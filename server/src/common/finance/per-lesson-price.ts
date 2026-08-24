@@ -1,9 +1,17 @@
 /**
  * One student's price for ONE lesson.
  *
- * The three-step fallback is the centre's actual pricing policy, and it was
- * copy-pasted into the revenue forecast and the Telegram daily report. Both
- * copies are gone; this is the only implementation.
+ * The three-step fallback is the centre's actual pricing policy. It was
+ * copy-pasted into the revenue forecast and the Telegram daily report, and
+ * both of those copies are gone.
+ *
+ * THIS IS NOT THE ONLY IMPLEMENTATION, whatever an earlier version of this
+ * comment said. One file imports it (`reports-expectation.service.ts`); the
+ * `|| 12` divisor at the heart of it is still written out by hand in a dozen
+ * more, `billing/` included. `per-lesson-price.single-source.spec.ts` freezes
+ * that list: the existing sites are grandfathered, a NEW one fails the suite.
+ * Consolidating the survivors means touching money paths and belongs in its
+ * own change with its own numbers — not in a comment.
  *
  *   1. an ACTIVE Contract's negotiated total, so a chegirmali shartnoma is
  *      priced exactly as agreed;

@@ -17,7 +17,9 @@ jobs:
       # `prisma generate` reads DATABASE_URL even though it never opens a
       # connection — a placeholder is enough. Tests mock PrismaService.
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
-      JWT_SECRET: ci-test-secret
+      # At least 16 chars — `config/env.validation.ts` refuses to boot below
+      # that, and this value has to satisfy the same rule production does.
+      JWT_SECRET: ci-test-secret-value
       NODE_ENV: test
     steps:
       - uses: actions/checkout@v4

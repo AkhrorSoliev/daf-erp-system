@@ -18,6 +18,14 @@ const DAILY_LIMIT = 3; // OTP sends per phone per 24h
 const DAILY_TTL_SEC = 24 * 60 * 60;
 const IP_LIMIT = 10; // request-code calls per IP per hour
 const VERIFY_IP_LIMIT = 30; // verify calls per IP per hour (brute-force guard)
+// Per-PHONE verify cap. This is the guard that actually holds: the IP the two
+// limits above key on comes from `x-forwarded-for`, which any client can send
+// (see `clientIp` in auth.controller.ts), so an attacker rotating that header
+// walks straight past them. A phone cannot be rotated — it is the thing being
+// attacked. A legitimate reset costs at most 9 verify calls a day (3 codes ×
+// 3 attempts), so 30 an hour is far above any real user and far below useful
+// hammering.
+const VERIFY_PHONE_LIMIT = 30;
 const IP_TTL_SEC = 60 * 60;
 const GLOBAL_TTL_SEC = 60 * 60;
 const RESET_TOKEN_TTL_SEC = 10 * 60; // verified → set-password window
@@ -28,6 +36,7 @@ const cooldownKey = (phone: string) => `otp_reset:cooldown:${phone}`;
 const dailyKey = (phone: string) => `otp_reset:daily:${phone}`;
 const ipKey = (ip: string) => `otp_reset:ip:${ip}`;
 const verifyIpKey = (ip: string) => `otp_reset:verify_ip:${ip}`;
+const verifyPhoneKey = (phone: string) => `otp_reset:verify_phone:${phone}`;
 const globalKey = (hourBucket: number) => `otp_reset:global:${hourBucket}`;
 const tokenKey = (token: string) => `otp_reset:rtoken:${token}`;
 
@@ -118,7 +127,10 @@ export class ForgotPasswordService {
       const code = String(randomInt(1000, 10000)); // 1000–9999, no leading zero
       await this.redis.set(
         codeKey(phone),
-        JSON.stringify({ h: this.hash(code), n: OTP_MAX_ATTEMPTS } as StoredCode),
+        JSON.stringify({
+          h: this.hash(code),
+          n: OTP_MAX_ATTEMPTS,
+        } as StoredCode),
         'EX',
         OTP_TTL_SEC,
       );
@@ -147,8 +159,20 @@ export class ForgotPasswordService {
     const phone = this.normalize(rawPhone);
     if (!phone) throw new BadRequestException(INVALID_CODE_MESSAGE);
 
-    // Brute-force guard on the verify endpoint itself (the 3-attempts-per-code
-    // cap is the primary defence; this stops rapid hammering across codes).
+    // Brute-force guards on the verify endpoint itself (the 3-attempts-per-code
+    // cap is the primary defence; these stop rapid hammering across codes).
+    //
+    // The phone check is unconditional and comes first, because it is the one
+    // that cannot be evaded. The IP check is kept as a second, weaker layer:
+    // it catches an unsophisticated attacker and costs nothing, but it must
+    // never be mistaken for the guarantee — until this change it had never run
+    // even once, since the controller passed no IP at all.
+    if (
+      (await this.hit(verifyPhoneKey(phone), IP_TTL_SEC)) > VERIFY_PHONE_LIMIT
+    ) {
+      this.logger.warn(`OTP verify phone limit reached: ${phone}`);
+      throw new BadRequestException(INVALID_CODE_MESSAGE);
+    }
     if (ip && (await this.hit(verifyIpKey(ip), IP_TTL_SEC)) > VERIFY_IP_LIMIT) {
       this.logger.warn(`OTP verify IP limit reached: ${ip}`);
       throw new BadRequestException(INVALID_CODE_MESSAGE);
@@ -214,7 +238,9 @@ export class ForgotPasswordService {
   ): Promise<{ message: string }> {
     // getdel is atomic: a concurrent request with the same token can never read
     // it after we consume it (single-use guarantee, no get→del race).
-    const raw = resetToken ? await this.redis.getdel(tokenKey(resetToken)) : null;
+    const raw = resetToken
+      ? await this.redis.getdel(tokenKey(resetToken))
+      : null;
     if (!raw) throw new BadRequestException(SESSION_EXPIRED_MESSAGE);
 
     let payload: StoredToken;
@@ -237,7 +263,11 @@ export class ForgotPasswordService {
       throw new BadRequestException(SESSION_EXPIRED_MESSAGE);
     }
 
-    await this.reset.applyNewPassword(target, newPassword, 'SMS orqali tiklandi');
+    await this.reset.applyNewPassword(
+      target,
+      newPassword,
+      'SMS orqali tiklandi',
+    );
     return { message: "Parol muvaffaqiyatli o'zgartirildi" };
   }
 
@@ -275,7 +305,9 @@ export class ForgotPasswordService {
           },
         })
         .catch((e) =>
-          this.logger.warn(`SmsMessage audit yozilmadi: ${(e as Error).message}`),
+          this.logger.warn(
+            `SmsMessage audit yozilmadi: ${(e as Error).message}`,
+          ),
         );
     }
   }
@@ -298,7 +330,8 @@ export class ForgotPasswordService {
   /** Normalize to the DB's 9-digit form; returns null if not a valid UZ number. */
   private normalize(phone: string): string | null {
     let digits = (phone ?? '').replace(/\D/g, '');
-    if (digits.length === 12 && digits.startsWith('998')) digits = digits.slice(3);
+    if (digits.length === 12 && digits.startsWith('998'))
+      digits = digits.slice(3);
     return digits.length === 9 ? digits : null;
   }
 

@@ -172,8 +172,9 @@ describe('ForgotPasswordService', () => {
       const { service, redis, reset } = build();
       const ROLELESS = { userId: 10500, companyId: 1 }; // farrosh, hech qanday rolsiz
       // Only an UNSCOPED resolve can reach the role-less account.
-      reset.resolveByPhone.mockImplementation(async (_p: string, ids?: number[] | null) =>
-        ids?.length ? null : ROLELESS,
+      reset.resolveByPhone.mockImplementation(
+        async (_p: string, ids?: number[] | null) =>
+          ids?.length ? null : ROLELESS,
       );
       await redis.set(
         `otp_reset:code:${PHONE}`,
@@ -187,6 +188,64 @@ describe('ForgotPasswordService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(reset.resolveByPhone).toHaveBeenCalledWith(PHONE, ADMIN_ROLE_IDS);
       expect(redis.store.has(`otp_reset:rtoken:`)).toBe(false);
+    });
+
+    it('caps verify calls per PHONE, so the guard cannot be shed with a header', async () => {
+      const { service, redis } = build();
+      // The IP-keyed limits read `x-forwarded-for`, which the caller writes.
+      // This one keys on the phone under attack, so no amount of header
+      // rotation moves the bucket.
+      redis.store.set('otp_reset:verify_phone:' + PHONE, '30');
+
+      await expect(service.verifyCode(PHONE, '1234')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('stops a phone-capped attempt BEFORE reading the stored code', async () => {
+      const { service, redis } = build();
+      redis.store.set(
+        `otp_reset:code:${PHONE}`,
+        JSON.stringify({ h: sha('1234'), n: 3 }),
+      );
+      redis.store.set('otp_reset:verify_phone:' + PHONE, '30');
+
+      // The correct code must not get through on a capped phone.
+      await expect(service.verifyCode(PHONE, '1234')).rejects.toThrow(
+        BadRequestException,
+      );
+      // …and the code survives, so the cap cannot be used to burn someone
+      // else's pending code.
+      expect(redis.store.get(`otp_reset:code:${PHONE}`)).toBeDefined();
+    });
+
+    it('leaves a normal reset far below the cap (3 codes x 3 attempts a day)', async () => {
+      const { service, redis, reset } = build();
+      reset.resolveByPhone.mockResolvedValue(TARGET);
+      redis.store.set(
+        `otp_reset:code:${PHONE}`,
+        JSON.stringify({ h: sha('1234'), n: 3 }),
+      );
+
+      for (let i = 0; i < 9; i++) {
+        await service.verifyCode(PHONE, '9999').catch(() => undefined);
+        redis.store.set(
+          `otp_reset:code:${PHONE}`,
+          JSON.stringify({ h: sha('1234'), n: 3 }),
+        );
+      }
+
+      const { resetToken } = await service.verifyCode(PHONE, '1234');
+      expect(resetToken).toHaveLength(64);
+    });
+
+    it('honours the IP cap as a second, weaker layer when an IP is supplied', async () => {
+      const { service, redis } = build();
+      redis.store.set('otp_reset:verify_ip:203.0.113.7', '30');
+
+      await expect(
+        service.verifyCode(PHONE, '1234', '203.0.113.7'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('decrements attempts on a wrong code and burns it after 3 failures', async () => {
@@ -246,8 +305,9 @@ describe('ForgotPasswordService', () => {
       const { service, redis, reset } = build();
       const token = 'tok456';
       const ROLELESS = { userId: 10500, companyId: 1 };
-      reset.resolveByPhone.mockImplementation(async (_p: string, ids?: number[] | null) =>
-        ids?.length ? TARGET : ROLELESS,
+      reset.resolveByPhone.mockImplementation(
+        async (_p: string, ids?: number[] | null) =>
+          ids?.length ? TARGET : ROLELESS,
       );
       await redis.set(
         `otp_reset:rtoken:${token}`,

@@ -53,10 +53,14 @@ import { PlannedAbsencesModule } from './planned-absences/planned-absences.modul
 import { PaymentPromisesModule } from './payment-promises/payment-promises.module';
 import { CallLogsModule } from './call-logs/call-logs.module';
 import { JwtAuthGuard, BranchScopeGuard } from './common/guards';
+import { validateEnv } from './config/env.validation';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    // `validate` runs BEFORE any module is constructed, so a missing key kills
+    // the boot instead of surfacing as a 500 on the first request that needs
+    // it. See `config/env.validation.ts` for why that trade is worth it here.
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     // Crons are ON unless explicitly switched off. The default has to be "on"
     // because production sets no such variable — a flag that defaults to off
     // would silently stop payroll, the nightly snapshot and every reminder.
@@ -65,7 +69,9 @@ import { JwtAuthGuard, BranchScopeGuard } from './common/guards';
     // production database to look at a real page. Without it, that laptop runs
     // the schedule too — attendance reminders go out to real teachers every 30
     // minutes, the 23:40 snapshot is written, and the 02:00 payroll fires.
-    ...(process.env.CRONS_ENABLED === 'false' ? [] : [ScheduleModule.forRoot()]),
+    ...(process.env.CRONS_ENABLED === 'false'
+      ? []
+      : [ScheduleModule.forRoot()]),
     EventEmitterModule.forRoot(),
     PrismaModule,
     DebtAgeModule,
