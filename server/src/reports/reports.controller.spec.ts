@@ -442,17 +442,27 @@ describe('ReportsController — role guards', () => {
         unknown
       >;
       expect(passed.include).toEqual([]);
-      expect(Object.keys(passed).filter((k) => k.startsWith('compare'))).toEqual(
-        [],
-      );
+      expect(
+        Object.keys(passed).filter((k) => k.startsWith('compare')),
+      ).toEqual([]);
       expect(res.end).toHaveBeenCalled();
     });
   });
 
   describe('getFinancialOverview() — sensitive-field stripping', () => {
     const fullOverview = {
-      income: { expected: 9, actual: 69126991, billed: 8, paymentCount: 212, byMethod: [{ method: 'CASH', amount: 5, count: 1 }] },
-      forecast: { recognizedRevenueForecast: 7, outstandingReceivable: 6, debtorExposure: { count: 4, avgDebt: 3 } },
+      income: {
+        expected: 9,
+        actual: 69126991,
+        billed: 8,
+        paymentCount: 212,
+        byMethod: [{ method: 'CASH', amount: 5, count: 1 }],
+      },
+      forecast: {
+        recognizedRevenueForecast: 7,
+        outstandingReceivable: 6,
+        debtorExposure: { count: 4, avgDebt: 3 },
+      },
       salary: { paid: 8251000, pending: 5, advances: 2 },
       expenses: 8251000,
       netProfit: 60875991,
@@ -494,6 +504,43 @@ describe('ReportsController — role guards', () => {
         forecast: fullOverview.forecast,
       });
       expect(res.salary.paid).toBe(fullOverview.salary.paid);
+    });
+
+    // The canonical figure is not always available. When it fails the endpoint
+    // keeps returning a number — breaking the overview would be worse — but it
+    // used to return the LEGACY CASH figure under the same field name, with no
+    // way for the caller to tell. That number runs high on purpose: teacher
+    // salary is paid the following cycle, so a paidAt-based profit barely
+    // subtracts it. The comment in the controller calls it the +78M June bug.
+    describe('net profit basis is stated, not implied', () => {
+      it('reports the recognized basis when the canonical figure computes', async () => {
+        const res: any = await controller.getFinancialOverview(query, {
+          id: 10001,
+          companyId: 1,
+          roles: ['CEO'],
+        });
+
+        expect(res.netProfit).toBe(12_345_678);
+        expect(res.netProfitBasis).toBe('recognized');
+      });
+
+      it('falls back to cash AND says so', async () => {
+        mockService.getMonthlyNetProfit.mockRejectedValueOnce(
+          new Error('recognized revenue unavailable'),
+        );
+
+        const res: any = await controller.getFinancialOverview(query, {
+          id: 10001,
+          companyId: 1,
+          roles: ['CEO'],
+        });
+
+        // The number still comes back — the card must render something…
+        expect(res.netProfit).toBe(fullOverview.netProfit);
+        // …but it is labelled for what it is, so the UI can stop calling it
+        // «Foyda».
+        expect(res.netProfitBasis).toBe('cash');
+      });
     });
 
     it('returns the FULL payload for Branch Director', async () => {
@@ -699,22 +746,28 @@ describe('ReportsController — role guards', () => {
 
     it('CEO who picks a branch is narrowed to it', async () => {
       mockPrisma.user.findFirst.mockResolvedValue(asCeo);
-      await expect((controller as any).resolveScope(1, 2)).resolves.toEqual([2]);
+      await expect((controller as any).resolveScope(1, 2)).resolves.toEqual([
+        2,
+      ]);
     });
 
     it('Branch Director defaults to their own branches', async () => {
       mockPrisma.user.findFirst.mockResolvedValue(asDirectorOf(3, 7));
-      await expect((controller as any).resolveScope(2)).resolves.toEqual([3, 7]);
+      await expect((controller as any).resolveScope(2)).resolves.toEqual([
+        3, 7,
+      ]);
     });
 
     it('a picked branch NARROWS a director rather than being overridden', async () => {
       // The old `branchWhere` let the director's whole scope win, so picking
       // one branch still returned both — under a header naming one.
       mockPrisma.user.findFirst.mockResolvedValue(asDirectorOf(3, 7));
-      await expect((controller as any).resolveScope(2, 7)).resolves.toEqual([7]);
+      await expect((controller as any).resolveScope(2, 7)).resolves.toEqual([
+        7,
+      ]);
     });
 
-    it('REFUSES a branch outside the caller\'s scope', async () => {
+    it("REFUSES a branch outside the caller's scope", async () => {
       // Serving zeros would be worse than a 403: services that re-derive their
       // own scope from `performedById` would fill part of the report with the
       // caller's own branch, so the document contradicts itself.

@@ -1,13 +1,14 @@
 import {
   BadRequestException,
   Controller,
+  ForbiddenException,
   Get,
+  Logger,
   Param,
   ParseIntPipe,
   Query,
   Res,
   UseGuards,
-  ForbiddenException,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { ReportsService } from './reports.service';
@@ -43,6 +44,8 @@ import { ReportsExcelService } from './reports-excel.service';
 @UseGuards(RolesGuard)
 @Roles('CEO', 'Branch Director', 'Administrator')
 export class ReportsController {
+  private readonly logger = new Logger(ReportsController.name);
+
   constructor(
     private readonly reportsService: ReportsService,
     private readonly prisma: PrismaService,
@@ -279,8 +282,17 @@ export class ReportsController {
     // The legacy overview.netProfit (kassa tushumi − NAQD to'langan oylik)
     // grossly overstated profit: teacher salary is paid next cycle, so its
     // paidAt-based figure was ~0 and barely reduced profit (the +78M June bug).
-    // Defensive: a failure keeps the legacy figure, never breaks the overview.
+    // Defensive: a failure keeps the legacy figure, never breaks the overview —
+    // but it SAYS SO. Falling back silently meant the card kept the label «Foyda»
+    // and a tooltip describing recognized revenue while showing the cash figure
+    // the comment above calls the +78M June bug. The Telegram card already
+    // relabels itself in this situation; the web card could not, because the
+    // response carried no way to tell the two apart.
+    //
+    // The bare `catch {}` also swallowed the reason, so a persistent failure
+    // would have been invisible: a wrong number, no error, nobody looking.
     let netProfit = overview.netProfit;
+    let netProfitBasis: 'recognized' | 'cash' = 'cash';
     try {
       const np = await this.reportsService.getMonthlyNetProfit(user.companyId, {
         month,
@@ -288,8 +300,16 @@ export class ReportsController {
         performedById: user.id,
       });
       netProfit = np.netProfit;
-    } catch {
+      netProfitBasis = 'recognized';
+    } catch (err) {
+      this.logger.warn(
+        `Monthly net profit failed for company ${user.companyId} (${month}) — ` +
+          `overview falls back to the cash figure: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+      );
       netProfit = overview.netProfit;
+      netProfitBasis = 'cash';
     }
 
     // «Oyning o'z foydasi» — the month's own money against its own costs.
@@ -311,6 +331,7 @@ export class ReportsController {
     return {
       ...overview,
       netProfit,
+      netProfitBasis,
       ownMonthProfit,
       salary: { ...overview.salary, computed },
     };
@@ -826,6 +847,9 @@ export class ReportsController {
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.reportsService.getStudentPaymentsFilterOptions(companyId, scope);
+    return this.reportsService.getStudentPaymentsFilterOptions(
+      companyId,
+      scope,
+    );
   }
 }
