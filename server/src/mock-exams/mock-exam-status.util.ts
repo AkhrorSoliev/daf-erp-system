@@ -18,6 +18,16 @@ import { MockExamStatus } from '@prisma/client';
  * DRAFT is no longer used — exams open registration immediately on create.
  * The enum value is kept in the Postgres type to avoid an irreversible
  * enum-drop migration, but no code path produces it anymore.
+ *
+ * THE SCHEMA STILL DOES, though. `MockExam.status` is `@default(DRAFT)`, and
+ * DRAFT has no outgoing transitions — a row that lands there can never open
+ * registration, be graded, or even be archived. The next `mockExam.create`
+ * written without a `status` inherits that default and produces an exam that
+ * is stuck with no error to explain it.
+ *
+ * `mock-exam-draft-trap.spec.ts` fails if any create omits the status. The
+ * default is not going anywhere: changing it is a migration, and the enum
+ * member cannot be dropped at all.
  */
 export const MOCK_EXAM_STATUS_TRANSITIONS: Record<
   MockExamStatus,
