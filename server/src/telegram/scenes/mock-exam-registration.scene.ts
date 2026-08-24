@@ -66,7 +66,18 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // DD.MM.YYYY or YYYY-MM-DD
 const DATE_RE = /^(\d{2}\.\d{2}\.\d{4}|\d{4}-\d{2}-\d{2})$/;
 
-/** The bot is single-tenant for now; see the fee-settlement call below. */
+/**
+ * Fallback only, for the unreachable branch where the exam row disappears
+ * between the two queries — the create below would fail on its `examId`
+ * foreign key anyway.
+ *
+ * The bot as a whole still assumes one company: registering a NEW person over
+ * Telegram has no tenant to derive from, because the person is not attached to
+ * one yet. That is a design question (which company does this bot serve?), not
+ * a bug to patch here. What is fixed is the case where the answer was already
+ * on the row — an exam, and the participants and payment links that hang off
+ * it — and was being ignored in favour of this constant.
+ */
 const DEFAULT_COMPANY_ID = 1001;
 
 export function createMockExamRegistrationScene(
@@ -539,10 +550,16 @@ async function finalizeRegistration(
   // Pricing (for the DaF discount) + the level the user chose.
   const exam = await prisma.mockExam.findFirst({
     where: { id: examId },
-    select: { price: true, studentPrice: true },
+    // `companyId` comes from the EXAM. A participant belongs to whoever owns
+    // the exam they registered for; it is not a property of the bot. Both the
+    // row below and the checkout links built from it used to take a hardcoded
+    // 1001 instead — harmless with one company, and a payment routed to the
+    // wrong merchant account the day there are two.
+    select: { price: true, studentPrice: true, companyId: true },
   });
   const examPrice = exam?.price ?? 0;
   const studentPrice = exam?.studentPrice ?? null;
+  const examCompanyId = exam?.companyId ?? DEFAULT_COMPANY_ID;
   const level = (ctx.session.data.level as string | null) ?? null;
   const examTime = (ctx.session.data.examTime as string | null) ?? null;
 
@@ -613,10 +630,8 @@ async function finalizeRegistration(
 
     const created = await prisma.mockExamParticipant.create({
       data: {
-        // Same single-tenant constant the fee settlement below uses. The column
-        // default that used to supply this is gone — a multi-company schema must
-        // not have one company baked into it.
-        companyId: DEFAULT_COMPANY_ID,
+        // The exam's own company — see the select above.
+        companyId: examCompanyId,
         examId,
         publicId,
         studentId,
@@ -687,7 +702,11 @@ async function finalizeRegistration(
   let hasPayLinks = false;
   if (price > 0) {
     try {
-      const links = await paymentLinkService.buildLinks(publicId, price);
+      const links = await paymentLinkService.buildLinks(
+        publicId,
+        price,
+        examCompanyId,
+      );
       const payRow: KbButton[] = [];
       if (links.payme) {
         payRow.push(Markup.button.url('💳 Payme', links.payme));

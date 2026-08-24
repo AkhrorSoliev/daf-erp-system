@@ -133,7 +133,10 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 
 - **One file = one responsibility** (Single Responsibility Principle)
 - Components: **100–300 lines** target
-- Hard maximum: **500 lines**
+- **500 lines is the limit for NEW files, not a claim about existing ones.**
+  18 files here are already over it. Written as a "hard maximum" it read as a
+  description of the codebase, which made it easy to assume a long file must
+  be somebody else's problem. It is a rule for what you add.
 - Split large components into smaller, reusable parts
 - **Golden rule:** If a new developer cannot understand the file in a few minutes — refactor it
 
@@ -857,6 +860,14 @@ every list renders; the roles are only access.
 - If a backend service or controller was added or modified, corresponding `*.spec.ts` tests **must** be written or updated — do not skip this step
 - **Controller guard tests are mandatory** — when adding or modifying `@Roles()` guards on controller endpoints, write tests that verify the role metadata and that `RolesGuard` allows/denies the correct roles
 - When both frontend and backend are changed in the same task, verify both: `npm run build` (client) and `npm test` (server)
+- **The client has its own suite: `npm test` (vitest).** It went unrun in CI
+  for a long time even though its files encode branch-isolation rules
+  (`branch-header`, `branch-cache`, `branch-scoped-stores`,
+  `branch-scoped-header`). CI runs it now; run it locally too.
+- **Lint is a gate.** CI runs `npx eslint src` and fails on ERRORS. Read the
+  `✖ N problems (X errors, Y warnings)` line — the "potentially fixable"
+  line below it counts something else and does not tell you whether the build
+  will pass.
 
 ### Code Organization
 
@@ -869,6 +880,9 @@ every list renders; the roles are only access.
 - **This file (CLAUDE.md) must be written entirely in English.** All section headings, descriptions, rules, and comments must use English only.
 - Uzbek text is acceptable **only** when quoting exact UI strings, error messages, or placeholder text that appears in the application (e.g. `"Barcha holatlar"`, `"Saqlashda xatolik yuz berdi"`).
 - When adding new sections or editing existing ones, always write in English.
+- **This rule governs this file alone.** It is not a rule about the codebase:
+  ADRs under `docs/adr/` are written in Uzbek by design, and code comments use
+  whichever language explains the thing best.
 
 ## Available Skills
 

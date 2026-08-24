@@ -42,7 +42,7 @@ tahrirlanmaydi; eskirsa yangi ADR yoziladi va eskisining holati
 
 - Every domain entity gets its own NestJS module (module + controller + service + dto/)
 - Services contain business logic; controllers are thin (validation + delegation)
-- Use `PrismaService` for all database access. Prefer the Prisma query builder; raw SQL is allowed **only** via the tagged-template `$queryRaw`/`$executeRaw` (parameterized — values become `$1,$2…`). **Never** use `$queryRawUnsafe`/`$executeRawUnsafe` (string-built — SQL-injection risk). Tagged-template raw SQL is used in some production services (e.g. `billing/lesson-billing.service.ts` for a `NOT EXISTS` unpaid-lesson scan) as well as one-off backfill scripts in `server/scripts/`.
+- Use `PrismaService` for all database access. Prefer the Prisma query builder; raw SQL is allowed **only** via the tagged-template `$queryRaw`/`$executeRaw` (parameterized — values become `$1,$2…`). **Never** use `$queryRawUnsafe`/`$executeRawUnsafe` (string-built — SQL-injection risk). Tagged-template raw SQL is used in some production services (e.g. `billing/lesson-billing.service.ts` for a `NOT EXISTS` unpaid-lesson scan) as well as one-off backfill scripts in `server/scripts/`. As of 2026-08 `src/` contains **zero** `*Unsafe` calls; the 7 that exist are all in `server/scripts/`, where the interpolated values are table names from a hardcoded list and never user input. That is the only place the exception has ever applied — a new one in `src/` is a bug, not a precedent.
 - `PrismaModule` is global — no need to import it per module
 
 ### Naming Conventions
@@ -83,13 +83,13 @@ tahrirlanmaydi; eskirsa yangi ADR yoziladi va eskisining holati
 - **Web only.** All three portals (`admin` / `lehrer` / `student`) offer "Telegram orqali kirish" through Telegram's official OAuth 2.0 / OIDC flow. The student **native app** still uses the older bot-deep-link + `GET /auth/otp/poll` flow — that flow's `requestId` is minted by the client and approved by whoever presses START, so a forwarded `t.me` link can hand the victim's session to an attacker. OAuth closes that by construction; do not extend the poll flow to staff.
 - **Endpoints** (all `@Public()`, all `IpThrottlerGuard`): `GET /auth/telegram/status` → `{ enabled }`, `GET /auth/telegram/start` → `{ url }`, `GET /auth/telegram/callback` (Telegram redirects here, 302s to the portal), `POST /auth/telegram/complete` → session.
 - **The portal origin comes from the `Origin` header ONLY.** `start` takes **no query parameters** — an earlier `?origin=` override was the one way a production request could claim `http://localhost:3000` and bypass portal scoping, and the client never sent it. Do not re-add it. `isKnownPortalOrigin` also requires the `https:` scheme (localhost/127.0.0.1 exempt for dev) and rejects a URL carrying `username`/`password`, because that origin is where the single-use `handoff` is delivered.
-- **`state` + PKCE live in Redis** (`tg_oauth:state:*`, 5 min, single-use via `getdel`) together with the portal origin. The `code_verifier` **never reaches the browser**, so a leaked authorize URL cannot be redeemed elsewhere; `state` + PKCE are what prevent code injection and code replay. **Nothing is stored in the browser** — no cookie, no verifier — so do not describe this pair as "binding the flow to the initiating browser". What actually closes the old bot-link relay hole is the delivery path: **Telegram hands the `code` to our server through the authorizing browser, and the `handoff` goes back out in that same browser's 302**, so the session lands in the browser that did the authorizing. The one residual this does *not* cover: an attacker who authorizes with their own Telegram account can hand the victim their own `?handoff=` URL within the 60s window and the page will overwrite the victim's session with the attacker's. That is bounded (single-use, 60s), conspicuous (the victim is suddenly someone else), gives the attacker nothing they did not already have, and is not the hole this design targets — the old flow's defect was the reverse direction (the *victim's* session opening in the *attacker's* browser).
+- **`state` + PKCE live in Redis** (`tg_oauth:state:*`, 5 min, single-use via `getdel`) together with the portal origin. The `code_verifier` **never reaches the browser**, so a leaked authorize URL cannot be redeemed elsewhere; `state` + PKCE are what prevent code injection and code replay. **Nothing is stored in the browser** — no cookie, no verifier — so do not describe this pair as "binding the flow to the initiating browser". What actually closes the old bot-link relay hole is the delivery path: **Telegram hands the `code` to our server through the authorizing browser, and the `handoff` goes back out in that same browser's 302**, so the session lands in the browser that did the authorizing. The one residual this does _not_ cover: an attacker who authorizes with their own Telegram account can hand the victim their own `?handoff=` URL within the 60s window and the page will overwrite the victim's session with the attacker's. That is bounded (single-use, 60s), conspicuous (the victim is suddenly someone else), gives the attacker nothing they did not already have, and is not the hole this design targets — the old flow's defect was the reverse direction (the _victim's_ session opening in the _attacker's_ browser).
 - **One `redirect_uri`, on the API domain** (`https://api.dafzentrum.uz/api/auth/telegram/callback`), because the code is exchanged with the client secret server-side. The portal to return to comes from the stored `state` and is re-checked against `isKnownPortalOrigin` — without that whitelist the callback would be an open redirect.
 - **`id_token` verification is absolute**: RS256 against `https://oauth.telegram.org/.well-known/jwks.json`, `issuer=https://oauth.telegram.org`, `audience` = client id, `exp`, plus `phone_number_verified === true`. Any failure denies sign-in. Never add a soft path and never read the token without verifying it — the whole flow's trust rests on this signature.
 - **Account lookup is shared with password login**: `phone_number` (no `+`, country code included) → `AuthService.findAccountsByIdentifier` (the `findMany`/`take: 2` twin of `findAccountByIdentifier`, sharing one private `buildAccountLookup` where-clause) → `AuthService.login` applies the portal role gate. The Telegram path must never be wider than the password path; that is why the where-clause is one function.
-- **A shared phone FAILS CLOSED on the OAuth path.** Neither `User.login` nor `User.phone` is unique, so one phone can match several accounts within the same portal (an office number on both a Cashier and an Administrator). Password login's `orderBy updatedAt desc` tiebreak is harmless — reaching the winning account still needs *that* account's password — but OAuth removes that second factor, so picking a winner would sign the caller into a stranger's account. When `findAccountsByIdentifier` returns more than one row the OAuth path refuses with "Bu raqam bir nechta akkauntga tegishli. Iltimos, telefon raqam va parol bilan kiring." **`validateUser` is deliberately unchanged** — do not "make them consistent" by adding the refusal to password login, and do not drop it from the OAuth path.
+- **A shared phone FAILS CLOSED on the OAuth path.** Neither `User.login` nor `User.phone` is unique, so one phone can match several accounts within the same portal (an office number on both a Cashier and an Administrator). Password login's `orderBy updatedAt desc` tiebreak is harmless — reaching the winning account still needs _that_ account's password — but OAuth removes that second factor, so picking a winner would sign the caller into a stranger's account. When `findAccountsByIdentifier` returns more than one row the OAuth path refuses with "Bu raqam bir nechta akkauntga tegishli. Iltimos, telefon raqam va parol bilan kiring." **`validateUser` is deliberately unchanged** — do not "make them consistent" by adding the refusal to password login, and do not drop it from the OAuth path.
 - **Tokens never travel in a URL.** The callback redirects with a single-use `handoff` (`tg_oauth:handoff:*`, 60s) that the SPA exchanges. A URL would leak the session into browser history, referrers and proxy logs.
-- **Failures after the `state` is consumed 302 to the portal, they do not throw.** `handleCallback` wraps everything past `consumeState` and returns `${portalOrigin}/auth/telegram/callback?error=<urlencoded message>`; the client page reads `error` and renders it with a "back to sign-in" button. Throwing there stranded the user on raw JSON at `api.dafzentrum.uz` with no way back. Only the message goes in the query string — nothing sensitive, and an unexpected (non-`HttpException`) error is replaced by a generic string and logged instead. The two failures that happen *before* the origin is known stay JSON 400: a stale/replayed/unknown `state`, and the user-declined `error` branch. Relatedly, `!code` is checked **before** `consumeState` so a code-less redirect does not burn a single-use state.
+- **Failures after the `state` is consumed 302 to the portal, they do not throw.** `handleCallback` wraps everything past `consumeState` and returns `${portalOrigin}/auth/telegram/callback?error=<urlencoded message>`; the client page reads `error` and renders it with a "back to sign-in" button. Throwing there stranded the user on raw JSON at `api.dafzentrum.uz` with no way back. Only the message goes in the query string — nothing sensitive, and an unexpected (non-`HttpException`) error is replaced by a generic string and logged instead. The two failures that happen _before_ the origin is known stay JSON 400: a stale/replayed/unknown `state`, and the user-declined `error` branch. Relatedly, `!code` is checked **before** `consumeState` so a code-less redirect does not burn a single-use state.
 - **`User.telegramChatId` is NOT written.** The `sub` claim is an opaque per-bot identifier, not the bot's `chat.id`; the Telegram user id is the separate `id` claim. Writing the wrong value would break bot messaging, and nothing here needs it. The verifier still asserts the `id` claim is **present and scalar** (a real strictness guard on the token shape) but deliberately does **not return the value** — no consumer wants it, and a large id parsed as a JSON `number` can exceed 2^53 and silently lose precision.
 - **Config gate:** missing any of the three env vars turns the feature fully off — `status` returns `{ enabled: false }` and the client renders no button; `start` answers **503** (`ServiceUnavailableException`). `status` also reports `false` when the calling `Origin` is not a known portal, so a CORS-allowed non-portal origin (e.g. a Vercel preview alias) shows **no** button instead of one that 400s on click. Config is applied by hand in BotFather + Railway, so a half-configured deploy must degrade to "off", never to a broken button.
 
@@ -97,10 +97,10 @@ tahrirlanmaydi; eskirsa yangi ADR yoziladi va eskisining holati
 
 The system uses **subdomain-based portals** — each subdomain restricts login to specific roles:
 
-| Portal | Domain | Allowed Roles |
-|--------|--------|---------------|
-| Admin panel | `admin.dafzentrum.uz` | CEO (1), Branch Director (2), Administrator (3), Cashier (5) |
-| Teacher portal | `lehrer.dafzentrum.uz` | Teacher (4) |
+| Portal         | Domain                  | Allowed Roles                                                                                                                               |
+| -------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Admin panel    | `admin.dafzentrum.uz`   | CEO (1), Branch Director (2), Administrator (3), Cashier (5)                                                                                |
+| Teacher portal | `lehrer.dafzentrum.uz`  | Teacher (4)                                                                                                                                 |
 | Student portal | `student.dafzentrum.uz` | Student (6) — implemented via `student-portal.controller.ts` (profile, schedule, attendance stats/history/scan, payments via Payme + Click) |
 
 - Configuration: `src/auth/portal-roles.config.ts` — `PORTAL_ROLES` mapping
@@ -116,6 +116,7 @@ The system uses **subdomain-based portals** — each subdomain restricts login t
 **CRITICAL: The backend is the real security boundary.** Frontend UI restrictions (hidden pages, disabled buttons) can be bypassed by calling the API directly. Every feature that is restricted to specific roles **must** have a `@Roles()` guard on its backend endpoint — this is non-negotiable.
 
 **When restricting access for any role:**
+
 1. **Backend:** Add `@Roles()` + `@UseGuards(RolesGuard)` on the controller endpoint so the API returns `403 Forbidden` for unauthorized roles
 2. **Frontend:** Hide the corresponding page/route, sidebar link, button, tab, or UI element entirely
 3. **Both layers must always be in sync** — if a page is hidden on the frontend, the backend endpoint must also reject the request, and vice versa
@@ -259,15 +260,15 @@ Use `@Roles()` decorator with **string role names** + `RolesGuard`:
 
 #### Currently tracked entities
 
-| Entity | create | update | statusChange | delete | restore |
-|--------|--------|--------|--------------|--------|---------|
-| Student | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Group | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Branch | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Room | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Course | ✅ | ✅ | ✅ | ✅ | ✅ |
-| User | ✅ | ✅ (profile) | — | — | — |
-| Holiday | ✅ | ✅ | ✅ | ✅ | — |
+| Entity  | create | update       | statusChange | delete | restore |
+| ------- | ------ | ------------ | ------------ | ------ | ------- |
+| Student | ✅     | ✅           | ✅           | ✅     | ✅      |
+| Group   | ✅     | ✅           | ✅           | ✅     | ✅      |
+| Branch  | ✅     | ✅           | ✅           | ✅     | ✅      |
+| Room    | ✅     | ✅           | ✅           | ✅     | ✅      |
+| Course  | ✅     | ✅           | ✅           | ✅     | ✅      |
+| User    | ✅     | ✅ (profile) | —            | —      | —       |
+| Holiday | ✅     | ✅           | ✅           | ✅     | —       |
 
 ### Holidays (Multi-day + Group endDate cascade)
 
@@ -293,12 +294,12 @@ Powers the `/reports/activity` page so historical periods (e.g. "Feb 2-20" befor
 
 Four dedicated tables in `prisma/schema.prisma`:
 
-| Table | Pattern | Tracks |
-|-------|---------|--------|
-| `RoomCapacitySnapshot` | SCD2 (`validFrom` / `validTo`) | Room capacity changes |
-| `GroupScheduleSnapshot` | SCD2 | Group `exactDays`, `lessonStartTime/endTime`, `courseId` |
-| `CoursePriceSnapshot` | SCD2 | Course price changes |
-| `EnrollmentStateLog` | Event log (`transitionAt`) | Every enrollment status transition |
+| Table                   | Pattern                        | Tracks                                                   |
+| ----------------------- | ------------------------------ | -------------------------------------------------------- |
+| `RoomCapacitySnapshot`  | SCD2 (`validFrom` / `validTo`) | Room capacity changes                                    |
+| `GroupScheduleSnapshot` | SCD2                           | Group `exactDays`, `lessonStartTime/endTime`, `courseId` |
+| `CoursePriceSnapshot`   | SCD2                           | Course price changes                                     |
+| `EnrollmentStateLog`    | Event log (`transitionAt`)     | Every enrollment status transition                       |
 
 SCD2 tables: on update, the old row gets `validTo = now()` and a new row is inserted with `validFrom = now()`. Query "state on date X" via `WHERE validFrom <= X AND (validTo IS NULL OR validTo > X)`.
 
@@ -344,6 +345,7 @@ Creates one initial snapshot per existing room/group/course (with `validFrom = e
 #### Date & Time Validation (`validateLessonDate`)
 
 Every attendance write (manual `save()` and QR `startSession()`) passes through `AttendanceService.validateLessonDate()` which enforces:
+
 1. Date format (YYYY-MM-DD)
 2. Group existence + multi-tenant `companyId` filter
 3. Group status must be `ACTIVE`
@@ -398,14 +400,14 @@ The group "Davomat (nuqtalar)" tab (`attendance-dots-tab.tsx`) renders one dot p
 - `AttendanceEventsListener` (`src/attendance/attendance-events.listener.ts`) — handles the `attendance.completed` event emitted from `AttendanceService.save()` on the first save of the day
 - **Triggers:**
 
-  | # | When | Attendance taken? | Recipient | NotificationType |
-  |---|---|---|---|---|
-  | 1 | `lessonStartTime` | — | Teacher | `LESSON_STARTED` |
-  | 2 | `lessonEndTime - 30 min` | ❌ | Branch Administrator(s) | `ATTENDANCE_ADMIN_ALERT` |
-  | 3 | `lessonEndTime - 15 min` | ❌ | Teacher | `ATTENDANCE_TEACHER_WARNING` |
-  | 4 | `lessonEndTime` | ❌ | Teacher | `ATTENDANCE_MISSING_TEACHER` |
-  | 5 | `lessonEndTime` | ❌ | Branch Administrator(s) | `ATTENDANCE_MISSING_ADMIN` |
-  | 6 | On first `save()` of the day | ✅ | Teacher | `ATTENDANCE_COMPLETED` (stats: present/absent/late/excused) |
+  | #   | When                         | Attendance taken? | Recipient               | NotificationType                                            |
+  | --- | ---------------------------- | ----------------- | ----------------------- | ----------------------------------------------------------- |
+  | 1   | `lessonStartTime`            | —                 | Teacher                 | `LESSON_STARTED`                                            |
+  | 2   | `lessonEndTime - 30 min`     | ❌                | Branch Administrator(s) | `ATTENDANCE_ADMIN_ALERT`                                    |
+  | 3   | `lessonEndTime - 15 min`     | ❌                | Teacher                 | `ATTENDANCE_TEACHER_WARNING`                                |
+  | 4   | `lessonEndTime`              | ❌                | Teacher                 | `ATTENDANCE_MISSING_TEACHER`                                |
+  | 5   | `lessonEndTime`              | ❌                | Branch Administrator(s) | `ATTENDANCE_MISSING_ADMIN`                                  |
+  | 6   | On first `save()` of the day | ✅                | Teacher                 | `ATTENDANCE_COMPLETED` (stats: present/absent/late/excused) |
 
 - **Idempotency (no new DB table):** each trigger checks `Notification` for an existing row with the same `(userId, type, relatedEntityType='Group', relatedEntityId=groupId)` created today (Tashkent day). If found → skip. If not → send + insert (the inserted row becomes the idempotency marker for the rest of the day)
 - **Auto-stop:** once the teacher marks attendance, triggers 2–5 short-circuit because `attendance.findFirst` returns a row. No cancellation of already-queued notifications is needed
@@ -430,7 +432,7 @@ The group "Davomat (nuqtalar)" tab (`attendance-dots-tab.tsx`) renders one dot p
 
 - **Why a separate table, not an `Attendance` row:** a real attendance row would (a) bill the student (`ABSENT` is billable — "lesson held = lesson paid") for a lesson that hasn't happened, and (b) trip the teacher-once lock. `PlannedAbsence` is a side-table overlay (same family as `LessonCancellation` / `LessonReschedule`) so it never bills, never locks the teacher, and is invisible to stats / absence-streak queries.
 - **Schema:** `PlannedAbsence { groupId, studentId, date, kind (PlannedAbsenceKind = SABABLI | SABABSIZ), note?, createdById, consumedAt?, companyId }`, unique `(groupId, studentId, date)`. Hard-deleted (it is intent, not a financial ledger row — no soft delete).
-- **Endpoints** (`@Roles('CEO', 'Branch Director', 'Administrator')`): `POST /api/planned-absences/:groupId/date/:date` (upsert `{ studentId, kind, note? }` — `note` is **required** when `kind = SABABLI`, i.e. an excused absence must record *why*; the service trims it and rejects an empty reason) and `DELETE /api/planned-absences/:id` (only while `consumedAt IS NULL`). The service reuses `AttendanceValidationService.validateLessonDate` (admins bypass the lesson time window, so today-before-the-lesson and any future scheduled date both pass), verifies an active/started enrollment, and rejects if attendance was already taken for that lesson.
+- **Endpoints** (`@Roles('CEO', 'Branch Director', 'Administrator')`): `POST /api/planned-absences/:groupId/date/:date` (upsert `{ studentId, kind, note? }` — `note` is **required** when `kind = SABABLI`, i.e. an excused absence must record _why_; the service trims it and rejects an empty reason) and `DELETE /api/planned-absences/:id` (only while `consumedAt IS NULL`). The service reuses `AttendanceValidationService.validateLessonDate` (admins bypass the lesson time window, so today-before-the-lesson and any future scheduled date both pass), verifies an active/started enrollment, and rejects if attendance was already taken for that lesson.
 - **Pre-fill:** `AttendanceReadService.getByDate` returns `plannedKind` / `plannedNote` / `plannedBy` / `plannedId` per student (the real `status` stays `null` — a pre-mark is not attendance). The attendance form seeds a pre-marked student as `EXCUSED` by default.
 - **Consume:** `AttendanceSaveService.save` stamps `consumedAt` on the date's pending pre-marks inside the same Serializable transaction and writes an `Oldindan: sababli/sababsiz` marker onto the `EXCUSED` attendance note when the note is empty (teachers can't write notes themselves).
 - **Billing is untouched.** A pre-mark never bills. On finalize both kinds default to `EXCUSED` (no charge); if the student actually shows up the teacher marks `PRESENT` and normal billing applies. **Consequence:** a pre-announced `SABABSIZ` lands as `EXCUSED`, so it does NOT count toward the 3-strike removal streak (accepted product decision).
@@ -441,18 +443,18 @@ The financial system is built on an **append-only ledger** principle — financi
 
 #### Core Models
 
-| Model | Purpose | Key Fields |
-|-------|---------|------------|
-| `Payment` | Student payments (money in) | `studentId`, `contractId?`, `amount`, `method`, `status`, `source`, `externalId?`, `providerFee?`, `branchId?` |
-| `Transaction` | Universal ledger (all money movement) | `type`, `amount` (signed), `balanceBefore`, `balanceAfter`, `reversedTransactionId?` |
-| `Contract` | Student-course agreement | `contractNumber` (DAF-YYYY-#####), `totalAmount`, `paidAmount`, `status` |
-| `EmployeeSalaryConfig` | Salary configuration per employee | `userId`, `groupId?`, `salaryType`, `value`, `isActive` |
-| `SalaryAccrual` | Per-lesson teacher earnings | `userId`, `studentId`, `groupId`, `lessonDate`, `amount`, `deductionTransactionId?` |
-| `SalaryPayment` | Monthly salary run | `userId`, `periodStart/End`, `amount`, `status` |
-| `Refund` | Student refund request/processing | `studentId`, `contractId`, `requestedAmount`, `approvedAmount?`, `deductions` (JSON), `status` |
-| `Expense` | Company outflows | `category`, `amount`, `branchId?`, `relatedUserId?` (for TEACHER_ADVANCE), `settledBySalaryPaymentId?` |
-| `PaymentGatewayEvent` | Webhook audit log | `provider`, `externalId`, `eventType`, `payload` (JSON), `signatureValid`, `processed` |
-| `PaymeTransaction` | Payme-specific transaction lifecycle | `paymeId`, `amount` (tiyin), `amountInSom`, `state` (1/2/-1/-2), `studentId`, `createTime`, `performTime`, `cancelTime`, `paymentId?` |
+| Model                  | Purpose                               | Key Fields                                                                                                                            |
+| ---------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `Payment`              | Student payments (money in)           | `studentId`, `contractId?`, `amount`, `method`, `status`, `source`, `externalId?`, `providerFee?`, `branchId?`                        |
+| `Transaction`          | Universal ledger (all money movement) | `type`, `amount` (signed), `balanceBefore`, `balanceAfter`, `reversedTransactionId?`                                                  |
+| `Contract`             | Student-course agreement              | `contractNumber` (DAF-YYYY-#####), `totalAmount`, `paidAmount`, `status`                                                              |
+| `EmployeeSalaryConfig` | Salary configuration per employee     | `userId`, `groupId?`, `salaryType`, `value`, `isActive`                                                                               |
+| `SalaryAccrual`        | Per-lesson teacher earnings           | `userId`, `studentId`, `groupId`, `lessonDate`, `amount`, `deductionTransactionId?`                                                   |
+| `SalaryPayment`        | Monthly salary run                    | `userId`, `periodStart/End`, `amount`, `status`                                                                                       |
+| `Refund`               | Student refund request/processing     | `studentId`, `contractId`, `requestedAmount`, `approvedAmount?`, `deductions` (JSON), `status`                                        |
+| `Expense`              | Company outflows                      | `category`, `amount`, `branchId?`, `relatedUserId?` (for TEACHER_ADVANCE), `settledBySalaryPaymentId?`                                |
+| `PaymentGatewayEvent`  | Webhook audit log                     | `provider`, `externalId`, `eventType`, `payload` (JSON), `signatureValid`, `processed`                                                |
+| `PaymeTransaction`     | Payme-specific transaction lifecycle  | `paymeId`, `amount` (tiyin), `amountInSom`, `state` (1/2/-1/-2), `studentId`, `createTime`, `performTime`, `cancelTime`, `paymentId?` |
 
 #### Financial Enums
 
@@ -488,6 +490,7 @@ The financial system is built on an **append-only ledger** principle — financi
 - - **`SalaryCenterTopUpService`** answers "who is the center still owed by" behind the card's Z figure. It reads the SAME accruals over the SAME teacher roster as `getMonthly` (both build the clause from `shared/teacher-roster-where.ts`), so `totals.centerPaid` is `===` `getMonthly`'s `totals.centerStillFronted` — two copies of that clause is the one way the card and its own drill-down could disagree. Per student it returns `centerPaid` (what the center paid the TEACHER for this month's fronted lessons) and **`studentDebt` = the student's debt TODAY, the same figure their profile shows**. The month scopes WHO is listed and what the center paid; it does NOT scope the debt. Two attempts to slice the debt by month were both wrong on production July 2026: reporting the month's lesson cost ignores every payment since (#10026 read 345 000 while owing 156 000), and capping at `min(debt, lesson cost)` failed more quietly — #10058 then read 466 662 against a profile saying 624 989, leaving an admin mid-call with two numbers and no rule for choosing. A balance settles oldest-first across every month, so it has no per-month share to report. Students with nothing left to collect are never listed. **Known defect (documented, NOT fixed):** `isCenterTopUp` is cleared only when retroactive billing settles a previously-unbilled lesson, but a debtor's lesson is billed immediately (the balance just goes negative), so a later payment never clears the flag — all 622 July fronted lessons already carried a `LESSON_CONSUMPTION`, and 6 students back at a zero balance were still flagged. The card therefore overstates Z; the drill-down hides those students and states the difference in one line.
 
 **`SalaryMonthlyService.getMonthlyForUser(userId, …)` is the ONE source of a single teacher's salary figures.** It runs the same `getMonthly` pass and returns `{ month, floorMonth, period, row }` — the teacher row, else the non-teaching FIXED_MONTHLY staff row, else `null`. The teacher profile "Ish haqi" tab, both profile cards, the own-profile card and the lehrer portal all render that row. **Never add a screen that computes a teacher's salary itself** — that is exactly how one teacher came to show four different numbers (a forecast, a period-less accrual sum, a raw `User.balance`, and the real report). Scoping lives in `resolveMonthlyScope`'s `userId`: a caller requesting their OWN row (`userId === performedById`) skips BD branch confinement, so an id-exact self lookup can't come back empty on a `UserBranch`/`mainBranch` mismatch; everyone else keeps the normal branch gate. Parity guard: `scripts/verify-per-user-salary-parity.ts` (read-only, compares every teacher's table row to their single-row response field by field).
+
 - **`SalaryStaffConfigService.listStaff` is the write side of the staff payroll.** `SalaryStaffMonthlyService` has surfaced non-teaching FIXED_MONTHLY staff on the monthly report since 2026-07, but it starts from the CONFIGS — and no screen could create one. `/salary/overview` (the only rate list) filters `roles.some.name = 'Teacher'`, and `/payments/salary/config` redirects into it, so the report's empty state told the CEO to go to a screen where no staff member was listed. Production ran with **13 employees and zero salary configs between them**, which is why the section always rendered empty. This service returns each non-teaching employee and their active rate, and nothing else — deliberately NOT a widened `getOverview`, whose per-teacher `actualEarned` / groups / active-students legs are all structurally 0 for a fixed-monthly administrator and would print "earned nothing" beside a salary owed in full. **Student accounts are Users too** (873 of this company's 886 non-teacher users), so the role filter excludes `['Teacher', 'Student']` — excluding Teacher alone buries the 13 real employees. `status` is NOT filtered (a TERMINATED employee's final prorated month is still payable, exactly as the report pays it); `deletedAt` is the hard exclusion and `isActive` rides along so the UI marks them rather than hides them. Rate-less staff sort FIRST — they are the only actionable rows. Branch scoping is the same ceiling-then-narrow rule as `/salary/overview` (`resolvePayrollBranchScope` + `narrowPayrollScope`, fail-closed). Gated **CEO/BD**, narrower than `/salary/overview`, because this list carries the administrative staff's own pay — see the "Salary config" row of `docs/role-access.md`. Writing a rate is still the existing CEO-only `POST /salary/config`.
 - **`SalarySummaryService.getTeacherSalarySummary` carries NO monthly money.** It returns group CONTEXT (groupId, name, active students, salary type/value, course price) plus `actualEarned` / `paidTotal` / advances for callers that still want lifetime figures. Its `expectedMonthly` and `expectedPerLesson` forecast fields were **deleted** — they were computed from a hardcoded `exactDays.length * 4` lessons-per-month and contradicted the real report. Do not re-add them.
 - **`SalaryOverviewService.getOverview`** reproduces `SalarySummaryService.getTeacherSalarySummary`'s actual-earned math in **bulk** (one query per metric across the page of teachers). No longer the main `/payments/salary` view; now feeds the ⚙ Sozlamalar rate list (teachers + their active configs). `actualEarned` = unpaid (`salaryPaymentId: null`), non-reversed accruals sum.
@@ -517,6 +520,7 @@ The financial system is built on an **append-only ledger** principle — financi
   The retyped `confirmAmount` is re-checked server-side — a set that moved after the dialog opened is refused, not partly settled. `PAID`/`CANCELLED` rows never enter the candidate set (which is what makes a repeat call a no-op), and each write re-reads its row inside its own Serializable tx so a concurrent settle is skipped rather than doubled. `SalaryPayment.note` gets a `Tashqarida berilgan oylik tasdiqlandi (<sana>)` marker alongside `paidById`/`paidAt`, and the ledger row's description says the same, so the row explains itself years later.
 
   **Two consequences to expect.** The month becomes a CLOSED payroll period, so a late student payment settling one of its lessons carries the teacher's accrual forward to the current period via `creditPeriodDate` ("Oldingi oydan") — the designed behaviour, nothing is lost. And **net profit does not move**: `getMonthlyNetProfit` subtracts DESERVED salary, not `paidAt`. What moves is the cash-basis surfaces (`/overview` «Ustoz oyliklari — to'langan», the Excel «Oyliklar» sheet, Foyda-zarar), which is exactly why `paidAt` is the real handover date the CEO enters rather than `now()`.
+
 - **No tax calculation** — the system does not compute or apply taxes. Possible deductions (Ustoz oyligidan 12%, Markaz qo'shimchasi 12%, Markaz daromad solig'i 4%, gateway commissions 2%) are surfaced as a static informational note in the salary UI only — they are not stored, not aggregated, not deducted from any payment
 
 #### Transactions Module (`src/transactions/`) — Universal Ledger
@@ -563,14 +567,14 @@ It also returns per-day `events` — enrolment transitions (`EnrollmentStateLog`
 
 `ReportsService.getMonthlyNetProfit` is the ONE net-profit figure. Four surfaces used to compute their own, so the same month showed four numbers:
 
-| Surface | Was | Now |
-|---|---|---|
-| `/overview` Foyda card | canonical ✅ | unchanged |
-| Telegram 21:00 daily report | `tushum − xarajat − avans` — **no salary subtracted at all** | canonical, with the cash reading on its own line |
-| Telegram `rm:cfin` card | legacy cash `overview.netProfit` | canonical |
-| Foyda-card click-through chart | legacy cash | renamed «Kassa oqimi» — see below |
+| Surface                        | Was                                                          | Now                                              |
+| ------------------------------ | ------------------------------------------------------------ | ------------------------------------------------ |
+| `/overview` Foyda card         | canonical ✅                                                 | unchanged                                        |
+| Telegram 21:00 daily report    | `tushum − xarajat − avans` — **no salary subtracted at all** | canonical, with the cash reading on its own line |
+| Telegram `rm:cfin` card        | legacy cash `overview.netProfit`                             | canonical                                        |
+| Foyda-card click-through chart | legacy cash                                                  | renamed «Kassa oqimi» — see below                |
 
-- The daily report's old formula was the worst: payroll is never written to `Expense`, so **no salary was deducted**, yet advance cash *was* — and the same message printed the full deserved salary a few lines lower. Both Telegram surfaces now call the canonical figure with a CEO caller (company-wide) and **fall back to an honestly-labelled cash line** if it fails, so a wrong number never wears the "Sof foyda" label.
+- The daily report's old formula was the worst: payroll is never written to `Expense`, so **no salary was deducted**, yet advance cash _was_ — and the same message printed the full deserved salary a few lines lower. Both Telegram surfaces now call the canonical figure with a CEO caller (company-wide) and **fall back to an honestly-labelled cash line** if it fails, so a wrong number never wears the "Sof foyda" label.
 - The **trend chart now plots the canonical figure too**, made affordable by a per-month **day cache** (`net-profit-cache.ts`). Six months × one `getMonthlyNetProfit` each is roughly ten times the queries of the cash basis, which is why the series was cheap before; a day is the right granularity because these numbers drift slowly (recognised revenue is keyed by attendance date, so a late payment never moves it — only the covered/gap split shifts). The first chart open of the Tashkent day computes, the rest are free.
   - Key is per `(company, branch, month)` so overlapping ranges reuse entries and a branch-filtered view never reads the company-wide figure. TTL runs to the next **Tashkent** midnight.
   - A Redis outage degrades to computing, never to failing; a month whose canonical figure cannot be produced keeps its cash value and is flagged `profitBasis: 'kassa'`, so one bad point never takes the chart down.
@@ -596,7 +600,7 @@ It also returns per-day `events` — enrolment transitions (`EnrollmentStateLog`
   - `tryResolveUserBranchId(db, userId)` — employee branch (`mainBranch`, else the single `UserBranch` row). Returns `null` for a deliberately branch-less CEO.
 - **Student priority is `StudentBranch` first, active enrollment second.** `StudentBranch` is what every read path filters on (`/students?branch_id=`, debtors, balance sheet), so money must be attributed the same way the lists slice it.
 - **`TransactionsWriteService` resolves the branch itself** for every student-scoped method, so callers cannot forget. Passing an explicit `branchId` still wins (contract-derived payments rely on this).
-- **Cash movements follow the same branch**: a refund or salary payment leaves that branch's kassa, never a company-wide one. **There is no company-level cash account any more** — `CashAccount.branchId` and `Expense.branchId` are `NOT NULL`, `CashAccountsService.create` rejects a branch-less account, and `resolveAccountId` no longer falls back. A movement for a *named* branch with no account now **throws** instead of no-opping with a warning; only a branch-less caller (a CEO salary, which spans branches) still degrades to a warning. The old fallback is what let 4 refunds and a salary payment drift a company account to −1 107 000 so'm while the branch's balance stayed that much too high.
+- **Cash movements follow the same branch**: a refund or salary payment leaves that branch's kassa, never a company-wide one. **There is no company-level cash account any more** — `CashAccount.branchId` and `Expense.branchId` are `NOT NULL`, `CashAccountsService.create` rejects a branch-less account, and `resolveAccountId` no longer falls back. A movement for a _named_ branch with no account now **throws** instead of no-opping with a warning; only a branch-less caller (a CEO salary, which spans branches) still degrades to a warning. The old fallback is what let 4 refunds and a salary payment drift a company account to −1 107 000 so'm while the branch's balance stayed that much too high.
 - **Expense reads are branch-scoped**: `ExpensesService.buildWhere` applies `query.branchId`. It previously accepted the filter and ignored it, so the list, the summary cards and the PDF always showed company-wide figures — under a header that printed the selected branch's name.
 - **`SALARY_ACCRUAL` takes the GROUP's branch, not the teacher's**, and it is **stamped (frozen) at write time** rather than joined live — a group that later moves branch must not rewrite settled payroll history.
 - **Three services write `Transaction` rows outside `TransactionsWriteService`** and each resolves the branch itself: `salary-accrual.service.ts`, `mock-exam-billing.service.ts`, `withdrawals.service.ts`. If you add a fourth, stamp the branch there too.
@@ -670,7 +674,7 @@ When adding a new id-addressed mutation, check the record's branch against the c
   - `maxRefundable = max(0, balance + prepaidRefundValue(prepaidLessonsRemaining))`
   - Free balance is drawn first. Only the shortfall comes out of the lessons, and `quickRefund` cancels the **fewest** lessons that cover it — walking up from one lesson rather than dividing, because a cycle's last lesson absorbs the rounding remainder and is not the base price.
   - Cancelling means `EnrollmentBillingService.releasePrepaidLessons`: credit their money via an `ADJUSTMENT` **and decrement the counter in the same step**. The student leaves with fewer lessons ahead of them, which is what taking the money back means.
-- **Never re-derive "unused lessons" from attendance.** The version removed in 2026-08 computed `overDeducted = lesson deductions − PRESENT/LATE attendance` and credited it back. The ledger deducts exactly `attendance + prepaidLessonsRemaining`, so that difference is *always* the ABSENT lessons plus lessons still reserved — never over-deduction. It credited money nobody had paid, left `prepaidLessonsRemaining` untouched so the same lessons stayed covered (one payment counted twice), and since neither side of the subtraction changed, **every subsequent refund offered the whole thing again**. #10393 gained 266 664 so'm on 2026-08-18 and its refund ceiling ROSE from 266 681 to 433 345; #10655 gained 233 331 in July and had to be cleaned up by hand. 281 of 420 active enrollments were exposed, 54.9 mln so'm in total.
+- **Never re-derive "unused lessons" from attendance.** The version removed in 2026-08 computed `overDeducted = lesson deductions − PRESENT/LATE attendance` and credited it back. The ledger deducts exactly `attendance + prepaidLessonsRemaining`, so that difference is _always_ the ABSENT lessons plus lessons still reserved — never over-deduction. It credited money nobody had paid, left `prepaidLessonsRemaining` untouched so the same lessons stayed covered (one payment counted twice), and since neither side of the subtraction changed, **every subsequent refund offered the whole thing again**. #10393 gained 266 664 so'm on 2026-08-18 and its refund ceiling ROSE from 266 681 to 433 345; #10655 gained 233 331 in July and had to be cleaned up by hand. 281 of 420 active enrollments were exposed, 54.9 mln so'm in total.
 - **Pricing goes through `EnrollmentBillingService.prepaidRefundValue`** — the batch's own `amount`, so discounts, contract prices and the cycle rounding remainder are all already in it. Do not recompute `course.price / lessonPaymentCount` at a call site; that figure ignores the student's discount.
 - **`reverse()` unwinds both halves.** The release `ADJUSTMENT` is tagged `metadata = { refundId, lessonsReleased }` (Transaction has no refund FK), so reversing a refund reverses that row too and increments `prepaidLessonsRemaining` back. Reversing only the payout leaves the student holding the credit AND missing the lessons.
 - **No "% of course" rule.** The old 50%-completed gate divided by `lessonPaymentCount`, which is the size of a **billing cycle**, not the course — a student 19 lessons into a 12-lesson cycle read as "158% attended". There is no total-lessons figure in the schema to divide by, so the warning was removed rather than made up. The preview warns about something true instead (no prepaid lessons → balance only).
@@ -717,18 +721,19 @@ Full integration with Paycom's JSON-RPC 2.0 Merchant API. Paycom sends requests 
 
 **6 RPC Methods**:
 
-| Method | Purpose | Key Logic |
-|--------|---------|-----------|
-| `CheckPerformTransaction` | Validate if payment is possible | Checks student exists + amount > 0 |
-| `CreateTransaction` | Create pending transaction (state=1) | Idempotent by `paymeId`; cancels existing pending txns for same student |
-| `PerformTransaction` | Complete payment (state=2) | Calls `PaymentsService.createFromExternal()` to credit student balance |
-| `CancelTransaction` | Cancel transaction | state=1→-1 (no financial impact); state=2→reverse the linked ERP payment then mark -2. Returns error -31007 (CANNOT_CANCEL) **only** when the reversal is blocked (funds already spent on lessons) — left state=2 for the admin to resolve. Reversal + the -2 write happen before responding so Payme is never told "refunded" while the balance is still out. |
-| `CheckTransaction` | Get transaction status | Returns full state |
-| `GetStatement` | List transactions in time range | For Paycom reconciliation |
+| Method                    | Purpose                              | Key Logic                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CheckPerformTransaction` | Validate if payment is possible      | Checks student exists + amount > 0                                                                                                                                                                                                                                                                                                                             |
+| `CreateTransaction`       | Create pending transaction (state=1) | Idempotent by `paymeId`; cancels existing pending txns for same student                                                                                                                                                                                                                                                                                        |
+| `PerformTransaction`      | Complete payment (state=2)           | Calls `PaymentsService.createFromExternal()` to credit student balance                                                                                                                                                                                                                                                                                         |
+| `CancelTransaction`       | Cancel transaction                   | state=1→-1 (no financial impact); state=2→reverse the linked ERP payment then mark -2. Returns error -31007 (CANNOT_CANCEL) **only** when the reversal is blocked (funds already spent on lessons) — left state=2 for the admin to resolve. Reversal + the -2 write happen before responding so Payme is never told "refunded" while the balance is still out. |
+| `CheckTransaction`        | Get transaction status               | Returns full state                                                                                                                                                                                                                                                                                                                                             |
+| `GetStatement`            | List transactions in time range      | For Paycom reconciliation                                                                                                                                                                                                                                                                                                                                      |
 
 **Transaction states**: 1=created, 2=performed, -1=cancelled, -2=refunded
 
 **Student Portal checkout** (`POST /api/student-portal/payments/init`):
+
 - Student selects Payme + enters amount → backend generates checkout URL → frontend redirects to Payme
 - Checkout URL format: `https://checkout.paycom.uz/{base64(params)}` (production) or `https://test.paycom.uz/{base64(params)}` (test)
 - After payment, Paycom calls our webhook with the 6 RPC methods above
@@ -752,26 +757,27 @@ Full integration with Click's two-phase SHOP-API. Click sends POST requests to o
 
 **Two-phase webhook flow**:
 
-| Phase | Action | Purpose | Key Logic |
-|-------|--------|---------|-----------|
-| `Prepare` | 0 | Validate and reserve | Checks student exists + amount > 0; creates `ClickTransaction` (status=1) |
-| `Complete` | 1 | Confirm and finalize | Calls `PaymentsService.createFromExternal()` to credit student balance; updates status=2 |
+| Phase      | Action | Purpose              | Key Logic                                                                                |
+| ---------- | ------ | -------------------- | ---------------------------------------------------------------------------------------- |
+| `Prepare`  | 0      | Validate and reserve | Checks student exists + amount > 0; creates `ClickTransaction` (status=1)                |
+| `Complete` | 1      | Confirm and finalize | Calls `PaymentsService.createFromExternal()` to credit student balance; updates status=2 |
 
 **Error codes** (returned by us):
 
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| -1 | SIGN CHECK FAILED (invalid MD5 signature) |
-| -2 | Incorrect parameter amount |
-| -4 | Already paid |
-| -5 | User does not exist |
-| -6 | Transaction does not exist |
-| -9 | Transaction cancelled |
+| Code | Meaning                                   |
+| ---- | ----------------------------------------- |
+| 0    | Success                                   |
+| -1   | SIGN CHECK FAILED (invalid MD5 signature) |
+| -2   | Incorrect parameter amount                |
+| -4   | Already paid                              |
+| -5   | User does not exist                       |
+| -6   | Transaction does not exist                |
+| -9   | Transaction cancelled                     |
 
 **Transaction states**: 0=pending, 1=prepared, 2=completed, -1=cancelled
 
 **Student Portal checkout** (`POST /api/student-portal/payments/init` with `method: "CLICK"`):
+
 - Student selects Click + enters amount → backend generates redirect URL → frontend redirects to Click
 - Redirect URL: `https://my.click.uz/services/pay?service_id=X&merchant_id=X&amount=X&transaction_param=studentId&return_url=X`
 - After payment, Click calls our webhook with Prepare then Complete
@@ -784,16 +790,31 @@ The billing model is **prepaid-by-batch**, not cycle-boundary. Both manual and Q
 
 ##### Status transition matrix
 
-| oldStatus | newStatus | Action |
-|---|---|---|
-| (yo'q) | ABSENT/EXCUSED | no-op |
-| (yo'q) | PRESENT/LATE | **bill** (consume or refill) |
-| ABS/EXC | ABS/EXC | no-op |
-| ABS/EXC | PRESENT/LATE | **bill** |
-| PRES/LATE | PRES/LATE | no-op |
-| PRES/LATE | ABS/EXC | **reverse** (consumption + prepaid +1 + accrual reverse) |
+**ABSENT IS BILLABLE.** The rule is "a lesson held is a lesson paid": the
+student's quota is consumed for any status confirming the lesson took place,
+whether or not they showed up. Only `EXCUSED` ("uzrli sabab — kechirildi")
+and cancelled lessons skip billing. The one line of truth is
+`BILLABLE` in `billing/lesson-billing.service.ts`, and the whole decision is
+`wasBillable` vs `isBillable` — there is no per-pair table in the code.
 
-##### Billing algorithm (PRESENT/LATE branch)
+An earlier version of this matrix grouped ABSENT with EXCUSED. It cost a real
+investigation (student #10061) before anyone checked the code, which is why
+the set is written out here rather than described.
+
+|               | PRESENT | LATE | ABSENT  | EXCUSED |
+| ------------- | ------- | ---- | ------- | ------- |
+| **billable?** | yes     | yes  | **yes** | no      |
+
+| oldStatus               | newStatus                   | Action                                                   |
+| ----------------------- | --------------------------- | -------------------------------------------------------- |
+| (yo'q)                  | PRESENT / LATE / **ABSENT** | **bill** (consume or refill)                             |
+| (yo'q)                  | EXCUSED                     | no-op                                                    |
+| EXCUSED                 | PRESENT / LATE / **ABSENT** | **bill**                                                 |
+| PRESENT / LATE / ABSENT | EXCUSED                     | **reverse** (consumption + prepaid +1 + accrual reverse) |
+| PRESENT / LATE / ABSENT | PRESENT / LATE / ABSENT     | no-op — both sides billable                              |
+| EXCUSED                 | EXCUSED                     | no-op                                                    |
+
+##### Billing algorithm (billable branch)
 
 1. **Idempotency**: skip if a non-reversed `LESSON_CONSUMPTION` already exists for `attendanceId`.
 2. **Lock** `Enrollment` row (`SELECT FOR UPDATE`).
@@ -822,6 +843,7 @@ The billing model is **prepaid-by-batch**, not cycle-boundary. Both manual and Q
 `reverseTransaction()` writes a new reversal row AND sets `reversedAt`/`reversedById` on the original. All "still-active" filters (idempotency checks, partial unique indexes, downstream consumption queries, refund eligibility, debt aggregations) use `reversedAt: null` as the canonical "this row is still in effect" predicate.
 
 Two partial unique indexes back this:
+
 - `tx_consumption_per_attendance_unique`: `(attendanceId) WHERE type='LESSON_CONSUMPTION' AND reversedAt IS NULL`
 - `tx_initial_balance_per_student_unique`: `(studentId) WHERE type='INITIAL_BALANCE' AND reversedAt IS NULL`
 
@@ -844,6 +866,7 @@ Two partial unique indexes back this:
 ##### Lesson-deduction reversal endpoint
 
 `POST /billing/lesson-deduction/:id/reverse` (CEO/BD) — undoes an entire prepaid batch:
+
 - Reverses the deduction (balance restored).
 - Reverses every linked `SalaryAccrual`.
 - Reverses every `LESSON_CONSUMPTION` for the same enrollment dated after the batch.
@@ -876,7 +899,7 @@ When a student pays late and retroactive billing settles a lesson whose own payr
 - **Rate is unaffected**: `findActiveVersion` still keys off the original `lessonDate`, so a past lesson keeps its past rate.
 - **Notification**: `createAccrual` pushes a `CarriedOverAccrual` into an optional `carriedOverSink` (threaded from `LessonBillingService.processRetroactiveBillingForStudent` → `bill()`/`settleDeferredAccruals`). `PaymentsWriteService.create()`/`createFromExternal()` collect the list and emit `salary.carried-over` **after the tx commits** (gated on `!outerTx`, like the receipt). `NotificationEventsListener` groups by teacher and fans out one message per teacher across all four channels.
 - **UI**: breakdown lines expose `isCarriedOver`; totals expose `carriedOverTotal`/`carriedOverCount`. A purple "Oldingi oydan" badge + a "shundan oldingi oydan" subtotal show on both the admin `salary-breakdown-drawer.tsx` and the teacher `teacher-salary-client.tsx`.
-- **Limitation**: accruals lost to the *old* refuse-and-log behaviour (before this shipped) can't be auto-recovered — admin uses Balance Withdrawal `creditTeacher`.
+- **Limitation**: accruals lost to the _old_ refuse-and-log behaviour (before this shipped) can't be auto-recovered — admin uses Balance Withdrawal `creditTeacher`.
 
 #### Salary Versioning (`EmployeeSalaryConfigVersion`)
 
@@ -896,10 +919,10 @@ Value is per-student-per-cycle, NOT per-lesson. Per-lesson amount in `createAccr
 
 `computePeriodBounds` returns **two** pairs, and picking the wrong one silently double-counts a day:
 
-| Pair | Use with | Columns |
-|---|---|---|
-| `periodStart` / `periodEnd` (Tashkent-shifted instants, `lte`) | TIMESTAMP columns | `SalaryAccrual.creditPeriodDate`, `SalaryPayment.periodStart/End`, `EmployeeSalaryConfigVersion.effectiveFrom/To` |
-| `periodStartDate` / `periodEndDateExclusive` (unshifted UTC dates, **`lt`**) | `@db.Date` columns | `SalaryAccrual.lessonDate`, `Attendance.date`, `Expense.date` |
+| Pair                                                                         | Use with           | Columns                                                                                                           |
+| ---------------------------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `periodStart` / `periodEnd` (Tashkent-shifted instants, `lte`)               | TIMESTAMP columns  | `SalaryAccrual.creditPeriodDate`, `SalaryPayment.periodStart/End`, `EmployeeSalaryConfigVersion.effectiveFrom/To` |
+| `periodStartDate` / `periodEndDateExclusive` (unshifted UTC dates, **`lt`**) | `@db.Date` columns | `SalaryAccrual.lessonDate`, `Attendance.date`, `Expense.date`                                                     |
 
 **Why:** Postgres compares a `date` column against a timestamp by truncating the timestamp to its UTC calendar date. The Tashkent-shifted start of July is `2026-06-30T19:00:00Z`, which truncates to **2026-06-30** — so `lessonDate >= periodStart` swept the last day of June into July, and that day counted in **both** periods. Measured on production: July's salary figure was inflated by **1 819 343 so'm**, and the error flowed into the Foyda card, the Excel «Sof foyda» sheet and the Telegram daily report. Fixing the bounds dropped the July figure from 90 824 433 to 89 005 090.
 
@@ -969,7 +992,7 @@ Invariants, and the one that is impossible: **`Σ remainder === Student.balance`
 
 **The card's vocabulary is part of the fix.** `remainderInBalance` is gone and must not come back under any name that claims a holding: it is what let a student read "233 339 qoldi" while owing money. The field is `unspent`, rendered as "Sarflanmagan qoldiq", never green while the balance is negative, with today's real balance on the latest payment card.
 
-Deliberately NOT merged into this engine: `getIncomeMonthAttribution` (`reports-financial.service.ts`). It filters reversals on purpose — it reports *corrected* history, while the card reports what the admin actually saw that day. Two questions, two engines, each documented; a shared flag would hide the difference.
+Deliberately NOT merged into this engine: `getIncomeMonthAttribution` (`reports-financial.service.ts`). It filters reversals on purpose — it reports _corrected_ history, while the card reports what the admin actually saw that day. Two questions, two engines, each documented; a shared flag would hide the difference.
 
 #### Lesson Trail (`GET /transactions/student/:id/lesson-trail`)
 
@@ -1011,20 +1034,20 @@ When an enrollment closes (TRANSFERRED or DROPPED), unused prepaid lessons are c
 
 #### RBAC for Financial Features
 
-| Feature | CEO | BD | Admin | Cashier | Teacher |
-|---------|:---:|:--:|:-----:|:-------:|:-------:|
-| Create payment | ✅ | ✅ | ✅ | ✅ | ❌ |
-| Reverse payment | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Correct payment amount | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Salary config | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Calculate salary | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Approve salary | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Pay salary | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Create refund | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Reverse refund | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Create expense | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Financial reports | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Debt page reads (history, aging, write-off list) | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Feature                                          | CEO | BD  | Admin | Cashier | Teacher |
+| ------------------------------------------------ | :-: | :-: | :---: | :-----: | :-----: |
+| Create payment                                   | ✅  | ✅  |  ✅   |   ✅    |   ❌    |
+| Reverse payment                                  | ✅  | ❌  |  ❌   |   ❌    |   ❌    |
+| Correct payment amount                           | ✅  | ✅  |  ✅   |   ❌    |   ❌    |
+| Salary config                                    | ✅  | ✅  |  ❌   |   ❌    |   ❌    |
+| Calculate salary                                 | ✅  | ❌  |  ❌   |   ❌    |   ❌    |
+| Approve salary                                   | ✅  | ❌  |  ❌   |   ❌    |   ❌    |
+| Pay salary                                       | ✅  | ✅  |  ❌   |   ❌    |   ❌    |
+| Create refund                                    | ✅  | ✅  |  ✅   |   ❌    |   ❌    |
+| Reverse refund                                   | ✅  | ❌  |  ❌   |   ❌    |   ❌    |
+| Create expense                                   | ✅  | ✅  |  ❌   |   ❌    |   ❌    |
+| Financial reports                                | ✅  | ✅  |  ❌   |   ❌    |   ❌    |
+| Debt page reads (history, aging, write-off list) | ✅  | ✅  |  ✅   |   ✅    |   ❌    |
 
 ### Comments & Task Assignment
 
@@ -1081,7 +1104,13 @@ When an enrollment closes (TRANSFERRED or DROPPED), unused prepaid lessons are c
 
 - **One file = one responsibility** (Single Responsibility Principle)
 - Components: **100–300 lines** target
-- Hard maximum: **500 lines**
+- **500 lines is the limit for NEW files, not a claim about existing ones.**
+  46 service/util files and 28 spec files are already over it, the largest at
+  1742 (`reports/reports-financial.service.ts`). Written as a "hard maximum"
+  it read as a description of the codebase, which made it easy to assume a
+  long file must be somebody else's problem. It is a rule for what you add:
+  do not create a new file above 500 lines, and do not push an existing one
+  further past it.
 - If a file grows too large — split into smaller, focused parts
 
 ### Lazy Data Loading for Tabs
@@ -1131,6 +1160,17 @@ The `User` model has two related fields: `isActive: Boolean` and `status: UserSt
 - Test both success paths **and** error paths (NotFoundException, ForbiddenException, BadRequestException)
 - Run tests: `npm test` (all), `npx jest <path>` (specific file)
 - **Always run the full test suite (`npm test`) after finishing changes** to verify nothing is broken — all tests must pass before the work is considered complete
+- **Green tests do not mean the types are right.** `ts-jest` runs with
+  `isolatedModules`, i.e. transpile-only: a spec can mock a signature that no
+  longer exists and still pass. `npm run typecheck` (`tsconfig.check.json`) is
+  what type-checks `src/` INCLUDING specs — `npm run build` cannot, its
+  tsconfig excludes them. Run both.
+- **Lint is a gate, not a suggestion.** CI runs `npx eslint src` on both
+  workspaces and fails on ERRORS (warnings are reported and do not block —
+  the `no-unsafe-*` family fires on every Prisma JSON field here, ~9,900
+  times, none of them defects). The error set is triaged to zero; keep it
+  there. Formatting is Prettier's, enforced through ESLint — run
+  `npx prettier --write` on files you touch.
 
 ## Commands
 
@@ -1151,6 +1191,10 @@ The `User` model has two related fields: `isActive: Boolean` and `status: UserSt
 - **This file (CLAUDE.md) must be written entirely in English.** All section headings, descriptions, rules, and comments must use English only.
 - Uzbek text is acceptable **only** when quoting exact UI strings, error messages, or API response messages that appear in the application.
 - When adding new sections or editing existing ones, always write in English.
+- **This rule governs this file alone.** It is not a rule about the codebase:
+  ADRs under `docs/adr/` are written in Uzbek by design, and code comments use
+  whichever language explains the thing best — often Uzbek where the subject is
+  a domain term the business uses in Uzbek.
 
 ## Available Skills
 
@@ -1158,33 +1202,33 @@ Skills are specialized knowledge modules that **must** be activated when working
 
 ### Slash Commands (`.claude/commands/`)
 
-| Command | When to use |
-|---------|-------------|
-| `/deploy` | Deploy to Vercel + Railway + Auto-Merge |
-| `/restart` | Restart dev servers |
-| `/team-deploy` | Safe team deployment |
-| `/team-merge` | Safe PR merge |
+| Command        | When to use                             |
+| -------------- | --------------------------------------- |
+| `/deploy`      | Deploy to Vercel + Railway + Auto-Merge |
+| `/restart`     | Restart dev servers                     |
+| `/team-deploy` | Safe team deployment                    |
+| `/team-merge`  | Safe PR merge                           |
 
 ### Context7 Skills (auto-triggered)
 
-| Skill | When to use |
-|-------|-------------|
-| `nestjs-best-practices` | NestJS module, DI, security, architecture patterns |
-| `typescript-expert` | TypeScript type-level programming, performance, migration |
-| `prisma-cli` | Prisma CLI: migrate, generate, seed, studio |
-| `prisma-client-api` | Prisma query, filter, CRUD, client configuration |
-| `prisma-database-setup` | Prisma + PostgreSQL/MySQL/SQLite connection and setup |
-| `prisma-postgres` | Prisma Postgres provisioning and management |
-| `docker-expert` | Docker containerization, multi-stage builds, orchestration |
-| `redis-development` | Redis data structures, performance, caching |
-| `use-railway` | Railway deploy, services, databases, domains |
+| Skill                   | When to use                                                |
+| ----------------------- | ---------------------------------------------------------- |
+| `nestjs-best-practices` | NestJS module, DI, security, architecture patterns         |
+| `typescript-expert`     | TypeScript type-level programming, performance, migration  |
+| `prisma-cli`            | Prisma CLI: migrate, generate, seed, studio                |
+| `prisma-client-api`     | Prisma query, filter, CRUD, client configuration           |
+| `prisma-database-setup` | Prisma + PostgreSQL/MySQL/SQLite connection and setup      |
+| `prisma-postgres`       | Prisma Postgres provisioning and management                |
+| `docker-expert`         | Docker containerization, multi-stage builds, orchestration |
+| `redis-development`     | Redis data structures, performance, caching                |
+| `use-railway`           | Railway deploy, services, databases, domains               |
 
 ### Agent Skills (`.agents/skills/`)
 
-| Skill | When to use |
-|-------|-------------|
+| Skill                  | When to use                                             |
+| ---------------------- | ------------------------------------------------------- |
 | `telegram-bot-builder` | Telegram bot development, scenes, handlers, middlewares |
-| `documentation-writer` | Writing technical documentation |
+| `documentation-writer` | Writing technical documentation                         |
 
 ### Skill Usage Rule
 
@@ -1206,25 +1250,25 @@ Skills are specialized knowledge modules that **must** be activated when working
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|---|---|---|
-| `DATABASE_URL` | PostgreSQL connection string | — |
-| `JWT_SECRET` | Secret for JWT signing | — |
-| `REDIS_HOST` | Redis host | `localhost` |
-| `REDIS_PORT` | Redis port | `6379` |
-| `PORT` | Server port | `4000` |
-| `NODE_ENV` | Environment | `development` |
-| `VAPID_PUBLIC_KEY` | Web Push VAPID public key | — |
-| `VAPID_PRIVATE_KEY` | Web Push VAPID private key | — |
-| `VAPID_EMAIL` | VAPID contact email | `mailto:admin@dafzentrum.uz` |
-| `PAYME_MERCHANT_ID` | Paycom merchant/kassa ID | — |
-| `PAYME_MERCHANT_KEY` | Paycom production secret key | — |
-| `PAYME_MERCHANT_KEY_TEST` | Paycom test/sandbox secret key | — |
-| `CLICK_MERCHANT_ID` | Click merchant ID | — |
-| `CLICK_SERVICE_ID` | Click service ID | — |
-| `CLICK_SECRET_KEY` | Click secret key for MD5 signature verification | — |
-| `STUDENT_ATTENDANCE_NOTIFICATIONS_ENABLED` | Gate for per-student attendance Telegram messages (`'true'` to enable) | _disabled_ |
-| `CRONS_ENABLED` | Set to `'false'` to skip `ScheduleModule.forRoot()`. Default (unset) = crons RUN, so production is unaffected. Exists so a LOCAL server can be pointed at the production database without its schedule firing — otherwise the laptop sends attendance reminders to real teachers every 30 min, writes the 23:40 snapshot and runs the 02:00 payroll. Blank `TELEGRAM_BOT_TOKEN=` / `TELEGRAM_ADMIN_BOT_TOKEN=` alongside it, or the local process polls the real bots. | _crons on_ |
-| `TELEGRAM_OAUTH_CLIENT_ID` | Telegram OIDC client id (BotFather → Login Widget) | — |
-| `TELEGRAM_OAUTH_CLIENT_SECRET` | Telegram OIDC client secret | — |
-| `TELEGRAM_OAUTH_REDIRECT_URI` | Must byte-match a BotFather Redirect URI | — |
+| Variable                                   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Default                      |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `DATABASE_URL`                             | PostgreSQL connection string                                                                                                                                                                                                                                                                                                                                                                                                                                           | —                            |
+| `JWT_SECRET`                               | Secret for JWT signing                                                                                                                                                                                                                                                                                                                                                                                                                                                 | —                            |
+| `REDIS_HOST`                               | Redis host                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `localhost`                  |
+| `REDIS_PORT`                               | Redis port                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `6379`                       |
+| `PORT`                                     | Server port                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `4000`                       |
+| `NODE_ENV`                                 | Environment                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `development`                |
+| `VAPID_PUBLIC_KEY`                         | Web Push VAPID public key                                                                                                                                                                                                                                                                                                                                                                                                                                              | —                            |
+| `VAPID_PRIVATE_KEY`                        | Web Push VAPID private key                                                                                                                                                                                                                                                                                                                                                                                                                                             | —                            |
+| `VAPID_EMAIL`                              | VAPID contact email                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `mailto:admin@dafzentrum.uz` |
+| `PAYME_MERCHANT_ID`                        | Paycom merchant/kassa ID                                                                                                                                                                                                                                                                                                                                                                                                                                               | —                            |
+| `PAYME_MERCHANT_KEY`                       | Paycom production secret key                                                                                                                                                                                                                                                                                                                                                                                                                                           | —                            |
+| `PAYME_MERCHANT_KEY_TEST`                  | Paycom test/sandbox secret key                                                                                                                                                                                                                                                                                                                                                                                                                                         | —                            |
+| `CLICK_MERCHANT_ID`                        | Click merchant ID                                                                                                                                                                                                                                                                                                                                                                                                                                                      | —                            |
+| `CLICK_SERVICE_ID`                         | Click service ID                                                                                                                                                                                                                                                                                                                                                                                                                                                       | —                            |
+| `CLICK_SECRET_KEY`                         | Click secret key for MD5 signature verification                                                                                                                                                                                                                                                                                                                                                                                                                        | —                            |
+| `STUDENT_ATTENDANCE_NOTIFICATIONS_ENABLED` | Gate for per-student attendance Telegram messages (`'true'` to enable)                                                                                                                                                                                                                                                                                                                                                                                                 | _disabled_                   |
+| `CRONS_ENABLED`                            | Set to `'false'` to skip `ScheduleModule.forRoot()`. Default (unset) = crons RUN, so production is unaffected. Exists so a LOCAL server can be pointed at the production database without its schedule firing — otherwise the laptop sends attendance reminders to real teachers every 30 min, writes the 23:40 snapshot and runs the 02:00 payroll. Blank `TELEGRAM_BOT_TOKEN=` / `TELEGRAM_ADMIN_BOT_TOKEN=` alongside it, or the local process polls the real bots. | _crons on_                   |
+| `TELEGRAM_OAUTH_CLIENT_ID`                 | Telegram OIDC client id (BotFather → Login Widget)                                                                                                                                                                                                                                                                                                                                                                                                                     | —                            |
+| `TELEGRAM_OAUTH_CLIENT_SECRET`             | Telegram OIDC client secret                                                                                                                                                                                                                                                                                                                                                                                                                                            | —                            |
+| `TELEGRAM_OAUTH_REDIRECT_URI`              | Must byte-match a BotFather Redirect URI                                                                                                                                                                                                                                                                                                                                                                                                                               | —                            |

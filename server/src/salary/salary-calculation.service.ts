@@ -500,11 +500,23 @@ export class SalaryCalculationService {
 
   /**
    * Bulk in-memory gap sweep — one query per input, no per-lesson DB lookups.
-   * Mirrors `SalaryMonthlyService.getMonthly`'s deserved/gap pass and the
-   * forecast script; all three share `deserved-math` so they stay in lock-step.
+   *
+   * The selection rule itself is NOT here: it lives in `sweepGapLessons`, the
+   * same function `SalaryMonthlyService.getMonthly` and the center top-up call.
+   * This method's job is to fetch the inputs and hand them over.
+   *
+   * An earlier version of this comment said the three "share `deserved-math`
+   * so they stay in lock-step". They shared the rate arithmetic and each kept
+   * its own copy of which lessons to sweep — which is a different thing, and
+   * the copies were free to drift. `gap-sweep.single-source.spec.ts` now fails
+   * if a file under `src/salary` names `NEW_STUDENT_TOPUP_MIN_LESSONS` without
+   * going through the shared sweep.
+   *
    * Returns per-teacher gap specs (uncovered billable lessons with a resolvable,
    * non-FIXED_MONTHLY rate). Config-gap lessons (no active rate at `lessonDate`)
-   * are skipped — a rate is never fabricated.
+   * are skipped — a rate is never fabricated. `skipZeroAmount` is the one
+   * deliberate difference from the other two callers, and it is a named option
+   * rather than a reimplementation.
    */
   private async computeGapAccruals(
     companyId: number,

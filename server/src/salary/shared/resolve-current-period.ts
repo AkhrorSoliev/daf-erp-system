@@ -7,6 +7,21 @@ import { PrismaService } from '../../prisma/prisma.service';
 // expose `.salaryPeriodSetting.findFirst`, which is all this module uses.
 type PrismaLike = PrismaService | Prisma.TransactionClient;
 
+/**
+ * Fallback for a company with no `SalaryPeriodSetting` row.
+ *
+ * IT DOES NOT MATCH PRODUCTION, which runs `cycleStartDay = 1`, and it does
+ * not match the rest of this module's callers either: both
+ * `shared/resolve-monthly-scope.ts` and `shared/topup.ts` reason in calendar
+ * months and say so in their comments ("with cycleStartDay=1 this is exactly
+ * the calendar month"). Under this fallback those two are wrong by a week.
+ *
+ * It is left at 8 rather than quietly changed to 1 because nothing reads it
+ * today — every existing company has a setting row, so this branch is dead in
+ * practice, and a payroll default is not the place for a drive-by edit. What
+ * matters is that a NEW company must be given an explicit setting before its
+ * first payroll run; do not rely on this number.
+ */
 const DEFAULT_CYCLE_START_DAY = 8;
 // Asia/Tashkent has no DST and is fixed at +05:00. Conversion is a flat
 // offset, no IANA TZ dance required.
