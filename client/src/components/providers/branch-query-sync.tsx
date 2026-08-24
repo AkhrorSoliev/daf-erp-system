@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useBranchChange } from "@/hooks/use-branch-change";
 import { resetBranchScopedStores } from "@/lib/branch-scoped-stores";
 
 /**
@@ -49,32 +48,16 @@ import { resetBranchScopedStores } from "@/lib/branch-scoped-stores";
  */
 export function BranchQuerySync() {
   const queryClient = useQueryClient();
-  const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
-  const loaded = useBranchSwitcher((s) => s.loaded);
 
-  // `null` is a real selection ("Barcha filiallar"), so it cannot double as
-  // "nothing chosen yet" — the sentinel has to be outside the value space.
-  const previous = useRef<number | null | undefined>(undefined);
-
-  useEffect(() => {
-    if (!loaded) return;
-
-    const current = selectedBranch?.id ?? null;
-
-    // First resolution after login/hydration is not a switch. Clearing here
-    // would throw away the initial page load's own requests.
-    if (previous.current === undefined) {
-      previous.current = current;
-      return;
-    }
-    if (previous.current === current) return;
-
-    previous.current = current;
-
+  // "A switch happened" is defined once, in `useBranchChange` — including the
+  // two traps (`null` is a selection; the first resolution is not a switch).
+  // The global search dropdown needs exactly the same rule, and two copies of
+  // it would be free to disagree.
+  useBranchChange(() => {
     void queryClient.cancelQueries();
     queryClient.removeQueries();
     resetBranchScopedStores();
-  }, [selectedBranch, loaded, queryClient]);
+  });
 
   return null;
 }
