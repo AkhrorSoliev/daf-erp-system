@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { filterPages, type SearchablePage } from "@/data/searchable-pages";
 import api from "@/lib/api";
+import { useBranchChange } from "@/hooks/use-branch-change";
 
 const RECENT_SEARCHES_KEY = "daf-recent-searches";
 const MAX_RECENT = 5;
@@ -94,6 +95,28 @@ export function useGlobalSearch() {
   }, []);
 
   const latestQuery = useRef("");
+
+  /**
+   * Results are branch-scoped, and this dropdown lives in the dashboard HEADER
+   * — outside the `<main>` that `BranchScopedMain` remounts on a switch. So
+   * nothing else clears it: search "Aziz" in Fargona, switch to Namangan, and
+   * the list still offers Fargona's students. Picking one is not a data leak
+   * (every detail route is branch-guarded server-side) but it is an offer the
+   * app cannot honour.
+   *
+   * `latestQuery` is reset too, so a request issued under the OLD branch cannot
+   * land afterwards and repopulate the list — the same reason `BranchQuerySync`
+   * cancels in-flight queries before clearing.
+   *
+   * Recent searches are deliberately kept: they are TERMS, not results, and
+   * re-running one searches the branch you are now in.
+   */
+  useBranchChange(() => {
+    latestQuery.current = "";
+    setQuery("");
+    setResults(emptyResult);
+    setIsLoading(false);
+  });
 
   const fetchResults = useDebouncedCallback(async (q: string) => {
     const trimmed = q.trim();
