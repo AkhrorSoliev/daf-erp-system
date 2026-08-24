@@ -75,3 +75,66 @@ export async function resolveBilledEnrollmentId(
   const active = candidates.find((e) => e.status === EnrollmentStatus.ACTIVE);
   return active?.id ?? candidates[0]?.id ?? null;
 }
+
+/**
+ * Which payment funded a lesson — the `LESSON_DEDUCTION` its accruals hang off.
+ *
+ * A salary accrual is only written when the lesson is backed by a paid
+ * deduction, and `reverseLessonDeduction` reverses EVERY accrual pointing at
+ * that deduction. So a wrong link here is not cosmetic: correcting one payment
+ * would reverse a teacher's pay for a lesson that payment never funded, and
+ * leave standing the pay for one it did.
+ *
+ * The substitute-teacher sync used to find it by date:
+ *
+ *   createdAt: { lte: p.date }        // p.date is UTC MIDNIGHT of the lesson
+ *
+ * A deduction is written when attendance is marked, i.e. DURING the lesson day
+ * — 09:30, 10:05, 11:10. Every one of those is after midnight, so the funding
+ * deduction was excluded by definition and the query fell back to an older
+ * batch. Measured on production: 27 of 45 accruals written through this path
+ * point at the wrong payment. None was lost; all are mis-wired.
+ *
+ * Neither the date nor the clock is needed. Two recorded answers, in order:
+ *
+ *   1. An accrual already on this attendance. Billing wrote it with the
+ *      coverage it actually used, so it is the answer, not an approximation.
+ *      Reversed rows count — reversal sets `reversedAt`, it does not erase the
+ *      link, and a substitute replacing a teacher inherits the same funding.
+ *   2. Failing that, the newest live deduction on the enrollment as of the
+ *      moment the lesson was CONSUMED. Anchoring to the consumption's own
+ *      timestamp is what "the batch the student was consuming" means; a
+ *      calendar bound only ever approximated it.
+ */
+export async function resolveFundingDeductionId(
+  tx: Prisma.TransactionClient,
+  params: {
+    attendanceId: string;
+    enrollmentId: string;
+    consumedAt: Date;
+  },
+): Promise<string | null> {
+  const priorAccrual = await tx.salaryAccrual.findFirst({
+    where: {
+      attendanceId: params.attendanceId,
+      deductionTransactionId: { not: null },
+    },
+    orderBy: { createdAt: 'desc' },
+    select: { deductionTransactionId: true },
+  });
+  if (priorAccrual?.deductionTransactionId) {
+    return priorAccrual.deductionTransactionId;
+  }
+
+  const deduction = await tx.transaction.findFirst({
+    where: {
+      enrollmentId: params.enrollmentId,
+      type: TransactionType.LESSON_DEDUCTION,
+      reversedAt: null,
+      createdAt: { lte: params.consumedAt },
+    },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true },
+  });
+  return deduction?.id ?? null;
+}
