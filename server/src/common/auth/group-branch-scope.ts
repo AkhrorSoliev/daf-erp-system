@@ -37,6 +37,7 @@ export async function assertCallerMayTouchGroup(
   roles: string[],
   groupId: string,
   message = "Bu guruh boshqa filialga tegishli — u bilan ishlash huquqingiz yo'q",
+  options: { lessonDate?: Date } = {},
 ): Promise<void> {
   const isTeacherOnly = roles.length > 0 && roles.every((r) => r === 'Teacher');
 
@@ -44,10 +45,32 @@ export async function assertCallerMayTouchGroup(
     const assigned = await prisma.groupTeacher.findUnique({
       where: { groupId_teacherId: { groupId, teacherId: userId } },
     });
-    if (!assigned) {
-      throw new ForbiddenException('Siz bu guruhga biriktirilmagansiz');
-    }
-    return;
+    if (assigned) return;
+
+    // A SUBSTITUTE is not a `GroupTeacher` — that row is the permanent
+    // assignment. Until this branch existed, a teacher covering someone else's
+    // lesson was told "Siz bu guruhga biriktirilmagansiz" and could not mark
+    // the register for a lesson they had just taught. Production shows what
+    // that costs: all five substitutions in August were entered by an
+    // administrator afterwards, never by the person who was in the room.
+    //
+    // `lessonDate` narrows it to the day they were actually assigned, so a
+    // one-off cover does not become standing access to the group. Callers that
+    // have no date (the calendar, the date list) accept ANY active override:
+    // they need it to find their day, and someone who taught the group has no
+    // less business reading its register than the regular teacher does.
+    const override = await prisma.lessonTeacherOverride.findFirst({
+      where: {
+        groupId,
+        deletedAt: null,
+        teacherIds: { has: userId },
+        ...(options.lessonDate ? { date: options.lessonDate } : {}),
+      },
+      select: { id: true },
+    });
+    if (override) return;
+
+    throw new ForbiddenException('Siz bu guruhga biriktirilmagansiz');
   }
 
   const group = await prisma.group.findFirst({

@@ -14,6 +14,7 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { GroupRowActions } from "./group-row-actions";
 import { LevelBadge } from "./level-badge";
+import { CoveringBadge } from "./covering-badge";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -27,10 +28,15 @@ interface GroupsTableProps {
   onStatusChanged?: (id: string, newStatus: string) => void;
 }
 
-export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted, onStatusChanged }: GroupsTableProps) {
+export function GroupsTable({
+  groups,
+  page = 1,
+  pageSize = 10,
+  onDeleted,
+  onStatusChanged,
+}: GroupsTableProps) {
   const user = useAuth((s) => s.user);
-  const canManage =
-    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
 
   if (groups.length === 0) {
     return (
@@ -65,9 +71,10 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted, onStat
         <TableBody>
           {groups.map((group, index) => {
             const groupStatusEnum = group.statusEnum || "FORMING";
-            const daysLabel = group.exactDays?.length > 0
-              ? formatWeekdays(group.exactDays)
-              : null;
+            const daysLabel =
+              group.exactDays?.length > 0
+                ? formatWeekdays(group.exactDays)
+                : null;
             const timeLabel =
               group.lessonStartTime && group.lessonEndTime
                 ? `${group.lessonStartTime}–${group.lessonEndTime}`
@@ -82,8 +89,14 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted, onStat
                   {(page - 1) * pageSize + index + 1}
                 </TableCell>
                 <TableCell>
-                  <Link href={`/groups/${group.id}`} className="absolute inset-0" />
-                  {group.name}
+                  <Link
+                    href={`/groups/${group.id}`}
+                    className="absolute inset-0"
+                  />
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span>{group.name}</span>
+                    <CoveringBadge dates={group.coveringDates ?? []} />
+                  </div>
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   <div className="flex items-center gap-2">
@@ -96,12 +109,16 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted, onStat
                     <div className="flex flex-col gap-1.5">
                       {group.teachers.map((t) => {
                         const fullName = `${t.firstName} ${t.lastName}`;
-                        const initials = `${t.firstName[0] ?? ''}${t.lastName[0] ?? ''}`.toUpperCase();
+                        const initials =
+                          `${t.firstName[0] ?? ""}${t.lastName[0] ?? ""}`.toUpperCase();
                         return (
                           <div key={t.id} className="flex items-center gap-2">
                             <AvatarWithPreview src={t.photo} alt={fullName}>
                               <Avatar className="size-6">
-                                <AvatarImage src={t.photo ?? undefined} alt={fullName} />
+                                <AvatarImage
+                                  src={t.photo ?? undefined}
+                                  alt={fullName}
+                                />
                                 <AvatarFallback className="text-[10px]">
                                   {initials}
                                 </AvatarFallback>
@@ -136,7 +153,11 @@ export function GroupsTable({ groups, page = 1, pageSize = 10, onDeleted, onStat
                 </TableCell>
                 {canManage && (
                   <TableCell className="relative z-10">
-                    <GroupRowActions group={group} onDeleted={onDeleted} onStatusChanged={onStatusChanged} />
+                    <GroupRowActions
+                      group={group}
+                      onDeleted={onDeleted}
+                      onStatusChanged={onStatusChanged}
+                    />
                   </TableCell>
                 )}
               </TableRow>

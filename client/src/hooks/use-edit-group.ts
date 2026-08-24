@@ -20,6 +20,12 @@ export interface GroupData {
   companyId: number | null;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Lesson dates the SIGNED-IN teacher is covering in this group. Empty for
+   * their own groups, and always empty for anyone who is not a teacher — the
+   * server only computes it for a teacher's own list.
+   */
+  coveringDates?: string[];
   course: {
     id: string;
     name: string;
@@ -33,7 +39,13 @@ export interface GroupData {
   };
   room: { id: string; name: string; capacity: number | null } | null;
   branch: { id: number; name: string };
-  teachers: { id: number; firstName: string; lastName: string; phone: string | null; photo: string | null }[];
+  teachers: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+    photo: string | null;
+  }[];
   studentCount: number;
 }
 
@@ -58,7 +70,8 @@ export const useEditGroup = create<EditGroupState>((set) => ({
   hasConflict: false,
   openDrawer: (group) => set({ open: true, mode: "edit", group }),
   openAddDrawer: () => set({ open: true, mode: "add", group: null }),
-  closeDrawer: () => set({ open: false, group: null, submitting: false, hasConflict: false }),
+  closeDrawer: () =>
+    set({ open: false, group: null, submitting: false, hasConflict: false }),
   setSubmitting: (v) => set({ submitting: v }),
   setHasConflict: (v) => set({ hasConflict: v }),
 }));

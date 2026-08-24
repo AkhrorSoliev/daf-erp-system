@@ -36,6 +36,10 @@ describe('GroupsService — id-addressed reads are branch-gated', () => {
         findFirst: jest.fn().mockResolvedValue({ branchId: NAMANGAN }),
       },
       groupTeacher: { findUnique: jest.fn().mockResolvedValue(null) },
+      // The group guard now also asks whether the caller is a SUBSTITUTE on
+      // this group (`LessonTeacherOverride`). Null here keeps these cases
+      // about the assignment rule they were written for.
+      lessonTeacherOverride: { findFirst: jest.fn().mockResolvedValue(null) },
       user: {
         findFirst: jest.fn().mockResolvedValue({
           mainBranch: FARGONA,
