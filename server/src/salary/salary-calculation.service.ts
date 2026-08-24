@@ -16,6 +16,7 @@ import {
   RateVersion,
 } from './shared/deserved-math';
 import { prorateFixedMonthly } from './shared/prorate-fixed-monthly';
+import { sweepGapLessons } from './shared/gap-sweep';
 import { SalaryAccrualService } from './salary-accrual.service';
 
 /** One uncovered billable lesson to be fronted by a center top-up accrual. */
@@ -70,14 +71,10 @@ export class SalaryCalculationService {
   ) {
     // `now` is injectable for deterministic tests; production passes nothing.
     const now = opts.now ?? new Date();
-    const {
-      periodStart,
-      periodEnd,
-      periodStartDate,
-      periodEndDateExclusive,
-    } = opts.asOfDate
-      ? await resolveCurrentPeriod(this.prisma, companyId, opts.asOfDate)
-      : await resolveCompletedPeriod(this.prisma, companyId, now);
+    const { periodStart, periodEnd, periodStartDate, periodEndDateExclusive } =
+      opts.asOfDate
+        ? await resolveCurrentPeriod(this.prisma, companyId, opts.asOfDate)
+        : await resolveCompletedPeriod(this.prisma, companyId, now);
 
     // Never settle a period that has not finished yet — it would pay a
     // half-open window. The cron path can't hit this (`resolveCompletedPeriod`
@@ -528,83 +525,83 @@ export class SalaryCalculationService {
       heldCounts,
       inactiveStudents,
     ] = await Promise.all([
-        // ALL non-reversed accruals bucketed into this period (covered + any
-        // prior top-up) → covered-key set so a lesson is never double-listed.
-        this.prisma.salaryAccrual.findMany({
-          where: {
-            companyId,
-            reversedAt: null,
-            OR: [
-              { creditPeriodDate: { gte: periodStart, lte: periodEnd } },
-              {
-                creditPeriodDate: null,
-                lessonDate: { gte: periodStartDate, lt: periodEndDateExclusive },
-              },
-            ],
-          },
-          select: { userId: true, attendanceId: true },
-        }),
-        // Every held lesson (PRESENT/LATE/ABSENT) can earn the teacher; an
-        // uncovered one is fronted by the center. EXCUSED never bills/accrues.
-        this.prisma.attendance.findMany({
-          where: {
-            companyId,
-            status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
-            date: { gte: periodStartDate, lt: periodEndDateExclusive },
-          },
-          select: { id: true, studentId: true, groupId: true, date: true },
-        }),
-        this.prisma.group.findMany({
-          where: { companyId },
-          select: {
-            id: true,
-            course: { select: { price: true, lessonPaymentCount: true } },
-          },
-        }),
-        this.prisma.groupTeacher.findMany({
-          select: { groupId: true, teacherId: true },
-        }),
-        this.prisma.lessonTeacherOverride.findMany({
-          where: { deletedAt: null },
-          select: { groupId: true, date: true, teacherIds: true },
-        }),
-        this.prisma.employeeSalaryConfigVersion.findMany({
-          where: { companyId, config: { isActive: true } },
-          select: {
-            salaryType: true,
-            value: true,
-            effectiveFrom: true,
-            effectiveTo: true,
-            config: {
-              select: { userId: true, groupId: true, salaryType: true },
+      // ALL non-reversed accruals bucketed into this period (covered + any
+      // prior top-up) → covered-key set so a lesson is never double-listed.
+      this.prisma.salaryAccrual.findMany({
+        where: {
+          companyId,
+          reversedAt: null,
+          OR: [
+            { creditPeriodDate: { gte: periodStart, lte: periodEnd } },
+            {
+              creditPeriodDate: null,
+              lessonDate: { gte: periodStartDate, lt: periodEndDateExclusive },
             },
+          ],
+        },
+        select: { userId: true, attendanceId: true },
+      }),
+      // Every held lesson (PRESENT/LATE/ABSENT) can earn the teacher; an
+      // uncovered one is fronted by the center. EXCUSED never bills/accrues.
+      this.prisma.attendance.findMany({
+        where: {
+          companyId,
+          status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
+          date: { gte: periodStartDate, lt: periodEndDateExclusive },
+        },
+        select: { id: true, studentId: true, groupId: true, date: true },
+      }),
+      this.prisma.group.findMany({
+        where: { companyId },
+        select: {
+          id: true,
+          course: { select: { price: true, lessonPaymentCount: true } },
+        },
+      }),
+      this.prisma.groupTeacher.findMany({
+        select: { groupId: true, teacherId: true },
+      }),
+      this.prisma.lessonTeacherOverride.findMany({
+        where: { deletedAt: null },
+        select: { groupId: true, date: true, teacherIds: true },
+      }),
+      this.prisma.employeeSalaryConfigVersion.findMany({
+        where: { companyId, config: { isActive: true } },
+        select: {
+          salaryType: true,
+          value: true,
+          effectiveFrom: true,
+          effectiveTo: true,
+          config: {
+            select: { userId: true, groupId: true, salaryType: true },
           },
-        }),
-        // BR-09: per-(student, group) count of ATTENDED (PRESENT/LATE) lessons
-        // up to this period's end. A new student whose count is below the
-        // threshold is not yet center-fronted (see the gate in the loop below).
-        this.prisma.attendance.groupBy({
-          by: ['studentId', 'groupId'],
-          where: {
-            companyId,
-            status: { in: ['PRESENT', 'LATE'] },
-            date: { lt: periodEndDateExclusive },
-          },
-          _count: { _all: true },
-        }),
-        // Cap: an inactive student (frozen/expelled/archived/…) is only center-
-        // fronted for lessons up to the date they went inactive (statusChangedAt);
-        // nothing after. A student who paid is covered regardless — this only
-        // bounds the center's own top-up.
-        this.prisma.student.findMany({
-          where: {
-            companyId,
-            status: { not: 'ACTIVE' },
-            statusChangedAt: { not: null },
-          },
-          select: { id: true, statusChangedAt: true },
-        }),
-      ]);
+        },
+      }),
+      // BR-09: per-(student, group) count of ATTENDED (PRESENT/LATE) lessons
+      // up to this period's end. A new student whose count is below the
+      // threshold is not yet center-fronted (see the gate in the loop below).
+      this.prisma.attendance.groupBy({
+        by: ['studentId', 'groupId'],
+        where: {
+          companyId,
+          status: { in: ['PRESENT', 'LATE'] },
+          date: { lt: periodEndDateExclusive },
+        },
+        _count: { _all: true },
+      }),
+      // Cap: an inactive student (frozen/expelled/archived/…) is only center-
+      // fronted for lessons up to the date they went inactive (statusChangedAt);
+      // nothing after. A student who paid is covered regardless — this only
+      // bounds the center's own top-up.
+      this.prisma.student.findMany({
+        where: {
+          companyId,
+          status: { not: 'ACTIVE' },
+          statusChangedAt: { not: null },
+        },
+        select: { id: true, statusChangedAt: true },
+      }),
+    ]);
 
     // (studentId::groupId) -> attended-lesson count (BR-09 new-student gate).
     const heldByStudentGroup = new Map<string, number>();
@@ -626,7 +623,10 @@ export class SalaryCalculationService {
     }
     // Center top-up is withheld for a lesson held after the student went
     // inactive; a lesson on/before that day is still fronted ("…gacha").
-    const cappedByInactivity = (studentId: number, lessonDate: Date): boolean => {
+    const cappedByInactivity = (
+      studentId: number,
+      lessonDate: Date,
+    ): boolean => {
       const day = inactiveSince.get(studentId);
       return day !== undefined && dateStr(lessonDate) > day;
     };
@@ -680,36 +680,40 @@ export class SalaryCalculationService {
       pickActiveVersion(versByKey.get(`${tid}::${groupId}`), at) ??
       pickActiveVersion(versByKey.get(`${tid}::GLOBAL`), at);
 
+    // `sweepGapLessons` — the SAME function `getMonthly` and the center top-up
+    // drill-down use. This loop used to be a second copy of those exclusions,
+    // living in the one place that actually writes money, and its own docstring
+    // claimed the three shared `deserved-math`. They shared the arithmetic; the
+    // rules about WHICH lessons qualify were duplicated, which is the half that
+    // drifts. `skipZeroAmount` is the one deliberate difference, now a named
+    // argument instead of an undocumented extra line.
     const gapByUser = new Map<number, GapSpec[]>();
-    for (const att of attendances) {
-      const g = groupMap.get(att.groupId);
-      if (!g) continue;
-      // BR-09: withhold the center top-up for a new student until they have
-      // attended >= threshold lessons in this group. A covered (paid) lesson is
-      // never gated — it isn't in this uncovered gap set to begin with.
-      const held = heldByStudentGroup.get(`${att.studentId}::${att.groupId}`) ?? 0;
-      if (held < NEW_STUDENT_TOPUP_MIN_LESSONS) continue;
-      // No center top-up for a lesson held after the student went inactive.
-      if (cappedByInactivity(att.studentId, att.date)) continue;
-      const lpc = g.course.lessonPaymentCount || 12;
-      const perLessonCost = Math.round(g.course.price / lpc);
-      const dStr = dateStr(att.date);
-      for (const tid of resolveTeachers(att.groupId, dStr)) {
-        if (coveredKey.has(`${att.id}::${tid}`)) continue; // already has a live accrual
-        if (fixedMonthlyTeachers.has(tid)) continue; // flat salary — no per-lesson gap
-        const v = resolveRate(tid, att.groupId, att.date);
-        if (!v) continue; // config gap — do NOT fabricate a rate
-        if (perLessonAccrual(v, perLessonCost, lpc) <= 0) continue; // FIXED_MONTHLY / zero
-        const arr = gapByUser.get(tid) ?? [];
-        arr.push({
-          studentId: att.studentId,
-          groupId: att.groupId,
-          attendanceId: att.id,
-          lessonDate: att.date,
-          perLessonCost,
-        });
-        gapByUser.set(tid, arr);
-      }
+    const sweep = sweepGapLessons({
+      attendances,
+      groupMap,
+      resolveTeachers,
+      resolveRate,
+      // Company-wide: the cron settles every teacher, so nothing is out of
+      // scope. The read surfaces pass their branch/search filter here.
+      inScope: () => true,
+      isCovered: (teacherId, attendanceId) =>
+        coveredKey.has(`${attendanceId}::${teacherId}`),
+      isFixedMonthly: (teacherId) => fixedMonthlyTeachers.has(teacherId),
+      heldByStudentGroup,
+      inactiveSince,
+      dateStr,
+      skipZeroAmount: true,
+    });
+    for (const lesson of sweep.lessons) {
+      const arr = gapByUser.get(lesson.teacherId) ?? [];
+      arr.push({
+        studentId: lesson.studentId,
+        groupId: lesson.groupId,
+        attendanceId: lesson.attendanceId,
+        lessonDate: lesson.lessonDate,
+        perLessonCost: lesson.perLessonCost,
+      });
+      gapByUser.set(lesson.teacherId, arr);
     }
 
     // ─── BR-09b: retroactive unlock across period boundaries ─────────────────
@@ -739,7 +743,8 @@ export class SalaryCalculationService {
       `;
       for (const att of backlog) {
         // Only genuine new-student pairs that have NOW crossed the threshold.
-        const held = heldByStudentGroup.get(`${att.studentId}::${att.groupId}`) ?? 0;
+        const held =
+          heldByStudentGroup.get(`${att.studentId}::${att.groupId}`) ?? 0;
         if (held < NEW_STUDENT_TOPUP_MIN_LESSONS) continue;
         if (cappedByInactivity(att.studentId, att.date)) continue;
         const g = groupMap.get(att.groupId);

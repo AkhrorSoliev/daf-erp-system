@@ -5,6 +5,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  parseTashkentDateStart,
+  tashkentStartOfToday,
+} from './shared/resolve-current-period';
+import {
   Prisma,
   SalaryType,
   EmployeeSalaryConfig,
@@ -246,7 +250,8 @@ export class SalaryConfigService {
         // (salaryType or value). isActive flips don't need a version row —
         // they're a deactivation, not a rate change.
         const rateChanged =
-          (dto.salaryType !== undefined && dto.salaryType !== existing.salaryType) ||
+          (dto.salaryType !== undefined &&
+            dto.salaryType !== existing.salaryType) ||
           (dto.value !== undefined && dto.value !== existing.value);
 
         if (rateChanged) {
@@ -371,19 +376,18 @@ export class SalaryConfigService {
 
   // ---------- internals ----------
 
-  /** YYYY-MM-DD → 00:00 Tashkent. Default = today @ 00:00 Tashkent. */
+  /**
+   * YYYY-MM-DD → 00:00 Tashkent. Default = today @ 00:00 Tashkent.
+   *
+   * Both branches delegate to `shared/resolve-current-period`, which is also
+   * what `computePeriodBounds` and `SalaryPeriodSettingsService` use — a rate
+   * version's start and the period boundary it has to line up with must not be
+   * computed two different ways. The default branch used to build the date via
+   * `toLocaleString` + `setHours`, which reads the PROCESS timezone and so gave
+   * a different answer on a UTC host than on a Tashkent one.
+   */
   private parseEffectiveFrom(input?: string): Date {
-    if (!input) {
-      // "today at 00:00 Tashkent" — Tashkent is UTC+5, no DST, so we
-      // anchor to UTC by subtracting 5 hours from local midnight.
-      const now = new Date();
-      const tashkent = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tashkent' }));
-      tashkent.setHours(0, 0, 0, 0);
-      return new Date(tashkent.getTime() - 5 * 60 * 60 * 1000);
-    }
-    // input is YYYY-MM-DD; treat as Tashkent 00:00 (UTC-5h)
-    const utc = new Date(`${input}T00:00:00.000Z`);
-    return new Date(utc.getTime() - 5 * 60 * 60 * 1000);
+    return input ? parseTashkentDateStart(input) : tashkentStartOfToday();
   }
 
   private async createWithInitialVersion(
@@ -424,7 +428,11 @@ export class SalaryConfigService {
   private async upsertNewVersion(
     tx: Prisma.TransactionClient,
     existing: EmployeeSalaryConfig & {
-      versions: Array<{ id: string; effectiveFrom: Date; effectiveTo: Date | null }>;
+      versions: Array<{
+        id: string;
+        effectiveFrom: Date;
+        effectiveTo: Date | null;
+      }>;
     },
     params: {
       salaryType: SalaryType;
@@ -448,7 +456,9 @@ export class SalaryConfigService {
       where: {
         userId: existing.userId,
         companyId: params.companyId,
-        status: { in: [SalaryPaymentStatus.APPROVED, SalaryPaymentStatus.PAID] },
+        status: {
+          in: [SalaryPaymentStatus.APPROVED, SalaryPaymentStatus.PAID],
+        },
         periodStart: { lte: params.effectiveFrom },
         periodEnd: { gte: params.effectiveFrom },
       },
