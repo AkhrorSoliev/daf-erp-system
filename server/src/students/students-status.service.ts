@@ -3,7 +3,12 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { EnrollmentStatus, ExitType, Prisma, StudentStatus } from '@prisma/client';
+import {
+  EnrollmentStatus,
+  ExitType,
+  Prisma,
+  StudentStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
@@ -81,13 +86,13 @@ export class StudentsStatusService {
         },
       });
       if (!reason) {
-        throw new NotFoundException('Sabab topilmadi yoki bu holatga taalluqli emas');
+        throw new NotFoundException(
+          'Sabab topilmadi yoki bu holatga taalluqli emas',
+        );
       }
       reasonId = reason.id;
       // Use the reason name as the audit text (free-text reason is appended)
-      reasonText = reasonText
-        ? `${reason.name} — ${reasonText}`
-        : reason.name;
+      reasonText = reasonText ? `${reason.name} — ${reasonText}` : reason.name;
     } else if (exitType) {
       // No reasonId — check whether configured reasons exist for this exit
       // type. If yes, force the user to pick one. If not, fall back to
@@ -100,10 +105,10 @@ export class StudentsStatusService {
         },
       });
       if (configured > 0) {
-        throw new BadRequestException("Sababni tanlash majburiy");
+        throw new BadRequestException('Sababni tanlash majburiy');
       }
       if (!reasonText) {
-        throw new BadRequestException("Sababni kiritish majburiy");
+        throw new BadRequestException('Sababni kiritish majburiy');
       }
     }
 
@@ -113,14 +118,12 @@ export class StudentsStatusService {
     // this in its own Serializable transaction — the outer status flow
     // isn't transactional today and rewriting it is out of scope. Failure
     // here aborts the whole status change (we never reach the cascade).
-    let frozenRefundResults:
-      | Array<{
-          enrollmentId: string;
-          refunded: number;
-          lessons: number;
-          extraReversed: number;
-        }>
-      | null = null;
+    let frozenRefundResults: Array<{
+      enrollmentId: string;
+      refunded: number;
+      lessons: number;
+      extraReversed: number;
+    }> | null = null;
     if (dto.status === StudentStatus.FROZEN) {
       validateFrozenRefundOverrides(dto.frozenRefundOverrides);
       frozenRefundResults = await this.refundPrepaidForFreeze(
@@ -230,15 +233,13 @@ export class StudentsStatusService {
         }> = [];
         for (const enr of targets) {
           const override = overrides?.[enr.id];
-          const result = await this.enrollmentBillingService.refundPrepaidWithOverride(
-            tx,
-            {
+          const result =
+            await this.enrollmentBillingService.refundPrepaidWithOverride(tx, {
               enrollmentId: enr.id,
               performedById: userId,
               overrideLessons: override,
               reason: "O'quvchi muzlatildi",
-            },
-          );
+            });
           if (result) {
             results.push({ enrollmentId: enr.id, ...result });
           }

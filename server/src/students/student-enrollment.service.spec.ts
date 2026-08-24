@@ -109,7 +109,9 @@ describe('StudentEnrollmentService', () => {
         },
         {
           provide: EnrollmentBillingService,
-          useValue: { refundPrepaidToBalance: jest.fn().mockResolvedValue(null) },
+          useValue: {
+            refundPrepaidToBalance: jest.fn().mockResolvedValue(null),
+          },
         },
         {
           provide: DebtWriteOffService,
