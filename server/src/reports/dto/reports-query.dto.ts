@@ -17,25 +17,11 @@ export class ReportsQueryDto {
 
   // Optional sheet groups for the Excel export: CSV of
   // "buxgalteriya" | "marketing" | "qarzdorlar". Absent = the ten defaults.
-  // (It replaced `compare`/`compareStartDate`/`compareEndDate` — the workbook
-  // no longer builds a comparison sheet for them to drive.)
+  // (It replaced `compare`/`compareStartDate`/`compareEndDate`, which were
+  // kept as accepted-and-ignored params for one release and removed on
+  // 2026-08-24 — the frontend release landed on 2026-08-10 and has been
+  // redeployed many times since.)
   @IsOptional()
   @IsString()
   include?: string;
-
-  // ACCEPTED AND IGNORED — one release only. `forbidNonWhitelisted` 400s any
-  // unknown param, and client/server deploy separately here, so a page served
-  // from before this release would lose its download entirely. Delete once the
-  // frontend release has landed. Nothing may READ these.
-  @IsOptional()
-  @IsString()
-  compare?: string;
-
-  @IsOptional()
-  @IsString()
-  compareStartDate?: string;
-
-  @IsOptional()
-  @IsString()
-  compareEndDate?: string;
 }
