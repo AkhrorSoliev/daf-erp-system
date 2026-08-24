@@ -88,6 +88,32 @@ const GROUPS: { feature: string; keys: string[] }[] = [
  */
 const MIN_JWT_SECRET_LENGTH = 16;
 
+/**
+ * Variables that are SET somewhere and read by nothing.
+ *
+ * These are the quietest configuration mistakes there are: the dashboard says
+ * one thing, the system does another, and nothing anywhere disagrees out loud.
+ * `JWT_EXPIRATION=7d` sat in production while every access token expired in an
+ * hour — someone configured week-long sessions and got hour-long ones.
+ *
+ * Warned, never rejected: a stale variable is not a reason to refuse a deploy,
+ * and the fix is in the dashboard rather than in the code.
+ *
+ * A key belongs here only after checking that nothing reads it AND that the
+ * behaviour it seems to configure is deliberate. If the variable SHOULD be
+ * honoured, wire it up instead of listing it.
+ */
+const IGNORED: Record<string, string> = {
+  JWT_EXPIRATION:
+    "token muddati kodda qat'iy: 1 soat (access) / 24 soat (refresh) — " +
+    "auth.service.ts. Bu qiymat hech narsaga ta'sir qilmaydi.",
+  R2_ACCOUNT_ID:
+    "hisob raqami R2_ENDPOINT manzilining ichida; alohida o'qilmaydi.",
+  OPENAI_API_KEY: "loyihada OpenAI kodi yo'q.",
+  TELEGRAM_GROUP_SIGNING_SECRET:
+    'imzo TELEGRAM_LINK_SECRET dan olinadi; bu nom ishlatilmaydi.',
+};
+
 /** Present AND non-blank. `FOO=` in a dashboard is an empty string, not absent. */
 function isSet(config: Record<string, unknown>, key: string): boolean {
   const value = config[key];
@@ -133,6 +159,16 @@ export function validateEnv(
       "Muhit sozlamalari noto'g'ri — server ishga tushmaydi:\n" +
         errors.map((e) => `  • ${e}`).join('\n') +
         "\n\nRailway → Variables bo'limini tekshiring.",
+    );
+  }
+
+  const ignored = Object.keys(IGNORED).filter((key) => isSet(config, key));
+  if (ignored.length > 0) {
+    // Loud enough to notice in a deploy log, quiet enough not to block one.
+    logger.warn(
+      "O'rnatilgan, lekin HECH NARSA O'QIMAYDIGAN o'zgaruvchilar — " +
+        'Railway dan olib tashlash kerak:\n' +
+        ignored.map((key) => `  • ${key} — ${IGNORED[key]}`).join('\n'),
     );
   }
 
