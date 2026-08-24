@@ -33,11 +33,18 @@ export function shortDate(iso: string): string {
 /**
  * Marks a group the teacher is only COVERING, and says which day.
  *
- * A substitute's group now appears in their list beside their own, and until
- * this badge it looked identical to them. The question that leaves unanswered
- * is not "why is this here" — it is "WHICH DAY is mine", because every other
- * day of that group belongs to someone else and is closed to them.
- * So the badge carries the date, not just a label.
+ * A substitute's group appears in their list beside their own, and without
+ * this it looks identical to them. The question that leaves unanswered is not
+ * "why is this here" — it is WHICH DAY IS MINE, because every other date of
+ * that group belongs to someone else and is closed to them.
+ *
+ * So the badge answers that and nothing else: "Faqat 25-avg". No role noun.
+ * "O'rinbosar" describes a PERSON, and the thing being labelled is a group;
+ * it also collides with "direktor o'rinbosari". The word that was reaching for
+ * accuracy was adding a second reading instead.
+ *
+ * The "why" it gives up is recovered on hover, where there is room for a
+ * sentence and no cost to the row.
  *
  * Dashed, in the neutral ink rather than a colour: a cover is provisional, and
  * a dashed edge says that without another hue. The six level badges have taken
@@ -53,19 +60,20 @@ export function CoveringBadge({
 }) {
   if (dates.length === 0) return null;
 
-  const label =
-    dates.length === 1
-      ? `O'rinbosar · ${shortDate(dates[0])}`
-      : `O'rinbosar · ${dates.length} kun`;
+  const single = dates.length === 1;
+  const label = single
+    ? `Faqat ${shortDate(dates[0])}`
+    : `Faqat ${dates.length} kun`;
 
   return (
     <span
-      // The full list on hover: with several dates the badge can only carry a
-      // count, and the count alone is not actionable.
+      // Hover carries what the label deliberately drops: WHY the group is in
+      // this list, and — when there are several days — which ones, since a
+      // count on its own is not actionable.
       title={
-        dates.length === 1
-          ? undefined
-          : `O'rinbosar bo'lgan kunlar: ${dates.map(shortDate).join(", ")}`
+        single
+          ? `Bu guruhga faqat ${shortDate(dates[0])} kuni o'rinbosar sifatida kirasiz`
+          : `O'rinbosar sifatida kirasiz: ${dates.map(shortDate).join(", ")}`
       }
       className={cn(
         "inline-flex h-5 w-fit shrink-0 items-center rounded-md border border-dashed",
