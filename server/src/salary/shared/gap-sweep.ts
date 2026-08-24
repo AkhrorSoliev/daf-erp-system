@@ -35,7 +35,10 @@ export interface GapSweepInput {
     date: Date;
   }>;
   /** groupId → course pricing. Missing group ⇒ the lesson is skipped. */
-  groupMap: Map<string, { course: { price: number; lessonPaymentCount: number } }>;
+  groupMap: Map<
+    string,
+    { course: { price: number; lessonPaymentCount: number } }
+  >;
   /** Teachers credited for a lesson, honouring substitute overrides. */
   resolveTeachers: (groupId: string, dateStr: string) => number[];
   /** Active rate for that teacher, group and date; null ⇒ no rate to apply. */
@@ -56,6 +59,21 @@ export interface GapSweepInput {
   inactiveSince: Map<number, string>;
   /** "YYYY-MM-DD" of a `@db.Date`, shared with the caller so both agree. */
   dateStr: (d: Date) => string;
+  /**
+   * Drop lessons whose accrual would price at zero.
+   *
+   * The payroll cron wants this: it is about to WRITE an accrual, and a
+   * zero-amount one is noise. The read surfaces do not — `getMonthly` counts
+   * such a lesson in `gapUnits` so the teacher's row shows the lesson was
+   * held even when the rate prices it at nothing.
+   *
+   * The difference is deliberate. It is a parameter rather than a second copy
+   * of this function because that second copy is exactly what drifted: the
+   * cron carried its own sweep for months, and the only thing keeping the
+   * paid figure and the shown figure in step was that nobody edited one
+   * without the other.
+   */
+  skipZeroAmount?: boolean;
 }
 
 export interface GapSweepResult {
@@ -101,13 +119,15 @@ export function sweepGapLessons(input: GapSweepInput): GapSweepResult {
         noConfigUnits.set(teacherId, (noConfigUnits.get(teacherId) ?? 0) + 1);
         continue;
       }
+      const amount = perLessonAccrual(v, perLessonCost, lpc);
+      if (input.skipZeroAmount && amount <= 0) continue;
       lessons.push({
         attendanceId: att.id,
         studentId: att.studentId,
         groupId: att.groupId,
         teacherId,
         lessonDate: att.date,
-        amount: perLessonAccrual(v, perLessonCost, lpc),
+        amount,
         perLessonCost,
       });
     }
