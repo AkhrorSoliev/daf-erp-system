@@ -129,7 +129,9 @@ export function computePeriodBounds(
   }
 
   // Convert back to UTC by subtracting the offset.
-  const periodStart = new Date(periodStartTashkent.getTime() - TASHKENT_OFFSET_MS);
+  const periodStart = new Date(
+    periodStartTashkent.getTime() - TASHKENT_OFFSET_MS,
+  );
   // periodEnd is inclusive (used with `lte`). Subtract 1ms from the next-period start.
   const periodEnd = new Date(
     periodEndTashkentExclusive.getTime() - TASHKENT_OFFSET_MS - 1,
@@ -154,6 +156,36 @@ export function computePeriodBounds(
 export function parseTashkentDateStart(input: string): Date {
   const utc = new Date(`${input}T00:00:00.000Z`);
   return new Date(utc.getTime() - TASHKENT_OFFSET_MS);
+}
+
+/**
+ * 00:00 Tashkent of the calendar day `now` falls on, as a UTC instant.
+ *
+ * Only `getUTC*` and arithmetic — so the answer does not depend on the
+ * timezone of the machine running it. That is the whole point: the previous
+ * version of this in `SalaryConfigService` went through
+ * `toLocaleString('en-US', { timeZone: 'Asia/Tashkent' })` and then
+ * `setHours(0,0,0,0)`, and `setHours` works in the PROCESS's local zone. The
+ * result was correct on a UTC host and five hours early on a Tashkent one:
+ *
+ *     TZ=UTC            → 2026-08-23T19:00:00Z   (correct)
+ *     TZ=Asia/Tashkent  → 2026-08-23T14:00:00Z   (-5h)
+ *     TZ=America/New_York → 2026-08-23T23:00:00Z (+4h)
+ *
+ * Five hours early means a rate version starts at 19:00 the previous evening,
+ * so the evening lessons of the day before are paid at the NEW rate — which is
+ * a money error at a school that teaches in the evening.
+ *
+ * `now` is a parameter so this is testable without touching the clock.
+ */
+export function tashkentStartOfToday(now: Date = new Date()): Date {
+  const shifted = new Date(now.getTime() + TASHKENT_OFFSET_MS);
+  const midnight = Date.UTC(
+    shifted.getUTCFullYear(),
+    shifted.getUTCMonth(),
+    shifted.getUTCDate(),
+  );
+  return new Date(midnight - TASHKENT_OFFSET_MS);
 }
 
 /**

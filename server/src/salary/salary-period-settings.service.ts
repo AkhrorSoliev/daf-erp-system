@@ -1,13 +1,12 @@
-import {
-  BadRequestException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { CreateSalaryPeriodSettingDto } from './dto/salary-period-setting.dto';
-import { computePeriodBounds } from './shared/resolve-current-period';
-
-const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+import {
+  computePeriodBounds,
+  parseTashkentDateStart,
+  tashkentStartOfToday,
+} from './shared/resolve-current-period';
 
 @Injectable()
 export class SalaryPeriodSettingsService {
@@ -72,10 +71,7 @@ export class SalaryPeriodSettingsService {
             open.cycleStartDay,
           );
           // Inside the currently-running cycle?
-          if (
-            requestedFrom >= periodStart &&
-            requestedFrom <= periodEnd
-          ) {
+          if (requestedFrom >= periodStart && requestedFrom <= periodEnd) {
             // periodEnd is inclusive (last ms of last day); the next cycle
             // starts immediately after.
             effectiveFrom = new Date(periodEnd.getTime() + 1);
@@ -104,20 +100,12 @@ export class SalaryPeriodSettingsService {
     );
   }
 
+  /**
+   * Was a correct copy of the same two lines `SalaryConfigService` had a broken
+   * copy of. Both now delegate to the shared helpers, so a period boundary and
+   * the rate version that has to align with it cannot be computed differently.
+   */
   private parseEffectiveFrom(input?: string): Date {
-    if (!input) {
-      const now = new Date();
-      const tashkent = new Date(now.getTime() + TASHKENT_OFFSET_MS);
-      const day = new Date(
-        Date.UTC(
-          tashkent.getUTCFullYear(),
-          tashkent.getUTCMonth(),
-          tashkent.getUTCDate(),
-        ),
-      );
-      return new Date(day.getTime() - TASHKENT_OFFSET_MS);
-    }
-    const utc = new Date(`${input}T00:00:00.000Z`);
-    return new Date(utc.getTime() - TASHKENT_OFFSET_MS);
+    return input ? parseTashkentDateStart(input) : tashkentStartOfToday();
   }
 }
