@@ -4,12 +4,6 @@ import { MockExamStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 
-// MockExam is single-tenant (no companyId column — same as Lead). The
-// EntityHistory row needs SOME company id for multi-tenant scoping, so we
-// fall back to the default company. If the system later goes multi-tenant
-// for mock exams, this constant becomes a per-exam lookup.
-const DEFAULT_COMPANY_ID = 1001;
-
 /**
  * Auto-closes mock exam registrations whose `registrationDeadline` has
  * passed. Runs once daily at 03:00 Tashkent — this flip is purely cosmetic
@@ -46,7 +40,14 @@ export class MockExamDeadlineCronService {
         deletedAt: null,
         registrationDeadline: { not: null, lte: now },
       },
-      select: { id: true, title: true },
+      // `companyId` is selected because the audit row needs it. An earlier
+      // version hardcoded 1001 on the belief that "MockExam is single-tenant
+      // (no companyId column — same as Lead)". Both halves are wrong: the
+      // model has carried `companyId` and an index on it for some time, and so
+      // has Lead. A hardcoded tenant in a cron is the kind of thing that is
+      // right until the day a second company exists and then files every
+      // audit row under the wrong one.
+      select: { id: true, title: true, companyId: true },
     });
 
     if (due.length === 0) return;
@@ -72,7 +73,7 @@ export class MockExamDeadlineCronService {
           },
           // System actor — no human user is behind this transition.
           changedById: null as unknown as number,
-          companyId: DEFAULT_COMPANY_ID,
+          companyId: exam.companyId,
         });
       } catch (err) {
         this.logger.error(
