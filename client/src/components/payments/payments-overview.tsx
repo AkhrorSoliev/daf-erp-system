@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -13,16 +14,13 @@ import {
   Eraser,
   Megaphone,
   Receipt,
-  Target,
   TrendingUp,
   UserMinus,
   UserPlus,
   Users,
   Wallet,
 } from "lucide-react";
-import { KpiChartDialog } from "./kpi-chart-dialog";
 import type { KpiKey } from "./kpi-chart-dialog";
-import { ExpectationHistoryDialog } from "./expectation-history-dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -124,6 +122,30 @@ interface PaymentsOverviewProps {
   refreshKey?: number;
 }
 
+/**
+ * Both dialogs draw with `recharts`, which is by far the heaviest dependency
+ * this page pulls in — and this is the page the finance team opens every
+ * morning. Statically imported, every one of those visits downloaded the
+ * charting library whether or not anyone opened a chart.
+ *
+ * `ssr: false` because a chart has nothing to render on the server, and the
+ * `opened` refs below are what actually save the bytes: `next/dynamic` fetches
+ * the chunk as soon as the component is RENDERED, and a controlled dialog is
+ * rendered from the start with `open={false}`. Mounting it only after the
+ * first open moves the download to the moment it is needed.
+ *
+ * They stay mounted afterwards, so the close animation still runs — it is the
+ * FIRST open that is being deferred, not every one.
+ */
+const KpiChartDialog = dynamic(
+  () => import("./kpi-chart-dialog").then((m) => m.KpiChartDialog),
+  { ssr: false },
+);
+const ExpectationHistoryDialog = dynamic(
+  () => import("./expectation-history-dialog").then((m) => m.ExpectationHistoryDialog),
+  { ssr: false },
+);
+
 export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOverviewProps) {
   const { selectedBranch } = useBranchSwitcher();
   const user = useAuth((s) => s.user);
@@ -171,8 +193,26 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
     staleTime: 0,
   });
 
-  const [chartKey, setChartKey] = useState<KpiKey | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const [chartKey, selectChartKey] = useState<KpiKey | null>(null);
+  const [historyOpen, showHistory] = useState(false);
+
+  // Latched at the first open and never lowered, so a dialog is mounted from
+  // then on: closing it must not tear the component down, or the exit
+  // animation is skipped and the next open refetches from scratch.
+  //
+  // Wrapping the setters rather than editing seven `onClick`s keeps the latch
+  // impossible to forget — a new KPI card cannot open the chart without it.
+  const [chartMounted, setChartMounted] = useState(false);
+  const [historyMounted, setHistoryMounted] = useState(false);
+
+  const setChartKey = (key: KpiKey | null) => {
+    if (key) setChartMounted(true);
+    selectChartKey(key);
+  };
+  const setHistoryOpen = (open: boolean) => {
+    if (open) setHistoryMounted(true);
+    showHistory(open);
+  };
 
   if (isLoading) {
     return (
@@ -617,6 +657,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
       </div>
       )}
 
+      {chartMounted && (
       <KpiChartDialog
         open={!!chartKey}
         onOpenChange={(open) => { if (!open) setChartKey(null); }}
@@ -625,15 +666,18 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
         endDate={endDate}
         expectedMonthEnd={d.forecast.expectedMonthEnd}
       />
+      )}
 
       {/* Kunlik surat tarixi — «Oy oxiriga kutilyapti» qatorini bosganda.
           Oy sahifadagi davrning BOSHLANG'ICH oyidan olinadi, kartalar bilan
           bir xil qoida. */}
+      {historyMounted && (
       <ExpectationHistoryDialog
         open={historyOpen}
         onOpenChange={setHistoryOpen}
         month={(startDate ?? new Date().toISOString().slice(0, 10)).slice(0, 7)}
       />
+      )}
     </div>
   );
 }
