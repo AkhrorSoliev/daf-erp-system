@@ -32,7 +32,16 @@ describe('LessonCancellationsService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         update: jest.fn(),
       },
-      enrollment: { findFirst: jest.fn() },
+      enrollment: {
+        findFirst: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      // The reversal asks which enrollment the lesson was CHARGED to
+      // (`resolveBilledEnrollmentId`); null here means "nothing billed" and
+      // sends it to the enrollment fallback above.
+      transaction: {
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
       // Cancelling reverses a lesson's billing, so the caller is now checked
       // against the GROUP's branch (`assertCallerMayTouchGroup`). A CEO spans
       // every branch, which is the shape these existing cases assume.
@@ -141,9 +150,13 @@ describe('LessonCancellationsService', () => {
         { id: 'att-1', studentId: 10001, status: 'PRESENT' },
         { id: 'att-2', studentId: 10002, status: 'LATE' },
       ]);
-      tx.enrollment.findFirst
-        .mockResolvedValueOnce({ id: 'enroll-1' })
-        .mockResolvedValueOnce({ id: 'enroll-2' });
+      // The enrollment now comes from the row the lesson was CHARGED to, not
+      // from a (student, group) guess — a student can hold two live
+      // enrollments in the same group and the prepaid unit must go back to the
+      // one that paid.
+      tx.transaction.findFirst
+        .mockResolvedValueOnce({ enrollmentId: 'enroll-1' })
+        .mockResolvedValueOnce({ enrollmentId: 'enroll-2' });
 
       await service.create(dto, 1, 99);
 
@@ -180,7 +193,8 @@ describe('LessonCancellationsService', () => {
       tx.attendance.findMany.mockResolvedValue([
         { id: 'att-1', studentId: 10001, status: 'PRESENT' },
       ]);
-      tx.enrollment.findFirst.mockResolvedValue(null);
+      tx.transaction.findFirst.mockResolvedValue(null);
+      tx.enrollment.findMany.mockResolvedValue([]);
 
       await service.create(dto, 1, 99);
 

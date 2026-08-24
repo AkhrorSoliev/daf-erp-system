@@ -11,6 +11,7 @@ import { assertCallerMayTouchGroup } from '../common/auth/group-branch-scope';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { CreateLessonCancellationDto } from './dto/create-lesson-cancellation.dto';
+import { resolveBilledEnrollmentId } from '../billing/resolve-billed-enrollment';
 
 /**
  * Payload emitted on cancellation create — consumed by
@@ -242,19 +243,21 @@ export class LessonCancellationsService {
             },
           });
 
-          const enrollment = await tx.enrollment.findFirst({
-            where: {
-              groupId: dto.groupId,
-              studentId: a.studentId,
-              deletedAt: null,
-            },
-            select: { id: true },
+          // The enrollment the charge actually landed on — see
+          // `resolveBilledEnrollmentId`. Guessing by (student, group) picks an
+          // arbitrary row for the 44 students who hold two live enrollments in
+          // the same group, and the prepaid unit is handed back to whichever
+          // one that happened to be.
+          const enrollmentId = await resolveBilledEnrollmentId(tx, {
+            attendanceId: a.id,
+            studentId: a.studentId,
+            groupId: dto.groupId,
           });
-          if (!enrollment) continue;
+          if (!enrollmentId) continue;
 
           await this.lessonBillingService.processAttendanceBilling(tx, {
             attendanceId: a.id,
-            enrollmentId: enrollment.id,
+            enrollmentId,
             studentId: a.studentId,
             groupId: dto.groupId,
             branchId: group.branchId,
