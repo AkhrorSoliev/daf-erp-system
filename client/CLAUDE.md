@@ -4,6 +4,11 @@
 
 An ERP system for **DaF Sprachzentrum** language school. Manages branches, staff, teachers, and students across multiple roles.
 
+> **Domain terms live in [`CONTEXT.md`](../CONTEXT.md)**, at the repo root: what
+> a word MEANS, plus the file that defines it. This file is about HOW to work;
+> `docs/adr/` is about WHY a decision was made. When a definition here and one
+> there disagree, the code wins and both should be corrected.
+
 > **Language:** The entire UI of this project is in **Uzbek** (O'zbek tili). All labels, placeholders, messages, and user-facing text must be written in Uzbek.
 
 ## Arxitektura qarorlari (ADR)

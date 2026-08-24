@@ -4,6 +4,11 @@
 
 An ERP system for **DaF Sprachzentrum** language school. Backend API serving the frontend client.
 
+> **Domain terms live in [`CONTEXT.md`](../CONTEXT.md)**, at the repo root: what
+> a word MEANS, plus the file that defines it. This file is about HOW to work;
+> `docs/adr/` is about WHY a decision was made. When a definition here and one
+> there disagree, the code wins and both should be corrected.
+
 > **Roles:** CEO, Branch Director, Administrator, Teacher, Cashier. The system supports **multiple branches** (filials).
 > Roles are stored in a `Role` table with fixed IDs (1–6: CEO=1, Branch Director=2, Administrator=3, Teacher=4, Cashier=5, **Student=6**), linked to users via `UserRole` join table (many-to-many). The Student role id is exposed as `STUDENT_ROLE_ID` constant in `src/students/shared/student-select.ts`.
 
