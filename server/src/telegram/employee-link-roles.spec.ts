@@ -15,7 +15,9 @@ describe('GRANTABLE_ROLE_IDS — privilege ceiling for registration links', () =
   const CASHIER = 5;
 
   it('lets a CEO grant every valid role', () => {
-    expect([...GRANTABLE_ROLE_IDS.CEO].sort()).toEqual([...VALID_ROLE_IDS].sort());
+    expect([...GRANTABLE_ROLE_IDS.CEO].sort()).toEqual(
+      [...VALID_ROLE_IDS].sort(),
+    );
   });
 
   it('never lets a Branch Director mint a CEO link', () => {
@@ -42,7 +44,9 @@ describe('GRANTABLE_ROLE_IDS — privilege ceiling for registration links', () =
     // Each ceiling must be a subset of the one above it.
     const ceo = new Set<number>(GRANTABLE_ROLE_IDS.CEO);
     const bd = new Set<number>(GRANTABLE_ROLE_IDS.BRANCH_DIRECTOR);
-    for (const r of GRANTABLE_ROLE_IDS.ADMINISTRATOR) expect(bd.has(r)).toBe(true);
-    for (const r of GRANTABLE_ROLE_IDS.BRANCH_DIRECTOR) expect(ceo.has(r)).toBe(true);
+    for (const r of GRANTABLE_ROLE_IDS.ADMINISTRATOR)
+      expect(bd.has(r)).toBe(true);
+    for (const r of GRANTABLE_ROLE_IDS.BRANCH_DIRECTOR)
+      expect(ceo.has(r)).toBe(true);
   });
 });

@@ -29,7 +29,10 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     p,
     new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(`kesh ${ms}ms ichida javob bermadi`)), ms),
+      setTimeout(
+        () => reject(new Error(`kesh ${ms}ms ichida javob bermadi`)),
+        ms,
+      ),
     ),
   ]);
 }
@@ -109,7 +112,12 @@ export class DebtAgeService {
     // Branch guard, same as every other id-addressed student read: this returns
     // how much someone owes and since when, so a director must not reach it by
     // typing another branch's id into the URL.
-    await assertCallerMayTouchStudent(this.prisma, userId, studentId, companyId);
+    await assertCallerMayTouchStudent(
+      this.prisma,
+      userId,
+      studentId,
+      companyId,
+    );
     try {
       const hit = await withTimeout(
         this.redis.get(this.key(companyId)),

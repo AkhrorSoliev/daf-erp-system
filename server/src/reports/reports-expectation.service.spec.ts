@@ -34,7 +34,10 @@ describe('ReportsExpectationService', () => {
         },
         {
           provide: RedisService,
-          useValue: { get: jest.fn().mockResolvedValue(null), setex: jest.fn() },
+          useValue: {
+            get: jest.fn().mockResolvedValue(null),
+            setex: jest.fn(),
+          },
         },
       ],
     }).compile();
@@ -51,7 +54,10 @@ describe('ReportsExpectationService', () => {
   });
 
   it('confines groups to the caller scope', async () => {
-    await service.getMonthlyExpectation(1, { month: '2026-08', branchIds: [7] });
+    await service.getMonthlyExpectation(1, {
+      month: '2026-08',
+      branchIds: [7],
+    });
     expect(prisma.group.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ branchId: { in: [7] } }),
@@ -72,7 +78,7 @@ describe('ReportsExpectationService', () => {
     expect(where.deletedAt).toBeUndefined();
   });
 
-  it('counts an archived group\'s past lessons but projects no future ones', async () => {
+  it("counts an archived group's past lessons but projects no future ones", async () => {
     prisma.group.findMany.mockResolvedValueOnce([
       {
         id: 'gone',

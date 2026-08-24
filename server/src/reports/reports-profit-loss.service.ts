@@ -76,7 +76,9 @@ export class ReportsProfitLossService {
           companyId,
           status: 'PAID',
           paidAt: tsFilter,
-          ...(branchScopeIds && { user: { mainBranch: { in: branchScopeIds } } }),
+          ...(branchScopeIds && {
+            user: { mainBranch: { in: branchScopeIds } },
+          }),
         },
         select: { amount: true, _count: { select: { accruals: true } } },
       }),

@@ -29,7 +29,9 @@ function makeStore(enabled = true) {
 describe('TelegramOauthStateStore', () => {
   it('authorize URL ni hujjatdagi parametrlar bilan yasaydi', async () => {
     const { store } = makeStore();
-    const url = new URL(await store.createAuthorizeUrl('https://admin.dafzentrum.uz'));
+    const url = new URL(
+      await store.createAuthorizeUrl('https://admin.dafzentrum.uz'),
+    );
 
     expect(url.origin + url.pathname).toBe('https://oauth.telegram.org/auth');
     expect(url.searchParams.get('client_id')).toBe('1234567890');
@@ -45,7 +47,9 @@ describe('TelegramOauthStateStore', () => {
 
   it('code_challenge = base64url(sha256(code_verifier))', async () => {
     const { store, kv } = makeStore();
-    const url = new URL(await store.createAuthorizeUrl('https://admin.dafzentrum.uz'));
+    const url = new URL(
+      await store.createAuthorizeUrl('https://admin.dafzentrum.uz'),
+    );
     const state = url.searchParams.get('state')!;
 
     const stored = JSON.parse(kv.get(`tg_oauth:state:${state}`)!);
@@ -73,7 +77,9 @@ describe('TelegramOauthStateStore', () => {
 
   it('state BIR MARTALIK — ikkinchi consume null qaytaradi', async () => {
     const { store } = makeStore();
-    const url = new URL(await store.createAuthorizeUrl('https://lehrer.dafzentrum.uz'));
+    const url = new URL(
+      await store.createAuthorizeUrl('https://lehrer.dafzentrum.uz'),
+    );
     const state = url.searchParams.get('state')!;
 
     const first = await store.consumeState(state);

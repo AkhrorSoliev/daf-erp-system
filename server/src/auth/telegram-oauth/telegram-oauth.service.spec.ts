@@ -1,5 +1,8 @@
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
-import { HANDOFF_TTL_SEC, TelegramOauthService } from './telegram-oauth.service';
+import {
+  HANDOFF_TTL_SEC,
+  TelegramOauthService,
+} from './telegram-oauth.service';
 
 /** `?error=` ni redirect URL'dan ajratib oladi (dekodlangan holda). */
 function errorOf(redirectUrl: string): string | null {
@@ -116,7 +119,7 @@ describe('TelegramOauthService', () => {
       );
     });
 
-    it('token endpointiga hujjatdagi shaklda so\'rov yuboradi', async () => {
+    it("token endpointiga hujjatdagi shaklda so'rov yuboradi", async () => {
       mockTokenEndpoint({ id_token: 'signed.id.token' });
       const { service } = makeService();
 
@@ -147,9 +150,9 @@ describe('TelegramOauthService', () => {
       const { service, stateStore, redis } = makeService();
       stateStore.consumeState.mockResolvedValue(null);
 
-      await expect(service.handleCallback('code-1', 'state-1')).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(
+        service.handleCallback('code-1', 'state-1'),
+      ).rejects.toBeInstanceOf(BadRequestException);
       expect(global.fetch).not.toHaveBeenCalled();
       // Fail-closed: a rejected sign-in must never leave a redeemable
       // handoff key sitting in Redis for the TTL window.
@@ -162,9 +165,9 @@ describe('TelegramOauthService', () => {
       // majbur bo'lardi. Kontrollerdagi `error` tarmog'i ham shu tartibda.
       const { service, stateStore, redis } = makeService();
 
-      await expect(service.handleCallback('', 'state-1')).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(
+        service.handleCallback('', 'state-1'),
+      ).rejects.toBeInstanceOf(BadRequestException);
       expect(stateStore.consumeState).not.toHaveBeenCalled();
       expect(redis.set).not.toHaveBeenCalled();
     });
@@ -213,7 +216,7 @@ describe('TelegramOauthService', () => {
       );
     });
 
-    it('error_description bo\'lsa uni ham logga qo\'shadi', async () => {
+    it("error_description bo'lsa uni ham logga qo'shadi", async () => {
       mockTokenEndpoint({
         error: 'invalid_grant',
         error_description: 'code_verifier mismatch',
@@ -230,7 +233,7 @@ describe('TelegramOauthService', () => {
       );
     });
 
-    it('chet el raqamini o\'zgartirmasdan topuvchiga uzatadi', async () => {
+    it("chet el raqamini o'zgartirmasdan topuvchiga uzatadi", async () => {
       // Normalizatsiya topuvchining ishi (common/utils/phone.util) — bu yerda
       // raqamga tegilmasligi kerak, aks holda mamlakat kodi yo'qoladi.
       mockTokenEndpoint({ id_token: 'signed.id.token' });
@@ -278,7 +281,7 @@ describe('TelegramOauthService', () => {
       expect(errorOf(redirectUrl)).toMatch(/parol bilan kiring/i);
     });
 
-    it('telefon tizimda bo\'lmasa portalga tushunarli xabar bilan qaytaradi', async () => {
+    it("telefon tizimda bo'lmasa portalga tushunarli xabar bilan qaytaradi", async () => {
       mockTokenEndpoint({ id_token: 'signed.id.token' });
       const { service, authService, redis } = makeService();
       authService.findAccountsByIdentifier.mockResolvedValue([]);
@@ -294,7 +297,7 @@ describe('TelegramOauthService', () => {
       expect(redis.set).not.toHaveBeenCalled();
     });
 
-    it('parol o\'rnatilmagan akkauntni rad etadi (Telegram yo\'li parol yo\'lidan kengroq bo\'lmasin)', async () => {
+    it("parol o'rnatilmagan akkauntni rad etadi (Telegram yo'li parol yo'lidan kengroq bo'lmasin)", async () => {
       // `validateUser` (parol bilan kirish) `!user.password` bo'lsa null
       // qaytaradi — bu akkaunt bugun umuman kira olmaydi. Telegram yo'li
       // xuddi shu RAW qatorni oladi, shuning uchun xuddi shu tekshiruvni
@@ -320,7 +323,9 @@ describe('TelegramOauthService', () => {
       mockTokenEndpoint({ id_token: 'signed.id.token' });
       const { service, authService, redis } = makeService();
       authService.login.mockRejectedValue(
-        new UnauthorizedException('Sizning rolingiz bu portalga kirish huquqiga ega emas'),
+        new UnauthorizedException(
+          'Sizning rolingiz bu portalga kirish huquqiga ega emas',
+        ),
       );
 
       const { redirectUrl } = await service.handleCallback('code-1', 'state-1');

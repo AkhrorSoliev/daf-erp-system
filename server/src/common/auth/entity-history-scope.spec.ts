@@ -37,8 +37,12 @@ describe('assertCallerMayReadEntityHistory', () => {
       attendance: {
         findFirst: jest.fn().mockResolvedValue({ groupId: 'group-nam' }),
       },
-      payment: { findFirst: jest.fn().mockResolvedValue({ branchId: NAMANGAN }) },
-      expense: { findFirst: jest.fn().mockResolvedValue({ branchId: NAMANGAN }) },
+      payment: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: NAMANGAN }),
+      },
+      expense: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: NAMANGAN }),
+      },
       room: { findFirst: jest.fn().mockResolvedValue({ branchId: NAMANGAN }) },
       lead: { findFirst: jest.fn().mockResolvedValue({ branchId: NAMANGAN }) },
       leadColumn: {
@@ -60,8 +64,12 @@ describe('assertCallerMayReadEntityHistory', () => {
       telegramGroup: {
         findFirst: jest.fn().mockResolvedValue({ branchId: NAMANGAN }),
       },
-      course: { findFirst: jest.fn().mockResolvedValue({ branchId: NAMANGAN }) },
-      holiday: { findFirst: jest.fn().mockResolvedValue({ branchId: NAMANGAN }) },
+      course: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: NAMANGAN }),
+      },
+      holiday: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: NAMANGAN }),
+      },
       user: {
         findFirst: jest.fn().mockResolvedValue({
           id: CALLER,
@@ -79,8 +87,7 @@ describe('assertCallerMayReadEntityHistory', () => {
     type: string,
     id = 'x',
     roles: string[] = ['Branch Director'],
-  ) =>
-    assertCallerMayReadEntityHistory(prisma, CALLER, roles, type, id, 1001);
+  ) => assertCallerMayReadEntityHistory(prisma, CALLER, roles, type, id, 1001);
 
   /**
    * The production census, so a type nobody classified fails HERE rather than
@@ -174,7 +181,9 @@ describe('assertCallerMayReadEntityHistory', () => {
         ['Holiday', 'holiday'],
       ] as const) {
         const prisma = prismaFor({
-          [model]: { findFirst: jest.fn().mockResolvedValue({ branchId: null }) },
+          [model]: {
+            findFirst: jest.fn().mockResolvedValue({ branchId: null }),
+          },
         });
         await expect(call(prisma, type, 'x')).resolves.toBeUndefined();
       }
@@ -205,8 +214,9 @@ describe('assertCallerMayReadEntityHistory', () => {
           }),
         },
       });
-      await expect(call(prisma, 'Payment', 'pay-x', ['CEO'])).resolves
-        .toBeUndefined();
+      await expect(
+        call(prisma, 'Payment', 'pay-x', ['CEO']),
+      ).resolves.toBeUndefined();
     });
   });
 

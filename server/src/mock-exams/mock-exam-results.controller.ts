@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { MockExamResultsService } from './mock-exam-results.service';
 import { BulkEnterScoresDto } from './dto/bulk-enter-scores.dto';
 import { CurrentUser, Roles } from '../common/decorators';

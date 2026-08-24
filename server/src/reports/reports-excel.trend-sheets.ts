@@ -55,15 +55,45 @@ export interface MonthRow {
  * month prints '—' for salary/net-profit/own-profit but keeps the real
  * lesson-value and cash figures — the data IS real, only payroll is not.
  */
-export function monthsSheet(wb: Workbook, rows: MonthRow[], scopeLine: string): void {
+export function monthsSheet(
+  wb: Workbook,
+  rows: MonthRow[],
+  scopeLine: string,
+): void {
   const ws = wb.addWorksheet('Oylar');
   ws.columns = [
-    { width: 15 }, { width: 20 }, { width: 19 }, { width: 17 }, { width: 15 }, { width: 17 },
-    { width: 17 }, { width: 17 }, { width: 15 }, { width: 13 }, { width: 34 },
+    { width: 15 },
+    { width: 20 },
+    { width: 19 },
+    { width: 17 },
+    { width: 15 },
+    { width: 17 },
+    { width: 17 },
+    { width: 17 },
+    { width: 15 },
+    { width: 13 },
+    { width: 34 },
   ];
-  sheetHead(ws, 'OYMA-OY', "Tizim boshlanishidan hozirgacha (tanlangan davrdan qat'i nazar)", scopeLine, 11);
-  const h = columnHeader(ws, ['Oy', "O'tilgan darslar qiymati", 'Kassaga tushgan pul', 'Ustoz oyligi',
-    'Xarajat', 'SOF FOYDA', "Oyning o'z foydasi", 'Oy oxiridagi qarz', 'Undirildi', 'Undirish %', 'Izoh']);
+  sheetHead(
+    ws,
+    'OYMA-OY',
+    "Tizim boshlanishidan hozirgacha (tanlangan davrdan qat'i nazar)",
+    scopeLine,
+    11,
+  );
+  const h = columnHeader(ws, [
+    'Oy',
+    "O'tilgan darslar qiymati",
+    'Kassaga tushgan pul',
+    'Ustoz oyligi',
+    'Xarajat',
+    'SOF FOYDA',
+    "Oyning o'z foydasi",
+    'Oy oxiridagi qarz',
+    'Undirildi',
+    'Undirish %',
+    'Izoh',
+  ]);
   const first = h.number + 1;
 
   for (const row of rows) {
@@ -87,7 +117,10 @@ export function monthsSheet(wb: Workbook, rows: MonthRow[], scopeLine: string): 
     if (typeof r.getCell(10).value === 'number') r.getCell(10).numFmt = PCT;
     r.getCell(6).font = { bold: true };
     if (typeof r.getCell(7).value === 'number') {
-      r.getCell(7).font = { bold: true, color: { argb: (r.getCell(7).value as number) >= 0 ? GREEN : RED } };
+      r.getCell(7).font = {
+        bold: true,
+        color: { argb: (r.getCell(7).value as number) >= 0 ? GREEN : RED },
+      };
     }
     izohCell(r, 11);
   }
@@ -95,21 +128,27 @@ export function monthsSheet(wb: Workbook, rows: MonthRow[], scopeLine: string): 
   const last = ws.rowCount;
   ws.addConditionalFormatting({
     ref: `F${first}:F${last}`,
-    rules: [{
-      type: 'colorScale',
-      cfvo: [{ type: 'min' }, { type: 'max' }],
-      color: [{ argb: 'FFF8C9C6' }, { argb: 'FF9FD8AE' }],
-      priority: 1,
-    }],
+    rules: [
+      {
+        type: 'colorScale',
+        cfvo: [{ type: 'min' }, { type: 'max' }],
+        color: [{ argb: 'FFF8C9C6' }, { argb: 'FF9FD8AE' }],
+        priority: 1,
+      },
+    ],
   } as any);
   ws.views = [{ state: 'frozen', ySplit: h.number }];
 
-  sheetFooter(ws, [
-    "«O'tilgan darslar qiymati» — shu oy o'tilgan darslar puli. «Kassaga tushgan pul» — shu oy kassaga real kirgan pul. Ular teng bo'lishi shart emas.",
-    "«SOF FOYDA» — oyda ishlab topilgan natija. «Oyning o'z foydasi» — o'sha oyning o'z puli o'z xarajatini qoplaganmi.",
-    "«—» belgisi: o'sha oyda ustoz oyligi to'liq hisoblanmagan (o'tish davri) — foyda chiqarilmadi.",
-    "Qarz ustunlari muzlatilgan: oy oxirida qanday bo'lsa shundayligicha qoladi.",
-  ], 11);
+  sheetFooter(
+    ws,
+    [
+      "«O'tilgan darslar qiymati» — shu oy o'tilgan darslar puli. «Kassaga tushgan pul» — shu oy kassaga real kirgan pul. Ular teng bo'lishi shart emas.",
+      "«SOF FOYDA» — oyda ishlab topilgan natija. «Oyning o'z foydasi» — o'sha oyning o'z puli o'z xarajatini qoplaganmi.",
+      "«—» belgisi: o'sha oyda ustoz oyligi to'liq hisoblanmagan (o'tish davri) — foyda chiqarilmadi.",
+      "Qarz ustunlari muzlatilgan: oy oxirida qanday bo'lsa shundayligicha qoladi.",
+    ],
+    11,
+  );
 }
 
 export interface BranchRow {
@@ -132,17 +171,41 @@ export function branchesSheet(
 ): void {
   const ws = wb.addWorksheet('Filiallar');
   ws.columns = [
-    { width: 24 }, { width: 20 }, { width: 19 }, { width: 17 }, { width: 15 },
-    { width: 15 }, { width: 17 }, { width: 15 }, { width: 16 },
+    { width: 24 },
+    { width: 20 },
+    { width: 19 },
+    { width: 17 },
+    { width: 15 },
+    { width: 15 },
+    { width: 17 },
+    { width: 15 },
+    { width: 16 },
   ];
   sheetHead(ws, 'FILIALLAR', periodLine, scopeLine, 9);
-  const h = columnHeader(ws, ['Filial', "O'tilgan darslar qiymati", 'Kassaga tushgan pul', 'Ustoz oyligi',
-    'Xarajat', 'Qaytarilgan', 'SOF FOYDA', 'Qarz (hozir)', "Guruhda o'qiyapti"]);
+  const h = columnHeader(ws, [
+    'Filial',
+    "O'tilgan darslar qiymati",
+    'Kassaga tushgan pul',
+    'Ustoz oyligi',
+    'Xarajat',
+    'Qaytarilgan',
+    'SOF FOYDA',
+    'Qarz (hozir)',
+    "Guruhda o'qiyapti",
+  ]);
 
   const totals = [0, 0, 0, 0, 0, 0, 0, 0];
   for (const row of rows) {
-    const values = [row.recognized, row.cashIn, row.teacherSalary, row.operatingExpenses,
-      row.refunds, row.netProfit, row.debt, row.inGroup];
+    const values = [
+      row.recognized,
+      row.cashIn,
+      row.teacherSalary,
+      row.operatingExpenses,
+      row.refunds,
+      row.netProfit,
+      row.debt,
+      row.inGroup,
+    ];
     values.forEach((v, i) => (totals[i] += v));
     const r = ws.addRow([row.branchName, ...values]);
     [2, 3, 4, 5, 6, 7, 8, 9].forEach((c) => (r.getCell(c).numFmt = NUM));
@@ -151,9 +214,13 @@ export function branchesSheet(
   totalsBar(ws, ['Jami', ...totals]);
   ws.views = [{ state: 'frozen', ySplit: h.number }];
 
-  sheetFooter(ws, [
-    "«O'tilgan darslar qiymati» — o'tilgan darslar puli; «Kassaga tushgan pul» — real kirgan pul. Ular teng bo'lishi shart emas.",
-    "Bitta ustoz bitta filialda dars o'tadi — oyligi to'liq o'sha filialga yoziladi.",
-    "Filiallar yig'indisi «Xulosa» varag'idagi jami raqamga teng.",
-  ], 9);
+  sheetFooter(
+    ws,
+    [
+      "«O'tilgan darslar qiymati» — o'tilgan darslar puli; «Kassaga tushgan pul» — real kirgan pul. Ular teng bo'lishi shart emas.",
+      "Bitta ustoz bitta filialda dars o'tadi — oyligi to'liq o'sha filialga yoziladi.",
+      "Filiallar yig'indisi «Xulosa» varag'idagi jami raqamga teng.",
+    ],
+    9,
+  );
 }

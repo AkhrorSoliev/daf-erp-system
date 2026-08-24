@@ -10,8 +10,20 @@ describe('ReportsCashFlowService', () => {
     prisma = {
       cashAccount: {
         findMany: jest.fn().mockResolvedValue([
-          { id: 'a', name: 'Kassa', type: 'CASH', branchId: null, balance: 800_000 },
-          { id: 'b', name: 'Bank', type: 'BANK', branchId: null, balance: 200_000 },
+          {
+            id: 'a',
+            name: 'Kassa',
+            type: 'CASH',
+            branchId: null,
+            balance: 800_000,
+          },
+          {
+            id: 'b',
+            name: 'Bank',
+            type: 'BANK',
+            branchId: null,
+            balance: 200_000,
+          },
         ]),
       },
       cashMovement: {

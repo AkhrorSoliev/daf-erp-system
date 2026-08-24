@@ -53,8 +53,7 @@ describe('assertCallerMayTouchCommentEntity', () => {
     type: string,
     id: string | number = '10264',
     roles: string[] = ['Branch Director'],
-  ) =>
-    assertCallerMayTouchCommentEntity(prisma, CALLER, roles, type, id, 1001);
+  ) => assertCallerMayTouchCommentEntity(prisma, CALLER, roles, type, id, 1001);
 
   describe('each type is gated by its own record', () => {
     it.each([
@@ -132,7 +131,9 @@ describe('assertCallerMayTouchCommentEntity', () => {
   describe('a pure teacher on a Group is checked by ASSIGNMENT', () => {
     it('refuses an unassigned teacher even in the right branch', async () => {
       const prisma = prismaFor({
-        group: { findFirst: jest.fn().mockResolvedValue({ branchId: FARGONA }) },
+        group: {
+          findFirst: jest.fn().mockResolvedValue({ branchId: FARGONA }),
+        },
       });
       await expect(
         call(prisma, 'Group', 'group-far', ['Teacher']),
@@ -182,9 +183,11 @@ describe('assertCallerMayTouchCommentEntity', () => {
         }),
       },
     });
-    await expect(call(prisma, 'Student', '10264', ['CEO'])).resolves
-      .toBeUndefined();
-    await expect(call(prisma, 'Group', 'group-nam', ['CEO'])).resolves
-      .toBeUndefined();
+    await expect(
+      call(prisma, 'Student', '10264', ['CEO']),
+    ).resolves.toBeUndefined();
+    await expect(
+      call(prisma, 'Group', 'group-nam', ['CEO']),
+    ).resolves.toBeUndefined();
   });
 });

@@ -41,9 +41,11 @@ describe('StudentEnrollmentService — branch confinement', () => {
         findFirst: jest
           .fn()
           .mockResolvedValue({ id: 10264, status: 'ACTIVE', companyId: 1001 }),
-        findUnique: jest
-          .fn()
-          .mockResolvedValue({ firstName: 'A', lastName: 'B', companyId: 1001 }),
+        findUnique: jest.fn().mockResolvedValue({
+          firstName: 'A',
+          lastName: 'B',
+          companyId: 1001,
+        }),
       },
       // The student and the group both sit in NAMANGAN — a consistent pair
       // that the D5 rule accepts. The only thing wrong is who is asking.

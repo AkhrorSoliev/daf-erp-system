@@ -75,53 +75,44 @@ describe('StudentsController — debt write-off role guards', () => {
       expect(guard.canActivate(ctx)).toBe(true);
     });
     it('denies Cashier', () => {
-      const ctx = mockExecutionContext(controller.removeFromGroup, [
-        'Cashier',
-      ]);
+      const ctx = mockExecutionContext(controller.removeFromGroup, ['Cashier']);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
     it('denies Teacher', () => {
-      const ctx = mockExecutionContext(controller.removeFromGroup, [
-        'Teacher',
-      ]);
+      const ctx = mockExecutionContext(controller.removeFromGroup, ['Teacher']);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
   });
 
   describe('getDebtWriteOffEligibility() guard', () => {
     it('allows CEO', () => {
-      const ctx = mockExecutionContext(
-        controller.getDebtWriteOffEligibility,
-        ['CEO'],
-      );
+      const ctx = mockExecutionContext(controller.getDebtWriteOffEligibility, [
+        'CEO',
+      ]);
       expect(guard.canActivate(ctx)).toBe(true);
     });
     it('allows Branch Director', () => {
-      const ctx = mockExecutionContext(
-        controller.getDebtWriteOffEligibility,
-        ['Branch Director'],
-      );
+      const ctx = mockExecutionContext(controller.getDebtWriteOffEligibility, [
+        'Branch Director',
+      ]);
       expect(guard.canActivate(ctx)).toBe(true);
     });
     it('allows Administrator', () => {
-      const ctx = mockExecutionContext(
-        controller.getDebtWriteOffEligibility,
-        ['Administrator'],
-      );
+      const ctx = mockExecutionContext(controller.getDebtWriteOffEligibility, [
+        'Administrator',
+      ]);
       expect(guard.canActivate(ctx)).toBe(true);
     });
     it('denies Cashier', () => {
-      const ctx = mockExecutionContext(
-        controller.getDebtWriteOffEligibility,
-        ['Cashier'],
-      );
+      const ctx = mockExecutionContext(controller.getDebtWriteOffEligibility, [
+        'Cashier',
+      ]);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
     it('denies Teacher', () => {
-      const ctx = mockExecutionContext(
-        controller.getDebtWriteOffEligibility,
-        ['Teacher'],
-      );
+      const ctx = mockExecutionContext(controller.getDebtWriteOffEligibility, [
+        'Teacher',
+      ]);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
   });

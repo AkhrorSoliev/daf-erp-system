@@ -67,7 +67,14 @@ describe('GroupsService — status methods', () => {
       // `findMany` backs the "teacher belongs to this group's branch" guard —
       // empty means no teacher from a foreign branch was requested.
       user: {
-        findFirst: jest.fn().mockResolvedValue({ mainBranch: null, branches: [], roles: [{ role: { name: 'CEO' } }] }), count: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+        count: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       // Every assigned teacher already has a salary rate (the normal case).
       employeeSalaryConfig: {
         findMany: jest
@@ -136,8 +143,8 @@ describe('GroupsService — status methods', () => {
         },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         {
-          provide:
-            require('./group-holiday-cascade.service').GroupHolidayCascadeService,
+          provide: require('./group-holiday-cascade.service')
+            .GroupHolidayCascadeService,
           useValue: cascadeService,
         },
       ],
@@ -323,7 +330,9 @@ describe('GroupsService — status methods', () => {
     });
 
     it('uses custom name when dto.name is provided', async () => {
-      prisma.group.findMany.mockResolvedValue([{ name: '#005', groupNumber: 5 }]);
+      prisma.group.findMany.mockResolvedValue([
+        { name: '#005', groupNumber: 5 },
+      ]);
       prisma.group.create.mockResolvedValue(mockCreated('Custom Group', 6));
 
       await service.create(
@@ -364,7 +373,9 @@ describe('GroupsService — status methods', () => {
     it('increments the number on a P2002 collision instead of repeating it', async () => {
       // Safety net for concurrent inserts: a unique-name clash must advance to
       // the next slot, not retry the same name (the old infinite-loop bug).
-      prisma.group.findMany.mockResolvedValue([{ name: '#005', groupNumber: 5 }]);
+      prisma.group.findMany.mockResolvedValue([
+        { name: '#005', groupNumber: 5 },
+      ]);
       prisma.group.create
         .mockRejectedValueOnce({ code: 'P2002' })
         .mockResolvedValueOnce(mockCreated('#007', 7));
@@ -456,7 +467,7 @@ describe('GroupsService — status methods', () => {
       expect(prisma.group.update).not.toHaveBeenCalled();
     });
 
-    it("rejects a teacher who belongs to another branch", async () => {
+    it('rejects a teacher who belongs to another branch', async () => {
       prisma.user.findMany.mockResolvedValueOnce([
         { id: 2002, firstName: 'Jane', lastName: 'Smith' },
       ]);

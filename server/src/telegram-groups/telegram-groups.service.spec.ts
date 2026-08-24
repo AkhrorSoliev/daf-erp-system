@@ -13,16 +13,16 @@ describe('TelegramGroupsService', () => {
   let service: TelegramGroupsService;
 
   const mockPrisma = {
-      // Approval now requires a real branch in this company, and checks the
-      // caller owns it. A CEO spans every branch.
-      branch: { findFirst: jest.fn().mockResolvedValue({ id: 1 }) },
-      user: {
-        findFirst: jest.fn().mockResolvedValue({
-          mainBranch: null,
-          branches: [],
-          roles: [{ role: { name: 'CEO' } }],
-        }),
-      },
+    // Approval now requires a real branch in this company, and checks the
+    // caller owns it. A CEO spans every branch.
+    branch: { findFirst: jest.fn().mockResolvedValue({ id: 1 }) },
+    user: {
+      findFirst: jest.fn().mockResolvedValue({
+        mainBranch: null,
+        branches: [],
+        roles: [{ role: { name: 'CEO' } }],
+      }),
+    },
     telegramGroup: {
       upsert: jest.fn(),
       findUnique: jest.fn(),

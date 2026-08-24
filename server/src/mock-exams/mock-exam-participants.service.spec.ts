@@ -19,12 +19,16 @@ describe('MockExamParticipantsService', () => {
         // `ensureExam` is now the company/branch gate for everything reached
         // through an exam, so a participant write resolves it too. Default to
         // an open exam in this company so existing cases are unaffected.
-        findFirst: jest
-          .fn()
-          .mockResolvedValue({ id: 'exam-1', status: 'REGISTRATION_OPEN', branchId: 1 }),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'exam-1',
+          status: 'REGISTRATION_OPEN',
+          branchId: 1,
+        }),
         // Pricing lookup used by addManual to compute the DaF-discounted
         // fee. Defaults to a free exam so existing tests are unaffected.
-        findUnique: jest.fn().mockResolvedValue({ price: 0, studentPrice: null }),
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ price: 0, studentPrice: null }),
       },
       mockExamParticipant: {
         findFirst: jest.fn(),
@@ -50,7 +54,9 @@ describe('MockExamParticipantsService', () => {
       recordRestore: jest.fn(),
     };
     const billing = {
-      tryDeductForStudent: jest.fn().mockResolvedValue({ paidCount: 0, deductedAmount: 0 }),
+      tryDeductForStudent: jest
+        .fn()
+        .mockResolvedValue({ paidCount: 0, deductedAmount: 0 }),
       refundParticipantFee: jest.fn().mockResolvedValue(0),
     };
     billingMock = billing;
@@ -83,7 +89,12 @@ describe('MockExamParticipantsService', () => {
       prisma.mockExamParticipant.findMany.mockResolvedValue([]);
       prisma.mockExamParticipant.count.mockResolvedValue(0);
 
-      const result = await service.list('e1', { page: 2, pageSize: 5 }, 1001, null);
+      const result = await service.list(
+        'e1',
+        { page: 2, pageSize: 5 },
+        1001,
+        null,
+      );
       expect(result.page).toBe(2);
       expect(result.pageSize).toBe(5);
       expect(prisma.mockExamParticipant.findMany).toHaveBeenCalledWith(
@@ -172,7 +183,7 @@ describe('MockExamParticipantsService', () => {
           { firstName: 'A', lastName: 'B', phone: '901234567' },
           1001,
           1,
-        null
+          null,
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -188,7 +199,8 @@ describe('MockExamParticipantsService', () => {
           { firstName: '  ', lastName: 'B', phone: '901234567' },
           1001,
           1,
-         null),
+          null,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -222,7 +234,8 @@ describe('MockExamParticipantsService', () => {
         { firstName: 'Aziz', lastName: 'Karimov', phone: '901234567' },
         1001,
         1,
-       null);
+        null,
+      );
 
       // No Student row should be created — mock participants are not students.
       expect(prisma.student.create).not.toHaveBeenCalled();
@@ -262,7 +275,8 @@ describe('MockExamParticipantsService', () => {
         { firstName: 'Aziz', lastName: 'Karimov', phone: '901234567' },
         1001,
         1,
-       null);
+        null,
+      );
 
       // No sequence allocation — we reuse the existing Student.id.
       expect(prisma.$queryRaw).not.toHaveBeenCalled();
@@ -294,7 +308,8 @@ describe('MockExamParticipantsService', () => {
         },
         1001,
         1,
-       null);
+        null,
+      );
 
       const callArg = prisma.mockExamParticipant.create.mock.calls[0][0];
       expect(callArg.data.studentId).toBe(10117);
@@ -320,7 +335,8 @@ describe('MockExamParticipantsService', () => {
         { firstName: 'Aziz', lastName: 'Karimov', phone: '901234567' },
         1001,
         1,
-       null);
+        null,
+      );
 
       const callArg = prisma.mockExamParticipant.create.mock.calls[0][0];
       expect(callArg.data.studentId).toBeNull();
@@ -350,7 +366,8 @@ describe('MockExamParticipantsService', () => {
         },
         1001,
         1,
-       null);
+        null,
+      );
 
       // Student was resolved by id + company scope, not by phone.
       expect(prisma.student.findFirst).toHaveBeenCalledWith(
@@ -385,7 +402,8 @@ describe('MockExamParticipantsService', () => {
           },
           1001,
           1,
-         null),
+          null,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -411,7 +429,8 @@ describe('MockExamParticipantsService', () => {
           },
           1001,
           1,
-         null),
+          null,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -437,7 +456,9 @@ describe('MockExamParticipantsService', () => {
       await service.markPaid('p1', { method: 'CASH' } as any, 1001, 1, null);
 
       expect(prisma.mockExamParticipant.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ paid: true }) }),
+        expect.objectContaining({
+          data: expect.objectContaining({ paid: true }),
+        }),
       );
       expect(emit).toHaveBeenCalledWith(
         'mock.participant.paid',
@@ -502,8 +523,10 @@ describe('MockExamParticipantsService', () => {
 
       // The refund must happen BEFORE the soft delete — afterwards the fee's
       // participant is gone and nothing links the money back to it.
-      const refundOrder = billingMock.refundParticipantFee.mock.invocationCallOrder[0];
-      const deleteOrder = prisma.mockExamParticipant.update.mock.invocationCallOrder[0];
+      const refundOrder =
+        billingMock.refundParticipantFee.mock.invocationCallOrder[0];
+      const deleteOrder =
+        prisma.mockExamParticipant.update.mock.invocationCallOrder[0];
       expect(refundOrder).toBeLessThan(deleteOrder);
     });
 

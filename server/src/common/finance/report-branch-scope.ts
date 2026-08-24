@@ -248,7 +248,7 @@ export function requireSingleBranchForWrite(
 export function assertBranchInScope(
   branchId: number,
   ids: ReportBranchIds | undefined,
-  message = 'Bu filialga yozish huquqingiz yo\'q',
+  message = "Bu filialga yozish huquqingiz yo'q",
 ): number {
   if (ids != null && !ids.includes(branchId)) {
     throw new ForbiddenException(message);

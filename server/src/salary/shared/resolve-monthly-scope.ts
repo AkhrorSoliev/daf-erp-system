@@ -110,7 +110,9 @@ export async function resolveMonthlyScope(
   // Same bounds as UTC instants, for `SalaryPayment.periodStart` bucketing
   // (mirrors getMatrix's Tashkent-month bucketing for a single month).
   const periodStartLow = new Date(monthStart.getTime() - TASHKENT_OFFSET_MS);
-  const periodStartHigh = new Date(nextMonthStart.getTime() - TASHKENT_OFFSET_MS);
+  const periodStartHigh = new Date(
+    nextMonthStart.getTime() - TASHKENT_OFFSET_MS,
+  );
 
   // ─── branch scope ───────────────────────────────────────────────────────
   // Looking at your own row is always allowed: an id-exact lookup of yourself

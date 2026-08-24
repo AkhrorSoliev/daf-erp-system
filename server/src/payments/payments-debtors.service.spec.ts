@@ -17,11 +17,17 @@ describe('PaymentsDebtorsService', () => {
       student: {
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn().mockResolvedValue(0),
-        aggregate: jest.fn().mockResolvedValue({ _sum: { balance: 0 }, _count: 0 }),
+        aggregate: jest
+          .fn()
+          .mockResolvedValue({ _sum: { balance: 0 }, _count: 0 }),
       },
       user: {
         findUnique: jest.fn().mockResolvedValue({ mainBranch: 7 }),
-        findFirst: jest.fn().mockResolvedValue({ mainBranch: null, branches: [], roles: [{ role: { name: 'CEO' } }] }),
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
       },
       paymentPromise: { count: jest.fn().mockResolvedValue(0) },
     };
@@ -40,7 +46,6 @@ describe('PaymentsDebtorsService', () => {
   });
 
   describe('getDebtors', () => {
-
     it('orders by debt age across the WHOLE set, not just the page', async () => {
       // The date is not a column, so this cannot be an `orderBy`. Sorting only
       // the page would make page 2 disagree with page 1 about who is oldest.
@@ -78,7 +83,7 @@ describe('PaymentsDebtorsService', () => {
         expect.objectContaining({
           companyId: 1001,
           // No `deletedAt: null` — archived debtors are listed as well.
-            balance: { lt: 0 },
+          balance: { lt: 0 },
         }),
       );
       expect(arg.where.branches).toBeUndefined();

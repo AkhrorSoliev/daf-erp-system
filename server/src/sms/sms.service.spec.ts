@@ -260,7 +260,13 @@ describe('SmsService', () => {
       prisma.smsMessage.findMany.mockResolvedValue([]);
       prisma.smsMessage.count.mockResolvedValue(0);
 
-      const result = await service.getByStudent(10001, 1001, undefined, undefined, CALLER_ID);
+      const result = await service.getByStudent(
+        10001,
+        1001,
+        undefined,
+        undefined,
+        CALLER_ID,
+      );
 
       expect(result).toEqual({
         data: [],

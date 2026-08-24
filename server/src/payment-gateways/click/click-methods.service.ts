@@ -458,7 +458,12 @@ export class ClickMethodsService {
 
   /** Complete path for non-DaF mock participants. */
   private async completePathMock(args: {
-    mockTxn: { id: string; state: number; amountInSom: number; preparedAt: Date | null };
+    mockTxn: {
+      id: string;
+      state: number;
+      amountInSom: number;
+      preparedAt: Date | null;
+    };
     clickTransId: number;
     merchantTransId: string;
     body: ClickCompleteRequest;
@@ -496,11 +501,7 @@ export class ClickMethodsService {
     }
 
     if (this.isPrepareExpired(mockTxn.preparedAt)) {
-      await this.mockGateway.markErrored(
-        mockTxn.id,
-        -9,
-        'Transaction expired',
-      );
+      await this.mockGateway.markErrored(mockTxn.id, -9, 'Transaction expired');
       return clickError(
         clickTransId,
         merchantTransId,

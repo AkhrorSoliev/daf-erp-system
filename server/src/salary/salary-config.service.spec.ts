@@ -15,7 +15,9 @@ describe('SalaryConfigService.deactivateConfigsForUser', () => {
 
   beforeEach(async () => {
     tx = {
-      employeeSalaryConfigVersion: { updateMany: jest.fn().mockResolvedValue({}) },
+      employeeSalaryConfigVersion: {
+        updateMany: jest.fn().mockResolvedValue({}),
+      },
       employeeSalaryConfig: { updateMany: jest.fn().mockResolvedValue({}) },
     };
     prisma = {

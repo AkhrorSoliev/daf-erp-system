@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolveCurrentPeriod } from './shared/resolve-current-period';
@@ -38,7 +42,9 @@ export class SalaryBreakdownService {
     });
     if (!payment) throw new NotFoundException('Oylik to`lovi topilmadi');
     if (asUserId !== undefined && payment.userId !== asUserId) {
-      throw new ForbiddenException("Faqat o'z oylik to'lovingizni ko'rishingiz mumkin");
+      throw new ForbiddenException(
+        "Faqat o'z oylik to'lovingizni ko'rishingiz mumkin",
+      );
     }
 
     const accruals = await this.fetchAccrualBreakdown(
@@ -81,11 +87,7 @@ export class SalaryBreakdownService {
    */
   async getCurrentCycleBreakdown(userId: number, companyId: number) {
     const { periodStart, periodEnd, periodStartDate, periodEndDateExclusive } =
-      await resolveCurrentPeriod(
-      this.prisma,
-      companyId,
-      new Date(),
-    );
+      await resolveCurrentPeriod(this.prisma, companyId, new Date());
 
     const accruals = await this.fetchAccrualBreakdown(userId, companyId, {
       periodStart,

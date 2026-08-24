@@ -16,7 +16,9 @@ export class TelegramOauthConfig {
   readonly redirectUri: string;
 
   constructor(config: ConfigService) {
-    this.clientId = (config.get<string>('TELEGRAM_OAUTH_CLIENT_ID') ?? '').trim();
+    this.clientId = (
+      config.get<string>('TELEGRAM_OAUTH_CLIENT_ID') ?? ''
+    ).trim();
     this.clientSecret = (
       config.get<string>('TELEGRAM_OAUTH_CLIENT_SECRET') ?? ''
     ).trim();

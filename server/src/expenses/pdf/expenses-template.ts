@@ -50,7 +50,9 @@ export interface ExpensesPdfInput {
 // A4 595pt − 50 − 50 = 495pt usable. 60+78+75+55+90 = 358 fixed, '*' = 137.
 const COL_WIDTHS = [60, 78, '*', 75, 55, 90];
 
-export function buildExpensesDoc(input: ExpensesPdfInput): TDocumentDefinitions {
+export function buildExpensesDoc(
+  input: ExpensesPdfInput,
+): TDocumentDefinitions {
   const logo = getCompanyLogoDataUrl();
 
   return {
@@ -109,14 +111,13 @@ function issuerBlock(input: ExpensesPdfInput): Content {
   const lines: Content[] = [
     { text: input.companyName, bold: true, fontSize: 11 },
   ];
-  if (input.branchName) lines.push({ text: input.branchName, color: COLOR.muted });
+  if (input.branchName)
+    lines.push({ text: input.branchName, color: COLOR.muted });
   return { stack: lines, margin: [0, 0, 0, 14] };
 }
 
 function filterBlock(input: ExpensesPdfInput): Content {
-  const lines: Content[] = [
-    kv('Davr', input.dateRangeLabel),
-  ];
+  const lines: Content[] = [kv('Davr', input.dateRangeLabel)];
   if (input.categoryLabel) lines.push(kv('Kategoriya', input.categoryLabel));
   if (input.methodLabel) lines.push(kv("To'lov turi", input.methodLabel));
   if (input.search) lines.push(kv('Qidiruv', input.search));
@@ -195,7 +196,11 @@ function expensesTable(rows: ExpensesPdfRow[]): Content {
 
 function totalsBlock(totals: ExpensesPdfInput['totals']): ContentColumns {
   const rows: { label: string; value: string; bold?: boolean }[] = [
-    { label: 'Jami', value: `${formatSom(totals.totalAmount)} so'm`, bold: true },
+    {
+      label: 'Jami',
+      value: `${formatSom(totals.totalAmount)} so'm`,
+      bold: true,
+    },
     { label: 'Naqt', value: `${formatSom(totals.cashTotal)} so'm` },
     { label: 'Karta', value: `${formatSom(totals.cardTotal)} so'm` },
     // Advance is part of Jami; called out as a "shundan" (of which) sub-line.
@@ -249,7 +254,14 @@ function totalsBlock(totals: ExpensesPdfInput['totals']): ContentColumns {
 // ─── small helpers ───────────────────────────────────────────────────
 
 function th(text: string, alignment: 'left' | 'right' = 'left'): TableCell {
-  return { text, bold: true, fontSize: 9, alignment, color: COLOR.text, border: NB };
+  return {
+    text,
+    bold: true,
+    fontSize: 9,
+    alignment,
+    color: COLOR.text,
+    border: NB,
+  };
 }
 
 function td(text: string, alignment: 'left' | 'right' = 'left'): TableCell {

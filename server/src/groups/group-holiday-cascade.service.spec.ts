@@ -102,12 +102,8 @@ describe('GroupHolidayCascadeService', () => {
 
       expect(result.extended).toBe(true);
       expect(result.daysExtended).toBe(2);
-      expect(result.oldEndDate?.toISOString()).toBe(
-        '2026-05-29T00:00:00.000Z',
-      );
-      expect(result.newEndDate?.toISOString()).toBe(
-        '2026-06-05T00:00:00.000Z',
-      );
+      expect(result.oldEndDate?.toISOString()).toBe('2026-05-29T00:00:00.000Z');
+      expect(result.newEndDate?.toISOString()).toBe('2026-06-05T00:00:00.000Z');
 
       expect(prisma.group.update).toHaveBeenCalledWith({
         where: { id: 'g-1' },
@@ -244,7 +240,7 @@ describe('GroupHolidayCascadeService', () => {
       expect(entityHistoryService.recordUpdate).toHaveBeenCalled();
     });
 
-    it("skips revert when admin manually changed endDate (logs warn)", async () => {
+    it('skips revert when admin manually changed endDate (logs warn)', async () => {
       const extension: any = {
         id: 'ext-1',
         groupId: 'g-1',

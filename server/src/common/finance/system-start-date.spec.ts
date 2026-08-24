@@ -35,7 +35,9 @@ describe('getSystemStartDate', () => {
   it('returns the company systemStartDate when set', async () => {
     const date = new Date('2026-05-01T00:00:00.000Z');
     const prisma = {
-      company: { findUnique: jest.fn().mockResolvedValue({ systemStartDate: date }) },
+      company: {
+        findUnique: jest.fn().mockResolvedValue({ systemStartDate: date }),
+      },
     } as any;
     await expect(getSystemStartDate(prisma, 1001)).resolves.toBe(date);
     expect(prisma.company.findUnique).toHaveBeenCalledWith({
@@ -46,7 +48,9 @@ describe('getSystemStartDate', () => {
 
   it('returns null when the company has no floor', async () => {
     const prisma = {
-      company: { findUnique: jest.fn().mockResolvedValue({ systemStartDate: null }) },
+      company: {
+        findUnique: jest.fn().mockResolvedValue({ systemStartDate: null }),
+      },
     } as any;
     await expect(getSystemStartDate(prisma, 1001)).resolves.toBeNull();
   });

@@ -60,7 +60,9 @@ describe('LessonBillingService', () => {
       // to look up groupId + date for the teacher resolver. Default null
       // because most tests don't trigger that branch.
       attendance: { findUnique: jest.fn().mockResolvedValue(null) },
-      groupTeacher: { findMany: jest.fn().mockResolvedValue(baseGroup.teachers) },
+      groupTeacher: {
+        findMany: jest.fn().mockResolvedValue(baseGroup.teachers),
+      },
       // Default: no per-lesson substitute override → resolver falls back
       // to GroupTeacher list above. Tests that exercise the override
       // branch explicitly mockResolvedValue([{ teacherIds: [...] }])
@@ -106,7 +108,9 @@ describe('LessonBillingService', () => {
         newStatus: AttendanceStatus.EXCUSED,
       });
       expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
-      expect(transactionsService.recordLessonConsumption).not.toHaveBeenCalled();
+      expect(
+        transactionsService.recordLessonConsumption,
+      ).not.toHaveBeenCalled();
     });
 
     it('EXCUSED → EXCUSED does nothing', async () => {
@@ -125,7 +129,9 @@ describe('LessonBillingService', () => {
         newStatus: AttendanceStatus.LATE,
       });
       expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
-      expect(transactionsService.reverseLessonConsumption).not.toHaveBeenCalled();
+      expect(
+        transactionsService.reverseLessonConsumption,
+      ).not.toHaveBeenCalled();
     });
 
     it('LATE → ABSENT does nothing (both billable now)', async () => {
@@ -135,7 +141,9 @@ describe('LessonBillingService', () => {
         newStatus: AttendanceStatus.ABSENT,
       });
       expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
-      expect(transactionsService.reverseLessonConsumption).not.toHaveBeenCalled();
+      expect(
+        transactionsService.reverseLessonConsumption,
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -341,7 +349,9 @@ describe('LessonBillingService', () => {
 
   describe('prepaid available — burn one unit', () => {
     beforeEach(() => {
-      tx.$queryRaw.mockResolvedValue([{ id: 'enroll-1', prepaidLessonsRemaining: 5 }]);
+      tx.$queryRaw.mockResolvedValue([
+        { id: 'enroll-1', prepaidLessonsRemaining: 5 },
+      ]);
       tx.transaction.findFirst.mockImplementation(({ where }: any) => {
         // Idempotency check returns null; coverage tx lookup returns the deduction
         if (where.type === 'LESSON_CONSUMPTION') return null;
@@ -499,7 +509,9 @@ describe('LessonBillingService', () => {
         newStatus: AttendanceStatus.PRESENT,
       });
       expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
-      expect(transactionsService.recordLessonConsumption).not.toHaveBeenCalled();
+      expect(
+        transactionsService.recordLessonConsumption,
+      ).not.toHaveBeenCalled();
       expect(tx.enrollment.update).not.toHaveBeenCalled();
     });
   });
@@ -527,7 +539,9 @@ describe('LessonBillingService', () => {
         where: { id: 'enroll-1' },
         data: { prepaidLessonsRemaining: { increment: 1 } },
       });
-      expect(salaryAccrualService.reverseAccrualForAttendance).toHaveBeenCalled();
+      expect(
+        salaryAccrualService.reverseAccrualForAttendance,
+      ).toHaveBeenCalled();
     });
 
     // Misol 7: pul yetmagan, consumption yo'q → prepaid +1 QILMAYDI.
@@ -538,10 +552,14 @@ describe('LessonBillingService', () => {
         oldStatus: AttendanceStatus.PRESENT,
         newStatus: AttendanceStatus.EXCUSED,
       });
-      expect(transactionsService.reverseLessonConsumption).not.toHaveBeenCalled();
+      expect(
+        transactionsService.reverseLessonConsumption,
+      ).not.toHaveBeenCalled();
       expect(tx.enrollment.update).not.toHaveBeenCalled();
       // Accrual reverse still attempted (returns null inside the service if missing)
-      expect(salaryAccrualService.reverseAccrualForAttendance).toHaveBeenCalled();
+      expect(
+        salaryAccrualService.reverseAccrualForAttendance,
+      ).toHaveBeenCalled();
     });
 
     // F-03 regression: a debtor's SINGLE_UNCOVERED lesson (Path D) writes a real
@@ -754,24 +772,30 @@ describe('LessonBillingService', () => {
       //   1. idempotency check (LESSON_CONSUMPTION on attendanceId)
       //   2. recent-batch lookup (LESSON_DEDUCTION on enrollmentId, when
       //      prepaid > 0 path runs)
-      tx.transaction.findFirst = jest.fn().mockImplementation(({ where }: any) => {
-        if (where?.type === 'LESSON_CONSUMPTION') {
-          return Promise.resolve(
-            consumedAttIds.has(where.attendanceId) ? { id: 'cons-x' } : null,
-          );
-        }
-        if (where?.type === 'LESSON_DEDUCTION') {
-          return Promise.resolve(lastDeductionId ? { id: lastDeductionId } : null);
-        }
-        return Promise.resolve(null);
-      });
+      tx.transaction.findFirst = jest
+        .fn()
+        .mockImplementation(({ where }: any) => {
+          if (where?.type === 'LESSON_CONSUMPTION') {
+            return Promise.resolve(
+              consumedAttIds.has(where.attendanceId) ? { id: 'cons-x' } : null,
+            );
+          }
+          if (where?.type === 'LESSON_DEDUCTION') {
+            return Promise.resolve(
+              lastDeductionId ? { id: lastDeductionId } : null,
+            );
+          }
+          return Promise.resolve(null);
+        });
 
-      transactionsService.deductLessonFee = jest.fn().mockImplementation((args: any) => {
-        balance -= args.amount;
-        deductionCounter += 1;
-        lastDeductionId = `ded-${deductionCounter}`;
-        return Promise.resolve({ id: lastDeductionId });
-      });
+      transactionsService.deductLessonFee = jest
+        .fn()
+        .mockImplementation((args: any) => {
+          balance -= args.amount;
+          deductionCounter += 1;
+          lastDeductionId = `ded-${deductionCounter}`;
+          return Promise.resolve({ id: lastDeductionId });
+        });
       transactionsService.recordLessonConsumption = jest
         .fn()
         .mockImplementation((args: any) => {
@@ -889,7 +913,9 @@ describe('LessonBillingService', () => {
       // balance back to 0 — both rows should accrue and clear.
       tx.enrollment.findMany = jest
         .fn()
-        .mockResolvedValue([{ id: enrollmentId, groupId, group: { branchId: 1 } }]);
+        .mockResolvedValue([
+          { id: enrollmentId, groupId, group: { branchId: 1 } },
+        ]);
       tx.$queryRaw = jest.fn().mockResolvedValue([]);
 
       const deferredRows = [
@@ -910,15 +936,15 @@ describe('LessonBillingService', () => {
       ];
       tx.transaction.findMany = jest.fn().mockResolvedValue(deferredRows);
       tx.transaction.update = jest.fn().mockResolvedValue({});
-      tx.attendance.findUnique = jest.fn().mockImplementation(({ where }: any) =>
-        Promise.resolve({
-          date: new Date(where.id === 'att-1' ? '2026-04-01' : '2026-04-03'),
-          groupId,
-        }),
-      );
-      tx.student.findUnique = jest
+      tx.attendance.findUnique = jest
         .fn()
-        .mockResolvedValue({ balance: 0 });
+        .mockImplementation(({ where }: any) =>
+          Promise.resolve({
+            date: new Date(where.id === 'att-1' ? '2026-04-01' : '2026-04-03'),
+            groupId,
+          }),
+        );
+      tx.student.findUnique = jest.fn().mockResolvedValue({ balance: 0 });
 
       await service.processRetroactiveBillingForStudent(tx, {
         studentId,
@@ -945,7 +971,9 @@ describe('LessonBillingService', () => {
     it('bubbles up carried-over accruals from deferred settlement (sink wiring)', async () => {
       tx.enrollment.findMany = jest
         .fn()
-        .mockResolvedValue([{ id: enrollmentId, groupId, group: { branchId: 1 } }]);
+        .mockResolvedValue([
+          { id: enrollmentId, groupId, group: { branchId: 1 } },
+        ]);
       tx.$queryRaw = jest.fn().mockResolvedValue([]);
       tx.transaction.findMany = jest.fn().mockResolvedValue([
         {
@@ -1001,7 +1029,9 @@ describe('LessonBillingService', () => {
       // by the remaining 20k to 30k (no accrual yet).
       tx.enrollment.findMany = jest
         .fn()
-        .mockResolvedValue([{ id: enrollmentId, groupId, group: { branchId: 1 } }]);
+        .mockResolvedValue([
+          { id: enrollmentId, groupId, group: { branchId: 1 } },
+        ]);
       tx.$queryRaw = jest.fn().mockResolvedValue([]);
 
       const oldRow = {
@@ -1024,9 +1054,7 @@ describe('LessonBillingService', () => {
         date: new Date('2026-04-01'),
         groupId,
       });
-      tx.student.findUnique = jest
-        .fn()
-        .mockResolvedValue({ balance: -30_000 });
+      tx.student.findUnique = jest.fn().mockResolvedValue({ balance: -30_000 });
 
       await service.processRetroactiveBillingForStudent(tx, {
         studentId,

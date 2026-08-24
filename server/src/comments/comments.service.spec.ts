@@ -69,7 +69,9 @@ describe('CommentsService', () => {
       // under test here is the comment logic, not the confinement, which has
       // its own spec.
       student: { findFirst: jest.fn().mockResolvedValue({ id: 10001 }) },
-      studentBranch: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
+      studentBranch: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
+      },
       enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
       group: { findFirst: jest.fn().mockResolvedValue({ branchId: 1 }) },
       groupTeacher: { findUnique: jest.fn().mockResolvedValue(null) },
@@ -283,7 +285,11 @@ describe('CommentsService', () => {
 
       expect(prisma.comment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { entityType: 'Student' as const, entityId: '10001', companyId: 1001 },
+          where: {
+            entityType: 'Student' as const,
+            entityId: '10001',
+            companyId: 1001,
+          },
           orderBy: { createdAt: 'desc' },
           skip: 0,
           take: 20,
@@ -312,7 +318,11 @@ describe('CommentsService', () => {
 
       expect(prisma.comment.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { entityType: 'Student' as const, entityId: '10001', companyId: 1001 },
+          where: {
+            entityType: 'Student' as const,
+            entityId: '10001',
+            companyId: 1001,
+          },
           orderBy: { createdAt: 'desc' },
         }),
       );

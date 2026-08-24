@@ -9,7 +9,9 @@ describe('ReportsBalanceSheetService', () => {
   beforeEach(async () => {
     prisma = {
       cashAccount: {
-        aggregate: jest.fn().mockResolvedValue({ _sum: { balance: 1_000_000 } }),
+        aggregate: jest
+          .fn()
+          .mockResolvedValue({ _sum: { balance: 1_000_000 } }),
       },
       student: {
         // first aggregate = receivables (negative), second = deferred (positive)

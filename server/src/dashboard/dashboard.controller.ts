@@ -15,7 +15,10 @@ import {
   BranchScope,
 } from '../common/decorators';
 import { RolesGuard } from '../common/guards/roles.guard';
-import { isEmptyScope, singleBranchId } from '../common/finance/report-branch-scope';
+import {
+  isEmptyScope,
+  singleBranchId,
+} from '../common/finance/report-branch-scope';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 
 @Controller('dashboard')
@@ -41,7 +44,7 @@ export class DashboardController {
     // or has none attached: refuse rather than silently drawing a different
     // branch's day under a header naming the one they picked.
     if (isEmptyScope(branchScope)) {
-      throw new ForbiddenException("Bu filial sizning ruxsatingizda emas");
+      throw new ForbiddenException('Bu filial sizning ruxsatingizda emas');
     }
     const branchId = singleBranchId(branchScope) ?? query.branchId;
     if (branchId == null) {

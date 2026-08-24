@@ -318,9 +318,7 @@ export class NotificationEventsListener {
         }
       }
     } catch (error) {
-      this.logger.error(
-        `payment.corrected handler failed: ${error.message}`,
-      );
+      this.logger.error(`payment.corrected handler failed: ${error.message}`);
     }
   }
 
@@ -365,7 +363,9 @@ export class NotificationEventsListener {
         ? `${student.firstName} ${student.lastName}`
         : "o'quvchi";
       const studentId = String(payload.studentId);
-      const [y, m, d] = tashkentDateStr(new Date(payload.promiseDate)).split('-');
+      const [y, m, d] = tashkentDateStr(new Date(payload.promiseDate)).split(
+        '-',
+      );
       const dateStr = `${d}.${m}.${y}`;
 
       const title = "To'lov sanasi o'tib ketdi";

@@ -145,7 +145,10 @@ export async function resetPassword(
     throw new PortalAccountMissingError();
   }
 
-  if (user.status !== UserStatus.ACTIVE && user.status !== UserStatus.INACTIVE) {
+  if (
+    user.status !== UserStatus.ACTIVE &&
+    user.status !== UserStatus.INACTIVE
+  ) {
     throw new UserNotResettableError(user.status);
   }
 
@@ -161,7 +164,7 @@ export async function resetPassword(
     entityType: 'Student',
     entityId: student.id,
     oldValues: { parol: '***' },
-    newValues: { parol: "Telegram bot orqali tiklandi" },
+    newValues: { parol: 'Telegram bot orqali tiklandi' },
     changedById: user.id,
     companyId: student.companyId ?? undefined,
   });

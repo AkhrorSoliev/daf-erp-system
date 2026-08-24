@@ -64,7 +64,10 @@ describe('TelegramGroupBroadcastListener', () => {
       expect(broadcast).not.toHaveBeenCalled();
       expect(push).toHaveBeenCalledWith(
         1001,
-        expect.objectContaining({ kind: 'payment', amount: LARGE_PAYMENT_THRESHOLD_SUM }),
+        expect.objectContaining({
+          kind: 'payment',
+          amount: LARGE_PAYMENT_THRESHOLD_SUM,
+        }),
       );
     });
 
@@ -82,7 +85,10 @@ describe('TelegramGroupBroadcastListener', () => {
       expect(broadcast).not.toHaveBeenCalled();
       expect(push).toHaveBeenCalledWith(
         1001,
-        expect.objectContaining({ kind: 'payment', method: PaymentMethod.PAYME }),
+        expect.objectContaining({
+          kind: 'payment',
+          method: PaymentMethod.PAYME,
+        }),
       );
     });
 
@@ -158,7 +164,9 @@ describe('TelegramGroupBroadcastListener', () => {
       expect(message).toContain('ID: 10042');
       expect(message).toContain('Chilonzor');
       // every active group on its own line with its teacher(s)
-      expect(message).toContain('A1-029 (Umumiy nemis tili) — Gulbahor Tursunova');
+      expect(message).toContain(
+        'A1-029 (Umumiy nemis tili) — Gulbahor Tursunova',
+      );
       expect(message).toContain('B2-014 (Intensiv nemis) — Sardor Aliyev');
       expect(message).toContain("Sabab: Ta'tilga chiqdi");
       expect(message).toContain('Dilnoza Karimova (Administrator)');
@@ -177,7 +185,9 @@ describe('TelegramGroupBroadcastListener', () => {
       const message = broadcast.mock.calls[0][0].message;
       expect(message).toContain('qaytadan faol');
       expect(message).toContain('Aziz Karimov');
-      expect(message).toContain('A1-029 (Umumiy nemis tili) — Gulbahor Tursunova');
+      expect(message).toContain(
+        'A1-029 (Umumiy nemis tili) — Gulbahor Tursunova',
+      );
       expect(message).not.toContain('Sabab'); // reactivation carries no reason
     });
 

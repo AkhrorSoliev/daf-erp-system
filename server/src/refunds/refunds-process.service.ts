@@ -4,9 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  assertCallerMayWriteForStudent,
-} from '../common/auth/financial-write-scope';
+import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
 import { TransactionsService } from '../transactions/transactions.service';
 import { ContractStatus, Prisma, RefundStatus } from '@prisma/client';
 import { ProcessRefundDto } from './dto/process-refund.dto';

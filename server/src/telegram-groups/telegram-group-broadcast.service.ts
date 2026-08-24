@@ -76,10 +76,7 @@ export class TelegramGroupBroadcastService {
         // narrows anything, it only adds groups that asked to see everything.
         ...(opts.branchId
           ? {
-              OR: [
-                { branchId: opts.branchId },
-                { receivesAllBranches: true },
-              ],
+              OR: [{ branchId: opts.branchId }, { receivesAllBranches: true }],
             }
           : {}),
       },

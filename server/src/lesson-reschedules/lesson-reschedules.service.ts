@@ -195,7 +195,7 @@ export class LessonReschedulesService {
       (!dto.newLessonStartTime && dto.newLessonEndTime)
     ) {
       throw new BadRequestException(
-        "Boshlanish va tugash vaqti birga kiritilishi kerak",
+        'Boshlanish va tugash vaqti birga kiritilishi kerak',
       );
     }
 
@@ -249,7 +249,7 @@ export class LessonReschedulesService {
         });
         if (existingOrigin) {
           throw new BadRequestException(
-            'Bu sanadagi dars allaqachon ko\'chirilgan',
+            "Bu sanadagi dars allaqachon ko'chirilgan",
           );
         }
 
@@ -259,7 +259,7 @@ export class LessonReschedulesService {
         });
         if (existingDestination) {
           throw new BadRequestException(
-            'Yangi sanada boshqa ko\'chirilgan dars allaqachon mavjud',
+            "Yangi sanada boshqa ko'chirilgan dars allaqachon mavjud",
           );
         }
 
@@ -540,7 +540,7 @@ export class LessonReschedulesService {
           (!effectiveStartOverride && effectiveEndOverride)
         ) {
           throw new BadRequestException(
-            "Boshlanish va tugash vaqti birga kiritilishi kerak",
+            'Boshlanish va tugash vaqti birga kiritilishi kerak',
           );
         }
 
@@ -589,7 +589,7 @@ export class LessonReschedulesService {
           });
           if (cancelledOnNew) {
             throw new BadRequestException(
-              "Yangi sana — bekor qilingan dars sanasi",
+              'Yangi sana — bekor qilingan dars sanasi',
             );
           }
         }
@@ -702,8 +702,13 @@ export class LessonReschedulesService {
     const existing = await this.prisma.lessonReschedule.findFirst({
       where: { id, companyId, deletedAt: null },
     });
-    if (!existing) throw new NotFoundException('Ko\'chirish topilmadi');
-    await assertCallerMayTouchGroup(this.prisma, userId, roles, existing.groupId);
+    if (!existing) throw new NotFoundException("Ko'chirish topilmadi");
+    await assertCallerMayTouchGroup(
+      this.prisma,
+      userId,
+      roles,
+      existing.groupId,
+    );
     return this.prisma.$transaction(async (tx) => {
       const row = await tx.lessonReschedule.update({
         where: { id },
@@ -728,7 +733,7 @@ export class LessonReschedulesService {
   private parseDate(dateStr: string): Date {
     const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (!m) {
-      throw new BadRequestException('Sana formati YYYY-MM-DD bo\'lishi kerak');
+      throw new BadRequestException("Sana formati YYYY-MM-DD bo'lishi kerak");
     }
     return new Date(`${dateStr}T00:00:00.000Z`);
   }

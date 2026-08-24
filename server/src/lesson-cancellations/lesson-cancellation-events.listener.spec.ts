@@ -35,7 +35,9 @@ describe('LessonCancellationEventsListener', () => {
       enrollment: { findMany: jest.fn() },
     };
     smsService = { sendToStudent: jest.fn().mockResolvedValue({}) };
-    notificationsService = { create: jest.fn().mockResolvedValue({ id: 'n-1' }) };
+    notificationsService = {
+      create: jest.fn().mockResolvedValue({ id: 'n-1' }),
+    };
     gateway = { sendToUser: jest.fn() };
     pushService = { sendToUser: jest.fn().mockResolvedValue(undefined) };
     telegramService = { getBot: jest.fn().mockReturnValue(bot) };

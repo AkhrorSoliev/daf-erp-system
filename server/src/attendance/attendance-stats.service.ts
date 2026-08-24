@@ -53,7 +53,8 @@ export class AttendanceStatsService {
     const systemStart = companyId
       ? await getSystemStartDate(this.prisma, companyId)
       : null;
-    const rangeStart = floorStart(requestedStart, systemStart) ?? requestedStart;
+    const rangeStart =
+      floorStart(requestedStart, systemStart) ?? requestedStart;
     const rangeEnd = endDate ? new Date(endDate + 'T00:00:00.000Z') : now;
 
     // Schedule-change aware: resolve lesson weekdays per date so the lesson

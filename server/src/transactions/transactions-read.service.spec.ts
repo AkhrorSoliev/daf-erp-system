@@ -489,7 +489,10 @@ describe('TransactionsReadService', () => {
       // The old walk latched on the FIRST dip and never let go, so a student
       // who paid off their debt and later fell one lesson short still read
       // "25 ta dars to'lovsiz". Only the CURRENT spell counts.
-      prisma.student.findFirst.mockResolvedValue({ id: 10460, balance: -33325 });
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10460,
+        balance: -33325,
+      });
       prisma.transaction.findMany.mockResolvedValueOnce([
         {
           type: 'LESSON_CONSUMPTION',

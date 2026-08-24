@@ -37,7 +37,9 @@ describe('StudentsService — profile reads are branch-gated', () => {
 
   beforeEach(async () => {
     prisma = {
-      student: { findFirst: jest.fn().mockResolvedValue({ id: FARGONA_STUDENT }) },
+      student: {
+        findFirst: jest.fn().mockResolvedValue({ id: FARGONA_STUDENT }),
+      },
       studentBranch: {
         findFirst: jest.fn().mockResolvedValue({ branchId: FARGONA }),
       },

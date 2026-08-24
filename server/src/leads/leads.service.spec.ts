@@ -43,9 +43,11 @@ describe('LeadsService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         findFirst: jest.fn().mockResolvedValue(null),
       },
-      $transaction: jest.fn().mockImplementation((arg: any) =>
-        typeof arg === 'function' ? arg(prisma) : Promise.all(arg),
-      ),
+      $transaction: jest
+        .fn()
+        .mockImplementation((arg: any) =>
+          typeof arg === 'function' ? arg(prisma) : Promise.all(arg),
+        ),
     };
     history = {
       recordCreate: jest.fn(),
@@ -74,9 +76,9 @@ describe('LeadsService', () => {
   describe('getSectionLeads', () => {
     it('throws NotFound when the section is missing', async () => {
       prisma.leadSection.findFirst.mockResolvedValue(null);
-      await expect(service.getSectionLeads('missing', 1001, null)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.getSectionLeads('missing', 1001, null),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('lists non-deleted, non-converted leads of the section', async () => {
@@ -529,7 +531,8 @@ describe('LeadsService', () => {
         { reason: 'Narx qimmat keldi' },
         1001,
         1,
-       null);
+        null,
+      );
 
       expect(prisma.lead.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -560,9 +563,9 @@ describe('LeadsService', () => {
   describe('convert', () => {
     it('throws NotFound when the lead is missing', async () => {
       prisma.lead.findFirst.mockResolvedValue(null);
-      await expect(service.convert('missing', {}, 1001, 1, null)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.convert('missing', {}, 1001, 1, null),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('rejects a lead that is already converted', async () => {
@@ -574,9 +577,9 @@ describe('LeadsService', () => {
         statusEnum: 'NEW',
         convertedStudentId: 10005,
       });
-      await expect(service.convert('lead-1', {}, 1001, 1, null)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.convert('lead-1', {}, 1001, 1, null),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('creates a student, links it and flags the lead CONVERTED', async () => {
@@ -595,7 +598,13 @@ describe('LeadsService', () => {
       students.create.mockResolvedValue({ id: 10007 });
       prisma.lead.update.mockResolvedValue({ id: 'lead-1' });
 
-      const result = await service.convert('lead-1', { branchId: 5 }, 1001, 1, null);
+      const result = await service.convert(
+        'lead-1',
+        { branchId: 5 },
+        1001,
+        1,
+        null,
+      );
 
       expect(students.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -655,7 +664,8 @@ describe('LeadsService', () => {
         { branchId: 5, groupId: 'grp-1', startDate: '2026-06-28' },
         1001,
         1,
-       null);
+        null,
+      );
 
       expect(students.create).toHaveBeenCalledWith(
         expect.objectContaining({ branchIds: [7] }),
@@ -702,9 +712,9 @@ describe('LeadsService', () => {
       // A live student already exists on this phone → refuse to mint a second.
       prisma.student.findFirst.mockResolvedValue({ id: 10099 });
 
-      await expect(service.convert('lead-1', {}, 1001, 1, null)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.convert('lead-1', {}, 1001, 1, null),
+      ).rejects.toThrow(BadRequestException);
       expect(students.create).not.toHaveBeenCalled();
       expect(prisma.lead.update).not.toHaveBeenCalled();
     });
@@ -720,7 +730,8 @@ describe('LeadsService', () => {
         { existingStudentId: 10050 },
         1001,
         1,
-       null);
+        null,
+      );
 
       expect(students.create).not.toHaveBeenCalled();
       expect(prisma.group.findFirst).not.toHaveBeenCalled();
@@ -863,7 +874,10 @@ describe('LeadsService', () => {
         id: 'lead-1',
         calledAt: original,
       });
-      prisma.lead.update.mockResolvedValue({ id: 'lead-1', calledAt: original });
+      prisma.lead.update.mockResolvedValue({
+        id: 'lead-1',
+        calledAt: original,
+      });
 
       // A different user (9) re-marks; neither the timestamp nor the caller
       // identity may change — the (when, who) pair must stay coherent.

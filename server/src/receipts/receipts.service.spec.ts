@@ -49,7 +49,14 @@ describe('ReceiptsService', () => {
     prisma = {
       payment: { findFirst: jest.fn() },
       refund: { findFirst: jest.fn() },
-      branch: { findUnique: jest.fn().mockResolvedValue({ id: 1, name: 'Asosiy', address: 'Toshkent', phone: '+998 71 200 00 00' }) },
+      branch: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 1,
+          name: 'Asosiy',
+          address: 'Toshkent',
+          phone: '+998 71 200 00 00',
+        }),
+      },
       company: { findUnique: jest.fn().mockResolvedValue(company) },
       enrollment: {
         findFirst: jest.fn().mockResolvedValue({
@@ -195,22 +202,21 @@ describe('ReceiptsService', () => {
   describe('invoice URL', () => {
     it('builds the QR target as <invoice>/<id> when INVOICE_BASE_URL is set', async () => {
       // Re-build with a config that exposes INVOICE_BASE_URL only.
-      const moduleWithInvoice: TestingModule =
-        await Test.createTestingModule({
-          providers: [
-            ReceiptsService,
-            { provide: PrismaService, useValue: prisma },
-            {
-              provide: ConfigService,
-              useValue: {
-                get: (k: string) =>
-                  k === 'INVOICE_BASE_URL'
-                    ? 'https://invoice.dafzentrum.uz'
-                    : null,
-              },
+      const moduleWithInvoice: TestingModule = await Test.createTestingModule({
+        providers: [
+          ReceiptsService,
+          { provide: PrismaService, useValue: prisma },
+          {
+            provide: ConfigService,
+            useValue: {
+              get: (k: string) =>
+                k === 'INVOICE_BASE_URL'
+                  ? 'https://invoice.dafzentrum.uz'
+                  : null,
             },
-          ],
-        }).compile();
+          },
+        ],
+      }).compile();
       const svc = moduleWithInvoice.get(ReceiptsService);
       prisma.payment.findFirst.mockResolvedValue({
         ...basePayment,

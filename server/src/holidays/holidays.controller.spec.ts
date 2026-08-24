@@ -12,7 +12,9 @@ describe('HolidaysController — role guards', () => {
   let guard: RolesGuard;
 
   const mockService = {
-    findAll: jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 10 }),
+    findAll: jest
+      .fn()
+      .mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 10 }),
     findOne: jest.fn().mockResolvedValue({}),
     create: jest.fn().mockResolvedValue({}),
     update: jest.fn().mockResolvedValue({}),

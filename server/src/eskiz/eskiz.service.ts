@@ -67,7 +67,9 @@ export class EskizService {
 
   async sendSms(phone: string, message: string): Promise<EskizSendResult> {
     if (!this.isConfigured()) {
-      throw new EskizError('Eskiz sozlanmagan (ESKIZ_EMAIL/ESKIZ_PASSWORD yo`q)');
+      throw new EskizError(
+        'Eskiz sozlanmagan (ESKIZ_EMAIL/ESKIZ_PASSWORD yo`q)',
+      );
     }
     const mobile = this.normalizePhone(phone);
 
@@ -111,7 +113,9 @@ export class EskizService {
 
   private async login(): Promise<string> {
     if (!this.email || !this.password) {
-      throw new EskizError('Eskiz sozlanmagan (ESKIZ_EMAIL/ESKIZ_PASSWORD yo`q)');
+      throw new EskizError(
+        'Eskiz sozlanmagan (ESKIZ_EMAIL/ESKIZ_PASSWORD yo`q)',
+      );
     }
     const form = new FormData();
     form.append('email', this.email);

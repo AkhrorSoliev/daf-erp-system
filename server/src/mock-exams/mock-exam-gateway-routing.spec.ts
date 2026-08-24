@@ -66,7 +66,9 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
   });
 
   it("allaqachon to'langan bo'lsa aralashmaydi", async () => {
-    prisma.mockExamParticipant.findMany.mockResolvedValue([participant({ paid: true })]);
+    prisma.mockExamParticipant.findMany.mockResolvedValue([
+      participant({ paid: true }),
+    ]);
     await expect(service.shouldRouteToMock(ARGS)).resolves.toBe(false);
   });
 
@@ -78,7 +80,9 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
   });
 
   it('bepul imtihonda aralashmaydi', async () => {
-    prisma.mockExamParticipant.findMany.mockResolvedValue([participant({ feeAmount: 0, exam: { price: 0 } })]);
+    prisma.mockExamParticipant.findMany.mockResolvedValue([
+      participant({ feeAmount: 0, exam: { price: 0 } }),
+    ]);
     await expect(
       service.shouldRouteToMock({ ...ARGS, amountSom: 0 }),
     ).resolves.toBe(false);
@@ -92,8 +96,10 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
     await expect(service.shouldRouteToMock(ARGS)).resolves.toBe(false);
   });
 
-  it("eski feeAmount=null qatorda imtihon narxiga qaraydi", async () => {
-    prisma.mockExamParticipant.findMany.mockResolvedValue([participant({ feeAmount: null, exam: { price: 40000 } })]);
+  it('eski feeAmount=null qatorda imtihon narxiga qaraydi', async () => {
+    prisma.mockExamParticipant.findMany.mockResolvedValue([
+      participant({ feeAmount: null, exam: { price: 40000 } }),
+    ]);
     await expect(
       service.shouldRouteToMock({ ...ARGS, amountSom: 40000 }),
     ).resolves.toBe(true);
@@ -116,7 +122,7 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
       participant({ id: 'mockA1', feeAmount: null, exam: { price: 40000 } }),
     ];
 
-    it("summaga MOS keladigan ishtirokchini tanlaydi (eng eskisini emas)", async () => {
+    it('summaga MOS keladigan ishtirokchini tanlaydi (eng eskisini emas)', async () => {
       prisma.mockExamParticipant.findMany.mockResolvedValue(many);
       const t = await service.resolveTarget(10003, 1000);
       expect(t).toEqual({
@@ -139,7 +145,7 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
       ).resolves.toBe(true);
     });
 
-    it("hech qaysi narxga mos kelmasa aralashmaydi", async () => {
+    it('hech qaysi narxga mos kelmasa aralashmaydi', async () => {
       prisma.mockExamParticipant.findMany.mockResolvedValue(many);
       await expect(
         service.shouldRouteToMock({ ...ARGS, amountSom: 555000 }),
@@ -148,7 +154,12 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
 
     it("mos summa to'langan bo'lsa, boshqa to'lanmaganiga o'tmaydi", async () => {
       prisma.mockExamParticipant.findMany.mockResolvedValue([
-        participant({ id: 'test2', feeAmount: 1000, paid: true, exam: { price: 1000 } }),
+        participant({
+          id: 'test2',
+          feeAmount: 1000,
+          paid: true,
+          exam: { price: 1000 },
+        }),
         participant({ id: 'test1', feeAmount: 2000, exam: { price: 2000 } }),
       ]);
       // 1000 uchun mos to'lanmagan yo'q → eng yangi to'lanmagani (2000) qaytadi,
@@ -174,7 +185,7 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
    * bilmasdi va to'lov tugmalari ekranda turaverardi.
    */
   describe("markCompleted — to'lov haqida xabar", () => {
-    it("mock.participant.paid hodisasini chiqaradi", async () => {
+    it('mock.participant.paid hodisasini chiqaradi', async () => {
       const emit = jest.fn();
       const tx = {
         mockExamGatewayTransaction: {
@@ -215,7 +226,7 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
       });
     });
 
-    it("eski feeAmount=null qatorda imtihon narxini yuboradi", async () => {
+    it('eski feeAmount=null qatorda imtihon narxini yuboradi', async () => {
       const emit = jest.fn();
       const tx = {
         mockExamGatewayTransaction: {
@@ -233,7 +244,10 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
       const mod = await Test.createTestingModule({
         providers: [
           MockExamGatewayBillingService,
-          { provide: PrismaService, useValue: { $transaction: async (fn: any) => fn(tx) } },
+          {
+            provide: PrismaService,
+            useValue: { $transaction: async (fn: any) => fn(tx) },
+          },
           { provide: EventEmitter2, useValue: { emit } },
         ],
       }).compile();
@@ -247,7 +261,7 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
     });
   });
 
-  it('PaymentIntent qidiruvi provider va summaga bog\'langan', async () => {
+  it("PaymentIntent qidiruvi provider va summaga bog'langan", async () => {
     prisma.mockExamParticipant.findMany.mockResolvedValue([participant()]);
     await service.shouldRouteToMock({ ...ARGS, provider: 'PAYME' });
     expect(prisma.paymentIntent.findFirst).toHaveBeenCalledWith(

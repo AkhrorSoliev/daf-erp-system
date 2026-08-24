@@ -28,9 +28,18 @@ import { BranchResetPlan } from './branch-reset-plan';
  * bu sirli tarzda ma'lumot yo'qotadi — shuning uchun bitta eksport qilingan
  * funksiya, ikkala chaqiruvchi ham shuni ishlatadi.
  */
-export function buildHistoryWhere(plan: BranchResetPlan): Record<string, unknown> {
-  const { studentIds, enrollmentIds, groupIds, roomIds, courseIds, studentUserIds, staffUserIds } =
-    plan;
+export function buildHistoryWhere(
+  plan: BranchResetPlan,
+): Record<string, unknown> {
+  const {
+    studentIds,
+    enrollmentIds,
+    groupIds,
+    roomIds,
+    courseIds,
+    studentUserIds,
+    staffUserIds,
+  } = plan;
   const allUserIds = [...studentUserIds, ...staffUserIds];
 
   // `companyId` qo'shimcha himoya sifatida qo'shilgan: Student va User ID
@@ -88,7 +97,9 @@ export async function executeBranchReset(
   // ── 1-qadam: o'quvchi tomoni ────────────────────────────────────────────
   // SmsMessage.studentId RESTRICT — o'quvchidan oldin ketishi SHART.
   await wipe('smsMessage', studentIds, { studentId: { in: studentIds } });
-  await wipe('enrollmentStateLog', enrollmentIds, { enrollmentId: { in: enrollmentIds } });
+  await wipe('enrollmentStateLog', enrollmentIds, {
+    enrollmentId: { in: enrollmentIds },
+  });
   await wipe('enrollment', enrollmentIds, { id: { in: enrollmentIds } });
   await wipe('studentBranch', studentIds, { studentId: { in: studentIds } });
   await wipe('student', studentIds, { id: { in: studentIds } });
@@ -98,7 +109,9 @@ export async function executeBranchReset(
   // bo'ladi. Shunday bo'lsa ham Student ATAYLAB avval ketadi: aks holda bu
   // yerda User o'chgach orqasida userId=NULL, filialsiz "etim" Student qatori
   // qolib ketardi — FK buni majburlamaydi, tartib shunchaki qasddan shunday.
-  await wipe('notification', studentUserIds, { userId: { in: studentUserIds } });
+  await wipe('notification', studentUserIds, {
+    userId: { in: studentUserIds },
+  });
   await wipe('userRole', studentUserIds, { userId: { in: studentUserIds } });
 
   // ── 2-qadam: guruh, xona, kurs ──────────────────────────────────────────
@@ -141,7 +154,9 @@ export async function executeBranchReset(
   await wipe('statusHistory', historyIds, historyWhere);
 
   // ── 5-qadam: kunlik moliyaviy suratlar ──────────────────────────────────
-  await wipe('dailyFinancialSnapshot', snapshotIds, { id: { in: snapshotIds } });
+  await wipe('dailyFinancialSnapshot', snapshotIds, {
+    id: { in: snapshotIds },
+  });
 
   return deleted;
 }

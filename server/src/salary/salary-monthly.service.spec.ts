@@ -52,7 +52,9 @@ describe('SalaryMonthlyService', () => {
       group: { findMany: jest.fn().mockResolvedValue([]) },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
       lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
-      employeeSalaryConfigVersion: { findMany: jest.fn().mockResolvedValue([]) },
+      employeeSalaryConfigVersion: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       expense: {
         groupBy: jest.fn().mockResolvedValue([]),
         findMany: jest.fn().mockResolvedValue([]),
@@ -108,7 +110,13 @@ describe('SalaryMonthlyService', () => {
   it('surfaces the non-teaching staff pass in the response', async () => {
     const staffRows = [
       {
-        user: { id: 10030, firstName: 'A', lastName: 'B', position: 'Administrator', branch: null },
+        user: {
+          id: 10030,
+          firstName: 'A',
+          lastName: 'B',
+          position: 'Administrator',
+          branch: null,
+        },
         monthly: 5_000_000,
         advances: 0,
         netToPay: 5_000_000,
@@ -148,8 +156,18 @@ describe('SalaryMonthlyService', () => {
       { userId: 10010, attendanceId: 'a1', amount: 6_000 },
     ]);
     prisma.attendance.findMany.mockResolvedValue([
-      { id: 'a1', studentId: 20001, groupId: 'g1', date: new Date('2026-07-10') },
-      { id: 'a2', studentId: 20001, groupId: 'g1', date: new Date('2026-07-12') },
+      {
+        id: 'a1',
+        studentId: 20001,
+        groupId: 'g1',
+        date: new Date('2026-07-10'),
+      },
+      {
+        id: 'a2',
+        studentId: 20001,
+        groupId: 'g1',
+        date: new Date('2026-07-12'),
+      },
     ]);
     // Student 20001 has cleared the BR-09 new-student gate (>= 4 attended).
     prisma.attendance.groupBy.mockResolvedValue([
@@ -166,7 +184,11 @@ describe('SalaryMonthlyService', () => {
     expect(row.fullDeserved).toBe(12_000);
     expect(row.netToPay).toBe(12_000); // FULL base (covered + gap) − 0 advances
     expect(res.totals).toEqual(
-      expect.objectContaining({ fullDeserved: 12_000, covered: 6_000, centerFunded: 6_000 }),
+      expect.objectContaining({
+        fullDeserved: 12_000,
+        covered: 6_000,
+        centerFunded: 6_000,
+      }),
     );
   });
 
@@ -214,8 +236,18 @@ describe('SalaryMonthlyService', () => {
       },
     ]);
     prisma.attendance.findMany.mockResolvedValue([
-      { id: 'a1', studentId: 20001, groupId: 'g1', date: new Date('2026-07-10') },
-      { id: 'a2', studentId: 20001, groupId: 'g1', date: new Date('2026-07-12') },
+      {
+        id: 'a1',
+        studentId: 20001,
+        groupId: 'g1',
+        date: new Date('2026-07-10'),
+      },
+      {
+        id: 'a2',
+        studentId: 20001,
+        groupId: 'g1',
+        date: new Date('2026-07-12'),
+      },
     ]);
     prisma.attendance.groupBy.mockResolvedValue([
       { studentId: 20001, groupId: 'g1', _count: { _all: 8 } },
@@ -263,7 +295,12 @@ describe('SalaryMonthlyService', () => {
       },
     ]);
     prisma.attendance.findMany.mockResolvedValue([
-      { id: 'a1', studentId: 20001, groupId: 'g1', date: new Date('2026-07-10') },
+      {
+        id: 'a1',
+        studentId: 20001,
+        groupId: 'g1',
+        date: new Date('2026-07-10'),
+      },
     ]);
 
     const res = await service.getMonthly({ month: '2026-07' }, 1, 999);
@@ -284,8 +321,18 @@ describe('SalaryMonthlyService', () => {
     // Two covered accruals: one normal (creditPeriodDate null), one carried IN
     // from a prior month (creditPeriodDate set → counts as "oldingi oydan").
     prisma.salaryAccrual.findMany.mockResolvedValue([
-      { userId: 10010, attendanceId: 'a1', amount: 6_000, creditPeriodDate: null },
-      { userId: 10010, attendanceId: 'a2', amount: 4_000, creditPeriodDate: new Date('2026-06-01') },
+      {
+        userId: 10010,
+        attendanceId: 'a1',
+        amount: 6_000,
+        creditPeriodDate: null,
+      },
+      {
+        userId: 10010,
+        attendanceId: 'a2',
+        amount: 4_000,
+        creditPeriodDate: new Date('2026-06-01'),
+      },
     ]);
     // This month's lessons whose earning carried OUT to a later period.
     prisma.salaryAccrual.groupBy.mockResolvedValue([
@@ -360,8 +407,18 @@ describe('SalaryMonthlyService', () => {
       { userId: 10010, attendanceId: 'a1', amount: 6_000 },
     ]);
     prisma.attendance.findMany.mockResolvedValue([
-      { id: 'a1', studentId: 20001, groupId: 'g1', date: new Date('2026-07-10') },
-      { id: 'a2', studentId: 20001, groupId: 'g1', date: new Date('2026-07-12') },
+      {
+        id: 'a1',
+        studentId: 20001,
+        groupId: 'g1',
+        date: new Date('2026-07-10'),
+      },
+      {
+        id: 'a2',
+        studentId: 20001,
+        groupId: 'g1',
+        date: new Date('2026-07-12'),
+      },
     ]);
     prisma.attendance.groupBy.mockResolvedValue([
       { studentId: 20001, groupId: 'g1', _count: { _all: 8 } },
@@ -548,8 +605,18 @@ describe('SalaryMonthlyService', () => {
     ]);
     prisma.salaryAccrual.findMany.mockResolvedValue([]); // both lessons uncovered
     prisma.attendance.findMany.mockResolvedValue([
-      { id: 'a1', studentId: 20003, groupId: 'g1', date: new Date('2026-07-10') }, // committed
-      { id: 'a2', studentId: 20004, groupId: 'g1', date: new Date('2026-07-12') }, // new
+      {
+        id: 'a1',
+        studentId: 20003,
+        groupId: 'g1',
+        date: new Date('2026-07-10'),
+      }, // committed
+      {
+        id: 'a2',
+        studentId: 20004,
+        groupId: 'g1',
+        date: new Date('2026-07-12'),
+      }, // new
     ]);
     prisma.attendance.groupBy.mockResolvedValue([
       { studentId: 20003, groupId: 'g1', _count: { _all: 5 } }, // >= 4 → topped up
@@ -590,8 +657,18 @@ describe('SalaryMonthlyService', () => {
     ]);
     prisma.salaryAccrual.findMany.mockResolvedValue([]); // both uncovered → would be gap
     prisma.attendance.findMany.mockResolvedValue([
-      { id: 'before', studentId: 20005, groupId: 'g1', date: new Date('2026-07-05') },
-      { id: 'after', studentId: 20005, groupId: 'g1', date: new Date('2026-07-20') },
+      {
+        id: 'before',
+        studentId: 20005,
+        groupId: 'g1',
+        date: new Date('2026-07-05'),
+      },
+      {
+        id: 'after',
+        studentId: 20005,
+        groupId: 'g1',
+        date: new Date('2026-07-20'),
+      },
     ]);
     prisma.attendance.groupBy.mockResolvedValue([
       { studentId: 20005, groupId: 'g1', _count: { _all: 6 } },

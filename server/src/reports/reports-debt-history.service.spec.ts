@@ -38,11 +38,7 @@ describe('ReportsDebtHistoryService', () => {
   const expectFoots = (months: any[]) => {
     for (const m of months) {
       expect(
-        m.openingDebt +
-          m.debtAdded -
-          m.debtPaid -
-          m.debtForgiven -
-          m.debtOther,
+        m.openingDebt + m.debtAdded - m.debtPaid - m.debtForgiven - m.debtOther,
       ).toBe(m.closingDebt);
     }
     // Consecutive months must chain: this month opens where the last closed.
@@ -318,7 +314,7 @@ describe('ReportsDebtHistoryService', () => {
     });
   });
 
-  describe('debt aging — today\'s debt, split by the month it arose in', () => {
+  describe("debt aging — today's debt, split by the month it arose in", () => {
     it('splits ONE student across the months their unpaid charges landed in', async () => {
       // The defect this replaced: a frozen debtor showed the same cumulative
       // figure under every month, so "how much of this is June's?" had no
@@ -344,7 +340,7 @@ describe('ReportsDebtHistoryService', () => {
       expect(june.monthDebt).toBe(200_000);
     });
 
-    it('the buckets sum EXACTLY to today\'s debt — which is what lets the table total', async () => {
+    it("the buckets sum EXACTLY to today's debt — which is what lets the table total", async () => {
       setup(
         [student(10001, -250_000), student(10002, -50_000)],
         [
@@ -360,9 +356,10 @@ describe('ReportsDebtHistoryService', () => {
       expect(sum).toBe(res.current.debt);
       expect(sum).toBe(300_000);
       // Shares are of that same total, so they close on 100.
-      expect(
-        res.months.reduce((a, m) => a + m.agedShare, 0),
-      ).toBeCloseTo(100, 1);
+      expect(res.months.reduce((a, m) => a + m.agedShare, 0)).toBeCloseTo(
+        100,
+        1,
+      );
     });
 
     it("the month's OWN debt does not shrink when the student later pays", async () => {
@@ -416,7 +413,7 @@ describe('ReportsDebtHistoryService', () => {
   });
 
   describe('getMonthAgingDetail', () => {
-    it('reports the month\'s own share and flags the debt held in other months', async () => {
+    it("reports the month's own share and flags the debt held in other months", async () => {
       prisma.student.findMany
         .mockResolvedValueOnce([student(10001, -300_000)]) // roster
         .mockResolvedValueOnce([

@@ -100,7 +100,12 @@ describe('UsersController — role guards', () => {
 
     it('passes companyId and callerId from JWT to the service', async () => {
       await controller.create(
-        { firstName: 'A', lastName: 'B', roleIds: [3], password: 'pass1' } as any,
+        {
+          firstName: 'A',
+          lastName: 'B',
+          roleIds: [3],
+          password: 'pass1',
+        } as any,
         1001,
         42,
       );

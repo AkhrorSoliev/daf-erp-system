@@ -45,7 +45,12 @@ describe('StudentExitReasonsService', () => {
   describe('findAll', () => {
     it('lists reasons scoped by company without filter', async () => {
       prisma.studentExitReason.findMany.mockResolvedValue([
-        { id: 'r1', name: 'A', appliesTo: ['GROUP_REMOVAL'], createdAt: new Date() },
+        {
+          id: 'r1',
+          name: 'A',
+          appliesTo: ['GROUP_REMOVAL'],
+          createdAt: new Date(),
+        },
       ]);
       await service.findAll(1001);
       expect(prisma.studentExitReason.findMany).toHaveBeenCalledWith(

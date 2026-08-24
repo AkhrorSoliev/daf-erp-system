@@ -41,7 +41,7 @@ describe('StudentsReadService', () => {
       await service.findAll(
         { status: 'ungrouped' } as StudentQueryDto,
         1001,
-        null
+        null,
       );
 
       const where = prisma.student.findMany.mock.calls[0][0].where;

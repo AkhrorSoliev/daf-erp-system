@@ -1,10 +1,11 @@
-import {
-  assertCallerInBranch,
-  resolveCallerBranchScope,
-} from './branch-scope';
+import { assertCallerInBranch, resolveCallerBranchScope } from './branch-scope';
 
 function prismaWith(
-  user: { mainBranch: number | null; branchIds: number[]; roles: string[] } | null,
+  user: {
+    mainBranch: number | null;
+    branchIds: number[];
+    roles: string[];
+  } | null,
 ) {
   return {
     user: {
@@ -63,7 +64,11 @@ describe('resolveCallerBranchScope', () => {
 });
 
 describe('assertCallerInBranch', () => {
-  const director = { mainBranch: 1, branchIds: [1], roles: ['Branch Director'] };
+  const director = {
+    mainBranch: 1,
+    branchIds: [1],
+    roles: ['Branch Director'],
+  };
 
   it('passes for the caller’s own branch', async () => {
     await expect(
@@ -133,4 +138,3 @@ describe('multi-branch staff', () => {
     ).rejects.toThrow(/ruxsat yo'q/);
   });
 });
-

@@ -77,7 +77,9 @@ describe('SalaryAccrualService', () => {
     };
 
     it('centerFunded bypasses the B.1 gate and marks isCenterTopUp=true', async () => {
-      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(
+        version,
+      );
       prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'acc-1' });
 
       const result = await service.createAccrual({
@@ -104,7 +106,9 @@ describe('SalaryAccrualService', () => {
     });
 
     it('covered path clears isCenterTopUp but keeps wasCenterTopUp sticky (recovery flip)', async () => {
-      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(
+        version,
+      );
       prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'acc-1' });
 
       await service.createAccrual(baseParams); // ordinary student-covered accrual
@@ -112,7 +116,10 @@ describe('SalaryAccrualService', () => {
       const call = prisma.salaryAccrual.upsert.mock.calls[0][0];
       // Fresh covered accrual: both flags FALSE on create.
       expect(call.create).toEqual(
-        expect.objectContaining({ isCenterTopUp: false, wasCenterTopUp: false }),
+        expect.objectContaining({
+          isCenterTopUp: false,
+          wasCenterTopUp: false,
+        }),
       );
       // Recovery flip: isCenterTopUp cleared; wasCenterTopUp is NOT touched on
       // the covered path (stays whatever the row had — TRUE if it was a top-up).
@@ -127,7 +134,9 @@ describe('SalaryAccrualService', () => {
       prisma.salaryPayment.findFirst
         .mockResolvedValueOnce({ id: 'closed-1', status: 'PAID' }) // lesson period closed
         .mockResolvedValueOnce(null); // current period still open
-      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(
+        version,
+      );
       // …but the accrual already exists (a center top-up already paid it).
       prisma.salaryAccrual.findUnique.mockResolvedValueOnce({ id: 'existing' });
       prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'existing' });
@@ -142,7 +151,9 @@ describe('SalaryAccrualService', () => {
       prisma.salaryPayment.findFirst
         .mockResolvedValueOnce({ id: 'closed-1', status: 'PAID' })
         .mockResolvedValueOnce(null);
-      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(
+        version,
+      );
       prisma.salaryAccrual.findUnique.mockResolvedValueOnce(null); // fresh accrual
       prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'new' });
 
@@ -172,7 +183,9 @@ describe('SalaryAccrualService', () => {
       prisma.salaryPayment.findFirst
         .mockResolvedValueOnce({ id: 'closed-jul', status: 'PAID' }) // July closed
         .mockResolvedValueOnce(null); // current period open
-      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(
+        version,
+      );
       prisma.salaryAccrual.findUnique.mockResolvedValueOnce({ id: 'existing' }); // top-up row exists
       prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'existing' });
       // The top-up already wrote the SALARY_ACCRUAL balance mirror → idempotency hit.
@@ -184,7 +197,9 @@ describe('SalaryAccrualService', () => {
       expect(prisma.transaction.create).not.toHaveBeenCalled();
       expect(prisma.user.update).not.toHaveBeenCalled();
       const call = prisma.salaryAccrual.upsert.mock.calls[0][0];
-      expect(call.update).toEqual(expect.objectContaining({ isCenterTopUp: false }));
+      expect(call.update).toEqual(
+        expect.objectContaining({ isCenterTopUp: false }),
+      );
     });
 
     it('a July+ late payment for a NEVER-topped-up lesson DOES pay the teacher (fresh carry)', async () => {
@@ -193,14 +208,20 @@ describe('SalaryAccrualService', () => {
       prisma.salaryPayment.findFirst
         .mockResolvedValueOnce({ id: 'closed-jul', status: 'PAID' })
         .mockResolvedValueOnce(null);
-      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(
+        version,
+      );
       prisma.salaryAccrual.findUnique.mockResolvedValueOnce(null); // fresh
       prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'new' });
       // No prior balance mirror → applyAccrualToBalance actually credits.
       prisma.transaction.findFirst.mockResolvedValue(null);
 
       const sink: any[] = [];
-      await service.createAccrual({ ...baseParams, lessonDate: julyLesson, carriedOverSink: sink });
+      await service.createAccrual({
+        ...baseParams,
+        lessonDate: julyLesson,
+        carriedOverSink: sink,
+      });
 
       const call = prisma.salaryAccrual.upsert.mock.calls[0][0];
       expect(call.create.creditPeriodDate).toBeInstanceOf(Date); // carried to current period
@@ -219,7 +240,9 @@ describe('SalaryAccrualService', () => {
     };
 
     it("stamps the mirror SALARY_ACCRUAL with the GROUP's branch, not the teacher's", async () => {
-      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(
+        version,
+      );
       prisma.salaryAccrual.findUnique.mockResolvedValueOnce(null);
       prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'new' });
       prisma.transaction.findFirst.mockResolvedValue(null);
@@ -234,7 +257,9 @@ describe('SalaryAccrualService', () => {
     });
 
     it('writes null rather than guessing when the group has no branch', async () => {
-      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(
+        version,
+      );
       prisma.salaryAccrual.findUnique.mockResolvedValueOnce(null);
       prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'new' });
       prisma.transaction.findFirst.mockResolvedValue(null);
@@ -298,7 +323,9 @@ describe('SalaryAccrualService', () => {
     };
 
     it('credits a center-funded backfill to the explicit override period (no closed-period probe)', async () => {
-      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(version);
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(
+        version,
+      );
       prisma.salaryAccrual.findUnique.mockResolvedValueOnce(null);
       prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'backfill' });
       const override = new Date('2026-08-01T00:00:00.000Z');
@@ -327,13 +354,16 @@ describe('SalaryAccrualService', () => {
         salaryType: 'PERCENTAGE',
         value: 40,
       };
-      prisma.employeeSalaryConfigVersion.findFirst
-        .mockResolvedValueOnce(groupVersion);
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce(
+        groupVersion,
+      );
 
       await service.createAccrual(baseParams);
 
       // Per-group query first
-      expect(prisma.employeeSalaryConfigVersion.findFirst).toHaveBeenNthCalledWith(
+      expect(
+        prisma.employeeSalaryConfigVersion.findFirst,
+      ).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({
           where: expect.objectContaining({
@@ -342,7 +372,9 @@ describe('SalaryAccrualService', () => {
         }),
       );
       // Global lookup not made — group version was found
-      expect(prisma.employeeSalaryConfigVersion.findFirst).toHaveBeenCalledTimes(1);
+      expect(
+        prisma.employeeSalaryConfigVersion.findFirst,
+      ).toHaveBeenCalledTimes(1);
     });
 
     it('falls back to global when per-group has no version', async () => {
@@ -357,8 +389,12 @@ describe('SalaryAccrualService', () => {
 
       await service.createAccrual(baseParams);
 
-      expect(prisma.employeeSalaryConfigVersion.findFirst).toHaveBeenCalledTimes(2);
-      expect(prisma.employeeSalaryConfigVersion.findFirst).toHaveBeenNthCalledWith(
+      expect(
+        prisma.employeeSalaryConfigVersion.findFirst,
+      ).toHaveBeenCalledTimes(2);
+      expect(
+        prisma.employeeSalaryConfigVersion.findFirst,
+      ).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({
           where: expect.objectContaining({
@@ -547,7 +583,9 @@ describe('SalaryAccrualService', () => {
 
       const result = await service.createAccrual(baseParams);
       expect(result).toBeNull();
-      expect(prisma.employeeSalaryConfigVersion.findFirst).not.toHaveBeenCalled();
+      expect(
+        prisma.employeeSalaryConfigVersion.findFirst,
+      ).not.toHaveBeenCalled();
       expect(prisma.salaryAccrual.upsert).not.toHaveBeenCalled();
     });
 

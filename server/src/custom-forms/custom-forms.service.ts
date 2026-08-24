@@ -326,7 +326,9 @@ export class CustomFormsService {
     if (!mapped.firstName || !mapped.lastName || !mapped.phone) {
       // Schema-time validation should have prevented this, but guard
       // against tampered or legacy form schemas.
-      throw new BadRequestException("Ism, familya va telefon maydonlari to'liq emas");
+      throw new BadRequestException(
+        "Ism, familya va telefon maydonlari to'liq emas",
+      );
     }
 
     const sourceId = await this.resolveSubmissionSourceId(
@@ -487,12 +489,16 @@ export class CustomFormsService {
     const ids = new Set<string>();
     for (const f of fields) {
       if (ids.has(f.id)) {
-        throw new BadRequestException("Maydon identifikatorlari takrorlanmasligi kerak");
+        throw new BadRequestException(
+          'Maydon identifikatorlari takrorlanmasligi kerak',
+        );
       }
       ids.add(f.id);
 
       if (!f.label) {
-        throw new BadRequestException("Har bir maydon nomi to'ldirilishi kerak");
+        throw new BadRequestException(
+          "Har bir maydon nomi to'ldirilishi kerak",
+        );
       }
       if (TYPES_WITH_OPTIONS.includes(f.type)) {
         if (!f.options?.length) {
@@ -536,7 +542,11 @@ export class CustomFormsService {
   }
 
   private slotLabel(slot: MapsToValue): string {
-    return slot === 'firstName' ? 'Ism' : slot === 'lastName' ? 'Familya' : 'Telefon';
+    return slot === 'firstName'
+      ? 'Ism'
+      : slot === 'lastName'
+        ? 'Familya'
+        : 'Telefon';
   }
 
   private parseFields(raw: Prisma.JsonValue): FormFieldDto[] {
@@ -555,11 +565,12 @@ export class CustomFormsService {
     for (const field of fields) {
       const raw = data[field.id];
       const value = this.coerceValue(field, raw);
-      const provided =
-        value !== undefined && value !== null && value !== '';
+      const provided = value !== undefined && value !== null && value !== '';
 
       if (field.required && !provided) {
-        throw new BadRequestException(`"${field.label}" maydoni to'ldirilishi shart`);
+        throw new BadRequestException(
+          `"${field.label}" maydoni to'ldirilishi shart`,
+        );
       }
 
       if (!provided) continue;
@@ -596,9 +607,7 @@ export class CustomFormsService {
       if (field.type === 'number') {
         const n = Number(value);
         if (Number.isNaN(n)) {
-          throw new BadRequestException(
-            `"${field.label}" — son kiriting`,
-          );
+          throw new BadRequestException(`"${field.label}" — son kiriting`);
         }
         cleaned[field.id] = n;
         continue;
@@ -647,7 +656,9 @@ export class CustomFormsService {
       });
       if (!exists) return slug;
     }
-    throw new BadRequestException("Forma havolasini yaratib bo'lmadi, qaytadan urinib ko'ring");
+    throw new BadRequestException(
+      "Forma havolasini yaratib bo'lmadi, qaytadan urinib ko'ring",
+    );
   }
 
   // Exposed for tests

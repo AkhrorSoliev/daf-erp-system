@@ -405,7 +405,10 @@ export function allocateCashSlices(
 ): Map<string, { cashAccountId: string; amount: number }[]> {
   const out = new Map<string, { cashAccountId: string; amount: number }[]>();
   // Mutable copy — the originals belong to the caller.
-  const remaining = new Map<number, { cashAccountId: string; left: number }[]>();
+  const remaining = new Map<
+    number,
+    { cashAccountId: string; left: number }[]
+  >();
   for (const [branchId, slices] of slicesByBranch) {
     remaining.set(
       branchId,

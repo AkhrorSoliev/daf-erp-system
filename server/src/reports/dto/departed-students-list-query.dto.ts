@@ -1,4 +1,11 @@
-import { IsBoolean, IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  Max,
+  Min,
+} from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { StudentStatus } from '@prisma/client';
 

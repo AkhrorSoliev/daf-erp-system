@@ -46,10 +46,7 @@ describe('TelegramGroupAnnouncementService', () => {
 
   it('refuses when both templateKey and customMessage given', async () => {
     await expect(
-      service.broadcast(
-        { templateKey: 'GENERAL', customMessage: 'x' },
-        caller,
-      ),
+      service.broadcast({ templateKey: 'GENERAL', customMessage: 'x' }, caller),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -89,7 +86,11 @@ describe('TelegramGroupAnnouncementService', () => {
       { id: '2', chatId: BigInt(-2) },
     ]);
     const result = await service.broadcast(
-      { templateKey: 'GENERAL', variables: { title: 'a', body: 'b' }, dryRun: true },
+      {
+        templateKey: 'GENERAL',
+        variables: { title: 'a', body: 'b' },
+        dryRun: true,
+      },
       caller,
     );
     expect(result.dryRun).toBe(true);

@@ -96,7 +96,7 @@ export class MockExamResultsService {
     const exam = await this.ensureExam(examId);
     if (exam.status !== MockExamStatus.GRADING) {
       throw new BadRequestException(
-        "Ballarni faqat GRADING (baholanmoqda) holatida kiritish mumkin",
+        'Ballarni faqat GRADING (baholanmoqda) holatida kiritish mumkin',
       );
     }
 
@@ -122,9 +122,7 @@ export class MockExamResultsService {
       for (const s of entry.scores) {
         const max = subjectMaxById.get(s.subjectId);
         if (max === undefined) {
-          throw new BadRequestException(
-            `Bo'lim topilmadi: ${s.subjectId}`,
-          );
+          throw new BadRequestException(`Bo'lim topilmadi: ${s.subjectId}`);
         }
         if (s.score < 0 || s.score > max) {
           throw new BadRequestException(

@@ -27,9 +27,11 @@ describe('LeadsArchiveService', () => {
       leadColumn: { findFirst: jest.fn() },
       // Restore runs inside an interactive transaction; execute the callback
       // against the same mock client.
-      $transaction: jest.fn().mockImplementation((arg: any) =>
-        typeof arg === 'function' ? arg(prisma) : Promise.all(arg),
-      ),
+      $transaction: jest
+        .fn()
+        .mockImplementation((arg: any) =>
+          typeof arg === 'function' ? arg(prisma) : Promise.all(arg),
+        ),
     };
     history = {
       recordCreate: jest.fn(),
@@ -81,7 +83,13 @@ describe('LeadsArchiveService', () => {
     it('throws NotFound when the archived lead is missing', async () => {
       prisma.lead.findFirst.mockResolvedValue(null);
       await expect(
-        service.restoreLead('x', { columnId: 'c', sectionId: 's' }, 1001, 1, null),
+        service.restoreLead(
+          'x',
+          { columnId: 'c', sectionId: 's' },
+          1001,
+          1,
+          null,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -110,7 +118,10 @@ describe('LeadsArchiveService', () => {
         column: { systemKey: 'NEW' },
       });
       prisma.lead.aggregate.mockResolvedValue({ _max: { order: 3 } });
-      prisma.lead.update.mockResolvedValue({ id: 'lead-1', sectionId: 'sec-1' });
+      prisma.lead.update.mockResolvedValue({
+        id: 'lead-1',
+        sectionId: 'sec-1',
+      });
 
       const result = await service.restoreLead(
         'lead-1',
@@ -149,7 +160,10 @@ describe('LeadsArchiveService', () => {
         column: { systemKey: 'NEW' },
       });
       prisma.lead.aggregate.mockResolvedValue({ _max: { order: null } });
-      prisma.lead.update.mockResolvedValue({ id: 'lead-9', sectionId: 'sec-1' });
+      prisma.lead.update.mockResolvedValue({
+        id: 'lead-9',
+        sectionId: 'sec-1',
+      });
 
       await service.restoreLead(
         'lead-9',

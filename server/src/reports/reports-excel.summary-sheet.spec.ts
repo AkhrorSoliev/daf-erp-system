@@ -23,7 +23,12 @@ const input = (over: Partial<SummaryInput> = {}): SummaryInput =>
     prevMonth: '2026-06',
     periodLine: 'Davr: 01.07.2026 — 31.07.2026 (Iyul 2026)',
     scopeLine: 'DaF Sprachzentrum · Barcha filiallar',
-    cur: { np: np(), covered: 80_321_275, centerFunded: 15_513_272, recognized: 173_783_991 },
+    cur: {
+      np: np(),
+      covered: 80_321_275,
+      centerFunded: 15_513_272,
+      recognized: 173_783_991,
+    },
     prev: { np: np({ netProfit: 4_714_564 }), covered: 1, centerFunded: 1 },
     ownMoney: { cur: 142_064_938, prev: 133_621_653 },
     ownProfit: { cur: 4_257_391, prev: -26_750_444 },
@@ -57,14 +62,29 @@ const input = (over: Partial<SummaryInput> = {}): SummaryInput =>
       attended: 444,
       inGroup: 427,
       groupless: 76,
-      byStatus: [{ status: 'FROZEN', count: 184 }, { status: 'EXPELLED', count: 134 }],
+      byStatus: [
+        { status: 'FROZEN', count: 184 },
+        { status: 'EXPELLED', count: 134 },
+      ],
       totalStudents: 824,
       arrived: 72,
-      left: { frozen: 73, expelled: 41, graduated: 20, archived: 0, total: 134 },
+      left: {
+        frozen: 73,
+        expelled: 41,
+        graduated: 20,
+        archived: 0,
+        total: 134,
+      },
       netChange: -62,
       dropped: {
-        records: 130, students: 118, stillInGroup: 37, groupless: 81,
-        grouplessByStatus: [{ status: 'EXPELLED', count: 35 }, { status: 'ACTIVE', count: 30 }],
+        records: 130,
+        students: 118,
+        stillInGroup: 37,
+        groupless: 81,
+        grouplessByStatus: [
+          { status: 'EXPELLED', count: 35 },
+          { status: 'ACTIVE', count: 30 },
+        ],
       },
     },
     ...over,
@@ -80,7 +100,8 @@ const textOf = (ws: Worksheet): string[] => {
 const valueFor = (ws: Worksheet, label: string, col = 2): any => {
   let v: any;
   ws.eachRow((r) => {
-    if (v === undefined && String(r.getCell(1).value ?? '') === label) v = r.getCell(col).value;
+    if (v === undefined && String(r.getCell(1).value ?? '') === label)
+      v = r.getCell(col).value;
   });
   return v;
 };
@@ -91,12 +112,20 @@ const pctFor = (ws: Worksheet, label: string): any => valueFor(ws, label, 3);
 // comparison header ("Ko'rsatkich" | curLabel | prevLabel | 'Farq' | 'Izoh'),
 // so a second-cell value narrows to the right row when the label alone is
 // ambiguous (block 6's is 'Soni', blocks 1/2's is the current-month label).
-const headerCells = (ws: Worksheet, firstCellLabel: string, secondCellLabel?: string): any[] => {
+const headerCells = (
+  ws: Worksheet,
+  firstCellLabel: string,
+  secondCellLabel?: string,
+): any[] => {
   let cells: any[] = [];
   ws.eachRow((r) => {
     if (cells.length) return;
     if (String(r.getCell(1).value ?? '') !== firstCellLabel) return;
-    if (secondCellLabel !== undefined && String(r.getCell(2).value ?? '') !== secondCellLabel) return;
+    if (
+      secondCellLabel !== undefined &&
+      String(r.getCell(2).value ?? '') !== secondCellLabel
+    )
+      return;
     cells = [2, 3, 4].map((c) => r.getCell(c).value);
   });
   return cells;
@@ -135,15 +164,28 @@ describe('summarySheetV2', () => {
   });
 
   it('spells out a fully collected month instead of printing a bare 0', () => {
-    expect(valueFor(ws, "Hali to'lanmay qolgan")).toBe("Yo'q — hammasi to'langan");
+    expect(valueFor(ws, "Hali to'lanmay qolgan")).toBe(
+      "Yo'q — hammasi to'langan",
+    );
   });
 
   it('prints the unpaid amount when there is one', () => {
     const wb = new Workbook();
-    summarySheetV2(wb, input({
-      lessonMoney: { paidInMonth: 1, paidEarlier: 1, paidNextMonth: 1, unpaid: 143_884_239, total: 143_884_242 },
-    }));
-    expect(valueFor(wb.getWorksheet('Xulosa')!, "Hali to'lanmay qolgan")).toBe(143_884_239);
+    summarySheetV2(
+      wb,
+      input({
+        lessonMoney: {
+          paidInMonth: 1,
+          paidEarlier: 1,
+          paidNextMonth: 1,
+          unpaid: 143_884_239,
+          total: 143_884_242,
+        },
+      }),
+    );
+    expect(valueFor(wb.getWorksheet('Xulosa')!, "Hali to'lanmay qolgan")).toBe(
+      143_884_239,
+    );
   });
 
   // Block 4's denominator is the month's FULL lesson value, not its recognised
@@ -216,10 +258,11 @@ describe('summarySheetV2', () => {
     expect(t).not.toContain('Sof marja');
   });
 
-  it("reports the net student change as a count, not money", () => {
+  it('reports the net student change as a count, not money', () => {
     let cell: any;
     ws.eachRow((r) => {
-      if (String(r.getCell(1).value ?? '').startsWith("Sof o'zgarish")) cell = r.getCell(2);
+      if (String(r.getCell(1).value ?? '').startsWith("Sof o'zgarish"))
+        cell = r.getCell(2);
     });
     expect(cell.value).toBe(-62);
     expect(cell.numFmt).toBe('#,##0');

@@ -124,20 +124,21 @@ describe('ReportsService', () => {
           useValue: holidaysService,
         },
         {
-          provide:
-            require('./reports-expectation-history.service')
-              .ReportsExpectationHistoryService,
+          provide: require('./reports-expectation-history.service')
+            .ReportsExpectationHistoryService,
           useValue: {
-            getMonthlyHistory: jest
-              .fn()
-              .mockResolvedValue({ month: '2026-08', branchId: null, points: [] }),
+            getMonthlyHistory: jest.fn().mockResolvedValue({
+              month: '2026-08',
+              branchId: null,
+              points: [],
+            }),
           },
         },
         {
           // The overview folds «Oy oxiriga kutilyapti» in; its own maths is
           // covered by reports-expectation.service.spec.ts.
-          provide:
-            require('./reports-expectation.service').ReportsExpectationService,
+          provide: require('./reports-expectation.service')
+            .ReportsExpectationService,
           useValue: {
             getMonthlyExpectation: jest.fn().mockResolvedValue({
               month: '2026-08',
@@ -151,8 +152,8 @@ describe('ReportsService', () => {
         },
         {
           // Own maths covered by reports-student-flow.service.spec.ts.
-          provide:
-            require('./reports-student-flow.service').ReportsStudentFlowService,
+          provide: require('./reports-student-flow.service')
+            .ReportsStudentFlowService,
           useValue: { getStudentFlow: jest.fn() },
         },
       ],
@@ -841,11 +842,7 @@ describe('ReportsService', () => {
     const baseParams = { startDate: '2026-03-01', endDate: '2026-03-31' };
 
     // Raw departed-student row shaped like loadDepartedStudents' query result.
-    const makeDeparted = (
-      id: number,
-      leftAt: Date | null,
-      balance = 0,
-    ) => ({
+    const makeDeparted = (id: number, leftAt: Date | null, balance = 0) => ({
       id,
       firstName: 'Test',
       lastName: String(id),
@@ -912,7 +909,10 @@ describe('ReportsService', () => {
       prisma.student.findMany.mockResolvedValueOnce([]);
       prisma.student.count.mockResolvedValueOnce(0);
 
-      await service.getDepartedStudentsSummary(1, { ...baseParams, branchId: 7 });
+      await service.getDepartedStudentsSummary(1, {
+        ...baseParams,
+        branchId: 7,
+      });
 
       const snapshotWhere = prisma.student.findMany.mock.calls[0][0].where;
       expect(snapshotWhere.branches).toEqual({ some: { branchId: 7 } });
@@ -1313,7 +1313,11 @@ describe('ReportsService', () => {
       statusChangedAt: new Date('2026-03-10'),
       statusExitReason: null,
       enrollments: [
-        { statusChangedAt: new Date('2026-03-10'), departureReason: null, group },
+        {
+          statusChangedAt: new Date('2026-03-10'),
+          departureReason: null,
+          group,
+        },
       ],
     });
 
@@ -1413,7 +1417,10 @@ describe('ReportsService', () => {
         },
       ]);
 
-      const rows = await service.getDepartedAfterTeacherChangeList(1, { startDate: '2026-03-01', endDate: '2026-03-31' });
+      const rows = await service.getDepartedAfterTeacherChangeList(1, {
+        startDate: '2026-03-01',
+        endDate: '2026-03-31',
+      });
 
       expect(rows).toHaveLength(1);
       expect(rows[0]).toMatchObject({
@@ -1430,7 +1437,10 @@ describe('ReportsService', () => {
 
     it('returns empty when there are no teacher changes', async () => {
       prisma.groupTeacherHistory.findMany.mockResolvedValueOnce([]);
-      const rows = await service.getDepartedAfterTeacherChangeList(1, { startDate: '2026-03-01', endDate: '2026-03-31' });
+      const rows = await service.getDepartedAfterTeacherChangeList(1, {
+        startDate: '2026-03-01',
+        endDate: '2026-03-31',
+      });
       expect(rows).toEqual([]);
     });
   });
@@ -1487,14 +1497,27 @@ describe('ReportsService', () => {
 
     it('passes the month-end date bounds to the attribution query', async () => {
       const svc: any = service;
-      const attr = jest.spyOn(svc, 'getIncomeMonthAttribution').mockResolvedValue({
-        total: 0, currentMonth: 0, lateTotal: 0, late: [],
-      });
+      const attr = jest
+        .spyOn(svc, 'getIncomeMonthAttribution')
+        .mockResolvedValue({
+          total: 0,
+          currentMonth: 0,
+          lateTotal: 0,
+          late: [],
+        });
       jest.spyOn(svc, 'getMonthlyNetProfit').mockResolvedValue({
-        teacherSalary: 0, adminSalary: 0, operatingExpenses: 0, refunds: 0, netProfit: 0,
+        teacherSalary: 0,
+        adminSalary: 0,
+        operatingExpenses: 0,
+        refunds: 0,
+        netProfit: 0,
       });
 
-      await svc.getOwnMonthProfit(1, { month: '2026-02', branchIds: [7], performedById: 1 });
+      await svc.getOwnMonthProfit(1, {
+        month: '2026-02',
+        branchIds: [7],
+        performedById: 1,
+      });
 
       expect(attr).toHaveBeenCalledWith(1, {
         branchIds: [7],
@@ -1507,7 +1530,9 @@ describe('ReportsService', () => {
       const svc: any = service;
       const attr = jest.spyOn(svc, 'getIncomeMonthAttribution');
       const out = await svc.getOwnMonthProfit(1, {
-        month: '2026-07', branchIds: [], performedById: 1,
+        month: '2026-07',
+        branchIds: [],
+        performedById: 1,
       });
       expect(out.ownMonthProfit).toBe(0);
       expect(attr).not.toHaveBeenCalled();

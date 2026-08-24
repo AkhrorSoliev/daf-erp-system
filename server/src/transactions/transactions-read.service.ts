@@ -429,7 +429,9 @@ export class TransactionsReadService {
     // Bir necha guruhning kutilayotgan darslari bitta to'lovda aralashsa,
     // ularni bitta sana bilan ifodalab bo'lmaydi.
     const enrollmentIds = new Set(
-      alloc.pendingDeductionIds.map((d) => enrollmentByDeduction.get(d) ?? null),
+      alloc.pendingDeductionIds.map(
+        (d) => enrollmentByDeduction.get(d) ?? null,
+      ),
     );
     if (enrollmentIds.size !== 1) return null;
     const enrollmentId = [...enrollmentIds][0];
@@ -585,7 +587,10 @@ export class TransactionsReadService {
       studentId,
       companyId,
       type: {
-        in: [TransactionType.LESSON_DEDUCTION, TransactionType.LESSON_CONSUMPTION],
+        in: [
+          TransactionType.LESSON_DEDUCTION,
+          TransactionType.LESSON_CONSUMPTION,
+        ],
       },
       ...(options.contractId && { contractId: options.contractId }),
       ...(options.from &&
@@ -642,7 +647,11 @@ export class TransactionsReadService {
             id: true,
             date: true,
             group: {
-              select: { id: true, name: true, course: { select: { name: true } } },
+              select: {
+                id: true,
+                name: true,
+                course: { select: { name: true } },
+              },
             },
           },
         })
@@ -656,7 +665,9 @@ export class TransactionsReadService {
     const coverageMap = await this.computeDeductionCoverage(rows);
 
     const data = rows.map((r) => {
-      const attendance = r.attendanceId ? attendanceMap.get(r.attendanceId) : null;
+      const attendance = r.attendanceId
+        ? attendanceMap.get(r.attendanceId)
+        : null;
       const coverage = coverageMap.get(r.id) ?? null;
       return {
         id: r.id,

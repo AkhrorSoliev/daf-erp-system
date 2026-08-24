@@ -22,9 +22,7 @@ describe('LessonReschedulesController — role guards', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [LessonReschedulesController],
-      providers: [
-        { provide: LessonReschedulesService, useValue: mockService },
-      ],
+      providers: [{ provide: LessonReschedulesService, useValue: mockService }],
     }).compile();
 
     controller = module.get(LessonReschedulesController);

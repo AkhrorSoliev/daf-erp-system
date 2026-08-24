@@ -32,7 +32,9 @@ describe('EntityHistoryService', () => {
     // the supplied tx client when present, so an outer $transaction can
     // roll back the audit row alongside the change it describes.
     it('recordStatusChange uses tx.entityHistory.create when tx is provided', async () => {
-      const tx = { entityHistory: { create: jest.fn().mockResolvedValue(undefined) } };
+      const tx = {
+        entityHistory: { create: jest.fn().mockResolvedValue(undefined) },
+      };
 
       await service.recordStatusChange({
         entityType: 'Student',
@@ -62,7 +64,9 @@ describe('EntityHistoryService', () => {
     });
 
     it('recordStatusChange always emits entity.status.changed (outside tx)', async () => {
-      const tx = { entityHistory: { create: jest.fn().mockResolvedValue(undefined) } };
+      const tx = {
+        entityHistory: { create: jest.fn().mockResolvedValue(undefined) },
+      };
 
       await service.recordStatusChange({
         entityType: 'Student',
@@ -87,7 +91,9 @@ describe('EntityHistoryService', () => {
     });
 
     it('recordRestore uses tx.entityHistory.create when tx is provided', async () => {
-      const tx = { entityHistory: { create: jest.fn().mockResolvedValue(undefined) } };
+      const tx = {
+        entityHistory: { create: jest.fn().mockResolvedValue(undefined) },
+      };
 
       await service.recordRestore({
         entityType: 'Student',

@@ -45,13 +45,15 @@ const STUDENT_ID = 10001;
 const GROUP_ID = 'group-1';
 const PERFORMER_ID = 99;
 
-function makeEnrollment(overrides: Partial<{
-  balance: number;
-  status: EnrollmentStatus;
-  startDate: Date | null;
-  price: number;
-  lessonPaymentCount: number;
-}> = {}) {
+function makeEnrollment(
+  overrides: Partial<{
+    balance: number;
+    status: EnrollmentStatus;
+    startDate: Date | null;
+    price: number;
+    lessonPaymentCount: number;
+  }> = {},
+) {
   return {
     id: ENROLLMENT_ID,
     studentId: STUDENT_ID,
@@ -115,7 +117,9 @@ describe('DebtWriteOffService.computeEligibility', () => {
   });
 
   it('returns NO_DEBT when balance >= 0', async () => {
-    client.enrollment.findFirst.mockResolvedValue(makeEnrollment({ balance: 0 }));
+    client.enrollment.findFirst.mockResolvedValue(
+      makeEnrollment({ balance: 0 }),
+    );
     client.attendance.findMany.mockResolvedValue([
       attendance(AttendanceStatus.ABSENT, 1),
     ]);
@@ -132,7 +136,11 @@ describe('DebtWriteOffService.computeEligibility', () => {
   // The breakdown fields surface kelgan/kelmagan/jami so admin can decide.
   it('eligible when student attended a few + has ABSENT — breakdown reflects mix', async () => {
     client.enrollment.findFirst.mockResolvedValue(
-      makeEnrollment({ balance: -450_000, price: 600_000, lessonPaymentCount: 12 }),
+      makeEnrollment({
+        balance: -450_000,
+        price: 600_000,
+        lessonPaymentCount: 12,
+      }),
     );
     client.attendance.findMany.mockResolvedValue([
       attendance(AttendanceStatus.PRESENT, 1),
@@ -174,11 +182,17 @@ describe('DebtWriteOffService.computeEligibility', () => {
 
   it('eligible: 9 ABSENT (cycle 1) + -450k balance → write off 450k', async () => {
     client.enrollment.findFirst.mockResolvedValue(
-      makeEnrollment({ balance: -450_000, price: 600_000, lessonPaymentCount: 12 }),
+      makeEnrollment({
+        balance: -450_000,
+        price: 600_000,
+        lessonPaymentCount: 12,
+      }),
     );
     // 9 ta ABSENT — sikl 1 ichida
     client.attendance.findMany.mockResolvedValue(
-      Array.from({ length: 9 }, (_, i) => attendance(AttendanceStatus.ABSENT, i + 1)),
+      Array.from({ length: 9 }, (_, i) =>
+        attendance(AttendanceStatus.ABSENT, i + 1),
+      ),
     );
 
     const result = await service.computeEligibility(ENROLLMENT_ID, COMPANY_ID);
@@ -194,10 +208,16 @@ describe('DebtWriteOffService.computeEligibility', () => {
   it('cap rule: theoretical debt > |balance| → write off only |balance|', async () => {
     // balans -100k, lekin 9 ta ABSENT × 50k = 450k nazariy. Cap=100k.
     client.enrollment.findFirst.mockResolvedValue(
-      makeEnrollment({ balance: -100_000, price: 600_000, lessonPaymentCount: 12 }),
+      makeEnrollment({
+        balance: -100_000,
+        price: 600_000,
+        lessonPaymentCount: 12,
+      }),
     );
     client.attendance.findMany.mockResolvedValue(
-      Array.from({ length: 9 }, (_, i) => attendance(AttendanceStatus.ABSENT, i + 1)),
+      Array.from({ length: 9 }, (_, i) =>
+        attendance(AttendanceStatus.ABSENT, i + 1),
+      ),
     );
 
     const result = await service.computeEligibility(ENROLLMENT_ID, COMPANY_ID);
@@ -209,7 +229,11 @@ describe('DebtWriteOffService.computeEligibility', () => {
 
   it('cycle 2: ignores cycle 1 attendances, only counts cycle 2', async () => {
     client.enrollment.findFirst.mockResolvedValue(
-      makeEnrollment({ balance: -250_000, price: 600_000, lessonPaymentCount: 12 }),
+      makeEnrollment({
+        balance: -250_000,
+        price: 600_000,
+        lessonPaymentCount: 12,
+      }),
     );
     // 12 ta PRESENT (sikl 1) + 5 ta ABSENT (sikl 2 boshlangan)
     const cycle1 = Array.from({ length: 12 }, (_, i) =>
@@ -224,18 +248,24 @@ describe('DebtWriteOffService.computeEligibility', () => {
 
     expect(result.eligible).toBe(true);
     expect(result.details.cycleNumber).toBe(2);
-    expect(result.details.cyclePresentCount).toBe(0);  // faqat sikl 2
-    expect(result.details.cycleAbsentCount).toBe(5);   // sikl 2 da 5 ABSENT
+    expect(result.details.cyclePresentCount).toBe(0); // faqat sikl 2
+    expect(result.details.cycleAbsentCount).toBe(5); // sikl 2 da 5 ABSENT
     expect(result.details.theoreticalCycleDebt).toBe(5 * 50_000);
     expect(result.details.suggestedWriteOff).toBe(250_000);
   });
 
   it('partial cycle 1 (4/12): eligible if all ABSENT', async () => {
     client.enrollment.findFirst.mockResolvedValue(
-      makeEnrollment({ balance: -200_000, price: 600_000, lessonPaymentCount: 12 }),
+      makeEnrollment({
+        balance: -200_000,
+        price: 600_000,
+        lessonPaymentCount: 12,
+      }),
     );
     client.attendance.findMany.mockResolvedValue(
-      Array.from({ length: 4 }, (_, i) => attendance(AttendanceStatus.ABSENT, i + 1)),
+      Array.from({ length: 4 }, (_, i) =>
+        attendance(AttendanceStatus.ABSENT, i + 1),
+      ),
     );
 
     const result = await service.computeEligibility(ENROLLMENT_ID, COMPANY_ID);
@@ -248,14 +278,20 @@ describe('DebtWriteOffService.computeEligibility', () => {
 
   it('uses LESSON_DEDUCTION.metadata.perLessonCost when available (price changed later)', async () => {
     client.enrollment.findFirst.mockResolvedValue(
-      makeEnrollment({ balance: -400_000, price: 900_000, lessonPaymentCount: 12 }),
+      makeEnrollment({
+        balance: -400_000,
+        price: 900_000,
+        lessonPaymentCount: 12,
+      }),
     );
     // Kurs hozir 900k (75k/dars), lekin oldingi sikl 600k narxda yozilgan
     client.transaction.findFirst.mockResolvedValue({
       metadata: { perLessonCost: 50_000 },
     });
     client.attendance.findMany.mockResolvedValue(
-      Array.from({ length: 8 }, (_, i) => attendance(AttendanceStatus.ABSENT, i + 1)),
+      Array.from({ length: 8 }, (_, i) =>
+        attendance(AttendanceStatus.ABSENT, i + 1),
+      ),
     );
 
     const result = await service.computeEligibility(ENROLLMENT_ID, COMPANY_ID);
@@ -347,7 +383,9 @@ describe('DebtWriteOffService.executeWriteOff', () => {
   });
 
   it('rejects when eligibility fails inside the tx (race condition)', async () => {
-    client.enrollment.findFirst.mockResolvedValue(makeEnrollment({ balance: 0 }));
+    client.enrollment.findFirst.mockResolvedValue(
+      makeEnrollment({ balance: 0 }),
+    );
 
     await expect(
       service.executeWriteOff(
@@ -355,7 +393,7 @@ describe('DebtWriteOffService.executeWriteOff', () => {
           enrollmentId: ENROLLMENT_ID,
           companyId: COMPANY_ID,
           performedById: PERFORMER_ID,
-          reason: 'Yo\'qolgan o\'quvchi',
+          reason: "Yo'qolgan o'quvchi",
           confirmAmount: 0,
         },
         client,
@@ -368,7 +406,9 @@ describe('DebtWriteOffService.executeWriteOff', () => {
       makeEnrollment({ balance: -450_000 }),
     );
     client.attendance.findMany.mockResolvedValue(
-      Array.from({ length: 9 }, (_, i) => attendance(AttendanceStatus.ABSENT, i + 1)),
+      Array.from({ length: 9 }, (_, i) =>
+        attendance(AttendanceStatus.ABSENT, i + 1),
+      ),
     );
 
     await expect(
@@ -394,7 +434,9 @@ describe('DebtWriteOffService.executeWriteOff', () => {
       group: { branchId: 1, companyId: COMPANY_ID },
     });
     client.attendance.findMany.mockResolvedValue(
-      Array.from({ length: 9 }, (_, i) => attendance(AttendanceStatus.ABSENT, i + 1)),
+      Array.from({ length: 9 }, (_, i) =>
+        attendance(AttendanceStatus.ABSENT, i + 1),
+      ),
     );
 
     const result = await service.executeWriteOff(
@@ -452,7 +494,9 @@ describe('DebtWriteOffService.executeWriteOff', () => {
       group: { branchId: 1, companyId: COMPANY_ID },
     });
     client.attendance.findMany.mockResolvedValue(
-      Array.from({ length: 9 }, (_, i) => attendance(AttendanceStatus.ABSENT, i + 1)),
+      Array.from({ length: 9 }, (_, i) =>
+        attendance(AttendanceStatus.ABSENT, i + 1),
+      ),
     );
 
     await service.executeWriteOff(

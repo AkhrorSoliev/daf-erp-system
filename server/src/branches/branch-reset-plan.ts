@@ -89,7 +89,9 @@ export async function buildBranchResetPlan(
   for (const link of allLinksOfCandidates) {
     linkCount.set(link.userId, (linkCount.get(link.userId) ?? 0) + 1);
   }
-  const staffUserIds = candidateIds.filter((id) => (linkCount.get(id) ?? 0) <= 1);
+  const staffUserIds = candidateIds.filter(
+    (id) => (linkCount.get(id) ?? 0) <= 1,
+  );
   const keptUserIds = candidateIds.filter((id) => (linkCount.get(id) ?? 0) > 1);
 
   const groups = await prisma.group.findMany({
@@ -105,8 +107,14 @@ export async function buildBranchResetPlan(
       })
     : [];
 
-  const rooms = await prisma.room.findMany({ where: { branchId }, select: { id: true } });
-  const courses = await prisma.course.findMany({ where: { branchId }, select: { id: true } });
+  const rooms = await prisma.room.findMany({
+    where: { branchId },
+    select: { id: true },
+  });
+  const courses = await prisma.course.findMany({
+    where: { branchId },
+    select: { id: true },
+  });
   const snapshots = await prisma.dailyFinancialSnapshot.findMany({
     where: { branchId },
     select: { id: true },
@@ -146,7 +154,9 @@ export async function verifyBranchResetPlan(
     });
     for (const s of strays) {
       if (s.branchId !== plan.branchId) {
-        problems.push(`O'quvchi #${s.studentId} #${s.branchId} filialda ham turibdi`);
+        problems.push(
+          `O'quvchi #${s.studentId} #${s.branchId} filialda ham turibdi`,
+        );
       }
     }
   }
@@ -184,7 +194,9 @@ export async function verifyBranchResetPlan(
     const keptSet = new Set(plan.keptUserIds);
     for (const id of plan.studentUserIds) {
       if (keptSet.has(id)) {
-        problems.push(`O'quvchi akkaunti #${id} saqlanadigan foydalanuvchilar ro'yxatida ham bor`);
+        problems.push(
+          `O'quvchi akkaunti #${id} saqlanadigan foydalanuvchilar ro'yxatida ham bor`,
+        );
       }
     }
   }
@@ -198,14 +210,20 @@ export async function verifyBranchResetPlan(
       // `branchId: null` — kompaniya darajasidagi qator — reset rejasida
       // HECH QACHON bo'lmasligi kerak, shuning uchun bu ham muammo hisoblanadi.
       if (s.branchId === null) {
-        problems.push(`Surat #${s.id} kompaniya darajasidagi qator (branchId yo'q)`);
+        problems.push(
+          `Surat #${s.id} kompaniya darajasidagi qator (branchId yo'q)`,
+        );
       } else if (s.branchId !== plan.branchId) {
         problems.push(`Surat #${s.id} #${s.branchId} filialga tegishli`);
       }
     }
   }
 
-  const scoped: [string, string[], () => Promise<{ id: string; branchId: number | null }[]>][] = [
+  const scoped: [
+    string,
+    string[],
+    () => Promise<{ id: string; branchId: number | null }[]>,
+  ][] = [
     [
       'Guruh',
       plan.groupIds,
@@ -281,9 +299,13 @@ export async function assertBranchIsFinanciallyEmpty(
   // groupId bo'yicha kalitlangan holicha qoladi — bu ham xuddi shu sababdan
   // to'g'ri. CashMovement va Expense har doim branchId bo'yicha, chunki
   // ularda boshqa yo'l yo'q.
-  const studentClause = studentIds.length ? { studentId: { in: studentIds } } : null;
+  const studentClause = studentIds.length
+    ? { studentId: { in: studentIds } }
+    : null;
   const groupClause = groupIds.length ? { groupId: { in: groupIds } } : null;
-  const enrollmentClause = enrollmentIds.length ? { enrollmentId: { in: enrollmentIds } } : null;
+  const enrollmentClause = enrollmentIds.length
+    ? { enrollmentId: { in: enrollmentIds } }
+    : null;
   const branchClause = { branchId };
 
   /**
@@ -297,7 +319,9 @@ export async function assertBranchIsFinanciallyEmpty(
   const buildOr = (
     clauses: (Record<string, unknown> | null)[],
   ): { OR: Record<string, unknown>[] } | null => {
-    const present = clauses.filter((c): c is Record<string, unknown> => c !== null);
+    const present = clauses.filter(
+      (c): c is Record<string, unknown> => c !== null,
+    );
     return present.length ? { OR: present } : null;
   };
 
@@ -312,12 +336,34 @@ export async function assertBranchIsFinanciallyEmpty(
   const refundWhere = buildOr([studentClause, enrollmentClause]);
 
   const checks: [string, () => Promise<number>][] = [
-    ['Payment', () => countIf(paymentWhere, (where) => prisma.payment.count({ where }))],
-    ['Transaction', () => countIf(transactionWhere, (where) => prisma.transaction.count({ where }))],
-    ['Attendance', () => countIf(groupClause, (where) => prisma.attendance.count({ where }))],
-    ['SalaryAccrual', () => countIf(groupClause, (where) => prisma.salaryAccrual.count({ where }))],
-    ['Contract', () => countIf(contractWhere, (where) => prisma.contract.count({ where }))],
-    ['Refund', () => countIf(refundWhere, (where) => prisma.refund.count({ where }))],
+    [
+      'Payment',
+      () => countIf(paymentWhere, (where) => prisma.payment.count({ where })),
+    ],
+    [
+      'Transaction',
+      () =>
+        countIf(transactionWhere, (where) =>
+          prisma.transaction.count({ where }),
+        ),
+    ],
+    [
+      'Attendance',
+      () => countIf(groupClause, (where) => prisma.attendance.count({ where })),
+    ],
+    [
+      'SalaryAccrual',
+      () =>
+        countIf(groupClause, (where) => prisma.salaryAccrual.count({ where })),
+    ],
+    [
+      'Contract',
+      () => countIf(contractWhere, (where) => prisma.contract.count({ where })),
+    ],
+    [
+      'Refund',
+      () => countIf(refundWhere, (where) => prisma.refund.count({ where })),
+    ],
     ['CashMovement', () => prisma.cashMovement.count({ where: branchClause })],
     ['Expense', () => prisma.expense.count({ where: branchClause })],
   ];
@@ -356,12 +402,23 @@ export async function assertNoBlockingDependents(
   prisma: PrismaLike,
   plan: BranchResetPlan,
 ): Promise<void> {
-  const { branchId, groupIds, studentIds, courseIds, staffUserIds, studentUserIds } = plan;
+  const {
+    branchId,
+    groupIds,
+    studentIds,
+    courseIds,
+    staffUserIds,
+    studentUserIds,
+  } = plan;
   const allUserIds = [...staffUserIds, ...studentUserIds];
 
   const groupClause = groupIds.length ? { groupId: { in: groupIds } } : null;
-  const studentClause = studentIds.length ? { studentId: { in: studentIds } } : null;
-  const courseClause = courseIds.length ? { courseId: { in: courseIds } } : null;
+  const studentClause = studentIds.length
+    ? { studentId: { in: studentIds } }
+    : null;
+  const courseClause = courseIds.length
+    ? { courseId: { in: courseIds } }
+    : null;
 
   /** `column` — bir xil `allUserIds` ro'yxatiga ishora qiluvchi ustun nomi turlicha. */
   const userClause = (column: string): Record<string, unknown> | null =>
@@ -374,96 +431,175 @@ export async function assertNoBlockingDependents(
 
   const checks: [string, () => Promise<number>][] = [
     // groupIds bo'yicha kalitlangan
-    ['Attendance.groupId', () => countIf(groupClause, (where) => prisma.attendance.count({ where }))],
+    [
+      'Attendance.groupId',
+      () => countIf(groupClause, (where) => prisma.attendance.count({ where })),
+    ],
     [
       'LessonCancellation.groupId',
-      () => countIf(groupClause, (where) => prisma.lessonCancellation.count({ where })),
+      () =>
+        countIf(groupClause, (where) =>
+          prisma.lessonCancellation.count({ where }),
+        ),
     ],
     [
       'LessonReschedule.groupId',
-      () => countIf(groupClause, (where) => prisma.lessonReschedule.count({ where })),
+      () =>
+        countIf(groupClause, (where) =>
+          prisma.lessonReschedule.count({ where }),
+        ),
     ],
     [
       'LessonTeacherOverride.groupId',
-      () => countIf(groupClause, (where) => prisma.lessonTeacherOverride.count({ where })),
+      () =>
+        countIf(groupClause, (where) =>
+          prisma.lessonTeacherOverride.count({ where }),
+        ),
     ],
     [
       'PlannedAbsence.groupId',
-      () => countIf(groupClause, (where) => prisma.plannedAbsence.count({ where })),
+      () =>
+        countIf(groupClause, (where) => prisma.plannedAbsence.count({ where })),
     ],
     [
       'SalaryAccrual.groupId',
-      () => countIf(groupClause, (where) => prisma.salaryAccrual.count({ where })),
+      () =>
+        countIf(groupClause, (where) => prisma.salaryAccrual.count({ where })),
     ],
     // studentIds bo'yicha kalitlangan
     [
       'Attendance.studentId',
-      () => countIf(studentClause, (where) => prisma.attendance.count({ where })),
+      () =>
+        countIf(studentClause, (where) => prisma.attendance.count({ where })),
     ],
-    ['CallLog.studentId', () => countIf(studentClause, (where) => prisma.callLog.count({ where }))],
-    ['Contract.studentId', () => countIf(studentClause, (where) => prisma.contract.count({ where }))],
-    ['Discount.studentId', () => countIf(studentClause, (where) => prisma.discount.count({ where }))],
-    ['Payment.studentId', () => countIf(studentClause, (where) => prisma.payment.count({ where }))],
+    [
+      'CallLog.studentId',
+      () => countIf(studentClause, (where) => prisma.callLog.count({ where })),
+    ],
+    [
+      'Contract.studentId',
+      () => countIf(studentClause, (where) => prisma.contract.count({ where })),
+    ],
+    [
+      'Discount.studentId',
+      () => countIf(studentClause, (where) => prisma.discount.count({ where })),
+    ],
+    [
+      'Payment.studentId',
+      () => countIf(studentClause, (where) => prisma.payment.count({ where })),
+    ],
     [
       'PaymentPromise.studentId',
-      () => countIf(studentClause, (where) => prisma.paymentPromise.count({ where })),
+      () =>
+        countIf(studentClause, (where) =>
+          prisma.paymentPromise.count({ where }),
+        ),
     ],
     [
       'PlannedAbsence.studentId',
-      () => countIf(studentClause, (where) => prisma.plannedAbsence.count({ where })),
+      () =>
+        countIf(studentClause, (where) =>
+          prisma.plannedAbsence.count({ where }),
+        ),
     ],
-    ['Refund.studentId', () => countIf(studentClause, (where) => prisma.refund.count({ where }))],
+    [
+      'Refund.studentId',
+      () => countIf(studentClause, (where) => prisma.refund.count({ where })),
+    ],
     [
       'SalaryAccrual.studentId',
-      () => countIf(studentClause, (where) => prisma.salaryAccrual.count({ where })),
+      () =>
+        countIf(studentClause, (where) =>
+          prisma.salaryAccrual.count({ where }),
+        ),
     ],
     [
       'Scholarship.studentId',
-      () => countIf(studentClause, (where) => prisma.scholarship.count({ where })),
+      () =>
+        countIf(studentClause, (where) => prisma.scholarship.count({ where })),
     ],
     // courseIds bo'yicha kalitlangan
-    ['Contract.courseId', () => countIf(courseClause, (where) => prisma.contract.count({ where }))],
+    [
+      'Contract.courseId',
+      () => countIf(courseClause, (where) => prisma.contract.count({ where })),
+    ],
     // staffUserIds ∪ studentUserIds bo'yicha kalitlangan
     [
       'CallLog.calledById',
-      () => countIf(userClause('calledById'), (where) => prisma.callLog.count({ where })),
+      () =>
+        countIf(userClause('calledById'), (where) =>
+          prisma.callLog.count({ where }),
+        ),
     ],
-    ['Comment.authorId', () => countIf(userClause('authorId'), (where) => prisma.comment.count({ where }))],
+    [
+      'Comment.authorId',
+      () =>
+        countIf(userClause('authorId'), (where) =>
+          prisma.comment.count({ where }),
+        ),
+    ],
     [
       'CommentAssignee.userId',
-      () => countIf(userClause('userId'), (where) => prisma.commentAssignee.count({ where })),
+      () =>
+        countIf(userClause('userId'), (where) =>
+          prisma.commentAssignee.count({ where }),
+        ),
     ],
     [
       'EmployeeSalaryConfig.userId',
-      () => countIf(userClause('userId'), (where) => prisma.employeeSalaryConfig.count({ where })),
+      () =>
+        countIf(userClause('userId'), (where) =>
+          prisma.employeeSalaryConfig.count({ where }),
+        ),
     ],
     [
       'Expense.createdById',
-      () => countIf(userClause('createdById'), (where) => prisma.expense.count({ where })),
+      () =>
+        countIf(userClause('createdById'), (where) =>
+          prisma.expense.count({ where }),
+        ),
     ],
     [
       'LessonCancellation.cancelledById',
-      () => countIf(userClause('cancelledById'), (where) => prisma.lessonCancellation.count({ where })),
+      () =>
+        countIf(userClause('cancelledById'), (where) =>
+          prisma.lessonCancellation.count({ where }),
+        ),
     ],
     [
       'LessonReschedule.scheduledById',
-      () => countIf(userClause('scheduledById'), (where) => prisma.lessonReschedule.count({ where })),
+      () =>
+        countIf(userClause('scheduledById'), (where) =>
+          prisma.lessonReschedule.count({ where }),
+        ),
     ],
     [
       'LessonTeacherOverride.setById',
-      () => countIf(userClause('setById'), (where) => prisma.lessonTeacherOverride.count({ where })),
+      () =>
+        countIf(userClause('setById'), (where) =>
+          prisma.lessonTeacherOverride.count({ where }),
+        ),
     ],
     [
       'PaymentPromise.createdById',
-      () => countIf(userClause('createdById'), (where) => prisma.paymentPromise.count({ where })),
+      () =>
+        countIf(userClause('createdById'), (where) =>
+          prisma.paymentPromise.count({ where }),
+        ),
     ],
     [
       'SalaryAccrual.userId',
-      () => countIf(userClause('userId'), (where) => prisma.salaryAccrual.count({ where })),
+      () =>
+        countIf(userClause('userId'), (where) =>
+          prisma.salaryAccrual.count({ where }),
+        ),
     ],
     [
       'SalaryPayment.userId',
-      () => countIf(userClause('userId'), (where) => prisma.salaryPayment.count({ where })),
+      () =>
+        countIf(userClause('userId'), (where) =>
+          prisma.salaryPayment.count({ where }),
+        ),
     ],
   ];
 
@@ -511,7 +647,14 @@ export async function assertNoInboundReferences(
   prisma: PrismaLike,
   plan: BranchResetPlan,
 ): Promise<void> {
-  const { branchId, studentIds, groupIds, roomIds, staffUserIds, studentUserIds } = plan;
+  const {
+    branchId,
+    studentIds,
+    groupIds,
+    roomIds,
+    staffUserIds,
+    studentUserIds,
+  } = plan;
   const allUserIds = [...staffUserIds, ...studentUserIds];
 
   const found: string[] = [];
@@ -530,7 +673,9 @@ export async function assertNoInboundReferences(
         select: { id: true, branchId: true },
       });
       const branchOf = new Map(groupBranches.map((g) => [g.id, g.branchId]));
-      const count = rows.filter((r) => branchOf.get(r.groupId) !== branchId).length;
+      const count = rows.filter(
+        (r) => branchOf.get(r.groupId) !== branchId,
+      ).length;
       if (count > 0) found.push(`GroupTeacher.teacherId: ${count}`);
     }
   }

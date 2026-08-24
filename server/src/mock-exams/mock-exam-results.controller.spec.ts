@@ -6,10 +6,7 @@ describe('MockExamResultsController — guards', () => {
   const reflector = new Reflector();
 
   it('restricts the entire controller to CEO / Branch Director / Administrator', () => {
-    const roles = reflector.get<string[]>(
-      ROLES_KEY,
-      MockExamResultsController,
-    );
+    const roles = reflector.get<string[]>(ROLES_KEY, MockExamResultsController);
     expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
   });
 });

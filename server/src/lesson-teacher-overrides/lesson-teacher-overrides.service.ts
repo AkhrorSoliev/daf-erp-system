@@ -4,11 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  AttendanceStatus,
-  Prisma,
-  TransactionType,
-} from '@prisma/client';
+import { AttendanceStatus, Prisma, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
 import { EntityHistoryService } from '../common/entity-history';
@@ -207,7 +203,10 @@ export class LessonTeacherOverridesService {
         if (!existing) throw new NotFoundException('Override topilmadi');
 
         const oldTeacherIds = [...existing.teacherIds].sort((a, b) => a - b);
-        const newTeacherIds = await this.defaultTeacherIds(tx, existing.groupId);
+        const newTeacherIds = await this.defaultTeacherIds(
+          tx,
+          existing.groupId,
+        );
 
         await tx.lessonTeacherOverride.update({
           where: { id },
@@ -272,13 +271,21 @@ export class LessonTeacherOverridesService {
         groupId: p.groupId,
         date: p.date,
         cancellationId: null,
-        status: { in: [AttendanceStatus.PRESENT, AttendanceStatus.LATE, AttendanceStatus.ABSENT] },
+        status: {
+          in: [
+            AttendanceStatus.PRESENT,
+            AttendanceStatus.LATE,
+            AttendanceStatus.ABSENT,
+          ],
+        },
       },
       select: { id: true, studentId: true },
     });
     if (attendances.length === 0) return;
 
-    const removed = p.oldTeacherIds.filter((id) => !p.newTeacherIds.includes(id));
+    const removed = p.oldTeacherIds.filter(
+      (id) => !p.newTeacherIds.includes(id),
+    );
     const added = p.newTeacherIds.filter((id) => !p.oldTeacherIds.includes(id));
 
     // Resolve coverage tx + perLessonCost from the most recent active
@@ -295,7 +302,10 @@ export class LessonTeacherOverridesService {
         metadata: true,
       },
     });
-    const consumptionByAttendance = new Map<string, { perLessonCost: number }>();
+    const consumptionByAttendance = new Map<
+      string,
+      { perLessonCost: number }
+    >();
     for (const c of consumptions) {
       const meta = (c.metadata as { perLessonCost?: number } | null) ?? null;
       if (c.attendanceId && meta?.perLessonCost) {
@@ -453,7 +463,8 @@ export class LessonTeacherOverridesService {
 
   private parseDate(dateStr: string): Date {
     const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!m) throw new BadRequestException('Sana formati YYYY-MM-DD bo\'lishi kerak');
+    if (!m)
+      throw new BadRequestException("Sana formati YYYY-MM-DD bo'lishi kerak");
     return new Date(`${dateStr}T00:00:00.000Z`);
   }
 }

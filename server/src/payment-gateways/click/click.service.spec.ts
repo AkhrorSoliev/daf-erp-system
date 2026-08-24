@@ -6,10 +6,7 @@ import { ClickMethodsService } from './click-methods.service';
 import { GatewayEventService } from '../gateway-event.service';
 import { GatewayConfigService } from '../gateway-config.service';
 import { CLICK_SIGN_CHECK_FAILED } from './click-errors';
-import type {
-  ClickCompleteRequest,
-  ClickPrepareRequest,
-} from './click.types';
+import type { ClickCompleteRequest, ClickPrepareRequest } from './click.types';
 
 describe('ClickService', () => {
   let service: ClickService;

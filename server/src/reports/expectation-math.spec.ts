@@ -97,7 +97,10 @@ describe('splitMonthLessons', () => {
       [
         group({
           datesWithAttendance: new Set(['2026-08-03']),
-          uncoveredAttendances: [{ perLesson: 100_000 }, { perLesson: 100_000 }],
+          uncoveredAttendances: [
+            { perLesson: 100_000 },
+            { perLesson: 100_000 },
+          ],
         }),
       ],
       opts(),

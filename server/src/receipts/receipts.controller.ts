@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Res,
-  NotFoundException,
-} from '@nestjs/common';
+import { Controller, Get, Param, Res, NotFoundException } from '@nestjs/common';
 import type { Response } from 'express';
 import { Public } from '../common/decorators';
 import { ReceiptsService } from './receipts.service';
@@ -69,10 +63,7 @@ export class ReceiptsController {
 
 function sendPdf(res: Response, buffer: Buffer, filename: string) {
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader(
-    'Content-Disposition',
-    `inline; filename="${filename}"`,
-  );
+  res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
   res.setHeader('Content-Length', buffer.length);
   res.end(buffer);
 }

@@ -327,7 +327,10 @@ export class SalaryMonthlyService {
         );
       }
     }
-    const cappedByInactivity = (studentId: number, lessonDate: Date): boolean => {
+    const cappedByInactivity = (
+      studentId: number,
+      lessonDate: Date,
+    ): boolean => {
       const day = inactiveSince.get(studentId);
       return day !== undefined && dateStr(lessonDate) > day;
     };
@@ -382,7 +385,12 @@ export class SalaryMonthlyService {
     // Settled payment per teacher (sum if duplicated; latest status wins — asc order).
     const paymentByUser = new Map<
       number,
-      { id: string; amount: number; grossAmount: number; status: SalaryPaymentStatus }
+      {
+        id: string;
+        amount: number;
+        grossAmount: number;
+        status: SalaryPaymentStatus;
+      }
     >();
     for (const p of payments) {
       const adv = p.settledExpenses.reduce((s, e) => s + e.amount, 0);
@@ -554,10 +562,8 @@ export class SalaryMonthlyService {
 
     // Sort by gross magnitude desc, then name.
     rows.sort((a, b) => {
-      const ma =
-        a.fullDeserved ?? (a.payment ? a.netToPay : 0);
-      const mb =
-        b.fullDeserved ?? (b.payment ? b.netToPay : 0);
+      const ma = a.fullDeserved ?? (a.payment ? a.netToPay : 0);
+      const mb = b.fullDeserved ?? (b.payment ? b.netToPay : 0);
       if (mb !== ma) return mb - ma;
       const fn = a.user.firstName.localeCompare(b.user.firstName);
       return fn !== 0 ? fn : a.user.lastName.localeCompare(b.user.lastName);
@@ -605,7 +611,15 @@ export class SalaryMonthlyService {
       totals.centerOwedByStudents = debtors.reduce((s, d) => s - d.balance, 0);
     }
 
-    return { month, floorMonth, period, data: rows, totals, staff, staffTotals };
+    return {
+      month,
+      floorMonth,
+      period,
+      data: rows,
+      totals,
+      staff,
+      staffTotals,
+    };
   }
 
   /**

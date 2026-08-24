@@ -474,7 +474,13 @@ export class AttendanceReadService {
     });
     const countMap: Record<
       string,
-      { present: number; absent: number; late: number; excused: number; total: number }
+      {
+        present: number;
+        absent: number;
+        late: number;
+        excused: number;
+        total: number;
+      }
     > = {};
     for (const row of attendanceCounts) {
       const dateStr = tashkentDateStr(row.date);

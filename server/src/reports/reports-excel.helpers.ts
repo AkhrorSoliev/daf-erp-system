@@ -132,14 +132,20 @@ export interface NetProfit {
 export function buildNetProfit(
   pl: any,
   salaries: any,
-  outflows: { refunds?: number; writeOffs?: number; providerFees?: number } | null,
+  outflows: {
+    refunds?: number;
+    writeOffs?: number;
+    providerFees?: number;
+  } | null,
   month?: string,
   recognizedRevenue?: number,
 ): NetProfit {
   // Revenue basis: prefer the "dars tushumi" (recognized — lessons held this
   // month) figure when supplied; fall back to cash COMPLETED payments (pl).
   const useRecognized = typeof recognizedRevenue === 'number';
-  const revenue = useRecognized ? recognizedRevenue! : pl?.revenue?.total ?? 0;
+  const revenue = useRecognized
+    ? recognizedRevenue!
+    : (pl?.revenue?.total ?? 0);
   const totals = salaries?.totals ?? {};
   // Include the center top-up (gap) only from the top-up month on.
   const hasTopup = month ? isTopUpMonth(month) : true;
@@ -318,7 +324,14 @@ export function checkRow(
 ): Row {
   const diff = expected - actual;
   const ok = diff === 0;
-  const r = ws.addRow([label, expected, actual, diff, ok ? 'MOS' : 'XATO', note ?? '']);
+  const r = ws.addRow([
+    label,
+    expected,
+    actual,
+    diff,
+    ok ? 'MOS' : 'XATO',
+    note ?? '',
+  ]);
   [2, 3, 4].forEach((c) => (r.getCell(c).numFmt = SOM));
   const verdict = r.getCell(5);
   verdict.font = { bold: true, color: { argb: 'FFFFFFFF' } };

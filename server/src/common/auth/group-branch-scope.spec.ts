@@ -22,7 +22,11 @@ describe('assertCallerMayTouchGroup', () => {
   function prismaFor(opts: {
     assigned?: boolean;
     groupBranch?: number | null;
-    caller?: { mainBranch: number | null; branches: { branchId: number }[]; role: string };
+    caller?: {
+      mainBranch: number | null;
+      branches: { branchId: number }[];
+      role: string;
+    };
   }) {
     return {
       groupTeacher: {
@@ -34,7 +38,9 @@ describe('assertCallerMayTouchGroup', () => {
         findFirst: jest
           .fn()
           .mockResolvedValue(
-            opts.groupBranch === null ? null : { branchId: opts.groupBranch ?? 1 },
+            opts.groupBranch === null
+              ? null
+              : { branchId: opts.groupBranch ?? 1 },
           ),
       },
       user: {
@@ -72,8 +78,10 @@ describe('assertCallerMayTouchGroup', () => {
     it('does not read the group at all for a teacher', async () => {
       const prisma = prismaFor({ assigned: true });
       await assertCallerMayTouchGroup(prisma, 42, ['Teacher'], GROUP);
-      expect((prisma as never as { group: { findFirst: jest.Mock } }).group.findFirst)
-        .not.toHaveBeenCalled();
+      expect(
+        (prisma as never as { group: { findFirst: jest.Mock } }).group
+          .findFirst,
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -81,7 +89,11 @@ describe('assertCallerMayTouchGroup', () => {
     it('allows an admin of the group branch', async () => {
       const prisma = prismaFor({
         groupBranch: 1,
-        caller: { mainBranch: 1, branches: [{ branchId: 1 }], role: 'Administrator' },
+        caller: {
+          mainBranch: 1,
+          branches: [{ branchId: 1 }],
+          role: 'Administrator',
+        },
       });
       await expect(
         assertCallerMayTouchGroup(prisma, 7, ['Administrator'], GROUP),
@@ -129,7 +141,12 @@ describe('assertCallerMayTouchGroup', () => {
         },
       });
       await expect(
-        assertCallerMayTouchGroup(prisma, 7, ['Teacher', 'Branch Director'], GROUP),
+        assertCallerMayTouchGroup(
+          prisma,
+          7,
+          ['Teacher', 'Branch Director'],
+          GROUP,
+        ),
       ).resolves.toBeUndefined();
     });
   });
@@ -145,7 +162,11 @@ describe('assertCallerMayTouchGroup', () => {
     it('refuses an unidentified caller', async () => {
       const prisma = prismaFor({
         groupBranch: 1,
-        caller: { mainBranch: 1, branches: [{ branchId: 1 }], role: 'Administrator' },
+        caller: {
+          mainBranch: 1,
+          branches: [{ branchId: 1 }],
+          role: 'Administrator',
+        },
       });
       await expect(
         assertCallerMayTouchGroup(prisma, undefined as never, [], GROUP),

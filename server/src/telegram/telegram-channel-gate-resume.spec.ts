@@ -53,11 +53,11 @@ describe("TelegramService — a'zolikdan keyin oqimni davom ettirish", () => {
     await inst.resumeAfterJoin(ctx);
 
     expect(ctx.reply).toHaveBeenCalledWith(
-      "Davom etish uchun /start yuboring.",
+      'Davom etish uchun /start yuboring.',
     );
   });
 
-  it('oqim xato bersa foydalanuvchi boshi berk ko\'chada qolmaydi', async () => {
+  it("oqim xato bersa foydalanuvchi boshi berk ko'chada qolmaydi", async () => {
     const inst = makeInstance();
     inst.startFlow = jest.fn().mockRejectedValue(new Error('scene crashed'));
     const ctx = makeCtx('student_1001');
@@ -66,7 +66,7 @@ describe("TelegramService — a'zolikdan keyin oqimni davom ettirish", () => {
 
     expect(inst.logger.error).toHaveBeenCalled();
     expect(ctx.reply).toHaveBeenCalledWith(
-      "Davom etish uchun /start yuboring.",
+      'Davom etish uchun /start yuboring.',
     );
   });
 });
@@ -80,9 +80,9 @@ describe('TelegramService — isRequiredChannelChat', () => {
 
   it('@username ni katta-kichik harfga qaramay taniydi', () => {
     const inst = withChannel('@daffergana');
-    expect(inst.isRequiredChannelChat({ id: -100, username: 'DafFergana' })).toBe(
-      true,
-    );
+    expect(
+      inst.isRequiredChannelChat({ id: -100, username: 'DafFergana' }),
+    ).toBe(true);
   });
 
   it('begona kanalni rad etadi', () => {
@@ -104,8 +104,8 @@ describe('TelegramService — isRequiredChannelChat', () => {
 
   it("gate o'chiq bo'lsa hech qachon mos kelmaydi", () => {
     const inst = withChannel(undefined);
-    expect(inst.isRequiredChannelChat({ id: -100, username: 'daffergana' })).toBe(
-      false,
-    );
+    expect(
+      inst.isRequiredChannelChat({ id: -100, username: 'daffergana' }),
+    ).toBe(false);
   });
 });

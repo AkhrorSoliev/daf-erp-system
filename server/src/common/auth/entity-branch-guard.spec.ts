@@ -35,7 +35,9 @@ describe('assertCallerMayTouchStudent', () => {
         findFirst: jest
           .fn()
           .mockResolvedValue(
-            opts.studentBranch === null ? null : { branchId: opts.studentBranch },
+            opts.studentBranch === null
+              ? null
+              : { branchId: opts.studentBranch },
           ),
       },
       enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
@@ -86,9 +88,8 @@ describe('assertCallerMayTouchStudent', () => {
     // The guard adds the branch question and leaves that one alone.
     const prisma = prismaFor({ studentBranch: 1, caller: FARGONA_DIRECTOR });
     await assertCallerMayTouchStudent(prisma, 7, 10264, 1001);
-    const where = (
-      prisma as never as { student: { findFirst: jest.Mock } }
-    ).student.findFirst.mock.calls[0][0].where;
+    const where = (prisma as never as { student: { findFirst: jest.Mock } })
+      .student.findFirst.mock.calls[0][0].where;
     expect(where).not.toHaveProperty('deletedAt');
     expect(where).toMatchObject({ id: 10264, companyId: 1001 });
   });
@@ -118,12 +119,9 @@ describe('assertCallerMayTouchStudent', () => {
     // fails closed as a 403 rather than a 500 on a page someone merely
     // clicked. (Production: 824 live students, 0 without a branch.)
     const prisma = prismaFor({ studentBranch: null, caller: FARGONA_DIRECTOR });
-    const err = await assertCallerMayTouchStudent(
-      prisma,
-      7,
-      10264,
-      1001,
-    ).catch((e: unknown) => e);
+    const err = await assertCallerMayTouchStudent(prisma, 7, 10264, 1001).catch(
+      (e: unknown) => e,
+    );
     expect(err).toBeInstanceOf(ForbiddenException);
     expect((err as Error).message).toMatch(/filial aniqlanmadi/);
   });

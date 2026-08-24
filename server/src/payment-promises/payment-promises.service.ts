@@ -160,7 +160,10 @@ export class PaymentPromisesService {
       return updated;
     }
 
-    const branchId = await this.resolveStudentBranch(params.studentId, companyId);
+    const branchId = await this.resolveStudentBranch(
+      params.studentId,
+      companyId,
+    );
     const created = await this.prisma.paymentPromise.create({
       data: {
         studentId: params.studentId,
@@ -196,21 +199,29 @@ export class PaymentPromisesService {
     const promise = await this.prisma.paymentPromise.findFirst({
       where: { id, companyId, status: 'OPEN' },
     });
-    if (!promise) throw new NotFoundException("Belgilangan to'lov sanasi topilmadi");
+    if (!promise)
+      throw new NotFoundException("Belgilangan to'lov sanasi topilmadi");
     // Gated on the promise's STUDENT, because the promise itself carries no
     // branch — cancelling one is a write on that student's debt record.
     await this.assertStudentInScope(promise.studentId, companyId, branchIds);
 
     const updated = await this.prisma.paymentPromise.update({
       where: { id },
-      data: { status: 'CANCELLED', resolvedAt: new Date(), resolvedById: userId },
+      data: {
+        status: 'CANCELLED',
+        resolvedAt: new Date(),
+        resolvedById: userId,
+      },
     });
 
     await this.entityHistory.recordStatusChange({
       entityType: 'Student',
       entityId: String(promise.studentId),
       oldValues: { vada: 'OCHIQ' },
-      newValues: { vada: 'BEKOR_QILINDI', action: "TO'LOV_VA'DASI_BEKOR_QILINDI" },
+      newValues: {
+        vada: 'BEKOR_QILINDI',
+        action: "TO'LOV_VA'DASI_BEKOR_QILINDI",
+      },
       changedById: userId,
       companyId,
     });

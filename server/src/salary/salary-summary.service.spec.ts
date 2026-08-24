@@ -17,7 +17,9 @@ describe('SalarySummaryService', () => {
       employeeSalaryConfig: { findMany: jest.fn().mockResolvedValue([]) },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
       salaryAccrual: {
-        aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 }, _count: 0 }),
+        aggregate: jest
+          .fn()
+          .mockResolvedValue({ _sum: { amount: 0 }, _count: 0 }),
         groupBy: jest.fn().mockResolvedValue([]),
       },
       salaryPayment: {

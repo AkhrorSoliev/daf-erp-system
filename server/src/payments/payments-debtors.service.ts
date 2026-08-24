@@ -272,9 +272,7 @@ export class PaymentsDebtorsService {
            * guessing a date from the balance.
            */
           debtSince: age?.since ?? null,
-          debtMonths: age
-            ? wholeMonthsBetween(new Date(age.since), now)
-            : null,
+          debtMonths: age ? wholeMonthsBetween(new Date(age.since), now) : null,
           debtByMonth: age
             ? Object.entries(age.months)
                 .sort(([a], [b]) => a.localeCompare(b))

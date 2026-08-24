@@ -22,8 +22,7 @@ export function resolvePeriod(
   const now = new Date();
   const y = now.getFullYear();
   const m = now.getMonth();
-  const startStr =
-    startDate ?? `${y}-${String(m + 1).padStart(2, '0')}-01`;
+  const startStr = startDate ?? `${y}-${String(m + 1).padStart(2, '0')}-01`;
   const lastDay = new Date(y, m + 1, 0).getDate();
   const endStr =
     endDate ??

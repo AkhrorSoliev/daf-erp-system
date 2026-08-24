@@ -475,7 +475,7 @@ export class MockExamParticipantsService {
       throw new NotFoundException('Ishtirokchi topilmadi');
     }
     if (participant.paid) {
-      throw new BadRequestException('Bu ishtirokchi allaqachon to\'lagan');
+      throw new BadRequestException("Bu ishtirokchi allaqachon to'lagan");
     }
     // Guard on the participant's locked-in fee (after any DaF discount),
     // falling back to the exam price for legacy rows.
@@ -563,7 +563,10 @@ export class MockExamParticipantsService {
     // that keeps its fee is money the centre holds for nothing — and because
     // the per-exam unique index only counts live rows, the same person can
     // register again and be charged twice over.
-    const refunded = await this.mockExamBilling.refundParticipantFee(id, userId);
+    const refunded = await this.mockExamBilling.refundParticipantFee(
+      id,
+      userId,
+    );
 
     await this.prisma.mockExamParticipant.update({
       where: { id },

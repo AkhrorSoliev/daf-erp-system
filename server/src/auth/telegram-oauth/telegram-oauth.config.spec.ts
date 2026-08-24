@@ -11,7 +11,8 @@ describe('TelegramOauthConfig', () => {
   const full = {
     TELEGRAM_OAUTH_CLIENT_ID: '1234567890',
     TELEGRAM_OAUTH_CLIENT_SECRET: 'secret-value',
-    TELEGRAM_OAUTH_REDIRECT_URI: 'https://api.dafzentrum.uz/api/auth/telegram/callback',
+    TELEGRAM_OAUTH_REDIRECT_URI:
+      'https://api.dafzentrum.uz/api/auth/telegram/callback',
   };
 
   it("hamma sozlama bo'lsa yoniq", () => {

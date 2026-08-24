@@ -214,7 +214,7 @@ export class HolidaysService {
         throw new BadRequestException(
           "Bu bayram allaqachon guruh jadvallariga ta'sir qilgan. " +
             "Sanalarini o'zgartirish uchun avval bayramni o'chiring, " +
-            'so\'ng qayta yarating',
+            "so'ng qayta yarating",
         );
       }
 

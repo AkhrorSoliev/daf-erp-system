@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { CashAccountsService } from './cash-accounts.service';
 import { CashMovementsService } from './cash-movements.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -74,7 +78,12 @@ describe('CashAccountsService', () => {
       });
 
       await service.create(
-        { name: 'Kassa', type: CashAccountType.CASH, branchId: 1, openingBalance: 1000 },
+        {
+          name: 'Kassa',
+          type: CashAccountType.CASH,
+          branchId: 1,
+          openingBalance: 1000,
+        },
         7,
         1,
       );
@@ -111,7 +120,7 @@ describe('CashAccountsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it("refuses to open an account in a branch the caller may not act on", async () => {
+    it('refuses to open an account in a branch the caller may not act on', async () => {
       // "The branch exists in this company" and "you may act on it" are
       // different questions, and only the first was asked. Every OTHER
       // cash-account operation resolves through `findOne(id, companyId,
@@ -152,7 +161,10 @@ describe('CashAccountsService', () => {
     });
 
     it('archives an empty account', async () => {
-      prisma.cashAccount.findFirst.mockResolvedValue({ id: 'acc1', balance: 0 });
+      prisma.cashAccount.findFirst.mockResolvedValue({
+        id: 'acc1',
+        balance: 0,
+      });
       const res = await service.remove('acc1', 7, 1);
       expect(res).toEqual({ message: "Kassa hisobi o'chirildi" });
       expect(entityHistory.recordDelete).toHaveBeenCalled();
@@ -198,7 +210,12 @@ describe('CashAccountsService', () => {
         id: 'acc1',
         balance: 800,
       });
-      await service.reconcile('acc1', { actualBalance: 1000, reason: 'sanab' }, 7, 1);
+      await service.reconcile(
+        'acc1',
+        { actualBalance: 1000, reason: 'sanab' },
+        7,
+        1,
+      );
       expect(cashMovements.adjust).toHaveBeenCalledWith(
         expect.objectContaining({ signedAmount: 200 }),
         txClient,
@@ -292,7 +309,11 @@ describe('CashAccountsService — branch confinement', () => {
         },
         {
           provide: EntityHistoryService,
-          useValue: { recordCreate: jest.fn(), recordUpdate: jest.fn(), recordDelete: jest.fn() },
+          useValue: {
+            recordCreate: jest.fn(),
+            recordUpdate: jest.fn(),
+            recordDelete: jest.fn(),
+          },
         },
       ],
     }).compile();
@@ -315,7 +336,12 @@ describe('CashAccountsService — branch confinement', () => {
   it("refuses to reconcile another branch's kassa", async () => {
     await makeService(director);
     await expect(
-      service.reconcile('acc-2', { actualBalance: 5, reason: 'x' } as any, 99, 1),
+      service.reconcile(
+        'acc-2',
+        { actualBalance: 5, reason: 'x' } as any,
+        99,
+        1,
+      ),
     ).rejects.toThrow(/boshqa filialga tegishli/);
   });
 
@@ -354,4 +380,3 @@ describe('CashAccountsService — branch confinement', () => {
     ).resolves.toBeDefined();
   });
 });
-

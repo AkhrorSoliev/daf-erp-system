@@ -114,7 +114,7 @@ export class TelegramGroupsService {
       caller.roles.includes('CEO') || caller.roles.includes('Branch Director');
     if (!isAllowed) {
       throw new ForbiddenException(
-        "Faqat CEO yoki Filial Direktori guruhni tasdiqlay oladi",
+        'Faqat CEO yoki Filial Direktori guruhni tasdiqlay oladi',
       );
     }
 
@@ -125,7 +125,7 @@ export class TelegramGroupsService {
     // which in turn left no way to declare a genuine org-wide group.
     if (branchId == null && !receivesAllBranches) {
       throw new BadRequestException(
-        "Guruhni tasdiqlash uchun filial tanlang yoki «barcha filiallar» ni belgilang",
+        'Guruhni tasdiqlash uchun filial tanlang yoki «barcha filiallar» ni belgilang',
       );
     }
     if (branchId != null) {
@@ -150,7 +150,7 @@ export class TelegramGroupsService {
     // branch's payment and attendance traffic through a chat they control.
     if (receivesAllBranches && !caller.roles.includes('CEO')) {
       throw new ForbiddenException(
-        "«Barcha filiallar» ni faqat CEO belgilay oladi",
+        '«Barcha filiallar» ni faqat CEO belgilay oladi',
       );
     }
 
@@ -224,8 +224,7 @@ export class TelegramGroupsService {
       throw new NotFoundException('Guruh topilmadi');
     }
 
-    const branchId =
-      dto.branchId !== undefined ? dto.branchId : group.branchId;
+    const branchId = dto.branchId !== undefined ? dto.branchId : group.branchId;
     const receivesAllBranches =
       dto.receivesAllBranches !== undefined
         ? dto.receivesAllBranches
@@ -236,7 +235,7 @@ export class TelegramGroupsService {
     // nothing, with no record of whether anyone meant it.
     if (branchId == null && !receivesAllBranches) {
       throw new BadRequestException(
-        "Guruh filialsiz qololmaydi — filial tanlang yoki «barcha filiallar» ni belgilang",
+        'Guruh filialsiz qololmaydi — filial tanlang yoki «barcha filiallar» ni belgilang',
       );
     }
 
@@ -264,7 +263,7 @@ export class TelegramGroupsService {
         this.prisma,
         caller.id,
         group.branchId,
-        "Bu guruh boshqa filialga tegishli",
+        'Bu guruh boshqa filialga tegishli',
       );
     }
     if (
@@ -273,7 +272,7 @@ export class TelegramGroupsService {
       !caller.roles.includes('CEO')
     ) {
       throw new ForbiddenException(
-        "«Barcha filiallar» ni faqat CEO belgilay oladi",
+        '«Barcha filiallar» ni faqat CEO belgilay oladi',
       );
     }
 
@@ -303,14 +302,18 @@ export class TelegramGroupsService {
     };
   }
 
-  async reject(id: string, caller: { id?: number; companyId?: number; roles: string[] }) {
+  async reject(
+    id: string,
+    caller: { id?: number; companyId?: number; roles: string[] },
+  ) {
     const isAllowed =
       caller.roles.includes('CEO') || caller.roles.includes('Branch Director');
     if (!isAllowed) {
       throw new ForbiddenException("Sizga ruxsat yo'q");
     }
     const group = await this.prisma.telegramGroup.findUnique({ where: { id } });
-    if (!group || group.deletedAt) throw new NotFoundException('Guruh topilmadi');
+    if (!group || group.deletedAt)
+      throw new NotFoundException('Guruh topilmadi');
     if (group.status === TelegramGroupStatus.APPROVED) {
       throw new BadRequestException(
         "Tasdiqlangan guruhni rad etib bo'lmaydi; uning o'rniga /unlink yoki DELETE ishlating",
@@ -318,7 +321,11 @@ export class TelegramGroupsService {
     }
     const updated = await this.prisma.telegramGroup.update({
       where: { id },
-      data: { status: TelegramGroupStatus.REJECTED, deletedAt: new Date(), isActive: false },
+      data: {
+        status: TelegramGroupStatus.REJECTED,
+        deletedAt: new Date(),
+        isActive: false,
+      },
     });
 
     if (caller.id) {
@@ -348,11 +355,17 @@ export class TelegramGroupsService {
    *   - From inside the group via /unlink: caller is a Telegram group admin —
    *     no ERP role check (the chat itself is the ACL).
    */
-  async unlinkApproved(id: string, caller: { companyId: number; roles: string[] }) {
+  async unlinkApproved(
+    id: string,
+    caller: { companyId: number; roles: string[] },
+  ) {
     const group = await this.prisma.telegramGroup.findUnique({ where: { id } });
-    if (!group || group.deletedAt) throw new NotFoundException('Guruh topilmadi');
+    if (!group || group.deletedAt)
+      throw new NotFoundException('Guruh topilmadi');
     if (group.companyId !== caller.companyId) {
-      throw new ForbiddenException("Bu guruh sizning kompaniyangizga tegishli emas");
+      throw new ForbiddenException(
+        'Bu guruh sizning kompaniyangizga tegishli emas',
+      );
     }
     if (!caller.roles.includes('CEO')) {
       throw new ForbiddenException('Faqat CEO botni guruhdan uzishi mumkin');

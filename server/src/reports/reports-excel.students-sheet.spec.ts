@@ -39,7 +39,8 @@ const textOf = (ws: Worksheet): string => {
 const valueFor = (ws: Worksheet, label: string): any => {
   let v: any;
   ws.eachRow((r) => {
-    if (v === undefined && String(r.getCell(1).value ?? '') === label) v = r.getCell(2).value;
+    if (v === undefined && String(r.getCell(1).value ?? '') === label)
+      v = r.getCell(2).value;
   });
   return v;
 };
@@ -48,7 +49,12 @@ describe('studentsSheet', () => {
   let ws: Worksheet;
   beforeEach(() => {
     const wb = new Workbook();
-    studentsSheet(wb, flow, 'Davr: 01.07.2026 — 31.07.2026', 'Barcha filiallar');
+    studentsSheet(
+      wb,
+      flow,
+      'Davr: 01.07.2026 — 31.07.2026',
+      'Barcha filiallar',
+    );
     ws = wb.getWorksheet("O'quvchilar")!;
   });
 

@@ -32,11 +32,7 @@ export class StudentsService {
   ) {
     return this.read.findAll(query, companyId, branchScope);
   }
-  findById(
-    id: number,
-    companyId: number,
-    branchScope: ReportBranchIds,
-  ) {
+  findById(id: number, companyId: number, branchScope: ReportBranchIds) {
     return this.read.findById(id, companyId, branchScope);
   }
   /**

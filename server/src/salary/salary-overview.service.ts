@@ -91,7 +91,11 @@ export class SalaryOverviewService {
     // Resolved before the refusal so every exit from this method returns the
     // SAME shape. The payroll cycle is a company-wide setting, not branch data,
     // so a refused caller learning it discloses nothing.
-    const period = await resolveCurrentPeriod(this.prisma, companyId, new Date());
+    const period = await resolveCurrentPeriod(
+      this.prisma,
+      companyId,
+      new Date(),
+    );
 
     if (blocked) {
       return emptyOverview(page, pageSize, period);
@@ -134,91 +138,87 @@ export class SalaryOverviewService {
     }
 
     // ─── Bulk fetches (one query each, keyed by userId) ───────────────────
-    const [
-      configs,
-      groupTeachers,
-      earnedAgg,
-      paidAgg,
-      advancesAgg,
-      payments,
-    ] = await Promise.all([
-      this.prisma.employeeSalaryConfig.findMany({
-        where: { userId: { in: ids }, isActive: true, companyId },
-        select: {
-          id: true,
-          userId: true,
-          salaryType: true,
-          value: true,
-          groupId: true,
-          group: { select: { id: true, name: true } },
-        },
-      }),
-      this.prisma.groupTeacher.findMany({
-        where: {
-          teacherId: { in: ids },
-          group: { deletedAt: null, statusEnum: 'ACTIVE' },
-        },
-        select: {
-          teacherId: true,
-          group: {
-            select: {
-              id: true,
-              exactDays: true,
-              course: { select: { price: true, lessonPaymentCount: true } },
-              _count: {
-                select: {
-                  enrollments: { where: { status: 'ACTIVE', deletedAt: null } },
+    const [configs, groupTeachers, earnedAgg, paidAgg, advancesAgg, payments] =
+      await Promise.all([
+        this.prisma.employeeSalaryConfig.findMany({
+          where: { userId: { in: ids }, isActive: true, companyId },
+          select: {
+            id: true,
+            userId: true,
+            salaryType: true,
+            value: true,
+            groupId: true,
+            group: { select: { id: true, name: true } },
+          },
+        }),
+        this.prisma.groupTeacher.findMany({
+          where: {
+            teacherId: { in: ids },
+            group: { deletedAt: null, statusEnum: 'ACTIVE' },
+          },
+          select: {
+            teacherId: true,
+            group: {
+              select: {
+                id: true,
+                exactDays: true,
+                course: { select: { price: true, lessonPaymentCount: true } },
+                _count: {
+                  select: {
+                    enrollments: {
+                      where: { status: 'ACTIVE', deletedAt: null },
+                    },
+                  },
                 },
               },
             },
           },
-        },
-      }),
-      // Real ishlangan = to'lanmagan, bekor qilinmagan accruallar yig'indisi
-      // (profildagi `actualEarned` bilan bir xil — davr bo'yicha filtrlanmaydi).
-      this.prisma.salaryAccrual.groupBy({
-        by: ['userId'],
-        where: {
-          userId: { in: ids },
-          companyId,
-          salaryPaymentId: null,
-          reversedAt: null,
-        },
-        _sum: { amount: true },
-      }),
-      this.prisma.salaryPayment.groupBy({
-        by: ['userId'],
-        where: { userId: { in: ids }, companyId, status: 'PAID' },
-        _sum: { amount: true },
-      }),
-      this.prisma.expense.groupBy({
-        by: ['relatedUserId'],
-        where: {
-          relatedUserId: { in: ids },
-          category: 'TEACHER_ADVANCE',
-          companyId,
-          deletedAt: null,
-        },
-        _sum: { amount: true },
-      }),
-      // Oxirgi to'lov (har ustoz uchun) + pending (tasdiqlash/to'lash) uchun.
-      this.prisma.salaryPayment.findMany({
-        where: {
-          userId: { in: ids },
-          companyId,
-          status: { not: SalaryPaymentStatus.CANCELLED },
-        },
-        select: {
-          id: true,
-          userId: true,
-          amount: true,
-          status: true,
-          periodStart: true,
-          periodEnd: true,
-        },
-        orderBy: { createdAt: 'desc' },
-      }),
-    ]);
+        }),
+        // Real ishlangan = to'lanmagan, bekor qilinmagan accruallar yig'indisi
+        // (profildagi `actualEarned` bilan bir xil — davr bo'yicha filtrlanmaydi).
+        this.prisma.salaryAccrual.groupBy({
+          by: ['userId'],
+          where: {
+            userId: { in: ids },
+            companyId,
+            salaryPaymentId: null,
+            reversedAt: null,
+          },
+          _sum: { amount: true },
+        }),
+        this.prisma.salaryPayment.groupBy({
+          by: ['userId'],
+          where: { userId: { in: ids }, companyId, status: 'PAID' },
+          _sum: { amount: true },
+        }),
+        this.prisma.expense.groupBy({
+          by: ['relatedUserId'],
+          where: {
+            relatedUserId: { in: ids },
+            category: 'TEACHER_ADVANCE',
+            companyId,
+            deletedAt: null,
+          },
+          _sum: { amount: true },
+        }),
+        // Oxirgi to'lov (har ustoz uchun) + pending (tasdiqlash/to'lash) uchun.
+        this.prisma.salaryPayment.findMany({
+          where: {
+            userId: { in: ids },
+            companyId,
+            status: { not: SalaryPaymentStatus.CANCELLED },
+          },
+          select: {
+            id: true,
+            userId: true,
+            amount: true,
+            status: true,
+            periodStart: true,
+            periodEnd: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+      ]);
 
     // Index bulk results by userId.
     const configsByUser = new Map<number, typeof configs>();

@@ -92,8 +92,7 @@ export class PaymentLinkService {
       );
       if (!cfg) return null;
 
-      const isProduction =
-        this.config.get<string>('NODE_ENV') === 'production';
+      const isProduction = this.config.get<string>('NODE_ENV') === 'production';
       return buildPaymeCheckoutUrl({
         merchantId: cfg.merchantId,
         accountId,
@@ -122,9 +121,7 @@ export class PaymentLinkService {
 
       const serviceId =
         this.config.get<string>('CLICK_SERVICE_ID') ?? cfg.secretKey;
-      const merchantUserId = this.config.get<string>(
-        'CLICK_MERCHANT_USER_ID',
-      );
+      const merchantUserId = this.config.get<string>('CLICK_MERCHANT_USER_ID');
       if (!serviceId) return null;
 
       return buildClickCheckoutUrl({

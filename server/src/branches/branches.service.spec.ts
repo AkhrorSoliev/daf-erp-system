@@ -159,7 +159,7 @@ describe('BranchesService — caller branch confinement', () => {
     service = module.get(BranchesService);
   };
 
-  it("refuses to edit another branch", async () => {
+  it('refuses to edit another branch', async () => {
     await makeService({
       mainBranch: 1,
       branches: [{ branchId: 1 }],
@@ -204,7 +204,6 @@ describe('BranchesService — caller branch confinement', () => {
     ).rejects.toThrow(/topilmadi/);
   });
 });
-
 
 /**
  * Opening branch #2 exposed these three: working hours were accepted by the DTO
@@ -256,7 +255,10 @@ describe('BranchesService — branch onboarding', () => {
       providers: [
         BranchesService,
         { provide: PrismaService, useValue: prisma },
-        { provide: StatusHistoryService, useValue: { changeStatus: jest.fn() } },
+        {
+          provide: StatusHistoryService,
+          useValue: { changeStatus: jest.fn() },
+        },
         { provide: StatusCascadeService, useValue: { cascade: jest.fn() } },
         {
           provide: EntityHistoryService,
@@ -371,7 +373,12 @@ describe('BranchesService — branch onboarding', () => {
       // BEFORE the first lesson, not after.
       prisma.user.findMany.mockResolvedValue([
         { id: 10001, firstName: 'Ali', lastName: 'Valiyev', salaryConfigs: [] },
-        { id: 10002, firstName: 'Zuhra', lastName: 'Karimova', salaryConfigs: [{ id: 'c1' }] },
+        {
+          id: 10002,
+          firstName: 'Zuhra',
+          lastName: 'Karimova',
+          salaryConfigs: [{ id: 'c1' }],
+        },
       ]);
 
       const res = await service.getReadiness(2, 1001, 1);
@@ -390,7 +397,12 @@ describe('BranchesService — branch onboarding', () => {
       prisma.course.count.mockResolvedValue(1);
       prisma.user.count.mockResolvedValue(1);
       prisma.user.findMany.mockResolvedValue([
-        { id: 10001, firstName: 'Ali', lastName: 'Valiyev', salaryConfigs: [{ id: 'c1' }] },
+        {
+          id: 10001,
+          firstName: 'Ali',
+          lastName: 'Valiyev',
+          salaryConfigs: [{ id: 'c1' }],
+        },
       ]);
 
       const res = await service.getReadiness(2, 1001, 1);

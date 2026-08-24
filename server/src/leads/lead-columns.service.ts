@@ -179,9 +179,7 @@ export class LeadColumnsService {
       where: { columnId: id, deletedAt: null },
     });
     if (sectionCount > 0) {
-      throw new BadRequestException(
-        "Avval ustundagi bo'limlarni o'chiring",
-      );
+      throw new BadRequestException("Avval ustundagi bo'limlarni o'chiring");
     }
 
     await this.entityHistoryService.recordDelete({

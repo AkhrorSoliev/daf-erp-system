@@ -44,7 +44,7 @@ describe('name-prompts', () => {
       expect(ASK_LAST_NAME.toLowerCase()).toContain('familiya');
     });
 
-    it("ogohlantirish nima qilish kerakligini aytadi", () => {
+    it('ogohlantirish nima qilish kerakligini aytadi', () => {
       expect(MULTI_WORD_NAME_HINT.toLowerCase()).toContain('faqat');
       expect(MULTI_WORD_NAME_HINT).toContain('Masalan');
     });

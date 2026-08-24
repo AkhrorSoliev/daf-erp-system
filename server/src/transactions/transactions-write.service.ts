@@ -519,7 +519,8 @@ export class TransactionsWriteService {
       // deliberately branch-less, and blocking their payout would be worse
       // than an unattributed row — those are handled explicitly in Batch 5.
       const branchId =
-        params.branchId ?? (await tryResolveUserBranchId(client, params.userId));
+        params.branchId ??
+        (await tryResolveUserBranchId(client, params.userId));
 
       const transaction = await client.transaction.create({
         data: {
@@ -545,7 +546,10 @@ export class TransactionsWriteService {
       // its own payroll cost, so one branch's cash must never settle another's.
       // One movement per named account, else a single resolved one as before.
       const outflows = slices.length
-        ? slices.map((s) => ({ cashAccountId: s.cashAccountId, amount: s.amount }))
+        ? slices.map((s) => ({
+            cashAccountId: s.cashAccountId,
+            amount: s.amount,
+          }))
         : [{ cashAccountId: undefined, amount: params.amount }];
       for (const out of outflows) {
         await this.cashMovements.recordOutflow(

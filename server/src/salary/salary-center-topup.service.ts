@@ -68,8 +68,16 @@ export class SalaryCenterTopUpService {
       periodEndDateExclusive,
     } = scope;
 
-    const [attendances, groups, groupTeachers, overrides, versionRows, covered,
-      heldCounts, inactiveStudents] = await Promise.all([
+    const [
+      attendances,
+      groups,
+      groupTeachers,
+      overrides,
+      versionRows,
+      covered,
+      heldCounts,
+      inactiveStudents,
+    ] = await Promise.all([
       this.prisma.attendance.findMany({
         where: {
           companyId,
@@ -129,7 +137,11 @@ export class SalaryCenterTopUpService {
         _count: { _all: true },
       }),
       this.prisma.student.findMany({
-        where: { companyId, status: { not: 'ACTIVE' }, statusChangedAt: { not: null } },
+        where: {
+          companyId,
+          status: { not: 'ACTIVE' },
+          statusChangedAt: { not: null },
+        },
         select: { id: true, statusChangedAt: true },
       }),
     ]);
@@ -160,7 +172,10 @@ export class SalaryCenterTopUpService {
           effectiveTo: r.effectiveTo,
         },
       ]);
-      if (r.config.salaryType === SalaryType.FIXED_MONTHLY && r.config.groupId == null) {
+      if (
+        r.config.salaryType === SalaryType.FIXED_MONTHLY &&
+        r.config.groupId == null
+      ) {
         fixedMonthly.add(r.config.userId);
       }
     }
@@ -302,7 +317,10 @@ export class SalaryCenterTopUpService {
     // month closed and the money had already gone out.
     const forecast =
       accruals.length === 0 && !allMonths
-        ? await this.sweepForecast(scope, teachers.map((t) => t.id))
+        ? await this.sweepForecast(
+            scope,
+            teachers.map((t) => t.id),
+          )
         : [];
     const isForecast = forecast.length > 0;
     const source = isForecast ? forecast : accruals;

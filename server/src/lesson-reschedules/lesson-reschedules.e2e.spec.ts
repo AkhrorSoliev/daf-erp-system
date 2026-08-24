@@ -8,9 +8,9 @@ import { RolesGuard } from '../common/guards';
 
 describe('LessonReschedulesController (e2e validation)', () => {
   let app: INestApplication;
-  const findAvailableRooms = jest.fn().mockResolvedValue([
-    { id: 'r-1', name: 'Xona 1' },
-  ]);
+  const findAvailableRooms = jest
+    .fn()
+    .mockResolvedValue([{ id: 'r-1', name: 'Xona 1' }]);
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -98,7 +98,8 @@ describe('LessonReschedulesController (e2e validation)', () => {
     const res = await request(app.getHttpServer())
       .get('/lesson-reschedules/available-rooms')
       .query(query);
-    if (res.status !== 200) console.log('REJECTED', query, res.status, res.body);
+    if (res.status !== 200)
+      console.log('REJECTED', query, res.status, res.body);
     expect(res.status).toBe(200);
   });
 });

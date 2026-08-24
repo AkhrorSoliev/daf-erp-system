@@ -214,7 +214,10 @@ describe('EnrollmentBillingService.releasePrepaidLessons', () => {
         EnrollmentBillingService,
         { provide: PrismaService, useValue: tx },
         { provide: TransactionsService, useValue: transactionsService },
-        { provide: SalaryAccrualService, useValue: { reverseAccrualForAttendance: jest.fn() } },
+        {
+          provide: SalaryAccrualService,
+          useValue: { reverseAccrualForAttendance: jest.fn() },
+        },
       ],
     }).compile();
 

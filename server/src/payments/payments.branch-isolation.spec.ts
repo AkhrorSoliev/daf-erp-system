@@ -56,7 +56,9 @@ describe('money reads are branch-isolated', () => {
         payment: {
           findMany: jest.fn((a) => (wheres.push(a.where), Promise.resolve([]))),
           count: jest.fn((a) => (wheres.push(a?.where), Promise.resolve(0))),
-          findFirst: jest.fn((a) => (wheres.push(a.where), Promise.resolve(null))),
+          findFirst: jest.fn(
+            (a) => (wheres.push(a.where), Promise.resolve(null)),
+          ),
         },
       };
       return { service: new PaymentsReadService(prisma), wheres };
@@ -111,7 +113,9 @@ describe('money reads are branch-isolated', () => {
       let captured: any;
       const prisma: any = {
         student: {
-          findFirst: jest.fn((a) => ((captured = a.where), Promise.resolve(null))),
+          findFirst: jest.fn(
+            (a) => ((captured = a.where), Promise.resolve(null)),
+          ),
         },
       };
       const service = new PaymentsPreviewService(prisma);
@@ -142,7 +146,9 @@ describe('money reads are branch-isolated', () => {
       let captured: any;
       const prisma: any = {
         group: {
-          findFirst: jest.fn((a) => ((captured = a.where), Promise.resolve(null))),
+          findFirst: jest.fn(
+            (a) => ((captured = a.where), Promise.resolve(null)),
+          ),
         },
       };
       const service = new PaymentsDebtorsService(prisma, debtAgeStub());
@@ -176,7 +182,9 @@ describe('money reads are branch-isolated', () => {
       let txWhere: any;
       const prisma: any = {
         student: {
-          findFirst: jest.fn((a) => ((studentWhere = a.where), Promise.resolve({ id: 10001 }))),
+          findFirst: jest.fn(
+            (a) => ((studentWhere = a.where), Promise.resolve({ id: 10001 })),
+          ),
         },
         transaction: {
           findMany: jest.fn((a) => ((txWhere = a.where), Promise.resolve([]))),

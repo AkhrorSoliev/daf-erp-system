@@ -102,9 +102,7 @@ export class MockExamSectionsService {
     if (dto.name !== undefined) {
       const trimmed = dto.name.trim();
       if (!trimmed) {
-        throw new BadRequestException(
-          "Bo'lim nomi bo'sh bo'lishi mumkin emas",
-        );
+        throw new BadRequestException("Bo'lim nomi bo'sh bo'lishi mumkin emas");
       }
       data.name = trimmed;
     }

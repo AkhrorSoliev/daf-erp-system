@@ -21,7 +21,13 @@ describe('prorateFixedMonthly', () => {
   it('prorates a mid-cycle hire by active days (effectiveFrom inside)', () => {
     // Hired on the 16th → June 16..30 = 15 of 30 days.
     const amount = prorateFixedMonthly(
-      [{ value: 3_000_000, effectiveFrom: tsh(2026, 6, 16), effectiveTo: null }],
+      [
+        {
+          value: 3_000_000,
+          effectiveFrom: tsh(2026, 6, 16),
+          effectiveTo: null,
+        },
+      ],
       periodStart,
       periodEnd,
     );

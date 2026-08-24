@@ -9,7 +9,9 @@ import { IsIn, IsOptional, IsString, Matches } from 'class-validator';
 export class SalaryMonthlyQueryDto {
   @IsOptional()
   @IsString()
-  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, { message: "month 'YYYY-MM' bo'lishi kerak" })
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, {
+    message: "month 'YYYY-MM' bo'lishi kerak",
+  })
   month?: string;
 
   /** Name / #id filter — same shape as the overview search. */

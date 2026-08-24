@@ -87,7 +87,7 @@ describe('TelegramGroupDigestService', () => {
 
   it('lists new groups', () => {
     const msg = service.build('DaF', [group('B1-Intensiv')], NOW)!;
-    expect(msg).toContain("Yangi guruhlar (1)");
+    expect(msg).toContain('Yangi guruhlar (1)');
     expect(msg).toContain('B1-Intensiv');
     expect(msg).toContain('01.06.2026');
   });
@@ -100,7 +100,7 @@ describe('TelegramGroupDigestService', () => {
     )!;
     expect(msg).toContain("Yangi o'quvchilar");
     expect(msg).toContain("To'lovlar");
-    expect(msg).toContain("Yangi guruhlar");
+    expect(msg).toContain('Yangi guruhlar');
   });
 
   it('escapes HTML-sensitive characters in names', () => {
@@ -114,7 +114,9 @@ describe('TelegramGroupDigestService', () => {
       student(`Student ${i}`),
     );
     const msg = service.build('DaF', many, NOW)!;
-    expect(msg).toContain(`Yangi o'quvchilar (${TG_GROUP_DIGEST_MAX_ITEMS + 5})`);
+    expect(msg).toContain(
+      `Yangi o'quvchilar (${TG_GROUP_DIGEST_MAX_ITEMS + 5})`,
+    );
     expect(msg).toContain('va yana 5 ta');
   });
 });

@@ -46,9 +46,7 @@ describe('RefundsEligibilityService', () => {
         aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
       },
       refund: {
-        aggregate: jest
-          .fn()
-          .mockResolvedValue({ _sum: { approvedAmount: 0 } }),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { approvedAmount: 0 } }),
       },
     };
 
@@ -105,9 +103,9 @@ describe('RefundsEligibilityService', () => {
 
   it('throws NotFoundException when explicit enrollmentId does not match the student', async () => {
     prisma.enrollment.findFirst.mockResolvedValue(null);
-    await expect(service.previewRefund(10001, 1, 'enr-foreign')).rejects.toThrow(
-      NotFoundException,
-    );
+    await expect(
+      service.previewRefund(10001, 1, 'enr-foreign'),
+    ).rejects.toThrow(NotFoundException);
   });
 
   // The dialog must refuse what the refund itself would refuse. `quickRefund`
@@ -188,7 +186,6 @@ describe('RefundsEligibilityService', () => {
     });
   });
 
-
   /**
    * What a refund may return.
    *
@@ -227,7 +224,10 @@ describe('RefundsEligibilityService', () => {
     });
 
     it('nets a negative balance off the prepaid value', async () => {
-      prisma.student.findFirst.mockResolvedValue({ id: 10001, balance: -50_000 });
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10001,
+        balance: -50_000,
+      });
       prisma.enrollment.findMany.mockResolvedValue([
         { ...enrollmentRow, prepaidLessonsRemaining: 3 },
       ]);
@@ -239,7 +239,10 @@ describe('RefundsEligibilityService', () => {
     });
 
     it('never goes below zero for a debtor with no prepaid lessons', async () => {
-      prisma.student.findFirst.mockResolvedValue({ id: 10001, balance: -80_000 });
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10001,
+        balance: -80_000,
+      });
       prisma.enrollment.findMany.mockResolvedValue([
         { ...enrollmentRow, prepaidLessonsRemaining: 0 },
       ]);
@@ -265,7 +268,10 @@ describe('RefundsEligibilityService', () => {
     });
 
     it('warns when there is nothing but free balance to draw on', async () => {
-      prisma.student.findFirst.mockResolvedValue({ id: 10001, balance: 10_000 });
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10001,
+        balance: 10_000,
+      });
       prisma.enrollment.findMany.mockResolvedValue([
         { ...enrollmentRow, prepaidLessonsRemaining: 0 },
       ]);

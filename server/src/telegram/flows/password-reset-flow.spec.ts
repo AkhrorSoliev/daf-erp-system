@@ -229,10 +229,7 @@ describe('password-reset-flow', () => {
         300,
       );
       expect(redis.incr).toHaveBeenCalledWith('pwd_reset:daily:12345');
-      expect(redis.expire).toHaveBeenCalledWith(
-        'pwd_reset:daily:12345',
-        86400,
-      );
+      expect(redis.expire).toHaveBeenCalledWith('pwd_reset:daily:12345', 86400);
     });
 
     it('does not bump the daily TTL on the 2nd hit of the same day', async () => {

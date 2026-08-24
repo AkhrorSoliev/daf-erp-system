@@ -111,7 +111,7 @@ export class PlannedAbsencesService {
     });
     if (existingAttendance) {
       throw new BadRequestException(
-        "Bu dars uchun davomat allaqachon olingan — oldindan belgilash kerak emas",
+        'Bu dars uchun davomat allaqachon olingan — oldindan belgilash kerak emas',
       );
     }
 

@@ -10,8 +10,15 @@ describe('ReportsExcelService', () => {
   // ---- Mock data tuned so every Tekshiruv tie reconciles (MOS). ----
   const pl = {
     period: { start: '2026-06-01', end: '2026-06-30' },
-    revenue: { total: 1_000_000, byType: [{ type: 'TUITION', amount: 1_000_000, count: 5 }] },
-    costOfServices: { teacherSalaries: 300_000, teacherAdvances: 20_000, total: 320_000 },
+    revenue: {
+      total: 1_000_000,
+      byType: [{ type: 'TUITION', amount: 1_000_000, count: 5 }],
+    },
+    costOfServices: {
+      teacherSalaries: 300_000,
+      teacherAdvances: 20_000,
+      total: 320_000,
+    },
     grossProfit: 680_000,
     operatingExpenses: {
       byCategory: [{ category: 'RENT', amount: 200_000 }],
@@ -23,8 +30,18 @@ describe('ReportsExcelService', () => {
   };
   const bs = {
     asOf: '2026-06-14',
-    assets: { cash: 600_000, accountsReceivable: 80_000, debtorCount: 3, total: 680_000 },
-    liabilities: { salariesPayable: 50_000, deferredRevenue: 120_000, prepaidStudentCount: 8, total: 170_000 },
+    assets: {
+      cash: 600_000,
+      accountsReceivable: 80_000,
+      debtorCount: 3,
+      total: 680_000,
+    },
+    liabilities: {
+      salariesPayable: 50_000,
+      deferredRevenue: 120_000,
+      prepaidStudentCount: 8,
+      total: 170_000,
+    },
     equity: { retainedEarnings: 510_000, total: 510_000 },
     note: 'GL yo‘q — hosila',
   };
@@ -72,7 +89,13 @@ describe('ReportsExcelService', () => {
     },
     data: [
       {
-        user: { id: 10010, firstName: 'Ustoz', lastName: 'B', isActive: true, branch: { id: 1, name: 'Markaz' } },
+        user: {
+          id: 10010,
+          firstName: 'Ustoz',
+          lastName: 'B',
+          isActive: true,
+          branch: { id: 1, name: 'Markaz' },
+        },
         hasLessonData: true,
         isFixedMonthly: false,
         fullDeserved: 500_000,
@@ -101,7 +124,15 @@ describe('ReportsExcelService', () => {
   };
   const debtors = {
     rows: [
-      { id: 10002, firstName: 'Vali', lastName: 'Aliyev', phone: '901234567', debtAmount: 80_000, branchIds: [1], groups: ['A1-01'] },
+      {
+        id: 10002,
+        firstName: 'Vali',
+        lastName: 'Aliyev',
+        phone: '901234567',
+        debtAmount: 80_000,
+        branchIds: [1],
+        groups: ['A1-01'],
+      },
     ],
     truncated: false,
     total: 80_000,
@@ -140,7 +171,12 @@ describe('ReportsExcelService', () => {
         recoveryRate: 40,
       },
     ],
-    totals: { closingDebt: 200_000, recovered: 80_000, writtenOff: 0, remaining: 120_000 },
+    totals: {
+      closingDebt: 200_000,
+      recovered: 80_000,
+      writtenOff: 0,
+      remaining: 120_000,
+    },
   };
 
   // ---- v2 datasets: the canonical net profit + own-month profit + students. ----
@@ -203,36 +239,98 @@ describe('ReportsExcelService', () => {
 
   // ---- Operational (non-financial) mock datasets. ----
   const leads = {
-    funnel: [{ status: 'NEW', count: 30 }, { status: 'CONVERTED', count: 10 }],
-    conversionRateOverTime: [{ month: '2026-05', rate: 20, total: 50, converted: 10 }],
+    funnel: [
+      { status: 'NEW', count: 30 },
+      { status: 'CONVERTED', count: 10 },
+    ],
+    conversionRateOverTime: [
+      { month: '2026-05', rate: 20, total: 50, converted: 10 },
+    ],
     averageDaysToConversion: 7,
   };
   const roomUtil = {
     rooms: [
-      { id: 'r1', name: '1-xona', capacity: 15, hoursPerWeek: 20, fillRate: 80, totalGroups: 3, totalEnrolled: 36 },
+      {
+        id: 'r1',
+        name: '1-xona',
+        capacity: 15,
+        hoursPerWeek: 20,
+        fillRate: 80,
+        totalGroups: 3,
+        totalEnrolled: 36,
+      },
     ],
-    summary: { totalRooms: 1, averageFillRate: 80, mostUtilized: '1-xona', leastUtilized: '1-xona' },
+    summary: {
+      totalRooms: 1,
+      averageFillRate: 80,
+      mostUtilized: '1-xona',
+      leastUtilized: '1-xona',
+    },
   };
   const attendance = {
     overallRate: 82,
     overallRetention: 95,
-    statusBreakdown: { present: 400, absent: 80, late: 10, excused: 20, total: 510 },
+    statusBreakdown: {
+      present: 400,
+      absent: 80,
+      late: 10,
+      excused: 20,
+      total: 510,
+    },
     bucket: 'week',
-    trend: [{ bucketStart: '2026-W23', label: '1 Iyn', rate: 80, total: 100, retentionPct: 95 }],
+    trend: [
+      {
+        bucketStart: '2026-W23',
+        label: '1 Iyn',
+        rate: 80,
+        total: 100,
+        retentionPct: 95,
+      },
+    ],
     byDayOfWeek: [{ day: 'Dushanba', rate: 85 }],
-    worstGroups: [{ groupId: 'g2', groupName: 'B1-02', rate: 60, retentionPct: 80 }],
-    bestGroups: [{ groupId: 'g1', groupName: 'A1-01', rate: 95, retentionPct: 100 }],
+    worstGroups: [
+      { groupId: 'g2', groupName: 'B1-02', rate: 60, retentionPct: 80 },
+    ],
+    bestGroups: [
+      { groupId: 'g1', groupName: 'A1-01', rate: 95, retentionPct: 100 },
+    ],
   };
   const teacherPerf = {
     teachers: [
-      { id: 10010, firstName: 'Ustoz', lastName: 'B', photo: null, groupsCount: 3, totalStudents: 40, startStudentCount: 35, endStudentCount: 40, retentionPct: 114, averageAttendance: 88, averageFillRate: 80 },
+      {
+        id: 10010,
+        firstName: 'Ustoz',
+        lastName: 'B',
+        photo: null,
+        groupsCount: 3,
+        totalStudents: 40,
+        startStudentCount: 35,
+        endStudentCount: 40,
+        retentionPct: 114,
+        averageAttendance: 88,
+        averageFillRate: 80,
+      },
     ],
     total: 1,
     page: 1,
     pageSize: 100,
   };
   const teacherChanges = [
-    { id: 'tc1', groupId: 'g1', groupName: 'A1-01', branchName: 'Markaz', courseName: 'A1', previousTeachers: ['Ustoz A'], newTeachers: ['Ustoz B'], changeType: 'REPLACED', triggeredByDismissal: false, reasonId: null, reasonName: 'Ish yuki', changedAt: new Date('2026-06-15T00:00:00Z'), changedBy: 'Admin A' },
+    {
+      id: 'tc1',
+      groupId: 'g1',
+      groupName: 'A1-01',
+      branchName: 'Markaz',
+      courseName: 'A1',
+      previousTeachers: ['Ustoz A'],
+      newTeachers: ['Ustoz B'],
+      changeType: 'REPLACED',
+      triggeredByDismissal: false,
+      reasonId: null,
+      reasonName: 'Ish yuki',
+      changedAt: new Date('2026-06-15T00:00:00Z'),
+      changedBy: 'Admin A',
+    },
   ];
 
   const baseMocks = () => ({
@@ -246,9 +344,11 @@ describe('ReportsExcelService', () => {
     getRecognizedRevenue: jest.fn().mockResolvedValue(1_000_000),
     getDebtorLineItems: jest.fn().mockResolvedValue(debtors),
     getReconciliation: jest.fn().mockResolvedValue(recon),
-    getPeriodOutflows: jest
-      .fn()
-      .mockResolvedValue({ refunds: 10_000, writeOffs: 5_000, providerFees: 0 }),
+    getPeriodOutflows: jest.fn().mockResolvedValue({
+      refunds: 10_000,
+      writeOffs: 5_000,
+      providerFees: 0,
+    }),
     getMonthlyDebtRecovery: jest.fn().mockResolvedValue(debtHistory),
     getDebtHistory: jest.fn().mockResolvedValue({
       months: [],
@@ -414,7 +514,11 @@ describe('ReportsExcelService', () => {
   });
 
   it('produces a non-empty xlsx buffer from every report source', async () => {
-    const buf = await service.generate(1, { startDate: '2026-06-01', endDate: '2026-06-30', branchIds: null });
+    const buf = await service.generate(1, {
+      startDate: '2026-06-01',
+      endDate: '2026-06-30',
+      branchIds: null,
+    });
     expect(Buffer.isBuffer(buf)).toBe(true);
     expect(buf.length).toBeGreaterThan(0);
     expect(reports.getOwnMonthProfit).toHaveBeenCalled();
@@ -601,7 +705,8 @@ describe('ReportsExcelService', () => {
     const balans = wb.getWorksheet('Balans')!;
     let hasGap = false;
     balans.eachRow((r) => {
-      if (String(r.getCell(1).value ?? '').includes('Balanslashuv')) hasGap = true;
+      if (String(r.getCell(1).value ?? '').includes('Balanslashuv'))
+        hasGap = true;
     });
     expect(hasGap).toBe(false);
   });
@@ -629,7 +734,12 @@ describe('ReportsExcelService', () => {
     const ws = wb.getWorksheet('Xonalar bandligi')!;
     let hasNote = false;
     ws.eachRow((r) => {
-      if (String(r.getCell(1).value ?? '').includes("Ma'lumot hozircha mavjud emas")) hasNote = true;
+      if (
+        String(r.getCell(1).value ?? '').includes(
+          "Ma'lumot hozircha mavjud emas",
+        )
+      )
+        hasNote = true;
     });
     expect(hasNote).toBe(true);
   });
@@ -728,7 +838,11 @@ describe('ReportsExcelService', () => {
       const pRow = findRow(wb.getWorksheet('Undirildi')!, 'Iyun 2026');
       expect(pRow.getCell(4).value).toBe(80000);
       // No scope passed => company-wide (a CEO who picked no branch).
-      expect(reports.getMonthDebtDetail).toHaveBeenCalledWith(1, '2026-06', null);
+      expect(reports.getMonthDebtDetail).toHaveBeenCalledWith(
+        1,
+        '2026-06',
+        null,
+      );
     });
 
     it('passes the SAME branch scope to both legs of the workbook', async () => {
@@ -775,7 +889,11 @@ describe('ReportsExcelService', () => {
       await service.generateDebtHistory(1, [2]);
       expect(reports.getDebtHistory).toHaveBeenCalledWith(1, [2]);
       expect(reports.getMonthlyDebtRecovery).toHaveBeenCalledWith(1, [2]);
-      expect(reports.getMonthDebtDetail).toHaveBeenCalledWith(1, '2026-06', [2]);
+      expect(reports.getMonthDebtDetail).toHaveBeenCalledWith(
+        1,
+        '2026-06',
+        [2],
+      );
     });
   });
 

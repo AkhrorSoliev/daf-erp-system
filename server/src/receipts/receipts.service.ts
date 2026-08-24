@@ -223,9 +223,7 @@ export class ReceiptsService {
     };
   }
 
-  private async loadRefundInput(
-    refundId: string,
-  ): Promise<RefundReceiptInput> {
+  private async loadRefundInput(refundId: string): Promise<RefundReceiptInput> {
     const refund = await this.prisma.refund.findFirst({
       where: { id: refundId },
       include: {
@@ -268,7 +266,7 @@ export class ReceiptsService {
       // We only generate documents for terminal-state refunds. Anything
       // else (REQUESTED/APPROVED/PROCESSING/REJECTED) is internal admin
       // workflow and shouldn't have a customer-facing PDF.
-      throw new NotFoundException("Qaytarish hali tasdiqlanmagan");
+      throw new NotFoundException('Qaytarish hali tasdiqlanmagan');
     }
 
     const company = await this.prisma.company.findUnique({

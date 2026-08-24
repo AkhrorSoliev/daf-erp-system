@@ -35,7 +35,10 @@ describe('DashboardController', () => {
 
   describe('getTodaySchedule()', () => {
     it('is staff-only — a student-portal token must not read it', () => {
-      const roles = reflector.get<string[]>(ROLES_KEY, controller.getTodaySchedule);
+      const roles = reflector.get<string[]>(
+        ROLES_KEY,
+        controller.getTodaySchedule,
+      );
       expect(roles).toEqual(expect.arrayContaining([...STAFF_ROLES]));
       expect(roles).not.toContain('Student');
     });
@@ -44,7 +47,7 @@ describe('DashboardController', () => {
       await controller.getTodaySchedule(
         { branchId: 1, date: '2026-04-13' },
         1001,
-        null
+        null,
       );
 
       expect(mockService.getTodaySchedule).toHaveBeenCalledWith(

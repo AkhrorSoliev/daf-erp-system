@@ -72,7 +72,10 @@ describe('SalaryCalculationService', () => {
       providers: [
         SalaryCalculationService,
         { provide: PrismaService, useValue: prisma },
-        { provide: SalaryAccrualService, useValue: { createAccrual: jest.fn() } },
+        {
+          provide: SalaryAccrualService,
+          useValue: { createAccrual: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -205,7 +208,12 @@ describe('SalaryCalculationService', () => {
 
     it('BR-09: withholds the center top-up for a new student below the lesson threshold', async () => {
       prisma.attendance.findMany.mockResolvedValue([
-        { id: 'att-1', studentId: 100, groupId: 'g1', date: new Date('2026-07-10') },
+        {
+          id: 'att-1',
+          studentId: 100,
+          groupId: 'g1',
+          date: new Date('2026-07-10'),
+        },
       ]);
       // Only 2 attended lessons → below the 4-lesson gate → no top-up yet.
       prisma.attendance.groupBy.mockResolvedValue([
@@ -227,13 +235,19 @@ describe('SalaryCalculationService', () => {
         },
       ]);
 
-      await service.calculateMonthlySalaries(1, { asOfDate: julyAsOf, now: julyNow });
+      await service.calculateMonthlySalaries(1, {
+        asOfDate: julyAsOf,
+        now: julyNow,
+      });
 
       expect(accrualService.createAccrual).not.toHaveBeenCalled();
     });
 
     it('the gap-sweep includes ABSENT (a held lesson earns the teacher)', async () => {
-      await service.calculateMonthlySalaries(1, { asOfDate: julyAsOf, now: julyNow });
+      await service.calculateMonthlySalaries(1, {
+        asOfDate: julyAsOf,
+        now: julyNow,
+      });
 
       const statusFilters = prisma.attendance.findMany.mock.calls.map(
         (c: any) => c[0]?.where?.status,
@@ -247,8 +261,18 @@ describe('SalaryCalculationService', () => {
     it('caps the top-up at a student who went inactive: no top-up after statusChangedAt', async () => {
       // Two July lessons: one before the freeze date, one after.
       prisma.attendance.findMany.mockResolvedValue([
-        { id: 'before', studentId: 100, groupId: 'g1', date: new Date('2026-07-05') },
-        { id: 'after', studentId: 100, groupId: 'g1', date: new Date('2026-07-20') },
+        {
+          id: 'before',
+          studentId: 100,
+          groupId: 'g1',
+          date: new Date('2026-07-05'),
+        },
+        {
+          id: 'after',
+          studentId: 100,
+          groupId: 'g1',
+          date: new Date('2026-07-20'),
+        },
       ]);
       prisma.attendance.groupBy.mockResolvedValue([
         { studentId: 100, groupId: 'g1', _count: { _all: 6 } },
@@ -273,7 +297,10 @@ describe('SalaryCalculationService', () => {
         },
       ]);
 
-      await service.calculateMonthlySalaries(1, { asOfDate: julyAsOf, now: julyNow });
+      await service.calculateMonthlySalaries(1, {
+        asOfDate: julyAsOf,
+        now: julyNow,
+      });
 
       const attIds = accrualService.createAccrual.mock.calls.map(
         (c: any) => c[0].attendanceId,
@@ -334,7 +361,12 @@ describe('SalaryCalculationService', () => {
       ]);
       // The backlog scan returns the un-accrued July lesson.
       prisma.$queryRaw.mockResolvedValue([
-        { id: 'jul-att', studentId: 100, groupId: 'g1', date: new Date('2026-07-10') },
+        {
+          id: 'jul-att',
+          studentId: 100,
+          groupId: 'g1',
+          date: new Date('2026-07-10'),
+        },
       ]);
       prisma.group.findMany.mockResolvedValue([
         { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } },
@@ -352,7 +384,10 @@ describe('SalaryCalculationService', () => {
         },
       ]);
 
-      await service.calculateMonthlySalaries(1, { asOfDate: augAsOf, now: augNow });
+      await service.calculateMonthlySalaries(1, {
+        asOfDate: augAsOf,
+        now: augNow,
+      });
 
       // The July lesson is fronted, credited to the current (August) period.
       expect(accrualService.createAccrual).toHaveBeenCalledWith(

@@ -143,11 +143,7 @@ describe('branch isolation — end-to-end scenarios', () => {
 
     it('a multi-branch scope is REFUSED, not silently unfiltered', () => {
       expect(() =>
-        narrowToSingleBranch(
-          [FARGONA, NAMANGAN],
-          refuseEmpty,
-          refuseAmbiguous,
-        ),
+        narrowToSingleBranch([FARGONA, NAMANGAN], refuseEmpty, refuseAmbiguous),
       ).toThrow(BadRequestException);
     });
   });

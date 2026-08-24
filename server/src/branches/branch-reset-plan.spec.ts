@@ -56,7 +56,9 @@ function fakePrisma(data: {
     studentBranch: {
       findMany: jest.fn(async ({ where }: any) =>
         d.studentBranches.filter(
-          (r) => inList(r.branchId, where?.branchId) && inList(r.studentId, where?.studentId),
+          (r) =>
+            inList(r.branchId, where?.branchId) &&
+            inList(r.studentId, where?.studentId),
         ),
       ),
     },
@@ -68,7 +70,9 @@ function fakePrisma(data: {
     userBranch: {
       findMany: jest.fn(async ({ where }: any) =>
         d.userBranches.filter(
-          (r) => inList(r.branchId, where?.branchId) && inList(r.userId, where?.userId),
+          (r) =>
+            inList(r.branchId, where?.branchId) &&
+            inList(r.userId, where?.userId),
         ),
       ),
     },
@@ -85,18 +89,24 @@ function fakePrisma(data: {
     groupTeacher: {
       findMany: jest.fn(async ({ where }: any) =>
         d.groupTeachers.filter(
-          (r) => inList(r.teacherId, where?.teacherId) && inList(r.groupId, where?.groupId),
+          (r) =>
+            inList(r.teacherId, where?.teacherId) &&
+            inList(r.groupId, where?.groupId),
         ),
       ),
     },
     room: {
       findMany: jest.fn(async ({ where }: any) =>
-        d.rooms.filter((r) => inList(r.branchId, where?.branchId) && inList(r.id, where?.id)),
+        d.rooms.filter(
+          (r) => inList(r.branchId, where?.branchId) && inList(r.id, where?.id),
+        ),
       ),
     },
     course: {
       findMany: jest.fn(async ({ where }: any) =>
-        d.courses.filter((r) => inList(r.branchId, where?.branchId) && inList(r.id, where?.id)),
+        d.courses.filter(
+          (r) => inList(r.branchId, where?.branchId) && inList(r.id, where?.id),
+        ),
       ),
     },
     enrollment: {
@@ -139,7 +149,7 @@ const namanganish = {
 };
 
 describe('buildBranchResetPlan', () => {
-  it('yig\'adi: o\'quvchi, ularning akkaunti, guruh, xona, kurs, enrollment, surat', async () => {
+  it("yig'adi: o'quvchi, ularning akkaunti, guruh, xona, kurs, enrollment, surat", async () => {
     const plan = await buildBranchResetPlan(fakePrisma(namanganish), 2);
 
     expect(plan.branchId).toBe(2);
@@ -153,7 +163,7 @@ describe('buildBranchResetPlan', () => {
     expect(plan.snapshotIds).toEqual([501]);
   });
 
-  it('ikkala filialdagi foydalanuvchini o\'chirish ro\'yxatidan chiqarib tashlaydi', async () => {
+  it("ikkala filialdagi foydalanuvchini o'chirish ro'yxatidan chiqarib tashlaydi", async () => {
     const plan = await buildBranchResetPlan(fakePrisma(namanganish), 2);
 
     expect(plan.staffUserIds.sort()).toEqual([10768, 10904]);
@@ -161,7 +171,7 @@ describe('buildBranchResetPlan', () => {
     expect(plan.keptUserIds).toEqual([10562]);
   });
 
-  it('mavjud bo\'lmagan filial uchun xato tashlaydi', async () => {
+  it("mavjud bo'lmagan filial uchun xato tashlaydi", async () => {
     await expect(
       buildBranchResetPlan(fakePrisma({ branch: null }), 99),
     ).rejects.toThrow(BranchResetUnsafeError);
@@ -174,16 +184,19 @@ describe('verifyBranchResetPlan', () => {
     return [prisma, await buildBranchResetPlan(prisma, 2)];
   };
 
-  it('toza rejadan o\'tkazadi', async () => {
+  it("toza rejadan o'tkazadi", async () => {
     const [prisma, plan] = await clean();
     await expect(verifyBranchResetPlan(prisma, plan)).resolves.toBeUndefined();
   });
 
-  it('boshqa filialda ham turgan o\'quvchini tutadi', async () => {
+  it("boshqa filialda ham turgan o'quvchini tutadi", async () => {
     const [, plan] = await clean();
     const prisma = fakePrisma({
       ...namanganish,
-      studentBranches: [...namanganish.studentBranches, { studentId: 10795, branchId: 1 }],
+      studentBranches: [
+        ...namanganish.studentBranches,
+        { studentId: 10795, branchId: 1 },
+      ],
     });
     await expect(verifyBranchResetPlan(prisma, plan)).rejects.toThrow(/10795/);
   });
@@ -195,7 +208,9 @@ describe('verifyBranchResetPlan', () => {
       ...namanganish,
       groups: [...namanganish.groups, { id: 'g-fargona', branchId: 1 }],
     });
-    await expect(verifyBranchResetPlan(prisma, plan)).rejects.toThrow(/g-fargona/);
+    await expect(verifyBranchResetPlan(prisma, plan)).rejects.toThrow(
+      /g-fargona/,
+    );
   });
 
   it('boshqa filialda ham turgan xodim rejaga sizib kirsa tutadi', async () => {
@@ -211,7 +226,9 @@ describe('verifyBranchResetPlan', () => {
       ...namanganish,
       rooms: [...namanganish.rooms, { id: 'r-fargona', branchId: 1 }],
     });
-    await expect(verifyBranchResetPlan(prisma, plan)).rejects.toThrow(/r-fargona/);
+    await expect(verifyBranchResetPlan(prisma, plan)).rejects.toThrow(
+      /r-fargona/,
+    );
   });
 
   it('boshqa filialning kunlik suratini tutadi', async () => {
@@ -230,7 +247,10 @@ describe('verifyBranchResetPlan', () => {
     // filialda (#1) xodim sifatida ham UserBranch qatoriga ega bo'lib qoladi.
     const prisma = fakePrisma({
       ...namanganish,
-      userBranches: [...namanganish.userBranches, { userId: 20795, branchId: 1 }],
+      userBranches: [
+        ...namanganish.userBranches,
+        { userId: 20795, branchId: 1 },
+      ],
     });
     await expect(verifyBranchResetPlan(prisma, plan)).rejects.toThrow(/20795/);
   });
@@ -246,10 +266,12 @@ describe('assertNoInboundReferences', () => {
   it("bog'lanish yo'q toza rejadan o'tkazadi", async () => {
     const prisma = fakePrismaWithMoney(namanganish, {});
     const plan = await buildBranchResetPlan(prisma, 2);
-    await expect(assertNoInboundReferences(prisma, plan)).resolves.toBeUndefined();
+    await expect(
+      assertNoInboundReferences(prisma, plan),
+    ).resolves.toBeUndefined();
   });
 
-  it("boshqa filial guruhidagi GroupTeacher.teacherId (reja foydalanuvchisi) ni tutadi", async () => {
+  it('boshqa filial guruhidagi GroupTeacher.teacherId (reja foydalanuvchisi) ni tutadi', async () => {
     const prisma = fakePrismaWithMoney(
       {
         ...namanganish,
@@ -264,16 +286,21 @@ describe('assertNoInboundReferences', () => {
     );
   });
 
-  it("boshqa filial guruhidagi Group.roomId (reja xonasi) ni tutadi", async () => {
+  it('boshqa filial guruhidagi Group.roomId (reja xonasi) ni tutadi', async () => {
     const prisma = fakePrismaWithMoney(
       {
         ...namanganish,
-        groups: [...namanganish.groups, { id: 'g-fargona-room', branchId: 1, roomId: 'r-1' }],
+        groups: [
+          ...namanganish.groups,
+          { id: 'g-fargona-room', branchId: 1, roomId: 'r-1' },
+        ],
       },
       {},
     );
     const plan = await buildBranchResetPlan(prisma, 2);
-    await expect(assertNoInboundReferences(prisma, plan)).rejects.toThrow(/Group\.roomId: 1/);
+    await expect(assertNoInboundReferences(prisma, plan)).rejects.toThrow(
+      /Group\.roomId: 1/,
+    );
   });
 
   it("reja guruhiga bog'langan, lekin reja o'quvchisiga tegishli bo'lmagan Contract.groupId ni tutadi", async () => {
@@ -282,12 +309,16 @@ describe('assertNoInboundReferences', () => {
     });
     const plan = await buildBranchResetPlan(prisma, 2);
     expect(plan.studentIds).not.toContain(99999);
-    await expect(assertNoInboundReferences(prisma, plan)).rejects.toThrow(/Contract\.groupId: 1/);
+    await expect(assertNoInboundReferences(prisma, plan)).rejects.toThrow(
+      /Contract\.groupId: 1/,
+    );
   });
 
   it("reja guruhiga bog'langan, lekin reja foydalanuvchisiga tegishli bo'lmagan EmployeeSalaryConfig.groupId ni tutadi", async () => {
     const prisma = fakePrismaWithMoney(namanganish, {
-      employeeSalaryConfig: [{ id: 'esc-stray', groupId: 'g-1', userId: 99999 }],
+      employeeSalaryConfig: [
+        { id: 'esc-stray', groupId: 'g-1', userId: 99999 },
+      ],
     });
     const plan = await buildBranchResetPlan(prisma, 2);
     expect(plan.staffUserIds).not.toContain(99999);
@@ -297,7 +328,7 @@ describe('assertNoInboundReferences', () => {
     );
   });
 
-  it('reja o\'quvchisiga bog\'langan MockExamParticipant.studentId ni tutadi', async () => {
+  it("reja o'quvchisiga bog'langan MockExamParticipant.studentId ni tutadi", async () => {
     const prisma = fakePrismaWithMoney(namanganish, {
       mockExamParticipant: [{ id: 'mep-1', studentId: 10795 }],
     });
@@ -403,8 +434,9 @@ function fakePrismaWithMoney(
   for (const model of models) {
     const modelRows = rows[model] ?? [];
     base[model] = {
-      count: jest.fn(async ({ where }: any = {}) =>
-        modelRows.filter((r) => matchesWhere(r, where)).length,
+      count: jest.fn(
+        async ({ where }: any = {}) =>
+          modelRows.filter((r) => matchesWhere(r, where)).length,
       ),
     };
   }
@@ -415,7 +447,9 @@ describe('assertBranchIsFinanciallyEmpty', () => {
   it("moliyaviy tarixi yo'q filialdan o'tkazadi", async () => {
     const prisma = fakePrismaWithMoney(namanganish, {});
     const plan = await buildBranchResetPlan(prisma, 2);
-    await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).resolves.toBeUndefined();
+    await expect(
+      assertBranchIsFinanciallyEmpty(prisma, plan),
+    ).resolves.toBeUndefined();
   });
 
   it("bitta to'lov ham bo'lsa to'xtatadi", async () => {
@@ -423,7 +457,9 @@ describe('assertBranchIsFinanciallyEmpty', () => {
       payment: [{ id: 'p-1', studentId: 10795, branchId: 2 }],
     });
     const plan = await buildBranchResetPlan(prisma, 2);
-    await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).rejects.toThrow(/Payment: 1/);
+    await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).rejects.toThrow(
+      /Payment: 1/,
+    );
   });
 
   it('topilgan barcha jadvallarni bitta xabarda sanaydi', async () => {
@@ -438,7 +474,10 @@ describe('assertBranchIsFinanciallyEmpty', () => {
         studentId: 10795,
         branchId: 2,
       })),
-      attendance: Array.from({ length: 7 }, (_, i) => ({ id: `a-${i}`, groupId: 'g-1' })),
+      attendance: Array.from({ length: 7 }, (_, i) => ({
+        id: `a-${i}`,
+        groupId: 'g-1',
+      })),
     });
     const plan = await buildBranchResetPlan(prisma, 2);
     await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).rejects.toThrow(
@@ -447,9 +486,14 @@ describe('assertBranchIsFinanciallyEmpty', () => {
   });
 
   it("o'quvchisi ham, guruhi ham yo'q filialdan o'tkazadi", async () => {
-    const prisma = fakePrismaWithMoney({ branch: { id: 3, name: 'Bo\'sh', companyId: 1 } }, {});
+    const prisma = fakePrismaWithMoney(
+      { branch: { id: 3, name: "Bo'sh", companyId: 1 } },
+      {},
+    );
     const plan = await buildBranchResetPlan(prisma, 3);
-    await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).resolves.toBeUndefined();
+    await expect(
+      assertBranchIsFinanciallyEmpty(prisma, plan),
+    ).resolves.toBeUndefined();
   });
 
   it("o'quvchi filialdan chiqarilgan bo'lsa ham, to'lov branchId orqali topilib tutiladi", async () => {
@@ -461,7 +505,9 @@ describe('assertBranchIsFinanciallyEmpty', () => {
     });
     const plan = await buildBranchResetPlan(prisma, 2);
     expect(plan.studentIds).not.toContain(99999);
-    await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).rejects.toThrow(/Payment/);
+    await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).rejects.toThrow(
+      /Payment/,
+    );
   });
 
   it("o'quvchi filialdan chiqarilgan bo'lsa ham, shartnoma branchId orqali topilib tutiladi", async () => {
@@ -470,7 +516,9 @@ describe('assertBranchIsFinanciallyEmpty', () => {
     });
     const plan = await buildBranchResetPlan(prisma, 2);
     expect(plan.studentIds).not.toContain(99999);
-    await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).rejects.toThrow(/Contract/);
+    await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).rejects.toThrow(
+      /Contract/,
+    );
   });
 
   it("o'quvchisi ham, guruhi ham yo'q filialda ham, kassa harakati branchId orqali tutiladi", async () => {
@@ -478,13 +526,15 @@ describe('assertBranchIsFinanciallyEmpty', () => {
     // qoldirmasligini isbotlaydi: studentIds/groupIds bo'sh bo'lsa-da,
     // CashMovement filial ID orqali topiladi va rad javobi beriladi.
     const prisma = fakePrismaWithMoney(
-      { branch: { id: 3, name: 'Bo\'sh', companyId: 1 } },
+      { branch: { id: 3, name: "Bo'sh", companyId: 1 } },
       { cashMovement: [{ id: 'cm-1', branchId: 3 }] },
     );
     const plan = await buildBranchResetPlan(prisma, 3);
     expect(plan.studentIds).toEqual([]);
     expect(plan.groupIds).toEqual([]);
-    await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).rejects.toThrow(/CashMovement/);
+    await expect(assertBranchIsFinanciallyEmpty(prisma, plan)).rejects.toThrow(
+      /CashMovement/,
+    );
   });
 });
 
@@ -492,7 +542,9 @@ describe('assertNoBlockingDependents', () => {
   it("bog'liq yozuvi yo'q toza rejadan o'tkazadi", async () => {
     const prisma = fakePrismaWithMoney(namanganish, {});
     const plan = await buildBranchResetPlan(prisma, 2);
-    await expect(assertNoBlockingDependents(prisma, plan)).resolves.toBeUndefined();
+    await expect(
+      assertNoBlockingDependents(prisma, plan),
+    ).resolves.toBeUndefined();
   });
 
   it('xodim yozgan izohni (Comment.authorId) tutadi', async () => {

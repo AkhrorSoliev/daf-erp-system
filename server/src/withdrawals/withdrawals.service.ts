@@ -4,11 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  EnrollmentStatus,
-  Prisma,
-  TransactionType,
-} from '@prisma/client';
+import { EnrollmentStatus, Prisma, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
 import { EntityHistoryService } from '../common/entity-history';
@@ -106,11 +102,7 @@ export class WithdrawalsService {
    *
    * All writes happen in one Serializable transaction.
    */
-  async create(
-    dto: CreateWithdrawalDto,
-    userId: number,
-    companyId: number,
-  ) {
+  async create(dto: CreateWithdrawalDto, userId: number, companyId: number) {
     // Draining a student's positive balance into recognised revenue is a
     // financial write like any other — the caller must own their branch.
     await assertCallerMayWriteForStudent(
@@ -182,8 +174,7 @@ export class WithdrawalsService {
             branchId,
             companyId,
             performedById: userId,
-            description:
-              dto.reason ?? `Yechib olish (${dto.targetMonth})`,
+            description: dto.reason ?? `Yechib olish (${dto.targetMonth})`,
             metadata: {
               targetMonth: dto.targetMonth,
               creditTeacher: dto.creditTeacher,

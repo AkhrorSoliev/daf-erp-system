@@ -74,7 +74,5 @@ export function tashkentMonthStart(monthKey: string): Date {
 /** "2026-06" → "2026-07". */
 export function nextMonthKey(monthKey: string): string {
   const [y, m] = monthKey.split('-').map(Number);
-  return m === 12
-    ? `${y + 1}-01`
-    : `${y}-${String(m + 1).padStart(2, '0')}`;
+  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
 }

@@ -18,25 +18,50 @@ function makeRedis() {
 
 describe('app-login-otp-flow (link/poll approval)', () => {
   it('not_found when no student is linked to the chat', async () => {
-    const prisma: any = { student: { findFirst: jest.fn().mockResolvedValue(null) } };
-    const res = await approveLoginRequest(prisma, makeRedis(), 'chat1', 'req-abc12345');
+    const prisma: any = {
+      student: { findFirst: jest.fn().mockResolvedValue(null) },
+    };
+    const res = await approveLoginRequest(
+      prisma,
+      makeRedis(),
+      'chat1',
+      'req-abc12345',
+    );
     expect(res).toEqual({ ok: false, reason: 'not_found' });
   });
 
   it('no_account when the student has no portal user', async () => {
     const prisma: any = {
-      student: { findFirst: jest.fn().mockResolvedValue({ firstName: 'A', userId: null }) },
+      student: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ firstName: 'A', userId: null }),
+      },
     };
-    const res = await approveLoginRequest(prisma, makeRedis(), 'chat1', 'req-abc12345');
+    const res = await approveLoginRequest(
+      prisma,
+      makeRedis(),
+      'chat1',
+      'req-abc12345',
+    );
     expect(res).toEqual({ ok: false, reason: 'no_account' });
   });
 
   it('approves a request that can then be consumed exactly once', async () => {
     const prisma: any = {
-      student: { findFirst: jest.fn().mockResolvedValue({ firstName: 'Ali', userId: 777 }) },
+      student: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ firstName: 'Ali', userId: 777 }),
+      },
     };
     const redis = makeRedis();
-    const res = await approveLoginRequest(prisma, redis, 'chat1', 'req-abc12345');
+    const res = await approveLoginRequest(
+      prisma,
+      redis,
+      'chat1',
+      'req-abc12345',
+    );
     expect(res).toEqual({ ok: true, firstName: 'Ali' });
 
     const first = await consumeLoginRequest(redis, 'req-abc12345');

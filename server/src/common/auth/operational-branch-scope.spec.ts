@@ -63,9 +63,7 @@ describe('operational reads are branch-confined', () => {
       const { service, calls } = make();
       await service.findAll({} as any, 1001, NAMANGAN);
       expect(calls.length).toBeGreaterThan(0);
-      expect(
-        calls.every((w) => mentionsBranches(w, NAMANGAN)),
-      ).toBe(true);
+      expect(calls.every((w) => mentionsBranches(w, NAMANGAN))).toBe(true);
     });
 
     it('IGNORES query.branch_id — the scope is the only source', async () => {
@@ -163,12 +161,7 @@ describe('operational reads are branch-confined', () => {
       };
       // UsersService takes four collaborators; the fifth was left over from an
       // older signature and only ever compiled because jest does not typecheck.
-      const service = new UsersService(
-        prisma,
-        {} as any,
-        {} as any,
-        {} as any,
-      );
+      const service = new UsersService(prisma, {} as any, {} as any, {} as any);
       await service.findAll({ search: 'Ali' } as any, 1001, NAMANGAN);
       expect(mentionsBranches(captured, NAMANGAN)).toBe(true);
     });
@@ -184,12 +177,7 @@ describe('operational reads are branch-confined', () => {
         },
       };
       // RoomsService takes four collaborators, same as UsersService above.
-      const service = new RoomsService(
-        prisma,
-        {} as any,
-        {} as any,
-        {} as any,
-      );
+      const service = new RoomsService(prisma, {} as any, {} as any, {} as any);
       await service.findAll({ branch_id: 1 } as any, 1001, NAMANGAN);
       expect(mentionsBranches(captured, NAMANGAN)).toBe(true);
     });
@@ -219,7 +207,9 @@ describe('operational reads are branch-confined', () => {
       const prisma: any = {
         branch: {
           findMany: jest.fn((a) => ((captured = a.where), Promise.resolve([]))),
-          findFirst: jest.fn((a) => ((captured = a.where), Promise.resolve(null))),
+          findFirst: jest.fn(
+            (a) => ((captured = a.where), Promise.resolve(null)),
+          ),
         },
       };
       const service = new BranchesService(

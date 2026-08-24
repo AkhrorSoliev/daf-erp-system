@@ -104,7 +104,9 @@ export class LessonRescheduleEventsListener {
       const studentText = composeStudentText(p, kind);
       const teacherText = composeTeacherText(p, kind, group.name, roomName);
       const teacherTitle =
-        kind === 'created' ? "Dars ko'chirildi" : 'Ko\'chirilgan dars yangilandi';
+        kind === 'created'
+          ? "Dars ko'chirildi"
+          : "Ko'chirilgan dars yangilandi";
 
       // Students — SmsService handles per-student delivery + persistence.
       let studentsNotified = 0;
@@ -262,9 +264,7 @@ function composeStudentText(
       `ma'lum sabablarga ko'ra ${formatDDMMYYYY(p.newDate)} ga ${verb}.`,
   );
   if (p.newLessonStartTime && p.newLessonEndTime) {
-    lines.push(
-      `Vaqt: ${p.newLessonStartTime}–${p.newLessonEndTime}.`,
-    );
+    lines.push(`Vaqt: ${p.newLessonStartTime}–${p.newLessonEndTime}.`);
   }
   return lines.join('\n');
 }
@@ -296,10 +296,7 @@ function composeTeacherText(
 }
 
 function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function stripHtml(s: string): string {

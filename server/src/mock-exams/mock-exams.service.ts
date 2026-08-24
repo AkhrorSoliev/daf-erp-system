@@ -222,7 +222,7 @@ export class MockExamsService {
   ) {
     const title = dto.title.trim();
     if (!title) {
-      throw new BadRequestException('Imtihon nomi bo\'sh bo\'lishi mumkin emas');
+      throw new BadRequestException("Imtihon nomi bo'sh bo'lishi mumkin emas");
     }
 
     // The venue is now mandatory. It used to default to `null`, and the one
@@ -292,13 +292,13 @@ export class MockExamsService {
       }
       seenNames.add(key);
     }
-    const subjectsTotal = subjectInputs.reduce(
-      (sum, s) => sum + s.maxScore,
-      0,
-    );
+    const subjectsTotal = subjectInputs.reduce((sum, s) => sum + s.maxScore, 0);
 
     const effectiveMaxScore = dto.maxScore ?? subjectsTotal;
-    if (dto.passingScore !== undefined && dto.passingScore > effectiveMaxScore) {
+    if (
+      dto.passingScore !== undefined &&
+      dto.passingScore > effectiveMaxScore
+    ) {
       throw new BadRequestException(
         "O'tish balli umumiy ballidan katta bo'la olmaydi",
       );
@@ -400,7 +400,7 @@ export class MockExamsService {
         where: { id: dto.sectionId, deletedAt: null, companyId },
       });
       if (!section) {
-        throw new NotFoundException('Bo\'lim topilmadi');
+        throw new NotFoundException("Bo'lim topilmadi");
       }
     }
 
@@ -465,9 +465,7 @@ export class MockExamsService {
     const nextMaxScore =
       dto.maxScore !== undefined ? dto.maxScore : existing.maxScore;
     const nextPassingScore =
-      dto.passingScore !== undefined
-        ? dto.passingScore
-        : existing.passingScore;
+      dto.passingScore !== undefined ? dto.passingScore : existing.passingScore;
     if (
       nextPassingScore !== null &&
       nextPassingScore !== undefined &&
@@ -620,12 +618,16 @@ export class MockExamsService {
     })) as { id: string; status: MockExamStatus };
     if (exam.status !== MockExamStatus.ANNOUNCED) {
       throw new BadRequestException(
-        "Qayta yuborish faqat ANNOUNCED holatdagi imtihon uchun mavjud",
+        'Qayta yuborish faqat ANNOUNCED holatdagi imtihon uchun mavjud',
       );
     }
     const cleared = await this.prisma.mockExamParticipant.updateMany({
       where: { examId: id, deletedAt: null, resultSentAt: { not: null } },
-      data: { resultSentAt: null, resultMessageId: null, resultSendError: null },
+      data: {
+        resultSentAt: null,
+        resultMessageId: null,
+        resultSendError: null,
+      },
     });
     this.eventEmitter.emit('mock-exam.announced', { examId: id });
     this.logger.log(
@@ -645,7 +647,7 @@ export class MockExamsService {
     })) as { id: string; status: MockExamStatus };
     if (exam.status !== MockExamStatus.ANNOUNCED) {
       throw new BadRequestException(
-        "PDF faqat ANNOUNCED holatdagi imtihon uchun yaratiladi",
+        'PDF faqat ANNOUNCED holatdagi imtihon uchun yaratiladi',
       );
     }
     return this.mockExamPdfService.generate(id);
@@ -724,7 +726,7 @@ export class MockExamsService {
     for (const f of fields) {
       if (ids.has(f.id)) {
         throw new BadRequestException(
-          "Forma maydonlari id-lari takrorlanmasligi kerak",
+          'Forma maydonlari id-lari takrorlanmasligi kerak',
         );
       }
       ids.add(f.id);

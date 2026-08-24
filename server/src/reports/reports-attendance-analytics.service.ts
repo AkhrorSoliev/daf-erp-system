@@ -282,8 +282,8 @@ export class ReportsAttendanceAnalyticsService {
     const bucketMap = new Map<
       string,
       {
-        total: number;       // all records (for display/tooltip)
-        scored: number;      // denominator: total - excused (PRESENT+ABSENT+LATE)
+        total: number; // all records (for display/tooltip)
+        scored: number; // denominator: total - excused (PRESENT+ABSENT+LATE)
         presentLate: number; // numerator: PRESENT + LATE
         bucketStart: string;
         displayLabel: string;
@@ -291,10 +291,7 @@ export class ReportsAttendanceAnalyticsService {
         rangeEnd: Date;
       }
     >();
-    const dayMap = new Map<
-      number,
-      { scored: number; presentLate: number }
-    >();
+    const dayMap = new Map<number, { scored: number; presentLate: number }>();
 
     for (const row of attendanceData) {
       const count = row._count.id;
@@ -850,9 +847,7 @@ export class ReportsAttendanceAnalyticsService {
         lessonCount: acc.lessonCount,
         attendanceRate: (() => {
           const scored = acc.total - acc.excused;
-          return scored > 0
-            ? Math.round((acc.presentLate / scored) * 100)
-            : 0;
+          return scored > 0 ? Math.round((acc.presentLate / scored) * 100) : 0;
         })(),
         present: acc.present,
         absent: acc.absent,

@@ -78,7 +78,9 @@ export async function buildPaymentReceiptDoc(
   const { payment, student, branch, company } = input;
   const isReversed = payment.status === PaymentStatus.REVERSED;
   const balanceBefore =
-    payment.amount > 0 ? input.balanceAfter - payment.amount : input.balanceAfter;
+    payment.amount > 0
+      ? input.balanceAfter - payment.amount
+      : input.balanceAfter;
 
   const qrDataUrl = await QRCode.toDataURL(input.qrUrl, {
     margin: 0,
@@ -180,27 +182,31 @@ export async function buildPaymentReceiptDoc(
       // 5. Totals (right-aligned). "To'langan summa" is the actual cash
       // movement of *this* receipt; balans rows show the wallet effect.
       totalsBlock([
-        { label: 'Avvalgi balans', value: `${formatSom(balanceBefore)} so'm`, muted: true },
-        { label: 'Joriy balans', value: `${formatSom(input.balanceAfter)} so'm`, muted: true },
-        { label: "To'langan summa", value: `${formatSom(payment.amount)} so'm`, bold: true },
+        {
+          label: 'Avvalgi balans',
+          value: `${formatSom(balanceBefore)} so'm`,
+          muted: true,
+        },
+        {
+          label: 'Joriy balans',
+          value: `${formatSom(input.balanceAfter)} so'm`,
+          muted: true,
+        },
+        {
+          label: "To'langan summa",
+          value: `${formatSom(payment.amount)} so'm`,
+          bold: true,
+        },
       ]),
       // 6. Memo + QR row at the bottom
-      memoQrBlock(
-        payment.note,
-        input.receivedByName,
-        'Qabul qildi',
-        qrDataUrl,
-      ),
+      memoQrBlock(payment.note, input.receivedByName, 'Qabul qildi', qrDataUrl),
     ],
   };
 }
 
 // ─── building blocks ─────────────────────────────────────────────────
 
-function headerRow(
-  logoDataUrl: string | null,
-  title: string,
-): ContentColumns {
+function headerRow(logoDataUrl: string | null, title: string): ContentColumns {
   return {
     columns: [
       logoDataUrl
@@ -249,7 +255,8 @@ function metaSection(
     { text: 'Mijoz:', bold: true, margin: [0, 0, 0, 4] },
     { text: `${student.firstName} ${student.lastName}` },
   ];
-  if (courseLabel) billTo.push({ text: `Kurs: ${courseLabel}`, color: COLOR.muted });
+  if (courseLabel)
+    billTo.push({ text: `Kurs: ${courseLabel}`, color: COLOR.muted });
   // "Guruh" prefers the explicit `level` (e.g. "Standart") over the raw
   // group name when both are present — matches what receptionists call out.
   const groupDisplay = groupLevel ?? groupName;
@@ -279,7 +286,10 @@ function metaSection(
   if (contractNumber) {
     billTo.push({ text: `Shartnoma: ${contractNumber}`, color: COLOR.muted });
   }
-  billTo.push({ text: `O'quvchining ID'si: ${student.id}`, color: COLOR.muted });
+  billTo.push({
+    text: `O'quvchining ID'si: ${student.id}`,
+    color: COLOR.muted,
+  });
   if (student.phone) {
     billTo.push({ text: formatPhone(student.phone), color: COLOR.muted });
   }
@@ -314,10 +324,37 @@ function lineItemsHeader(): Content[] {
     // below so they line up exactly. Numeric columns are right-aligned.
     {
       columns: [
-        { text: 'Tavsif', bold: true, fontSize: 10, color: COLOR.text, width: '*' },
-        { text: 'Miqdor', bold: true, fontSize: 10, color: COLOR.text, width: 60, alignment: 'right' },
-        { text: 'Narx', bold: true, fontSize: 10, color: COLOR.text, width: 70, alignment: 'right' },
-        { text: 'Summa', bold: true, fontSize: 10, color: COLOR.text, width: 90, alignment: 'right' },
+        {
+          text: 'Tavsif',
+          bold: true,
+          fontSize: 10,
+          color: COLOR.text,
+          width: '*',
+        },
+        {
+          text: 'Miqdor',
+          bold: true,
+          fontSize: 10,
+          color: COLOR.text,
+          width: 60,
+          alignment: 'right',
+        },
+        {
+          text: 'Narx',
+          bold: true,
+          fontSize: 10,
+          color: COLOR.text,
+          width: 70,
+          alignment: 'right',
+        },
+        {
+          text: 'Summa',
+          bold: true,
+          fontSize: 10,
+          color: COLOR.text,
+          width: 90,
+          alignment: 'right',
+        },
       ],
       columnGap: 0,
       margin: [0, 0, 0, 6],
@@ -441,7 +478,11 @@ function memoQrBlock(
 
 // ─── small helpers ───────────────────────────────────────────────────
 
-function td(text: string, alignment: 'left' | 'right', bold = false): TableCell {
+function td(
+  text: string,
+  alignment: 'left' | 'right',
+  bold = false,
+): TableCell {
   return { text, alignment, bold, border: NB };
 }
 
@@ -451,7 +492,6 @@ function metaRow(label: string, value: string): TableCell[] {
     { text: value, alignment: 'right', border: NB },
   ];
 }
-
 
 function lineItemDescription(input: PaymentReceiptInput): TableCell {
   const title = input.courseLabel ?? "To'lov uchun";

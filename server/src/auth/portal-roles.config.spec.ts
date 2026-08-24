@@ -32,17 +32,25 @@ describe('portal-roles.config', () => {
     });
 
     it('falls back to Origin when no portal key is given (web)', () => {
-      expect(resolveAllowedRoleIds('https://student.dafzentrum.uz', undefined)).toEqual([6]);
-      expect(resolveAllowedRoleIds('https://admin.dafzentrum.uz', undefined)).toEqual([1, 2, 3, 5]);
+      expect(
+        resolveAllowedRoleIds('https://student.dafzentrum.uz', undefined),
+      ).toEqual([6]);
+      expect(
+        resolveAllowedRoleIds('https://admin.dafzentrum.uz', undefined),
+      ).toEqual([1, 2, 3, 5]);
     });
 
     it('X-Portal takes precedence over Origin', () => {
-      expect(resolveAllowedRoleIds('https://admin.dafzentrum.uz', 'student')).toEqual([6]);
+      expect(
+        resolveAllowedRoleIds('https://admin.dafzentrum.uz', 'student'),
+      ).toEqual([6]);
     });
 
     it('returns null (no restriction) when neither matches', () => {
       expect(resolveAllowedRoleIds(undefined, undefined)).toBeNull();
-      expect(resolveAllowedRoleIds('https://localhost:3000', undefined)).toBeNull();
+      expect(
+        resolveAllowedRoleIds('https://localhost:3000', undefined),
+      ).toBeNull();
     });
   });
 
@@ -76,9 +84,9 @@ describe('portal-roles.config', () => {
     it('rejects an origin carrying userinfo even when the host is a portal', () => {
       // `https://u:p@admin.dafzentrum.uz` has a genuine portal hostname but
       // reads as a different address to a human. It never comes from us.
-      expect(
-        isKnownPortalOrigin('https://user:pass@admin.dafzentrum.uz'),
-      ).toBe(false);
+      expect(isKnownPortalOrigin('https://user:pass@admin.dafzentrum.uz')).toBe(
+        false,
+      );
       expect(isKnownPortalOrigin('https://user@admin.dafzentrum.uz')).toBe(
         false,
       );
@@ -90,9 +98,9 @@ describe('portal-roles.config', () => {
     it('rejects unknown hosts, junk and undefined', () => {
       expect(isKnownPortalOrigin('https://evil.example.com')).toBe(false);
       expect(isKnownPortalOrigin('client-brown-ten-36.vercel.app')).toBe(false);
-      expect(isKnownPortalOrigin('https://client-brown-ten-36.vercel.app')).toBe(
-        false,
-      );
+      expect(
+        isKnownPortalOrigin('https://client-brown-ten-36.vercel.app'),
+      ).toBe(false);
       expect(isKnownPortalOrigin('not a url')).toBe(false);
       expect(isKnownPortalOrigin(undefined)).toBe(false);
       expect(isKnownPortalOrigin('')).toBe(false);

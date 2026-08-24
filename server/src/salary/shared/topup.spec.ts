@@ -13,7 +13,9 @@ import {
 describe('salary/shared/topup', () => {
   describe('topUpEraStartDate', () => {
     it('is the UTC-midnight first day of the top-up era', () => {
-      expect(topUpEraStartDate().toISOString()).toBe('2026-07-01T00:00:00.000Z');
+      expect(topUpEraStartDate().toISOString()).toBe(
+        '2026-07-01T00:00:00.000Z',
+      );
     });
   });
 

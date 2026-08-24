@@ -24,10 +24,7 @@ describe('ExpectationHistoryQueryDto', () => {
   };
 
   it('accepts the exact query the overview dialog sends', async () => {
-    const out = await pipe.transform(
-      { branchId: '1', month: '2026-08' },
-      meta,
-    );
+    const out = await pipe.transform({ branchId: '1', month: '2026-08' }, meta);
     expect(out).toEqual({ branchId: 1, month: '2026-08' });
   });
 

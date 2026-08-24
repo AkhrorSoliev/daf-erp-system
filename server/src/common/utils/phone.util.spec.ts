@@ -17,7 +17,7 @@ describe('normalizeSharedPhone', () => {
     });
   });
 
-  describe("Chet el — kod bilan saqlanadi", () => {
+  describe('Chet el — kod bilan saqlanadi', () => {
     it.each([
       // CEO test qilgan haqiqiy raqam
       ['+49 174 9493338', '491749493338'],
@@ -42,14 +42,19 @@ describe('normalizeSharedPhone', () => {
     });
   });
 
-  it("998 bilan boshlanuvchi lekin uzunligi boshqa raqamni kesmaydi", () => {
+  it('998 bilan boshlanuvchi lekin uzunligi boshqa raqamni kesmaydi', () => {
     // 998 — Kolumbiya/boshqa raqam boshi ham bo'lishi mumkin; faqat aynan
     // 12 xonali o'zbek formatida kesamiz.
     expect(normalizeSharedPhone('9981234567')).toBe('9981234567');
   });
 
-  it("bir xil raqam turli formatda bir xil natija beradi", () => {
-    const forms = ['+998901234567', '998901234567', '901234567', '+998 90 123-45-67'];
+  it('bir xil raqam turli formatda bir xil natija beradi', () => {
+    const forms = [
+      '+998901234567',
+      '998901234567',
+      '901234567',
+      '+998 90 123-45-67',
+    ];
     const results = forms.map((f) => normalizeSharedPhone(f));
     expect(new Set(results).size).toBe(1);
   });

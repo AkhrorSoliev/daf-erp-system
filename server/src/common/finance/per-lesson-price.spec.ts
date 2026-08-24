@@ -15,7 +15,11 @@ describe('perLessonPrice', () => {
 
   it('applies the student discount to the course price when there is no contract', () => {
     expect(
-      perLessonPrice({ course, discountPercent: 25, contractTotalAmount: null }),
+      perLessonPrice({
+        course,
+        discountPercent: 25,
+        contractTotalAmount: null,
+      }),
     ).toBe(75_000);
   });
 
@@ -31,10 +35,18 @@ describe('perLessonPrice', () => {
 
   it('clamps a nonsense discount into 0..100', () => {
     expect(
-      perLessonPrice({ course, discountPercent: 140, contractTotalAmount: null }),
+      perLessonPrice({
+        course,
+        discountPercent: 140,
+        contractTotalAmount: null,
+      }),
     ).toBe(0);
     expect(
-      perLessonPrice({ course, discountPercent: -30, contractTotalAmount: null }),
+      perLessonPrice({
+        course,
+        discountPercent: -30,
+        contractTotalAmount: null,
+      }),
     ).toBe(100_000);
   });
 

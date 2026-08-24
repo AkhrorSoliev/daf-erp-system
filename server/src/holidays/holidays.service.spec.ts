@@ -160,7 +160,7 @@ describe('HolidaysService', () => {
       await service.create(
         { name: "Navro'z", date: '2026-03-21', endDate: '2026-03-23' },
         7,
-          1001,
+        1001,
       );
       expect(prisma.holiday.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
@@ -192,10 +192,7 @@ describe('HolidaysService', () => {
     });
 
     it('triggers cascade for active overlapping groups', async () => {
-      prisma.group.findMany.mockResolvedValue([
-        { id: 'g-1' },
-        { id: 'g-2' },
-      ]);
+      prisma.group.findMany.mockResolvedValue([{ id: 'g-1' }, { id: 'g-2' }]);
       await service.create({ name: 'X', date: '2026-05-27' }, 1, 1001);
       expect(cascadeService.extendGroupEndDateForHoliday).toHaveBeenCalledTimes(
         2,
@@ -229,7 +226,7 @@ describe('HolidaysService', () => {
       });
     });
 
-    it("regression: name-only edit does NOT trigger date-change block (bug #1)", async () => {
+    it('regression: name-only edit does NOT trigger date-change block (bug #1)', async () => {
       // Frontend always sends `date` in payload even when only the name
       // changes. The service must compare Tashkent calendar strings so
       // "2026-09-01" matches a DB row stored as Date(2026-09-01T00:00:00Z).
@@ -312,9 +309,9 @@ describe('HolidaysService', () => {
         1,
         COMPANY_ID,
       );
-      expect(
-        cascadeService.extendGroupEndDateForHoliday,
-      ).toHaveBeenCalledTimes(1);
+      expect(cascadeService.extendGroupEndDateForHoliday).toHaveBeenCalledTimes(
+        1,
+      );
     });
   });
 
@@ -330,7 +327,7 @@ describe('HolidaysService', () => {
       prisma.holiday.create.mockResolvedValue({ ...mockHoliday });
 
       await service.create(
-        { name: 'Navro\'z', date: '2026-09-01' } as any,
+        { name: "Navro'z", date: '2026-09-01' } as any,
         7,
         COMPANY_ID,
       );
@@ -372,7 +369,7 @@ describe('HolidaysService', () => {
   });
 
   describe('company scope on id-addressed reads', () => {
-    it('looks a holiday up within the caller\'s company', async () => {
+    it("looks a holiday up within the caller's company", async () => {
       prisma.holiday.findFirst.mockResolvedValue(mockHoliday);
 
       await service.findOne('h-1', COMPANY_ID);
@@ -384,7 +381,7 @@ describe('HolidaysService', () => {
       );
     });
 
-    it('reports another company\'s holiday as not found', async () => {
+    it("reports another company's holiday as not found", async () => {
       // The scoped `where` is what makes this miss; the service turns a miss
       // into 404 rather than leaking that the row exists elsewhere.
       prisma.holiday.findFirst.mockResolvedValue(null);
