@@ -882,15 +882,23 @@ Spec Q7: daraja deterministik aniqlanadi. Bu task shu qarorni kodga aylantiradi.
 ```ts
 import { parseChapterPage } from './dib-chapter.parser';
 
+// Haqiqiy DiB markupi: Focus va Recommended bo'limlari CSS klassi bilan emas,
+// SARLAVHA RASMI bilan ajratilgan — `ti_grammar_f.gif` va `ti_grammar_r.gif`.
 const TOC = `
 <html><body>
-<div class="gr_focus">
-  <a href="http://coerll.utexas.edu/gg/gr/no_02.html">nouns gender</a>
-  <a href="http://coerll.utexas.edu/gg/gr/vi_05.html">haben</a>
+<div class="bot_000">
+<img src="images/ti_grammar_f.gif" width=207 height=17 border=0 alt="Focus" title="Focus">
 </div>
-<div class="gr_rec">
-  <a href="http://coerll.utexas.edu/gg/gr/cas_02.html">nominative case</a>
+<div class="bot_150 toc_ind_23"><table class="unbor_toc_num">
+<tr><td><a href="http://coerll.utexas.edu/gg/gr/no_02.html" target="offsite">Nouns gender</a></td></tr>
+<tr><td><a href="http://coerll.utexas.edu/gg/gr/vi_05.html" target="offsite">haben</a></td></tr>
+</table></div>
+<div class="bot_000">
+<img src="images/ti_grammar_r.gif" width=207 height=17 border=0 alt="Recommended" title="Recommended">
 </div>
+<div class="bot_150 toc_ind_23"><table class="unbor_toc_num">
+<tr><td><a href="http://coerll.utexas.edu/gg/gr/cas_02.html" target="offsite">nominative case</a></td></tr>
+</table></div>
 </body></html>`;
 
 describe('parseChapterPage', () => {
@@ -903,8 +911,9 @@ describe('parseChapterPage', () => {
 
   it('bir xil kod ikki marta chiqsa, bir marta qaytaradi', () => {
     const dup = TOC.replace(
-      '</div>\n<div class="gr_rec">',
-      '<a href="http://coerll.utexas.edu/gg/gr/vi_05.html">haben</a></div>\n<div class="gr_rec">',
+      '</table></div>\n<div class="bot_000">\n<img src="images/ti_grammar_r.gif"',
+      '<tr><td><a href="http://coerll.utexas.edu/gg/gr/vi_05.html">haben</a></td></tr>'
+        + '</table></div>\n<div class="bot_000">\n<img src="images/ti_grammar_r.gif"',
     );
     expect(parseChapterPage(dup, 1).grammarFocus).toEqual(['no_02', 'vi_05']);
   });
@@ -930,6 +939,15 @@ import type { ChapterInfo } from '../dataset.types';
 
 const LINK_RE = /\/gg\/gr\/([a-z]+_\d+)\.html/g;
 
+/**
+ * Focus va Recommended bo'limlari sahifada CSS klassi bilan emas, SARLAVHA
+ * RASMI bilan ajratilgan. Rasm fayl nomi (`ti_grammar_f.gif`) belgi sifatida
+ * `alt="Focus"` dan ishonchliroq: alt matni tarjima qilinishi mumkin, fayl
+ * nomi esa yo'q.
+ */
+const FOCUS_MARK = 'ti_grammar_f.gif';
+const REC_MARK = 'ti_grammar_r.gif';
+
 function codes(block: string): string[] {
   return [...new Set([...block.matchAll(LINK_RE)].map((m) => m[1]))];
 }
@@ -943,8 +961,8 @@ function codes(block: string): string[] {
  * o'z qarori.
  */
 export function parseChapterPage(html: string, chapter: number): ChapterInfo {
-  const focusStart = html.indexOf('gr_focus');
-  const recStart = html.indexOf('gr_rec');
+  const focusStart = html.indexOf(FOCUS_MARK);
+  const recStart = html.indexOf(REC_MARK);
 
   if (focusStart === -1 && recStart === -1) {
     return { chapter, grammarFocus: [], grammarRecommended: [] };
