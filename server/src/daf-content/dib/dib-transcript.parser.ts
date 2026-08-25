@@ -31,12 +31,18 @@ function panel(html: string, id: string): string | null {
   return html.slice(start, Math.max(start, i - 6));
 }
 
+/**
+ * Haqiqiy sahifada qatorlar `<p>` emas, `<li class="vidt_i">` (intervyuchi)
+ * va `<li class="vidt_s">` (so'zlovchi) elementlarida keladi. Ikkalasi ham
+ * transkript matni, shuning uchun sinf bo'yicha ajratilmaydi — hujjatdagi
+ * ketma-ketlikda bittalab olinadi.
+ */
 function lines(block: string | null): { title: string; rows: string[] } {
   if (!block) return { title: '', rows: [] };
-  const titleMatch = block.match(/class="ti"[^>]*>([\s\S]*?)<\/div>/);
+  const titleMatch = block.match(/class="vidt_th"[^>]*>([\s\S]*?)<\/div>/);
   const title = titleMatch ? clean(titleMatch[1]) : '';
   const body = titleMatch ? block.replace(titleMatch[0], '') : block;
-  const rows = [...body.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/g)]
+  const rows = [...body.matchAll(/<li class="vidt_[is]"[^>]*>([\s\S]*?)<\/li>/g)]
     .map((m) => clean(m[1]))
     .filter((s) => s !== '');
   return { title, rows };
@@ -76,6 +82,19 @@ export function parseTranscriptPage(
   };
 }
 
+/**
+ * DiB RSS ba'zan ikki marta UTF-8 kodlangan matn beradi: `ü` ning UTF-8
+ * baytlari (0xC3 0xBC) yana bir marta UTF-8 sifatida kodlanadi va JS
+ * satrida "Ã¼" ikkita alohida belgi bo'lib chiqadi. Bu naqsh aniqlanganda
+ * bitta kodlash qatlami qaytariladi (baytlar Latin-1 sifatida o'qilib, UTF-8
+ * sifatida qayta dekodlanadi); to'g'ri kelgan matnga tegilmaydi.
+ */
+export function repairDoubleEncodedUtf8(s: string): string {
+  if (!/[\u00c2\u00c3][\u0080-\u00bf]/.test(s)) return s;
+  const repaired = Buffer.from(s, 'latin1').toString('utf8');
+  return repaired.includes('\ufffd') ? s : repaired;
+}
+
 /** Bobning video ro'yxati `rss.php?k=N&a=mp4` dan olinadi. */
 export function parseVideoList(
   rssXml: string,
@@ -86,7 +105,10 @@ export function parseVideoList(
     const url = it[1].match(/url="[^"]*\/mp4s\/([A-Za-z0-9_-]+)\.mp4"/);
     const title = it[1].match(/<title>([\s\S]*?)<\/title>/);
     if (url) {
-      out.push({ fileId: url[1], title: title ? clean(title[1]) : '' });
+      out.push({
+        fileId: url[1],
+        title: title ? repairDoubleEncodedUtf8(clean(title[1])) : '',
+      });
     }
   }
   return out;
