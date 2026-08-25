@@ -20,34 +20,29 @@ topshirmaydi va tizim uning nimani bilganini bilmaydi.
 Talab: portalga **haqiqiy o'quv dasturi** qo'shish — Goethe imtihoniga
 yo'naltirilgan, mashqli, progress hisoblanadigan.
 
-Ikkita mavjud qaror bu ishni to'g'ridan-to'g'ri chegaralaydi.
+Ikkita mavjud ADR kontekst beradi, lekin **ikkalasi ham bu ishni
+chegaralamaydi**.
 
-**ADR-0009 (Deutsch Tutor).** `OPENAI_API_KEY` Railway'da qo'yilmagani uchun
-193 ta suhbatda 0 ta javob berilgan. Ishlamaydigan xususiyat menyuning eng
-ko'rinadigan joyida turgan. Xulosa: **tashqi sozlamaga bog'liq xususiyat, o'sha
-sozlama yo'q bo'lsa, menyuda ko'rinmasligi kerak.**
+**ADR-0009 (Deutsch Tutor).** `/portal/ai` qatlami olib tashlangan edi —
+maqsad uni keyinroq **noldan, kuchliroq qilib qayta qurish**. ADR'ning o'zi
+shuni yozgan: «xususiyat kelajakda boshqa strukturada, noldan quriladi va o'z
+ma'lumot modelini o'zi olib keladi». Bu dizayn aynan o'sha qayta qurishning
+uyasi (3.6 va 6-bo'lim). Eski `AiConversation` / `AiChatMessage` shakli
+tiklanmaydi — o'sha taqiq kuchida.
 
-**ADR-0010 (Videothek).** Transkript paneli va lug'at bo'limi **atayin
-qurilmagan**, ikkita sabab bilan: (1) YouTube subtitr matnini rasmiy yo'l bilan
-bermaydi, (2) transkriptni qo'lda yozish — sahifa qurish emas, kontent ishlab
-chiqarish. Shu ADR videoni yuklab olish va o'zimizda saqlashni ham taqiqlagan —
-sababi YouTube ToS.
+**ADR-0010 (Videothek).** YouTube katalogi sinov sifatida qurilgan va
+kelajakda butunlay olib tashlanishi mumkin. Undagi transkript va media saqlash
+bo'yicha taqiqlar **YouTube manbasiga tegishli** — sababi ToS va subtitr
+matnining yo'qligi. Bu dizaynning manbalari boshqa: DiB CC BY 4.0 litsenziyali,
+268 transkripti tayyor, darajasi bob tartibidan aniqlanadi. Shuning uchun o'sha
+taqiqlar bu yerga ko'chirilmaydi.
 
-### 1.1 Nima o'zgardi
+### 1.1 Mavjud media bo'limi bilan munosabat
 
-Bu dizayn ADR-0010 dan **boshqacha qaror qabul qiladi**, chunki kirish
-ma'lumotlari boshqa. O'sha ADR'ni bekor qilmaydi — u YouTube manbasi uchun
-kuchida qoladi.
-
-| ADR-0010 dagi to'siq | Yangi manbalarda holati |
-|---|---|
-| Subtitr matnini olib bo'lmaydi | DiB videolari **tayyor nemischa + inglizcha transkript** bilan keladi (`vidt.php` HTML ichida) |
-| Transkriptni qo'lda yozish juda qimmat | Yozilmaydi — 268 tasi allaqachon yozilgan |
-| Video darajasini dasturiy aniqlab bo'lmaydi | DiB'da bob tartibi + bobga biriktirilgan grammatika ro'yxati bor; ZUM'da `A1`/`A2`/`B1` toifasi bor |
-| Videoni saqlash ToS buzadi (YouTube) | DiB — **CC BY 4.0**, yuklab olish va qayta joylash litsenziya bilan ochiq ruxsat etilgan |
-
-Ya'ni ADR-0010 ni tug'dirgan to'rt sababning to'rttasi ham bu manbalarda
-mavjud emas.
+Radio (passiv fon) o'z holicha qoladi. Videothek — sinov; bu modul jonli
+kontent bilan to'lgach, uning o'rnini bosishi yoki butunlay olib tashlanishi
+mumkin. Bu qaror **shu spec doirasida qabul qilinmaydi** — Faza 2 da kontent
+haqiqiy hajmda ko'ringanda ko'riladi.
 
 ### 1.2 Manbalar
 
@@ -77,7 +72,7 @@ Qamrov bahosi *(o'lchov emas, baholash)*: A1 ≈ 80%, A2 ≈ 65%, B1 ≈ 30%.
 | Q7 | Daraja **deterministik** aniqlanadi: bob tartibi + bobga biriktirilgan grammatika. Leksik profil faqat **chetga chiqqanni belgilaydi**, qaror qilmaydi | Qayta ishlab chiqsa bir xil natija beradi va tushuntirib bo'ladi. Sof LLM taxmini takrorlanmaydi va himoya qilinmaydi |
 | Q8 | Kontent — **o'zgarmas seed** (manbadan quyiladi), o'quvchi ma'lumoti undan **butunlay ajratilgan** | Manbani qayta yig'ish o'quvchining progressini yo'q qilmasligi kerak |
 | Q9 | Atribut **majburiy va avtomatik**: har aktiv o'z litsenziyasi, muallifi va manbasini olib yuradi | CC BY huquqiy majburiyat. H5P metama'lumoti buni har element uchun allaqachon yozib qo'ygan — quvurga kiritiladi, keyinga qoldirilmaydi |
-| Q10 | Modul **kontent bo'lmasa menyuda ko'rinmaydi** | ADR-0009 tuzog'i. R2 sozlanmagan yoki seed quyilmagan bo'lsa, o'quvchi bo'sh sahifaga tushmasligi kerak |
+| Q10 | Modul **kontent bo'lmasa menyuda ko'rinmaydi** | R2 sozlanmagan yoki seed quyilmagan bo'lsa, o'quvchi bosadigan-u javob olmaydigan tugma ko'rmasligi kerak. Videothek'da ham shu naqsh: katalog bo'sh bo'lsa tab chiqmaydi |
 | Q11 | Netzwerk/Klett va boshqa tijorat darsliklari — **faqat struktura o'lchovi**, kontent ko'chirilmaydi | Format mualliflik huquqi bilan himoyalanmaydi, aniq matn himoyalanadi |
 | Q12 | `B1` tizimda mavjud, lekin **bo'sh**. Modul halol **«A1–A2»** deb chiqariladi | Manbalarda B1 xomashyosi ≈30%. «A1–B1» deb e'lon qilish o'quvchini aldash bo'lardi |
 
@@ -132,6 +127,8 @@ DafLesson       dars — bosqichlar ketma-ketligi (3.5)
 
 ```
 DafAttempt      studentId · exerciseId · javob · ball · vaqt · urinish raqami
+                gradedBy: AUTO | AI | TEACHER      ← 3.6
+                feedback? · gradedAt? · gradedByUserId?
 DafProgress     studentId · canDoId → foiz          («maqsadga qancha qoldi»)
 DafSrsCard      studentId · lexemeId · interval · keyingi sana · osonlik
 ```
@@ -192,6 +189,37 @@ KURZ_UND_KLAR       Rückschau: Redemittel + grammatika xulosasi
 Har 3 darsdan keyin `PLATTFORM` — takrorlash. Intervalli takrorlash tuzilmaga
 qurilgan, `DafSrsCard` esa leksika darajasida alohida ishlaydi.
 
+### 3.6 Baholovchi qatlam — kim tekshiradi
+
+3.4 dagi formatlar baholanishi bo'yicha **ikkiga bo'linadi**, va bu ajratma
+tizimning qamrovini belgilaydi:
+
+| Baholovchi | Formatlar | Holati |
+|---|---|---|
+| `AUTO` | `MC_TEXT_3`, `TRUE_FALSE`, `YES_NO`, `MC_IMAGE`, `MATCH_OPTIONS`, `AB_CHOICE`, `FORM_FILL` va butun `UEBUNG` qatlami | Javob kaliti bilan tekshiriladi. Kod yozilsa bo'ldi |
+| `AI` yoki `TEACHER` | `WRITE_GUIDED`, `SPEAK_CARD`, `SPEAK_PLAN`, `SPEAK_PRESENT` | **Javob kaliti yo'q** — erkin matn va nutq |
+
+Ikkinchi qator — Goethe imtihonining **Schreiben va Sprechen modullari**, ya'ni
+ballning taxminan yarmi. Ular baholovchisiz mashq bo'la olmaydi: o'quvchi
+yozadi, hech kim javob bermaydi.
+
+Shuning uchun **baholovchi tizimning ixtiyoriy bezagi emas, yarmini
+ishlatadigan qismi.** Ikki yo'l bir vaqtda quriladi:
+
+- **`TEACHER`** — o'qituvchi navbatida ko'radi va Goethe mezoni bo'yicha
+  baholaydi. Ishonchli, lekin miqyoslanmaydi.
+- **`AI`** (Deutsch Tutor qaytishi) — darhol javob beradi, miqyoslanadi,
+  lekin baho sifati kafolatlanmaydi.
+
+`DafAttempt.gradedBy` shuning uchun **saqlanadi**: keyin «AI qo'ygan bahoning
+o'qituvchi bahosidan farqi qancha» degan savolga javob bera olishimiz kerak.
+AI bahosi o'qituvchi tasdig'i bilan solishtirilmasa, uning sifatini hech qachon
+bilmaymiz.
+
+**Bu spec AI baholovchining ichki qurilishini belgilamaydi** — u ADR-0009 talab
+qilganidek o'z spec'i va o'z ma'lumot modeli bilan keladi. Bu yerda faqat
+**uyasi** ochiladi: `gradedBy`, `feedback`, `gradedAt`.
+
 ## 4. Adapter kontrakti
 
 Har manba uchun bitta adapter. Adapter **faqat o'zak tushunadigan shaklda**
@@ -248,20 +276,26 @@ bormaydi — ADR-0010 dagi bilan bir xil tamoyil.
 ## 6. Fazalar
 
 Bu spec **Faza 1 ni to'liq** qamraydi va **barcha fazalar tayanadigan o'zak modelini** belgilaydi.
-Faza 2–5 shu modeldan foydalanadi, lekin har biri o'z spec'ini oladi.
+Faza 2–6 shu modeldan foydalanadi, lekin har biri o'z spec'ini oladi.
 
 | Faza | Natija | Alohida spec |
 |---|---|---|
 | **1** | Dataset + media R2'da: adapterlar, daraja yorliqlash, tarjima (tasdiqlanmagan holatda) | yo'q — shu hujjat |
 | **2** | Ko'rinadigan kutubxona: `Daf*` modellar, seed, API, portal bo'limi. Mashqsiz | kerak |
 | **3** | Mashq dvigateli — 3.4 dagi formatlar | kerak |
-| **4** | Admin muallif UI + guruhga yo'naltirish + tarjima tasdig'i | kerak |
-| **5** | `student-app` pariteti | kerak |
+| **4** | Admin muallif UI + guruhga yo'naltirish + tarjima tasdig'i. O'qituvchi baholash navbati (`gradedBy=TEACHER`) | kerak |
+| **5** | **Deutsch Tutor qaytishi** — AI baholovchi (`gradedBy=AI`) va tushuntiruvchi. Noldan, o'z modeli bilan | kerak |
+| **6** | `student-app` pariteti | kerak |
+
+Faza 5 ni Faza 4 dan keyinga qo'yishning sababi: AI bahosining sifatini
+o'lchash uchun **o'qituvchi bahosi allaqachon bazada bo'lishi kerak**. Aks holda
+AI nima qilayotganini solishtiradigan narsa bo'lmaydi (3.6).
 
 ## 7. Nima QILINMAYDI
 
-- **YouTube videosini yuklab olish yoki saqlash.** ADR-0010 kuchida qoladi.
-  Faqat CC litsenziyali, litsenziyasi tekshirilgan manbalar saqlanadi.
+- **Litsenziyasi tekshirilmagan media saqlash.** Faqat CC litsenziyali va
+  litsenziyasi yozib qo'yilgan aktivlar R2'ga chiqadi. YouTube kontenti bu
+  shartga tushmaydi va bu modulga manba bo'lmaydi.
 - **Tijorat darslik kontentini ko'chirish.** Netzwerk, Hueber, Cornelsen —
   struktura o'lchovi, manba emas.
 - **Cloudflare Workers / D1.** Q6.
@@ -270,13 +304,15 @@ Faza 2–5 shu modeldan foydalanadi, lekin har biri o'z spec'ini oladi.
   yozuv `REVIEW` holatida turadi va portalda chiqmaydi.
 - **DiB'ning Webquest'lari.** 2005-yilgi tashqi havolalar, aksari o'lgan.
 - **`B1` ni to'ldirilgandek ko'rsatish.** Q12.
+- **AI baholovchining ichki qurilishi.** 3.6 faqat uyasini ochadi; dvigatel
+  o'z spec'i bilan keladi.
 
 ## 8. Xavflar
 
 | Xavf | Ta'sir | Yumshatish |
 |---|---|---|
 | **`Lesen` matnlari ikkala manbada ham yo'q** | A1/A2 imtihonining ≈1/3 qismi qoplanmaydi | Matn turlari aniq belgilangan (e'lon, taxta, qisqa e-mail) — qisqa matnlar, o'zimiz yozamiz. Wikinews A2/B1 gazeta matnini beradi |
-| R2 sozlanmay qolishi | ADR-0009 takrori | Q10 — kontent bo'lmasa modul menyuda ko'rinmaydi. Seed va R2 tekshiruvi deploy oldidan |
+| R2 sozlanmay qolishi | O'quvchi bosadigan-u ishlamaydigan tugma ko'radi | Q10 — kontent bo'lmasa modul menyuda ko'rinmaydi. Seed va R2 tekshiruvi deploy oldidan |
 | ZUM sifati bir tekis emas (hamjamiyat wiki'si) | Sifatsiz mashq o'quvchiga chiqadi | Barcha import `REVIEW` holatida keladi; o'qituvchi tasdig'isiz `PUBLISHED` bo'lmaydi |
 | ZUM konteksti **DaZ** (Germaniyadagi muhojirlar) | Ba'zi material bizning o'quvchiga mos emas | Handlungsfeld darajasida filtr; `REVIEW` bosqichida ajratiladi |
 | Fayl litsenziyalari aralash (CC0/BY/BY-SA) | Atribut yoki ShareAlike buzilishi | Q9 — har aktiv litsenziyasi bilan keladi; `BY-SA` aktivlar alohida belgilanadi |
@@ -296,6 +332,6 @@ Faza 2–5 shu modeldan foydalanadi, lekin har biri o'z spec'ini oladi.
 
 ## 10. ADR
 
-Bu dizayn ADR-0010 dan boshqacha qaror qabul qiladi (media saqlash, transkript),
-shuning uchun **ADR-0011** yoziladi: *«O'quv o'zagi standartga bog'lanadi,
-manbaga emas»* — Q1, Q6, Q7 va ADR-0010 bilan chegarani rasmiylashtiradi.
+**ADR-0011** yoziladi: *«O'quv o'zagi standartga bog'lanadi, manbaga emas»* —
+Q1, Q3, Q4 va Q7 ni rasmiylashtiradi. Bu eng qimmat qaytariladigan qaror:
+o'zak bir marta manbaning shakliga qurilsa, har yangi kitob uni buzadi.
