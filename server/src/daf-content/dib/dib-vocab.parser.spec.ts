@@ -77,4 +77,25 @@ describe('parseVocabPage', () => {
   it('lug\'ati yo\'q sahifada bo\'sh ro\'yxat qaytaradi', () => {
     expect(parseVocabPage('<html></html>', 3)).toEqual([]);
   });
+
+  it('bo\'sh to\'ldiruvchi qatorlarni filtrlaydi', () => {
+    const htmlWithEmptyRow = `
+<html><body>
+<a href="https://media.la.utexas.edu:443/dib/audio/voc_01_01_begr.mp3">audio</a>
+<span class="hi_12_0057d1">Begrüßungen</span>
+<span class="hi_12_0057d1">Greetings</span>
+<table>
+<tr onmouseover="this.className='vtr_over'"><td>Hallo!</td><td>Hello!</td></tr>
+<tr onmouseover="this.className='vtr_over'" title="&nbsp;•&nbsp;"><td></td><td></td></tr>
+<tr onmouseover="this.className='vtr_over'"><td>Tschüss!</td><td>Bye!</td></tr>
+</table>
+</body></html>`;
+    const s = parseVocabPage(htmlWithEmptyRow, 1);
+    expect(s).toHaveLength(1);
+    expect(s[0].entries).toHaveLength(2);
+    expect(s[0].entries).toEqual([
+      { de: 'Hallo!', en: 'Hello!', sectionId: s[0].id },
+      { de: 'Tschüss!', en: 'Bye!', sectionId: s[0].id },
+    ]);
+  });
 });
