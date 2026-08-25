@@ -77,7 +77,9 @@ Qamrov bahosi *(o'lchov emas, baholash)*: A1 ≈ 80%, A2 ≈ 65%, B1 ≈ 30%.
 | Q12 | `B1` tizimda mavjud, lekin **bo'sh**. Modul halol **«A1–A2»** deb chiqariladi | Manbalarda B1 xomashyosi ≈30%. «A1–B1» deb e'lon qilish o'quvchini aldash bo'lardi |
 | Q13 | Erkin javoblarni **boshidanoq AI baholaydi** | O'qituvchi baholashi miqyoslanmaydi va kechikkan javob mashqning ma'nosini yo'qotadi (3.6) |
 | Q14 | O'qituvchi to'liq emas, **namuna tekshiruvi** qiladi (~5%) | AI bahosini o'lchashning yagona yo'li, narxi yigirmadan bir qismi (3.6) |
-| Q15 | Provayder **Anthropic**, model `claude-opus-5`, chiqish **strukturali JSON** | Ball erkin matndan parse qilinmaydi — sxema bo'yicha tekshiriladi (3.8) |
+| Q15 | Baholash **uch qatlamda**: LanguageTool (bepul) → arzon model + rubrika → chegaraviy holatda kuchliroq model | 30 so'zlik ishni kuchli modelga berish — eng qimmat va eng kam ishonchli yo'l (3.7) |
+| Q16 | Model **reytingdan emas, o'z ma'lumotimizdagi o'lchovdan** tanlanadi. Boshlang'ich: `claude-haiku-4-5` | Umumiy benchmark boshqa vazifani o'lchaydi. Kerakli savol — imtihonchi ballga moslik (3.9) |
+| Q17 | **Rubrika yozilmaydi** — Goethe'ning rasmiy `Bewertungskriterien` i olinadi; rasmiy ball qo'yilgan ~11 namuna few-shot va regressiya testi bo'ladi | Kalibrlash to'plamini kutish shart emas, u 5% tekshiruvdan o'sadi (3.9) |
 
 ## 3. Ma'lumot modeli
 
@@ -224,33 +226,117 @@ emas — **hech kim uning ishlamayotganini ko'rsatadigan raqamga qaramagani**.
 193 ta bo'sh suhbat oylab turgan. `gradedBy` saqlanishi va namuna tekshiruvi
 shuning takrorlanmasligi uchun.
 
-### 3.7 Nutqni baholash — cheklov
+### 3.7 Baholash uch qatlamda
 
-`SPEAK_*` formatlari **audio** ishlab chiqaradi. Claude API matn, rasm va
-hujjat qabul qiladi; **audio kirish emas**. Ya'ni nutqni baholash uchun avval
-nutq matnga o'giriladi (STT), keyin matn baholanadi.
+Erkin javobni bitta kuchli modelga berish — eng qimmat va eng kam ishonchli
+yo'l. A1 yozma ishi 30 ta so'z, uchta nuqta, salom va xayr: bu o'ylash masalasi
+emas, **tekshirish ro'yxati**. Shuning uchun ish uch qatlamga bo'linadi.
 
-Bundan kelib chiqadigan halol chegara: bu yo'l bilan **mazmun, tuzilish va
-Redemittel ishlatilishini** baholab bo'ladi; **talaffuz, ravonlik va urg'uni**
-esa yo'q — ular matnda qolmaydi.
+| Qatlam | Nima qiladi | Vosita | Narx |
+|---|---|---|---|
+| **0** | Imlo, grammatika, artikl, so'z tartibi | **LanguageTool**, o'z serverimizda (LGPL 2.1) | **bepul** |
+| **1** | Rubrika mezonlari: Leitpunktlar yoritilganmi, Anrede/Gruß bormi, registr to'g'rimi | arzon model + Goethe rubrikasi + namunalar | tokenga qarab |
+| **2** | Faqat chegaraviy holat (ball o'tish chegarasiga yaqin) | kuchliroq model, ~15% holat | kam |
 
-Shuning uchun `SPEAK_*` boshida **mazmun bo'yicha baholanadi** va o'quvchiga
-buni ochiq aytiladi. Talaffuz baholash — alohida ish, bu spec'ga kirmaydi.
+LanguageTool qoidalar dvigateli — bir xil xatoga har doim bir xil javob beradi,
+tushuntirib bo'ladi va hech qachon o'ylab topmaydi. A1/A2 bahosining katta
+qismi aynan shu. Uni LLM'ga berish — qimmatroq va ishonchsizroq.
 
-### 3.8 Provayder va model
+### 3.8 Nutqni baholash — ikki yo'l
+
+`SPEAK_*` **audio** ishlab chiqaradi. Matnga o'girib baholash mumkin, lekin u
+faqat yarmi: talaffuz matnda qolmaydi. «Ich möchte» ni noto'g'ri talaffuz
+qilgan o'quvchining transkripti baribir to'g'ri chiqadi.
+
+Bitta yozuvdan ikkita parallel yo'l:
+
+| Yo'l | Nima baholanadi | Vosita |
+|---|---|---|
+| **A — talaffuz** | tovush aniqligi, ravonlik | Azure Speech pronunciation assessment |
+| **B — mazmun** | Leitpunktlar, tuzilish, Redemittel, grammatika | Whisper → matn → 3.7 dagi qatlamlar |
+
+**Tasdiqlangan cheklov:** Azure'ning **prosody** (ohang, ritm, urg'u) bahosi
+faqat `en-US` uchun mavjud; `de-DE` da **accuracy va fluency** ishlaydi,
+prosody yo'q. Goethe esa A2 Sprechen'da `Satzmelodie` va `Wortakzent` ni
+baholaydi — ya'ni bu mezon avtomatik qoplanmaydi va o'qituvchi namuna
+tekshiruviga qoladi.
+
+Azure narxi tasdiqlanmadi (sahifa mintaqaga qarab dinamik) — ishlatishdan
+oldin aniqlanadi. Shuning uchun **Yo'l B birinchi ishga tushadi**, Yo'l A esa
+narx aniqlangach. O'quvchiga «bu yerda talaffuz baholanmaydi» deb ochiq
+aytiladi — yarim ishlaydigan narsa hech narsadan yaxshi, lekin faqat chegarasi
+oshkora bo'lsa.
+
+### 3.9 Rubrika va kalibrlash
+
+**Rubrika yozilmaydi — Goethe uni chop etgan.** Modellsatz va Übungssatz
+hujjatlarida rasmiy `Bewertungskriterien Schreiben` va
+`Bewertungskriterien Sprechen` to'liq berilgan:
+
+- **A1** — har mazmun nuqtasi uchun 3 / 1,5 / 0 ball, ustiga
+  `Kommunikative Gestaltung` uchun 1 / 0,5 / 0
+- **A2 va B1** — A–E bandlari: `Aufgabenerfüllung` (Sprachfunktion, Register,
+  Textumfang) va `Sprache` (Spektrum va Beherrschung: Kohärenz, Wortschatz,
+  Strukturen); Sprechen'da qo'shimcha `Aussprache`
+
+**Kalibrlash to'plami ham qisman tayyor.** Goethe rasmiy **ball qo'yilgan
+o'quvchi ishlarini** chop etgan — A1 uchun uchta to'plamda ~11 ta namuna, har
+biri real matn + rasmiy ball + mezonlar bo'yicha taqsimot
+(masalan `10 Punkte (3 – 3 – 3 – 1)`, `6,5 Punkte (3 – 1,5 – 1,5 – 0,5)`).
+A2 va B1 da `Leistungsbeispiele` bor, lekin **ball qo'yilmagan** — ular daraja
+langari sifatida ishlaydi, ball haqiqati sifatida emas.
+
+Bu namunalar **ikki vazifani** bajaradi:
+
+1. **Prompt ichida namuna** (few-shot) — rasmiy baholangan ish modelga
+   ekspert qanday baholashini ko'rsatadi. Arzon modelni imtihonchiga
+   o'xshatadigan asosiy narsa shu.
+2. **Regressiya testi** — prompt yoki model o'zgarganda o'sha ~11 ta ish qayta
+   baholanadi; rasmiy balldan chetlashsa, o'zgarish qabul qilinmaydi.
+
+**Q16 — model reytingdan emas, o'lchovdan tanlanadi.** Umumiy nemis tili
+benchmarki (Artificial Analysis'da eng yuqorisi Gemini 3.1 Pro va Claude Opus
+4.6) boshqa vazifani o'lchaydi. Bizga kerakli savol: *«bu model imtihonchi
+qo'ygan ballga qanchalik mos ball qo'yadi?»* — buni faqat o'z ma'lumotimizda
+o'lchaymiz.
+
+Kalibrlash to'plami **kutilmaydi, o'sadi**: ~11 ta rasmiy namuna bilan
+boshlanadi, keyin 5% namuna tekshiruvi (Q14) uni har oy to'ldiradi.
+
+**Sintetik namuna ball haqiqati sifatida ishlatilmaydi** — LLM xato yozib,
+keyin o'sha xatoni o'zi baholasa, bu doiraviy bo'ladi. Sintetik matn faqat
+turg'unlikni sinash uchun.
+
+### 3.10 Provayder va model
 
 | Qaror | Qiymat |
 |---|---|
-| Provayder | **Anthropic (Claude)** |
-| Model | `claude-opus-5` |
+| Provayder | **Anthropic (Claude)** — bitta integratsiya, tekshirilgan hujjat bilan |
+| Model | **`claude-haiku-4-5`** asos, chegaraviy holatda `claude-sonnet-5` |
 | SDK | `@anthropic-ai/sdk` (loyiha TypeScript) |
-| Chiqish shakli | `output_config.format` — strukturali JSON, ball va izoh bazaga to'g'ridan-to'g'ri tushadi |
-| Kesh | rubrika `system` da, `cache_control` bilan — u har baholashda bir xil |
-| Kalit joyi | **Railway server env** (`ANTHROPIC_API_KEY`), `.env` faylida emas |
+| Chiqish shakli | `output_config.format` — strukturali JSON |
+| Kesh | rubrika + namunalar `system` da, `cache_control` bilan |
+| Kalit joyi | **Railway server env** (`ANTHROPIC_API_KEY`) |
+
+Narx, 8 000 baholash/oy (500 o'quvchi × 16):
+
+| Tuzilma | Oyiga |
+|---|---|
+| `claude-opus-5` yolg'iz | $148.00 |
+| **`claude-haiku-4-5` yolg'iz** | **$29.60** |
+| Haiku + 15% Sonnet 5 (kaskad) | $38.48 |
+| Batch API bilan (−50%) | yarmi |
+
+Qatlam 0 (LanguageTool) xatolarni oldindan topgani uchun chiqish tokeni ham
+qisqaradi — bu jadvalda hisobga olinmagan.
+
+Boshqa provayderlar (Gemini Flash Lite ≈ $2.6/oy, DeepSeek ≈ $2.5/oy) yana
+arzonroq, lekin **ikkinchi integratsiya** degani. $27 farq uchun bu xavf
+arzimaydi; o'lchov (Q16) ko'rsatsa, ko'chiriladi.
 
 Strukturali chiqish shu yerda hal qiluvchi: baho `{ball, mezonlar, izoh}`
-shaklida sxema bo'yicha tekshirilib qaytadi, matndan ajratib olinmaydi. Bahoni
-erkin matndan parse qilish — jimgina buziladigan joy.
+shaklida sxema bo'yicha tekshirilib qaytadi. Bahoni erkin matndan parse qilish
+— jimgina buziladigan joy.
 
 **Bu spec AI baholovchining ichki qurilishini belgilamaydi** — u ADR-0009 talab
 qilganidek o'z spec'i va o'z ma'lumot modeli bilan keladi. Bu yerda faqat
@@ -325,7 +411,7 @@ Faza 2–6 shu modeldan foydalanadi, lekin har biri o'z spec'ini oladi.
 
 `WRITE_GUIDED` Faza 3 ga kiritildi: baholovchisiz u mashq bo'la olmaydi, ya'ni
 AI ni kechiktirsak, Schreiben moduli bo'sh qoladi. `SPEAK_*` esa Faza 5 da —
-u qo'shimcha bo'g'inni (STT) talab qiladi va cheklovi bor (3.7).
+u qo'shimcha bo'g'inni (STT) talab qiladi va cheklovi bor (3.8).
 
 ## 7. Nima QILINMAYDI
 
@@ -355,7 +441,7 @@ u qo'shimcha bo'g'inni (STT) talab qiladi va cheklovi bor (3.7).
 | DiB videolari 2005–2009 yillarniki | O'quvchi eskiligini sezadi | Til jihatidan yaroqli. Kutish darajasi oldindan to'g'rilanadi, yashirilmaydi |
 | **AI bahosi noto'g'ri bo'lishi** | O'quvchi xato bahoga ishonib, xato o'rganadi | Q14 — namuna tekshiruvi; `gradedBy` saqlanadi. Farq kattaligi o'lchanadi, ko'rsatkich chiqariladi |
 | **`ANTHROPIC_API_KEY` Railway'da qo'yilmasligi** | ADR-0009 ning aynan takrori | Kalit yo'q bo'lsa `WRITE_GUIDED` mashqlari **umuman ko'rsatilmaydi** (Q10). Deploy oldidan tekshiruv |
-| Baholash narxi kutilganidan oshishi | Oylik xarajat | Rubrika keshlanadi; shoshilinch bo'lmagan baholash Batch API'ga (50% arzon) chiqarilishi mumkin |
+| Baholash narxi kutilganidan oshishi | Oylik xarajat | Q15 — Qatlam 0 bepul; rubrika va namunalar keshlanadi; shoshilinch bo'lmagan baholash Batch API'ga (−50%) chiqariladi |
 | Tarjima hajmi (1 948 + grammatika) | O'qituvchi vaqti — real to'siq | Fazaga kiritiladi; `REVIEW` navbati ustuvorlik bilan (avval A1 leksikasi) |
 
 ## 9. Ochiq qolgan savollar
@@ -368,6 +454,12 @@ u qo'shimcha bo'g'inni (STT) talab qiladi va cheklovi bor (3.7).
 3. **Transkript vaqt belgisi.** DiB transkriptlari vaqtga bog'lanmagan.
    Karaoke uslubidagi pleer kerak bo'lsa, forced alignment (Whisper) — alohida
    ish, Faza 1 ga kirmaydi.
+4. **Azure pronunciation assessment narxi** — sahifa mintaqaga qarab dinamik
+   chiqaradi, tasdiqlanmadi. Yo'l A (3.8) shu aniqlangunicha boshlanmaydi.
+5. **A2/B1 uchun ball qo'yilgan namunalar.** Goethe A2 va B1 da
+   `Leistungsbeispiele` ni ballsiz beradi. Qo'shimcha manba (telc, ÖSD, DTZ)
+   qidiriladi; topilmasa, o'sha darajalarning kalibrlashi to'liq 5% namuna
+   tekshiruvidan yig'iladi.
 
 ## 10. ADR
 
