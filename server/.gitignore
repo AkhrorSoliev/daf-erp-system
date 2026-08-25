@@ -14,3 +14,6 @@ node_modules
 # with a leading slash so it matches ONLY server/reports/ and never the source
 # tree server/src/reports/ — see the note in the repo-root .gitignore.
 /reports/
+
+# Content harvest cache (disk-cached HTTP responses, regenerated)
+.cache/
