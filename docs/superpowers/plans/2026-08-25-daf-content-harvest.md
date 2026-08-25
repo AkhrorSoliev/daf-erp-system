@@ -644,6 +644,17 @@ bo'yicha bo'lish 'Sections' degan soxta bo'lim tug'dirardi."
 - Consumes: `Transcript`, `AssetRef` (Task 1), `decodeEntities` (Task 3)
 - Produces: `parseTranscriptPage(html: string, fileId: string, chapter: number): Transcript | null`, `parseVideoList(rssXml: string): { fileId: string; title: string }[]`
 
+> **TUZATISH (bajarilganidan keyin yozildi).** Quyidagi kod namunasidagi
+> selektorlar NOTO'G'RI edi — ular sahifaning matn ko'rinishidan yozilgan,
+> HTML tuzilishidan emas. Haqiqiy markup:
+> qatorlar `<p>` emas, **`<li class="vidt_i">`** (intervyuchi) va
+> **`<li class="vidt_s">`** (so'zlovchi) ichida; sarlavha `class="ti"` emas,
+> **`class="vidt_th"`** va ichida `<span>` bor. Butun sahifada bitta `<p>`
+> bor va u pleyerga tegishli. Bundan tashqari RSS sarlavhalari ikki marta
+> kodlangan UTF-8 bilan keladi va tuzatilishi kerak.
+> Haqiqiy holat commit `d1155e6` da; haqiqiy sahifa repo'da fixture bo'lib
+> yotadi: `server/src/daf-content/dib/__fixtures__/vidt-01_02.html`.
+
 - [ ] **Step 1: Testni yozing**
 
 `server/src/daf-content/dib/dib-transcript.parser.spec.ts`:
