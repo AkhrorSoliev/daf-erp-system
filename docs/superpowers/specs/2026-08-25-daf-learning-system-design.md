@@ -75,6 +75,9 @@ Qamrov bahosi *(o'lchov emas, baholash)*: A1 ≈ 80%, A2 ≈ 65%, B1 ≈ 30%.
 | Q10 | Modul **kontent bo'lmasa menyuda ko'rinmaydi** | R2 sozlanmagan yoki seed quyilmagan bo'lsa, o'quvchi bosadigan-u javob olmaydigan tugma ko'rmasligi kerak. Videothek'da ham shu naqsh: katalog bo'sh bo'lsa tab chiqmaydi |
 | Q11 | Netzwerk/Klett va boshqa tijorat darsliklari — **faqat struktura o'lchovi**, kontent ko'chirilmaydi | Format mualliflik huquqi bilan himoyalanmaydi, aniq matn himoyalanadi |
 | Q12 | `B1` tizimda mavjud, lekin **bo'sh**. Modul halol **«A1–A2»** deb chiqariladi | Manbalarda B1 xomashyosi ≈30%. «A1–B1» deb e'lon qilish o'quvchini aldash bo'lardi |
+| Q13 | Erkin javoblarni **boshidanoq AI baholaydi** | O'qituvchi baholashi miqyoslanmaydi va kechikkan javob mashqning ma'nosini yo'qotadi (3.6) |
+| Q14 | O'qituvchi to'liq emas, **namuna tekshiruvi** qiladi (~5%) | AI bahosini o'lchashning yagona yo'li, narxi yigirmadan bir qismi (3.6) |
+| Q15 | Provayder **Anthropic**, model `claude-opus-5`, chiqish **strukturali JSON** | Ball erkin matndan parse qilinmaydi — sxema bo'yicha tekshiriladi (3.8) |
 
 ## 3. Ma'lumot modeli
 
@@ -204,17 +207,50 @@ ballning taxminan yarmi. Ular baholovchisiz mashq bo'la olmaydi: o'quvchi
 yozadi, hech kim javob bermaydi.
 
 Shuning uchun **baholovchi tizimning ixtiyoriy bezagi emas, yarmini
-ishlatadigan qismi.** Ikki yo'l bir vaqtda quriladi:
+ishlatadigan qismi.**
 
-- **`TEACHER`** — o'qituvchi navbatida ko'radi va Goethe mezoni bo'yicha
-  baholaydi. Ishonchli, lekin miqyoslanmaydi.
-- **`AI`** (Deutsch Tutor qaytishi) — darhol javob beradi, miqyoslanadi,
-  lekin baho sifati kafolatlanmaydi.
+**Q13 — asosiy baholovchi boshidanoq `AI`.** O'qituvchi baholashi
+miqyoslanmaydi: bitta o'qituvchi 200 o'quvchining haftalik yozma ishini
+o'qib chiqa olmaydi, va javob bir necha kunga kechiksa mashqning ma'nosi
+yo'qoladi. AI darhol javob beradi.
 
-`DafAttempt.gradedBy` shuning uchun **saqlanadi**: keyin «AI qo'ygan bahoning
-o'qituvchi bahosidan farqi qancha» degan savolga javob bera olishimiz kerak.
-AI bahosi o'qituvchi tasdig'i bilan solishtirilmasa, uning sifatini hech qachon
-bilmaymiz.
+**Q14 — o'qituvchi to'liq baholamaydi, `namuna tekshiruvi` qiladi.** Har
+baholangan ishning kichik ulushi (boshlanish uchun ~5%) o'qituvchi navbatiga
+tushadi. Bu AI bahosini o'lchash uchun yagona yo'l va u to'liq baholashning
+yigirmadan bir qismini oladi.
+
+O'lchovsiz qoldirmaslik shart. ADR-0009 ning haqiqiy saboqi kalit yo'qligi
+emas — **hech kim uning ishlamayotganini ko'rsatadigan raqamga qaramagani**.
+193 ta bo'sh suhbat oylab turgan. `gradedBy` saqlanishi va namuna tekshiruvi
+shuning takrorlanmasligi uchun.
+
+### 3.7 Nutqni baholash — cheklov
+
+`SPEAK_*` formatlari **audio** ishlab chiqaradi. Claude API matn, rasm va
+hujjat qabul qiladi; **audio kirish emas**. Ya'ni nutqni baholash uchun avval
+nutq matnga o'giriladi (STT), keyin matn baholanadi.
+
+Bundan kelib chiqadigan halol chegara: bu yo'l bilan **mazmun, tuzilish va
+Redemittel ishlatilishini** baholab bo'ladi; **talaffuz, ravonlik va urg'uni**
+esa yo'q — ular matnda qolmaydi.
+
+Shuning uchun `SPEAK_*` boshida **mazmun bo'yicha baholanadi** va o'quvchiga
+buni ochiq aytiladi. Talaffuz baholash — alohida ish, bu spec'ga kirmaydi.
+
+### 3.8 Provayder va model
+
+| Qaror | Qiymat |
+|---|---|
+| Provayder | **Anthropic (Claude)** |
+| Model | `claude-opus-5` |
+| SDK | `@anthropic-ai/sdk` (loyiha TypeScript) |
+| Chiqish shakli | `output_config.format` — strukturali JSON, ball va izoh bazaga to'g'ridan-to'g'ri tushadi |
+| Kesh | rubrika `system` da, `cache_control` bilan — u har baholashda bir xil |
+| Kalit joyi | **Railway server env** (`ANTHROPIC_API_KEY`), `.env` faylida emas |
+
+Strukturali chiqish shu yerda hal qiluvchi: baho `{ball, mezonlar, izoh}`
+shaklida sxema bo'yicha tekshirilib qaytadi, matndan ajratib olinmaydi. Bahoni
+erkin matndan parse qilish — jimgina buziladigan joy.
 
 **Bu spec AI baholovchining ichki qurilishini belgilamaydi** — u ADR-0009 talab
 qilganidek o'z spec'i va o'z ma'lumot modeli bilan keladi. Bu yerda faqat
@@ -282,14 +318,14 @@ Faza 2–6 shu modeldan foydalanadi, lekin har biri o'z spec'ini oladi.
 |---|---|---|
 | **1** | Dataset + media R2'da: adapterlar, daraja yorliqlash, tarjima (tasdiqlanmagan holatda) | yo'q — shu hujjat |
 | **2** | Ko'rinadigan kutubxona: `Daf*` modellar, seed, API, portal bo'limi. Mashqsiz | kerak |
-| **3** | Mashq dvigateli — 3.4 dagi formatlar | kerak |
-| **4** | Admin muallif UI + guruhga yo'naltirish + tarjima tasdig'i. O'qituvchi baholash navbati (`gradedBy=TEACHER`) | kerak |
-| **5** | **Deutsch Tutor qaytishi** — AI baholovchi (`gradedBy=AI`) va tushuntiruvchi. Noldan, o'z modeli bilan | kerak |
+| **3** | Mashq dvigateli — 3.4 dagi formatlar. Yopiq formatlar `AUTO`, **`WRITE_GUIDED` esa `AI`** (Schreiben ishlaydi) | kerak |
+| **4** | Admin muallif UI + guruhga yo'naltirish + tarjima tasdig'i + **o'qituvchi namuna tekshiruvi navbati** | kerak |
+| **5** | **Deutsch Tutor to'liq qaytishi** — tushuntiruvchi suhbat, `SPEAK_*` uchun STT | kerak |
 | **6** | `student-app` pariteti | kerak |
 
-Faza 5 ni Faza 4 dan keyinga qo'yishning sababi: AI bahosining sifatini
-o'lchash uchun **o'qituvchi bahosi allaqachon bazada bo'lishi kerak**. Aks holda
-AI nima qilayotganini solishtiradigan narsa bo'lmaydi (3.6).
+`WRITE_GUIDED` Faza 3 ga kiritildi: baholovchisiz u mashq bo'la olmaydi, ya'ni
+AI ni kechiktirsak, Schreiben moduli bo'sh qoladi. `SPEAK_*` esa Faza 5 da —
+u qo'shimcha bo'g'inni (STT) talab qiladi va cheklovi bor (3.7).
 
 ## 7. Nima QILINMAYDI
 
@@ -317,6 +353,9 @@ AI nima qilayotganini solishtiradigan narsa bo'lmaydi (3.6).
 | ZUM konteksti **DaZ** (Germaniyadagi muhojirlar) | Ba'zi material bizning o'quvchiga mos emas | Handlungsfeld darajasida filtr; `REVIEW` bosqichida ajratiladi |
 | Fayl litsenziyalari aralash (CC0/BY/BY-SA) | Atribut yoki ShareAlike buzilishi | Q9 — har aktiv litsenziyasi bilan keladi; `BY-SA` aktivlar alohida belgilanadi |
 | DiB videolari 2005–2009 yillarniki | O'quvchi eskiligini sezadi | Til jihatidan yaroqli. Kutish darajasi oldindan to'g'rilanadi, yashirilmaydi |
+| **AI bahosi noto'g'ri bo'lishi** | O'quvchi xato bahoga ishonib, xato o'rganadi | Q14 — namuna tekshiruvi; `gradedBy` saqlanadi. Farq kattaligi o'lchanadi, ko'rsatkich chiqariladi |
+| **`ANTHROPIC_API_KEY` Railway'da qo'yilmasligi** | ADR-0009 ning aynan takrori | Kalit yo'q bo'lsa `WRITE_GUIDED` mashqlari **umuman ko'rsatilmaydi** (Q10). Deploy oldidan tekshiruv |
+| Baholash narxi kutilganidan oshishi | Oylik xarajat | Rubrika keshlanadi; shoshilinch bo'lmagan baholash Batch API'ga (50% arzon) chiqarilishi mumkin |
 | Tarjima hajmi (1 948 + grammatika) | O'qituvchi vaqti — real to'siq | Fazaga kiritiladi; `REVIEW` navbati ustuvorlik bilan (avval A1 leksikasi) |
 
 ## 9. Ochiq qolgan savollar
