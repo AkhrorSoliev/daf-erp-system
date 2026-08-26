@@ -1,4 +1,9 @@
-import { parseCategoryMembers, parseWikitext, parseH5pPage } from './zum.parser';
+import {
+  parseCategoryMembers,
+  parseWikitext,
+  parseWikitextResponse,
+  parseH5pPage,
+} from './zum.parser';
 
 const CATEGORY = JSON.stringify({
   query: {
@@ -25,6 +30,43 @@ const H5P_PAGE = `<html><script type="application/json"
  data-drupal-selector="drupal-settings-json">{"h5p":{"H5PIntegration":{"contents":{
  "cid-39679":{"library":"H5P.Flashcards 1.7","jsonContent":"{\\"cards\\":[{\\"text\\":\\"dick\\"}]}",
  "metadata":{"license":"CC BY 4.0","title":"Antonyme","authors":[{"name":"C Pannen"}]}}}}}}</script></html>`;
+
+// MediaWiki `action=parse&prop=wikitext` javobining haqiqiy shakli — vikimatn
+// `wikitext['*']` ichida JSON satr sifatida qochirilgan holda yotadi
+// (masalan `Interaktive Übungen` shu tarzda ko'rinadi).
+const WIKITEXT_ENVELOPE = JSON.stringify({
+  parse: { title: 'Adjektive - Antonyme - 1', wikitext: { '*': WIKITEXT } },
+});
+
+// Haqiqiy H5P sahifasida yuqori darajadagi `metadata.license` sahifaning
+// o'zinikidir; `jsonContent` ichidagi har bir slayd/element o'zining
+// litsenziyasini olib yurishi mumkin (masalan CC0 yoki "U" — noma'lum), va u
+// UMUMAN mustaqil. Parser faqat yuqori darajadagi litsenziyani o'qishi kerak.
+const NESTED_JSON_CONTENT = JSON.stringify({
+  interactiveVideo: {
+    assets: {
+      interactions: [{ action: { metadata: { license: 'CC0 1.0' } } }],
+    },
+  },
+});
+const H5P_PAGE_NESTED_LICENSE = `<html><script type="application/json"
+ data-drupal-selector="drupal-settings-json">${JSON.stringify({
+   h5p: {
+     H5PIntegration: {
+       contents: {
+         'cid-1': {
+           library: 'H5P.InteractiveVideo 1.0',
+           jsonContent: NESTED_JSON_CONTENT,
+           metadata: {
+             license: 'CC BY-NC-SA 4.0',
+             title: 'Video mashq',
+             authors: [{ name: 'X' }],
+           },
+         },
+       },
+     },
+   },
+ })}</script></html>`;
 
 describe('parseCategoryMembers', () => {
   it('faqat maqolalarni oladi, toifa va faylni tashlab ketadi', () => {
@@ -60,6 +102,41 @@ describe('parseWikitext', () => {
   });
 });
 
+describe('parseWikitextResponse', () => {
+  it('MediaWiki konvertini yechib, xuddi shu natijani beradi — qochirilgan yoki xizmat toifasi mavzuga sizmaydi', () => {
+    const fromResponse = parseWikitextResponse(
+      WIKITEXT_ENVELOPE,
+      'Adjektive - Antonyme - 1',
+    );
+    const fromPlainText = parseWikitext(WIKITEXT, 'Adjektive - Antonyme - 1');
+
+    expect(fromResponse).toEqual(fromPlainText);
+    // Faqat haqiqiy mavzu qoladi — na qochirilgan, na xizmat toifasi sizib kirmaydi.
+    expect(fromResponse.topics).toEqual(['Adjektive']);
+  });
+
+  it('konvert buzilgan yoki vikimatn yo\'q bo\'lsa, xato tashlamay bo\'sh sahifa qaytaradi', () => {
+    expect(parseWikitextResponse('{bu json emas', 'X')).toEqual({
+      title: 'X',
+      h5pIds: [],
+      level: null,
+      topics: [],
+    });
+    expect(parseWikitextResponse('{"parse":{}}', 'X')).toEqual({
+      title: 'X',
+      h5pIds: [],
+      level: null,
+      topics: [],
+    });
+    expect(parseWikitextResponse('{"error":{"code":"missingtitle"}}', 'X')).toEqual({
+      title: 'X',
+      h5pIds: [],
+      level: null,
+      topics: [],
+    });
+  });
+});
+
 describe('parseH5pPage', () => {
   it('mashq turini, mazmunini va litsenziyasini oladi', () => {
     const e = parseH5pPage(H5P_PAGE)!;
@@ -77,5 +154,10 @@ describe('parseH5pPage', () => {
   it('litsenziyasi yo\'q mashqni o\'tkazmaydi', () => {
     const noLic = H5P_PAGE.replace('"license":"CC BY 4.0",', '');
     expect(parseH5pPage(noLic)).toBeNull();
+  });
+
+  it('ichki elementning boshqa litsenziyasiga qaramay, yuqori darajadagi litsenziyani oladi', () => {
+    const e = parseH5pPage(H5P_PAGE_NESTED_LICENSE)!;
+    expect(e.license).toBe('CC BY-NC-SA 4.0');
   });
 });

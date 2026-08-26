@@ -58,6 +58,33 @@ export function parseWikitext(wikitext: string, title: string): ZumPage {
 }
 
 /**
+ * `ZumClient.wikitext()` xom MediaWiki konvertini qaytaradi:
+ * `{"parse":{"title":"...","wikitext":{"*":"<vikimatn>"}}}`. Vikimatn shu
+ * konvert ICHIDA JSON satr sifatida qochirilgan holda yotadi (masalan
+ * `Interaktive Übungen` → `Interaktive Übungen`), shuning uchun uni
+ * to'g'ridan-to'g'ri `parseWikitext`ga berish mumkin emas — `NOT_A_TOPIC`dagi
+ * satrga mos kelmay, xizmat toifasi buzilgan matn sifatida mavzuga sizib
+ * kiradi. Bu funksiya avval konvertni yechadi, keyin toza vikimatnni
+ * `parseWikitext`ga uzatadi.
+ *
+ * Konvert buzilgan yoki vikimatn yo'q bo'lsa (bo'sh sahifa yoki API xato
+ * javobi) — xato TASHLANMAYDI: bo'sh `ZumPage` (h5pIds/topics bo'sh, level
+ * null) qaytariladi, xuddi hech qanday H5P yoki toifa topilmagandek.
+ */
+export function parseWikitextResponse(json: string, title: string): ZumPage {
+  let wikitext = '';
+  try {
+    const d = JSON.parse(json) as {
+      parse?: { wikitext?: { '*'?: string } };
+    };
+    wikitext = d.parse?.wikitext?.['*'] ?? '';
+  } catch {
+    wikitext = '';
+  }
+  return parseWikitext(wikitext, title);
+}
+
+/**
  * H5P mashqining mazmuni `apps.zum.de` sahifasining Drupal sozlamalari ichida
  * to'liq JSON bo'lib yotadi (~55 KB).
  *
