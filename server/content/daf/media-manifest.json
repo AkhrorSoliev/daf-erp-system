@@ -1,0 +1,2046 @@
+[
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_01_01_begr.mp3",
+    "key": "dib/audio/voc_01_01_begr.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_01_02_werbistdu.mp3",
+    "key": "dib/audio/voc_01_02_werbistdu.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_01_03_gettoknow.mp3",
+    "key": "dib/audio/voc_01_03_gettoknow.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_01_04_herkunft.mp3",
+    "key": "dib/audio/voc_01_04_herkunft.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_01_05_land.mp3",
+    "key": "dib/audio/voc_01_05_land.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_01_06_kontinent.mp3",
+    "key": "dib/audio/voc_01_06_kontinent.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_01_07_zahlen.mp3",
+    "key": "dib/audio/voc_01_07_zahlen.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_01_08_moreinfo.mp3",
+    "key": "dib/audio/voc_01_08_moreinfo.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_01_09_farben.mp3",
+    "key": "dib/audio/voc_01_09_farben.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_01_10_wiegehts.mp3",
+    "key": "dib/audio/voc_01_10_wiegehts.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_01_11_geldhandy.mp3",
+    "key": "dib/audio/voc_01_11_geldhandy.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_01_12_anderuni.mp3",
+    "key": "dib/audio/voc_01_12_anderuni.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_01_13_faecher.mp3",
+    "key": "dib/audio/voc_01_13_faecher.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_01_14_diewoche.mp3",
+    "key": "dib/audio/voc_01_14_diewoche.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_02_01_anderuni.mp3",
+    "key": "dib/audio/voc_02_01_anderuni.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_02_02_stadium.mp3",
+    "key": "dib/audio/voc_02_02_stadium.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_02_03_inclass.mp3",
+    "key": "dib/audio/voc_02_03_inclass.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_02_04_desk.mp3",
+    "key": "dib/audio/voc_02_04_desk.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_02_05_computer.mp3",
+    "key": "dib/audio/voc_02_05_computer.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_02_06_istzeit.mp3",
+    "key": "dib/audio/voc_02_06_istzeit.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_02_07_wohnung.mp3",
+    "key": "dib/audio/voc_02_07_wohnung.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_02_08_kitchen.mp3",
+    "key": "dib/audio/voc_02_08_kitchen.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_02_09_saubermachen.mp3",
+    "key": "dib/audio/voc_02_09_saubermachen.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_02_10_bad.mp3",
+    "key": "dib/audio/voc_02_10_bad.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_02_11_wohnzim.mp3",
+    "key": "dib/audio/voc_02_11_wohnzim.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_02_12_study.mp3",
+    "key": "dib/audio/voc_02_12_study.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_02_13_bedroom.mp3",
+    "key": "dib/audio/voc_02_13_bedroom.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_03_01_dailyroutine.mp3",
+    "key": "dib/audio/voc_03_01_dailyroutine.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_03_02_breakfast.mp3",
+    "key": "dib/audio/voc_03_02_breakfast.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_03_03_univ.mp3",
+    "key": "dib/audio/voc_03_03_univ.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_03_04_classes.mp3",
+    "key": "dib/audio/voc_03_04_classes.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_03_05_lunch.mp3",
+    "key": "dib/audio/voc_03_05_lunch.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_03_06_stores.mp3",
+    "key": "dib/audio/voc_03_06_stores.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_03_07_drugstore.mp3",
+    "key": "dib/audio/voc_03_07_drugstore.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_03_08_stationery.mp3",
+    "key": "dib/audio/voc_03_08_stationery.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_03_09_greengrocer.mp3",
+    "key": "dib/audio/voc_03_09_greengrocer.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_03_10_supermarket.mp3",
+    "key": "dib/audio/voc_03_10_supermarket.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_04_01_freizeitakt.mp3",
+    "key": "dib/audio/voc_04_01_freizeitakt.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_04_02_wheretogo.mp3",
+    "key": "dib/audio/voc_04_02_wheretogo.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_04_03_kleidung.mp3",
+    "key": "dib/audio/voc_04_03_kleidung.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_04_04_games.mp3",
+    "key": "dib/audio/voc_04_04_games.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_04_05_kreativ.mp3",
+    "key": "dib/audio/voc_04_05_kreativ.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_04_06_musik.mp3",
+    "key": "dib/audio/voc_04_06_musik.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_04_07_sport.mp3",
+    "key": "dib/audio/voc_04_07_sport.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_04_08_goeat.mp3",
+    "key": "dib/audio/voc_04_08_goeat.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_04_09_movies.mp3",
+    "key": "dib/audio/voc_04_09_movies.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_04_10_hobbies.mp3",
+    "key": "dib/audio/voc_04_10_hobbies.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_05_01_family.mp3",
+    "key": "dib/audio/voc_05_01_family.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_05_02_whatsitlike.mp3",
+    "key": "dib/audio/voc_05_02_whatsitlike.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_05_03_holidays.mp3",
+    "key": "dib/audio/voc_05_03_holidays.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_05_04_celebrate.mp3",
+    "key": "dib/audio/voc_05_04_celebrate.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_06_01_travel.mp3",
+    "key": "dib/audio/voc_06_01_travel.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_06_02_booktrip.mp3",
+    "key": "dib/audio/voc_06_02_booktrip.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_06_03_accom.mp3",
+    "key": "dib/audio/voc_06_03_accom.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_06_04_modes.mp3",
+    "key": "dib/audio/voc_06_04_modes.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_06_05_destination.mp3",
+    "key": "dib/audio/voc_06_05_destination.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_06_06_onatrip.mp3",
+    "key": "dib/audio/voc_06_06_onatrip.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_06_07_beach.mp3",
+    "key": "dib/audio/voc_06_07_beach.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_06_08_sights.mp3",
+    "key": "dib/audio/voc_06_08_sights.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_06_09_howwasit.mp3",
+    "key": "dib/audio/voc_06_09_howwasit.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_06_10_seppref.mp3",
+    "key": "dib/audio/voc_06_10_seppref.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_06_11_insepref.mp3",
+    "key": "dib/audio/voc_06_11_insepref.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_06_12_weather.mp3",
+    "key": "dib/audio/voc_06_12_weather.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_07_01_gesundleban.mp3",
+    "key": "dib/audio/voc_07_01_gesundleban.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_07_02_sporttreiban.mp3",
+    "key": "dib/audio/voc_07_02_sporttreiban.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_07_03_sportanlagen.mp3",
+    "key": "dib/audio/voc_07_03_sportanlagen.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_07_04_body.mp3",
+    "key": "dib/audio/voc_07_04_body.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_07_05_hygiene.mp3",
+    "key": "dib/audio/voc_07_05_hygiene.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_07_07_beschwerden.mp3",
+    "key": "dib/audio/voc_07_07_beschwerden.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_07_06_injuries.mp3",
+    "key": "dib/audio/voc_07_06_injuries.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_07_08_kur.mp3",
+    "key": "dib/audio/voc_07_08_kur.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_07_09_doctors.mp3",
+    "key": "dib/audio/voc_07_09_doctors.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_07_10_beimarzt.mp3",
+    "key": "dib/audio/voc_07_10_beimarzt.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_07_11_insurance.mp3",
+    "key": "dib/audio/voc_07_11_insurance.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_07_12_medizin.mp3",
+    "key": "dib/audio/voc_07_12_medizin.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_08_01_leute.mp3",
+    "key": "dib/audio/voc_08_01_leute.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_08_02_descriptions.mp3",
+    "key": "dib/audio/voc_08_02_descriptions.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_08_03_einander.mp3",
+    "key": "dib/audio/voc_08_03_einander.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_08_04_eswirdernest.mp3",
+    "key": "dib/audio/voc_08_04_eswirdernest.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_08_05_woleben.mp3",
+    "key": "dib/audio/voc_08_05_woleben.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_08_06_workworkwork.mp3",
+    "key": "dib/audio/voc_08_06_workworkwork.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_08_07_berufe.mp3",
+    "key": "dib/audio/voc_08_07_berufe.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_09_01_deutsch.mp3",
+    "key": "dib/audio/voc_09_01_deutsch.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_09_02_politik.mp3",
+    "key": "dib/audio/voc_09_02_politik.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_09_03_schule.mp3",
+    "key": "dib/audio/voc_09_03_schule.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_09_04_nachderschule.mp3",
+    "key": "dib/audio/voc_09_04_nachderschule.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_09_05_umwelt.mp3",
+    "key": "dib/audio/voc_09_05_umwelt.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_10_01_history.mp3",
+    "key": "dib/audio/voc_10_01_history.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_10_02_warnpeace.mp3",
+    "key": "dib/audio/voc_10_02_warnpeace.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_10_04_famouspeople.mp3",
+    "key": "dib/audio/voc_10_04_famouspeople.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_10_05_germans.mp3",
+    "key": "dib/audio/voc_10_05_germans.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_10_06_operas.mp3",
+    "key": "dib/audio/voc_10_06_operas.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_10_07_askdir.mp3",
+    "key": "dib/audio/voc_10_07_askdir.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/audio/voc_10_08_givedir.mp3",
+    "key": "dib/audio/voc_10_08_givedir.mp3",
+    "kind": "AUDIO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_02_int_ag_who.mp4",
+    "key": "dib/video/01_02_int_ag_who.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_03_int_ag_studies-home.mp4",
+    "key": "dib/video/01_03_int_ag_studies-home.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_04_int_ag_interests.mp4",
+    "key": "dib/video/01_04_int_ag_interests.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_05_int_hm_who.mp4",
+    "key": "dib/video/01_05_int_hm_who.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_06_int_hm_studies-home.mp4",
+    "key": "dib/video/01_06_int_hm_studies-home.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_07_int_ec_who.mp4",
+    "key": "dib/video/01_07_int_ec_who.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_08_int_ec_studies-home.mp4",
+    "key": "dib/video/01_08_int_ec_studies-home.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_09_int_ec_friends.mp4",
+    "key": "dib/video/01_09_int_ec_friends.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_10_int_sco_who.mp4",
+    "key": "dib/video/01_10_int_sco_who.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_11_int_sco_studies-home.mp4",
+    "key": "dib/video/01_11_int_sco_studies-home.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_12_int_sco_friends.mp4",
+    "key": "dib/video/01_12_int_sco_friends.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_13_int_scl_who.mp4",
+    "key": "dib/video/01_13_int_scl_who.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_14_int_scl_studies-home.mp4",
+    "key": "dib/video/01_14_int_scl_studies-home.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_15_int_bg_who.mp4",
+    "key": "dib/video/01_15_int_bg_who.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_16_int_bg_studies-home.mp4",
+    "key": "dib/video/01_16_int_bg_studies-home.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_17_int_bg_friends.mp4",
+    "key": "dib/video/01_17_int_bg_friends.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_18_int_ek_who.mp4",
+    "key": "dib/video/01_18_int_ek_who.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_19_int_ek_studies-home.mp4",
+    "key": "dib/video/01_19_int_ek_studies-home.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_20_int_ek_friends.mp4",
+    "key": "dib/video/01_20_int_ek_friends.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_21_int_ek_interests.mp4",
+    "key": "dib/video/01_21_int_ek_interests.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_22_int_hb_who.mp4",
+    "key": "dib/video/01_22_int_hb_who.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_23_int_ju_who.mp4",
+    "key": "dib/video/01_23_int_ju_who.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_24_int_ju_studies-home.mp4",
+    "key": "dib/video/01_24_int_ju_studies-home.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_25_int_ju_friends.mp4",
+    "key": "dib/video/01_25_int_ju_friends.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_26_int_ph_who.mp4",
+    "key": "dib/video/01_26_int_ph_who.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/01_27_int_hm_friends.mp4",
+    "key": "dib/video/01_27_int_hm_friends.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_02_int_ek_studies.mp4",
+    "key": "dib/video/02_02_int_ek_studies.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_03_int_ag_studies.mp4",
+    "key": "dib/video/02_03_int_ag_studies.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_04_int_sco_studies.mp4",
+    "key": "dib/video/02_04_int_sco_studies.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_05_int_scl_studies.mp4",
+    "key": "dib/video/02_05_int_scl_studies.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_06_int_bg_studies.mp4",
+    "key": "dib/video/02_06_int_bg_studies.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_07_int_hb_studies.mp4",
+    "key": "dib/video/02_07_int_hb_studies.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_08_int_ju_studies.mp4",
+    "key": "dib/video/02_08_int_ju_studies.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_09_int_hm_studies.mp4",
+    "key": "dib/video/02_09_int_hm_studies.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_10_int_scl_favorite.mp4",
+    "key": "dib/video/02_10_int_scl_favorite.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_11_int_bg_favorite.mp4",
+    "key": "dib/video/02_11_int_bg_favorite.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_12_int_ek_favorite.mp4",
+    "key": "dib/video/02_12_int_ek_favorite.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_13_int_ju_favorite.mp4",
+    "key": "dib/video/02_13_int_ju_favorite.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_14_int_ag_favorite.mp4",
+    "key": "dib/video/02_14_int_ag_favorite.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_15_int_ec_favorite.mp4",
+    "key": "dib/video/02_15_int_ec_favorite.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_17_int_sco_favorite.mp4",
+    "key": "dib/video/02_17_int_sco_favorite.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_18_int_hm_class.mp4",
+    "key": "dib/video/02_18_int_hm_class.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_20_int_ek_class.mp4",
+    "key": "dib/video/02_20_int_ek_class.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_21_int_ju_class.mp4",
+    "key": "dib/video/02_21_int_ju_class.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_22_int_sco_class.mp4",
+    "key": "dib/video/02_22_int_sco_class.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_24_int_bg_requirements.mp4",
+    "key": "dib/video/02_24_int_bg_requirements.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_25_int_ju_requirements.mp4",
+    "key": "dib/video/02_25_int_ju_requirements.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_33_int_ph_email.mp4",
+    "key": "dib/video/02_33_int_ph_email.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/02_34_int_hb_email.mp4",
+    "key": "dib/video/02_34_int_hb_email.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_01_int_ec_typischertag.mp4",
+    "key": "dib/video/03_01_int_ec_typischertag.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_03_int_bg_typischertag.mp4",
+    "key": "dib/video/03_03_int_bg_typischertag.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_04_int_ek_fruhstuck.mp4",
+    "key": "dib/video/03_04_int_ek_fruhstuck.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_05_int_hm_typischertag.mp4",
+    "key": "dib/video/03_05_int_hm_typischertag.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_06_int_ec_fruhstuck.mp4",
+    "key": "dib/video/03_06_int_ec_fruhstuck.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_07_int_hm_fruhstuck.mp4",
+    "key": "dib/video/03_07_int_hm_fruhstuck.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_08_int_bg_mittag.mp4",
+    "key": "dib/video/03_08_int_bg_mittag.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_09_int_ju_mittag.mp4",
+    "key": "dib/video/03_09_int_ju_mittag.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_19_int_ag_kaffee.mp4",
+    "key": "dib/video/03_19_int_ag_kaffee.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_21_int_ek_kaffee.mp4",
+    "key": "dib/video/03_21_int_ek_kaffee.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_22_int_hb_kaffee.mp4",
+    "key": "dib/video/03_22_int_hb_kaffee.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_23_int_sco_kaffee.mp4",
+    "key": "dib/video/03_23_int_sco_kaffee.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_24_int_bg_morgenmensch.mp4",
+    "key": "dib/video/03_24_int_bg_morgenmensch.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_25_int_ek_morgenmensch.mp4",
+    "key": "dib/video/03_25_int_ek_morgenmensch.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_26_int_hb_morgenmensch.mp4",
+    "key": "dib/video/03_26_int_hb_morgenmensch.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_27_int_ju_morgenmensch.mp4",
+    "key": "dib/video/03_27_int_ju_morgenmensch.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_20_int_hm_morgenmensch.mp4",
+    "key": "dib/video/03_20_int_hm_morgenmensch.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_28_int_ag_morgenmensch.mp4",
+    "key": "dib/video/03_28_int_ag_morgenmensch.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_30_int_ec_morgenmensch.mp4",
+    "key": "dib/video/03_30_int_ec_morgenmensch.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_31_int_sco_morgenmensch.mp4",
+    "key": "dib/video/03_31_int_sco_morgenmensch.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_29_int_hm_kaffee.mp4",
+    "key": "dib/video/03_29_int_hm_kaffee.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/03_53_int_sco_fruhstuck.mp4",
+    "key": "dib/video/03_53_int_sco_fruhstuck.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_01_int_bg_freizeit.mp4",
+    "key": "dib/video/04_01_int_bg_freizeit.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_02_int_ek_freizeit.mp4",
+    "key": "dib/video/04_02_int_ek_freizeit.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_03_int_hb_freizeit.mp4",
+    "key": "dib/video/04_03_int_hb_freizeit.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_04_int_ju_freizeit.mp4",
+    "key": "dib/video/04_04_int_ju_freizeit.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_05_int_ph_freizeit.mp4",
+    "key": "dib/video/04_05_int_ph_freizeit.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_06_int_ag_freizeit.mp4",
+    "key": "dib/video/04_06_int_ag_freizeit.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_07_int_hm_freizeit.mp4",
+    "key": "dib/video/04_07_int_hm_freizeit.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_08_int_ec_freizeit.mp4",
+    "key": "dib/video/04_08_int_ec_freizeit.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_09_int_sco_freizeit.mp4",
+    "key": "dib/video/04_09_int_sco_freizeit.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_10_int_scl_freizeit.mp4",
+    "key": "dib/video/04_10_int_scl_freizeit.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_11_int_bg_kleidung.mp4",
+    "key": "dib/video/04_11_int_bg_kleidung.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_12_int_ek_kleidung.mp4",
+    "key": "dib/video/04_12_int_ek_kleidung.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_13_int_hb_kleidung.mp4",
+    "key": "dib/video/04_13_int_hb_kleidung.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_14_int_ec_keidung.mp4",
+    "key": "dib/video/04_14_int_ec_keidung.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_15_int_sco_kleidung.mp4",
+    "key": "dib/video/04_15_int_sco_kleidung.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_16_int_bg_musik.mp4",
+    "key": "dib/video/04_16_int_bg_musik.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_17_int_ek_musik.mp4",
+    "key": "dib/video/04_17_int_ek_musik.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_18_int_hb_musik.mp4",
+    "key": "dib/video/04_18_int_hb_musik.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_19_int_ju_musik.mp4",
+    "key": "dib/video/04_19_int_ju_musik.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_20_int_ph_musik.mp4",
+    "key": "dib/video/04_20_int_ph_musik.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_21_int_ec_musik.mp4",
+    "key": "dib/video/04_21_int_ec_musik.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_22_int_hm_musik.mp4",
+    "key": "dib/video/04_22_int_hm_musik.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_23_int_scl_musik.mp4",
+    "key": "dib/video/04_23_int_scl_musik.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_24_int_sco_musik.mp4",
+    "key": "dib/video/04_24_int_sco_musik.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_25_int_ag_musik.mp4",
+    "key": "dib/video/04_25_int_ag_musik.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_26_int_bg_filmbuch.mp4",
+    "key": "dib/video/04_26_int_bg_filmbuch.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_27_int_ju_filmbuch.mp4",
+    "key": "dib/video/04_27_int_ju_filmbuch.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_28_int_hb_filmbuch.mp4",
+    "key": "dib/video/04_28_int_hb_filmbuch.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_29_int_ju_sport.mp4",
+    "key": "dib/video/04_29_int_ju_sport.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/04_30_int_ek_sport.mp4",
+    "key": "dib/video/04_30_int_ek_sport.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_01_int_bg_familie.mp4",
+    "key": "dib/video/05_01_int_bg_familie.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_02_int_ju_familie.mp4",
+    "key": "dib/video/05_02_int_ju_familie.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_03_int_ag_familie.mp4",
+    "key": "dib/video/05_03_int_ag_familie.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_04_int_hm_familie.mp4",
+    "key": "dib/video/05_04_int_hm_familie.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_05_int_ec_familie.mp4",
+    "key": "dib/video/05_05_int_ec_familie.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_06_int_sco_familie.mp4",
+    "key": "dib/video/05_06_int_sco_familie.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_07_int_scl_familie.mp4",
+    "key": "dib/video/05_07_int_scl_familie.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_08_int_ek_familie.mp4",
+    "key": "dib/video/05_08_int_ek_familie.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_09_int_ph_familie.mp4",
+    "key": "dib/video/05_09_int_ph_familie.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_10_int_bg_hause.mp4",
+    "key": "dib/video/05_10_int_bg_hause.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_11_int_ju_hause.mp4",
+    "key": "dib/video/05_11_int_ju_hause.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_12_int_bg_feiertag.mp4",
+    "key": "dib/video/05_12_int_bg_feiertag.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_13_int_ek_feiertag.mp4",
+    "key": "dib/video/05_13_int_ek_feiertag.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_14_int_ju_feiertag.mp4",
+    "key": "dib/video/05_14_int_ju_feiertag.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_15_int_ag_feiertag.mp4",
+    "key": "dib/video/05_15_int_ag_feiertag.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_16_int_sco_feiertag.mp4",
+    "key": "dib/video/05_16_int_sco_feiertag.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_17_int_hm_feiertage.mp4",
+    "key": "dib/video/05_17_int_hm_feiertage.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_18_int_ec_feiertag.mp4",
+    "key": "dib/video/05_18_int_ec_feiertag.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_22_int_hm_geburtstag.mp4",
+    "key": "dib/video/05_22_int_hm_geburtstag.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_23_int_ec_geburtstag.mp4",
+    "key": "dib/video/05_23_int_ec_geburtstag.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_24_int_sco_geburtstag.mp4",
+    "key": "dib/video/05_24_int_sco_geburtstag.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_25_int_ju_geburtstag.mp4",
+    "key": "dib/video/05_25_int_ju_geburtstag.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/05_26_int_ek_geburtstag.mp4",
+    "key": "dib/video/05_26_int_ek_geburtstag.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/06_01_int_ag_reisen.mp4",
+    "key": "dib/video/06_01_int_ag_reisen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/06_02_int_hm_reisen.mp4",
+    "key": "dib/video/06_02_int_hm_reisen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/06_03_int_ec_reisen.mp4",
+    "key": "dib/video/06_03_int_ec_reisen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/06_04_int_sco_reisen.mp4",
+    "key": "dib/video/06_04_int_sco_reisen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/06_05_int_scl_reisen.mp4",
+    "key": "dib/video/06_05_int_scl_reisen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/06_06_int_bg_reisen.mp4",
+    "key": "dib/video/06_06_int_bg_reisen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/06_07_int_ju_reisen.mp4",
+    "key": "dib/video/06_07_int_ju_reisen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/06_08_int_ak_guenstig.mp4",
+    "key": "dib/video/06_08_int_ak_guenstig.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/06_09_int_ek_guenstig.mp4",
+    "key": "dib/video/06_09_int_ek_guenstig.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/06_10_int_sco_guenstig.mp4",
+    "key": "dib/video/06_10_int_sco_guenstig.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/06_11_int_ph_bericht.mp4",
+    "key": "dib/video/06_11_int_ph_bericht.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/06_12_int_ek_reisen.mp4",
+    "key": "dib/video/06_12_int_ek_reisen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/06_16_int_scl_bericht.mp4",
+    "key": "dib/video/06_16_int_scl_bericht.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/06_17_int_ag_bericht.mp4",
+    "key": "dib/video/06_17_int_ag_bericht.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/06_20_int_hb_naechste.mp4",
+    "key": "dib/video/06_20_int_hb_naechste.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/06_21_int_ju_naechste.mp4",
+    "key": "dib/video/06_21_int_ju_naechste.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/06_22_int_bg_naechste.mp4",
+    "key": "dib/video/06_22_int_bg_naechste.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/07_04_int_hm_gesundleben.mp4",
+    "key": "dib/video/07_04_int_hm_gesundleben.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/07_01_int_bg_gesundleben.mp4",
+    "key": "dib/video/07_01_int_bg_gesundleben.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/07_02_int_ek_gesundleben.mp4",
+    "key": "dib/video/07_02_int_ek_gesundleben.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/07_03_int_ju_gesundleben.mp4",
+    "key": "dib/video/07_03_int_ju_gesundleben.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/07_13_int_hm_schlafen.mp4",
+    "key": "dib/video/07_13_int_hm_schlafen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/07_05_int_ec_gesundleben.mp4",
+    "key": "dib/video/07_05_int_ec_gesundleben.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/07_06_int_bg_gesundessen.mp4",
+    "key": "dib/video/07_06_int_bg_gesundessen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/07_07_int_ek_gesundessen.mp4",
+    "key": "dib/video/07_07_int_ek_gesundessen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/07_10_int_bg_schlafen.mp4",
+    "key": "dib/video/07_10_int_bg_schlafen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/07_11_int_ek_schlafen.mp4",
+    "key": "dib/video/07_11_int_ek_schlafen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/07_12_int_ju_schlafen.mp4",
+    "key": "dib/video/07_12_int_ju_schlafen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/07_14_int_ec_schlafen.mp4",
+    "key": "dib/video/07_14_int_ec_schlafen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/07_15_int_sco_schlafen.mp4",
+    "key": "dib/video/07_15_int_sco_schlafen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/07_17_int_hb_gesundleben.mp4",
+    "key": "dib/video/07_17_int_hb_gesundleben.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/07_18_int_hb_beimarzt.mp4",
+    "key": "dib/video/07_18_int_hb_beimarzt.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_01_int_ek_beziehungen.mp4",
+    "key": "dib/video/08_01_int_ek_beziehungen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_02_int_ec_beziehungen.mp4",
+    "key": "dib/video/08_02_int_ec_beziehungen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_03_int_sco_beziehungen.mp4",
+    "key": "dib/video/08_03_int_sco_beziehungen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_04_int_bg_beziehungen.mp4",
+    "key": "dib/video/08_04_int_bg_beziehungen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_05_int_ju_beziehungen.mp4",
+    "key": "dib/video/08_05_int_ju_beziehungen.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_08_int_bg_partner.mp4",
+    "key": "dib/video/08_08_int_bg_partner.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_09_int_ju_partner.mp4",
+    "key": "dib/video/08_09_int_ju_partner.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_10_int_ec_partner.mp4",
+    "key": "dib/video/08_10_int_ec_partner.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_11_int_ek_mitbewohner.mp4",
+    "key": "dib/video/08_11_int_ek_mitbewohner.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_12_int_sco_mitbewohner.mp4",
+    "key": "dib/video/08_12_int_sco_mitbewohner.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_13_int_ju_mitbewohner.mp4",
+    "key": "dib/video/08_13_int_ju_mitbewohner.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_15_int_bg_mitbewohner.mp4",
+    "key": "dib/video/08_15_int_bg_mitbewohner.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_17_int_ek_lebenin10.mp4",
+    "key": "dib/video/08_17_int_ek_lebenin10.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_18_int_ec_lebenin10.mp4",
+    "key": "dib/video/08_18_int_ec_lebenin10.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_19_int_ju_lebenin10.mp4",
+    "key": "dib/video/08_19_int_ju_lebenin10.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_20_int_bg_lebenin10.mp4",
+    "key": "dib/video/08_20_int_bg_lebenin10.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_21_int_ek_arbeit.mp4",
+    "key": "dib/video/08_21_int_ek_arbeit.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_22_int_ju_arbeit.mp4",
+    "key": "dib/video/08_22_int_ju_arbeit.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/08_23_int_bg_arbeit.mp4",
+    "key": "dib/video/08_23_int_bg_arbeit.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_02_int_ek_engagiert.mp4",
+    "key": "dib/video/09_02_int_ek_engagiert.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_03_int_hm_gegenseitig.mp4",
+    "key": "dib/video/09_03_int_hm_gegenseitig.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_04_int_ec_engagiert.mp4",
+    "key": "dib/video/09_04_int_ec_engagiert.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_05_int_bg_engagiert.mp4",
+    "key": "dib/video/09_05_int_bg_engagiert.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_06_int_ju_engagiert.mp4",
+    "key": "dib/video/09_06_int_ju_engagiert.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_07_int_bg_informiert.mp4",
+    "key": "dib/video/09_07_int_bg_informiert.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_08_int_ek_informiert.mp4",
+    "key": "dib/video/09_08_int_ek_informiert.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_09_int_hb_informiert.mp4",
+    "key": "dib/video/09_09_int_hb_informiert.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_10_int_ju_informiert.mp4",
+    "key": "dib/video/09_10_int_ju_informiert.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_11_int_ph_informiert.mp4",
+    "key": "dib/video/09_11_int_ph_informiert.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_12_int_ak_informiert.mp4",
+    "key": "dib/video/09_12_int_ak_informiert.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_13_int_hm_engagiert.mp4",
+    "key": "dib/video/09_13_int_hm_engagiert.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_13_int_ec_informiert.mp4",
+    "key": "dib/video/09_13_int_ec_informiert.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_14_int_sco_informiert.mp4",
+    "key": "dib/video/09_14_int_sco_informiert.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_15_int_sco_systeme.mp4",
+    "key": "dib/video/09_15_int_sco_systeme.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_16_int_bg_systeme.mp4",
+    "key": "dib/video/09_16_int_bg_systeme.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_17_int_ek_systeme.mp4",
+    "key": "dib/video/09_17_int_ek_systeme.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_21_int_bg_gegenseitig.mp4",
+    "key": "dib/video/09_21_int_bg_gegenseitig.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_22_int_ek_gegenseitig.mp4",
+    "key": "dib/video/09_22_int_ek_gegenseitig.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_23_int_ju_gegenseitig.mp4",
+    "key": "dib/video/09_23_int_ju_gegenseitig.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_24_int_hm_gegenseitig.mp4",
+    "key": "dib/video/09_24_int_hm_gegenseitig.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_25_int_ec_gegenseitig.mp4",
+    "key": "dib/video/09_25_int_ec_gegenseitig.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  },
+  {
+    "sourceUrl": "https://media.la.utexas.edu/dib/video/09_26_int_sco_gegenseitig.mp4",
+    "key": "dib/video/09_26_int_sco_gegenseitig.mp4",
+    "kind": "VIDEO",
+    "license": "CC BY 4.0",
+    "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
+  }
+]
