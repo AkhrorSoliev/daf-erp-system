@@ -1,6 +1,6 @@
 {
   "source": "DIB",
-  "harvestedAt": "2026-08-26T18:40:58.327Z",
+  "harvestedAt": "2026-08-26T19:12:24.542Z",
   "license": "CC BY 4.0",
   "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0",
   "chapters": [
@@ -20796,7 +20796,148 @@
           "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
         }
       ],
-      "exercises": []
+      "exercises": [
+        {
+          "kind": "MC",
+          "sentenceDe": "der alte König: Das moderne Leben! Wir haben ___ statt eines Königs! Ich muss nicht mehr arbeiten!",
+          "options": [
+            "a. einen Präsidenten",
+            "b. den Präsident",
+            "c. des Präsidentens",
+            "d. eines Präsidents"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "no_04",
+          "id": "no_04_fib_1"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Rotkäppchen: Stimmt! Ich habe vor kurzem ___ getroffen, und wir gehen miteinander (we are dating). Das hätte ich im 19. Jahrhundert nicht machen dürfen!!!",
+          "options": [
+            "a. ein Jungen",
+            "b. eines Jungens",
+            "c. mit einem Jungen",
+            "d. einen Jungen"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "no_04",
+          "id": "no_04_fib_2"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Schneewittchen: Ach, keine Frage! Das moderne Leben gefällt mir viel besser! Ich schreibe im Moment mit ___ einen Artikel über die Gleichberechtigung der Märchenfiguren!",
+          "options": [
+            "a. einem Soziologer",
+            "b. einem Soziologen",
+            "c. des Soziologisten",
+            "d. einen Soziologen"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "no_04",
+          "id": "no_04_fib_3"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "die alte Hexe: Ich bin ganz anderer Meinung! Das alte Leben war viel mehr nach ___ ! Damals hatten die Kinder so richtig Angst vor Hexen, aber heute lieben sie uns ... dummer Harry Potter!",
+          "options": [
+            "a. meinem Herzen",
+            "b. meines Herzens",
+            "c. meinen Herzen",
+            "d. dem Herzens"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "no_04",
+          "id": "no_04_fib_4"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "das brave Mädchen: Es ist mir völlig egal! Heutzutage habe ich genauso ___ , wie in der ursprünglichen (original) Geschichte! Ich will endlich einen haben!!!!",
+          "options": [
+            "a. keinen Namen",
+            "b. kein Name",
+            "c. einem Namen",
+            "d. keines Namens"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "no_04",
+          "id": "no_04_fib_5"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "der Prinz: Tja, das alte Leben war viel besser. Damals hielten mich die Menschen für ___ und heute bin ich - dank dem Feminismus - vollkommen ersetzlich (replaceable). So ein Mist!",
+          "options": [
+            "a. einen Held",
+            "b. eines Heldens",
+            "c. einen Helden",
+            "d. dem Helden"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "no_04",
+          "id": "no_04_fib_6"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "der Froschkönig: Ich stimme mit dir überein, Theo! Damals musste mich die Prinzessin küssen, und sie liebte mich, ___ ! Heute nicht mehr! Ich bin total deprimiert! Wo ist mein Bier?",
+          "options": [
+            "a. einen Prinzen",
+            "b. den Prinzen",
+            "c. des Prinzen",
+            "d. eines Prinzens"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "no_04",
+          "id": "no_04_fib_7"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "der Esel: Ach, das Leben im Schloss ist viel leichter! Es gibt ___ , der mich wegschickt! Ich kann in diesem Märchen den ganzen Tag ruhig herumtrödeln (putz around).",
+          "options": [
+            "a. einen Bauern",
+            "b. den Bauern",
+            "c. des Bauerns",
+            "d. keinen Bauern"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "no_04",
+          "id": "no_04_fib_8"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Gerdi: Weder noch (neither one)! Ich möchte wieder zwischen den beiden Märchen sein. Ich kann ___ trauen, weil ich mein ganzes Geld verloren habe! Dumme Arbeitserlaubnis (work permit)!",
+          "options": [
+            "a. keinem Menschen",
+            "b. keinen Menschen",
+            "c. einem Menschen",
+            "d. kein Mensch"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "no_04",
+          "id": "no_04_fib_9"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "die böse Königin: Das moderne Leben, das ist klar! Ich lese gerade eine Geschichte von ___ , die von einer anderen, wunderschönen Königin handelt! Traumhaftes Märchen!",
+          "options": [
+            "a. dem Dänen",
+            "b. Däner",
+            "c. einem Dänen",
+            "d. einen Dänen"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "no_04",
+          "id": "no_04_fib_10"
+        }
+      ]
     },
     {
       "code": "det_01",
@@ -20986,7 +21127,256 @@
           "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
         }
       ],
-      "exercises": []
+      "exercises": [
+        {
+          "kind": "MC",
+          "sentenceDe": "___ Mal, wenn die Königstochter ihre goldene Kugel in die Höhe wirft, fällt die Kugel wieder in ihre Hand.",
+          "options": [
+            "a. Jenes",
+            "b. Jedes"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_1"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Aber eines Tages fällt ___ Kugel auf die Erde und rollt in den Brunnen hinein.",
+          "options": [
+            "a. diese",
+            "b. solche"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_2"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Die Königstochter fängt an zu weinen, denn ___ Kugeln sind sehr teuer!",
+          "options": [
+            "a. solche",
+            "b. welche"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_3"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Plötzlich erscheint ein Frosch am Rande des Brunnens. Die Königstochter bietet ihm ___ Arten von Reichtümern (sorts of riches) an, wenn er die Kugel wieder heraufholt.",
+          "options": [
+            "a. jede",
+            "b. alle"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_4"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Der Frosch will aber keine Reichtümer, und er erzählt ihr, ___ Belohnung (reward) er lieber mag: die Gesellschaft der Königstochter (the company of the king's daughter)!",
+          "options": [
+            "a. welche",
+            "b. manche"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_5"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Nachdem die Königstochter ihm ihre Gesellschaft verspricht, bekommt sie ___ kostbare Spielzeug zurück.",
+          "options": [
+            "a. welches",
+            "b. jenes"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_6"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Sobald sie die Kugel aufhebt, läuft die Königstochter nach Hause, ohne den Frosch mitzunehmen. \" ___ ein Verrat!\" denkt sich der Frosch, und er beginnt, ihr nachzulaufen.",
+          "options": [
+            "a. Manch",
+            "b. Solch"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_7"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "___ ein Frosch hätte aufgegeben (would have given up) auf dem langen Weg zum Schloss.",
+          "options": [
+            "a. Manch",
+            "b. Welch"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_8"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Aber ___ Frosch ist viel stärker und mutiger als die normalen Frösche, und er kommt am nächsten Tag endlich an.",
+          "options": [
+            "a. jeder",
+            "b. dieser"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_9"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Der Frosch klopft an die Tür, und die Königstochter muss ihrem Vater vom vorherigen Nachmittag erzählen. Der König sagt, dass sie ___ Versprechen halten muss.",
+          "options": [
+            "a. jedes",
+            "b. solches"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_10"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Die Königstochter öffnet die Tür und ___ Hofleute sind erstaunt, als der Frosch in den Speisesaal hüpft.",
+          "options": [
+            "a. alle",
+            "b. welche"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_11"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "\"Heb mich hinauf zu dir!\" sagt der Frosch zu ihr; er will auf dem Tisch sitzen, um von ihrem Teller ___ wohlschmeckenden Bissen (tasty morsels) zu kosten.",
+          "options": [
+            "a. manche",
+            "b. jede"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_12"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Zunächst will der Frosch in dem Bett der Königstochter schlafen - ___ sie ihm schon versprochen hatte - aber sie wird zornig und wirft ihn gegen die Wand des Schlafzimmers.",
+          "options": [
+            "a. solches",
+            "b. welches"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_13"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Als der Frosch von der Wand auf den Boden fällt, ist er kein Frosch mehr, sondern ___ hübsche Königssohn, der von einer bösen Hexe verwünscht wurde!",
+          "options": [
+            "a. jener",
+            "b. jeder"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_14"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Ich muss mich entscheiden, ___ Leben mir besser gefällt: das Leben als Frosch oder das Leben als König.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_15"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Als Frosch konnte ich ___ Tag schwimmen und faulenzen, aber jetzt als König muss ich immer arbeiten.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_16"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Außerdem darf ich jetzt nur ___ eine Prinzessin küssen!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_17"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Für ___ Frauenjäger (womanizers) wie mich ist das fast unerträglich!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_18"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Wenn ich wieder Frosch wäre (if I were a frog again), könnte ich ___ andere Prinzessinnen küssen. Niemand würde mich erkennen! (No one would recognize me!)",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_19"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Ich muss versuchen, wieder Kontakt mit ___ Hexe aufzunehmen, die mich ursprünglich verzaubert hat.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_20"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Ich bin sicher verrückt! Haben ___ Könige dumme Wünsche wie ich?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_21"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Ja, ___ Idee, wieder Frosch zu werden, ist lächerlich. Habe ich die schmerzhafte Verwandlung schon vergessen?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_22"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Vielleicht soll ich ___ Kafka-Novelle (f.) noch einmal lesen, um mich an das furchtbare Erlebnis zu erinnern!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_23"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Ich lasse mich lieber von der Prinzessin scheiden; heutzutage lassen sich ___ Leute scheiden!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "det_02",
+          "id": "det_02_fib_24"
+        }
+      ]
     },
     {
       "code": "det_03",
@@ -22250,6 +22640,78 @@
           "answerStatus": "MISSING",
           "grammarCode": "v_02",
           "id": "v_02_fib_8"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Die Tiere ___ (machen) viel Lärm: der Esel ___ (schreien), der Hund ___ (bellen), die Katze ___ (miauen) und der Hahn ___ (krähen).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "v_02",
+          "id": "v_02_fib_9"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Die Räuber ___ (glauben), dass die Tiere Gespenster (ghosts) sind und laufen weg.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "v_02",
+          "id": "v_02_fib_10"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Die Tiere essen und ___ (trinken) und später ___ (gehen) sie schlafen.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "v_02",
+          "id": "v_02_fib_11"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Esel ___ (stehen) im Stall, der Hund ___ (liegen) hinter der Tür, die Katze auf dem Herd (hearth) und der Hahn ___ (sitzen) auf der Fensterbank (window sill).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "v_02",
+          "id": "v_02_fib_12"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Ein kleines Licht (light) ___ (brennen) auf dem Tisch.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "v_02",
+          "id": "v_02_fib_13"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Ein Räuber ___ (kommen) zurück (back).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "v_02",
+          "id": "v_02_fib_14"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Er ___ (wecken) die Tiere, als er ins Haus ___ (gehen).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "v_02",
+          "id": "v_02_fib_15"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Die Tiere ___ (erschrecken) ihn. Die Katze ___ (kratzen) den Räuber, der Hund ___ (beißen) in sein Bein (leg), der Hahn ___ (rufen) 'kikeriki' von der Fensterbank und der Esel tritt ihn mit dem Hinterfuß (kicks him with a hind leg).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "v_02",
+          "id": "v_02_fib_16"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Räuber ___ (fliehen) und weder er noch (neither ... nor ...) die anderen Räuber ___ (kommen) zurück.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "v_02",
+          "id": "v_02_fib_17"
         }
       ]
     },
@@ -22684,7 +23146,104 @@
           "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
         }
       ],
-      "exercises": []
+      "exercises": [
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der alte König: Die Musik der Bremer Stadtmusikanten ___ mir sehr!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_04",
+          "id": "vi_04_fib_1"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Wolf: Ich ___ besonders die Kostüme (costumes) ___ .",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_04",
+          "id": "vi_04_fib_2"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Froschkönig: Ich auch. Als Löwe ___ ich den Frauen mehr als als Frosch.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_04",
+          "id": "vi_04_fib_3"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Rotkäppchen: Herr König, wie ___ Ihnen mein neues Käppchen? Es ist rot!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_04",
+          "id": "vi_04_fib_4"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Die sieben Zwerge: Wir ___ unsere neue Wohnung sehr ___ ! Sie ist groß und hell, und es gibt sogar einen Aufzug (elevator).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_04",
+          "id": "vi_04_fib_5"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Schneewittchen: Hmmm... Der Jäger ___ den Wein ein bisschen zu ___",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_04",
+          "id": "vi_04_fib_6"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Die Hexe: Mir ___ diese Cocktailpartys überhaupt nicht! So viele Kinder, und ich kann nichts tun!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_04",
+          "id": "vi_04_fib_7"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Prinz: Schneewittchen, du ___ mir so sehr!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_04",
+          "id": "vi_04_fib_8"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Schneewittchen: Liebling, ich ___ dich auch ___ .",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_04",
+          "id": "vi_04_fib_9"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "die böse Königin: Spieglein (mirror), Spieglein an der Wand, wie ___ ich dir?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_04",
+          "id": "vi_04_fib_10"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Das Spieglein: Frau Königin, ich kann Ihnen nicht antworten. Mir ___ Ihr Zauberspruch nicht. Sie sollten 'Spieglein, Spieglein an der Wand, wer ist die Schönste im ganzen Land' sagen! Mit Reim!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_04",
+          "id": "vi_04_fib_11"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Die Hexe: ___ du meinen neuen Zauberbesen ___ ? Jetzt mache ich das ganze Schloss mit Zauber sauber!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_04",
+          "id": "vi_04_fib_12"
+        }
+      ]
     },
     {
       "code": "vi_03",
@@ -23540,6 +24099,110 @@
           "answerStatus": "MISSING",
           "grammarCode": "vi_09",
           "id": "vi_09_fib_7"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Happy: Chef und Brummbär, warum ___ ihr nicht? Es ist erst 7 Uhr an einem Sonntagmorgen!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_09",
+          "id": "vi_09_fib_8"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Chef: Ich ___ nur bis 5 Uhr, egal ob es Mittwoch oder Sonntag ist! Ich bin alt und kann meine Gewohnheiten nicht leicht ändern.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_09",
+          "id": "vi_09_fib_9"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Happy: Und warum ___ Brummbär nicht? Und warum antwortet er mir nicht?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_09",
+          "id": "vi_09_fib_10"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Chef: Du kennst ihn doch, Happy, er ___ nicht, weil er sich gut auschlafen könnte, und dann könnte er nicht mehr so brummig sein.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_09",
+          "id": "vi_09_fib_11"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Brummbär: Hört doch auf! Ich ___ , wann ich will! 2. Im Turm 2",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_09",
+          "id": "vi_09_fib_12"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gudrun, die böse Königin: Der dumme Spiegel ___ wieder! Ich will wissen, ob ich die Schönste im Land bin!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_09",
+          "id": "vi_09_fib_13"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Heidrun: Und warum ___ du nicht?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_09",
+          "id": "vi_09_fib_14"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gudrun: Du fragst, warum ich nicht ___ ? Ich muss wissen, ob ich wieder einkaufen gehen muss, um weitere Schminke (make-up) zu kaufen!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_09",
+          "id": "vi_09_fib_15"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Heidrun (zu sich selbst): Ich mache ihr ein starkes, magisches Schlafmittel, dann ___ sie letztendlich und lässt mich in Ruhe (leaves me alone)! 3. In Wohnung 1/B",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_09",
+          "id": "vi_09_fib_16"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Hahn: Warum ___ ihr noch? Ich habe schon um 5:47 gekräht!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_09",
+          "id": "vi_09_fib_17"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Esel: Und warum, wenn ich fragen darf? Warum ___ auch du nicht weiter?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_09",
+          "id": "vi_09_fib_18"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Hahn: Das ist einfach, was wir Hähne so tun, wir ___ nur, bis die Sonne aufgeht.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_09",
+          "id": "vi_09_fib_19"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Esel: Du musst mit diesem dummen Krähen wirklich aufhören. Ich stehe gern früh auf, aber die anderen ___ lieber bis zu Mittag! Wir sind alle alt; du bist selbst älter als 200 Jahre!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vi_09",
+          "id": "vi_09_fib_20"
         }
       ]
     },
@@ -24904,7 +25567,128 @@
           "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
         }
       ],
-      "exercises": []
+      "exercises": [
+        {
+          "kind": "MC",
+          "sentenceDe": "Das arme Mädchen ___ jeden Tag arbeiten.",
+          "options": [
+            "a. muss",
+            "b. kann"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vm_01",
+          "id": "vm_01_fib_1"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Eines Tages wird ihre Hand blutig, aber sie ___ sie nicht waschen, weil der Brunnen zu tief ist.",
+          "options": [
+            "a. kann",
+            "b. will"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vm_01",
+          "id": "vm_01_fib_2"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Sie verliert ihre Spule, und ___ sie vom Brunnen zurückbringen.",
+          "options": [
+            "a. darf",
+            "b. soll"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vm_01",
+          "id": "vm_01_fib_3"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Sie steht auf einer schönen Wiese, und ___ das Brot aus dem Ofen herausziehen.",
+          "options": [
+            "a. soll",
+            "b. möchte"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vm_01",
+          "id": "vm_01_fib_4"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Zunächst schüttelt sie die Äpfel vom Baum herunter; sie ___ das, weil sie stark ist.",
+          "options": [
+            "a. will",
+            "b. kann"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vm_01",
+          "id": "vm_01_fib_5"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Als sie Frau Holle zuerst sieht, hat sie Angst vor der alten Frau (afraid of the woman) und ___ weglaufen.",
+          "options": [
+            "a. mag",
+            "b. will"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vm_01",
+          "id": "vm_01_fib_6"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Aber Frau Holle ist sehr nett und sagt: \"Wenn du alle Hausarbeiten fleißig machst, ___ es dir hier gut gehen.\"",
+          "options": [
+            "a. soll",
+            "b. will"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vm_01",
+          "id": "vm_01_fib_7"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Das Mädchen ist überrascht (surprised), weil sie das Leben sowie die Arbeit bei Frau Holle ___ .",
+          "options": [
+            "a. will",
+            "b. mag"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vm_01",
+          "id": "vm_01_fib_8"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Nach einer Weile hat sie aber Heimweh (she is homesick), und ___ wieder nach Hause.",
+          "options": [
+            "a. kann",
+            "b. will"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vm_01",
+          "id": "vm_01_fib_9"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Weil das Mädchen so hart gearbeitet hat, ___ Frau Holle es belohnen (reward); sie schenkt dem Mädchen viel Gold.",
+          "options": [
+            "a. möchte",
+            "b. darf"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vm_01",
+          "id": "vm_01_fib_10"
+        }
+      ]
     },
     {
       "code": "vm_02",
@@ -25310,6 +26094,214 @@
           "answerStatus": "MISSING",
           "grammarCode": "vcp_01",
           "id": "vcp_01_fib_12"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Ich ___ gerade von unserem Haus gekommen.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_13"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Wolf, du ___ hast mich auf dem Pfad (path) im Wald getroffen, und hast mich gefragt, ob ich Blumen pflücken wollte.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_14"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Ich sagte ja, und du ___ so schnell wie der Wind vor mir weggelaufen.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_15"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Ich ___ ganz langsam zu Omas Haus gegangen; es war ein wunderschöner Tag!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_16"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Sie war noch im Bett! Ich dachte mir: \"Wie merkwürdig! Sie ___ noch nicht aufgestanden!\"",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_17"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Als ich sie begrüßte, ___ sie nicht zu mir gekommen, sondern hat weiter im Bett gelegen!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_18"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Ich merkte (I noticed) auch, dass ihre Augen ganz groß geworden ___ ! Die ganze Sache wurde immer merkwürdiger!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_19"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Ich ___ zu ihrem Bett gegangen, und habe sie gefragt, wie es ihr ging.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_20"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Sie ___ aufgesprungen, und hat mich einfach in den Mund gestopft! So was!?!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_21"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Zwei Minuten später sah ich meine Omi! Aha! Gottseidank ___ sie nicht verrückt geworden (go crazy).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_22"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Ein paar Minuten später ___ alles wieder hell (bright) geworden: Der Jäger hat uns gerettet!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_23"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Wir ___ sofort aus dem Magen des Wolfs herausgesprungen!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_24"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Jäger hat uns später erzählt: \"Ihr ___ ja echt ekelhaft (gross) gewesen ...\"",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_25"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Ja klar, ich ___ alles gesehen!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_26"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Ich ___ hinter einem Baum gestanden und mir alles angeschaut!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_27"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Die ganze Sache (the whole thing) ___ mich total fasziniert!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_28"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Als der Wolf von Rotkäppchen weggegangen ___ , ___ ich ihm gefolgt.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_29"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Rotkäppchen, du ___ ahnungslos (without a clue) zu Omis Haus gegangen.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_30"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Wolf ___ natürlich die Großmutter schon aufgefressen und sich in ihr Bett gelegt (lay down).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_31"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Rotkäppchen, du ___ gar nicht kapiert, dass es nicht deine Omi im Bett war!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_32"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Damals ___ ihr, kleine Kinder, öfters im Wald herumgelaufen... Das ___ mir immer viel Spaß gemacht!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_33"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Ihr ___ mich nie gesehen, und ich konnte euch stundenlang erschrecken!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_34"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Manche ___ nie wieder nach Hause gekommen, aber die Wölfe und ich hatten doch auch ein Recht zum Leben!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_35"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Diesmal ___ ich aber den Jäger gerufen, und er ___ fast sofort gekommen.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_36"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Die Großmutter und Rotkäppchen ___ aus dem Magen des Wolfs herausgesprungen, und ich ___ mich sehr gefreut!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_37"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Seht ihr, einmal ___ mich der Wolf gebissen (bite), und jetzt ___ letztendlich die Zeit für meine Rache gekommen (arrive)! Hahaha!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_01",
+          "id": "vcp_01_fib_38"
         }
       ]
     },
@@ -25336,7 +26328,246 @@
           "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
         }
       ],
-      "exercises": []
+      "exercises": [
+        {
+          "kind": "MC",
+          "sentenceDe": "Ein Mann und eine Frau haben sich (for themselves) schon lange ein Kind ___ .",
+          "options": [
+            "a. wünscht",
+            "b. gewünscht",
+            "c. gewünschen",
+            "d. wünschen"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_02",
+          "id": "vcp_02_fib_1"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Sie haben neben (next to) einer alten Hexe ___ .",
+          "options": [
+            "a. gelebt",
+            "b. gelebte",
+            "c. lebten",
+            "d. gelebten"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_02",
+          "id": "vcp_02_fib_2"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Der Mann hat eines Tages ___ : \"Was fehlt dir, liebe Frau?\"",
+          "options": [
+            "a. fragen",
+            "b. fragten",
+            "c. gefragt",
+            "d. gefragten"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_02",
+          "id": "vcp_02_fib_3"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Die Frau hat ihm schnell ___ : \"Wenn ich keine Rapunzeln aus dem Garten hinter unserm Hause esse, so sterbe ich!\"",
+          "options": [
+            "a. geantwortet",
+            "b. antworten",
+            "c. geantworten",
+            "d. geantwort"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_02",
+          "id": "vcp_02_fib_4"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Der Mann hat ihr von den Rapunzeln einige ___ , sobald es Nacht wurde (became night).",
+          "options": [
+            "a. geholten",
+            "b. holten",
+            "c. geholtet",
+            "d. geholt"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_02",
+          "id": "vcp_02_fib_5"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Seine Frau hat daraus sofort einen Salat ___ .",
+          "options": [
+            "a. gemachtet",
+            "b. gemächt",
+            "c. gemachen",
+            "d. gemacht"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_02",
+          "id": "vcp_02_fib_6"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Er ist am nächsten Tag wieder über die Mauer ___ , weil seine Frau noch dreimal soviel Lust auf die Rapunzeln bekam.",
+          "options": [
+            "a. geklettert",
+            "b. geklettertet",
+            "c. geklett",
+            "d. kletterte"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_02",
+          "id": "vcp_02_fib_7"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Als die Hexe das gesehen hat (saw), hat sie dem Mann und der Frau ein schreckliches Angebot ___ : \"Du kannst soviel Rapunzeln mitnehmen, wie du willst, aber du musst mir das Kind geben, das deine Frau zur Welt bringen wird.\"",
+          "options": [
+            "a. machen",
+            "b. gemächt",
+            "c. gemacht",
+            "d. gemachen"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_02",
+          "id": "vcp_02_fib_8"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Und so war das ... Sie hat für das kleine Mädchen, namens Rapunzel, wie eine Mutter ___ .",
+          "options": [
+            "a. gesorgt",
+            "b. gesorgen",
+            "c. sorgt",
+            "d. sorgen"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_02",
+          "id": "vcp_02_fib_9"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Nachdem das Mächen zwölf Jahre alt wurde, hat sie in einem Turm ___ .",
+          "options": [
+            "a. wohnen",
+            "b. gewohnt",
+            "c. gewonnen",
+            "d. wohnt"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_02",
+          "id": "vcp_02_fib_10"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Rapunzel hat lange, prächtige Haare ___ , fein wie gesponnenes Gold.",
+          "options": [
+            "a. habten",
+            "b. gehattet",
+            "c. gehat",
+            "d. gehabt"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_02",
+          "id": "vcp_02_fib_11"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Ein paar Jahre später ist ein Königssohn vorbeigeritten (rode past on horseback) und hat Rapunzels Lied ___ .",
+          "options": [
+            "a. gehört",
+            "b. hörten",
+            "c. gehorn",
+            "d. gehörtet"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_02",
+          "id": "vcp_02_fib_12"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Der Königssohn hat nach einer Tür ___ , aber konnte keine finden.",
+          "options": [
+            "a. gesuchten",
+            "b. sucht",
+            "c. gesucht",
+            "d. suchten"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_02",
+          "id": "vcp_02_fib_13"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Eines Tages (one day) hat er ___ , was die Hexe Rapunzel rief: \"Rapunzel, Rapunzel, lass dein Haar herunter.\"",
+          "options": [
+            "a. gehört",
+            "b. hörten",
+            "c. gehorn",
+            "d. gehörtet"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_02",
+          "id": "vcp_02_fib_14"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Als die Hexe dies ___ hat, hat sie Rapunzels Haare abgeschnitten (cut), und sie in eine Wüste (deserted place) gebracht.",
+          "options": [
+            "a. merken",
+            "b. gemerkt",
+            "c. gemerken",
+            "d. gemerktet"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_02",
+          "id": "vcp_02_fib_15"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Der Prinz ist vom Turm gefallen und blind geworden; aber er ist seiner Liebe in die Wüste ___ .",
+          "options": [
+            "a. gehört",
+            "b. hörten",
+            "c. gehorn",
+            "d. gefolgt"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_02",
+          "id": "vcp_02_fib_16"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Nach vielen Jahren hat er sie gefunden und sie haben noch lange glücklich und vergnügt ___ .",
+          "options": [
+            "a. geleben",
+            "b. gelebt",
+            "c. lebten",
+            "d. geliebt"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vcp_02",
+          "id": "vcp_02_fib_17"
+        }
+      ]
     },
     {
       "code": "vcp_03",
@@ -25700,7 +26931,88 @@
           "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
         }
       ],
-      "exercises": []
+      "exercises": [
+        {
+          "kind": "GAP",
+          "sentenceDe": "___ läuft weg in den großen, dunklen Wald.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_02",
+          "id": "cas_02_fib_1"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Einige Stunden später findet ___ ein kleines Haus in der Mitte des Waldes.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_02",
+          "id": "cas_02_fib_2"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "In dem Häuschen steht ___ mit sieben Tellerchen (plates), mit sieben Löffelchen (little spoons) und sieben Messerchen (little knives).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_02",
+          "id": "cas_02_fib_3"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Als es ganz dunkel wird, kommen ___ von der Arbeit (from work) nach Hause.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_02",
+          "id": "cas_02_fib_4"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "___ sagt: Wer hat auf meinem Stühlchen gesessen? (who sat on my chair?)",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_02",
+          "id": "cas_02_fib_5"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "In ihrem Schlafzimmer findet ___ das kleine, wunderschöne Kind, das nachher (afterwards) bei den Zwergen lebt (who lives with the dwarves).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_02",
+          "id": "cas_02_fib_6"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Eines Tages fragt ___ ihren Spiegel; Wer ist die Schönste im ganzen Land?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_02",
+          "id": "cas_02_fib_7"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "___ versucht, Schneewittchen zu töten: zuerst mit einem Schnürriemen (lace for her dress), mit einem giftigen Kamm (poisoned comb) und mit einem giftigem Apfel (poisoned apple).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_02",
+          "id": "cas_02_fib_8"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Die Zwerge sind traurig als Schneewittchen stirbt, aber Gott sei Dank kommt ___ und rettet Schneewittchen.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_02",
+          "id": "cas_02_fib_9"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "___ heiratet (marries) und lädt auch die Stiefmutter zur Hochzeit ein (invites the stepmother to the wedding too).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_02",
+          "id": "cas_02_fib_10"
+        }
+      ]
     },
     {
       "code": "cas_03",
@@ -25826,6 +27138,242 @@
           "answerStatus": "MISSING",
           "grammarCode": "cas_03",
           "id": "cas_03_fib_10"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Aschenputtels Mutter stirbt ganz am Anfang der Geschichte, aber ihr Geist (in spirit) ist immer ___ ihre Tochter herum.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_11"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Nach einem Jahr heiratet der Vater eine neue Frau. Das ist nicht sehr gut ___ das arme Aschenputtel. Ihre Stiefmutter ist gemein!!!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_12"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Eines Tages geht der Vater in die Messe und bringt einen Haselnussbusch ___ seine kleine Tochter mit.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_13"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Immer wenn Aschenputtel sehr traurig ist, geht sie ___ die Hintertür und ruft ihre Freunde: die Vöglein und Turteltäubchen helfen dem armen Mädchen.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_14"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Einmal gibt es einen Ball im Schloss, aber Aschenputtel darf nicht mitgehen. Sie hat nur schmutzige Kleider und hölzerne Schuhe, also geht ihre Familie ___ sie auf den Ball.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_15"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Ball dauert drei Tage, und jede Nacht verschwindet Aschenputtel ___ ein Taubenhaus (bird house for doves), damit der Prinz sie nicht findet.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_16"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Prinz kann aber ___ seine Traumfrau nicht leben! Er hat ihren Schuh, und sucht sie.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_17"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Die ältere Stiefschwester findet, dass der Schuh zu klein ___ ihren Fuss ist, und schneidet ihre Zehen ab (cuts off her toes).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_18"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Prinz setzt sie auf sein Pferd (horse), aber als sie am Friedhof vorbeireiten, singen und protestieren die Vöglein ___ die falsche Braut (bride).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_19"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der jüngeren Stiefschwester geht es nicht besser (she doesn't fare any better), und sie läuft umsonst (flutter in vain) ___ den Prinzen herum!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_20"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Dem kleinen Aschenputtel passt der Schuh aber ___ Problem!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_21"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Das Ende des Märchens ist aber grausam: Tauben und Vögel machen die beiden Stiefschwestern blind! Ich bin prinzipiell ___ solche harten, unmenschlichen Strafen (punishments)!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_22"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "___ stirbt Aschenputtels Mutter, und das kleine Mädchen geht jeden Tag zum Grab.",
+          "options": [
+            "a. Schon am Anfang",
+            "b. Schon vor Anfang",
+            "c. Anfangs",
+            "d. Am Anfangs"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_23"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Sie sitzt ___ in der Asche und sortiert Linsen!",
+          "options": [
+            "a. all Tag",
+            "b. den ganzen Tag",
+            "c. all den Tag",
+            "d. ganzer Tag"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_24"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Der Vater geht auf den Markt; er ist ___ unterwegs (on the road).",
+          "options": [
+            "a. all Tag",
+            "b. das Ende der Woche",
+            "c. dem Wochenende",
+            "d. das ganze Wochenende"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_25"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Der Ball dauert ___ .",
+          "options": [
+            "a. drei Tag",
+            "b. drei Tage",
+            "c. drei Tagen",
+            "d. nach drei Tage"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_26"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Aschenputtel sieht ___ schöner aus.",
+          "options": [
+            "a. den Abends",
+            "b. jeder Abend",
+            "c. jeden Abend",
+            "d. am abends"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_27"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Der Prinz tanzt ___ nur mit Aschenputtel. Sie läuft aber immer weg, ohne dem Prinzen ihren Namen zu sagen.",
+          "options": [
+            "a. die ganze Zeit",
+            "b. das ganzen Zeit",
+            "c. die Zeit",
+            "d. alle die Zeit"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_28"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Nach dem dritten Abend verliert Aschenputtel ihren Schuh und der Prinz verbringt ___ damit, seine Traumfrau zu finden.",
+          "options": [
+            "a. einen ganzen Nachmittag",
+            "b. ein Nachmittag",
+            "c. der Nachmittag",
+            "d. am letzten Nachmittag"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_29"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Zuerst reitet er mit den Stiefschwestern fort, aber ___ kehrt er zurück. Keine von beiden ist die richtige Braut!",
+          "options": [
+            "a. später ein paar Minuten",
+            "b. Minute später",
+            "c. später einige Minute",
+            "d. ein paar Minuten später"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_30"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "___ bringt der Vater Aschenputtel zum Prinzen, und natürlich passt ihr der Schuh wie angegossen (as if they poured it on her foot).",
+          "options": [
+            "a. Später in einen Stunde",
+            "b. Stunden",
+            "c. später eine Stunde",
+            "d. eine Stunde später"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_31"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "___ feiern sie schon Hochzeit, und wenn sie nicht gestorben sind so leben sie noch heute ...",
+          "options": [
+            "a. Nächster Tag",
+            "b. Den nächsten Tag",
+            "c. Nach dem Tag",
+            "d. Dem Tag nach"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_03",
+          "id": "cas_03_fib_32"
         }
       ]
     },
@@ -26385,6 +27933,230 @@
           "answerStatus": "MISSING",
           "grammarCode": "cas_07",
           "id": "cas_07_fib_10"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "___ einer Woche ist sie in Hamburg angekommen.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_11"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Sie wollte studieren und ging bald ___ dem Anmeldeamt, um ihr Studium beginnen zu können.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_12"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Am nächsten Tag hat sie ___ einer internationalen Firma ein Praktikum begonnen.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_13"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "___ ihrer Fakultät bekam sie auch ein super Stipendium (scholarship).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_14"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "___ ihrem ersten Seminar suchte sie eine Wohnung.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_15"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Sie kannte niemanden ___ ihren Kommilitonen (classmates) in ihren Seminaren.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_16"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Aber sie wollte ___ ihnen überhaupt nicht sprechen; sie hatte nur für den Professor Zeit! Sie ist sehr fleißig geworden!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_17"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Jeden Nachmittag rennt sie ___ dem Klassenzimmer und schaltet ihren Computer an, um ihre Aktien (stocks) zu kontrollieren.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_18"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Ihre Aktien steigen regelmäßig und sie verdient (earns) immer mehr Geld ___ ihrer Investition.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_19"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "___ ihrem Jobinterview ist sie noch hochnäsiger geworden!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_20"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Wie gesagt, geht es Gerdi am Anfang ganz gut. Sie ___ einem tollen Sportklub an und hat ihr eigenes Zimmer in Uninähe.",
+          "options": [
+            "a. gehört",
+            "b. zuhört"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_21"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Sie ___ vielen Männern, weil sie gleichzeitig hübsch und sportlich ist.",
+          "options": [
+            "a. imponiert",
+            "b. gratuliert"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_22"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Als sie ihr Studium beendet, ___ viele Leute der jungen Stundentin.",
+          "options": [
+            "a. antworten",
+            "b. gratulieren"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_23"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Eines Tages ___ aber der neuen Finanzexpertin etwas Schreckliches.",
+          "options": [
+            "a. passiert",
+            "b. passt"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_24"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Die Regierung ___ dem Mädchen einen Brief, dass sie keinen deutschen Ausweis hat und dass ihr Konto eingefroren ist (account is frozen).",
+          "options": [
+            "a. schenkt",
+            "b. schickt"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_25"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Sie ___ ihren Augen nicht: \"Wer ist denn noch deutscher als eine Märchenfigur aus einem Märchen der Gebrüder Grimm?!?\"",
+          "options": [
+            "a. antwortet",
+            "b. glaubt"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_26"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Ihr Verlust (loss) ___ der jungen Frau körperlich (physically) ___ . Sie kann kaum atmen (breathe), schlafen oder essen!",
+          "options": [
+            "a. tut [...] weh",
+            "b. fällt [...] ein"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_27"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Die Regierung ___ dem Mädchen für ihre regelmäßigen (regular) Briefe, aber sagt ihm, dass es mit dem Briefschreiben endlich aufhören soll (should stop).",
+          "options": [
+            "a. gibt",
+            "b. dankt"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_28"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Die Regierung ___ der Studentin mit Gefängnis, wenn sie nicht aufhört!",
+          "options": [
+            "a. droht",
+            "b. dient"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_29"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "So kann sie nichts anderes tun als aufzuhören. Sie ___ einem Vermieter (landlord), dessen (whose) Anzeige sie in der Zeitung gesehen hat.",
+          "options": [
+            "a. antwortet",
+            "b. folgt"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_30"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Nach zwei Tagen zieht sie im Schloss ein; niemand ___ der Studentin, weil sie keine Freunde hat!",
+          "options": [
+            "a. gibt",
+            "b. hilft"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_31"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Schon am ersten Tag ___ sie ihren drei Mitbewohnern, Dornröschen, Rapunzel und Aschenputtel. Gerdi denkt: Ach, das überleb' ich nicht!! Ich brauche meine Privatsphäre.",
+          "options": [
+            "a. begegnet",
+            "b. passt"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_07",
+          "id": "cas_07_fib_32"
         }
       ]
     },
@@ -26767,6 +28539,102 @@
           "answerStatus": "MISSING",
           "grammarCode": "cas_09",
           "id": "cas_09_fib_12"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Die Hexe ist aber natürlich sehr böse und schneidet Rapunzels Haare ab; die schönen Haare liegen auf ___ Erde.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_09",
+          "id": "cas_09_fib_13"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Sie will, dass der Prinz nicht mehr in ___ Turm klettert.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_09",
+          "id": "cas_09_fib_14"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Sie schickt Rapunzel weg in ___ Wüste.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_09",
+          "id": "cas_09_fib_15"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Die Hexe bindet die Haare an ___ Fenster und wartet auf den Königgsohn.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_09",
+          "id": "cas_09_fib_16"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Als in der Nacht der Prinz unter ___ Fenster steht, lässt die böse Hexe Rapunzels Haare hinunter.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_09",
+          "id": "cas_09_fib_17"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Prinz klettert nach oben, und die Hexe sagt ihm, dass Rapunzel nicht mehr in ___ Turm ist.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_09",
+          "id": "cas_09_fib_18"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Königssohn ist so traurig, dass er aus dem Turm springt und in ___ Dornen fällt, die vor ___ Turm stehen.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_09",
+          "id": "cas_09_fib_19"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Die Dornen zerstechen ihm die Augen und er geht blind in ___ Welt hinaus.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_09",
+          "id": "cas_09_fib_20"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Einige Jahre lang wandert er, bis er endlich an ___ Haus vorbeikommt, wo Rapunzel und ihre zwei Kinder leben.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_09",
+          "id": "cas_09_fib_21"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Sie sind sehr froh, und weinen vor ___ Freude (joy).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_09",
+          "id": "cas_09_fib_22"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Er steht glücklich zwischen ___ Kindern und lächelt seine Frau an.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_09",
+          "id": "cas_09_fib_23"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Danach führt er seine Familie in ___ Königreich, das er vor vielen Jahren verlassen hat.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "cas_09",
+          "id": "cas_09_fib_24"
         }
       ]
     },
@@ -27192,7 +29060,126 @@
           "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
         }
       ],
-      "exercises": []
+      "exercises": [
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Rotkäppchen: Gretel, wie findest du die Geschichte über Rumpelstilzchen?",
+          "tokens": [
+            ": Gretel, wie findest du die Geschichte über Rumpelstilzchen?"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_03",
+          "id": "pro_03_fib_1"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gretel: Ich finde ___ gleichzeitig (simultaneously) grausam und dumm.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_03",
+          "id": "pro_03_fib_2"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Rotkäppchen: Meinst du, Gretel, dass die Leser ___ auch doof finden?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_03",
+          "id": "pro_03_fib_3"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gretel: Ich glaube nicht. Wir sind süß und jung und sogar Opferfiguren (victim figures). Aber Rumpelstilzchen, man muss ___ hassen, weil er das Kind der Königin wegnehmen wollte (he wanted to take the queen's baby). B. In der Schlange vor dem Kino (in the line, in front of the movies)",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_03",
+          "id": "pro_03_fib_4"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Rotkäppchen: Welchen Film möchtest du sehen, Gretel? Hast du diesen neuen deutschen Kunstfilm gesehen? Er heißt \"Das Leben der Anderen.\"",
+          "tokens": [
+            ": Welchen Film möchtest du sehen, Gretel? Hast du diesen neuen deutschen Kunstfilm gesehen? Er heißt \"Das Leben der Anderen.\""
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_03",
+          "id": "pro_03_fib_5"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gretel: Nein, ich habe ___ noch nicht gesehen. Aber siehst du den Wolf, er steht hinter uns in der Schlange!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_03",
+          "id": "pro_03_fib_6"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Rotkäppchen: Ja, ich sehe ___ . Also, tun wir so, als ob wir diesen Hollywood Film sehen wollten, okay? Wenn er uns folgen will (if he wants to follow us), dann muss er sich an unsere Spielregeln halten (he has to play by our rules)!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_03",
+          "id": "pro_03_fib_7"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gretel: Du musst auch noch deine Mutti anrufen! Oder ruft sie ___ an? C. Im Kino",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_03",
+          "id": "pro_03_fib_8"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Rotkäppchen: Wie lange will er noch warten? Hat er Liebesfilme gern??? Ist der Wolf nicht gegen ___ ?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_03",
+          "id": "pro_03_fib_9"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gretel: Ja, doch, doch, er steht schon auf. Jetzt können wir ohne ___ den anderen Film sehen! Und noch dreimal, wenn er wirklich sehr gut ist. D. Nach dem Film",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_03",
+          "id": "pro_03_fib_10"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gretel: Mensch, das dumme Tier ist wieder da. Siehst du ___ ? Auf der anderen Seite der Straße.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_03",
+          "id": "pro_03_fib_11"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Rotkäppchen: Ja. Meine Mutter hat gesagt, dass ich einfach weitergehen muss und gar nicht anhalten darf. Also, wir tun so, als ob wir den Wolf gar nicht sehen könnten, und gehen lieber um ___ herum.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_03",
+          "id": "pro_03_fib_12"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gretel: Und jetzt müssen wir sehr schnell nach Hause, wo deine Mutter ___ erwartet. E. Zu Hause",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_03",
+          "id": "pro_03_fib_13"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Rotkäppchens Mutter: Wo wart ihr? Ich habe ___ schon vor 6 Stunden erwartet (expected)! Rotkäppchen, warum hast du dein Handy ausgeschaltet?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_03",
+          "id": "pro_03_fib_14"
+        }
+      ]
     },
     {
       "code": "pro_04",
@@ -27289,7 +29276,120 @@
           "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
         }
       ],
-      "exercises": []
+      "exercises": [
+        {
+          "kind": "GAP",
+          "sentenceDe": "Rotkäppchen: Großmutter, kannst du ___ deine Augen und Ohren zeigen? Sie sind sehr groß!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_04",
+          "id": "pro_04_fib_1"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "der Wolf: Ja, ich zeige sie ___ gerne, komm ein bisschen näher!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_04",
+          "id": "pro_04_fib_2"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Rotkäppchen: Du bist nicht meine Großmutter! Wo ist meine Großmutter? Was ist ___ passiert?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_04",
+          "id": "pro_04_fib_3"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "der Wolf: Ich habe sie aufgefressen! Und jetzt bist du dran (it's your turn)! Und schreie nicht, außer ___ gibt es niemanden im Wald. Niemand kann dich hören! B. Der Jäger und der Wolf",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_04",
+          "id": "pro_04_fib_4"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "der Jäger: Was ist dieser schreckliche Lärm? Großmutter schnarcht nicht so laut, oder? Ich möchte mit ___ sprechen: ist alles in Ordnung?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_04",
+          "id": "pro_04_fib_5"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "der Jäger: Hoppla! Das ist der Wolf! Wo ist die Großmutter? Wo ist Rotkäppchen? Ich muss ___ sofort (immediately) helfen!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_04",
+          "id": "pro_04_fib_6"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "der Jäger: Hallo! Wo sind Sie? Können Sie mich hören? Bitte antworten Sie ___ , wenn Sie mich hören können!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_04",
+          "id": "pro_04_fib_7"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "der Jäger: OK! Der Wolf schläft ganz tief. Ich werde ihm den Bauch aufschneiden, dann können Sie aus ___ herauskommen! C. Nach der 'Operation'",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_04",
+          "id": "pro_04_fib_8"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "die Großmutter: Wir danken ___ ! Sie haben uns das Leben gerettet!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_04",
+          "id": "pro_04_fib_9"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "der Jäger: Und jetzt der Wolf ... Wir sollten ___ den Bauch mit Steinen füllen, dann merkt er nicht, dass Sie nicht mehr darin (in there) sind! D. Der Wolf wacht auf",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_04",
+          "id": "pro_04_fib_10"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "der Wolf: Aua, mein Magen tut ___ echt weh! Ich muss sofort etwas Wasser trinken! HILFE!!!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_04",
+          "id": "pro_04_fib_11"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "der Jäger: Endlich! Jetzt ist er ins Wasser gefallen! Er kann uns nicht mehr auffressen; er kann ___ nicht mehr schaden (harm).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_04",
+          "id": "pro_04_fib_12"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "eine Hexe: Was ist denn das? Was schwimmt im Wasser? Oho, der Wolf! Wenn ich ___ helfe, muss er alles tun, was ich ihm befehle (order)!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_04",
+          "id": "pro_04_fib_13"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "die Hexe: Herr Jäger, Großmutter und Rotkäppchen, jetzt mach' ich ___ das Leben recht schwer!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_04",
+          "id": "pro_04_fib_14"
+        }
+      ]
     },
     {
       "code": "pro_05",
@@ -27372,7 +29472,120 @@
           "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
         }
       ],
-      "exercises": []
+      "exercises": [
+        {
+          "kind": "GAP",
+          "sentenceDe": "Tja, ich habe große Ohren, mit ___ ich dich besser hören kann.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_05",
+          "id": "pro_05_fib_1"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Und ich habe ein großes Maul, in ___ ich dich stopfen kann!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_05",
+          "id": "pro_05_fib_2"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Wolf, ___ zuerst im Bett liegt, springt aus dem Bett und verschlingt (devours) das arme Mädchen.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_05",
+          "id": "pro_05_fib_3"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Zunächst geht der Wolf, ___ Magen im Moment zu voll ist, zurück ins Bett und schläft ein.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_05",
+          "id": "pro_05_fib_4"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Sein Schnarchen macht einen riesengroßen Lärm, ___ der Jäger schon aus zwei Kilometer hört.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_05",
+          "id": "pro_05_fib_5"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Jäger geht in Großmutters Haus und steht vor dem Bett, in ___ der Wolf ruhig schnarcht, und sieht den Wolf statt der Großmutter.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_05",
+          "id": "pro_05_fib_6"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Sein Gewehr, statt ___ er eine Schere benutzt, lässt er draußen, weil er die Großmutter nicht verletzten will.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_05",
+          "id": "pro_05_fib_7"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Er schneidet den Magen des Wolfes auf, und Rotkäppchen und die Großmutter, ___ Leben er gerettet hat, sind ihm sehr dankbar.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_05",
+          "id": "pro_05_fib_8"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Das kleine Mädchen, ___ anscheinend schlauer ist als die beiden Erwachsenen zusammen, holt geschwind große Steine.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_05",
+          "id": "pro_05_fib_9"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Diese Steine, ___ den Wolf später fast zum Ertrinken bringen, waren sehr schwer.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_05",
+          "id": "pro_05_fib_10"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Nachher essen und trinken die drei die Sachen, ___ Rotkäppchen mitgebracht hatte: das Brot, den Kuchen und die Flasche Wein.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_05",
+          "id": "pro_05_fib_11"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Dieses Märchen hat auch eine zweite Variante, in ___ Rotkäppchen dem Wolf nicht zuhört.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_05",
+          "id": "pro_05_fib_12"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Die Großmutter, ___ Rotkäppchen auch in dieser Version besucht, stellt einen Topf voller Wasser auf den Ofen und kocht Würste.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_05",
+          "id": "pro_05_fib_13"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Wie ihr schon raten könnt, fällt der Wolf vom Dach in den Topf, in ___ die Großmutter die Würste kocht, und er ertrinkt (drowns).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_05",
+          "id": "pro_05_fib_14"
+        }
+      ]
     },
     {
       "code": "pro_07",
@@ -27453,7 +29666,176 @@
           "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
         }
       ],
-      "exercises": []
+      "exercises": [
+        {
+          "kind": "MC",
+          "sentenceDe": "Schneewittchen: Ich bin gerade einkaufen gegangen, denn ihr könnt nicht immer ___ Kleidung tragen! Was meint ihr dazu?",
+          "options": [
+            "a. diejenige",
+            "b. dieselbe"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_07",
+          "id": "pro_07_fib_1"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Brummbär: Wir sind bloß Bergleute, Schneewittchen. ___ Kleidung ist viel zu schön für uns.",
+          "options": [
+            "a. diese",
+            "b. diegleiche"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_07",
+          "id": "pro_07_fib_2"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Happy: Sei nett, Brummbär. ___ finde ich, em ..., interessant, Schneewittchen.",
+          "options": [
+            "a. die",
+            "b. diese"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_07",
+          "id": "pro_07_fib_3"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Schlafmütz: Hast du ___ Schlafanzug gefunden, den ich das letzte Mal hatte?",
+          "options": [
+            "a. diesen",
+            "b. denselben"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_07",
+          "id": "pro_07_fib_4"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Schneewittchen: Leider nicht. Aber ___ schicke Schlafanzug hat nur 20 Euro gekostet. Magst du ihn?",
+          "options": [
+            "a. dieser",
+            "b. derjenige"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_07",
+          "id": "pro_07_fib_5"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Brummbär: Humpf! Ich habe ___ Schlafanzug bei Wal-Mart gesehen - 5 Euro billiger!",
+          "options": [
+            "a. denjenigen",
+            "b. jenen"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_07",
+          "id": "pro_07_fib_6"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Happy: Brummbär! ___ Negativität! Hör bitte auf damit!",
+          "options": [
+            "a. dieselbe",
+            "b. diese"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_07",
+          "id": "pro_07_fib_7"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Schlafmütz: Hmm, dieser Schlafanzug! ___ sieht etwas komisch aus.",
+          "options": [
+            "a. der",
+            "b. dieser"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_07",
+          "id": "pro_07_fib_8"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Schneewittchen: Wieso komisch? Weil er aus dem 21. Jahrhundert ist? Seppl, wie findest du dieses Hemd? ___ wird dir gut stehen, oder?",
+          "options": [
+            "a. das",
+            "b. dasselbe"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_07",
+          "id": "pro_07_fib_9"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Seppl: Lieber mag ich ___ , die rote Streifen darauf haben.",
+          "options": [
+            "a. diegleichen",
+            "b. diejenigen"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_07",
+          "id": "pro_07_fib_10"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Schneewittchen: Aber Seppl, Rot steht dir nicht gut. Wenn du dieses nicht magst, wie wär's mit ___ da? Dem blauen?",
+          "options": [
+            "a. diesem",
+            "b. jenem"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_07",
+          "id": "pro_07_fib_11"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Seppl: Nein, ___ finde ich total hässlich. (das, dieses)",
+          "options": [
+            "a. das",
+            "b. dieses"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_07",
+          "id": "pro_07_fib_12"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Schneewittchen: Argh! Du bist immer ___ Meinung!",
+          "options": [
+            "a. derjenigen",
+            "b. derselben"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_07",
+          "id": "pro_07_fib_13"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Brummbär: Schneewittchen, das nächste Mal gehen wir ___ einkaufen! Unser Geschmack ist altmodisch und deiner ist zu modern.",
+          "options": [
+            "a. selber",
+            "b. diese"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "pro_07",
+          "id": "pro_07_fib_14"
+        }
+      ]
     },
     {
       "code": "con_01",
@@ -27580,7 +29962,256 @@
           "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
         }
       ],
-      "exercises": []
+      "exercises": [
+        {
+          "kind": "MC",
+          "sentenceDe": "Der König und die Königin haben noch ___ Kind; sie sind traurig.",
+          "options": [
+            "a. nicht",
+            "b. kein"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_1"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Als die Königin sich eines Tages badet, kommt ein Frosch vorbei. Er verspricht, dass sie ___ länger warten muss: \"Bald wirst du eine Tochter zur Welt bringen.\"",
+          "options": [
+            "a. nicht",
+            "b. kein"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_2"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Das Kind ist so schön, dass der König seinen Augen ___ trauen kann.",
+          "options": [
+            "a. nicht",
+            "b. kein"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_3"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Der König plant ein großes Fest; er scheut ___ Kosten. (to spare)",
+          "options": [
+            "a. nicht",
+            "b. keine"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_4"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Zum Fest lädt er ___ nur seine Verwandten, Freunde und Bekannten, sondern auch die weisen Frauen ein.",
+          "options": [
+            "a. nicht",
+            "b. kein"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_5"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Obwohl es dreizehn weise Frauen im Königsreich gibt, darf der König ___ alle einladen, denn das Schloss hat nur zwölf goldene Teller.",
+          "options": [
+            "a. nicht",
+            "b. kein"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_6"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Die 13. weise Frau bekommt ___ Einladung, und sie wird böse.",
+          "options": [
+            "a. nicht",
+            "b. keine"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_7"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Sie verhext das kleine Kind; es soll seinen 15. Geburtstag ___ überleben.",
+          "options": [
+            "a. nicht",
+            "b. keine"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_8"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Glücklicherweise hat die 12. weise Frau ihren Wunsch noch. Sie kann den bösen Spruch ___ aufheben, nur mildern.",
+          "options": [
+            "a. nicht",
+            "b. kein"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_9"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Das Mädchen wird sich an einer Spindel stechen, aber es wird ___ Tod bewirken, sondern einen hundertjährigen tiefen Schlaf.",
+          "options": [
+            "a. nicht",
+            "b. keinen"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_10"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "An dem Tag, an dem das Mädchen gerade 15 Jahre alt wird, sind der König und die Königin ___ zu Hause, und es sticht sich mit einer Spindel in die Finger.",
+          "options": [
+            "a. nicht",
+            "b. kein"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_11"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Ein tiefer Schlaf verbreitet sich über das ganze Schloss; ___ einziges Blättchen regt sich noch (leaf still stirs).",
+          "options": [
+            "a. nicht",
+            "b. kein"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_12"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Aber außerhalb des Schlosses wächst eine große Dornenhecke, und die ersten 20 Prinzen können die Prinzessin ___ erreichen (reach).",
+          "options": [
+            "a. nicht",
+            "b. kein"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_13"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Endlich kommt ein Prinz, der sich vor der schreckliche Dornenhecke ___ fürchtet, und er rettet die Prinzessin und das ganze Königsreich.",
+          "options": [
+            "a. nicht",
+            "b. kein"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_14"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "___ Baby ist schöner als die Königstochter.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_15"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Aber die 13. weise Frau hat ___ Skrupel (scruples) und will es mit einer Spindel töten.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_16"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der König befiehlt, dass alle Spindeln verbrannt werden sollen, und jetzt gibt es im Reich ___ Spindeln mehr ... außer einer!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_17"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "An ihrem 15. Geburtstag findet Dornröschen ___ Menschen im Schloss.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_18"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Dornröschen spürt ___ Gefahr, also steigt es die Treppe eines alten Turmes hinauf und findet es ein Stübchen, in dem eine alte Frau spinnt.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_19"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Weil das Mädchen naiv ist, hat es ___ Angst vor der Spindel.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_20"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Es fühlt sich ___ Schmerz, als es die Spindel anrührt.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_21"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Dornröschen fällt in einen tiefen Schlief, aber es hat irgendwie ___ Träume.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_22"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Die Dornenhecke, die um das Schloss herumwächst, lässt ___ Prinzen los.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_23"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der letzte Prinz muss ___ bösen Drachen erschlagen; er hat einfach Glück, dass die hundert Jahre endlich vorbei sind und die Dornenhecke ihn durchlässt.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_02",
+          "id": "con_02_fib_24"
+        }
+      ]
     },
     {
       "code": "con_03",
@@ -27605,7 +30236,238 @@
           "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
         }
       ],
-      "exercises": []
+      "exercises": [
+        {
+          "kind": "MC",
+          "sentenceDe": "Zuerst können die Kinder das Haus nicht sehen, ___ sie merken (notice) bald, dass es aus Brot und Kuchen ist!",
+          "options": [
+            "a. aber",
+            "b. oder"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_1"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Die Fenster sind aus Zucker, ___ das Dach ist mit Kuchen bedeckt (covered).",
+          "options": [
+            "a. und",
+            "b. denn"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_2"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Die Kinder hören mit dem Essen nicht auf, ___ sie haben großen Hunger.",
+          "options": [
+            "a. sondern",
+            "b. denn"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_3"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Plötzlich kommt eine alte Frau aus dem Haus. Ist sie eine Mutterfigur, ___ eine böse Hexe?",
+          "options": [
+            "a. oder",
+            "b. aber"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_4"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Die alte Frau lädt die Kinder ins Haus ein ___ bringt ihnen Milch und Pfannkuchen!",
+          "options": [
+            "a. aber",
+            "b. und"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_5"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Aber natürlich ist sie keine mitfühlende (compassionate) Person, ___ eine böse Hexe!",
+          "options": [
+            "a. aber",
+            "b. sondern"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_6"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Sie ist keine warmherzige Mutterfigur, ___ sie will die Kinder essen!",
+          "options": [
+            "a. denn",
+            "b. oder"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_7"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Gretel muss etwas Gutes kochen ___ ihr Bruder soll fett werden.",
+          "options": [
+            "a. , aber",
+            "b. und"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_8"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Die Alte fragt immer, ob (whether) Hänsel schon fett genug ist, ___ Hänsel reicht ihr (gives her) immer ein Knöchlein (little bone), damit (so that) sie ihn nicht isst.",
+          "options": [
+            "a. und",
+            "b. aber"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_9"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Es hilft aber ___ Weinen noch Trick, die Hexe will Hänsel essen.",
+          "options": [
+            "a. weder",
+            "b. entweder"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_10"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Vier Wochen später will die Hexe nicht mehr warten. Sie ruft Gretel zu ihr.",
+          "tokens": [
+            "Vier Wochen später will die Hexe nicht mehr warten. Sie ruft Gretel zu ihr."
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_11"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Gretel muss Wasser holen. Die Hexe will Hänsel kochen.",
+          "tokens": [
+            "Gretel muss Wasser holen. Die Hexe will Hänsel kochen."
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_12"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Die Hexe ist echt gemein. Gretel ist glücklicherweise sehr schlau (clever).",
+          "tokens": [
+            "Die Hexe ist echt gemein. Gretel ist glücklicherweise sehr schlau (clever)."
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_13"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Die Hexe will Gretel in den Backofen stecken. Gretel weiß nicht, wie man das so macht.",
+          "tokens": [
+            "Die Hexe will Gretel in den Backofen stecken. Gretel weiß nicht, wie man das so macht."
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_14"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Bäckt die Hexe das kleine Mädchen? Fällt sie vielleicht selbst in den Ofen?",
+          "tokens": [
+            "Bäckt die Hexe das kleine Mädchen? Fällt sie vielleicht selbst in den Ofen?"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_15"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Die Hexe muss Gretel zeigen, wie man in den Ofen kriecht. Das Mädchen spielt den Dummen (she plays dumb).",
+          "tokens": [
+            "Die Hexe muss Gretel zeigen, wie man in den Ofen kriecht. Das Mädchen spielt den Dummen (she plays dumb)."
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_16"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Gretel wartet nicht. Sie gibt der Hexe einen Stoß (gave her a shove).",
+          "tokens": [
+            "Gretel wartet nicht. Sie gibt der Hexe einen Stoß (gave her a shove)."
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_17"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Die Hexe fällt in den Backofen hinein. Gretel macht die eiserne (iron) Tür zu.",
+          "tokens": [
+            "Die Hexe fällt in den Backofen hinein. Gretel macht die eiserne (iron) Tür zu."
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_18"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Im Häuschen finden sie Kasten mit Perlen und Edelsteinen. Sie wollen nicht im Hexenwald bleiben.",
+          "tokens": [
+            "Im Häuschen finden sie Kasten mit Perlen und Edelsteinen. Sie wollen nicht im Hexenwald bleiben."
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_19"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Die Kinder gehen nach Hause, wo sie bleiben dürfen (are allowed to stay). Die Stiefmutter ist tot.",
+          "tokens": [
+            "Die Kinder gehen nach Hause, wo sie bleiben dürfen (are allowed to stay). Die Stiefmutter ist tot."
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_03",
+          "id": "con_03_fib_20"
+        }
+      ]
     },
     {
       "code": "con_04",
@@ -27686,7 +30548,224 @@
           "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
         }
       ],
-      "exercises": []
+      "exercises": [
+        {
+          "kind": "MC",
+          "sentenceDe": "Die Kinder gehen nach Hause und sind sehr froh, ___ sie sehr reich sind.",
+          "options": [
+            "a. weil",
+            "b. ob"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_1"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "___ sich keine Kinder verlieren, bauen sie einen Pfad von ihrem Haus zum Hexenhaus.",
+          "options": [
+            "a. Obwohl",
+            "b. Damit"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_2"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Zuerst wissen sie nicht, ___ sie mit ihrem Geld machen sollen.",
+          "options": [
+            "a. wer",
+            "b. was"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_3"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "___ sie mit ihrem Vater wieder zusammen sind, sind sie glücklich.",
+          "options": [
+            "a. Sobald",
+            "b. Solange"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_4"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "___ sie aber 100 Jahre mit ihm zu Hause verbringen (spend), sehnen sie sich nach (long for) einem modernen Leben.",
+          "options": [
+            "a. Nachdem",
+            "b. Bevor"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_5"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Sie verkaufen das Haus, ___ sie es dem Vater sagen.",
+          "options": [
+            "a. ohne dass",
+            "b. während"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_6"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Die Kinder glauben, ___ er ihnen diese Chance schuldig ist (he owes them this chance).",
+          "options": [
+            "a. warum",
+            "b. dass"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_7"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "___ sie in ihre neue Wohnung einziehen, kaufen sie einen neuen Kühlschrank, neue Möbel und eine tolle Stereoanlage.",
+          "options": [
+            "a. Als",
+            "b. wenn"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_8"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Leider kann Hänsel nur sehr wenig essen, und er hungert, ___ er fast stirbt!",
+          "options": [
+            "a. solange",
+            "b. bis"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_9"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Gretel fragt ihn, ___ er bereit ist (willing), einige neue Gerichte auszuprobieren.",
+          "options": [
+            "a. ob",
+            "b. obwohl"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_10"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gretel: Ich weiß nicht, ___ ich tun soll! Hänsel wird verhungern!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_11"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Aschenputtel: Hat er dir schon gesagt, ___ er nicht essen will oder kann?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_12"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gretel: Ja, aber er weiß es auch nicht. Ich kann dir nicht sagen, ___ verschiedene (different) Gerichte ich schon gekocht habe: Italienisch, Japanisch, alles mögliche!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_13"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gerdi: Hat er genug gegessen, ___ ihr bei der Hexe wart?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_14"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gretel: Natürlich nicht, du weißt doch, ___ wir damals nicht genug zu essen hatten!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_15"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Aschenputel: ___ das Essen für ihn eindeutig (clearly) traumatisch ist, muss er doch immer noch essen, um am Leben zu bleiben!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_16"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Schneewittchen: Was habt ihr gegessen, ___ ihr bei der Hexe wart?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_17"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gretel: Tolle Sachen, muss ich ehrlich sagen! ___ die Hexe ihn fett machen wollte, musste ich ihm die besten Speisen zubereiten (prepare).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_18"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gerdi: Ach, ich weiß, ___ du ihm helfen kannst!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_19"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Aschenputtel: Ich auch! ___ du sein Essen kochst, isst er nicht!!!!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_20"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gretel: Oh nein! Er kann nicht essen, ___ ich bei der Hexe die Köchin war! Mein Kochen traumatisiert ihn!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_21"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gerdi: Aber keine Sorge! Ihr seid super reich, oder? Und ___ ihr reich seid, könnt ihr jeden Tag etwas vom Restaurant bestellen!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "con_04",
+          "id": "con_04_fib_22"
+        }
+      ]
     },
     {
       "code": "con_05",
@@ -28879,7 +31958,244 @@
           "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
         }
       ],
-      "exercises": []
+      "exercises": [
+        {
+          "kind": "MC",
+          "sentenceDe": "die alte Hexe: Ich bin viel ___ als du, Babsi!",
+          "options": [
+            "a. bösest",
+            "b. am bösesten",
+            "c. böser",
+            "d. der bösere"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_1"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Gerdi: Unter allen Märchenfiguren bin ich ___ !",
+          "options": [
+            "a. reichest",
+            "b. am reichsten",
+            "c. reicher",
+            "d. die reiche"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_2"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Happy: Ohne Frage ist aber Seppl die ___ Märchenfigur!",
+          "options": [
+            "a. leiseste",
+            "b. am leisesten",
+            "c. leiser",
+            "d. leise"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_3"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Aschenputtel und Schneewittchen: Und wir sind heute die ___ Freunde!",
+          "options": [
+            "a. besten",
+            "b. am besten",
+            "c. bessere",
+            "d. mehr guten"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_4"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Der Froschkönig: Ich bin doch genauso ___ wie Thilo! Und genauso küssenswürdig (kiss-worthy)!",
+          "options": [
+            "a. der niedliche",
+            "b. am niedlichsten",
+            "c. niedlicher",
+            "d. niedlich"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_5"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Rotkäppchen: Im Märchen war ich ein viel ___ Mädchen als heute!",
+          "options": [
+            "a. bravstes",
+            "b. am bravsten",
+            "c. braveres",
+            "d. braver"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_6"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Rapunzel: Meine Geschichte ist wahrscheinlich das ___ Märchen. Die Hexe macht den Prinzen blind, und er muss jahrelang in der Welt herumwandern.",
+          "options": [
+            "a. grimm",
+            "b. am grimmsten",
+            "c. grimmste",
+            "d. grimmsten"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_7"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Hänsel und Gretel: Wir waren ohne Zweifel (without doubt) ___ . Wir haben über die Hexe gesiegt und den Weg nach Hause gefunden!",
+          "options": [
+            "a. die schlaueste",
+            "b. am schlauesten",
+            "c. schlauer",
+            "d. mehr schlau"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_8"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "die Königin: Ich bin mindestens so ___ wie Schneewittchen!",
+          "options": [
+            "a. die schönste",
+            "b. am schönsten",
+            "c. mehr schön",
+            "d. schön"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_9"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Thilo: Und ich bin der ___ Mann unter den männlichen Märchenfiguren!",
+          "options": [
+            "a. attraktiv",
+            "b. am attraktivsten",
+            "c. attraktiver",
+            "d. attraktivste"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_10"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Frau Holle: Wenn deine Stiefschwester nicht so ___ gewesen wäre (would have been), hätte sie auch reich werden können.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_11"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Brummbär: Ich verstehe nicht, warum der ___ Zwerg immer der niedlichste sein muss! Ich bin mindestens genauso niedlich wie der Seppl!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_12"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Aschenputtel: Ich bin sicher, dass meine Geschichte ___ war! Ich weine immer noch, wenn ich sie lese.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_13"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "der Froschkönig: Warum heiße ich denn Egon??? Gibt es keinen ___ Namen? Wer soll sich in einen Frosch mit diesem Namen verlieben?!?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_14"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Wolfdietrich: Im Gegensatz dazu (in contrast), finde ich meinen Namen fantastisch. Er passt gut zu dem ___ Wolf der ganzen Märchenwelt!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_15"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Gerdi: Im alten Märchen war ich viel ___ als heute; selbst wenn die Regierung mich nicht an mein Geld heranlässt!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_16"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "der Jäger: Ich bin völlig davon überzeugt, dass ich jetzt die ___ Märchenfigur bin. Selbst Thilo ist kein Liebhaber, und den Froschkönig können wir doch einfach vergessen.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_17"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Rotkäppchens Grossmutter: Du hast recht, Jäger, und wir sollten sofort auf unsere Hochzeitsreise gehen, denn wir werden nicht ___ !",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_18"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "der Esel und die Katze: Wir sind heute genauso ___ wie damals, aber jetzt müssen wir nicht mehr arbeiten. Gott sei Dank, dass wir im 21. Jahrhundert wiederbelebt (revived) wurden!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_19"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Schneewittchen: Mein Mann ist viel ___ als der Prinz aus Aschenputtels Märchen; ihr Prinz ist nach Monaco geflohen (fled) - er arbeitet als Ersatzprinz (substitute prince).",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_20"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "die böse Königin: Ich hasse mein modernes Leben! Die Polizei kann alle Morde aufklären, sie kennt sogar die ___ Giftstoffe (poisionous substances)!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_21"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Wolfgang: Dass ich eingeschlafen bin, war die ___ Katastrophe! Hätte ich das nicht getan, (if I hadn't done that), müsste ich heute nicht an dieser dummen Märchenparodie teilnehmen!!!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adj_05",
+          "id": "adj_05_fib_22"
+        }
+      ]
     },
     {
       "code": "adv_01",
@@ -29175,7 +32491,176 @@
           "attribution": "Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0"
         }
       ],
-      "exercises": []
+      "exercises": [
+        {
+          "kind": "MC",
+          "sentenceDe": "Am Anfang steht Gretel morgens sehr ___ auf; Hänsel und sie haben genug zu essen, und die böse Stiefmutter ist nicht da.",
+          "options": [
+            "a. hoffentlich",
+            "b. gerne",
+            "c. eventuell",
+            "d. langsam"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adv_02",
+          "id": "adv_02_fib_1"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Sie putzt und kocht und holt ganz ___ Wasser; sie ist wirklich froh.",
+          "options": [
+            "a. zufällig",
+            "b. zögerlich",
+            "c. wütend",
+            "d. fleißig"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adv_02",
+          "id": "adv_02_fib_2"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Nach den ersten paar Tagen aber bemerken sie ___ , dass nicht alles so super ist, wie sie das gedacht haben.",
+          "options": [
+            "a. traurig",
+            "b. leichtsinnig",
+            "c. gern",
+            "d. draußen"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adv_02",
+          "id": "adv_02_fib_3"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Sie verstehen ___ , dass die Hexe nichts Gutes im Schilde führt (is up to no good).",
+          "options": [
+            "a. gemeinsam",
+            "b. alleine",
+            "c. langsam",
+            "d. gern"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adv_02",
+          "id": "adv_02_fib_4"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Ab dem dritten Tag arbeitet Gretel nur noch ___ und Hänsel hört mit dem Essen auf.",
+          "options": [
+            "a. glücklicherweise",
+            "b. zögerlich",
+            "c. hoffentlich",
+            "d. freiwillig"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adv_02",
+          "id": "adv_02_fib_5"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Die Hexe merkt es und fängt an, die Kinder immer öfter ___ anzuschreien: Komm doch schnell! Iss das! Bring mehr Wasser!",
+          "options": [
+            "a. sicherlich",
+            "b. gemeinsam",
+            "c. wütend",
+            "d. alleine"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adv_02",
+          "id": "adv_02_fib_6"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Schließlich sperrt sie Hänsel in einen Käfig und dann sitzt er da ___ , traurig und hoffnungslos.",
+          "options": [
+            "a. draußen",
+            "b. drinnen",
+            "c. irgendwo",
+            "d. hier"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adv_02",
+          "id": "adv_02_fib_7"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Sie überprüft jeden Tag, ob Hänsel schon dick genug ist, und der reicht ihr jeden Tag seinen kleinen Finger ___ .",
+          "options": [
+            "a. innen",
+            "b. links",
+            "c. hinaus",
+            "d. vorne"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adv_02",
+          "id": "adv_02_fib_8"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Nach ein paar Wochen hat die Hexe die Nase voll (she's fed up) und entschließt sich ___ dazu, Hänsel zu kochen.",
+          "options": [
+            "a. plötzlich",
+            "b. überall",
+            "c. eventuell",
+            "d. zögerlich"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adv_02",
+          "id": "adv_02_fib_9"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Gretel soll ___ im Garten Holz sammeln und ein gutes Feuer machen.",
+          "options": [
+            "a. von oben",
+            "b. dorthin",
+            "c. draußen",
+            "d. daher"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adv_02",
+          "id": "adv_02_fib_10"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Gretel tut so, als ob sie nicht wüsste, wie man Feuer macht, und fragt die Hexe, ob sie das vielleicht ___ machen könnten, sie und die Hexe.",
+          "options": [
+            "a. allein",
+            "b. auswendig",
+            "c. gern",
+            "d. zusammen"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adv_02",
+          "id": "adv_02_fib_11"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Als die Hexe sich ___ beugt, stößt sie Gretel ___ und die Hexe fällt ins Feuer und stirbt sofort .... Oder ___ auch nicht?!?",
+          "options": [
+            "a. nach vorne/von hinten/vielleicht",
+            "b. nach oben/von hinten/lieber",
+            "c. dorthin/von vorne/vielleicht",
+            "d. nach unten/von recths/natürlich"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "adv_02",
+          "id": "adv_02_fib_12"
+        }
+      ]
     },
     {
       "code": "adv_03",
@@ -30901,6 +34386,178 @@
           "answerStatus": "MISSING",
           "grammarCode": "vsp_02",
           "id": "vsp_02_fib_12"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Großmutter und der Jäger: wir / einladen / einige alte Freunde / auf eine Party",
+          "tokens": [
+            "Großmutter und der Jäger: wir",
+            "einladen",
+            "einige alte Freunde",
+            "auf eine Party"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsp_02",
+          "id": "vsp_02_fib_13"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Frau Holle: ich / legen / das ganze Wochenende / im Bett / und / fernsehen",
+          "tokens": [
+            "Frau Holle: ich",
+            "legen",
+            "das ganze Wochenende",
+            "im Bett",
+            "und",
+            "fernsehen"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsp_02",
+          "id": "vsp_02_fib_14"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Aschenputtel zum Froschkönig: du / treffen / endlich / den anderen verzauberten Frosch?",
+          "tokens": [
+            "Aschenputtel zum Froschkönig: du",
+            "treffen",
+            "endlich",
+            "den anderen verzauberten Frosch?"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsp_02",
+          "id": "vsp_02_fib_15"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Die Wölfe: wir / gehen / in ein Thai Restaurant / und / essen / viel Gemüse und Obst",
+          "tokens": [
+            "Die Wölfe: wir",
+            "gehen",
+            "in ein Thai Restaurant",
+            "und",
+            "essen",
+            "viel Gemüse und Obst"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsp_02",
+          "id": "vsp_02_fib_16"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Die alte Hexe: ich / wegschmeißen / die Ergebnisse einiger schiefgegangenen Experimente (results of some experiments that went askew) / und / trinken / ein neues Zaubergetränk",
+          "tokens": [
+            "Die alte Hexe: ich",
+            "wegschmeißen",
+            "die Ergebnisse einiger schiefgegangenen Experimente (results of some experiments that went askew)",
+            "und",
+            "trinken",
+            "ein neues Zaubergetränk"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsp_02",
+          "id": "vsp_02_fib_17"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Dornröschen: Ich / weil / 100 Jahre lang / schlafen / ich / aufbleiben / das ganze Wochenende",
+          "tokens": [
+            "Dornröschen: Ich",
+            "weil",
+            "100 Jahre lang",
+            "schlafen",
+            "ich",
+            "aufbleiben",
+            "das ganze Wochenende"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsp_02",
+          "id": "vsp_02_fib_18"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Schneewittchen zu Theo: Du / schreiben / einige neue Gedichte / und / ich / anfangen / für meine Zwischenprüfung / zu studieren",
+          "tokens": [
+            "Schneewittchen zu Theo: Du",
+            "schreiben",
+            "einige neue Gedichte",
+            "und",
+            "ich",
+            "anfangen",
+            "für meine Zwischenprüfung",
+            "zu studieren"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsp_02",
+          "id": "vsp_02_fib_19"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "die sieben Zwerge: Brummbär / gehen / in den Wald / und / er / brechen / sein Bein",
+          "tokens": [
+            "die sieben Zwerge: Brummbär",
+            "gehen",
+            "in den Wald",
+            "und",
+            "er",
+            "brechen",
+            "sein Bein"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsp_02",
+          "id": "vsp_02_fib_20"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "die böse Königin: ich / tun / nichts / sehen / nichts / und / ich / brechen / Brummbärs Bein / nicht / mit einem Zauberspruch !",
+          "tokens": [
+            "die böse Königin: ich",
+            "tun",
+            "nichts",
+            "sehen",
+            "nichts",
+            "und",
+            "ich",
+            "brechen",
+            "Brummbärs Bein",
+            "nicht",
+            "mit einem Zauberspruch !"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsp_02",
+          "id": "vsp_02_fib_21"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "der Esel und der Hund: wir / sehen / den Haushahn / die ganze Zeit / nicht / weil / jemand / ihn / wegnehmen / und / der ganzen Nachmittag / halten / in einem Käfig",
+          "tokens": [
+            "der Esel und der Hund: wir",
+            "sehen",
+            "den Haushahn",
+            "die ganze Zeit",
+            "nicht",
+            "weil",
+            "jemand",
+            "ihn",
+            "wegnehmen",
+            "und",
+            "der ganzen Nachmittag",
+            "halten",
+            "in einem Käfig"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsp_02",
+          "id": "vsp_02_fib_22"
         }
       ]
     },
@@ -32141,6 +35798,174 @@
           "answerStatus": "MISSING",
           "grammarCode": "vsub_02",
           "id": "vsub_02_fib_10"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "der Froschkönig: Guten Tag, Frau Heidrun, ich ___ wieder Prinz werden!",
+          "options": [
+            "a. möchte",
+            "b. sollte",
+            "c. könnte",
+            "d. müsste"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_02",
+          "id": "vsub_02_fib_11"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "___ Sie mir bitte helfen?",
+          "options": [
+            "a. Dürften",
+            "b. Sollte",
+            "c. Könnten",
+            "d. Wollten"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_02",
+          "id": "vsub_02_fib_12"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "die alte Hexe: Hallo Froschkönig! Natürlich ___ ich Ihnen helfen, aber ich will nicht!",
+          "options": [
+            "a. möchte",
+            "b. dürfte",
+            "c. könnte",
+            "d. müsste"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_02",
+          "id": "vsub_02_fib_13"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "Und ich ___ das sowieso nicht tun; unser Schloss braucht einen Froschkönig!",
+          "options": [
+            "a. könnte",
+            "b. sollte",
+            "c. möge",
+            "d. müsste"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_02",
+          "id": "vsub_02_fib_14"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "der Froschkönig: Ich weiß, dass ich Sie zuerst küssen ___ , bevor Sie mir helfen würden, aber ich bin jetzt bereit (I'm ready)!",
+          "options": [
+            "a. möchte",
+            "b. sollte",
+            "c. könnte",
+            "d. müsste"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_02",
+          "id": "vsub_02_fib_15"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "die alte Hexe: Aber ich habe meine Arbeitserlaubnis nicht; ich ___ Ihnen nicht helfen, selbst wenn ich das gerne tun würde!",
+          "options": [
+            "a. müsste",
+            "b. dürfte",
+            "c. könnte",
+            "d. wollte"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_02",
+          "id": "vsub_02_fib_16"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "der Froschkönig: Was für eine Katastrophe! Ich ___ so sehr Prinz werden! Ich würde alles dafür tun, meinen Traum zu verwirklichen!",
+          "options": [
+            "a. wollte",
+            "b. sollte",
+            "c. könnte",
+            "d. müsste"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_02",
+          "id": "vsub_02_fib_17"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "die alte Hexe: OK, schon gut, aber Sie ___ mich dreimal küssen, wäre das in Ordnung?",
+          "options": [
+            "a. müssten",
+            "b. dürften",
+            "c. mögen",
+            "d. könnten"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_02",
+          "id": "vsub_02_fib_18"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "der Froschkönig: Blech ... Ich meine, ja! Alles ist in Ordnung! Ich tue alles! ___ wir uns jetzt umarmen (embrace)? -- sie küssen einander drei mal ...",
+          "options": [
+            "a. dürften",
+            "b. sollten",
+            "c. könnten",
+            "d. müssen"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_02",
+          "id": "vsub_02_fib_19"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "die alte Hexe: Oh, so ein Mist! Nun mal keine Panik, Froschkönig, ich ___ Sie nicht erschrecken (frighten), aber Sie sind kein Prinz sondern ein Walross!",
+          "options": [
+            "a. müsste",
+            "b. sollte",
+            "c. könnte",
+            "d. möchte"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_02",
+          "id": "vsub_02_fib_20"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "der Froschkönig: Ein Walross? Was hast du wieder gemacht, du alte Hexe (hag)??? Tja, ich ___ doch jetzt ein gutaussehender Prinz sein, und kein Walross!",
+          "options": [
+            "a. möchte",
+            "b. sollte",
+            "c. könnte",
+            "d. müsste"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_02",
+          "id": "vsub_02_fib_21"
+        },
+        {
+          "kind": "MC",
+          "sentenceDe": "die alte Hexe: Du hast recht, Liebling, und in einem Grimm Märchen ___ es sowieso kein Walross geben! Das ist anthropologisch nicht erlaubt (not allowed)! Was tun wir?!?!",
+          "options": [
+            "a. wollte",
+            "b. sollte",
+            "c. könnte",
+            "d. dürfte"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_02",
+          "id": "vsub_02_fib_22"
         }
       ]
     },
@@ -32311,6 +36136,209 @@
           "answerStatus": "MISSING",
           "grammarCode": "vsub_03",
           "id": "vsub_03_fib_10"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Was / passieren / wenn / ich / vorbeikommen / an jenem schicksalsschweren Tag / nicht?",
+          "tokens": [
+            "Was",
+            "passieren",
+            "wenn",
+            "ich",
+            "vorbeikommen",
+            "an jenem schicksalsschweren Tag",
+            "nicht?"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_03",
+          "id": "vsub_03_fib_11"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Der Wolf / auffressen / Rotkäppchen und seine Großmutter / ohne Zweifel",
+          "tokens": [
+            "Der Wolf",
+            "auffressen",
+            "Rotkäppchen und seine Großmutter",
+            "ohne Zweifel"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_03",
+          "id": "vsub_03_fib_12"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Ich / können / sagen / der Großmuter / wie sehr / ich / lieben / sie",
+          "tokens": [
+            "Ich",
+            "können",
+            "sagen",
+            "der Großmuter",
+            "wie sehr",
+            "ich",
+            "lieben",
+            "sie"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_03",
+          "id": "vsub_03_fib_13"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Mein Leben / sein / viel einsamer / wenn / ihr / kommen / zu meinem Haus / nicht",
+          "tokens": [
+            "Mein Leben",
+            "sein",
+            "viel einsamer",
+            "wenn",
+            "ihr",
+            "kommen",
+            "zu meinem Haus",
+            "nicht"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_03",
+          "id": "vsub_03_fib_14"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Wenn / deine Spule / hineinfallen / in den Brunnen / nicht, ich / treffen / können / dich / nie",
+          "tokens": [
+            "Wenn",
+            "deine Spule",
+            "hineinfallen",
+            "in den Brunnen",
+            "nicht, ich",
+            "treffen",
+            "können",
+            "dich",
+            "nie"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_03",
+          "id": "vsub_03_fib_15"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Wenn / deine Stiefschwester / sein / nicht so faul / es / geben / keinen Konflikt / in unserem Märchen",
+          "tokens": [
+            "Wenn",
+            "deine Stiefschwester",
+            "sein",
+            "nicht so faul",
+            "es",
+            "geben",
+            "keinen Konflikt",
+            "in unserem Märchen"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_03",
+          "id": "vsub_03_fib_16"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Wenn / das Gute / gewinnen / können / über / das Böse / nicht, / die Leute / interessieren sich / im 19. Jahrhundert / für unsere Geschichte / nicht",
+          "tokens": [
+            "Wenn",
+            "das Gute",
+            "gewinnen",
+            "können",
+            "über",
+            "das Böse",
+            "nicht,",
+            "die Leute",
+            "interessieren sich",
+            "im 19. Jahrhundert",
+            "für unsere Geschichte",
+            "nicht"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_03",
+          "id": "vsub_03_fib_17"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Wenn / meine Mutter / essen / wollen / nur / keine Rapunzeln!",
+          "tokens": [
+            "Wenn",
+            "meine Mutter",
+            "essen",
+            "wollen",
+            "nur",
+            "keine Rapunzeln!"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_03",
+          "id": "vsub_03_fib_18"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Die alte Hexe / einsperren / mich / in den Turm / nicht",
+          "tokens": [
+            "Die alte Hexe",
+            "einsperren",
+            "mich",
+            "in den Turm",
+            "nicht"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_03",
+          "id": "vsub_03_fib_19"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Ich / singen / können / sowieso?",
+          "tokens": [
+            "Ich",
+            "singen",
+            "können",
+            "sowieso?"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_03",
+          "id": "vsub_03_fib_20"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Wie / sein / es / wenn / mein Mann / mich / finden / nicht?",
+          "tokens": [
+            "Wie",
+            "sein",
+            "es",
+            "wenn",
+            "mein Mann",
+            "mich",
+            "finden",
+            "nicht?"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_03",
+          "id": "vsub_03_fib_21"
+        },
+        {
+          "kind": "REORDER",
+          "sentenceDe": "Meine Kinder und ich / fliehen / in die Wüste / nicht",
+          "tokens": [
+            "Meine Kinder und ich",
+            "fliehen",
+            "in die Wüste",
+            "nicht"
+          ],
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vsub_03",
+          "id": "vsub_03_fib_22"
         }
       ]
     },
@@ -33186,6 +37214,102 @@
           "answerStatus": "MISSING",
           "grammarCode": "vrf_01",
           "id": "vrf_01_fib_10"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "der Haushahn: Ich ___ mich ständig, seit ich einen Wecker habe!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vrf_01",
+          "id": "vrf_01_fib_11"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "die böse Königin: Die arme Hexe kann sich an keine Zaubersprüche ___ !",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vrf_01",
+          "id": "vrf_01_fib_12"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Aschenputtel: ___ ihr euch auf die wöchentlichen Therapiestunden?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vrf_01",
+          "id": "vrf_01_fib_13"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "die Hexe: Ich ___ mich, an deinen sogenannten Therapiestunden teil zu nehmen! Ich werde immer ausgelacht!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vrf_01",
+          "id": "vrf_01_fib_14"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "die 6 Zwerge: Wir ___ uns über andere möglichen Arbeitsstellen und Karrieren. Dieses Internet ist echt fantastisch!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vrf_01",
+          "id": "vrf_01_fib_15"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "der Jäger: Ich ___ mich immer mehr in Rotkäppchens Großmutter!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vrf_01",
+          "id": "vrf_01_fib_16"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Dornröschen: Gerdi ___ sich jetzt jeden Tag: sie legt Lippenstift an und Mascara, und sie benutzt auch Parfüm ... was kann das bedeuten?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vrf_01",
+          "id": "vrf_01_fib_17"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Rotkäppchens Mutter: Und Rotkäppchen?!? Sie ist kein kleines Kind mehr! Ich ___ mir richtig Sorgen um sie!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vrf_01",
+          "id": "vrf_01_fib_18"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Schneewittchen: Ich muss mich immer ___ ; ich habe zu viel zu tun: arbeiten, als Freiwillige bei einer Firma und dazu auch noch Praktikantin!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vrf_01",
+          "id": "vrf_01_fib_19"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Frau Holle: Und wir ___ uns einfach aus: es ist wirklich schön, nicht mehr für den ganzen Schneefall verantwortlich zu sein!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vrf_01",
+          "id": "vrf_01_fib_20"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Der Froschkönig:Ich ___ mich einfach, ob ich irgendwann noch einmal Prinz werden könnte!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vrf_01",
+          "id": "vrf_01_fib_21"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "die Bremer Stadtmusikanten: Wir haben uns in den letzten paar Monaten wirklich prima ___ !",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vrf_01",
+          "id": "vrf_01_fib_22"
         }
       ]
     },
@@ -33313,6 +37437,86 @@
           "answerStatus": "MISSING",
           "grammarCode": "vphr_01",
           "id": "vphr_01_fib_10"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Dornröschen: Hallo, Rapunzel! Schneewittchen, Aschenputtel und ich haben gerade ___ gesprochen, dass du Rat suchst.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vphr_01",
+          "id": "vphr_01_fib_11"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Aschenputtel: Wir wollen dir helfen! ___ leidest du eigentlich?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vphr_01",
+          "id": "vphr_01_fib_12"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Rapunzel: Ich will einen richtigen Job suchen, aber ich zweifele ___ , dass mein Mann so etwas erlauben würde. Er ist ja sehr konservativ! Was soll ich tun?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vphr_01",
+          "id": "vphr_01_fib_13"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Dornröschen: Hmm, das kommt ___ an. Was für einen Job suchst du denn?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vphr_01",
+          "id": "vphr_01_fib_14"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Rapunzel: Natürlich möchte ich Friseurin werden! Ich freue mich so sehr ___ !",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vphr_01",
+          "id": "vphr_01_fib_15"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Dornröschen: OK. Sobald du eine Stelle als Friseurin gefunden hast, stelle (to hire) eine Haushälterin ein - aber sag es deinem Mann nicht! Dann bitte die Haushälterin ___ , eine lange Perücke (wig) zu tragen.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vphr_01",
+          "id": "vphr_01_fib_16"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Rapunzel: ___ denkst du denn, Dornröschen? Diese Idee klingt komisch.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vphr_01",
+          "id": "vphr_01_fib_17"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Aschenputtel: Du gewöhnst dich gleich ___ , Rapunzel. Hör nur zu.",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vphr_01",
+          "id": "vphr_01_fib_18"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Dornröschen: Dein Mann würde die Haushälterin für dich halten - der Perücke wegen! Du könntest jeden Tag arbeiten! Gute Idee, oder? Interessierst du dich ___ oder nicht?",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vphr_01",
+          "id": "vphr_01_fib_19"
+        },
+        {
+          "kind": "GAP",
+          "sentenceDe": "Rapunzel: ___ warten wir? Kaufen wir eine Perücke!",
+          "answer": null,
+          "answerStatus": "MISSING",
+          "grammarCode": "vphr_01",
+          "id": "vphr_01_fib_20"
         }
       ]
     }

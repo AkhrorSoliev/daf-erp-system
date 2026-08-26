@@ -261,6 +261,87 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
     );
   });
 
+  it("bo'sh joyi yo'q MC mashqini xato deb belgilaydi", () => {
+    // MC ham umumiy `___` qoidasidan istisno EMAS — u REORDER emasligi
+    // uchun umumiy `else if` shoxobchasiga tushadi.
+    const d = base();
+    d.grammar.push({
+      code: 'con_04',
+      titleDe: 'Subordinating Conjunctions',
+      titleEn: 'con_04',
+      level: 'B1',
+      explanation: 'x',
+      dialogue: [],
+      audio: [],
+      exercises: [
+        {
+          id: 'con_04_fib_1',
+          kind: 'MC',
+          sentenceDe: 'Die Kinder gehen nach Hause, sie sehr reich sind.',
+          options: ['a. weil', 'b. ob'],
+          answer: null,
+          answerStatus: 'MISSING',
+          grammarCode: 'con_04',
+        },
+      ],
+    });
+    expect(validateDataset(d)).toContain(
+      "con_04_fib_1: gapda bo'sh joy (___) yo'q",
+    );
+  });
+
+  it('ikkitadan kam variantli MC mashqini xato deb belgilaydi', () => {
+    const d = base();
+    d.grammar.push({
+      code: 'con_04',
+      titleDe: 'Subordinating Conjunctions',
+      titleEn: 'con_04',
+      level: 'B1',
+      explanation: 'x',
+      dialogue: [],
+      audio: [],
+      exercises: [
+        {
+          id: 'con_04_fib_1',
+          kind: 'MC',
+          sentenceDe: 'Die Kinder gehen nach Hause, ___ sie sehr reich sind.',
+          options: ['a. weil'],
+          answer: null,
+          answerStatus: 'MISSING',
+          grammarCode: 'con_04',
+        },
+      ],
+    });
+    expect(validateDataset(d)).toContain(
+      "con_04_fib_1: MC mashqida kamida ikkita `options` bo'lishi shart",
+    );
+  });
+
+  it("to'g'ri to'ldirilgan MC mashqini o'tkazadi", () => {
+    const d = base();
+    d.grammar.push({
+      code: 'con_04',
+      titleDe: 'Subordinating Conjunctions',
+      titleEn: 'con_04',
+      level: 'B1',
+      explanation: 'x',
+      dialogue: [],
+      audio: [],
+      exercises: [
+        {
+          id: 'con_04_fib_1',
+          kind: 'MC',
+          sentenceDe: 'Die Kinder gehen nach Hause, ___ sie sehr reich sind.',
+          options: ['a. weil', 'b. ob'],
+          answer: null,
+          answerStatus: 'MISSING',
+          grammarCode: 'con_04',
+        },
+      ],
+    });
+    expect(validateDataset(d)).toEqual([]);
+  });
+
   it("takrorlangan talaffuz id'sini topadi", () => {
     const d = base();
     const item = {

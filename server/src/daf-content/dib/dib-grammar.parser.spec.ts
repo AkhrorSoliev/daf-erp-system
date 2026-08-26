@@ -33,6 +33,18 @@ const MULTI_ROW_PAGE = readFileSync(
   join(__dirname, '__fixtures__', 'gg-pr-cas_06.html'),
   'utf8',
 );
+// `con_04` — 92 sahifalik to'liq yig'ishda topilgan BESHINCHI mashq formati:
+// MC (ko'p variantli). Raqamlash `qnum` klassisiz, yalang'och
+// `<td><b>N.</b></td>` bilan keladi, bo'sh joy `txt_1` emas, chiziqchalar
+// ketma-ketligi bilan belgilanadi, variantlar esa ichma-ich
+// `<table class="mc_vert">` radio jadvalida keladi. Sahifada IKKITA
+// `<table class="ex">` bloki bor (birinchisi — 10 ta MC, ikkinchisi — 12 ta
+// GAP) — bu `sliceExerciseTable`ning bitta `indexOf` bilan faqat birinchi
+// blokni olishi kabi ikkinchi defektni ham fosh qildi.
+const MC_PAGE = readFileSync(
+  join(__dirname, '__fixtures__', 'gg-pr-con_04.html'),
+  'utf8',
+);
 
 const INDEX = `
 <html><body>
@@ -120,11 +132,29 @@ describe('parseGrammarPage — haqiqiy sahifada', () => {
 describe("parseGrammarPage — so'z tartiblash formati (vsub_02)", () => {
   it("10 ta REORDER mashqini bo'sh bo'lmagan tokenlar bilan beradi", () => {
     const p = parseGrammarPage(REORDER_PAGE, 'vsub_02')!;
-    expect(p.exercises).toHaveLength(10);
-    for (const ex of p.exercises) {
-      expect(ex.kind).toBe('REORDER');
+    const reorder = p.exercises.filter((e) => e.kind === 'REORDER');
+    expect(reorder).toHaveLength(10);
+    for (const ex of reorder) {
       expect(ex.tokens).toBeDefined();
       expect(ex.tokens!.length).toBeGreaterThan(0);
+      expect(ex.answer).toBeNull();
+      expect(ex.answerStatus).toBe('MISSING');
+    }
+  });
+
+  // Sahifada IKKINCHI `<table class="ex">` bloki ham bor — u to'liq MC
+  // (12 ta savol). Eski bitta-blokli parser buni butunlay ko'rmasdi, shuning
+  // uchun sahifa jami 10 ta emas, 22 ta mashq beradi endi. Eski sonni
+  // majburlash o'rniga, haqiqiy sonni tasdiqlaymiz.
+  it("ikkinchi blokdagi 12 ta MC mashqini ham qo'shib, jami 22 ta mashq beradi", () => {
+    const p = parseGrammarPage(REORDER_PAGE, 'vsub_02')!;
+    expect(p.exercises).toHaveLength(22);
+    const mc = p.exercises.filter((e) => e.kind === 'MC');
+    expect(mc).toHaveLength(12);
+    for (const ex of mc) {
+      expect(ex.sentenceDe).toContain('___');
+      expect(ex.options).toBeDefined();
+      expect(ex.options!.length).toBeGreaterThanOrEqual(2);
       expect(ex.answer).toBeNull();
       expect(ex.answerStatus).toBe('MISSING');
     }
@@ -171,12 +201,17 @@ describe('parseGrammarPage — cloze formati (adv_03)', () => {
 });
 
 describe('parseGrammarPage — dialogsiz sahifa (cas_07)', () => {
-  it("10 ta GAP mashqini beradi va dialogni bo'sh deb belgilaydi", () => {
+  // Sahifada UCHTA `<table class="ex">` bloki bor: ikkitasi GAP (10+10),
+  // uchinchisi to'liq MC (12). Eski bitta-blokli parser faqat birinchi
+  // GAP blokini ko'rardi (10 ta); tuzatilgandan keyin sahifa jami 32 ta
+  // mashq beradi.
+  it("32 ta mashqni (20 GAP + 12 MC) beradi va dialogni bo'sh deb belgilaydi", () => {
     const p = parseGrammarPage(NO_DIALOGUE_PAGE, 'cas_07')!;
-    expect(p.exercises).toHaveLength(10);
-    for (const ex of p.exercises) {
-      expect(ex.kind).toBe('GAP');
-    }
+    expect(p.exercises).toHaveLength(32);
+    const gap = p.exercises.filter((e) => e.kind === 'GAP');
+    const mc = p.exercises.filter((e) => e.kind === 'MC');
+    expect(gap).toHaveLength(20);
+    expect(mc).toHaveLength(12);
     // Xom HTML'da tekshirilgan: bu sahifada haqiqatan ham dialog jadvali
     // yo'q — bu kamchilik emas, sahifaning haqiqiy holati.
     expect(p.dialogue).toEqual([]);
@@ -221,12 +256,14 @@ describe('parseGrammarPage — hech bir sahifada xom teg qolmaydi', () => {
     ['adv_03', CLOZE_PAGE],
     ['cas_07', NO_DIALOGUE_PAGE],
     ['cas_06', MULTI_ROW_PAGE],
+    ['con_04', MC_PAGE],
   ])('%s sahifasidagi mashqlarda `<` uchramaydi', (code, html) => {
     const p = parseGrammarPage(html, code)!;
     const texts = p.exercises.flatMap((e) => [
       e.sentenceDe,
       ...(e.tokens ?? []),
       ...(e.wordBank ?? []),
+      ...(e.options ?? []),
     ]);
     expect(texts.some((t) => t.includes('<'))).toBe(false);
   });
@@ -243,6 +280,7 @@ describe('parseGrammarPage — hech bir sahifada xom entity qolmaydi', () => {
     ['vsub_02', REORDER_PAGE],
     ['adv_03', CLOZE_PAGE],
     ['cas_07', NO_DIALOGUE_PAGE],
+    ['con_04', MC_PAGE],
   ])(
     '%s sahifasida `&harf;` shaklidagi dekodlanmagan entity uchramaydi',
     (code, html) => {
@@ -254,9 +292,55 @@ describe('parseGrammarPage — hech bir sahifada xom entity qolmaydi', () => {
           e.sentenceDe,
           ...(e.tokens ?? []),
           ...(e.wordBank ?? []),
+          ...(e.options ?? []),
         ]),
       ];
       expect(texts.some((t) => /&[A-Za-z]+;/.test(t))).toBe(false);
     },
   );
+});
+
+describe("parseGrammarPage — ko'p variantli (MC) formati (con_04)", () => {
+  it("birinchi blokdagi 10 ta MC mashqini bo'sh joy va kamida ikkita variant bilan beradi", () => {
+    const p = parseGrammarPage(MC_PAGE, 'con_04')!;
+    const mc = p.exercises.filter((e) => e.kind === 'MC');
+    expect(mc).toHaveLength(10);
+    for (const ex of mc) {
+      expect(ex.sentenceDe).toContain('___');
+      expect(ex.options).toBeDefined();
+      expect(ex.options!.length).toBeGreaterThanOrEqual(2);
+      expect(ex.answer).toBeNull();
+      expect(ex.answerStatus).toBe('MISSING');
+      // Variant matni radio/input belgilaridan tozalangan bo'lishi shart —
+      // manba `<input type="radio" ...>` va `<input type="hidden" ...>`ni
+      // variant matni bilan bir katakka joylaydi.
+      for (const opt of ex.options!) {
+        expect(opt).not.toMatch(/input|radio|hidden/i);
+      }
+    }
+  });
+
+  it('birinchi variant `a.`, ikkinchisi `b.` bilan boshlanadi', () => {
+    const p = parseGrammarPage(MC_PAGE, 'con_04')!;
+    const first = p.exercises.find((e) => e.kind === 'MC')!;
+    expect(first.options![0]).toBe('a. weil');
+    expect(first.options![1]).toBe('b. ob');
+    expect(first.sentenceDe).toBe(
+      'Die Kinder gehen nach Hause und sind sehr froh, ___ sie sehr reich sind.',
+    );
+  });
+
+  // Sahifaning IKKINCHI `<table class="ex">` bloki oddiy GAP formatida —
+  // ikkala blok ham parse qilinishi va id'lar sahifa bo'ylab ketma-ket
+  // (takrorlanmasdan) raqamlanishi kerak.
+  it("ikkinchi blokdagi 12 ta GAP mashqini ham qo'shib, jami 22 ta mashq beradi, id'lar ketma-ket", () => {
+    const p = parseGrammarPage(MC_PAGE, 'con_04')!;
+    expect(p.exercises).toHaveLength(22);
+    const gap = p.exercises.filter((e) => e.kind === 'GAP');
+    expect(gap).toHaveLength(12);
+    const ids = p.exercises.map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids[0]).toBe('con_04_fib_1');
+    expect(ids[ids.length - 1]).toBe(`con_04_fib_${ids.length}`);
+  });
 });

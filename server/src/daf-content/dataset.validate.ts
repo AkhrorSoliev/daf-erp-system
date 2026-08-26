@@ -91,6 +91,16 @@ export function validateDataset(d: DafDataset): string[] {
           );
         }
       }
+
+      // MC `___` qoidasini yuqoridagi umumiy tekshiruvdan OLADI (REORDER
+      // emas, shuning uchun `else if` shoxobchasiga tushadi) — alohida
+      // istisno emas. Bu yerda faqat MC'ga xos qoida qo'shiladi: kamida
+      // ikkita variant bo'lmasa, o'quvchi tanlaydigan hech narsa yo'q.
+      if (ex.kind === 'MC' && (!ex.options || ex.options.length < 2)) {
+        errors.push(
+          `${ex.id}: MC mashqida kamida ikkita \`options\` bo'lishi shart`,
+        );
+      }
     }
   }
 

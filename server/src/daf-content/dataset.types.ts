@@ -96,9 +96,9 @@ export interface DialogueLine {
  */
 export interface GapExercise {
   id: string;
-  /** Manbada uch xil mashq formati bor — ular bir xil shaklga sig'maydi. */
-  kind: 'GAP' | 'REORDER' | 'CLOZE';
-  /** GAP va CLOZE: bo'sh joy `___` bilan belgilangan matn. REORDER: topshiriq matni. */
+  /** Manbada besh xil mashq formati bor — ular bir xil shaklga sig'maydi. */
+  kind: 'GAP' | 'REORDER' | 'CLOZE' | 'MC';
+  /** GAP, CLOZE va MC: bo'sh joy `___` bilan belgilangan matn. REORDER: topshiriq matni. */
   sentenceDe: string;
   /** REORDER: tartiblanadigan tokenlar. */
   tokens?: string[];
@@ -106,6 +106,8 @@ export interface GapExercise {
   wordBank?: string[];
   /** CLOZE: matndagi bo'sh joylar soni. */
   blankCount?: number;
+  /** MC: variant matnlari (masalan `a. weil`), radio/input belgilaridan tozalangan. */
+  options?: string[];
   answer: string | null;
   answerStatus: 'MISSING' | 'DRAFT' | 'APPROVED';
   grammarCode: string;
