@@ -22,10 +22,24 @@ import {
   parseVideoList,
 } from '../src/daf-content/dib/dib-transcript.parser';
 import { parseChapterPage } from '../src/daf-content/dib/dib-chapter.parser';
-import { DIB_LICENSE, DIB_ATTRIBUTION } from '../src/daf-content/dib/dib-license';
+import {
+  parseGrammarIndex,
+  parseGrammarPage,
+} from '../src/daf-content/dib/dib-grammar.parser';
+import { parsePhoneticsPage } from '../src/daf-content/dib/dib-phonetics.parser';
+import {
+  DIB_LICENSE,
+  DIB_ATTRIBUTION,
+} from '../src/daf-content/dib/dib-license';
 import { labelChapter } from '../src/daf-content/level-labeler';
 import { collectAssets } from '../src/daf-content/media/media-manifest';
 import { validateDataset } from '../src/daf-content/dataset.validate';
+import {
+  lemmaOf,
+  enrichLexeme,
+} from '../src/daf-content/wort-schule/wort-schule.parser';
+import { WortSchuleAdapter } from '../src/daf-content/wort-schule/wort-schule.adapter';
+import { WortSchuleClient } from '../src/daf-content/wort-schule/wort-schule-client';
 import type { AssetRef, DafDataset } from '../src/daf-content/dataset.types';
 
 const OUT = join(__dirname, '..', 'content', 'daf');
@@ -94,7 +108,91 @@ async function harvestDib(): Promise<DafDataset> {
     process.stdout.write(`  bob ${k}: tayyor\n`);
   }
 
+  // Grimm Grammar DiB'ning o'zida emas, qo'shni bo'limda joylashgan — nisbiy
+  // yo'l (`../gg/...`) `DIB_BASE`dan yuqoriga chiqib, coerll.utexas.edu/gg/
+  // ga tushadi. Mundarija bosma indeks sahifasidan olinadi, so'ng har bir
+  // kod uchun ALOHIDA bosma sahifa yuklanadi (grammatika bilan bir xil
+  // sabab: navigatsiya chrome'i yo'q, mashq bo'sh joylari aniq belgilangan).
+  const indexHtml = await client.fetchText('../gg/gr/index.html');
+  const codes = parseGrammarIndex(indexHtml);
+  console.log(`  grammatika sahifalari: ${codes.length}`);
+
+  for (const code of codes) {
+    const page = await client.fetchText(`../gg/pr/${code}.html`);
+    const g = parseGrammarPage(page, code);
+    if (g) d.grammar.push(g);
+  }
+
+  for (const k of CHAPTERS) {
+    const html = await client.fetchText(`pho.php?k=${k}`);
+    d.phonetics.push(...parsePhoneticsPage(html, k));
+  }
+
+  // Har bob uchun bitta Kurs-Paket PDF — matni o'qilmaydi, faqat R2'ga
+  // ko'chadi (Faza 2'ning hujjat kutubxonasi uchun).
+  for (const k of CHAPTERS) {
+    const file = `k_${String(k).padStart(2, '0')}.pdf`;
+    d.documents.push({
+      sourceUrl: `https://coerll.utexas.edu/dib/pdfs/${file}`,
+      key: `dib/pdf/${file}`,
+      kind: 'PDF',
+      license: DIB_LICENSE,
+      attribution: DIB_ATTRIBUTION,
+    });
+  }
+
   return d;
+}
+
+/**
+ * Lug'at yozuvlarini `wort.schule` metama'lumotlari bilan boyitadi.
+ *
+ * `parseWordJson` rasm bo'lmasa ham, boshqa foydali maydon (bo'g'inlar,
+ * sinonimlar, mavzular) bo'lsa yozuvni qaytaradi — shuning uchun boyitilgan
+ * yozuvlar soni (`enriched`) va rasm topilgan yozuvlar soni (`imageHits`)
+ * IKKI XIL son. Hisobotda («Rasmli so'z») aynan `imageHits` ko'rsatiladi.
+ *
+ * `client.fetchWord` chinakam nosozlikni (5xx, tarmoq uzilishi, cheklov)
+ * yutmaydi — bu yerda ATAYLAB tutilmaydi, xato yig'ishni to'xtatadi. Sabab:
+ * ~625 so'rovning yarmi muvaffaqiyatsiz bo'lganda ham jim davom etish, ochiq
+ * ko'rinadigan-u aslida chala to'ldirilgan korpus berardi — kesh borligi
+ * uchun qayta ishga tushirish arzon, shuning uchun to'xtash xavfsizroq.
+ */
+async function enrichVocabulary(
+  d: DafDataset,
+): Promise<{ enriched: number; imageHits: number }> {
+  // Lemmaga tushadigan yozuvlarni yig'amiz va qayerda turganini eslab qolamiz.
+  const wanted = new Map<string, { section: number; entry: number }[]>();
+  d.sections.forEach((s, si) =>
+    s.entries.forEach((e, ei) => {
+      const lemma = lemmaOf(e.de);
+      if (!lemma) return;
+      const list = wanted.get(lemma) ?? [];
+      list.push({ section: si, entry: ei });
+      wanted.set(lemma, list);
+    }),
+  );
+
+  const adapter = new WortSchuleAdapter(
+    [...wanted.keys()],
+    new WortSchuleClient(join(CACHE, 'ws')),
+  );
+
+  let enriched = 0;
+  let imageHits = 0;
+  for await (const raw of adapter.harvest()) {
+    const entry = adapter.map(raw);
+    if (!entry) continue;
+
+    for (const at of wanted.get(raw.lemma) ?? []) {
+      const s = d.sections[at.section];
+      s.entries[at.entry] = enrichLexeme(s.entries[at.entry], entry);
+      enriched++;
+      if (entry.image) imageHits++;
+    }
+  }
+
+  return { enriched, imageHits };
 }
 
 async function main() {
@@ -102,6 +200,10 @@ async function main() {
 
   console.log('DiB yig\'ilmoqda...');
   const dib = await harvestDib();
+
+  console.log('wort.schule bilan boyitilmoqda...');
+  const { enriched, imageHits } = await enrichVocabulary(dib);
+  console.log(`  boyitilgan yozuvlar: ${enriched}, rasmli: ${imageHits}`);
 
   const errors = validateDataset(dib);
   if (errors.length > 0) {
@@ -140,15 +242,28 @@ async function main() {
     );
     thresholdFailed = true;
   }
+  if (dib.grammar.length < 85) {
+    console.error(
+      `\nDIQQAT: ${dib.grammar.length} ta grammatika sahifasi — kutilgani 92. Manba o'zgardimi?`,
+    );
+    thresholdFailed = true;
+  }
+  if (dib.phonetics.length < 55) {
+    console.error(
+      `\nDIQQAT: ${dib.phonetics.length} ta talaffuz bo'limi — kutilgani ~61.`,
+    );
+    thresholdFailed = true;
+  }
   if (thresholdFailed) {
     process.exitCode = 1;
     return;
   }
 
+  const assets = collectAssets(dib);
   writeFileSync(join(OUT, 'dib.json'), JSON.stringify(dib, null, 2), 'utf8');
   writeFileSync(
     join(OUT, 'media-manifest.json'),
-    JSON.stringify(collectAssets(dib), null, 2),
+    JSON.stringify(assets, null, 2),
     'utf8',
   );
 
@@ -164,7 +279,14 @@ async function main() {
       '  (kutilgan holat — manba saytida faqat intervyu videolari' +
       ' transkriptlanadi, "sik" va "intro" videolarda transkript umuman yo\'q)',
   );
-  console.log(`Media aktiv:  ${collectAssets(dib).length}`);
+  console.log(`Grammatika:   ${dib.grammar.length} sahifa`);
+  console.log(
+    `Mashq gapi:   ${dib.grammar.reduce((n, g) => n + g.exercises.length, 0)} (javob kaliti bo'sh — Faza 2)`,
+  );
+  console.log(`Talaffuz:     ${dib.phonetics.length}`);
+  console.log(`Hujjat (PDF): ${dib.documents.length}`);
+  console.log(`Rasmli so'z:  ${imageHits} (wort.schule, CC0)`);
+  console.log(`Media aktiv:  ${assets.length}`);
 
   console.log('\nDaraja bo\'yicha boblar:');
   for (const c of dib.chapters) {

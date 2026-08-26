@@ -23,6 +23,16 @@ const NO_DIALOGUE_PAGE = readFileSync(
   join(__dirname, '__fixtures__', 'gg-pr-cas_07.html'),
   'utf8',
 );
+// `cas_06` — 92 sahifalik to'liq yig'ishda topilgan TO'RTINCHI mashq
+// formati: `<table class="ex">` qatorlari UCH ustunli va bitta raqamlangan
+// mashq bir necha qatorga (davom + bo'sh joy) taqsimlangan — bo'sh joy
+// `qnum`siz davom qatorida keladi. Eski bitta-qatorli parser bu holatda
+// faqat so'zlovchi nomini olardi, haqiqiy bo'sh joyni ko'rmasdi va uni bo'sh
+// `tokens` bilan REORDER deb noto'g'ri belgilardi.
+const MULTI_ROW_PAGE = readFileSync(
+  join(__dirname, '__fixtures__', 'gg-pr-cas_06.html'),
+  'utf8',
+);
 
 const INDEX = `
 <html><body>
@@ -173,12 +183,44 @@ describe('parseGrammarPage — dialogsiz sahifa (cas_07)', () => {
   });
 });
 
+describe("parseGrammarPage — ko'p qatorli dialog formati (cas_06)", () => {
+  it("6 ta GAP mashqini beradi, hech biri bo'sh tokenlar bilan qolmaydi", () => {
+    const p = parseGrammarPage(MULTI_ROW_PAGE, 'cas_06')!;
+    expect(p.exercises).toHaveLength(6);
+    for (const ex of p.exercises) {
+      expect(ex.kind).toBe('GAP');
+      expect(ex.sentenceDe).toContain('___');
+      // GAP mashqida `tokens` umuman yozilmaydi (REORDER uchun maydon) —
+      // eski xato aynan bo'sh `tokens: []` bilan REORDER chiqarardi.
+      expect(ex.tokens).toBeUndefined();
+    }
+  });
+
+  it("so'zlovchi nomi VA dialog matni bitta gapga birlashadi", () => {
+    const p = parseGrammarPage(MULTI_ROW_PAGE, 'cas_06')!;
+    expect(p.exercises[0].sentenceDe).toContain('Brummbär:');
+    expect(p.exercises[0].sentenceDe).toContain('Chef:');
+    expect(p.exercises[0].sentenceDe).toContain('Ich will eine neue Badehose');
+    expect(p.exercises[0].sentenceDe).toContain(
+      'Wieso brauchst du eine neue Badehose',
+    );
+  });
+
+  it("ajratuvchi bo'sh qator (`&nbsp;`) matnga hech narsa qo'shmaydi", () => {
+    const p = parseGrammarPage(MULTI_ROW_PAGE, 'cas_06')!;
+    for (const ex of p.exercises) {
+      expect(ex.sentenceDe).not.toMatch(/\s{2,}/);
+    }
+  });
+});
+
 describe('parseGrammarPage — hech bir sahifada xom teg qolmaydi', () => {
   it.each([
     ['vi_05', REAL],
     ['vsub_02', REORDER_PAGE],
     ['adv_03', CLOZE_PAGE],
     ['cas_07', NO_DIALOGUE_PAGE],
+    ['cas_06', MULTI_ROW_PAGE],
   ])('%s sahifasidagi mashqlarda `<` uchramaydi', (code, html) => {
     const p = parseGrammarPage(html, code)!;
     const texts = p.exercises.flatMap((e) => [

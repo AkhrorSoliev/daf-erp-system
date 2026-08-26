@@ -12,7 +12,9 @@ const CODE_RE = /href="(?:\.\.\/gr\/)?([a-z]+_\d+)\.html"/g;
 const TITLE_RE = /<title>([\s\S]*?)<\/title>/;
 const DIALOGUE_ROW_RE =
   /<tr>\s*<td class="nowrap">([\s\S]*?)<\/td>\s*<td>([\s\S]*?)<\/td>\s*<td>([\s\S]*?)<\/td>\s*<\/tr>/g;
-const EX_ROW_RE = /<td class="qnum">[\s\S]*?<\/td>\s*<td>([\s\S]*?)<\/td>/g;
+const TABLE_ROW_RE = /<tr>([\s\S]*?)<\/tr>/g;
+const TABLE_CELL_RE = /<td[^>]*>([\s\S]*?)<\/td>/g;
+const QNUM_ROW_RE = /^\s*<td class="qnum">/;
 const CLOZE_BLANK_RE = /<p class="txt_1"><\/p>/g;
 const WB_TABLE_RE = /<table class="wb">([\s\S]*?)<\/table>/;
 const WB_CELL_RE = /<td([^>]*)>([\s\S]*?)<\/td>/g;
@@ -105,16 +107,17 @@ function explanationOf(html: string): string {
  * Sahifadagi mashqlar. Manbada UCH XIL format bor va bittasi ikkinchisini
  * istisno qiladi — bitta sahifa faqat bittasini ishlatadi:
  *
- * 1. Qator jadvali (`<table class="ex">`) — har qatorda GAP yoki REORDER.
+ * 1. Qator jadvali (`<table class="ex">`) — har SPAN'da GAP yoki REORDER.
  * 2. Cloze parcha (`<p class="clz">`) — bitta ko'p bo'sh joyli matn.
  * 3. Hech biri — sahifada haqiqatan ham Übung yo'q (bo'sh ro'yxat qonuniy).
  */
 function exercisesOf(html: string, code: string): GapExercise[] {
   const exBlock = sliceExerciseTable(html);
   if (exBlock) {
-    return [...exBlock.matchAll(EX_ROW_RE)].map((m, i) =>
-      rowExercise(m[1], code, i),
-    );
+    return exerciseSpans(exBlock)
+      .map((rows) => spanExercise(rows, code))
+      .filter((e): e is Omit<GapExercise, 'id'> => e !== null)
+      .map((e, i) => ({ ...e, id: `${code}_fib_${i + 1}` }));
   }
 
   const cloze = sliceCloze(html);
@@ -126,16 +129,54 @@ function exercisesOf(html: string, code: string): GapExercise[] {
 }
 
 /**
- * Bitta jadval qatori. `<p class="txt_1">` bor bo'lsa — GAP (bo'sh joy).
- * Bo'lmasa — REORDER: katak `<i>So'zlovchi:</i> token / token / ...<br>
- * <input class="txt_2">` shaklida, tokenlar `/` bilan ajratilgan.
+ * Jadvaldagi qatorlarni mashq SPAN'lariga guruhlaydi: har span raqamlangan
+ * (`qnum`) qatordan boshlanib, navbatdagi `qnum` qatorigacha davom etadi.
+ * Ko'pchilik sahifada span bitta qatordan iborat, lekin `cas_06` kabi
+ * dialogli formatda bitta savol bir necha qatorga (davomi + bo'sh joy) taqsimlangan
+ * — bo'sh joy `qnum`siz davom qatorida keladi. Ajratuvchi bo'sh qator
+ * (`line-height: .5em`) hech qanday span'ga tegishli emas, u shunchaki
+ * keyingi span boshlanmaguncha oxirgi span'ga qo'shilib, keyin bo'sh matn
+ * sifatida yo'qoladi.
  */
-function rowExercise(cellHtml: string, code: string, i: number): GapExercise {
-  const id = `${code}_fib_${i + 1}`;
+function exerciseSpans(exBlock: string): string[][] {
+  const rows = [...exBlock.matchAll(TABLE_ROW_RE)].map((m) => m[1]);
+  const spans: string[][] = [];
+  let current: string[] | null = null;
+
+  for (const row of rows) {
+    if (QNUM_ROW_RE.test(row)) {
+      if (current) spans.push(current);
+      current = [row];
+    } else if (current) {
+      current.push(row);
+    }
+  }
+  if (current) spans.push(current);
+
+  return spans;
+}
+
+/**
+ * Bitta mashq span'i — bir yoki bir necha qator. `qnum` katagi (span'ning
+ * eng birinchi katagi) tashlab yuboriladi, qolgan barcha kataklar o'qish
+ * tartibida bo'shliq bilan birlashtiriladi, shunda so'zlar tutashib
+ * ketmaydi. Natijada `class="txt_1"` bor bo'lsa — GAP (bo'sh joy). Bo'lmasa
+ * — REORDER: `<i>So'zlovchi:</i> token / token / ...<br><input class="txt_2">`
+ * shaklida, tokenlar `/` bilan ajratilgan. Ikkalasi ham topilmasa (masalan
+ * yolg'iz so'zlovchi nomi, davom matni boshqa katakda), span mashq
+ * tarkibiga ega emas va o'tkazib yuboriladi.
+ */
+function spanExercise(
+  rows: string[],
+  code: string,
+): Omit<GapExercise, 'id'> | null {
+  const cells = rows.flatMap((row) =>
+    [...row.matchAll(TABLE_CELL_RE)].map((m) => m[1]),
+  );
+  const cellHtml = cells.slice(1).join(' ');
 
   if (cellHtml.includes('class="txt_1"')) {
     return {
-      id,
       kind: 'GAP',
       sentenceDe: stripTags(cellHtml.replace(CLOZE_BLANK_RE, ' ___ ')),
       answer: null,
@@ -153,8 +194,9 @@ function rowExercise(cellHtml: string, code: string, i: number): GapExercise {
     .map((t) => stripTags(t).trim())
     .filter(Boolean);
 
+  if (tokens.length === 0) return null;
+
   return {
-    id,
     kind: 'REORDER',
     sentenceDe: stripTags(promptHtml),
     tokens,

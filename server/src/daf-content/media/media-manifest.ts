@@ -22,5 +22,16 @@ export function collectAssets(d: DafDataset): AssetRef[] {
     byKey.set(v.key, v);
   }
 
+  for (const g of d.grammar) {
+    for (const a of g.audio) byKey.set(a.key, a);
+  }
+  for (const p of d.phonetics) byKey.set(p.audio.key, p.audio);
+  for (const doc of d.documents) byKey.set(doc.key, doc);
+  for (const s of d.sections) {
+    for (const e of s.entries) {
+      if (e.image) byKey.set(e.image.key, e.image);
+    }
+  }
+
   return [...byKey.values()];
 }
