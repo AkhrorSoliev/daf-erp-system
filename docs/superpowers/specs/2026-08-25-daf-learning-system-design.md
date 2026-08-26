@@ -470,6 +470,7 @@ keltirildi.
 
 ## 10. ADR
 
-**ADR-0011** yoziladi: *«O'quv o'zagi standartga bog'lanadi, manbaga emas»* —
-Q1, Q3, Q4 va Q7 ni rasmiylashtiradi. Bu eng qimmat qaytariladigan qaror:
-o'zak bir marta manbaning shakliga qurilsa, har yangi kitob uni buzadi.
+[ADR-0011](../../adr/0011-oquv-ozagi-standartga-boglanadi.md) — *«O'quv o'zagi
+Goethe standartiga bog'lanadi, manbaga emas»* — Q1, Q3, Q4 va Q7 ni
+rasmiylashtiradi. Bu eng qimmat qaytariladigan qaror: o'zak bir marta
+manbaning shakliga qurilsa, har yangi kitob uni buzadi.
