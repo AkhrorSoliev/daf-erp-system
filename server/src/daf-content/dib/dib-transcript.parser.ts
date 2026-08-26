@@ -1,9 +1,6 @@
 import type { AssetRef, Transcript } from '../dataset.types';
 import { decodeEntities } from './html-entities';
-
-const DIB_LICENSE = 'CC BY 4.0';
-const DIB_ATTRIBUTION =
-  'Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0';
+import { DIB_LICENSE, DIB_ATTRIBUTION } from './dib-license';
 
 function clean(s: string): string {
   return decodeEntities(s.replace(/<[^>]*>/g, '')).replace(/\s+/g, ' ').trim();

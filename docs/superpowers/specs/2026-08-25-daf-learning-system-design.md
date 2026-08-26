@@ -402,8 +402,8 @@ Faza 2–6 shu modeldan foydalanadi, lekin har biri o'z spec'ini oladi.
 
 | Faza | Natija | Alohida spec |
 |---|---|---|
-| **1** | Dataset + media R2'da: adapterlar, daraja yorliqlash, tarjima (tasdiqlanmagan holatda) | yo'q — shu hujjat |
-| **2** | Ko'rinadigan kutubxona: `Daf*` modellar, seed, API, portal bo'limi. Mashqsiz | kerak |
+| **1** | Dataset + media R2'da: adapterlar, daraja yorliqlash | yo'q — shu hujjat |
+| **2** | Ko'rinadigan kutubxona: `Daf*` modellar, seed, API, portal bo'limi, **o'zbekcha tarjima (tasdiqlanmagan holatda)**. Mashqsiz | kerak |
 | **3** | Mashq dvigateli — 3.4 dagi formatlar. Yopiq formatlar `AUTO`, **`WRITE_GUIDED` esa `AI`** (Schreiben ishlaydi) | kerak |
 | **4** | Admin muallif UI + guruhga yo'naltirish + tarjima tasdig'i + **o'qituvchi namuna tekshiruvi navbati** | kerak |
 | **5** | **Deutsch Tutor to'liq qaytishi** — tushuntiruvchi suhbat, `SPEAK_*` uchun STT | kerak |
@@ -412,6 +412,13 @@ Faza 2–6 shu modeldan foydalanadi, lekin har biri o'z spec'ini oladi.
 `WRITE_GUIDED` Faza 3 ga kiritildi: baholovchisiz u mashq bo'la olmaydi, ya'ni
 AI ni kechiktirsak, Schreiben moduli bo'sh qoladi. `SPEAK_*` esa Faza 5 da —
 u qo'shimcha bo'g'inni (STT) talab qiladi va cheklovi bor (3.8).
+
+**Izoh (2026-08-25 tuzatildi):** o'zbekcha tarjima ilgari shu jadvalda Faza 1
+ga yozilgan edi, lekin kontent yig'ish rejasi (`daf-content-harvest.md`) uni
+ataylab Faza 2 ga ko'chirdi — Faza 1 hech qanday baza yozmaydi (natija faqat
+fayllar), tarjima esa `REVIEW` holatida saqlanishi uchun `Daf*` modellari va
+seed kerak, ular esa Faza 2 ning o'zi. Bu yerdagi yozuv o'sha qarorga mos
+keltirildi.
 
 ## 7. Nima QILINMAYDI
 

@@ -1,9 +1,6 @@
 import type { AssetRef, Lexeme, LexemeSection } from '../dataset.types';
 import { decodeEntities } from './html-entities';
-
-const DIB_LICENSE = 'CC BY 4.0';
-const DIB_ATTRIBUTION =
-  'Deutsch im Blick, COERLL, The University of Texas at Austin — CC BY 4.0';
+import { DIB_LICENSE, DIB_ATTRIBUTION } from './dib-license';
 
 const AUDIO_RE = /voc_(\d{2})_(\d{2})_[A-Za-z0-9_-]+\.mp3/g;
 const TITLE_RE = /class="hi_12_0057d1">([^<]*)</g;

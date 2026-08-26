@@ -17,6 +17,12 @@ export interface AssetRef {
   kind: 'AUDIO' | 'VIDEO' | 'IMAGE' | 'PDF';
   license: string;
   attribution: string;
+  /**
+   * Inson o'qiy oladigan nom, manbada mavjud bo'lsagina to'ldiriladi.
+   * Hozircha faqat DiB video aktivlarida (RSS sarlavhasidan) — audio uchun
+   * manba sarlavha bermaydi, shuning uchun bo'sh qoldiriladi.
+   */
+  title?: string;
 }
 
 export interface Lexeme {
@@ -54,6 +60,15 @@ export interface ChapterInfo {
   /** Grimm Grammar sahifa kodlari, masalan `vi_05`. */
   grammarFocus: string[];
   grammarRecommended: string[];
+  /**
+   * Quyidagi uchtasi parser emas, `labelChapter` (level-labeler.ts) tomonidan
+   * to'ldiriladi — shuning uchun ixtiyoriy: `parseChapterPage` faqat
+   * grammatika bog'lanishini biladi, darajani esa yig'uvchi skript
+   * (`daf-harvest.ts`) hisoblab, shu maydonlarga yozadi.
+   */
+  level?: CefrLevel;
+  needsReview?: boolean;
+  reason?: string;
 }
 
 export interface DafDataset {
