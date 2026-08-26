@@ -9,7 +9,7 @@ const A: AssetRef = {
   attribution: 'COERLL',
 };
 
-function make(over: { head?: jest.Mock; put?: jest.Mock; fetchFn?: jest.Mock } = {}) {
+function make(over: { fetchFn?: jest.Mock } = {}) {
   const send = jest.fn();
   const s3 = { send } as never;
   const fetchFn =
@@ -45,7 +45,7 @@ describe('R2Uploader.uploadMissing', () => {
     expect(fetchFn).not.toHaveBeenCalled();
   });
 
-  it('manba javob bermasa, boshqa fayllarni to\'xtatmaydi', async () => {
+  it('manba javob bermasa, boshqa fayllarni to\'xtatmaydi va sababini yozadi', async () => {
     const fetchFn = jest.fn().mockResolvedValue({ ok: false, status: 500 });
     const { up, send } = make({ fetchFn });
     send.mockRejectedValue({ name: 'NotFound' });
@@ -53,7 +53,46 @@ describe('R2Uploader.uploadMissing', () => {
     const r = await up.uploadMissing([A]);
 
     expect(r.uploaded).toBe(0);
-    expect(r.failed).toEqual(['dib/audio/a.mp3']);
+    expect(r.failed).toEqual([{ key: 'dib/audio/a.mp3', reason: 'HTTP 500' }]);
+  });
+
+  it('manba so\'rovi tarmoq xatosi bilan rad etilsa ham, sababi bilan qayd etiladi', async () => {
+    const fetchFn = jest.fn().mockRejectedValue(new Error('network timeout'));
+    const { up, send } = make({ fetchFn });
+    send.mockRejectedValue({ name: 'NotFound' });
+
+    const r = await up.uploadMissing([A]);
+
+    expect(r.uploaded).toBe(0);
+    expect(r.failed).toEqual([
+      { key: 'dib/audio/a.mp3', reason: 'network timeout' },
+    ]);
+  });
+
+  it('PutObject rad etilsa, sababi bilan qayd etiladi va ijro davom etadi', async () => {
+    const { up, send } = make();
+    send
+      .mockRejectedValueOnce({ name: 'NotFound' }) // HeadObject - yo'q
+      .mockRejectedValueOnce({ name: 'AccessDenied', message: 'Access Denied' }); // PutObject rad etildi
+
+    const r = await up.uploadMissing([A]);
+
+    expect(r.uploaded).toBe(0);
+    expect(r.failed).toEqual([
+      { key: 'dib/audio/a.mp3', reason: 'Access Denied' },
+    ]);
+  });
+
+  it('HeadObject 403 bilan yiqilsa, "yo\'q" deb hisoblanmaydi va yuqoriga uloqtiriladi', async () => {
+    const { up, send } = make();
+    send.mockRejectedValue({
+      name: 'Forbidden',
+      $metadata: { httpStatusCode: 403 },
+    });
+
+    await expect(up.uploadMissing([A])).rejects.toMatchObject({
+      name: 'Forbidden',
+    });
   });
 
   it('litsenziyani R2 metama\'lumotiga yozadi', async () => {
