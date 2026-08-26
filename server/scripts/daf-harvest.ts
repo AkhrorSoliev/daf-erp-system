@@ -9,6 +9,9 @@
  *
  * Tarmoq javoblari `server/.cache/daf/` ga keshlanadi. Manbani qaytadan
  * o'qish kerak bo'lsa, o'sha katalogni o'chiring.
+ *
+ * DIQQAT: kesh kaliti Faza 1b da sha1'ga o'tdi. Eski `.cache/daf/` dagi
+ * fayllar endi topilmaydi va manba qaytadan o'qiladi — bu bir martalik.
  */
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
