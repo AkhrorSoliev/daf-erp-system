@@ -2068,3 +2068,37 @@ shunga moslanishi kerak.
 - ZUM'ning to'liq yig'ilishi — bu rejada adapter va parser yozildi, lekin 759 mashqni yig'ish CLI'si Faza 2 da, chunki mashq modeli hali yo'q
 - Grammatika sahifalari va talaffuz audiosi — Faza 2
 - Mashq dvigateli, AI baholash — Faza 3–5
+
+---
+
+## Yakuniy ko'rikdan Faza 2 ga o'tadigan topilmalar
+
+Bu reja bajarildi va yakuniy butun-shox ko'rigidan o'tdi. Quyidagilar **ataylab
+bu shoxda tuzatilmadi** — ular Faza 2 ning boshida hal qilinadi:
+
+**ZUM adapteri yarim.** `zum-client.ts` va `zum.parser.ts` yozildi va
+testlandi, lekin ularni hech kim chaqirmaydi va ular **`AssetRef` umuman
+ishlab chiqarmaydi**. Ya'ni ZUM ning 5 077 rasmi hozirgi shaklda R2 ga chiqa
+olmaydi. `ZumPage`/`ZumExercise` `dataset.types.ts` da emas, ya'ni
+`DafDataset` ularni ushlay olmaydi.
+
+**Adapter interfeysi yozilmagan.** Spec 4-bo'limidagi `DafSourceAdapter`
+kontrakti kodda mavjud emas, va ikki adapter bir-biridan uzoqlashgan: DiB
+keshi kalitni `/ ? &` ni `_` ga aylantirib yasaydi (to'qnashuv mumkin), ZUM esa
+sha1 ishlatadi (to'qnashuvsiz). ZUM usuli yaxshiroq — umumlashtirilsin.
+
+**`cmlimit=500`, sahifalash yo'q.** ZUM harvest CLI yozilganda 500 dan katta
+toifa **jimgina qirqiladi** — qirqilgan toifa kichik toifadan farq qilmaydi.
+
+**`ChapterInfo.level` ixtiyoriy.** Xom parser chiqishi va saqlangan yozuv
+bitta tipni bo'lishgani uchun shunday bo'ldi. `RawChapterInfo` ga ajratilsa,
+maydonlarni majburiy qilish mumkin.
+
+**`asciiMetadata` lotin bo'lmagan ismni buzadi.** DiB satrlari uchun to'g'ri
+ishlaydi, lekin ZUM atributlari wiki muallif ismlaridan tuziladi — «Jürgen»
+R2 metama'lumotida «J?rgen» bo'ladi. ZUM yuklash yo'li paydo bo'lguncha
+tegmaydi, paydo bo'lganda shart.
+
+**DiB PDF'lari tushib qolgan.** Spec 1.2 da 10 ta Kurs-Paket PDF sanalgan,
+lekin bu rejada ular na bajarildi, na kechiktirildi deb yozildi. Faza 1 dan
+e'lonsiz tushib qolgan yagona narsa.
