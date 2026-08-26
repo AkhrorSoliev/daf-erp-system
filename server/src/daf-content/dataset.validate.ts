@@ -34,5 +34,12 @@ export function validateDataset(d: DafDataset): string[] {
     checkAsset(t.video);
   }
 
+  // `d.videos` — transkriptidan qat'i nazar, manbadagi HAR BIR video. Xuddi
+  // bo'lim audiosi va transkript videosi kabi, litsenziyasiz aktiv bu yerda
+  // ham o'tkazilmasligi kerak.
+  for (const v of d.videos) {
+    checkAsset(v);
+  }
+
   return errors;
 }

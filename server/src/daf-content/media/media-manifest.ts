@@ -15,6 +15,12 @@ export function collectAssets(d: DafDataset): AssetRef[] {
   for (const t of d.transcripts) {
     if (t.video) byKey.set(t.video.key, t.video);
   }
+  // `d.videos` manbadagi HAR BIR videoni o'z ichiga oladi, transkriptli
+  // videolar bilan birga — kalit bo'yicha yagonalashtirilgani uchun ustma-ust
+  // tushgan yozuv ikki marta sanalmaydi.
+  for (const v of d.videos) {
+    byKey.set(v.key, v);
+  }
 
   return [...byKey.values()];
 }

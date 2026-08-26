@@ -1,11 +1,11 @@
 import { collectAssets } from './media-manifest';
 import type { AssetRef, DafDataset } from '../dataset.types';
 
-function asset(key: string): AssetRef {
+function asset(key: string, kind: AssetRef['kind'] = 'AUDIO'): AssetRef {
   return {
     sourceUrl: `https://x/${key}`,
     key,
-    kind: 'AUDIO',
+    kind,
     license: 'CC BY 4.0',
     attribution: 'COERLL',
   };
@@ -26,6 +26,7 @@ function dataset(): DafDataset {
     transcripts: [
       { id: 't1', chapter: 1, titleDe: 'v', linesDe: ['x'], linesEn: [], video: asset('v.mp4') },
     ],
+    videos: [],
   };
 }
 
@@ -43,5 +44,21 @@ describe('collectAssets', () => {
 
   it('aktivi yo\'q bo\'limni o\'tkazib yuboradi', () => {
     expect(collectAssets(dataset()).map((a) => a.key)).not.toContain(null);
+  });
+
+  it('`videos` ro\'yxatidagi transkriptsiz videoni ham qo\'shadi', () => {
+    const d = dataset();
+    d.videos.push(asset('intro.mp4', 'VIDEO'));
+    expect(collectAssets(d).map((a) => a.key).sort()).toEqual([
+      'a.mp3',
+      'intro.mp4',
+      'v.mp4',
+    ]);
+  });
+
+  it('transkriptdagi video `videos` ro\'yxatida ham bo\'lsa, bir marta sanaydi', () => {
+    const d = dataset();
+    d.videos.push(asset('v.mp4', 'VIDEO'));
+    expect(collectAssets(d).filter((a) => a.key === 'v.mp4')).toHaveLength(1);
   });
 });

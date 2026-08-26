@@ -22,7 +22,7 @@ import { parseChapterPage } from '../src/daf-content/dib/dib-chapter.parser';
 import { labelChapter } from '../src/daf-content/level-labeler';
 import { collectAssets } from '../src/daf-content/media/media-manifest';
 import { validateDataset } from '../src/daf-content/dataset.validate';
-import type { DafDataset } from '../src/daf-content/dataset.types';
+import type { AssetRef, DafDataset } from '../src/daf-content/dataset.types';
 
 const OUT = join(__dirname, '..', 'content', 'daf');
 const CACHE = join(__dirname, '..', '.cache', 'daf');
@@ -42,6 +42,7 @@ async function harvestDib(): Promise<DafDataset> {
     chapters: [],
     sections: [],
     transcripts: [],
+    videos: [],
   };
 
   for (const k of CHAPTERS) {
@@ -50,6 +51,20 @@ async function harvestDib(): Promise<DafDataset> {
 
     const videos = parseVideoList(await client.fetchText(`rss.php?k=${k}&a=mp4`));
     for (const v of videos) {
+      // Har bir video RSS'da ro'yxatlanganning o'zi bilan `d.videos`ga tushadi —
+      // transkripti bor-yo'qligidan qat'i nazar. Aks holda «sik» (Sprache im
+      // Kontext) va «intro» videolar (manba saytida transkript paneli bo'lmagan
+      // `vid.php`ga yo'naltiriladi) hech qachon media manifestga, demak R2'ga
+      // ham tushmay qolardi.
+      const asset: AssetRef = {
+        sourceUrl: `https://media.la.utexas.edu/dib/video/${v.fileId}.mp4`,
+        key: `dib/video/${v.fileId}.mp4`,
+        kind: 'VIDEO',
+        license: LICENSE,
+        attribution: ATTRIBUTION,
+      };
+      d.videos.push(asset);
+
       const page = await client.fetchText(`vidt.php?f=${v.fileId}`);
       const t = parseTranscriptPage(page, v.fileId, k);
       if (t) d.transcripts.push(t);
@@ -86,7 +101,13 @@ async function main() {
   console.log(
     `Lug'at:       ${dib.sections.reduce((n, s) => n + s.entries.length, 0)}`,
   );
+  console.log(`Videolar:     ${dib.videos.length}`);
   console.log(`Transkript:   ${dib.transcripts.length}`);
+  console.log(
+    `Transkriptsiz video: ${dib.videos.length - dib.transcripts.length}` +
+      '  (kutilgan holat — manba saytida faqat intervyu videolari' +
+      ' transkriptlanadi, "sik" va "intro" videolarda transkript umuman yo\'q)',
+  );
   console.log(`Media aktiv:  ${collectAssets(dib).length}`);
 
   console.log('\nDaraja bo\'yicha boblar:');
@@ -96,9 +117,28 @@ async function main() {
     console.log(`  bob ${String(c.chapter).padStart(2)}  ${l.level}  ${l.reason}${mark}`);
   }
 
-  if (dib.transcripts.length < 200) {
+  // Ikkita chegara ATAYIN mustaqil. DiB saytida faqat intervyu videolari
+  // (`vidt.php`, transkript paneli bilan) transkriptlanadi — «sik» (Sprache im
+  // Kontext) va «intro» videolar boshqa sahifaga (`vid.php`, transkript
+  // panelisiz) yo'naltiriladi. Shuning uchun transkript soni video sonidan
+  // DOIM kam bo'ladi — bu XATO EMAS, kutilgan taqsimot. Video soni ~268,
+  // ulardan ~199 tasi (intervyu videolari) haqiqiy transkriptga ega —
+  // qolgan ~69 tasida transkript sahifada shunchaki YO'Q.
+  //
+  // Birinchi tekshiruv RSS ro'yxatining o'zi qisqarib qolganini ushlaydi
+  // (masalan manba formatini o'zgartirsa); ikkinchisi — transkript
+  // parserining buzilib ketganini. Ikkalasi ham chegarani pasaytirish bilan
+  // emas, manba va parserni qo'lda tekshirish bilan hal qilinadi.
+  if (dib.videos.length < 250) {
     console.error(
-      `\nDIQQAT: ${dib.transcripts.length} ta transkript — kutilgani ~268. Manba o'zgardimi?`,
+      `\nDIQQAT: ${dib.videos.length} ta video — kutilgani ~268. Manba o'zgardimi?`,
+    );
+    process.exitCode = 1;
+  }
+  if (dib.transcripts.length < 190) {
+    console.error(
+      `\nDIQQAT: ${dib.transcripts.length} ta transkript — kutilgani ~199` +
+        " (faqat intervyu videolari). Parser buzildimi?",
     );
     process.exitCode = 1;
   }

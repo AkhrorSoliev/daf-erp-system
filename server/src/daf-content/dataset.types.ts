@@ -65,4 +65,14 @@ export interface DafDataset {
   chapters: ChapterInfo[];
   sections: LexemeSection[];
   transcripts: Transcript[];
+  /**
+   * Manbadagi HAR BIR video, transkripti bor-yo'qligidan qat'i nazar.
+   * Transkript faqat intervyu videolarini qamrab oladi — `sik` (Sprache im
+   * Kontext) va `intro` videolari manba saytida umuman boshqa sahifaga
+   * (`vid.php`, transkript panelisiz) yo'naltiriladi. Shuning uchun video
+   * `Transcript.video` orqali EMAS, shu ro'yxat orqali kuzatiladi — aks
+   * holda transkriptsiz videolar media manifestga hech qachon tushmay,
+   * R2'ga chiqmay qolardi.
+   */
+  videos: AssetRef[];
 }

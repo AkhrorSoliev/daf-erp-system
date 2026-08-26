@@ -19,6 +19,7 @@ function base(): DafDataset {
       },
     ],
     transcripts: [],
+    videos: [],
   };
 }
 
@@ -59,5 +60,19 @@ describe('validateDataset', () => {
     const d = base();
     d.sections.push({ ...d.sections[0], entries: [] });
     expect(validateDataset(d)).toContain("dib-1-1: bo'lim id'si takrorlangan");
+  });
+
+  it('litsenziyasiz `videos` yozuvini o\'tkazmaydi', () => {
+    const d = base();
+    d.videos.push({
+      sourceUrl: 'https://x/v.mp4',
+      key: 'dib/video/v.mp4',
+      kind: 'VIDEO',
+      license: '',
+      attribution: 'x',
+    });
+    expect(validateDataset(d)).toContain(
+      'dib/video/v.mp4: litsenziya ko\'rsatilmagan',
+    );
   });
 });
