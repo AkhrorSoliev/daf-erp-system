@@ -27,6 +27,9 @@ function dataset(): DafDataset {
       { id: 't1', chapter: 1, titleDe: 'v', linesDe: ['x'], linesEn: [], video: asset('v.mp4') },
     ],
     videos: [],
+    grammar: [],
+    phonetics: [],
+    documents: [],
   };
 }
 

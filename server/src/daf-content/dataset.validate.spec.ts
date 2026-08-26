@@ -29,6 +29,9 @@ function base(): DafDataset {
     ],
     transcripts: [],
     videos: [],
+    grammar: [],
+    phonetics: [],
+    documents: [],
   };
 }
 
@@ -132,5 +135,118 @@ describe('validateDataset', () => {
     expect(validateDataset(d)).toContain(
       "dib/video/v.mp4: video kaliti takrorlangan",
     );
+  });
+});
+
+describe('validateDataset — Faza 1b to\'plamlari', () => {
+  it('grammatika sahifasining audiosini litsenziyasiz o\'tkazmaydi', () => {
+    const d = base();
+    d.grammar.push({
+      code: 'vi_05',
+      titleDe: 'Haben',
+      titleEn: 'haben',
+      level: 'A1.1',
+      explanation: 'Haben can be used…',
+      dialogue: [],
+      audio: [
+        {
+          sourceUrl: 'https://x/a.mp3',
+          key: 'dib/gg-audio/vi_05_01.mp3',
+          kind: 'AUDIO',
+          license: '',
+          attribution: 'COERLL',
+        },
+      ],
+      exercises: [],
+    });
+    expect(validateDataset(d)).toContain(
+      "dib/gg-audio/vi_05_01.mp3: litsenziya ko'rsatilmagan",
+    );
+  });
+
+  it('takrorlangan grammatika kodini topadi', () => {
+    const d = base();
+    const page = {
+      code: 'vi_05',
+      titleDe: 'Haben',
+      titleEn: 'haben',
+      level: 'A1.1' as const,
+      explanation: 'x',
+      dialogue: [],
+      audio: [],
+      exercises: [],
+    };
+    d.grammar.push(page, { ...page });
+    expect(validateDataset(d)).toContain('vi_05: grammatika kodi takrorlangan');
+  });
+
+  it('bo\'sh joyi yo\'q mashq gapini xato deb belgilaydi', () => {
+    const d = base();
+    d.grammar.push({
+      code: 'vi_05',
+      titleDe: 'Haben',
+      titleEn: 'haben',
+      level: 'A1.1',
+      explanation: 'x',
+      dialogue: [],
+      audio: [],
+      exercises: [
+        {
+          id: 'vi_05_fib_1',
+          sentenceDe: 'Schneewittchen hat eine neue Karriere.',
+          answer: null,
+          answerStatus: 'MISSING',
+          grammarCode: 'vi_05',
+        },
+      ],
+    });
+    expect(validateDataset(d)).toContain(
+      "vi_05_fib_1: gapda bo'sh joy (___) yo'q",
+    );
+  });
+
+  it('takrorlangan talaffuz id\'sini topadi', () => {
+    const d = base();
+    const item = {
+      id: 'pho_01_01_abc',
+      chapter: 1,
+      textDe: 'A, B, C',
+      textEn: '',
+      caption: 'Listen to the alphabet',
+      audio: {
+        sourceUrl: 'https://x/p.mp3',
+        key: 'dib/audio/pho_01_01_abc.mp3',
+        kind: 'AUDIO' as const,
+        license: 'CC BY 4.0',
+        attribution: 'COERLL',
+      },
+    };
+    d.phonetics.push(item, { ...item });
+    expect(validateDataset(d)).toContain(
+      "pho_01_01_abc: talaffuz id'si takrorlangan",
+    );
+  });
+
+  it('to\'g\'ri to\'ldirilgan Faza 1b to\'plamlarini o\'tkazadi', () => {
+    const d = base();
+    d.grammar.push({
+      code: 'vi_05',
+      titleDe: 'Haben',
+      titleEn: 'haben',
+      level: 'A1.1',
+      explanation: 'x',
+      dialogue: [{ speaker: 'Rotkäppchen', de: 'Ich habe Brot.', en: 'I have bread.' }],
+      audio: [],
+      exercises: [
+        {
+          id: 'vi_05_fib_1',
+          sentenceDe: 'Schneewittchen ___ eine neue Karriere.',
+          answer: null,
+          answerStatus: 'MISSING',
+          grammarCode: 'vi_05',
+        },
+      ],
+    });
+    expect(validateDataset(d)).toEqual([]);
   });
 });

@@ -62,5 +62,38 @@ export function validateDataset(d: DafDataset): string[] {
     checkAsset(v);
   }
 
+  const grammarCodes = new Set<string>();
+  for (const g of d.grammar) {
+    if (grammarCodes.has(g.code)) {
+      errors.push(`${g.code}: grammatika kodi takrorlangan`);
+    }
+    grammarCodes.add(g.code);
+
+    for (const a of g.audio) checkAsset(a);
+
+    for (const ex of g.exercises) {
+      if (!ex.sentenceDe.includes('___')) {
+        errors.push(`${ex.id}: gapda bo'sh joy (___) yo'q`);
+      }
+    }
+  }
+
+  const phoneticsIds = new Set<string>();
+  for (const p of d.phonetics) {
+    if (phoneticsIds.has(p.id)) {
+      errors.push(`${p.id}: talaffuz id'si takrorlangan`);
+    }
+    phoneticsIds.add(p.id);
+    checkAsset(p.audio);
+  }
+
+  for (const doc of d.documents) checkAsset(doc);
+
+  for (const s of d.sections) {
+    for (const e of s.entries) {
+      if (e.image) checkAsset(e.image);
+    }
+  }
+
   return errors;
 }

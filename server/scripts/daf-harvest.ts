@@ -40,6 +40,9 @@ async function harvestDib(): Promise<DafDataset> {
     sections: [],
     transcripts: [],
     videos: [],
+    grammar: [],
+    phonetics: [],
+    documents: [],
   };
 
   // DiB RSS ba'zan BITTA bobning o'z ichida ham bir xil yozuvni ikki marta
