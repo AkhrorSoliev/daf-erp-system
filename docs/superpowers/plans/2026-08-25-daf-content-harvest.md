@@ -1497,7 +1497,7 @@ CC BY 4.0, lekin ichidagi aktivlar CC0/BY/BY-SA aralash."
 
 **Interfaces:**
 - Consumes: `AssetRef`, `DafDataset` (Task 1)
-- Produces: `collectAssets(d: DafDataset): AssetRef[]`, `class R2Uploader { constructor(deps); uploadMissing(assets: AssetRef[]): Promise<{ uploaded: number; skipped: number; failed: string[] }> }`
+- Produces: `collectAssets(d: DafDataset): AssetRef[]`, `asciiMetadata(value: string): string`, `class R2Uploader { constructor(deps); uploadMissing(assets: AssetRef[]): Promise<{ uploaded: number; skipped: number; failed: { key: string; reason: string }[] }> }`
 
 - [ ] **Step 1: Manifest testini yozing**
 
@@ -1965,7 +1965,9 @@ async function main() {
   console.log(`\nYuklandi: ${r.uploaded}   O'tkazildi: ${r.skipped}`);
   if (r.failed.length > 0) {
     console.error(`Yiqildi: ${r.failed.length}`);
-    for (const k of r.failed.slice(0, 20)) console.error(`  - ${k}`);
+    for (const f of r.failed.slice(0, 20)) {
+      console.error(`  - ${f.key}: ${f.reason}`);
+    }
     process.exitCode = 1;
   }
 }
@@ -2002,13 +2004,18 @@ Expected: xatosiz
 
 Run: `cd server && npm run daf:harvest`
 
-Expected (taxminiy — manba o'zgargan bo'lsa farq qiladi):
+Expected:
 ```
 Bo'limlar:    94
-Lug'at:       ~1948
+Lug'at:       ~1850
 Transkript:   ~268
-Media aktiv:  ~362
+Media aktiv:  ~360
 ```
+
+> **Lug'at soni haqida.** Boshida ~1948 deb hisoblangan edi, lekin u XOM
+> qatorlar soni: manbaning o'zida har jadval oxirida bo'sh to'ldiruvchi
+> qatorlar bor. Task 3 ni haqiqiy sahifada o'lchaganda 1-bobda 238 xom qator
+> 226 ta haqiqiy yozuv bergan. Shuning uchun kutilgan yakuniy son ~1850.
 
 Agar transkript soni 200 dan kam chiqsa, skript `exitCode = 1` bilan tugaydi — manba o'zgargan, parserni tekshirish kerak.
 
