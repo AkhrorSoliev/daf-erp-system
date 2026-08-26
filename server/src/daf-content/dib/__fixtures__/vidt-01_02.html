@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Deutsch im Blick :: Kapitel 1 :: Video :: Interviews: Adan  &#149; Wer bin ich?</title>
+<link rel="shortcut icon" href="images/dib_01.ico">
+<meta http-equiv="content-type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" type="text/css" href="css/dib.css">
+<link rel="stylesheet" type="text/css" href="css/content.css">
+<link rel="stylesheet" type="text/css" href="css/share-links.css">
+
+<style type="text/css">
+<!--
+#vidt_g { visibility: visible;}
+#vidt_e { visibility: hidden;}
+#vidt_v { visibility: hidden;}
+
+#but_g_c { visibility: visible;}
+#but_e_c { visibility: hidden;}
+#but_v_c { visibility: hidden;}
+-->
+</style>
+
+<!--[if lt IE 7]>
+<style type="text/css">
+.png { visibility: hidden;}
+</style>
+<![endif]-->
+<script type="text/javascript" language="javascript">
+	add_video_share_tools = null;
+</script>
+<script src="js/main.js" language="JavaScript" type="text/javascript"></script>
+<script type="text/javascript" src="js/dom_drag.js"></script>
+<script type="text/javascript" src="js/scrolller.js"></script>
+<script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+
+<script type="text/javascript" src="js/share-links.js"></script>
+<script src="js/jwplayer.js" language="JavaScript" type="text/javascript"></script>
+<script type="text/javascript" language="javascript">
+<!--
+// active scroll layer
+var active='g';
+
+// determines whether scrollwheel focus is on text field, or not
+var g_scroll_flag;
+
+// required for scroll buttons
+var scroll_time_out;
+//-->
+</script>
+<!-- google analytics -->
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+	var pluginUrl = '//www.google-analytics.com/plugins/ga/inpage_linkid.js';
+	_gaq.push(['_require', 'inpage_linkid', pluginUrl]);
+  _gaq.push(['_setAccount', 'UA-40195754-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+</script>
+<!-- end google analytics -->
+
+
+</head>
+
+<body class="vidt" onLoad="init_rollovers_vidt(); vidt_scroll('g'); do_pngs();">
+
+<!-- wrapper_vidt -->
+<div id="wrapper_vidt">
+
+<!-- top_wrapper_vidt -->
+<div id="top_wrapper_vidt">
+
+<!-- frame_vidt -->
+<div id="frame_vidt"><img src="images/frame_vidt.png" width=869 height=364 alt="" class="png"></div>
+<!-- end frame_vidt -->
+
+<!-- ti_vidt_top -->
+<div id="ti_vidt_top"><img src="images/ti_vidt_top_int_e.gif" width=232 height=25 alt="Interviews: Amerikanische Studenten" title="Interviews: Amerikanische Studenten"></div>
+<!-- end ti_vidt_top -->
+
+
+<!-- cont_swft -->
+<div id="cont_swft">
+<DIV id="player"><p class="top_075">
+&nbsp; <div id="troubleshooting_message">Please check our <a href="http://coerll.utexas.edu/coerll/support/video-and-audio-issues" target="offsite" title="COERLL's Media troubleshooting page">COERLL media troubleshooting</a> page if you can't see this video.</div>
+</p></DIV>
+
+<!-- jw_player_js -->
+<script type="text/javascript">
+	var video_loc = "https://media.la.utexas.edu:443/dib/video/";
+	
+	
+	//var video_player = "https://media.la.utexas.edu:8080/jwplayer/5.6.1768/player.swf";
+	
+	//document.write('<DIV id="player"></DIV>');	
+	
+	//get current media file name from URL
+	//for mp4 file
+	var full_vid_url = window.location.href;
+	full_vid_url=full_vid_url.replace('html', "mp4");
+	full_vid_url=full_vid_url.replace('vid', "mp4");
+	full_vid_url_array=full_vid_url.split('=');
+	full_vid_url = full_vid_url_array[full_vid_url_array.length-1];
+	full_vid_url = video_loc+full_vid_url+".mp4";
+	
+	
+	if(!navigator.userAgent.match(/Android 2.1/i)) {
+	
+		//for jw share plugin
+		var sharing_link = window.location.href;
+		var embed_link = '<embed src="'+ full_vid_url+'" width="321" height="265" allowfullscreen="true" />';
+		
+		//for download link
+		var dwn_array = full_vid_url.split('=');
+		var dwn_file = dwn_array[dwn_array.length-1]; 
+		/*dwn_file = dwn_file.replace(".mp4","");
+		//var link_url = '../export_mp4.php?f='+dwn_file+'';
+		jwplayer('player').setup({  
+		flashplayer:''+video_player+'',	 
+		file: ''+full_vid_url+'',
+		autostart:"true",
+		width: '321',
+		height: '265',
+		controlbar: {
+			'position': 'bottom',
+			'idlehide': 'false'
+			},
+		plugins: {
+			"sharing-2": {
+				code: embed_link,
+				link: sharing_link
+			 }
+			},		
+		author: 'German Department - University of Texas at Austin - COERLL',
+		description: 'Deutsch im Blick: video '+ dwn_file,
+		title: 'Deutsch im Blick: video '+ dwn_file
+		});*/
+	document.getElementById('player').innerHTML = '<video width="320" height="253" controls><source src="'+full_vid_url+'" type="video/mp4">Your browser does not support the video tag.</video>';
+	
+	}
+
+	/*function supports_canvas() { 
+		return !!document.createElement('canvas').getContext; 
+	}
+	
+	if(supports_canvas()){
+			if(navigator.userAgent.match(/Android 2.1/i)) {
+				document.write('<br><br><div id="android-link" align="center"><a href="'+full_vid_url+'" class="ext" style="color:#fff">Click here to see the video on an Android device</a><span class="ext"></span></div>');	
+				document.getElementById("player").style.display="none";
+			}
+	}*/
+
+
+/*var s1 = new SWFObject('swf/mediaplayer.swf','player_id','{$player_w}','{$player_h_total}','9.0.115.0','#5f6d80');
+s1.addParam('allowscriptaccess','always');
+s1.addParam('allowfullscreen','true');
+s1.addVariable('width','{$player_w}');
+s1.addVariable('height','{$player_h_total}');
+s1.addVariable('displayheight','{$displayheight}');
+s1.addVariable('frontcolor','{$frontcolor}');
+s1.addVariable('backcolor','{$backcolor}');
+s1.addVariable('lightcolor','{$lightcolor}');
+s1.addVariable('screencolor','{$screencolor}');
+s1.addVariable('overstretch','true');
+s1.addVariable('autostart','{$autostart}');
+s1.addVariable('showicons','{$showicons}');
+s1.addVariable('volume','{$volume}');
+s1.addVariable("enablejs","{$enablejs}");
+s1.addVariable("javascriptid","player_id"); 
+s1.addVariable("file","{$str_file}"); 
+//s1.addVariable("image","images/flv_player.gif");
+s1.write('{$div_video_container}');*/
+
+</script>
+<!-- end jw_player_js -->
+
+</div>
+<!-- end cont_swft -->
+
+
+
+<!-- vidt_g -->
+<div id="vidt_g">
+<!-- vidt_g titles -->
+<div class="vidt_th">Kap 01 <span class="sm_sepbull_vidt">&#149;</span> Adan  <span class="sm_sepbull_vidt">&#149;</span> Wer bin ich?</div>
+<div class="vidt_tsl">Deutsch</div>
+
+<!-- cont_tra_g -->
+<div id="cont_tra_g">
+
+<div id="tra_g">
+<ul>
+	<li class="vidt_i">Wie hei&szlig;t du?</li>
+	<li class="vidt_s">Ich hei&szlig;e Adan.</li>
+	<li class="vidt_i">Woher kommst du?</li>
+	<li class="vidt_s">Ich komme aus Long Beach Kalifornien.</li>
+	<li class="vidt_i">Und wo ist Long Beach, Kalifornien?</li>
+	<li class="vidt_s">Long Beach Kalifornien ist zwanzig, ungef&auml;hr zwanzig Minuten s&uuml;dlich von Los Angeles. Es ist in der N&auml;he von der OC.</li>
+	<li class="vidt_i">Wie alt bist du?</li>
+	<li class="vidt_s">Ich bin 25 Jahre alt.</li>
+	<li class="vidt_i">Wie ist deine Telefonnummer?</li>
+	<li class="vidt_s">Meine Telefonnummer? Ich wei&szlig; es nicht, weil normalerweise ich rufe mich nicht an. [ich mich normalerweise nicht anrufe].</li>
+	<li class="vidt_i">Wie ist deine Telefonnummer in Kalifornien?</li>
+	<li class="vidt_s">Meine Telefonnummer in Kalifornien ist (562) 923-1637</li>
+	<li class="vidt_i">Was ist deine Lieblingsfarbe?</li>
+	<li class="vidt_s">Meine Lieblingsfarbe, ich glaube es ist Grau.</li>
+	<li class="vidt_i">Warum Grau?</li>
+	<li class="vidt_s">Grau ist ganz neutral. Es ist nicht so hell, nicht so dunkel. Es ist ganz in der Mitte. Ganz spitze!</li>
+
+</ul>
+</div>
+<!-- end tra_g -->
+
+</div>
+<!-- end cont_tra_g -->
+
+
+</div>
+<!-- end vidt_g -->
+
+
+
+<!-- vidt_e -->
+<div id="vidt_e">
+<!-- vidt_e titles -->
+<div class="vidt_th">Ch 01 <span class="sm_sepbull_vidt">&#149;</span> Adan  <span class="sm_sepbull_vidt">&#149;</span> Who am I?</div>
+<div class="vidt_tsl">Englisch</div>
+
+<!-- cont_tra_e -->
+<div id="cont_tra_e">
+
+<div id="tra_e">
+<ul>
+	<li class="vidt_i">What is your name?</li>
+	<li class="vidt_s">My name is Adan.</li>
+	<li class="vidt_i">Where are you from?</li>
+	<li class="vidt_s">I am from Long Beach, California.</li>
+	<li class="vidt_i">And where in Long Beach, California?</li>
+	<li class="vidt_s">Long Beach is twenty, about twenty minutes south of Los Angeles. It's near the OC.</li>
+	<li class="vidt_i">How old are you?</li>
+	<li class="vidt_s">I am 25 years old.</li>
+	<li class="vidt_i">What is your telephone number?</li>
+	<li class="vidt_s">My telephone number? I don't know, because I don't usually call myself.</li>
+	<li class="vidt_i">And what is your telephone number in California?</li>
+	<li class="vidt_s">My telephone number in California is (562) 923-1637.</li>
+	<li class="vidt_i">What is your favorite color?</li>
+	<li class="vidt_s">My favorite color, I think, is gray.</li>
+	<li class="vidt_i">Why gray?</li>
+	<li class="vidt_s">Gray is very neutral. It's not too light, not too dark. It's exactly in the middle. Really cool!</li>
+
+</ul>
+</div>
+<!-- end tra_e -->
+
+</div>
+<!-- end cont_tra_e -->
+
+
+</div>
+<!-- end vidt_e -->
+
+
+
+<!-- vidt_v -->
+<div id="vidt_v">
+<!-- cont_tra_v -->
+<div id="cont_tra_v">
+
+<div id="tra_v">
+
+</div>
+<!-- end tra_v -->
+
+</div>
+<!-- end cont_tra_v -->
+
+
+</div>
+<!-- end vidt_v -->
+
+
+
+<!-- but_g, but_e, but_v -->
+<div id="but_g"><a href="#" onClick="vidt_togbut('g'); vidt_togtra('g'); vidt_scroll('g'); return false;" tabindex="0" role="link" title="View: German transcription"><img src="images/but_g.gif" width=70 height=15 alt="View: German transcription" title="View: German transcription" class="imgover"></a></div>
+<div id="but_e"><a href="#" onClick="vidt_togbut('e'); vidt_togtra('e'); vidt_scroll('e'); return false;" tabindex="0" role="link" title="View: English translation"><img src="images/but_e.gif" width=70 height=15 alt="View: English translation" title="View: English translation" class="imgover"></a></div>
+<div id="but_v"><a href="#" onClick="vidt_togbut('v'); vidt_togtra('v'); vidt_scroll('v'); return false;" tabindex="0" role="link" title="View: No transcription"><img src="images/but_v.gif" width=70 height=15 alt="View: No transcription" title="View: No transcription" class="imgover"></a></div>
+<!-- end but_g, but_e, but_v -->
+
+<!-- but_g_c, but_e_c, but_v_c -->
+<div id="but_g_c"><img src="images/but_g_c.gif" width=70 height=15 alt="Current view: German transcription" title="Current view: German transcription"></div>
+<div id="but_e_c"><img src="images/but_e_c.gif" width=70 height=15 alt="Current view: English translation" title="Current view: English translation"></div>
+<div id="but_v_c"><img src="images/but_v_c.gif" width=70 height=15 alt="Current view: No transcription" title="Current view: No transcription"></div>
+<!-- end but_g_c, but_e_c, but_v_c -->
+
+
+<!-- vidt_wrapscr: scrollbar -->
+<div id="vidt_wrapscr">
+<div id="vidt_scrollcont"><div id="vidt_scroller" title="scroll"></div></div>
+<div id="vidt_arrtop"><a href="javascript:void(0);" onMouseDown="scroll_but_handler('1');" onMouseUp="scroll_but_handler_kill();" tabindex="0" role="link"><img src="images/vidt_arrtop.gif" width=8 height=9 alt="scroll up" title="scroll up"></a></div>
+<div id="vidt_arrbot"><a href="javascript:void(0);" onMouseDown="scroll_but_handler('-1');" onMouseUp="scroll_but_handler_kill();" tabindex="0" role="link"><img src="images/vidt_arrbot.gif" width=8 height=9 alt="scroll down" title="scroll down"></a></div>
+</div>
+<!-- end vidt_wrapscr -->
+
+
+</div>
+<!-- end top_wrapper_vidt -->
+
+</div>
+<!-- end wrapper_vidt -->
+<!-- video share button -->
+<script type="text/javascript">
+	var video = document.getElementsByTagName('video')[0];
+	video.addEventListener("pause", function(){ 
+		add_video_share_tools(this); 
+	}); 
+	$('#player').click(function(){ 
+		video.addEventListener("play", function(){ 
+			hide_video_share_tools(this); 
+		});
+	}); 
+	
+</script>
+<!-- end video share button -->
+
+</body>
+
+</html>

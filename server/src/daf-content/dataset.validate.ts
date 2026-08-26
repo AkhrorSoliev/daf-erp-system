@@ -1,0 +1,66 @@
+import type { AssetRef, DafDataset } from './dataset.types';
+
+/**
+ * Dataset commit qilinishidan oldingi qorovul. Xatolar ro'yxatini qaytaradi —
+ * bo'sh ro'yxat «toza» degani. Exception tashlamaydi: skript hamma muammoni
+ * bir yo'la ko'rsatishi kerak, birinchisida to'xtab qolmasligi.
+ */
+export function validateDataset(d: DafDataset): string[] {
+  const errors: string[] = [];
+
+  const checkAsset = (a: AssetRef | null) => {
+    if (!a) return;
+    if (!a.license.trim()) errors.push(`${a.key}: litsenziya ko'rsatilmagan`);
+    if (!a.attribution.trim()) errors.push(`${a.key}: muallif ko'rsatilmagan`);
+  };
+
+  // Bo'lim id'lari OLDINDAN, alohida o'tishda to'planadi. Bitta o'tishda
+  // tekshirish nosog'lom edi: hali ko'rilmagan (ro'yxatda pastroqda turgan)
+  // bo'limga havola soxta xato bo'lib chiqar, ko'rilgan-u aloqasiz bo'limga
+  // havola esa aksincha o'tkazib yuborilardi. Ikki bosqichli tekshiruv buni
+  // yopadi: yozuvlar to'liq to'plamga tekshiriladi, ketma-ketlikdan qat'i
+  // nazar.
+  const sectionIds = new Set<string>();
+  for (const s of d.sections) {
+    if (sectionIds.has(s.id)) errors.push(`${s.id}: bo'lim id'si takrorlangan`);
+    sectionIds.add(s.id);
+  }
+
+  for (const s of d.sections) {
+    checkAsset(s.audio);
+
+    for (const e of s.entries) {
+      if (!e.de.trim()) errors.push(`${s.id}: bo'sh \`de\` qiymati bor`);
+      if (!e.en.trim()) errors.push(`${s.id}: bo'sh \`en\` qiymati bor`);
+      if (!sectionIds.has(e.sectionId)) {
+        errors.push(`${s.id}: \`${e.sectionId}\` bo'limi mavjud emas`);
+      }
+    }
+  }
+
+  // Transkript id'si manba fayl nomi (masalan `07_04_int_hm_gesundleben`) —
+  // Faza 2'da `DafTranscript` shu id bo'yicha kalitlanadi, shuning uchun
+  // takrorlanish shu yerda ushlanishi shart, DB'ning unique cheklovigacha
+  // yetib bormasdan.
+  const transcriptIds = new Set<string>();
+  for (const t of d.transcripts) {
+    if (transcriptIds.has(t.id)) {
+      errors.push(`${t.id}: transkript id'si takrorlangan`);
+    }
+    transcriptIds.add(t.id);
+    if (t.linesDe.length === 0) errors.push(`${t.id}: nemischa matn bo'sh`);
+    checkAsset(t.video);
+  }
+
+  // `d.videos` — transkriptidan qat'i nazar, manbadagi HAR BIR video. Xuddi
+  // bo'lim audiosi va transkript videosi kabi, litsenziyasiz aktiv bu yerda
+  // ham o'tkazilmasligi kerak — va R2 kaliti ham takrorlanmasligi kerak.
+  const videoKeys = new Set<string>();
+  for (const v of d.videos) {
+    if (videoKeys.has(v.key)) errors.push(`${v.key}: video kaliti takrorlangan`);
+    videoKeys.add(v.key);
+    checkAsset(v);
+  }
+
+  return errors;
+}
