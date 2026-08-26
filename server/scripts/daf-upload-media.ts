@@ -18,11 +18,15 @@ import type { AssetRef } from '../src/daf-content/dataset.types';
 
 const MANIFEST = join(__dirname, '..', 'content', 'daf', 'media-manifest.json');
 
+// Loyihaning mavjud R2 konvensiyasi — `src/upload/upload.service.ts` ayni shu
+// nomlarni o'qiydi. Yangi nom o'ylab topilmaydi: R2 allaqachon sozlangan
+// bo'lsa ham «sozlanmagan» deb aytadigan skript eng yomon holat.
+// `R2_ACCOUNT_ID` bu yerda kerak emas — hisob raqami `R2_ENDPOINT` ichida.
 const REQUIRED = [
-  'R2_ACCOUNT_ID',
+  'R2_ENDPOINT',
   'R2_ACCESS_KEY_ID',
   'R2_SECRET_ACCESS_KEY',
-  'R2_BUCKET',
+  'R2_BUCKET_NAME',
 ];
 
 async function main() {
@@ -56,20 +60,47 @@ async function main() {
 
   const s3 = new S3Client({
     region: 'auto',
-    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    endpoint: process.env.R2_ENDPOINT!,
     credentials: {
       accessKeyId: process.env.R2_ACCESS_KEY_ID!,
       secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
     },
   });
 
-  const uploader = new R2Uploader(s3, process.env.R2_BUCKET!);
-  const r = await uploader.uploadMissing(assets);
+  const uploader = new R2Uploader(s3, process.env.R2_BUCKET_NAME!);
 
-  console.log(`\nYuklandi: ${r.uploaded}   O'tkazildi: ${r.skipped}`);
-  if (r.failed.length > 0) {
-    console.error(`Yiqildi: ${r.failed.length}`);
-    for (const f of r.failed.slice(0, 20)) {
+  // Aktivlar bir nechta yo'lakda parallel yuklanadi. Sabab o'lchangan:
+  // manba serveri (COERLL) fayl hajmidan qat'i nazar har so'rovga ~7 soniya
+  // javob beradi, ya'ni 1 095 fayl ketma-ket ~2 soatga cho'ziladi. Yo'laklar
+  // bir-biriga tegmaydi — har bir aktivning kaliti yagona va `uploadMissing`
+  // idempotent, shuning uchun uzilgan yugurishni shunchaki qayta ishga
+  // tushirsa bo'ladi.
+  const LANES = 6;
+  const CHUNK = 10;
+  const totals = { uploaded: 0, skipped: 0 };
+  const failed: { key: string; reason: string }[] = [];
+  let done = 0;
+
+  await Promise.all(
+    Array.from({ length: LANES }, async (_, lane) => {
+      const mine = assets.filter((_, i) => i % LANES === lane);
+      for (let i = 0; i < mine.length; i += CHUNK) {
+        const r = await uploader.uploadMissing(mine.slice(i, i + CHUNK));
+        totals.uploaded += r.uploaded;
+        totals.skipped += r.skipped;
+        failed.push(...r.failed);
+        done += Math.min(CHUNK, mine.length - i);
+        console.log(
+          `  ${done}/${assets.length} — yuklandi ${totals.uploaded}, o'tkazildi ${totals.skipped}, yiqildi ${failed.length}`,
+        );
+      }
+    }),
+  );
+
+  console.log(`\nYuklandi: ${totals.uploaded}   O'tkazildi: ${totals.skipped}`);
+  if (failed.length > 0) {
+    console.error(`Yiqildi: ${failed.length}`);
+    for (const f of failed.slice(0, 20)) {
       console.error(`  - ${f.key}: ${f.reason}`);
     }
     process.exitCode = 1;
