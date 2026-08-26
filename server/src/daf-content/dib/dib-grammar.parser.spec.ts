@@ -7,6 +7,23 @@ const REAL = readFileSync(
   'utf8',
 );
 
+// `vsub_02` — so'z tartiblash (REORDER) formatini, `adv_03` — cloze
+// parchani (CLOZE), `cas_07` — dialogsiz GAP sahifasini tekshiradi. Uchalasi
+// ham haqiqiy sahifa: fixture o'ylab topilsa, manbada uch xil mashq formati
+// borligi ko'rinmay qolardi (Fix round 1 — task-4-report.md).
+const REORDER_PAGE = readFileSync(
+  join(__dirname, '__fixtures__', 'gg-pr-vsub_02.html'),
+  'utf8',
+);
+const CLOZE_PAGE = readFileSync(
+  join(__dirname, '__fixtures__', 'gg-pr-adv_03.html'),
+  'utf8',
+);
+const NO_DIALOGUE_PAGE = readFileSync(
+  join(__dirname, '__fixtures__', 'gg-pr-cas_07.html'),
+  'utf8',
+);
+
 const INDEX = `
 <html><body>
 <a href="no_01.html">nouns overview</a>
@@ -60,6 +77,7 @@ describe('parseGrammarPage — haqiqiy sahifada', () => {
     const p = parseGrammarPage(REAL, 'vi_05')!;
     expect(p.exercises).toHaveLength(14);
     expect(p.exercises[0].id).toBe('vi_05_fib_1');
+    expect(p.exercises[0].kind).toBe('GAP');
     expect(p.exercises[0].sentenceDe).toBe(
       'Schneewittchen ___ eine neue Karriere. Sie ist Rechtsanwältin für Menschenrechte.',
     );
@@ -86,5 +104,88 @@ describe('parseGrammarPage — haqiqiy sahifada', () => {
 
   it("audio bloki yo'q sahifa uchun null qaytaradi", () => {
     expect(parseGrammarPage('<html><body></body></html>', 'zz_99')).toBeNull();
+  });
+});
+
+describe("parseGrammarPage — so'z tartiblash formati (vsub_02)", () => {
+  it("10 ta REORDER mashqini bo'sh bo'lmagan tokenlar bilan beradi", () => {
+    const p = parseGrammarPage(REORDER_PAGE, 'vsub_02')!;
+    expect(p.exercises).toHaveLength(10);
+    for (const ex of p.exercises) {
+      expect(ex.kind).toBe('REORDER');
+      expect(ex.tokens).toBeDefined();
+      expect(ex.tokens!.length).toBeGreaterThan(0);
+      expect(ex.answer).toBeNull();
+      expect(ex.answerStatus).toBe('MISSING');
+    }
+  });
+
+  it("so'zlovchi prefiksini token emas, topshiriq matni deb hisoblaydi", () => {
+    const p = parseGrammarPage(REORDER_PAGE, 'vsub_02')!;
+    expect(p.exercises[0].sentenceDe).toContain('Der Esel:');
+    expect(p.exercises[0].tokens).toEqual([
+      'Ich',
+      'machen',
+      'nichts anderes',
+      'weil',
+      'ich',
+      'sein',
+      'gerne',
+      'ein Tier',
+    ]);
+  });
+
+  it("«Toifa:Sarlavha» yo'l belgisi tushuntirishga sizib kirmaydi", () => {
+    // Bu sahifada yo'l belgisi 30 belgidan uzun ("Verbs : Konjunktiv II im
+    // Präsens") — eski uzunlik filtridan sizib o'tgan aynan shu holat edi.
+    const p = parseGrammarPage(REORDER_PAGE, 'vsub_02')!;
+    expect(p.explanation).not.toContain('Verbs');
+    expect(p.explanation).toContain('subjunctive mood');
+  });
+});
+
+describe('parseGrammarPage — cloze formati (adv_03)', () => {
+  it("bitta CLOZE mashqini bo'sh joylar soni va so'z banki bilan beradi", () => {
+    const p = parseGrammarPage(CLOZE_PAGE, 'adv_03')!;
+    expect(p.exercises).toHaveLength(1);
+    const ex = p.exercises[0];
+    expect(ex.kind).toBe('CLOZE');
+    expect(ex.blankCount).toBe(11);
+    expect((ex.sentenceDe.match(/___/g) ?? []).length).toBe(11);
+    expect(ex.wordBank).toBeDefined();
+    expect(ex.wordBank!.length).toBeGreaterThan(0);
+    expect(ex.wordBank).toContain('plötzlich');
+    expect(ex.answer).toBeNull();
+    expect(ex.answerStatus).toBe('MISSING');
+  });
+});
+
+describe('parseGrammarPage — dialogsiz sahifa (cas_07)', () => {
+  it("10 ta GAP mashqini beradi va dialogni bo'sh deb belgilaydi", () => {
+    const p = parseGrammarPage(NO_DIALOGUE_PAGE, 'cas_07')!;
+    expect(p.exercises).toHaveLength(10);
+    for (const ex of p.exercises) {
+      expect(ex.kind).toBe('GAP');
+    }
+    // Xom HTML'da tekshirilgan: bu sahifada haqiqatan ham dialog jadvali
+    // yo'q — bu kamchilik emas, sahifaning haqiqiy holati.
+    expect(p.dialogue).toEqual([]);
+  });
+});
+
+describe('parseGrammarPage — hech bir sahifada xom teg qolmaydi', () => {
+  it.each([
+    ['vi_05', REAL],
+    ['vsub_02', REORDER_PAGE],
+    ['adv_03', CLOZE_PAGE],
+    ['cas_07', NO_DIALOGUE_PAGE],
+  ])('%s sahifasidagi mashqlarda `<` uchramaydi', (code, html) => {
+    const p = parseGrammarPage(html, code)!;
+    const texts = p.exercises.flatMap((e) => [
+      e.sentenceDe,
+      ...(e.tokens ?? []),
+      ...(e.wordBank ?? []),
+    ]);
+    expect(texts.some((t) => t.includes('<'))).toBe(false);
   });
 });

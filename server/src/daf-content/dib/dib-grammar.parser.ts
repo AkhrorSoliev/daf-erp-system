@@ -13,6 +13,13 @@ const TITLE_RE = /<title>([\s\S]*?)<\/title>/;
 const DIALOGUE_ROW_RE =
   /<tr>\s*<td class="nowrap">([\s\S]*?)<\/td>\s*<td>([\s\S]*?)<\/td>\s*<td>([\s\S]*?)<\/td>\s*<\/tr>/g;
 const EX_ROW_RE = /<td class="qnum">[\s\S]*?<\/td>\s*<td>([\s\S]*?)<\/td>/g;
+const CLOZE_BLANK_RE = /<p class="txt_1"><\/p>/g;
+const WB_TABLE_RE = /<table class="wb">([\s\S]*?)<\/table>/;
+const WB_CELL_RE = /<td([^>]*)>([\s\S]*?)<\/td>/g;
+// Bosh sahifa tepasidagi «Toifa:Sarlavha» yo'l belgisi shu span bilan
+// belgilanadi — HAR TO'RTALA fixture'da bir xil, uzunligi esa har xil
+// (ba'zida 30 belgidan uzun bo'lib, tushuntirishga sizib kirardi).
+const CATEGORY_MARKER = 'h_16_8a97b2';
 
 /** Grimm Grammar mundarijasidagi sahifa kodlari. */
 export function parseGrammarIndex(html: string): string[] {
@@ -55,17 +62,6 @@ export function parseGrammarPage(
     })),
   );
 
-  const exBlock = sliceExerciseTable(html);
-  const exercises: GapExercise[] = [...exBlock.matchAll(EX_ROW_RE)].map(
-    (m, i) => ({
-      id: `${code}_fib_${i + 1}`,
-      sentenceDe: stripTags(m[1].replace(/<p class="txt_1"><\/p>/g, ' ___ ')),
-      answer: null,
-      answerStatus: 'MISSING' as const,
-      grammarCode: code,
-    }),
-  );
-
   return {
     code,
     titleDe: titleOf(html),
@@ -74,7 +70,7 @@ export function parseGrammarPage(
     explanation: explanationOf(html),
     dialogue,
     audio,
-    exercises,
+    exercises: exercisesOf(html, code),
   };
 }
 
@@ -95,15 +91,133 @@ function explanationOf(html: string): string {
     '',
   );
   const paras = [...body.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/g)]
+    // «Toifa:Sarlavha» yo'l belgisi tushuntirish EMAS — sarlavha `<title>`
+    // orqali allaqachon olingan. Uzunlik bo'yicha emas, aynan shu belgi
+    // orqali chetlatiladi: ba'zi sahifalarda (masalan `vsub_02`) bu qator
+    // 30 belgidan uzun bo'lib, eski uzunlik filtridan sizib o'tardi.
+    .filter((m) => !m[1].includes(CATEGORY_MARKER))
     .map((m) => stripTags(m[1]))
-    .filter((t) => t.length > 30);
+    .filter((t) => t.length > 0);
   return paras.join(' ');
 }
 
-/** `Übung` bo'limidagi `<table class="ex">` ning ichi. */
+/**
+ * Sahifadagi mashqlar. Manbada UCH XIL format bor va bittasi ikkinchisini
+ * istisno qiladi — bitta sahifa faqat bittasini ishlatadi:
+ *
+ * 1. Qator jadvali (`<table class="ex">`) — har qatorda GAP yoki REORDER.
+ * 2. Cloze parcha (`<p class="clz">`) — bitta ko'p bo'sh joyli matn.
+ * 3. Hech biri — sahifada haqiqatan ham Übung yo'q (bo'sh ro'yxat qonuniy).
+ */
+function exercisesOf(html: string, code: string): GapExercise[] {
+  const exBlock = sliceExerciseTable(html);
+  if (exBlock) {
+    return [...exBlock.matchAll(EX_ROW_RE)].map((m, i) =>
+      rowExercise(m[1], code, i),
+    );
+  }
+
+  const cloze = sliceCloze(html);
+  if (cloze !== null) {
+    return [clozeExercise(cloze, html, code)];
+  }
+
+  return [];
+}
+
+/**
+ * Bitta jadval qatori. `<p class="txt_1">` bor bo'lsa — GAP (bo'sh joy).
+ * Bo'lmasa — REORDER: katak `<i>So'zlovchi:</i> token / token / ...<br>
+ * <input class="txt_2">` shaklida, tokenlar `/` bilan ajratilgan.
+ */
+function rowExercise(cellHtml: string, code: string, i: number): GapExercise {
+  const id = `${code}_fib_${i + 1}`;
+
+  if (cellHtml.includes('class="txt_1"')) {
+    return {
+      id,
+      kind: 'GAP',
+      sentenceDe: stripTags(cellHtml.replace(CLOZE_BLANK_RE, ' ___ ')),
+      answer: null,
+      answerStatus: 'MISSING',
+      grammarCode: code,
+    };
+  }
+
+  // So'zlovchi prefiksi (`<i>Der Esel:</i>`) topshiriq matnining bir qismi,
+  // token EMAS — shuning uchun tokenlarni ajratishdan oldin olib tashlanadi.
+  const promptHtml = cellHtml.split(/<br\s*\/?>/i)[0];
+  const tokenHtml = promptHtml.replace(/<i>[\s\S]*?<\/i>\s*/, '');
+  const tokens = tokenHtml
+    .split('/')
+    .map((t) => stripTags(t).trim())
+    .filter(Boolean);
+
+  return {
+    id,
+    kind: 'REORDER',
+    sentenceDe: stripTags(promptHtml),
+    tokens,
+    answer: null,
+    answerStatus: 'MISSING',
+    grammarCode: code,
+  };
+}
+
+/**
+ * Cloze mashqi bitta yaxlit yozuv sifatida qaytadi — 11 ta bo'sh joy bitta
+ * kontekstni bo'lishadi, ularni alohida-alohida mashqqa bo'lish javob
+ * berishga imkon beruvchi kontekstni yo'qotardi.
+ */
+function clozeExercise(
+  clozeHtml: string,
+  fullHtml: string,
+  code: string,
+): GapExercise {
+  const blankCount = [...clozeHtml.matchAll(CLOZE_BLANK_RE)].length;
+  const sentenceDe = stripTags(clozeHtml.replace(CLOZE_BLANK_RE, ' ___ '));
+  const wordBank = wordBankOf(fullHtml);
+
+  return {
+    id: `${code}_fib_1`,
+    kind: 'CLOZE',
+    sentenceDe,
+    blankCount,
+    ...(wordBank.length > 0 ? { wordBank } : {}),
+    answer: null,
+    answerStatus: 'MISSING',
+    grammarCode: code,
+  };
+}
+
+/** `Übung` bo'limidagi `<table class="ex">` ning ichi. Topilmasa — bo'sh. */
 function sliceExerciseTable(html: string): string {
   const start = html.indexOf('<table class="ex">');
   if (start === -1) return '';
   const end = html.indexOf('</table>', start);
   return html.slice(start, end === -1 ? html.length : end);
+}
+
+/**
+ * `<p class="clz">` ning ichi. Manba HTML'i bu paragrafni yopmaydi
+ * (`</p>` teg yo'q) — matn uni o'rab turgan `indent_wrap_250` divi
+ * yopilguncha davom etadi. Topilmasa — `null` (sahifada cloze yo'q).
+ */
+function sliceCloze(html: string): string | null {
+  const marker = '<p class="clz">';
+  const start = html.indexOf(marker);
+  if (start === -1) return null;
+  const contentStart = start + marker.length;
+  const end = html.indexOf('</div>', contentStart);
+  return html.slice(contentStart, end === -1 ? html.length : end);
+}
+
+/** `<table class="wb">` dagi so'z banki — sarlavha qatori (`ti_wb`) chetlatiladi. */
+function wordBankOf(html: string): string[] {
+  const table = html.match(WB_TABLE_RE);
+  if (!table) return [];
+  return [...table[1].matchAll(WB_CELL_RE)]
+    .filter(([, attrs]) => !attrs.includes('ti_wb'))
+    .map(([, , content]) => stripTags(content))
+    .filter(Boolean);
 }

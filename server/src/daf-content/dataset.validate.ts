@@ -57,7 +57,8 @@ export function validateDataset(d: DafDataset): string[] {
   // ham o'tkazilmasligi kerak — va R2 kaliti ham takrorlanmasligi kerak.
   const videoKeys = new Set<string>();
   for (const v of d.videos) {
-    if (videoKeys.has(v.key)) errors.push(`${v.key}: video kaliti takrorlangan`);
+    if (videoKeys.has(v.key))
+      errors.push(`${v.key}: video kaliti takrorlangan`);
     videoKeys.add(v.key);
     checkAsset(v);
   }
@@ -72,8 +73,23 @@ export function validateDataset(d: DafDataset): string[] {
     for (const a of g.audio) checkAsset(a);
 
     for (const ex of g.exercises) {
-      if (!ex.sentenceDe.includes('___')) {
+      // `___` qoidasi faqat GAP va CLOZE uchun: REORDER'da bo'sh joy o'rniga
+      // tartiblanadigan `tokens` ro'yxati bo'lishi shart.
+      if (ex.kind === 'REORDER') {
+        if (!ex.tokens || ex.tokens.length === 0) {
+          errors.push(`${ex.id}: REORDER mashqida \`tokens\` ro'yxati bo'sh`);
+        }
+      } else if (!ex.sentenceDe.includes('___')) {
         errors.push(`${ex.id}: gapda bo'sh joy (___) yo'q`);
+      }
+
+      if (ex.kind === 'CLOZE') {
+        const blanksInText = (ex.sentenceDe.match(/___/g) ?? []).length;
+        if (ex.blankCount !== blanksInText) {
+          errors.push(
+            `${ex.id}: \`blankCount\` (${ex.blankCount}) matndagi bo'sh joylar soniga (${blanksInText}) mos kelmaydi`,
+          );
+        }
       }
     }
   }
