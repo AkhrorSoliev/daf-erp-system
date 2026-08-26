@@ -14,7 +14,7 @@ adapter interfeysining haqiqatan yozilishi.
 Faza 1 tugadi va `main`ga qo'shildi (PR #461). U DiB'dan lug'at (1 843),
 video (263), transkript (198) va bob→grammatika bog'lanishini olib keldi.
 
-**Olib kelmagani:** DiB'ning 70 grammatika sahifasi, 61 talaffuz mp3'i va
+**Olib kelmagani:** DiB'ning 92 grammatika sahifasi, 61 talaffuz mp3'i va
 10 Kurs-Paket PDF'i. ZUM adapteri yozildi, lekin hech qayerdan chaqirilmaydi
 va `AssetRef` umuman ishlab chiqarmaydi. Spec 4-bo'limidagi
 `DafSourceAdapter` interfeysi esa **kodda hech qachon yozilmagan**, natijada
@@ -179,7 +179,7 @@ bajarilmaydi; dataset git'da ko'riladi; media R2'da.
 | Xavf | Ta'sir | Yumshatish |
 |---|---|---|
 | `wort.schule` qamrovi kutilganidan past chiqishi | Rasmli mashqlar uchun asos kichik bo'ladi | O'lchandi: keng tarqalgan so'zlarda ~56%. Qolgani generatsiyaga qoladi (Faza 3/4), ya'ni bo'shliq rejalashtirilgan |
-| Grammatika sahifalarining markupi bir xil emasligi | Parser ba'zi sahifada bo'sh qaytaradi | Faza 1 saboqi: yig'ish skripti sahifa sonini tekshiradi va 70 dan sezilarli kam chiqsa nolga teng bo'lmagan kod bilan tugaydi |
+| Grammatika sahifalarining markupi bir xil emasligi | Parser ba'zi sahifada bo'sh qaytaradi | Faza 1 saboqi: yig'ish skripti sahifa sonini tekshiradi va 92 dan sezilarli kam chiqsa nolga teng bo'lmagan kod bilan tugaydi |
 | Mashq gaplarining `___` joyi noaniq bo'lishi | Kalit to'ldirishda chalkashlik | `<input name="fib_N">` gapdagi aniq o'rinni beradi — joy markupdan olinadi, taxmin qilinmaydi |
 | Ikki litsenziya aralashuvi | Atribut noto'g'ri chiqishi | Har `AssetRef` o'z litsenziyasini olib yuradi; `DafDataset.license` endi umumiy da'vo emas, shu spec'da yozildi |
 | PDF'lar 91 MB qo'shishi | R2 hajmi o'sadi | Jami ~1.5 GB bo'ladi, bepul limitning 15% i. Xavf yo'q |
@@ -192,5 +192,5 @@ bajarilmaydi; dataset git'da ko'riladi; media R2'da.
    amalga oshirishda o'lchanadi.
 2. **Mashq gapidagi javob kaliti kim tomonidan to'ldiriladi.** Faza 2/3 da
    hal qilinadi; hozir `answerStatus: 'MISSING'` bilan saqlanadi.
-3. **Grammatika sahifalarining `zip/` arxivlari** (PDF + mp3, ~800 KB × 70)
+3. **Grammatika sahifalarining `zip/` arxivlari** (PDF + mp3, ~800 KB × 92)
    olinmaydi — audio alohida olinadi. Agar bosma PDF kerak bo'lsa, keyin.
