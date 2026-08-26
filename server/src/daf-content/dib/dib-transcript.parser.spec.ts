@@ -63,7 +63,7 @@ describe('parseTranscriptPage', () => {
     expect(t.linesEn[1]).toBe('My name is Adan.');
   });
 
-  it('sarlavhani ajratib oladi va matn qatoriga qo\'shmaydi', () => {
+  it("sarlavhani ajratib oladi va matn qatoriga qo'shmaydi", () => {
     const t = parseTranscriptPage(PAGE, '01_02_int_ag_who', 1)!;
     expect(t.titleDe).toBe('Kap 01 • Adan • Wer bin ich?');
     expect(t.linesDe).not.toContain('Kap 01 • Adan • Wer bin ich?');
@@ -76,11 +76,11 @@ describe('parseTranscriptPage', () => {
     expect(t.video?.license).toBe('CC BY 4.0');
   });
 
-  it('nemischa matni yo\'q sahifada null qaytaradi', () => {
+  it("nemischa matni yo'q sahifada null qaytaradi", () => {
     expect(parseTranscriptPage('<html></html>', 'x', 1)).toBeNull();
   });
 
-  it('inglizchasi yo\'q bo\'lsa ham nemischasini beradi', () => {
+  it("inglizchasi yo'q bo'lsa ham nemischasini beradi", () => {
     const only =
       '<div id="vidt_g"><ul><li class="vidt_i">Guten Tag.</li></ul></div>';
     const t = parseTranscriptPage(only, 'y', 2)!;
@@ -88,7 +88,7 @@ describe('parseTranscriptPage', () => {
     expect(t.linesEn).toEqual([]);
   });
 
-  it('haqiqiy DiB sahifasini to\'g\'ri tahlil qiladi', () => {
+  it("haqiqiy DiB sahifasini to'g'ri tahlil qiladi", () => {
     const html = readFileSync(
       join(__dirname, '__fixtures__', 'vidt-01_02.html'),
       'utf8',
@@ -108,23 +108,49 @@ describe('parseTranscriptPage', () => {
 describe('parseVideoList', () => {
   it('RSS dan fayl id va sarlavhani oladi', () => {
     expect(parseVideoList(RSS)).toEqual([
-      { fileId: '01_01_intro_arrival', title: 'Kapitel 01 - Ankunft in Würzburg' },
-      { fileId: '01_02_int_ag_who', title: 'Kapitel 01 - Interviews, Adan: Wer bin ich?' },
+      {
+        fileId: '01_01_intro_arrival',
+        title: 'Kapitel 01 - Ankunft in Würzburg',
+      },
+      {
+        fileId: '01_02_int_ag_who',
+        title: 'Kapitel 01 - Interviews, Adan: Wer bin ich?',
+      },
     ]);
   });
 
-  it('bo\'sh RSS uchun bo\'sh ro\'yxat', () => {
+  it("bo'sh RSS uchun bo'sh ro'yxat", () => {
     expect(parseVideoList('<rss></rss>')).toEqual([]);
   });
 
-  it('ikki marta kodlangan sarlavhani ham to\'g\'rilaydi', () => {
+  it("ikki marta kodlangan sarlavhani ham to'g'rilaydi", () => {
     const mojibakeTitle = Buffer.from(
       'Kapitel 01 - Ankunft in Würzburg',
       'utf8',
     ).toString('latin1');
     const rss = `<rss><channel><item><title>${mojibakeTitle}</title><enclosure url="http://coerll.utexas.edu/dib/mp4s/01_01_intro_arrival.mp4"/></item></channel></rss>`;
     expect(parseVideoList(rss)).toEqual([
-      { fileId: '01_01_intro_arrival', title: 'Kapitel 01 - Ankunft in Würzburg' },
+      {
+        fileId: '01_01_intro_arrival',
+        title: 'Kapitel 01 - Ankunft in Würzburg',
+      },
+    ]);
+  });
+
+  // Task 10: manba ba'zan `&amp;quot;` deb IKKI MARTA entity-kodlaydi.
+  // Bitta `decodeEntities` bosqichi buni faqat yarim yechadi — `&amp;`
+  // `&`ga aylanadi-yu, ortidagi `quot;` xom holida qoladi va natijada xom
+  // `&quot;` matnda chiqib ketadi («Kapitel 07» intervyu sarlavhalarida
+  // aynan shu topilgan). Ikkinchi dekodlash bosqichi buni yakunlaydi.
+  it('ikki marta entity-kodlangan (&amp;quot;) sarlavhani ham yechadi', () => {
+    const rss =
+      '<rss><channel><item><title>Berna: &amp;quot;Schlaf, Kindlein, schlaf&amp;quot;</title>' +
+      '<enclosure url="http://coerll.utexas.edu/dib/mp4s/07_04_int.mp4"/></item></channel></rss>';
+    expect(parseVideoList(rss)).toEqual([
+      {
+        fileId: '07_04_int',
+        title: 'Berna: "Schlaf, Kindlein, schlaf"',
+      },
     ]);
   });
 });
@@ -135,7 +161,7 @@ describe('repairDoubleEncodedUtf8', () => {
     expect(repairDoubleEncodedUtf8(mojibake)).toBe('Würzburg');
   });
 
-  it('to\'g\'ri kelgan matnga tegmaydi', () => {
+  it("to'g'ri kelgan matnga tegmaydi", () => {
     expect(repairDoubleEncodedUtf8('Würzburg')).toBe('Würzburg');
     expect(repairDoubleEncodedUtf8('Kapitel 01')).toBe('Kapitel 01');
   });

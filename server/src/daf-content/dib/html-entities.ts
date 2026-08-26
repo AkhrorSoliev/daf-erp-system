@@ -28,6 +28,15 @@ const NAMED: Record<string, string> = {
   int: '∫',
   lowast: '∗',
   theta: 'θ',
+  // Lug'at va transkript qatorlarida uchraydigan yana beshta nom-entity —
+  // haqiqiy datasetda topilgan (598-topilma): `eacute` (café), `deg`
+  // (harorat, masalan 25 &deg;C), `bdquo`/`sbquo` (nemischa pastki
+  // tirnoqlar „…“/‚…‘) va `euro`.
+  eacute: 'é',
+  deg: '°',
+  bdquo: '„',
+  sbquo: '‚',
+  euro: '€',
 };
 
 /**

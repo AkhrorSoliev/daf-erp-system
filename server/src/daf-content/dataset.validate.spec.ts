@@ -195,6 +195,7 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
           id: 'vi_05_fib_1',
           kind: 'GAP',
           sentenceDe: 'Schneewittchen hat eine neue Karriere.',
+          blankCount: 0,
           answer: null,
           answerStatus: 'MISSING',
           grammarCode: 'vi_05',
@@ -229,7 +230,92 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
       ],
     });
     expect(validateDataset(d)).toContain(
-      "vsub_02_fib_1: REORDER mashqida `tokens` ro'yxati bo'sh",
+      "vsub_02_fib_1: REORDER mashqida kamida ikkita `tokens` elementi bo'lishi shart",
+    );
+  });
+
+  // Ikkitadan kam — nol EMAS — token invariantni buzishi ham shart: bitta
+  // "token" gapni birlashtirish topshirig'i bo'lishi mumkin (con_03/vpp_01
+  // holati), REORDER emas.
+  it('bitta tokenli REORDER mashqini ham xato deb belgilaydi', () => {
+    const d = base();
+    d.grammar.push({
+      code: 'vpp_01',
+      titleDe: 'Perfekt',
+      titleEn: 'perfekt',
+      level: 'A2.1',
+      explanation: 'x',
+      dialogue: [],
+      audio: [],
+      exercises: [
+        {
+          id: 'vpp_01_fib_1',
+          kind: 'REORDER',
+          sentenceDe: 'Am Abend haben die Kinder Hunger.',
+          tokens: ['Am Abend haben die Kinder Hunger.'],
+          answer: null,
+          answerStatus: 'MISSING',
+          grammarCode: 'vpp_01',
+        },
+      ],
+    });
+    expect(validateDataset(d)).toContain(
+      "vpp_01_fib_1: REORDER mashqida kamida ikkita `tokens` elementi bo'lishi shart",
+    );
+  });
+
+  it('blankCount mos kelmagan GAP mashqini xato deb belgilaydi', () => {
+    const d = base();
+    d.grammar.push({
+      code: 'vi_05',
+      titleDe: 'Haben',
+      titleEn: 'haben',
+      level: 'A1.1',
+      explanation: 'x',
+      dialogue: [],
+      audio: [],
+      exercises: [
+        {
+          id: 'vi_05_fib_1',
+          kind: 'GAP',
+          sentenceDe: 'Schneewittchen ___ eine neue Karriere. Sie ___ Anwalt.',
+          blankCount: 1,
+          answer: null,
+          answerStatus: 'MISSING',
+          grammarCode: 'vi_05',
+        },
+      ],
+    });
+    expect(validateDataset(d)).toContain(
+      "vi_05_fib_1: `blankCount` (1) matndagi bo'sh joylar soniga (2) mos kelmaydi",
+    );
+  });
+
+  it('blankCount mos kelmagan MC mashqini xato deb belgilaydi', () => {
+    const d = base();
+    d.grammar.push({
+      code: 'con_04',
+      titleDe: 'Subordinating Conjunctions',
+      titleEn: 'con_04',
+      level: 'B1',
+      explanation: 'x',
+      dialogue: [],
+      audio: [],
+      exercises: [
+        {
+          id: 'con_04_fib_1',
+          kind: 'MC',
+          sentenceDe: 'Die Kinder gehen nach Hause, ___ sie sehr reich sind.',
+          blankCount: 2,
+          options: ['a. weil', 'b. ob'],
+          answer: null,
+          answerStatus: 'MISSING',
+          grammarCode: 'con_04',
+        },
+      ],
+    });
+    expect(validateDataset(d)).toContain(
+      "con_04_fib_1: `blankCount` (2) matndagi bo'sh joylar soniga (1) mos kelmaydi",
     );
   });
 
@@ -278,6 +364,7 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
           id: 'con_04_fib_1',
           kind: 'MC',
           sentenceDe: 'Die Kinder gehen nach Hause, sie sehr reich sind.',
+          blankCount: 0,
           options: ['a. weil', 'b. ob'],
           answer: null,
           answerStatus: 'MISSING',
@@ -305,6 +392,7 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
           id: 'con_04_fib_1',
           kind: 'MC',
           sentenceDe: 'Die Kinder gehen nach Hause, ___ sie sehr reich sind.',
+          blankCount: 1,
           options: ['a. weil'],
           answer: null,
           answerStatus: 'MISSING',
@@ -332,6 +420,7 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
           id: 'con_04_fib_1',
           kind: 'MC',
           sentenceDe: 'Die Kinder gehen nach Hause, ___ sie sehr reich sind.',
+          blankCount: 1,
           options: ['a. weil', 'b. ob'],
           answer: null,
           answerStatus: 'MISSING',
@@ -381,6 +470,7 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
           id: 'vi_05_fib_1',
           kind: 'GAP',
           sentenceDe: 'Schneewittchen ___ eine neue Karriere.',
+          blankCount: 1,
           answer: null,
           answerStatus: 'MISSING',
           grammarCode: 'vi_05',
@@ -388,5 +478,17 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
       ],
     });
     expect(validateDataset(d)).toEqual([]);
+  });
+
+  // Task 10: `html-entities.ts`dagi jadval fixture'larga qarshi tekshiriladi,
+  // shuning uchun real datasetda qolib ketgan entity'ni (mas. yangi ochilgan
+  // yoki hali jadvalga qo'shilmagan) strukturaviy ko'ra olmaydi. Bu qoida
+  // butun datasetni aylanib chiqadi va shunday holatni ushlab qoladi.
+  it('dekodlanmagan HTML entity qolgan matn maydonini xato deb belgilaydi', () => {
+    const d = base();
+    d.sections[0].entries[0].en = 'caf&eacute;';
+    expect(validateDataset(d)).toContain(
+      'dataset.sections[0].entries[0].en: dekodlanmagan HTML entity qoldi — "caf&eacute;"',
+    );
   });
 });

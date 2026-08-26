@@ -84,3 +84,32 @@ describe('parsePhoneticsPage — haqiqiy sahifada', () => {
     expect(parsePhoneticsPage('<html><body></body></html>', 7)).toEqual([]);
   });
 });
+
+// Task 6: `overlib('…')` payload'i ichida `<br />` uchrashi mumkin (4-bob
+// qofiyali mashqlari, masalan «The fat roofer roofed the thick
+// roof.<br />Then the fat roofer…»). Eski kod faqat `decodeEntities`
+// chaqirardi, `stripTags` emas — xom `<br />` `textEn`ga sizib chiqqan edi.
+describe('parsePhoneticsPage — overlib ichidagi <br /> tozalanadi', () => {
+  const PAGE_WITH_BR_GLOSS = `
+<html><body>
+<p class="bot_075"><i>Listen:</i></p>
+<div id="fp_01">
+  <audio controls="controls">
+    <source src="https://media.la.utexas.edu:443/dib/audio/pho_04_01_reim.mp3" type="audio/mpeg" />
+  </audio>
+</div>
+<div id="ps_01" class="aud_txt">
+  <a href="javascript:;" onmouseover="return overlib('The fat roofer roofed the thick roof.<br />Then the fat roofer carried the lady.')">Der dicke Dachdecker deckte das Dach.</a>
+</div>
+<div id="ps_01_t" class="aud_txtt"></div>
+</body></html>`;
+
+  it("gloss ichidagi <br /> bo'shliqqa almashadi, xom teg qolmaydi", () => {
+    const items = parsePhoneticsPage(PAGE_WITH_BR_GLOSS, 4);
+    expect(items).toHaveLength(1);
+    expect(items[0].textEn).not.toContain('<');
+    expect(items[0].textEn).toContain(
+      'The fat roofer roofed the thick roof. Then the fat roofer carried the lady.',
+    );
+  });
+});

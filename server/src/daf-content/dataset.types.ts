@@ -104,7 +104,11 @@ export interface GapExercise {
   tokens?: string[];
   /** CLOZE: so'z banki, agar sahifada bo'lsa. */
   wordBank?: string[];
-  /** CLOZE: matndagi bo'sh joylar soni. */
+  /**
+   * GAP, MC va CLOZE: `sentenceDe`dagi `___` bo'sh joylar soni (bittadan
+   * ko'p bo'lishi mumkin — 61 ta GAP va 2 ta MC'da shunday). REORDER'da
+   * bo'sh joy tushunchasi yo'q, shuning uchun bu maydon aniqlanmagan qoladi.
+   */
   blankCount?: number;
   /** MC: variant matnlari (masalan `a. weil`), radio/input belgilaridan tozalangan. */
   options?: string[];
@@ -142,7 +146,15 @@ export interface DafDataset {
   source: SourceId;
   /** Yig'ilgan sana, ISO. Skript beradi — parser emas. */
   harvestedAt: string;
+  /**
+   * FAQAT asosiy manba (DiB, CC BY 4.0) litsenziyasi — butun datasetni
+   * TA'RIFLAMAYDI. `wort.schule`dan kelgan maydonlar (`Lexeme.image`,
+   * `syllables`, `comparative`, `superlative`, `synonyms`, `opposites`,
+   * `wsTopics`) o'zining CC0 litsenziyasini alohida olib yuradi (qarang:
+   * `Lexeme` izohi) — bu yerga aralashtirilmaydi.
+   */
   license: string;
+  /** Xuddi shu tarzda — faqat asosiy manba muallifi, `wort.schule` emas. */
   attribution: string;
   chapters: ChapterInfo[];
   sections: LexemeSection[];

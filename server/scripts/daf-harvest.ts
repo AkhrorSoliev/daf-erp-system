@@ -26,6 +26,7 @@ import {
   parseGrammarIndex,
   parseGrammarPage,
 } from '../src/daf-content/dib/dib-grammar.parser';
+import type { SkipStats } from '../src/daf-content/dib/dib-grammar.parser';
 import { parsePhoneticsPage } from '../src/daf-content/dib/dib-phonetics.parser';
 import {
   DIB_LICENSE,
@@ -46,7 +47,10 @@ const OUT = join(__dirname, '..', 'content', 'daf');
 const CACHE = join(__dirname, '..', '.cache', 'daf');
 const CHAPTERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-async function harvestDib(): Promise<DafDataset> {
+async function harvestDib(): Promise<{
+  dataset: DafDataset;
+  skippedSpans: number;
+}> {
   const client = new DibClient(CACHE);
   const d: DafDataset = {
     source: 'DIB',
@@ -69,16 +73,23 @@ async function harvestDib(): Promise<DafDataset> {
   const seenFileIds = new Set<string>();
 
   for (const k of CHAPTERS) {
-    const chapterInfo = parseChapterPage(await client.fetchText(`toc.php?k=${k}`), k);
+    const chapterInfo = parseChapterPage(
+      await client.fetchText(`toc.php?k=${k}`),
+      k,
+    );
     const label = labelChapter(chapterInfo);
     chapterInfo.level = label.level;
     chapterInfo.needsReview = label.needsReview;
     chapterInfo.reason = label.reason;
     d.chapters.push(chapterInfo);
 
-    d.sections.push(...parseVocabPage(await client.fetchText(`voc.php?k=${k}`), k));
+    d.sections.push(
+      ...parseVocabPage(await client.fetchText(`voc.php?k=${k}`), k),
+    );
 
-    const videos = parseVideoList(await client.fetchText(`rss.php?k=${k}&a=mp4`));
+    const videos = parseVideoList(
+      await client.fetchText(`rss.php?k=${k}&a=mp4`),
+    );
     for (const v of videos) {
       if (seenFileIds.has(v.fileId)) continue;
       seenFileIds.add(v.fileId);
@@ -117,9 +128,13 @@ async function harvestDib(): Promise<DafDataset> {
   const codes = parseGrammarIndex(indexHtml);
   console.log(`  grammatika sahifalari: ${codes.length}`);
 
+  // Har sahifa REORDER'ga aylanolmagan (ikkitadan kam tokenli) span'larni
+  // o'tkazib yuboradi — bu yo'qotish jim qolmasligi uchun 92 sahifa
+  // bo'ylab yig'ilib, hisobotda ko'rsatiladi.
+  const skipStats: SkipStats = { skipped: 0 };
   for (const code of codes) {
     const page = await client.fetchText(`../gg/pr/${code}.html`);
-    const g = parseGrammarPage(page, code);
+    const g = parseGrammarPage(page, code, skipStats);
     if (g) d.grammar.push(g);
   }
 
@@ -141,7 +156,7 @@ async function harvestDib(): Promise<DafDataset> {
     });
   }
 
-  return d;
+  return { dataset: d, skippedSpans: skipStats.skipped };
 }
 
 /**
@@ -198,8 +213,8 @@ async function enrichVocabulary(
 async function main() {
   mkdirSync(OUT, { recursive: true });
 
-  console.log('DiB yig\'ilmoqda...');
-  const dib = await harvestDib();
+  console.log("DiB yig'ilmoqda...");
+  const { dataset: dib, skippedSpans } = await harvestDib();
 
   console.log('wort.schule bilan boyitilmoqda...');
   const { enriched, imageHits } = await enrichVocabulary(dib);
@@ -238,7 +253,7 @@ async function main() {
   if (dib.transcripts.length < 190) {
     console.error(
       `\nDIQQAT: ${dib.transcripts.length} ta transkript — kutilgani ~198` +
-        " (faqat intervyu videolari). Parser buzildimi?",
+        ' (faqat intervyu videolari). Parser buzildimi?',
     );
     thresholdFailed = true;
   }
@@ -251,6 +266,25 @@ async function main() {
   if (dib.phonetics.length < 55) {
     console.error(
       `\nDIQQAT: ${dib.phonetics.length} ta talaffuz bo'limi — kutilgani ~61.`,
+    );
+    thresholdFailed = true;
+  }
+  // `wort.schule`ga xos ikkita bo'sag'a: manzil sxemasi o'zgarsa (yoki sayt
+  // vaqtincha butunlay 404 qaytarsa), `fetchWord` HAR bir so'rovni "so'z
+  // yo'q" deb talqin qilib `null` qaytaradi — boyitish jimgina nolga tushadi
+  // va hech qanday tekshiruv buni ushlamas edi, chunki bu ikkalasi
+  // to'liq DiB-ga xos edi. Natijada harvest 0 bilan chiqib, committed
+  // datasetning 76 ta rasmi va 288 ta boyitilgan yozuvini o'chirib
+  // yuborardi — hech qanday signalsiz.
+  if (enriched < 200) {
+    console.error(
+      `\nDIQQAT: ${enriched} ta boyitilgan yozuv — kutilgani ~288. wort.schule manzili o'zgardimi?`,
+    );
+    thresholdFailed = true;
+  }
+  if (imageHits < 50) {
+    console.error(
+      `\nDIQQAT: ${imageHits} ta rasmli so'z — kutilgani ~76. wort.schule manzili o'zgardimi?`,
     );
     thresholdFailed = true;
   }
@@ -280,19 +314,34 @@ async function main() {
       ' transkriptlanadi, "sik" va "intro" videolarda transkript umuman yo\'q)',
   );
   console.log(`Grammatika:   ${dib.grammar.length} sahifa`);
+  const allExercises = dib.grammar.flatMap((g) => g.exercises);
   console.log(
-    `Mashq gapi:   ${dib.grammar.reduce((n, g) => n + g.exercises.length, 0)} (javob kaliti bo'sh — Faza 2)`,
+    `Mashq gapi:   ${allExercises.length} (javob kaliti bo'sh — Faza 2)`,
+  );
+  const exercisesByKind = new Map<string, number>();
+  for (const ex of allExercises) {
+    exercisesByKind.set(ex.kind, (exercisesByKind.get(ex.kind) ?? 0) + 1);
+  }
+  for (const [kind, count] of exercisesByKind) {
+    console.log(`  ${kind}: ${count}`);
+  }
+  // Yo'qotish jim qolmasligi uchun — REORDER'ga aylanolmagan (ikkitadan kam
+  // tokenli) span'lar soni shu yerda ko'rsatiladi (Task 3).
+  console.log(
+    `  o'tkazib yuborilgan span'lar: ${skippedSpans} (ikkitadan kam tokenli, REORDER emas)`,
   );
   console.log(`Talaffuz:     ${dib.phonetics.length}`);
   console.log(`Hujjat (PDF): ${dib.documents.length}`);
   console.log(`Rasmli so'z:  ${imageHits} (wort.schule, CC0)`);
   console.log(`Media aktiv:  ${assets.length}`);
 
-  console.log('\nDaraja bo\'yicha boblar:');
+  console.log("\nDaraja bo'yicha boblar:");
   for (const c of dib.chapters) {
     const l = labelChapter(c);
-    const mark = l.needsReview ? '  ⚠ ko\'rik kerak' : '';
-    console.log(`  bob ${String(c.chapter).padStart(2)}  ${l.level}  ${l.reason}${mark}`);
+    const mark = l.needsReview ? "  ⚠ ko'rik kerak" : '';
+    console.log(
+      `  bob ${String(c.chapter).padStart(2)}  ${l.level}  ${l.reason}${mark}`,
+    );
   }
 }
 

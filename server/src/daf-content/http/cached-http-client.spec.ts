@@ -63,4 +63,25 @@ describe('CachedHttpClient.fetchText', () => {
     await expect(c.fetchText('https://x/a')).rejects.toThrow();
     expect(readdirSync(dir)).toHaveLength(0);
   });
+
+  // 404 boshqa xatolardan farqli — u keshlanadi, chunki manba "bu manzil
+  // yo'q" deganida ertaga ham shu javobni beradi. Keshlanmasa, har harvest
+  // ishga tushganda topilmagan yuzlab lemma qayta so'raladi (measured: 602
+  // tadan 306 tasi keshlangan, qolgani har safar tarmoqqa boradi).
+  it('404 keshlanadi — ikkinchi chaqiruv tarmoqqa bormaydi, lekin baribir rad etadi', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'http-'));
+    const fetchFn = jest
+      .fn()
+      .mockResolvedValue({ ok: false, status: 404, text: async () => '' });
+
+    const c = new CachedHttpClient(dir, fetchFn as never);
+    await expect(c.fetchText('https://x/yoq')).rejects.toThrow(
+      'Manba javob bermadi (404): https://x/yoq',
+    );
+    await expect(c.fetchText('https://x/yoq')).rejects.toThrow(
+      'Manba javob bermadi (404): https://x/yoq',
+    );
+
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
 });

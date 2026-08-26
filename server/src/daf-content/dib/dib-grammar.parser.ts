@@ -38,10 +38,16 @@ export function parseGrammarIndex(html: string): string[] {
  * navigatsiya chrome'i yo'q, va mashq gaplari bo'sh joyni `<p class="txt_1">`
  * bilan aniq belgilab beradi (interaktivda u `<input>` bo'lib, atributlari
  * bilan aralashadi).
+ *
+ * `skipStats` ixtiyoriy — berilsa, REORDER'ga aylanolmagan (ikkitadan kam
+ * tokenli) span'lar soni shu ob'ektga qo'shib boriladi. Yig'uvchi skript
+ * (`daf-harvest.ts`) buni 92 sahifa bo'ylab yig'ib, hisobotda ko'rsatadi —
+ * yo'qotish jim qolmasligi uchun.
  */
 export function parseGrammarPage(
   html: string,
   code: string,
+  skipStats?: SkipStats,
 ): GrammarPage | null {
   const sections = parseAudSections(html);
   if (sections.length === 0) return null;
@@ -67,24 +73,43 @@ export function parseGrammarPage(
     })),
   );
 
+  const { titleDe, titleEn } = titlesOf(html, code);
+
   return {
     code,
-    titleDe: titleOf(html),
-    titleEn: code,
+    titleDe,
+    titleEn,
     level: GRAMMAR_LEVEL[code] ?? null,
     explanation: explanationOf(html),
     dialogue,
     audio,
-    exercises: exercisesOf(html, code),
+    exercises: exercisesOf(html, code, skipStats),
   };
 }
 
-/** `<title>Grimm Grammar : haben : Haben</title>` → `Haben`. */
-function titleOf(html: string): string {
+/**
+ * `<title>Grimm Grammar : haben : Haben</title>` uch qismdan iborat: manba
+ * bo'limi (doim «Grimm Grammar»), inglizcha nom va nemischa sarlavha.
+ * `titleDe` OXIRGI qismni oladi (ba'zi nemischa sarlavhalarning o'zida
+ * ikkinchi ikki nuqta bor, masalan «Das Passiv: Alternative zum Passiv» —
+ * bu holat alohida muammo, shu funksiya doirasida hal qilinmaydi).
+ * `titleEn` — O'RTADAGI qism, aynan shu joyda edi va oldin butunlay
+ * tashlab yuborilib, `code` bilan almashtirilardi. Sarlavha uch qismdan kam
+ * bo'lsa (masalan mundarija sahifasi), inglizcha nomga o'rin yo'q — `code`ga
+ * qaytiladi.
+ */
+function titlesOf(
+  html: string,
+  code: string,
+): { titleDe: string; titleEn: string } {
   const m = html.match(TITLE_RE);
-  if (!m) return '';
-  const parts = stripTags(m[1]).split(':');
-  return parts[parts.length - 1].trim();
+  if (!m) return { titleDe: '', titleEn: code };
+  const parts = stripTags(m[1])
+    .split(':')
+    .map((p) => p.trim());
+  const titleDe = parts[parts.length - 1];
+  const titleEn = parts.length >= 3 ? parts[1] : code;
+  return { titleDe, titleEn };
 }
 
 /** Birinchi audio blokigacha bo'lgan matn — sahifaning tushuntirish qismi. */
@@ -106,36 +131,48 @@ function explanationOf(html: string): string {
   return paras.join(' ');
 }
 
+/** `exercisesOf` ichida REORDER'ga aylanolmay o'tkazib yuborilgan span'lar soni. */
+export interface SkipStats {
+  skipped: number;
+}
+
 /**
- * Sahifadagi mashqlar. Manbada TO'RT XIL format bor va bittasi ikkinchisini
- * istisno qiladi — bitta sahifa odatda bittasini ishlatadi, ba'zi sahifalarda
- * (masalan `con_04`, `vsub_02`, `cas_07`) esa BIR NECHTA `<table class="ex">`
- * bloki bor va ular turli formatlarni aralashtirib ishlatadi:
+ * Sahifadagi mashqlar. Manbada TO'RT XIL format bor, va ular bir-birini
+ * ISTISNO QILMAYDI — bitta sahifada ikkalasi ham bo'lishi mumkin
+ * (masalan `cas_03`, `vcp_02`: qator jadvali VA cloze parcha bir sahifada):
  *
  * 1. Qator jadvali (`<table class="ex">`) — har SPAN'da GAP, REORDER yoki MC.
  * 2. Cloze parcha (`<p class="clz">`) — bitta ko'p bo'sh joyli matn.
  * 3. Hech biri — sahifada haqiqatan ham Übung yo'q (bo'sh ro'yxat qonuniy).
  *
+ * Eski kod cloze tekshiruvini FAQAT jadval topilmasa bajarardi (`if/return`),
+ * shuning uchun jadvali VA clozesi bor sahifada cloze hech qachon
+ * ko'rinmasdi — `vcp_02` (13 bo'sh joy) va `cas_03` (15 bo'sh joy) shunday
+ * butunlay yo'qolgan edi. Endi ikkala manba HAR DOIM o'qiladi va
+ * birlashtiriladi; id'lar shu birlashgan ro'yxat bo'yicha ketma-ket
+ * raqamlanadi.
+ *
  * Sahifadagi BARCHA `<table class="ex">` bloklari o'qiladi (faqat birinchisi
- * emas) va mashqlar ketma-ket raqamlanadi, shunda id'lar sahifa bo'ylab
- * takrorlanmaydi.
+ * emas).
  */
-function exercisesOf(html: string, code: string): GapExercise[] {
+function exercisesOf(
+  html: string,
+  code: string,
+  skipStats?: SkipStats,
+): GapExercise[] {
   const exBlocks = sliceExerciseTables(html);
-  if (exBlocks.length > 0) {
-    return exBlocks
-      .flatMap((block) => exerciseSpans(block))
-      .map((rows) => spanExercise(rows, code))
-      .filter((e): e is Omit<GapExercise, 'id'> => e !== null)
-      .map((e, i) => ({ ...e, id: `${code}_fib_${i + 1}` }));
-  }
+  const fromTables = exBlocks
+    .flatMap((block) => exerciseSpans(block))
+    .map((rows) => spanExercise(rows, code, skipStats))
+    .filter((e): e is Omit<GapExercise, 'id'> => e !== null);
 
   const cloze = sliceCloze(html);
-  if (cloze !== null) {
-    return [clozeExercise(cloze, html, code)];
-  }
+  const all =
+    cloze !== null
+      ? [...fromTables, clozeExercise(cloze, html, code)]
+      : fromTables;
 
-  return [];
+  return all.map((e, i) => ({ ...e, id: `${code}_fib_${i + 1}` }));
 }
 
 /**
@@ -168,6 +205,11 @@ function exerciseSpans(exBlock: string): string[][] {
   return spans;
 }
 
+/** `sentenceDe` ichidagi `___` bo'sh joylar soni — GAP, MC va CLOZE uchun umumiy. */
+function blankCountOf(sentenceDe: string): number {
+  return (sentenceDe.match(/___/g) ?? []).length;
+}
+
 /**
  * Bitta mashq span'i — bir yoki bir necha qator. Avval MC tekshiriladi:
  * ichma-ich `<table class="mc_vert">` bo'lsa, oddiy katak-bo'yicha ajratish
@@ -180,13 +222,24 @@ function exerciseSpans(exBlock: string): string[][] {
  * birlashtiriladi, shunda so'zlar tutashib ketmaydi. Natijada
  * `class="txt_1"` bor bo'lsa — GAP (bo'sh joy). Bo'lmasa — REORDER:
  * `<i>So'zlovchi:</i> token / token / ...<br><input class="txt_2">`
- * shaklida, tokenlar `/` bilan ajratilgan. Hech biri topilmasa (masalan
- * yolg'iz so'zlovchi nomi, davom matni boshqa katakda), span mashq
- * tarkibiga ega emas va o'tkazib yuboriladi.
+ * shaklida, tokenlar `/` bilan ajratilgan.
+ *
+ * Tokenlarga ajratishdan OLDIN teglar tozalanishi shart: `/` bilan avval
+ * bo'lib, keyin `stripTags` chaqirilsa, yopilish tegining o'zidagi `/`
+ * (`</span>`) ham ajratgich deb hisoblanib, tegni ikkiga bo'lib yuboradi
+ * (`vpass_04`da aynan shu — natija tokenlarda xom `<`/`span>` qoldig'i bilan
+ * chiqqan edi). Endi butun span avval tozalanadi, `/` shundan keyin
+ * qidiriladi — teg ichidagi `/` allaqachon yo'q bo'ladi.
+ *
+ * Ikkitadan kam tokenli natija (masalan yolg'iz so'zlovchi nomi, yoki
+ * gapni birlashtirish topshirig'i — bitta "token" ichida ikkita to'liq gap)
+ * REORDER emas: tartiblanadigan hech narsa yo'q. Bunday span o'tkazib
+ * yuboriladi, `skipStats` bo'lsa hisoblanadi.
  */
 function spanExercise(
   rows: string[],
   code: string,
+  skipStats?: SkipStats,
 ): Omit<GapExercise, 'id'> | null {
   const rawSpan = rows.join(' ');
   if (rawSpan.includes(MC_VERT_OPEN)) {
@@ -199,9 +252,11 @@ function spanExercise(
   const cellHtml = cells.slice(1).join(' ');
 
   if (cellHtml.includes('class="txt_1"')) {
+    const sentenceDe = stripTags(cellHtml.replace(CLOZE_BLANK_RE, ' ___ '));
     return {
       kind: 'GAP',
-      sentenceDe: stripTags(cellHtml.replace(CLOZE_BLANK_RE, ' ___ ')),
+      sentenceDe,
+      blankCount: blankCountOf(sentenceDe),
       answer: null,
       answerStatus: 'MISSING',
       grammarCode: code,
@@ -212,12 +267,15 @@ function spanExercise(
   // token EMAS — shuning uchun tokenlarni ajratishdan oldin olib tashlanadi.
   const promptHtml = cellHtml.split(/<br\s*\/?>/i)[0];
   const tokenHtml = promptHtml.replace(/<i>[\s\S]*?<\/i>\s*/, '');
-  const tokens = tokenHtml
+  const tokens = stripTags(tokenHtml)
     .split('/')
-    .map((t) => stripTags(t).trim())
+    .map((t) => t.trim())
     .filter(Boolean);
 
-  if (tokens.length === 0) return null;
+  if (tokens.length < 2) {
+    if (skipStats) skipStats.skipped++;
+    return null;
+  }
 
   return {
     kind: 'REORDER',
@@ -270,6 +328,7 @@ function mcExercise(
   return {
     kind: 'MC',
     sentenceDe,
+    blankCount: blankCountOf(sentenceDe),
     options,
     answer: null,
     answerStatus: 'MISSING',
@@ -319,21 +378,22 @@ function splitTopLevelRows(exBlock: string): string[] {
  * Cloze mashqi bitta yaxlit yozuv sifatida qaytadi — 11 ta bo'sh joy bitta
  * kontekstni bo'lishadi, ularni alohida-alohida mashqqa bo'lish javob
  * berishga imkon beruvchi kontekstni yo'qotardi.
+ *
+ * `id` bu yerda BERILMAYDI — `exercisesOf` jadval mashqlari bilan
+ * birlashtirilgandan keyin, YAGONA joyda ketma-ket raqamlaydi.
  */
 function clozeExercise(
   clozeHtml: string,
   fullHtml: string,
   code: string,
-): GapExercise {
-  const blankCount = [...clozeHtml.matchAll(CLOZE_BLANK_RE)].length;
+): Omit<GapExercise, 'id'> {
   const sentenceDe = stripTags(clozeHtml.replace(CLOZE_BLANK_RE, ' ___ '));
   const wordBank = wordBankOf(fullHtml);
 
   return {
-    id: `${code}_fib_1`,
     kind: 'CLOZE',
     sentenceDe,
-    blankCount,
+    blankCount: blankCountOf(sentenceDe),
     ...(wordBank.length > 0 ? { wordBank } : {}),
     answer: null,
     answerStatus: 'MISSING',

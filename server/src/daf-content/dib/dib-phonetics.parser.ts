@@ -1,5 +1,4 @@
 import type { PhoneticsItem } from '../dataset.types';
-import { decodeEntities } from './html-entities';
 import { parseAudSections, stripTags } from './aud-section.parser';
 import { DIB_LICENSE, DIB_ATTRIBUTION } from './dib-license';
 
@@ -11,6 +10,12 @@ const OVERLIB_RE = /overlib\('((?:[^'\\]|\\.)*)'\)/g;
  *
  * Inglizcha izoh matnda emas, `onmouseover="return overlib('…')"` ichida
  * turadi: sahifada u sichqoncha ostida chiqadigan qalqib chiquvchi oyna.
+ *
+ * Payload ichida ba'zan `<br />` bor (masalan 4-bobning qofiyali mashqlari,
+ * har qatordan keyin) — `textDe` uchun ishlatilgan `stripTags` shu yerga
+ * qo'llanilmagan edi, faqat `decodeEntities`, shuning uchun xom `<br />`
+ * `textEn`ga sizib chiqardi. Endi ikkalasi ham bir xil `stripTags` orqali
+ * o'tadi (u o'zi entity'larni ham dekodlaydi).
  */
 export function parsePhoneticsPage(
   html: string,
@@ -23,7 +28,7 @@ export function parsePhoneticsPage(
       const id = file.replace(/\.mp3$/, '');
 
       const glosses = [...s.contentHtml.matchAll(OVERLIB_RE)]
-        .map((m) => decodeEntities(m[1].replace(/\\'/g, "'")))
+        .map((m) => stripTags(m[1].replace(/\\'/g, "'")))
         .join(' · ');
 
       return {

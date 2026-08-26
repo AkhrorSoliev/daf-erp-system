@@ -1,4 +1,4 @@
-import { R2Uploader } from './r2-uploader';
+import { R2Uploader, contentTypeOf } from './r2-uploader';
 import type { AssetRef } from '../dataset.types';
 
 const A: AssetRef = {
@@ -19,11 +19,34 @@ function make(over: { fetchFn?: jest.Mock } = {}) {
       status: 200,
       arrayBuffer: async () => new ArrayBuffer(8),
     });
-  return { s3, send, fetchFn, up: new R2Uploader(s3, 'bucket', fetchFn as never) };
+  return {
+    s3,
+    send,
+    fetchFn,
+    up: new R2Uploader(s3, 'bucket', fetchFn as never),
+  };
 }
 
+// Task 8: `Content-Type` `AssetRef.kind`dan emas, kalitning kengaytmasidan
+// olinishi kerak — barcha 71 ta yuklanadigan rasm PNG, eski qattiq
+// `IMAGE → image/jpeg` xaritalash ularning hammasini noto'g'ri
+// belgilagan bo'lardi.
+describe('contentTypeOf', () => {
+  it("'.png' kengaytmasi uchun 'image/png' beradi", () => {
+    expect(contentTypeOf('wort-schule/dick.png')).toBe('image/png');
+  });
+
+  it("'.jpg' kengaytmasi uchun 'image/jpeg' beradi", () => {
+    expect(contentTypeOf('wort-schule/dick.jpg')).toBe('image/jpeg');
+  });
+
+  it("noma'lum kengaytma uchun sezgir standart qiymatga tushadi", () => {
+    expect(contentTypeOf('dib/pdf/k_01.xyz')).toBe('application/octet-stream');
+  });
+});
+
 describe('R2Uploader.uploadMissing', () => {
-  it('R2\'da yo\'q faylni yuklaydi', async () => {
+  it("R2'da yo'q faylni yuklaydi", async () => {
     const { up, send, fetchFn } = make();
     send
       .mockRejectedValueOnce({ name: 'NotFound' }) // HeadObject
@@ -35,7 +58,7 @@ describe('R2Uploader.uploadMissing', () => {
     expect(fetchFn).toHaveBeenCalledWith('https://x/a.mp3');
   });
 
-  it('R2\'da bor faylni qayta yuklamaydi', async () => {
+  it("R2'da bor faylni qayta yuklamaydi", async () => {
     const { up, send, fetchFn } = make();
     send.mockResolvedValueOnce({ ContentLength: 8 }); // HeadObject topdi
 
@@ -45,7 +68,7 @@ describe('R2Uploader.uploadMissing', () => {
     expect(fetchFn).not.toHaveBeenCalled();
   });
 
-  it('manba javob bermasa, boshqa fayllarni to\'xtatmaydi va sababini yozadi', async () => {
+  it("manba javob bermasa, boshqa fayllarni to'xtatmaydi va sababini yozadi", async () => {
     const fetchFn = jest.fn().mockResolvedValue({ ok: false, status: 500 });
     const { up, send } = make({ fetchFn });
     send.mockRejectedValue({ name: 'NotFound' });
@@ -56,7 +79,7 @@ describe('R2Uploader.uploadMissing', () => {
     expect(r.failed).toEqual([{ key: 'dib/audio/a.mp3', reason: 'HTTP 500' }]);
   });
 
-  it('manba so\'rovi tarmoq xatosi bilan rad etilsa ham, sababi bilan qayd etiladi', async () => {
+  it("manba so'rovi tarmoq xatosi bilan rad etilsa ham, sababi bilan qayd etiladi", async () => {
     const fetchFn = jest.fn().mockRejectedValue(new Error('network timeout'));
     const { up, send } = make({ fetchFn });
     send.mockRejectedValue({ name: 'NotFound' });
@@ -73,7 +96,10 @@ describe('R2Uploader.uploadMissing', () => {
     const { up, send } = make();
     send
       .mockRejectedValueOnce({ name: 'NotFound' }) // HeadObject - yo'q
-      .mockRejectedValueOnce({ name: 'AccessDenied', message: 'Access Denied' }); // PutObject rad etildi
+      .mockRejectedValueOnce({
+        name: 'AccessDenied',
+        message: 'Access Denied',
+      }); // PutObject rad etildi
 
     const r = await up.uploadMissing([A]);
 
@@ -95,7 +121,7 @@ describe('R2Uploader.uploadMissing', () => {
     });
   });
 
-  it('litsenziyani R2 metama\'lumotiga yozadi', async () => {
+  it("litsenziyani R2 metama'lumotiga yozadi", async () => {
     const { up, send } = make();
     send.mockRejectedValueOnce({ name: 'NotFound' }).mockResolvedValueOnce({});
 

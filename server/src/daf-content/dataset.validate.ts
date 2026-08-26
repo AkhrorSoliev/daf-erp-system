@@ -73,17 +73,22 @@ export function validateDataset(d: DafDataset): string[] {
     for (const a of g.audio) checkAsset(a);
 
     for (const ex of g.exercises) {
-      // `___` qoidasi faqat GAP va CLOZE uchun: REORDER'da bo'sh joy o'rniga
-      // tartiblanadigan `tokens` ro'yxati bo'lishi shart.
+      // REORDER'da bo'sh joy o'rniga tartiblanadigan `tokens` ro'yxati
+      // bo'lishi shart, va u KAMIDA IKKITA elementdan iborat bo'lishi kerak —
+      // bitta "token" tartiblash emas, aslida REORDER'ga noto'g'ri
+      // tasniflangan boshqa mashq (masalan gapni birlashtirish topshirig'i).
+      // Qolgan uch tur (GAP, MC, CLOZE) uchun `___` bo'sh joy va uning soni
+      // (`blankCount`) bir xil qoida bilan tekshiriladi.
       if (ex.kind === 'REORDER') {
-        if (!ex.tokens || ex.tokens.length === 0) {
-          errors.push(`${ex.id}: REORDER mashqida \`tokens\` ro'yxati bo'sh`);
+        if (!ex.tokens || ex.tokens.length < 2) {
+          errors.push(
+            `${ex.id}: REORDER mashqida kamida ikkita \`tokens\` elementi bo'lishi shart`,
+          );
         }
-      } else if (!ex.sentenceDe.includes('___')) {
-        errors.push(`${ex.id}: gapda bo'sh joy (___) yo'q`);
-      }
-
-      if (ex.kind === 'CLOZE') {
+      } else {
+        if (!ex.sentenceDe.includes('___')) {
+          errors.push(`${ex.id}: gapda bo'sh joy (___) yo'q`);
+        }
         const blanksInText = (ex.sentenceDe.match(/___/g) ?? []).length;
         if (ex.blankCount !== blanksInText) {
           errors.push(
@@ -92,10 +97,8 @@ export function validateDataset(d: DafDataset): string[] {
         }
       }
 
-      // MC `___` qoidasini yuqoridagi umumiy tekshiruvdan OLADI (REORDER
-      // emas, shuning uchun `else if` shoxobchasiga tushadi) — alohida
-      // istisno emas. Bu yerda faqat MC'ga xos qoida qo'shiladi: kamida
-      // ikkita variant bo'lmasa, o'quvchi tanlaydigan hech narsa yo'q.
+      // MC'ga xos qo'shimcha qoida: kamida ikkita variant bo'lmasa,
+      // o'quvchi tanlaydigan hech narsa yo'q.
       if (ex.kind === 'MC' && (!ex.options || ex.options.length < 2)) {
         errors.push(
           `${ex.id}: MC mashqida kamida ikkita \`options\` bo'lishi shart`,
@@ -121,5 +124,40 @@ export function validateDataset(d: DafDataset): string[] {
     }
   }
 
+  errors.push(...findUndecodedEntities(d));
+
+  return errors;
+}
+
+const RAW_ENTITY_RE = /&[A-Za-z]+;/;
+
+/**
+ * `html-entities.ts`dagi jadval fixture'larga qarshi tekshiriladi, real
+ * datasetga emas — shuning uchun u strukturaviy jihatdan haqiqiy natijada
+ * qolib ketgan entity'ni (masalan `&eacute;`, `&euro;`) ko'ra olmaydi. Bu
+ * qoida esa butun datasetni — har qanday satr maydonini — aylanib chiqadi,
+ * shuning uchun shu turkumdagi muammoni fixture'ma-fixture emas, bir yo'la
+ * yopadi.
+ */
+function findUndecodedEntities(d: DafDataset): string[] {
+  const errors: string[] = [];
+
+  const visit = (value: unknown, path: string): void => {
+    if (typeof value === 'string') {
+      if (RAW_ENTITY_RE.test(value)) {
+        errors.push(
+          `${path}: dekodlanmagan HTML entity qoldi — "${value.slice(0, 60)}"`,
+        );
+      }
+    } else if (Array.isArray(value)) {
+      value.forEach((item, i) => visit(item, `${path}[${i}]`));
+    } else if (value && typeof value === 'object') {
+      for (const [key, val] of Object.entries(value)) {
+        visit(val, `${path}.${key}`);
+      }
+    }
+  };
+
+  visit(d, 'dataset');
   return errors;
 }

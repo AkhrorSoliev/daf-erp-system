@@ -97,7 +97,14 @@ DialogueLine
 
 GapExercise
   id              'vi_05_01_fib_1'
-  sentenceDe      'Schneewittchen ___ eine neue Karriere.'
+  kind            'GAP' | 'REORDER' | 'CLOZE' | 'MC'  — manbada TO'RT format
+  sentenceDe      'Schneewittchen ___ eine neue Karriere.'  — GAP/CLOZE/MC:
+                                             bo'sh joy `___`; REORDER: topshiriq matni
+  tokens?         string[]                  — faqat REORDER: tartiblanadigan so'zlar
+  options?        string[]                  — faqat MC: variant matnlari (`a. weil`)
+  wordBank?       string[]                  — faqat CLOZE, sahifada bo'lsa
+  blankCount?     number                    — GAP/MC/CLOZE: `___` soni;
+                                             REORDER'da aniqlanmagan
   answer          null                       — R5: Faza 1b da BO'SH
   answerStatus    'MISSING'
   grammarCode     'vi_05'
@@ -105,7 +112,9 @@ GapExercise
 PhoneticsItem
   id              'pho_01_01_abc'
   chapter         1
-  titleDe/titleEn
+  textDe          'A, B, C, D, ...'          — nemischa misollar matni
+  textEn          'A as in apple, ...'       — inglizcha izoh, `overlib()` dan
+  caption         'Listen to the alphabet:'  — bo'lim izohi
   audio           AssetRef
 ```
 

@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { parseGrammarIndex, parseGrammarPage } from './dib-grammar.parser';
+import type { SkipStats } from './dib-grammar.parser';
 
 const REAL = readFileSync(
   join(__dirname, '__fixtures__', 'gg-pr-vi_05.html'),
@@ -45,6 +46,15 @@ const MC_PAGE = readFileSync(
   join(__dirname, '__fixtures__', 'gg-pr-con_04.html'),
   'utf8',
 );
+// `cas_03` — 92 sahifalik to'liq yig'ishda topilgan holat: sahifada UCHTA
+// `<table class="ex">` bloki VA bitta `<p class="clz">` cloze parchasi bir
+// vaqtda bor. Eski parser jadval topilgach darhol qaytardi, cloze
+// tekshiruvi hech qachon ishlamasdi — 15 bo'sh joyli cloze butunlay
+// yo'qolardi. Fixture haqiqiy sahifa (Der Akkusativ).
+const BOTH_FORMATS_PAGE = readFileSync(
+  join(__dirname, '__fixtures__', 'gg-pr-cas_03.html'),
+  'utf8',
+);
 
 const INDEX = `
 <html><body>
@@ -71,6 +81,15 @@ describe('parseGrammarPage — haqiqiy sahifada', () => {
     expect(p.code).toBe('vi_05');
     expect(p.titleDe).toBe('Haben');
     expect(p.level).toBe('A1.1');
+  });
+
+  // `<title>Grimm Grammar : haben : Haben</title>` — o'rtadagi qism
+  // inglizcha nom, eski parser buni tashlab yuborib `code`ning o'zini
+  // (`vi_05`) yozardi.
+  it("o'rtadagi qismni inglizcha sarlavha sifatida beradi", () => {
+    const p = parseGrammarPage(REAL, 'vi_05')!;
+    expect(p.titleDe).toBe('Haben');
+    expect(p.titleEn).toBe('haben');
   });
 
   it('inglizcha tushuntirishni oladi', () => {
@@ -342,5 +361,132 @@ describe("parseGrammarPage — ko'p variantli (MC) formati (con_04)", () => {
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids[0]).toBe('con_04_fib_1');
     expect(ids[ids.length - 1]).toBe(`con_04_fib_${ids.length}`);
+  });
+});
+
+// Task 1 (Muhim): REORDER span'ida topshiriq matni ichida `</span>` bo'lsa,
+// eski kod tokenlarni `/` bo'yicha AVVAL, teglarni tozalashdan OLDIN
+// ajratardi — yopilish tegining o'zidagi `/` ham ajratgich bo'lib qolib,
+// tegni ikkiga bo'lib yuborardi. Haqiqiy manbada (`vpass_04`) bu naqsh
+// `<span class="hi_12_ff6600">Matn</span>: davomi` — span'ning o'zi
+// ta'kidlash uchun, ajratgich EMAS.
+describe("parseGrammarPage — span ichida </span> bo'lgan REORDER topshirig'i", () => {
+  const SPAN_IN_PROMPT_PAGE = `
+<html><body>
+<title>Grimm Grammar : test : Test</title>
+<div id="fp_01">
+  <audio controls="controls">
+    <source src="https://media.la.utexas.edu:443/gg/audio/test_01.mp3" type="audio/mpeg" />
+  </audio>
+</div>
+<div id="ps_01" class="aud_txt">
+  <div class="indent_wrap_250">
+  <table class="ex">
+    <tr>
+      <td class="qnum"><b>1.</b></td>
+      <td><span class="hi_12_ff6600">Geheimnis wird gel&ouml;st</span>: die Rapunzeln wurden gestohlen! (sich lassen)<br>
+      <input name="fib_1" type="text" value="" class="txt_2"></td>
+    </tr>
+  </table>
+  </div>
+</div>
+<div id="ps_01_t" class="aud_txtt"></div>
+</body></html>`;
+
+  it("teg ichidagi `/` tokenlarni yolg'on ajratmaydi — natijada xom teg qoldig'i chiqmaydi", () => {
+    const skipStats: SkipStats = { skipped: 0 };
+    const p = parseGrammarPage(SPAN_IN_PROMPT_PAGE, 'vpass_04', skipStats)!;
+    // Bitta haqiqiy `/` yo'q — bu span aslida bitta gap, REORDER emas,
+    // shuning uchun o'tkazib yuboriladi (Task 3 qoidasi).
+    expect(p.exercises).toHaveLength(0);
+    expect(skipStats.skipped).toBe(1);
+  });
+});
+
+// Task 2 (Muhim): sahifada HAM jadval mashqlari, HAM cloze parcha bo'lsa,
+// eski kod jadval topilgach darhol qaytardi — cloze hech qachon
+// tekshirilmasdi. `cas_03` (Der Akkusativ) haqiqiy sahifa: 32 ta jadval
+// mashqi VA 15 bo'sh joyli cloze bir vaqtda bor.
+describe('parseGrammarPage — jadval VA cloze bir sahifada (cas_03)', () => {
+  it("jadvaldagi 32 ta mashqni HAM, cloze'ni HAM beradi", () => {
+    const p = parseGrammarPage(BOTH_FORMATS_PAGE, 'cas_03')!;
+    expect(p.exercises).toHaveLength(33);
+    const cloze = p.exercises.filter((e) => e.kind === 'CLOZE');
+    expect(cloze).toHaveLength(1);
+    expect(cloze[0].blankCount).toBe(15);
+    expect((cloze[0].sentenceDe.match(/___/g) ?? []).length).toBe(15);
+  });
+
+  it("id'lar birlashgan ro'yxat bo'yicha ketma-ket, takrorlanmaydi", () => {
+    const p = parseGrammarPage(BOTH_FORMATS_PAGE, 'cas_03')!;
+    const ids = p.exercises.map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids[0]).toBe('cas_03_fib_1');
+    expect(ids[ids.length - 1]).toBe(`cas_03_fib_${ids.length}`);
+  });
+});
+
+// Task 3 (Muhim): validator endi `tokens.length >= 2` talab qiladi.
+// `con_03_fib_11..16` va `vpp_01`ning barcha 10 mashqi gapni birlashtirish
+// topshirig'i — bitta "token" ichida ikkita to'liq gap, hech qanday `/`
+// ajratgichisiz. Bular REORDER emas, parser ularni endi o'tkazib yuboradi.
+describe("parseGrammarPage — ikkitadan kam tokenli span o'tkazib yuboriladi", () => {
+  const SENTENCE_COMBINE_PAGE = `
+<html><body>
+<title>Grimm Grammar : test : Test</title>
+<div id="fp_01">
+  <audio controls="controls">
+    <source src="https://media.la.utexas.edu:443/gg/audio/test_01.mp3" type="audio/mpeg" />
+  </audio>
+</div>
+<div id="ps_01" class="aud_txt">
+  <div class="indent_wrap_250">
+  <table class="ex">
+    <tr>
+      <td class="qnum"><b>1.</b></td>
+      <td>Gretel muss Wasser holen. Die Hexe will H&auml;nsel kochen.<br>
+      <input name="fib_1" type="text" value="" class="txt_2"></td>
+    </tr>
+    <tr>
+      <td class="qnum"><b>2.</b></td>
+      <td>Ich / machen / nichts anderes<br>
+      <input name="fib_2" type="text" value="" class="txt_2"></td>
+    </tr>
+  </table>
+  </div>
+</div>
+<div id="ps_01_t" class="aud_txtt"></div>
+</body></html>`;
+
+  it("bitta tokenli span'ni tashlab, faqat haqiqiy REORDER'ni qoldiradi va skip sonini hisoblaydi", () => {
+    const skipStats: SkipStats = { skipped: 0 };
+    const p = parseGrammarPage(SENTENCE_COMBINE_PAGE, 'con_03', skipStats)!;
+    expect(p.exercises).toHaveLength(1);
+    expect(p.exercises[0].kind).toBe('REORDER');
+    expect(p.exercises[0].tokens).toEqual(['Ich', 'machen', 'nichts anderes']);
+    expect(skipStats.skipped).toBe(1);
+  });
+});
+
+// Task 11: `blankCount` endi GAP va MC uchun ham to'ldiriladi (avval faqat
+// CLOZE'da bor edi), `sentenceDe`dagi `___` sonini sanab.
+describe("parseGrammarPage — blankCount GAP va MC uchun ham to'ldiriladi", () => {
+  it("bitta bo'sh joyli GAP mashqida blankCount 1", () => {
+    const p = parseGrammarPage(REAL, 'vi_05')!;
+    const gap = p.exercises.find((e) => e.kind === 'GAP')!;
+    expect(gap.blankCount).toBe(1);
+  });
+
+  it("ko'p bo'sh joyli MC mashqida blankCount haqiqiy sondagi `___` ga teng", () => {
+    const p = parseGrammarPage(MC_PAGE, 'con_04')!;
+    const mc = p.exercises.find((e) => e.kind === 'MC')!;
+    expect(mc.blankCount).toBe((mc.sentenceDe.match(/___/g) ?? []).length);
+    expect(mc.blankCount).toBeGreaterThan(0);
+  });
+
+  it('REORDER mashqida blankCount aniqlanmagan qoladi', () => {
+    const p = parseGrammarPage(REORDER_PAGE, 'vsub_02')!;
+    const reorder = p.exercises.find((e) => e.kind === 'REORDER')!;
+    expect(reorder.blankCount).toBeUndefined();
   });
 });
