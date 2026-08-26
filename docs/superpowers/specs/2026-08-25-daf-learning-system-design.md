@@ -398,11 +398,14 @@ bormaydi — ADR-0010 dagi bilan bir xil tamoyil.
 ## 6. Fazalar
 
 Bu spec **Faza 1 ni to'liq** qamraydi va **barcha fazalar tayanadigan o'zak modelini** belgilaydi.
-Faza 2–6 shu modeldan foydalanadi, lekin har biri o'z spec'ini oladi.
+Faza 1b–6 shu modeldan foydalanadi, lekin har biri o'z spec'ini oladi.
+Faza 1b keyinroq qo'shildi: ma'lumot modelini qotirishdan (Faza 2) oldin
+kontentning to'liq shakli ko'rinishi kerak.
 
 | Faza | Natija | Alohida spec |
 |---|---|---|
-| **1** | Dataset + media R2'da: adapterlar, daraja yorliqlash | yo'q — shu hujjat |
+| **1** | Dataset + media R2'da: adapterlar, daraja yorliqlash | bajarildi (PR #461) |
+| **1b** | Kontent yig'ishni tugatish: DiB grammatikasi, talaffuzi, PDF'lari; `wort.schule` rasmlari; adapter interfeysi | [bor](2026-08-26-daf-faza-1b-design.md) |
 | **2** | Ko'rinadigan kutubxona: `Daf*` modellar, seed, API, portal bo'limi, **o'zbekcha tarjima (tasdiqlanmagan holatda)**. Mashqsiz | kerak |
 | **3** | Mashq dvigateli — 3.4 dagi formatlar. Yopiq formatlar `AUTO`, **`WRITE_GUIDED` esa `AI`** (Schreiben ishlaydi) | kerak |
 | **4** | Admin muallif UI + guruhga yo'naltirish + tarjima tasdig'i + **o'qituvchi namuna tekshiruvi navbati** | kerak |
