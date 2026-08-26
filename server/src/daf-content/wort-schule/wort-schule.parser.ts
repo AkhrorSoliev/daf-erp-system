@@ -26,6 +26,15 @@ export function lemmaOf(de: string): string | null {
   return /^[A-Za-zÄÖÜäöüß-]+$/.test(t) ? t : null;
 }
 
+/**
+ * Rasm URL'idan kengaytmani oladi (so'roq qatori bo'lsa ham). Kengaytma
+ * topilmasa `.png` ga tushadi — hozirgacha ko'rilgan barcha namunalar shu.
+ */
+function extensionOf(url: string): string {
+  const m = /\.([a-z0-9]{2,4})(?:[?#]|$)/i.exec(url);
+  return m ? `.${m[1].toLowerCase()}` : '.png';
+}
+
 export function parseWordJson(
   json: string,
   lemma: string,
@@ -37,9 +46,6 @@ export function parseWordJson(
     return null;
   }
 
-  const imageUrl = typeof d.image_url === 'string' ? d.image_url : null;
-  if (!imageUrl) return null;
-
   const list = (v: unknown): string[] | undefined => {
     const a = Array.isArray(v)
       ? v.filter((x): x is string => typeof x === 'string')
@@ -49,15 +55,18 @@ export function parseWordJson(
   const str = (v: unknown): string | undefined =>
     typeof v === 'string' && v.trim() !== '' ? v : undefined;
 
-  const image: AssetRef = {
-    sourceUrl: imageUrl,
-    key: `wort-schule/${lemma}.png`,
-    kind: 'IMAGE',
-    license: WS_LICENSE,
-    attribution: WS_ATTRIBUTION,
-  };
+  const imageUrl = typeof d.image_url === 'string' ? d.image_url : null;
+  const image: AssetRef | undefined = imageUrl
+    ? {
+        sourceUrl: imageUrl,
+        key: `wort-schule/${lemma}${extensionOf(imageUrl)}`,
+        kind: 'IMAGE',
+        license: WS_LICENSE,
+        attribution: WS_ATTRIBUTION,
+      }
+    : undefined;
 
-  return {
+  const entry: WordSchuleEntry = {
     lemma,
     image,
     syllables: str(d.syllables),
@@ -67,6 +76,14 @@ export function parseWordJson(
     opposites: list(d.opposites),
     topics: list(d.topics),
   };
+
+  // Rasm bo'lmasa ham, boshqa foydali maydon bo'lsa yozuv saqlanadi — «laufen»
+  // kabi so'zlarning bo'g'inlari, sinonimlari va mavzulari faqat rasm yo'qligi
+  // sababli yo'qolib qolmasligi kerak. Foydali hech narsa bo'lmasagina null.
+  const hasUsefulField = Object.entries(entry).some(
+    ([key, value]) => key !== 'lemma' && value !== undefined,
+  );
+  return hasUsefulField ? entry : null;
 }
 
 /**

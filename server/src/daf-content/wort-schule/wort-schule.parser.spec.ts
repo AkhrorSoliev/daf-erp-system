@@ -21,6 +21,18 @@ const JSON_OK = JSON.stringify({
   topics: ['Tiere'],
 });
 
+// Haqiqiy javob shakli: «laufen» rasmga ega emas, lekin bo'g'in, sinonim va
+// mavzular bilan to'la — bular faqat rasm yo'qligi sababli yo'qolmasligi kerak.
+const JSON_LAUFEN = JSON.stringify({
+  name: 'laufen',
+  word_type: 'Verb',
+  meaning: 'sich zu Fuß fortbewegen',
+  syllables: 'lau-fen',
+  image_url: null,
+  synonyms: ['rennen'],
+  topics: ['Sport', 'Bewegung', 'Schule', 'Freizeit', 'Alltag', 'Verben'],
+});
+
 describe('lemmaOf', () => {
   it('artiklni olib tashlaydi', () => {
     expect(lemmaOf('der Tisch')).toBe('Tisch');
@@ -58,9 +70,24 @@ describe('parseWordJson', () => {
     expect(e.topics).toEqual(['Tiere']);
   });
 
-  it("rasmi yo'q yozuv uchun null qaytaradi", () => {
-    const noImg = JSON.stringify({ name: 'x', image_url: null });
-    expect(parseWordJson(noImg, 'x')).toBeNull();
+  it("rasmi yo'q, lekin metama'lumoti bor «laufen» kabi yozuvni saqlaydi", () => {
+    const e = parseWordJson(JSON_LAUFEN, 'laufen')!;
+    expect(e).not.toBeNull();
+    expect(e.image).toBeUndefined();
+    expect(e.syllables).toBe('lau-fen');
+    expect(e.synonyms).toEqual(['rennen']);
+    expect(e.topics).toHaveLength(6);
+  });
+
+  it("foydali maydoni bo'lmagan yozuv uchun null qaytaradi", () => {
+    const empty = JSON.stringify({ name: 'x', image_url: null });
+    expect(parseWordJson(empty, 'x')).toBeNull();
+  });
+
+  it("rasm URL'idagi kengaytmani ishlatadi, uni .png deb faraz qilmaydi", () => {
+    const jpg = JSON.stringify({ name: 'x', image_url: 'https://w/x.jpg' });
+    const e = parseWordJson(jpg, 'x')!;
+    expect(e.image!.key).toBe('wort-schule/x.jpg');
   });
 
   it('buzuq JSON uchun null qaytaradi, xato tashlamaydi', () => {
@@ -94,6 +121,16 @@ describe('enrichLexeme', () => {
     )!;
     const out = enrichLexeme(base, e);
     expect(out.synonyms).toBeUndefined();
+  });
+
+  it('yangi yozuv bermagan mavjud ixtiyoriy maydonni saqlab qoladi', () => {
+    const withSyllables: Lexeme = { ...base, syllables: 'eski-band' };
+    const noSyllables = parseWordJson(
+      JSON.stringify({ name: 'x', image_url: 'https://w/x.png' }),
+      'x',
+    )!;
+    const out = enrichLexeme(withSyllables, noSyllables);
+    expect(out.syllables).toBe('eski-band');
   });
 });
 
