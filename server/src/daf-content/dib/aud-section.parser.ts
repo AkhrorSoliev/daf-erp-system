@@ -10,8 +10,19 @@ export interface AudSection {
   caption: string;
 }
 
+// Manba so'z ICHIDA bitta harfni belgilash uchun `<span>` ishlatadi (masalan
+// `A<span>usland</span>` — "Ausland" ichidagi "A" ta'kidlangan). Bu kabi teglar
+// bo'shliq bilan almashtirilsa, so'z ikkiga bo'linib ketadi: "A usland". Shuning
+// uchun matn ICHIDA joylashadigan teglar bo'shliqsiz olib tashlanadi; qatorlarni
+// AJRATIB turadigan teglar (`<br>`, `<p>`, `<div>`, jadval teglari) esa, avvalgidek,
+// bo'shliqqa almashtiriladi — ular orasida so'zlar tabiiy ravishda tutashib qolmaydi.
+const INLINE_TAG_RE =
+  /<\/?(span|b|i|em|strong|a|u|sup|sub|small)(?:\s[^>]*)?>/gi;
+
 export function stripTags(html: string): string {
-  return decodeEntities(html.replace(/<[^>]*>/g, ' '))
+  return decodeEntities(
+    html.replace(INLINE_TAG_RE, '').replace(/<[^>]*>/g, ' '),
+  )
     .replace(/\s+/g, ' ')
     .trim();
 }

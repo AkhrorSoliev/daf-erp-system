@@ -51,6 +51,35 @@ describe('parsePhoneticsPage — haqiqiy sahifada', () => {
     expect(bad).toEqual([]);
   });
 
+  // Manbada har misol so'zning birinchi harfi <span> bilan ta'kidlangan
+  // (masalan `das <span ...>A</span>usland`). `stripTags` bu tegni bo'shliq
+  // bilan almashtirsa, so'z "A usland" bo'lib ikkiga bo'linib qolardi — aniq
+  // tenglik shuni tutib qoladi, `toContain` esa tutmas edi.
+  it("'A' bo'limida so'zlar bo'linib ketmaydi", () => {
+    const items = parsePhoneticsPage(REAL, 1);
+    const aSection = items.find((i) => i.id === 'pho_01_02_a')!;
+    expect(aSection).toBeDefined();
+    expect(aSection.textDe).toContain('das Ausland');
+    expect(aSection.textDe).not.toContain('A usland');
+  });
+
+  // Fonetik belgilar (masalan `&int;`, `&theta;`) `decodeEntities`'ning NAMED
+  // jadvalida bo'lmasa, xom entity sifatida chiqib ketardi — aynan shu
+  // modul buni o'quvchiga o'rgatishi kerak bo'lgan joyda. Faqat birinchi
+  // elementni emas, BARCHASINI tekshiradi.
+  it('hech bir elementda xom entity yoki overlib qoldiqi qolmaydi', () => {
+    const items = parsePhoneticsPage(REAL, 1);
+    expect(items.length).toBeGreaterThan(0);
+    for (const item of items) {
+      expect(item.textDe).not.toMatch(/&[A-Za-z]+;/);
+      expect(item.textEn).not.toMatch(/&[A-Za-z]+;/);
+      expect(item.textDe).not.toContain('overlib');
+      expect(item.textEn).not.toContain('overlib');
+      expect(item.textDe).not.toContain('<');
+      expect(item.textEn).not.toContain('<');
+    }
+  });
+
   it("audiosi yo'q sahifada bo'sh ro'yxat qaytaradi", () => {
     expect(parsePhoneticsPage('<html><body></body></html>', 7)).toEqual([]);
   });

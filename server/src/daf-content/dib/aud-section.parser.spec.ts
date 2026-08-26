@@ -33,6 +33,23 @@ describe('stripTags', () => {
   it("ketma-ket bo'shliqlarni bittaga keltiradi", () => {
     expect(stripTags('a\n\n  <i>b</i>   c')).toBe('a b c');
   });
+
+  // Manba so'z ICHIDA bitta harfni <span> bilan ta'kidlaydi (masalan
+  // `A<span>usland</span>` — real sahifada `das <span ...>A</span>usland`).
+  // Bu inline teg bo'shliqqa almashtirilsa, so'z ikkiga bo'linib qolardi.
+  it("so'z ichidagi <span> so'zni bo'lib yubormaydi", () => {
+    expect(stripTags('das <span class="hi_11_0057d1">A</span>usland')).toBe(
+      'das Ausland',
+    );
+  });
+
+  // `<br>` esa qatorni AJRATADI — ikkala tomonidagi so'z tutashib qolmasligi
+  // uchun bo'shliq saqlanishi shart.
+  it("<br> ikki so'z orasida bo'shliqni saqlaydi", () => {
+    expect(stripTags('erste Zeile<br>zweite Zeile')).toBe(
+      'erste Zeile zweite Zeile',
+    );
+  });
 });
 
 describe('parseAudSections', () => {

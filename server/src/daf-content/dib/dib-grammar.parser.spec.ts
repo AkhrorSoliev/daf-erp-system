@@ -189,3 +189,32 @@ describe('parseGrammarPage — hech bir sahifada xom teg qolmaydi', () => {
     expect(texts.some((t) => t.includes('<'))).toBe(false);
   });
 });
+
+// `decodeEntities`'ning NAMED jadvali qo'lda to'ldiriladi — talaffuz
+// sahifasida aynan shu tarzda oltita belgi (masalan `&int;`, `&theta;`)
+// unutilib, xom holida chiqib ketgan edi. `stripTags` grammatika bilan
+// talaffuz o'rtasida umumiy bo'lgani uchun bu tekshiruv shu yerda ham kerak —
+// keyingi yetishmagan entity o'quvchiga emas, shu testga uchraydi.
+describe('parseGrammarPage — hech bir sahifada xom entity qolmaydi', () => {
+  it.each([
+    ['vi_05', REAL],
+    ['vsub_02', REORDER_PAGE],
+    ['adv_03', CLOZE_PAGE],
+    ['cas_07', NO_DIALOGUE_PAGE],
+  ])(
+    '%s sahifasida `&harf;` shaklidagi dekodlanmagan entity uchramaydi',
+    (code, html) => {
+      const p = parseGrammarPage(html, code)!;
+      const texts = [
+        p.explanation,
+        ...p.dialogue.flatMap((d) => [d.speaker, d.de, d.en]),
+        ...p.exercises.flatMap((e) => [
+          e.sentenceDe,
+          ...(e.tokens ?? []),
+          ...(e.wordBank ?? []),
+        ]),
+      ];
+      expect(texts.some((t) => /&[A-Za-z]+;/.test(t))).toBe(false);
+    },
+  );
+});
