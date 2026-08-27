@@ -72,7 +72,12 @@ describe('DafSeedService', () => {
   let prisma: {
     dafUnit: { upsert: jest.Mock };
     dafLexeme: { upsert: jest.Mock; deleteMany: jest.Mock };
-    dafGrammar: { upsert: jest.Mock; findMany: jest.Mock };
+    dafGrammar: {
+      upsert: jest.Mock;
+      findMany: jest.Mock;
+      findUnique: jest.Mock;
+    };
+    dafLesson: { upsert: jest.Mock };
     dafExercise: { upsert: jest.Mock; updateMany: jest.Mock };
     $transaction: jest.Mock;
   };
@@ -87,7 +92,9 @@ describe('DafSeedService', () => {
       dafGrammar: {
         upsert: jest.fn().mockResolvedValue({ id: 20 }),
         findMany: jest.fn().mockResolvedValue([{ id: 20, unitId: 10 }]),
+        findUnique: jest.fn().mockResolvedValue({ unitId: 10 }),
       },
+      dafLesson: { upsert: jest.fn().mockResolvedValue({ id: 40 }) },
       dafExercise: {
         upsert: jest.fn().mockResolvedValue({ id: 30 }),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
@@ -111,6 +118,8 @@ describe('DafSeedService', () => {
 
     expect(report).toMatchObject({
       units: 1,
+      // Bitta lug'at bo'limi + bitta grammatika sahifasi = ikkita dars.
+      lessons: 2,
       lexemes: 2,
       grammar: 1,
       exercises: 1,
@@ -183,6 +192,30 @@ describe('DafSeedService', () => {
       create: { answerStatus: string };
     };
     expect(call.create.answerStatus).toBe('OPEN');
+  });
+
+  // Tartib ATAYLAB shunday: avval lug'at darslari, keyin grammatika.
+  // So'zsiz grammatika ma'nosiz — o'quvchi qoidani biladi, lekin uni
+  // qo'llaydigan so'zi yo'q.
+  it("lug'at darslarini grammatikadan oldin qo'yadi", async () => {
+    await service.seed(dataset());
+
+    const kinds = prisma.dafLesson.upsert.mock.calls.map(
+      (c) => (c[0] as { create: { kind: string; order: number } }).create,
+    );
+    expect(kinds.map((k) => k.kind)).toEqual(['VOCAB', 'GRAMMAR']);
+    expect(kinds.map((k) => k.order)).toEqual([1, 2]);
+  });
+
+  // Dars kaliti manbanikidan quriladi, shuning uchun qayta yuritish
+  // darslarni takrorlamaydi.
+  it("dars kalitini manba id'sidan quradi", async () => {
+    await service.seed(dataset());
+
+    const ids = prisma.dafLesson.upsert.mock.calls.map(
+      (c) => (c[0] as { where: { sourceId: string } }).where.sourceId,
+    );
+    expect(ids).toEqual(['dib-voc-01-01', 'gram:no_02']);
   });
 
   it('audio kalitini leksemaga biriktiradi', async () => {

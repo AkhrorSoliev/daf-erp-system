@@ -464,6 +464,8 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'at all. Scoping these reads by branch would answer a question nobody asks ' +
       'and imply the catalogue differs per branch, which it does not.',
     routes: [
+      'GET /student-portal/lernen/grammar',
+      'GET /student-portal/lernen/lessons/:id',
       'GET /student-portal/lernen/levels',
       'GET /student-portal/lernen/units/:id',
     ],

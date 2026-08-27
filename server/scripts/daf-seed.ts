@@ -29,6 +29,7 @@ async function main() {
   const r = await service.seed(dataset);
 
   console.log(`\nBo'lim:       ${r.units}`);
+  console.log(`Dars:         ${r.lessons}`);
   console.log(`Lug'at:       ${r.lexemes}`);
   console.log(`Grammatika:   ${r.grammar}`);
   console.log(`Mashq:        ${r.exercises}`);

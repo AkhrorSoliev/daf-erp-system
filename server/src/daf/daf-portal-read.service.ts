@@ -24,7 +24,13 @@ export const LEVEL_LABEL: Record<DafLevel, string> = {
 export interface LevelPathItem {
   level: DafLevel;
   label: string;
-  units: { id: number; order: number; titleUz: string; titleDe: string }[];
+  units: {
+    id: number;
+    order: number;
+    titleUz: string;
+    titleDe: string;
+    lessonCount: number;
+  }[];
 }
 
 @Injectable()
@@ -57,6 +63,7 @@ export class DafPortalReadService {
         order: true,
         titleUz: true,
         titleDe: true,
+        _count: { select: { lessons: true } },
       },
     });
 
@@ -65,24 +72,22 @@ export class DafPortalReadService {
       label: LEVEL_LABEL[level],
       units: units
         .filter((u) => u.level === level)
-        .map(({ id, order, titleUz, titleDe }) => ({
-          id,
-          order,
-          titleUz,
-          titleDe,
+        .map((u) => ({
+          id: u.id,
+          order: u.order,
+          titleUz: u.titleUz,
+          titleDe: u.titleDe,
+          lessonCount: u._count.lessons,
         })),
     }));
   }
 
   /**
-   * Bitta bo'lim: lug'at, grammatika va mashqlar.
+   * Bitta bo'lim — DARSLAR ro'yxati.
    *
-   * TO'G'RI JAVOB QAYTARILMAYDI. Uni yuborish mashqning ma'nosini
-   * yo'qotardi — brauzerdagi tarmoq oynasida ko'rinib turardi. Javob
-   * faqat urinish yozilganda, serverda tekshiriladi.
-   *
-   * Nafaqaga chiqarilgan mashq ro'yxatga tushmaydi, lekin bazada qoladi:
-   * unga ishora qiluvchi urinish tarixi saqlanadi.
+   * Bo'limning o'zi lug'at yoki mashq qaytarmaydi: birinchi bo'limda
+   * 226 so'z va 108 mashq bor, ya'ni bitta ekranga sig'maydi va o'quvchi
+   * qayerdan boshlashini bilmaydi. Kontent darsning ichida.
    */
   async getUnit(unitId: number) {
     const unit = await this.prisma.dafUnit.findUnique({
@@ -97,33 +102,82 @@ export class DafPortalReadService {
     });
     if (!unit) throw new NotFoundException("Bo'lim topilmadi");
 
-    const [lexemes, grammar, exercises] = await Promise.all([
+    const lessons = await this.prisma.dafLesson.findMany({
+      where: { unitId },
+      orderBy: { order: 'asc' },
+      select: {
+        id: true,
+        order: true,
+        kind: true,
+        titleDe: true,
+        titleUz: true,
+        _count: { select: { lexemes: true, exercises: true } },
+      },
+    });
+
+    return {
+      ...unit,
+      label: LEVEL_LABEL[unit.level],
+      lessons: lessons.map((l) => ({
+        id: l.id,
+        order: l.order,
+        kind: l.kind,
+        titleDe: l.titleDe,
+        titleUz: l.titleUz,
+        wordCount: l._count.lexemes,
+        exerciseCount: l._count.exercises,
+      })),
+    };
+  }
+
+  /**
+   * Bitta dars: lug'at yoki grammatika izohi, so'ng mashqlar.
+   *
+   * TO'G'RI JAVOB QAYTARILMAYDI. Uni yuborish mashqning ma'nosini
+   * yo'qotardi — brauzerdagi tarmoq oynasida ko'rinib turardi. Javob
+   * faqat urinish yozilganda, serverda tekshiriladi.
+   *
+   * Nafaqaga chiqarilgan mashq ro'yxatga tushmaydi, lekin bazada qoladi:
+   * unga ishora qiluvchi urinish tarixi saqlanadi.
+   */
+  async getLesson(lessonId: number) {
+    const lesson = await this.prisma.dafLesson.findUnique({
+      where: { id: lessonId },
+      select: {
+        id: true,
+        order: true,
+        kind: true,
+        titleDe: true,
+        titleUz: true,
+        unit: { select: { id: true, titleUz: true, level: true } },
+        grammar: {
+          select: {
+            id: true,
+            code: true,
+            titleDe: true,
+            titleUz: true,
+            explanationUz: true,
+            explanationEn: true,
+          },
+        },
+      },
+    });
+    if (!lesson) throw new NotFoundException('Dars topilmadi');
+
+    const [lexemes, exercises] = await Promise.all([
       this.prisma.dafLexeme.findMany({
-        where: { unitId },
-        orderBy: [{ sectionTitleDe: 'asc' }, { order: 'asc' }],
+        where: { lessonId },
+        orderBy: { order: 'asc' },
         select: {
           id: true,
           de: true,
           uz: true,
-          sectionTitleDe: true,
           audioKey: true,
           imageKey: true,
         },
       }),
-      this.prisma.dafGrammar.findMany({
-        where: { unitId },
-        orderBy: { code: 'asc' },
-        select: {
-          id: true,
-          code: true,
-          titleDe: true,
-          titleUz: true,
-          explanationUz: true,
-          level: true,
-        },
-      }),
       this.prisma.dafExercise.findMany({
-        where: { unitId, retiredAt: null },
+        where: { lessonId, retiredAt: null },
         orderBy: [{ sourceSetCode: 'asc' }, { order: 'asc' }],
         select: {
           id: true,
@@ -131,24 +185,55 @@ export class DafPortalReadService {
           prompt: true,
           options: true,
           answerStatus: true,
-          grammarId: true,
         },
       }),
     ]);
 
     return {
-      ...unit,
-      label: LEVEL_LABEL[unit.level],
+      ...lesson,
+      label: LEVEL_LABEL[lesson.unit.level],
       lexemes: lexemes.map((l) => ({
         id: l.id,
         de: l.de,
         uz: l.uz,
-        section: l.sectionTitleDe,
         audioUrl: this.mediaUrl(l.audioKey),
         imageUrl: this.mediaUrl(l.imageKey),
       })),
-      grammar,
       exercises,
     };
+  }
+
+  /**
+   * Grammatika mavzulari — 92 sahifaning hammasi.
+   *
+   * Bu ro'yxat kamchilikni yopadi: mashqlarning 459 tasi (39 %) hech
+   * qaysi bo'limga tegishli emas, chunki ularning sahifasini hech qaysi
+   * bob o'z mavzusi deb ko'rsatmagan. Bo'lim yo'li ularni ko'rsatmaydi;
+   * bu ro'yxat ko'rsatadi.
+   */
+  async getGrammarIndex() {
+    const rows = await this.prisma.dafGrammar.findMany({
+      orderBy: [{ level: 'asc' }, { code: 'asc' }],
+      select: {
+        id: true,
+        code: true,
+        titleDe: true,
+        titleUz: true,
+        level: true,
+        unitId: true,
+        _count: { select: { exercises: true } },
+      },
+    });
+
+    return rows.map((g) => ({
+      id: g.id,
+      code: g.code,
+      titleDe: g.titleDe,
+      titleUz: g.titleUz,
+      level: g.level,
+      /** Yo'lda ko'rinadimi — yo'q bo'lsa faqat shu ro'yxatdan ochiladi. */
+      inPath: g.unitId !== null,
+      exerciseCount: g._count.exercises,
+    }));
   }
 }

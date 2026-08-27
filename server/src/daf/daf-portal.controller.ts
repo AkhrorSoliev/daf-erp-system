@@ -39,6 +39,20 @@ export class DafPortalController {
     return this.read.getUnit(id);
   }
 
+  @Get('lessons/:id')
+  getLesson(@Param('id', ParseIntPipe) id: number) {
+    return this.read.getLesson(id);
+  }
+
+  /**
+   * Grammatika mavzulari ro'yxati. Yo'lga tushmagan 34 sahifa faqat shu
+   * yerdan ochiladi — ularsiz mashqlarning 39 % i ko'rinmay qolardi.
+   */
+  @Get('grammar')
+  getGrammar() {
+    return this.read.getGrammarIndex();
+  }
+
   /**
    * `studentId` TOKENDAN olinadi, tanadan emas — aks holda o'quvchi
    * boshqasining nomidan urinish yozib, uning natijasini buzishi mumkin

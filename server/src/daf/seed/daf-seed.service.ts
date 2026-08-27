@@ -1,5 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DafAnswerStatus, DafLevel, Prisma } from '@prisma/client';
+import {
+  DafAnswerStatus,
+  DafLessonKind,
+  DafLevel,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import type {
   CefrLevel,
@@ -10,6 +15,7 @@ import { DAF_UNIT_TITLES, orderWithinLevel } from './daf-unit-titles';
 
 export interface SeedReport {
   units: number;
+  lessons: number;
   lexemes: number;
   grammar: number;
   exercises: number;
@@ -97,15 +103,29 @@ export class DafSeedService {
 
   async seed(dataset: DafDataset): Promise<SeedReport> {
     const unitIdByChapter = await this.seedUnits(dataset);
-    const lexemes = await this.seedLexemes(dataset, unitIdByChapter);
     const grammarIdByCode = await this.seedGrammar(dataset, unitIdByChapter);
-    const exercises = await this.seedExercises(dataset, grammarIdByCode);
+    const lessonIdBySource = await this.seedLessons(
+      dataset,
+      unitIdByChapter,
+      grammarIdByCode,
+    );
+    const lexemes = await this.seedLexemes(
+      dataset,
+      unitIdByChapter,
+      lessonIdBySource,
+    );
+    const exercises = await this.seedExercises(
+      dataset,
+      grammarIdByCode,
+      lessonIdBySource,
+    );
 
     const retired = await this.retireMissingExercises(dataset);
     const lexemesRemoved = await this.removeMissingLexemes(dataset);
 
     return {
       units: unitIdByChapter.size,
+      lessons: lessonIdBySource.size,
       lexemes,
       grammar: grammarIdByCode.size,
       exercises,
@@ -150,23 +170,108 @@ export class DafSeedService {
     return byChapter;
   }
 
+  /**
+   * Darslar — bo'lim ichidagi bosqichlar.
+   *
+   * Tartib ATAYLAB shunday: avval lug'at darslari, keyin grammatika.
+   * So'zsiz grammatika ma'nosiz — o'quvchi qoidani biladi, lekin uni
+   * qo'llaydigan so'zi yo'q.
+   *
+   * Dars kaliti manbanikidan quriladi (`dib-voc-01-01`, `gram:no_02`),
+   * shuning uchun qayta yuritish darslarni takrorlamaydi.
+   */
+  private async seedLessons(
+    dataset: DafDataset,
+    unitIdByChapter: Map<number, number>,
+    grammarIdByCode: Map<string, number>,
+  ): Promise<Map<string, number>> {
+    const byUnit = new Map<
+      number,
+      {
+        sourceId: string;
+        kind: DafLessonKind;
+        titleDe: string;
+        grammarId: number | null;
+      }[]
+    >();
+
+    for (const section of dataset.sections) {
+      const unitId = unitIdByChapter.get(section.chapter);
+      if (unitId === undefined) continue;
+      const list = byUnit.get(unitId) ?? [];
+      list.push({
+        sourceId: section.id,
+        kind: DafLessonKind.VOCAB,
+        titleDe: section.titleDe,
+        grammarId: null,
+      });
+      byUnit.set(unitId, list);
+    }
+
+    // Grammatika darsi FAQAT bo'limga biriktirilgan sahifadan tug'iladi.
+    // Bo'limsiz 34 sahifa yo'lda ko'rinmaydi, lekin ular yo'qolmaydi —
+    // grammatika ro'yxati ularni alohida ko'rsatadi.
+    for (const g of dataset.grammar) {
+      const grammarId = grammarIdByCode.get(g.code);
+      if (grammarId === undefined) continue;
+      const row = await this.prisma.dafGrammar.findUnique({
+        where: { id: grammarId },
+        select: { unitId: true },
+      });
+      if (!row?.unitId) continue;
+      const list = byUnit.get(row.unitId) ?? [];
+      list.push({
+        sourceId: `gram:${g.code}`,
+        kind: DafLessonKind.GRAMMAR,
+        titleDe: g.titleDe,
+        grammarId,
+      });
+      byUnit.set(row.unitId, list);
+    }
+
+    const bySource = new Map<string, number>();
+    for (const [unitId, list] of byUnit) {
+      for (const [i, l] of list.entries()) {
+        const data = {
+          unitId,
+          order: i + 1,
+          kind: l.kind,
+          titleDe: l.titleDe,
+          grammarId: l.grammarId,
+        };
+        const row = await this.prisma.dafLesson.upsert({
+          where: { sourceId: l.sourceId },
+          create: { sourceId: l.sourceId, ...data },
+          // `titleUz` `update` da YO'Q: o'qituvchi tuzatgan tarjima seed
+          // qayta yuritilganda yo'qolmasligi kerak.
+          update: data,
+        });
+        bySource.set(l.sourceId, row.id);
+      }
+    }
+
+    return bySource;
+  }
+
   private async seedLexemes(
     dataset: DafDataset,
     unitIdByChapter: Map<number, number>,
+    lessonIdBySource: Map<string, number>,
   ): Promise<number> {
     const writes: Prisma.PrismaPromise<unknown>[] = [];
 
     for (const section of dataset.sections) {
       const unitId = unitIdByChapter.get(section.chapter);
-      if (unitId === undefined) continue;
+      const lessonId = lessonIdBySource.get(section.id);
+      if (unitId === undefined || lessonId === undefined) continue;
 
       for (const [i, entry] of section.entries.entries()) {
         const sourceId = lexemeSourceId(section.id, i);
         const data = {
           unitId,
+          lessonId,
           de: entry.de,
           en: entry.en,
-          sectionTitleDe: section.titleDe,
           audioKey: section.audio?.key ?? null,
           order: i + 1,
         };
@@ -260,6 +365,7 @@ export class DafSeedService {
   private async seedExercises(
     dataset: DafDataset,
     grammarIdByCode: Map<string, number>,
+    lessonIdBySource: Map<string, number>,
   ): Promise<number> {
     // Bo'limlar bitta so'rovda o'qiladi: sahifa boshiga alohida
     // `findUnique` 92 ta ortiqcha borish-kelish edi.
@@ -275,8 +381,13 @@ export class DafSeedService {
       const unitId =
         grammarId === null ? null : (unitIdByGrammarId.get(grammarId) ?? null);
 
+      // Mashq grammatika DARSIGA biriktiriladi. Darsi yo'q (bo'limsiz)
+      // sahifaning mashqlari `lessonId: null` bo'lib qoladi — ular
+      // yo'lda emas, lekin grammatika ro'yxatida ko'rinadi.
+      const lessonId = lessonIdBySource.get(`gram:${page.code}`) ?? null;
+
       for (const [i, ex] of page.exercises.entries()) {
-        const data = this.exerciseData(ex, grammarId, unitId, i);
+        const data = this.exerciseData(ex, grammarId, unitId, lessonId, i);
         writes.push(
           this.prisma.dafExercise.upsert({
             where: { sourceId: ex.id },
@@ -298,12 +409,14 @@ export class DafSeedService {
     ex: GapExercise,
     grammarId: number | null,
     unitId: number | null,
+    lessonId: number | null,
     index: number,
   ): Prisma.DafExerciseUncheckedCreateInput {
     return {
       sourceId: ex.id,
       grammarId,
       unitId,
+      lessonId,
       kind: ex.kind,
       prompt: ex.sentenceDe,
       options: ex.options ?? [],

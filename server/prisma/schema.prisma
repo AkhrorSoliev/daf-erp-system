@@ -2858,12 +2858,46 @@ model DafUnit {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  lessons   DafLesson[]
   lexemes   DafLexeme[]
   grammar   DafGrammar[]
   exercises DafExercise[]
 
   @@unique([level, order])
   @@index([level])
+}
+
+enum DafLessonKind {
+  VOCAB
+  GRAMMAR
+}
+
+/// Bo'lim ichidagi DARS — bitta o'tirishga mo'ljallangan hajm.
+///
+/// Donadorlik o'ylab topilmagan, u MANBADA bor: lug'at bo'limlari
+/// (o'rtacha 16 so'z) va grammatika sahifalari. Sun'iy kesish («har 10
+/// so'zdan bitta dars») bir mavzuni ikkiga bo'lib yuborardi, chunki
+/// manbaning bo'linishi mazmunga bog'langan.
+model DafLesson {
+  id       Int           @id @default(autoincrement())
+  sourceId String        @unique
+  unitId   Int
+  order    Int
+  kind     DafLessonKind
+  titleDe  String
+  titleUz  String?
+
+  translationSource DafTranslationSource?
+  /// `GRAMMAR` darsining mavzusi. `VOCAB` da bo'sh.
+  grammarId         Int?
+
+  unit      DafUnit       @relation(fields: [unitId], references: [id])
+  grammar   DafGrammar?   @relation(fields: [grammarId], references: [id])
+  lexemes   DafLexeme[]
+  exercises DafExercise[]
+
+  @@unique([unitId, order])
+  @@index([unitId])
 }
 
 model DafLexeme {
@@ -2879,13 +2913,15 @@ model DafLexeme {
   /// R2 kaliti, to'liq manzil emas — manzil `R2_PUBLIC_URL` bilan quriladi.
   audioKey          String?
   imageKey          String?
-  sectionTitleDe    String
-  sectionTitleUz    String?
   order             Int
+  /// Bo'lim sarlavhasi darsga ko'chdi — u yerda o'z tarjimasi bilan turadi.
+  lessonId          Int
 
-  unit DafUnit @relation(fields: [unitId], references: [id])
+  unit   DafUnit   @relation(fields: [unitId], references: [id])
+  lesson DafLesson @relation(fields: [lessonId], references: [id])
 
   @@index([unitId])
+  @@index([lessonId])
 }
 
 model DafGrammar {
@@ -2905,6 +2941,7 @@ model DafGrammar {
 
   unit      DafUnit?      @relation(fields: [unitId], references: [id])
   exercises DafExercise[]
+  lessons   DafLesson[]
 
   @@index([unitId])
   @@index([code])
@@ -2915,6 +2952,7 @@ model DafExercise {
   sourceId String @unique
 
   unitId    Int?
+  lessonId  Int?
   grammarId Int?
 
   kind    DafExerciseKind
@@ -2937,10 +2975,12 @@ model DafExercise {
   retiredAt     DateTime?
 
   unit     DafUnit?     @relation(fields: [unitId], references: [id])
+  lesson   DafLesson?   @relation(fields: [lessonId], references: [id])
   grammar  DafGrammar?  @relation(fields: [grammarId], references: [id])
   attempts DafAttempt[]
 
   @@index([unitId])
+  @@index([lessonId])
   @@index([grammarId])
   @@index([retiredAt])
 }

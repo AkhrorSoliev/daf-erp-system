@@ -8,6 +8,7 @@ describe('DafPortalReadService', () => {
   let service: DafPortalReadService;
   let prisma: {
     dafUnit: { findMany: jest.Mock; findUnique: jest.Mock };
+    dafLesson: { findMany: jest.Mock; findUnique: jest.Mock };
     dafLexeme: { findMany: jest.Mock };
     dafGrammar: { findMany: jest.Mock };
     dafExercise: { findMany: jest.Mock };
@@ -23,6 +24,7 @@ describe('DafPortalReadService', () => {
             order: 1,
             titleUz: 'Tanishuv',
             titleDe: 'Kennenlernen',
+            _count: { lessons: 14 },
           },
         ]),
         findUnique: jest.fn().mockResolvedValue({
@@ -31,6 +33,27 @@ describe('DafPortalReadService', () => {
           order: 1,
           titleUz: 'Tanishuv',
           titleDe: 'Kennenlernen',
+        }),
+      },
+      dafLesson: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 3,
+            order: 1,
+            kind: 'VOCAB',
+            titleDe: 'Begrüßungen',
+            titleUz: 'Salomlashish',
+            _count: { lexemes: 16, exercises: 0 },
+          },
+        ]),
+        findUnique: jest.fn().mockResolvedValue({
+          id: 3,
+          order: 1,
+          kind: 'VOCAB',
+          titleDe: 'Begrüßungen',
+          titleUz: 'Salomlashish',
+          unit: { id: 1, titleUz: 'Tanishuv', level: 'A1_1' },
+          grammar: null,
         }),
       },
       dafLexeme: {
@@ -95,9 +118,9 @@ describe('DafPortalReadService', () => {
   // uni brauzerning tarmoq oynasida ko'rish mumkin bo'lardi va mashqning
   // ham, keyingi reytingning ham ma'nosi qolmasdi.
   it("mashq ro'yxatida javob yuborilmaydi", async () => {
-    const unit = await service.getUnit(1);
+    const lesson = await service.getLesson(3);
 
-    for (const ex of unit.exercises) {
+    for (const ex of lesson.exercises) {
       expect(ex).not.toHaveProperty('answers');
       expect(ex).not.toHaveProperty('slots');
     }
@@ -109,7 +132,7 @@ describe('DafPortalReadService', () => {
   // Nafaqadagi mashq ro'yxatda ko'rinmaydi, lekin bazada qoladi: unga
   // ishora qiluvchi urinish tarixi saqlanadi.
   it("nafaqaga chiqarilgan mashqni so'ramaydi", async () => {
-    await service.getUnit(1);
+    await service.getLesson(3);
 
     const where = prisma.dafExercise.findMany.mock.calls[0][0].where as {
       retiredAt: null;
@@ -120,11 +143,25 @@ describe('DafPortalReadService', () => {
   // Media baytlari bazada emas — jadvalda faqat R2 kaliti turadi, manzil
   // o'qishda quriladi.
   it('R2 kalitini ommaviy manzilga aylantiradi', async () => {
-    const unit = await service.getUnit(1);
-    expect(unit.lexemes[0].audioUrl).toBe(
+    const lesson = await service.getLesson(3);
+    expect(lesson.lexemes[0].audioUrl).toBe(
       'https://pub-x.r2.dev/dib/audio/a.mp3',
     );
-    expect(unit.lexemes[0].imageUrl).toBeNull();
+    expect(lesson.lexemes[0].imageUrl).toBeNull();
+  });
+
+  // Bo'lim ekrani lug'at ham, mashq ham qaytarmaydi — birinchi bo'limda
+  // 226 so'z va 108 mashq bor, ya'ni bitta ekranga sig'maydi. Kontent
+  // darsning ichida.
+  it("bo'lim faqat darslar ro'yxatini beradi", async () => {
+    const unit = await service.getUnit(1);
+
+    expect(unit).not.toHaveProperty('lexemes');
+    expect(unit).not.toHaveProperty('exercises');
+    expect(unit.lessons[0]).toMatchObject({
+      titleUz: 'Salomlashish',
+      wordCount: 16,
+    });
   });
 
   it("mavjud bo'lmagan bo'limda 404 beradi", async () => {
