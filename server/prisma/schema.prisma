@@ -2911,7 +2911,17 @@ model DafLexeme {
 
   translationSource DafTranslationSource?
   /// R2 kaliti, to'liq manzil emas — manzil `R2_PUBLIC_URL` bilan quriladi.
+  ///
+  /// Fayl BUTUN BO'LIMniki: bitta mp3 o'ntacha so'zni ketma-ket o'qiydi.
+  /// Shuning uchun so'zning o'zi `audioStartMs`/`audioEndMs` oraliqda
+  /// yashaydi — usiz tugma har safar butun faylni boshidan o'ynatardi.
   audioKey          String?
+  /// So'zning fayl ichidagi boshlanishi va tugashi, millisekundda.
+  /// Whisper matni + jimlik chegarasidan olinadi. Ishonchli topilmasa
+  /// IKKALASI HAM `null` bo'lib qoladi: noto'g'ri oraliq «audio bor» deb
+  /// ko'rsatib, boshqa so'zni o'ynatardi.
+  audioStartMs      Int?
+  audioEndMs        Int?
   imageKey          String?
   order             Int
   /// Bo'lim sarlavhasi darsga ko'chdi — u yerda o'z tarjimasi bilan turadi.
