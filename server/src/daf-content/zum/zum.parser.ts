@@ -25,8 +25,16 @@ const LEVEL_MAP: Record<string, CefrLevel> = {
 
 /** Daraja va xizmat toifalari mavzu emas — ular ro'yxatdan chiqariladi. */
 const NOT_A_TOPIC = new Set([
-  'A1', 'A2', 'B1', 'B2', 'C1', 'C2',
-  'Interaktive Übungen', 'H5P', 'Videos', 'Hilfe',
+  'A1',
+  'A2',
+  'B1',
+  'B2',
+  'C1',
+  'C2',
+  'Interaktive Übungen',
+  'H5P',
+  'Videos',
+  'Hilfe',
 ]);
 
 /** `ns: 0` — maqola. Toifa (14) va fayl (6) kerak emas. */

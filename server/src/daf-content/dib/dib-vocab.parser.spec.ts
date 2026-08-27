@@ -30,11 +30,11 @@ describe('decodeEntities', () => {
     expect(decodeEntities('&ldquo;good day&rdquo;')).toBe('“good day”');
   });
 
-  it('&nbsp; ni oddiy bo\'shliqqa aylantiradi', () => {
+  it("&nbsp; ni oddiy bo'shliqqa aylantiradi", () => {
     expect(decodeEntities('a&nbsp;b')).toBe('a b');
   });
 
-  it('Windows-1252 raqamli havolani to\'g\'ri belgiga aylantiradi', () => {
+  it("Windows-1252 raqamli havolani to'g'ri belgiga aylantiradi", () => {
     // 149 Unicode'da boshqaruv belgisi; DiB uni «•» ma'nosida ishlatadi
     expect(decodeEntities('Kap 01 &#149; Adan')).toBe('Kap 01 • Adan');
     expect(decodeEntities('&#150;')).toBe('–');
@@ -42,7 +42,7 @@ describe('decodeEntities', () => {
 });
 
 describe('parseVocabPage', () => {
-  it('har bo\'limni sarlavhasi va audiosi bilan ajratadi', () => {
+  it("har bo'limni sarlavhasi va audiosi bilan ajratadi", () => {
     const s = parseVocabPage(HTML, 1);
     expect(s).toHaveLength(2);
     expect(s[0].titleDe).toBe('Begrüßungen');
@@ -53,7 +53,7 @@ describe('parseVocabPage', () => {
     expect(s[1].titleDe).toBe('Zahlen');
   });
 
-  it('yozuvlarni to\'g\'ri bo\'limga biriktiradi', () => {
+  it("yozuvlarni to'g'ri bo'limga biriktiradi", () => {
     const s = parseVocabPage(HTML, 1);
     expect(s[0].entries).toEqual([
       { de: 'Hallo!', en: 'Hello!', sectionId: s[0].id },
@@ -63,22 +63,22 @@ describe('parseVocabPage', () => {
     expect(s[1].entries[0].de).toBe('eins');
   });
 
-  it('navigatsiyadagi «Sections» sarlavhasini bo\'lim deb hisoblamaydi', () => {
+  it("navigatsiyadagi «Sections» sarlavhasini bo'lim deb hisoblamaydi", () => {
     const s = parseVocabPage(HTML, 1);
     expect(s.map((x) => x.titleDe)).not.toContain('Sections');
   });
 
-  it('bo\'lim id\'si bob va tartib raqamidan tuziladi', () => {
+  it("bo'lim id'si bob va tartib raqamidan tuziladi", () => {
     const s = parseVocabPage(HTML, 1);
     expect(s[0].id).toBe('dib-voc-01-01');
     expect(s[1].id).toBe('dib-voc-01-02');
   });
 
-  it('lug\'ati yo\'q sahifada bo\'sh ro\'yxat qaytaradi', () => {
+  it("lug'ati yo'q sahifada bo'sh ro'yxat qaytaradi", () => {
     expect(parseVocabPage('<html></html>', 3)).toEqual([]);
   });
 
-  it('bo\'sh to\'ldiruvchi qatorlarni filtrlaydi', () => {
+  it("bo'sh to'ldiruvchi qatorlarni filtrlaydi", () => {
     const htmlWithEmptyRow = `
 <html><body>
 <a href="https://media.la.utexas.edu:443/dib/audio/voc_01_01_begr.mp3">audio</a>

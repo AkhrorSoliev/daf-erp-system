@@ -743,9 +743,19 @@ describe('GroupsService — status methods', () => {
 
         const covering = (whereOf().AND[0].OR as any[])[1];
         const floor = covering.lessonTeacherOverrides.some.date.gte as Date;
-        const todayUtcMidnight = new Date();
-        todayUtcMidnight.setUTCHours(0, 0, 0, 0);
-        expect(floor.getTime()).toBe(todayUtcMidnight.getTime());
+        // The floor is UTC midnight of the TASHKENT day, which is what lesson
+        // dates are stored at. Flooring a raw `new Date()` to UTC midnight
+        // instead made this test fail every day between 19:00 and 24:00 UTC,
+        // when Tashkent is already on the next date — the production code was
+        // right and the assertion was a UTC-day copy of it. Uzbekistan has no
+        // DST, so the +5 offset is constant.
+        const tashkentNow = new Date(Date.now() + 5 * 60 * 60 * 1000);
+        const expected = Date.UTC(
+          tashkentNow.getUTCFullYear(),
+          tashkentNow.getUTCMonth(),
+          tashkentNow.getUTCDate(),
+        );
+        expect(floor.getTime()).toBe(expected);
       });
 
       it('narrows nothing when the caller is not a teacher', async () => {

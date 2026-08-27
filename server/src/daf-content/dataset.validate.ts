@@ -57,10 +57,107 @@ export function validateDataset(d: DafDataset): string[] {
   // ham o'tkazilmasligi kerak — va R2 kaliti ham takrorlanmasligi kerak.
   const videoKeys = new Set<string>();
   for (const v of d.videos) {
-    if (videoKeys.has(v.key)) errors.push(`${v.key}: video kaliti takrorlangan`);
+    if (videoKeys.has(v.key))
+      errors.push(`${v.key}: video kaliti takrorlangan`);
     videoKeys.add(v.key);
     checkAsset(v);
   }
 
+  const grammarCodes = new Set<string>();
+  for (const g of d.grammar) {
+    if (grammarCodes.has(g.code)) {
+      errors.push(`${g.code}: grammatika kodi takrorlangan`);
+    }
+    grammarCodes.add(g.code);
+
+    for (const a of g.audio) checkAsset(a);
+
+    for (const ex of g.exercises) {
+      // REORDER'da bo'sh joy o'rniga tartiblanadigan `tokens` ro'yxati
+      // bo'lishi shart, va u KAMIDA IKKITA elementdan iborat bo'lishi kerak —
+      // bitta "token" tartiblash emas, aslida REORDER'ga noto'g'ri
+      // tasniflangan boshqa mashq (masalan gapni birlashtirish topshirig'i).
+      // Qolgan uch tur (GAP, MC, CLOZE) uchun `___` bo'sh joy va uning soni
+      // (`blankCount`) bir xil qoida bilan tekshiriladi.
+      if (ex.kind === 'REORDER') {
+        if (!ex.tokens || ex.tokens.length < 2) {
+          errors.push(
+            `${ex.id}: REORDER mashqida kamida ikkita \`tokens\` elementi bo'lishi shart`,
+          );
+        }
+      } else {
+        if (!ex.sentenceDe.includes('___')) {
+          errors.push(`${ex.id}: gapda bo'sh joy (___) yo'q`);
+        }
+        const blanksInText = (ex.sentenceDe.match(/___/g) ?? []).length;
+        if (ex.blankCount !== blanksInText) {
+          errors.push(
+            `${ex.id}: \`blankCount\` (${ex.blankCount}) matndagi bo'sh joylar soniga (${blanksInText}) mos kelmaydi`,
+          );
+        }
+      }
+
+      // MC'ga xos qo'shimcha qoida: kamida ikkita variant bo'lmasa,
+      // o'quvchi tanlaydigan hech narsa yo'q.
+      if (ex.kind === 'MC' && (!ex.options || ex.options.length < 2)) {
+        errors.push(
+          `${ex.id}: MC mashqida kamida ikkita \`options\` bo'lishi shart`,
+        );
+      }
+    }
+  }
+
+  const phoneticsIds = new Set<string>();
+  for (const p of d.phonetics) {
+    if (phoneticsIds.has(p.id)) {
+      errors.push(`${p.id}: talaffuz id'si takrorlangan`);
+    }
+    phoneticsIds.add(p.id);
+    checkAsset(p.audio);
+  }
+
+  for (const doc of d.documents) checkAsset(doc);
+
+  for (const s of d.sections) {
+    for (const e of s.entries) {
+      if (e.image) checkAsset(e.image);
+    }
+  }
+
+  errors.push(...findUndecodedEntities(d));
+
+  return errors;
+}
+
+const RAW_ENTITY_RE = /&[A-Za-z]+;/;
+
+/**
+ * `html-entities.ts`dagi jadval fixture'larga qarshi tekshiriladi, real
+ * datasetga emas — shuning uchun u strukturaviy jihatdan haqiqiy natijada
+ * qolib ketgan entity'ni (masalan `&eacute;`, `&euro;`) ko'ra olmaydi. Bu
+ * qoida esa butun datasetni — har qanday satr maydonini — aylanib chiqadi,
+ * shuning uchun shu turkumdagi muammoni fixture'ma-fixture emas, bir yo'la
+ * yopadi.
+ */
+function findUndecodedEntities(d: DafDataset): string[] {
+  const errors: string[] = [];
+
+  const visit = (value: unknown, path: string): void => {
+    if (typeof value === 'string') {
+      if (RAW_ENTITY_RE.test(value)) {
+        errors.push(
+          `${path}: dekodlanmagan HTML entity qoldi — "${value.slice(0, 60)}"`,
+        );
+      }
+    } else if (Array.isArray(value)) {
+      value.forEach((item, i) => visit(item, `${path}[${i}]`));
+    } else if (value && typeof value === 'object') {
+      for (const [key, val] of Object.entries(value)) {
+        visit(val, `${path}.${key}`);
+      }
+    }
+  };
+
+  visit(d, 'dataset');
   return errors;
 }

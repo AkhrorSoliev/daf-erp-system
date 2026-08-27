@@ -1,9 +1,42 @@
 const NAMED: Record<string, string> = {
-  auml: "ä", ouml: "ö", uuml: "ü",
-  Auml: "Ä", Ouml: "Ö", Uuml: "Ü",
-  szlig: "ß", nbsp: " ", amp: "&", lt: "<", gt: ">", quot: "\"",
-  rsquo: "’", lsquo: "‘", ldquo: "“", rdquo: "”", ndash: "–", mdash: "—",
-  bull: "•", hellip: "…",
+  auml: 'ä',
+  ouml: 'ö',
+  uuml: 'ü',
+  Auml: 'Ä',
+  Ouml: 'Ö',
+  Uuml: 'Ü',
+  szlig: 'ß',
+  nbsp: ' ',
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  rsquo: '’',
+  lsquo: '‘',
+  ldquo: '“',
+  rdquo: '”',
+  ndash: '–',
+  mdash: '—',
+  bull: '•',
+  hellip: '…',
+  // Talaffuz sahifalari fonetik belgilarni HTML nom-entity sifatida beradi:
+  // 3- va 6-boblarda IPA'ga yaqin belgilar (masalan `sch [&int;]`, `d - &delta;`)
+  // shu ro'yxatda bo'lmagani uchun oldin dekodlanmay, xom holida chiqib ketgan edi.
+  ccedil: 'ç',
+  chi: 'χ',
+  delta: 'δ',
+  int: '∫',
+  lowast: '∗',
+  theta: 'θ',
+  // Lug'at va transkript qatorlarida uchraydigan yana beshta nom-entity —
+  // haqiqiy datasetda topilgan (598-topilma): `eacute` (café), `deg`
+  // (harorat, masalan 25 &deg;C), `bdquo`/`sbquo` (nemischa pastki
+  // tirnoqlar „…“/‚…‘) va `euro`.
+  eacute: 'é',
+  deg: '°',
+  bdquo: '„',
+  sbquo: '‚',
+  euro: '€',
 };
 
 /**
@@ -14,8 +47,14 @@ const NAMED: Record<string, string> = {
  * hech bir veb-sahifa u yerga haqiqatan murojaat qilmaydi.
  */
 const CP1252: Record<number, string> = {
-  133: "…", 145: "‘", 146: "’", 147: "“", 148: "”",
-  149: "•", 150: "–", 151: "—",
+  133: '…',
+  145: '‘',
+  146: '’',
+  147: '“',
+  148: '”',
+  149: '•',
+  150: '–',
+  151: '—',
 };
 
 /**

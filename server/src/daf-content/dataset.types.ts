@@ -6,7 +6,7 @@
  */
 export type CefrLevel = 'A1.1' | 'A1.2' | 'A2.1' | 'A2.2' | 'B1';
 
-export type SourceId = 'DIB' | 'ZUM';
+export type SourceId = 'DIB' | 'ZUM' | 'WORT_SCHULE';
 
 /** R2'ga ketadigan bitta fayl. Litsenziyasiz aktiv manifestga tushmaydi. */
 export interface AssetRef {
@@ -31,6 +31,15 @@ export interface Lexeme {
   /** Inglizcha tarjima (manbadan). O'zbekcha keyinroq qo'shiladi. */
   en: string;
   sectionId: string;
+  /** Quyidagilar `wort.schule` dan keladi va HAMMASI ixtiyoriy — u so'zlarning
+   *  taxminan yarmini qoplaydi. Litsenziyasi CC0, DiB'niki CC BY 4.0. */
+  image?: AssetRef;
+  syllables?: string;
+  comparative?: string;
+  superlative?: string;
+  synonyms?: string[];
+  opposites?: string[];
+  wsTopics?: string[];
 }
 
 /** Lug'atning bitta mavzuli bo'limi — DiB'da har biriga bitta mp3 to'g'ri keladi. */
@@ -71,11 +80,81 @@ export interface ChapterInfo {
   reason?: string;
 }
 
+/** Grammatika sahifasidagi dialog qatori — nemischa va inglizchasi yonma-yon. */
+export interface DialogueLine {
+  speaker: string;
+  de: string;
+  en: string;
+}
+
+/**
+ * Grammatika sahifasidagi to'ldirish mashqi.
+ *
+ * `answer` ATAYLAB bo'sh: manba javob kalitini HTML'da bermaydi, u serverda
+ * tekshiriladi. Kalitni biz to'ldiramiz, lekin u tasdiqlanishi kerak, tasdiq
+ * holati esa baza tushunchasi — shuning uchun to'ldirish Faza 2 ga qoldirildi.
+ */
+export interface GapExercise {
+  id: string;
+  /** Manbada besh xil mashq formati bor — ular bir xil shaklga sig'maydi. */
+  kind: 'GAP' | 'REORDER' | 'CLOZE' | 'MC';
+  /** GAP, CLOZE va MC: bo'sh joy `___` bilan belgilangan matn. REORDER: topshiriq matni. */
+  sentenceDe: string;
+  /** REORDER: tartiblanadigan tokenlar. */
+  tokens?: string[];
+  /** CLOZE: so'z banki, agar sahifada bo'lsa. */
+  wordBank?: string[];
+  /**
+   * GAP, MC va CLOZE: `sentenceDe`dagi `___` bo'sh joylar soni (bittadan
+   * ko'p bo'lishi mumkin — 61 ta GAP va 2 ta MC'da shunday). REORDER'da
+   * bo'sh joy tushunchasi yo'q, shuning uchun bu maydon aniqlanmagan qoladi.
+   */
+  blankCount?: number;
+  /** MC: variant matnlari (masalan `a. weil`), radio/input belgilaridan tozalangan. */
+  options?: string[];
+  answer: string | null;
+  answerStatus: 'MISSING' | 'DRAFT' | 'APPROVED';
+  grammarCode: string;
+}
+
+export interface GrammarPage {
+  /** Grimm Grammar sahifa kodi, masalan `vi_05`. */
+  code: string;
+  titleDe: string;
+  titleEn: string;
+  level: CefrLevel | null;
+  /** Inglizcha tushuntirish matni. */
+  explanation: string;
+  dialogue: DialogueLine[];
+  audio: AssetRef[];
+  exercises: GapExercise[];
+}
+
+export interface PhoneticsItem {
+  id: string;
+  chapter: number;
+  /** Nemischa misollar matni. */
+  textDe: string;
+  /** Inglizcha izoh, manbada `overlib()` ichida keladi. Bo'lmasligi mumkin. */
+  textEn: string;
+  /** Bo'lim izohi, masalan «Listen to the alphabet…». */
+  caption: string;
+  audio: AssetRef;
+}
+
 export interface DafDataset {
   source: SourceId;
   /** Yig'ilgan sana, ISO. Skript beradi — parser emas. */
   harvestedAt: string;
+  /**
+   * FAQAT asosiy manba (DiB, CC BY 4.0) litsenziyasi — butun datasetni
+   * TA'RIFLAMAYDI. `wort.schule`dan kelgan maydonlar (`Lexeme.image`,
+   * `syllables`, `comparative`, `superlative`, `synonyms`, `opposites`,
+   * `wsTopics`) o'zining CC0 litsenziyasini alohida olib yuradi (qarang:
+   * `Lexeme` izohi) — bu yerga aralashtirilmaydi.
+   */
   license: string;
+  /** Xuddi shu tarzda — faqat asosiy manba muallifi, `wort.schule` emas. */
   attribution: string;
   chapters: ChapterInfo[];
   sections: LexemeSection[];
@@ -90,4 +169,8 @@ export interface DafDataset {
    * R2'ga chiqmay qolardi.
    */
   videos: AssetRef[];
+  grammar: GrammarPage[];
+  phonetics: PhoneticsItem[];
+  /** Kurs-Paket PDF'lari — faqat R2'ga chiqadi, matni o'qilmaydi. */
+  documents: AssetRef[];
 }

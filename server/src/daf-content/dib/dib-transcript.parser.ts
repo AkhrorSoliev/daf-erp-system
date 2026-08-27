@@ -3,7 +3,9 @@ import { decodeEntities } from './html-entities';
 import { DIB_LICENSE, DIB_ATTRIBUTION } from './dib-license';
 
 function clean(s: string): string {
-  return decodeEntities(s.replace(/<[^>]*>/g, '')).replace(/\s+/g, ' ').trim();
+  return decodeEntities(s.replace(/<[^>]*>/g, ''))
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /** `<div id="...">` ichini oxirigacha emas, mos keluvchi yopilishgacha oladi. */
@@ -39,7 +41,9 @@ function lines(block: string | null): { title: string; rows: string[] } {
   const titleMatch = block.match(/class="vidt_th"[^>]*>([\s\S]*?)<\/div>/);
   const title = titleMatch ? clean(titleMatch[1]) : '';
   const body = titleMatch ? block.replace(titleMatch[0], '') : block;
-  const rows = [...body.matchAll(/<li class="vidt_[is]"[^>]*>([\s\S]*?)<\/li>/g)]
+  const rows = [
+    ...body.matchAll(/<li class="vidt_[is]"[^>]*>([\s\S]*?)<\/li>/g),
+  ]
     .map((m) => clean(m[1]))
     .filter((s) => s !== '');
   return { title, rows };
@@ -104,7 +108,15 @@ export function parseVideoList(
     if (url) {
       out.push({
         fileId: url[1],
-        title: title ? repairDoubleEncodedUtf8(clean(title[1])) : '',
+        // RSS sarlavhasi ba'zan IKKI MARTA entity-kodlangan (`&amp;quot;`
+        // manbada) — `clean()`ning bitta dekodlash bosqichi buni faqat
+        // yarim yechadi, natijada xom `&quot;` matnda qolib ketadi (10 ta
+        // «Kapitel 07» video nomida). Ikkinchi `decodeEntities` chaqiruvi
+        // shuni yakunlaydi; allaqachon toza matnga ta'sir qilmaydi, chunki
+        // unda dekodlanadigan hech narsa qolmagan bo'ladi.
+        title: title
+          ? decodeEntities(repairDoubleEncodedUtf8(clean(title[1])))
+          : '',
       });
     }
   }

@@ -210,10 +210,20 @@ describe('assertCallerMayTouchGroup', () => {
    */
   describe('a substitute is admitted for the day they were assigned', () => {
     const TEACHER = 42;
+    // "Today" here must be the TASHKENT day, not the UTC one. Lesson dates are
+    // stored at UTC midnight of the Tashkent date and `coverFloor` compares
+    // against that, so a UTC-day origin made these three tests fail every day
+    // between 19:00 and 24:00 UTC — the window in which Tashkent has already
+    // turned over and this block's TODAY is really yesterday. Uzbekistan has
+    // no DST, so the +5 offset is constant.
     const dayOffset = (days: number) => {
-      const d = new Date();
-      d.setUTCHours(0, 0, 0, 0);
-      return new Date(d.getTime() + days * 86400000);
+      const tashkentNow = new Date(Date.now() + 5 * 60 * 60 * 1000);
+      const midnight = Date.UTC(
+        tashkentNow.getUTCFullYear(),
+        tashkentNow.getUTCMonth(),
+        tashkentNow.getUTCDate(),
+      );
+      return new Date(midnight + days * 86400000);
     };
     const TODAY = dayOffset(0);
     const TOMORROW = dayOffset(1);

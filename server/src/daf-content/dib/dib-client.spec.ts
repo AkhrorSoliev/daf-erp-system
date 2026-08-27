@@ -1,10 +1,11 @@
 import { mkdtempSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { DibClient } from './dib-client';
+import { cacheKeyFor } from '../http/cached-http-client';
+import { DibClient, DIB_BASE } from './dib-client';
 
 describe('DibClient.fetchText', () => {
-  it('birinchi so\'rovda tarmoqqa boradi va diskka yozadi', async () => {
+  it("birinchi so'rovda tarmoqqa boradi va diskka yozadi", async () => {
     const dir = mkdtempSync(join(tmpdir(), 'dib-'));
     const fetchFn = jest.fn().mockResolvedValue({
       ok: true,
@@ -17,15 +18,19 @@ describe('DibClient.fetchText', () => {
 
     expect(html).toBe('<html>salom</html>');
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(readFileSync(join(dir, 'voc.php_k=1.html'), 'utf8')).toBe(
-      '<html>salom</html>',
-    );
+    expect(
+      readFileSync(join(dir, cacheKeyFor(DIB_BASE + 'voc.php?k=1')), 'utf8'),
+    ).toBe('<html>salom</html>');
   });
 
-  it('kesh bor bo\'lsa tarmoqqa umuman bormaydi', async () => {
+  it("kesh bor bo'lsa tarmoqqa umuman bormaydi", async () => {
     const dir = mkdtempSync(join(tmpdir(), 'dib-'));
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, 'voc.php_k=1.html'), 'keshdagi', 'utf8');
+    writeFileSync(
+      join(dir, cacheKeyFor(DIB_BASE + 'voc.php?k=1')),
+      'keshdagi',
+      'utf8',
+    );
     const fetchFn = jest.fn();
 
     const client = new DibClient(dir, fetchFn as never);
@@ -41,7 +46,7 @@ describe('DibClient.fetchText', () => {
 
     const client = new DibClient(dir, fetchFn as never);
     await expect(client.fetchText('yoq.php')).rejects.toThrow(
-      'DiB javob bermadi (404): yoq.php',
+      `Manba javob bermadi (404): ${DIB_BASE}yoq.php`,
     );
   });
 });

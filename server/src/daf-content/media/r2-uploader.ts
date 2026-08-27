@@ -2,12 +2,32 @@ import { HeadObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import type { S3Client } from '@aws-sdk/client-s3';
 import type { AssetRef } from '../dataset.types';
 
-const CONTENT_TYPE: Record<AssetRef['kind'], string> = {
-  AUDIO: 'audio/mpeg',
-  VIDEO: 'video/mp4',
-  IMAGE: 'image/jpeg',
-  PDF: 'application/pdf',
+/**
+ * Kengaytma bo'yicha `Content-Type`. `AssetRef.kind` bo'yicha qattiq
+ * xaritalash (masalan `IMAGE → image/jpeg`) noto'g'ri edi: yuklanadigan
+ * 71 ta rasmning HAMMASI PNG, JPEG emas — hech narsa hali yuklanmagani
+ * uchun bu hozir arzon, lekin butun rasm to'plamini qayta yuklashni talab
+ * qilardi agar kechroq topilganida edi. Kengaytma `AssetRef.key`dan
+ * olinadi — u manba emas, R2'dagi yakuniy fayl nomi, shuning uchun haqiqiy
+ * baytlarga mos keladi.
+ */
+const EXTENSION_CONTENT_TYPE: Record<string, string> = {
+  '.mp3': 'audio/mpeg',
+  '.mp4': 'video/mp4',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.pdf': 'application/pdf',
 };
+const DEFAULT_CONTENT_TYPE = 'application/octet-stream';
+
+/** `AssetRef.key`ning kengaytmasidan `Content-Type`ni topadi. */
+export function contentTypeOf(key: string): string {
+  const dot = key.lastIndexOf('.');
+  if (dot === -1) return DEFAULT_CONTENT_TYPE;
+  const ext = key.slice(dot).toLowerCase();
+  return EXTENSION_CONTENT_TYPE[ext] ?? DEFAULT_CONTENT_TYPE;
+}
 
 /**
  * Tipografik belgilarni ASCII ekvivalentiga tekislaydigan jadval. Bu yerda
@@ -111,9 +131,7 @@ export class R2Uploader {
     }
   }
 
-  async uploadMissing(
-    assets: AssetRef[],
-  ): Promise<{
+  async uploadMissing(assets: AssetRef[]): Promise<{
     uploaded: number;
     skipped: number;
     failed: { key: string; reason: string }[];
@@ -141,7 +159,7 @@ export class R2Uploader {
             Bucket: this.bucket,
             Key: a.key,
             Body: body,
-            ContentType: CONTENT_TYPE[a.kind],
+            ContentType: contentTypeOf(a.key),
             Metadata: {
               license: asciiMetadata(a.license),
               attribution: asciiMetadata(a.attribution),
