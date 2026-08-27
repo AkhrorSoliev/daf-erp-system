@@ -130,14 +130,72 @@ tarixga tegmaydi. Mashq manbadan yo'qolsa, u `retiredAt` bilan
 belgilanadi, o'chirilmaydi: o'chirilgan mashqqa ishora qiluvchi urinish
 tarixi ma'nosini yo'qotadi.
 
+## D9. Bo'lim ichida DARS bo'ladi
+
+Birinchi bo'limda 226 so'z va 108 mashq bor — bitta ekranga sig'maydigan
+hajm, va o'quvchi qayerdan boshlashini bilmaydi.
+
+Dars donadorligi o'ylab topilmaydi, u MANBADA bor: lug'at bo'limlari
+(o'rtacha 16 so'z) va grammatika sahifalari. Ya'ni to'rt qavat:
+
+```
+DARAJA A1.1 → BO'LIM «Tanishuv va salomlashish» → DARS «Salomlashish» (16 so'z)
+```
+
+Dars ikki xil: `VOCAB` (so'zlar + audio) va `GRAMMAR` (izoh + mashqlar).
+Tartib: lug'at darslari avval, keyin grammatika — so'zsiz grammatika
+ma'nosiz.
+
+**Taqiqlanadi:** darsni bo'lim ichida qo'lda kesish yoki «har 10 so'zdan
+bitta dars» kabi sun'iy bo'lish. Manbaning o'z bo'linishi mazmunga
+bog'langan; raqam bo'yicha kesish bir mavzuni ikkiga bo'lib yuboradi.
+
+## D10. Ekranda to'rt yo'nalish KO'RINADI, lekin holati rost aytiladi
+
+Goethe imtihonining to'rt moduli — Hören, Lesen, Schreiben, Sprechen —
+o'quv yo'lining maqsadi. Bizda hozir ularning bittasi ham to'liq yo'q:
+Hören uchun audio va transkript bor, savollar yo'q; Lesen matnlari ikkala
+manbada ham yo'q; Schreiben va Sprechen AI baholashni talab qiladi
+(Faza 5).
+
+Bizda bor narsa — lug'at va grammatika. Goethe tizimida bu to'rt
+yo'nalishning yonidagi beshinchi narsa emas, ularning POYDEVORI.
+
+Shuning uchun ekran shunday: poydevor (ishlaydi) + to'rt yo'nalish
+(«tez orada»). Ularni yashirish o'quvchini grammatika mashqlarini nima
+uchun yechayotganidan bexabar qoldiradi; ishlaydigandek ko'rsatish esa
+bosilganda bo'sh ekran beradi.
+
+## D11. Ball Faza 3 dan keyin, va u SAQLANMAYDI
+
+Hozir faqat MC ishlaydi — 1 180 mashqning 255 tasi. Ball berilsa, ko'proq
+MC tushgan o'quvchi yutadi: bilimi uchun emas, unga qaysi mashq to'g'ri
+kelgani uchun.
+
+Ball qator sifatida saqlanmaydi, har safar urinishlar jurnalidan
+hisoblanadi. Formula albatta o'zgaradi; saqlangan ball o'zgargan kuni eski
+va yangi qoida bo'yicha hisoblangan ballar aralashib qoladi va ularni
+solishtirib bo'lmaydi.
+
+Uchta qoida hozirdan belgilanadi, chunki ular jurnalning shakliga bog'liq:
+
+- **Bir mashq bir marta ball beradi** (birinchi to'g'ri javob). Aks holda
+  bitta oson mashqni yigirma marta yechib reyting boshiga chiqsa bo'ladi.
+- **Xato javob jarima emas.** Jarima o'quvchini urinishdan qaytaradi — til
+  o'rganishda eng yomon natija.
+- **Filial reytingi muhrlangan qiymatdan hisoblanadi** (D3).
+
 ## 2. Ma'lumot modeli
 
 ```
 DafUnit        id, level, order, titleUz, titleDe, sourceChapter
-DafLexeme      id, unitId, de, en, uz, translationSource, audioKey, imageKey
+DafLesson      id, unitId, order, kind (VOCAB|GRAMMAR), titleUz, titleDe,
+               grammarId, translationSource
+DafLexeme      id, unitId, lessonId, de, en, uz, translationSource,
+               audioKey, imageKey
 DafGrammar     id, unitId, code, titleUz, titleDe, explanationEn, explanationUz,
                translationSource, level
-DafExercise    id, unitId, grammarId, kind, prompt, options, answers,
+DafExercise    id, unitId, lessonId, grammarId, kind, prompt, options, answers,
                answerStatus, slots, sourceSetCode, retiredAt
 DafAttempt     id, studentId, exerciseId, isCorrect, given, durationMs,
                companyId, branchId, groupId, createdAt
@@ -153,9 +211,16 @@ Hammasi `@Roles('Student')`, `@CurrentUser('studentId')` bilan — mavjud
 
 ```
 GET  /student-portal/lernen/levels          daraja yo'li + har darajadagi bo'limlar
-GET  /student-portal/lernen/units/:id       bo'lim: lug'at, grammatika, mashqlar
+GET  /student-portal/lernen/units/:id       bo'lim: darslar ro'yxati
+GET  /student-portal/lernen/lessons/:id     dars: lug'at yoki grammatika + mashqlar
+GET  /student-portal/lernen/grammar         92 grammatika mavzusi (yetimlari ham)
 POST /student-portal/lernen/attempts        urinish yozish, natija qaytarish
 ```
+
+`grammar` so'nggi nuqtasi kamchilikni yopadi: mashqlarning 459 tasi
+(39 %) hech qaysi bo'limga tegishli emas, chunki ularning grammatika
+sahifasini hech qaysi bob o'z mavzusi deb ko'rsatmagan. Bo'lim ekrani
+ularni ko'rsatmaydi; grammatika ro'yxati ko'rsatadi.
 
 `POST attempts` javobni **serverda** tekshiradi. To'g'ri javob mijozga
 hech qachon yuborilmaydi — aks holda uni brauzerda ko'rish mumkin bo'lardi
@@ -166,9 +231,12 @@ va reyting ma'nosini yo'qotardi.
 `/portal/lernen` — Lumio uslubida, mavjud `student-nav-items.ts` ga
 «Ta'lim» qatori qo'shiladi.
 
-1. **Daraja yo'li** — A1.1 dan B1 gacha, har darajada bo'limlar soni
-2. **Bo'lim** — lug'at (audio bilan), grammatika izohi, mashqlar ro'yxati
-3. **Mashq** — MC: variant tanlanadi, javob serverga ketadi, natija darhol
+1. **Daraja yo'li** — A1.1 dan B1 gacha, o'sish halqasi bilan
+2. **Daraja** — poydevor (lug'at va grammatika, ishlaydi) + to'rt yo'nalish
+   (Hören, Lesen, Schreiben, Sprechen — «tez orada», D10)
+3. **Bo'lim** — darslar ro'yxati, har birida hajmi va holati
+4. **Dars** — lug'at (audio bilan) yoki grammatika izohi, so'ng mashqlar
+5. **Mashq** — MC: variant tanlanadi, javob serverga ketadi, natija darhol
    ko'rinadi. Boshqa turlar ko'rinadi, lekin «tez orada» deb belgilanadi
 
 ## 5. Tekshiruv
