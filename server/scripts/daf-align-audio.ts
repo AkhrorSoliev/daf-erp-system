@@ -20,7 +20,7 @@
  * tushunmasdi, shunchaki noto'g'ri o'rganardi.
  */
 import 'dotenv/config';
-import { execFileSync } from 'child_process';
+import { execFileSync, spawnSync } from 'child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -31,6 +31,7 @@ import {
   tokensToWords,
   type Token,
 } from '../src/daf/audio/token-align';
+import { parseSilences, speechSpans, tighten } from '../src/daf/audio/tighten';
 
 const MODEL = process.env.WHISPER_MODEL ?? '';
 const WORK = join(tmpdir(), 'daf-align');
@@ -40,6 +41,31 @@ function limitArg(): number | null {
   if (i === -1) return null;
   const n = Number(process.argv[i + 1]);
   return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/**
+ * ffmpeg diagnostikani (jimlik ro'yxatini ham) STDERR'ga yozadi va
+ * muvaffaqiyatli tugaydi. `execFileSync` esa stderr'ni faqat XATO
+ * bo'lganda beradi — shuning uchun `spawnSync`.
+ */
+function stderrOf(cmd: string, args: string[]): string {
+  return spawnSync(cmd, args, { encoding: 'utf8' }).stderr ?? '';
+}
+
+/** Jimliklar orasidagi nutq oraliqlari. */
+function speechOf(wav: string) {
+  const stderr = stderrOf('ffmpeg', [
+    '-v',
+    'info',
+    '-i',
+    wav,
+    '-af',
+    'silencedetect=noise=-35dB:d=0.30',
+    '-f',
+    'null',
+    '-',
+  ]);
+  return speechSpans(parseSilences(stderr), durationMs(wav));
 }
 
 function run(cmd: string, args: string[]): string {
@@ -149,6 +175,9 @@ async function main() {
   // Nutqi umuman tanilmagan fayl — bu jiddiy, chunki unda hech bir
   // so'z audio olmaydi.
   const noSpeech: string[] = [];
+  // Jimlik topilmagan fayl — oraliq keng qoladi, ya'ni so'z tugagach
+  // keyingisining boshi eshitiladi.
+  const noSilence: string[] = [];
 
   for (const [i, key] of files.entries()) {
     const words = await prisma.dafLexeme.findMany({
@@ -165,10 +194,30 @@ async function main() {
     const stream = tokensToWords(transcribeTokens(wav, join(WORK, 'a')));
     if (stream.length === 0) noSpeech.push(key);
 
-    const aligned = alignToStream(
+    const rough = alignToStream(
       words.map((w) => w.de),
       stream,
     );
+
+    // Token vaqtlari KENG: Whisper bir tokenning oxirini keyingisining
+    // boshigacha cho'zadi, natijada bitta so'zning oralig'i o'rtacha
+    // 2.66 soniya chiqadi — nemischa so'z esa 0.7–1.2 soniya. Shu holicha
+    // o'ynatilsa, so'z tugagach keyingisining boshi ham eshitiladi.
+    //
+    // Jimlik aniq chegara beradi. Bu bosqich tokenlarga o'tishda tushib
+    // qolgan edi, va uni hech narsa bildirmagan: «topildi/topilmadi»
+    // o'lchovi oraliq SIFATINI o'lchamaydi.
+    const spans = speechOf(wav);
+    if (spans.length === 0) noSilence.push(key);
+
+    const aligned = rough.map((a) => {
+      if (a.startMs === null || a.endMs === null) return a;
+      const t = tighten(
+        { startMs: a.startMs, endMs: a.endMs, text: a.de },
+        spans,
+      );
+      return { ...a, startMs: t.startMs, endMs: t.endMs };
+    });
 
     for (const [j, a] of aligned.entries()) {
       await prisma.dafLexeme.update({
@@ -190,6 +239,9 @@ async function main() {
 
   console.log(`\nTopildi:     ${matched}`);
   console.log(`Topilmadi:   ${unmatched}`);
+  if (noSilence.length > 0) {
+    console.log(`\nJimlik topilmagan fayllar: ${noSilence.length}`);
+  }
   if (noSpeech.length > 0) {
     console.log(`\nNutq tanilmagan fayllar: ${noSpeech.length}`);
     for (const k of noSpeech.slice(0, 10)) console.log(`  ${k}`);

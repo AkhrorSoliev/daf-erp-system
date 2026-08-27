@@ -5,6 +5,7 @@ import { CheckCircle, SpeakerHigh, XCircle } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Button, Card, ProgressBar } from "../lumio";
 import { useCheckDrill, useLernenDrill } from "./queries";
+import { useClipPlayer } from "./use-clip-player";
 import type { DrillQuestion } from "./types";
 
 const KIND_PROMPT: Record<DrillQuestion["kind"], string> = {
@@ -12,41 +13,6 @@ const KIND_PROMPT: Record<DrillQuestion["kind"], string> = {
   WORD_TO_UZ: "Bu so'z nimani anglatadi?",
   UZ_TO_WORD: "Bu ma'noni qaysi so'z beradi?",
 };
-
-/**
- * Audioning FAQAT bir bo'lagini o'ynatadi.
- *
- * Manbadagi mp3 butun bo'limni o'qiydi, ya'ni faylni oddiy o'ynatish
- * o'ntacha so'zni ketma-ket eshittiradi. Oraliq server bergan vaqt
- * belgilaridan keladi; o'ynatish tugash vaqtida to'xtatiladi.
- */
-function useClipPlayer(audio: DrillQuestion["audio"]) {
-  const ref = React.useRef<HTMLAudioElement | null>(null);
-
-  React.useEffect(() => {
-    return () => {
-      ref.current?.pause();
-      ref.current = null;
-    };
-  }, [audio?.url]);
-
-  return React.useCallback(() => {
-    if (!audio) return;
-    ref.current ??= new Audio(audio.url);
-    const el = ref.current;
-
-    const stop = () => {
-      if (el.currentTime * 1000 >= audio.endMs) {
-        el.pause();
-        el.removeEventListener("timeupdate", stop);
-      }
-    };
-
-    el.currentTime = audio.startMs / 1000;
-    el.addEventListener("timeupdate", stop);
-    void el.play();
-  }, [audio]);
-}
 
 function Question({
   question,

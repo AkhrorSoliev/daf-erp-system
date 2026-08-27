@@ -13,6 +13,7 @@ import {
   LoadingCards,
 } from "../lumio";
 import { useLernenLesson } from "./queries";
+import { useClipPlayer } from "./use-clip-player";
 import { VocabDrill } from "./vocab-drill";
 import { McExercise } from "./mc-exercise";
 import type { LernenExercise, LernenLexeme } from "./types";
@@ -34,28 +35,15 @@ const KIND_LABEL: Record<LernenExercise["kind"], string> = {
  * so'zni o'ynatadi.
  */
 function LexemeRow({ lexeme }: { lexeme: LernenLexeme }) {
-  const ref = React.useRef<HTMLAudioElement | null>(null);
-
-  const play = () => {
-    if (!lexeme.audioUrl) return;
-    ref.current ??= new Audio(lexeme.audioUrl);
-    const el = ref.current;
-
-    if (lexeme.audioStartMs === null || lexeme.audioEndMs === null) {
-      void el.play();
-      return;
-    }
-
-    const stop = () => {
-      if (el.currentTime * 1000 >= lexeme.audioEndMs!) {
-        el.pause();
-        el.removeEventListener("timeupdate", stop);
-      }
-    };
-    el.currentTime = lexeme.audioStartMs / 1000;
-    el.addEventListener("timeupdate", stop);
-    void el.play();
-  };
+  const play = useClipPlayer(
+    lexeme.audioUrl
+      ? {
+          url: lexeme.audioUrl,
+          startMs: lexeme.audioStartMs,
+          endMs: lexeme.audioEndMs,
+        }
+      : null,
+  );
 
   return (
     <div className="flex items-center gap-3 border-b border-line py-2.5 last:border-0">
