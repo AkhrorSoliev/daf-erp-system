@@ -1,7 +1,12 @@
 import { parseExerciseSets } from './dib-exercise-set.parser';
 
 describe('parseExerciseSets', () => {
-  const form = (code: string, type: string, count: string, body = '<td>x</td>') =>
+  const form = (
+    code: string,
+    type: string,
+    count: string,
+    body = '<td>x</td>',
+  ) =>
     `<form name="${code}" onsubmit="proc_post('/gg/ex_set_proc.php?ec=${code}','1','es_01','${code}','${type}','${count}'); return false;">${body}</form>`;
 
   it('to`plam kodini, turini va savollar sonini o`qiydi', () => {
@@ -20,10 +25,7 @@ describe('parseExerciseSets', () => {
       form('vcp_01_01_fib', 'fib', '8') + form('vcp_01_02_fib', 'fib', '6');
     const sets = parseExerciseSets(html);
 
-    expect(sets.map((s) => s.code)).toEqual([
-      'vcp_01_01_fib',
-      'vcp_01_02_fib',
-    ]);
+    expect(sets.map((s) => s.code)).toEqual(['vcp_01_01_fib', 'vcp_01_02_fib']);
     expect(sets.map((s) => s.count)).toEqual([8, 6]);
   });
 

@@ -164,6 +164,66 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
     );
   });
 
+  // Javobsiz mashq o'quvchiga ko'rsatiladi, lekin tekshirilmaydi — ya'ni u
+  // mashq emas, matn. Bu holat jimgina o'tib ketmasligi kerak.
+  it('javobsiz mashqni xato deb belgilaydi', () => {
+    const d = base();
+    d.grammar.push({
+      code: 'vi_05',
+      titleDe: 'Haben',
+      titleEn: 'haben',
+      level: 'A1.1',
+      explanation: 'x',
+      dialogue: [],
+      audio: [],
+      exercises: [
+        {
+          id: 'vi_05_01_fib_1',
+          kind: 'GAP',
+          sentenceDe: 'Schneewittchen ___ eine neue Karriere.',
+          blankCount: 1,
+          answers: null,
+          answerStatus: 'MISSING',
+          grammarCode: 'vi_05',
+          setCode: 'vi_05_01_fib',
+          slots: [1],
+        },
+      ],
+    });
+    expect(validateDataset(d)).toContain("vi_05_01_fib_1: javobi yo'q");
+  });
+
+  // Javoblar soni o'rinlar soniga teng bo'lmasa, javob boshqa bo'sh joyga
+  // tushadi — mashq javobli ko'rinadi, lekin javobi boshqa savolniki.
+  it("o'rinlar soniga mos kelmagan javoblarni xato deb belgilaydi", () => {
+    const d = base();
+    d.grammar.push({
+      code: 'vi_05',
+      titleDe: 'Haben',
+      titleEn: 'haben',
+      level: 'A1.1',
+      explanation: 'x',
+      dialogue: [],
+      audio: [],
+      exercises: [
+        {
+          id: 'vi_05_01_fib_1',
+          kind: 'GAP',
+          sentenceDe: '___ Mutter gibt ___ Kind Kuchen.',
+          blankCount: 2,
+          answers: ['die'],
+          answerStatus: 'FROM_SOURCE',
+          grammarCode: 'vi_05',
+          setCode: 'vi_05_01_fib',
+          slots: [1, 2],
+        },
+      ],
+    });
+    expect(validateDataset(d)).toContain(
+      "vi_05_01_fib_1: 2 ta javob o'rniga 1 ta javob",
+    );
+  });
+
   it('takrorlangan grammatika kodini topadi', () => {
     const d = base();
     const page = {
@@ -196,11 +256,11 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
           kind: 'GAP',
           sentenceDe: 'Schneewittchen hat eine neue Karriere.',
           blankCount: 0,
-          answers: null,
-          answerStatus: 'MISSING',
+          answers: ['x'],
+          answerStatus: 'FROM_SOURCE',
           grammarCode: 'vi_05',
-        setCode: 'vi_05_01_fib',
-        slots: [1],
+          setCode: 'vi_05_01_fib',
+          slots: [1],
         },
       ],
     });
@@ -225,11 +285,11 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
           kind: 'REORDER',
           sentenceDe: 'Der Esel: Ich / machen / nichts anderes',
           tokens: [],
-          answers: null,
-          answerStatus: 'MISSING',
+          answers: ['x'],
+          answerStatus: 'FROM_SOURCE',
           grammarCode: 'vsub_02',
-        setCode: 'vsub_02_01_fib',
-        slots: [1],
+          setCode: 'vsub_02_01_fib',
+          slots: [1],
         },
       ],
     });
@@ -257,11 +317,11 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
           kind: 'REORDER',
           sentenceDe: 'Am Abend haben die Kinder Hunger.',
           tokens: ['Am Abend haben die Kinder Hunger.'],
-          answers: null,
-          answerStatus: 'MISSING',
+          answers: ['x'],
+          answerStatus: 'FROM_SOURCE',
           grammarCode: 'vpp_01',
-        setCode: 'vpp_01_01_fib',
-        slots: [1],
+          setCode: 'vpp_01_01_fib',
+          slots: [1],
         },
       ],
     });
@@ -286,11 +346,11 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
           kind: 'GAP',
           sentenceDe: 'Schneewittchen ___ eine neue Karriere. Sie ___ Anwalt.',
           blankCount: 1,
-          answers: null,
-          answerStatus: 'MISSING',
+          answers: ['x'],
+          answerStatus: 'FROM_SOURCE',
           grammarCode: 'vi_05',
-        setCode: 'vi_05_01_fib',
-        slots: [1],
+          setCode: 'vi_05_01_fib',
+          slots: [1],
         },
       ],
     });
@@ -316,11 +376,11 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
           sentenceDe: 'Die Kinder gehen nach Hause, ___ sie sehr reich sind.',
           blankCount: 2,
           options: ['a. weil', 'b. ob'],
-          answers: null,
-          answerStatus: 'MISSING',
+          answers: ['x'],
+          answerStatus: 'FROM_SOURCE',
           grammarCode: 'con_04',
-        setCode: 'con_04_01_fib',
-        slots: [1],
+          setCode: 'con_04_01_fib',
+          slots: [1],
         },
       ],
     });
@@ -346,11 +406,11 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
           sentenceDe: '___ soll ich erzählen. ___ war es vorbei.',
           blankCount: 3,
           wordBank: ['plötzlich', 'dann'],
-          answers: null,
-          answerStatus: 'MISSING',
+          answers: ['x'],
+          answerStatus: 'FROM_SOURCE',
           grammarCode: 'adv_03',
-        setCode: 'adv_03_01_fib',
-        slots: [1],
+          setCode: 'adv_03_01_fib',
+          slots: [1],
         },
       ],
     });
@@ -359,9 +419,12 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
     );
   });
 
-  it("bo'sh joyi yo'q MC mashqini xato deb belgilaydi", () => {
-    // MC ham umumiy `___` qoidasidan istisno EMAS — u REORDER emasligi
-    // uchun umumiy `else if` shoxobchasiga tushadi.
+  // Manbada MC ikki xil keladi va ikkalasi ham haqiqiy: gapda `___`
+  // bo'lgani, va butun gap berilib to'g'ri o'zgartirish tanlanadigani
+  // («Zuerst holt der Mann… → a. Zuerst wird… geholt»). Bu test avval
+  // teskarisini talab qilardi — parser 100 ta bunday MC'ni allaqachon
+  // tashlab yuborgani uchun buni hech kim sezmagan.
+  it("bo'sh joysiz MC mashqini o'tkazadi", () => {
     const d = base();
     d.grammar.push({
       code: 'con_04',
@@ -378,17 +441,15 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
           sentenceDe: 'Die Kinder gehen nach Hause, sie sehr reich sind.',
           blankCount: 0,
           options: ['a. weil', 'b. ob'],
-          answers: null,
-          answerStatus: 'MISSING',
+          answers: ['x'],
+          answerStatus: 'FROM_SOURCE',
           grammarCode: 'con_04',
-        setCode: 'con_04_01_fib',
-        slots: [1],
+          setCode: 'con_04_01_fib',
+          slots: [1],
         },
       ],
     });
-    expect(validateDataset(d)).toContain(
-      "con_04_fib_1: gapda bo'sh joy (___) yo'q",
-    );
+    expect(validateDataset(d)).toEqual([]);
   });
 
   it('ikkitadan kam variantli MC mashqini xato deb belgilaydi', () => {
@@ -408,11 +469,11 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
           sentenceDe: 'Die Kinder gehen nach Hause, ___ sie sehr reich sind.',
           blankCount: 1,
           options: ['a. weil'],
-          answers: null,
-          answerStatus: 'MISSING',
+          answers: ['x'],
+          answerStatus: 'FROM_SOURCE',
           grammarCode: 'con_04',
-        setCode: 'con_04_01_fib',
-        slots: [1],
+          setCode: 'con_04_01_fib',
+          slots: [1],
         },
       ],
     });
@@ -438,11 +499,11 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
           sentenceDe: 'Die Kinder gehen nach Hause, ___ sie sehr reich sind.',
           blankCount: 1,
           options: ['a. weil', 'b. ob'],
-          answers: null,
-          answerStatus: 'MISSING',
+          answers: ['x'],
+          answerStatus: 'FROM_SOURCE',
           grammarCode: 'con_04',
-        setCode: 'con_04_01_fib',
-        slots: [1],
+          setCode: 'con_04_01_fib',
+          slots: [1],
         },
       ],
     });
@@ -489,11 +550,11 @@ describe("validateDataset — Faza 1b to'plamlari", () => {
           kind: 'GAP',
           sentenceDe: 'Schneewittchen ___ eine neue Karriere.',
           blankCount: 1,
-          answers: null,
-          answerStatus: 'MISSING',
+          answers: ['x'],
+          answerStatus: 'FROM_SOURCE',
           grammarCode: 'vi_05',
-        setCode: 'vi_05_01_fib',
-        slots: [1],
+          setCode: 'vi_05_01_fib',
+          slots: [1],
         },
       ],
     });

@@ -1,7 +1,4 @@
-import {
-  parseAnswerKey,
-  AnswerKeyRefusedError,
-} from './dib-answer-key.parser';
+import { parseAnswerKey, AnswerKeyRefusedError } from './dib-answer-key.parser';
 
 describe('parseAnswerKey', () => {
   const page = (body: string) =>
@@ -14,11 +11,7 @@ describe('parseAnswerKey', () => {
         '<tr><td><span class="ans_fib">der</span></td></tr>',
     );
 
-    expect(parseAnswerKey(html, 'no_02_01_fib')).toEqual([
-      'die',
-      'das',
-      'der',
-    ]);
+    expect(parseAnswerKey(html, 'no_02_01_fib')).toEqual(['die', 'das', 'der']);
   });
 
   it('variant tanlash javobini variant matni bilan qaytaradi', () => {

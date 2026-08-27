@@ -96,8 +96,12 @@ export interface DialogueLine {
  */
 export interface GapExercise {
   id: string;
-  /** Manbada besh xil mashq formati bor — ular bir xil shaklga sig'maydi. */
-  kind: 'GAP' | 'REORDER' | 'CLOZE' | 'MC';
+  /**
+   * Manbadagi mashq formatlari. `FREE_WRITE` — ochiq javobli topshiriq
+   * (masalan ikki gapni birlashtirish): javob qatori bor, lekin manbada
+   * namuna javob yo'q, chunki to'g'ri javob bitta emas.
+   */
+  kind: 'GAP' | 'REORDER' | 'CLOZE' | 'MC' | 'FREE_WRITE';
   /** GAP, CLOZE va MC: bo'sh joy `___` bilan belgilangan matn. REORDER: topshiriq matni. */
   sentenceDe: string;
   /** REORDER: tartiblanadigan tokenlar. */
@@ -113,17 +117,26 @@ export interface GapExercise {
   /** MC: variant matnlari (masalan `a. weil`), radio/input belgilaridan tozalangan. */
   options?: string[];
   /**
-   * To'g'ri javoblar — har bo'sh joyga bittadan, hujjat tartibida. MC va
-   * REORDER'da bitta element. Manba tekshirgichidan olinadi
-   * (`dib-answer-key.parser.ts`), taxmin qilinmaydi.
+   * To'g'ri javoblar — har javob o'rniga bittadan, `slots` bilan bir
+   * tartibda. `null` element: manba shu o'rin uchun javob bermagan (ochiq
+   * javobli topshiriq — 1 306 o'rindan 187 tasi shunday). Bo'sh satr bilan
+   * to'ldirish ularni javobli qilib ko'rsatardi.
    */
-  answers: string[] | null;
+  answers: (string | null)[] | null;
   /**
-   * `FROM_SOURCE` — manbaning o'z javob kaliti. `DRAFT`/`APPROVED` hali
-   * ishlatilmaydi: ular o'zimiz yozadigan savollar uchun (Hören), o'sha
-   * yerda javob yaratiladi va o'qituvchi tasdiqlaydi.
+   * `FROM_SOURCE` — har o'rinning javobi bor. `PARTIAL` — bir qismi bor.
+   * `OPEN` — manba umuman javob bermagan (so'z tartiblash, gap
+   * birlashtirish): bunday mashq ko'rsatiladi, lekin avtomatik
+   * tekshirilmaydi. `DRAFT`/`APPROVED` hali ishlatilmaydi — ular o'zimiz
+   * yozadigan savollar uchun (Hören).
    */
-  answerStatus: 'MISSING' | 'FROM_SOURCE' | 'DRAFT' | 'APPROVED';
+  answerStatus:
+    | 'MISSING'
+    | 'FROM_SOURCE'
+    | 'PARTIAL'
+    | 'OPEN'
+    | 'DRAFT'
+    | 'APPROVED';
   grammarCode: string;
   /** Manbadagi mashq to'plami kodi, masalan `no_02_01_fib`. */
   setCode: string;

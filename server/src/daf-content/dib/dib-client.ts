@@ -19,4 +19,12 @@ export class DibClient {
   fetchText(path: string): Promise<string> {
     return this.http.fetchText(DIB_BASE + path);
   }
+
+  /**
+   * Mashq tekshirgichiga forma yuboradi. To'liq manzil olinadi, chunki
+   * tekshirgich DiB'da emas, qo'shni Grimm Grammar bo'limida turadi.
+   */
+  postForm(url: string, body: string): Promise<string> {
+    return this.http.postForm(url, body);
+  }
 }

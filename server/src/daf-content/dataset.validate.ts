@@ -63,6 +63,20 @@ export function validateDataset(d: DafDataset): string[] {
     checkAsset(v);
   }
 
+  /** `blankCount` matndagi `___` soniga teng bo'lishi kerak. */
+  const checkBlankCount = (ex: {
+    id: string;
+    sentenceDe: string;
+    blankCount?: number;
+  }): void => {
+    const blanksInText = (ex.sentenceDe.match(/___/g) ?? []).length;
+    if (ex.blankCount !== blanksInText) {
+      errors.push(
+        `${ex.id}: \`blankCount\` (${ex.blankCount}) matndagi bo'sh joylar soniga (${blanksInText}) mos kelmaydi`,
+      );
+    }
+  };
+
   const grammarCodes = new Set<string>();
   for (const g of d.grammar) {
     if (grammarCodes.has(g.code)) {
@@ -85,16 +99,24 @@ export function validateDataset(d: DafDataset): string[] {
             `${ex.id}: REORDER mashqida kamida ikkita \`tokens\` elementi bo'lishi shart`,
           );
         }
+      } else if (ex.kind === 'FREE_WRITE') {
+        // Ochiq javobli topshiriqda bo'sh joy ham, tokenlar ham yo'q —
+        // topshiriq matni va javob qatori bor, xolos.
+        if (!ex.sentenceDe.trim()) {
+          errors.push(`${ex.id}: topshiriq matni bo'sh`);
+        }
+      } else if (ex.kind === 'MC') {
+        // MC'da bo'sh joy SHART EMAS. Manbada MC ikki xil: gapda `___`
+        // bo'lgani, va butun gap berilib to'g'ri o'zgartirish tanlanadigani.
+        // `___` ni talab qilgan versiya 100 ta MC'ni rad etardi — parser
+        // ularni allaqachon tashlab yuborgani uchun buni hech kim
+        // sezmagan: ikkala qatlam bir xil noto'g'ri farazni takrorlagan.
+        if (ex.sentenceDe.includes('___')) checkBlankCount(ex);
       } else {
         if (!ex.sentenceDe.includes('___')) {
           errors.push(`${ex.id}: gapda bo'sh joy (___) yo'q`);
         }
-        const blanksInText = (ex.sentenceDe.match(/___/g) ?? []).length;
-        if (ex.blankCount !== blanksInText) {
-          errors.push(
-            `${ex.id}: \`blankCount\` (${ex.blankCount}) matndagi bo'sh joylar soniga (${blanksInText}) mos kelmaydi`,
-          );
-        }
+        checkBlankCount(ex);
       }
 
       // MC'ga xos qo'shimcha qoida: kamida ikkita variant bo'lmasa,
@@ -102,6 +124,18 @@ export function validateDataset(d: DafDataset): string[] {
       if (ex.kind === 'MC' && (!ex.options || ex.options.length < 2)) {
         errors.push(
           `${ex.id}: MC mashqida kamida ikkita \`options\` bo'lishi shart`,
+        );
+      }
+
+      // Javob har o'rin uchun bittadan bo'lishi shart. Javobsiz mashq
+      // o'quvchiga ko'rsatiladi, lekin tekshirilmaydi — ya'ni u mashq emas,
+      // matn. Javoblar soni o'rinlar soniga teng bo'lmasa esa javob boshqa
+      // bo'sh joyga tushadi, va bu xato ko'rinmaydi.
+      if (ex.answerStatus === 'MISSING') {
+        errors.push(`${ex.id}: javobi yo'q`);
+      } else if (!ex.answers || ex.answers.length !== ex.slots.length) {
+        errors.push(
+          `${ex.id}: ${ex.slots.length} ta javob o'rniga ${ex.answers?.length ?? 0} ta javob`,
         );
       }
     }

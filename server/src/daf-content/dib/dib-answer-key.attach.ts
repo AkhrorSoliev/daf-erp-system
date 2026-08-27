@@ -60,9 +60,24 @@ export function attachAnswerKey(
     );
   }
 
-  return exercises.map((ex) => ({
-    ...ex,
-    answers: ex.slots.map((slot) => key[slot - 1]),
-    answerStatus: 'FROM_SOURCE' as const,
-  }));
+  return exercises.map((ex) => {
+    // Bo'sh javob — manba shu o'rin uchun kalit BERMAGANI. 1 306 o'rindan
+    // 187 tasi shunday: gap birlashtirish va so'z tartiblash kabi ochiq
+    // javobli topshiriqlarda to'g'ri javob bitta emas. Bo'sh satrni javob
+    // sifatida saqlash ularni javobli qilib ko'rsatardi, va mashq dvigateli
+    // o'quvchining har qanday javobini xato deb belgilardi.
+    const answers = ex.slots.map((slot) => key[slot - 1] || null);
+    const known = answers.filter((a) => a !== null).length;
+
+    return {
+      ...ex,
+      answers,
+      answerStatus:
+        known === 0
+          ? 'OPEN'
+          : known === answers.length
+            ? 'FROM_SOURCE'
+            : 'PARTIAL',
+    } as GapExercise;
+  });
 }

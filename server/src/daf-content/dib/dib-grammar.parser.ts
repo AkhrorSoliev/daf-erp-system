@@ -33,7 +33,8 @@ const INPUT_NAME_RE = /name="(?:fib|mc)_(\d+)"/i;
 /** Bo'sh joyning manbadagi tartib raqami — javob kalitiga kalit. */
 const SLOT_ATTR_RE = /<p class="txt_1" data-slot="(\d+)"><\/p>/g;
 /** REORDER javob qatori — butun mashqqa bitta o'rin. */
-const REORDER_SLOT_RE = /<input\b[^>]*name="fib_(\d+)"[^>]*class="txt_2"[^>]*>/i;
+const REORDER_SLOT_RE =
+  /<input\b[^>]*name="fib_(\d+)"[^>]*class="txt_2"[^>]*>/i;
 const MC_SLOT_RE = /name="mc_(\d+)"/i;
 
 /**
@@ -49,7 +50,9 @@ const MC_SLOT_RE = /name="mc_(\d+)"/i;
 function normalizeBlanks(html: string): string {
   return html.replace(INPUT_BLANK_RE, (tag) => {
     const n = INPUT_NAME_RE.exec(tag)?.[1];
-    return n ? `<p class="txt_1" data-slot="${n}"></p>` : '<p class="txt_1"></p>';
+    return n
+      ? `<p class="txt_1" data-slot="${n}"></p>`
+      : '<p class="txt_1"></p>';
   });
 }
 
@@ -227,7 +230,8 @@ function exercisesOf(
     for (const block of sliceExerciseTables(setHtml)) {
       for (const rows of exerciseSpans(block)) {
         const e = spanExercise(rows, code, skipStats);
-        if (e !== null) fromTables.push({ ...e, slots: slotsOf(rows.join('')) });
+        if (e !== null)
+          fromTables.push({ ...e, slots: slotsOf(rows.join('')) });
       }
     }
 
@@ -247,7 +251,6 @@ function exercisesOf(
     }));
   });
 }
-
 
 /**
  * Jadvaldagi qatorlarni mashq SPAN'lariga guruhlaydi: har span raqamlangan
@@ -346,9 +349,27 @@ function spanExercise(
     .map((t) => t.trim())
     .filter(Boolean);
 
+  // Ikkitadan kam token — tartiblanadigan hech narsa yo'q. Lekin bu mashq
+  // yo'q degani emas: `con_03` va `vpp_01` da bunday span aslida OCHIQ
+  // JAVOBLI topshiriq — «bu ikki gapni birlashtiring», bitta "token" ichida
+  // ikkita to'liq gap. Uni tashlab yuborish 16 ta haqiqiy mashqni
+  // yo'qotardi, va javob kalitidagi o'rinlari egasiz qolardi.
+  //
+  // Mashq ekanining belgisi — JAVOB QATORI (`txt_2` kiritish maydoni).
+  // Qatorsiz span mashq emas (masalan yolg'iz so'zlovchi nomi yoki
+  // ajratuvchi qator) va u haqiqatan o'tkazib yuboriladi.
   if (tokens.length < 2) {
-    if (skipStats) skipStats.skipped++;
-    return null;
+    if (!/class="txt_2"/i.test(rawSpan)) {
+      if (skipStats) skipStats.skipped++;
+      return null;
+    }
+    return {
+      kind: 'FREE_WRITE',
+      sentenceDe: stripTags(promptHtml),
+      answers: null,
+      answerStatus: 'MISSING',
+      grammarCode: code,
+    };
   }
 
   return {

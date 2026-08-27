@@ -399,10 +399,14 @@ describe("parseGrammarPage — span ichida </span> bo'lgan REORDER topshirig'i",
   it("teg ichidagi `/` tokenlarni yolg'on ajratmaydi — natijada xom teg qoldig'i chiqmaydi", () => {
     const skipStats: SkipStats = { skipped: 0 };
     const p = parseGrammarPage(SPAN_IN_PROMPT_PAGE, 'vpass_04', skipStats)!;
-    // Bitta haqiqiy `/` yo'q — bu span aslida bitta gap, REORDER emas,
-    // shuning uchun o'tkazib yuboriladi (Task 3 qoidasi).
-    expect(p.exercises).toHaveLength(0);
-    expect(skipStats.skipped).toBe(1);
+    // Bitta haqiqiy `/` yo'q — bu span REORDER emas. Lekin javob qatori
+    // bor, ya'ni u haqiqiy topshiriq: ochiq javobli. Tashlab yuborish 16 ta
+    // mashqni yo'qotardi. Bu test tekshiradigan narsa o'zgarmadi —
+    // topshiriq matnida xom teg qoldig'i bo'lmasligi kerak.
+    expect(p.exercises).toHaveLength(1);
+    expect(p.exercises[0].kind).toBe('FREE_WRITE');
+    expect(p.exercises[0].sentenceDe).not.toMatch(/[<>]|span>/);
+    expect(skipStats.skipped).toBe(0);
   });
 });
 
@@ -466,10 +470,15 @@ describe("parseGrammarPage — ikkitadan kam tokenli span o'tkazib yuboriladi", 
   it("bitta tokenli span'ni tashlab, faqat haqiqiy REORDER'ni qoldiradi va skip sonini hisoblaydi", () => {
     const skipStats: SkipStats = { skipped: 0 };
     const p = parseGrammarPage(SENTENCE_COMBINE_PAGE, 'con_03', skipStats)!;
-    expect(p.exercises).toHaveLength(1);
-    expect(p.exercises[0].kind).toBe('REORDER');
-    expect(p.exercises[0].tokens).toEqual(['Ich', 'machen', 'nichts anderes']);
-    expect(skipStats.skipped).toBe(1);
+    // Gap birlashtirish topshirig'i REORDER emas — lekin mashq ham emas
+    // degani emas. Javob qatori borligi uni haqiqiy topshiriq qiladi, va u
+    // `FREE_WRITE` bo'lib qoladi: manbada namuna javob yo'q, chunki to'g'ri
+    // javob bitta emas. Uni tashlab yuborish 16 ta mashqni yo'qotardi.
+    expect(p.exercises).toHaveLength(2);
+    expect(p.exercises[0].kind).toBe('FREE_WRITE');
+    expect(p.exercises[1].kind).toBe('REORDER');
+    expect(p.exercises[1].tokens).toEqual(['Ich', 'machen', 'nichts anderes']);
+    expect(skipStats.skipped).toBe(0);
   });
 });
 
