@@ -562,6 +562,7 @@ model Student {
   refunds         Refund[]
   salaryAccruals  SalaryAccrual[]  @relation("StudentSalaryAccruals")
   paymentPromises PaymentPromise[]
+  dafAttempts     DafAttempt[]
   callLogs        CallLog[]
   discounts       Discount[]
   scholarships    Scholarship[]
@@ -2797,4 +2798,181 @@ model TelegramChannelGateEvent {
   @@index([companyId, blockedAt])
   @@index([companyId, joinedAt])
   @@index([companyId, leftAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DaF o'quv tizimi (Faza 2)
+//
+// Kontent jadvallarida `companyId` ATAYLAB yo'q: material COERLL ning
+// CC BY 4.0 ishi, u markazga tegishli emas va filialdan filialga farq
+// qilmaydi. Har kompaniyaga nusxa ko'chirish 1 180 mashqni takrorlab,
+// bitta tuzatishni nusxalar soniga ko'paytirardi.
+//
+// `DafAttempt` esa kompaniya, filial va guruhni YOZISH PAYTIDA muhrlaydi —
+// jonli bog'lanishdan o'qimaydi. Sabab loyihada allaqachon yozilgan
+// (`SalaryAccrual` guruh filialini muhrlaydi): o'quvchi filialdan filialga
+// ko'chganda uning o'tgan oydagi natijalari yangi filialga ko'chib
+// o'tmasligi kerak.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum DafLevel {
+  A1_1
+  A1_2
+  A2_1
+  A2_2
+  B1
+}
+
+enum DafExerciseKind {
+  GAP
+  MC
+  CLOZE
+  REORDER
+  FREE_WRITE
+}
+
+/// `OPEN` — manba javob bermagan (to'g'ri javob bitta emas: so'z
+/// tartiblash, gap birlashtirish). Bunday mashq ko'rsatiladi, lekin
+/// avtomatik tekshirilmaydi.
+enum DafAnswerStatus {
+  FROM_SOURCE
+  PARTIAL
+  OPEN
+}
+
+enum DafTranslationSource {
+  MODEL
+  TEACHER
+}
+
+/// O'quv yo'lining bosqichi. Manba bobi unga BIRIKTIRILADI — bo'lim
+/// manbadan kelib chiqmaydi (ADR-0011).
+model DafUnit {
+  id            Int      @id @default(autoincrement())
+  level         DafLevel
+  order         Int
+  titleUz       String
+  titleDe       String
+  /// Manbadagi bob raqami — kelib chiqishi, o'zligi emas.
+  sourceChapter Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  lexemes   DafLexeme[]
+  grammar   DafGrammar[]
+  exercises DafExercise[]
+
+  @@unique([level, order])
+  @@index([level])
+}
+
+model DafLexeme {
+  id       Int     @id @default(autoincrement())
+  /// Manbadagi barqaror id — seed shu bo'yicha yangilaydi, takrorlamaydi.
+  sourceId String  @unique
+  unitId   Int
+  de       String
+  en       String
+  uz       String?
+
+  translationSource DafTranslationSource?
+  /// R2 kaliti, to'liq manzil emas — manzil `R2_PUBLIC_URL` bilan quriladi.
+  audioKey          String?
+  imageKey          String?
+  sectionTitleDe    String
+  sectionTitleUz    String?
+  order             Int
+
+  unit DafUnit @relation(fields: [unitId], references: [id])
+
+  @@index([unitId])
+}
+
+model DafGrammar {
+  id       Int     @id @default(autoincrement())
+  sourceId String  @unique
+  unitId   Int?
+  code     String
+  titleDe  String
+  titleUz  String?
+
+  /// Asl inglizcha matn SAQLANADI: tarjima qayta ko'rilganda solishtirish
+  /// uchun kerak.
+  explanationEn     String
+  explanationUz     String?
+  translationSource DafTranslationSource?
+  level             DafLevel?
+
+  unit      DafUnit?      @relation(fields: [unitId], references: [id])
+  exercises DafExercise[]
+
+  @@index([unitId])
+  @@index([code])
+}
+
+model DafExercise {
+  id       Int    @id @default(autoincrement())
+  sourceId String @unique
+
+  unitId    Int?
+  grammarId Int?
+
+  kind    DafExerciseKind
+  prompt  String
+  /// MC variantlari. Boshqa turlarda bo'sh.
+  options String[]
+
+  /// Har javob o'rniga bittadan. `null` element — manba shu o'rin uchun
+  /// javob bermagan. Bo'sh satr bilan to'ldirilmaydi: u mashqni javobli
+  /// qilib ko'rsatib, o'quvchining har javobini xato deb belgilardi.
+  answers      Json
+  answerStatus DafAnswerStatus
+  /// Manbadagi javob o'rinlari raqamlari (`name="fib_7"` → 7).
+  slots        Int[]
+
+  sourceSetCode String
+  order         Int
+  /// Manbadan yo'qolgan mashq O'CHIRILMAYDI — belgilanadi. O'chirilgan
+  /// mashqqa ishora qiluvchi urinish tarixi ma'nosini yo'qotadi.
+  retiredAt     DateTime?
+
+  unit     DafUnit?     @relation(fields: [unitId], references: [id])
+  grammar  DafGrammar?  @relation(fields: [grammarId], references: [id])
+  attempts DafAttempt[]
+
+  @@index([unitId])
+  @@index([grammarId])
+  @@index([retiredAt])
+}
+
+/// O'zgarmas hodisa: tahrirlanmaydi, o'chirilmaydi.
+///
+/// Progress jadvali ATAYLAB yo'q. «Bajarildi» holati shu qatorlardan
+/// hisoblanadi, chunki ball va reyting formulasi keyin quriladi va u
+/// o'zgarganda butun tarix qayta hisoblanishi kerak. Holat sifatida
+/// saqlangan ball buni imkonsiz qiladi.
+model DafAttempt {
+  id         Int     @id @default(autoincrement())
+  studentId  Int
+  exerciseId Int
+  isCorrect  Boolean
+  /// O'quvchi bergan javob. Xato javoblar ham saqlanadi — o'qituvchiga eng
+  /// kerakli signal aynan shu: guruh qaysi mashqda qoqilyapti.
+  given      Json
+  durationMs Int?
+
+  /// Yozish paytida MUHRLANADI, jonli bog'lanishdan o'qilmaydi.
+  companyId Int
+  branchId  Int?
+  groupId   Int?
+
+  createdAt DateTime @default(now())
+
+  student  Student     @relation(fields: [studentId], references: [id])
+  exercise DafExercise @relation(fields: [exerciseId], references: [id])
+
+  @@index([studentId, createdAt])
+  @@index([exerciseId])
+  @@index([companyId, createdAt])
+  @@index([branchId, createdAt])
 }
