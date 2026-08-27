@@ -173,6 +173,8 @@ export class DafPortalReadService {
           de: true,
           uz: true,
           audioKey: true,
+          audioStartMs: true,
+          audioEndMs: true,
           imageKey: true,
         },
       }),
@@ -197,6 +199,10 @@ export class DafPortalReadService {
         de: l.de,
         uz: l.uz,
         audioUrl: this.mediaUrl(l.audioKey),
+        // Oraliq — so'zning fayl ichidagi o'rni. Usiz tugma butun
+        // bo'limni ketma-ket eshittirardi.
+        audioStartMs: l.audioStartMs,
+        audioEndMs: l.audioEndMs,
         imageUrl: this.mediaUrl(l.imageKey),
       })),
       exercises,

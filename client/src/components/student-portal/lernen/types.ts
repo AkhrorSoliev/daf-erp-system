@@ -46,6 +46,13 @@ export interface LernenLexeme {
   de: string;
   uz: string | null;
   audioUrl: string | null;
+  /**
+   * So'zning fayl ICHIDAGI oralig'i. Manbadagi mp3 butun bo'limni
+   * o'qiydi, shuning uchun usiz tugma o'ntacha so'zni ketma-ket
+   * eshittirardi.
+   */
+  audioStartMs: number | null;
+  audioEndMs: number | null;
   imageUrl: string | null;
 }
 
@@ -92,4 +99,27 @@ export interface AttemptResult {
   isCorrect: boolean;
   /** To'g'ri javob — FAQAT urinishdan keyin keladi. */
   correctAnswers: (string | null)[];
+}
+
+export type DrillKind = "AUDIO_TO_WORD" | "WORD_TO_UZ" | "UZ_TO_WORD";
+
+/**
+ * Dars mashqi — TO'G'RI JAVOBSIZ.
+ *
+ * Javob serverda qoladi va faqat tekshirishdan keyin `DrillResult` ichida
+ * keladi. Mijozga oldindan yuborilsa, uni brauzerning tarmoq oynasida
+ * ko'rish mumkin bo'lardi.
+ */
+export interface DrillQuestion {
+  index: number;
+  kind: DrillKind;
+  prompt: string;
+  options: string[];
+  /** Tinglash savolida: fayl manzili va faqat shu so'zning oralig'i. */
+  audio: { url: string; startMs: number; endMs: number } | null;
+}
+
+export interface DrillResult {
+  isCorrect: boolean;
+  answer: string;
 }

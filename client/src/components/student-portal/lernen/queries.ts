@@ -4,6 +4,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import type {
   AttemptResult,
+  DrillQuestion,
+  DrillResult,
   LernenGrammarItem,
   LernenLesson,
   LernenLevel,
@@ -39,6 +41,32 @@ export function useLernenGrammar() {
   return useQuery<LernenGrammarItem[]>({
     queryKey: ["lernen", "grammar"],
     queryFn: () => api.get(`${BASE}/grammar`).then((r) => r.data),
+  });
+}
+
+export function useLernenDrill(lessonId: number) {
+  return useQuery<DrillQuestion[]>({
+    queryKey: ["lernen", "drill", lessonId],
+    queryFn: () =>
+      api.get(`${BASE}/lessons/${lessonId}/drill`).then((r) => r.data),
+    enabled: Number.isFinite(lessonId),
+  });
+}
+
+/**
+ * Mashq javobini tekshiradi.
+ *
+ * Mijoz savol O'RNINI va tanlovini yuboradi, to'g'ri javobni bilmaydi —
+ * u serverda solishtiriladi.
+ */
+export function useCheckDrill() {
+  return useMutation<
+    DrillResult,
+    unknown,
+    { lessonId: number; index: number; given: string; durationMs?: number }
+  >({
+    mutationFn: (body) =>
+      api.post(`${BASE}/drill/check`, body).then((r) => r.data),
   });
 }
 

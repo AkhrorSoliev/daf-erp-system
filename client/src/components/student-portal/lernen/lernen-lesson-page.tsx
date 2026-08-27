@@ -1,17 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, SpeakerHigh } from "@phosphor-icons/react";
+import { BookOpen, SpeakerHigh, Trophy } from "@phosphor-icons/react";
 import {
   Screen,
   StackHeader,
   FadeIn,
   Card,
   Badge,
+  Button,
   EmptyState,
   LoadingCards,
 } from "../lumio";
 import { useLernenLesson } from "./queries";
+import { VocabDrill } from "./vocab-drill";
 import { McExercise } from "./mc-exercise";
 import type { LernenExercise, LernenLexeme } from "./types";
 
@@ -24,17 +26,39 @@ const KIND_LABEL: Record<LernenExercise["kind"], string> = {
   FREE_WRITE: "Yozma topshiriq",
 };
 
+/**
+ * Bitta so'z — o'z audio BO'LAGI bilan.
+ *
+ * Manbadagi mp3 butun bo'limni o'qiydi. Server har so'zning fayl ichidagi
+ * oralig'ini beradi, shuning uchun tugma butun faylni emas, faqat shu
+ * so'zni o'ynatadi.
+ */
 function LexemeRow({ lexeme }: { lexeme: LernenLexeme }) {
-  const audio = React.useRef<HTMLAudioElement | null>(null);
+  const ref = React.useRef<HTMLAudioElement | null>(null);
 
   const play = () => {
     if (!lexeme.audioUrl) return;
-    audio.current ??= new Audio(lexeme.audioUrl);
-    void audio.current.play();
+    ref.current ??= new Audio(lexeme.audioUrl);
+    const el = ref.current;
+
+    if (lexeme.audioStartMs === null || lexeme.audioEndMs === null) {
+      void el.play();
+      return;
+    }
+
+    const stop = () => {
+      if (el.currentTime * 1000 >= lexeme.audioEndMs!) {
+        el.pause();
+        el.removeEventListener("timeupdate", stop);
+      }
+    };
+    el.currentTime = lexeme.audioStartMs / 1000;
+    el.addEventListener("timeupdate", stop);
+    void el.play();
   };
 
   return (
-    <div className="flex items-center gap-3 border-b border-ink-500/10 py-2.5 last:border-0">
+    <div className="flex items-center gap-3 border-b border-line py-2.5 last:border-0">
       <div className="min-w-0 flex-1">
         <p className="font-semibold text-ink-900">{lexeme.de}</p>
         <p className="text-sm font-semibold text-ink-500">
@@ -58,10 +82,9 @@ function LexemeRow({ lexeme }: { lexeme: LernenLexeme }) {
 /**
  * Ishlamaydigan mashq turlari YASHIRILMAYDI.
  *
- * Kontent bor, dvigateli hali yo'q — buni aytish yashirishdan yaxshiroq, va
- * o'quvchi keyin nima kelishini ko'radi. Ochiq javobli mashq ham shu yerga
- * tushadi: uning bitta to'g'ri javobi yo'q, shuning uchun avtomatik
- * tekshirilmaydi.
+ * Kontent bor, dvigateli hali yo'q — buni aytish yashirishdan yaxshiroq.
+ * Ochiq javobli mashq ham shu yerga tushadi: uning bitta to'g'ri javobi
+ * yo'q, shuning uchun avtomatik tekshirilmaydi.
  */
 function NotYetExercise({
   exercise,
@@ -90,10 +113,15 @@ function NotYetExercise({
   );
 }
 
+type Stage = "study" | "drill" | "done";
+
 export function LernenLessonPage({ lessonId }: { lessonId: number }) {
   const { data, isLoading, isError } = useLernenLesson(lessonId);
+  const [stage, setStage] = React.useState<Stage>("study");
+  const [score, setScore] = React.useState({ correct: 0, total: 0 });
 
   const title = data ? (data.titleUz ?? data.titleDe) : "Dars";
+  const isVocab = data?.kind === "VOCAB";
 
   return (
     <Screen narrow>
@@ -112,6 +140,48 @@ export function LernenLessonPage({ lessonId }: { lessonId: number }) {
           title="Darsni yuklab bo'lmadi"
           description="Internet aloqasini tekshirib, qayta urinib ko'ring."
         />
+      ) : stage === "drill" ? (
+        <FadeIn>
+          <VocabDrill
+            lessonId={lessonId}
+            onFinished={(correct, total) => {
+              setScore({ correct, total });
+              setStage("done");
+            }}
+          />
+        </FadeIn>
+      ) : stage === "done" ? (
+        <FadeIn>
+          <Card className="space-y-4 text-center">
+            <Trophy
+              size={48}
+              weight="fill"
+              className="mx-auto text-amber-500"
+            />
+            <div>
+              <p className="font-display text-3xl font-bold text-ink-900">
+                {score.correct} / {score.total}
+              </p>
+              <p className="mt-1 font-semibold text-ink-500">
+                {score.correct === score.total
+                  ? "Hammasi to'g'ri!"
+                  : "Yaxshi ish — qaytarib mustahkamlang"}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setStage("study")}
+              >
+                So&apos;zlarni ko&apos;rish
+              </Button>
+              <Button className="flex-1" onClick={() => setStage("drill")}>
+                Qayta mashq
+              </Button>
+            </div>
+          </Card>
+        </FadeIn>
       ) : (
         <FadeIn className="space-y-4">
           <p className="text-sm font-semibold text-ink-500">
@@ -143,6 +213,14 @@ export function LernenLessonPage({ lessonId }: { lessonId: number }) {
                 <LexemeRow key={l.id} lexeme={l} />
               ))}
             </Card>
+          ) : null}
+
+          {/* Lug'at darsi mashq bilan tugaydi — aks holda u ro'yxat
+              bo'lib qolardi va o'quvchi bilganini tekshirmasdi. */}
+          {isVocab && data.lexemes.length >= 2 ? (
+            <Button className="w-full" onClick={() => setStage("drill")}>
+              Mashqni boshlash
+            </Button>
           ) : null}
 
           {data.exercises.length > 0 ? (
