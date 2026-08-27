@@ -2962,9 +2962,10 @@ model DafAttempt {
   durationMs Int?
 
   /// Yozish paytida MUHRLANADI, jonli bog'lanishdan o'qilmaydi.
+  /// `groupId` — `Group.id` kabi uuid satri, son emas.
   companyId Int
   branchId  Int?
-  groupId   Int?
+  groupId   String?
 
   createdAt DateTime @default(now())
 

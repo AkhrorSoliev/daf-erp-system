@@ -72,8 +72,9 @@ describe('DafSeedService', () => {
   let prisma: {
     dafUnit: { upsert: jest.Mock };
     dafLexeme: { upsert: jest.Mock; deleteMany: jest.Mock };
-    dafGrammar: { upsert: jest.Mock; findUnique: jest.Mock };
+    dafGrammar: { upsert: jest.Mock; findMany: jest.Mock };
     dafExercise: { upsert: jest.Mock; updateMany: jest.Mock };
+    $transaction: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -85,12 +86,17 @@ describe('DafSeedService', () => {
       },
       dafGrammar: {
         upsert: jest.fn().mockResolvedValue({ id: 20 }),
-        findUnique: jest.fn().mockResolvedValue({ unitId: 10 }),
+        findMany: jest.fn().mockResolvedValue([{ id: 20, unitId: 10 }]),
       },
       dafExercise: {
         upsert: jest.fn().mockResolvedValue({ id: 30 }),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
+      // Yozuvlar bo'laklab tranzaksiyada yuboriladi; mock ularni shunchaki
+      // kutadi.
+      $transaction: jest
+        .fn()
+        .mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops)),
     };
 
     const module = await Test.createTestingModule({

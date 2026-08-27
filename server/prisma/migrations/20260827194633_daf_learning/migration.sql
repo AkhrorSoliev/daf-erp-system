@@ -88,7 +88,7 @@ CREATE TABLE "DafAttempt" (
     "durationMs" INTEGER,
     "companyId" INTEGER NOT NULL,
     "branchId" INTEGER,
-    "groupId" INTEGER,
+    "groupId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "DafAttempt_pkey" PRIMARY KEY ("id")

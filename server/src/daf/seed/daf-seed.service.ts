@@ -79,6 +79,16 @@ export function lexemeSourceId(sectionId: string, index: number): string {
  * unga ishora qiluvchi urinish tarixi ma'nosini yo'qotadi. Lug'at yozuvi
  * esa o'chiriladi — unga hech narsa ishora qilmaydi.
  */
+/**
+ * Bir martada bitta tranzaksiyaga yuboriladigan yozuvlar soni.
+ *
+ * Sabab o'lchangan: 3 100 ta ketma-ket `upsert` Neon'ga qirq daqiqadan
+ * oshdi, chunki har biri alohida borish-kelish kutardi. Bo'lak ichida ular
+ * baravariga ketadi. 50 — ulanishlar hovuzini bo'g'ib qo'ymaslik uchun
+ * tanlangan chegara.
+ */
+const BATCH = 50;
+
 @Injectable()
 export class DafSeedService {
   private readonly logger = new Logger(DafSeedService.name);
@@ -144,7 +154,7 @@ export class DafSeedService {
     dataset: DafDataset,
     unitIdByChapter: Map<number, number>,
   ): Promise<number> {
-    let n = 0;
+    const writes: Prisma.PrismaPromise<unknown>[] = [];
 
     for (const section of dataset.sections) {
       const unitId = unitIdByChapter.get(section.chapter);
@@ -152,33 +162,48 @@ export class DafSeedService {
 
       for (const [i, entry] of section.entries.entries()) {
         const sourceId = lexemeSourceId(section.id, i);
-        // Tarjima `update` da TEGILMAYDI: o'qituvchi tuzatgan tarjima
-        // seed qayta yuritilganda yo'qolmasligi kerak.
-        await this.prisma.dafLexeme.upsert({
-          where: { sourceId },
-          create: {
-            sourceId,
-            unitId,
-            de: entry.de,
-            en: entry.en,
-            sectionTitleDe: section.titleDe,
-            audioKey: section.audio?.key ?? null,
-            order: i + 1,
-          },
-          update: {
-            unitId,
-            de: entry.de,
-            en: entry.en,
-            sectionTitleDe: section.titleDe,
-            audioKey: section.audio?.key ?? null,
-            order: i + 1,
-          },
-        });
-        n++;
+        const data = {
+          unitId,
+          de: entry.de,
+          en: entry.en,
+          sectionTitleDe: section.titleDe,
+          audioKey: section.audio?.key ?? null,
+          order: i + 1,
+        };
+        // `uz` va `translationSource` `update` da YO'Q: o'qituvchi tuzatgan
+        // tarjima seed qayta yuritilganda yo'qolmasligi kerak.
+        writes.push(
+          this.prisma.dafLexeme.upsert({
+            where: { sourceId },
+            create: { sourceId, ...data },
+            update: data,
+          }),
+        );
       }
     }
 
-    return n;
+    await this.runBatched(writes);
+    return writes.length;
+  }
+
+  /**
+   * Yozuvlarni bo'laklab, bo'lak ichida BARAVARIGA yuboradi.
+   *
+   * Tranzaksiya ATAYLAB ishlatilmaydi. Ikki sabab: yozuvlar bir-biriga
+   * bog'liq emas (har biri o'z `sourceId` si bo'yicha mustaqil `upsert`),
+   * va seed idempotent — yarim yo'lda uzilsa, qayta yuritish tugatadi.
+   * Massiv shaklidagi `$transaction` esa faqat `isolationLevel` qabul
+   * qiladi, chegara berib bo'lmaydi: 50 ta yozuv standart 5 soniyaga
+   * sig'may «rollback» bilan uzildi.
+   *
+   * Bo'lak hajmi ulanishlar hovuzini bo'g'ib qo'ymaslik uchun cheklangan.
+   */
+  private async runBatched(
+    writes: Prisma.PrismaPromise<unknown>[],
+  ): Promise<void> {
+    for (let i = 0; i < writes.length; i += BATCH) {
+      await Promise.all(writes.slice(i, i + BATCH));
+    }
   }
 
   private async seedGrammar(
@@ -236,38 +261,37 @@ export class DafSeedService {
     dataset: DafDataset,
     grammarIdByCode: Map<string, number>,
   ): Promise<number> {
-    const unitIdByGrammarId = new Map<number, number | null>();
-    for (const id of grammarIdByCode.values()) {
-      const g = await this.prisma.dafGrammar.findUnique({
-        where: { id },
-        select: { unitId: true },
-      });
-      unitIdByGrammarId.set(id, g?.unitId ?? null);
-    }
+    // Bo'limlar bitta so'rovda o'qiladi: sahifa boshiga alohida
+    // `findUnique` 92 ta ortiqcha borish-kelish edi.
+    const rows = await this.prisma.dafGrammar.findMany({
+      where: { id: { in: [...grammarIdByCode.values()] } },
+      select: { id: true, unitId: true },
+    });
+    const unitIdByGrammarId = new Map(rows.map((r) => [r.id, r.unitId]));
 
-    let n = 0;
+    const writes: Prisma.PrismaPromise<unknown>[] = [];
     for (const page of dataset.grammar) {
       const grammarId = grammarIdByCode.get(page.code) ?? null;
       const unitId =
         grammarId === null ? null : (unitIdByGrammarId.get(grammarId) ?? null);
 
       for (const [i, ex] of page.exercises.entries()) {
-        await this.prisma.dafExercise.upsert({
-          where: { sourceId: ex.id },
-          create: this.exerciseData(ex, grammarId, unitId, i),
-          // `retiredAt: null` — manbada qaytadan paydo bo'lgan mashq
-          // nafaqadan qaytariladi, aks holda u bir marta yo'qolgani uchun
-          // abadiy ko'rinmay qolardi.
-          update: {
-            ...this.exerciseData(ex, grammarId, unitId, i),
-            retiredAt: null,
-          },
-        });
-        n++;
+        const data = this.exerciseData(ex, grammarId, unitId, i);
+        writes.push(
+          this.prisma.dafExercise.upsert({
+            where: { sourceId: ex.id },
+            create: data,
+            // `retiredAt: null` — manbada qaytadan paydo bo'lgan mashq
+            // nafaqadan qaytariladi, aks holda u bir marta yo'qolgani uchun
+            // abadiy ko'rinmay qolardi.
+            update: { ...data, retiredAt: null },
+          }),
+        );
       }
     }
 
-    return n;
+    await this.runBatched(writes);
+    return writes.length;
   }
 
   private exerciseData(

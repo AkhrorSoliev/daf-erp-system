@@ -455,6 +455,29 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /salary/period-settings',
     ],
   },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'The DaF learning catalogue is reference content, not branch data. It is ' +
+      "COERLL's CC BY 4.0 material: the same units, vocabulary and exercises for " +
+      'every branch, which is why the `Daf*` content tables carry no `companyId` ' +
+      'at all. Scoping these reads by branch would answer a question nobody asks ' +
+      'and imply the catalogue differs per branch, which it does not.',
+    routes: [
+      'GET /student-portal/lernen/levels',
+      'GET /student-portal/lernen/units/:id',
+    ],
+  },
+  {
+    policy: 'SELF',
+    reason:
+      "Keyed on `@CurrentUser('studentId')` — the caller is the subject, and the " +
+      'DTO deliberately has no `studentId` field, so one student cannot write an ' +
+      "attempt in another's name. The row DOES carry a branch, but it is STAMPED " +
+      "from the student's own record at write time rather than taken from a " +
+      'header: a later transfer must not move past results into the new branch.',
+    routes: ['POST /student-portal/lernen/attempts'],
+  },
 ];
 
 /**

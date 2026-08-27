@@ -13,6 +13,7 @@ import { RoomsModule } from './rooms/rooms.module';
 import { CoursesModule } from './courses/courses.module';
 import { TeachersModule } from './teachers/teachers.module';
 import { StudentsModule } from './students/students.module';
+import { DafModule } from './daf/daf.module';
 import { GroupsModule } from './groups/groups.module';
 import { HolidaysModule } from './holidays/holidays.module';
 import { CompanyModule } from './company/company.module';
@@ -83,6 +84,7 @@ import { validateEnv } from './config/env.validation';
     CoursesModule,
     TeachersModule,
     StudentsModule,
+    DafModule,
     GroupsModule,
     HolidaysModule,
     CompanyModule,
