@@ -29,6 +29,12 @@ import {
 import type { SkipStats } from '../src/daf-content/dib/dib-grammar.parser';
 import { parsePhoneticsPage } from '../src/daf-content/dib/dib-phonetics.parser';
 import {
+  parseExerciseSets,
+  type ExerciseSet,
+} from '../src/daf-content/dib/dib-exercise-set.parser';
+import { parseAnswerKey } from '../src/daf-content/dib/dib-answer-key.parser';
+import { attachAnswerKey } from '../src/daf-content/dib/dib-answer-key.attach';
+import {
   DIB_LICENSE,
   DIB_ATTRIBUTION,
 } from '../src/daf-content/dib/dib-license';
@@ -46,6 +52,25 @@ import type { AssetRef, DafDataset } from '../src/daf-content/dataset.types';
 const OUT = join(__dirname, '..', 'content', 'daf');
 const CACHE = join(__dirname, '..', '.cache', 'daf');
 const CHAPTERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+const GG_BASE = 'https://coerll.utexas.edu/gg/';
+
+/**
+ * Tekshirgichga yuboriladigan "javob" — ATAYLAB noto'g'ri.
+ *
+ * Bizni tekshirgichning bahosi qiziqtirmaydi; javob sahifasi TO'G'RI
+ * javoblarni belgilab qaytaradi va bizga kerakli narsa shu. Har o'rin
+ * to'ldirilishi kerak: bo'sh forma «No form data was submitted» bilan rad
+ * etiladi, va bunday rad etish nol javob emas, XATO — `parseAnswerKey` uni
+ * yiqilish bilan bildiradi.
+ */
+function dummyFormBody(set: ExerciseSet): string {
+  const field = set.type === 'mcr' ? 'mc' : set.type;
+  return Array.from(
+    { length: set.count },
+    (_, i) => `${field}_${i + 1}=${set.type === 'mcr' ? '1' : 'zz'}`,
+  ).join('&');
+}
 
 async function harvestDib(): Promise<{
   dataset: DafDataset;
@@ -121,9 +146,11 @@ async function harvestDib(): Promise<{
 
   // Grimm Grammar DiB'ning o'zida emas, qo'shni bo'limda joylashgan — nisbiy
   // yo'l (`../gg/...`) `DIB_BASE`dan yuqoriga chiqib, coerll.utexas.edu/gg/
-  // ga tushadi. Mundarija bosma indeks sahifasidan olinadi, so'ng har bir
-  // kod uchun ALOHIDA bosma sahifa yuklanadi (grammatika bilan bir xil
-  // sabab: navigatsiya chrome'i yo'q, mashq bo'sh joylari aniq belgilangan).
+  // ga tushadi.
+  //
+  // INTERAKTIV sahifa o'qiladi (`gg/gr/`), bosma emas: faqat u mashq
+  // to'plamlarining chegarasini, savollar sonini va har bo'sh joyning
+  // raqamini beradi. Javob kaliti o'sha raqamlar bo'yicha biriktiriladi.
   const indexHtml = await client.fetchText('../gg/gr/index.html');
   const codes = parseGrammarIndex(indexHtml);
   console.log(`  grammatika sahifalari: ${codes.length}`);
@@ -132,11 +159,34 @@ async function harvestDib(): Promise<{
   // o'tkazib yuboradi — bu yo'qotish jim qolmasligi uchun 92 sahifa
   // bo'ylab yig'ilib, hisobotda ko'rsatiladi.
   const skipStats: SkipStats = { skipped: 0 };
+  let answered = 0;
   for (const code of codes) {
-    const page = await client.fetchText(`../gg/pr/${code}.html`);
+    const page = await client.fetchText(`../gg/gr/${code}.html`);
     const g = parseGrammarPage(page, code, skipStats);
-    if (g) d.grammar.push(g);
+    if (!g) continue;
+
+    // Javob kaliti to'plam-bo'yicha olinadi va O'RIN RAQAMI bo'yicha
+    // biriktiriladi. `attachAnswerKey` har o'rinning aynan bir marta
+    // ishlatilishini talab qiladi — mos kelmasa u yiqiladi va butun yig'ish
+    // to'xtaydi. Bu ataylab: javobi boshqa mashqniki bo'lgan mashq
+    // javobsizidan yomonroq, chunki xato ko'rinmaydi.
+    const withAnswers: typeof g.exercises = [];
+    for (const set of parseExerciseSets(page)) {
+      const mine = g.exercises.filter((e) => e.setCode === set.code);
+      const html = await client.postForm(
+        `${GG_BASE}ex_set_proc.php?ec=${set.code}`,
+        dummyFormBody(set),
+      );
+      const key = parseAnswerKey(html, set.code);
+      if (key.length === 0 && mine.length === 0) continue;
+      withAnswers.push(...attachAnswerKey(mine, key, set.code));
+    }
+    g.exercises = withAnswers;
+    answered += withAnswers.length;
+
+    d.grammar.push(g);
   }
+  console.log(`  javobi bor mashqlar: ${answered}`);
 
   for (const k of CHAPTERS) {
     const html = await client.fetchText(`pho.php?k=${k}`);
@@ -263,6 +313,19 @@ async function main() {
     );
     thresholdFailed = true;
   }
+  // Mashqlar bo'sag'asi: to'plam-bo'yicha sanoq tekshiruvi allaqachon har
+  // to'plamni alohida qo'riqlaydi, lekin u to'plam TOPILGAN bo'lsagina
+  // ishlaydi. Formalar umuman o'qilmay qolsa (masalan manba `proc_post`ni
+  // tashlab, boshqa mexanizmga o'tsa) hech qanday to'plam bo'lmaydi, hech
+  // qanday mos kelmaslik chiqmaydi, va natija jimgina nolga tushadi — 256
+  // ta mashqni yo'qotgan xatoning aynan o'zi.
+  const exercises = dib.grammar.reduce((n, g) => n + g.exercises.length, 0);
+  if (exercises < 1100) {
+    console.error(
+      `\nDIQQAT: ${exercises} ta mashq — kutilgani ~1 180. Mashq formalari o'qilyaptimi?`,
+    );
+    thresholdFailed = true;
+  }
   if (dib.phonetics.length < 55) {
     console.error(
       `\nDIQQAT: ${dib.phonetics.length} ta talaffuz bo'limi — kutilgani ~61.`,
@@ -315,8 +378,17 @@ async function main() {
   );
   console.log(`Grammatika:   ${dib.grammar.length} sahifa`);
   const allExercises = dib.grammar.flatMap((g) => g.exercises);
+  // Javob holati bo'yicha taqsimot. «Ochiq» — manba javob bermagan mashqlar
+  // (gap birlashtirish, so'z tartiblash): ular ko'rsatiladi, lekin
+  // avtomatik tekshirilmaydi. Bu raqam yashirilmaydi — mashq dvigateli
+  // qancha mashqni o'zi baholay olishini shu belgilaydi.
+  const byStatus = (st: string) =>
+    allExercises.filter((e) => e.answerStatus === st).length;
+
   console.log(
-    `Mashq gapi:   ${allExercises.length} (javob kaliti bo'sh — Faza 2)`,
+    `Mashq gapi:   ${allExercises.length}` +
+      ` (javobli ${byStatus('FROM_SOURCE')}, qisman ${byStatus('PARTIAL')},` +
+      ` ochiq ${byStatus('OPEN')})`,
   );
   const exercisesByKind = new Map<string, number>();
   for (const ex of allExercises) {

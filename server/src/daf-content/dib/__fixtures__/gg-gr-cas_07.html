@@ -16,55 +16,359 @@
 <!--[if lt IE 7]><link rel="stylesheet" type="text/css" href="../css/ie6.css"><![endif]-->
 <style type="text/css">
 <!--
-/* mai */
-#mai {
-	position: absolute;
-	top: 0px;
-	left: 0px;
-	width: 716px;
-	margin: 0;
-	padding: 0;
+#ti_page a       { background: transparent url(../images/ti_page/cas_07.gif) 0 0 no-repeat; }
+#ti_page a:hover { background: transparent url(../images/ti_page/cas_07_o.gif) 0 0 no-repeat; }
+
+/* bsub_01_fib, bres_01_fib */
+#bsub_01_fib, #bres_01_fib {
+	top: .25em;
+	left: -2px;
 }
+
+#bsub_01_fib, #bsub_01_fib a, #bres_01_fib, #bres_01_fib a {
+	display: block;
+	cursor: pointer;
+	width: 158px;
+	height: 38px;
+}
+
+#bsub_01_fib a       { background: url(../images/but_check_answers.gif) 0 0 no-repeat; }
+#bsub_01_fib a:hover { background: url(../images/but_check_answers_o.gif) 0 0 no-repeat; }
+
+#bres_01_fib a       { background: url(../images/but_reset_questions.gif) 0 0 no-repeat; }
+#bres_01_fib a:hover { background: url(../images/but_reset_questions_o.gif) 0 0 no-repeat; }
+
+/* bsub_02_fib, bres_02_fib */
+#bsub_02_fib, #bres_02_fib {
+	top: .25em;
+	left: -2px;
+}
+
+#bsub_02_fib, #bsub_02_fib a, #bres_02_fib, #bres_02_fib a {
+	display: block;
+	cursor: pointer;
+	width: 158px;
+	height: 38px;
+}
+
+#bsub_02_fib a       { background: url(../images/but_check_answers.gif) 0 0 no-repeat; }
+#bsub_02_fib a:hover { background: url(../images/but_check_answers_o.gif) 0 0 no-repeat; }
+
+#bres_02_fib a       { background: url(../images/but_reset_questions.gif) 0 0 no-repeat; }
+#bres_02_fib a:hover { background: url(../images/but_reset_questions_o.gif) 0 0 no-repeat; }
+
+/* bsub_03_mcr, bres_03_mcr */
+#bsub_03_mcr, #bres_03_mcr {
+	top: .25em;
+	left: -2px;
+}
+
+#bsub_03_mcr, #bsub_03_mcr a, #bres_03_mcr, #bres_03_mcr a {
+	display: block;
+	cursor: pointer;
+	width: 158px;
+	height: 38px;
+}
+
+#bsub_03_mcr a       { background: url(../images/but_check_answers.gif) 0 0 no-repeat; }
+#bsub_03_mcr a:hover { background: url(../images/but_check_answers_o.gif) 0 0 no-repeat; }
+
+#bres_03_mcr a       { background: url(../images/but_reset_questions.gif) 0 0 no-repeat; }
+#bres_03_mcr a:hover { background: url(../images/but_reset_questions_o.gif) 0 0 no-repeat; }
+
 -->
 </style>
+
 <script type="text/javascript" language="javascript">
 <!--
 // global
-var v="pr";
-var page_v_offset=48;
+var v="gr";
+var page_v_offset=88;
+var scroll_time_out='';
+var g_content_code='';
+var g_scroll_flag='';
 var swf_curr='';
 //-->
 </script>
 <script type="text/javascript" src="../js/main.js"></script>
 <script type="text/javascript" src="../js/scriptaculous/prototype.js"></script>
 <script type="text/javascript" src="../js/scriptaculous/scriptaculous.js"></script>
+<script type="text/javascript" src="../js/dom_drag.js"></script>
 <script type="text/javascript" src="../js/swfobject.js"></script>
+<script type="text/javascript" src="../js/jwplayer.js"></script>
+<script type="text/javascript" src="../js/scroller.js"></script>
+
 
 </head>
+<body class="gr" onLoad="do_pngs(); start_list();">
 
-<body class="pl" onLoad="do_pngs(); start_list();">
-
-<!-- pr_wrapper-->
-<div id="pr_wrapper">
+<!-- wrapper-->
+<div id="wrapper">
 
 
-<!-- top_wrapper_pr -->
-<div id="top_wrapper_pr">
 
-<div id="ti_page_pr"><a href="javascript:alert('Category: Cases\n\nEnglish title:\ndative\n\nGerman title:\nDer Dativ');" alt="dative"><img src="../images/ti_page_pr/cas_07.gif" width="554" height="30" title="dative" alt="dative"></a></div>
-<div id="ti_gg_pr"><a href="../index.html"><img src="../images/ti_gg_pr.gif" width="185" height="30" alt="Grimm Grammar" title="Grimm Grammar"></a></div>
+<!-- top_wrapper-->
+<div id="top_wrapper">
+
+<div id="ti_page"><div><a href="#" onClick="alert('Category: Cases\n\nEnglish title:\ndative\n\nGerman title:\nDer Dativ'); return false;"  alt="dative" title="dative"></a></div></div>
+<div id="ti_gg"><div><a href="../index.html" alt="Grimm Grammar" title="Grimm Grammar"></a></div></div>
 
 </div>
-<!-- end top_wrapper_pr -->
+<!-- end top_wrapper -->
 
 
-<!-- mid_wrapper_pr -->
-<div id="mid_wrapper_pr">
+<!-- nav_wrapper-->
+<div id="nav_wrapper">
+  
+<!-- nav -->
+<ul id="nav">
+	<li id="no" class="horz">
+		<div><a href="index.html?si=no"><img src="../images/transdot.gif" alt=""></a></div>
+		<ul style="width: 140px;">
+			<li><a href="no_01.html">nouns overview</a></li>
+			<li><a href="no_02.html">nouns gender</a></li>
+			<li><a href="no_03.html">nouns plural</a></li>
+			<li><a href="no_04.html">masculine weak nouns</a></li>
+					
+		</ul>
+	</li>
+	
+	<li id="det" class="horz">
+		<div><a href="index.html?si=det"><img src="../images/transdot.gif" alt=""></a></div>
+		<ul style="width: 210px;">
+			<li><a href="det_01.html">articles</a></li>
+			<li><a href="det_02.html">der-words</a></li>
+			<li><a href="det_03.html">ein-words</a></li>
+			<li><a href="det_04.html">possessive determiners nominative</a></li>
+			<li><a href="det_05.html">possessive determiners accusative</a></li>
+			<li><a href="det_06.html">possessive determiners dative</a></li>
+			<li><a href="det_07.html">possessive determiners genitive</a></li>
+					
+		</ul>
+	</li>
+
+	<li id="v" class="horz">
+		<div><a href="index.html?si=v"><img src="../images/transdot.gif" alt=""></a></div>
+		<ul style="width: 290px;">
+			<li><a href="v_01.html">verbs overview</a></li>
+			<li><a href="v_02.html">present regular verbs</a></li>
+			<li><a href="vi_01.html">essen</a></li>
+			<li><a href="vi_02.html">fahren</a></li>
+			<li><a href="vi_04.html">gefallen</a></li>
+			<li><a href="vi_03.html">geben</a></li>
+			<li><a href="vi_05.html">haben</a></li>
+			<li><a href="vi_06.html">laufen</a></li>
+			<li><a href="vi_07.html">lesen</a></li>
+			<li><a href="vi_08.html">nehmen</a></li>
+			<li><a href="vi_09.html">schlafen</a></li>
+			<li><a href="vi_10.html">sehen</a></li>
+			<li><a href="vi_11.html">sein</a></li>
+			<li><a href="vi_12.html">sprechen</a></li>
+			<li><a href="vi_13.html">tragen</a></li>
+			<li><a href="vi_14.html">werden</a></li>
+			<li><a href="vi_15.html">wissen (also vs. kennen)</a></li>
+			<li><a href="v_04.html">separable prefix verbs</a></li>
+			<li><a href="v_05.html">inseparable prefix verbs</a></li>
+			<li><a href="vm_01.html">modal verbs - present tense</a></li>
+			<li><a href="vm_02.html">modal verbs - past tense</a></li>
+			<li><a href="vcp_01.html">conversational past </a></li>
+			<li><a href="vcp_02.html">conversational past - regular verbs</a></li>
+			<li><a href="vcp_03.html">conversational past of irregular verbs with haben</a></li>
+			<li><a href="vcp_04.html">conversational past of irregular verbs with sein</a></li>
+			<li><a href="index.html?si=v">More ...</a></li>		
+		</ul>
+	</li>
+
+	<li id="cas" class="horz">
+		<div><a href="index.html?si=cas"><img src="../images/transdot.gif" alt=""></a></div>
+		<ul style="width: 150px;">
+			<li><a href="cas_01.html">cases overview</a></li>
+			<li><a href="cas_02.html">nominative case</a></li>
+			<li><a href="cas_03.html">accusative case</a></li>
+			<li><a href="cas_04.html">telling time</a></li>
+			<li><a href="cas_05.html">days of the week </a></li>
+			<li><a href="cas_06.html">months and seasons</a></li>
+			<li><a href="cas_07.html">dative</a></li>
+			<li><a href="cas_08.html">genitive</a></li>
+			<li><a href="cas_09.html">two-way prepositions</a></li>
+					
+		</ul>
+	</li>
+
+	<li id="pro" class="horz">
+		<div><a href="index.html?si=pro"><img src="../images/transdot.gif" alt=""></a></div>
+		<ul style="width: 160px;">
+			<li><a href="pro_01.html">pronouns overview</a></li>
+			<li><a href="pro_02.html">nominative pronouns</a></li>
+			<li><a href="pro_03.html">accusative pronouns</a></li>
+			<li><a href="pro_04.html">dative pronouns</a></li>
+			<li><a href="pro_05.html">relative pronouns</a></li>
+			<li><a href="pro_07.html">demonstrative pronouns</a></li>
+					
+		</ul>
+	</li>
+
+	<li id="con" class="horz">
+		<div><a href="index.html?si=con"><img src="../images/transdot.gif" alt=""></a></div>
+		<ul style="width: 175px;">
+			<li><a href="con_01.html">conjunctions overview</a></li>
+			<li><a href="con_02.html">negation</a></li>
+			<li><a href="con_03.html">coordinating conjunctions</a></li>
+			<li><a href="con_04.html">subordinating conjunctions</a></li>
+			<li><a href="con_05.html">interrogatives</a></li>
+			<li><a href="con_06.html">word order</a></li>
+					
+		</ul>
+	</li>
+
+	<li id="adj" class="horz">
+		<div><a href="index.html?si=adj"><img src="../images/transdot.gif" alt=""></a></div>
+		<ul style="width: 230px;">
+			<li><a href="adj_01.html">adjectives overview, adjective endings</a></li>
+			<li><a href="adj_02.html">adjectives after ein-words</a></li>
+			<li><a href="adj_03.html">adjectives after der-words</a></li>
+			<li><a href="adj_04.html">adjectives unpreceded</a></li>
+			<li><a href="adj_05.html">comparative and superlative</a></li>
+					
+		</ul>
+	</li>
+	
+	<li id="adv" class="horz">
+		<div><a href="index.html?si=adv"><img src="../images/transdot.gif" alt=""></a></div>
+		<ul style="width: 270px;">
+			<li><a href="adv_01.html">adverbs of time, frequency, quantity, intensity</a></li>
+			<li><a href="adv_02.html">adverbs of manner and place</a></li>
+			<li><a href="adv_03.html">adverbs of narration</a></li>
+					
+		</ul>
+	</li>
+	
+	<li id="mis" class="horz">
+		<div><a href="index.html?si=mis"><img src="../images/transdot.gif" alt=""></a></div>
+		<ul style="width: 125px;">
+			<li><a href="mis_01.html">punctuation</a></li>
+			<li><a href="mis_02.html">word formation</a></li>
+			<li><a href="mis_03.html">false cognates</a></li>
+			<li><a href="mis_04.html">flavoring particles</a></li>
+			<li><a href="mis_05.html">spelling reform</a></li>
+					
+		</ul>
+	</li>
+</ul>
+<!-- end nav -->
+
+</div>
+<!-- end nav_wrapper -->
 
 
+<!-- mid_wrapper-->
+<div id="mid_wrapper">
 
-<!-- mai: needed for popup layer => js positions layer relative to obj_mai.offsetHeight -->
-<div id="mai">
+<!-- buttons -->
+<div id="but">
+	<div id="b_ho"><a href="../index.html" title="Home"></a></div>
+	<div id="b_si"><a href="index.html" title="Site index"></a></div>
+	<div id="b_he"><a href="help.html" title="Help"></a></div>
+	<div id="b_pr"><a href="../pr/cas_07.html" title="Print this page" target="print_view"></a></div>
+	<div id="b_se"><a href="#" onClick="toggle_pop_layer('popsearch','125','402'); return false;" title="Search this site"></a></div>
+	<div id="b_dl"><a href="../zip/cas_07.zip" title="Download zip archive: 'cas_07', 2650 KiB" onClick="return confirm_dl('cas_07','2650','a zip archive of pdf and mp3 files')"></a></div>
+	<div id="b_rs"><a href="#" onclick="proc_fsd('popfsd','','','popfsd_content','in_01_rss-feeds',1,'../',1,'12','390'); return false;"  title="RSS subscriptions"></a></div>
+</div>
+
+<!-- popsearch -->
+<div id="popsearch">
+<div id="frame_popsearch"><img src="../images/frame_popsearch.png" width="435" height ="140" alt="" class="png_hid"></div>
+<div id="popsearch_close"><a href="#" onClick="toggle_pop_layer('popsearch','',''); return false;"  title="Close search box"><img src="../images/transdot.gif" width="20" height ="20" border ="0" alt="white bullet navigation spacer" title="Close search box"></a></div>
+<div id="srch">
+<!--<form name="gs" method="get" action="http://www.google.com/u/universityoftexas" onSubmit="return validate_single('gs','q');">
+<input type="image" name="btnG" value="search" src="../images/ti_popsearch.gif" alt="Search: Grimm Grammar" title="Search: Grimm Grammar" style="vertical-align: middle; padding: 0 3px 0 0; cursor: pointer;">
+<input type="text" name="q" value=" " size="18" maxlength="50" title="Search" id="searchfield">
+<input type="hidden" name="sitesearch" value="coerll.utexas.edu/gg" checked>
+<input type="hidden" name="hl" value="en">
+<input type="hidden" name="lr" value="">
+<input type="hidden" name="ie" value="ISO-8859-1">
+<input type="hidden" name="domains" value="coerll.utexas.edu/gg">
+</form>-->
+
+            <!-- Include Javascript/No Javascript Google Custom Search Forms -->
+
+            <div class="cse-branding-bottom">
+             <!--<h2>Search THIS SITE</h2>-->
+            
+             <div class="cse-branding-form" style="display:inline;">
+              <script type="text/javascript">
+              <!-- Begin JavaScript-enabled Google CSE Search Form  -->
+              <!-- Contents hidden when JavaScript is disabled -->
+              <!--
+            
+              <!--
+               document.write('<form name="cse_searchbox" style="display:inline;" action="./search_results.php"" method="get" id="cse_searchbox">');
+               document.write('<input type="hidden" name="cx" value="006231515013251315323:snd0oa52nmi" />');
+               document.write('<input type="hidden" name="cof" value="FORID:10" />');
+               document.write('<input type="hidden" name="as_sitesearch" value="http://coerll.utexas.edu/gg" />');
+							 document.write('<input type="image" name="btnG" value="search" src="../images/ti_popsearch.gif" alt="Search: Grimm Grammar" title="Search: Grimm Grammar" style="vertical-align: middle; padding: 0 3px 0 0; cursor: pointer;">');
+							 document.write('<input type="text" name="q" size="17" maxlength="255" value="" id="cseq" />');
+               <!--document.write('<input type="submit" name="sa" value="go" />');-->
+               document.write('</form>');
+							-->
+						</script>
+            
+              <noscript>
+               <!-- Begin Disabled JavaScript Google CSE Search Form  -->
+               <!-- Contents shown only when JavaScript is disabled -->
+               <form name="cse_searchbox" action="https://www.google.com/cse" id="cse_searchbox">
+                 <label for="cseq" class="nodisplaytext">search:</label>
+                 <input type="hidden" name="cx" value="006231515013251315323:snd0oa52nmi" />
+                 <input type="hidden" name="as_sitesearch" value="https://coerll.utexas.edu/gg" />
+                 <input type="text" name="q" size="17" maxlength="255" value="" id="cseq" />
+                 <input type="submit" name="sa" value="go" />
+               </form>
+              </noscript>
+            
+             </div>
+            
+             <div class="cse-branding-logo-and-text">
+                <!--<div class="cse-branding-logo">
+                  <a href="http://www.google.com/">
+                  Google search
+                  </a>
+                </div>
+            
+                <div class="cse-branding-text">
+                   Custom Search
+                </div>-->
+             </div>
+            </div>         
+
+
+</div>
+</div>
+
+<!-- popfsd -->
+<div id="popfsd">
+<div id="popfsd_frame"><img src="../images/popfsd_frame.png" width="453" height ="523" alt="" class="png_hid"></div>
+<div id="popfsd_close"><a href="#" onClick="toggle_pop_layer('popfsd','',''); return false;" title="Close"><img src="../images/transdot.gif" width="20" height ="20" border ="0" alt="" title="Close"></a></div>
+<div id="popfsd_content"></div>
+
+<!-- popfsd_wrapscr: scrollbar -->
+<div id="popfsd_wrapscr">
+<div id="popfsd_scrollcont"><div id="popfsd_scroller" title="scroll"></div></div>
+<div id="popfsd_arrtop"><a href="#" onMouseDown ="scroll_but_handler('1'); return false;" onMouseUp ="scroll_but_handler_kill();return false;><img src="../images/popfsd_arrtop.gif" width="7" height ="9" alt="scroll up" title="scroll up"></a></div>
+<div id="popfsd_arrbot"><a href="#" onMouseDown ="scroll_but_handler('-1'); return false;" onMouseUp ="scroll_but_handler_kill();return false;><img src="../images/popfsd_arrbot.gif" width="7" height ="9" alt="scroll down" title="scroll down"></a></div>
+</div>
+<!-- end popfsd_wrapscr -->
+
+</div>
+<!-- end popfsd -->
+
+<!-- mai_wrapper-->
+<div id="mai_wrapper">
+
+<!-- mai -->
+<table id="mai">
+	<tr>
+		<td id="left_bor"><img src="../images/left_bor.gif" width="58" height ="495" alt=""></td>
+		<td id="mid">
 
 <!-- content_wrapper -->
 <div id="content_wrapper">
@@ -72,7 +376,7 @@ var swf_curr='';
 <!-- snippet: The dative case is used to describe the indirect object of a sentence. The indirect object is the recipient of the direct object. In addition to changes in the article, plural nouns also receive an -n suffix (except for nouns that already end in an -n). -->
 
 <p class="bot_050">
-<img src="../images/ico18_hermetica_9ea9bf.gif" width=14 height=13 alt="" class="img_ico_screen"><span class="h_16_8a97b2">Cases<span class="h_colon">:</span>Der Dativ</span>
+<img src="../images/ico18_hermetica_9ea9bf.gif" width="14" height ="13" alt="" class="img_ico_screen"><span class="h_16_8a97b2">Cases<span class="h_colon">:</span>Der Dativ</span>
 </p>
 
 <p class="bot_100">
@@ -125,7 +429,7 @@ The dative case is used to describe the indirect object of a sentence. The indir
 
 <!-- image: cas_07_01_money-falling.gif -->
 <div class="cen" style="padding-bottom: 1em;">
-<a href="javascript:;" onClick="open_second_win('../image_pop/cas_07_01_money-falling_pop.html','996','609','cas_07_01','yes','no','no')"><img src="../images/pages/cas_07_01_money-falling.gif" width="607" height="356" title="God gives the girl thousands of coins (click to enlarge)" alt="God gives the girl thousands of coins"></a>
+<a href="#" onClick="open_second_win('../image_pop/cas_07_01_money-falling_pop.html','996','609','cas_07_01','yes','no','no'); return false;" ><img src="../images/pages/cas_07_01_money-falling.gif" width="607" height="356" title="God gives the girl thousands of coins (click to enlarge)" alt="God gives the girl thousands of coins"></a>
 </div>
 <!-- end image -->
 
@@ -140,7 +444,7 @@ Nevertheless, in formal writing, if the pronoun appears in the same sentence as 
 
 
 <p class="bot_075">
-<img src="../images/ico_star_7886a1.gif" width=9 height=9 alt="" class="img_ico_shd"><span class="h_14_7886a1">Definite and Indefinite articles in the dative case</span>
+<img src="../images/ico_star_7886a1.gif" width="9" height ="9" alt="" class="img_ico_shd"><span class="h_14_7886a1">Definite and Indefinite articles in the dative case</span>
 </p>
 
 <p class="bot_100">
@@ -309,7 +613,7 @@ Please note that plural nouns also get an -<span class="hi_12_0057d1">n</span> s
 
 
 <p class="bot_075">
-<img src="../images/ico_star_7886a1.gif" width=9 height=9 alt="" class="img_ico_shd"><span class="h_14_7886a1">Dative prepositions</span>
+<img src="../images/ico_star_7886a1.gif" width="9" height ="9" alt="" class="img_ico_shd"><span class="h_14_7886a1">Dative prepositions</span>
 </p>
 
 <p class="bot_150">
@@ -394,7 +698,7 @@ In addition to indicating the indirect object of some sentences, the dative case
 
 
 <p class="bot_075">
-<img src="../images/ico_star_7886a1.gif" width=9 height=9 alt="" class="img_ico_shd"><span class="h_14_7886a1">Dative verbs</span>
+<img src="../images/ico_star_7886a1.gif" width="9" height ="9" alt="" class="img_ico_shd"><span class="h_14_7886a1">Dative verbs</span>
 </p>
 
 <p class="bot_100">
@@ -597,13 +901,13 @@ Here are some of the most common verbs that take the <span class="hi_12_a80000">
 
 <!-- image: cas_07_02_mod-gerdi-pretty.gif -->
 <div class="cen" style="padding-bottom: 0;">
-<a href="javascript:;" onClick="open_second_win('../image_pop/cas_07_02_mod-gerdi-pretty_pop.html','996','484','cas_07_02','yes','no','no')"><img src="../images/pages/cas_07_02_mod-gerdi-pretty.gif" width="618" height="260" title="New clothes made of gold and silk (click to enlarge)" alt="New clothes made of gold and silk"></a>
+<a href="#" onClick="open_second_win('../image_pop/cas_07_02_mod-gerdi-pretty_pop.html','996','484','cas_07_02','yes','no','no'); return false;" ><img src="../images/pages/cas_07_02_mod-gerdi-pretty.gif" width="618" height="260" title="New clothes made of gold and silk (click to enlarge)" alt="New clothes made of gold and silk"></a>
 </div>
 <!-- end image -->
 
 
 <p class="bot_075">
-<img src="../images/ico_star_7886a1.gif" width=9 height=9 alt="" class="img_ico_shd"><span class="h_14_7886a1">Word order</span>
+<img src="../images/ico_star_7886a1.gif" width="9" height ="9" alt="" class="img_ico_shd"><span class="h_14_7886a1">Word order</span>
 </p>
 
 <p class="bot_100">
@@ -668,7 +972,7 @@ When a sentence or clause contains both a dative and an accusative noun, the dat
 <form name="cas_07_01_fib" onsubmit="proc_post('/gg/ex_set_proc.php?ec=cas_07_01_fib','1','es_01_fib','cas_07_01_fib','fib','10'); return false;" style="display: inline;">
 
 <p class="bot_075">
-<img src="../images/ico18_hermetica_9ea9bf.gif" width=14 height=13 alt="" class="img_ico_screen"><span class="h_16_8a97b2">&Uuml;bung 1</span>
+<img src="../images/ico18_hermetica_9ea9bf.gif" width="14" height ="13" alt="" class="img_ico_screen"><span class="h_16_8a97b2">&Uuml;bung 1</span>
 </p>
 
 <p class="bot_150">
@@ -703,48 +1007,48 @@ Let's review what the little girl Gerdi gave all the people she met.&nbsp; Then 
 <table class="ex">
 	<tr>
 		<td class="qnum"><b>1.</b></td>
-		<td>Gerdi gibt <p class="txt_1"></p> ihr St&uuml;ck Brot.</td>
+		<td>Gerdi gibt <input name="fib_1" type="text" value="" class="txt_1"> ihr St&uuml;ck Brot.</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>2.</b></td>
-		<td>Sie schenkt <p class="txt_1"></p> ihre M&uuml;tze.</td>
+		<td>Sie schenkt <input name="fib_2" type="text" value="" class="txt_1"> ihre M&uuml;tze.</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>3.</b></td>
-		<td><p class="txt_1"></p> schenkt sie ihr Hemd und ihr Kleid.</td>
+		<td><input name="fib_3" type="text" value="" class="txt_1"> schenkt sie ihr Hemd und ihr Kleid.</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>4.</b></td>
-		<td>Gott schickt <p class="txt_1"></p> tausende von Talern vom Himmel f&uuml;r seine Gro&szlig;z&uuml;gigkeit.</td>
+		<td>Gott schickt <input name="fib_4" type="text" value="" class="txt_1"> tausende von Talern vom Himmel f&uuml;r seine Gro&szlig;z&uuml;gigkeit.</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>5.</b></td>
-		<td>Sie half <p class="txt_1"></p> im Dorf und kaufte ihnen H&auml;user, K&uuml;he und H&uuml;hner.</td>
+		<td>Sie half <input name="fib_5" type="text" value="" class="txt_1"> im Dorf und kaufte ihnen H&auml;user, K&uuml;he und H&uuml;hner.</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>6.</b></td>
-		<td>Sie kaufte <p class="txt_1"></p> eine neue Kirche.</td>
+		<td>Sie kaufte <input name="fib_6" type="text" value="" class="txt_1"> eine neue Kirche.</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>7.</b></td>
-		<td>10 Jahre sp&auml;ter wurde Gerdi eine junge Frau. Es fiel <p class="txt_1"></p> ein, dass sie nicht ihr ganzes Geld weggeben wollte.</td>
+		<td>10 Jahre sp&auml;ter wurde Gerdi eine junge Frau. Es fiel <input name="fib_7" type="text" value="" class="txt_1"> ein, dass sie nicht ihr ganzes Geld weggeben wollte.</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>8.</b></td>
-		<td>Sie half <p class="txt_1"></p> des Dorfes nicht mehr, au&szlig;er zwei Personen.</td>
+		<td>Sie half <input name="fib_8" type="text" value="" class="txt_1"> des Dorfes nicht mehr, au&szlig;er zwei Personen.</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>9.</b></td>
-		<td><p class="txt_1"></p> schenkte sie noch ganz schnell ein neues Schulhaus, und dann zog sie weg.</td>
+		<td><input name="fib_9" type="text" value="" class="txt_1"> schenkte sie noch ganz schnell ein neues Schulhaus, und dann zog sie weg.</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>10.</b></td>
-		<td>Sie hat auch <p class="txt_1"></p> eine Weltreise spendiert (pay for).</td>
+		<td>Sie hat auch <input name="fib_10" type="text" value="" class="txt_1"> eine Weltreise spendiert (pay for).</td>
 	</tr>
 </table>
 </div>
 <!-- 'check answers (submit)' button -->
-
+<div id="bsub_01_fib"><a href="#" onClick="proc_post('/gg/ex_set_proc.php?ec=cas_07_01_fib','1','es_01_fib','cas_07_01_fib','fib','10'); return false; return false;" title="Check Answers &#150; &Uuml;bung 1"></a></div>
 </form>
 
 </div>
@@ -755,7 +1059,7 @@ Let's review what the little girl Gerdi gave all the people she met.&nbsp; Then 
 <form name="cas_07_02_fib" onsubmit="proc_post('/gg/ex_set_proc.php?ec=cas_07_02_fib','1','es_02_fib','cas_07_02_fib','fib','10'); return false;" style="display: inline;">
 
 <p class="bot_075">
-<img src="../images/ico18_hermetica_9ea9bf.gif" width=14 height=13 alt="" class="img_ico_screen"><span class="h_16_8a97b2">&Uuml;bung 2</span>
+<img src="../images/ico18_hermetica_9ea9bf.gif" width="14" height ="13" alt="" class="img_ico_screen"><span class="h_16_8a97b2">&Uuml;bung 2</span>
 </p>
 
 <p class="bot_150">
@@ -771,48 +1075,48 @@ Fill in the dative prepositions in the following story to find out how Gerdi's l
 <table class="ex">
 	<tr>
 		<td class="qnum"><b>1.</b></td>
-		<td><p class="txt_1"></p> einer Woche ist sie in Hamburg angekommen.</td>
+		<td><input name="fib_1" type="text" value="" class="txt_1"> einer Woche ist sie in Hamburg angekommen.</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>2.</b></td>
-		<td>Sie wollte studieren und ging bald <p class="txt_1"></p> dem Anmeldeamt, um ihr Studium beginnen zu k&ouml;nnen.</td>
+		<td>Sie wollte studieren und ging bald <input name="fib_2" type="text" value="" class="txt_1"> dem Anmeldeamt, um ihr Studium beginnen zu k&ouml;nnen.</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>3.</b></td>
-		<td>Am n&auml;chsten Tag hat sie <p class="txt_1"></p> einer internationalen Firma ein Praktikum begonnen.</td>
+		<td>Am n&auml;chsten Tag hat sie <input name="fib_3" type="text" value="" class="txt_1"> einer internationalen Firma ein Praktikum begonnen.</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>4.</b></td>
-		<td><p class="txt_1"></p> ihrer Fakult&auml;t bekam sie auch ein super Stipendium (scholarship).</td>
+		<td><input name="fib_4" type="text" value="" class="txt_1"> ihrer Fakult&auml;t bekam sie auch ein super Stipendium (scholarship).</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>5.</b></td>
-		<td><p class="txt_1"></p> ihrem ersten Seminar suchte sie eine Wohnung.</td>
+		<td><input name="fib_5" type="text" value="" class="txt_1"> ihrem ersten Seminar suchte sie eine Wohnung.</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>6.</b></td>
-		<td>Sie kannte niemanden <p class="txt_1"></p> ihren Kommilitonen (classmates) in ihren Seminaren.</td>
+		<td>Sie kannte niemanden <input name="fib_6" type="text" value="" class="txt_1"> ihren Kommilitonen (classmates) in ihren Seminaren.</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>7.</b></td>
-		<td>Aber sie wollte <p class="txt_1"></p> ihnen &uuml;berhaupt nicht sprechen; sie hatte nur f&uuml;r den Professor Zeit! Sie ist sehr flei&szlig;ig geworden!</td>
+		<td>Aber sie wollte <input name="fib_7" type="text" value="" class="txt_1"> ihnen &uuml;berhaupt nicht sprechen; sie hatte nur f&uuml;r den Professor Zeit! Sie ist sehr flei&szlig;ig geworden!</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>8.</b></td>
-		<td>Jeden Nachmittag rennt sie <p class="txt_1"></p> dem Klassenzimmer und schaltet ihren Computer an, um ihre Aktien (stocks) zu kontrollieren.</td>
+		<td>Jeden Nachmittag rennt sie <input name="fib_8" type="text" value="" class="txt_1"> dem Klassenzimmer und schaltet ihren Computer an, um ihre Aktien (stocks) zu kontrollieren.</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>9.</b></td>
-		<td>Ihre Aktien steigen regelm&auml;&szlig;ig und sie verdient (earns) immer mehr Geld <p class="txt_1"></p> ihrer Investition.</td>
+		<td>Ihre Aktien steigen regelm&auml;&szlig;ig und sie verdient (earns) immer mehr Geld <input name="fib_9" type="text" value="" class="txt_1"> ihrer Investition.</td>
 	</tr>
 	<tr>
 		<td class="qnum"><b>10.</b></td>
-		<td><p class="txt_1"></p> ihrem Jobinterview ist sie noch hochn&auml;siger geworden!</td>
+		<td><input name="fib_10" type="text" value="" class="txt_1"> ihrem Jobinterview ist sie noch hochn&auml;siger geworden!</td>
 	</tr>
 </table>
 </div>
 <!-- 'check answers (submit)' button -->
-
+<div id="bsub_02_fib"><a href="#" onClick="proc_post('/gg/ex_set_proc.php?ec=cas_07_02_fib','1','es_02_fib','cas_07_02_fib','fib','10'); return false; return false;" title="Check Answers &#150; &Uuml;bung 2"></a></div>
 </form>
 
 </div>
@@ -823,7 +1127,7 @@ Fill in the dative prepositions in the following story to find out how Gerdi's l
 <form name="cas_07_03_mcr" onsubmit="proc_post('/gg/ex_set_proc.php?ec=cas_07_03_mcr','1','es_03_mcr','cas_07_03_mcr','mcr','12'); return false;" style="display: inline;">
 
 <p class="bot_075">
-<img src="../images/ico18_hermetica_9ea9bf.gif" width=14 height=13 alt="" class="img_ico_screen"><span class="h_16_8a97b2">&Uuml;bung 3</span>
+<img src="../images/ico18_hermetica_9ea9bf.gif" width="14" height ="13" alt="" class="img_ico_screen"><span class="h_16_8a97b2">&Uuml;bung 3</span>
 </p>
 
 <p class="bot_150">
@@ -991,7 +1295,7 @@ Select the right dative verbs (or their correct conjugation) from the options pr
 </table>
 </div>
 <!-- 'check answers (submit)' button -->
-
+<div id="bsub_03_mcr"><a href="#" onClick="proc_post('/gg/ex_set_proc.php?ec=cas_07_03_mcr','1','es_03_mcr','cas_07_03_mcr','mcr','12'); return false; return false;" title="Check Answers &#150; &Uuml;bung 3"></a></div>
 </form>
 
 </div>
@@ -1001,47 +1305,109 @@ Select the right dative verbs (or their correct conjugation) from the options pr
 </div>
 <!-- end EXERCISES, ex_wrapper -->
 
-<!-- foo_wrapper_pr -->
-<div id="foo_wrapper_pr">
+		</td>
+		<td id="right_bor"><img src="../images/right_bor.gif" width="58" height ="495" alt=""></td>
+	</tr>
+</table>
 
-<!-- menu_foo_pr -->
-<ul id="menu_foo_pr">
+<!-- foo_wrapper-->
+<div id="foo_wrapper">
+
+<!-- foo_img -->
+<div id="foo_img"><img src="../images/foo_img.png" width="936" height ="52" alt="foot" class="png"></div>
+
+<!-- menu_foo -->
+<ul id="menu_foo">
     <li id="mf_cc"><a rel="license" href="http://creativecommons.org/licenses/by/4.0/"><img alt="Creative Commons License" style="border-width:0" src="//i.creativecommons.org/l/by/4.0/80x15.png" /></a></li>
-	<li><span class="sm_sepbull">&#149;</span></li>
-	<li><a href="http://coerll.utexas.edu/coerll/" target="offsite" title="Center for Open Educational Resources and Language Learning">COERLL</a></li>
-	<li><span class="sm_sepbull">&#149;</span></li>
-	<li><a href="http://www.utexas.edu/" target="offsite" title="UT Austin">UT Austin</a></li>
-	<li><span class="sm_sepbull">&#149;</span></li>
-	<li><a href="about.html" title="About this website">About</a></li>
-	<li><span class="sm_sepbull">&#149;</span></li>
-	<li><a href="characters.html" title="Fairy tale characters">Characters</a></li>
-	<li><span class="sm_sepbull">&#149;</span></li>
-	<li><a href="http://coerll.utexas.edu/gg/rss_photocast.php?pt=htm" title="Illustrations">Illustrations</a></li>
-	<li><span class="sm_sepbull">&#149;</span></li>
-	<li><a href="help.html" title="Website help">Help</a></li>
-	<li><span class="sm_sepbull">&#149;</span></li>
-	<li><a href="credits.html" title="Website credits">Credits</a></li>
-	<li><span class="sm_sepbull">&#149;</span></li>
-	<li><a href="index.html" title="Site index">Site Index</a></li>
-	<li><span class="sm_sepbull">&#149;</span></li>
-	<li class="rit_end"><a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#119;&#119;&#119;&#64;&#116;&#108;&#116;&#99;&#46;&#108;&#97;&#46;&#117;&#116;&#101;&#120;&#97;&#115;&#46;&#101;&#100;&#117;&#63;&#115;&#117;&#98;&#106;&#101;&#99;&#116;&#61;&#71;&#114;&#105;&#109;&#109;&#32;&#71;&#114;&#97;&#109;&#109;&#97;&#114;&#32;&#99;&#111;&#109;&#109;&#101;&#110;&#116;&#47;&#113;&#117;&#101;&#115;&#116;&#105;&#111;&#110;" title="Send email comment or question.">&#75;&#111;&#110;&#116;&#97;&#107;&#116;</a></li>
+	<li id="mf_tl"><a href="http://coerll.utexas.edu/coerll/" target="offsite" title="Center for Open Educational Resources and Language Learning"></a></li>
+	<li id="mf_ut"><a href="http://www.utexas.edu/" target="offsite" title="UT Austin"></a></li>
+	<li id="mf_ab"><a href="about.html" title="About this website"></a></li>
+	<li id="mf_ch"><a href="characters.html" title="Fairy tale characters"></a></li>
+	<li id="mf_il"><a href="http://coerll.utexas.edu/gg/rss_photocast.php?pt=htm" title="Illustrations"></a></li>
+	<li id="mf_cr"><a href="credits.html" title="Website credits"></a></li>	
+	<li id="mf_ko"><a href="mailto:Grimm Grammar <info@coerll.utexas.edu>?subject=Website comment/question" title="Send email comment or question."></a></li>
 </ul>
 
+<!-- shapez -->
+<script type="text/javascript" language="javascript">
+<!--
+document.write(display_shapez('../','shapez'));
+if(supports_canvas()){	
+		if(	(navigator.userAgent.match(/Android/i)) || 
+				(navigator.userAgent.match(/iPhone/i)) || 
+				(navigator.userAgent.match(/iPod/i)) || 
+				(navigator.userAgent.match(/iPad/i)) || 
+				(navigator.userAgent.match(/opera mini/i)) || 
+				(navigator.userAgent.match(/blackberry/i))|| 
+				(navigator.userAgent.match(/opera mini/i)) || 
+				(navigator.userAgent.match(/pre\/|palm os|palm|hiptop|avantgo|plucker|xiino|blazer|elaine/i)) || 
+				(navigator.userAgent.match(/mini 9.5|vx1000|lge |m800|e860|u940|ux840|compal|wireless| mobi|ahong|lg380|lgku|lgu900|lg210|lg47|lg920|lg840|lg370|sam-r|mg50|s55|g83|t66|vx400|mk99|d615|d763|el370|sl900|mp500|samu3|samu4|vx10|xda_|samu5|samu6|samu7|samu9|a615|b832|m881|s920|n210|s700|c-810|_h797|mob-x|sk16d|848b|mowser|s580|r800|471x|v120|rim8|c500foma:|160x|x160|480x|x640|t503|w839|i250|sprint|w398samr810|m5252|c7100|mt126|x225|s5330|s820|htil-g1|fly v71|s302|-x113|novarra|k610i|-three|8325rc|8352rc|sanyo|vx54|c888|nx250|n120|mtk |c5588|s710|t880|c5005|i;458x|p404i|s210|c5100|teleca|s940|c500|s590|foma|samsu|vx8|vx9|a1000|_mms|myx|a700|gu1100|bc831|e300|ems100|me701|me702m-three|sd588|s800|8325rc|ac831|mw200|brew |d88|htc\/|htc_touch|355x|m50|km100|d736|p-9521|telco|sl74|ktouch|m4u\/|me702|8325rc|kddi|phone|lg |sonyericsson|samsung|240x|x320|vx10|nokia|sony cmd|motorola|up.browser|up.link|mmp|symbian|smartphone|midp|wap|vodafone|o2|pocket|kindle|mobile|psp|treo/i))
+				) {
+
+		var text= getElementsByClassName('aud_txtt');
+		var text2= getElementsByClassName('aud_txt');
+		
+		if(!(navigator.userAgent.match(/android 2.1/i))) {
+			for(var i=0;i<text.length;i++)  {
+				//if(!(navigator.userAgent.match(/2.1/i))) {
+					text[i].style.marginTop="20px";
+				//}
+			}
+			
+			for(var i=0;i<text2.length;i++)  {
+				//if(!(navigator.userAgent.match(/2.1/i))) {
+					text2[i].style.marginTop="20px";
+				//}
+			}
+		}else {
+			for(var i=0;i<text.length;i++)  {
+				//if(!(navigator.userAgent.match(/2.1/i))) {
+					text[i].style.marginTop="5px";
+				//}
+			}
+			
+			for(var i=0;i<text2.length;i++)  {
+				//if(!(navigator.userAgent.match(/2.1/i))) {
+					text2[i].style.marginTop="5px";
+				//}
+			}
+		}
+		
+	}
+}
+
+function getElementsByClassName(classname, node)  {
+    if(!node) node = document.getElementsByTagName("body")[0];
+    var a = [];
+    var re = new RegExp('\\b' + classname + '\\b');
+    var els = node.getElementsByTagName("*");
+    for(var i=0,j=els.length; i<j; i++)
+        if(re.test(els[i].className))a.push(els[i]);
+    return a;
+}
+
+//-->
+</script>
 
 </div>
-<!-- end foo_wrapper_home -->
+<!-- end foo_wrapper -->
 
 </div>
-<!-- end mai -->
-
-
-</div>
-<!-- end mid_wrapper_pr -->
+<!-- end mai_wrapper -->
 
 </div>
-<!-- end pr_wrapper -->
+<!-- end mid_wrapper -->
+
+</div>
+<!-- end wrapper -->
 
 
+<script type="text/javascript" language="javascript">
+<!--
+new Draggable('popsearch',{zindex:'300'});
+new Draggable('popfsd',{zindex:'400',handle:'popfsd_frame'});
+//-->
+</script>
 
 <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){

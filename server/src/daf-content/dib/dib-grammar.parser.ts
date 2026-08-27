@@ -6,6 +6,7 @@ import type {
 } from '../dataset.types';
 import { GRAMMAR_LEVEL } from '../grammar-levels';
 import { parseAudSections, stripTags } from './aud-section.parser';
+import { parseExerciseSets } from './dib-exercise-set.parser';
 import { DIB_LICENSE, DIB_ATTRIBUTION } from './dib-license';
 
 const CODE_RE = /href="(?:\.\.\/gr\/)?([a-z]+_\d+)\.html"/g;
@@ -18,7 +19,55 @@ const QNUM_ROW_RE = /^\s*<td class="qnum">/;
 // `<td><b>N.</b></td>` bilan raqamlanadi — span shu qatordan ham ochiladi.
 const BARE_NUM_ROW_RE = /^\s*<td><b>\d+\.?<\/b>\.?<\/td>/;
 const MC_VERT_OPEN = '<table class="mc_vert">';
-const CLOZE_BLANK_RE = /<p class="txt_1"><\/p>/g;
+const CLOZE_BLANK_RE = /<p class="txt_1"[^>]*><\/p>/g;
+/**
+ * Interaktiv sahifadagi bo'sh joy: `<input name="fib_7" class="txt_1">`.
+ *
+ * FAQAT `txt_1`. `txt_2` — REORDER'ning javob qatori, ya'ni gap ichidagi
+ * bo'sh joy emas, butun javob uchun bitta chiziq. Uni ham bo'sh joyga
+ * aylantirish REORDER'ni GAP deb ko'rsatib yuboradi (tur `txt_1` borligi
+ * bilan aniqlanadi) va 10 ta tartiblash mashqi yo'qoladi.
+ */
+const INPUT_BLANK_RE = /<input\b[^>]*class="txt_1"[^>]*>/gi;
+const INPUT_NAME_RE = /name="(?:fib|mc)_(\d+)"/i;
+/** Bo'sh joyning manbadagi tartib raqami — javob kalitiga kalit. */
+const SLOT_ATTR_RE = /<p class="txt_1" data-slot="(\d+)"><\/p>/g;
+/** REORDER javob qatori — butun mashqqa bitta o'rin. */
+const REORDER_SLOT_RE =
+  /<input\b[^>]*name="fib_(\d+)"[^>]*class="txt_2"[^>]*>/i;
+const MC_SLOT_RE = /name="mc_(\d+)"/i;
+
+/**
+ * Interaktiv sahifani bosma sahifa shakliga keltiradi — LEKIN bo'sh
+ * joyning raqamini saqlab qoladi.
+ *
+ * Bosma versiyada bo'sh joy `<p class="txt_1"></p>`, ya'ni ANONIM. Shuning
+ * uchun javoblarni faqat tartib bo'yicha biriktirish mumkin edi, va bitta
+ * xato siljish butun to'plamning javoblarini buzardi. Interaktiv versiyada
+ * esa har bo'sh joy o'z raqami bilan keladi (`name="fib_7"`) va o'sha raqam
+ * javob kalitidagi o'rinni bevosita ko'rsatadi.
+ */
+function normalizeBlanks(html: string): string {
+  return html.replace(INPUT_BLANK_RE, (tag) => {
+    const n = INPUT_NAME_RE.exec(tag)?.[1];
+    return n
+      ? `<p class="txt_1" data-slot="${n}"></p>`
+      : '<p class="txt_1"></p>';
+  });
+}
+
+/** Mashqning javob kalitidagi o'rinlari, hujjat tartibida. */
+function slotsOf(spanHtml: string): number[] {
+  const blanks = [...spanHtml.matchAll(SLOT_ATTR_RE)].map((m) => Number(m[1]));
+  if (blanks.length > 0) return blanks;
+
+  const reorder = REORDER_SLOT_RE.exec(spanHtml);
+  if (reorder) return [Number(reorder[1])];
+
+  const mc = MC_SLOT_RE.exec(spanHtml);
+  return mc ? [Number(mc[1])] : [];
+}
+
 const WB_TABLE_RE = /<table class="wb">([\s\S]*?)<\/table>/;
 const WB_CELL_RE = /<td([^>]*)>([\s\S]*?)<\/td>/g;
 // Bosh sahifa tepasidagi «Toifa:Sarlavha» yo'l belgisi shu span bilan
@@ -155,24 +204,52 @@ export interface SkipStats {
  * Sahifadagi BARCHA `<table class="ex">` bloklari o'qiladi (faqat birinchisi
  * emas).
  */
+/**
+ * Mashqlar TO'PLAM bo'yicha o'qiladi, sahifa bo'yicha emas.
+ *
+ * Avval butun sahifadagi `<table class="ex">` bloklari bir qopga
+ * yig'ilardi. Bu ikki narsani yo'qotdi: qaysi mashq qaysi to'plamga
+ * tegishli ekani (javob kalitini biriktirib bo'lmaydi), va manba e'lon
+ * qilgan savollar soni bilan solishtirish imkoni (256 ta mashq shuning
+ * uchun jimgina yo'qolgan edi).
+ *
+ * Har mashq o'z to'plamining kodini olib yuradi. `id` ham to'plam ichida
+ * raqamlanadi, sahifa bo'ylab emas — shunda bitta to'plamning o'zgarishi
+ * qo'shni to'plamning identifikatorlarini surib yubormaydi.
+ */
 function exercisesOf(
   html: string,
   code: string,
   skipStats?: SkipStats,
 ): GapExercise[] {
-  const exBlocks = sliceExerciseTables(html);
-  const fromTables = exBlocks
-    .flatMap((block) => exerciseSpans(block))
-    .map((rows) => spanExercise(rows, code, skipStats))
-    .filter((e): e is Omit<GapExercise, 'id'> => e !== null);
+  return parseExerciseSets(html).flatMap((set): GapExercise[] => {
+    const setHtml = normalizeBlanks(set.html);
 
-  const cloze = sliceCloze(html);
-  const all =
-    cloze !== null
-      ? [...fromTables, clozeExercise(cloze, html, code)]
-      : fromTables;
+    type Parsed = Omit<GapExercise, 'id' | 'setCode'>;
+    const fromTables: Parsed[] = [];
+    for (const block of sliceExerciseTables(setHtml)) {
+      for (const rows of exerciseSpans(block)) {
+        const e = spanExercise(rows, code, skipStats);
+        if (e !== null)
+          fromTables.push({ ...e, slots: slotsOf(rows.join('')) });
+      }
+    }
 
-  return all.map((e, i) => ({ ...e, id: `${code}_fib_${i + 1}` }));
+    const cloze = sliceCloze(setHtml);
+    const all: Parsed[] =
+      cloze !== null
+        ? [
+            ...fromTables,
+            { ...clozeExercise(cloze, setHtml, code), slots: slotsOf(cloze) },
+          ]
+        : fromTables;
+
+    return all.map((e, i) => ({
+      ...e,
+      id: `${set.code}_${i + 1}`,
+      setCode: set.code,
+    }));
+  });
 }
 
 /**
@@ -240,7 +317,7 @@ function spanExercise(
   rows: string[],
   code: string,
   skipStats?: SkipStats,
-): Omit<GapExercise, 'id'> | null {
+): Omit<GapExercise, 'id' | 'setCode' | 'slots'> | null {
   const rawSpan = rows.join(' ');
   if (rawSpan.includes(MC_VERT_OPEN)) {
     return mcExercise(rawSpan, code);
@@ -257,7 +334,7 @@ function spanExercise(
       kind: 'GAP',
       sentenceDe,
       blankCount: blankCountOf(sentenceDe),
-      answer: null,
+      answers: null,
       answerStatus: 'MISSING',
       grammarCode: code,
     };
@@ -272,16 +349,34 @@ function spanExercise(
     .map((t) => t.trim())
     .filter(Boolean);
 
+  // Ikkitadan kam token — tartiblanadigan hech narsa yo'q. Lekin bu mashq
+  // yo'q degani emas: `con_03` va `vpp_01` da bunday span aslida OCHIQ
+  // JAVOBLI topshiriq — «bu ikki gapni birlashtiring», bitta "token" ichida
+  // ikkita to'liq gap. Uni tashlab yuborish 16 ta haqiqiy mashqni
+  // yo'qotardi, va javob kalitidagi o'rinlari egasiz qolardi.
+  //
+  // Mashq ekanining belgisi — JAVOB QATORI (`txt_2` kiritish maydoni).
+  // Qatorsiz span mashq emas (masalan yolg'iz so'zlovchi nomi yoki
+  // ajratuvchi qator) va u haqiqatan o'tkazib yuboriladi.
   if (tokens.length < 2) {
-    if (skipStats) skipStats.skipped++;
-    return null;
+    if (!/class="txt_2"/i.test(rawSpan)) {
+      if (skipStats) skipStats.skipped++;
+      return null;
+    }
+    return {
+      kind: 'FREE_WRITE',
+      sentenceDe: stripTags(promptHtml),
+      answers: null,
+      answerStatus: 'MISSING',
+      grammarCode: code,
+    };
   }
 
   return {
     kind: 'REORDER',
     sentenceDe: stripTags(promptHtml),
     tokens,
-    answer: null,
+    answers: null,
     answerStatus: 'MISSING',
     grammarCode: code,
   };
@@ -300,7 +395,7 @@ function spanExercise(
 function mcExercise(
   rawSpan: string,
   code: string,
-): Omit<GapExercise, 'id'> | null {
+): Omit<GapExercise, 'id' | 'setCode' | 'slots'> | null {
   const withoutNumberCell = rawSpan.replace(
     /^\s*<td[^>]*>[\s\S]*?<\/td>\s*/,
     '',
@@ -323,14 +418,20 @@ function mcExercise(
     .map((m) => stripTags(m[1]))
     .filter(Boolean);
 
-  if (!sentenceDe.includes('___') || options.length < 2) return null;
+  // Bo'sh joy TALAB QILINMAYDI. Manbada MC ikki xil keladi: gapda `___`
+  // bo'lgani («Wir haben ___ statt eines Königs»), va butun gap berilib
+  // to'g'ri o'zgartirish tanlanadigani («Zuerst holt der Mann… → a. Zuerst
+  // wird… geholt»). Ikkinchisi ham haqiqiy Goethe formati. `___` ni shart
+  // qilib qo'ygan versiya 9 sahifadagi 100 ta MC'ni jimgina tashlab
+  // yuborardi, va 6 sahifa butunlay mashqsiz qolardi.
+  if (!sentenceDe || options.length < 2) return null;
 
   return {
     kind: 'MC',
     sentenceDe,
     blankCount: blankCountOf(sentenceDe),
     options,
-    answer: null,
+    answers: null,
     answerStatus: 'MISSING',
     grammarCode: code,
   };
@@ -386,7 +487,7 @@ function clozeExercise(
   clozeHtml: string,
   fullHtml: string,
   code: string,
-): Omit<GapExercise, 'id'> {
+): Omit<GapExercise, 'id' | 'setCode' | 'slots'> {
   const sentenceDe = stripTags(clozeHtml.replace(CLOZE_BLANK_RE, ' ___ '));
   const wordBank = wordBankOf(fullHtml);
 
@@ -395,7 +496,7 @@ function clozeExercise(
     sentenceDe,
     blankCount: blankCountOf(sentenceDe),
     ...(wordBank.length > 0 ? { wordBank } : {}),
-    answer: null,
+    answers: null,
     answerStatus: 'MISSING',
     grammarCode: code,
   };
