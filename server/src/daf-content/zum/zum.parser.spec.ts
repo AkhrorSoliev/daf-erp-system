@@ -75,13 +75,15 @@ describe('parseCategoryMembers', () => {
     ]);
   });
 
-  it('bo\'sh javobda bo\'sh ro\'yxat', () => {
-    expect(parseCategoryMembers('{"query":{"categorymembers":[]}}')).toEqual([]);
+  it("bo'sh javobda bo'sh ro'yxat", () => {
+    expect(parseCategoryMembers('{"query":{"categorymembers":[]}}')).toEqual(
+      [],
+    );
   });
 });
 
 describe('parseWikitext', () => {
-  it('H5P id\'larini va darajani oladi', () => {
+  it("H5P id'larini va darajani oladi", () => {
     const p = parseWikitext(WIKITEXT, 'Adjektive - Antonyme - 1');
     expect(p.h5pIds).toEqual([39679, 30963]);
     expect(p.level).toBe('A1.1');
@@ -92,12 +94,12 @@ describe('parseWikitext', () => {
     expect(p.topics).toEqual(['Adjektive']);
   });
 
-  it('darajasi ko\'rsatilmagan sahifa uchun null', () => {
+  it("darajasi ko'rsatilmagan sahifa uchun null", () => {
     const p = parseWikitext('{{h5p-zum|id=1}}', 'X');
     expect(p.level).toBeNull();
   });
 
-  it('A2 toifasini A2.1 ga o\'giradi', () => {
+  it("A2 toifasini A2.1 ga o'giradi", () => {
     expect(parseWikitext('[[Kategorie:A2]]', 'X').level).toBe('A2.1');
   });
 });
@@ -115,7 +117,7 @@ describe('parseWikitextResponse', () => {
     expect(fromResponse.topics).toEqual(['Adjektive']);
   });
 
-  it('konvert buzilgan yoki vikimatn yo\'q bo\'lsa, xato tashlamay bo\'sh sahifa qaytaradi', () => {
+  it("konvert buzilgan yoki vikimatn yo'q bo'lsa, xato tashlamay bo'sh sahifa qaytaradi", () => {
     expect(parseWikitextResponse('{bu json emas', 'X')).toEqual({
       title: 'X',
       h5pIds: [],
@@ -128,7 +130,9 @@ describe('parseWikitextResponse', () => {
       level: null,
       topics: [],
     });
-    expect(parseWikitextResponse('{"error":{"code":"missingtitle"}}', 'X')).toEqual({
+    expect(
+      parseWikitextResponse('{"error":{"code":"missingtitle"}}', 'X'),
+    ).toEqual({
       title: 'X',
       h5pIds: [],
       level: null,
@@ -147,11 +151,11 @@ describe('parseH5pPage', () => {
     expect(e.attribution).toContain('C Pannen');
   });
 
-  it('H5P ma\'lumoti yo\'q sahifada null', () => {
+  it("H5P ma'lumoti yo'q sahifada null", () => {
     expect(parseH5pPage('<html></html>')).toBeNull();
   });
 
-  it('litsenziyasi yo\'q mashqni o\'tkazmaydi', () => {
+  it("litsenziyasi yo'q mashqni o'tkazmaydi", () => {
     const noLic = H5P_PAGE.replace('"license":"CC BY 4.0",', '');
     expect(parseH5pPage(noLic)).toBeNull();
   });

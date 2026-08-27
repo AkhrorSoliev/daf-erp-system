@@ -4,10 +4,13 @@ import { DIB_LICENSE, DIB_ATTRIBUTION } from './dib-license';
 
 const AUDIO_RE = /voc_(\d{2})_(\d{2})_[A-Za-z0-9_-]+\.mp3/g;
 const TITLE_RE = /class="hi_12_0057d1">([^<]*)</g;
-const ROW_RE = /<tr[^>]*vtr_over[^>]*>\s*<td>([\s\S]*?)<\/td>\s*<td>([\s\S]*?)<\/td>/g;
+const ROW_RE =
+  /<tr[^>]*vtr_over[^>]*>\s*<td>([\s\S]*?)<\/td>\s*<td>([\s\S]*?)<\/td>/g;
 
 function clean(s: string): string {
-  return decodeEntities(s.replace(/<[^>]*>/g, '')).replace(/\s+/g, ' ').trim();
+  return decodeEntities(s.replace(/<[^>]*>/g, ''))
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
@@ -18,10 +21,7 @@ function clean(s: string): string {
  * `<td>` juftlari. Sahifaning yuqorisidagi navigatsiya ro'yxatida ham
  * sarlavha spani bor — u birinchi mp3 dan oldin turgani uchun kesiladi.
  */
-export function parseVocabPage(
-  html: string,
-  chapter: number,
-): LexemeSection[] {
+export function parseVocabPage(html: string, chapter: number): LexemeSection[] {
   const marks = [...html.matchAll(AUDIO_RE)];
   if (marks.length === 0) return [];
 
@@ -29,7 +29,8 @@ export function parseVocabPage(
 
   for (let i = 0; i < marks.length; i++) {
     const start = marks[i].index ?? 0;
-    const end = i + 1 < marks.length ? (marks[i + 1].index ?? html.length) : html.length;
+    const end =
+      i + 1 < marks.length ? (marks[i + 1].index ?? html.length) : html.length;
     const chunk = html.slice(start, end);
     const file = marks[i][0];
 

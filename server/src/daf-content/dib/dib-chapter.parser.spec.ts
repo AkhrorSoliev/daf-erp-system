@@ -30,13 +30,13 @@ describe('parseChapterPage', () => {
   it('bir xil kod ikki marta chiqsa, bir marta qaytaradi', () => {
     const dup = TOC.replace(
       '</table></div>\n<div class="bot_000">\n<img src="images/ti_grammar_r.gif"',
-      '<tr><td><a href="http://coerll.utexas.edu/gg/gr/vi_05.html">haben</a></td></tr>'
-        + '</table></div>\n<div class="bot_000">\n<img src="images/ti_grammar_r.gif"',
+      '<tr><td><a href="http://coerll.utexas.edu/gg/gr/vi_05.html">haben</a></td></tr>' +
+        '</table></div>\n<div class="bot_000">\n<img src="images/ti_grammar_r.gif"',
     );
     expect(parseChapterPage(dup, 1).grammarFocus).toEqual(['no_02', 'vi_05']);
   });
 
-  it('grammatika havolasi yo\'q sahifada bo\'sh ro\'yxat', () => {
+  it("grammatika havolasi yo'q sahifada bo'sh ro'yxat", () => {
     const c = parseChapterPage('<html></html>', 7);
     expect(c).toEqual({ chapter: 7, grammarFocus: [], grammarRecommended: [] });
   });
