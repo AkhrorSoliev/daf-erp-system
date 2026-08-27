@@ -4,7 +4,7 @@ import { parseGrammarIndex, parseGrammarPage } from './dib-grammar.parser';
 import type { SkipStats } from './dib-grammar.parser';
 
 const REAL = readFileSync(
-  join(__dirname, '__fixtures__', 'gg-pr-vi_05.html'),
+  join(__dirname, '__fixtures__', 'gg-gr-vi_05.html'),
   'utf8',
 );
 
@@ -13,15 +13,15 @@ const REAL = readFileSync(
 // ham haqiqiy sahifa: fixture o'ylab topilsa, manbada uch xil mashq formati
 // borligi ko'rinmay qolardi (Fix round 1 — task-4-report.md).
 const REORDER_PAGE = readFileSync(
-  join(__dirname, '__fixtures__', 'gg-pr-vsub_02.html'),
+  join(__dirname, '__fixtures__', 'gg-gr-vsub_02.html'),
   'utf8',
 );
 const CLOZE_PAGE = readFileSync(
-  join(__dirname, '__fixtures__', 'gg-pr-adv_03.html'),
+  join(__dirname, '__fixtures__', 'gg-gr-adv_03.html'),
   'utf8',
 );
 const NO_DIALOGUE_PAGE = readFileSync(
-  join(__dirname, '__fixtures__', 'gg-pr-cas_07.html'),
+  join(__dirname, '__fixtures__', 'gg-gr-cas_07.html'),
   'utf8',
 );
 // `cas_06` — 92 sahifalik to'liq yig'ishda topilgan TO'RTINCHI mashq
@@ -31,7 +31,7 @@ const NO_DIALOGUE_PAGE = readFileSync(
 // faqat so'zlovchi nomini olardi, haqiqiy bo'sh joyni ko'rmasdi va uni bo'sh
 // `tokens` bilan REORDER deb noto'g'ri belgilardi.
 const MULTI_ROW_PAGE = readFileSync(
-  join(__dirname, '__fixtures__', 'gg-pr-cas_06.html'),
+  join(__dirname, '__fixtures__', 'gg-gr-cas_06.html'),
   'utf8',
 );
 // `con_04` — 92 sahifalik to'liq yig'ishda topilgan BESHINCHI mashq formati:
@@ -43,7 +43,7 @@ const MULTI_ROW_PAGE = readFileSync(
 // GAP) — bu `sliceExerciseTable`ning bitta `indexOf` bilan faqat birinchi
 // blokni olishi kabi ikkinchi defektni ham fosh qildi.
 const MC_PAGE = readFileSync(
-  join(__dirname, '__fixtures__', 'gg-pr-con_04.html'),
+  join(__dirname, '__fixtures__', 'gg-gr-con_04.html'),
   'utf8',
 );
 // `cas_03` — 92 sahifalik to'liq yig'ishda topilgan holat: sahifada UCHTA
@@ -52,7 +52,7 @@ const MC_PAGE = readFileSync(
 // tekshiruvi hech qachon ishlamasdi — 15 bo'sh joyli cloze butunlay
 // yo'qolardi. Fixture haqiqiy sahifa (Der Akkusativ).
 const BOTH_FORMATS_PAGE = readFileSync(
-  join(__dirname, '__fixtures__', 'gg-pr-cas_03.html'),
+  join(__dirname, '__fixtures__', 'gg-gr-cas_03.html'),
   'utf8',
 );
 
@@ -117,7 +117,7 @@ describe('parseGrammarPage — haqiqiy sahifada', () => {
   it("14 ta mashq gapini bo'sh joy belgisi bilan beradi", () => {
     const p = parseGrammarPage(REAL, 'vi_05')!;
     expect(p.exercises).toHaveLength(14);
-    expect(p.exercises[0].id).toBe('vi_05_fib_1');
+    expect(p.exercises[0].id).toBe('vi_05_01_fib_1');
     expect(p.exercises[0].kind).toBe('GAP');
     expect(p.exercises[0].sentenceDe).toBe(
       'Schneewittchen ___ eine neue Karriere. Sie ist Rechtsanwältin für Menschenrechte.',
@@ -128,7 +128,7 @@ describe('parseGrammarPage — haqiqiy sahifada', () => {
   it("javob kalitini bo'sh qoldiradi", () => {
     const p = parseGrammarPage(REAL, 'vi_05')!;
     for (const ex of p.exercises) {
-      expect(ex.answer).toBeNull();
+      expect(ex.answers).toBeNull();
       expect(ex.answerStatus).toBe('MISSING');
     }
   });
@@ -156,7 +156,7 @@ describe("parseGrammarPage — so'z tartiblash formati (vsub_02)", () => {
     for (const ex of reorder) {
       expect(ex.tokens).toBeDefined();
       expect(ex.tokens!.length).toBeGreaterThan(0);
-      expect(ex.answer).toBeNull();
+      expect(ex.answers).toBeNull();
       expect(ex.answerStatus).toBe('MISSING');
     }
   });
@@ -174,7 +174,7 @@ describe("parseGrammarPage — so'z tartiblash formati (vsub_02)", () => {
       expect(ex.sentenceDe).toContain('___');
       expect(ex.options).toBeDefined();
       expect(ex.options!.length).toBeGreaterThanOrEqual(2);
-      expect(ex.answer).toBeNull();
+      expect(ex.answers).toBeNull();
       expect(ex.answerStatus).toBe('MISSING');
     }
   });
@@ -214,7 +214,7 @@ describe('parseGrammarPage — cloze formati (adv_03)', () => {
     expect(ex.wordBank).toBeDefined();
     expect(ex.wordBank!.length).toBeGreaterThan(0);
     expect(ex.wordBank).toContain('plötzlich');
-    expect(ex.answer).toBeNull();
+    expect(ex.answers).toBeNull();
     expect(ex.answerStatus).toBe('MISSING');
   });
 });
@@ -328,7 +328,7 @@ describe("parseGrammarPage — ko'p variantli (MC) formati (con_04)", () => {
       expect(ex.sentenceDe).toContain('___');
       expect(ex.options).toBeDefined();
       expect(ex.options!.length).toBeGreaterThanOrEqual(2);
-      expect(ex.answer).toBeNull();
+      expect(ex.answers).toBeNull();
       expect(ex.answerStatus).toBe('MISSING');
       // Variant matni radio/input belgilaridan tozalangan bo'lishi shart —
       // manba `<input type="radio" ...>` va `<input type="hidden" ...>`ni
@@ -350,8 +350,9 @@ describe("parseGrammarPage — ko'p variantli (MC) formati (con_04)", () => {
   });
 
   // Sahifaning IKKINCHI `<table class="ex">` bloki oddiy GAP formatida —
-  // ikkala blok ham parse qilinishi va id'lar sahifa bo'ylab ketma-ket
-  // (takrorlanmasdan) raqamlanishi kerak.
+  // ikkala blok ham parse qilinishi kerak. Raqamlash TO'PLAM ichida
+  // yuritiladi, sahifa bo'ylab emas: shunda bitta to'plamdagi o'zgarish
+  // qo'shni to'plamning identifikatorlarini surib yubormaydi.
   it("ikkinchi blokdagi 12 ta GAP mashqini ham qo'shib, jami 22 ta mashq beradi, id'lar ketma-ket", () => {
     const p = parseGrammarPage(MC_PAGE, 'con_04')!;
     expect(p.exercises).toHaveLength(22);
@@ -359,8 +360,8 @@ describe("parseGrammarPage — ko'p variantli (MC) formati (con_04)", () => {
     expect(gap).toHaveLength(12);
     const ids = p.exercises.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids[0]).toBe('con_04_fib_1');
-    expect(ids[ids.length - 1]).toBe(`con_04_fib_${ids.length}`);
+    expect(ids[0]).toBe('con_04_01_mcr_1');
+    expect(ids[ids.length - 1]).toBe('con_04_02_fib_12');
   });
 });
 
@@ -381,6 +382,7 @@ describe("parseGrammarPage — span ichida </span> bo'lgan REORDER topshirig'i",
 </div>
 <div id="ps_01" class="aud_txt">
   <div class="indent_wrap_250">
+  <form onsubmit="proc_post('/gg/ex_set_proc.php?ec=x_01_01_fib','1','es','f','fib','1'); return false;">
   <table class="ex">
     <tr>
       <td class="qnum"><b>1.</b></td>
@@ -388,6 +390,7 @@ describe("parseGrammarPage — span ichida </span> bo'lgan REORDER topshirig'i",
       <input name="fib_1" type="text" value="" class="txt_2"></td>
     </tr>
   </table>
+  </form>
   </div>
 </div>
 <div id="ps_01_t" class="aud_txtt"></div>
@@ -417,12 +420,12 @@ describe('parseGrammarPage — jadval VA cloze bir sahifada (cas_03)', () => {
     expect((cloze[0].sentenceDe.match(/___/g) ?? []).length).toBe(15);
   });
 
-  it("id'lar birlashgan ro'yxat bo'yicha ketma-ket, takrorlanmaydi", () => {
+  it("id'lar har to'plam ichida raqamlanadi va takrorlanmaydi", () => {
     const p = parseGrammarPage(BOTH_FORMATS_PAGE, 'cas_03')!;
     const ids = p.exercises.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids[0]).toBe('cas_03_fib_1');
-    expect(ids[ids.length - 1]).toBe(`cas_03_fib_${ids.length}`);
+    expect(ids[0]).toBe('cas_03_01_fib_1');
+    expect(ids[ids.length - 1]).toBe('cas_03_04_mcr_10');
   });
 });
 
@@ -441,6 +444,7 @@ describe("parseGrammarPage — ikkitadan kam tokenli span o'tkazib yuboriladi", 
 </div>
 <div id="ps_01" class="aud_txt">
   <div class="indent_wrap_250">
+  <form onsubmit="proc_post('/gg/ex_set_proc.php?ec=y_01_01_fib','1','es','f','fib','1'); return false;">
   <table class="ex">
     <tr>
       <td class="qnum"><b>1.</b></td>
@@ -453,6 +457,7 @@ describe("parseGrammarPage — ikkitadan kam tokenli span o'tkazib yuboriladi", 
       <input name="fib_2" type="text" value="" class="txt_2"></td>
     </tr>
   </table>
+  </form>
   </div>
 </div>
 <div id="ps_01_t" class="aud_txtt"></div>
