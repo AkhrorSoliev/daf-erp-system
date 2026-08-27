@@ -466,6 +466,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     routes: [
       'GET /student-portal/lernen/grammar',
       'GET /student-portal/lernen/lessons/:id',
+      'GET /student-portal/lernen/lessons/:id/drill',
       'GET /student-portal/lernen/levels',
       'GET /student-portal/lernen/units/:id',
     ],
@@ -478,7 +479,10 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       "attempt in another's name. The row DOES carry a branch, but it is STAMPED " +
       "from the student's own record at write time rather than taken from a " +
       'header: a later transfer must not move past results into the new branch.',
-    routes: ['POST /student-portal/lernen/attempts'],
+    routes: [
+      'POST /student-portal/lernen/attempts',
+      'POST /student-portal/lernen/drill/check',
+    ],
   },
 ];
 

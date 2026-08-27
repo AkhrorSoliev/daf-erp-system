@@ -11,7 +11,8 @@ import { CurrentUser, Roles } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 import { DafPortalReadService } from './daf-portal-read.service';
 import { DafAttemptService } from './daf-attempt.service';
-import { CreateAttemptDto } from './dto/create-attempt.dto';
+import { CheckDrillDto, CreateAttemptDto } from './dto/create-attempt.dto';
+import { DafDrillService } from './lesson/daf-drill.service';
 
 /**
  * O'quvchi portalining o'quv bo'limi.
@@ -27,6 +28,7 @@ export class DafPortalController {
   constructor(
     private readonly read: DafPortalReadService,
     private readonly attempts: DafAttemptService,
+    private readonly drills: DafDrillService,
   ) {}
 
   @Get('levels')
@@ -51,6 +53,25 @@ export class DafPortalController {
   @Get('grammar')
   getGrammar() {
     return this.read.getGrammarIndex();
+  }
+
+  /** Darsning lug'at mashqlari — javobsiz. */
+  @Get('lessons/:id/drill')
+  getDrill(@Param('id', ParseIntPipe) id: number) {
+    return this.drills.getDrill(id);
+  }
+
+  /**
+   * Lug'at mashqiga javob. Tekshiruv SERVERDA: savol qayta tug'iladi va
+   * berilgan tanlov solishtiriladi. Mijoz to'g'ri javobni bilmaydi.
+   */
+  @Post('drill/check')
+  checkDrill(
+    @Body() dto: CheckDrillDto,
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.attempts.recordDrill(dto, { studentId, companyId });
   }
 
   /**

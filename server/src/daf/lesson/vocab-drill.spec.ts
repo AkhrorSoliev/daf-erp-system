@@ -42,7 +42,7 @@ describe('pickDistractors', () => {
     expect(out).not.toContain('Hallo!');
   });
 
-  it("nomzod yetmasa bor narsani beradi, takrorlamaydi", () => {
+  it('nomzod yetmasa bor narsani beradi, takrorlamaydi', () => {
     const out = pickDistractors('a', ['a', 'b'], 3, seeded(1));
     expect(out).toEqual(['b']);
   });
@@ -79,7 +79,10 @@ describe('buildDrill', () => {
   // Audiosiz so'zda savol audioning O'ZI bo'lgan turdan savol
   // tuzilmaydi — savolsiz mashq bo'lmaydi.
   it("audiosiz so'zga tinglash savolini bermaydi", () => {
-    const words = [lex(1, 'Hallo!', 'Salom!', false), lex(2, 'Tschüss!', 'Xayr!')];
+    const words = [
+      lex(1, 'Hallo!', 'Salom!', false),
+      lex(2, 'Tschüss!', 'Xayr!'),
+    ];
     const audioQs = buildDrill(words, seeded(5)).filter(
       (q) => q.kind === 'AUDIO_TO_WORD',
     );
@@ -90,8 +93,14 @@ describe('buildDrill', () => {
   // Tarjimasi yo'q so'zga tarjima savoli berilmaydi: javobi bo'lmagan
   // savol mashq emas.
   it("tarjimasiz so'zga tarjima savolini bermaydi", () => {
-    const words = [lex(1, 'Hallo!', null), lex(2, 'Tschüss!', 'Xayr!'), lex(3, 'Bis bald!', 'Xayr!')];
-    const qs = buildDrill(words, seeded(9)).filter((q) => q.kind !== 'AUDIO_TO_WORD');
+    const words = [
+      lex(1, 'Hallo!', null),
+      lex(2, 'Tschüss!', 'Xayr!'),
+      lex(3, 'Bis bald!', 'Xayr!'),
+    ];
+    const qs = buildDrill(words, seeded(9)).filter(
+      (q) => q.kind !== 'AUDIO_TO_WORD',
+    );
 
     expect(qs.map((q) => q.lexemeId)).not.toContain(1);
   });

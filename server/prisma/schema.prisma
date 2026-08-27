@@ -2927,8 +2927,9 @@ model DafLexeme {
   /// Bo'lim sarlavhasi darsga ko'chdi — u yerda o'z tarjimasi bilan turadi.
   lessonId          Int
 
-  unit   DafUnit   @relation(fields: [unitId], references: [id])
-  lesson DafLesson @relation(fields: [lessonId], references: [id])
+  unit     DafUnit      @relation(fields: [unitId], references: [id])
+  lesson   DafLesson    @relation(fields: [lessonId], references: [id])
+  attempts DafAttempt[]
 
   @@index([unitId])
   @@index([lessonId])
@@ -3002,9 +3003,17 @@ model DafExercise {
 /// o'zgarganda butun tarix qayta hisoblanishi kerak. Holat sifatida
 /// saqlangan ball buni imkonsiz qiladi.
 model DafAttempt {
-  id         Int     @id @default(autoincrement())
-  studentId  Int
-  exerciseId Int
+  id        Int @id @default(autoincrement())
+  studentId Int
+
+  /// Urinish YO grammatika mashqiga, YO lug'at so'ziga tegishli.
+  ///
+  /// Lug'at mashqlari bazada saqlanmaydi — ular lug'atdan har safar
+  /// qayta tug'iladi, chunki lug'at o'zgarganda savol ham o'zgarishi
+  /// kerak. Shuning uchun bunday urinish LEKSEMAga bog'lanadi.
+  exerciseId Int?
+  lexemeId   Int?
+
   isCorrect  Boolean
   /// O'quvchi bergan javob. Xato javoblar ham saqlanadi — o'qituvchiga eng
   /// kerakli signal aynan shu: guruh qaysi mashqda qoqilyapti.
@@ -3019,11 +3028,13 @@ model DafAttempt {
 
   createdAt DateTime @default(now())
 
-  student  Student     @relation(fields: [studentId], references: [id])
-  exercise DafExercise @relation(fields: [exerciseId], references: [id])
+  student  Student      @relation(fields: [studentId], references: [id])
+  exercise DafExercise? @relation(fields: [exerciseId], references: [id])
+  lexeme   DafLexeme?   @relation(fields: [lexemeId], references: [id])
 
   @@index([studentId, createdAt])
   @@index([exerciseId])
+  @@index([lexemeId])
   @@index([companyId, createdAt])
   @@index([branchId, createdAt])
 }

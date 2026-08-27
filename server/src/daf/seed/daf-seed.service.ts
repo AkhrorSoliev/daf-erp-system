@@ -3,6 +3,7 @@ import {
   DafAnswerStatus,
   DafLessonKind,
   DafLevel,
+  DafTranslationSource,
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -23,6 +24,28 @@ export interface SeedReport {
   retired: number;
   /** Manbadan yo'qolgani uchun o'chirilgan lug'at yozuvlari. */
   lexemesRemoved: number;
+  /** Fayldan qo'yilgan tarjimalar. */
+  translationsApplied: number;
+}
+
+/** `content/daf/translations.json` ning shakli. */
+export interface TranslationFile {
+  lexemes: {
+    sourceId: string;
+    uz: string | null;
+    translationSource: string | null;
+  }[];
+  grammar: {
+    sourceId: string;
+    titleUz: string | null;
+    explanationUz: string | null;
+    translationSource: string | null;
+  }[];
+  lessons: {
+    sourceId: string;
+    titleUz: string | null;
+    translationSource: string | null;
+  }[];
 }
 
 /** `A1.1` → `A1_1`. Prisma enum nuqtani qabul qilmaydi. */
@@ -101,7 +124,10 @@ export class DafSeedService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async seed(dataset: DafDataset): Promise<SeedReport> {
+  async seed(
+    dataset: DafDataset,
+    translations?: TranslationFile,
+  ): Promise<SeedReport> {
     const unitIdByChapter = await this.seedUnits(dataset);
     const grammarIdByCode = await this.seedGrammar(dataset, unitIdByChapter);
     const lessonIdBySource = await this.seedLessons(
@@ -122,6 +148,7 @@ export class DafSeedService {
 
     const retired = await this.retireMissingExercises(dataset);
     const lexemesRemoved = await this.removeMissingLexemes(dataset);
+    const translationsApplied = await this.applyTranslations(translations);
 
     return {
       units: unitIdByChapter.size,
@@ -131,7 +158,86 @@ export class DafSeedService {
       exercises,
       retired,
       lexemesRemoved,
+      translationsApplied,
     };
+  }
+
+  /**
+   * Tarjimalarni fayldan qo'yadi.
+   *
+   * Shu tufayli ishlab chiqarishda tarjima UMUMAN qilinmaydi: model
+   * chaqirilmaydi, API kaliti kerak emas, va har muhitda aynan bir xil matn
+   * turadi (model bir xil so'rovga bir xil javob bermaydi).
+   *
+   * O'QITUVCHI tuzatgan tarjima qayta yozilmaydi. Faylda modelning eski
+   * tarjimasi turishi mumkin, bazada esa o'qituvchi tuzatgani — fayl uni
+   * bosib o'tsa, tuzatish jimgina yo'qolardi.
+   */
+  private async applyTranslations(file?: TranslationFile): Promise<number> {
+    if (!file) return 0;
+
+    let n = 0;
+    const writes: Prisma.PrismaPromise<unknown>[] = [];
+
+    for (const l of file.lexemes) {
+      if (!l.uz) continue;
+      writes.push(
+        this.prisma.dafLexeme.updateMany({
+          where: {
+            sourceId: l.sourceId,
+            translationSource: { not: DafTranslationSource.TEACHER },
+          },
+          data: {
+            uz: l.uz,
+            translationSource: this.toSource(l.translationSource),
+          },
+        }),
+      );
+      n++;
+    }
+
+    for (const g of file.grammar) {
+      writes.push(
+        this.prisma.dafGrammar.updateMany({
+          where: {
+            sourceId: g.sourceId,
+            translationSource: { not: DafTranslationSource.TEACHER },
+          },
+          data: {
+            titleUz: g.titleUz,
+            explanationUz: g.explanationUz,
+            translationSource: this.toSource(g.translationSource),
+          },
+        }),
+      );
+      n++;
+    }
+
+    for (const l of file.lessons) {
+      if (!l.titleUz) continue;
+      writes.push(
+        this.prisma.dafLesson.updateMany({
+          where: {
+            sourceId: l.sourceId,
+            translationSource: { not: DafTranslationSource.TEACHER },
+          },
+          data: {
+            titleUz: l.titleUz,
+            translationSource: this.toSource(l.translationSource),
+          },
+        }),
+      );
+      n++;
+    }
+
+    await this.runBatched(writes);
+    return n;
+  }
+
+  private toSource(value: string | null): DafTranslationSource {
+    return value === 'TEACHER'
+      ? DafTranslationSource.TEACHER
+      : DafTranslationSource.MODEL;
   }
 
   private async seedUnits(dataset: DafDataset): Promise<Map<number, number>> {

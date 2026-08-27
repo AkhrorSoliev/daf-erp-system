@@ -71,13 +71,18 @@ describe('DafSeedService', () => {
   let service: DafSeedService;
   let prisma: {
     dafUnit: { upsert: jest.Mock };
-    dafLexeme: { upsert: jest.Mock; deleteMany: jest.Mock };
+    dafLexeme: {
+      upsert: jest.Mock;
+      deleteMany: jest.Mock;
+      updateMany: jest.Mock;
+    };
     dafGrammar: {
       upsert: jest.Mock;
       findMany: jest.Mock;
       findUnique: jest.Mock;
+      updateMany: jest.Mock;
     };
-    dafLesson: { upsert: jest.Mock };
+    dafLesson: { upsert: jest.Mock; updateMany: jest.Mock };
     dafExercise: { upsert: jest.Mock; updateMany: jest.Mock };
     $transaction: jest.Mock;
   };
@@ -88,13 +93,18 @@ describe('DafSeedService', () => {
       dafLexeme: {
         upsert: jest.fn().mockResolvedValue({ id: 1 }),
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       dafGrammar: {
         upsert: jest.fn().mockResolvedValue({ id: 20 }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         findMany: jest.fn().mockResolvedValue([{ id: 20, unitId: 10 }]),
         findUnique: jest.fn().mockResolvedValue({ unitId: 10 }),
       },
-      dafLesson: { upsert: jest.fn().mockResolvedValue({ id: 40 }) },
+      dafLesson: {
+        upsert: jest.fn().mockResolvedValue({ id: 40 }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
       dafExercise: {
         upsert: jest.fn().mockResolvedValue({ id: 30 }),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
@@ -224,6 +234,57 @@ describe('DafSeedService', () => {
       create: { audioKey: string };
     };
     expect(call.create.audioKey).toBe('dib/audio/a.mp3');
+  });
+
+  // Tarjima fayldan qo'yiladi, shuning uchun ishlab chiqarishda model
+  // umuman chaqirilmaydi va har muhitda aynan bir xil matn turadi.
+  it('tarjimani fayldan qo`yadi', async () => {
+    await service.seed(dataset(), {
+      lexemes: [
+        {
+          sourceId: 'dib-voc-01-01#1',
+          uz: 'Salom!',
+          translationSource: 'MODEL',
+        },
+      ],
+      grammar: [],
+      lessons: [],
+    });
+
+    const call = prisma.dafLexeme.updateMany.mock.calls[0][0] as {
+      where: { sourceId: string; translationSource: { not: string } };
+      data: { uz: string };
+    };
+    expect(call.data.uz).toBe('Salom!');
+  });
+
+  // O'qituvchi tuzatgan tarjima qayta yozilmaydi: faylda modelning eski
+  // tarjimasi turishi mumkin, va u tuzatishni jimgina bosib o'tardi.
+  it('o`qituvchi tuzatgan tarjimani chetlab o`tadi', async () => {
+    await service.seed(dataset(), {
+      lexemes: [
+        {
+          sourceId: 'dib-voc-01-01#1',
+          uz: 'Salom!',
+          translationSource: 'MODEL',
+        },
+      ],
+      grammar: [],
+      lessons: [],
+    });
+
+    const call = prisma.dafLexeme.updateMany.mock.calls[0][0] as {
+      where: { translationSource: { not: string } };
+    };
+    expect(call.where.translationSource).toEqual({ not: 'TEACHER' });
+  });
+
+  // Tarjima fayli bo'lmasligi mumkin — birinchi yig'ishdan keyin, tarjima
+  // hali yuritilmaganda. Bu xato emas.
+  it('tarjima fayli bo`lmasa ham ishlaydi', async () => {
+    const report = await service.seed(dataset());
+    expect(report.translationsApplied).toBe(0);
+    expect(prisma.dafLexeme.updateMany).not.toHaveBeenCalled();
   });
 });
 

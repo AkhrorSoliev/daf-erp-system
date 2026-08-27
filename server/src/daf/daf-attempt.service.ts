@@ -6,6 +6,7 @@ import {
 import { DafAnswerStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { tryResolveStudentBranchId } from '../common/finance/resolve-branch';
+import { DafDrillService } from './lesson/daf-drill.service';
 
 export interface AttemptResult {
   isCorrect: boolean;
@@ -27,7 +28,51 @@ export interface AttemptContext {
  */
 @Injectable()
 export class DafAttemptService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly drills: DafDrillService,
+  ) {}
+
+  /**
+   * Lug'at mashqiga javobni yozadi.
+   *
+   * Grammatika mashqidan farqi: bu savol bazada YO'Q — u lug'atdan har
+   * safar qayta tug'iladi. Shuning uchun urinish `DafExercise` ga emas,
+   * LEKSEMAga bog'lanadi, va `exerciseId` bo'sh qoladi.
+   */
+  async recordDrill(
+    input: {
+      lessonId: number;
+      index: number;
+      given: string;
+      durationMs?: number;
+    },
+    ctx: AttemptContext,
+  ): Promise<{ isCorrect: boolean; answer: string }> {
+    const r = await this.drills.check(input.lessonId, input.index, input.given);
+
+    const branchId = await tryResolveStudentBranchId(
+      this.prisma,
+      ctx.studentId,
+      ctx.companyId,
+    );
+    const groupId = await this.currentGroupId(ctx.studentId);
+
+    await this.prisma.dafAttempt.create({
+      data: {
+        studentId: ctx.studentId,
+        lexemeId: r.lexemeId,
+        isCorrect: r.isCorrect,
+        given: input.given,
+        durationMs: input.durationMs ?? null,
+        companyId: ctx.companyId,
+        branchId,
+        groupId,
+      },
+    });
+
+    return { isCorrect: r.isCorrect, answer: r.answer };
+  }
 
   async record(
     input: { exerciseId: number; given: string; durationMs?: number },

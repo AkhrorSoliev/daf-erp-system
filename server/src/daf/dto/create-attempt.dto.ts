@@ -37,3 +37,30 @@ export class CreateAttemptDto {
   @Max(86_400_000)
   durationMs?: number;
 }
+
+/**
+ * Lug'at mashqiga javob.
+ *
+ * `answer` maydoni YO'Q va bo'lishi ham mumkin emas: mijoz to'g'ri
+ * javobni bilmaydi. U faqat SAVOL O'RNINI va o'z tanlovini yuboradi,
+ * server esa savolni qayta tug'ib solishtiradi.
+ */
+export class CheckDrillDto {
+  @IsInt()
+  lessonId!: number;
+
+  /** Savolning dars ichidagi o'rni. */
+  @IsInt()
+  @Min(0)
+  index!: number;
+
+  @IsString()
+  @MaxLength(500)
+  given!: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(86_400_000)
+  durationMs?: number;
+}

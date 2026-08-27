@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DafAttemptService } from './daf-attempt.service';
+import { DafDrillService } from './lesson/daf-drill.service';
 
 const CTX = { studentId: 10001, companyId: 1 };
 
@@ -38,6 +39,16 @@ describe('DafAttemptService', () => {
       providers: [
         DafAttemptService,
         { provide: PrismaService, useValue: prisma },
+        // Lug'at mashqi alohida yo'l — bu testlar grammatika mashqiga
+        // tegishli, shuning uchun dvigatel mock qilinadi.
+        {
+          provide: DafDrillService,
+          useValue: {
+            check: jest
+              .fn()
+              .mockResolvedValue({ isCorrect: true, answer: 'x', lexemeId: 5 }),
+          },
+        },
       ],
     }).compile();
 
