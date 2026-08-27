@@ -63,7 +63,7 @@ export function McExercise({ exercise, index }: McExerciseProps) {
               onClick={() => setPicked(opt)}
               className={cn(
                 "flex w-full items-center gap-2.5 rounded-2xl border-2 px-3.5 py-2.5 text-left font-semibold transition-colors",
-                "border-transparent bg-surface-sunk text-ink-800",
+                "border-transparent bg-tint text-ink-800",
                 isPicked && !result && "border-coral-500 bg-coral-500/10",
                 isRight && "border-success bg-success/10 text-success",
                 isWrongPick && "border-danger bg-danger/10 text-danger",

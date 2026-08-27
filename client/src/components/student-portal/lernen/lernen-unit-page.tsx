@@ -1,18 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import {
-  BookOpen,
-  CaretRight,
-  ListChecks,
-  Textbox,
-} from "@phosphor-icons/react";
+import { BookOpen, ListChecks, Textbox } from "@phosphor-icons/react";
 import {
   Screen,
   StackHeader,
   FadeIn,
-  Card,
-  IconTile,
+  ListRow,
   EmptyState,
   LoadingCards,
 } from "../lumio";
@@ -23,31 +16,25 @@ function LessonRow({ lesson }: { lesson: LernenLessonSummary }) {
   const isVocab = lesson.kind === "VOCAB";
   const title = lesson.titleUz ?? lesson.titleDe;
 
+  const parts = [
+    isVocab ? `${lesson.wordCount} so'z` : "Grammatika",
+    lesson.exerciseCount > 0 ? `${lesson.exerciseCount} mashq` : null,
+  ].filter(Boolean);
+
   return (
-    <Link
+    <ListRow
       href={`/portal/lernen/lessons/${lesson.id}`}
-      className="flex items-center gap-3 rounded-2xl bg-surface-sunk px-3.5 py-3 transition-colors hover:bg-ink-500/5"
-    >
-      <IconTile
-        tone={isVocab ? "teal" : "grape"}
-        size="sm"
-        icon={
-          isVocab ? (
-            <Textbox size={18} weight="bold" />
-          ) : (
-            <ListChecks size={18} weight="bold" />
-          )
-        }
-      />
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold text-ink-900">{title}</p>
-        <p className="text-xs font-semibold text-ink-500">
-          {isVocab ? `${lesson.wordCount} so'z` : "Grammatika"}
-          {lesson.exerciseCount > 0 ? ` · ${lesson.exerciseCount} mashq` : null}
-        </p>
-      </div>
-      <CaretRight size={16} weight="bold" className="text-ink-400" />
-    </Link>
+      icon={
+        isVocab ? (
+          <Textbox size={18} weight="bold" />
+        ) : (
+          <ListChecks size={18} weight="bold" />
+        )
+      }
+      iconTone={isVocab ? "teal" : "grape"}
+      label={title}
+      subtitle={parts.join(" · ")}
+    />
   );
 }
 
@@ -80,11 +67,11 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
           <p className="text-sm font-semibold text-ink-500">
             {data.label} · {data.titleDe} · {data.lessons.length} dars
           </p>
-          <Card className="space-y-2">
+          <div className="space-y-2">
             {data.lessons.map((l) => (
               <LessonRow key={l.id} lesson={l} />
             ))}
-          </Card>
+          </div>
         </FadeIn>
       )}
     </Screen>

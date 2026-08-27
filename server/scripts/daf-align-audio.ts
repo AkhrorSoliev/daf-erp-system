@@ -20,14 +20,17 @@
  * tushunmasdi, shunchaki noto'g'ri o'rganardi.
  */
 import 'dotenv/config';
-import { execFileSync, spawnSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { alignWords, type AudioSegment } from '../src/daf/audio/align';
-import { parseSilences, speechSpans, tighten } from '../src/daf/audio/tighten';
+import {
+  alignToStream,
+  tokensToWords,
+  type Token,
+} from '../src/daf/audio/token-align';
 
 const MODEL = process.env.WHISPER_MODEL ?? '';
 const WORK = join(tmpdir(), 'daf-align');
@@ -44,20 +47,6 @@ function run(cmd: string, args: string[]): string {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
-}
-
-/**
- * ffmpeg diagnostikani (jimlik ro'yxatini ham) STDERR'ga yozadi, va
- * muvaffaqiyatli tugaydi.
- *
- * Shuning uchun `spawnSync`: `execFileSync` faqat XATO bo'lganda stderr
- * beradi, muvaffaqiyatda esa uni tashlab yuboradi. Birinchi versiya aynan
- * shuni qilgan — jimlik ro'yxati hech qachon kelmagan, chegara
- * toraytirilmagan, va buni hech narsa bildirmagan.
- */
-function runCapturingStderr(cmd: string, args: string[]): string {
-  const r = spawnSync(cmd, args, { encoding: 'utf8' });
-  return r.stderr ?? '';
 }
 
 /** Faylning davomiyligi, millisekundda. */
@@ -92,8 +81,15 @@ function toWav(mp3: string, wav: string): void {
   ]);
 }
 
-/** Whisper bo'laklari — matn va taxminiy chegara. */
-function transcribe(wav: string, out: string): AudioSegment[] {
+/**
+ * Whisper TOKENLARI — har biri o'z vaqti bilan.
+ *
+ * `-ojf` (to'liq JSON) token darajasini beradi. Oddiy `-oj` faqat
+ * bo'laklarni beradi, va ular ishonchsiz: ot-so'zlar faylida bitta
+ * bo'lakka to'qqizta so'z tushadi, natijada 40 fayldan 17 tasida hech
+ * narsa topilmagan edi.
+ */
+function transcribeTokens(wav: string, out: string): Token[] {
   run('whisper-cli', [
     '-m',
     MODEL,
@@ -101,35 +97,23 @@ function transcribe(wav: string, out: string): AudioSegment[] {
     wav,
     '-l',
     'de',
-    '-oj',
+    '-ojf',
     '-of',
     out,
     '--no-prints',
   ]);
   const json = JSON.parse(readFileSync(`${out}.json`, 'utf8')) as {
-    transcription: { offsets: { from: number; to: number }; text: string }[];
+    transcription: {
+      tokens?: { text: string; offsets: { from: number; to: number } }[];
+    }[];
   };
-  return json.transcription.map((t) => ({
-    startMs: t.offsets.from,
-    endMs: t.offsets.to,
-    text: t.text.trim(),
-  }));
-}
-
-/** ffmpeg jimlik ro'yxati. */
-function silences(wav: string) {
-  const stderr = runCapturingStderr('ffmpeg', [
-    '-v',
-    'info',
-    '-i',
-    wav,
-    '-af',
-    'silencedetect=noise=-35dB:d=0.35',
-    '-f',
-    'null',
-    '-',
-  ]);
-  return parseSilences(stderr);
+  return json.transcription.flatMap((seg) =>
+    (seg.tokens ?? []).map((t) => ({
+      text: t.text,
+      startMs: t.offsets.from,
+      endMs: t.offsets.to,
+    })),
+  );
 }
 
 async function main() {
@@ -162,10 +146,9 @@ async function main() {
   let matched = 0;
   let unmatched = 0;
   const weak: string[] = [];
-  // Jimliksiz fayl — chegara toraytirilmagani, ya'ni so'z o'ynagach
-  // keyingisigacha jimlik davom etadi. Bu xato emas, lekin jim
-  // qolmasligi kerak.
-  const noSilence: string[] = [];
+  // Nutqi umuman tanilmagan fayl — bu jiddiy, chunki unda hech bir
+  // so'z audio olmaydi.
+  const noSpeech: string[] = [];
 
   for (const [i, key] of files.entries()) {
     const words = await prisma.dafLexeme.findMany({
@@ -179,16 +162,12 @@ async function main() {
     run('curl', ['-sSL', '-o', mp3, `${base}/${key}`]);
     toWav(mp3, wav);
 
-    const sil = silences(wav);
-    if (sil.length === 0) noSilence.push(key);
-    const spans = speechSpans(sil, durationMs(wav));
-    const segments = transcribe(wav, join(WORK, 'a')).map((s) =>
-      tighten(s, spans),
-    );
+    const stream = tokensToWords(transcribeTokens(wav, join(WORK, 'a')));
+    if (stream.length === 0) noSpeech.push(key);
 
-    const aligned = alignWords(
+    const aligned = alignToStream(
       words.map((w) => w.de),
-      segments,
+      stream,
     );
 
     for (const [j, a] of aligned.entries()) {
@@ -211,10 +190,9 @@ async function main() {
 
   console.log(`\nTopildi:     ${matched}`);
   console.log(`Topilmadi:   ${unmatched}`);
-  if (noSilence.length > 0) {
-    console.log(
-      `\nJimlik topilmagan fayllar: ${noSilence.length} (chegara Whisper bo'yicha qoldi)`,
-    );
+  if (noSpeech.length > 0) {
+    console.log(`\nNutq tanilmagan fayllar: ${noSpeech.length}`);
+    for (const k of noSpeech.slice(0, 10)) console.log(`  ${k}`);
   }
   if (weak.length > 0) {
     console.log(`\nTo'liq bo'lmagan fayllar (${weak.length}):`);

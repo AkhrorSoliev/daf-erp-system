@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import {
   BookOpen,
-  CaretRight,
   Headphones,
   Microphone,
   PencilSimple,
@@ -16,6 +14,7 @@ import {
   Card,
   Badge,
   IconTile,
+  ListRow,
   ProgressRing,
   EmptyState,
   LoadingCards,
@@ -98,26 +97,14 @@ function LevelCard({ level }: { level: LernenLevel }) {
       {empty ? null : (
         <div className="space-y-2">
           {level.units.map((u) => (
-            <Link
+            <ListRow
               key={u.id}
               href={`/portal/lernen/units/${u.id}`}
-              className="flex items-center gap-3 rounded-2xl bg-surface-sunk px-3.5 py-3 transition-colors hover:bg-ink-500/5"
-            >
-              <IconTile
-                tone="grape"
-                size="sm"
-                icon={<BookOpen size={18} weight="bold" />}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold text-ink-900">
-                  {u.titleUz}
-                </p>
-                <p className="text-xs font-semibold text-ink-500">
-                  {u.lessonCount} dars
-                </p>
-              </div>
-              <CaretRight size={16} weight="bold" className="text-ink-400" />
-            </Link>
+              icon={<BookOpen size={18} weight="bold" />}
+              iconTone="grape"
+              label={u.titleUz}
+              subtitle={`${u.lessonCount} dars`}
+            />
           ))}
         </div>
       )}
