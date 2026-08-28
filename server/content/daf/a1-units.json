@@ -10,6 +10,13 @@
     },
     {
       "order": 2,
+      "titleUz": "Sonlar",
+      "titleDe": "Zahlen",
+      "sections": ["dib-voc-01-07"],
+      "grammar": ["no_01", "no_02", "no_03", "det_01"]
+    },
+    {
+      "order": 3,
       "titleUz": "Kelib chiqish va shaxsiy ma'lumot",
       "titleDe": "Herkunft und persönliche Daten",
       "sections": [
@@ -19,13 +26,6 @@
         "dib-voc-01-08"
       ],
       "grammar": ["v_01", "v_02", "cas_02"]
-    },
-    {
-      "order": 3,
-      "titleUz": "Sonlar",
-      "titleDe": "Zahlen",
-      "sections": ["dib-voc-01-07"],
-      "grammar": ["no_01", "no_02", "no_03", "det_01"]
     },
     {
       "order": 4,
@@ -60,7 +60,7 @@
       "titleUz": "Ish stoli va kompyuter",
       "titleDe": "Schreibtisch und Computer",
       "sections": ["dib-voc-02-04", "dib-voc-02-05"],
-      "grammar": ["con_06"]
+      "grammar": ["v_04"]
     },
     {
       "order": 9,
@@ -87,7 +87,7 @@
         "dib-voc-02-12",
         "dib-voc-02-13"
       ],
-      "grammar": ["v_04", "vimp_01"]
+      "grammar": ["con_06", "vimp_01"]
     },
     {
       "order": 12,
@@ -122,7 +122,7 @@
       "titleUz": "Gigiyena do'koni va supermarket",
       "titleDe": "Drogerie und Supermarkt",
       "sections": ["dib-voc-03-07", "dib-voc-03-10"],
-      "grammar": ["v_05"]
+      "grammar": []
     },
     {
       "order": 17,
