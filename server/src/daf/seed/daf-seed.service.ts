@@ -34,6 +34,9 @@ export interface TranslationFile {
     sourceId: string;
     uz: string | null;
     translationSource: string | null;
+    /** Audio oralig'i — tarjima emas, lekin u ham faqat bazada yashaydi. */
+    audioStartMs?: number | null;
+    audioEndMs?: number | null;
   }[];
   grammar: {
     sourceId: string;
@@ -180,12 +183,32 @@ export class DafSeedService {
     const writes: Prisma.PrismaPromise<unknown>[] = [];
 
     for (const l of file.lexemes) {
+      // Audio oralig'i tarjimadan MUSTAQIL yoziladi: o'qituvchi tarjimani
+      // tuzatgan bo'lsa ham, oraliq baribir qo'yilishi kerak — u
+      // o'lchangan fakt, tahrir emas.
+      if (l.audioStartMs != null && l.audioEndMs != null) {
+        writes.push(
+          this.prisma.dafLexeme.updateMany({
+            where: { sourceId: l.sourceId },
+            data: { audioStartMs: l.audioStartMs, audioEndMs: l.audioEndMs },
+          }),
+        );
+      }
+
       if (!l.uz) continue;
       writes.push(
         this.prisma.dafLexeme.updateMany({
           where: {
             sourceId: l.sourceId,
-            translationSource: { not: DafTranslationSource.TEACHER },
+            // `not: TEACHER` YOLG'IZ yetarli emas. Yangi bazada bu ustun
+            // NULL, va SQL da `NULL <> 'TEACHER'` natijasi `true` emas,
+            // `NULL` — ya'ni qator mos kelmaydi. Aynan shu holat ishlab
+            // chiqarishda: birinchi seed'da hamma yozuv tarjimasiz
+            // qolardi, va hech qanday xato chiqmasdi.
+            OR: [
+              { translationSource: null },
+              { translationSource: { not: DafTranslationSource.TEACHER } },
+            ],
           },
           data: {
             uz: l.uz,
@@ -201,7 +224,10 @@ export class DafSeedService {
         this.prisma.dafGrammar.updateMany({
           where: {
             sourceId: g.sourceId,
-            translationSource: { not: DafTranslationSource.TEACHER },
+            OR: [
+              { translationSource: null },
+              { translationSource: { not: DafTranslationSource.TEACHER } },
+            ],
           },
           data: {
             titleUz: g.titleUz,
@@ -219,7 +245,10 @@ export class DafSeedService {
         this.prisma.dafLesson.updateMany({
           where: {
             sourceId: l.sourceId,
-            translationSource: { not: DafTranslationSource.TEACHER },
+            OR: [
+              { translationSource: null },
+              { translationSource: { not: DafTranslationSource.TEACHER } },
+            ],
           },
           data: {
             titleUz: l.titleUz,

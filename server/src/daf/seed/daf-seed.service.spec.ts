@@ -274,9 +274,11 @@ describe('DafSeedService', () => {
     });
 
     const call = prisma.dafLexeme.updateMany.mock.calls[0][0] as {
-      where: { translationSource: { not: string } };
+      where: { OR: { translationSource: unknown }[] };
     };
-    expect(call.where.translationSource).toEqual({ not: 'TEACHER' });
+    expect(call.where.OR).toContainEqual({
+      translationSource: { not: 'TEACHER' },
+    });
   });
 
   // Tarjima fayli bo'lmasligi mumkin — birinchi yig'ishdan keyin, tarjima

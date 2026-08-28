@@ -25,7 +25,8 @@
     "daf:upload-media": "ts-node scripts/daf-upload-media.ts",
     "daf:seed": "ts-node scripts/daf-seed.ts",
     "daf:translate": "ts-node scripts/daf-translate.ts",
-    "daf:align-audio": "ts-node scripts/daf-align-audio.ts"
+    "daf:align-audio": "ts-node scripts/daf-align-audio.ts",
+    "daf:export-content": "ts-node scripts/daf-export-content.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1016.0",
