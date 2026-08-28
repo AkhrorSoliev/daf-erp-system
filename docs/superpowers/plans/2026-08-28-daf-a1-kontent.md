@@ -51,7 +51,6 @@ ts-node skriptlar · fal.ai (`fal-ai/flux/schnell`,
 | `src/daf/units/a1-units.types.ts` | Fayl shakli (Task 2) |
 | `src/daf/units/a1-units.validate.ts` | Fayl qoidalarini tekshirish (Task 2) |
 | `src/daf/seed/daf-seed.service.ts` | Bo'lim/dars qurishni fayldan o'qishga o'tkazish (Task 3) |
-| `src/daf/sentence/vocab-set.ts` | Bo'limgacha to'plangan ruxsat etilgan so'z to'plami (Task 4) |
 | `src/daf/sentence/sentence-validate.ts` | Gapdagi notanish so'zni topish (Task 4) |
 | `src/daf/sentence/sentence-generate.ts` | So'rov qurish, javobni o'qish, qayta urinish (Task 5) |
 | `scripts/daf-gen-sentences.ts` | Gap yasash skripti (Task 5) |
@@ -62,6 +61,7 @@ ts-node skriptlar · fal.ai (`fal-ai/flux/schnell`,
 | `server/content/daf/picturable.json` | Belgilash natijasi (Task 7) |
 | `src/daf/media/fal-client.ts` | fal.ai ga yagona kirish nuqtasi (Task 8) |
 | `src/daf/media/image-prompt.ts` | Rasm so'rovini qurish (Task 8) |
+| `src/daf/media/media-keys.ts` | R2 kalitlarini yasash — rasm va ovoz (Task 8, 9) |
 | `scripts/daf-gen-images.ts` | Bo'lim rasmlari (Task 8) |
 | `scripts/daf-gen-tts.ts` | Gap ovozlari (Task 9) |
 
@@ -944,7 +944,6 @@ qilinmagan A1 mavzusi qolsa seed yiqiladi."
 ## Task 4: Gap validatori
 
 **Files:**
-- Create: `src/daf/sentence/vocab-set.ts`
 - Create: `src/daf/sentence/sentence-validate.ts`
 - Test: `src/daf/sentence/sentence-validate.spec.ts`
 
@@ -1111,8 +1110,9 @@ export function unknownWords(sentence: string, allowed: Set<string>): string[] {
 }
 ```
 
-`src/daf/sentence/vocab-set.ts` faylini yaratmang — `cumulativeVocab`
-shu modulda turadi va alohida fayl ortiqcha bo'ladi.
+`cumulativeVocab` shu modulda turadi — u `unknownWords` bilan bir
+savolga xizmat qiladi («bu so'z tanishmi?») va alohida faylga ajratish
+ikkisini bir-biridan uzib qo'yardi.
 
 - [ ] **Step 4: Test o'tishini tasdiqlang**
 
@@ -1698,8 +1698,11 @@ Expected: PASS (6 test)
 `scripts/daf-mark-picturable.ts`:
 
 1. A1 lug'atini bazadan oladi;
-2. mamlakatlarni darhol `false` qiladi (bayroq alohida yo'l bilan
-   beriladi);
+2. mamlakatlarni `false` qiladi — bu «rasm kerak emas» degani EMAS,
+   «sun'iy intellekt chizmasin» degani. Task 8 Step 10 ularga tayyor
+   bayroq beradi va o'shanda `true` ga qaytaradi. Shu tartib muhim:
+   `daf-gen-images` faqat `picturable = true` larni oladi, ya'ni
+   bayroqsiz mamlakat generatorga tushib qolmaydi;
 3. qolganini 40 talik guruhda modeldan so'raydi;
 4. natijani `content/daf/picturable.json` ga yozadi:
    `{ "sourceId": true|false }`;
@@ -1760,14 +1763,15 @@ chetlatildi — Flux bayroqlarni xato chizadi, ular uchun tayyor aktiv."
   - `class FalClient { constructor(apiKey: string, fetchFn?: typeof fetch); image(prompt: string, seed: number): Promise<string>; speech(text: string): Promise<string> }`
   - `function imagePrompt(scene: string): string`
   - `function sceneFor(de: string, en: string): string`
-  - `function imageKeyFor(sourceId: string): string`
+  - `function imageKeyFor(sourceId: string): string` (`media-keys.ts` da)
 
 - [ ] **Step 1: Yiqiladigan testni yozing**
 
 `src/daf/media/image-prompt.spec.ts`:
 
 ```ts
-import { imagePrompt, imageKeyFor } from './image-prompt';
+import { imagePrompt } from './image-prompt';
+import { imageKeyFor } from './media-keys';
 
 describe('imagePrompt', () => {
   const p = imagePrompt('a person walking on a path');
@@ -1869,6 +1873,11 @@ export function imagePrompt(scene: string): string {
   return STYLE.replace('{SCENE}', scene);
 }
 
+```
+
+`src/daf/media/media-keys.ts` — R2 kalitlari faqat shu yerda yasaladi:
+
+```ts
 export function imageKeyFor(sourceId: string): string {
   return `daf/img/${sourceId}.jpg`;
 }
@@ -2075,11 +2084,11 @@ Uslub qolipi namunada tasdiqlangan va kodda qotirilgan. --unit majburiy:
 
 - [ ] **Step 1: Kalit yasovchi uchun test yozing**
 
-`src/daf/media/image-prompt.spec.ts` ga qo'shing (kalit yasovchilar bir
-joyda tursin):
+`src/daf/media/media-keys.spec.ts` ga qo'shing — kalit yasovchilar bir
+joyda turadi:
 
 ```ts
-import { sentenceAudioKey } from './image-prompt';
+import { sentenceAudioKey } from './media-keys';
 
 describe('sentenceAudioKey', () => {
   it('bo`lim va tartibdan barqaror kalit yasaydi', () => {
@@ -2095,12 +2104,12 @@ describe('sentenceAudioKey', () => {
 
 - [ ] **Step 2: Test yiqilishini tasdiqlang**
 
-Run: `npx jest src/daf/media/image-prompt.spec.ts`
+Run: `npx jest src/daf/media/media-keys.spec.ts`
 Expected: FAIL — `sentenceAudioKey` eksport qilinmagan
 
 - [ ] **Step 3: Yozing**
 
-`src/daf/media/image-prompt.ts` ga qo'shing:
+`src/daf/media/media-keys.ts` ga qo'shing:
 
 ```ts
 /** Gap ovozining R2 kaliti. Bo'lim va tartibdan — barqaror. */
@@ -2113,7 +2122,7 @@ export function sentenceAudioKey(unitOrder: number, order: number): string {
 
 - [ ] **Step 4: Test o'tishini tasdiqlang**
 
-Run: `npx jest src/daf/media/image-prompt.spec.ts`
+Run: `npx jest src/daf/media/media-keys.spec.ts`
 Expected: PASS
 
 - [ ] **Step 5: Skriptni yozing**
@@ -2194,7 +2203,7 @@ Expected: `A1 bo'lim 20 | dars 100+ | gap 600 (ovozli 600) | chiziladigan so'z 3
 - [ ] **Step 10: Commit**
 
 ```bash
-git add scripts/daf-gen-tts.ts src/daf/media/image-prompt.ts package.json
+git add scripts/daf-gen-tts.ts src/daf/media/media-keys.ts package.json
 git commit -m "Gap ovozi TTS bilan yasaladi
 
 A1 uchun toza va sekin talaffuz intervyu tezligidan afzal. Haqiqiy
