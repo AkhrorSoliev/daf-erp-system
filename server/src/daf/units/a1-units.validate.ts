@@ -6,6 +6,9 @@ export const MAX_WORDS = 50;
 /**
  * Bo'lim faylini tekshiradi va muammolar ro'yxatini qaytaradi.
  *
+ * Grammatika kodlari ham qo'riqlanadi: bitta sahifa ikki bo'limda tursa,
+ * 3-task uni bittasiga bog'laydi va ikkinchisi jimgina grammatikasiz qoladi.
+ *
  * Muammo topilsa YIQILMAYDI, ro'yxat qaytaradi — chaqiruvchi hammasini
  * bir yo'la ko'rsatishi uchun. Bittalab yiqilish faylni tuzatishni
  * o'nlab yugurishga aylantirardi.
@@ -14,9 +17,12 @@ export function validateA1Units(
   file: A1UnitsFile,
   sectionSizes: Map<string, number>,
   allSections: string[],
+  allGrammar: string[],
 ): string[] {
   const problems: string[] = [];
   const seen = new Map<string, number>();
+  const seenGrammar = new Map<string, number>();
+  const knownGrammar = new Set(allGrammar);
 
   for (const u of file.units) {
     for (const s of u.sections) {
@@ -25,6 +31,14 @@ export function validateA1Units(
         continue;
       }
       seen.set(s, (seen.get(s) ?? 0) + 1);
+    }
+
+    for (const g of u.grammar) {
+      if (!knownGrammar.has(g)) {
+        problems.push(`Manbada yo'q grammatika: ${g} (${u.order}-bo'lim)`);
+        continue;
+      }
+      seenGrammar.set(g, (seenGrammar.get(g) ?? 0) + 1);
     }
 
     const words = u.sections.reduce(
@@ -42,6 +56,13 @@ export function validateA1Units(
   const dup = [...seen].filter(([, n]) => n > 1).map(([s]) => s);
   if (dup.length > 0) {
     problems.push(`Bir necha bo'limda takrorlangan mavzu: ${dup.join(', ')}`);
+  }
+
+  const dupGrammar = [...seenGrammar].filter(([, n]) => n > 1).map(([g]) => g);
+  if (dupGrammar.length > 0) {
+    problems.push(
+      `Bir necha bo'limda takrorlangan grammatika: ${dupGrammar.join(', ')}`,
+    );
   }
 
   const untouched = allSections.filter((s) => !seen.has(s));
