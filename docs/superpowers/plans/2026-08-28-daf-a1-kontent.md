@@ -575,8 +575,44 @@ keyingisini boshlang. Sarlavhani mavzularning nemischa nomiga qarab
 o'zingiz yozing (masalan `Begrüßungen` + `Persönliche Informationen`
 → `titleUz: "Tanishuv"`, `titleDe: "Sich vorstellen"`).
 
-Grammatika sahifalarini shu bobning `d.grammar` ro'yxatidan mavzuga
-ma'nan mos bo'limga biriktiring; bir sahifa faqat bitta bo'limga.
+Grammatika sahifalarini biriktiring. **Manbada `grammar[].chapter`
+maydoni YO'Q** — bog'lanish teskari tomondan keladi: bobning o'zida
+`grammarFocus` va `grammarRecommended` ro'yxatlari bor va ular
+grammatika `code` lariga ishora qiladi.
+
+1–4-boblar (A1) shu kodlarni nomlaydi:
+
+```
+bob 1  focus: no_02, v_01, vi_05, vi_11, pro_02, con_05   (+6 recommended)
+bob 2  focus: cas_04, cas_05, cas_03, vi_10               (+3 recommended)
+bob 3  focus: vi_01, vi_02, vi_06, vi_08, vi_09           (+1 recommended)
+bob 4  focus: vm_01, con_03, vi_13                        (+5 recommended)
+```
+
+Ro'yxatni shu buyruq bilan to'liq chiqaring:
+
+```bash
+cd server && node -e "
+const d=require('./content/daf/dib.json');
+for (const c of d.chapters.filter(x=>x.chapter<=4)) {
+  const pick=k=>(c[k]||[]).map(x=>typeof x==='string'?x:x.code);
+  console.log('bob',c.chapter,'focus:',pick('grammarFocus').join(','));
+  console.log('bob',c.chapter,'recommended:',pick('grammarRecommended').join(','));
+}
+const codes=new Set(d.grammar.map(g=>g.code));
+const ref=new Set(d.chapters.flatMap(c=>[...(c.grammarFocus||[]),...(c.grammarRecommended||[])].map(x=>typeof x==='string'?x:x.code)));
+console.log('YETIM (hech bir bob ishora qilmagan):', [...codes].filter(c=>!ref.has(c)).join(','));
+console.log('A1 deb belgilangan:', d.grammar.filter(g=>g.level==='A1.1'||g.level==='A1.2').map(g=>g.code).join(','));
+"
+```
+
+**Yetim sahifalar ham biriktirilishi mumkin va kerak.** 92 sahifadan
+34 tasiga hech bir bob ishora qilmaydi — ularning mashqlari Faza 2 da
+o'quvchiga umuman yetib bormagan edi. Yetimlardan `level` i `A1.1`
+yoki `A1.2` bo'lganini, hamda mavzusi A1 bo'limlariga mos tushganini
+tegishli bo'limga qo'shing. Qolganlari (A2/B1 grammatikasi) tegilmaydi.
+
+Bir sahifa faqat bitta bo'limga tegishli bo'ladi.
 
 Boshlanish shakli:
 
