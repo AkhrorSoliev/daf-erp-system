@@ -632,6 +632,11 @@ hajm chegarasini tekshiradi."
 - Modify: `src/daf/seed/daf-seed.service.ts`
 - Modify: `src/daf/seed/daf-seed.service.spec.ts`
 - Modify: `scripts/daf-seed.ts`
+- Modify: `src/daf/daf-portal-read.service.ts` — hamon `A1_1`/`A2_2` va
+  `kind` ga tayanadi (15 ta typecheck xatosi). Daraja yorliqlarini
+  uchtaga, `kind` ni `tier` ga o'tkazing; usiz shox typecheck'dan
+  o'tmaydi
+- Modify: `src/daf/daf-portal-read.service.spec.ts` — o'sha sabab
 
 **Interfaces:**
 - Consumes: Task 2 ning `A1UnitsFile`, `validateA1Units`
