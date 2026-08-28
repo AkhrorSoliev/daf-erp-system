@@ -68,10 +68,73 @@ export function nodeState(index: number, percents: number[]): LessonNodeState {
   return percents[index - 1] >= 100 ? "active" : "locked";
 }
 
-/** Ikki tugun orasidagi nuqtali chiziq. */
-function Connector({ toRight }: { toRight: boolean }) {
+/**
+ * Bezakning joylashuvi — TASODIFIY EMAS, tartib raqamidan hisoblanadi.
+ *
+ * `Math.random()` ishlatilsa, React qayta chizganda bulutlar sakrab
+ * yurardi: bezak har renderda boshqa joyga tushadi va bu buzilgandek
+ * ko'rinadi. Hash esa har doim bir xil natija beradi — ko'rinishi
+ * tasodifiy, xatti-harakati barqaror.
+ */
+function hash(n: number): number {
+  const x = Math.sin(n * 127.1) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+/**
+ * Bog'lovchi chiziq yonidagi bezak.
+ *
+ * Bezak faqat qatorlar ORASIDA turadi va chekkaga suriladi — tugunning
+ * ustiga tushmasligi va sarlavhani to'sib qo'ymasligi uchun. Har uchinchi
+ * bo'shliqda bulut, qolganida uchqun: har bo'shliqni to'ldirish yo'lni
+ * shovqinga aylantiradi.
+ */
+function Decor({ index }: { index: number }) {
+  const r = hash(index);
+  const cloud = index % 3 === 0;
+  const left = hash(index + 7) > 0.5;
+
   return (
-    <div aria-hidden className="flex h-11 items-center justify-center">
+    <div
+      aria-hidden
+      className="pointer-events-none absolute"
+      style={{
+        top: `${8 + r * 24}px`,
+        ...(left ? { left: `${2 + r * 10}px` } : { right: `${2 + r * 10}px` }),
+      }}
+    >
+      {cloud ? (
+        <Cloud
+          size={30 + Math.round(r * 26)}
+          weight="fill"
+          className="lumio-float text-sky-400/35"
+          style={{
+            animationDuration: `${2800 + Math.round(r * 1800)}ms`,
+            animationDelay: `${Math.round(r * 900)}ms`,
+          }}
+        />
+      ) : (
+        <Sparkle
+          size={13 + Math.round(r * 9)}
+          weight="fill"
+          className="lumio-sparkle text-amber-400"
+          style={{
+            animationDuration: `${1500 + Math.round(r * 900)}ms`,
+            animationDelay: `${Math.round(r * 700)}ms`,
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Ikki tugun orasidagi nuqtali chiziq. */
+function Connector({ toRight, index }: { toRight: boolean; index: number }) {
+  return (
+    // Butun qator bezak: chiziq ham, bulut ham ma'no tashimaydi, shuning
+    // uchun ekran o'quvchisiga e'lon qilinmaydi.
+    <div aria-hidden className="relative flex h-14 items-center justify-center">
+      <Decor index={index} />
       <div
         className="h-[5px] w-24 rounded-full"
         style={{
@@ -104,39 +167,6 @@ export function LessonPath({ units }: { units: PathUnit[] }) {
   return (
     <div className="relative mx-auto w-full" style={{ maxWidth: COLUMN }}>
       {/* Bezaklar — faqat fon, ekran o'quvchisiga e'lon qilinmaydi. */}
-      {/* Bulutlar suzadi, uchqunlar miltillaydi — dizayn tizimining
-          `lumio-float` va `lumio-sparkle` halqalari.
-          
-          Davomiylik har biriga BOSHQACHA berilgan: bir xil bo'lsa
-          hammasi bir vaqtda ko'tarilib-tushib, harakat sun'iy
-          ko'rinardi. Kechikish ham shu sabab. */}
-      <Cloud
-        aria-hidden
-        size={52}
-        weight="fill"
-        className="lumio-float pointer-events-none absolute -top-3 right-1 text-sky-400/40"
-      />
-      <Cloud
-        aria-hidden
-        size={34}
-        weight="fill"
-        className="lumio-float pointer-events-none absolute left-2 top-2 text-sky-400/30"
-        style={{ animationDuration: "4200ms", animationDelay: "600ms" }}
-      />
-      <Sparkle
-        aria-hidden
-        size={18}
-        weight="fill"
-        className="lumio-sparkle pointer-events-none absolute left-1 top-24 text-amber-400"
-      />
-      <Sparkle
-        aria-hidden
-        size={14}
-        weight="fill"
-        className="lumio-sparkle pointer-events-none absolute right-3 top-44 text-amber-400"
-        style={{ animationDuration: "2100ms", animationDelay: "400ms" }}
-      />
-
       <div className="relative flex flex-col">
         {units.map((u, i) => {
           const left = i % 2 === 0;
@@ -147,7 +177,7 @@ export function LessonPath({ units }: { units: PathUnit[] }) {
               {u.firstOfLevel ? (
                 <LevelMark label={u.levelLabel} />
               ) : i > 0 ? (
-                <Connector toRight={!left} />
+                <Connector toRight={!left} index={i} />
               ) : null}
 
               <div
