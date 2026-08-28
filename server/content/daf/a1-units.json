@@ -39,7 +39,7 @@
       "titleUz": "Pul, telefon va kampus",
       "titleDe": "Geld, Handy und Campus",
       "sections": ["dib-voc-01-11", "dib-voc-01-12"],
-      "grammar": ["det_03"]
+      "grammar": ["det_03", "det_04"]
     },
     {
       "order": 6,
@@ -67,7 +67,7 @@
       "titleUz": "Vaqt va soat",
       "titleDe": "Uhrzeit und Zeitangaben",
       "sections": ["dib-voc-02-06"],
-      "grammar": ["cas_04"]
+      "grammar": ["cas_04", "cas_06", "vi_14"]
     },
     {
       "order": 10,
@@ -87,7 +87,7 @@
         "dib-voc-02-12",
         "dib-voc-02-13"
       ],
-      "grammar": ["v_04"]
+      "grammar": ["v_04", "vimp_01"]
     },
     {
       "order": 12,
@@ -115,7 +115,7 @@
       "titleUz": "Shahardagi do'konlar",
       "titleDe": "Geschäfte in der Stadt",
       "sections": ["dib-voc-03-06", "dib-voc-03-08"],
-      "grammar": ["pro_03"]
+      "grammar": ["pro_03", "vi_03"]
     },
     {
       "order": 16,
@@ -129,14 +129,14 @@
       "titleUz": "Bo'sh vaqt va sevimli mashg'ulot",
       "titleDe": "Freizeit und Hobbys",
       "sections": ["dib-voc-04-01", "dib-voc-04-10"],
-      "grammar": ["con_03"]
+      "grammar": ["con_03", "vsp_04"]
     },
     {
       "order": 18,
       "titleUz": "Sayrga chiqish: kafe, kino, restoran",
       "titleDe": "Ausgehen: Café, Kino, Restaurant",
       "sections": ["dib-voc-04-02", "dib-voc-04-08", "dib-voc-04-09"],
-      "grammar": ["vm_01"]
+      "grammar": ["vm_01", "vsp_05"]
     },
     {
       "order": 19,
@@ -150,7 +150,7 @@
       "titleUz": "Sport, musiqa va o'yinlar",
       "titleDe": "Sport, Musik und Spiele",
       "sections": ["dib-voc-04-04", "dib-voc-04-06", "dib-voc-04-07"],
-      "grammar": ["vi_14"]
+      "grammar": ["vi_04"]
     }
   ]
 }
