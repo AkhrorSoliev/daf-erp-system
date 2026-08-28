@@ -78,3 +78,51 @@ describe('Daf sxemasi', () => {
     },
   );
 });
+
+describe('A1 strukturasi', () => {
+  // Bu blok ham sxema faylini matn sifatida o'qiydi — yuqoridagi
+  // `sourceId yagona` testi kabi, DMMF emas, chunki bu yerda tekshirilgan
+  // enum/unique shakllari runtime DMMF'da to'liq ko'rinmaydi.
+  const schema = readFileSync(
+    join(__dirname, '..', '..', 'prisma', 'schema.prisma'),
+    'utf8',
+  );
+
+  // Daraja o'quvchining bosqichi bo'lishi kerak, manbaning yorlig'i emas.
+  // Goethe imtihonlari ham A1/A2/B1.
+  it('DafLevel uchta qiymatga tushgan', () => {
+    expect(schema).toMatch(/enum DafLevel \{\s*A1\s+A2\s+B1\s*\}/);
+    expect(schema).not.toMatch(/A1_1/);
+    expect(schema).not.toMatch(/A2_2/);
+  });
+
+  // Endi dars TURI emas, DARAJASI muhim: har bosqichda ham lug'at,
+  // ham grammatika, ham eshitish bo'ladi.
+  it('DafLesson kind o`rniga tier ishlatadi', () => {
+    expect(schema).toMatch(/model DafLesson[\s\S]*?tier\s+Int/);
+    expect(schema).not.toMatch(/enum DafLessonKind/);
+    expect(schema).toMatch(/@@unique\(\[unitId, tier\]\)/);
+  });
+
+  it('DafSentence bo`limga bog`langan va kelib chiqishini saqlaydi', () => {
+    expect(schema).toMatch(/model DafSentence[\s\S]*?origin\s+DafSentenceOrigin/);
+    expect(schema).toMatch(/enum DafSentenceOrigin \{\s*GENERATED\s+SOURCE\s*\}/);
+  });
+
+  // «Qaysi so'z qaytishi kerak» savoliga butun urinishlar tarixidan
+  // javob berish qimmat, shuning uchun holat saqlanadi.
+  it('DafLexemeState o`quvchi va so`z bo`yicha yagona', () => {
+    expect(schema).toMatch(/model DafLexemeState[\s\S]*?@@unique\(\[studentId, lexemeId\]\)/);
+    expect(schema).toMatch(/model DafLexemeState[\s\S]*?@@index\(\[studentId, dueAt\]\)/);
+  });
+
+  it('DafLessonProgress o`quvchi va dars bo`yicha yagona', () => {
+    expect(schema).toMatch(/model DafLessonProgress[\s\S]*?@@unique\(\[studentId, lessonId\]\)/);
+  });
+
+  // Rasmli savol turlari faqat aniq so'zlarga beriladi — `weil` ni
+  // chizib bo'lmaydi.
+  it('DafLexeme picturable bayrog`ini olgan', () => {
+    expect(schema).toMatch(/model DafLexeme[\s\S]*?picturable\s+Boolean\s+@default\(false\)/);
+  });
+});
