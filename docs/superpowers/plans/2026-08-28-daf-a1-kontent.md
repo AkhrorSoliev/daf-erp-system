@@ -31,7 +31,7 @@ ts-node skriptlar · fal.ai (`fal-ai/flux/schnell`,
 - `FAL_KEY` faqat muhit o'zgaruvchisi. Kalit repo'ga **hech qachon** yozilmaydi.
 - Kod izohlari o'zbekcha (Lotin). `CLAUDE.md` ingliz tili qoidasi faqat o'sha faylga tegishli.
 - Har task oxirida: `npx jest <fayl>` yashil, `npm run typecheck` toza, `npx prettier --write` tegilgan fayllarga.
-- Prisma migratsiyasi: `migrate dev` bu repo'da ishlamaydi. `migrate diff` → `db execute` → `migrate resolve` ishlatiladi (dev), prod'ga `migrate deploy`.
+- Prisma migratsiyasi: `migrate dev` bu repo'da ishlamaydi va shadow baza yo'q. `migrate diff --from-schema/--to-schema` → `db execute` → `migrate resolve` (dev), prod'ga `migrate deploy`. `--to-schema-datamodel` bu versiyada olib tashlangan.
 
 ## Prerequisite (odam bajaradi)
 
@@ -273,10 +273,12 @@ bilan chiqaring:
 ```bash
 cd server
 mkdir -p prisma/migrations/20260828120000_daf_a1_structure
+# `--from-migrations` shadow bazani talab qiladi, bu repo'da esa u yo'q.
+# Ikki sxemani solishtirish shadow'siz ishlaydi: eskisi git'dan olinadi.
+git show HEAD:server/prisma/schema.prisma > /tmp/old.prisma
 npx prisma migrate diff \
-  --from-migrations prisma/migrations \
-  --to-schema-datamodel prisma/schema.prisma \
-  --shadow-database-url "$SHADOW_DATABASE_URL" \
+  --from-schema /tmp/old.prisma \
+  --to-schema prisma/schema.prisma \
   --script > prisma/migrations/20260828120000_daf_a1_structure/migration.sql
 ```
 
