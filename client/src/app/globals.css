@@ -279,6 +279,8 @@
   --amber-700: #d2790a;
   --teal-50: #e6fbf8;
   --teal-100: #c2f4ed;
+  /* LessonNode'ning `done` holatidagi lab soyasi shu tondan foydalanadi. */
+  --teal-300: #6fe0d3;
   --teal-400: #2dd4c4;
   --teal-500: #14b8ac;
   --teal-600: #0e9a90;

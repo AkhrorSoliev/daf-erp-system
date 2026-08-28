@@ -2,7 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
-import { Check, X, Clock, ShieldCheck, CloudSlash } from "@phosphor-icons/react";
+import {
+  Check,
+  X,
+  Clock,
+  ShieldCheck,
+  CloudSlash,
+} from "@phosphor-icons/react";
 import {
   Screen,
   StackHeader,
@@ -17,10 +23,30 @@ import {
 import type { AttendanceGroup, AttendanceStats } from "./lib/types";
 
 const STATUS = {
-  PRESENT: { label: "Keldi", icon: Check, tone: "success" as const, color: "var(--success)" },
-  ABSENT: { label: "Kelmadi", icon: X, tone: "danger" as const, color: "var(--danger)" },
-  LATE: { label: "Kechikdi", icon: Clock, tone: "warning" as const, color: "var(--warning)" },
-  EXCUSED: { label: "Sababli", icon: ShieldCheck, tone: "sky" as const, color: "var(--ink-400)" },
+  PRESENT: {
+    label: "Keldi",
+    icon: Check,
+    tone: "success" as const,
+    color: "var(--success)",
+  },
+  ABSENT: {
+    label: "Kelmadi",
+    icon: X,
+    tone: "danger" as const,
+    color: "var(--danger)",
+  },
+  LATE: {
+    label: "Kechikdi",
+    icon: Clock,
+    tone: "warning" as const,
+    color: "var(--warning)",
+  },
+  EXCUSED: {
+    label: "Sababli",
+    icon: ShieldCheck,
+    tone: "sky" as const,
+    color: "var(--ink-400)",
+  },
 } as const;
 
 function percentColor(p: number): string {
@@ -55,10 +81,7 @@ function StatCell({
 }) {
   return (
     <div className="flex flex-col items-center">
-      <span
-        className="font-display text-xl font-extrabold"
-        style={{ color }}
-      >
+      <span className="font-display text-xl font-extrabold" style={{ color }}>
         {value}
       </span>
       <span className="text-xs font-semibold text-ink-500">{label}</span>
@@ -102,10 +125,26 @@ export function StudentAttendanceHistory() {
                   sublabel="davomat"
                 />
                 <div className="grid flex-1 grid-cols-2 gap-3">
-                  <StatCell value={stats.present} label="Keldi" color="var(--success)" />
-                  <StatCell value={stats.late} label="Kechikdi" color="var(--warning)" />
-                  <StatCell value={stats.absent} label="Kelmadi" color="var(--danger)" />
-                  <StatCell value={stats.excused} label="Sababli" color="var(--ink-500)" />
+                  <StatCell
+                    value={stats.present}
+                    label="Keldi"
+                    color="var(--success)"
+                  />
+                  <StatCell
+                    value={stats.late}
+                    label="Kechikdi"
+                    color="var(--warning)"
+                  />
+                  <StatCell
+                    value={stats.absent}
+                    label="Kelmadi"
+                    color="var(--danger)"
+                  />
+                  <StatCell
+                    value={stats.excused}
+                    label="Sababli"
+                    color="var(--ink-500)"
+                  />
                 </div>
               </Card>
             </FadeIn>
@@ -127,7 +166,15 @@ export function StudentAttendanceHistory() {
                           .join(" · ")}
                       </p>
                     </div>
-                    <Badge tone={group.stats.percentage >= 75 ? "success" : group.stats.percentage >= 50 ? "warning" : "danger"}>
+                    <Badge
+                      tone={
+                        group.stats.percentage >= 75
+                          ? "success"
+                          : group.stats.percentage >= 50
+                            ? "warning"
+                            : "danger"
+                      }
+                    >
                       {group.stats.percentage}%
                     </Badge>
                   </div>
@@ -136,10 +183,16 @@ export function StudentAttendanceHistory() {
                     <div className="px-4 pt-3">
                       <ProgressBar
                         segments={[
-                          { value: group.stats.present, color: "var(--success)" },
+                          {
+                            value: group.stats.present,
+                            color: "var(--success)",
+                          },
                           { value: group.stats.late, color: "var(--warning)" },
                           { value: group.stats.absent, color: "var(--danger)" },
-                          { value: group.stats.excused, color: "var(--ink-400)" },
+                          {
+                            value: group.stats.excused,
+                            color: "var(--ink-400)",
+                          },
                         ]}
                         height={10}
                       />
@@ -155,7 +208,8 @@ export function StudentAttendanceHistory() {
                       {group.records.map((record) => {
                         const cfg = STATUS[record.status];
                         const Icon = cfg.icon;
-                        const dayName = DAY_NAMES[new Date(record.date).getDay()];
+                        const dayName =
+                          DAY_NAMES[new Date(record.date).getDay()];
                         return (
                           <div
                             key={record.date}

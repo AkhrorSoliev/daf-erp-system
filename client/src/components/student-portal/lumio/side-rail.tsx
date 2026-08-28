@@ -107,9 +107,7 @@ export function LumioSideRail({ className }: { className?: string }) {
                 title={collapsed ? item.title : undefined}
                 className={cn(
                   "relative flex items-center rounded-md text-sm transition-colors",
-                  collapsed
-                    ? "justify-center py-3"
-                    : "gap-3 px-3 py-2.5",
+                  collapsed ? "justify-center py-3" : "gap-3 px-3 py-2.5",
                   active
                     ? "bg-coral-500/10 font-bold text-coral-600"
                     : "font-semibold text-ink-600 hover:bg-tint hover:text-ink-900",

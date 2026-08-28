@@ -132,6 +132,7 @@ export function LernenLessonPage({ lessonId }: { lessonId: number }) {
         <FadeIn>
           <VocabDrill
             lessonId={lessonId}
+            onExit={() => setStage("study")}
             onFinished={(correct, total) => {
               setScore({ correct, total });
               setStage("done");

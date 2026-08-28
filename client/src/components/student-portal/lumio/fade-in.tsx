@@ -8,7 +8,13 @@ export interface FadeInProps extends React.HTMLAttributes<HTMLDivElement> {
 
 // Staggered entrance wrapper. Sets the `--i` custom property consumed by the
 // `.lumio-fade-up` animation in globals.css (respects prefers-reduced-motion).
-export function FadeIn({ index = 0, className, style, children, ...rest }: FadeInProps) {
+export function FadeIn({
+  index = 0,
+  className,
+  style,
+  children,
+  ...rest
+}: FadeInProps) {
   return (
     <div
       className={cn("lumio-fade-up", className)}

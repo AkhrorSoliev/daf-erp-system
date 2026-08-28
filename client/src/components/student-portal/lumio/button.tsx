@@ -34,7 +34,8 @@ export const lumioButton = cva(
 );
 
 export interface LumioButtonProps
-  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "color">,
+  extends
+    Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "color">,
     VariantProps<typeof lumioButton> {
   loading?: boolean;
   iconBefore?: React.ReactNode;

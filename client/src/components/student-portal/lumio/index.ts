@@ -3,6 +3,22 @@
 export { Button, lumioButton, type LumioButtonProps } from "./button";
 export { Card, type LumioCardProps } from "./card";
 export { FeatureCard, type FeatureCardProps } from "./feature-card";
+// O'quv bo'limi uchun — `daf-design-system/components/` dan ko'chirilgan.
+export {
+  LessonNode,
+  type LessonNodeProps,
+  type LessonNodeState,
+} from "./lesson-node";
+export {
+  CategoryCard,
+  type CategoryCardProps,
+  type CategoryTone,
+} from "./category-card";
+export {
+  FractionChip,
+  type FractionChipProps,
+  type FractionKind,
+} from "./fraction-chip";
 export { IconTile, type IconTileProps } from "./icon-tile";
 export { ListRow, type ListRowProps } from "./list-row";
 export { Badge, type BadgeProps } from "./badge";

@@ -50,7 +50,10 @@ export function StudentPortalLayout({
   if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <CircleNotch className="size-8 animate-spin text-coral-500" weight="bold" />
+        <CircleNotch
+          className="size-8 animate-spin text-coral-500"
+          weight="bold"
+        />
       </div>
     );
   }

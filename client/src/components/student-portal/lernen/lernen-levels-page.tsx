@@ -14,12 +14,11 @@ import {
   Card,
   Badge,
   IconTile,
-  ListRow,
-  ProgressRing,
   EmptyState,
   LoadingCards,
 } from "../lumio";
 import { useLernenLevels } from "./queries";
+import { LessonPath } from "./lesson-path";
 import type { LernenLevel } from "./types";
 
 /**
@@ -64,51 +63,37 @@ const SKILLS = [
   },
 ];
 
-function LevelCard({ level }: { level: LernenLevel }) {
-  const lessons = level.units.reduce((n, u) => n + u.lessonCount, 0);
-  const empty = level.units.length === 0;
+function LevelSection({ level }: { level: LernenLevel }) {
+  if (level.units.length === 0) {
+    return (
+      <section className="flex items-center justify-between px-1">
+        <h2 className="font-display text-[22px] font-extrabold text-ink-900">
+          {level.label}
+        </h2>
+        <Badge tone="neutral" size="sm">
+          Material tayyorlanmoqda
+        </Badge>
+      </section>
+    );
+  }
+
+  // Progress hali hisoblanmaydi: urinishlar jurnali yozilyapti, ball
+  // formulasi esa Faza 3 dan keyin. Nol ko'rsatish yolg'on emas —
+  // o'quvchi hali hech narsani tugatmagan.
+  const percents = level.units.map(() => 0);
 
   return (
-    <Card className="space-y-4">
-      <div className="flex items-center gap-4">
-        <ProgressRing
-          value={0}
-          size={64}
-          stroke={7}
-          className="text-coral-500"
-          label={
-            <span className="font-display text-sm font-bold">
-              {level.label}
-            </span>
-          }
-        />
-        <div className="min-w-0 flex-1">
-          <p className="font-display text-lg font-bold text-ink-900">
-            {level.label}
-          </p>
-          <p className="text-sm font-semibold text-ink-500">
-            {empty
-              ? "Bu daraja uchun material hali qo'shilmagan"
-              : `${level.units.length} bo'lim · ${lessons} dars`}
-          </p>
-        </div>
+    <section className="space-y-2">
+      <div className="flex items-center justify-between px-1">
+        <h2 className="font-display text-[22px] font-extrabold text-ink-900">
+          {level.label}
+        </h2>
+        <span className="font-display text-[22px] font-extrabold text-ink-900">
+          0%
+        </span>
       </div>
-
-      {empty ? null : (
-        <div className="space-y-2">
-          {level.units.map((u) => (
-            <ListRow
-              key={u.id}
-              href={`/portal/lernen/units/${u.id}`}
-              icon={<BookOpen size={18} weight="bold" />}
-              iconTone="grape"
-              label={u.titleUz}
-              subtitle={`${u.lessonCount} dars`}
-            />
-          ))}
-        </div>
-      )}
-    </Card>
+      <LessonPath units={level.units} percents={percents} />
+    </section>
   );
 }
 
@@ -117,7 +102,7 @@ export function LernenLevelsPage() {
 
   return (
     <Screen>
-      <ScreenHeader subtitle="Nemis tili" title="Ta'lim" />
+      <ScreenHeader subtitle="Nemis tili" title="Darslar" />
 
       {isLoading ? (
         <LoadingCards count={3} />
@@ -129,12 +114,9 @@ export function LernenLevelsPage() {
         />
       ) : (
         <FadeIn className="space-y-4">
-          <section className="space-y-3">
-            <h2 className="font-display text-sm font-bold uppercase tracking-wide text-ink-500">
-              Poydevor
-            </h2>
+          <section className="space-y-6">
             {data.map((level) => (
-              <LevelCard key={level.level} level={level} />
+              <LevelSection key={level.level} level={level} />
             ))}
           </section>
 

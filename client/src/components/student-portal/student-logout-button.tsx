@@ -19,7 +19,11 @@ import { ListRow } from "./lumio/list-row";
 
 // Logout with a styled confirmation (never the native confirm()). Two looks:
 // a full-width danger ListRow for the More hub, a compact button for the rail.
-export function LogoutButton({ variant = "row" }: { variant?: "row" | "rail" }) {
+export function LogoutButton({
+  variant = "row",
+}: {
+  variant?: "row" | "rail";
+}) {
   const [open, setOpen] = useState(false);
   const logout = useAuth((s) => s.logout);
   const queryClient = useQueryClient();
@@ -57,7 +61,8 @@ export function LogoutButton({ variant = "row" }: { variant?: "row" | "rail" }) 
           <AlertDialogHeader>
             <AlertDialogTitle>Hisobdan chiqasizmi?</AlertDialogTitle>
             <AlertDialogDescription>
-              Qayta kirish uchun telefon raqamingiz va parolingiz kerak bo&apos;ladi.
+              Qayta kirish uchun telefon raqamingiz va parolingiz kerak
+              bo&apos;ladi.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

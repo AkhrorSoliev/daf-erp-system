@@ -226,7 +226,11 @@ export function StudentPaymentSummary() {
 
               {redirecting ? (
                 <p className="flex items-center justify-center gap-2 text-center text-sm font-bold text-ink-500">
-                  <CircleNotch size={16} weight="bold" className="animate-spin" />
+                  <CircleNotch
+                    size={16}
+                    weight="bold"
+                    className="animate-spin"
+                  />
                   To&apos;lov sahifasiga o&apos;tkazilmoqda...
                 </p>
               ) : null}
@@ -269,7 +273,10 @@ function PaymentHistory() {
         transactions.map((t) => {
           const positive = t.amount >= 0;
           return (
-            <Card key={t.id} className="flex items-center justify-between gap-3">
+            <Card
+              key={t.id}
+              className="flex items-center justify-between gap-3"
+            >
               <div className="min-w-0 flex-1">
                 <p className="truncate font-display text-sm font-bold text-ink-900">
                   {t.description || TYPE_LABELS[t.type] || t.type}
