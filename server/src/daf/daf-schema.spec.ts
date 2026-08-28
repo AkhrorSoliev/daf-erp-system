@@ -125,4 +125,10 @@ describe('A1 strukturasi', () => {
   it('DafLexeme picturable bayrog`ini olgan', () => {
     expect(schema).toMatch(/model DafLexeme[\s\S]*?picturable\s+Boolean\s+@default\(false\)/);
   });
+
+  // Yangi modelda so'z bo'limga tegishli, darsga emas. Sxema majburiy
+  // desa, seed so'z yarata olmaydi.
+  it('DafLexeme darsga ixtiyoriy bog`lanadi', () => {
+    expect(schema).toMatch(/model DafLexeme[\s\S]*?lessonId\s+Int\?/);
+  });
 });

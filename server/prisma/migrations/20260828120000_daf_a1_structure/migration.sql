@@ -75,7 +75,16 @@ CREATE UNIQUE INDEX "DafUnit_level_order_key" ON "DafUnit"("level", "order");
 -- Shuning uchun qatorlarning o'zi olib tashlanadi. So'z (`DafLexeme`)
 -- va mashqlar (`DafExercise`) — HAQIQIY lug'at, yo'qotib bo'lmaydi —
 -- avval darsdan uziladi (FK NULL), keyin seed ularni qayta bog'laydi.
+--
+-- `DafLexeme.lessonId` endi ixtiyoriy: so'z endi BO'LIMga tegishli,
+-- darsga emas. FK ham shunga mos ravishda `ON DELETE SET NULL`ga
+-- almashtiriladi (`DafExercise.lessonId`da allaqachon shunday) — aks
+-- holda ixtiyoriy ustunda ham eski `RESTRICT` qolib, kelajakda darsni
+-- o'chirish so'zni ushlab qolib, xatoga sabab bo'lardi.
 ALTER TABLE "DafLexeme" ALTER COLUMN "lessonId" DROP NOT NULL;
+ALTER TABLE "DafLexeme" DROP CONSTRAINT "DafLexeme_lessonId_fkey";
+ALTER TABLE "DafLexeme" ADD CONSTRAINT "DafLexeme_lessonId_fkey"
+  FOREIGN KEY ("lessonId") REFERENCES "DafLesson"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 UPDATE "DafLexeme" SET "lessonId" = NULL;
 UPDATE "DafExercise" SET "lessonId" = NULL;
 DELETE FROM "DafLesson";

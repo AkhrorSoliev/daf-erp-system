@@ -2934,14 +2934,16 @@ model DafLexeme {
   audioEndMs        Int?
   imageKey          String?
   order             Int
-  /// Bo'lim sarlavhasi darsga ko'chdi — u yerda o'z tarjimasi bilan turadi.
-  lessonId          Int
+  /// So'z endi BO'LIMga tegishli, darsga emas — darsni tuzuvchi so'zlarni
+  /// ish vaqtida (runtime) oladi. Shuning uchun ixtiyoriy: seed so'zni
+  /// hech qanday darsga bog'lamasdan ham yarata olishi kerak.
+  lessonId          Int?
   /// Rasm chizib bo'ladimi. `false` — abstrakt so'z (weil, Verantwortung).
   /// Rasmli savol turlari faqat `true` bo'lganlarga beriladi.
   picturable        Boolean               @default(false)
 
   unit     DafUnit          @relation(fields: [unitId], references: [id])
-  lesson   DafLesson        @relation(fields: [lessonId], references: [id])
+  lesson   DafLesson?       @relation(fields: [lessonId], references: [id])
   attempts DafAttempt[]
   states   DafLexemeState[]
 
