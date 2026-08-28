@@ -18,8 +18,7 @@ import {
   LoadingCards,
 } from "../lumio";
 import { useLernenLevels } from "./queries";
-import { LessonPath } from "./lesson-path";
-import type { LernenLevel } from "./types";
+import { LessonPath, flattenPath } from "./lesson-path";
 
 /**
  * Goethe imtihonining to'rt moduli — o'quv yo'lining MAQSADI.
@@ -63,40 +62,6 @@ const SKILLS = [
   },
 ];
 
-function LevelSection({ level }: { level: LernenLevel }) {
-  if (level.units.length === 0) {
-    return (
-      <section className="flex items-center justify-between px-1">
-        <h2 className="font-display text-[22px] font-extrabold text-ink-900">
-          {level.label}
-        </h2>
-        <Badge tone="neutral" size="sm">
-          Material tayyorlanmoqda
-        </Badge>
-      </section>
-    );
-  }
-
-  // Progress hali hisoblanmaydi: urinishlar jurnali yozilyapti, ball
-  // formulasi esa Faza 3 dan keyin. Nol ko'rsatish yolg'on emas —
-  // o'quvchi hali hech narsani tugatmagan.
-  const percents = level.units.map(() => 0);
-
-  return (
-    <section className="space-y-2">
-      <div className="flex items-center justify-between px-1">
-        <h2 className="font-display text-[22px] font-extrabold text-ink-900">
-          {level.label}
-        </h2>
-        <span className="font-display text-[22px] font-extrabold text-ink-900">
-          0%
-        </span>
-      </div>
-      <LessonPath units={level.units} percents={percents} />
-    </section>
-  );
-}
-
 export function LernenLevelsPage() {
   const { data, isLoading, isError } = useLernenLevels();
 
@@ -114,10 +79,11 @@ export function LernenLevelsPage() {
         />
       ) : (
         <FadeIn className="space-y-4">
-          <section className="space-y-6">
-            {data.map((level) => (
-              <LevelSection key={level.level} level={level} />
-            ))}
+          {/* Yo'l uzluksiz: A1.1 dan B1 gacha bitta zigzag, darajalar
+              rang bilan ajraladi. Avval har daraja alohida blokda edi va
+              ular orasidagi bog'lanish ko'rinmasdi. */}
+          <section>
+            <LessonPath units={flattenPath(data)} />
           </section>
 
           <section className="space-y-3">
