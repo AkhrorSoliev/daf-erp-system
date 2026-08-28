@@ -6,7 +6,12 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhone } from "@/lib/format-utils";
-import { Camera, CircleNotch, PencilSimple, Trash } from "@phosphor-icons/react";
+import {
+  Camera,
+  CircleNotch,
+  PencilSimple,
+  Trash,
+} from "@phosphor-icons/react";
 import { Screen, StackHeader, Card, Avatar, LoadingCards } from "./lumio";
 import { StudentNameDialog } from "./student-name-dialog";
 import { useStudentProfile } from "./lib/queries";
@@ -89,9 +94,7 @@ export function StudentProfilePage() {
     );
   }
 
-  const name = profile
-    ? `${profile.firstName} ${profile.lastName}`.trim()
-    : "";
+  const name = profile ? `${profile.firstName} ${profile.lastName}`.trim() : "";
   const branchNames = profile?.branches.map((b) => b.name).join(", ") || null;
 
   return (

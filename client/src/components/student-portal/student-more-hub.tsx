@@ -15,12 +15,37 @@ import { LogoutButton } from "./student-logout-button";
 import { useStudentProfile } from "./lib/queries";
 
 const MENU = [
-  { icon: Wallet, tone: "teal" as const, label: "To'lovlar", href: "/portal/payments" },
-  { icon: ChartLineUp, tone: "amber" as const, label: "Davomat", href: "/portal/attendance" },
-  { icon: Radio, tone: "coral" as const, label: "Radio", href: "/portal/radio" },
-  { icon: Gear, tone: "ink" as const, label: "Sozlamalar", href: "/portal/settings" },
+  {
+    icon: Wallet,
+    tone: "teal" as const,
+    label: "To'lovlar",
+    href: "/portal/payments",
+  },
+  {
+    icon: ChartLineUp,
+    tone: "amber" as const,
+    label: "Davomat",
+    href: "/portal/attendance",
+  },
+  {
+    icon: Radio,
+    tone: "coral" as const,
+    label: "Radio",
+    href: "/portal/radio",
+  },
+  {
+    icon: Gear,
+    tone: "ink" as const,
+    label: "Sozlamalar",
+    href: "/portal/settings",
+  },
   { icon: Question, tone: "sky" as const, label: "FAQ", href: "/portal/faq" },
-  { icon: Info, tone: "grape" as const, label: "Biz haqimizda", href: "/portal/about" },
+  {
+    icon: Info,
+    tone: "grape" as const,
+    label: "Biz haqimizda",
+    href: "/portal/about",
+  },
 ];
 
 export function StudentMoreHub() {

@@ -4,8 +4,10 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Eye, EyeSlash } from "@phosphor-icons/react";
 
-export interface LumioInputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "prefix"> {
+export interface LumioInputProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  "prefix"
+> {
   iconBefore?: React.ReactNode;
   /** Text prefixed inside the field, e.g. the non-editable `+998`. */
   addon?: React.ReactNode;
@@ -13,7 +15,10 @@ export interface LumioInputProps
 
 // Lumio text field — tall, rounded, sunk-tinted with a coral focus ring.
 export const Input = React.forwardRef<HTMLInputElement, LumioInputProps>(
-  function Input({ className, iconBefore, addon, type = "text", ...rest }, ref) {
+  function Input(
+    { className, iconBefore, addon, type = "text", ...rest },
+    ref,
+  ) {
     const isPassword = type === "password";
     const [show, setShow] = React.useState(false);
     const resolvedType = isPassword ? (show ? "text" : "password") : type;

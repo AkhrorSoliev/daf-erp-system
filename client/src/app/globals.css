@@ -201,7 +201,11 @@
   --clay-lip: #c83d20; /* coral-700 solid bottom lip */
   --clay-ambient: rgb(240 78 44 / 0.32); /* soft coral ambient */
 
-  font-family: var(--font-body), ui-sans-serif, system-ui, -apple-system,
+  font-family:
+    var(--font-body),
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
     sans-serif;
   color: var(--foreground);
 }
@@ -279,6 +283,8 @@
   --amber-700: #d2790a;
   --teal-50: #e6fbf8;
   --teal-100: #c2f4ed;
+  /* LessonNode'ning `done` holatidagi lab soyasi shu tondan foydalanadi. */
+  --teal-300: #6fe0d3;
   --teal-400: #2dd4c4;
   --teal-500: #14b8ac;
   --teal-600: #0e9a90;
@@ -338,7 +344,8 @@
   --clay-teal: 0 6px 0 var(--teal-700), 0 16px 26px rgba(14, 154, 144, 0.3);
   --clay-grape: 0 6px 0 var(--grape-600), 0 16px 26px rgba(124, 58, 237, 0.3);
   --clay-sky: 0 6px 0 var(--sky-600), 0 16px 26px rgba(27, 123, 224, 0.3);
-  --clay-coral-press: 0 2px 0 var(--coral-700), 0 6px 12px rgba(240, 78, 44, 0.28);
+  --clay-coral-press:
+    0 2px 0 var(--coral-700), 0 6px 12px rgba(240, 78, 44, 0.28);
   --clay-neutral-press: 0 2px 0 #d6dee7, 0 5px 10px rgba(14, 42, 61, 0.1);
 
   /* --- Feature-card gradients --- */
@@ -352,6 +359,9 @@
   --blur-glass: saturate(140%) blur(18px);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Takrorlanuvchi bezak harakatlari uchun — boshi va oxiri bir xil
+     yumshoq bo'lishi kerak, aks holda halqa har aylanishda seziladi. */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --dur-fast: 120ms;
   --dur-base: 200ms;
   --dur-slow: 320ms;
@@ -379,7 +389,11 @@
   --ring: var(--coral-500);
   --radius: 1.25rem;
 
-  font-family: var(--font-body), ui-sans-serif, system-ui, -apple-system,
+  font-family:
+    var(--font-body),
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
     sans-serif;
   color: var(--foreground);
 }
@@ -522,19 +536,111 @@
   }
   .lumio .lumio-stagger > * {
     animation: lumio-fade-up var(--dur-slow) var(--ease-out) both;
-    animation-delay: calc(var(--i, 0) * 55ms);
+    animation-delay: calc(var(--i, 0) * var(--step, 55ms));
   }
 }
 
-/* Reduced motion → resolve to end-state, drop the stagger delay. */
+/* Bezak halqalari — dizayn tizimining `tokens/motion.css` faylidan
+   ko'chirilgan. Ular ATAYLAB kichik: qoida «takrorlanuvchi harakat faqat
+   mayda urg'ularda» (uchqun, halqa, suzish). Kattaroq narsani doimiy
+   qimirlatish sahifani bezovta qiladi. */
+@keyframes lumio-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* Javob xato bo'lganda — dizayn tizimining `lumio-shake` i. Xatoni RANG
+   bilan ham, HARAKAT bilan ham bildirish kerak: rang ko'rmaydigan
+   foydalanuvchi uchun yolg'iz qizil yetarli emas. */
+@keyframes lumio-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-7px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+}
+
+/* Hozirgi darsning halqasi — o'quvchi qayerdan davom etishini bir
+   qarashda ko'rsin. */
+@keyframes lumio-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 74, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(255, 107, 74, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 74, 0);
+  }
+}
+
+@keyframes lumio-sparkle {
+  0%,
+  100% {
+    transform: scale(0.7) rotate(0deg);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.1) rotate(20deg);
+    opacity: 1;
+  }
+}
+
+.lumio .lumio-float {
+  animation: lumio-float 3000ms var(--ease-in-out) infinite;
+}
+
+.lumio .lumio-sparkle {
+  animation: lumio-sparkle 1600ms var(--ease-in-out) infinite;
+}
+
+.lumio .lumio-shake {
+  animation: lumio-shake 420ms var(--ease-in-out) both;
+}
+
+.lumio .lumio-pulse-ring {
+  animation: lumio-pulse-ring 1800ms var(--ease-out) infinite;
+}
+
+/* Reduced motion → resolve to end-state, drop the stagger delay.
+   Halqalar butunlay to'xtaydi: vestibulyar buzilishi bor foydalanuvchi
+   uchun doimiy harakat bosh aylanishiga sabab bo'ladi, va bu bezak
+   uchun to'lanadigan narx emas. */
 @media (prefers-reduced-motion: reduce) {
   .lumio .lumio-fade-up,
   .lumio .lumio-stagger > * {
     animation-duration: 0.001ms;
     animation-delay: 0ms;
   }
-}
 
+  .lumio .lumio-float,
+  .lumio .lumio-sparkle,
+  .lumio .lumio-pulse-ring {
+    animation: none;
+  }
+
+  /* Silkinish bir martalik va qisqa — u xato haqidagi XABAR, bezak emas,
+     shuning uchun butunlay o'chirilmaydi, faqat tezlashtiriladi. */
+  .lumio .lumio-shake {
+    animation-duration: 0.001ms;
+  }
+}
 
 /* --- Liquid glass (admin login card) ---------------------------------------
    macOS 26 style glass, built from three layers: a tinted body that takes its
@@ -687,8 +793,8 @@
   .lumio h2,
   .lumio h3,
   .lumio .font-display {
-    font-family: var(--font-display), "Baloo 2", ui-sans-serif, system-ui,
-      sans-serif;
+    font-family:
+      var(--font-display), "Baloo 2", ui-sans-serif, system-ui, sans-serif;
     letter-spacing: -0.01em;
   }
 }

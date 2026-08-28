@@ -25,9 +25,9 @@ export function StudentAboutPage() {
             Markaz haqida
           </h3>
           <p className="text-[15px] font-semibold leading-relaxed text-ink-700">
-            DAF Sprachzentrum — nemis tilini zamonaviy uslublarda o&apos;rgatuvchi
-            markaz. Ushbu portal orqali jadvalingizni, davomatingizni va
-            to&apos;lovlaringizni bir joyda kuzatib borasiz.
+            DAF Sprachzentrum — nemis tilini zamonaviy uslublarda
+            o&apos;rgatuvchi markaz. Ushbu portal orqali jadvalingizni,
+            davomatingizni va to&apos;lovlaringizni bir joyda kuzatib borasiz.
           </p>
         </Card>
       </FadeIn>

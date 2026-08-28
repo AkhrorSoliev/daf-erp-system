@@ -69,7 +69,9 @@ function GroupCard({ group }: { group: ProfileGroup }) {
         {group.teachers.length > 0 ? (
           <span className="flex items-center gap-1.5">
             <GraduationCap size={14} weight="bold" />
-            {group.teachers.map((t) => `${t.firstName} ${t.lastName}`).join(", ")}
+            {group.teachers
+              .map((t) => `${t.firstName} ${t.lastName}`)
+              .join(", ")}
           </span>
         ) : null}
         {group.room ? (
@@ -165,7 +167,11 @@ export function StudentHomePage() {
                   >
                     {stats.percentage}%
                   </span>
-                  <CaretRight size={18} weight="bold" className="text-ink-400" />
+                  <CaretRight
+                    size={18}
+                    weight="bold"
+                    className="text-ink-400"
+                  />
                 </span>
               </div>
               {stats.total > 0 ? (

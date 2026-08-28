@@ -48,9 +48,7 @@ export function RadioHost() {
       title: station.name,
       artist: categoryOf(station.category).label,
       album: "DAF Zentrum radio",
-      artwork: [
-        { src: "/daf-logo.png", sizes: "512x512", type: "image/png" },
-      ],
+      artwork: [{ src: "/daf-logo.png", sizes: "512x512", type: "image/png" }],
     });
     session.playbackState = status === "playing" ? "playing" : "paused";
 

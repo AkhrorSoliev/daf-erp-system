@@ -12,8 +12,7 @@ const CLAY_CLASS: Record<ClayTone, string> = {
   sky: "clay-sky",
 };
 
-export interface LumioCardProps
-  extends React.HTMLAttributes<HTMLDivElement> {
+export interface LumioCardProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Extruded clay lip instead of the flat ambient card shadow. */
   clay?: boolean;
   /** Lip color when `clay`. */
@@ -33,7 +32,14 @@ const PAD: Record<NonNullable<LumioCardProps["pad"]>, string> = {
 // flat ambient shadow for the extruded bottom lip in the given tone.
 export const Card = React.forwardRef<HTMLDivElement, LumioCardProps>(
   function Card(
-    { className, clay = false, tone = "neutral", pad = "md", children, ...rest },
+    {
+      className,
+      clay = false,
+      tone = "neutral",
+      pad = "md",
+      children,
+      ...rest
+    },
     ref,
   ) {
     return (

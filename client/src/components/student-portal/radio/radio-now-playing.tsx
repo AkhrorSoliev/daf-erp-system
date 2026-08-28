@@ -82,7 +82,11 @@ export function RadioNowPlaying() {
             <p
               className={cn(
                 "mt-1 flex items-center gap-1.5 text-sm font-bold",
-                failed ? "text-danger" : playing ? "text-coral-600" : "text-ink-500",
+                failed
+                  ? "text-danger"
+                  : playing
+                    ? "text-coral-600"
+                    : "text-ink-500",
               )}
             >
               {playing ? <LiveBars active /> : null}
@@ -98,7 +102,11 @@ export function RadioNowPlaying() {
           <button
             type="button"
             onClick={() => toggleFavorite(station.id)}
-            aria-label={isFavorite ? "Sevimlilardan olib tashlash" : "Sevimlilarga qo'shish"}
+            aria-label={
+              isFavorite
+                ? "Sevimlilardan olib tashlash"
+                : "Sevimlilarga qo'shish"
+            }
             aria-pressed={isFavorite}
             className={cn(
               "inline-flex size-11 shrink-0 items-center justify-center rounded-full border transition-colors",
@@ -143,7 +151,11 @@ export function RadioNowPlaying() {
             type="button"
             onClick={failed ? retry : toggle}
             aria-label={
-              failed ? "Qayta ulanish" : playing || loading ? "To'xtatish" : "Eshitish"
+              failed
+                ? "Qayta ulanish"
+                : playing || loading
+                  ? "To'xtatish"
+                  : "Eshitish"
             }
             className="clay-btn inline-flex size-[68px] items-center justify-center rounded-full bg-coral-500 text-white shadow-lumio-pop transition-transform active:scale-95"
           >

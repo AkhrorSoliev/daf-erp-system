@@ -29,9 +29,12 @@ const lumioBadge = cva(
 );
 
 export interface BadgeProps
-  extends React.HTMLAttributes<HTMLSpanElement>,
+  extends
+    React.HTMLAttributes<HTMLSpanElement>,
     VariantProps<typeof lumioBadge> {}
 
 export function Badge({ className, tone, size, ...rest }: BadgeProps) {
-  return <span className={cn(lumioBadge({ tone, size }), className)} {...rest} />;
+  return (
+    <span className={cn(lumioBadge({ tone, size }), className)} {...rest} />
+  );
 }

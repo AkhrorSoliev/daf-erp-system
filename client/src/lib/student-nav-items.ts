@@ -8,6 +8,7 @@ import {
   Question,
   Info,
   Radio,
+  GraduationCap,
   type Icon,
 } from "@/components/student-portal/lumio/icon";
 import type { LumioTone } from "@/components/student-portal/lumio/tones";
@@ -62,6 +63,13 @@ export const studentNavItems: StudentNavItem[] = [
     icon: ChartLineUp,
     slot: "more",
     tone: "amber",
+  },
+  {
+    title: "Ta'lim",
+    url: "/portal/lernen",
+    icon: GraduationCap,
+    slot: "more",
+    tone: "grape",
   },
   {
     title: "Radio",
@@ -124,6 +132,7 @@ export const moreRoutes = [
   "/portal/more",
   "/portal/profile",
   "/portal/attendance",
+  "/portal/lernen",
   "/portal/radio",
   "/portal/settings",
   "/portal/faq",

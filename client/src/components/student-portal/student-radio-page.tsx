@@ -64,8 +64,8 @@ export function StudentRadioPage() {
 
       <p className="-mt-1 max-w-[62ch] text-sm font-semibold leading-relaxed text-ink-600">
         Germaniya va Avstriyaning jonli radiostansiyalari. Kuniga 15 daqiqa
-        tinglash ham quloqni nemis tiliga o&apos;rgatadi — dars qilayotganda fonda
-        qoldiring.
+        tinglash ham quloqni nemis tiliga o&apos;rgatadi — dars qilayotganda
+        fonda qoldiring.
       </p>
 
       {/* Filter chips — horizontal scroller on narrow screens. */}
@@ -188,7 +188,11 @@ function StationRow({ station }: { station: RadioStation }) {
       <button
         type="button"
         onClick={() => (current ? toggle() : play(station))}
-        aria-label={playing ? `${station.name} — to'xtatish` : `${station.name} — eshitish`}
+        aria-label={
+          playing
+            ? `${station.name} — to'xtatish`
+            : `${station.name} — eshitish`
+        }
         className={cn(
           "group relative inline-flex size-12 shrink-0 items-center justify-center rounded-card transition-transform active:scale-95",
           current ? "bg-coral-500 text-white" : TILE_TONE[category.tone],

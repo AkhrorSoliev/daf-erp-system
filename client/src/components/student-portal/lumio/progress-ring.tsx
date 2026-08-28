@@ -31,12 +31,7 @@ export function ProgressRing({
       className={cn("relative inline-flex text-coral-500", className)}
       style={{ width: size, height: size }}
     >
-      <svg
-        width={size}
-        height={size}
-        className="-rotate-90"
-        aria-hidden
-      >
+      <svg width={size} height={size} className="-rotate-90" aria-hidden>
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -59,7 +54,10 @@ export function ProgressRing({
         />
       </svg>
       <span className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-display font-extrabold leading-none text-ink-900" style={{ fontSize: size * 0.26 }}>
+        <span
+          className="font-display font-extrabold leading-none text-ink-900"
+          style={{ fontSize: size * 0.26 }}
+        >
           {label ?? `${Math.round(pct)}%`}
         </span>
         {sublabel ? (

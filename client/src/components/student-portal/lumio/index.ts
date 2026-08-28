@@ -3,6 +3,24 @@
 export { Button, lumioButton, type LumioButtonProps } from "./button";
 export { Card, type LumioCardProps } from "./card";
 export { FeatureCard, type FeatureCardProps } from "./feature-card";
+export { Stagger, type StaggerProps } from "./stagger";
+// O'quv bo'limi uchun — `daf-design-system/components/` dan ko'chirilgan.
+export {
+  LessonNode,
+  type LessonNodeProps,
+  type LessonNodeState,
+  type LessonNodeTone,
+} from "./lesson-node";
+export {
+  CategoryCard,
+  type CategoryCardProps,
+  type CategoryTone,
+} from "./category-card";
+export {
+  FractionChip,
+  type FractionChipProps,
+  type FractionKind,
+} from "./fraction-chip";
 export { IconTile, type IconTileProps } from "./icon-tile";
 export { ListRow, type ListRowProps } from "./list-row";
 export { Badge, type BadgeProps } from "./badge";
@@ -25,12 +43,7 @@ export {
   type ThemeMode,
 } from "./theme-segmented";
 export { EmptyState, type EmptyStateProps } from "./empty-state";
-export {
-  Screen,
-  ScreenHeader,
-  StackHeader,
-  type ScreenProps,
-} from "./screen";
+export { Screen, ScreenHeader, StackHeader, type ScreenProps } from "./screen";
 export { Section, type SectionProps } from "./section";
 export { FadeIn, type FadeInProps } from "./fade-in";
 export { Skeleton, LoadingCards } from "./skeleton";

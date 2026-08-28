@@ -13,7 +13,11 @@ export type ThemeMode = "system" | "light" | "dark";
 // both places drive `next-themes` through the same three-way pick instead of
 // the old cycle-button / segmented-control split.
 const THEME_OPTIONS: SegmentOption<ThemeMode>[] = [
-  { value: "system", label: "Tizim", icon: <Desktop size={16} weight="bold" /> },
+  {
+    value: "system",
+    label: "Tizim",
+    icon: <Desktop size={16} weight="bold" />,
+  },
   { value: "light", label: "Yorug'", icon: <Sun size={16} weight="bold" /> },
   { value: "dark", label: "Qorong'i", icon: <Moon size={16} weight="bold" /> },
 ];

@@ -1,13 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import {
-  Play,
-  Pause,
-  ArrowClockwise,
-  CircleNotch,
-  X,
-} from "../lumio/icon";
+import { Play, Pause, ArrowClockwise, CircleNotch, X } from "../lumio/icon";
 import { TILE_TONE } from "../lumio/tones";
 import { categoryOf } from "@/lib/radio-stations";
 import { useRadio } from "../lib/radio-store";
@@ -85,7 +79,11 @@ export function RadioMiniPlayer() {
             <span
               className={cn(
                 "mt-0.5 flex items-center gap-1.5 text-xs font-bold leading-none",
-                failed ? "text-danger" : playing ? "text-coral-600" : "text-ink-500",
+                failed
+                  ? "text-danger"
+                  : playing
+                    ? "text-coral-600"
+                    : "text-ink-500",
               )}
             >
               {playing ? <LiveBars active /> : null}
