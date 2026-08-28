@@ -104,17 +104,37 @@ export function LessonPath({ units }: { units: PathUnit[] }) {
   return (
     <div className="relative mx-auto w-full" style={{ maxWidth: COLUMN }}>
       {/* Bezaklar — faqat fon, ekran o'quvchisiga e'lon qilinmaydi. */}
+      {/* Bulutlar suzadi, uchqunlar miltillaydi — dizayn tizimining
+          `lumio-float` va `lumio-sparkle` halqalari.
+          
+          Davomiylik har biriga BOSHQACHA berilgan: bir xil bo'lsa
+          hammasi bir vaqtda ko'tarilib-tushib, harakat sun'iy
+          ko'rinardi. Kechikish ham shu sabab. */}
       <Cloud
         aria-hidden
         size={52}
         weight="fill"
-        className="pointer-events-none absolute -top-3 right-1 text-sky-400/40"
+        className="lumio-float pointer-events-none absolute -top-3 right-1 text-sky-400/40"
+      />
+      <Cloud
+        aria-hidden
+        size={34}
+        weight="fill"
+        className="lumio-float pointer-events-none absolute left-2 top-2 text-sky-400/30"
+        style={{ animationDuration: "4200ms", animationDelay: "600ms" }}
       />
       <Sparkle
         aria-hidden
         size={18}
         weight="fill"
-        className="pointer-events-none absolute left-1 top-24 text-amber-400/80"
+        className="lumio-sparkle pointer-events-none absolute left-1 top-24 text-amber-400"
+      />
+      <Sparkle
+        aria-hidden
+        size={14}
+        weight="fill"
+        className="lumio-sparkle pointer-events-none absolute right-3 top-44 text-amber-400"
+        style={{ animationDuration: "2100ms", animationDelay: "400ms" }}
       />
 
       <div className="relative flex flex-col">
