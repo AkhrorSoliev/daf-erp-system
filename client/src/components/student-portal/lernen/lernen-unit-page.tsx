@@ -1,11 +1,12 @@
 "use client";
 
+import * as React from "react";
 import { useRouter } from "next/navigation";
 import { BookOpen } from "@phosphor-icons/react";
 import {
   Screen,
   StackHeader,
-  FadeIn,
+  Stagger,
   CategoryCard,
   EmptyState,
   LoadingCards,
@@ -58,7 +59,7 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
           description="Material tez orada qo'shiladi."
         />
       ) : (
-        <FadeIn className="space-y-4">
+        <Stagger className="space-y-4">
           <p className="px-1 text-sm font-semibold text-ink-500">
             {data.label} · {data.titleDe}
           </p>
@@ -91,13 +92,14 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
                 <h2 className="px-1 font-display text-sm font-bold uppercase tracking-wide text-ink-500">
                   {group.title}
                 </h2>
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="lumio-stagger grid grid-cols-2 gap-2.5">
                   {group.items.map((l, i) => (
                     <button
                       key={l.id}
                       type="button"
                       onClick={() => router.push(lessonHref(l))}
-                      className="flex flex-col gap-1 rounded-card border border-line bg-surface px-3.5 py-3 text-left shadow-lumio-sm transition-transform active:translate-y-[2px]"
+                      style={{ ["--i" as string]: i } as React.CSSProperties}
+                      className="flex flex-col gap-1 rounded-card border border-line bg-surface px-3.5 py-3 text-left shadow-lumio-sm transition-transform active:translate-y-[2px] hover:-translate-y-0.5"
                     >
                       <span className="font-display text-xs font-bold text-ink-400">
                         {i + 1}
@@ -115,7 +117,7 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
                 </div>
               </section>
             ))}
-        </FadeIn>
+        </Stagger>
       )}
     </Screen>
   );

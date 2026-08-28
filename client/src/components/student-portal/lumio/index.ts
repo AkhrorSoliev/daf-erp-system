@@ -3,6 +3,7 @@
 export { Button, lumioButton, type LumioButtonProps } from "./button";
 export { Card, type LumioCardProps } from "./card";
 export { FeatureCard, type FeatureCardProps } from "./feature-card";
+export { Stagger, type StaggerProps } from "./stagger";
 // O'quv bo'limi uchun — `daf-design-system/components/` dan ko'chirilgan.
 export {
   LessonNode,

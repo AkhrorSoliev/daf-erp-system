@@ -97,6 +97,11 @@ export function LessonNode({
       className={cn(
         "relative flex size-[132px] shrink-0 flex-col justify-between rounded-3xl p-4 text-left transition-transform",
         "active:translate-y-[3px]",
+        // Hozirgi dars nafas oladi — o'quvchi qayerdan davom etishini
+        // bir qarashda ko'radi. Qulflangan tugunlar tinch turadi, aks
+        // holda butun ekran qimirlab, urg'u yo'qoladi.
+        state === "active" && "lumio-pulse-ring",
+        !locked && "hover:-translate-y-0.5",
         locked && "cursor-default",
         className,
       )}

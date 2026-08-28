@@ -47,8 +47,13 @@ function AnswerButton({
       type="button"
       onClick={onPick}
       disabled={state === "right" || state === "wrong"}
+      style={{ ["--i" as string]: index } as React.CSSProperties}
       className={cn(
-        "flex items-center gap-3 rounded-[18px] border-2 px-4 py-4 text-left font-display text-lg font-bold transition-colors",
+        "flex items-center gap-3 rounded-[18px] border-2 px-4 py-4 text-left font-display text-lg font-bold transition-all",
+        // Xato javob SILKINADI. Rang yolg'iz yetarli emas: rangni
+        // ajratolmaydigan o'quvchi uchun qizil hech narsa demaydi.
+        state === "wrong" && "lumio-shake",
+        state === "idle" && "hover:-translate-y-0.5",
         state === "idle" && "border-line bg-surface text-ink-900",
         state === "sel" && "border-coral-500 bg-coral-100/60 text-ink-900",
         state === "right" && "border-success bg-success/10 text-success",
@@ -131,7 +136,9 @@ function Question({
         )}
       </Card>
 
-      <div className="grid gap-3">
+      {/* Variantlar ketma-ket chiqadi — hammasi birdan paydo bo'lsa,
+          o'quvchi qayerdan o'qishni boshlashini bilmaydi. */}
+      <div className="lumio-stagger grid gap-3">
         {question.options.map((opt, i) => (
           <AnswerButton
             key={opt}

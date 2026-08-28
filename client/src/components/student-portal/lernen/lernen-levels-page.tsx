@@ -1,5 +1,7 @@
 "use client";
 
+import * as React from "react";
+
 import {
   BookOpen,
   Headphones,
@@ -90,9 +92,13 @@ export function LernenLevelsPage() {
             <h2 className="font-display text-sm font-bold uppercase tracking-wide text-ink-500">
               Imtihon yo&apos;nalishlari
             </h2>
-            <div className="grid grid-cols-2 gap-3">
-              {SKILLS.map((s) => (
-                <Card key={s.key} className="space-y-2 opacity-70">
+            <div className="lumio-stagger grid grid-cols-2 gap-3">
+              {SKILLS.map((s, i) => (
+                <Card
+                  key={s.key}
+                  className="space-y-2 opacity-70"
+                  style={{ ["--i" as string]: i } as React.CSSProperties}
+                >
                   <IconTile
                     tone={s.tone}
                     size="sm"

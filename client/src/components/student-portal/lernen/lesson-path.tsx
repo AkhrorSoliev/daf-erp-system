@@ -167,7 +167,10 @@ export function LessonPath({ units }: { units: PathUnit[] }) {
   return (
     <div className="relative mx-auto w-full" style={{ maxWidth: COLUMN }}>
       {/* Bezaklar — faqat fon, ekran o'quvchisiga e'lon qilinmaydi. */}
-      <div className="relative flex flex-col">
+      {/* Bo'limlar ketma-ket chiqadi — yuqoridan pastga, yo'l chizilayotgandek.
+          Hammasi birdan chiqsa, harakat bitta katta qadamga aylanadi va
+          ko'zni yetaklamaydi. */}
+      <div className="lumio-stagger relative flex flex-col">
         {units.map((u, i) => {
           const left = i % 2 === 0;
           const state = nodeState(i, percents);
