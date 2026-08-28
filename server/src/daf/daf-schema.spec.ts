@@ -88,6 +88,19 @@ describe('A1 strukturasi', () => {
     'utf8',
   );
 
+  // Faqat MODEL BLOKINING ICHIDAN qidirish uchun. `model X[\s\S]*?...`
+  // kabi dangasa naqsh model chegarasida to'xtamaydi: agar X'da izlangan
+  // maydon bo'lmasa, moslik pastroqdagi BOSHQA modelga sirg'alib ketadi
+  // va test soxta-yashil qoladi (masalan `lessonId Int?` ham `DafLexeme`,
+  // ham `DafExercise`da bor — DafLexeme.lessonId qayta majburiy qilinsa
+  // ham, naqsh DafExercise'dagi optsional nusxaga tushib qolardi).
+  const modelBlock = (name: string) => {
+    const from = schema.indexOf(`model ${name} {`);
+    if (from === -1) throw new Error(`model ${name} sxemada topilmadi`);
+    const block = schema.slice(from);
+    return block.slice(0, block.indexOf('\n}'));
+  };
+
   // Daraja o'quvchining bosqichi bo'lishi kerak, manbaning yorlig'i emas.
   // Goethe imtihonlari ham A1/A2/B1.
   it('DafLevel uchta qiymatga tushgan', () => {
@@ -99,36 +112,42 @@ describe('A1 strukturasi', () => {
   // Endi dars TURI emas, DARAJASI muhim: har bosqichda ham lug'at,
   // ham grammatika, ham eshitish bo'ladi.
   it('DafLesson kind o`rniga tier ishlatadi', () => {
-    expect(schema).toMatch(/model DafLesson[\s\S]*?tier\s+Int/);
+    expect(modelBlock('DafLesson')).toMatch(/tier\s+Int/);
     expect(schema).not.toMatch(/enum DafLessonKind/);
     expect(schema).toMatch(/@@unique\(\[unitId, tier\]\)/);
   });
 
   it('DafSentence bo`limga bog`langan va kelib chiqishini saqlaydi', () => {
-    expect(schema).toMatch(/model DafSentence[\s\S]*?origin\s+DafSentenceOrigin/);
+    expect(modelBlock('DafSentence')).toMatch(/origin\s+DafSentenceOrigin/);
     expect(schema).toMatch(/enum DafSentenceOrigin \{\s*GENERATED\s+SOURCE\s*\}/);
   });
 
   // «Qaysi so'z qaytishi kerak» savoliga butun urinishlar tarixidan
   // javob berish qimmat, shuning uchun holat saqlanadi.
   it('DafLexemeState o`quvchi va so`z bo`yicha yagona', () => {
-    expect(schema).toMatch(/model DafLexemeState[\s\S]*?@@unique\(\[studentId, lexemeId\]\)/);
-    expect(schema).toMatch(/model DafLexemeState[\s\S]*?@@index\(\[studentId, dueAt\]\)/);
+    expect(modelBlock('DafLexemeState')).toMatch(/@@unique\(\[studentId, lexemeId\]\)/);
+    expect(modelBlock('DafLexemeState')).toMatch(/@@index\(\[studentId, dueAt\]\)/);
   });
 
   it('DafLessonProgress o`quvchi va dars bo`yicha yagona', () => {
-    expect(schema).toMatch(/model DafLessonProgress[\s\S]*?@@unique\(\[studentId, lessonId\]\)/);
+    expect(modelBlock('DafLessonProgress')).toMatch(/@@unique\(\[studentId, lessonId\]\)/);
   });
 
   // Rasmli savol turlari faqat aniq so'zlarga beriladi — `weil` ni
   // chizib bo'lmaydi.
   it('DafLexeme picturable bayrog`ini olgan', () => {
-    expect(schema).toMatch(/model DafLexeme[\s\S]*?picturable\s+Boolean\s+@default\(false\)/);
+    expect(modelBlock('DafLexeme')).toMatch(/picturable\s+Boolean\s+@default\(false\)/);
   });
 
   // Yangi modelda so'z bo'limga tegishli, darsga emas. Sxema majburiy
   // desa, seed so'z yarata olmaydi.
+  //
+  // `modelBlock` bilan chegaralangan: `lessonId Int?` `DafExercise`da
+  // ham bor, shuning uchun butun sxema bo'yicha qidirish (`model
+  // DafLexeme[\s\S]*?lessonId Int?`) DafLexeme'ning o'zi majburiy
+  // `Int`ga qaytarilsa ham, pastroqdagi DafExercise'ga sirg'alib,
+  // testni soxta-yashil qoldirardi.
   it('DafLexeme darsga ixtiyoriy bog`lanadi', () => {
-    expect(schema).toMatch(/model DafLexeme[\s\S]*?lessonId\s+Int\?/);
+    expect(modelBlock('DafLexeme')).toMatch(/lessonId\s+Int\?/);
   });
 });
