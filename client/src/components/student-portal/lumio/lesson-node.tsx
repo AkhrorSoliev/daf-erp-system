@@ -46,7 +46,7 @@ export function LessonNode({
       disabled={locked || !onClick}
       aria-label={`${label}${locked ? " — hali ochilmagan" : ""}`}
       className={cn(
-        "relative flex size-[132px] flex-col justify-between rounded-3xl p-4 text-left transition-transform",
+        "relative flex size-[132px] shrink-0 flex-col justify-between rounded-3xl p-4 text-left transition-transform",
         "active:translate-y-[3px]",
         locked && "cursor-default",
         className,

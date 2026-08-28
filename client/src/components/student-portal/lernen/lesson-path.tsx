@@ -3,30 +3,47 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Cloud, Sparkle } from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
 import { LessonNode, type LessonNodeState } from "../lumio";
 import type { LernenUnitSummary } from "./types";
 
 /**
- * Bo'limlar yo'li — Duolingo uslubidagi zigzag.
+ * Bo'limlar yo'li — dizayn tizimidagi «Darslar» ekranidan.
  *
- * Dizayn tizimidagi «Darslar» ekranidan olingan
- * (`daf-design-system/ui_kits/student-app/screens.jsx`): tugunlar chapga
- * va o'ngga almashib boradi, orasida nuqtali chiziq, fonda bulut va
- * uchqunlar.
+ * Maketda tugunlar MUTLAQ koordinatalar bilan qo'yilgan (`top: 30, 178,
+ * 322`), chunki u ~390 px telefon ramkasi uchun chizilgan. Bizning ustun
+ * esa desktopda 980 px gacha kengayadi, va o'sha koordinatalar bilan
+ * tugunlar ikki chekkaga tarqab ketardi, bog'lovchi chiziqlar esa havoda
+ * qolardi.
  *
- * Tugun BALANDLIGI bilan emas, tartib bilan joylashadi: mutlaq
- * koordinatalar maketda qat'iy yozilgan edi (top: 30, 178, 322), lekin
- * bo'lim soni darajaga qarab o'zgaradi — 1 dan 4 tagacha. Shuning uchun
- * qadam hisoblanadi.
+ * Shuning uchun joylashuv OQIM bilan quriladi: har bo'lim o'z qatorida,
+ * qatorlar chapga va o'ngga almashadi, bog'lovchi chiziq qatorlar
+ * orasida turadi. Butun yo'l qat'iy kenglikdagi ustunga o'ralib
+ * markazlashadi — zigzag kengaygan sari o'z ma'nosini yo'qotadi.
  */
-const STEP = 148;
-const NODE = 132;
+const COLUMN = 380;
 
 /** Ochilgan-yopilganini aniqlaydi: keyingisi oldingisi tugagach ochiladi. */
 export function nodeState(index: number, percents: number[]): LessonNodeState {
   if (percents[index] >= 100) return "done";
   if (index === 0) return "active";
   return percents[index - 1] >= 100 ? "active" : "locked";
+}
+
+/** Ikki tugun orasidagi nuqtali chiziq. */
+function Connector({ toRight }: { toRight: boolean }) {
+  return (
+    <div aria-hidden className="flex h-12 items-center justify-center">
+      <div
+        className="h-[5px] w-28 rounded-full"
+        style={{
+          transform: `rotate(${toRight ? 14 : -14}deg)`,
+          backgroundImage:
+            "repeating-linear-gradient(90deg,var(--sky-400) 0 14px,transparent 14px 26px)",
+        }}
+      />
+    </div>
+  );
 }
 
 export function LessonPath({
@@ -39,86 +56,66 @@ export function LessonPath({
   const router = useRouter();
 
   return (
-    <div
-      className="relative mx-1.5"
-      style={{ height: units.length * STEP + 40 }}
-    >
-      {/* Fon bezaklari — maketdagi bulut va uchqunlar. */}
+    <div className="relative mx-auto w-full" style={{ maxWidth: COLUMN }}>
+      {/* Bezaklar — maketdagi bulut va uchqunlar. Faqat fon, shuning
+          uchun ekran o'quvchisiga e'lon qilinmaydi. */}
       <Cloud
-        size={56}
+        aria-hidden
+        size={52}
         weight="fill"
-        className="absolute right-10 top-1.5 text-sky-400/45"
-      />
-      <Cloud
-        size={38}
-        weight="fill"
-        className="absolute right-24 top-8 text-sky-400/45"
+        className="pointer-events-none absolute -top-3 right-1 text-sky-400/40"
       />
       <Sparkle
+        aria-hidden
+        size={18}
+        weight="fill"
+        className="pointer-events-none absolute left-1 top-20 text-amber-400/80"
+      />
+      <Sparkle
+        aria-hidden
         size={22}
         weight="fill"
-        className="absolute left-28 top-32 text-amber-400"
-      />
-      <Sparkle
-        size={16}
-        weight="fill"
-        className="absolute left-10 top-16 text-amber-400"
+        className="pointer-events-none absolute bottom-12 right-4 text-amber-400/80"
       />
 
-      {units.map((u, i) => {
-        const left = i % 2 === 0;
-        const state = nodeState(i, percents);
+      <div className="relative flex flex-col">
+        {units.map((u, i) => {
+          const left = i % 2 === 0;
+          const state = nodeState(i, percents);
 
-        return (
-          <React.Fragment key={u.id}>
-            {i > 0 ? (
+          return (
+            <React.Fragment key={u.id}>
+              {i > 0 ? <Connector toRight={!left} /> : null}
+
               <div
-                aria-hidden
-                className="absolute h-[5px] rounded-full"
-                style={{
-                  top: i * STEP - 18,
-                  left: left ? 70 : undefined,
-                  right: left ? undefined : 70,
-                  width: 110,
-                  transform: `rotate(${left ? -6 : 6}deg)`,
-                  backgroundImage:
-                    "repeating-linear-gradient(90deg,var(--sky-400) 0 14px,transparent 14px 26px)",
-                }}
-              />
-            ) : null}
-
-            <LessonNode
-              label={`${i + 1}-bo'lim`}
-              percent={percents[i] ?? 0}
-              state={state}
-              onClick={
-                state === "locked"
-                  ? undefined
-                  : () => router.push(`/portal/lernen/units/${u.id}`)
-              }
-              className="absolute"
-              style={{
-                top: i * STEP + 10,
-                ...(left ? { left: 16 } : { right: 16 }),
-              }}
-            />
-
-            <div
-              className="absolute max-w-[150px] font-display text-[13px] font-bold text-ink-900"
-              style={{
-                top: i * STEP + 44,
-                ...(left
-                  ? { left: 16 + NODE + 14 }
-                  : { right: 16 + NODE + 14 }),
-              }}
-            >
-              <p className="rounded-2xl bg-surface px-3.5 py-2.5 shadow-lumio-sm">
-                {u.titleUz}
-              </p>
-            </div>
-          </React.Fragment>
-        );
-      })}
+                className={cn(
+                  "flex items-center gap-3",
+                  left ? "flex-row" : "flex-row-reverse",
+                )}
+              >
+                <LessonNode
+                  label={`${i + 1}-bo'lim`}
+                  percent={percents[i] ?? 0}
+                  state={state}
+                  onClick={
+                    state === "locked"
+                      ? undefined
+                      : () => router.push(`/portal/lernen/units/${u.id}`)
+                  }
+                />
+                <p
+                  className={cn(
+                    "min-w-0 flex-1 rounded-2xl bg-surface px-3.5 py-2.5 font-display text-[13px] font-bold leading-snug text-ink-900 shadow-lumio-sm",
+                    left ? "text-left" : "text-right",
+                  )}
+                >
+                  {u.titleUz}
+                </p>
+              </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
     </div>
   );
 }
