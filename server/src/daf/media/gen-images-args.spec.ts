@@ -36,6 +36,7 @@ describe('parseGenImagesArgs', () => {
     expect(parseGenImagesArgs(['--unit', '12'])).toEqual({
       unit: 12,
       dryRun: false,
+      redraw: false,
     });
   });
 
@@ -43,6 +44,17 @@ describe('parseGenImagesArgs', () => {
     expect(parseGenImagesArgs(['--unit', '12', '--dry-run'])).toEqual({
       unit: 12,
       dryRun: true,
+      redraw: false,
     });
+  });
+});
+
+describe('--redraw', () => {
+  it('bayroq berilmasa false', () => {
+    expect(parseGenImagesArgs(['--unit', '12']).redraw).toBe(false);
+  });
+
+  it('bayroq berilsa true', () => {
+    expect(parseGenImagesArgs(['--unit', '12', '--redraw']).redraw).toBe(true);
   });
 });

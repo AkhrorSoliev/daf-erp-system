@@ -31,11 +31,6 @@
           "origin": "SOURCE"
         },
         {
-          "de": "Wie heißt sie?",
-          "uz": "Uning ismi nima?",
-          "origin": "GENERATED"
-        },
-        {
           "de": "Wie heißt er?",
           "uz": "Uning ismi nima?",
           "origin": "GENERATED"
@@ -162,7 +157,7 @@
         },
         {
           "de": "Ich komme aus Belgien.",
-          "uz": "Men Belgiya keldim.",
+          "uz": "Men Belgiyadan kelganman.",
           "origin": "GENERATED"
         },
         {
@@ -277,7 +272,7 @@
         },
         {
           "de": "Ich bin aus Belgien.",
-          "uz": "Men Belgiya keldim.",
+          "uz": "Men belgiyalikman.",
           "origin": "GENERATED"
         },
         {
@@ -377,7 +372,7 @@
         },
         {
           "de": "Wo ist die Toilette?",
-          "uz": "Hojatxona qayerda?",
+          "uz": "Tualet qayerda?",
           "origin": "GENERATED"
         },
         {
@@ -1172,7 +1167,7 @@
         },
         {
           "de": "Wo ist die Toilette?",
-          "uz": "Hojatxona qayerda?",
+          "uz": "Tualet qayerda?",
           "origin": "GENERATED"
         },
         {
@@ -1327,7 +1322,7 @@
       "sentences": [
         {
           "de": "Das Essen ist fertig.",
-          "uz": "ovqat tayyor",
+          "uz": "Ovqat tayyor.",
           "origin": "SOURCE"
         },
         {
@@ -1337,7 +1332,7 @@
         },
         {
           "de": "Wir essen zu Abend.",
-          "uz": "Biz kechki ovqat yemoqdamiz.",
+          "uz": "Biz kechki ovqat yeymiz.",
           "origin": "GENERATED"
         },
         {
@@ -1357,22 +1352,22 @@
         },
         {
           "de": "Ich esse ein Ei.",
-          "uz": "Men tuxum yiyorum.",
+          "uz": "Men tuxum yeyman.",
           "origin": "GENERATED"
         },
         {
           "de": "Sie trinkt einen Saft.",
-          "uz": "U sharbat ichyapti.",
+          "uz": "U sharbat ichadi.",
           "origin": "GENERATED"
         },
         {
           "de": "Wir essen das Abendbrot.",
-          "uz": "Biz kechki ovqat yemoqdamiz.",
+          "uz": "Biz yengil kechki ovqat yeymiz.",
           "origin": "GENERATED"
         },
         {
           "de": "Sie macht das Mittagessen.",
-          "uz": "U tushlik tayyorlayapti.",
+          "uz": "U tushlik tayyorlaydi.",
           "origin": "GENERATED"
         },
         {
@@ -1392,12 +1387,12 @@
         },
         {
           "de": "Ich trinke ein Getränk.",
-          "uz": "Men ichimlik ichyapman.",
+          "uz": "Men ichimlik ichaman.",
           "origin": "GENERATED"
         },
         {
           "de": "Ich mache mir einen Aufstrich.",
-          "uz": "Men o'zimga tartib tayyorlayman.",
+          "uz": "Men o'zimga surtma tayyorlayman.",
           "origin": "GENERATED"
         },
         {
@@ -1407,12 +1402,12 @@
         },
         {
           "de": "Er trinkt einen Tee.",
-          "uz": "U choy ichyapti.",
+          "uz": "U choy ichadi.",
           "origin": "GENERATED"
         },
         {
           "de": "Sie macht sich für die Uni fertig.",
-          "uz": "U universitetga tayyorlanmoqda.",
+          "uz": "U universitetga tayyorlanadi.",
           "origin": "GENERATED"
         },
         {
@@ -1422,7 +1417,7 @@
         },
         {
           "de": "Sie trinkt ein Getränk.",
-          "uz": "U ichimlik ichyapti.",
+          "uz": "U ichimlik ichadi.",
           "origin": "GENERATED"
         },
         {
@@ -1437,7 +1432,7 @@
         },
         {
           "de": "Ich esse Brot mit Aufschnitt.",
-          "uz": "Men nonni go'sht bilan yeyman.",
+          "uz": "Men nonni kolbasa bilan yeyman.",
           "origin": "GENERATED"
         },
         {
@@ -1447,12 +1442,7 @@
         },
         {
           "de": "Wir gehen ins Bett um zehn.",
-          "uz": "Biz soat o'n da yotamiz.",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Sie trinkt einen Tee.",
-          "uz": "U choy ichadi.",
+          "uz": "Biz soat o'nda yotamiz.",
           "origin": "GENERATED"
         }
       ]
@@ -1897,7 +1887,7 @@
         },
         {
           "de": "Ich esse ein Bonbon.",
-          "uz": "Men bir bonbon yiyorum.",
+          "uz": "Men konfet yeyman.",
           "origin": "GENERATED"
         },
         {
@@ -1922,7 +1912,7 @@
         },
         {
           "de": "Ich esse einen Keks.",
-          "uz": "Men bir pechene yiyorum.",
+          "uz": "Men pechene yeyman.",
           "origin": "GENERATED"
         },
         {
@@ -1957,7 +1947,7 @@
         },
         {
           "de": "Ich esse die Tiefkühlpizza.",
-          "uz": "Men muzlatilgan pizzani yiyorum.",
+          "uz": "Men muzlatilgan pitsani yeyman.",
           "origin": "GENERATED"
         },
         {
@@ -2002,7 +1992,7 @@
         },
         {
           "de": "Ich esse das Hackfleisch.",
-          "uz": "Men maydalangan go'shtni yiyorum.",
+          "uz": "Men qiyma go'shtni yeyman.",
           "origin": "GENERATED"
         },
         {

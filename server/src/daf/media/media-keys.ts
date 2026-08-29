@@ -52,8 +52,20 @@ export function imageKeyFor(sourceId: string): string {
  * aylantirilmaydi (harflar, tire, `#` bor), shuning uchun SHA-256 orqali
  * hisoblanadi va natijaning birinchi 4 bayti manfiy bo'lmagan butun
  * songa o'giriladi — FLUX `seed` maydoni shu diapazonni kutadi.
+ *
+ * `attempt` — RAD ETILGAN rasmni qayta chizish uchun. "Bir xil so'z —
+ * bir xil rasm" qoidasi rasm YAROQLI bo'lganda foydali, ammo rasm
+ * buzuq chiqqanda tuzoqqa aylanadi: 12-bo'limda `sich die Zähne putzen`
+ * deyarli qop-qora chiqqan, `der Honig`da suv belgisi bo'lgan — ikkalasi
+ * ham o'sha urug' bilan qayta so'ralsa AYNAN o'zi qaytarardi. Urug'ga
+ * urinish raqami qo'shilsa model boshqa rasm beradi, va bu ham barqaror:
+ * bir xil (`sourceId`, `attempt`) juftligi har doim bir xil rasm.
+ *
+ * `attempt = 0` da hash MANBANING O'ZIDAN olinadi (`#0` qo'shilmaydi) —
+ * shunda allaqachon qabul qilingan yuzlab rasm urug'i o'zgarmay qoladi.
  */
-export function seedFor(sourceId: string): number {
-  const digest = createHash('sha256').update(sourceId).digest();
+export function seedFor(sourceId: string, attempt = 0): number {
+  const input = attempt === 0 ? sourceId : `${sourceId}@${attempt}`;
+  const digest = createHash('sha256').update(input).digest();
   return digest.readUInt32BE(0);
 }

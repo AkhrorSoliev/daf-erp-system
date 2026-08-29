@@ -16,6 +16,17 @@ export interface GenImagesArgs {
   unit: number;
   /** `true` bo'lsa hech qanday model chaqirilmaydi — faqat son aytiladi. */
   dryRun: boolean;
+  /**
+   * `true` bo'lsa `content/daf/image-redraw.json` da RAD ETILGAN deb
+   * belgilangan so'zlar `imageKey` bor bo'lsa ham qayta chiziladi.
+   *
+   * Nega alohida bayroq: oddiy yugurish faqat `imageKey = null` so'zlarni
+   * oladi, ya'ni rad etilgan rasm hech qachon o'zi qayta chizilmaydi.
+   * Buni avtomatik qilib qo'yish ham xato bo'lardi — har oddiy yugurishda
+   * jurnaldagi hamma so'z uchun fal.ai qaytadan chaqirilib, pul bekorga
+   * sarflanardi.
+   */
+  redraw: boolean;
 }
 
 /**
@@ -61,5 +72,9 @@ export function parseGenImagesArgs(argv: string[]): GenImagesArgs {
     );
   }
 
-  return { unit, dryRun: argv.includes('--dry-run') };
+  return {
+    unit,
+    dryRun: argv.includes('--dry-run'),
+    redraw: argv.includes('--redraw'),
+  };
 }
