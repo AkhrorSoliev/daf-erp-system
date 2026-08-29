@@ -6,6 +6,20 @@ export interface GeneratedSentence {
   uz: string;
 }
 
+/**
+ * Gap qayerdan keldi. Prisma'dagi `DafSentenceOrigin` bilan bir xil.
+ *
+ * `SOURCE` — lug'at yozuvining o'zi tayyor gap bo'lgan hol
+ * (`Wer ist das?`). Ularni yasashga urinish ham, tashlab yuborish ham
+ * noto'g'ri edi: ular allaqachon mavjud, tarjimasi bilan, va ularni
+ * ODAM yozgan — ya'ni to'plamdagi eng sifatli qism.
+ */
+export type SentenceOrigin = 'GENERATED' | 'SOURCE';
+
+export interface StoredSentence extends GeneratedSentence {
+  origin: SentenceOrigin;
+}
+
 export const MAX_TRIES = 3;
 
 /**
@@ -39,13 +53,13 @@ export interface RejectedSentence {
 }
 
 /**
- * Solishtirish uchun normallashtirilgan shakl.
+ * Takrorni topish uchun normallashtirilgan kalit.
  *
  * Bosh harf va oxirgi tinish belgisi farqi gapni boshqa gapga
  * aylantirmaydi: «Ich bin Student.» va «ich bin Student» — bitta mashq.
  * Ularni ikkitaga sanash dedupni foydasiz qilardi.
  */
-function normalizeForCompare(de: string): string {
+export function sentenceKey(de: string): string {
   return de
     .toLowerCase()
     .replace(/\s+/g, ' ')
@@ -103,6 +117,7 @@ export function buildSentencePrompt(
     '  Wie heißt er? | Uning ismi nima?',
     '  Wie heißt sie? | Uning ismi nima?',
     '  Wie heißt du? | Isming nima?',
+    '  Ich finde das nett. | Bu menga yoqadi.',
     '  Es tut mir leid. | Juda afsusdaman.',
     '  Wie geht es dir? | Ahvoling qanday?',
     '',
@@ -126,6 +141,75 @@ export function buildSentencePrompt(
  * shuning uchun bitta gap ikki marta saqlanardi.
  */
 const LIST_MARKER = /^\s*(?:\d+\s*[.)]|[-*•])\s*/;
+
+/** Gap tugallanganini bildiruvchi tinish belgisi. */
+const SENTENCE_END = /[.?!]\s*$/;
+
+/**
+ * Yozuv o'zi tugallangan ifodami?
+ *
+ * Ikki alomat: ichida gap tinish belgisi bor, yoki uch so'zdan uzun.
+ * `wohnen`, `Student`, `die Unterschrift` — qurilish materiali;
+ * `Bis nächste Woche.`, `Wer ist das?` — tayyor ifoda.
+ */
+export function isPhraseEntry(de: string): boolean {
+  return /[.?!]/.test(de) || wordsOf(de).length > 3;
+}
+
+/**
+ * So'rovga beriladigan so'zlar — faqat qurilish materiali.
+ *
+ * Tayyor ifodalar chiqarib tashlanadi, chunki model ularni gap
+ * yasashning o'rniga shundoq QAYTARARDI: 1-bo'limda rad etishlarning
+ * eng katta toifasi (35 ta) aynan shu edi — «Hallo!», «Bis bald!»,
+ * uzunlik chegarasidan o'tmaydigan undovlar.
+ *
+ * Bu ularni lug'atdan o'chirmaydi. Ular `sourceSentences` orqali gap
+ * sifatida qaytadi, qolganini esa o'quvchi boshqa mashq turlarida
+ * ko'radi.
+ */
+export function materialWords(entries: string[]): string[] {
+  return entries.filter((de) => !isPhraseEntry(de));
+}
+
+/**
+ * Lug'at yozuvidan tayyor gap.
+ *
+ * Uch qoida bilan tanlanadi:
+ *
+ * 1. **Gap tinish belgisi bilan tugaydi.** «das Land (die Länder)» yoki
+ *    «Ich bin Student/Studentin» uch so'zdan uzun bo'lsa ham gap emas,
+ *    va uni mashqqa qo'yish xato bo'lardi.
+ * 2. **Qavs bo'lmaydi.** «(Es) tut mir leid.» — ixtiyoriy bo'lakli
+ *    yozuv, ya'ni bitta aniq gap emas. Matnni qayta yozib qavsni olib
+ *    tashlash oson edi, lekin manba matnini jimgina tahrirlash shu
+ *    loyihada ataylab qilinmaydi.
+ * 3. **Kamida `MIN_WORDS` mazmunli so'z.** «Bis Samstag.» ikki so'z —
+ *    mashq uchun juda qisqa, u lug'at bo'lib qolaveradi.
+ *
+ * `A / B` shaklidagi yozuvdan BIRINCHI variant olinadi
+ * («Wie heißt du? / Wie ist dein Name?» → «Wie heißt du?»), lekin faqat
+ * o'sha birinchi variantning o'zi gap bo'lsa. «Es ist nett, dich / Sie
+ * kennen zu lernen» da qiyshiq chiziq gap ichida turadi va bo'lingani
+ * parcha berardi — bunday yozuv olinmaydi.
+ *
+ * Notanish so'z tekshiruvi qo'llanmaydi: bu gaplar bo'limning o'z
+ * lug'ati, ta'rif bo'yicha tanish.
+ */
+export function sourceSentences(
+  entries: { de: string; uz: string | null }[],
+): StoredSentence[] {
+  const out: StoredSentence[] = [];
+  for (const e of entries) {
+    if (e.uz === null || e.uz.trim() === '') continue;
+    const de = e.de.split(' / ')[0].trim();
+    if (!SENTENCE_END.test(de)) continue;
+    if (/[()]/.test(de)) continue;
+    if (wordsOf(de).length < MIN_WORDS) continue;
+    out.push({ de, uz: e.uz.trim(), origin: 'SOURCE' });
+  }
+  return out;
+}
 
 export function parseSentences(raw: string): GeneratedSentence[] {
   return raw
@@ -199,7 +283,7 @@ export async function generateForUnit(
     for (const s of parseSentences(raw)) {
       if (kept.length >= opts.count) break;
 
-      const key = normalizeForCompare(s.de);
+      const key = sentenceKey(s.de);
       if (seen.has(key)) {
         duplicates++;
         continue;

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-29T00:43:52.059Z",
+  "generatedAt": "2026-08-29T00:52:22.975Z",
   "model": "gpt-4o-mini",
   "units": [
     {
@@ -7,83 +7,103 @@
       "sentences": [
         {
           "de": "Bis nächste Woche.",
-          "uz": "Keyingi haftada ko'rishamiz."
+          "uz": "Kelasi hafta ko'rishamiz.",
+          "origin": "SOURCE"
         },
         {
           "de": "Wie heißt du?",
-          "uz": "Isming nima?"
-        },
-        {
-          "de": "Wie ist dein Name?",
-          "uz": "Ismingiz nima?"
-        },
-        {
-          "de": "Ich bin Student.",
-          "uz": "Men talabayman."
-        },
-        {
-          "de": "Ich bin Studentin.",
-          "uz": "Men talaba qizman."
+          "uz": "Ismingiz nima?",
+          "origin": "SOURCE"
         },
         {
           "de": "Wie heißen Sie?",
-          "uz": "Ismingiz nima?"
+          "uz": "Ismingiz nima? (rasmiy)",
+          "origin": "SOURCE"
+        },
+        {
+          "de": "Wer ist das?",
+          "uz": "Bu kim?",
+          "origin": "SOURCE"
         },
         {
           "de": "Darf ich vorstellen?",
-          "uz": "Tanishtirishim mumkinmi?"
-        },
-        {
-          "de": "Das ist mein Freund.",
-          "uz": "Bu mening do'stim."
-        },
-        {
-          "de": "Es tut mir leid.",
-          "uz": "Juda afsusdaman."
-        },
-        {
-          "de": "Wo wohnst du?",
-          "uz": "Qayerda yashaysan?"
-        },
-        {
-          "de": "Wo wohnen Sie?",
-          "uz": "Qayerda yashaysiz?"
-        },
-        {
-          "de": "Bleibst du hier?",
-          "uz": "Bu yerda qolasanmi?"
-        },
-        {
-          "de": "Ich bleibe bis morgen.",
-          "uz": "Men ertagacha qolaman."
-        },
-        {
-          "de": "Ich unterschreibe hier.",
-          "uz": "Men bu yerda imzo qo'yaman."
-        },
-        {
-          "de": "Ich heiße Udo.",
-          "uz": "Mening ismim Udo."
-        },
-        {
-          "de": "Ich bleibe hier.",
-          "uz": "Men bu yerda qolaman."
-        },
-        {
-          "de": "Ich finde das nett.",
-          "uz": "Men buni yoqtiraman."
-        },
-        {
-          "de": "Wie ist Ihr Name?",
-          "uz": "Ismingiz nima?"
+          "uz": "Tanishtirishim mumkinmi?",
+          "origin": "SOURCE"
         },
         {
           "de": "Das ist mein Freund, Udo.",
-          "uz": "Bu mening do'stim Udo."
+          "uz": "Bu mening do'stim, Udo.",
+          "origin": "SOURCE"
+        },
+        {
+          "de": "Wie heißt er?",
+          "uz": "Uning ismi nima?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Wie heißt sie?",
+          "uz": "Uning ismi nima?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Wo wohnen Sie?",
+          "uz": "Siz qayerda yashaysiz?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Wo wohnst du?",
+          "uz": "Sen qayerda yashaysan?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich finde das gut.",
+          "uz": "Bu menga yoqadi.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich bleibe hier.",
+          "uz": "Men bu yerda qolaman.",
+          "origin": "GENERATED"
         },
         {
           "de": "Entschuldigung, wo ist das?",
-          "uz": "Kechirasiz, bu qayerda?"
+          "uz": "Kechirasiz, bu qayerda?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Wo ist die Unterschrift?",
+          "uz": "Imzo qayerda?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich unterschreibe das.",
+          "uz": "Men buni imzolayman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich bleibe bis morgen.",
+          "uz": "Men ertaga qolgani keldim.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich bin ein Student.",
+          "uz": "Men talaba.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Wie heißt dein Freund?",
+          "uz": "Do'sting ismi nima?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich unterschreibe hier.",
+          "uz": "Men bu yerda imzo qo'yaman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Bleiben Sie hier, bitte.",
+          "uz": "Iltimos, bu yerda qoling.",
+          "origin": "GENERATED"
         }
       ]
     }

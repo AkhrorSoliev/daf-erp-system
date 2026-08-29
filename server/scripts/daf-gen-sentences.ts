@@ -24,11 +24,14 @@ import {
 } from '../src/daf/sentence/sentence-validate';
 import {
   generateForUnit,
+  materialWords,
+  sourceSentences,
+  sentenceKey,
   MIN_WORDS,
   MAX_WORDS,
-  type GeneratedSentence,
   type RejectReason,
   type RejectedSentence,
+  type StoredSentence,
 } from '../src/daf/sentence/sentence-generate';
 import {
   OpenAiTranslateModel,
@@ -70,6 +73,12 @@ interface DibEntry {
   de: string;
 }
 
+/** `translations.json` dagi tarjima; `sourceId` — `<bo'lim>#<tartib>`. */
+interface Lexeme {
+  sourceId: string;
+  uz: string | null;
+}
+
 interface DibSection {
   id: string;
   entries?: DibEntry[];
@@ -88,7 +97,7 @@ interface Dib {
 interface SentencesFile {
   generatedAt: string;
   model: string;
-  units: { order: number; sentences: GeneratedSentence[] }[];
+  units: { order: number; sentences: StoredSentence[] }[];
 }
 
 /** Rad etish sababi — hisobot uchun o'qiladigan shaklda. */
@@ -148,6 +157,24 @@ async function main() {
     dib.sections.map((s) => [s.id, (s.entries ?? []).map((e) => e.de)]),
   );
 
+  // Tarjima `dib.json` da emas, alohida faylda yashaydi va yozuvga
+  // `<bo'lim>#<tartib>` kaliti bilan bog'lanadi (tartib birdan boshlanadi).
+  const translations = readJson<{ lexemes: Lexeme[] }>(
+    join(CONTENT, 'translations.json'),
+  );
+  const uzBySourceId = new Map(
+    translations.lexemes.map((l) => [l.sourceId, l.uz]),
+  );
+  const entriesWithUz = (
+    sectionId: string,
+  ): { de: string; uz: string | null }[] =>
+    (dib.sections.find((s) => s.id === sectionId)?.entries ?? []).map(
+      (e, i) => ({
+        de: e.de,
+        uz: uzBySourceId.get(`${sectionId}#${i + 1}`) ?? null,
+      }),
+    );
+
   const force = hasFlag('--force');
   const onlyUnit = flagValue('--unit');
 
@@ -156,7 +183,7 @@ async function main() {
   // o'qituvchi ko'rib chiqqan gaplarni sababsiz almashtirardi.
   const existing: SentencesFile | null =
     !force && existsSync(OUT) ? readJson<SentencesFile>(OUT) : null;
-  const done = new Map<number, GeneratedSentence[]>(
+  const done = new Map<number, StoredSentence[]>(
     (existing?.units ?? []).map((u) => [u.order, u.sentences]),
   );
 
@@ -183,6 +210,7 @@ async function main() {
     rejectedLength: number;
     rejectedNoNew: number;
     duplicates: number;
+    fromSource: number;
   }[] = [];
 
   for (const unit of todo) {
@@ -195,11 +223,20 @@ async function main() {
     // `cumulativeVocab` qayta ishlatildi, chunki so'z shakllarini
     // hosil qilish qoidasi bitta joyda turishi kerak.
     const newWords = cumulativeVocab([unit], entriesBySection, 0);
-    const words = unit.sections.flatMap((s) => entriesBySection.get(s) ?? []);
+    // So'rovga faqat QURILISH MATERIALI beriladi. Tayyor ifodalar
+    // («Wer ist das?») model uchun emas — ular gap sifatida to'g'ridan
+    // to'g'ri olinadi.
+    const words = materialWords(
+      unit.sections.flatMap((s) => entriesBySection.get(s) ?? []),
+    );
+    const fromSource = unit.sections.flatMap((s) =>
+      sourceSentences(entriesWithUz(s)),
+    );
     const examples = cleanExamples(dib, allowed);
 
     console.log(
-      `\n${unit.order}. ${unit.titleUz} — ${words.length} so'z, ${examples.length} namuna`,
+      `\n${unit.order}. ${unit.titleUz} — ${words.length} so'z,` +
+        ` ${examples.length} namuna, manbadan ${fromSource.length} gap`,
     );
 
     const { kept, rejected, duplicates } = await generateForUnit(model, {
@@ -224,8 +261,23 @@ async function main() {
       rejectedLength: count('length'),
       rejectedNoNew: count('no-new-word'),
       duplicates,
+      fromSource: fromSource.length,
     });
-    done.set(unit.order, kept);
+    // Manbadagi gap oldinda turadi: uni odam yozgan, ya'ni sifati
+    // yuqoriroq. Model o'sha gapni qayta yasagan bo'lsa, nusxasi
+    // tashlanadi.
+    const seen = new Set(fromSource.map((x) => sentenceKey(x.de)));
+    const generated = kept.filter((x) => !seen.has(sentenceKey(x.de)));
+    const overlap = kept.length - generated.length;
+    done.set(unit.order, [
+      ...fromSource,
+      ...generated.map((x) => ({ ...x, origin: 'GENERATED' as const })),
+    ]);
+    if (overlap > 0) {
+      console.log(
+        `   ${overlap} ta yasalgan gap manbadagisi bilan bir xil — tashlandi`,
+      );
+    }
     console.log(
       `   saqlandi ${kept.length}, rad etildi ${rejected.length}` +
         ` (notanish ${count('unknown')}, uzunlik ${count('length')},` +
@@ -234,8 +286,10 @@ async function main() {
     for (const r of rejected) {
       console.log(`   ✗ ${r.de}  [${whyRejected(r)}]`);
     }
-    for (const s of kept) {
-      console.log(`   ✓ ${s.de} | ${s.uz}`);
+    for (const s of done.get(unit.order) ?? []) {
+      console.log(
+        `   ✓ [${s.origin === 'SOURCE' ? 'manba' : 'yasama'}] ${s.de} | ${s.uz}`,
+      );
     }
   }
 
@@ -258,17 +312,19 @@ async function main() {
     rejectedAll += rejected;
     duplicatesAll += s.duplicates;
     console.log(
-      `  ${s.order}-bo'lim: saqlandi ${s.kept}, rad etildi ${rejected}` +
-        ` (notanish ${s.rejectedUnknown}, uzunlik ${s.rejectedLength},` +
-        ` yangi so'zsiz ${s.rejectedNoNew}), takror ${s.duplicates}`,
+      `  ${s.order}-bo'lim: yasaldi ${s.kept}, manbadan ${s.fromSource},` +
+        ` rad etildi ${rejected} (notanish ${s.rejectedUnknown},` +
+        ` uzunlik ${s.rejectedLength}, yangi so'zsiz ${s.rejectedNoNew}),` +
+        ` takror ${s.duplicates}`,
     );
   }
   // Takror rad etishga qo'shilmaydi: u yaroqsizlik emas, ortiqchalik.
   const total = keptAll + rejectedAll;
   const pct = total === 0 ? 0 : Math.round((rejectedAll / total) * 100);
+  const sourceAll = stats.reduce((a, x) => a + x.fromSource, 0);
   console.log(
-    `  Jami: saqlandi ${keptAll}, rad etildi ${rejectedAll} (${pct} %),` +
-      ` takror ${duplicatesAll}`,
+    `  Jami: yasaldi ${keptAll}, manbadan ${sourceAll}, rad etildi` +
+      ` ${rejectedAll} (${pct} %), takror ${duplicatesAll}`,
   );
 
   const top = [...unknownTally.entries()]

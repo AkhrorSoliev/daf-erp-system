@@ -2,6 +2,9 @@ import {
   buildSentencePrompt,
   parseSentences,
   generateForUnit,
+  isPhraseEntry,
+  materialWords,
+  sourceSentences,
 } from './sentence-generate';
 import type { TranslateModel } from '../translate/translate-model';
 
@@ -203,5 +206,83 @@ describe('generateForUnit', () => {
     });
     expect(r.kept).toHaveLength(0);
     expect(r.rejected).toHaveLength(3);
+  });
+});
+
+describe('materialWords', () => {
+  // Model tayyor ifodani gap yasashning o'rniga shundoq qaytarardi.
+  it('tayyor ifodani so`rov ro`yxatidan chiqaradi', () => {
+    expect(
+      materialWords([
+        'wohnen',
+        'die Unterschrift',
+        'Bis nächste Woche.',
+        'Wer ist das?',
+        'Es ist nett, dich kennen zu lernen',
+      ]),
+    ).toEqual(['wohnen', 'die Unterschrift']);
+  });
+
+  it('gap tinish belgisini ham, uzunlikni ham alomat deb biladi', () => {
+    expect(isPhraseEntry('Hallo!')).toBe(true);
+    expect(isPhraseEntry('Ich bin Student/Studentin')).toBe(true);
+    expect(isPhraseEntry('unterschreiben')).toBe(false);
+  });
+});
+
+describe('sourceSentences', () => {
+  // Bu gaplarni ODAM yozgan — to'plamdagi eng sifatli qism.
+  it('lug`at yozuvidan tayyor gapni oladi', () => {
+    expect(sourceSentences([{ de: 'Wer ist das?', uz: 'Bu kim?' }])).toEqual([
+      { de: 'Wer ist das?', uz: 'Bu kim?', origin: 'SOURCE' },
+    ]);
+  });
+
+  // «Bis Samstag.» — ikki so'z, mashq uchun juda qisqa.
+  it('uch so`zdan qisqa yozuvni olmaydi', () => {
+    expect(
+      sourceSentences([{ de: 'Bis Samstag.', uz: 'Shanba kuni.' }]),
+    ).toEqual([]);
+  });
+
+  it('gap tinish belgisisiz yozuvni olmaydi', () => {
+    expect(
+      sourceSentences([
+        { de: 'Ich bin Student/Studentin', uz: 'Men talabaman' },
+        { de: 'das Land (die Länder)', uz: 'mamlakat' },
+      ]),
+    ).toEqual([]);
+  });
+
+  it('tarjimasi yo`q yozuvni olmaydi', () => {
+    expect(sourceSentences([{ de: 'Wer ist das?', uz: null }])).toEqual([]);
+  });
+
+  // «A / B» — ikki variant; birinchisi olinadi.
+  it('birinchi variantni oladi', () => {
+    expect(
+      sourceSentences([
+        { de: 'Wie heißt du? / Wie ist dein Name?', uz: 'Ismingiz nima?' },
+      ]),
+    ).toEqual([
+      { de: 'Wie heißt du?', uz: 'Ismingiz nima?', origin: 'SOURCE' },
+    ]);
+  });
+
+  // Qiyshiq chiziq gap ICHIDA turgan yozuv bo'lingani parcha berardi.
+  it('bo`lingani gap bo`lmasa olmaydi', () => {
+    expect(
+      sourceSentences([
+        { de: 'Es ist nett, dich / Sie kennen zu lernen', uz: 'Yoqimli.' },
+      ]),
+    ).toEqual([]);
+  });
+
+  // Ixtiyoriy bo'lakli yozuv bitta aniq gap emas, va manba matni
+  // jimgina tahrirlanmaydi.
+  it('qavsli yozuvni olmaydi', () => {
+    expect(
+      sourceSentences([{ de: '(Es) tut mir leid.', uz: 'Afsusdaman.' }]),
+    ).toEqual([]);
   });
 });
