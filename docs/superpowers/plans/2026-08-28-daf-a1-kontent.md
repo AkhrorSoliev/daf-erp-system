@@ -1508,7 +1508,9 @@ describe('seedSentences', () => {
   it('bo`limga gaplarni yozadi va sonini qaytaradi', async () => {
     const n = await seedSentences(prisma, {
       generatedAt: 'x', model: 'm',
-      units: [{ order: 1, sentences: [{ de: 'Ich heiße Anna.', uz: 'Mening ismim Anna.' }] }],
+      units: [{ order: 1, sentences: [
+        { de: 'Ich heiße Anna.', uz: 'Mening ismim Anna.', origin: 'GENERATED' },
+      ] }],
     });
     expect(n).toBe(1);
 
@@ -1516,12 +1518,25 @@ describe('seedSentences', () => {
     expect(row).toMatchObject({ de: 'Ich heiße Anna.', wordCount: 3, origin: 'GENERATED' });
   });
 
+  // Manbadan olingan gap «yasama» bo'lib qolsa kelib chiqishi
+  // yo'qoladi va ustoz ko'rigida qaysi biri model yozgani bilinmaydi.
+  it('SOURCE gapni GENERATED qilib yozmaydi', async () => {
+    await seedSentences(prisma, {
+      generatedAt: 'x', model: 'm',
+      units: [{ order: 1, sentences: [
+        { de: 'Wie heißt du?', uz: 'Ismingiz nima?', origin: 'SOURCE' },
+      ] }],
+    });
+
+    expect((await prisma.dafSentence.findFirst())?.origin).toBe('SOURCE');
+  });
+
   // Qayta yugurish yangi qator yaratmasligi kerak, aks holda har
   // seed bazani ikkilantirardi.
   it('ikki marta yugursa qator ikkilanmaydi', async () => {
     const file = {
       generatedAt: 'x', model: 'm',
-      units: [{ order: 1, sentences: [{ de: 'A.', uz: 'B.' }] }],
+      units: [{ order: 1, sentences: [{ de: 'A.', uz: 'B.', origin: 'GENERATED' }] }],
     };
     await seedSentences(prisma, file);
     await seedSentences(prisma, file);
@@ -1533,7 +1548,7 @@ describe('seedSentences', () => {
   it('mavjud audioKey ni o`chirmaydi', async () => {
     const file = {
       generatedAt: 'x', model: 'm',
-      units: [{ order: 1, sentences: [{ de: 'A.', uz: 'B.' }] }],
+      units: [{ order: 1, sentences: [{ de: 'A.', uz: 'B.', origin: 'GENERATED' }] }],
     };
     await seedSentences(prisma, file);
     await prisma.dafSentence.updateMany({ data: { audioKey: 'k.mp3' } });
@@ -1545,7 +1560,7 @@ describe('seedSentences', () => {
     await expect(
       seedSentences(prisma, {
         generatedAt: 'x', model: 'm',
-        units: [{ order: 99, sentences: [{ de: 'A.', uz: 'B.' }] }],
+        units: [{ order: 99, sentences: [{ de: 'A.', uz: 'B.', origin: 'GENERATED' }] }],
       }),
     ).rejects.toThrow(/99/);
   });
@@ -1567,7 +1582,10 @@ import type { PrismaService } from '../../prisma/prisma.service';
 export interface SentenceFile {
   generatedAt: string;
   model: string;
-  units: { order: number; sentences: { de: string; uz: string }[] }[];
+  units: {
+    order: number;
+    sentences: { de: string; uz: string; origin: DafSentenceOrigin }[];
+  }[];
 }
 
 export function countWords(s: string): number {
@@ -1602,7 +1620,11 @@ export async function seedSentences(
           de: s.de,
           uz: s.uz,
           wordCount: countWords(s.de),
-          origin: 'GENERATED',
+          // `origin` FAYLDAN o'qiladi, qattiq yozilmaydi. 510 gapning
+          // 30 tasi manbadagi tayyor ibora (`SOURCE`) — ularni
+          // «yasama» deb belgilash kelib chiqishini yo'qotardi va
+          // keyin ustoz ko'rigida qaysi biri model yozgani bilinmasdi.
+          origin: s.origin,
         },
         update: { de: s.de, uz: s.uz, wordCount: countWords(s.de) },
       });
