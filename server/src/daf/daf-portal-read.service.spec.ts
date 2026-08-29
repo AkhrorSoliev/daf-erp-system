@@ -20,7 +20,7 @@ describe('DafPortalReadService', () => {
         findMany: jest.fn().mockResolvedValue([
           {
             id: 1,
-            level: 'A1_1',
+            level: 'A1',
             order: 1,
             titleUz: 'Tanishuv',
             titleDe: 'Kennenlernen',
@@ -29,7 +29,7 @@ describe('DafPortalReadService', () => {
         ]),
         findUnique: jest.fn().mockResolvedValue({
           id: 1,
-          level: 'A1_1',
+          level: 'A1',
           order: 1,
           titleUz: 'Tanishuv',
           titleDe: 'Kennenlernen',
@@ -40,7 +40,7 @@ describe('DafPortalReadService', () => {
           {
             id: 3,
             order: 1,
-            kind: 'VOCAB',
+            tier: 1,
             titleDe: 'Begrüßungen',
             titleUz: 'Salomlashish',
             _count: { lexemes: 16, exercises: 0 },
@@ -49,10 +49,10 @@ describe('DafPortalReadService', () => {
         findUnique: jest.fn().mockResolvedValue({
           id: 3,
           order: 1,
-          kind: 'VOCAB',
+          tier: 1,
           titleDe: 'Begrüßungen',
           titleUz: 'Salomlashish',
-          unit: { id: 1, titleUz: 'Tanishuv', level: 'A1_1' },
+          unit: { id: 1, titleUz: 'Tanishuv', level: 'A1' },
           grammar: null,
         }),
       },
@@ -100,18 +100,15 @@ describe('DafPortalReadService', () => {
   // Bo'limi yo'q daraja ham qaytariladi: o'quvchi butun yo'lni ko'rishi
   // kerak. Bo'sh darajani yashirish «B1 umuman yo'q» degan taassurot
   // qoldirardi.
+  //
+  // Daraja uchta: `A1.1`/`A1.2` bo'linishi manbaning yorlig'i edi, yo'lda
+  // esa o'quvchining bosqichi turadi.
   it("bo'sh darajani ham yo'lda qoldiradi", async () => {
     const path = await service.getLevels();
 
-    expect(path.map((p) => p.label)).toEqual([
-      'A1.1',
-      'A1.2',
-      'A2.1',
-      'A2.2',
-      'B1',
-    ]);
+    expect(path.map((p) => p.label)).toEqual(['A1', 'A2', 'B1']);
     expect(path[0].units).toHaveLength(1);
-    expect(path[4].units).toEqual([]);
+    expect(path[2].units).toEqual([]);
   });
 
   // ENG MUHIM TEKSHIRUV: to'g'ri javob mijozga yuborilmaydi. Yuborilsa,
@@ -150,15 +147,16 @@ describe('DafPortalReadService', () => {
     expect(lesson.lexemes[0].imageUrl).toBeNull();
   });
 
-  // Bo'lim ekrani lug'at ham, mashq ham qaytarmaydi — birinchi bo'limda
-  // 226 so'z va 108 mashq bor, ya'ni bitta ekranga sig'maydi. Kontent
-  // darsning ichida.
-  it("bo'lim faqat darslar ro'yxatini beradi", async () => {
+  // Bo'lim ekrani lug'at ham, mashq ham qaytarmaydi — bo'limda 30–50 so'z
+  // va o'nlab mashq bor, ya'ni bitta ekranga sig'maydi. Kontent
+  // bosqichning ichida.
+  it("bo'lim faqat bosqichlar ro'yxatini beradi", async () => {
     const unit = await service.getUnit(1);
 
     expect(unit).not.toHaveProperty('lexemes');
     expect(unit).not.toHaveProperty('exercises');
     expect(unit.lessons[0]).toMatchObject({
+      tier: 1,
       titleUz: 'Salomlashish',
       wordCount: 16,
     });

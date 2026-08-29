@@ -119,24 +119,34 @@ describe('A1 strukturasi', () => {
 
   it('DafSentence bo`limga bog`langan va kelib chiqishini saqlaydi', () => {
     expect(modelBlock('DafSentence')).toMatch(/origin\s+DafSentenceOrigin/);
-    expect(schema).toMatch(/enum DafSentenceOrigin \{\s*GENERATED\s+SOURCE\s*\}/);
+    expect(schema).toMatch(
+      /enum DafSentenceOrigin \{\s*GENERATED\s+SOURCE\s*\}/,
+    );
   });
 
   // «Qaysi so'z qaytishi kerak» savoliga butun urinishlar tarixidan
   // javob berish qimmat, shuning uchun holat saqlanadi.
   it('DafLexemeState o`quvchi va so`z bo`yicha yagona', () => {
-    expect(modelBlock('DafLexemeState')).toMatch(/@@unique\(\[studentId, lexemeId\]\)/);
-    expect(modelBlock('DafLexemeState')).toMatch(/@@index\(\[studentId, dueAt\]\)/);
+    expect(modelBlock('DafLexemeState')).toMatch(
+      /@@unique\(\[studentId, lexemeId\]\)/,
+    );
+    expect(modelBlock('DafLexemeState')).toMatch(
+      /@@index\(\[studentId, dueAt\]\)/,
+    );
   });
 
   it('DafLessonProgress o`quvchi va dars bo`yicha yagona', () => {
-    expect(modelBlock('DafLessonProgress')).toMatch(/@@unique\(\[studentId, lessonId\]\)/);
+    expect(modelBlock('DafLessonProgress')).toMatch(
+      /@@unique\(\[studentId, lessonId\]\)/,
+    );
   });
 
   // Rasmli savol turlari faqat aniq so'zlarga beriladi — `weil` ni
   // chizib bo'lmaydi.
   it('DafLexeme picturable bayrog`ini olgan', () => {
-    expect(modelBlock('DafLexeme')).toMatch(/picturable\s+Boolean\s+@default\(false\)/);
+    expect(modelBlock('DafLexeme')).toMatch(
+      /picturable\s+Boolean\s+@default\(false\)/,
+    );
   });
 
   // Yangi modelda so'z bo'limga tegishli, darsga emas. Sxema majburiy

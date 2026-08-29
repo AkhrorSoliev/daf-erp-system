@@ -1,4 +1,4 @@
-import type { CefrLevel } from '../../daf-content/dataset.types';
+import type { DafLevel } from '@prisma/client';
 
 /**
  * Bo'lim nomlari.
@@ -24,6 +24,10 @@ export interface DafUnitTitle {
 }
 
 export const DAF_UNIT_TITLES: DafUnitTitle[] = [
+  // 1–4-boblar ENDI ISHLATILMAYDI: A1 ni `content/daf/a1-units.json`
+  // egalladi — u yerda 20 bo'lim qo'lda chizilgan. Qatorlar o'chirilmadi,
+  // chunki fayl A1 dan voz kechsa (yoki boshqa manbaning A1 bobi
+  // qo'shilsa) eski yo'l ularsiz sarlavhasiz qolardi.
   { chapter: 1, titleDe: 'Kennenlernen', titleUz: 'Tanishuv va salomlashish' },
   { chapter: 2, titleDe: 'Studium und Wohnen', titleUz: "O'qish va turar joy" },
   {
@@ -48,11 +52,18 @@ export const DAF_UNIT_TITLES: DafUnitTitle[] = [
   },
 ];
 
-/** Bo'limning tartibi daraja ICHIDA — yo'l shu tartibda yuriladi. */
+/**
+ * Bo'limning tartibi daraja ICHIDA — yo'l shu tartibda yuriladi.
+ *
+ * Daraja BAZANIKI (`A2`), manbaniki (`A2.1`/`A2.2`) emas. Manba yorlig'i
+ * bilan sanaganda 5-bob (A2.2) ham, 6-bob (A2.1) ham «A2 ning 1-bo'limi»
+ * bo'lib chiqardi va `@@unique([level, order])` sababli bittasi
+ * ikkinchisini bosib o'tardi.
+ */
 export function orderWithinLevel(
   chapter: number,
-  level: CefrLevel,
-  all: { chapter: number; level?: CefrLevel }[],
+  level: DafLevel,
+  all: { chapter: number; level?: DafLevel }[],
 ): number {
   const sameLevel = all
     .filter((c) => c.level === level)
