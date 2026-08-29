@@ -36,6 +36,11 @@
           "origin": "GENERATED"
         },
         {
+          "de": "Wie heißt sie?",
+          "uz": "Uning ismi nima?",
+          "origin": "GENERATED"
+        },
+        {
           "de": "Wo wohnen Sie?",
           "uz": "Siz qayerda yashaysiz?",
           "origin": "GENERATED"
@@ -1402,6 +1407,11 @@
         },
         {
           "de": "Er trinkt einen Tee.",
+          "uz": "U choy ichadi.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Sie trinkt einen Tee.",
           "uz": "U choy ichadi.",
           "origin": "GENERATED"
         },

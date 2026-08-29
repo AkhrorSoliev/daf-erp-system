@@ -3097,7 +3097,7 @@
     {
       "sourceId": "dib-voc-03-01#11",
       "uz": "uyquga ketmoq",
-      "translationSource": "HUMAN",
+      "translationSource": "TEACHER",
       "audioStartMs": 81663,
       "audioEndMs": 82508
     },
@@ -3111,14 +3111,14 @@
     {
       "sourceId": "dib-voc-03-01#13",
       "uz": "ovqat",
-      "translationSource": "HUMAN",
+      "translationSource": "TEACHER",
       "audioStartMs": null,
       "audioEndMs": null
     },
     {
       "sourceId": "dib-voc-03-01#14",
       "uz": "Ovqat tayyor.",
-      "translationSource": "HUMAN",
+      "translationSource": "TEACHER",
       "audioStartMs": null,
       "audioEndMs": null
     },
@@ -3160,7 +3160,7 @@
     {
       "sourceId": "dib-voc-03-01#2",
       "uz": "yengil kechki ovqat",
-      "translationSource": "HUMAN",
+      "translationSource": "TEACHER",
       "audioStartMs": 6817,
       "audioEndMs": 7933
     },
@@ -3174,7 +3174,7 @@
     {
       "sourceId": "dib-voc-03-01#21",
       "uz": "soqol olmoq",
-      "translationSource": "HUMAN",
+      "translationSource": "TEACHER",
       "audioStartMs": null,
       "audioEndMs": null
     },
@@ -3188,7 +3188,7 @@
     {
       "sourceId": "dib-voc-03-01#23",
       "uz": "to'yib uxlamoq / uzoq uxlamoq / uxlab qolmoq",
-      "translationSource": "HUMAN",
+      "translationSource": "TEACHER",
       "audioStartMs": 91608,
       "audioEndMs": 92580
     },
@@ -3223,7 +3223,7 @@
     {
       "sourceId": "dib-voc-03-01#5",
       "uz": "yechinmoq",
-      "translationSource": "HUMAN",
+      "translationSource": "TEACHER",
       "audioStartMs": 16788,
       "audioEndMs": 17908
     },
@@ -3244,7 +3244,7 @@
     {
       "sourceId": "dib-voc-03-01#8",
       "uz": "xarid qilmoq",
-      "translationSource": "HUMAN",
+      "translationSource": "TEACHER",
       "audioStartMs": 26300,
       "audioEndMs": 27600
     },
@@ -3258,14 +3258,14 @@
     {
       "sourceId": "dib-voc-03-02#1",
       "uz": "surtma (non ustiga)",
-      "translationSource": "HUMAN",
+      "translationSource": "TEACHER",
       "audioStartMs": 3876,
       "audioEndMs": 7958
     },
     {
       "sourceId": "dib-voc-03-02#10",
       "uz": "asal",
-      "translationSource": "HUMAN",
+      "translationSource": "TEACHER",
       "audioStartMs": 61294,
       "audioEndMs": 62203
     },
@@ -3335,14 +3335,14 @@
     {
       "sourceId": "dib-voc-03-02#2",
       "uz": "kolbasa qiyimlari",
-      "translationSource": "HUMAN",
+      "translationSource": "TEACHER",
       "audioStartMs": 10308,
       "audioEndMs": 13923
     },
     {
       "sourceId": "dib-voc-03-02#20",
       "uz": "tvorog",
-      "translationSource": "HUMAN",
+      "translationSource": "TEACHER",
       "audioStartMs": 103680,
       "audioEndMs": 104418
     },
@@ -3356,7 +3356,7 @@
     {
       "sourceId": "dib-voc-03-02#22",
       "uz": "bekon",
-      "translationSource": "HUMAN",
+      "translationSource": "TEACHER",
       "audioStartMs": 113180,
       "audioEndMs": 113964
     },
@@ -3384,7 +3384,7 @@
     {
       "sourceId": "dib-voc-03-02#3",
       "uz": "non-bulka mahsulotlari",
-      "translationSource": "HUMAN",
+      "translationSource": "TEACHER",
       "audioStartMs": 16403,
       "audioEndMs": 17552
     },
@@ -3398,7 +3398,7 @@
     {
       "sourceId": "dib-voc-03-02#5",
       "uz": "kichik non (bulochka)",
-      "translationSource": "HUMAN",
+      "translationSource": "TEACHER",
       "audioStartMs": 30742,
       "audioEndMs": 34722
     },
