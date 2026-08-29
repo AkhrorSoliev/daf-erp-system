@@ -20,19 +20,29 @@ import { join } from 'path';
 import {
   cumulativeVocab,
   unknownWords,
+  wordsOf,
 } from '../src/daf/sentence/sentence-validate';
 import {
   generateForUnit,
   MIN_WORDS,
   MAX_WORDS,
   type GeneratedSentence,
+  type RejectReason,
+  type RejectedSentence,
 } from '../src/daf/sentence/sentence-generate';
 import {
   OpenAiTranslateModel,
   type TranslateModel,
 } from '../src/daf/translate/translate-model';
 
-/** Bo'limiga so'raladigan gaplar soni. */
+/**
+ * Bo'limiga SO'RALADIGAN gaplar soni — kafolat emas, so'rov.
+ *
+ * Bo'lim shunchasini bermasligi mumkin va bu normal: 1-bo'lim lug'atining
+ * 42 yozuvidan 13 tasi salomlashish undovi, ular gap qura olmaydi.
+ * Sun'iy ravishda 30 ga yetkazish uchun qoidalarni bo'shatish mashqni
+ * buzardi — nechta tabiiy chiqsa, o'shancha olinadi.
+ */
 const TARGET = 30;
 
 /**
@@ -45,8 +55,6 @@ const MAX_EXAMPLES = 8;
 
 // Namuna gapning uzunligi mashq gapiniki bilan bir xil bo'ladi:
 // chegara `sentence-generate.ts` da, bitta joyda turadi.
-
-const WORD = /[a-zA-ZäöüÄÖÜß]+/g;
 
 const CONTENT = join(__dirname, '..', 'content', 'daf');
 const OUT = join(CONTENT, 'sentences.json');
@@ -83,6 +91,13 @@ interface SentencesFile {
   units: { order: number; sentences: GeneratedSentence[] }[];
 }
 
+/** Rad etish sababi — hisobot uchun o'qiladigan shaklda. */
+function whyRejected(r: RejectedSentence): string {
+  if (r.reason === 'unknown') return r.unknown.join(', ');
+  if (r.reason === 'length') return 'uzunlik chegarasi';
+  return "bo'limning yangi so'zi yo'q";
+}
+
 function flagValue(name: string): string | null {
   const i = process.argv.indexOf(name);
   if (i === -1) return null;
@@ -109,7 +124,7 @@ function cleanExamples(dib: Dib, allowed: Set<string>): string[] {
   const out: string[] = [];
   for (const t of dib.transcripts) {
     for (const line of t.linesDe) {
-      const n = (line.match(WORD) ?? []).filter((w) => w.length > 1).length;
+      const n = wordsOf(line).length;
       if (n < MIN_WORDS || n > MAX_WORDS) continue;
       if (unknownWords(line, allowed).length > 0) continue;
       if (out.includes(line)) continue;
@@ -147,7 +162,11 @@ async function main() {
 
   const todo = plan.units.filter((u) => {
     if (onlyUnit !== null && u.order !== Number(onlyUnit)) return false;
-    return force || (done.get(u.order)?.length ?? 0) < TARGET;
+    // «TARGET ga yetmagani» emas, «umuman yo'g'i»: bo'lim tabiiy
+    // ravishda 30 ga yetmasligi mumkin, va o'sha chegara bilan har
+    // yuritishda o'sha bo'lim qayta so'ralib, pul sarflanib, tayyor
+    // gaplar sababsiz almashaverardi.
+    return force || (done.get(u.order)?.length ?? 0) === 0;
   });
 
   if (todo.length === 0) {
@@ -162,6 +181,7 @@ async function main() {
     kept: number;
     rejectedUnknown: number;
     rejectedLength: number;
+    rejectedNoNew: number;
     duplicates: number;
   }[] = [];
 
@@ -171,6 +191,10 @@ async function main() {
     // so'zlarini beradi, chunki mashq yangi so'z uchun kerak. Oldingi
     // bo'lim so'zi gapda uchrasa u rad etilmaydi — o'quvchi uni biladi.
     const allowed = cumulativeVocab(plan.units, entriesBySection, index);
+    // Yagona bo'limli ro'yxat — «shu bo'limning o'zi» degani.
+    // `cumulativeVocab` qayta ishlatildi, chunki so'z shakllarini
+    // hosil qilish qoidasi bitta joyda turishi kerak.
+    const newWords = cumulativeVocab([unit], entriesBySection, 0);
     const words = unit.sections.flatMap((s) => entriesBySection.get(s) ?? []);
     const examples = cleanExamples(dib, allowed);
 
@@ -180,6 +204,7 @@ async function main() {
 
     const { kept, rejected, duplicates } = await generateForUnit(model, {
       allowed,
+      newWords,
       words,
       examples,
       count: TARGET,
@@ -190,26 +215,24 @@ async function main() {
         unknownTally.set(w, (unknownTally.get(w) ?? 0) + 1);
       }
     }
-    const rejectedUnknown = rejected.filter(
-      (r) => r.reason === 'unknown',
-    ).length;
+    const count = (reason: RejectReason) =>
+      rejected.filter((r) => r.reason === reason).length;
     stats.push({
       order: unit.order,
       kept: kept.length,
-      rejectedUnknown,
-      rejectedLength: rejected.length - rejectedUnknown,
+      rejectedUnknown: count('unknown'),
+      rejectedLength: count('length'),
+      rejectedNoNew: count('no-new-word'),
       duplicates,
     });
     done.set(unit.order, kept);
     console.log(
       `   saqlandi ${kept.length}, rad etildi ${rejected.length}` +
-        ` (notanish ${rejectedUnknown}, uzunlik ${rejected.length - rejectedUnknown})` +
-        `, takror ${duplicates}`,
+        ` (notanish ${count('unknown')}, uzunlik ${count('length')},` +
+        ` yangi so'zsiz ${count('no-new-word')}), takror ${duplicates}`,
     );
     for (const r of rejected) {
-      const why =
-        r.reason === 'unknown' ? r.unknown.join(', ') : 'uzunlik chegarasi';
-      console.log(`   ✗ ${r.de}  [${why}]`);
+      console.log(`   ✗ ${r.de}  [${whyRejected(r)}]`);
     }
     for (const s of kept) {
       console.log(`   ✓ ${s.de} | ${s.uz}`);
@@ -230,14 +253,14 @@ async function main() {
   let rejectedAll = 0;
   let duplicatesAll = 0;
   for (const s of stats) {
-    const rejected = s.rejectedUnknown + s.rejectedLength;
+    const rejected = s.rejectedUnknown + s.rejectedLength + s.rejectedNoNew;
     keptAll += s.kept;
     rejectedAll += rejected;
     duplicatesAll += s.duplicates;
     console.log(
       `  ${s.order}-bo'lim: saqlandi ${s.kept}, rad etildi ${rejected}` +
-        ` (notanish ${s.rejectedUnknown}, uzunlik ${s.rejectedLength})` +
-        `, takror ${s.duplicates}`,
+        ` (notanish ${s.rejectedUnknown}, uzunlik ${s.rejectedLength},` +
+        ` yangi so'zsiz ${s.rejectedNoNew}), takror ${s.duplicates}`,
     );
   }
   // Takror rad etishga qo'shilmaydi: u yaroqsizlik emas, ortiqchalik.

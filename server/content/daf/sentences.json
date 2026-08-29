@@ -1,10 +1,14 @@
 {
-  "generatedAt": "2026-08-29T00:33:52.884Z",
+  "generatedAt": "2026-08-29T00:43:52.059Z",
   "model": "gpt-4o-mini",
   "units": [
     {
       "order": 1,
       "sentences": [
+        {
+          "de": "Bis nächste Woche.",
+          "uz": "Keyingi haftada ko'rishamiz."
+        },
         {
           "de": "Wie heißt du?",
           "uz": "Isming nima?"
@@ -18,64 +22,68 @@
           "uz": "Men talabayman."
         },
         {
-          "de": "Wie heißen Sie?",
-          "uz": "Sizning ismingiz nima?"
-        },
-        {
           "de": "Ich bin Studentin.",
           "uz": "Men talaba qizman."
         },
         {
-          "de": "Das ist mein Freund.",
-          "uz": "Bu mening do'stim."
+          "de": "Wie heißen Sie?",
+          "uz": "Ismingiz nima?"
         },
         {
           "de": "Darf ich vorstellen?",
           "uz": "Tanishtirishim mumkinmi?"
         },
         {
-          "de": "Wie heißt er?",
-          "uz": "U nima deb ataladi?"
-        },
-        {
-          "de": "Wer ist das?",
-          "uz": "Bu kim?"
-        },
-        {
-          "de": "Wo wohnen Sie?",
-          "uz": "Siz qayerda yashaysiz?"
+          "de": "Das ist mein Freund.",
+          "uz": "Bu mening do'stim."
         },
         {
           "de": "Es tut mir leid.",
           "uz": "Juda afsusdaman."
         },
         {
-          "de": "Bis nächste Woche.",
-          "uz": "Keyingi haftagacha."
+          "de": "Wo wohnst du?",
+          "uz": "Qayerda yashaysan?"
         },
         {
-          "de": "Wie ist Ihr Name?",
-          "uz": "Sizning ismingiz nima?"
+          "de": "Wo wohnen Sie?",
+          "uz": "Qayerda yashaysiz?"
         },
         {
-          "de": "Ich bin hier.",
-          "uz": "Men bu yerda."
+          "de": "Bleibst du hier?",
+          "uz": "Bu yerda qolasanmi?"
+        },
+        {
+          "de": "Ich bleibe bis morgen.",
+          "uz": "Men ertagacha qolaman."
+        },
+        {
+          "de": "Ich unterschreibe hier.",
+          "uz": "Men bu yerda imzo qo'yaman."
         },
         {
           "de": "Ich heiße Udo.",
           "uz": "Mening ismim Udo."
         },
         {
-          "de": "Entschuldigung, wo ist das?",
-          "uz": "Kechirasiz, bu qayerda?"
+          "de": "Ich bleibe hier.",
+          "uz": "Men bu yerda qolaman."
+        },
+        {
+          "de": "Ich finde das nett.",
+          "uz": "Men buni yoqtiraman."
+        },
+        {
+          "de": "Wie ist Ihr Name?",
+          "uz": "Ismingiz nima?"
         },
         {
           "de": "Das ist mein Freund, Udo.",
           "uz": "Bu mening do'stim Udo."
         },
         {
-          "de": "Das ist nett.",
-          "uz": "Bu yoqimli."
+          "de": "Entschuldigung, wo ist das?",
+          "uz": "Kechirasiz, bu qayerda?"
         }
       ]
     }

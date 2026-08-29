@@ -9,11 +9,64 @@
 
 const WORD = /[a-zA-ZäöüÄÖÜß]+/g;
 
-/** Lug'at yozuvidagi barcha so'z shakllari, kichik harfda. */
-export function wordFormsOf(de: string): string[] {
-  return (de.match(WORD) ?? [])
+/**
+ * Matndagi so'zlar, kichik harfda, TAKRORLARI BILAN.
+ *
+ * Takror ataylab saqlanadi: bu funksiya gap uzunligini sanashga ham
+ * xizmat qiladi, «Ich heiße Anna und ich komme aus Anna» esa sakkiz
+ * so'z, olti emas.
+ */
+export function wordsOf(text: string): string[] {
+  return (text.match(WORD) ?? [])
     .map((w) => w.toLowerCase())
     .filter((w) => w.length > 1);
+}
+
+/**
+ * Muntazam fe'lning hozirgi zamondagi shakllari.
+ *
+ * Lug'atda fe'l INFINITIVDA turadi (`wohnen`), o'quvchi esa gapda uni
+ * tuslaydi (`Ich wohne`). Faqat yozilgan shaklni tanish deb bilsak,
+ * tabiiy gap yasashning imkoni qolmaydi — 1-bo'limdagi o'lchov shuni
+ * ko'rsatdi: rad etishlarning yarmi `wohne`, `gehe`, `finde`, `geht`
+ * kabi qonuniy shakllar edi, va modelga infinitiv bilan undovdan
+ * boshqa material qolmasdi.
+ *
+ * Qamrov ATAYLAB tor: faqat muntazam tuslanish. Ot ko'pligi, sifat
+ * kelishigi va o'zak unlisining o'zgarishi (`fahren → fährt`) bu yerda
+ * yo'q — ular alohida va kattaroq ish.
+ *
+ * Ot va sifat ham `-n` ga tugashi mumkin (`Morgen`, `schön`), ya'ni
+ * to'plamga ma'nosiz shakllar ham tushadi (`morge`, `schöst`). Bu
+ * zararsiz: nemis tilida bunday so'z yo'q, demak gapda uchramaydi.
+ * Teskarisi — qonuniy shaklni rad etish — zararli edi, va biz uni
+ * ko'rdik.
+ */
+function presentTenseForms(word: string): string[] {
+  const stem = word.endsWith('en')
+    ? word.slice(0, -2)
+    : word.endsWith('n')
+      ? word.slice(0, -1)
+      : null;
+  if (stem === null || stem.length < 2) return [];
+
+  const forms = [stem + 'e', stem + 'st', stem + 't', stem + 'en'];
+  // «arbeiten → du arbeitest, er arbeitet»: -t/-d bilan tugagan o'zak
+  // qo'shimchadan oldin yordamchi «e» oladi. Bu ham muntazam tuslanish.
+  if (stem.endsWith('t') || stem.endsWith('d')) {
+    forms.push(stem + 'est', stem + 'et');
+  }
+  return forms;
+}
+
+/**
+ * Lug'at yozuvidagi barcha so'z shakllari, kichik harfda.
+ *
+ * «Barcha shakllar» — yozuvda YOZILGANI va o'quvchi undan qonuniy
+ * hosil qiladigani. Ikkinchisisiz funksiya o'z nomini oqlamasdi.
+ */
+export function wordFormsOf(de: string): string[] {
+  return [...new Set(wordsOf(de).flatMap((w) => [w, ...presentTenseForms(w)]))];
 }
 
 /**
@@ -126,8 +179,7 @@ export function cumulativeVocab(
 
 /** Gapdagi ruxsat etilmagan so'zlar. Bo'sh massiv = gap yaroqli. */
 export function unknownWords(sentence: string, allowed: Set<string>): string[] {
-  return (sentence.match(WORD) ?? [])
-    .map((w) => w.toLowerCase())
-    .filter((w) => w.length > 1)
-    .filter((w) => !allowed.has(w) && !FUNCTION_WORDS.has(w));
+  return wordsOf(sentence).filter(
+    (w) => !allowed.has(w) && !FUNCTION_WORDS.has(w),
+  );
 }

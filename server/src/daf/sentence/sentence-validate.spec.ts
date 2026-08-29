@@ -1,4 +1,5 @@
 import {
+  wordsOf,
   wordFormsOf,
   cumulativeVocab,
   unknownWords,
@@ -22,6 +23,30 @@ describe('wordFormsOf', () => {
 
   it('bir harfli bo`laklarni tashlaydi', () => {
     expect(wordFormsOf('A, B, C')).toEqual([]);
+  });
+
+  // Lug'atda fe'l infinitivda turadi, o'quvchi esa uni tuslaydi.
+  // Bu shakllarni notanish deb belgilash tabiiy gap yasashni
+  // imkonsiz qilardi.
+  it('muntazam fe`lning hozirgi zamon shakllarini hosil qiladi', () => {
+    expect(wordFormsOf('wohnen')).toEqual(
+      expect.arrayContaining(['wohnen', 'wohne', 'wohnst', 'wohnt']),
+    );
+  });
+
+  // «arbeiten → du arbeitest, er arbeitet»
+  it('-t bilan tugagan o`zakka yordamchi «e» qo`shadi', () => {
+    expect(wordFormsOf('arbeiten')).toEqual(
+      expect.arrayContaining(['arbeitest', 'arbeitet']),
+    );
+  });
+});
+
+describe('wordsOf', () => {
+  // `wordFormsOf` dan farqi shu: takror saqlanadi, chunki gap
+  // uzunligini aynan shu funksiya sanaydi.
+  it('takror so`zni ikki marta qaytaradi', () => {
+    expect(wordsOf('Anna und Anna')).toEqual(['anna', 'und', 'anna']);
   });
 });
 
@@ -59,6 +84,16 @@ describe('unknownWords', () => {
     expect(unknownWords('Ich heiße Anna aus Kalifornien.', allowed)).toEqual([
       'kalifornien',
     ]);
+  });
+
+  // Lug'atda `wohnen` turadi, gapda esa `wohne`.
+  it('lug`atdagi infinitivning tuslangan shaklini kechiradi', () => {
+    const v = cumulativeVocab(
+      [{ sections: ['s'] }],
+      new Map([['s', ['wohnen']]]),
+      0,
+    );
+    expect(unknownWords('Ich wohne hier.', v)).toEqual([]);
   });
 
   // Artikl, olmosh, bog'lovchi har bo'limda uchraydi va ularni

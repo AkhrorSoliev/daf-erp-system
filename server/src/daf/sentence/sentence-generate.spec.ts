@@ -151,6 +151,47 @@ describe('generateForUnit', () => {
     expect(prompts[0]).toContain('15');
   });
 
+  // «Wer ist das?» validatordan ham, uzunlik chegarasidan ham o'tadi,
+  // lekin bo'limning hech qaysi so'zini mashq qilmaydi.
+  it('bo`limning yangi so`zisiz gapni rad etadi', async () => {
+    const r = await generateForUnit(model('Wer ist das? | Bu kim?'), {
+      allowed: new Set(['anna']),
+      newWords: new Set(['anna']),
+      words: [],
+      examples: [],
+      count: 1,
+    });
+    expect(r.kept).toHaveLength(0);
+    expect(r.rejected[0].reason).toBe('no-new-word');
+  });
+
+  it('yangi so`z ishlatgan gapni saqlaydi', async () => {
+    const r = await generateForUnit(
+      model('Ich heiße Anna. | Mening ismim Anna.'),
+      {
+        allowed,
+        newWords: new Set(['heiße']),
+        words: [],
+        examples: [],
+        count: 1,
+      },
+    );
+    expect(r.kept).toHaveLength(1);
+  });
+
+  // Yordamchi so'z bo'lim yozuvida uchrasa ham «yangi» emas.
+  it('yordamchi so`zni yangi so`z deb sanamaydi', async () => {
+    const r = await generateForUnit(model('Wer ist das? | Bu kim?'), {
+      allowed: new Set(),
+      newWords: new Set(['das', 'wer', 'ist']),
+      words: [],
+      examples: [],
+      count: 1,
+    });
+    expect(r.kept).toHaveLength(0);
+    expect(r.rejected[0].reason).toBe('no-new-word');
+  });
+
   // Cheksiz urinish skriptni qotirib qo'yardi.
   it('uch urinishdan keyin gapni tashlaydi', async () => {
     const bad = 'Ich komme aus Kalifornien. | Men Kaliforniyadanman.';

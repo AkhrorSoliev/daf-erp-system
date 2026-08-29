@@ -1,5 +1,5 @@
 import type { TranslateModel } from '../translate/translate-model';
-import { unknownWords, wordFormsOf } from './sentence-validate';
+import { FUNCTION_WORDS, unknownWords, wordsOf } from './sentence-validate';
 
 export interface GeneratedSentence {
   de: string;
@@ -29,7 +29,7 @@ export const MAX_WORDS = 7;
 export const OVERASK = 1.5;
 
 /** Gap nega rad etildi. */
-export type RejectReason = 'unknown' | 'length';
+export type RejectReason = 'unknown' | 'length' | 'no-new-word';
 
 export interface RejectedSentence {
   de: string;
@@ -69,6 +69,11 @@ function normalizeForCompare(de: string): string {
  *   ataladi?», bu buyum haqidagi savol). Namunalar QO'LDA yozilgan;
  *   lug'atdagi tarjimalar namuna sifatida BERILMAYDI, chunki ularning
  *   o'zida kalka bor va u yasalgan gaplarga ko'chardi.
+ * - Salbiy misol («Falsch wäre: …») so'rovdan OLIB TASHLANDI. U turgan
+ *   yuritishda xato baribir qaytdi: `temperature: 0` da model matndagi
+ *   naqshni takrorlaydi, ya'ni noto'g'ri variantni ko'rsatish uni
+ *   o'chirish o'rniga mustahkamlaydi. O'rniga `heißen` uchun uchta
+ *   ijobiy juft berildi.
  */
 export function buildSentencePrompt(
   words: string[],
@@ -94,12 +99,12 @@ export function buildSentencePrompt(
     'Zur usbekischen Zeile:',
     '- Sie gibt den SINN wieder. Schreibe den Satz, den ein Usbeke in',
     '  dieser Situation wirklich sagt — keine Wort-für-Wort-Abbildung.',
-    '- Richtig so:',
+    '- So ist es richtig:',
+    '  Wie heißt er? | Uning ismi nima?',
     '  Wie heißt sie? | Uning ismi nima?',
+    '  Wie heißt du? | Isming nima?',
     '  Es tut mir leid. | Juda afsusdaman.',
     '  Wie geht es dir? | Ahvoling qanday?',
-    '- Falsch wäre: «Wie heißt sie?» → «U nima deb ataladi?»',
-    '  (das fragt nach einem Gegenstand, nicht nach einem Menschen).',
     '',
     examples.length > 0 ? 'Beispiele für den Stil (nicht abschreiben):' : '',
     ...examples.slice(0, 8),
@@ -135,7 +140,20 @@ export function parseSentences(raw: string): GeneratedSentence[] {
 }
 
 export interface GenerateOpts {
+  /** Shu va OLDINGI bo'limlarning so'z shakllari — gap shulardan tuziladi. */
   allowed: Set<string>;
+  /**
+   * Faqat SHU bo'limning so'z shakllari.
+   *
+   * Berilsa, gap ulardan kamida bittasini ishlatishi shart. Sababi:
+   * «Wer ist das?» va «Ich bin hier.» validatordan ham, uzunlik
+   * chegarasidan ham o'tadi, lekin butunlay yordamchi so'zlardan
+   * tuzilgan — bo'limning yangi materialini mashq qilmaydi.
+   *
+   * Berilmasa qoida qo'llanmaydi: «yangi so'z» tushunchasi faqat
+   * bo'lim ma'lum bo'lganda ma'noga ega.
+   */
+  newWords?: Set<string>;
   words: string[];
   examples: string[];
   count: number;
@@ -169,6 +187,7 @@ export async function generateForUnit(
   const kept: GeneratedSentence[] = [];
   const rejected: RejectedSentence[] = [];
   const seen = new Set<string>();
+  const newWords = opts.newWords;
   let duplicates = 0;
 
   for (let tries = 0; tries < MAX_TRIES && kept.length < opts.count; tries++) {
@@ -186,7 +205,10 @@ export async function generateForUnit(
         continue;
       }
 
-      const wordCount = wordFormsOf(s.de).length;
+      // `wordsOf`, `wordFormsOf` emas: ikkinchisi endi lug'at uchun
+      // tuslangan shakllarni ham hosil qiladi va takrorni yig'ib
+      // tashlaydi — uzunlik sanog'i uchun ikkalasi ham noto'g'ri.
+      const wordCount = wordsOf(s.de).length;
       if (wordCount < MIN_WORDS || wordCount > MAX_WORDS) {
         rejected.push({ de: s.de, unknown: [], reason: 'length' });
         continue;
@@ -195,6 +217,17 @@ export async function generateForUnit(
       const bad = unknownWords(s.de, opts.allowed);
       if (bad.length > 0) {
         rejected.push({ de: s.de, unknown: bad, reason: 'unknown' });
+        continue;
+      }
+
+      // Yordamchi so'z «yangi» hisoblanmaydi, garchi u bo'lim
+      // yozuvlarida uchrasa ham: «Wer ist das?» ning uchala so'zi ham
+      // 1-bo'lim yozuvlaridan keladi, lekin gap hech nima o'rgatmaydi.
+      if (
+        newWords !== undefined &&
+        !wordsOf(s.de).some((w) => newWords.has(w) && !FUNCTION_WORDS.has(w))
+      ) {
+        rejected.push({ de: s.de, unknown: [], reason: 'no-new-word' });
         continue;
       }
 
