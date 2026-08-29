@@ -212,16 +212,48 @@ export function materialWords(entries: string[]): string[] {
  */
 export function sourceSentences(
   entries: { de: string; uz: string | null }[],
+  newWords?: Set<string>,
 ): StoredSentence[] {
   const out: StoredSentence[] = [];
   for (const e of entries) {
     if (e.uz === null || e.uz.trim() === '') continue;
     const de = e.de.split(' / ')[0].trim();
+    const uz = e.uz.trim();
+
+    // Tarjima o'rnida nemischaning O'ZI turgan yozuv. Lug'atning bir
+    // qismida shunday: `uz` bo'sh emas, lekin `de` ning nusxasi. Bo'sh
+    // emasligini tekshirish yetarli emasligi 12 gap orqali bilindi —
+    // o'quvchi «qora» o'rniga `schwarz` ko'rardi.
+    if (uz === de || uz === e.de.trim()) continue;
+
     if (!SENTENCE_END.test(de)) continue;
     if (/[()]/.test(de)) continue;
+
+    // Bosh harf — gap boshlanganining alomati. Lug'atda esa parcha va
+    // predlogli ibora kichik harf bilan yoziladi: «an welchem Tag?»,
+    // «eine Kugel Vanillaeis, bitte!».
+    if (!/^[A-ZÄÖÜ]/.test(de)) continue;
+
+    // Lug'at artefaktlari: «lemma - misol» qolipi
+    // («verrückt - Du bist ja verrückt!») va to'ldiriladigan o'rin
+    // («Wie viet kostet....?»).
+    if (de.includes(' - ') || de.includes('...') || de.includes('…')) continue;
+
     const n = wordsOf(de).length;
     if (n < MIN_WORDS || n > MAX_WORDS) continue;
-    out.push({ de, uz: e.uz.trim(), origin: 'SOURCE' });
+
+    // «Kamida bitta yangi so'z» qoidasi manbadagi gapga ham tegishli:
+    // `Wer ist das?` ning uchala so'zi ham yordamchi, ya'ni gap
+    // bo'limning hech nimasini o'rgatmaydi. Qoida ilgari faqat
+    // `generateForUnit` da turardi.
+    if (
+      newWords !== undefined &&
+      !wordsOf(de).some((w) => newWords.has(w) && !FUNCTION_WORDS.has(w))
+    ) {
+      continue;
+    }
+
+    out.push({ de, uz, origin: 'SOURCE' });
   }
   return out;
 }
@@ -305,7 +337,12 @@ export async function generateForUnit(
   for (let tries = 0; tries < MAX_TRIES && kept.length < opts.count; tries++) {
     const need = opts.count - kept.length;
     const raw = await model.complete(
-      buildSentencePrompt(opts.words, opts.examples, Math.ceil(need * OVERASK)),
+      buildSentencePrompt(
+        opts.words,
+        opts.examples,
+        Math.ceil(need * OVERASK),
+        opts.knownWords ?? [],
+      ),
     );
 
     for (const s of parseSentences(raw)) {

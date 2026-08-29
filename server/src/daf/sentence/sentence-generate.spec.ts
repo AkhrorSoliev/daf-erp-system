@@ -209,6 +209,27 @@ describe('generateForUnit', () => {
     expect(r.rejected[0].reason).toBe('no-new-word');
   });
 
+  // To'g'ridan-to'g'ri `buildSentencePrompt` testi bu sinfni ushlay
+  // olmadi: argument uzatilmay qolgan edi va testlar yashil turgan.
+  it('tanish so`zlarni generateForUnit orqali ham so`rovga qo`yadi', async () => {
+    const prompts: string[] = [];
+    const spy: TranslateModel = {
+      name: 'test',
+      complete: async (p: string) => {
+        prompts.push(p);
+        return '';
+      },
+    };
+    await generateForUnit(spy, {
+      allowed,
+      words: ['heißen'],
+      knownWords: ['wohnen'],
+      examples: [],
+      count: 1,
+    });
+    expect(prompts[0]).toContain('wohnen');
+  });
+
   // Cheksiz urinish skriptni qotirib qo'yardi.
   it('uch urinishdan keyin gapni tashlaydi', async () => {
     const bad = 'Ich komme aus Kalifornien. | Men Kaliforniyadanman.';
@@ -279,6 +300,51 @@ describe('sourceSentences', () => {
         { de: 'das Land (die Länder)', uz: 'mamlakat' },
       ]),
     ).toEqual([]);
+  });
+
+  // Tarjima o'rnida nemischaning o'zi turgan 12 gap faylga o'tib
+  // ketgan edi — o'quvchi «qora» o'rniga `schwarz` ko'rardi.
+  it('tarjimasi nemischaning nusxasi bo`lgan yozuvni olmaydi', () => {
+    expect(
+      sourceSentences([{ de: 'Wie geht es Ihnen?', uz: 'Wie geht es Ihnen?' }]),
+    ).toEqual([]);
+  });
+
+  it('kichik harf bilan boshlangan parchani olmaydi', () => {
+    expect(
+      sourceSentences([
+        { de: 'an welchem Tag?', uz: 'qaysi kuni?' },
+        { de: 'eine Kugel Vanillaeis, bitte!', uz: 'bir shar muzqaymoq!' },
+      ]),
+    ).toEqual([]);
+  });
+
+  it('lug`at artefaktini olmaydi', () => {
+    expect(
+      sourceSentences([
+        { de: 'verrückt - Du bist ja verrückt!', uz: 'sen aqldan ozgansan!' },
+        { de: 'Wie viet kostet....?', uz: 'narxi qancha?' },
+      ]),
+    ).toEqual([]);
+  });
+
+  // Qoida ilgari faqat `generateForUnit` da turardi.
+  it('bo`limning yangi so`zisiz manba gapini olmaydi', () => {
+    expect(
+      sourceSentences(
+        [{ de: 'Wer ist das?', uz: 'Bu kim?' }],
+        new Set(['anna']),
+      ),
+    ).toEqual([]);
+  });
+
+  it('yangi so`zi bor manba gapini oladi', () => {
+    expect(
+      sourceSentences(
+        [{ de: 'Wer ist Anna?', uz: 'Anna kim?' }],
+        new Set(['anna']),
+      ),
+    ).toEqual([{ de: 'Wer ist Anna?', uz: 'Anna kim?', origin: 'SOURCE' }]);
   });
 
   it('tarjimasi yo`q yozuvni olmaydi', () => {

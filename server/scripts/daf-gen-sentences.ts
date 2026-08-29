@@ -232,8 +232,9 @@ async function main() {
     if (prev === undefined) continue;
     if (todo.some((u) => u.order === unit.order)) continue;
 
+    const freshNewWords = cumulativeVocab([unit], entriesBySection, 0);
     const fresh = unit.sections.flatMap((sec) =>
-      sourceSentences(entriesWithUz(sec)),
+      sourceSentences(entriesWithUz(sec), freshNewWords),
     );
     const keys = new Set(fresh.map((x) => sentenceKey(x.de)));
     const generated = prev.filter(
@@ -291,7 +292,7 @@ async function main() {
         .flatMap((s) => entriesBySection.get(s) ?? []),
     );
     const fromSource = unit.sections.flatMap((s) =>
-      sourceSentences(entriesWithUz(s)),
+      sourceSentences(entriesWithUz(s), newWords),
     );
     const examples = cleanExamples(dib, allowed);
 

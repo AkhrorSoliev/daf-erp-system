@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-29T15:12:01.121Z",
+  "generatedAt": "2026-08-29T15:27:01.011Z",
   "model": "gpt-4o-mini",
   "units": [
     {
@@ -18,11 +18,6 @@
         {
           "de": "Wie heißen Sie?",
           "uz": "Ismingiz nima? (rasmiy)",
-          "origin": "SOURCE"
-        },
-        {
-          "de": "Wer ist das?",
-          "uz": "Bu kim?",
           "origin": "SOURCE"
         },
         {
@@ -311,66 +306,6 @@
       "order": 4,
       "sentences": [
         {
-          "de": "Welche Farbe hat dein Auto?",
-          "uz": "Welche Farbe hat dein Auto?",
-          "origin": "SOURCE"
-        },
-        {
-          "de": "Was ist deine Lieblingsfarbe?",
-          "uz": "Was ist deine Lieblingsfarbe?",
-          "origin": "SOURCE"
-        },
-        {
-          "de": "Wie geht es Ihnen?",
-          "uz": "Wie geht es Ihnen?",
-          "origin": "SOURCE"
-        },
-        {
-          "de": "Sehr gut, danke!",
-          "uz": "Sehr gut, danke!",
-          "origin": "SOURCE"
-        },
-        {
-          "de": "Es geht mir gut.",
-          "uz": "Es geht mir gut.",
-          "origin": "SOURCE"
-        },
-        {
-          "de": "Was ist los?",
-          "uz": "Was ist los?",
-          "origin": "SOURCE"
-        },
-        {
-          "de": "Es geht mir nicht so gut.",
-          "uz": "Es geht mir nicht so gut.",
-          "origin": "SOURCE"
-        },
-        {
-          "de": "Es geht mir schlecht.",
-          "uz": "Es geht mir schlecht.",
-          "origin": "SOURCE"
-        },
-        {
-          "de": "Ich fühle mich schlecht.",
-          "uz": "Ich fühle mich schlecht.",
-          "origin": "SOURCE"
-        },
-        {
-          "de": "Ich bin müde.",
-          "uz": "Ich bin müde.",
-          "origin": "SOURCE"
-        },
-        {
-          "de": "Ich bin krank.",
-          "uz": "Ich bin krank.",
-          "origin": "SOURCE"
-        },
-        {
-          "de": "Ich habe Kopfschmerzen.",
-          "uz": "Ich habe Kopfschmerzen.",
-          "origin": "SOURCE"
-        },
-        {
           "de": "Das Auto ist rot.",
           "uz": "Avtomobil qizil.",
           "origin": "GENERATED"
@@ -400,11 +335,6 @@
     {
       "order": 5,
       "sentences": [
-        {
-          "de": "Wie viel kostet....?",
-          "uz": "qancha turadi....?",
-          "origin": "SOURCE"
-        },
         {
           "de": "Wo ist die Toilette, bitte?",
           "uz": "hojatxona qayerda, iltimos?",
@@ -970,11 +900,6 @@
     {
       "order": 9,
       "sentences": [
-        {
-          "de": "an welchem Tag?",
-          "uz": "qaysi kunda?",
-          "origin": "SOURCE"
-        },
         {
           "de": "Um wie viel Uhr?",
           "uz": "qachon?",
@@ -1876,11 +1801,6 @@
       "order": 16,
       "sentences": [
         {
-          "de": "eine Kugel Vanillaeis, bitte!",
-          "uz": "bir qoshiq vanil moroziq, iltimos!",
-          "origin": "SOURCE"
-        },
-        {
           "de": "Wo ist das Duschgel?",
           "uz": "Dush gel qayerda?",
           "origin": "GENERATED"
@@ -2061,11 +1981,6 @@
           "origin": "SOURCE"
         },
         {
-          "de": "verrückt - Du bist ja verrückt!",
-          "uz": "aqldan ozgan - sen aqldan ozgansan!",
-          "origin": "SOURCE"
-        },
-        {
           "de": "Wir gehen oft ins Kino.",
           "uz": "Biz tez-tez kinoga boramiz.",
           "origin": "GENERATED"
@@ -2215,11 +2130,6 @@
     {
       "order": 18,
       "sentences": [
-        {
-          "de": "lass uns am Wochenende einen Film sehen!",
-          "uz": "keling, dam olish kunlari film ko'raylik!",
-          "origin": "SOURCE"
-        },
         {
           "de": "Wo möchten Sie sitzen?",
           "uz": "qayerda o'tirmoqchisiz?",
