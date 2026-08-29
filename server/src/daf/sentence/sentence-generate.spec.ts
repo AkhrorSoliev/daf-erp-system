@@ -268,17 +268,34 @@ describe('materialWords', () => {
 });
 
 describe('sourceSentences', () => {
+  // `newWords` ATAYLAB majburiy argument: ixtiyoriy bo'lganida chaqiruv
+  // joyi uni unutsa qorovul jimgina o'chardi va bironta test
+  // qizarmasdi. Har test o'z qoidasini ajratib tekshirishi uchun
+  // to'plamga gapning mazmunli so'zi beriladi.
+
   // Bu gaplarni ODAM yozgan — to'plamdagi eng sifatli qism.
   it('lug`at yozuvidan tayyor gapni oladi', () => {
-    expect(sourceSentences([{ de: 'Wer ist das?', uz: 'Bu kim?' }])).toEqual([
-      { de: 'Wer ist das?', uz: 'Bu kim?', origin: 'SOURCE' },
+    expect(
+      sourceSentences(
+        [{ de: 'Darf ich vorstellen?', uz: 'Tanishtirishim mumkinmi?' }],
+        new Set(['vorstellen']),
+      ),
+    ).toEqual([
+      {
+        de: 'Darf ich vorstellen?',
+        uz: 'Tanishtirishim mumkinmi?',
+        origin: 'SOURCE',
+      },
     ]);
   });
 
   // «Bis Samstag.» — ikki so'z, mashq uchun juda qisqa.
   it('uch so`zdan qisqa yozuvni olmaydi', () => {
     expect(
-      sourceSentences([{ de: 'Bis Samstag.', uz: 'Shanba kuni.' }]),
+      sourceSentences(
+        [{ de: 'Bis Samstag.', uz: 'Shanba kuni.' }],
+        new Set(['samstag']),
+      ),
     ).toEqual([]);
   });
 
@@ -286,21 +303,27 @@ describe('sourceSentences', () => {
   // o'tishi kerak, aks holda mashqlar bir xil o'lchovda bo'lmaydi.
   it('yetti so`zdan uzun yozuvni olmaydi', () => {
     expect(
-      sourceSentences([
-        {
-          de: 'Möchtest du Salz oder Zucker auf deinem Popcorn?',
-          uz: 'Popkoringizga tuz yoki shakar kerakmi?',
-        },
-      ]),
+      sourceSentences(
+        [
+          {
+            de: 'Möchtest du Salz oder Zucker auf deinem Popcorn?',
+            uz: 'Popkoringizga tuz yoki shakar kerakmi?',
+          },
+        ],
+        new Set(['popcorn']),
+      ),
     ).toEqual([]);
   });
 
   it('gap tinish belgisisiz yozuvni olmaydi', () => {
     expect(
-      sourceSentences([
-        { de: 'Ich bin Student/Studentin', uz: 'Men talabaman' },
-        { de: 'das Land (die Länder)', uz: 'mamlakat' },
-      ]),
+      sourceSentences(
+        [
+          { de: 'Ich bin Student/Studentin', uz: 'Men talabaman' },
+          { de: 'das Land (die Länder)', uz: 'mamlakat' },
+        ],
+        new Set(['student', 'land']),
+      ),
     ).toEqual([]);
   });
 
@@ -308,25 +331,34 @@ describe('sourceSentences', () => {
   // ketgan edi — o'quvchi «qora» o'rniga `schwarz` ko'rardi.
   it('tarjimasi nemischaning nusxasi bo`lgan yozuvni olmaydi', () => {
     expect(
-      sourceSentences([{ de: 'Wie geht es Ihnen?', uz: 'Wie geht es Ihnen?' }]),
+      sourceSentences(
+        [{ de: 'Wie geht es Ihnen?', uz: 'Wie geht es Ihnen?' }],
+        new Set(['geht']),
+      ),
     ).toEqual([]);
   });
 
   it('kichik harf bilan boshlangan parchani olmaydi', () => {
     expect(
-      sourceSentences([
-        { de: 'an welchem Tag?', uz: 'qaysi kuni?' },
-        { de: 'eine Kugel Vanillaeis, bitte!', uz: 'bir shar muzqaymoq!' },
-      ]),
+      sourceSentences(
+        [
+          { de: 'an welchem Tag?', uz: 'qaysi kuni?' },
+          { de: 'eine Kugel Vanillaeis, bitte!', uz: 'bir shar muzqaymoq!' },
+        ],
+        new Set(['tag', 'kugel']),
+      ),
     ).toEqual([]);
   });
 
   it('lug`at artefaktini olmaydi', () => {
     expect(
-      sourceSentences([
-        { de: 'verrückt - Du bist ja verrückt!', uz: 'sen aqldan ozgansan!' },
-        { de: 'Wie viet kostet....?', uz: 'narxi qancha?' },
-      ]),
+      sourceSentences(
+        [
+          { de: 'Verrückt - Du bist ja verrückt!', uz: 'sen aqldan ozgansan!' },
+          { de: 'Wie viet kostet....?', uz: 'narxi qancha?' },
+        ],
+        new Set(['verrückt', 'kostet']),
+      ),
     ).toEqual([]);
   });
 
@@ -350,15 +382,18 @@ describe('sourceSentences', () => {
   });
 
   it('tarjimasi yo`q yozuvni olmaydi', () => {
-    expect(sourceSentences([{ de: 'Wer ist das?', uz: null }])).toEqual([]);
+    expect(
+      sourceSentences([{ de: 'Wer ist Anna?', uz: null }], new Set(['anna'])),
+    ).toEqual([]);
   });
 
   // «A / B» — ikki variant; birinchisi olinadi.
   it('birinchi variantni oladi', () => {
     expect(
-      sourceSentences([
-        { de: 'Wie heißt du? / Wie ist dein Name?', uz: 'Ismingiz nima?' },
-      ]),
+      sourceSentences(
+        [{ de: 'Wie heißt du? / Wie ist dein Name?', uz: 'Ismingiz nima?' }],
+        new Set(['heißt']),
+      ),
     ).toEqual([
       { de: 'Wie heißt du?', uz: 'Ismingiz nima?', origin: 'SOURCE' },
     ]);
@@ -367,9 +402,10 @@ describe('sourceSentences', () => {
   // Qiyshiq chiziq gap ICHIDA turgan yozuv bo'lingani parcha berardi.
   it('bo`lingani gap bo`lmasa olmaydi', () => {
     expect(
-      sourceSentences([
-        { de: 'Es ist nett, dich / Sie kennen zu lernen', uz: 'Yoqimli.' },
-      ]),
+      sourceSentences(
+        [{ de: 'Es ist nett, dich / Sie kennen zu lernen', uz: 'Yoqimli.' }],
+        new Set(['nett']),
+      ),
     ).toEqual([]);
   });
 
@@ -377,7 +413,10 @@ describe('sourceSentences', () => {
   // jimgina tahrirlanmaydi.
   it('qavsli yozuvni olmaydi', () => {
     expect(
-      sourceSentences([{ de: '(Es) tut mir leid.', uz: 'Afsusdaman.' }]),
+      sourceSentences(
+        [{ de: '(Es) tut mir leid.', uz: 'Afsusdaman.' }],
+        new Set(['leid']),
+      ),
     ).toEqual([]);
   });
 });

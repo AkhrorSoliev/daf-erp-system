@@ -248,11 +248,12 @@ export function materialWords(entries: string[]): string[] {
  * parcha berardi — bunday yozuv olinmaydi.
  *
  * Notanish so'z tekshiruvi qo'llanmaydi: bu gaplar bo'limning o'z
- * lug'ati, ta'rif bo'yicha tanish.
+ * lug'ati, ta'rif bo'yicha tanish. `newWords` esa majburiy — u
+ * «gap bo'limning yangi so'zini o'rgatadimi?» degan qorovul.
  */
 export function sourceSentences(
   entries: { de: string; uz: string | null }[],
-  newWords?: Set<string>,
+  newWords: Set<string>,
 ): StoredSentence[] {
   const out: StoredSentence[] = [];
   for (const e of entries) {
@@ -286,10 +287,12 @@ export function sourceSentences(
     // `Wer ist das?` ning uchala so'zi ham yordamchi, ya'ni gap
     // bo'limning hech nimasini o'rgatmaydi. Qoida ilgari faqat
     // `generateForUnit` da turardi.
-    if (
-      newWords !== undefined &&
-      !wordsOf(de).some((w) => newWords.has(w) && !FUNCTION_WORDS.has(w))
-    ) {
+    //
+    // `newWords` ATAYLAB majburiy. Ixtiyoriy bo'lganida chaqiruv joyi
+    // uni unutsa qorovul jimgina o'chardi va bironta test qizarmasdi —
+    // `knownWords` aynan shu tarzda uzatilmay qolgan edi. Majburiy
+    // argumentda esa unutish typecheck xatosi bo'ladi.
+    if (!wordsOf(de).some((w) => newWords.has(w) && !FUNCTION_WORDS.has(w))) {
       continue;
     }
 

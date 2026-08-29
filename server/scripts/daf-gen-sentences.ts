@@ -102,7 +102,19 @@ interface SentencesFile {
   units: { order: number; sentences: StoredSentence[] }[];
 }
 
-/** Natijani faylga yozadi. Gapi yo'q bo'lim faylga chiqmaydi. */
+/**
+ * Natijani faylga yozadi.
+ *
+ * Gapi YO'Q bo'lim ham chiqadi — `sentences: []` bilan. Yozuvning
+ * yo'qligi «bu bo'lim hali tekshirilmagan» degani, bo'sh ro'yxat esa
+ * «tekshirildi, natija bo'sh» — ikkalasi bir narsa emas.
+ *
+ * Bu `shouldGenerate` bilan juft ishlaydi: idempotentlik sharti bo'lim
+ * yozuvining MAVJUDLIGIGA qaraydi. Agar bo'sh bo'lim bu yerda
+ * yozilmasa, u har yuritishda «hali tekshirilmagan» bo'lib ko'rinardi
+ * va qaytadan so'ralardi — uchta model chaqiruvi, natija doim nol.
+ * Ya'ni bu ikki qoidani bir-biridan ajratib bo'lmaydi.
+ */
 function writeOut(
   done: Map<number, StoredSentence[]>,
   plan: { units: Unit[] },
