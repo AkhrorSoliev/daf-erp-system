@@ -20,6 +20,20 @@ describe('buildSentencePrompt', () => {
     expect(p).toContain('Wie heißt du?');
     expect(p).toContain('5');
   });
+
+  // So'rov validator bilan bir xil narsani ko'rsatishi kerak: validator
+  // to'plangan lug'atni kechiradi, demak model ham uni bilishi shart.
+  it('oldingi bo`limlarning so`zlarini alohida ro`yxatda beradi', () => {
+    const p = buildSentencePrompt(['zwei'], [], 5, ['wohnen']);
+    expect(p).toContain('zwei');
+    expect(p).toContain('wohnen');
+  });
+
+  it('tanish so`zlar bo`lmasa ikkinchi ro`yxat chiqmaydi', () => {
+    expect(buildSentencePrompt(['zwei'], [], 5)).not.toContain(
+      'kennt der Lernende schon',
+    );
+  });
 });
 
 describe('parseSentences', () => {

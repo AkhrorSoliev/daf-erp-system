@@ -181,8 +181,14 @@ async function main() {
   // Mavjud natija saqlanadi: model chaqiruvi pul va vaqt, va har
   // chaqiruv boshqacha matn beradi — tayyor bo'limni qayta yasash
   // o'qituvchi ko'rib chiqqan gaplarni sababsiz almashtirardi.
-  const existing: SentencesFile | null =
-    !force && existsSync(OUT) ? readJson<SentencesFile>(OUT) : null;
+  //
+  // Fayl `--force` da ham O'QILADI: bayroq «hammasini unut» degani
+  // emas, «nishonga olingan bo'limni qayta yasa» degani. Aks holda
+  // `--force --unit 2` faylni bitta bo'limga qisqartirib, qolgan
+  // bo'limlarni jimgina yo'q qilardi.
+  const existing: SentencesFile | null = existsSync(OUT)
+    ? readJson<SentencesFile>(OUT)
+    : null;
   const done = new Map<number, StoredSentence[]>(
     (existing?.units ?? []).map((u) => [u.order, u.sentences]),
   );
@@ -229,6 +235,15 @@ async function main() {
     const words = materialWords(
       unit.sections.flatMap((s) => entriesBySection.get(s) ?? []),
     );
+    // Oldingi bo'limlarning materiali ham so'rovga chiqadi: validator
+    // uni allaqachon kechiradi, va yashirish modelni gap qura olmaydigan
+    // holga solardi (2-bo'lim: sof sonlar, 0 gap).
+    const knownWords = materialWords(
+      plan.units
+        .slice(0, index)
+        .flatMap((u) => u.sections)
+        .flatMap((s) => entriesBySection.get(s) ?? []),
+    );
     const fromSource = unit.sections.flatMap((s) =>
       sourceSentences(entriesWithUz(s)),
     );
@@ -236,13 +251,15 @@ async function main() {
 
     console.log(
       `\n${unit.order}. ${unit.titleUz} — ${words.length} so'z,` +
-        ` ${examples.length} namuna, manbadan ${fromSource.length} gap`,
+        ` (+${knownWords.length} tanish), ${examples.length} namuna,` +
+        ` manbadan ${fromSource.length} gap`,
     );
 
     const { kept, rejected, duplicates } = await generateForUnit(model, {
       allowed,
       newWords,
       words,
+      knownWords,
       examples,
       count: TARGET,
     });

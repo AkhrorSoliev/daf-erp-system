@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-29T00:52:22.975Z",
+  "generatedAt": "2026-08-29T01:01:07.823Z",
   "model": "gpt-4o-mini",
   "units": [
     {
@@ -36,23 +36,23 @@
           "origin": "SOURCE"
         },
         {
-          "de": "Wie heißt er?",
-          "uz": "Uning ismi nima?",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Wie heißt sie?",
-          "uz": "Uning ismi nima?",
-          "origin": "GENERATED"
-        },
-        {
           "de": "Wo wohnen Sie?",
           "uz": "Siz qayerda yashaysiz?",
           "origin": "GENERATED"
         },
         {
-          "de": "Wo wohnst du?",
-          "uz": "Sen qayerda yashaysan?",
+          "de": "Wie heißt sie?",
+          "uz": "Uning ismim nima?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich bin Student.",
+          "uz": "Men talabayman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Wo gehen wir?",
+          "uz": "Biz qayerga boryapmiz?",
           "origin": "GENERATED"
         },
         {
@@ -66,28 +66,23 @@
           "origin": "GENERATED"
         },
         {
-          "de": "Entschuldigung, wo ist das?",
-          "uz": "Kechirasiz, bu qayerda?",
+          "de": "Ich unterschreibe hier.",
+          "uz": "Men bu yerda imzo qo'yaman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Wo ist die Unterschrift?",
-          "uz": "Imzo qayerda?",
+          "de": "Wo gehen sie?",
+          "uz": "Ular qayerga boryapti?",
           "origin": "GENERATED"
         },
         {
-          "de": "Ich unterschreibe das.",
-          "uz": "Men buni imzolayman.",
+          "de": "Ich bin ein Freund.",
+          "uz": "Men do'stman.",
           "origin": "GENERATED"
         },
         {
           "de": "Ich bleibe bis morgen.",
-          "uz": "Men ertaga qolgani keldim.",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Ich bin ein Student.",
-          "uz": "Men talaba.",
+          "uz": "Men ertagacha qolaman.",
           "origin": "GENERATED"
         },
         {
@@ -96,13 +91,218 @@
           "origin": "GENERATED"
         },
         {
-          "de": "Ich unterschreibe hier.",
-          "uz": "Men bu yerda imzo qo'yaman.",
+          "de": "Wo finden wir das?",
+          "uz": "Biz buni qayerdan topamiz?",
           "origin": "GENERATED"
         },
         {
-          "de": "Bleiben Sie hier, bitte.",
-          "uz": "Iltimos, bu yerda qoling.",
+          "de": "Entschuldigung, was ist das?",
+          "uz": "Kechirasiz, bu nima?",
+          "origin": "GENERATED"
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "sentences": [
+        {
+          "de": "Hast du eine Nummer?",
+          "uz": "Sening raqaming bormi?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich wohne in der Nummer drei.",
+          "uz": "Men uchinchi raqamda yashayman.",
+          "origin": "GENERATED"
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "sentences": [
+        {
+          "de": "Woher kommst du?",
+          "uz": "Sen qayerdansan?",
+          "origin": "SOURCE"
+        },
+        {
+          "de": "Woher kommen Sie?",
+          "uz": "Siz qayerdansiz?",
+          "origin": "SOURCE"
+        },
+        {
+          "de": "Ich komme aus Texas.",
+          "uz": "Men Texasdanman.",
+          "origin": "SOURCE"
+        },
+        {
+          "de": "Ich komme aus den U.S.A.",
+          "uz": "Men AQShdanman.",
+          "origin": "SOURCE"
+        },
+        {
+          "de": "Wie alt bist du?",
+          "uz": "sen necha yoshdasan?",
+          "origin": "SOURCE"
+        },
+        {
+          "de": "Wie alt sind Sie?",
+          "uz": "siz necha yoshdasiz?",
+          "origin": "SOURCE"
+        },
+        {
+          "de": "Ich bin achtzehn Jahre alt.",
+          "uz": "men o'n sakkiz yoshdaman.",
+          "origin": "SOURCE"
+        },
+        {
+          "de": "Was ist Ihre Adresse?",
+          "uz": "sizning manzilingiz nima?",
+          "origin": "SOURCE"
+        },
+        {
+          "de": "Ich komme aus Deutschland.",
+          "uz": "Men Germaniyadanman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich komme aus Belgien.",
+          "uz": "Men Belgiya keldim.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Er kommt aus Frankreich.",
+          "uz": "U Frantsiyadan keldi.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Sie kommt aus Italien.",
+          "uz": "U Italiyadan keldi.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich bin aus Kanada.",
+          "uz": "Men Kanadadanman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Woher kommt dein Freund?",
+          "uz": "Do'sting qayerdan?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich wohne in Luxemburg.",
+          "uz": "Men Lyuksemburgda yashayman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Die Postleitzahl ist 12345.",
+          "uz": "Pochta indeksi 12345.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich komme aus Mexiko.",
+          "uz": "Men Meksikadanman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Er kommt aus Österreich.",
+          "uz": "U Avstriyadan keldi.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Sie kommt aus Polen.",
+          "uz": "U Polshadan keldi.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich wohne in der Schweiz.",
+          "uz": "Men Shveytsariyada yashayman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich bin aus Spanien.",
+          "uz": "Men Ispaniyadanman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Er kommt aus der Türkei.",
+          "uz": "U Turkiyadan keldi.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Sie kommt aus Ungarn.",
+          "uz": "U Vengriyadan keldi.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich komme aus dem Irak.",
+          "uz": "Men Iroqdaman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich bin aus Afrika.",
+          "uz": "Men Afrikadanman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Er kommt aus Asien.",
+          "uz": "U Osiyadan keldi.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich wohne in Australien.",
+          "uz": "Men Avstraliyada yashayman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Wie alt ist das Jahr?",
+          "uz": "Yil nechta yoshda?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich komme aus Europa.",
+          "uz": "Men Evropadanman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich bin 30 Jahre alt.",
+          "uz": "Men 30 yoshdaman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Sie kommt aus Deutschland.",
+          "uz": "U Germaniyadan keldi.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich wohne in Mexiko.",
+          "uz": "Men Meksikada yashayman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich bin aus Belgien.",
+          "uz": "Men Belgiya keldim.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich komme aus Italien.",
+          "uz": "Men Italiyadanman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Sie kommt aus Kanada.",
+          "uz": "U Kanadadan keldi.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Woher kommt er?",
+          "uz": "U qayerdan keladi?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Sie kommt aus Belgien.",
+          "uz": "U Belgiya'dan keladi.",
           "origin": "GENERATED"
         }
       ]

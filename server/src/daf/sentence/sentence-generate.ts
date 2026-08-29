@@ -93,15 +93,24 @@ export function buildSentencePrompt(
   words: string[],
   examples: string[],
   count: number,
+  knownWords: string[] = [],
 ): string {
   return [
     `Du bist Deutschlehrer. Schreibe ${count} kurze A1-Sätze (${MIN_WORDS}–${MAX_WORDS} Wörter).`,
     '',
     'Regeln:',
-    '- Benutze NUR diese Wörter und die häufigsten Funktionswörter:',
+    '- JEDER Satz benutzt mindestens ein Wort aus dieser NEUEN Liste:',
     words.join(', '),
+    knownWords.length > 0
+      ? '- Diese Wörter kennt der Lernende schon und darfst du frei dazu\n  benutzen:'
+      : '',
+    knownWords.length > 0 ? knownWords.join(', ') : '',
+    '- Andere Wörter sind VERBOTEN, außer den häufigsten Funktionswörtern.',
     '- Jeder Satz muss natürlich und grammatisch korrekt sein.',
     '- Keine Eigennamen außer den unten gezeigten.',
+    '- Vor Berufen, Nationalitäten und Religionen steht KEIN Artikel.',
+    '  So ist es richtig: «Ich bin Student.», «Sie ist Ärztin.»,',
+    '  «Er ist Deutscher.»',
     '- Jeder Satz ist ein GANZER Satz (Aussage oder Frage) mit Subjekt und',
     `  konjugiertem Verb und hat MINDESTENS ${MIN_WORDS} und HÖCHSTENS`,
     `  ${MAX_WORDS} Wörter. Einzelne Wörter, Grußformeln und Wortlisten`,
@@ -238,7 +247,20 @@ export interface GenerateOpts {
    * bo'lim ma'lum bo'lganda ma'noga ega.
    */
   newWords?: Set<string>;
+  /** So'rovga «yangi» deb beriladigan so'zlar — bo'limning materiali. */
   words: string[];
+  /**
+   * Oldingi bo'limlarning materiali — so'rovga «allaqachon bilasan»
+   * deb beriladi.
+   *
+   * Busiz so'rov bilan validator bir-biriga zid turardi: validator
+   * TO'PLANGAN lug'atni kechiradi, so'rov esa modelga faqat shu
+   * bo'limning so'zlarini ko'rsatardi. 2-bo'lim (sof sonlar) shu
+   * ziddiyatni o'ldiruvchi qildi — sonlardan yolg'iz gap qurib
+   * bo'lmaydi, va model bo'shliqni o'ylab topgan so'z bilan
+   * to'ldirib, 213 marta rad etildi (100 %).
+   */
+  knownWords?: string[];
   examples: string[];
   count: number;
 }
