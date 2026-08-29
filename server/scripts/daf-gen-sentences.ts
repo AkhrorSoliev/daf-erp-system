@@ -24,6 +24,8 @@ import {
 } from '../src/daf/sentence/sentence-validate';
 import {
   generateForUnit,
+  shouldGenerate,
+  unitsToWrite,
   materialWords,
   sourceSentences,
   sentenceKey,
@@ -109,9 +111,10 @@ function writeOut(
   const out: SentencesFile = {
     generatedAt: new Date().toISOString(),
     model: modelName,
-    units: plan.units
-      .filter((u) => (done.get(u.order)?.length ?? 0) > 0)
-      .map((u) => ({ order: u.order, sentences: done.get(u.order) ?? [] })),
+    units: unitsToWrite(
+      plan.units.map((u) => u.order),
+      done,
+    ),
   };
   writeFileSync(OUT, JSON.stringify(out, null, 2) + '\n', 'utf8');
 }
@@ -209,14 +212,15 @@ async function main() {
     (existing?.units ?? []).map((u) => [u.order, u.sentences]),
   );
 
-  const todo = plan.units.filter((u) => {
-    if (onlyUnit !== null && u.order !== Number(onlyUnit)) return false;
-    // «TARGET ga yetmagani» emas, «umuman yo'g'i»: bo'lim tabiiy
-    // ravishda 30 ga yetmasligi mumkin, va o'sha chegara bilan har
-    // yuritishda o'sha bo'lim qayta so'ralib, pul sarflanib, tayyor
-    // gaplar sababsiz almashaverardi.
-    return force || (done.get(u.order)?.length ?? 0) === 0;
-  });
+  // Qaror `shouldGenerate` da — u sinaladi, bu yerda esa faqat
+  // chaqiriladi. Shartni shu yerga ko'chirish ikkinchi nusxa yasardi.
+  const attempted = new Set(done.keys());
+  const todo = plan.units.filter((u) =>
+    shouldGenerate(u.order, attempted, {
+      force,
+      onlyUnit: onlyUnit === null ? null : Number(onlyUnit),
+    }),
+  );
 
   // Manbadan olingan gaplar HAR yuritishda qayta hisoblanadi.
   //

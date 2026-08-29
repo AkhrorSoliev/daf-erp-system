@@ -151,6 +151,46 @@ export function buildSentencePrompt(
  */
 const LIST_MARKER = /^\s*(?:\d+\s*[.)]|[-*•])\s*/;
 
+/**
+ * Bo'lim qayta yasalsinmi?
+ *
+ * Shart «gapi bormi» EMAS, «urinib ko'rilganmi». Farqi 2-bo'limda
+ * ko'rindi: u uch yuritishdan ikkitasida nol gap berdi, chunki sonlar
+ * bilan qo'shiladigan so'zlar undan keyingi bo'limlarda o'rgatiladi.
+ * «Gapi bormi» sharti bilan u HAR yuritishda qayta so'ralardi — uchta
+ * model chaqiruvi, ~163 taklif, natija doim nol.
+ *
+ * `force` shartdan YUQORIDA turadi. Usiz «urinib ko'rilganmi» bo'limni
+ * mangu muzlatib qo'yardi: bir marta bo'sh chiqqan bo'limni hech
+ * qachon qayta yasab bo'lmasdi.
+ */
+export function shouldGenerate(
+  order: number,
+  attempted: ReadonlySet<number>,
+  opts: { force: boolean; onlyUnit: number | null },
+): boolean {
+  if (opts.onlyUnit !== null && order !== opts.onlyUnit) return false;
+  if (opts.force) return true;
+  return !attempted.has(order);
+}
+
+/**
+ * Faylga chiqadigan bo'limlar.
+ *
+ * Urinib ko'rilgan, lekin natija bermagan bo'lim `sentences: []` bilan
+ * QOLADI. Yozuvning yo'qligi «hali tekshirilmagan» degani, bo'sh
+ * ro'yxat esa «tekshirildi, natija bo'sh» — ikkalasi bir narsa emas,
+ * va faylni o'qiydigan keyingi qadam farqni ko'rishi kerak.
+ */
+export function unitsToWrite<T>(
+  orders: number[],
+  done: ReadonlyMap<number, T[]>,
+): { order: number; sentences: T[] }[] {
+  return orders
+    .filter((o) => done.has(o))
+    .map((o) => ({ order: o, sentences: done.get(o) ?? [] }));
+}
+
 /** Gap tugallanganini bildiruvchi tinish belgisi. */
 const SENTENCE_END = /[.?!]\s*$/;
 

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-29T15:27:01.011Z",
+  "generatedAt": "2026-08-29T15:39:34.964Z",
   "model": "gpt-4o-mini",
   "units": [
     {
@@ -31,23 +31,23 @@
           "origin": "SOURCE"
         },
         {
+          "de": "Wie heißt sie?",
+          "uz": "Uning ismi nima?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Wie heißt er?",
+          "uz": "Uning ismi nima?",
+          "origin": "GENERATED"
+        },
+        {
           "de": "Wo wohnen Sie?",
           "uz": "Siz qayerda yashaysiz?",
           "origin": "GENERATED"
         },
         {
-          "de": "Wie heißt sie?",
-          "uz": "Uning ismim nima?",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Ich bin Student.",
-          "uz": "Men talabayman.",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Wo gehen wir?",
-          "uz": "Biz qayerga boryapmiz?",
+          "de": "Wo wohnst du?",
+          "uz": "Sen qayerda yashaysan?",
           "origin": "GENERATED"
         },
         {
@@ -66,18 +66,13 @@
           "origin": "GENERATED"
         },
         {
-          "de": "Wo gehen sie?",
-          "uz": "Ular qayerga boryapti?",
+          "de": "Ich bin Student.",
+          "uz": "Men talaba.",
           "origin": "GENERATED"
         },
         {
-          "de": "Ich bin ein Freund.",
-          "uz": "Men do'stman.",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Ich bleibe bis morgen.",
-          "uz": "Men ertagacha qolaman.",
+          "de": "Hast du einen Freund?",
+          "uz": "Sening do'sting bormi?",
           "origin": "GENERATED"
         },
         {
@@ -86,8 +81,13 @@
           "origin": "GENERATED"
         },
         {
-          "de": "Wo finden wir das?",
-          "uz": "Biz buni qayerdan topamiz?",
+          "de": "Bleiben Sie hier!",
+          "uz": "Bu yerda qoling!",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich bleibe bis morgen.",
+          "uz": "Men ertagacha qolaman.",
           "origin": "GENERATED"
         },
         {
@@ -306,28 +306,38 @@
       "order": 4,
       "sentences": [
         {
-          "de": "Das Auto ist rot.",
-          "uz": "Avtomobil qizil.",
+          "de": "Was ist deine Lieblingsfarbe?",
+          "uz": "Sening sevimli rangin nima?",
           "origin": "GENERATED"
         },
         {
-          "de": "Ich finde das toll.",
-          "uz": "Bu juda ajoyib.",
+          "de": "Das Auto ist schwarz.",
+          "uz": "Avtomobil qora rangda.",
           "origin": "GENERATED"
         },
         {
-          "de": "Das Auto ist grün.",
-          "uz": "Avtomobil yashil.",
+          "de": "Ich finde das hell.",
+          "uz": "Men buni yorqin deb bilaman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Das Auto ist rot und schwarz.",
-          "uz": "Avtomobil qizil va qora.",
+          "de": "Ich finde lila toll.",
+          "uz": "Men binafsha rangni ajoyib deb bilaman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Wie findest du die Farbe?",
-          "uz": "Rangni qanday topasan?",
+          "de": "Mir geht es gut.",
+          "uz": "Mening ahvolim yaxshi.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich finde das dunkel.",
+          "uz": "Men buni qorong'i deb bilaman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich finde das bunt.",
+          "uz": "Men buni rang-barang deb bilaman.",
           "origin": "GENERATED"
         }
       ]
@@ -466,113 +476,133 @@
       "order": 6,
       "sentences": [
         {
-          "de": "Ich studiere Biologie.",
-          "uz": "Men biologiyani o'qiyman.",
+          "de": "Ich studiere Amerikanistik.",
+          "uz": "Men Amerikanistika o‘qiyapman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Er lernt Englisch.",
-          "uz": "U ingliz tilini o'rganadi.",
+          "de": "Ich bin in der Biologie.",
+          "uz": "Men biologiya fanidaman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Er ist in der Politikwissenschaft.",
-          "uz": "U siyosatshunoslikda.",
+          "de": "Ich lerne Englisch und Deutsch.",
+          "uz": "Men ingliz va nemis tilini o‘rganaman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Er studiert Ingenieurwissenschaften.",
-          "uz": "U muhandislikni o'qiydi.",
+          "de": "Ich bin Student der Chemie.",
+          "uz": "Men kimyo talabasiman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Er ist ein Student der Germanistik.",
-          "uz": "U nemis filologiyasi talabasidir.",
+          "de": "Ich bin in der Linguistik.",
+          "uz": "Men lingvistika fanidaman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Sie studiert Anthropologie.",
-          "uz": "U antropologiyani o'qiydi.",
+          "de": "Ich studiere Politologie.",
+          "uz": "Men siyosatshunoslik o‘qiyapman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Er ist in der Chemie sehr gut.",
-          "uz": "U kimyoda juda yaxshi.",
+          "de": "Ich bleibe am Wochenende hier.",
+          "uz": "Men hafta oxirida bu yerda qolaman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Ich studiere Musikwissenschaft.",
-          "uz": "Men musiqa fanini o'qiyman.",
+          "de": "Ich bin in der Medizin.",
+          "uz": "Men tibbiyot fanidaman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Er ist ein Student der Medizin.",
-          "uz": "U tibbiyot talabasidir.",
+          "de": "Ich studiere Ingenieurwissenschaften.",
+          "uz": "Men muhandislikni o‘qiyapman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich bin in der Musikwissenschaft.",
+          "uz": "Men musiqa fanidaman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich bin in der Kunstgeschichte.",
+          "uz": "Men san'at tarixi fanidaman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich studiere Anthropologie.",
+          "uz": "Men antropologiyani o‘qiyapman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich bin in der Germanistik.",
+          "uz": "Men germaniya fanidaman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich bin in der Ökonomie.",
+          "uz": "Men iqtisodiyot fanidaman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich bin in der Anglistik.",
+          "uz": "Men ingliz tili fanidaman.",
           "origin": "GENERATED"
         },
         {
           "de": "Ich studiere Theologie.",
-          "uz": "Men dinshunoslikni o'qiyman.",
+          "uz": "Men teologiyani o‘qiyapman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Sie ist in der Biologie sehr gut.",
-          "uz": "U biologiyada juda yaxshi.",
+          "de": "Ich bin in der Pädagogik.",
+          "uz": "Men pedagogika fanidaman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Er studiert Politologie.",
-          "uz": "U siyosatshunoslikni o'qiydi.",
+          "de": "Ich bin Student der Architektur.",
+          "uz": "Men arxitektura talabasiman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich lerne Englisch und Französisch.",
+          "uz": "Men ingliz va fransuz tillarini o‘rganaman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Was kostet das Wochenende?",
+          "uz": "Dam olish kuni qancha turadi?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich studiere Psychologie und Soziologie.",
+          "uz": "Men psixologiya va sotsiologiyani o‘qiyapman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich bin in der Biologie gut.",
+          "uz": "Men biologiyada yaxshi.",
           "origin": "GENERATED"
         },
         {
           "de": "Ich studiere Anglistik.",
-          "uz": "Men ingliz filologiyasini o'qiyman.",
+          "uz": "Men ingliz filologiyasini o‘rganaman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Er studiert Politikwissenschaft.",
-          "uz": "U siyosatshunoslikni o'qiydi.",
+          "de": "Ich habe einen Freund in Architektur.",
+          "uz": "Menda arxitektura bo'yicha do'stim bor.",
           "origin": "GENERATED"
         },
         {
-          "de": "Wir lernen Linguistik.",
-          "uz": "Biz lingvistika o'rganamiz.",
+          "de": "Ich bin Student der Germanistik.",
+          "uz": "Men nemis filologiyasi talabasiman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Sie studiert Musikwissenschaft.",
-          "uz": "U musiqa fanini o'qiydi.",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Sie ist Studentin der Theologie.",
-          "uz": "U dinshunoslik talabasidir.",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Ich lerne Italienisch.",
-          "uz": "Men italiyan tilini o'rganaman.",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Sie lernt Französisch.",
-          "uz": "U fransuz tilini o‘rganmoqda.",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Sie studiert Architektur.",
-          "uz": "U arxitektura o‘rganmoqda.",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Er ist Student der Anglistik.",
-          "uz": "U ingliz filologiyasi talabasidir.",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Wir lernen während der Woche.",
-          "uz": "Biz hafta davomida o‘rganamiz.",
+          "de": "Ich lerne Französisch und Englisch.",
+          "uz": "Men fransuz va ingliz tillarini o‘rganaman.",
           "origin": "GENERATED"
         }
       ]
@@ -911,78 +941,98 @@
           "origin": "SOURCE"
         },
         {
-          "de": "Ich habe im Augenblick Zeit.",
-          "uz": "Hozirda vaqtim bor.",
+          "de": "Ich bin 20 Jahre alt.",
+          "uz": "Men 20 yoshdaman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Ich mache das das erste Mal.",
-          "uz": "Men buni birinchi marta qilaman.",
+          "de": "Was machst du am Abend?",
+          "uz": "Kechqurun nima qilasan?",
           "origin": "GENERATED"
         },
         {
-          "de": "Sie kommt am Vormittag.",
-          "uz": "U ertalab keladi.",
+          "de": "Ich bin oft müde.",
+          "uz": "Men ko‘pincha charchayman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Ich mache das selten.",
-          "uz": "Men buni kamdan-kam qilaman.",
+          "de": "Es ist Viertel nach 10.",
+          "uz": "Soat o‘n bir chorak.",
           "origin": "GENERATED"
         },
         {
-          "de": "Ich mache das viermal die Woche.",
-          "uz": "Men buni haftada to'rt marta qilaman.",
+          "de": "Was machst du am Wochenende?",
+          "uz": "Dam olish kunlari nima qilasan?",
           "origin": "GENERATED"
         },
         {
-          "de": "Ich bin abends müde.",
-          "uz": "Men kechqurun charchayman.",
+          "de": "Ich bin im Unterricht.",
+          "uz": "Men darsdaman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Sie kommt selten zu mir.",
-          "uz": "U kamdan-kam menga keladi.",
+          "de": "Ich bin selten krank.",
+          "uz": "Men kamdan-kam kasal bo‘laman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Ich habe im Augenblick keine Zeit.",
-          "uz": "Hozirda vaqtim yo'q.",
+          "de": "Ich habe eine Stunde Zeit.",
+          "uz": "Menda bir soat vaqt bor.",
           "origin": "GENERATED"
         },
         {
-          "de": "Er kommt um gegen Mittag.",
-          "uz": "U taxminan tushda keladi.",
+          "de": "Ich lerne jeden Tag.",
+          "uz": "Men har kuni o‘rganaman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Sie kommt um Viertel nach 10.",
-          "uz": "U 10:15 da keladi.",
+          "de": "Ich brauche eine Stunde.",
+          "uz": "Menga bir soat kerak.",
           "origin": "GENERATED"
         },
         {
-          "de": "Ich mache das zweimal.",
-          "uz": "Men buni ikki marta qilaman.",
+          "de": "Ich telefoniere oft.",
+          "uz": "Men tez-tez telefon qilaman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Ich mache das nie.",
-          "uz": "Men buni hech qachon qilmayman.",
+          "de": "Ich habe das erste Mal hier.",
+          "uz": "Men bu yerda birinchi marta.",
           "origin": "GENERATED"
         },
         {
-          "de": "Er ist am Abend müde.",
-          "uz": "U kechqurun charchagan.",
+          "de": "Ich bin um Viertel nach 10 da.",
+          "uz": "Men 10:15 da kelaman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Sie telefoniert oft am Vormittag.",
-          "uz": "U ertalab tez-tez telefon qiladi.",
+          "de": "Ich bin in der Nacht müde.",
+          "uz": "Men kechasi charchaganman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Ich bin müde am Morgen.",
-          "uz": "Men ertalab charchaganman.",
+          "de": "Wir lernen oft Deutsch.",
+          "uz": "Biz tez-tez nemis tilini o‘rganamiz.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich habe keine Zeit im Augenblick.",
+          "uz": "Hozirda vaqtim yo‘q.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich telefoniere selten am Morgen.",
+          "uz": "Men ertalab kamdan-kam telefon qilaman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich mache die Hausaufgaben jeden Tag.",
+          "uz": "Men har kuni uy vazifalarini bajaraman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich lese ein Buch am Vormittag.",
+          "uz": "Men ertalab kitob o‘qiyman.",
           "origin": "GENERATED"
         }
       ]
@@ -1141,13 +1191,43 @@
       "order": 11,
       "sentences": [
         {
-          "de": "Ich brauche ein Papiertuch.",
-          "uz": "Menga qog'oz sochiq kerak.",
+          "de": "Wo ist das Spülmittel?",
+          "uz": "Idish yuvish vositasi qayerda?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich spüle das Geschirr.",
+          "uz": "Men idishlarni yuvyapman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Hast du ein Papiertuch?",
+          "uz": "Sizda qog'oz sochiq bormi?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich brauche das Zewa.",
+          "uz": "Menga Zewa kerak.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Wo ist der Schwamm?",
+          "uz": "Gubka qayerda?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich bade in der Badewanne.",
+          "uz": "Men hammomda cho'milyapman.",
           "origin": "GENERATED"
         },
         {
           "de": "Die Badeschlappen sind blau.",
-          "uz": "Cho'milish poyabzallari ko'k rangda.",
+          "uz": "Basseyn oyoq kiyimlari ko'k rangda.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Wo ist die Dusche?",
+          "uz": "Dush qayerda?",
           "origin": "GENERATED"
         },
         {
@@ -1161,98 +1241,83 @@
           "origin": "GENERATED"
         },
         {
+          "de": "Hast du die CD?",
+          "uz": "Sizda CD bormi?",
+          "origin": "GENERATED"
+        },
+        {
           "de": "Das Poster ist bunt.",
           "uz": "Plakat rang-barang.",
           "origin": "GENERATED"
         },
         {
-          "de": "Die Kommode ist alt.",
-          "uz": "Komoda eski.",
+          "de": "Ich stelle den Tisch.",
+          "uz": "Men stoldan foydalanaman.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Wo ist die Vase?",
+          "uz": "Vaza qayerda?",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Ich brauche eine Decke.",
+          "uz": "Menga ko'rpa kerak.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Wo ist der Kleiderschrank?",
+          "uz": "Kiyim shkafi qayerda?",
           "origin": "GENERATED"
         },
         {
           "de": "Die Lampe ist an.",
-          "uz": "Lampa yoqilgan.",
+          "uz": "Chiroq yoqilgan.",
+          "origin": "GENERATED"
+        },
+        {
+          "de": "Wo ist der Nachttisch?",
+          "uz": "Kechki stol qayerda?",
           "origin": "GENERATED"
         },
         {
           "de": "Ich stelle den Wecker.",
-          "uz": "Men soatni qo'yaman.",
+          "uz": "Men soatni belgilayman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Wo ist das Spülmittel?",
-          "uz": "Idish yuvish vositasi qayerda?",
+          "de": "Die Gabel ist auf dem Tisch.",
+          "uz": "Vilka stolda.",
           "origin": "GENERATED"
         },
         {
-          "de": "Hast du das Badetuch?",
-          "uz": "Sizda cho'milish sochiqi bormi?",
+          "de": "Ich stelle die Tasse auf den Tisch.",
+          "uz": "Men chashkani stolda qo'yaman.",
           "origin": "GENERATED"
         },
         {
-          "de": "Wo ist der Schwamm?",
-          "uz": "Gubka qayerda?",
+          "de": "Ich brauche einen Schwamm.",
+          "uz": "Menga gubka kerak.",
           "origin": "GENERATED"
         },
         {
-          "de": "Wo ist der Fernseher?",
-          "uz": "Televizor qayerda?",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Ich brauche einen Stuhl.",
-          "uz": "Menga bir stul kerak.",
+          "de": "Wo ist der Duschvorhang?",
+          "uz": "Dush pardasi qayerda?",
           "origin": "GENERATED"
         },
         {
           "de": "Wo ist das Waschbecken?",
-          "uz": "Yuvinish joyi qayerda?",
+          "uz": "Lavabo qayerda?",
           "origin": "GENERATED"
         },
         {
-          "de": "Ich brauche ein Badetuch.",
-          "uz": "Menga hammom sochi kerak.",
+          "de": "Hast du das Badetuch?",
+          "uz": "Sening hammom sochiqing bormi?",
           "origin": "GENERATED"
         },
         {
-          "de": "Wo sind die Badeschlappen?",
-          "uz": "Hammom poyabzallari qayerda?",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Ich lese eine CD.",
-          "uz": "Men bir CD o'qiyapman.",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Ich mache die Lampe an.",
-          "uz": "Men lampani yoqaman.",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Wo ist der Papierkorb?",
-          "uz": "Qog'oz savati qayerda?",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Ich bade in der Badewanne.",
-          "uz": "Men hammomda cho'milaman.",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Wo ist das Badetuch?",
-          "uz": "Hammom sochiq qayerda?",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Der Duschvorhang ist blau.",
-          "uz": "Dush pardasi ko'k rangda.",
-          "origin": "GENERATED"
-        },
-        {
-          "de": "Der Spiegel ist im Bad.",
-          "uz": "Oyna hammomda.",
+          "de": "Wo ist der Wasserhahn?",
+          "uz": "Suv krani qayerda?",
           "origin": "GENERATED"
         }
       ]

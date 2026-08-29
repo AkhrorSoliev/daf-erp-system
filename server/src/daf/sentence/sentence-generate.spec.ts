@@ -1,4 +1,6 @@
 import {
+  shouldGenerate,
+  unitsToWrite,
   buildSentencePrompt,
   parseSentences,
   generateForUnit,
@@ -377,5 +379,52 @@ describe('sourceSentences', () => {
     expect(
       sourceSentences([{ de: '(Es) tut mir leid.', uz: 'Afsusdaman.' }]),
     ).toEqual([]);
+  });
+});
+
+describe('unitsToWrite', () => {
+  // Yozuvning yo'qligi «hali tekshirilmagan», bo'sh ro'yxat esa
+  // «tekshirildi, natija bo'sh» — ikkalasi bir narsa emas.
+  it('natijasiz bo`limni bo`sh ro`yxat bilan yozadi', () => {
+    const done = new Map<number, { de: string }[]>([
+      [1, [{ de: 'Ich heiße Anna.' }]],
+      [2, []],
+    ]);
+    expect(unitsToWrite([1, 2, 3], done)).toEqual([
+      { order: 1, sentences: [{ de: 'Ich heiße Anna.' }] },
+      { order: 2, sentences: [] },
+    ]);
+  });
+});
+
+describe('shouldGenerate', () => {
+  const all = { force: false, onlyUnit: null };
+
+  it('tekshirilmagan bo`limni yasaydi', () => {
+    expect(shouldGenerate(2, new Set(), all)).toBe(true);
+  });
+
+  // Aks holda 2-bo'lim har yuritishda uchta model chaqiruvini yeb,
+  // natija doim nol bo'lardi.
+  it('bo`sh natijali bo`limni qayta so`ramaydi', () => {
+    expect(shouldGenerate(2, new Set([2]), all)).toBe(false);
+  });
+
+  it('gapi bor bo`limni qayta so`ramaydi', () => {
+    expect(shouldGenerate(1, new Set([1]), all)).toBe(false);
+  });
+
+  // Eng muhimi: usiz «urinib ko`rilganmi» sharti bo`limni MANGU
+  // muzlatib qo`yardi.
+  it('`--force --unit N` bo`sh bo`limni baribir qayta yasaydi', () => {
+    expect(shouldGenerate(2, new Set([2]), { force: true, onlyUnit: 2 })).toBe(
+      true,
+    );
+  });
+
+  it('`--unit N` boshqa bo`limlarga tegmaydi', () => {
+    expect(shouldGenerate(3, new Set(), { force: true, onlyUnit: 2 })).toBe(
+      false,
+    );
   });
 });
