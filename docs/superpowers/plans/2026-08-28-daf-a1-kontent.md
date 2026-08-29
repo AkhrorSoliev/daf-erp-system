@@ -1183,8 +1183,10 @@ console.log(\`manbadagi qisqa gap: \${all}, toza: \${ok} (\${Math.round(ok/all*1
 "
 ```
 
-Expected: ~27 % atrofida. Bu raqam spec'dagi o'lchov bilan mos kelishi
-kerak — kelmasa lug'at yig'ilishida xato bor.
+Expected: 25–30 % oralig'ida. Aniq qiymat filtr shartiga bog'liq
+(inglizcha tarjimasi juft bo'lgan satrlarnigina sanasangiz ~27 %,
+hammasini sanasangiz ~30 %). Oraliqdan chetga chiqsa lug'at
+yig'ilishida yoki `FUNCTION_WORDS` da xato bor.
 
 - [ ] **Step 6: Commit**
 
