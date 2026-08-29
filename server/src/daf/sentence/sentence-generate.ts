@@ -193,8 +193,13 @@ export function materialWords(entries: string[]): string[] {
  *    yozuv, ya'ni bitta aniq gap emas. Matnni qayta yozib qavsni olib
  *    tashlash oson edi, lekin manba matnini jimgina tahrirlash shu
  *    loyihada ataylab qilinmaydi.
- * 3. **Kamida `MIN_WORDS` mazmunli so'z.** «Bis Samstag.» ikki so'z —
- *    mashq uchun juda qisqa, u lug'at bo'lib qolaveradi.
+ * 3. **`MIN_WORDS`–`MAX_WORDS` oralig'ida.** «Bis Samstag.» ikki so'z —
+ *    mashq uchun juda qisqa, u lug'at bo'lib qolaveradi. Yuqori chegara
+ *    ham xuddi shunday kerak: yasalgan gap ikkala chegaradan o'tadi, va
+ *    manbadagi gap boshqa o'lchov bilan o'lchansa mashqlar bir xil
+ *    bo'lmasdi. Avval bu yerda faqat quyi chegara turgan edi va
+ *    «Möchtest du Salz oder Zucker auf deinem Popcorn?» (8 so'z)
+ *    o'tib ketgan.
  *
  * `A / B` shaklidagi yozuvdan BIRINCHI variant olinadi
  * («Wie heißt du? / Wie ist dein Name?» → «Wie heißt du?»), lekin faqat
@@ -214,7 +219,8 @@ export function sourceSentences(
     const de = e.de.split(' / ')[0].trim();
     if (!SENTENCE_END.test(de)) continue;
     if (/[()]/.test(de)) continue;
-    if (wordsOf(de).length < MIN_WORDS) continue;
+    const n = wordsOf(de).length;
+    if (n < MIN_WORDS || n > MAX_WORDS) continue;
     out.push({ de, uz: e.uz.trim(), origin: 'SOURCE' });
   }
   return out;

@@ -100,6 +100,22 @@ interface SentencesFile {
   units: { order: number; sentences: StoredSentence[] }[];
 }
 
+/** Natijani faylga yozadi. Gapi yo'q bo'lim faylga chiqmaydi. */
+function writeOut(
+  done: Map<number, StoredSentence[]>,
+  plan: { units: Unit[] },
+  modelName: string,
+): void {
+  const out: SentencesFile = {
+    generatedAt: new Date().toISOString(),
+    model: modelName,
+    units: plan.units
+      .filter((u) => (done.get(u.order)?.length ?? 0) > 0)
+      .map((u) => ({ order: u.order, sentences: done.get(u.order) ?? [] })),
+  };
+  writeFileSync(OUT, JSON.stringify(out, null, 2) + '\n', 'utf8');
+}
+
 /** Rad etish sababi — hisobot uchun o'qiladigan shaklda. */
 function whyRejected(r: RejectedSentence): string {
   if (r.reason === 'unknown') return r.unknown.join(', ');
@@ -202,8 +218,38 @@ async function main() {
     return force || (done.get(u.order)?.length ?? 0) === 0;
   });
 
+  // Manbadan olingan gaplar HAR yuritishda qayta hisoblanadi.
+  //
+  // Ular modeldan emas, lug'atdan keladi: tekin, va aynan bir xil
+  // takrorlanadi. Muzlatib qo'yilgani uchun tanlash qoidasidagi
+  // tuzatish faylga hech qachon yetib bormasdi — 8 so'zli
+  // «Möchtest du Salz oder Zucker auf deinem Popcorn?» faylda aynan
+  // shu sababdan qolib ketgan edi. Yasalgan gaplarga tegilmaydi:
+  // ular pul turadi va qayta chaqiruv boshqa matn berardi.
+  let refreshed = 0;
+  for (const unit of plan.units) {
+    const prev = done.get(unit.order);
+    if (prev === undefined) continue;
+    if (todo.some((u) => u.order === unit.order)) continue;
+
+    const fresh = unit.sections.flatMap((sec) =>
+      sourceSentences(entriesWithUz(sec)),
+    );
+    const keys = new Set(fresh.map((x) => sentenceKey(x.de)));
+    const generated = prev.filter(
+      (x) => x.origin === 'GENERATED' && !keys.has(sentenceKey(x.de)),
+    );
+    const next = [...fresh, ...generated];
+    if (JSON.stringify(next) !== JSON.stringify(prev)) refreshed++;
+    done.set(unit.order, next);
+  }
+  if (refreshed > 0) {
+    console.log(`Manbadagi gaplar yangilandi: ${refreshed} bo'lim`);
+  }
+
   if (todo.length === 0) {
     console.log('Hamma bo`lim to`la — model chaqirilmadi.');
+    writeOut(done, plan, existing?.model ?? 'gpt-4o-mini');
     return;
   }
 
@@ -310,14 +356,7 @@ async function main() {
     }
   }
 
-  const out: SentencesFile = {
-    generatedAt: new Date().toISOString(),
-    model: model.name,
-    units: plan.units
-      .filter((u) => (done.get(u.order)?.length ?? 0) > 0)
-      .map((u) => ({ order: u.order, sentences: done.get(u.order) ?? [] })),
-  };
-  writeFileSync(OUT, JSON.stringify(out, null, 2) + '\n', 'utf8');
+  writeOut(done, plan, model.name);
 
   console.log('\n— Hisobot —');
   let keptAll = 0;

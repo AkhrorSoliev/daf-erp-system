@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-29T15:03:46.658Z",
+  "generatedAt": "2026-08-29T15:12:01.121Z",
   "model": "gpt-4o-mini",
   "units": [
     {
@@ -2218,11 +2218,6 @@
         {
           "de": "lass uns am Wochenende einen Film sehen!",
           "uz": "keling, dam olish kunlari film ko'raylik!",
-          "origin": "SOURCE"
-        },
-        {
-          "de": "Möchtest du Salz oder Zucker auf deinem Popcorn?",
-          "uz": "popkoringizga tuz yoki shakar qo'shmoqchimisiz?",
           "origin": "SOURCE"
         },
         {

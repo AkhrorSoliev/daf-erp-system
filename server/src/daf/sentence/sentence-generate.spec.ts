@@ -259,6 +259,19 @@ describe('sourceSentences', () => {
     ).toEqual([]);
   });
 
+  // Yasalgan gap ikkala chegaradan o'tadi; manbadagisi ham shundan
+  // o'tishi kerak, aks holda mashqlar bir xil o'lchovda bo'lmaydi.
+  it('yetti so`zdan uzun yozuvni olmaydi', () => {
+    expect(
+      sourceSentences([
+        {
+          de: 'Möchtest du Salz oder Zucker auf deinem Popcorn?',
+          uz: 'Popkoringizga tuz yoki shakar kerakmi?',
+        },
+      ]),
+    ).toEqual([]);
+  });
+
   it('gap tinish belgisisiz yozuvni olmaydi', () => {
     expect(
       sourceSentences([
