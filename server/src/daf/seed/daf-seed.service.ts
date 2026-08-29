@@ -14,6 +14,7 @@ import type {
 import type { A1UnitsFile } from '../units/a1-units.types';
 import { validateA1Units } from '../units/a1-units.validate';
 import { DAF_UNIT_TITLES, orderWithinLevel } from './daf-unit-titles';
+import { seedSentences, type SentenceFile } from './daf-sentence-seed';
 
 export interface SeedReport {
   units: number;
@@ -27,6 +28,8 @@ export interface SeedReport {
   lexemesRemoved: number;
   /** Fayldan qo'yilgan tarjimalar. */
   translationsApplied: number;
+  /** Fayldan yozilgan gaplar (Hören/Sätze mashqi uchun). */
+  sentences: number;
 }
 
 /** `content/daf/translations.json` ning shakli. */
@@ -173,11 +176,15 @@ export class DafSeedService {
    * @param a1Units berilsa A1 bo'limlari SHU fayldan quriladi; fayl da'vo
    * qilmagan boblar avvalgidek bob-bo'lim bo'lib qoladi (A2 va B1 shu
    * yo'lda ishlashda davom etadi).
+   * @param sentences berilsa A1 bo'limlariga gaplar shu fayldan yoziladi.
+   * Bo'limlar yaratilgandan KEYIN chaqiriladi — gap bo'limga ishora
+   * qiladi, bo'lim hali yo'q bo'lsa yozib bo'lmaydi.
    */
   async seed(
     dataset: DafDataset,
     translations?: TranslationFile,
     a1Units?: A1UnitsFile,
+    sentences?: SentenceFile,
   ): Promise<SeedReport> {
     const { unitIdBySection, unitIdByChapter, units } = await this.seedUnits(
       dataset,
@@ -196,6 +203,9 @@ export class DafSeedService {
     const retired = await this.retireMissingExercises(dataset);
     const lexemesRemoved = await this.removeMissingLexemes(dataset);
     const translationsApplied = await this.applyTranslations(translations);
+    const sentenceCount = sentences
+      ? await seedSentences(this.prisma, sentences)
+      : 0;
 
     return {
       units: units.length,
@@ -206,6 +216,7 @@ export class DafSeedService {
       retired,
       lexemesRemoved,
       translationsApplied,
+      sentences: sentenceCount,
     };
   }
 
