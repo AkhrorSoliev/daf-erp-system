@@ -1,129 +1,81 @@
 {
-  "generatedAt": "2026-08-29T00:25:32.452Z",
+  "generatedAt": "2026-08-29T00:33:52.884Z",
   "model": "gpt-4o-mini",
   "units": [
     {
       "order": 1,
       "sentences": [
         {
+          "de": "Wie heißt du?",
+          "uz": "Isming nima?"
+        },
+        {
           "de": "Wie ist dein Name?",
           "uz": "Ismingiz nima?"
         },
         {
           "de": "Ich bin Student.",
-          "uz": "Men talaba."
-        },
-        {
-          "de": "Das ist mein Freund, Udo.",
-          "uz": "Bu mening do'stim Udo."
-        },
-        {
-          "de": "Guten Morgen!",
-          "uz": "Hayirli tong!"
-        },
-        {
-          "de": "Guten Abend!",
-          "uz": "Hayirli kech!"
+          "uz": "Men talabayman."
         },
         {
           "de": "Wie heißen Sie?",
-          "uz": "Ismingiz nima?"
+          "uz": "Sizning ismingiz nima?"
+        },
+        {
+          "de": "Ich bin Studentin.",
+          "uz": "Men talaba qizman."
+        },
+        {
+          "de": "Das ist mein Freund.",
+          "uz": "Bu mening do'stim."
         },
         {
           "de": "Darf ich vorstellen?",
           "uz": "Tanishtirishim mumkinmi?"
+        },
+        {
+          "de": "Wie heißt er?",
+          "uz": "U nima deb ataladi?"
+        },
+        {
+          "de": "Wer ist das?",
+          "uz": "Bu kim?"
+        },
+        {
+          "de": "Wo wohnen Sie?",
+          "uz": "Siz qayerda yashaysiz?"
+        },
+        {
+          "de": "Es tut mir leid.",
+          "uz": "Juda afsusdaman."
+        },
+        {
+          "de": "Bis nächste Woche.",
+          "uz": "Keyingi haftagacha."
+        },
+        {
+          "de": "Wie ist Ihr Name?",
+          "uz": "Sizning ismingiz nima?"
         },
         {
           "de": "Ich bin hier.",
           "uz": "Men bu yerda."
         },
         {
-          "de": "Bis bald!",
-          "uz": "Tez orada ko'rishamiz!"
+          "de": "Ich heiße Udo.",
+          "uz": "Mening ismim Udo."
         },
         {
           "de": "Entschuldigung, wo ist das?",
           "uz": "Kechirasiz, bu qayerda?"
         },
         {
-          "de": "Wie heißt sie?",
-          "uz": "U nima deb ataladi?"
-        },
-        {
-          "de": "Tschüss!",
-          "uz": "Xayr!"
-        },
-        {
-          "de": "Bis morgen!",
-          "uz": "Ertaga ko'rishamiz!"
-        },
-        {
-          "de": "Guten Tag!",
-          "uz": "Salom!"
-        },
-        {
-          "de": "Wie heißen sie?",
-          "uz": "Ular nima deb ataladi?"
-        },
-        {
-          "de": "Bis nächste Woche!",
-          "uz": "Keyingi haftagacha!"
-        },
-        {
-          "de": "Es tut mir leid.",
-          "uz": "Meni afsuslantiradi."
-        },
-        {
-          "de": "Ich bin hier, um zu lernen.",
-          "uz": "Men o'rganish uchun bu yerda."
-        },
-        {
-          "de": "Bis dann!",
-          "uz": "O'sha paytda ko'rishamiz!"
-        },
-        {
-          "de": "Wie ist Ihr Name?",
-          "uz": "Ismingiz nima?"
-        },
-        {
-          "de": "Mach’s gut!",
-          "uz": "Yaxshi bo'ling!"
-        },
-        {
-          "de": "Ich bin Student.",
-          "uz": "Men talaba."
-        },
-        {
-          "de": "Wie heißt du?",
-          "uz": "Sening isming nima?"
-        },
-        {
           "de": "Das ist mein Freund, Udo.",
           "uz": "Bu mening do'stim Udo."
         },
         {
-          "de": "Guten Morgen!",
-          "uz": "Hayirli tong!"
-        },
-        {
-          "de": "Bis morgen!",
-          "uz": "Ertaga ko'rishamiz!"
-        },
-        {
-          "de": "Darf ich vorstellen?",
-          "uz": "Tanishtirishim mumkinmi?"
-        },
-        {
-          "de": "Es tut mir leid.",
-          "uz": "Meni kechiring."
-        },
-        {
-          "de": "Ich bin Student.",
-          "uz": "Men talaba."
-        },
-        {
-          "de": "Wie ist Ihr Name?",
-          "uz": "Sizning ismingiz nima?"
+          "de": "Das ist nett.",
+          "uz": "Bu yoqimli."
         }
       ]
     }

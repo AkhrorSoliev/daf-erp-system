@@ -23,6 +23,8 @@ import {
 } from '../src/daf/sentence/sentence-validate';
 import {
   generateForUnit,
+  MIN_WORDS,
+  MAX_WORDS,
   type GeneratedSentence,
 } from '../src/daf/sentence/sentence-generate';
 import {
@@ -41,9 +43,8 @@ const TARGET = 30;
  */
 const MAX_EXAMPLES = 8;
 
-/** Namuna sifatida faqat qisqa gap olinadi — mashq ham shunday bo'ladi. */
-const MIN_WORDS = 3;
-const MAX_WORDS = 7;
+// Namuna gapning uzunligi mashq gapiniki bilan bir xil bo'ladi:
+// chegara `sentence-generate.ts` da, bitta joyda turadi.
 
 const WORD = /[a-zA-ZäöüÄÖÜß]+/g;
 
@@ -156,7 +157,13 @@ async function main() {
 
   const model = buildModel();
   const unknownTally = new Map<string, number>();
-  const stats: { order: number; kept: number; rejected: number }[] = [];
+  const stats: {
+    order: number;
+    kept: number;
+    rejectedUnknown: number;
+    rejectedLength: number;
+    duplicates: number;
+  }[] = [];
 
   for (const unit of todo) {
     const index = plan.units.findIndex((u) => u.order === unit.order);
@@ -171,7 +178,7 @@ async function main() {
       `\n${unit.order}. ${unit.titleUz} — ${words.length} so'z, ${examples.length} namuna`,
     );
 
-    const { kept, rejected } = await generateForUnit(model, {
+    const { kept, rejected, duplicates } = await generateForUnit(model, {
       allowed,
       words,
       examples,
@@ -183,15 +190,26 @@ async function main() {
         unknownTally.set(w, (unknownTally.get(w) ?? 0) + 1);
       }
     }
+    const rejectedUnknown = rejected.filter(
+      (r) => r.reason === 'unknown',
+    ).length;
     stats.push({
       order: unit.order,
       kept: kept.length,
-      rejected: rejected.length,
+      rejectedUnknown,
+      rejectedLength: rejected.length - rejectedUnknown,
+      duplicates,
     });
     done.set(unit.order, kept);
-    console.log(`   saqlandi ${kept.length}, rad etildi ${rejected.length}`);
+    console.log(
+      `   saqlandi ${kept.length}, rad etildi ${rejected.length}` +
+        ` (notanish ${rejectedUnknown}, uzunlik ${rejected.length - rejectedUnknown})` +
+        `, takror ${duplicates}`,
+    );
     for (const r of rejected) {
-      console.log(`   ✗ ${r.de}  [${r.unknown.join(', ')}]`);
+      const why =
+        r.reason === 'unknown' ? r.unknown.join(', ') : 'uzunlik chegarasi';
+      console.log(`   ✗ ${r.de}  [${why}]`);
     }
     for (const s of kept) {
       console.log(`   ✓ ${s.de} | ${s.uz}`);
@@ -210,17 +228,24 @@ async function main() {
   console.log('\n— Hisobot —');
   let keptAll = 0;
   let rejectedAll = 0;
+  let duplicatesAll = 0;
   for (const s of stats) {
+    const rejected = s.rejectedUnknown + s.rejectedLength;
     keptAll += s.kept;
-    rejectedAll += s.rejected;
+    rejectedAll += rejected;
+    duplicatesAll += s.duplicates;
     console.log(
-      `  ${s.order}-bo'lim: saqlandi ${s.kept}, rad etildi ${s.rejected}`,
+      `  ${s.order}-bo'lim: saqlandi ${s.kept}, rad etildi ${rejected}` +
+        ` (notanish ${s.rejectedUnknown}, uzunlik ${s.rejectedLength})` +
+        `, takror ${s.duplicates}`,
     );
   }
+  // Takror rad etishga qo'shilmaydi: u yaroqsizlik emas, ortiqchalik.
   const total = keptAll + rejectedAll;
   const pct = total === 0 ? 0 : Math.round((rejectedAll / total) * 100);
   console.log(
-    `  Jami: saqlandi ${keptAll}, rad etildi ${rejectedAll} (${pct} %)`,
+    `  Jami: saqlandi ${keptAll}, rad etildi ${rejectedAll} (${pct} %),` +
+      ` takror ${duplicatesAll}`,
   );
 
   const top = [...unknownTally.entries()]
