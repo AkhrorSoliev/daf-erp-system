@@ -320,6 +320,35 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - Do **not** use `placeholder` on `<SelectValue>` — use a real `<SelectItem value="all">` as the default option instead.
 - Align filter controls to `items-center` (not `items-end`) since there are no labels to align around.
 
+#### Filters are MULTI-select by default
+
+A filter narrows a list, and "show me A1 **and** A2" is the ordinary question — a
+single-choice control forces the user to run the same report twice and add the
+numbers up themselves. So a new list/report filter uses
+`MultiSelectCombobox` (`src/components/ui/multi-select-combobox.tsx`) unless the
+dimension genuinely admits one answer at a time (a month, a date range, a sort
+order, the branch switcher).
+
+- **Empty selection = "Barcha ..."**, and that is the ONLY meaning of empty.
+  There is no `"all"` sentinel value in the option list: an `all` option that can
+  be ticked alongside `A1` describes a state nobody can read. The placeholder
+  carries the category name (`"Barcha darajalar"`), exactly as for a `<Select>`.
+- The trigger shows the single option's label when one is picked, `"N ta
+  tanlangan"` beyond that, and an ✕ that clears back to "all".
+- Per-option counts (`count` + `countSuffix`) stay **scoped to the branch, not to
+  the other active filters**, so the number beside an option does not move as you
+  tick its neighbours.
+- Use `leading` for an option that carries a visual marker (a level badge), and
+  `initials` / `avatarUrl` for people.
+- Keep a plain `<Select>` for one-at-a-time dimensions and for controls that are
+  not filters (page size).
+
+Two filters are deliberately still single-choice because one selection maps to
+several backend parameters rather than one: the leads **«Holati»** filter
+(stage / contacted / commented) and the gateway-events **«Natija»** filter
+(`processed` + `signatureValid`). Making those multi means OR-composing across
+dimensions on the server — do that properly or leave them alone.
+
 ### URL-Persisted Filter State
 
 - **Every filter bar on a list or report page must persist its state in the URL query string.** The URL is the single source of truth; React state is derived from `useSearchParams()`, not held independently in `useState`.
@@ -328,7 +357,9 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - **Implementation:**
   - Read with `useSearchParams()` from `next/navigation`. Parse values into the filter shape in a `useMemo` keyed on the `searchParams` object.
   - Write with `useRouter().replace(...)` (not `push`) so filter changes don't clutter browser history. Pass `{ scroll: false }` to prevent jump-to-top.
-  - For scalar (string/number) filters, prefer the shared `useUrlFilters` hook (`src/hooks/use-url-filters.ts`). For arrays, dates, or nullables, inline `useSearchParams` + `useRouter` is fine — encode arrays as comma-separated strings (`groupIds=a,b,c`), dates as `yyyy-MM-dd`.
+  - Prefer the shared `useUrlFilters` hook (`src/hooks/use-url-filters.ts`) — it handles `"string"`, `"number"` and `"array"` params. For dates or nullables it does not cover, inline `useSearchParams` + `useRouter` is fine; encode dates as `yyyy-MM-dd`.
+  - **Multi-select filters are comma-separated in the URL** (`?role=CEO,Teacher`, `?groupIds=a,b,c`), never a repeated key. The link stays readable, and the server's `toStringArray` (`server/src/common/dto/to-array.ts`) parses exactly this shape. Send them with `listParam(values)`, which returns `undefined` for an empty list so axios omits the parameter entirely.
+  - The hook memoizes on the query **string**, not the `searchParams` object — an array filter that got a fresh identity every render would re-fire any `useEffect` that depends on it. Keep it that way.
   - **Omit defaults from the URL.** If a filter equals its default (`branchId === null`, empty array, default status), `delete` it from the URLSearchParams so the URL stays short and meaningful.
   - **Reset `page` to `1`** when any filter changes (including pageSize).
 - **Do not** call `router.replace` in a `useEffect` that reads state — that creates a render loop. Write the URL directly from the filter-change event handler instead.

@@ -66,6 +66,30 @@ tahrirlanmaydi; eskirsa yangi ADR yoziladi va eskisining holati
 - Prices: stored as **integers** (in so'm)
 - **User and Student IDs:** Always **5-digit integers** (starting from 10000). PostgreSQL sequence is set to start at 10000. Never manually assign IDs below 10000.
 
+#### Multi-value filter parameters
+
+List filters are multi-select on the client, so a query parameter that filters a
+list accepts **several comma-separated values** (`?level=A1,A2`, `?user_type=CEO,Teacher`).
+One shared helper parses them — `src/common/dto/to-array.ts` — and no DTO writes
+its own copy (two hand-rolled `toArray` functions had already drifted apart
+before it existed).
+
+- `toStringArray` / `toNumberArray` in a `@Transform`, then `@IsArray()` +
+  `@IsEnum(..., { each: true })` (or `@IsString`/`@IsInt` with `each`). A single
+  value still arrives as a one-element array, so an old link keeps working.
+- **Empty parses to `undefined`, never `[]`.** `[]` means "match nothing" and
+  `in: []` would silently return an empty list; the absence of a filter means
+  "everything". Never let a blank or junk parameter collapse into `in: []`.
+- Build the `where` with `equalsOrIn(values)`: one value becomes `equals` (clearer
+  plan, uses the existing index), several become `in`.
+- A filter whose options are **composite predicates** — one option is a whole
+  `where` fragment, not a column value (mock-exam `paidStatus`, student `status`)
+  — cannot use `in`. OR the fragments together and nest that OR under `AND`,
+  because free-text search usually already owns `where.OR`.
+- A filter whose single option maps to **several parameters** across dimensions
+  (leads `holati`, gateway-events outcome) needs grouping — AND between
+  dimensions, OR within one. Until that is written, those stay single-choice.
+
 ### Authentication & Authorization
 
 - All routes require JWT auth by default (global `JwtAuthGuard`)

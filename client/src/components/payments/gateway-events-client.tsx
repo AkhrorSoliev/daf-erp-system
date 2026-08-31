@@ -44,7 +44,7 @@ import { GatewayEventsFilterBar } from "./gateway-events-filter-bar";
 import { GatewayEventsDetailDialog } from "./gateway-events-detail-dialog";
 
 export function GatewayEventsClient() {
-  const [provider, setProvider] = useState<string>("all");
+  const [provider, setProvider] = useState<string[]>([]);
   const [outcomeFilter, setOutcomeFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>();
@@ -82,7 +82,7 @@ export function GatewayEventsClient() {
       api
         .get("/gateways/events", {
           params: {
-            ...(provider !== "all" && { provider }),
+            ...(provider.length > 0 && { provider: provider.join(",") }),
             ...(processedParam !== undefined && { processed: processedParam }),
             ...(signatureParam !== undefined && {
               signatureValid: signatureParam,
@@ -100,7 +100,7 @@ export function GatewayEventsClient() {
   });
 
   const resetFilters = () => {
-    setProvider("all");
+    setProvider([]);
     setOutcomeFilter("all");
     setSearch("");
     setStartDate(undefined);

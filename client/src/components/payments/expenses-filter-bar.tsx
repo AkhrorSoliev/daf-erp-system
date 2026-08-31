@@ -5,12 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  MultiSelectCombobox,
+  type MultiSelectOption,
+} from "@/components/ui/multi-select-combobox";
 
 // TEACHER_ADVANCE is intentionally absent — advances are created and viewed on
 // the Ish haqi (/payments/salary) page, never here.
@@ -27,15 +24,23 @@ export const EXPENSE_METHOD_LABELS: Record<string, string> = {
   CARD: "Karta",
 };
 
+const CATEGORY_OPTIONS: MultiSelectOption[] = Object.entries(
+  EXPENSE_CATEGORY_LABELS,
+).map(([value, label]) => ({ value, label }));
+
+const METHOD_OPTIONS: MultiSelectOption[] = Object.entries(
+  EXPENSE_METHOD_LABELS,
+).map(([value, label]) => ({ value, label }));
+
 interface ExpensesFilterBarProps {
-  category: string;
-  paymentMethod: string;
+  category: string[];
+  paymentMethod: string[];
   searchValue: string;
   startDate: Date | null;
   endDate: Date | null;
   hasActiveFilters: boolean;
-  onCategoryChange: (v: string) => void;
-  onPaymentMethodChange: (v: string) => void;
+  onCategoryChange: (v: string[]) => void;
+  onPaymentMethodChange: (v: string[]) => void;
   onSearchChange: (v: string) => void;
   onStartDateChange: (d: Date | null) => void;
   onEndDateChange: (d: Date | null) => void;
@@ -68,33 +73,23 @@ export function ExpensesFilterBar({
         />
       </div>
 
-      <Select value={category} onValueChange={onCategoryChange}>
-        <SelectTrigger className="h-9 w-auto min-w-[150px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Barcha turlar</SelectItem>
-          {Object.entries(EXPENSE_CATEGORY_LABELS).map(([k, v]) => (
-            <SelectItem key={k} value={k}>
-              {v}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <MultiSelectCombobox
+        options={CATEGORY_OPTIONS}
+        selected={category}
+        onChange={onCategoryChange}
+        placeholder="Barcha turlar"
+        searchPlaceholder="Tur qidirish..."
+        className="w-auto min-w-[150px]"
+      />
 
-      <Select value={paymentMethod} onValueChange={onPaymentMethodChange}>
-        <SelectTrigger className="h-9 w-auto min-w-[160px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Barcha to&apos;lov turlari</SelectItem>
-          {Object.entries(EXPENSE_METHOD_LABELS).map(([k, v]) => (
-            <SelectItem key={k} value={k}>
-              {v}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <MultiSelectCombobox
+        options={METHOD_OPTIONS}
+        selected={paymentMethod}
+        onChange={onPaymentMethodChange}
+        placeholder="Barcha to'lov turlari"
+        searchPlaceholder="To'lov turi qidirish..."
+        className="w-auto min-w-[160px]"
+      />
 
       <div className="flex items-center gap-1">
         <DatePicker

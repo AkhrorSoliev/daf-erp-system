@@ -2,63 +2,59 @@
 
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useCallback, useMemo } from "react";
+import {
+  readFilters,
+  writeFilters,
+  type FilterSchema,
+  type ParamConfig,
+} from "@/lib/url-filter-params";
 
-type ParamType = "string" | "number";
-
-interface ParamConfig {
-  type: ParamType;
-  defaultValue: string | number;
-}
-
-export type FilterSchema = Record<string, ParamConfig>;
+export type { FilterSchema, ParamConfig };
+export { listParam } from "@/lib/url-filter-params";
 
 type FilterValues<T extends FilterSchema> = {
-  [K in keyof T]: T[K]["type"] extends "number" ? number : string;
+  [K in keyof T]: T[K]["type"] extends "number"
+    ? number
+    : T[K]["type"] extends "array"
+      ? string[]
+      : string;
 };
+
+export type FilterValue = string | number | string[];
 
 export function useUrlFilters<T extends FilterSchema>(schema: T) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
 
-  const filters = useMemo(() => {
-    const result = {} as FilterValues<T>;
-    for (const key of Object.keys(schema)) {
-      const config = schema[key];
-      const raw = searchParams.get(key);
-      if (raw === null) {
-        (result as any)[key] = config.defaultValue;
-      } else if (config.type === "number") {
-        const parsed = parseInt(raw, 10);
-        (result as any)[key] = isNaN(parsed) ? config.defaultValue : parsed;
-      } else {
-        (result as any)[key] = raw;
-      }
-    }
-    return result;
-  }, [searchParams, schema]);
+  /**
+   * Memo primitiv so'rov satriga bog'lanadi, `searchParams` obyektiga emas.
+   * Massiv filtri har render'da yangi havola bo'lib qolsa, uni `useEffect`
+   * bog'liqliklariga qo'ygan sahifa cheksiz qayta so'rov yuboradi; satr kalit
+   * esa faqat URL haqiqatan o'zgarganda qayta hisoblatadi.
+   */
+  const queryString = searchParams.toString();
+
+  const filters = useMemo(
+    () =>
+      readFilters(schema, new URLSearchParams(queryString)) as FilterValues<T>,
+    [queryString, schema],
+  );
 
   const buildUrl = useCallback(
     (updates: Partial<FilterValues<T>>) => {
-      const params = new URLSearchParams(searchParams.toString());
-      const merged = { ...filters, ...updates };
-      for (const key of Object.keys(schema)) {
-        const config = schema[key];
-        const value = (merged as any)[key];
-        if (value === config.defaultValue || value === undefined || value === "") {
-          params.delete(key);
-        } else {
-          params.set(key, String(value));
-        }
-      }
+      const params = writeFilters(schema, new URLSearchParams(queryString), {
+        ...filters,
+        ...updates,
+      });
       const qs = params.toString();
       return qs ? `${pathname}?${qs}` : pathname;
     },
-    [searchParams, pathname, schema, filters],
+    [queryString, pathname, schema, filters],
   );
 
   const setFilter = useCallback(
-    (key: keyof T & string, value: string | number) => {
+    (key: keyof T & string, value: FilterValue) => {
       router.replace(buildUrl({ [key]: value } as Partial<FilterValues<T>>));
     },
     [router, buildUrl],

@@ -249,7 +249,7 @@ describe('GatewayEventsService', () => {
 
       await service.findAll({
         ...baseFilters,
-        provider: 'PAYME',
+        provider: ['PAYME'],
         processed: false,
         signatureValid: false,
       });
@@ -261,6 +261,21 @@ describe('GatewayEventsService', () => {
             provider: 'PAYME',
             processed: false,
             signatureValid: false,
+          }),
+        }),
+      );
+    });
+
+    it("bir nechta to'lov tizimi tanlansa `in` bilan filtrlaydi", async () => {
+      prisma.paymentGatewayEvent.findMany.mockResolvedValue([]);
+      prisma.paymentGatewayEvent.count.mockResolvedValue(0);
+
+      await service.findAll({ ...baseFilters, provider: ['PAYME', 'CLICK'] });
+
+      expect(prisma.paymentGatewayEvent.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            provider: { in: ['PAYME', 'CLICK'] },
           }),
         }),
       );

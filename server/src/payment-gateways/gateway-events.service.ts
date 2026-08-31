@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PaymentMethod, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { equalsOrIn } from '../common/dto/to-array';
 
 export interface GatewayEventFilters {
   companyId: number;
-  provider?: PaymentMethod;
+  provider?: PaymentMethod[];
   processed?: boolean;
   signatureValid?: boolean;
   search?: string;
@@ -76,7 +77,9 @@ export class GatewayEventsService {
 
     const where: Prisma.PaymentGatewayEventWhereInput = {
       companyId: filters.companyId,
-      ...(filters.provider && { provider: filters.provider }),
+      ...(filters.provider?.length && {
+        provider: equalsOrIn(filters.provider),
+      }),
       ...(filters.processed !== undefined && { processed: filters.processed }),
       ...(filters.signatureValid !== undefined && {
         signatureValid: filters.signatureValid,
