@@ -45,6 +45,11 @@ import {
 } from "@/lib/status-config";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import {
+  EXIT_REASON_COMMENT_MIN_LENGTH,
+  isExitReasonCommentMissing,
+  type ExitReasonOption,
+} from "@/lib/exit-reason-utils";
 import toast from "react-hot-toast";
 
 // Maps Student status enum -> StudentExitReason.appliesTo enum
@@ -170,12 +175,12 @@ export function ChangeStatusDialog({
   // Cache reasons per exit type so switching between statuses is instant after
   // the first fetch — no flicker between Select and Textarea.
   const { data: reasons, isFetching: reasonsLoading } = useQuery<
-    { id: string; name: string }[]
+    ExitReasonOption[]
   >({
     queryKey: ["student-exit-reasons", exitType],
     queryFn: () =>
       api
-        .get<{ id: string; name: string }[]>("/student-exit-reasons", {
+        .get<ExitReasonOption[]>("/student-exit-reasons", {
           params: { appliesTo: exitType },
         })
         .then((r) => r.data),
@@ -234,11 +239,16 @@ export function ChangeStatusDialog({
   const useDropdown =
     !!exitType && (reasonsLoading || hasConfiguredReasons);
 
+  // "Boshqa sabab" says nothing on its own — the comment carries the reason,
+  // so it is required alongside it. Mirrors the server-side check.
+  const commentMissing = isExitReasonCommentMissing(reasons, reasonId, reason);
+
   const canSubmit = (() => {
     if (!selectedStatus) return false;
     if (!isReasonRequired) return true;
     if (reasonsLoading) return false; // wait for reasons to load
-    if (useDropdown && hasConfiguredReasons) return reasonId !== null;
+    if (useDropdown && hasConfiguredReasons)
+      return reasonId !== null && !commentMissing;
     return reason.trim().length > 0;
   })();
 
@@ -467,11 +477,23 @@ export function ChangeStatusDialog({
                         </SelectContent>
                       </Select>
                       <Textarea
-                        placeholder="Qo'shimcha izoh (ixtiyoriy)"
+                        placeholder={
+                          commentMissing
+                            ? "Nima sababdan? (majburiy)"
+                            : "Qo'shimcha izoh (ixtiyoriy)"
+                        }
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
                         rows={2}
+                        aria-invalid={commentMissing}
                       />
+                      {commentMissing && (
+                        <p className="text-xs text-destructive">
+                          «Boshqa sabab» tanlandi — nima sababdan ekanini
+                          yozing (kamida{" "}
+                          {EXIT_REASON_COMMENT_MIN_LENGTH} belgi).
+                        </p>
+                      )}
                     </>
                   ) : (
                     <Textarea

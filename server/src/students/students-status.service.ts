@@ -20,6 +20,11 @@ import {
 } from './dto/change-student-status.dto';
 import { studentSelect, formatStudent } from './shared/student-select';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
+import {
+  EXIT_REASON_COMMENT_ERROR,
+  EXIT_REASON_COMMENT_MIN_LENGTH,
+  exitReasonRequiresComment,
+} from '../common/exit-reason-comment';
 
 const STATUS_TO_EXIT_TYPE: Partial<Record<StudentStatus, ExitType>> = {
   FROZEN: ExitType.FREEZE,
@@ -91,6 +96,14 @@ export class StudentsStatusService {
         );
       }
       reasonId = reason.id;
+      // "Boshqa sabab" carries no information on its own — the comment IS
+      // the reason, so it becomes mandatory. Other reasons keep it optional.
+      if (
+        exitReasonRequiresComment(reason.name) &&
+        (!reasonText || reasonText.length < EXIT_REASON_COMMENT_MIN_LENGTH)
+      ) {
+        throw new BadRequestException(EXIT_REASON_COMMENT_ERROR);
+      }
       // Use the reason name as the audit text (free-text reason is appended)
       reasonText = reasonText ? `${reason.name} — ${reasonText}` : reason.name;
     } else if (exitType) {
