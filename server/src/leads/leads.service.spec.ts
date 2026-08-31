@@ -125,6 +125,26 @@ describe('LeadsService', () => {
   });
 
   describe('findAll', () => {
+    it('bir nechta ustun va manba tanlansa `in` bilan filtrlaydi', async () => {
+      prisma.lead.findMany.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+
+      await service.findAll(
+        { columnId: ['col-1', 'col-2'], sourceId: ['s-1', 's-2'] },
+        1001,
+        null,
+      );
+
+      expect(prisma.lead.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            section: { columnId: { in: ['col-1', 'col-2'] } },
+            sourceId: { in: ['s-1', 's-2'] },
+          }),
+        }),
+      );
+    });
+
     it('applies search, status and column filters with pagination', async () => {
       prisma.lead.findMany.mockResolvedValue([]);
       prisma.lead.count.mockResolvedValue(0);
@@ -133,7 +153,7 @@ describe('LeadsService', () => {
         {
           search: 'Aziz',
           status: 'NEW' as any,
-          columnId: 'col-1',
+          columnId: ['col-1'],
           page: 2,
           pageSize: 20,
         },

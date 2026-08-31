@@ -39,6 +39,11 @@ import { SummaryCard } from "../summary-card";
 import { RecordPaymentDialog } from "../record-payment-dialog";
 import { type Debtor, DebtorRow } from "../debtor-row";
 import { useDebtFilters } from "./debt-filters-provider";
+import { listParam } from "@/hooks/use-url-filters";
+import {
+  MultiSelectCombobox,
+  type MultiSelectOption,
+} from "@/components/ui/multi-select-combobox";
 
 type PaymentTarget = {
   id: number;
@@ -79,11 +84,11 @@ const STATUS_OPTIONS = [
   { value: "ARCHIVED", label: "Arxivlangan" },
 ] as const;
 
-const PROMISE_OPTIONS = [
-  { value: "all", label: "Barcha qarzdorlar" },
+// «Barcha qarzdorlar» alohida variant emas — bo'sh tanlov o'sha ma'noni beradi.
+const PROMISE_OPTIONS: MultiSelectOption[] = [
   { value: "has_open", label: "Sana belgilangan" },
   { value: "overdue", label: "Muddati o'tgan" },
-] as const;
+];
 
 /**
  * The debt page's main view: who owes money right now, and the two actions that
@@ -144,7 +149,7 @@ export function DebtorsView() {
             search: filters.search || undefined,
             sortBy: sortMeta.sortBy,
             order: sortMeta.order,
-            promise: filters.promise === "all" ? undefined : filters.promise,
+            promise: listParam(filters.promise),
             studentStatus: filters.holat,
           },
         })
@@ -262,21 +267,14 @@ export function DebtorsView() {
             ))}
           </SelectContent>
         </Select>
-        <Select
-          value={filters.promise}
-          onValueChange={(v) => setFilters({ promise: v, page: 1 })}
-        >
-          <SelectTrigger className="w-52" aria-label="To'lov sanasi holati">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {PROMISE_OPTIONS.map((p) => (
-              <SelectItem key={p.value} value={p.value}>
-                {p.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MultiSelectCombobox
+          options={PROMISE_OPTIONS}
+          selected={filters.promise}
+          onChange={(next) => setFilters({ promise: next, page: 1 })}
+          placeholder="Barcha qarzdorlar"
+          searchPlaceholder="Holat qidirish..."
+          className="w-52"
+        />
       </div>
 
       {isLoading ? (
@@ -287,7 +285,7 @@ export function DebtorsView() {
         </div>
       ) : rows.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
-          {filters.search || filters.promise !== "all"
+          {filters.search || filters.promise.length > 0
             ? "Filtrlarga mos qarzdor topilmadi — qidiruvni tozalab yoki filtrni kengaytirib ko'ring"
             : "Qarzdor o'quvchilar yo'q"}
         </p>

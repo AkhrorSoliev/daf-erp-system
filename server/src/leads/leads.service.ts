@@ -21,6 +21,7 @@ import { LeadQueryDto } from './dto/lead-query.dto';
 import { ConvertLeadDto } from './dto/convert-lead.dto';
 import { MarkCalledLeadDto } from './dto/mark-called-lead.dto';
 import { RemoveLeadDto } from './dto/remove-lead.dto';
+import { equalsOrIn } from '../common/dto/to-array';
 
 // Sentinel stored in Lead.statusChangeReason when a lead is CONVERTED by being
 // linked to an already-existing student (no new account minted) rather than by
@@ -102,9 +103,10 @@ export class LeadsService {
         { phone: { contains: search } },
       ];
     }
-    if (query.sourceId) where.sourceId = query.sourceId;
+    if (query.sourceId?.length) where.sourceId = equalsOrIn(query.sourceId);
     if (query.sectionId) where.sectionId = query.sectionId;
-    if (query.columnId) where.section = { columnId: query.columnId };
+    if (query.columnId?.length)
+      where.section = { columnId: equalsOrIn(query.columnId) };
     if (query.status) where.statusEnum = query.status;
 
     // Contact marker filter — leads already called vs not yet called.

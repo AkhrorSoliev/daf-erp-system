@@ -1,6 +1,6 @@
 import { IsArray, IsInt, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { toNumberArray } from '../../common/dto/to-array';
+import { toNumberArray, toStringArray } from '../../common/dto/to-array';
 
 export class DepartedStudentsSummaryQueryDto {
   @IsOptional()
@@ -8,9 +8,12 @@ export class DepartedStudentsSummaryQueryDto {
   @IsInt()
   branchId?: number;
 
+  // Nomi ataylab birlikda — qarang: student-payments-report-query.dto.ts.
   @IsOptional()
-  @IsUUID()
-  courseId?: string;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  courseId?: string[];
 
   @IsOptional()
   @Transform(({ value }) => toNumberArray(value))

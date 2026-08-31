@@ -74,7 +74,8 @@ export function StudentPaymentsClient() {
       ).filter((m): m is PaymentMethod =>
         VALID_METHODS.includes(m as PaymentMethod),
       ),
-      courseId: searchParams.get("courseId") || null,
+      courseId:
+        searchParams.get("courseId")?.split(",").filter(Boolean) ?? [],
       rangeStart: parseDate(searchParams.get("startDate")),
       rangeEnd: parseDate(searchParams.get("endDate")),
     };
@@ -106,7 +107,8 @@ export function StudentPaymentsClient() {
       teacherIds:
         next.teacherIds.length > 0 ? next.teacherIds.join(",") : undefined,
       methods: next.methods.length > 0 ? next.methods.join(",") : undefined,
-      courseId: next.courseId ?? undefined,
+      courseId:
+        next.courseId.length > 0 ? next.courseId.join(",") : undefined,
       startDate: formatDate(next.rangeStart),
       endDate: formatDate(next.rangeEnd),
       page: undefined,
@@ -138,7 +140,8 @@ export function StudentPaymentsClient() {
     teacherIds:
       filter.teacherIds.length > 0 ? filter.teacherIds.join(",") : undefined,
     methods: filter.methods.length > 0 ? filter.methods.join(",") : undefined,
-    courseId: filter.courseId ?? undefined,
+    courseId:
+      filter.courseId.length > 0 ? filter.courseId.join(",") : undefined,
     startDate: formatDate(filter.rangeStart),
     endDate: formatDate(filter.rangeEnd),
     page,

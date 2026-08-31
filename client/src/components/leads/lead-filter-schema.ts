@@ -7,8 +7,8 @@ export const LEAD_FILTER_SCHEMA = {
   // Single "Holati" filter merging funnel stage + contact + comment presence.
   // One token at a time (see LEAD_HOLATI_OPTIONS); "all" = no filter.
   holati: { type: "string" as const, defaultValue: "all" },
-  sourceId: { type: "string" as const, defaultValue: "all" },
-  columnId: { type: "string" as const, defaultValue: "all" },
+  sourceId: { type: "array" as const, defaultValue: [] as string[] },
+  columnId: { type: "array" as const, defaultValue: [] as string[] },
   startDate: { type: "string" as const, defaultValue: "" },
   endDate: { type: "string" as const, defaultValue: "" },
   page: { type: "number" as const, defaultValue: 1 },
@@ -18,8 +18,8 @@ export const LEAD_FILTER_SCHEMA = {
 export interface LeadFilterValues {
   search: string;
   holati: string;
-  sourceId: string;
-  columnId: string;
+  sourceId: string[];
+  columnId: string[];
   startDate: string;
   endDate: string;
   page: number;
@@ -85,8 +85,8 @@ export function leadFiltersActive(f: LeadFilterValues): boolean {
   return (
     f.search !== "" ||
     f.holati !== "all" ||
-    f.sourceId !== "all" ||
-    f.columnId !== "all" ||
+    f.sourceId.length > 0 ||
+    f.columnId.length > 0 ||
     f.startDate !== "" ||
     f.endDate !== ""
   );

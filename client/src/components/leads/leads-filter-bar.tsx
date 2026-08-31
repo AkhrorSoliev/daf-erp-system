@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/tooltip";
 import api from "@/lib/api";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { useLeadsBoard } from "@/hooks/use-leads-board";
 import {
@@ -98,40 +99,26 @@ export function LeadsFilterBar() {
         </SelectContent>
       </Select>
 
-      <Select
-        value={filters.sourceId}
-        onValueChange={(value) => setFilters({ sourceId: value, page: 1 })}
-      >
-        <SelectTrigger className="w-full sm:w-48">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Barcha manbalar</SelectItem>
-          {sources.map((source) => (
-            <SelectItem key={source.id} value={source.id}>
-              {source.name}
-              {source.deleted ? " (o'chirilgan)" : ""}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <MultiSelectCombobox
+        options={sources.map((x) => ({
+          value: x.id,
+          label: `${x.name}${x.deleted ? " (o'chirilgan)" : ""}`,
+        }))}
+        selected={filters.sourceId}
+        onChange={(next) => setFilters({ sourceId: next, page: 1 })}
+        placeholder="Barcha manbalar"
+        searchPlaceholder="Manba qidirish..."
+        className="w-full sm:w-48"
+      />
 
-      <Select
-        value={filters.columnId}
-        onValueChange={(value) => setFilters({ columnId: value, page: 1 })}
-      >
-        <SelectTrigger className="w-full sm:w-48">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Barcha ustunlar</SelectItem>
-          {columns.map((column) => (
-            <SelectItem key={column.id} value={column.id}>
-              {column.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <MultiSelectCombobox
+        options={columns.map((x) => ({ value: x.id, label: x.name }))}
+        selected={filters.columnId}
+        onChange={(next) => setFilters({ columnId: next, page: 1 })}
+        placeholder="Barcha ustunlar"
+        searchPlaceholder="Ustun qidirish..."
+        className="w-full sm:w-48"
+      />
 
       <DatePicker
         value={startDate}

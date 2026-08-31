@@ -35,9 +35,14 @@ export class StudentPaymentsReportQueryDto {
   @IsEnum(PaymentMethod, { each: true })
   methods?: PaymentMethod[];
 
+  // Nomi ATAYLAB birlikda qoldi, garchi bir nechta qiymat qabul qilsa ham:
+  // `courseIds` ga o'zgartirilsa, eski ulashilgan havolalar
+  // `forbidNonWhitelisted` sababli 400 bilan yiqiladi.
   @IsOptional()
-  @IsString()
-  courseId?: string;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsString({ each: true })
+  courseId?: string[];
 
   @IsOptional()
   @IsString()

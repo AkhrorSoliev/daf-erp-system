@@ -1,15 +1,32 @@
-import { IsOptional, IsInt, IsString } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsInt, IsString, IsArray, IsIn } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { toNumberArray, toStringArray } from '../../common/dto/to-array';
 
+/** Holat filtri variantlari — har biri alohida `where` bo'lagiga aylanadi. */
+export const STUDENT_STATUS_FILTERS = [
+  'active',
+  'frozen',
+  'ungrouped',
+  'graduated',
+  'expelled',
+] as const;
+export type StudentStatusFilter = (typeof STUDENT_STATUS_FILTERS)[number];
+
+/**
+ * Ko'p tanlovli filtrlar vergul bilan keladi (`?level=A1,A2`). Bitta qiymat
+ * eski havolalardagidek ishlaydi — u bir elementli ro'yxatga aylanadi.
+ */
 export class StudentQueryDto extends PaginationDto {
   @IsOptional()
   @IsString()
   search?: string;
 
   @IsOptional()
-  @IsString()
-  status?: string;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsIn(STUDENT_STATUS_FILTERS, { each: true })
+  status?: StudentStatusFilter[];
 
   @IsOptional()
   @IsInt()
@@ -17,15 +34,20 @@ export class StudentQueryDto extends PaginationDto {
   branch_id?: number;
 
   @IsOptional()
-  @IsInt()
-  @Type(() => Number)
-  teacher_id?: number;
+  @Transform(({ value }) => toNumberArray(value))
+  @IsArray()
+  @IsInt({ each: true })
+  teacher_id?: number[];
 
   @IsOptional()
-  @IsString()
-  group_id?: string;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsString({ each: true })
+  group_id?: string[];
 
   @IsOptional()
-  @IsString()
-  level?: string;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsString({ each: true })
+  level?: string[];
 }

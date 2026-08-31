@@ -1,48 +1,47 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { ChevronsUpDown, Search, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
+import {
+  MultiSelectCombobox,
+  type MultiSelectOption,
+} from "@/components/ui/multi-select-combobox";
 import api from "@/lib/api";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
 export interface StudentFilters {
   fullName: string;
-  status: string;
-  teacherId: string;
-  groupId: string;
-  level: string;
+  /** Bo'sh ro'yxat = «Barcha ...». */
+  status: string[];
+  teacherId: string[];
+  groupId: string[];
+  level: string[];
 }
 
 const defaultFilters: StudentFilters = {
   fullName: "",
-  status: "all",
-  teacherId: "all",
-  groupId: "all",
-  level: "all",
+  status: [],
+  teacherId: [],
+  groupId: [],
+  level: [],
 };
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
+
+const STATUS_OPTIONS: MultiSelectOption[] = [
+  { value: "active", label: "Faol" },
+  { value: "frozen", label: "Muzlatilgan" },
+  { value: "ungrouped", label: "Guruhlashtirilmagan" },
+  { value: "graduated", label: "Bitirgan" },
+  { value: "expelled", label: "Chetlatilgan" },
+];
 
 interface Teacher {
   id: number;
@@ -76,8 +75,6 @@ export function StudentsFilters({
   levelCounts,
 }: StudentsFiltersProps) {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [teacherPopoverOpen, setTeacherPopoverOpen] = useState(false);
-  const [teacherSearch, setTeacherSearch] = useState("");
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
 
   const branchId = selectedBranch?.id;
@@ -102,30 +99,32 @@ export function StudentsFilters({
     };
   }, [isTeacher, branchId]);
 
-  const selectedTeacher = useMemo(
-    () => teachers.find((t) => String(t.id) === filters.teacherId),
-    [teachers, filters.teacherId],
-  );
-
-  const filteredTeachers = useMemo(
-    () =>
-      teacherSearch.trim()
-        ? teachers.filter((t) =>
-            `${t.firstName} ${t.lastName}`.toLowerCase().includes(teacherSearch.toLowerCase()),
-          )
-        : teachers,
-    [teachers, teacherSearch],
-  );
-
   const hasActiveFilters =
     filters.fullName !== "" ||
-    filters.groupId !== "all" ||
-    filters.level !== "all" ||
-    (!isTeacher && (filters.status !== "all" || filters.teacherId !== "all"));
+    filters.groupId.length > 0 ||
+    filters.level.length > 0 ||
+    (!isTeacher && (filters.status.length > 0 || filters.teacherId.length > 0));
 
-  const updateFilter = (key: keyof StudentFilters, value: string) => {
+  const updateFilter = (
+    key: keyof StudentFilters,
+    value: string | string[],
+  ) => {
     onFilterChange({ ...filters, [key]: value });
   };
+
+  const teacherOptions: MultiSelectOption[] = teachers.map((t) => ({
+    value: String(t.id),
+    label: `${t.firstName} ${t.lastName}`,
+    avatarUrl: t.photo,
+    initials: `${t.firstName[0] ?? ""}${t.lastName[0] ?? ""}`.toUpperCase(),
+    count: t.studentCount ?? 0,
+  }));
+
+  const levelOptions: MultiSelectOption[] = LEVELS.map((lvl) => ({
+    value: lvl,
+    label: lvl,
+    count: levelCounts?.[lvl] ?? 0,
+  }));
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -140,151 +139,48 @@ export function StudentsFilters({
       </div>
 
       {isTeacher && groups && groups.length > 0 && (
-        <Select
-          value={filters.groupId}
-          onValueChange={(value) => updateFilter("groupId", value)}
-        >
-          <SelectTrigger className="w-full sm:w-52">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha guruhlar</SelectItem>
-            {groups.map((g) => (
-              <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MultiSelectCombobox
+          options={groups.map((g) => ({ value: g.id, label: g.name }))}
+          selected={filters.groupId}
+          onChange={(next) => updateFilter("groupId", next)}
+          placeholder="Barcha guruhlar"
+          searchPlaceholder="Guruh qidirish..."
+          className="w-full sm:w-52"
+        />
       )}
 
       {!isTeacher && (
-        <Select
-          value={filters.status}
-          onValueChange={(value) => updateFilter("status", value)}
-        >
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha holatlar</SelectItem>
-            <SelectItem value="active">Faol</SelectItem>
-            <SelectItem value="frozen">Muzlatilgan</SelectItem>
-            <SelectItem value="ungrouped">Guruhlashtirilmagan</SelectItem>
-            <SelectItem value="graduated">Bitirgan</SelectItem>
-            <SelectItem value="expelled">Chetlatilgan</SelectItem>
-          </SelectContent>
-        </Select>
+        <MultiSelectCombobox
+          options={STATUS_OPTIONS}
+          selected={filters.status}
+          onChange={(next) => updateFilter("status", next)}
+          placeholder="Barcha holatlar"
+          searchPlaceholder="Holat qidirish..."
+          className="w-full sm:w-48"
+        />
       )}
 
-      <Select
-        value={filters.level}
-        onValueChange={(value) => updateFilter("level", value)}
-      >
-        <SelectTrigger className="w-full sm:w-44">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Barcha darajalar</SelectItem>
-          {LEVELS.map((lvl) => (
-            <SelectItem key={lvl} value={lvl}>
-              <span className="flex items-center gap-1.5">
-                {lvl}
-                {levelCounts && (
-                  <span className="text-muted-foreground">
-                    ({levelCounts[lvl] ?? 0})
-                  </span>
-                )}
-              </span>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <MultiSelectCombobox
+        options={levelOptions}
+        selected={filters.level}
+        onChange={(next) => updateFilter("level", next)}
+        placeholder="Barcha darajalar"
+        searchPlaceholder="Daraja qidirish..."
+        countSuffix="o'quvchi"
+        className="w-full sm:w-44"
+      />
 
       {!isTeacher && (
-        <Popover
-          modal
-          open={teacherPopoverOpen}
-          onOpenChange={(open) => {
-            setTeacherPopoverOpen(open);
-            if (!open) setTeacherSearch("");
-          }}
-        >
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              type="button"
-              className="h-9 w-full min-w-0 justify-between font-normal sm:w-52"
-            >
-              {selectedTeacher ? (
-                <span className="flex items-center gap-2">
-                  <Avatar size="sm">
-                    {selectedTeacher.photo && (
-                      <AvatarImage
-                        src={selectedTeacher.photo}
-                        alt={`${selectedTeacher.firstName} ${selectedTeacher.lastName}`}
-                      />
-                    )}
-                    <AvatarFallback>
-                      {`${selectedTeacher.firstName[0] ?? ""}${selectedTeacher.lastName[0] ?? ""}`.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  {selectedTeacher.firstName} {selectedTeacher.lastName}
-                </span>
-              ) : (
-                <span className="text-muted-foreground">Barcha o&apos;qituvchilar</span>
-              )}
-              <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-72 gap-0 p-0" align="start">
-            <div className="border-b p-2">
-              <div className="relative">
-                <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
-                <Input
-                  placeholder="Qidirish..."
-                  value={teacherSearch}
-                  onChange={(e) => setTeacherSearch(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
-            </div>
-            <div className="max-h-52 space-y-1 overflow-y-auto overscroll-contain p-2">
-              {filteredTeachers.map((t) => {
-                const isSelected = filters.teacherId === String(t.id);
-                const fullName = `${t.firstName} ${t.lastName}`;
-                const initials = `${t.firstName[0] ?? ""}${t.lastName[0] ?? ""}`.toUpperCase();
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => {
-                      updateFilter("teacherId", isSelected ? "all" : String(t.id));
-                      setTeacherPopoverOpen(false);
-                      setTeacherSearch("");
-                    }}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent",
-                      isSelected && "bg-accent",
-                    )}
-                  >
-                    <Avatar size="sm">
-                      {t.photo && <AvatarImage src={t.photo} alt={fullName} />}
-                      <AvatarFallback>{initials}</AvatarFallback>
-                    </Avatar>
-                    <span className="truncate flex-1 text-left">{fullName}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {t.studentCount ?? 0} o&apos;quvchi
-                    </span>
-                  </button>
-                );
-              })}
-              {filteredTeachers.length === 0 && (
-                <p className="text-muted-foreground px-2 py-1.5 text-sm">
-                  O&apos;qituvchilar topilmadi
-                </p>
-              )}
-            </div>
-          </PopoverContent>
-        </Popover>
+        <MultiSelectCombobox
+          options={teacherOptions}
+          selected={filters.teacherId}
+          onChange={(next) => updateFilter("teacherId", next)}
+          placeholder="Barcha o'qituvchilar"
+          searchPlaceholder="O'qituvchi qidirish..."
+          countSuffix="o'quvchi"
+          className="w-full sm:w-52"
+          contentClassName="w-[288px]"
+        />
       )}
 
       {hasActiveFilters && (

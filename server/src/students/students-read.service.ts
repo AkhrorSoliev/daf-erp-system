@@ -7,7 +7,11 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService } from '../common/status';
-import { StudentQueryDto } from './dto/student-query.dto';
+import {
+  StudentQueryDto,
+  type StudentStatusFilter,
+} from './dto/student-query.dto';
+import { equalsOrIn } from '../common/dto/to-array';
 import { studentSelect, formatStudent } from './shared/student-select';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { getSystemStartDate } from '../common/finance/system-start-date';
@@ -15,6 +19,47 @@ import {
   ReportBranchIds,
   studentBranchWhere,
 } from '../common/finance/report-branch-scope';
+
+/**
+ * Bitta holat filtri varianti uchun `where` bo'lagi.
+ *
+ * «Guruhsiz» — bu `Student.status` qiymati emas: u FAOL, lekin hozir hech
+ * qaysi faol guruhda o'qimayotgan o'quvchi. Shuning uchun variantlar oddiy
+ * enum ro'yxati emas va ular `in` bilan birlashtirilmaydi.
+ */
+function studentStatusWhere(
+  filter: StudentStatusFilter,
+): Prisma.StudentWhereInput | null {
+  switch (filter) {
+    case 'active':
+      return {
+        status: StudentStatus.ACTIVE,
+        enrollments: { some: { deletedAt: null } },
+      };
+    case 'frozen':
+      return { status: StudentStatus.FROZEN };
+    case 'ungrouped':
+      // Hech qachon guruhga qo'shilmaganlar ham, guruhlari
+      // DROPPED/FROZEN/TRANSFERRED bo'lganlar ham shu yerga tushadi — ularning
+      // hammasi hali joylashtirilishi kerak.
+      return {
+        status: StudentStatus.ACTIVE,
+        enrollments: {
+          none: {
+            deletedAt: null,
+            status: 'ACTIVE',
+            group: { deletedAt: null, statusEnum: 'ACTIVE' },
+          },
+        },
+      };
+    case 'graduated':
+      return { status: StudentStatus.GRADUATED };
+    case 'expelled':
+      return { status: StudentStatus.EXPELLED };
+    default:
+      return null;
+  }
+}
 
 @Injectable()
 export class StudentsReadService {
@@ -56,22 +101,22 @@ export class StudentsReadService {
       { deletedAt: null },
     ];
 
-    if (query.teacher_id) {
+    if (query.teacher_id?.length) {
       enrollmentConditions.push({
         group: {
           deletedAt: null,
-          teachers: { some: { teacherId: query.teacher_id } },
+          teachers: { some: { teacherId: equalsOrIn(query.teacher_id) } },
         },
       });
     }
 
-    if (query.group_id) {
-      enrollmentConditions.push({ groupId: query.group_id });
+    if (query.group_id?.length) {
+      enrollmentConditions.push({ groupId: equalsOrIn(query.group_id) });
     }
 
-    if (query.level) {
+    if (query.level?.length) {
       enrollmentConditions.push({
-        group: { deletedAt: null, level: query.level },
+        group: { deletedAt: null, level: equalsOrIn(query.level) },
       });
     }
 
@@ -90,48 +135,22 @@ export class StudentsReadService {
     // Full where: base + status filter (for main query)
     const where: Prisma.StudentWhereInput = { ...baseWhere };
 
-    if (status === 'active') {
-      where.status = StudentStatus.ACTIVE;
-      const activeEnrollmentFilter = {
-        enrollments: { some: { deletedAt: null } },
-      };
-      if (where.enrollments) {
-        where.AND = [
-          { enrollments: where.enrollments },
-          activeEnrollmentFilter,
-        ];
-        delete where.enrollments;
-      } else {
-        where.enrollments = activeEnrollmentFilter.enrollments;
-      }
-    } else if (status === 'frozen') {
-      where.status = StudentStatus.FROZEN;
-    } else if (status === 'ungrouped') {
-      // "Guruhsiz" = active student not currently in any active group. Covers
-      // both never-enrolled students AND students whose enrollments are all
-      // DROPPED/FROZEN/TRANSFERRED or in finished groups — every one of them
-      // still needs to be placed into a group. (Previously this matched only
-      // students with zero enrollment rows, hiding the dropped-out students.)
-      where.status = StudentStatus.ACTIVE;
-      const noActiveGroupFilter: Prisma.StudentWhereInput = {
-        enrollments: {
-          none: {
-            deletedAt: null,
-            status: 'ACTIVE',
-            group: { deletedAt: null, statusEnum: 'ACTIVE' },
-          },
-        },
-      };
-      if (where.enrollments) {
-        where.AND = [{ enrollments: where.enrollments }, noActiveGroupFilter];
-        delete where.enrollments;
-      } else {
-        where.enrollments = noActiveGroupFilter.enrollments;
-      }
-    } else if (status === 'graduated') {
-      where.status = StudentStatus.GRADUATED;
-    } else if (status === 'expelled') {
-      where.status = StudentStatus.EXPELLED;
+    // Har bir holat varianti — butun bir `where` bo'lagi, ustun qiymati emas
+    // (`ungrouped` umuman `status` ustuniga tayanmaydi), shuning uchun ko'p
+    // tanlov `in` bilan emas, OR bilan birlashadi. Bo'lak AND ichiga
+    // joylanadi: `where.enrollments` ni o'qituvchi/guruh/daraja filtri
+    // allaqachon egallagan bo'lishi mumkin, AND esa ikkovini ham saqlaydi.
+    const statusFragments = (status ?? [])
+      .map(studentStatusWhere)
+      .filter((f): f is Prisma.StudentWhereInput => f !== null);
+
+    if (statusFragments.length > 0) {
+      where.AND = [
+        ...((where.AND as Prisma.StudentWhereInput[]) ?? []),
+        statusFragments.length === 1
+          ? statusFragments[0]
+          : { OR: statusFragments },
+      ];
     }
 
     // Stats queries use baseWhere (no status filter) so they reflect the full filtered set

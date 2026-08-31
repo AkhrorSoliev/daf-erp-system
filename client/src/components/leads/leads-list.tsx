@@ -39,7 +39,7 @@ import {
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhone } from "@/lib/format-utils";
-import { useUrlFilters } from "@/hooks/use-url-filters";
+import { listParam, useUrlFilters } from "@/hooks/use-url-filters";
 import {
   LEAD_STATUS_LABELS,
   useLeadsBoard,
@@ -80,13 +80,13 @@ export function LeadsList() {
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string | number> = {
+      const params: Record<string, string | number | undefined> = {
         page: filters.page,
         pageSize: filters.pageSize,
       };
       if (filters.search.trim()) params.search = filters.search.trim();
-      if (filters.sourceId !== "all") params.sourceId = filters.sourceId;
-      if (filters.columnId !== "all") params.columnId = filters.columnId;
+      params.sourceId = listParam(filters.sourceId);
+      params.columnId = listParam(filters.columnId);
       // The unified "Holati" filter maps its token to exactly one backend param
       // (stage / contact / comment).
       if (filters.holati !== "all") {

@@ -106,6 +106,38 @@ describe('PaymentsDebtorsService', () => {
       );
     });
 
+    it("bitta va'da holati tanlansa `equals` bilan filtrlaydi", async () => {
+      await service.getDebtors(1001, {
+        userId: 1,
+        roles: ['CEO'],
+        promise: ['has_open'],
+      });
+      const where = prisma.student.findMany.mock.calls[0][0].where;
+      expect(where.paymentPromises).toEqual({ some: { status: 'OPEN' } });
+    });
+
+    it("ikkovi tanlansa 'va'dasi bor' degani — filtrsizlik emas", async () => {
+      await service.getDebtors(1001, {
+        userId: 1,
+        roles: ['CEO'],
+        promise: ['has_open', 'overdue'],
+      });
+      const where = prisma.student.findMany.mock.calls[0][0].where;
+      expect(where.paymentPromises).toEqual({
+        some: { status: { in: ['OPEN', 'BROKEN'] } },
+      });
+    });
+
+    it("va'da tanlanmasa filtr umuman qo'yilmaydi", async () => {
+      await service.getDebtors(1001, {
+        userId: 1,
+        roles: ['CEO'],
+        promise: [],
+      });
+      const where = prisma.student.findMany.mock.calls[0][0].where;
+      expect(where.paymentPromises).toBeUndefined();
+    });
+
     it('maps debtAmount as the absolute value of the negative balance', async () => {
       prisma.student.findMany.mockResolvedValueOnce([
         { id: 1, balance: -50000, enrollments: [] },

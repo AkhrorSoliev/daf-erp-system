@@ -343,11 +343,23 @@ order, the branch switcher).
 - Keep a plain `<Select>` for one-at-a-time dimensions and for controls that are
   not filters (page size).
 
-Two filters are deliberately still single-choice because one selection maps to
-several backend parameters rather than one: the leads **«Holati»** filter
-(stage / contacted / commented) and the gateway-events **«Natija»** filter
-(`processed` + `signatureValid`). Making those multi means OR-composing across
-dimensions on the server — do that properly or leave them alone.
+Some filters stay single-choice on purpose:
+
+- **A dimension that admits one answer**: a year, a month, a period preset, a
+  date range, a sort order, a view toggle, page size. "2025 and 2026 together"
+  is not a report anyone asked for.
+- **A two-option dimension where picking both equals picking neither.** The
+  debt page's debtor-status tiles collapse to `active` / `inactive`, so
+  multi-select there costs a click and buys nothing. (Contrast the debt
+  **«Va'da»** filter, which IS multi: "has an open promise" + "has a broken
+  one" excludes debtors who promised nothing, so it is not the same as no
+  filter. That difference is the test — if selecting everything equals
+  selecting nothing, leave it single.)
+- **One selection that maps to several backend parameters**: the leads
+  **«Holati»** filter (stage / contacted / commented) and the gateway-events
+  **«Natija»** filter (`processed` + `signatureValid`). Making those multi
+  means OR-composing across dimensions on the server — do that properly or
+  leave them alone.
 
 ### URL-Persisted Filter State
 

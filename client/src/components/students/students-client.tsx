@@ -28,7 +28,7 @@ import { EditStudentDrawer } from "./edit-student-drawer";
 import { AddStudentDialog } from "./add-student-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
-import { useUrlFilters } from "@/hooks/use-url-filters";
+import { listParam, useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
 import {
@@ -41,10 +41,10 @@ const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
 const filtersSchema = {
   search: { type: "string" as const, defaultValue: "" },
-  status: { type: "string" as const, defaultValue: "all" },
-  teacherId: { type: "string" as const, defaultValue: "all" },
-  groupId: { type: "string" as const, defaultValue: "all" },
-  level: { type: "string" as const, defaultValue: "all" },
+  status: { type: "array" as const, defaultValue: [] as string[] },
+  teacherId: { type: "array" as const, defaultValue: [] as string[] },
+  groupId: { type: "array" as const, defaultValue: [] as string[] },
+  level: { type: "array" as const, defaultValue: [] as string[] },
   page: { type: "number" as const, defaultValue: 1 },
   pageSize: { type: "number" as const, defaultValue: 10 },
 };
@@ -92,10 +92,10 @@ export function StudentsClient() {
       const searchValue = filters.search.trim();
       const cleanSearch = searchValue.startsWith('#') ? searchValue.slice(1).trim() : searchValue;
       if (cleanSearch) params.search = cleanSearch;
-      if (filters.status && filters.status !== "all") params.status = filters.status;
-      if (filters.teacherId && filters.teacherId !== "all") params.teacher_id = filters.teacherId;
-      if (filters.groupId && filters.groupId !== "all") params.group_id = filters.groupId;
-      if (filters.level && filters.level !== "all") params.level = filters.level;
+      params.status = listParam(filters.status);
+      params.teacher_id = listParam(filters.teacherId);
+      params.group_id = listParam(filters.groupId);
+      params.level = listParam(filters.level);
       if (selectedBranch?.id) params.branch_id = selectedBranch.id;
       const { data } = await api.get("/students", { params });
       setStudents(data.data);
@@ -133,11 +133,13 @@ export function StudentsClient() {
       setSearchInput(newFilters.fullName);
       debouncedSetSearch(newFilters.fullName);
     }
+    const sameList = (a: string[], b: string[]) =>
+      a.length === b.length && a.every((v, i) => v === b[i]);
     if (
-      newFilters.status !== filters.status ||
-      newFilters.teacherId !== filters.teacherId ||
-      newFilters.groupId !== filters.groupId ||
-      newFilters.level !== filters.level
+      !sameList(newFilters.status, filters.status) ||
+      !sameList(newFilters.teacherId, filters.teacherId) ||
+      !sameList(newFilters.groupId, filters.groupId) ||
+      !sameList(newFilters.level, filters.level)
     ) {
       setUrlFilters({
         status: newFilters.status,
@@ -226,7 +228,7 @@ export function StudentsClient() {
         )}
       </div>
       <StudentsStats
-        stats={filters.status !== "all" ? { ...stats, total } : stats}
+        stats={filters.status.length > 0 ? { ...stats, total } : stats}
         loading={loading}
         isTeacher={isTeacher}
       />

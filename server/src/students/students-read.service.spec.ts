@@ -39,24 +39,69 @@ describe('StudentsReadService', () => {
   describe('findAll — ungrouped filter', () => {
     it('matches active students not in any active group (dropped-out students included)', async () => {
       await service.findAll(
-        { status: 'ungrouped' } as StudentQueryDto,
+        { status: ['ungrouped'] } as StudentQueryDto,
         1001,
         null,
       );
 
       const where = prisma.student.findMany.mock.calls[0][0].where;
-      expect(where.status).toBe('ACTIVE');
       expect(where.companyId).toBe(1001);
       // A student is "ungrouped" unless they have an ACTIVE enrollment in an
       // ACTIVE group — so students whose only enrollments are DROPPED/FROZEN
-      // (a non-empty enrollments list) now match too.
-      expect(where.enrollments).toEqual({
-        none: {
-          deletedAt: null,
+      // (a non-empty enrollments list) now match too. The status filter is a
+      // whole where-fragment, so it rides in AND rather than on `where.status`.
+      expect(where.AND).toEqual([
+        {
           status: 'ACTIVE',
-          group: { deletedAt: null, statusEnum: 'ACTIVE' },
+          enrollments: {
+            none: {
+              deletedAt: null,
+              status: 'ACTIVE',
+              group: { deletedAt: null, statusEnum: 'ACTIVE' },
+            },
+          },
+        },
+      ]);
+    });
+
+    it('bir nechta holat tanlansa OR bilan birlashadi', async () => {
+      await service.findAll(
+        { status: ['frozen', 'expelled'] } as StudentQueryDto,
+        1001,
+        null,
+      );
+
+      const where = prisma.student.findMany.mock.calls[0][0].where;
+      expect(where.AND).toEqual([
+        { OR: [{ status: 'FROZEN' }, { status: 'EXPELLED' }] },
+      ]);
+    });
+
+    it("holat filtri o'qituvchi filtrini bosib ketmaydi — ikkovi ham qoladi", async () => {
+      await service.findAll(
+        { status: ['ungrouped'], teacher_id: [10010] } as StudentQueryDto,
+        1001,
+        null,
+      );
+
+      const where = prisma.student.findMany.mock.calls[0][0].where;
+      // O'qituvchi filtri yuqori darajadagi `enrollments` da qoladi...
+      expect(where.enrollments).toEqual({
+        some: {
+          AND: [
+            { deletedAt: null },
+            {
+              group: {
+                deletedAt: null,
+                teachers: { some: { teacherId: 10010 } },
+              },
+            },
+          ],
         },
       });
+      // ...holatniki esa AND ichida, o'zining `enrollments` i bilan.
+      expect(where.AND).toHaveLength(1);
+      expect((where.AND as any[])[0].enrollments.none).toBeDefined();
     });
 
     it('does not apply the ungrouped enrollment filter for other statuses', async () => {
@@ -65,6 +110,7 @@ describe('StudentsReadService', () => {
       const where = prisma.student.findMany.mock.calls[0][0].where;
       expect(where.enrollments).toBeUndefined();
       expect(where.status).toBeUndefined();
+      expect(where.AND).toBeUndefined();
     });
   });
 
