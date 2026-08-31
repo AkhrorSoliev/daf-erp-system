@@ -827,4 +827,86 @@ describe('SalaryMonthlyService', () => {
       expect(res.row).toBeNull();
     });
   });
+  /**
+   * Ish haqi ro'yxati bo'shatilgan odamlarni ko'rsatmasligi kerak — LEKIN
+   * "faol emas" ni butunlay filtrlash pulni yashirib qo'yadi: 27.07 da
+   * bo'shatilgan ustozning may va iyul oyliklari hali CALCULATED turibdi.
+   * Qoida shuning uchun holatga emas, o'sha oyda puli qolgan-qolmaganiga
+   * tayanadi.
+   */
+  describe("faol emas ustozlarni ro'yxatdan olib tashlash", () => {
+    const inactive = (id: number) => ({
+      ...teacher(id, 'Bo', 'Shagan'),
+      isActive: false,
+    });
+
+    it("bo'sh oyda faol emas ustozni ro'yxatdan olib tashlaydi", async () => {
+      prisma.user.findMany.mockResolvedValue([
+        teacher(10010, 'Jamsher'),
+        inactive(10505),
+      ]);
+
+      const res = await service.getMonthly({ month: '2026-06' }, 1, 999);
+
+      expect(res.data.map((r) => r.user.id)).toEqual([10010]);
+    });
+
+    it("faol emas ustoz dars ma'lumoti bo'lsa ro'yxatda qoladi", async () => {
+      prisma.user.findMany.mockResolvedValue([inactive(10505)]);
+      prisma.salaryAccrual.findMany.mockResolvedValue([
+        { userId: 10505, attendanceId: 'a1', amount: 79_998 },
+      ]);
+
+      const res = await service.getMonthly({ month: '2026-06' }, 1, 999);
+
+      expect(res.data).toHaveLength(1);
+      expect(res.data[0].covered).toBe(79_998);
+      // Ro'yxatdan tushib ketsa, JAMI ham shuncha kamayib ketardi.
+      expect(res.totals.covered).toBe(79_998);
+    });
+
+    it("faol emas ustoz to'lanmagan oyligi bo'lsa ro'yxatda qoladi", async () => {
+      prisma.user.findMany.mockResolvedValue([inactive(10505)]);
+      prisma.salaryPayment.findMany.mockResolvedValue([
+        {
+          id: 'sp-1',
+          userId: 10505,
+          amount: 13_333,
+          status: 'CALCULATED',
+          settledExpenses: [],
+        },
+      ]);
+
+      const res = await service.getMonthly({ month: '2026-07' }, 1, 999);
+
+      expect(res.data.map((r) => r.user.id)).toEqual([10505]);
+      expect(res.data[0].netToPay).toBe(13_333);
+    });
+
+    it("faol emas ustoz avansi bo'lsa ro'yxatda qoladi", async () => {
+      prisma.user.findMany.mockResolvedValue([inactive(10505)]);
+      prisma.expense.groupBy.mockResolvedValue([
+        { relatedUserId: 10505, _sum: { amount: 200_000 } },
+      ]);
+
+      const res = await service.getMonthly({ month: '2026-06' }, 1, 999);
+
+      expect(res.data.map((r) => r.user.id)).toEqual([10505]);
+      expect(res.data[0].advances).toBe(200_000);
+    });
+
+    it("bitta odam so'ralganda (profil/portal) filtr ishlamaydi", async () => {
+      prisma.user.findMany.mockResolvedValue([inactive(10505)]);
+
+      const res = await service.getMonthlyForUser(
+        10505,
+        { month: '2026-06' },
+        1,
+        999,
+      );
+
+      expect(res.row).not.toBeNull();
+      expect(res.row?.user.id).toBe(10505);
+    });
+  });
 });

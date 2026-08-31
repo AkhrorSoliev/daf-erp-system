@@ -49,6 +49,7 @@ import {
   currentMonthKey,
   monthLabel,
 } from "./salary-utils";
+import { SalaryInactiveBadge } from "./salary-inactive-badge";
 import { SalarySettingsSheet } from "./salary-settings-sheet";
 import { SettleMonthDialog } from "./salary-settle-month-dialog";
 import { SalaryAddAdvanceDialog } from "./salary-add-advance-dialog";
@@ -422,6 +423,10 @@ export function SalaryMonthlyView({
                             Oylik
                           </Badge>
                         )}
+                        {/* Faol emas ustoz bu yerga faqat puli qolganda
+                            tushadi — belgi "nega hali ro'yxatda?" degan
+                            savolga javob beradi. */}
+                        {!row.user.isActive && <SalaryInactiveBadge />}
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-medium">

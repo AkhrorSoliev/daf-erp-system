@@ -19,6 +19,7 @@ import {
 import { Info } from "lucide-react";
 import { formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
+import { SalaryInactiveBadge } from "./salary-inactive-badge";
 import { SALARY_STATUS_BADGE, SALARY_STATUS_LABELS } from "./salary-utils";
 
 export interface StaffRow {
@@ -27,6 +28,7 @@ export interface StaffRow {
     firstName: string;
     lastName: string;
     position: string | null;
+    isActive: boolean;
     branch: { id: number; name: string } | null;
   };
   monthly: number;
@@ -108,8 +110,11 @@ export function SalaryMonthlyStaffTable({
                     {idx + 1}
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium">
+                    <div className="flex items-center gap-1.5 font-medium">
                       {row.user.firstName} {row.user.lastName}
+                      {/* Faol emas xodim bu yerga faqat oxirgi (proratsiya
+                          qilingan) oyi yopilmagan bo'lsa tushadi. */}
+                      {!row.user.isActive && <SalaryInactiveBadge />}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       #{row.user.id}
