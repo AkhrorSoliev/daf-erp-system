@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Workbook, Worksheet } from 'exceljs';
 import { ReportsExcelService } from './reports-excel.service';
 import { ReportsService } from './reports.service';
-import { cellText } from './reports-excel.helpers';
+import { cellText, tashkentTodayStr } from './reports-excel.helpers';
 
 describe('ReportsExcelService', () => {
   let service: ReportsExcelService;
@@ -553,8 +553,14 @@ describe('ReportsExcelService', () => {
   });
 
   it('keeps all sheets for the CURRENT month even with the flag set', async () => {
-    const now = new Date();
-    const m = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    // The month MUST come from Tashkent, not the runner's clock: the service
+    // decides "is this period past?" with `tashkentTodayStr()`, and on the
+    // last day of a month a UTC runner is still in the old month while
+    // Tashkent (UTC+5) has already rolled over. `new Date()` here made the
+    // test build an August period and assert against a service that had
+    // moved to September — red every month-end after 19:00 UTC, green again
+    // five hours later, with nothing in the code having changed.
+    const m = tashkentTodayStr().slice(0, 7);
     const wb = await buildWorkbook(
       {},
       {
