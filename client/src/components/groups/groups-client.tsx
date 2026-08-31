@@ -20,13 +20,15 @@ import {
 import { GroupsTable } from "./groups-table";
 import { GroupsStats, type GroupsStatsData } from "./groups-stats";
 import { EditGroupDrawer } from "./edit-group-drawer";
-import { GroupsRoomFilter } from "./groups-room-filter";
-import { GroupsTeacherFilter } from "./groups-teacher-filter";
 import { LevelBadge } from "./level-badge";
 import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
-import { useUrlFilters } from "@/hooks/use-url-filters";
+import { listParam, useUrlFilters } from "@/hooks/use-url-filters";
+import {
+  MultiSelectCombobox,
+  type MultiSelectOption,
+} from "@/components/ui/multi-select-combobox";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
 
@@ -45,6 +47,18 @@ interface TeacherOption {
 
 const LEVEL_OPTIONS = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
+const STATUS_OPTIONS = [
+  { value: "ACTIVE", label: "Faol" },
+  { value: "FORMING", label: "Boshlanmagan" },
+  { value: "PAUSED", label: "Pauza" },
+  { value: "COMPLETED", label: "Tugallangan" },
+];
+
+const COURSE_TYPE_OPTIONS = [
+  { value: "standard", label: "Standart" },
+  { value: "intensive", label: "Intensiv" },
+];
+
 interface FilterCounts {
   status: Record<string, number>;
   level: Record<string, number>;
@@ -61,13 +75,15 @@ const EMPTY_FILTER_COUNTS: FilterCounts = {
   teacher: {},
 };
 
+// Bo'sh ro'yxat = «Barcha ...». Sanagichlar filialga bog'liq, tanlovga emas,
+// shuning uchun ular ko'p tanlashda ham barqaror qoladi.
 const filtersSchema = {
   search: { type: "string" as const, defaultValue: "" },
-  status: { type: "string" as const, defaultValue: "all" },
-  level: { type: "string" as const, defaultValue: "all" },
-  courseType: { type: "string" as const, defaultValue: "all" },
-  room: { type: "string" as const, defaultValue: "all" },
-  teacher: { type: "string" as const, defaultValue: "all" },
+  status: { type: "array" as const, defaultValue: [] as string[] },
+  level: { type: "array" as const, defaultValue: [] as string[] },
+  courseType: { type: "array" as const, defaultValue: [] as string[] },
+  room: { type: "array" as const, defaultValue: [] as string[] },
+  teacher: { type: "array" as const, defaultValue: [] as string[] },
   page: { type: "number" as const, defaultValue: 1 },
   pageSize: { type: "number" as const, defaultValue: 10 },
 };
@@ -134,14 +150,12 @@ export function GroupsClient() {
         pageSize: filters.pageSize,
       };
       if (selectedBranch) params.branch_id = selectedBranch.id;
-      if (filters.status !== "all") {
-        params.statusEnum = filters.status;
-      }
       if (filters.search.trim()) params.search = filters.search.trim();
-      if (filters.level !== "all") params.level = filters.level;
-      if (filters.courseType !== "all") params.course_type = filters.courseType;
-      if (filters.room !== "all") params.room_id = filters.room;
-      if (filters.teacher !== "all") params.teacher_id = Number(filters.teacher);
+      params.statusEnum = listParam(filters.status);
+      params.level = listParam(filters.level);
+      params.course_type = listParam(filters.courseType);
+      params.room_id = listParam(filters.room);
+      params.teacher_id = listParam(filters.teacher);
       const { data } = await api.get("/groups", { params });
       setGroups(data.data);
       setTotal(data.total);
@@ -182,13 +196,34 @@ export function GroupsClient() {
   };
 
 
-  const handleRoomChange = (value: string) => {
-    setUrlFilters({ room: value, page: 1 });
-  };
+  const statusOptions: MultiSelectOption[] = STATUS_OPTIONS.map((o) => ({
+    ...o,
+    count: filterCounts.status[o.value] ?? 0,
+  }));
 
-  const handleTeacherChange = (value: string) => {
-    setUrlFilters({ teacher: value, page: 1 });
-  };
+  const levelOptions: MultiSelectOption[] = LEVEL_OPTIONS.map((level) => ({
+    value: level,
+    label: level,
+    leading: <LevelBadge level={level} />,
+    count: filterCounts.level[level] ?? 0,
+  }));
+
+  const courseTypeOptions: MultiSelectOption[] = COURSE_TYPE_OPTIONS.map((o) => ({
+    ...o,
+    count: filterCounts.courseType[o.value] ?? 0,
+  }));
+
+  const roomOptions: MultiSelectOption[] = rooms.map((r) => ({
+    value: String(r.id),
+    label: r.name,
+    count: filterCounts.room[String(r.id)] ?? 0,
+  }));
+
+  const teacherOptions: MultiSelectOption[] = teachers.map((t) => ({
+    value: String(t.id),
+    label: `${t.lastName} ${t.firstName}`,
+    count: filterCounts.teacher[String(t.id)] ?? 0,
+  }));
 
   return (
     <div className="space-y-4">
@@ -203,69 +238,52 @@ export function GroupsClient() {
             className="pl-9"
           />
         </div>
-        <Select
-          value={filters.status}
-          onValueChange={(value) => setUrlFilters({ status: value, page: 1 })}
-        >
-          <SelectTrigger className="h-9 w-[calc(100%-3rem)] sm:w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha holatlar</SelectItem>
-            <SelectItem value="ACTIVE">Faol ({filterCounts.status.ACTIVE ?? 0})</SelectItem>
-            <SelectItem value="FORMING">Boshlanmagan ({filterCounts.status.FORMING ?? 0})</SelectItem>
-            <SelectItem value="PAUSED">Pauza ({filterCounts.status.PAUSED ?? 0})</SelectItem>
-            <SelectItem value="COMPLETED">Tugallangan ({filterCounts.status.COMPLETED ?? 0})</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={filters.level}
-          onValueChange={(value) => setUrlFilters({ level: value, page: 1 })}
-        >
-          <SelectTrigger className="h-9 w-[calc(100%-3rem)] sm:w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha darajalar</SelectItem>
-            {LEVEL_OPTIONS.map((level) => (
-              <SelectItem key={level} value={level}>
-                <span className="flex items-center gap-1.5">
-                  <LevelBadge level={level} />
-                  <span className="text-muted-foreground">
-                    ({filterCounts.level[level] ?? 0})
-                  </span>
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={filters.courseType}
-          onValueChange={(value) =>
-            setUrlFilters({ courseType: value, page: 1 })
-          }
-        >
-          <SelectTrigger className="h-9 w-[calc(100%-3rem)] sm:w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha turlar</SelectItem>
-            <SelectItem value="standard">Standart ({filterCounts.courseType.standard ?? 0})</SelectItem>
-            <SelectItem value="intensive">Intensiv ({filterCounts.courseType.intensive ?? 0})</SelectItem>
-          </SelectContent>
-        </Select>
-        <GroupsRoomFilter
-          value={filters.room}
-          rooms={rooms}
-          onChange={handleRoomChange}
-          counts={filterCounts.room}
+        <MultiSelectCombobox
+          options={statusOptions}
+          selected={filters.status}
+          onChange={(next) => setUrlFilters({ status: next, page: 1 })}
+          placeholder="Barcha holatlar"
+          searchPlaceholder="Holat qidirish..."
+          countSuffix="guruh"
+          className="w-[calc(100%-3rem)] sm:w-44"
+        />
+        <MultiSelectCombobox
+          options={levelOptions}
+          selected={filters.level}
+          onChange={(next) => setUrlFilters({ level: next, page: 1 })}
+          placeholder="Barcha darajalar"
+          searchPlaceholder="Daraja qidirish..."
+          countSuffix="guruh"
+          className="w-[calc(100%-3rem)] sm:w-44"
+        />
+        <MultiSelectCombobox
+          options={courseTypeOptions}
+          selected={filters.courseType}
+          onChange={(next) => setUrlFilters({ courseType: next, page: 1 })}
+          placeholder="Barcha turlar"
+          searchPlaceholder="Tur qidirish..."
+          countSuffix="guruh"
+          className="w-[calc(100%-3rem)] sm:w-44"
+        />
+        <MultiSelectCombobox
+          options={roomOptions}
+          selected={filters.room}
+          onChange={(next) => setUrlFilters({ room: next, page: 1 })}
+          placeholder="Barcha xonalar"
+          searchPlaceholder="Xona qidirish..."
+          countSuffix="guruh"
+          className="w-[calc(100%-3rem)] sm:w-44"
         />
         {!isTeacherOnly && (
-          <GroupsTeacherFilter
-            value={filters.teacher}
-            teachers={teachers}
-            onChange={handleTeacherChange}
-            counts={filterCounts.teacher}
+          <MultiSelectCombobox
+            options={teacherOptions}
+            selected={filters.teacher}
+            onChange={(next) => setUrlFilters({ teacher: next, page: 1 })}
+            placeholder="Barcha o'qituvchilar"
+            searchPlaceholder="O'qituvchi qidirish..."
+            countSuffix="guruh"
+            className="w-[calc(100%-3rem)] sm:w-48"
+            contentClassName="w-[288px]"
           />
         )}
         {canManage &&

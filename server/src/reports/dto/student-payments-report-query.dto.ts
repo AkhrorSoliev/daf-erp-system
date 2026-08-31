@@ -9,16 +9,7 @@ import {
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { PaymentMethod } from '@prisma/client';
-
-function toArray<T = string>(value: unknown): T[] | undefined {
-  if (value === undefined || value === null || value === '') return undefined;
-  if (Array.isArray(value)) return value as T[];
-  if (typeof value !== 'string' && typeof value !== 'number') return undefined;
-  return String(value)
-    .split(',')
-    .map((v) => v.trim())
-    .filter((v) => v.length > 0) as T[];
-}
+import { toNumberArray, toStringArray } from '../../common/dto/to-array';
 
 export class StudentPaymentsReportQueryDto {
   @IsOptional()
@@ -27,19 +18,19 @@ export class StudentPaymentsReportQueryDto {
   branchId?: number;
 
   @IsOptional()
-  @Transform(({ value }) => toArray<string>(value))
+  @Transform(({ value }) => toStringArray(value))
   @IsArray()
   @IsString({ each: true })
   groupIds?: string[];
 
   @IsOptional()
-  @Transform(({ value }) => toArray<string>(value)?.map((v) => Number(v)))
+  @Transform(({ value }) => toNumberArray(value))
   @IsArray()
   @IsInt({ each: true })
   teacherIds?: number[];
 
   @IsOptional()
-  @Transform(({ value }) => toArray<string>(value))
+  @Transform(({ value }) => toStringArray(value))
   @IsArray()
   @IsEnum(PaymentMethod, { each: true })
   methods?: PaymentMethod[];

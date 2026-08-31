@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
 import {
+  IsArray,
   IsBoolean,
   IsEnum,
   IsInt,
@@ -9,11 +10,14 @@ import {
   Min,
 } from 'class-validator';
 import { PaymentMethod } from '@prisma/client';
+import { toStringArray } from '../../common/dto/to-array';
 
 export class GatewayEventsQueryDto {
   @IsOptional()
-  @IsEnum(PaymentMethod)
-  provider?: PaymentMethod;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsEnum(PaymentMethod, { each: true })
+  provider?: PaymentMethod[];
 
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)

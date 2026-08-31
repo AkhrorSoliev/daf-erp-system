@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Check, ChevronsUpDown, X } from "lucide-react";
 import {
   Popover,
@@ -9,20 +9,32 @@ import {
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 export interface MultiSelectOption {
   value: string;
   label: string;
+  /** O'ng chekkada ko'rsatiladigan son — masalan shu darajadagi guruhlar soni. */
+  count?: number;
+  /** Odam tanlanadigan ro'yxatlar uchun (o'qituvchi, xodim). */
+  avatarUrl?: string | null;
+  initials?: string;
+  /** Yorliq o'rniga chiziladigan belgi — masalan rangli daraja nishoni. */
+  leading?: ReactNode;
 }
 
 interface MultiSelectComboboxProps {
   options: MultiSelectOption[];
   selected: string[];
   onChange: (next: string[]) => void;
+  /** Hech narsa tanlanmaganda ko'rinadigan matn — «Barcha ...» shaklida. */
   placeholder: string;
   searchPlaceholder?: string;
+  /** `count` yonida turadigan so'z: «guruh», «o'quvchi». */
+  countSuffix?: string;
   className?: string;
+  contentClassName?: string;
   disabled?: boolean;
 }
 
@@ -32,7 +44,9 @@ export function MultiSelectCombobox({
   onChange,
   placeholder,
   searchPlaceholder = "Qidirish...",
+  countSuffix,
   className,
+  contentClassName,
   disabled,
 }: MultiSelectComboboxProps) {
   const [open, setOpen] = useState(false);
@@ -61,11 +75,19 @@ export function MultiSelectCombobox({
   })();
 
   return (
-    <Popover open={open} onOpenChange={setOpen} modal>
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) setSearch("");
+      }}
+      modal
+    >
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
+          type="button"
           disabled={disabled}
           className={cn(
             "h-9 justify-between font-normal",
@@ -102,7 +124,7 @@ export function MultiSelectCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[260px] p-0 gap-0"
+        className={cn("w-[260px] p-0 gap-0", contentClassName)}
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
@@ -114,6 +136,24 @@ export function MultiSelectCombobox({
             className="h-8"
           />
         </div>
+        {/*
+          «Hammasi» alohida variant emas, tanlovni tozalash. Uni ro'yxatdagi
+          belgilanadigan qatorga aylantirish "hammasi + A1" degan ma'nosiz
+          holatni ochib qo'yadi — bo'sh tanlov allaqachon "hammasi" degani.
+        */}
+        <button
+          type="button"
+          onClick={() => onChange([])}
+          className={cn(
+            "flex w-full items-center gap-2 border-b px-3 py-1.5 text-left text-sm hover:bg-muted",
+            selected.length === 0 && "bg-muted/60",
+          )}
+        >
+          <span className="flex size-4 items-center justify-center rounded border border-input">
+            {selected.length === 0 && <Check className="size-3" />}
+          </span>
+          <span className="truncate">{placeholder}</span>
+        </button>
         <div className="max-h-[260px] overflow-y-auto overscroll-contain py-1">
           {filtered.length === 0 ? (
             <div className="px-3 py-6 text-center text-xs text-muted-foreground">
@@ -132,10 +172,30 @@ export function MultiSelectCombobox({
                     isSelected && "bg-muted/60",
                   )}
                 >
-                  <span className="flex size-4 items-center justify-center rounded border border-input">
+                  <span className="flex size-4 shrink-0 items-center justify-center rounded border border-input">
                     {isSelected && <Check className="size-3" />}
                   </span>
-                  <span className="truncate">{option.label}</span>
+                  {option.initials !== undefined && (
+                    <Avatar size="sm">
+                      {option.avatarUrl && (
+                        <AvatarImage
+                          src={option.avatarUrl}
+                          alt={option.label}
+                        />
+                      )}
+                      <AvatarFallback>{option.initials}</AvatarFallback>
+                    </Avatar>
+                  )}
+                  {option.leading ?? (
+                    <span className="flex-1 truncate">{option.label}</span>
+                  )}
+                  {option.leading && <span className="flex-1" />}
+                  {option.count !== undefined && (
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {option.count}
+                      {countSuffix ? ` ${countSuffix}` : ""}
+                    </span>
+                  )}
                 </button>
               );
             })

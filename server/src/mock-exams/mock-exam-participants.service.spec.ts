@@ -132,9 +132,9 @@ describe('MockExamParticipantsService', () => {
       await service.list(
         'e1',
         {
-          examTime: '14:00',
-          level: 'B1',
-          paidStatus: 'cash',
+          examTime: ['14:00'],
+          level: ['B1'],
+          paidStatus: ['cash'],
         } as any,
         1001,
         null,
@@ -145,10 +145,71 @@ describe('MockExamParticipantsService', () => {
         expect.objectContaining({
           examTime: '14:00',
           level: 'B1',
-          paid: false,
-          formData: { path: ['__payIntent'], equals: 'CASH' },
+          AND: [
+            {
+              OR: [
+                {
+                  paid: false,
+                  formData: { path: ['__payIntent'], equals: 'CASH' },
+                },
+              ],
+            },
+          ],
         }),
       );
+    });
+
+    it('bir nechta vaqt va daraja tanlansa `in` bilan filtrlaydi', async () => {
+      prisma.mockExam.findFirst.mockResolvedValue({
+        id: 'e1',
+        status: MockExamStatus.REGISTRATION_OPEN,
+      });
+      prisma.mockExamParticipant.findMany.mockResolvedValue([]);
+      prisma.mockExamParticipant.count.mockResolvedValue(0);
+
+      await service.list(
+        'e1',
+        { examTime: ['10:00', '14:00'], level: ['A2', 'B1'] } as any,
+        1001,
+        null,
+      );
+
+      const arg = prisma.mockExamParticipant.findMany.mock.calls[0][0];
+      expect(arg.where).toEqual(
+        expect.objectContaining({
+          examTime: { in: ['10:00', '14:00'] },
+          level: { in: ['A2', 'B1'] },
+        }),
+      );
+    });
+
+    it("bir nechta to'lov holati OR bilan birlashadi", async () => {
+      prisma.mockExam.findFirst.mockResolvedValue({
+        id: 'e1',
+        status: MockExamStatus.REGISTRATION_OPEN,
+      });
+      prisma.mockExamParticipant.findMany.mockResolvedValue([]);
+      prisma.mockExamParticipant.count.mockResolvedValue(0);
+
+      await service.list(
+        'e1',
+        { paidStatus: ['paid', 'cash'] } as any,
+        1001,
+        null,
+      );
+
+      const arg = prisma.mockExamParticipant.findMany.mock.calls[0][0];
+      expect(arg.where.AND).toEqual([
+        {
+          OR: [
+            { paid: true },
+            {
+              paid: false,
+              formData: { path: ['__payIntent'], equals: 'CASH' },
+            },
+          ],
+        },
+      ]);
     });
 
     it('filters "pending" as unpaid without a cash intent', async () => {
@@ -159,15 +220,19 @@ describe('MockExamParticipantsService', () => {
       prisma.mockExamParticipant.findMany.mockResolvedValue([]);
       prisma.mockExamParticipant.count.mockResolvedValue(0);
 
-      await service.list('e1', { paidStatus: 'pending' } as any, 1001, null);
+      await service.list('e1', { paidStatus: ['pending'] } as any, 1001, null);
 
       const arg = prisma.mockExamParticipant.findMany.mock.calls[0][0];
-      expect(arg.where).toEqual(
-        expect.objectContaining({
-          paid: false,
-          NOT: { formData: { path: ['__payIntent'], equals: 'CASH' } },
-        }),
-      );
+      expect(arg.where.AND).toEqual([
+        {
+          OR: [
+            {
+              paid: false,
+              NOT: { formData: { path: ['__payIntent'], equals: 'CASH' } },
+            },
+          ],
+        },
+      ]);
     });
   });
 

@@ -15,7 +15,11 @@ import { EntityHistoryService } from '../common/entity-history';
 import { MockExamBillingService } from './mock-exam-billing.service';
 import { AddManualParticipantDto } from './dto/add-manual-participant.dto';
 import { ConvertMockParticipantDto } from './dto/convert-mock-participant.dto';
-import { ParticipantsQueryDto } from './dto/participants-query.dto';
+import {
+  ParticipantsQueryDto,
+  type ParticipantPaidStatus,
+} from './dto/participants-query.dto';
+import { equalsOrIn } from '../common/dto/to-array';
 import { MarkMockPaidDto } from './dto/mark-mock-paid.dto';
 import { resolveParticipantFee } from './mock-exam-pricing.util';
 
@@ -30,6 +34,22 @@ const DEFAULT_PAGE_SIZE = 10;
  * Manual adds work in any pre-grading status — once GRADING has begun,
  * adding new participants is blocked (would skew rank/percentage tables).
  */
+/**
+ * `cash` — to'lanmagan, lekin formada naqd niyati belgilangan; `pending` —
+ * to'lanmagan va bunday belgisi yo'q; `paid` — yopilgan.
+ */
+const CASH_INTENT: Prisma.MockExamParticipantWhereInput = {
+  formData: { path: ['__payIntent'], equals: 'CASH' },
+};
+
+function paidStatusWhere(
+  status: ParticipantPaidStatus,
+): Prisma.MockExamParticipantWhereInput {
+  if (status === 'paid') return { paid: true };
+  if (status === 'cash') return { paid: false, formData: CASH_INTENT.formData };
+  return { paid: false, NOT: CASH_INTENT };
+}
+
 @Injectable()
 export class MockExamParticipantsService {
   private readonly logger = new Logger(MockExamParticipantsService.name);
@@ -65,25 +85,21 @@ export class MockExamParticipantsService {
         { telegramUsername: { contains: search, mode: 'insensitive' } },
       ];
     }
-    if (query.examTime) {
-      where.examTime = query.examTime;
+    if (query.examTime?.length) {
+      where.examTime = equalsOrIn(query.examTime);
     }
-    if (query.level) {
-      where.level = query.level;
+    if (query.level?.length) {
+      where.level = equalsOrIn(query.level);
     }
     // Payment-status filter. `cash` = unpaid with a cash intent marker in
-    // formData; `pending` = unpaid without it; `paid` = settled.
-    const CASH_INTENT: Prisma.MockExamParticipantWhereInput = {
-      formData: { path: ['__payIntent'], equals: 'CASH' },
-    };
-    if (query.paidStatus === 'paid') {
-      where.paid = true;
-    } else if (query.paidStatus === 'cash') {
-      where.paid = false;
-      where.formData = CASH_INTENT.formData;
-    } else if (query.paidStatus === 'pending') {
-      where.paid = false;
-      where.NOT = CASH_INTENT;
+    // formData; `pending` = unpaid without it; `paid` = settled. Each is a
+    // COMPOSITE predicate, so several selected statuses are OR'd — and the OR
+    // is nested under AND because the free-text search already owns `where.OR`.
+    if (query.paidStatus?.length) {
+      where.AND = [
+        ...((where.AND as Prisma.MockExamParticipantWhereInput[]) ?? []),
+        { OR: query.paidStatus.map(paidStatusWhere) },
+      ];
     }
 
     const [data, total] = await Promise.all([
