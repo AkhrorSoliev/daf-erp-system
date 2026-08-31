@@ -479,7 +479,7 @@ export class SalaryMonthlyService {
     }
 
     // ─── Step 5+6: build rows ────────────────────────────────────────────
-    const rows = teachers.map((t) => {
+    const allRows = teachers.map((t) => {
       const a = agg.get(t.id)!;
       // Keyed off the accrual TOTAL, not the student leg: a month the center
       // funded end to end has `studentFunded = 0` and would otherwise blank out
@@ -550,6 +550,32 @@ export class SalaryMonthlyService {
           : null,
       };
     });
+
+    // Faol emas (bo'shatilgan/to'xtatilgan) ustoz ro'yxatda faqat o'sha oyda
+    // hali puli qolgan bo'lsa turadi: dars ma'lumoti, avansi, hisoblangan
+    // to'lovi yoki to'lanishi kerak summasi bo'lsa. Hech narsasi bo'lmasa —
+    // tushib qoladi, chunki nol qatorlar ro'yxatni cho'zishdan boshqa hech
+    // narsa qilmaydi.
+    //
+    // Nima uchun butunlay `isActive: true` filtri EMAS: 27.07 da bo'shatilgan
+    // ustozning may va iyul oyliklari hali CALCULATED (to'lanmagan) turibdi.
+    // Uni ro'yxatdan olib tashlash o'sha pulni ekrandan ham, JAMI dan ham
+    // yo'qotardi — ya'ni qarz bor, lekin hech qayerda ko'rinmaydi.
+    //
+    // `userId` berilganda (profil/portal `getMonthlyForUser` orqali bitta
+    // odamni so'raganda) filtr ishlamaydi: aniq shu odam so'ralgan bo'lsa,
+    // javob "topilmadi" bo'lib qolmasligi kerak.
+    const rows =
+      userId !== undefined
+        ? allRows
+        : allRows.filter(
+            (r) =>
+              r.user.isActive ||
+              r.hasLessonData ||
+              r.advances !== 0 ||
+              r.netToPay !== 0 ||
+              r.payment !== null,
+          );
 
     // Sort by gross magnitude desc, then name.
     rows.sort((a, b) => {
