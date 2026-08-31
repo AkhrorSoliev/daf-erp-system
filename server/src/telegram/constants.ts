@@ -13,8 +13,16 @@ export const MOCK_EXAM_DEEP_LINK_PREFIX = 'mock_';
 /** Native app login (link/poll): t.me/<bot>?start=req_<id> → bot approves, app polls. */
 export const APP_LOGIN_REQUEST_PREFIX = 'req_';
 export const STUDENT_GROUP_DEEP_LINK_RE = /^student_(\d+)_group_(.+)$/;
+/**
+ * Role ids are joined with `-`, not `,`: Telegram only delivers a `?start=`
+ * parameter made of base64url characters (`A-Z a-z 0-9 _ -`). A comma made the
+ * client drop the parameter outright, so every multi-role link silently opened
+ * the plain menu instead of the registration flow. See `signed-link.util.ts`.
+ */
 export const EMPLOYEE_DEEP_LINK_RE =
-  /^employee_(\d+)_roles_([\d,]+)_sig_([0-9a-f]+)$/i;
+  /^employee_(\d+)_roles_(\d+(?:-\d+)*)_sig_([0-9a-f]+)$/i;
+/** Separator between role ids inside an employee deep-link payload. */
+export const EMPLOYEE_ROLE_SEPARATOR = '-';
 
 export const TEACHER_ROLE_ID = 4;
 export const VALID_ROLE_IDS = [1, 2, 3, 4, 5] as const;

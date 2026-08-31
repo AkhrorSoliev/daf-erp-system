@@ -18,6 +18,7 @@ import {
   STUDENT_DEEP_LINK_PREFIX,
   STUDENT_GROUP_DEEP_LINK_RE,
   EMPLOYEE_DEEP_LINK_RE,
+  EMPLOYEE_ROLE_SEPARATOR,
   MOCK_EXAM_DEEP_LINK_PREFIX,
   APP_LOGIN_REQUEST_PREFIX,
   VALID_ROLE_IDS,
@@ -299,13 +300,13 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      // employee_{branchId}_roles_{id1,id2,...}_sig_{hmac} — xodim sifatida ro'yxatdan o'tish
+      // employee_{branchId}_roles_{id1-id2-...}_sig_{hmac} — xodim sifatida ro'yxatdan o'tish
       const employeeMatch = payload.match(EMPLOYEE_DEEP_LINK_RE);
       if (employeeMatch) {
         ctx.session.processing = true;
         const branchId = Number(employeeMatch[1]);
         const rawRoleIds = employeeMatch[2]
-          .split(',')
+          .split(EMPLOYEE_ROLE_SEPARATOR)
           .map((id) => Number(id))
           .filter(
             (id) =>
