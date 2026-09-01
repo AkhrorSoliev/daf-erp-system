@@ -11,18 +11,17 @@ import {
   type MultiSelectOption,
 } from "@/components/ui/multi-select-combobox";
 
+const OUTCOME_OPTIONS: MultiSelectOption[] = [
+  { value: "success", label: "Muvaffaqiyatli" },
+  { value: "pending", label: "Kutilmoqda" },
+  { value: "rejected", label: "Xavfsizlik xatosi" },
+];
+
 const PROVIDER_OPTIONS: MultiSelectOption[] = [
   { value: "PAYME", label: "Payme" },
   { value: "CLICK", label: "Click" },
   { value: "UZUM", label: "Uzum" },
 ];
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -35,8 +34,8 @@ interface GatewayEventsFilterBarProps {
   onSearchChange: (value: string) => void;
   provider: string[];
   onProviderChange: (value: string[]) => void;
-  outcomeFilter: string;
-  onOutcomeFilterChange: (value: string) => void;
+  outcomeFilter: string[];
+  onOutcomeFilterChange: (value: string[]) => void;
   startDate: Date | undefined;
   onStartDateChange: (date: Date | undefined) => void;
   endDate: Date | undefined;
@@ -86,17 +85,14 @@ export function GatewayEventsFilterBar({
           className="w-[200px]"
         />
 
-        <Select value={outcomeFilter} onValueChange={onOutcomeFilterChange}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha natijalar</SelectItem>
-            <SelectItem value="success">Muvaffaqiyatli</SelectItem>
-            <SelectItem value="pending">Kutilmoqda</SelectItem>
-            <SelectItem value="rejected">Xavfsizlik xatosi</SelectItem>
-          </SelectContent>
-        </Select>
+        <MultiSelectCombobox
+          options={OUTCOME_OPTIONS}
+          selected={outcomeFilter}
+          onChange={onOutcomeFilterChange}
+          placeholder="Barcha natijalar"
+          searchPlaceholder="Natija qidirish..."
+          className="w-[200px]"
+        />
       </div>
 
       {/* Qator 2: sana oralig'i + texnik so'rovlar + tozalash */}

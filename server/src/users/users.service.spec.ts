@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
 import { UserStatus } from '@prisma/client';
 import { UsersService } from './users.service';
+import { ROLELESS_TOKEN } from './dto/user-query.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { EntityHistoryService } from '../common/entity-history';
@@ -523,6 +524,51 @@ describe('UsersService — findAll companyId scoping', () => {
     const where = prisma.user.findMany.mock.calls[0][0].where;
     expect(where.isActive).toBeUndefined();
     expect(where.status).toBeUndefined();
+  });
+
+  it('bitta rol tanlansa `equals` bilan filtrlaydi', async () => {
+    await service.findAll({ user_type: ['Teacher'] } as any, 1001, null);
+    const where = prisma.user.findMany.mock.calls[0][0].where;
+    expect(where.roles).toEqual({ some: { role: { name: 'Teacher' } } });
+  });
+
+  it('bir nechta rol tanlansa `in` bilan filtrlaydi', async () => {
+    await service.findAll(
+      { user_type: ['Teacher', 'Cashier'] } as any,
+      1001,
+      null,
+    );
+    const where = prisma.user.findMany.mock.calls[0][0].where;
+    expect(where.roles).toEqual({
+      some: { role: { name: { in: ['Teacher', 'Cashier'] } } },
+    });
+  });
+
+  it("faqat «Rolsiz» tanlansa roli yo'q xodimlarni beradi", async () => {
+    await service.findAll({ user_type: [ROLELESS_TOKEN] } as any, 1001, null);
+    const where = prisma.user.findMany.mock.calls[0][0].where;
+    expect(where.roles).toEqual({ none: {} });
+  });
+
+  it('«Rolsiz» rol nomlari bilan birga tanlansa OR bilan birlashadi', async () => {
+    await service.findAll(
+      { user_type: ['Teacher', ROLELESS_TOKEN] } as any,
+      1001,
+      null,
+    );
+    const where = prisma.user.findMany.mock.calls[0][0].where;
+    // Filial qamrovi allaqachon AND ichida — rol sharti unga QO'SHILADI,
+    // uni almashtirmaydi.
+    expect(where.AND).toEqual([
+      // Filialsiz qamrov (CEO) bo'sh shart beradi.
+      {},
+      {
+        OR: [
+          { roles: { some: { role: { name: 'Teacher' } } } },
+          { roles: { none: {} } },
+        ],
+      },
+    ]);
   });
 
   it('restricts to ACTIVE users when active_only is set (assignee dropdowns)', async () => {

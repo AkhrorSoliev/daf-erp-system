@@ -75,9 +75,22 @@ const ROLE_VARIANTS: Record<string, "default" | "secondary" | "outline"> = {
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
-const ROLE_FILTER_OPTIONS: MultiSelectOption[] = Object.entries(ROLE_LABELS).map(
-  ([value, label]) => ({ value, label }),
-);
+/**
+ * Bu filtr ROL bo'yicha qidiradi, lavozim bo'yicha emas — jadvaldagi ustun esa
+ * lavozimni ko'rsatadi (`positionLabel`, lavozimi yo'qlar uchun rol nomiga
+ * qaytadi). Ilgari u «Barcha lavozimlar» deb atalardi va shu ikkovini
+ * chalkashtirardi.
+ *
+ * `__roleless` rol nomi emas, belgi: rolsiz xodim (farrosh, qorovul) ataylab
+ * mavjud va rol nomlari ro'yxatidagi hech qaysi variantga tushmaydi, ya'ni usiz
+ * uni filtr orqali topib bo'lmasdi.
+ */
+const ROLELESS_TOKEN = "__roleless";
+
+const ROLE_FILTER_OPTIONS: MultiSelectOption[] = [
+  ...Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label })),
+  { value: ROLELESS_TOKEN, label: "Rolsiz" },
+];
 
 const filtersSchema = {
   search: { type: "string" as const, defaultValue: "" },
@@ -224,8 +237,8 @@ export function EmployeesSettingsClient() {
           options={ROLE_FILTER_OPTIONS}
           selected={filters.role}
           onChange={(next) => setUrlFilters({ role: next, page: 1 })}
-          placeholder="Barcha lavozimlar"
-          searchPlaceholder="Lavozim qidirish..."
+          placeholder="Barcha rollar"
+          searchPlaceholder="Rol qidirish..."
           className="w-full sm:w-44"
         />
       </div>

@@ -281,6 +281,41 @@ describe('GatewayEventsService', () => {
       );
     });
 
+    it("bitta natija tanlansa uning kompozit shartini qo'yadi", async () => {
+      prisma.paymentGatewayEvent.findMany.mockResolvedValue([]);
+      prisma.paymentGatewayEvent.count.mockResolvedValue(0);
+
+      await service.findAll({ ...baseFilters, outcome: ['pending'] });
+
+      const where = prisma.paymentGatewayEvent.findMany.mock.calls[0][0].where;
+      expect(where.AND).toEqual([{ processed: false, signatureValid: true }]);
+    });
+
+    it('bir nechta natija OR bilan birlashadi', async () => {
+      prisma.paymentGatewayEvent.findMany.mockResolvedValue([]);
+      prisma.paymentGatewayEvent.count.mockResolvedValue(0);
+
+      await service.findAll({
+        ...baseFilters,
+        outcome: ['success', 'rejected'],
+      });
+
+      const where = prisma.paymentGatewayEvent.findMany.mock.calls[0][0].where;
+      expect(where.AND).toEqual([
+        { OR: [{ processed: true }, { signatureValid: false }] },
+      ]);
+    });
+
+    it("natija tanlanmasa AND umuman qo'shilmaydi", async () => {
+      prisma.paymentGatewayEvent.findMany.mockResolvedValue([]);
+      prisma.paymentGatewayEvent.count.mockResolvedValue(0);
+
+      await service.findAll({ ...baseFilters, outcome: [] });
+
+      const where = prisma.paymentGatewayEvent.findMany.mock.calls[0][0].where;
+      expect(where.AND).toBeUndefined();
+    });
+
     it('applies date range filter', async () => {
       prisma.paymentGatewayEvent.findMany.mockResolvedValue([]);
       prisma.paymentGatewayEvent.count.mockResolvedValue(0);

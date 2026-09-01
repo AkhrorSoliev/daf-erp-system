@@ -3,6 +3,7 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -12,7 +13,21 @@ import {
 import { PaymentMethod } from '@prisma/client';
 import { toStringArray } from '../../common/dto/to-array';
 
+/**
+ * "Natija" filtri variantlari. Har biri ikki ustun ustidagi KOMPOZIT shart,
+ * ustun qiymati emas — shuning uchun ular `in` bilan emas, OR bilan
+ * birlashadi (`gateway-events.service.ts` dagi `outcomeWhere`).
+ */
+export const GATEWAY_OUTCOMES = ['success', 'pending', 'rejected'] as const;
+export type GatewayOutcome = (typeof GATEWAY_OUTCOMES)[number];
+
 export class GatewayEventsQueryDto {
+  @IsOptional()
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsIn(GATEWAY_OUTCOMES, { each: true })
+  outcome?: GatewayOutcome[];
+
   @IsOptional()
   @Transform(({ value }) => toStringArray(value))
   @IsArray()
