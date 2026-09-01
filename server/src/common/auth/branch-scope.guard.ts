@@ -65,10 +65,24 @@ export interface BranchScopedRequest extends Request {
  * ceiling is applied afterwards regardless.
  */
 function readRequestedBranchId(req: BranchScopedRequest): number | null {
+  // The QUERY wins over the header, and the order matters.
+  //
+  // The header is ambient: the client attaches the branch switcher's selection
+  // to every request. A query parameter is the opposite — one page naming one
+  // branch for one request, which is what the report pages' own "Barcha
+  // filiallar" dropdown sends. Reading the header first made that dropdown
+  // decorative: with the switcher on Toshkent, picking Namangan on
+  // /reports/departed-students still rendered Toshkent's numbers under a
+  // control that said Namangan.
+  //
+  // This cannot widen anything. Whatever is read here is only a REQUEST; the
+  // caller's ceiling is intersected with it afterwards, so a parameter naming a
+  // branch outside the ceiling resolves to `[]` (nothing) rather than to that
+  // branch.
   const raw =
-    req.headers?.['x-branch-id'] ??
     (req.query as Record<string, unknown> | undefined)?.branch_id ??
-    (req.query as Record<string, unknown> | undefined)?.branchId;
+    (req.query as Record<string, unknown> | undefined)?.branchId ??
+    req.headers?.['x-branch-id'];
 
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (value == null || value === '' || value === 'all') return null;

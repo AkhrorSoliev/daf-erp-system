@@ -91,12 +91,44 @@ describe('BranchScopeGuard', () => {
       expect(scope).toEqual([]);
     });
 
-    it('prefers the header over the query parameter', async () => {
+    it('prefers the QUERY parameter over the header', async () => {
+      // The header is ambient — the client attaches the branch switcher's
+      // selection to every request. A query parameter is one page naming one
+      // branch for one request, so it is the more specific signal and wins.
+      //
+      // Reading the header first made the report pages' own branch dropdown
+      // decorative: with the switcher on one branch, picking another on
+      // /reports/departed-students still rendered the switcher's branch under a
+      // control naming the one that was picked.
+      //
+      // This is also the STRICTER order. Here the query names a branch outside
+      // the director's ceiling, so it resolves to nothing rather than quietly
+      // serving branch 2 — the same "refuse rather than default" rule the rest
+      // of this guard follows.
       const scope = await scopeFor(namanganDirector, {
         headers: { 'x-branch-id': '2' },
         query: { branch_id: '1' },
       });
+      expect(scope).toEqual([]);
+    });
+
+    it('falls back to the header when the query names no branch', async () => {
+      const scope = await scopeFor(namanganDirector, {
+        headers: { 'x-branch-id': '2' },
+        query: { page: '1' },
+      });
       expect(scope).toEqual([2]);
+    });
+
+    it('a query parameter can NARROW but never WIDEN the ceiling', async () => {
+      // The whole point: whatever is read is only a request. A director naming
+      // a branch they may not see gets nothing, not that branch.
+      expect(
+        await scopeFor(namanganDirector, { query: { branchId: '1' } }),
+      ).toEqual([]);
+      expect(
+        await scopeFor(namanganDirector, { query: { branchId: '2' } }),
+      ).toEqual([2]);
     });
 
     it('merges mainBranch and UserBranch', async () => {
