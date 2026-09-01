@@ -355,10 +355,6 @@ Some filters stay single-choice on purpose:
   one" excludes debtors who promised nothing, so it is not the same as no
   filter. That difference is the test — if selecting everything equals
   selecting nothing, leave it single.)
-- **One selection that maps to several backend parameters** — until the
-  grouping is written properly. The gateway-events **«Natija»** filter
-  (`processed` + `signatureValid`) is still in this state.
-
 The leads **«Holati»** filter is the worked example of doing that grouping
 right (`lead-filter-schema.ts`, `leadHolatiParams`). Two rules make it work,
 and both are load-bearing:
@@ -375,6 +371,16 @@ and both are load-bearing:
   dropdown offers 2 of `LeadStatus`'s 6 values, so ticking both must still
   filter, or `LOST` and `ARCHIVED` leads silently reappear. `EXHAUSTIVE_PARAM_KEYS`
   is what encodes that difference; a test covers both halves.
+
+The gateway-events **«Natija»** filter looks similar but is NOT the same shape,
+and reaching for the leads pattern there would be wrong. Each outcome is a
+*composite* condition over two columns (`success` = processed; `pending` =
+not processed AND signature valid; `rejected` = signature invalid), so it
+follows the **students «Holat»** pattern instead: OR the fragments, nest under
+AND. That semantics now lives on the server (`outcome` param) rather than in
+the client assembling two params — the old client-side shape could not express
+two outcomes at once. The `processed` / `signatureValid` params stay on the DTO
+so existing links keep working.
 
 ### URL-Persisted Filter State
 

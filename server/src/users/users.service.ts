@@ -6,7 +6,8 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
-import { UserQueryDto } from './dto/user-query.dto';
+import { ROLELESS_TOKEN, UserQueryDto } from './dto/user-query.dto';
+import { equalsOrIn } from '../common/dto/to-array';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -305,15 +306,28 @@ export class UsersService {
       where.status = UserStatus.ACTIVE;
     }
 
-    if (user_type) {
-      const types = user_type
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean);
-      if (types.length === 1) {
-        where.roles = { some: { role: { name: types[0] } } };
-      } else if (types.length > 1) {
-        where.roles = { some: { role: { name: { in: types } } } };
+    // Rol filtri. `ROLELESS_TOKEN` rol nomi emas — u butunlay boshqa shakldagi
+    // shart (`roles: { none: {} }`), shuning uchun nomlar bilan `in` ichida
+    // aralashtirib bo'lmaydi va ikkovi OR bilan birlashadi.
+    if (user_type?.length) {
+      const wantsRoleless = user_type.includes(ROLELESS_TOKEN);
+      const names = user_type.filter((t) => t !== ROLELESS_TOKEN);
+
+      const fragments: Prisma.UserWhereInput[] = [];
+      if (names.length > 0) {
+        fragments.push({
+          roles: { some: { role: { name: equalsOrIn(names) } } },
+        });
+      }
+      if (wantsRoleless) fragments.push({ roles: { none: {} } });
+
+      if (fragments.length === 1) {
+        Object.assign(where, fragments[0]);
+      } else if (fragments.length > 1) {
+        where.AND = [
+          ...((where.AND as Prisma.UserWhereInput[]) ?? []),
+          { OR: fragments },
+        ];
       }
     }
 

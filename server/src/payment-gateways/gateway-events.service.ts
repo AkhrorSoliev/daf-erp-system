@@ -2,10 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PaymentMethod, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { equalsOrIn } from '../common/dto/to-array';
+import type { GatewayOutcome } from './dto/gateway-events-query.dto';
 
 export interface GatewayEventFilters {
   companyId: number;
   provider?: PaymentMethod[];
+  outcome?: GatewayOutcome[];
   processed?: boolean;
   signatureValid?: boolean;
   search?: string;
@@ -21,6 +23,21 @@ export interface GatewayEventFilters {
  * Enriches events with student info by joining on the provider's transaction table
  * (PaymeTransaction/ClickTransaction) via externalId.
  */
+/**
+ * Bitta "Natija" varianti uchun `where` bo'lagi.
+ *
+ * `pending` — imzosi to'g'ri, lekin hali qayta ishlanmagan hodisa; `rejected` —
+ * imzo tekshiruvidan o'tmagani (xavfsizlik xatosi), u qayta ishlangan-
+ * ishlanmaganidan qat'i nazar.
+ */
+function outcomeWhere(
+  outcome: GatewayOutcome,
+): Prisma.PaymentGatewayEventWhereInput {
+  if (outcome === 'success') return { processed: true };
+  if (outcome === 'pending') return { processed: false, signatureValid: true };
+  return { signatureValid: false };
+}
+
 @Injectable()
 export class GatewayEventsService {
   constructor(private prisma: PrismaService) {}
@@ -105,6 +122,18 @@ export class GatewayEventsService {
         },
       }),
     };
+
+    // "Natija" — har bir variant `processed` va `signatureValid` ustidagi butun
+    // bir shart, shuning uchun bir nechtasi OR bilan birlashadi. Ilgari bu
+    // moslashtirish klientda edi va u yerdan ikkita alohida parametr kelardi;
+    // ikki variantni birga so'rashning iloji yo'q edi.
+    if (filters.outcome?.length) {
+      const fragments = filters.outcome.map(outcomeWhere);
+      where.AND = [
+        ...((where.AND as Prisma.PaymentGatewayEventWhereInput[]) ?? []),
+        fragments.length === 1 ? fragments[0] : { OR: fragments },
+      ];
+    }
 
     // Two parallel reads — no need for $transaction (atomicity isn't required for listing).
     // Neon serverless can't reliably start new interactive transactions under load.
