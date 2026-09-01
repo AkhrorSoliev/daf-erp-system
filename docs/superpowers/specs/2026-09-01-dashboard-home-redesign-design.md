@@ -75,8 +75,13 @@ jadval komponentini o'z ichida chizadi, shunda manzil ham, xatcho'plar ham buzil
 
 **Qoida:** yangi «yig'im foizi» kiritilmaydi. Tizimda yig'im foizining yagona ta'rifi bor
 (Telegram hisoboti va `/payments/overview` uchun umumiy `collectionPct`); bosh sahifada
-unga zid ikkinchi foiz paydo bo'lmasligi uchun 2-kartada foiz emas, **summa** ko'rsatiladi
-(ost-satr: «hozirgacha yig'ilgan»).
+unga zid ikkinchi foiz paydo bo'lmasligi uchun 2-kartada foiz emas, **summa** ko'rsatiladi.
+
+**Qoida:** kartalar ustida ayirish/bo'lish qilinmaydi. «Oy oxiriga kutilyapti» — darslar
+qiymati bo'yicha prognoz, «Bu oy tushum» — kassa. Ikkalasi turli bazada, shuning uchun
+ularning farqi hisoblanmaydi. Har karta faqat o'z ost-satrini ko'rsatadi:
+tushum → «N ta to'lov», kutilyapti → «prognoz», qarzdorlik → «N ta qarzdor»,
+foyda → hisoblash asosi.
 
 **Qoida:** `netProfitBasis === 'cash'` bo'lsa karta sarlavhasi «Foyda (kassa asosida)» ga
 o'zgaradi va tooltip sababni aytadi. Bu `/payments/overview` dagi mavjud xatti-harakatning
