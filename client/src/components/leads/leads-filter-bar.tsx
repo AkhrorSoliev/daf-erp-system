@@ -5,15 +5,6 @@ import { Search, X } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   Tooltip,
@@ -22,7 +13,10 @@ import {
 } from "@/components/ui/tooltip";
 import api from "@/lib/api";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
+import {
+  MultiSelectCombobox,
+  type MultiSelectOption,
+} from "@/components/ui/multi-select-combobox";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { useLeadsBoard } from "@/hooks/use-leads-board";
 import {
@@ -38,6 +32,18 @@ interface FilterSource {
   name: string;
   deleted: boolean;
 }
+
+/**
+ * Variantlar guruh tartibida tekislanadi — `MultiSelectCombobox` sarlavhani
+ * guruh o'zgargan joyda chizadi, shuning uchun tartib muhim.
+ */
+const HOLATI_OPTIONS: MultiSelectOption[] = LEAD_HOLATI_GROUPS.flatMap((group) =>
+  LEAD_HOLATI_OPTIONS.filter((o) => o.group === group).map((o) => ({
+    value: o.value,
+    label: o.label,
+    group,
+  })),
+);
 
 export function LeadsFilterBar() {
   const { filters, setFilters, resetFilters } = useUrlFilters(
@@ -77,27 +83,14 @@ export function LeadsFilterBar() {
         />
       </div>
 
-      <Select
-        value={filters.holati}
-        onValueChange={(value) => setFilters({ holati: value, page: 1 })}
-      >
-        <SelectTrigger className="w-full sm:w-56">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Barcha holatlar</SelectItem>
-          {LEAD_HOLATI_GROUPS.map((group) => (
-            <SelectGroup key={group}>
-              <SelectLabel>{group}</SelectLabel>
-              {LEAD_HOLATI_OPTIONS.filter((o) => o.group === group).map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          ))}
-        </SelectContent>
-      </Select>
+      <MultiSelectCombobox
+        options={HOLATI_OPTIONS}
+        selected={filters.holati}
+        onChange={(next) => setFilters({ holati: next, page: 1 })}
+        placeholder="Barcha holatlar"
+        searchPlaceholder="Holat qidirish..."
+        className="w-full sm:w-56"
+      />
 
       <MultiSelectCombobox
         options={sources.map((x) => ({

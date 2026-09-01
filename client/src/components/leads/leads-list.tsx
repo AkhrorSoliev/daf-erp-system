@@ -46,7 +46,7 @@ import {
   type LeadStatus,
 } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
-import { LEAD_FILTER_SCHEMA, LEAD_HOLATI_OPTIONS } from "./lead-filter-schema";
+import { LEAD_FILTER_SCHEMA, leadHolatiParams } from "./lead-filter-schema";
 
 interface LeadListRow {
   id: string;
@@ -87,12 +87,8 @@ export function LeadsList() {
       if (filters.search.trim()) params.search = filters.search.trim();
       params.sourceId = listParam(filters.sourceId);
       params.columnId = listParam(filters.columnId);
-      // The unified "Holati" filter maps its token to exactly one backend param
-      // (stage / contact / comment).
-      if (filters.holati !== "all") {
-        const opt = LEAD_HOLATI_OPTIONS.find((o) => o.value === filters.holati);
-        if (opt) params[opt.param.key] = opt.param.value;
-      }
+      // Birlashgan «Holati» filtri: bir guruh ichi YOKI, guruhlar orasi VA.
+      Object.assign(params, leadHolatiParams(filters.holati));
       if (filters.startDate) params.startDate = filters.startDate;
       if (filters.endDate) params.endDate = filters.endDate;
 

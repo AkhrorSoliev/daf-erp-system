@@ -4,9 +4,9 @@
  */
 export const LEAD_FILTER_SCHEMA = {
   search: { type: "string" as const, defaultValue: "" },
-  // Single "Holati" filter merging funnel stage + contact + comment presence.
-  // One token at a time (see LEAD_HOLATI_OPTIONS); "all" = no filter.
-  holati: { type: "string" as const, defaultValue: "all" },
+  // Unified "Holati" filter merging funnel stage + contact + comment presence.
+  // Several tokens at once (see LEAD_HOLATI_OPTIONS); empty = no filter.
+  holati: { type: "array" as const, defaultValue: [] as string[] },
   sourceId: { type: "array" as const, defaultValue: [] as string[] },
   columnId: { type: "array" as const, defaultValue: [] as string[] },
   startDate: { type: "string" as const, defaultValue: "" },
@@ -17,7 +17,7 @@ export const LEAD_FILTER_SCHEMA = {
 
 export interface LeadFilterValues {
   search: string;
-  holati: string;
+  holati: string[];
   sourceId: string[];
   columnId: string[];
   startDate: string;
@@ -31,6 +31,9 @@ export interface LeadFilterValues {
  * one backend query param so the single control drives stage / contact / comment
  * filtering. Grouped in the dropdown by `group`. Shared by the filter bar (labels)
  * and the list (param translation) so the two never drift.
+ *
+ * Ko'p tanlovda ma'no: BITTA guruh ichida YOKI, guruhlar orasida VA. Ya'ni
+ * «Yangi» + «Aloqaga chiqilmagan» = hali qo'ng'iroq qilinmagan yangi lidlar.
  */
 export interface LeadHolatiOption {
   value: string;
@@ -84,10 +87,54 @@ export const LEAD_HOLATI_OPTIONS: LeadHolatiOption[] = [
 export function leadFiltersActive(f: LeadFilterValues): boolean {
   return (
     f.search !== "" ||
-    f.holati !== "all" ||
+    f.holati.length > 0 ||
     f.sourceId.length > 0 ||
     f.columnId.length > 0 ||
     f.startDate !== "" ||
     f.endDate !== ""
   );
+}
+
+/**
+ * Ikki qiymatli, bir-birini TO'LIQ to'ldiruvchi o'lchamlar: ikkovi tanlansa
+ * hech bir lid chetda qolmaydi, shuning uchun parametr yuborilmaydi.
+ *
+ * `status` ataylab bu ro'yxatda YO'Q. Dropdown faqat ikkita bosqichni
+ * (`NEW`, `CONVERTED`) taklif qiladi, `LeadStatus` da esa oltita qiymat bor —
+ * ikkovini tanlash «hamma lid» degani emas, u `TRIAL`, `LOST` va `ARCHIVED`
+ * ni chetlab o'tadi. Uni ham "to'liq" deb hisoblash yo'qotilgan lidlarni
+ * jimgina ro'yxatga qaytargan bo'lardi.
+ */
+const EXHAUSTIVE_PARAM_KEYS = new Set(["called", "hasComments"]);
+
+/**
+ * Tanlangan tokenlarni backend parametrlariga aylantiradi.
+ *
+ * Bitta guruh ichidagi tanlovlar bitta parametrga vergul bilan qo'shiladi
+ * (YOKI), turli guruhlar alohida parametr bo'ladi va server ularni AND qiladi.
+ */
+export function leadHolatiParams(
+  selected: readonly string[],
+): Partial<Record<"status" | "called" | "hasComments", string>> {
+  const byKey = new Map<string, string[]>();
+  for (const token of selected) {
+    const opt = LEAD_HOLATI_OPTIONS.find((o) => o.value === token);
+    if (!opt) continue;
+    const values = byKey.get(opt.param.key) ?? [];
+    values.push(opt.param.value);
+    byKey.set(opt.param.key, values);
+  }
+
+  const params: Partial<Record<"status" | "called" | "hasComments", string>> =
+    {};
+  for (const [key, values] of byKey) {
+    if (EXHAUSTIVE_PARAM_KEYS.has(key)) {
+      const total = LEAD_HOLATI_OPTIONS.filter(
+        (o) => o.param.key === key,
+      ).length;
+      if (values.length >= total) continue; // o'lcham to'liq — filtrsizlik
+    }
+    params[key as "status" | "called" | "hasComments"] = values.join(",");
+  }
+  return params;
 }

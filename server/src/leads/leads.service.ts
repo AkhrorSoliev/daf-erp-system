@@ -107,7 +107,7 @@ export class LeadsService {
     if (query.sectionId) where.sectionId = query.sectionId;
     if (query.columnId?.length)
       where.section = { columnId: equalsOrIn(query.columnId) };
-    if (query.status) where.statusEnum = query.status;
+    if (query.status?.length) where.statusEnum = equalsOrIn(query.status);
 
     // Contact marker filter — leads already called vs not yet called.
     if (query.called === 'true') where.calledAt = { not: null };

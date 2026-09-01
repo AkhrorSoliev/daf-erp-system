@@ -22,6 +22,13 @@ export interface MultiSelectOption {
   initials?: string;
   /** Yorliq o'rniga chiziladigan belgi — masalan rangli daraja nishoni. */
   leading?: ReactNode;
+  /**
+   * Ro'yxatda ustiga sarlavha qo'yiladigan guruh nomi. Guruhlar tanlov
+   * MA'NOSINI o'zgartirganda kerak bo'ladi — masalan lidlarda bitta guruh
+   * ichidagi tanlovlar YOKI bilan, guruhlar orasidagilari VA bilan
+   * birlashadi; sarlavhasiz buni ro'yxatdan o'qib bo'lmaydi.
+   */
+  group?: string;
 }
 
 interface MultiSelectComboboxProps {
@@ -160,11 +167,19 @@ export function MultiSelectCombobox({
               Topilmadi
             </div>
           ) : (
-            filtered.map((option) => {
+            filtered.map((option, index) => {
+              const groupChanged =
+                option.group !== undefined &&
+                option.group !== filtered[index - 1]?.group;
               const isSelected = selected.includes(option.value);
               return (
+                <div key={option.value}>
+                  {groupChanged && (
+                    <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">
+                      {option.group}
+                    </div>
+                  )}
                 <button
-                  key={option.value}
                   type="button"
                   onClick={() => toggle(option.value)}
                   className={cn(
@@ -197,6 +212,7 @@ export function MultiSelectCombobox({
                     </span>
                   )}
                 </button>
+                </div>
               );
             })
           )}

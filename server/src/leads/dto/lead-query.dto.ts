@@ -33,9 +33,12 @@ export class LeadQueryDto extends PaginationDto {
   @IsString()
   sectionId?: string;
 
+  // Bosqich filtri — bir nechta bosqich birga tanlanishi mumkin.
   @IsOptional()
-  @IsEnum(LeadStatus)
-  status?: LeadStatus;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsEnum(LeadStatus, { each: true })
+  status?: LeadStatus[];
 
   // "true" → only leads already marked called (calledAt set); "false" → only
   // not-yet-called leads. Omitted → no contact filter.
