@@ -125,6 +125,60 @@ describe('LeadsService', () => {
   });
 
   describe('findAll', () => {
+    it('bir nechta bosqich tanlansa `in` bilan filtrlaydi', async () => {
+      prisma.lead.findMany.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+
+      await service.findAll(
+        { status: ['NEW', 'CONVERTED'] as any },
+        1001,
+        null,
+      );
+
+      expect(prisma.lead.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            statusEnum: { in: ['NEW', 'CONVERTED'] },
+          }),
+        }),
+      );
+    });
+
+    it("bosqich bilan aloqa filtri BIRGA qo'llanadi (o'lchamlar orasida AND)", async () => {
+      prisma.lead.findMany.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+
+      await service.findAll(
+        { status: ['NEW'] as any, called: 'false' },
+        1001,
+        null,
+      );
+
+      const where = prisma.lead.findMany.mock.calls[0][0].where;
+      expect(where.statusEnum).toBe('NEW');
+      expect(where.calledAt).toBeNull();
+    });
+
+    it('bir nechta ustun va manba tanlansa `in` bilan filtrlaydi', async () => {
+      prisma.lead.findMany.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+
+      await service.findAll(
+        { columnId: ['col-1', 'col-2'], sourceId: ['s-1', 's-2'] },
+        1001,
+        null,
+      );
+
+      expect(prisma.lead.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            section: { columnId: { in: ['col-1', 'col-2'] } },
+            sourceId: { in: ['s-1', 's-2'] },
+          }),
+        }),
+      );
+    });
+
     it('applies search, status and column filters with pagination', async () => {
       prisma.lead.findMany.mockResolvedValue([]);
       prisma.lead.count.mockResolvedValue(0);
@@ -132,8 +186,8 @@ describe('LeadsService', () => {
       const result = await service.findAll(
         {
           search: 'Aziz',
-          status: 'NEW' as any,
-          columnId: 'col-1',
+          status: ['NEW'] as any,
+          columnId: ['col-1'],
           page: 2,
           pageSize: 20,
         },

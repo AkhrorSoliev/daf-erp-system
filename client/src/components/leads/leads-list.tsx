@@ -39,14 +39,14 @@ import {
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhone } from "@/lib/format-utils";
-import { useUrlFilters } from "@/hooks/use-url-filters";
+import { listParam, useUrlFilters } from "@/hooks/use-url-filters";
 import {
   LEAD_STATUS_LABELS,
   useLeadsBoard,
   type LeadStatus,
 } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
-import { LEAD_FILTER_SCHEMA, LEAD_HOLATI_OPTIONS } from "./lead-filter-schema";
+import { LEAD_FILTER_SCHEMA, leadHolatiParams } from "./lead-filter-schema";
 
 interface LeadListRow {
   id: string;
@@ -80,19 +80,15 @@ export function LeadsList() {
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string | number> = {
+      const params: Record<string, string | number | undefined> = {
         page: filters.page,
         pageSize: filters.pageSize,
       };
       if (filters.search.trim()) params.search = filters.search.trim();
-      if (filters.sourceId !== "all") params.sourceId = filters.sourceId;
-      if (filters.columnId !== "all") params.columnId = filters.columnId;
-      // The unified "Holati" filter maps its token to exactly one backend param
-      // (stage / contact / comment).
-      if (filters.holati !== "all") {
-        const opt = LEAD_HOLATI_OPTIONS.find((o) => o.value === filters.holati);
-        if (opt) params[opt.param.key] = opt.param.value;
-      }
+      params.sourceId = listParam(filters.sourceId);
+      params.columnId = listParam(filters.columnId);
+      // Birlashgan «Holati» filtri: bir guruh ichi YOKI, guruhlar orasi VA.
+      Object.assign(params, leadHolatiParams(filters.holati));
       if (filters.startDate) params.startDate = filters.startDate;
       if (filters.endDate) params.endDate = filters.endDate;
 

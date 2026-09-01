@@ -146,7 +146,7 @@ export class ReportsDepartedListsService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;

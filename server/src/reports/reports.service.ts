@@ -562,7 +562,7 @@ export class ReportsService {
       groupIds?: string[];
       teacherIds?: number[];
       methods?: ('CASH' | 'PAYME' | 'CLICK' | 'UZUM' | 'TRANSFER')[];
-      courseId?: string;
+      courseId?: string[];
       startDate?: string;
       endDate?: string;
       page?: number;
@@ -607,7 +607,7 @@ export class ReportsService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;
@@ -639,7 +639,7 @@ export class ReportsService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;
@@ -651,7 +651,7 @@ export class ReportsService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;
@@ -663,7 +663,7 @@ export class ReportsService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;
@@ -677,7 +677,7 @@ export class ReportsService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;
@@ -690,7 +690,7 @@ export class ReportsService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;

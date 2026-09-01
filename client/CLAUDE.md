@@ -343,11 +343,38 @@ order, the branch switcher).
 - Keep a plain `<Select>` for one-at-a-time dimensions and for controls that are
   not filters (page size).
 
-Two filters are deliberately still single-choice because one selection maps to
-several backend parameters rather than one: the leads **«Holati»** filter
-(stage / contacted / commented) and the gateway-events **«Natija»** filter
-(`processed` + `signatureValid`). Making those multi means OR-composing across
-dimensions on the server — do that properly or leave them alone.
+Some filters stay single-choice on purpose:
+
+- **A dimension that admits one answer**: a year, a month, a period preset, a
+  date range, a sort order, a view toggle, page size. "2025 and 2026 together"
+  is not a report anyone asked for.
+- **A two-option dimension where picking both equals picking neither.** The
+  debt page's debtor-status tiles collapse to `active` / `inactive`, so
+  multi-select there costs a click and buys nothing. (Contrast the debt
+  **«Va'da»** filter, which IS multi: "has an open promise" + "has a broken
+  one" excludes debtors who promised nothing, so it is not the same as no
+  filter. That difference is the test — if selecting everything equals
+  selecting nothing, leave it single.)
+- **One selection that maps to several backend parameters** — until the
+  grouping is written properly. The gateway-events **«Natija»** filter
+  (`processed` + `signatureValid`) is still in this state.
+
+The leads **«Holati»** filter is the worked example of doing that grouping
+right (`lead-filter-schema.ts`, `leadHolatiParams`). Two rules make it work,
+and both are load-bearing:
+
+- **Within one group OR, across groups AND.** Selected tokens are bucketed by
+  the backend param they map to; each bucket becomes one comma-joined param,
+  and the server ANDs the params it receives. So «Yangi» + «Aloqaga
+  chiqilmagan» means *new leads that have not been called* — the combination
+  the page exists for.
+- **Dropping a fully-selected dimension is only valid when its options are
+  exhaustive.** `called` and `hasComments` are booleans: ticking both covers
+  every lead, so the param is omitted (sending both would AND two contrary
+  conditions and always return nothing). `status` is NOT exhaustive — the
+  dropdown offers 2 of `LeadStatus`'s 6 values, so ticking both must still
+  filter, or `LOST` and `ARCHIVED` leads silently reappear. `EXHAUSTIVE_PARAM_KEYS`
+  is what encodes that difference; a test covers both halves.
 
 ### URL-Persisted Filter State
 

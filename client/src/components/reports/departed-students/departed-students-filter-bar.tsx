@@ -32,7 +32,7 @@ export interface DepartedStudentsFilter {
   rangeStart: Date | null;
   rangeEnd: Date | null;
   branchId: number | null;
-  courseId: string | null;
+  courseId: string[];
   teacherIds: number[];
 }
 
@@ -48,7 +48,6 @@ interface Props {
 }
 
 const ALL_BRANCHES = "all";
-const ALL_COURSES = "all";
 
 const PRESET_LABELS: Record<MonthsPreset, string> = {
   current_month: "Joriy oy",
@@ -72,7 +71,7 @@ export function defaultFilter(): DepartedStudentsFilter {
     rangeStart: null,
     rangeEnd: null,
     branchId: null,
-    courseId: null,
+    courseId: [],
     teacherIds: [],
   };
 }
@@ -216,24 +215,17 @@ export function DepartedStudentsFilterBar({ value, onChange, options }: Props) {
         </SelectContent>
       </Select>
 
-      <Select
-        value={value.courseId ?? ALL_COURSES}
-        onValueChange={(v) =>
-          onChange({ ...value, courseId: v === ALL_COURSES ? null : v })
-        }
-      >
-        <SelectTrigger className="h-9 w-auto min-w-[160px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={ALL_COURSES}>Barcha kurslar</SelectItem>
-          {(options?.courses ?? []).map((c) => (
-            <SelectItem key={c.id} value={c.id}>
-              {c.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <MultiSelectCombobox
+        options={(options?.courses ?? []).map((c) => ({
+          value: c.id,
+          label: c.name,
+        }))}
+        selected={value.courseId}
+        onChange={(next) => onChange({ ...value, courseId: next })}
+        placeholder="Barcha kurslar"
+        searchPlaceholder="Kurs qidirish..."
+        className="w-auto min-w-[160px]"
+      />
 
       <MultiSelectCombobox
         options={teacherOptions}

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { buildDepartedEnrollmentWhere } from './shared/departed-filter';
+import { equalsOrIn } from '../common/dto/to-array';
 
 @Injectable()
 export class ReportsTeacherChangesService {
@@ -13,7 +14,7 @@ export class ReportsTeacherChangesService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;
@@ -26,7 +27,8 @@ export class ReportsTeacherChangesService {
 
     const groupFilter: any = { companyId, deletedAt: null };
     if (params.branchId !== undefined) groupFilter.branchId = params.branchId;
-    if (params.courseId) groupFilter.courseId = params.courseId;
+    if (params.courseId?.length)
+      groupFilter.courseId = equalsOrIn(params.courseId);
     if (params.teacherIds && params.teacherIds.length > 0) {
       groupFilter.teachers = {
         some: { teacherId: { in: params.teacherIds } },
@@ -111,7 +113,7 @@ export class ReportsTeacherChangesService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;

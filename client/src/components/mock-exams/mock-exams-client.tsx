@@ -14,14 +14,11 @@ import {
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  MultiSelectCombobox,
+  type MultiSelectOption,
+} from "@/components/ui/multi-select-combobox";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -42,21 +39,18 @@ import {
   type CreateExamPrefill,
 } from "./create-exam-drawer";
 
-const STATUS_FILTERS: Array<{ value: "all" | MockExamStatus; label: string }> =
+const STATUS_FILTERS: MultiSelectOption[] = (
   [
-    { value: "all", label: "Barcha holatlar" },
-    {
-      value: "REGISTRATION_OPEN",
-      label: MOCK_EXAM_STATUS_LABELS.REGISTRATION_OPEN,
-    },
-    {
-      value: "REGISTRATION_CLOSED",
-      label: MOCK_EXAM_STATUS_LABELS.REGISTRATION_CLOSED,
-    },
-    { value: "GRADING", label: MOCK_EXAM_STATUS_LABELS.GRADING },
-    { value: "ANNOUNCED", label: MOCK_EXAM_STATUS_LABELS.ANNOUNCED },
-    { value: "ARCHIVED", label: MOCK_EXAM_STATUS_LABELS.ARCHIVED },
-  ];
+    "REGISTRATION_OPEN",
+    "REGISTRATION_CLOSED",
+    "IN_PROGRESS",
+    "GRADING",
+    "ANNOUNCED",
+    "ARCHIVED",
+  ] as MockExamStatus[]
+)
+  .filter((v) => MOCK_EXAM_STATUS_LABELS[v] !== undefined)
+  .map((value) => ({ value, label: MOCK_EXAM_STATUS_LABELS[value] }));
 
 export function MockExamsClient() {
   const router = useRouter();
@@ -72,9 +66,7 @@ export function MockExamsClient() {
 
   // Filters — section grouping is intentionally not surfaced (backend
   // auto-assigns a default section; UX treats exams as a flat list).
-  const [statusFilter, setStatusFilter] = useState<"all" | MockExamStatus>(
-    "all",
-  );
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [search, setSearch] = useState("");
 
   // Revenue summary KPIs
@@ -112,7 +104,8 @@ export function MockExamsClient() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return exams.filter((e) => {
-      if (statusFilter !== "all" && e.status !== statusFilter) return false;
+      if (statusFilter.length > 0 && !statusFilter.includes(e.status))
+        return false;
       if (q && !e.title.toLowerCase().includes(q)) return false;
       return true;
     });
@@ -172,23 +165,14 @@ export function MockExamsClient() {
           placeholder="Nom bo'yicha qidirish..."
           className="w-64"
         />
-        <Select
-          value={statusFilter}
-          onValueChange={(v) =>
-            setStatusFilter(v as "all" | MockExamStatus)
-          }
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_FILTERS.map((f) => (
-              <SelectItem key={f.value} value={f.value}>
-                {f.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MultiSelectCombobox
+          options={STATUS_FILTERS}
+          selected={statusFilter}
+          onChange={setStatusFilter}
+          placeholder="Barcha holatlar"
+          searchPlaceholder="Holat qidirish..."
+          className="w-48"
+        />
       </div>
 
       {loading && !loaded ? (

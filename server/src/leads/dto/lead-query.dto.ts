@@ -1,12 +1,15 @@
 import {
+  IsArray,
   IsBooleanString,
   IsDateString,
   IsEnum,
   IsOptional,
   IsString,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { LeadStatus } from '@prisma/client';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { toStringArray } from '../../common/dto/to-array';
 
 export class LeadQueryDto extends PaginationDto {
   // Free-text search across first name, last name and phone.
@@ -15,20 +18,27 @@ export class LeadQueryDto extends PaginationDto {
   search?: string;
 
   @IsOptional()
-  @IsString()
-  sourceId?: string;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsString({ each: true })
+  sourceId?: string[];
 
   @IsOptional()
-  @IsString()
-  columnId?: string;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsString({ each: true })
+  columnId?: string[];
 
   @IsOptional()
   @IsString()
   sectionId?: string;
 
+  // Bosqich filtri — bir nechta bosqich birga tanlanishi mumkin.
   @IsOptional()
-  @IsEnum(LeadStatus)
-  status?: LeadStatus;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsEnum(LeadStatus, { each: true })
+  status?: LeadStatus[];
 
   // "true" → only leads already marked called (calledAt set); "false" → only
   // not-yet-called leads. Omitted → no contact filter.

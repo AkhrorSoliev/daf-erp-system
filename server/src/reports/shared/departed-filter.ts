@@ -1,14 +1,17 @@
+import { equalsOrIn } from '../../common/dto/to-array';
+
 export function buildDepartedEnrollmentWhere(
   companyId: number,
   params: {
     branchId?: number;
-    courseId?: string;
+    courseId?: string[];
     teacherIds?: number[];
   },
 ): any {
   const groupFilter: any = {};
   if (params.branchId !== undefined) groupFilter.branchId = params.branchId;
-  if (params.courseId) groupFilter.courseId = params.courseId;
+  if (params.courseId?.length)
+    groupFilter.courseId = equalsOrIn(params.courseId);
   if (params.teacherIds && params.teacherIds.length > 0) {
     groupFilter.teachers = {
       some: { teacherId: { in: params.teacherIds } },

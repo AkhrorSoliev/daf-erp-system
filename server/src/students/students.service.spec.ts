@@ -453,7 +453,7 @@ describe('StudentsService — status methods', () => {
   describe('findAll filters', () => {
     it('filters by level via enrollments.some.AND with group.level', async () => {
       await service.findAll(
-        { page: 1, pageSize: 10, level: 'B1' } as any,
+        { page: 1, pageSize: 10, level: ['B1'] } as any,
         1001,
         null,
       );

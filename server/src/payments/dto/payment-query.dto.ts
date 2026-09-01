@@ -1,7 +1,15 @@
-import { IsOptional, IsInt, IsEnum, IsString, IsIn } from 'class-validator';
-import { Type } from 'class-transformer';
+import {
+  IsOptional,
+  IsInt,
+  IsEnum,
+  IsString,
+  IsIn,
+  IsArray,
+} from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { PaymentMethod, PaymentStatus } from '@prisma/client';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { toStringArray } from '../../common/dto/to-array';
 
 export class PaymentQueryDto extends PaginationDto {
   @IsOptional()
@@ -47,9 +55,13 @@ export class PaymentQueryDto extends PaginationDto {
 
   // Debtors list: filter by payment-promise state.
   // has_open = has an active promise; overdue = has a broken promise.
+  // Ikkovi birga tanlanishi mumkin va bu filtrsizlik BILAN BIR XIL EMAS —
+  // umuman va'da bermagan qarzdor baribir ro'yxatdan tushib qoladi.
   @IsOptional()
-  @IsIn(['has_open', 'overdue'])
-  promise?: 'has_open' | 'overdue';
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsIn(['has_open', 'overdue'], { each: true })
+  promise?: ('has_open' | 'overdue')[];
 
   /**
    * Debtors list: student status. `'all'` (the default) lists every debtor

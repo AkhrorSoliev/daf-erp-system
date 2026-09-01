@@ -38,6 +38,18 @@ import { cn } from "@/lib/utils";
 import { DebtMonthsBadge } from "./debt-months-badge";
 import { monthLabel, monthShort } from "../salary-utils";
 import { SummaryCard } from "../summary-card";
+import {
+  MultiSelectCombobox,
+  type MultiSelectOption,
+} from "@/components/ui/multi-select-combobox";
+
+const STUDENT_STATUS_OPTIONS: MultiSelectOption[] = [
+  { value: "ACTIVE", label: "Faol" },
+  { value: "FROZEN", label: "Muzlatilgan" },
+  { value: "EXPELLED", label: "Chetlatilgan" },
+  { value: "GRADUATED", label: "Bitirgan" },
+  { value: "ARCHIVED", label: "Arxivlangan" },
+];
 
 export interface TopUpRow {
   student: {
@@ -160,7 +172,7 @@ export const ALL_MONTHS = "all";
  * the parent.
  */
 export function CenterTopUpContent({ month }: Props) {
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -194,8 +206,8 @@ export function CenterTopUpContent({ month }: Props) {
     // data — the flag they carry is simply stale — but this list exists to
     // answer "who do I ring", and they are not an answer to it.
     let all = (data?.data ?? []).filter(hasDebt);
-    if (statusFilter !== "all")
-      all = all.filter((r) => r.student.status === statusFilter);
+    if (statusFilter.length > 0)
+      all = all.filter((r) => statusFilter.includes(r.student.status));
     // Client-side, unlike the debtors tab next door: that list is paged by the
     // server, this one already holds every row, so filtering here is instant
     // and costs no request. Matches the three things the row actually shows —
@@ -243,7 +255,7 @@ export function CenterTopUpContent({ month }: Props) {
       ),
     [rows],
   );
-  const isFiltered = statusFilter !== "all" || search.trim() !== "";
+  const isFiltered = statusFilter.length > 0 || search.trim() !== "";
 
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const pageRows = rows.slice((page - 1) * pageSize, page * pageSize);
@@ -370,19 +382,14 @@ export function CenterTopUpContent({ month }: Props) {
             className="pl-8"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-52">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha holatlar</SelectItem>
-            <SelectItem value="ACTIVE">Faol</SelectItem>
-            <SelectItem value="FROZEN">Muzlatilgan</SelectItem>
-            <SelectItem value="EXPELLED">Chetlatilgan</SelectItem>
-            <SelectItem value="GRADUATED">Bitirgan</SelectItem>
-            <SelectItem value="ARCHIVED">Arxivlangan</SelectItem>
-          </SelectContent>
-        </Select>
+        <MultiSelectCombobox
+          options={STUDENT_STATUS_OPTIONS}
+          selected={statusFilter}
+          onChange={setStatusFilter}
+          placeholder="Barcha holatlar"
+          searchPlaceholder="Holat qidirish..."
+          className="w-auto min-w-[160px]"
+        />
       </div>
 
       <div className="rounded-md border">
