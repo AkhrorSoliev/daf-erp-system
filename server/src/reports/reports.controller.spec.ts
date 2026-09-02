@@ -44,9 +44,10 @@ describe('ReportsController — role guards', () => {
     // «Kanonik yoki kassa» qarori endi servisda. Kontroller faqat unga
     // topshiradi va javobini o'zgartirmasdan qaytaradi — fallback mantiqining
     // o'zi `reports.service.spec.ts` da sinaladi.
-    getNetProfitWithBasis: jest
-      .fn()
-      .mockResolvedValue({ netProfit: 12_345_678, netProfitBasis: 'recognized' }),
+    getNetProfitWithBasis: jest.fn().mockResolvedValue({
+      netProfit: 12_345_678,
+      netProfitBasis: 'recognized',
+    }),
     // «Oyning o'z foydasi» — default resolves so unrelated tests in this file
     // (which don't care about the field) aren't left exercising the catch path.
     getOwnMonthProfit: jest.fn().mockResolvedValue({ ownMonthProfit: null }),
@@ -570,7 +571,7 @@ describe('ReportsController — role guards', () => {
       expect(res.salary.paid).toBe(fullOverview.salary.paid);
     });
 
-    it("sof foydani servisdan oladi va kassa zaxirasi sifatida overview.netProfit ni uzatadi", async () => {
+    it('sof foydani servisdan oladi va kassa zaxirasi sifatida overview.netProfit ni uzatadi', async () => {
       const res: any = await controller.getFinancialOverview(query, {
         id: 10001,
         companyId: 1,

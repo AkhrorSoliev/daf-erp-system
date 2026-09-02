@@ -71,10 +71,10 @@ function makeService(overrides: Record<string, any> = {}) {
   };
 
   const service = new DashboardSummaryService(
-    reports as any,
-    payments as any,
-    outreach as any,
-    dashboard as any,
+    reports,
+    payments,
+    outreach,
+    dashboard,
     redis as any,
   );
   return { service, reports, payments, outreach, dashboard, redis };
@@ -133,9 +133,7 @@ describe('DashboardSummaryService.getSummary', () => {
       todayAbsentees: 0,
       brokenPromises: 0,
       removalQueue: 0,
-      topDebtors: [
-        { id: 10061, name: 'Sardor Nazarov', balance: -1_240_000 },
-      ],
+      topDebtors: [{ id: 10061, name: 'Sardor Nazarov', balance: -1_240_000 }],
     });
     expect(payments.getDebtors).toHaveBeenCalled();
   });
@@ -176,7 +174,7 @@ describe('DashboardSummaryService.getSummary', () => {
     expect(redis.setex).not.toHaveBeenCalled();
   });
 
-  it('kesh kaliti rol darajasini o\'z ichiga oladi', async () => {
+  it("kesh kaliti rol darajasini o'z ichiga oladi", async () => {
     const { service, redis } = makeService();
     await service.getSummary(CEO);
     await service.getSummary({ ...CEO, roles: ['Administrator'] });
