@@ -66,6 +66,73 @@ export interface MigrationInput {
   reversedDeductions: Record<number, number>;
 }
 
+/**
+ * Bitta o'quvchi qatorini yakunlaydi: `newBalance` va `state`ni
+ * `oldBalance`/`prepaidRefund`/`reversedSeptember`/`monthlyCharge`dan
+ * hisoblaydi. Mutatsiya qiladi (chaqiruvchi qulay bo'lishi uchun) va
+ * o'sha obyektni qaytaradi.
+ *
+ * Eksport qilingan: `buildMigrationPlan` (bashorat, taxminiy raqamlar) va
+ * migratsiyaning `--apply` yo'li (haqiqiy, bazaga yozilgan raqamlar) BIR XIL
+ * arifmetikadan foydalanishi kerak — aks holda ikkovi orasidagi tafovut
+ * "bashorat xato edi" bilan "kod xato ishladi"ni ajratib bo'lmaydigan qilib
+ * qo'yardi.
+ */
+export function finalizeStudentPlan(s: StudentPlan): StudentPlan {
+  s.newBalance =
+    s.oldBalance + s.prepaidRefund + s.reversedSeptember - s.monthlyCharge;
+  if (s.newBalance >= 0) {
+    s.state = 'PAID';
+  } else if (-s.newBalance <= s.monthlyCharge) {
+    s.state = 'CURRENT_MONTH_PENDING';
+  } else {
+    s.state = 'OLD_DEBT';
+  }
+  return s;
+}
+
+/**
+ * `StudentPlan[]` (allaqachon `newBalance`/`state`dan tashqari to'ldirilgan)
+ * dan to'liq `MigrationPlan` yasaydi — sarhisob va "eng katta 20 ta"
+ * bo'limlari bilan. `buildMigrationPlan` (bashorat) VA migratsiyaning
+ * `--apply` natija-hisoboti (haqiqiy raqamlar) shu YAGONA joydan
+ * foydalanadi, shunda ikkovi orasida sarhisob arifmetikasi mos kelmay
+ * qolish xavfi yo'q.
+ */
+export function buildPlanFromStudents(students: StudentPlan[]): MigrationPlan {
+  for (const s of students) finalizeStudentPlan(s);
+
+  const summary = {
+    studentCount: students.length,
+    paidCount: students.filter((s) => s.state === 'PAID').length,
+    currentMonthPendingCount: students.filter(
+      (s) => s.state === 'CURRENT_MONTH_PENDING',
+    ).length,
+    oldDebtCount: students.filter((s) => s.state === 'OLD_DEBT').length,
+    totalPrepaidRefund: sum(students, (s) => s.prepaidRefund),
+    totalReversedSeptember: sum(students, (s) => s.reversedSeptember),
+    totalMonthlyCharge: sum(students, (s) => s.monthlyCharge),
+    // Qarzning qancha qismi shu oyniki, qancha qismi eskidan qolgani.
+    currentMonthDebt: sum(students, (s) =>
+      s.newBalance < 0 ? Math.min(-s.newBalance, s.monthlyCharge) : 0,
+    ),
+    oldDebt: sum(students, (s) =>
+      s.newBalance < 0 ? Math.max(0, -s.newBalance - s.monthlyCharge) : 0,
+    ),
+    positiveBalanceAfter: sum(students, (s) => Math.max(0, s.newBalance)),
+  };
+
+  const biggestChanges = [...students]
+    .sort(
+      (a, b) =>
+        Math.abs(b.newBalance - b.oldBalance) -
+        Math.abs(a.newBalance - a.oldBalance),
+    )
+    .slice(0, 20);
+
+  return { students, biggestChanges, summary };
+}
+
 export function buildMigrationPlan(input: MigrationInput): MigrationPlan {
   const byStudent = new Map<number, StudentPlan>();
 
@@ -114,48 +181,7 @@ export function buildMigrationPlan(input: MigrationInput): MigrationPlan {
     });
   }
 
-  const students = [...byStudent.values()];
-  for (const s of students) {
-    s.newBalance =
-      s.oldBalance + s.prepaidRefund + s.reversedSeptember - s.monthlyCharge;
-    if (s.newBalance >= 0) {
-      s.state = 'PAID';
-    } else if (-s.newBalance <= s.monthlyCharge) {
-      s.state = 'CURRENT_MONTH_PENDING';
-    } else {
-      s.state = 'OLD_DEBT';
-    }
-  }
-
-  const summary = {
-    studentCount: students.length,
-    paidCount: students.filter((s) => s.state === 'PAID').length,
-    currentMonthPendingCount: students.filter(
-      (s) => s.state === 'CURRENT_MONTH_PENDING',
-    ).length,
-    oldDebtCount: students.filter((s) => s.state === 'OLD_DEBT').length,
-    totalPrepaidRefund: sum(students, (s) => s.prepaidRefund),
-    totalReversedSeptember: sum(students, (s) => s.reversedSeptember),
-    totalMonthlyCharge: sum(students, (s) => s.monthlyCharge),
-    // Qarzning qancha qismi shu oyniki, qancha qismi eskidan qolgani.
-    currentMonthDebt: sum(students, (s) =>
-      s.newBalance < 0 ? Math.min(-s.newBalance, s.monthlyCharge) : 0,
-    ),
-    oldDebt: sum(students, (s) =>
-      s.newBalance < 0 ? Math.max(0, -s.newBalance - s.monthlyCharge) : 0,
-    ),
-    positiveBalanceAfter: sum(students, (s) => Math.max(0, s.newBalance)),
-  };
-
-  const biggestChanges = [...students]
-    .sort(
-      (a, b) =>
-        Math.abs(b.newBalance - b.oldBalance) -
-        Math.abs(a.newBalance - a.oldBalance),
-    )
-    .slice(0, 20);
-
-  return { students, biggestChanges, summary };
+  return buildPlanFromStudents([...byStudent.values()]);
 }
 
 function sum<T>(xs: T[], f: (x: T) => number): number {
@@ -164,11 +190,21 @@ function sum<T>(xs: T[], f: (x: T) => number): number {
 
 const som = (n: number) => n.toLocaleString('ru-RU');
 
-export function renderSummary(plan: MigrationPlan): string {
+/**
+ * `title` standart bo'yicha dry-run sarlavhasi — `--apply`ning haqiqiy
+ * natija hisoboti (`migrate-to-monthly.ts`) o'ziniki bilan almashtiradi,
+ * chunki u YOZDI, "HECH NARSA YOZILMADI" degan matn u yerda noto'g'ri
+ * bo'lardi. Arifmetika (`plan.summary`) ikkalasida ham AYNAN bir xil —
+ * faqat sarlavha matni farq qiladi.
+ */
+export function renderSummary(
+  plan: MigrationPlan,
+  title = 'MIGRATSIYA REJASI — HECH NARSA YOZILMADI',
+): string {
   const s = plan.summary;
   return [
     '='.repeat(72),
-    'MIGRATSIYA REJASI — HECH NARSA YOZILMADI',
+    title,
     '='.repeat(72),
     `O'quvchi soni:                 ${s.studentCount}`,
     '',
