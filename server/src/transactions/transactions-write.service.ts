@@ -32,6 +32,21 @@ const CASH_FLOW_TYPES: ReadonlySet<TransactionType> = new Set([
   TransactionType.REFUND,
 ]);
 
+const MONTH_NAMES_UZ = [
+  'Yanvar',
+  'Fevral',
+  'Mart',
+  'Aprel',
+  'May',
+  'Iyun',
+  'Iyul',
+  'Avgust',
+  'Sentabr',
+  'Oktabr',
+  'Noyabr',
+  'Dekabr',
+] as const;
+
 @Injectable()
 export class TransactionsWriteService {
   constructor(
@@ -242,6 +257,165 @@ export class TransactionsWriteService {
       });
 
       return transaction;
+    }, tx);
+  }
+
+  /**
+   * Bir oylik to'lovni balansdan yechish.
+   *
+   * Ataylab `LESSON_DEDUCTION` turida yoziladi: qarz, hisobot va kassa
+   * so'rovlarining o'nlab joyi shu turga tayanadi, yangi tur qo'shish
+   * ularning hammasini qayta yozishni talab qilardi. Oylik qatorni
+   * `metadata.mode === 'MONTHLY_PERIOD'` ajratib turadi.
+   *
+   * `lessonsCovered` metadataga ATAYLAB yozilmaydi — `lesson-coverage.helper`
+   * o'sha kalit bo'yicha "sikl ochildi" deb hisoblaydi va oylik qatorni
+   * paket sikliga aylantirib yuborardi.
+   */
+  async chargeMonthlyFee(
+    params: {
+      studentId: number;
+      /** Balansdan yechiladigan summa; 0 bo'lishi mumkin, manfiy emas. */
+      amount: number;
+      enrollmentId: string;
+      companyId: number;
+      branchId?: number;
+      periodYear: number;
+      periodMonth: number;
+      monthlyPrice: number;
+      plannedLessons: number;
+      coveredLessons: number;
+      perLessonCost: number;
+      creditLessons: number;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    if (!Number.isFinite(params.amount) || params.amount < 0) {
+      throw new BadRequestException(
+        `Oylik to'lov summasi manfiy bo'lishi mumkin emas: ${params.amount}`,
+      );
+    }
+
+    return this.runInTx(async (client) => {
+      const student = await this.lockStudent(client, params.studentId);
+      const balanceBefore = student.balance;
+      const balanceAfter = balanceBefore - params.amount;
+      const branchId = await this.branchForStudent(
+        client,
+        params.studentId,
+        params.companyId,
+        params.branchId,
+      );
+
+      const period = `${params.periodYear}-${String(params.periodMonth).padStart(2, '0')}`;
+
+      const transaction = await client.transaction.create({
+        data: {
+          type: TransactionType.LESSON_DEDUCTION,
+          // `-params.amount` produces `-0` when amount is exactly 0 (a fully
+          // credit-covered month) — normalize it so the stored/returned
+          // amount is a plain 0, not a sign-bit oddity.
+          amount: -params.amount || 0,
+          balanceBefore,
+          balanceAfter,
+          studentId: params.studentId,
+          enrollmentId: params.enrollmentId,
+          branchId,
+          companyId: params.companyId,
+          description: `${MONTH_NAMES_UZ[params.periodMonth - 1]} ${params.periodYear} oylik to'lovi`,
+          metadata: {
+            mode: 'MONTHLY_PERIOD',
+            period,
+            monthlyPrice: params.monthlyPrice,
+            plannedLessons: params.plannedLessons,
+            coveredLessons: params.coveredLessons,
+            perLessonCost: params.perLessonCost,
+            creditLessons: params.creditLessons,
+          },
+        },
+      });
+
+      if (balanceAfter !== balanceBefore) {
+        await client.student.update({
+          where: { id: params.studentId },
+          data: { balance: balanceAfter },
+        });
+      }
+
+      return transaction;
+    }, tx);
+  }
+
+  /**
+   * Oylik to'lov qatorini teskari qilish (o'quvchi ketdi, migratsiya, tuzatish).
+   *
+   * Teskari summa asl qatorning ishorasidan kelib chiqadi — `Math.abs`
+   * ishlatilmaydi (ADR-0004). Asl qator manfiy edi, teskarisi musbat.
+   */
+  async reverseMonthlyFee(
+    params: {
+      transactionId: string;
+      companyId: number;
+      reason: string;
+      performedById?: number;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.runInTx(async (client) => {
+      const original = await client.transaction.findFirst({
+        where: {
+          id: params.transactionId,
+          companyId: params.companyId,
+          reversedAt: null,
+        },
+      });
+      if (!original) {
+        throw new NotFoundException(
+          `Teskari qilinadigan oylik to'lov topilmadi: ${params.transactionId}`,
+        );
+      }
+      if (!original.studentId) {
+        throw new BadRequestException(
+          `Oylik to'lov qatorida o'quvchi yo'q: ${params.transactionId}`,
+        );
+      }
+
+      const student = await this.lockStudent(client, original.studentId);
+      const balanceBefore = student.balance;
+      // Asl qator manfiy -> teskarisi musbat. Ishora asl qatordan olinadi.
+      const reversalAmount = -original.amount;
+      const balanceAfter = balanceBefore + reversalAmount;
+
+      const reversal = await client.transaction.create({
+        data: {
+          type: original.type,
+          amount: reversalAmount,
+          balanceBefore,
+          balanceAfter,
+          studentId: original.studentId,
+          enrollmentId: original.enrollmentId,
+          branchId: original.branchId,
+          companyId: params.companyId,
+          description: `Bekor qilindi: ${params.reason}`,
+          reversedTransactionId: original.id,
+          reversedById: params.performedById,
+          metadata: original.metadata ?? undefined,
+        },
+      });
+
+      await client.transaction.update({
+        where: { id: original.id },
+        data: { reversedAt: new Date(), reversedById: params.performedById },
+      });
+
+      if (balanceAfter !== balanceBefore) {
+        await client.student.update({
+          where: { id: original.studentId },
+          data: { balance: balanceAfter },
+        });
+      }
+
+      return reversal;
     }, tx);
   }
 
