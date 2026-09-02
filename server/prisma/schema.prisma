@@ -193,6 +193,16 @@ enum LessonDeductionMode {
   SINGLE_UNCOVERED
 }
 
+enum PaymentModel {
+  LESSON_PACK // hozirgi: price / lessonPaymentCount
+  MONTHLY // yangi: price = bir oy narxi
+}
+
+enum MonthlyChargeStatus {
+  CHARGED
+  REVERSED
+}
+
 enum ContractStatus {
   DRAFT
   ACTIVE
@@ -431,6 +441,7 @@ model Branch {
   leadColumns     LeadColumn[]
   mockExams       MockExam[]
   holidays        Holiday[]
+  monthlyCharges  EnrollmentMonthlyCharge[]
 
   @@index([deletedAt])
   @@index([status])
@@ -471,6 +482,9 @@ model Course {
   description        String?
   price              Int
   lessonPaymentCount Int          @default(12)
+  // MONTHLY da `price` bir OY narxi, `lessonPaymentCount` o'qilmaydi.
+  // LESSON_PACK — mavjud xatti-harakat, hech narsa o'zgarmaydi.
+  paymentModel       PaymentModel @default(LESSON_PACK)
   courseDuration     Int?
   lessonDuration     Int?
   lessonMinutes      Int?
@@ -557,15 +571,16 @@ model Student {
 
   // Financial relations
   payments        Payment[]
-  transactions    Transaction[]    @relation("StudentTransactions")
+  transactions    Transaction[]             @relation("StudentTransactions")
   contracts       Contract[]
   refunds         Refund[]
-  salaryAccruals  SalaryAccrual[]  @relation("StudentSalaryAccruals")
+  salaryAccruals  SalaryAccrual[]           @relation("StudentSalaryAccruals")
   paymentPromises PaymentPromise[]
   dafAttempts     DafAttempt[]
   callLogs        CallLog[]
   discounts       Discount[]
   scholarships    Scholarship[]
+  monthlyCharges  EnrollmentMonthlyCharge[]
 
   @@index([deletedAt])
   @@index([status])
@@ -1181,11 +1196,12 @@ model Group {
   salaryAccruals SalaryAccrual[]        @relation("GroupSalaryAccruals")
 
   scheduleSnapshots      GroupScheduleSnapshot[]
-  lessonCancellations    LessonCancellation[]    @relation("LessonCancellationGroup")
-  lessonTeacherOverrides LessonTeacherOverride[] @relation("LessonTeacherOverrideGroup")
-  lessonReschedules      LessonReschedule[]      @relation("LessonRescheduleGroup")
+  lessonCancellations    LessonCancellation[]      @relation("LessonCancellationGroup")
+  lessonTeacherOverrides LessonTeacherOverride[]   @relation("LessonTeacherOverrideGroup")
+  lessonReschedules      LessonReschedule[]        @relation("LessonRescheduleGroup")
   holidayExtensions      GroupHolidayExtension[]
   plannedAbsences        PlannedAbsence[]
+  monthlyCharges         EnrollmentMonthlyCharge[]
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -1270,13 +1286,57 @@ model Enrollment {
   deletedBy       User?     @relation("EnrollmentDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  stateLog EnrollmentStateLog[]
-  refunds  Refund[]
+  stateLog       EnrollmentStateLog[]
+  refunds        Refund[]
+  monthlyCharges EnrollmentMonthlyCharge[]
 
   @@index([deletedAt])
   @@index([status])
   @@index([departureReasonId])
   @@index([transferReasonId])
+}
+
+/// Oylik to'lov modelining yagona haqiqat manbasi: har yozilish, har oy
+/// uchun bitta qator. plannedLessons/perLessonCost/monthlyPrice MUZLATILADI
+/// — jadval oy o'rtasida o'zgarsa ham o'quvchining hisobi va o'qituvchining
+/// haqi qimirlamaydi.
+model EnrollmentMonthlyCharge {
+  id           String     @id @default(uuid())
+  enrollmentId String
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id])
+  studentId    Int
+  student      Student    @relation(fields: [studentId], references: [id])
+  groupId      String
+  group        Group      @relation(fields: [groupId], references: [id])
+  branchId     Int
+  branch       Branch     @relation(fields: [branchId], references: [id])
+  companyId    Int
+  company      Company    @relation(fields: [companyId], references: [id])
+
+  periodYear  Int
+  periodMonth Int
+
+  plannedLessons Int
+  perLessonCost  Int
+  monthlyPrice   Int
+  coveredLessons Int
+  creditLessons  Int @default(0)
+  creditAmount   Int @default(0)
+  chargedAmount  Int
+
+  /// Oy davomida to'planadi; keyingi oyning creditLessons'iga aylanadi.
+  excusedLessons Int @default(0)
+
+  status        MonthlyChargeStatus @default(CHARGED)
+  transactionId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([enrollmentId, periodYear, periodMonth])
+  @@index([studentId, periodYear, periodMonth])
+  @@index([groupId, periodYear, periodMonth])
+  @@index([branchId, periodYear, periodMonth])
 }
 
 model Holiday {
@@ -1488,6 +1548,7 @@ model Company {
   mockExams                   MockExam[]
   mockExamParticipants        MockExamParticipant[]
   holidays                    Holiday[]
+  monthlyCharges              EnrollmentMonthlyCharge[]
 }
 
 enum TelegramGroupStatus {
