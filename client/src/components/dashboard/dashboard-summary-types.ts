@@ -36,7 +36,8 @@ export interface DashboardPeople {
   activeGroups: number;
   /** Shu oyning o'rtacha davomati, 0–100. */
   attendancePct: number;
-  todayLessons: number;
+  /** Filial tanlanmagan bo'lsa `null` — jadval bitta filialga bog'liq. */
+  todayLessons: number | null;
 }
 
 export interface DashboardTopDebtor {
@@ -73,7 +74,12 @@ export interface DashboardSummary {
   money: DashboardMoney | null;
   people: DashboardPeople | null;
   attention: DashboardAttention | null;
-  /** Filial tanlanmagan («Barcha filiallar») holatda `null`. */
+  /**
+   * BUGUNGI KUNNING BARCHA darslari, vaqt bo'yicha saralangan. Qaysi biri
+   * «keyingi» ekanini `pickNextLessons` MIJOZNING soatiga qarab tanlaydi —
+   * server boshqa mintaqada bo'lishi mumkin. Filial tanlanmagan
+   * («Barcha filiallar») holatda `null`.
+   */
   nextLessons: DashboardNextLesson[] | null;
   /** Yiqilgan bo'limlar nomi, masalan `["money"]`. */
   failed: string[];

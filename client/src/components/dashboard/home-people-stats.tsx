@@ -59,7 +59,10 @@ export function HomePeopleStats({ people }: { people: DashboardPeople }) {
       <PeopleStat
         icon={CalendarDays}
         label="Bugungi darslar"
-        value={formatNumber(people.todayLessons)}
+        value={
+          people.todayLessons === null ? "—" : formatNumber(people.todayLessons)
+        }
+        hint={people.todayLessons === null ? "filial tanlanmagan" : undefined}
         href="/schedule"
       />
     </div>
