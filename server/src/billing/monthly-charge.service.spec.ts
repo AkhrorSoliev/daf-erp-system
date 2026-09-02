@@ -631,6 +631,90 @@ describe('MonthlyChargeService', () => {
       expect(res?.refunded).toBe(5);
     });
 
+    it('50% chegirmali o`quvchi uchun CHEGIRMALI narxda qaytaradi', async () => {
+      // 20.09 da chiqdi, xuddi birinchi testdagi kabi: 13 dars, 9 o'tgan,
+      // 4 qolgan. perLessonCost ATAYLAB chegirmasiz (34 615) saqlanadi,
+      // lekin qaytarish o'quvchi TO'LAGAN 50% chegirmali narxda bo'lishi
+      // kerak: applyDiscount(34 615, 50) = 17 308, 4 x 17 308 = 69 232 —
+      // chegirmasiz holatdagi 138 460 ning yarmiga yaqin, ikki barobar EMAS.
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        id: 'chg-1',
+        groupId: 'grp-1',
+        plannedLessons: 13,
+        coveredLessons: 13,
+        perLessonCost: 34_615,
+        discountPercent: 50,
+        chargedAmount: 225_000,
+        transactionId: 'tx-1',
+        status: 'CHARGED',
+      });
+
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-09-20T00:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqdi',
+      });
+
+      expect(res?.refunded).toBe(69_232);
+      expect(txWriteMock.createAdjustment).toHaveBeenCalledWith(
+        expect.objectContaining({ amount: 69_232 }),
+        tx,
+      );
+    });
+
+    it('0% chegirmada natija eskisidan farq qilmaydi (fix mavjud qatorlar uchun no-op)', async () => {
+      // Xuddi birinchi testdagi stsenariy, faqat endi `discountPercent: 0`
+      // ANIQ berilgan — tuzatish chegirmasiz yozilishlarga tegmasligini
+      // pinlash uchun.
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        id: 'chg-1',
+        groupId: 'grp-1',
+        plannedLessons: 13,
+        coveredLessons: 13,
+        perLessonCost: 34_615,
+        discountPercent: 0,
+        chargedAmount: 450_000,
+        transactionId: 'tx-1',
+        status: 'CHARGED',
+      });
+
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-09-20T00:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqdi',
+      });
+
+      expect(res?.refunded).toBe(138_460); // 4 x 34 615, eskisi bilan bir xil
+    });
+
+    it('chegirmali dars narxida ham qaytarish yechilgandan oshmaydi (cap)', async () => {
+      // Kredit tufayli faqat 5 so'm yechilgan oy, 50% chegirma bilan ham:
+      // 4 x 17 308 = 69 232 ancha katta, lekin chargedAmount=5 qopqog'i
+      // ishlashi kerak.
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        id: 'chg-1',
+        groupId: 'grp-1',
+        plannedLessons: 13,
+        coveredLessons: 13,
+        perLessonCost: 34_615,
+        discountPercent: 50,
+        chargedAmount: 5,
+        transactionId: 'tx-1',
+        status: 'CHARGED',
+      });
+
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-09-20T00:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqdi',
+      });
+
+      expect(res?.refunded).toBe(5);
+    });
+
     it('hisob topilmasa null qaytaradi', async () => {
       prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue(null);
       const res = await service.reverseChargeForDeparture(tx, {
