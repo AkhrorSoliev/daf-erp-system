@@ -291,26 +291,18 @@ export class ReportsController {
     //
     // The bare `catch {}` also swallowed the reason, so a persistent failure
     // would have been invisible: a wrong number, no error, nobody looking.
-    let netProfit = overview.netProfit;
-    let netProfitBasis: 'recognized' | 'cash' = 'cash';
-    try {
-      const np = await this.reportsService.getMonthlyNetProfit(user.companyId, {
+    // Kanonik «Foyda» — Excel «Sof foyda» bilan bir xil raqam. «Kanonik yoki
+    // kassa» qarori `ReportsService.getNetProfitWithBasis` da turadi, chunki
+    // bosh sahifa ham AYNAN shu raqamni ko'rsatishi kerak; qaror ikki joyda
+    // bo'lsa, bir kuni biri o'zgarib, ikki sahifa bir oy uchun ikki xil foyda
+    // ko'rsatib turardi.
+    const { netProfit, netProfitBasis } =
+      await this.reportsService.getNetProfitWithBasis(user.companyId, {
         month,
         branchIds,
         performedById: user.id,
+        cashFallback: overview.netProfit,
       });
-      netProfit = np.netProfit;
-      netProfitBasis = 'recognized';
-    } catch (err) {
-      this.logger.warn(
-        `Monthly net profit failed for company ${user.companyId} (${month}) — ` +
-          `overview falls back to the cash figure: ${
-            err instanceof Error ? err.message : String(err)
-          }`,
-      );
-      netProfit = overview.netProfit;
-      netProfitBasis = 'cash';
-    }
 
     // «Oyning o'z foydasi» — the month's own money against its own costs.
     // A positive Foyda card can still sit on a month that did not pay for
