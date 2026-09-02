@@ -645,5 +645,39 @@ describe('MonthlyChargeService', () => {
         prismaMock.enrollmentMonthlyCharge.findUnique,
       ).not.toHaveBeenCalled();
     });
+
+    it('chaqiruvchi `today` ni o`zi bersa, haqiqiy soat tun yarmidan o`tib ketgan bo`lsa ham backdated deb rad etmaydi', async () => {
+      // Round-3 finding: StatusCascadeService `departureDate`ni BIR marta
+      // ushlab, o'nlab-yuzlab yozilishni ketma-ket Serializable
+      // tranzaksiyalarda ishlaydi — sikl haqiqiy Toshkent yarim tunidan
+      // o'tib ketishi mumkin. Agar bu funksiya HAR safar o'zi `new Date()`
+      // hisoblasa, sikl o'rtasida "bugun" bir kunga siljib, hali bitta ham
+      // marta ishlanmagan (lekin haqiqatda backdated BO'LMAGAN)
+      // `departureDate`ni noto'g'ri rad etardi. `today` tashqaridan
+      // berilganda — hatto haqiqiy vaqt ancha oldinga ketgan bo'lsa ham —
+      // faqat SHU qiymatga qarab qaror qilinadi.
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        id: 'chg-1',
+        groupId: 'grp-1',
+        plannedLessons: 13,
+        coveredLessons: 13,
+        perLessonCost: 34_615,
+        chargedAmount: 450_000,
+        transactionId: 'tx-1',
+        status: 'CHARGED',
+      });
+
+      // departureDate haqiqiy devorli soatdan (2026-09-02) ANCHA oldin —
+      // `today` berilmasa, bu backdated deb rad etilardi.
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2020-01-01T00:00:00Z'),
+        today: '2020-01-01', // chaqiruvchining o'z, bir marta ushlangan soati
+        companyId: 1,
+        reason: 'Guruhdan chiqdi',
+      });
+
+      expect(res).not.toBeNull();
+    });
   });
 });

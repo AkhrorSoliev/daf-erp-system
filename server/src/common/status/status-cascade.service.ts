@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   GroupStatus,
   EnrollmentStatus,
@@ -11,6 +11,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { EntityHistoryService } from '../entity-history';
 import { EnrollmentBillingService } from '../../billing/enrollment-billing.service';
 import { MonthlyChargeService } from '../../billing/monthly-charge.service';
+import { tashkentDateStr } from '../../attendance/shared/date-utils';
 
 interface CascadeResult {
   entity: string;
@@ -20,6 +21,8 @@ interface CascadeResult {
 
 @Injectable()
 export class StatusCascadeService {
+  private readonly logger = new Logger(StatusCascadeService.name);
+
   constructor(
     private prisma: PrismaService,
     private entityHistoryService: EntityHistoryService,
@@ -71,30 +74,55 @@ export class StatusCascadeService {
     ) {
       const departureDate =
         (auditFields.statusChangedAt as Date | undefined) ?? new Date();
+      // Captured ONCE, alongside departureDate, and threaded into every
+      // iteration below as `reverseChargeForDeparture`'s `today` — a batch
+      // of hundreds of enrollments (branch close) can straddle Toshkent
+      // yarim tun across its per-enrollment transactions; re-deriving "bugun"
+      // fresh on each iteration would let a later one see a new day and
+      // reject `departureDate` as backdated even though the whole batch is
+      // the SAME departure event. One clock for the whole batch.
+      const departureToday = tashkentDateStr(departureDate);
       for (const m of matches) {
-        await this.prisma.$transaction(
-          async (tx) => {
-            await this.enrollmentBillingService.refundPrepaidToBalance(tx, {
-              enrollmentId: m.id,
-              reason: reason
-                ? `Qoldiq oldindan to'langan darslar balansga qaytarildi (${reason})`
-                : undefined,
-              performedById: userId,
-            });
-            await this.monthlyChargeService.reverseChargeForDeparture(tx, {
-              enrollmentId: m.id,
-              departureDate,
-              companyId: m.group.companyId,
-              reason: reason ?? 'Cascade orqali guruhdan chiqarildi',
-              performedById: userId,
-            });
-          },
-          {
-            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-            maxWait: 10_000,
-            timeout: 15_000,
-          },
-        );
+        // One enrollment's refund failing (DB hiccup, lock timeout) must
+        // not abort the cascade for the rest — same resilience pattern as
+        // `MonthlyChargeService.createChargesForPeriod`. Before this
+        // wrapping, an uncaught throw here (e.g. a genuinely backdated
+        // departureDate, or any other error) would bail out of the `for`
+        // loop entirely, so `enrollment.updateMany` below would NEVER run —
+        // leaving every earlier iteration's refund already committed
+        // against an enrollment still sitting ACTIVE.
+        try {
+          await this.prisma.$transaction(
+            async (tx) => {
+              await this.enrollmentBillingService.refundPrepaidToBalance(tx, {
+                enrollmentId: m.id,
+                reason: reason
+                  ? `Qoldiq oldindan to'langan darslar balansga qaytarildi (${reason})`
+                  : undefined,
+                performedById: userId,
+              });
+              await this.monthlyChargeService.reverseChargeForDeparture(tx, {
+                enrollmentId: m.id,
+                departureDate,
+                today: departureToday,
+                companyId: m.group.companyId,
+                reason: reason ?? 'Cascade orqali guruhdan chiqarildi',
+                performedById: userId,
+              });
+            },
+            {
+              isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+              maxWait: 10_000,
+              timeout: 15_000,
+            },
+          );
+        } catch (err) {
+          this.logger.error(
+            `Cascade: enrollment=${m.id} uchun pul qaytarish yiqildi ` +
+              `(newStatus=${newStatus}) — qolgan yozilishlar davom etadi`,
+            err,
+          );
+        }
       }
     }
 

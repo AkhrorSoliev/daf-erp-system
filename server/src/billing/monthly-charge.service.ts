@@ -237,10 +237,29 @@ export class MonthlyChargeService {
       companyId: number;
       reason: string;
       performedById?: number;
+      /**
+       * Optional: "bugun" Toshkent 'YYYY-MM-DD' shaklida, BIR martalik
+       * chaqiruvchi uchun emas — bir necha o'nlab/yuzlab yozilishni ketma-ket
+       * qayta ishlaydigan BATCH chaqiruvchi uchun (`StatusCascadeService`).
+       * Har bir tranzaksiya `maxWait 10s / timeout 15s`gacha cho'zilishi
+       * mumkin — yuzlab yozilishli sikl real vaqtda Toshkent yarim tunidan
+       * o'tib ketishi mumkin. Agar bu funksiya HAR safar `new Date()`ni
+       * o'zi qayta hisoblasa, sikl o'rtasida soat kun almashtirib yuboradi:
+       * kecha ochilgan (hali bitta ham iteratsiya bajarmagan) `departureDate`
+       * keyingi iteratsiyalarda to'satdan "backdated" deb rad etiladi — bu
+       * esa qo'riqsiz sikl(dan) chiqib, butun cascade'ni to'xtatib qo'yardi
+       * (2026-09 sharh, 3-bosqich). Batch chaqiruvchi shu YERDA BIR marta
+       * hisoblangan "bugun"ni har bir iteratsiyaga bab-baravar uzatadi —
+       * shunda butun partiya BITTA soatga qarab baholanadi, har biri o'z
+       * "hozir"iga emas. Yagona bitta-yozilishli chaqiruvchi
+       * (`removeFromGroup`) buni bermaydi — pastda `new Date()`ga tushadi,
+       * bu yerda hech qanday xavf yo'q.
+       */
+      today?: string;
     },
   ): Promise<{ refunded: number } | null> {
     const day = tashkentDateStr(params.departureDate);
-    const today = tashkentDateStr(new Date());
+    const today = params.today ?? tashkentDateStr(new Date());
     if (day < today) {
       throw new BadRequestException(
         "reverseChargeForDeparture: departureDate bugundan oldingi sana bo'lishi mumkin emas — aks holda allaqachon o'tilgan (va o'qituvchiga hisoblangan) darslar ham 'qolgan' deb hisoblanib qaytarilib qolardi",
