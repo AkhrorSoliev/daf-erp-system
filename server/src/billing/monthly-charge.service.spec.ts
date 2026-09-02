@@ -24,7 +24,11 @@ const enrollment = (over: Partial<Record<string, unknown>> = {}) =>
       companyId: 1,
       statusEnum: 'ACTIVE',
       exactDays: ['saturday', 'thursday', 'tuesday'],
-      course: { price: 450_000, paymentModel: 'MONTHLY', lessonPaymentCount: 12 },
+      course: {
+        price: 450_000,
+        paymentModel: 'MONTHLY',
+        lessonPaymentCount: 12,
+      },
     },
     ...over,
   }) as unknown as ChargeableEnrollment;
@@ -61,7 +65,20 @@ describe('MonthlyChargeService', () => {
       },
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
       lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
-      enrollment: { findMany: jest.fn().mockResolvedValue([]) },
+      enrollment: {
+        findMany: jest.fn().mockResolvedValue([]),
+        // Default shape for reverseChargeForDeparture's own lookup —
+        // matches the `enrollment()` fixture above (saturday/thursday/
+        // tuesday, branch 1). Individual tests override with
+        // mockResolvedValueOnce as needed.
+        findUnique: jest.fn().mockResolvedValue({
+          studentId: 10453,
+          group: {
+            branchId: 1,
+            exactDays: ['saturday', 'thursday', 'tuesday'],
+          },
+        }),
+      },
       // `createChargesForPeriod` opens ITS OWN tx per enrollment — tests for
       // it stub `createChargeForEnrollment` directly (already covered above),
       // so this just has to invoke the callback with something tx-shaped.
@@ -72,6 +89,7 @@ describe('MonthlyChargeService', () => {
     txWriteMock = {
       chargeMonthlyFee: jest.fn().mockResolvedValue({ id: 'txn-1' }),
       reverseMonthlyFee: jest.fn(),
+      createAdjustment: jest.fn().mockResolvedValue({ id: 'adj-1' }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -161,7 +179,11 @@ describe('MonthlyChargeService', () => {
         enrollment: enrollment({
           group: {
             ...enrollment().group,
-            course: { price: 450_000, paymentModel: 'LESSON_PACK', lessonPaymentCount: 12 },
+            course: {
+              price: 450_000,
+              paymentModel: 'LESSON_PACK',
+              lessonPaymentCount: 12,
+            },
           },
         }),
         periodYear: 2026,
@@ -430,7 +452,9 @@ describe('MonthlyChargeService', () => {
       );
 
       expect(charge).toEqual({ id: 'charge-1' });
-      expect(prismaMock.enrollmentMonthlyCharge.findUnique).toHaveBeenCalledWith({
+      expect(
+        prismaMock.enrollmentMonthlyCharge.findUnique,
+      ).toHaveBeenCalledWith({
         where: {
           enrollmentId_periodYear_periodMonth: {
             enrollmentId: 'enr-1',
@@ -439,6 +463,125 @@ describe('MonthlyChargeService', () => {
           },
         },
       });
+    });
+  });
+
+  describe('reverseChargeForDeparture', () => {
+    it('o`tmagan darslar ulushini balansga qaytaradi', async () => {
+      // 20.09 da chiqdi. Sentabrda 13 dars, 9 tasi o'tgan, 4 tasi qolgan.
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        id: 'chg-1',
+        groupId: 'grp-1',
+        plannedLessons: 13,
+        coveredLessons: 13,
+        perLessonCost: 34_615,
+        chargedAmount: 450_000,
+        transactionId: 'tx-1',
+        status: 'CHARGED',
+      });
+
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-09-20T00:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqdi',
+      });
+
+      expect(res?.refunded).toBe(138_460); // 4 x 34 615
+      expect(txWriteMock.createAdjustment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          studentId: 10453,
+          amount: 138_460,
+          companyId: 1,
+          branchId: 1,
+        }),
+        tx,
+      );
+      expect(prismaMock.enrollmentMonthlyCharge.update).toHaveBeenCalledWith({
+        where: { id: 'chg-1' },
+        data: { coveredLessons: 9, chargedAmount: 311_540 },
+      });
+    });
+
+    it('oy oxirida chiqqanda hech narsa qaytarmaydi', async () => {
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        id: 'chg-1',
+        groupId: 'grp-1',
+        plannedLessons: 13,
+        coveredLessons: 13,
+        perLessonCost: 34_615,
+        chargedAmount: 450_000,
+        transactionId: 'tx-1',
+        status: 'CHARGED',
+      });
+
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-09-30T00:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqdi',
+      });
+
+      expect(res).toBeNull();
+      expect(txWriteMock.createAdjustment).not.toHaveBeenCalled();
+    });
+
+    it('qaytarilgan summa hech qachon yechilgandan ko`p bo`lmaydi', async () => {
+      // Kredit tufayli faqat 5 so'm yechilgan oy: 4 dars ulushi undan katta.
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        id: 'chg-1',
+        groupId: 'grp-1',
+        plannedLessons: 13,
+        coveredLessons: 13,
+        perLessonCost: 34_615,
+        chargedAmount: 5,
+        transactionId: 'tx-1',
+        status: 'CHARGED',
+      });
+
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-09-20T00:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqdi',
+      });
+
+      expect(res?.refunded).toBe(5);
+    });
+
+    it('hisob topilmasa null qaytaradi', async () => {
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue(null);
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-09-20T00:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqdi',
+      });
+      expect(res).toBeNull();
+      expect(txWriteMock.createAdjustment).not.toHaveBeenCalled();
+    });
+
+    it('REVERSED holatidagi hisobni qaytarilgan deb hisoblamaydi', async () => {
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        id: 'chg-1',
+        groupId: 'grp-1',
+        plannedLessons: 13,
+        coveredLessons: 13,
+        perLessonCost: 34_615,
+        chargedAmount: 450_000,
+        transactionId: 'tx-1',
+        status: 'REVERSED',
+      });
+
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-09-20T00:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqdi',
+      });
+
+      expect(res).toBeNull();
+      expect(txWriteMock.createAdjustment).not.toHaveBeenCalled();
     });
   });
 });

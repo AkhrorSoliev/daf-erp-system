@@ -1,5 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { EnrollmentStatus, GroupStatus, PaymentModel, Prisma } from '@prisma/client';
+import {
+  EnrollmentStatus,
+  GroupStatus,
+  MonthlyChargeStatus,
+  PaymentModel,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsWriteService } from '../transactions/transactions-write.service';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
@@ -125,7 +131,12 @@ export class MonthlyChargeService {
       coveredLessons,
     );
 
-    const carried = await this.carriedCredit(tx, enr.id, periodYear, periodMonth);
+    const carried = await this.carriedCredit(
+      tx,
+      enr.id,
+      periodYear,
+      periodMonth,
+    );
     const credit = applyLessonCredit(grossAmount, perLessonCost, carried);
 
     const charge = await tx.enrollmentMonthlyCharge.create({
@@ -172,6 +183,103 @@ export class MonthlyChargeService {
       where: { id: charge.id },
       data: { transactionId: transaction.id },
     });
+  }
+
+  /**
+   * O'quvchi oy o'rtasida ketdi: o'tmagan darslar ulushini balansga qaytaradi.
+   *
+   * Butun oy hisobi teskari qilinmaydi — o'tgan darslar to'langan bo'lib
+   * qolishi kerak (`EnrollmentMonthlyCharge.status` `CHARGED` bo'lib qoladi,
+   * asl `chargeMonthlyFee` tranzaksiyasi ham tegilmaydi). Faqat qolgan
+   * darslar ulushi qaytariladi va qaytariladigan summa hech qachon
+   * yechilgandan oshmaydi (kredit tufayli oz yechilgan oy).
+   *
+   * Bu servis TEACHER accrual'lariga MUTLAQO tegmaydi: qaytarilayotgan
+   * darslar hali o'tilmagan (ketgan kundan KEYINGI sanalar), shuning uchun
+   * ularga hech qanday `SalaryAccrual` yozuvi yo'q — reverse qilinadigan
+   * narsa yo'q. O'qituvchi haqi (`accrueMonthlySalary`) har bir davomat
+   * uchun alohida, `EnrollmentMonthlyCharge.perLessonCost` (bu yerda
+   * o'zgartirilmaydigan, muzlatilgan qiymat) asosida hisoblanadi.
+   */
+  async reverseChargeForDeparture(
+    tx: Prisma.TransactionClient,
+    params: {
+      enrollmentId: string;
+      departureDate: Date;
+      companyId: number;
+      reason: string;
+      performedById?: number;
+    },
+  ): Promise<{ refunded: number } | null> {
+    const day = tashkentDateStr(params.departureDate);
+    const periodYear = Number(day.slice(0, 4));
+    const periodMonth = Number(day.slice(5, 7));
+
+    const charge = await tx.enrollmentMonthlyCharge.findUnique({
+      where: {
+        enrollmentId_periodYear_periodMonth: {
+          enrollmentId: params.enrollmentId,
+          periodYear,
+          periodMonth,
+        },
+      },
+    });
+    if (!charge || charge.status !== MonthlyChargeStatus.CHARGED) return null;
+
+    const enr = await tx.enrollment.findUnique({
+      where: { id: params.enrollmentId },
+      select: {
+        studentId: true,
+        group: { select: { branchId: true, exactDays: true } },
+      },
+    });
+    if (!enr) return null;
+
+    const excludedDates = await this.resolveExcludedDates(
+      tx,
+      charge.groupId,
+      enr.group.branchId,
+      periodYear,
+      periodMonth,
+    );
+
+    // Ketgan kundan KEYINGI darslar — ketgan kunning o'zi o'tgan hisoblanadi.
+    const remaining = lessonDatesInMonth({
+      year: periodYear,
+      month: periodMonth,
+      exactDays: enr.group.exactDays,
+      excludedDates,
+    }).filter((d) => d > day).length;
+
+    if (remaining === 0) return null;
+
+    const refunded = Math.min(
+      remaining * charge.perLessonCost,
+      charge.chargedAmount,
+    );
+    if (refunded <= 0) return null;
+
+    await this.transactionsWrite.createAdjustment(
+      {
+        studentId: enr.studentId,
+        amount: refunded,
+        companyId: params.companyId,
+        branchId: enr.group.branchId,
+        description: `${params.reason} — o'tmagan ${remaining} dars qaytarildi`,
+        performedById: params.performedById,
+      },
+      tx,
+    );
+
+    await tx.enrollmentMonthlyCharge.update({
+      where: { id: charge.id },
+      data: {
+        coveredLessons: charge.coveredLessons - remaining,
+        chargedAmount: charge.chargedAmount - refunded,
+      },
+    });
+
+    return { refunded };
   }
 
   /**

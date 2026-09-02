@@ -5,11 +5,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
 import { DebtWriteOffService } from '../billing/debt-write-off.service';
+import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('StudentEnrollmentService', () => {
   let service: StudentEnrollmentService;
   let prisma: any;
+  let monthlyChargeMock: any;
 
   const mockStudent = {
     id: 1,
@@ -124,6 +126,13 @@ describe('StudentEnrollmentService', () => {
             }),
             reverseWriteOff: jest.fn(),
           },
+        },
+        {
+          provide: MonthlyChargeService,
+          useValue: (monthlyChargeMock = {
+            createChargeForEnrollment: jest.fn().mockResolvedValue(null),
+            reverseChargeForDeparture: jest.fn().mockResolvedValue(null),
+          }),
         },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
@@ -243,6 +252,34 @@ describe('StudentEnrollmentService', () => {
       await expect(
         service.enrollToGroup(1, 'group-1', 2, 1001),
       ).resolves.not.toThrow();
+    });
+
+    describe('o`rtada qo`shilgan o`quvchi (MONTHLY proratsiya)', () => {
+      it('yozilish yaratilganda darhol hisob yoziladi — cronni kutmaydi', async () => {
+        const now = new Date();
+        const tashkent = new Date(now.getTime() + 5 * 60 * 60 * 1000);
+
+        await service.enrollToGroup(1, 'group-1', 2, 1001);
+
+        expect(
+          monthlyChargeMock.createChargeForEnrollment,
+        ).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            periodYear: tashkent.getUTCFullYear(),
+            periodMonth: tashkent.getUTCMonth() + 1,
+            companyId: 1001,
+          }),
+        );
+      });
+
+      it('does not block enrollment when the course is not MONTHLY (no-op)', async () => {
+        // Real service returns null for LESSON_PACK — the mock already
+        // does, this just asserts enroll still succeeds either way.
+        await expect(
+          service.enrollToGroup(1, 'group-1', 2, 1001),
+        ).resolves.not.toThrow();
+      });
     });
 
     describe('transfer (already has active enrollment)', () => {
@@ -511,6 +548,22 @@ describe('StudentEnrollmentService', () => {
       await expect(
         service.removeFromGroup(1, 'enroll-1', 10001, 1001, {}),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('calls reverseChargeForDeparture for the monthly-course refund share (no-op on a LESSON_PACK enrollment)', async () => {
+      prisma.studentExitReason.count.mockResolvedValueOnce(0);
+      await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+        reason: "O'z xohishi bilan",
+      });
+
+      expect(monthlyChargeMock.reverseChargeForDeparture).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          enrollmentId: 'enroll-1',
+          companyId: 1001,
+          performedById: 10001,
+        }),
+      );
     });
   });
 });

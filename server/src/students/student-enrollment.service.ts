@@ -4,11 +4,21 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { Prisma, StudentStatus } from '@prisma/client';
+import {
+  EnrollmentStatus,
+  GroupStatus,
+  PaymentModel,
+  Prisma,
+  StudentStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
 import { DebtWriteOffService } from '../billing/debt-write-off.service';
+import {
+  ChargeableEnrollment,
+  MonthlyChargeService,
+} from '../billing/monthly-charge.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
 import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
@@ -28,6 +38,7 @@ export class StudentEnrollmentService {
     private entityHistoryService: EntityHistoryService,
     private enrollmentBillingService: EnrollmentBillingService,
     private debtWriteOffService: DebtWriteOffService,
+    private monthlyChargeService: MonthlyChargeService,
     private eventEmitter: EventEmitter2,
   ) {}
 
@@ -54,7 +65,9 @@ export class StudentEnrollmentService {
     const group = await this.prisma.group.findFirst({
       where: { id: groupId, deletedAt: null, companyId },
       include: {
-        course: { select: { name: true } },
+        // price/paymentModel: needed to charge a mid-month MONTHLY join
+        // immediately below — see chargeMidMonthJoin.
+        course: { select: { name: true, price: true, paymentModel: true } },
         teachers: { select: { teacherId: true } },
       },
     });
@@ -237,6 +250,7 @@ export class StudentEnrollmentService {
               changedById: userId,
             },
           });
+          await this.chargeMidMonthJoin(tx, fresh, group, companyId, userId);
           return fresh;
         },
         {
@@ -248,22 +262,37 @@ export class StudentEnrollmentService {
       // Atomic block already created the new enrollment + state log.
       enrollment = transferred;
     } else {
-      enrollment = await this.prisma.enrollment.create({
-        data: {
-          studentId,
-          groupId,
-          startDate: resolvedStartDate,
-        },
-      });
+      // Wrapped in a transaction (previously a bare create) so the
+      // mid-month MONTHLY proration charge below is atomic with the
+      // enrollment itself — either both land or neither does.
+      enrollment = await this.prisma.$transaction(
+        async (tx) => {
+          const fresh = await tx.enrollment.create({
+            data: {
+              studentId,
+              groupId,
+              startDate: resolvedStartDate,
+            },
+          });
 
-      await this.prisma.enrollmentStateLog.create({
-        data: {
-          enrollmentId: enrollment.id,
-          status: 'ACTIVE',
-          transitionAt: enrollment.createdAt!,
-          changedById: userId,
+          await tx.enrollmentStateLog.create({
+            data: {
+              enrollmentId: fresh.id,
+              status: 'ACTIVE',
+              transitionAt: fresh.createdAt,
+              changedById: userId,
+            },
+          });
+
+          await this.chargeMidMonthJoin(tx, fresh, group, companyId, userId);
+          return fresh;
         },
-      });
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          maxWait: 10_000,
+          timeout: 15_000,
+        },
+      );
     }
 
     // Prepaid model (post-audit): do NOT deduct a cycle at enrollment.
@@ -346,6 +375,70 @@ export class StudentEnrollmentService {
     });
 
     return enrollment;
+  }
+
+  /**
+   * Oylik kursda o'rtada qo'shilgan o'quvchi cronni kutmaydi: uning
+   * proratsiya qilingan JORIY DAVR hisobi yozilish yaratilgan zahoti
+   * chiqadi — aks holda oy boshi cron/kunlik qorovul ishlaguncha
+   * (keyingi oygacha) bepul o'qib yurardi.
+   *
+   * `createChargeForEnrollment` oylik bo'lmagan kursda (`LESSON_PACK`),
+   * guruh hali ACTIVE bo'lmaganda (FORMING/PAUSED) yoki `startDate`
+   * joriy davrdan keyingi oyga tushganda `null` qaytaradi — bu holatlarda
+   * hech narsa yozilmaydi va LESSON_PACK yo'liga ta'sir qilmaydi. Agar
+   * `startDate` KEYINGI oyga tushsa, o'sha oyning hisobini oy boshi
+   * cron'i o'zi yaratadi.
+   */
+  private async chargeMidMonthJoin(
+    tx: Prisma.TransactionClient,
+    created: {
+      id: string;
+      studentId: number;
+      groupId: string;
+      status: string;
+      startDate: Date | null;
+    },
+    group: {
+      id: string;
+      branchId: number;
+      companyId: number;
+      statusEnum: string;
+      exactDays: string[];
+      course: { price: number; paymentModel: string };
+    },
+    companyId: number,
+    userId: number,
+  ): Promise<void> {
+    const now = new Date();
+    const tashkent = new Date(now.getTime() + 5 * 60 * 60 * 1000);
+
+    const chargeableEnrollment: ChargeableEnrollment = {
+      id: created.id,
+      studentId: created.studentId,
+      groupId: created.groupId,
+      status: created.status as EnrollmentStatus,
+      startDate: created.startDate,
+      group: {
+        id: group.id,
+        branchId: group.branchId,
+        companyId: group.companyId,
+        statusEnum: group.statusEnum as GroupStatus,
+        exactDays: group.exactDays,
+        course: {
+          price: group.course.price,
+          paymentModel: group.course.paymentModel as PaymentModel,
+        },
+      },
+    };
+
+    await this.monthlyChargeService.createChargeForEnrollment(tx, {
+      enrollment: chargeableEnrollment,
+      periodYear: tashkent.getUTCFullYear(),
+      periodMonth: tashkent.getUTCMonth() + 1,
+      companyId,
+      performedById: userId,
+    });
   }
 
   async removeFromGroup(
@@ -461,6 +554,11 @@ export class StudentEnrollmentService {
       }
     }
 
+    // Same instant reused below for the state log, the status flip and the
+    // monthly-charge departure refund, so all three agree on exactly when
+    // the student left (which lessons still count as "held").
+    const departureAt = new Date();
+
     // Atomic: refund unused prepaid lessons + (optional) write off the
     // current-cycle debt + flip enrollment to DROPPED + write the state
     // log. Order matters:
@@ -468,6 +566,12 @@ export class StudentEnrollmentService {
     //      credits the balance. May shrink the negative balance the
     //      write-off then targets, which is correct (we never write off
     //      more than the post-refund debt).
+    //   1b. Monthly-model counterpart of the same idea: refund the share of
+    //      THIS month's frozen charge covering lessons not yet held. The two
+    //      are mutually exclusive in practice — `prepaidLessonsRemaining` is
+    //      only ever non-zero for LESSON_PACK enrollments, and an
+    //      EnrollmentMonthlyCharge row only ever exists for MONTHLY ones —
+    //      so at most one of the two actually credits anything.
     //   2. Write-off (if requested) — clears the joriy-sikl portion.
     //      DebtWriteOffService.executeWriteOff recomputes eligibility
     //      inside the same tx and compares the freshly-suggested amount
@@ -480,6 +584,14 @@ export class StudentEnrollmentService {
           enrollmentId,
           performedById: userId,
           reason: 'Guruhdan chiqarilganda qoldiq darslar uchun balans tiklash',
+        });
+
+        await this.monthlyChargeService.reverseChargeForDeparture(tx, {
+          enrollmentId,
+          departureDate: departureAt,
+          companyId,
+          reason: 'Guruhdan chiqarilganda',
+          performedById: userId,
         });
 
         if (input.writeOffCycleDebt) {
@@ -499,7 +611,7 @@ export class StudentEnrollmentService {
           data: {
             enrollmentId,
             status: 'DROPPED',
-            transitionAt: new Date(),
+            transitionAt: departureAt,
             reason: reasonText,
             changedById: userId,
           },
@@ -508,7 +620,7 @@ export class StudentEnrollmentService {
           where: { id: enrollmentId },
           data: {
             status: 'DROPPED',
-            statusChangedAt: new Date(),
+            statusChangedAt: departureAt,
             statusChangedById: userId,
             statusChangeReason: reasonText,
             departureReasonId,

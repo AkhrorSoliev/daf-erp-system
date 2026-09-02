@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
 import { DebtWriteOffService } from '../billing/debt-write-off.service';
+import { MonthlyChargeService } from '../billing/monthly-charge.service';
 
 /**
  * Enrollment moves money, and three of its four routes are addressed by an
@@ -101,6 +102,13 @@ describe('StudentEnrollmentService — branch confinement', () => {
           useValue: { refundPrepaidToBalance: jest.fn() },
         },
         { provide: DebtWriteOffService, useValue: debtWriteOff },
+        {
+          provide: MonthlyChargeService,
+          useValue: {
+            createChargeForEnrollment: jest.fn().mockResolvedValue(null),
+            reverseChargeForDeparture: jest.fn().mockResolvedValue(null),
+          },
+        },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
