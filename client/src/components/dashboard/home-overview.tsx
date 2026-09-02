@@ -7,6 +7,7 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { resolveHomeSections } from "./dashboard-home-visibility";
 import type { DashboardSummary } from "./dashboard-summary-types";
 import { HomeAttentionList } from "./home-attention-list";
+import { HomeCharts } from "./home-charts";
 import { HomeErrorNote } from "./home-error-note";
 import { HomeLoadError } from "./home-load-error";
 import { HomeMoneyCards } from "./home-money-cards";
@@ -97,6 +98,10 @@ export function HomeOverview() {
           </div>
         )}
       </div>
+
+      {/* Diagrammalar ENG OXIRIDA va alohida so'rov bilan: sahifaning o'zagi
+          — kartalar, «E'tibor» va jadval — ular uchun kutmaydi. */}
+      <HomeCharts ready />
     </div>
   );
 }

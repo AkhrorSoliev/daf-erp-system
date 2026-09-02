@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
 import { DashboardSummaryService } from './dashboard-summary.service';
+import { DashboardChartsService } from './dashboard-charts.service';
 import { TodayScheduleQueryDto } from './dto/today-schedule-query.dto';
 import { DashboardSummaryQueryDto } from './dto/dashboard-summary-query.dto';
 import {
@@ -28,6 +29,7 @@ export class DashboardController {
   constructor(
     private readonly dashboardService: DashboardService,
     private readonly dashboardSummaryService: DashboardSummaryService,
+    private readonly dashboardChartsService: DashboardChartsService,
   ) {}
 
   // Staff only. The home dashboard is visible to every staff role including
@@ -82,6 +84,32 @@ export class DashboardController {
     @BranchScope() branchScope: ReportBranchIds,
   ) {
     return this.dashboardSummaryService.getSummary({
+      userId: user.id,
+      companyId: user.companyId,
+      roles: user.roles,
+      branchScope,
+    });
+  }
+  /**
+   * Bosh sahifadagi diagrammalar.
+   *
+   * Sanagichlardan ATAYLAB ajratilgan: `/dashboard/summary` sovuq keshda ~7 s
+   * ochiladi va diagrammalarni o'sha javobga qo'shish uni yanada
+   * sekinlashtirardi. Mijoz avval sanagichlarni chizadi, keyin bu so'rovni
+   * yuboradi.
+   *
+   * Guard `summary` bilan bir xil, lekin servis kassirga hech narsa bermaydi:
+   * diagrammalarning manbasi `/reports/*` servislari, ular unga ochiq emas.
+   */
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Get('charts')
+  getCharts(
+    @Query() _query: DashboardSummaryQueryDto,
+    @CurrentUser() user: { id: number; companyId: number; roles: string[] },
+    @BranchScope() branchScope: ReportBranchIds,
+  ) {
+    return this.dashboardChartsService.getCharts({
       userId: user.id,
       companyId: user.companyId,
       roles: user.roles,
