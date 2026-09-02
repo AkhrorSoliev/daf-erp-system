@@ -83,7 +83,7 @@ kalendarga bog'lash.
 | Q1 | Pul qanday yechiladi | **Oy boshida bitta yechim** — 1-sanada butun oy hisoblanadi |
 | Q2 | O'rtada qo'shilgan | **Qolgan darslar soniga proratsiya** — 450 000 × 6/13 |
 | Q3 | Uzrli dars | Pul qaytmaydi; **dars krediti** yoziladi |
-| Q4 | Kredit qanday ishlatiladi | **Keyingi oy to'lovi kamayadi** (450 000 − 2×34 615 = 380 770) |
+| Q4 | Kredit qanday ishlatiladi | **Keyingi oy to'lovi kamayadi**; kredit darsda saqlanadi (oktabr 14 dars: 450 000 − 2×32 143 = 385 714) |
 | Q5 | To'lov turi qayerda | **Kurs kartochkasida** (guruh/o'quvchi ustidan yozish 1-bosqichda yo'q) |
 | Q6 | Qarz qachondan | **Darhol** — 1-sanada to'lanmagani qarz; oy davomida kamayishi yig'im ko'rsatkichi |
 | Q7 | O'tish sanasi | **01.09.2026**, orqaga qaytarib |
@@ -229,6 +229,21 @@ Har **ACTIVE** yozilish uchun (ACTIVE guruhda, ACTIVE o'quvchi;
 To'liq oyni o'taydigan o'quvchida `coveredLessons == plannedLessons`, ya'ni
 `grossAmount == monthlyPrice` — proratsiya faqat o'rtada qo'shilganda ishlaydi.
 
+**Kredit DARSDA saqlanadi, pulda emas.** Misol:
+
+```
+Sentabr: 13 dars, 34 615/dars, 450 000 hisoblandi, 2 tasi uzrli
+Oktabr:  14 dars, 32 143/dars
+         450 000 − (2 × 32 143) = 385 714
+```
+
+Sentabrda 34 615 turgan dars oktabrda 32 143 bo'lib chegiriladi, chunki
+oktabrda dars ko'proq. O'quvchi baribir aynan ikkita qo'shimcha darsga ega
+bo'ladi — CEO talabi ("pul qaytarish emas, to'lovi bitta darsga ko'proq
+yetishi kerak") aynan shuni anglatadi. Pul qiymatini muzlatish kerak
+bo'lganda `creditLessons` o'rniga `creditAmount` saqlanishi kerak edi; bu
+ataylab tanlanmagan.
+
 Balans yetmasa manfiyga tushadi. **Qarz darhol** (Q6).
 
 Idempotent: `@@unique([enrollmentId, periodYear, periodMonth])` cron ikki
@@ -336,7 +351,7 @@ oylar jadvaliga almashadi:
 
 ```
 Sentabr 2026    450 000    ✓ to'langan
-Oktabr  2026    380 770    ⏳ kutilmoqda   (2 ta uzrli dars chegirildi)
+Oktabr  2026    385 714    ⏳ kutilmoqda   (2 ta uzrli dars chegirildi)
 Noyabr  2026    450 000    ⚠ to'lanmagan
 ```
 
