@@ -81,7 +81,7 @@ kalendarga bog'lash.
 | # | Savol | Qaror |
 |---|---|---|
 | Q1 | Pul qanday yechiladi | **Oy boshida bitta yechim** — 1-sanada butun oy hisoblanadi |
-| Q2 | O'rtada qo'shilgan | **Qolgan darslar soniga proratsiya** — 450 000 × 5/13 |
+| Q2 | O'rtada qo'shilgan | **Qolgan darslar soniga proratsiya** — 450 000 × 6/13 |
 | Q3 | Uzrli dars | Pul qaytmaydi; **dars krediti** yoziladi |
 | Q4 | Kredit qanday ishlatiladi | **Keyingi oy to'lovi kamayadi** (450 000 − 2×34 615 = 380 770) |
 | Q5 | To'lov turi qayerda | **Kurs kartochkasida** (guruh/o'quvchi ustidan yozish 1-bosqichda yo'q) |
@@ -252,8 +252,9 @@ prepaid, sikl indeksi va `lessonsAffordable` arifmetikasi yo'q.
 `Enrollment.startDate` dan keyin oyda qolgan dars kunlari sanaladi:
 
 ```
-17.09 da qo'shildi, sentabrda qolgan 5 dars, oyda jami 13
-chargedAmount = round(450 000 × 5 / 13) = 173 077
+17.09 da qo'shildi, sentabrda qolgan 6 dars (17, 19, 22, 24, 26, 29),
+oyda jami 13
+chargedAmount = round(450 000 × 6 / 13) = 207 692
 ```
 
 Yozilish yaratilganda darhol hisoblanadi (cronni kutmaydi).

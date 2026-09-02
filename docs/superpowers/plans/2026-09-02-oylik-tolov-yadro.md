@@ -231,7 +231,7 @@ describe('proratedMonthlyAmount', () => {
   });
 
   it('o`rtada qo`shilganda qolgan darslarga proratsiya qiladi', () => {
-    // 17.09 da keldi, sentabrda qolgan 5 dars, oyda jami 13
+    // Oyda 13 dars, o'quvchi 5 tasiga ulgurdi.
     expect(proratedMonthlyAmount(450_000, 13, 5)).toBe(173_077);
   });
 
@@ -464,7 +464,7 @@ describe('lessonDatesInMonth', () => {
   });
 
   it('fromDate berilsa o`sha kundan boshlab sanaydi (o`rtada qo`shilgan)', () => {
-    // 17.09.2026 — payshanba. Shu kundan oy oxirigacha qolgan darslar.
+    // 17.09.2026 — payshanba. Shu kundan oy oxirigacha: 17, 19, 22, 24, 26, 29.
     const dates = lessonDatesInMonth({
       year: 2026,
       month: 9,
@@ -472,7 +472,7 @@ describe('lessonDatesInMonth', () => {
       fromDate: '2026-09-17',
     });
     expect(dates[0]).toBe('2026-09-17');
-    expect(dates).toHaveLength(5);
+    expect(dates).toHaveLength(6);
   });
 
   it('toDate berilsa o`sha kungacha sanaydi (o`rtada ketgan)', () => {
@@ -514,10 +514,10 @@ describe('lessonDatesInMonth', () => {
   });
 
   it('fevral kabi qisqa oyni to`g`ri sanaydi', () => {
-    // 2028 — kabisa yili, fevral 29 kun.
+    // 2028 — kabisa yili, fevral 29 kun. Du/Cho/Ju: 02-dan 28-gacha 12 ta.
     expect(
       lessonDatesInMonth({ year: 2028, month: 2, exactDays: MON_WED_FRI }),
-    ).toHaveLength(13);
+    ).toHaveLength(12);
   });
 });
 ```
@@ -1023,8 +1023,10 @@ describe('MonthlyChargeService.createChargeForEnrollment', () => {
     });
 
     expect(charge?.plannedLessons).toBe(13); // guruhning oyi o'zgarmaydi
-    expect(charge?.coveredLessons).toBe(5); // o'quvchining ulushi
-    expect(charge?.chargedAmount).toBe(173_077);
+    // 17, 19, 22, 24, 26, 29 — olti dars qoldi.
+    expect(charge?.coveredLessons).toBe(6);
+    expect(charge?.chargedAmount).toBe(207_692); // 450 000 x 6/13
+
   });
 
   it('o`tgan oyning uzrli darslarini kredit sifatida chegiradi', async () => {
