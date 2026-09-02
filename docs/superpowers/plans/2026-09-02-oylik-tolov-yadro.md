@@ -669,10 +669,25 @@ describe('chargeMonthlyFee', () => {
     });
   });
 
-  it('metadataga lessonsCovered YOZMAYDI — sikl dvigateli uni yutib yubormasligi uchun', () => {
+  it('metadataga lessonsCovered YOZMAYDI — sikl dvigateli uni yutib yubormasligi uchun', async () => {
     // lesson-coverage.helper `lessonsCovered` bo'yicha sikl ochilganini
     // aniqlaydi. Oylik qatorda u bo'lsa, qoplama hisobi buzilardi.
-    expect(Object.keys(lastCreatedMetadata)).not.toContain('lessonsCovered');
+    const written = await service.chargeMonthlyFee({
+      studentId: 10453,
+      amount: 450_000,
+      enrollmentId: 'enr-1',
+      companyId: 1,
+      periodYear: 2026,
+      periodMonth: 9,
+      monthlyPrice: 450_000,
+      plannedLessons: 13,
+      coveredLessons: 13,
+      perLessonCost: 34_615,
+      creditLessons: 0,
+    });
+    expect(Object.keys(written.metadata as object)).not.toContain(
+      'lessonsCovered',
+    );
   });
 
   it('summa 0 bo`lsa ham qator yozadi — kredit oyni to`liq yopgani ko`rinishi kerak', async () => {
@@ -1529,7 +1544,9 @@ describe('MONTHLY kurs — davomat balansga tegmaydi', () => {
       newStatus: 'EXCUSED',
     }));
 
-    expect(accrualMock.reverseAccrualForAttendance).toHaveBeenCalled();
+    expect(accrualMock.reverseAccrualForAttendance).toHaveBeenCalledWith(
+      expect.objectContaining({ groupId: 'grp-1', studentId: 10453 }),
+    );
     expect(monthlyChargeMock.recordExcusedLesson).toHaveBeenCalledWith(
       tx,
       expect.objectContaining({ delta: 1 }),
@@ -1651,11 +1668,25 @@ Expected: FAIL — oylik shoxi yo'q, `deductLessonFee` chaqirilgan bo'ladi
     }
 
     // Dars hisoblanardi, endi uzrli: haqni qaytarib, kredit yozamiz.
-    await this.salaryAccrualService.reverseAccrualForAttendance({
-      attendanceId: params.attendanceId,
-      companyId: params.companyId,
+    // `reverseAccrualForAttendance` O'QITUVCHI bo'yicha ishlaydi
+    // (`salary-accrual.service.ts:391`), shuning uchun darsning
+    // o'qituvchilari avval aniqlanadi.
+    const teacherIds = await this.resolveTeachersForLesson(
       tx,
-    });
+      params.groupId,
+      params.lessonDate,
+    );
+    for (const teacherId of teacherIds) {
+      await this.salaryAccrualService.reverseAccrualForAttendance({
+        teacherId,
+        studentId: params.studentId,
+        groupId: params.groupId,
+        lessonDate: params.lessonDate,
+        reversedById: params.performedById,
+        reversalReason: 'Dars uzrli deb belgilandi',
+        tx,
+      });
+    }
     await this.monthlyChargeService.recordExcusedLesson(tx, {
       enrollmentId: params.enrollmentId,
       lessonDate: params.lessonDate,
