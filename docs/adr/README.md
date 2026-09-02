@@ -70,5 +70,6 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0007](0007-lavozim-roldan-ajratilgan.md) | Lavozim roldan ajratilgan | Qabul qilindi | 2026-08-16 |
 | [0008](0008-royxatdan-otish-aktori-oshkora.md) | Chaqiruvchisi yo'q yozuv o'zini oshkora e'lon qiladi | Qabul qilindi | 2026-08-19 |
 | [0009](0009-deutsch-tutor-olib-tashlandi.md) | Deutsch Tutor noldan qayta quriladi, eski qatlam olib tashlandi | Qabul qilindi | 2026-08-19 |
+| [0012](0012-bosh-sahifa-qayta-hisoblamaydi.md) | Bosh sahifa paneli raqamlarni qayta hisoblamaydi | Qabul qilindi | 2026-09-02 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
