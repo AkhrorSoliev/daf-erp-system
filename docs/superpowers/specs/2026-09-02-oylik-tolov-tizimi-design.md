@@ -417,6 +417,50 @@ Serializable tranzaksiya ichida, filial bo'yicha bo'lib.
 | Jami qarz | 14.9 mln | ~184.7 mln (169.8 shu oy + 14.9 eski) |
 | Qulflangan prepaid | 16.5 mln | 0 |
 
+### Migratsiya oldidan majburiy hisobot
+
+Skript `--dry-run` da **hech narsa yozmaydi**, faqat real prod ma'lumoti
+bilan nima o'zgarishini ko'rsatadi. CEO uni ko'rib tasdiqlamaguncha
+haqiqiy ishga tushirish **bloklanadi**.
+
+Hisobot to'rt qatlamda:
+
+**1. Umumiy sarhisob**
+
+```
+                        HOZIR          KEYIN         FARQ
+Qarzdor soni              141            367         +226
+Jami qarz          14 936 608    184 736 608   +169 800 000
+  ├─ shu oy (sentabr)      —    169 800 000
+  └─ eski qarz      14 936 608     14 936 608            0
+Musbat balans       5 479 625        100 005    −5 379 620
+Qulflangan prepaid 16 546 494              0   −16 546 494
+```
+
+**2. Guruh kesimida** — har guruh uchun: o'quvchi soni, sentabrdagi
+rejalashtirilgan dars soni, eski 1 dars narxi → yangi 1 dars narxi,
+guruhdan kutilayotgan oylik tushum, o'qituvchi haqidagi farq.
+
+```
+#031  Standart   50 o'quvchi  13 dars  37 500 → 34 615  tushum 22 500 000  ustoz −7.7%
+#051  Intensive  45 o'quvchi  22 dars  37 000 → 33 636  tushum 33 300 000  ustoz −9.1%
+```
+
+**3. O'quvchi kesimida — to'liq ro'yxat (CSV)** har 370 o'quvchi uchun:
+
+```
+ID     Ism            Eski balans  Prepaid qaytdi  Sentabr hisobi  Yangi balans  Holat
+10453  Aziz Karimov      −120 000         185 000        −450 000      −385 000  🔴 eski qarz bor
+10231  Dilnoza R.         340 000               0        −450 000      −110 000  🟡 shu oy kutilmoqda
+10118  Sardor T.          520 000         370 000        −450 000       440 000  🟢 to'langan
+```
+
+**4. Eng katta o'zgarishlar** — balansi eng ko'p o'zgargan 20 o'quvchi
+alohida ko'rsatiladi, chunki xatolik birinchi navbatda shu yerda ko'rinadi.
+
+Hisobot faylga ham yoziladi (`docs/migration-preview-<sana>.csv`), shunda
+migratsiyadan keyin haqiqiy natija bilan qator-qator taqqoslash mumkin.
+
 ### Tekshirish (migratsiyadan keyin darhol)
 
 - Har o'quvchi uchun: `eskiBalans + qaytarilganPrepaid − sentabrHisobi
@@ -444,7 +488,9 @@ Serializable tranzaksiya ichida, filial bo'yicha bo'lib.
 
 **1-bosqich — oylik yadro va migratsiya**
 `PaymentModel`, `EnrollmentMonthlyCharge`, oy boshi cron'i, davomat
-yo'lining `MONTHLY` shoxi, o'qituvchi haqi manbasi, migratsiya skripti.
+yo'lining `MONTHLY` shoxi, o'qituvchi haqi manbasi, migratsiya skripti va
+uning **majburiy oldindan hisoboti** (9-bo'lim). Hisobot CEO tomonidan
+ko'rilib tasdiqlanmaguncha prod'da migratsiya ishga tushmaydi.
 
 **2-bosqich — sozlamalar paneli**
 `Setting` jadvali, `SettingsService`, `/settings` sahifasi bo'limlar
