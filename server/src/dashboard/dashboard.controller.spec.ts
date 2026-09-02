@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
 import { DashboardSummaryService } from './dashboard-summary.service';
+import { DashboardChartsService } from './dashboard-charts.service';
 import { ROLES_KEY, STAFF_ROLES } from '../common/decorators';
 
 describe('DashboardController', () => {
@@ -30,12 +31,22 @@ describe('DashboardController', () => {
     }),
   };
 
+  const mockChartsService = {
+    getCharts: jest.fn().mockResolvedValue({
+      money: null,
+      students: null,
+      attendance: null,
+      failed: [],
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DashboardController],
       providers: [
         { provide: DashboardService, useValue: mockService },
         { provide: DashboardSummaryService, useValue: mockSummaryService },
+        { provide: DashboardChartsService, useValue: mockChartsService },
       ],
     }).compile();
 
@@ -102,6 +113,32 @@ describe('DashboardController', () => {
       );
 
       expect(mockSummaryService.getSummary).toHaveBeenCalledWith({
+        userId: 10406,
+        companyId: 1001,
+        roles: ['CEO'],
+        branchScope: [1],
+      });
+    });
+  });
+  describe('getCharts()', () => {
+    it("o'qituvchi va o'quvchiga yopiq, qolgan xodimlarga ochiq", () => {
+      const roles = reflector.get<string[]>(ROLES_KEY, controller.getCharts);
+      expect(roles).toEqual([
+        'CEO',
+        'Branch Director',
+        'Administrator',
+        'Cashier',
+      ]);
+    });
+
+    it('servisga chaqiruvchining konteksti bilan topshiradi', async () => {
+      await controller.getCharts(
+        { branchId: 1 } as any,
+        { id: 10406, companyId: 1001, roles: ['CEO'] } as any,
+        [1],
+      );
+
+      expect(mockChartsService.getCharts).toHaveBeenCalledWith({
         userId: 10406,
         companyId: 1001,
         roles: ['CEO'],

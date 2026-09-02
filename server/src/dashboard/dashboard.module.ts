@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
 import { DashboardSummaryService } from './dashboard-summary.service';
+import { DashboardChartsService } from './dashboard-charts.service';
 import { HolidaysModule } from '../holidays/holidays.module';
 import { ReportsModule } from '../reports/reports.module';
 import { PaymentsModule } from '../payments/payments.module';
@@ -19,6 +20,10 @@ import { RedisModule } from '../redis/redis.module';
     RedisModule,
   ],
   controllers: [DashboardController],
-  providers: [DashboardService, DashboardSummaryService],
+  providers: [
+    DashboardService,
+    DashboardSummaryService,
+    DashboardChartsService,
+  ],
 })
 export class DashboardModule {}
