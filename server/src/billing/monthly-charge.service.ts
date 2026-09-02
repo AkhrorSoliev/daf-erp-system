@@ -174,6 +174,107 @@ export class MonthlyChargeService {
     });
   }
 
+  /**
+   * Bir kompaniyaning barcha oylik yozilishlariga bir davr uchun hisob yozadi.
+   *
+   * Ikki chaqiruvchi bor: oy boshi cron'i (`MonthlyBillingCronService`, har
+   * oyning 1-kuni, JORIY davr uchun) va kunlik qorovul
+   * (`MonthlyBillingWatchdogService`, har kuni, shu KUNNING davri uchun) —
+   * ikkalasi ham xuddi shu metodni chaqiradi. Ular orasida farq yo'q: bu
+   * metod tabiatan idempotent, shuning uchun qorovulning har kunlik
+   * qayta-chaqiruvi allaqachon hisoblangan yozilishlarga tegmaydi.
+   *
+   * So'rov o'zi `monthlyCharges: { none: {...davr...} }` bilan filtrlaydi —
+   * ya'ni faqat ANIQ shu davr uchun hisobi yo'q yozilishlarni qaytaradi.
+   * Bu ikki narsani beradi: (1) tekshirish bitta so'rovda — 370 ta yozilish
+   * uchun ham N+1 emas, chunki Prisma buni bitta NOT EXISTS pastki
+   * so'roviga aylantiradi; (2) qorovul kod TAKRORLAMAYDI — "kimga hisob
+   * yetishmayapti" so'rovi shu YERDA, yagona manbada.
+   *
+   * Har yozilish O'ZINING Serializable tranzaksiyasida ishlanadi: bitta
+   * o'quvchidagi xato qolgan 369 tasini to'xtatmasligi kerak. Idempotent —
+   * unique kalit takroriy yozuvni to'sadi, shuning uchun cron ikki marta
+   * ishlasa ham zarar yo'q.
+   */
+  async createChargesForPeriod(params: {
+    companyId: number;
+    periodYear: number;
+    periodMonth: number;
+    performedById?: number;
+  }): Promise<{ created: number; skipped: number; totalCharged: number }> {
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: {
+        status: EnrollmentStatus.ACTIVE,
+        deletedAt: null,
+        group: {
+          deletedAt: null,
+          companyId: params.companyId,
+          statusEnum: GroupStatus.ACTIVE,
+          course: { paymentModel: PaymentModel.MONTHLY, deletedAt: null },
+        },
+        student: { deletedAt: null, status: 'ACTIVE' },
+        monthlyCharges: {
+          none: {
+            periodYear: params.periodYear,
+            periodMonth: params.periodMonth,
+          },
+        },
+      },
+      select: {
+        id: true,
+        studentId: true,
+        groupId: true,
+        status: true,
+        startDate: true,
+        group: {
+          select: {
+            id: true,
+            branchId: true,
+            companyId: true,
+            statusEnum: true,
+            exactDays: true,
+            course: { select: { price: true, paymentModel: true } },
+          },
+        },
+      },
+    });
+
+    let created = 0;
+    let skipped = 0;
+    let totalCharged = 0;
+
+    for (const enr of enrollments) {
+      try {
+        const charge = await this.prisma.$transaction(
+          (tx) =>
+            this.createChargeForEnrollment(tx, {
+              enrollment: enr as ChargeableEnrollment,
+              periodYear: params.periodYear,
+              periodMonth: params.periodMonth,
+              companyId: params.companyId,
+              performedById: params.performedById,
+            }),
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+        if (charge) {
+          created++;
+          totalCharged += charge.chargedAmount;
+        } else {
+          skipped++;
+        }
+      } catch (err) {
+        skipped++;
+        this.logger.error(
+          `Oylik hisob yozilmadi: enrollment=${enr.id} ` +
+            `davr=${params.periodYear}-${params.periodMonth}`,
+          err,
+        );
+      }
+    }
+
+    return { created, skipped, totalCharged };
+  }
+
   /** O'tgan oyning sarflanmagan uzrli darslari. */
   private async carriedCredit(
     tx: Prisma.TransactionClient,

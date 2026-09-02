@@ -61,6 +61,11 @@ describe('MonthlyChargeService', () => {
       },
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
       lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
+      enrollment: { findMany: jest.fn().mockResolvedValue([]) },
+      // `createChargesForPeriod` opens ITS OWN tx per enrollment — tests for
+      // it stub `createChargeForEnrollment` directly (already covered above),
+      // so this just has to invoke the callback with something tx-shaped.
+      $transaction: jest.fn((cb: any) => cb(prismaMock)),
     };
     tx = prismaMock;
 
@@ -239,6 +244,114 @@ describe('MonthlyChargeService', () => {
       expect(charge?.plannedLessons).toBe(12);
       expect(charge?.perLessonCost).toBe(37_500); // 450 000 / 12
       expect(charge?.chargedAmount).toBe(450_000); // oy narxi o'zgarmaydi
+    });
+  });
+
+  describe('createChargesForPeriod', () => {
+    // `createChargeForEnrollment` o'zi yuqorida to'liq test qilingan — bu
+    // yerda uni stub qilamiz, faqat ko'p yozilishni aylantirish va xatoni
+    // izolyatsiya qilish mantig'ini tekshiramiz.
+    let chargeSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      chargeSpy = jest.spyOn(service, 'createChargeForEnrollment');
+    });
+
+    afterEach(() => {
+      chargeSpy.mockRestore();
+    });
+
+    const enr = (id: string) => enrollment({ id });
+
+    it('so`rov joriy davr uchun hisobi yo`q yozilishlarnigina qaytaradi', async () => {
+      prismaMock.enrollment.findMany.mockResolvedValueOnce([]);
+
+      await service.createChargesForPeriod({
+        companyId: 1,
+        periodYear: 2026,
+        periodMonth: 10,
+      });
+
+      const call = prismaMock.enrollment.findMany.mock.calls[0][0];
+      expect(call.where.monthlyCharges).toEqual({
+        none: { periodYear: 2026, periodMonth: 10 },
+      });
+      expect(call.where.status).toBe('ACTIVE');
+      expect(call.where.student).toEqual({ deletedAt: null, status: 'ACTIVE' });
+    });
+
+    it('har yozilishni alohida tranzaksiyada yozadi — bittasi yiqilsa qolganlari yiqilmaydi', async () => {
+      prismaMock.enrollment.findMany.mockResolvedValueOnce([
+        enr('enr-a'),
+        enr('enr-b'),
+        enr('enr-c'),
+      ]);
+      chargeSpy
+        .mockResolvedValueOnce({ id: 'chg-a', chargedAmount: 450_000 })
+        .mockRejectedValueOnce(new Error('B yiqildi'))
+        .mockResolvedValueOnce({ id: 'chg-c', chargedAmount: 450_000 });
+
+      const res = await service.createChargesForPeriod({
+        companyId: 1,
+        periodYear: 2026,
+        periodMonth: 10,
+      });
+
+      expect(res.created).toBe(2);
+      expect(res.skipped).toBe(1);
+      expect(chargeSpy).toHaveBeenCalledTimes(3);
+    });
+
+    it('yaratilgan hisoblarning summasini qaytaradi', async () => {
+      prismaMock.enrollment.findMany.mockResolvedValueOnce([
+        enr('enr-a'),
+        enr('enr-b'),
+      ]);
+      chargeSpy
+        .mockResolvedValueOnce({ id: 'chg-a', chargedAmount: 450_000 })
+        .mockResolvedValueOnce({ id: 'chg-b', chargedAmount: 450_000 });
+
+      const res = await service.createChargesForPeriod({
+        companyId: 1,
+        periodYear: 2026,
+        periodMonth: 10,
+      });
+
+      expect(res.totalCharged).toBe(900_000); // 2 x 450 000
+      expect(res.created).toBe(2);
+    });
+
+    it('hisob kerak bo`lmasa (masalan oyda dars yo`q) skipped sifatida sanaydi, xato yozmaydi', async () => {
+      const errorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
+      prismaMock.enrollment.findMany.mockResolvedValueOnce([enr('enr-a')]);
+      chargeSpy.mockResolvedValueOnce(null);
+
+      const res = await service.createChargesForPeriod({
+        companyId: 1,
+        periodYear: 2026,
+        periodMonth: 10,
+      });
+
+      expect(res.created).toBe(0);
+      expect(res.skipped).toBe(1);
+      expect(res.totalCharged).toBe(0);
+      expect(errorSpy).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
+
+    it('hech qanday yozilish topilmasa bo`sh natija qaytaradi (kunlik qorovul uchun xavfsiz)', async () => {
+      prismaMock.enrollment.findMany.mockResolvedValueOnce([]);
+
+      const res = await service.createChargesForPeriod({
+        companyId: 1,
+        periodYear: 2026,
+        periodMonth: 10,
+      });
+
+      expect(res).toEqual({ created: 0, skipped: 0, totalCharged: 0 });
+      expect(chargeSpy).not.toHaveBeenCalled();
     });
   });
 

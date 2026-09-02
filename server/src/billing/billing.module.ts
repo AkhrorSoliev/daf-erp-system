@@ -3,6 +3,8 @@ import { LessonBillingService } from './lesson-billing.service';
 import { EnrollmentBillingService } from './enrollment-billing.service';
 import { DebtWriteOffService } from './debt-write-off.service';
 import { MonthlyChargeService } from './monthly-charge.service';
+import { MonthlyBillingCronService } from './monthly-billing-cron.service';
+import { MonthlyBillingWatchdogService } from './monthly-billing-watchdog.service';
 import { BillingController } from './billing.controller';
 import { StudentDebtNotificationListener } from './student-debt-notification.listener';
 import { TransactionsModule } from '../transactions/transactions.module';
@@ -20,6 +22,11 @@ import { TelegramModule } from '../telegram/telegram.module';
  * `DebtWriteOffService` is the "yo'qolgan o'quvchi" write-off flow —
  * admin-driven clearing of the current-cycle portion of a student's debt
  * when the student never attended any lesson in this cycle.
+ *
+ * `MonthlyBillingCronService` (oyning 1-kuni) and
+ * `MonthlyBillingWatchdogService` (har kuni, bo'shliqni tuzatuvchi) both
+ * drive `MonthlyChargeService.createChargesForPeriod` — the monthly-model
+ * counterpart of the lesson-pack billing pipeline above.
  */
 @Module({
   imports: [TransactionsModule, SalaryModule, TelegramModule],
@@ -29,6 +36,8 @@ import { TelegramModule } from '../telegram/telegram.module';
     EnrollmentBillingService,
     DebtWriteOffService,
     MonthlyChargeService,
+    MonthlyBillingCronService,
+    MonthlyBillingWatchdogService,
     StudentDebtNotificationListener,
   ],
   exports: [
