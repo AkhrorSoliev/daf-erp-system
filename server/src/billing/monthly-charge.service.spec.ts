@@ -269,6 +269,88 @@ describe('MonthlyChargeService', () => {
     });
   });
 
+  describe('createChargeForEnrollment — chegirma', () => {
+    const baseParams = {
+      enrollment: enrollment(),
+      periodYear: 2026,
+      periodMonth: 9,
+      companyId: 1,
+    };
+
+    it('50% chegirmali o`quvchidan yarim pul yechadi', async () => {
+      // Sentabr 13 dars, 450 000 -> chegirmasiz 450 000, 50% bilan 225 000.
+      const charge = await service.createChargeForEnrollment(tx, {
+        ...baseParams,
+        discountPercent: 50,
+      });
+      expect(charge?.chargedAmount).toBe(225_000);
+    });
+
+    it('perLessonCost ni CHEGIRMASIZ saqlaydi — o`qituvchi haqi kamaymaydi', async () => {
+      const charge = await service.createChargeForEnrollment(tx, {
+        ...baseParams,
+        discountPercent: 50,
+      });
+      expect(charge?.perLessonCost).toBe(34_615); // 450 000 / 13, chegirmasiz
+      expect(charge?.discountPercent).toBe(50);
+    });
+
+    it('kreditni CHEGIRMALI narxda hisoblaydi', async () => {
+      // O'tgan oydan (avgust) 2 ta uzrli dars. 50% chegirmali o'quvchi
+      // uchun bitta dars 17 308 turadi (34 615 ning yarmi), 34 615 emas.
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockImplementation(
+        ({ where }: any) => {
+          const key = where.enrollmentId_periodYear_periodMonth;
+          if (key.periodMonth === 8) {
+            return Promise.resolve({ excusedLessons: 2 });
+          }
+          return Promise.resolve(null);
+        },
+      );
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        ...baseParams,
+        discountPercent: 50,
+      });
+      expect(charge?.creditAmount).toBe(34_616); // 2 x 17 308
+      expect(charge?.chargedAmount).toBe(190_384); // 225 000 - 34 616
+    });
+
+    it('chegirmasiz o`quvchi uchun hech narsa o`zgarmaydi', async () => {
+      const charge = await service.createChargeForEnrollment(tx, {
+        ...baseParams,
+        discountPercent: 0,
+      });
+      expect(charge?.chargedAmount).toBe(450_000);
+      expect(charge?.discountPercent).toBe(0);
+    });
+
+    it('100% chegirma nol to`lov beradi, lekin hisob qatori YARATILADI', async () => {
+      // Qator kerak: o'qituvchi haqi va uzrli dars krediti shunga yoziladi.
+      const charge = await service.createChargeForEnrollment(tx, {
+        ...baseParams,
+        discountPercent: 100,
+      });
+      expect(charge?.chargedAmount).toBe(0);
+      expect(charge?.perLessonCost).toBe(34_615);
+    });
+
+    it('chegirma metadata sifatida chargeMonthlyFee ga o`tadi', async () => {
+      await service.createChargeForEnrollment(tx, {
+        ...baseParams,
+        discountPercent: 50,
+      });
+      expect(txWriteMock.chargeMonthlyFee).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 225_000,
+          discountPercent: 50,
+          fullAmount: 450_000,
+        }),
+        tx,
+      );
+    });
+  });
+
   describe('createChargesForPeriod', () => {
     // `createChargeForEnrollment` o'zi yuqorida to'liq test qilingan — bu
     // yerda uni stub qilamiz, faqat ko'p yozilishni aylantirish va xatoni

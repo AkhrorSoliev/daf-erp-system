@@ -342,6 +342,7 @@ async function main(prisma: PrismaClient) {
         monthlyPrice: course.price,
         plannedLessons,
         coveredLessons,
+        discountPercent: e.student.discountPercent,
       });
     }
 

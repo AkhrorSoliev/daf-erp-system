@@ -6,6 +6,7 @@
  * ishlatadi — hisobotda ko'rgan raqam bilan bazaga tushgan raqam
  * bir-biridan farq qila olmaydi.
  */
+import { applyDiscount, clampDiscount } from '../../src/billing/monthly-price';
 
 export interface MigrationRow {
   enrollmentId: string;
@@ -22,6 +23,12 @@ export interface MigrationRow {
   monthlyPrice: number;
   plannedLessons: number;
   coveredLessons: number;
+  /**
+   * `Student.discountPercent` (0-100). `MonthlyChargeService.createChargeForEnrollment`
+   * bilan AYNAN bir xil joyda qo'llanadi — aks holda bu bashorat haqiqiy
+   * xizmat yozadigan raqamdan farq qilib qoladi.
+   */
+  discountPercent?: number;
 }
 
 export interface StudentPlan {
@@ -70,7 +77,7 @@ export function buildMigrationPlan(input: MigrationInput): MigrationPlan {
     // Dry-run va apply BIR XIL arifmetikani ishlatishi kerak, shuning
     // uchun bu yerda ham hisob 0 — `coveredLessons >= plannedLessons`
     // (0 >= 0) to'liq narxni to'lab qo'yishi mumkin edi.
-    const monthlyCharge =
+    const monthlyChargeFull =
       r.plannedLessons <= 0
         ? 0
         : Math.round(
@@ -78,6 +85,13 @@ export function buildMigrationPlan(input: MigrationInput): MigrationPlan {
               ? r.monthlyPrice
               : (r.monthlyPrice * r.coveredLessons) / r.plannedLessons,
           );
+    // Markazning ulushi — createChargeForEnrollment bilan bitta nusxadan
+    // (task-9c-brief.md): 709 000 so'm/oy uch o'quvchida shu qadam
+    // tushib qolgani sababli edi.
+    const monthlyCharge = applyDiscount(
+      monthlyChargeFull,
+      clampDiscount(r.discountPercent ?? 0),
+    );
 
     const existing = byStudent.get(r.studentId);
     if (existing) {

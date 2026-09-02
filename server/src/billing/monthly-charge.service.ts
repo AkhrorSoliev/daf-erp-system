@@ -12,7 +12,9 @@ import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { buildHolidayDateSet } from '../holidays/holiday-date-set';
 import { lessonDatesInMonth } from './planned-lessons';
 import {
+  applyDiscount,
   applyLessonCredit,
+  clampDiscount,
   perLessonCostForMonth,
   proratedMonthlyAmount,
 } from './monthly-price';
@@ -76,9 +78,19 @@ export class MonthlyChargeService {
       periodMonth: number;
       companyId: number;
       performedById?: number;
+      /**
+       * `Student.discountPercent` (0-100). Chaqiruvchi buni o'zining
+       * mavjud so'rovidan uzatadi (N+1 emas) — bu servis o'quvchini
+       * qayta o'qimaydi. Faqat markazning ulushini qisqartiradi:
+       * `EnrollmentMonthlyCharge.perLessonCost` ATAYLAB chegirmasiz
+       * qoladi, chunki Task 6 o'qituvchi haqini shu maydondan hisoblaydi
+       * (`Student.discountPercent` izohiga qara).
+       */
+      discountPercent?: number;
     },
   ) {
     const { enrollment: enr, periodYear, periodMonth } = params;
+    const discountPercent = clampDiscount(params.discountPercent ?? 0);
 
     if (enr.group.course.paymentModel !== PaymentModel.MONTHLY) return null;
     if (enr.status !== EnrollmentStatus.ACTIVE) return null;
@@ -124,11 +136,24 @@ export class MonthlyChargeService {
     if (coveredLessons === 0) return null;
 
     const monthlyPrice = enr.group.course.price;
-    const perLessonCost = perLessonCostForMonth(monthlyPrice, plannedLessons);
-    const grossAmount = proratedMonthlyAmount(
+    // CHEGIRMASIZ — o'qituvchi haqi (Task 6) va bu qatorning o'zi shu
+    // ikkisidan hisoblanadi.
+    const perLessonCostFull = perLessonCostForMonth(
+      monthlyPrice,
+      plannedLessons,
+    );
+    const grossAmountFull = proratedMonthlyAmount(
       monthlyPrice,
       plannedLessons,
       coveredLessons,
+    );
+    // Markazning ulushi — o'quvchi aynan shuni to'laydi. Kredit ham shu
+    // chegirmali narxda sarflanadi: aks holda chegirmali o'quvchi to'lagan
+    // pulidan ikki barobar ko'p kredit olardi (task-9c-brief.md).
+    const grossAmountStudent = applyDiscount(grossAmountFull, discountPercent);
+    const perLessonCostStudent = applyDiscount(
+      perLessonCostFull,
+      discountPercent,
     );
 
     const carried = await this.carriedCredit(
@@ -137,7 +162,11 @@ export class MonthlyChargeService {
       periodYear,
       periodMonth,
     );
-    const credit = applyLessonCredit(grossAmount, perLessonCost, carried);
+    const credit = applyLessonCredit(
+      grossAmountStudent,
+      perLessonCostStudent,
+      carried,
+    );
 
     const charge = await tx.enrollmentMonthlyCharge.create({
       data: {
@@ -149,7 +178,7 @@ export class MonthlyChargeService {
         periodYear,
         periodMonth,
         plannedLessons,
-        perLessonCost,
+        perLessonCost: perLessonCostFull,
         monthlyPrice,
         coveredLessons,
         creditLessons: credit.creditLessonsUsed,
@@ -158,6 +187,7 @@ export class MonthlyChargeService {
         // Sig'magan kredit kuymaydi: keyingi oy uni ko'rishi uchun shu
         // oyning uzrli sanog'ida qoldiriladi.
         excusedLessons: credit.carriedCreditLessons,
+        discountPercent,
       },
     });
 
@@ -173,8 +203,10 @@ export class MonthlyChargeService {
         monthlyPrice,
         plannedLessons,
         coveredLessons,
-        perLessonCost,
+        perLessonCost: perLessonCostFull,
         creditLessons: credit.creditLessonsUsed,
+        discountPercent,
+        fullAmount: grossAmountFull,
       },
       tx,
     );
@@ -319,8 +351,17 @@ export class MonthlyChargeService {
     );
     if (remaining === 0) return null;
 
+    // `charge.perLessonCost` ATAYLAB chegirmasiz (o'qituvchi haqi undan
+    // hisoblanadi) — qaytariladigan summa esa o'quvchi TO'LAGAN narxda
+    // bo'lishi kerak, aks holda chegirmali o'quvchi ortiqcha qaytarib
+    // olardi (`discountPercent` default 0 — chegirmasiz yozilishlar uchun
+    // bu qatorning natijasi o'zgarmaydi).
+    const discountedPerLessonCost = applyDiscount(
+      charge.perLessonCost,
+      clampDiscount(charge.discountPercent ?? 0),
+    );
     const refunded = Math.min(
-      remaining * charge.perLessonCost,
+      remaining * discountedPerLessonCost,
       charge.chargedAmount,
     );
     if (refunded <= 0) return null;
@@ -400,6 +441,9 @@ export class MonthlyChargeService {
         groupId: true,
         status: true,
         startDate: true,
+        // Chegirma shu YERDA, bir so'rovda o'qiladi — enrollment boshiga
+        // alohida so'rov (N+1) emas.
+        student: { select: { discountPercent: true } },
         group: {
           select: {
             id: true,
@@ -427,6 +471,7 @@ export class MonthlyChargeService {
               periodMonth: params.periodMonth,
               companyId: params.companyId,
               performedById: params.performedById,
+              discountPercent: enr.student?.discountPercent ?? 0,
             }),
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
         );

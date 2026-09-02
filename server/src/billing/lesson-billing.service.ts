@@ -21,7 +21,11 @@ import {
 import { MonthlyChargeService } from './monthly-charge.service';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { lessonDatesInMonth } from './planned-lessons';
-import { perLessonCostForMonth } from './monthly-price';
+import {
+  applyDiscount,
+  clampDiscount,
+  perLessonCostForMonth,
+} from './monthly-price';
 
 // Business rule: a lesson held = a lesson paid. The student's prepaid
 // quota is consumed (and the teacher earns) for any status that confirms
@@ -33,17 +37,6 @@ const BILLABLE: ReadonlySet<AttendanceStatus> = new Set([
   AttendanceStatus.LATE,
   AttendanceStatus.ABSENT,
 ]);
-
-function clampDiscount(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.max(0, Math.min(100, Math.trunc(value)));
-}
-
-function applyDiscount(fullAmount: number, discountPercent: number): number {
-  if (discountPercent <= 0) return fullAmount;
-  if (discountPercent >= 100) return 0;
-  return Math.round((fullAmount * (100 - discountPercent)) / 100);
-}
 
 export interface ProcessAttendanceBillingParams {
   attendanceId: string;

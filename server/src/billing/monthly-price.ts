@@ -39,6 +39,34 @@ export function proratedMonthlyAmount(
   return Math.round((monthlyPrice * coveredLessons) / plannedLessons);
 }
 
+/**
+ * O'quvchi chegirmasini (`Student.discountPercent`) 0–100 oralig'iga qisadi.
+ *
+ * Ikkala yo'l (12 talik `LessonBillingService` va oylik
+ * `MonthlyChargeService`) BITTA nusxadan foydalanadi — ikkinchi nusxa
+ * ilgari aynan shu arifmetikada tafovut yasagan (Task 6).
+ */
+export function clampDiscount(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, Math.trunc(value)));
+}
+
+/**
+ * Chegirmani summaga qo'llaydi — markazning ulushini qisqartiradi.
+ *
+ * `perLessonCost` (yoki `EnrollmentMonthlyCharge.perLessonCost`) ATAYLAB
+ * chegirmasiz qoladi: o'qituvchi haqi undan hisoblanadi, chegirmani faqat
+ * markaz ko'taradi (`Student.discountPercent` izohiga qara).
+ */
+export function applyDiscount(
+  fullAmount: number,
+  discountPercent: number,
+): number {
+  if (discountPercent <= 0) return fullAmount;
+  if (discountPercent >= 100) return 0;
+  return Math.round((fullAmount * (100 - discountPercent)) / 100);
+}
+
 export interface LessonCreditResult {
   /** Shu oyda sarflangan kredit darslari soni. */
   creditLessonsUsed: number;

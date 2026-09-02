@@ -115,6 +115,47 @@ describe('buildMigrationPlan', () => {
     expect(plan.students[0].monthlyCharge).toBe(900_000); // ikki guruh
   });
 
+  describe('chegirma — PROD tekshiruvi 02.09.2026 (task-9c-brief.md)', () => {
+    it('#10698 Azizbek Rahimov — 50% chegirma, Standart 450 000 -> 225 000', () => {
+      const plan = buildMigrationPlan({
+        rows: [row({ studentId: 10698, discountPercent: 50 })],
+        reversedDeductions: {},
+      });
+      expect(plan.students[0].monthlyCharge).toBe(225_000);
+    });
+
+    it('#10080 Madina Ahrolova — 50% chegirma, Standart 450 000 -> 225 000', () => {
+      const plan = buildMigrationPlan({
+        rows: [row({ studentId: 10080, discountPercent: 50 })],
+        reversedDeductions: {},
+      });
+      expect(plan.students[0].monthlyCharge).toBe(225_000);
+    });
+
+    it('#10321 Behruz Yuldashev — 35% chegirma, Intensive 740 000 -> 481 000', () => {
+      const plan = buildMigrationPlan({
+        rows: [
+          row({
+            studentId: 10321,
+            monthlyPrice: 740_000,
+            discountPercent: 35,
+          }),
+        ],
+        reversedDeductions: {},
+      });
+      // Jami ortiqcha: 740 000 - 481 000 = 259 000 so'm/oy (brief jadvali).
+      expect(plan.students[0].monthlyCharge).toBe(481_000);
+    });
+
+    it('chegirmasiz o`quvchi uchun hech narsa o`zgarmaydi', () => {
+      const plan = buildMigrationPlan({
+        rows: [row({ discountPercent: 0 })],
+        reversedDeductions: {},
+      });
+      expect(plan.students[0].monthlyCharge).toBe(450_000);
+    });
+  });
+
   it('plannedLessons=0 bo`lsa hisob 0 — MonthlyChargeService.createChargeForEnrollment kabi hech narsa yozilmaydi', () => {
     const plan = buildMigrationPlan({
       rows: [row({ plannedLessons: 0, coveredLessons: 0 })],

@@ -287,6 +287,14 @@ export class TransactionsWriteService {
       coveredLessons: number;
       perLessonCost: number;
       creditLessons: number;
+      /**
+       * O'quvchi chegirmasi (0-100) va chegirmasiz to'liq summa. 12 talik
+       * yo'ldagi `LESSON_DEDUCTION` metadatasi ham AYNAN shu ikki kalitni
+       * saqlaydi (`billing/lesson-billing.service.ts`), shunda hisobotlar
+       * ikkala yo'lni bir xil o'qiydi.
+       */
+      discountPercent?: number;
+      fullAmount?: number;
     },
     tx?: Prisma.TransactionClient,
   ) {
@@ -331,6 +339,12 @@ export class TransactionsWriteService {
             coveredLessons: params.coveredLessons,
             perLessonCost: params.perLessonCost,
             creditLessons: params.creditLessons,
+            ...(params.discountPercent !== undefined && {
+              discountPercent: params.discountPercent,
+            }),
+            ...(params.fullAmount !== undefined && {
+              fullAmount: params.fullAmount,
+            }),
           },
         },
       });

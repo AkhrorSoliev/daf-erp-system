@@ -1327,6 +1327,12 @@ model EnrollmentMonthlyCharge {
   /// Oy davomida to'planadi; keyingi oyning creditLessons'iga aylanadi.
   excusedLessons Int @default(0)
 
+  // Hisob yozilgan paytdagi o'quvchi chegirmasi (0-100), muzlatiladi.
+  // `perLessonCost` ATAYLAB chegirmasiz qoladi: o'qituvchi haqi undan
+  // hisoblanadi va chegirma faqat markaz zimmasida (schema.prisma dagi
+  // Student.discountPercent izohiga qara).
+  discountPercent Int @default(0)
+
   status        MonthlyChargeStatus @default(CHARGED)
   transactionId String?
 

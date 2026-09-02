@@ -250,7 +250,14 @@ export class StudentEnrollmentService {
               changedById: userId,
             },
           });
-          await this.chargeMidMonthJoin(tx, fresh, group, companyId, userId);
+          await this.chargeMidMonthJoin(
+            tx,
+            fresh,
+            group,
+            companyId,
+            userId,
+            student.discountPercent,
+          );
           return fresh;
         },
         {
@@ -284,7 +291,14 @@ export class StudentEnrollmentService {
             },
           });
 
-          await this.chargeMidMonthJoin(tx, fresh, group, companyId, userId);
+          await this.chargeMidMonthJoin(
+            tx,
+            fresh,
+            group,
+            companyId,
+            userId,
+            student.discountPercent,
+          );
           return fresh;
         },
         {
@@ -409,6 +423,7 @@ export class StudentEnrollmentService {
     },
     companyId: number,
     userId: number,
+    discountPercent: number,
   ): Promise<void> {
     const now = new Date();
     const tashkent = new Date(now.getTime() + 5 * 60 * 60 * 1000);
@@ -438,6 +453,7 @@ export class StudentEnrollmentService {
       periodMonth: tashkent.getUTCMonth() + 1,
       companyId,
       performedById: userId,
+      discountPercent,
     });
   }
 
