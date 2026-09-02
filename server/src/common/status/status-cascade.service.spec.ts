@@ -3,12 +3,14 @@ import { StatusCascadeService } from './status-cascade.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EntityHistoryService } from '../entity-history';
 import { EnrollmentBillingService } from '../../billing/enrollment-billing.service';
+import { MonthlyChargeService } from '../../billing/monthly-charge.service';
 
 describe('StatusCascadeService', () => {
   let service: StatusCascadeService;
   let prisma: any;
   let entityHistoryService: any;
   let enrollmentBillingService: any;
+  let monthlyChargeService: any;
 
   const mockEnrollmentWithStudent = [
     {
@@ -61,6 +63,10 @@ describe('StatusCascadeService', () => {
         .mockResolvedValue({ refunded: 0, lessons: 0 }),
     };
 
+    monthlyChargeService = {
+      reverseChargeForDeparture: jest.fn().mockResolvedValue(null),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StatusCascadeService,
@@ -70,6 +76,7 @@ describe('StatusCascadeService', () => {
           provide: EnrollmentBillingService,
           useValue: enrollmentBillingService,
         },
+        { provide: MonthlyChargeService, useValue: monthlyChargeService },
       ],
     }).compile();
 
@@ -223,8 +230,8 @@ describe('StatusCascadeService', () => {
 
     it('COMPLETED: auto-graduates students with no remaining active enrollments', async () => {
       prisma.enrollment.findMany.mockResolvedValue([
-        { studentId: 100 },
-        { studentId: 101 },
+        { id: 'enr-100', studentId: 100, group: { companyId: 1 } },
+        { id: 'enr-101', studentId: 101, group: { companyId: 1 } },
       ]);
       prisma.enrollment.count.mockResolvedValue(0);
       prisma.student.findFirst.mockResolvedValue({
@@ -262,7 +269,9 @@ describe('StatusCascadeService', () => {
     });
 
     it('COMPLETED: does NOT graduate students who have other active enrollments', async () => {
-      prisma.enrollment.findMany.mockResolvedValue([{ studentId: 100 }]);
+      prisma.enrollment.findMany.mockResolvedValue([
+        { id: 'enr-100', studentId: 100, group: { companyId: 1 } },
+      ]);
       prisma.enrollment.count.mockResolvedValue(2);
 
       await service.cascade('Group', 'group-1', 'COMPLETED', 1);
@@ -440,6 +449,39 @@ describe('StatusCascadeService', () => {
       expect(
         enrollmentBillingService.refundPrepaidToBalance,
       ).toHaveBeenCalled();
+    });
+
+    it('EXPELLED: also reverses the MONTHLY-model departure charge (paymentModel-agnostic wiring)', async () => {
+      await service.cascade('Student', '100', 'EXPELLED', 42);
+
+      expect(
+        monthlyChargeService.reverseChargeForDeparture,
+      ).toHaveBeenCalledWith(
+        prisma, // tx from the mocked $transaction
+        expect.objectContaining({
+          enrollmentId: 'enr-1',
+          companyId: 1001, // mockEnrollmentWithStudent's group.companyId
+          performedById: 42,
+        }),
+      );
+    });
+
+    it('Group CANCELLED: also reverses the MONTHLY-model departure charge', async () => {
+      await service.cascade('Group', 'group-1', 'CANCELLED', 1);
+      expect(
+        monthlyChargeService.reverseChargeForDeparture,
+      ).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({ enrollmentId: 'enr-1' }),
+      );
+    });
+
+    it('no departure-reversal calls when no enrollments match', async () => {
+      prisma.enrollment.findMany.mockResolvedValue([]);
+      await service.cascade('Student', '100', 'EXPELLED', 1);
+      expect(
+        monthlyChargeService.reverseChargeForDeparture,
+      ).not.toHaveBeenCalled();
     });
 
     it('Branch CLOSED: refunds unused prepaid', async () => {

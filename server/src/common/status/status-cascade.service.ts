@@ -10,6 +10,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { EntityHistoryService } from '../entity-history';
 import { EnrollmentBillingService } from '../../billing/enrollment-billing.service';
+import { MonthlyChargeService } from '../../billing/monthly-charge.service';
 
 interface CascadeResult {
   entity: string;
@@ -23,6 +24,7 @@ export class StatusCascadeService {
     private prisma: PrismaService,
     private entityHistoryService: EntityHistoryService,
     private enrollmentBillingService: EnrollmentBillingService,
+    private monthlyChargeService: MonthlyChargeService,
   ) {}
 
   /**
@@ -40,7 +42,7 @@ export class StatusCascadeService {
   ): Promise<{ count: number }> {
     const matches = await this.prisma.enrollment.findMany({
       where: filter,
-      select: { id: true },
+      select: { id: true, group: { select: { companyId: true } } },
     });
 
     // Closing an enrollment (DROPPED/COMPLETED) strands any unused prepaid
@@ -50,20 +52,43 @@ export class StatusCascadeService {
     // paths (student EXPELLED/ARCHIVED, group CANCELLED/COMPLETED, branch
     // close, course archive) silently lose the student's money — the
     // 2026-06 audit found 7 production victims (~630k so'm).
+    //
+    // The MONTHLY counterpart runs in the SAME per-enrollment tx, right
+    // alongside the LESSON_PACK refund — mirrors removeFromGroup(). The two
+    // calls are mutually exclusive in practice without needing to branch on
+    // `Course.paymentModel` here: `refundPrepaidToBalance` no-ops when
+    // `prepaidLessonsRemaining` is 0 (always true for a MONTHLY enrollment),
+    // and `reverseChargeForDeparture` no-ops when no `EnrollmentMonthlyCharge`
+    // row exists for the period (always true for LESSON_PACK, since only
+    // the MONTHLY billing path ever writes that table). Before this, a
+    // MONTHLY student dropped through ANY cascade route (group cancelled,
+    // student EXPELLED/ARCHIVED, branch closed, course archived) kept a
+    // full un-refunded charge for lessons they would never take — same bug
+    // shape as the missing prepaid refund above, just for the newer model.
     if (
       newStatus === EnrollmentStatus.DROPPED ||
       newStatus === EnrollmentStatus.COMPLETED
     ) {
+      const departureDate =
+        (auditFields.statusChangedAt as Date | undefined) ?? new Date();
       for (const m of matches) {
         await this.prisma.$transaction(
-          (tx) =>
-            this.enrollmentBillingService.refundPrepaidToBalance(tx, {
+          async (tx) => {
+            await this.enrollmentBillingService.refundPrepaidToBalance(tx, {
               enrollmentId: m.id,
               reason: reason
                 ? `Qoldiq oldindan to'langan darslar balansga qaytarildi (${reason})`
                 : undefined,
               performedById: userId,
-            }),
+            });
+            await this.monthlyChargeService.reverseChargeForDeparture(tx, {
+              enrollmentId: m.id,
+              departureDate,
+              companyId: m.group.companyId,
+              reason: reason ?? 'Cascade orqali guruhdan chiqarildi',
+              performedById: userId,
+            });
+          },
           {
             isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
             maxWait: 10_000,

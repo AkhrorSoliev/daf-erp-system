@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import {
   EnrollmentStatus,
   GroupStatus,
@@ -194,12 +194,40 @@ export class MonthlyChargeService {
    * darslar ulushi qaytariladi va qaytariladigan summa hech qachon
    * yechilgandan oshmaydi (kredit tufayli oz yechilgan oy).
    *
+   * IDEMPOTENT — takroriy chaqiruv (qo'sh bosish, tarmoq qayta urinishi
+   * committed bo'lib qolgan so'rovni qayta yuborishi) ikkinchi marta
+   * qaytarmaydi. `remaining` KALENDARDAN emas — hisobning O'ZI saqlab
+   * turgan `charge.coveredLessons`dan chiqariladi: "departureDate holatida
+   * shu kungacha qoplanishi kerak bo'lgan darslar soni"
+   * (`lessonsThroughDeparture`) hisoblab, joriy `coveredLessons`dan
+   * ayiriladi. Birinchi chaqiruv shu farqni qaytaradi VA `coveredLessons`ni
+   * aynan o'sha farqga kamaytiradi — shuning uchun ikkinchi chaqiruvda farq
+   * 0 bo'lib qoladi, chunki `status` doim `CHARGED` bo'lib qolaveradi (u
+   * yagona himoya bo'la olmaydi). Faqat kalendardan hisoblangan avvalgi
+   * versiya (`lessonDatesInMonth(...).filter(d => d > day)`) BUG edi: u har
+   * safar bir xil sonni qaytarib, chaqirilgan safar sayin qayta-qayta pul
+   * yechardi — faqat `chargedAmount` qopqog'i bilan chegaralangan, haqiqiy
+   * pul.
+   *
+   * `departureDate` bugundan OLDINGI sana bo'lishi MUMKIN EMAS: bu funksiya
+   * "departureDate'dan keyingi darslar hali o'tilmagan" deb faraz qiladi —
+   * bu faqat bugun yoki kelajakdagi sana uchun to'g'ri. Orqaga sanaladigan
+   * (backdated) chiqish allaqachon o'qitilgan va o'qituvchiga hisoblangan
+   * darslarni ham "qolgan" deb hisoblab qaytarib yuborardi — bu holda
+   * `SalaryAccrual` bilan sinxronsizlik yuzaga kelardi (garchi bu funksiya
+   * hech qachon accrual'ga to'g'ridan-to'g'ri tegmasa ham — pastga qarang).
+   * Yagona hozirgi chaqiruvchi (`removeFromGroup`) doim `new Date()`ni
+   * yuboradi; bu tekshiruv KELAJAKDAGI chaqiruvchilar uchun himoya —
+   * xato jim yuz bermasligi kerak.
+   *
    * Bu servis TEACHER accrual'lariga MUTLAQO tegmaydi: qaytarilayotgan
    * darslar hali o'tilmagan (ketgan kundan KEYINGI sanalar), shuning uchun
    * ularga hech qanday `SalaryAccrual` yozuvi yo'q — reverse qilinadigan
    * narsa yo'q. O'qituvchi haqi (`accrueMonthlySalary`) har bir davomat
    * uchun alohida, `EnrollmentMonthlyCharge.perLessonCost` (bu yerda
-   * o'zgartirilmaydigan, muzlatilgan qiymat) asosida hisoblanadi.
+   * o'zgartirilmaydigan, muzlatilgan qiymat) asosida hisoblanadi. Yuqoridagi
+   * backdated-taqiq shu invariantni KUCHAB QO'YADI — accrual'siz qolishning
+   * yagona sababi "bu darslar hali o'tilmagan" degan faraz edi.
    */
   async reverseChargeForDeparture(
     tx: Prisma.TransactionClient,
@@ -212,6 +240,13 @@ export class MonthlyChargeService {
     },
   ): Promise<{ refunded: number } | null> {
     const day = tashkentDateStr(params.departureDate);
+    const today = tashkentDateStr(new Date());
+    if (day < today) {
+      throw new BadRequestException(
+        "reverseChargeForDeparture: departureDate bugundan oldingi sana bo'lishi mumkin emas — aks holda allaqachon o'tilgan (va o'qituvchiga hisoblangan) darslar ham 'qolgan' deb hisoblanib qaytarilib qolardi",
+      );
+    }
+
     const periodYear = Number(day.slice(0, 4));
     const periodMonth = Number(day.slice(5, 7));
 
@@ -230,6 +265,7 @@ export class MonthlyChargeService {
       where: { id: params.enrollmentId },
       select: {
         studentId: true,
+        startDate: true,
         group: { select: { branchId: true, exactDays: true } },
       },
     });
@@ -243,14 +279,25 @@ export class MonthlyChargeService {
       periodMonth,
     );
 
-    // Ketgan kundan KEYINGI darslar — ketgan kunning o'zi o'tgan hisoblanadi.
-    const remaining = lessonDatesInMonth({
+    // "departureDate holatida shu kungacha (kiritilgan holda) qoplanishi
+    // kerak bo'lgan darslar soni" — createChargeForEnrollment'dagi
+    // coveredLessons bilan BIR XIL usulda hisoblanadi (o'sha `fromDate`,
+    // faqat bu yerda `toDate=day`). `remaining` shu bilan HOZIRGI
+    // `charge.coveredLessons` orasidagi FARQ — kalendardan emas, hisobning
+    // o'zidan. Shu orqali idempotent (yuqoridagi izohga qarang).
+    const lessonsThroughDeparture = lessonDatesInMonth({
       year: periodYear,
       month: periodMonth,
       exactDays: enr.group.exactDays,
       excludedDates,
-    }).filter((d) => d > day).length;
+      fromDate: enr.startDate ? tashkentDateStr(enr.startDate) : null,
+      toDate: day,
+    }).length;
 
+    const remaining = Math.max(
+      0,
+      charge.coveredLessons - lessonsThroughDeparture,
+    );
     if (remaining === 0) return null;
 
     const refunded = Math.min(

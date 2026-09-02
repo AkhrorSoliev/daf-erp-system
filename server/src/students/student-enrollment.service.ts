@@ -465,6 +465,19 @@ export class StudentEnrollmentService {
       throw new NotFoundException('Faol yozuv topilmadi');
     }
 
+    // Refuses a SECOND call on the same enrollment (double-click, a client
+    // retry after a request that timed out but actually committed). Without
+    // this, `reverseChargeForDeparture` was the only guard against re-running
+    // the whole departure transaction — and it stayed silent on a repeat
+    // (idempotent refund math), so nothing here would have surfaced a
+    // double-submit at all. This turns it into an explicit, loud 400 instead
+    // of a silent no-op two-refund-attempts-deep in the tx.
+    if (enrollment.status !== 'ACTIVE') {
+      throw new BadRequestException(
+        "Bu yozilish allaqachon yopilgan — qayta chiqarib bo'lmaydi",
+      );
+    }
+
     // Anchored on the ENROLLMENT's own student, never the `:id` in the path —
     // which this method has always ignored (`_studentId`). Guarding the path
     // parameter would let a caller pass one of their OWN students' ids

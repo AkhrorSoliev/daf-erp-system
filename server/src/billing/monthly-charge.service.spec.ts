@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { BadRequestException, Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   ChargeableEnrollment,
@@ -582,6 +582,68 @@ describe('MonthlyChargeService', () => {
 
       expect(res).toBeNull();
       expect(txWriteMock.createAdjustment).not.toHaveBeenCalled();
+    });
+
+    it('ikkinchi marta chaqirilganda qayta qaytarmaydi (idempotent)', async () => {
+      // Coordinator review finding #1: `remaining` avval kalendardan
+      // qayta-qayta hisoblanardi va chaqirilgan safar sayin bir xil summani
+      // yana qaytarardi. Bu test HAQIQIY DB holatini simulyatsiya qiladi —
+      // findUnique ikkinchi chaqiruvda birinchisining `update`i natijasini
+      // ko'rishi kerak (avvalgi testlardagi kabi bir martalik mock emas).
+      let chargeRow: any = {
+        id: 'chg-1',
+        groupId: 'grp-1',
+        plannedLessons: 13,
+        coveredLessons: 13,
+        perLessonCost: 34_615,
+        chargedAmount: 450_000,
+        transactionId: 'tx-1',
+        status: 'CHARGED',
+      };
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockImplementation(() =>
+        Promise.resolve({ ...chargeRow }),
+      );
+      prismaMock.enrollmentMonthlyCharge.update.mockImplementation(
+        ({ data }: any) => {
+          chargeRow = { ...chargeRow, ...data };
+          return Promise.resolve({ ...chargeRow });
+        },
+      );
+
+      const params = {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-09-20T00:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqdi',
+      };
+
+      const first = await service.reverseChargeForDeparture(tx, params);
+      const second = await service.reverseChargeForDeparture(tx, params);
+
+      expect(first?.refunded).toBe(138_460); // 4 x 34 615
+      expect(second).toBeNull(); // nothing left to reconcile the 2nd time
+      expect(txWriteMock.createAdjustment).toHaveBeenCalledTimes(1);
+      expect(chargeRow.coveredLessons).toBe(9);
+      expect(chargeRow.chargedAmount).toBe(311_540);
+    });
+
+    it('departureDate bugundan oldingi bo`lsa BadRequestException', async () => {
+      // Hazard #2 (coordinator finding #3): backdated chiqish allaqachon
+      // o'tilgan (va o'qituvchiga hisoblangan) darslarni ham "qolgan" deb
+      // hisoblab qaytarib yuborardi. Yagona chaqiruvchi doim `new Date()`
+      // yuboradi, lekin imzo o'zboshimcha `departureDate` qabul qiladi —
+      // shu tekshiruv kelajakdagi chaqiruvchilarni jim xatodan himoya qiladi.
+      await expect(
+        service.reverseChargeForDeparture(tx, {
+          enrollmentId: 'enr-1',
+          departureDate: new Date('2020-01-01T00:00:00Z'),
+          companyId: 1,
+          reason: 'Guruhdan chiqdi',
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(
+        prismaMock.enrollmentMonthlyCharge.findUnique,
+      ).not.toHaveBeenCalled();
     });
   });
 });
