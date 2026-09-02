@@ -8,6 +8,7 @@ import { resolveHomeSections } from "./dashboard-home-visibility";
 import type { DashboardSummary } from "./dashboard-summary-types";
 import { HomeAttentionList } from "./home-attention-list";
 import { HomeErrorNote } from "./home-error-note";
+import { HomeLoadError } from "./home-load-error";
 import { HomeMoneyCards } from "./home-money-cards";
 import { HomeNextLessons } from "./home-next-lessons";
 import { HomePeopleStats } from "./home-people-stats";
@@ -31,7 +32,7 @@ export function HomeOverview() {
   const roleIds = user?.roles.map((r) => r.id) ?? [];
   const sections = resolveHomeSections(roleIds);
 
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["dashboard", "summary", selectedBranch?.id ?? "all"],
     queryFn: () =>
       api
@@ -45,6 +46,11 @@ export function HomeOverview() {
     staleTime: 30_000,
   });
 
+  // Xato holati skeletondan OLDIN tekshiriladi. `isPending` xatoda `false`
+  // bo'ladi, `data` esa `undefined` bo'lib qolaveradi — shuning uchun faqat
+  // `!data` ga tayanish abadiy skeleton beradi (backend deploy bo'lmay qolgan
+  // paytda aynan shu bo'lgan: yangi frontend eski backenddan 404 olardi).
+  if (isError) return <HomeLoadError onRetry={() => void refetch()} />;
   if (isPending || !data) return <HomeSkeleton />;
 
   const failed = (s: string) => data.failed.includes(s);
