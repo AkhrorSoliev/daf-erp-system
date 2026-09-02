@@ -1538,4 +1538,38 @@ describe('ReportsService', () => {
       expect(attr).not.toHaveBeenCalled();
     });
   });
+  describe('getNetProfitWithBasis', () => {
+    it("kanonik hisob ishlasa 'recognized' asosini qaytaradi", async () => {
+      jest
+        .spyOn(service, 'getMonthlyNetProfit')
+        .mockResolvedValue({ netProfit: 4_700_000 } as any);
+
+      const res = await service.getNetProfitWithBasis(1001, {
+        month: '2026-08',
+        branchIds: null,
+        performedById: 10406,
+        cashFallback: 78_000_000,
+      });
+
+      expect(res).toEqual({
+        netProfit: 4_700_000,
+        netProfitBasis: 'recognized',
+      });
+    });
+
+    it("kanonik hisob yiqilsa kassa raqamiga tushadi va buni 'cash' deb belgilaydi", async () => {
+      jest
+        .spyOn(service, 'getMonthlyNetProfit')
+        .mockRejectedValue(new Error("salary config yo'q"));
+
+      const res = await service.getNetProfitWithBasis(1001, {
+        month: '2026-08',
+        branchIds: null,
+        performedById: 10406,
+        cashFallback: 78_000_000,
+      });
+
+      expect(res).toEqual({ netProfit: 78_000_000, netProfitBasis: 'cash' });
+    });
+  });
 });

@@ -41,6 +41,12 @@ describe('ReportsController — role guards', () => {
     }),
     // Canonical monthly net profit — overrides overview.netProfit on the card.
     getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 12_345_678 }),
+    // «Kanonik yoki kassa» qarori endi servisda. Kontroller faqat unga
+    // topshiradi va javobini o'zgartirmasdan qaytaradi — fallback mantiqining
+    // o'zi `reports.service.spec.ts` da sinaladi.
+    getNetProfitWithBasis: jest
+      .fn()
+      .mockResolvedValue({ netProfit: 12_345_678, netProfitBasis: 'recognized' }),
     // «Oyning o'z foydasi» — default resolves so unrelated tests in this file
     // (which don't care about the field) aren't left exercising the catch path.
     getOwnMonthProfit: jest.fn().mockResolvedValue({ ownMonthProfit: null }),
@@ -529,9 +535,12 @@ describe('ReportsController — role guards', () => {
       });
 
       it('falls back to cash AND says so', async () => {
-        mockService.getMonthlyNetProfit.mockRejectedValueOnce(
-          new Error('recognized revenue unavailable'),
-        );
+        // Servis kanonik hisobni bajara olmaganda kassa raqamini 'cash' belgisi
+        // bilan qaytaradi; kontroller uni o'zgartirmasdan uzatishi shart.
+        mockService.getNetProfitWithBasis.mockResolvedValueOnce({
+          netProfit: fullOverview.netProfit,
+          netProfitBasis: 'cash',
+        });
 
         const res: any = await controller.getFinancialOverview(query, {
           id: 10001,
@@ -561,24 +570,26 @@ describe('ReportsController — role guards', () => {
       expect(res.salary.paid).toBe(fullOverview.salary.paid);
     });
 
-    it('overrides netProfit with the canonical getMonthlyNetProfit; falls back to legacy on failure', async () => {
-      // Success path → canonical figure.
-      const ok: any = await controller.getFinancialOverview(query, {
+    it("sof foydani servisdan oladi va kassa zaxirasi sifatida overview.netProfit ni uzatadi", async () => {
+      const res: any = await controller.getFinancialOverview(query, {
         id: 10001,
         companyId: 1,
         roles: ['CEO'],
       });
-      expect(ok.netProfit).toBe(12_345_678);
-      expect(mockService.getMonthlyNetProfit).toHaveBeenCalled();
 
-      // Failure path → keep the legacy overview.netProfit, never break the card.
-      mockService.getMonthlyNetProfit.mockRejectedValueOnce(new Error('boom'));
-      const degraded: any = await controller.getFinancialOverview(query, {
-        id: 10001,
-        companyId: 1,
-        roles: ['CEO'],
-      });
-      expect(degraded.netProfit).toBe(fullOverview.netProfit);
+      expect(res.netProfit).toBe(12_345_678);
+      expect(res.netProfitBasis).toBe('recognized');
+
+      // Eng muhim tasdiq shu: kanonik hisob yiqilganda servis AYNAN shu songa
+      // tushadi. Kontroller noto'g'ri zaxira uzatsa, degradatsiya jimgina
+      // boshqa raqam ko'rsatib turardi.
+      expect(mockService.getNetProfitWithBasis).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          performedById: 10001,
+          cashFallback: fullOverview.netProfit,
+        }),
+      );
     });
 
     it('folds the computed monthly teacher salary into salary.computed for CEO (matches the Excel Oyliklar sheet)', async () => {
