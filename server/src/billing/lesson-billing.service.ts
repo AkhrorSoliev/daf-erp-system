@@ -194,7 +194,27 @@ export class LessonBillingService {
     });
   }
 
-  /** Oylik kursda o'qituvchi haqi — narx muzlatilgan hisobdan olinadi. */
+  /**
+   * Oylik kursda o'qituvchi haqi — narx muzlatilgan hisobdan olinadi.
+   *
+   * MUHIM INVARIANT (Task 6 sharhi, topilma #2): bu metod BIR marta bir
+   * davomat uchun (attendanceId, teacherId) juftligiga faqat oldindan
+   * `salaryAccrualService.reverseAccrualForAttendance` chaqirilgandan
+   * KEYIN qayta chaqirilishi mumkin. `createAccrual` ichidagi
+   * `applyAccrualToBalance` (`salary-accrual.service.ts`) shu juftlik
+   * uchun bekor qilinmagan SALARY_ACCRUAL Transaction allaqachon bo'lsa —
+   * BALANSGA TEGMAYDI (jim o'tkazib yuboradi), holbuki `SalaryAccrual`
+   * qatorining o'zi (amount) YANGI narx bilan qayta yoziladi. Ya'ni:
+   * reversalsiz qayta chaqiruv `SalaryAccrual.amount`ni yangilaydi, lekin
+   * pul (Transaction + o'qituvchi balansi) ESKI narxda qoladi — yozuv va
+   * pul JIMGINA kelishmay qoladi. Bu xatti-harakat `salary-accrual.service
+   * .spec.ts`dagi "reprocessing without reversal" testida ATAYLAB
+   * pinlangan (tuzatilmagan, faqat hujjatlashtirilgan). Shuning uchun:
+   * shu funksiyani chaqiradigan HAR QANDAY yo'l (jumladan 7-vazifadagi
+   * cron) bitta davomatni ikki marta narxlash kerak bo'lsa, avval
+   * `reverseAccrualForAttendance` orqali eskisini bekor qilishi SHART —
+   * aks holda xatolik yuqorida tavsiflangan tarzda jim yuz beradi.
+   */
   private async accrueMonthlySalary(
     tx: Prisma.TransactionClient,
     params: ProcessAttendanceBillingParams,
@@ -278,10 +298,29 @@ export class LessonBillingService {
     if (!enr) return { perLessonCost: 0 };
 
     const day = tashkentDateStr(params.lessonDate);
+    const periodYear = Number(day.slice(0, 4));
+    const periodMonth = Number(day.slice(5, 7));
+
+    // BAYRAMLAR VA BEKOR QILINGAN DARSLAR real hisob bilan BIR XIL manbadan
+    // olinishi SHART. Bu yerda mustaqil ravishda faqat exactDays'dan
+    // hisoblash (excludedDates'siz) `planned` sonini oshirib yuboradi va
+    // zaxira narx REAL EnrollmentMonthlyCharge muzlatgan narxdan sonli
+    // farq qilib qoladi — "muzlatilmagan" emas, NOTO'G'RI bo'ladi. Shu
+    // sababli `MonthlyChargeService.resolveExcludedDates` (createChargeForEnrollment
+    // ishlatadigan xuddi o'sha metod) chaqiriladi.
+    const excludedDates = await this.monthlyChargeService.resolveExcludedDates(
+      tx,
+      params.groupId,
+      params.branchId,
+      periodYear,
+      periodMonth,
+    );
+
     const planned = lessonDatesInMonth({
-      year: Number(day.slice(0, 4)),
-      month: Number(day.slice(5, 7)),
+      year: periodYear,
+      month: periodMonth,
       exactDays: enr.group.exactDays,
+      excludedDates,
     }).length;
 
     return {

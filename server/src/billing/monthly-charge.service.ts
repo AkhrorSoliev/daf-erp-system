@@ -89,7 +89,7 @@ export class MonthlyChargeService {
     });
     if (existing) return existing;
 
-    const excludedDates = await this.excludedDates(
+    const excludedDates = await this.resolveExcludedDates(
       tx,
       enr.groupId,
       enr.group.branchId,
@@ -206,8 +206,15 @@ export class MonthlyChargeService {
    * yerda qaytadan yozish oson xato qiladi (masalan, faqat `date`
    * ustunini tekshirib, oy ichiga tushgan ko'p kunlik bayramni o'tkazib
    * yuborish).
+   *
+   * PUBLIC ataylab: `LessonBillingService`ning zaxira narx hisob-kitobi
+   * (`fallbackMonthlyPerLessonCost`, cron ulgurmagan holat uchun) HAM shu
+   * metoddan foydalanadi — aks holda ikkita mustaqil "qaysi kunlar
+   * hisobga kirmaydi" mantig'i bir-biridan uzoqlashib, bayram yoki
+   * bekor qilingan dars bo'lgan oyda zaxira narx REAL hisobdan farq
+   * qilib qolardi (narx "muzlatilmagan" emas, sonli NOTO'G'RI bo'lardi).
    */
-  private async excludedDates(
+  async resolveExcludedDates(
     tx: Prisma.TransactionClient,
     groupId: string,
     branchId: number,

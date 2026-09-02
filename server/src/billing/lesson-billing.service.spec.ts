@@ -11,7 +11,11 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
-import { MonthlyChargeService } from './monthly-charge.service';
+import {
+  ChargeableEnrollment,
+  MonthlyChargeService,
+} from './monthly-charge.service';
+import { TransactionsWriteService } from '../transactions/transactions-write.service';
 
 /**
  * Tests cover the 6-row status transition matrix and the 3 financial
@@ -50,6 +54,9 @@ describe('LessonBillingService', () => {
       createChargeForEnrollment: jest.fn(),
       recordExcusedLesson: jest.fn().mockResolvedValue(undefined),
       findChargeForLesson: jest.fn().mockResolvedValue(null),
+      // Default: no exclusions. Tests exercising the fallback with a
+      // holiday/cancellation override this per-call.
+      resolveExcludedDates: jest.fn().mockResolvedValue([]),
     };
 
     // tx is the same object as prisma — so $queryRaw and findUnique etc.
@@ -1330,6 +1337,141 @@ describe('LessonBillingService', () => {
       );
       expect(errorSpy).toHaveBeenCalled();
       errorSpy.mockRestore();
+    });
+  });
+
+  // ============================================================
+  // Review finding #1 (Task 6 fix-up): zaxira narx REAL charge bilan
+  // bir xil manbadan (bayram/bekor qilingan dars) hisoblanishi kerak.
+  // Bu yerda MonthlyChargeService MOCK emas — `resolveExcludedDates`
+  // ikkala yo'lda (fallback va createChargeForEnrollment) haqiqatda
+  // bitta metod ekanini isbotlash uchun ikkalasi ham REAL instansiya
+  // orqali sinaladi.
+  // ============================================================
+
+  describe('zaxira narx real oylik hisob bilan bir xil manbadan (bayramli oy)', () => {
+    it('bayram kuni bo`lgan oyda fallback narxi createChargeForEnrollment muzlatadigan narx bilan mos keladi', async () => {
+      let lastRealCharge: any = null;
+      const txLocal: any = {
+        enrollment: { findUnique: jest.fn() },
+        // 2026-04-01 — chorshanba, guruhning dars kuni (mon/wed/fri) — shu
+        // kunga bayram qo'yilgan, shuning uchun rejalashtirilgan darslar
+        // sonidan bittasi tushib qolishi kerak.
+        holiday: {
+          findMany: jest.fn().mockResolvedValue([
+            {
+              date: new Date('2026-04-01T00:00:00Z'),
+              endDate: new Date('2026-04-01T00:00:00Z'),
+            },
+          ]),
+        },
+        lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
+        enrollmentMonthlyCharge: {
+          // Fallback yo'li: bu oy uchun hisob hali yo'q (cron ulgurmagan).
+          findUnique: jest.fn().mockResolvedValue(null),
+          // `createChargeForEnrollment` create() dan keyin update()ni HAM
+          // chaqiradi (transactionId qo'yish uchun) — ikkalasi bitta
+          // yopiq o'zgaruvchida qo'shilishi kerak, aks holda update()
+          // qaytargan qator faqat {id, transactionId} bo'lib qoladi va
+          // perLessonCost kabi maydonlar yo'qoladi (task-5's spec pattern).
+          create: jest.fn(({ data }: any) => {
+            lastRealCharge = { id: 'charge-real-1', ...data };
+            return Promise.resolve(lastRealCharge);
+          }),
+          update: jest.fn(({ data }: any) => {
+            lastRealCharge = { ...lastRealCharge, ...data };
+            return Promise.resolve(lastRealCharge);
+          }),
+        },
+        lessonTeacherOverride: {
+          findFirst: jest.fn().mockResolvedValue(null),
+        },
+        groupTeacher: {
+          findMany: jest.fn().mockResolvedValue([{ teacherId: 20001 }]),
+        },
+      };
+
+      const groupExactDays = ['monday', 'wednesday', 'friday'];
+      const coursePrice = 450_000;
+
+      txLocal.enrollment.findUnique.mockResolvedValue({
+        group: {
+          exactDays: groupExactDays,
+          course: {
+            paymentModel: PaymentModel.MONTHLY,
+            price: coursePrice,
+          },
+        },
+      });
+
+      const transactionsMock = {
+        deductLessonFee: jest.fn(),
+        recordLessonConsumption: jest.fn(),
+        reverseLessonConsumption: jest.fn(),
+        reverseTransaction: jest.fn(),
+      };
+      const salaryMock = {
+        createAccrual: jest.fn().mockResolvedValue(null),
+        reverseAccrualForAttendance: jest.fn().mockResolvedValue(null),
+      };
+      const txWriteMock = {
+        chargeMonthlyFee: jest.fn().mockResolvedValue({ id: 'txn-real-1' }),
+      };
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          LessonBillingService,
+          MonthlyChargeService,
+          { provide: PrismaService, useValue: txLocal },
+          { provide: TransactionsService, useValue: transactionsMock },
+          { provide: SalaryAccrualService, useValue: salaryMock },
+          { provide: TransactionsWriteService, useValue: txWriteMock },
+        ],
+      }).compile();
+
+      const lessonBillingReal = module.get(LessonBillingService);
+      const monthlyChargeReal = module.get(MonthlyChargeService);
+
+      // 1) Zaxira yo'l: davomat PRESENT deb belgilanadi, hisob yo'q —
+      // fallback narx hisoblanadi va shu narx bilan o'qituvchiga yoziladi.
+      await lessonBillingReal.processAttendanceBilling(txLocal, {
+        ...baseParams,
+        oldStatus: null,
+        newStatus: AttendanceStatus.PRESENT,
+      });
+      const fallbackPerLessonCost =
+        salaryMock.createAccrual.mock.calls[0][0].perLessonCost;
+
+      // 2) Xuddi shu oy uchun REAL hisob yaratilsa (masalan cron keyinroq
+      // yugursa) — muzlatadigan narx.
+      const enrollment: ChargeableEnrollment = {
+        id: baseParams.enrollmentId,
+        studentId: baseParams.studentId,
+        groupId: baseParams.groupId,
+        status: 'ACTIVE' as any,
+        startDate: null,
+        group: {
+          id: baseParams.groupId,
+          branchId: baseParams.branchId,
+          companyId: baseParams.companyId,
+          statusEnum: 'ACTIVE' as any,
+          exactDays: groupExactDays,
+          course: { price: coursePrice, paymentModel: PaymentModel.MONTHLY },
+        },
+      };
+      const realCharge = await monthlyChargeReal.createChargeForEnrollment(
+        txLocal,
+        {
+          enrollment,
+          periodYear: 2026,
+          periodMonth: 4,
+          companyId: baseParams.companyId,
+        },
+      );
+
+      // 450_000 / 12 (13 rejalashtirilgan dars − 1 bayram) = 37_500.
+      expect(realCharge?.perLessonCost).toBe(37_500);
+      expect(fallbackPerLessonCost).toBe(realCharge?.perLessonCost);
     });
   });
 
