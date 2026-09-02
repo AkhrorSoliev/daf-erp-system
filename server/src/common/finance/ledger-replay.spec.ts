@@ -63,6 +63,56 @@ describe('splitLessonSlices', () => {
   });
 });
 
+describe('splitLessonSlices — oylik qator', () => {
+  const monthlyMeta = {
+    mode: 'MONTHLY_PERIOD',
+    period: '2026-09',
+    monthlyPrice: 450_000,
+    plannedLessons: 13,
+    coveredLessons: 13,
+    perLessonCost: 34_615,
+    creditLessons: 2,
+  };
+
+  it('sig`imni metadatadan oladi, summadan teskari hisoblamaydi', () => {
+    // 13 ta dars, 2 tasini kredit yopdi -> bu pul 11 ta darsni sotib oldi.
+    const slices = splitLessonSlices(-380_770, monthlyMeta, []);
+    expect(slices).toHaveLength(11);
+    expect(slices.reduce((s, x) => s + x.cost, 0)).toBe(380_770);
+  });
+
+  it('kredit oyni butunlay yopsa, bo`lak qoldirmaydi', () => {
+    // Pul harakat qilmagan -> «bu pul ketdi» da ko'rsatadigan narsa yo'q.
+    const slices = splitLessonSlices(
+      0,
+      { ...monthlyMeta, creditLessons: 13 },
+      [],
+    );
+    expect(slices).toHaveLength(0);
+  });
+
+  it('berilgan sanalarni bo`laklarga qo`yadi', () => {
+    const dates = [new Date('2026-09-01'), new Date('2026-09-03')];
+    const slices = splitLessonSlices(
+      -69_230,
+      { ...monthlyMeta, coveredLessons: 2, creditLessons: 0 },
+      dates,
+    );
+    expect(slices.map((s) => s.date)).toEqual(dates);
+  });
+
+  it('paket qatorini o`zgartirmaydi', () => {
+    // Regressiya qorovuli: eski yo'l tegilmagan bo'lishi kerak.
+    const slices = splitLessonSlices(
+      -400_000,
+      { lessonsCovered: 12, perLessonCost: 33_333 },
+      [],
+    );
+    expect(slices).toHaveLength(12);
+    expect(slices.reduce((s, x) => s + x.cost, 0)).toBe(400_000);
+  });
+});
+
 describe('replayStudentLedger — #10460 golden fixture', () => {
   // O'quvchi #10460 (Javohirbek Hamraliyev) ning PRODdagi haqiqiy ledgeri:
   // 3 ta to'lov + 19 ta dars yechimi. Bu aynan foydalanuvchi shikoyat qilgan

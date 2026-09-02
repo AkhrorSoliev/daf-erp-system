@@ -176,6 +176,25 @@ export function splitLessonSlices(
   const md = (metadata ?? {}) as Record<string, unknown>;
   const perLessonCost = Number(md.perLessonCost) || 0;
 
+  // Oylik qator: sig'imni summadan teskari hisoblab bo'lmaydi, chunki summa
+  // kredit ayirilgandan keyingi qoldiq. Metadata aniq raqamni saqlaydi.
+  if (md.mode === 'MONTHLY_PERIOD') {
+    const covered = Number(md.coveredLessons) || 0;
+    const creditUsed = Number(md.creditLessons) || 0;
+    const paidLessons = Math.max(0, covered - creditUsed);
+    // Kredit oyni butunlay yopgan bo'lsa pul harakat qilmagan — «bu pul
+    // ketdi» ekranida ko'rsatadigan bo'lak yo'q.
+    if (paidLessons === 0 || total === 0) return [];
+    const unitM = Math.floor(total / paidLessons);
+    const out: LessonSlice[] = [];
+    for (let i = 0; i < paidLessons; i += 1) {
+      const cost =
+        i === paidLessons - 1 ? total - unitM * (paidLessons - 1) : unitM;
+      out.push({ cost, date: consumedDates[i] ?? null });
+    }
+    return out;
+  }
+
   let capacity = Number(md.lessonsCovered) || 0;
   if (capacity <= 0) {
     capacity =
