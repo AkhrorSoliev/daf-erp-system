@@ -19,6 +19,10 @@ import {
   ReportBranchIds,
   studentBranchWhere,
 } from '../common/finance/report-branch-scope';
+import {
+  activeStudentWhere,
+  ungroupedStudentWhere,
+} from './shared/active-student-where';
 
 /**
  * Bitta holat filtri varianti uchun `where` bo'lagi.
@@ -32,26 +36,11 @@ function studentStatusWhere(
 ): Prisma.StudentWhereInput | null {
   switch (filter) {
     case 'active':
-      return {
-        status: StudentStatus.ACTIVE,
-        enrollments: { some: { deletedAt: null } },
-      };
+      return activeStudentWhere();
     case 'frozen':
       return { status: StudentStatus.FROZEN };
     case 'ungrouped':
-      // Hech qachon guruhga qo'shilmaganlar ham, guruhlari
-      // DROPPED/FROZEN/TRANSFERRED bo'lganlar ham shu yerga tushadi — ularning
-      // hammasi hali joylashtirilishi kerak.
-      return {
-        status: StudentStatus.ACTIVE,
-        enrollments: {
-          none: {
-            deletedAt: null,
-            status: 'ACTIVE',
-            group: { deletedAt: null, statusEnum: 'ACTIVE' },
-          },
-        },
-      };
+      return ungroupedStudentWhere();
     case 'graduated':
       return { status: StudentStatus.GRADUATED };
     case 'expelled':

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
+import { activeStudentWhere } from '../students/shared/active-student-where';
 
 @Injectable()
 export class ReportsOverviewService {
@@ -33,20 +34,26 @@ export class ReportsOverviewService {
       totalLeads,
       convertedLeads,
     ] = await Promise.all([
+      // «Faol o'quvchi» ta'rifi bitta joyda — `activeStudentWhere`. Bu yerda
+      // ilgari faqat `status: 'ACTIVE'` turgan edi, ya'ni guruhga
+      // biriktirilmagan o'quvchi ham faol sanalardi (2026-09-02 o'lchovi:
+      // 12 011 dan 1 348 tasi guruhsiz edi).
       this.prisma.student.count({
         where: {
           companyId,
           deletedAt: null,
-          status: 'ACTIVE',
+          ...activeStudentWhere(),
           ...branchStudentFilter,
         },
       }),
 
+      // Trend uchun taqqoslash bazasi — AYNI ta'rif bilan, aks holda trend
+      // ikki xil o'lchovni bir-biriga bo'lgan bo'lardi.
       this.prisma.student.count({
         where: {
           companyId,
           deletedAt: null,
-          status: 'ACTIVE',
+          ...activeStudentWhere(),
           createdAt: { lt: firstOfMonth },
           ...branchStudentFilter,
         },
