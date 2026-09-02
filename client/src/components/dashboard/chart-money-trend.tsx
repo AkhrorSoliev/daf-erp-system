@@ -34,12 +34,17 @@ export function ChartMoneyTrend({ data }: { data: ChartTrendPoint[] }) {
       title="Moliya trendi"
       subtitle={
         last
-          ? `Oxirgi oy: tushum ${formatNumber(last.income)}, sof foyda ${formatNumber(last.profit)} so'm`
+          ? `Oxirgi oy: kassaga ${formatNumber(last.income)}, sof foyda ${formatNumber(last.profit)} so'm`
           : undefined
       }
       tooltip={
-        "Oxirgi 6 oy. Ustunlar — kassa tushumi va xarajat, chiziq — kanonik sof foyda.\n\n" +
-        "Sof foyda «Sof foyda» kartasi bilan bitta manbadan keladi."
+        "Oxirgi 6 oy.\n\n" +
+        "Ustunlar — KASSA harakati: haqiqatan kirgan va chiqqan pul.\n\n" +
+        "Chiziq — sof foyda, u o'tilgan DARSLAR bo'yicha hisoblanadi va « Sof foyda » " +
+        "kartasi bilan bitta manbadan keladi.\n\n" +
+        "Ikkalasi turli o'lchov: chiziq ustunlar ayirmasiga TENG EMAS va undan " +
+        "yuqori ham bo'lishi mumkin — masalan o'quvchi oldindan to'lagan oyda kassa " +
+        "to'ladi, dars esa keyingi oyda o'tiladi."
       }
       isEmpty={data.length === 0}
       emptyMessage="Bu davrda moliyaviy harakat yo'q"
@@ -81,14 +86,14 @@ export function ChartMoneyTrend({ data }: { data: ChartTrendPoint[] }) {
             />
             <Bar
               dataKey="income"
-              name="Tushum"
+              name="Kassa tushumi"
               fill={palette.series1}
               radius={[4, 4, 0, 0]}
               maxBarSize={22}
             />
             <Bar
               dataKey="expenses"
-              name="Xarajat"
+              name="Kassa xarajati"
               fill={palette.series2}
               radius={[4, 4, 0, 0]}
               maxBarSize={22}
