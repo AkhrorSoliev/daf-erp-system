@@ -3,7 +3,9 @@
 import { useAuth } from "@/hooks/use-auth";
 import { resolveHomeSections } from "./dashboard-home-visibility";
 import { HOME_FIXTURE } from "./home-fixture";
+import { HomeAttentionList } from "./home-attention-list";
 import { HomeMoneyCards } from "./home-money-cards";
+import { HomeNextLessons } from "./home-next-lessons";
 import { HomePeopleStats } from "./home-people-stats";
 
 /**
@@ -27,6 +29,25 @@ export function HomeOverview() {
       {sections.people && data.people && (
         <HomePeopleStats people={data.people} />
       )}
+
+      {/* Chapda bugun qilinadigan ish, o'ngda bugun bo'ladigan dars. Mobilda
+          biri ikkinchisining ostiga tushadi — «e'tibor» birinchi bo'ladi,
+          chunki u harakat talab qiladi. */}
+      <div className="grid gap-3 lg:grid-cols-5 lg:gap-4">
+        {sections.attention && data.attention && (
+          <div className="lg:col-span-3">
+            <HomeAttentionList
+              attention={data.attention}
+              includeOutreach={sections.attentionOutreachRows}
+            />
+          </div>
+        )}
+        {sections.nextLessons && (
+          <div className="lg:col-span-2">
+            <HomeNextLessons lessons={data.nextLessons} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
