@@ -182,9 +182,18 @@ export function splitLessonSlices(
     const covered = Number(md.coveredLessons) || 0;
     const creditUsed = Number(md.creditLessons) || 0;
     const paidLessons = Math.max(0, covered - creditUsed);
-    // Kredit oyni butunlay yopgan bo'lsa pul harakat qilmagan — «bu pul
-    // ketdi» ekranida ko'rsatadigan bo'lak yo'q.
-    if (paidLessons === 0 || total === 0) return [];
+    // Pul harakat qilmagan -> «bu pul ketdi» ekranida ko'rsatadigan bo'lak
+    // yo'q. Bu shart `paidLessons`ga EMAS, faqat `total`ga qaraydi:
+    // `proratedMonthlyAmount` va `applyLessonCredit` mustaqil yaxlitlaydi,
+    // shuning uchun `paidLessons` 0 bo'lsa ham `total` kichik yaxlitlash
+    // qoldig'i sifatida nolдан farqli qolishi mumkin (masalan, 34 615/dars,
+    // gross 450 000, kredit 13 dars -> creditAmount 449 995, total 5).
+    if (total === 0) return [];
+    // Kredit hamma darsni "yopdi" deb hisoblangan, lekin yaxlitlash
+    // qoldig'i pul harakat qilgan — bitta bo'lakka, egasi noma'lum
+    // (sana yo'q) sifatida yozamiz. Eski fallback yo'l xuddi shunday
+    // holatni tasodifan 1 bo'lak bilan yopardi; endi bu ataylab.
+    if (paidLessons === 0) return [{ cost: total, date: null }];
     const unitM = Math.floor(total / paidLessons);
     const out: LessonSlice[] = [];
     for (let i = 0; i < paidLessons; i += 1) {
