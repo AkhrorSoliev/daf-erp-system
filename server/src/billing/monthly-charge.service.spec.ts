@@ -1,0 +1,318 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import {
+  ChargeableEnrollment,
+  MonthlyChargeService,
+} from './monthly-charge.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { TransactionsWriteService } from '../transactions/transactions-write.service';
+
+// Cast once here rather than `as any` at every call site below: the shape
+// matches `ChargeableEnrollment` at runtime (Prisma's string enums compare
+// equal to the plain string literals used here), this just satisfies the
+// stricter compile-time enum types.
+const enrollment = (over: Partial<Record<string, unknown>> = {}) =>
+  ({
+    id: 'enr-1',
+    studentId: 10453,
+    groupId: 'grp-1',
+    status: 'ACTIVE',
+    startDate: null,
+    group: {
+      id: 'grp-1',
+      branchId: 1,
+      companyId: 1,
+      statusEnum: 'ACTIVE',
+      exactDays: ['saturday', 'thursday', 'tuesday'],
+      course: { price: 450_000, paymentModel: 'MONTHLY', lessonPaymentCount: 12 },
+    },
+    ...over,
+  }) as unknown as ChargeableEnrollment;
+
+describe('MonthlyChargeService', () => {
+  let service: MonthlyChargeService;
+  let prismaMock: any;
+  let txWriteMock: any;
+  let tx: any;
+  // The service does create() then update() on the same row (the second
+  // write stamps transactionId once the ledger row exists). This mirrors
+  // that: update()'s mocked return merges onto the object create() made,
+  // so assertions on the FINAL returned charge still see plannedLessons,
+  // chargedAmount, etc. — not just the transactionId the update call sent.
+  let lastChargeRow: any;
+
+  beforeEach(async () => {
+    lastChargeRow = null;
+
+    prismaMock = {
+      enrollmentMonthlyCharge: {
+        // Default: no existing charge for the requested period, and no
+        // carried-over credit from the previous period. Individual tests
+        // override this with mockImplementation/mockResolvedValueOnce.
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn(({ data }: any) => {
+          lastChargeRow = { id: 'charge-1', status: 'CHARGED', ...data };
+          return Promise.resolve(lastChargeRow);
+        }),
+        update: jest.fn(({ data }: any) => {
+          lastChargeRow = { ...lastChargeRow, ...data };
+          return Promise.resolve(lastChargeRow);
+        }),
+      },
+      holiday: { findMany: jest.fn().mockResolvedValue([]) },
+      lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    tx = prismaMock;
+
+    txWriteMock = {
+      chargeMonthlyFee: jest.fn().mockResolvedValue({ id: 'txn-1' }),
+      reverseMonthlyFee: jest.fn(),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        MonthlyChargeService,
+        { provide: PrismaService, useValue: prismaMock },
+        { provide: TransactionsWriteService, useValue: txWriteMock },
+      ],
+    }).compile();
+
+    service = module.get(MonthlyChargeService);
+  });
+
+  describe('createChargeForEnrollment', () => {
+    it('to`liq oyda oy narxini muzlatilgan dars soni bilan yozadi', async () => {
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(charge).toMatchObject({
+        plannedLessons: 13,
+        coveredLessons: 13,
+        perLessonCost: 34_615,
+        monthlyPrice: 450_000,
+        chargedAmount: 450_000,
+        creditLessons: 0,
+        status: 'CHARGED',
+      });
+      expect(txWriteMock.chargeMonthlyFee).toHaveBeenCalledWith(
+        expect.objectContaining({ amount: 450_000, enrollmentId: 'enr-1' }),
+        tx,
+      );
+    });
+
+    it('o`rtada qo`shilgan o`quvchiga qolgan darslar bo`yicha proratsiya qiladi', async () => {
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment({ startDate: new Date('2026-09-17T00:00:00Z') }),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(charge?.plannedLessons).toBe(13); // guruhning oyi o'zgarmaydi
+      // 17, 19, 22, 24, 26, 29 — olti dars qoldi.
+      expect(charge?.coveredLessons).toBe(6);
+      expect(charge?.chargedAmount).toBe(207_692); // 450 000 x 6/13
+    });
+
+    it('o`tgan oyning uzrli darslarini kredit sifatida chegiradi', async () => {
+      // Sentabr hisobida excusedLessons = 2 turibdi. `findUnique` ikki xil
+      // maqsadda chaqiriladi — joriy davr (oktabr) uchun "mavjudmi" tekshiruvi
+      // va o'tgan davr (sentabr) uchun kredit qidiruvi — shuning uchun
+      // qaysi davr so'ralganiga qarab javob beramiz, chaqiruv tartibiga
+      // tayanmaymiz.
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockImplementation(
+        ({ where }: any) => {
+          const key = where.enrollmentId_periodYear_periodMonth;
+          if (key.periodMonth === 9) {
+            return Promise.resolve({ excusedLessons: 2 });
+          }
+          return Promise.resolve(null);
+        },
+      );
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 10,
+        companyId: 1,
+      });
+
+      // Kredit OKTABRning o'z dars narxida sarflanadi, sentabrniki emas —
+      // oktabrda sat/thu/tue bo'yicha 14 dars bor (sentabrda 13 edi), shuning
+      // uchun perLessonCost = round(450 000/14) = 32 143.
+      expect(charge?.plannedLessons).toBe(14);
+      expect(charge?.perLessonCost).toBe(32_143);
+      expect(charge?.creditLessons).toBe(2);
+      expect(charge?.creditAmount).toBe(64_286); // 2 x 32 143
+      expect(charge?.chargedAmount).toBe(385_714); // 450 000 - 64 286
+    });
+
+    it('LESSON_PACK kursini butunlay chetlab o`tadi', async () => {
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment({
+          group: {
+            ...enrollment().group,
+            course: { price: 450_000, paymentModel: 'LESSON_PACK', lessonPaymentCount: 12 },
+          },
+        }),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+      expect(charge).toBeNull();
+      expect(txWriteMock.chargeMonthlyFee).not.toHaveBeenCalled();
+    });
+
+    it('PAUSED guruhga hisob yozmaydi', async () => {
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment({
+          group: { ...enrollment().group, statusEnum: 'PAUSED' },
+        }),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+      expect(charge).toBeNull();
+    });
+
+    it('FROZEN yozilishga hisob yozmaydi', async () => {
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment({ status: 'FROZEN' }),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+      expect(charge).toBeNull();
+    });
+
+    it('oyda birorta dars bo`lmasa hisob yozmaydi', async () => {
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment({
+          group: { ...enrollment().group, exactDays: [] },
+        }),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+      expect(charge).toBeNull();
+    });
+
+    it('ikkinchi marta chaqirilganda yangi qator yozmaydi (idempotent)', async () => {
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        id: 'chg-1',
+        status: 'CHARGED',
+      });
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(charge?.id).toBe('chg-1');
+      expect(txWriteMock.chargeMonthlyFee).not.toHaveBeenCalled();
+    });
+
+    it('bayram kunlarini rejadan chiqaradi va dars narxini oshiradi', async () => {
+      // 1-sentabr 2026 — seshanba, ya'ni rejadagi kunlardan biri.
+      // `buildHolidayDateSet` `date` va `endDate` ikkalasini o'qiydi, shu
+      // sababli bir kunlik bayram uchun ham ikkalasini beramiz.
+      prismaMock.holiday.findMany.mockResolvedValueOnce([
+        {
+          date: new Date('2026-09-01T00:00:00Z'),
+          endDate: new Date('2026-09-01T00:00:00Z'),
+        },
+      ]);
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(charge?.plannedLessons).toBe(12);
+      expect(charge?.perLessonCost).toBe(37_500); // 450 000 / 12
+      expect(charge?.chargedAmount).toBe(450_000); // oy narxi o'zgarmaydi
+    });
+  });
+
+  describe('recordExcusedLesson', () => {
+    it('uzrli darsni o`sha oyning hisobiga qo`shadi', async () => {
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValueOnce({
+        id: 'charge-1',
+      });
+
+      await service.recordExcusedLesson(tx, {
+        enrollmentId: 'enr-1',
+        lessonDate: new Date('2026-09-10T00:00:00Z'),
+        delta: 1,
+      });
+
+      expect(prismaMock.enrollmentMonthlyCharge.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { excusedLessons: { increment: 1 } },
+        }),
+      );
+    });
+
+    it('tuzatishda (uzrli -> keldi) sanoqni kamaytiradi', async () => {
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValueOnce({
+        id: 'charge-1',
+      });
+
+      await service.recordExcusedLesson(tx, {
+        enrollmentId: 'enr-1',
+        lessonDate: new Date('2026-09-10T00:00:00Z'),
+        delta: -1,
+      });
+
+      expect(prismaMock.enrollmentMonthlyCharge.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { excusedLessons: { increment: -1 } },
+        }),
+      );
+    });
+
+    it('o`sha oyning hisobi topilmasa jim o`tadi', async () => {
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValueOnce(null);
+      await expect(
+        service.recordExcusedLesson(tx, {
+          enrollmentId: 'enr-1',
+          lessonDate: new Date('2026-09-10T00:00:00Z'),
+          delta: 1,
+        }),
+      ).resolves.toBeUndefined();
+      expect(prismaMock.enrollmentMonthlyCharge.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findChargeForLesson', () => {
+    it('dars sanasidan davrni chiqarib hisobni topadi', async () => {
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValueOnce({
+        id: 'charge-1',
+      });
+
+      const charge = await service.findChargeForLesson(
+        tx,
+        'enr-1',
+        new Date('2026-09-10T00:00:00Z'),
+      );
+
+      expect(charge).toEqual({ id: 'charge-1' });
+      expect(prismaMock.enrollmentMonthlyCharge.findUnique).toHaveBeenCalledWith({
+        where: {
+          enrollmentId_periodYear_periodMonth: {
+            enrollmentId: 'enr-1',
+            periodYear: 2026,
+            periodMonth: 9,
+          },
+        },
+      });
+    });
+  });
+});

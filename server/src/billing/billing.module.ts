@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { LessonBillingService } from './lesson-billing.service';
 import { EnrollmentBillingService } from './enrollment-billing.service';
 import { DebtWriteOffService } from './debt-write-off.service';
+import { MonthlyChargeService } from './monthly-charge.service';
 import { BillingController } from './billing.controller';
 import { StudentDebtNotificationListener } from './student-debt-notification.listener';
 import { TransactionsModule } from '../transactions/transactions.module';
@@ -27,12 +28,14 @@ import { TelegramModule } from '../telegram/telegram.module';
     LessonBillingService,
     EnrollmentBillingService,
     DebtWriteOffService,
+    MonthlyChargeService,
     StudentDebtNotificationListener,
   ],
   exports: [
     LessonBillingService,
     EnrollmentBillingService,
     DebtWriteOffService,
+    MonthlyChargeService,
   ],
 })
 export class BillingModule {}
