@@ -374,6 +374,21 @@ export class TransactionsWriteService {
           `Teskari qilinadigan oylik to'lov topilmadi: ${params.transactionId}`,
         );
       }
+      // Bu metod FAQAT oylik to'lov qatorlarini teskari qiladi. Umumiy
+      // `reverseTransaction()` PAYMENT/REFUND/SALARY_PAYMENT/EXPENSE kabi
+      // haqiqiy pul harakatini kassa yozuviga ham ko'chiradi — bu yerda esa
+      // bunday sinxronizatsiya yo'q, shuning uchun boshqa turdagi qatorni
+      // shu yo'l bilan teskari qilish balans va kassani abadiy ajratib
+      // yuboradi.
+      const md = (original.metadata ?? {}) as Record<string, unknown>;
+      if (
+        original.type !== TransactionType.LESSON_DEDUCTION ||
+        md.mode !== 'MONTHLY_PERIOD'
+      ) {
+        throw new BadRequestException(
+          `Bu qator oylik to'lov emas, reverseMonthlyFee bilan teskari qilinmaydi: ${params.transactionId}`,
+        );
+      }
       if (!original.studentId) {
         throw new BadRequestException(
           `Oylik to'lov qatorida o'quvchi yo'q: ${params.transactionId}`,
@@ -383,8 +398,23 @@ export class TransactionsWriteService {
       const student = await this.lockStudent(client, original.studentId);
       const balanceBefore = student.balance;
       // Asl qator manfiy -> teskarisi musbat. Ishora asl qatordan olinadi.
-      const reversalAmount = -original.amount;
+      // `-original.amount` asl summa 0 bo'lganda `-0` beradi (masalan, kredit
+      // butun oyni yopgan qator) — shu sababli `chargeMonthlyFee` dagi kabi
+      // normallashtiriladi.
+      const reversalAmount = -original.amount || 0;
       const balanceAfter = balanceBefore + reversalAmount;
+
+      // Asl qatorni AVVAL "reversedAt" bilan belgilaymiz, keyin teskari
+      // qatorni yozamiz — xuddi shu fayldagi `reverseTransaction()` kabi.
+      // Sabab: `reversedAt IS NULL` ga qamrab olingan partial unique
+      // indexlar (masalan, attendanceId yoki studentId bo'yicha) aks holda
+      // ikkala qator bir lahza faol turgan payt P2002 bilan yiqilishi
+      // mumkin. Hozircha LESSON_DEDUCTION uchun bunday index yo'q, lekin
+      // faylning hujjatlashtirilgan tartibiga ergashamiz.
+      await client.transaction.update({
+        where: { id: original.id },
+        data: { reversedAt: new Date(), reversedById: params.performedById },
+      });
 
       const reversal = await client.transaction.create({
         data: {
@@ -401,11 +431,6 @@ export class TransactionsWriteService {
           reversedById: params.performedById,
           metadata: original.metadata ?? undefined,
         },
-      });
-
-      await client.transaction.update({
-        where: { id: original.id },
-        data: { reversedAt: new Date(), reversedById: params.performedById },
       });
 
       if (balanceAfter !== balanceBefore) {

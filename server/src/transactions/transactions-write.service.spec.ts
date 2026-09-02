@@ -588,4 +588,98 @@ describe('TransactionsWriteService.reverseMonthlyFee', () => {
       }),
     ).rejects.toThrow();
   });
+
+  // Ushbu metod FAQAT oylik to'lov qatorlarini teskari qiladi. PAYMENT/
+  // REFUND/SALARY_PAYMENT/EXPENSE kabi turlar kassa harakatiga ega — ular
+  // shu yo'l bilan teskari qilinsa, balans va kassa abadiy ajralib qolardi.
+  // Umumiy reverseTransaction() bunday qatorlar uchun mo'ljallangan.
+  it('oylik bo`lmagan (masalan PAYMENT) qatorni rad etadi', async () => {
+    prisma.transaction.findFirst.mockResolvedValue({
+      id: 'tx-1',
+      type: 'PAYMENT',
+      amount: 400_000,
+      studentId: STUDENT,
+      enrollmentId: null,
+      branchId: 1,
+      companyId: COMPANY,
+      metadata: null,
+      reversedAt: null,
+    });
+
+    await expect(
+      service.reverseMonthlyFee({
+        transactionId: 'tx-1',
+        companyId: 1,
+        reason: 'test',
+      }),
+    ).rejects.toThrow();
+
+    expect(prisma.transaction.create).not.toHaveBeenCalled();
+    expect(prisma.transaction.update).not.toHaveBeenCalled();
+  });
+
+  it('LESSON_DEDUCTION turida lekin MONTHLY_PERIOD metadatasiz qatorni rad etadi', async () => {
+    // masalan paket sikli LESSON_DEDUCTION qatori — mode boshqa yoki yo'q.
+    prisma.transaction.findFirst.mockResolvedValue({
+      id: 'tx-1',
+      type: 'LESSON_DEDUCTION',
+      amount: -450_000,
+      studentId: STUDENT,
+      enrollmentId: 'enr-1',
+      branchId: 1,
+      companyId: COMPANY,
+      metadata: { mode: 'FULL_CYCLE' },
+      reversedAt: null,
+    });
+
+    await expect(
+      service.reverseMonthlyFee({
+        transactionId: 'tx-1',
+        companyId: 1,
+        reason: 'test',
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('asl summa 0 bo`lganda teskarisini ham 0 sifatida yozadi (-0 emas)', async () => {
+    prisma.transaction.findFirst.mockResolvedValue({
+      id: 'tx-1',
+      type: 'LESSON_DEDUCTION',
+      amount: 0,
+      studentId: STUDENT,
+      enrollmentId: 'enr-1',
+      branchId: 1,
+      companyId: COMPANY,
+      metadata: { mode: 'MONTHLY_PERIOD', period: '2026-10' },
+      reversedAt: null,
+    });
+
+    const rev = await service.reverseMonthlyFee({
+      transactionId: 'tx-1',
+      companyId: 1,
+      reason: 'test',
+    });
+    expect(rev.amount).toBe(0);
+    expect(Object.is(rev.amount, -0)).toBe(false);
+  });
+
+  it('teskari qatordan oldin asl qatorni reversedAt bilan belgilaydi', async () => {
+    const calls: string[] = [];
+    prisma.transaction.update.mockImplementation(() => {
+      calls.push('update');
+      return Promise.resolve({});
+    });
+    prisma.transaction.create.mockImplementation(({ data }: any) => {
+      calls.push('create');
+      return Promise.resolve({ id: 'tx-2', ...data });
+    });
+
+    await service.reverseMonthlyFee({
+      transactionId: 'tx-1',
+      companyId: 1,
+      reason: 'test',
+    });
+
+    expect(calls).toEqual(['update', 'create']);
+  });
 });
