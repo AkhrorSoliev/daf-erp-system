@@ -257,7 +257,19 @@ export class MonthlyChargeService {
       },
       select: { id: true },
     });
-    if (!charge) return;
+    if (!charge) {
+      // Bu oy uchun hisob hali yaratilmagan (masalan cron ulgurmagan) —
+      // BU YERDA hisob shoshilinch YARATILMAYDI: davomat belgilash admin
+      // uchun kutilmagan yechimga aylanmasligi kerak. Kredit shu holatda
+      // yo'qoladi — bu xatolik jurnalga yoziladi, shunda bo'shliq ko'rinib
+      // turadi. 7-vazifadagi cron o'z-o'zini tuzatish tomonini olib boradi.
+      this.logger.error(
+        `Oylik hisob topilmadi: enrollment=${params.enrollmentId} ` +
+          `davr=${periodYear}-${String(periodMonth).padStart(2, '0')} ` +
+          `sana=${day} — uzrli dars krediti (delta=${params.delta}) yozilmadi`,
+      );
+      return;
+    }
 
     await tx.enrollmentMonthlyCharge.update({
       where: { id: charge.id },

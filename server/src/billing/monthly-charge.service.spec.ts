@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   ChargeableEnrollment,
@@ -278,8 +279,16 @@ describe('MonthlyChargeService', () => {
       );
     });
 
-    it('o`sha oyning hisobi topilmasa jim o`tadi', async () => {
+    it('o`sha oyning hisobi topilmasa jim o`tadi, lekin xatolik jurnalga yoziladi', async () => {
+      // Koordinator qarori (5-vazifa sharhidan keyin): kredit bu holatda
+      // hech qanday izsiz yo'qolmasligi kerak — hisob shu yerda shoshilinch
+      // yaratilmaydi (buni 7-vazifadagi cron o'zi tuzatadi), ammo bo'shliq
+      // jurnalda ko'rinib turishi shart.
+      const errorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
       prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValueOnce(null);
+
       await expect(
         service.recordExcusedLesson(tx, {
           enrollmentId: 'enr-1',
@@ -287,7 +296,11 @@ describe('MonthlyChargeService', () => {
           delta: 1,
         }),
       ).resolves.toBeUndefined();
+
       expect(prismaMock.enrollmentMonthlyCharge.update).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('enr-1'));
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('2026-09'));
+      errorSpy.mockRestore();
     });
   });
 

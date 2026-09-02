@@ -1,9 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AttendanceStatus, LessonDeductionMode } from '@prisma/client';
-import { LessonBillingService } from './lesson-billing.service';
+import {
+  AttendanceStatus,
+  LessonDeductionMode,
+  PaymentModel,
+} from '@prisma/client';
+import {
+  LessonBillingService,
+  ProcessAttendanceBillingParams,
+} from './lesson-billing.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
+import { MonthlyChargeService } from './monthly-charge.service';
 
 /**
  * Tests cover the 6-row status transition matrix and the 3 financial
@@ -16,6 +24,7 @@ describe('LessonBillingService', () => {
   let prisma: any;
   let transactionsService: any;
   let salaryAccrualService: any;
+  let monthlyChargeService: any;
   let tx: any;
 
   const baseGroup = {
@@ -37,6 +46,11 @@ describe('LessonBillingService', () => {
       createAccrual: jest.fn().mockResolvedValue(null),
       reverseAccrualForAttendance: jest.fn().mockResolvedValue(null),
     };
+    monthlyChargeService = {
+      createChargeForEnrollment: jest.fn(),
+      recordExcusedLesson: jest.fn().mockResolvedValue(undefined),
+      findChargeForLesson: jest.fn().mockResolvedValue(null),
+    };
 
     // tx is the same object as prisma — so $queryRaw and findUnique etc.
     // share the same jest.fn instances across the inner and outer scope.
@@ -53,7 +67,16 @@ describe('LessonBillingService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         update: jest.fn().mockResolvedValue({}),
       },
-      enrollment: { update: jest.fn().mockResolvedValue({}) },
+      enrollment: {
+        update: jest.fn().mockResolvedValue({}),
+        // `resolvePaymentModel` reads this on every call. Default to
+        // LESSON_PACK so every pre-existing test (which never touches
+        // MONTHLY) keeps exercising the unchanged package path without
+        // having to mock this itself.
+        findUnique: jest.fn().mockResolvedValue({
+          group: { course: { paymentModel: PaymentModel.LESSON_PACK } },
+        }),
+      },
       group: { findUnique: jest.fn().mockResolvedValue(baseGroup) },
       student: { findUnique: jest.fn() },
       // `settleDeferredAccruals` resolves the deduction's linked Attendance
@@ -79,6 +102,7 @@ describe('LessonBillingService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: TransactionsService, useValue: transactionsService },
         { provide: SalaryAccrualService, useValue: salaryAccrualService },
+        { provide: MonthlyChargeService, useValue: monthlyChargeService },
       ],
     }).compile();
 
@@ -1104,6 +1128,227 @@ describe('LessonBillingService', () => {
         expect.any(Function),
         expect.objectContaining({ isolationLevel: 'Serializable' }),
       );
+    });
+  });
+
+  // ============================================================
+  // MONTHLY kurs — davomat balansga tegmaydi (Task 6)
+  // ============================================================
+
+  /**
+   * `tx.enrollment.findUnique` bitta mock bo'lgani uchun (Prisma `select`
+   * haqiqiy filtrlamaydi) qaytariladigan obyekt HAR IKKI chaqiruvchini
+   * qondirishi kerak: `resolvePaymentModel` (`group.course.paymentModel`)
+   * va zaxira yo'l `fallbackMonthlyPerLessonCost`
+   * (`group.exactDays` + `group.course.price`).
+   */
+  function monthlyEnrollmentRow() {
+    return {
+      group: {
+        exactDays: ['monday', 'wednesday', 'friday'],
+        course: { paymentModel: PaymentModel.MONTHLY, price: 450_000 },
+      },
+    };
+  }
+
+  function monthlyParams(
+    over: Pick<ProcessAttendanceBillingParams, 'oldStatus' | 'newStatus'>,
+  ): ProcessAttendanceBillingParams {
+    tx.enrollment.findUnique.mockResolvedValue(monthlyEnrollmentRow());
+    return { ...baseParams, ...over };
+  }
+
+  function packParams(
+    over: Pick<ProcessAttendanceBillingParams, 'oldStatus' | 'newStatus'>,
+  ): ProcessAttendanceBillingParams {
+    tx.enrollment.findUnique.mockResolvedValue({
+      group: { course: { paymentModel: PaymentModel.LESSON_PACK } },
+    });
+    return { ...baseParams, ...over };
+  }
+
+  describe('MONTHLY kurs — davomat balansga tegmaydi', () => {
+    beforeEach(() => {
+      monthlyChargeService.findChargeForLesson.mockResolvedValue({
+        id: 'chg-1',
+        perLessonCost: 34_615,
+        transactionId: 'tx-monthly-1',
+      });
+    });
+
+    it('PRESENT belgilanganda balansdan hech narsa yechmaydi', async () => {
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({
+          oldStatus: null,
+          newStatus: AttendanceStatus.PRESENT,
+        }),
+      );
+
+      expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
+      expect(
+        transactionsService.recordLessonConsumption,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('PRESENT belgilanganda o`qituvchiga muzlatilgan narx bo`yicha haq yozadi', async () => {
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({
+          oldStatus: null,
+          newStatus: AttendanceStatus.PRESENT,
+        }),
+      );
+
+      expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
+        expect.objectContaining({
+          perLessonCost: 34_615,
+          deductionTransactionId: 'tx-monthly-1',
+        }),
+      );
+    });
+
+    it('ABSENT ham to`langan dars — o`qituvchi haqi yoziladi', async () => {
+      // Dars o'tdi, o'quvchi kelmadi: oylik modelda ham dars hisoblanadi.
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({ oldStatus: null, newStatus: AttendanceStatus.ABSENT }),
+      );
+      expect(salaryAccrualService.createAccrual).toHaveBeenCalled();
+    });
+
+    it('birinchi marta EXCUSED belgilanganda o`qituvchiga haq yozmaydi va kredit qo`shadi', async () => {
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({
+          oldStatus: null,
+          newStatus: AttendanceStatus.EXCUSED,
+        }),
+      );
+
+      expect(salaryAccrualService.createAccrual).not.toHaveBeenCalled();
+      expect(monthlyChargeService.recordExcusedLesson).toHaveBeenCalledWith(
+        tx,
+        expect.objectContaining({ delta: 1 }),
+      );
+    });
+
+    it('EXCUSED -> EXCUSED hech narsa qilmaydi (haqiqiy o`zgarish yo`q)', async () => {
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({
+          oldStatus: AttendanceStatus.EXCUSED,
+          newStatus: AttendanceStatus.EXCUSED,
+        }),
+      );
+
+      expect(salaryAccrualService.createAccrual).not.toHaveBeenCalled();
+      expect(monthlyChargeService.recordExcusedLesson).not.toHaveBeenCalled();
+      expect(
+        salaryAccrualService.reverseAccrualForAttendance,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('PRESENT -> LATE hech narsa qilmaydi (ikkalasi ham billable)', async () => {
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({
+          oldStatus: AttendanceStatus.PRESENT,
+          newStatus: AttendanceStatus.LATE,
+        }),
+      );
+
+      expect(salaryAccrualService.createAccrual).not.toHaveBeenCalled();
+      expect(monthlyChargeService.recordExcusedLesson).not.toHaveBeenCalled();
+    });
+
+    it('PRESENT -> EXCUSED tuzatishida haqni teskari qiladi va kredit qo`shadi', async () => {
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({
+          oldStatus: AttendanceStatus.PRESENT,
+          newStatus: AttendanceStatus.EXCUSED,
+        }),
+      );
+
+      expect(
+        salaryAccrualService.reverseAccrualForAttendance,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          groupId: baseParams.groupId,
+          studentId: baseParams.studentId,
+        }),
+      );
+      expect(monthlyChargeService.recordExcusedLesson).toHaveBeenCalledWith(
+        tx,
+        expect.objectContaining({ delta: 1 }),
+      );
+      // Balans yo'liga umuman tegmaydi.
+      expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
+    });
+
+    it('EXCUSED -> PRESENT tuzatishida kreditni qaytarib oladi', async () => {
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({
+          oldStatus: AttendanceStatus.EXCUSED,
+          newStatus: AttendanceStatus.PRESENT,
+        }),
+      );
+
+      expect(monthlyChargeService.recordExcusedLesson).toHaveBeenCalledWith(
+        tx,
+        expect.objectContaining({ delta: -1 }),
+      );
+      expect(salaryAccrualService.createAccrual).toHaveBeenCalled();
+    });
+
+    it('oylik hisob topilmasa ham o`qituvchi haqsiz qolmaydi (zaxira narx + markaz moliyalashtiradi)', async () => {
+      // Cron ishlamay qolgan holat: narx joyida hisoblanadi va xatolik
+      // jurnalga yoziladi (recordExcusedLesson'dagi xatti-harakat singari).
+      monthlyChargeService.findChargeForLesson.mockResolvedValue(null);
+      const errorSpy = jest
+        .spyOn((service as any).logger, 'error')
+        .mockImplementation();
+
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({
+          oldStatus: null,
+          newStatus: AttendanceStatus.PRESENT,
+        }),
+      );
+
+      // exactDays = [mon, wed, fri] → 2026-04 da 13 ta dars kuni.
+      // 450_000 / 13 = 34_615 (yaxlitlangan).
+      expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
+        expect.objectContaining({
+          perLessonCost: 34_615,
+          deductionTransactionId: null,
+          centerFunded: true,
+        }),
+      );
+      expect(errorSpy).toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
+  });
+
+  describe('LESSON_PACK kurs — eski yo`l o`zgarmaydi (Task 6 shoxlanishi)', () => {
+    beforeEach(() => {
+      tx.$queryRaw.mockResolvedValue([
+        { id: 'enroll-1', prepaidLessonsRemaining: 0, cycleLessonIndex: 0 },
+      ]);
+      tx.student.findUnique.mockResolvedValue({ balance: 400_000 });
+    });
+
+    it('PRESENT da avvalgidek balansdan yechadi', async () => {
+      await service.processAttendanceBilling(
+        tx,
+        packParams({ oldStatus: null, newStatus: AttendanceStatus.PRESENT }),
+      );
+      expect(transactionsService.deductLessonFee).toHaveBeenCalled();
+      expect(monthlyChargeService.recordExcusedLesson).not.toHaveBeenCalled();
+      expect(monthlyChargeService.findChargeForLesson).not.toHaveBeenCalled();
     });
   });
 });

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
   AttendanceStatus,
   LessonDeductionMode,
+  PaymentModel,
   Prisma,
   TransactionType,
 } from '@prisma/client';
@@ -17,6 +18,10 @@ import {
   SalaryAccrualService,
   CarriedOverAccrual,
 } from '../salary/salary-accrual.service';
+import { MonthlyChargeService } from './monthly-charge.service';
+import { tashkentDateStr } from '../attendance/shared/date-utils';
+import { lessonDatesInMonth } from './planned-lessons';
+import { perLessonCostForMonth } from './monthly-price';
 
 // Business rule: a lesson held = a lesson paid. The student's prepaid
 // quota is consumed (and the teacher earns) for any status that confirms
@@ -87,12 +92,22 @@ export class LessonBillingService {
     private prisma: PrismaService,
     private transactionsService: TransactionsService,
     private salaryAccrualService: SalaryAccrualService,
+    private monthlyChargeService: MonthlyChargeService,
   ) {}
 
   async processAttendanceBilling(
     tx: Prisma.TransactionClient,
     params: ProcessAttendanceBillingParams,
   ): Promise<void> {
+    const paymentModel = await this.resolvePaymentModel(
+      tx,
+      params.enrollmentId,
+    );
+    if (paymentModel === PaymentModel.MONTHLY) {
+      await this.processMonthlyAttendance(tx, params);
+      return;
+    }
+
     const wasBillable =
       params.oldStatus !== null && BILLABLE.has(params.oldStatus);
     const isBillable = BILLABLE.has(params.newStatus);
@@ -103,6 +118,175 @@ export class LessonBillingService {
       await this.reverse(tx, params);
     }
     // Other transitions: no-op.
+  }
+
+  /** Yozilishning kursi qaysi to'lov modelida ekanini aniqlaydi. */
+  private async resolvePaymentModel(
+    tx: Prisma.TransactionClient,
+    enrollmentId: string,
+  ): Promise<PaymentModel> {
+    const enr = await tx.enrollment.findUnique({
+      where: { id: enrollmentId },
+      select: {
+        group: { select: { course: { select: { paymentModel: true } } } },
+      },
+    });
+    return enr?.group.course.paymentModel ?? PaymentModel.LESSON_PACK;
+  }
+
+  /**
+   * Oylik kursda davomat BALANSGA TEGMAYDI — oy boshida to'langan.
+   * Davomat faqat ikki narsani hal qiladi: o'qituvchi haq oladimi, va
+   * uzrli dars keyingi oyga kredit bo'lib o'tadimi.
+   */
+  private async processMonthlyAttendance(
+    tx: Prisma.TransactionClient,
+    params: ProcessAttendanceBillingParams,
+  ): Promise<void> {
+    const wasBillable =
+      params.oldStatus !== null && BILLABLE.has(params.oldStatus);
+    const isBillable = BILLABLE.has(params.newStatus);
+    // Haqiqiy "hech narsa o'zgarmadi" holatigina o'tkazib yuboriladi: avvalgi
+    // holat BOR edi va uning billable-toifasi o'zgarmadi (EXCUSED→EXCUSED,
+    // yoki PRESENT→LATE kabi billable→billable). `oldStatus === null`
+    // (yangi davomat) BU QOIDAGA kirmaydi — birinchi marta EXCUSED deb
+    // belgilash ham uzrli dars hisoblanadi va kredit yozilishi kerak, aks
+    // holda kredit izsiz yo'qoladi.
+    if (params.oldStatus !== null && wasBillable === isBillable) return;
+
+    if (isBillable) {
+      // Uzrli edi, endi dars hisoblanadi: kreditni qaytarib olamiz.
+      if (params.oldStatus === AttendanceStatus.EXCUSED) {
+        await this.monthlyChargeService.recordExcusedLesson(tx, {
+          enrollmentId: params.enrollmentId,
+          lessonDate: params.lessonDate,
+          delta: -1,
+        });
+      }
+      await this.accrueMonthlySalary(tx, params);
+      return;
+    }
+
+    // Dars hisoblanardi, endi uzrli: haqni qaytarib, kredit yozamiz.
+    // `reverseAccrualForAttendance` O'QITUVCHI bo'yicha ishlaydi
+    // (`salary-accrual.service.ts:391`), shuning uchun darsning
+    // o'qituvchilari avval aniqlanadi.
+    const teacherIds = await this.resolveTeachersForLesson(
+      tx,
+      params.groupId,
+      params.lessonDate,
+    );
+    for (const teacherId of teacherIds) {
+      await this.salaryAccrualService.reverseAccrualForAttendance({
+        teacherId,
+        studentId: params.studentId,
+        groupId: params.groupId,
+        lessonDate: params.lessonDate,
+        reversedById: params.performedById,
+        reversalReason: 'Dars uzrli deb belgilandi',
+        tx,
+      });
+    }
+    await this.monthlyChargeService.recordExcusedLesson(tx, {
+      enrollmentId: params.enrollmentId,
+      lessonDate: params.lessonDate,
+      delta: 1,
+    });
+  }
+
+  /** Oylik kursda o'qituvchi haqi — narx muzlatilgan hisobdan olinadi. */
+  private async accrueMonthlySalary(
+    tx: Prisma.TransactionClient,
+    params: ProcessAttendanceBillingParams,
+  ): Promise<void> {
+    const charge = await this.monthlyChargeService.findChargeForLesson(
+      tx,
+      params.enrollmentId,
+      params.lessonDate,
+    );
+
+    let perLessonCost = charge?.perLessonCost ?? 0;
+    let deductionTransactionId: string | null = charge?.transactionId ?? null;
+
+    if (!charge) {
+      // Oylik hisob topilmadi — bu holatda YANGI hisob bu yerda YARATILMAYDI:
+      // davomat belgilash admin uchun kutilmagan 450 000 so'mlik yechimga
+      // aylanmasligi kerak. Buning o'rniga kamchilik LOG orqali ko'rinadigan
+      // qilinadi (7-vazifadagi cron bu bo'shliqni o'zi to'ldiradi), narx esa
+      // shu yerda zaxira hisob-kitob orqali topiladi — o'qituvchi haqsiz
+      // qolmaydi.
+      const periodDay = tashkentDateStr(params.lessonDate);
+      this.logger.error(
+        `Oylik hisob topilmadi: enrollment=${params.enrollmentId} ` +
+          `davr=${periodDay.slice(0, 7)} sana=${periodDay} — bu darsga ` +
+          `hech qanday EnrollmentMonthlyCharge yozuvi yo'q`,
+      );
+      const fallback = await this.fallbackMonthlyPerLessonCost(tx, params);
+      perLessonCost = fallback.perLessonCost;
+      deductionTransactionId = null;
+    }
+
+    if (perLessonCost <= 0) return;
+
+    const teacherIds = await this.resolveTeachersForLesson(
+      tx,
+      params.groupId,
+      params.lessonDate,
+    );
+    for (const teacherId of teacherIds) {
+      try {
+        await this.salaryAccrualService.createAccrual({
+          teacherId,
+          studentId: params.studentId,
+          groupId: params.groupId,
+          attendanceId: params.attendanceId,
+          lessonDate: params.lessonDate,
+          perLessonCost,
+          companyId: params.companyId,
+          deductionTransactionId,
+          // Hisob yo'q bo'lsa o'quvchi tomonidan qoplanmagan — markaz
+          // qoplaydi, aks holda createAccrual null qaytarib chiqib ketardi.
+          centerFunded: !charge,
+          tx,
+        });
+      } catch (err) {
+        this.logger.error(
+          `Oylik salary accrual failed for teacher ${teacherId}`,
+          err,
+        );
+      }
+    }
+  }
+
+  /**
+   * Zaxira narx hisob-kitobi — oylik hisob topilmagan holatda ishlatiladi
+   * (masalan cron ishlamay qolgan bo'lsa). Guruhning shu oydagi rejalashtirilgan
+   * dars sonidan kurs narxining bir darsga to'g'ri keladigan ulushini topadi.
+   */
+  private async fallbackMonthlyPerLessonCost(
+    tx: Prisma.TransactionClient,
+    params: ProcessAttendanceBillingParams,
+  ): Promise<{ perLessonCost: number }> {
+    const enr = await tx.enrollment.findUnique({
+      where: { id: params.enrollmentId },
+      select: {
+        group: {
+          select: { exactDays: true, course: { select: { price: true } } },
+        },
+      },
+    });
+    if (!enr) return { perLessonCost: 0 };
+
+    const day = tashkentDateStr(params.lessonDate);
+    const planned = lessonDatesInMonth({
+      year: Number(day.slice(0, 4)),
+      month: Number(day.slice(5, 7)),
+      exactDays: enr.group.exactDays,
+    }).length;
+
+    return {
+      perLessonCost: perLessonCostForMonth(enr.group.course.price, planned),
+    };
   }
 
   /**
