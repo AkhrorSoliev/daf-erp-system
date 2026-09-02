@@ -47,7 +47,7 @@ describe('lessonDatesInMonth', () => {
   });
 
   it('fromDate berilsa o`sha kundan boshlab sanaydi (o`rtada qo`shilgan)', () => {
-    // 17.09.2026 — payshanba. Shu kundan oy oxirigacha qolgan darslar.
+    // 17.09.2026 — payshanba. Shu kundan oy oxirigacha: 17, 19, 22, 24, 26, 29.
     const dates = lessonDatesInMonth({
       year: 2026,
       month: 9,
@@ -55,7 +55,7 @@ describe('lessonDatesInMonth', () => {
       fromDate: '2026-09-17',
     });
     expect(dates[0]).toBe('2026-09-17');
-    expect(dates).toHaveLength(5);
+    expect(dates).toHaveLength(6);
   });
 
   it('toDate berilsa o`sha kungacha sanaydi (o`rtada ketgan)', () => {
@@ -97,9 +97,9 @@ describe('lessonDatesInMonth', () => {
   });
 
   it('fevral kabi qisqa oyni to`g`ri sanaydi', () => {
-    // 2028 — kabisa yili, fevral 29 kun.
+    // 2028 — kabisa yili, fevral 29 kun. Du/Cho/Ju: 02-dan 28-gacha 12 ta.
     expect(
       lessonDatesInMonth({ year: 2028, month: 2, exactDays: MON_WED_FRI }),
-    ).toHaveLength(13);
+    ).toHaveLength(12);
   });
 });
