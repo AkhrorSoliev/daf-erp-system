@@ -114,4 +114,12 @@ describe('buildMigrationPlan', () => {
     expect(plan.students).toHaveLength(1);
     expect(plan.students[0].monthlyCharge).toBe(900_000); // ikki guruh
   });
+
+  it('plannedLessons=0 bo`lsa hisob 0 — MonthlyChargeService.createChargeForEnrollment kabi hech narsa yozilmaydi', () => {
+    const plan = buildMigrationPlan({
+      rows: [row({ plannedLessons: 0, coveredLessons: 0 })],
+      reversedDeductions: {},
+    });
+    expect(plan.students[0].monthlyCharge).toBe(0);
+  });
 });

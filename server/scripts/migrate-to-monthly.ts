@@ -60,6 +60,10 @@ import {
   renderStudentCsv,
   renderSummary,
 } from './lib/monthly-migration-report';
+import {
+  resolvePackPerLessonCost,
+  type PrepaidRefundBatch,
+} from './lib/prepaid-refund-price';
 
 interface CliArgs {
   apply: boolean;
@@ -216,7 +220,10 @@ async function main(prisma: PrismaClient) {
     }
 
     // ── har enrollment uchun eng so'nggi (bekor qilinmagan) LESSON_DEDUCTION —
-    // prepaid qaytarish shu narxda hisoblanadi (bitta batch so'rov). ─────────
+    // prepaid qaytarish shu BATCH'ning o'z summasidan hisoblanadi (bitta
+    // so'rov), xuddi EnrollmentBillingService.prepaidRefundValue kabi —
+    // metadata.perLessonCost ATAYLAB chegirmasiz, uni to'g'ridan-to'g'ri
+    // ishlatish chegirmali o'quvchini 2x ortiqcha ko'rsatardi. ─────────────
     const enrollmentsWithPrepaid = enrollments.filter(
       (e) => e.prepaidLessonsRemaining > 0,
     );
@@ -228,13 +235,21 @@ async function main(prisma: PrismaClient) {
             enrollmentId: { in: enrollmentsWithPrepaid.map((e) => e.id) },
           },
           orderBy: { createdAt: 'asc' },
-          select: { enrollmentId: true, metadata: true },
+          select: { enrollmentId: true, amount: true, metadata: true },
         })
       : [];
-    const lastDeductionByEnrollment = new Map<string, Prisma.JsonValue>();
+    const lastDeductionByEnrollment = new Map<string, PrepaidRefundBatch>();
     for (const d of deductions) {
-      if (d.enrollmentId)
-        lastDeductionByEnrollment.set(d.enrollmentId, d.metadata);
+      if (!d.enrollmentId) continue;
+      const meta = d.metadata as
+        | { perLessonCost?: number; lessonsCovered?: number }
+        | null
+        | undefined;
+      lastDeductionByEnrollment.set(d.enrollmentId, {
+        amount: d.amount,
+        lessonsCovered: meta?.lessonsCovered,
+        perLessonCost: meta?.perLessonCost,
+      });
     }
 
     // ── shu davrda (masalan 02.09) yechilib, migratsiyada bekor qilinadigan
@@ -292,18 +307,16 @@ async function main(prisma: PrismaClient) {
     // ── MigrationRow[] ni yig'ish ─────────────────────────────────────────
     for (const e of enrollments) {
       const course = e.group.course;
-      const oldPerLesson = baseLessonPrice(
-        course.price,
-        course.lessonPaymentCount,
-      );
-      const discMul = 1 - (e.student.discountPercent || 0) / 100;
 
-      let packPerLessonCost = Math.round(oldPerLesson * discMul);
-      const meta = lastDeductionByEnrollment.get(e.id) as
-        | { perLessonCost?: number }
-        | null
-        | undefined;
-      if (meta?.perLessonCost) packPerLessonCost = meta.perLessonCost;
+      // EnrollmentBillingService.prepaidRefundValue bilan bir xil ustuvorlik
+      // (scripts/lib/prepaid-refund-price.ts izohiga qarang) — chegirmani
+      // batch summasidan to'g'ri o'qiydi, metadata.perLessonCost'ga
+      // (chegirmasiz) faqat batch ma'lumoti yo'q bo'lganda tushadi.
+      const packPerLessonCost = resolvePackPerLessonCost({
+        remaining: e.prepaidLessonsRemaining,
+        course,
+        batch: lastDeductionByEnrollment.get(e.id) ?? null,
+      });
 
       const plannedLessons = plannedByGroup.get(e.groupId) ?? 0;
       const coveredLessons = lessonDatesInMonth({

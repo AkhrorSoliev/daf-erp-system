@@ -64,11 +64,20 @@ export function buildMigrationPlan(input: MigrationInput): MigrationPlan {
 
   for (const r of input.rows) {
     const prepaidRefund = r.prepaidLessons * r.packPerLessonCost;
-    const monthlyCharge = Math.round(
-      r.coveredLessons >= r.plannedLessons
-        ? r.monthlyPrice
-        : (r.monthlyPrice * r.coveredLessons) / r.plannedLessons,
-    );
+    // plannedLessons === 0 (oyda shu guruh uchun dars kuni yo'q) —
+    // MonthlyChargeService.createChargeForEnrollment shu holatda hech
+    // qanday hisob yozmaydi (`if (plannedLessons === 0) return null;`).
+    // Dry-run va apply BIR XIL arifmetikani ishlatishi kerak, shuning
+    // uchun bu yerda ham hisob 0 — `coveredLessons >= plannedLessons`
+    // (0 >= 0) to'liq narxni to'lab qo'yishi mumkin edi.
+    const monthlyCharge =
+      r.plannedLessons <= 0
+        ? 0
+        : Math.round(
+            r.coveredLessons >= r.plannedLessons
+              ? r.monthlyPrice
+              : (r.monthlyPrice * r.coveredLessons) / r.plannedLessons,
+          );
 
     const existing = byStudent.get(r.studentId);
     if (existing) {
