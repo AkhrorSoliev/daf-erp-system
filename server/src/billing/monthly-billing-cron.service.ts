@@ -11,7 +11,10 @@ import { MonthlyChargeService } from './monthly-charge.service';
  * bilan bir xil naqsh. Bu kelajakda hisoblash sanasini sozlamadan
  * o'zgartirish imkonini beradi, cron jadvalini qayta deploy qilmasdan.
  *
- * Vaqti 03:00 — oylik maosh cron'i (02:00) tugab bo'lgach ishlaydi.
+ * Vaqti 03:10 — oylik maosh cron'i (02:00) tugab bo'lgach ishlaydi.
+ * Daqiqa ATAYLAB 0 emas: `mock-exam-deadline-cron` aynan 03:00:00 da
+ * turadi, va oyning 1-kuni bu yerdan 370 ta Serializable tranzaksiya
+ * boshlanadi — ikkovi bir soniyaga to'g'ri kelmasligi kerak.
  * `MonthlyChargeService.createChargesForPeriod` o'zi idempotent (unique
  * kalit + "hisobi yo'q" so'rov filtri), shuning uchun bu ikkalasi orasida
  * tartib zaruriy emas — faqat resurs bahsini kamaytirish uchun ajratilgan.
@@ -30,7 +33,7 @@ export class MonthlyBillingCronService {
     private monthlyChargeService: MonthlyChargeService,
   ) {}
 
-  @Cron('0 3 * * *', { timeZone: 'Asia/Tashkent' })
+  @Cron('10 3 * * *', { timeZone: 'Asia/Tashkent' })
   async chargeMonthlyFees(): Promise<void> {
     const today = tashkentDateStr(new Date());
     if (Number(today.slice(8, 10)) !== 1) return;

@@ -186,7 +186,7 @@ export function splitLessonSlices(
     // yo'q. Bu shart `paidLessons`ga EMAS, faqat `total`ga qaraydi:
     // `proratedMonthlyAmount` va `applyLessonCredit` mustaqil yaxlitlaydi,
     // shuning uchun `paidLessons` 0 bo'lsa ham `total` kichik yaxlitlash
-    // qoldig'i sifatida nolдан farqli qolishi mumkin (masalan, 34 615/dars,
+    // qoldig'i sifatida noldan farqli qolishi mumkin (masalan, 34 615/dars,
     // gross 450 000, kredit 13 dars -> creditAmount 449 995, total 5).
     if (total === 0) return [];
     // Kredit hamma darsni "yopdi" deb hisoblangan, lekin yaxlitlash

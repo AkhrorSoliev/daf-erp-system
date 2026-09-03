@@ -12,6 +12,7 @@ import {
   StudentStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { EntityHistoryService } from '../common/entity-history';
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
 import { DebtWriteOffService } from '../billing/debt-write-off.service';
@@ -425,8 +426,10 @@ export class StudentEnrollmentService {
     userId: number,
     discountPercent: number,
   ): Promise<void> {
-    const now = new Date();
-    const tashkent = new Date(now.getTime() + 5 * 60 * 60 * 1000);
+    // Qaysi OY uchun hisob yoziladi — shu qator hal qiladi. Toshkent kuni
+    // yagona umumiy yordamchidan olinadi; qo'lda `+5 soat` surish bu kod
+    // bazasida ikkinchi (va bir kun adashishi mumkin bo'lgan) nusxa edi.
+    const today = tashkentDateStr(new Date());
 
     const chargeableEnrollment: ChargeableEnrollment = {
       id: created.id,
@@ -449,8 +452,8 @@ export class StudentEnrollmentService {
 
     await this.monthlyChargeService.createChargeForEnrollment(tx, {
       enrollment: chargeableEnrollment,
-      periodYear: tashkent.getUTCFullYear(),
-      periodMonth: tashkent.getUTCMonth() + 1,
+      periodYear: Number(today.slice(0, 4)),
+      periodMonth: Number(today.slice(5, 7)),
       companyId,
       performedById: userId,
       discountPercent,

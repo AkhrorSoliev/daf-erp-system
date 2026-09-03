@@ -29,6 +29,7 @@
     "scripts/lib/monthly-migration-report.ts",
     "scripts/lib/monthly-migration-report.spec.ts",
     "scripts/lib/prepaid-refund-price.ts",
+    "scripts/lib/prepaid-refund-price.spec.ts",
     "scripts/lib/check-cli.ts"
   ],
   "exclude": ["node_modules", "dist", "src/generated"]
