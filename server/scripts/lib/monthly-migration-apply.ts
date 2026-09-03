@@ -161,6 +161,21 @@ export interface EnrollmentToMigrate {
    * "hisobotda ko'rgan raqam bazaga tushmadi" holati jim o'tmasligi kerak.
    */
   expectedPrepaidRefund: number;
+  /**
+   * Prepaid qaytarish O'TKAZIB YUBORILGANDA (davr ichidagi batch uni
+   * qoplaydi): bekor qilish qaytarishi KUTILAYOTGAN summa. Aks holda 0.
+   *
+   * Nega kerak: "prepaid'ni qoplab turgan batch — eng so'nggi bekor
+   * qilinmagan `LESSON_DEDUCTION`" degan qoida haqiqiy LESSON_PACK oqimida
+   * to'g'ri, lekin bu FARAZ. Agar prodda qo'lda tuzatilgan qator uni buzsa,
+   * yozilishning prepaid'i qaytarilMASDAN nolga tushardi va HAMMA tekshiruv
+   * baribir o'tardi: bashorat ham xuddi shu qoidani ishlatadi, prepaid oxirida
+   * 0 bo'ladi, balans formulasi ham to'g'ri chiqadi. Shuning uchun o'tkazib
+   * yuborish faraziga qarshi HAQIQIY dalil talab qilinadi: bekor qilingan
+   * qatorlar ichida aynan o'sha batch bormi va qaytgan summa shu qiymatdan
+   * kam emasmi.
+   */
+  prepaidCoveredByReversal: number;
 }
 
 export interface ApplyStudentParams {
@@ -301,6 +316,8 @@ export async function applyMigrationForStudent(
     // PAUSED guruhda (chargeable=false) BEKOR QILINMAYDI: o'rniga qo'yiladigan
     // oylik hisob yo'q, demak bekor qilish o'tilgan darsni bepul qilib
     // qo'yardi. ──────────────────────────────────────────────────────────
+    const reversedIds: string[] = [];
+    let enrollmentReversed = 0;
     if (item.chargeable) {
       const deductions = await tx.transaction.findMany({
         where: {
@@ -322,7 +339,31 @@ export async function applyMigrationForStudent(
         // ishora reverseTransaction'ning o'zidan, shu yerda faqat yig'indiga
         // qo'shiladi).
         reversedSeptember += reversal.amount;
+        enrollmentReversed += reversal.amount;
         reversedDeductionCount += 1;
+        reversedIds.push(d.id);
+      }
+    }
+
+    // ── 2b. O'TKAZIB YUBORISH FARAZINI ISBOTLASH. Prepaid qaytarilmagan
+    // bo'lsa, "uni bekor qilish qopladi" degan gap DALIL bilan tasdiqlanishi
+    // kerak — aks holda prepaid jimgina yo'qolardi va bitta ham tekshiruv
+    // yiqilmasdi (`prepaidCoveredByReversal` izohiga qarang). ─────────────
+    if (skipPrepaidRefund) {
+      if (!fundingBatch || !reversedIds.includes(fundingBatch.id)) {
+        throw new Error(
+          `Yozilish ${enr.id}: prepaid qaytarish o'tkazib yuborildi, chunki uni ` +
+            `${fundingBatch?.id ?? '(topilmagan)'} batchi qoplaydi deb hisoblangan edi — ` +
+            `lekin o'sha qator bekor qilinganlar ichida YO'Q. ` +
+            `Migratsiya to'xtatildi, hech narsa yozilmadi.`,
+        );
+      }
+      if (enrollmentReversed < item.prepaidCoveredByReversal) {
+        throw new Error(
+          `Yozilish ${enr.id}: bekor qilish ${enrollmentReversed} qaytardi, ` +
+            `qaytarilmagan prepaid esa ${item.prepaidCoveredByReversal} turadi — ` +
+            `farq o'quvchidan yo'qolardi. Migratsiya to'xtatildi, hech narsa yozilmadi.`,
+        );
       }
     }
 

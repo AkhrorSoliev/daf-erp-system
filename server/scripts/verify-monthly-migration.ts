@@ -31,6 +31,7 @@ import {
   EnrollmentStatus,
   GroupStatus,
   PaymentModel,
+  Prisma,
   PrismaClient,
 } from '@prisma/client';
 import * as fs from 'fs';
@@ -44,6 +45,8 @@ import {
   som,
 } from './lib/check-cli';
 import { tashkentDateStr } from '../src/attendance/shared/date-utils';
+import { MonthlyChargeService } from '../src/billing/monthly-charge.service';
+import { lessonDatesInMonth } from '../src/billing/planned-lessons';
 
 interface VerifyArgs {
   period: string;
@@ -77,15 +80,23 @@ function docsDir(): string {
   return path.join(__dirname, '..', '..', 'docs');
 }
 
-/** Eng so'nggi `docs/migration-preview-*.csv` (nom bo'yicha saralangan). */
+/**
+ * Eng so'nggi `docs/migration-preview-*.csv`, `mtime` bo'yicha.
+ *
+ * Nom bo'yicha saralash XATO edi: `migration-preview-<sana>-<HHmmss>.csv`
+ * leksikografik tartibda `migration-preview-<sana>.csv` dan OLDIN turadi,
+ * ya'ni kunning eng ESKI fayli "eng yangisi" deb tanlanardi. 4-tekshiruv
+ * shunda eskirgan bashorat bilan solishtirib, JIM noto'g'ri javob berardi.
+ */
 function latestPreviewCsv(): string | null {
   const dir = docsDir();
   if (!fs.existsSync(dir)) return null;
   const files = fs
     .readdirSync(dir)
     .filter((f) => f.startsWith('migration-preview-') && f.endsWith('.csv'))
-    .sort();
-  return files.length ? path.join(dir, files[files.length - 1]) : null;
+    .map((f) => path.join(dir, f))
+    .sort((a, b) => fs.statSync(a).mtimeMs - fs.statSync(b).mtimeMs);
+  return files.length ? files[files.length - 1] : null;
 }
 
 /**
@@ -175,36 +186,86 @@ async function main(prisma: PrismaClient) {
     select: {
       id: true,
       studentId: true,
+      startDate: true,
       prepaidLessonsRemaining: true,
+      groupId: true,
       group: {
         select: {
           name: true,
           statusEnum: true,
+          branchId: true,
+          exactDays: true,
           course: { select: { name: true, paymentModel: true } },
         },
       },
     },
   });
 
-  // PAUSED guruh ATAYLAB hisobsiz qoladi (I2): `createChargeForEnrollment`
-  // ACTIVE bo'lmagan guruhga hisob yozmaydi. Ular alohida ko'rsatiladi,
-  // FAIL sifatida emas.
-  const unchargedActive = uncharged.filter(
-    (e) => e.group.statusEnum === GroupStatus.ACTIVE,
-  );
+  // Hisobsiz qolishning IKKI ta kutilgan sababi bor — ikkalasi ham
+  // `createChargeForEnrollment` ning o'z qorovullaridan:
+  //   - guruh ACTIVE emas (PAUSED, I2) -> `statusEnum !== ACTIVE` -> null;
+  //   - oyda shu yozilish uchun dars kuni yo'q -> `plannedLessons === 0`
+  //     yoki `coveredLessons === 0` -> null.
+  // Bular BIR MARTALIK emas, DOIMIY holat: qamrovdan chiqishning yagona
+  // yo'li hisob yozilishi, demak bu yozilishlar hech qachon chiqmaydi. Ularni
+  // FAIL deb ko'rsatish to'g'ri migratsiyadan keyin ham 1 kod berardi va
+  // operatorni bu tekshiruvni e'tiborsiz qoldirishga o'rgatardi.
   const unchargedPaused = uncharged.filter(
     (e) => e.group.statusEnum !== GroupStatus.ACTIVE,
   );
+  const unchargedActiveGroup = uncharged.filter(
+    (e) => e.group.statusEnum === GroupStatus.ACTIVE,
+  );
+
+  // Dars kunlari YAGONA manbadan — `MonthlyChargeService.resolveExcludedDates`
+  // + `lessonDatesInMonth`, xuddi hisob yozadigan yo'l kabi. Ikkinchi nusxa
+  // yozilmaydi. Faqat hisobsiz qolgan (odatda juda kam) yozilishlar uchun
+  // hisoblanadi.
+  const chargeService = new MonthlyChargeService(
+    prisma as unknown as never,
+    undefined as unknown as never,
+  );
+  const readTx = prisma as unknown as Prisma.TransactionClient;
+  const excludedCache = new Map<string, string[]>();
+  const noLessonDays: typeof unchargedActiveGroup = [];
+  const genuinelyUncharged: typeof unchargedActiveGroup = [];
+  for (const e of unchargedActiveGroup) {
+    let excluded = excludedCache.get(e.groupId);
+    if (!excluded) {
+      excluded = await chargeService.resolveExcludedDates(
+        readTx,
+        e.groupId,
+        e.group.branchId,
+        year,
+        month,
+      );
+      excludedCache.set(e.groupId, excluded);
+    }
+    const planned = lessonDatesInMonth({
+      year,
+      month,
+      exactDays: e.group.exactDays,
+      excludedDates: excluded,
+    }).length;
+    const covered = lessonDatesInMonth({
+      year,
+      month,
+      exactDays: e.group.exactDays,
+      excludedDates: excluded,
+      fromDate: e.startDate ? tashkentDateStr(e.startDate) : null,
+    }).length;
+    if (planned === 0 || covered === 0) noLessonDays.push(e);
+    else genuinelyUncharged.push(e);
+  }
 
   checks.push({
     name: `1. QAMROV — ${period} hisobi yo'q faol yozilish`,
-    pass: unchargedActive.length === 0,
+    pass: genuinelyUncharged.length === 0,
     detail:
-      `ACTIVE guruhda hisobsiz: ${unchargedActive.length} ta` +
-      (unchargedPaused.length
-        ? ` · PAUSED guruhda (ataylab hisobsiz): ${unchargedPaused.length} ta`
-        : ''),
-    rows: unchargedActive
+      `sababsiz hisobsiz: ${genuinelyUncharged.length} ta` +
+      ` · kutilgan qoldiq: PAUSED ${unchargedPaused.length} ta` +
+      `, oyda dars kuni yo'q ${noLessonDays.length} ta`,
+    rows: genuinelyUncharged
       .slice(0, show)
       .map(
         (e) =>

@@ -38,6 +38,7 @@ function makeEnrollment(over: EnrollmentOverride = {}): EnrollmentToMigrate {
     discountPercent: 0,
     chargeable: true,
     expectedPrepaidRefund: DEFAULT_REFUND,
+    prepaidCoveredByReversal: 0,
     ...over,
     enrollment,
   };
@@ -374,7 +375,12 @@ describe('applyMigrationForStudent', () => {
       periodMonth: 9,
       periodGte: PERIOD_GTE,
       periodLt: PERIOD_LT,
-      enrollments: [makeEnrollment({ expectedPrepaidRefund: 0 })],
+      enrollments: [
+        makeEnrollment({
+          expectedPrepaidRefund: 0,
+          prepaidCoveredByReversal: 206_250,
+        }),
+      ],
     });
 
     expect(deps.refundPrepaidToBalance).not.toHaveBeenCalled();
@@ -549,5 +555,79 @@ describe('applyMigrationForStudent', () => {
       }),
     ).rejects.toThrow(/ledger qatori \(transactionId\) yo'q/);
     expect(deps.reverseAccrualForAttendance).not.toHaveBeenCalled();
+  });
+  it("prepaid o'tkazib yuborilgan, lekin qoplaydi deb hisoblangan batch bekor qilinganlar ichida YO'Q — qattiq xato", async () => {
+    const tx = makeTx({
+      transaction: {
+        // Davr ichida BOSHQA qator bekor qilinadi...
+        findMany: jest.fn().mockResolvedValue([{ id: 'ded-boshqa' }]),
+        // ...prepaid'ni qoplaydi deb hisoblangani esa 'ded-sep'.
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'ded-sep',
+          createdAt: new Date('2026-09-02T09:00:00.000Z'),
+        }),
+      },
+      student: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ balance: 0 }),
+      },
+    });
+    const deps = makeDeps();
+
+    await expect(
+      applyMigrationForStudent({
+        tx,
+        deps,
+        studentId: 10453,
+        companyId: 1,
+        periodYear: 2026,
+        periodMonth: 9,
+        periodGte: PERIOD_GTE,
+        periodLt: PERIOD_LT,
+        enrollments: [
+          makeEnrollment({
+            expectedPrepaidRefund: 0,
+            prepaidCoveredByReversal: 206_250,
+          }),
+        ],
+      }),
+    ).rejects.toThrow(/bekor qilinganlar ichida YO'Q/);
+  });
+
+  it("bekor qilish qaytargan summa qaytarilmagan prepaid'dan kam — qattiq xato", async () => {
+    const tx = makeTx({
+      transaction: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'ded-sep' }]),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'ded-sep',
+          createdAt: new Date('2026-09-02T09:00:00.000Z'),
+        }),
+      },
+      student: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ balance: 0 }),
+      },
+    });
+    const deps = makeDeps({
+      // Batch bekor qilindi, lekin atigi 100 000 qaytdi.
+      reverseTransaction: jest.fn().mockResolvedValue({ amount: 100_000 }),
+    });
+
+    await expect(
+      applyMigrationForStudent({
+        tx,
+        deps,
+        studentId: 10453,
+        companyId: 1,
+        periodYear: 2026,
+        periodMonth: 9,
+        periodGte: PERIOD_GTE,
+        periodLt: PERIOD_LT,
+        enrollments: [
+          makeEnrollment({
+            expectedPrepaidRefund: 0,
+            prepaidCoveredByReversal: 206_250,
+          }),
+        ],
+      }),
+    ).rejects.toThrow(/farq o'quvchidan yo'qolardi/);
   });
 });

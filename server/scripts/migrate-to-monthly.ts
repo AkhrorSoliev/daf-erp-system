@@ -69,6 +69,7 @@ import {
   MigrationRow,
   renderStudentCsv,
   renderSummary,
+  scopeResidueVerdict,
 } from './lib/monthly-migration-report';
 import {
   resolvePackPerLessonCost,
@@ -186,7 +187,14 @@ function nextPreviewPath(): string {
   );
 }
 
-/** Shu kunga tegishli barcha bashorat CSV'lari (eng yangisi oxirida). */
+/**
+ * Shu kunga tegishli barcha bashorat CSV'lari, ENG YANGISI OXIRIDA.
+ *
+ * Saralash `mtime` bo'yicha, nom bo'yicha EMAS: `migration-preview-<sana>-
+ * <HHmmss>.csv` leksikografik tartibda `migration-preview-<sana>.csv` dan
+ * OLDIN turadi, ya'ni nom bo'yicha saralash kunning ENG ESKI faylini
+ * "eng yangisi" deb ko'rsatardi.
+ */
 function existingPreviewFiles(): string[] {
   const today = tashkentDateStr(new Date());
   const dir = docsDir();
@@ -196,8 +204,8 @@ function existingPreviewFiles(): string[] {
     .filter(
       (f) => f.startsWith(`migration-preview-${today}`) && f.endsWith('.csv'),
     )
-    .sort()
-    .map((f) => path.join(dir, f));
+    .map((f) => path.join(dir, f))
+    .sort((a, b) => fs.statSync(a).mtimeMs - fs.statSync(b).mtimeMs);
 }
 
 /** Qo'llash natijasi CSV'si — bashorat CSV'si bilan qator-qator solishtirish
@@ -440,6 +448,29 @@ async function runApply(params: RunApplyParams): Promise<void> {
 
   const remainingInScope = await params.countInScope();
 
+  // ── Qamrov qoldig'i: KUTILGAN qism va KUTILMAGAN qism ─────────────────
+  // Qamrovdan chiqishning yagona yo'li — shu davr uchun hisob yozilishi.
+  // Ikki toifa buni hech qachon qila olmaydi va qamrovda QOLADI:
+  //   - `chargesSkipped` — PAUSED guruh (ataylab hisobsiz, I2), yoki
+  //     `createChargeForEnrollment` null qaytargan holat (oyda dars kuni
+  //     yo'q / yozilish oy tugagach boshlangan);
+  //   - yiqilgan o'quvchilarning BARCHA yozilishlari (tranzaksiya qaytdi).
+  // Shu ikkisini hisobga olmasdan "qoldiq > 0 -> xato" deb qo'yish TO'G'RI
+  // to'liq ishni ham 1 kod bilan yiqitardi (prodda 7 ta PAUSED yozilish bor).
+  // Bu esa operatorni aynan C3 qo'ygan tekshiruvni e'tiborsiz qoldirishga
+  // o'rgatardi — shuning uchun qoldiq ANIQ solishtiriladi, "> 0" emas.
+  const failedEnrollmentCount = failures.reduce(
+    (a, f) => a + (migrateByStudent.get(f.studentId)?.enrollments.length ?? 0),
+    0,
+  );
+  const residue = scopeResidueVerdict({
+    remainingInScope,
+    chargesSkipped,
+    failedEnrollments: failedEnrollmentCount,
+    limited: limit !== null,
+  });
+  const expectedRemainingInScope = residue.expected;
+
   section('NATIJA');
   printTable(
     ["ko'rsatkich", 'qiymat'],
@@ -454,6 +485,10 @@ async function runApply(params: RunApplyParams): Promise<void> {
       ['Balanslar jami o`zgarishi', som(totalDelta)],
       ['Ledger qatorlari yig`indisi', som(ledgerDelta)],
       ['Qamrovda qolgan yozilish', String(remainingInScope)],
+      [
+        '  shundan kutilgan qoldiq',
+        `${expectedRemainingInScope} (hisobsiz ${chargesSkipped} + yiqilgan ${failedEnrollmentCount})`,
+      ],
     ],
     ['l', 'r'],
   );
@@ -488,11 +523,20 @@ async function runApply(params: RunApplyParams): Promise<void> {
         `bazada ${liveById.get(balanceDrift[0].studentId)}).`,
     );
   }
-  if (limit === null && remainingInScope > 0) {
+  if (!residue.ok) {
     problems.push(
-      `Migratsiyadan keyin ${remainingInScope} ta yozilish HALI qamrovda ` +
-        `(shu davr uchun oylik hisobi yo'q). Bular jim qolmasligi kerak — ` +
-        `\`verify-monthly-migration.ts\` ularni ro'yxatlaydi.`,
+      `Qamrov qoldig'i kutilganidan farq qiladi: bazada ${remainingInScope} ta ` +
+        `yozilish hali qamrovda, kutilgan ${expectedRemainingInScope} ta ` +
+        `(hisobsiz ${chargesSkipped} + yiqilgan ${failedEnrollmentCount}). ` +
+        `Farq ${remainingInScope - expectedRemainingInScope} ta — bular jim ` +
+        `qolmasligi kerak, \`verify-monthly-migration.ts\` ularni ro'yxatlaydi.`,
+    );
+  } else if (limit === null && expectedRemainingInScope > 0) {
+    console.log('');
+    console.log(
+      `Eslatma: ${expectedRemainingInScope} ta yozilish qamrovda QOLDI va bu ` +
+        `KUTILGAN (hisobsiz ${chargesSkipped} + yiqilgan ${failedEnrollmentCount}). ` +
+        `Har birini \`verify-monthly-migration.ts\` nomma-nom ko'rsatadi.`,
     );
   }
 
@@ -849,14 +893,16 @@ async function main(prisma: PrismaClient) {
       // fayli boshidagi izoh.
       const fundedInPeriod =
         !!batch && batch.createdAt >= periodGte && batch.createdAt < periodLt;
-      const prepaidRefundTotal =
-        chargeable && fundedInPeriod
-          ? 0
-          : resolvePrepaidRefundTotal({
-              remaining: e.prepaidLessonsRemaining,
-              course,
-              batch,
-            });
+      const prepaidValue = resolvePrepaidRefundTotal({
+        remaining: e.prepaidLessonsRemaining,
+        course,
+        batch,
+      });
+      const skipPrepaidRefund = chargeable && fundedInPeriod;
+      const prepaidRefundTotal = skipPrepaidRefund ? 0 : prepaidValue;
+      // O'tkazib yuborilganda: bekor qilish qoplashi KUTILAYOTGAN summa.
+      // `--apply` buni dalil bilan tekshiradi (EnrollmentToMigrate izohi).
+      const prepaidCoveredByReversal = skipPrepaidRefund ? prepaidValue : 0;
 
       const plannedLessons = plannedByGroup.get(e.groupId) ?? 0;
       const coveredLessons = lessonDatesInMonth({
@@ -918,6 +964,7 @@ async function main(prisma: PrismaClient) {
         discountPercent: e.student.discountPercent,
         chargeable,
         expectedPrepaidRefund: prepaidRefundTotal,
+        prepaidCoveredByReversal,
       });
       migrateByStudent.set(e.studentId, bucket);
     }

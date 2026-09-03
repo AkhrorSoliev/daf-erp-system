@@ -1,4 +1,7 @@
-import { buildMigrationPlan } from './monthly-migration-report';
+import {
+  buildMigrationPlan,
+  scopeResidueVerdict,
+} from './monthly-migration-report';
 
 const row = (over = {}) => ({
   enrollmentId: 'enr-1',
@@ -162,5 +165,52 @@ describe('buildMigrationPlan', () => {
       reversedDeductions: {},
     });
     expect(plan.students[0].monthlyCharge).toBe(0);
+  });
+});
+
+describe('scopeResidueVerdict', () => {
+  const v = (over: Partial<Parameters<typeof scopeResidueVerdict>[0]> = {}) =>
+    scopeResidueVerdict({
+      remainingInScope: 0,
+      chargesSkipped: 0,
+      failedEnrollments: 0,
+      limited: false,
+      ...over,
+    });
+
+  it("hech narsa qolmagan — o'tadi", () => {
+    expect(v()).toEqual({ expected: 0, unexplained: 0, ok: true });
+  });
+
+  it('PAUSED yozilishlar qamrovda qolgani XATO EMAS (prodda 7 ta)', () => {
+    // Regressiya: avvalgi "qoldiq > 0 -> xato" sharti aynan shu holatda
+    // to'g'ri bajarilgan to'liq ishni yiqitardi.
+    expect(v({ remainingInScope: 7, chargesSkipped: 7 })).toEqual({
+      expected: 7,
+      unexplained: 0,
+      ok: true,
+    });
+  });
+
+  it('yiqilgan o`quvchining yozilishlari ham kutilgan qoldiq', () => {
+    expect(
+      v({ remainingInScope: 9, chargesSkipped: 7, failedEnrollments: 2 }),
+    ).toEqual({ expected: 9, unexplained: 0, ok: true });
+  });
+
+  it("tushuntirib bo'lmaydigan qoldiq — yiqiladi (C1 detektori)", () => {
+    const r = v({ remainingInScope: 100, chargesSkipped: 7 });
+    expect(r.ok).toBe(false);
+    expect(r.unexplained).toBe(93);
+  });
+
+  it("hisobdan KO'P chiqib ketgani ham yiqiladi (qamrov noto'g'ri toraygan bo'lishi mumkin)", () => {
+    const r = v({ remainingInScope: 2, chargesSkipped: 7 });
+    expect(r.ok).toBe(false);
+    expect(r.unexplained).toBe(-5);
+  });
+
+  it('--limit bilan tekshiruv o`tkazib yuboriladi', () => {
+    expect(v({ remainingInScope: 10_000, limited: true }).ok).toBe(true);
   });
 });

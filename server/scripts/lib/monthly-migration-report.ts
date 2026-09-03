@@ -258,3 +258,32 @@ export function renderStudentCsv(plan: MigrationPlan): string {
   );
   return [head, ...lines].join('\n');
 }
+
+/**
+ * Migratsiyadan keyin qamrovda qolgan yozilishlar KUTILGANMI?
+ *
+ * Qamrovdan chiqishning yagona yo'li — shu davr uchun `EnrollmentMonthlyCharge`
+ * yozilishi. Ikki toifa buni hech qachon qila olmaydi:
+ *   - `chargesSkipped` — PAUSED guruh (I2: ataylab hisobsiz), yoki
+ *     `createChargeForEnrollment` null qaytargan holat (oyda dars kuni yo'q,
+ *     yozilish oy tugagach boshlangan);
+ *   - yiqilgan o'quvchilarning barcha yozilishlari (tranzaksiya qaytdi).
+ *
+ * Shuning uchun qoldiq "> 0 bo'lsa xato" EMAS, ANIQ solishtiriladi. Avvalgi
+ * "> 0" varianti to'g'ri bajarilgan to'liq ishni ham 1 kod bilan yiqitardi
+ * (prodda 7 ta PAUSED yozilish bor) — bu esa operatorni aynan shu tekshiruvni
+ * e'tiborsiz qoldirishga o'rgatardi.
+ *
+ * `limited` (`--limit` bilan ishlangan) — tegilmagan nishonlar ham qamrovda
+ * qoladi, shuning uchun tekshiruv o'tkazib yuboriladi.
+ */
+export function scopeResidueVerdict(params: {
+  remainingInScope: number;
+  chargesSkipped: number;
+  failedEnrollments: number;
+  limited: boolean;
+}): { expected: number; unexplained: number; ok: boolean } {
+  const expected = params.chargesSkipped + params.failedEnrollments;
+  const unexplained = params.remainingInScope - expected;
+  return { expected, unexplained, ok: params.limited || unexplained === 0 };
+}
