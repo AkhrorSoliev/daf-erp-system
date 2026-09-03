@@ -36,7 +36,8 @@
     "daf:gen-sentences": "ts-node scripts/daf-gen-sentences.ts",
     "daf:mark-picturable": "ts-node scripts/daf-mark-picturable.ts",
     "daf:gen-images": "ts-node scripts/daf-gen-images.ts",
-    "daf:gen-saetze": "ts-node scripts/daf-gen-u01-saetze.ts"
+    "daf:gen-saetze": "ts-node scripts/daf-gen-u01-saetze.ts",
+    "daf:inhalt-seed": "ts-node scripts/daf-inhalt-seed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1016.0",

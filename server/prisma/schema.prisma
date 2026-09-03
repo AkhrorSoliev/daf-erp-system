@@ -2888,6 +2888,8 @@ model DafUnit {
   exercises DafExercise[]
   sentences DafSentence[]
   sections  DafSection[]
+  dialoge   DafDialog[]
+  phrasen   DafPhrase[]
 
   @@unique([level, order])
   @@index([level])
@@ -2959,8 +2961,13 @@ model DafSection {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  unit    DafUnit     @relation(fields: [unitId], references: [id])
-  lessons DafLesson[]
+  unit          DafUnit       @relation(fields: [unitId], references: [id])
+  lessons       DafLesson[]
+  lexemes       DafLexeme[]
+  sentences     DafSentence[]
+  grammarRegeln DafGrammar[]
+  dialoge       DafDialog[]
+  phrasen       DafPhrase[]
 
   @@unique([unitId, order])
   @@index([unitId])
@@ -2997,9 +3004,20 @@ model DafLexeme {
   /// Rasm chizib bo'ladimi. `false` — abstrakt so'z (weil, Verantwortung).
   /// Rasmli savol turlari faqat `true` bo'lganlarga beriladi.
   picturable        Boolean               @default(false)
+  /// Qaysi mavzuli bo'limga tegishli. Eski DiB so'zlarida `null`.
+  sectionId         Int?
+  /// Ovoz yasovchiga yuboriladigan matn. Yakka harf va raqamni TTS
+  /// inglizcha o'qiydi, shuning uchun ular uchun qo'lda yoziladi.
+  tts               String?
+  artikel           String?
+  plural            String?
+  /// Ko'rgazma raqami — `de`ning yonida ko'rsatiladigan RAQAM ko'rinishi,
+  /// FAQAT sonlar uchun. `de` — o'zi o'rgatiladigan nemischa so'z.
+  anzeige           String?
 
   unit     DafUnit          @relation(fields: [unitId], references: [id])
   lesson   DafLesson?       @relation(fields: [lessonId], references: [id])
+  section  DafSection?      @relation(fields: [sectionId], references: [id])
   attempts DafAttempt[]
   states   DafLexemeState[]
 
@@ -3021,13 +3039,95 @@ model DafGrammar {
   explanationUz     String?
   translationSource DafTranslationSource?
   level             DafLevel?
+  sectionId         Int?
+  /// Qoidaning o'zbekcha izohi — boshlovchi qoidani ona tilida tushunadi.
+  erklaerungUz      String?
 
-  unit      DafUnit?      @relation(fields: [unitId], references: [id])
+  unit      DafUnit?             @relation(fields: [unitId], references: [id])
   exercises DafExercise[]
   lessons   DafLesson[]
+  section   DafSection?          @relation(fields: [sectionId], references: [id])
+  beispiele DafGrammarBeispiel[]
 
   @@index([unitId])
   @@index([code])
+}
+
+/// Grammatika qoidasining misoli.
+model DafGrammarBeispiel {
+  id        Int      @id @default(autoincrement())
+  grammarId Int
+  order     Int
+  de        String
+  tts       String?
+  uz        String
+  createdAt DateTime @default(now())
+
+  grammar DafGrammar @relation(fields: [grammarId], references: [id])
+
+  @@unique([grammarId, order])
+  @@index([grammarId])
+}
+
+/// Bo'limning dialogi — eshitish va o'qish materiali.
+model DafDialog {
+  id        Int      @id @default(autoincrement())
+  /// Barqaror kalit: `u01-d1`.
+  code      String   @unique
+  unitId    Int
+  sectionId Int
+  titelDe   String
+  titelUz   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  unit    DafUnit         @relation(fields: [unitId], references: [id])
+  section DafSection      @relation(fields: [sectionId], references: [id])
+  zeilen  DafDialogLine[]
+
+  @@index([sectionId])
+}
+
+/// Dialogning bitta satri.
+///
+/// Gapiruvchi ISM bilan saqlanadi: ovoz yasashda har ismga bitta obraz
+/// biriktiriladi va u butun kursda o'zgarmaydi.
+model DafDialogLine {
+  id       Int     @id @default(autoincrement())
+  dialogId Int
+  order    Int
+  sprecher String
+  de       String
+  tts      String?
+  uz       String
+  audioKey String?
+
+  dialog DafDialog @relation(fields: [dialogId], references: [id])
+
+  @@unique([dialogId, order])
+  @@index([dialogId])
+}
+
+/// Vaziyat → tayyor ibora (Redemittel).
+model DafPhrase {
+  id         Int      @id @default(autoincrement())
+  /// Barqaror kalit: `u01-s1-begruessen-1`.
+  code       String   @unique
+  unitId     Int
+  sectionId  Int
+  funktion   String
+  funktionUz String
+  de         String
+  tts        String?
+  uz         String
+  audioKey   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  unit    DafUnit    @relation(fields: [unitId], references: [id])
+  section DafSection @relation(fields: [sectionId], references: [id])
+
+  @@index([sectionId])
 }
 
 model DafExercise {
@@ -3129,8 +3229,11 @@ model DafSentence {
   origin    DafSentenceOrigin
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
+  sectionId Int?
+  tts       String?
 
-  unit DafUnit @relation(fields: [unitId], references: [id])
+  unit    DafUnit     @relation(fields: [unitId], references: [id])
+  section DafSection? @relation(fields: [sectionId], references: [id])
 
   @@unique([unitId, order])
   @@index([unitId])
