@@ -133,14 +133,18 @@ export class MonthlyChargeService {
     const plannedLessons = groupDates.length;
     if (plannedLessons === 0) return null;
 
-    // O'quvchining ulushi — o'rtada qo'shilgan bo'lsa kamroq.
-    const coveredLessons = lessonDatesInMonth({
+    // O'quvchining ulushi — o'rtada qo'shilgan bo'lsa kamroq. SANALARNING
+    // O'ZI ham saqlanadi: `reverseChargeForDeparture` "ketgan kungacha
+    // nechtasi qoplangan edi" degan savolga JONLI kalendardan emas, shu
+    // muzlatilgan ro'yxatdan javob berishi kerak (schema izohi).
+    const coveredDates = lessonDatesInMonth({
       year: periodYear,
       month: periodMonth,
       exactDays: enr.group.exactDays,
       excludedDates,
       fromDate: enr.startDate ? tashkentDateStr(enr.startDate) : null,
-    }).length;
+    });
+    const coveredLessons = coveredDates.length;
     if (coveredLessons === 0) return null;
 
     const monthlyPrice = enr.group.course.price;
@@ -188,6 +192,7 @@ export class MonthlyChargeService {
       perLessonCost: perLessonCostFull,
       monthlyPrice,
       coveredLessons,
+      coveredDates,
       creditLessons: credit.creditLessonsUsed,
       creditAmount: credit.creditAmount,
       chargedAmount: credit.chargedAmount,
@@ -407,28 +412,47 @@ export class MonthlyChargeService {
     });
     if (!enr) return null;
 
-    const excludedDates = await this.resolveExcludedDates(
-      tx,
-      charge.groupId,
-      enr.group.branchId,
-      periodYear,
-      periodMonth,
-    );
-
     // "departureDate holatida shu kungacha (kiritilgan holda) qoplanishi
-    // kerak bo'lgan darslar soni" — createChargeForEnrollment'dagi
-    // coveredLessons bilan BIR XIL usulda hisoblanadi (o'sha `fromDate`,
-    // faqat bu yerda `toDate=day`). `remaining` shu bilan HOZIRGI
+    // kerak bo'lgan darslar soni" — hisob YOZILGAN paytdagi MUZLATILGAN
+    // sanalar ro'yxatidan. `remaining` shu bilan HOZIRGI
     // `charge.coveredLessons` orasidagi FARQ — kalendardan emas, hisobning
     // o'zidan. Shu orqali idempotent (yuqoridagi izohga qarang).
-    const lessonsThroughDeparture = lessonDatesInMonth({
-      year: periodYear,
-      month: periodMonth,
-      exactDays: enr.group.exactDays,
-      excludedDates,
-      fromDate: enr.startDate ? tashkentDateStr(enr.startDate) : null,
-      toDate: day,
-    }).length;
+    //
+    // Ilgari bu son JONLI `resolveExcludedDates` dan qayta hisoblanardi va
+    // muzlatish invariantini buzardi (spec 5.5): oy o'rtasida bitta dars
+    // bekor qilinsa (`LessonCancellation`) yoki bayram qo'shilsa,
+    // `lessonsThroughDeparture` KAMAYARDI, `remaining` esa O'SARDI —
+    // ketayotgan o'quvchiga bo'lib o'tmagan, lekin allaqachon "qoplangan"
+    // deb hisoblangan dars uchun ham pul qaytarilardi (~34 615/dars), va
+    // teskarisi ham. Idempotentlik ham shunga bog'liq edi: ikkinchi
+    // chaqiruvda farq yana noldan farqli bo'lib qolardi.
+    const frozenCoveredDates = charge.coveredDates ?? [];
+    let lessonsThroughDeparture: number;
+    if (frozenCoveredDates.length > 0) {
+      lessonsThroughDeparture = frozenCoveredDates.filter(
+        (d) => d <= day,
+      ).length;
+    } else {
+      // `coveredDates` ustuni qo'shilishidan OLDIN yozilgan qator (hisob
+      // hech qachon `coveredLessons = 0` bilan yozilmaydi, shuning uchun
+      // bo'sh massiv aynan shuni bildiradi). Eski xatti-harakat saqlanadi —
+      // muqobili "hech narsa qaytarmaslik" bo'lardi.
+      const excludedDates = await this.resolveExcludedDates(
+        tx,
+        charge.groupId,
+        enr.group.branchId,
+        periodYear,
+        periodMonth,
+      );
+      lessonsThroughDeparture = lessonDatesInMonth({
+        year: periodYear,
+        month: periodMonth,
+        exactDays: enr.group.exactDays,
+        excludedDates,
+        fromDate: enr.startDate ? tashkentDateStr(enr.startDate) : null,
+        toDate: day,
+      }).length;
+    }
 
     const remaining = Math.max(
       0,

@@ -123,6 +123,23 @@ describe('MonthlyChargeService', () => {
         creditLessons: 0,
         status: 'CHARGED',
       });
+      // Qoplangan dars SANALARI muzlatiladi — `reverseChargeForDeparture`
+      // ularni jonli kalendardan qayta hisoblamasligi uchun.
+      expect((charge as { coveredDates: string[] }).coveredDates).toEqual([
+        '2026-09-01',
+        '2026-09-03',
+        '2026-09-05',
+        '2026-09-08',
+        '2026-09-10',
+        '2026-09-12',
+        '2026-09-15',
+        '2026-09-17',
+        '2026-09-19',
+        '2026-09-22',
+        '2026-09-24',
+        '2026-09-26',
+        '2026-09-29',
+      ]);
       expect(txWriteMock.chargeMonthlyFee).toHaveBeenCalledWith(
         expect.objectContaining({ amount: 450_000, enrollmentId: 'enr-1' }),
         tx,
@@ -692,6 +709,54 @@ describe('MonthlyChargeService', () => {
         where: { id: 'chg-1' },
         data: { coveredLessons: 9, chargedAmount: 311_540 },
       });
+    });
+
+    it('oy o`rtasida dars bekor qilinsa ham qaytarilgan summa O`ZGARMAYDI (muzlatilgan sanalar)', async () => {
+      // Spec 5.5. Ilgari `lessonsThroughDeparture` JONLI `resolveExcludedDates`
+      // dan qayta hisoblanardi: 10-sentabrga bekor qilingan dars qo'shilsa,
+      // "ketguncha qoplangan" 9 dan 8 ga tushib, `remaining` 4 dan 5 ga
+      // chiqardi — o'quvchiga bo'lib o'tmagan dars uchun ham 34 615 so'm
+      // qaytarilardi.
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        id: 'chg-1',
+        groupId: 'grp-1',
+        plannedLessons: 13,
+        coveredLessons: 13,
+        coveredDates: [
+          '2026-09-01',
+          '2026-09-03',
+          '2026-09-05',
+          '2026-09-08',
+          '2026-09-10',
+          '2026-09-12',
+          '2026-09-15',
+          '2026-09-17',
+          '2026-09-19',
+          '2026-09-22',
+          '2026-09-24',
+          '2026-09-26',
+          '2026-09-29',
+        ],
+        perLessonCost: 34_615,
+        chargedAmount: 450_000,
+        transactionId: 'tx-1',
+        status: 'CHARGED',
+      });
+      // Hisob yozilgandan KEYIN qo'shilgan bekor qilish.
+      prismaMock.lessonCancellation.findMany.mockResolvedValue([
+        { date: new Date('2026-09-10T00:00:00Z') },
+      ]);
+
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-09-20T00:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqdi',
+      });
+
+      expect(res?.refunded).toBe(138_460); // 4 x 34 615, 5 x emas
+      // Jonli kalendarga umuman qaralmaydi.
+      expect(prismaMock.lessonCancellation.findMany).not.toHaveBeenCalled();
     });
 
     it('oy oxirida chiqqanda hech narsa qaytarmaydi', async () => {

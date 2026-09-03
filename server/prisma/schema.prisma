@@ -1320,8 +1320,20 @@ model EnrollmentMonthlyCharge {
   perLessonCost  Int
   monthlyPrice   Int
   coveredLessons Int
-  creditLessons  Int @default(0)
-  creditAmount   Int @default(0)
+  /// Hisob yozilgan paytdagi qoplangan dars SANALARI ('YYYY-MM-DD'),
+  /// MUZLATILGAN. `coveredLessons` shu ro'yxatning uzunligi.
+  ///
+  /// Nega saqlanadi: `reverseChargeForDeparture` "ketgan kungacha nechta
+  /// dars qoplangan edi" degan savolga javob berishi kerak, va uni JONLI
+  /// kalendardan (bayram + bekor qilingan dars) qayta hisoblash muzlatish
+  /// invariantini buzardi — oy o'rtasida bitta dars bekor qilinsa, ketayotgan
+  /// o'quvchiga o'sha dars uchun ham pul qaytarilardi (spec 5.5), va
+  /// idempotentlik ham buzilardi (ikkinchi chaqiruvda farq yana paydo
+  /// bo'lardi). Bo'sh massiv = shu ustun qo'shilishidan OLDIN yozilgan
+  /// qator (hisob hech qachon `coveredLessons = 0` bilan yozilmaydi).
+  coveredDates   String[] @default([])
+  creditLessons  Int      @default(0)
+  creditAmount   Int      @default(0)
   chargedAmount  Int
 
   /// Oy davomida to'planadi; keyingi oyning creditLessons'iga aylanadi.
