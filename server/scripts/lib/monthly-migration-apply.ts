@@ -22,15 +22,45 @@
  *     qanday tur uchun ishlaydigan umumiy teskari qiluvchi (ADR-0004:
  *     summasi asl qatorning ishorasidan, `Math.abs` yo'q).
  *  3. `Enrollment.prepaidLessonsRemaining`/`cycleLessonIndex` nolga.
- *  4. `Course.paymentModel = MONTHLY`.
- *  5. `MonthlyChargeService.createChargeForEnrollment` — xuddi cron
+ *  4. `MonthlyChargeService.createChargeForEnrollment` — xuddi cron
  *     ishlatadigan yo'lning o'zi.
- *  6. `SalaryAccrualService.reverseAccrualForAttendance` + `createAccrual` —
+ *  5. `SalaryAccrualService.reverseAccrualForAttendance` + `createAccrual` —
  *     sentabr davridagi har bir o'tilgan (billable) darsni YANGI muzlatilgan
  *     narxda qayta hisoblaydi. AVVAL reverse, KEYIN create — aks holda
  *     `SalaryAccrual.amount` yozuv va pul (Transaction + o'qituvchi balansi)
  *     bir-biridan uzilib qoladi (`accrueMonthlySalary` sharhi,
  *     `lesson-billing.service.ts`).
+ *
+ * ## Nega `Course.paymentModel` bu YERDA almashtirilmaydi (2026-09-03)
+ *
+ * Avval 4-qadam `Course.paymentModel = MONTHLY` edi — HAR O'QUVCHINING
+ * tranzaksiyasi ichida. `paymentModel` esa KURS darajasidagi maydon:
+ * prodda bitta "Standart" kursda 51 guruh, ~370 yozilish bor. Ya'ni
+ * BIRINCHI o'quvchi commit bo'lgan lahzada, ishlab turgan backend qolgan
+ * ~300 ta HALI KO'CHMAGAN kursdoshni MONTHLY deb ko'ra boshlardi:
+ *
+ *   - `MonthlyBillingWatchdogService` har kuni 04:00 da
+ *     `createChargesForPeriod` chaqiradi va uning yagona istisnosi "shu davr
+ *     uchun hisobi bor". Ko'chmagan har bir faol yozilish shartga TUSHADI ->
+ *     to'liq oylik hisob yoziladi: prepaid'i qaytarilmagan, sentabr
+ *     yechimlari bekor qilinmagan. ~300 x 450 000 ~ 135 mln so'm.
+ *   - Bundan tuzalib bo'lmasdi: qorovul yozgan hisob o'sha yozilishni
+ *     migratsiyaning O'Z qamrovidan chiqarardi (`monthlyCharges: { none }`),
+ *     shuning uchun haqiqiy ishga tushirish uni O'TKAZIB YUBORIB, 0 kod
+ *     bilan "muvaffaqiyat" deb chiqardi.
+ *   - Cron kutish ham shart emas: `processAttendanceBilling` o'sha zahoti
+ *     oylik shoxga o'tardi — darslar hisoblanmay qolardi, o'qituvchi haqi
+ *     esa markaz hisobidan (`centerFunded`) ketardi.
+ *
+ * Shuning uchun bayroq bu funksiyadan CHIQARILDI. Uni butun o'tish
+ * tugagandan KEYIN, alohida yakuniy qadam sifatida `migrate-to-monthly.ts`
+ * (`flipCoursesToMonthly`) qo'yadi — va faqat o'sha kursda hisobsiz qolgan
+ * yozilish qolmagan bo'lsa. `--limit` bilan ishlaganda bayroq UMUMAN
+ * almashmaydi.
+ *
+ * Kursning bu yerda almashmagani hisob yozishga xalaqit bermaydi:
+ * `createChargeForEnrollment` ga uzatiladigan `ChargeableEnrollment`
+ * nusxasida `paymentModel` allaqachon MONTHLY deb beriladi (pastga qarang).
  *
  * ## Nega prepaid qaytarish BEKOR QILISHDAN OLDIN (2026-09-03 tuzatish)
  *
@@ -137,8 +167,9 @@ export interface ApplyMigrationDeps {
 }
 
 /** Migratsiya qamrovidagi bitta yozilish — `courseId` alohida, chunki
- * `Course.paymentModel` shu yerdan yangilanadi (ChargeableEnrollment buni
- * o'z ichiga olmaydi). */
+ * yakuniy `Course.paymentModel` qadami (`flipCoursesToMonthly`) shu
+ * ro'yxatdan qaysi kurslarni almashtirishni biladi (ChargeableEnrollment
+ * buni o'z ichiga olmaydi). */
 export interface EnrollmentToMigrate {
   enrollment: ChargeableEnrollment;
   courseId: string;
@@ -148,8 +179,8 @@ export interface EnrollmentToMigrate {
    * `false` — PAUSED guruh: sentabr yechimlari BEKOR QILINMAYDI va oylik
    * hisob YOZILMAYDI (o'tilmagan darsga hisob yo'q, o'tilgan darsga esa
    * o'rniga hech narsa qo'yilmasa bekor qilish sovg'a bo'lardi). Prepaid
-   * baribir qaytariladi va kurs baribir MONTHLY'ga o'tadi — kurs darajasidagi
-   * bayroq guruhdoshlari tufayli qanday bo'lsa ham almashadi, va MONTHLY
+   * baribir qaytariladi va kurs baribir MONTHLY'ga o'tadi — yakuniy qadam
+   * bayroqni kurs darajasida almashtiradi, va MONTHLY
    * yo'lida `prepaidLessonsRemaining` umuman o'qilmaydi
    * (`lesson-billing.service.ts` MONTHLY shoxida prepaid mantig'iga
    * yetib bormaydi), ya'ni qaytarilmagan prepaid abadiy qotib qolardi.
@@ -211,6 +242,15 @@ export interface ApplyStudentResult {
    * `verify-monthly-migration.ts` ularni nomma-nom ko'rsatadi.
    */
   chargesSkipped: number;
+  /**
+   * Aynan qaysi yozilishlar hisobsiz qoldi (`chargesSkipped` ning nomlari).
+   *
+   * Yakuniy `Course.paymentModel` qadami shularsiz ishlay olmaydi: u
+   * "bu kursda hisobsiz qolgan yozilish bormi" deb so'raydi, va BILIB
+   * o'tkazib yuborilganlar (PAUSED guruh, oyda dars kuni yo'q) javobni
+   * abadiy "ha" qilib, bayroqni hech qachon almashtirmasdi.
+   */
+  skippedEnrollmentIds: string[];
 }
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -264,6 +304,7 @@ export async function applyMigrationForStudent(
   let accrualsRecomputed = 0;
   let chargesCreated = 0;
   let chargesSkipped = 0;
+  const skippedEnrollmentIds: string[] = [];
 
   for (const item of params.enrollments) {
     const enr = item.enrollment;
@@ -374,16 +415,7 @@ export async function applyMigrationForStudent(
       data: { prepaidLessonsRemaining: 0, cycleLessonIndex: 0 },
     });
 
-    // ── 4. Kursni MONTHLY'ga o'tkazish (idempotent — updateMany allaqachon
-    // MONTHLY bo'lsa ham qayta yozadi, xato bermaydi). Bir nechta guruh bir
-    // xil kursni bo'lishishi mumkin — shu YERDA bir marta yozilgani ularning
-    // barchasiga tegadi (kurs darajasidagi maydon). ─────────────────────
-    await tx.course.updateMany({
-      where: { id: item.courseId },
-      data: { paymentModel: PaymentModel.MONTHLY },
-    });
-
-    // ── 5. Sentabr oylik hisobini yaratish — cron ishlatadigan XUDDI SHU
+    // ── 4. Sentabr oylik hisobini yaratish — cron ishlatadigan XUDDI SHU
     // yo'l. Chegirma o'tkaziladi (default 0'ga tushib qolmaydi). Avvaldan
     // mavjud bo'lsa (qayta ishga tushirish), servis o'zi topib qaytaradi —
     // lekin bu holda pul YANGI harakatlanmagan, shuning uchun
@@ -430,9 +462,10 @@ export async function applyMigrationForStudent(
       // Hisob YOZILMADI: PAUSED guruh, oyda dars kuni yo'q, yoki yozilish
       // oy tugagandan keyin boshlangan. Yozilish qamrovda qoladi.
       chargesSkipped += 1;
+      skippedEnrollmentIds.push(enr.id);
     }
 
-    // ── 6. Sentabr davridagi o'tilgan darslar uchun o'qituvchi haqini
+    // ── 5. Sentabr davridagi o'tilgan darslar uchun o'qituvchi haqini
     // YANGI muzlatilgan narxda qayta hisoblash. Faqat YANGI hisob
     // yaratilganda (yuqoridagi bilan bir xil sabab — qayta ishga tushirish
     // shu qadamni ikkinchi marta takrorlamasligi kerak: birinchi
@@ -523,5 +556,6 @@ export async function applyMigrationForStudent(
     accrualsRecomputed,
     chargesCreated,
     chargesSkipped,
+    skippedEnrollmentIds,
   };
 }

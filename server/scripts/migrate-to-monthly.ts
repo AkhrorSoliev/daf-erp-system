@@ -37,6 +37,7 @@
 import {
   EnrollmentStatus,
   GroupStatus,
+  MonthlyChargeStatus,
   PaymentModel,
   Prisma,
   PrismaClient,
@@ -76,6 +77,7 @@ import {
   resolvePrepaidRefundTotal,
   type PrepaidRefundBatch,
 } from './lib/prepaid-refund-price';
+import { flipCoursesToMonthly } from './lib/monthly-course-flip';
 import {
   applyMigrationForStudent,
   type ApplyMigrationDeps,
@@ -553,6 +555,66 @@ async function runApply(params: RunApplyParams): Promise<void> {
     );
   }
 
+  // ── YAKUNIY QADAM: kurs bayrog'i ────────────────────────────────────
+  // ATAYLAB eng oxirida, va faqat butun o'tish TOZA tugagandan keyin.
+  // Bayroqni o'quvchi tranzaksiyasi ichida almashtirish (avvalgi 4-qadam)
+  // ishlab turgan backendni hali ko'chmagan kursdoshlarga qarshi
+  // qurollantirardi — `monthly-migration-apply.ts` sarlavhasiga qarang.
+  section("KURS BAYROG'I");
+  if (limit !== null) {
+    console.log(
+      `--limit bilan ishlandi -> \`Course.paymentModel\` ALMASHTIRILMADI.\n` +
+        `Bu ataylab: bayroq kurs darajasida, uni yarim ko'chgan kursda\n` +
+        `almashtirish qolgan kursdoshlarga qorovul orqali noto'g'ri hisob\n` +
+        `yozardi.\n` +
+        `\n` +
+        `DIQQAT: bayroq almashmaguncha migratsiya qilingan o'quvchilar\n` +
+        `davomat yo'lida HALI ESKI (LESSON_PACK) mantiqda qoladi. Bu oynada\n` +
+        `ularga davomat belgilanmasligi kerak. Limitsiz to'liq ishga\n` +
+        `tushirishni DARHOL bajaring:\n` +
+        `  npx ts-node scripts/migrate-to-monthly.ts --apply --ha-men-tasdiqlayman --zaxira-olindi --period=${period}`,
+    );
+  } else if (problems.length > 0) {
+    console.log(
+      `Yuqoridagi tekshiruvlar yiqilgani uchun \`Course.paymentModel\`\n` +
+        `ALMASHTIRILMADI. Avval muammolarni tuzatib, skriptni qayta ishga\n` +
+        `tushiring — bayroq faqat toza yakundan keyin almashadi.`,
+    );
+  } else {
+    const courseIds = [
+      ...new Set(
+        [...migrateByStudent.values()].flatMap((b) =>
+          b.enrollments.map((e) => e.courseId),
+        ),
+      ),
+    ];
+    const skippedEnrollmentIds = results.flatMap((r) => r.skippedEnrollmentIds);
+    const flip = await flipCoursesToMonthly({
+      prisma,
+      courseIds,
+      skippedEnrollmentIds,
+      year,
+      month,
+    });
+    console.log(
+      `MONTHLY'ga o'tkazilgan kurs: ${flip.flipped.length}/${courseIds.length}` +
+        (flip.flipped.length ? ` — ${flip.flipped.join(', ')}` : ''),
+    );
+    if (flip.blocked.length > 0) {
+      for (const b of flip.blocked) {
+        console.log(
+          `  BLOKLANDI: "${b.courseName}" (${b.courseId}) — shu kursda hali ` +
+            `${b.remaining} ta hisobsiz faol yozilish bor.`,
+        );
+      }
+      problems.push(
+        `${flip.blocked.length} ta kursning bayrog'i ALMASHTIRILMADI: ularda ` +
+          `hisobsiz qolgan faol yozilish bor. Bayroqni shunday almashtirish ` +
+          `kunlik qorovulga o'sha yozilishlarga to'liq oylik hisob yozdirardi.`,
+      );
+    }
+  }
+
   if (problems.length > 0) {
     section('TEKSHIRUV YIQILDI');
     for (const p of problems) console.log(`  - ${p}`);
@@ -658,7 +720,13 @@ async function main(prisma: PrismaClient) {
     },
     student: { deletedAt: null, status: 'ACTIVE' as const },
     monthlyCharges: {
-      none: { periodYear: year, periodMonth: month },
+      // `status` shart: bekor qilingan hisob "bu yozilish ko'chgan" degani
+      // emas (`MonthlyChargeService` ning bo'shliq so'rovi bilan bir xil).
+      none: {
+        periodYear: year,
+        periodMonth: month,
+        status: MonthlyChargeStatus.CHARGED,
+      },
     },
   });
 

@@ -20,6 +20,12 @@
  *      Σ hisob === Σ ledger.
  *   4. CSV — bashorat CSV'sidagi `yangi_balans` bazadagi haqiqiy balans bilan
  *      qator-qator mos.
+ *   5. KURS BAYROG'I — shu davrda hisob yozilgan HAR bir kurs endi
+ *      `paymentModel = MONTHLY`. Migratsiyaning yakuniy qadami
+ *      (`flipCoursesToMonthly`) o'quvchi tranzaksiyasidan tashqarida
+ *      ishlaydi va bloklanishi mumkin — bloklangani jim qolsa, o'quvchi
+ *      oylik hisobini to'lagan bo'lardi, dars esa ESKI (LESSON_PACK)
+ *      yo'ldan qayta hisoblanardi.
  *
  * Har tekshiruv PASS yoki FAIL chiqaradi; bitta FAIL bo'lsa chiqish kodi 1.
  *
@@ -30,6 +36,7 @@
 import {
   EnrollmentStatus,
   GroupStatus,
+  MonthlyChargeStatus,
   PaymentModel,
   Prisma,
   PrismaClient,
@@ -181,7 +188,15 @@ async function main(prisma: PrismaClient) {
         course: { deletedAt: null },
       },
       student: { deletedAt: null, status: 'ACTIVE' },
-      monthlyCharges: { none: { periodYear: year, periodMonth: month } },
+      monthlyCharges: {
+        none: {
+          periodYear: year,
+          periodMonth: month,
+          // Bekor qilingan hisob "ko'chgan" degani emas — `MonthlyChargeService`
+          // ning bo'shliq so'rovi bilan bir xil shart.
+          status: MonthlyChargeStatus.CHARGED,
+        },
+      },
     },
     select: {
       id: true,
@@ -307,12 +322,17 @@ async function main(prisma: PrismaClient) {
 
   // ── 3. LEDGER: har hisob o'z Transaction qatoriga langarlangan ─────────
   const charges = await prisma.enrollmentMonthlyCharge.findMany({
-    where: { periodYear: year, periodMonth: month },
+    where: {
+      periodYear: year,
+      periodMonth: month,
+      status: MonthlyChargeStatus.CHARGED,
+    },
     select: {
       id: true,
       studentId: true,
       chargedAmount: true,
       transactionId: true,
+      group: { select: { courseId: true } },
     },
   });
   const txIds = charges
@@ -415,6 +435,37 @@ async function main(prisma: PrismaClient) {
       rows: mismatches.slice(0, show),
     });
   }
+
+  // ── 5. KURS BAYROG'I: hisob yozilgan har bir kurs MONTHLY ─────────────
+  // Migratsiya bayroqni ENG OXIRIDA, alohida qadamda almashtiradi
+  // (`flipCoursesToMonthly`) — bu ataylab: uni o'quvchi tranzaksiyasi ichida
+  // almashtirish hali ko'chmagan kursdoshlarga kunlik qorovul orqali to'liq
+  // oylik hisob yozdirardi. Ammo o'sha yakuniy qadam BLOKLANISHI mumkin, va
+  // bloklangani jim qolsa eng yomon holat yuzaga kelardi: o'quvchi oylik
+  // hisobini to'lagan, kurs esa hamon LESSON_PACK — ya'ni har bir dars
+  // ustiga ESKI yo'ldan yana yechilardi.
+  const chargedCourseIds = [
+    ...new Set(charges.map((c) => c.group.courseId)),
+  ].filter((id): id is string => !!id);
+  const chargedCourses = chargedCourseIds.length
+    ? await prisma.course.findMany({
+        where: { id: { in: chargedCourseIds } },
+        select: { id: true, name: true, paymentModel: true },
+      })
+    : [];
+  const notFlipped = chargedCourses.filter(
+    (c) => c.paymentModel !== PaymentModel.MONTHLY,
+  );
+  checks.push({
+    name: "5. KURS BAYROG'I — hisob yozilgan kurslar MONTHLY",
+    pass: notFlipped.length === 0,
+    detail:
+      `${chargedCourses.length} ta kursda ${period} hisobi bor · ` +
+      `MONTHLY emas: ${notFlipped.length} ta`,
+    rows: notFlipped
+      .slice(0, show)
+      .map((c) => `kurs "${c.name}" (${c.id}) — hamon ${c.paymentModel}`),
+  });
 
   // ── natija ────────────────────────────────────────────────────────────
   section('TEKSHIRUV NATIJASI');

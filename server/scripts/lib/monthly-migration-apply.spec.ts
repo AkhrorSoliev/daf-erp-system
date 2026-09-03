@@ -151,6 +151,7 @@ describe('applyMigrationForStudent', () => {
       accrualsRecomputed: 1,
       chargesCreated: 1,
       chargesSkipped: 0,
+      skippedEnrollmentIds: [],
     });
 
     // Tartib: prepaid qaytarish AVVAL, teskari qilish keyin. Teskarisi
@@ -169,11 +170,13 @@ describe('applyMigrationForStudent', () => {
       .invocationCallOrder[0];
     expect(accrualReverseCall).toBeLessThan(accrualCreateCall);
 
-    // Kurs MONTHLY'ga o'tkazildi.
-    expect(tx.course.updateMany).toHaveBeenCalledWith({
-      where: { id: 'course-1' },
-      data: { paymentModel: PaymentModel.MONTHLY },
-    });
+    // C1: kurs bayrog'iga bu yerda TEGILMAYDI. `Course.paymentModel` KURS
+    // darajasidagi maydon — uni bitta o'quvchining tranzaksiyasida
+    // almashtirish ishlab turgan backendni o'sha kursdagi hali ko'chmagan
+    // ~300 yozilishga qarshi qurollantirardi (kunlik qorovul har biriga
+    // to'liq oylik hisob yozardi). Bayroqni `migrate-to-monthly.ts` ning
+    // yakuniy `flipCoursesToMonthly` qadami qo'yadi.
+    expect(tx.course.updateMany).not.toHaveBeenCalled();
 
     // Hisoblagichlar nolga.
     expect(tx.enrollment.update).toHaveBeenCalledWith({
@@ -339,7 +342,8 @@ describe('applyMigrationForStudent', () => {
     });
 
     expect(result.monthlyCharge).toBe(900_000);
-    expect(tx.course.updateMany).toHaveBeenCalledTimes(2);
+    // C1: ikkala kursning bayrog'i ham bu yerda emas, yakuniy qadamda.
+    expect(tx.course.updateMany).not.toHaveBeenCalled();
   });
   // ── C2: prepaid qaytarish AVVAL, va davr ichidagi batch ikki marta
   // qaytarilmaydi ────────────────────────────────────────────────────────
@@ -473,12 +477,12 @@ describe('applyMigrationForStudent', () => {
     expect(result.prepaidRefund).toBe(DEFAULT_REFUND);
     expect(result.chargesCreated).toBe(0);
     expect(result.chargesSkipped).toBe(1);
-    // Kurs baribir MONTHLY'ga o'tadi — bayroq kurs darajasida, guruhdoshlari
-    // uni qanday bo'lsa ham almashtiradi.
-    expect(tx.course.updateMany).toHaveBeenCalledWith({
-      where: { id: 'course-1' },
-      data: { paymentModel: PaymentModel.MONTHLY },
-    });
+    // Hisobsiz qolgan yozilish NOMMA-NOM qaytariladi: yakuniy kurs bayrog'i
+    // qadami "bu kursda hisobsiz yozilish bormi" degan savolni shu ro'yxat
+    // bilan to'g'ri javoblaydi (aks holda PAUSED guruh bayroqni abadiy
+    // bloklardi).
+    expect(result.skippedEnrollmentIds).toEqual(['enr-1']);
+    expect(tx.course.updateMany).not.toHaveBeenCalled();
   });
 
   // ── I4: `createAccrual` jim `null` qaytarmasligi kerak ────────────────

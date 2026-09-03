@@ -24,6 +24,8 @@
     "test/**/*",
     "scripts/migrate-to-monthly.ts",
     "scripts/verify-monthly-migration.ts",
+    "scripts/lib/monthly-course-flip.ts",
+    "scripts/lib/monthly-course-flip.spec.ts",
     "scripts/lib/monthly-migration-apply.ts",
     "scripts/lib/monthly-migration-apply.spec.ts",
     "scripts/lib/monthly-migration-report.ts",
