@@ -1,0 +1,689 @@
+{
+  "level": "A1",
+  "units": [
+    {
+      "order": 1,
+      "code": "u01",
+      "titleDe": "Hallo!",
+      "titleUz": "Salom!",
+      "theme": "salomlashish, tanishuv, alifbo, 0–20",
+      "sections": [
+        {
+          "order": 1,
+          "code": "u01-s1",
+          "titleDe": "Hallo und tschüs",
+          "titleUz": "Salom va xayr",
+          "grammar": "Personalpronomen ich/du, sein",
+          "grammarUz": "ich/du olmoshlari va sein fe'li",
+          "wordBudget": 10
+        },
+        {
+          "order": 2,
+          "code": "u01-s2",
+          "titleDe": "Guten Tag, Frau Karimova",
+          "titleUz": "Rasmiy salomlashish",
+          "grammar": "Sie-Form, W-Frage",
+          "grammarUz": "Sie shakli va so'roq gap",
+          "wordBudget": 10
+        },
+        {
+          "order": 3,
+          "code": "u01-s3",
+          "titleDe": "Woher kommst du?",
+          "titleUz": "Qayerdansan?",
+          "grammar": "Verben kommen/wohnen, aus/in",
+          "grammarUz": "kommen/wohnen tuslanishi, aus/in",
+          "wordBudget": 10
+        },
+        {
+          "order": 4,
+          "code": "u01-s4",
+          "titleDe": "Zahlen 0–20",
+          "titleUz": "0–20 sonlari",
+          "grammar": "Zahlen, Telefonnummer",
+          "grammarUz": "sonlar va telefon raqami",
+          "wordBudget": 10
+        },
+        {
+          "order": 5,
+          "code": "u01-s5",
+          "titleDe": "Das Alphabet",
+          "titleUz": "Alifbo",
+          "grammar": "buchstabieren, Wie schreibt man das?",
+          "grammarUz": "harflab aytish",
+          "wordBudget": 10
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "code": "u02",
+      "titleDe": "Menschen um mich",
+      "titleUz": "Atrofimdagi odamlar",
+      "theme": "oila, kasblar, tavsif",
+      "sections": [
+        {
+          "order": 1,
+          "code": "u02-s1",
+          "titleDe": "Meine Familie",
+          "titleUz": "Mening oilam",
+          "grammar": "Possessivartikel mein/dein",
+          "grammarUz": "mening/sening",
+          "wordBudget": 10
+        },
+        {
+          "order": 2,
+          "code": "u02-s2",
+          "titleDe": "Das ist mein Bruder",
+          "titleUz": "Bu mening akam",
+          "grammar": "Verb haben, Zahlen 20–100",
+          "grammarUz": "haben fe'li, 20–100 sonlari",
+          "wordBudget": 10
+        },
+        {
+          "order": 3,
+          "code": "u02-s3",
+          "titleDe": "Berufe",
+          "titleUz": "Kasblar",
+          "grammar": "Beruf ohne Artikel, -in",
+          "grammarUz": "kasb artiklsiz, ayol shakli",
+          "wordBudget": 10
+        },
+        {
+          "order": 4,
+          "code": "u02-s4",
+          "titleDe": "Wie ist er?",
+          "titleUz": "U qanday odam?",
+          "grammar": "sein + Adjektiv",
+          "grammarUz": "sein va sifat",
+          "wordBudget": 10
+        },
+        {
+          "order": 5,
+          "code": "u02-s5",
+          "titleDe": "Freunde und Kollegen",
+          "titleUz": "Do'stlar va hamkasblar",
+          "grammar": "Personalpronomen er/sie/wir",
+          "grammarUz": "er/sie/wir olmoshlari",
+          "wordBudget": 10
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "code": "u03",
+      "titleDe": "In der Stadt",
+      "titleUz": "Shaharda",
+      "theme": "shahar, yo'l, transport",
+      "sections": [
+        {
+          "order": 1,
+          "code": "u03-s1",
+          "titleDe": "Orte in der Stadt",
+          "titleUz": "Shahardagi joylar",
+          "grammar": "bestimmter Artikel der/die/das",
+          "grammarUz": "aniq artikl",
+          "wordBudget": 10
+        },
+        {
+          "order": 2,
+          "code": "u03-s2",
+          "titleDe": "Wo ist die Post?",
+          "titleUz": "Pochta qayerda?",
+          "grammar": "Präposition in/an/neben, Wo?",
+          "grammarUz": "joy ko'makchilari",
+          "wordBudget": 10
+        },
+        {
+          "order": 3,
+          "code": "u03-s3",
+          "titleDe": "Wie komme ich zum Bahnhof?",
+          "titleUz": "Vokzalga qanday boraman?",
+          "grammar": "zum/zur, Imperativ Sie-Form",
+          "grammarUz": "zum/zur va buyruq shakli",
+          "wordBudget": 10
+        },
+        {
+          "order": 4,
+          "code": "u03-s4",
+          "titleDe": "Verkehrsmittel",
+          "titleUz": "Transport",
+          "grammar": "mit + Dativ",
+          "grammarUz": "mit bilan qaratqich",
+          "wordBudget": 10
+        },
+        {
+          "order": 5,
+          "code": "u03-s5",
+          "titleDe": "Mein Weg zur Arbeit",
+          "titleUz": "Ishga boradigan yo'lim",
+          "grammar": "Verbposition, Zeitangabe",
+          "grammarUz": "fe'lning o'rni va vaqt",
+          "wordBudget": 10
+        }
+      ]
+    },
+    {
+      "order": 4,
+      "code": "u04",
+      "titleDe": "Essen und Trinken",
+      "titleUz": "Ovqat va ichimlik",
+      "theme": "oziq-ovqat, xarid, restoran",
+      "sections": [
+        {
+          "order": 1,
+          "code": "u04-s1",
+          "titleDe": "Lebensmittel",
+          "titleUz": "Oziq-ovqat",
+          "grammar": "unbestimmter Artikel ein/eine",
+          "grammarUz": "noaniq artikl",
+          "wordBudget": 8
+        },
+        {
+          "order": 2,
+          "code": "u04-s2",
+          "titleDe": "Im Supermarkt",
+          "titleUz": "Supermarketda",
+          "grammar": "Plural, Preise",
+          "grammarUz": "ko'plik va narx",
+          "wordBudget": 8
+        },
+        {
+          "order": 3,
+          "code": "u04-s3",
+          "titleDe": "Was isst du gern?",
+          "titleUz": "Nimani yoqtirasan?",
+          "grammar": "essen/trinken, gern",
+          "grammarUz": "o'zgaruvchi fe'llar va gern",
+          "wordBudget": 8
+        },
+        {
+          "order": 4,
+          "code": "u04-s4",
+          "titleDe": "Frühstück, Mittag, Abend",
+          "titleUz": "Nonushta, tushlik, kechki ovqat",
+          "grammar": "Zeitangaben am/um",
+          "grammarUz": "am/um bilan vaqt",
+          "wordBudget": 8
+        },
+        {
+          "order": 5,
+          "code": "u04-s5",
+          "titleDe": "Im Restaurant",
+          "titleUz": "Restoranda",
+          "grammar": "möchten, Ich hätte gern",
+          "grammarUz": "buyurtma iboralari",
+          "wordBudget": 8
+        },
+        {
+          "order": 6,
+          "code": "u04-s6",
+          "titleDe": "Rezept und Mengen",
+          "titleUz": "Retsept va miqdor",
+          "grammar": "Akkusativ einen/eine/ein",
+          "grammarUz": "tushum kelishigi",
+          "wordBudget": 8
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "code": "u05",
+      "titleDe": "Mein Tag",
+      "titleUz": "Mening kunim",
+      "theme": "soat, kun tartibi, uchrashuvlar",
+      "sections": [
+        {
+          "order": 1,
+          "code": "u05-s1",
+          "titleDe": "Wie spät ist es?",
+          "titleUz": "Soat necha?",
+          "grammar": "Uhrzeit",
+          "grammarUz": "soatni aytish",
+          "wordBudget": 10
+        },
+        {
+          "order": 2,
+          "code": "u05-s2",
+          "titleDe": "Wochentage",
+          "titleUz": "Hafta kunlari",
+          "grammar": "Präposition am",
+          "grammarUz": "am ko'makchisi",
+          "wordBudget": 10
+        },
+        {
+          "order": 3,
+          "code": "u05-s3",
+          "titleDe": "Mein Tagesablauf",
+          "titleUz": "Kun tartibim",
+          "grammar": "trennbare Verben",
+          "grammarUz": "ajraladigan fe'llar",
+          "wordBudget": 10
+        },
+        {
+          "order": 4,
+          "code": "u05-s4",
+          "titleDe": "Termine",
+          "titleUz": "Uchrashuvlar",
+          "grammar": "von … bis, um",
+          "grammarUz": "vaqt oralig'i",
+          "wordBudget": 10
+        },
+        {
+          "order": 5,
+          "code": "u05-s5",
+          "titleDe": "Zu Hause",
+          "titleUz": "Uyda",
+          "grammar": "Modalverb müssen",
+          "grammarUz": "müssen modal fe'li",
+          "wordBudget": 10
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "code": "u06",
+      "titleDe": "Freizeit",
+      "titleUz": "Bo'sh vaqt",
+      "theme": "mashg'ulot, sport, ob-havo",
+      "sections": [
+        {
+          "order": 1,
+          "code": "u06-s1",
+          "titleDe": "Hobbys",
+          "titleUz": "Sevimli mashg'ulot",
+          "grammar": "Verb + gern, oft/nie",
+          "grammarUz": "gern va takrorlanish",
+          "wordBudget": 10
+        },
+        {
+          "order": 2,
+          "code": "u06-s2",
+          "titleDe": "Sport und Musik",
+          "titleUz": "Sport va musiqa",
+          "grammar": "Modalverb können",
+          "grammarUz": "können modal fe'li",
+          "wordBudget": 10
+        },
+        {
+          "order": 3,
+          "code": "u06-s3",
+          "titleDe": "Wollen wir ins Kino?",
+          "titleUz": "Kinoga boramizmi?",
+          "grammar": "wollen, ins/in die",
+          "grammarUz": "wollen va yo'nalish",
+          "wordBudget": 10
+        },
+        {
+          "order": 4,
+          "code": "u06-s4",
+          "titleDe": "Das Wetter",
+          "titleUz": "Ob-havo",
+          "grammar": "es ist / es gibt",
+          "grammarUz": "es ist va es gibt",
+          "wordBudget": 10
+        },
+        {
+          "order": 5,
+          "code": "u06-s5",
+          "titleDe": "Verabredung",
+          "titleUz": "Uchrashuvni kelishish",
+          "grammar": "Wortstellung: Zeit vor Ort",
+          "grammarUz": "vaqt joydan oldin",
+          "wordBudget": 10
+        }
+      ]
+    },
+    {
+      "order": 7,
+      "code": "u07",
+      "titleDe": "Arbeit und Alltag",
+      "titleUz": "Ish va kundalik hayot",
+      "theme": "kasb, ish kuni, telefon",
+      "sections": [
+        {
+          "order": 1,
+          "code": "u07-s1",
+          "titleDe": "Berufe und Arbeitsplatz",
+          "titleUz": "Kasb va ish joyi",
+          "grammar": "arbeiten als, Wo?",
+          "grammarUz": "als bilan kasb",
+          "wordBudget": 8
+        },
+        {
+          "order": 2,
+          "code": "u07-s2",
+          "titleDe": "Mein Arbeitstag",
+          "titleUz": "Ish kunim",
+          "grammar": "trennbare Verben: anfangen",
+          "grammarUz": "anfangen/aufhören",
+          "wordBudget": 8
+        },
+        {
+          "order": 3,
+          "code": "u07-s3",
+          "titleDe": "Am Telefon",
+          "titleUz": "Telefonda",
+          "grammar": "Redemittel am Telefon",
+          "grammarUz": "telefon iboralari",
+          "wordBudget": 8
+        },
+        {
+          "order": 4,
+          "code": "u07-s4",
+          "titleDe": "E-Mail und Termin",
+          "titleUz": "Xat va uchrashuv",
+          "grammar": "Datum, am + Datum",
+          "grammarUz": "sana va am",
+          "wordBudget": 8
+        },
+        {
+          "order": 5,
+          "code": "u07-s5",
+          "titleDe": "Im Büro",
+          "titleUz": "Ofisda",
+          "grammar": "Possessivartikel unser/euer",
+          "grammarUz": "bizning/sizning",
+          "wordBudget": 8
+        },
+        {
+          "order": 6,
+          "code": "u07-s6",
+          "titleDe": "Probleme bei der Arbeit",
+          "titleUz": "Ishdagi muammolar",
+          "grammar": "müssen/dürfen",
+          "grammarUz": "müssen va dürfen",
+          "wordBudget": 8
+        }
+      ]
+    },
+    {
+      "order": 8,
+      "code": "u08",
+      "titleDe": "Gesundheit",
+      "titleUz": "Sog'liq",
+      "theme": "tana, kasallik, shifokor",
+      "sections": [
+        {
+          "order": 1,
+          "code": "u08-s1",
+          "titleDe": "Körperteile",
+          "titleUz": "Tana a'zolari",
+          "grammar": "Plural der Körperteile",
+          "grammarUz": "tana a'zolari ko'pligi",
+          "wordBudget": 10
+        },
+        {
+          "order": 2,
+          "code": "u08-s2",
+          "titleDe": "Ich bin krank",
+          "titleUz": "Men kasalman",
+          "grammar": "Schmerzen haben, tut weh",
+          "grammarUz": "og'riqni aytish",
+          "wordBudget": 10
+        },
+        {
+          "order": 3,
+          "code": "u08-s3",
+          "titleDe": "Beim Arzt",
+          "titleUz": "Shifokorda",
+          "grammar": "Imperativ Sie-Form",
+          "grammarUz": "shifokor buyrug'i",
+          "wordBudget": 10
+        },
+        {
+          "order": 4,
+          "code": "u08-s4",
+          "titleDe": "Medikamente und Apotheke",
+          "titleUz": "Dori va dorixona",
+          "grammar": "Modalverb sollen",
+          "grammarUz": "sollen modal fe'li",
+          "wordBudget": 10
+        },
+        {
+          "order": 5,
+          "code": "u08-s5",
+          "titleDe": "Gesund leben",
+          "titleUz": "Sog'lom yashash",
+          "grammar": "Negation kein/nicht",
+          "grammarUz": "kein va nicht",
+          "wordBudget": 10
+        }
+      ]
+    },
+    {
+      "order": 9,
+      "code": "u09",
+      "titleDe": "Meine Wohnung",
+      "titleUz": "Mening uyim",
+      "theme": "xonalar, mebel, ijara",
+      "sections": [
+        {
+          "order": 1,
+          "code": "u09-s1",
+          "titleDe": "Räume",
+          "titleUz": "Xonalar",
+          "grammar": "es gibt + Akkusativ",
+          "grammarUz": "es gibt tuzilmasi",
+          "wordBudget": 8
+        },
+        {
+          "order": 2,
+          "code": "u09-s2",
+          "titleDe": "Möbel",
+          "titleUz": "Mebel",
+          "grammar": "Wechselpräposition + Dativ",
+          "grammarUz": "in/auf/unter joy ma'nosida",
+          "wordBudget": 8
+        },
+        {
+          "order": 3,
+          "code": "u09-s3",
+          "titleDe": "Meine Wohnung ist …",
+          "titleUz": "Uyim qanday",
+          "grammar": "Adjektive groß/klein/hell",
+          "grammarUz": "tavsiflovchi sifatlar",
+          "wordBudget": 8
+        },
+        {
+          "order": 4,
+          "code": "u09-s4",
+          "titleDe": "Wohnung suchen",
+          "titleUz": "Uy izlash",
+          "grammar": "Zahlen: Miete, Quadratmeter",
+          "grammarUz": "ijara va maydon",
+          "wordBudget": 8
+        },
+        {
+          "order": 5,
+          "code": "u09-s5",
+          "titleDe": "Umzug",
+          "titleUz": "Ko'chish",
+          "grammar": "Dativ mit dem/der",
+          "grammarUz": "mit bilan jo'nalish",
+          "wordBudget": 8
+        },
+        {
+          "order": 6,
+          "code": "u09-s6",
+          "titleDe": "Nachbarn und Hausordnung",
+          "titleUz": "Qo'shnilar va qoidalar",
+          "grammar": "dürfen / nicht dürfen",
+          "grammarUz": "ruxsat va taqiq",
+          "wordBudget": 8
+        }
+      ]
+    },
+    {
+      "order": 10,
+      "code": "u10",
+      "titleDe": "Lernen und Beruf",
+      "titleUz": "O'qish va kasb",
+      "theme": "til o'rganish, ariza, tarjimai hol",
+      "sections": [
+        {
+          "order": 1,
+          "code": "u10-s1",
+          "titleDe": "Sprachen lernen",
+          "titleUz": "Til o'rganish",
+          "grammar": "wollen/können takrori",
+          "grammarUz": "modal fe'llar takrori",
+          "wordBudget": 10
+        },
+        {
+          "order": 2,
+          "code": "u10-s2",
+          "titleDe": "Im Kurs",
+          "titleUz": "Kursda",
+          "grammar": "Imperativ du-Form",
+          "grammarUz": "du buyruq shakli",
+          "wordBudget": 10
+        },
+        {
+          "order": 3,
+          "code": "u10-s3",
+          "titleDe": "Mein Lebenslauf",
+          "titleUz": "Tarjimai hol",
+          "grammar": "Perfekt mit haben",
+          "grammarUz": "haben bilan o'tgan zamon",
+          "wordBudget": 10
+        },
+        {
+          "order": 4,
+          "code": "u10-s4",
+          "titleDe": "Bewerbung",
+          "titleUz": "Ariza",
+          "grammar": "förmliche Redemittel",
+          "grammarUz": "rasmiy iboralar",
+          "wordBudget": 10
+        },
+        {
+          "order": 5,
+          "code": "u10-s5",
+          "titleDe": "Pläne für die Zukunft",
+          "titleUz": "Kelajak rejalari",
+          "grammar": "möchte … werden",
+          "grammarUz": "kelajak niyati",
+          "wordBudget": 10
+        }
+      ]
+    },
+    {
+      "order": 11,
+      "code": "u11",
+      "titleDe": "Kleidung und Einkauf",
+      "titleUz": "Kiyim va xarid",
+      "theme": "kiyim, rang, do'kon",
+      "sections": [
+        {
+          "order": 1,
+          "code": "u11-s1",
+          "titleDe": "Kleidung",
+          "titleUz": "Kiyim",
+          "grammar": "Plural, Adjektiv + Farbe",
+          "grammarUz": "ko'plik va rang",
+          "wordBudget": 10
+        },
+        {
+          "order": 2,
+          "code": "u11-s2",
+          "titleDe": "Farben und Größen",
+          "titleUz": "Rang va o'lcham",
+          "grammar": "Welcher/Welche/Welches",
+          "grammarUz": "qaysi? so'rog'i",
+          "wordBudget": 10
+        },
+        {
+          "order": 3,
+          "code": "u11-s3",
+          "titleDe": "Im Geschäft",
+          "titleUz": "Do'konda",
+          "grammar": "Fragen im Geschäft",
+          "grammarUz": "do'kondagi savollar",
+          "wordBudget": 10
+        },
+        {
+          "order": 4,
+          "code": "u11-s4",
+          "titleDe": "Das gefällt mir",
+          "titleUz": "Bu menga yoqadi",
+          "grammar": "gefallen + Dativ, mir/dir",
+          "grammarUz": "mir/dir olmoshlari",
+          "wordBudget": 10
+        },
+        {
+          "order": 5,
+          "code": "u11-s5",
+          "titleDe": "Umtausch",
+          "titleUz": "Almashtirish",
+          "grammar": "Perfekt: ich habe gekauft",
+          "grammarUz": "o'tgan zamon takrori",
+          "wordBudget": 10
+        }
+      ]
+    },
+    {
+      "order": 12,
+      "code": "u12",
+      "titleDe": "Reisen und Urlaub",
+      "titleUz": "Sayohat va ta'til",
+      "theme": "sayohat, mehmonxona, ta'til",
+      "sections": [
+        {
+          "order": 1,
+          "code": "u12-s1",
+          "titleDe": "Reiseziele",
+          "titleUz": "Sayohat manzillari",
+          "grammar": "nach/in + Land",
+          "grammarUz": "mamlakatga yo'nalish",
+          "wordBudget": 8
+        },
+        {
+          "order": 2,
+          "code": "u12-s2",
+          "titleDe": "Am Bahnhof und Flughafen",
+          "titleUz": "Vokzal va aeroportda",
+          "grammar": "von … nach, Uhrzeit",
+          "grammarUz": "yo'nalish va vaqt",
+          "wordBudget": 8
+        },
+        {
+          "order": 3,
+          "code": "u12-s3",
+          "titleDe": "Im Hotel",
+          "titleUz": "Mehmonxonada",
+          "grammar": "Redemittel: reservieren",
+          "grammarUz": "joy band qilish",
+          "wordBudget": 8
+        },
+        {
+          "order": 4,
+          "code": "u12-s4",
+          "titleDe": "Urlaub machen",
+          "titleUz": "Ta'tilda",
+          "grammar": "Perfekt: regelmäßig/unregelmäßig",
+          "grammarUz": "o'tgan zamon shakllari",
+          "wordBudget": 8
+        },
+        {
+          "order": 5,
+          "code": "u12-s5",
+          "titleDe": "Postkarte schreiben",
+          "titleUz": "Xat yozish",
+          "grammar": "Wortstellung in der Vergangenheit",
+          "grammarUz": "o'tgan zamonda so'z tartibi",
+          "wordBudget": 8
+        },
+        {
+          "order": 6,
+          "code": "u12-s6",
+          "titleDe": "Auf Wiedersehen!",
+          "titleUz": "Xayr!",
+          "grammar": "Wiederholung: alle Redemittel",
+          "grammarUz": "barcha iboralar takrori",
+          "wordBudget": 8
+        }
+      ]
+    }
+  ]
+}
