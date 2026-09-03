@@ -2904,23 +2904,28 @@ model DafLesson {
   sourceId String  @unique
   unitId   Int
   order    Int
-  /// Bo'lim ichidagi qiyinlik bosqichi, 1–5.
+  /// Eski DiB darsining qiyinlik bosqichi, 1–5 — faqat o'sha eski
+  /// darslar uchun qoladi, yangi kurs buni ishlatmaydi.
   ///
-  /// Avval bu yerda `kind` (VOCAB/GRAMMAR) turardi. U dars TURINI
-  /// bildirardi va grammatikani mashqdan uzib qo'yardi — o'quvchi
-  /// qoidani o'qir, keyin ishlatmasdi. Endi har bosqichda ham lug'at,
-  /// ham grammatika, ham eshitish bor; farq faqat qiyinlikda.
-  /// Eski DiB darslarining qiyinlik bosqichi. Yangi kursda ishlatilmaydi.
+  /// Avval bu yerda `kind` (VOCAB/GRAMMAR) darsning MAVZUSINI bildirardi
+  /// va grammatikani mashqdan uzib qo'yardi — o'quvchi qoidani o'qir,
+  /// keyin ishlatmasdi. Shuning uchun u o'chirilgan edi: har bosqichda
+  /// ham lug'at, ham grammatika, ham eshitish bor, farq faqat qiyinlikda.
+  /// `kind` pastda QAYTDI, lekin boshqa ma'noda — endi u MAVZU emas,
+  /// SEANS TURI (pastga qarang).
   tier     Int?
   titleDe  String
   titleUz  String?
 
   translationSource DafTranslationSource?
-  /// Darsning grammatika mavzusi, bo'lsa. `kind` o'chgani uchun endi
-  /// dars TURIGA emas, faqat bor-yo'qligiga bog'liq — har qanday
-  /// bosqichdagi dars grammatikaga ega bo'lishi mumkin.
+  /// Darsning grammatika mavzusi, bo'lsa — `tier`dan ham, `kind`dan ham
+  /// mustaqil: har qanday seans turi grammatikaga ega bo'lishi mumkin.
   grammarId         Int?
-  /// Seans turi. `null` — eski DiB darsi.
+  /// Seans turi: SECTION_A/SECTION_B/BRIDGE/UNIT_TEST (yuqoridagi
+  /// enumga qarang). `null` — eski DiB darsi. Bu MAVZU emas: eski
+  /// `kind` (VOCAB/GRAMMAR) darsning nimaga bag'ishlanganini bildirgan
+  /// va shu sabab o'chirilgan edi (yuqoridagi `tier` izohiga qarang).
+  /// Yangisi darsning A1 kurs xaritasidagi SEANSINI bildiradi.
   kind      DafLessonKind?
   sectionId Int?
 
