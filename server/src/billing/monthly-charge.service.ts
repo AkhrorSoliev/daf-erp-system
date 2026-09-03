@@ -251,6 +251,16 @@ export class MonthlyChargeService {
       monthlyPrice,
       coveredLessons,
       coveredDates,
+      // Muzlatilgan-chiqarilgan to'plam qayta boshlanadi: bu qator YANGI
+      // hisob (yoki `REVERSED` dan qayta CHARGED'ga qaytgan hisob) — eski
+      // `frozenOutDates` (agar `existing` REVERSED bo'lgan bo'lsa) shu
+      // yerdan boshlab hech qanday ma'noga ega emas, chunki `coveredDates`
+      // ham shu yerda yangidan yozilmoqda. Buni ATAYLAB tiklamaslik
+      // muzlatish/qaytish to'plamini eskirgan holatda qoldirardi — keyingi
+      // muzlatish YANGI (to'liq) `coveredDates`dan emas, ESKI qoldiq
+      // to'plamdan ayirardi (2026-09 review, NEW-1: reverse -> re-charge ->
+      // freeze zanjirida 276 920 so'm kam qaytarilgan holat).
+      frozenOutDates: [],
       creditLessons: credit.creditLessonsUsed,
       creditAmount: credit.creditAmount,
       chargedAmount: credit.chargedAmount,
@@ -800,52 +810,83 @@ export class MonthlyChargeService {
     );
     const rechargeRaw = missing * discountedPerLessonCost;
 
-    // SIMMETRIK QOPQOQ (HIGH-3 tuzatishi, 2026-09 review): muzlatish
-    // tomoni qaytarishni `min(remaining*cost, chargedAmount)` bilan
-    // qopqoqlaydi — chunki qoplangan darslarning bir qismi KREDIT bilan
-    // (naqd emas) to'langan bo'lishi mumkin, va naqd qaytarish shu naqd
-    // miqdoridan oshmasligi kerak. Bu tomon shu qopqoqni QAYTARMASA,
-    // muzlatishda qopqoq ishlagan holatlarda (`remaining*cost >
-    // chargedAmount`) keyinroq qaytishda `missing*cost` XOM holda
-    // qo'shilib, aslida hech qachon qaytarilmagan naqd pul "yaratilardi" —
-    // o'quvchidan HAQIQATDA olingandan ko'proq naqd yechilardi.
+    // SIMMETRIK QOPQOQ (HIGH-3 tuzatishi, 2026-09 review — va 2026-09
+    // ikkinchi re-review, NEW-2: birinchi versiyasi TOMONI o'zi noto'g'ri
+    // edi). Muzlatish tomoni qaytarishni `min(remaining*cost,
+    // chargedAmount)` bilan qopqoqlaydi — chunki qoplangan darslarning bir
+    // qismi KREDIT bilan (naqd emas) to'langan bo'lishi mumkin, va naqd
+    // qaytarish shu naqd miqdoridan oshmasligi kerak. Bu tomon shu
+    // qopqoqni QAYTARMASA, muzlatishda qopqoq ishlagan holatlarda
+    // (`remaining*cost > chargedAmount`) keyinroq qaytishda `missing*cost`
+    // XOM holda qo'shilib, aslida hech qachon qaytarilmagan naqd pul
+    // "yaratilardi" — o'quvchidan HAQIQATDA olingandan ko'proq naqd
+    // yechilardi.
     //
-    // Qopqoq: `chargedAmount` `coveredLessonsNow` darslar uchun (FIKS
-    // `creditAmount`ni ayirib) qanday bo'lishi kerakligidan OSHMASIN.
-    // `proratedMonthlyAmount` (oy yaratilish arifmetikasi) ATAYLAB
-    // ISHLATILMAYDI — bu funksiya (va uning ko'zgusi) allaqachon
-    // `count * perLessonCost` chizig'ida ishlaydi; ikkinchi (oylik-darajali
-    // dumaloqlash) yo'lni shu YERGA aralashtirish ikkita mustaqil
-    // yaxlitlash yo'lini bitta hisobga qo'shardi — bu loyihada uch marta
-    // aynan shunday holatdan zarar ko'rilgan (monthly-price.ts sarlavha
-    // izohi). `creditLessons`/`creditAmount`/`excusedLessons`ning o'ziga
-    // HECH QACHON tegilmaydi — ular hisob YARATILGANDA bir marta
-    // belgilanadi va shu FIKS holicha qoladi.
-    const ceiling = Math.max(
+    // QOPQOQ FORMULASI: reviewer'ning kamaytirishi — `chargedAmount_now =
+    // A0 − Σrefunded + Σcharged`, shuning uchun `Σcharged <= Σrefunded`
+    // ANIQ o'shanda ushlaydiki, `chargedAmount` hech qachon o'zining
+    // yaratilish qiymati `A0`dan OSHMASA. Muzlatish faqat pasaytiradi;
+    // qaytish `ceiling(k) = k·perLessonCost_chegirmali − creditAmount`gacha
+    // ko'taradi. Bu invariant faqat `N·perLessonCost_chegirmali <= A0`
+    // bo'lganda ushlaydi — bu esa dars narxi YUQORIGA dumaloqlanganda
+    // (masalan 450 000/14=32 142.857 -> 32 143, 14x32 143=450 002>450 000)
+    // BUZILADI. Birinchi versiyada shu YERDA `coveredLessonsNow *
+    // discountedPerLessonCost` ishlatilgan edi — bu YUQORIDAGI aynan shu
+    // buzilishga olib kelardi (naiv "count x cost" chizig'i `A0` yaratilgan
+    // "proratsiya" chizig'idan FARQLI dumaloqlanadi).
+    //
+    // TO'G'RI qopqoq — `A0`NING O'ZI qanday hisoblangan bo'lsa, ceiling ham
+    // AYNAN SHU (proratsiya) chiziqda hisoblanadi: `monthlyPrice` va
+    // `plannedLessons` qatorda saqlanadi, shuning uchun ikkinchi mustaqil
+    // yaxlitlash yo'li YO'Q — bitta chiziq, ikki nuqtada baholanadi.
+    // `creditLessons`/`creditAmount`/`excusedLessons`ning o'ziga HECH
+    // QACHON tegilmaydi — ular hisob YARATILGANDA bir marta belgilanadi va
+    // shu FIKS holicha qoladi.
+    const grossNow = proratedMonthlyAmount(
+      charge.monthlyPrice,
+      charge.plannedLessons,
+      coveredLessonsNow,
+    );
+    const grossNowDiscounted = applyDiscount(
+      grossNow,
+      clampDiscount(charge.discountPercent ?? 0),
+    );
+    const ceiling = Math.max(0, grossNowDiscounted - charge.creditAmount);
+    // `ceiling - chargedAmount` manfiy bo'lishi mumkin (masalan, yaxlitlash
+    // chekkasida) — tashqi `Math.max(0, ...)` `chargedAmount`ni HECH QACHON
+    // KAMAYTIRMASLIKNI kafolatlaydi: bu funksiya faqat QAYTA HISOBLAYDI,
+    // hech qachon qaytarmaydi (`reverseChargeForDeparture`ning ishi).
+    const charged = Math.max(
       0,
-      coveredLessonsNow * discountedPerLessonCost - charge.creditAmount,
+      Math.min(rechargeRaw, ceiling - charge.chargedAmount),
     );
-    const chargedAmountAfter = Math.min(
-      charge.chargedAmount + rechargeRaw,
-      ceiling,
-    );
-    const charged = chargedAmountAfter - charge.chargedAmount;
-    if (charged <= 0) return null;
+    const chargedAmountAfter = charge.chargedAmount + charged;
 
-    // Balansdan MANFIY summa bilan yechish — `reverseChargeForDeparture`
-    // musbat summa bilan qaytarganining aksi. Yangi pul metodi yozilmaydi.
-    await this.transactionsWrite.createAdjustment(
-      {
-        studentId: enr.studentId,
-        amount: -charged,
-        companyId: params.companyId,
-        branchId: enr.group.branchId,
-        description: `${params.reason} — qaytgandan keyingi ${missing} dars qayta hisoblandi`,
-        performedById: params.performedById,
-      },
-      tx,
-    );
+    if (charged > 0) {
+      // Balansdan MANFIY summa bilan yechish — `reverseChargeForDeparture`
+      // musbat summa bilan qaytarganining aksi. Yangi pul metodi
+      // yozilmaydi.
+      await this.transactionsWrite.createAdjustment(
+        {
+          studentId: enr.studentId,
+          amount: -charged,
+          companyId: params.companyId,
+          branchId: enr.group.branchId,
+          description: `${params.reason} — qaytgandan keyingi ${missing} dars qayta hisoblandi`,
+          performedById: params.performedById,
+        },
+        tx,
+      );
+    }
 
+    // TO'PLAM yozuvi PUL harakatidan MUSTAQIL ravishda doim yoziladi —
+    // qopqoq `charged`ni 0 gacha bosib qo'ysa ham (2026-09 re-review,
+    // kosmetik topilma). `missing > 0` bo'lgani uchun bu sanalar HAQIQATDA
+    // qaytgan (o'quvchi ularga keladi) — pul cheklovi buni o'zgartirmaydi.
+    // Bu yerda ERTAROQ `return` qilish (pul harakati bo'lmasa) sanalarni
+    // ABADIY "muzlatib chiqarilgan" holda qoldirar edi — `coveredLessons =
+    // coveredDates.length - frozenOutDates.length` hosila invariantini
+    // buzib.
     await tx.enrollmentMonthlyCharge.update({
       where: { id: charge.id },
       data: {

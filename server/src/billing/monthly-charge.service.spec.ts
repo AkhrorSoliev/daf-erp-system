@@ -1341,9 +1341,15 @@ describe('MonthlyChargeService', () => {
       ],
       coveredLessons: 5,
       perLessonCost: 32_143,
+      monthlyPrice: 450_000,
+      plannedLessons: 14,
       discountPercent: 0,
       creditAmount: 0,
-      chargedAmount: 160_715, // 5 x 32 143, kredit yo'q
+      // 450 000 - 9x32 143 (10.10 dagi muzlatish qaytargani) = 160 713 —
+      // NAIV 5x32 143=160 715 EMAS: dars narxi YUQORIGA dumaloqlangani
+      // uchun (450000/14=32142.857->32143) haqiqiy muzlatish qaytarimi
+      // to'liq narxdan 2 so'm KO'PROQ kesadi (2026-09 review, NEW-2).
+      chargedAmount: 160_713,
     };
 
     beforeEach(() => {
@@ -1376,7 +1382,7 @@ describe('MonthlyChargeService', () => {
         where: { id: 'ch-1' },
         data: {
           coveredLessons: 12,
-          chargedAmount: 385_716,
+          chargedAmount: 385_714, // proratedMonthlyAmount(450000,14,12), naiv 385 716 EMAS
           frozenOutDates: ['2026-10-13', '2026-10-15'],
         },
       });
@@ -1421,7 +1427,9 @@ describe('MonthlyChargeService', () => {
       prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
         ...charge,
         discountPercent: 50,
-        chargedAmount: 80_360, // 5 x applyDiscount(32 143, 50) = 5 x 16 072
+        // 225 000 (applyDiscount(450000,50)) - 9x16 072 = 80 352 — bir xil
+        // sabab bilan naiv 5x16 072=80 360 EMAS.
+        chargedAmount: 80_352,
       });
 
       const res = await service.restoreChargeForReturn(tx, {
@@ -1494,6 +1502,8 @@ describe('MonthlyChargeService', () => {
         frozenOutDates: [] as string[],
         coveredLessons: 14,
         perLessonCost: 32_143,
+        monthlyPrice: 450_000,
+        plannedLessons: 14,
         discountPercent: 0,
         creditAmount: 0,
         chargedAmount: 450_000,
@@ -1674,6 +1684,103 @@ describe('MonthlyChargeService', () => {
       expect(ret?.charged).toBeLessThan(12 * 32_143); // qopqoq ishladi
       expect(ret?.charged).toBeLessThanOrEqual(freeze!.refunded); // ASOSIY INVARIANT
       expect(state.current.chargedAmount).toBeLessThanOrEqual(freeze!.refunded);
+    });
+
+    it('NEW-2: to`liq muzlatish / to`liq qaytish — dars narxi YUQORIGA dumaloqlanganda ham Σ charged ortiqcha yaratmaydi', async () => {
+      // 450 000 / 14 = 32 142.857 -> 32 143 (YUQORIGA). 14 x 32 143 =
+      // 450 002 — 2 so'm ko'proq. Oyning BIRINCHI darsidan OLDIN
+      // muzlatilib, ERTASIGA (hamon birinchi darsdan oldin) qaytarilgan
+      // o'quvchida BUTUN oy chiqadi-va-qaytadi — bu holat naiv
+      // `coveredLessonsNow x perLessonCost` qopqog'ini "ishlatmas" edi,
+      // chunki u ceiling'ni AYNAN shu 450 002 ga hisoblardi (haqiqiy A0
+      // 450 000 emas). Reviewer uch xil probe'da (jumladan chegirmali va
+      // oy o'rtasida qo'shilgan o'quvchida) shuni topgan; bu — eng oddiy
+      // (chegirmasiz, to'liq oy) ko'rinishi.
+      const state = statefulCharge(freshChargeRow());
+
+      const freeze = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-09-29T00:00:00.000Z'), // oy boshidan OLDIN
+        companyId: 1001,
+        reason: 'Muzlatish',
+      });
+      // 14 x 32 143 = 450 002, lekin chargedAmount 450 000 dan oshib
+      // qaytmaydi — qopqoq shu YERDA ham ishlaydi.
+      expect(freeze?.refunded).toBe(450_000);
+      expect(state.current.chargedAmount).toBe(0);
+      expect(state.current.frozenOutDates).toHaveLength(14);
+
+      const ret = await service.restoreChargeForReturn(tx, {
+        enrollmentId: 'enr-1',
+        returnDate: new Date('2026-09-30T00:00:00.000Z'), // hamon oy boshidan OLDIN
+        companyId: 1001,
+        reason: 'Muzlatishdan chiqarildi',
+      });
+
+      expect(ret?.lessons).toBe(14); // barcha 14 ta sana tiklandi
+      // ASOSIY DALIL: naiv (proratsiyasiz) qopqoq bilan bu 450 002 bo'lardi
+      // — refund'dan 2 so'm KO'P, invariantni buzardi. To'g'irlangan
+      // (proratsiya-chizig'idagi) qopqoq bilan aynan 450 000 — refund
+      // bilan TENG, oshmaydi.
+      expect(ret?.charged).toBe(450_000);
+      expect(ret?.charged).toBeLessThanOrEqual(freeze!.refunded);
+      expect(state.current.chargedAmount).toBe(450_000);
+      expect(state.current.frozenOutDates).toEqual([]);
+    });
+
+    it('NEW-1: reverse -> re-charge -> freeze — frozenOutDates STALE holatni endi olib yurmaydi', async () => {
+      // Sentabr hisobi ilgari 10.09 da muzlatilgan edi (8 sana chiqarilgan:
+      // 12,15,17,19,22,24,26,29), keyin BUTUNLAY bekor qilingan
+      // (`REVERSED`) — stale `frozenOutDates` shu qatorda qolib ketgan
+      // edi. `createChargeForEnrollment`ning qayta-hisoblash yo'li
+      // (REVERSED -> CHARGED) `coveredDates`/`coveredLessons`/
+      // `chargedAmount`ni RESET qilardi, lekin `frozenOutDates`ni
+      // reset QILMAS edi (reviewer repro: 05.09 dagi keyingi muzlatish
+      // 346 150 o'rniga 69 230 qaytarardi — 276 920 so'm kam).
+      lastChargeRow = {
+        id: 'chg-1',
+        status: 'REVERSED',
+        frozenOutDates: [
+          '2026-09-12',
+          '2026-09-15',
+          '2026-09-17',
+          '2026-09-19',
+          '2026-09-22',
+          '2026-09-24',
+          '2026-09-26',
+          '2026-09-29',
+        ],
+      };
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockImplementation(() =>
+        Promise.resolve({ ...lastChargeRow }),
+      );
+
+      // Qayta hisoblash — sentabr, 13 dars (shanba/payshanba/seshanba),
+      // to'liq oy: chargedAmount 450 000 (mavjud "BEKOR QILINGAN oyni
+      // qayta hisoblaydi" testidagi bilan bir xil fixture/natija).
+      await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(lastChargeRow.frozenOutDates).toEqual([]);
+      expect(lastChargeRow.chargedAmount).toBe(450_000);
+
+      // 25.08 da muzlatilsa (sentabrning BIRINCHI darsidan OLDIN) — butun
+      // oy puli qaytishi kerak: 13 x 34 615 = 449 995. Stale to'plam
+      // qolib ketganda faqat 5 ta (13-8) sana "yangi" hisoblanib, 5 x
+      // 34 615 = 173 075 qaytarilardi.
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-08-25T00:00:00.000Z'),
+        today: '2026-08-25', // real devor soatidan mustaqil (backdated-qopqoq)
+        companyId: 1,
+        reason: 'Muzlatish',
+      });
+
+      expect(res?.refunded).toBe(449_995);
     });
   });
 
