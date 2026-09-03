@@ -679,6 +679,144 @@ export class MonthlyChargeService {
   }
 
   /**
+   * `reverseChargeForDeparture`ning KO'ZGUSI: muzlatishdan chiqqan
+   * (FROZEN -> ACTIVE) yozilishga oyning qolgan qismini QAYTA hisoblaydi.
+   *
+   * Task 1 muzlatishda oyning qolgan darslari pulini balansga qaytardi
+   * (`reverseChargeForDeparture` shu yo'l bilan chaqiriladi). Bu funksiya
+   * teskarisi: o'quvchi qaytganda, qaytgan kundan keyingi darslar puli
+   * QAYTA balansdan yechiladi — aks holda o'quvchi oyning qolgan qismini
+   * TEKIN o'qiydi (pul balansda yotadi, dars berilgan, hech qanday hisob
+   * yo'q).
+   *
+   * `null` qaytaradi: hisob topilmasa, `REVERSED` bo'lsa, yoki qaytaradigan
+   * narsa bo'lmasa (idempotent — pastga qara).
+   *
+   * Chaqiruvchi Serializable tranzaksiya ichida bo'lishi SHART — `tx` shu
+   * tranzaksiyaning mijozi.
+   */
+  async restoreChargeForReturn(
+    tx: Prisma.TransactionClient,
+    params: {
+      enrollmentId: string;
+      returnDate: Date;
+      companyId: number;
+      reason: string;
+      performedById?: number;
+      /**
+       * Optional: "bugun" Toshkent 'YYYY-MM-DD' shaklida, BIR martalik
+       * chaqiruvchi uchun emas — bir necha o'nlab/yuzlab yozilishni ketma-ket
+       * qayta ishlaydigan BATCH chaqiruvchi uchun (`StatusCascadeService`,
+       * FROZEN -> ACTIVE shoxi). Har bir tranzaksiya `maxWait 10s / timeout
+       * 15s`gacha cho'zilishi mumkin — yuzlab yozilishli sikl real vaqtda
+       * Toshkent yarim tunidan o'tib ketishi mumkin. Agar bu funksiya HAR
+       * safar `new Date()`ni o'zi qayta hisoblasa, sikl o'rtasida soat kun
+       * almashtirib yuboradi va hali bitta ham iteratsiya bajarmagan
+       * `returnDate` keyingi iteratsiyalarda to'satdan "backdated" deb rad
+       * etilardi (`reverseChargeForDeparture`da xuddi shu sabab bilan xuddi
+       * shu muammo bo'lgan — 2026-09 sharh, 3-bosqich). Batch chaqiruvchi
+       * shu YERDA BIR marta hisoblangan "bugun"ni har bir iteratsiyaga
+       * bab-baravar uzatadi — shunda butun partiya BITTA soatga qarab
+       * baholanadi, har biri o'z "hozir"iga emas.
+       */
+      today?: string;
+    },
+  ): Promise<{ charged: number; lessons: number } | null> {
+    const day = tashkentDateStr(params.returnDate);
+    const today = params.today ?? tashkentDateStr(new Date());
+    if (day < today) {
+      throw new BadRequestException(
+        "restoreChargeForReturn: returnDate bugundan oldingi sana bo'lishi mumkin emas — reverseChargeForDeparture dagi bilan bir xil himoya (backdated kirish kelajakdagi chaqiruvchilarni jim xatodan asraydi)",
+      );
+    }
+
+    const periodYear = Number(day.slice(0, 4));
+    const periodMonth = Number(day.slice(5, 7));
+
+    const charge = await tx.enrollmentMonthlyCharge.findUnique({
+      where: {
+        enrollmentId_periodYear_periodMonth: {
+          enrollmentId: params.enrollmentId,
+          periodYear,
+          periodMonth,
+        },
+      },
+    });
+    if (!charge || charge.status !== MonthlyChargeStatus.CHARGED) return null;
+
+    const enr = await tx.enrollment.findUnique({
+      where: { id: params.enrollmentId },
+      select: { studentId: true, group: { select: { branchId: true } } },
+    });
+    if (!enr) return null;
+
+    // "returnDate holatida shu kungacha (kiritilgan holda) muzlatish
+    // TEGMAGAN darslar soni" — hisob YOZILGAN paytdagi MUZLATILGAN sanalar
+    // ro'yxatidan, JONLI kalendardan emas — `reverseChargeForDeparture`
+    // dagi bilan bir xil sabab: shu orqali idempotent, va oyning
+    // o'rtasida bekor qilingan/qo'shilgan dars ushbu hisobni buzmaydi.
+    const coveredDates = charge.coveredDates ?? [];
+    const lessonsThroughReturn = coveredDates.filter((d) => d <= day).length;
+    // Qaytgandan KEYINGI darslar — muzlatish davomida pul qaytarilgan,
+    // endi o'quvchi ularga qaytadan keladi.
+    const restorable = coveredDates.length - lessonsThroughReturn;
+    // MUHIM: bu YIG'INDI `restorable - max(0, coveredLessons -
+    // lessonsThroughReturn)` shaklida EMAS. Muzlatish har doim
+    // `lessonsThroughReturn`gacha (yoki undan kam) qoplaydi — chunki
+    // muzlatish sanasi xronologik jihatdan qaytish sanasidan OLDIN yoki
+    // TENG bo'ladi, hech qachon undan keyin emas. Shuning uchun:
+    //   - `coveredLessons <= lessonsThroughReturn` — bu hali hech qachon
+    //     qayta hisoblanmagan (yoki hech qachon muzlatilmagan) holat:
+    //     qolgan BUTUN `restorable` bir yo'la qaytadan hisoblanadi.
+    //   - `coveredLessons > lessonsThroughReturn` — bu ALLAQACHON shu
+    //     chaqiruv orqali qayta hisoblangan holat (yuqoridagi filiadan
+    //     keyin `coveredLessons` aynan shu `restorable`ni qo'shib
+    //     oshirilgan bo'ladi) — qaytaradigan narsa qolmagan, `0`.
+    // Ikkinchi holatni oddiy `restorable - max(0, coveredLessons -
+    // lessonsThroughReturn)` bilan hisoblash IDEMPOTENT emas edi: ikkinchi
+    // chaqiruv `coveredLessons > lessonsThroughReturn` bo'lgani uchun
+    // qisman qiymat qaytarardi va o'quvchidan IKKINCHI marta pul yechardi.
+    const missing =
+      charge.coveredLessons <= lessonsThroughReturn ? restorable : 0;
+    if (missing <= 0) return null;
+
+    // `charge.perLessonCost` ATAYLAB chegirmasiz (o'qituvchi haqi undan
+    // hisoblanadi) — qayta hisoblanadigan summa esa o'quvchi TO'LAYDIGAN
+    // chegirmali narxda bo'lishi kerak, `reverseChargeForDeparture` dagi
+    // bilan bir xil qoida.
+    const discountedPerLessonCost = applyDiscount(
+      charge.perLessonCost,
+      clampDiscount(charge.discountPercent ?? 0),
+    );
+    const charged = missing * discountedPerLessonCost;
+    if (charged <= 0) return null;
+
+    // Balansdan MANFIY summa bilan yechish — `reverseChargeForDeparture`
+    // musbat summa bilan qaytarganining aksi. Yangi pul metodi yozilmaydi.
+    await this.transactionsWrite.createAdjustment(
+      {
+        studentId: enr.studentId,
+        amount: -charged,
+        companyId: params.companyId,
+        branchId: enr.group.branchId,
+        description: `${params.reason} — qaytgandan keyingi ${missing} dars qayta hisoblandi`,
+        performedById: params.performedById,
+      },
+      tx,
+    );
+
+    await tx.enrollmentMonthlyCharge.update({
+      where: { id: charge.id },
+      data: {
+        coveredLessons: charge.coveredLessons + missing,
+        chargedAmount: charge.chargedAmount + charged,
+      },
+    });
+
+    return { charged, lessons: missing };
+  }
+
+  /**
    * Bir kompaniyaning barcha oylik yozilishlariga bir davr uchun hisob yozadi.
    *
    * Ikki chaqiruvchi bor: oy boshi cron'i (`MonthlyBillingCronService`, har

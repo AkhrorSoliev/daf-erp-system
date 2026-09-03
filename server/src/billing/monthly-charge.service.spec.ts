@@ -1302,6 +1302,132 @@ describe('MonthlyChargeService', () => {
     });
   });
 
+  describe('restoreChargeForReturn', () => {
+    const charge = {
+      id: 'ch-1',
+      status: 'CHARGED',
+      coveredDates: [
+        '2026-10-01',
+        '2026-10-03',
+        '2026-10-06',
+        '2026-10-08',
+        '2026-10-10',
+        '2026-10-13',
+        '2026-10-15',
+        '2026-10-17',
+        '2026-10-20',
+        '2026-10-22',
+        '2026-10-24',
+        '2026-10-27',
+        '2026-10-29',
+        '2026-10-31',
+      ],
+      coveredLessons: 5, // muzlatishda 14 -> 5 ga tushgan
+      perLessonCost: 32_143,
+      discountPercent: 0,
+      chargedAmount: 160_715,
+    };
+
+    beforeEach(() => {
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue(charge);
+    });
+
+    it('qaytganidan keyingi darslarni qayta hisoblaydi', async () => {
+      // 15-oktabrda qaytdi. <= 15.10 bo'lgan sanalar: 01,03,06,08,10,13,15 = 7.
+      // Qayta tiklanadigan: 14 - 7 = 7. coveredLessons(5) <= 7 bo'lgani
+      // uchun butun 7 ta bir yo'la qayta hisoblanadi -> 7 x 32 143 = 225 001.
+      const res = await service.restoreChargeForReturn(tx, {
+        enrollmentId: 'enr-1',
+        returnDate: new Date('2026-10-15T00:00:00.000Z'),
+        companyId: 1001,
+        reason: 'Muzlatishdan chiqarildi',
+      });
+
+      expect(res).toEqual({ charged: 225_001, lessons: 7 });
+      expect(txWriteMock.createAdjustment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          studentId: 10453,
+          amount: -225_001,
+          companyId: 1001,
+          branchId: 1,
+        }),
+        tx,
+      );
+      expect(prismaMock.enrollmentMonthlyCharge.update).toHaveBeenCalledWith({
+        where: { id: 'ch-1' },
+        data: { coveredLessons: 12, chargedAmount: 385_716 },
+      });
+    });
+
+    it('ikkinchi marta chaqirilganda null qaytaradi (idempotent)', async () => {
+      // coveredLessons allaqachon 12 — birinchi chaqiruv shu qiymatga
+      // ko'targan (5 dan 7 tasini qo'shib). lessonsThroughReturn hamon 7,
+      // va 12 > 7 bo'lgani uchun bu ALLAQACHON qayta hisoblangan holat —
+      // qaytaradigan narsa qolmagan.
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        ...charge,
+        coveredLessons: 12,
+      });
+
+      const res = await service.restoreChargeForReturn(tx, {
+        enrollmentId: 'enr-1',
+        returnDate: new Date('2026-10-15T00:00:00.000Z'),
+        companyId: 1001,
+        reason: 'Muzlatishdan chiqarildi',
+      });
+
+      expect(res).toBeNull();
+      expect(txWriteMock.createAdjustment).not.toHaveBeenCalled();
+    });
+
+    it('coveredDates dan KO`P dars qayta hisoblanmaydi', async () => {
+      const res = await service.restoreChargeForReturn(tx, {
+        enrollmentId: 'enr-1',
+        returnDate: new Date('2026-10-15T00:00:00.000Z'),
+        companyId: 1001,
+        reason: 'Muzlatishdan chiqarildi',
+      });
+
+      expect(res).not.toBeNull();
+      const updated =
+        prismaMock.enrollmentMonthlyCharge.update.mock.calls[0][0];
+      expect(updated.data.coveredLessons).toBeLessThanOrEqual(
+        charge.coveredDates.length,
+      );
+    });
+
+    it('chegirmani qo`llaydi', async () => {
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        ...charge,
+        discountPercent: 50,
+      });
+
+      const res = await service.restoreChargeForReturn(tx, {
+        enrollmentId: 'enr-1',
+        returnDate: new Date('2026-10-15T00:00:00.000Z'),
+        companyId: 1001,
+        reason: 'Muzlatishdan chiqarildi',
+      });
+
+      // 7 x applyDiscount(32 143, 50) = 7 x 16 072 = 112 504
+      expect(res?.charged).toBe(112_504);
+    });
+
+    it('oy oxiridan keyin qaytsa null qaytaradi', async () => {
+      // Noyabrda qaytgan deb hisoblansa, davr 2026/11 ga suriladi va
+      // shu davr uchun hisob yo'q — natijada barcha oktabr sanalari
+      // "qaytishgacha" hisoblanib, restorable = 0 chiqadi.
+      const res = await service.restoreChargeForReturn(tx, {
+        enrollmentId: 'enr-1',
+        returnDate: new Date('2026-11-05T00:00:00.000Z'),
+        companyId: 1001,
+        reason: 'Muzlatishdan chiqarildi',
+      });
+
+      expect(res).toBeNull();
+    });
+  });
+
   describe("markaz qoplagani hisob yozilganda o'z-o'zidan tozalanadi", () => {
     /**
      * 12 talik yo'lda `isCenterTopUp` keyingi to'lov darsni yopganda

@@ -17,7 +17,10 @@ describe('StatusCascadeService', () => {
     {
       id: 'enr-1',
       groupId: 'group-1',
-      group: { companyId: 1001 },
+      group: {
+        companyId: 1001,
+        course: { paymentModel: 'MONTHLY' },
+      },
       student: { firstName: 'Ali', lastName: 'Valiyev' },
     },
   ];
@@ -66,6 +69,7 @@ describe('StatusCascadeService', () => {
 
     monthlyChargeService = {
       reverseChargeForDeparture: jest.fn().mockResolvedValue(null),
+      restoreChargeForReturn: jest.fn().mockResolvedValue(null),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -613,6 +617,116 @@ describe('StatusCascadeService', () => {
       expect(
         enrollmentBillingService.refundPrepaidToBalance,
       ).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── Task 1B: recharge on unfreeze return ──────────
+  describe('FROZEN -> ACTIVE: restoreChargeForReturn wiring', () => {
+    beforeEach(() => {
+      prisma.enrollment.findMany.mockResolvedValue(mockEnrollmentWithStudent);
+    });
+
+    it('MONTHLY yozilish uchun restoreChargeForReturn chaqiriladi', async () => {
+      await service.cascade('Student', '100', 'ACTIVE', 42);
+
+      expect(monthlyChargeService.restoreChargeForReturn).toHaveBeenCalledWith(
+        prisma, // tx from the mocked $transaction
+        expect.objectContaining({
+          enrollmentId: 'enr-1',
+          companyId: 1001, // mockEnrollmentWithStudent's group.companyId
+          performedById: 42,
+        }),
+      );
+    });
+
+    it('LESSON_PACK yozilish uchun restoreChargeForReturn UMUMAN chaqirilmaydi', async () => {
+      prisma.enrollment.findMany.mockResolvedValue([
+        {
+          id: 'enr-2',
+          groupId: 'group-2',
+          group: {
+            companyId: 1001,
+            course: { paymentModel: 'LESSON_PACK' },
+          },
+          student: { firstName: 'Vali', lastName: 'Aliyev' },
+        },
+      ]);
+
+      await service.cascade('Student', '100', 'ACTIVE', 1);
+
+      expect(
+        monthlyChargeService.restoreChargeForReturn,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('boshqa (DROPPED/COMPLETED) kaskadlarda chaqirilmaydi', async () => {
+      await service.cascade('Student', '100', 'EXPELLED', 1);
+
+      expect(
+        monthlyChargeService.restoreChargeForReturn,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('bitta yozilishning muvaffaqiyatsizligi qolganlarini to`xtatmaydi', async () => {
+      const twoEnrollments = [
+        {
+          id: 'enr-1',
+          groupId: 'group-1',
+          group: { companyId: 1001, course: { paymentModel: 'MONTHLY' } },
+          student: { firstName: 'Ali', lastName: 'Valiyev' },
+        },
+        {
+          id: 'enr-2',
+          groupId: 'group-1',
+          group: { companyId: 1001, course: { paymentModel: 'MONTHLY' } },
+          student: { firstName: 'Vali', lastName: 'Aliyev' },
+        },
+      ];
+      prisma.enrollment.findMany.mockResolvedValue(twoEnrollments);
+      monthlyChargeService.restoreChargeForReturn
+        .mockRejectedValueOnce(new Error('DB vaqtincha ishlamadi'))
+        .mockResolvedValue(null);
+      const errorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
+
+      await service.cascade('Student', '100', 'ACTIVE', 1);
+
+      expect(monthlyChargeService.restoreChargeForReturn).toHaveBeenCalledTimes(
+        2,
+      );
+      expect(prisma.enrollment.updateMany).toHaveBeenCalled();
+
+      errorSpy.mockRestore();
+    });
+
+    it('butun partiya BITTA "bugun"ga qarab baholanadi (tun yarmi bo`linishi)', async () => {
+      const twoEnrollments = [
+        {
+          id: 'enr-1',
+          groupId: 'group-1',
+          group: { companyId: 1001, course: { paymentModel: 'MONTHLY' } },
+          student: { firstName: 'Ali', lastName: 'Valiyev' },
+        },
+        {
+          id: 'enr-2',
+          groupId: 'group-1',
+          group: { companyId: 1001, course: { paymentModel: 'MONTHLY' } },
+          student: { firstName: 'Vali', lastName: 'Aliyev' },
+        },
+      ];
+      prisma.enrollment.findMany.mockResolvedValue(twoEnrollments);
+
+      await service.cascade('Student', '100', 'ACTIVE', 1);
+
+      expect(monthlyChargeService.restoreChargeForReturn).toHaveBeenCalledTimes(
+        2,
+      );
+      const calls = (monthlyChargeService.restoreChargeForReturn as jest.Mock)
+        .mock.calls;
+      const todayValues = calls.map(([, params]: any) => params.today);
+      expect(todayValues[0]).toBeDefined();
+      expect(todayValues[0]).toBe(todayValues[1]);
     });
   });
 

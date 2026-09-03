@@ -5,6 +5,7 @@ import {
   RoomStatus,
   BranchStatus,
   CourseStatus,
+  PaymentModel,
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -45,7 +46,15 @@ export class StatusCascadeService {
   ): Promise<{ count: number }> {
     const matches = await this.prisma.enrollment.findMany({
       where: filter,
-      select: { id: true, group: { select: { companyId: true } } },
+      select: {
+        id: true,
+        group: {
+          select: {
+            companyId: true,
+            course: { select: { paymentModel: true } },
+          },
+        },
+      },
     });
 
     // Closing an enrollment (DROPPED/COMPLETED) strands any unused prepaid
@@ -122,6 +131,66 @@ export class StatusCascadeService {
               `(newStatus=${newStatus}) — qolgan yozilishlar davom etadi`,
             err,
           );
+        }
+      }
+    }
+
+    // Task 1B: FROZEN -> ACTIVE (muzlatishdan chiqish) — Task 1 muzlatishda
+    // oyning qolgan darslari pulini balansga qaytargan edi
+    // (`reverseChargeForDeparture` shu yo'l bilan chaqiriladi, yuqoridagi
+    // blok). Bu YERDA teskarisi bajariladi: o'quvchi qaytganda, qaytgan
+    // kundan keyingi darslar puli QAYTA balansdan yechiladi — aks holda
+    // o'quvchi oyning qolgan qismini TEKIN o'qir edi (pul balansda yotadi,
+    // dars berilgan, hech qanday hisob yo'q).
+    //
+    // `LESSON_PACK` yozilishlar bu yo'lga UMUMAN yetib bormasligi kerak —
+    // `restoreChargeForReturn`ning o'zi topilmagan hisobda `null` qaytaradi,
+    // lekin shunga tayanib qolish o'rniga bu YERDA `paymentModel` bo'yicha
+    // ANIQ filtrlanadi (brief talabi): har bir LESSON_PACK yozilish uchun
+    // bekorga bir so'rov yubormaslik + kelajakda funksiya xatti-harakati
+    // o'zgarsa ham bu yo'l xavfsiz qolishi uchun.
+    if (newStatus === EnrollmentStatus.ACTIVE) {
+      const monthlyMatches = matches.filter(
+        (m) => m.group.course.paymentModel === PaymentModel.MONTHLY,
+      );
+      if (monthlyMatches.length > 0) {
+        const returnDate =
+          (auditFields.statusChangedAt as Date | undefined) ?? new Date();
+        // Xuddi yuqoridagi `departureToday` kabi — sikl o'nlab yozilishni
+        // ketma-ket Serializable tranzaksiyalarda ishlaydi va real vaqtda
+        // Toshkent yarim tunidan o'tib ketishi mumkin. BIR marta hisoblanib,
+        // har bir iteratsiyaga bab-baravar uzatiladi (Task 8'da xuddi shu
+        // sabab bilan aynan shu joyda ikki marta tuzatilgan xato).
+        const returnToday = tashkentDateStr(returnDate);
+        for (const m of monthlyMatches) {
+          // Bitta yozilishning qayta hisob-kitobi yiqilishi qolgan
+          // yozilishlarni to'xtatmasligi kerak — yuqoridagi DROPPED/COMPLETED
+          // blokidagi bilan bir xil chidamlilik namunasi.
+          try {
+            await this.prisma.$transaction(
+              async (tx) => {
+                await this.monthlyChargeService.restoreChargeForReturn(tx, {
+                  enrollmentId: m.id,
+                  returnDate,
+                  today: returnToday,
+                  companyId: m.group.companyId,
+                  reason: reason ?? 'Cascade orqali muzlatishdan chiqarildi',
+                  performedById: userId,
+                });
+              },
+              {
+                isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+                maxWait: 10_000,
+                timeout: 15_000,
+              },
+            );
+          } catch (err) {
+            this.logger.error(
+              `Cascade: enrollment=${m.id} uchun qayta hisoblash yiqildi ` +
+                `(newStatus=${newStatus}) — qolgan yozilishlar davom etadi`,
+              err,
+            );
+          }
         }
       }
     }
