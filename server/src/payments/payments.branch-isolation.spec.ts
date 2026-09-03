@@ -2,7 +2,39 @@ import { NotFoundException } from '@nestjs/common';
 import { PaymentsReadService } from './payments-read.service';
 import { PaymentsDebtorsService } from './payments-debtors.service';
 import { PaymentsPreviewService } from './payments-preview.service';
+import { PaymentsFrozenBalanceService } from './payments-frozen-balance.service';
 import { TransactionsReadService } from '../transactions/transactions-read.service';
+
+/**
+ * Does this `where` confine to exactly these branch ids?
+ *
+ * Exported so every branch-scope spec in this module uses the SAME check
+ * rather than each writing its own (weaker) shape — a loose assertion like
+ * `JSON.stringify(where).includes('branch')` can pass on a hardcoded WRONG
+ * branch id and never catch a leak.
+ */
+export function confinedTo(where: unknown, ids: number[]): boolean {
+  const target = JSON.stringify(ids);
+  const walk = (node: unknown): boolean => {
+    if (node == null || typeof node !== 'object') return false;
+    for (const [key, value] of Object.entries(
+      node as Record<string, unknown>,
+    )) {
+      if (
+        (key === 'branchId' || key === 'mainBranch') &&
+        value &&
+        typeof value === 'object' &&
+        'in' in value &&
+        JSON.stringify(value.in) === target
+      ) {
+        return true;
+      }
+      if (walk(value)) return true;
+    }
+    return false;
+  };
+  return walk(where);
+}
 
 /**
  * Negative cross-branch tests for the money READ paths.
@@ -26,28 +58,6 @@ describe('money reads are branch-isolated', () => {
   const FARGONA = [1];
   const NAMANGAN = [2];
   const COMPANY = 1001;
-
-  /** Does this `where` confine to exactly these branch ids? */
-  function confinedTo(where: unknown, ids: number[]): boolean {
-    const target = JSON.stringify(ids);
-    const walk = (node: any): boolean => {
-      if (node == null || typeof node !== 'object') return false;
-      for (const [key, value] of Object.entries(node)) {
-        if (
-          (key === 'branchId' || key === 'mainBranch') &&
-          value &&
-          typeof value === 'object' &&
-          'in' in (value as any) &&
-          JSON.stringify((value as any).in) === target
-        ) {
-          return true;
-        }
-        if (walk(value)) return true;
-      }
-      return false;
-    };
-    return walk(where);
-  }
 
   describe('PaymentsReadService', () => {
     function make() {
@@ -156,6 +166,60 @@ describe('money reads are branch-isolated', () => {
         service.getDebtorsForGroup('grp-fargona', COMPANY, NAMANGAN),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(confinedTo(captured, NAMANGAN)).toBe(true);
+    });
+  });
+
+  describe('PaymentsFrozenBalanceService', () => {
+    /**
+     * `PaymentsFrozenBalanceService` resolves its own scope from the DB via
+     * `resolveCallerReportBranchIds` → `resolveCallerBranchScope`
+     * (`prisma.user.findFirst`), unlike `PaymentsDebtorsService.getPending`
+     * above which takes an already-resolved `branchIds`. So the caller row
+     * is mocked here rather than the scope being passed in directly.
+     */
+    const callerRow = (branchIds: number[]) => ({
+      mainBranch: null,
+      branches: branchIds.map((branchId) => ({ branchId })),
+      roles: [{ role: { name: 'Branch Director' } }],
+    });
+
+    it('frozen-balances list is confined to the resolved scope', async () => {
+      let captured: any;
+      const prisma: any = {
+        user: { findFirst: jest.fn().mockResolvedValue(callerRow(NAMANGAN)) },
+        student: {
+          findMany: jest.fn((a) => ((captured = a.where), Promise.resolve([]))),
+          count: jest.fn().mockResolvedValue(0),
+        },
+        payment: { groupBy: jest.fn().mockResolvedValue([]) },
+      };
+      const service = new PaymentsFrozenBalanceService(prisma);
+      await service.getFrozenBalances(COMPANY, {
+        userId: 20002,
+        roles: ['Branch Director'],
+      });
+      expect(confinedTo(captured, NAMANGAN)).toBe(true);
+    });
+
+    it('an EMPTY resolved scope yields nothing, never the whole company', async () => {
+      // A Branch Director with no branch attached — `resolveCallerBranchScope`
+      // returns `{ kind: 'branches', branchIds: [] }`, which must short-circuit
+      // to an empty result rather than falling back to every branch.
+      const prisma: any = {
+        user: { findFirst: jest.fn().mockResolvedValue(callerRow([])) },
+        student: {
+          findMany: jest.fn().mockResolvedValue([]),
+          count: jest.fn().mockResolvedValue(0),
+        },
+        payment: { groupBy: jest.fn().mockResolvedValue([]) },
+      };
+      const service = new PaymentsFrozenBalanceService(prisma);
+      const result = await service.getFrozenBalances(COMPANY, {
+        userId: 20003,
+        roles: ['Branch Director'],
+      });
+      expect(result).toEqual({ data: [], total: 0, page: 1, pageSize: 10 });
+      expect(prisma.student.findMany).not.toHaveBeenCalled();
     });
   });
 

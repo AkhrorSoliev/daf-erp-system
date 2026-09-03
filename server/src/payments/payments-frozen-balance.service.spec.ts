@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PaymentsFrozenBalanceService } from './payments-frozen-balance.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { confinedTo } from './payments.branch-isolation.spec';
 
 const FROZEN_BALANCE_MIN_DAYS = 30;
 
@@ -71,7 +72,10 @@ describe('PaymentsFrozenBalanceService', () => {
       expect(where.statusChangedAt.lt).toBeInstanceOf(Date);
     });
 
-    it('29 kun bo`lganni QAYTARMAYDI, 31 kun bo`lganni qaytaradi', async () => {
+    // Bu test faqat cutoff arifmetikasini tekshiradi (aslida 29/31 kunlik
+    // qator tuzilmaydi — mocklangan Prisma bilan buni to'g'ridan-to'g'ri
+    // isbotlash qiyin). Nom brifdan olingan; nima tekshirilayotgani shu izoh.
+    it('29 kun bo`lganni QAYTARMAYDI, 31 kun bo`lganni qaytaradi — cutoff aynan 30 kun oldin', async () => {
       const now = new Date('2026-09-03T00:00:00.000Z');
       jest.useFakeTimers().setSystemTime(now);
       await service.getFrozenBalances(1001, { userId: 10001, roles: ['CEO'] });
@@ -106,7 +110,7 @@ describe('PaymentsFrozenBalanceService', () => {
       jest.useRealTimers();
     });
 
-    it('filial qamrovini qo`llaydi', async () => {
+    it('filial qamrovini qo`llaydi — AYNAN [2] ga cheklaydi, boshqasiga emas', async () => {
       await service.getFrozenBalances(1001, {
         branchId: 2,
         userId: 10002,
@@ -114,7 +118,12 @@ describe('PaymentsFrozenBalanceService', () => {
       });
 
       const where = prisma.student.findMany.mock.calls[0][0].where;
-      expect(JSON.stringify(where)).toContain('branch');
+      // Aniq id tekshiruvi — `JSON.stringify(where).includes('branch')` kabi
+      // yumshoq tekshiruv noto'g'ri filialga qattiq kodlangan bo'lsa ham
+      // o'tib ketardi (masalan `studentBranchWhere([1])` — filial 1ga
+      // sizib chiqish). `confinedTo` esa faqat [2] ga mos kelsa o'tadi.
+      expect(confinedTo(where, [2])).toBe(true);
+      expect(confinedTo(where, [1])).toBe(false);
     });
 
     it('lastPaymentAt ni BITTA guruhlangan so`rov bilan oladi (N+1 yo`q)', async () => {
