@@ -89,6 +89,17 @@ export class MonthlyChargeService {
        * (`Student.discountPercent` izohiga qara).
        */
       discountPercent?: number;
+      /**
+       * Oldindan hal qilingan `payment.excusedCreditEnabled` /
+       * `payment.excusedCreditMonthlyCap`. Berilsa — bu servis
+       * `settingsService`ga UMUMAN murojaat qilmaydi. `createChargesForPeriod`
+       * buni FILIAL boshiga bir marta o'qib (370+ yozilishli tsiklda emas)
+       * shu yerga uzatadi — Redis o'chganda (kesh DBga tushadi) bu N+1
+       * so'rov to'foniga yo'l qo'ymaslik uchun. Berilmasa (masalan
+       * `StudentEnrollmentService`ning bitta yozilish uchun chaqiruvi),
+       * avvalgidek o'zi `settingsService`dan o'qiydi.
+       */
+      excusedCredit?: { enabled: boolean; monthlyCap: number | null };
     },
   ) {
     const { enrollment: enr, periodYear, periodMonth } = params;
@@ -178,28 +189,49 @@ export class MonthlyChargeService {
     );
     // `payment.excusedCreditEnabled` / `payment.excusedCreditMonthlyCap` —
     // sozlamalar panelidan boshqariladi (filial override kompaniyadan
-    // ustun). Kesh orqali o'qiladi (`SettingsService`/`settings-cache.ts`):
-    // bu chaqiruv har bir yozilish uchun bitta so'rov QO'SHMAYDI — oy
-    // boshidagi 370+ yozilishli sikl bitta keshlangan ro'yxatdan o'qiydi.
+    // ustun). `params.excusedCredit` berilgan bo'lsa (`createChargesForPeriod`
+    // shunday chaqiradi — filial boshiga BIR MARTA o'qib, shu yerga uzatadi)
+    // bu yerda HECH QANDAY so'rov ketmaydi. Berilmasa (masalan
+    // `StudentEnrollmentService`ning bitta yozilish uchun chaqiruvi) — o'zi
+    // `settingsService`dan o'qiydi; Redis sog'lom bo'lsa bu kesh o'qishi,
+    // lekin Redis o'chganda DBga tushadi — shuning uchun issiq (370+
+    // yozilishli) tsikl HECH QACHON shu yo'ldan o'tmasligi kerak (aks
+    // holda Redis o'chgan aynan o'sha vaqtda N+1 so'rov to'foniga aylanadi).
     // O'chirilgan bo'lsa — bu oyga HECH QANDAY kredit o'tmaydi (o'tgan
     // oydan qolgan kredit ham shu bilan yo'qoladi, chunki yangi yozuvning
     // `excusedLessons`i 0 bo'lib qoladi — keyingi oy uni ko'rmaydi).
     // Cheklangan bo'lsa — bu oyga ko'pi bilan N dars kiradi.
-    const excusedCreditEnabled = await this.settingsService.get(
-      params.companyId,
-      'payment.excusedCreditEnabled',
-      enr.group.branchId,
-    );
-    const excusedCreditMonthlyCap = await this.settingsService.get(
-      params.companyId,
-      'payment.excusedCreditMonthlyCap',
-      enr.group.branchId,
-    );
+    const excusedCreditEnabled = params.excusedCredit
+      ? params.excusedCredit.enabled
+      : await this.settingsService.get(
+          params.companyId,
+          'payment.excusedCreditEnabled',
+          enr.group.branchId,
+        );
+    const excusedCreditMonthlyCap = params.excusedCredit
+      ? params.excusedCredit.monthlyCap
+      : await this.settingsService.get(
+          params.companyId,
+          'payment.excusedCreditMonthlyCap',
+          enr.group.branchId,
+        );
     const carried = !excusedCreditEnabled
       ? 0
       : excusedCreditMonthlyCap != null
         ? Math.min(rawCarried, excusedCreditMonthlyCap)
         : rawCarried;
+    // Cheklov (`excusedCreditMonthlyCap`) shu OYGA ko'pi bilan N dars
+    // kiritadi — lekin N dan oshgan qism KUYDIRILMAYDI, faqat SHU oyda
+    // ishlatilmaydi. `deferredByCap` o'sha qismni ushlab qoladi va pastda
+    // `excusedLessons`ga qo'shiladi, xuddi "sig'magan" (affordability bilan
+    // chegaralangan) kredit kabi — ikkalasi ham keyingi oy `carriedCredit()`
+    // orqali ko'rinadi. `excusedCreditEnabled=false` holatida rawCarried
+    // ATAYLAB butunlay tashlanadi (yuqoridagi izoh) — bu faqat cheklov
+    // o'zi sabab bo'lgan holatga tegishli.
+    const deferredByCap =
+      excusedCreditEnabled && excusedCreditMonthlyCap != null
+        ? Math.max(0, rawCarried - excusedCreditMonthlyCap)
+        : 0;
     const credit = applyLessonCredit(
       grossAmountStudent,
       perLessonCostStudent,
@@ -223,8 +255,10 @@ export class MonthlyChargeService {
       creditAmount: credit.creditAmount,
       chargedAmount: credit.chargedAmount,
       // Sig'magan kredit kuymaydi: keyingi oy uni ko'rishi uchun shu
-      // oyning uzrli sanog'ida qoldiriladi.
-      excusedLessons: credit.carriedCreditLessons,
+      // oyning uzrli sanog'ida qoldiriladi. Cheklov tashlab yuborgan qism
+      // (`deferredByCap`) ham xuddi shunday — faqat SURILADI, hech qachon
+      // yo'qolmaydi.
+      excusedLessons: credit.carriedCreditLessons + deferredByCap,
       discountPercent,
     };
 
@@ -601,8 +635,42 @@ export class MonthlyChargeService {
     let skipped = 0;
     let totalCharged = 0;
 
+    // `payment.excusedCreditEnabled`/`MonthlyCap` filial darajasida
+    // qulflanadi (override kompaniyadan ustun) — shuning uchun "butunlay
+    // bitta o'qish" TO'G'RI EMAS (filial override'ini yo'qotib qo'yadi),
+    // lekin "har enrollment uchun o'qish" ham KERAK EMAS: bitta company
+    // bir necha o'nlab enrollmentga ega bo'lgan hovlichada odatda bir necha
+    // filial bor, ko'pi bilan. Shu Map filial boshiga BIR MARTA o'qiydi va
+    // qolgan barcha shu filialdagi yozilishlar shu keshlangan qiymatdan
+    // foydalanadi — Redis sog'lom bo'lganda ham (kamroq round-trip), Redis
+    // o'chganda ham (endi 2×filial soni so'rov, 2×370 emas).
+    const excusedCreditByBranch = new Map<
+      number,
+      { enabled: boolean; monthlyCap: number | null }
+    >();
+    const resolveExcusedCredit = async (branchId: number) => {
+      const cached = excusedCreditByBranch.get(branchId);
+      if (cached) return cached;
+      const [enabled, monthlyCap] = await Promise.all([
+        this.settingsService.get(
+          params.companyId,
+          'payment.excusedCreditEnabled',
+          branchId,
+        ),
+        this.settingsService.get(
+          params.companyId,
+          'payment.excusedCreditMonthlyCap',
+          branchId,
+        ),
+      ]);
+      const resolved = { enabled, monthlyCap };
+      excusedCreditByBranch.set(branchId, resolved);
+      return resolved;
+    };
+
     for (const enr of enrollments) {
       try {
+        const excusedCredit = await resolveExcusedCredit(enr.group.branchId);
         const charge = await this.prisma.$transaction(
           (tx) =>
             this.createChargeForEnrollment(tx, {
@@ -612,6 +680,7 @@ export class MonthlyChargeService {
               companyId: params.companyId,
               performedById: params.performedById,
               discountPercent: enr.student?.discountPercent ?? 0,
+              excusedCredit,
             }),
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
         );

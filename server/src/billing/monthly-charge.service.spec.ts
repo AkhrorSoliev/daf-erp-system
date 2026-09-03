@@ -267,6 +267,76 @@ describe('MonthlyChargeService', () => {
       expect(charge?.creditLessons).toBe(1);
       expect(charge?.creditAmount).toBe(32_143);
       expect(charge?.chargedAmount).toBe(417_857); // 450 000 - 32 143
+      // Qolgan 1 tasi KUYMAYDI — keyingi oy ko'rishi uchun shu hisobning
+      // o'z uzrli sanog'ida qoladi (regression: avval bu yerda 0 bo'lib,
+      // cheklovdan oshgan kredit butunlay yo'qolardi).
+      expect(charge?.excusedLessons).toBe(1);
+    });
+
+    it('cheklov ustma-ust oylarga SURADI, hech narsa kuymaydi (5 ta, cheklov 2 -> 2, 2, 1)', async () => {
+      settingsMock.get.mockImplementation((_companyId: number, key: string) => {
+        if (key === 'payment.excusedCreditEnabled') return Promise.resolve(true);
+        if (key === 'payment.excusedCreditMonthlyCap') return Promise.resolve(2);
+        return Promise.resolve(undefined);
+      });
+
+      // Har `createChargeForEnrollment` chaqiruvi `enrollmentMonthlyCharge.
+      // findUnique`ni aniq IKKI marta chaqiradi, shu tartibda: (1) "joriy
+      // davr uchun hisob bormi" (har doim yo'q — bu test uchtala oyni ham
+      // yangidan hisoblaydi), (2) `carriedCredit()` orqali "o'tgan oy"ning
+      // uzrli sanog'i. Har chaqiruvdan oldin shu ikkitasini navbat bilan
+      // qo'yib, davrga qarab shoxlanadigan qidiruvga tayanmaymiz — bu yerda
+      // aniq nechta va qaysi tartibda chaqirilishi muhim.
+      const queueCurrentThenPrevious = (prevExcusedLessons: number) => {
+        prismaMock.enrollmentMonthlyCharge.findUnique
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce({ excusedLessons: prevExcusedLessons });
+      };
+
+      // Oy 1 (sentabr): 5 ta bor, cheklov 2 -> 2 tasi ishlatiladi, 3 tasi
+      // suriladi (cheklovdan oshgan qism, hammasi affordable — 14 dars
+      // narxi 450 000 buni yutadi).
+      queueCurrentThenPrevious(5);
+      const charge1 = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+      expect(charge1?.creditLessons).toBe(2);
+      expect(charge1?.excusedLessons).toBe(3);
+
+      // Oy 2 (oktabr): 3 ta bor, cheklov 2 -> 2 tasi ishlatiladi, 1 tasi
+      // suriladi.
+      queueCurrentThenPrevious(charge1!.excusedLessons);
+      const charge2 = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 10,
+        companyId: 1,
+      });
+      expect(charge2?.creditLessons).toBe(2);
+      expect(charge2?.excusedLessons).toBe(1);
+
+      // Oy 3 (noyabr): 1 ta qoldi, cheklov 2 dan kam bo'lgani uchun
+      // cheklov ishlamaydi — bittasi ham ishlatiladi, qoldiq 0.
+      queueCurrentThenPrevious(charge2!.excusedLessons);
+      const charge3 = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 11,
+        companyId: 1,
+      });
+      expect(charge3?.creditLessons).toBe(1);
+      expect(charge3?.excusedLessons).toBe(0);
+
+      // Jami ishlatilgan: 2 + 2 + 1 = 5 — boshlang'ich 5 tadan bittasi
+      // ham yo'qolmagan.
+      expect(
+        (charge1?.creditLessons ?? 0) +
+          (charge2?.creditLessons ?? 0) +
+          (charge3?.creditLessons ?? 0),
+      ).toBe(5);
     });
 
     it('LESSON_PACK kursini butunlay chetlab o`tadi', async () => {
@@ -582,6 +652,52 @@ describe('MonthlyChargeService', () => {
 
       expect(res).toEqual({ created: 0, skipped: 0, totalCharged: 0 });
       expect(chargeSpy).not.toHaveBeenCalled();
+    });
+
+    it('sozlamalarni FILIAL boshiga bir marta o`qiydi — har yozilish uchun emas (Redis o`chganda N+1 to`foniga yo`l qo`ymaslik)', async () => {
+      // `chargeSpy` bu yerda ustidan yozilmaydi (haqiqiy implementatsiya
+      // ishlaydi) — maqsad settingsMock.get chaqiruvlarini sanash. 3 ta
+      // yozilish, lekin faqat 2 ta FARQLI filial (1 va 2) — to'g'ri
+      // xatti-harakat: settingsService.get 2 kalit x 2 filial = 4 marta
+      // chaqiriladi, 2 kalit x 3 yozilish = 6 marta emas.
+      const enrOnBranch = (id: string, branchId: number) =>
+        enrollment({
+          id,
+          group: {
+            id: `grp-${branchId}`,
+            branchId,
+            companyId: 1,
+            statusEnum: 'ACTIVE',
+            exactDays: ['saturday', 'thursday', 'tuesday'],
+            course: {
+              price: 450_000,
+              paymentModel: 'MONTHLY',
+              lessonPaymentCount: 12,
+            },
+          },
+        });
+      prismaMock.enrollment.findMany.mockResolvedValueOnce([
+        enrOnBranch('enr-a', 1),
+        enrOnBranch('enr-b', 1),
+        enrOnBranch('enr-c', 2),
+      ]);
+      // Har yozilish o'z hisobi uchun "mavjudmi" va "o'tgan oy krediti"
+      // so'rovlarini qiladi — ikkalasiga ham "yo'q" javob beramiz, faqat
+      // to'liq oqim yiqilmasligi kerak (haqiqiy hisob mantig'i tekshirilmayapti).
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue(null);
+
+      await service.createChargesForPeriod({
+        companyId: 1,
+        periodYear: 2026,
+        periodMonth: 10,
+      });
+
+      const excusedCreditCalls = settingsMock.get.mock.calls.filter(
+        ([, key]: [number, string]) =>
+          key === 'payment.excusedCreditEnabled' ||
+          key === 'payment.excusedCreditMonthlyCap',
+      );
+      expect(excusedCreditCalls).toHaveLength(4);
     });
   });
 
