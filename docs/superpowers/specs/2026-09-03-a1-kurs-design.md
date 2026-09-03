@@ -47,8 +47,9 @@ A1
     └ «Kurz und klar»            15 savol      butun unit + Redemittel + dialog
 ```
 
-Unitda ≈ 18 seans, seans 3–5 daqiqa. 12 unitda ≈ 216 seans ≈ 15 soat sof
-mashq. Bu sinf darsining o'rnini bosmaydi — uy ishi va takror vazifasini
+Seans 3–5 daqiqa. Bo'limi 5 ta bo'lgan unitda 15 seans (5×2 dars + 4 o'tish
++ 1 yakun), 6 ta bo'lganida 18 seans. 12 unitda jami **192 seans** ≈ 13 soat
+sof mashq. Bu sinf darsining o'rnini bosmaydi — uy ishi va takror vazifasini
 bajaradi.
 
 **O'tish sinovi** alohida savol turi emas, **aralash tarkib**: yarmi endi
@@ -257,8 +258,8 @@ Tekshirilmagan generatsiya jimgina buzadi.
 nima chiqqani» — hammasi `DafAttempt` dan hisoblanadi. Alohida sanagich
 haqiqatdan uzilib qolishi mumkin.
 
-**Savollar bazada saqlanmaydi** — har so'rovda quriladi. 64 bo'lim × 18
-seans × 12 savol = 13 000 dan ortiq qator bo'lardi va material
+**Savollar bazada saqlanmaydi** — har so'rovda quriladi. 192 seans × 12 savol
+= 2 300 dan ortiq qator bo'lardi va material
 o'zgarganda eskirardi.
 
 ### 7.1 Eski DiB kontenti
