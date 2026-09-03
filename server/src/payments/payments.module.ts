@@ -4,6 +4,7 @@ import { PaymentsWriteService } from './payments-write.service';
 import { PaymentsReadService } from './payments-read.service';
 import { PaymentsDebtorsService } from './payments-debtors.service';
 import { PaymentsPreviewService } from './payments-preview.service';
+import { PaymentsFrozenBalanceService } from './payments-frozen-balance.service';
 import { PaymentsController } from './payments.controller';
 import { PaymentEventsListener } from './payment-events.listener';
 import { TransactionsModule } from '../transactions/transactions.module';
@@ -20,6 +21,7 @@ import { MockExamsModule } from '../mock-exams/mock-exams.module';
     PaymentsReadService,
     PaymentsDebtorsService,
     PaymentsPreviewService,
+    PaymentsFrozenBalanceService,
     PaymentEventsListener,
   ],
   exports: [PaymentsService, PaymentsDebtorsService],

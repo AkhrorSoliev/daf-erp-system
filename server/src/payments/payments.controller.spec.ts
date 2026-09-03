@@ -23,6 +23,7 @@ describe('PaymentsController — role guards', () => {
     getDebtorSummary: jest.fn().mockResolvedValue({}),
     getPending: jest.fn().mockResolvedValue({}),
     getDebtorsForGroup: jest.fn().mockResolvedValue({}),
+    getFrozenBalances: jest.fn().mockResolvedValue({}),
   };
 
   beforeEach(async () => {
@@ -128,6 +129,60 @@ describe('PaymentsController — role guards', () => {
         status: 'all',
         userId: 99,
         roles: ['CEO'],
+      });
+    });
+  });
+
+  describe('frozen-balances list', () => {
+    it('has the same @Roles metadata as the debtors endpoint (both fall back to the class-level guard)', () => {
+      const frozenRoles = reflector.get<string[] | undefined>(
+        ROLES_KEY,
+        controller.getFrozenBalances,
+      );
+      const debtorsRoles = reflector.get<string[] | undefined>(
+        ROLES_KEY,
+        controller.getDebtors,
+      );
+      // Neither endpoint declares its own @Roles() — both rely purely on the
+      // controller class-level @Roles('CEO', 'Branch Director',
+      // 'Administrator', 'Cashier'). Method-level metadata is therefore
+      // undefined for both, and RolesGuard falls back to the class.
+      expect(frozenRoles).toEqual(debtorsRoles);
+      expect(frozenRoles).toBeUndefined();
+    });
+
+    it('should allow CEO, Branch Director, Administrator and Cashier (class-level guard)', () => {
+      for (const role of [
+        'CEO',
+        'Branch Director',
+        'Administrator',
+        'Cashier',
+      ]) {
+        const ctx = mockExecutionContext(controller.getFrozenBalances, [role]);
+        expect(guard.canActivate(ctx)).toBe(true);
+      }
+    });
+
+    it('should deny Teacher (class-level guard)', () => {
+      const ctx = mockExecutionContext(controller.getFrozenBalances, [
+        'Teacher',
+      ]);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+
+    it('delegates getFrozenBalances with branch scope (userId + roles)', () => {
+      controller.getFrozenBalances(
+        { branchId: 2, page: 1, pageSize: 10 } as any,
+        99,
+        1001,
+        ['Branch Director'],
+      );
+      expect(mockService.getFrozenBalances).toHaveBeenCalledWith(1001, {
+        branchId: 2,
+        page: 1,
+        pageSize: 10,
+        userId: 99,
+        roles: ['Branch Director'],
       });
     });
   });
