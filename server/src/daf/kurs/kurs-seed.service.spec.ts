@@ -51,6 +51,8 @@ function fakePrisma() {
         if (!sectionRows.has(key)) sectionRows.set(key, { id: ++seq });
         return sectionRows.get(key);
       }),
+      /** Sinovlar buzilgan holatni sinash uchun bu yerni qayta yozadi. */
+      findMany: jest.fn(async () => [] as { code: string }[]),
     },
     dafLesson: {
       upsert: jest.fn(async ({ where }: any) => {
@@ -101,5 +103,43 @@ describe('KursSeedService', () => {
     const call = prisma.dafSection.upsert.mock.calls[0][0] as any;
     expect(call.create.unitId).toBe(1);
     expect(call.create.code).toBe('u01-s1');
+  });
+
+  it('bo`lim seansini o`z bo`limiga, yakunini null`ga bog`laydi', async () => {
+    const prisma = fakePrisma();
+    await new KursSeedService(prisma as any).seed(kurs());
+
+    const bId = prisma.sectionRows.get('u01-s2')!.id;
+    const calls = prisma.dafLesson.upsert.mock.calls.map((c: any) => c[0]);
+
+    // ikkinchi bo'limning "tanishuv" darsi (u01-s02-a) shu bo'limga bog'lanishi kerak
+    const sectionACall = calls.find((c: any) => c.create.sourceId === 'u01-s02-a');
+    expect(sectionACall.create.sectionId).toBe(bId);
+    expect(sectionACall.update.sectionId).toBe(bId);
+
+    // unit yakuni (u01-test) hech qaysi bo'limga bog'lanmaydi
+    const testCall = calls.find((c: any) => c.create.sourceId === 'u01-test');
+    expect(testCall.create.sectionId).toBeNull();
+    expect(testCall.update.sectionId).toBeNull();
+  });
+
+  it('bazada xaritada yo`q bo`lim kodi qolgan bo`lsa, rad etadi', async () => {
+    const prisma = fakePrisma();
+    prisma.dafSection.findMany = jest.fn(async () => [
+      { code: 'u01-s1' },
+      { code: 'u01-eski' },
+    ]);
+
+    let error: unknown;
+    try {
+      await new KursSeedService(prisma as any).seed(kurs());
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error).toBeInstanceOf(Error);
+    const message = (error as Error).message;
+    expect(message).toContain('u01'); // qaysi unit
+    expect(message).toContain('u01-eski'); // qaysi kod yetim qoldi
   });
 });

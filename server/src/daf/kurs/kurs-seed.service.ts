@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { planLessons } from './kurs-lessons';
-import type { KursFile } from './kurs.types';
+import type { KursFile, KursUnitSpec } from './kurs.types';
 
 export interface KursSeedReport {
   units: number;
@@ -44,6 +44,8 @@ export class KursSeedService {
           retiredAt: null,
         },
       });
+
+      await this.assertNoOrphanSections(unit.id, u);
 
       const sectionIdByCode = new Map<string, number>();
 
@@ -109,6 +111,35 @@ export class KursSeedService {
     );
 
     return { units: file.units.length, sections, lessons, retired };
+  }
+
+  /**
+   * Unit ichida xaritada yo'q bo'lim kodi qolib ketganini tekshiradi.
+   *
+   * `dafSection.upsert` faqat `code` bo'yicha ishlaydi: bo'lim nomi
+   * o'zgartirilsa yoki xaritadan olib tashlansa, eski qator yangilanmaydi
+   * ham, nafaqaga chiqarilmaydi ham — jonli unitga yopishib qoladi, o'z
+   * lug'ati va darslari bilan yetim bo'lib. Almashtiruvchi bo'lim xuddi
+   * shu `order`ni olsa, `@@unique([unitId, order])` yarim yo'lda yiqiladi.
+   *
+   * Bu yerda rekonsiliatsiya QILINMAYDI — keyingi reja ishi. Faqat ovozli
+   * to'xtaydi: sukut buzilishdan ko'ra ochiq xatolik yaxshiroq.
+   */
+  private async assertNoOrphanSections(unitId: number, unit: KursUnitSpec): Promise<void> {
+    const liveCodes = new Set(unit.sections.map((s) => s.code));
+    const existing = await this.prisma.dafSection.findMany({
+      where: { unitId },
+      select: { code: true },
+    });
+    const orphans = existing.map((s) => s.code).filter((code) => !liveCodes.has(code));
+
+    if (orphans.length > 0) {
+      throw new Error(
+        `Unit "${unit.code}" bazada bo'lim kodi(lari)ga ega, lekin xaritada yo'q: ` +
+          `${orphans.join(', ')}. Xarita bo'lim kodini o'zgartira yoki o'chira olmaydi — ` +
+          `nafaqaga chiqarishni keyingi reja hal qiladi.`,
+      );
+    }
   }
 
   /**
