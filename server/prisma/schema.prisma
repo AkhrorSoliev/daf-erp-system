@@ -385,6 +385,8 @@ model User {
 
   approvedTelegramGroups TelegramGroup[] @relation("TelegramGroupApprovedBy")
 
+  updatedSettings Setting[] @relation("SettingUpdatedBy")
+
   @@index([deletedAt])
   @@index([status])
 }
@@ -442,9 +444,35 @@ model Branch {
   mockExams       MockExam[]
   holidays        Holiday[]
   monthlyCharges  EnrollmentMonthlyCharge[]
+  settings        Setting[]
 
   @@index([deletedAt])
   @@index([status])
+}
+
+/// Markaziy sozlamalar panelining saqlash joyi (`/settings`).
+///
+/// Bitta kalit ikki darajada yozilishi mumkin: kompaniya darajasida
+/// (`branchId = null`) va filial darajasida (`branchId` bilan) — filial
+/// qiymati kompaniya qiymatini USTIDAN yozadi (`SettingsService.get`).
+/// `value` — `Json`, lekin bu jadvalga hech qanday chaqiruvchi to'g'ridan-
+/// to'g'ri yozmaydi/o'qimaydi: yagona kirish nuqtasi `SettingsService`,
+/// u `SETTING_DEFINITIONS` ro'yxati orqali tipli qiymatga aylantiradi.
+model Setting {
+  id          String   @id @default(uuid())
+  companyId   Int
+  company     Company  @relation(fields: [companyId], references: [id])
+  branchId    Int?
+  branch      Branch?  @relation(fields: [branchId], references: [id])
+  key         String
+  value       Json
+  updatedById Int?
+  updatedBy   User?    @relation("SettingUpdatedBy", fields: [updatedById], references: [id])
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@unique([companyId, branchId, key])
+  @@index([companyId, key])
 }
 
 model Room {
@@ -1567,6 +1595,7 @@ model Company {
   mockExamParticipants        MockExamParticipant[]
   holidays                    Holiday[]
   monthlyCharges              EnrollmentMonthlyCharge[]
+  settings                    Setting[]
 }
 
 enum TelegramGroupStatus {
