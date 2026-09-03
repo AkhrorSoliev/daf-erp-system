@@ -123,7 +123,7 @@
   {
    "section": "u01-s2",
    "de": "Auf Wiedersehen, bis bald!",
-   "uz": "Xayr, tez orada ko'rishamiz!",
+   "uz": "Xayrli qoling, tez orada ko'rishamiz!",
    "wordCount": 4,
    "origin": "GENERATED"
   },
@@ -157,11 +157,58 @@
   },
   {
    "section": "u01-s5",
-   "de": "Ist das ein W oder ein Y?",
-   "uz": "Bu W-mi yoki Y-mi?",
+   "de": "Buchstabieren Sie das, bitte.",
+   "uz": "Buni harflab ayting, iltimos.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "section": "u01-s5",
+   "de": "Wir buchstabieren I, C, H.",
+   "uz": "Biz I, C, H deb harflaymiz.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "tts": "Wir buchstabieren Ih, Tseh, Hah."
+  },
+  {
+   "section": "u01-s5",
+   "de": "Ja, das ist ein C.",
+   "uz": "Ha, bu C harfi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "tts": "Ja, das ist ein Tseh."
+  },
+  {
+   "section": "u01-s5",
+   "de": "Nein, das ist ein E.",
+   "uz": "Yo'q, bu E harfi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "tts": "Nein, das ist ein Eh."
+  },
+  {
+   "section": "u01-s5",
+   "de": "Ist das ein H oder ein J?",
+   "uz": "Bu H-mi yoki J-mi?",
    "wordCount": 7,
    "origin": "GENERATED",
-   "tts": "Ist das ein Weh oder ein Ypsilon?"
+   "tts": "Ist das ein Hah oder ein Jott?"
+  },
+  {
+   "section": "u01-s5",
+   "de": "Ist das ein I oder ein Z?",
+   "uz": "Bu I-mi yoki Z-mi?",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "tts": "Ist das ein Ih oder ein Zett?"
+  },
+  {
+   "section": "u01-s5",
+   "de": "Ist das ein V oder ein W?",
+   "uz": "Bu V-mi yoki W-mi?",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "tts": "Ist das ein Fau oder ein Weh?"
   },
   {
    "section": "u01-s3",
@@ -218,54 +265,6 @@
    "uz": "Uch va besh - sakkiz bo'ladi.",
    "wordCount": 5,
    "origin": "GENERATED"
-  },
-  {
-   "section": "u01-s5",
-   "de": "Ist das ein C oder ein E?",
-   "uz": "Bu C-mi yoki E-mi?",
-   "wordCount": 7,
-   "origin": "GENERATED",
-   "tts": "Ist das ein Tseh oder ein Eh?"
-  },
-  {
-   "section": "u01-s5",
-   "de": "Ist das ein H oder ein J?",
-   "uz": "Bu H-mi yoki J-mi?",
-   "wordCount": 7,
-   "origin": "GENERATED",
-   "tts": "Ist das ein Hah oder ein Jott?"
-  },
-  {
-   "section": "u01-s5",
-   "de": "Ist das ein V oder ein W?",
-   "uz": "Bu V-mi yoki W-mi?",
-   "wordCount": 7,
-   "origin": "GENERATED",
-   "tts": "Ist das ein Fau oder ein Weh?"
-  },
-  {
-   "section": "u01-s5",
-   "de": "Ist das ein I oder ein Z?",
-   "uz": "Bu I-mi yoki Z-mi?",
-   "wordCount": 7,
-   "origin": "GENERATED",
-   "tts": "Ist das ein Ih oder ein Zett?"
-  },
-  {
-   "section": "u01-s5",
-   "de": "Ist das ein E oder ein V?",
-   "uz": "Bu E-mi yoki V-mi?",
-   "wordCount": 7,
-   "origin": "GENERATED",
-   "tts": "Ist das ein Eh oder ein Fau?"
-  },
-  {
-   "section": "u01-s5",
-   "de": "Ist das ein C oder ein Z?",
-   "uz": "Bu C-mi yoki Z-mi?",
-   "wordCount": 7,
-   "origin": "GENERATED",
-   "tts": "Ist das ein Tseh oder ein Zett?"
   }
  ]
 }

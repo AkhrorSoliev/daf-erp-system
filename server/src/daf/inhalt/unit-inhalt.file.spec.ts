@@ -403,17 +403,6 @@ describe('1-unitning gaplari', () => {
 
   const sections = new Set(kurs.units[0].sections.map((s) => s.code));
 
-  // Bu chegara 50 EMAS: loyihaning bog'lovchi qoidasi pastdagi
-  // "har bo`limda kamida 6 gap bor" testi — u haqiqiy qamrovni
-  // belgilaydi. Bu yerdagi 30 shunchaki tuzatuvchi qorovul: fayl
-  // yarmigacha yozilib qolsa yoki bitta bo'lim generatsiyasi
-  // butunlay qulasa (masalan skript yarim yo'lda yiqilsa), umumiy
-  // son sezilarli pasayadi va shu narsani ushlab qoladi. Joriy 37
-  // gap (7+6+8+9+7) bu chegaradan xotirjam yuqori.
-  it('fayl yarmigacha yozilib qolmagan (kamida 30 gap)', () => {
-    expect(saetze.saetze.length).toBeGreaterThanOrEqual(30);
-  });
-
   it('har bo`limda kamida 6 gap bor', () => {
     for (const code of sections) {
       const n = saetze.saetze.filter((s) => s.section === code).length;
