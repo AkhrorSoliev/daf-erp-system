@@ -1,0 +1,72 @@
+{
+  "unit": "u01",
+  "regeln": [
+    {
+      "section": "u01-s1",
+      "titelDe": "Personalpronomen ich/du, sein",
+      "titelUz": "ich/du olmoshlari va sein fe'li",
+      "erklaerungUz": "Nemis tilida gapiruvchi kim ekani olmosh bilan ko'rsatiladi: o'zim haqimda gapirsam ich, suhbatdoshimga to'g'ridan-to'g'ri murojaat qilsam du ishlataman. sein (bo'lmoq) fe'li ular bilan birga o'zgaradi: ich bin, du bist.",
+      "beispiele": [
+        { "de": "Hallo! Ich bin Anna.", "uz": "Salom! Men Annaman." },
+        { "de": "Bist du Timur?", "uz": "Sen Timurmisan?" },
+        { "de": "Ja, ich bin Timur.", "uz": "Ha, men Timurman." },
+        { "de": "Nein, ich bin nicht Timur. Ich bin Nodira.", "uz": "Yo'q, men Timur emasman. Men Nodiraman." },
+        { "de": "Wie ist dein Name?", "uz": "Ismingiz (isming) nima?" },
+        { "de": "Mein Name ist Anna.", "uz": "Mening ismim Anna." }
+      ]
+    },
+    {
+      "section": "u01-s2",
+      "titelDe": "Sie-Form, W-Frage",
+      "titelUz": "Sie shakli va so'roq gap",
+      "erklaerungUz": "Notanish yoki katta yoshli odamga hurmat bilan murojaat qilganda du emas, Sie ishlatiladi — bu 'Siz' ma'nosini beradi va fe'l infinitiv bilan bir xil bo'ladi: Sie heißen, Sie sind. Savol so'zi (wer — kim, wie — qanday) gap boshida turadi: Wie heißen Sie?",
+      "beispiele": [
+        { "de": "Guten Tag, Frau Karimova!", "uz": "Xayrli kun, Karimova xonim!" },
+        { "de": "Guten Tag, Herr Karimov!", "uz": "Xayrli kun, Karimov janob!" },
+        { "de": "Wie heißen Sie?", "uz": "Ismingiz nima (rasmiy)?" },
+        { "de": "Wer sind Sie?", "uz": "Siz kimsiz?" },
+        { "de": "Auf Wiedersehen, Frau Karimova!", "uz": "Xayr, Karimova xonim!" },
+        { "de": "Danke!", "uz": "Rahmat!" }
+      ]
+    },
+    {
+      "section": "u01-s3",
+      "titelDe": "Verben kommen/wohnen, aus/in",
+      "titelUz": "kommen/wohnen tuslanishi, aus/in",
+      "erklaerungUz": "Kommen (kelmoq) va wohnen (yashamoq) fe'llari ich/du bilan o'zgaradi: ich komme, du kommst; ich wohne, du wohnst. Qayerdan kelganingni aytishda aus (masalan, aus Usbekistan), qayerda yashashingni aytishda esa in (masalan, in Deutschland) ishlatiladi.",
+      "beispiele": [
+        { "de": "Woher kommst du?", "uz": "Sen qayerdansan?" },
+        { "de": "Ich komme aus Usbekistan.", "uz": "Men O'zbekistondan kelaman." },
+        { "de": "Wo wohnst du?", "uz": "Sen qayerda yashaysan?" },
+        { "de": "Ich wohne in Deutschland.", "uz": "Men Germaniyada yashayman." },
+        { "de": "Kommst du aus Deutschland?", "uz": "Sen Germaniyadan kelasanmi?" }
+      ]
+    },
+    {
+      "section": "u01-s4",
+      "titelDe": "Zahlen, Telefonnummer",
+      "titelUz": "sonlar va telefon raqami",
+      "erklaerungUz": "0 dan 11 gacha har bir son alohida nemischa so'z: null, eins, zwei... Telefon raqamini aytganda nemislar sonlarni butun holda emas, har bir raqamni birma-bir aytadi — xuddi bizning 'nol-bir-ikki' deb sanashimizga o'xshaydi.",
+      "beispiele": [
+        { "de": "Null, eins, zwei.", "uz": "Nol, bir, ikki." },
+        { "de": "Drei, vier, fünf.", "uz": "Uch, to'rt, besh." },
+        { "de": "Sechs, sieben, acht.", "uz": "Olti, yetti, sakkiz." },
+        { "de": "Neun, zehn, elf.", "uz": "To'qqiz, o'n, o'n bir." },
+        { "de": "Null eins zwei drei vier fünf.", "uz": "Telefon raqami: nol-bir-ikki-uch-to'rt-besh, har raqam alohida aytiladi." }
+      ]
+    },
+    {
+      "section": "u01-s5",
+      "titelDe": "buchstabieren, Wie schreibt man das?",
+      "titelUz": "harflab aytish",
+      "erklaerungUz": "Ba'zi harflarning nemischa nomi yozilishidan farq qiladi — masalan V 'Fau', W esa 'Veh' deb o'qiladi. Bir so'zni harflab aytish so'ralganda 'Buchstabieren Sie bitte' deyiladi, yozilishini so'rash uchun esa 'Wie schreibt man das?' ishlatiladi.",
+      "beispiele": [
+        { "de": "Wie schreibt man das?", "uz": "Bu qanday yoziladi?" },
+        { "de": "Buchstabieren Sie bitte.", "uz": "Iltimos, harflab ayting." },
+        { "de": "Ist das ein Z?", "uz": "Bu 'Z' harfimi?" },
+        { "de": "Ja, das ist ein Z.", "uz": "Ha, bu 'Z' harfi." },
+        { "de": "Ist das V oder W?", "uz": "Bu 'V' yoki 'W'mi?" }
+      ]
+    }
+  ]
+}

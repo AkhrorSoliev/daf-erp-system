@@ -3,6 +3,7 @@ import { join } from 'path';
 import { validateWortliste } from './wortliste.validate';
 import type { WortlisteFile } from './wortliste.types';
 import type { WoerterFile } from './unit-inhalt.types';
+import type { GrammatikFile, RedemittelFile } from './unit-inhalt.types';
 import type { KursFile } from '../kurs/kurs.types';
 import type { GoetheFile } from './goethe-parse';
 
@@ -93,5 +94,74 @@ describe('1-unitning so`zlari', () => {
         .sort((a, b) => a - b);
       expect(orders).toEqual(orders.map((_, i) => i + 1));
     }
+  });
+});
+
+describe('1-unitning grammatikasi va iboralari', () => {
+  const kurs = read<KursFile>('kurs.json');
+  const woerter = read<WoerterFile>('u01', 'woerter.json');
+  const grammatik = read<GrammatikFile>('u01', 'grammatik.json');
+  const redemittel = read<RedemittelFile>('u01', 'redemittel.json');
+
+  const sections = kurs.units[0].sections.map((s) => s.code);
+  const bekannt = new Set(
+    woerter.woerter.flatMap((w) => w.de.toLowerCase().split(/\s+/)),
+  );
+
+  it('har bo`limning qoidasi bor', () => {
+    expect(grammatik.regeln.map((r) => r.section).sort()).toEqual(
+      [...sections].sort(),
+    );
+  });
+
+  it('har qoidada kamida 4 misol bor', () => {
+    const kam = grammatik.regeln.filter((r) => r.beispiele.length < 4);
+    expect(kam.map((r) => r.section)).toEqual([]);
+  });
+
+  it('qoida izohi o`zbekcha va bo`sh emas', () => {
+    expect(
+      grammatik.regeln.filter((r) => r.erklaerungUz.trim().length < 20),
+    ).toEqual([]);
+  });
+
+  it('har bo`limda kamida 3 ta ibora bor', () => {
+    for (const code of sections) {
+      const n = redemittel.phrasen.filter((p) => p.section === code).length;
+      expect(`${code}: ${n}`).toBe(`${code}: ${Math.max(n, 3)}`);
+    }
+  });
+
+  it('ibora va misollarning har so`zi tanish', () => {
+    // Yordamchi so'zlar ro'yxati: ular hamma bo'limda ishlatiladi va
+    // lug'atga kirmaydi.
+    const hilfs = new Set([
+      'ich','du','sie','er','es','wir','ihr','bin','bist','ist','sind','seid',
+      'und','oder','nicht','ja','nein','wie','wo','was','wer','woher','das',
+      'der','die','ein','eine','mein','dein','sehr','auch','bitte','danke',
+      'in','aus','aus.','?','!',
+      // Ismlar: namuna dialoglarda ishlatilgan atoqli otlar. Bular
+      // lug'at so'zi emas — hech qanday tarjima yoki o'rgatishni talab
+      // qilmaydi, faqat suhbatdosh nomi sifatida turibdi.
+      'anna','timur','nodira','karimova','karimov',
+      // kommen/wohnen fe'llarining ich/du shakllari — aynan shu
+      // bo'limning grammatikasi (u01-s3), infinitiv allaqachon
+      // lug'atda; tuslanish qoidaning o'zida (erklaerungUz) tushuntiriladi.
+      'komme','kommst','wohne','wohnst',
+      // u01-s5 grammatikasining nomi kurs.json'da aynan shu so'zlar
+      // bilan berilgan: "buchstabieren, Wie schreibt man das?".
+      'buchstabieren','schreibt','man',
+    ]);
+    const unbekannt = new Set<string>();
+    const check = (s: string): void => {
+      for (const w of s.toLowerCase().replace(/[.,!?]/g, '').split(/\s+/)) {
+        if (w === '') continue;
+        if (bekannt.has(w) || hilfs.has(w)) continue;
+        unbekannt.add(w);
+      }
+    };
+    grammatik.regeln.forEach((r) => r.beispiele.forEach((b) => check(b.de)));
+    redemittel.phrasen.forEach((p) => check(p.de));
+    expect([...unbekannt]).toEqual([]);
   });
 });

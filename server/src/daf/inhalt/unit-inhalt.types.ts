@@ -51,3 +51,37 @@ export interface WoerterFile {
   unit: string;
   woerter: Wort[];
 }
+
+/** Bo'limning grammatika qoidasi — izoh o'zbekcha, misollar nemischa. */
+export interface Regel {
+  section: string;
+  titelDe: string;
+  titelUz: string;
+  /**
+   * Qoidaning o'zbekcha izohi.
+   *
+   * Nemischa atama (`Personalpronomen`) sarlavhada qoladi, izoh esa
+   * o'zbekcha bo'ladi: boshlovchi qoidani ona tilida tushunadi, atamani
+   * esa keyin taniydi.
+   */
+  erklaerungUz: string;
+  beispiele: Sprechbar[];
+}
+
+export interface GrammatikFile {
+  unit: string;
+  regeln: Regel[];
+}
+
+/** Vaziyat → tayyor ibora. */
+export interface Phrase extends Sprechbar {
+  section: string;
+  /** Nemischa funksiya nomi: `sich vorstellen`. */
+  funktion: string;
+  funktionUz: string;
+}
+
+export interface RedemittelFile {
+  unit: string;
+  phrasen: Phrase[];
+}

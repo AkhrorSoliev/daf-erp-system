@@ -9,7 +9,10 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { validateWortliste } from '../src/daf/inhalt/wortliste.validate';
 import type { WortlisteFile } from '../src/daf/inhalt/wortliste.types';
-import type { WoerterFile } from '../src/daf/inhalt/unit-inhalt.types';
+import type {
+  WoerterFile,
+  GrammatikFile,
+} from '../src/daf/inhalt/unit-inhalt.types';
 import type { KursFile } from '../src/daf/kurs/kurs.types';
 import type { GoetheFile } from '../src/daf/inhalt/goethe-parse';
 
@@ -41,6 +44,18 @@ function main(): void {
     const w = read<WoerterFile>(code, 'woerter.json');
     const core = w.woerter.filter((x) => x.core).length;
     if (core !== 50) problems.push(`${code}: ${core} ta asosiy so'z — 50 kerak`);
+  }
+
+  const grammatikPath = join(A1, code, 'grammatik.json');
+  if (!existsSync(grammatikPath)) {
+    problems.push(`${code}: grammatik.json yo'q`);
+  } else {
+    const g = read<GrammatikFile>(code, 'grammatik.json');
+    const unit = read<KursFile>('kurs.json').units.find((u) => u.code === code);
+    const want = unit?.sections.length ?? 0;
+    if (g.regeln.length !== want) {
+      problems.push(`${code}: ${g.regeln.length} qoida — ${want} kerak`);
+    }
   }
 
   if (problems.length > 0) {

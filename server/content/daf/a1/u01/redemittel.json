@@ -1,0 +1,138 @@
+{
+  "unit": "u01",
+  "phrasen": [
+    {
+      "section": "u01-s1",
+      "funktion": "begrüßen",
+      "funktionUz": "salomlashish",
+      "de": "Hallo!",
+      "uz": "Salom!"
+    },
+    {
+      "section": "u01-s1",
+      "funktion": "sich vorstellen",
+      "funktionUz": "o'zini tanishtirish",
+      "de": "Ich bin Anna.",
+      "uz": "Men Annaman."
+    },
+    {
+      "section": "u01-s1",
+      "funktion": "sich verabschieden",
+      "funktionUz": "xayrlashish",
+      "de": "Tschüss! Bis bald.",
+      "uz": "Xayr! Tez orada ko'rishguncha."
+    },
+    {
+      "section": "u01-s1",
+      "funktion": "gute Nacht wünschen",
+      "funktionUz": "xayrli tun tilash",
+      "de": "Gute Nacht!",
+      "uz": "Xayrli tun!"
+    },
+    {
+      "section": "u01-s2",
+      "funktion": "formell grüßen",
+      "funktionUz": "rasmiy salomlashish",
+      "de": "Guten Tag, Frau Karimova!",
+      "uz": "Xayrli kun, Karimova xonim!"
+    },
+    {
+      "section": "u01-s2",
+      "funktion": "nach dem Namen fragen",
+      "funktionUz": "ismini rasmiy so'rash",
+      "de": "Wie heißen Sie?",
+      "uz": "Ismingiz nima?"
+    },
+    {
+      "section": "u01-s2",
+      "funktion": "sich formell verabschieden",
+      "funktionUz": "rasmiy xayrlashish",
+      "de": "Auf Wiedersehen, Herr Karimov!",
+      "uz": "Xayr, Karimov janob!"
+    },
+    {
+      "section": "u01-s2",
+      "funktion": "danken",
+      "funktionUz": "rahmat aytish",
+      "de": "Danke!",
+      "uz": "Rahmat!"
+    },
+    {
+      "section": "u01-s3",
+      "funktion": "nach der Herkunft fragen",
+      "funktionUz": "qayerdanligini so'rash",
+      "de": "Woher kommst du?",
+      "uz": "Sen qayerdansan?"
+    },
+    {
+      "section": "u01-s3",
+      "funktion": "die Herkunft nennen",
+      "funktionUz": "qayerdanligini aytish",
+      "de": "Ich komme aus Usbekistan.",
+      "uz": "Men O'zbekistondan kelaman."
+    },
+    {
+      "section": "u01-s3",
+      "funktion": "nach dem Wohnort fragen",
+      "funktionUz": "yashash joyini so'rash",
+      "de": "Wo wohnst du?",
+      "uz": "Sen qayerda yashaysan?"
+    },
+    {
+      "section": "u01-s3",
+      "funktion": "den Wohnort nennen",
+      "funktionUz": "yashash joyini aytish",
+      "de": "Ich wohne in Deutschland.",
+      "uz": "Men Germaniyada yashayman."
+    },
+    {
+      "section": "u01-s4",
+      "funktion": "eine Zahl nennen",
+      "funktionUz": "sonni aytish",
+      "de": "Null, eins, zwei.",
+      "uz": "Nol, bir, ikki."
+    },
+    {
+      "section": "u01-s4",
+      "funktion": "Zahlen aufzählen",
+      "funktionUz": "sonlarni sanash",
+      "de": "Drei, vier, fünf, sechs.",
+      "uz": "Uch, to'rt, besh, olti."
+    },
+    {
+      "section": "u01-s4",
+      "funktion": "eine Telefonnummer sagen",
+      "funktionUz": "telefon raqamini aytish",
+      "de": "Sieben, acht, neun, zehn, elf.",
+      "uz": "Telefon raqami: yetti, sakkiz, to'qqiz, o'n, o'n bir."
+    },
+    {
+      "section": "u01-s5",
+      "funktion": "um Buchstabieren bitten",
+      "funktionUz": "harflab aytishni so'rash",
+      "de": "Buchstabieren Sie bitte.",
+      "uz": "Iltimos, harflab ayting."
+    },
+    {
+      "section": "u01-s5",
+      "funktion": "nach der Schreibweise fragen",
+      "funktionUz": "yozilishini so'rash",
+      "de": "Wie schreibt man das?",
+      "uz": "Bu qanday yoziladi?"
+    },
+    {
+      "section": "u01-s5",
+      "funktion": "einen Buchstaben bestätigen",
+      "funktionUz": "harfni tasdiqlash",
+      "de": "Ja, das ist ein Z.",
+      "uz": "Ha, bu 'Z' harfi."
+    },
+    {
+      "section": "u01-s5",
+      "funktion": "einen Buchstaben erfragen",
+      "funktionUz": "harfni aniqlashtirish",
+      "de": "Ist das V oder W?",
+      "uz": "Bu 'V' yoki 'W'mi?"
+    }
+  ]
+}
