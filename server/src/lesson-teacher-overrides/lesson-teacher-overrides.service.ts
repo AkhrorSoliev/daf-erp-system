@@ -4,9 +4,15 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { AttendanceStatus, Prisma, TransactionType } from '@prisma/client';
+import {
+  AttendanceStatus,
+  PaymentModel,
+  Prisma,
+  TransactionType,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
+import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { UpsertLessonTeacherOverrideDto } from './dto/upsert-lesson-teacher-override.dto';
 import {
@@ -43,6 +49,7 @@ export class LessonTeacherOverridesService {
     private prisma: PrismaService,
     private salaryAccrualService: SalaryAccrualService,
     private entityHistoryService: EntityHistoryService,
+    private monthlyChargeService: MonthlyChargeService,
   ) {}
 
   async findByGroup(
@@ -292,23 +299,37 @@ export class LessonTeacherOverridesService {
     );
     const added = p.newTeacherIds.filter((id) => !p.oldTeacherIds.includes(id));
 
+    // MONTHLY kursda pul boshqacha oqadi va `LESSON_CONSUMPTION` UMUMAN
+    // yozilmaydi. Pastdagi `if (!cons) continue;` shu sababli har bir
+    // o'rinbosar tayinlashni jimgina NOLGA hisoblardi: o'qituvchi butun
+    // bir kunlik ishi uchun hech narsa olmasdi. Oylik yo'lda narx
+    // MUZLATILGAN `EnrollmentMonthlyCharge.perLessonCost` dan olinadi —
+    // xuddi `LessonBillingService.accrueMonthlySalary` kabi.
+    const group = await tx.group.findUnique({
+      where: { id: p.groupId },
+      select: { course: { select: { paymentModel: true } } },
+    });
+    const isMonthly = group?.course.paymentModel === PaymentModel.MONTHLY;
+
     // Resolve coverage tx + perLessonCost from the most recent active
     // LESSON_CONSUMPTION → its parent LESSON_DEDUCTION. We need this so the
     // newly-created accruals link back to the same paid cycle (B.1).
-    const consumptions = await tx.transaction.findMany({
-      where: {
-        attendanceId: { in: attendances.map((a) => a.id) },
-        type: TransactionType.LESSON_CONSUMPTION,
-        reversedAt: null,
-      },
-      select: {
-        attendanceId: true,
-        metadata: true,
-        // The moment the lesson was consumed — the anchor for "which payment
-        // was funding it". See `resolveFundingDeductionId`.
-        createdAt: true,
-      },
-    });
+    const consumptions = isMonthly
+      ? []
+      : await tx.transaction.findMany({
+          where: {
+            attendanceId: { in: attendances.map((a) => a.id) },
+            type: TransactionType.LESSON_CONSUMPTION,
+            reversedAt: null,
+          },
+          select: {
+            attendanceId: true,
+            metadata: true,
+            // The moment the lesson was consumed — the anchor for "which payment
+            // was funding it". See `resolveFundingDeductionId`.
+            createdAt: true,
+          },
+        });
     const consumptionByAttendance = new Map<
       string,
       { perLessonCost: number; consumedAt: Date }
@@ -339,7 +360,10 @@ export class LessonTeacherOverridesService {
 
       // Create accruals for newly-assigned teachers.
       const cons = consumptionByAttendance.get(att.id);
-      if (!cons) continue; // attendance with no consumption — student had no balance, no accrual to write
+      // LESSON_PACK: attendance with no consumption — student had no
+      // balance, no accrual to write. (Oylik yo'lda `cons` doim yo'q,
+      // shuning uchun bu qorovul faqat eski yo'lga tegishli.)
+      if (!isMonthly && !cons) continue;
 
       // The enrollment the lesson was CHARGED to, not a (student, group)
       // guess — a student can hold two live enrollments in one group.
@@ -350,15 +374,40 @@ export class LessonTeacherOverridesService {
       });
       if (!enrollmentId) continue;
 
-      // The payment that funded THIS lesson. Resolved per attendance, not
-      // cached per enrollment: a cycle can roll over mid-day, and the cache
-      // would then hand the second half of the lesson the first half's batch.
-      const deductionTransactionId = await resolveFundingDeductionId(tx, {
-        attendanceId: att.id,
-        enrollmentId,
-        consumedAt: cons.consumedAt,
-      });
-      if (!deductionTransactionId) continue;
+      let perLessonCost: number;
+      let deductionTransactionId: string | null;
+
+      if (isMonthly) {
+        // Muzlatilgan narx — o'quvchi to'lagan oyning O'ZIDAN. Bu ATAYLAB
+        // chegirmasiz maydon: o'qituvchi haqi undan hisoblanadi
+        // (`monthly-charge.service.ts` dagi `perLessonCost` izohi).
+        const charge = await this.monthlyChargeService.findChargeForLesson(
+          tx,
+          enrollmentId,
+          p.date,
+        );
+        if (!charge || charge.perLessonCost <= 0 || !charge.transactionId) {
+          this.logger.error(
+            `O'rinbosar ustoz: oylik hisob topilmadi yoki ledgerga bog'lanmagan — ` +
+              `enrollment=${enrollmentId} sana=${p.date.toISOString().slice(0, 10)}. ` +
+              `Bu dars uchun accrual yozilmadi.`,
+          );
+          continue;
+        }
+        perLessonCost = charge.perLessonCost;
+        deductionTransactionId = charge.transactionId;
+      } else {
+        // The payment that funded THIS lesson. Resolved per attendance, not
+        // cached per enrollment: a cycle can roll over mid-day, and the cache
+        // would then hand the second half of the lesson the first half's batch.
+        deductionTransactionId = await resolveFundingDeductionId(tx, {
+          attendanceId: att.id,
+          enrollmentId,
+          consumedAt: cons!.consumedAt,
+        });
+        if (!deductionTransactionId) continue;
+        perLessonCost = cons!.perLessonCost;
+      }
 
       for (const teacherId of added) {
         await this.salaryAccrualService.createAccrual({
@@ -367,7 +416,7 @@ export class LessonTeacherOverridesService {
           groupId: p.groupId,
           attendanceId: att.id,
           lessonDate: p.date,
-          perLessonCost: cons.perLessonCost,
+          perLessonCost,
           companyId: p.companyId,
           deductionTransactionId,
           tx,

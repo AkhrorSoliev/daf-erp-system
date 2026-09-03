@@ -4,12 +4,15 @@ import { LessonTeacherOverridesService } from './lesson-teacher-overrides.servic
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { MonthlyChargeService } from '../billing/monthly-charge.service';
 
 describe('LessonTeacherOverridesService', () => {
   let service: LessonTeacherOverridesService;
   let prisma: any;
   let tx: any;
   let history: any;
+  let salaryAccrual: any;
+  let monthlyCharge: any;
 
   beforeEach(async () => {
     tx = {
@@ -29,6 +32,11 @@ describe('LessonTeacherOverridesService', () => {
       enrollment: { findFirst: jest.fn() },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
     };
+    // `recomputeAccruals` guruh kursining `paymentModel` ini o'qiydi.
+    // Standart — LESSON_PACK, ya'ni eski yo'l.
+    tx.group.findUnique = jest.fn().mockResolvedValue({
+      course: { paymentModel: 'LESSON_PACK' },
+    });
     prisma = {
       ...tx,
       user: {
@@ -36,6 +44,11 @@ describe('LessonTeacherOverridesService', () => {
       },
       $transaction: jest.fn((cb) => cb(tx)),
     };
+    salaryAccrual = {
+      createAccrual: jest.fn(),
+      reverseAccrualForAttendance: jest.fn(),
+    };
+    monthlyCharge = { findChargeForLesson: jest.fn().mockResolvedValue(null) };
     history = {
       recordCreate: jest.fn(),
       recordUpdate: jest.fn(),
@@ -46,14 +59,9 @@ describe('LessonTeacherOverridesService', () => {
       providers: [
         LessonTeacherOverridesService,
         { provide: PrismaService, useValue: prisma },
-        {
-          provide: SalaryAccrualService,
-          useValue: {
-            createAccrual: jest.fn(),
-            reverseAccrualForAttendance: jest.fn(),
-          },
-        },
+        { provide: SalaryAccrualService, useValue: salaryAccrual },
         { provide: EntityHistoryService, useValue: history },
+        { provide: MonthlyChargeService, useValue: monthlyCharge },
       ],
     }).compile();
 
@@ -183,6 +191,78 @@ describe('LessonTeacherOverridesService', () => {
       await service.upsert('group-1', wednesday, validDto, 1, 99);
 
       expect(history.recordCreate).toHaveBeenCalled();
+    });
+  });
+
+  // I2 — o'rinbosar ustoz OYLIK kursda ham haq olishi kerak.
+  //
+  // Avval bu yerda `if (!cons) continue;` turardi va u pulni
+  // `LESSON_CONSUMPTION.metadata.perLessonCost` dan olardi. Oylik yo'l esa
+  // bitta ham `LESSON_CONSUMPTION` yozmaydi, ya'ni oylik guruhdagi HAR BIR
+  // o'rinbosar tayinlash jimgina NOLGA hisoblanardi.
+  describe('recomputeAccruals — MONTHLY kurs', () => {
+    const wednesday = '2026-05-13';
+
+    beforeEach(() => {
+      tx.group.findFirst.mockResolvedValue({
+        id: 'group-1',
+        exactDays: ['wednesday'],
+      });
+      tx.group.findUnique.mockResolvedValue({
+        course: { paymentModel: 'MONTHLY' },
+      });
+      tx.lessonTeacherOverride.findFirst.mockResolvedValue(null);
+      tx.lessonTeacherOverride.create.mockResolvedValue({ id: 'override-1' });
+      tx.groupTeacher.findMany.mockResolvedValue([{ teacherId: 10001 }]);
+      tx.attendance.findMany.mockResolvedValue([
+        { id: 'att-1', studentId: 30001 },
+      ]);
+      // `resolveBilledEnrollmentId`: attendanceId'ga bog'langan qator yo'q
+      // (oylik hisobda `attendanceId` yozilmaydi) -> yozilish ro'yxatidan.
+      tx.transaction.findFirst.mockResolvedValue(null);
+      tx.enrollment.findMany = jest
+        .fn()
+        .mockResolvedValue([{ id: 'enr-1', status: 'ACTIVE' }]);
+    });
+
+    it('muzlatilgan `EnrollmentMonthlyCharge.perLessonCost` bilan haq yozadi', async () => {
+      monthlyCharge.findChargeForLesson.mockResolvedValue({
+        perLessonCost: 34_615,
+        transactionId: 'mon-tx-1',
+      });
+
+      await service.upsert('group-1', wednesday, { teacherIds: [10042] }, 1, 99);
+
+      expect(monthlyCharge.findChargeForLesson).toHaveBeenCalledWith(
+        tx,
+        'enr-1',
+        expect.any(Date),
+      );
+      expect(salaryAccrual.createAccrual).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teacherId: 10042,
+          studentId: 30001,
+          attendanceId: 'att-1',
+          perLessonCost: 34_615,
+          deductionTransactionId: 'mon-tx-1',
+        }),
+      );
+      // LESSON_CONSUMPTION so'rovi umuman yuborilmaydi — oylik yo'lda
+      // bunday qator yo'q.
+      expect(tx.transaction.findMany).not.toHaveBeenCalled();
+    });
+
+    it('oylik hisob topilmasa haq yozmaydi va xatoni jurnalga tushiradi', async () => {
+      const errorSpy = jest
+        .spyOn((service as any).logger, 'error')
+        .mockImplementation(() => undefined);
+      monthlyCharge.findChargeForLesson.mockResolvedValue(null);
+
+      await service.upsert('group-1', wednesday, { teacherIds: [10042] }, 1, 99);
+
+      expect(salaryAccrual.createAccrual).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalled();
+      errorSpy.mockRestore();
     });
   });
 
