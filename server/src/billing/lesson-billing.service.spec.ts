@@ -1555,9 +1555,7 @@ describe('LessonBillingService', () => {
         expect.any(Object),
         tx,
       );
-      expect(
-        monthlyChargeService.reverseMonthlyCharge,
-      ).not.toHaveBeenCalled();
+      expect(monthlyChargeService.reverseMonthlyCharge).not.toHaveBeenCalled();
       expect(tx.enrollment.update).toHaveBeenCalledWith({
         where: { id: 'enroll-1' },
         data: { prepaidLessonsRemaining: 0 },

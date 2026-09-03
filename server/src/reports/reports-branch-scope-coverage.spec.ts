@@ -207,6 +207,9 @@ describe('branch scope coverage — expectation service', () => {
       attendance: { findMany: jest.fn().mockResolvedValue([]) },
       transaction: { findMany: jest.fn().mockResolvedValue([]) },
       lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
+      // Oylik hisoblar zanjirning ichida: guruh so'rovi qaytargan
+      // id'lardan filtrlanadi, o'zi filial predikatini tashimaydi.
+      enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [

@@ -81,9 +81,9 @@ describe('lessonDatesInMonth', () => {
   });
 
   it('exactDays bo`sh bo`lsa bo`sh ro`yxat qaytaradi', () => {
-    expect(
-      lessonDatesInMonth({ year: 2026, month: 9, exactDays: [] }),
-    ).toEqual([]);
+    expect(lessonDatesInMonth({ year: 2026, month: 9, exactDays: [] })).toEqual(
+      [],
+    );
   });
 
   it('kun nomlarini registr va bo`shliqqa qaramay tanidi', () => {

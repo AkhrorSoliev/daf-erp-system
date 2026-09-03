@@ -21,6 +21,9 @@ describe('ReportsExpectationService', () => {
       attendance: { findMany: jest.fn().mockResolvedValue([]) },
       transaction: { findMany: jest.fn().mockResolvedValue([]) },
       lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
+      // Oylik hisoblar — muzlatilgan dars narxi manbasi. Bo'sh: bu testlar
+      // 12 talik (LESSON_PACK) yo'lni tasvirlaydi.
+      enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -178,6 +181,58 @@ describe('ReportsExpectationService', () => {
     expect(r.remainingValue).toBe(500_000);
     expect(r.heldValue).toBe(0);
     expect(r.expectedValue).toBe(500_000);
+  });
+
+  // I1 — oylik yozilishda `LESSON_CONSUMPTION` UMUMAN yozilmaydi. Busiz
+  // o'tilgan oylik dars "hali to'lanmagan" (remaining) tarafga tushardi va
+  // 12 talik formulasi bilan narxlanardi (450 000/12 = 37 500, to'g'risi
+  // 34 615) — «Sof foyda» bilan bir oyga ikki xil raqam.
+  it('oylik darsni muzlatilgan narxda TO`LANGAN deb hisoblaydi', async () => {
+    prisma.group.findMany.mockResolvedValueOnce([
+      {
+        id: 'g1',
+        statusEnum: 'ACTIVE',
+        deletedAt: null,
+        exactDays: ['monday'],
+        startDate: null,
+        endDate: null,
+        scheduleSnapshots: [],
+        course: { price: 450_000, lessonPaymentCount: 12 },
+        contracts: [],
+        enrollments: [{ studentId: 10001, student: { discountPercent: 0 } }],
+      },
+    ]);
+    prisma.attendance.findMany.mockResolvedValueOnce([
+      {
+        id: 'a1',
+        groupId: 'g1',
+        studentId: 10001,
+        date: new Date('2026-08-03'),
+      },
+    ]);
+    // Oylik yo'lda dars-boshiga qator yo'q.
+    prisma.transaction.findMany.mockResolvedValueOnce([]);
+    prisma.enrollmentMonthlyCharge.findMany.mockResolvedValueOnce([
+      {
+        studentId: 10001,
+        groupId: 'g1',
+        periodYear: 2026,
+        periodMonth: 8,
+        perLessonCost: 34_615,
+      },
+    ]);
+
+    const r = await service.getMonthlyExpectation(1, {
+      month: '2026-08',
+      branchIds: null,
+    });
+
+    expect(r.heldLessons).toBe(1);
+    expect(r.heldValue).toBe(34_615); // 37 500 EMAS
+    // Qolgan dushanbalar (10,17,24,31) ham muzlatilgan narxda —
+    // bitta oyning ikki yarmi ikki xil narxda bo'lmaydi.
+    expect(r.remainingLessons).toBe(4);
+    expect(r.remainingValue).toBe(138_460);
   });
 
   it('prices covered lessons exactly like getRecognizedRevenue does', async () => {

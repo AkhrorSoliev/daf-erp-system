@@ -4,6 +4,10 @@ import { HolidaysService } from '../holidays/holidays.service';
 import { RedisService } from '../redis/redis.service';
 import { perLessonPrice } from '../common/finance/per-lesson-price';
 import {
+  loadFrozenMonthlyPerLesson,
+  monthlyPerLessonKey,
+} from '../common/finance/monthly-per-lesson';
+import {
   isEmptyScope,
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
@@ -192,6 +196,25 @@ export class ReportsExpectationService {
       }
     }
 
+    // OYLIK yozilishlar `LESSON_CONSUMPTION` YOZMAYDI — pul oy boshida bitta
+    // `MONTHLY_PERIOD` yechimi bilan olinadi. Yuqoridagi `consumed` xaritasi
+    // ularni hech qachon topmaydi, ya'ni o'tilgan oylik dars "hali to'lanmagan"
+    // (remaining) tarafga tushardi va narxi 12 talik formulasi bilan
+    // (450 000/12 = 37 500, to'g'risi 34 615) hisoblanardi. Muzlatilgan narx
+    // `getRecognizedRevenue` bilan AYNAN bitta funksiyadan o'qiladi — aks
+    // holda «Sof foyda» va bu prognoz bir oyga ikki xil raqam berardi.
+    const frozenMonthly = await loadFrozenMonthlyPerLesson(this.prisma, {
+      companyId,
+      studentIds: [
+        ...attendances.map((a) => a.studentId),
+        ...groups.flatMap((g) => g.enrollments.map((e) => e.studentId)),
+      ],
+      groupIds,
+      periods: [
+        { year: Number(month.slice(0, 4)), month: Number(month.slice(5, 7)) },
+      ],
+    });
+
     const cancelledByGroup = new Map<string, Set<string>>();
     for (const c of cancellations) {
       const set = cancelledByGroup.get(c.groupId) ?? new Set<string>();
@@ -223,6 +246,10 @@ export class ReportsExpectationService {
         ]),
       );
 
+      /** Oylik hisob yozilgan bo'lsa — muzlatilgan dars narxi, aks holda undefined. */
+      const monthlyPerLesson = (studentId: number) =>
+        frozenMonthly.get(monthlyPerLessonKey(studentId, g.id, month));
+
       const covered: PricedAttendance[] = [];
       const uncovered: PricedAttendance[] = [];
       const datesWithAttendance = new Set<string>();
@@ -239,6 +266,14 @@ export class ReportsExpectationService {
               stored ??
               Math.round(g.course.price / (g.course.lessonPaymentCount || 12)),
           });
+          continue;
+        }
+        const frozen = monthlyPerLesson(a.studentId);
+        if (frozen !== undefined) {
+          // Oylik hisob yozilgan -> bu dars TO'LANGAN (pul oy boshida
+          // olingan), demak `covered` tarafda. Narx muzlatilgan, chegirmasiz —
+          // xuddi `LESSON_CONSUMPTION.metadata.perLessonCost` kabi.
+          covered.push({ perLesson: frozen });
         } else {
           uncovered.push({
             perLesson: priceFor(
@@ -265,7 +300,12 @@ export class ReportsExpectationService {
         roster: projectable
           ? g.enrollments.map((e) => ({
               studentId: e.studentId,
-              perLesson: priceFor(e.studentId, e.student?.discountPercent ?? 0),
+              // Oylik yozilishda kelajakdagi darslar ham muzlatilgan narxda
+              // baholanadi — aks holda bitta oyning o'tgan yarmi 34 615,
+              // qolgan yarmi 37 500 bo'lib, jami hech narsaga to'g'ri kelmasdi.
+              perLesson:
+                monthlyPerLesson(e.studentId) ??
+                priceFor(e.studentId, e.student?.discountPercent ?? 0),
             }))
           : [],
         datesWithAttendance,

@@ -29,6 +29,9 @@ describe('ReportsFinancialService', () => {
       // attribution cases keep their `transaction.findMany` mock order (the
       // recognized-revenue walk short-circuits before its consumption query).
       attendance: { findMany: jest.fn().mockResolvedValue([]) },
+      // Oylik model: `LESSON_CONSUMPTION` yozilmagan darsning muzlatilgan
+      // narxi shu yerdan keladi. Bo'sh — mavjud testlar 12 talik yo'lda.
+      enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
       student: {
         aggregate: jest
           .fn()
@@ -950,6 +953,50 @@ describe('ReportsFinancialService', () => {
 
       const arg = prisma.attendance.findMany.mock.calls[0][0];
       expect(arg.where.group).toBeUndefined();
+    });
+
+    // I1 — oylik yo'l `LESSON_CONSUMPTION` yozmaydi. Busiz oylik o'quvchining
+    // har bir darsi nolga hisoblanardi, o'qituvchi haqi esa hisoblanaverardi:
+    // «Sof foyda» 01.09 dan boshlab soxta ZARAR ko'rsatardi.
+    it('recognizes a monthly lesson from the frozen EnrollmentMonthlyCharge', async () => {
+      prisma.attendance.findMany.mockResolvedValueOnce([
+        {
+          id: 'att-1',
+          studentId: 10001,
+          groupId: 'g1',
+          date: new Date('2026-06-10T00:00:00Z'),
+          group: { course: { price: 450_000, lessonPaymentCount: 12 } },
+        },
+        {
+          id: 'att-2',
+          studentId: 10002,
+          groupId: 'g1',
+          date: new Date('2026-06-10T00:00:00Z'),
+          group: { course: { price: 450_000, lessonPaymentCount: 12 } },
+        },
+      ]);
+      // Oylik yo'lda dars-boshiga qator yo'q.
+      prisma.transaction.findMany.mockResolvedValueOnce([]);
+      // #10001 ning iyun hisobi yozilgan; #10002 niki emas.
+      prisma.enrollmentMonthlyCharge.findMany.mockResolvedValueOnce([
+        {
+          studentId: 10001,
+          groupId: 'g1',
+          periodYear: 2026,
+          periodMonth: 6,
+          perLessonCost: 34_615,
+        },
+      ]);
+
+      const result = await service.getRecognizedRevenue(1, {
+        ...window,
+        branchIds: null,
+      });
+
+      // Faqat hisobi bor dars tan olinadi; hisobsizi avvalgidek 0.
+      expect(result).toBe(34_615);
+      // 12 talik formulasi (450 000/12 = 37 500) ISHLATILMAYDI.
+      expect(result).not.toBe(37_500);
     });
   });
 });

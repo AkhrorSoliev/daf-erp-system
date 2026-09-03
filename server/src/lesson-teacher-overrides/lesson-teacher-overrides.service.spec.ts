@@ -231,7 +231,13 @@ describe('LessonTeacherOverridesService', () => {
         transactionId: 'mon-tx-1',
       });
 
-      await service.upsert('group-1', wednesday, { teacherIds: [10042] }, 1, 99);
+      await service.upsert(
+        'group-1',
+        wednesday,
+        { teacherIds: [10042] },
+        1,
+        99,
+      );
 
       expect(monthlyCharge.findChargeForLesson).toHaveBeenCalledWith(
         tx,
@@ -258,7 +264,13 @@ describe('LessonTeacherOverridesService', () => {
         .mockImplementation(() => undefined);
       monthlyCharge.findChargeForLesson.mockResolvedValue(null);
 
-      await service.upsert('group-1', wednesday, { teacherIds: [10042] }, 1, 99);
+      await service.upsert(
+        'group-1',
+        wednesday,
+        { teacherIds: [10042] },
+        1,
+        99,
+      );
 
       expect(salaryAccrual.createAccrual).not.toHaveBeenCalled();
       expect(errorSpy).toHaveBeenCalled();
