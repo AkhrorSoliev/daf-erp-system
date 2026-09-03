@@ -15,9 +15,94 @@ export interface GoetheWort {
 export interface GoetheFile {
   source: string;
   words: GoetheWort[];
+  gruppen?: GoetheGruppen;
+}
+
+export interface GoetheGruppen {
+  zahlen: GoetheWort[];
+  wochentage: GoetheWort[];
+  monate: GoetheWort[];
+  jahreszeiten: GoetheWort[];
 }
 
 const ARTIKEL = new Set(['der', 'die', 'das']);
+
+/**
+ * Goethe A1 Wortgruppenliste — yopiq to'plamlar PDF'ning 6–8-sahifalardan
+ * (tangli ustun bloklari — tahlil qilib o'qiy bo'lmaydi). Raqamlar, hafta kunlari,
+ * oylar, fasatlar A1 standartiga zaruridir, alifbohla harflar ro'yxatida yo'q.
+ *
+ * Nouns darajasida — "null" raqam (telefon raqami uchun) shu chaman. Hamma
+ * shaxs nomlari (oylar, kunlar, fasatlar) "der"/"die"/"das" artikli o'z bilan.
+ *
+ * Bu to'plamlar eng yangilanmasa ham barkaror, shuning uchun qo'lda kiritilgan.
+ * Qayta chiqarish (re-extraction) kerak bo'lsa, shuni yangilash yetarli.
+ */
+export const GOETHE_ZAHLEN: GoetheWort[] = [
+  { artikel: null, wort: 'null' },
+  { artikel: null, wort: 'eins' },
+  { artikel: null, wort: 'zwei' },
+  { artikel: null, wort: 'drei' },
+  { artikel: null, wort: 'vier' },
+  { artikel: null, wort: 'fünf' },
+  { artikel: null, wort: 'sechs' },
+  { artikel: null, wort: 'sieben' },
+  { artikel: null, wort: 'acht' },
+  { artikel: null, wort: 'neun' },
+  { artikel: null, wort: 'zehn' },
+  { artikel: null, wort: 'elf' },
+  { artikel: null, wort: 'zwölf' },
+  { artikel: null, wort: 'dreizehn' },
+  { artikel: null, wort: 'vierzehn' },
+  { artikel: null, wort: 'fünfzehn' },
+  { artikel: null, wort: 'sechzehn' },
+  { artikel: null, wort: 'siebzehn' },
+  { artikel: null, wort: 'achtzehn' },
+  { artikel: null, wort: 'neunzehn' },
+  { artikel: null, wort: 'zwanzig' },
+  { artikel: null, wort: 'einundzwanzig' },
+  { artikel: null, wort: 'dreißig' },
+  { artikel: null, wort: 'vierzig' },
+  { artikel: null, wort: 'fünfzig' },
+  { artikel: null, wort: 'sechzig' },
+  { artikel: null, wort: 'siebzig' },
+  { artikel: null, wort: 'achtzig' },
+  { artikel: null, wort: 'neunzig' },
+  { artikel: null, wort: 'hundert' },
+  { artikel: null, wort: 'tausend' },
+];
+
+export const GOETHE_WOCHENTAGE: GoetheWort[] = [
+  { artikel: 'der', wort: 'Montag' },
+  { artikel: 'der', wort: 'Dienstag' },
+  { artikel: 'der', wort: 'Mittwoch' },
+  { artikel: 'der', wort: 'Donnerstag' },
+  { artikel: 'der', wort: 'Freitag' },
+  { artikel: 'der', wort: 'Samstag' },
+  { artikel: 'der', wort: 'Sonntag' },
+];
+
+export const GOETHE_MONATE: GoetheWort[] = [
+  { artikel: 'der', wort: 'Januar' },
+  { artikel: 'der', wort: 'Februar' },
+  { artikel: 'der', wort: 'März' },
+  { artikel: 'der', wort: 'April' },
+  { artikel: 'der', wort: 'Mai' },
+  { artikel: 'der', wort: 'Juni' },
+  { artikel: 'der', wort: 'Juli' },
+  { artikel: 'der', wort: 'August' },
+  { artikel: 'der', wort: 'September' },
+  { artikel: 'der', wort: 'Oktober' },
+  { artikel: 'der', wort: 'November' },
+  { artikel: 'der', wort: 'Dezember' },
+];
+
+export const GOETHE_JAHRESZEITEN: GoetheWort[] = [
+  { artikel: 'der', wort: 'Frühling' },
+  { artikel: 'der', wort: 'Sommer' },
+  { artikel: 'der', wort: 'Herbst' },
+  { artikel: 'der', wort: 'Winter' },
+];
 
 /**
  * English words va book title'lardan kirgan so'zlar - PDF'ning "Literatüra"
@@ -99,4 +184,37 @@ export function parseGoetheLines(lines: string[]): GoetheWort[] {
   }
 
   return out;
+}
+
+/**
+ * O'zbek A1 o'quv tizimida so'z Goethe standartiga mos ekanini tekshiradi.
+ * Alifbohla ro'yxat yoki yopiq to'plamlarda mavjud bo'lsa — TRUE.
+ *
+ * Ishlatuvchi uchun: bir so'zni "rasmiy A1 lug'atda bor/yo'q" qilip tekshirish uchun.
+ */
+export function isWordInGoetheA1(wort: string, file: GoetheFile): boolean {
+  // Alifbohla ro'yxatda
+  if (file.words.some((w) => w.wort.toLowerCase() === wort.toLowerCase())) {
+    return true;
+  }
+
+  // Yopiq to'plamlarda
+  if (file.gruppen) {
+    const { zahlen, wochentage, monate, jahreszeiten } = file.gruppen;
+
+    if (zahlen?.some((w) => w.wort.toLowerCase() === wort.toLowerCase())) {
+      return true;
+    }
+    if (wochentage?.some((w) => w.wort.toLowerCase() === wort.toLowerCase())) {
+      return true;
+    }
+    if (monate?.some((w) => w.wort.toLowerCase() === wort.toLowerCase())) {
+      return true;
+    }
+    if (jahreszeiten?.some((w) => w.wort.toLowerCase() === wort.toLowerCase())) {
+      return true;
+    }
+  }
+
+  return false;
 }

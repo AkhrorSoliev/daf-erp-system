@@ -10,7 +10,14 @@
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';
-import { parseGoetheLines, type GoetheFile } from '../src/daf/inhalt/goethe-parse';
+import {
+  parseGoetheLines,
+  type GoetheFile,
+  GOETHE_ZAHLEN,
+  GOETHE_WOCHENTAGE,
+  GOETHE_MONATE,
+  GOETHE_JAHRESZEITEN,
+} from '../src/daf/inhalt/goethe-parse';
 
 const OUT = join(__dirname, '..', 'content', 'daf', 'a1', 'goethe-a1.json');
 const SOURCE = 'https://www.goethe.de/pro/relaunch/prf/de/A1_SD1_Wortliste_02.pdf';
@@ -25,11 +32,19 @@ function main(): void {
   const lines = readFileSync(process.argv[i + 1], 'utf8').split('\n');
   const words = parseGoetheLines(lines);
 
-  const file: GoetheFile = { source: SOURCE, words };
+  const gruppen = {
+    zahlen: GOETHE_ZAHLEN,
+    wochentage: GOETHE_WOCHENTAGE,
+    monate: GOETHE_MONATE,
+    jahreszeiten: GOETHE_JAHRESZEITEN,
+  };
+
+  const file: GoetheFile = { source: SOURCE, words, gruppen };
   mkdirSync(dirname(OUT), { recursive: true });
   writeFileSync(OUT, `${JSON.stringify(file, null, 1)}\n`, 'utf8');
 
-  console.log(`${words.length} ta bosh so'z yozildi.`);
+  const gruppenCount = Object.values(gruppen).reduce((sum, arr) => sum + arr.length, 0);
+  console.log(`${words.length} ta bosh so'z va ${gruppenCount} ta gruppali so'z yozildi.`);
 }
 
 main();

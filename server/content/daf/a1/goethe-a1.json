@@ -2465,5 +2465,231 @@
    "artikel": null,
    "wort": "dem"
   }
- ]
+ ],
+ "gruppen": {
+  "zahlen": [
+   {
+    "artikel": null,
+    "wort": "null"
+   },
+   {
+    "artikel": null,
+    "wort": "eins"
+   },
+   {
+    "artikel": null,
+    "wort": "zwei"
+   },
+   {
+    "artikel": null,
+    "wort": "drei"
+   },
+   {
+    "artikel": null,
+    "wort": "vier"
+   },
+   {
+    "artikel": null,
+    "wort": "fünf"
+   },
+   {
+    "artikel": null,
+    "wort": "sechs"
+   },
+   {
+    "artikel": null,
+    "wort": "sieben"
+   },
+   {
+    "artikel": null,
+    "wort": "acht"
+   },
+   {
+    "artikel": null,
+    "wort": "neun"
+   },
+   {
+    "artikel": null,
+    "wort": "zehn"
+   },
+   {
+    "artikel": null,
+    "wort": "elf"
+   },
+   {
+    "artikel": null,
+    "wort": "zwölf"
+   },
+   {
+    "artikel": null,
+    "wort": "dreizehn"
+   },
+   {
+    "artikel": null,
+    "wort": "vierzehn"
+   },
+   {
+    "artikel": null,
+    "wort": "fünfzehn"
+   },
+   {
+    "artikel": null,
+    "wort": "sechzehn"
+   },
+   {
+    "artikel": null,
+    "wort": "siebzehn"
+   },
+   {
+    "artikel": null,
+    "wort": "achtzehn"
+   },
+   {
+    "artikel": null,
+    "wort": "neunzehn"
+   },
+   {
+    "artikel": null,
+    "wort": "zwanzig"
+   },
+   {
+    "artikel": null,
+    "wort": "einundzwanzig"
+   },
+   {
+    "artikel": null,
+    "wort": "dreißig"
+   },
+   {
+    "artikel": null,
+    "wort": "vierzig"
+   },
+   {
+    "artikel": null,
+    "wort": "fünfzig"
+   },
+   {
+    "artikel": null,
+    "wort": "sechzig"
+   },
+   {
+    "artikel": null,
+    "wort": "siebzig"
+   },
+   {
+    "artikel": null,
+    "wort": "achtzig"
+   },
+   {
+    "artikel": null,
+    "wort": "neunzig"
+   },
+   {
+    "artikel": null,
+    "wort": "hundert"
+   },
+   {
+    "artikel": null,
+    "wort": "tausend"
+   }
+  ],
+  "wochentage": [
+   {
+    "artikel": "der",
+    "wort": "Montag"
+   },
+   {
+    "artikel": "der",
+    "wort": "Dienstag"
+   },
+   {
+    "artikel": "der",
+    "wort": "Mittwoch"
+   },
+   {
+    "artikel": "der",
+    "wort": "Donnerstag"
+   },
+   {
+    "artikel": "der",
+    "wort": "Freitag"
+   },
+   {
+    "artikel": "der",
+    "wort": "Samstag"
+   },
+   {
+    "artikel": "der",
+    "wort": "Sonntag"
+   }
+  ],
+  "monate": [
+   {
+    "artikel": "der",
+    "wort": "Januar"
+   },
+   {
+    "artikel": "der",
+    "wort": "Februar"
+   },
+   {
+    "artikel": "der",
+    "wort": "März"
+   },
+   {
+    "artikel": "der",
+    "wort": "April"
+   },
+   {
+    "artikel": "der",
+    "wort": "Mai"
+   },
+   {
+    "artikel": "der",
+    "wort": "Juni"
+   },
+   {
+    "artikel": "der",
+    "wort": "Juli"
+   },
+   {
+    "artikel": "der",
+    "wort": "August"
+   },
+   {
+    "artikel": "der",
+    "wort": "September"
+   },
+   {
+    "artikel": "der",
+    "wort": "Oktober"
+   },
+   {
+    "artikel": "der",
+    "wort": "November"
+   },
+   {
+    "artikel": "der",
+    "wort": "Dezember"
+   }
+  ],
+  "jahreszeiten": [
+   {
+    "artikel": "der",
+    "wort": "Frühling"
+   },
+   {
+    "artikel": "der",
+    "wort": "Sommer"
+   },
+   {
+    "artikel": "der",
+    "wort": "Herbst"
+   },
+   {
+    "artikel": "der",
+    "wort": "Winter"
+   }
+  ]
+ }
 }

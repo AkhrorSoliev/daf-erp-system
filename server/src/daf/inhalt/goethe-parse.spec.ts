@@ -1,4 +1,11 @@
-import { parseGoetheLines } from './goethe-parse';
+import {
+  parseGoetheLines,
+  isWordInGoetheA1,
+  GOETHE_ZAHLEN,
+  GOETHE_WOCHENTAGE,
+  GOETHE_MONATE,
+  GOETHE_JAHRESZEITEN,
+} from './goethe-parse';
 
 describe('parseGoetheLines', () => {
   it('artiklsiz bosh so`zni oladi', () => {
@@ -109,5 +116,62 @@ describe('parseGoetheLines', () => {
     expect(dassEntry?.artikel).toBeNull();
     const diesEntry = result.find((w) => w.wort === 'dies-');
     expect(diesEntry?.artikel).toBeNull();
+  });
+});
+
+describe('Goethe A1 Wortgruppen', () => {
+  it('zahlen guruhi tadbiq etiladi', () => {
+    expect(GOETHE_ZAHLEN).toHaveLength(31);
+    expect(GOETHE_ZAHLEN[0].wort).toBe('null');
+    expect(GOETHE_ZAHLEN).toContainEqual({ artikel: null, wort: 'zwanzig' });
+  });
+
+  it('wochentage guruhi tadbiq etiladi', () => {
+    expect(GOETHE_WOCHENTAGE).toHaveLength(7);
+    expect(GOETHE_WOCHENTAGE[0]).toEqual({ artikel: 'der', wort: 'Montag' });
+  });
+
+  it('monate guruhi tadbiq etiladi', () => {
+    expect(GOETHE_MONATE).toHaveLength(12);
+    expect(GOETHE_MONATE).toContainEqual({ artikel: 'der', wort: 'Juli' });
+  });
+
+  it('jahreszeiten guruhi tadbiq etiladi', () => {
+    expect(GOETHE_JAHRESZEITEN).toHaveLength(4);
+    expect(GOETHE_JAHRESZEITEN).toContainEqual({ artikel: 'der', wort: 'Sommer' });
+  });
+});
+
+describe('isWordInGoetheA1 helper', () => {
+  const testFile = {
+    source: 'test',
+    words: parseGoetheLines(['aber Beispiel.']),
+    gruppen: {
+      zahlen: GOETHE_ZAHLEN,
+      wochentage: GOETHE_WOCHENTAGE,
+      monate: GOETHE_MONATE,
+      jahreszeiten: GOETHE_JAHRESZEITEN,
+    },
+  };
+
+  it('alifbohla ro`yxatdan so`zni topadi', () => {
+    expect(isWordInGoetheA1('aber', testFile)).toBe(true);
+  });
+
+  it('zahlar guruhindan so`zni topadi', () => {
+    expect(isWordInGoetheA1('zwanzig', testFile)).toBe(true);
+  });
+
+  it('oylar guruhindan so`zni topadi', () => {
+    expect(isWordInGoetheA1('Juli', testFile)).toBe(true);
+  });
+
+  it('o`chgina bo`lmagan so`zni rad etadi', () => {
+    expect(isWordInGoetheA1('Kühlschrank', testFile)).toBe(false);
+  });
+
+  it('case-insensitive qidiradi', () => {
+    expect(isWordInGoetheA1('ABER', testFile)).toBe(true);
+    expect(isWordInGoetheA1('juli', testFile)).toBe(true);
   });
 });
