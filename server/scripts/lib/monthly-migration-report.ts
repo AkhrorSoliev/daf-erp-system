@@ -18,8 +18,25 @@ export interface MigrationRow {
   /** O'quvchining migratsiyadan oldingi balansi. */
   balance: number;
   prepaidLessons: number;
-  /** Eski paket bo'yicha dars narxi — prepaid qaytarish shu bo'yicha. */
+  /** Eski paket bo'yicha dars narxi — FAQAT ko'rsatish uchun. */
   packPerLessonCost: number;
+  /**
+   * Prepaid qaytarishning ANIQ summasi (`EnrollmentBillingService.
+   * prepaidRefundValue` bilan bir xil arifmetika: batch summasi minus
+   * sarflangan darslar). Berilmasa `prepaidLessons * packPerLessonCost` ga
+   * tushadi — lekin o'sha ko'paytma sikl yaxlitlash qoldig'i tufayli bir necha
+   * so'mga farq qiladi, shuning uchun `--apply` bashorat bilan haqiqatni
+   * qator-qator solishtirganda AYNAN shu maydon ishlatiladi.
+   */
+  prepaidRefundTotal?: number;
+  /**
+   * Guruh ACTIVE emas (masalan PAUSED). `MonthlyChargeService.
+   * createChargeForEnrollment` bunday guruhga hisob YOZMAYDI
+   * (`statusEnum !== ACTIVE` -> null), shuning uchun bashorat ham 0 hisoblaydi
+   * — aks holda CEO ko'rgan raqam hech qachon yozilmaydigan hisobni sanardi.
+   * Berilmasa `true` (hisoblanadi).
+   */
+  chargeable?: boolean;
   monthlyPrice: number;
   plannedLessons: number;
   coveredLessons: number;
@@ -137,7 +154,10 @@ export function buildMigrationPlan(input: MigrationInput): MigrationPlan {
   const byStudent = new Map<number, StudentPlan>();
 
   for (const r of input.rows) {
-    const prepaidRefund = r.prepaidLessons * r.packPerLessonCost;
+    // Aniq summa bo'lsa o'sha — `prepaidLessons * packPerLessonCost` bir necha
+    // so'm yaxlitlash farqi beradi (izohga qarang).
+    const prepaidRefund =
+      r.prepaidRefundTotal ?? r.prepaidLessons * r.packPerLessonCost;
     // plannedLessons === 0 (oyda shu guruh uchun dars kuni yo'q) —
     // MonthlyChargeService.createChargeForEnrollment shu holatda hech
     // qanday hisob yozmaydi (`if (plannedLessons === 0) return null;`).
@@ -145,7 +165,7 @@ export function buildMigrationPlan(input: MigrationInput): MigrationPlan {
     // uchun bu yerda ham hisob 0 — `coveredLessons >= plannedLessons`
     // (0 >= 0) to'liq narxni to'lab qo'yishi mumkin edi.
     const monthlyChargeFull =
-      r.plannedLessons <= 0
+      r.chargeable === false || r.plannedLessons <= 0
         ? 0
         : Math.round(
             r.coveredLessons >= r.plannedLessons

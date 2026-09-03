@@ -7,7 +7,17 @@
  * kesimi chiqaradi va to'liq o'quvchi ro'yxatini CSV'ga yozadi. HECH QANDAY
  * `create`/`update`/`delete`/`upsert`/`$executeRaw` ishlatilmaydi.
  *
- * `--apply --ha-men-tasdiqlayman`: migratsiyani haqiqatda qo'llaydi.
+ * `--apply --ha-men-tasdiqlayman --zaxira-olindi`: migratsiyani haqiqatda
+ * qo'llaydi. Uchala bayroq ham kerak, va ustiga `docs/migration-preview-
+ * <bugun>*.csv` (CEO ko'rib chiqqan bashorat) MAVJUD bo'lishi shart.
+ *
+ * QAMROV yozilishning O'Z holatidan: "shu davr uchun `EnrollmentMonthlyCharge`
+ * yo'q" (kurs darajasidagi `paymentModel` bayrog'idan EMAS — pastdagi
+ * `scopeWhere` izohiga qarang). Shuning uchun qayta ishga tushirish
+ * bajarilganlarni takrorlamaydi VA bajarilmaganlarni o'tkazib yubormaydi.
+ *
+ * Qo'llagandan keyin ALBATTA:
+ *   npx ts-node scripts/verify-monthly-migration.ts --period=2026-09
  *
  * Arifmetika `scripts/lib/monthly-migration-report.ts` (buildMigrationPlan)
  * dan keladi — bu skript faqat MigrationRow[] ni bazadan yig'adi. Dars
@@ -62,6 +72,7 @@ import {
 } from './lib/monthly-migration-report';
 import {
   resolvePackPerLessonCost,
+  resolvePrepaidRefundTotal,
   type PrepaidRefundBatch,
 } from './lib/prepaid-refund-price';
 import {
@@ -109,6 +120,8 @@ interface CliArgs {
   /** `--apply` yolg'iz yetarli emas: xato bosilgan bayroq 370 o'quvchining
    * balansini qayta yozmasligi uchun ikkinchi, ataylab uzun tasdiq kerak. */
   confirmed: boolean;
+  /** Brief 2-qadam: `pg_dump` olinganini alohida tasdiqlash. */
+  backedUp: boolean;
   period: string;
 }
 
@@ -116,6 +129,7 @@ function parseCliArgs(): CliArgs {
   const argv = process.argv.slice(2);
   const apply = argv.includes('--apply');
   const confirmed = argv.includes('--ha-men-tasdiqlayman');
+  const backedUp = argv.includes('--zaxira-olindi');
   const limitTok = argv.find((a) => a.startsWith('--limit='));
   const limit = limitTok ? Number(limitTok.split('=')[1]) : null;
   if (limit !== null && (!Number.isInteger(limit) || limit <= 0)) {
@@ -130,7 +144,7 @@ function parseCliArgs(): CliArgs {
       `--period noto'g'ri format: "${period}" (kutilgan YYYY-MM, masalan 2026-09)`,
     );
   }
-  return { apply, confirmed, limit, period };
+  return { apply, confirmed, backedUp, limit, period };
 }
 
 interface GroupSummaryRow {
@@ -144,18 +158,47 @@ interface GroupSummaryRow {
   teacherPayDelta: number;
 }
 
-/** `docs/migration-preview-<sana>.csv` — repo ildizidagi docs/, server/ ichida emas. */
-function csvOutputPath(): string {
+/** Repo ildizidagi `docs/` — server/ ichida emas. */
+function docsDir(): string {
+  return path.join(__dirname, '..', '..', 'docs');
+}
+
+/** `HHmmss` (Toshkent) — bir kunda ikkinchi ishga tushirish birinchisining
+ * dalilini bosib ketmasligi uchun (M3). */
+function tashkentClockStamp(): string {
+  const d = new Date(Date.now() + 5 * 60 * 60 * 1000);
+  return d.toISOString().slice(11, 19).replace(/:/g, '');
+}
+
+/**
+ * `docs/migration-preview-<sana>.csv` — bir kunda birinchi ishga tushirish.
+ * Fayl allaqachon bo'lsa YANGISI vaqt bilan yoziladi
+ * (`migration-preview-<sana>-<HHmmss>.csv`) — CEO ko'rib chiqqan hisobot
+ * ustiga yozilmasligi kerak (M3).
+ */
+function nextPreviewPath(): string {
   const today = tashkentDateStr(new Date());
+  const base = path.join(docsDir(), `migration-preview-${today}.csv`);
+  if (!fs.existsSync(base)) return base;
   return path.join(
-    __dirname,
-    '..',
-    '..',
-    'docs',
-    `migration-preview-${today}.csv`,
+    docsDir(),
+    `migration-preview-${today}-${tashkentClockStamp()}.csv`,
   );
 }
 
+/** Shu kunga tegishli barcha bashorat CSV'lari (eng yangisi oxirida). */
+function existingPreviewFiles(): string[] {
+  const today = tashkentDateStr(new Date());
+  const dir = docsDir();
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir)
+    .filter(
+      (f) => f.startsWith(`migration-preview-${today}`) && f.endsWith('.csv'),
+    )
+    .sort()
+    .map((f) => path.join(dir, f));
+}
 
 /** Qo'llash natijasi CSV'si — bashorat CSV'si bilan qator-qator solishtirish
  * uchun ayni ustunlar tartibida. */
@@ -169,6 +212,8 @@ function renderOutcomeCsv(rows: ApplyStudentResult[]): string {
     'newBalance',
     'reversedDeductionCount',
     'accrualsRecomputed',
+    'chargesCreated',
+    'chargesSkipped',
   ].join(',');
   const body = rows
     .map((r) =>
@@ -181,6 +226,8 @@ function renderOutcomeCsv(rows: ApplyStudentResult[]): string {
         r.newBalance,
         r.reversedDeductionCount,
         r.accrualsRecomputed,
+        r.chargesCreated,
+        r.chargesSkipped,
       ].join(','),
     )
     .join('\n');
@@ -188,11 +235,15 @@ function renderOutcomeCsv(rows: ApplyStudentResult[]): string {
 }
 
 interface RunApplyParams {
+  prisma: PrismaClient;
   plan: ReturnType<typeof buildMigrationPlan>;
   migrateByStudent: Map<
     number,
     { companyId: number; enrollments: EnrollmentToMigrate[] }
   >;
+  /** Qamrovni QAYTA hisoblaydigan funksiya — migratsiyadan keyin nechta
+   * yozilish hali qamrovda qolganini bazadan mustaqil o'qish uchun (C1). */
+  countInScope: () => Promise<number>;
   year: number;
   month: number;
   period: string;
@@ -212,7 +263,7 @@ interface RunApplyParams {
  * ikki marta hisoblashning oxirgi to'sig'i.
  */
 async function runApply(params: RunApplyParams): Promise<void> {
-  const { plan, migrateByStudent, year, month, period, limit } = params;
+  const { prisma, plan, migrateByStudent, year, month, period, limit } = params;
 
   const targets =
     limit === null
@@ -220,6 +271,32 @@ async function runApply(params: RunApplyParams): Promise<void> {
       : [...migrateByStudent.entries()].slice(0, limit);
 
   section(`MIGRATSIYA QO'LLANMOQDA — davr ${period} — ${dbEnvLabel()}`);
+
+  // ── C1: "0 ta o'quvchi" JIM MUVAFFAQIYAT bo'lmasligi kerak ──────────────
+  // Avvalgi versiyada qamrov kurs darajasidagi `paymentModel` bayrog'idan
+  // kelardi, va 4-qadam o'sha bayroqni almashtirardi — bitta o'quvchi
+  // migratsiya qilingani butun kursdoshlarini qamrovdan CHIQARIB YUBORARDI.
+  // Keyingi ishga tushirish "enrollments=0" topib, "hech qanday xato yo'q"
+  // deb chiqardi, holbuki yarmi ko'chmagan edi. Endi qamrov yozilishning
+  // O'Z holatidan (shu davr uchun `EnrollmentMonthlyCharge` bormi) —
+  // va bo'sh qamrov BALAND aytiladi.
+  if (targets.length === 0) {
+    section('QAMROV BO`SH');
+    console.log(
+      `Davr ${period} uchun migratsiya qilinadigan yozilish TOPILMADI.\n` +
+        `Bu ikki narsadan biri:\n` +
+        `  1) migratsiya allaqachon to'liq bajarilgan — buni\n` +
+        `     \`npx ts-node scripts/verify-monthly-migration.ts --period=${period}\`\n` +
+        `     bilan TASDIQLANG;\n` +
+        `  2) qamrov so'rovi noto'g'ri filtrlayapti — bu holda hech narsa\n` +
+        `     yozilmagani "muvaffaqiyat" emas.\n` +
+        `Hech narsa yozilmadi.`,
+    );
+    throw new Error(
+      `Qamrov bo'sh: ${period} uchun 0 ta o'quvchi. Tekshiruv skriptini ishga tushiring.`,
+    );
+  }
+
   console.log(
     `O'quvchi: ${targets.length} ta` +
       (limit === null ? '' : ` (jami ${migrateByStudent.size} tadan --limit)`) +
@@ -259,6 +336,14 @@ async function runApply(params: RunApplyParams): Promise<void> {
   const results: ApplyStudentResult[] = [];
   const failures: { studentId: number; message: string }[] = [];
 
+  // C3: mustaqil ledger tekshiruvi uchun BAZA soatidan boshlanish nuqtasi
+  // (Node soati emas — `Transaction.createdAt` bazada qo'yiladi).
+  const [{ now: runStartedAt }] = await prismaService.$queryRaw<
+    { now: Date }[]
+  >`SELECT now() AS now`;
+
+  const startedMs = Date.now();
+  let processed = 0;
   for (const [studentId, bucket] of targets) {
     try {
       const res = await prismaService.$transaction(
@@ -283,11 +368,24 @@ async function runApply(params: RunApplyParams): Promise<void> {
         message: err instanceof Error ? err.message : String(err),
       });
     }
+    // M5: ~20 daqiqalik prod ishida jim qolmaslik.
+    processed += 1;
+    if (processed % 25 === 0 || processed === targets.length) {
+      const secs = Math.round((Date.now() - startedMs) / 1000);
+      const rate = processed / Math.max(1, secs);
+      const etaSecs = Math.round(
+        (targets.length - processed) / Math.max(rate, 0.001),
+      );
+      console.log(
+        `  ${processed}/${targets.length} — ${secs}s o'tdi, ` +
+          `taxminan ${etaSecs}s qoldi, yiqilgan: ${failures.length}`,
+      );
+    }
   }
 
   await app.close();
 
-  // ── tekshiruv ─────────────────────────────────────────────────────────
+  // ── natija ────────────────────────────────────────────────────────────
   const totalPrepaid = results.reduce((a, r) => a + r.prepaidRefund, 0);
   const totalReversed = results.reduce((a, r) => a + r.reversedSeptember, 0);
   const totalCharged = results.reduce((a, r) => a + r.monthlyCharge, 0);
@@ -295,7 +393,52 @@ async function runApply(params: RunApplyParams): Promise<void> {
     (a, r) => a + (r.newBalance - r.oldBalance),
     0,
   );
-  const expectedDelta = totalPrepaid + totalReversed - totalCharged;
+  const chargesCreated = results.reduce((a, r) => a + r.chargesCreated, 0);
+  const chargesSkipped = results.reduce((a, r) => a + r.chargesSkipped, 0);
+
+  const outPath = path.join(
+    docsDir(),
+    `migration-outcome-${tashkentDateStr(new Date())}-${tashkentClockStamp()}.csv`,
+  );
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(outPath, renderOutcomeCsv(results), 'utf-8');
+
+  // ── C3: MUSTAQIL ledger tekshiruvi ────────────────────────────────────
+  // `totalDelta === totalPrepaid + totalReversed - totalCharged` tekshiruvi
+  // AYNIYAT edi: `applyMigrationForStudent` aynan shu tenglikni har o'quvchi
+  // uchun tranzaksiya ichida talab qiladi, ya'ni `results`ga faqat uni
+  // qanoatlantirganlar tushadi. Yig'indi hech qachon yiqila olmasdi — va
+  // prepaid ikki barobar qaytarilganda ham "mos keldi" deb chiqarardi.
+  //
+  // Mustaqil manba: run boshlanganidan keyin O'SHA o'quvchilarga YOZILGAN
+  // `Transaction.amount` qatorlarining yig'indisi. Balans harakati
+  // ledger'ga langarlangan (ADR-0004), demak ikkovi teng bo'lishi SHART —
+  // va bu tenglik boshqa jadvaldan o'qilgani uchun yiqila OLADI.
+  const migratedIds = results.map((r) => r.studentId);
+  const ledger = migratedIds.length
+    ? await prisma.transaction.aggregate({
+        _sum: { amount: true },
+        where: {
+          studentId: { in: migratedIds },
+          createdAt: { gte: runStartedAt },
+        },
+      })
+    : { _sum: { amount: 0 } };
+  const ledgerDelta = ledger._sum.amount ?? 0;
+
+  // Ikkinchi mustaqil manba: commit'dan KEYIN qayta o'qilgan balanslar.
+  const liveBalances = migratedIds.length
+    ? await prisma.student.findMany({
+        where: { id: { in: migratedIds } },
+        select: { id: true, balance: true },
+      })
+    : [];
+  const liveById = new Map(liveBalances.map((s) => [s.id, s.balance]));
+  const balanceDrift = results.filter(
+    (r) => liveById.get(r.studentId) !== r.newBalance,
+  );
+
+  const remainingInScope = await params.countInScope();
 
   section('NATIJA');
   printTable(
@@ -306,21 +449,15 @@ async function runApply(params: RunApplyParams): Promise<void> {
       ['Prepaid qaytarildi', som(totalPrepaid)],
       ['Davr ichi bekor qilindi', som(totalReversed)],
       ['Oylik hisoblandi', som(totalCharged)],
+      ['Yozilgan oylik hisob', String(chargesCreated)],
+      ['Hisobsiz qolgan yozilish', String(chargesSkipped)],
       ['Balanslar jami o`zgarishi', som(totalDelta)],
-      ['Kutilgan o`zgarish', som(expectedDelta)],
+      ['Ledger qatorlari yig`indisi', som(ledgerDelta)],
+      ['Qamrovda qolgan yozilish', String(remainingInScope)],
     ],
     ['l', 'r'],
   );
 
-  const outPath = path.join(
-    __dirname,
-    '..',
-    '..',
-    'docs',
-    `migration-outcome-${tashkentDateStr(new Date())}.csv`,
-  );
-  fs.mkdirSync(path.dirname(outPath), { recursive: true });
-  fs.writeFileSync(outPath, renderOutcomeCsv(results), 'utf-8');
   console.log('');
   console.log(`Natija CSV: ${outPath}`);
   console.log(`Bashorat CSV bilan qator-qator solishtiring.`);
@@ -338,9 +475,24 @@ async function runApply(params: RunApplyParams): Promise<void> {
     );
   }
 
-  if (totalDelta !== expectedDelta) {
-    throw new Error(
-      `Ledger tengligi buzildi: balanslar ${totalDelta}, kutilgan ${expectedDelta}.`,
+  const problems: string[] = [];
+  if (ledgerDelta !== totalDelta) {
+    problems.push(
+      `Ledger mos kelmadi: balanslar ${totalDelta}, yozilgan Transaction qatorlari ${ledgerDelta}.`,
+    );
+  }
+  if (balanceDrift.length > 0) {
+    problems.push(
+      `Commit'dan keyin ${balanceDrift.length} ta o'quvchining balansi natijadan farq qiladi ` +
+        `(masalan #${balanceDrift[0].studentId}: kutilgan ${balanceDrift[0].newBalance}, ` +
+        `bazada ${liveById.get(balanceDrift[0].studentId)}).`,
+    );
+  }
+  if (limit === null && remainingInScope > 0) {
+    problems.push(
+      `Migratsiyadan keyin ${remainingInScope} ta yozilish HALI qamrovda ` +
+        `(shu davr uchun oylik hisobi yo'q). Bular jim qolmasligi kerak — ` +
+        `\`verify-monthly-migration.ts\` ularni ro'yxatlaydi.`,
     );
   }
 
@@ -349,24 +501,59 @@ async function runApply(params: RunApplyParams): Promise<void> {
     for (const f of failures) {
       console.log(`  #${f.studentId}: ${f.message}`);
     }
-    throw new Error(
+    problems.push(
       `${failures.length} ta o'quvchi migratsiya qilinmadi. ` +
-        `Tuzatib, skriptni QAYTA ishga tushiring — bajarilganlar takrorlanmaydi.`,
+        `Tuzatib, skriptni QAYTA ishga tushiring — qamrov yozilishning o'z ` +
+        `holatidan olinadi, shuning uchun bajarilganlar takrorlanmaydi va ` +
+        `BAJARILMAGANLAR o'tkazib yuborilmaydi.`,
     );
   }
 
+  if (problems.length > 0) {
+    section('TEKSHIRUV YIQILDI');
+    for (const p of problems) console.log(`  - ${p}`);
+    throw new Error(problems.join(' | '));
+  }
+
   console.log('');
-  console.log("Migratsiya tugadi. Hech qanday xato yo'q.");
+  console.log(
+    "Migratsiya tugadi. Hech qanday xato yo'q.\n" +
+      `Endi tekshiruvni ishga tushiring:\n` +
+      `  npx ts-node scripts/verify-monthly-migration.ts --period=${period}`,
+  );
 }
 
 async function main(prisma: PrismaClient) {
-  const { apply, confirmed, limit, period } = parseCliArgs();
+  const { apply, confirmed, backedUp, limit, period } = parseCliArgs();
 
   if (apply && !confirmed) {
     throw new Error(
       "--apply yolg'iz ishlamaydi. 370 o'quvchining balansi qayta yoziladi.\n" +
         "Rostdan ham qo'llamoqchi bo'lsangiz, qo'shimcha bayroqni ham bering:\n" +
-        '  npx ts-node scripts/migrate-to-monthly.ts --apply --ha-men-tasdiqlayman',
+        '  npx ts-node scripts/migrate-to-monthly.ts --apply --ha-men-tasdiqlayman --zaxira-olindi',
+    );
+  }
+
+  // ── I3: brief 1-qadam — CEO ko'rib chiqqan bashorat hisoboti bo'lmasa
+  // hech narsa yozilmaydi. ────────────────────────────────────────────────
+  if (apply) {
+    const previews = existingPreviewFiles();
+    if (previews.length === 0) {
+      const today = tashkentDateStr(new Date());
+      throw new Error(
+        "Avval --dry-run ishga tushiring va hisobotni CEO bilan ko'rib chiqing. " +
+          `Kutilgan fayl: ${path.join(docsDir(), `migration-preview-${today}.csv`)}`,
+      );
+    }
+    console.log(`Bashorat hisoboti topildi: ${previews[previews.length - 1]}`);
+  }
+
+  // ── I3: brief 2-qadam — zaxira nusxa. ──────────────────────────────────
+  if (apply && !backedUp) {
+    throw new Error(
+      "DIQQAT: o'quvchilarning balansi o'zgaradi.\n" +
+        'Zaxira nusxa olindimi? (pg_dump)\n' +
+        "Davom etish uchun --zaxira-olindi bayrog'ini ham qo'shing.",
     );
   }
 
@@ -374,8 +561,12 @@ async function main(prisma: PrismaClient) {
   const year = Number(yearStr);
   const month = Number(monthStr);
 
+  // I1: `--apply` da "HECH NARSA YOZILMAYDI" deb yozish YOLG'ON edi — pul
+  // yozilishidan bir necha qator oldin chiqardi.
   printHeader(
-    `MIGRATSIYA OLDINDAN HISOBOTI — davr ${period} — DRY RUN, HECH NARSA YOZILMAYDI`,
+    apply
+      ? `MIGRATSIYA QO'LLANMOQDA — davr ${period} — BAZAGA YOZILADI`
+      : `MIGRATSIYA OLDINDAN HISOBOTI — davr ${period} — DRY RUN, HECH NARSA YOZILMAYDI`,
   );
 
   // resolveExcludedDates() `this`ga tegmaydi (faqat o'z parametrlaridan
@@ -390,6 +581,51 @@ async function main(prisma: PrismaClient) {
 
   const companies = await prisma.company.findMany({ select: { id: true } });
 
+  /**
+   * MIGRATSIYA QAMROVI — yozilishning O'Z holatidan, kurs bayrog'idan EMAS.
+   *
+   * Avval bu yerda `course: { paymentModel: LESSON_PACK }` turardi. Lekin
+   * `paymentModel` KURS darajasidagi maydon va migratsiyaning 4-qadami uni
+   * almashtiradi: prodda bitta "Standart" kursda 51 guruh bor, ya'ni birinchi
+   * migratsiya qilingan o'quvchi qolgan barcha kursdoshlarini qamrovdan
+   * ABADIY chiqarib yuborardi — sentabr hisobi yozilmagan, prepaid'i qotib
+   * qolgan, kursi esa allaqachon MONTHLY. Keyingi ishga tushirish
+   * "enrollments=0" topib "Migratsiya tugadi, hech qanday xato yo'q" deb
+   * chiqardi. Ya'ni brief tavsiya qilgan bosqichma-bosqich (`--limit`)
+   * chiqish aynan buzuvchi edi.
+   *
+   * To'g'ri belgi — shu davr uchun `EnrollmentMonthlyCharge` bormi. U
+   * yozilish darajasida, migratsiyaning haqiqiy natijasidan kelib chiqadi
+   * va `verify-monthly-migration.ts` ning 1-tekshiruvi bilan AYNAN
+   * to'ldiruvchi (biri "qamrovda qolganlar", ikkinchisi "hisobi borlar").
+   *
+   * Ogohlantirish: bu skript endi "shu davr uchun hisobi yo'q har qanday
+   * faol yozilish"ni oladi. Migratsiya tugagach oylik hisoblarni oy boshi
+   * cron'i yozadi — bu skriptni keyingi oylarda ishlatish uchun mo'ljallanmagan.
+   */
+  const scopeWhere = (companyId: number) => ({
+    status: EnrollmentStatus.ACTIVE,
+    deletedAt: null,
+    group: {
+      deletedAt: null,
+      companyId,
+      statusEnum: { in: [GroupStatus.ACTIVE, GroupStatus.PAUSED] },
+      course: { deletedAt: null },
+    },
+    student: { deletedAt: null, status: 'ACTIVE' as const },
+    monthlyCharges: {
+      none: { periodYear: year, periodMonth: month },
+    },
+  });
+
+  const countInScope = async (): Promise<number> => {
+    let total = 0;
+    for (const c of companies) {
+      total += await prisma.enrollment.count({ where: scopeWhere(c.id) });
+    }
+    return total;
+  };
+
   const allRows: MigrationRow[] = [];
   const reversedDeductions: Record<number, number> = {};
   const groupSummaries: GroupSummaryRow[] = [];
@@ -403,17 +639,7 @@ async function main(prisma: PrismaClient) {
 
   for (const company of companies) {
     const enrollments = await prisma.enrollment.findMany({
-      where: {
-        status: EnrollmentStatus.ACTIVE,
-        deletedAt: null,
-        group: {
-          deletedAt: null,
-          companyId: company.id,
-          statusEnum: { in: [GroupStatus.ACTIVE, GroupStatus.PAUSED] },
-          course: { paymentModel: PaymentModel.LESSON_PACK, deletedAt: null },
-        },
-        student: { deletedAt: null, status: 'ACTIVE' },
-      },
+      where: scopeWhere(company.id),
       select: {
         id: true,
         studentId: true,
@@ -505,10 +731,18 @@ async function main(prisma: PrismaClient) {
             enrollmentId: { in: enrollmentsWithPrepaid.map((e) => e.id) },
           },
           orderBy: { createdAt: 'asc' },
-          select: { enrollmentId: true, amount: true, metadata: true },
+          select: {
+            enrollmentId: true,
+            amount: true,
+            metadata: true,
+            createdAt: true,
+          },
         })
       : [];
-    const lastDeductionByEnrollment = new Map<string, PrepaidRefundBatch>();
+    const lastDeductionByEnrollment = new Map<
+      string,
+      PrepaidRefundBatch & { createdAt: Date }
+    >();
     for (const d of deductions) {
       if (!d.enrollmentId) continue;
       const meta = d.metadata as
@@ -519,6 +753,7 @@ async function main(prisma: PrismaClient) {
         amount: d.amount,
         lessonsCovered: meta?.lessonsCovered,
         perLessonCost: meta?.perLessonCost,
+        createdAt: d.createdAt,
       });
     }
 
@@ -529,19 +764,32 @@ async function main(prisma: PrismaClient) {
     const { lt: periodLt } = tashkentDayRangeUtc(
       `${period}-${String(daysInMonth).padStart(2, '0')}`,
     );
-    const periodDeductions = await prisma.transaction.findMany({
-      where: {
-        type: TransactionType.LESSON_DEDUCTION,
-        reversedAt: null,
-        createdAt: { gte: periodGte, lt: periodLt },
-        studentId: { in: enrollments.map((e) => e.studentId) },
-      },
-      select: { studentId: true, amount: true },
-    });
+    // `--apply` HAR YOZILISH bo'yicha bekor qiladi (`enrollmentId: enr.id`) va
+    // faqat ACTIVE guruhda (I2) — bashorat ham aynan shu to'plamdan olinishi
+    // kerak. Avvalgi versiya `studentId` bo'yicha olardi: qamrovga
+    // kirmaydigan yozilishning (masalan chiqib ketgani, yoki PAUSED guruhdagi)
+    // yechimini ham sanardi.
+    const chargeableEnrollmentIds = enrollments
+      .filter((e) => e.group.statusEnum === GroupStatus.ACTIVE)
+      .map((e) => e.id);
+    const periodDeductions = chargeableEnrollmentIds.length
+      ? await prisma.transaction.findMany({
+          where: {
+            type: TransactionType.LESSON_DEDUCTION,
+            reversedAt: null,
+            createdAt: { gte: periodGte, lt: periodLt },
+            enrollmentId: { in: chargeableEnrollmentIds },
+          },
+          select: { studentId: true, amount: true },
+        })
+      : [];
     for (const t of periodDeductions) {
       if (t.studentId == null) continue;
+      // ADR-0004: teskari qatorning summasi asl qatorning ISHORASIDAN
+      // chiqadi (`reverseTransaction`: `-original.amount`). `Math.abs`
+      // taqiqlangan — u musbat qatorni ham "qaytariladi" deb sanardi.
       reversedDeductions[t.studentId] =
-        (reversedDeductions[t.studentId] ?? 0) + Math.abs(t.amount);
+        (reversedDeductions[t.studentId] ?? 0) + -t.amount;
     }
 
     // ── o'qituvchi stavkalari (guruh-maxsus, aks holda global) ──────────────
@@ -582,11 +830,33 @@ async function main(prisma: PrismaClient) {
       // (scripts/lib/prepaid-refund-price.ts izohiga qarang) — chegirmani
       // batch summasidan to'g'ri o'qiydi, metadata.perLessonCost'ga
       // (chegirmasiz) faqat batch ma'lumoti yo'q bo'lganda tushadi.
+      const batch = lastDeductionByEnrollment.get(e.id) ?? null;
       const packPerLessonCost = resolvePackPerLessonCost({
         remaining: e.prepaidLessonsRemaining,
         course,
-        batch: lastDeductionByEnrollment.get(e.id) ?? null,
+        batch,
       });
+
+      // I2: PAUSED guruhga `createChargeForEnrollment` hisob yozmaydi
+      // (`statusEnum !== ACTIVE` -> null), shuning uchun bashorat ham
+      // hisoblamaydi va `--apply` sentabr yechimlarini bekor qilmaydi.
+      const chargeable = e.group.statusEnum === GroupStatus.ACTIVE;
+
+      // C2: prepaid'ni qoplab turgan batch shu davr ichida bo'lsa VA u
+      // bekor qilinadigan bo'lsa, prepaid ALOHIDA qaytarilmaydi — bekor
+      // qilish o'sha pulni allaqachon qaytaradi (aks holda bir batch ikki
+      // marta qaytarilardi). Batafsil: `lib/monthly-migration-apply.ts`
+      // fayli boshidagi izoh.
+      const fundedInPeriod =
+        !!batch && batch.createdAt >= periodGte && batch.createdAt < periodLt;
+      const prepaidRefundTotal =
+        chargeable && fundedInPeriod
+          ? 0
+          : resolvePrepaidRefundTotal({
+              remaining: e.prepaidLessonsRemaining,
+              course,
+              batch,
+            });
 
       const plannedLessons = plannedByGroup.get(e.groupId) ?? 0;
       const coveredLessons = lessonDatesInMonth({
@@ -609,6 +879,8 @@ async function main(prisma: PrismaClient) {
         balance: e.student.balance,
         prepaidLessons: e.prepaidLessonsRemaining,
         packPerLessonCost,
+        prepaidRefundTotal,
+        chargeable,
         monthlyPrice: course.price,
         plannedLessons,
         coveredLessons,
@@ -644,6 +916,8 @@ async function main(prisma: PrismaClient) {
         },
         courseId: e.group.courseId,
         discountPercent: e.student.discountPercent,
+        chargeable,
+        expectedPrepaidRefund: prepaidRefundTotal,
       });
       migrateByStudent.set(e.studentId, bucket);
     }
@@ -723,12 +997,23 @@ async function main(prisma: PrismaClient) {
   const plan = buildMigrationPlan({ rows: allRows, reversedDeductions });
 
   console.log('');
-  console.log(renderSummary(plan));
+  // I1: `--apply` da "HECH NARSA YOZILMADI" sarlavhasi bilan chiqarish
+  // pul yozilishidan sal oldin yolg'on gapirish edi.
+  console.log(
+    renderSummary(
+      plan,
+      apply
+        ? "MIGRATSIYA REJASI — HOZIR QO'LLANADI, BAZAGA YOZILADI"
+        : undefined,
+    ),
+  );
 
   if (apply) {
     await runApply({
+      prisma,
       plan,
       migrateByStudent,
+      countInScope,
       year,
       month,
       period,
@@ -793,7 +1078,7 @@ async function main(prisma: PrismaClient) {
 
   // ── to'liq o'quvchi ro'yxati CSV'ga (CEO qatlami 3) ─────────────────────
   const csv = renderStudentCsv(plan);
-  const outPath = csvOutputPath();
+  const outPath = nextPreviewPath();
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, csv, 'utf-8');
 
@@ -804,6 +1089,17 @@ async function main(prisma: PrismaClient) {
   console.log(
     "Bu skript FAQAT o'qidi — bazaga hech qanday create/update/delete/upsert yozilmadi.",
   );
+
+  if (plan.students.length === 0) {
+    section('QAMROV BO`SH');
+    console.log(
+      `Davr ${period} uchun migratsiya qilinadigan yozilish TOPILMADI.\n` +
+        `Agar migratsiya allaqachon bajarilgan bo'lsa buni TASDIQLANG:\n` +
+        `  npx ts-node scripts/verify-monthly-migration.ts --period=${period}\n` +
+        `Aks holda qamrov so'rovi noto'g'ri filtrlayapti — bo'sh ro'yxat\n` +
+        `"hammasi joyida" degani EMAS.`,
+    );
+  }
 }
 
 run(main);

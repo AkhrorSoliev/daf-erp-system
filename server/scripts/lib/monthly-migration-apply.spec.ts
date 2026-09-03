@@ -1,4 +1,5 @@
-import { PaymentModel } from '@prisma/client';
+import { EnrollmentStatus, GroupStatus, PaymentModel } from '@prisma/client';
+import type { ChargeableEnrollment } from '../../src/billing/monthly-charge.service';
 import {
   applyMigrationForStudent,
   ApplyMigrationDeps,
@@ -8,29 +9,38 @@ import {
 const PERIOD_GTE = new Date('2026-09-01T00:00:00.000Z');
 const PERIOD_LT = new Date('2026-10-01T00:00:00.000Z');
 
-function makeEnrollment(over: Partial<EnrollmentToMigrate> = {}) {
-  const enrollment = {
+/** `makeDeps` ning standart `refundPrepaidToBalance` javobi. */
+const DEFAULT_REFUND = 187_500;
+
+type EnrollmentOverride = Partial<Omit<EnrollmentToMigrate, 'enrollment'>> & {
+  enrollment?: Partial<ChargeableEnrollment>;
+};
+
+function makeEnrollment(over: EnrollmentOverride = {}): EnrollmentToMigrate {
+  const enrollment: ChargeableEnrollment = {
     id: 'enr-1',
     studentId: 10453,
     groupId: 'grp-1',
-    status: 'ACTIVE',
+    status: EnrollmentStatus.ACTIVE,
     startDate: null,
     group: {
       id: 'grp-1',
       branchId: 1,
       companyId: 1,
-      statusEnum: 'ACTIVE',
+      statusEnum: GroupStatus.ACTIVE,
       exactDays: ['MON', 'WED'],
       course: { price: 450_000, paymentModel: PaymentModel.LESSON_PACK },
     },
-    ...(over.enrollment as object),
+    ...over.enrollment,
   };
   return {
     courseId: 'course-1',
     discountPercent: 0,
+    chargeable: true,
+    expectedPrepaidRefund: DEFAULT_REFUND,
     ...over,
     enrollment,
-  } as EnrollmentToMigrate;
+  };
 }
 
 /** Minimal mock of the tx client — only the model methods this module calls. */
@@ -41,6 +51,8 @@ function makeTx(over: Record<string, unknown> = {}) {
     },
     transaction: {
       findMany: jest.fn().mockResolvedValue([]),
+      // Prepaid'ni qoplab turgan batch — standart: yo'q.
+      findFirst: jest.fn().mockResolvedValue(null),
     },
     enrollment: {
       update: jest.fn().mockResolvedValue({}),
@@ -77,7 +89,7 @@ function makeDeps(over: Partial<ApplyMigrationDeps> = {}): ApplyMigrationDeps {
       transactionId: 'tx-charge-1',
     }),
     reverseAccrualForAttendance: jest.fn().mockResolvedValue(null),
-    createAccrual: jest.fn().mockResolvedValue({}),
+    createAccrual: jest.fn().mockResolvedValue({ id: 'accrual-1' }),
     ...over,
   };
 }
@@ -87,11 +99,19 @@ describe('applyMigrationForStudent', () => {
     const tx = makeTx({
       transaction: {
         findMany: jest.fn().mockResolvedValue([{ id: 'ded-1' }]),
+        // Prepaid'ni qoplagan batch AVGUSTdan — shu sababli prepaid
+        // alohida qaytariladi (davr ichidagi batch bo'lganda qaytarilmasdi).
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'ded-aug',
+          createdAt: new Date('2026-08-04T09:00:00.000Z'),
+        }),
       },
       attendance: {
-        findMany: jest.fn().mockResolvedValue([
-          { id: 'att-1', date: new Date('2026-09-02'), groupId: 'grp-1' },
-        ]),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            { id: 'att-1', date: new Date('2026-09-02'), groupId: 'grp-1' },
+          ]),
       },
       groupTeacher: {
         findMany: jest.fn().mockResolvedValue([{ teacherId: 777 }]),
@@ -128,19 +148,22 @@ describe('applyMigrationForStudent', () => {
       newBalance: -342_500,
       reversedDeductionCount: 1,
       accrualsRecomputed: 1,
+      chargesCreated: 1,
+      chargesSkipped: 0,
     });
 
-    // Tartib: teskari qilish MUSTAQIL, prepaid qaytarish undan keyin.
+    // Tartib: prepaid qaytarish AVVAL, teskari qilish keyin. Teskarisi
+    // `prepaidRefundValue`ni metadatasiz teskari qatorga tushirib, chegirmasiz
+    // (2x) narxni qaytarardi — fayl boshidagi izohga qarang.
     const reverseCall = (deps.reverseTransaction as jest.Mock).mock
       .invocationCallOrder[0];
     const refundCall = (deps.refundPrepaidToBalance as jest.Mock).mock
       .invocationCallOrder[0];
-    expect(reverseCall).toBeLessThan(refundCall);
+    expect(refundCall).toBeLessThan(reverseCall);
 
     // Accrual: AVVAL reverse, KEYIN create — shart (accrueMonthlySalary sharhi).
-    const accrualReverseCall = (
-      deps.reverseAccrualForAttendance as jest.Mock
-    ).mock.invocationCallOrder[0];
+    const accrualReverseCall = (deps.reverseAccrualForAttendance as jest.Mock)
+      .mock.invocationCallOrder[0];
     const accrualCreateCall = (deps.createAccrual as jest.Mock).mock
       .invocationCallOrder[0];
     expect(accrualReverseCall).toBeLessThan(accrualCreateCall);
@@ -161,7 +184,10 @@ describe('applyMigrationForStudent', () => {
   it("qayta ishga tushirish (resume): hammasi allaqachon bajarilgan bo'lsa, ikkinchi marta hisoblamaydi", async () => {
     const tx = makeTx({
       // reverseTransaction uchun qator topilmadi (allaqachon teskari).
-      transaction: { findMany: jest.fn().mockResolvedValue([]) },
+      transaction: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
       // Hisob allaqachon mavjud.
       enrollmentMonthlyCharge: {
         findUnique: jest.fn().mockResolvedValue({ id: 'existing-charge' }),
@@ -193,7 +219,7 @@ describe('applyMigrationForStudent', () => {
       periodMonth: 9,
       periodGte: PERIOD_GTE,
       periodLt: PERIOD_LT,
-      enrollments: [makeEnrollment()],
+      enrollments: [makeEnrollment({ expectedPrepaidRefund: 0 })],
     });
 
     expect(result.reversedSeptember).toBe(0);
@@ -261,14 +287,17 @@ describe('applyMigrationForStudent', () => {
         periodMonth: 9,
         periodGte: PERIOD_GTE,
         periodLt: PERIOD_LT,
-        enrollments: [makeEnrollment()],
+        enrollments: [makeEnrollment({ expectedPrepaidRefund: 0 })],
       }),
     ).rejects.toThrow(/O'quvchi 10453/);
   });
 
   it("bir nechta yozilishni bitta o'quvchida yig'adi (ikki guruh, ikki kurs)", async () => {
     const tx = makeTx({
-      transaction: { findMany: jest.fn().mockResolvedValue([]) },
+      transaction: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
       student: {
         findUniqueOrThrow: jest
           .fn()
@@ -298,15 +327,227 @@ describe('applyMigrationForStudent', () => {
         makeEnrollment({
           enrollment: { id: 'enr-1', groupId: 'grp-1' },
           courseId: 'course-1',
+          expectedPrepaidRefund: 0,
         }),
         makeEnrollment({
           enrollment: { id: 'enr-2', groupId: 'grp-2' },
           courseId: 'course-2',
+          expectedPrepaidRefund: 0,
         }),
       ],
     });
 
     expect(result.monthlyCharge).toBe(900_000);
     expect(tx.course.updateMany).toHaveBeenCalledTimes(2);
+  });
+  // ── C2: prepaid qaytarish AVVAL, va davr ichidagi batch ikki marta
+  // qaytarilmaydi ────────────────────────────────────────────────────────
+  it("davr ICHIDAGI batch prepaid'ni qoplagan bo'lsa — prepaid alohida qaytarilmaydi (bekor qilish uni allaqachon qaytaradi)", async () => {
+    const tx = makeTx({
+      transaction: {
+        // Sentabr yechimi bekor qilinadi: +450 000 balansga qaytadi.
+        findMany: jest.fn().mockResolvedValue([{ id: 'ded-sep' }]),
+        // ...va prepaid'ni qoplab turgan batch AYNAN o'sha davr ichidagi qator.
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'ded-sep',
+          createdAt: new Date('2026-09-02T09:00:00.000Z'),
+        }),
+      },
+      student: {
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValueOnce({ balance: 0 })
+          // 0 + 0 (prepaid YO'Q) + 450000 (bekor) - 450000 (hisob)
+          .mockResolvedValueOnce({ balance: 0 }),
+      },
+    });
+    const deps = makeDeps({
+      reverseTransaction: jest.fn().mockResolvedValue({ amount: 450_000 }),
+    });
+
+    const result = await applyMigrationForStudent({
+      tx,
+      deps,
+      studentId: 10453,
+      companyId: 1,
+      periodYear: 2026,
+      periodMonth: 9,
+      periodGte: PERIOD_GTE,
+      periodLt: PERIOD_LT,
+      enrollments: [makeEnrollment({ expectedPrepaidRefund: 0 })],
+    });
+
+    expect(deps.refundPrepaidToBalance).not.toHaveBeenCalled();
+    expect(result.prepaidRefund).toBe(0);
+    expect(result.reversedSeptember).toBe(450_000);
+    // Hisoblagich baribir nolga tushadi — pul bekor qilish orqali qaytdi.
+    expect(tx.enrollment.update).toHaveBeenCalledWith({
+      where: { id: 'enr-1' },
+      data: { prepaidLessonsRemaining: 0, cycleLessonIndex: 0 },
+    });
+  });
+
+  it('bashorat qilingan prepaid summasi bilan haqiqiy summa farq qilsa — qattiq xato', async () => {
+    const tx = makeTx({
+      student: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ balance: 0 }),
+      },
+    });
+    const deps = makeDeps();
+
+    await expect(
+      applyMigrationForStudent({
+        tx,
+        deps,
+        studentId: 10453,
+        companyId: 1,
+        periodYear: 2026,
+        periodMonth: 9,
+        periodGte: PERIOD_GTE,
+        periodLt: PERIOD_LT,
+        // Bashorat 206 250 dedi, servis 187 500 qaytardi.
+        enrollments: [makeEnrollment({ expectedPrepaidRefund: 206_250 })],
+      }),
+    ).rejects.toThrow(/prepaid qaytarish bashorati 206250/);
+  });
+
+  // ── I2: PAUSED guruh ──────────────────────────────────────────────────
+  it("PAUSED guruh (chargeable=false): bekor qilinmaydi, hisob yozilmaydi, lekin prepaid qaytariladi va kurs MONTHLY'ga o'tadi", async () => {
+    const tx = makeTx({
+      transaction: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'ded-sep' }]),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'ded-sep',
+          createdAt: new Date('2026-09-02T09:00:00.000Z'),
+        }),
+      },
+      student: {
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValueOnce({ balance: -50_000 })
+          // -50000 + 187500 (prepaid) + 0 (bekor yo'q) - 0 (hisob yo'q)
+          .mockResolvedValueOnce({ balance: 137_500 }),
+      },
+    });
+    const deps = makeDeps();
+
+    const result = await applyMigrationForStudent({
+      tx,
+      deps,
+      studentId: 10453,
+      companyId: 1,
+      periodYear: 2026,
+      periodMonth: 9,
+      periodGte: PERIOD_GTE,
+      periodLt: PERIOD_LT,
+      enrollments: [
+        makeEnrollment({
+          chargeable: false,
+          enrollment: {
+            group: {
+              id: 'grp-1',
+              branchId: 1,
+              companyId: 1,
+              statusEnum: GroupStatus.PAUSED,
+              exactDays: ['MON', 'WED'],
+              course: {
+                price: 450_000,
+                paymentModel: PaymentModel.LESSON_PACK,
+              },
+            },
+          },
+        }),
+      ],
+    });
+
+    expect(deps.reverseTransaction).not.toHaveBeenCalled();
+    expect(deps.createChargeForEnrollment).not.toHaveBeenCalled();
+    expect(result.reversedSeptember).toBe(0);
+    expect(result.monthlyCharge).toBe(0);
+    expect(result.prepaidRefund).toBe(DEFAULT_REFUND);
+    expect(result.chargesCreated).toBe(0);
+    expect(result.chargesSkipped).toBe(1);
+    // Kurs baribir MONTHLY'ga o'tadi — bayroq kurs darajasida, guruhdoshlari
+    // uni qanday bo'lsa ham almashtiradi.
+    expect(tx.course.updateMany).toHaveBeenCalledWith({
+      where: { id: 'course-1' },
+      data: { paymentModel: PaymentModel.MONTHLY },
+    });
+  });
+
+  // ── I4: `createAccrual` jim `null` qaytarmasligi kerak ────────────────
+  it('createAccrual null qaytarsa — qattiq xato (aks holda eski accrual bekor qilinib, yangisi yozilmasdi)', async () => {
+    const tx = makeTx({
+      attendance: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            { id: 'att-1', date: new Date('2026-09-02'), groupId: 'grp-1' },
+          ]),
+      },
+      groupTeacher: {
+        findMany: jest.fn().mockResolvedValue([{ teacherId: 777 }]),
+      },
+      student: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ balance: 0 }),
+      },
+    });
+    const deps = makeDeps({
+      createAccrual: jest.fn().mockResolvedValue(null),
+    });
+
+    await expect(
+      applyMigrationForStudent({
+        tx,
+        deps,
+        studentId: 10453,
+        companyId: 1,
+        periodYear: 2026,
+        periodMonth: 9,
+        periodGte: PERIOD_GTE,
+        periodLt: PERIOD_LT,
+        enrollments: [makeEnrollment()],
+      }),
+    ).rejects.toThrow(/createAccrual null qaytardi/);
+  });
+
+  it("oylik hisobda ledger qatori (transactionId) bo'lmasa — accrual qadamiga umuman kirilmaydi", async () => {
+    const tx = makeTx({
+      attendance: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            { id: 'att-1', date: new Date('2026-09-02'), groupId: 'grp-1' },
+          ]),
+      },
+      groupTeacher: {
+        findMany: jest.fn().mockResolvedValue([{ teacherId: 777 }]),
+      },
+      student: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ balance: 0 }),
+      },
+    });
+    const deps = makeDeps({
+      createChargeForEnrollment: jest.fn().mockResolvedValue({
+        chargedAmount: 450_000,
+        perLessonCost: 34_615,
+        transactionId: null,
+      }),
+    });
+
+    await expect(
+      applyMigrationForStudent({
+        tx,
+        deps,
+        studentId: 10453,
+        companyId: 1,
+        periodYear: 2026,
+        periodMonth: 9,
+        periodGte: PERIOD_GTE,
+        periodLt: PERIOD_LT,
+        enrollments: [makeEnrollment()],
+      }),
+    ).rejects.toThrow(/ledger qatori \(transactionId\) yo'q/);
+    expect(deps.reverseAccrualForAttendance).not.toHaveBeenCalled();
   });
 });

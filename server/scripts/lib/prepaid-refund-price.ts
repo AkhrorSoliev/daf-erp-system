@@ -45,8 +45,16 @@ export interface PrepaidRefundInput {
   batch?: PrepaidRefundBatch | null;
 }
 
-/** Bitta dars uchun qaytariladigan summa — pastdagi izohdagi ustuvorlik bilan. */
-export function resolvePackPerLessonCost(input: PrepaidRefundInput): number {
+/**
+ * Prepaid qaytarishning TO'LIQ summasi — `EnrollmentBillingService.
+ * prepaidRefundValue` bilan qator-qator bir xil arifmetika.
+ *
+ * Bashorat (`MigrationRow.prepaidRefundTotal`) va `--apply` ning haqiqiy
+ * natijasi shu funksiya orqali AYNAN teng bo'ladi; bitta darsga bo'lingan
+ * `resolvePackPerLessonCost` esa faqat ko'rsatish uchun qoladi (bo'linish
+ * bir necha so'm yaxlitlash farqi beradi).
+ */
+export function resolvePrepaidRefundTotal(input: PrepaidRefundInput): number {
   const { remaining, course, batch } = input;
   if (remaining <= 0) return 0;
 
@@ -55,15 +63,19 @@ export function resolvePackPerLessonCost(input: PrepaidRefundInput): number {
 
   if (batchLessons > 0 && batchAmount > 0 && remaining <= batchLessons) {
     const consumed = batchLessons - remaining;
-    const refund =
-      batchAmount - cycleCostFor(batchAmount, batchLessons, consumed);
-    return Math.round(refund / remaining);
+    return batchAmount - cycleCostFor(batchAmount, batchLessons, consumed);
   }
 
   if (batch?.perLessonCost && batch.perLessonCost > 0) {
-    return batch.perLessonCost;
+    return remaining * batch.perLessonCost;
   }
 
   const lessonPaymentCount = course.lessonPaymentCount || 12;
-  return Math.round(course.price / lessonPaymentCount);
+  return remaining * Math.round(course.price / lessonPaymentCount);
+}
+
+/** Bitta dars uchun qaytariladigan summa — FAQAT ko'rsatish uchun. */
+export function resolvePackPerLessonCost(input: PrepaidRefundInput): number {
+  if (input.remaining <= 0) return 0;
+  return Math.round(resolvePrepaidRefundTotal(input) / input.remaining);
 }
