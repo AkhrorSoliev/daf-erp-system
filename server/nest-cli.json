@@ -5,7 +5,16 @@
   "compilerOptions": {
     "deleteOutDir": true,
     "assets": [
-      { "include": "../assets/**/*", "outDir": "dist/assets", "watchAssets": false }
+      {
+        "include": "../assets/**/*",
+        "outDir": "dist/assets",
+        "watchAssets": false
+      },
+      {
+        "include": "../content/**/*",
+        "outDir": "dist/content",
+        "watchAssets": false
+      }
     ]
   }
 }

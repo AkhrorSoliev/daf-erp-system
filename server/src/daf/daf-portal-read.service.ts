@@ -3,21 +3,18 @@ import { ConfigService } from '@nestjs/config';
 import { DafLevel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
-/** Yo'lning tartibi. Daraja o'sish tartibida yuriladi. */
-export const LEVEL_ORDER: DafLevel[] = [
-  DafLevel.A1_1,
-  DafLevel.A1_2,
-  DafLevel.A2_1,
-  DafLevel.A2_2,
-  DafLevel.B1,
-];
+/**
+ * Yo'lning tartibi. Daraja o'sish tartibida yuriladi.
+ *
+ * Uchta daraja, beshta emas: `A1.1`/`A1.2` bo'linishi manbaning yorlig'i
+ * edi, o'quvchi va Goethe imtihoni uchun esa daraja bitta — A1.
+ */
+export const LEVEL_ORDER: DafLevel[] = [DafLevel.A1, DafLevel.A2, DafLevel.B1];
 
 /** Ekranda ko'rinadigan daraja nomi. */
 export const LEVEL_LABEL: Record<DafLevel, string> = {
-  [DafLevel.A1_1]: 'A1.1',
-  [DafLevel.A1_2]: 'A1.2',
-  [DafLevel.A2_1]: 'A2.1',
-  [DafLevel.A2_2]: 'A2.2',
+  [DafLevel.A1]: 'A1',
+  [DafLevel.A2]: 'A2',
   [DafLevel.B1]: 'B1',
 };
 
@@ -48,7 +45,7 @@ export class DafPortalReadService {
   }
 
   /**
-   * Daraja yo'li: A1.1 dan B1 gacha, har darajada bo'limlar.
+   * Daraja yo'li: A1 dan B1 gacha, har darajada bo'limlar.
    *
    * Bo'limi yo'q daraja ham qaytariladi — o'quvchi butun yo'lni ko'rishi
    * kerak, shu jumladan hali kontenti yo'q bosqichlarni ham. Ularni
@@ -56,6 +53,13 @@ export class DafPortalReadService {
    */
   async getLevels(): Promise<LevelPathItem[]> {
     const units = await this.prisma.dafUnit.findMany({
+      // Nafaqaga chiqarilgan unit yo'lga chiqmaydi. A1 migratsiyasi eski
+      // 20 ta DiB unitini `retiredAt` bilan belgilab, `order`ini
+      // manfiyga o'tkazdi (yangi 12 unit 1..12ni egallashi uchun) — shu
+      // filtrsiz ular ham qaytardi, VA manfiy `order` ustuvorligida
+      // (o'sish tartibida saralanganda eng manfiysi birinchi) o'quvchining
+      // yo'li teskari aylanardi.
+      where: { retiredAt: null },
       orderBy: [{ level: 'asc' }, { order: 'asc' }],
       select: {
         id: true,
@@ -83,11 +87,11 @@ export class DafPortalReadService {
   }
 
   /**
-   * Bitta bo'lim — DARSLAR ro'yxati.
+   * Bitta bo'lim — BOSQICHLAR ro'yxati (har bo'limda aynan beshta).
    *
-   * Bo'limning o'zi lug'at yoki mashq qaytarmaydi: birinchi bo'limda
-   * 226 so'z va 108 mashq bor, ya'ni bitta ekranga sig'maydi va o'quvchi
-   * qayerdan boshlashini bilmaydi. Kontent darsning ichida.
+   * Bo'limning o'zi lug'at yoki mashq qaytarmaydi: bo'limda 30–50 so'z va
+   * o'nlab mashq bor, ya'ni bitta ekranga sig'maydi va o'quvchi qayerdan
+   * boshlashini bilmaydi. Kontent bosqichning ichida.
    */
   async getUnit(unitId: number) {
     const unit = await this.prisma.dafUnit.findUnique({
@@ -98,30 +102,40 @@ export class DafPortalReadService {
         order: true,
         titleUz: true,
         titleDe: true,
+        retiredAt: true,
       },
     });
-    if (!unit) throw new NotFoundException("Bo'lim topilmadi");
+    // Nafaqaga chiqarilgan unit ham "topilmadi" — `getLevels` uni
+    // ko'rsatmaydi, shuning uchun uning ID'siga to'g'ridan-to'g'ri
+    // kirish ham xuddi shu 404 yo'lidan o'tishi kerak.
+    if (!unit || unit.retiredAt)
+      throw new NotFoundException("Bo'lim topilmadi");
 
+    // Seans tartibi — `order` ning o'zi (`tier` emas): yangi A1 xaritasi
+    // darslarini `tier`siz yozadi (u endi null), `order` esa har ikkala
+    // avlodda ham to'ldirilgan — eski seed uni `tier`dan hosil qilgan.
     const lessons = await this.prisma.dafLesson.findMany({
       where: { unitId },
       orderBy: { order: 'asc' },
       select: {
         id: true,
         order: true,
-        kind: true,
+        tier: true,
         titleDe: true,
         titleUz: true,
         _count: { select: { lexemes: true, exercises: true } },
       },
     });
 
+    const { retiredAt: _retiredAt, ...publicUnit } = unit;
+
     return {
-      ...unit,
+      ...publicUnit,
       label: LEVEL_LABEL[unit.level],
       lessons: lessons.map((l) => ({
         id: l.id,
         order: l.order,
-        kind: l.kind,
+        tier: l.tier,
         titleDe: l.titleDe,
         titleUz: l.titleUz,
         wordCount: l._count.lexemes,
@@ -146,7 +160,7 @@ export class DafPortalReadService {
       select: {
         id: true,
         order: true,
-        kind: true,
+        tier: true,
         titleDe: true,
         titleUz: true,
         unit: { select: { id: true, titleUz: true, level: true } },

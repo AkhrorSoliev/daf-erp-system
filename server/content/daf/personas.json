@@ -1,0 +1,315 @@
+{
+ "version": 1,
+ "hinweis": "Obrazlar ro'yxati. dialogfaehig=false bo'lgani boshqa tizimda yasalgan — bitta dialogda boshqalar bilan birga ishlatilmaydi.",
+ "personas": [
+  {
+   "id": "emma-fischer",
+   "vorname": "Emma",
+   "nachname": "Fischer",
+   "alter": 8,
+   "geschlecht": "w",
+   "stadt": "Hamburg",
+   "land": "Deutschland",
+   "sprachen": [
+    "Deutsch"
+   ],
+   "beruf": "Schülerin",
+   "aussehen": "a cheerful 8-year-old girl with light brown hair in two braids, freckles",
+   "stimme": {
+    "engine": "minimax-voice-design",
+    "voice": "ttv-voice-2026090100034626-SFDnUFGM",
+    "label": "MiniMax — faqat yakka",
+    "hz": 267,
+    "dialogfaehig": false
+   },
+   "portrait": "daf/persona/portrait/emma-fischer.jpg",
+   "probe": "daf/persona/voice/emma-fischer.mp3"
+  },
+  {
+   "id": "ben-fischer",
+   "vorname": "Ben",
+   "nachname": "Fischer",
+   "alter": 10,
+   "geschlecht": "m",
+   "stadt": "Hamburg",
+   "land": "Deutschland",
+   "sprachen": [
+    "Deutsch"
+   ],
+   "beruf": "Schüler",
+   "aussehen": "a 10-year-old boy with short blond hair and a striped shirt, Emma's brother",
+   "stimme": {
+    "engine": "minimax-voice-design",
+    "voice": "ttv-voice-2026090100091926-u2OXb3Pb",
+    "label": "MiniMax — faqat yakka",
+    "hz": 235,
+    "dialogfaehig": false
+   },
+   "portrait": "daf/persona/portrait/ben-fischer.jpg",
+   "probe": "daf/persona/voice/ben-fischer.mp3"
+  },
+  {
+   "id": "mia-schroeder",
+   "vorname": "Mia",
+   "nachname": "Schröder",
+   "alter": 15,
+   "geschlecht": "w",
+   "stadt": "Leipzig",
+   "land": "Deutschland",
+   "sprachen": [
+    "Deutsch",
+    "Englisch"
+   ],
+   "beruf": "Schülerin",
+   "aussehen": "a 15-year-old girl with dark shoulder-length hair and round glasses",
+   "stimme": {
+    "engine": "elevenlabs",
+    "voice": "Alice",
+    "label": "Alice",
+    "hz": 216,
+    "dialogfaehig": true
+   },
+   "portrait": "daf/persona/portrait/mia-schroeder.jpg",
+   "probe": "daf/persona/voice/mia-schroeder.mp3"
+  },
+  {
+   "id": "jonas-weber",
+   "vorname": "Jonas",
+   "nachname": "Weber",
+   "alter": 17,
+   "geschlecht": "m",
+   "stadt": "Leipzig",
+   "land": "Deutschland",
+   "sprachen": [
+    "Deutsch",
+    "Englisch"
+   ],
+   "beruf": "Schüler",
+   "aussehen": "a 17-year-old boy with curly dark hair and a hoodie",
+   "stimme": {
+    "engine": "elevenlabs",
+    "voice": "Liam",
+    "label": "Liam",
+    "hz": 145,
+    "dialogfaehig": true
+   },
+   "portrait": "daf/persona/portrait/jonas-weber.jpg",
+   "probe": "daf/persona/voice/jonas-weber.mp3"
+  },
+  {
+   "id": "anna-weber",
+   "vorname": "Anna",
+   "nachname": "Weber",
+   "alter": 24,
+   "geschlecht": "w",
+   "stadt": "Hannover",
+   "land": "Deutschland",
+   "sprachen": [
+    "Deutsch",
+    "Englisch"
+   ],
+   "beruf": "Studentin",
+   "aussehen": "a 24-year-old woman with long auburn hair, warm smile, casual jacket",
+   "stimme": {
+    "engine": "elevenlabs",
+    "voice": "Rachel",
+    "label": "Rachel",
+    "hz": 200,
+    "dialogfaehig": true
+   },
+   "portrait": "daf/persona/portrait/anna-weber.jpg",
+   "probe": "daf/persona/voice/anna-weber.mp3"
+  },
+  {
+   "id": "luca-rossi",
+   "vorname": "Luca",
+   "nachname": "Rossi",
+   "alter": 27,
+   "geschlecht": "m",
+   "stadt": "München",
+   "land": "Italien",
+   "sprachen": [
+    "Italienisch",
+    "Deutsch",
+    "Englisch"
+   ],
+   "beruf": "Koch",
+   "aussehen": "a 27-year-old man with short dark hair and light stubble, olive skin",
+   "stimme": {
+    "engine": "elevenlabs",
+    "voice": "Callum",
+    "label": "Callum",
+    "hz": 131,
+    "dialogfaehig": true
+   },
+   "portrait": "daf/persona/portrait/luca-rossi.jpg",
+   "probe": "daf/persona/voice/luca-rossi.mp3"
+  },
+  {
+   "id": "doniyor-soliyev",
+   "vorname": "Doniyor",
+   "nachname": "Soliyev",
+   "alter": 25,
+   "geschlecht": "m",
+   "stadt": "Berlin",
+   "land": "Usbekistan",
+   "sprachen": [
+    "Usbekisch",
+    "Russisch",
+    "Deutsch"
+   ],
+   "beruf": "Student",
+   "aussehen": "a 25-year-old Central Asian man with black hair and dark eyes, neat casual shirt",
+   "stimme": {
+    "engine": "elevenlabs",
+    "voice": "Charlie",
+    "label": "Charlie",
+    "hz": 133,
+    "dialogfaehig": true
+   },
+   "portrait": "daf/persona/portrait/doniyor-soliyev.jpg",
+   "probe": "daf/persona/voice/doniyor-soliyev.mp3"
+  },
+  {
+   "id": "sabine-kowalski",
+   "vorname": "Sabine",
+   "nachname": "Kowalski",
+   "alter": 48,
+   "geschlecht": "w",
+   "stadt": "Berlin",
+   "land": "Polen",
+   "sprachen": [
+    "Polnisch",
+    "Deutsch"
+   ],
+   "beruf": "Verkäuferin",
+   "aussehen": "a 48-year-old woman with short blonde hair and a friendly, practical look",
+   "stimme": {
+    "engine": "elevenlabs",
+    "voice": "Matilda",
+    "label": "Matilda",
+    "hz": 195,
+    "dialogfaehig": true
+   },
+   "portrait": "daf/persona/portrait/sabine-kowalski.jpg",
+   "probe": "daf/persona/voice/sabine-kowalski.mp3"
+  },
+  {
+   "id": "peter-neumann",
+   "vorname": "Peter",
+   "nachname": "Neumann",
+   "alter": 52,
+   "geschlecht": "m",
+   "stadt": "Köln",
+   "land": "Deutschland",
+   "sprachen": [
+    "Deutsch",
+    "Englisch"
+   ],
+   "beruf": "Büroangestellter",
+   "aussehen": "a 52-year-old man with greying hair and glasses, shirt and tie",
+   "stimme": {
+    "engine": "elevenlabs",
+    "voice": "George",
+    "label": "George",
+    "hz": 136,
+    "dialogfaehig": true
+   },
+   "portrait": "daf/persona/portrait/peter-neumann.jpg",
+   "probe": "daf/persona/voice/peter-neumann.mp3"
+  },
+  {
+   "id": "claudia-bauer",
+   "vorname": "Claudia",
+   "nachname": "Bauer",
+   "alter": 44,
+   "geschlecht": "w",
+   "stadt": "Hamburg",
+   "land": "Deutschland",
+   "sprachen": [
+    "Deutsch",
+    "Französisch"
+   ],
+   "beruf": "Ärztin",
+   "aussehen": "a 44-year-old woman with dark hair tied back, wearing a white coat",
+   "stimme": {
+    "engine": "elevenlabs",
+    "voice": "Aria",
+    "label": "Aria",
+    "hz": 200,
+    "dialogfaehig": true
+   },
+   "portrait": "daf/persona/portrait/claudia-bauer.jpg",
+   "probe": "daf/persona/voice/claudia-bauer.mp3"
+  },
+  {
+   "id": "markus-schneider",
+   "vorname": "Markus",
+   "nachname": "Schneider",
+   "alter": 50,
+   "geschlecht": "m",
+   "stadt": "Stuttgart",
+   "land": "Deutschland",
+   "sprachen": [
+    "Deutsch"
+   ],
+   "beruf": "Lehrer",
+   "aussehen": "a 50-year-old man with a short beard and a cardigan, kind expression",
+   "stimme": {
+    "engine": "elevenlabs",
+    "voice": "Brian",
+    "label": "Brian",
+    "hz": 108,
+    "dialogfaehig": true
+   },
+   "portrait": "daf/persona/portrait/markus-schneider.jpg",
+   "probe": "daf/persona/voice/markus-schneider.mp3"
+  },
+  {
+   "id": "oma-krause",
+   "vorname": "Helga",
+   "nachname": "Krause",
+   "alter": 72,
+   "geschlecht": "w",
+   "stadt": "Dresden",
+   "land": "Deutschland",
+   "sprachen": [
+    "Deutsch"
+   ],
+   "beruf": "Rentnerin",
+   "aussehen": "a 72-year-old woman with white hair in a bun and small earrings, gentle face",
+   "stimme": {
+    "engine": "elevenlabs",
+    "voice": "Laura",
+    "label": "Laura",
+    "hz": 205,
+    "dialogfaehig": true
+   },
+   "portrait": "daf/persona/portrait/oma-krause.jpg",
+   "probe": "daf/persona/voice/oma-krause.mp3"
+  },
+  {
+   "id": "opa-fischer",
+   "vorname": "Walter",
+   "nachname": "Fischer",
+   "alter": 76,
+   "geschlecht": "m",
+   "stadt": "Dresden",
+   "land": "Deutschland",
+   "sprachen": [
+    "Deutsch"
+   ],
+   "beruf": "Rentner",
+   "aussehen": "a 76-year-old man with white hair, glasses and a knitted vest",
+   "stimme": {
+    "engine": "elevenlabs",
+    "voice": "Bill",
+    "label": "Bill",
+    "hz": 170,
+    "dialogfaehig": true
+   },
+   "portrait": "daf/persona/portrait/opa-fischer.jpg",
+   "probe": "daf/persona/voice/opa-fischer.mp3"
+  }
+ ]
+}

@@ -1,0 +1,156 @@
+{
+  "level": "A1",
+  "units": [
+    {
+      "order": 1,
+      "titleUz": "Tanishuv va salomlashish",
+      "titleDe": "Sich vorstellen",
+      "sections": ["dib-voc-01-01", "dib-voc-01-02", "dib-voc-01-03"],
+      "grammar": ["pro_01", "pro_02", "vi_11", "con_05"]
+    },
+    {
+      "order": 2,
+      "titleUz": "Sonlar",
+      "titleDe": "Zahlen",
+      "sections": ["dib-voc-01-07"],
+      "grammar": ["no_01", "no_02", "no_03", "det_01"]
+    },
+    {
+      "order": 3,
+      "titleUz": "Kelib chiqish va shaxsiy ma'lumot",
+      "titleDe": "Herkunft und persönliche Daten",
+      "sections": [
+        "dib-voc-01-04",
+        "dib-voc-01-05",
+        "dib-voc-01-06",
+        "dib-voc-01-08"
+      ],
+      "grammar": ["v_01", "v_02", "cas_02"]
+    },
+    {
+      "order": 4,
+      "titleUz": "Ranglar va kayfiyat",
+      "titleDe": "Farben und Befinden",
+      "sections": ["dib-voc-01-09", "dib-voc-01-10"],
+      "grammar": ["vi_05", "con_02"]
+    },
+    {
+      "order": 5,
+      "titleUz": "Pul, telefon va kampus",
+      "titleDe": "Geld, Handy und Campus",
+      "sections": ["dib-voc-01-11", "dib-voc-01-12"],
+      "grammar": ["det_03", "det_04"]
+    },
+    {
+      "order": 6,
+      "titleUz": "Fanlar va hafta kunlari",
+      "titleDe": "Studienfächer und Wochentage",
+      "sections": ["dib-voc-01-13", "dib-voc-01-14"],
+      "grammar": ["cas_05", "det_02"]
+    },
+    {
+      "order": 7,
+      "titleUz": "Universitetda va darsda",
+      "titleDe": "An der Uni",
+      "sections": ["dib-voc-02-01", "dib-voc-02-02", "dib-voc-02-03"],
+      "grammar": ["cas_01", "cas_03", "vi_07", "vi_12"]
+    },
+    {
+      "order": 8,
+      "titleUz": "Ish stoli va kompyuter",
+      "titleDe": "Schreibtisch und Computer",
+      "sections": ["dib-voc-02-04", "dib-voc-02-05"],
+      "grammar": ["v_04"]
+    },
+    {
+      "order": 9,
+      "titleUz": "Vaqt va soat",
+      "titleDe": "Uhrzeit und Zeitangaben",
+      "sections": ["dib-voc-02-06"],
+      "grammar": ["cas_04", "cas_06", "vi_14"]
+    },
+    {
+      "order": 10,
+      "titleUz": "Uy va oshxona",
+      "titleDe": "Wohnung und Küche",
+      "sections": ["dib-voc-02-07", "dib-voc-02-08"],
+      "grammar": ["vi_10"]
+    },
+    {
+      "order": 11,
+      "titleUz": "Xonalar va uy yumushlari",
+      "titleDe": "Zimmer und Haushalt",
+      "sections": [
+        "dib-voc-02-09",
+        "dib-voc-02-10",
+        "dib-voc-02-11",
+        "dib-voc-02-12",
+        "dib-voc-02-13"
+      ],
+      "grammar": ["con_06", "vimp_01"]
+    },
+    {
+      "order": 12,
+      "titleUz": "Kun tartibi va nonushta",
+      "titleDe": "Tagesablauf und Frühstück",
+      "sections": ["dib-voc-03-01", "dib-voc-03-02"],
+      "grammar": ["vi_09", "vi_01"]
+    },
+    {
+      "order": 13,
+      "titleUz": "Universitetga yo'l va darslar",
+      "titleDe": "Zur Uni und in den Kurs",
+      "sections": ["dib-voc-03-03", "dib-voc-03-04"],
+      "grammar": ["vi_02", "vi_06"]
+    },
+    {
+      "order": 14,
+      "titleUz": "Tushlik va oziq-ovqat",
+      "titleDe": "Mittagessen und Lebensmittel",
+      "sections": ["dib-voc-03-05", "dib-voc-03-09"],
+      "grammar": ["vi_08"]
+    },
+    {
+      "order": 15,
+      "titleUz": "Shahardagi do'konlar",
+      "titleDe": "Geschäfte in der Stadt",
+      "sections": ["dib-voc-03-06", "dib-voc-03-08"],
+      "grammar": ["pro_03", "vi_03"]
+    },
+    {
+      "order": 16,
+      "titleUz": "Gigiyena do'koni va supermarket",
+      "titleDe": "Drogerie und Supermarkt",
+      "sections": ["dib-voc-03-07", "dib-voc-03-10"],
+      "grammar": []
+    },
+    {
+      "order": 17,
+      "titleUz": "Bo'sh vaqt va sevimli mashg'ulot",
+      "titleDe": "Freizeit und Hobbys",
+      "sections": ["dib-voc-04-01", "dib-voc-04-10"],
+      "grammar": ["con_03", "vsp_04"]
+    },
+    {
+      "order": 18,
+      "titleUz": "Sayrga chiqish: kafe, kino, restoran",
+      "titleDe": "Ausgehen: Café, Kino, Restaurant",
+      "sections": ["dib-voc-04-02", "dib-voc-04-08", "dib-voc-04-09"],
+      "grammar": ["vm_01", "vsp_05"]
+    },
+    {
+      "order": 19,
+      "titleUz": "Kiyim-kechak va qo'l hunari",
+      "titleDe": "Kleidung und Handarbeit",
+      "sections": ["dib-voc-04-03", "dib-voc-04-05"],
+      "grammar": ["vi_13"]
+    },
+    {
+      "order": 20,
+      "titleUz": "Sport, musiqa va o'yinlar",
+      "titleDe": "Sport, Musik und Spiele",
+      "sections": ["dib-voc-04-04", "dib-voc-04-06", "dib-voc-04-07"],
+      "grammar": ["vi_04"]
+    }
+  ]
+}

@@ -556,16 +556,18 @@ model Student {
   mockExamParticipations MockExamParticipant[] @relation("StudentMockExamParticipations")
 
   // Financial relations
-  payments        Payment[]
-  transactions    Transaction[]    @relation("StudentTransactions")
-  contracts       Contract[]
-  refunds         Refund[]
-  salaryAccruals  SalaryAccrual[]  @relation("StudentSalaryAccruals")
-  paymentPromises PaymentPromise[]
-  dafAttempts     DafAttempt[]
-  callLogs        CallLog[]
-  discounts       Discount[]
-  scholarships    Scholarship[]
+  payments          Payment[]
+  transactions      Transaction[]       @relation("StudentTransactions")
+  contracts         Contract[]
+  refunds           Refund[]
+  salaryAccruals    SalaryAccrual[]     @relation("StudentSalaryAccruals")
+  paymentPromises   PaymentPromise[]
+  dafAttempts       DafAttempt[]
+  dafLexemeStates   DafLexemeState[]
+  dafLessonProgress DafLessonProgress[]
+  callLogs          CallLog[]
+  discounts         Discount[]
+  scholarships      Scholarship[]
 
   @@index([deletedAt])
   @@index([status])
@@ -2816,10 +2818,8 @@ model TelegramChannelGateEvent {
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum DafLevel {
-  A1_1
-  A1_2
-  A2_1
-  A2_2
+  A1
+  A2
   B1
 }
 
@@ -2845,31 +2845,52 @@ enum DafTranslationSource {
   TEACHER
 }
 
+enum DafSentenceOrigin {
+  GENERATED
+  SOURCE
+}
+
+/// Seans turi.
+///
+/// `SECTION_A` tanib olishga, `SECTION_B` ishlab chiqarishga qaratilgan.
+/// `BRIDGE` — bo'limdan bo'limga o'tish: yarmi endi tugagan bo'limdan,
+/// yarmi oldingilaridan. So'z shu joyda birinchi marta o'z konteksti
+/// tashqarisida tekshiriladi.
+enum DafLessonKind {
+  SECTION_A
+  SECTION_B
+  BRIDGE
+  UNIT_TEST
+}
+
 /// O'quv yo'lining bosqichi. Manba bobi unga BIRIKTIRILADI — bo'lim
 /// manbadan kelib chiqmaydi (ADR-0011).
 model DafUnit {
-  id            Int      @id @default(autoincrement())
+  id            Int       @id @default(autoincrement())
   level         DafLevel
   order         Int
   titleUz       String
   titleDe       String
   /// Manbadagi bob raqami — kelib chiqishi, o'zligi emas.
   sourceChapter Int?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  /// Barqaror kalit: `u01`. Seed shu bo'yicha yangilaydi — `order` emas,
+  /// chunki eski bo'limlar nafaqaga chiqqanda tartib raqamlari bo'shaydi.
+  code          String?   @unique
+  /// Nafaqaga chiqqan bo'lim: o'quvchiga ko'rinmaydi, lekin lug'ati va
+  /// audiosi zaxira sifatida bazada qoladi. O'chirish ma'lumotni yo'qotardi.
+  retiredAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   lessons   DafLesson[]
   lexemes   DafLexeme[]
   grammar   DafGrammar[]
   exercises DafExercise[]
+  sentences DafSentence[]
+  sections  DafSection[]
 
   @@unique([level, order])
   @@index([level])
-}
-
-enum DafLessonKind {
-  VOCAB
-  GRAMMAR
 }
 
 /// Bo'lim ichidagi DARS — bitta o'tirishga mo'ljallangan hajm.
@@ -2879,22 +2900,67 @@ enum DafLessonKind {
 /// so'zdan bitta dars») bir mavzuni ikkiga bo'lib yuborardi, chunki
 /// manbaning bo'linishi mazmunga bog'langan.
 model DafLesson {
-  id       Int           @id @default(autoincrement())
-  sourceId String        @unique
+  id       Int     @id @default(autoincrement())
+  sourceId String  @unique
   unitId   Int
   order    Int
-  kind     DafLessonKind
+  /// Eski DiB darsining qiyinlik bosqichi, 1–5 — faqat o'sha eski
+  /// darslar uchun qoladi, yangi kurs buni ishlatmaydi.
+  ///
+  /// Avval bu yerda `kind` (VOCAB/GRAMMAR) darsning MAVZUSINI bildirardi
+  /// va grammatikani mashqdan uzib qo'yardi — o'quvchi qoidani o'qir,
+  /// keyin ishlatmasdi. Shuning uchun u o'chirilgan edi: har bosqichda
+  /// ham lug'at, ham grammatika, ham eshitish bor, farq faqat qiyinlikda.
+  /// `kind` pastda QAYTDI, lekin boshqa ma'noda — endi u MAVZU emas,
+  /// SEANS TURI (pastga qarang).
+  tier     Int?
   titleDe  String
   titleUz  String?
 
   translationSource DafTranslationSource?
-  /// `GRAMMAR` darsining mavzusi. `VOCAB` da bo'sh.
+  /// Darsning grammatika mavzusi, bo'lsa — `tier`dan ham, `kind`dan ham
+  /// mustaqil: har qanday seans turi grammatikaga ega bo'lishi mumkin.
   grammarId         Int?
+  /// Seans turi: SECTION_A/SECTION_B/BRIDGE/UNIT_TEST (yuqoridagi
+  /// enumga qarang). `null` — eski DiB darsi. Bu MAVZU emas: eski
+  /// `kind` (VOCAB/GRAMMAR) darsning nimaga bag'ishlanganini bildirgan
+  /// va shu sabab o'chirilgan edi (yuqoridagi `tier` izohiga qarang).
+  /// Yangisi darsning A1 kurs xaritasidagi SEANSINI bildiradi.
+  kind              DafLessonKind?
+  sectionId         Int?
 
-  unit      DafUnit       @relation(fields: [unitId], references: [id])
-  grammar   DafGrammar?   @relation(fields: [grammarId], references: [id])
+  unit      DafUnit             @relation(fields: [unitId], references: [id])
+  grammar   DafGrammar?         @relation(fields: [grammarId], references: [id])
+  section   DafSection?         @relation(fields: [sectionId], references: [id])
   lexemes   DafLexeme[]
   exercises DafExercise[]
+  progress  DafLessonProgress[]
+
+  @@index([unitId])
+}
+
+/// Unit ichidagi MAVZULI bo'lim.
+///
+/// Qiyinlik bo'lim ichida ko'tariladi, bo'limlar orasida emas: aks holda
+/// bitta darsda «Tisch» ham «Krankenhaus» ham chiqib, mavzu yo'qolardi.
+model DafSection {
+  id         Int      @id @default(autoincrement())
+  unitId     Int
+  order      Int
+  /// Barqaror kalit: `u01-s3`.
+  code       String   @unique
+  titleDe    String
+  titleUz    String
+  grammar    String
+  grammarUz  String
+  /// Xaritada rejalashtirilgan asosiy so'zlar soni — kontent to'ldirilganda
+  /// haqiqiy son shunga solishtiriladi.
+  wordBudget Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  unit    DafUnit     @relation(fields: [unitId], references: [id])
+  lessons DafLesson[]
 
   @@unique([unitId, order])
   @@index([unitId])
@@ -2924,12 +2990,18 @@ model DafLexeme {
   audioEndMs        Int?
   imageKey          String?
   order             Int
-  /// Bo'lim sarlavhasi darsga ko'chdi — u yerda o'z tarjimasi bilan turadi.
-  lessonId          Int
+  /// So'z endi BO'LIMga tegishli, darsga emas — darsni tuzuvchi so'zlarni
+  /// ish vaqtida (runtime) oladi. Shuning uchun ixtiyoriy: seed so'zni
+  /// hech qanday darsga bog'lamasdan ham yarata olishi kerak.
+  lessonId          Int?
+  /// Rasm chizib bo'ladimi. `false` — abstrakt so'z (weil, Verantwortung).
+  /// Rasmli savol turlari faqat `true` bo'lganlarga beriladi.
+  picturable        Boolean               @default(false)
 
-  unit     DafUnit      @relation(fields: [unitId], references: [id])
-  lesson   DafLesson    @relation(fields: [lessonId], references: [id])
+  unit     DafUnit          @relation(fields: [unitId], references: [id])
+  lesson   DafLesson?       @relation(fields: [lessonId], references: [id])
   attempts DafAttempt[]
+  states   DafLexemeState[]
 
   @@index([unitId])
   @@index([lessonId])
@@ -3037,4 +3109,69 @@ model DafAttempt {
   @@index([lexemeId])
   @@index([companyId, createdAt])
   @@index([branchId, createdAt])
+}
+
+/// Mashq uchun gap.
+///
+/// Manbadan olinmaydi: A1 dagi 252 qisqa gapning atigi 68 tasi (27 %)
+/// o'quvchi bilgan so'zlardan tuzilgan edi. Qolganida notanish so'z bor,
+/// ya'ni gap mashq emas, to'siq bo'lardi. Shuning uchun gap bo'limning
+/// O'Z lug'atidan yasaladi va validator har so'zni tekshiradi.
+model DafSentence {
+  id        Int               @id @default(autoincrement())
+  unitId    Int
+  order     Int
+  de        String
+  uz        String
+  /// R2 kaliti — TTS bilan yasalgan ovoz.
+  audioKey  String?
+  wordCount Int
+  origin    DafSentenceOrigin
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  unit DafUnit @relation(fields: [unitId], references: [id])
+
+  @@unique([unitId, order])
+  @@index([unitId])
+}
+
+/// Bitta o'quvchining bitta so'z ustidagi holati — Leitner qutisi.
+model DafLexemeState {
+  id           Int      @id @default(autoincrement())
+  studentId    Int
+  lexemeId     Int
+  /// 0–5. 0 = yangi yoki xato qilingan, 5 = mustahkam.
+  strength     Int      @default(0)
+  dueAt        DateTime
+  lastSeenAt   DateTime
+  correctCount Int      @default(0)
+  wrongCount   Int      @default(0)
+  companyId    Int
+
+  student Student   @relation(fields: [studentId], references: [id])
+  lexeme  DafLexeme @relation(fields: [lexemeId], references: [id])
+
+  @@unique([studentId, lexemeId])
+  @@index([studentId, dueAt])
+  @@index([companyId])
+}
+
+/// Yo'l ekrani uchun: qaysi dars tugallangan.
+model DafLessonProgress {
+  id          Int       @id @default(autoincrement())
+  studentId   Int
+  lessonId    Int
+  completedAt DateTime?
+  /// 12 dan nechtasi birinchi urinishda to'g'ri bo'lgan.
+  bestScore   Int       @default(0)
+  runs        Int       @default(0)
+  companyId   Int
+
+  student Student   @relation(fields: [studentId], references: [id])
+  lesson  DafLesson @relation(fields: [lessonId], references: [id])
+
+  @@unique([studentId, lessonId])
+  @@index([studentId])
+  @@index([companyId])
 }

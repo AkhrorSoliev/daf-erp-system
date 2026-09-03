@@ -461,9 +461,14 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'The DaF learning catalogue is reference content, not branch data. It is ' +
       "COERLL's CC BY 4.0 material: the same units, vocabulary and exercises for " +
       'every branch, which is why the `Daf*` content tables carry no `companyId` ' +
-      'at all. Scoping these reads by branch would answer a question nobody asks ' +
-      'and imply the catalogue differs per branch, which it does not.',
+      'at all. The media inventory endpoints return generated content (audio, ' +
+      'images, character profiles) produced alongside the catalogue, read from ' +
+      'on-disk JSON manifests — this content is also identical per branch and ' +
+      'carries no `companyId`. Scoping these reads by branch would answer a ' +
+      'question nobody asks and imply the catalogue differs per branch, which it ' +
+      'does not.',
     routes: [
+      'GET /daf/media/overview',
       'GET /student-portal/lernen/grammar',
       'GET /student-portal/lernen/lessons/:id',
       'GET /student-portal/lernen/lessons/:id/drill',
