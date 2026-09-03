@@ -17,7 +17,6 @@ import {
 } from '../src/daf/seed/daf-seed.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import type { DafDataset } from '../src/daf-content/dataset.types';
-import type { SentenceFile } from '../src/daf/seed/daf-sentence-seed';
 
 const DATASET = join(__dirname, '..', 'content', 'daf', 'dib.json');
 const TRANSLATIONS = join(
@@ -27,7 +26,6 @@ const TRANSLATIONS = join(
   'daf',
   'translations.json',
 );
-const SENTENCES = join(__dirname, '..', 'content', 'daf', 'sentences.json');
 
 async function main() {
   const dataset = JSON.parse(readFileSync(DATASET, 'utf8')) as DafDataset;
@@ -44,11 +42,13 @@ async function main() {
   // faylni bu yerga uzatish `DafSeedService.seed()`ni rad ettiradi —
   // qarang shu servisning `assertA1NotProvided`i.
 
-  // Gap fayli bo'lmasligi mumkin (9-taskdan oldin, ovoz hali yozilmagan
-  // bosqichda) — bu ham xato emas, shunchaki gapsiz seed.
-  const sentences = existsSync(SENTENCES)
-    ? (JSON.parse(readFileSync(SENTENCES, 'utf8')) as SentenceFile)
-    : undefined;
+  // `content/daf/sentences.json` ATAYLAB o'qilmaydi: u A1 ning ESKI 20
+  // bo'limlik tuzilishiga (order 1..20) qarab yasalgan, yangi qo'lda
+  // chizilgan A1 (u01..u12) bilan aloqasi yo'q. Bu faylni shu yerga
+  // uzatish `DafSeedService.seed()`ni rad ettiradi — qarang shu
+  // servisning `assertSentencesNotProvided`i. Yangi tuzilish uchun gaplar
+  // qayta yasalgach, ular `seedSentences`ni boshqa chaqiruvchidan
+  // ishlatadi, bu skriptdan emas.
 
   const prisma = new PrismaClient({
     adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -56,7 +56,7 @@ async function main() {
 
   const service = new DafSeedService(prisma as unknown as PrismaService);
   console.log('Bazaga yozilmoqda…');
-  const r = await service.seed(dataset, translations, undefined, sentences);
+  const r = await service.seed(dataset, translations);
 
   console.log(`\nBo'lim:       ${r.units}`);
   console.log(`Dars:         ${r.lessons}`);
@@ -68,7 +68,6 @@ async function main() {
   console.log(
     `Tarjima:      ${r.translationsApplied}${translations ? '' : " (fayl yo'q)"}`,
   );
-  console.log(`Gap:          ${r.sentences}${sentences ? '' : " (fayl yo'q)"}`);
 
   await prisma.$disconnect();
 }

@@ -10,6 +10,7 @@ import {
 } from './daf-seed.service';
 import type { DafDataset } from '../../daf-content/dataset.types';
 import type { A1UnitsFile } from '../units/a1-units.types';
+import type { SentenceFile } from './daf-sentence-seed';
 
 const CONTENT = join(__dirname, '..', '..', '..', 'content', 'daf');
 
@@ -26,6 +27,10 @@ function readContent<T>(name: string): T {
  */
 const realDataset = readContent<DafDataset>('dib.json');
 const a1UnitsFile = readContent<A1UnitsFile>('a1-units.json');
+// Haqiqiy `sentences.json`: A1 ning ESKI 20 bo'limlik tuzilishiga (order
+// 1..20) qarab yasalgan — aynan shu fayl `npm run daf:seed` skriptidan
+// `DafSeedService.seed()`ga uzatilardi.
+const sentencesFile = readContent<SentenceFile>('sentences.json');
 
 // `A2.1` ATAYLAB tanlangan, `A1.1` emas: bu sun'iy dataset A1 bilan hech
 // qanday aloqasi yo'q umumiy seed xatti-harakatini (bo'lim, dars, lug'at,
@@ -609,6 +614,42 @@ describe('DafSeedService', () => {
       expect(b1.length).toBeGreaterThan(0);
       expect(report.units).toBe(a2.length + b1.length);
       expect(report.lessons).toBe((a2.length + b1.length) * 5);
+    });
+  });
+
+  describe('Gap fayli endi bu yerdan seed qilinmaydi', () => {
+    // `sentences.json` A1 ning ESKI 20 bo'limlik tuzilishiga (order 1..20)
+    // qarab yasalgan — `npm run daf:a1-seed` migratsiyasidan keyingi 12
+    // unitga (order 1..12) emas. `npm run daf:seed` (`daf-seed.ts`) shu
+    // faylni o'qib `DafSeedService.seed()`ga uzatishi mumkin edi: orderlar
+    // 1..12 YANGI unitlarga to'g'ri kelib, ularga tegishli bo'lmagan 508 ta
+    // gap yopishtirilardi, order 13 esa hech qanday bo'limga tushmay
+    // `Bo'lim topilmadi: A1 #13` bilan butun seedni yiqitardi. Bu haqiqiy
+    // faylni, aynan skript uzatgan shaklda, shu servisga berish — skript
+    // bosib o'tadigan yo'lning o'zi, gipotetik emas.
+    it('sentences berilsa rad etadi', async () => {
+      await expect(
+        service.seed(dataset(), undefined, undefined, sentencesFile),
+      ).rejects.toThrow(/ESKI 20/);
+    });
+
+    it('rad etish sababi tushunarli: eski tuzilish aytiladi', async () => {
+      await expect(
+        service.seed(dataset(), undefined, undefined, sentencesFile),
+      ).rejects.toThrow(/daf:a1-seed/);
+    });
+
+    // Rad etish DASTLABKI qadam — hech qanday bo'lim o'qilmaydi, hech
+    // qanday gap yozilmaydi. `npm run daf:seed`ning kuzatiladigan natijasi
+    // aynan shu: A1 bo'limi o'qilmaydi, `DafSentence` qatori yozilmaydi.
+    it("bo'lim o'qishga yetmasdan rad etadi: hech qanday DafUnit so'rovi ketmaydi", async () => {
+      const before = prisma.dafUnit.findFirst.mock.calls.length;
+
+      await expect(
+        service.seed(dataset(), undefined, undefined, sentencesFile),
+      ).rejects.toThrow();
+
+      expect(prisma.dafUnit.findFirst.mock.calls.length).toBe(before);
     });
   });
 });

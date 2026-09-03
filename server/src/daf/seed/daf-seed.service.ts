@@ -179,9 +179,11 @@ export class DafSeedService {
    * A1 bo'limlari nafaqaga chiqarilgan va manfiy tartibda saqlanadi. Bu
    * parametr faqat eski chaqiruvchini ushlab qolish uchun qoldirilgan —
    * qarang {@link assertA1NotProvided}.
-   * @param sentences berilsa A1 bo'limlariga gaplar shu fayldan yoziladi.
-   * Bo'limlar yaratilgandan KEYIN chaqiriladi — gap bo'limga ishora
-   * qiladi, bo'lim hali yo'q bo'lsa yozib bo'lmaydi.
+   * @param sentences ENDI QO'LLAB-QUVVATLANMAYDI — berilsa `seed()` rad
+   * etadi. `content/daf/sentences.json` eski 20 bo'limlik A1 tuzilishiga
+   * qarab yasalgan (order 1..20), yangi qo'lda chizilgan A1 (u01..u12,
+   * order 1..12) bilan hech qanday aloqasi yo'q. Qarang
+   * {@link assertSentencesNotProvided}.
    */
   async seed(
     dataset: DafDataset,
@@ -190,6 +192,7 @@ export class DafSeedService {
     sentences?: SentenceFile,
   ): Promise<SeedReport> {
     this.assertA1NotProvided(a1Units);
+    this.assertSentencesNotProvided(sentences);
 
     const { unitIdBySection, unitIdByChapter, units } = await this.seedUnits(
       dataset,
@@ -242,6 +245,29 @@ export class DafSeedService {
         "eski DiB A1 bo'limlari esa nafaqaga chiqarilgan (retiredAt + manfiy order). " +
         "`a1-units.json`ni `DafSeedService.seed()`ga uzatish endi shu eski bo'limlarning " +
         "o'rniga YANGI A1 unitlarini (u01..u12) chalkashtirib yuborardi.",
+    );
+  }
+
+  /**
+   * `sentences.json` A1 ning ESKI 20 bo'limlik tuzilishiga (order 1..20)
+   * qarab yasalgan, `npm run daf:a1-seed`dan keyingi 12 unitga (order
+   * 1..12) emas. Shu faylni bu yerga uzatish ikki xil noto'g'ri narsa
+   * qilardi: order 1..12 endi YANGI unitlarga to'g'ri kelib, ularga
+   * tegishli bo'lmagan 508 ta gap yopishtirilardi, order 13..20 esa
+   * hech qanday bo'limga tushmay, `seedSentences` `Bo'lim topilmadi: A1
+   * #13` bilan yiqilib, butun `daf:seed`ni yarim yo'lda to'xtatardi.
+   * `seedSentences`ning o'zi qoladi — u yangi tuzilish uchun qayta
+   * yasalgan gaplar bilan boshqa chaqiruvchidan ishlatiladi; shu yo'l esa
+   * faqat eski faylni ushlab qolgan `daf:seed` skripti uchun yopiladi.
+   */
+  private assertSentencesNotProvided(sentences?: SentenceFile): void {
+    if (!sentences) return;
+    throw new Error(
+      'Gap fayli endi bu yerdan seed qilinmaydi: `sentences.json` A1 ning ESKI 20 ' +
+        "bo'limlik tuzilishiga (order 1..20) qarab yasalgan, `npm run daf:a1-seed`dan " +
+        'keyingi 12 unitga (order 1..12) emas. Bu faylni `DafSeedService.seed()`ga ' +
+        "uzatish yangi unitlarga tegishli bo'lmagan gaplarni yopishtirar yoki 13-bo'lim " +
+        'topilmagani uchun yiqilardi.',
     );
   }
 
