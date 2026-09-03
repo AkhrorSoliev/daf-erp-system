@@ -73,8 +73,15 @@ describe('1-unitning so`zlari', () => {
     // Raqamdan farqli o'laroq, harfning yozma shakli harfning o'zidan
     // boshqa narsa emas ("A" so'zi "A" harfidan boshqa emas) — shuning
     // uchun ko'rgazma-raqam ajralishi harflarga tegishli emas.
-    const harflar = woerter.woerter.filter((w) => w.section === 'u01-s5');
-    expect(harflar).toHaveLength(10);
+    //
+    // u01-s5 endi faqat harflardan iborat emas — "buchstabieren"
+    // (harflab aytmoq) fe'li ham shu bo'limda, chunki bo'lim nomining
+    // o'zi shu fe'l bilan atalgan. Shuning uchun bu yerda faqat yakka
+    // harf yozuvlari (`de` bitta lotin harfi) ajratib olinadi.
+    const harflar = woerter.woerter.filter(
+      (w) => w.section === 'u01-s5' && /^[A-ZÄÖÜ]$/.test(w.de),
+    );
+    expect(harflar).toHaveLength(9);
     for (const w of harflar) {
       expect(w.anzeige).toBeUndefined();
       expect(w.tts).toBeTruthy();
@@ -148,9 +155,12 @@ describe('1-unitning grammatikasi va iboralari', () => {
       // bo'limning grammatikasi (u01-s3), infinitiv allaqachon
       // lug'atda; tuslanish qoidaning o'zida (erklaerungUz) tushuntiriladi.
       'komme','kommst','wohne','wohnst',
-      // u01-s5 grammatikasining nomi kurs.json'da aynan shu so'zlar
-      // bilan berilgan: "buchstabieren, Wie schreibt man das?".
-      'buchstabieren','schreibt','man',
+      // "man" — shaxssiz olmosh ("Wie schreibt man das?" iborasidagi
+      // grammatik ko'makchi so'z), hech qanday bo'limga tegishli
+      // lug'at emas. ("buchstabieren" endi u01-s5 lug'atining o'zida —
+      // bo'lim nomining aynan shu fe'l bilan atalgani uchun haqiqiy
+      // so'z sifatida qo'shildi, shuning uchun bu yerda emas.)
+      'man',
     ]);
     const unbekannt = new Set<string>();
     const check = (s: string): void => {

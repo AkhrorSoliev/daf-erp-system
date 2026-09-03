@@ -413,38 +413,20 @@
       "order": 5
     },
     {
-      "sourceId": "u01-s5-w",
-      "section": "u01-s5",
-      "de": "W",
-      "tts": "Weh",
-      "uz": "'W' harfi",
-      "core": true,
-      "order": 8
-    },
-    {
-      "sourceId": "u01-s5-z",
-      "section": "u01-s5",
-      "de": "Z",
-      "tts": "Zett",
-      "uz": "'Z' harfi",
-      "core": true,
-      "order": 10
-    },
-    {
-      "sourceId": "u01-s5-q",
-      "section": "u01-s5",
-      "de": "Q",
-      "tts": "Kuh",
-      "uz": "'Q' harfi",
-      "core": true,
-      "order": 6
-    },
-    {
       "sourceId": "u01-s5-v",
       "section": "u01-s5",
       "de": "V",
       "tts": "Fau",
       "uz": "'V' harfi",
+      "core": true,
+      "order": 6
+    },
+    {
+      "sourceId": "u01-s5-w",
+      "section": "u01-s5",
+      "de": "W",
+      "tts": "Weh",
+      "uz": "'W' harfi",
       "core": true,
       "order": 7
     },
@@ -455,7 +437,24 @@
       "tts": "Ypsilon",
       "uz": "'Y' harfi",
       "core": true,
+      "order": 8
+    },
+    {
+      "sourceId": "u01-s5-z",
+      "section": "u01-s5",
+      "de": "Z",
+      "tts": "Zett",
+      "uz": "'Z' harfi",
+      "core": true,
       "order": 9
+    },
+    {
+      "sourceId": "u01-s5-buchstabieren",
+      "section": "u01-s5",
+      "de": "buchstabieren",
+      "uz": "harflab aytmoq",
+      "core": true,
+      "order": 10
     }
   ]
 }

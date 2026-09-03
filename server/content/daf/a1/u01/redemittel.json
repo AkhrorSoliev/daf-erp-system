@@ -89,22 +89,22 @@
       "section": "u01-s4",
       "funktion": "eine Zahl nennen",
       "funktionUz": "sonni aytish",
-      "de": "Null, eins, zwei.",
-      "uz": "Nol, bir, ikki."
+      "de": "Fünf.",
+      "uz": "Besh."
     },
     {
       "section": "u01-s4",
       "funktion": "Zahlen aufzählen",
       "funktionUz": "sonlarni sanash",
-      "de": "Drei, vier, fünf, sechs.",
-      "uz": "Uch, to'rt, besh, olti."
+      "de": "Acht, drei, zehn, eins.",
+      "uz": "Sakkiz, uch, o'n, bir."
     },
     {
       "section": "u01-s4",
       "funktion": "eine Telefonnummer sagen",
       "funktionUz": "telefon raqamini aytish",
-      "de": "Sieben, acht, neun, zehn, elf.",
-      "uz": "Telefon raqami: yetti, sakkiz, to'qqiz, o'n, o'n bir."
+      "de": "Null, sieben, zwei, neun, vier, elf.",
+      "uz": "Telefon raqami: nol, yetti, ikki, to'qqiz, to'rt, o'n bir."
     },
     {
       "section": "u01-s5",
@@ -115,24 +115,19 @@
     },
     {
       "section": "u01-s5",
-      "funktion": "nach der Schreibweise fragen",
-      "funktionUz": "yozilishini so'rash",
-      "de": "Wie schreibt man das?",
-      "uz": "Bu qanday yoziladi?"
-    },
-    {
-      "section": "u01-s5",
       "funktion": "einen Buchstaben bestätigen",
       "funktionUz": "harfni tasdiqlash",
       "de": "Ja, das ist ein Z.",
-      "uz": "Ha, bu 'Z' harfi."
+      "uz": "Ha, bu 'Z' harfi.",
+      "tts": "Ja, das ist ein Zett."
     },
     {
       "section": "u01-s5",
       "funktion": "einen Buchstaben erfragen",
       "funktionUz": "harfni aniqlashtirish",
       "de": "Ist das V oder W?",
-      "uz": "Bu 'V' yoki 'W'mi?"
+      "uz": "Bu 'V' yoki 'W'mi?",
+      "tts": "Ist das Fau oder Weh?"
     }
   ]
 }

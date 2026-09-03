@@ -129,13 +129,6 @@
       "grund": "harf nomi — Goethe ro'yxati yakka harflarni bosh so'z sifatida sanamaydi; harflab aytish (buchstabieren) mavzusi uchun zarur"
     },
     {
-      "wort": "Q",
-      "artikel": null,
-      "section": "u01-s5",
-      "core": true,
-      "grund": "harf nomi — Goethe ro'yxati yakka harflarni bosh so'z sifatida sanamaydi; harflab aytish (buchstabieren) mavzusi uchun zarur"
-    },
-    {
       "wort": "V",
       "artikel": null,
       "section": "u01-s5",
@@ -162,6 +155,7 @@
       "section": "u01-s5",
       "core": true,
       "grund": "harf nomi — Goethe ro'yxati yakka harflarni bosh so'z sifatida sanamaydi; harflab aytish (buchstabieren) mavzusi uchun zarur"
-    }
+    },
+    { "wort": "buchstabieren", "artikel": null, "section": "u01-s5", "core": true }
   ]
 }
