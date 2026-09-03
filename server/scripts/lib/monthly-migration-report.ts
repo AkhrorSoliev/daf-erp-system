@@ -6,7 +6,11 @@
  * ishlatadi — hisobotda ko'rgan raqam bilan bazaga tushgan raqam
  * bir-biridan farq qila olmaydi.
  */
-import { applyDiscount, clampDiscount } from '../../src/billing/monthly-price';
+import {
+  applyDiscount,
+  clampDiscount,
+  proratedMonthlyAmount,
+} from '../../src/billing/monthly-price';
 
 export interface MigrationRow {
   enrollmentId: string;
@@ -158,19 +162,19 @@ export function buildMigrationPlan(input: MigrationInput): MigrationPlan {
     // so'm yaxlitlash farqi beradi (izohga qarang).
     const prepaidRefund =
       r.prepaidRefundTotal ?? r.prepaidLessons * r.packPerLessonCost;
-    // plannedLessons === 0 (oyda shu guruh uchun dars kuni yo'q) —
-    // MonthlyChargeService.createChargeForEnrollment shu holatda hech
-    // qanday hisob yozmaydi (`if (plannedLessons === 0) return null;`).
-    // Dry-run va apply BIR XIL arifmetikani ishlatishi kerak, shuning
-    // uchun bu yerda ham hisob 0 — `coveredLessons >= plannedLessons`
-    // (0 >= 0) to'liq narxni to'lab qo'yishi mumkin edi.
+    // Proratsiya YAGONA manbadan — `proratedMonthlyAmount`. Bu yerda
+    // ilgari o'sha formulaning qo'lda yozilgan nusxasi turardi va u bir
+    // marta ALLAQACHON adashgan edi (`plannedLessons === 0` da
+    // `coveredLessons >= plannedLessons` sharti 0 >= 0 bo'lib, oyda dars
+    // kuni bo'lmagan guruhga to'liq oy narxini yozib qo'yardi — holbuki
+    // `createChargeForEnrollment` bu holatda `null` qaytaradi).
     const monthlyChargeFull =
-      r.chargeable === false || r.plannedLessons <= 0
+      r.chargeable === false
         ? 0
-        : Math.round(
-            r.coveredLessons >= r.plannedLessons
-              ? r.monthlyPrice
-              : (r.monthlyPrice * r.coveredLessons) / r.plannedLessons,
+        : proratedMonthlyAmount(
+            r.monthlyPrice,
+            r.plannedLessons,
+            r.coveredLessons,
           );
     // Markazning ulushi — createChargeForEnrollment bilan bitta nusxadan
     // (task-9c-brief.md): 709 000 so'm/oy uch o'quvchida shu qadam

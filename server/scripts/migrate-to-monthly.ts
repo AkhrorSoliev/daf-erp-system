@@ -59,7 +59,12 @@ import {
 } from '../src/attendance/shared/date-utils';
 import { baseLessonPrice } from '../src/billing/lesson-price';
 import { MonthlyChargeService } from '../src/billing/monthly-charge.service';
-import { perLessonCostForMonth } from '../src/billing/monthly-price';
+import {
+  applyDiscount,
+  clampDiscount,
+  perLessonCostForMonth,
+  proratedMonthlyAmount,
+} from '../src/billing/monthly-price';
 import { lessonDatesInMonth } from '../src/billing/planned-lessons';
 import {
   perLessonAccrual,
@@ -1050,7 +1055,16 @@ async function main(prisma: PrismaClient) {
         group.course.lessonPaymentCount,
       );
 
+      // CEO shu hisobotdan qarorni oladi, shuning uchun bu qatlam 1/3/4
+      // qatlamlar bilan FOOTING berishi shart. Ilgari bu yerda proratsiya
+      // formulasining UCHINCHI qo'lda yozilgan nusxasi turardi va u
+      // `applyDiscount`ni ham, PAUSED guruh (`chargeable`) bayrog'ini ham
+      // qo'llamasdi: prodda kutilayotgan daromadni ~709 000 (3 chegirmali
+      // o'quvchi) + ~3.15 mln (7 PAUSED yozilish) ~ 3.9 mln so'mga
+      // OSHIRIB ko'rsatardi.
+      const groupChargeable = group.statusEnum === GroupStatus.ACTIVE;
       const expectedIncome = rowsInGroup.reduce((sum, e) => {
+        if (!groupChargeable) return sum;
         const covered = lessonDatesInMonth({
           year,
           month,
@@ -1058,13 +1072,15 @@ async function main(prisma: PrismaClient) {
           excludedDates: excludedByGroup.get(groupId),
           fromDate: e.startDate ? tashkentDateStr(e.startDate) : null,
         }).length;
-        const charge =
-          plannedLessons > 0 && covered >= plannedLessons
-            ? group.course.price
-            : plannedLessons > 0
-              ? Math.round((group.course.price * covered) / plannedLessons)
-              : 0;
-        return sum + charge;
+        const full = proratedMonthlyAmount(
+          group.course.price,
+          plannedLessons,
+          covered,
+        );
+        return (
+          sum +
+          applyDiscount(full, clampDiscount(e.student.discountPercent ?? 0))
+        );
       }, 0);
 
       // Faqat "yangi dars narxi almashishi teacher haqiga qanday ta'sir
