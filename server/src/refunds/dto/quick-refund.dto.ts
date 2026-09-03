@@ -13,9 +13,13 @@ export class QuickRefundDto {
   @IsNotEmpty()
   studentId: number;
 
+  // Optional: a frozen student has no ACTIVE enrollment, so the refund draws
+  // on the free balance alone. Omitted (or null) selects that balance-only
+  // path; a student with an ACTIVE enrollment must supply it as before.
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  enrollmentId: string;
+  enrollmentId?: string;
 
   @IsInt()
   @Min(1)

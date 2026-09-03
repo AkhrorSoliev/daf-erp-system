@@ -66,6 +66,13 @@ export class RefundsCreateService {
     });
     if (!student) throw new NotFoundException("O'quvchi topilmadi");
 
+    // No enrollmentId => the student has no ACTIVE enrollment to fund the
+    // refund from (a frozen student's are all FROZEN). Balance is the only
+    // source left — see `quickRefundBalanceOnly`.
+    if (!dto.enrollmentId) {
+      return this.quickRefundBalanceOnly(dto, userId, companyId, student);
+    }
+
     const enrollment = await this.loadEnrollment(
       dto.enrollmentId,
       dto.studentId,
@@ -222,6 +229,132 @@ export class RefundsCreateService {
     });
 
     return refund.refundRow;
+  }
+
+  /**
+   * Balance-only payout for a student with no ACTIVE enrollment (frozen
+   * students, whose enrollments are all cascaded to FROZEN). Freezing already
+   * ran `refundPrepaidForFreeze`/`refundMonthlyForFreeze`, which credited the
+   * balance and zeroed what was held against the enrollment — there is
+   * nothing left on the enrollment side to release, so `maxRefundable` is the
+   * free balance alone and `EnrollmentBillingService` is never called.
+   */
+  private async quickRefundBalanceOnly(
+    dto: QuickRefundDto,
+    userId: number,
+    companyId: number,
+    student: { id: number; balance: number },
+  ) {
+    const maxRefundable = Math.max(0, student.balance);
+    if (dto.amount > maxRefundable) {
+      throw new BadRequestException(
+        `Qaytarish summasi maksimal summadan oshib ketdi (maksimum ${maxRefundable} so'm)`,
+      );
+    }
+
+    // Same double-click protection as the enrollment path, scoped by student
+    // instead of enrollment since there is none to disambiguate by.
+    const recentDuplicate = await this.prisma.refund.findFirst({
+      where: {
+        studentId: dto.studentId,
+        enrollmentId: null,
+        approvedAmount: dto.amount,
+        status: RefundStatus.COMPLETED,
+        createdAt: { gte: new Date(Date.now() - 60_000) },
+      },
+      select: { id: true },
+    });
+    if (recentDuplicate) {
+      throw new BadRequestException(
+        'Shu summadagi qaytarish hozirgina yozildi — takror yuborilmadi',
+      );
+    }
+
+    const priorRefunds = await this.prisma.refund.aggregate({
+      where: {
+        studentId: dto.studentId,
+        status: {
+          in: [
+            RefundStatus.APPROVED,
+            RefundStatus.PROCESSING,
+            RefundStatus.COMPLETED,
+          ],
+        },
+      },
+      _sum: { approvedAmount: true },
+    });
+    const previousRefundsTotal = priorRefunds._sum.approvedAmount ?? 0;
+
+    const deductions = {
+      balanceBeforeRefund: student.balance,
+      prepaidLessonsBefore: 0,
+      prepaidValueBefore: 0,
+      lessonsReleased: 0,
+      lessonsAttended: 0,
+      previousRefunds: previousRefundsTotal,
+      tax: 0,
+      bankFee: 0,
+    };
+
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 21);
+
+    const refundRow = await this.prisma.$transaction(
+      async (tx) => {
+        const row = await tx.refund.create({
+          data: {
+            studentId: dto.studentId,
+            enrollmentId: null,
+            requestedAmount: dto.amount,
+            approvedAmount: dto.amount,
+            lessonsCompleted: 0,
+            totalLessons: 0,
+            deductions,
+            status: RefundStatus.COMPLETED,
+            refundMethod: dto.refundMethod,
+            reason: dto.reason,
+            processedById: userId,
+            processedAt: new Date(),
+            dueDate,
+            companyId,
+          },
+        });
+
+        await this.transactionsService.recordRefund(
+          {
+            studentId: dto.studentId,
+            amount: dto.amount,
+            refundId: row.id,
+            companyId,
+            performedById: userId,
+          },
+          tx,
+        );
+
+        return row;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+
+    const balanceAfter = student.balance - dto.amount;
+    await this.entityHistoryService.recordStatusChange({
+      entityType: 'Student',
+      entityId: dto.studentId,
+      oldValues: { balans: student.balance },
+      newValues: {
+        balans: balanceAfter,
+        qaytarilgan_summa: dto.amount,
+        bekor_qilingan_darslar: 0,
+        usul: REFUND_METHOD_LABEL[dto.refundMethod] ?? dto.refundMethod,
+        guruh: 'Balans (faol guruhsiz)',
+        sabab: dto.reason ?? null,
+        status: 'PUL_QAYTARILDI',
+      },
+      changedById: userId,
+      companyId,
+    });
+
+    return refundRow;
   }
 
   // -- helpers ---------------------------------------------------------------

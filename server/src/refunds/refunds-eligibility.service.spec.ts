@@ -281,4 +281,83 @@ describe('RefundsEligibilityService', () => {
       expect(result.warning).toMatch(/balansdagi/i);
     });
   });
+
+  /**
+   * A frozen student's enrollments are all FROZEN (freezing cascades every
+   * enrollment), so there is nothing ACTIVE to scope a refund to — but
+   * freezing already moved everything the enrollment held onto the balance
+   * (`refundPrepaidForFreeze` / `refundMonthlyForFreeze`). The refund is
+   * therefore funded from the balance alone.
+   */
+  describe('balance-only path (no ACTIVE enrollment)', () => {
+    beforeEach(() => {
+      // No ACTIVE enrollment for this student at all.
+      prisma.enrollment.findFirst.mockResolvedValue(null);
+    });
+
+    it('quotes maxRefundable as exactly the balance', async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10001,
+        balance: 250_000,
+      });
+
+      const result = await service.previewRefund(10001, 1);
+
+      expect(result.maxRefundable).toBe(250_000);
+      expect(result.suggestedAmount).toBe(250_000);
+    });
+
+    it('never touches prepaid lessons or the billing service', async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10001,
+        balance: 250_000,
+      });
+
+      const result = await service.previewRefund(10001, 1);
+
+      expect(result.prepaidLessons).toBe(0);
+      expect(result.prepaidValue).toBe(0);
+      expect(result.lessonsAttended).toBe(0);
+      expect(result.groupId).toBeNull();
+      expect(billing.prepaidRefundValue).not.toHaveBeenCalled();
+      expect(prisma.attendance.count).not.toHaveBeenCalled();
+    });
+
+    it('quotes zero for a frozen student with zero balance', async () => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10001, balance: 0 });
+
+      const result = await service.previewRefund(10001, 1);
+
+      expect(result.maxRefundable).toBe(0);
+    });
+
+    it('never goes negative for a frozen debtor', async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        id: 10001,
+        balance: -40_000,
+      });
+
+      const result = await service.previewRefund(10001, 1);
+
+      expect(result.maxRefundable).toBe(0);
+    });
+  });
+
+  it('still takes the ACTIVE-enrollment path when one exists, deriving fields the balance-only path cannot produce', async () => {
+    // `prepaidValue` only exists via `EnrollmentBillingService` against a real
+    // enrollment — the balance-only path never calls it and always reports 0.
+    // If the two paths were ever conflated, this would collapse to 0 too.
+    prisma.enrollment.findFirst.mockResolvedValue(enrollmentRow);
+    prisma.enrollment.findMany.mockResolvedValue([
+      { ...enrollmentRow, prepaidLessonsRemaining: 5 },
+    ]);
+    billing.prepaidRefundValue.mockResolvedValue(166_665);
+
+    const result = await service.previewRefund(10001, 1);
+
+    expect(result.groupName).toBe('TOS-101');
+    expect(result.prepaidLessons).toBe(5);
+    expect(result.prepaidValue).toBe(166_665);
+    expect(billing.prepaidRefundValue).toHaveBeenCalled();
+  });
 });

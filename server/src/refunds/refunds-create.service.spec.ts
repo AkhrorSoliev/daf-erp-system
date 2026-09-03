@@ -189,6 +189,56 @@ describe('RefundsCreateService.quickRefund', () => {
     expect(transactionsService.recordRefund).not.toHaveBeenCalled();
   });
 
+  /**
+   * A frozen student has no ACTIVE enrollment — `dto.enrollmentId` is
+   * omitted and the payout is funded from the free balance alone, through
+   * the same `TransactionsService.recordRefund` the enrollment path uses.
+   */
+  describe('balance-only path (no enrollmentId)', () => {
+    const balanceOnlyDto = (amount: number) => ({
+      studentId: 10001,
+      amount,
+      refundMethod: 'CASH' as const,
+    });
+
+    it('succeeds and moves exactly the balance through recordRefund, never touching enrollments', async () => {
+      student.balance = 180_000;
+
+      await service.quickRefund(balanceOnlyDto(180_000), 99, 1);
+
+      expect(transactionsService.recordRefund).toHaveBeenCalledWith(
+        expect.objectContaining({
+          studentId: 10001,
+          amount: 180_000,
+        }),
+        expect.anything(),
+      );
+      expect(prisma.enrollment.findFirst).not.toHaveBeenCalled();
+      expect(enrollmentBilling.releasePrepaidLessons).not.toHaveBeenCalled();
+      expect(enrollmentBilling.prepaidRefundValue).not.toHaveBeenCalled();
+    });
+
+    it('refuses a refund larger than the balance, writing nothing', async () => {
+      student.balance = 100_000;
+
+      await expect(
+        service.quickRefund(balanceOnlyDto(150_000), 99, 1),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(transactionsService.recordRefund).not.toHaveBeenCalled();
+    });
+
+    it('refuses any refund for a frozen student with zero balance', async () => {
+      student.balance = 0;
+
+      await expect(
+        service.quickRefund(balanceOnlyDto(1), 99, 1),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(transactionsService.recordRefund).not.toHaveBeenCalled();
+    });
+  });
+
   it('falls back to every remaining lesson when granularity leaves a gap', async () => {
     // Rounding can leave the last lesson worth slightly less than the shortfall;
     // the max check already passed, so release everything rather than nothing.
