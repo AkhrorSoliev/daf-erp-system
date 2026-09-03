@@ -2850,6 +2850,19 @@ enum DafSentenceOrigin {
   SOURCE
 }
 
+/// Seans turi.
+///
+/// `SECTION_A` tanib olishga, `SECTION_B` ishlab chiqarishga qaratilgan.
+/// `BRIDGE` — bo'limdan bo'limga o'tish: yarmi endi tugagan bo'limdan,
+/// yarmi oldingilaridan. So'z shu joyda birinchi marta o'z konteksti
+/// tashqarisida tekshiriladi.
+enum DafLessonKind {
+  SECTION_A
+  SECTION_B
+  BRIDGE
+  UNIT_TEST
+}
+
 /// O'quv yo'lining bosqichi. Manba bobi unga BIRIKTIRILADI — bo'lim
 /// manbadan kelib chiqmaydi (ADR-0011).
 model DafUnit {
@@ -2860,6 +2873,12 @@ model DafUnit {
   titleDe       String
   /// Manbadagi bob raqami — kelib chiqishi, o'zligi emas.
   sourceChapter Int?
+  /// Barqaror kalit: `u01`. Seed shu bo'yicha yangilaydi — `order` emas,
+  /// chunki eski bo'limlar nafaqaga chiqqanda tartib raqamlari bo'shaydi.
+  code          String?  @unique
+  /// Nafaqaga chiqqan bo'lim: o'quvchiga ko'rinmaydi, lekin lug'ati va
+  /// audiosi zaxira sifatida bazada qoladi. O'chirish ma'lumotni yo'qotardi.
+  retiredAt     DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -2868,6 +2887,7 @@ model DafUnit {
   grammar   DafGrammar[]
   exercises DafExercise[]
   sentences DafSentence[]
+  sections  DafSection[]
 
   @@unique([level, order])
   @@index([level])
@@ -2890,7 +2910,8 @@ model DafLesson {
   /// bildirardi va grammatikani mashqdan uzib qo'yardi — o'quvchi
   /// qoidani o'qir, keyin ishlatmasdi. Endi har bosqichda ham lug'at,
   /// ham grammatika, ham eshitish bor; farq faqat qiyinlikda.
-  tier     Int
+  /// Eski DiB darslarining qiyinlik bosqichi. Yangi kursda ishlatilmaydi.
+  tier     Int?
   titleDe  String
   titleUz  String?
 
@@ -2899,14 +2920,44 @@ model DafLesson {
   /// dars TURIGA emas, faqat bor-yo'qligiga bog'liq — har qanday
   /// bosqichdagi dars grammatikaga ega bo'lishi mumkin.
   grammarId         Int?
+  /// Seans turi. `null` — eski DiB darsi.
+  kind      DafLessonKind?
+  sectionId Int?
 
   unit      DafUnit             @relation(fields: [unitId], references: [id])
   grammar   DafGrammar?         @relation(fields: [grammarId], references: [id])
+  section   DafSection?         @relation(fields: [sectionId], references: [id])
   lexemes   DafLexeme[]
   exercises DafExercise[]
   progress  DafLessonProgress[]
 
-  @@unique([unitId, tier])
+  @@index([unitId])
+}
+
+/// Unit ichidagi MAVZULI bo'lim.
+///
+/// Qiyinlik bo'lim ichida ko'tariladi, bo'limlar orasida emas: aks holda
+/// bitta darsda «Tisch» ham «Krankenhaus» ham chiqib, mavzu yo'qolardi.
+model DafSection {
+  id          Int      @id @default(autoincrement())
+  unitId      Int
+  order       Int
+  /// Barqaror kalit: `u01-s3`.
+  code        String   @unique
+  titleDe     String
+  titleUz     String
+  grammar     String
+  grammarUz   String
+  /// Xaritada rejalashtirilgan asosiy so'zlar soni — kontent to'ldirilganda
+  /// haqiqiy son shunga solishtiriladi.
+  wordBudget  Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  unit    DafUnit     @relation(fields: [unitId], references: [id])
+  lessons DafLesson[]
+
+  @@unique([unitId, order])
   @@index([unitId])
 }
 
