@@ -1493,4 +1493,75 @@ describe('LessonBillingService', () => {
       expect(monthlyChargeService.findChargeForLesson).not.toHaveBeenCalled();
     });
   });
+
+  describe('reverseLessonDeduction — oylik qatorlar boshqa yo`ldan boradi', () => {
+    beforeEach(() => {
+      // `reverseLessonDeduction` o'z tranzaksiyasini ochadi.
+      prisma.$transaction = jest.fn((cb: any) => cb(tx));
+      tx.salaryAccrual = {
+        findMany: jest.fn().mockResolvedValue([]),
+        update: jest.fn().mockResolvedValue({}),
+      };
+      monthlyChargeService.reverseMonthlyCharge = jest
+        .fn()
+        .mockResolvedValue({ chargeId: 'chg-1' });
+    });
+
+    it('MONTHLY_PERIOD qatorini reverseMonthlyCharge orqali bekor qiladi', async () => {
+      tx.transaction.findFirst.mockResolvedValueOnce({
+        id: 'mon-1',
+        enrollmentId: 'enroll-1',
+        reversedAt: null,
+        metadata: { mode: 'MONTHLY_PERIOD', period: '2026-09' },
+      });
+
+      await service.reverseLessonDeduction('mon-1', {
+        performedById: 7,
+        reason: 'Xato hisoblandi',
+        companyId: 1,
+      });
+
+      expect(monthlyChargeService.reverseMonthlyCharge).toHaveBeenCalledWith(
+        tx,
+        expect.objectContaining({
+          transactionId: 'mon-1',
+          companyId: 1,
+          reason: 'Xato hisoblandi',
+        }),
+      );
+      // Umumiy reverseTransaction ATAYLAB chaqirilmaydi: u `metadata.mode`
+      // ni tekshirmaydi va hisob qatorini `CHARGED` bo'lib qoldirardi.
+      expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
+      // Oylik yo'lda LESSON_CONSUMPTION ham, prepaid hisoblagichi ham yo'q.
+      expect(tx.enrollment.update).not.toHaveBeenCalled();
+    });
+
+    it('LESSON_PACK qatorida eski yo`l o`zgarmaydi', async () => {
+      tx.transaction.findFirst.mockResolvedValueOnce({
+        id: 'ded-9',
+        enrollmentId: 'enroll-1',
+        reversedAt: null,
+        metadata: { mode: LessonDeductionMode.FULL_CYCLE },
+      });
+      tx.transaction.findMany.mockResolvedValueOnce([]);
+
+      await service.reverseLessonDeduction('ded-9', {
+        performedById: 7,
+        companyId: 1,
+      });
+
+      expect(transactionsService.reverseTransaction).toHaveBeenCalledWith(
+        'ded-9',
+        expect.any(Object),
+        tx,
+      );
+      expect(
+        monthlyChargeService.reverseMonthlyCharge,
+      ).not.toHaveBeenCalled();
+      expect(tx.enrollment.update).toHaveBeenCalledWith({
+        where: { id: 'enroll-1' },
+        data: { prepaidLessonsRemaining: 0 },
+      });
+    });
+  });
 });

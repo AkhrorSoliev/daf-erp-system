@@ -105,7 +105,15 @@ export class MonthlyChargeService {
         },
       },
     });
-    if (existing) return existing;
+    // Faqat KUCHDAGI hisob qayta hisoblashni to'sadi. `REVERSED` — admin shu
+    // oyni butunlay bekor qilgan holat (`reverseMonthlyCharge`): o'sha oy
+    // QAYTA hisoblanishi kerak, aks holda bitta bosish bir oylik o'qishni
+    // bepul qilib qo'yardi. `@@unique([enrollmentId, periodYear,
+    // periodMonth])` ikkinchi qator yozishga yo'l qo'ymaydi, shuning uchun
+    // pastda o'sha qatorning O'ZI qayta yoziladi (create emas, update).
+    if (existing && existing.status === MonthlyChargeStatus.CHARGED) {
+      return existing;
+    }
 
     const excludedDates = await this.resolveExcludedDates(
       tx,
@@ -168,28 +176,41 @@ export class MonthlyChargeService {
       carried,
     );
 
-    const charge = await tx.enrollmentMonthlyCharge.create({
-      data: {
-        enrollmentId: enr.id,
-        studentId: enr.studentId,
-        groupId: enr.groupId,
-        branchId: enr.group.branchId,
-        companyId: params.companyId,
-        periodYear,
-        periodMonth,
-        plannedLessons,
-        perLessonCost: perLessonCostFull,
-        monthlyPrice,
-        coveredLessons,
-        creditLessons: credit.creditLessonsUsed,
-        creditAmount: credit.creditAmount,
-        chargedAmount: credit.chargedAmount,
-        // Sig'magan kredit kuymaydi: keyingi oy uni ko'rishi uchun shu
-        // oyning uzrli sanog'ida qoldiriladi.
-        excusedLessons: credit.carriedCreditLessons,
-        discountPercent,
-      },
-    });
+    const chargeData = {
+      enrollmentId: enr.id,
+      studentId: enr.studentId,
+      groupId: enr.groupId,
+      branchId: enr.group.branchId,
+      companyId: params.companyId,
+      periodYear,
+      periodMonth,
+      plannedLessons,
+      perLessonCost: perLessonCostFull,
+      monthlyPrice,
+      coveredLessons,
+      creditLessons: credit.creditLessonsUsed,
+      creditAmount: credit.creditAmount,
+      chargedAmount: credit.chargedAmount,
+      // Sig'magan kredit kuymaydi: keyingi oy uni ko'rishi uchun shu
+      // oyning uzrli sanog'ida qoldiriladi.
+      excusedLessons: credit.carriedCreditLessons,
+      discountPercent,
+    };
+
+    // `existing` bu yergacha yetib kelsa u FAQAT `REVERSED` bo'lishi mumkin
+    // (yuqoridagi qorovul `CHARGED`ni qaytarib yuborgan). Bekor qilingan oy
+    // qayta hisoblanadi: eski `transactionId` bo'shatiladi, chunki pastda
+    // YANGI ledger qatori yoziladi va eskisi allaqachon teskari qilingan.
+    const charge = existing
+      ? await tx.enrollmentMonthlyCharge.update({
+          where: { id: existing.id },
+          data: {
+            ...chargeData,
+            status: MonthlyChargeStatus.CHARGED,
+            transactionId: null,
+          },
+        })
+      : await tx.enrollmentMonthlyCharge.create({ data: chargeData });
 
     const transaction = await this.transactionsWrite.chargeMonthlyFee(
       {
@@ -215,6 +236,70 @@ export class MonthlyChargeService {
       where: { id: charge.id },
       data: { transactionId: transaction.id },
     });
+  }
+
+  /**
+   * Butun bir oylik hisobni BEKOR qiladi (admin tuzatishi).
+   *
+   * `reverseChargeForDeparture` dan farqi: u oyning QOLGAN qismini
+   * qaytaradi va hisob `CHARGED` bo'lib qolaveradi; bu esa "bu oy umuman
+   * hisoblanmasligi kerak edi" degan to'liq bekor qilish.
+   *
+   * IKKI yozuv birga o'zgaradi va ular ajralib qolmasligi SHART:
+   *   1. ledger — `TransactionsWriteService.reverseMonthlyFee` orqali
+   *      (umumiy `reverseTransaction` EMAS: u kassa bilan sinxronlashadigan
+   *      turlarni ham qabul qiladi va `metadata.mode` ni tekshirmaydi);
+   *   2. `EnrollmentMonthlyCharge.status` -> `REVERSED`.
+   *
+   * Ikkinchisisiz oy JIMGINA bepul bo'lib qolardi: `createChargeForEnrollment`
+   * ham, cron/qorovulning "hisobi yo'q" so'rovi ham hisob QATORI borligini
+   * ko'rib, o'sha oyni boshqa hech qachon yozmasdi.
+   *
+   * Ledger qatoriga mos hisob topilmasa — pul TEGILMAYDI (xato tashlanadi,
+   * chaqiruvchining tranzaksiyasi qaytadi). "Balans tiklandi, lekin qaysi
+   * oyligi noma'lum" degan holat qolmasligi kerak; teskari qilingan
+   * qatorning O'ZINI qayta bekor qilishga urinish ham shu yerda to'xtaydi.
+   */
+  async reverseMonthlyCharge(
+    tx: Prisma.TransactionClient,
+    params: {
+      transactionId: string;
+      companyId: number;
+      reason: string;
+      performedById?: number;
+    },
+  ): Promise<{ chargeId: string }> {
+    const charge = await tx.enrollmentMonthlyCharge.findFirst({
+      where: { transactionId: params.transactionId },
+      select: { id: true, status: true },
+    });
+    if (!charge) {
+      throw new BadRequestException(
+        `Bu ledger qatoriga bog'langan oylik hisob topilmadi: ${params.transactionId}`,
+      );
+    }
+    if (charge.status !== MonthlyChargeStatus.CHARGED) {
+      throw new BadRequestException(
+        `Oylik hisob allaqachon bekor qilingan: ${charge.id}`,
+      );
+    }
+
+    await this.transactionsWrite.reverseMonthlyFee(
+      {
+        transactionId: params.transactionId,
+        companyId: params.companyId,
+        reason: params.reason,
+        performedById: params.performedById,
+      },
+      tx,
+    );
+
+    await tx.enrollmentMonthlyCharge.update({
+      where: { id: charge.id },
+      data: { status: MonthlyChargeStatus.REVERSED },
+    });
+
+    return { chargeId: charge.id };
   }
 
   /**
@@ -432,6 +517,11 @@ export class MonthlyChargeService {
           none: {
             periodYear: params.periodYear,
             periodMonth: params.periodMonth,
+            // `status` ATAYLAB shu yerda: bekor qilingan (`REVERSED`) hisob
+            // yozilishni qamrovdan CHIQARMASLIGI kerak, aks holda admin
+            // bitta oylik hisobni bekor qilsa o'sha oy hech qachon qayta
+            // yozilmasdi va bir oylik o'qish jimgina bepulga aylanardi.
+            status: MonthlyChargeStatus.CHARGED,
           },
         },
       },
@@ -604,14 +694,22 @@ export class MonthlyChargeService {
     });
   }
 
-  /** Dars sanasiga to'g'ri keladigan oylik hisob (o'qituvchi haqi uchun). */
+  /**
+   * Dars sanasiga to'g'ri keladigan KUCHDAGI oylik hisob (o'qituvchi haqi
+   * uchun).
+   *
+   * `REVERSED` qator `null` bilan bir xil ko'rinadi va bu ATAYLAB: bekor
+   * qilingan oyda o'quvchidan pul olinmagan, demak o'qituvchining haqi
+   * chaqiruvchining zaxira yo'liga (`centerFunded`) tushishi kerak. Aks
+   * holda accrual allaqachon teskari qilingan ledger qatoriga bog'lanardi.
+   */
   async findChargeForLesson(
     tx: Prisma.TransactionClient,
     enrollmentId: string,
     lessonDate: Date,
   ) {
     const day = tashkentDateStr(lessonDate);
-    return tx.enrollmentMonthlyCharge.findUnique({
+    const charge = await tx.enrollmentMonthlyCharge.findUnique({
       where: {
         enrollmentId_periodYear_periodMonth: {
           enrollmentId,
@@ -620,5 +718,6 @@ export class MonthlyChargeService {
         },
       },
     });
+    return charge?.status === MonthlyChargeStatus.CHARGED ? charge : null;
   }
 }

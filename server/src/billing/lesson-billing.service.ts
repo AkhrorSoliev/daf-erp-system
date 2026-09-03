@@ -1029,6 +1029,17 @@ export class LessonBillingService {
    * the cycle was triggered for the wrong group. Distinct from a lesson-level
    * attendance flip — this is a "this whole batch never should have been
    * billed" undo, not "this one lesson didn't happen".
+   *
+   * OYLIK (`metadata.mode === 'MONTHLY_PERIOD'`) qatorlari BOSHQA yo'ldan
+   * boradi. Ular ham `LESSON_DEDUCTION` turida (bu ATAYLAB — mavjud ko'p
+   * so'rov shu turga tayanadi), lekin ularda na `attendanceId`, na
+   * `LESSON_CONSUMPTION` qatorlari, na prepaid hisoblagichi bor, va ular
+   * ortida `EnrollmentMonthlyCharge` qatori turadi. Umumiy yo'l bilan bekor
+   * qilinsa balans tiklanar, ammo hisob qatori `CHARGED` bo'lib qolardi —
+   * va o'sha oy boshqa HECH QACHON yozilmasdi (bosishiga 450 000 so'm bepul
+   * o'qish). Shuning uchun ular `MonthlyChargeService.reverseMonthlyCharge`
+   * ga yo'naltiriladi: u pulni `reverseMonthlyFee` orqali qaytaradi va
+   * hisob qatorini `REVERSED` qilib belgilaydi.
    */
   async reverseLessonDeduction(
     deductionTransactionId: string,
@@ -1056,16 +1067,31 @@ export class LessonBillingService {
           throw new Error('Bu yozuv allaqachon bekor qilingan');
         }
 
+        const isMonthly =
+          ((deduction.metadata ?? {}) as { mode?: string }).mode ===
+          'MONTHLY_PERIOD';
+
         // Reverse the deduction itself (balance is restored, original is
-        // marked reversedAt by reverseTransaction).
-        await this.transactionsService.reverseTransaction(
-          deduction.id,
-          {
-            performedById: params.performedById,
+        // marked reversedAt). Monthly rows go through the charge service so
+        // the `EnrollmentMonthlyCharge` row is marked REVERSED in the same
+        // transaction — see the method comment.
+        if (isMonthly) {
+          await this.monthlyChargeService.reverseMonthlyCharge(tx, {
+            transactionId: deduction.id,
+            companyId: params.companyId,
             reason: params.reason ?? 'Admin tomonidan bekor qilindi',
-          },
-          tx,
-        );
+            performedById: params.performedById,
+          });
+        } else {
+          await this.transactionsService.reverseTransaction(
+            deduction.id,
+            {
+              performedById: params.performedById,
+              reason: params.reason ?? 'Admin tomonidan bekor qilindi',
+            },
+            tx,
+          );
+        }
 
         // Reverse all SalaryAccrual rows that referenced this deduction.
         const accruals = await tx.salaryAccrual.findMany({
@@ -1090,7 +1116,13 @@ export class LessonBillingService {
         // Reverse all LESSON_CONSUMPTION rows for the same enrollment that
         // were created after this deduction (i.e. the audit rows that drew
         // down its prepaid balance).
-        if (deduction.enrollmentId) {
+        //
+        // Oylik yo'lda bu blok ATAYLAB o'tkazib yuboriladi: oylik hisob
+        // `LESSON_CONSUMPTION` yozmaydi, prepaid hisoblagichini esa umuman
+        // o'qimaydi. Uni nolga tushirish yozilishning LESSON_PACK davridan
+        // qolgan (migratsiya paytida ataylab saqlangan) holatini jimgina
+        // buzardi.
+        if (!isMonthly && deduction.enrollmentId) {
           const consumptions = await tx.transaction.findMany({
             where: {
               enrollmentId: deduction.enrollmentId,

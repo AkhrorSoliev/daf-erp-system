@@ -62,6 +62,8 @@ describe('MonthlyChargeService', () => {
           lastChargeRow = { ...lastChargeRow, ...data };
           return Promise.resolve(lastChargeRow);
         }),
+        // `reverseMonthlyCharge` ledger qatoridan hisobni topadi.
+        findFirst: jest.fn().mockResolvedValue(null),
       },
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
       lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
@@ -245,6 +247,35 @@ describe('MonthlyChargeService', () => {
       expect(txWriteMock.chargeMonthlyFee).not.toHaveBeenCalled();
     });
 
+    it('BEKOR QILINGAN oyni qayta hisoblaydi (yangi qator emas, o`shanisi)', async () => {
+      // Admin sentabr hisobini bekor qildi -> `REVERSED`. Cron/qorovul o'sha
+      // oyni QAYTA yozishi kerak: aks holda 450 000 so'mlik oy bepul qolardi.
+      lastChargeRow = { id: 'chg-1', status: 'REVERSED' };
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        id: 'chg-1',
+        status: 'REVERSED',
+      });
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(prismaMock.enrollmentMonthlyCharge.create).not.toHaveBeenCalled();
+      expect(txWriteMock.chargeMonthlyFee).toHaveBeenCalledWith(
+        expect.objectContaining({ amount: 450_000 }),
+        tx,
+      );
+      expect(charge).toMatchObject({
+        id: 'chg-1',
+        status: 'CHARGED',
+        chargedAmount: 450_000,
+        transactionId: 'txn-1',
+      });
+    });
+
     it('bayram kunlarini rejadan chiqaradi va dars narxini oshiradi', async () => {
       // 1-sentabr 2026 — seshanba, ya'ni rejadagi kunlardan biri.
       // `buildHolidayDateSet` `date` va `endDate` ikkalasini o'qiydi, shu
@@ -378,7 +409,9 @@ describe('MonthlyChargeService', () => {
 
       const call = prismaMock.enrollment.findMany.mock.calls[0][0];
       expect(call.where.monthlyCharges).toEqual({
-        none: { periodYear: 2026, periodMonth: 10 },
+        // `status` shart: bekor qilingan hisob yozilishni qamrovdan
+        // chiqarmasligi kerak, aks holda o'sha oy qayta yozilmasdi.
+        none: { periodYear: 2026, periodMonth: 10, status: 'CHARGED' },
       });
       expect(call.where.status).toBe('ACTIVE');
       expect(call.where.student).toEqual({ deletedAt: null, status: 'ACTIVE' });
@@ -525,6 +558,7 @@ describe('MonthlyChargeService', () => {
     it('dars sanasidan davrni chiqarib hisobni topadi', async () => {
       prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValueOnce({
         id: 'charge-1',
+        status: 'CHARGED',
       });
 
       const charge = await service.findChargeForLesson(
@@ -533,7 +567,7 @@ describe('MonthlyChargeService', () => {
         new Date('2026-09-10T00:00:00Z'),
       );
 
-      expect(charge).toEqual({ id: 'charge-1' });
+      expect(charge).toEqual({ id: 'charge-1', status: 'CHARGED' });
       expect(
         prismaMock.enrollmentMonthlyCharge.findUnique,
       ).toHaveBeenCalledWith({
@@ -545,6 +579,81 @@ describe('MonthlyChargeService', () => {
           },
         },
       });
+    });
+
+    it('BEKOR QILINGAN hisobni "hisob yo`q" deb ko`rsatadi', async () => {
+      // Aks holda o'qituvchi haqi allaqachon teskari qilingan ledger
+      // qatoriga bog'lanardi. `null` -> chaqiruvchining `centerFunded`
+      // zaxira yo'li ishlaydi.
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValueOnce({
+        id: 'charge-1',
+        status: 'REVERSED',
+      });
+
+      const charge = await service.findChargeForLesson(
+        tx,
+        'enr-1',
+        new Date('2026-09-10T00:00:00Z'),
+      );
+
+      expect(charge).toBeNull();
+    });
+  });
+
+  describe('reverseMonthlyCharge', () => {
+    it('pulni qaytaradi VA hisob qatorini REVERSED qiladi', async () => {
+      prismaMock.enrollmentMonthlyCharge.findFirst.mockResolvedValueOnce({
+        id: 'chg-1',
+        status: 'CHARGED',
+      });
+
+      const res = await service.reverseMonthlyCharge(tx, {
+        transactionId: 'txn-1',
+        companyId: 1,
+        reason: 'Xato hisoblandi',
+        performedById: 7,
+      });
+
+      expect(res).toEqual({ chargeId: 'chg-1' });
+      expect(txWriteMock.reverseMonthlyFee).toHaveBeenCalledWith(
+        expect.objectContaining({ transactionId: 'txn-1', companyId: 1 }),
+        tx,
+      );
+      expect(prismaMock.enrollmentMonthlyCharge.update).toHaveBeenCalledWith({
+        where: { id: 'chg-1' },
+        data: { status: 'REVERSED' },
+      });
+    });
+
+    it('mos hisob topilmasa PULGA TEGMAYDI', async () => {
+      prismaMock.enrollmentMonthlyCharge.findFirst.mockResolvedValueOnce(null);
+
+      await expect(
+        service.reverseMonthlyCharge(tx, {
+          transactionId: 'txn-yo`q',
+          companyId: 1,
+          reason: 'Xato hisoblandi',
+        }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(txWriteMock.reverseMonthlyFee).not.toHaveBeenCalled();
+    });
+
+    it('allaqachon bekor qilingan hisobni ikkinchi marta bekor qilmaydi', async () => {
+      prismaMock.enrollmentMonthlyCharge.findFirst.mockResolvedValueOnce({
+        id: 'chg-1',
+        status: 'REVERSED',
+      });
+
+      await expect(
+        service.reverseMonthlyCharge(tx, {
+          transactionId: 'txn-1',
+          companyId: 1,
+          reason: 'Xato hisoblandi',
+        }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(txWriteMock.reverseMonthlyFee).not.toHaveBeenCalled();
     });
   });
 
