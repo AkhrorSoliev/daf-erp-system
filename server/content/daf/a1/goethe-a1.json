@@ -1,0 +1,2469 @@
+{
+ "source": "https://www.goethe.de/pro/relaunch/prf/de/A1_SD1_Wortliste_02.pdf",
+ "words": [
+  {
+   "artikel": null,
+   "wort": "ab"
+  },
+  {
+   "artikel": null,
+   "wort": "aber"
+  },
+  {
+   "artikel": null,
+   "wort": "abfahren"
+  },
+  {
+   "artikel": null,
+   "wort": "abgeben"
+  },
+  {
+   "artikel": null,
+   "wort": "abholen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Absender"
+  },
+  {
+   "artikel": null,
+   "wort": "Achtung"
+  },
+  {
+   "artikel": "die",
+   "wort": "Adresse"
+  },
+  {
+   "artikel": null,
+   "wort": "all-"
+  },
+  {
+   "artikel": null,
+   "wort": "allein"
+  },
+  {
+   "artikel": null,
+   "wort": "also"
+  },
+  {
+   "artikel": null,
+   "wort": "alt"
+  },
+  {
+   "artikel": "das",
+   "wort": "Alter"
+  },
+  {
+   "artikel": null,
+   "wort": "an"
+  },
+  {
+   "artikel": null,
+   "wort": "anbieten"
+  },
+  {
+   "artikel": null,
+   "wort": "ander-"
+  },
+  {
+   "artikel": null,
+   "wort": "anfangen"
+  },
+  {
+   "artikel": null,
+   "wort": "anklicken"
+  },
+  {
+   "artikel": null,
+   "wort": "ankommen"
+  },
+  {
+   "artikel": "die",
+   "wort": "Ankunft"
+  },
+  {
+   "artikel": null,
+   "wort": "ankreuzen"
+  },
+  {
+   "artikel": null,
+   "wort": "anmachen"
+  },
+  {
+   "artikel": "die",
+   "wort": "Anrede"
+  },
+  {
+   "artikel": null,
+   "wort": "anrufen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Anruf"
+  },
+  {
+   "artikel": null,
+   "wort": "INVeNTAre"
+  },
+  {
+   "artikel": null,
+   "wort": "Alphabetische"
+  },
+  {
+   "artikel": null,
+   "wort": "wortliste"
+  },
+  {
+   "artikel": "die",
+   "wort": "Ansage"
+  },
+  {
+   "artikel": "der",
+   "wort": "Anschluss"
+  },
+  {
+   "artikel": null,
+   "wort": "antworten"
+  },
+  {
+   "artikel": "die",
+   "wort": "Anzeige"
+  },
+  {
+   "artikel": "das",
+   "wort": "Apartment"
+  },
+  {
+   "artikel": "der",
+   "wort": "Apfel"
+  },
+  {
+   "artikel": "der",
+   "wort": "Appetit"
+  },
+  {
+   "artikel": null,
+   "wort": "arbeiten"
+  },
+  {
+   "artikel": null,
+   "wort": "arbeitslos"
+  },
+  {
+   "artikel": "der",
+   "wort": "Arbeitsplatz"
+  },
+  {
+   "artikel": "der",
+   "wort": "Arm"
+  },
+  {
+   "artikel": "der",
+   "wort": "Arzt"
+  },
+  {
+   "artikel": null,
+   "wort": "auch"
+  },
+  {
+   "artikel": null,
+   "wort": "auf"
+  },
+  {
+   "artikel": "die",
+   "wort": "Aufgabe"
+  },
+  {
+   "artikel": null,
+   "wort": "aufhören"
+  },
+  {
+   "artikel": null,
+   "wort": "aufstehen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Aufzug"
+  },
+  {
+   "artikel": "das",
+   "wort": "Auge"
+  },
+  {
+   "artikel": null,
+   "wort": "aus"
+  },
+  {
+   "artikel": "der",
+   "wort": "Ausflug"
+  },
+  {
+   "artikel": null,
+   "wort": "ausfüllen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Ausgang"
+  },
+  {
+   "artikel": "die",
+   "wort": "Auskunft"
+  },
+  {
+   "artikel": "das",
+   "wort": "Ausland"
+  },
+  {
+   "artikel": null,
+   "wort": "ausmachen"
+  },
+  {
+   "artikel": "die",
+   "wort": "Aussage"
+  },
+  {
+   "artikel": null,
+   "wort": "aussehen"
+  },
+  {
+   "artikel": null,
+   "wort": "aussteigen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Ausweis"
+  },
+  {
+   "artikel": "das",
+   "wort": "Auto"
+  },
+  {
+   "artikel": "die",
+   "wort": "Autobahn"
+  },
+  {
+   "artikel": "der",
+   "wort": "Automat"
+  },
+  {
+   "artikel": null,
+   "wort": "automatisch"
+  },
+  {
+   "artikel": "das",
+   "wort": "Baby"
+  },
+  {
+   "artikel": "die",
+   "wort": "Bäckerei"
+  },
+  {
+   "artikel": "das",
+   "wort": "Bad"
+  },
+  {
+   "artikel": null,
+   "wort": "baden"
+  },
+  {
+   "artikel": "die",
+   "wort": "Bahn"
+  },
+  {
+   "artikel": "der",
+   "wort": "Bahnhof"
+  },
+  {
+   "artikel": "der",
+   "wort": "Bahnsteig"
+  },
+  {
+   "artikel": null,
+   "wort": "bald"
+  },
+  {
+   "artikel": "der",
+   "wort": "Balkon"
+  },
+  {
+   "artikel": "die",
+   "wort": "Banane"
+  },
+  {
+   "artikel": "die",
+   "wort": "Bank"
+  },
+  {
+   "artikel": null,
+   "wort": "bar"
+  },
+  {
+   "artikel": "der",
+   "wort": "Bauch"
+  },
+  {
+   "artikel": "der",
+   "wort": "Baum"
+  },
+  {
+   "artikel": "der",
+   "wort": "Beamte"
+  },
+  {
+   "artikel": null,
+   "wort": "bedeuten"
+  },
+  {
+   "artikel": null,
+   "wort": "beginnen"
+  },
+  {
+   "artikel": null,
+   "wort": "bei"
+  },
+  {
+   "artikel": null,
+   "wort": "beide"
+  },
+  {
+   "artikel": "das",
+   "wort": "Bein"
+  },
+  {
+   "artikel": "das",
+   "wort": "Beispiel"
+  },
+  {
+   "artikel": null,
+   "wort": "bekannt"
+  },
+  {
+   "artikel": null,
+   "wort": "der"
+  },
+  {
+   "artikel": null,
+   "wort": "bekommen"
+  },
+  {
+   "artikel": null,
+   "wort": "benutzen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Beruf"
+  },
+  {
+   "artikel": null,
+   "wort": "besetzt"
+  },
+  {
+   "artikel": null,
+   "wort": "besichtigen"
+  },
+  {
+   "artikel": null,
+   "wort": "besser"
+  },
+  {
+   "artikel": null,
+   "wort": "best-"
+  },
+  {
+   "artikel": null,
+   "wort": "bestellen"
+  },
+  {
+   "artikel": null,
+   "wort": "besuchen"
+  },
+  {
+   "artikel": "das",
+   "wort": "Bett"
+  },
+  {
+   "artikel": null,
+   "wort": "bezahlen"
+  },
+  {
+   "artikel": "das",
+   "wort": "Bier"
+  },
+  {
+   "artikel": "das",
+   "wort": "Bild"
+  },
+  {
+   "artikel": null,
+   "wort": "billig"
+  },
+  {
+   "artikel": "die",
+   "wort": "Birne"
+  },
+  {
+   "artikel": null,
+   "wort": "bis"
+  },
+  {
+   "artikel": null,
+   "wort": "bisschen"
+  },
+  {
+   "artikel": null,
+   "wort": "bitte"
+  },
+  {
+   "artikel": null,
+   "wort": "bitter"
+  },
+  {
+   "artikel": null,
+   "wort": "bleiben"
+  },
+  {
+   "artikel": "der",
+   "wort": "Bleistift"
+  },
+  {
+   "artikel": "der",
+   "wort": "Blick"
+  },
+  {
+   "artikel": "die",
+   "wort": "Blume"
+  },
+  {
+   "artikel": "der",
+   "wort": "Bogen"
+  },
+  {
+   "artikel": null,
+   "wort": "böse"
+  },
+  {
+   "artikel": null,
+   "wort": "brauchen"
+  },
+  {
+   "artikel": null,
+   "wort": "breit"
+  },
+  {
+   "artikel": "der",
+   "wort": "Brief"
+  },
+  {
+   "artikel": "die",
+   "wort": "Briefmarke"
+  },
+  {
+   "artikel": null,
+   "wort": "bringen"
+  },
+  {
+   "artikel": "das",
+   "wort": "Brot"
+  },
+  {
+   "artikel": "das",
+   "wort": "Brötchen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Bruder"
+  },
+  {
+   "artikel": "das",
+   "wort": "Buch"
+  },
+  {
+   "artikel": "der",
+   "wort": "Buchstabe"
+  },
+  {
+   "artikel": null,
+   "wort": "buchstabieren"
+  },
+  {
+   "artikel": "der",
+   "wort": "Bus"
+  },
+  {
+   "artikel": "die",
+   "wort": "Butter"
+  },
+  {
+   "artikel": "das",
+   "wort": "Caf"
+  },
+  {
+   "artikel": "der",
+   "wort": "Chef"
+  },
+  {
+   "artikel": null,
+   "wort": "circa"
+  },
+  {
+   "artikel": "der",
+   "wort": "Computer"
+  },
+  {
+   "artikel": null,
+   "wort": "da"
+  },
+  {
+   "artikel": "die",
+   "wort": "Dame"
+  },
+  {
+   "artikel": null,
+   "wort": "daneben"
+  },
+  {
+   "artikel": null,
+   "wort": "danken"
+  },
+  {
+   "artikel": null,
+   "wort": "dann"
+  },
+  {
+   "artikel": "das",
+   "wort": "Datum"
+  },
+  {
+   "artikel": null,
+   "wort": "dauern"
+  },
+  {
+   "artikel": null,
+   "wort": "dein-"
+  },
+  {
+   "artikel": null,
+   "wort": "denn"
+  },
+  {
+   "artikel": null,
+   "wort": "dich"
+  },
+  {
+   "artikel": "die",
+   "wort": "s-"
+  },
+  {
+   "artikel": null,
+   "wort": "dir"
+  },
+  {
+   "artikel": "die",
+   "wort": "Disco"
+  },
+  {
+   "artikel": "der",
+   "wort": "Doktor"
+  },
+  {
+   "artikel": "das",
+   "wort": "Doppelzimmer"
+  },
+  {
+   "artikel": "das",
+   "wort": "Dorf"
+  },
+  {
+   "artikel": null,
+   "wort": "dort"
+  },
+  {
+   "artikel": null,
+   "wort": "draußen"
+  },
+  {
+   "artikel": null,
+   "wort": "drucken"
+  },
+  {
+   "artikel": null,
+   "wort": "drücken"
+  },
+  {
+   "artikel": null,
+   "wort": "durch"
+  },
+  {
+   "artikel": "die",
+   "wort": "Durchsage"
+  },
+  {
+   "artikel": null,
+   "wort": "dürfen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Durst"
+  },
+  {
+   "artikel": "die",
+   "wort": "Ecke"
+  },
+  {
+   "artikel": "die",
+   "wort": "Ehefrau"
+  },
+  {
+   "artikel": "der",
+   "wort": "Ehemann"
+  },
+  {
+   "artikel": "das",
+   "wort": "Ei"
+  },
+  {
+   "artikel": null,
+   "wort": "eilig"
+  },
+  {
+   "artikel": null,
+   "wort": "ein-"
+  },
+  {
+   "artikel": null,
+   "wort": "einfach"
+  },
+  {
+   "artikel": "der",
+   "wort": "Eingang"
+  },
+  {
+   "artikel": null,
+   "wort": "einkaufen"
+  },
+  {
+   "artikel": null,
+   "wort": "einladen"
+  },
+  {
+   "artikel": null,
+   "wort": "einmal"
+  },
+  {
+   "artikel": null,
+   "wort": "einsteigen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Eintritt"
+  },
+  {
+   "artikel": "das",
+   "wort": "Einzelzimmer"
+  },
+  {
+   "artikel": "die",
+   "wort": "Eltern"
+  },
+  {
+   "artikel": "die",
+   "wort": "E-Mail"
+  },
+  {
+   "artikel": "der",
+   "wort": "Empfänger"
+  },
+  {
+   "artikel": null,
+   "wort": "empfehlen"
+  },
+  {
+   "artikel": null,
+   "wort": "enden"
+  },
+  {
+   "artikel": null,
+   "wort": "entschuldigen"
+  },
+  {
+   "artikel": null,
+   "wort": "er"
+  },
+  {
+   "artikel": "das",
+   "wort": "Ergebnis"
+  },
+  {
+   "artikel": null,
+   "wort": "erklären"
+  },
+  {
+   "artikel": null,
+   "wort": "erlauben"
+  },
+  {
+   "artikel": "der",
+   "wort": "Erwachsene"
+  },
+  {
+   "artikel": null,
+   "wort": "erzählen"
+  },
+  {
+   "artikel": null,
+   "wort": "es"
+  },
+  {
+   "artikel": null,
+   "wort": "essen"
+  },
+  {
+   "artikel": null,
+   "wort": "euer"
+  },
+  {
+   "artikel": null,
+   "wort": "fahren"
+  },
+  {
+   "artikel": "die",
+   "wort": "Fahrkarte"
+  },
+  {
+   "artikel": "das",
+   "wort": "Fahrrad"
+  },
+  {
+   "artikel": null,
+   "wort": "falsch"
+  },
+  {
+   "artikel": "die",
+   "wort": "Familie"
+  },
+  {
+   "artikel": "die",
+   "wort": "Farbe"
+  },
+  {
+   "artikel": "das",
+   "wort": "Fax"
+  },
+  {
+   "artikel": null,
+   "wort": "Feier-"
+  },
+  {
+   "artikel": null,
+   "wort": "feiern"
+  },
+  {
+   "artikel": null,
+   "wort": "fehlen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Fehler"
+  },
+  {
+   "artikel": null,
+   "wort": "fernsehen"
+  },
+  {
+   "artikel": null,
+   "wort": "fertig"
+  },
+  {
+   "artikel": "das",
+   "wort": "Feuer"
+  },
+  {
+   "artikel": "das",
+   "wort": "Fieber"
+  },
+  {
+   "artikel": "der",
+   "wort": "Film"
+  },
+  {
+   "artikel": null,
+   "wort": "finden"
+  },
+  {
+   "artikel": "die",
+   "wort": "Firma"
+  },
+  {
+   "artikel": "der",
+   "wort": "Fisch"
+  },
+  {
+   "artikel": "die",
+   "wort": "Flasche"
+  },
+  {
+   "artikel": "das",
+   "wort": "Fleisch"
+  },
+  {
+   "artikel": null,
+   "wort": "fliegen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Flughafen"
+  },
+  {
+   "artikel": "das",
+   "wort": "Flugzeug"
+  },
+  {
+   "artikel": "das",
+   "wort": "Formular"
+  },
+  {
+   "artikel": "das",
+   "wort": "Foto"
+  },
+  {
+   "artikel": null,
+   "wort": "fragen"
+  },
+  {
+   "artikel": "die",
+   "wort": "Frau"
+  },
+  {
+   "artikel": null,
+   "wort": "frei"
+  },
+  {
+   "artikel": "die",
+   "wort": "Freizeit"
+  },
+  {
+   "artikel": null,
+   "wort": "fremd"
+  },
+  {
+   "artikel": "der",
+   "wort": "Freund"
+  },
+  {
+   "artikel": null,
+   "wort": "früher"
+  },
+  {
+   "artikel": null,
+   "wort": "frühstücken"
+  },
+  {
+   "artikel": "die",
+   "wort": "Führung"
+  },
+  {
+   "artikel": null,
+   "wort": "für"
+  },
+  {
+   "artikel": "der",
+   "wort": "Fuß"
+  },
+  {
+   "artikel": "der",
+   "wort": "Fußball"
+  },
+  {
+   "artikel": "der",
+   "wort": "Garten"
+  },
+  {
+   "artikel": "der",
+   "wort": "Gast"
+  },
+  {
+   "artikel": null,
+   "wort": "geben"
+  },
+  {
+   "artikel": null,
+   "wort": "geboren"
+  },
+  {
+   "artikel": "das",
+   "wort": "Geburtsjahr"
+  },
+  {
+   "artikel": "der",
+   "wort": "Geburtsort"
+  },
+  {
+   "artikel": "der",
+   "wort": "Geburtstag"
+  },
+  {
+   "artikel": null,
+   "wort": "gefallen"
+  },
+  {
+   "artikel": null,
+   "wort": "gegen"
+  },
+  {
+   "artikel": null,
+   "wort": "gehen"
+  },
+  {
+   "artikel": null,
+   "wort": "gehören"
+  },
+  {
+   "artikel": "das",
+   "wort": "Geld"
+  },
+  {
+   "artikel": "das",
+   "wort": "Gemüse"
+  },
+  {
+   "artikel": "das",
+   "wort": "Gepäck"
+  },
+  {
+   "artikel": null,
+   "wort": "gerade"
+  },
+  {
+   "artikel": null,
+   "wort": "geradeaus"
+  },
+  {
+   "artikel": null,
+   "wort": "gern"
+  },
+  {
+   "artikel": "das",
+   "wort": "Geschäft"
+  },
+  {
+   "artikel": "das",
+   "wort": "Geschenk"
+  },
+  {
+   "artikel": "die",
+   "wort": "Geschwister"
+  },
+  {
+   "artikel": "das",
+   "wort": "Gespräch"
+  },
+  {
+   "artikel": null,
+   "wort": "gestern"
+  },
+  {
+   "artikel": null,
+   "wort": "gestorben"
+  },
+  {
+   "artikel": "das",
+   "wort": "Getränk"
+  },
+  {
+   "artikel": "das",
+   "wort": "Gewicht"
+  },
+  {
+   "artikel": null,
+   "wort": "gewinnen"
+  },
+  {
+   "artikel": "das",
+   "wort": "Glas"
+  },
+  {
+   "artikel": null,
+   "wort": "glauben"
+  },
+  {
+   "artikel": null,
+   "wort": "gleich"
+  },
+  {
+   "artikel": "das",
+   "wort": "Gleis"
+  },
+  {
+   "artikel": "das",
+   "wort": "Glück"
+  },
+  {
+   "artikel": null,
+   "wort": "glücklich"
+  },
+  {
+   "artikel": "der",
+   "wort": "Glückwunsch"
+  },
+  {
+   "artikel": null,
+   "wort": "Grad"
+  },
+  {
+   "artikel": null,
+   "wort": "gratulieren"
+  },
+  {
+   "artikel": null,
+   "wort": "grillen"
+  },
+  {
+   "artikel": null,
+   "wort": "groß"
+  },
+  {
+   "artikel": "die",
+   "wort": "Großeltern"
+  },
+  {
+   "artikel": "die",
+   "wort": "Gruppe"
+  },
+  {
+   "artikel": "der",
+   "wort": "Gruß"
+  },
+  {
+   "artikel": null,
+   "wort": "gültig"
+  },
+  {
+   "artikel": null,
+   "wort": "günstig"
+  },
+  {
+   "artikel": null,
+   "wort": "gut"
+  },
+  {
+   "artikel": "das",
+   "wort": "Haar"
+  },
+  {
+   "artikel": null,
+   "wort": "haben"
+  },
+  {
+   "artikel": "das",
+   "wort": "Hähnchen"
+  },
+  {
+   "artikel": "die",
+   "wort": "Halbpension"
+  },
+  {
+   "artikel": "die",
+   "wort": "Halle"
+  },
+  {
+   "artikel": null,
+   "wort": "hallo"
+  },
+  {
+   "artikel": null,
+   "wort": "halten"
+  },
+  {
+   "artikel": "die",
+   "wort": "Haltestelle"
+  },
+  {
+   "artikel": "die",
+   "wort": "Hand"
+  },
+  {
+   "artikel": "das",
+   "wort": "Handy"
+  },
+  {
+   "artikel": "das",
+   "wort": "Haus"
+  },
+  {
+   "artikel": "die",
+   "wort": "Hausaufgabe"
+  },
+  {
+   "artikel": "die",
+   "wort": "Hausfrau"
+  },
+  {
+   "artikel": "die",
+   "wort": "Heimat"
+  },
+  {
+   "artikel": null,
+   "wort": "heiraten"
+  },
+  {
+   "artikel": null,
+   "wort": "heißen"
+  },
+  {
+   "artikel": null,
+   "wort": "helfen"
+  },
+  {
+   "artikel": null,
+   "wort": "hell"
+  },
+  {
+   "artikel": "der",
+   "wort": "Herd"
+  },
+  {
+   "artikel": "der",
+   "wort": "Herr"
+  },
+  {
+   "artikel": null,
+   "wort": "herzlich"
+  },
+  {
+   "artikel": null,
+   "wort": "heute"
+  },
+  {
+   "artikel": null,
+   "wort": "hier"
+  },
+  {
+   "artikel": "die",
+   "wort": "Hilfe"
+  },
+  {
+   "artikel": null,
+   "wort": "hinten"
+  },
+  {
+   "artikel": "das",
+   "wort": "Hobby"
+  },
+  {
+   "artikel": null,
+   "wort": "hoch"
+  },
+  {
+   "artikel": "die",
+   "wort": "Hochzeit"
+  },
+  {
+   "artikel": null,
+   "wort": "holen"
+  },
+  {
+   "artikel": null,
+   "wort": "hören"
+  },
+  {
+   "artikel": "das",
+   "wort": "Hotel"
+  },
+  {
+   "artikel": "der",
+   "wort": "Hund"
+  },
+  {
+   "artikel": "der",
+   "wort": "Hunger"
+  },
+  {
+   "artikel": null,
+   "wort": "ich"
+  },
+  {
+   "artikel": null,
+   "wort": "ihr"
+  },
+  {
+   "artikel": null,
+   "wort": "immer"
+  },
+  {
+   "artikel": null,
+   "wort": "in"
+  },
+  {
+   "artikel": "die",
+   "wort": "Information"
+  },
+  {
+   "artikel": null,
+   "wort": "international"
+  },
+  {
+   "artikel": "das",
+   "wort": "Internet"
+  },
+  {
+   "artikel": null,
+   "wort": "ja"
+  },
+  {
+   "artikel": "die",
+   "wort": "Jacke"
+  },
+  {
+   "artikel": null,
+   "wort": "jed-"
+  },
+  {
+   "artikel": null,
+   "wort": "jetzt"
+  },
+  {
+   "artikel": "der",
+   "wort": "Job"
+  },
+  {
+   "artikel": "der",
+   "wort": "Jugendliche"
+  },
+  {
+   "artikel": null,
+   "wort": "jung"
+  },
+  {
+   "artikel": "der",
+   "wort": "Junge"
+  },
+  {
+   "artikel": "der",
+   "wort": "Kaffee"
+  },
+  {
+   "artikel": null,
+   "wort": "kaputt"
+  },
+  {
+   "artikel": "die",
+   "wort": "Karte"
+  },
+  {
+   "artikel": "die",
+   "wort": "Kartoffel"
+  },
+  {
+   "artikel": "die",
+   "wort": "Kasse"
+  },
+  {
+   "artikel": null,
+   "wort": "kaufen"
+  },
+  {
+   "artikel": null,
+   "wort": "kein"
+  },
+  {
+   "artikel": null,
+   "wort": "kennen"
+  },
+  {
+   "artikel": "das",
+   "wort": "Kind"
+  },
+  {
+   "artikel": "der",
+   "wort": "Kindergarten"
+  },
+  {
+   "artikel": "das",
+   "wort": "Kino"
+  },
+  {
+   "artikel": "der",
+   "wort": "Kiosk"
+  },
+  {
+   "artikel": null,
+   "wort": "klar"
+  },
+  {
+   "artikel": "die",
+   "wort": "Klasse"
+  },
+  {
+   "artikel": "die",
+   "wort": "Kleidung"
+  },
+  {
+   "artikel": null,
+   "wort": "klein"
+  },
+  {
+   "artikel": null,
+   "wort": "kochen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Koffer"
+  },
+  {
+   "artikel": "der",
+   "wort": "Kollege"
+  },
+  {
+   "artikel": null,
+   "wort": "kommen"
+  },
+  {
+   "artikel": null,
+   "wort": "können"
+  },
+  {
+   "artikel": "das",
+   "wort": "Konto"
+  },
+  {
+   "artikel": "der",
+   "wort": "Kopf"
+  },
+  {
+   "artikel": null,
+   "wort": "kosten"
+  },
+  {
+   "artikel": null,
+   "wort": "krank"
+  },
+  {
+   "artikel": null,
+   "wort": "kriegen"
+  },
+  {
+   "artikel": "die",
+   "wort": "Küche"
+  },
+  {
+   "artikel": "der",
+   "wort": "Kuchen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Kugelschreiber"
+  },
+  {
+   "artikel": "der",
+   "wort": "Kühlschrank"
+  },
+  {
+   "artikel": null,
+   "wort": "kulturell"
+  },
+  {
+   "artikel": null,
+   "wort": "sich"
+  },
+  {
+   "artikel": "der",
+   "wort": "Kunde"
+  },
+  {
+   "artikel": "der",
+   "wort": "Kurs"
+  },
+  {
+   "artikel": null,
+   "wort": "kurz"
+  },
+  {
+   "artikel": null,
+   "wort": "lachen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Laden"
+  },
+  {
+   "artikel": "das",
+   "wort": "Land"
+  },
+  {
+   "artikel": null,
+   "wort": "lang"
+  },
+  {
+   "artikel": null,
+   "wort": "lange"
+  },
+  {
+   "artikel": null,
+   "wort": "langsam"
+  },
+  {
+   "artikel": null,
+   "wort": "laufen"
+  },
+  {
+   "artikel": null,
+   "wort": "laut"
+  },
+  {
+   "artikel": null,
+   "wort": "leben"
+  },
+  {
+   "artikel": null,
+   "wort": "ledig"
+  },
+  {
+   "artikel": null,
+   "wort": "legen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Lehrer"
+  },
+  {
+   "artikel": null,
+   "wort": "leicht"
+  },
+  {
+   "artikel": null,
+   "wort": "leider"
+  },
+  {
+   "artikel": null,
+   "wort": "leise"
+  },
+  {
+   "artikel": null,
+   "wort": "lernen"
+  },
+  {
+   "artikel": null,
+   "wort": "lesen"
+  },
+  {
+   "artikel": null,
+   "wort": "letzt-"
+  },
+  {
+   "artikel": "die",
+   "wort": "Leute"
+  },
+  {
+   "artikel": "das",
+   "wort": "Licht"
+  },
+  {
+   "artikel": null,
+   "wort": "lieb-"
+  },
+  {
+   "artikel": null,
+   "wort": "Lieblings-"
+  },
+  {
+   "artikel": "das",
+   "wort": "Lied"
+  },
+  {
+   "artikel": null,
+   "wort": "liegen"
+  },
+  {
+   "artikel": null,
+   "wort": "links"
+  },
+  {
+   "artikel": "der",
+   "wort": "Lkw"
+  },
+  {
+   "artikel": "das",
+   "wort": "Lokal"
+  },
+  {
+   "artikel": "die",
+   "wort": "Lösung"
+  },
+  {
+   "artikel": null,
+   "wort": "lustig"
+  },
+  {
+   "artikel": null,
+   "wort": "machen"
+  },
+  {
+   "artikel": "das",
+   "wort": "Mädchen"
+  },
+  {
+   "artikel": null,
+   "wort": "man"
+  },
+  {
+   "artikel": "der",
+   "wort": "Mann"
+  },
+  {
+   "artikel": "die",
+   "wort": "Maschine"
+  },
+  {
+   "artikel": "das",
+   "wort": "Meer"
+  },
+  {
+   "artikel": null,
+   "wort": "mehr"
+  },
+  {
+   "artikel": null,
+   "wort": "mein"
+  },
+  {
+   "artikel": null,
+   "wort": "meist-"
+  },
+  {
+   "artikel": "der",
+   "wort": "Mensch"
+  },
+  {
+   "artikel": null,
+   "wort": "mieten"
+  },
+  {
+   "artikel": "die",
+   "wort": "Milch"
+  },
+  {
+   "artikel": null,
+   "wort": "mit"
+  },
+  {
+   "artikel": null,
+   "wort": "mitbringen"
+  },
+  {
+   "artikel": null,
+   "wort": "mitkommen"
+  },
+  {
+   "artikel": null,
+   "wort": "mitmachen"
+  },
+  {
+   "artikel": null,
+   "wort": "mitnehmen"
+  },
+  {
+   "artikel": "die",
+   "wort": "Mitte"
+  },
+  {
+   "artikel": "die",
+   "wort": "Möbel"
+  },
+  {
+   "artikel": null,
+   "wort": "möchten"
+  },
+  {
+   "artikel": null,
+   "wort": "mögen"
+  },
+  {
+   "artikel": null,
+   "wort": "möglich"
+  },
+  {
+   "artikel": "der",
+   "wort": "Moment"
+  },
+  {
+   "artikel": null,
+   "wort": "morgen"
+  },
+  {
+   "artikel": null,
+   "wort": "müde"
+  },
+  {
+   "artikel": "der",
+   "wort": "Mund"
+  },
+  {
+   "artikel": null,
+   "wort": "müssen"
+  },
+  {
+   "artikel": "die",
+   "wort": "Mutter"
+  },
+  {
+   "artikel": null,
+   "wort": "nach"
+  },
+  {
+   "artikel": null,
+   "wort": "nächst-"
+  },
+  {
+   "artikel": "der",
+   "wort": "Name"
+  },
+  {
+   "artikel": null,
+   "wort": "nehmen"
+  },
+  {
+   "artikel": null,
+   "wort": "nein"
+  },
+  {
+   "artikel": null,
+   "wort": "neu"
+  },
+  {
+   "artikel": null,
+   "wort": "nicht"
+  },
+  {
+   "artikel": null,
+   "wort": "nichts"
+  },
+  {
+   "artikel": null,
+   "wort": "nie"
+  },
+  {
+   "artikel": null,
+   "wort": "noch"
+  },
+  {
+   "artikel": null,
+   "wort": "normal"
+  },
+  {
+   "artikel": "die",
+   "wort": "Nummer"
+  },
+  {
+   "artikel": null,
+   "wort": "nur"
+  },
+  {
+   "artikel": null,
+   "wort": "oben"
+  },
+  {
+   "artikel": "das",
+   "wort": "Obst"
+  },
+  {
+   "artikel": null,
+   "wort": "oder"
+  },
+  {
+   "artikel": null,
+   "wort": "öffnen"
+  },
+  {
+   "artikel": null,
+   "wort": "oft"
+  },
+  {
+   "artikel": null,
+   "wort": "ohne"
+  },
+  {
+   "artikel": "das",
+   "wort": "Öl"
+  },
+  {
+   "artikel": "die",
+   "wort": "Oma"
+  },
+  {
+   "artikel": "der",
+   "wort": "Opa"
+  },
+  {
+   "artikel": "die",
+   "wort": "Ordnung"
+  },
+  {
+   "artikel": "der",
+   "wort": "Ort"
+  },
+  {
+   "artikel": "das",
+   "wort": "Papier"
+  },
+  {
+   "artikel": "die",
+   "wort": "Papiere"
+  },
+  {
+   "artikel": "der",
+   "wort": "Partner"
+  },
+  {
+   "artikel": "die",
+   "wort": "Partnerin"
+  },
+  {
+   "artikel": "die",
+   "wort": "Party"
+  },
+  {
+   "artikel": "der",
+   "wort": "Pass"
+  },
+  {
+   "artikel": "die",
+   "wort": "Pause"
+  },
+  {
+   "artikel": "der",
+   "wort": "Plan"
+  },
+  {
+   "artikel": "der",
+   "wort": "Platz"
+  },
+  {
+   "artikel": "die",
+   "wort": "Polizei"
+  },
+  {
+   "artikel": "die",
+   "wort": "Pommes"
+  },
+  {
+   "artikel": "die",
+   "wort": "Post"
+  },
+  {
+   "artikel": "die",
+   "wort": "Postleitzahl"
+  },
+  {
+   "artikel": "das",
+   "wort": "Praktikum"
+  },
+  {
+   "artikel": "die",
+   "wort": "Praxis"
+  },
+  {
+   "artikel": "der",
+   "wort": "Preis"
+  },
+  {
+   "artikel": "das",
+   "wort": "Problem"
+  },
+  {
+   "artikel": "der",
+   "wort": "Prospekt"
+  },
+  {
+   "artikel": "die",
+   "wort": "Prüfung"
+  },
+  {
+   "artikel": null,
+   "wort": "pünktlich"
+  },
+  {
+   "artikel": null,
+   "wort": "Rad"
+  },
+  {
+   "artikel": null,
+   "wort": "rauchen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Raum"
+  },
+  {
+   "artikel": "die",
+   "wort": "Rechnung"
+  },
+  {
+   "artikel": null,
+   "wort": "rechts"
+  },
+  {
+   "artikel": null,
+   "wort": "regnen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Reis"
+  },
+  {
+   "artikel": null,
+   "wort": "reisen"
+  },
+  {
+   "artikel": null,
+   "wort": "reparieren"
+  },
+  {
+   "artikel": "das",
+   "wort": "Restaurant"
+  },
+  {
+   "artikel": "die",
+   "wort": "Rezeption"
+  },
+  {
+   "artikel": null,
+   "wort": "richtig"
+  },
+  {
+   "artikel": null,
+   "wort": "riechen"
+  },
+  {
+   "artikel": null,
+   "wort": "ruhig"
+  },
+  {
+   "artikel": "der",
+   "wort": "Saft"
+  },
+  {
+   "artikel": null,
+   "wort": "sagen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Salat"
+  },
+  {
+   "artikel": "das",
+   "wort": "Salz"
+  },
+  {
+   "artikel": null,
+   "wort": "Satz"
+  },
+  {
+   "artikel": "die",
+   "wort": "S-Bahn"
+  },
+  {
+   "artikel": "der",
+   "wort": "Schalter"
+  },
+  {
+   "artikel": null,
+   "wort": "scheinen"
+  },
+  {
+   "artikel": null,
+   "wort": "schicken"
+  },
+  {
+   "artikel": "das",
+   "wort": "Schild"
+  },
+  {
+   "artikel": "der",
+   "wort": "Schinken"
+  },
+  {
+   "artikel": null,
+   "wort": "schlafen"
+  },
+  {
+   "artikel": null,
+   "wort": "schlecht"
+  },
+  {
+   "artikel": null,
+   "wort": "schließen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Schluss"
+  },
+  {
+   "artikel": "der",
+   "wort": "Schlüssel"
+  },
+  {
+   "artikel": null,
+   "wort": "schmecken"
+  },
+  {
+   "artikel": null,
+   "wort": "schnell"
+  },
+  {
+   "artikel": null,
+   "wort": "schon"
+  },
+  {
+   "artikel": null,
+   "wort": "schön"
+  },
+  {
+   "artikel": "der",
+   "wort": "Schrank"
+  },
+  {
+   "artikel": null,
+   "wort": "schreiben"
+  },
+  {
+   "artikel": "der",
+   "wort": "Schuh"
+  },
+  {
+   "artikel": "die",
+   "wort": "Schule"
+  },
+  {
+   "artikel": null,
+   "wort": "schwer"
+  },
+  {
+   "artikel": "die",
+   "wort": "Schwester"
+  },
+  {
+   "artikel": null,
+   "wort": "schwimmen"
+  },
+  {
+   "artikel": "der",
+   "wort": "See"
+  },
+  {
+   "artikel": null,
+   "wort": "sehen"
+  },
+  {
+   "artikel": "die",
+   "wort": "Sehenswürdigkeit"
+  },
+  {
+   "artikel": null,
+   "wort": "sehr"
+  },
+  {
+   "artikel": null,
+   "wort": "sein"
+  },
+  {
+   "artikel": null,
+   "wort": "seit"
+  },
+  {
+   "artikel": null,
+   "wort": "selbstständig"
+  },
+  {
+   "artikel": null,
+   "wort": "sie"
+  },
+  {
+   "artikel": null,
+   "wort": "Sie"
+  },
+  {
+   "artikel": null,
+   "wort": "sitzen"
+  },
+  {
+   "artikel": null,
+   "wort": "so"
+  },
+  {
+   "artikel": "das",
+   "wort": "Sofa"
+  },
+  {
+   "artikel": null,
+   "wort": "sofort"
+  },
+  {
+   "artikel": "der",
+   "wort": "Sohn"
+  },
+  {
+   "artikel": null,
+   "wort": "sollen"
+  },
+  {
+   "artikel": "die",
+   "wort": "Sonne"
+  },
+  {
+   "artikel": null,
+   "wort": "spät"
+  },
+  {
+   "artikel": null,
+   "wort": "später"
+  },
+  {
+   "artikel": "die",
+   "wort": "Speisekarte"
+  },
+  {
+   "artikel": null,
+   "wort": "spielen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Sport"
+  },
+  {
+   "artikel": "die",
+   "wort": "Sprache"
+  },
+  {
+   "artikel": null,
+   "wort": "sprechen"
+  },
+  {
+   "artikel": "die",
+   "wort": "Stadt"
+  },
+  {
+   "artikel": null,
+   "wort": "stehen"
+  },
+  {
+   "artikel": "die",
+   "wort": "Stelle"
+  },
+  {
+   "artikel": null,
+   "wort": "stellen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Stock"
+  },
+  {
+   "artikel": "die",
+   "wort": "Straße"
+  },
+  {
+   "artikel": "die",
+   "wort": "Straßenbahn"
+  },
+  {
+   "artikel": null,
+   "wort": "studieren"
+  },
+  {
+   "artikel": "das",
+   "wort": "Studium"
+  },
+  {
+   "artikel": "die",
+   "wort": "Stunde"
+  },
+  {
+   "artikel": null,
+   "wort": "suchen"
+  },
+  {
+   "artikel": null,
+   "wort": "tanzen"
+  },
+  {
+   "artikel": "die",
+   "wort": "Tasche"
+  },
+  {
+   "artikel": "das",
+   "wort": "Taxi"
+  },
+  {
+   "artikel": "der",
+   "wort": "Tee"
+  },
+  {
+   "artikel": "der",
+   "wort": "Teil"
+  },
+  {
+   "artikel": null,
+   "wort": "telefonieren"
+  },
+  {
+   "artikel": "der",
+   "wort": "Termin"
+  },
+  {
+   "artikel": "der",
+   "wort": "Test"
+  },
+  {
+   "artikel": null,
+   "wort": "teuer"
+  },
+  {
+   "artikel": "der",
+   "wort": "Text"
+  },
+  {
+   "artikel": "das",
+   "wort": "Thema"
+  },
+  {
+   "artikel": "das",
+   "wort": "Ticket"
+  },
+  {
+   "artikel": "der",
+   "wort": "Tisch"
+  },
+  {
+   "artikel": "die",
+   "wort": "Tochter"
+  },
+  {
+   "artikel": "die",
+   "wort": "Toilette"
+  },
+  {
+   "artikel": "die",
+   "wort": "Tomate"
+  },
+  {
+   "artikel": null,
+   "wort": "tot"
+  },
+  {
+   "artikel": "die",
+   "wort": "Treppe"
+  },
+  {
+   "artikel": null,
+   "wort": "trinken"
+  },
+  {
+   "artikel": null,
+   "wort": "tschüss"
+  },
+  {
+   "artikel": null,
+   "wort": "tun"
+  },
+  {
+   "artikel": null,
+   "wort": "über"
+  },
+  {
+   "artikel": null,
+   "wort": "übernachten"
+  },
+  {
+   "artikel": null,
+   "wort": "überweisen"
+  },
+  {
+   "artikel": "die",
+   "wort": "Uhr"
+  },
+  {
+   "artikel": null,
+   "wort": "um"
+  },
+  {
+   "artikel": null,
+   "wort": "umziehen"
+  },
+  {
+   "artikel": null,
+   "wort": "und"
+  },
+  {
+   "artikel": null,
+   "wort": "unser-"
+  },
+  {
+   "artikel": null,
+   "wort": "unten"
+  },
+  {
+   "artikel": null,
+   "wort": "unter"
+  },
+  {
+   "artikel": "der",
+   "wort": "Unterricht"
+  },
+  {
+   "artikel": null,
+   "wort": "unterschreiben"
+  },
+  {
+   "artikel": "der",
+   "wort": "Urlaub"
+  },
+  {
+   "artikel": "der",
+   "wort": "Vater"
+  },
+  {
+   "artikel": null,
+   "wort": "verboten"
+  },
+  {
+   "artikel": null,
+   "wort": "verdienen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Verein"
+  },
+  {
+   "artikel": null,
+   "wort": "verheiratet"
+  },
+  {
+   "artikel": null,
+   "wort": "verkaufen"
+  },
+  {
+   "artikel": null,
+   "wort": "vermieten"
+  },
+  {
+   "artikel": null,
+   "wort": "verstehen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Verwandte"
+  },
+  {
+   "artikel": null,
+   "wort": "viel"
+  },
+  {
+   "artikel": null,
+   "wort": "vielleicht"
+  },
+  {
+   "artikel": null,
+   "wort": "von"
+  },
+  {
+   "artikel": null,
+   "wort": "vor"
+  },
+  {
+   "artikel": "der",
+   "wort": "Vorname"
+  },
+  {
+   "artikel": "die",
+   "wort": "Vorsicht"
+  },
+  {
+   "artikel": "die",
+   "wort": "Vorwahl"
+  },
+  {
+   "artikel": null,
+   "wort": "wandern"
+  },
+  {
+   "artikel": null,
+   "wort": "wann"
+  },
+  {
+   "artikel": null,
+   "wort": "warten"
+  },
+  {
+   "artikel": null,
+   "wort": "warum"
+  },
+  {
+   "artikel": null,
+   "wort": "was"
+  },
+  {
+   "artikel": "das",
+   "wort": "Wasser"
+  },
+  {
+   "artikel": null,
+   "wort": "weh"
+  },
+  {
+   "artikel": null,
+   "wort": "weiblich"
+  },
+  {
+   "artikel": "der",
+   "wort": "Wein"
+  },
+  {
+   "artikel": null,
+   "wort": "weit"
+  },
+  {
+   "artikel": null,
+   "wort": "weiter"
+  },
+  {
+   "artikel": null,
+   "wort": "welch-"
+  },
+  {
+   "artikel": "die",
+   "wort": "Welt"
+  },
+  {
+   "artikel": null,
+   "wort": "wenig"
+  },
+  {
+   "artikel": null,
+   "wort": "wer"
+  },
+  {
+   "artikel": null,
+   "wort": "werden"
+  },
+  {
+   "artikel": "das",
+   "wort": "Wetter"
+  },
+  {
+   "artikel": null,
+   "wort": "wichtig"
+  },
+  {
+   "artikel": null,
+   "wort": "wie"
+  },
+  {
+   "artikel": null,
+   "wort": "wiederholen"
+  },
+  {
+   "artikel": "das",
+   "wort": "Wiederhören"
+  },
+  {
+   "artikel": "das",
+   "wort": "Wiedersehen"
+  },
+  {
+   "artikel": null,
+   "wort": "willkommen"
+  },
+  {
+   "artikel": "der",
+   "wort": "Wind"
+  },
+  {
+   "artikel": null,
+   "wort": "wir"
+  },
+  {
+   "artikel": null,
+   "wort": "wissen"
+  },
+  {
+   "artikel": null,
+   "wort": "wo"
+  },
+  {
+   "artikel": null,
+   "wort": "woher"
+  },
+  {
+   "artikel": null,
+   "wort": "wohin"
+  },
+  {
+   "artikel": null,
+   "wort": "wohnen"
+  },
+  {
+   "artikel": null,
+   "wort": "wollen"
+  },
+  {
+   "artikel": "das",
+   "wort": "Wort"
+  },
+  {
+   "artikel": null,
+   "wort": "wunderbar"
+  },
+  {
+   "artikel": null,
+   "wort": "zahlen"
+  },
+  {
+   "artikel": "die",
+   "wort": "Zeit"
+  },
+  {
+   "artikel": "die",
+   "wort": "Zeitung"
+  },
+  {
+   "artikel": "die",
+   "wort": "Zigarette"
+  },
+  {
+   "artikel": "das",
+   "wort": "Zimmer"
+  },
+  {
+   "artikel": "der",
+   "wort": "Zoll"
+  },
+  {
+   "artikel": null,
+   "wort": "zu"
+  },
+  {
+   "artikel": null,
+   "wort": "zufrieden"
+  },
+  {
+   "artikel": "der",
+   "wort": "Zug"
+  },
+  {
+   "artikel": null,
+   "wort": "zurück"
+  },
+  {
+   "artikel": null,
+   "wort": "zusammen"
+  },
+  {
+   "artikel": null,
+   "wort": "zwischen"
+  },
+  {
+   "artikel": null,
+   "wort": "dem"
+  }
+ ]
+}
