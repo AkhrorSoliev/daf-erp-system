@@ -471,6 +471,11 @@ model Setting {
   updatedAt   DateTime @updatedAt
   createdAt   DateTime @default(now())
 
+  /// Postgres treats NULLs in a UNIQUE index as distinct, so this does NOT
+  /// stop a second company-wide row (`branchId = null`) for the same key —
+  /// the partial index `setting_company_row_unique` (see the migration)
+  /// does. Same pattern as `DailyFinancialSnapshot`. `SettingsService.set`
+  /// therefore does `findFirst` + create/update, never `upsert`.
   @@unique([companyId, branchId, key])
   @@index([companyId, key])
 }
