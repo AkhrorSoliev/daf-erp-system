@@ -37,6 +37,7 @@ import { CourseRowActions } from "./course-row-actions";
 import { EditCourseDrawer } from "./edit-course-drawer";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
+import { PAYMENT_MODEL_SHORT_LABELS } from "@/lib/payment-model";
 
 const coursesSchema = {
   search: { type: "string" as const, defaultValue: "" },
@@ -165,6 +166,7 @@ export function CoursesSettingsClient() {
               <TableHead>Kurs nomi</TableHead>
               <TableHead>Sikl darslari</TableHead>
               <TableHead>Narxi</TableHead>
+              <TableHead>To&apos;lov modeli</TableHead>
               <TableHead>Holati</TableHead>
               <TableHead className="w-10" />
             </TableRow>
@@ -172,14 +174,14 @@ export function CoursesSettingsClient() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   <Loader2 className="mx-auto size-6 animate-spin text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="h-24 text-center text-muted-foreground"
                 >
                   <div className="flex flex-col items-center gap-2">
@@ -207,6 +209,11 @@ export function CoursesSettingsClient() {
                       : "—"}
                   </TableCell>
                   <TableCell>{formatPrice(course.price)} so&apos;m</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {PAYMENT_MODEL_SHORT_LABELS[course.paymentModel]}
+                    </Badge>
+                  </TableCell>
                   <TableCell>
                     <Badge
                       variant={course.isActive ? "default" : "secondary"}

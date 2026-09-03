@@ -11,6 +11,7 @@ import {
   ClipboardList,
   Loader2,
   RefreshCw,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,7 @@ import type { Course } from "@/hooks/use-edit-course";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import { EditCourseDrawer } from "./edit-course-drawer";
 import api from "@/lib/api";
+import { PAYMENT_MODEL_LABELS } from "@/lib/payment-model";
 import { formatPrice } from "@/lib/format-utils";
 
 interface CourseDetailClientProps {
@@ -77,6 +79,7 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
           price: data.price,
           isActive: data.isActive,
           branchId: data.branchId,
+          paymentModel: data.paymentModel,
         };
         setCourse(c);
         setGroupCount(data._count?.groups ?? 0);
@@ -168,6 +171,11 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
               icon={<Banknote className="h-4 w-4 text-muted-foreground" />}
               label="Narx"
               value={`${formatPrice(course.price)} so'm`}
+            />
+            <InfoRow
+              icon={<Wallet className="h-4 w-4 text-muted-foreground" />}
+              label="To'lov modeli"
+              value={PAYMENT_MODEL_LABELS[course.paymentModel]}
             />
             <InfoRow
               icon={<Users className="h-4 w-4 text-muted-foreground" />}
