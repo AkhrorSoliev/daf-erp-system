@@ -4,6 +4,7 @@ import { validateWortliste } from './wortliste.validate';
 import type { WortlisteFile } from './wortliste.types';
 import type { WoerterFile } from './unit-inhalt.types';
 import type { GrammatikFile, RedemittelFile } from './unit-inhalt.types';
+import type { DialogeFile } from './unit-inhalt.types';
 import type { KursFile } from '../kurs/kurs.types';
 import type { GoetheFile } from './goethe-parse';
 
@@ -143,18 +144,59 @@ describe('1-unitning grammatikasi va iboralari', () => {
     // Yordamchi so'zlar ro'yxati: ular hamma bo'limda ishlatiladi va
     // lug'atga kirmaydi.
     const hilfs = new Set([
-      'ich','du','sie','er','es','wir','ihr','bin','bist','ist','sind','seid',
-      'und','oder','nicht','ja','nein','wie','wo','was','wer','woher','das',
-      'der','die','ein','eine','mein','dein','sehr','auch','bitte','danke',
-      'in','aus','aus.','?','!',
+      'ich',
+      'du',
+      'sie',
+      'er',
+      'es',
+      'wir',
+      'ihr',
+      'bin',
+      'bist',
+      'ist',
+      'sind',
+      'seid',
+      'und',
+      'oder',
+      'nicht',
+      'ja',
+      'nein',
+      'wie',
+      'wo',
+      'was',
+      'wer',
+      'woher',
+      'das',
+      'der',
+      'die',
+      'ein',
+      'eine',
+      'mein',
+      'dein',
+      'sehr',
+      'auch',
+      'bitte',
+      'danke',
+      'in',
+      'aus',
+      'aus.',
+      '?',
+      '!',
       // Ismlar: namuna dialoglarda ishlatilgan atoqli otlar. Bular
       // lug'at so'zi emas — hech qanday tarjima yoki o'rgatishni talab
       // qilmaydi, faqat suhbatdosh nomi sifatida turibdi.
-      'anna','timur','nodira','karimova','karimov',
+      'anna',
+      'timur',
+      'nodira',
+      'karimova',
+      'karimov',
       // kommen/wohnen fe'llarining ich/du shakllari — aynan shu
       // bo'limning grammatikasi (u01-s3), infinitiv allaqachon
       // lug'atda; tuslanish qoidaning o'zida (erklaerungUz) tushuntiriladi.
-      'komme','kommst','wohne','wohnst',
+      'komme',
+      'kommst',
+      'wohne',
+      'wohnst',
       // "man" — shaxssiz olmosh ("Wie schreibt man das?" iborasidagi
       // grammatik ko'makchi so'z), hech qanday bo'limga tegishli
       // lug'at emas. ("buchstabieren" endi u01-s5 lug'atining o'zida —
@@ -164,7 +206,10 @@ describe('1-unitning grammatikasi va iboralari', () => {
     ]);
     const unbekannt = new Set<string>();
     const check = (s: string): void => {
-      for (const w of s.toLowerCase().replace(/[.,!?]/g, '').split(/\s+/)) {
+      for (const w of s
+        .toLowerCase()
+        .replace(/[.,!?]/g, '')
+        .split(/\s+/)) {
         if (w === '') continue;
         if (bekannt.has(w) || hilfs.has(w)) continue;
         unbekannt.add(w);
@@ -172,6 +217,141 @@ describe('1-unitning grammatikasi va iboralari', () => {
     };
     grammatik.regeln.forEach((r) => r.beispiele.forEach((b) => check(b.de)));
     redemittel.phrasen.forEach((p) => check(p.de));
+    expect([...unbekannt]).toEqual([]);
+  });
+});
+
+describe('1-unitning dialoglari', () => {
+  const kurs = read<KursFile>('kurs.json');
+  const woerter = read<WoerterFile>('u01', 'woerter.json');
+  const dialoge = read<DialogeFile>('u01', 'dialoge.json');
+
+  const sections = new Set(kurs.units[0].sections.map((s) => s.code));
+
+  it('kamida 6 ta dialog bor', () => {
+    expect(dialoge.dialoge.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it('har dialog mavjud bo`limga tegishli', () => {
+    const notat = dialoge.dialoge.filter((d) => !sections.has(d.section));
+    expect(notat.map((d) => d.id)).toEqual([]);
+  });
+
+  it('har dialogda 4 dan 8 gacha satr bor', () => {
+    // To'rttadan kam bo'lsa suhbat emas, sakkiztadan ko'p bo'lsa A1
+    // uchun uzun: o'quvchi boshini yo'qotadi.
+    const notri = dialoge.dialoge.filter(
+      (d) => d.zeilen.length < 4 || d.zeilen.length > 8,
+    );
+    expect(notri.map((d) => `${d.id}:${d.zeilen.length}`)).toEqual([]);
+  });
+
+  it('har dialogda kamida ikki gapiruvchi bor', () => {
+    const yakka = dialoge.dialoge.filter(
+      (d) => new Set(d.zeilen.map((z) => z.sprecher)).size < 2,
+    );
+    expect(yakka.map((d) => d.id)).toEqual([]);
+  });
+
+  it('dialog kaliti takrorlanmaydi', () => {
+    const ids = dialoge.dialoge.map((d) => d.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('har satrning o`zbekchasi bor', () => {
+    const bosh = dialoge.dialoge.flatMap((d) =>
+      d.zeilen.filter((z) => z.uz.trim() === '').map(() => d.id),
+    );
+    expect(bosh).toEqual([]);
+  });
+
+  it('raqamli satrda tts yozilgan', () => {
+    // TTS raqamni inglizcha o'qiydi: `0176` → «Zero…». Aytilishi qo'lda
+    // yoziladi, aks holda telefon raqami eshitilmaydi.
+    const shubhali = dialoge.dialoge.flatMap((d) =>
+      d.zeilen
+        .filter((z) => /\d/.test(z.de) && (z.tts ?? '').trim() === '')
+        .map((z) => `${d.id}: ${z.de}`),
+    );
+    expect(shubhali).toEqual([]);
+  });
+
+  it('dialoglarda notanish so`z yo`q', () => {
+    const bekannt = new Set(
+      woerter.woerter.flatMap((w) => w.de.toLowerCase().split(/\s+/)),
+    );
+    const hilfs = new Set([
+      'ich',
+      'du',
+      'sie',
+      'er',
+      'es',
+      'wir',
+      'ihr',
+      'bin',
+      'bist',
+      'ist',
+      'sind',
+      'seid',
+      'und',
+      'oder',
+      'nicht',
+      'ja',
+      'nein',
+      'wie',
+      'wo',
+      'was',
+      'wer',
+      'woher',
+      'das',
+      'der',
+      'die',
+      'ein',
+      'eine',
+      'mein',
+      'dein',
+      'sehr',
+      'auch',
+      'bitte',
+      'danke',
+      'in',
+      'aus',
+      'heisse',
+      'heisst',
+      'komme',
+      'kommst',
+      'wohne',
+      'wohnst',
+      'geht',
+      'gut',
+      'dir',
+      'ihnen',
+      'mir',
+      'ist.',
+      'hier',
+      // Ismlar: dialoglarda gapiruvchilar bir-birini shu ism bilan
+      // chaqiradi yoki o'zini shu ism bilan tanishtiradi (masalan,
+      // "Ich bin Mia."). Bular lug'at so'zi emas — hech qanday tarjima
+      // yoki o'rgatishni talab qilmaydi, faqat sobit obraz nomi sifatida
+      // turibdi (xuddi grammatik/redemittel testidagi 'anna','timur' kabi).
+      'mia',
+      'jonas',
+      'emma',
+      'claudia',
+      'markus',
+    ]);
+    const unbekannt = new Set<string>();
+    for (const d of dialoge.dialoge) {
+      for (const z of d.zeilen) {
+        for (const w of z.de
+          .toLowerCase()
+          .replace(/[.,!?]/g, '')
+          .split(/\s+/)) {
+          if (w === '' || bekannt.has(w) || hilfs.has(w)) continue;
+          unbekannt.add(w);
+        }
+      }
+    }
     expect([...unbekannt]).toEqual([]);
   });
 });

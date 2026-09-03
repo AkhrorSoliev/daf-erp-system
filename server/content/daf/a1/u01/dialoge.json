@@ -1,0 +1,91 @@
+{
+  "unit": "u01",
+  "dialoge": [
+    {
+      "id": "u01-d1",
+      "section": "u01-s1",
+      "titelDe": "Bist du Mia?",
+      "titelUz": "Sen Miamisan?",
+      "zeilen": [
+        { "sprecher": "Jonas", "de": "Hallo! Bist du Mia?", "uz": "Salom! Sen Miamisan?" },
+        { "sprecher": "Mia", "de": "Ja, ich bin Mia. Und du?", "uz": "Ha, men Miaman. Senchi?" },
+        { "sprecher": "Jonas", "de": "Ich bin Jonas.", "uz": "Men Jonasman." },
+        { "sprecher": "Mia", "de": "Wie geht es dir?", "uz": "Ahvoling qanday?" },
+        { "sprecher": "Jonas", "de": "Danke, gut. Und dir?", "uz": "Rahmat, yaxshi. Senchi?" },
+        { "sprecher": "Mia", "de": "Auch gut, danke! Tschüss!", "uz": "Menam yaxshi, rahmat! Xayr!" },
+        { "sprecher": "Jonas", "de": "Tschüss! Bis bald.", "uz": "Xayr! Tez orada ko'rishguncha." }
+      ]
+    },
+    {
+      "id": "u01-d2",
+      "section": "u01-s1",
+      "titelDe": "Gute Nacht, Emma!",
+      "titelUz": "Xayrli tun, Emma!",
+      "zeilen": [
+        { "sprecher": "Walter", "de": "Guten Abend, Emma!", "uz": "Xayrli kech, Emma!" },
+        { "sprecher": "Emma", "de": "Guten Abend!", "uz": "Xayrli kech!" },
+        { "sprecher": "Walter", "de": "Wie geht es dir?", "uz": "Ahvoling qanday?" },
+        { "sprecher": "Emma", "de": "Gut, danke! Und dir?", "uz": "Yaxshi, rahmat! Senchi?" },
+        { "sprecher": "Walter", "de": "Auch gut. Gute Nacht!", "uz": "Menam yaxshi. Xayrli tun!" },
+        { "sprecher": "Emma", "de": "Gute Nacht! Bis bald.", "uz": "Xayrli tun! Tez orada ko'rishguncha." }
+      ]
+    },
+    {
+      "id": "u01-d3",
+      "section": "u01-s2",
+      "titelDe": "Wie heißen Sie?",
+      "titelUz": "Ismingiz nima?",
+      "zeilen": [
+        { "sprecher": "Claudia", "de": "Guten Tag!", "uz": "Xayrli kun!" },
+        { "sprecher": "Markus", "de": "Guten Tag!", "uz": "Xayrli kun!" },
+        { "sprecher": "Claudia", "de": "Wie heißen Sie?", "uz": "Ismingiz nima?" },
+        { "sprecher": "Markus", "de": "Ich bin Markus. Und Sie?", "uz": "Men Markusman. Sizchi?" },
+        { "sprecher": "Claudia", "de": "Ich bin Claudia. Danke!", "uz": "Men Claudiaman. Rahmat!" },
+        { "sprecher": "Markus", "de": "Auf Wiedersehen!", "uz": "Xayr!" },
+        { "sprecher": "Claudia", "de": "Auf Wiedersehen!", "uz": "Xayr!" }
+      ]
+    },
+    {
+      "id": "u01-d4",
+      "section": "u01-s3",
+      "titelDe": "Woher kommst du?",
+      "titelUz": "Sen qayerdansan?",
+      "zeilen": [
+        { "sprecher": "Doniyor", "de": "Woher kommst du?", "uz": "Sen qayerdansan?" },
+        { "sprecher": "Anna", "de": "Ich komme aus Deutschland. Und du?", "uz": "Men Germaniyadan kelaman. Senchi?" },
+        { "sprecher": "Doniyor", "de": "Ich komme aus Usbekistan.", "uz": "Men O'zbekistondan kelaman." },
+        { "sprecher": "Anna", "de": "Wo wohnst du?", "uz": "Sen qayerda yashaysan?" },
+        { "sprecher": "Doniyor", "de": "Ich wohne in Deutschland. Und du?", "uz": "Men Germaniyada yashayman. Senchi?" },
+        { "sprecher": "Anna", "de": "Ich wohne auch in Deutschland.", "uz": "Men ham Germaniyada yashayman." }
+      ]
+    },
+    {
+      "id": "u01-d5",
+      "section": "u01-s4",
+      "titelDe": "Meine Zahlen",
+      "titelUz": "Mening raqamlarim",
+      "zeilen": [
+        { "sprecher": "Sabine", "de": "Guten Tag!", "uz": "Xayrli kun!" },
+        { "sprecher": "Peter", "de": "Guten Tag!", "uz": "Xayrli kun!" },
+        { "sprecher": "Sabine", "de": "Hier, null, sieben, zwei, neun, vier, elf.", "uz": "Mana, nol, yetti, ikki, to'qqiz, to'rt, o'n bir." },
+        { "sprecher": "Peter", "de": "Danke! Hier, eins, drei, acht, zehn, fünf, sechs.", "uz": "Rahmat! Mana, bir, uch, sakkiz, o'n, besh, olti." },
+        { "sprecher": "Sabine", "de": "Danke! Auf Wiedersehen!", "uz": "Rahmat! Xayr!" },
+        { "sprecher": "Peter", "de": "Auf Wiedersehen!", "uz": "Xayr!" }
+      ]
+    },
+    {
+      "id": "u01-d6",
+      "section": "u01-s5",
+      "titelDe": "Ist das V oder W?",
+      "titelUz": "Bu 'V' yoki 'W'mi?",
+      "zeilen": [
+        { "sprecher": "Helga", "de": "Buchstabieren Sie bitte.", "uz": "Iltimos, harflab ayting." },
+        { "sprecher": "Luca", "de": "Z.", "tts": "Zett.", "uz": "Zet." },
+        { "sprecher": "Helga", "de": "Ist das ein Z?", "tts": "Ist das ein Zett?", "uz": "Bu 'Z' harfimi?" },
+        { "sprecher": "Luca", "de": "Ja, das ist ein Z.", "tts": "Ja, das ist ein Zett.", "uz": "Ha, bu 'Z' harfi." },
+        { "sprecher": "Helga", "de": "Ist das V oder W?", "tts": "Ist das Fau oder Weh?", "uz": "Bu 'V' yoki 'W'mi?" },
+        { "sprecher": "Luca", "de": "Nein, das ist ein Z.", "tts": "Nein, das ist ein Zett.", "uz": "Yo'q, bu 'Z' harfi." }
+      ]
+    }
+  ]
+}

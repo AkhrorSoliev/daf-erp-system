@@ -85,3 +85,27 @@ export interface RedemittelFile {
   unit: string;
   phrasen: Phrase[];
 }
+
+/**
+ * Dialog satri.
+ *
+ * Gapiruvchi ISM bilan yoziladi, «A»/«B» bilan emas: ovoz yasashda har
+ * ismga bitta obraz biriktiriladi va shu obraz butun kursda o'zgarmaydi.
+ */
+export interface DialogZeile extends Sprechbar {
+  sprecher: string;
+}
+
+export interface Dialog {
+  /** Barqaror kalit: `u01-d1`. */
+  id: string;
+  section: string;
+  titelDe: string;
+  titelUz: string;
+  zeilen: DialogZeile[];
+}
+
+export interface DialogeFile {
+  unit: string;
+  dialoge: Dialog[];
+}
