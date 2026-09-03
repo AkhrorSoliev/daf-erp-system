@@ -12,8 +12,24 @@ function kurs(): KursFile {
         titleUz: 'Salom!',
         theme: 'tanishuv',
         sections: [
-          { order: 1, code: 'u01-s1', titleDe: 'A', titleUz: 'A', grammar: 'g', grammarUz: 'g', wordBudget: 10 },
-          { order: 2, code: 'u01-s2', titleDe: 'B', titleUz: 'B', grammar: 'g', grammarUz: 'g', wordBudget: 10 },
+          {
+            order: 1,
+            code: 'u01-s1',
+            titleDe: 'A',
+            titleUz: 'A',
+            grammar: 'g',
+            grammarUz: 'g',
+            wordBudget: 10,
+          },
+          {
+            order: 2,
+            code: 'u01-s2',
+            titleDe: 'B',
+            titleUz: 'B',
+            grammar: 'g',
+            grammarUz: 'g',
+            wordBudget: 10,
+          },
         ],
       },
     ],
@@ -28,22 +44,48 @@ function fakePrisma() {
   const retired: string[] = [];
   let seq = 0;
 
+  // Bazada allaqachon turgan, xaritada yo'q eski unit — `retireOld` shuni
+  // topib nafaqaga chiqarishi kerak, lekin FAQAT bir marta: ikkinchi
+  // yuritishda `retiredAt` allaqachon to'ldirilgan, shuning uchun
+  // `findMany({ where: { retiredAt: null } })` uni ENDI qaytarmasligi
+  // kerak. Fake buni ANIQ takrorlamasa, "qayta chiqarilmaydi" sinovi
+  // hech narsani tekshirmay o'tib ketardi.
+  const oldUnits: { id: number; code: string; retiredAt: Date | null }[] = [
+    { id: 99, code: 'dib-01', retiredAt: null },
+  ];
+
   return {
     retired,
     unitRows,
     sectionRows,
     lessonRows,
+    oldUnits,
     dafUnit: {
       upsert: jest.fn(async ({ where }: any) => {
         const key = where.code as string;
         if (!unitRows.has(key)) unitRows.set(key, { id: ++seq });
         return unitRows.get(key);
       }),
-      findMany: jest.fn(async () => [{ id: 99, code: 'dib-01' }]),
-      update: jest.fn(async ({ where }: any) => {
-        retired.push(String(where.id));
-        return { id: where.id };
+      findMany: jest.fn(async ({ where }: any) => {
+        if (where?.retiredAt === null) {
+          return oldUnits.filter((u) => u.retiredAt === null);
+        }
+        return oldUnits;
       }),
+      update: jest.fn(
+        async ({
+          where,
+          data,
+        }: {
+          where: { id: number };
+          data: { retiredAt?: Date };
+        }) => {
+          retired.push(String(where.id));
+          const row = oldUnits.find((u) => u.id === where.id);
+          if (row) row.retiredAt = data.retiredAt ?? new Date();
+          return { id: where.id };
+        },
+      ),
     },
     dafSection: {
       upsert: jest.fn(async ({ where }: any) => {
@@ -96,6 +138,20 @@ describe('KursSeedService', () => {
     expect(prisma.lessonRows.size).toBe(6);
   });
 
+  // Allaqachon nafaqadagi qator ikkinchi marta "nafaqaga chiqarilgan"
+  // deb sanalmasligi kerak — `retireOld` `retiredAt: null` bo'yicha
+  // so'raydi, va bir marta belgilangan qator ENDI shu ro'yxatga tushmaydi.
+  it('qayta yuritilganda nafaqaga chiqarishni takrorlamaydi', async () => {
+    const prisma = fakePrisma();
+    const service = new KursSeedService(prisma as any);
+
+    const first = await service.seed(kurs());
+    const second = await service.seed(kurs());
+
+    expect(first.retired).toBe(1);
+    expect(second.retired).toBe(0);
+  });
+
   it('bo`limni unitga bog`laydi', async () => {
     const prisma = fakePrisma();
     await new KursSeedService(prisma as any).seed(kurs());
@@ -113,7 +169,9 @@ describe('KursSeedService', () => {
     const calls = prisma.dafLesson.upsert.mock.calls.map((c: any) => c[0]);
 
     // ikkinchi bo'limning "tanishuv" darsi (u01-s02-a) shu bo'limga bog'lanishi kerak
-    const sectionACall = calls.find((c: any) => c.create.sourceId === 'u01-s02-a');
+    const sectionACall = calls.find(
+      (c: any) => c.create.sourceId === 'u01-s02-a',
+    );
     expect(sectionACall.create.sectionId).toBe(bId);
     expect(sectionACall.update.sectionId).toBe(bId);
 

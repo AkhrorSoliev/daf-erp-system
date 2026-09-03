@@ -530,96 +530,38 @@ describe('DafSeedService', () => {
     expect(prisma.dafLexeme.updateMany).not.toHaveBeenCalled();
   });
 
-  describe('A1 bo`limlari fayldan quriladi', () => {
-    // Fayl da'vo qilmagan bob eski yo'lda qoladi — aks holda A2/B1
-    // seed'i shu o'zgarish bilan buzilardi.
-    it('fayl da`vo qilmagan bob eski bob-bo`lim yo`lida qoladi', async () => {
-      const report = await service.seed(realDataset, undefined, a1UnitsFile);
+  describe('A1 endi bu yerdan seed qilinmaydi', () => {
+    // A1 xaritasi endi `npm run daf:a1-seed`ning yagona mulki. Eski
+    // `a1-units.json`ni bu servisga uzatish A1 migratsiyasidan keyin
+    // XATARLI: eski DiB A1 bo'limlari `order = -id`ga o'tkazilgan, shuning
+    // uchun `level_order` bo'yicha upsert ularni ENDI topa olmaydi —
+    // buning o'rniga YANGI 12 unitning (`u01`..`u12`) ustidan yozib, DiB
+    // sarlavhasi bilan almashtirar, so'ng qolgan orderlarga yana 8 ta A1
+    // unit qo'shib yuborardi.
+    it('a1Units berilsa rad etadi', async () => {
+      await expect(
+        service.seed(dataset(), undefined, a1UnitsFile),
+      ).rejects.toThrow(/daf:a1-seed/);
+    });
+
+    it('rad etish sababi tushunarli: A1 nafaqaga chiqarilgani aytiladi', async () => {
+      await expect(
+        service.seed(dataset(), undefined, a1UnitsFile),
+      ).rejects.toThrow(/nafaqaga chiqarilgan/);
+    });
+
+    // `a1Units` uzatilmasa — `daf:seed` skripti endi shunday chaqiradi —
+    // A2/B1 avvalgidek bob-bo'lim yo'lida ishlaydi. `daf:translate` va
+    // `daf:gen-sentences` `daf:seed`ning qayta yuritilishiga tayanadi,
+    // shuning uchun bu yo'l buzilmasligi shart.
+    it('a1Units berilmasa A2/B1 avvalgidek quriladi', async () => {
+      const report = await service.seed(realDataset);
 
       const a2 = await prisma.dafUnit.findMany({ where: { level: 'A2' } });
       const b1 = await prisma.dafUnit.findMany({ where: { level: 'B1' } });
       expect(a2.length).toBeGreaterThan(0);
       expect(b1.length).toBeGreaterThan(0);
-      expect(report.units).toBe(
-        a1UnitsFile.units.length + a2.length + b1.length,
-      );
-    });
-
-    // Daraja ichidagi tartib manbaning `A2.1`/`A2.2` yorlig'idan emas,
-    // bazaning `A2` darajasidan sanaladi — aks holda ikki bob bitta
-    // (daraja, tartib) juftini talashib, biri ikkinchisini bosib o'tardi.
-    it('bir darajadagi bo`limlarga uzluksiz tartib beradi', async () => {
-      await service.seed(realDataset, undefined, a1UnitsFile);
-
-      const a2 = await prisma.dafUnit.findMany({ where: { level: 'A2' } });
-      const orders = a2.map((u) => u.order as number);
-      expect(orders.sort((x, y) => x - y)).toEqual([1, 2, 3, 4, 5]);
-    });
-
-    it('bir bo`limga bir necha mavzuning so`zlarini yig`adi', async () => {
-      await service.seed(realDataset, undefined, a1UnitsFile);
-
-      const unit = await prisma.dafUnit.findFirst({
-        where: { level: 'A1', order: 1 },
-        include: { lexemes: true },
-      });
-      expect(unit?.titleUz).toBe(a1UnitsFile.units[0].titleUz);
-      expect((unit?.lexemes as unknown[]).length).toBeGreaterThanOrEqual(30);
-    });
-
-    // Har bo'limda aynan 5 bosqich — dars endi turi bilan emas,
-    // darajasi bilan ajraladi.
-    it('har A1 bo`limida aynan 5 bosqich yaratadi', async () => {
-      await service.seed(realDataset, undefined, a1UnitsFile);
-
-      const units = await prisma.dafUnit.findMany({
-        where: { level: 'A1' },
-        include: { lessons: true },
-      });
-      expect(units).toHaveLength(a1UnitsFile.units.length);
-      for (const u of units) {
-        const lessons = u.lessons as { tier: number }[];
-        expect(lessons.map((l) => l.tier).sort()).toEqual([1, 2, 3, 4, 5]);
-      }
-    });
-
-    // Tegmagan mavzu — jimgina yo'qolgan kontent. Seed buni kechirmaydi.
-    it('tegmagan mavzu qolsa yiqiladi', async () => {
-      const broken = {
-        ...a1UnitsFile,
-        units: [a1UnitsFile.units[0]],
-      };
-      await expect(
-        service.seed(realDataset, undefined, broken),
-      ).rejects.toThrow(/tegmagan mavzu/i);
-    });
-
-    // Faza 2 da mashqlarning 39 % iga bo'lim yo'lidan yetib bo'lmasdi.
-    // Fayl grammatikani qo'lda biriktirgani uchun yetim sahifa ham
-    // kerakli bo'limga ulanadi.
-    it('fayl ko`rsatgan grammatikani bo`limga ulaydi', async () => {
-      await service.seed(realDataset, undefined, a1UnitsFile);
-
-      const first = a1UnitsFile.units[0];
-      const unit = await prisma.dafUnit.findFirst({
-        where: { level: 'A1', order: 1 },
-        include: { grammar: true },
-      });
-      const grammar = unit?.grammar as { sourceId: string }[];
-      expect(grammar.map((g) => g.sourceId).sort()).toEqual(
-        [...first.grammar].sort(),
-      );
-    });
-
-    // Mashq grammatika orqali bo'limga yetib borishi kerak, aks holda
-    // u yana yetim qoladi.
-    it('grammatikaning mashqlari ham o`sha bo`limga tushadi', async () => {
-      await service.seed(realDataset, undefined, a1UnitsFile);
-
-      const orphan = await prisma.dafExercise.count({
-        where: { unitId: null, grammar: { unit: { level: 'A1' } } },
-      });
-      expect(orphan).toBe(0);
+      expect(report.units).toBeGreaterThan(0);
     });
   });
 });

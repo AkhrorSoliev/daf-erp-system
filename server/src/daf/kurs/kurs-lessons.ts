@@ -22,6 +22,17 @@ export function lessonSourceId(
   sectionOrder?: number,
 ): string {
   if (kind === 'UNIT_TEST') return `${unitCode}-test`;
+  // `sectionOrder` UNIT_TEST'dan boshqa har bir tur uchun majburiy.
+  // Sukut bilan o'tkazib yuborilsa, `String(undefined)` "undefined"ga
+  // aylanib, `u01-sundefined-a` kabi jimgina buzuq kalit yasardi —
+  // xato chaqiruvni faqat bazadagi g'alati sourceId orqali topish kerak
+  // bo'lardi. Shu yerda darhol, ovoz bilan to'xtaydi.
+  if (sectionOrder === undefined) {
+    throw new Error(
+      `lessonSourceId: "${kind}" bo'lim tartibisiz chaqirildi (unit "${unitCode}") — ` +
+        'bu tur uchun sectionOrder majburiy.',
+    );
+  }
   const s = String(sectionOrder).padStart(2, '0');
   if (kind === 'BRIDGE') return `${unitCode}-s${s}-bridge`;
   return `${unitCode}-s${s}-${kind === 'SECTION_A' ? 'a' : 'b'}`;
@@ -57,7 +68,13 @@ export function planLessons(unit: KursUnitSpec): PlannedLesson[] {
     push('SECTION_A', s.code, s.titleDe, `${s.titleUz} — tanishuv`, s.order);
     push('SECTION_B', s.code, s.titleDe, `${s.titleUz} — ishlatish`, s.order);
     if (i < unit.sections.length - 1) {
-      push('BRIDGE', s.code, `${s.titleDe} — Wiederholung`, `${s.titleUz} — o'tish sinovi`, s.order);
+      push(
+        'BRIDGE',
+        s.code,
+        `${s.titleDe} — Wiederholung`,
+        `${s.titleUz} — o'tish sinovi`,
+        s.order,
+      );
     }
   });
 

@@ -17,11 +17,9 @@ import {
 } from '../src/daf/seed/daf-seed.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import type { DafDataset } from '../src/daf-content/dataset.types';
-import type { A1UnitsFile } from '../src/daf/units/a1-units.types';
 import type { SentenceFile } from '../src/daf/seed/daf-sentence-seed';
 
 const DATASET = join(__dirname, '..', 'content', 'daf', 'dib.json');
-const A1_UNITS = join(__dirname, '..', 'content', 'daf', 'a1-units.json');
 const TRANSLATIONS = join(
   __dirname,
   '..',
@@ -40,12 +38,11 @@ async function main() {
     ? (JSON.parse(readFileSync(TRANSLATIONS, 'utf8')) as TranslationFile)
     : undefined;
 
-  // A1 bo'limlarining chegarasi qo'lda yozilgan. Fayl bo'lmasa seed eski
-  // bob-bo'lim yo'lida ishlaydi — ya'ni fayl yo'qolgani jimgina noto'g'ri
-  // bo'lim yasab qo'ymaydi, u shunchaki eski holatga qaytadi.
-  const a1Units = existsSync(A1_UNITS)
-    ? (JSON.parse(readFileSync(A1_UNITS, 'utf8')) as A1UnitsFile)
-    : undefined;
+  // `content/daf/a1-units.json` ATAYLAB o'qilmaydi: A1 xaritasi endi
+  // `content/daf/a1/kurs.json` + `npm run daf:a1-seed` orqali boshqariladi,
+  // eski DiB A1 bo'limlari esa nafaqaga chiqarilgan (manfiy order). Bu
+  // faylni bu yerga uzatish `DafSeedService.seed()`ni rad ettiradi —
+  // qarang shu servisning `assertA1NotProvided`i.
 
   // Gap fayli bo'lmasligi mumkin (9-taskdan oldin, ovoz hali yozilmagan
   // bosqichda) — bu ham xato emas, shunchaki gapsiz seed.
@@ -59,7 +56,7 @@ async function main() {
 
   const service = new DafSeedService(prisma as unknown as PrismaService);
   console.log('Bazaga yozilmoqda…');
-  const r = await service.seed(dataset, translations, a1Units, sentences);
+  const r = await service.seed(dataset, translations, undefined, sentences);
 
   console.log(`\nBo'lim:       ${r.units}`);
   console.log(`Dars:         ${r.lessons}`);
@@ -71,10 +68,7 @@ async function main() {
   console.log(
     `Tarjima:      ${r.translationsApplied}${translations ? '' : " (fayl yo'q)"}`,
   );
-  console.log(
-    `Gap:          ${r.sentences}${sentences ? '' : " (fayl yo'q)"}`,
-  );
-  if (!a1Units) console.log("A1 bo'lim fayli topilmadi — eski bob yo'li");
+  console.log(`Gap:          ${r.sentences}${sentences ? '' : " (fayl yo'q)"}`);
 
   await prisma.$disconnect();
 }

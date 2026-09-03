@@ -33,6 +33,7 @@ describe('DafPortalReadService', () => {
           order: 1,
           titleUz: 'Tanishuv',
           titleDe: 'Kennenlernen',
+          retiredAt: null,
         }),
       },
       dafLesson: {
@@ -111,6 +112,19 @@ describe('DafPortalReadService', () => {
     expect(path[2].units).toEqual([]);
   });
 
+  // Nafaqaga chiqarilgan eski DiB unitlari (A1 migratsiyasi) yo'lga
+  // chiqmasligi kerak: ular `order = -id`ga o'tkazilgan, o'sish
+  // tartibida saralanganda birinchi bo'lib chiqib, o'quvchining A1
+  // yo'lini teskari aylantirardi.
+  it("nafaqaga chiqarilgan unitni so'ramaydi", async () => {
+    await service.getLevels();
+
+    const where = prisma.dafUnit.findMany.mock.calls[0][0].where as {
+      retiredAt: null;
+    };
+    expect(where.retiredAt).toBeNull();
+  });
+
   // ENG MUHIM TEKSHIRUV: to'g'ri javob mijozga yuborilmaydi. Yuborilsa,
   // uni brauzerning tarmoq oynasida ko'rish mumkin bo'lardi va mashqning
   // ham, keyingi reytingning ham ma'nosi qolmasdi.
@@ -165,5 +179,33 @@ describe('DafPortalReadService', () => {
   it("mavjud bo'lmagan bo'limda 404 beradi", async () => {
     prisma.dafUnit.findUnique.mockResolvedValue(null);
     await expect(service.getUnit(99)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  // Nafaqaga chiqarilgan unit `getLevels`da ko'rinmaydi — uning ID'siga
+  // to'g'ridan-to'g'ri kirish ham xuddi shu "topilmadi"ni berishi kerak,
+  // aks holda havola orqali eski DiB bo'limi hali ham ochilaverardi.
+  it("nafaqaga chiqarilgan bo'limda ham 404 beradi", async () => {
+    prisma.dafUnit.findUnique.mockResolvedValue({
+      id: 1,
+      level: 'A1',
+      order: -1,
+      titleUz: 'Eski',
+      titleDe: 'Alt',
+      retiredAt: new Date('2026-08-01'),
+    });
+    await expect(service.getUnit(1)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  // Seans tartibi `order`dan olinadi, `tier`dan emas: yangi A1
+  // xaritasining darslarida `tier` null, faqat `order` to'ldirilgan.
+  // `tier` bo'yicha saralash 15–18 seansni tasodifiy tartibda qaytarardi.
+  it("bosqichlarni `order` bo'yicha so'raydi, `tier` bo'yicha emas", async () => {
+    await service.getUnit(1);
+
+    const orderBy = prisma.dafLesson.findMany.mock.calls[0][0].orderBy as {
+      order?: string;
+      tier?: string;
+    };
+    expect(orderBy).toEqual({ order: 'asc' });
   });
 });

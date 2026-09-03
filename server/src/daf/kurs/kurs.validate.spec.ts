@@ -46,7 +46,7 @@ describe('validateKurs', () => {
   it('unit soni 12 emasligini aytadi', () => {
     const f = fullKurs();
     f.units.pop();
-    expect(has(validateKurs(f), "12 ta unit")).toBe(true);
+    expect(has(validateKurs(f), '12 ta unit')).toBe(true);
   });
 
   it('bo`lim soni 5 dan kam bo`lsa aytadi', () => {
@@ -101,5 +101,17 @@ describe('validateKurs', () => {
     const f = fullKurs();
     f.units[0].sections.pop();
     expect(has(validateKurs(f), "64 ta bo'lim")).toBe(true);
+  });
+
+  it('daraja A1 emasligini aytadi', () => {
+    const f = fullKurs() as unknown as { level: string };
+    f.level = 'A2';
+    expect(has(validateKurs(f as never), 'A1')).toBe(true);
+  });
+
+  it('unit kaliti tartibiga mos emasligini aytadi', () => {
+    const f = fullKurs();
+    f.units[0].code = 'u09';
+    expect(has(validateKurs(f), 'kaliti u01')).toBe(true);
   });
 });

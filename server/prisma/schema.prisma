@@ -2866,7 +2866,7 @@ enum DafLessonKind {
 /// O'quv yo'lining bosqichi. Manba bobi unga BIRIKTIRILADI — bo'lim
 /// manbadan kelib chiqmaydi (ADR-0011).
 model DafUnit {
-  id            Int      @id @default(autoincrement())
+  id            Int       @id @default(autoincrement())
   level         DafLevel
   order         Int
   titleUz       String
@@ -2875,12 +2875,12 @@ model DafUnit {
   sourceChapter Int?
   /// Barqaror kalit: `u01`. Seed shu bo'yicha yangilaydi — `order` emas,
   /// chunki eski bo'limlar nafaqaga chiqqanda tartib raqamlari bo'shaydi.
-  code          String?  @unique
+  code          String?   @unique
   /// Nafaqaga chiqqan bo'lim: o'quvchiga ko'rinmaydi, lekin lug'ati va
   /// audiosi zaxira sifatida bazada qoladi. O'chirish ma'lumotni yo'qotardi.
   retiredAt     DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   lessons   DafLesson[]
   lexemes   DafLexeme[]
@@ -2926,8 +2926,8 @@ model DafLesson {
   /// `kind` (VOCAB/GRAMMAR) darsning nimaga bag'ishlanganini bildirgan
   /// va shu sabab o'chirilgan edi (yuqoridagi `tier` izohiga qarang).
   /// Yangisi darsning A1 kurs xaritasidagi SEANSINI bildiradi.
-  kind      DafLessonKind?
-  sectionId Int?
+  kind              DafLessonKind?
+  sectionId         Int?
 
   unit      DafUnit             @relation(fields: [unitId], references: [id])
   grammar   DafGrammar?         @relation(fields: [grammarId], references: [id])
@@ -2944,20 +2944,20 @@ model DafLesson {
 /// Qiyinlik bo'lim ichida ko'tariladi, bo'limlar orasida emas: aks holda
 /// bitta darsda «Tisch» ham «Krankenhaus» ham chiqib, mavzu yo'qolardi.
 model DafSection {
-  id          Int      @id @default(autoincrement())
-  unitId      Int
-  order       Int
+  id         Int      @id @default(autoincrement())
+  unitId     Int
+  order      Int
   /// Barqaror kalit: `u01-s3`.
-  code        String   @unique
-  titleDe     String
-  titleUz     String
-  grammar     String
-  grammarUz   String
+  code       String   @unique
+  titleDe    String
+  titleUz    String
+  grammar    String
+  grammarUz  String
   /// Xaritada rejalashtirilgan asosiy so'zlar soni — kontent to'ldirilganda
   /// haqiqiy son shunga solishtiriladi.
-  wordBudget  Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  wordBudget Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   unit    DafUnit     @relation(fields: [unitId], references: [id])
   lessons DafLesson[]

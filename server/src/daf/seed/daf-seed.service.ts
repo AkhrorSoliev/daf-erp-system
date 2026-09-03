@@ -173,9 +173,12 @@ export class DafSeedService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * @param a1Units berilsa A1 bo'limlari SHU fayldan quriladi; fayl da'vo
-   * qilmagan boblar avvalgidek bob-bo'lim bo'lib qoladi (A2 va B1 shu
-   * yo'lda ishlashda davom etadi).
+   * @param a1Units ENDI QO'LLAB-QUVVATLANMAYDI — berilsa `seed()` rad
+   * etadi. A1 endi `content/daf/a1/kurs.json` + `npm run daf:a1-seed`
+   * orqali boshqariladi (`KursSeedService`); eski `a1-units.json`dagi DiB
+   * A1 bo'limlari nafaqaga chiqarilgan va manfiy tartibda saqlanadi. Bu
+   * parametr faqat eski chaqiruvchini ushlab qolish uchun qoldirilgan —
+   * qarang {@link assertA1NotProvided}.
    * @param sentences berilsa A1 bo'limlariga gaplar shu fayldan yoziladi.
    * Bo'limlar yaratilgandan KEYIN chaqiriladi — gap bo'limga ishora
    * qiladi, bo'lim hali yo'q bo'lsa yozib bo'lmaydi.
@@ -186,6 +189,8 @@ export class DafSeedService {
     a1Units?: A1UnitsFile,
     sentences?: SentenceFile,
   ): Promise<SeedReport> {
+    this.assertA1NotProvided(a1Units);
+
     const { unitIdBySection, unitIdByChapter, units } = await this.seedUnits(
       dataset,
       a1Units,
@@ -218,6 +223,26 @@ export class DafSeedService {
       translationsApplied,
       sentences: sentenceCount,
     };
+  }
+
+  /**
+   * `a1-units.json` endi o'lik fayl: eski DiB A1 bo'limlari nafaqaga
+   * chiqarilgan va `order = -id` ga o'tkazilgan (A1 xaritasi migratsiyasi).
+   * Shu holatda `level_order` bo'yicha upsert eski `order`larni ENDI TOPA
+   * OLMAYDI — ular endi manfiy — va buning o'rniga YANGI 12 unitning
+   * (`u01`..`u12`, `order` 1..12) ustidan yozib, ularning sarlavhasini DiB
+   * sarlavhasi bilan almashtiradi, so'ng qolgan orderlarga yana 8 ta A1
+   * unit qo'shib qo'yadi. Bu funksiya shu yo'lni butunlay yopadi: A1 endi
+   * FAQAT `npm run daf:a1-seed` (`KursSeedService`) orqali yoziladi.
+   */
+  private assertA1NotProvided(a1Units?: A1UnitsFile): void {
+    if (!a1Units) return;
+    throw new Error(
+      'A1 endi bu yerdan seed qilinmaydi: `npm run daf:a1-seed` A1 xaritasining yagona egasi, ' +
+        "eski DiB A1 bo'limlari esa nafaqaga chiqarilgan (retiredAt + manfiy order). " +
+        "`a1-units.json`ni `DafSeedService.seed()`ga uzatish endi shu eski bo'limlarning " +
+        "o'rniga YANGI A1 unitlarini (u01..u12) chalkashtirib yuborardi.",
+    );
   }
 
   /**

@@ -38,9 +38,14 @@ describe('planLessons', () => {
   it('har bo`limdan keyin A, B va o`tish keladi', () => {
     const kinds = planLessons(unit(3)).map((l) => l.kind);
     expect(kinds).toEqual([
-      'SECTION_A', 'SECTION_B', 'BRIDGE',
-      'SECTION_A', 'SECTION_B', 'BRIDGE',
-      'SECTION_A', 'SECTION_B',
+      'SECTION_A',
+      'SECTION_B',
+      'BRIDGE',
+      'SECTION_A',
+      'SECTION_B',
+      'BRIDGE',
+      'SECTION_A',
+      'SECTION_B',
       'UNIT_TEST',
     ]);
   });
@@ -69,5 +74,16 @@ describe('planLessons', () => {
     expect(lessonSourceId('u01', 'SECTION_A', 3)).toBe('u01-s03-a');
     expect(lessonSourceId('u01', 'BRIDGE', 3)).toBe('u01-s03-bridge');
     expect(lessonSourceId('u01', 'UNIT_TEST')).toBe('u01-test');
+  });
+
+  // `sectionOrder` UNIT_TEST'dan boshqa har bir tur uchun majburiy.
+  // Tashlab ketilsa, avvalgi kod jimgina `u01-sundefined-a` kabi buzuq
+  // kalit yasardi — endi ovoz bilan to'xtaydi.
+  it.each<[Exclude<Parameters<typeof lessonSourceId>[1], 'UNIT_TEST'>]>([
+    ['SECTION_A'],
+    ['SECTION_B'],
+    ['BRIDGE'],
+  ])('%s uchun bo`lim tartibisiz chaqirilsa rad etadi', (kind) => {
+    expect(() => lessonSourceId('u01', kind)).toThrow(/sectionOrder majburiy/);
   });
 });

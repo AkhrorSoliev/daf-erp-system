@@ -53,6 +53,13 @@ export class DafPortalReadService {
    */
   async getLevels(): Promise<LevelPathItem[]> {
     const units = await this.prisma.dafUnit.findMany({
+      // Nafaqaga chiqarilgan unit yo'lga chiqmaydi. A1 migratsiyasi eski
+      // 20 ta DiB unitini `retiredAt` bilan belgilab, `order`ini
+      // manfiyga o'tkazdi (yangi 12 unit 1..12ni egallashi uchun) — shu
+      // filtrsiz ular ham qaytardi, VA manfiy `order` ustuvorligida
+      // (o'sish tartibida saralanganda eng manfiysi birinchi) o'quvchining
+      // yo'li teskari aylanardi.
+      where: { retiredAt: null },
       orderBy: [{ level: 'asc' }, { order: 'asc' }],
       select: {
         id: true,
@@ -95,15 +102,21 @@ export class DafPortalReadService {
         order: true,
         titleUz: true,
         titleDe: true,
+        retiredAt: true,
       },
     });
-    if (!unit) throw new NotFoundException("Bo'lim topilmadi");
+    // Nafaqaga chiqarilgan unit ham "topilmadi" — `getLevels` uni
+    // ko'rsatmaydi, shuning uchun uning ID'siga to'g'ridan-to'g'ri
+    // kirish ham xuddi shu 404 yo'lidan o'tishi kerak.
+    if (!unit || unit.retiredAt)
+      throw new NotFoundException("Bo'lim topilmadi");
 
-    // Bosqich tartibi — `tier` ning o'zi. `order` ustuni saqlanib qolgan,
-    // lekin yo'lni belgilaydigan raqam bosqichniki.
+    // Seans tartibi — `order` ning o'zi (`tier` emas): yangi A1 xaritasi
+    // darslarini `tier`siz yozadi (u endi null), `order` esa har ikkala
+    // avlodda ham to'ldirilgan — eski seed uni `tier`dan hosil qilgan.
     const lessons = await this.prisma.dafLesson.findMany({
       where: { unitId },
-      orderBy: { tier: 'asc' },
+      orderBy: { order: 'asc' },
       select: {
         id: true,
         order: true,
@@ -114,8 +127,10 @@ export class DafPortalReadService {
       },
     });
 
+    const { retiredAt: _retiredAt, ...publicUnit } = unit;
+
     return {
-      ...unit,
+      ...publicUnit,
       label: LEVEL_LABEL[unit.level],
       lessons: lessons.map((l) => ({
         id: l.id,

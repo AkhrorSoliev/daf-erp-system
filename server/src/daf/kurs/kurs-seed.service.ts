@@ -23,16 +23,24 @@ export class KursSeedService {
   async seed(file: KursFile): Promise<KursSeedReport> {
     let sections = 0;
     let lessons = 0;
-    const liveCodes = new Set<string>();
+    const liveCodes = new Set(file.units.map((u) => u.code));
+
+    // Nafaqaga chiqarish UNIT UPSERT'LARIDAN OLDIN yuritiladi. Migratsiya
+    // eski A1 unitlarini allaqachon manfiy `order`ga o'tkazgan bo'lishi
+    // kerak — lekin migratsiya hali yetib bormagan bazada (tiklangan
+    // nusxa, `db push` muhiti) eski unit hali `(level, order)` joyini
+    // egallab turadi, va YANGI unitning birinchi `upsert`i xuddi shu
+    // juftlikka `create` qilishga urinib, `@@unique([level, order])`da
+    // yiqiladi. Avval bo'shatib, keyin band qilish shu poyga holatini
+    // yo'qqa chiqaradi.
+    const retired = await this.retireOld(file.level, liveCodes);
 
     for (const u of file.units) {
-      liveCodes.add(u.code);
-
       const unit = await this.prisma.dafUnit.upsert({
         where: { code: u.code },
         create: {
           code: u.code,
-          level: 'A1',
+          level: file.level,
           order: u.order,
           titleDe: u.titleDe,
           titleUz: u.titleUz,
@@ -78,7 +86,9 @@ export class KursSeedService {
 
       for (const l of planLessons(u)) {
         const sectionId =
-          l.sectionCode === null ? null : (sectionIdByCode.get(l.sectionCode) ?? null);
+          l.sectionCode === null
+            ? null
+            : (sectionIdByCode.get(l.sectionCode) ?? null);
 
         await this.prisma.dafLesson.upsert({
           where: { sourceId: l.sourceId },
@@ -104,8 +114,6 @@ export class KursSeedService {
       }
     }
 
-    const retired = await this.retireOld(liveCodes);
-
     this.logger.log(
       `A1 xaritasi: ${file.units.length} unit, ${sections} bo'lim, ${lessons} seans, ${retired} nafaqa`,
     );
@@ -125,13 +133,18 @@ export class KursSeedService {
    * Bu yerda rekonsiliatsiya QILINMAYDI — keyingi reja ishi. Faqat ovozli
    * to'xtaydi: sukut buzilishdan ko'ra ochiq xatolik yaxshiroq.
    */
-  private async assertNoOrphanSections(unitId: number, unit: KursUnitSpec): Promise<void> {
+  private async assertNoOrphanSections(
+    unitId: number,
+    unit: KursUnitSpec,
+  ): Promise<void> {
     const liveCodes = new Set(unit.sections.map((s) => s.code));
     const existing = await this.prisma.dafSection.findMany({
       where: { unitId },
       select: { code: true },
     });
-    const orphans = existing.map((s) => s.code).filter((code) => !liveCodes.has(code));
+    const orphans = existing
+      .map((s) => s.code)
+      .filter((code) => !liveCodes.has(code));
 
     if (orphans.length > 0) {
       throw new Error(
@@ -143,15 +156,18 @@ export class KursSeedService {
   }
 
   /**
-   * Xaritada yo'q A1 bo'limlarini nafaqaga chiqaradi.
+   * Xaritada yo'q shu darajadagi bo'limlarni nafaqaga chiqaradi.
    *
    * O'chirmaydi: eski DiB bo'limlarining lug'ati, tarjimasi va audiosi
    * yangi kurs uchun zaxira. Tartib raqami manfiyga o'tkaziladi, chunki
-   * `@@unique([level, order])` ni yangi 12 unit egallaydi.
+   * `@@unique([level, order])` ni yangi unitlar egallaydi.
    */
-  private async retireOld(liveCodes: Set<string>): Promise<number> {
+  private async retireOld(
+    level: KursFile['level'],
+    liveCodes: Set<string>,
+  ): Promise<number> {
     const old = await this.prisma.dafUnit.findMany({
-      where: { level: 'A1', retiredAt: null },
+      where: { level, retiredAt: null },
       select: { id: true, code: true },
     });
 
