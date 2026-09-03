@@ -404,6 +404,71 @@ describe('SalaryCalculationService', () => {
       );
     });
 
+    /**
+     * BR-09b tsikli oylik kursda ham `resolveLessonPricing` dan o'tadi:
+     * `Course.price` bir OYning narxi, uni 12 ga bo'lish o'qituvchiga
+     * noto'g'ri haq yozardi. Muzlatilgan hisob topilmasa dars NARXLANMAYDI
+     * — lekin jim ham yo'qolmaydi: supurgi bilan BITTA sanagichga tushadi
+     * va cron ogohlantiradi.
+     */
+    it('BR-09b: muzlatilgan hisobsiz OYLIK dars narxlanmaydi va SANALADI', async () => {
+      const warn = jest
+        .spyOn((service as any).logger, 'warn')
+        .mockImplementation(() => undefined);
+
+      const augNow = new Date('2026-09-20T08:00:00.000Z');
+      const augAsOf = new Date('2026-08-15T00:00:00.000Z');
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.attendance.groupBy.mockResolvedValue([
+        { studentId: 100, groupId: 'g1', _count: { _all: 5 } },
+      ]);
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          id: 'jul-att',
+          studentId: 100,
+          groupId: 'g1',
+          date: new Date('2026-07-10'),
+        },
+      ]);
+      prisma.group.findMany.mockResolvedValue([
+        {
+          id: 'g1',
+          course: {
+            price: 240_000,
+            lessonPaymentCount: 12,
+            paymentModel: 'MONTHLY',
+          },
+        },
+      ]);
+      prisma.groupTeacher.findMany.mockResolvedValue([
+        { groupId: 'g1', teacherId: 10010 },
+      ]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          salaryType: 'PERCENTAGE',
+          value: 30,
+          effectiveFrom: new Date('2026-05-01'),
+          effectiveTo: null,
+          config: { userId: 10010, groupId: null, salaryType: 'PERCENTAGE' },
+        },
+      ]);
+      // Muzlatilgan hisob yo'q (odatiy mock — bo'sh ro'yxat).
+
+      await service.calculateMonthlySalaries(1, {
+        asOfDate: augAsOf,
+        now: augNow,
+      });
+
+      // Taxminiy narx bilan PUL YOZILMAYDI.
+      expect(accrualService.createAccrual).not.toHaveBeenCalledWith(
+        expect.objectContaining({ attendanceId: 'jul-att' }),
+      );
+      // Lekin jim ham yo'qolmaydi.
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('1 ta oylik dars narxlanmadi'),
+      );
+    });
+
     it('does NOT run the gap sweep for a pre-July (covered-only) period', async () => {
       // Default `now` (2026-06-20) settles the completed May period.
       await service.calculateMonthlySalaries(1, { now });

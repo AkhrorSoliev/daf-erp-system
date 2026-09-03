@@ -738,19 +738,11 @@ export class SalaryCalculationService {
       dateStr,
       skipZeroAmount: true,
     });
-    // Narxlab bo'lmagan oylik darslar JIM tashlanmaydi: pul yozadigan yo'lda
-    // "hech narsa yozilmadi" ni operator ko'rishi kerak.
-    const noChargeTotal = [...sweep.noChargeUnits.values()].reduce(
-      (a, b) => a + b,
-      0,
-    );
-    if (noChargeTotal > 0) {
-      this.logger.warn(
-        `Center top-up: ${noChargeTotal} ta oylik dars narxlanmadi — ` +
-          `${sweep.noChargeUnits.size} o'qituvchida muzlatilgan ` +
-          `EnrollmentMonthlyCharge topilmadi.`,
-      );
-    }
+    // Narxlab bo'lmagan oylik darslarning YAGONA sanog'i. Supurgi o'zinikini
+    // shu yerga qaytaradi, pastdagi BR-09b tsikli ham SHU XARITAGA qo'shadi
+    // — «sanaladi, hech qachon taxmin qilinmaydi» siyosati ikkala yo'lda
+    // ham amal qilishi uchun. Ogohlantirish ikkovi ham tugagach chiqadi.
+    const noChargeUnits = sweep.noChargeUnits;
 
     for (const lesson of sweep.lessons) {
       const arr = gapByUser.get(lesson.teacherId) ?? [];
@@ -813,14 +805,20 @@ export class SalaryCalculationService {
           att.date,
           backlogFrozen,
         );
-        // Oylik kursda muzlatilgan hisob yo'q — narx taxmin qilinmaydi.
-        if (!pricing) continue;
-        const { perLessonCost, divisor } = pricing;
         const dStr = dateStr(att.date);
         for (const tid of resolveTeachers(att.groupId, dStr)) {
           if (fixedMonthlyTeachers.has(tid)) continue;
           const v = resolveRate(tid, att.groupId, att.date);
           if (!v) continue;
+          // Oylik kursda muzlatilgan hisob yo'q — narx taxmin qilinmaydi.
+          // Supurgi bilan BIR XIL tartib va BIR XIL sanagich: stavka
+          // topilgandan keyin tekshiriladi, aks holda stavkasiz o'qituvchi
+          // ham "narxlanmadi" bo'lib sanalardi.
+          if (!pricing) {
+            noChargeUnits.set(tid, (noChargeUnits.get(tid) ?? 0) + 1);
+            continue;
+          }
+          const { perLessonCost, divisor } = pricing;
           if (perLessonAccrual(v, perLessonCost, divisor) <= 0) continue;
           const arr = gapByUser.get(tid) ?? [];
           arr.push({
@@ -834,6 +832,19 @@ export class SalaryCalculationService {
           gapByUser.set(tid, arr);
         }
       }
+    }
+
+    // Pul yozadigan yo'lda "hech narsa yozilmadi" ni operator ko'rishi kerak.
+    const noChargeTotal = [...noChargeUnits.values()].reduce(
+      (a, b) => a + b,
+      0,
+    );
+    if (noChargeTotal > 0) {
+      this.logger.warn(
+        `Center top-up: ${noChargeTotal} ta oylik dars narxlanmadi — ` +
+          `${noChargeUnits.size} o'qituvchida muzlatilgan ` +
+          `EnrollmentMonthlyCharge topilmadi.`,
+      );
     }
 
     return gapByUser;
