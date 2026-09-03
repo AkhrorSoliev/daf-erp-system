@@ -19,9 +19,12 @@ export interface GoetheFile {
 
 const ARTIKEL = new Set(['der', 'die', 'das']);
 
-// English so'zlar va referenslar fragmentlari - PDF'ning tasnifi bo'limidan
-// to'qnash bo'limiga o'tganda kirib qolgan so'zlar
-const ENGLISH_WORDS_TO_SKIP = new Set([
+/**
+ * English words va book title'lardan kirgan so'zlar - PDF'ning "Literatüra"
+ * bo'limida, rasmiy Goethe-Institut A1 ro'yxatidan keyin keladi.
+ * Misol: "Waystage: Systems development in adult language learning"
+ */
+const ENGLISH_REFERENCE_WORDS = new Set([
   'objective',
   'modern',
   'ation',
@@ -31,19 +34,25 @@ const ENGLISH_WORDS_TO_SKIP = new Set([
   'credit',
   'european',
   'unit',
-  // Referenslar bo'limining to'l so'zlar va fragmentlari
-  'langenscheidt',
-  'profile',
-  'nikative',
-  'scheidt',
-  'tur',
-  'kultusminister',
-  'schweizerischen',
-  'europäischen',
-  'müller',
-  'gemeinsamer',
-  'urteilen',
-  'sche',
+]);
+
+/**
+ * PDF satrlari ajratilganda paydo bo'ladigan fragmentlar - qayta chiqarish
+ * (re-extraction) o'zgargan taqdirda har-birlari sharhlanadi.
+ */
+const HYPHENATION_FRAGMENTS = new Set([
+  'langenscheidt', // ← "Langenscheidt" (nashriyot nomi)
+  'profile', // ← "Profile" (kitob nomi)
+  'nikative', // ← "kommunikative" (PDF qator ajratilgani)
+  'scheidt', // ← "Langenscheidt" (qator sharhi)
+  'tur', // ← birorta so'zning oxiri
+  'kultusminister', // ← "Kultusministerium" (tashkilot nomi)
+  'schweizerischen', // ← "Schweizerischen" (kitob hujjat fragmenti)
+  'europäischen', // ← "europäischen" (kitob nomi fragmenti)
+  'müller', // ← "Müller" (muallif nomi)
+  'gemeinsamer', // ← "Gemeinsamer" (kitob nomi)
+  'urteilen', // ← PDF chiqarish fragmenti
+  'sche', // ← "technische" yoki shunga o'xshash (PDF qator ajratilgani)
 ]);
 
 
@@ -64,21 +73,24 @@ export function parseGoetheLines(lines: string[]): GoetheWort[] {
     // Alifbo ajratgichi: bitta harf.
     if (/^[A-ZÄÖÜ]$/.test(line)) continue;
 
-    const m = /^(der|die|das)?\s*([A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß.-]*)/.exec(line);
+    const m = /^(?:(der|die|das)\s+)?([A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß.-]*)/.exec(line);
     if (!m) continue;
 
-    const artikel = m[1] && ARTIKEL.has(m[1]) ? m[1] : null;
+    const artikel = m[1] || null;
     const wort = m[2];
     if (wort.length < 2) continue;
 
     // Literature reference va title'sdan fragmentlarni tashlaydi
     // (masalan, "Waystage." yoki kitob nomlaridan "ALTE")
     if (wort.endsWith('.')) continue;
-    if (wort === 'LITerATur') continue;
+    // "LITerATur" ko'rinishdagi bo'lim sarlavhasi (case-insensitive, PDF ishlab chiqarish artifact'i)
+    if (wort.toLowerCase() === 'literatur') continue;
     // All-caps so'zlar (bo'limlik sarlavhalar yoki kitob nomlari)
     if (wort.length > 1 && wort === wort.toUpperCase()) continue;
-    // English so'zlar va fragmentlar - referenslar bo'limidan kirgan
-    if (ENGLISH_WORDS_TO_SKIP.has(wort.toLowerCase())) continue;
+    // English reference-section so'zlar
+    if (ENGLISH_REFERENCE_WORDS.has(wort.toLowerCase())) continue;
+    // PDF hyphenation / line-break fragmentlari
+    if (HYPHENATION_FRAGMENTS.has(wort.toLowerCase())) continue;
 
     const key = `${artikel ?? ''} ${wort}`;
     if (seen.has(key)) continue;

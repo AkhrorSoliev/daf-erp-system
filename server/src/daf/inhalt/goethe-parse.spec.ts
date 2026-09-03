@@ -84,4 +84,30 @@ describe('parseGoetheLines', () => {
     expect(words).not.toContain('nikative');
     expect(words).not.toContain('scheidt');
   });
+
+  it('articleni bo`shliq bilan ajratadi - "dass", "dies-", "die Adresse"', () => {
+    // Article must be followed by whitespace, so "dass" is NOT "das" + "s"
+    // and "dies-" is NOT "die" + "s-"
+    const result = parseGoetheLines([
+      'dass Ich denke, dass es richtig ist.',
+      'dies- Welche Farbe magst du? Dies.',
+      'die Adresse,-en Können Sie mir helfen?',
+    ]);
+    const words = result.map((w) => w.wort);
+    // All three headwords must be present
+    expect(words).toContain('dass');
+    expect(words).toContain('dies-');
+    expect(words).toContain('Adresse');
+    // Check that "s" and "s-" were NOT extracted as garbage
+    expect(words).not.toContain('s');
+    expect(words).not.toContain('s-');
+    // Verify article capture for "die Adresse"
+    const addressEntry = result.find((w) => w.wort === 'Adresse');
+    expect(addressEntry?.artikel).toBe('die');
+    // "dass" and "dies-" should have no article
+    const dassEntry = result.find((w) => w.wort === 'dass');
+    expect(dassEntry?.artikel).toBeNull();
+    const diesEntry = result.find((w) => w.wort === 'dies-');
+    expect(diesEntry?.artikel).toBeNull();
+  });
 });
