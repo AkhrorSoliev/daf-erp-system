@@ -79,6 +79,29 @@ describe('changeStatus → FROZEN, oylik kurs', () => {
     expect(monthlyCharge.reverseChargeForDeparture).not.toHaveBeenCalled();
   });
 
+  // Spec 4-bo'limdagi asosiy pul invarianti: muzlatish qaytardi, keyin
+  // o'quvchi guruhdan chiqarildi -> IKKINCHI marta qaytmasligi shart.
+  // `reverseChargeForDeparture` `remaining` ni jonli `charge.coveredLessons`
+  // dan oladi (kalendardan qayta hisoblamaydi), shuning uchun birinchi
+  // chaqiruv sanagichni kamaytiradi va ikkinchisi 0 topadi.
+  it('muzlatish qaytargandan keyin chiqarishda IKKINCHI marta qaytmaydi', async () => {
+    // 1-chaqiruv (muzlatish): 8 dars qaytdi.
+    monthlyCharge.reverseChargeForDeparture.mockResolvedValueOnce({
+      refunded: 257_144,
+      lessons: 8,
+    });
+    await service.changeStatus(10453, { status: 'FROZEN' } as never, 10001);
+
+    // 2-chaqiruv (guruhdan chiqarish): qaytariladigan narsa qolmadi.
+    monthlyCharge.reverseChargeForDeparture.mockResolvedValueOnce(null);
+    const second = await monthlyCharge.reverseChargeForDeparture(
+      {} as never,
+      { enrollmentId: 'enr-1' } as never,
+    );
+
+    expect(second).toBeNull();
+  });
+
   it('muzlatish qaytarishi yiqilsa status O`ZGARMAYDI', async () => {
     monthlyCharge.reverseChargeForDeparture.mockRejectedValue(
       new Error('tranzaksiya yiqildi'),
