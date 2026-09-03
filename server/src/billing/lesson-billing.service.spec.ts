@@ -1390,6 +1390,10 @@ describe('LessonBillingService', () => {
         groupTeacher: {
           findMany: jest.fn().mockResolvedValue([{ teacherId: 20001 }]),
         },
+        // Hisob yozilganda markaz qoplagani bayrog'ini tozalaydi.
+        salaryAccrual: {
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
       };
 
       const groupExactDays = ['monday', 'wednesday', 'friday'];
@@ -1485,6 +1489,35 @@ describe('LessonBillingService', () => {
       // 450_000 / 12 (13 rejalashtirilgan dars − 1 bayram) = 37_500.
       expect(realCharge?.perLessonCost).toBe(37_500);
       expect(fallbackPerLessonCost).toBe(realCharge?.perLessonCost);
+
+      // 3) Bu tsiklning O'ZI markaz qoplagani bayrog'ining tozalanadigan
+      // paytini ko'rsatadi: 1-qadamda hisob yo'q edi, shuning uchun accrual
+      // `centerFunded: true` bilan yozildi; 2-qadamdagi hisob esa o'sha
+      // davrni o'quvchi zimmasiga o'tkazadi. Oylik yo'lda o'tgan darsga
+      // qayta accrual yozilmagani uchun bayroqni boshqa hech nima
+      // tozalamasdi.
+      expect(salaryMock.createAccrual).toHaveBeenCalledWith(
+        expect.objectContaining({ centerFunded: true }),
+      );
+      expect(txLocal.salaryAccrual.updateMany).toHaveBeenCalledWith({
+        where: {
+          companyId: baseParams.companyId,
+          studentId: baseParams.studentId,
+          groupId: baseParams.groupId,
+          isCenterTopUp: true,
+          lessonDate: {
+            gte: new Date('2026-04-01T00:00:00.000Z'),
+            lt: new Date('2026-05-01T00:00:00.000Z'),
+          },
+        },
+        // Yopishqoq `wasCenterTopUp` saqlanadi, `amount` o'zgarmaydi —
+        // shuning uchun o'qituvchi balansi ham, ledger ham qimirlamaydi.
+        data: { isCenterTopUp: false },
+      });
+      // Accrual QAYTA yozilmadi (aks holda `applyAccrualToBalance` ning
+      // idempotentligi tufayli qator yangi narxda, pul esa eskisida qolardi
+      // — `accrueMonthlySalary` izohidagi taqiq).
+      expect(salaryMock.createAccrual).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -67,6 +67,9 @@ describe('MonthlyChargeService', () => {
         // `reverseMonthlyCharge` ledger qatoridan hisobni topadi.
         findFirst: jest.fn().mockResolvedValue(null),
       },
+      // Markaz qoplagan accrual'lar bayrog'ini tozalash
+      // (`clearCenterTopUpForPeriod`). Odatiy — tegadigan qator yo'q.
+      salaryAccrual: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
       lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
       enrollment: {
@@ -1218,6 +1221,114 @@ describe('MonthlyChargeService', () => {
       });
 
       expect(res).not.toBeNull();
+    });
+  });
+
+  describe("markaz qoplagani hisob yozilganda o'z-o'zidan tozalanadi", () => {
+    /**
+     * 12 talik yo'lda `isCenterTopUp` keyingi to'lov darsni yopganda
+     * `createAccrual({ centerFunded: false })` orqali tozalanadi. Oylik
+     * yo'lda o'tgan darsga hech qachon qayta accrual yozilmaydi, shuning
+     * uchun bayroq abadiy yoqilgan qolib, «Markaz qopladi» raqamlari
+     * markaz undirib bo'lgan pulni ham qarz qilib ko'rsatardi.
+     */
+    it("davrning markaz qoplagan accrual'larini «undirildi» ga o'tkazadi", async () => {
+      await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(prismaMock.salaryAccrual.updateMany).toHaveBeenCalledTimes(1);
+      const call = prismaMock.salaryAccrual.updateMany.mock.calls[0][0];
+
+      expect(call.where).toEqual({
+        companyId: 1,
+        studentId: 10453,
+        groupId: 'grp-1',
+        isCenterTopUp: true,
+        // `@db.Date` — surilmagan UTC chegaralari, yuqorisi OCHIQ.
+        lessonDate: {
+          gte: new Date('2026-09-01T00:00:00.000Z'),
+          lt: new Date('2026-10-01T00:00:00.000Z'),
+        },
+      });
+      // FAQAT bayroq: `wasCenterTopUp` yopishqoq bo'lib qoladi, `amount` ga
+      // tegilmaydi.
+      expect(call.data).toEqual({ isCenterTopUp: false });
+      expect(Object.keys(call.data)).not.toContain('wasCenterTopUp');
+      expect(Object.keys(call.data)).not.toContain('amount');
+    });
+
+    it('dekabrda keyingi yilga to`g`ri o`tadi', async () => {
+      await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 12,
+        companyId: 1,
+      });
+
+      expect(
+        prismaMock.salaryAccrual.updateMany.mock.calls[0][0].where.lessonDate,
+      ).toEqual({
+        gte: new Date('2026-12-01T00:00:00.000Z'),
+        lt: new Date('2027-01-01T00:00:00.000Z'),
+      });
+    });
+
+    it('PUL QIMIRLAMAYDI — ledger va o`qituvchi balansiga tegilmaydi', async () => {
+      await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      // Bayroq almashishi accrual'ni QAYTA yozmaydi: `createAccrual` ham,
+      // uning ichidagi `applyAccrualToBalance` ham umuman ishga tushmaydi,
+      // shuning uchun ikkinchi SALARY_ACCRUAL Transaction ham,
+      // `User.balance` o'zgarishi ham bo'lishi mumkin emas. Ayni shu sabab
+      // `lesson-billing.service.ts` dagi «reversalsiz qayta narxlama»
+      // invarianti ham buzilmaydi.
+      expect(prismaMock.salaryAccrual.update).toBeUndefined();
+      expect(prismaMock.salaryAccrual.upsert).toBeUndefined();
+      expect(prismaMock.transaction).toBeUndefined();
+      expect(prismaMock.user).toBeUndefined();
+      // O'quvchidan yechish faqat BIR marta — oylik hisobning o'zi.
+      expect(txWriteMock.chargeMonthlyFee).toHaveBeenCalledTimes(1);
+    });
+
+    it("hisob yozilmagan oyda (dars yo'q) bayroqqa ham tegilmaydi", async () => {
+      const charge = await service.createChargeForEnrollment(tx, {
+        // O'quvchi oy tugagandan KEYIN qo'shilgan: qoplangan dars 0,
+        // shuning uchun hisob umuman yozilmaydi.
+        enrollment: enrollment({
+          startDate: new Date('2026-10-15T00:00:00Z'),
+        }),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(charge).toBeNull();
+      expect(prismaMock.salaryAccrual.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("allaqachon KUCHDAGI hisob qayta tozalamaydi (idempotent yo'l)", async () => {
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValueOnce({
+        id: 'charge-1',
+        status: 'CHARGED',
+      });
+
+      await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(prismaMock.salaryAccrual.updateMany).not.toHaveBeenCalled();
     });
   });
 });

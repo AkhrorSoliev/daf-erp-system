@@ -297,9 +297,81 @@ export class MonthlyChargeService {
       tx,
     );
 
+    // Hisob yozildi — demak bu davrning darslari endi O'QUVCHI zimmasida.
+    // Markaz oldindan qoplab qo'ygan accrual'lar shu daqiqada UNDIRILGAN
+    // hisoblanadi (pastdagi izohga qara).
+    await this.clearCenterTopUpForPeriod(tx, {
+      studentId: enr.studentId,
+      groupId: enr.groupId,
+      companyId: params.companyId,
+      periodYear,
+      periodMonth,
+    });
+
     return tx.enrollmentMonthlyCharge.update({
       where: { id: charge.id },
       data: { transactionId: transaction.id },
+    });
+  }
+
+  /**
+   * Markaz qoplagan darslarni «undirildi» deb belgilaydi — FAQAT BAYROQ.
+   *
+   * Nima uchun kerak: `SalaryAccrual.isCenterTopUp` "markaz bu darsni hali
+   * o'z pulidan qoplab turibdi" degani. 12 talik yo'lda u o'z-o'zidan
+   * tozalanadi — keyinroq kelgan to'lov darsni yopganda `createAccrual`
+   * o'sha tabiiy kalit bilan QAYTA chaqiriladi (`centerFunded: false`) va
+   * upsert bayroqni FALSE ga qaytaradi. OYLIK yo'lda esa o'tgan darsga hech
+   * qachon qayta accrual yozilmaydi: `accrueMonthlySalary` hisob BOR-YO'QLIGIGA
+   * qarab `centerFunded: !charge` deb bir marta yozadi, xolos. Natijada
+   * bayroq abadiy yoqilgan qolib, oylik kartadagi `centerStillFronted` va
+   * «Markaz qopladi» raqamlari markaz haqiqatda undirmagan pulni oshirib
+   * ko'rsatardi.
+   *
+   * Nega aynan hisob yozilgan payt: oylik modelda "o'quvchi qopladi" degani
+   * `EnrollmentMonthlyCharge` qatorining borligi — `accrueMonthlySalary`
+   * ning O'ZI ham aynan shu mezondan foydalanadi (`centerFunded: !charge`).
+   * Hisob balans yetarli-yetarsizligiga qaramay yoziladi (qarzdorda balans
+   * manfiyga ketadi), shuning uchun bu yerdagi mezon accrual yozilgandagi
+   * mezonning aynan teskarisi — ikkisi hech qachon farq qila olmaydi.
+   *
+   * PUL QIMIRLAMAYDI. `amount` ga tegilmaydi, `createAccrual` chaqirilmaydi,
+   * ledger'ga hech nima yozilmaydi — shuning uchun `applyAccrualToBalance`
+   * idempotentligiga tayanish ham shart emas: u umuman ishga tushmaydi.
+   * (Aks holda accrual'ni qayta yozish `lesson-billing.service.ts` dagi
+   * `accrueMonthlySalary` izohi ogohlantirgan holatga olib borardi:
+   * `reverseAccrualForAttendance` siz qayta narxlash `SalaryAccrual.amount`
+   * ni yangilaydi-yu, Transaction va o'qituvchi balansi eski narxda qolib
+   * ketadi.)
+   *
+   * `wasCenterTopUp` ATAYLAB tegilmaydi — u yopishqoq: undirilgan
+   * qo'shimchalar sanaladigan bo'lib qolishi kerak (X/Y/Z lifecycle).
+   *
+   * `lessonDate` — `@db.Date` ustuni, shuning uchun chegara SURILMAGAN UTC
+   * sanalari bilan va yuqorisi OCHIQ (`lt`) beriladi (`PeriodBounds` qoidasi).
+   */
+  private async clearCenterTopUpForPeriod(
+    tx: Prisma.TransactionClient,
+    params: {
+      studentId: number;
+      groupId: string;
+      companyId: number;
+      periodYear: number;
+      periodMonth: number;
+    },
+  ): Promise<void> {
+    await tx.salaryAccrual.updateMany({
+      where: {
+        companyId: params.companyId,
+        studentId: params.studentId,
+        groupId: params.groupId,
+        isCenterTopUp: true,
+        lessonDate: {
+          gte: new Date(Date.UTC(params.periodYear, params.periodMonth - 1, 1)),
+          lt: new Date(Date.UTC(params.periodYear, params.periodMonth, 1)),
+        },
+      },
+      data: { isCenterTopUp: false },
     });
   }
 
