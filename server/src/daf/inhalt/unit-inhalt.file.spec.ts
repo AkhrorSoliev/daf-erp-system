@@ -265,14 +265,39 @@ describe('1-unitning dialoglari', () => {
     expect(bosh).toEqual([]);
   });
 
-  it('raqamli satrda tts yozilgan', () => {
-    // TTS raqamni inglizcha o'qiydi: `0176` → «Zero…». Aytilishi qo'lda
-    // yoziladi, aks holda telefon raqami eshitilmaydi.
+  it('raqam yoki yakka harfli satrda tts yozilgan', () => {
+    // TTS raqamni va yakka harfni inglizcha o'qiydi: `0176` → «Zero…»,
+    // `Z` → «zee» («Zett» emas). Aytilishi qo'lda yoziladi, aks holda
+    // telefon raqami yoki harf eshitilmaydi.
+    const yakkaHarfBormi = (de: string): boolean =>
+      de
+        .replace(/[.,!?]/g, '')
+        .split(/\s+/)
+        .some((t) => /^[A-ZÄÖÜ]$/i.test(t));
     const shubhali = dialoge.dialoge.flatMap((d) =>
       d.zeilen
-        .filter((z) => /\d/.test(z.de) && (z.tts ?? '').trim() === '')
+        .filter(
+          (z) =>
+            (/\d/.test(z.de) || yakkaHarfBormi(z.de)) &&
+            (z.tts ?? '').trim() === '',
+        )
         .map((z) => `${d.id}: ${z.de}`),
     );
+    expect(shubhali).toEqual([]);
+  });
+
+  it('sarlavha va o`zbekcha matnda kirill yoki arab harfi yo`q', () => {
+    // Loyiha qoidasi: o'zbekcha faqat lotin alifbosida yoziladi.
+    // U+0400–U+052F — kirill (+ qo'shimchasi), U+0600–U+06FF — arab.
+    const notLotin = /[\u0400-\u052F\u0600-\u06FF]/;
+    const shubhali = dialoge.dialoge.flatMap((d) => {
+      const topilgan: string[] = [];
+      if (notLotin.test(d.titelUz)) topilgan.push(`${d.id}: titelUz`);
+      for (const z of d.zeilen) {
+        if (notLotin.test(z.uz)) topilgan.push(`${d.id}: ${z.uz}`);
+      }
+      return topilgan;
+    });
     expect(shubhali).toEqual([]);
   });
 
@@ -339,6 +364,11 @@ describe('1-unitning dialoglari', () => {
       'emma',
       'claudia',
       'markus',
+      // u01-d6: Anna Weber o'z ismini aytadi va uni harflab tasdiqlaydi
+      // (`Buchstabieren Sie bitte.` — nimani harflab aytish kerakligini
+      // shu ism belgilaydi). `weber` familiya — lug'at so'zi emas.
+      'anna',
+      'weber',
     ]);
     const unbekannt = new Set<string>();
     for (const d of dialoge.dialoge) {
@@ -350,6 +380,15 @@ describe('1-unitning dialoglari', () => {
           if (w === '' || bekannt.has(w) || hilfs.has(w)) continue;
           unbekannt.add(w);
         }
+      }
+      if (
+        d.titelDe
+          .toLowerCase()
+          .replace(/[.,!?]/g, '')
+          .split(/\s+/)
+          .some((w) => w !== '' && !bekannt.has(w) && !hilfs.has(w))
+      ) {
+        unbekannt.add(`titelDe: ${d.titelDe}`);
       }
     }
     expect([...unbekannt]).toEqual([]);
