@@ -102,6 +102,10 @@ class MigrationModule {}
 
 interface CliArgs {
   apply: boolean;
+  /** Faqat birinchi N o'quvchini migratsiya qiladi. Prodda bosqichma-bosqich
+   * chiqish uchun: avval `--limit=5`, natijani tekshirasiz, keyin limitsiz
+   * qayta ishga tushirasiz — bajarilganlar takrorlanmaydi. */
+  limit: number | null;
   /** `--apply` yolg'iz yetarli emas: xato bosilgan bayroq 370 o'quvchining
    * balansini qayta yozmasligi uchun ikkinchi, ataylab uzun tasdiq kerak. */
   confirmed: boolean;
@@ -112,6 +116,11 @@ function parseCliArgs(): CliArgs {
   const argv = process.argv.slice(2);
   const apply = argv.includes('--apply');
   const confirmed = argv.includes('--ha-men-tasdiqlayman');
+  const limitTok = argv.find((a) => a.startsWith('--limit='));
+  const limit = limitTok ? Number(limitTok.split('=')[1]) : null;
+  if (limit !== null && (!Number.isInteger(limit) || limit <= 0)) {
+    throw new Error(`--limit musbat butun son bo'lishi kerak: "${limitTok}"`);
+  }
   const periodTok = argv.find((a) => a.startsWith('--period='));
   const period = periodTok
     ? periodTok.split('=')[1]
@@ -121,7 +130,7 @@ function parseCliArgs(): CliArgs {
       `--period noto'g'ri format: "${period}" (kutilgan YYYY-MM, masalan 2026-09)`,
     );
   }
-  return { apply, confirmed, period };
+  return { apply, confirmed, limit, period };
 }
 
 interface GroupSummaryRow {
@@ -187,6 +196,7 @@ interface RunApplyParams {
   year: number;
   month: number;
   period: string;
+  limit: number | null;
 }
 
 /**
@@ -202,11 +212,18 @@ interface RunApplyParams {
  * ikki marta hisoblashning oxirgi to'sig'i.
  */
 async function runApply(params: RunApplyParams): Promise<void> {
-  const { plan, migrateByStudent, year, month, period } = params;
+  const { plan, migrateByStudent, year, month, period, limit } = params;
+
+  const targets =
+    limit === null
+      ? [...migrateByStudent.entries()]
+      : [...migrateByStudent.entries()].slice(0, limit);
 
   section(`MIGRATSIYA QO'LLANMOQDA — davr ${period} — ${dbEnvLabel()}`);
   console.log(
-    `O'quvchi: ${migrateByStudent.size} ta. Har biri alohida tranzaksiyada.`,
+    `O'quvchi: ${targets.length} ta` +
+      (limit === null ? '' : ` (jami ${migrateByStudent.size} tadan --limit)`) +
+      '. Har biri alohida tranzaksiyada.',
   );
   console.log('');
 
@@ -242,7 +259,7 @@ async function runApply(params: RunApplyParams): Promise<void> {
   const results: ApplyStudentResult[] = [];
   const failures: { studentId: number; message: string }[] = [];
 
-  for (const [studentId, bucket] of migrateByStudent) {
+  for (const [studentId, bucket] of targets) {
     try {
       const res = await prismaService.$transaction(
         (tx) =>
@@ -308,12 +325,13 @@ async function runApply(params: RunApplyParams): Promise<void> {
   console.log(`Natija CSV: ${outPath}`);
   console.log(`Bashorat CSV bilan qator-qator solishtiring.`);
 
-  // Bashorat bilan haqiqat mos keldimi?
+  // Bashorat bilan haqiqat mos keldimi? `--limit` bilan ishlanganda taqqoslash
+  // ma'nosiz — bashorat butun qamrov uchun, qo'llangani esa faqat bir qismi.
   const predictedCharge = plan.students.reduce(
     (a, st) => a + st.monthlyCharge,
     0,
   );
-  if (predictedCharge !== totalCharged) {
+  if (limit === null && predictedCharge !== totalCharged) {
     console.log('');
     console.log(
       `DIQQAT: bashorat ${som(predictedCharge)} edi, haqiqatda ${som(totalCharged)} hisoblandi.`,
@@ -342,7 +360,7 @@ async function runApply(params: RunApplyParams): Promise<void> {
 }
 
 async function main(prisma: PrismaClient) {
-  const { apply, confirmed, period } = parseCliArgs();
+  const { apply, confirmed, limit, period } = parseCliArgs();
 
   if (apply && !confirmed) {
     throw new Error(
@@ -714,6 +732,7 @@ async function main(prisma: PrismaClient) {
       year,
       month,
       period,
+      limit,
     });
     return;
   }
