@@ -1,7 +1,7 @@
 import { validateWortliste } from './wortliste.validate';
 import type { WortlisteFile, WortEintrag } from './wortliste.types';
 import type { KursFile } from '../kurs/kurs.types';
-import type { GoetheWort } from './goethe-parse';
+import type { GoetheFile } from './goethe-parse';
 
 function kurs(): KursFile {
   return {
@@ -22,11 +22,14 @@ function kurs(): KursFile {
   };
 }
 
-const GOETHE: GoetheWort[] = [
-  { artikel: null, wort: 'hallo' },
-  { artikel: null, wort: 'tschuess' },
-  { artikel: 'der', wort: 'Name' },
-];
+const GOETHE: GoetheFile = {
+  source: 'test',
+  words: [
+    { artikel: null, wort: 'hallo' },
+    { artikel: null, wort: 'tschuess' },
+    { artikel: 'der', wort: 'Name' },
+  ],
+};
 
 function eintrag(wort: string, section = 'u01-s1'): WortEintrag {
   return { wort, artikel: null, section, core: true };
@@ -37,8 +40,11 @@ function fullSection(code: string, prefix: string): WortEintrag[] {
   return Array.from({ length: 8 }, (_, i) => eintrag(`${prefix}${i}`, code));
 }
 
-function goetheFor(entries: WortEintrag[]): GoetheWort[] {
-  return entries.map((e) => ({ artikel: null, wort: e.wort }));
+function goetheFor(entries: WortEintrag[]): GoetheFile {
+  return {
+    source: 'test',
+    words: entries.map((e) => ({ artikel: null, wort: e.wort })),
+  };
 }
 
 describe('validateWortliste', () => {

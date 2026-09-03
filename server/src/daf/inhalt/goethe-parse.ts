@@ -187,8 +187,50 @@ export function parseGoetheLines(lines: string[]): GoetheWort[] {
 }
 
 /**
+ * Sonlar (0-20) RAQAM ↔ SO'Z moslashuvi.
+ *
+ * Wortliste'da sonlar RAQAM ko'rinishida yoziladi ("0", "1", ...) — TTS
+ * buni to'g'ri talaffuz qilishi uchun so'z shakli alohida `tts` maydonida
+ * yoziladi (`sonlar 0-20 tema, u01-s4`). Goethe ro'yxati esa so'z shaklini
+ * saqlaydi (`gruppen.zahlen`: "null", "eins", ...). Bu jadval ikkalasini
+ * QIYMAT orqali bog'laydi — `gruppen.zahlen` massivining TARTIBIGA
+ * (index'iga) hech qanday ishonch yo'q: massiv qisqarsa yoki qayta
+ * tartiblansa, `isWordInGoetheA1` baribir to'g'ri javob berishi kerak.
+ */
+export const GOETHE_ZIFFER_ZU_WORT: ReadonlyMap<string, string> = new Map([
+  ['0', 'null'],
+  ['1', 'eins'],
+  ['2', 'zwei'],
+  ['3', 'drei'],
+  ['4', 'vier'],
+  ['5', 'fünf'],
+  ['6', 'sechs'],
+  ['7', 'sieben'],
+  ['8', 'acht'],
+  ['9', 'neun'],
+  ['10', 'zehn'],
+  ['11', 'elf'],
+  ['12', 'zwölf'],
+  ['13', 'dreizehn'],
+  ['14', 'vierzehn'],
+  ['15', 'fünfzehn'],
+  ['16', 'sechzehn'],
+  ['17', 'siebzehn'],
+  ['18', 'achtzehn'],
+  ['19', 'neunzehn'],
+  ['20', 'zwanzig'],
+]);
+
+/**
  * O'zbek A1 o'quv tizimida so'z Goethe standartiga mos ekanini tekshiradi.
  * Alifbohla ro'yxat yoki yopiq to'plamlarda mavjud bo'lsa — TRUE.
+ *
+ * RAQAM ko'rinishidagi so'z (masalan "13") ham to'g'ri tekshiriladi: u
+ * `GOETHE_ZIFFER_ZU_WORT` orqali kutilgan nemischa so'zga ("dreizehn")
+ * aylantiriladi, so'ng o'sha so'z `gruppen.zahlen`da HAQIQATDA bormi —
+ * QIYMAT bo'yicha — tekshiriladi. Agar `gruppen.zahlen` qisqartirilgan
+ * yoki qayta tartiblangan bo'lib, kutilgan so'zni saqlamasa, natija FALSE
+ * bo'ladi (rad etiladi) — index bo'yicha "rost" deb hisoblanmaydi.
  *
  * Ishlatuvchi uchun: bir so'zni "rasmiy A1 lug'atda bor/yo'q" qilip tekshirish uchun.
  */
@@ -196,6 +238,17 @@ export function isWordInGoetheA1(wort: string, file: GoetheFile): boolean {
   // Alifbohla ro'yxatda
   if (file.words.some((w) => w.wort.toLowerCase() === wort.toLowerCase())) {
     return true;
+  }
+
+  // Raqam ko'rinishi ("0".."20") — qiymat bo'yicha, index bo'yicha emas
+  if (/^\d+$/.test(wort)) {
+    const kutilganSoz = GOETHE_ZIFFER_ZU_WORT.get(wort);
+    if (kutilganSoz === undefined) {
+      return false;
+    }
+    return (file.gruppen?.zahlen ?? []).some(
+      (w) => w.wort.toLowerCase() === kutilganSoz.toLowerCase(),
+    );
   }
 
   // Yopiq to'plamlarda

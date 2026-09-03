@@ -11,28 +11,11 @@ import { validateWortliste } from '../src/daf/inhalt/wortliste.validate';
 import type { WortlisteFile } from '../src/daf/inhalt/wortliste.types';
 import type { WoerterFile } from '../src/daf/inhalt/unit-inhalt.types';
 import type { KursFile } from '../src/daf/kurs/kurs.types';
-import type { GoetheFile, GoetheWort } from '../src/daf/inhalt/goethe-parse';
+import type { GoetheFile } from '../src/daf/inhalt/goethe-parse';
 
 const A1 = join(__dirname, '..', 'content', 'daf', 'a1');
 const read = <T>(...p: string[]): T =>
   JSON.parse(readFileSync(join(A1, ...p), 'utf8')) as T;
-
-/**
- * Sonlar (0-20) Goethe ro'yxatida SO'Z shaklida turibdi (`gruppen.zahlen`:
- * "null", "eins", ...), lekin wortliste'da ular RAQAM ko'rinishida
- * yozilgan ("0", "1", ...) — chunki TTS raqamni inglizcha o'qiydi va
- * to'g'ri talaffuz `tts` maydonida alohida yoziladi. `gruppen.zahlen`ning
- * birinchi 21 yozuvi aynan 0 dan 20 gacha tartib bilan qo'lda kiritilgan
- * (barqaror), shuning uchun index qiymatning o'zi — shu asosda raqam
- * ko'rinishlarini ham "Goethe so'zi" sifatida qo'shamiz. Harflar bunga
- * kirmaydi: ular haqiqatan ham Goethe bosh so'zi emas.
- */
-function goetheBilanRaqamlar(goethe: GoetheFile): GoetheWort[] {
-  const raqamlar: GoetheWort[] = (goethe.gruppen?.zahlen ?? [])
-    .slice(0, 21)
-    .map((_, i) => ({ artikel: null, wort: String(i) }));
-  return [...goethe.words, ...raqamlar];
-}
 
 function main(): void {
   const i = process.argv.indexOf('--unit');
@@ -42,11 +25,13 @@ function main(): void {
   }
   const code = `u${String(Number(process.argv[i + 1])).padStart(2, '0')}`;
 
-  const goethe = read<GoetheFile>('goethe-a1.json');
+  // `validateWortliste` butun GoetheFile'ni oladi — sonlarning raqam
+  // ko'rinishi va yopiq guruhlar (`isWordInGoetheA1` orqali) shu yerda
+  // markazlashgan holda tekshiriladi.
   const problems = validateWortliste(
     read<WortlisteFile>('wortliste.json'),
     read<KursFile>('kurs.json'),
-    goetheBilanRaqamlar(goethe),
+    read<GoetheFile>('goethe-a1.json'),
   );
 
   const woerterPath = join(A1, code, 'woerter.json');

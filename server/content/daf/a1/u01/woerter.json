@@ -83,7 +83,6 @@
       "core": true,
       "order": 10
     },
-
     {
       "sourceId": "u01-s2-guten-tag",
       "section": "u01-s2",
@@ -168,7 +167,6 @@
       "core": true,
       "order": 10
     },
-
     {
       "sourceId": "u01-s3-kommen",
       "section": "u01-s3",
@@ -228,12 +226,10 @@
       "order": 7
     },
     {
-      "sourceId": "u01-s3-stadt",
+      "sourceId": "u01-s3-sprechen",
       "section": "u01-s3",
-      "de": "Stadt",
-      "artikel": "die",
-      "plural": "Städte",
-      "uz": "shahar",
+      "de": "sprechen",
+      "uz": "gapirmoq",
       "core": true,
       "order": 8
     },
@@ -253,7 +249,16 @@
       "core": true,
       "order": 10
     },
-
+    {
+      "sourceId": "u01-s3-stadt",
+      "section": "u01-s3",
+      "de": "Stadt",
+      "artikel": "die",
+      "plural": "Städte",
+      "uz": "shahar",
+      "core": false,
+      "order": 11
+    },
     {
       "sourceId": "u01-s4-null",
       "section": "u01-s4",
@@ -443,7 +448,6 @@
       "core": false,
       "order": 21
     },
-
     {
       "sourceId": "u01-s5-a",
       "section": "u01-s5",

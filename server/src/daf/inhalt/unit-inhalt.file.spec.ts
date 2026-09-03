@@ -4,28 +4,11 @@ import { validateWortliste } from './wortliste.validate';
 import type { WortlisteFile } from './wortliste.types';
 import type { WoerterFile } from './unit-inhalt.types';
 import type { KursFile } from '../kurs/kurs.types';
-import type { GoetheFile, GoetheWort } from './goethe-parse';
+import type { GoetheFile } from './goethe-parse';
 
 const A1 = join(__dirname, '..', '..', '..', 'content', 'daf', 'a1');
 const read = <T>(...p: string[]): T =>
   JSON.parse(readFileSync(join(A1, ...p), 'utf8')) as T;
-
-/**
- * Sonlar (0-20) Goethe ro'yxatida SO'Z shaklida turibdi (`gruppen.zahlen`:
- * "null", "eins", ...), lekin bizning wortliste'da ular RAQAM ko'rinishida
- * yozilgan ("0", "1", ...) — chunki TTS raqamni inglizcha o'qiydi va
- * to'g'ri talaffuz `tts` maydonida alohida yoziladi. `gruppen.zahlen`ning
- * birinchi 21 yozuvi aynan 0 dan 20 gacha tartib bilan qo'lda kiritilgan
- * (barqaror), shuning uchun index qiymatning o'zi — shu asosda raqam
- * ko'rinishlarini ham "Goethe so'zi" sifatida qo'shamiz. Harflar bunga
- * kirmaydi: ular haqiqatan ham Goethe bosh so'zi emas.
- */
-function goetheBilanRaqamlar(goethe: GoetheFile): GoetheWort[] {
-  const raqamlar: GoetheWort[] = (goethe.gruppen?.zahlen ?? [])
-    .slice(0, 21)
-    .map((_, i) => ({ artikel: null, wort: String(i) }));
-  return [...goethe.words, ...raqamlar];
-}
 
 describe('1-unitning so`zlari', () => {
   const kurs = read<KursFile>('kurs.json');
@@ -34,7 +17,11 @@ describe('1-unitning so`zlari', () => {
   const woerter = read<WoerterFile>('u01', 'woerter.json');
 
   it('taqsimot validatordan o`tadi', () => {
-    expect(validateWortliste(wortliste, kurs, goetheBilanRaqamlar(goethe))).toEqual([]);
+    // `validateWortliste` butun GoetheFile'ni oladi — sonlarning raqam
+    // ko'rinishi (`isWordInGoetheA1` orqali) va yopiq guruhlar shu yerda,
+    // markazlashgan holda tekshiriladi. Chaqiruv nuqtasida hech qanday
+    // qo'shimcha "boyitish" kerak emas.
+    expect(validateWortliste(wortliste, kurs, goethe)).toEqual([]);
   });
 
   it('1-unitda 50 ta asosiy so`z bor', () => {

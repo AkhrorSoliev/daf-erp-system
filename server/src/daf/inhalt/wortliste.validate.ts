@@ -1,5 +1,6 @@
 import type { KursFile } from '../kurs/kurs.types';
-import type { GoetheWort } from './goethe-parse';
+import type { GoetheFile } from './goethe-parse';
+import { isWordInGoetheA1 } from './goethe-parse';
 import type { WortlisteFile } from './wortliste.types';
 
 export const WORDS_MIN = 8;
@@ -12,11 +13,19 @@ export const UNIT_WORDS_MAX = 50;
  * BOSHLANGAN bo'limgagina hajm qoidasi qo'llanadi: fayl bosqichma-bosqich
  * to'ladi, va hali yozilmagan bo'limni «bo'sh» deb aybdor qilish butun
  * faylni 12 unit tugagunga qadar qizil holatda ushlab turardi.
+ *
+ * Uchinchi argument BUTUN `GoetheFile`ni oladi (nafaqat alifbohla
+ * ro'yxatni) — Goethe-tegishlilik `isWordInGoetheA1` orqali tekshiriladi,
+ * shu bilan yopiq guruhlar (sonlar, hafta kunlari, ...) ham, ularning
+ * raqam ko'rinishlari ham bir joyda, bir xil qoida bilan hisobga olinadi.
+ * Har bir chaqiruv nuqtasi endi shunchaki `goethe`ni butunligicha uzatadi —
+ * "sonlarni qanday tekshirish kerak" degan bilim faqat shu yerda va
+ * `isWordInGoetheA1`da yashaydi, chaqiruv nuqtalarida takrorlanmaydi.
  */
 export function validateWortliste(
   file: WortlisteFile,
   kurs: KursFile,
-  goethe: GoetheWort[],
+  goethe: GoetheFile,
 ): string[] {
   const problems: string[] = [];
 
@@ -24,8 +33,6 @@ export function validateWortliste(
   for (const u of kurs.units) {
     for (const s of u.sections) unitOfSection.set(s.code, u.code);
   }
-
-  const goetheSet = new Set(goethe.map((g) => g.wort.toLowerCase()));
 
   const bySection = new Map<string, number>();
   const byUnit = new Map<string, number>();
@@ -45,7 +52,7 @@ export function validateWortliste(
       seen.set(e.wort.toLowerCase(), e.section);
     }
 
-    if (!goetheSet.has(e.wort.toLowerCase()) && (e.grund ?? '').trim() === '') {
+    if (!isWordInGoetheA1(e.wort, goethe) && (e.grund ?? '').trim() === '') {
       problems.push(`${e.wort}: Goethe ro\`yxatida yo\`q va sababi yozilmagan`);
     }
 
