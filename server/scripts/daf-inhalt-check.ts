@@ -1,0 +1,70 @@
+/**
+ * Unit matnini tekshiradi.
+ *
+ *   npm run daf:inhalt-check -- --unit 1
+ *
+ * Muammo topilsa 1 kod bilan chiqadi va ro'yxatni to'liq ko'rsatadi.
+ */
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
+import { validateWortliste } from '../src/daf/inhalt/wortliste.validate';
+import type { WortlisteFile } from '../src/daf/inhalt/wortliste.types';
+import type { WoerterFile } from '../src/daf/inhalt/unit-inhalt.types';
+import type { KursFile } from '../src/daf/kurs/kurs.types';
+import type { GoetheFile, GoetheWort } from '../src/daf/inhalt/goethe-parse';
+
+const A1 = join(__dirname, '..', 'content', 'daf', 'a1');
+const read = <T>(...p: string[]): T =>
+  JSON.parse(readFileSync(join(A1, ...p), 'utf8')) as T;
+
+/**
+ * Sonlar (0-20) Goethe ro'yxatida SO'Z shaklida turibdi (`gruppen.zahlen`:
+ * "null", "eins", ...), lekin wortliste'da ular RAQAM ko'rinishida
+ * yozilgan ("0", "1", ...) — chunki TTS raqamni inglizcha o'qiydi va
+ * to'g'ri talaffuz `tts` maydonida alohida yoziladi. `gruppen.zahlen`ning
+ * birinchi 21 yozuvi aynan 0 dan 20 gacha tartib bilan qo'lda kiritilgan
+ * (barqaror), shuning uchun index qiymatning o'zi — shu asosda raqam
+ * ko'rinishlarini ham "Goethe so'zi" sifatida qo'shamiz. Harflar bunga
+ * kirmaydi: ular haqiqatan ham Goethe bosh so'zi emas.
+ */
+function goetheBilanRaqamlar(goethe: GoetheFile): GoetheWort[] {
+  const raqamlar: GoetheWort[] = (goethe.gruppen?.zahlen ?? [])
+    .slice(0, 21)
+    .map((_, i) => ({ artikel: null, wort: String(i) }));
+  return [...goethe.words, ...raqamlar];
+}
+
+function main(): void {
+  const i = process.argv.indexOf('--unit');
+  if (i === -1 || !process.argv[i + 1]) {
+    console.error('Kerak: --unit <raqam>');
+    process.exit(1);
+  }
+  const code = `u${String(Number(process.argv[i + 1])).padStart(2, '0')}`;
+
+  const goethe = read<GoetheFile>('goethe-a1.json');
+  const problems = validateWortliste(
+    read<WortlisteFile>('wortliste.json'),
+    read<KursFile>('kurs.json'),
+    goetheBilanRaqamlar(goethe),
+  );
+
+  const woerterPath = join(A1, code, 'woerter.json');
+  if (!existsSync(woerterPath)) {
+    problems.push(`${code}: woerter.json yo'q`);
+  } else {
+    const w = read<WoerterFile>(code, 'woerter.json');
+    const core = w.woerter.filter((x) => x.core).length;
+    if (core !== 50) problems.push(`${code}: ${core} ta asosiy so'z — 50 kerak`);
+  }
+
+  if (problems.length > 0) {
+    console.error(`${problems.length} ta muammo:`);
+    problems.forEach((p) => console.error(`  - ${p}`));
+    process.exit(1);
+  }
+
+  console.log(`${code}: matn toza.`);
+}
+
+main();

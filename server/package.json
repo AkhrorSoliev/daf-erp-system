@@ -29,6 +29,7 @@
     "daf:a1-seed": "ts-node scripts/daf-a1-seed.ts",
     "daf:goethe-extract": "ts-node scripts/daf-goethe-extract.ts",
     "daf:a1-check": "ts-node scripts/daf-a1-check.ts",
+    "daf:inhalt-check": "ts-node scripts/daf-inhalt-check.ts",
     "daf:translate": "ts-node scripts/daf-translate.ts",
     "daf:align-audio": "ts-node scripts/daf-align-audio.ts",
     "daf:export-content": "ts-node scripts/daf-export-content.ts",

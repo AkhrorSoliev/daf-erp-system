@@ -1,0 +1,538 @@
+{
+  "unit": "u01",
+  "woerter": [
+    {
+      "sourceId": "u01-s1-hallo",
+      "section": "u01-s1",
+      "de": "hallo",
+      "uz": "salom",
+      "core": true,
+      "order": 1
+    },
+    {
+      "sourceId": "u01-s1-guten-morgen",
+      "section": "u01-s1",
+      "de": "Guten Morgen",
+      "uz": "xayrli tong",
+      "core": true,
+      "order": 2
+    },
+    {
+      "sourceId": "u01-s1-guten-abend",
+      "section": "u01-s1",
+      "de": "Guten Abend",
+      "uz": "xayrli kech",
+      "core": true,
+      "order": 3
+    },
+    {
+      "sourceId": "u01-s1-gute-nacht",
+      "section": "u01-s1",
+      "de": "Gute Nacht",
+      "uz": "xayrli tun",
+      "core": true,
+      "order": 4
+    },
+    {
+      "sourceId": "u01-s1-tschuess",
+      "section": "u01-s1",
+      "de": "tschüss",
+      "uz": "xayr (norasmiy)",
+      "core": true,
+      "order": 5
+    },
+    {
+      "sourceId": "u01-s1-bis-bald",
+      "section": "u01-s1",
+      "de": "bis bald",
+      "uz": "tez orada ko'rishamiz",
+      "core": true,
+      "order": 6
+    },
+    {
+      "sourceId": "u01-s1-ich",
+      "section": "u01-s1",
+      "de": "ich",
+      "uz": "men",
+      "core": true,
+      "order": 7
+    },
+    {
+      "sourceId": "u01-s1-du",
+      "section": "u01-s1",
+      "de": "du",
+      "uz": "sen",
+      "core": true,
+      "order": 8
+    },
+    {
+      "sourceId": "u01-s1-sein",
+      "section": "u01-s1",
+      "de": "sein",
+      "uz": "bo'lmoq",
+      "core": true,
+      "order": 9
+    },
+    {
+      "sourceId": "u01-s1-name",
+      "section": "u01-s1",
+      "de": "Name",
+      "artikel": "der",
+      "plural": "Namen",
+      "uz": "ism",
+      "core": true,
+      "order": 10
+    },
+
+    {
+      "sourceId": "u01-s2-guten-tag",
+      "section": "u01-s2",
+      "de": "Guten Tag",
+      "uz": "xayrli kun",
+      "core": true,
+      "order": 1
+    },
+    {
+      "sourceId": "u01-s2-auf-wiedersehen",
+      "section": "u01-s2",
+      "de": "Auf Wiedersehen",
+      "uz": "xayr (rasmiy)",
+      "core": true,
+      "order": 2
+    },
+    {
+      "sourceId": "u01-s2-sie",
+      "section": "u01-s2",
+      "de": "Sie",
+      "uz": "siz (rasmiy)",
+      "core": true,
+      "order": 3
+    },
+    {
+      "sourceId": "u01-s2-frau",
+      "section": "u01-s2",
+      "de": "Frau",
+      "artikel": "die",
+      "plural": "Frauen",
+      "uz": "xonim",
+      "core": true,
+      "order": 4
+    },
+    {
+      "sourceId": "u01-s2-herr",
+      "section": "u01-s2",
+      "de": "Herr",
+      "artikel": "der",
+      "plural": "Herren",
+      "uz": "janob",
+      "core": true,
+      "order": 5
+    },
+    {
+      "sourceId": "u01-s2-heissen",
+      "section": "u01-s2",
+      "de": "heißen",
+      "uz": "atalmoq",
+      "core": true,
+      "order": 6
+    },
+    {
+      "sourceId": "u01-s2-wie",
+      "section": "u01-s2",
+      "de": "wie",
+      "uz": "qanday",
+      "core": true,
+      "order": 7
+    },
+    {
+      "sourceId": "u01-s2-wer",
+      "section": "u01-s2",
+      "de": "wer",
+      "uz": "kim",
+      "core": true,
+      "order": 8
+    },
+    {
+      "sourceId": "u01-s2-was",
+      "section": "u01-s2",
+      "de": "was",
+      "uz": "nima",
+      "core": true,
+      "order": 9
+    },
+    {
+      "sourceId": "u01-s2-danke",
+      "section": "u01-s2",
+      "de": "danke",
+      "uz": "rahmat",
+      "core": true,
+      "order": 10
+    },
+
+    {
+      "sourceId": "u01-s3-kommen",
+      "section": "u01-s3",
+      "de": "kommen",
+      "uz": "kelmoq",
+      "core": true,
+      "order": 1
+    },
+    {
+      "sourceId": "u01-s3-wohnen",
+      "section": "u01-s3",
+      "de": "wohnen",
+      "uz": "yashamoq",
+      "core": true,
+      "order": 2
+    },
+    {
+      "sourceId": "u01-s3-woher",
+      "section": "u01-s3",
+      "de": "woher",
+      "uz": "qayerdan",
+      "core": true,
+      "order": 3
+    },
+    {
+      "sourceId": "u01-s3-aus",
+      "section": "u01-s3",
+      "de": "aus",
+      "uz": "-dan (chiqish predlogi)",
+      "core": true,
+      "order": 4
+    },
+    {
+      "sourceId": "u01-s3-in",
+      "section": "u01-s3",
+      "de": "in",
+      "uz": "-da (joy predlogi)",
+      "core": true,
+      "order": 5
+    },
+    {
+      "sourceId": "u01-s3-wo",
+      "section": "u01-s3",
+      "de": "wo",
+      "uz": "qayerda",
+      "core": true,
+      "order": 6
+    },
+    {
+      "sourceId": "u01-s3-land",
+      "section": "u01-s3",
+      "de": "Land",
+      "artikel": "das",
+      "plural": "Länder",
+      "uz": "mamlakat",
+      "core": true,
+      "order": 7
+    },
+    {
+      "sourceId": "u01-s3-stadt",
+      "section": "u01-s3",
+      "de": "Stadt",
+      "artikel": "die",
+      "plural": "Städte",
+      "uz": "shahar",
+      "core": true,
+      "order": 8
+    },
+    {
+      "sourceId": "u01-s3-deutschland",
+      "section": "u01-s3",
+      "de": "Deutschland",
+      "uz": "Germaniya",
+      "core": true,
+      "order": 9
+    },
+    {
+      "sourceId": "u01-s3-usbekistan",
+      "section": "u01-s3",
+      "de": "Usbekistan",
+      "uz": "O'zbekiston",
+      "core": true,
+      "order": 10
+    },
+
+    {
+      "sourceId": "u01-s4-null",
+      "section": "u01-s4",
+      "de": "0",
+      "tts": "null",
+      "uz": "nol",
+      "core": true,
+      "order": 1
+    },
+    {
+      "sourceId": "u01-s4-eins",
+      "section": "u01-s4",
+      "de": "1",
+      "tts": "eins",
+      "uz": "bir",
+      "core": true,
+      "order": 2
+    },
+    {
+      "sourceId": "u01-s4-zwei",
+      "section": "u01-s4",
+      "de": "2",
+      "tts": "zwei",
+      "uz": "ikki",
+      "core": true,
+      "order": 3
+    },
+    {
+      "sourceId": "u01-s4-drei",
+      "section": "u01-s4",
+      "de": "3",
+      "tts": "drei",
+      "uz": "uch",
+      "core": true,
+      "order": 4
+    },
+    {
+      "sourceId": "u01-s4-vier",
+      "section": "u01-s4",
+      "de": "4",
+      "tts": "vier",
+      "uz": "to'rt",
+      "core": true,
+      "order": 5
+    },
+    {
+      "sourceId": "u01-s4-fuenf",
+      "section": "u01-s4",
+      "de": "5",
+      "tts": "fünf",
+      "uz": "besh",
+      "core": true,
+      "order": 6
+    },
+    {
+      "sourceId": "u01-s4-sechs",
+      "section": "u01-s4",
+      "de": "6",
+      "tts": "sechs",
+      "uz": "olti",
+      "core": true,
+      "order": 7
+    },
+    {
+      "sourceId": "u01-s4-sieben",
+      "section": "u01-s4",
+      "de": "7",
+      "tts": "sieben",
+      "uz": "yetti",
+      "core": true,
+      "order": 8
+    },
+    {
+      "sourceId": "u01-s4-acht",
+      "section": "u01-s4",
+      "de": "8",
+      "tts": "acht",
+      "uz": "sakkiz",
+      "core": true,
+      "order": 9
+    },
+    {
+      "sourceId": "u01-s4-neun",
+      "section": "u01-s4",
+      "de": "9",
+      "tts": "neun",
+      "uz": "to'qqiz",
+      "core": true,
+      "order": 10
+    },
+    {
+      "sourceId": "u01-s4-zehn",
+      "section": "u01-s4",
+      "de": "10",
+      "tts": "zehn",
+      "uz": "o'n",
+      "core": false,
+      "order": 11
+    },
+    {
+      "sourceId": "u01-s4-elf",
+      "section": "u01-s4",
+      "de": "11",
+      "tts": "elf",
+      "uz": "o'n bir",
+      "core": false,
+      "order": 12
+    },
+    {
+      "sourceId": "u01-s4-zwoelf",
+      "section": "u01-s4",
+      "de": "12",
+      "tts": "zwölf",
+      "uz": "o'n ikki",
+      "core": false,
+      "order": 13
+    },
+    {
+      "sourceId": "u01-s4-dreizehn",
+      "section": "u01-s4",
+      "de": "13",
+      "tts": "dreizehn",
+      "uz": "o'n uch",
+      "core": false,
+      "order": 14
+    },
+    {
+      "sourceId": "u01-s4-vierzehn",
+      "section": "u01-s4",
+      "de": "14",
+      "tts": "vierzehn",
+      "uz": "o'n to'rt",
+      "core": false,
+      "order": 15
+    },
+    {
+      "sourceId": "u01-s4-fuenfzehn",
+      "section": "u01-s4",
+      "de": "15",
+      "tts": "fünfzehn",
+      "uz": "o'n besh",
+      "core": false,
+      "order": 16
+    },
+    {
+      "sourceId": "u01-s4-sechzehn",
+      "section": "u01-s4",
+      "de": "16",
+      "tts": "sechzehn",
+      "uz": "o'n olti",
+      "core": false,
+      "order": 17
+    },
+    {
+      "sourceId": "u01-s4-siebzehn",
+      "section": "u01-s4",
+      "de": "17",
+      "tts": "siebzehn",
+      "uz": "o'n yetti",
+      "core": false,
+      "order": 18
+    },
+    {
+      "sourceId": "u01-s4-achtzehn",
+      "section": "u01-s4",
+      "de": "18",
+      "tts": "achtzehn",
+      "uz": "o'n sakkiz",
+      "core": false,
+      "order": 19
+    },
+    {
+      "sourceId": "u01-s4-neunzehn",
+      "section": "u01-s4",
+      "de": "19",
+      "tts": "neunzehn",
+      "uz": "o'n to'qqiz",
+      "core": false,
+      "order": 20
+    },
+    {
+      "sourceId": "u01-s4-zwanzig",
+      "section": "u01-s4",
+      "de": "20",
+      "tts": "zwanzig",
+      "uz": "yigirma",
+      "core": false,
+      "order": 21
+    },
+
+    {
+      "sourceId": "u01-s5-a",
+      "section": "u01-s5",
+      "de": "A",
+      "tts": "Ah",
+      "uz": "'A' harfi",
+      "core": true,
+      "order": 1
+    },
+    {
+      "sourceId": "u01-s5-b",
+      "section": "u01-s5",
+      "de": "B",
+      "tts": "Beh",
+      "uz": "'B' harfi",
+      "core": true,
+      "order": 2
+    },
+    {
+      "sourceId": "u01-s5-c",
+      "section": "u01-s5",
+      "de": "C",
+      "tts": "Tseh",
+      "uz": "'C' harfi",
+      "core": true,
+      "order": 3
+    },
+    {
+      "sourceId": "u01-s5-e",
+      "section": "u01-s5",
+      "de": "E",
+      "tts": "Eh",
+      "uz": "'E' harfi",
+      "core": true,
+      "order": 4
+    },
+    {
+      "sourceId": "u01-s5-h",
+      "section": "u01-s5",
+      "de": "H",
+      "tts": "Hah",
+      "uz": "'H' harfi",
+      "core": true,
+      "order": 5
+    },
+    {
+      "sourceId": "u01-s5-i",
+      "section": "u01-s5",
+      "de": "I",
+      "tts": "Ih",
+      "uz": "'I' harfi",
+      "core": true,
+      "order": 6
+    },
+    {
+      "sourceId": "u01-s5-j",
+      "section": "u01-s5",
+      "de": "J",
+      "tts": "Jott",
+      "uz": "'J' harfi",
+      "core": true,
+      "order": 7
+    },
+    {
+      "sourceId": "u01-s5-u",
+      "section": "u01-s5",
+      "de": "U",
+      "tts": "Uh",
+      "uz": "'U' harfi",
+      "core": true,
+      "order": 8
+    },
+    {
+      "sourceId": "u01-s5-w",
+      "section": "u01-s5",
+      "de": "W",
+      "tts": "Weh",
+      "uz": "'W' harfi",
+      "core": true,
+      "order": 9
+    },
+    {
+      "sourceId": "u01-s5-z",
+      "section": "u01-s5",
+      "de": "Z",
+      "tts": "Zett",
+      "uz": "'Z' harfi",
+      "core": true,
+      "order": 10
+    }
+  ]
+}
