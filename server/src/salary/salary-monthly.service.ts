@@ -415,7 +415,22 @@ export class SalaryMonthlyService {
       /** Billable lessons with NO accrual yet — the center's unsettled leg. */
       gap: number;
       gapUnits: number;
+      /**
+       * Narxlanmagan darslar — ikki xil sabab, ikki xil sanagich.
+       *
+       * `noConfigUnits`: dars o'tilgan, lekin o'sha sanani qamrab oladigan
+       * stavka versiyasi yo'q (2026-may imzosi — konfiguratsiyalar faqat
+       * iyundan kuchga kirgan edi). `noChargeUnits`: stavka bor, lekin
+       * OYLIK kursning muzlatilgan `EnrollmentMonthlyCharge` qatori yo'q,
+       * ya'ni bir darsning narxini aniqlaydigan asos yo'q.
+       *
+       * Ikkalasida ham raqam TAXMIN QILINMAYDI — sanaladi. Shuning uchun
+       * ular ekranga chiqishi shart: aks holda o'qituvchining qatori
+       * sababsiz kam ko'rinadi va buni faqat serverning jurnalidan
+       * bilish mumkin bo'lardi.
+       */
       noConfigUnits: number;
+      noChargeUnits: number;
       isFixedMonthly: boolean;
       centerAdvanced: number;
       centerStillFronted: number;
@@ -432,6 +447,7 @@ export class SalaryMonthlyService {
         gap: 0,
         gapUnits: 0,
         noConfigUnits: 0,
+        noChargeUnits: 0,
         isFixedMonthly: fixedMonthlyTeachers.has(id),
         centerAdvanced: 0,
         centerStillFronted: 0,
@@ -495,6 +511,10 @@ export class SalaryMonthlyService {
     for (const [tid, n] of sweep.noConfigUnits) {
       const a = agg.get(tid);
       if (a) a.noConfigUnits = n;
+    }
+    for (const [tid, n] of sweep.noChargeUnits) {
+      const a = agg.get(tid);
+      if (a) a.noChargeUnits = n;
     }
 
     // ─── Step 5+6: build rows ────────────────────────────────────────────
@@ -564,6 +584,13 @@ export class SalaryMonthlyService {
         // it is 0 while `centerFunded` already carries the forecast.
         centerAdvanced: a.centerAdvanced,
         centerStillFronted: a.centerStillFronted,
+        // Nega ikkalasi ham qaytariladi: `noConfigUnits` shu paytgacha
+        // yig'ilardi-yu, javobga UMUMAN qo'shilmasdi — ya'ni sanoq bor,
+        // lekin uni ko'radigan hech kim yo'q edi. `noChargeUnits` ga
+        // «xuddi shunday muomala» qilish uni ikkinchi o'lik maydonga
+        // aylantirardi, shuning uchun ikkovi ham yuzaga chiqarildi.
+        noConfigUnits: a.noConfigUnits,
+        noChargeUnits: a.noChargeUnits,
         payment: payment
           ? { id: payment.id, amount: payment.amount, status: payment.status }
           : null,
