@@ -918,8 +918,7 @@ describe('1-unitning grammatikasi va iboralari', () => {
   it('har bo`limda kamida 3 ta ibora bor', () => {
     for (const code of sections) {
       const n = redemittel.phrasen.filter((p) => p.section === code).length;
-      expect({ code, n }).toEqual({ code, n: expect.any(Number) });
-      expect(n).toBeGreaterThanOrEqual(3);
+      expect(`${code}: ${n}`).toBe(`${code}: ${Math.max(n, 3)}`);
     }
   });
 
