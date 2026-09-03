@@ -134,6 +134,19 @@ export class StudentsStatusService {
     // this in its own Serializable transaction — the outer status flow
     // isn't transactional today and rewriting it is out of scope. Failure
     // here aborts the whole status change (we never reach the cascade).
+    //
+    // `refundPrepaidForFreeze` (LESSON_PACK) and `refundMonthlyForFreeze`
+    // (MONTHLY) below are now TWO separate `$transaction`s run one after
+    // the other, not one. For a student holding enrollments in both
+    // billing models, the first can commit and the second can throw —
+    // leaving the LESSON_PACK money already refunded to balance while the
+    // student's status never flips to FROZEN. This straddle did not exist
+    // before this method had a second transaction. It is recoverable: a
+    // retry re-runs `refundPrepaidForFreeze` safely because it only
+    // selects enrollments with `prepaidLessonsRemaining > 0` (or an
+    // explicit override), and the first, already-committed run zeroed
+    // that counter — so the retry finds nothing left to re-refund on the
+    // LESSON_PACK leg and simply proceeds to (retry) the MONTHLY leg.
     let frozenRefundResults: Array<{
       enrollmentId: string;
       refunded: number;

@@ -161,38 +161,22 @@ describe('StudentsStatusService', () => {
       );
     });
 
-    // Spec 4-bo'limdagi asosiy pul invarianti: muzlatish qaytardi, keyin
-    // o'quvchi guruhdan chiqarildi -> IKKINCHI marta qaytmasligi shart.
-    // `reverseChargeForDeparture` `remaining` ni jonli `charge.coveredLessons`
-    // dan oladi (kalendardan qayta hisoblamaydi), shuning uchun birinchi
-    // chaqiruv sanagichni kamaytiradi va ikkinchisi 0 topadi.
-    it('muzlatish qaytargandan keyin chiqarishda IKKINCHI marta qaytmaydi', async () => {
-      prisma.enrollment.findMany.mockResolvedValue([
-        { id: 'enr-1', group: { companyId } },
-      ]);
-
-      // 1-chaqiruv (muzlatish): 8 dars qaytdi.
-      monthlyCharge.reverseChargeForDeparture.mockResolvedValueOnce({
-        refunded: 257_144,
-      });
-      await service.changeStatus(
-        studentId,
-        { status: StudentStatus.FROZEN, reason: 'Sinov sababi' } as never,
-        userId,
-        companyId,
-      );
-
-      // 2-chaqiruv (guruhdan chiqarish, `reverseChargeForDeparture`ning
-      // o'zi idempotent bo'lgani uchun): qaytariladigan narsa qolmadi.
-      monthlyCharge.reverseChargeForDeparture.mockResolvedValueOnce(null);
-      const second = await monthlyCharge.reverseChargeForDeparture(
-        {} as never,
-        { enrollmentId: 'enr-1' } as never,
-      );
-
-      expect(second).toBeNull();
-      expect(monthlyCharge.reverseChargeForDeparture).toHaveBeenCalledTimes(2);
-    });
+    // Spec 4-bo'limdagi asosiy pul invarianti — muzlatish qaytardi, keyin
+    // o'quvchi guruhdan chiqarildi -> IKKINCHI marta qaytmasligi shart —
+    // ATAYLAB bu yerda test qilinmaydi. `reverseChargeForDeparture`ning
+    // o'zi shu servisda mock qilingan, shuning uchun uni to'g'ridan-to'g'ri
+    // chaqirib "ikkinchi marta null qaytaradi" deb tekshirish faqat
+    // mockning o'zini sinaydi — implementatsiyani EMAS (2026-09-03 kod
+    // ko'rigi: shu naqshdagi test `plannedLessons`/`coveredLessons`
+    // almashtirilgan xatoni ushlay olmadi). Haqiqiy idempotentlik
+    // himoyasi — `charge.coveredLessons`ning jonli holatidan hisoblanishi —
+    // `server/src/billing/monthly-charge.service.spec.ts`dagi
+    // "ikkinchi marta chaqirilganda qayta qaytarmaydi (idempotent)"
+    // testida yotadi: u haqiqiy `reverseChargeForDeparture`ni statefull
+    // Prisma mock ustida ikki marta ketma-ket chaqiradi va shu implementatsiya
+    // xatosida qizil bo'lib qoladi. Bu fayl faqat "MONTHLY freeze
+    // reverseChargeForDeparture'ni chaqiradi" chegarasini sinaydi —
+    // funksiyaning o'z ichki arifmetikasi emas.
 
     it("muzlatish qaytarishi yiqilsa status O'ZGARMAYDI", async () => {
       prisma.enrollment.findMany.mockResolvedValue([
