@@ -161,6 +161,17 @@ describe('StudentsService — status methods', () => {
             refundPrepaidToBalance: jest.fn(),
           },
         },
+        // MONTHLY-course counterpart of the refund above (freeze). The
+        // students.service tests don't exercise that path either — default
+        // `enrollment.findMany` above already returns [], so this is only
+        // here to satisfy DI.
+        {
+          provide: require('../billing/monthly-charge.service')
+            .MonthlyChargeService,
+          useValue: {
+            reverseChargeForDeparture: jest.fn().mockResolvedValue(null),
+          },
+        },
         // Discount adjustment path — write tests directly exercise this in the
         // dedicated `update — discountPercent` describe block below.
         {
