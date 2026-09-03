@@ -5,9 +5,7 @@ import {
   GOETHE_WOCHENTAGE,
   GOETHE_MONATE,
   GOETHE_JAHRESZEITEN,
-  GOETHE_ZIFFER_ZU_WORT,
 } from './goethe-parse';
-import type { GoetheFile } from './goethe-parse';
 
 describe('parseGoetheLines', () => {
   it('artiklsiz bosh so`zni oladi', () => {
@@ -175,97 +173,5 @@ describe('isWordInGoetheA1 helper', () => {
   it('case-insensitive qidiradi', () => {
     expect(isWordInGoetheA1('ABER', testFile)).toBe(true);
     expect(isWordInGoetheA1('juli', testFile)).toBe(true);
-  });
-});
-
-describe('GOETHE_ZIFFER_ZU_WORT — raqam-so`z moslashuvining o`zi', () => {
-  it('0 dan 20 gacha har bir raqam uchun to`g`ri nemischa so`zni saqlaydi', () => {
-    expect(GOETHE_ZIFFER_ZU_WORT.get('0')).toBe('null');
-    expect(GOETHE_ZIFFER_ZU_WORT.get('1')).toBe('eins');
-    expect(GOETHE_ZIFFER_ZU_WORT.get('9')).toBe('neun');
-    expect(GOETHE_ZIFFER_ZU_WORT.get('10')).toBe('zehn');
-    expect(GOETHE_ZIFFER_ZU_WORT.get('12')).toBe('zwölf');
-    expect(GOETHE_ZIFFER_ZU_WORT.get('13')).toBe('dreizehn');
-    expect(GOETHE_ZIFFER_ZU_WORT.get('18')).toBe('achtzehn');
-    expect(GOETHE_ZIFFER_ZU_WORT.get('20')).toBe('zwanzig');
-  });
-
-  it('aynan 21 ta yozuv (0-20) saqlaydi', () => {
-    expect(GOETHE_ZIFFER_ZU_WORT.size).toBe(21);
-  });
-
-  it('21 dan katta raqam uchun moslashuv yo`q', () => {
-    expect(GOETHE_ZIFFER_ZU_WORT.get('21')).toBeUndefined();
-  });
-});
-
-describe('isWordInGoetheA1 — raqam ko`rinishi (ziffer)', () => {
-  const goetheAsl: GoetheFile = {
-    source: 'test',
-    words: [],
-    gruppen: {
-      zahlen: GOETHE_ZAHLEN,
-      wochentage: [],
-      monate: [],
-      jahreszeiten: [],
-    },
-  };
-
-  it('"0"dan "20"gacha har biri gruppen.zahlen orqali topiladi', () => {
-    for (let n = 0; n <= 20; n++) {
-      expect(isWordInGoetheA1(String(n), goetheAsl)).toBe(true);
-    }
-  });
-
-  it('moslashuvda yo`q raqamni rad etadi (21 dan katta)', () => {
-    expect(isWordInGoetheA1('25', goetheAsl)).toBe(false);
-  });
-
-  it('gruppen umuman bo`lmasa raqamni rad etadi', () => {
-    const goetheGruppensiz: GoetheFile = { source: 'test', words: [] };
-    expect(isWordInGoetheA1('5', goetheGruppensiz)).toBe(false);
-  });
-
-  it('gruppen.zahlen kutilgan so`zni saqlamasa — RAD ETADI (index emas, QIYMAT tekshiriladi)', () => {
-    // Bu aynan avvalgi index-asosli "enrichment" xatosini ushlaydi: agar
-    // birov gruppen.zahlen'ni tartibini o'zgartirsa yoki qisqartirsa,
-    // "13" endi noto'g'ri so'zga (yoki hech narsaga) mos kelib qolishi
-    // kerak — index bo'yicha "to'g'ri" deb hisoblanmasligi kerak.
-    const qisqartirilgan: GoetheFile = {
-      source: 'test',
-      words: [],
-      gruppen: {
-        // Faqat 0-12 saqlangan — "13" (dreizehn) endi yo'q.
-        zahlen: GOETHE_ZAHLEN.slice(0, 13),
-        wochentage: [],
-        monate: [],
-        jahreszeiten: [],
-      },
-    };
-    expect(isWordInGoetheA1('13', qisqartirilgan)).toBe(false);
-    // 0-12 hali ham to'g'ri topiladi.
-    expect(isWordInGoetheA1('12', qisqartirilgan)).toBe(true);
-
-    // Qayta tartiblangan massiv: index 13'da endi "dreizehn" emas,
-    // "zwanzig" turibdi. Index-asosli yechim buni "13" deb noto'g'ri
-    // qabul qilardi; qiymat-asosli yechim rad etadi.
-    const qaytaTartiblangan: GoetheFile = {
-      source: 'test',
-      words: [],
-      gruppen: {
-        zahlen: [
-          ...GOETHE_ZAHLEN.slice(0, 13),
-          { artikel: null, wort: 'zwanzig' }, // index 13'da "dreizehn" o'rniga
-          ...GOETHE_ZAHLEN.slice(14),
-        ],
-        wochentage: [],
-        monate: [],
-        jahreszeiten: [],
-      },
-    };
-    expect(isWordInGoetheA1('13', qaytaTartiblangan)).toBe(false);
-    // "zwanzig" so'zining o'zi hali ham (boshqa index'da bo'lsa ham) bor,
-    // shuning uchun "20" to'g'ri topiladi — qiymat qidirilgani uchun.
-    expect(isWordInGoetheA1('20', qaytaTartiblangan)).toBe(true);
   });
 });

@@ -24,13 +24,6 @@
       "grund": "ibora — 'gut' Goethe ro'yxatida bor, 'Nacht' esa PDF chiqarishda alohida ko'rinmagan (Goethe A1 rasmiy so'zi bo'lsa ham)"
     },
     { "wort": "tschüss", "artikel": null, "section": "u01-s1", "core": true },
-    {
-      "wort": "bis bald",
-      "artikel": null,
-      "section": "u01-s1",
-      "core": true,
-      "grund": "ibora — 'bis' va 'bald' ikkalasi ham Goethe ro'yxatida bor, lekin tayyor xayrlashish iborasi sifatida birga o'rgatiladi"
-    },
     { "wort": "ich", "artikel": null, "section": "u01-s1", "core": true },
     {
       "wort": "du",
@@ -63,13 +56,6 @@
     { "wort": "wie", "artikel": null, "section": "u01-s2", "core": true },
     { "wort": "wer", "artikel": null, "section": "u01-s2", "core": true },
     { "wort": "was", "artikel": null, "section": "u01-s2", "core": true },
-    {
-      "wort": "danke",
-      "artikel": null,
-      "section": "u01-s2",
-      "core": true,
-      "grund": "PDF chiqarishda alohida ko'rinmagan ('danken' fe'li ro'yxatda bor), lekin rahmat aytish A1'ning eng asosiy iborasi"
-    },
 
     { "wort": "kommen", "artikel": null, "section": "u01-s3", "core": true },
     { "wort": "wohnen", "artikel": null, "section": "u01-s3", "core": true },
@@ -94,37 +80,25 @@
       "grund": "Goethe rasmiy so'z ro'yxati mamlakat nomlarini kiritmaydi; bu esa o'quvchining o'z vatani — mavzu uchun eng muhim so'z"
     },
 
-    { "wort": "0", "artikel": null, "section": "u01-s4", "core": true },
-    { "wort": "1", "artikel": null, "section": "u01-s4", "core": true },
-    { "wort": "2", "artikel": null, "section": "u01-s4", "core": true },
-    { "wort": "3", "artikel": null, "section": "u01-s4", "core": true },
-    { "wort": "4", "artikel": null, "section": "u01-s4", "core": true },
-    { "wort": "5", "artikel": null, "section": "u01-s4", "core": true },
-    { "wort": "6", "artikel": null, "section": "u01-s4", "core": true },
-    { "wort": "7", "artikel": null, "section": "u01-s4", "core": true },
-    { "wort": "8", "artikel": null, "section": "u01-s4", "core": true },
-    { "wort": "9", "artikel": null, "section": "u01-s4", "core": true },
+    { "wort": "null", "artikel": null, "section": "u01-s4", "core": true },
+    { "wort": "eins", "artikel": null, "section": "u01-s4", "core": true },
+    { "wort": "zwei", "artikel": null, "section": "u01-s4", "core": true },
+    { "wort": "drei", "artikel": null, "section": "u01-s4", "core": true },
+    { "wort": "vier", "artikel": null, "section": "u01-s4", "core": true },
+    { "wort": "fünf", "artikel": null, "section": "u01-s4", "core": true },
+    { "wort": "sechs", "artikel": null, "section": "u01-s4", "core": true },
+    { "wort": "sieben", "artikel": null, "section": "u01-s4", "core": true },
+    { "wort": "acht", "artikel": null, "section": "u01-s4", "core": true },
+    { "wort": "neun", "artikel": null, "section": "u01-s4", "core": true },
+    { "wort": "zehn", "artikel": null, "section": "u01-s4", "core": true },
+    { "wort": "elf", "artikel": null, "section": "u01-s4", "core": true },
 
-    {
-      "wort": "A",
-      "artikel": null,
-      "section": "u01-s5",
-      "core": true,
-      "grund": "harf nomi — Goethe ro'yxati yakka harflarni bosh so'z sifatida sanamaydi (PDF'da ular alifbo bo'lim ajratgichi sifatida ishlatilgan); harflab aytish (buchstabieren) mavzusi uchun zarur"
-    },
-    {
-      "wort": "B",
-      "artikel": null,
-      "section": "u01-s5",
-      "core": true,
-      "grund": "harf nomi — Goethe ro'yxati yakka harflarni bosh so'z sifatida sanamaydi; harflab aytish (buchstabieren) mavzusi uchun zarur"
-    },
     {
       "wort": "C",
       "artikel": null,
       "section": "u01-s5",
       "core": true,
-      "grund": "harf nomi — Goethe ro'yxati yakka harflarni bosh so'z sifatida sanamaydi; harflab aytish (buchstabieren) mavzusi uchun zarur"
+      "grund": "harf nomi — Goethe ro'yxati yakka harflarni bosh so'z sifatida sanamaydi (PDF'da ular alifbo bo'lim ajratgichi sifatida ishlatilgan); harflab aytish (buchstabieren) mavzusi uchun zarur"
     },
     {
       "wort": "E",
@@ -155,7 +129,14 @@
       "grund": "harf nomi — Goethe ro'yxati yakka harflarni bosh so'z sifatida sanamaydi; harflab aytish (buchstabieren) mavzusi uchun zarur"
     },
     {
-      "wort": "U",
+      "wort": "Q",
+      "artikel": null,
+      "section": "u01-s5",
+      "core": true,
+      "grund": "harf nomi — Goethe ro'yxati yakka harflarni bosh so'z sifatida sanamaydi; harflab aytish (buchstabieren) mavzusi uchun zarur"
+    },
+    {
+      "wort": "V",
       "artikel": null,
       "section": "u01-s5",
       "core": true,
@@ -163,6 +144,13 @@
     },
     {
       "wort": "W",
+      "artikel": null,
+      "section": "u01-s5",
+      "core": true,
+      "grund": "harf nomi — Goethe ro'yxati yakka harflarni bosh so'z sifatida sanamaydi; harflab aytish (buchstabieren) mavzusi uchun zarur"
+    },
+    {
+      "wort": "Y",
       "artikel": null,
       "section": "u01-s5",
       "core": true,

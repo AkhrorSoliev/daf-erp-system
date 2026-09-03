@@ -51,6 +51,35 @@ describe('1-unitning so`zlari', () => {
     expect(shubhali.filter((w) => !w.tts || w.tts.trim() === '')).toEqual([]);
   });
 
+  it('sonlarda de — nemischa so`z, anzeige — raqam, ortiqcha tts yo`q', () => {
+    // CEO qarori: yozma mashq `de` ustiga quriladi, shuning uchun `de`
+    // o'rgatiladigan narsaning O'ZI (nemischa so'z) bo'lishi kerak —
+    // raqam emas. Raqam faqat ko'rgazma sifatida `anzeige`da turadi.
+    // `tts` esa faqat talaffuz yozma shakldan farq qilganda kerak —
+    // "eins" kabi so'zlarni TTS o'z-o'zidan to'g'ri o'qiydi, shuning
+    // uchun bu yerda ortiqcha.
+    const sonlar = woerter.woerter.filter((w) => w.section === 'u01-s4');
+    expect(sonlar).toHaveLength(12);
+    for (const w of sonlar) {
+      expect(/^\d+$/.test(w.de)).toBe(false);
+      expect(w.anzeige).toBeDefined();
+      expect(/^\d+$/.test(w.anzeige ?? '')).toBe(true);
+      expect(w.tts).toBeUndefined();
+    }
+  });
+
+  it('harflarda anzeige yo`q — yozma shakl harfning o`zi', () => {
+    // Raqamdan farqli o'laroq, harfning yozma shakli harfning o'zidan
+    // boshqa narsa emas ("A" so'zi "A" harfidan boshqa emas) — shuning
+    // uchun ko'rgazma-raqam ajralishi harflarga tegishli emas.
+    const harflar = woerter.woerter.filter((w) => w.section === 'u01-s5');
+    expect(harflar).toHaveLength(10);
+    for (const w of harflar) {
+      expect(w.anzeige).toBeUndefined();
+      expect(w.tts).toBeTruthy();
+    }
+  });
+
   it('so`z kaliti takrorlanmaydi', () => {
     const ids = woerter.woerter.map((w) => w.sourceId);
     expect(new Set(ids).size).toBe(ids.length);
