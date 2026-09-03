@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useEditCourse } from "@/hooks/use-edit-course";
 import type { Course } from "@/hooks/use-edit-course";
+import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -99,6 +100,17 @@ export function EditCourseForm({
 }: EditCourseFormProps) {
   const setSubmitting = useEditCourse((s) => s.setSubmitting);
   const submitting = useEditCourse((s) => s.submitting);
+  // Backend `PATCH /courses/:id` Administratorga BOSHQA maydonlarni
+  // (nomi, narxi...) tahrirlashga ruxsat beradi, lekin `paymentModel`ni
+  // faqat CEO/Filial direktoridan qabul qiladi (kursning har bir guruhini
+  // birdan boshqa hisob-kitob qoidasiga o'tkazadigan pul qarori). Shu
+  // sabab bu boshqaruv Administrator uchun butunlay YASHIRILADI — nafaqat
+  // o'chirilgan, chunki ko'rinib turgan-lekin-bosilmaydigan tugma "nega
+  // ishlamayapti" degan savol tug'diradi (backend guardiga mos: `server/
+  // src/courses/courses.controller.ts`, PAYMENT_MODEL_ROLES).
+  const authUser = useAuth((s) => s.user);
+  const canEditPaymentModel =
+    authUser?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
 
   // Guruhlar soni — to'lov modelini almashtirish tasdig'ida "bu N ta
   // guruhga ta'sir qiladi" deb aniq aytish uchun. Ro'yxat sahifasida bu son
@@ -176,7 +188,14 @@ export function EditCourseForm({
           lessonMinutes: values.lessonMinutes || undefined,
           price: priceNum,
           isActive: values.isActive,
-          paymentModel: values.paymentModel,
+          // Administrator uchun bu maydon formada ko'rinmaydi (yuqoridagi
+          // `canEditPaymentModel`) — shuning uchun payloadga ham
+          // qo'shilmaydi. Aks holda o'zgarmagan qiymat ham yuborilib,
+          // backend `paymentModel !== undefined` tekshiruviga ilinib
+          // qolardi va oddiy nom/narx tahrirlashini ham 403 qilardi.
+          paymentModel: canEditPaymentModel
+            ? values.paymentModel
+            : undefined,
         });
 
         toast.success("Kurs muvaffaqiyatli yangilandi");
