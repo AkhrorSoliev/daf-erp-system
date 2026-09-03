@@ -60,7 +60,7 @@
       "code": "u02",
       "titleDe": "Menschen um mich",
       "titleUz": "Atrofimdagi odamlar",
-      "theme": "oila, kasblar, tavsif",
+      "theme": "oila, do'stlar, kasb, 20–100",
       "sections": [
         {
           "order": 1,
@@ -114,7 +114,7 @@
       "code": "u03",
       "titleDe": "In der Stadt",
       "titleUz": "Shaharda",
-      "theme": "shahar, yo'l, transport",
+      "theme": "shahar, yo'l so'rash, transport",
       "sections": [
         {
           "order": 1,
@@ -168,7 +168,7 @@
       "code": "u04",
       "titleDe": "Essen und Trinken",
       "titleUz": "Ovqat va ichimlik",
-      "theme": "oziq-ovqat, xarid, restoran",
+      "theme": "ovqat, do'kon, restoran, narx",
       "sections": [
         {
           "order": 1,
@@ -231,7 +231,7 @@
       "code": "u05",
       "titleDe": "Mein Tag",
       "titleUz": "Mening kunim",
-      "theme": "soat, kun tartibi, uchrashuvlar",
+      "theme": "kun tartibi, soat, hafta kunlari",
       "sections": [
         {
           "order": 1,
@@ -285,7 +285,7 @@
       "code": "u06",
       "titleDe": "Freizeit",
       "titleUz": "Bo'sh vaqt",
-      "theme": "mashg'ulot, sport, ob-havo",
+      "theme": "bo'sh vaqt, uchrashuv, ob-havo",
       "sections": [
         {
           "order": 1,
@@ -339,7 +339,7 @@
       "code": "u07",
       "titleDe": "Arbeit und Alltag",
       "titleUz": "Ish va kundalik hayot",
-      "theme": "kasb, ish kuni, telefon",
+      "theme": "ish kuni, kasb, telefon",
       "sections": [
         {
           "order": 1,
@@ -456,7 +456,7 @@
       "code": "u09",
       "titleDe": "Meine Wohnung",
       "titleUz": "Mening uyim",
-      "theme": "xonalar, mebel, ijara",
+      "theme": "uy, xonalar, mebel, ijara",
       "sections": [
         {
           "order": 1,
@@ -519,7 +519,7 @@
       "code": "u10",
       "titleDe": "Lernen und Beruf",
       "titleUz": "O'qish va kasb",
-      "theme": "til o'rganish, ariza, tarjimai hol",
+      "theme": "o'qish, kurs, ariza",
       "sections": [
         {
           "order": 1,
@@ -573,7 +573,7 @@
       "code": "u11",
       "titleDe": "Kleidung und Einkauf",
       "titleUz": "Kiyim va xarid",
-      "theme": "kiyim, rang, do'kon",
+      "theme": "kiyim, o'lcham, rang, xarid",
       "sections": [
         {
           "order": 1,
@@ -627,7 +627,7 @@
       "code": "u12",
       "titleDe": "Reisen und Urlaub",
       "titleUz": "Sayohat va ta'til",
-      "theme": "sayohat, mehmonxona, ta'til",
+      "theme": "sayohat, mehmonxona, xayrlashuv",
       "sections": [
         {
           "order": 1,
