@@ -22,7 +22,7 @@
       "section": "u01-s1",
       "de": "Guten Abend",
       "uz": "xayrli kech",
-      "core": true,
+      "core": false,
       "order": 3
     },
     {
@@ -30,7 +30,7 @@
       "section": "u01-s1",
       "de": "Gute Nacht",
       "uz": "xayrli tun",
-      "core": true,
+      "core": false,
       "order": 4
     },
     {
@@ -46,7 +46,7 @@
       "section": "u01-s1",
       "de": "bis bald",
       "uz": "tez orada ko'rishamiz",
-      "core": false,
+      "core": true,
       "order": 6
     },
     {
@@ -164,7 +164,7 @@
       "section": "u01-s2",
       "de": "danke",
       "uz": "rahmat",
-      "core": false,
+      "core": true,
       "order": 10
     },
     {

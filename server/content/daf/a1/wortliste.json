@@ -9,21 +9,14 @@
       "core": true,
       "grund": "ibora — 'gut' Goethe ro'yxatida bor, lekin tayyor salomlashish iborasi sifatida alohida o'rgatiladi (Goethe faqat bosh so'zlarni sanaydi, iboralarni emas)"
     },
-    {
-      "wort": "Guten Abend",
-      "artikel": null,
-      "section": "u01-s1",
-      "core": true,
-      "grund": "ibora — 'gut' Goethe ro'yxatida bor, 'Abend' esa PDF chiqarishda alohida ko'rinmagan (Goethe A1 rasmiy so'zi bo'lsa ham)"
-    },
-    {
-      "wort": "Gute Nacht",
-      "artikel": null,
-      "section": "u01-s1",
-      "core": true,
-      "grund": "ibora — 'gut' Goethe ro'yxatida bor, 'Nacht' esa PDF chiqarishda alohida ko'rinmagan (Goethe A1 rasmiy so'zi bo'lsa ham)"
-    },
     { "wort": "tschüss", "artikel": null, "section": "u01-s1", "core": true },
+    {
+      "wort": "bis bald",
+      "artikel": null,
+      "section": "u01-s1",
+      "core": true,
+      "grund": "ibora — 'bis' va 'bald' ikkalasi ham Goethe ro'yxatida bor, lekin tayyor xayrlashish iborasi sifatida birga o'rgatiladi"
+    },
     { "wort": "ich", "artikel": null, "section": "u01-s1", "core": true },
     {
       "wort": "du",
@@ -56,6 +49,13 @@
     { "wort": "wie", "artikel": null, "section": "u01-s2", "core": true },
     { "wort": "wer", "artikel": null, "section": "u01-s2", "core": true },
     { "wort": "was", "artikel": null, "section": "u01-s2", "core": true },
+    {
+      "wort": "danke",
+      "artikel": null,
+      "section": "u01-s2",
+      "core": true,
+      "grund": "PDF chiqarishda alohida ko'rinmagan ('danken' fe'li ro'yxatda bor), lekin rahmat aytish A1'ning eng asosiy iborasi"
+    },
 
     { "wort": "kommen", "artikel": null, "section": "u01-s3", "core": true },
     { "wort": "wohnen", "artikel": null, "section": "u01-s3", "core": true },
