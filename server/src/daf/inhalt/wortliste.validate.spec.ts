@@ -114,4 +114,13 @@ describe('validateWortliste', () => {
     const file: WortlisteFile = { level: 'A1', eintraege };
     expect(validateWortliste(file, kurs(), GOETHE)).toEqual([]);
   });
+
+  it('bitta so`z bo`lim xatosi va Goethe yo`qligi ikkala muammoni birga aytadi', () => {
+    const eintraege = [eintrag('unknown_word', 'u99-s9')];
+    const file: WortlisteFile = { level: 'A1', eintraege };
+    const problems = validateWortliste(file, kurs(), GOETHE);
+    expect(problems.length).toBeGreaterThanOrEqual(2);
+    expect(problems.some((x) => x.includes('xaritada yo`q'))).toBe(true);
+    expect(problems.some((x) => x.includes('ro`yxatida yo`q'))).toBe(true);
+  });
 });

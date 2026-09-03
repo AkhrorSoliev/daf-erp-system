@@ -20,9 +20,6 @@ export function validateWortliste(
 ): string[] {
   const problems: string[] = [];
 
-  const known = new Set<string>();
-  for (const s of kurs.units.flatMap((u) => u.sections)) known.add(s.code);
-
   const unitOfSection = new Map<string, string>();
   for (const u of kurs.units) {
     for (const s of u.sections) unitOfSection.set(s.code, u.code);
@@ -35,9 +32,10 @@ export function validateWortliste(
   const seen = new Map<string, string>();
 
   for (const e of file.eintraege) {
-    if (!known.has(e.section)) {
+    const isKnownSection = unitOfSection.has(e.section);
+
+    if (!isKnownSection) {
       problems.push(`${e.wort}: xaritada yo\`q bo\`lim — ${e.section}`);
-      continue;
     }
 
     const prev = seen.get(e.wort.toLowerCase());
@@ -51,9 +49,12 @@ export function validateWortliste(
       problems.push(`${e.wort}: Goethe ro\`yxatida yo\`q va sababi yozilmagan`);
     }
 
-    bySection.set(e.section, (bySection.get(e.section) ?? 0) + 1);
-    const unit = unitOfSection.get(e.section);
-    if (unit !== undefined) byUnit.set(unit, (byUnit.get(unit) ?? 0) + 1);
+    // Only count words in known sections
+    if (isKnownSection) {
+      bySection.set(e.section, (bySection.get(e.section) ?? 0) + 1);
+      const unit = unitOfSection.get(e.section);
+      if (unit !== undefined) byUnit.set(unit, (byUnit.get(unit) ?? 0) + 1);
+    }
   }
 
   for (const [code, n] of bySection) {
