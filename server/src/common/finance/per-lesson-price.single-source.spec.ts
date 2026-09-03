@@ -30,7 +30,6 @@ const GRANDFATHERED = [
   'src/reports/reports-expectation.service.ts',
   'src/reports/reports-financial.service.ts',
   'src/salary/salary-accrual.service.ts',
-  'src/salary/salary-calculation.service.ts',
   'src/salary/shared/gap-sweep.ts',
   'src/students/students-read.service.ts',
 ].sort();

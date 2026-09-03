@@ -16,7 +16,11 @@ import {
   RateVersion,
 } from './shared/deserved-math';
 import { prorateFixedMonthly } from './shared/prorate-fixed-monthly';
-import { sweepGapLessons } from './shared/gap-sweep';
+import { resolveLessonPricing, sweepGapLessons } from './shared/gap-sweep';
+import {
+  loadFrozenMonthlyCharges,
+  periodsInRange,
+} from '../common/finance/monthly-per-lesson';
 import { SalaryAccrualService } from './salary-accrual.service';
 
 /** One uncovered billable lesson to be fronted by a center top-up accrual. */
@@ -567,7 +571,13 @@ export class SalaryCalculationService {
         where: { companyId },
         select: {
           id: true,
-          course: { select: { price: true, lessonPaymentCount: true } },
+          course: {
+            select: {
+              price: true,
+              lessonPaymentCount: true,
+              paymentModel: true,
+            },
+          },
         },
       }),
       this.prisma.groupTeacher.findMany({
@@ -699,10 +709,22 @@ export class SalaryCalculationService {
     // rules about WHICH lessons qualify were duplicated, which is the half that
     // drifts. `skipZeroAmount` is the one deliberate difference, now a named
     // argument instead of an undocumented extra line.
+    // Oylik kursda bir darsning qiymati `Course.price / 12` EMAS — u bir
+    // OYning narxi. Yagona haqiqiy manba `EnrollmentMonthlyCharge` dagi
+    // muzlatilgan juftlik; uni SHU YERDA bir marta o'qib, sweep'ga
+    // beramiz (`resolveLessonPricing` izohiga qara).
+    const monthlyFrozen = await loadFrozenMonthlyCharges(this.prisma, {
+      companyId,
+      studentIds: attendances.map((a) => a.studentId),
+      groupIds: attendances.map((a) => a.groupId),
+      periods: periodsInRange(periodStartDate, periodEndDateExclusive),
+    });
+
     const gapByUser = new Map<number, GapSpec[]>();
     const sweep = sweepGapLessons({
       attendances,
       groupMap,
+      monthlyFrozen,
       resolveTeachers,
       resolveRate,
       // Company-wide: the cron settles every teacher, so nothing is out of
@@ -716,6 +738,20 @@ export class SalaryCalculationService {
       dateStr,
       skipZeroAmount: true,
     });
+    // Narxlab bo'lmagan oylik darslar JIM tashlanmaydi: pul yozadigan yo'lda
+    // "hech narsa yozilmadi" ni operator ko'rishi kerak.
+    const noChargeTotal = [...sweep.noChargeUnits.values()].reduce(
+      (a, b) => a + b,
+      0,
+    );
+    if (noChargeTotal > 0) {
+      this.logger.warn(
+        `Center top-up: ${noChargeTotal} ta oylik dars narxlanmadi — ` +
+          `${sweep.noChargeUnits.size} o'qituvchida muzlatilgan ` +
+          `EnrollmentMonthlyCharge topilmadi.`,
+      );
+    }
+
     for (const lesson of sweep.lessons) {
       const arr = gapByUser.get(lesson.teacherId) ?? [];
       arr.push({
@@ -753,6 +789,15 @@ export class SalaryCalculationService {
             WHERE sa."attendanceId" = a.id AND sa."reversedAt" IS NULL
           )
       `;
+      // Qo'shimcha tsikl O'TGAN oylarga tegadi, shuning uchun uning
+      // muzlatilgan narxlari sweep'nikidan boshqa davrlarda yotadi — alohida
+      // o'qiladi, lekin AYNAN o'sha funksiya orqali narxlanadi.
+      const backlogFrozen = await loadFrozenMonthlyCharges(this.prisma, {
+        companyId,
+        studentIds: backlog.map((a) => a.studentId),
+        groupIds: backlog.map((a) => a.groupId),
+        periods: periodsInRange(eraStart, periodStart),
+      });
       for (const att of backlog) {
         // Only genuine new-student pairs that have NOW crossed the threshold.
         const held =
@@ -761,14 +806,22 @@ export class SalaryCalculationService {
         if (cappedByInactivity(att.studentId, att.date)) continue;
         const g = groupMap.get(att.groupId);
         if (!g) continue;
-        const lpc = g.course.lessonPaymentCount || 12;
-        const perLessonCost = Math.round(g.course.price / lpc);
+        const pricing = resolveLessonPricing(
+          g.course,
+          att.studentId,
+          att.groupId,
+          att.date,
+          backlogFrozen,
+        );
+        // Oylik kursda muzlatilgan hisob yo'q — narx taxmin qilinmaydi.
+        if (!pricing) continue;
+        const { perLessonCost, divisor } = pricing;
         const dStr = dateStr(att.date);
         for (const tid of resolveTeachers(att.groupId, dStr)) {
           if (fixedMonthlyTeachers.has(tid)) continue;
           const v = resolveRate(tid, att.groupId, att.date);
           if (!v) continue;
-          if (perLessonAccrual(v, perLessonCost, lpc) <= 0) continue;
+          if (perLessonAccrual(v, perLessonCost, divisor) <= 0) continue;
           const arr = gapByUser.get(tid) ?? [];
           arr.push({
             studentId: att.studentId,

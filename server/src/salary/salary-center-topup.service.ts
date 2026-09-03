@@ -11,6 +11,10 @@ import {
 } from './shared/teacher-roster-where';
 import { DebtAgeService } from '../common/finance/debt-age.service';
 import { sweepGapLessons } from './shared/gap-sweep';
+import {
+  loadFrozenMonthlyCharges,
+  periodsInRange,
+} from '../common/finance/monthly-per-lesson';
 import { pickActiveVersion, type RateVersion } from './shared/deserved-math';
 import {
   MonthlyChargeStatus,
@@ -94,7 +98,13 @@ export class SalaryCenterTopUpService {
         where: { companyId },
         select: {
           id: true,
-          course: { select: { price: true, lessonPaymentCount: true } },
+          course: {
+            select: {
+              price: true,
+              lessonPaymentCount: true,
+              paymentModel: true,
+            },
+          },
         },
       }),
       this.prisma.groupTeacher.findMany({
@@ -206,9 +216,19 @@ export class SalaryCenterTopUpService {
     }
     const inScope = new Set(teacherIds);
 
+    // Xuddi `getMonthly` va cron kabi: oylik kursning narxi muzlatilgan
+    // hisobdan keladi, `Course.price / 12` dan emas.
+    const monthlyFrozen = await loadFrozenMonthlyCharges(this.prisma, {
+      companyId,
+      studentIds: attendances.map((a) => a.studentId),
+      groupIds: attendances.map((a) => a.groupId),
+      periods: periodsInRange(periodStartDate, periodEndDateExclusive),
+    });
+
     const { lessons } = sweepGapLessons({
       attendances,
       groupMap,
+      monthlyFrozen,
       resolveTeachers: (groupId, d) =>
         overrideMap.get(`${groupId}::${d}`) ?? rosterMap.get(groupId) ?? [],
       resolveRate: (tid, groupId, at) =>

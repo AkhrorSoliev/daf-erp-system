@@ -62,16 +62,33 @@ export interface FrozenMonthlyPerLessonParams {
 }
 
 /**
- * `EnrollmentMonthlyCharge` dan muzlatilgan dars narxlarini yig'adi.
+ * Bitta (yozilish, davr) uchun muzlatilgan ikki qiymat.
+ *
+ * `perLessonCost` — bir darsning qiymati (chegirmasiz).
+ * `plannedLessons` — guruhning o'sha oydagi rejalashtirilgan dars soni; ayni
+ * shu son `perLessonCost` ning bo'luvchisi bo'lgan, shuning uchun oylik
+ * modelda "sikl uzunligi" ma'nosini u tashiydi (12 talik modeldagi
+ * `Course.lessonPaymentCount` ning qarshi tomoni).
+ */
+export interface FrozenMonthlyCharge {
+  perLessonCost: number;
+  plannedLessons: number;
+}
+
+/**
+ * `EnrollmentMonthlyCharge` dan muzlatilgan qiymatlarni yig'adi.
  *
  * Faqat `CHARGED` qatorlar: bekor qilingan hisob (`REVERSED`) hech qanday
  * daromadni tan olmaydi.
+ *
+ * `loadFrozenMonthlyPerLesson` shu funksiyaning ustidagi yupqa proyeksiya —
+ * so'rov ham, kalit sxemasi ham BITTA joyda qoladi.
  */
-export async function loadFrozenMonthlyPerLesson(
+export async function loadFrozenMonthlyCharges(
   prisma: Pick<Prisma.TransactionClient, 'enrollmentMonthlyCharge'>,
   params: FrozenMonthlyPerLessonParams,
-): Promise<Map<string, number>> {
-  const out = new Map<string, number>();
+): Promise<Map<string, FrozenMonthlyCharge>> {
+  const out = new Map<string, FrozenMonthlyCharge>();
   if (
     params.studentIds.length === 0 ||
     params.groupIds.length === 0 ||
@@ -97,16 +114,32 @@ export async function loadFrozenMonthlyPerLesson(
       periodYear: true,
       periodMonth: true,
       perLessonCost: true,
+      plannedLessons: true,
     },
   });
 
   for (const r of rows) {
     const monthKey = `${r.periodYear}-${String(r.periodMonth).padStart(2, '0')}`;
-    out.set(
-      monthlyPerLessonKey(r.studentId, r.groupId, monthKey),
-      r.perLessonCost,
-    );
+    out.set(monthlyPerLessonKey(r.studentId, r.groupId, monthKey), {
+      perLessonCost: r.perLessonCost,
+      plannedLessons: r.plannedLessons,
+    });
   }
+  return out;
+}
+
+/**
+ * Muzlatilgan dars narxlari xaritasi (hisobot yuzalari uchun).
+ *
+ * `loadFrozenMonthlyCharges` ning proyeksiyasi — ikkinchi so'rov EMAS.
+ */
+export async function loadFrozenMonthlyPerLesson(
+  prisma: Pick<Prisma.TransactionClient, 'enrollmentMonthlyCharge'>,
+  params: FrozenMonthlyPerLessonParams,
+): Promise<Map<string, number>> {
+  const charges = await loadFrozenMonthlyCharges(prisma, params);
+  const out = new Map<string, number>();
+  for (const [key, c] of charges) out.set(key, c.perLessonCost);
   return out;
 }
 

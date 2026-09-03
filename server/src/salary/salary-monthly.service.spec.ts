@@ -52,6 +52,9 @@ describe('SalaryMonthlyService', () => {
       group: { findMany: jest.fn().mockResolvedValue([]) },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
       lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
+      // Oylik kursning MUZLATILGAN dars narxi (`loadFrozenMonthlyCharges`).
+      // Odatiy — bo'sh: bu testlarning kurslari 12 talik modelda.
+      enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
       employeeSalaryConfigVersion: {
         findMany: jest.fn().mockResolvedValue([]),
       },

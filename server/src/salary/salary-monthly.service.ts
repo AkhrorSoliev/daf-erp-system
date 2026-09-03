@@ -10,6 +10,10 @@ import {
 import { SalaryStaffMonthlyService } from './salary-monthly-staff.service';
 import { buildTeacherRosterWhere } from './shared/teacher-roster-where';
 import { sweepGapLessons } from './shared/gap-sweep';
+import {
+  loadFrozenMonthlyCharges,
+  periodsInRange,
+} from '../common/finance/monthly-per-lesson';
 
 export type { SalaryMonthlyQuery } from './shared/resolve-monthly-scope';
 
@@ -211,7 +215,13 @@ export class SalaryMonthlyService {
         where: { companyId },
         select: {
           id: true,
-          course: { select: { price: true, lessonPaymentCount: true } },
+          course: {
+            select: {
+              price: true,
+              lessonPaymentCount: true,
+              paymentModel: true,
+            },
+          },
         },
       }),
       // Group rosters.
@@ -455,9 +465,18 @@ export class SalaryMonthlyService {
     // top-up drill-down, which sums the SAME sweep by student instead of by
     // teacher — so the payroll column and the list of people it is owed by are
     // computed from one set of exclusions.
+    // Oylik kursda darsning qiymati muzlatilgan hisobdan olinadi — cron
+    // qaysi raqamni TO'LASA, bu hisobot ayni o'shani KO'RSATISHI shart.
+    const monthlyFrozen = await loadFrozenMonthlyCharges(this.prisma, {
+      companyId,
+      studentIds: attendances.map((a) => a.studentId),
+      groupIds: attendances.map((a) => a.groupId),
+      periods: periodsInRange(periodStartDate, periodEndDateExclusive),
+    });
     const sweep = sweepGapLessons({
       attendances,
       groupMap,
+      monthlyFrozen,
       resolveTeachers,
       resolveRate,
       inScope: (tid) => agg.has(tid),
