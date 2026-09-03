@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
@@ -97,6 +97,34 @@ export class SettingsService {
   }
 
   /**
+   * Har bir sozlama kaliti uchun — qaysi filiallarda o'ZIGA XOS (kompaniya
+   * darajasidan farqli) qiymat saqlangan.
+   *
+   * Faqat CEOning kompaniya darajasidagi ko'rinishi uchun: Branch Director
+   * har doim o'z filialiga qulflanadi (`SettingsController.
+   * resolveReadBranchId`), shuning uchun ular buni hech qachon so'ramaydi.
+   * Buning yo'qligi muammo edi — BDning saqlagan override'i CEO ekranida
+   * ko'rinmas edi, panel "bitta qiymat" deb ko'rsatardi, holbuki filialda
+   * boshqacha ishlayotgan bo'lishi mumkin edi.
+   *
+   * Xuddi shu keshlangan qatorlardan foydalanadi (`loadRows`) — alohida
+   * so'rov QO'SHMAYDI.
+   */
+  async getBranchOverrides(
+    companyId: number,
+  ): Promise<Record<SettingKey, number[]>> {
+    const rows = await this.loadRows(companyId);
+    const result = {} as Record<SettingKey, number[]>;
+    for (const key of SETTING_KEYS) {
+      result[key] = rows
+        .filter((r) => r.key === key && r.branchId != null)
+        .map((r) => r.branchId as number)
+        .sort((a, b) => a - b);
+    }
+    return result;
+  }
+
+  /**
    * Bitta sozlamani yozadi. `value` registr bo'yicha tekshiriladi — noto'g'ri
    * qiymat lotin-o'zbekcha xabar bilan rad etiladi.
    *
@@ -116,6 +144,17 @@ export class SettingsService {
     branchId?: number,
   ): Promise<SettingValueMap[K]> {
     const def = getSettingDefinition(key);
+    // Filial darajasida hech qachon o'qilmaydigan sozlama filial darajasida
+    // yozilsa — "saqlandi" deb ko'rsatib, hech qachon ishlatilmaydigan
+    // dekorativ boshqaruvga aylanadi. Shu yerda, YAGONA yozish nuqtasida
+    // to'sib qo'yiladi — CEO ham, Branch Director ham (BDning yozishi
+    // kontrollerda har doim o'z filialiga qulflanadi, shuning uchun bu
+    // amalda BD uchun HAR QANDAY yozishni rad etadi).
+    if (def.companyLevelOnly && branchId != null) {
+      throw new BadRequestException(
+        `${key} faqat kompaniya darajasida sozlanadi — filial darajasida alohida qiymatga ega emas`,
+      );
+    }
     const value = def.parse(rawValue);
     const resolvedBranchId = branchId ?? null;
 

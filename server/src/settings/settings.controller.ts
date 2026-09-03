@@ -42,7 +42,16 @@ export class SettingsController {
   ) {
     const branchId = await this.resolveReadBranchId(userId, query.branchId);
     const settings = await this.settingsService.getMany(companyId, branchId);
-    return { branchId: branchId ?? null, settings };
+    // Faqat kompaniya darajasidagi ko'rinishda (CEO, `branchId` so'ralmagan)
+    // ma'noli — shu yerda qaysi filiallar o'z override'iga ega ekanini ham
+    // qaytaramiz, aks holda BDning saqlagan filial qiymati CEO ekranida
+    // ko'rinmas edi (bitta "umumiy" qiymat ko'rsatib, aslida bir filialda
+    // boshqacha ishlayotganini yashirardi).
+    const branchOverrides =
+      branchId == null
+        ? await this.settingsService.getBranchOverrides(companyId)
+        : undefined;
+    return { branchId: branchId ?? null, settings, branchOverrides };
   }
 
   @Patch('payment')

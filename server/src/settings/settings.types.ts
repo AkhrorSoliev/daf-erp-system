@@ -40,6 +40,20 @@ interface SettingDefinition<K extends SettingKey> {
   defaultValue: SettingValueMap[K];
   /** Uzbek-tilida tushunarli xato bilan tekshiradi va tipga keltiradi. */
   parse: (raw: unknown) => SettingValueMap[K];
+  /**
+   * `true` bo'lsa — bu sozlama FAQAT kompaniya darajasida yoziladi
+   * (`branchId: null`). Filial darajasidagi yozishga urinish
+   * `SettingsService.set` da rad etiladi.
+   *
+   * Buni faqat sozlamani HAQIQATDA o'qigan kod ham filial bo'yicha
+   * o'qisa qo'y — aks holda saqlangan filial qiymati hech qachon
+   * ishlatilmaydigan "dekorativ" boshqaruvga aylanadi (`payment.
+   * chargeDayOfMonth` shu sabab bilan qo'shildi: oylik hisob-kitob
+   * cron/watchdog kompaniya darajasida ishlaydi, `branchId` bilan
+   * hech qachon o'qimaydi — filial qiymati saqlansa ham HECH QACHON
+   * ishlatilmasdi).
+   */
+  companyLevelOnly?: boolean;
 }
 
 function parsePaymentModel(raw: unknown): PaymentModel {
@@ -98,6 +112,11 @@ export const SETTING_DEFINITIONS: {
     key: 'payment.chargeDayOfMonth',
     defaultValue: 1,
     parse: parseChargeDayOfMonth,
+    // Cron (`MonthlyBillingCronService`) va qorovul (`MonthlyBillingWatchdogService`)
+    // buni FAQAT `companyId` bilan o'qiydi — `branchId` argumenti umuman
+    // yo'q. Filial darajasida saqlab qo'yish shuning uchun hech qachon
+    // ishlatilmaydigan qiymat yozardi (dekorativ boshqaruv).
+    companyLevelOnly: true,
   },
 };
 

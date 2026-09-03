@@ -112,6 +112,32 @@ describe('SettingsService', () => {
     });
   });
 
+  describe('getBranchOverrides', () => {
+    it('groups branch-level rows by key, company-level (branchId null) rows excluded', async () => {
+      prisma.setting.findMany.mockResolvedValue([
+        { key: 'payment.chargeDayOfMonth', branchId: null, value: 5 }, // company-level — not an override
+        { key: 'payment.excusedCreditEnabled', branchId: 3, value: false },
+        { key: 'payment.excusedCreditEnabled', branchId: 7, value: false },
+        { key: 'payment.excusedCreditMonthlyCap', branchId: 3, value: 2 },
+      ]);
+
+      const overrides = await service.getBranchOverrides(COMPANY_ID);
+
+      expect(overrides).toEqual({
+        'payment.defaultModel': [],
+        'payment.excusedCreditEnabled': [3, 7],
+        'payment.excusedCreditMonthlyCap': [3],
+        'payment.chargeDayOfMonth': [],
+      });
+    });
+
+    it('returns every key with an empty array when nothing is overridden', async () => {
+      prisma.setting.findMany.mockResolvedValue([]);
+      const overrides = await service.getBranchOverrides(COMPANY_ID);
+      expect(Object.values(overrides).every((v) => v.length === 0)).toBe(true);
+    });
+  });
+
   describe('set', () => {
     it('rejects an invalid value with a Latin-Uzbek message and never writes', async () => {
       await expect(
@@ -119,6 +145,46 @@ describe('SettingsService', () => {
       ).rejects.toThrow(BadRequestException);
       expect(prisma.setting.create).not.toHaveBeenCalled();
       expect(prisma.setting.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects a branch-scoped write of a companyLevelOnly key (payment.chargeDayOfMonth) and never writes', async () => {
+      // The month-start cron and watchdog read this key with NO branchId
+      // argument at all — a saved branch-level row would be silently never
+      // consulted (decorative control). This is also how a Branch Director's
+      // write gets rejected, since the controller always resolves their
+      // write to their own (non-null) branch.
+      await expect(
+        service.set(COMPANY_ID, 'payment.chargeDayOfMonth', 5, 42, 3),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.set(COMPANY_ID, 'payment.chargeDayOfMonth', 5, 42, 3),
+      ).rejects.toThrow(/kompaniya darajasida/);
+      expect(prisma.setting.create).not.toHaveBeenCalled();
+      expect(prisma.setting.update).not.toHaveBeenCalled();
+    });
+
+    it('still allows a company-level write of payment.chargeDayOfMonth (branchId omitted)', async () => {
+      prisma.setting.findFirst.mockResolvedValue(null);
+      prisma.setting.create.mockResolvedValue({
+        id: 'setting-1',
+        key: 'payment.chargeDayOfMonth',
+        branchId: null,
+        value: 5,
+      });
+
+      const value = await service.set(
+        COMPANY_ID,
+        'payment.chargeDayOfMonth',
+        5,
+        42,
+      );
+
+      expect(value).toBe(5);
+      expect(prisma.setting.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ branchId: null }),
+        }),
+      );
     });
 
     it('creates a new row via findFirst + create — never upsert (nullable branchId)', async () => {

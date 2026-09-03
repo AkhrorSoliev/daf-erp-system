@@ -109,6 +109,12 @@ describe('SettingsController — branch scope', () => {
         'payment.chargeDayOfMonth': 1,
       }),
       set: jest.fn().mockResolvedValue(undefined),
+      getBranchOverrides: jest.fn().mockResolvedValue({
+        'payment.defaultModel': [],
+        'payment.excusedCreditEnabled': [5],
+        'payment.excusedCreditMonthlyCap': [],
+        'payment.chargeDayOfMonth': [],
+      }),
     };
     prisma = {
       user: { findFirst: jest.fn() },
@@ -125,6 +131,34 @@ describe('SettingsController — branch scope', () => {
     const result = await controller.getPayment({}, 1, 1001);
     expect(result.branchId).toBeNull();
     expect(settingsService.getMany).toHaveBeenCalledWith(1001, undefined);
+  });
+
+  it('CEO company-wide read also includes which branches carry an override', async () => {
+    prisma.user.findFirst.mockResolvedValue(ceoUser);
+    const result = await controller.getPayment({}, 1, 1001);
+    expect(settingsService.getBranchOverrides).toHaveBeenCalledWith(1001);
+    expect(result.branchOverrides).toEqual({
+      'payment.defaultModel': [],
+      'payment.excusedCreditEnabled': [5],
+      'payment.excusedCreditMonthlyCap': [],
+      'payment.chargeDayOfMonth': [],
+    });
+  });
+
+  it('CEO reading one specific branch does NOT fetch branch overrides (only the company-wide view needs them)', async () => {
+    prisma.user.findFirst.mockResolvedValue(ceoUser);
+    const result = await controller.getPayment({ branchId: 7 } as any, 1, 1001);
+    expect(result.branchId).toBe(7);
+    expect(settingsService.getBranchOverrides).not.toHaveBeenCalled();
+    expect(result.branchOverrides).toBeUndefined();
+  });
+
+  it('Branch Director read never fetches branch overrides — they are always locked to one branch', async () => {
+    prisma.user.findFirst.mockResolvedValue(bdUser);
+    const result = await controller.getPayment({}, 2, 1001);
+    expect(result.branchId).toBe(5);
+    expect(settingsService.getBranchOverrides).not.toHaveBeenCalled();
+    expect(result.branchOverrides).toBeUndefined();
   });
 
   it('CEO may write to an explicit branch after it is confirmed to exist', async () => {
