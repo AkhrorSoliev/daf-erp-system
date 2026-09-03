@@ -25,6 +25,20 @@ export class KursSeedService {
     let lessons = 0;
     const liveCodes = new Set(file.units.map((u) => u.code));
 
+    // Yetim bo'lim tekshiruvi HAR QANDAY yozishdan OLDIN yuritiladi —
+    // pastdagi `retireOld` ham, unit/bo'lim/dars upsert'lari ham hali
+    // ishlamagan bo'ladi. Avval bu tekshiruv unit upsert QILINGANDAN KEYIN,
+    // shu unit ustida yuritilardi: uchinchi unit yiqilganda birinchi
+    // ikkitasi allaqachon yozilgan, ESKI unitlar esa `retireOld` orqali
+    // allaqachon nafaqaga chiqarilgan bo'lardi — qayta yuritishgacha A1
+    // yarim holatda (eskisi yo'q, yangisi to'liq emas) qolardi. Bu yerda
+    // tekshiruv bazadagi HOZIRGI (hali o'zgartirilmagan) holatga qarab
+    // ishlaydi, shuning uchun `retireOld`ning unit upsert'laridan OLDIN
+    // kelishi kerakligi (pastdagi izohga qarang — bu poyga holatini oldini
+    // olish uchun) buzilmaydi: ikkalasi ham hali hech narsa yozmagan holatda
+    // ishlaydi.
+    await this.assertNoOrphanSectionsForAll(file.units);
+
     // Nafaqaga chiqarish UNIT UPSERT'LARIDAN OLDIN yuritiladi. Migratsiya
     // eski A1 unitlarini allaqachon manfiy `order`ga o'tkazgan bo'lishi
     // kerak — lekin migratsiya hali yetib bormagan bazada (tiklangan
@@ -52,8 +66,6 @@ export class KursSeedService {
           retiredAt: null,
         },
       });
-
-      await this.assertNoOrphanSections(unit.id, u);
 
       const sectionIdByCode = new Map<string, number>();
 
@@ -119,6 +131,35 @@ export class KursSeedService {
     );
 
     return { units: file.units.length, sections, lessons, retired };
+  }
+
+  /**
+   * `assertNoOrphanSections`ni HAR bir unit uchun, yozishdan OLDIN yuritadi.
+   *
+   * Unit bazada kodi bo'yicha hali yo'q bo'lsa (birinchi seed yoki xaritaga
+   * yangi qo'shilgan unit), yetim bo'lim FIZIK JIHATDAN mumkin emas —
+   * bo'lim faqat shu unit orqali yaratiladi, va u hali yaratilmagan.
+   * Shuning uchun faqat bazada KODI BO'YICHA allaqachon mavjud unitlar
+   * tekshiriladi; yangilari jimgina o'tkazib yuboriladi.
+   */
+  private async assertNoOrphanSectionsForAll(
+    units: KursUnitSpec[],
+  ): Promise<void> {
+    const existing = await this.prisma.dafUnit.findMany({
+      where: { code: { in: units.map((u) => u.code) } },
+      select: { id: true, code: true },
+    });
+    const idByCode = new Map(
+      existing
+        .filter((u): u is { id: number; code: string } => u.code !== null)
+        .map((u) => [u.code, u.id] as const),
+    );
+
+    for (const u of units) {
+      const unitId = idByCode.get(u.code);
+      if (unitId === undefined) continue;
+      await this.assertNoOrphanSections(unitId, u);
+    }
   }
 
   /**

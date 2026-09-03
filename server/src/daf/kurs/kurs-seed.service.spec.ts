@@ -36,6 +36,35 @@ function kurs(): KursFile {
   };
 }
 
+/** `kurs()`ning ikki unitli varianti — "hammasi yoki hech narsa" sinovi uchun. */
+function twoUnitKurs(): KursFile {
+  const base = kurs();
+  return {
+    level: 'A1',
+    units: [
+      ...base.units,
+      {
+        order: 2,
+        code: 'u02',
+        titleDe: 'Familie',
+        titleUz: 'Oila',
+        theme: 'oila',
+        sections: [
+          {
+            order: 1,
+            code: 'u02-s1',
+            titleDe: 'C',
+            titleUz: 'C',
+            grammar: 'g',
+            grammarUz: 'g',
+            wordBudget: 10,
+          },
+        ],
+      },
+    ],
+  };
+}
+
 /** Prisma o'rniga eng kichik soxta obyekt — baza kerak emas. */
 function fakePrisma() {
   const unitRows = new Map<string, { id: number }>();
@@ -67,6 +96,20 @@ function fakePrisma() {
         return unitRows.get(key);
       }),
       findMany: jest.fn(async ({ where }: any) => {
+        // `assertNoOrphanSectionsForAll` yozishdan OLDIN kodi bo'yicha
+        // so'raydi — bu ham "eski" (`oldUnits`), ham allaqachon shu
+        // seed'dan yozilgan ("yangi", `unitRows`) unitlarni ko'rishi kerak.
+        if (where?.code?.in) {
+          const codes = where.code.in as string[];
+          const knownNew = [...unitRows.entries()].map(([code, row]) => ({
+            id: row.id,
+            code,
+            retiredAt: null as Date | null,
+          }));
+          return [...oldUnits, ...knownNew].filter((u) =>
+            codes.includes(u.code),
+          );
+        }
         if (where?.retiredAt === null) {
           return oldUnits.filter((u) => u.retiredAt === null);
         }
@@ -94,7 +137,9 @@ function fakePrisma() {
         return sectionRows.get(key);
       }),
       /** Sinovlar buzilgan holatni sinash uchun bu yerni qayta yozadi. */
-      findMany: jest.fn(async () => [] as { code: string }[]),
+      findMany: jest.fn(
+        async (_args?: { where?: any }) => [] as { code: string }[],
+      ),
     },
     dafLesson: {
       upsert: jest.fn(async ({ where }: any) => {
@@ -181,8 +226,16 @@ describe('KursSeedService', () => {
     expect(testCall.update.sectionId).toBeNull();
   });
 
+  // Yetim bo'lim faqat QAYTA seed'da bo'lishi mumkin — birinchi marta
+  // yaratilayotgan unitning bazada hali hech qanday bo'limi yo'q. Shuning
+  // uchun bu sinov ikki bosqichli: avval 'u01' oddiy holda yoziladi, keyin
+  // xaritadan bo'lim olib tashlangandek qilib ikkinchi marta yuritiladi.
   it('bazada xaritada yo`q bo`lim kodi qolgan bo`lsa, rad etadi', async () => {
     const prisma = fakePrisma();
+    const service = new KursSeedService(prisma as any);
+
+    await service.seed(kurs());
+
     prisma.dafSection.findMany = jest.fn(async () => [
       { code: 'u01-s1' },
       { code: 'u01-eski' },
@@ -190,7 +243,7 @@ describe('KursSeedService', () => {
 
     let error: unknown;
     try {
-      await new KursSeedService(prisma as any).seed(kurs());
+      await service.seed(kurs());
     } catch (e) {
       error = e;
     }
@@ -199,5 +252,39 @@ describe('KursSeedService', () => {
     const message = (error as Error).message;
     expect(message).toContain('u01'); // qaysi unit
     expect(message).toContain('u01-eski'); // qaysi kod yetim qoldi
+  });
+
+  // Tekshiruv HAMMA unit uchun yozishdan OLDIN yuritiladi — shuning uchun
+  // fayldagi BITTA unit yiqilsa, boshqasi sog' bo'lsa ham hech narsa
+  // yozilmaydi. Avvalgi tartibda (unit ustida yuritilgan tekshiruv) 'u01'
+  // to'liq yozilib bo'lardi, `retireOld` ham allaqachon ishlab bo'lardi,
+  // va faqat 'u02'da to'xtalardi — A1 qayta yuritishgacha yarim holatda
+  // qolardi.
+  it('bir unit yiqilsa, boshqasi ham yozilmaydi (hammasi yoki hech narsa)', async () => {
+    const prisma = fakePrisma();
+    const service = new KursSeedService(prisma as any);
+    const file = twoUnitKurs();
+
+    // Birinchi yuritish — ikkalasi ham muvaffaqiyatli yoziladi.
+    await service.seed(file);
+
+    // Endi faqat 'u02' uchun xaritadan bo'lim olib tashlangandek qilamiz.
+    prisma.dafSection.findMany = jest.fn(async ({ where }: any) => {
+      const u02Id = prisma.unitRows.get('u02')?.id;
+      if (where.unitId === u02Id) return [{ code: 'u02-eski' }];
+      return [];
+    });
+
+    prisma.dafUnit.upsert.mockClear();
+    prisma.dafUnit.update.mockClear();
+    prisma.dafSection.upsert.mockClear();
+    prisma.dafLesson.upsert.mockClear();
+
+    await expect(service.seed(file)).rejects.toThrow(/u02/);
+
+    expect(prisma.dafUnit.upsert).not.toHaveBeenCalled();
+    expect(prisma.dafUnit.update).not.toHaveBeenCalled();
+    expect(prisma.dafSection.upsert).not.toHaveBeenCalled();
+    expect(prisma.dafLesson.upsert).not.toHaveBeenCalled();
   });
 });

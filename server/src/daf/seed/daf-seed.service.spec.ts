@@ -27,6 +27,13 @@ function readContent<T>(name: string): T {
 const realDataset = readContent<DafDataset>('dib.json');
 const a1UnitsFile = readContent<A1UnitsFile>('a1-units.json');
 
+// `A2.1` ATAYLAB tanlangan, `A1.1` emas: bu sun'iy dataset A1 bilan hech
+// qanday aloqasi yo'q umumiy seed xatti-harakatini (bo'lim, dars, lug'at,
+// grammatika, mashq) sinaydi. A1 endi `seedUnits`da qasddan chetlab
+// o'tiladi (qarang shu faylning pastidagi "A1 endi bu yerdan seed
+// qilinmaydi" bo'limi), shuning uchun bu umumiy testlar A1dan boshqa
+// darajada bo'lishi SHART — aks holda ular chetlab o'tilgan yo'lni emas,
+// bo'sh natijani sinardi.
 function dataset(): DafDataset {
   return {
     source: 'DIB',
@@ -38,7 +45,7 @@ function dataset(): DafDataset {
         chapter: 1,
         grammarFocus: ['no_02'],
         grammarRecommended: [],
-        level: 'A1.1',
+        level: 'A2.1',
       },
     ],
     sections: [
@@ -67,7 +74,7 @@ function dataset(): DafDataset {
         code: 'no_02',
         titleDe: 'Genus',
         titleEn: 'noun gender',
-        level: 'A1.1',
+        level: 'A2.1',
         explanation: 'German nouns have a gender.',
         dialogue: [],
         audio: [],
@@ -458,11 +465,11 @@ describe('DafSeedService', () => {
       (c) => c[0].where.sourceId,
     );
     expect(ids).toEqual([
-      'lesson_A1_1_t1',
-      'lesson_A1_1_t2',
-      'lesson_A1_1_t3',
-      'lesson_A1_1_t4',
-      'lesson_A1_1_t5',
+      'lesson_A2_1_t1',
+      'lesson_A2_1_t2',
+      'lesson_A2_1_t3',
+      'lesson_A2_1_t4',
+      'lesson_A2_1_t5',
     ]);
   });
 
@@ -554,14 +561,54 @@ describe('DafSeedService', () => {
     // A2/B1 avvalgidek bob-bo'lim yo'lida ishlaydi. `daf:translate` va
     // `daf:gen-sentences` `daf:seed`ning qayta yuritilishiga tayanadi,
     // shuning uchun bu yo'l buzilmasligi shart.
-    it('a1Units berilmasa A2/B1 avvalgidek quriladi', async () => {
+    //
+    // `realDataset` (`dib.json`) A1, A2 va B1 boblarini BIRGA o'z ichiga
+    // oladi — bu muhim: A1 ni butunlay tashlab ketuvchi tekshiruv faqat
+    // shu aralash faylda ma'noga ega. Avvalgi versiyasi `a1Units`ni hech
+    // qachon uzatmagani uchun yangi kodni sinamas va A1 haqida hech narsa
+    // da'vo qilmas edi — aynan shu sababli legacy yo'l A1 ning DiB
+    // boblarini (1-4) `u01`..`u04` ustidan yozib yuborgani sezilmagan edi.
+    it('a1Units berilmasa A1 tegilmaydi, A2/B1 avvalgidek quriladi', async () => {
       const report = await service.seed(realDataset);
 
+      const a1 = await prisma.dafUnit.findMany({ where: { level: 'A1' } });
       const a2 = await prisma.dafUnit.findMany({ where: { level: 'A2' } });
       const b1 = await prisma.dafUnit.findMany({ where: { level: 'B1' } });
+
+      // A1: bitta ham unit yozilmaydi — na yaratiladi, na yangilanadi.
+      // `daf:a1-seed` migratsiyasidan keyin A1 boblarining ESKI order'i
+      // (1..4) yangi qo'lda chizilgan `u01`..`u04` bilan bir xil bo'lib
+      // qoladi, shuning uchun bu yo'q qatorli tekshiruv aynan o'sha
+      // to'qnashuvni ushlaydi.
+      expect(a1).toHaveLength(0);
+      expect(
+        prisma.dafUnit.upsert.mock.calls.some(
+          (c) => (c[0].where.level_order as { level?: string })?.level === 'A1',
+        ),
+      ).toBe(false);
+
+      // A1 uchun unit yo'q bo'lgani uchun unga bog'lanadigan dars ham yo'q.
+      const a1LessonIds = prisma.dafLesson.upsert.mock.calls
+        .map((c) => c[0].where.sourceId as string)
+        .filter((id) => id.startsWith('lesson_A1_'));
+      expect(a1LessonIds).toHaveLength(0);
+
+      // So'z va mashq A1 unitga BOG'LANMAYDI (bog'lanadigan unit yo'q).
+      const allUnits = db.all('dafUnit');
+      const isA1Unit = (unitId: number | null | undefined) =>
+        unitId != null && allUnits.find((u) => u.id === unitId)?.level === 'A1';
+      const lexemes = await prisma.dafLexeme.findMany({});
+      const exercises = await prisma.dafExercise.findMany({});
+      expect(lexemes.some((l) => isA1Unit(l.unitId as number))).toBe(false);
+      expect(exercises.some((e) => isA1Unit(e.unitId as number | null))).toBe(
+        false,
+      );
+
+      // A2/B1 avvalgidek — bob-bo'lim yo'li o'zgarishsiz ishlaydi.
       expect(a2.length).toBeGreaterThan(0);
       expect(b1.length).toBeGreaterThan(0);
-      expect(report.units).toBeGreaterThan(0);
+      expect(report.units).toBe(a2.length + b1.length);
+      expect(report.lessons).toBe((a2.length + b1.length) * 5);
     });
   });
 });

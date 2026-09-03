@@ -357,6 +357,19 @@ export class DafSeedService {
    * bosqichi emas (bitta bobda 226 so'z bor edi). Fayl tegmagan boblar
    * esa avvalgidek bob-bo'lim bo'lib qoladi: A2 va B1 hali qo'lda
    * chizilmagan, va ularni shu o'zgarish bilan buzib bo'lmaydi.
+   *
+   * A1 ENDI shu ikki yo'lning hech biriga kirmaydi — `assertA1NotProvided`
+   * `a1Units` uzatilishini butunlay rad etgani uchun birinchi yo'l allaqachon
+   * o'lik, lekin ikkinchisi ("fayl da'vo qilmagan boblar") A1 ning DiB
+   * boblarini (1..4) hamon ko'rar edi. `npm run daf:a1-seed` migratsiyasi
+   * o'sha boblarni retiredAt + manfiy order bilan chetlatgan, ammo ularning
+   * ESKI order'i (1..4) endi YANGI qo'lda chizilgan A1 unitlari (u01..u04)
+   * ning order'i bilan bir xil — shuning uchun legacy yo'l `level_order`
+   * bo'yicha aynan o'sha yangi unitlarni topib, ularning sarlavhasini DiB
+   * bilan almashtirar, `sourceChapter`ni yolg'on to'ldirar va 5 ta ortiqcha
+   * DiB darsini ularga yopishtirardi. A1 endi FAQAT `KursSeedService`ning
+   * ishi — shu funksiya ichida darajasi A1 bo'lgan bob butunlay tashlab
+   * ketiladi (pastda, `level === DafLevel.A1` tekshiruvi).
    */
   private async seedUnits(
     dataset: DafDataset,
@@ -442,6 +455,12 @@ export class DafSeedService {
       // ayta olmaydi.
       const level = levelByChapter.get(section.chapter);
       if (!level) continue;
+
+      // A1 bu yo'lning ishi EMAS — qasddan chegara, tasodif emas. A1
+      // xaritasining yagona egasi `KursSeedService` (`npm run daf:a1-seed`);
+      // bu yerda davom etish yuqoridagi izohda tasvirlangan to'qnashuvni
+      // qaytaradi (yangi u01..u04 ustidan yozish + begona DiB darslari).
+      if (level === DafLevel.A1) continue;
 
       const title = DAF_UNIT_TITLES.find((t) => t.chapter === section.chapter);
       if (!title) continue;
