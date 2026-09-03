@@ -425,10 +425,22 @@ describe('StudentEnrollmentService', () => {
           groupId: 'group-1',
           status,
         });
+        // Haqiqiy ketish sababi beriladi, aks holda «sababni kiritish
+        // majburiy» xatosi qorovuldan OLDIN otiladi va test qorovul
+        // o'chirilgan holatda ham o'tib ketadi — ya'ni hech narsani
+        // tekshirmaydi. Xabar bo'yicha tasdiqlash ham shu sababdan.
+        prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+          id: 'reason-1',
+          name: 'Moliyaviy sabablar',
+          companyId: 1001,
+          appliesTo: ['GROUP_REMOVAL'],
+        });
 
         await expect(
-          service.removeFromGroup(1, 'enroll-1', 10001, 1001, {}),
-        ).rejects.toThrow(BadRequestException);
+          service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+            departureReasonId: 'reason-1',
+          }),
+        ).rejects.toThrow('Bu yozilish allaqachon yopilgan');
         expect(prisma.enrollment.update).not.toHaveBeenCalled();
       },
     );
