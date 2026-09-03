@@ -46,25 +46,25 @@ describe('validateKurs', () => {
   it('unit soni 12 emasligini aytadi', () => {
     const f = fullKurs();
     f.units.pop();
-    expect(has(validateKurs(f), '12 ta unit')).toBe(true);
+    expect(has(validateKurs(f), "12 ta unit")).toBe(true);
   });
 
   it('bo`lim soni 5 dan kam bo`lsa aytadi', () => {
     const f = fullKurs();
     f.units[0].sections.pop();
-    expect(has(validateKurs(f), '5–6 bo`lim')).toBe(true);
+    expect(has(validateKurs(f), "5–6 bo'lim")).toBe(true);
   });
 
   it('bo`limning so`z byudjeti chegaradan chiqsa aytadi', () => {
     const f = fullKurs();
     f.units[0].sections[0].wordBudget = 13;
-    expect(has(validateKurs(f), '8–12 so`z')).toBe(true);
+    expect(has(validateKurs(f), "8–12 so'z")).toBe(true);
   });
 
   it('unitning jami byudjeti 50 dan oshsa aytadi', () => {
     const f = fullKurs();
     f.units[0].sections.forEach((s) => (s.wordBudget = 12));
-    expect(has(validateKurs(f), '50 so`zdan ko`p')).toBe(true);
+    expect(has(validateKurs(f), "50 so'zdan ko'p")).toBe(true);
   });
 
   it('takrorlangan bo`lim kalitini aytadi', () => {
@@ -82,13 +82,13 @@ describe('validateKurs', () => {
   it('bo`sh sarlavhani aytadi', () => {
     const f = fullKurs();
     f.units[2].sections[1].titleUz = '   ';
-    expect(has(validateKurs(f), 'sarlavhasi bo`sh')).toBe(true);
+    expect(has(validateKurs(f), "sarlavhasi bo'sh")).toBe(true);
   });
 
   it('grammatika yozilmaganini aytadi', () => {
     const f = fullKurs();
     f.units[2].sections[1].grammar = '';
-    expect(has(validateKurs(f), 'grammatikasi bo`sh')).toBe(true);
+    expect(has(validateKurs(f), "grammatikasi bo'sh")).toBe(true);
   });
 
   it('bo`lim kaliti unit kalitiga mos emasligini aytadi', () => {
@@ -100,6 +100,6 @@ describe('validateKurs', () => {
   it('jami bo`lim soni 64 emasligini aytadi', () => {
     const f = fullKurs();
     f.units[0].sections.pop();
-    expect(has(validateKurs(f), '64 ta bo`lim')).toBe(true);
+    expect(has(validateKurs(f), "64 ta bo'lim")).toBe(true);
   });
 });

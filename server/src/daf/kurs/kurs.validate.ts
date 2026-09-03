@@ -46,33 +46,33 @@ export function validateKurs(file: KursFile): string[] {
 
     const wantCode = `u${String(u.order).padStart(2, '0')}`;
     if (u.code !== wantCode) {
-      problems.push(`${u.order}-unit kaliti ${wantCode} bo\`lishi kerak: ${u.code}`);
+      problems.push(`${u.order}-unit kaliti ${wantCode} bo'lishi kerak: ${u.code}`);
     }
     if (u.titleDe.trim() === '' || u.titleUz.trim() === '') {
-      problems.push(`${u.code}: unit sarlavhasi bo\`sh`);
+      problems.push(`${u.code}: unit sarlavhasi bo'sh`);
     }
     if (u.theme.trim() === '') {
-      problems.push(`${u.code}: unit mavzusi bo\`sh`);
+      problems.push(`${u.code}: unit mavzusi bo'sh`);
     }
 
     const n = u.sections.length;
     sectionTotal += n;
     if (n < SECTIONS_MIN || n > SECTIONS_MAX) {
       problems.push(
-        `${u.code}: ${n} ta bo\`lim — ${SECTIONS_MIN}–${SECTIONS_MAX} bo\`lim bo\`lishi kerak`,
+        `${u.code}: ${n} ta bo'lim — ${SECTIONS_MIN}–${SECTIONS_MAX} bo'lim bo'lishi kerak`,
       );
     }
 
     const sOrders = u.sections.map((s) => s.order);
     const sExpected = u.sections.map((_, i) => i + 1);
     if (sOrders.join(',') !== sExpected.join(',')) {
-      problems.push(`${u.code}: bo\`lim tartibi uzluksiz emas: ${sOrders.join(', ')}`);
+      problems.push(`${u.code}: bo'lim tartibi uzluksiz emas: ${sOrders.join(', ')}`);
     }
 
     let words = 0;
     for (const s of u.sections) {
       if (sectionCodes.has(s.code)) {
-        problems.push(`takrorlangan bo\`lim kaliti: ${s.code}`);
+        problems.push(`takrorlangan bo'lim kaliti: ${s.code}`);
       }
       sectionCodes.add(s.code);
 
@@ -80,27 +80,27 @@ export function validateKurs(file: KursFile): string[] {
         problems.push(`${s.code}: kaliti unitga mos emas (${u.code} kutilgan)`);
       }
       if (s.titleDe.trim() === '' || s.titleUz.trim() === '') {
-        problems.push(`${s.code}: sarlavhasi bo\`sh`);
+        problems.push(`${s.code}: sarlavhasi bo'sh`);
       }
       if (s.grammar.trim() === '' || s.grammarUz.trim() === '') {
-        problems.push(`${s.code}: grammatikasi bo\`sh`);
+        problems.push(`${s.code}: grammatikasi bo'sh`);
       }
       if (s.wordBudget < WORDS_MIN || s.wordBudget > WORDS_MAX) {
         problems.push(
-          `${s.code}: ${s.wordBudget} so\`z — ${WORDS_MIN}–${WORDS_MAX} so\`z bo\`lishi kerak`,
+          `${s.code}: ${s.wordBudget} so'z — ${WORDS_MIN}–${WORDS_MAX} so'z bo'lishi kerak`,
         );
       }
       words += s.wordBudget;
     }
 
     if (words > UNIT_WORDS_MAX) {
-      problems.push(`${u.code}: jami ${words} so\`z — ${UNIT_WORDS_MAX} so\`zdan ko\`p`);
+      problems.push(`${u.code}: jami ${words} so'z — ${UNIT_WORDS_MAX} so'zdan ko'p`);
     }
   }
 
   if (sectionTotal !== SECTION_COUNT) {
     problems.push(
-      `Jami ${SECTION_COUNT} ta bo\`lim bo\`lishi kerak, faylda: ${sectionTotal}`,
+      `Jami ${SECTION_COUNT} ta bo'lim bo'lishi kerak, faylda: ${sectionTotal}`,
     );
   }
 
