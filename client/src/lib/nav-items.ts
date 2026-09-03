@@ -10,6 +10,7 @@ import {
   Settings,
   UsersRound,
   ListTodo,
+  Images,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -49,6 +50,7 @@ export const navItems: NavItem[] = [
   { title: "Mock imtihonlar", url: "/mock-exams", icon: ClipboardCheck, visibleForRoles: [1, 2, 3] },
   { title: "Guruhlar", url: "/groups", icon: UsersRound },
   { title: "Topshiriqlar", url: "/tasks", icon: ListTodo },
+  { title: "Media", url: "/media", icon: Images, visibleForRoles: [1, 2, 3] },
   // Lehrer portal — only Teachers see this. Backend `/salary/me/*`
   // endpoints scope by @CurrentUser('id') so a teacher only sees their own.
   {

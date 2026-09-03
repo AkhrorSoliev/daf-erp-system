@@ -23,6 +23,8 @@
     "typecheck": "tsc -p tsconfig.check.json --noEmit",
     "daf:harvest": "ts-node scripts/daf-harvest.ts",
     "daf:upload-media": "ts-node scripts/daf-upload-media.ts",
+    "daf:media-manifest": "ts-node scripts/daf-media-manifest.ts",
+    "daf:upload-generated": "ts-node scripts/daf-upload-generated.ts",
     "daf:seed": "ts-node scripts/daf-seed.ts",
     "daf:translate": "ts-node scripts/daf-translate.ts",
     "daf:align-audio": "ts-node scripts/daf-align-audio.ts",
