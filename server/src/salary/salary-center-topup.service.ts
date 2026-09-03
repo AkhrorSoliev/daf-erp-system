@@ -12,7 +12,11 @@ import {
 import { DebtAgeService } from '../common/finance/debt-age.service';
 import { sweepGapLessons } from './shared/gap-sweep';
 import { pickActiveVersion, type RateVersion } from './shared/deserved-math';
-import { SalaryType, TransactionType } from '@prisma/client';
+import {
+  MonthlyChargeStatus,
+  SalaryType,
+  TransactionType,
+} from '@prisma/client';
 
 /**
  * "Markaz qo'shimchasi — qolgan" drill-down: WHO the center is still owed by.
@@ -369,15 +373,56 @@ export class SalaryCenterTopUpService {
         Number.isFinite(raw) ? Math.max(0, raw) : 0,
       );
     }
+
+    // OYLIK model: dars-boshiga "qoplanmagan qism" degan tushuncha YO'Q.
+    // Hisob OY bo'yicha yoziladi (`EnrollmentMonthlyCharge`), balansdan
+    // to'liq yechiladi (balans manfiyga chiqishi mumkin), va o'sha qatorda
+    // na `attendanceId`, na `uncoveredAmount` bor. Yuqoridagi so'rov shu
+    // sababli oylik darsni HECH QACHON topmasdi va u pastdagi
+    // `?? a.perLessonCost` zaxirasiga qulardi — ya'ni "o'quvchi bu dars
+    // uchun bir tiyin ham to'lamagan". Natijada oylik o'quvchining har bir
+    // darsi "markaz hali qaytarib olmagan" deb ko'rsatilardi.
+    //
+    // To'g'ri javob: shu dars tushgan OY uchun kuchdagi hisob bo'lsa,
+    // markazning avansi o'sha hisob orqali qaytgan — qarz endi BALANSDA,
+    // markazning avansida emas (balans qarzi bu tabning ishi emas: yuqoridagi
+    // sinf izohiga qarang, `studentDebt` alohida ustun). Hisob bo'lmasa
+    // (aynan shu holatda `accrueMonthlySalary` `centerFunded: true` yozadi)
+    // eski javob o'z kuchida qoladi.
+    const monthlyCharges = await this.prisma.enrollmentMonthlyCharge.findMany({
+      where: {
+        companyId,
+        status: MonthlyChargeStatus.CHARGED,
+        studentId: { in: [...new Set(source.map((a) => a.studentId))] },
+        groupId: { in: [...new Set(source.map((a) => a.groupId))] },
+      },
+      select: {
+        studentId: true,
+        groupId: true,
+        periodYear: true,
+        periodMonth: true,
+      },
+    });
+    const monthlyBilled = new Set(
+      monthlyCharges.map(
+        (c) =>
+          `${c.studentId}::${c.groupId}::${c.periodYear}-` +
+          `${String(c.periodMonth).padStart(2, '0')}`,
+      ),
+    );
+
     // A null lesson id (legacy accrual) has nothing to look up, so it falls to
     // the same default as an unbilled one: assume none of it has been paid.
-    const unrecoveredOf = (a: (typeof source)[number]) =>
-      Math.min(
+    const unrecoveredOf = (a: (typeof source)[number]) => {
+      const monthlyKey = `${a.studentId}::${a.groupId}::${monthKeyOf(a.lessonDate)}`;
+      if (monthlyBilled.has(monthlyKey)) return 0;
+      return Math.min(
         a.amount,
         (a.attendanceId === null
           ? undefined
           : outstandingByLesson.get(a.attendanceId)) ?? a.perLessonCost,
       );
+    };
 
     interface MonthBucket {
       lessons: number;
