@@ -300,12 +300,13 @@ export class MonthlyChargeService {
     // Hisob yozildi — demak bu davrning darslari endi O'QUVCHI zimmasida.
     // Markaz oldindan qoplab qo'ygan accrual'lar shu daqiqada UNDIRILGAN
     // hisoblanadi (pastdagi izohga qara).
-    await this.clearCenterTopUpForPeriod(tx, {
+    await this.setCenterTopUpForPeriod(tx, {
       studentId: enr.studentId,
       groupId: enr.groupId,
       companyId: params.companyId,
       periodYear,
       periodMonth,
+      fronted: false,
     });
 
     return tx.enrollmentMonthlyCharge.update({
@@ -315,7 +316,8 @@ export class MonthlyChargeService {
   }
 
   /**
-   * Markaz qoplagan darslarni «undirildi» deb belgilaydi — FAQAT BAYROQ.
+   * Davrning markaz qoplagan darslarini «undirildi» / «yana markazda» deb
+   * belgilaydi — FAQAT BAYROQ, IKKI YO'NALISHDA.
    *
    * Nima uchun kerak: `SalaryAccrual.isCenterTopUp` "markaz bu darsni hali
    * o'z pulidan qoplab turibdi" degani. 12 talik yo'lda u o'z-o'zidan
@@ -328,12 +330,22 @@ export class MonthlyChargeService {
    * «Markaz qopladi» raqamlari markaz haqiqatda undirmagan pulni oshirib
    * ko'rsatardi.
    *
-   * Nega aynan hisob yozilgan payt: oylik modelda "o'quvchi qopladi" degani
-   * `EnrollmentMonthlyCharge` qatorining borligi — `accrueMonthlySalary`
-   * ning O'ZI ham aynan shu mezondan foydalanadi (`centerFunded: !charge`).
-   * Hisob balans yetarli-yetarsizligiga qaramay yoziladi (qarzdorda balans
-   * manfiyga ketadi), shuning uchun bu yerdagi mezon accrual yozilgandagi
-   * mezonning aynan teskarisi — ikkisi hech qachon farq qila olmaydi.
+   * Nega aynan hisob yozilgan/bekor qilingan payt: oylik modelda "o'quvchi
+   * qopladi" degani `EnrollmentMonthlyCharge` qatorining `CHARGED` bo'lib
+   * turishi — `accrueMonthlySalary` ning O'ZI ham aynan shu mezondan
+   * foydalanadi (`centerFunded: !charge`, va `findChargeForLesson` faqat
+   * `CHARGED` ni qaytaradi). Hisob balans yetarli-yetarsizligiga qaramay
+   * yoziladi (qarzdorda balans manfiyga ketadi), shuning uchun bu yerdagi
+   * mezon accrual yozilgandagi mezonning aynan teskarisi — ikkisi hech
+   * qachon farq qila olmaydi.
+   *
+   * IKKI YO'NALISH ham shu sababdan zarur. Hisob bekor qilinganda
+   * (`reverseMonthlyCharge`) `findChargeForLesson` o'sha oy uchun endi
+   * `null` qaytaradi, ya'ni SHU PAYTDAN KEYIN yoziladigan accrual'lar
+   * to'g'ri ravishda `centerFunded: true` bo'ladi — bekor qilishdan OLDIN
+   * yozilganlari esa `false` bo'lib qotib qolardi. Bitta oy, bitta
+   * yozilish, ikki dars — va ular kim qoplayotgani haqida bir-biriga zid
+   * javob berardi.
    *
    * PUL QIMIRLAMAYDI. `amount` ga tegilmaydi, `createAccrual` chaqirilmaydi,
    * ledger'ga hech nima yozilmaydi — shuning uchun `applyAccrualToBalance`
@@ -344,13 +356,21 @@ export class MonthlyChargeService {
    * ni yangilaydi-yu, Transaction va o'qituvchi balansi eski narxda qolib
    * ketadi.)
    *
-   * `wasCenterTopUp` ATAYLAB tegilmaydi — u yopishqoq: undirilgan
+   * `wasCenterTopUp` HECH QACHON yozilmaydi — u yopishqoq: undirilgan
    * qo'shimchalar sanaladigan bo'lib qolishi kerak (X/Y/Z lifecycle).
+   * Orqaga qaytarishda esa u FILTR bo'lib xizmat qiladi: faqat markaz
+   * haqiqatda qoplagan qator yana «markazda» bo'la oladi. Bu
+   * `isCenterTopUp ⊆ wasCenterTopUp` invariantini saqlaydi — aks holda
+   * «hali qoplanmoqda» (Z) «qoplangan edi» (X) dan katta bo'lib ketardi.
+   *
+   * `reversedAt: null` — bekor qilingan accrual hech bir payroll yig'indisiga
+   * kirmaydi, shuning uchun uning bayrog'i ham o'zgartirilmaydi: tarixiy
+   * qator qanday bo'lsa shundayligicha qoladi.
    *
    * `lessonDate` — `@db.Date` ustuni, shuning uchun chegara SURILMAGAN UTC
    * sanalari bilan va yuqorisi OCHIQ (`lt`) beriladi (`PeriodBounds` qoidasi).
    */
-  private async clearCenterTopUpForPeriod(
+  private async setCenterTopUpForPeriod(
     tx: Prisma.TransactionClient,
     params: {
       studentId: number;
@@ -358,6 +378,8 @@ export class MonthlyChargeService {
       companyId: number;
       periodYear: number;
       periodMonth: number;
+      /** `false` — hisob yozildi (undirildi); `true` — hisob bekor qilindi. */
+      fronted: boolean;
     },
   ): Promise<void> {
     await tx.salaryAccrual.updateMany({
@@ -365,13 +387,17 @@ export class MonthlyChargeService {
         companyId: params.companyId,
         studentId: params.studentId,
         groupId: params.groupId,
-        isCenterTopUp: true,
+        reversedAt: null,
+        // Faqat holati haqiqatan o'zgaradiganlar.
+        isCenterTopUp: !params.fronted,
+        // Orqaga qaytarish faqat markaz haqiqatda qoplagan qatorlarga.
+        ...(params.fronted ? { wasCenterTopUp: true } : {}),
         lessonDate: {
           gte: new Date(Date.UTC(params.periodYear, params.periodMonth - 1, 1)),
           lt: new Date(Date.UTC(params.periodYear, params.periodMonth, 1)),
         },
       },
-      data: { isCenterTopUp: false },
+      data: { isCenterTopUp: params.fronted },
     });
   }
 
@@ -408,7 +434,16 @@ export class MonthlyChargeService {
   ): Promise<{ chargeId: string }> {
     const charge = await tx.enrollmentMonthlyCharge.findFirst({
       where: { transactionId: params.transactionId },
-      select: { id: true, status: true },
+      select: {
+        id: true,
+        status: true,
+        // Markaz qoplagani bayrog'ini qaytarish uchun
+        // (`setCenterTopUpForPeriod`).
+        studentId: true,
+        groupId: true,
+        periodYear: true,
+        periodMonth: true,
+      },
     });
     if (!charge) {
       throw new BadRequestException(
@@ -434,6 +469,19 @@ export class MonthlyChargeService {
     await tx.enrollmentMonthlyCharge.update({
       where: { id: charge.id },
       data: { status: MonthlyChargeStatus.REVERSED },
+    });
+
+    // Hisob bekor qilindi — bu oyning darslari yana MARKAZ zimmasida.
+    // `createChargeForEnrollment` dagi o'girishning aynan teskarisi; usiz
+    // bekor qilishdan oldin yozilgan accrual'lar «o'quvchi qopladi» bo'lib
+    // qotib qolardi, keyin yoziladiganlari esa `centerFunded: true` bo'lardi.
+    await this.setCenterTopUpForPeriod(tx, {
+      studentId: charge.studentId,
+      groupId: charge.groupId,
+      companyId: params.companyId,
+      periodYear: charge.periodYear,
+      periodMonth: charge.periodMonth,
+      fronted: true,
     });
 
     return { chargeId: charge.id };

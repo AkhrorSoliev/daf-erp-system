@@ -67,8 +67,8 @@ describe('MonthlyChargeService', () => {
         // `reverseMonthlyCharge` ledger qatoridan hisobni topadi.
         findFirst: jest.fn().mockResolvedValue(null),
       },
-      // Markaz qoplagan accrual'lar bayrog'ini tozalash
-      // (`clearCenterTopUpForPeriod`). Odatiy — tegadigan qator yo'q.
+      // Markaz qoplagani bayrog'ini ikki yo'nalishda o'girish
+      // (`setCenterTopUpForPeriod`). Odatiy — tegadigan qator yo'q.
       salaryAccrual: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
       lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
@@ -845,6 +845,82 @@ describe('MonthlyChargeService', () => {
       });
     });
 
+    /**
+     * Hisob bekor qilinganda `findChargeForLesson` o'sha oyga endi `null`
+     * qaytaradi (u faqat `CHARGED` ni ko'radi), ya'ni SHUNDAN KEYIN
+     * yoziladigan accrual'lar to'g'ri ravishda `centerFunded: true` bo'ladi.
+     * Bekor qilishdan OLDIN yozilganlari esa «o'quvchi qopladi» bo'lib qotib
+     * qolardi — bitta oyning ikki darsi kim qoplayotgani haqida bir-biriga
+     * zid javob berardi.
+     */
+    it("markaz qoplagani bayrog'ini ORQAGA qaytaradi", async () => {
+      prismaMock.enrollmentMonthlyCharge.findFirst.mockResolvedValueOnce({
+        id: 'chg-1',
+        status: 'CHARGED',
+        studentId: 10453,
+        groupId: 'grp-1',
+        periodYear: 2026,
+        periodMonth: 9,
+      });
+
+      await service.reverseMonthlyCharge(tx, {
+        transactionId: 'txn-1',
+        companyId: 1,
+        reason: 'Xato hisoblandi',
+      });
+
+      expect(prismaMock.salaryAccrual.updateMany).toHaveBeenCalledTimes(1);
+      const call = prismaMock.salaryAccrual.updateMany.mock.calls[0][0];
+
+      expect(call.where).toEqual({
+        companyId: 1,
+        studentId: 10453,
+        groupId: 'grp-1',
+        // Oldinga yo'nalishning aynan teskarisi.
+        isCenterTopUp: false,
+        // FAQAT markaz haqiqatda qoplagan qator qaytib «markazda» bo'ladi:
+        // `isCenterTopUp ⊆ wasCenterTopUp` invarianti saqlanadi, aks holda
+        // «hali qoplanmoqda» (Z) «qoplangan edi» (X) dan katta bo'lib
+        // ketardi.
+        wasCenterTopUp: true,
+        reversedAt: null,
+        lessonDate: {
+          gte: new Date('2026-09-01T00:00:00.000Z'),
+          lt: new Date('2026-10-01T00:00:00.000Z'),
+        },
+      });
+      expect(call.data).toEqual({ isCenterTopUp: true });
+      // Yopishqoq ustunga YOZILMAYDI — u faqat filtr.
+      expect(Object.keys(call.data)).not.toContain('wasCenterTopUp');
+      expect(Object.keys(call.data)).not.toContain('amount');
+    });
+
+    it('bayroq qaytarish ham PULNI QIMIRLATMAYDI', async () => {
+      prismaMock.enrollmentMonthlyCharge.findFirst.mockResolvedValueOnce({
+        id: 'chg-1',
+        status: 'CHARGED',
+        studentId: 10453,
+        groupId: 'grp-1',
+        periodYear: 2026,
+        periodMonth: 9,
+      });
+
+      await service.reverseMonthlyCharge(tx, {
+        transactionId: 'txn-1',
+        companyId: 1,
+        reason: 'Xato hisoblandi',
+      });
+
+      // Pul faqat BITTA yo'ldan qaytadi — `reverseMonthlyFee`. Bayroq
+      // o'girishi accrual'ni qayta yozmaydi, shuning uchun ikkinchi
+      // SALARY_ACCRUAL Transaction ham, balans o'zgarishi ham yo'q.
+      expect(txWriteMock.reverseMonthlyFee).toHaveBeenCalledTimes(1);
+      expect(prismaMock.salaryAccrual.update).toBeUndefined();
+      expect(prismaMock.salaryAccrual.upsert).toBeUndefined();
+      expect(prismaMock.transaction).toBeUndefined();
+      expect(prismaMock.user).toBeUndefined();
+    });
+
     it('mos hisob topilmasa PULGA TEGMAYDI', async () => {
       prismaMock.enrollmentMonthlyCharge.findFirst.mockResolvedValueOnce(null);
 
@@ -874,6 +950,8 @@ describe('MonthlyChargeService', () => {
       ).rejects.toThrow(BadRequestException);
 
       expect(txWriteMock.reverseMonthlyFee).not.toHaveBeenCalled();
+      // Qorovul to'xtatgan yo'lda bayroqqa ham tegilmaydi.
+      expect(prismaMock.salaryAccrual.updateMany).not.toHaveBeenCalled();
     });
   });
 
@@ -1248,12 +1326,18 @@ describe('MonthlyChargeService', () => {
         studentId: 10453,
         groupId: 'grp-1',
         isCenterTopUp: true,
+        // Bekor qilingan accrual hech bir yig'indiga kirmaydi — tarixiy
+        // qator o'zgarishsiz qoladi.
+        reversedAt: null,
         // `@db.Date` — surilmagan UTC chegaralari, yuqorisi OCHIQ.
         lessonDate: {
           gte: new Date('2026-09-01T00:00:00.000Z'),
           lt: new Date('2026-10-01T00:00:00.000Z'),
         },
       });
+      // Oldinga yo'nalishda `wasCenterTopUp` filtri YO'Q: markaz qoplab
+      // turgan har qanday qator undiriladi.
+      expect(Object.keys(call.where)).not.toContain('wasCenterTopUp');
       // FAQAT bayroq: `wasCenterTopUp` yopishqoq bo'lib qoladi, `amount` ga
       // tegilmaydi.
       expect(call.data).toEqual({ isCenterTopUp: false });

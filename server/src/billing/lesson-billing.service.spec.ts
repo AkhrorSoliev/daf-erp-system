@@ -1505,6 +1505,7 @@ describe('LessonBillingService', () => {
           studentId: baseParams.studentId,
           groupId: baseParams.groupId,
           isCenterTopUp: true,
+          reversedAt: null,
           lessonDate: {
             gte: new Date('2026-04-01T00:00:00.000Z'),
             lt: new Date('2026-05-01T00:00:00.000Z'),
