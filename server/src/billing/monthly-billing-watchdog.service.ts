@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { MonthlyChargeService } from './monthly-charge.service';
+import { SettingsService } from '../settings/settings.service';
 
 /**
  * O'z-o'zini tuzatuvchi kunlik qorovul.
@@ -28,6 +29,12 @@ import { MonthlyChargeService } from './monthly-charge.service';
  * Xavfsizlik: har kuni ishlashi kerak va HECH NARSA topmasa ham zarar
  * keltirmasligi shart — `createChargesForPeriod`ning so'zi "hisobi yo'q"
  * filtri bo'sh natija qaytarsa, pastdagi tsikl shunchaki bo'sh o'tadi.
+ *
+ * `payment.chargeDayOfMonth`ni HAM hurmat qiladi — sozlangan kundan OLDIN
+ * hech narsa yozmaydi. Aks holda bu qorovul sozlamani ma'nosiz qilib
+ * qo'yardi: kompaniya "10-kuni hisobla" desa ham, oyning 2-kuni birinchi
+ * qorovul yugurishi barcha yozilishlarni "bo'shliq" deb topib, darhol
+ * hisoblab qo'yardi.
  */
 @Injectable()
 export class MonthlyBillingWatchdogService {
@@ -36,11 +43,13 @@ export class MonthlyBillingWatchdogService {
   constructor(
     private prisma: PrismaService,
     private monthlyChargeService: MonthlyChargeService,
+    private settingsService: SettingsService,
   ) {}
 
   @Cron('0 4 * * *', { timeZone: 'Asia/Tashkent' })
   async healMissingCharges(): Promise<void> {
     const today = tashkentDateStr(new Date());
+    const todayDay = Number(today.slice(8, 10));
     const periodYear = Number(today.slice(0, 4));
     const periodMonth = Number(today.slice(5, 7));
 
@@ -50,6 +59,12 @@ export class MonthlyBillingWatchdogService {
 
     for (const company of companies) {
       try {
+        const chargeDayOfMonth = await this.settingsService.get(
+          company.id,
+          'payment.chargeDayOfMonth',
+        );
+        if (todayDay < chargeDayOfMonth) continue;
+
         const res = await this.monthlyChargeService.createChargesForPeriod({
           companyId: company.id,
           periodYear,

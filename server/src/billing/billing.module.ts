@@ -10,6 +10,7 @@ import { StudentDebtNotificationListener } from './student-debt-notification.lis
 import { TransactionsModule } from '../transactions/transactions.module';
 import { SalaryModule } from '../salary/salary.module';
 import { TelegramModule } from '../telegram/telegram.module';
+import { SettingsModule } from '../settings/settings.module';
 
 /**
  * Owns the unified billing pipeline that both manual and QR attendance
@@ -29,7 +30,7 @@ import { TelegramModule } from '../telegram/telegram.module';
  * counterpart of the lesson-pack billing pipeline above.
  */
 @Module({
-  imports: [TransactionsModule, SalaryModule, TelegramModule],
+  imports: [TransactionsModule, SalaryModule, TelegramModule, SettingsModule],
   controllers: [BillingController],
   providers: [
     LessonBillingService,

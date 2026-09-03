@@ -6,6 +6,7 @@ import {
 } from './monthly-charge.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsWriteService } from '../transactions/transactions-write.service';
+import { SettingsService } from '../settings/settings.service';
 
 // Cast once here rather than `as any` at every call site below: the shape
 // matches `ChargeableEnrollment` at runtime (Prisma's string enums compare
@@ -37,6 +38,7 @@ describe('MonthlyChargeService', () => {
   let service: MonthlyChargeService;
   let prismaMock: any;
   let txWriteMock: any;
+  let settingsMock: any;
   let tx: any;
   // The service does create() then update() on the same row (the second
   // write stamps transactionId once the ledger row exists). This mirrors
@@ -94,11 +96,24 @@ describe('MonthlyChargeService', () => {
       createAdjustment: jest.fn().mockResolvedValue({ id: 'adj-1' }),
     };
 
+    // Sozlamalarning boshlang'ich (kod ichidagi) qiymatlarini aks ettiradi:
+    // kredit yoqilgan, cheklovsiz — mavjud testlar shu yordamida
+    // o'zgarishsiz o'tadi. Sozlama-xos testlar buni mockResolvedValueOnce
+    // bilan qayta belgilaydi.
+    settingsMock = {
+      get: jest.fn((_companyId: number, key: string) => {
+        if (key === 'payment.excusedCreditEnabled') return Promise.resolve(true);
+        if (key === 'payment.excusedCreditMonthlyCap') return Promise.resolve(null);
+        return Promise.resolve(undefined);
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MonthlyChargeService,
         { provide: PrismaService, useValue: prismaMock },
         { provide: TransactionsWriteService, useValue: txWriteMock },
+        { provide: SettingsService, useValue: settingsMock },
       ],
     }).compile();
 
@@ -191,6 +206,67 @@ describe('MonthlyChargeService', () => {
       expect(charge?.creditLessons).toBe(2);
       expect(charge?.creditAmount).toBe(64_286); // 2 x 32 143
       expect(charge?.chargedAmount).toBe(385_714); // 450 000 - 64 286
+    });
+
+    it('payment.excusedCreditEnabled=false bo`lsa kredit umuman o`tmaydi', async () => {
+      settingsMock.get.mockImplementation((_companyId: number, key: string) => {
+        if (key === 'payment.excusedCreditEnabled') return Promise.resolve(false);
+        if (key === 'payment.excusedCreditMonthlyCap') return Promise.resolve(null);
+        return Promise.resolve(undefined);
+      });
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockImplementation(
+        ({ where }: any) => {
+          const key = where.enrollmentId_periodYear_periodMonth;
+          if (key.periodMonth === 9) {
+            return Promise.resolve({ excusedLessons: 2 });
+          }
+          return Promise.resolve(null);
+        },
+      );
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 10,
+        companyId: 1,
+      });
+
+      // O'tgan oyda 2 ta uzrli kredit bo'lsa ham — sozlama o'chirilgani
+      // uchun bu oy uni ko'rmaydi: to'liq narx yechiladi.
+      expect(charge?.creditLessons).toBe(0);
+      expect(charge?.creditAmount).toBe(0);
+      expect(charge?.chargedAmount).toBe(450_000);
+    });
+
+    it('payment.excusedCreditMonthlyCap kreditni cheklaydi', async () => {
+      settingsMock.get.mockImplementation((_companyId: number, key: string) => {
+        if (key === 'payment.excusedCreditEnabled') return Promise.resolve(true);
+        if (key === 'payment.excusedCreditMonthlyCap') return Promise.resolve(1);
+        return Promise.resolve(undefined);
+      });
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockImplementation(
+        ({ where }: any) => {
+          const key = where.enrollmentId_periodYear_periodMonth;
+          if (key.periodMonth === 9) {
+            return Promise.resolve({ excusedLessons: 2 });
+          }
+          return Promise.resolve(null);
+        },
+      );
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 10,
+        companyId: 1,
+      });
+
+      // 2 ta bor edi, lekin cheklov 1 — faqat 1 tasi shu oyga o'tadi.
+      expect(charge?.plannedLessons).toBe(14);
+      expect(charge?.perLessonCost).toBe(32_143);
+      expect(charge?.creditLessons).toBe(1);
+      expect(charge?.creditAmount).toBe(32_143);
+      expect(charge?.chargedAmount).toBe(417_857); // 450 000 - 32 143
     });
 
     it('LESSON_PACK kursini butunlay chetlab o`tadi', async () => {

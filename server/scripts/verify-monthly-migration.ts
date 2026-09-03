@@ -239,6 +239,9 @@ async function main(prisma: PrismaClient) {
   const chargeService = new MonthlyChargeService(
     prisma as unknown as never,
     undefined as unknown as never,
+    // SettingsService — `resolveExcludedDates` unga tegmaydi, shuning uchun
+    // bu skriptda hech qachon chaqirilmaydi.
+    undefined as unknown as never,
   );
   const readTx = prisma as unknown as Prisma.TransactionClient;
   const excludedCache = new Map<string, string[]>();

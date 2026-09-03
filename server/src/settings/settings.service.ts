@@ -87,7 +87,11 @@ export class SettingsService {
     for (const key of SETTING_KEYS) {
       const def = getSettingDefinition(key);
       const raw = this.resolveRaw(rows, key, branchId);
-      result[key] = raw === undefined ? def.defaultValue : def.parse(raw);
+      // TypeScript `SettingValueMap[key]`ni union kalit bo'yicha `never`ga
+      // toraytiradi (har kalitning tipi har xil). Qiymat `def.parse` orqali
+      // allaqachon tekshirilgan, shuning uchun bu yerda cast xavfsiz.
+      (result as Record<SettingKey, unknown>)[key] =
+        raw === undefined ? def.defaultValue : def.parse(raw);
     }
     return result;
   }

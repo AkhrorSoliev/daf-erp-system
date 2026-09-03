@@ -8,6 +8,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsWriteService } from '../transactions/transactions-write.service';
+import { SettingsService } from '../settings/settings.service';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { buildHolidayDateSet } from '../holidays/holiday-date-set';
 import { lessonDatesInMonth } from './planned-lessons';
@@ -57,6 +58,7 @@ export class MonthlyChargeService {
   constructor(
     private prisma: PrismaService,
     private transactionsWrite: TransactionsWriteService,
+    private settingsService: SettingsService,
   ) {}
 
   /**
@@ -168,12 +170,36 @@ export class MonthlyChargeService {
       discountPercent,
     );
 
-    const carried = await this.carriedCredit(
+    const rawCarried = await this.carriedCredit(
       tx,
       enr.id,
       periodYear,
       periodMonth,
     );
+    // `payment.excusedCreditEnabled` / `payment.excusedCreditMonthlyCap` —
+    // sozlamalar panelidan boshqariladi (filial override kompaniyadan
+    // ustun). Kesh orqali o'qiladi (`SettingsService`/`settings-cache.ts`):
+    // bu chaqiruv har bir yozilish uchun bitta so'rov QO'SHMAYDI — oy
+    // boshidagi 370+ yozilishli sikl bitta keshlangan ro'yxatdan o'qiydi.
+    // O'chirilgan bo'lsa — bu oyga HECH QANDAY kredit o'tmaydi (o'tgan
+    // oydan qolgan kredit ham shu bilan yo'qoladi, chunki yangi yozuvning
+    // `excusedLessons`i 0 bo'lib qoladi — keyingi oy uni ko'rmaydi).
+    // Cheklangan bo'lsa — bu oyga ko'pi bilan N dars kiradi.
+    const excusedCreditEnabled = await this.settingsService.get(
+      params.companyId,
+      'payment.excusedCreditEnabled',
+      enr.group.branchId,
+    );
+    const excusedCreditMonthlyCap = await this.settingsService.get(
+      params.companyId,
+      'payment.excusedCreditMonthlyCap',
+      enr.group.branchId,
+    );
+    const carried = !excusedCreditEnabled
+      ? 0
+      : excusedCreditMonthlyCap != null
+        ? Math.min(rawCarried, excusedCreditMonthlyCap)
+        : rawCarried;
     const credit = applyLessonCredit(
       grossAmountStudent,
       perLessonCostStudent,

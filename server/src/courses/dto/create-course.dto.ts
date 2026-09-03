@@ -1,5 +1,6 @@
-import { IsString, IsOptional, IsInt, Min, Max } from 'class-validator';
+import { IsString, IsOptional, IsInt, IsEnum, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PaymentModel } from '@prisma/client';
 
 export class CreateCourseDto {
   @IsString()
@@ -51,4 +52,11 @@ export class CreateCourseDto {
   @IsInt()
   @Type(() => Number)
   companyId?: number;
+
+  // Berilmasa — `payment.defaultModel` sozlamasi ishlatiladi
+  // (`CoursesService.create`). Aniq ko'rsatilsa, sozlamadan qat'i nazar
+  // shu qiymat yoziladi.
+  @IsOptional()
+  @IsEnum(PaymentModel)
+  paymentModel?: PaymentModel;
 }

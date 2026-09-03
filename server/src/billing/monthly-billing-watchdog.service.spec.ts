@@ -3,11 +3,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MonthlyBillingWatchdogService } from './monthly-billing-watchdog.service';
 import { MonthlyChargeService } from './monthly-charge.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 
 describe('MonthlyBillingWatchdogService', () => {
   let watchdog: MonthlyBillingWatchdogService;
   let prismaMock: any;
   let monthlyChargeMock: any;
+  let settingsMock: any;
 
   beforeEach(async () => {
     prismaMock = {
@@ -18,12 +20,18 @@ describe('MonthlyBillingWatchdogService', () => {
         .fn()
         .mockResolvedValue({ created: 0, skipped: 0, totalCharged: 0 }),
     };
+    // Boshlang'ich qiymat (1) — qorovul har kuni ishlaydigan mavjud
+    // testlar shu bilan o'zgarishsiz o'tadi.
+    settingsMock = {
+      get: jest.fn().mockResolvedValue(1),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MonthlyBillingWatchdogService,
         { provide: PrismaService, useValue: prismaMock },
         { provide: MonthlyChargeService, useValue: monthlyChargeMock },
+        { provide: SettingsService, useValue: settingsMock },
       ],
     }).compile();
 
@@ -86,5 +94,24 @@ describe('MonthlyBillingWatchdogService', () => {
 
     await expect(watchdog.healMissingCharges()).resolves.toBeUndefined();
     expect(monthlyChargeMock.createChargesForPeriod).toHaveBeenCalledTimes(2);
+  });
+
+  it('payment.chargeDayOfMonth sozlangan kundan OLDIN hech narsa yozmaydi', async () => {
+    // Kompaniya "har oy 15-kuni hisobla" desa, qorovul oyning 2-kuni
+    // "bo'shliq" deb hammasini yozib qo'ymasligi kerak — aks holda sozlama
+    // ma'nosiz bo'lib qolardi.
+    settingsMock.get.mockResolvedValue(15);
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-02T04:05:00+05:00'));
+    await watchdog.healMissingCharges();
+    expect(monthlyChargeMock.createChargesForPeriod).not.toHaveBeenCalled();
+  });
+
+  it('payment.chargeDayOfMonth sozlangan kundan KEYIN bo`shliqni tuzatadi', async () => {
+    settingsMock.get.mockResolvedValue(15);
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-20T04:05:00+05:00'));
+    await watchdog.healMissingCharges();
+    expect(monthlyChargeMock.createChargesForPeriod).toHaveBeenCalledWith(
+      expect.objectContaining({ companyId: 1, periodYear: 2026, periodMonth: 10 }),
+    );
   });
 });

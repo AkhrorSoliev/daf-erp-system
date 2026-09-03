@@ -3,13 +3,16 @@ import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { MonthlyChargeService } from './monthly-charge.service';
+import { SettingsService } from '../settings/settings.service';
 
 /**
- * Oylik to'lovni oyning 1-kuni hisoblab, balansdan yechadi.
+ * Oylik to'lovni sozlangan kunda hisoblab, balansdan yechadi.
  *
- * Kunlik ishlaydi va "bugun 1-mi?" deb tekshiradi — `SalaryCronService`
- * bilan bir xil naqsh. Bu kelajakda hisoblash sanasini sozlamadan
- * o'zgartirish imkonini beradi, cron jadvalini qayta deploy qilmasdan.
+ * Kunlik ishlaydi va "bugun sozlangan kunmi?" deb tekshiradi —
+ * `SalaryCronService` bilan bir xil naqsh. Sozlangan kun —
+ * `payment.chargeDayOfMonth` (`/settings` paneli, boshlang'ich 1),
+ * KOMPANIYA bo'yicha o'qiladi — shuning uchun tekshiruv har bir
+ * kompaniya uchun ALOHIDA, sikl ICHIDA bajariladi, sikldan oldin emas.
  *
  * Vaqti 03:10 — oylik maosh cron'i (02:00) tugab bo'lgach ishlaydi.
  * Daqiqa ATAYLAB 0 emas: `mock-exam-deadline-cron` aynan 03:00:00 da
@@ -19,10 +22,12 @@ import { MonthlyChargeService } from './monthly-charge.service';
  * kalit + "hisobi yo'q" so'rov filtri), shuning uchun bu ikkalasi orasida
  * tartib zaruriy emas — faqat resurs bahsini kamaytirish uchun ajratilgan.
  *
- * Bu yerda faqat OY BOSHIDA (1-kun) yozadigan cron bor. Kunlik bo'shliqni
- * topib tuzatuvchi qorovul alohida faylda —
+ * Bu yerda faqat OY BOSHIDAGI (sozlangan kun) yozadigan cron bor. Kunlik
+ * bo'shliqni topib tuzatuvchi qorovul alohida faylda —
  * `monthly-billing-watchdog.service.ts` — chunki bu kod bazasida har bir
- * cron o'z faylida, bitta `@Cron` bilan yashaydi.
+ * cron o'z faylida, bitta `@Cron` bilan yashaydi. Qorovul HAM shu
+ * sozlamani hurmat qiladi: aks holda u sozlangan kundan oldin ham
+ * "hisobi yo'q" bo'shliqni "tuzatib", sozlamani ma'nosiz qilib qo'yardi.
  */
 @Injectable()
 export class MonthlyBillingCronService {
@@ -31,13 +36,13 @@ export class MonthlyBillingCronService {
   constructor(
     private prisma: PrismaService,
     private monthlyChargeService: MonthlyChargeService,
+    private settingsService: SettingsService,
   ) {}
 
   @Cron('10 3 * * *', { timeZone: 'Asia/Tashkent' })
   async chargeMonthlyFees(): Promise<void> {
     const today = tashkentDateStr(new Date());
-    if (Number(today.slice(8, 10)) !== 1) return;
-
+    const todayDay = Number(today.slice(8, 10));
     const periodYear = Number(today.slice(0, 4));
     const periodMonth = Number(today.slice(5, 7));
 
@@ -47,6 +52,17 @@ export class MonthlyBillingCronService {
 
     for (const company of companies) {
       try {
+        // Har kompaniyaning O'ZINING `payment.chargeDayOfMonth`i bor
+        // (filial override kompaniyadan ustun bo'lishi mumkin, lekin bu
+        // cron filial darajasida yurmaydi — shuning uchun kompaniya
+        // qiymati o'qiladi). Bugun shu kun bo'lmasa — bu kompaniya shu
+        // safar chetlab o'tiladi.
+        const chargeDayOfMonth = await this.settingsService.get(
+          company.id,
+          'payment.chargeDayOfMonth',
+        );
+        if (todayDay !== chargeDayOfMonth) continue;
+
         const res = await this.monthlyChargeService.createChargesForPeriod({
           companyId: company.id,
           periodYear,

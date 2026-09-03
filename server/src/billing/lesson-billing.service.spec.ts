@@ -16,6 +16,7 @@ import {
   MonthlyChargeService,
 } from './monthly-charge.service';
 import { TransactionsWriteService } from '../transactions/transactions-write.service';
+import { SettingsService } from '../settings/settings.service';
 
 /**
  * Tests cover the 6-row status transition matrix and the 3 financial
@@ -1426,6 +1427,16 @@ describe('LessonBillingService', () => {
           { provide: TransactionsService, useValue: transactionsMock },
           { provide: SalaryAccrualService, useValue: salaryMock },
           { provide: TransactionsWriteService, useValue: txWriteMock },
+          {
+            provide: SettingsService,
+            useValue: {
+              get: jest.fn((_companyId: number, key: string) => {
+                if (key === 'payment.excusedCreditEnabled') return Promise.resolve(true);
+                if (key === 'payment.excusedCreditMonthlyCap') return Promise.resolve(null);
+                return Promise.resolve(undefined);
+              }),
+            },
+          },
         ],
       }).compile();
 

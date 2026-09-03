@@ -484,6 +484,20 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /student-portal/lernen/drill/check',
     ],
   },
+  {
+    policy: 'BRANCH_SCOPED_BY_SERVICE',
+    reason:
+      'The settings panel resolves its own scope by calling ' +
+      '`resolveCallerBranchScope(userId)` rather than taking `@BranchScope()`, ' +
+      'because reads and writes here need a STRICTER rule than ceiling ∩ ' +
+      'requested: a CEO may read or write the company-wide row (`branchId = ' +
+      'null`) or any one branch, but a Branch Director may NEVER touch the ' +
+      'company-wide row — even an empty request body is forced onto the ' +
+      "caller's own branch, not merged with it. `@BranchScope()` has no way " +
+      'to express "this ceiling can never resolve to company-wide", so the ' +
+      'controller does the resolution itself.',
+    routes: ['GET /settings/payment', 'PATCH /settings/payment'],
+  },
 ];
 
 /**
