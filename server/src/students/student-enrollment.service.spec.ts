@@ -390,6 +390,49 @@ describe('StudentEnrollmentService', () => {
       prisma.student.update = jest.fn().mockResolvedValue({});
     });
 
+    // CEO qarori (2026-09-03): guruhda faqat faol o'quvchilar qolishi kerak,
+    // shuning uchun muzlatilganni chiqarish MUMKIN. Qorovul takroriy
+    // chaqiruvni to'sish uchun yozilgan edi; `!== 'ACTIVE'` shakli uni
+    // holat filtriga aylantirib, kerakli amalni ham bloklagan.
+    it('muzlatilgan yozilishni guruhdan chiqarishga RUXSAT beradi', async () => {
+      prisma.enrollment.findFirst.mockResolvedValue({
+        id: 'enroll-1',
+        studentId: 1,
+        groupId: 'group-1',
+        status: 'FROZEN',
+      });
+
+      prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+        id: 'reason-1',
+        name: 'Moliyaviy sabablar',
+        companyId: 1001,
+        appliesTo: ['GROUP_REMOVAL'],
+      });
+
+      await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+        departureReasonId: 'reason-1',
+      });
+
+      expect(prisma.enrollment.update).toHaveBeenCalled();
+    });
+
+    it.each(['DROPPED', 'TRANSFERRED', 'COMPLETED'])(
+      'allaqachon yopilgan (%s) yozilishni rad etadi — takroriy chaqiruv qorovuli',
+      async (status) => {
+        prisma.enrollment.findFirst.mockResolvedValue({
+          id: 'enroll-1',
+          studentId: 1,
+          groupId: 'group-1',
+          status,
+        });
+
+        await expect(
+          service.removeFromGroup(1, 'enroll-1', 10001, 1001, {}),
+        ).rejects.toThrow(BadRequestException);
+        expect(prisma.enrollment.update).not.toHaveBeenCalled();
+      },
+    );
+
     it('uses StudentExitReason name when departureReasonId is provided', async () => {
       prisma.studentExitReason.findFirst.mockResolvedValueOnce({
         id: 'reason-1',

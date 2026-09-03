@@ -14,6 +14,20 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { EntityHistoryService } from '../common/entity-history';
+
+/**
+ * Yopilgan yozilish holatlari — `removeFromGroup` shularni rad etadi.
+ *
+ * `FROZEN` ataylab bu ro'yxatda YO'Q: muzlatilgan o'quvchi hali guruhda
+ * turadi va uni chiqarish kerakli amal. Ro'yxat takroriy chaqiruvni
+ * (ikki marta bosish, timeout'dan keyingi qayta urinish) to'sish uchun,
+ * holatga qarab filtrlash uchun emas.
+ */
+const CLOSED_ENROLLMENT_STATUSES: ReadonlySet<EnrollmentStatus> = new Set([
+  EnrollmentStatus.DROPPED,
+  EnrollmentStatus.TRANSFERRED,
+  EnrollmentStatus.COMPLETED,
+]);
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
 import { DebtWriteOffService } from '../billing/debt-write-off.service';
 import {
@@ -491,7 +505,14 @@ export class StudentEnrollmentService {
     // (idempotent refund math), so nothing here would have surfaced a
     // double-submit at all. This turns it into an explicit, loud 400 instead
     // of a silent no-op two-refund-attempts-deep in the tx.
-    if (enrollment.status !== 'ACTIVE') {
+    //
+    // Faqat ALLAQACHON YOPILGAN yozilish rad etiladi. MUZLATILGAN emas:
+    // muzlatilgan o'quvchi guruhda turaveradi, uni chiqarish esa oddiy va
+    // kerakli amal — guruhda faqat faol o'quvchilar qolishi kerak (CEO
+    // qarori, 2026-09-03). Avvalgi `!== 'ACTIVE'` sharti buni ham to'sib
+    // qo'ygan edi: qorovul takroriy chaqiruv uchun yozilgan, holat
+    // filtri sifatida emas.
+    if (CLOSED_ENROLLMENT_STATUSES.has(enrollment.status)) {
       throw new BadRequestException(
         "Bu yozilish allaqachon yopilgan — qayta chiqarib bo'lmaydi",
       );
