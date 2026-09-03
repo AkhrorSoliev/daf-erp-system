@@ -5,6 +5,7 @@ import type { WortlisteFile } from './wortliste.types';
 import type { WoerterFile } from './unit-inhalt.types';
 import type { GrammatikFile, RedemittelFile } from './unit-inhalt.types';
 import type { DialogeFile } from './unit-inhalt.types';
+import type { SaetzeFile } from './unit-inhalt.types';
 import type { KursFile } from '../kurs/kurs.types';
 import type { GoetheFile } from './goethe-parse';
 
@@ -389,6 +390,67 @@ describe('1-unitning dialoglari', () => {
           .some((w) => w !== '' && !bekannt.has(w) && !hilfs.has(w))
       ) {
         unbekannt.add(`titelDe: ${d.titelDe}`);
+      }
+    }
+    expect([...unbekannt]).toEqual([]);
+  });
+});
+
+describe('1-unitning gaplari', () => {
+  const kurs = read<KursFile>('kurs.json');
+  const woerter = read<WoerterFile>('u01', 'woerter.json');
+  const saetze = read<SaetzeFile>('u01', 'saetze.json');
+
+  const sections = new Set(kurs.units[0].sections.map((s) => s.code));
+
+  it('kamida 50 gap bor', () => {
+    expect(saetze.saetze.length).toBeGreaterThanOrEqual(50);
+  });
+
+  it('har bo`limda kamida 6 gap bor', () => {
+    for (const code of sections) {
+      const n = saetze.saetze.filter((s) => s.section === code).length;
+      expect(n).toBeGreaterThanOrEqual(6);
+    }
+  });
+
+  it('gaplar uch-yetti so`z oralig`ida', () => {
+    const notri = saetze.saetze.filter((s) => s.wordCount < 3 || s.wordCount > 7);
+    expect(notri.map((s) => s.de)).toEqual([]);
+  });
+
+  it('wordCount haqiqiy so`z soniga teng', () => {
+    const notri = saetze.saetze.filter(
+      (s) => s.wordCount !== s.de.replace(/[.,!?]/g, '').trim().split(/\s+/).length,
+    );
+    expect(notri.map((s) => s.de)).toEqual([]);
+  });
+
+  it('gap takrorlanmaydi', () => {
+    const keys = saetze.saetze.map((s) => s.de.toLowerCase().replace(/[.,!?]/g, '').trim());
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('har gapning o`zbekchasi bor', () => {
+    expect(saetze.saetze.filter((s) => s.uz.trim() === '')).toEqual([]);
+  });
+
+  it('gaplarda notanish so`z yo`q', () => {
+    const bekannt = new Set(
+      woerter.woerter.flatMap((w) => w.de.toLowerCase().split(/\s+/)),
+    );
+    const hilfs = new Set([
+      'ich','du','sie','er','es','wir','ihr','bin','bist','ist','sind','seid',
+      'und','oder','nicht','ja','nein','wie','wo','was','wer','woher','das',
+      'der','die','ein','eine','mein','dein','sehr','auch','bitte','danke',
+      'in','aus','heisse','heisst','komme','kommst','wohne','wohnst','geht',
+      'gut','dir','ihnen','mir','hier',
+    ]);
+    const unbekannt = new Set<string>();
+    for (const s of saetze.saetze) {
+      for (const w of s.de.toLowerCase().replace(/[.,!?]/g, '').split(/\s+/)) {
+        if (w === '' || bekannt.has(w) || hilfs.has(w)) continue;
+        unbekannt.add(w);
       }
     }
     expect([...unbekannt]).toEqual([]);

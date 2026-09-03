@@ -109,3 +109,21 @@ export interface DialogeFile {
   unit: string;
   dialoge: Dialog[];
 }
+
+/**
+ * Yasalgan gap.
+ *
+ * Manbadan olinmaydi: A1 dagi tayyor gaplarning atigi 27 % i tanish
+ * so'zlardan tuzilgan edi, ya'ni qolgani o'quvchiga notanish so'z
+ * ko'rsatardi.
+ */
+export interface Satz extends Sprechbar {
+  section: string;
+  wordCount: number;
+  origin: 'GENERATED';
+}
+
+export interface SaetzeFile {
+  unit: string;
+  saetze: Satz[];
+}
