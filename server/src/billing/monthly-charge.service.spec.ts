@@ -102,8 +102,10 @@ describe('MonthlyChargeService', () => {
     // bilan qayta belgilaydi.
     settingsMock = {
       get: jest.fn((_companyId: number, key: string) => {
-        if (key === 'payment.excusedCreditEnabled') return Promise.resolve(true);
-        if (key === 'payment.excusedCreditMonthlyCap') return Promise.resolve(null);
+        if (key === 'payment.excusedCreditEnabled')
+          return Promise.resolve(true);
+        if (key === 'payment.excusedCreditMonthlyCap')
+          return Promise.resolve(null);
         return Promise.resolve(undefined);
       }),
     };
@@ -210,8 +212,10 @@ describe('MonthlyChargeService', () => {
 
     it('payment.excusedCreditEnabled=false bo`lsa kredit umuman o`tmaydi', async () => {
       settingsMock.get.mockImplementation((_companyId: number, key: string) => {
-        if (key === 'payment.excusedCreditEnabled') return Promise.resolve(false);
-        if (key === 'payment.excusedCreditMonthlyCap') return Promise.resolve(null);
+        if (key === 'payment.excusedCreditEnabled')
+          return Promise.resolve(false);
+        if (key === 'payment.excusedCreditMonthlyCap')
+          return Promise.resolve(null);
         return Promise.resolve(undefined);
       });
       prismaMock.enrollmentMonthlyCharge.findUnique.mockImplementation(
@@ -240,8 +244,10 @@ describe('MonthlyChargeService', () => {
 
     it('payment.excusedCreditMonthlyCap kreditni cheklaydi', async () => {
       settingsMock.get.mockImplementation((_companyId: number, key: string) => {
-        if (key === 'payment.excusedCreditEnabled') return Promise.resolve(true);
-        if (key === 'payment.excusedCreditMonthlyCap') return Promise.resolve(1);
+        if (key === 'payment.excusedCreditEnabled')
+          return Promise.resolve(true);
+        if (key === 'payment.excusedCreditMonthlyCap')
+          return Promise.resolve(1);
         return Promise.resolve(undefined);
       });
       prismaMock.enrollmentMonthlyCharge.findUnique.mockImplementation(
@@ -275,8 +281,10 @@ describe('MonthlyChargeService', () => {
 
     it('cheklov ustma-ust oylarga SURADI, hech narsa kuymaydi (5 ta, cheklov 2 -> 2, 2, 1)', async () => {
       settingsMock.get.mockImplementation((_companyId: number, key: string) => {
-        if (key === 'payment.excusedCreditEnabled') return Promise.resolve(true);
-        if (key === 'payment.excusedCreditMonthlyCap') return Promise.resolve(2);
+        if (key === 'payment.excusedCreditEnabled')
+          return Promise.resolve(true);
+        if (key === 'payment.excusedCreditMonthlyCap')
+          return Promise.resolve(2);
         return Promise.resolve(undefined);
       });
 

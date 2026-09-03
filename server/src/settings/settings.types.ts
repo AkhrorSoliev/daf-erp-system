@@ -72,7 +72,10 @@ function parseBoolean(key: SettingKey, raw: unknown): boolean {
   );
 }
 
-function parseNullableNonNegativeInt(key: SettingKey, raw: unknown): number | null {
+function parseNullableNonNegativeInt(
+  key: SettingKey,
+  raw: unknown,
+): number | null {
   if (raw === null) return null;
   if (typeof raw === 'number' && Number.isInteger(raw) && raw >= 0) return raw;
   throw new BadRequestException(
@@ -81,7 +84,12 @@ function parseNullableNonNegativeInt(key: SettingKey, raw: unknown): number | nu
 }
 
 function parseChargeDayOfMonth(raw: unknown): number {
-  if (typeof raw === 'number' && Number.isInteger(raw) && raw >= 1 && raw <= 28) {
+  if (
+    typeof raw === 'number' &&
+    Number.isInteger(raw) &&
+    raw >= 1 &&
+    raw <= 28
+  ) {
     return raw;
   }
   throw new BadRequestException(
@@ -120,9 +128,7 @@ export const SETTING_DEFINITIONS: {
   },
 };
 
-export const SETTING_KEYS = Object.keys(
-  SETTING_DEFINITIONS,
-) as SettingKey[];
+export const SETTING_KEYS = Object.keys(SETTING_DEFINITIONS) as SettingKey[];
 
 export function isSettingKey(value: string): value is SettingKey {
   return (SETTING_KEYS as string[]).includes(value);

@@ -205,7 +205,11 @@ describe('SettingsService', () => {
 
       expect(value).toBe(5);
       expect(prisma.setting.findFirst).toHaveBeenCalledWith({
-        where: { companyId: COMPANY_ID, branchId: null, key: 'payment.chargeDayOfMonth' },
+        where: {
+          companyId: COMPANY_ID,
+          branchId: null,
+          key: 'payment.chargeDayOfMonth',
+        },
       });
       expect(prisma.setting.create).toHaveBeenCalledWith({
         data: {

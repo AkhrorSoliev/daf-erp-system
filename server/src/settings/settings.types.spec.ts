@@ -1,6 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
 import { PaymentModel } from '@prisma/client';
-import { getSettingDefinition, isSettingKey, SETTING_KEYS } from './settings.types';
+import {
+  getSettingDefinition,
+  isSettingKey,
+  SETTING_KEYS,
+} from './settings.types';
 
 describe('SETTING_DEFINITIONS registry', () => {
   it('covers exactly the four shipped payment keys', () => {

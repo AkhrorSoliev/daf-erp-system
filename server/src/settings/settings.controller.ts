@@ -84,9 +84,7 @@ export class SettingsController {
     }
 
     if (edits.length === 0) {
-      throw new BadRequestException(
-        "Kamida bitta sozlama yuborilishi kerak",
-      );
+      throw new BadRequestException('Kamida bitta sozlama yuborilishi kerak');
     }
 
     for (const [key, value] of edits) {
@@ -111,7 +109,7 @@ export class SettingsController {
     if (scope.kind === 'all') return requestedBranchId;
 
     if (scope.branchIds.length === 0) {
-      throw new ForbiddenException("Sizga hech qanday filial biriktirilmagan");
+      throw new ForbiddenException('Sizga hech qanday filial biriktirilmagan');
     }
     if (
       requestedBranchId != null &&
@@ -154,7 +152,7 @@ export class SettingsController {
     }
 
     if (scope.branchIds.length === 0) {
-      throw new ForbiddenException("Sizga hech qanday filial biriktirilmagan");
+      throw new ForbiddenException('Sizga hech qanday filial biriktirilmagan');
     }
     if (
       requestedBranchId != null &&

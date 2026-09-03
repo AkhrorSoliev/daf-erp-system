@@ -64,7 +64,9 @@ describe('CoursesService — status methods', () => {
         },
         {
           provide: SettingsService,
-          useValue: (settingsMock = { get: jest.fn().mockResolvedValue('MONTHLY') }),
+          useValue: (settingsMock = {
+            get: jest.fn().mockResolvedValue('MONTHLY'),
+          }),
         },
       ],
     }).compile();

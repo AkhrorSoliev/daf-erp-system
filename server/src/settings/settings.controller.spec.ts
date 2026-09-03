@@ -66,9 +66,9 @@ describe('SettingsController — role guard', () => {
   });
 
   it('denies Administrator', () => {
-    expect(() => guard.canActivate(mockExecutionContext(['Administrator']))).toThrow(
-      ForbiddenException,
-    );
+    expect(() =>
+      guard.canActivate(mockExecutionContext(['Administrator'])),
+    ).toThrow(ForbiddenException);
   });
 
   it('denies Cashier', () => {
@@ -183,11 +183,7 @@ describe('SettingsController — branch scope', () => {
 
   it('Branch Director is always locked to their own branch, ignoring a company-wide request', async () => {
     prisma.user.findFirst.mockResolvedValue(bdUser);
-    await controller.updatePayment(
-      { chargeDayOfMonth: 10 } as any,
-      2,
-      1001,
-    );
+    await controller.updatePayment({ chargeDayOfMonth: 10 } as any, 2, 1001);
     expect(settingsService.set).toHaveBeenCalledWith(
       1001,
       'payment.chargeDayOfMonth',

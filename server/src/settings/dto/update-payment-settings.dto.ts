@@ -1,4 +1,11 @@
-import { IsBoolean, IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  Max,
+  Min,
+} from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { PaymentModel } from '@prisma/client';
 
@@ -25,7 +32,9 @@ export class UpdatePaymentSettingsDto {
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Transform(({ value }) => (value === null || value === undefined ? value : Number(value)))
+  @Transform(({ value }) =>
+    value === null || value === undefined ? value : Number(value),
+  )
   excusedCreditMonthlyCap?: number | null;
 
   @IsOptional()

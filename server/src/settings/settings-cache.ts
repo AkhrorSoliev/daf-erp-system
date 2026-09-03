@@ -68,6 +68,8 @@ export async function invalidateCompanySettingsCache(
   try {
     await redis.del(settingsCacheKey(companyId));
   } catch (e) {
-    logger.warn(`Cache invalidate failed for ${settingsCacheKey(companyId)}: ${e}`);
+    logger.warn(
+      `Cache invalidate failed for ${settingsCacheKey(companyId)}: ${e}`,
+    );
   }
 }

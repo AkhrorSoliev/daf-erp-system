@@ -1431,8 +1431,10 @@ describe('LessonBillingService', () => {
             provide: SettingsService,
             useValue: {
               get: jest.fn((_companyId: number, key: string) => {
-                if (key === 'payment.excusedCreditEnabled') return Promise.resolve(true);
-                if (key === 'payment.excusedCreditMonthlyCap') return Promise.resolve(null);
+                if (key === 'payment.excusedCreditEnabled')
+                  return Promise.resolve(true);
+                if (key === 'payment.excusedCreditMonthlyCap')
+                  return Promise.resolve(null);
                 return Promise.resolve(undefined);
               }),
             },

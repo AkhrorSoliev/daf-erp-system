@@ -172,8 +172,16 @@ export class SettingsService {
       await this.entityHistoryService.recordUpdate({
         entityType: 'Setting',
         entityId: updated.id,
-        oldValues: { key: existing.key, branchId: existing.branchId, value: existing.value },
-        newValues: { key: updated.key, branchId: updated.branchId, value: updated.value },
+        oldValues: {
+          key: existing.key,
+          branchId: existing.branchId,
+          value: existing.value,
+        },
+        newValues: {
+          key: updated.key,
+          branchId: updated.branchId,
+          value: updated.value,
+        },
         changedById: updatedById,
         companyId,
       });
@@ -190,7 +198,11 @@ export class SettingsService {
       await this.entityHistoryService.recordCreate({
         entityType: 'Setting',
         entityId: created.id,
-        newValues: { key: created.key, branchId: created.branchId, value: created.value },
+        newValues: {
+          key: created.key,
+          branchId: created.branchId,
+          value: created.value,
+        },
         changedById: updatedById,
         companyId,
       });

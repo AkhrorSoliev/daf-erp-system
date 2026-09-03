@@ -95,7 +95,11 @@ describe('MonthlyBillingCronService', () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-10-15T02:05:00+05:00'));
     await cron.chargeMonthlyFees();
     expect(monthlyChargeMock.createChargesForPeriod).toHaveBeenCalledWith(
-      expect.objectContaining({ companyId: 1, periodYear: 2026, periodMonth: 10 }),
+      expect.objectContaining({
+        companyId: 1,
+        periodYear: 2026,
+        periodMonth: 10,
+      }),
     );
   });
 
