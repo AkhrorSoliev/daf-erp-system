@@ -1365,6 +1365,20 @@ model EnrollmentMonthlyCharge {
   /// bo'lardi). Bo'sh massiv = shu ustun qo'shilishidan OLDIN yozilgan
   /// qator (hisob hech qachon `coveredLessons = 0` bilan yozilmaydi).
   coveredDates   String[] @default([])
+  /// `coveredDates`ning HOZIRGI muzlatib chiqarilgan qism-to'plami (freeze
+  /// bilan olib tashlangan, hali return orqali qaytarilmagan sanalar).
+  /// `coveredLessons = coveredDates.length - frozenOutDates.length` — bu
+  /// HOSILA, moslik uchun saqlanadi (2026-09 review, HIGH-1/2/3): eski
+  /// dizaynda `coveredLessons` faqat SON edi va `coveredDates`ning
+  /// PREFIKSI (boshidan N tasi) qoplangan deb faraz qilardi — bu muzlatish
+  /// (pastdan kesish) uchun xavfsiz edi, lekin qaytish (yuqoridan
+  /// qo'shish, ya'ni SUFFIKS) buni buzdi: `prefiks ∪ suffiks` endi son
+  /// bilan ifodalanmaydi. Bo'sh massiv = hech narsa muzlatib chiqarilmagan
+  /// (barcha eski qatorlar uchun xavfsiz standart — xatti-harakat
+  /// o'zgarmaydi). Faqat `reverseChargeForDeparture` (muzlatish/ketish) va
+  /// `restoreChargeForReturn` (qaytish) o'zgartiradi — union/difference
+  /// sifatida, hech qachon boshqa joydan qayta hisoblanmaydi.
+  frozenOutDates String[] @default([])
   creditLessons  Int      @default(0)
   creditAmount   Int      @default(0)
   chargedAmount  Int

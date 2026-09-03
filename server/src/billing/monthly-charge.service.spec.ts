@@ -1303,15 +1303,32 @@ describe('MonthlyChargeService', () => {
   });
 
   describe('restoreChargeForReturn', () => {
+    // 14 ta oktabr sanasi — Task 1B brifidagi misol bilan bir xil.
+    const octoberDates = [
+      '2026-10-01',
+      '2026-10-03',
+      '2026-10-06',
+      '2026-10-08',
+      '2026-10-10',
+      '2026-10-13',
+      '2026-10-15',
+      '2026-10-17',
+      '2026-10-20',
+      '2026-10-22',
+      '2026-10-24',
+      '2026-10-27',
+      '2026-10-29',
+      '2026-10-31',
+    ];
+    // Muzlatish 10-oktabrdan keyingi 9 ta sanani chiqargan deb faraz
+    // qilinadi (14 -> 5, brifdagi misol bilan bir xil): `coveredLessons`
+    // endi bu funksiya uchun HECH NARSANI belgilamaydi (HIGH-1/2/3
+    // tuzatishi) — yagona manba `frozenOutDates`.
     const charge = {
       id: 'ch-1',
       status: 'CHARGED',
-      coveredDates: [
-        '2026-10-01',
-        '2026-10-03',
-        '2026-10-06',
-        '2026-10-08',
-        '2026-10-10',
+      coveredDates: octoberDates,
+      frozenOutDates: [
         '2026-10-13',
         '2026-10-15',
         '2026-10-17',
@@ -1322,20 +1339,22 @@ describe('MonthlyChargeService', () => {
         '2026-10-29',
         '2026-10-31',
       ],
-      coveredLessons: 5, // muzlatishda 14 -> 5 ga tushgan
+      coveredLessons: 5,
       perLessonCost: 32_143,
       discountPercent: 0,
-      chargedAmount: 160_715,
+      creditAmount: 0,
+      chargedAmount: 160_715, // 5 x 32 143, kredit yo'q
     };
 
     beforeEach(() => {
       prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue(charge);
     });
 
-    it('qaytganidan keyingi darslarni qayta hisoblaydi', async () => {
-      // 15-oktabrda qaytdi. <= 15.10 bo'lgan sanalar: 01,03,06,08,10,13,15 = 7.
-      // Qayta tiklanadigan: 14 - 7 = 7. coveredLessons(5) <= 7 bo'lgani
-      // uchun butun 7 ta bir yo'la qayta hisoblanadi -> 7 x 32 143 = 225 001.
+    it('qaytganidan keyingi (frozenOutDates ichidan) sanalarni qayta hisoblaydi', async () => {
+      // 15-oktabrda qaytdi. frozenOutDates ichidan >15.10 bo'lganlari:
+      // 17,20,22,24,27,29,31 = 7. 13 va 15 <=15.10 bo'lgani uchun ABADIY
+      // chiqarilgan qoladi (dars kunining o'zi tiklanmaydi — sinf
+      // izohidagi konvensiya).
       const res = await service.restoreChargeForReturn(tx, {
         enrollmentId: 'enr-1',
         returnDate: new Date('2026-10-15T00:00:00.000Z'),
@@ -1355,51 +1374,54 @@ describe('MonthlyChargeService', () => {
       );
       expect(prismaMock.enrollmentMonthlyCharge.update).toHaveBeenCalledWith({
         where: { id: 'ch-1' },
-        data: { coveredLessons: 12, chargedAmount: 385_716 },
+        data: {
+          coveredLessons: 12,
+          chargedAmount: 385_716,
+          frozenOutDates: ['2026-10-13', '2026-10-15'],
+        },
       });
     });
 
-    it('ikkinchi marta chaqirilganda null qaytaradi (idempotent)', async () => {
-      // coveredLessons allaqachon 12 — birinchi chaqiruv shu qiymatga
-      // ko'targan (5 dan 7 tasini qo'shib). lessonsThroughReturn hamon 7,
-      // va 12 > 7 bo'lgani uchun bu ALLAQACHON qayta hisoblangan holat —
-      // qaytaradigan narsa qolmagan.
-      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
-        ...charge,
-        coveredLessons: 12,
-      });
-
-      const res = await service.restoreChargeForReturn(tx, {
-        enrollmentId: 'enr-1',
-        returnDate: new Date('2026-10-15T00:00:00.000Z'),
-        companyId: 1001,
-        reason: 'Muzlatishdan chiqarildi',
-      });
-
-      expect(res).toBeNull();
-      expect(txWriteMock.createAdjustment).not.toHaveBeenCalled();
-    });
-
-    it('coveredDates dan KO`P dars qayta hisoblanmaydi', async () => {
-      const res = await service.restoreChargeForReturn(tx, {
-        enrollmentId: 'enr-1',
-        returnDate: new Date('2026-10-15T00:00:00.000Z'),
-        companyId: 1001,
-        reason: 'Muzlatishdan chiqarildi',
-      });
-
-      expect(res).not.toBeNull();
-      const updated =
-        prismaMock.enrollmentMonthlyCharge.update.mock.calls[0][0];
-      expect(updated.data.coveredLessons).toBeLessThanOrEqual(
-        charge.coveredDates.length,
+    it('ikkinchi marta chaqirilganda null qaytaradi (idempotent — HAQIQIY DB holati)', async () => {
+      // Coordinator review (2026-09-03, uchinchi tur), HIGH-1: eski
+      // `coveredLessons <= lessonsThroughReturn` formulasi faqat SON
+      // parametr fazosining yarmida barqarorlashardi. `frozenOutDates`
+      // to'plamidan AYIRISH esa qurilishiga ko'ra idempotent — bu test
+      // buni HAQIQIY DB holatini simulyatsiya qilib tekshiradi (bir
+      // martalik mock emas, `findUnique` ikkinchi chaqiruvda birinchisining
+      // `update`ini ko'radi).
+      let chargeRow: any = { ...charge };
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockImplementation(() =>
+        Promise.resolve({ ...chargeRow }),
       );
+      prismaMock.enrollmentMonthlyCharge.update.mockImplementation(
+        ({ data }: any) => {
+          chargeRow = { ...chargeRow, ...data };
+          return Promise.resolve({ ...chargeRow });
+        },
+      );
+
+      const params = {
+        enrollmentId: 'enr-1',
+        returnDate: new Date('2026-10-15T00:00:00.000Z'),
+        companyId: 1001,
+        reason: 'Muzlatishdan chiqarildi',
+      };
+
+      const first = await service.restoreChargeForReturn(tx, params);
+      const second = await service.restoreChargeForReturn(tx, params);
+
+      expect(first).toEqual({ charged: 225_001, lessons: 7 });
+      expect(second).toBeNull();
+      expect(txWriteMock.createAdjustment).toHaveBeenCalledTimes(1);
+      expect(chargeRow.frozenOutDates).toEqual(['2026-10-13', '2026-10-15']);
     });
 
     it('chegirmani qo`llaydi', async () => {
       prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
         ...charge,
         discountPercent: 50,
+        chargedAmount: 80_360, // 5 x applyDiscount(32 143, 50) = 5 x 16 072
       });
 
       const res = await service.restoreChargeForReturn(tx, {
@@ -1413,10 +1435,26 @@ describe('MonthlyChargeService', () => {
       expect(res?.charged).toBe(112_504);
     });
 
-    it('oy oxiridan keyin qaytsa null qaytaradi', async () => {
-      // Noyabrda qaytgan deb hisoblansa, davr 2026/11 ga suriladi va
-      // shu davr uchun hisob yo'q — natijada barcha oktabr sanalari
-      // "qaytishgacha" hisoblanib, restorable = 0 chiqadi.
+    it('hech narsa muzlatib chiqarilmagan bo`lsa null qaytaradi', async () => {
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        ...charge,
+        frozenOutDates: [],
+      });
+
+      const res = await service.restoreChargeForReturn(tx, {
+        enrollmentId: 'enr-1',
+        returnDate: new Date('2026-10-15T00:00:00.000Z'),
+        companyId: 1001,
+        reason: 'Muzlatishdan chiqarildi',
+      });
+
+      expect(res).toBeNull();
+      expect(txWriteMock.createAdjustment).not.toHaveBeenCalled();
+    });
+
+    it('barcha muzlatib chiqarilgan sanalar qaytish kunidan oldin bo`lsa null qaytaradi', async () => {
+      // Noyabrda qaytgan deb hisoblansa, frozenOutDates ichidagi barcha
+      // (oktabr) sanalar <= qaytish kuni bo'lib chiqadi — tiklanadigani yo'q.
       const res = await service.restoreChargeForReturn(tx, {
         enrollmentId: 'enr-1',
         returnDate: new Date('2026-11-05T00:00:00.000Z'),
@@ -1425,6 +1463,217 @@ describe('MonthlyChargeService', () => {
       });
 
       expect(res).toBeNull();
+    });
+  });
+
+  describe('frozenOutDates: muzlatish + qaytish invariantlari (2026-09 review, HIGH-1/2/3)', () => {
+    // 14 ta oktabr sanasi, to'liq oy: monthlyPrice 450 000, plannedLessons
+    // 14 -> perLessonCost 32 143 (round(450000/14)).
+    const octoberDates = [
+      '2026-10-01',
+      '2026-10-03',
+      '2026-10-06',
+      '2026-10-08',
+      '2026-10-10',
+      '2026-10-13',
+      '2026-10-15',
+      '2026-10-17',
+      '2026-10-20',
+      '2026-10-22',
+      '2026-10-24',
+      '2026-10-27',
+      '2026-10-29',
+      '2026-10-31',
+    ];
+
+    function freshChargeRow(overrides: Record<string, unknown> = {}) {
+      return {
+        id: 'ch-1',
+        status: 'CHARGED',
+        coveredDates: octoberDates,
+        frozenOutDates: [] as string[],
+        coveredLessons: 14,
+        perLessonCost: 32_143,
+        discountPercent: 0,
+        creditAmount: 0,
+        chargedAmount: 450_000,
+        ...overrides,
+      };
+    }
+
+    function statefulCharge(initial: any) {
+      let row = { ...initial };
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockImplementation(() =>
+        Promise.resolve({ ...row }),
+      );
+      prismaMock.enrollmentMonthlyCharge.update.mockImplementation(
+        ({ data }: any) => {
+          row = { ...row, ...data };
+          return Promise.resolve({ ...row });
+        },
+      );
+      return {
+        get current() {
+          return row;
+        },
+      };
+    }
+
+    it('HIGH-2: muzlatish 10.10 -> qaytish 15.10 -> ketish 20.10 zanjiri to`g`ri qaytaradi (eski kod 96 429 qaytarardi)', async () => {
+      const state = statefulCharge(freshChargeRow());
+
+      const freeze1 = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-10T00:00:00.000Z'),
+        companyId: 1001,
+        reason: 'Muzlatish',
+      });
+      expect(freeze1?.refunded).toBe(289_287); // 9 x 32 143
+
+      const ret = await service.restoreChargeForReturn(tx, {
+        enrollmentId: 'enr-1',
+        returnDate: new Date('2026-10-15T00:00:00.000Z'),
+        companyId: 1001,
+        reason: 'Muzlatishdan chiqarildi',
+      });
+      expect(ret).toEqual({ charged: 225_001, lessons: 7 });
+
+      // Ketish 20.10 da: HAQIQIY qolgan to'lovli-lekin-o'tilmagan darslar —
+      // 22,24,27,29,31 = 5 ta = 160 715. Eski (prefiks faraz qiluvchi) kod
+      // `coveredDates`ning TO'LIQ ro'yxatini `<=day`ga solishtirib
+      // `lessonsThroughDeparture=9`, `remaining=coveredLessons(12)-9=3`
+      // hisoblab 96 429 (3 x 32 143) qaytarardi — 15.10 dagi qaytishni
+      // "hisobga olmay". `frozenOutDates` bilan bu xato yo'q: 20.10'dan
+      // KEYIN turgan va HOZIR muzlatib chiqarilMAGAN sanalar to'g'ridan
+      // to'g'ri hisoblanadi.
+      const departure = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-20T00:00:00.000Z'),
+        companyId: 1001,
+        reason: 'Guruhdan chiqdi',
+      });
+      expect(departure?.refunded).toBe(160_715); // 5 x 32 143
+
+      // Umumiy hisob: 3 harakatdan keyin hech qanday pul "yo'qolmagan" yoki
+      // "yaratilmagan" — faqat haqiqatan o'tilmagan darslar puli qoladi.
+      expect(state.current.frozenOutDates.sort()).toEqual(
+        [
+          '2026-10-13',
+          '2026-10-15',
+          '2026-10-22',
+          '2026-10-24',
+          '2026-10-27',
+          '2026-10-29',
+          '2026-10-31',
+        ].sort(),
+      );
+    });
+
+    it('HIGH-1: uzoq muzlatishdan (06 -> 27) keyin qaytish faqat BIRINCHI marta to`laydi, keyingi 5 chaqiruv null', async () => {
+      const state = statefulCharge(freshChargeRow());
+
+      const freeze = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-06T00:00:00.000Z'),
+        companyId: 1001,
+        reason: 'Muzlatish',
+      });
+      expect(freeze?.refunded).toBe(353_573); // 11 x 32 143
+
+      const returnParams = {
+        enrollmentId: 'enr-1',
+        returnDate: new Date('2026-10-27T00:00:00.000Z'),
+        companyId: 1001,
+        reason: 'Muzlatishdan chiqarildi',
+      };
+
+      const results: Array<{ charged: number; lessons: number } | null> = [];
+      for (let i = 0; i < 6; i++) {
+        results.push(await service.restoreChargeForReturn(tx, returnParams));
+      }
+
+      // Reviewer probe: eski `coveredLessons <= lessonsThroughReturn`
+      // formulasi shu aniq holatda 64 286 ni BESH marta qaytarib
+      // undirardi (5 harakatda 321 430 ortiqcha). Yangi to'plam-asosli kod
+      // faqat BIRINCHI chaqiruvda undiradi.
+      expect(results[0]).toEqual({ charged: 64_286, lessons: 2 }); // 29,31
+      for (let i = 1; i < 6; i++) {
+        expect(results[i]).toBeNull();
+      }
+      expect(txWriteMock.createAdjustment).toHaveBeenCalledTimes(2); // freeze + 1-return
+      expect(state.current.frozenOutDates.sort()).toEqual(
+        [
+          '2026-10-08',
+          '2026-10-10',
+          '2026-10-13',
+          '2026-10-15',
+          '2026-10-17',
+          '2026-10-20',
+          '2026-10-22',
+          '2026-10-24',
+          '2026-10-27',
+        ].sort(),
+      );
+    });
+
+    it('HIGH-1 retryi zaif zonada (freeze 24 -> return 29): ikkinchi chaqiruv null', async () => {
+      statefulCharge(freshChargeRow());
+
+      await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-24T00:00:00.000Z'),
+        companyId: 1001,
+        reason: 'Muzlatish',
+      });
+
+      const returnParams = {
+        enrollmentId: 'enr-1',
+        returnDate: new Date('2026-10-29T00:00:00.000Z'),
+        companyId: 1001,
+        reason: 'Muzlatishdan chiqarildi',
+      };
+
+      const first = await service.restoreChargeForReturn(tx, returnParams);
+      const second = await service.restoreChargeForReturn(tx, returnParams);
+
+      expect(first).toEqual({ charged: 32_143, lessons: 1 }); // faqat 31
+      expect(second).toBeNull();
+    });
+
+    it('HIGH-3: kredit bilan qoplangan darslar qaytishda ORTIQCHA pul "yaratmaydi" (Σ charged <= Σ refunded)', async () => {
+      // 3 dars kredit bilan (naqd emas) qoplangan: creditAmount = 3 x
+      // 32 143 = 96 429, chargedAmount shuncha kam.
+      const state = statefulCharge(
+        freshChargeRow({
+          creditAmount: 96_429,
+          chargedAmount: 353_571, // 450 000 - 96 429
+        }),
+      );
+
+      // 01.10 da muzlatish — deyarli butun oy chiqadi (13 ta sana), lekin
+      // naqd faqat 353 571 bor edi: qaytarish shu bilan QOPQOQLANADI.
+      const freeze = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-01T00:00:00.000Z'),
+        companyId: 1001,
+        reason: 'Muzlatish',
+      });
+      expect(freeze?.refunded).toBe(353_571); // qopqoq ishladi (13x32143=417 859 emas)
+      expect(state.current.chargedAmount).toBe(0);
+
+      // 04.10 da qaytish — naiv `missing x cost` 385 716 bo'lardi (bu
+      // refund'dan 32 145 KO'P) — simmetrik qopqoq buni to'xtatadi.
+      const ret = await service.restoreChargeForReturn(tx, {
+        enrollmentId: 'enr-1',
+        returnDate: new Date('2026-10-04T00:00:00.000Z'),
+        companyId: 1001,
+        reason: 'Muzlatishdan chiqarildi',
+      });
+
+      expect(ret?.lessons).toBe(12); // sana-darajasida to'g'ri hisoblandi
+      expect(ret?.charged).toBeLessThan(12 * 32_143); // qopqoq ishladi
+      expect(ret?.charged).toBeLessThanOrEqual(freeze!.refunded); // ASOSIY INVARIANT
+      expect(state.current.chargedAmount).toBeLessThanOrEqual(freeze!.refunded);
     });
   });
 

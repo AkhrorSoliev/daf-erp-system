@@ -488,48 +488,48 @@ export class MonthlyChargeService {
   }
 
   /**
-   * O'quvchi oy o'rtasida ketdi: o'tmagan darslar ulushini balansga qaytaradi.
+   * Muzlatish PULINI (yoki haqiqiy ketishda qolgan oy pulini) balansga
+   * qaytaradi — `departureDate`dan KEYINGI, hali "muzlatib chiqarilmagan"
+   * sanalarni `frozenOutDates`ga qo'shadi.
    *
-   * Butun oy hisobi teskari qilinmaydi — o'tgan darslar to'langan bo'lib
-   * qolishi kerak (`EnrollmentMonthlyCharge.status` `CHARGED` bo'lib qoladi,
-   * asl `chargeMonthlyFee` tranzaksiyasi ham tegilmaydi). Faqat qolgan
-   * darslar ulushi qaytariladi va qaytariladigan summa hech qachon
-   * yechilgandan oshmaydi (kredit tufayli oz yechilgan oy).
+   * Ikkita chaqiruvchisi bor va ikkalasi ham xuddi shu funksiyani ishlatadi:
+   * (1) `students-status.service.ts`ning FROZEN bloki — bu YERDA
+   * `departureDate` aslida "muzlatish sanasi"; (2) `status-cascade.service
+   * .ts`ning DROPPED/COMPLETED shoxi — bu YERDA haqiqiy ketish sanasi. Ikkala
+   * holatda ham semantika bir xil: "shu sanadan KEYINGI darslar endi
+   * qoplanmaydi, puli qaytadi" — shuning uchun bitta funksiya ikkalasiga
+   * ham xizmat qiladi.
    *
-   * IDEMPOTENT — takroriy chaqiruv (qo'sh bosish, tarmoq qayta urinishi
-   * committed bo'lib qolgan so'rovni qayta yuborishi) ikkinchi marta
-   * qaytarmaydi. `remaining` KALENDARDAN emas — hisobning O'ZI saqlab
-   * turgan `charge.coveredLessons`dan chiqariladi: "departureDate holatida
-   * shu kungacha qoplanishi kerak bo'lgan darslar soni"
-   * (`lessonsThroughDeparture`) hisoblab, joriy `coveredLessons`dan
-   * ayiriladi. Birinchi chaqiruv shu farqni qaytaradi VA `coveredLessons`ni
-   * aynan o'sha farqga kamaytiradi — shuning uchun ikkinchi chaqiruvda farq
-   * 0 bo'lib qoladi, chunki `status` doim `CHARGED` bo'lib qolaveradi (u
-   * yagona himoya bo'la olmaydi). Faqat kalendardan hisoblangan avvalgi
-   * versiya (`lessonDatesInMonth(...).filter(d => d > day)`) BUG edi: u har
-   * safar bir xil sonni qaytarib, chaqirilgan safar sayin qayta-qayta pul
-   * yechardi — faqat `chargedAmount` qopqog'i bilan chegaralangan, haqiqiy
-   * pul.
+   * QOIDA (2026-09 review, HIGH-1/2/3 — ildiz sabab data-modelda edi):
+   * `coveredLessons` shunchaki SON, `coveredDates`ning "boshidan N tasi"
+   * qoplangan deb faraz qilardi. Bu muzlatish uchun xavfsiz edi (faqat
+   * pastdan kesardi — prefiks qisqarardi), lekin qaytish YUQORIDAN
+   * (suffiks) qo'shadi — `prefiks ∪ suffiks` endi SON bilan ifodalanmaydi.
+   * Shuning uchun bu funksiya (va uning ko'zgusi, `restoreChargeForReturn`)
+   * endi TO'PLAM bilan ishlaydi: `frozenOutDates` — `coveredDates`ning
+   * hozir "chiqarilgan" qism-to'plami. Muzlatish shu to'plamga qo'shadi
+   * (`∪`), qaytish undan ayiradi (`\`). Union/difference FIKSIRLANGAN
+   * to'plam ustida QURILISHIGA KO'RA idempotent — qayta chaqirilganda
+   * qo'shiladigan/ayiriladigan narsa yo'q bo'lib chiqadi, kalendardan
+   * qayta hisoblashga yoki oldingi "necha dars o'tgan edi" holatini eslab
+   * qolishga hojat qolmaydi. `coveredLessons = coveredDates.length -
+   * frozenOutDates.length` — endi shunchaki HOSILA, moslik uchun saqlanadi.
    *
-   * `departureDate` bugundan OLDINGI sana bo'lishi MUMKIN EMAS: bu funksiya
-   * "departureDate'dan keyingi darslar hali o'tilmagan" deb faraz qiladi —
-   * bu faqat bugun yoki kelajakdagi sana uchun to'g'ri. Orqaga sanaladigan
-   * (backdated) chiqish allaqachon o'qitilgan va o'qituvchiga hisoblangan
-   * darslarni ham "qolgan" deb hisoblab qaytarib yuborardi — bu holda
-   * `SalaryAccrual` bilan sinxronsizlik yuzaga kelardi (garchi bu funksiya
-   * hech qachon accrual'ga to'g'ridan-to'g'ri tegmasa ham — pastga qarang).
-   * Yagona hozirgi chaqiruvchi (`removeFromGroup`) doim `new Date()`ni
-   * yuboradi; bu tekshiruv KELAJAKDAGI chaqiruvchilar uchun himoya —
-   * xato jim yuz bermasligi kerak.
+   * SANA CHEGARASI KONVENSIYASI (MEDIUM, 2026-09 review): muzlatish
+   * `departureDate`NING O'ZINI iste'mol qilingan deb hisoblaydi —
+   * `d <= departureDate` qoplangan qoladi, faqat `d > departureDate`
+   * chiqariladi. `restoreChargeForReturn`da bu ATAYLAB ASIMMETRIK: qaytish
+   * kunining o'zi TIKLANMAYDI (`d > returnDate` bo'lganlarigina qayta
+   * hisoblanadi) — ya'ni aynan dars kunida qaytgan o'quvchi o'sha darsni
+   * BEPUL oladi. Bu ikkala funksiyada ham bir xil konvensiya: chegara sanasi
+   * har doim "hozirgi tomonga" tegishli (muzlatishda — hali qoplangan
+   * tomonga; qaytishda — hali muzlatilgan tomonga qoladi).
    *
-   * Bu servis TEACHER accrual'lariga MUTLAQO tegmaydi: qaytarilayotgan
-   * darslar hali o'tilmagan (ketgan kundan KEYINGI sanalar), shuning uchun
-   * ularga hech qanday `SalaryAccrual` yozuvi yo'q — reverse qilinadigan
-   * narsa yo'q. O'qituvchi haqi (`accrueMonthlySalary`) har bir davomat
-   * uchun alohida, `EnrollmentMonthlyCharge.perLessonCost` (bu yerda
-   * o'zgartirilmaydigan, muzlatilgan qiymat) asosida hisoblanadi. Yuqoridagi
-   * backdated-taqiq shu invariantni KUCHAB QO'YADI — accrual'siz qolishning
-   * yagona sababi "bu darslar hali o'tilmagan" degan faraz edi.
+   * `null` qaytaradi: hisob topilmasa, `REVERSED` bo'lsa, yoki
+   * qaytariladigan narsa bo'lmasa (idempotent).
+   *
+   * Chaqiruvchi Serializable tranzaksiya ichida bo'lishi SHART — `tx` shu
+   * tranzaksiyaning mijozi.
    */
   async reverseChargeForDeparture(
     tx: Prisma.TransactionClient,
@@ -592,31 +592,35 @@ export class MonthlyChargeService {
     });
     if (!enr) return null;
 
-    // "departureDate holatida shu kungacha (kiritilgan holda) qoplanishi
-    // kerak bo'lgan darslar soni" — hisob YOZILGAN paytdagi MUZLATILGAN
-    // sanalar ro'yxatidan. `remaining` shu bilan HOZIRGI
-    // `charge.coveredLessons` orasidagi FARQ — kalendardan emas, hisobning
-    // o'zidan. Shu orqali idempotent (yuqoridagi izohga qarang).
-    //
-    // Ilgari bu son JONLI `resolveExcludedDates` dan qayta hisoblanardi va
-    // muzlatish invariantini buzardi (spec 5.5): oy o'rtasida bitta dars
-    // bekor qilinsa (`LessonCancellation`) yoki bayram qo'shilsa,
-    // `lessonsThroughDeparture` KAMAYARDI, `remaining` esa O'SARDI —
-    // ketayotgan o'quvchiga bo'lib o'tmagan, lekin allaqachon "qoplangan"
-    // deb hisoblangan dars uchun ham pul qaytarilardi (~34 615/dars), va
-    // teskarisi ham. Idempotentlik ham shunga bog'liq edi: ikkinchi
-    // chaqiruvda farq yana noldan farqli bo'lib qolardi.
-    const frozenCoveredDates = charge.coveredDates ?? [];
-    let lessonsThroughDeparture: number;
-    if (frozenCoveredDates.length > 0) {
-      lessonsThroughDeparture = frozenCoveredDates.filter(
-        (d) => d <= day,
-      ).length;
+    const coveredDates = charge.coveredDates ?? [];
+    const frozenOutBefore = charge.frozenOutDates ?? [];
+
+    // `remaining`/`frozenOutAfter`: ikkita yo'l bor, `coveredDates`ning
+    // bo'sh yoki bo'sh emasligiga qarab.
+    let remaining: number;
+    let frozenOutAfter: string[] | null = null;
+
+    if (coveredDates.length > 0) {
+      // TO'PLAM yo'li (HIGH-1/2/3 tuzatishi): `coveredDates`dan hali
+      // chiqarilmagan va `departureDate`dan KEYINGI sanalar yangidan
+      // `frozenOutDates`ga qo'shiladi. Union — ikkinchi marta xuddi shu
+      // (yoki oldinroq) sana bilan chaqirilsa, bu sanalar allaqachon
+      // to'plamda bo'lgani uchun `newlyOut` bo'sh chiqadi va `null`
+      // qaytariladi (qurilishiga ko'ra idempotent — pastga qarang).
+      const frozenOutSet = new Set(frozenOutBefore);
+      const newlyOut = coveredDates.filter(
+        (d) => d > day && !frozenOutSet.has(d),
+      );
+      remaining = newlyOut.length;
+      if (remaining === 0) return null;
+      frozenOutAfter = [...frozenOutBefore, ...newlyOut].sort();
     } else {
       // `coveredDates` ustuni qo'shilishidan OLDIN yozilgan qator (hisob
       // hech qachon `coveredLessons = 0` bilan yozilmaydi, shuning uchun
-      // bo'sh massiv aynan shuni bildiradi). Eski xatti-harakat saqlanadi —
-      // muqobili "hech narsa qaytarmaslik" bo'lardi.
+      // bo'sh massiv aynan shuni bildiradi). Bunday qatorda sanalarning
+      // o'zi yo'q — `frozenOutDates` to'plam sifatida ishlay olmaydi, eski
+      // SON-asosli xatti-harakat saqlanadi (muqobili "hech narsa
+      // qaytarmaslik" bo'lardi).
       const excludedDates = await this.resolveExcludedDates(
         tx,
         charge.groupId,
@@ -624,7 +628,7 @@ export class MonthlyChargeService {
         periodYear,
         periodMonth,
       );
-      lessonsThroughDeparture = lessonDatesInMonth({
+      const lessonsThroughDeparture = lessonDatesInMonth({
         year: periodYear,
         month: periodMonth,
         exactDays: enr.group.exactDays,
@@ -632,13 +636,9 @@ export class MonthlyChargeService {
         fromDate: enr.startDate ? tashkentDateStr(enr.startDate) : null,
         toDate: day,
       }).length;
+      remaining = Math.max(0, charge.coveredLessons - lessonsThroughDeparture);
+      if (remaining === 0) return null;
     }
-
-    const remaining = Math.max(
-      0,
-      charge.coveredLessons - lessonsThroughDeparture,
-    );
-    if (remaining === 0) return null;
 
     // `charge.perLessonCost` ATAYLAB chegirmasiz (o'qituvchi haqi undan
     // hisoblanadi) — qaytariladigan summa esa o'quvchi TO'LAGAN narxda
@@ -667,11 +667,16 @@ export class MonthlyChargeService {
       tx,
     );
 
+    const newCoveredLessons = frozenOutAfter
+      ? coveredDates.length - frozenOutAfter.length
+      : charge.coveredLessons - remaining;
+
     await tx.enrollmentMonthlyCharge.update({
       where: { id: charge.id },
       data: {
-        coveredLessons: charge.coveredLessons - remaining,
+        coveredLessons: newCoveredLessons,
         chargedAmount: charge.chargedAmount - refunded,
+        ...(frozenOutAfter ? { frozenOutDates: frozenOutAfter } : {}),
       },
     });
 
@@ -689,8 +694,24 @@ export class MonthlyChargeService {
    * TEKIN o'qiydi (pul balansda yotadi, dars berilgan, hech qanday hisob
    * yo'q).
    *
-   * `null` qaytaradi: hisob topilmasa, `REVERSED` bo'lsa, yoki qaytaradigan
-   * narsa bo'lmasa (idempotent — pastga qara).
+   * TO'PLAM MODELI (2026-09 review, HIGH-1/2/3): `reverseChargeForDeparture`
+   * `frozenOutDates`ga sanalar QO'SHADI (`∪`), bu funksiya ULARDAN
+   * `returnDate`dan KEYINGI qismini AYIRADI (`\`). Difference FIKSIRLANGAN
+   * to'plamdan ATAYLAB idempotent: qaytgan sanalar to'plamdan chiqib
+   * ketgach, xuddi shu `returnDate` bilan qayta chaqirilsa ayiriladigan
+   * narsa qolmaydi — kalendarga yoki `coveredLessons`ning avvalgi qiymatiga
+   * qarab "hali qaytarilmadimi" degan taxminga hojat yo'q.
+   *
+   * SANA CHEGARASI: `returnDate`NING O'ZI qaytarilmaydi — faqat undan
+   * KEYINGI sanalar (`d > returnDate`) qayta hisoblanadi.
+   * `reverseChargeForDeparture`dagi bilan bir xil konvensiya (uning
+   * sinf-darajasidagi izohiga qarang): dars kunining o'zida qaytgan
+   * o'quvchi o'sha darsni BEPUL oladi (ataylab, muzlatish tomonining
+   * ko'zgusi).
+   *
+   * `null` qaytaradi: hisob topilmasa, `REVERSED` bo'lsa, hech narsa
+   * muzlatib chiqarilmagan bo'lsa, yoki qaytariladigan narsa bo'lmasa
+   * (idempotent — yuqoriga qarang).
    *
    * Chaqiruvchi Serializable tranzaksiya ichida bo'lishi SHART — `tx` shu
    * tranzaksiyaning mijozi.
@@ -750,35 +771,24 @@ export class MonthlyChargeService {
     });
     if (!enr) return null;
 
-    // "returnDate holatida shu kungacha (kiritilgan holda) muzlatish
-    // TEGMAGAN darslar soni" — hisob YOZILGAN paytdagi MUZLATILGAN sanalar
-    // ro'yxatidan, JONLI kalendardan emas — `reverseChargeForDeparture`
-    // dagi bilan bir xil sabab: shu orqali idempotent, va oyning
-    // o'rtasida bekor qilingan/qo'shilgan dars ushbu hisobni buzmaydi.
     const coveredDates = charge.coveredDates ?? [];
-    const lessonsThroughReturn = coveredDates.filter((d) => d <= day).length;
-    // Qaytgandan KEYINGI darslar — muzlatish davomida pul qaytarilgan,
-    // endi o'quvchi ularga qaytadan keladi.
-    const restorable = coveredDates.length - lessonsThroughReturn;
-    // MUHIM: bu YIG'INDI `restorable - max(0, coveredLessons -
-    // lessonsThroughReturn)` shaklida EMAS. Muzlatish har doim
-    // `lessonsThroughReturn`gacha (yoki undan kam) qoplaydi — chunki
-    // muzlatish sanasi xronologik jihatdan qaytish sanasidan OLDIN yoki
-    // TENG bo'ladi, hech qachon undan keyin emas. Shuning uchun:
-    //   - `coveredLessons <= lessonsThroughReturn` — bu hali hech qachon
-    //     qayta hisoblanmagan (yoki hech qachon muzlatilmagan) holat:
-    //     qolgan BUTUN `restorable` bir yo'la qaytadan hisoblanadi.
-    //   - `coveredLessons > lessonsThroughReturn` — bu ALLAQACHON shu
-    //     chaqiruv orqali qayta hisoblangan holat (yuqoridagi filiadan
-    //     keyin `coveredLessons` aynan shu `restorable`ni qo'shib
-    //     oshirilgan bo'ladi) — qaytaradigan narsa qolmagan, `0`.
-    // Ikkinchi holatni oddiy `restorable - max(0, coveredLessons -
-    // lessonsThroughReturn)` bilan hisoblash IDEMPOTENT emas edi: ikkinchi
-    // chaqiruv `coveredLessons > lessonsThroughReturn` bo'lgani uchun
-    // qisman qiymat qaytarardi va o'quvchidan IKKINCHI marta pul yechardi.
-    const missing =
-      charge.coveredLessons <= lessonsThroughReturn ? restorable : 0;
-    if (missing <= 0) return null;
+    const frozenOutBefore = charge.frozenOutDates ?? [];
+    // Bo'sh to'plam = "hech narsa muzlatib chiqarilmagan" (hech qachon
+    // muzlatilmagan yozilish, YOKI `frozenOutDates` ustuni qo'shilishidan
+    // OLDIN yozilgan qator — ikkalasida ham qaytaradigan narsa yo'q).
+    if (frozenOutBefore.length === 0) return null;
+
+    // `returnDate`dan KEYIN turgan, hozir muzlatib chiqarilgan sanalar —
+    // aynan shular qaytadan qoplanadi. `<= returnDate` bo'lganlari
+    // (muzlatish davomida o'tib ketgan darslar) ABADIY chiqarilgan bo'lib
+    // qoladi — sinf-darajasidagi izohdagi sabab bilan.
+    const toRestore = frozenOutBefore.filter((d) => d > day);
+    const missing = toRestore.length;
+    if (missing === 0) return null;
+
+    const toRestoreSet = new Set(toRestore);
+    const frozenOutAfter = frozenOutBefore.filter((d) => !toRestoreSet.has(d));
+    const coveredLessonsNow = coveredDates.length - frozenOutAfter.length;
 
     // `charge.perLessonCost` ATAYLAB chegirmasiz (o'qituvchi haqi undan
     // hisoblanadi) — qayta hisoblanadigan summa esa o'quvchi TO'LAYDIGAN
@@ -788,7 +798,38 @@ export class MonthlyChargeService {
       charge.perLessonCost,
       clampDiscount(charge.discountPercent ?? 0),
     );
-    const charged = missing * discountedPerLessonCost;
+    const rechargeRaw = missing * discountedPerLessonCost;
+
+    // SIMMETRIK QOPQOQ (HIGH-3 tuzatishi, 2026-09 review): muzlatish
+    // tomoni qaytarishni `min(remaining*cost, chargedAmount)` bilan
+    // qopqoqlaydi — chunki qoplangan darslarning bir qismi KREDIT bilan
+    // (naqd emas) to'langan bo'lishi mumkin, va naqd qaytarish shu naqd
+    // miqdoridan oshmasligi kerak. Bu tomon shu qopqoqni QAYTARMASA,
+    // muzlatishda qopqoq ishlagan holatlarda (`remaining*cost >
+    // chargedAmount`) keyinroq qaytishda `missing*cost` XOM holda
+    // qo'shilib, aslida hech qachon qaytarilmagan naqd pul "yaratilardi" —
+    // o'quvchidan HAQIQATDA olingandan ko'proq naqd yechilardi.
+    //
+    // Qopqoq: `chargedAmount` `coveredLessonsNow` darslar uchun (FIKS
+    // `creditAmount`ni ayirib) qanday bo'lishi kerakligidan OSHMASIN.
+    // `proratedMonthlyAmount` (oy yaratilish arifmetikasi) ATAYLAB
+    // ISHLATILMAYDI — bu funksiya (va uning ko'zgusi) allaqachon
+    // `count * perLessonCost` chizig'ida ishlaydi; ikkinchi (oylik-darajali
+    // dumaloqlash) yo'lni shu YERGA aralashtirish ikkita mustaqil
+    // yaxlitlash yo'lini bitta hisobga qo'shardi — bu loyihada uch marta
+    // aynan shunday holatdan zarar ko'rilgan (monthly-price.ts sarlavha
+    // izohi). `creditLessons`/`creditAmount`/`excusedLessons`ning o'ziga
+    // HECH QACHON tegilmaydi — ular hisob YARATILGANDA bir marta
+    // belgilanadi va shu FIKS holicha qoladi.
+    const ceiling = Math.max(
+      0,
+      coveredLessonsNow * discountedPerLessonCost - charge.creditAmount,
+    );
+    const chargedAmountAfter = Math.min(
+      charge.chargedAmount + rechargeRaw,
+      ceiling,
+    );
+    const charged = chargedAmountAfter - charge.chargedAmount;
     if (charged <= 0) return null;
 
     // Balansdan MANFIY summa bilan yechish — `reverseChargeForDeparture`
@@ -808,8 +849,9 @@ export class MonthlyChargeService {
     await tx.enrollmentMonthlyCharge.update({
       where: { id: charge.id },
       data: {
-        coveredLessons: charge.coveredLessons + missing,
-        chargedAmount: charge.chargedAmount + charged,
+        coveredLessons: coveredLessonsNow,
+        chargedAmount: chargedAmountAfter,
+        frozenOutDates: frozenOutAfter,
       },
     });
 
