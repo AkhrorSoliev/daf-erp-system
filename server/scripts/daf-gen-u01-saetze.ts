@@ -87,7 +87,10 @@ const HILFS = new Set([
 ]);
 
 function wordCount(de: string): number {
-  return de.replace(/[.,!?]/g, '').trim().split(/\s+/).length;
+  return de
+    .replace(/[.,!?]/g, '')
+    .trim()
+    .split(/\s+/).length;
 }
 
 function tokensOf(de: string): string[] {
@@ -99,7 +102,9 @@ function tokensOf(de: string): string[] {
 }
 
 function bekanntSet(woerter: WoerterFile): Set<string> {
-  return new Set(woerter.woerter.flatMap((w) => w.de.toLowerCase().split(/\s+/)));
+  return new Set(
+    woerter.woerter.flatMap((w) => w.de.toLowerCase().split(/\s+/)),
+  );
 }
 
 function unknownWordsIn(de: string, bekannt: Set<string>): string[] {
@@ -107,7 +112,10 @@ function unknownWordsIn(de: string, bekannt: Set<string>): string[] {
 }
 
 function sentenceKey(de: string): string {
-  return de.toLowerCase().replace(/[.,!?]/g, '').trim();
+  return de
+    .toLowerCase()
+    .replace(/[.,!?]/g, '')
+    .trim();
 }
 
 /**
@@ -129,7 +137,7 @@ function needsTts(de: string): boolean {
 /**
  * Yakka harfni gapning o'zida qanday aytish kerakligiga almashtiradi
  * (`C` → vocab'dagi `tts` maydoni, masalan "Tseh"). Raqam tokeni
- * uchraса — bu unit'da raqam so'zlar TO'LIQ yozilgan holda beriladi
+ * uchrasa — bu unit'da raqam so'zlar TO'LIQ yozilgan holda beriladi
  * (`sieben`, raqam belgisi emas), shuning uchun bu holat amalda faqat
  * modelning qoidani buzgan javobida chiqishi mumkin va qo'lda
  * ko'rikdan o'tkaziladi.
@@ -283,7 +291,9 @@ async function main(): Promise<void> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error("OPENAI_API_KEY yo'q");
 
-  const kurs = JSON.parse(readFileSync(join(A1, 'kurs.json'), 'utf8')) as KursFile;
+  const kurs = JSON.parse(
+    readFileSync(join(A1, 'kurs.json'), 'utf8'),
+  ) as KursFile;
   const woerter = JSON.parse(
     readFileSync(join(A1, code, 'woerter.json'), 'utf8'),
   ) as WoerterFile;

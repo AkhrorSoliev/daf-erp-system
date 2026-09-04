@@ -1,6 +1,7 @@
 -- AlterTable
 ALTER TABLE "DafLexeme" ADD COLUMN     "anzeige" TEXT,
 ADD COLUMN     "artikel" TEXT,
+ADD COLUMN     "core" BOOLEAN NOT NULL DEFAULT true,
 ADD COLUMN     "plural" TEXT,
 ADD COLUMN     "sectionId" INTEGER,
 ADD COLUMN     "tts" TEXT;
@@ -11,6 +12,7 @@ ADD COLUMN     "sectionId" INTEGER;
 
 -- AlterTable
 ALTER TABLE "DafSentence" ADD COLUMN     "sectionId" INTEGER,
+ADD COLUMN     "sourceId" TEXT,
 ADD COLUMN     "tts" TEXT;
 
 -- CreateTable
@@ -95,6 +97,9 @@ CREATE UNIQUE INDEX "DafPhrase_code_key" ON "DafPhrase"("code");
 
 -- CreateIndex
 CREATE INDEX "DafPhrase_sectionId_idx" ON "DafPhrase"("sectionId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "DafSentence_sourceId_key" ON "DafSentence"("sourceId");
 
 -- AddForeignKey
 ALTER TABLE "DafLexeme" ADD CONSTRAINT "DafLexeme_sectionId_fkey" FOREIGN KEY ("sectionId") REFERENCES "DafSection"("id") ON DELETE SET NULL ON UPDATE CASCADE;

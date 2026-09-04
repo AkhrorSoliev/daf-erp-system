@@ -38,8 +38,8 @@
         {
           "order": 4,
           "code": "u01-s4",
-          "titleDe": "Zahlen 0–20",
-          "titleUz": "0–20 sonlari",
+          "titleDe": "Zahlen 0–11",
+          "titleUz": "0–11 sonlari",
           "grammar": "Zahlen, Telefonnummer",
           "grammarUz": "sonlar va telefon raqami",
           "wordBudget": 10

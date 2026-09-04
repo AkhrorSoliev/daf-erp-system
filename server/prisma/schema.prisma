@@ -3014,6 +3014,12 @@ model DafLexeme {
   /// Ko'rgazma raqami — `de`ning yonida ko'rsatiladigan RAQAM ko'rinishi,
   /// FAQAT sonlar uchun. `de` — o'zi o'rgatiladigan nemischa so'z.
   anzeige           String?
+  /// Aktiv/passiv farqi. `true` — mashqda so'raladi, statistikasi
+  /// yig'iladi va Leitner qutisida qaytariladi. `false` — so'z faqat
+  /// dialog yoki matnda uchraydi, tarjimasi bor, lekin hech qachon
+  /// so'ralmaydi (masalan `Gute Nacht`, `Stadt`). Standart `true` —
+  /// eski DiB so'zlari ham, aksariyat yangi so'zlar ham aktiv.
+  core              Boolean               @default(true)
 
   unit     DafUnit          @relation(fields: [unitId], references: [id])
   lesson   DafLesson?       @relation(fields: [lessonId], references: [id])
@@ -3234,6 +3240,11 @@ model DafSentence {
   updatedAt DateTime          @updatedAt
   sectionId Int?
   tts       String?
+  /// Barqaror kalit: `u01-s3-04` (bo'lim + bo'lim ichidagi tartib
+  /// raqami). Seed shu bo'yicha yangilaydi/o'chiradi — `order` faqat
+  /// displey uchun. Eski (yangi unit matnidan oldingi) qatorlarda
+  /// `null` qoladi, shuning uchun ixtiyoriy.
+  sourceId  String?           @unique
 
   unit    DafUnit     @relation(fields: [unitId], references: [id])
   section DafSection? @relation(fields: [sectionId], references: [id])

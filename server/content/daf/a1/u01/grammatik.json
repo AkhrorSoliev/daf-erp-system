@@ -11,7 +11,7 @@
         { "de": "Bist du Timur?", "uz": "Sen Timurmisan?" },
         { "de": "Ja, ich bin Timur.", "uz": "Ha, men Timurman." },
         { "de": "Nein, ich bin nicht Timur. Ich bin Nodira.", "uz": "Yo'q, men Timur emasman. Men Nodiraman." },
-        { "de": "Wie ist dein Name?", "uz": "Ismingiz (isming) nima?" },
+        { "de": "Wie ist dein Name?", "uz": "Isming nima?" },
         { "de": "Mein Name ist Anna.", "uz": "Mening ismim Anna." }
       ]
     },
@@ -22,7 +22,7 @@
       "erklaerungUz": "Notanish yoki katta yoshli odamga hurmat bilan murojaat qilganda du emas, Sie ishlatiladi — bu 'Siz' ma'nosini beradi va fe'l infinitiv bilan bir xil bo'ladi: Sie heißen, Sie sind. Savol so'zi (wer — kim, wie — qanday) gap boshida turadi: Wie heißen Sie?",
       "beispiele": [
         { "de": "Guten Tag, Frau Karimova!", "uz": "Xayrli kun, Karimova xonim!" },
-        { "de": "Guten Tag, Herr Karimov!", "uz": "Xayrli kun, Karimov janob!" },
+        { "de": "Guten Tag, Herr Karimov!", "uz": "Xayrli kun, janob Karimov!" },
         { "de": "Wie heißen Sie?", "uz": "Ismingiz nima (rasmiy)?" },
         { "de": "Wer sind Sie?", "uz": "Siz kimsiz?" },
         { "de": "Auf Wiedersehen, Frau Karimova!", "uz": "Xayr, Karimova xonim!" },
@@ -36,7 +36,7 @@
       "erklaerungUz": "Kommen (kelmoq) va wohnen (yashamoq) fe'llari ich/du bilan o'zgaradi: ich komme, du kommst; ich wohne, du wohnst. Qayerdan kelganingni aytishda aus (masalan, aus Usbekistan), qayerda yashashingni aytishda esa in (masalan, in Deutschland) ishlatiladi.",
       "beispiele": [
         { "de": "Woher kommst du?", "uz": "Sen qayerdansan?" },
-        { "de": "Ich komme aus Usbekistan.", "uz": "Men O'zbekistondan kelaman." },
+        { "de": "Ich komme aus Usbekistan.", "uz": "Men O'zbekistondanman." },
         { "de": "Wo wohnst du?", "uz": "Sen qayerda yashaysan?" },
         { "de": "Ich wohne in Deutschland.", "uz": "Men Germaniyada yashayman." },
         { "de": "Kommst du aus Deutschland?", "uz": "Sen Germaniyadan kelasanmi?" }
@@ -46,7 +46,7 @@
       "section": "u01-s4",
       "titelDe": "Zahlen, Telefonnummer",
       "titelUz": "sonlar va telefon raqami",
-      "erklaerungUz": "0 dan 11 gacha har bir son alohida nemischa so'z: null, eins, zwei... Telefon raqamini aytganda nemislar sonlarni tartib bilan sanamaydi, balki har bir raqamni tasodifiy ketma-ketlikda, birma-bir aytadi — chunki telefon raqami sanoq emas, raqamlar to'plami.",
+      "erklaerungUz": "0 dan 11 gacha har bir son alohida nemischa so'z: null, eins, zwei... Telefon raqamini aytganda nemislar sonlarni sanamaydi — har bir raqamni yozilgan tartibda, birma-bir yoki juft-juft qilib aytadi, chunki telefon raqami sanoq emas, raqamlar ketma-ketligi.",
       "beispiele": [
         { "de": "Null, drei, sieben, eins, fünf, neun.", "uz": "Telefon raqami: nol, uch, yetti, bir, besh, to'qqiz." },
         { "de": "Acht, zwei, zehn, sechs.", "uz": "Sakkiz, ikki, o'n, olti." },

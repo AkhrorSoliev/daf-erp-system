@@ -84,6 +84,14 @@
       "order": 10
     },
     {
+      "sourceId": "u01-s1-wie",
+      "section": "u01-s1",
+      "de": "wie",
+      "uz": "qanday",
+      "core": true,
+      "order": 11
+    },
+    {
       "sourceId": "u01-s2-guten-tag",
       "section": "u01-s2",
       "de": "Guten Tag",
@@ -136,20 +144,12 @@
       "order": 6
     },
     {
-      "sourceId": "u01-s2-wie",
-      "section": "u01-s2",
-      "de": "wie",
-      "uz": "qanday",
-      "core": true,
-      "order": 7
-    },
-    {
       "sourceId": "u01-s2-wer",
       "section": "u01-s2",
       "de": "wer",
       "uz": "kim",
       "core": true,
-      "order": 8
+      "order": 7
     },
     {
       "sourceId": "u01-s2-was",
@@ -157,7 +157,7 @@
       "de": "was",
       "uz": "nima",
       "core": true,
-      "order": 9
+      "order": 8
     },
     {
       "sourceId": "u01-s2-danke",
@@ -165,7 +165,7 @@
       "de": "danke",
       "uz": "rahmat",
       "core": true,
-      "order": 10
+      "order": 9
     },
     {
       "sourceId": "u01-s3-kommen",

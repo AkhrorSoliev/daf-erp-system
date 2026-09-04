@@ -6,13 +6,27 @@ function files(): InhaltFiles {
     woerter: {
       unit: 'u01',
       woerter: [
-        { sourceId: 'u01-s1-hallo', section: 'u01-s1', de: 'hallo', uz: 'salom', core: true, order: 1 },
+        {
+          sourceId: 'u01-s1-hallo',
+          section: 'u01-s1',
+          de: 'hallo',
+          uz: 'salom',
+          core: true,
+          order: 1,
+        },
       ],
     },
     saetze: {
       unit: 'u01',
       saetze: [
-        { section: 'u01-s1', de: 'Ich bin Anna.', uz: 'Men Annaman.', wordCount: 3, origin: 'GENERATED' },
+        {
+          sourceId: 'u01-s1-01',
+          section: 'u01-s1',
+          de: 'Ich bin Anna.',
+          uz: 'Men Annaman.',
+          wordCount: 3,
+          origin: 'GENERATED',
+        },
       ],
     },
     dialoge: {
@@ -45,14 +59,23 @@ function files(): InhaltFiles {
     redemittel: {
       unit: 'u01',
       phrasen: [
-        { section: 'u01-s1', funktion: 'begruessen', funktionUz: 'salomlashish', de: 'Hallo!', uz: 'Salom!' },
+        {
+          section: 'u01-s1',
+          funktion: 'begruessen',
+          funktionUz: 'salomlashish',
+          de: 'Hallo!',
+          uz: 'Salom!',
+        },
       ],
     },
   };
 }
 
 /** `where`ni soxta jadval qatoriga solishtiradi: `notIn`/`in`/`gt` + tenglik. */
-function matches(row: Record<string, any>, where: Record<string, any>): boolean {
+function matches(
+  row: Record<string, any>,
+  where: Record<string, any>,
+): boolean {
   return Object.entries(where).every(([key, cond]) => {
     if (cond && typeof cond === 'object' && !Array.isArray(cond)) {
       if ('notIn' in cond) return !(cond.notIn as unknown[]).includes(row[key]);
@@ -76,7 +99,9 @@ function fakeTable(keyOf: (args: any) => string, seqRef: { n: number }) {
   const upsert = jest.fn(async (args: any) => {
     const k = keyOf(args);
     const existing = map.get(k);
-    const row = existing ? { ...existing, ...args.update } : { id: ++seqRef.n, ...args.create };
+    const row = existing
+      ? { ...existing, ...args.update }
+      : { id: ++seqRef.n, ...args.create };
     map.set(k, row);
     return row;
   });
@@ -84,7 +109,10 @@ function fakeTable(keyOf: (args: any) => string, seqRef: { n: number }) {
   return {
     map,
     upsert,
-    count: jest.fn(async ({ where }: any = {}) => list().filter((r) => matches(r, where ?? {})).length),
+    count: jest.fn(
+      async ({ where }: any = {}) =>
+        list().filter((r) => matches(r, where ?? {})).length,
+    ),
     findMany: jest.fn(async ({ where }: any = {}) =>
       list()
         .filter((r) => matches(r, where ?? {}))
@@ -106,11 +134,18 @@ function fakeTable(keyOf: (args: any) => string, seqRef: { n: number }) {
 function fakePrisma() {
   const seqRef = { n: 0 };
   const lexeme = fakeTable((a) => a.where.sourceId, seqRef);
-  const sentence = fakeTable((a) => `${a.where.unitId_order?.unitId}:${a.where.unitId_order?.order}`, seqRef);
+  const sentence = fakeTable((a) => a.where.sourceId, seqRef);
   const dialog = fakeTable((a) => a.where.code, seqRef);
-  const line = fakeTable((a) => `${a.where.dialogId_order.dialogId}:${a.where.dialogId_order.order}`, seqRef);
+  const line = fakeTable(
+    (a) => `${a.where.dialogId_order.dialogId}:${a.where.dialogId_order.order}`,
+    seqRef,
+  );
   const grammar = fakeTable((a) => a.where.sourceId, seqRef);
-  const beispiel = fakeTable((a) => `${a.where.grammarId_order.grammarId}:${a.where.grammarId_order.order}`, seqRef);
+  const beispiel = fakeTable(
+    (a) =>
+      `${a.where.grammarId_order.grammarId}:${a.where.grammarId_order.order}`,
+    seqRef,
+  );
   const phrase = fakeTable((a) => a.where.code, seqRef);
 
   return {
@@ -128,12 +163,28 @@ function fakePrisma() {
     },
     dafUnit: { findFirst: jest.fn(async () => ({ id: 1, code: 'u01' })) },
     dafLexeme: { upsert: lexeme.upsert, count: lexeme.count },
-    dafSentence: { upsert: sentence.upsert, count: sentence.count },
-    dafDialog: { upsert: dialog.upsert, findMany: dialog.findMany, deleteMany: dialog.deleteMany, count: dialog.count },
+    dafSentence: {
+      upsert: sentence.upsert,
+      count: sentence.count,
+      deleteMany: sentence.deleteMany,
+    },
+    dafDialog: {
+      upsert: dialog.upsert,
+      findMany: dialog.findMany,
+      deleteMany: dialog.deleteMany,
+      count: dialog.count,
+    },
     dafDialogLine: { upsert: line.upsert, deleteMany: line.deleteMany },
     dafGrammar: { upsert: grammar.upsert },
-    dafGrammarBeispiel: { upsert: beispiel.upsert, deleteMany: beispiel.deleteMany },
-    dafPhrase: { upsert: phrase.upsert, deleteMany: phrase.deleteMany, count: phrase.count },
+    dafGrammarBeispiel: {
+      upsert: beispiel.upsert,
+      deleteMany: beispiel.deleteMany,
+    },
+    dafPhrase: {
+      upsert: phrase.upsert,
+      deleteMany: phrase.deleteMany,
+      count: phrase.count,
+    },
   };
 }
 
@@ -148,7 +199,6 @@ describe('InhaltSeedService', () => {
       zeilen: 2,
       regeln: 1,
       phrasen: 1,
-      staleSaetze: 0,
       staleWoerter: 0,
     });
   });
@@ -164,7 +214,9 @@ describe('InhaltSeedService', () => {
     const prisma = fakePrisma();
     const f = files();
     f.woerter.woerter[0].section = 'u01-s9';
-    await expect(new InhaltSeedService(prisma as any).seed('u01', f)).rejects.toThrow('u01-s9');
+    await expect(
+      new InhaltSeedService(prisma as any).seed('u01', f),
+    ).rejects.toThrow('u01-s9');
   });
 
   it('anzeige bor so`zda saqlanadi, yo`qida null qoladi', async () => {
@@ -185,6 +237,27 @@ describe('InhaltSeedService', () => {
     const eins = calls.find((c) => c[0].create.sourceId === 'u01-s4-eins')[0];
     expect(hallo.create.anzeige).toBeNull();
     expect(eins.create.anzeige).toBe('1');
+  });
+
+  it('core bayrog`i (aktiv/passiv) so`zga o`tkaziladi', async () => {
+    const prisma = fakePrisma();
+    const f = files();
+    f.woerter.woerter.push({
+      sourceId: 'u01-s1-gute-nacht',
+      section: 'u01-s1',
+      de: 'Gute Nacht',
+      uz: 'xayrli tun',
+      core: false,
+      order: 2,
+    });
+    await new InhaltSeedService(prisma as any).seed('u01', f);
+    const calls = prisma.dafLexeme.upsert.mock.calls as any[];
+    const hallo = calls.find((c) => c[0].create.sourceId === 'u01-s1-hallo')[0];
+    const guteNacht = calls.find(
+      (c) => c[0].create.sourceId === 'u01-s1-gute-nacht',
+    )[0];
+    expect(hallo.create.core).toBe(true);
+    expect(guteNacht.create.core).toBe(false);
   });
 
   it('ikki dialogning satrlari aralashmaydi — bitta dialogli fixture ushlay olmaydigan xato', async () => {
@@ -209,8 +282,12 @@ describe('InhaltSeedService', () => {
     const d2 = prisma.rows.dialog.get('u01-d2');
     expect(d1.id).not.toBe(d2.id);
 
-    const linesOfD1 = [...prisma.rows.line.values()].filter((l: any) => l.dialogId === d1.id);
-    const linesOfD2 = [...prisma.rows.line.values()].filter((l: any) => l.dialogId === d2.id);
+    const linesOfD1 = [...prisma.rows.line.values()].filter(
+      (l: any) => l.dialogId === d1.id,
+    );
+    const linesOfD2 = [...prisma.rows.line.values()].filter(
+      (l: any) => l.dialogId === d2.id,
+    );
     expect(linesOfD1).toHaveLength(2);
     expect(linesOfD2).toHaveLength(3);
   });
@@ -219,17 +296,104 @@ describe('InhaltSeedService', () => {
     const prisma = fakePrisma();
     const f = files();
     f.redemittel.phrasen = [
-      { section: 'u01-s1', funktion: 'begruessen', funktionUz: 'salomlashish', de: 'Hallo!', uz: 'Salom!' },
-      { section: 'u01-s1', funktion: 'vorstellen', funktionUz: 'tanishtirish', de: 'Ich heiße Anna.', uz: 'Mening ismim Anna.' },
-      { section: 'u01-s1', funktion: 'begruessen', funktionUz: 'salomlashish', de: 'Guten Tag!', uz: 'Assalomu alaykum!' },
+      {
+        section: 'u01-s1',
+        funktion: 'begruessen',
+        funktionUz: 'salomlashish',
+        de: 'Hallo!',
+        uz: 'Salom!',
+      },
+      {
+        section: 'u01-s1',
+        funktion: 'vorstellen',
+        funktionUz: 'tanishtirish',
+        de: 'Ich heiße Anna.',
+        uz: 'Mening ismim Anna.',
+      },
+      {
+        section: 'u01-s1',
+        funktion: 'begruessen',
+        funktionUz: 'salomlashish',
+        de: 'Guten Tag!',
+        uz: 'Assalomu alaykum!',
+      },
     ];
     await new InhaltSeedService(prisma as any).seed('u01', f);
-    const codes = (prisma.dafPhrase.upsert.mock.calls as any[]).map((c) => c[0].create.code);
+    const codes = (prisma.dafPhrase.upsert.mock.calls as any[]).map(
+      (c) => c[0].create.code,
+    );
     // Massiv tartibi begruessen, vorstellen, begruessen. Kod BUTUN massiv
     // indeksidan (i+1) hisoblansa: begruessen-1, vorstellen-2,
     // begruessen-3 chiqardi. To`g`ri xulq — har funksiya o`z hisoblagichiga
     // ega, boshqa funksiyaning yozuvi uni siljitmaydi.
-    expect(codes).toEqual(['u01-s1-begruessen-1', 'u01-s1-vorstellen-1', 'u01-s1-begruessen-2']);
+    expect(codes).toEqual([
+      'u01-s1-begruessen-1',
+      'u01-s1-vorstellen-1',
+      'u01-s1-begruessen-2',
+    ]);
+  });
+
+  it('gap `sourceId` bo`yicha yangilanadi — o`rtadan bitta gap o`chirilsa qolganlar joyida qoladi', async () => {
+    const prisma = fakePrisma();
+    const service = new InhaltSeedService(prisma as any);
+    const f = files();
+    f.saetze.saetze = [
+      {
+        sourceId: 'u01-s1-01',
+        section: 'u01-s1',
+        de: 'Erster Satz.',
+        uz: 'Birinchi gap.',
+        wordCount: 2,
+        origin: 'GENERATED',
+      },
+      {
+        sourceId: 'u01-s1-02',
+        section: 'u01-s1',
+        de: 'Zweiter Satz.',
+        uz: 'Ikkinchi gap.',
+        wordCount: 2,
+        origin: 'GENERATED',
+      },
+      {
+        sourceId: 'u01-s1-03',
+        section: 'u01-s1',
+        de: 'Dritter Satz.',
+        uz: 'Uchinchi gap.',
+        wordCount: 2,
+        origin: 'GENERATED',
+      },
+    ];
+    await service.seed('u01', f);
+    const dritterBefore = prisma.rows.sentence.get('u01-s1-03');
+
+    // O`rtadagi (2-chi) gap faylda o`chirildi — massivdagi POZITSIYA
+    // asosida kalitlansa, 3-chi gap "2-o`rin"ga tushib, uning nemischasi
+    // "Zweiter Satz."ga almashib qolardi.
+    f.saetze.saetze = [
+      {
+        sourceId: 'u01-s1-01',
+        section: 'u01-s1',
+        de: 'Erster Satz.',
+        uz: 'Birinchi gap.',
+        wordCount: 2,
+        origin: 'GENERATED',
+      },
+      {
+        sourceId: 'u01-s1-03',
+        section: 'u01-s1',
+        de: 'Dritter Satz.',
+        uz: 'Uchinchi gap.',
+        wordCount: 2,
+        origin: 'GENERATED',
+      },
+    ];
+    await service.seed('u01', f);
+
+    const dritterAfter = prisma.rows.sentence.get('u01-s1-03');
+    expect(dritterAfter.id).toBe(dritterBefore.id);
+    expect(dritterAfter.de).toBe('Dritter Satz.');
+    // Faylda endi yo`q gap — dialog/ibora kabi O`CHIRILADI.
+    expect(prisma.rows.sentence.has('u01-s1-02')).toBe(false);
   });
 
   it('grammatika kaliti bo`lim ichida noyob va ikki marta prefikslanmagan', async () => {
@@ -243,7 +407,9 @@ describe('InhaltSeedService', () => {
       beispiele: [{ de: 'Ich heiße Anna.', uz: 'Mening ismim Anna.' }],
     });
     await new InhaltSeedService(prisma as any).seed('u01', f);
-    const sourceIds = (prisma.dafGrammar.upsert.mock.calls as any[]).map((c) => c[0].create.sourceId);
+    const sourceIds = (prisma.dafGrammar.upsert.mock.calls as any[]).map(
+      (c) => c[0].create.sourceId,
+    );
     expect(sourceIds).toEqual(['u01-s1-regel-1', 'u01-s1-regel-2']);
     for (const id of sourceIds) expect(id).not.toMatch(/^u01-u01-/);
   });
@@ -286,7 +452,7 @@ describe('InhaltSeedService', () => {
     expect(prisma.rows.phrase.size).toBe(2);
   });
 
-  it('faylda yo`q qator: DafDialog/DafDialogLine/DafGrammarBeispiel/DafPhrase o`chiriladi, gap/so`z faqat sanaladi', async () => {
+  it('faylda yo`q qator: DafSentence/DafDialog/DafDialogLine/DafGrammarBeispiel/DafPhrase o`chiriladi, so`z faqat sanaladi', async () => {
     const prisma = fakePrisma();
     const service = new InhaltSeedService(prisma as any);
 
@@ -300,13 +466,17 @@ describe('InhaltSeedService', () => {
       order: 2,
     });
     round1.saetze.saetze.push({
+      sourceId: 'u01-s1-02',
       section: 'u01-s1',
       de: 'Ich heiße Anna.',
       uz: 'Mening ismim Anna.',
       wordCount: 3,
       origin: 'GENERATED',
     });
-    round1.grammatik.regeln[0].beispiele.push({ de: 'Ich bin Jonas.', uz: 'Men Jonasman.' });
+    round1.grammatik.regeln[0].beispiele.push({
+      de: 'Ich bin Jonas.',
+      uz: 'Men Jonasman.',
+    });
     round1.dialoge.dialoge.push({
       id: 'u01-d2',
       section: 'u01-s1',
@@ -347,11 +517,16 @@ describe('InhaltSeedService', () => {
 
     const r2 = await service.seed('u01', round2);
 
-    // Sonlanadi, lekin O'CHIRILMAYDI — talaba urinishi ularga bog'langan.
+    // So'z (DafLexeme): sonlanadi, lekin O'CHIRILMAYDI — talaba
+    // `DafLexemeState`si unga bog'langan.
     expect(r2.staleWoerter).toBe(1);
-    expect(r2.staleSaetze).toBe(1);
     expect(prisma.rows.lexeme.size).toBe(2);
-    expect(prisma.rows.sentence.size).toBe(2);
+
+    // Gap (DafSentence) endi dialog/ibora kabi O'CHIRILADI — hech kim
+    // ishora qilmaydi.
+    expect(prisma.rows.sentence.size).toBe(1);
+    expect(prisma.rows.sentence.has('u01-s1-02')).toBe(false);
+    expect(prisma.rows.sentence.has('u01-s1-01')).toBe(true);
 
     // O'CHIRILADI — hech kim ishora qilmaydi.
     expect(prisma.rows.dialog.has('u01-d1')).toBe(false);

@@ -118,6 +118,13 @@ export interface DialogeFile {
  * ko'rsatardi.
  */
 export interface Satz extends Sprechbar {
+  /**
+   * Barqaror kalit: `u01-s3-04` (bo'lim + bo'lim ichidagi tartib
+   * raqami). Seed shu bo'yicha yangilaydi — massivdagi POZITSIYA emas,
+   * shuning uchun faylning o'rtasidan bitta gap o'chirilsa ham qolgan
+   * gaplarning nemischasi va audiosi joyida qoladi.
+   */
+  sourceId: string;
   section: string;
   wordCount: number;
   origin: 'GENERATED';

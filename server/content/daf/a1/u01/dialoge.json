@@ -15,7 +15,7 @@
         {
           "sprecher": "Mia",
           "de": "Ja, ich bin Mia. Und du?",
-          "uz": "Ha, men Miaman. Senchi?"
+          "uz": "Ha, men Miaman. Sen-chi?"
         },
         {
           "sprecher": "Jonas",
@@ -29,34 +29,34 @@
         },
         {
           "sprecher": "Jonas",
-          "de": "Danke, gut. Und dir?",
-          "uz": "Rahmat, yaxshi. Senchi?"
+          "de": "Gut. Und dir?",
+          "uz": "Yaxshi. Sen-chi?"
         },
         {
           "sprecher": "Mia",
-          "de": "Auch gut, danke! Tschüss!",
-          "uz": "Menam yaxshi, rahmat! Xayr!"
+          "de": "Auch gut! Tschüss!",
+          "uz": "Men ham yaxshi! Xayr!"
         },
         {
           "sprecher": "Jonas",
           "de": "Tschüss! Bis bald.",
-          "uz": "Xayr! Tez orada ko'rishguncha."
+          "uz": "Xayr! Tez orada ko'rishamiz."
         }
       ]
     },
     {
       "id": "u01-d2",
       "section": "u01-s1",
-      "titelDe": "Gute Nacht, Emma!",
-      "titelUz": "Xayrli tun, Emma!",
+      "titelDe": "Gute Nacht, Mia!",
+      "titelUz": "Xayrli tun, Mia!",
       "zeilen": [
         {
           "sprecher": "Walter",
-          "de": "Guten Abend, Emma!",
-          "uz": "Xayrli kech, Emma!"
+          "de": "Guten Abend, Mia!",
+          "uz": "Xayrli kech, Mia!"
         },
         {
-          "sprecher": "Emma",
+          "sprecher": "Mia",
           "de": "Guten Abend!",
           "uz": "Xayrli kech!"
         },
@@ -66,19 +66,19 @@
           "uz": "Ahvoling qanday?"
         },
         {
-          "sprecher": "Emma",
-          "de": "Gut, danke! Und dir?",
-          "uz": "Yaxshi, rahmat! Senchi?"
+          "sprecher": "Mia",
+          "de": "Gut! Und dir?",
+          "uz": "Yaxshi! Sen-chi?"
         },
         {
           "sprecher": "Walter",
           "de": "Auch gut. Gute Nacht!",
-          "uz": "Menam yaxshi. Xayrli tun!"
+          "uz": "Men ham yaxshi. Xayrli tun!"
         },
         {
-          "sprecher": "Emma",
+          "sprecher": "Mia",
           "de": "Gute Nacht! Bis bald.",
-          "uz": "Xayrli tun! Tez orada ko'rishguncha."
+          "uz": "Xayrli tun! Tez orada ko'rishamiz."
         }
       ]
     },
@@ -106,7 +106,7 @@
         {
           "sprecher": "Markus",
           "de": "Ich bin Markus. Und Sie?",
-          "uz": "Men Markusman. Sizchi?"
+          "uz": "Men Markusman. Siz-chi?"
         },
         {
           "sprecher": "Claudia",
@@ -139,12 +139,12 @@
         {
           "sprecher": "Anna",
           "de": "Ich komme aus Deutschland. Und du?",
-          "uz": "Men Germaniyadan kelaman. Senchi?"
+          "uz": "Men Germaniyadanman. Sen-chi?"
         },
         {
           "sprecher": "Doniyor",
           "de": "Ich komme aus Usbekistan.",
-          "uz": "Men O'zbekistondan kelaman."
+          "uz": "Men O'zbekistondanman."
         },
         {
           "sprecher": "Anna",
@@ -154,7 +154,7 @@
         {
           "sprecher": "Doniyor",
           "de": "Ich wohne in Deutschland. Und du?",
-          "uz": "Men Germaniyada yashayman. Senchi?"
+          "uz": "Men Germaniyada yashayman. Sen-chi?"
         },
         {
           "sprecher": "Anna",

@@ -28,15 +28,19 @@ export interface GoetheGruppen {
 const ARTIKEL = new Set(['der', 'die', 'das']);
 
 /**
- * Goethe A1 Wortgruppenliste — yopiq to'plamlar PDF'ning 6–8-sahifalardan
- * (tangli ustun bloklari — tahlil qilib o'qiy bo'lmaydi). Raqamlar, hafta kunlari,
- * oylar, fasatlar A1 standartiga zaruridir, alifbohla harflar ro'yxatida yo'q.
+ * Goethe A1 ning yopiq so'z guruhlari: raqamlar, hafta kunlari, oylar,
+ * fasllar. A1 standartining majburiy qismi, lekin PDF manbada bular
+ * alifbo tartibidagi asosiy ro'yxatda emas — PDF'ning 6–8-sahifalarida
+ * alohida, ustunli jadval sifatida berilgan va `parseGoetheLines`ning
+ * qatorma-qator tahlili bunday jadvalni to'g'ri o'qiy olmaydi (ustunlar
+ * bitta qatorga qo'shilib ketadi). Shuning uchun bu to'rtta ro'yxat
+ * PDF'dan avtomatik chiqarilmagan — qo'lda, ko'zdan kechirib yozilgan.
  *
- * Nouns darajasida — "null" raqam (telefon raqami uchun) shu chaman. Hamma
- * shaxs nomlari (oylar, kunlar, fasatlar) "der"/"die"/"das" artikli o'z bilan.
- *
- * Bu to'plamlar eng yangilanmasa ham barkaror, shuning uchun qo'lda kiritilgan.
- * Qayta chiqarish (re-extraction) kerak bo'lsa, shuni yangilash yetarli.
+ * Bu to'plamlar juda kam o'zgaradi (raqamlar, kunlar va oylar soni
+ * qat'iy), shuning uchun qo'lda yozilgan holat barqaror qoladi. Agar
+ * baribir manbadan qayta chiqarish (re-extraction) kerak bo'lsa: mos PDF
+ * sahifasini qayta o'qib, quyidagi ro'yxatlarni qo'lda yangilang —
+ * `parseGoetheLines`ga tegishli emas.
  */
 export const GOETHE_ZAHLEN: GoetheWort[] = [
   { artikel: null, wort: 'null' },
@@ -140,7 +144,6 @@ const HYPHENATION_FRAGMENTS = new Set([
   'sche', // ← "technische" yoki shunga o'xshash (PDF qator ajratilgani)
 ]);
 
-
 /**
  * Bosh so'z satr BOSHIDA turadi. Ichkariga surilgan satr — oldingi
  * so'zning ikkinchi misoli yoki hosila yozuvi; uni bosh so'z deb olsak
@@ -158,7 +161,9 @@ export function parseGoetheLines(lines: string[]): GoetheWort[] {
     // Alifbo ajratgichi: bitta harf.
     if (/^[A-ZÄÖÜ]$/.test(line)) continue;
 
-    const m = /^(?:(der|die|das)\s+)?([A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß.-]*)/.exec(line);
+    const m = /^(?:(der|die|das)\s+)?([A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß.-]*)/.exec(
+      line,
+    );
     if (!m) continue;
 
     const artikel = m[1] || null;
@@ -217,7 +222,9 @@ export function isWordInGoetheA1(wort: string, file: GoetheFile): boolean {
     if (monate?.some((w) => w.wort.toLowerCase() === wort.toLowerCase())) {
       return true;
     }
-    if (jahreszeiten?.some((w) => w.wort.toLowerCase() === wort.toLowerCase())) {
+    if (
+      jahreszeiten?.some((w) => w.wort.toLowerCase() === wort.toLowerCase())
+    ) {
       return true;
     }
   }

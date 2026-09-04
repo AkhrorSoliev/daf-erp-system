@@ -27,6 +27,13 @@
     },
     { "wort": "sein", "artikel": null, "section": "u01-s1", "core": true },
     { "wort": "Name", "artikel": "der", "section": "u01-s1", "core": true },
+    {
+      "wort": "wie",
+      "artikel": null,
+      "section": "u01-s1",
+      "core": true,
+      "grund": "aslida u01-s2 uchun rejalashtirilgan edi, lekin 'Wie ist dein Name?'/'Wie geht es dir?' — u01-s1ning o'zida kerak bo'lgani uchun ko'chirildi (2026-09 ko'rikdan keyin)"
+    },
 
     {
       "wort": "Guten Tag",
@@ -46,7 +53,6 @@
     { "wort": "Frau", "artikel": "die", "section": "u01-s2", "core": true },
     { "wort": "Herr", "artikel": "der", "section": "u01-s2", "core": true },
     { "wort": "heißen", "artikel": null, "section": "u01-s2", "core": true },
-    { "wort": "wie", "artikel": null, "section": "u01-s2", "core": true },
     { "wort": "wer", "artikel": null, "section": "u01-s2", "core": true },
     { "wort": "was", "artikel": null, "section": "u01-s2", "core": true },
     {

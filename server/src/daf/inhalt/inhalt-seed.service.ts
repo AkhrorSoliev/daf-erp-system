@@ -24,13 +24,11 @@ export interface InhaltSeedReport {
   regeln: number;
   phrasen: number;
   /**
-   * Faylda endi YO'Q, lekin bazada BOR gap/so'z soni.
+   * Faylda endi YO'Q, lekin bazada BOR so'z soni.
    *
-   * Bular O'CHIRILMAYDI (pastdagi katta izohga qarang) — faqat
-   * hisoblanadi, shuning uchun drift ko'rinadigan bo'ladi va inson qaror
-   * qiladi.
+   * O'CHIRILMAYDI (pastdagi katta izohga qarang) — faqat hisoblanadi,
+   * shuning uchun drift ko'rinadigan bo'ladi va inson qaror qiladi.
    */
-  staleSaetze: number;
   staleWoerter: number;
 }
 
@@ -56,27 +54,28 @@ export interface InhaltSeedReport {
  *    (eskisi esa orfan bo'lib qolardi).
  * 2. **"Faylda yo'q, bazada bor" qatorlar TIZIMLI ravishda paydo
  *    bo'ladi** — bu xato emas, tahrirlashning tabiiy natijasi. Ularga
- *    ikki xil munosabat bor, ATAYLAB:
+ *    ikki xil munosabat bor, ATAYLAB, va farq nimaga ISHORA
+ *    qilinishida, jadval nomida emas:
  *
- *    - `DafDialogLine`, `DafGrammarBeispiel`, `DafPhrase`, `DafDialog` —
- *      hech kim ularga ISHORA qilmaydi (talaba urinishi, boshqa jadval —
- *      hech narsa). Shuning uchun stale qatorni O'CHIRISH xavfsiz: baza
- *      faylni aynan aks ettiradi, hech narsa yo'qolmaydi.
- *    - `DafSentence`, `DafLexeme` — talabaning `DafAttempt`/
- *      `DafLexemeState` qatorlari ularga ISHORA qiladi. Bu ikkisini
- *      o'chirish talabaning haqiqiy progressini yo'q qilardi. Shuning
- *      uchun ular O'CHIRILMAYDI — faqat soni hisoblanadi va hisobotda
- *      `staleSaetze`/`staleWoerter` sifatida qaytariladi, inson ko'rib
- *      qaror qilsin deb.
+ *    - `DafSentence`, `DafDialogLine`, `DafGrammarBeispiel`, `DafPhrase`,
+ *      `DafDialog` — hech kim ularga ishora qilmaydi. `DafAttempt`da
+ *      `sentenceId` YO'Q — gap qaysi urinishga tegishli ekani
+ *      lexeme/format/dars orqali biladi, gap qatorining o'ziga emas.
+ *      Shuning uchun stale qatorni O'CHIRISH xavfsiz: baza faylni aynan
+ *      aks ettiradi, hech narsa yo'qolmaydi. Bu besh jadval bir xil
+ *      qoida bilan ishlaydi: `sourceId`/`code` bo'yicha upsert, keyin
+ *      faylda yo'q qolganlarni o'chirish.
+ *    - `DafLexeme` — talabaning `DafLexemeState` qatori `lexemeId`ga
+ *      ISHORA qiladi. So'zni o'chirish talabaning haqiqiy Leitner
+ *      tarixini yo'q qilardi. Shuning uchun u O'CHIRILMAYDI — faqat
+ *      soni hisoblanadi va hisobotda `staleWoerter` sifatida
+ *      qaytariladi, inson ko'rib qaror qilsin deb.
  *
- *    **Bu asimmetriya ATAYLAB** — ikkisini bitta qoidaga "tozalab"
- *    qo'ymang. Farq nimaga ishora qilinishida, jadval nomida emas.
- *
- * 3. **Bo'sh to'plam ≠ "hammasini o'chir".** `dialoge`/`redemittel`
- *    to'plami BO'SH kelsa-yu, bazada shu unit uchun qator ALLAQACHON
- *    bor bo'lsa, seed to'xtaydi va hech narsani o'chirmaydi — bo'sh
- *    massiv chala yozilgan fayldan ham, haqiqatan bo'sh mazmundan ham
- *    farqlanmaydi, shuning uchun bazadagi mavjudlik so'raladi
+ * 3. **Bo'sh to'plam ≠ "hammasini o'chir".** `saetze`/`dialoge`/
+ *    `redemittel` to'plami BO'SH kelsa-yu, bazada shu unit uchun qator
+ *    ALLAQACHON bor bo'lsa, seed to'xtaydi va hech narsani o'chirmaydi —
+ *    bo'sh massiv chala yozilgan fayldan ham, haqiqatan bo'sh mazmundan
+ *    ham farqlanmaydi, shuning uchun bazadagi mavjudlik so'raladi
  *    (`assertNotEmptyFileWipe`). Bazada hali hech narsa yo'q bo'lsa
  *    (unit hali yozilmagan), jim davom etadi.
  */
@@ -100,6 +99,13 @@ export class InhaltSeedService {
     const sectionId = new Map(rows.map((r) => [r.code, r.id]));
 
     this.assertSectionsKnown(files, sectionId);
+    await this.assertNotEmptyFileWipe(
+      unitCode,
+      unit.id,
+      files.saetze.saetze.length === 0,
+      'saetze',
+      () => this.prisma.dafSentence.count({ where: { unitId: unit.id } }),
+    );
     await this.assertNotEmptyFileWipe(
       unitCode,
       unit.id,
@@ -131,6 +137,9 @@ export class InhaltSeedService {
         // Ko'rgazma raqami — faqat sonlar bo'limida bor, qolganida `null`.
         anzeige: w.anzeige ?? null,
         order: w.order,
+        // Aktiv/passiv farqi: `true` — mashqda so'raladi, `false` — faqat
+        // dialog/matnda uchraydi va hech qachon so'ralmaydi.
+        core: w.core,
       };
       await this.prisma.dafLexeme.upsert({
         where: { sourceId: w.sourceId },
@@ -146,29 +155,35 @@ export class InhaltSeedService {
     });
 
     let saetze = 0;
+    const saetzeSourceIds: string[] = [];
     for (const [i, s] of files.saetze.saetze.entries()) {
-      const order = i + 1;
+      saetzeSourceIds.push(s.sourceId);
       const data = {
+        unitId: unit.id,
         sectionId: sectionId.get(s.section) ?? null,
         de: s.de,
         uz: s.uz,
         tts: s.tts ?? null,
         wordCount: s.wordCount,
         origin: s.origin,
+        // Ko'rsatish tartibi — hech kim bu qatorga ISHORA qilmaydi,
+        // shuning uchun bu faqat displey uchun, identifikatsiya emas.
+        order: i + 1,
       };
       await this.prisma.dafSentence.upsert({
-        where: { unitId_order: { unitId: unit.id, order } },
-        create: { unitId: unit.id, order, ...data },
+        where: { sourceId: s.sourceId },
+        create: { sourceId: s.sourceId, ...data },
         update: data,
       });
       saetze += 1;
     }
-    // O'CHIRILMAYDI — talaba `DafAttempt`i gapga bog'langan; faqat
-    // hisoblanadi (klass izohidagi asimmetriyaga qarang). `order` fayl
-    // tartibida uzluksiz 1..N, shuning uchun N dan katta har qanday
-    // `order` — endi faylda yo'q qoldiq.
-    const staleSaetze = await this.prisma.dafSentence.count({
-      where: { unitId: unit.id, order: { gt: files.saetze.saetze.length } },
+    // Faylda endi yo'q gaplarni butunlay o'chiramiz — dialog/ibora kabi,
+    // so'z kabi EMAS. `DafAttempt`da `sentenceId` yo'q, ya'ni hech kim
+    // bu qatorlarga ishora qilmaydi (klass izohidagi asimmetriyaga
+    // qarang), shuning uchun ularni sanab, abadiy saqlab qo'yishning
+    // hojati yo'q.
+    await this.prisma.dafSentence.deleteMany({
+      where: { unitId: unit.id, sourceId: { notIn: saetzeSourceIds } },
     });
 
     // Faylda endi yo'q dialoglarni butunlay o'chiramiz. Avval SATRLARI —
@@ -321,7 +336,6 @@ export class InhaltSeedService {
       zeilen,
       regeln,
       phrasen,
-      staleSaetze,
       staleWoerter,
     };
     this.logger.log(`${unitCode} matni: ${JSON.stringify(report)}`);
