@@ -129,11 +129,11 @@ function fakePrisma() {
     dafUnit: { findFirst: jest.fn(async () => ({ id: 1, code: 'u01' })) },
     dafLexeme: { upsert: lexeme.upsert, count: lexeme.count },
     dafSentence: { upsert: sentence.upsert, count: sentence.count },
-    dafDialog: { upsert: dialog.upsert, findMany: dialog.findMany, deleteMany: dialog.deleteMany },
+    dafDialog: { upsert: dialog.upsert, findMany: dialog.findMany, deleteMany: dialog.deleteMany, count: dialog.count },
     dafDialogLine: { upsert: line.upsert, deleteMany: line.deleteMany },
     dafGrammar: { upsert: grammar.upsert },
     dafGrammarBeispiel: { upsert: beispiel.upsert, deleteMany: beispiel.deleteMany },
-    dafPhrase: { upsert: phrase.upsert, deleteMany: phrase.deleteMany },
+    dafPhrase: { upsert: phrase.upsert, deleteMany: phrase.deleteMany, count: phrase.count },
   };
 }
 
@@ -361,5 +361,58 @@ describe('InhaltSeedService', () => {
     expect(prisma.rows.phrase.size).toBe(1);
     expect(prisma.rows.phrase.has('u01-s1-begruessen-2')).toBe(false);
     expect(prisma.rows.phrase.has('u01-s1-begruessen-1')).toBe(true);
+  });
+
+  it('dialoge bo`sh kelsa-yu, bazada dialog bor bo`lsa — rad etadi va hech narsani o`chirmaydi', async () => {
+    const prisma = fakePrisma();
+    const service = new InhaltSeedService(prisma as any);
+    await service.seed('u01', files());
+    expect(prisma.rows.dialog.size).toBe(1);
+    expect(prisma.rows.line.size).toBe(2);
+
+    const f = files();
+    f.dialoge.dialoge = [];
+    await expect(service.seed('u01', f)).rejects.toThrow(/u01/);
+    await expect(service.seed('u01', f)).rejects.toThrow(/dialoge/);
+
+    // Hech narsa o`chirilmagan — rad etish YOZISHDAN OLDIN sodir bo`ladi.
+    expect(prisma.rows.dialog.size).toBe(1);
+    expect(prisma.rows.line.size).toBe(2);
+  });
+
+  it('dialoge bo`sh kelsa-yu, bazada ham dialog yo`q bo`lsa — jim davom etadi', async () => {
+    const prisma = fakePrisma();
+    const f = files();
+    f.dialoge.dialoge = [];
+    const r = await new InhaltSeedService(prisma as any).seed('u01', f);
+    expect(r.dialoge).toBe(0);
+    expect(r.zeilen).toBe(0);
+    // Boshqa turlar bemalol yozilaveradi — faqat dialoge bo`sh.
+    expect(r.woerter).toBe(1);
+    expect(r.phrasen).toBe(1);
+  });
+
+  it('redemittel bo`sh kelsa-yu, bazada ibora bor bo`lsa — rad etadi va hech narsani o`chirmaydi', async () => {
+    const prisma = fakePrisma();
+    const service = new InhaltSeedService(prisma as any);
+    await service.seed('u01', files());
+    expect(prisma.rows.phrase.size).toBe(1);
+
+    const f = files();
+    f.redemittel.phrasen = [];
+    await expect(service.seed('u01', f)).rejects.toThrow(/u01/);
+    await expect(service.seed('u01', f)).rejects.toThrow(/redemittel/);
+
+    expect(prisma.rows.phrase.size).toBe(1);
+  });
+
+  it('redemittel bo`sh kelsa-yu, bazada ham ibora yo`q bo`lsa — jim davom etadi', async () => {
+    const prisma = fakePrisma();
+    const f = files();
+    f.redemittel.phrasen = [];
+    const r = await new InhaltSeedService(prisma as any).seed('u01', f);
+    expect(r.phrasen).toBe(0);
+    expect(r.woerter).toBe(1);
+    expect(r.dialoge).toBe(1);
   });
 });

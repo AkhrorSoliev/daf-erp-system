@@ -233,7 +233,12 @@ export class DafPortalReadService {
    */
   async getGrammarIndex() {
     const rows = await this.prisma.dafGrammar.findMany({
-      orderBy: [{ level: 'asc' }, { code: 'asc' }],
+      // `code` endi ixtiyoriy (yangi unit qoidalarida `null`) — NULL
+      // tartiblash bazaga bog'liq va ekranda qoidalarni tasodifiy
+      // aralashtirib yuborardi. `sourceId` har qatorda bor va eski
+      // qoidalarda `code` bilan bir xil qiymatga ega edi, shuning uchun
+      // eski tartib o'zgarmaydi.
+      orderBy: [{ level: 'asc' }, { sourceId: 'asc' }],
       select: {
         id: true,
         code: true,

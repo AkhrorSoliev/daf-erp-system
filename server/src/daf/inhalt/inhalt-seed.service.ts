@@ -71,6 +71,14 @@ export interface InhaltSeedReport {
  *
  *    **Bu asimmetriya ATAYLAB** — ikkisini bitta qoidaga "tozalab"
  *    qo'ymang. Farq nimaga ishora qilinishida, jadval nomida emas.
+ *
+ * 3. **Bo'sh to'plam ≠ "hammasini o'chir".** `dialoge`/`redemittel`
+ *    to'plami BO'SH kelsa-yu, bazada shu unit uchun qator ALLAQACHON
+ *    bor bo'lsa, seed to'xtaydi va hech narsani o'chirmaydi — bo'sh
+ *    massiv chala yozilgan fayldan ham, haqiqatan bo'sh mazmundan ham
+ *    farqlanmaydi, shuning uchun bazadagi mavjudlik so'raladi
+ *    (`assertNotEmptyFileWipe`). Bazada hali hech narsa yo'q bo'lsa
+ *    (unit hali yozilmagan), jim davom etadi.
  */
 @Injectable()
 export class InhaltSeedService {
@@ -92,6 +100,20 @@ export class InhaltSeedService {
     const sectionId = new Map(rows.map((r) => [r.code, r.id]));
 
     this.assertSectionsKnown(files, sectionId);
+    await this.assertNotEmptyFileWipe(
+      unitCode,
+      unit.id,
+      files.dialoge.dialoge.length === 0,
+      'dialoge',
+      () => this.prisma.dafDialog.count({ where: { unitId: unit.id } }),
+    );
+    await this.assertNotEmptyFileWipe(
+      unitCode,
+      unit.id,
+      files.redemittel.phrasen.length === 0,
+      'redemittel',
+      () => this.prisma.dafPhrase.count({ where: { unitId: unit.id } }),
+    );
 
     let woerter = 0;
     const wortSourceIds: string[] = [];
@@ -304,6 +326,35 @@ export class InhaltSeedService {
     };
     this.logger.log(`${unitCode} matni: ${JSON.stringify(report)}`);
     return report;
+  }
+
+  /**
+   * Fayldagi to'plam BO'SH bo'lsa-yu, bazada shu unit uchun qatorlar
+   * BOR bo'lsa, to'xtaydi — hech narsani o'chirmaydi.
+   *
+   * Sabab: `dialoge`/`redemittel` tozalash `notIn: <fayldagi kodlar>`
+   * bilan ishlaydi. Massiv BO'SH bo'lsa, `notIn: []` HAMMA qatorga mos
+   * keladi — yuklovchi xatosi, chala yozilgan fayl yoki buzuq JSON
+   * (`{"dialoge": []}`) ham xuddi shunday ko'rinadi. Ularni haqiqiy
+   * "bu unitda hali dialog yo'q" holatidan farqlashning yagona yo'li —
+   * bazada ALLAQACHON qator bormi, deb so'rash: bo'lsa, fayl gumon
+   * ostida va o'chirish to'xtatiladi; bo'lmasa (hali hech narsa
+   * yozilmagan unit), jim davom etadi.
+   */
+  private async assertNotEmptyFileWipe(
+    unitCode: string,
+    unitId: number,
+    fileIsEmpty: boolean,
+    fileKey: string,
+    countExisting: () => Promise<number>,
+  ): Promise<void> {
+    if (!fileIsEmpty) return;
+    const existing = await countExisting();
+    if (existing > 0) {
+      throw new Error(
+        `${unitCode}: '${fileKey}' fayli bo'sh ko'rinadi, lekin bazada ${existing} ta qator bor (unitId=${unitId}) — buzuq yoki chala o'qilgan fayldan xato o'chirishning oldini olish uchun seed hech narsani o'chirmaydi. Faylni tekshiring.`,
+      );
+    }
   }
 
   /** Noma'lum bo'lim kaliti bo'lsa, BIRORTA yozuvdan oldin to'xtaydi. */
