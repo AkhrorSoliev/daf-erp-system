@@ -218,32 +218,7 @@ SECTIONS = [
         ],
     },
     {
-        "n": 7, "title": "Ruxsatlar",
-        "questions": [
-            {
-                "q": "Kurs narxini kim o'zgartira olsin?",
-                "ex": "Standart kursining narxi 450 000 dan 500 000 ga oshirildi. "
-                      "Bu 51 ta guruhning barchasiga tegadi.",
-                "opts": ["Faqat direktor", "Direktor va filial direktori", "Administrator ham"],
-            },
-            {
-                "q": "Pul qaytarishga summa chegarasi bo'lsinmi?",
-                "ex": "Administrator o'quvchiga 800 000 so'm qaytardi.",
-                "opts": [
-                    "Chegara bo'lmasin",
-                    "_____ so'mdan yuqorisi direktor tasdig'i bilan",
-                    "Faqat direktor qaytara olsin",
-                ],
-            },
-            {
-                "q": "Oylik to'lovni bekor qilishga kim haqli bo'lsin?",
-                "ex": "Bekor qilinganda o'quvchiga bir oylik pul qaytadi — 450 000 so'm.",
-                "opts": ["Faqat direktor", "Direktor va filial direktori", "Administrator ham"],
-            },
-        ],
-    },
-    {
-        "n": 8, "title": "Shartnoma bilan farqlar",
+        "n": 7, "title": "Shartnoma bilan farqlar",
         "note": "Quyidagi joylarda shartnoma bir narsani, tizim boshqa narsani aytadi. "
                 "Band raqamiga bosilsa shartnomaning o'sha yeriga o'tadi.",
         "questions": [
@@ -361,5 +336,5 @@ CLOSING = "Bu yerda ko'rilmagan, lekin siz muhim deb bilgan holatlarni yozing."
 
 CONTRACT_LEAD = [
     "Quyida o'quvchilar bilan tuziladigan ommaviy oferta keltirilgan.",
-    "8-bo'limdagi band raqamlari shu hujjatga havola qiladi.",
+    "7-bo'limdagi band raqamlari shu hujjatga havola qiladi.",
 ]

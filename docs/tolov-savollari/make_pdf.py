@@ -3,7 +3,7 @@
 
 Ishlatish:  python3 make_pdf.py <chiqish.pdf>
 
-8-bo'limdagi «Shartnoma 5.2» kabi yorliqlar bosiladigan havola bo'ladi:
+7-bo'limdagi «Shartnoma 5.2» kabi yorliqlar bosiladigan havola bo'ladi:
 reportlab chizishda ularning joyini yozib boradi, pypdf esa birlashtirilgan
 hujjatda o'sha joylarga Link annotatsiyasini qo'yadi.
 """
@@ -242,7 +242,7 @@ for sec in Q.SECTIONS:
         d.y -= 9*mm
 
 # ── Qo'shimcha ──────────────────────────────────────────────────────────
-heading(9, "Qo'shimcha")
+heading(8, "Qo'shimcha")
 d.text(Q.CLOSING, "DS", 9.8, SOFT, gap=6*mm)
 d.field("qoshimcha", h=80*mm)
 
