@@ -328,6 +328,12 @@ turibdi, deploy tez, telefon brauzerida ochiladi.
 | `/portal/lernen/units/[unitId]` | bo'limlar ro'yxati, har bo'limning holati |
 | `/portal/lernen/lessons/[lessonId]` | seans (12 / 8 / 15 savol) va natija ekrani |
 
+**Uch o'lchamda ishlashi shart (CEO, 2026-09-04):** o'quvchi kursni VEBDA
+ishlatadi, va o'sha veb telefon, katta planshet va mobilda bir xil ishlashi
+kerak. Ya'ni seans ekrani moslashuvchan bo'ladi — kichik ekranda savol va
+javob tugmalari barmoqqa mo'ljallangan o'lchamda, planshetda esa bo'sh joy
+behuda ketmaydigan qilib. Bu ekran rejasining talabi, keyinga qoldirilmaydi.
+
 Native ilovaga ko'chirish **bu rejada yo'q** — formatlar qotgandan keyin,
 alohida reja va alohida PR bilan (web/native paritet qoidasi).
 
