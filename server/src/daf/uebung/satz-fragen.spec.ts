@@ -8,7 +8,12 @@ function s(id: number, de: string, uz: string): MaterialSatz {
 function w(id: number, de: string, uz: string): MaterialWort {
   return { id, de, uz, artikel: null, anzeige: null, sectionCode: 'u01-s1' };
 }
-function p(id: number, funktionUz: string, de: string, uz: string): MaterialPhrase {
+function p(
+  id: number,
+  funktionUz: string,
+  de: string,
+  uz: string,
+): MaterialPhrase {
   return { id, funktionUz, de, uz, sectionCode: 'u01-s1' };
 }
 
@@ -23,6 +28,14 @@ describe('luecke', () => {
     expect(f.prompt).toBe('Ich ___ Anna.');
     expect(f.richtig).toBe('bin');
     expect(f.hilfe).toBe('Men Annaman.');
+  });
+
+  it('savol o`zligi SO`ZGA ishora qiladi, gapga emas', () => {
+    // Javob har qanday boshqa so'z savoli kabi qayta hisoblanishi uchun
+    // `itemType`/`itemId` bo'shatilgan SO'Zning o'zini ko'rsatishi kerak.
+    const f = luecke(SATZ, [w(2, 'bin', 'bo`lmoq')], rnd)!;
+    expect(f.itemType).toBe('WORT');
+    expect(f.itemId).toBe(2);
   });
 
   it('gapda bo`limning so`zi bo`lmasa savol qurmaydi', () => {
@@ -42,6 +55,8 @@ describe('luecke', () => {
     expect(f).not.toBeNull();
     expect(f.prompt).toBe('Wir ___ heute.');
     expect(f.richtig).toBe('üben');
+    expect(f.itemType).toBe('WORT');
+    expect(f.itemId).toBe(6);
   });
 
   it('apostrofli qisqartmani noto`g`ri nishonlamaydi', () => {
@@ -57,6 +72,8 @@ describe('luecke', () => {
     expect(f).not.toBeNull();
     expect(f.prompt).toBe("Wie geht's? Es ___ mir gut.");
     expect(f.richtig).toBe('geht');
+    expect(f.itemType).toBe('WORT');
+    expect(f.itemId).toBe(8);
   });
 });
 
@@ -128,7 +145,11 @@ describe('reaktion', () => {
 
   it('bir xil vazifadagi iborani chalg`ituvchi qilmaydi', () => {
     // Ikki salomlashish iborasi orasida «to'g'ri» javob yo'q.
-    const f = reaktion(ZIEL, [p(9, 'salomlashish', 'Hallo!', 'Salom!'), ...ANDERE], rnd)!;
+    const f = reaktion(
+      ZIEL,
+      [p(9, 'salomlashish', 'Hallo!', 'Salom!'), ...ANDERE],
+      rnd,
+    )!;
     expect(f.options).not.toContain('Hallo!');
   });
 
@@ -146,7 +167,12 @@ describe('reaktion', () => {
     // `birXilMatn` `falsch`ning BIRINCHI o'rnida qoladi va (filtr bo'lmasa)
     // `slice(0, 3)` uni saqlab qoladi — filtrning o'zi sinaladi.
     const identityRnd = (): number => 0.9999;
-    const birXilMatn = p(10, 'boshqa-vazifa', 'Guten Morgen!', 'Boshqa tarjima');
+    const birXilMatn = p(
+      10,
+      'boshqa-vazifa',
+      'Guten Morgen!',
+      'Boshqa tarjima',
+    );
     const f = reaktion(ZIEL, [birXilMatn, ...ANDERE], identityRnd)!;
     expect(f.options.filter((o) => o === 'Guten Morgen!')).toHaveLength(1);
   });

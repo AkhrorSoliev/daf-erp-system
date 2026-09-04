@@ -3,6 +3,12 @@ import { UebungService } from './uebung.service';
 /**
  * Bazaning eng kichik soxta nusxasi. Prisma o'rniga: bizni servisning
  * mantig'i qiziqtiradi, Prisma emas.
+ *
+ * `dafLexeme.findMany` VA `dafLexemeState.findMany` `where`ni haqiqatda
+ * hisobga oladi (boshqalari yo'q) — chunki ba'zi testlar aynan
+ * SERVISNING SO'RAGAN filtri (masalan `PAAR` javobini bir unitga
+ * cheklash, yoki qaytarish so'rovini `take`ga cheklash) to'g'ri
+ * qurilganini tekshiradi. Qolgan modellar bunga muhtoj emas.
  */
 function fakePrisma() {
   const lexeme = [
@@ -14,6 +20,7 @@ function fakePrisma() {
       anzeige: null,
       core: true,
       sectionId: 7,
+      unitId: 1,
     },
     {
       id: 2,
@@ -23,6 +30,7 @@ function fakePrisma() {
       anzeige: null,
       core: true,
       sectionId: 7,
+      unitId: 1,
     },
     {
       id: 3,
@@ -32,6 +40,7 @@ function fakePrisma() {
       anzeige: null,
       core: true,
       sectionId: 7,
+      unitId: 1,
     },
     {
       id: 4,
@@ -41,6 +50,7 @@ function fakePrisma() {
       anzeige: null,
       core: true,
       sectionId: 7,
+      unitId: 1,
     },
     {
       id: 5,
@@ -50,6 +60,7 @@ function fakePrisma() {
       anzeige: null,
       core: true,
       sectionId: 7,
+      unitId: 1,
     },
     {
       id: 6,
@@ -59,6 +70,20 @@ function fakePrisma() {
       anzeige: null,
       core: false,
       sectionId: 7,
+      unitId: 1,
+    },
+    // Boshqa UNITning so'zi — hech qachon shu darsda ko'rsatilmaydi.
+    // `PAAR` javobi shu so'zni nomlab "to'g'ri" bo'lib qolmasligini
+    // sinash uchun kerak (Finding 1: unit-scoping).
+    {
+      id: 99,
+      de: 'fremd',
+      uz: 'begona',
+      artikel: null,
+      anzeige: null,
+      core: true,
+      sectionId: 77,
+      unitId: 2,
     },
   ];
   const sentence = [
@@ -114,7 +139,23 @@ function fakePrisma() {
       findMany: jest.fn(async () => [{ id: 7, code: 'u01-s1', order: 1 }]),
     },
     dafLexeme: {
-      findMany: jest.fn(async () => lexeme),
+      findMany: jest.fn(async (args: any = {}) => {
+        const where = args?.where ?? {};
+        let rows = lexeme;
+        if (where.sectionId?.in) {
+          rows = rows.filter((l) => where.sectionId.in.includes(l.sectionId));
+        }
+        if (where.id?.in) {
+          rows = rows.filter((l) => where.id.in.includes(l.id));
+        }
+        if (where.de?.in) {
+          rows = rows.filter((l) => where.de.in.includes(l.de));
+        }
+        if (where.unitId != null) {
+          rows = rows.filter((l) => l.unitId === where.unitId);
+        }
+        return rows;
+      }),
       findUnique: jest.fn(
         async ({ where }: any) => lexeme.find((l) => l.id === where.id) ?? null,
       ),
@@ -180,6 +221,45 @@ describe('UebungService.seans', () => {
   });
 });
 
+describe('UebungService.seans — qaytarish (wiederholung)', () => {
+  it('muddati kelgan so`z seansga kiradi, ikkitadan oshmaydi va boshqa formatda so`raladi', async () => {
+    const prisma = fakePrisma();
+    const eski = new Date(Date.now() - 60_000);
+    // Uchta muddati kelgan so'z beriladi — cheklov ikkita ekanini
+    // ko'rish uchun ataylab ko'proq.
+    prisma.dafLexemeState.findMany = jest.fn(async ({ take }: any) =>
+      [
+        { lexemeId: 1, lastFormat: 'WORT_UZ', dueAt: eski },
+        { lexemeId: 2, lastFormat: 'UZ_WORT', dueAt: eski },
+        { lexemeId: 3, lastFormat: 'WORT_UZ', dueAt: eski },
+      ].slice(0, take),
+    ) as any;
+
+    const fragen = await new UebungService(prisma as any).seans(100, 55);
+
+    // 12 savollik seansda oltidan biri — ya'ni ikkitasi so'raladi.
+    // Servis buni SO'ROVNING O'ZIDA cheklaydi (`take: 2`), uchinchi
+    // holat bazadan umuman tortib olinmaydi.
+    const chaqiruv = (prisma.dafLexemeState.findMany as jest.Mock).mock
+      .calls[0][0];
+    expect(chaqiruv.take).toBe(2);
+
+    // Ikkala muddati kelgan so'z (1 va 2) seansda ko'rinadi.
+    const soz1 = fragen.find((f) => f.itemType === 'WORT' && f.itemId === 1);
+    const soz2 = fragen.find((f) => f.itemType === 'WORT' && f.itemId === 2);
+    expect(soz1).toBeDefined();
+    expect(soz2).toBeDefined();
+
+    // 1-so'z oxirgi marta WORT_UZ da so'ralgan (artikli yo'q, shuning
+    // uchun ARTIKEL formatini qura olmaydi) — yagona qolgan muqobil
+    // UZ_WORT, demak aynan shu formatda qaytishi SHART.
+    expect(soz1?.format).toBe('UZ_WORT');
+    // 2-so'z oxirgi marta UZ_WORT da so'ralgan — xuddi shu sababdan
+    // yagona muqobil WORT_UZ.
+    expect(soz2?.format).toBe('WORT_UZ');
+  });
+});
+
 describe('UebungService.pruefen', () => {
   const ctx = { studentId: 55, companyId: 1 };
 
@@ -231,11 +311,27 @@ describe('UebungService.pruefen', () => {
 
   it('so`z holatini yangilaydi', async () => {
     const prisma = fakePrisma();
+    const oldin = Date.now();
     await new UebungService(prisma as any).pruefen(
       { itemType: 'WORT', itemId: 1, format: 'WORT_UZ', given: 'salom' },
       ctx,
     );
     expect(prisma.dafLexemeState.upsert).toHaveBeenCalled();
+
+    // Faqat chaqirilganini emas — YUKINI ham tekshiramiz: yangi so'z
+    // (holat topilmadi, `strength` 0 dan boshlanadi) + to'g'ri javob —
+    // kuch 1ga o'sadi, muddat kelajakka suriladi, format keyingi
+    // qaytarish uchun yoziladi.
+    const arg = (prisma.dafLexemeState.upsert as jest.Mock).mock.calls[0][0];
+    expect(arg.where.studentId_lexemeId).toEqual({
+      studentId: 55,
+      lexemeId: 1,
+    });
+    expect(arg.create.strength).toBe(1);
+    expect(arg.create.dueAt.getTime()).toBeGreaterThan(oldin);
+    expect(arg.create.lastFormat).toBe('WORT_UZ');
+    expect(arg.update.strength).toBe(1);
+    expect(arg.update.lastFormat).toBe('WORT_UZ');
   });
 
   it('gap javobida so`z holati yangilanmaydi', async () => {
@@ -293,13 +389,86 @@ describe('UebungService.pruefen', () => {
     expect(r.isCorrect).toBe(false);
   });
 
-  it('LUECKE javobini hozircha tekshirmaydi — xato tashlaydi', async () => {
+  it('PAAR: to`rttadan farqli juft soni xato hisoblanadi, ekzeptsiya emas', async () => {
+    // Bitta TO'G'RI juft yuborilsa ham, to'rttadan kam bo'lgani uchun
+    // butun javob XATO — qolgan uchtasi sinovdan o'tmagan deb hisoblanadi.
     const prisma = fakePrisma();
-    await expect(
-      new UebungService(prisma as any).pruefen(
-        { itemType: 'SATZ', itemId: 11, format: 'LUECKE', given: 'bin' },
-        ctx,
-      ),
-    ).rejects.toThrow();
+    const r = await new UebungService(prisma as any).pruefen(
+      { itemType: 'WORT', itemId: 1, format: 'PAAR', given: 'hallo=salom' },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(false);
+  });
+
+  it('PAAR: boshqa unitdan so`z nomlansa qabul qilinmaydi', async () => {
+    // "fremd=begona" tarjima sifatida TO'G'RI, lekin `fremd` boshqa
+    // unitning so'zi — bu darsda hech qachon ko'rsatilmagan. So'z qidiruvi
+    // shu unitga cheklangani uchun bu juft "topilmadi" deb hisoblanadi.
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'WORT',
+        itemId: 1,
+        format: 'PAAR',
+        given: 'hallo=salom|danke=rahmat|ich=men|fremd=begona',
+      },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(false);
+  });
+
+  it('PAAR: har so`zning holati faqat O`Z juftining natijasi bilan yangilanadi', async () => {
+    // 'hallo' va 'ich' TO'G'RI juftlashgan, 'danke' va 'du' XATO
+    // (tarjimalari almashtirilgan). Umumiy verdikt xato bo'lsa ham,
+    // to'g'ri juftlashgan ikkita so'zning holati BUZILMASLIGI kerak.
+    const prisma = fakePrisma();
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'WORT',
+        itemId: 1,
+        format: 'PAAR',
+        given: 'hallo=salom|danke=sen|ich=men|du=rahmat',
+      },
+      ctx,
+    );
+
+    const calls = (prisma.dafLexemeState.upsert as jest.Mock).mock.calls;
+    // To'rtta so'zning HAR BIRI o'zicha yangilanadi — umumiy verdikt
+    // bilan bitta yozuv emas.
+    expect(calls.length).toBe(4);
+
+    const holatBoyicha = new Map(
+      calls.map(([arg]: any) => [arg.where.studentId_lexemeId.lexemeId, arg]),
+    );
+
+    // 'hallo' (id 1) — to'g'ri juftlashgan: kuch o'sadi.
+    expect(holatBoyicha.get(1).create.strength).toBe(1);
+    expect(holatBoyicha.get(1).create.correctCount).toBe(1);
+    expect(holatBoyicha.get(1).create.lastFormat).toBe('PAAR');
+
+    // 'danke' (id 2) — noto'g'ri juftlashgan: kuch nolga tushadi.
+    expect(holatBoyicha.get(2).create.strength).toBe(0);
+    expect(holatBoyicha.get(2).create.wrongCount).toBe(1);
+
+    // 'ich' (id 3) — to'g'ri juftlashgan: kuch o'sadi.
+    expect(holatBoyicha.get(3).create.strength).toBe(1);
+
+    // 'du' (id 4) — noto'g'ri juftlashgan: kuch nolga tushadi.
+    expect(holatBoyicha.get(4).create.strength).toBe(0);
+  });
+
+  it('LUECKE endi SO`Z savoli sifatida tekshiriladi', async () => {
+    // Dizayn o'zgardi: `luecke` endi bo'shatilgan so'zning o'zini
+    // (`itemType: 'WORT'`) nishonlaydi, shuning uchun javob har qanday
+    // boshqa so'z savoli kabi tekshiriladi va o'sha so'zning holati
+    // yangilanadi.
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any).pruefen(
+      { itemType: 'WORT', itemId: 1, format: 'LUECKE', given: 'hallo' },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(true);
+    expect(r.richtig).toBe('hallo');
+    expect(prisma.dafLexemeState.upsert).toHaveBeenCalled();
   });
 });

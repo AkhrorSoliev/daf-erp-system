@@ -39,17 +39,18 @@ function mischen<T>(items: T[], rnd: () => number): T[] {
 /**
  * To'g'ri javob MATERIALDAN qaytadan hisoblanadi, savoldan emas.
  *
- * `LUECKE` va `PAAR` bu yerda tekshirilmaydi: ularning javobi materialdan
- * YAGONA tarzda kelib chiqmaydi. `LUECKE` da qaysi so'z olib tashlangani
- * savol qurilganda tasodifiy tanlangan, `PAAR` da esa to'rt juftning
- * qaysilari tushgani ham shunday. Ularni tekshirish uchun savolning
- * o'zligi kengayishi kerak (qaysi so'z, qaysi to'rtlik) — bu keyingi
- * rejaning ishi. Hozir ular seansda beriladi, lekin javobi qabul
- * qilinmaydi, va buni xato aniq aytadi.
+ * `LUECKE` ENDI ODATDAGI SO'Z SAVOLI: `luecke` bo'shatilgan so'zning
+ * `id`sini `itemId` sifatida qaytaradi (`itemType: 'WORT'`), shuning
+ * uchun to'g'ri javob boshqa har qanday so'z savoli kabi — o'sha so'zning
+ * `de`si — qaytadan hisoblanadi. Gap qaysi so'z olib tashlangani savol
+ * qurilganda tasodifiy tanlangan bo'lsa ham, MUAMMO EMAS: natija allaqachon
+ * savolning o'zligiga yozib qo'yilgan, qayta tanlash kerak emas.
  *
- * `PAAR` uchun bu funksiya chaqirilmaydi ham — `pruefen` uni undan OLDIN
- * o'z yo'li bilan (juft-juft) tekshiradi, chunki o'sha tekshiruv bitta
- * "to'g'ri javob" satriga sig'maydi.
+ * `PAAR` bundan boshqacha: to'rt juftning qaysilari tushgani ham
+ * tasodifiy, lekin ularni bitta "to'g'ri javob" satriga sig'dirib
+ * bo'lmaydi (to'rtta so'z, to'rtta natija). Shuning uchun `PAAR` bu
+ * funksiyaga UMUMAN yetib kelmaydi — `pruefen` uni bundan OLDIN o'z yo'li
+ * bilan (juft-juft) tekshiradi.
  */
 function richtigeAntwort(
   format: FrageFormat,
@@ -72,6 +73,7 @@ function richtigeAntwort(
       }
       return { richtig: material.artikel, akzeptiert: [] };
     case 'SATZ_BAUEN':
+    case 'LUECKE':
     case 'REAKTION':
       return { richtig: material.de, akzeptiert: [] };
     default:
@@ -389,6 +391,11 @@ export class UebungService {
 
     let isCorrect: boolean;
     let richtig: string;
+    // `PAAR` uchun har bir juftning O'Z natijasi — Leitner holatini
+    // qaysi so'z uchun qanday yangilash kerakligini bildiradi. `null` —
+    // format `PAAR` emas, holat pastda ITEMTYPE bo'yicha yagona so'zga
+    // yangilanadi.
+    let paarNatijalari: Array<{ lexemeId: number; ok: boolean }> | null = null;
 
     if (format === 'PAAR') {
       // `PAAR` javobi bitta "to'g'ri javob" satriga sig'maydi: to'rt
@@ -396,9 +403,17 @@ export class UebungService {
       // tanlangan va bu yerda qayta tiklanmaydi. Shuning uchun har juft
       // (de=uz) MUSTAQIL tekshiriladi — savol qaysi to'rtlikni ko'rsatgani
       // bilan ishimiz yo'q, faqat har bir juftlashning o'zi to'g'rimi.
-      const natija = await this.pruefePaar(given);
+      if (material.unitId == null) {
+        // Amalda yetib bo'lmaydi: `PAAR`ning `itemType`si doim `WORT`,
+        // va WORT materiali doim `unitId` bilan qaytadi. Himoya sifatida.
+        throw new BadRequestException("PAAR savoli faqat so'zga tegishli");
+      }
+      const natija = await this.pruefePaar(given, material.unitId);
       isCorrect = natija.isCorrect;
       richtig = natija.richtig;
+      paarNatijalari = natija.paare
+        .filter((p) => p.lexemeId != null)
+        .map((p) => ({ lexemeId: p.lexemeId as number, ok: p.ok }));
     } else {
       const antwort = richtigeAntwort(format, material);
       isCorrect = istRichtig(given, antwort.richtig, antwort.akzeptiert);
@@ -416,7 +431,20 @@ export class UebungService {
       },
     } as any);
 
-    if (itemType === 'WORT') {
+    if (paarNatijalari) {
+      // Har so'z FAQAT O'Z juftining natijasi bilan yangilanadi. Umumiy
+      // `isCorrect` (to'rttasining AND'i) faqat urinish yozuviga ketadi —
+      // bitta xato juft qolgan uchtasini "unutmagan" so'zlarni jazolamasin.
+      for (const p of paarNatijalari) {
+        await this.aktualisiereZustand(
+          ctx.studentId,
+          ctx.companyId,
+          p.lexemeId,
+          p.ok,
+          format,
+        );
+      }
+    } else if (itemType === 'WORT') {
       await this.aktualisiereZustand(
         ctx.studentId,
         ctx.companyId,
@@ -430,45 +458,70 @@ export class UebungService {
   }
 
   /**
-   * Har juftni (`de=uz`) mustaqil tekshiradi: so'zni nemischa matni
-   * bo'yicha materialdan qidiradi va uning haqiqiy tarjimasi bilan
-   * solishtiradi. To'rttalik qaysi so'zlardan tuzilgani bilinmasa ham
-   * shu yetarli — shu sabab `paar`ning `itemId`si faqat ma'lumot.
+   * Har juftni (`de=uz`) mustaqil tekshiradi va HAR SO'ZNING o'z
+   * natijasini (`lexemeId` + `ok`) qaytaradi — chaqiruvchi shu natija
+   * bilan o'sha so'zning Leitner holatini yangilaydi, umumiy verdikt
+   * bilan emas.
+   *
+   * TO'RTTA JUFT SHART. `PAAR` savoli har doim to'rt juft ko'rsatadi;
+   * boshqa son — masalan bitta yoki uchta juft yuborilishi — savol
+   * shaklini buzgan javob va butunlay XATO hisoblanadi, ekzeptsiya emas
+   * (xuddi bo'sh javob har doim xato bo'lgani kabi). Aks holda bitta
+   * to'g'ri juft yuborib, qolgan uchtasini o'ylab ko'rmasdan ham
+   * "to'liq to'g'ri" deb hisoblanib qolardi.
+   *
+   * SO'Z QIDIRUVI SHU `unitId`GA CHEKLANADI — savol qurilgan material
+   * qaysi unitdan bo'lsa, shundan. Aks holda o'quvchi boshqa unitdan
+   * (hatto butunlay o'zga darsdan) bir xil nemischa so'zni nomlab,
+   * hech qachon ko'rsatilmagan materialga "to'g'ri" javob olishi mumkin
+   * edi — chalg'ituvchi variant sifatida ham ko'rsatilmagan so'z.
    */
-  private async pruefePaar(given: string): Promise<PruefenErgebnis> {
+  private async pruefePaar(
+    given: string,
+    unitId: number,
+  ): Promise<{
+    isCorrect: boolean;
+    richtig: string;
+    paare: Array<{ lexemeId: number | null; ok: boolean }>;
+  }> {
     const juftlar = given
       .split('|')
       .map((p) => p.split('='))
       .filter((p): p is [string, string] => p.length === 2);
-    if (juftlar.length === 0) {
-      return { isCorrect: false, richtig: '' };
+
+    if (juftlar.length !== 4) {
+      return { isCorrect: false, richtig: '', paare: [] };
     }
 
     const deLar = juftlar.map(([de]) => de);
     const soezler = (await this.prisma.dafLexeme.findMany({
-      where: { de: { in: deLar } },
-    } as any)) as Array<{ de: string; uz: string }>;
-    const uzByDe = new Map(soezler.map((s) => [s.de, s.uz]));
+      where: { de: { in: deLar }, unitId },
+    } as any)) as Array<{ id: number; de: string; uz: string }>;
+    const byDe = new Map(soezler.map((s) => [s.de, s]));
 
     const natijalar = juftlar.map(([de, uzGegeben]) => {
-      const uzRichtig = uzByDe.get(de);
-      return {
-        de,
-        ok: uzRichtig != null && istRichtig(uzGegeben, uzRichtig),
-        uzRichtig,
-      };
+      const soz = byDe.get(de);
+      const ok = soz != null && istRichtig(uzGegeben, soz.uz);
+      return { lexemeId: soz?.id ?? null, de, ok, uzRichtig: soz?.uz ?? null };
     });
 
     return {
       isCorrect: natijalar.every((n) => n.ok),
       richtig: natijalar.map((n) => `${n.de}=${n.uzRichtig ?? ''}`).join('|'),
+      paare: natijalar.map(({ lexemeId, ok }) => ({ lexemeId, ok })),
     };
   }
 
   private async ladeMaterial(
     itemType: PruefenInput['itemType'],
     itemId: number,
-  ): Promise<{ de: string; uz: string; artikel?: string | null } | null> {
+  ): Promise<{
+    de: string;
+    uz: string;
+    artikel?: string | null;
+    /** Faqat `WORT` uchun — `PAAR` javobini shu unitga cheklash uchun kerak. */
+    unitId?: number;
+  } | null> {
     if (itemType === 'WORT') {
       const row = (await this.prisma.dafLexeme.findUnique({
         where: { id: itemId },
@@ -476,6 +529,7 @@ export class UebungService {
         de: string;
         uz: string;
         artikel: string | null;
+        unitId: number;
       } | null;
       return row;
     }

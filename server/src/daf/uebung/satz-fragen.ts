@@ -16,7 +16,10 @@ function mischen<T>(items: T[], rnd: () => number): T[] {
 
 /** Tinish belgisisiz so'zlar — gapni bo'laklashda ishlatiladi. */
 function woerterVon(de: string): string[] {
-  return de.replace(/[.,!?]/g, '').trim().split(/\s+/);
+  return de
+    .replace(/[.,!?]/g, '')
+    .trim()
+    .split(/\s+/);
 }
 
 /**
@@ -36,6 +39,13 @@ function woerterVon(de: string): string[] {
  * Variant BERILMAYDI — javob yoziladi. Sabab: to'rt variantdan tanlash
  * grammatik shaklni emas, ko'rish xotirasini tekshiradi; `bin` va `bist`
  * orasidagi farqni bilish uchun uni YOZISH kerak.
+ *
+ * SAVOL O'ZLIGI SO'ZNIKI, GAPNIKI EMAS: bo'shatilgan token bitta LEKSEMA
+ * bo'lgani uchun `itemType`/`itemId` o'sha SO'ZGA ishora qiladi (`SATZ`
+ * emas). Shu tufayli javob har qanday boshqa so'z savoli kabi qayta
+ * hisoblanadi (`richtig` — so'zning `de`si) va JAVOB TO'G'RI/XATO bo'lsa
+ * ham o'sha so'zning Leitner holati yangilanadi — o'quvchi bo'sh joyni
+ * to'ldirganda aslida so'zni bilish-bilmasligini ko'rsatgan bo'ladi.
  */
 export function luecke(
   satz: MaterialSatz,
@@ -62,12 +72,14 @@ export function luecke(
   const kernStart = zielRoh.toLowerCase().indexOf(ziel.de.toLowerCase());
   if (kernStart === -1) return null;
   roh[zielIndex] =
-    zielRoh.slice(0, kernStart) + '___' + zielRoh.slice(kernStart + ziel.de.length);
+    zielRoh.slice(0, kernStart) +
+    '___' +
+    zielRoh.slice(kernStart + ziel.de.length);
 
   return {
     format: 'LUECKE',
-    itemType: 'SATZ',
-    itemId: satz.id,
+    itemType: 'WORT',
+    itemId: ziel.id,
     prompt: roh.join(' '),
     hilfe: satz.uz,
     options: [],
@@ -99,7 +111,9 @@ export function satzUebersetzen(
 ): Frage | null {
   const falsch = [
     ...new Set(
-      andere.filter((s) => s.id !== ziel.id && s.uz !== ziel.uz).map((s) => s.uz),
+      andere
+        .filter((s) => s.id !== ziel.id && s.uz !== ziel.uz)
+        .map((s) => s.uz),
     ),
   ];
   if (falsch.length < 3) return null;
