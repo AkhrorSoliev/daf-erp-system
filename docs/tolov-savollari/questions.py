@@ -30,15 +30,22 @@ FACTS = [
 SECTIONS = [
     {
         "n": 2, "title": "Ustoz haqi",
+        "note": "Ustozning haqi kurs narxidan kelib chiqib belgilanadi.",
         "questions": [
             {
-                "q": "Ustozning haqi kursga qarab farq qilsinmi?",
-                "ex": "Malika opa Standart kursda (450 000) ham, Intensive kursda "
-                      "(740 000) ham dars beradi. Ikkalasida ham bir xil summa oladi.",
+                "q": "Har kurs uchun ustozning ulushi qancha bo'lsin?",
+                "ex": "Har qatorga ustoz bir o'quvchi uchun bir oyda oladigan summani "
+                      "yozing. Masalan Standart kursi 450 000 bo'lsa, ustoz ulushi "
+                      "200 000.",
+                "table": True,
+            },
+            {
+                "q": "Ulush qat'iy summa bo'lsinmi yoki foiz?",
+                "ex": "Kurs narxi oshsa: qat'iy summada ustozning haqi o'zgarmaydi, "
+                      "foizda esa o'zi ham oshadi.",
                 "opts": [
-                    "Barcha kurslarda bir xil olsin",
-                    "Har kurs uchun alohida summa belgilansin — masalan Standart 200 000, Intensive 345 000",
-                    "Har kurs uchun alohida foiz belgilansin",
+                    "Qat'iy summa — narx oshsa alohida qayta ko'riladi",
+                    "Foiz — narx oshsa ustozning haqi ham avtomatik oshadi",
                 ],
             },
             {

@@ -158,11 +158,28 @@ for sec in Q.SECTIONS:
     d.y -= 11*mm
     c.setFont("NRL", 25); c.setFillColor(INK)
     c.drawString(ML, d.y, sec["title"])
-    d.y -= 10*mm
+    d.y -= 8*mm
+    if sec.get("note"):
+        d.text(sec["note"], "DS", 9.8, SOFT, gap=4*mm)
+    d.y -= 2*mm
 
     for q in sec["questions"]:
         qno += 1
-        d.need(96)
+        # Savol bo'linib ketmasligi uchun butun blok balandligini oldindan
+        # o'lchaymiz: raqam + savol + misol + variantlar + javob katakchasi.
+        if q.get("table"):
+            est = 30
+            est += len(d.wrap(q["q"], "NRM", 13.2, CW)) * 19
+            est += len(d.wrap(q["ex"], "DS", 9.3, CW - 9)) * 14.4 + 6
+            est += 21 + (len(Q.PRICES) - 1) * 10*mm + 9*mm
+        else:
+            est = 30
+            est += len(d.wrap(q["q"], "NRM", 13.2, CW)) * 19
+            est += len(d.wrap(q["ex"], "DS", 9.3, CW - 9)) * 14.4 + 6
+            for o in q["opts"]:
+                est += len(d.wrap(o, "DS", 9.9, CW - 15)) * 16
+            est += 14*mm + 13 + 9*mm
+        d.need(est)
         d.y -= 4
         c.setFont("DSM", 8.4); c.setFillColor(CLAY)
         c.drawString(ML, d.y, f"{qno:02d}")
@@ -173,6 +190,35 @@ for sec in Q.SECTIONS:
         d.text(q["ex"], "DS", 9.3, SOFT, x=9, gap=6)
         c.setFillColor(CLAY); c.rect(ML, d.y + 4, 1.4, ytop - d.y - 8, stroke=0, fill=1)
         c.setFillColor(INK)
+
+        if q.get("table"):
+            d.need(30)
+            d.y -= 16
+            c.setFont("DSM", 8.2); c.setFillColor(FAINT)
+            c.drawString(ML, d.y, "Kurs")
+            c.drawRightString(ML + CW*0.52, d.y, "Narx")
+            c.drawString(ML + CW*0.60, d.y, "Ustoz ulushi")
+            d.y -= 5
+            c.setStrokeColor(RULE); c.setLineWidth(0.6)
+            c.line(ML, d.y, ML + CW, d.y)
+            for row in Q.PRICES[1:]:
+                d.need(11*mm)
+                d.y -= 10*mm
+                c.setFont("DS", 10); c.setFillColor(INK)
+                c.drawString(ML, d.y + 2.5*mm, row[0])
+                c.setFont("DS", 10); c.setFillColor(SOFT)
+                c.drawRightString(ML + CW*0.52, d.y + 2.5*mm, row[1])
+                c.setFillColor(INK)
+                key = row[0].lower().replace(" ", "_").replace("'", "")
+                c.acroForm.textfield(
+                    name=f"ulush_{key}", tooltip=f"{row[0]} — ustoz ulushi",
+                    x=ML + CW*0.60, y=d.y, width=CW*0.40, height=8*mm,
+                    borderColor=RULE, fillColor=white, textColor=INK,
+                    fontName="Helvetica", fontSize=10, borderWidth=0.6,
+                    forceBorder=True)
+                d.fields += 1
+            d.y -= 9*mm
+            continue
 
         for i, o in enumerate(q["opts"]):
             d.need(20)
