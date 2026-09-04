@@ -1,7 +1,7 @@
 # To'lov tizimi — qaror savollari
 
 `docs/tolov-tizimi-savollari.pdf` — to'ldiriladigan hujjat.
-14 sahifa, 28 savol, 30 ta maydon.
+21 sahifa (16 savolnoma + 5 shartnoma), 29 savol, 30 ta maydon.
 
 ## Qayta yaratish
 
@@ -10,8 +10,21 @@ python3 docs/tolov-savollari/make_pdf.py docs/tolov-tizimi-savollari.pdf
 ```
 
 `questions.py` — savollar, misollar, variantlar.
-`make_pdf.py` — sahifa tuzilishi.
+`make_pdf.py` — sahifa tuzilishi, shartnomani qo'shish, havolalar.
+`shartnoma.pdf` — ommaviy oferta, hujjatning oxiriga qo'shiladi.
 `ttf/` — Newsreader va DM Sans (CV manbasidan olingan, woff2 dan o'girilgan).
+
+## Shartnoma havolalari
+
+8-bo'limdagi «Shartnoma 5.2» yorliqlari bosiladigan havola. `questions.py` da
+har savolning `refs` maydoni `(band, shartnoma sahifasi)` juftliklarini
+saqlaydi; sahifa raqami `shartnoma.pdf` ning o'z ichidagi raqami. Birlashtirilgan
+hujjatdagi o'rni `make_pdf.py` da hisoblanadi, shuning uchun savolnoma
+uzayganda havolalar o'zi to'g'rilanadi.
+
+pypdf `/Dest` ga sahifa raqamini yozadi — bu faqat tashqi hujjatga havolada
+to'g'ri. `make_pdf.py` uni sahifa obyektiga ko'rsatkichga almashtiradi, aks
+holda ba'zi ko'ruvchilarda havola ishlamaydi.
 
 ## Dizayn
 

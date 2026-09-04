@@ -1,10 +1,16 @@
 # -*- coding: utf-8 -*-
-"""To'lov tizimi — qaror savollari. Mazmun."""
+"""To'lov tizimi — qaror savollari. Mazmun.
+
+`refs` — shartnomaning bandiga havola: (yorliq, shartnoma sahifasi).
+Sahifa raqami `shartnoma.pdf` ning O'Z ichidagi raqami (1..5); yakuniy
+hujjatdagi o'rni `make_pdf.py` da hisoblanadi.
+"""
 
 LEAD = [
     "Bu hujjat to'lov va ustoz haqi bo'yicha qarorlarni bir joyga yig'adi.",
     "Har savolda qisqa misol va tanlov variantlari bor. Tanlaganingizni katakchaga yozing.",
     "Variantlar to'g'ri kelmasa, o'z javobingizni yozing.",
+    "Oxirgi bo'limda o'quvchilar bilan tuziladigan shartnoma keltirilgan.",
 ]
 
 PRICES = [
@@ -20,44 +26,15 @@ PRICES = [
 ]
 
 FACTS = [
-    "Ustozlarning haqi uch xil hisoblanadi: dars narxidan foiz, har o'quvchi uchun "
-    "qat'iy summa, yoki qat'iy oylik.",
-    "Ustozning haqi qaysi kursni o'qitishiga bog'liq emas — bitta ustoz barcha "
-    "kurslarda bir xil oladi.",
+    "Ustozning haqi kurs narxidan kelib chiqib belgilanadi. Tizimda uni har kurs "
+    "uchun alohida, kerak bo'lsa alohida ustoz uchun ham qo'yish mumkin bo'ladi.",
     "Markazda 370 o'quvchi, 47 guruh, 14 ustoz, 2 filial.",
 ]
 
 SECTIONS = [
     {
         "n": 2, "title": "Ustoz haqi",
-        "note": "Ustozning haqi kurs narxidan kelib chiqib belgilanadi.",
         "questions": [
-            {
-                "q": "Har kurs uchun ustozning ulushi qancha bo'lsin?",
-                "ex": "Har qatorga ustoz bir o'quvchi uchun bir oyda oladigan summani "
-                      "yozing. Masalan Standart kursi 450 000 bo'lsa, ustoz ulushi "
-                      "200 000.",
-                "table": True,
-            },
-            {
-                "q": "Ulush qat'iy summa bo'lsinmi yoki foiz?",
-                "ex": "Kurs narxi oshsa: qat'iy summada ustozning haqi o'zgarmaydi, "
-                      "foizda esa o'zi ham oshadi.",
-                "opts": [
-                    "Qat'iy summa — narx oshsa alohida qayta ko'riladi",
-                    "Foiz — narx oshsa ustozning haqi ham avtomatik oshadi",
-                ],
-            },
-            {
-                "q": "Bir xil kursni o'qitadigan ustozlar bir xil olsinmi?",
-                "ex": "Malika opa va Nodira opa ikkalasi ham Standart kursda dars beradi. "
-                      "Malika opa besh yillik tajribali, Nodira opa yangi kelgan.",
-                "opts": [
-                    "Bir xil olsin",
-                    "Tajriba darajalari belgilansin va haq shunga qarab farq qilsin",
-                    "Har ustoz bilan alohida kelishilsin",
-                ],
-            },
             {
                 "q": "Oyda dars soni o'zgarsa, ustozning oyligi o'zgarsinmi?",
                 "ex": "Sentabrda guruhda 13 ta dars bo'ldi, oktabrda 14 ta. "
@@ -87,26 +64,6 @@ SECTIONS = [
                     "Har holat alohida hal qilinsin",
                 ],
             },
-            {
-                "q": "Chegirmali o'quvchi uchun ustozning haqi kamaysinmi?",
-                "ex": "O'quvchiga 50% chegirma berildi — u 450 000 o'rniga 225 000 to'laydi. "
-                      "Ustozning haqi qaysi summadan hisoblansin?",
-                "opts": [
-                    "To'liq narxdan — chegirmani markaz ko'taradi",
-                    "Chegirmali narxdan — ustoz ham kamroq oladi",
-                    "Yarmi-yarmi bo'linsin",
-                ],
-            },
-            {
-                "q": "To'lamagan o'quvchi darsga kelsa, ustozga qachon to'lansin?",
-                "ex": "O'quvchi oktabr uchun to'lamadi, lekin darslarga kelaverdi. "
-                      "Ustoz o'z ishini qildi.",
-                "opts": [
-                    "Ustozga darhol to'lansin — markaz o'z hisobidan beradi, keyin o'quvchidan undiradi",
-                    "O'quvchi to'lagandan keyin to'lansin",
-                    "Darhol to'lansin, lekin markazning bir oylik chegarasi bo'lsin: _____ so'm",
-                ],
-            },
         ],
     },
     {
@@ -114,12 +71,12 @@ SECTIONS = [
         "questions": [
             {
                 "q": "Kelmay qo'ygan o'quvchining puli qancha kutsin?",
-                "ex": "O'quvchi uch oydan beri kelmayapti. Balansida 180 000 so'm bor. "
-                      "Guruhdan hali chiqarilmagan.",
+                "ex": "O'quvchi uch oydan beri kelmayapti — muzlatilgan yoki shunchaki "
+                      "yo'qolgan. Balansida 180 000 so'm turibdi.",
                 "opts": [
                     "Cheksiz kutsin — o'quvchi kelib so'raguncha",
-                    "_____ oydan keyin markaz hisobiga o'tkazilsin",
-                    "_____ oydan keyin o'quvchiga xabar berilsin, javob bo'lmasa o'tkazilsin",
+                    "_____ oydan keyin alohida ro'yxatda chiqsin, qarorni markaz qabul qilsin",
+                    "_____ oydan keyin o'quvchiga xabar berilsin, javob bo'lmasa markaz hisobiga o'tsin",
                 ],
             },
             {
@@ -158,25 +115,6 @@ SECTIONS = [
                 ],
             },
             {
-                "q": "To'lov qaysi kundan boshlab qarz sanalsin?",
-                "ex": "Oyning birinchi kunida hamma o'quvchiga 450 000 hisoblanadi. "
-                      "Ko'pchilik 5-10 kunlari to'laydi.",
-                "opts": [
-                    "Birinchi kundanoq qarz sanalsin",
-                    "Oyning _____ -sanasidan keyin qarz sanalsin",
-                ],
-            },
-            {
-                "q": "Qarzi bor o'quvchi darsga kiritilsinmi?",
-                "ex": "O'quvchi ikki oydan beri to'lamagan, qarzi 900 000 so'm. "
-                      "Darslarga kelaveradi.",
-                "opts": [
-                    "Kiritilaversin",
-                    "Qarzi _____ so'mdan oshsa kiritilmasin",
-                    "Bir oy to'lamasa kiritilmasin",
-                ],
-            },
-            {
                 "q": "Undirib bo'lmagan qarz qachon hisobdan chiqarilsin?",
                 "ex": "O'quvchi sakkiz oydan beri yo'q, telefoni o'chiq. Qarzi 600 000 so'm.",
                 "opts": [
@@ -201,41 +139,32 @@ SECTIONS = [
                 ],
             },
             {
-                "q": "Ko'chirilgan kun ba'zi o'quvchilarga to'g'ri kelmasa?",
-                "ex": "Bayram darsi shanba kuniga ko'chirildi. Uch o'quvchi shanbada band "
-                      "va kela olmaydi.",
+                "q": "Ko'chirilgan darsga o'quvchi kela olmasa nima bo'lsin?",
+                "ex": "Ustoz kasal bo'lib payshanba darsi o'tilmadi va shanbaga "
+                      "ko'chirildi. Uch o'quvchi shanbada band.",
                 "opts": [
-                    "Ular uchun uzrli deb belgilansin",
-                    "Oddiy kelmagan deb belgilansin",
-                    "Ko'chirish faqat hamma kela oladigan kunga qilinsin",
+                    "Ular uchun uzrli deb belgilansin va o'sha dars puli qaytarilsin",
+                    "Dars o'tilgan hisoblansin — puli qaytarilmasin",
+                    "Ko'chirish faqat hamma kela oladigan kunga qilinsin, aks holda dars o'tilmasin",
                 ],
             },
             {
-                "q": "Ustoz kelmagani uchun dars bo'lmasa?",
-                "ex": "Ustoz kasal bo'ldi, o'rinbosar topilmadi, dars o'tilmadi. "
-                      "O'quvchi o'sha oy uchun to'lagan.",
+                "q": "Bir oyda dars kunlari ko'p yoki kam bo'lsa, to'lov o'zgarsinmi?",
+                "ex": "Sentabrda guruhda 13 ta dars, oktabrda 14 ta dars bor. "
+                      "Kurs narxi ikkalasida ham 450 000.",
                 "opts": [
-                    "Dars boshqa kunga ko'chirilsin",
-                    "O'sha darsning puli o'quvchiga qaytarilsin",
-                    "Ustozning haqidan ushlab qolinsin",
+                    "To'lov o'zgarmasin — oylik narx qat'iy",
+                    "Dars soniga qarab o'zgarsin — 14 darslik oy qimmatroq",
                 ],
             },
             {
-                "q": "Rejadagidan ortiq dars o'tilsa, qo'shimcha to'lov olinsinmi?",
-                "ex": "Oyda o'n uch dars rejalashtirilgan edi, o'n to'rttasi o'tildi.",
+                "q": "O'quvchi oy o'rtasida boshqa kursga o'tsa, to'lov qanday hisoblansin?",
+                "ex": "O'quvchi 15-oktabrda A1 dan A2 ga o'tdi. A1 — 450 000, "
+                      "A2 — 500 000. Oktabr uchun 450 000 to'lab bo'lgan edi.",
                 "opts": [
-                    "Qo'shimcha to'lov olinmasin",
-                    "Ortiqcha dars uchun qo'shimcha to'lov olinsin",
-                ],
-            },
-            {
-                "q": "Guruh oy o'rtasida tugasa, qolgan kunlar puli nima bo'lsin?",
-                "ex": "Guruh 15-oktabrda kursni tamomladi. O'quvchi butun oktabr uchun "
-                      "to'lagan edi.",
-                "opts": [
-                    "Qolgan kunlar puli qaytarilsin",
-                    "Qaytarilmasin",
-                    "Keyingi kursga o'tkazilsin",
+                    "Kunlarga bo'lib hisoblansin — yarim oy eski, yarim oy yangi narxda",
+                    "Butun oktabr eski kurs narxida qolsin, yangi narx noyabrdan",
+                    "Butun oktabr yangi kurs narxida hisoblansin",
                 ],
             },
         ],
@@ -253,20 +182,12 @@ SECTIONS = [
                 ],
             },
             {
-                "q": "Muzlatishdan qaytganda oy qayta hisoblansinmi?",
-                "ex": "O'quvchi 10-oktabrda muzlatilib, 15-oktabrda qaytdi. "
-                      "Oktabrning yana besh darsi bor.",
+                "q": "Muzlatishdan qaytgandan keyin oyning qolgani uchun pul olinsinmi?",
+                "ex": "O'quvchi 10-oktabrda muzlatildi — o'tilmagan sakkiz dars puli "
+                      "balansiga qaytdi. 20-oktabrda qaytib keldi, oktabrning to'rt darsi qoldi.",
                 "opts": [
-                    "Qolgan darslar uchun qayta hisoblansin",
-                    "Oyning qolgani bepul bo'lsin",
-                ],
-            },
-            {
-                "q": "Muzlatilgan o'quvchining puli qancha kutsin?",
-                "ex": "O'quvchi ikki oydan beri muzlatilgan. Balansida 250 000 so'm turibdi.",
-                "opts": [
-                    "_____ kundan keyin alohida ro'yxatda chiqsin",
-                    "Cheksiz kutsin",
+                    "Faqat qolgan to'rt dars uchun olinsin, ortig'i balansda tursin",
+                    "Butun oy uchun to'liq olinsin",
                 ],
             },
         ],
@@ -275,23 +196,23 @@ SECTIONS = [
         "n": 6, "title": "Chegirma",
         "questions": [
             {
-                "q": "Chegirmani kim bera oladi va qancha?",
-                "ex": "Administrator o'quvchiga 30% chegirma berdi. Bu yiliga taxminan "
-                      "1 600 000 so'm.",
+                "q": "Chegirmali o'quvchi uchun ustozning haqi kamaysinmi?",
+                "ex": "O'quvchiga 50% chegirma berildi — u 450 000 o'rniga 225 000 to'laydi. "
+                      "Ustozning haqi qaysi summadan hisoblansin?",
                 "opts": [
-                    "Faqat direktor bersin, chegarasiz",
-                    "Direktor chegarasiz, filial direktori _____ % gacha",
-                    "Administrator ham _____ % gacha bera olsin",
+                    "To'liq narxdan — chegirmani markaz ko'taradi",
+                    "Chegirmali narxdan — ustoz ham kamroq oladi",
+                    "Yarmi-yarmi bo'linsin",
                 ],
             },
             {
-                "q": "Butunlay bepul o'qiydigan o'quvchi bo'ladimi?",
-                "ex": "Xodim farzandi bepul o'qiydi. Ustozga haq baribir to'lanadi va "
-                      "uni markaz o'z hisobidan beradi.",
+                "q": "Butunlay bepul o'qiydigan o'quvchi bo'lishi mumkinmi?",
+                "ex": "Bir o'quvchiga 100% chegirma berildi — u hech narsa to'lamaydi. "
+                      "Ustoz esa u uchun ham dars o'tadi.",
                 "opts": [
-                    "Bo'lsin — ustozning haqi markaz zimmasida",
-                    "Bo'lsin, lekin ustozning haqi ham kamaysin",
-                    "Bo'lmasin",
+                    "Bo'lsin — ustozning haqini markaz o'z hisobidan to'laydi",
+                    "Bo'lsin, lekin bunday o'quvchi uchun ustozga haq yozilmasin",
+                    "Bo'lmasin — eng kamida _____ % to'lansin",
                 ],
             },
         ],
@@ -321,6 +242,124 @@ SECTIONS = [
             },
         ],
     },
+    {
+        "n": 8, "title": "Shartnoma bilan farqlar",
+        "note": "Quyidagi joylarda shartnoma bir narsani, tizim boshqa narsani aytadi. "
+                "Band raqamiga bosilsa shartnomaning o'sha yeriga o'tadi.",
+        "questions": [
+            {
+                "q": "Uzrli dars qayta o'tilsinmi yoki puli qaytarilsinmi?",
+                "ex": "Shartnoma: uzrli sabab bilan qoldirilgan darslar kelishuvga ko'ra "
+                      "qayta o'tiladi. Tizim: uzrli dars puli o'quvchining balansiga qaytadi.",
+                "refs": [("5.2", 3)],
+                "opts": [
+                    "Shartnomadagidek — dars qayta o'tilsin, pul qaytarilmasin",
+                    "Tizimdagidek — pul qaytarilsin, shartnoma shunga moslansin",
+                    "Ikkalasi ham bo'lsin — markaz holatga qarab tanlasin",
+                ],
+            },
+            {
+                "q": "Muzlatilganda kurs muddati uzaytirilsinmi yoki pul qaytarilsinmi?",
+                "ex": "Shartnoma: 10 kundan ortiq kela olmasa kursni to'xtatib turish mumkin, "
+                      "kurs muddati shunga uzaytiriladi. Tizim: o'tilmagan darslar puli "
+                      "balansga qaytadi.",
+                "refs": [("5.4", 3)],
+                "opts": [
+                    "Kurs muddati uzaytirilsin",
+                    "Pul balansga qaytsin",
+                    "O'quvchining o'zi tanlasin",
+                ],
+            },
+            {
+                "q": "Kursni tashlagan o'quvchidan 50% ushlab qolinsinmi?",
+                "ex": "Shartnoma: kurs boshlangandan keyin o'quvchi o'zi to'xtatsa 50% "
+                      "ushlab qolinadi, darslarning 30% dan ko'pi o'tilgan bo'lsa umuman "
+                      "qaytarilmaydi. Tizim: faqat o'tilgan darslar puli ushlanadi, qolgani "
+                      "to'liq qaytadi.",
+                "refs": [("6.3.2", 3), ("6.3.3", 3)],
+                "opts": [
+                    "Shartnomadagidek — 50% ushlansin",
+                    "Tizimdagidek — faqat o'tilgan darslar puli ushlansin",
+                    "Boshqacha: _____ % ushlansin",
+                ],
+            },
+            {
+                "q": "To'lov muddati oyning 1-kunimi yoki 10-kuni?",
+                "ex": "Shartnoma: keyingi oylik to'lovlar har oyning 10-sanasiga qadar "
+                      "to'lanadi. Tizim: oyning birinchi kunidan qarz ko'rinadi.",
+                "refs": [("3.2", 2)],
+                "opts": [
+                    "Qarz 1-kundan ko'rinsin, lekin 10-kungacha ogohlantirilmasin",
+                    "Shartnomaga moslansin — qarz 10-kundan keyin sanalsin",
+                    "Shartnoma o'zgartirilsin: to'lov oyning _____ -sanasigacha",
+                ],
+            },
+            {
+                "q": "Shartnomadagi narxlar tizimdagi narxlarga to'g'ri kelmaydi.",
+                "ex": "Shartnoma: A1, A2, B1 — 400 000; B2 — 500 000; intensiv — 690 000. "
+                      "Tizim: Standart 450 000, Standart A2 450 000, Standart B1 475 000, "
+                      "Intensive 740 000.",
+                "refs": [("3.2", 2), ("3.1", 1)],
+                "opts": [
+                    "Shartnomadagi narxlar yangilansin",
+                    "Shartnomada narx umuman yozilmasin — 3.1-banddagidek e'lon qilingan narx amal qilsin",
+                    "Tizim narxlari shartnomadagi narxlarga tushirilsin",
+                ],
+            },
+            {
+                "q": "Shartnoma bir oyda 12 dars deydi, kalendar oyda esa 13-14 bo'ladi.",
+                "ex": "Shartnoma: «bir oyda o'tilishi kerak bo'lgan 12 ta dars». "
+                      "Oylik to'lovda dars soni oyga qarab 12 dan 14 gacha o'zgaradi.",
+                "refs": [("6.3.3", 3)],
+                "opts": [
+                    "Shartnomadan «12 ta dars» olib tashlansin — oy to'liq hisoblansin",
+                    "Oyiga 12 tadan ortiq dars uchun to'lov olinmasin deb yozilsin",
+                    "Har kursning oylik dars soni shartnomada alohida ko'rsatilsin",
+                ],
+            },
+            {
+                "q": "Uzrli dars uchun 24 soat va ma'lumotnoma talab qilinsinmi?",
+                "ex": "Shartnoma: o'quvchi kamida 24 soat oldin xabar berishi shart, "
+                      "kasallik tibbiy ma'lumotnoma bilan tasdiqlanadi. Tizim: uzrlini "
+                      "administrator hech qanday shartsiz belgilay oladi.",
+                "refs": [("4.3.5", 2), ("5.1", 3)],
+                "opts": [
+                    "Shartnomadagidek — 24 soat va ma'lumotnoma talab qilinsin",
+                    "Oldindan xabar bersa yetarli, ma'lumotnoma shart emas",
+                    "Har holatda administrator o'zi qaror qilsin",
+                ],
+            },
+            {
+                "q": "Markaz aybi bilan dars o'tilmasa, shartnomada hech narsa yozilmagan.",
+                "ex": "Shartnomaning 5-bo'limi faqat o'quvchi qoldirgan darsni tartibga "
+                      "soladi. Ustoz kelmagani yoki bayram tufayli o'tilmagan dars haqida "
+                      "band yo'q.",
+                "refs": [("5.1", 3), ("6.2.2", 3)],
+                "opts": [
+                    "Shartnomaga qo'shilsin: bunday dars boshqa kunga ko'chiriladi",
+                    "Shartnomaga qo'shilsin: bunday darsning puli qaytariladi",
+                    "Qo'shilmasin — hozirgicha qolsin",
+                ],
+            },
+            {
+                "q": "Narx oshganda 15 kun oldin xabar berish tizimda yo'q.",
+                "ex": "Shartnoma: narxni oshirishdan kamida 15 kun oldin o'quvchi "
+                      "xabardor qilinadi. Tizim: kurs narxi o'zgartirilsa o'sha zahoti "
+                      "kuchga kiradi.",
+                "refs": [("3.5", 2)],
+                "opts": [
+                    "Tizim narx o'zgarishini kelajak sanaga qo'yadigan qilinsin",
+                    "Xabar berish qo'lda qilinaversin, tizim o'zgarmasin",
+                    "Bu band shartnomadan olib tashlansin",
+                ],
+            },
+        ],
+    },
 ]
 
 CLOSING = "Bu yerda ko'rilmagan, lekin siz muhim deb bilgan holatlarni yozing."
+
+CONTRACT_LEAD = [
+    "Quyida o'quvchilar bilan tuziladigan ommaviy oferta keltirilgan.",
+    "8-bo'limdagi band raqamlari shu hujjatga havola qiladi.",
+]

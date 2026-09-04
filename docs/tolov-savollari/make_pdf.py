@@ -1,14 +1,31 @@
 # -*- coding: utf-8 -*-
-import sys, os
+"""Savolnomani yasaydi va oxiriga shartnomani qo'shadi.
+
+Ishlatish:  python3 make_pdf.py <chiqish.pdf>
+
+8-bo'limdagi «Shartnoma 5.2» kabi yorliqlar bosiladigan havola bo'ladi:
+reportlab chizishda ularning joyini yozib boradi, pypdf esa birlashtirilgan
+hujjatda o'sha joylarga Link annotatsiyasini qo'yadi.
+"""
+import io
+import os
+import sys
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib.colors import HexColor, white
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-import q2 as Q
+from pypdf import PdfReader, PdfWriter
+from pypdf.annotations import Link
+from pypdf.generic import ArrayObject, FloatObject, NameObject
+import questions as Q
+
+CONTRACT = f"{HERE}/shartnoma.pdf"
 
 T = f"{HERE}/ttf"
 pdfmetrics.registerFont(TTFont("NR",  f"{T}/Newsreader-400-normal.ttf"))
@@ -28,13 +45,15 @@ FAINT = HexColor("#B8B4AC")
 CLAY  = HexColor("#B4532F")
 RULE  = HexColor("#DDD9D0")
 
+
 class Doc:
-    def __init__(self, path):
-        self.c = canvas.Canvas(path, pagesize=A4)
+    def __init__(self, stream):
+        self.c = canvas.Canvas(stream, pagesize=A4)
         self.c.setTitle("To'lov tizimi - qaror savollari")
         self.c.setAuthor("DaF Sprachzentrum")
         self.page = 0
         self.fields = 0
+        self.links = []   # (sahifa indeksi 0-dan, [x0,y0,x1,y1], shartnoma sahifasi 1-dan)
         self.newpage()
 
     def newpage(self):
@@ -89,7 +108,25 @@ class Doc:
         self.fields += 1
         self.c.setFillColor(INK)
 
-d = Doc(sys.argv[1]); c = d.c
+    def refchips(self, refs):
+        """«Shartnoma 5.2» yorliqlari — bosiladigan havola."""
+        self.need(24)
+        self.y -= 17
+        x = ML
+        for label, page in refs:
+            txt = f"Shartnoma {label}"
+            w = pdfmetrics.stringWidth(txt, "DSM", 8.6) + 14
+            self.c.setStrokeColor(RULE); self.c.setLineWidth(0.6)
+            self.c.roundRect(x, self.y - 4.5, w, 15, 4, stroke=1, fill=0)
+            self.c.setFont("DSM", 8.6); self.c.setFillColor(CLAY)
+            self.c.drawString(x + 7, self.y, txt)
+            self.links.append((self.page - 1, [x, self.y - 4.5, x + w, self.y + 10.5], page))
+            x += w + 6
+        self.c.setFillColor(INK)
+
+
+buf = io.BytesIO()
+d = Doc(buf); c = d.c
 
 # ── Muqova ──────────────────────────────────────────────────────────────
 d.y = H - 84*mm
@@ -107,19 +144,26 @@ d.y -= 8*mm
 c.setFillColor(FAINT); c.setFont("DS", 9)
 c.drawString(ML, d.y, "DaF Sprachzentrum")
 
-# ── 1-bo'lim: narxlar ───────────────────────────────────────────────────
-d.newpage()
-c.setFont("DSM", 9); c.setFillColor(CLAY)
-d.y -= 4; c.drawString(ML, d.y, "1")
-d.y -= 11*mm
-c.setFont("NRL", 25); c.setFillColor(INK)
-c.drawString(ML, d.y, "Kurs narxlari")
-d.y -= 9*mm
-d.text("Savollardagi misollar shu narxlarga tayanadi.", "DS", 9.6, SOFT, gap=8*mm)
 
-rows = Q.PRICES
+def heading(num, title, note=None):
+    d.newpage()
+    c.setFont("DSM", 9); c.setFillColor(CLAY)
+    d.y -= 4; c.drawString(ML, d.y, str(num))
+    d.y -= 11*mm
+    c.setFont("NRL", 25); c.setFillColor(INK)
+    c.drawString(ML, d.y, title)
+    d.y -= 8*mm
+    if note:
+        d.text(note, "DS", 9.8, SOFT, gap=4*mm)
+    d.y -= 2*mm
+
+
+# ── 1-bo'lim: narxlar ───────────────────────────────────────────────────
+heading(1, "Kurs narxlari")
+d.text("Savollardagi misollar shu narxlarga tayanadi.", "DS", 9.6, SOFT, gap=6*mm)
+
 cx = [0, CW*0.60, CW*0.82]
-for i, r in enumerate(rows):
+for i, r in enumerate(Q.PRICES):
     d.need(16)
     d.y -= 15
     if i == 0:
@@ -141,7 +185,7 @@ for i, r in enumerate(rows):
 d.y -= 12*mm
 
 for f in Q.FACTS:
-    d.need(40)
+    d.need(46)
     ytop = d.y
     d.text(f, "DS", 9.6, SOFT, x=8, gap=6)
     c.setFillColor(CLAY); c.rect(ML, d.y + 3, 1.6, ytop - d.y - 6, stroke=0, fill=1)
@@ -152,34 +196,22 @@ for f in Q.FACTS:
 LETTERS = "ABCDEFG"
 qno = 0
 for sec in Q.SECTIONS:
-    d.newpage()
-    c.setFont("DSM", 9); c.setFillColor(CLAY)
-    d.y -= 4; c.drawString(ML, d.y, str(sec["n"]))
-    d.y -= 11*mm
-    c.setFont("NRL", 25); c.setFillColor(INK)
-    c.drawString(ML, d.y, sec["title"])
-    d.y -= 8*mm
-    if sec.get("note"):
-        d.text(sec["note"], "DS", 9.8, SOFT, gap=4*mm)
-    d.y -= 2*mm
+    heading(sec["n"], sec["title"], sec.get("note"))
 
     for q in sec["questions"]:
         qno += 1
         # Savol bo'linib ketmasligi uchun butun blok balandligini oldindan
-        # o'lchaymiz: raqam + savol + misol + variantlar + javob katakchasi.
-        if q.get("table"):
-            est = 30
-            est += len(d.wrap(q["q"], "NRM", 13.2, CW)) * 19
-            est += len(d.wrap(q["ex"], "DS", 9.3, CW - 9)) * 14.4 + 6
-            est += 21 + (len(Q.PRICES) - 1) * 10*mm + 9*mm
-        else:
-            est = 30
-            est += len(d.wrap(q["q"], "NRM", 13.2, CW)) * 19
-            est += len(d.wrap(q["ex"], "DS", 9.3, CW - 9)) * 14.4 + 6
-            for o in q["opts"]:
-                est += len(d.wrap(o, "DS", 9.9, CW - 15)) * 16
-            est += 14*mm + 13 + 9*mm
+        # o'lchaymiz: raqam + savol + misol + havola + variantlar + katakcha.
+        est = 30
+        est += len(d.wrap(q["q"], "NRM", 13.2, CW)) * 19
+        est += len(d.wrap(q["ex"], "DS", 9.3, CW - 9)) * 14.4 + 6
+        if q.get("refs"):
+            est += 24
+        for o in q["opts"]:
+            est += len(d.wrap(o, "DS", 9.9, CW - 15)) * 16
+        est += 14*mm + 13 + 9*mm
         d.need(est)
+
         d.y -= 4
         c.setFont("DSM", 8.4); c.setFillColor(CLAY)
         c.drawString(ML, d.y, f"{qno:02d}")
@@ -191,34 +223,8 @@ for sec in Q.SECTIONS:
         c.setFillColor(CLAY); c.rect(ML, d.y + 4, 1.4, ytop - d.y - 8, stroke=0, fill=1)
         c.setFillColor(INK)
 
-        if q.get("table"):
-            d.need(30)
-            d.y -= 16
-            c.setFont("DSM", 8.2); c.setFillColor(FAINT)
-            c.drawString(ML, d.y, "Kurs")
-            c.drawRightString(ML + CW*0.52, d.y, "Narx")
-            c.drawString(ML + CW*0.60, d.y, "Ustoz ulushi")
-            d.y -= 5
-            c.setStrokeColor(RULE); c.setLineWidth(0.6)
-            c.line(ML, d.y, ML + CW, d.y)
-            for row in Q.PRICES[1:]:
-                d.need(11*mm)
-                d.y -= 10*mm
-                c.setFont("DS", 10); c.setFillColor(INK)
-                c.drawString(ML, d.y + 2.5*mm, row[0])
-                c.setFont("DS", 10); c.setFillColor(SOFT)
-                c.drawRightString(ML + CW*0.52, d.y + 2.5*mm, row[1])
-                c.setFillColor(INK)
-                key = row[0].lower().replace(" ", "_").replace("'", "")
-                c.acroForm.textfield(
-                    name=f"ulush_{key}", tooltip=f"{row[0]} — ustoz ulushi",
-                    x=ML + CW*0.60, y=d.y, width=CW*0.40, height=8*mm,
-                    borderColor=RULE, fillColor=white, textColor=INK,
-                    fontName="Helvetica", fontSize=10, borderWidth=0.6,
-                    forceBorder=True)
-                d.fields += 1
-            d.y -= 9*mm
-            continue
+        if q.get("refs"):
+            d.refchips(q["refs"])
 
         for i, o in enumerate(q["opts"]):
             d.need(20)
@@ -235,18 +241,41 @@ for sec in Q.SECTIONS:
         d.field(f"javob_{qno}", h=14*mm, label="Javob")
         d.y -= 9*mm
 
-# ── Yakun ───────────────────────────────────────────────────────────────
-d.newpage()
-c.setFont("DSM", 9); c.setFillColor(CLAY)
-d.y -= 4; c.drawString(ML, d.y, "8")
-d.y -= 11*mm
-c.setFont("NRL", 25); c.setFillColor(INK)
-c.drawString(ML, d.y, "Qo'shimcha")
-d.y -= 9*mm
+# ── Qo'shimcha ──────────────────────────────────────────────────────────
+heading(9, "Qo'shimcha")
 d.text(Q.CLOSING, "DS", 9.8, SOFT, gap=6*mm)
-d.field("qoshimcha", h=70*mm)
-d.y -= 12*mm
-d.field("imzo", h=13*mm, label="Ism, lavozim, sana")
+d.field("qoshimcha", h=80*mm)
+
+# ── Shartnoma ajratuvchisi ──────────────────────────────────────────────
+heading("", "Shartnoma")
+for ln in Q.CONTRACT_LEAD:
+    d.text(ln, "DS", 9.8, SOFT, lead=16, gap=5)
 
 d.foot(); c.save()
-print(f"Sahifa: {d.page}  |  maydon: {d.fields}")
+
+# ── Shartnomani qo'shish + havolalarni ulash ────────────────────────────
+buf.seek(0)
+writer = PdfWriter(clone_from=buf)
+NQ = len(writer.pages)
+writer.append(CONTRACT)
+
+for page_idx, rect, cpage in d.links:
+    target = NQ + cpage - 1
+    link = Link(rect=rect, target_page_index=target,
+                border=ArrayObject([FloatObject(0), FloatObject(0), FloatObject(0)]))
+    link[NameObject("/H")] = NameObject("/N")
+    added = writer.add_annotation(page_number=page_idx, annotation=link)
+    # pypdf `/Dest` ga sahifa RAQAMINI yozadi ([18 /Fit]). Standart bo'yicha
+    # bu faqat tashqi hujjatga havolada to'g'ri — ichki havolada sahifa
+    # obyektiga ko'rsatkich turishi kerak, aks holda ba'zi ko'ruvchilar
+    # bosilganda hech qayerga o'tmaydi.
+    added[NameObject("/Dest")] = ArrayObject(
+        [writer.pages[target].indirect_reference, NameObject("/Fit")])
+
+out = sys.argv[1]
+with open(out, "wb") as fh:
+    writer.write(fh)
+
+print(f"Savollar: {qno}  |  sahifa: {len(writer.pages)} "
+      f"({NQ} savolnoma + {len(writer.pages) - NQ} shartnoma)  |  "
+      f"maydon: {d.fields}  |  havola: {len(d.links)}")
