@@ -1,0 +1,307 @@
+{
+ "unit": "u01",
+ "saetze": [
+  {
+   "sourceId": "u01-s1-01",
+   "section": "u01-s1",
+   "de": "Guten Morgen, wie geht es dir?",
+   "uz": "Xayrli tong, ahvoling qanday?",
+   "wordCount": 6,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s1-02",
+   "section": "u01-s1",
+   "de": "Tschüss, bis bald!",
+   "uz": "Xayr, tez orada ko'rishamiz!",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s1-03",
+   "section": "u01-s1",
+   "de": "Ich bin hier.",
+   "uz": "Men bu yerdaman.",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s1-04",
+   "section": "u01-s1",
+   "de": "Wie ist dein Name?",
+   "uz": "Isming nima?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s2-01",
+   "section": "u01-s2",
+   "de": "Wie heißen Sie?",
+   "uz": "Sizning ismingiz nima?",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s2-02",
+   "section": "u01-s2",
+   "de": "Wer ist das?",
+   "uz": "Bu kim?",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s3-01",
+   "section": "u01-s3",
+   "de": "Ich komme aus Deutschland.",
+   "uz": "Men Germaniyadanman.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s3-02",
+   "section": "u01-s3",
+   "de": "Woher kommst du?",
+   "uz": "Sen qayerdansan?",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s3-03",
+   "section": "u01-s3",
+   "de": "Ich wohne in Usbekistan.",
+   "uz": "Men O'zbekistonda yashayman.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s3-04",
+   "section": "u01-s3",
+   "de": "Wo wohnst du?",
+   "uz": "Sen qayerda yashaysan?",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s1-05",
+   "section": "u01-s1",
+   "de": "Ich bin hier, und du?",
+   "uz": "Men bu yerdaman, sen-chi?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s2-03",
+   "section": "u01-s2",
+   "de": "Wer ist das, bitte?",
+   "uz": "Bu kim, iltimos?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s4-01",
+   "section": "u01-s4",
+   "de": "Wir sind fünf.",
+   "uz": "Biz beshtamiz.",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s1-06",
+   "section": "u01-s1",
+   "de": "Wie geht es dir?",
+   "uz": "Ahvoling qanday?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s1-07",
+   "section": "u01-s1",
+   "de": "Bist du hier?",
+   "uz": "Sen bu yerdamisan?",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s2-04",
+   "section": "u01-s2",
+   "de": "Guten Tag, ich bin hier.",
+   "uz": "Xayrli kun, men bu yerdaman.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s2-05",
+   "section": "u01-s2",
+   "de": "Wie heißen Sie, bitte?",
+   "uz": "Sizning ismingiz nima, iltimos?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s2-06",
+   "section": "u01-s2",
+   "de": "Auf Wiedersehen, bis bald!",
+   "uz": "Xayrli qoling, tez orada ko'rishamiz!",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s3-05",
+   "section": "u01-s3",
+   "de": "Wo ist dein Land?",
+   "uz": "Sening mamlakating qayerda?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s3-06",
+   "section": "u01-s3",
+   "de": "Wie geht es Ihnen?",
+   "uz": "Ahvolingiz qanday?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s3-07",
+   "section": "u01-s3",
+   "de": "Wo ist Deutschland?",
+   "uz": "Germaniya qayerda?",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s4-02",
+   "section": "u01-s4",
+   "de": "Wir sind drei.",
+   "uz": "Biz uchtamiz.",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s5-01",
+   "section": "u01-s5",
+   "de": "Buchstabieren Sie das, bitte.",
+   "uz": "Buni harflab ayting, iltimos.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s5-02",
+   "section": "u01-s5",
+   "de": "Wir buchstabieren I, C, H.",
+   "uz": "Biz I, C, H deb harflaymiz.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "tts": "Wir buchstabieren Ih, Tseh, Hah."
+  },
+  {
+   "sourceId": "u01-s5-03",
+   "section": "u01-s5",
+   "de": "Ja, das ist ein C.",
+   "uz": "Ha, bu C harfi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "tts": "Ja, das ist ein Tseh."
+  },
+  {
+   "sourceId": "u01-s5-04",
+   "section": "u01-s5",
+   "de": "Nein, das ist ein E.",
+   "uz": "Yo'q, bu E harfi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "tts": "Nein, das ist ein Eh."
+  },
+  {
+   "sourceId": "u01-s5-05",
+   "section": "u01-s5",
+   "de": "Ist das ein H oder ein J?",
+   "uz": "Bu H-mi yoki J-mi?",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "tts": "Ist das ein Hah oder ein Jott?"
+  },
+  {
+   "sourceId": "u01-s5-06",
+   "section": "u01-s5",
+   "de": "Ist das ein I oder ein Z?",
+   "uz": "Bu I-mi yoki Z-mi?",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "tts": "Ist das ein Ih oder ein Zett?"
+  },
+  {
+   "sourceId": "u01-s5-07",
+   "section": "u01-s5",
+   "de": "Ist das ein V oder ein W?",
+   "uz": "Bu V-mi yoki W-mi?",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "tts": "Ist das ein Fau oder ein Weh?"
+  },
+  {
+   "sourceId": "u01-s3-08",
+   "section": "u01-s3",
+   "de": "Wo wohnen wir?",
+   "uz": "Biz qayerda yashaymiz?",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s4-03",
+   "section": "u01-s4",
+   "de": "Wir sind sechs.",
+   "uz": "Biz oltitamiz.",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s4-04",
+   "section": "u01-s4",
+   "de": "Fünf und vier ist neun.",
+   "uz": "Besh va to'rt - to'qqiz bo'ladi.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s4-05",
+   "section": "u01-s4",
+   "de": "Zwei und drei ist fünf.",
+   "uz": "Ikki va uch - besh bo'ladi.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s4-06",
+   "section": "u01-s4",
+   "de": "Wir sind sieben.",
+   "uz": "Biz yettitamiz.",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s4-07",
+   "section": "u01-s4",
+   "de": "Wir sind acht.",
+   "uz": "Biz sakkiztamiz.",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s4-08",
+   "section": "u01-s4",
+   "de": "Zehn und eins ist elf.",
+   "uz": "O'n va bir - o'n bir bo'ladi.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s4-09",
+   "section": "u01-s4",
+   "de": "Drei und fünf ist acht.",
+   "uz": "Uch va besh - sakkiz bo'ladi.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  }
+ ]
+}

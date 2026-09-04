@@ -1,0 +1,256 @@
+{
+  "unit": "u01",
+  "dialoge": [
+    {
+      "id": "u01-d1",
+      "section": "u01-s1",
+      "titelDe": "Bist du Mia?",
+      "titelUz": "Sen Miamisan?",
+      "zeilen": [
+        {
+          "sprecher": "Jonas",
+          "de": "Hallo! Bist du Mia?",
+          "uz": "Salom! Sen Miamisan?"
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Ja, ich bin Mia. Und du?",
+          "uz": "Ha, men Miaman. Sen-chi?"
+        },
+        {
+          "sprecher": "Jonas",
+          "de": "Ich bin Jonas.",
+          "uz": "Men Jonasman."
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Wie geht es dir?",
+          "uz": "Ahvoling qanday?"
+        },
+        {
+          "sprecher": "Jonas",
+          "de": "Gut. Und dir?",
+          "uz": "Yaxshi. Sen-chi?"
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Auch gut! Tschüss!",
+          "uz": "Men ham yaxshi! Xayr!"
+        },
+        {
+          "sprecher": "Jonas",
+          "de": "Tschüss! Bis bald.",
+          "uz": "Xayr! Tez orada ko'rishamiz."
+        }
+      ]
+    },
+    {
+      "id": "u01-d2",
+      "section": "u01-s1",
+      "titelDe": "Gute Nacht, Mia!",
+      "titelUz": "Xayrli tun, Mia!",
+      "zeilen": [
+        {
+          "sprecher": "Walter",
+          "de": "Guten Abend, Mia!",
+          "uz": "Xayrli kech, Mia!"
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Guten Abend!",
+          "uz": "Xayrli kech!"
+        },
+        {
+          "sprecher": "Walter",
+          "de": "Wie geht es dir?",
+          "uz": "Ahvoling qanday?"
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Gut! Und dir?",
+          "uz": "Yaxshi! Sen-chi?"
+        },
+        {
+          "sprecher": "Walter",
+          "de": "Auch gut. Gute Nacht!",
+          "uz": "Men ham yaxshi. Xayrli tun!"
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Gute Nacht! Bis bald.",
+          "uz": "Xayrli tun! Tez orada ko'rishamiz."
+        }
+      ]
+    },
+    {
+      "id": "u01-d3",
+      "section": "u01-s2",
+      "titelDe": "Wie heißen Sie?",
+      "titelUz": "Ismingiz nima?",
+      "zeilen": [
+        {
+          "sprecher": "Claudia",
+          "de": "Guten Tag!",
+          "uz": "Xayrli kun!"
+        },
+        {
+          "sprecher": "Markus",
+          "de": "Guten Tag!",
+          "uz": "Xayrli kun!"
+        },
+        {
+          "sprecher": "Claudia",
+          "de": "Wie heißen Sie?",
+          "uz": "Ismingiz nima?"
+        },
+        {
+          "sprecher": "Markus",
+          "de": "Ich bin Markus. Und Sie?",
+          "uz": "Men Markusman. Siz-chi?"
+        },
+        {
+          "sprecher": "Claudia",
+          "de": "Ich bin Claudia. Danke!",
+          "uz": "Men Claudiaman. Rahmat!"
+        },
+        {
+          "sprecher": "Markus",
+          "de": "Auf Wiedersehen!",
+          "uz": "Xayr!"
+        },
+        {
+          "sprecher": "Claudia",
+          "de": "Auf Wiedersehen!",
+          "uz": "Xayr!"
+        }
+      ]
+    },
+    {
+      "id": "u01-d4",
+      "section": "u01-s3",
+      "titelDe": "Woher kommst du?",
+      "titelUz": "Sen qayerdansan?",
+      "zeilen": [
+        {
+          "sprecher": "Doniyor",
+          "de": "Woher kommst du?",
+          "uz": "Sen qayerdansan?"
+        },
+        {
+          "sprecher": "Anna",
+          "de": "Ich komme aus Deutschland. Und du?",
+          "uz": "Men Germaniyadanman. Sen-chi?"
+        },
+        {
+          "sprecher": "Doniyor",
+          "de": "Ich komme aus Usbekistan.",
+          "uz": "Men O'zbekistondanman."
+        },
+        {
+          "sprecher": "Anna",
+          "de": "Wo wohnst du?",
+          "uz": "Sen qayerda yashaysan?"
+        },
+        {
+          "sprecher": "Doniyor",
+          "de": "Ich wohne in Deutschland. Und du?",
+          "uz": "Men Germaniyada yashayman. Sen-chi?"
+        },
+        {
+          "sprecher": "Anna",
+          "de": "Ich wohne auch in Deutschland.",
+          "uz": "Men ham Germaniyada yashayman."
+        }
+      ]
+    },
+    {
+      "id": "u01-d5",
+      "section": "u01-s4",
+      "titelDe": "Null bis elf",
+      "titelUz": "Nol dan o'n birgacha",
+      "zeilen": [
+        {
+          "sprecher": "Sabine",
+          "de": "Guten Tag! Hier, null, sieben, zwei, neun, vier, elf.",
+          "uz": "Xayrli kun! Mana, nol, yetti, ikki, to'qqiz, to'rt, o'n bir."
+        },
+        {
+          "sprecher": "Peter",
+          "de": "Null, sieben, zwei, neun, fünf, elf?",
+          "uz": "Nol, yetti, ikki, to'qqiz, besh, o'n birmi?"
+        },
+        {
+          "sprecher": "Sabine",
+          "de": "Nein, nicht fünf. Vier!",
+          "uz": "Yo'q, besh emas. To'rt!"
+        },
+        {
+          "sprecher": "Peter",
+          "de": "Null, sieben, zwei, neun, vier, elf. Ja?",
+          "uz": "Nol, yetti, ikki, to'qqiz, to'rt, o'n bir. Shundaymi?"
+        },
+        {
+          "sprecher": "Sabine",
+          "de": "Ja, gut! Danke!",
+          "uz": "Ha, yaxshi! Rahmat!"
+        },
+        {
+          "sprecher": "Peter",
+          "de": "Bitte! Auf Wiedersehen!",
+          "uz": "Marhamat! Xayr!"
+        },
+        {
+          "sprecher": "Sabine",
+          "de": "Auf Wiedersehen!",
+          "uz": "Xayr!"
+        }
+      ]
+    },
+    {
+      "id": "u01-d6",
+      "section": "u01-s5",
+      "titelDe": "W wie Weber",
+      "titelUz": "Weber so'zidagi 'W'",
+      "zeilen": [
+        {
+          "sprecher": "Helga",
+          "de": "Wie heißen Sie?",
+          "uz": "Ismingiz nima?"
+        },
+        {
+          "sprecher": "Anna",
+          "de": "Ich bin Anna Weber.",
+          "uz": "Men Anna Weberman."
+        },
+        {
+          "sprecher": "Helga",
+          "de": "Buchstabieren Sie bitte.",
+          "uz": "Iltimos, harflab ayting."
+        },
+        {
+          "sprecher": "Anna",
+          "de": "W wie Weber.",
+          "tts": "Weh wie Weber.",
+          "uz": "Weber so'zidagi 'W'."
+        },
+        {
+          "sprecher": "Helga",
+          "de": "Ist das V?",
+          "tts": "Ist das Fau?",
+          "uz": "Bu 'V'mi?"
+        },
+        {
+          "sprecher": "Anna",
+          "de": "Nein, W! W wie Weber.",
+          "tts": "Nein, Weh! Weh wie Weber.",
+          "uz": "Yo'q, 'W'! Weber so'zidagi 'W'."
+        },
+        {
+          "sprecher": "Helga",
+          "de": "Gut, danke!",
+          "uz": "Yaxshi, rahmat!"
+        }
+      ]
+    }
+  ]
+}

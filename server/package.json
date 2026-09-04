@@ -27,13 +27,17 @@
     "daf:upload-generated": "ts-node scripts/daf-upload-generated.ts",
     "daf:seed": "ts-node scripts/daf-seed.ts",
     "daf:a1-seed": "ts-node scripts/daf-a1-seed.ts",
+    "daf:goethe-extract": "ts-node scripts/daf-goethe-extract.ts",
     "daf:a1-check": "ts-node scripts/daf-a1-check.ts",
+    "daf:inhalt-check": "ts-node scripts/daf-inhalt-check.ts",
     "daf:translate": "ts-node scripts/daf-translate.ts",
     "daf:align-audio": "ts-node scripts/daf-align-audio.ts",
     "daf:export-content": "ts-node scripts/daf-export-content.ts",
     "daf:gen-sentences": "ts-node scripts/daf-gen-sentences.ts",
     "daf:mark-picturable": "ts-node scripts/daf-mark-picturable.ts",
-    "daf:gen-images": "ts-node scripts/daf-gen-images.ts"
+    "daf:gen-images": "ts-node scripts/daf-gen-images.ts",
+    "daf:gen-saetze": "ts-node scripts/daf-gen-u01-saetze.ts",
+    "daf:inhalt-seed": "ts-node scripts/daf-inhalt-seed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1016.0",

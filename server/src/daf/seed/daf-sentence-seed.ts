@@ -42,6 +42,37 @@ export function toSentenceOrigin(
 }
 
 /**
+ * A1 uchun bu funksiya endi FAQAT nafaqaga chiqarilgan (`retiredAt` bor)
+ * bo'limga tegishli bo'lishi mumkin — jonli A1 endi `InhaltSeedService`
+ * ('npm run daf:inhalt-seed') ning yagona ishi, xuddi unit/dars/qoida
+ * uchun `DafSeedService`da qilinganidek (`assertA1NotProvided`,
+ * `level === DafLevel.A1` tekshiruvi).
+ *
+ * Sabab shu funksiyaga xos: u `dafUnit`ni FAQAT `level` + POZITSION
+ * `order` bo'yicha izlaydi (`content/daf/sentences.json` — A1 ning ESKI
+ * 20 bo'limlik tuzilishi, `order` 1..20). "A1 xaritasi migratsiyasi"dan
+ * keyin eski (nafaqaga chiqqan) bo'limlarning `order`i MANFIY qilib
+ * qo'yildi, YANGI 12 unit esa xuddi shu `level`, xuddi shu musbat
+ * oraliqdagi (`order` 1..12) qatorlarni egalladi. Demak bugun bu qidiruv
+ * `order` 1..12 uchun har doim YANGI (u01..u12) unitning o'ziga to'g'ri
+ * keladi — eskisiga emas — va bu funksiyani qayta chaqirish ularning
+ * gaplarini eski (yoki umuman tegishli bo'lmagan) matn bilan bosib
+ * yozib qo'yardi.
+ */
+function assertUnitIsRetired(
+  unit: { retiredAt: Date | null },
+  order: number,
+): void {
+  if (unit.retiredAt) return;
+  throw new Error(
+    `A1 #${order}: bu unit JONLI (nafaqaga chiqarilmagan) — uning gaplari endi ` +
+      "'InhaltSeedService' (`npm run daf:inhalt-seed`) ning yagona ishi. " +
+      "'seedSentences' faqat nafaqaga chiqarilgan (retiredAt bor) eski A1 " +
+      "bo'limlarining muzlagan matnini tuzatish uchun qoladi.",
+  );
+}
+
+/**
  * Gaplarni bazaga yozadi.
  *
  * `origin` FAYLDAN o'qiladi (qattiq `GENERATED` yozilmaydi): 510 gapning
@@ -66,6 +97,7 @@ export async function seedSentences(
       where: { level: 'A1', order: u.order },
     });
     if (!unit) throw new Error(`Bo'lim topilmadi: A1 #${u.order}`);
+    assertUnitIsRetired(unit, u.order);
 
     // Bo'limning mavjud qatorlari BITTA so'rovda o'qiladi: har gap uchun
     // alohida `findUnique` o'rniga — audioKey taqqoslash ham, yetim
@@ -90,24 +122,33 @@ export async function seedSentences(
       // Prisma'da yo'q kalit = tegilmagan maydon.
       const audioReset = existing !== undefined && existing.de !== s.de;
 
-      await prisma.dafSentence.upsert({
-        where: { unitId_order: { unitId: unit.id, order } },
-        create: {
-          unitId: unit.id,
-          order,
-          de: s.de,
-          uz: s.uz,
-          wordCount: countWords(s.de),
-          origin,
-        },
-        update: {
-          de: s.de,
-          uz: s.uz,
-          wordCount: countWords(s.de),
-          origin,
-          ...(audioReset ? { audioKey: null } : {}),
-        },
-      });
+      // `unitId_order` ENDI NOYOB EMAS (qarang `DafSentence`dagi izoh),
+      // shuning uchun atomik `upsert` o'rniga yuqorida allaqachon
+      // o'qilgan `existingByOrder`dan foydalanib qo'lda create/update
+      // qilinadi — natija xuddi avvalgi `upsert` bilan bir xil.
+      if (existing) {
+        await prisma.dafSentence.update({
+          where: { id: existing.id },
+          data: {
+            de: s.de,
+            uz: s.uz,
+            wordCount: countWords(s.de),
+            origin,
+            ...(audioReset ? { audioKey: null } : {}),
+          },
+        });
+      } else {
+        await prisma.dafSentence.create({
+          data: {
+            unitId: unit.id,
+            order,
+            de: s.de,
+            uz: s.uz,
+            wordCount: countWords(s.de),
+            origin,
+          },
+        });
+      }
       n++;
     }
 

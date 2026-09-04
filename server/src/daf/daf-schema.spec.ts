@@ -204,3 +204,44 @@ describe('A1 kurs strukturasi', () => {
     expect(model).toMatch(/sectionId\s+Int\?/);
   });
 });
+
+describe('Unit matni jadvallari', () => {
+  const schema = readFileSync(
+    join(__dirname, '..', '..', 'prisma', 'schema.prisma'),
+    'utf8',
+  );
+
+  it('so`z bo`limga bog`lanadi va aytilishini saqlaydi', () => {
+    const m = schema.split('model DafLexeme {')[1].split('\n}')[0];
+    expect(m).toMatch(/sectionId\s+Int\?/);
+    expect(m).toMatch(/tts\s+String\?/);
+    expect(m).toMatch(/artikel\s+String\?/);
+    expect(m).toMatch(/plural\s+String\?/);
+  });
+
+  it('gap bo`limga bog`lanadi', () => {
+    const m = schema.split('model DafSentence {')[1].split('\n}')[0];
+    expect(m).toMatch(/sectionId\s+Int\?/);
+    expect(m).toMatch(/tts\s+String\?/);
+  });
+
+  it('dialog va uning satrlari bor', () => {
+    expect(schema).toMatch(/model DafDialog \{/);
+    expect(schema).toMatch(/model DafDialogLine \{/);
+    const d = schema.split('model DafDialog {')[1].split('\n}')[0];
+    expect(d).toMatch(/code\s+String\s+@unique/);
+  });
+
+  it('ibora jadvali bor', () => {
+    expect(schema).toMatch(/model DafPhrase \{/);
+    const p = schema.split('model DafPhrase {')[1].split('\n}')[0];
+    expect(p).toMatch(/code\s+String\s+@unique/);
+  });
+
+  it('grammatika qoidasi bo`limga bog`lanadi va misollari bor', () => {
+    const g = schema.split('model DafGrammar {')[1].split('\n}')[0];
+    expect(g).toMatch(/sectionId\s+Int\?/);
+    expect(g).toMatch(/erklaerungUz\s+String\?/);
+    expect(schema).toMatch(/model DafGrammarBeispiel \{/);
+  });
+});
