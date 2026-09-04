@@ -136,8 +136,18 @@ describe('reaktion', () => {
     // Vazifasi boshqa bo'lsa ham, nemischa matni to'g'ri javob bilan bir
     // xil bo'lsa, uni distraktor qilish to'g'ri javobni `options` ichida
     // IKKI marta ko'rsatar edi.
+    //
+    // Umumiy `rnd = () => 0` bu yerda ISHLAMAYDI: u chapdan-birga-siljish
+    // (mischen j===0 har doim), ya'ni ro'yxatning BIRINCHI elementi doim
+    // oxiriga tushib, `slice(0, 3)` uni tashlab yuboradi — `birXilMatn`ni
+    // ro'yxat boshiga qo'ysak ham, filtr bor-yo'qligidan qat'i nazar u
+    // baribir chetlanadi va test hech narsani isbotlamay o'tib ketardi.
+    // `() => 0.9999` esa j===i, ya'ni asl tartibni saqlaydi: shunda
+    // `birXilMatn` `falsch`ning BIRINCHI o'rnida qoladi va (filtr bo'lmasa)
+    // `slice(0, 3)` uni saqlab qoladi — filtrning o'zi sinaladi.
+    const identityRnd = (): number => 0.9999;
     const birXilMatn = p(10, 'boshqa-vazifa', 'Guten Morgen!', 'Boshqa tarjima');
-    const f = reaktion(ZIEL, [birXilMatn, ...ANDERE], rnd)!;
+    const f = reaktion(ZIEL, [birXilMatn, ...ANDERE], identityRnd)!;
     expect(f.options.filter((o) => o === 'Guten Morgen!')).toHaveLength(1);
   });
 });
