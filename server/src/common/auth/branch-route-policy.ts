@@ -472,6 +472,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /student-portal/lernen/grammar',
       'GET /student-portal/lernen/lessons/:id',
       'GET /student-portal/lernen/lessons/:id/drill',
+      'GET /student-portal/lernen/lessons/:id/uebung',
       'GET /student-portal/lernen/levels',
       'GET /student-portal/lernen/units/:id',
     ],
@@ -487,6 +488,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     routes: [
       'POST /student-portal/lernen/attempts',
       'POST /student-portal/lernen/drill/check',
+      'POST /student-portal/lernen/uebung/check',
     ],
   },
 ];

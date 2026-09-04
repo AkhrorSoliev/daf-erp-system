@@ -12,7 +12,9 @@ import { RolesGuard } from '../common/guards';
 import { DafPortalReadService } from './daf-portal-read.service';
 import { DafAttemptService } from './daf-attempt.service';
 import { CheckDrillDto, CreateAttemptDto } from './dto/create-attempt.dto';
+import { CheckAntwortDto } from './dto/uebung.dto';
 import { DafDrillService } from './lesson/daf-drill.service';
+import { UebungService } from './uebung/uebung.service';
 
 /**
  * O'quvchi portalining o'quv bo'limi.
@@ -29,6 +31,7 @@ export class DafPortalController {
     private readonly read: DafPortalReadService,
     private readonly attempts: DafAttemptService,
     private readonly drills: DafDrillService,
+    private readonly uebung: UebungService,
   ) {}
 
   @Get('levels')
@@ -86,5 +89,28 @@ export class DafPortalController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.attempts.record(dto, { studentId, companyId });
+  }
+
+  /** Darsning 12 savoli. To'g'ri javoblar ichida YO'Q. */
+  @Get('lessons/:id/uebung')
+  getUebung(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('studentId') studentId: number,
+  ) {
+    return this.uebung.seans(id, studentId);
+  }
+
+  /**
+   * Mashq javobi. `studentId` TOKENDAN olinadi, tanadan emas — aks holda
+   * o'quvchi boshqasining nomidan javob yozib, uning natijasini buzishi
+   * mumkin bo'lardi.
+   */
+  @Post('uebung/check')
+  checkUebung(
+    @Body() dto: CheckAntwortDto,
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.uebung.pruefen(dto, { studentId, companyId });
   }
 }
