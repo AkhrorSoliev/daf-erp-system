@@ -174,7 +174,6 @@ describe('1-unitning grammatikasi va iboralari', () => {
     // so'zlaridan BIRORTASI ham turmasligi kerak — aks holda o'sha so'z
     // o'z bo'limidan oldin ishlatilsa ham tekshiruv buni ko'rmaydi.
     const hilfs = new Set([
-      'sie',
       'er',
       'es',
       'wir',
@@ -329,7 +328,6 @@ describe('1-unitning dialoglari', () => {
   it('dialoglarda shu bo`lim yoki oldingisidan tashqari notanish so`z yo`q', () => {
     const known = knownWordsBySection(sectionsOrdered, woerter);
     const hilfs = new Set([
-      'sie',
       'er',
       'es',
       'wir',
@@ -464,7 +462,6 @@ describe('1-unitning gaplari', () => {
   it('gaplarda shu bo`lim yoki oldingisidan tashqari notanish so`z yo`q', () => {
     const known = knownWordsBySection(sectionsOrdered, woerter);
     const hilfs = new Set([
-      'sie',
       'er',
       'es',
       'wir',

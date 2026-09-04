@@ -154,10 +154,27 @@ export class InhaltSeedService {
       where: { unitId: unit.id, sourceId: { notIn: wortSourceIds } },
     });
 
+    // Faylda endi yo'q gaplarni butunlay o'chiramiz — dialog/ibora kabi,
+    // so'z kabi EMAS. `DafAttempt`da `sentenceId` yo'q, ya'ni hech kim
+    // bu qatorlarga ishora qilmaydi (klass izohidagi asimmetriyaga
+    // qarang), shuning uchun ularni sanab, abadiy saqlab qo'yishning
+    // hojati yo'q.
+    //
+    // O'CHIRISH YOZISHDAN OLDIN sodir bo'lishi SHART: `order` faqat
+    // ko'rsatish tartibi va endi NOYOB emas (qarang `DafSentence`dagi
+    // izoh) — lekin tartib buzilishining oldini olish uchun baribir
+    // avval eskisini olib tashlaymiz. Masalan bo'limning 2-gapi faylda
+    // o'chirilsa, qolgan gaplar bir qadam yuqoriga suriladi (3-gap endi
+    // 2-o'rinda) — bu HECH QANDAY muammo tug'dirmaydi, chunki qator
+    // o'zligi `sourceId` bilan aniqlanadi, `order` esa faqat ko'rinish
+    // uchun qayta yoziladi.
+    const saetzeSourceIds = files.saetze.saetze.map((s) => s.sourceId);
+    await this.prisma.dafSentence.deleteMany({
+      where: { unitId: unit.id, sourceId: { notIn: saetzeSourceIds } },
+    });
+
     let saetze = 0;
-    const saetzeSourceIds: string[] = [];
     for (const [i, s] of files.saetze.saetze.entries()) {
-      saetzeSourceIds.push(s.sourceId);
       const data = {
         unitId: unit.id,
         sectionId: sectionId.get(s.section) ?? null,
@@ -177,14 +194,6 @@ export class InhaltSeedService {
       });
       saetze += 1;
     }
-    // Faylda endi yo'q gaplarni butunlay o'chiramiz — dialog/ibora kabi,
-    // so'z kabi EMAS. `DafAttempt`da `sentenceId` yo'q, ya'ni hech kim
-    // bu qatorlarga ishora qilmaydi (klass izohidagi asimmetriyaga
-    // qarang), shuning uchun ularni sanab, abadiy saqlab qo'yishning
-    // hojati yo'q.
-    await this.prisma.dafSentence.deleteMany({
-      where: { unitId: unit.id, sourceId: { notIn: saetzeSourceIds } },
-    });
 
     // Faylda endi yo'q dialoglarni butunlay o'chiramiz. Avval SATRLARI —
     // FK `ON DELETE RESTRICT`, aks holda dialogni o'chirish rad etiladi.

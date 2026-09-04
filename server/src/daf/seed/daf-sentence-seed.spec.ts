@@ -17,6 +17,7 @@ interface UnitRow {
   id: number;
   level: string;
   order: number;
+  retiredAt: Date | null;
 }
 
 interface SentenceRow {
@@ -67,9 +68,21 @@ class FakePrisma {
   private readonly units: UnitRow[] = [];
   private readonly sentences: SentenceRow[] = [];
 
-  /** Testga bo'lim qo'shadi — bo'limsiz gap yozib bo'lmaydi. */
-  addUnit(level: string, order: number): UnitRow {
-    const row: UnitRow = { id: ++this.unitSeq, level, order };
+  /**
+   * Testga bo'lim qo'shadi — bo'limsiz gap yozib bo'lmaydi.
+   *
+   * `retiredAt` standart holda BOR (kecha nafaqaga chiqqan) — mavjud
+   * testlarning barchasi `seedSentences`ning YAGONA qolgan haqiqiy
+   * ishini, ya'ni ESKI (nafaqaga chiqqan) A1 bo'limining muzlagan
+   * matnini tuzatishni, sinaydi. Jonli (nafaqaga chiqmagan) unit faqat
+   * shu holatni ATAYLAB sinaydigan testda, `null` bilan qo'shiladi.
+   */
+  addUnit(
+    level: string,
+    order: number,
+    retiredAt: Date | null = new Date('2026-01-01'),
+  ): UnitRow {
+    const row: UnitRow = { id: ++this.unitSeq, level, order, retiredAt };
     this.units.push(row);
     return row;
   }
@@ -84,26 +97,24 @@ class FakePrisma {
   };
 
   readonly dafSentence = {
-    upsert: (args: {
-      where: { unitId_order: { unitId: number; order: number } };
-      create: Omit<SentenceRow, 'id' | 'audioKey'>;
-      update: Partial<SentenceRow>;
-    }) => {
-      const { unitId, order } = args.where.unitId_order;
-      const existing = this.sentences.find(
-        (s) => s.unitId === unitId && s.order === order,
-      );
-      if (existing) {
-        Object.assign(existing, args.update);
-        return Promise.resolve({ ...existing });
-      }
+    // Haqiqiy kod endi atomik `upsert` emas — `unitId_order` composite
+    // noyob emas — balki alohida `create`/`update` (qarang
+    // `daf-sentence-seed.ts`dagi izoh). Soxta baza ham shu ikkalasini
+    // alohida taqlid qiladi.
+    create: (args: { data: Omit<SentenceRow, 'id' | 'audioKey'> }) => {
       const row: SentenceRow = {
         id: ++this.sentenceSeq,
         audioKey: null,
-        ...args.create,
+        ...args.data,
       };
       this.sentences.push(row);
       return Promise.resolve({ ...row });
+    },
+    update: (args: { where: { id: number }; data: Partial<SentenceRow> }) => {
+      const existing = this.sentences.find((s) => s.id === args.where.id);
+      if (!existing) throw new Error(`Sentence #${args.where.id} topilmadi`);
+      Object.assign(existing, args.data);
+      return Promise.resolve({ ...existing });
     },
     findFirst: (args?: { where?: WhereClause }) =>
       Promise.resolve(
@@ -152,6 +163,56 @@ describe('countWords', () => {
   });
   it('tinish belgisini so`z deb sanamaydi', () => {
     expect(countWords('Hallo! Wie geht es dir?')).toBe(5);
+  });
+});
+
+describe('A1 chegarasi — jonli unit endi InhaltSeedService mulki', () => {
+  // `beforeEach` allaqachon nafaqaga chiqqan (retiredAt bor) `A1 #1`ni
+  // qo'shgan — yuqoridagi butun `describe('seedSentences', ...)` bloki
+  // aynan shu YAGONA qolgan holatni (eski, muzlagan bo'limni tuzatish)
+  // sinaydi. Bu yerda esa JONLI A1 unit (retiredAt = null, ya'ni yangi
+  // u01..u12 dan biri) ATAYLAB qo'shiladi va rad etilishi tekshiriladi.
+  it('jonli A1 bo`limiga gap yozishga urinsa rad etadi va hech narsa yozmaydi', async () => {
+    fake.addUnit('A1', 2, null);
+    const file: SentenceFile = {
+      generatedAt: 'x',
+      model: 'm',
+      units: [
+        {
+          order: 2,
+          sentences: [{ de: 'Ich bin hier.', uz: 'B.', origin: 'GENERATED' }],
+        },
+      ],
+    };
+
+    await expect(seedSentences(prisma, file)).rejects.toThrow(/JONLI/);
+    await expect(seedSentences(prisma, file)).rejects.toThrow(
+      /InhaltSeedService/,
+    );
+
+    // Rad etish hech qanday qator yozmasligi kerak — `A1 #1` (retired,
+    // beforeEach'dan) tegilmagan, `A1 #2` (jonli) uchun esa umuman
+    // qator yaratilmagan.
+    expect(await prisma.dafSentence.count()).toBe(0);
+  });
+
+  it('nafaqaga chiqqan A1 bo`limiga esa avvalgidek yoziladi', async () => {
+    // `beforeEach`dagi `A1 #1` retired — bu tekshiruv `seedSentences`
+    // ning yagona qolgan haqiqiy vazifasi hali ishlayotganini alohida
+    // ta'kidlaydi (yuqoridagi katta test to'plami bilan bir xil holat,
+    // shu yerda ATAYLAB nomlangan holda qayta tasdiqlanadi).
+    const n = await seedSentences(prisma, {
+      generatedAt: 'x',
+      model: 'm',
+      units: [
+        {
+          order: 1,
+          sentences: [{ de: 'Alte Zeile.', uz: 'B.', origin: 'GENERATED' }],
+        },
+      ],
+    });
+    expect(n).toBe(1);
+    expect(await prisma.dafSentence.count()).toBe(1);
   });
 });
 

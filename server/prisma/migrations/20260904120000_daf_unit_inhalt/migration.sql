@@ -98,6 +98,17 @@ CREATE UNIQUE INDEX "DafPhrase_code_key" ON "DafPhrase"("code");
 -- CreateIndex
 CREATE INDEX "DafPhrase_sectionId_idx" ON "DafPhrase"("sectionId");
 
+-- DropIndex
+-- `(unitId, order)` endi NOYOB EMAS: `order` faqat displey tartibi,
+-- o'zlik `sourceId`da (yoki eski qatorlar uchun `id`da). Bu cheklov
+-- bo'lim o'rtasidan bitta gap o'chirilib, qolganlari qayta
+-- raqamlanganda (haligacha o'chirilmagan eski qator bilan `order`
+-- to'qnashib) P2002 bilan yiqilishga sabab bo'lardi.
+DROP INDEX "DafSentence_unitId_order_key";
+
+-- CreateIndex
+CREATE INDEX "DafSentence_unitId_order_idx" ON "DafSentence"("unitId", "order");
+
 -- CreateIndex
 CREATE UNIQUE INDEX "DafSentence_sourceId_key" ON "DafSentence"("sourceId");
 

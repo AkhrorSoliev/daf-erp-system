@@ -94,7 +94,22 @@ function matches(
  * o'chiradi/sanaydi — buni sinash uchun soxta jadval ham shuni bajarishi
  * kerak.
  */
-function fakeTable(keyOf: (args: any) => string, seqRef: { n: number }) {
+function fakeTable(
+  keyOf: (args: any) => string,
+  seqRef: { n: number },
+  /**
+   * Ixtiyoriy: qo'shimcha (bosh kalitdan boshqa) noyoblik o'qi.
+   *
+   * `DafSentence` haqiqiy bazada endi `(unitId, order)` bo'yicha noyob
+   * EMAS (Finding A — bu cheklov aynan shu turdagi to'qnashuvga sabab
+   * bo'lardi, shuning uchun olib tashlandi). Lekin operatsiyalar
+   * TARTIBI (avval o'chirish, keyin yozish) ham to'g'ri ekanini —
+   * hatto cheklov qaytarilsa ham — mustaqil isbotlash uchun soxta
+   * jadval buni ATAYLAB taqlid qiladi: aks holda test "ko'r" bo'lib
+   * qolardi va operatsiyalar tartibidagi xatoni ko'rmasdi.
+   */
+  compositeUniqueOf?: (row: any) => string,
+) {
   const map = new Map<string, any>();
   const upsert = jest.fn(async (args: any) => {
     const k = keyOf(args);
@@ -102,6 +117,18 @@ function fakeTable(keyOf: (args: any) => string, seqRef: { n: number }) {
     const row = existing
       ? { ...existing, ...args.update }
       : { id: ++seqRef.n, ...args.create };
+    if (compositeUniqueOf) {
+      const rowUnique = compositeUniqueOf(row);
+      for (const [otherKey, otherRow] of map.entries()) {
+        if (otherKey === k) continue;
+        if (compositeUniqueOf(otherRow) === rowUnique) {
+          throw new Error(
+            `Unique constraint failed (haqiqiy Postgres P2002ni taqlid qiladi): ` +
+              `${k} va ${otherKey} ikkalasi ham "${rowUnique}"ga da'vo qiladi`,
+          );
+        }
+      }
+    }
     map.set(k, row);
     return row;
   });
@@ -134,7 +161,11 @@ function fakeTable(keyOf: (args: any) => string, seqRef: { n: number }) {
 function fakePrisma() {
   const seqRef = { n: 0 };
   const lexeme = fakeTable((a) => a.where.sourceId, seqRef);
-  const sentence = fakeTable((a) => a.where.sourceId, seqRef);
+  const sentence = fakeTable(
+    (a) => a.where.sourceId,
+    seqRef,
+    (r) => `${r.unitId}:${r.order}`,
+  );
   const dialog = fakeTable((a) => a.where.code, seqRef);
   const line = fakeTable(
     (a) => `${a.where.dialogId_order.dialogId}:${a.where.dialogId_order.order}`,
@@ -206,7 +237,7 @@ describe('InhaltSeedService', () => {
   it('so`zni bo`limga bog`laydi', async () => {
     const prisma = fakePrisma();
     await new InhaltSeedService(prisma as any).seed('u01', files());
-    const call = prisma.dafLexeme.upsert.mock.calls[0][0] as any;
+    const call = prisma.dafLexeme.upsert.mock.calls[0][0];
     expect(call.create.sectionId).toBe(7);
   });
 

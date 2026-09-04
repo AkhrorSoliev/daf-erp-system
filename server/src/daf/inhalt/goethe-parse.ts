@@ -25,8 +25,6 @@ export interface GoetheGruppen {
   jahreszeiten: GoetheWort[];
 }
 
-const ARTIKEL = new Set(['der', 'die', 'das']);
-
 /**
  * Goethe A1 ning yopiq so'z guruhlari: raqamlar, hafta kunlari, oylar,
  * fasllar. A1 standartining majburiy qismi, lekin PDF manbada bular

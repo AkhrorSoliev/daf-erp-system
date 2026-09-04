@@ -3249,7 +3249,13 @@ model DafSentence {
   unit    DafUnit     @relation(fields: [unitId], references: [id])
   section DafSection? @relation(fields: [sectionId], references: [id])
 
-  @@unique([unitId, order])
+  /// ENDI NOYOB EMAS — `order` faqat displey tartibi, o'zlik `sourceId`
+  /// (yoki eski qatorlar uchun `id`)da. Noyob qoldirilsa, bo'lim
+  /// o'rtasidan bitta gap o'chirilib qolganlari qayta raqamlanganda
+  /// (haligacha o'chirilmagan eski qator bilan `order` to'qnashib)
+  /// P2002 bilan yiqilardi — aynan shuni oldini olish uchun olib
+  /// tashlandi (qarang: `InhaltSeedService`dagi izoh).
+  @@index([unitId, order])
   @@index([unitId])
 }
 
