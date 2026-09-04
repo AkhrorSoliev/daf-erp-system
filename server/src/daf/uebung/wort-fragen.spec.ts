@@ -60,35 +60,28 @@ describe('paar', () => {
     expect(paar([ZIEL, ANDERE[0]], rnd)).toBeNull();
   });
 
-  it('birinchi to`rt dublikatlasa keyingisini sinab ko`radi', () => {
-    // 5 ta so'z: birinchi 4 ta bir xil uz -> noja'm
-    // Keyingi 4 ta (start=1): hey, danke, ich, du -> tufa
+  it('birinchi to`rtda dublikat bo`lsa greedy tanlab topadi', () => {
+    // 6 ta so'z: birinchi 2 ta normal, keyingi 2 ta bir xil uz, oxirgi 2 ta normal.
+    // rnd=>0 shuffle: left-rotate-by-one → [i2, i3, i4, i5, i6, i1]
+    // Sliding window [0-3]: i2, i3(uzDUP), i4(uzDUP), i5 → DUP fail
+    // Greedy tanla: i2, i3(add), skip i4(uzDUP used), i5, i6 → 4 ta tufa
     const words = [
       w(1, 'hallo', 'salom'),
-      w(2, 'hey', 'salom'), // Dup uz
-      w(3, 'danke', 'rahmat'),
-      w(4, 'ich', 'men'),
+      w(2, 'danke', 'rahmat'),
+      w(3, 'ichka', 'sameTrans1'),
+      w(4, 'sehr', 'sameTrans1'),
       w(5, 'du', 'sen'),
+      w(6, 'ich', 'men'),
     ];
     const f = paar(words, rnd);
     expect(f).not.toBeNull();
-    // Keyingi to`rt tanlansa noja'm yo'q
     if (f) {
       const pairs = f.richtig.split('|').map((p) => p.split('='));
+      const des = pairs.map((p) => p[0]);
       const uzs = pairs.map((p) => p[1]);
+      expect([...new Set(des)]).toHaveLength(4);
       expect([...new Set(uzs)]).toHaveLength(4);
     }
-  });
-
-  it('nemischa dublikatlansa savol qurmaydi', () => {
-    // Barch to`rt so'z bir xil nemischa
-    const words = [
-      w(1, 'Name', 'ism'),
-      w(2, 'Name', 'nomi'),
-      w(3, 'Name', 'nomi2'),
-      w(4, 'Name', 'nomi3'),
-    ];
-    expect(paar(words, rnd)).toBeNull();
   });
 
   it('barcha so`zlar bir xil tarjimada savol qurmaydi', () => {

@@ -92,45 +92,55 @@ export function uzWort(
  *
  * Olamlar ikkala tomonda (de va uz) noyob bo'lishi shart — juftlash
  * nojam bo'lmasligi uchun. To'rt shunday so'z yo'q bo'lsa null qaytaradi.
+ * Dastlabki to'rtning dublikati bo'lsa, keyingisiga o'tadi, to'rttasini
+ * topguncha yoki ro'yxat tugaguncha.
  *
- * `itemId` — shu o'n so'zning bittasi. Bitta sovolning javob kilib bo'lganda
- * server uni qayta qurmaydi (D7): u shunchaki materialni bazadan o'qib va
- * javobni doimiylik asosida tekshiradi. Juftlash solishtirish chuponadi —
- * har bir juftning sahodasi alohida tekshiriladi, va `itemId` shu uchun kerak
- * emas — faqat ma'luma xususiy.
+ * `itemId` — ma'lumot sifatida saqlanadi (tanlangan to'rtning birinchisini).
+ * Server javob kilib bo'lganda savolni qayta qurmaydi; u har bir juftni
+ * (de=uz) alohida tekshiradi. Shuning uchun savolni qayta qurishga `itemId`
+ * kerak emas.
  */
 export function paar(woerter: MaterialWort[], rnd: () => number): Frage | null {
   if (woerter.length < 4) return null;
 
-  // Har bir noja'ri so'zlar to'plamini sinab ko'rish (shuffle bilan).
-  // Agar birinchi jisim mos kelmasa, keyingi to'rtni sinab ko'ring.
+  // Aralashtirilgan ro'yxatdan to'rt so'z tanla: ikkala tomonda (de va uz)
+  // noyoblik tekshiriladi. Dublikat bo'lsa, keyingiga o'tadi.
   const shuffled = mischen(woerter, rnd);
-  for (let start = 0; start <= shuffled.length - 4; start++) {
-    const vier = shuffled.slice(start, start + 4);
-    const des = vier.map((w) => w.de);
-    const uzs = vier.map((w) => w.uz);
+  const selected: MaterialWort[] = [];
+  const usedDe = new Set<string>();
+  const usedUz = new Set<string>();
 
-    // Ikkala tomonda noyob bo'lish kerak.
-    const uniqueDes = new Set(des);
-    const uniqueUzs = new Set(uzs);
-    if (uniqueDes.size === 4 && uniqueUzs.size === 4) {
-      const links = des;
-      const rechts = mischen(uzs, rnd);
-      return {
-        format: 'PAAR',
-        itemType: 'WORT',
-        itemId: vier[0].id,
-        prompt: 'Juftlang',
-        hilfe: null,
-        options: [...links, ...rechts],
-        richtig: vier.map((w) => `${w.de}=${w.uz}`).join('|'),
-        akzeptiert: [],
-      };
+  for (const word of shuffled) {
+    // Ushbu so'z tubidan noyobmi?
+    if (!usedDe.has(word.de) && !usedUz.has(word.uz)) {
+      selected.push(word);
+      usedDe.add(word.de);
+      usedUz.add(word.uz);
+
+      if (selected.length === 4) {
+        break;
+      }
     }
   }
 
-  // No distinct four found.
-  return null;
+  // To'rt noyob so'z topildi?
+  if (selected.length < 4) {
+    return null;
+  }
+
+  const links = selected.map((w) => w.de);
+  const rechts = mischen(selected.map((w) => w.uz), rnd);
+
+  return {
+    format: 'PAAR',
+    itemType: 'WORT',
+    itemId: selected[0].id,
+    prompt: 'Juftlang',
+    hilfe: null,
+    options: [...links, ...rechts],
+    richtig: selected.map((w) => `${w.de}=${w.uz}`).join('|'),
+    akzeptiert: [],
+  };
 }
 
 export function artikel(ziel: MaterialWort): Frage | null {
