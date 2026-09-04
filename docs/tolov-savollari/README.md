@@ -1,7 +1,7 @@
 # To'lov tizimi — qaror savollari
 
-`docs/tolov-tizimi-savollari.pdf` — ma'muriyat to'ldiradigan hujjat.
-13 sahifa, 35 savol, 72 ta to'ldiriladigan maydon.
+`docs/tolov-tizimi-savollari.pdf` — to'ldiriladigan hujjat.
+14 sahifa, 28 savol, 30 ta maydon.
 
 ## Qayta yaratish
 
@@ -9,23 +9,21 @@
 python3 docs/tolov-savollari/make_pdf.py docs/tolov-tizimi-savollari.pdf
 ```
 
-`questions.py` — mazmun (savollar, variantlar, hozirgi holat jadvallari).
-`make_pdf.py` — sahifa tuzilishi va forma maydonlari.
+`questions.py` — savollar, misollar, variantlar.
+`make_pdf.py` — sahifa tuzilishi.
+`ttf/` — Newsreader va DM Sans (CV manbasidan olingan, woff2 dan o'girilgan).
 
-## Raqamlar qayerdan
+## Dizayn
 
-Hujjatdagi barcha narx, foiz va sanoq 2026-09 holatiga ko'ra PROD bazadan
-faqat-o'qish so'rovlari bilan olingan:
-- 9 ta aktiv kurs, narxlari va paket hajmi
-- 19 ta aktiv ustoz stavkasi (6 foiz, 8 o'quvchi-boshiga, 5 qat'iy oylik)
-- 370 aktiv o'quvchi, 47 guruh, 14 ustoz, 2 filial
-- 3 ta chegirmali o'quvchi (50%, 50%, 35%)
+CV bilan bir xil: qog'oz `#FAF9F5`, siyoh `#1A1915`, urg'u `#B4532F`,
+sarlavhalar Newsreader, matn DM Sans. Har bo'lim yangi sahifadan.
 
-Javoblar kelgach raqamlarni yangilab, hujjatni qayta yaratish kerak.
+`ʻ` (U+02BB) shriftlarda yo'q, shuning uchun matnda oddiy apostrof
+ishlatiladi (`to'lov`). Forma maydonlari Helvetica'da — reportlab AcroForm
+faqat standart shriftlarni qabul qiladi.
 
-## Shrift haqida
+## Raqamlar
 
-Hujjat matni `Arial Unicode` bilan chiziladi — `oʻ`, `gʻ` kabi harflar
-to'g'ri chiqadi. Forma maydonlari esa Helvetica'da: reportlab AcroForm
-faqat standart 14 shriftni qabul qiladi. Amalda muammo emas — to'ldiruvchi
-oddiy apostrof yozadi.
+Kurs narxlari va sanoqlar prod bazadan faqat-o'qish so'rovlari bilan
+olingan. Narxlar o'zgarsa `questions.py` dagi `PRICES` va `FACTS`
+yangilanadi va hujjat qayta yaratiladi.

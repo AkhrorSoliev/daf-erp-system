@@ -1,176 +1,206 @@
 # -*- coding: utf-8 -*-
 import sys, os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib.colors import HexColor, white
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-import questions as Q
+import q2 as Q
 
-FONT = "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
-pdfmetrics.registerFont(TTFont("AU", FONT))
-pdfmetrics.registerFont(TTFont("AUB", "/System/Library/Fonts/Supplemental/Arial Bold.ttf"))
+T = f"{HERE}/ttf"
+pdfmetrics.registerFont(TTFont("NR",  f"{T}/Newsreader-400-normal.ttf"))
+pdfmetrics.registerFont(TTFont("NRM", f"{T}/Newsreader-500-normal.ttf"))
+pdfmetrics.registerFont(TTFont("NRL", f"{T}/Newsreader-300-normal.ttf"))
+pdfmetrics.registerFont(TTFont("DS",  f"{T}/DMSans-400-normal.ttf"))
+pdfmetrics.registerFont(TTFont("DSM", f"{T}/DMSans-500-normal.ttf"))
 
 W, H = A4
-ML, MR, MT, MB = 20*mm, 20*mm, 18*mm, 20*mm
+ML, MR, MT, MB = 24*mm, 24*mm, 22*mm, 20*mm
 CW = W - ML - MR
-INK   = HexColor("#1a1a1a")
-MUTED = HexColor("#5b6470")
-LINE  = HexColor("#d8dde3")
-ACC   = HexColor("#7a1f2b")
-BOXBG = HexColor("#f5f7f9")
+
+PAPER = HexColor("#FAF9F5")
+INK   = HexColor("#1A1915")
+SOFT  = HexColor("#6B6862")
+FAINT = HexColor("#B8B4AC")
+CLAY  = HexColor("#B4532F")
+RULE  = HexColor("#DDD9D0")
 
 class Doc:
     def __init__(self, path):
         self.c = canvas.Canvas(path, pagesize=A4)
-        self.c.setTitle("To'lov tizimi — qaror savollari")
+        self.c.setTitle("To'lov tizimi - qaror savollari")
         self.c.setAuthor("DaF Sprachzentrum")
-        self.y = H - MT
-        self.page = 1
+        self.page = 0
         self.fields = 0
+        self.newpage()
 
-    def space(self, need):
-        if self.y - need < MB:
-            self.footer(); self.c.showPage(); self.page += 1; self.y = H - MT
+    def newpage(self):
+        if self.page: self.foot(); self.c.showPage()
+        self.page += 1
+        self.c.setFillColor(PAPER); self.c.rect(0, 0, W, H, stroke=0, fill=1)
+        self.c.setFillColor(INK)
+        self.y = H - MT
 
-    def footer(self):
-        self.c.setFont("AU", 7.5); self.c.setFillColor(MUTED)
-        self.c.drawString(ML, MB - 9, "DaF Sprachzentrum — to'lov tizimi qaror savollari")
-        self.c.drawRightString(W - MR, MB - 9, str(self.page))
+    def foot(self):
+        if self.page == 1: return
+        self.c.setFont("DS", 7.5); self.c.setFillColor(FAINT)
+        self.c.drawRightString(W - MR, MB - 10, str(self.page))
         self.c.setFillColor(INK)
 
     def wrap(self, text, font, size, width):
         out, line = [], ""
-        for word in text.split():
-            t = (line + " " + word).strip()
-            if pdfmetrics.stringWidth(t, font, size) <= width:
-                line = t
+        for w in text.split():
+            t = (line + " " + w).strip()
+            if pdfmetrics.stringWidth(t, font, size) <= width: line = t
             else:
                 if line: out.append(line)
-                line = word
+                line = w
         if line: out.append(line)
         return out
 
-    def para(self, text, size=9.2, font="AU", color=INK, lead=None, indent=0, gap=3):
-        lead = lead or size * 1.42
-        lines = self.wrap(text, font, size, CW - indent)
-        self.space(len(lines) * lead + gap)
-        self.c.setFont(font, size); self.c.setFillColor(color)
-        for ln in lines:
-            if self.y - lead < MB:
-                self.footer(); self.c.showPage(); self.page += 1; self.y = H - MT
-                self.c.setFont(font, size); self.c.setFillColor(color)
+    def need(self, h):
+        if self.y - h < MB: self.newpage()
+
+    def text(self, s, font="DS", size=9.6, color=INK, lead=None, x=0, width=None, gap=0):
+        lead = lead or size * 1.55
+        width = width or (CW - x)
+        for ln in self.wrap(s, font, size, width):
+            self.need(lead)
+            self.c.setFont(font, size); self.c.setFillColor(color)
             self.y -= lead
-            self.c.drawString(ML + indent, self.y, ln)
+            self.c.drawString(ML + x, self.y, ln)
         self.y -= gap
         self.c.setFillColor(INK)
 
-    def field(self, name, label, height=13*mm):
-        self.space(height + 12)
-        self.c.setFont("AU", 7.6); self.c.setFillColor(MUTED)
-        self.y -= 9
-        self.c.drawString(ML, self.y, label)
-        self.y -= height + 2
+    def field(self, name, h=15*mm, label=None):
+        self.need(h + 14)
+        if label:
+            self.c.setFont("DS", 7.4); self.c.setFillColor(FAINT)
+            self.y -= 10; self.c.drawString(ML, self.y, label)
+        self.y -= h + 3
         self.c.acroForm.textfield(
-            name=name, tooltip=label, x=ML, y=self.y, width=CW, height=height,
-            borderColor=LINE, fillColor=white, textColor=INK,
-            fontName="Helvetica", fontSize=9.5, borderWidth=0.7,
-            forceBorder=True, fieldFlags="multiline" if height > 8*mm else "",
-        )
+            name=name, tooltip=label or name, x=ML, y=self.y, width=CW, height=h,
+            borderColor=RULE, fillColor=white, textColor=INK,
+            fontName="Helvetica", fontSize=10, borderWidth=0.6,
+            forceBorder=True, fieldFlags="multiline")
         self.fields += 1
-        self.y -= 6
         self.c.setFillColor(INK)
 
-d = Doc(sys.argv[1])
-c = d.c
+d = Doc(sys.argv[1]); c = d.c
 
-# ── Sarlavha ────────────────────────────────────────────────────────────
-c.setFillColor(ACC); c.rect(0, H - 46*mm, W, 46*mm, stroke=0, fill=1)
-c.setFillColor(white)
-c.setFont("AUB", 21); c.drawString(ML, H - 24*mm, "To'lov tizimi — qaror savollari")
-c.setFont("AU", 10.5); c.drawString(ML, H - 32*mm, "DaF Sprachzentrum · ma'muriyat uchun · 2026-yil sentabr")
-c.setFont("AU", 9); c.drawString(ML, H - 39*mm, "35 ta savol · 7 bo'lim · javoblar shu hujjatning o'ziga yoziladi")
-d.y = H - 56*mm
+# ── Muqova ──────────────────────────────────────────────────────────────
+d.y = H - 84*mm
+c.setFillColor(CLAY); c.rect(ML, d.y + 26*mm, 34, 2.2, stroke=0, fill=1)
+c.setFillColor(INK); c.setFont("NRL", 34)
+c.drawString(ML, d.y, "To'lov tizimi")
+d.y -= 13*mm
+c.setFont("NRL", 34); c.setFillColor(SOFT)
+c.drawString(ML, d.y, "qaror savollari")
+d.y -= 20*mm
 c.setFillColor(INK)
+for ln in Q.LEAD:
+    d.text(ln, "DS", 10.4, SOFT, lead=17, gap=5)
+d.y -= 8*mm
+c.setFillColor(FAINT); c.setFont("DS", 9)
+c.drawString(ML, d.y, "DaF Sprachzentrum")
 
-for t, b in Q.INTRO:
-    d.para(t, size=10.5, font="AUB", gap=2)
-    d.para(b, size=9.2, color=MUTED, gap=8)
+# ── 1-bo'lim: narxlar ───────────────────────────────────────────────────
+d.newpage()
+c.setFont("DSM", 9); c.setFillColor(CLAY)
+d.y -= 4; c.drawString(ML, d.y, "1")
+d.y -= 11*mm
+c.setFont("NRL", 25); c.setFillColor(INK)
+c.drawString(ML, d.y, "Kurs narxlari")
+d.y -= 9*mm
+d.text("Savollardagi misollar shu narxlarga tayanadi.", "DS", 9.6, SOFT, gap=8*mm)
 
-# ── 0-bo'lim: hozirgi holat ─────────────────────────────────────────────
-d.space(40)
-d.y -= 6
-c.setFillColor(ACC); c.rect(ML, d.y - 2, CW, 1.4, stroke=0, fill=1); c.setFillColor(INK)
-d.y -= 6
-d.para(Q.STATE["title"], size=11.5, font="AUB", gap=6)
+rows = Q.PRICES
+cx = [0, CW*0.60, CW*0.82]
+for i, r in enumerate(rows):
+    d.need(16)
+    d.y -= 15
+    if i == 0:
+        c.setFont("DSM", 8.2); c.setFillColor(FAINT)
+        c.drawString(ML, d.y, r[0])
+        c.drawRightString(ML + cx[1] + 24*mm, d.y, r[1])
+        c.drawRightString(ML + cx[2] + 26*mm, d.y, r[2])
+        d.y -= 4
+        c.setStrokeColor(RULE); c.setLineWidth(0.6)
+        c.line(ML, d.y, ML + CW, d.y)
+    else:
+        c.setFont("DS", 10); c.setFillColor(INK)
+        c.drawString(ML, d.y, r[0])
+        c.setFont("DSM", 10)
+        c.drawRightString(ML + cx[1] + 24*mm, d.y, r[1])
+        c.setFont("DS", 10); c.setFillColor(SOFT)
+        c.drawRightString(ML + cx[2] + 26*mm, d.y, r[2])
+        c.setFillColor(INK)
+d.y -= 12*mm
 
-for title, rows in Q.STATE["blocks"]:
-    d.para(title, size=9.6, font="AUB", gap=3)
-    ncol = len(rows[0])
-    colw = [CW*0.34] + [(CW*0.66)/(ncol-1)]*(ncol-1) if ncol > 2 else [CW*0.5, CW*0.5]
-    rh = 13
-    d.space(rh * (len(rows) + 1))
-    for i, row in enumerate(rows):
-        if d.y - rh < MB:
-            d.footer(); c.showPage(); d.page += 1; d.y = H - MT
-        d.y -= rh
-        if i == 0:
-            c.setFillColor(BOXBG); c.rect(ML, d.y - 3, CW, rh, stroke=0, fill=1)
-            c.setFillColor(INK); c.setFont("AUB", 8.4)
-        else:
-            c.setFont("AU", 8.6); c.setFillColor(INK)
-        x = ML + 3
-        for j, cell in enumerate(row):
-            if j == 0: c.drawString(x, d.y, str(cell))
-            else: c.drawRightString(x + colw[j] - 6, d.y, str(cell))
-            x += colw[j]
-        c.setStrokeColor(LINE); c.setLineWidth(0.4)
-        c.line(ML, d.y - 4, ML + CW, d.y - 4)
-    d.y -= 8
-
-for n in Q.STATE["notes"]:
-    d.para("•  " + n, size=8.8, color=MUTED, indent=4, gap=4)
+for f in Q.FACTS:
+    d.need(40)
+    ytop = d.y
+    d.text(f, "DS", 9.6, SOFT, x=8, gap=6)
+    c.setFillColor(CLAY); c.rect(ML, d.y + 3, 1.6, ytop - d.y - 6, stroke=0, fill=1)
+    c.setFillColor(INK)
+    d.y -= 3
 
 # ── Savollar ────────────────────────────────────────────────────────────
+LETTERS = "ABCDEFG"
 qno = 0
 for sec in Q.SECTIONS:
-    d.space(60)
-    d.y -= 10
-    c.setFillColor(ACC); c.rect(ML, d.y - 2, CW, 1.4, stroke=0, fill=1); c.setFillColor(INK)
-    d.y -= 6
-    d.para(sec["title"], size=11.5, font="AUB", gap=3)
-    d.para(sec["intro"], size=8.8, color=MUTED, gap=8)
+    d.newpage()
+    c.setFont("DSM", 9); c.setFillColor(CLAY)
+    d.y -= 4; c.drawString(ML, d.y, str(sec["n"]))
+    d.y -= 11*mm
+    c.setFont("NRL", 25); c.setFillColor(INK)
+    c.drawString(ML, d.y, sec["title"])
+    d.y -= 10*mm
 
     for q in sec["questions"]:
         qno += 1
-        d.space(78)
-        d.para(f"{qno}.  {q['q']}", size=10, font="AUB", gap=4)
-        d.para(q["situation"], size=9.1, gap=4)
-        d.para("Nega muhim:  " + q["why"], size=8.8, color=MUTED, gap=5)
-        for opt in q["options"]:
-            d.para(opt, size=9.1, indent=10, gap=1.5)
-        d.y -= 3
-        d.field(f"javob_{qno}", "Javob (A / B / C yoki o'z variantingiz):", height=11*mm)
-        d.field(f"izoh_{qno}", "Izoh:", height=13*mm)
-        d.y -= 5
-        c.setStrokeColor(LINE); c.setLineWidth(0.4)
-        if d.y - 6 > MB:
-            c.line(ML, d.y, ML + CW, d.y)
-        d.y -= 8
+        d.need(96)
+        d.y -= 4
+        c.setFont("DSM", 8.4); c.setFillColor(CLAY)
+        c.drawString(ML, d.y, f"{qno:02d}")
+        d.y -= 6
+        d.text(q["q"], "NRM", 13.2, INK, lead=19, gap=5)
+
+        ytop = d.y
+        d.text(q["ex"], "DS", 9.3, SOFT, x=9, gap=6)
+        c.setFillColor(CLAY); c.rect(ML, d.y + 4, 1.4, ytop - d.y - 8, stroke=0, fill=1)
+        c.setFillColor(INK)
+
+        for i, o in enumerate(q["opts"]):
+            d.need(20)
+            first = True
+            for ln in d.wrap(o, "DS", 9.9, CW - 15):
+                d.need(16); d.y -= 16
+                if first:
+                    c.setFont("DSM", 9.9); c.setFillColor(CLAY)
+                    c.drawString(ML, d.y, LETTERS[i])
+                    first = False
+                c.setFont("DS", 9.9); c.setFillColor(INK)
+                c.drawString(ML + 15, d.y, ln)
+        d.y -= 4
+        d.field(f"javob_{qno}", h=14*mm, label="Javob")
+        d.y -= 9*mm
 
 # ── Yakun ───────────────────────────────────────────────────────────────
-d.space(90)
-d.y -= 8
-c.setFillColor(ACC); c.rect(ML, d.y - 2, CW, 1.4, stroke=0, fill=1); c.setFillColor(INK)
-d.y -= 6
-d.para(Q.CLOSING[0], size=11.5, font="AUB", gap=3)
-d.para(Q.CLOSING[1], size=9, color=MUTED, gap=6)
-d.field("qoshimcha", "Qo'shimcha holatlar va izohlar:", height=45*mm)
-d.y -= 6
-d.field("imzo", "To'ldirdi (F.I.Sh., lavozim, sana):", height=11*mm)
+d.newpage()
+c.setFont("DSM", 9); c.setFillColor(CLAY)
+d.y -= 4; c.drawString(ML, d.y, "8")
+d.y -= 11*mm
+c.setFont("NRL", 25); c.setFillColor(INK)
+c.drawString(ML, d.y, "Qo'shimcha")
+d.y -= 9*mm
+d.text(Q.CLOSING, "DS", 9.8, SOFT, gap=6*mm)
+d.field("qoshimcha", h=70*mm)
+d.y -= 12*mm
+d.field("imzo", h=13*mm, label="Ism, lavozim, sana")
 
-d.footer()
-c.save()
-print(f"Sahifa: {d.page}, to'ldiriladigan maydon: {d.fields}")
+d.foot(); c.save()
+print(f"Sahifa: {d.page}  |  maydon: {d.fields}")
