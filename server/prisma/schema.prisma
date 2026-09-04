@@ -3271,6 +3271,12 @@ model DafLexemeState {
   correctCount Int      @default(0)
   wrongCount   Int      @default(0)
   companyId    Int
+  /// So'z oxirgi marta qaysi formatda so'ralgan.
+  ///
+  /// Qaytarish savoli SHUNDAN boshqa formatda quriladi: bir so'zni har
+  /// safar bir xil tarzda so'rash uni tanish qiladi, bilinadigan emas —
+  /// o'quvchi savolning shaklini yodlab qo'yadi, so'zni emas.
+  lastFormat String?
 
   student Student   @relation(fields: [studentId], references: [id])
   lexeme  DafLexeme @relation(fields: [lexemeId], references: [id])
