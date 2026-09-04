@@ -1,4 +1,5 @@
 import { luecke, reaktion, satzBauen, satzUebersetzen } from './satz-fragen';
+import { istRichtig } from './antwort';
 import type { MaterialPhrase, MaterialSatz, MaterialWort } from './frage.types';
 
 function s(id: number, de: string, uz: string): MaterialSatz {
@@ -32,6 +33,31 @@ describe('luecke', () => {
     const f = luecke(SATZ, [w(2, 'bin', 'bo`lmoq')], rnd)!;
     expect(f.options).toEqual([]);
   });
+
+  it('umlautli so`zni ham bo`shatadi (regex \\b ASCII bilan cheklangan edi)', () => {
+    // `\büben\b` hech qachon topilmas edi: probel ham, 'ü' ham regex
+    // uchun "so'z emas" hisoblanadi, ya'ni ular orasida chegara ko'rinmaydi.
+    const satz2 = s(5, 'Wir üben heute.', 'Biz bugun mashq qilamiz.');
+    const f = luecke(satz2, [w(6, 'üben', 'mashq qilmoq')], rnd)!;
+    expect(f).not.toBeNull();
+    expect(f.prompt).toBe('Wir ___ heute.');
+    expect(f.richtig).toBe('üben');
+  });
+
+  it('apostrofli qisqartmani noto`g`ri nishonlamaydi', () => {
+    // "geht's" — "geht" so'zi bilan bir xil TOKEN emas, shuning uchun
+    // uni chalg'itib "___'s" kabi chala gap qoldirmasligi kerak. Standalone
+    // "geht" gapning davomida bo'lsa, aynan o'sha joy bo'shatiladi.
+    const satz3 = s(
+      7,
+      "Wie geht's? Es geht mir gut.",
+      'Ahvoling qanday? Menda hammasi yaxshi.',
+    );
+    const f = luecke(satz3, [w(8, 'geht', 'bormoq')], rnd)!;
+    expect(f).not.toBeNull();
+    expect(f.prompt).toBe("Wie geht's? Es ___ mir gut.");
+    expect(f.richtig).toBe('geht');
+  });
 });
 
 describe('satzBauen', () => {
@@ -46,6 +72,20 @@ describe('satzBauen', () => {
   it('ikki so`zli gapga savol qurmaydi', () => {
     // Ikki so'zdan gap tuzish tanlov emas: tartib bittagina.
     expect(satzBauen(s(1, 'Guten Tag.', 'Xayrli kun.'), rnd)).toBeNull();
+  });
+
+  it('chiplar tinishsiz bo`lsa ham, birlashtirilgan javob baholovchida to`g`ri hisoblanadi', () => {
+    // `options` tinish belgisiz (woerterVon nuqta/vergulni olib tashlaydi),
+    // `richtig` esa asl (tinishli) gapning o'zi. Ularning mos kelishi
+    // savol quruvchining ishi emas — `istRichtig` (Vazifa 1) taqqoslashdan
+    // OLDIN ikkalasini ham tinish belgisidan tozalaydi, shuning uchun
+    // xavfsiz. rnd=0.9999 → mischen j===i har doim, ya'ni asl so'z tartibi
+    // saqlanadi va chiplarni to'g'ridan-to'g'ri birlashtirish mumkin.
+    const identityRnd = (): number => 0.9999;
+    const satz = s(9, 'Ja, ich bin Anna.', 'Ha, men Annaman.');
+    const f = satzBauen(satz, identityRnd)!;
+    const gegeben = f.options.join(' ');
+    expect(istRichtig(gegeben, f.richtig)).toBe(true);
   });
 });
 
@@ -90,5 +130,14 @@ describe('reaktion', () => {
     // Ikki salomlashish iborasi orasida «to'g'ri» javob yo'q.
     const f = reaktion(ZIEL, [p(9, 'salomlashish', 'Hallo!', 'Salom!'), ...ANDERE], rnd)!;
     expect(f.options).not.toContain('Hallo!');
+  });
+
+  it('bir xil nemischa matnli, boshqa vazifadagi ibora chalg`ituvchi bo`lmaydi', () => {
+    // Vazifasi boshqa bo'lsa ham, nemischa matni to'g'ri javob bilan bir
+    // xil bo'lsa, uni distraktor qilish to'g'ri javobni `options` ichida
+    // IKKI marta ko'rsatar edi.
+    const birXilMatn = p(10, 'boshqa-vazifa', 'Guten Morgen!', 'Boshqa tarjima');
+    const f = reaktion(ZIEL, [birXilMatn, ...ANDERE], rnd)!;
+    expect(f.options.filter((o) => o === 'Guten Morgen!')).toHaveLength(1);
   });
 });

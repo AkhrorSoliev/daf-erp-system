@@ -22,6 +22,17 @@ function woerterVon(de: string): string[] {
 /**
  * Gapdan bo'limning bitta so'zini olib tashlaydi.
  *
+ * Nishonlash REGEX EMAS — TOKEN TENGLIGI orqali qilinadi. Sabab: `\b`
+ * faqat ASCII harflarini "so'z belgisi" deb biladi. `über` yoki `groß`
+ * kabi umlautli/ß so'zlarda chegaraning ikkala tomoni ham "so'z emas"
+ * bo'lib chiqadi, ya'ni `\b` hech qachon topilmaydi va material bekorga
+ * `null`ga chiqadi. Aksincha, `geht's` kabi apostrofli qisqartmada `\b`
+ * "t" bilan apostrof orasida haqiqiy chegara ko'radi va `geht` so'zini
+ * ICHKARIDAN topib, «___'s» kabi chala gap qoldiradi. Bundan tashqari,
+ * so'zning o'zi regex maxsus belgisi bo'lsa, `RegExp` konstruktori
+ * yiqilishi mumkin edi — bu faylning shartnomasi esa hech qachon
+ * yiqilmaslik, faqat `null` qaytarish.
+ *
  * Variant BERILMAYDI — javob yoziladi. Sabab: to'rt variantdan tanlash
  * grammatik shaklni emas, ko'rish xotirasini tekshiradi; `bin` va `bist`
  * orasidagi farqni bilish uchun uni YOZISH kerak.
@@ -38,17 +49,26 @@ export function luecke(
   if (treffer.length === 0) return null;
 
   const ziel = mischen(treffer, rnd)[0];
-  const prompt = satz.de.replace(
-    new RegExp(`\\b${ziel.de}\\b`, 'i'),
-    '___',
+  const zielIndex = woerter.findIndex(
+    (w) => w.toLowerCase() === ziel.de.toLowerCase(),
   );
-  if (prompt === satz.de) return null;
+  if (zielIndex === -1) return null;
+
+  // Asl (tinish belgili) so'zlarni olamiz: faqat NISHON o'rindagi tokenni
+  // ___ ga almashtiramiz, qolgan so'zlarning nuqta/vergul kabi tinish
+  // belgisi o'zgarishsiz qoladi.
+  const roh = satz.de.trim().split(/\s+/);
+  const zielRoh = roh[zielIndex];
+  const kernStart = zielRoh.toLowerCase().indexOf(ziel.de.toLowerCase());
+  if (kernStart === -1) return null;
+  roh[zielIndex] =
+    zielRoh.slice(0, kernStart) + '___' + zielRoh.slice(kernStart + ziel.de.length);
 
   return {
     format: 'LUECKE',
     itemType: 'SATZ',
     itemId: satz.id,
-    prompt,
+    prompt: roh.join(' '),
     hilfe: satz.uz,
     options: [],
     richtig: ziel.de,
@@ -101,6 +121,11 @@ export function satzUebersetzen(
  * Bir xil VAZIFADAGI ibora chalg'ituvchi bo'la olmaydi: ikki
  * salomlashish iborasining ikkalasi ham to'g'ri, ya'ni savolning bitta
  * javobi qolmaydi.
+ *
+ * Bir xil NEMISCHA matnli ibora ham chalg'ituvchi bo'la olmaydi — vazifasi
+ * boshqa bo'lsa ham. Aks holda to'g'ri javob `options` ichida ikki marta
+ * chiqadi. `satzUebersetzen` va Vazifa 2ning `ablenker`i xuddi shu
+ * tekshiruvni matn maydoni bo'yicha qiladi.
  */
 export function reaktion(
   ziel: MaterialPhrase,
@@ -110,7 +135,12 @@ export function reaktion(
   const falsch = [
     ...new Set(
       andere
-        .filter((p) => p.id !== ziel.id && p.funktionUz !== ziel.funktionUz)
+        .filter(
+          (p) =>
+            p.id !== ziel.id &&
+            p.funktionUz !== ziel.funktionUz &&
+            p.de !== ziel.de,
+        )
         .map((p) => p.de),
     ),
   ];
