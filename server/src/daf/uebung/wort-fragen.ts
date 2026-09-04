@@ -96,7 +96,7 @@ export function uzWort(
  * topguncha yoki ro'yxat tugaguncha.
  *
  * `itemId` — ma'lumot sifatida saqlanadi (tanlangan to'rtning birinchisini).
- * Server javob kilib bo'lganda savolni qayta qurmaydi; u har bir juftni
+ * Javob kelganda server savolni qayta qurmaydi; u har bir juftni
  * (de=uz) alohida tekshiradi. Shuning uchun savolni qayta qurishga `itemId`
  * kerak emas.
  */

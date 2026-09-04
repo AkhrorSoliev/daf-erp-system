@@ -60,20 +60,23 @@ describe('paar', () => {
     expect(paar([ZIEL, ANDERE[0]], rnd)).toBeNull();
   });
 
-  it('birinchi to`rtda dublikat bo`lsa greedy tanlab topadi', () => {
-    // 6 ta so'z: birinchi 2 ta normal, keyingi 2 ta bir xil uz, oxirgi 2 ta normal.
-    // rnd=>0 shuffle: left-rotate-by-one → [i2, i3, i4, i5, i6, i1]
-    // Sliding window [0-3]: i2, i3(uzDUP), i4(uzDUP), i5 → DUP fail
-    // Greedy tanla: i2, i3(add), skip i4(uzDUP used), i5, i6 → 4 ta tufa
+  it('slaydlar oyna faqat shunda topsa: dublikat indeks 2-3 greedy topadi', () => {
+    // 6 ta so'z, rnd=0.9999 bilan identity shuffle (array tushadi).
+    // w1 (uz=uz1), w2 (uz=uz2), w3 (uz=SHARED), w4 (uz=SHARED), w5 (uz=uz5), w6 (uz=uz6).
+    // Slaydlar: [0-3] → uz1, uz2, SHARED, SHARED (DUP) ❌
+    //          [1-4] → uz2, SHARED, SHARED, uz5 (DUP) ❌
+    //          [2-5] → SHARED, SHARED, uz5, uz6 (DUP) ❌
+    // Greedy: uz1 ✓, uz2 ✓, skip SHARED (ishlandi), uz5 ✓, uz6 ✓ → 4 ta tufa ✅
+    const identityShuffle = (): number => 0.9999;
     const words = [
-      w(1, 'hallo', 'salom'),
-      w(2, 'danke', 'rahmat'),
-      w(3, 'ichka', 'sameTrans1'),
-      w(4, 'sehr', 'sameTrans1'),
-      w(5, 'du', 'sen'),
-      w(6, 'ich', 'men'),
+      w(1, 'word1', 'uz1'),
+      w(2, 'word2', 'uz2'),
+      w(3, 'word3', 'uz_SHARED'),
+      w(4, 'word4', 'uz_SHARED'),
+      w(5, 'word5', 'uz5'),
+      w(6, 'word6', 'uz6'),
     ];
-    const f = paar(words, rnd);
+    const f = paar(words, identityShuffle);
     expect(f).not.toBeNull();
     if (f) {
       const pairs = f.richtig.split('|').map((p) => p.split('='));
@@ -82,6 +85,16 @@ describe('paar', () => {
       expect([...new Set(des)]).toHaveLength(4);
       expect([...new Set(uzs)]).toHaveLength(4);
     }
+  });
+
+  it('barcha so`zlar bir xil nemischa kelmasa savol qurmaydi', () => {
+    const words = [
+      w(1, 'Name', 'ism'),
+      w(2, 'Name', 'nomi'),
+      w(3, 'Name', 'nomi2'),
+      w(4, 'Name', 'nomi3'),
+    ];
+    expect(paar(words, rnd)).toBeNull();
   });
 
   it('barcha so`zlar bir xil tarjimada savol qurmaydi', () => {
