@@ -3029,7 +3029,10 @@ model DafGrammar {
   id       Int     @id @default(autoincrement())
   sourceId String  @unique
   unitId   Int?
-  code     String
+  /// Eski DiB mavzu kodi (masalan `sein-praesens`). Yangi unit matnida
+  /// mos manba kodi yo'q — `sourceId`ning o'zi kifoya, shuning uchun
+  /// bu yerda ixtiyoriy: yangi qoidalar `code`siz yoziladi.
+  code     String?
   titleDe  String
   titleUz  String?
 

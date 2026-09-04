@@ -23,6 +23,15 @@ export interface InhaltSeedReport {
   zeilen: number;
   regeln: number;
   phrasen: number;
+  /**
+   * Faylda endi YO'Q, lekin bazada BOR gap/so'z soni.
+   *
+   * Bular O'CHIRILMAYDI (pastdagi katta izohga qarang) — faqat
+   * hisoblanadi, shuning uchun drift ko'rinadigan bo'ladi va inson qaror
+   * qiladi.
+   */
+  staleSaetze: number;
+  staleWoerter: number;
 }
 
 /**
@@ -32,6 +41,36 @@ export interface InhaltSeedReport {
  * Bo'lim kalitlari YOZISHDAN OLDIN tekshiriladi. Yarim yozilgan holat
  * eng yomon natija: matnning bir qismi bazada, qolgani yo'q, va qaysi
  * qismi yetib borgani faqat qo'lda aniqlanadi.
+ *
+ * ## Kontent fayllari TAHRIRLANADI — bu servis shunga mo'ljallangan
+ *
+ * 11 ta unit hali oldinda va ularning har biri necha marta qayta
+ * ko'riladi: so'z/gap/dialog/qoida o'chadi, qo'shiladi, tartibi
+ * o'zgaradi. Shuning uchun ikkita narsa muhim:
+ *
+ * 1. **Kalitlar POZITSIYAGA emas, MAZMUNGA bog'liq bo'lishi kerak.**
+ *    `DafPhrase.code` va `DafGrammar.sourceId` bo'lim+funksiya/tartib
+ *    ichida hisoblanadi, butun massiv bo'yicha emas — aks holda bitta
+ *    o'rtadagi yozuvni o'chirish/qo'shish undan KEYINGI hamma yozuvning
+ *    kalitini o'zgartirib, ularni yangi qator sifatida qayta yaratardi
+ *    (eskisi esa orfan bo'lib qolardi).
+ * 2. **"Faylda yo'q, bazada bor" qatorlar TIZIMLI ravishda paydo
+ *    bo'ladi** — bu xato emas, tahrirlashning tabiiy natijasi. Ularga
+ *    ikki xil munosabat bor, ATAYLAB:
+ *
+ *    - `DafDialogLine`, `DafGrammarBeispiel`, `DafPhrase`, `DafDialog` —
+ *      hech kim ularga ISHORA qilmaydi (talaba urinishi, boshqa jadval —
+ *      hech narsa). Shuning uchun stale qatorni O'CHIRISH xavfsiz: baza
+ *      faylni aynan aks ettiradi, hech narsa yo'qolmaydi.
+ *    - `DafSentence`, `DafLexeme` — talabaning `DafAttempt`/
+ *      `DafLexemeState` qatorlari ularga ISHORA qiladi. Bu ikkisini
+ *      o'chirish talabaning haqiqiy progressini yo'q qilardi. Shuning
+ *      uchun ular O'CHIRILMAYDI — faqat soni hisoblanadi va hisobotda
+ *      `staleSaetze`/`staleWoerter` sifatida qaytariladi, inson ko'rib
+ *      qaror qilsin deb.
+ *
+ *    **Bu asimmetriya ATAYLAB** — ikkisini bitta qoidaga "tozalab"
+ *    qo'ymang. Farq nimaga ishora qilinishida, jadval nomida emas.
  */
 @Injectable()
 export class InhaltSeedService {
@@ -55,7 +94,9 @@ export class InhaltSeedService {
     this.assertSectionsKnown(files, sectionId);
 
     let woerter = 0;
+    const wortSourceIds: string[] = [];
     for (const w of files.woerter.woerter) {
+      wortSourceIds.push(w.sourceId);
       const data = {
         unitId: unit.id,
         sectionId: sectionId.get(w.section) ?? null,
@@ -76,6 +117,11 @@ export class InhaltSeedService {
       });
       woerter += 1;
     }
+    // O'CHIRILMAYDI — talaba `DafLexemeState`si so'zga bog'langan; faqat
+    // hisoblanadi (klass izohidagi asimmetriyaga qarang).
+    const staleWoerter = await this.prisma.dafLexeme.count({
+      where: { unitId: unit.id, sourceId: { notIn: wortSourceIds } },
+    });
 
     let saetze = 0;
     for (const [i, s] of files.saetze.saetze.entries()) {
@@ -94,6 +140,31 @@ export class InhaltSeedService {
         update: data,
       });
       saetze += 1;
+    }
+    // O'CHIRILMAYDI — talaba `DafAttempt`i gapga bog'langan; faqat
+    // hisoblanadi (klass izohidagi asimmetriyaga qarang). `order` fayl
+    // tartibida uzluksiz 1..N, shuning uchun N dan katta har qanday
+    // `order` — endi faylda yo'q qoldiq.
+    const staleSaetze = await this.prisma.dafSentence.count({
+      where: { unitId: unit.id, order: { gt: files.saetze.saetze.length } },
+    });
+
+    // Faylda endi yo'q dialoglarni butunlay o'chiramiz. Avval SATRLARI —
+    // FK `ON DELETE RESTRICT`, aks holda dialogni o'chirish rad etiladi.
+    // Hech kim boshqa joydan bunga ishora qilmaydi — o'chirish xavfsiz.
+    const dialogCodes = files.dialoge.dialoge.map((d) => d.id);
+    const staleDialoge = await this.prisma.dafDialog.findMany({
+      where: { unitId: unit.id, code: { notIn: dialogCodes } },
+      select: { id: true },
+    });
+    if (staleDialoge.length > 0) {
+      const staleDialogIds = staleDialoge.map((d) => d.id);
+      await this.prisma.dafDialogLine.deleteMany({
+        where: { dialogId: { in: staleDialogIds } },
+      });
+      await this.prisma.dafDialog.deleteMany({
+        where: { id: { in: staleDialogIds } },
+      });
     }
 
     let dialoge = 0;
@@ -127,22 +198,38 @@ export class InhaltSeedService {
         });
         zeilen += 1;
       }
+
+      // O'chiriladi — dialog satriga hech kim ishora qilmaydi. Fayldan
+      // o'rtadagi satr o'chirilsa, qolganlari qayta raqamlanadi va faqat
+      // ORTIQDA qolgan (endi ishlatilmagan) `order` qatorlari qoladi.
+      await this.prisma.dafDialogLine.deleteMany({
+        where: { dialogId: row.id, order: { gt: d.zeilen.length } },
+      });
     }
 
     let regeln = 0;
+    // Bo'lim+tartib ichida hisoblanadi — butun massiv indeksi EMAS, aks
+    // holda bir bo'limga qoida qo'shish/o'chirish boshqa bo'limlarning
+    // sourceId'sini ham siljitib yuborardi.
+    const sectionRegelSeq = new Map<string, number>();
     for (const r of files.grammatik.regeln) {
-      const sourceId = `${unitCode}-${r.section}-regel`;
+      const n = (sectionRegelSeq.get(r.section) ?? 0) + 1;
+      sectionRegelSeq.set(r.section, n);
+      // `r.section` allaqachon unit kodini o'z ichiga oladi (`u01-s1`) —
+      // oldin bu yerga yana `unitCode` qo'shilib, `u01-u01-s1-regel`
+      // kabi ikki marta prefikslangan kalit yasalar edi.
+      const sourceId = `${r.section}-regel-${n}`;
       const data = {
         unitId: unit.id,
         sectionId: sectionId.get(r.section) ?? null,
         titleDe: r.titelDe,
         titleUz: r.titelUz,
         erklaerungUz: r.erklaerungUz,
-        // `code`/`explanationEn` DiB davridan qolgan majburiy ustunlar —
-        // yangi unit matnida ingliz izoh yo'q, shuning uchun so'z uchun
-        // qilingani kabi bo'sh qoldiriladi; `code` sifatida `sourceId`
-        // ishlatiladi, chunki u allaqachon yagona.
-        code: sourceId,
+        // `explanationEn` DiB davridan qolgan majburiy ustun — yangi
+        // unit matnida ingliz izoh yo'q, shuning uchun so'z uchun
+        // qilingani kabi bo'sh qoldiriladi. `code` endi ixtiyoriy
+        // (migratsiya bilan NOT NULL olib tashlandi) — yangi qoidalarga
+        // yozilmaydi, chunki `sourceId`ning o'zi allaqachon yagona.
         explanationEn: '',
       };
       const row = await this.prisma.dafGrammar.upsert({
@@ -161,11 +248,29 @@ export class InhaltSeedService {
           update: bData,
         });
       }
+
+      // O'chiriladi — misolga hech kim ishora qilmaydi. Sabab satr
+      // o'chirishdagi bilan bir xil: qayta raqamlangach ortiqda qolgan
+      // `order`lar.
+      await this.prisma.dafGrammarBeispiel.deleteMany({
+        where: { grammarId: row.id, order: { gt: r.beispiele.length } },
+      });
     }
 
     let phrasen = 0;
-    for (const [i, p] of files.redemittel.phrasen.entries()) {
-      const code = `${p.section}-${p.funktion}-${i + 1}`;
+    // Bo'lim+funksiya ichida hisoblanadi — butun massiv indeksi EMAS,
+    // aks holda bir funksiyaga ibora qo'shish/o'chirish undan KEYINGI
+    // hamma iboraning kodini siljitardi (masalan `begruessen`dan keyin
+    // kelgan `vorstellen-1` ham qayta nomlanardi), eskisi orfan bo'lib
+    // qolardi.
+    const sectionFunktionSeq = new Map<string, number>();
+    const phraseCodes: string[] = [];
+    for (const p of files.redemittel.phrasen) {
+      const key = `${p.section}::${p.funktion}`;
+      const n = (sectionFunktionSeq.get(key) ?? 0) + 1;
+      sectionFunktionSeq.set(key, n);
+      const code = `${p.section}-${p.funktion}-${n}`;
+      phraseCodes.push(code);
       const data = {
         unitId: unit.id,
         sectionId: sectionId.get(p.section) as number,
@@ -182,8 +287,21 @@ export class InhaltSeedService {
       });
       phrasen += 1;
     }
+    // O'chiriladi — iboraga hech kim ishora qilmaydi.
+    await this.prisma.dafPhrase.deleteMany({
+      where: { unitId: unit.id, code: { notIn: phraseCodes } },
+    });
 
-    const report = { woerter, saetze, dialoge, zeilen, regeln, phrasen };
+    const report = {
+      woerter,
+      saetze,
+      dialoge,
+      zeilen,
+      regeln,
+      phrasen,
+      staleSaetze,
+      staleWoerter,
+    };
     this.logger.log(`${unitCode} matni: ${JSON.stringify(report)}`);
     return report;
   }
