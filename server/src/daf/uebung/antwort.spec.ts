@@ -42,8 +42,11 @@ describe('istRichtig', () => {
     expect(istRichtig('ich bin Anna', 'Ich heiße Anna', ['Ich bin Anna'])).toBe(true);
   });
 
-  it('bo`sh javobni rad etadi', () => {
-    expect(istRichtig('', 'hallo')).toBe(false);
-    expect(istRichtig('   ', 'hallo')).toBe(false);
+  it('bo`sh javobni rad etadi, hatto to\'g\'ri javob tinish belgisi bo\'lsa ham', () => {
+    // Agar to'g'ri javob faqat tinish belgisi bo'lsa, masalan ".",
+    // u normalisieren shundan so'ng bo'sh satr qaytaradi. O'quvchi bo'sh yozdi deb
+    // javobni to'g'ri deb belgilash xato: tinish belgisini bilishi keraki.
+    expect(istRichtig('', '.', [])).toBe(false);
+    expect(istRichtig('   ', '!', [])).toBe(false);
   });
 });
