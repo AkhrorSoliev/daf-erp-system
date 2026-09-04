@@ -22,7 +22,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ChartCard } from "./chart-card";
+import { ChartCard } from "@/components/shared/chart-card";
 
 export type GroupByDimension = "course" | "teacher" | "branch";
 

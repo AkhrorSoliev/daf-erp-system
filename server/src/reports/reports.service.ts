@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service';
 import { cachedNetProfit } from './net-profit-cache';
 import { StudentStatus } from '@prisma/client';
@@ -68,6 +68,8 @@ export interface ReportScopeQuery {
 
 @Injectable()
 export class ReportsService {
+  private readonly logger = new Logger(ReportsService.name);
+
   constructor(
     private overview: ReportsOverviewService,
     private attendanceAnalytics: ReportsAttendanceAnalyticsService,
@@ -189,6 +191,56 @@ export class ReportsService {
       this.getPeriodOutflows(companyId, scope),
     ]);
     return buildNetProfit(pl, sm, outflows, month, recognizedRevenue);
+  }
+
+  /**
+   * Kanonik sof foyda va u qaysi asosda hisoblanganini birga qaytaradi.
+   *
+   * NEGA SERVISDA: bu qaror ilgari `ReportsController.getFinancialOverview`
+   * ichida turgan edi, ya'ni undan tashqarida hech kim foydalana olmasdi.
+   * Bosh sahifaning «Sof foyda» kartasi ham aynan shu raqamni ko'rsatishi
+   * kerak, nusxa ko'chirish esa «qaysi asos» qarorini ikki joyga bo'lib
+   * yuborardi — bir kuni biri o'zgarib, ikki sahifa bir oy uchun ikki xil
+   * foyda ko'rsatib turardi.
+   *
+   * `cash` — kanonik hisob yiqilgani va bu ESKI kassa raqami degani: ustoz
+   * oyligi keyingi davrda to'lanadi, shuning uchun kassa raqami haqiqiy
+   * foydadan ancha yuqori chiqadi (2026-iyundagi +78M xatosi shundan edi).
+   * Chaqiruvchi buni YASHIRMASLIGI shart — karta o'z sarlavhasini o'zgartiradi.
+   */
+  async getNetProfitWithBasis(
+    companyId: number,
+    {
+      month,
+      branchIds,
+      performedById,
+      cashFallback,
+    }: {
+      month: string;
+      branchIds: ReportBranchIds;
+      performedById: number;
+      /** Kanonik hisob yiqilganda ishlatiladigan kassa raqami. */
+      cashFallback: number;
+    },
+  ): Promise<{ netProfit: number; netProfitBasis: 'recognized' | 'cash' }> {
+    try {
+      const np = await this.getMonthlyNetProfit(companyId, {
+        month,
+        branchIds,
+        performedById,
+      });
+      return { netProfit: np.netProfit, netProfitBasis: 'recognized' };
+    } catch (err) {
+      // Sababni yutib yubormaymiz: doimiy nosozlik ko'rinmay qolsa, natija
+      // noto'g'ri raqam bo'ladi — xatosiz, va hech kim qaramaydi.
+      this.logger.warn(
+        `Monthly net profit failed for company ${companyId} (${month}) — ` +
+          `caller falls back to the cash figure: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+      );
+      return { netProfit: cashFallback, netProfitBasis: 'cash' };
+    }
   }
 
   /**
@@ -562,7 +614,7 @@ export class ReportsService {
       groupIds?: string[];
       teacherIds?: number[];
       methods?: ('CASH' | 'PAYME' | 'CLICK' | 'UZUM' | 'TRANSFER')[];
-      courseId?: string;
+      courseId?: string[];
       startDate?: string;
       endDate?: string;
       page?: number;
@@ -607,7 +659,7 @@ export class ReportsService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;
@@ -639,7 +691,7 @@ export class ReportsService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;
@@ -651,7 +703,7 @@ export class ReportsService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;
@@ -663,7 +715,7 @@ export class ReportsService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;
@@ -677,7 +729,7 @@ export class ReportsService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;
@@ -690,7 +742,7 @@ export class ReportsService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;

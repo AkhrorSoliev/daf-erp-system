@@ -768,10 +768,18 @@ describe('GroupsService — status methods', () => {
         // Two different questions: "whose group is this" vs "what am I working
         // on". Merging them would put substituted groups into an admin's
         // per-teacher filter.
-        await service.findAll({ teacher_id: 777 } as any, 1001, null);
+        await service.findAll({ teacher_id: [777] } as any, 1001, null);
 
         expect(whereOf().teachers).toEqual({ some: { teacherId: 777 } });
         expect(whereOf().AND ?? []).toEqual([]);
+      });
+
+      it("bir nechta o'qituvchi tanlansa `in` bilan filtrlaydi", async () => {
+        await service.findAll({ teacher_id: [777, 888] } as any, 1001, null);
+
+        expect(whereOf().teachers).toEqual({
+          some: { teacherId: { in: [777, 888] } },
+        });
       });
     });
 

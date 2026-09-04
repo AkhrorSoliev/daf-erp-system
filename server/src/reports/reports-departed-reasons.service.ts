@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ExitType, StudentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { buildDepartedEnrollmentWhere } from './shared/departed-filter';
+import { equalsOrIn } from '../common/dto/to-array';
 
 const EXIT_TYPE_TO_STATUS: Record<ExitType, StudentStatus | null> = {
   GROUP_REMOVAL: null, // enrollment-based, not student-status-based
@@ -19,7 +20,7 @@ export class ReportsDepartedReasonsService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;
@@ -76,7 +77,7 @@ export class ReportsDepartedReasonsService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;
@@ -88,7 +89,8 @@ export class ReportsDepartedReasonsService {
 
     const groupFilter: any = { companyId, deletedAt: null };
     if (params.branchId !== undefined) groupFilter.branchId = params.branchId;
-    if (params.courseId) groupFilter.courseId = params.courseId;
+    if (params.courseId?.length)
+      groupFilter.courseId = equalsOrIn(params.courseId);
     if (params.teacherIds && params.teacherIds.length > 0) {
       groupFilter.teachers = {
         some: { teacherId: { in: params.teacherIds } },
@@ -208,7 +210,7 @@ export class ReportsDepartedReasonsService {
     companyId: number,
     params: {
       branchId?: number;
-      courseId?: string;
+      courseId?: string[];
       teacherIds?: number[];
       startDate: string;
       endDate: string;

@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { CreateStudentExitReasonDto } from './dto/create-student-exit-reason.dto';
 import { UpdateStudentExitReasonDto } from './dto/update-student-exit-reason.dto';
+import { exitReasonRequiresComment } from '../common/exit-reason-comment';
 
 @Injectable()
 export class StudentExitReasonsService {
@@ -17,8 +18,8 @@ export class StudentExitReasonsService {
     private entityHistoryService: EntityHistoryService,
   ) {}
 
-  findAll(companyId: number, appliesTo?: ExitType) {
-    return this.prisma.studentExitReason.findMany({
+  async findAll(companyId: number, appliesTo?: ExitType) {
+    const reasons = await this.prisma.studentExitReason.findMany({
       where: {
         companyId,
         deletedAt: null,
@@ -32,6 +33,13 @@ export class StudentExitReasonsService {
       },
       orderBy: { name: 'asc' },
     });
+
+    // requiresComment tells the picker UI to make the comment box mandatory
+    // for the catch-all "Boshqa sabab" — see common/exit-reason-comment.ts.
+    return reasons.map((r) => ({
+      ...r,
+      requiresComment: exitReasonRequiresComment(r.name),
+    }));
   }
 
   async create(

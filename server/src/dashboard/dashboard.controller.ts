@@ -7,7 +7,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
+import { DashboardSummaryService } from './dashboard-summary.service';
+import { DashboardChartsService } from './dashboard-charts.service';
 import { TodayScheduleQueryDto } from './dto/today-schedule-query.dto';
+import { DashboardSummaryQueryDto } from './dto/dashboard-summary-query.dto';
 import {
   CurrentUser,
   Roles,
@@ -23,7 +26,11 @@ import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 
 @Controller('dashboard')
 export class DashboardController {
-  constructor(private readonly dashboardService: DashboardService) {}
+  constructor(
+    private readonly dashboardService: DashboardService,
+    private readonly dashboardSummaryService: DashboardSummaryService,
+    private readonly dashboardChartsService: DashboardChartsService,
+  ) {}
 
   // Staff only. The home dashboard is visible to every staff role including
   // teachers, but a student-portal token could read the whole centre's daily
@@ -55,5 +62,58 @@ export class DashboardController {
       companyId,
       query.date,
     );
+  }
+  /**
+   * Bosh sahifaning boshqaruv paneli.
+   *
+   * `STAFF_ROLES` bu yerda YETARLI EMAS: u o'qituvchini ham kiritadi, bu
+   * endpoint esa markazning pul ko'rsatkichlarini olib keladi. O'qituvchi `/`
+   * da jadvalni ko'radi — unga bu ma'lumot kerak emas ham, ruxsat ham yo'q.
+   *
+   * Rol filtri ikki qatlamda: guard kimni KIRITISHNI, servis esa kim NIMANI
+   * ko'rishini hal qiladi (administratorga `money: null` qaytadi).
+   */
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Get('summary')
+  getSummary(
+    // `branchId` ni `@BranchScope()` o'qiydi; DTO uni faqat validatsiya qiladi,
+    // shuning uchun parametrning o'zi ishlatilmaydi.
+    @Query() _query: DashboardSummaryQueryDto,
+    @CurrentUser() user: { id: number; companyId: number; roles: string[] },
+    @BranchScope() branchScope: ReportBranchIds,
+  ) {
+    return this.dashboardSummaryService.getSummary({
+      userId: user.id,
+      companyId: user.companyId,
+      roles: user.roles,
+      branchScope,
+    });
+  }
+  /**
+   * Bosh sahifadagi diagrammalar.
+   *
+   * Sanagichlardan ATAYLAB ajratilgan: `/dashboard/summary` sovuq keshda ~7 s
+   * ochiladi va diagrammalarni o'sha javobga qo'shish uni yanada
+   * sekinlashtirardi. Mijoz avval sanagichlarni chizadi, keyin bu so'rovni
+   * yuboradi.
+   *
+   * Guard `summary` bilan bir xil, lekin servis kassirga hech narsa bermaydi:
+   * diagrammalarning manbasi `/reports/*` servislari, ular unga ochiq emas.
+   */
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')
+  @Get('charts')
+  getCharts(
+    @Query() _query: DashboardSummaryQueryDto,
+    @CurrentUser() user: { id: number; companyId: number; roles: string[] },
+    @BranchScope() branchScope: ReportBranchIds,
+  ) {
+    return this.dashboardChartsService.getCharts({
+      userId: user.id,
+      companyId: user.companyId,
+      roles: user.roles,
+      branchScope,
+    });
   }
 }

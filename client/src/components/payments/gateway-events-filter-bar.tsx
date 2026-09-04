@@ -7,12 +7,21 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  MultiSelectCombobox,
+  type MultiSelectOption,
+} from "@/components/ui/multi-select-combobox";
+
+const OUTCOME_OPTIONS: MultiSelectOption[] = [
+  { value: "success", label: "Muvaffaqiyatli" },
+  { value: "pending", label: "Kutilmoqda" },
+  { value: "rejected", label: "Xavfsizlik xatosi" },
+];
+
+const PROVIDER_OPTIONS: MultiSelectOption[] = [
+  { value: "PAYME", label: "Payme" },
+  { value: "CLICK", label: "Click" },
+  { value: "UZUM", label: "Uzum" },
+];
 import {
   Tooltip,
   TooltipContent,
@@ -23,10 +32,10 @@ import {
 interface GatewayEventsFilterBarProps {
   search: string;
   onSearchChange: (value: string) => void;
-  provider: string;
-  onProviderChange: (value: string) => void;
-  outcomeFilter: string;
-  onOutcomeFilterChange: (value: string) => void;
+  provider: string[];
+  onProviderChange: (value: string[]) => void;
+  outcomeFilter: string[];
+  onOutcomeFilterChange: (value: string[]) => void;
   startDate: Date | undefined;
   onStartDateChange: (date: Date | undefined) => void;
   endDate: Date | undefined;
@@ -67,29 +76,23 @@ export function GatewayEventsFilterBar({
           </div>
         </div>
 
-        <Select value={provider} onValueChange={onProviderChange}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha to&apos;lov tizimlari</SelectItem>
-            <SelectItem value="PAYME">Payme</SelectItem>
-            <SelectItem value="CLICK">Click</SelectItem>
-            <SelectItem value="UZUM">Uzum</SelectItem>
-          </SelectContent>
-        </Select>
+        <MultiSelectCombobox
+          options={PROVIDER_OPTIONS}
+          selected={provider}
+          onChange={onProviderChange}
+          placeholder="Barcha to'lov tizimlari"
+          searchPlaceholder="To'lov tizimi qidirish..."
+          className="w-[200px]"
+        />
 
-        <Select value={outcomeFilter} onValueChange={onOutcomeFilterChange}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha natijalar</SelectItem>
-            <SelectItem value="success">Muvaffaqiyatli</SelectItem>
-            <SelectItem value="pending">Kutilmoqda</SelectItem>
-            <SelectItem value="rejected">Xavfsizlik xatosi</SelectItem>
-          </SelectContent>
-        </Select>
+        <MultiSelectCombobox
+          options={OUTCOME_OPTIONS}
+          selected={outcomeFilter}
+          onChange={onOutcomeFilterChange}
+          placeholder="Barcha natijalar"
+          searchPlaceholder="Natija qidirish..."
+          className="w-[200px]"
+        />
       </div>
 
       {/* Qator 2: sana oralig'i + texnik so'rovlar + tozalash */}

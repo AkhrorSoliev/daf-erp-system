@@ -44,8 +44,8 @@ import { GatewayEventsFilterBar } from "./gateway-events-filter-bar";
 import { GatewayEventsDetailDialog } from "./gateway-events-detail-dialog";
 
 export function GatewayEventsClient() {
-  const [provider, setProvider] = useState<string>("all");
-  const [outcomeFilter, setOutcomeFilter] = useState<string>("all");
+  const [provider, setProvider] = useState<string[]>([]);
+  const [outcomeFilter, setOutcomeFilter] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
@@ -56,15 +56,6 @@ export function GatewayEventsClient() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selected, setSelected] = useState<GatewayEvent | null>(null);
-
-  // Map outcome filter to backend params
-  const processedParam =
-    outcomeFilter === "success"
-      ? "true"
-      : outcomeFilter === "pending"
-        ? "false"
-        : undefined;
-  const signatureParam = outcomeFilter === "rejected" ? "false" : undefined;
 
   const { data, isLoading } = useQuery<EventsResponse>({
     queryKey: [
@@ -82,12 +73,12 @@ export function GatewayEventsClient() {
       api
         .get("/gateways/events", {
           params: {
-            ...(provider !== "all" && { provider }),
-            ...(processedParam !== undefined && { processed: processedParam }),
-            ...(signatureParam !== undefined && {
-              signatureValid: signatureParam,
+            ...(provider.length > 0 && { provider: provider.join(",") }),
+            // Natijaning ma'nosi endi serverda — har bir variant
+            // `processed`/`signatureValid` ustidagi butun bir shart.
+            ...(outcomeFilter.length > 0 && {
+              outcome: outcomeFilter.join(","),
             }),
-            ...(outcomeFilter === "pending" && { signatureValid: "true" }),
             ...(search && { search }),
             ...(startDate && { startDate: format(startDate, "yyyy-MM-dd") }),
             ...(endDate && { endDate: format(endDate, "yyyy-MM-dd") }),
@@ -100,8 +91,8 @@ export function GatewayEventsClient() {
   });
 
   const resetFilters = () => {
-    setProvider("all");
-    setOutcomeFilter("all");
+    setProvider([]);
+    setOutcomeFilter([]);
     setSearch("");
     setStartDate(undefined);
     setEndDate(undefined);

@@ -46,7 +46,11 @@ import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 import { positionLabel } from "@/components/payments/salary-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useUrlFilters } from "@/hooks/use-url-filters";
+import { listParam, useUrlFilters } from "@/hooks/use-url-filters";
+import {
+  MultiSelectCombobox,
+  type MultiSelectOption,
+} from "@/components/ui/multi-select-combobox";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
 import { formatPhone } from "@/lib/format-utils";
@@ -71,9 +75,27 @@ const ROLE_VARIANTS: Record<string, "default" | "secondary" | "outline"> = {
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
+/**
+ * Bu filtr ROL bo'yicha qidiradi, lavozim bo'yicha emas — jadvaldagi ustun esa
+ * lavozimni ko'rsatadi (`positionLabel`, lavozimi yo'qlar uchun rol nomiga
+ * qaytadi). Ilgari u «Barcha lavozimlar» deb atalardi va shu ikkovini
+ * chalkashtirardi.
+ *
+ * `__roleless` rol nomi emas, belgi: rolsiz xodim (farrosh, qorovul) ataylab
+ * mavjud va rol nomlari ro'yxatidagi hech qaysi variantga tushmaydi, ya'ni usiz
+ * uni filtr orqali topib bo'lmasdi.
+ */
+const ROLELESS_TOKEN = "__roleless";
+
+const ROLE_FILTER_OPTIONS: MultiSelectOption[] = [
+  ...Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label })),
+  { value: ROLELESS_TOKEN, label: "Rolsiz" },
+];
+
 const filtersSchema = {
   search: { type: "string" as const, defaultValue: "" },
-  role: { type: "string" as const, defaultValue: "all" },
+  // Bir nechta rol tanlanadi; bo'sh ro'yxat = «Barcha lavozimlar».
+  role: { type: "array" as const, defaultValue: [] as string[] },
   page: { type: "number" as const, defaultValue: 1 },
   pageSize: { type: "number" as const, defaultValue: 10 },
 };
@@ -111,7 +133,8 @@ export function EmployeesSettingsClient() {
         branch_id: selectedBranch.id,
       };
       if (filters.search.trim()) params.search = filters.search.trim();
-      if (filters.role !== "all") params.user_type = filters.role;
+      // Server `user_type` ni vergulli ro'yxat sifatida qabul qiladi.
+      params.user_type = listParam(filters.role);
       const { data } = await api.get("/users", { params });
       setEmployees(data.data);
       setTotal(data.total);
@@ -210,19 +233,14 @@ export function EmployeesSettingsClient() {
           />
         </div>
 
-        <Select value={filters.role} onValueChange={(v) => { setUrlFilters({ role: v, page: 1 }); }}>
-          <SelectTrigger className="w-full sm:w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha lavozimlar</SelectItem>
-            <SelectItem value="CEO">CEO</SelectItem>
-            <SelectItem value="Branch Director">Direktor</SelectItem>
-            <SelectItem value="Administrator">Administrator</SelectItem>
-            <SelectItem value="Teacher">O&apos;qituvchi</SelectItem>
-            <SelectItem value="Cashier">Kassir</SelectItem>
-          </SelectContent>
-        </Select>
+        <MultiSelectCombobox
+          options={ROLE_FILTER_OPTIONS}
+          selected={filters.role}
+          onChange={(next) => setUrlFilters({ role: next, page: 1 })}
+          placeholder="Barcha rollar"
+          searchPlaceholder="Rol qidirish..."
+          className="w-full sm:w-44"
+        />
       </div>
 
       {/* Mobile: card list */}

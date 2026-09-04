@@ -5,6 +5,7 @@ import {
   branchIdWhere,
   userBranchWhere,
 } from '../common/finance/report-branch-scope';
+import { equalsOrIn } from '../common/dto/to-array';
 
 @Injectable()
 export class ReportsStudentPaymentsService {
@@ -17,7 +18,7 @@ export class ReportsStudentPaymentsService {
       groupIds?: string[];
       teacherIds?: number[];
       methods?: ('CASH' | 'PAYME' | 'CLICK' | 'UZUM' | 'TRANSFER')[];
-      courseId?: string;
+      courseId?: string[];
       startDate?: string;
       endDate?: string;
       page?: number;
@@ -103,17 +104,18 @@ export class ReportsStudentPaymentsService {
       });
     }
 
-    if (params.courseId) {
+    if (params.courseId?.length) {
+      const course = equalsOrIn(params.courseId);
       matchGroups.push({
         OR: [
-          { contract: { courseId: params.courseId } },
+          { contract: { courseId: course } },
           {
             student: {
               enrollments: {
                 some: {
                   status: 'ACTIVE',
                   deletedAt: null,
-                  group: { courseId: params.courseId },
+                  group: { courseId: course },
                 },
               },
             },

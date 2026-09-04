@@ -25,11 +25,16 @@ import { PriceInput } from "@/components/ui/price-input";
 import { AlertTriangle } from "lucide-react";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
 import type { DebtWriteOffEligibility } from "./debt-write-off-types";
+import {
+  EXIT_REASON_COMMENT_MIN_LENGTH,
+  isExitReasonCommentMissing,
+  type ExitReasonOption,
+} from "@/lib/exit-reason-utils";
 
 interface StudentRemoveFromGroupDialogProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  reasons: { id: string; name: string }[] | undefined;
+  reasons: ExitReasonOption[] | undefined;
   reasonId: string | null;
   onReasonIdChange: (id: string | null) => void;
   reasonText: string;
@@ -79,6 +84,14 @@ export function StudentRemoveFromGroupDialog({
   onWriteOffReasonChange,
 }: StudentRemoveFromGroupDialogProps) {
   const hasConfiguredReasons = (reasons?.length ?? 0) > 0;
+  // "Boshqa sabab" says nothing on its own — the comment carries the reason,
+  // so it is required alongside it. Gated here rather than in each of the
+  // three callers, so every entry point to this dialog gets the same rule.
+  const commentMissing = isExitReasonCommentMissing(
+    reasons,
+    reasonId,
+    reasonText,
+  );
   // Hide the write-off block when the caller didn't wire its handlers —
   // legacy callers that don't yet support the flow stay un-changed.
   const writeOffWired = !!onWriteOffChange && !!onWriteOffReasonChange;
@@ -120,12 +133,24 @@ export function StudentRemoveFromGroupDialog({
                 </SelectContent>
               </Select>
               <Textarea
-                placeholder="Qo'shimcha izoh (ixtiyoriy)"
+                placeholder={
+                  commentMissing
+                    ? "Nima sababdan? (majburiy)"
+                    : "Qo'shimcha izoh (ixtiyoriy)"
+                }
                 value={reasonText}
                 onChange={(e) => onReasonTextChange(e.target.value)}
                 rows={2}
                 className="resize-none"
+                aria-invalid={commentMissing}
               />
+              {commentMissing && (
+                <p className="text-xs text-destructive">
+                  «Boshqa sabab» tanlandi — o&apos;quvchi nima sababdan
+                  ketayotganini yozing (kamida{" "}
+                  {EXIT_REASON_COMMENT_MIN_LENGTH} belgi).
+                </p>
+              )}
             </div>
           ) : (
             <Textarea
@@ -165,7 +190,7 @@ export function StudentRemoveFromGroupDialog({
           <AlertDialogCancel disabled={removing}>Bekor qilish</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            disabled={!canSubmit || removing}
+            disabled={!canSubmit || commentMissing || removing}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             {removing ? "Chiqarilmoqda..." : "Chiqarish"}

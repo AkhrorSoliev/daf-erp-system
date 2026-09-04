@@ -94,8 +94,8 @@ describe('ExpensesService — findAll filters + summary', () => {
   it('filters by category and paymentMethod when provided', async () => {
     await service.findAll(
       {
-        category: ExpenseCategory.RENT,
-        paymentMethod: ExpensePaymentMethod.CARD,
+        category: [ExpenseCategory.RENT],
+        paymentMethod: [ExpensePaymentMethod.CARD],
       } as ExpenseQueryDto,
       COMPANY_ID,
       null,
@@ -197,11 +197,46 @@ describe('ExpensesService — findAll filters + summary', () => {
 
   it('honours a non-advance category filter (still excluding advances implicitly)', async () => {
     await service.findAll(
-      { category: ExpenseCategory.MARKETING } as ExpenseQueryDto,
+      { category: [ExpenseCategory.MARKETING] } as ExpenseQueryDto,
       COMPANY_ID,
       null,
     );
     expect(whereArg().category).toEqual(ExpenseCategory.MARKETING);
+  });
+
+  it('bir nechta toifa tanlansa `in` bilan filtrlaydi', async () => {
+    await service.findAll(
+      {
+        category: [ExpenseCategory.MARKETING, ExpenseCategory.RENT],
+      } as ExpenseQueryDto,
+      COMPANY_ID,
+      null,
+    );
+    expect(whereArg().category).toEqual({
+      in: [ExpenseCategory.MARKETING, ExpenseCategory.RENT],
+    });
+  });
+
+  it("tanlovdan avansni olib tashlaydi va qolganini qo'llaydi", async () => {
+    await service.findAll(
+      {
+        category: [ExpenseCategory.TEACHER_ADVANCE, ExpenseCategory.RENT],
+      } as ExpenseQueryDto,
+      COMPANY_ID,
+      null,
+    );
+    expect(whereArg().category).toEqual(ExpenseCategory.RENT);
+  });
+
+  it('faqat avans tanlansa avansni chiqarib tashlash shartiga qaytadi', async () => {
+    await service.findAll(
+      { category: [ExpenseCategory.TEACHER_ADVANCE] } as ExpenseQueryDto,
+      COMPANY_ID,
+      null,
+    );
+    expect(whereArg().category).toEqual({
+      not: ExpenseCategory.TEACHER_ADVANCE,
+    });
   });
 
   it('defaults missing payment-method buckets to 0', async () => {
@@ -218,8 +253,8 @@ describe('ExpensesService — findAll filters + summary', () => {
       prisma.expense.findMany.mockResolvedValue([{ id: 'e1' }]);
       const rows = await service.exportAll(
         {
-          category: ExpenseCategory.MARKETING,
-          paymentMethod: ExpensePaymentMethod.CASH,
+          category: [ExpenseCategory.MARKETING],
+          paymentMethod: [ExpensePaymentMethod.CASH],
           page: 2,
           pageSize: 10,
         } as ExpenseQueryDto,

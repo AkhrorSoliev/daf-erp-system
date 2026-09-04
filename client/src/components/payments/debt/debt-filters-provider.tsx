@@ -16,7 +16,12 @@ export const DEBT_FILTER_SCHEMA = {
   tab: { type: "string", defaultValue: "qarzdorlar" },
   search: { type: "string", defaultValue: "" },
   sort: { type: "string", defaultValue: "debt_high" },
-  promise: { type: "string", defaultValue: "all" },
+  /**
+   * To'lov va'dasi. Bo'sh ro'yxat = filtrsiz. Ikkovi birga tanlanishi mumkin
+   * va bu filtrsizlik BILAN BIR XIL EMAS — umuman va'da bermagan qarzdor
+   * ro'yxatdan tushib qoladi.
+   */
+  promise: { type: "array", defaultValue: [] as string[] },
   page: { type: "number", defaultValue: 1 },
   pageSize: { type: "number", defaultValue: 10 },
   /**

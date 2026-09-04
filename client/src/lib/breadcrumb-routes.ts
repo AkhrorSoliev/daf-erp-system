@@ -13,6 +13,7 @@ export const routeLabels: Record<string, string> = {
   forms: "Formalar",
   new: "Yangi",
   groups: "Guruhlar",
+  schedule: "Jadval",
 
   payments: "Moliya",
   reports: "Hisobotlar",

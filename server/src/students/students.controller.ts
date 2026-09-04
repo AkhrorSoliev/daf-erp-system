@@ -66,7 +66,7 @@ export class StudentsController {
         ['CEO', 'Branch Director', 'Administrator'].includes(r),
       );
     if (isTeacherOnly) {
-      query.teacher_id = currentUser.id;
+      query.teacher_id = [currentUser.id as number];
     }
     return this.studentsService.findAll(
       query,

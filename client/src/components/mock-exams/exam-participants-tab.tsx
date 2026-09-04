@@ -39,13 +39,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPrice } from "@/lib/format-utils";
@@ -56,6 +49,17 @@ import type {
 import { ManualParticipantDialog } from "./manual-participant-dialog";
 import { ConvertParticipantDialog } from "./convert-participant-dialog";
 import { MarkPaidDialog } from "./mark-paid-dialog";
+import { listParam } from "@/hooks/use-url-filters";
+import {
+  MultiSelectCombobox,
+  type MultiSelectOption,
+} from "@/components/ui/multi-select-combobox";
+
+const PAID_FILTER_OPTIONS: MultiSelectOption[] = [
+  { value: "paid", label: "To'langan" },
+  { value: "pending", label: "Kutilmoqda" },
+  { value: "cash", label: "Naqd kutilmoqda" },
+];
 
 interface ExamParticipantsTabProps {
   exam: ExamDetail;
@@ -87,10 +91,10 @@ export function ExamParticipantsTab({
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  // Filters (all = no filter). Sent as server-side query params.
-  const [timeFilter, setTimeFilter] = useState("all");
-  const [paidFilter, setPaidFilter] = useState("all");
-  const [levelFilter, setLevelFilter] = useState("all");
+  // Filtrlar (bo'sh ro'yxat = filtrsiz). Serverga vergulli ro'yxat ketadi.
+  const [timeFilter, setTimeFilter] = useState<string[]>([]);
+  const [paidFilter, setPaidFilter] = useState<string[]>([]);
+  const [levelFilter, setLevelFilter] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [manualOpen, setManualOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] =
@@ -124,9 +128,9 @@ export function ExamParticipantsTab({
               page: targetPage,
               pageSize: PAGE_SIZE,
               search: q || undefined,
-              examTime: timeFilter !== "all" ? timeFilter : undefined,
-              paidStatus: paidFilter !== "all" ? paidFilter : undefined,
-              level: levelFilter !== "all" ? levelFilter : undefined,
+              examTime: listParam(timeFilter),
+              paidStatus: listParam(paidFilter),
+              level: listParam(levelFilter),
             },
           },
         );
@@ -210,45 +214,32 @@ export function ExamParticipantsTab({
       {/* Filters: time, payment status, level (server-side) */}
       <div className="flex flex-wrap items-center gap-2">
         {exam.examTimes && exam.examTimes.length > 0 && (
-          <Select value={timeFilter} onValueChange={setTimeFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Barcha vaqtlar</SelectItem>
-              {exam.examTimes.map((t) => (
-                <SelectItem key={t} value={t}>
-                  🕐 {t}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelectCombobox
+            options={exam.examTimes.map((t) => ({ value: t, label: `🕐 ${t}` }))}
+            selected={timeFilter}
+            onChange={setTimeFilter}
+            placeholder="Barcha vaqtlar"
+            searchPlaceholder="Vaqt qidirish..."
+            className="w-40"
+          />
         )}
-        <Select value={paidFilter} onValueChange={setPaidFilter}>
-          <SelectTrigger className="w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha to&apos;lovlar</SelectItem>
-            <SelectItem value="paid">To&apos;langan</SelectItem>
-            <SelectItem value="pending">Kutilmoqda</SelectItem>
-            <SelectItem value="cash">Naqd kutilmoqda</SelectItem>
-          </SelectContent>
-        </Select>
+        <MultiSelectCombobox
+          options={PAID_FILTER_OPTIONS}
+          selected={paidFilter}
+          onChange={setPaidFilter}
+          placeholder="Barcha to'lovlar"
+          searchPlaceholder="To'lov holati qidirish..."
+          className="w-44"
+        />
         {exam.offeredLevels && exam.offeredLevels.length > 0 && (
-          <Select value={levelFilter} onValueChange={setLevelFilter}>
-            <SelectTrigger className="w-36">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Barcha darajalar</SelectItem>
-              {exam.offeredLevels.map((l) => (
-                <SelectItem key={l} value={l}>
-                  {l}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelectCombobox
+            options={exam.offeredLevels.map((l) => ({ value: l, label: l }))}
+            selected={levelFilter}
+            onChange={setLevelFilter}
+            placeholder="Barcha darajalar"
+            searchPlaceholder="Daraja qidirish..."
+            className="w-36"
+          />
         )}
       </div>
 

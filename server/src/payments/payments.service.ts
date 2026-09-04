@@ -97,7 +97,7 @@ export class PaymentsService {
       search?: string;
       sortBy?: 'balance' | 'firstName' | 'lastName' | 'debtSince';
       order?: 'asc' | 'desc';
-      promise?: 'has_open' | 'overdue';
+      promise?: ('has_open' | 'overdue')[];
       status?: StudentStatus | 'all';
       userId: number;
       roles: string[];

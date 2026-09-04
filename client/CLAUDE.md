@@ -320,6 +320,68 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - Do **not** use `placeholder` on `<SelectValue>` — use a real `<SelectItem value="all">` as the default option instead.
 - Align filter controls to `items-center` (not `items-end`) since there are no labels to align around.
 
+#### Filters are MULTI-select by default
+
+A filter narrows a list, and "show me A1 **and** A2" is the ordinary question — a
+single-choice control forces the user to run the same report twice and add the
+numbers up themselves. So a new list/report filter uses
+`MultiSelectCombobox` (`src/components/ui/multi-select-combobox.tsx`) unless the
+dimension genuinely admits one answer at a time (a month, a date range, a sort
+order, the branch switcher).
+
+- **Empty selection = "Barcha ..."**, and that is the ONLY meaning of empty.
+  There is no `"all"` sentinel value in the option list: an `all` option that can
+  be ticked alongside `A1` describes a state nobody can read. The placeholder
+  carries the category name (`"Barcha darajalar"`), exactly as for a `<Select>`.
+- The trigger shows the single option's label when one is picked, `"N ta
+  tanlangan"` beyond that, and an ✕ that clears back to "all".
+- Per-option counts (`count` + `countSuffix`) stay **scoped to the branch, not to
+  the other active filters**, so the number beside an option does not move as you
+  tick its neighbours.
+- Use `leading` for an option that carries a visual marker (a level badge), and
+  `initials` / `avatarUrl` for people.
+- Keep a plain `<Select>` for one-at-a-time dimensions and for controls that are
+  not filters (page size).
+
+Some filters stay single-choice on purpose:
+
+- **A dimension that admits one answer**: a year, a month, a period preset, a
+  date range, a sort order, a view toggle, page size. "2025 and 2026 together"
+  is not a report anyone asked for.
+- **A two-option dimension where picking both equals picking neither.** The
+  debt page's debtor-status tiles collapse to `active` / `inactive`, so
+  multi-select there costs a click and buys nothing. (Contrast the debt
+  **«Va'da»** filter, which IS multi: "has an open promise" + "has a broken
+  one" excludes debtors who promised nothing, so it is not the same as no
+  filter. That difference is the test — if selecting everything equals
+  selecting nothing, leave it single.)
+The leads **«Holati»** filter is the worked example of doing that grouping
+right (`lead-filter-schema.ts`, `leadHolatiParams`). Two rules make it work,
+and both are load-bearing:
+
+- **Within one group OR, across groups AND.** Selected tokens are bucketed by
+  the backend param they map to; each bucket becomes one comma-joined param,
+  and the server ANDs the params it receives. So «Yangi» + «Aloqaga
+  chiqilmagan» means *new leads that have not been called* — the combination
+  the page exists for.
+- **Dropping a fully-selected dimension is only valid when its options are
+  exhaustive.** `called` and `hasComments` are booleans: ticking both covers
+  every lead, so the param is omitted (sending both would AND two contrary
+  conditions and always return nothing). `status` is NOT exhaustive — the
+  dropdown offers 2 of `LeadStatus`'s 6 values, so ticking both must still
+  filter, or `LOST` and `ARCHIVED` leads silently reappear. `EXHAUSTIVE_PARAM_KEYS`
+  is what encodes that difference; a test covers both halves.
+
+The gateway-events **«Natija»** filter looks similar but is NOT the same shape,
+and reaching for the leads pattern there would be wrong. Each outcome is a
+*composite* condition over two columns (`success` = processed; `pending` =
+not processed AND signature valid; `rejected` = signature invalid), so it
+follows the **students «Holat»** pattern instead: OR the fragments, nest under
+AND. That semantics now lives on the server (`outcome` param) rather than in
+the client assembling two params — the old client-side shape could not express
+two outcomes at once. The `processed` / `signatureValid` params stay on the DTO
+so existing links keep working.
+
 ### URL-Persisted Filter State
 
 - **Every filter bar on a list or report page must persist its state in the URL query string.** The URL is the single source of truth; React state is derived from `useSearchParams()`, not held independently in `useState`.
@@ -328,7 +390,9 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - **Implementation:**
   - Read with `useSearchParams()` from `next/navigation`. Parse values into the filter shape in a `useMemo` keyed on the `searchParams` object.
   - Write with `useRouter().replace(...)` (not `push`) so filter changes don't clutter browser history. Pass `{ scroll: false }` to prevent jump-to-top.
-  - For scalar (string/number) filters, prefer the shared `useUrlFilters` hook (`src/hooks/use-url-filters.ts`). For arrays, dates, or nullables, inline `useSearchParams` + `useRouter` is fine — encode arrays as comma-separated strings (`groupIds=a,b,c`), dates as `yyyy-MM-dd`.
+  - Prefer the shared `useUrlFilters` hook (`src/hooks/use-url-filters.ts`) — it handles `"string"`, `"number"` and `"array"` params. For dates or nullables it does not cover, inline `useSearchParams` + `useRouter` is fine; encode dates as `yyyy-MM-dd`.
+  - **Multi-select filters are comma-separated in the URL** (`?role=CEO,Teacher`, `?groupIds=a,b,c`), never a repeated key. The link stays readable, and the server's `toStringArray` (`server/src/common/dto/to-array.ts`) parses exactly this shape. Send them with `listParam(values)`, which returns `undefined` for an empty list so axios omits the parameter entirely.
+  - The hook memoizes on the query **string**, not the `searchParams` object — an array filter that got a fresh identity every render would re-fire any `useEffect` that depends on it. Keep it that way.
   - **Omit defaults from the URL.** If a filter equals its default (`branchId === null`, empty array, default status), `delete` it from the URLSearchParams so the URL stays short and meaningful.
   - **Reset `page` to `1`** when any filter changes (including pageSize).
 - **Do not** call `router.replace` in a `useEffect` that reads state — that creates a render loop. Write the URL directly from the filter-change event handler instead.
@@ -601,7 +665,7 @@ The financial section lives under `/payments/*` with these sub-pages:
 
 #### Key Components
 
-- **`salary-monthly-view.tsx`** — the main `/payments/salary` table (`GET /salary/monthly?month=YYYY-MM&search=`, URL-persisted via `useUrlFilters`). A `MonthPicker` (with `minMonth` floor = response `floorMonth`, `maxMonth` = current month) drives the selected month; no pagination (every teacher renders). Columns: **To'liq ishlangan** (`fullDeserved`), **O'quvchilar to'lagan** (`covered`), **Markaz qo'shdi** (`centerFunded`, amber when >0), **Avans**, **To'lanishi kerak** (`netToPay`, semibold), **Holat** (SalaryPayment status badge). A `MoneyOrDash` helper renders `—` when `hasLessonData` is false (manual/Excel months like May); an amber banner explains such months. JAMI footer sums the columns (deserved/covered/centerFunded exclude manual months). Clicking a row with a payment opens `salary-breakdown-drawer`. **Display-only** — no rate editing / approve / pay in the rows. Below the table, a **"Markaz qo'shimchasi — undirish holati"** card shows the company-level center top-up lifecycle for the selected month — Jami qo'shdi (X) / Undirildi (Y) / Qolgan markaz (Z), from `totals.centerAdvanced/centerRecovered/centerStillFronted`. Rendered only when `centerAdvanced > 0` (past settled top-up months; hidden for the in-progress month where nothing has been fronted YET — that month's centre money lives in the per-teacher **Markaz qo'shdi** column as a forecast). The card is the recovery lifecycle, NOT a second copy of the column.
+- **`salary-monthly-view.tsx`** — the main `/payments/salary` table (`GET /salary/monthly?month=YYYY-MM&search=`, URL-persisted via `useUrlFilters`). A `MonthPicker` (with `minMonth` floor = response `floorMonth`, `maxMonth` = current month) drives the selected month; no pagination (every teacher renders). Columns: **To'liq ishlangan** (`fullDeserved`), **O'quvchilar to'lagan** (`covered`), **Markaz qo'shdi** (`centerFunded`, amber when >0), **Avans**, **To'lanishi kerak** (`netToPay`, semibold), **Holat** (SalaryPayment status badge). A `MoneyOrDash` helper renders `—` when `hasLessonData` is false (manual/Excel months like May); an amber banner explains such months. JAMI footer sums the columns (deserved/covered/centerFunded exclude manual months). Bo'shatilgan (`isActive: false`) odam ro'yxatda faqat o'sha oyda puli qolgan bo'lsa turadi — server filtri, `salary-monthly.service.ts` (o'sha qoida xodimlar jadvaliga ham tegishli). Qolganlariga `<SalaryInactiveBadge />` («Nofaol») qo'yiladi; belgi ikkala jadvalda bitta komponent, `salary-inactive-badge.tsx`. Clicking a row with a payment opens `salary-breakdown-drawer`. **Display-only** — no rate editing / approve / pay in the rows. Below the table, a **"Markaz qo'shimchasi — undirish holati"** card shows the company-level center top-up lifecycle for the selected month — Jami qo'shdi (X) / Undirildi (Y) / Qolgan markaz (Z), from `totals.centerAdvanced/centerRecovered/centerStillFronted`. Rendered only when `centerAdvanced > 0` (past settled top-up months; hidden for the in-progress month where nothing has been fronted YET — that month's centre money lives in the per-teacher **Markaz qo'shdi** column as a forecast). The card is the recovery lifecycle, NOT a second copy of the column.
 - **Markaz qo'shimchasi drill-down** — the salary page's card no longer opens a dialog: its two live figures («Qolgan (markaz)» and «O'quvchilardan olinishi kerak») are `<Link>`s to `/payments/debt?tab=markaz&month=…`, where the list lives as `debt/center-topup-content.tsx`. A dialog holding a second copy meant two places to keep in step and a list nobody could open in a new tab. The list shows exactly TWO money columns — **Markaz ustozga to'lagan** (the center's outlay) and **O'quvchining qarzi** (their debt today, the same figure as their profile). Two other versions of that second column were tried and removed: what the lessons cost (#10026 showed 345 000 against a real debt of 156 000) and `min(debt, lesson cost)` (#10058 showed 466 662 against a profile saying 624 989). An UNSETTLED month shows the forecast leg instead — lessons held that payroll has not paid for yet — labelled «Markaz to'laydi» over a banner, never merged into the paid figures.
 - **`salary-settle-month-dialog.tsx`** — «Oylik berilganini tasdiqlash» (CEO-only button in the `/payments/salary` filter row, shown only when the selected month still carries unpaid payroll). Confirms salaries that were **handed over outside the system** at the amounts the system had already calculated. Reads `GET /salary/payments/settle-month/preview` — a dedicated endpoint, NOT the table, because the table shows one payment per employee while a re-calculated month carries several per person (June 2026: two rows for six teachers), and the dialog must list exactly what it settles. It asks for three things: the real handover **date** (`DatePicker`, `maxDate` today, `minDate` period start), **how much left each kassa account** of every branch in the batch — an amount per account, not one chosen account, because a payroll routinely goes out part cash and part card; each branch's amounts must close to its own total exactly, and each row shows a live "Hozir X → keyin Y" projection that warns in amber when an account goes negative but never blocks (the money really did leave) — and the **total retyped in digits**. Typing the sum is the confirmation rather than a random code: the total is the one number the operator has to have read, and the server re-checks it against the live set. **This dialog's table is deliberately NOT paginated** — a confirmation dialog that hides part of what it is confirming works against its own purpose.
 - **`salary-settings-sheet.tsx`** — ⚙ Sozlamalar Sheet (CEO-only button in the filter row). Three sections: **Hisoblash davri** (embeds `salary-period-control.tsx`), **Ustoz stavkalari** (fetches `GET /salary/overview?pageSize=100`; per teacher a rate-badge row + pencil → `salary-config-row-sheet`, checkbox multi-select → `salary-config-bulk-dialog`) and **Xodimlar stavkalari** (`salary-staff-config-list.tsx` → `GET /salary/staff-config`). This is where rate rules + cycle-day are managed, kept OUT of the display report. `onChanged` bumps the report's refreshKey.

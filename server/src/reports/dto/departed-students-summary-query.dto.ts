@@ -1,15 +1,6 @@
 import { IsArray, IsInt, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-
-function toArray(value: unknown): string[] | undefined {
-  if (value === undefined || value === null || value === '') return undefined;
-  if (Array.isArray(value)) return value as string[];
-  if (typeof value !== 'string' && typeof value !== 'number') return undefined;
-  return String(value)
-    .split(',')
-    .map((v) => v.trim())
-    .filter((v) => v.length > 0);
-}
+import { toNumberArray, toStringArray } from '../../common/dto/to-array';
 
 export class DepartedStudentsSummaryQueryDto {
   @IsOptional()
@@ -17,12 +8,15 @@ export class DepartedStudentsSummaryQueryDto {
   @IsInt()
   branchId?: number;
 
+  // Nomi ataylab birlikda — qarang: student-payments-report-query.dto.ts.
   @IsOptional()
-  @IsUUID()
-  courseId?: string;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  courseId?: string[];
 
   @IsOptional()
-  @Transform(({ value }) => toArray(value)?.map((v) => Number(v)))
+  @Transform(({ value }) => toNumberArray(value))
   @IsArray()
   @IsInt({ each: true })
   teacherIds?: number[];

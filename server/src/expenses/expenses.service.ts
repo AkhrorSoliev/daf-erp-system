@@ -8,6 +8,7 @@ import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { ExpenseCategory, ExpensePaymentMethod, Prisma } from '@prisma/client';
 import { CreateExpenseDto } from './dto/create-expense.dto';
+import { equalsOrIn } from '../common/dto/to-array';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
 import { resolvePeriod } from '../common/finance/period-helpers';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
@@ -161,6 +162,23 @@ export class ExpensesService {
   // the CSV export — all three must scope to the SAME rows so the cards reconcile
   // with the table and the export matches what the user sees. `deletedAt: null`
   // keeps soft-deleted expenses out of every read.
+  /**
+   * Avans (`TEACHER_ADVANCE`) bu ro'yxatga hech qachon tushmaydi — u Ish haqi
+   * sahifasida boshqariladi. Shuning uchun tanlangan toifalardan avval avans
+   * olib tashlanadi; agar tanlovdan boshqa hech narsa qolmasa, filtr yo'q
+   * hisoblanadi va avansni chiqarib tashlaydigan odatiy shart ishlaydi.
+   */
+  private categoryWhere(
+    selected: ExpenseCategory[] | undefined,
+  ): Prisma.ExpenseWhereInput {
+    const withoutAdvance = (selected ?? []).filter(
+      (c) => c !== ExpenseCategory.TEACHER_ADVANCE,
+    );
+    return withoutAdvance.length > 0
+      ? { category: equalsOrIn(withoutAdvance) }
+      : { category: { not: ExpenseCategory.TEACHER_ADVANCE } };
+  }
+
   private buildWhere(
     query: ExpenseQueryDto,
     companyId: number,
@@ -180,10 +198,10 @@ export class ExpensesService {
       // TEACHER_ADVANCE is managed on the Ish haqi (salary) page now — advances
       // never surface in the expenses list / summary / PDF. Any other category
       // filter still applies; without one we simply exclude advances.
-      ...(query.category && query.category !== ExpenseCategory.TEACHER_ADVANCE
-        ? { category: query.category }
-        : { category: { not: ExpenseCategory.TEACHER_ADVANCE } }),
-      ...(query.paymentMethod && { paymentMethod: query.paymentMethod }),
+      ...this.categoryWhere(query.category),
+      ...(query.paymentMethod?.length && {
+        paymentMethod: equalsOrIn(query.paymentMethod),
+      }),
       ...(query.search && {
         description: { contains: query.search, mode: 'insensitive' },
       }),
@@ -388,12 +406,10 @@ export class ExpensesService {
     const doc = buildExpensesDoc({
       companyName: company?.name ?? 'DaF Sprachzentrum',
       branchName: branch?.name ?? null,
-      categoryLabel: query.category
-        ? (CATEGORY_LABELS[query.category] ?? query.category)
-        : null,
-      methodLabel: query.paymentMethod
-        ? (METHOD_LABELS[query.paymentMethod] ?? query.paymentMethod)
-        : null,
+      // Bir nechta toifa tanlangan bo'lsa, sarlavhada hammasi sanaladi —
+      // aks holda PDF bitta toifa bo'yicha filtrlanganday ko'rinadi.
+      categoryLabel: joinLabels(query.category, CATEGORY_LABELS),
+      methodLabel: joinLabels(query.paymentMethod, METHOD_LABELS),
       search: query.search?.trim() || null,
       dateRangeLabel: buildDateRangeLabel(query.startDate, query.endDate),
       generatedAt: new Date(),
@@ -571,4 +587,13 @@ export class ExpensesService {
 
     return { message: "Xarajat o'chirildi" };
   }
+}
+
+/** Tanlangan kalitlarni o'qiladigan yorliqlar qatoriga aylantiradi. */
+function joinLabels(
+  values: string[] | undefined,
+  labels: Record<string, string>,
+): string | null {
+  if (!values?.length) return null;
+  return values.map((v) => labels[v] ?? v).join(', ');
 }

@@ -1,7 +1,12 @@
-import { IsInt, IsOptional, IsString } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsArray, IsInt, IsOptional, IsString } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { toNumberArray, toStringArray } from '../../common/dto/to-array';
 
+/**
+ * Ko'p tanlovli filtrlar vergul bilan keladi (`?level=A1,A2`). Bitta qiymat
+ * ham eski shakldagidek ishlaydi — bir elementli ro'yxatga aylanadi, xolos.
+ */
 export class GroupQueryDto extends PaginationDto {
   @IsOptional()
   @IsInt()
@@ -14,27 +19,36 @@ export class GroupQueryDto extends PaginationDto {
   status?: number;
 
   @IsOptional()
-  @IsString()
-  statusEnum?: string;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsString({ each: true })
+  statusEnum?: string[];
 
   @IsOptional()
   @IsString()
   search?: string;
 
   @IsOptional()
-  @IsInt()
-  @Type(() => Number)
-  teacher_id?: number;
+  @Transform(({ value }) => toNumberArray(value))
+  @IsArray()
+  @IsInt({ each: true })
+  teacher_id?: number[];
 
   @IsOptional()
-  @IsString()
-  room_id?: string;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsString({ each: true })
+  room_id?: string[];
 
   @IsOptional()
-  @IsString()
-  level?: string;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsString({ each: true })
+  level?: string[];
 
   @IsOptional()
-  @IsString()
-  course_type?: 'intensive' | 'standard';
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsString({ each: true })
+  course_type?: string[];
 }

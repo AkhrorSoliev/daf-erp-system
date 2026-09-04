@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  CalendarDays,
   GraduationCap,
   BookOpen,
   UserPlus,
@@ -43,6 +44,9 @@ const settingsChildren: NavItemChild[] = settingsNavSections.flatMap((s) => s.it
 
 export const navItems: NavItem[] = [
   { title: "Bosh sahifa", url: "/", icon: LayoutDashboard },
+  // Kunlik jadval ilgari bosh sahifaning o'zi edi. Bosh sahifa boshqaruv
+  // paneliga aylangach u alohida sahifaga chiqdi — hamma rol ko'radi.
+  { title: "Jadval", url: "/schedule", icon: CalendarDays },
   { title: "O'qituvchilar", url: "/teachers", icon: GraduationCap, visibleForRoles: [1, 2, 3] },
   { title: "O'quvchilar", url: "/students", icon: BookOpen, visibleForRoles: [1, 2, 3] },
   { title: "Lidlar", url: "/leads", icon: UserPlus, visibleForRoles: [1, 2, 3] },

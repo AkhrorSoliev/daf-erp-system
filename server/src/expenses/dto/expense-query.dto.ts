@@ -1,16 +1,21 @@
-import { IsOptional, IsInt, IsEnum, IsString } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsInt, IsEnum, IsString, IsArray } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { ExpenseCategory, ExpensePaymentMethod } from '@prisma/client';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { toStringArray } from '../../common/dto/to-array';
 
 export class ExpenseQueryDto extends PaginationDto {
   @IsOptional()
-  @IsEnum(ExpenseCategory)
-  category?: ExpenseCategory;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsEnum(ExpenseCategory, { each: true })
+  category?: ExpenseCategory[];
 
   @IsOptional()
-  @IsEnum(ExpensePaymentMethod)
-  paymentMethod?: ExpensePaymentMethod;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsEnum(ExpensePaymentMethod, { each: true })
+  paymentMethod?: ExpensePaymentMethod[];
 
   @IsOptional()
   @IsInt()

@@ -8,6 +8,7 @@ import { computeNextGroupNumber } from './shared/next-group-number';
 import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { currentCoverWhere } from '../common/lesson-cover';
+import { equalsOrIn } from '../common/dto/to-array';
 import {
   ReportBranchIds,
   branchIdWhere,
@@ -42,8 +43,8 @@ export class GroupsReadService {
       ...branchIdWhere(scope),
     };
 
-    if (query.statusEnum) {
-      where.statusEnum = query.statusEnum as any;
+    if (query.statusEnum?.length) {
+      where.statusEnum = equalsOrIn(query.statusEnum) as any;
     } else if (query.status) {
       where.status = query.status;
     }
@@ -73,8 +74,8 @@ export class GroupsReadService {
       }));
     }
 
-    if (query.teacher_id) {
-      where.teachers = { some: { teacherId: query.teacher_id } };
+    if (query.teacher_id?.length) {
+      where.teachers = { some: { teacherId: equalsOrIn(query.teacher_id) } };
     }
 
     // A teacher looking at their OWN list: groups they are assigned to, plus
@@ -94,18 +95,22 @@ export class GroupsReadService {
       ];
     }
 
-    if (query.room_id) {
-      where.roomId = query.room_id;
+    if (query.room_id?.length) {
+      where.roomId = equalsOrIn(query.room_id);
     }
 
-    if (query.level) {
-      where.level = query.level;
+    if (query.level?.length) {
+      where.level = equalsOrIn(query.level);
     }
 
-    if (query.course_type === 'intensive') {
-      where.course = { lessonPaymentCount: 20 };
-    } else if (query.course_type === 'standard') {
-      where.course = { lessonPaymentCount: { not: 20 } };
+    // «Intensiv» va «Standart» bir-birini to'ldiradi, shuning uchun ikkovi
+    // birga tanlangani — filtrsizlik bilan bir xil. Ikkalasini AND qilib
+    // qo'yish esa hech qachon mos kelmaydigan shart yasagan bo'lardi.
+    const courseTypes = new Set(query.course_type ?? []);
+    if (courseTypes.size === 1) {
+      where.course = courseTypes.has('intensive')
+        ? { lessonPaymentCount: 20 }
+        : { lessonPaymentCount: { not: 20 } };
     }
 
     // baseWhere = filters without status (for stats)

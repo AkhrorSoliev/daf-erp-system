@@ -393,6 +393,81 @@ describe('StudentEnrollmentService', () => {
       );
     });
 
+    it('rejects «Boshqa sabab» without a comment', async () => {
+      prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+        id: 'reason-other',
+        name: 'Boshqa sabab',
+        companyId: 1001,
+        appliesTo: ['GROUP_REMOVAL'],
+      });
+
+      await expect(
+        service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+          departureReasonId: 'reason-other',
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.enrollment.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects «Boshqa sabab» with a too-short comment', async () => {
+      prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+        id: 'reason-other',
+        name: 'Boshqa sabab',
+        companyId: 1001,
+        appliesTo: ['GROUP_REMOVAL'],
+      });
+
+      await expect(
+        service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+          departureReasonId: 'reason-other',
+          reason: 'ok',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('accepts «Boshqa sabab» with a comment and appends it to the audit text', async () => {
+      prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+        id: 'reason-other',
+        name: 'Boshqa sabab',
+        companyId: 1001,
+        appliesTo: ['GROUP_REMOVAL'],
+      });
+
+      await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+        departureReasonId: 'reason-other',
+        reason: 'Pravaga imtihon topshiryapti',
+      });
+
+      expect(prisma.enrollment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            statusChangeReason: 'Boshqa sabab — Pravaga imtihon topshiryapti',
+          }),
+        }),
+      );
+    });
+
+    it('does not require a comment for a self-explanatory reason', async () => {
+      prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+        id: 'reason-move',
+        name: "Boshqa guruhga ko'chdi",
+        companyId: 1001,
+        appliesTo: ['GROUP_REMOVAL'],
+      });
+
+      await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+        departureReasonId: 'reason-move',
+      });
+
+      expect(prisma.enrollment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            statusChangeReason: "Boshqa guruhga ko'chdi",
+          }),
+        }),
+      );
+    });
+
     it('throws NotFound if departureReasonId is not in company or deleted', async () => {
       prisma.studentExitReason.findFirst.mockResolvedValueOnce(null);
       await expect(

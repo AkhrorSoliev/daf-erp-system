@@ -1,5 +1,6 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
+  IsArray,
   IsIn,
   IsInt,
   IsOptional,
@@ -9,6 +10,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { toStringArray } from '../../common/dto/to-array';
 
 /** Payment-status filter values for the participants list. */
 export const PARTICIPANT_PAID_STATUSES = ['paid', 'pending', 'cash'] as const;
@@ -20,24 +22,30 @@ export class ParticipantsQueryDto {
   @MaxLength(100)
   search?: string;
 
-  /** Filter by the chosen exam time slot ("HH:mm"). */
+  /** Filter by the chosen exam time slots ("HH:mm"), comma-separated. */
   @IsOptional()
-  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
-  examTime?: string;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { each: true })
+  examTime?: string[];
 
-  /** Filter by CEFR level (A1..C2). */
+  /** Filter by CEFR levels (A1..C2), comma-separated. */
   @IsOptional()
-  @IsString()
-  @MaxLength(4)
-  level?: string;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsString({ each: true })
+  @MaxLength(4, { each: true })
+  level?: string[];
 
   /**
    * Filter by payment status: `paid` (settled), `pending` (unpaid, no cash
    * intent), or `cash` (unpaid, chose to pay cash on arrival).
    */
   @IsOptional()
-  @IsIn(PARTICIPANT_PAID_STATUSES)
-  paidStatus?: ParticipantPaidStatus;
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @IsIn(PARTICIPANT_PAID_STATUSES, { each: true })
+  paidStatus?: ParticipantPaidStatus[];
 
   @IsOptional()
   @Type(() => Number)

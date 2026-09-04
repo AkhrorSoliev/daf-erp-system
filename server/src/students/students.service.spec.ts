@@ -248,6 +248,72 @@ describe('StudentsService — status methods', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
+    it('rejects «Boshqa sabab» without a comment', async () => {
+      prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+        id: 'reason-other',
+        name: 'Boshqa sabab',
+        companyId: 1001,
+        appliesTo: ['FREEZE'],
+      });
+
+      await expect(
+        service.changeStatus(
+          1,
+          { status: 'FROZEN' as any, reasonId: 'reason-other' },
+          2,
+          1001,
+        ),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(prisma.student.update).not.toHaveBeenCalled();
+    });
+
+    it('accepts «Boshqa sabab» with a comment', async () => {
+      prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+        id: 'reason-other',
+        name: 'Boshqa sabab',
+        companyId: 1001,
+        appliesTo: ['FREEZE'],
+      });
+
+      await service.changeStatus(
+        1,
+        {
+          status: 'FROZEN' as any,
+          reasonId: 'reason-other',
+          reason: 'Pravaga imtihon topshiryapti',
+        },
+        2,
+        1001,
+      );
+
+      expect(statusHistoryService.changeStatus).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reason: 'Boshqa sabab — Pravaga imtihon topshiryapti',
+        }),
+      );
+    });
+
+    it('does not require a comment for a self-explanatory reason', async () => {
+      prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+        id: 'reason-price',
+        name: 'Narx qimmat',
+        companyId: 1001,
+        appliesTo: ['FREEZE'],
+      });
+
+      await service.changeStatus(
+        1,
+        { status: 'FROZEN' as any, reasonId: 'reason-price' },
+        2,
+        1001,
+      );
+
+      expect(statusHistoryService.changeStatus).toHaveBeenCalledWith(
+        expect.objectContaining({ reason: 'Narx qimmat' }),
+      );
+    });
+
     it('rejects manual GRADUATED — only set automatically on group completion', async () => {
       await expect(
         service.changeStatus(1, { status: 'GRADUATED' as any }, 2, 1001),
@@ -387,7 +453,7 @@ describe('StudentsService — status methods', () => {
   describe('findAll filters', () => {
     it('filters by level via enrollments.some.AND with group.level', async () => {
       await service.findAll(
-        { page: 1, pageSize: 10, level: 'B1' } as any,
+        { page: 1, pageSize: 10, level: ['B1'] } as any,
         1001,
         null,
       );

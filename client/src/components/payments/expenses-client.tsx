@@ -44,7 +44,7 @@ import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
-import { useUrlFilters } from "@/hooks/use-url-filters";
+import { listParam, useUrlFilters } from "@/hooks/use-url-filters";
 import { TablePagination } from "@/components/outreach/table-pagination";
 import {
   ExpensesFilterBar,
@@ -76,8 +76,8 @@ interface ExpensesResponse {
 const filtersSchema = {
   page: { type: "number", defaultValue: 1 },
   pageSize: { type: "number", defaultValue: 10 },
-  category: { type: "string", defaultValue: "all" },
-  paymentMethod: { type: "string", defaultValue: "all" },
+  category: { type: "array", defaultValue: [] as string[] },
+  paymentMethod: { type: "array", defaultValue: [] as string[] },
   search: { type: "string", defaultValue: "" },
   startDate: { type: "string", defaultValue: "" },
   endDate: { type: "string", defaultValue: "" },
@@ -126,9 +126,8 @@ export function ExpensesClient() {
     branchId: selectedBranch?.id,
     page: filters.page,
     pageSize: filters.pageSize,
-    category: filters.category === "all" ? undefined : filters.category,
-    paymentMethod:
-      filters.paymentMethod === "all" ? undefined : filters.paymentMethod,
+    category: listParam(filters.category),
+    paymentMethod: listParam(filters.paymentMethod),
     search: filters.search || undefined,
     startDate: effectiveStartDate,
     endDate: effectiveEndDate,
@@ -235,8 +234,8 @@ export function ExpensesClient() {
   const endDate = new Date(effectiveEndDate);
 
   const hasActiveFilters =
-    filters.category !== "all" ||
-    filters.paymentMethod !== "all" ||
+    filters.category.length > 0 ||
+    filters.paymentMethod.length > 0 ||
     filters.search !== "" ||
     filters.startDate !== "" ||
     filters.endDate !== "";

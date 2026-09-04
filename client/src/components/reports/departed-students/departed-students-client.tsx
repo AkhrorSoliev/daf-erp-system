@@ -101,7 +101,8 @@ export function DepartedStudentsClient() {
       rangeStart: parseDate(searchParams.get("startDate")),
       rangeEnd: parseDate(searchParams.get("endDate")),
       branchId: branchId && !Number.isNaN(branchId) ? branchId : null,
-      courseId: searchParams.get("courseId") || null,
+      courseId:
+        searchParams.get("courseId")?.split(",").filter(Boolean) ?? [],
       teacherIds:
         searchParams
           .get("teacherIds")
@@ -130,7 +131,8 @@ export function DepartedStudentsClient() {
       startDate: formatDate(next.rangeStart),
       endDate: formatDate(next.rangeEnd),
       branchId: next.branchId !== null ? String(next.branchId) : undefined,
-      courseId: next.courseId ?? undefined,
+      courseId:
+        next.courseId.length > 0 ? next.courseId.join(",") : undefined,
       teacherIds:
         next.teacherIds.length > 0 ? next.teacherIds.join(",") : undefined,
       page: undefined,
@@ -163,7 +165,8 @@ export function DepartedStudentsClient() {
   const rawSummaryParams = useMemo(
     () => ({
       branchId: filter.branchId ?? undefined,
-      courseId: filter.courseId ?? undefined,
+      courseId:
+      filter.courseId.length > 0 ? filter.courseId.join(",") : undefined,
       teacherIds:
         filter.teacherIds.length > 0 ? filter.teacherIds.join(",") : undefined,
       startDate: startStr,

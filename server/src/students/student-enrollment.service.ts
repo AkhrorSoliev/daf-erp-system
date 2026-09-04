@@ -13,6 +13,11 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
 import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
+import {
+  EXIT_REASON_COMMENT_ERROR,
+  EXIT_REASON_COMMENT_MIN_LENGTH,
+  exitReasonRequiresComment,
+} from '../common/exit-reason-comment';
 
 @Injectable()
 export class StudentEnrollmentService {
@@ -408,7 +413,18 @@ export class StudentEnrollmentService {
         throw new NotFoundException('Ketish sababi topilmadi');
       }
       departureReasonId = reason.id;
-      reasonText = reason.name;
+      // "Boshqa sabab" carries no information on its own — the comment IS
+      // the reason, so it becomes mandatory. Other reasons keep it optional.
+      const comment = input.reason?.trim();
+      if (
+        exitReasonRequiresComment(reason.name) &&
+        (!comment || comment.length < EXIT_REASON_COMMENT_MIN_LENGTH)
+      ) {
+        throw new BadRequestException(EXIT_REASON_COMMENT_ERROR);
+      }
+      // Append the comment to the audit text so it survives into the
+      // enrollment state log (mirrors the status-change flow).
+      reasonText = comment ? `${reason.name} — ${comment}` : reason.name;
     } else {
       // No reasonId — check whether the company has any GROUP_REMOVAL
       // reasons configured. If yes, force the user to pick one.

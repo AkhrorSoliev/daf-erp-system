@@ -71,6 +71,14 @@ tizimga kira olmaydi.** Ilgari bu ikkisi bir narsa deb qaralardi.
 **Student** — o'quvchi. `Student.balance` — uning puli (manfiy = qarz).
 `prisma/schema.prisma`
 
+**Faol o'quvchi** — statusi `ACTIVE` **va** hozir faol guruhda faol yozuvi bor
+o'quvchi. Statusi faol, lekin guruhsiz qolgani — «guruhlashtirilmagan»: u faol
+emas, joylashtirilishi kerak. Ikki toifa **bitta** shartning `some` va `none`
+ko'rinishi, shuning uchun ular ustma-ust tushmaydi va birgalikda statusi faol
+hamma o'quvchini qoplaydi. Ilgari uch xil ta'rif bor edi va 496 ta o'quvchi
+ikkala ro'yxatda ham turardi.
+`students/shared/active-student-where.ts`
+
 **Lead** — hali o'quvchi bo'lmagan potensial mijoz. Kanban doskasida yuradi;
 ustun = filial. O'chirish = `LOST` holatiga o'tkazish + majburiy sabab.
 `leads/leads.service.ts`

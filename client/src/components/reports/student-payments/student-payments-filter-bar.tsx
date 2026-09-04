@@ -20,7 +20,7 @@ export interface StudentPaymentsFilter {
   groupIds: string[];
   teacherIds: number[];
   methods: PaymentMethod[];
-  courseId: string | null;
+  courseId: string[];
   rangeStart: Date | null;
   rangeEnd: Date | null;
 }
@@ -38,7 +38,6 @@ interface Props {
 }
 
 const ALL_BRANCHES = "all";
-const ALL_COURSES = "all";
 
 const METHOD_LABELS: Record<PaymentMethod, string> = {
   CASH: "Naqd",
@@ -58,7 +57,7 @@ export function defaultFilter(): StudentPaymentsFilter {
     groupIds: [],
     teacherIds: [],
     methods: [],
-    courseId: null,
+    courseId: [],
     rangeStart: null,
     rangeEnd: null,
   };
@@ -134,24 +133,17 @@ export function StudentPaymentsFilterBar({ value, onChange, options }: Props) {
         className="min-w-[180px]"
       />
 
-      <Select
-        value={value.courseId ?? ALL_COURSES}
-        onValueChange={(v) =>
-          onChange({ ...value, courseId: v === ALL_COURSES ? null : v })
-        }
-      >
-        <SelectTrigger className="h-9 w-auto min-w-[160px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={ALL_COURSES}>Barcha kurslar</SelectItem>
-          {(options?.courses ?? []).map((c) => (
-            <SelectItem key={c.id} value={c.id}>
-              {c.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <MultiSelectCombobox
+        options={(options?.courses ?? []).map((c) => ({
+          value: c.id,
+          label: c.name,
+        }))}
+        selected={value.courseId}
+        onChange={(next) => onChange({ ...value, courseId: next })}
+        placeholder="Barcha kurslar"
+        searchPlaceholder="Kurs qidirish..."
+        className="w-auto min-w-[160px]"
+      />
 
       <div className="flex items-center gap-1">
         <DatePicker

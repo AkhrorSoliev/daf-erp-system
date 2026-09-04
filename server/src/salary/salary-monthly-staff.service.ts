@@ -19,6 +19,12 @@ export interface StaffRow {
      * dash for exactly the employee this report exists to pay.
      */
     position: string | null;
+    /**
+     * Faol emas xodim bu ro'yxatda faqat oyi hali yopilmagan bo'lsa qoladi
+     * (pastdagi "monthly === 0 && !payment" tashlab yuborishi) — shuning uchun
+     * qatorga "Faol emas" belgisini qo'yish uchun kerak.
+     */
+    isActive: boolean;
     branch: { id: number; name: string } | null;
   };
   /** Prorated fixed-monthly salary for the period (full month = the flat value). */
@@ -79,6 +85,12 @@ export class SalaryStaffMonthlyService {
     // always closed (so future months prorate to 0). `deletedAt` is the hard
     // exclusion; `status` is deliberately NOT filtered so a TERMINATED-status
     // user still gets their worked days.
+    //
+    // Ular ro'yxatdan o'zi tushib qoladi, filtr bilan emas: oxirgi oyi
+    // o'tgach `monthly === 0 && !payment` qatorni tashlab yuboradi (5-qadam).
+    // Ya'ni "faqat faol xodimlar ko'rinsin" natijasi shu yerda puli qolganini
+    // yo'qotmasdan hosil bo'ladi — bu ustozlar jadvalidagi qoida bilan bir xil
+    // (`salary-monthly.service.ts`, Step 5+6 dagi filtr).
     const configs = await this.prisma.employeeSalaryConfig.findMany({
       where: {
         companyId,
@@ -108,6 +120,7 @@ export class SalaryStaffMonthlyService {
             firstName: true,
             lastName: true,
             position: true,
+            isActive: true,
             roles: { select: { role: { select: { name: true } } } },
             branches: {
               select: { branch: { select: { id: true, name: true } } },
@@ -211,6 +224,7 @@ export class SalaryStaffMonthlyService {
           firstName: c.user.firstName,
           lastName: c.user.lastName,
           position: c.user.position ?? c.user.roles[0]?.role.name ?? null,
+          isActive: c.user.isActive,
           branch: c.user.branches[0]?.branch ?? null,
         },
         monthly,

@@ -24,6 +24,7 @@ import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
 import { DebtAgeService } from '../common/finance/debt-age.service';
 import { wholeMonthsBetween } from '../common/finance/debt-origin';
+import { equalsOrIn } from '../common/dto/to-array';
 
 @Injectable()
 export class PaymentsDebtorsService {
@@ -106,7 +107,7 @@ export class PaymentsDebtorsService {
       search?: string;
       sortBy?: 'balance' | 'firstName' | 'lastName' | 'debtSince';
       order?: 'asc' | 'desc';
-      promise?: 'has_open' | 'overdue';
+      promise?: ('has_open' | 'overdue')[];
       /** Student status; 'all' (the page default) drops the filter entirely. */
       status?: StudentStatus | 'all';
       userId: number;
@@ -128,10 +129,13 @@ export class PaymentsDebtorsService {
     const where = this.debtorWhere(companyId, branchIds, query.status ?? 'all');
 
     // Payment-promise filter — students with an active / broken promise.
-    if (query.promise === 'has_open') {
-      where.paymentPromises = { some: { status: 'OPEN' } };
-    } else if (query.promise === 'overdue') {
-      where.paymentPromises = { some: { status: 'BROKEN' } };
+    // Ikkovi tanlansa "va'dasi bor" degani bo'ladi; va'da bermaganlar baribir
+    // chiqib ketadi, shuning uchun bu filtrsizlik bilan bir xil emas.
+    const promiseStatuses = (query.promise ?? []).map((p) =>
+      p === 'has_open' ? 'OPEN' : 'BROKEN',
+    );
+    if (promiseStatuses.length > 0) {
+      where.paymentPromises = { some: { status: equalsOrIn(promiseStatuses) } };
     }
 
     // Unified search across name / phone / id — same OR shape as
