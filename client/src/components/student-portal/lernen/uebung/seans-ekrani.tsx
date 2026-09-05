@@ -201,7 +201,12 @@ export function SeansEkrani({ lessonId }: SeansEkraniProps) {
         else tekshir();
         return;
       }
-      if (rejim !== "TANLASH" || natija) return;
+      // `pruefen.isPending` ham bloklaydi — aks holda `Tanlash`ga
+      // uzatilgan `kutilmoqda` qulfi chetlab o'tilardi: sichqoncha
+      // tugmalari o'chirilgan bo'lsa ham, klaviatura orqali "1"-"4"
+      // bosib `tanlangan`ni javob kutayotgan paytda almashtirish mumkin
+      // bo'lib qolardi.
+      if (rejim !== "TANLASH" || natija || pruefen.isPending) return;
       const n = Number(e.key);
       if (n >= 1 && n <= (frage?.options.length ?? 0)) {
         setTanlangan(frage!.options[n - 1]);

@@ -112,12 +112,21 @@ function GapTuzish({ options, tanlangan, onOzgar, natija, kutilmoqda }: IchkiPro
               onClick={() => onOzgar(tanlangan.filter((_, idx) => idx !== j))}
               className={cn(
                 "rounded-xl px-3 py-1.5 font-semibold shadow-sm",
-                qulflangan
+                // Rang FAQAT `natija` kelganda yonadi — `qulflangan`
+                // `kutilmoqda` orqali ham `true` bo'lishi mumkin
+                // (tekshiruv hali javob bermagan), va `natija?.isCorrect`
+                // o'sha paytda `undefined` bo'lib, sukut bo'yicha
+                // "xato" rangiga tushib qolardi. Interaktsiyani
+                // to'xtatish (`qulflangan`) va rangni yoqish (`natija`)
+                // ikkita ALOHIDA shart.
+                natija != null
                   ? cn(
                       "cursor-default",
-                      natija?.isCorrect ? "bg-success/10 text-success" : "bg-danger/10 text-danger",
+                      natija.isCorrect ? "bg-success/10 text-success" : "bg-danger/10 text-danger",
                     )
-                  : "bg-white text-ink-800",
+                  : qulflangan
+                    ? "cursor-default bg-white text-ink-800 opacity-70"
+                    : "bg-white text-ink-800",
               )}
             >
               {soz}
