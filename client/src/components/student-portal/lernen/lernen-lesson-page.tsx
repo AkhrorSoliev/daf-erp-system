@@ -109,7 +109,9 @@ export function LernenLessonPage({ lessonId }: { lessonId: number }) {
   const [score, setScore] = React.useState({ correct: 0, total: 0 });
 
   const title = data ? (data.titleUz ?? data.titleDe) : "Dars";
-  const isVocab = data?.kind === "VOCAB";
+  // Eski `kind` (VOCAB/GRAMMAR) mavzu bo'yicha ajratardi va o'chirilgan —
+  // endi mashqni boshlash tugmasi so'z sonining o'ziga qarab chiqadi.
+  const isVocab = (data?.lexemes.length ?? 0) >= 2;
 
   return (
     <Screen narrow>
@@ -206,7 +208,7 @@ export function LernenLessonPage({ lessonId }: { lessonId: number }) {
 
           {/* Lug'at darsi mashq bilan tugaydi — aks holda u ro'yxat
               bo'lib qolardi va o'quvchi bilganini tekshirmasdi. */}
-          {isVocab && data.lexemes.length >= 2 ? (
+          {isVocab ? (
             <Button className="w-full" onClick={() => setStage("drill")}>
               Mashqni boshlash
             </Button>

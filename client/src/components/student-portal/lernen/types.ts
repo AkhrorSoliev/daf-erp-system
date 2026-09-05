@@ -37,7 +37,13 @@ export interface AbschlussErgebnis {
 }
 
 export type DafLevel = "A1_1" | "A1_2" | "A2_1" | "A2_2" | "B1";
-export type DafLessonKind = "VOCAB" | "GRAMMAR";
+/**
+ * Seans turi — A1 kurs xaritasidagi bosqich. Eski nom (`VOCAB`/`GRAMMAR`)
+ * darsning MAVZUSINI bildirardi va grammatikani mashqdan uzib qo'yardi;
+ * server enumi (`schema.prisma`) allaqachon shu to'rttasiga o'tgan.
+ * `null` — eski DiB darsi, unda seans turi umuman yo'q.
+ */
+export type DafLessonKind = "SECTION_A" | "SECTION_B" | "BRIDGE" | "UNIT_TEST";
 export type DafExerciseKind = "GAP" | "MC" | "CLOZE" | "REORDER" | "FREE_WRITE";
 export type DafAnswerStatus = "FROM_SOURCE" | "PARTIAL" | "OPEN";
 
@@ -47,6 +53,8 @@ export interface LernenUnitSummary {
   titleUz: string;
   titleDe: string;
   lessonCount: number;
+  /** Shu o'quvchi shu unitda tugatgan seanslar soni. */
+  doneCount: number;
 }
 
 export interface LernenLevel {
@@ -55,14 +63,28 @@ export interface LernenLevel {
   units: LernenUnitSummary[];
 }
 
-export interface LernenLessonSummary {
+/** Unit ichidagi bitta seans — yangi A1 xaritasi ham, eski DiB darsi ham. */
+export interface LernenSeans {
   id: number;
   order: number;
-  kind: DafLessonKind;
+  kind: DafLessonKind | null;
   titleDe: string;
   titleUz: string | null;
   wordCount: number;
   exerciseCount: number;
+  completedAt: string | null;
+  bestScore: number;
+  runs: number;
+}
+
+/** Unit ichidagi MAVZULI bo'lim — o'z sahifasi yo'q, faqat sarlavha. */
+export interface LernenSectionGroup {
+  id: number;
+  order: number;
+  code: string;
+  titleUz: string;
+  titleDe: string;
+  lessons: LernenSeans[];
 }
 
 export interface LernenUnit {
@@ -72,7 +94,14 @@ export interface LernenUnit {
   order: number;
   titleUz: string;
   titleDe: string;
-  lessons: LernenLessonSummary[];
+  /**
+   * Yassi ro'yxat — eski DiB unitlarida (`sections` bo'sh) shu yerdan
+   * o'qiladi. Yangi A1 unitlarida `sections.flatMap` + `finalTest` bilan
+   * bir xil to'plam, faqat guruhlanmagan.
+   */
+  lessons: LernenSeans[];
+  sections: LernenSectionGroup[];
+  finalTest: LernenSeans | null;
 }
 
 export interface LernenLexeme {
@@ -101,7 +130,8 @@ export interface LernenExercise {
 export interface LernenLesson {
   id: number;
   order: number;
-  kind: DafLessonKind;
+  /** Eski DiB darsida seans turi yo'q — `null`. */
+  kind: DafLessonKind | null;
   titleDe: string;
   titleUz: string | null;
   label: string;
