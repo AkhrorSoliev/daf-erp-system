@@ -1,4 +1,4 @@
-import { LernenLessonPage } from "@/components/student-portal/lernen/lernen-lesson-page";
+import { SeansEkrani } from "@/components/student-portal/lernen/uebung/seans-ekrani";
 
 export default async function Page({
   params,
@@ -6,5 +6,5 @@ export default async function Page({
   params: Promise<{ lessonId: string }>;
 }) {
   const { lessonId } = await params;
-  return <LernenLessonPage lessonId={Number(lessonId)} />;
+  return <SeansEkrani lessonId={Number(lessonId)} />;
 }
