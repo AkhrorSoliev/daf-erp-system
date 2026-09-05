@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { DafPortalReadService } from './daf-portal-read.service';
@@ -399,6 +399,88 @@ describe('getUnit — bo`limlar va ilgarilash', () => {
     expect(unit.lessons.map((l: any) => l.id)).toEqual([5]);
     expect(unit.sections).toEqual([]);
     expect(unit.finalTest).toBeNull();
+  });
+
+  it('bo`limi bor unitda sectionId`si yo`q dars ogohlantiradi (Finding M12)', async () => {
+    // Bu holat yuqoridagi testdan farq qiladi: u yerda unitda UMUMAN
+    // bo'lim yo'q (seeding me'yori), bu yerda esa unitda BOSHQA darslar
+    // bo'limga ega — demak bu dars uchun `sectionId: null` seeding
+    // xatosi va u sahifada UMUMAN ko'rinmay qoladi (bo'lim guruhlari uni
+    // tashlab ketadi, yassi ro'yxat esa faqat `sections` bo'sh bo'lganda
+    // ko'rsatiladi). Bunday xato sukut saqlab yo'qolib ketmasligi kerak.
+    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const prisma = fakePrisma();
+    prisma.dafSection.findMany = jest.fn(async () => [
+      { id: 10, order: 1, code: 'u01-s1', titleUz: 'Bir', titleDe: 'Eins' },
+    ]);
+    prisma.dafLesson.findMany = jest.fn(async () => [
+      {
+        id: 1,
+        order: 1,
+        kind: 'SECTION_A',
+        sectionId: 10,
+        tier: null,
+        titleDe: 'A',
+        titleUz: 'A',
+        _count: { lexemes: 0, exercises: 0 },
+      },
+      {
+        id: 2,
+        order: 2,
+        kind: 'SECTION_A',
+        sectionId: null,
+        tier: null,
+        titleDe: 'Yetim',
+        titleUz: 'Yetim',
+        _count: { lexemes: 0, exercises: 0 },
+      },
+    ]);
+    const unit = await svc(prisma).getUnit(1, 55);
+    // Dars hamon bo'lim guruhlarida ko'rinmaydi — bu xulq o'zgarmadi.
+    expect(
+      unit.sections.flatMap((s: any) => s.lessons).map((l: any) => l.id),
+    ).toEqual([1]);
+    // Lekin endi bu XATO SUKUT SAQLAMAYDI.
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('dars 2'),
+    );
+    warnSpy.mockRestore();
+  });
+
+  it('bitta unitda ikkinchi UNIT_TEST paydo bo`lsa ogohlantiradi (Finding M12)', async () => {
+    // `finalTest` ni `.find()` bilan tanlash faqat BIRINCHISINI oladi —
+    // ikkinchi UNIT_TEST qatori bo'lsa, u yakuniy sinov sifatida hech
+    // qachon ko'rinmaydi. Bu seeding xatosi ogohlantirishsiz yo'qolib
+    // ketmasligi kerak.
+    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const prisma = fakePrisma();
+    prisma.dafSection.findMany = jest.fn(async () => []);
+    prisma.dafLesson.findMany = jest.fn(async () => [
+      {
+        id: 9,
+        order: 9,
+        kind: 'UNIT_TEST',
+        sectionId: null,
+        tier: null,
+        titleDe: 'Test',
+        titleUz: 'Sinov',
+        _count: { lexemes: 0, exercises: 0 },
+      },
+      {
+        id: 10,
+        order: 10,
+        kind: 'UNIT_TEST',
+        sectionId: null,
+        tier: null,
+        titleDe: 'Test2',
+        titleUz: 'Sinov2',
+        _count: { lexemes: 0, exercises: 0 },
+      },
+    ]);
+    const unit = await svc(prisma).getUnit(1, 55);
+    expect(unit.finalTest!.id).toBe(9);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('UNIT_TEST'));
+    warnSpy.mockRestore();
   });
 
   it('har darsga o`quvchining ilgarilashini yopishtiradi', async () => {

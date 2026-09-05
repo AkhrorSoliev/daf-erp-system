@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DafLevel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -33,6 +33,8 @@ export interface LevelPathItem {
 
 @Injectable()
 export class DafPortalReadService {
+  private readonly logger = new Logger(DafPortalReadService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
@@ -193,13 +195,46 @@ export class DafPortalReadService {
     const alle = lessons.map(toItem);
 
     // Yakuniy sinov bo'lim ichida emas — u butun unitni sinaydi va
-    // dizaynda oxirida alohida turadi.
-    const finalTest = alle.find((l) => l.kind === 'UNIT_TEST') ?? null;
+    // dizaynda oxirida alohida turadi. `.find()` faqat BIRINCHISINI
+    // oladi — bu me'yorda ziyon emas (bitta unitda bitta yakuniy sinov
+    // bo'lishi kerak), lekin seed xatosi bilan ikkinchisi paydo bo'lsa,
+    // u sahifada UMUMAN ko'rinmasdan qoladi. Shuning uchun bu holat
+    // pastda ogohlantiriladi — aks holda xato sukut saqlab yo'qolib
+    // ketardi.
+    const unitTests = alle.filter((l) => l.kind === 'UNIT_TEST');
+    if (unitTests.length > 1) {
+      this.logger.warn(
+        `Unit ${unitId}da ${unitTests.length} ta UNIT_TEST darsi bor — ` +
+          `faqat birinchisi (dars ${unitTests[0].id}) ko'rsatiladi, ` +
+          `qolganlari (dars ${unitTests
+            .slice(1)
+            .map((l) => l.id)
+            .join(', ')}) sahifada ko'rinmaydi. Bu seed xatosi — bitta ` +
+          "unitda bitta yakuniy sinov bo'lishi kerak.",
+      );
+    }
+    const finalTest = unitTests[0] ?? null;
 
     const bySection = new Map<number, typeof alle>();
     for (const item of alle) {
+      if (item.kind === 'UNIT_TEST') continue;
       const raw = lessons.find((l) => l.id === item.id)!;
-      if (raw.sectionId == null || item.kind === 'UNIT_TEST') continue;
+      if (raw.sectionId == null) {
+        // Bu unitda sectionlar UMUMAN yo'q bo'lsa (eski, nafaqaga
+        // chiqarilmagan DiB darsi kabi) bu me'yor — pastdagi yassi
+        // `lessons` ro'yxati orqali ko'rinadi. Lekin unitda BOSHQA
+        // darslar sectionga ega bo'lsa, bu SEEDING XATOSI: sahifa
+        // `sections` bo'sh bo'lmagan unitda faqat bo'lim guruhlarini
+        // ko'rsatadi, yassi ro'yxatga qaramaydi — demak bu dars
+        // ekranda UMUMAN ko'rinmay qoladi.
+        if (sections.length > 0) {
+          this.logger.warn(
+            `Unit ${unitId}, dars ${item.id} (${item.titleUz}) sectionId'siz, ` +
+              "lekin bu unitda boshqa bo'limlar bor — dars sahifada ko'rinmaydi.",
+          );
+        }
+        continue;
+      }
       const list = bySection.get(raw.sectionId) ?? [];
       list.push(item);
       bySection.set(raw.sectionId, list);
@@ -224,9 +259,14 @@ export class DafPortalReadService {
     return {
       ...publicUnit,
       label: LEVEL_LABEL[unit.level],
-      // Yassi ro'yxat QOLADI: nafaqaga chiqarilgan 20 ta eski DiB
-      // unitining darslarida `sectionId` yo'q, ular faqat shu yerda
-      // ko'rinadi. O'chirilsa o'sha unitlar bo'shab qolardi.
+      // Yassi ro'yxat QOLADI — lekin NAFAQAGA CHIQARILGAN 20 ta eski DiB
+      // uniti uchun emas: shu funksiya yuqorida `retiredAt` bor unitni
+      // 404 bilan rad etadi (test bilan tasdiqlangan), shuning uchun
+      // ularning yassi ro'yxatiga hech qachon yetib bo'lmaydi. Haqiqiy
+      // sabab — TIRIK unit ham sectionsiz dars tashib yurishi mumkin
+      // (seeding xatosi, yuqoridagi ogohlantirishga qarang): bunday
+      // holatda bo'lim guruhlari o'sha darsni ko'rsatmaydi, va yagona
+      // joy shu yassi ro'yxat.
       lessons: alle,
       sections: sectionGruppen,
       finalTest,

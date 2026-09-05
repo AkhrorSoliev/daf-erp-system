@@ -274,6 +274,23 @@ describe('UebungService.seans', () => {
       new UebungService(prisma as any).seans(999, 55),
     ).rejects.toThrow();
   });
+
+  it('dars bor, lekin bo`limi yo`q bo`lsa (eski DiB darsi) bo`sh massiv qaytaradi, xato tashlamaydi', async () => {
+    // Bu dars XATO EMAS — u yangi dvigatel migratsiyasidan oldingi.
+    // Mijoz `seans.data.length === 0`ni ko'rib eski `LernenLessonPage`ga
+    // qaytadi, shuning uchun server bu yerda 404 emas, bo'sh massiv
+    // qaytarishi kerak (Finding I3).
+    const prisma = fakePrisma();
+    prisma.dafLesson.findUnique = jest.fn(async () => ({
+      id: 100,
+      unitId: 1,
+      sectionId: null,
+      kind: 'SECTION_A',
+      section: null,
+    })) as any;
+    const fragen = await new UebungService(prisma as any).seans(100, 55);
+    expect(fragen).toEqual([]);
+  });
 });
 
 describe('UebungService.seans — qaytarish (wiederholung)', () => {
@@ -617,16 +634,24 @@ describe('UebungService.ersatz', () => {
     expect(Object.keys(f!)).not.toContain('akzeptiert');
   });
 
-  it('boshqa format qolmasa null qaytaradi', async () => {
-    // Materialda bitta so'z bo'lsa chalg'ituvchi yetmaydi va hech qanday
-    // format qurilmaydi — bu xato emas, tabiiy holat.
+  it('nichtFormat yagona qurilgan nomzodning o`ziga to`g`ri kelsa, null qaytaradi', async () => {
+    // Yagona so'z, artikli bor. `artikel()` chalg'ituvchi TALAB QILMAYDI
+    // (variantlar har doim der/die/das) — shuning uchun yolg'iz so'z
+    // bo'lsa ham quriladi. `wortUz`/`uzWort` esa boshqa so'zlardan farqli
+    // 3 ta chalg'ituvchi talab qiladi va bitta so'zda buni topa olmaydi.
+    // Demak bu material uchun FAQAT ARTIKEL nomzodi bor — va aynan
+    // shu formatni `nichtFormat` sifatida so'raymiz. Bu testni `f.format
+    // !== nichtFormat` filtri o'chirilganda ham "yashil" qiladigan avvalgi
+    // versiyadan farqli o'laroq (u yerda materialdan UMUMAN nomzod
+    // qurilmasdi), bu yerda filtr chindan ham ishlamasa natija `null`
+    // EMAS, ARTIKEL savoli bo'lardi.
     const prisma = fakePrisma();
     prisma.dafLexeme.findMany = jest.fn(async () => [
       {
-        id: 1,
-        de: 'hallo',
-        uz: 'salom',
-        artikel: null,
+        id: 5,
+        de: 'Name',
+        uz: 'ism',
+        artikel: 'der',
         anzeige: null,
         core: true,
         sectionId: 7,
@@ -638,8 +663,8 @@ describe('UebungService.ersatz', () => {
       100,
       55,
       'WORT',
-      1,
-      'WORT_UZ',
+      5,
+      'ARTIKEL',
     );
     expect(f).toBeNull();
   });
@@ -650,6 +675,27 @@ describe('UebungService.ersatz', () => {
     await expect(
       new UebungService(prisma as any).ersatz(999, 55, 'WORT', 1, 'WORT_UZ'),
     ).rejects.toThrow();
+  });
+
+  it('dars bor, lekin bo`limi yo`q bo`lsa (eski DiB darsi) null qaytaradi, xato tashlamaydi', async () => {
+    // Xuddi `seans` dagidek (Finding I3): bo'limsiz dars — mos o'rinbosar
+    // yo'qligi bilan bir xil tabiiy holat, 404 emas.
+    const prisma = fakePrisma();
+    prisma.dafLesson.findUnique = jest.fn(async () => ({
+      id: 100,
+      unitId: 1,
+      sectionId: null,
+      kind: 'SECTION_A',
+      section: null,
+    })) as any;
+    const f = await new UebungService(prisma as any).ersatz(
+      100,
+      55,
+      'WORT',
+      1,
+      'WORT_UZ',
+    );
+    expect(f).toBeNull();
   });
 });
 

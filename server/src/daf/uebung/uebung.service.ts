@@ -172,11 +172,14 @@ export class UebungService {
     studentId: number,
     rnd: () => number = Math.random,
   ): Promise<PublicFrage[]> {
-    const { pflicht, kandidaten } = await this.baueKandidaten(
-      lessonId,
-      studentId,
-      rnd,
-    );
+    const natija = await this.baueKandidaten(lessonId, studentId, rnd);
+    // Dars mavjud, lekin bo'limi yo'q (eski DiB darsi, `sectionId: null`) —
+    // bu XATO emas, yangi dvigatel faqat sectionli darslar uchun ishlaydi.
+    // Mijoz `seans.data.length === 0`ni ko'rib eski `LernenLessonPage`ga
+    // qaytadi — shuning uchun bu yerda 404 EMAS, bo'sh massiv qaytariladi.
+    // Darsning O'ZI topilmasa (`null`) `baueKandidaten` hamon 404 tashlaydi.
+    if (!natija) return [];
+    const { pflicht, kandidaten } = natija;
 
     const { fragen, nichtPlatziert } = baueSeans(
       kandidaten,
@@ -222,11 +225,12 @@ export class UebungService {
     nichtFormat: FrageFormat,
     rnd: () => number = Math.random,
   ): Promise<PublicFrage | null> {
-    const { pflicht, kandidaten } = await this.baueKandidaten(
-      lessonId,
-      studentId,
-      rnd,
-    );
+    const natija = await this.baueKandidaten(lessonId, studentId, rnd);
+    // Xuddi `seans` dagidek: bo'limsiz dars XATO emas — bu yerda mos
+    // o'rinbosar yo'qligi bilan bir xil tabiiy holat, shuning uchun 404
+    // emas, `null` (dizaynda allaqachon "topilmadi" degani emas).
+    if (!natija) return null;
+    const { pflicht, kandidaten } = natija;
 
     const nomzod = [...pflicht, ...kandidaten].find(
       (f) =>
@@ -252,6 +256,10 @@ export class UebungService {
    */
   async abschluss(
     lessonId: number,
+    // `input.durationMs` — kelajak uchun qabul qilinadi, HOZIRCHA
+    // saqlanmaydi: `DafLessonProgress`da bu qiymat uchun ustun yo'q. Bu
+    // funksiya uni pastda hech qayerda o'qimaydi — kelajakda haqiqatda
+    // yozish kerak bo'lsa, DTOsi allaqachon tayyor.
     input: { richtig: number; gesamt: number; durationMs?: number },
     ctx: { studentId: number; companyId: number },
   ): Promise<{ bestScore: number; runs: number }> {
@@ -296,18 +304,31 @@ export class UebungService {
    * so'z/gap/ibora nomzodlarini qurish, takroriy formatlarni filtrlash)
    * bir marta, shu yerda yoziladi — ikki nusxada ikki xil o'zgarib
    * qolmasligi uchun.
+   *
+   * IKKI XIL "YO'Q" BOR, VA ULAR BOSHQA-BOSHQA NARSA:
+   * - Dars qatorining O'ZI topilmasa — bu HAQIQIY 404: bunday `lessonId`
+   *   umuman mavjud emas.
+   * - Dars bor, lekin `section`i yo'q (`sectionId: null`) — bular eski,
+   *   yangi dvigatel migratsiyasidan OLDINGI DiB darslari. Bu XATO emas,
+   *   faqat "bu dars yangi mashq tizimida ishlamaydi" degani — chaqiruvchi
+   *   (`seans` bo'sh massiv, `ersatz` `null`) buni tabiiy holat sifatida
+   *   ko'radi. Shuning uchun bu funksiya faqat BIRINCHI holatda istisno
+   *   tashlaydi; ikkinchisida `null` qaytaradi.
    */
   private async baueKandidaten(
     lessonId: number,
     studentId: number,
     rnd: () => number,
-  ): Promise<{ pflicht: Frage[]; kandidaten: Frage[] }> {
+  ): Promise<{ pflicht: Frage[]; kandidaten: Frage[] } | null> {
     const lesson = await this.prisma.dafLesson.findUnique({
       where: { id: lessonId },
       include: { section: true },
     } as any);
-    if (!lesson || !(lesson as any).section) {
+    if (!lesson) {
       throw new NotFoundException(`Dars topilmadi: ${lessonId}`);
+    }
+    if (!(lesson as any).section) {
+      return null;
     }
     const section = (lesson as any).section as {
       id: number;

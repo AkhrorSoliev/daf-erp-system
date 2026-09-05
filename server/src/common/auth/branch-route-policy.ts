@@ -472,6 +472,19 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /student-portal/lernen/grammar',
       'GET /student-portal/lernen/lessons/:id',
       'GET /student-portal/lernen/lessons/:id/drill',
+    ],
+  },
+  {
+    policy: 'SELF',
+    reason:
+      'The catalogue itself is COMPANY_WIDE (see above), but these two build a ' +
+      "SESSION from it, not the catalogue verbatim. `seans()` and `ersatz()` " +
+      "both read the caller's own Leitner state (`DafLexemeState` — which " +
+      'words are due, which format each was last asked in) to decide which ' +
+      'questions to build, so the response is a payload that differs per ' +
+      'student even though the underlying material is shared — exactly what ' +
+      'COMPANY_WIDE promises it does not.',
+    routes: [
       'GET /student-portal/lernen/lessons/:id/uebung',
       'GET /student-portal/lernen/lessons/:id/uebung/ersatz',
     ],

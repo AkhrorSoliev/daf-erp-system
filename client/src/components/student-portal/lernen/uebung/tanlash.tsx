@@ -36,7 +36,15 @@ export function Tanlash({ options, tanlangan, onTanla, natija, kutilmoqda = fals
     <div className={cn("grid gap-2.5", qisqa ? "sm:grid-cols-2" : "grid-cols-1")}>
       {options.map((opt, i) => {
         const bosilgan = tanlangan === opt;
-        const togri = natija != null && opt === natija.richtig;
+        // Aksariyat formatlarda `natija.richtig` variantlar ro'yxatida
+        // AYNAN o'zi bor — lekin `UZ_WORT` artiklli otda emas: variantlar
+        // ATAYLAB artiklsiz ko'rsatiladi (`uzWort` izohiga qarang), `richtig`
+        // esa artikl bilan qaytadi ("der Name"). Shu holatda hech qaysi
+        // variant aynan teng bo'lmaydi — bosilgan variant to'g'ri bo'lsa ham
+        // (`natija.isCorrect`) yashil bo'lmay qolardi. Shuning uchun
+        // "bosilgan VA to'g'ri" ham hisobga olinadi: xato javobda esa hamon
+        // aniq moslikning o'zi yetarli (`richtig`ni ko'rsatish uchun).
+        const togri = natija != null && (opt === natija.richtig || (bosilgan && natija.isCorrect));
         const xatoTanlov = natija != null && bosilgan && !natija.isCorrect;
 
         return (

@@ -141,7 +141,13 @@ export function useErsatz() {
         .get(`${BASE}/lessons/${lessonId}/uebung/ersatz`, {
           params: { itemType, itemId, nichtFormat },
         })
-        .then((r) => r.data ?? null),
+        // `??` EMAS: Nest `null` javobini bo'sh tanaga (`response.send()`
+        // argumentsiz) aylantiradi, shuning uchun axios `r.data` ni `""`
+        // qilib qaytaradi — `"" ?? null` esa `""` bo'lib qoladi, `null`
+        // emas. `||` bo'sh satrni ham, `undefined`ni ham `null`ga
+        // aylantiradi, shu bilan e'lon qilingan `PublicFrage | null` tur
+        // ishonchli bo'ladi.
+        .then((r) => r.data || null),
   });
 }
 

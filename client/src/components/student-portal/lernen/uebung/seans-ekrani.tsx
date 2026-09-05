@@ -104,7 +104,12 @@ export function SeansEkrani({ lessonId }: SeansEkraniProps) {
   };
 
   const keyingi = async () => {
-    if (!holat || !frage || !natija) return;
+    // `ersatzSorov.isPending` ham qo'riqlaydi: `ersatz` so'rovi kutilayotgan
+    // paytda ikkinchi marta bosish (ikki marta bosish yoki bosilgan
+    // Enter'ni ushlab turish) shu funksiyani QAYTA ishga tushirardi — oxirgi
+    // holat baribir to'g'ri chiqadi, lekin bekorga ikkinchi savol so'raladi
+    // va tashlab yuboriladi.
+    if (!holat || !frage || !natija || ersatzSorov.isPending) return;
     const { holat: yangi, ersatzSoralsinmi } = javobBerildi(holat, natija);
 
     let keyingiHolat = yangi;
@@ -199,6 +204,13 @@ export function SeansEkrani({ lessonId }: SeansEkraniProps) {
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Tirik savol yo'q bo'lsa (natija, 404 yoki xato ekrani — bularda
+      // `frage` har doim `null`) bu ushlagich HECH NARSA qilmasligi kerak.
+      // Aks holda u ekranga osilib qolgan holda `Enter`ning DEFAULT
+      // amalini (bosilgan tugmani faollashtirishni) bekor qilardi — natija
+      // ekranidagi "Davom etish"/"Qayta o'tish" va xato ekranlaridagi
+      // "Orqaga"/"Qayta urinish" tugmalari Enter'ga o'lik bo'lib qolardi.
+      if (!frage) return;
       // Yozish rejimida raqamlar javobning O'ZI — ularni tortib
       // olsak, o'quvchi «7» yoza olmasdi.
       if (e.key === "Enter") {
@@ -242,15 +254,30 @@ export function SeansEkrani({ lessonId }: SeansEkraniProps) {
     // - `keyingi`, `tekshir` — har render yangi yopilish (closure), lekin
     //   ularning QO'RIQCHI xatti-harakatiga ta'sir qiluvchi HAMMA qiymat
     //   (`rejim`, `natija`, `frage`, `tanlangan`, `given`, `tayyor`,
-    //   `pruefen.isPending`) allaqachon ro'yxatda — demak, eski yopilish
-    //   AHAMIYATLI bo'ladigan har bir renderda effekt qayta ishga tushib,
-    //   listenerni yangi yopilish bilan qayta o'rnatadi.
+    //   `pruefen.isPending`, `ersatzSorov.isPending`) allaqachon
+    //   ro'yxatda — demak, eski yopilish AHAMIYATLI bo'ladigan har bir
+    //   renderda effekt qayta ishga tushib, listenerni yangi yopilish
+    //   bilan qayta o'rnatadi. `ersatzSorov.isPending` xuddi
+    //   `pruefen.isPending` bilan bo'lgani kabi kerak: `keyingi()`ning
+    //   o'zi shu bayroqni tekshiradi (qayta kirishni bloklash uchun),
+    //   ro'yxatda bo'lmasa Enter bosilishi eski (hali `false` bo'lgan)
+    //   yopilishni chaqirib, ikkinchi `ersatz` so'rovini yubora olardi.
     // - `setTanlangan` — `useState` sozlagichi, React uning identifikatorini
     //   komponent umri davomida barqaror ushlab turishini kafolatlaydi.
-    // - `pruefen` obyektining o'zi emas, faqat `.isPending`i ro'yxatda —
-    //   `.mutate`si barqaror, uni kuzatish shart emas.
+    // - `pruefen`/`ersatzSorov` obyektlarining o'zi emas, faqat
+    //   `.isPending`lari ro'yxatda — `.mutate`/`.mutateAsync`i barqaror,
+    //   ularni kuzatish shart emas.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rejim, natija, frage, tanlangan, given, tayyor, pruefen.isPending]);
+  }, [
+    rejim,
+    natija,
+    frage,
+    tanlangan,
+    given,
+    tayyor,
+    pruefen.isPending,
+    ersatzSorov.isPending,
+  ]);
 
   if (seans.isLoading) {
     return (
@@ -421,7 +448,7 @@ export function SeansEkrani({ lessonId }: SeansEkraniProps) {
           <Button
             className="w-full"
             onClick={natija ? () => void keyingi() : tekshir}
-            disabled={natija ? false : !tayyor || pruefen.isPending}
+            disabled={natija ? ersatzSorov.isPending : !tayyor || pruefen.isPending}
           >
             {natija ? "Keyingi" : pruefen.isPending ? "Tekshirilmoqda…" : "Tekshirish"}
           </Button>

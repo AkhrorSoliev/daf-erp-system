@@ -89,6 +89,13 @@ export class AbschlussDto {
   @Max(100)
   gesamt!: number;
 
+  /**
+   * Kelajakka mo'ljallab qabul qilinadi va tekshiriladi, lekin HOZIRCHA
+   * HECH QAYERGA YOZILMAYDI — `DafLessonProgress`da bu qiymat uchun ustun
+   * yo'q (`UebungService.abschluss` uni faqat qabul qiladi, saqlamaydi).
+   * Maydonni olib tashlamang: `whitelist: true, forbidNonWhitelisted: true`
+   * ostida mijozning uni yuboradigan mavjud so'rovi rad etilib qolardi.
+   */
   @IsOptional()
   @IsInt()
   @Min(0)
