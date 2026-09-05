@@ -37,6 +37,36 @@ function mischen<T>(items: T[], rnd: () => number): T[] {
 }
 
 /**
+ * DB qatoridan mashq materialiga o'tkazadi — SHU YERDA, BIR MARTA.
+ *
+ * `DafLexeme.uz` sxemada NULLABLE (`String?`) — ba'zi so'zlar hali
+ * tarjima qilinmagan (Netzwerk 2–12 unitlari, eski DiB so'zlarining bir
+ * qismi). Tarjimasi yo'q so'zdan savol qurib bo'lmaydi: `prompt`/`options`
+ * ichida `null` chiqib ketardi va `pruefen` javobni solishtirishda
+ * `normalisieren(null)`da yiqilardi. Shuning uchun bu funksiya `uz` yo'q
+ * bo'lsa `null` qaytaradi — chaqiruvchi (bo'lim materiali ham, qaytarish
+ * nomzodi ham) shu SO'ZNI butunlay tashlab ketadi.
+ */
+function toWort(l: {
+  id: number;
+  de: string;
+  uz: string | null;
+  artikel: string | null;
+  anzeige: string | null;
+  sectionCode: string;
+}): MaterialWort | null {
+  if (!l.uz) return null;
+  return {
+    id: l.id,
+    de: l.de,
+    uz: l.uz,
+    artikel: l.artikel,
+    anzeige: l.anzeige,
+    sectionCode: l.sectionCode,
+  };
+}
+
+/**
  * To'g'ri javob MATERIALDAN qaytadan hisoblanadi, savoldan emas.
  *
  * `LUECKE` ENDI ODATDAGI SO'Z SAVOLI: `luecke` bo'shatilgan so'zning
@@ -173,7 +203,9 @@ export class UebungService {
     interface LexemeRow {
       id: number;
       de: string;
-      uz: string;
+      // Sxemada nullable (`DafLexeme.uz String?`) — `toWort` shuni hisobga
+      // olib, tarjimasiz qatorni `null`ga aylantiradi.
+      uz: string | null;
       artikel: string | null;
       anzeige: string | null;
       core: boolean;
@@ -196,14 +228,6 @@ export class UebungService {
     const kodVon = (sectionId: number | null): string =>
       (sectionId != null && sectionCodeById.get(sectionId)) || '';
 
-    const toWort = (l: LexemeRow): MaterialWort => ({
-      id: l.id,
-      de: l.de,
-      uz: l.uz,
-      artikel: l.artikel,
-      anzeige: l.anzeige,
-      sectionCode: kodVon(l.sectionId),
-    });
     const toSatz = (s: SentenceRow): MaterialSatz => ({
       id: s.id,
       de: s.de,
@@ -220,9 +244,14 @@ export class UebungService {
 
     // `core: false` so'zlar so'ralmaydi VA chalg'ituvchi sifatida ham
     // ishlatilmaydi — o'quvchi ularni o'rganmagan (rule 2).
+    //
+    // Tarjimasi (`uz`) yo'q so'z ham shu yerda tushib qoladi (`toWort`
+    // `null` qaytaradi) — u ORQADAGI materialdan chiqarilmasa, savol
+    // qurilib, `prompt`/`options`da `null` chiqib ketardi.
     const coreWords: MaterialWort[] = (lexemeRows as LexemeRow[])
       .filter((l) => l.core)
-      .map(toWort);
+      .map((l) => toWort({ ...l, sectionCode: kodVon(l.sectionId) }))
+      .filter((w): w is MaterialWort => w !== null);
 
     const sentences: MaterialSatz[] = (sentenceRows as SentenceRow[]).map(
       toSatz,
@@ -230,15 +259,52 @@ export class UebungService {
     const phrases: MaterialPhrase[] = (phraseRows as PhraseRow[]).map(toPhrase);
 
     const rnd = Math.random;
+
+    // Qaytarish (pflicht) savollari — DUE so'rovi shu yerda, kandidaten
+    // qurilishidan OLDIN chaqiriladi, chunki pastdagi `letzterFormatByWort`
+    // so'rovi ham `dafLexemeState`ga boradi va ikkalasining tartibi
+    // testlarda kuzatilgan (birinchi chaqiruv — DUE so'rovi).
+    const pflicht = await this.baueWiederholung(studentId, coreWords, rnd);
+
+    // Qoida 5 (dizayn 4.3): ketma-ket ikki SEANSDA bir xil (so'z+format)
+    // juftligi takrorlanmaydi. `DafLexemeState.lastFormat` shu so'z oxirgi
+    // marta qaysi formatda so'ralganini saqlaydi — shu bo'limning BARCHA
+    // so'zlari uchun (qaytarish uchun DUE bo'lgan ozgina so'z emas) shu
+    // xaritani so'raymiz, chunki har qanday so'z (nafaqat qaytariladigan)
+    // shu qoidaga bo'ysunishi kerak.
+    const coreWordIds = coreWords.map((w) => w.id);
+    const letzteZustaende = coreWordIds.length
+      ? ((await this.prisma.dafLexemeState.findMany({
+          where: { studentId, lexemeId: { in: coreWordIds } },
+        } as any)) as Array<{ lexemeId: number; lastFormat: string | null }>)
+      : [];
+    const letzterFormatByWort = new Map(
+      letzteZustaende.map((z) => [z.lexemeId, z.lastFormat]),
+    );
+
     const kandidaten: Frage[] = [];
 
     for (const w of coreWords) {
-      const wu = wortUz(w, coreWords, rnd);
-      if (wu) kandidaten.push(wu);
-      const uw = uzWort(w, coreWords, rnd);
-      if (uw) kandidaten.push(uw);
-      const art = artikel(w);
-      if (art) kandidaten.push(art);
+      // So'z o'tgan safar qaysi formatda so'ralgan bo'lsa, shu format bu
+      // safar UNING UCHUN qurilmaydi — qolgan formatlar kandidaten
+      // panelida qoladi. Hech qanday muqobil qolmasa (masalan artiklsiz
+      // so'z, yagona muqobil ARTIKEL ham lastFormat bilan bir xil emas —
+      // bu holat WORT_FORMATE uchun amalda yuzaga kelmaydi, chunki uch
+      // format bor), so'z shunchaki bu safar hech narsa qo'shmaydi — bu
+      // XATO emas, dizaynning o'zi shunday talab qiladi.
+      const letzter = letzterFormatByWort.get(w.id) ?? null;
+      if (letzter !== 'WORT_UZ') {
+        const wu = wortUz(w, coreWords, rnd);
+        if (wu) kandidaten.push(wu);
+      }
+      if (letzter !== 'UZ_WORT') {
+        const uw = uzWort(w, coreWords, rnd);
+        if (uw) kandidaten.push(uw);
+      }
+      if (letzter !== 'ARTIKEL') {
+        const art = artikel(w);
+        if (art) kandidaten.push(art);
+      }
     }
     // Bir necha PAAR nomzodi: har chaqiruv `rnd` holatini siljitib, boshqa
     // to'rtlikni tanlaydi. Material yetmasa `paar` `null` qaytaradi.
@@ -260,8 +326,6 @@ export class UebungService {
       const re = reaktion(p, phrases, rnd);
       if (re) kandidaten.push(re);
     }
-
-    const pflicht = await this.baueWiederholung(studentId, coreWords, rnd);
 
     const { fragen, nichtPlatziert } = baueSeans(
       kandidaten,
@@ -311,7 +375,8 @@ export class UebungService {
     } as any)) as Array<{
       id: number;
       de: string;
-      uz: string;
+      // Sxemada nullable — `toWort` tarjimasiz qatorni `null`ga aylantiradi.
+      uz: string | null;
       artikel: string | null;
       anzeige: string | null;
       sectionId: number | null;
@@ -325,14 +390,8 @@ export class UebungService {
     for (const state of due) {
       const raw = byId.get(state.lexemeId);
       if (!raw) continue; // so'z bazadan o'chirilgan — o'tkazib yuboriladi.
-      const wort: MaterialWort = {
-        id: raw.id,
-        de: raw.de,
-        uz: raw.uz,
-        artikel: raw.artikel,
-        anzeige: raw.anzeige,
-        sectionCode: '',
-      };
+      const wort = toWort({ ...raw, sectionCode: '' });
+      if (!wort) continue; // tarjimasiz so'z qaytarish savoliga aylana olmaydi.
       const andere = coreWords.some((w) => w.id === wort.id)
         ? coreWords
         : [...coreWords, wort];

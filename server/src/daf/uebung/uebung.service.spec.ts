@@ -85,6 +85,20 @@ function fakePrisma() {
       sectionId: 77,
       unitId: 2,
     },
+    // Tarjimasi yo'q so'z (`uz: null`) — sxemada `DafLexeme.uz` nullable.
+    // Unit 1 to'liq tarjima qilingan, lekin 2–12-unitlarda va eski DiB
+    // so'zlarida bunday qatorlar bor. Bu so'z `core: true` va shu
+    // bo'limda bo'lsa ham, savolga aylanmasligi SHART (Finding 5).
+    {
+      id: 7,
+      de: 'unbekannt',
+      uz: null,
+      artikel: null,
+      anzeige: null,
+      core: true,
+      sectionId: 7,
+      unitId: 1,
+    },
   ];
   const sentence = [
     { id: 11, de: 'Ich bin Anna.', uz: 'Men Annaman.', sectionId: 7 },
@@ -204,6 +218,25 @@ describe('UebungService.seans', () => {
     expect(soralgan).not.toContain(6);
   });
 
+  // Finding 5: `DafLexeme.uz` sxemada nullable — tarjimasi yo'q so'zdan
+  // (id 7) savol qurilsa `prompt`/`options`da `null` chiqib, `pruefen`
+  // `normalisieren(null)`da yiqilardi. Bunday so'z materialga aylanish
+  // bosqichidayoq chiqarib tashlanishi kerak, xato tashlanmasdan.
+  it('tarjimasi yo`q so`zdan savol qurmaydi, xato tashlamaydi', async () => {
+    const prisma = fakePrisma();
+    const fragen = await new UebungService(prisma as any).seans(100, 55);
+    const soralgan = fragen
+      .filter((f) => f.itemType === 'WORT')
+      .map((f) => f.itemId);
+    expect(soralgan).not.toContain(7);
+    // Hech qayerda `null` chiqmasligi ham tekshiriladi — `prompt`/`hilfe`/
+    // `options` ichida.
+    for (const f of fragen) {
+      expect(f.prompt).not.toBeNull();
+      expect(f.options).not.toContain(null);
+    }
+  });
+
   it('savollar tartib raqamiga ega', async () => {
     const prisma = fakePrisma();
     const fragen = await new UebungService(prisma as any).seans(100, 55);
@@ -257,6 +290,50 @@ describe('UebungService.seans — qaytarish (wiederholung)', () => {
     // 2-so'z oxirgi marta UZ_WORT da so'ralgan — xuddi shu sababdan
     // yagona muqobil WORT_UZ.
     expect(soz2?.format).toBe('WORT_UZ');
+  });
+
+  // Finding 4 / dizayn qoidasi 5: ketma-ket ikki SEANSDA bir xil
+  // (so'z+format) juftligi takrorlanmaydi. Bu — ODDIY (qaytarish
+  // ro'yxatida bo'lmagan) so'zlar uchun ham amal qilishi kerak: agar
+  // so'z 1 ('hallo') o'tgan safar WORT_UZ formatida so'ralgan bo'lsa
+  // (lekin hozir muddati kelgan emas — oddiy nomzod sifatida qatnashadi),
+  // bu safar u WORT_UZ sifatida QURILMAYDI ham — demak kandidaten
+  // panelida bunday nomzod umuman yo'q, seans uni tanlab OLOLMAYDI.
+  it('oddiy so`zning ham avvalgi formatidagi nomzodi qurilmaydi (dizayn qoidasi 5)', async () => {
+    const prisma = fakePrisma();
+    prisma.dafLexemeState.findMany = jest.fn(async (args: any) => {
+      const where = args?.where ?? {};
+      if (where.dueAt) return []; // bu testda muddati kelgan so'z yo'q
+      if (where.lexemeId?.in) {
+        // 1-so'z ('hallo') o'tgan SEANSda WORT_UZ formatida so'ralgan edi.
+        return [{ lexemeId: 1, lastFormat: 'WORT_UZ' }];
+      }
+      return [];
+    }) as any;
+
+    const fragen = await new UebungService(prisma as any).seans(100, 55);
+    const soz1Savollari = fragen.filter(
+      (f) => f.itemType === 'WORT' && f.itemId === 1,
+    );
+    // Chiqsa ham — hech qachon WORT_UZ formatida emas, chunki bu format
+    // uning uchun kandidaten ro'yxatiga UMUMAN kiritilmagan.
+    for (const f of soz1Savollari) {
+      expect(f.format).not.toBe('WORT_UZ');
+    }
+  });
+
+  // Finding 5, qaytarish yo'lidagi hodisasi: muddati kelgan so'zning
+  // o'zi tarjimasiz bo'lsa (id 7 — `uz: null`), `baueWiederholung` xato
+  // tashlamasdan uni tashlab ketishi kerak.
+  it('muddati kelgan so`z tarjimasiz bo`lsa, xato tashlamay tashlab ketadi', async () => {
+    const prisma = fakePrisma();
+    const eski = new Date(Date.now() - 60_000);
+    prisma.dafLexemeState.findMany = jest.fn(async ({ take }: any) =>
+      [{ lexemeId: 7, lastFormat: null, dueAt: eski }].slice(0, take),
+    ) as any;
+
+    const fragen = await new UebungService(prisma as any).seans(100, 55);
+    expect(fragen.filter((f) => f.itemId === 7)).toHaveLength(0);
   });
 });
 

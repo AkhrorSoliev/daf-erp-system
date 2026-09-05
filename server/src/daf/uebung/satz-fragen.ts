@@ -1,8 +1,10 @@
-import type {
-  Frage,
-  MaterialPhrase,
-  MaterialSatz,
-  MaterialWort,
+import { normalisieren } from './antwort';
+import {
+  materialSchluessel,
+  type Frage,
+  type MaterialPhrase,
+  type MaterialSatz,
+  type MaterialWort,
 } from './frage.types';
 
 function mischen<T>(items: T[], rnd: () => number): T[] {
@@ -85,6 +87,7 @@ export function luecke(
     options: [],
     richtig: ziel.de,
     akzeptiert: [],
+    belegteItems: [materialSchluessel('WORT', ziel.id)],
   };
 }
 
@@ -101,6 +104,7 @@ export function satzBauen(satz: MaterialSatz, rnd: () => number): Frage | null {
     options: mischen(woerter, rnd),
     richtig: satz.de,
     akzeptiert: [],
+    belegteItems: [materialSchluessel('SATZ', satz.id)],
   };
 }
 
@@ -109,10 +113,17 @@ export function satzUebersetzen(
   andere: MaterialSatz[],
   rnd: () => number,
 ): Frage | null {
+  // `normalisieren` bilan solishtiriladi — grading ham shu funksiya
+  // orqali ishlaydi, xom teng emas solishtirilsa richtigdan faqat
+  // tinish belgisi bilan farq qiladigan gap ham chalg'ituvchi bo'lib
+  // qolar, javob berilganda esa u ham "to'g'ri" hisoblanardi.
   const falsch = [
     ...new Set(
       andere
-        .filter((s) => s.id !== ziel.id && s.uz !== ziel.uz)
+        .filter(
+          (s) =>
+            s.id !== ziel.id && normalisieren(s.uz) !== normalisieren(ziel.uz),
+        )
         .map((s) => s.uz),
     ),
   ];
@@ -126,6 +137,7 @@ export function satzUebersetzen(
     options: mischen([ziel.uz, ...mischen(falsch, rnd).slice(0, 3)], rnd),
     richtig: ziel.uz,
     akzeptiert: [],
+    belegteItems: [materialSchluessel('SATZ', ziel.id)],
   };
 }
 
@@ -153,7 +165,10 @@ export function reaktion(
           (p) =>
             p.id !== ziel.id &&
             p.funktionUz !== ziel.funktionUz &&
-            p.de !== ziel.de,
+            // `normalisieren` bilan: grading xuddi shu funksiya orqali
+            // solishtiradi, xom teng emas richtigdan faqat tinish
+            // belgisi bilan farq qiladigan iborani ham o'tkazib yuborardi.
+            normalisieren(p.de) !== normalisieren(ziel.de),
         )
         .map((p) => p.de),
     ),
@@ -168,5 +183,6 @@ export function reaktion(
     options: mischen([ziel.de, ...mischen(falsch, rnd).slice(0, 3)], rnd),
     richtig: ziel.de,
     akzeptiert: [],
+    belegteItems: [materialSchluessel('PHRASE', ziel.id)],
   };
 }

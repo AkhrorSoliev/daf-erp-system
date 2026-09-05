@@ -1,7 +1,12 @@
 import { artikel, paar, uzWort, wortUz } from './wort-fragen';
 import type { MaterialWort } from './frage.types';
 
-function w(id: number, de: string, uz: string, art: string | null = null): MaterialWort {
+function w(
+  id: number,
+  de: string,
+  uz: string,
+  art: string | null = null,
+): MaterialWort {
   return { id, de, uz, artikel: art, anzeige: null, sectionCode: 'u01-s1' };
 }
 
@@ -34,6 +39,52 @@ describe('wortUz', () => {
     const f = wortUz(w(5, 'Name', 'ism', 'der'), ANDERE, rnd)!;
     expect(f.prompt).toBe('der Name');
   });
+
+  // Finding 1: `hilfe` avval `ziel.anzeige`ni qaytarardi — raqam so'zida
+  // bu aynan javobning o'zi (masalan `acht` uchun `8`). Nemis tilini
+  // bilmasa ham raqamni o'qiy oladigan o'quvchi savolni bilim tekshirmay
+  // yecha olardi. Endi `hilfe` umuman berilmaydi, `anzeige` faqat
+  // materialning o'zida qoladi.
+  it('raqam so`zida `hilfe`ga raqam berilmaydi, javob hech qayerda ko`rinmaydi', () => {
+    const acht: MaterialWort = {
+      id: 10,
+      de: 'acht',
+      uz: 'sakkiz',
+      artikel: null,
+      anzeige: '8',
+      sectionCode: 'u01-s1',
+    };
+    const boshqaRaqamlar: MaterialWort[] = [
+      {
+        id: 11,
+        de: 'ich',
+        uz: 'men',
+        artikel: null,
+        anzeige: null,
+        sectionCode: 'u01-s1',
+      },
+      {
+        id: 12,
+        de: 'drei',
+        uz: 'uch',
+        artikel: null,
+        anzeige: '3',
+        sectionCode: 'u01-s1',
+      },
+      {
+        id: 13,
+        de: 'neun',
+        uz: "to'qqiz",
+        artikel: null,
+        anzeige: '9',
+        sectionCode: 'u01-s1',
+      },
+    ];
+    const f = wortUz(acht, boshqaRaqamlar, rnd)!;
+    expect(f.hilfe).toBeNull();
+    const hammaMatn = [f.prompt, ...f.options].join(' ');
+    expect(hammaMatn).not.toMatch(/\d/);
+  });
 });
 
 describe('uzWort', () => {
@@ -43,6 +94,37 @@ describe('uzWort', () => {
     expect(f.prompt).toBe('salom');
     expect(f.options).toContain('hallo');
     expect(f.richtig).toBe('hallo');
+  });
+
+  // Finding 2: variantlar `anzeigen` orqali (artikl bilan) ko'rsatilsa,
+  // to'rttadan faqat ot bo'lgan so'z ikki so'zli («das Land» kabi) chiqib,
+  // javob mazmunidan emas SHAKLIDAN aniqlanib qoladi. Endi hammasi qur'iy.
+  it('variantlarning hech biri artikl bilan chiqmaydi, ot sibling bo`lsa ham', () => {
+    const ziel = w(1, 'fünf', 'besh');
+    const boshqalar = [
+      w(2, 'sechs', 'olti'),
+      w(3, 'vier', "to'rt"),
+      w(4, 'Land', 'davlat', 'das'), // ot — artikli bor
+    ];
+    const f = uzWort(ziel, boshqalar, rnd)!;
+    expect(f.options).toContain('Land');
+    for (const variant of f.options) {
+      expect(variant).not.toMatch(/^(der|die|das)\s/);
+    }
+  });
+
+  it('ot uchun artikl shakli endi variant emas, faqat `akzeptiert`da saqlanadi', () => {
+    const ziel = w(4, 'Land', 'davlat', 'das');
+    const boshqalar = [
+      w(1, 'fünf', 'besh'),
+      w(2, 'sechs', 'olti'),
+      w(3, 'vier', "to'rt"),
+    ];
+    const f = uzWort(ziel, boshqalar, rnd)!;
+    expect(f.options).toContain('Land');
+    expect(f.options).not.toContain('das Land');
+    expect(f.richtig).toBe('Land');
+    expect(f.akzeptiert).toContain('das Land');
   });
 });
 
@@ -60,13 +142,30 @@ describe('paar', () => {
     expect(paar([ZIEL, ANDERE[0]], rnd)).toBeNull();
   });
 
-  it('slaydlar oyna faqat shunda topsa: dublikat indeks 2-3 greedy topadi', () => {
-    // 6 ta so'z, rnd=0.9999 bilan identity shuffle (array tushadi).
+  // Finding 3: `PAAR` to'rtta so'zning tarjimasini birdaniga ko'rsatadi,
+  // shuning uchun to'rttasi ham "band" bo'lishi kerak — faqat `itemId`
+  // (birinchisi) emas. Aks holda qolgan uchtasi shu seansda yana alohida
+  // savol sifatida so'ralishi mumkin edi (masalan `ich=men` PAARda
+  // ko'rsatilgandan keyin, `ich` yana WORT_UZ sifatida ham chiqishi).
+  it('belegteItems to`rtta so`zning barchasini o`z ichiga oladi', () => {
+    const f = paar([ZIEL, ...ANDERE], rnd)!;
+    expect(f.belegteItems.sort()).toEqual(
+      ['WORT:1', 'WORT:2', 'WORT:3', 'WORT:4'].sort(),
+    );
+  });
+
+  it('ikkinchi bir xil tarjimali so`zni (ikkinchi SHARED) tashlab, to`rttaga yetkazadi', () => {
+    // 6 ta so'z, rnd=0.9999 bilan Fisher-Yates AMALDA hech kimni
+    // almashtirmaydi — tartib o'zgarmagan holicha qoladi (identity shuffle):
     // w1 (uz=uz1), w2 (uz=uz2), w3 (uz=SHARED), w4 (uz=SHARED), w5 (uz=uz5), w6 (uz=uz6).
-    // Slaydlar: [0-3] → uz1, uz2, SHARED, SHARED (DUP) ❌
-    //          [1-4] → uz2, SHARED, SHARED, uz5 (DUP) ❌
-    //          [2-5] → SHARED, SHARED, uz5, uz6 (DUP) ❌
-    // Greedy: uz1 ✓, uz2 ✓, skip SHARED (ishlandi), uz5 ✓, uz6 ✓ → 4 ta tufa ✅
+    //
+    // Greedy tanlov ketma-ket yuradi: w1 va w2 — tarjimasi hali band emas,
+    // TANLANADI. w3 — tarjimasi (SHARED) BIRINCHI marta ko'rinyapti, u ham
+    // hali band emas — TANLANADI (birinchi SHARED tashlab ketilmaydi).
+    // w4 — tarjimasi ALLAQACHON band (xuddi w3dagi SHARED) — TASHLAB
+    // YUBORILADI. w5 — band emas, TANLANADI va to'rttaga yetadi; w6ga
+    // hech qachon yetib borilmaydi.
+    // Natija: tanlangan to'rtlik — [w1, w2, w3, w5].
     const identityShuffle = (): number => 0.9999;
     const words = [
       w(1, 'word1', 'uz1'),

@@ -1,7 +1,11 @@
 import { baueSeans, FORMAT_MAX_PRO_SEANS, MIN_FORMATE } from './seans';
 import type { Frage, FrageFormat } from './frage.types';
 
-function f(format: FrageFormat, itemId: number): Frage {
+function f(
+  format: FrageFormat,
+  itemId: number,
+  belegteItems?: string[],
+): Frage {
   return {
     format,
     itemType: 'WORT',
@@ -11,14 +15,21 @@ function f(format: FrageFormat, itemId: number): Frage {
     options: [],
     richtig: 'x',
     akzeptiert: [],
+    belegteItems: belegteItems ?? [`WORT:${itemId}`],
   };
 }
 
 /** Har formatdan yetarlicha nomzod. */
 function kandidaten(): Frage[] {
   const formate: FrageFormat[] = [
-    'WORT_UZ', 'UZ_WORT', 'PAAR', 'ARTIKEL',
-    'LUECKE', 'SATZ_BAUEN', 'SATZ_UEBERSETZEN', 'REAKTION',
+    'WORT_UZ',
+    'UZ_WORT',
+    'PAAR',
+    'ARTIKEL',
+    'LUECKE',
+    'SATZ_BAUEN',
+    'SATZ_UEBERSETZEN',
+    'REAKTION',
   ];
   return formate.flatMap((fmt, i) =>
     Array.from({ length: 5 }, (_, j) => f(fmt, i * 10 + j)),
@@ -36,7 +47,8 @@ describe('baueSeans', () => {
     const { fragen } = baueSeans(kandidaten(), 12, rnd);
     const sanoq = new Map<string, number>();
     for (const q of fragen) sanoq.set(q.format, (sanoq.get(q.format) ?? 0) + 1);
-    for (const n of sanoq.values()) expect(n).toBeLessThanOrEqual(FORMAT_MAX_PRO_SEANS);
+    for (const n of sanoq.values())
+      expect(n).toBeLessThanOrEqual(FORMAT_MAX_PRO_SEANS);
   });
 
   // Diqqat: nomzodlar bir xil sonli (5 tadan sakkiz formatda) bo'lganda,
@@ -48,7 +60,13 @@ describe('baueSeans', () => {
   // haqiqatda ikkita bir xil formatni yonma-yon qo'yib qo'yadi (sinovda
   // tekshirilgan: `WORT_UZ, WORT_UZ` 7-8 o'rinlarda chiqadi).
   it('ketma-ket ikki savolni bir formatda qo`ymaydi', () => {
-    const formate: FrageFormat[] = ['WORT_UZ', 'UZ_WORT', 'PAAR', 'ARTIKEL', 'LUECKE'];
+    const formate: FrageFormat[] = [
+      'WORT_UZ',
+      'UZ_WORT',
+      'PAAR',
+      'ARTIKEL',
+      'LUECKE',
+    ];
     const nomzodlar = formate.flatMap((fmt, i) =>
       Array.from({ length: 3 }, (_, j) => f(fmt, i * 100 + j)),
     );
@@ -89,7 +107,8 @@ describe('baueSeans', () => {
   // ikkinchisining tanlanishini to'sadi.
   it('bir materialni bir seansda ikki marta so`ramaydi', () => {
     const nomzodlar: Frage[] = [
-      f('WORT_UZ', 5), f('UZ_WORT', 5), // bitta material, ikki format
+      f('WORT_UZ', 5),
+      f('UZ_WORT', 5), // bitta material, ikki format
       ...Array.from({ length: 3 }, (_, i) => f('PAAR', 20 + i)),
       ...Array.from({ length: 3 }, (_, i) => f('ARTIKEL', 30 + i)),
       ...Array.from({ length: 3 }, (_, i) => f('LUECKE', 40 + i)),
@@ -98,6 +117,33 @@ describe('baueSeans', () => {
     const kalitlar = fragen.map((q) => `${q.itemType}:${q.itemId}`);
     expect(new Set(kalitlar).size).toBe(kalitlar.length);
     expect(fragen.filter((q) => q.itemId === 5)).toHaveLength(1);
+  });
+
+  // `PAAR` to'rtta so'zni bittada ko'rsatadi va ularning tarjimasini
+  // oshkor qiladi — shuning uchun to'rttasi ham `belegteItems`da "band"
+  // deb belgilanadi. Bu test faqat `itemId`ga (bitta materialga) emas,
+  // BUTUN `belegteItems` ro'yxatiga qarab tekshirishni sinaydi: `PAAR`
+  // ichidagi 2-so'z (itemId=2) alohida `WORT_UZ` nomzodi sifatida ham
+  // panelda bo'lsa, ikkinchi marta (endi alohida savol sifatida)
+  // so'ralmasligi kerak.
+  it('PAAR ichida ko`rsatilgan so`z shu seansda alohida savol sifatida qayta so`ralmaydi', () => {
+    const juftlik = f('PAAR', 1, ['WORT:1', 'WORT:2', 'WORT:3', 'WORT:4']);
+    const alohidaSavol2 = f('UZ_WORT', 2); // belegteItems: ['WORT:2'] — PAAR bilan bir xil material
+    const toldiruvchilar: Frage[] = [
+      juftlik,
+      alohidaSavol2,
+      ...Array.from({ length: 3 }, (_, i) => f('ARTIKEL', 30 + i)),
+      ...Array.from({ length: 3 }, (_, i) => f('LUECKE', 40 + i)),
+    ];
+    const { fragen } = baueSeans(toldiruvchilar, 8, rnd);
+
+    const paarTanlandi = fragen.some((q) => q.format === 'PAAR');
+    const alohidaTanlandi = fragen.some(
+      (q) => q.format === 'UZ_WORT' && q.itemId === 2,
+    );
+    // Ikkalasi ham material '2'ni "band" qiladi — ikkalasi BIRDANIGA
+    // seansga kira olmaydi.
+    expect(paarTanlandi && alohidaTanlandi).toBe(false);
   });
 
   it('nomzod yetmasa borini beradi, takrorlamaydi', () => {
@@ -125,7 +171,9 @@ describe('baueSeans', () => {
     ];
     const { fragen } = baueSeans(nomzodlar, 12, rnd);
     expect(fragen).toHaveLength(12);
-    expect(fragen.filter((q) => q.format === 'WORT_UZ')).toHaveLength(FORMAT_MAX_PRO_SEANS);
+    expect(fragen.filter((q) => q.format === 'WORT_UZ')).toHaveLength(
+      FORMAT_MAX_PRO_SEANS,
+    );
   });
 
   // Nomzodlar panelida besh xil format umuman yo'q bo'lsa (bor-yo'g'i
@@ -166,7 +214,10 @@ describe('baueSeans', () => {
   // nichtPlatziert'da ko'rinadi.
   it('cap to`lgani sabab joylasholmagan majburiy savol nichtPlatziert`da ko`rinadi', () => {
     const wiederholung = [
-      f('WORT_UZ', 900), f('WORT_UZ', 901), f('WORT_UZ', 902), f('WORT_UZ', 903),
+      f('WORT_UZ', 900),
+      f('WORT_UZ', 901),
+      f('WORT_UZ', 902),
+      f('WORT_UZ', 903),
     ];
     const toldiruvchilar: Frage[] = [
       ...Array.from({ length: 5 }, (_, i) => f('UZ_WORT', 10 + i)),
@@ -174,8 +225,15 @@ describe('baueSeans', () => {
       ...Array.from({ length: 5 }, (_, i) => f('ARTIKEL', 30 + i)),
       ...Array.from({ length: 5 }, (_, i) => f('LUECKE', 40 + i)),
     ];
-    const { fragen, nichtPlatziert } = baueSeans(toldiruvchilar, 12, rnd, wiederholung);
-    const joylashganIds = fragen.filter((q) => q.itemId >= 900).map((q) => q.itemId);
+    const { fragen, nichtPlatziert } = baueSeans(
+      toldiruvchilar,
+      12,
+      rnd,
+      wiederholung,
+    );
+    const joylashganIds = fragen
+      .filter((q) => q.itemId >= 900)
+      .map((q) => q.itemId);
     expect(joylashganIds).toHaveLength(FORMAT_MAX_PRO_SEANS);
     expect(nichtPlatziert.map((q) => q.itemId)).toEqual([903]);
   });

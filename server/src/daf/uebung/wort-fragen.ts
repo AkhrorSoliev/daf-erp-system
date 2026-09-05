@@ -1,4 +1,9 @@
-import type { Frage, MaterialWort } from './frage.types';
+import { normalisieren } from './antwort';
+import {
+  materialSchluessel,
+  type Frage,
+  type MaterialWort,
+} from './frage.types';
 
 /**
  * So'zdan quriladigan savollar.
@@ -37,8 +42,17 @@ function ablenker(
   rnd: () => number,
 ): string[] | null {
   const richtig = feld(ziel);
+  // `normalisieren` bilan solishtiriladi (nemischa maydonlar uchun ham
+  // ishlaydi — imlo/tinish farqiga sezgir emas), chunki grading
+  // (`istRichtig`) xuddi shu funksiya bilan solishtiradi. Xom teng emas
+  // solishtirilsa, richtigdan faqat tinish belgisi bilan farq qiladigan
+  // chalg'ituvchi ham panelga kirib, aslida TO'G'RI javob sifatida
+  // baholanib qolardi.
   const kandidaten = andere
-    .filter((w) => w.id !== ziel.id && feld(w) !== richtig)
+    .filter(
+      (w) =>
+        w.id !== ziel.id && normalisieren(feld(w)) !== normalisieren(richtig),
+    )
     .map(feld);
   const einmalig = [...new Set(kandidaten)];
   if (einmalig.length < 3) return null;
@@ -57,10 +71,16 @@ export function wortUz(
     itemType: 'WORT',
     itemId: ziel.id,
     prompt: anzeigen(ziel),
-    hilfe: ziel.anzeige,
+    // `hilfe` ATAYLAB berilmaydi: `anzeige` raqam so'zlarida aynan
+    // javobning o'zi (masalan `acht` uchun `8`). Uni ko'rsatish savolni
+    // nemis tilini bilishdan mustaqil qilib qo'yardi — o'quvchi raqamni
+    // o'qiy olsagina to'g'ri variantni topadi, nemischa so'zni bilmasa
+    // ham. `anzeige` materialning bir qismi, savolning emas.
+    hilfe: null,
     options: mischen([ziel.uz, ...falsch], rnd),
     richtig: ziel.uz,
     akzeptiert: [],
+    belegteItems: [materialSchluessel('WORT', ziel.id)],
   };
 }
 
@@ -69,7 +89,14 @@ export function uzWort(
   andere: MaterialWort[],
   rnd: () => number,
 ): Frage | null {
-  const falsch = ablenker(ziel, andere, (w) => anzeigen(w), rnd);
+  // Variantlar QUR'IY holda (`de`, artiklsiz) ko'rsatiladi. Artikl bilan
+  // ko'rsatilsa, faqat ot bo'lgan so'z ikki so'zli («der Land» kabi)
+  // chiqadi va boshqa uchtasi bitta so'zli qoladi — javob mazmunidan
+  // emas, SHAKLIDAN aniqlanib qoladi. Jins `ARTIKEL` formati orqali
+  // o'rgatiladi, bu yerda emas; shuning uchun artikl shakli yo'qolmaydi,
+  // faqat `akzeptiert`ga tushadi — artikl bilan yozgan o'quvchi ham
+  // to'g'ri hisoblanadi.
+  const falsch = ablenker(ziel, andere, (w) => w.de, rnd);
   if (!falsch) return null;
   return {
     format: 'UZ_WORT',
@@ -77,9 +104,10 @@ export function uzWort(
     itemId: ziel.id,
     prompt: ziel.uz,
     hilfe: null,
-    options: mischen([anzeigen(ziel), ...falsch], rnd),
-    richtig: anzeigen(ziel),
-    akzeptiert: [ziel.de],
+    options: mischen([ziel.de, ...falsch], rnd),
+    richtig: ziel.de,
+    akzeptiert: ziel.artikel ? [anzeigen(ziel)] : [],
+    belegteItems: [materialSchluessel('WORT', ziel.id)],
   };
 }
 
@@ -129,7 +157,10 @@ export function paar(woerter: MaterialWort[], rnd: () => number): Frage | null {
   }
 
   const links = selected.map((w) => w.de);
-  const rechts = mischen(selected.map((w) => w.uz), rnd);
+  const rechts = mischen(
+    selected.map((w) => w.uz),
+    rnd,
+  );
 
   return {
     format: 'PAAR',
@@ -140,6 +171,12 @@ export function paar(woerter: MaterialWort[], rnd: () => number): Frage | null {
     options: [...links, ...rechts],
     richtig: selected.map((w) => `${w.de}=${w.uz}`).join('|'),
     akzeptiert: [],
+    // To'rttasi ham "band": bu savol to'rtta so'zning tarjimasini
+    // birdaniga ko'rsatadi, shuning uchun boshqa uchtasi ham xuddi
+    // `itemId`dagi birinchi so'z kabi shu seansda ikkinchi marta
+    // (masalan alohida `WORT_UZ`/`UZ_WORT` savoli sifatida) so'ralmasligi
+    // kerak — ular allaqachon shu yerda javobi bilan ko'rsatilgan.
+    belegteItems: selected.map((w) => materialSchluessel('WORT', w.id)),
   };
 }
 
@@ -154,5 +191,6 @@ export function artikel(ziel: MaterialWort): Frage | null {
     options: ['der', 'die', 'das'],
     richtig: ziel.artikel,
     akzeptiert: [],
+    belegteItems: [materialSchluessel('WORT', ziel.id)],
   };
 }

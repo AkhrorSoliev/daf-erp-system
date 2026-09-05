@@ -16,8 +16,6 @@ export interface SeansPlan {
   nichtPlatziert: Frage[];
 }
 
-const schluessel = (f: Frage): string => `${f.itemType}:${f.itemId}`;
-
 /**
  * Seans tarkibi.
  *
@@ -34,7 +32,12 @@ const schluessel = (f: Frage): string => `${f.itemType}:${f.itemId}`;
  *    formatdagi nomzod har doim ustunlik oladi — aks holda ochko'z
  *    tanlov to'rt formatni to'ldirib, beshinchisiga hech qachon
  *    yetmasligi mumkin (4 format x cap=3 = 12, aynan so'ralgan son).
- * 4. Bir material (itemType+itemId) bir seansda ikki marta so'ralmaydi.
+ * 4. Bir material bir seansda ikki marta so'ralmaydi. Tekshiruv
+ *    `itemType:itemId`ga emas, `belegteItems`ga qaraydi: ko'pchilik
+ *    savol uchun ular bir xil, lekin `PAAR` to'rtta so'zni bittada
+ *    ko'rsatgani uchun to'rttasini ham "band" qiladi — aks holda `PAAR`
+ *    ichida ko'rsatilgan so'z shu seansda yana alohida savol sifatida
+ *    ham chiqishi mumkin edi.
  * 5. Nomzod yetmasa TAKRORLAMAYDI — kamroq savol beradi.
  *
  * MAJBURIY (pflicht) SAVOLLAR: ular seansning sababi — muddati kelgan
@@ -68,7 +71,7 @@ export function baueSeans(
   const joylashtir = (f: Frage): void => {
     fragen.push(f);
     proFormat.set(f.format, (proFormat.get(f.format) ?? 0) + 1);
-    benutzteItems.add(schluessel(f));
+    for (const kalit of f.belegteItems) benutzteItems.add(kalit);
   };
 
   // --- 1-bosqich: majburiy savollar ---
@@ -84,7 +87,7 @@ export function baueSeans(
     const qoladigan: Frage[] = [];
     for (const f of qoldi) {
       const capToldi = (proFormat.get(f.format) ?? 0) >= FORMAT_MAX_PRO_SEANS;
-      const ishlatilgan = benutzteItems.has(schluessel(f));
+      const ishlatilgan = f.belegteItems.some((k) => benutzteItems.has(k));
       if (capToldi || ishlatilgan) {
         nichtPlatziert.push(f);
       } else {
@@ -107,7 +110,7 @@ export function baueSeans(
       (f) =>
         f.format !== letzte &&
         (proFormat.get(f.format) ?? 0) < FORMAT_MAX_PRO_SEANS &&
-        !benutzteItems.has(schluessel(f)),
+        !f.belegteItems.some((k) => benutzteItems.has(k)),
     );
     if (spacerIdx === -1) {
       // Bo'shliq yaratib bo'lmadi — qolganlarini joylashtirib bo'lmaydi.
@@ -128,7 +131,7 @@ export function baueSeans(
     const mosKeladi = (f: Frage): boolean =>
       f.format !== letzte &&
       (proFormat.get(f.format) ?? 0) < FORMAT_MAX_PRO_SEANS &&
-      !benutzteItems.has(schluessel(f));
+      !f.belegteItems.some((k) => benutzteItems.has(k));
 
     // Besh xil formatga yetmaguncha ishlatilmagan format ustunlik
     // oladi (3-qoida) — aks holda ochko'z findIndex to'rtta formatni

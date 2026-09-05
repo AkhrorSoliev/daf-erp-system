@@ -52,6 +52,29 @@ export interface Frage {
   options: string[];
   richtig: string;
   akzeptiert: string[];
+  /**
+   * Shu savol "ishlatib qo'yadigan" barcha material kalitlari
+   * (`materialSchluessel` shaklida).
+   *
+   * Ko'pchilik format bitta so'z/gap/iboraga tegishli bo'lgani uchun
+   * bu odatda bitta elementli massiv — `itemType:itemId` bilan bir xil.
+   * `PAAR` BUNDAN MUSTASNO: u to'rtta so'zni bittada ko'rsatadi va
+   * tarjimasini oshkor qiladi, shuning uchun to'rttasini ham shu yerga
+   * yozadi. Seans quruvchisi (`baueSeans`) shu ro'yxatga qarab so'z
+   * qayta so'ralmasligini ta'minlaydi — faqat `itemType:itemId`ga
+   * qaraganda, `PAAR` ichidagi qolgan uch so'z "band" bo'lib qolmas
+   * edi va bir seansda ikkinchi marta (masalan alohida savol sifatida)
+   * so'ralishi mumkin bo'lardi.
+   */
+  belegteItems: string[];
+}
+
+/** `belegteItems`/seans ichidagi band material kalitini quradi. */
+export function materialSchluessel(
+  itemType: Frage['itemType'],
+  itemId: number,
+): string {
+  return `${itemType}:${itemId}`;
 }
 
 /** Mijozga ketadigan savol — to'g'ri javobsiz. */
