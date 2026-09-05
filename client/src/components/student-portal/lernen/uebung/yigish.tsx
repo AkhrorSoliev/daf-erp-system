@@ -14,6 +14,11 @@ export interface YigishProps {
   tanlangan: string[];
   onOzgar: (next: string[]) => void;
   natija: PruefErgebnis | null;
+  /**
+   * `pruefen` javob kutmoqda: natija hali yo'q, lekin o'quvchi
+   * yuborilgan javobni endi o'zgartirmasligi kerak.
+   */
+  kutilmoqda?: boolean;
 }
 
 /**
@@ -25,14 +30,33 @@ export interface YigishProps {
  * `de=uz|de=uz|de=uz|de=uz`) yuqoridagi chaqiruvchi (5-vazifa) tomonidan
  * tuziladi — bu komponent faqat `tanlangan` ni yig'adi.
  */
-export function Yigish({ format, options, tanlangan, onOzgar, natija }: YigishProps) {
+export function Yigish({
+  format,
+  options,
+  tanlangan,
+  onOzgar,
+  natija,
+  kutilmoqda = false,
+}: YigishProps) {
   if (format === "PAAR") {
     return (
-      <Juftlash options={options} tanlangan={tanlangan} onOzgar={onOzgar} natija={natija} />
+      <Juftlash
+        options={options}
+        tanlangan={tanlangan}
+        onOzgar={onOzgar}
+        natija={natija}
+        kutilmoqda={kutilmoqda}
+      />
     );
   }
   return (
-    <GapTuzish options={options} tanlangan={tanlangan} onOzgar={onOzgar} natija={natija} />
+    <GapTuzish
+      options={options}
+      tanlangan={tanlangan}
+      onOzgar={onOzgar}
+      natija={natija}
+      kutilmoqda={kutilmoqda}
+    />
   );
 }
 
@@ -41,9 +65,10 @@ interface IchkiProps {
   tanlangan: string[];
   onOzgar: (next: string[]) => void;
   natija: PruefErgebnis | null;
+  kutilmoqda: boolean;
 }
 
-function GapTuzish({ options, tanlangan, onOzgar, natija }: IchkiProps) {
+function GapTuzish({ options, tanlangan, onOzgar, natija, kutilmoqda }: IchkiProps) {
   // Bir xil so'z gapda ikki marta uchrashi mumkin ("ich bin ... ich"), shuning
   // uchun pastdagi bo'laklar qaysi INDEKSI ishlatilganini hisoblaymiz — so'zning
   // o'ziga qarab hisoblasak, ikkinchi nusxa tanlanganda birinchisi yashiringan
@@ -61,7 +86,7 @@ function GapTuzish({ options, tanlangan, onOzgar, natija }: IchkiProps) {
     return true;
   });
 
-  const qulflangan = natija != null;
+  const qulflangan = natija != null || kutilmoqda;
 
   return (
     <div className="space-y-3">
@@ -124,14 +149,14 @@ function GapTuzish({ options, tanlangan, onOzgar, natija }: IchkiProps) {
   );
 }
 
-function Juftlash({ options, tanlangan, onOzgar, natija }: IchkiProps) {
+function Juftlash({ options, tanlangan, onOzgar, natija, kutilmoqda }: IchkiProps) {
   // `options` aynan sakkizta: birinchi to'rttasi nemischa (chap ustun,
   // tartibi o'zgarmaydi), oxirgi to'rttasi o'zbekcha (aralashtirilgan).
   const nemischa = options.slice(0, 4);
   const ozbekcha = options.slice(4, 8);
 
   const [kutilayotgan, setKutilayotgan] = React.useState<string | null>(null);
-  const qulflangan = natija != null;
+  const qulflangan = natija != null || kutilmoqda;
 
   // Natija kelganda server `richtig` ni "de=uz|de=uz|de=uz|de=uz" ko'rinishida
   // qaytaradi — har bir juftni alohida to'g'ri/xato deb ko'rsatish uchun uni

@@ -10,6 +10,11 @@ export interface YozishProps {
   natija: PruefErgebnis | null;
   /** Enter bosilganda — desktopda tekshirish/keyingi. */
   onEnter: () => void;
+  /**
+   * `pruefen` javob kutmoqda: natija hali yo'q, lekin o'quvchi
+   * yuborilgan javobni endi o'zgartirmasligi kerak.
+   */
+  kutilmoqda?: boolean;
 }
 
 const UMLAUT = ["ä", "ö", "ü", "ß"];
@@ -20,7 +25,7 @@ const UMLAUT = ["ä", "ö", "ü", "ß"];
  * TO'G'RI JAVOB PROPS'DA YO'Q — `mc-exercise.tsx` va `Tanlash` dagi
  * qoida shu yerda ham amal qiladi.
  */
-export function Yozish({ qiymat, onYoz, natija, onEnter }: YozishProps) {
+export function Yozish({ qiymat, onYoz, natija, onEnter, kutilmoqda = false }: YozishProps) {
   const ref = React.useRef<HTMLInputElement>(null);
 
   // Savol almashganda maydon o'zi fokuslanadi: aks holda o'quvchi har
@@ -34,7 +39,7 @@ export function Yozish({ qiymat, onYoz, natija, onEnter }: YozishProps) {
       <input
         ref={ref}
         value={qiymat}
-        disabled={natija != null}
+        disabled={natija != null || kutilmoqda}
         onChange={(e) => onYoz(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
@@ -60,11 +65,12 @@ export function Yozish({ qiymat, onYoz, natija, onEnter }: YozishProps) {
             <button
               key={ch}
               type="button"
+              disabled={kutilmoqda}
               onClick={() => {
                 onYoz(qiymat + ch);
                 ref.current?.focus();
               }}
-              className="h-10 w-10 rounded-xl bg-tint font-semibold text-ink-700"
+              className="h-10 w-10 rounded-xl bg-tint font-semibold text-ink-700 disabled:opacity-50"
             >
               {ch}
             </button>

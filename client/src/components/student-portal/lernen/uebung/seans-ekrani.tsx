@@ -3,8 +3,10 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import toast from "react-hot-toast";
 import { Books, X } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { Button, EmptyState, LoadingCards, ProgressBar } from "../../lumio";
 import { LernenLessonPage } from "../lernen-lesson-page";
 import { useAbschluss, useErsatz, useLernenLesson, usePruefen, useUebungSeans } from "../queries";
@@ -143,12 +145,23 @@ export function SeansEkrani({ lessonId }: SeansEkraniProps) {
     if (!holat || !tugadimi(holat) || holat.jami === 0 || yozildi.current) return;
     yozildi.current = true;
     tugashDavomiyligi.current = Date.now() - seansBoshi;
-    abschluss.mutate({
-      lessonId,
-      richtig: holat.togri,
-      gesamt: holat.jami,
-      durationMs: tugashDavomiyligi.current,
-    });
+    abschluss.mutate(
+      {
+        lessonId,
+        richtig: holat.togri,
+        gesamt: holat.jami,
+        durationMs: tugashDavomiyligi.current,
+      },
+      {
+        // `ersatz`ning jimligi ataylab — o'rinbosar savol topilmasligi
+        // oddiy holat. Bu yerda esa yo'qotish HAQIQIY: ball yozilmasa,
+        // o'quvchining ilgarilashi saqlanmay qoladi va buni ko'rsatish
+        // shart — natija ekrani muvaffaqiyatning o'zi, shuning uchun
+        // faqat xato holatida tost chiqadi.
+        onError: (err) =>
+          toast.error(getErrorMessage(err, "Natija saqlanmadi. Internetni tekshiring")),
+      },
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [holat]);
 
@@ -175,10 +188,14 @@ export function SeansEkrani({ lessonId }: SeansEkraniProps) {
       // Yozish rejimida raqamlar javobning O'ZI — ularni tortib
       // olsak, o'quvchi «7» yoza olmasdi.
       if (e.key === "Enter") {
-        // `Yozish` maydoni Enter'ni O'ZI ushlaydi (`onEnter` orqali) —
-        // hodisa shu yerga baribir ko'tarilib keladi (bubbling).
-        // Qayta ishlasak, tekshirish/keyingi IKKI marta yuborilardi.
-        if (rejim === "YOZISH") return;
+        // Tekshirish bosqichida (`natija` hali yo'q) `Yozish` maydoni
+        // Enter'ni O'ZI ushlaydi (`onEnter` orqali) va hodisa shu yerga
+        // baribir ko'tarilib keladi (bubbling) — qayta ishlasak,
+        // tekshirish IKKI marta yuborilardi. Ammo natija kelgach maydon
+        // `disabled` bo'lib fokusni yo'qotadi, uning mahalliy ushlagichi
+        // endi ishlamaydi — «Keyingi»ga o'tishni shu global ushlagich
+        // olib qoladi, aks holda LUECKE'da Enter hech narsa qilmay qolardi.
+        if (rejim === "YOZISH" && !natija) return;
         e.preventDefault();
         if (natija) void keyingi();
         else tekshir();
@@ -317,6 +334,7 @@ export function SeansEkrani({ lessonId }: SeansEkraniProps) {
             tanlangan={tanlangan}
             onTanla={setTanlangan}
             natija={natija}
+            kutilmoqda={pruefen.isPending}
           />
         ) : rejim === "YOZISH" ? (
           <Yozish
@@ -324,6 +342,7 @@ export function SeansEkrani({ lessonId }: SeansEkraniProps) {
             onYoz={setYozilgan}
             natija={natija}
             onEnter={() => (natija ? void keyingi() : tekshir())}
+            kutilmoqda={pruefen.isPending}
           />
         ) : (
           <Yigish
@@ -332,6 +351,7 @@ export function SeansEkrani({ lessonId }: SeansEkraniProps) {
             tanlangan={yigilgan}
             onOzgar={setYigilgan}
             natija={natija}
+            kutilmoqda={pruefen.isPending}
           />
         )}
       </main>
