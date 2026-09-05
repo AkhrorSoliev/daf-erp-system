@@ -162,6 +162,20 @@ export function SeansEkrani({ lessonId }: SeansEkraniProps) {
           toast.error(getErrorMessage(err, "Natija saqlanmadi. Internetni tekshiring")),
       },
     );
+    // Qasddan tushirilgan bog'liqliklar (har biri xavfsiz):
+    // - `abschluss` — uning `.mutate`si react-query tomonidan barqaror
+    //   ulanadi, render sayin o'zgarmaydi.
+    // - `tugadimi` — sof, modul darajasidagi import, hech qachon o'zgarmaydi.
+    // - `lessonId` — shu ekran o'rnatilgan davomida o'zgarmaydigan marshrut
+    //   parametri.
+    // - `seansBoshi` — holat, lekin bu effekt HECH QACHON "eski" chaqiruv
+    //   sifatida qolib ketmaydi: pastdagi klaviatura effektidan farqli
+    //   o'laroq, bu yerda uzoq umr ko'radigan listener O'RNATILMAYDI — u
+    //   faqat `holat` chindan o'zgargan render'da, o'sha bitta renderning
+    //   o'zida ishga tushadi. `qaytaOtish` `setSeansBoshi` va `setHolat`ni
+    //   BIR PARTIYADA chaqiradi, shuning uchun `holat` o'zgargan renderda
+    //   `seansBoshi` ham aynan o'sha yangi qiymatga ega bo'ladi — eskirish
+    //   imkoni yo'q.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [holat]);
 
@@ -214,8 +228,29 @@ export function SeansEkrani({ lessonId }: SeansEkraniProps) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+    // Bu effekt UZOQ UMR KO'RADIGAN `window` listener o'rnatadi — u
+    // yuqoridagi kabi "bitta renderda ishga tushadi" effekt emas: ro'yxatga
+    // olingan `onKey` funksiyasi bog'liqliklar RO'YXATI o'zgarmaguncha
+    // ekranga osilib qoladi, garchi HAR bir render yangi `onKey` yaratsa
+    // ham. 3-round xatosi aynan shu yerda edi: `pruefen.isPending` ro'yxatda
+    // yo'q edi, shuning uchun tekshiruv boshlanganda ekranga osilgan
+    // `onKey` hamon ESKI (tekshiruv boshlanishidan OLDINGI) qiymatni
+    // ko'rar, va uning ichidagi `tekshir()` qo'riqchisi ham eski
+    // `pruefen.isPending`ni o'qir edi — raqam tugmasi qulfi ishlamas edi.
+    //
+    // Qasddan tushirilgan qolganlari (har biri xavfsiz):
+    // - `keyingi`, `tekshir` — har render yangi yopilish (closure), lekin
+    //   ularning QO'RIQCHI xatti-harakatiga ta'sir qiluvchi HAMMA qiymat
+    //   (`rejim`, `natija`, `frage`, `tanlangan`, `given`, `tayyor`,
+    //   `pruefen.isPending`) allaqachon ro'yxatda — demak, eski yopilish
+    //   AHAMIYATLI bo'ladigan har bir renderda effekt qayta ishga tushib,
+    //   listenerni yangi yopilish bilan qayta o'rnatadi.
+    // - `setTanlangan` — `useState` sozlagichi, React uning identifikatorini
+    //   komponent umri davomida barqaror ushlab turishini kafolatlaydi.
+    // - `pruefen` obyektining o'zi emas, faqat `.isPending`i ro'yxatda —
+    //   `.mutate`si barqaror, uni kuzatish shart emas.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rejim, natija, frage, tanlangan, given, tayyor]);
+  }, [rejim, natija, frage, tanlangan, given, tayyor, pruefen.isPending]);
 
   if (seans.isLoading) {
     return (
