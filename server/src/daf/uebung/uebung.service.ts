@@ -18,6 +18,7 @@ import { toPublic } from './frage.types';
 import { naechsterZustand } from './leitner';
 import { luecke, reaktion, satzBauen, satzUebersetzen } from './satz-fragen';
 import { baueSeans } from './seans';
+import { ohneWiederholteFormate } from './wiederholte-formate';
 import { artikel, paar, uzWort, wortUz } from './wort-fragen';
 
 /** So'z uchun quriladigan formatlar — `PAAR` bu yerda yo'q: u bitta so'zga emas, to'rtlikka tegishli. */
@@ -158,7 +159,19 @@ export class UebungService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async seans(lessonId: number, studentId: number): Promise<PublicFrage[]> {
+  /**
+   * `rnd` ixtiyoriy — sukut bo'yicha `Math.random`. Faqat testlar uchun:
+   * seedlangan generator berilsa, oddiy (qaytarish ro'yxatida bo'lmagan)
+   * nomzodlar panelining qurilishi va seans tanlovi DETERMINISTIK
+   * bo'ladi — shu bilan "so'z+format takrorlanmaydi" kabi qoidalarni
+   * haqiqiy so'rov ustida CI'da barqaror tekshirish mumkin (tasodifiy
+   * namunaga tayangan test har safar boshqa natija berardi).
+   */
+  async seans(
+    lessonId: number,
+    studentId: number,
+    rnd: () => number = Math.random,
+  ): Promise<PublicFrage[]> {
     const lesson = await this.prisma.dafLesson.findUnique({
       where: { id: lessonId },
       include: { section: true },
@@ -258,8 +271,6 @@ export class UebungService {
     );
     const phrases: MaterialPhrase[] = (phraseRows as PhraseRow[]).map(toPhrase);
 
-    const rnd = Math.random;
-
     // Qaytarish (pflicht) savollari — DUE so'rovi shu yerda, kandidaten
     // qurilishidan OLDIN chaqiriladi, chunki pastdagi `letzterFormatByWort`
     // so'rovi ham `dafLexemeState`ga boradi va ikkalasining tartibi
@@ -282,50 +293,48 @@ export class UebungService {
       letzteZustaende.map((z) => [z.lexemeId, z.lastFormat]),
     );
 
-    const kandidaten: Frage[] = [];
+    const rohKandidaten: Frage[] = [];
 
+    // Bu yerda hech qanday format lastFormat bo'yicha OLDINDAN
+    // filtrlanmaydi — barcha so'zlar uchun UCHALA format quriladi.
+    // Qoida 5 (bir xil so'z+format juftligi ikki seansda ketma-ket
+    // takrorlanmaydi) endi PASTDA, `ohneWiederholteFormate` orqali,
+    // BUTUN nomzodlar ro'yxatiga (LUECKE va PAAR ham qo'shilgan holda)
+    // bir yo'la qo'llanadi — qarang shu funksiyaning izohi.
     for (const w of coreWords) {
-      // So'z o'tgan safar qaysi formatda so'ralgan bo'lsa, shu format bu
-      // safar UNING UCHUN qurilmaydi — qolgan formatlar kandidaten
-      // panelida qoladi. Hech qanday muqobil qolmasa (masalan artiklsiz
-      // so'z, yagona muqobil ARTIKEL ham lastFormat bilan bir xil emas —
-      // bu holat WORT_FORMATE uchun amalda yuzaga kelmaydi, chunki uch
-      // format bor), so'z shunchaki bu safar hech narsa qo'shmaydi — bu
-      // XATO emas, dizaynning o'zi shunday talab qiladi.
-      const letzter = letzterFormatByWort.get(w.id) ?? null;
-      if (letzter !== 'WORT_UZ') {
-        const wu = wortUz(w, coreWords, rnd);
-        if (wu) kandidaten.push(wu);
-      }
-      if (letzter !== 'UZ_WORT') {
-        const uw = uzWort(w, coreWords, rnd);
-        if (uw) kandidaten.push(uw);
-      }
-      if (letzter !== 'ARTIKEL') {
-        const art = artikel(w);
-        if (art) kandidaten.push(art);
-      }
+      const wu = wortUz(w, coreWords, rnd);
+      if (wu) rohKandidaten.push(wu);
+      const uw = uzWort(w, coreWords, rnd);
+      if (uw) rohKandidaten.push(uw);
+      const art = artikel(w);
+      if (art) rohKandidaten.push(art);
     }
     // Bir necha PAAR nomzodi: har chaqiruv `rnd` holatini siljitib, boshqa
     // to'rtlikni tanlaydi. Material yetmasa `paar` `null` qaytaradi.
     for (let i = 0; i < 3; i += 1) {
       const p = paar(coreWords, rnd);
-      if (p) kandidaten.push(p);
+      if (p) rohKandidaten.push(p);
     }
 
     for (const s of sentences) {
       const lu = luecke(s, coreWords, rnd);
-      if (lu) kandidaten.push(lu);
+      if (lu) rohKandidaten.push(lu);
       const sb = satzBauen(s, rnd);
-      if (sb) kandidaten.push(sb);
+      if (sb) rohKandidaten.push(sb);
       const su = satzUebersetzen(s, sentences, rnd);
-      if (su) kandidaten.push(su);
+      if (su) rohKandidaten.push(su);
     }
 
     for (const p of phrases) {
       const re = reaktion(p, phrases, rnd);
-      if (re) kandidaten.push(re);
+      if (re) rohKandidaten.push(re);
     }
+
+    // Qoida 5 (dizayn 4.3): ketma-ket ikki SEANSDA bir xil (so'z+format)
+    // juftligi takrorlanmaydi. Nomzodning O'ZIDAN (`itemType`/`format`
+    // + `belegteItems`dan) kelib chiqadi — qarang `wiederholte-formate.ts`
+    // uchun to'liq izoh, nega hand-listed format ro'yxati emas.
+    const kandidaten = ohneWiederholteFormate(rohKandidaten, letzterFormatByWort);
 
     const { fragen, nichtPlatziert } = baueSeans(
       kandidaten,

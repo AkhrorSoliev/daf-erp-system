@@ -87,7 +87,14 @@ export function luecke(
     options: [],
     richtig: ziel.de,
     akzeptiert: [],
-    belegteItems: [materialSchluessel('WORT', ziel.id)],
+    // GAPNING O'ZI HAM band qilinadi, faqat bo'shatilgan so'z emas:
+    // aks holda shu gap bir seansda `SATZ_BAUEN`/`SATZ_UEBERSETZEN`
+    // sifatida ham chiqib, endigina bo'shatib so'ralgan so'zni to'liq
+    // ko'rinishda oshkor qilib qo'yardi — javobni savolning o'zi beradi.
+    belegteItems: [
+      materialSchluessel('WORT', ziel.id),
+      materialSchluessel('SATZ', satz.id),
+    ],
   };
 }
 

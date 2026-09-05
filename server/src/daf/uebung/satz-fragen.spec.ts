@@ -1,5 +1,6 @@
 import { luecke, reaktion, satzBauen, satzUebersetzen } from './satz-fragen';
 import { istRichtig } from './antwort';
+import { baueSeans } from './seans';
 import type { MaterialPhrase, MaterialSatz, MaterialWort } from './frage.types';
 
 function s(id: number, de: string, uz: string): MaterialSatz {
@@ -75,6 +76,50 @@ describe('luecke', () => {
     expect(f.itemType).toBe('WORT');
     expect(f.itemId).toBe(8);
   });
+
+  // Finding 1: `luecke` faqat bo'shatilgan SO'Zni band qilardi
+  // (`WORT:<id>`), gapning o'zini emas. Natijada xuddi shu gap bir
+  // seansda `SATZ_BAUEN`/`SATZ_UEBERSETZEN` sifatida to'liq (bo'shatilgan
+  // so'zi ham ko'rinadigan holda) qayta chiqib, javobni oshkor qilardi.
+  it('belegteItems endi GAPNING o`zini ham band qiladi, faqat bo`shatilgan so`zni emas', () => {
+    const satz = s(9, 'Ich trinke Kaffee heute.', 'Men bugun kofe ichaman.');
+    const f = luecke(satz, [w(2, 'trinke', 'ichmoq')], rnd)!;
+    expect(f.belegteItems.sort()).toEqual(['SATZ:9', 'WORT:2'].sort());
+  });
+
+  it('LUECKE ishlatgan gap bir seansda SATZ_BAUEN yoki SATZ_UEBERSETZEN sifatida qayta chiqmaydi', () => {
+    const satz = s(9, 'Ich trinke Kaffee heute.', 'Men bugun kofe ichaman.');
+    const boshqaGaplar = [
+      s(20, 'Er isst Brot.', 'U non yeydi.'),
+      s(21, 'Wir gehen nach Hause.', 'Biz uyga ketamiz.'),
+      s(22, 'Sie liest ein Buch.', 'U kitob o`qiydi.'),
+    ];
+
+    const luecheSavoli = luecke(satz, [w(2, 'trinke', 'ichmoq')], rnd)!;
+    const bauenSavoli = satzBauen(satz, rnd)!;
+    const uebersetzenSavoli = satzUebersetzen(
+      satz,
+      [satz, ...boshqaGaplar],
+      rnd,
+    )!;
+    expect(luecheSavoli).not.toBeNull();
+    expect(bauenSavoli).not.toBeNull();
+    expect(uebersetzenSavoli).not.toBeNull();
+
+    // Uchtasi ham endi SATZ:9 kalitini "band" qiladi — `baueSeans`ning
+    // material-takrorlash tekshiruvi (`belegteItems`) shuning uchun
+    // faqat BITTASINI seansga qo'yishi mumkin, qaysi biri birinchi
+    // tanlanishidan qat'i nazar.
+    const { fragen } = baueSeans(
+      [luecheSavoli, bauenSavoli, uebersetzenSavoli],
+      3,
+      rnd,
+    );
+    expect(fragen).toHaveLength(1);
+    expect(['LUECKE', 'SATZ_BAUEN', 'SATZ_UEBERSETZEN']).toContain(
+      fragen[0].format,
+    );
+  });
 });
 
 describe('satzBauen', () => {
@@ -124,6 +169,21 @@ describe('satzUebersetzen', () => {
 
   it('chalg`ituvchi yetmasa savol qurmaydi', () => {
     expect(satzUebersetzen(ZIEL, ANDERE.slice(0, 1), rnd)).toBeNull();
+  });
+
+  // Finding 4: to'g'ri javobdan FAQAT tinish belgisi bilan farq
+  // qiladigan tarjima chalg'ituvchi bo'lsa, `istRichtig` (`normalisieren`
+  // orqali solishtiradi) ikkalasini ham to'g'ri deb hisoblardi.
+  //
+  // `0.9999` — asl tartibni saqlaydigan rnd (yuqoridagi `reaktion`
+  // testidagi izohga qarang): chalg'ituvchi RO'YXAT BOSHIDA qoladi va
+  // filtr ishlamasa `slice(0, 3)` uni saqlab qolib, `options`da
+  // ko'rinadi — shu bilan test filtrning o'zini sinaydi.
+  it('richtigdan faqat tinish belgisi bilan farq qiladigan tarjima chalg`ituvchi bo`lmaydi', () => {
+    const identityRnd = (): number => 0.9999;
+    const birXilMatn = s(50, 'Ich schlafe.', 'Men Annaman!');
+    const f = satzUebersetzen(ZIEL, [birXilMatn, ...ANDERE], identityRnd)!;
+    expect(f.options).not.toContain('Men Annaman!');
   });
 });
 
@@ -175,5 +235,23 @@ describe('reaktion', () => {
     );
     const f = reaktion(ZIEL, [birXilMatn, ...ANDERE], identityRnd)!;
     expect(f.options.filter((o) => o === 'Guten Morgen!')).toHaveLength(1);
+  });
+
+  // Finding 4: to'g'ri javobdan FAQAT tinish belgisi bilan (matn
+  // aynan bir xil emas) farq qiladigan ibora ham xuddi shu sababdan
+  // chalg'ituvchi bo'lmasligi kerak — `istRichtig` ikkalasini bir xil
+  // ko'radi. Yuqoridagi testdan farqi: bu yerda matn aynan bir xil
+  // EMAS ('Guten Morgen!' vs 'Guten Morgen.'), faqat tinish belgisi
+  // boshqa — xuddi shu `normalisieren` yo'li sinaladi.
+  it('richtigdan faqat tinish belgisi bilan farq qiladigan ibora chalg`ituvchi bo`lmaydi', () => {
+    const identityRnd = (): number => 0.9999;
+    const birXilMatn = p(
+      11,
+      'boshqa-vazifa',
+      'Guten Morgen.',
+      'Boshqa tarjima',
+    );
+    const f = reaktion(ZIEL, [birXilMatn, ...ANDERE], identityRnd)!;
+    expect(f.options).not.toContain('Guten Morgen.');
   });
 });

@@ -1,6 +1,24 @@
 import { UebungService } from './uebung.service';
 
 /**
+ * Seedlangan pseudo-tasodifiy generator (mulberry32) — `seans()`ga
+ * `Math.random` o'rniga beriladi, shunda bir xil seed HAR DOIM bir xil
+ * seans beradi. Faqat determinstik CI tekshiruvi uchun (Finding 3):
+ * haqiqiy `Math.random`ga tayangan test har ishga tushishda boshqa
+ * namunani sinaydi, ba'zida qoidani buzilishini SINAB HAM ko'rmaydi.
+ */
+function mulberry32(seed: number): () => number {
+  let a = seed;
+  return function (): number {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
  * Bazaning eng kichik soxta nusxasi. Prisma o'rniga: bizni servisning
  * mantig'i qiziqtiradi, Prisma emas.
  *
@@ -299,6 +317,16 @@ describe('UebungService.seans — qaytarish (wiederholung)', () => {
   // (lekin hozir muddati kelgan emas — oddiy nomzod sifatida qatnashadi),
   // bu safar u WORT_UZ sifatida QURILMAYDI ham — demak kandidaten
   // panelida bunday nomzod umuman yo'q, seans uni tanlab OLOLMAYDI.
+  //
+  // BU TEST AVVAL HAQIQIY `Math.random`GA TAYANARDI (Finding 3 —
+  // qayta ko'rikdan o'tkazish): 2000 marta ishga tushirilganda,
+  // taqiqlangan format aslida 38% holatda namunaga tushar, so'z esa
+  // 15%da seansda UMUMAN chiqmasdi — ikkalasida ham tekshiruv jimgina
+  // "o'tib" ketardi. Endi SEEDLANGAN generator beriladi: natija HAR
+  // DOIM bir xil (seed=0 bilan so'z 1 UZ_WORT sifatida chiqishi
+  // oldindan tekshirilgan), shuning uchun CI'da barqaror va ikkinchi
+  // shart (so'zning seansda haqiqatda BORLIGI) ham endi tasdiqlanadi —
+  // aks holda ichki `for` sikli bo'sh massivda bekorga "o'tib" ketardi.
   it('oddiy so`zning ham avvalgi formatidagi nomzodi qurilmaydi (dizayn qoidasi 5)', async () => {
     const prisma = fakePrisma();
     prisma.dafLexemeState.findMany = jest.fn(async (args: any) => {
@@ -311,10 +339,17 @@ describe('UebungService.seans — qaytarish (wiederholung)', () => {
       return [];
     }) as any;
 
-    const fragen = await new UebungService(prisma as any).seans(100, 55);
+    const fragen = await new UebungService(prisma as any).seans(
+      100,
+      55,
+      mulberry32(0),
+    );
     const soz1Savollari = fragen.filter(
       (f) => f.itemType === 'WORT' && f.itemId === 1,
     );
+    // So'z 1 seansda HAQIQATDA chiqadi — aks holda pastdagi tekshiruv
+    // bo'sh massivda vaqinchalik "o'tib" ketgan bo'lardi.
+    expect(soz1Savollari.length).toBeGreaterThan(0);
     // Chiqsa ham — hech qachon WORT_UZ formatida emas, chunki bu format
     // uning uchun kandidaten ro'yxatiga UMUMAN kiritilmagan.
     for (const f of soz1Savollari) {

@@ -40,6 +40,25 @@ describe('wortUz', () => {
     expect(f.prompt).toBe('der Name');
   });
 
+  // Finding 4: to'g'ri javobdan FAQAT tinish belgisi bilan farq qiladigan
+  // so'z chalg'ituvchi bo'lsa, `istRichtig` (baholovchi ham `normalisieren`
+  // orqali solishtiradi) uni ham TO'G'RI deb hisoblardi — ya'ni savolda
+  // ikkita "to'g'ri" variant ko'rinardi.
+  //
+  // `rnd = () => 0` bu yerda ISHLAMAYDI (`satz-fragen.spec.ts`dagi
+  // `reaktion` testidagi izohga qarang): u har doim BIRINCHI elementni
+  // navbat oxiriga suradi, ya'ni filtr ishlamasa ham chalg'ituvchi
+  // ko'pincha `slice(0, 3)` chetiga chiqib ketardi va test hech narsani
+  // isbotlamasdi. `0.9999` esa asl tartibni saqlaydi — shu bilan
+  // chalg'ituvchi RO'YXAT BOSHIDA qoladi va filtr ishlamasa `options`da
+  // ko'rinadi.
+  it('richtigdan faqat tinish belgisi bilan farq qiladigan so`z chalg`ituvchi bo`lmaydi', () => {
+    const identityRnd = (): number => 0.9999;
+    const birXilMatn = w(50, 'servus', 'salom!');
+    const f = wortUz(ZIEL, [birXilMatn, ...ANDERE], identityRnd)!;
+    expect(f.options).not.toContain('salom!');
+  });
+
   // Finding 1: `hilfe` avval `ziel.anzeige`ni qaytarardi — raqam so'zida
   // bu aynan javobning o'zi (masalan `acht` uchun `8`). Nemis tilini
   // bilmasa ham raqamni o'qiy oladigan o'quvchi savolni bilim tekshirmay
