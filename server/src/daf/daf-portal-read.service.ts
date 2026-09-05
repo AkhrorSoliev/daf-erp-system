@@ -27,6 +27,7 @@ export interface LevelPathItem {
     titleUz: string;
     titleDe: string;
     lessonCount: number;
+    doneCount: number;
   }[];
 }
 
@@ -51,7 +52,7 @@ export class DafPortalReadService {
    * kerak, shu jumladan hali kontenti yo'q bosqichlarni ham. Ularni
    * yashirish «B1 umuman yo'q» degan taassurot qoldirardi.
    */
-  async getLevels(): Promise<LevelPathItem[]> {
+  async getLevels(studentId: number): Promise<LevelPathItem[]> {
     const units = await this.prisma.dafUnit.findMany({
       // Nafaqaga chiqarilgan unit yo'lga chiqmaydi. A1 migratsiyasi eski
       // 20 ta DiB unitini `retiredAt` bilan belgilab, `order`ini
@@ -71,6 +72,20 @@ export class DafPortalReadService {
       },
     });
 
+    // Tugallangan seanslar SANALADI, ro'yxati kerak emas: yo'l kartasida
+    // faqat `4/18` ko'rinadi. `completedAt: { not: null }` shart —
+    // qator seans boshlanganda emas, TUGAGANDA yoziladi, lekin
+    // kelajakda boshqa yozuvchi paydo bo'lsa yarim qator sanalmasin.
+    const bajarilgan = await this.prisma.dafLessonProgress.findMany({
+      where: { studentId, completedAt: { not: null } },
+      select: { lesson: { select: { unitId: true } } },
+    });
+    const bajarilganSoni = new Map<number, number>();
+    for (const p of bajarilgan) {
+      const u = p.lesson.unitId;
+      bajarilganSoni.set(u, (bajarilganSoni.get(u) ?? 0) + 1);
+    }
+
     return LEVEL_ORDER.map((level) => ({
       level,
       label: LEVEL_LABEL[level],
@@ -82,6 +97,7 @@ export class DafPortalReadService {
           titleUz: u.titleUz,
           titleDe: u.titleDe,
           lessonCount: u._count.lessons,
+          doneCount: bajarilganSoni.get(u.id) ?? 0,
         })),
     }));
   }
@@ -93,7 +109,7 @@ export class DafPortalReadService {
    * o'nlab mashq bor, ya'ni bitta ekranga sig'maydi va o'quvchi qayerdan
    * boshlashini bilmaydi. Kontent bosqichning ichida.
    */
-  async getUnit(unitId: number) {
+  async getUnit(unitId: number, studentId: number) {
     const unit = await this.prisma.dafUnit.findUnique({
       where: { id: unitId },
       select: {
@@ -121,26 +137,99 @@ export class DafPortalReadService {
         id: true,
         order: true,
         tier: true,
+        kind: true,
+        sectionId: true,
         titleDe: true,
         titleUz: true,
         _count: { select: { lexemes: true, exercises: true } },
       },
     });
 
+    // Bo'lim guruhlari faqat sarlavha uchun — dizaynda bo'limning o'z
+    // sahifasi yo'q, u shunchaki unit ichidagi darslarni to'playdigan
+    // ko'rinish qatlami.
+    const sections = await this.prisma.dafSection.findMany({
+      where: { unitId },
+      orderBy: { order: 'asc' },
+      select: {
+        id: true,
+        order: true,
+        code: true,
+        titleUz: true,
+        titleDe: true,
+      },
+    });
+
+    const fortschritt = await this.prisma.dafLessonProgress.findMany({
+      where: { studentId, lesson: { unitId } },
+      select: {
+        lessonId: true,
+        completedAt: true,
+        bestScore: true,
+        runs: true,
+      },
+    });
+    const byLesson = new Map(fortschritt.map((f) => [f.lessonId, f]));
+
+    const toItem = (l: (typeof lessons)[number]) => {
+      const f = byLesson.get(l.id);
+      return {
+        id: l.id,
+        order: l.order,
+        tier: l.tier,
+        kind: l.kind,
+        titleDe: l.titleDe,
+        titleUz: l.titleUz,
+        wordCount: l._count.lexemes,
+        exerciseCount: l._count.exercises,
+        // `Date` obyekti JSON'da ISO satrga aylanadi — mijoz tipi
+        // (`LernenSeans.completedAt: string | null`) shuni kutadi.
+        completedAt: f?.completedAt ?? null,
+        bestScore: f?.bestScore ?? 0,
+        runs: f?.runs ?? 0,
+      };
+    };
+
+    const alle = lessons.map(toItem);
+
+    // Yakuniy sinov bo'lim ichida emas — u butun unitni sinaydi va
+    // dizaynda oxirida alohida turadi.
+    const finalTest = alle.find((l) => l.kind === 'UNIT_TEST') ?? null;
+
+    const bySection = new Map<number, typeof alle>();
+    for (const item of alle) {
+      const raw = lessons.find((l) => l.id === item.id)!;
+      if (raw.sectionId == null || item.kind === 'UNIT_TEST') continue;
+      const list = bySection.get(raw.sectionId) ?? [];
+      list.push(item);
+      bySection.set(raw.sectionId, list);
+    }
+
+    // `orderBy` yuqorida DB'ga ishonadi, lekin buni ikkinchi marta
+    // tekshirish arzon: bo'lim ro'yxati ekranda ketma-ket ko'rinishi
+    // shart, tasodifiy tartib bo'lim raqamlarini chalkashtirib yuboradi.
+    const sectionGruppen = [...sections]
+      .sort((a, b) => a.order - b.order)
+      .map((s) => ({
+        id: s.id,
+        order: s.order,
+        code: s.code,
+        titleUz: s.titleUz,
+        titleDe: s.titleDe,
+        lessons: bySection.get(s.id) ?? [],
+      }));
+
     const { retiredAt: _retiredAt, ...publicUnit } = unit;
 
     return {
       ...publicUnit,
       label: LEVEL_LABEL[unit.level],
-      lessons: lessons.map((l) => ({
-        id: l.id,
-        order: l.order,
-        tier: l.tier,
-        titleDe: l.titleDe,
-        titleUz: l.titleUz,
-        wordCount: l._count.lexemes,
-        exerciseCount: l._count.exercises,
-      })),
+      // Yassi ro'yxat QOLADI: nafaqaga chiqarilgan 20 ta eski DiB
+      // unitining darslarida `sectionId` yo'q, ular faqat shu yerda
+      // ko'rinadi. O'chirilsa o'sha unitlar bo'shab qolardi.
+      lessons: alle,
+      sections: sectionGruppen,
+      finalTest,
     };
   }
 

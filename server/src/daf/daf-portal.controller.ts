@@ -39,14 +39,24 @@ export class DafPortalController {
     private readonly uebung: UebungService,
   ) {}
 
+  /**
+   * `studentId` TOKENDAN olinadi: javob endi shu o'quvchining
+   * ilgarilashiga (`doneCount`) bog'liq, boshqasining tanasidan yoki
+   * so'rov parametridan olinsa, birov boshqaning natijasini ko'rishi
+   * mumkin bo'lardi.
+   */
   @Get('levels')
-  getLevels() {
-    return this.read.getLevels();
+  getLevels(@CurrentUser('studentId') studentId: number) {
+    return this.read.getLevels(studentId);
   }
 
+  /** Xuddi shu sabab: javobga har darsning ilgarilashi (`completedAt`/`bestScore`/`runs`) qo'shiladi. */
   @Get('units/:id')
-  getUnit(@Param('id', ParseIntPipe) id: number) {
-    return this.read.getUnit(id);
+  getUnit(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('studentId') studentId: number,
+  ) {
+    return this.read.getUnit(id, studentId);
   }
 
   @Get('lessons/:id')

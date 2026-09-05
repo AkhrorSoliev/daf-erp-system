@@ -474,8 +474,6 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /student-portal/lernen/lessons/:id/drill',
       'GET /student-portal/lernen/lessons/:id/uebung',
       'GET /student-portal/lernen/lessons/:id/uebung/ersatz',
-      'GET /student-portal/lernen/levels',
-      'GET /student-portal/lernen/units/:id',
     ],
   },
   {
@@ -491,6 +489,20 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /student-portal/lernen/drill/check',
       'POST /student-portal/lernen/lessons/:id/abschluss',
       'POST /student-portal/lernen/uebung/check',
+    ],
+  },
+  {
+    policy: 'SELF',
+    reason:
+      'The catalogue itself is COMPANY_WIDE (see above) — these two routes moved ' +
+      'out of that block because the RESPONSE is no longer just the catalogue. ' +
+      "`getLevels`/`getUnit` now read `DafLessonProgress` for the caller's own " +
+      '`studentId` and attach it (`doneCount`, per-lesson `completedAt`/' +
+      '`bestScore`/`runs`) — the same content, but the payload differs per ' +
+      'student, which is exactly what COMPANY_WIDE promises it does not.',
+    routes: [
+      'GET /student-portal/lernen/levels',
+      'GET /student-portal/lernen/units/:id',
     ],
   },
 ];
