@@ -103,15 +103,32 @@ function NotYetExercise({
 
 type Stage = "study" | "drill" | "done";
 
+/**
+ * Mashq tugmasi ATAYLAB o'chirilgan.
+ *
+ * Avval bu yerda `data?.kind === "VOCAB"` turardi — lekin `getLesson`
+ * (`daf-portal-read.service.ts`) bu marshrut uchun `kind`ni UMUMAN
+ * yubormaydi, faqat `tier`ni tanlaydi. Demak shart PRODDA doim `false`
+ * bo'lgan va «Mashqni boshlash» tugmasi hech qachon chiqmagan — bu
+ * kutilmagan xatti-harakat emas, balki hech qachon ishlamagan yo'l edi.
+ *
+ * `DafLessonKind` to'g'irlanganda (endi `SECTION_A`/`SECTION_B`/`BRIDGE`/
+ * `UNIT_TEST`) `"VOCAB"` bilan solishtirish endi tip xatosi bo'lardi.
+ * Buni so'z soniga qarab almashtirish holatni O'ZGARTIRARDI — tugma
+ * birinchi marta chiqib qolardi, sinalmagan holda. Shuning uchun natija
+ * shu konstanta bilan ATAYLAB avvalgidek o'chirilgan holda saqlanadi.
+ * Jonlantirish — server "lug'at darsi"ni qanday belgilashini hal qiladigan
+ * ALOHIDA qaror, bu yerda emas.
+ */
+const MASHQ_TUGMASI_YOQILGAN = false;
+
 export function LernenLessonPage({ lessonId }: { lessonId: number }) {
   const { data, isLoading, isError } = useLernenLesson(lessonId);
   const [stage, setStage] = React.useState<Stage>("study");
   const [score, setScore] = React.useState({ correct: 0, total: 0 });
 
   const title = data ? (data.titleUz ?? data.titleDe) : "Dars";
-  // Eski `kind` (VOCAB/GRAMMAR) mavzu bo'yicha ajratardi va o'chirilgan —
-  // endi mashqni boshlash tugmasi so'z sonining o'ziga qarab chiqadi.
-  const isVocab = (data?.lexemes.length ?? 0) >= 2;
+  const isVocab = MASHQ_TUGMASI_YOQILGAN && (data?.lexemes.length ?? 0) >= 2;
 
   return (
     <Screen narrow>

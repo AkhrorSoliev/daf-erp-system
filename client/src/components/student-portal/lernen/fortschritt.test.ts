@@ -67,4 +67,13 @@ describe("unitHolati", () => {
     expect(unitHolati([u(1, 18, 18), u(2, 0, 0), u(3, 0, 0)]))
       .toEqual(["BAJARILGAN", "TAYYOR_EMAS", "TAYYOR_EMAS"]);
   });
+
+  it("bo`sh unitdan keyingisi, o`zi kontentga ega bo`lsa ham, QULF bo`ladi", () => {
+    // Yuqoridagi holatning bosh farqi: 3-unit endi BO'SH EMAS (18 dars
+    // bor), lekin baribir OCHIQ emas. Bo'sh 2-unit "oldingisi tugagan"
+    // bayrog'ini ataylab `false`ga uzatadi — shu mexanizmni aynan shu
+    // yerda tekshiramiz, TAYYOR_EMAS emas, QULF kutiladi.
+    expect(unitHolati([u(1, 18, 18), u(2, 0, 0), u(3, 18, 0)]))
+      .toEqual(["BAJARILGAN", "TAYYOR_EMAS", "QULF"]);
+  });
 });
