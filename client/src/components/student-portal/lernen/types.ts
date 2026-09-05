@@ -2,6 +2,40 @@
 // kerak: u faqat urinishdan keyin, `AttemptResult` ichida keladi. Mijozga
 // oldindan yuborilsa, uni brauzerning tarmoq oynasida ko'rish mumkin bo'lardi.
 
+export type FrageFormat =
+  | "WORT_UZ"
+  | "UZ_WORT"
+  | "PAAR"
+  | "ARTIKEL"
+  | "LUECKE"
+  | "SATZ_BAUEN"
+  | "SATZ_UEBERSETZEN"
+  | "REAKTION";
+
+export type MaterialTyp = "WORT" | "SATZ" | "PHRASE";
+
+/** Serverdan kelgan savol. To'g'ri javob bu yerda YO'Q. */
+export interface PublicFrage {
+  index: number;
+  format: FrageFormat;
+  itemType: MaterialTyp;
+  itemId: number;
+  prompt: string;
+  hilfe: string | null;
+  options: string[];
+}
+
+/** Javob tekshirilgandan KEYIN keladi — faqat shunda to'g'ri javob ma'lum. */
+export interface PruefErgebnis {
+  isCorrect: boolean;
+  richtig: string;
+}
+
+export interface AbschlussErgebnis {
+  bestScore: number;
+  runs: number;
+}
+
 export type DafLevel = "A1_1" | "A1_2" | "A2_1" | "A2_2" | "B1";
 export type DafLessonKind = "VOCAB" | "GRAMMAR";
 export type DafExerciseKind = "GAP" | "MC" | "CLOZE" | "REORDER" | "FREE_WRITE";
