@@ -50,8 +50,8 @@ export function Yozish({ qiymat, onYoz, natija, onEnter }: YozishProps) {
         className={cn(
           "w-full rounded-2xl border-2 bg-tint px-4 py-3.5 text-lg font-semibold text-ink-900 outline-none",
           "border-transparent focus:border-coral-500",
-          natija?.isCorrect && "border-success text-success",
-          natija != null && !natija.isCorrect && "border-danger text-danger",
+          natija?.isCorrect && "border-success bg-success/10 text-success",
+          natija != null && !natija.isCorrect && "border-danger bg-danger/10 text-danger",
         )}
       />
       {natija == null ? (

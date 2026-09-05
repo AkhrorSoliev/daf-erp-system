@@ -65,13 +65,15 @@ function GapTuzish({ options, tanlangan, onOzgar, natija }: IchkiProps) {
 
   return (
     <div className="space-y-3">
-      {/* Yig'ilgan gap — bosilgan so'z shu yerdan qaytadi */}
+      {/* Yig'ilgan gap — bosilgan so'z shu yerdan qaytadi. To'g'ri/xato
+          rangi butun qatorga qo'llanadi (so'z-so'z emas) — mc-exercise.tsx
+          dagi to'liq ranglar to'plami: border, fon rangi va matn rangi. */}
       <div
         className={cn(
-          "flex min-h-[3.25rem] flex-wrap items-center gap-2 rounded-2xl border-2 bg-tint p-3",
-          "border-transparent",
-          natija?.isCorrect && "border-success",
-          natija != null && !natija.isCorrect && "border-danger",
+          "flex min-h-[3.25rem] flex-wrap items-center gap-2 rounded-2xl border-2 p-3",
+          "border-transparent bg-tint",
+          natija?.isCorrect && "border-success bg-success/10 text-success",
+          natija != null && !natija.isCorrect && "border-danger bg-danger/10 text-danger",
         )}
       >
         {tanlangan.length === 0 ? (
@@ -84,8 +86,13 @@ function GapTuzish({ options, tanlangan, onOzgar, natija }: IchkiProps) {
               disabled={qulflangan}
               onClick={() => onOzgar(tanlangan.filter((_, idx) => idx !== j))}
               className={cn(
-                "rounded-xl bg-white px-3 py-1.5 font-semibold text-ink-800 shadow-sm",
-                qulflangan && "cursor-default opacity-80",
+                "rounded-xl px-3 py-1.5 font-semibold shadow-sm",
+                qulflangan
+                  ? cn(
+                      "cursor-default",
+                      natija?.isCorrect ? "bg-success/10 text-success" : "bg-danger/10 text-danger",
+                    )
+                  : "bg-white text-ink-800",
               )}
             >
               {soz}
