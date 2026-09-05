@@ -172,6 +172,136 @@ export class UebungService {
     studentId: number,
     rnd: () => number = Math.random,
   ): Promise<PublicFrage[]> {
+    const { pflicht, kandidaten } = await this.baueKandidaten(
+      lessonId,
+      studentId,
+      rnd,
+    );
+
+    const { fragen, nichtPlatziert } = baueSeans(
+      kandidaten,
+      SEANS_UZUNLIGI,
+      rnd,
+      pflicht,
+    );
+
+    if (nichtPlatziert.length > 0) {
+      this.logger.warn(
+        `Muddati kelgan ${nichtPlatziert.length} savol seansga joylashmadi ` +
+          `(lessonId=${lessonId}, studentId=${studentId}): ` +
+          nichtPlatziert.map((f) => `${f.itemType}:${f.itemId}`).join(', '),
+      );
+    }
+
+    return fragen.map((f, i) => toPublic(f, i));
+  }
+
+  /**
+   * Shu material haqida, `nichtFormat`dan BOSHQA formatda bitta to'liq
+   * savol.
+   *
+   * NEGA BU YO'L BOR. Mijoz noto'g'ri javob berganda ekranda "boshqa
+   * ko'rinishda qayta ko'rsat" imkoniyati bo'lishi mumkin — lekin savolni
+   * mijozning o'zi qura olmaydi (chalg'ituvchi tanlash, options tuzish
+   * serverning ishi) va to'g'ri javobni ham bilmaydi. Shuning uchun
+   * server materialni qaytadan yuklab, o'sha material uchun boshqa
+   * formatdagi savolni to'liq qurib beradi.
+   *
+   * `seans` bilan bir xil yo'ldan boradi (`baueKandidaten`) — material
+   * yuklash va nomzod qurish takrorlanmaydi. Farqi: bu yerda seans
+   * QURILMAYDI, faqat berilgan `itemType`/`itemId`ga tegishli, formati
+   * `nichtFormat`ga teng bo'lmagan BITTA nomzod tanlanadi. Mos nomzod
+   * topilmasa (masalan, bo'limda chalg'ituvchi yetmasa) `null` qaytadi —
+   * bu xato emas, tabiiy holat.
+   */
+  async ersatz(
+    lessonId: number,
+    studentId: number,
+    itemType: 'WORT' | 'SATZ' | 'PHRASE',
+    itemId: number,
+    nichtFormat: FrageFormat,
+    rnd: () => number = Math.random,
+  ): Promise<PublicFrage | null> {
+    const { pflicht, kandidaten } = await this.baueKandidaten(
+      lessonId,
+      studentId,
+      rnd,
+    );
+
+    const nomzod = [...pflicht, ...kandidaten].find(
+      (f) =>
+        f.itemType === itemType &&
+        f.itemId === itemId &&
+        f.format !== nichtFormat,
+    );
+
+    return nomzod ? toPublic(nomzod, 0) : null;
+  }
+
+  /**
+   * Seans tugaganini yozadi.
+   *
+   * NEGA MIJOZ AYTADI. Server seans tugaganini o'zi bilmaydi: u savollarni
+   * saqlamaydi va nechta savol berilganini eslamaydi. Bu D6 qarorining
+   * ("savollar saqlanmaydi") tabiiy narxi.
+   *
+   * NEGA BU YETARLI. Mijoz "tugadi" deb yolg'on ayta oladi, lekin bundan
+   * yutadigan narsa yo'q — keyingi dars ochiladi, xolos. Haqiqiy o'lchov
+   * `DafAttempt` da: kim nechta savolga qanday javob berganini mijoz
+   * o'zgartira olmaydi.
+   */
+  async abschluss(
+    lessonId: number,
+    input: { richtig: number; gesamt: number; durationMs?: number },
+    ctx: { studentId: number; companyId: number },
+  ): Promise<{ bestScore: number; runs: number }> {
+    if (input.gesamt <= 0) {
+      throw new BadRequestException("Seansda savol bo'lmagan");
+    }
+    if (input.richtig < 0 || input.richtig > input.gesamt) {
+      throw new BadRequestException(
+        "To'g'ri javob soni savol sonidan oshib ketdi",
+      );
+    }
+
+    const oldingi = await this.prisma.dafLessonProgress.findUnique({
+      where: { studentId_lessonId: { studentId: ctx.studentId, lessonId } },
+    } as any);
+
+    // Eng yaxshi ball SAQLANADI, oxirgisi emas: qayta o'tish natijani
+    // pasaytirmasligi kerak, aks holda o'quvchi mashq qilishdan qo'rqadi.
+    const bestScore = Math.max((oldingi as any)?.bestScore ?? 0, input.richtig);
+    const runs = ((oldingi as any)?.runs ?? 0) + 1;
+
+    await this.prisma.dafLessonProgress.upsert({
+      where: { studentId_lessonId: { studentId: ctx.studentId, lessonId } },
+      create: {
+        studentId: ctx.studentId,
+        lessonId,
+        companyId: ctx.companyId,
+        completedAt: new Date(),
+        bestScore,
+        runs,
+      },
+      update: { completedAt: new Date(), bestScore, runs },
+    } as any);
+
+    return { bestScore, runs };
+  }
+
+  /**
+   * Material yuklash va nomzod qurish — `seans` HAM, `ersatz` HAM shu
+   * yo'ldan boradi. Bu ikkalasida bir xil bosqichlar (darsni o'qish,
+   * bo'lim materialini yuklash, qaytarish (pflicht) so'zlarini aniqlash,
+   * so'z/gap/ibora nomzodlarini qurish, takroriy formatlarni filtrlash)
+   * bir marta, shu yerda yoziladi — ikki nusxada ikki xil o'zgarib
+   * qolmasligi uchun.
+   */
+  private async baueKandidaten(
+    lessonId: number,
+    studentId: number,
+    rnd: () => number,
+  ): Promise<{ pflicht: Frage[]; kandidaten: Frage[] }> {
     const lesson = await this.prisma.dafLesson.findUnique({
       where: { id: lessonId },
       include: { section: true },
@@ -334,24 +464,12 @@ export class UebungService {
     // juftligi takrorlanmaydi. Nomzodning O'ZIDAN (`itemType`/`format`
     // + `belegteItems`dan) kelib chiqadi — qarang `wiederholte-formate.ts`
     // uchun to'liq izoh, nega hand-listed format ro'yxati emas.
-    const kandidaten = ohneWiederholteFormate(rohKandidaten, letzterFormatByWort);
-
-    const { fragen, nichtPlatziert } = baueSeans(
-      kandidaten,
-      SEANS_UZUNLIGI,
-      rnd,
-      pflicht,
+    const kandidaten = ohneWiederholteFormate(
+      rohKandidaten,
+      letzterFormatByWort,
     );
 
-    if (nichtPlatziert.length > 0) {
-      this.logger.warn(
-        `Muddati kelgan ${nichtPlatziert.length} savol seansga joylashmadi ` +
-          `(lessonId=${lessonId}, studentId=${studentId}): ` +
-          nichtPlatziert.map((f) => `${f.itemType}:${f.itemId}`).join(', '),
-      );
-    }
-
-    return fragen.map((f, i) => toPublic(f, i));
+    return { pflicht, kandidaten };
   }
 
   /**

@@ -5,6 +5,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser, Roles } from '../common/decorators';
@@ -12,7 +13,11 @@ import { RolesGuard } from '../common/guards';
 import { DafPortalReadService } from './daf-portal-read.service';
 import { DafAttemptService } from './daf-attempt.service';
 import { CheckDrillDto, CreateAttemptDto } from './dto/create-attempt.dto';
-import { CheckAntwortDto } from './dto/uebung.dto';
+import {
+  AbschlussDto,
+  CheckAntwortDto,
+  ErsatzQueryDto,
+} from './dto/uebung.dto';
 import { DafDrillService } from './lesson/daf-drill.service';
 import { UebungService } from './uebung/uebung.service';
 
@@ -112,5 +117,41 @@ export class DafPortalController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.uebung.pruefen(dto, { studentId, companyId });
+  }
+
+  /**
+   * Noto'g'ri javob berilgan material haqida boshqa formatda savol.
+   * Kurs kontenti kabi filialga bog'liq emas, lekin savolning o'zi
+   * SHU o'quvchining Leitner holatiga qarab quriladi — shuning uchun
+   * `studentId` tokendan kerak (kirish huquqiga emas, savol tarkibiga).
+   */
+  @Get('lessons/:id/uebung/ersatz')
+  getErsatz(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: ErsatzQueryDto,
+    @CurrentUser('studentId') studentId: number,
+  ) {
+    return this.uebung.ersatz(
+      id,
+      studentId,
+      query.itemType,
+      query.itemId,
+      query.nichtFormat,
+    );
+  }
+
+  /**
+   * Seans tugaganini yozadi. `studentId` TOKENDAN olinadi, tanadan emas —
+   * aks holda o'quvchi boshqasining nomidan yakun yozib, uning
+   * ilgarilashini buzishi mumkin bo'lardi.
+   */
+  @Post('lessons/:id/abschluss')
+  postAbschluss(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AbschlussDto,
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.uebung.abschluss(id, dto, { studentId, companyId });
   }
 }

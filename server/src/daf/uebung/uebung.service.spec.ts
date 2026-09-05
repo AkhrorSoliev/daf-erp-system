@@ -211,6 +211,10 @@ function fakePrisma() {
       upsert: jest.fn(async () => ({ id: 1 })),
     },
     dafAttempt: { create: jest.fn(async () => ({ id: 1 })) },
+    dafLessonProgress: {
+      findUnique: jest.fn(async () => null),
+      upsert: jest.fn(async () => ({ id: 1 })),
+    },
   };
 }
 
@@ -582,5 +586,132 @@ describe('UebungService.pruefen', () => {
     expect(r.isCorrect).toBe(true);
     expect(r.richtig).toBe('hallo');
     expect(prisma.dafLexemeState.upsert).toHaveBeenCalled();
+  });
+});
+
+describe('UebungService.ersatz', () => {
+  it('shu material haqida boshqa formatda savol beradi', async () => {
+    const prisma = fakePrisma();
+    const f = await new UebungService(prisma as any).ersatz(
+      100,
+      55,
+      'WORT',
+      1,
+      'WORT_UZ',
+    );
+    expect(f).not.toBeNull();
+    expect(f!.itemId).toBe(1);
+    expect(f!.format).not.toBe('WORT_UZ');
+  });
+
+  it('to`g`ri javobni YUBORMAYDI', async () => {
+    const prisma = fakePrisma();
+    const f = await new UebungService(prisma as any).ersatz(
+      100,
+      55,
+      'WORT',
+      1,
+      'WORT_UZ',
+    );
+    expect(Object.keys(f!)).not.toContain('richtig');
+    expect(Object.keys(f!)).not.toContain('akzeptiert');
+  });
+
+  it('boshqa format qolmasa null qaytaradi', async () => {
+    // Materialda bitta so'z bo'lsa chalg'ituvchi yetmaydi va hech qanday
+    // format qurilmaydi — bu xato emas, tabiiy holat.
+    const prisma = fakePrisma();
+    prisma.dafLexeme.findMany = jest.fn(async () => [
+      {
+        id: 1,
+        de: 'hallo',
+        uz: 'salom',
+        artikel: null,
+        anzeige: null,
+        core: true,
+        sectionId: 7,
+      },
+    ]) as any;
+    prisma.dafSentence.findMany = jest.fn(async () => []) as any;
+    prisma.dafPhrase.findMany = jest.fn(async () => []) as any;
+    const f = await new UebungService(prisma as any).ersatz(
+      100,
+      55,
+      'WORT',
+      1,
+      'WORT_UZ',
+    );
+    expect(f).toBeNull();
+  });
+
+  it('dars topilmasa xato tashlaydi', async () => {
+    const prisma = fakePrisma();
+    prisma.dafLesson.findUnique = jest.fn(async () => null) as any;
+    await expect(
+      new UebungService(prisma as any).ersatz(999, 55, 'WORT', 1, 'WORT_UZ'),
+    ).rejects.toThrow();
+  });
+});
+
+describe('UebungService.abschluss', () => {
+  const ctx = { studentId: 55, companyId: 1 };
+
+  it('birinchi yakunda ilgarilashni yozadi', async () => {
+    const prisma = fakePrisma();
+    await new UebungService(prisma as any).abschluss(
+      100,
+      { richtig: 10, gesamt: 12, durationMs: 200000 },
+      ctx,
+    );
+    const call = (prisma.dafLessonProgress.upsert as jest.Mock).mock
+      .calls[0][0];
+    expect(call.create.studentId).toBe(55);
+    expect(call.create.lessonId).toBe(100);
+    expect(call.create.bestScore).toBe(10);
+    expect(call.create.runs).toBe(1);
+    expect(call.create.completedAt).toBeInstanceOf(Date);
+  });
+
+  it('eng yaxshi ballni saqlaydi, oxirgisini emas', async () => {
+    const prisma = fakePrisma();
+    prisma.dafLessonProgress.findUnique = jest.fn(async () => ({
+      id: 1,
+      studentId: 55,
+      lessonId: 100,
+      bestScore: 11,
+      runs: 2,
+      completedAt: new Date(),
+    })) as any;
+    await new UebungService(prisma as any).abschluss(
+      100,
+      { richtig: 7, gesamt: 12 },
+      ctx,
+    );
+    const call = (prisma.dafLessonProgress.upsert as jest.Mock).mock
+      .calls[0][0];
+    expect(call.update.bestScore).toBe(11);
+    expect(call.update.runs).toBe(3);
+  });
+
+  it('gesamt noldan katta bo`lishini talab qiladi', async () => {
+    const prisma = fakePrisma();
+    await expect(
+      new UebungService(prisma as any).abschluss(
+        100,
+        { richtig: 0, gesamt: 0 },
+        ctx,
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('richtig gesamtdan katta bo`lolmaydi', async () => {
+    const prisma = fakePrisma();
+    await expect(
+      new UebungService(prisma as any).abschluss(
+        100,
+        { richtig: 13, gesamt: 12 },
+        ctx,
+      ),
+    ).rejects.toThrow();
   });
 });
