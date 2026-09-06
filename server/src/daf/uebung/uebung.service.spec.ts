@@ -397,6 +397,93 @@ describe('UebungService.seans — qaytarish (wiederholung)', () => {
   });
 });
 
+describe('wiederholung', () => {
+  function fakeMitDue(count: number) {
+    const prisma = fakePrisma();
+    const states = Array.from({ length: count }, (_, i) => ({
+      lexemeId: i + 1,
+      lastFormat: null,
+      dueAt: new Date(Date.now() - 1000),
+    }));
+    prisma.dafLexemeState.findMany = jest.fn(async () => states) as any;
+    prisma.dafLexeme.findMany = jest.fn(async () =>
+      Array.from({ length: count }, (_, i) => ({
+        id: i + 1,
+        de: `Wort${i + 1}`,
+        uz: `soz${i + 1}`,
+        artikel: null,
+        anzeige: null,
+        sectionId: null,
+        core: true,
+      })),
+    ) as any;
+    return prisma;
+  }
+
+  it("muddati kelgan so'z yo'q bo'lsa bo'sh ro'yxat — bu XATO EMAS", async () => {
+    const prisma = fakePrisma();
+    prisma.dafLexemeState.findMany = jest.fn(async () => []) as any;
+    await expect(
+      new UebungService(prisma as any).wiederholung(55),
+    ).resolves.toEqual([]);
+  });
+
+  it("ko'pi bilan 12 savol qaytaradi", async () => {
+    const fragen = await new UebungService(fakeMitDue(40) as any).wiederholung(
+      55,
+    );
+    expect(fragen.length).toBeLessThanOrEqual(12);
+    expect(fragen.length).toBeGreaterThan(0);
+  });
+
+  it("faqat MUDDATI KELGAN so'zlarni so'raydi", async () => {
+    const prisma = fakeMitDue(20);
+    await new UebungService(prisma as any).wiederholung(55);
+    const where = (prisma.dafLexemeState.findMany as jest.Mock).mock.calls[0][0]
+      .where;
+    expect(where.studentId).toBe(55);
+    expect(where.dueAt).toHaveProperty('lte');
+  });
+
+  it("bitta so'z ikki marta so'ralmaydi", async () => {
+    const fragen = await new UebungService(fakeMitDue(30) as any).wiederholung(
+      55,
+    );
+    const ids = fragen.map((f) => `${f.itemType}:${f.itemId}`);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("to'g'ri javobni YUBORMAYDI", async () => {
+    const fragen = await new UebungService(fakeMitDue(20) as any).wiederholung(
+      55,
+    );
+    for (const f of fragen) {
+      expect(Object.keys(f)).not.toContain('richtig');
+      expect(Object.keys(f)).not.toContain('akzeptiert');
+    }
+  });
+
+  it("savol qurib bo'lmaydigan so'zlar seansni yiqitmaydi", async () => {
+    // Tarjimasi yo'q so'zdan savol qurilmaydi — u tashlab ketiladi,
+    // ekzeptsiya tashlanmaydi.
+    const prisma = fakeMitDue(5);
+    prisma.dafLexeme.findMany = jest.fn(async () => [
+      {
+        id: 1,
+        de: 'Wort1',
+        uz: null,
+        artikel: null,
+        anzeige: null,
+        sectionId: null,
+        core: true,
+      },
+    ]) as any;
+    await expect(
+      new UebungService(prisma as any).wiederholung(55),
+    ).resolves.toEqual([]);
+  });
+});
+
 describe('UebungService.pruefen', () => {
   const ctx = { studentId: 55, companyId: 1 };
 

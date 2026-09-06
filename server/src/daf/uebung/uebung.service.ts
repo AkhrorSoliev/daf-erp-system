@@ -301,6 +301,76 @@ export class UebungService {
   }
 
   /**
+   * Takrorlash seansi — muddati kelgan so'zlardan qurilgan to'liq seans.
+   *
+   * NEGA ALOHIDA SEANS. Ballning qoidasi bo'yicha darsni qayta o'tish
+   * hech narsa bermaydi, ya'ni hamma darsni tugatgan o'quvchi haftalik
+   * jadvaldan yo'qolardi. Bu seans o'sha teshikni yopadi va u tuzilishi
+   * bo'yicha har kuni yangi: so'zga javob berilishi bilan u bugungi
+   * navbatdan chiqadi (`leitner.ts`), ya'ni navbat faqat KAMAYADI va
+   * uni o'ynab to'ldirib bo'lmaydi.
+   *
+   * NEGA SAVOL QURISH `baueWiederholung`GA TASHLANADI. Bu yerda
+   * so'zlarni tanlash, formatni almashtirish va savol qurish mantig'i
+   * TAKRORLANMAYDI — ular allaqachon `seans()` uchun `baueWiederholung`da
+   * yozilgan. Farqi faqat sonda: `seans` uni bitta seansning oltidan biri
+   * uchun chaqiradi, bu yerda esa BUTUN seans uzunligi (`SEANS_UZUNLIGI`)
+   * beriladi, chunki takrorlash seansining o'zi shu tanlovning o'zidan
+   * quriladi — boshqa hech qanday material yo'q.
+   *
+   * CHALG'ITUVCHILAR MUDDATI KELGAN SO'ZLARNING O'ZIDAN OLINADI — bu
+   * seans hech qaysi darsga tegishli emas, ya'ni "shu bo'limning
+   * so'zlari" degan tayyor manba yo'q. O'quvchi ko'rmagan so'zdan
+   * chalg'ituvchi qo'yish bilimni emas, taxminni tekshirardi; muddati
+   * kelgan so'z esa ta'rifi bo'yicha o'quvchi allaqachon ko'rgan so'z
+   * (`DafLexemeState` qatori bor). Amalda bu to'plam so'raladigan 12
+   * tadan ancha katta (faol o'quvchida o'nlab so'z muddati keladi),
+   * shuning uchun panelni to'ldirishga yetarli.
+   *
+   * Bo'sh ro'yxat XATO EMAS: bugun takrorlanadigan so'z yo'q, xolos.
+   */
+  async wiederholung(
+    studentId: number,
+    rnd: () => number = Math.random,
+  ): Promise<PublicFrage[]> {
+    const zustaende = (await this.prisma.dafLexemeState.findMany({
+      where: { studentId, dueAt: { lte: new Date() } },
+    } as any)) as Array<{ lexemeId: number }>;
+    // Muddati kelgan so'z umuman yo'q — bu tabiiy holat (masalan,
+    // o'quvchi hali hech narsa o'rganmagan yoki bugun hammasiga javob
+    // berib bo'lgan). Keyingi so'rovlarga hojat yo'q.
+    if (zustaende.length === 0) return [];
+
+    const wortIds = zustaende.map((z) => z.lexemeId);
+    const wortRows = (await this.prisma.dafLexeme.findMany({
+      where: { id: { in: wortIds } },
+    } as any)) as Array<{
+      id: number;
+      de: string;
+      // Sxemada nullable — `toWort` tarjimasiz qatorni `null`ga aylantiradi.
+      uz: string | null;
+      artikel: string | null;
+      anzeige: string | null;
+      sectionId: number | null;
+    }>;
+
+    // `sectionCode: ''` — takrorlash seansi hech qaysi bo'limga
+    // tegishli emas, bu maydon faqat ko'rgazma uchun ishlatiladi
+    // (savol qurishga ta'sir qilmaydi).
+    const alleWoerter: MaterialWort[] = wortRows
+      .map((l) => toWort({ ...l, sectionCode: '' }))
+      .filter((w): w is MaterialWort => w !== null);
+
+    const fragen = await this.baueWiederholung(
+      studentId,
+      alleWoerter,
+      rnd,
+      SEANS_UZUNLIGI,
+    );
+    return fragen.map((f, i) => toPublic(f, i));
+  }
+
+  /**
    * Material yuklash va nomzod qurish — `seans` HAM, `ersatz` HAM shu
    * yo'ldan boradi. Bu ikkalasida bir xil bosqichlar (darsni o'qish,
    * bo'lim materialini yuklash, qaytarish (pflicht) so'zlarini aniqlash,
@@ -509,15 +579,26 @@ export class UebungService {
     studentId: number,
     coreWords: MaterialWort[],
     rnd: () => number,
+    // Sukut qiymat — bitta seansdagi (pflicht) ulush, `seans()` shu
+    // yordamida chaqiradi. `wiederholung()` esa BUTUN seans uzunligini
+    // beradi (`SEANS_UZUNLIGI`) — chunki takrorlash seansining o'zi
+    // to'liq shu tanlovdan quriladi, boshqa hech qanday material yo'q.
+    anzahl: number = Math.floor(SEANS_UZUNLIGI / WIEDERHOLUNG_ULUSH),
   ): Promise<Frage[]> {
-    const soni = Math.floor(SEANS_UZUNLIGI / WIEDERHOLUNG_ULUSH);
+    const soni = anzahl;
     if (soni <= 0) return [];
 
-    const due = (await this.prisma.dafLexemeState.findMany({
-      where: { studentId, dueAt: { lte: new Date() } },
-      orderBy: { dueAt: 'asc' },
-      take: soni,
-    } as any)) as Array<{ lexemeId: number; lastFormat: string | null }>;
+    // `take: soni` — cheklov SO'ROVNING O'ZIDA. Natija yana `slice` bilan
+    // qattiq ushlanadi: `anzahl` chaqiruvchiga berilgan QAT'IY VA'DA
+    // (masalan `wiederholung()` uchun butun `SEANS_UZUNLIGI`), shuning
+    // uchun bu chegara faqat so'rov qatlamiga ishonib qoldirilmaydi.
+    const due = (
+      (await this.prisma.dafLexemeState.findMany({
+        where: { studentId, dueAt: { lte: new Date() } },
+        orderBy: { dueAt: 'asc' },
+        take: soni,
+      } as any)) as Array<{ lexemeId: number; lastFormat: string | null }>
+    ).slice(0, soni);
     if (due.length === 0) return [];
 
     const dueIds = due.map((d) => d.lexemeId);

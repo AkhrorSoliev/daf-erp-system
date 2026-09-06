@@ -477,16 +477,21 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'SELF',
     reason:
-      'The catalogue itself is COMPANY_WIDE (see above), but these two build a ' +
-      "SESSION from it, not the catalogue verbatim. `seans()` and `ersatz()` " +
+      'The catalogue itself is COMPANY_WIDE (see above), but these three build a ' +
+      'SESSION from it, not the catalogue verbatim. `seans()` and `ersatz()` ' +
       "both read the caller's own Leitner state (`DafLexemeState` — which " +
       'words are due, which format each was last asked in) to decide which ' +
       'questions to build, so the response is a payload that differs per ' +
       'student even though the underlying material is shared — exactly what ' +
-      'COMPANY_WIDE promises it does not.',
+      'COMPANY_WIDE promises it does not. `wiederholung()` goes further: it ' +
+      'belongs to no lesson at all — the whole session (both which words are ' +
+      "asked and which words supply distractors) is built from the caller's " +
+      'own due `DafLexemeState` rows, so there is no catalogue-verbatim part ' +
+      'to it in the first place.',
     routes: [
       'GET /student-portal/lernen/lessons/:id/uebung',
       'GET /student-portal/lernen/lessons/:id/uebung/ersatz',
+      'GET /student-portal/lernen/wiederholung/uebung',
     ],
   },
   {
@@ -523,17 +528,17 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     reason:
       "Keyed on `@CurrentUser('studentId')` — the response is the caller's own " +
       "progress or a leaderboard row list, never another student's read by id. " +
-      "`GET .../fortschritt` is SELF in the ordinary sense: every field on it " +
+      '`GET .../fortschritt` is SELF in the ordinary sense: every field on it ' +
       "is the caller's own (their total, level, streak, rank). " +
-      "`GET .../reyting` is SELF for the SAME reason (the caller decides which " +
-      "of their two tables to see via `?scope=`), but its `zentrum` branch is " +
-      "DELIBERATELY NOT branch-scoped inside that — this is the one exception " +
-      "in the whole route-branch story, not an oversight. The CEO decided on " +
-      "2026-09-06 that the weekly ranking spans the whole centre: a student in " +
-      "one branch sees the full name of a student in another. Recorded in " +
-      "`docs/superpowers/specs/2026-09-06-ball-va-yol-design.md` section 6.1, " +
+      '`GET .../reyting` is SELF for the SAME reason (the caller decides which ' +
+      'of their two tables to see via `?scope=`), but its `zentrum` branch is ' +
+      'DELIBERATELY NOT branch-scoped inside that — this is the one exception ' +
+      'in the whole route-branch story, not an oversight. The CEO decided on ' +
+      '2026-09-06 that the weekly ranking spans the whole centre: a student in ' +
+      'one branch sees the full name of a student in another. Recorded in ' +
+      '`docs/superpowers/specs/2026-09-06-ball-va-yol-design.md` section 6.1, ' +
       "and in the comment on `FortschrittService`'s centre query " +
-      "(`fortschritt/fortschritt.service.ts`). Do not add a `branchId` filter " +
+      '(`fortschritt/fortschritt.service.ts`). Do not add a `branchId` filter ' +
       "there — that would be 'fixing' a considered decision.",
     routes: [
       'GET /student-portal/lernen/fortschritt',

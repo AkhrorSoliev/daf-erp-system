@@ -169,6 +169,15 @@ export class DafPortalController {
   }
 
   /**
+   * Takrorlash seansi. Yo'l `lessons/` OSTIDA EMAS — bu seans hech qanday
+   * darsga tegishli emas va `lessons/:id` uni son deb o'qishga urinardi.
+   */
+  @Get('wiederholung/uebung')
+  getWiederholung(@CurrentUser('studentId') studentId: number) {
+    return this.uebung.wiederholung(studentId);
+  }
+
+  /**
    * O'quvchining o'z ilgarilashi: umumiy ball, daraja, seriya, haftalik
    * ball va o'rin. `studentId` TOKENDAN olinadi — bu javob shu
    * o'quvchining shaxsiy ko'rsatkichi, so'rov parametridan olinsa birov
