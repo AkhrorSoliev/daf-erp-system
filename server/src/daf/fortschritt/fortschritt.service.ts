@@ -112,17 +112,22 @@ export class FortschrittService {
         .points ?? 0;
     const wochePlatzZentrum = platziniTop(zentrumSaralangan, studentId);
 
+    // Guruh o'rni `gruppeHaftaligi` orqali hisoblanadi — xuddi shu funksiya
+    // `reyting('gruppe')` jadvalini quradi. Bitta joyda hisoblanmasa, ikki
+    // ekran bir xil savolga ikki xil javob berishi mumkin edi: bu haqiqiy
+    // xato bo'lib topilgan (mashq qilmagan a'zo o'z o'rnini past ko'rsatgan
+    // — "shu hafta mashq qilganlar" populyatsiyasi bilan hisoblangan
+    // eski versiya butun rosterni emas, faqat urinish qilganlarni ko'rgan).
     let wochePlatzGruppe: number | null = null;
     if (groupId) {
-      const gruppeHaftalik = await this.prisma.dafAttempt.groupBy({
-        by: ['studentId'],
-        where: { companyId, groupId, createdAt: { gte: wochenStart } },
-        _sum: { points: true },
-      });
-      const gruppeSaralangan = saralaBarqaror(
-        oʻziniQoshib(gruppeHaftalik, studentId),
+      const { saralangan } = await this.gruppeHaftaligi(
+        groupId,
+        companyId,
+        wochenStart,
       );
-      wochePlatzGruppe = platziniTop(gruppeSaralangan, studentId);
+      if (saralangan.length > 0) {
+        wochePlatzGruppe = platziniTop(saralangan, studentId);
+      }
     }
 
     return {
@@ -166,12 +171,45 @@ export class FortschrittService {
     const groupId = await currentGroupId(this.prisma, studentId);
     if (!groupId) return [];
 
+    const { saralangan, azoIdlari } = await this.gruppeHaftaligi(
+      groupId,
+      companyId,
+      wochenStart,
+    );
+    if (azoIdlari.length === 0) return [];
+
+    return this.qatorlargaAylantir(saralangan, azoIdlari, studentId);
+  }
+
+  /**
+   * Guruhning haftalik ROSTER asosidagi saralangan ro'yxati — `uebersicht`
+   * (o'z o'rnini hisoblash uchun) va `gruppeReytingi` (jadval qurish uchun)
+   * IKKALASI HAM shu funksiyani chaqiradi.
+   *
+   * Ilgari ikkalasi mustaqil hisoblangan edi: `uebersicht` faqat shu hafta
+   * kamida bitta urinish qilgan a'zolarni ko'rar edi (`dafAttempt.groupBy`
+   * natijasi to'g'ridan-to'g'ri), `gruppeReytingi` esa butun faol rosterni
+   * (`enrollment.findMany`) nol ball bilan to'ldirib. Ikkisi FARQLI
+   * populyatsiya bo'lgani uchun ikki ekran bir xil o'quvchiga ikki xil
+   * o'rin ko'rsatishi mumkin edi — masalan, o'quvchidan kichik id'li,
+   * bu hafta mashq qilmagan a'zo faqat rosterda ko'rinadi va teng ballda
+   * uni oldinga chiqaradi. To'g'ri populyatsiya ROSTER: nol ballilar ham
+   * ko'rinishi kerak bo'lgani uchun ular o'rin hisobida ham qatnashishi
+   * shart.
+   */
+  private async gruppeHaftaligi(
+    groupId: string,
+    companyId: number,
+    wochenStart: Date,
+  ): Promise<{ saralangan: HaftalikYigindi[]; azoIdlari: number[] }> {
     const azolar = await this.prisma.enrollment.findMany({
       where: { groupId, status: 'ACTIVE' },
       select: { studentId: true },
     });
-    if (azolar.length === 0) return [];
     const azoIdlari = [...new Set(azolar.map((a) => a.studentId))];
+    if (azoIdlari.length === 0) {
+      return { saralangan: [], azoIdlari: [] };
+    }
 
     // `groupId` yozuv paytida muhrlangan: ball topilgan paytdagi guruhga
     // tegishli, o'quvchining HOZIRGI guruhiga emas. Shu bitta so'rov bilan
@@ -188,11 +226,7 @@ export class FortschrittService {
       _sum: { points: ballMap.get(id) ?? 0 },
     }));
 
-    return this.qatorlargaAylantir(
-      saralaBarqaror(toliqRoyxat),
-      azoIdlari,
-      studentId,
-    );
+    return { saralangan: saralaBarqaror(toliqRoyxat), azoIdlari };
   }
 
   /**
@@ -211,6 +245,12 @@ export class FortschrittService {
    * qatori (agar u shu haftada mashq qilgan bo'lsa). Markazda yuzlab
    * o'quvchi bor, hammasini har so'rovda yuborish sahifani sekinlashtiradi;
    * shu bir `groupBy` so'rovi kifoya, o'quvchilar sonidan mustaqil.
+   *
+   * Qo'shib qo'yilgan o'z qatori TOP 50 ichidagidek qayta raqamlanmaydi —
+   * u TO'LIQ saralangan ro'yxatdagi HAQIQIY o'rnini saqlaydi (`platz`
+   * to'liq ro'yxatdan olinadi, `top.slice`dan keyin emas). Buni
+   * o'zgartirish oson unutiladigan xato: "51-o'rin" "TOP 50 + 1" deb 51
+   * qilib qayta yozilsa, o'quvchining haqiqiy o'rni (masalan 137) yo'qoladi.
    */
   private async zentrumReytingi(
     studentId: number,

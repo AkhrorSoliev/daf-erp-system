@@ -102,4 +102,39 @@ describe('reyting', () => {
     expect(where).not.toHaveProperty('branchId');
     expect(where.companyId).toBe(1);
   });
+
+  it(
+    "uebersicht().wochePlatzGruppe reyting('gruppe')dagi platz bilan mos " +
+      "keladi — mashq qilmagan a'zolar ham hisobga olinadi",
+    async () => {
+      // Guruhda ikkita mashq qilmagan a'zo bor (10 va 30), ikkalasi ham
+      // so'ragan o'quvchi (55)dan KICHIK id bilan. Ular bu hafta hech narsa
+      // qilmagan, ya'ni `groupBy` ularni umuman qaytarmaydi — faqat
+      // roster (`enrollment.findMany`) orqali ma'lum bo'ladi. So'ragan
+      // o'quvchi ham bu hafta mashq qilmagan (0 ball), shuning uchun
+      // teng ballda `studentId` bo'yicha tartib mashq qilmagan a'zolarni
+      // undan OLDINGA chiqaradi. Faqat "shu hafta mashq qilganlar"
+      // populyatsiyasida hisoblangan eski kod bu ikki a'zoni ko'rmaydi va
+      // noto'g'ri (yuqoriroq) o'rin beradi.
+      const prisma = fakePrisma();
+      prisma.enrollment.findFirst = jest.fn(async () => ({ groupId: 'g-1' }));
+      prisma.enrollment.findMany = jest.fn(async () => [
+        { studentId: 10 },
+        { studentId: 30 },
+        { studentId: 55 },
+        { studentId: 7 },
+      ]);
+      prisma.dafAttempt.groupBy = jest.fn(async () => [
+        { studentId: 7, _sum: { points: 100 } },
+      ]);
+
+      const service = new FortschrittService(prisma);
+      const f = await service.uebersicht(55, 1);
+      const r = await service.reyting(55, 1, 'gruppe');
+      const oʻzQatori = r.find((z) => z.studentId === 55)!;
+
+      expect(f.wochePlatzGruppe).toBe(oʻzQatori.platz);
+      expect(f.wochePlatzGruppe).toBe(4);
+    },
+  );
 });

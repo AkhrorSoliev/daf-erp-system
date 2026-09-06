@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
@@ -21,10 +20,8 @@ import {
 } from './dto/uebung.dto';
 import { DafDrillService } from './lesson/daf-drill.service';
 import { UebungService } from './uebung/uebung.service';
-import {
-  FortschrittService,
-  ReytingQamrovi,
-} from './fortschritt/fortschritt.service';
+import { FortschrittService } from './fortschritt/fortschritt.service';
+import { ReytingQueryDto } from './dto/reyting-query.dto';
 
 /**
  * O'quvchi portalining o'quv bo'limi.
@@ -189,23 +186,16 @@ export class DafPortalController {
    * Haftalik reyting jadvali. `scope=gruppe` — o'quvchining o'z guruhi,
    * `scope=zentrum` — butun markaz (filialga cheklanmagani sababi
    * `fortschritt.service.ts`dagi izohda va `branch-route-policy.ts`da
-   * yozilgan). Boshqa qiymat qabul qilinmaydi.
+   * yozilgan). Noto'g'ri `scope` global `ValidationPipe` tomonidan
+   * `ReytingQueryDto` orqali rad etiladi — kontrollerda qo'lda tekshiruv
+   * shart emas.
    */
   @Get('reyting')
   getReyting(
-    @Query('scope') scope: string,
+    @Query() query: ReytingQueryDto,
     @CurrentUser('studentId') studentId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    if (scope !== 'gruppe' && scope !== 'zentrum') {
-      throw new BadRequestException(
-        "scope faqat 'gruppe' yoki 'zentrum' bo'lishi mumkin",
-      );
-    }
-    return this.fortschritt.reyting(
-      studentId,
-      companyId,
-      scope as ReytingQamrovi,
-    );
+    return this.fortschritt.reyting(studentId, companyId, query.scope);
   }
 }
