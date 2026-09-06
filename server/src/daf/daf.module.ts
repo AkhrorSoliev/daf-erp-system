@@ -9,6 +9,7 @@ import { DafDrillService } from './lesson/daf-drill.service';
 import { KursSeedService } from './kurs/kurs-seed.service';
 import { InhaltSeedService } from './inhalt/inhalt-seed.service';
 import { UebungService } from './uebung/uebung.service';
+import { FortschrittService } from './fortschritt/fortschritt.service';
 
 @Module({
   controllers: [DafPortalController, DafMediaController],
@@ -21,6 +22,7 @@ import { UebungService } from './uebung/uebung.service';
     KursSeedService,
     InhaltSeedService,
     UebungService,
+    FortschrittService,
   ],
   exports: [DafSeedService],
 })

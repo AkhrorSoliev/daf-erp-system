@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -20,6 +21,10 @@ import {
 } from './dto/uebung.dto';
 import { DafDrillService } from './lesson/daf-drill.service';
 import { UebungService } from './uebung/uebung.service';
+import {
+  FortschrittService,
+  ReytingQamrovi,
+} from './fortschritt/fortschritt.service';
 
 /**
  * O'quvchi portalining o'quv bo'limi.
@@ -37,6 +42,7 @@ export class DafPortalController {
     private readonly attempts: DafAttemptService,
     private readonly drills: DafDrillService,
     private readonly uebung: UebungService,
+    private readonly fortschritt: FortschrittService,
   ) {}
 
   /**
@@ -163,5 +169,43 @@ export class DafPortalController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.uebung.abschluss(id, dto, { studentId, companyId });
+  }
+
+  /**
+   * O'quvchining o'z ilgarilashi: umumiy ball, daraja, seriya, haftalik
+   * ball va o'rin. `studentId` TOKENDAN olinadi — bu javob shu
+   * o'quvchining shaxsiy ko'rsatkichi, so'rov parametridan olinsa birov
+   * boshqasining natijasini ko'rishi mumkin bo'lardi.
+   */
+  @Get('fortschritt')
+  getFortschritt(
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.fortschritt.uebersicht(studentId, companyId);
+  }
+
+  /**
+   * Haftalik reyting jadvali. `scope=gruppe` — o'quvchining o'z guruhi,
+   * `scope=zentrum` — butun markaz (filialga cheklanmagani sababi
+   * `fortschritt.service.ts`dagi izohda va `branch-route-policy.ts`da
+   * yozilgan). Boshqa qiymat qabul qilinmaydi.
+   */
+  @Get('reyting')
+  getReyting(
+    @Query('scope') scope: string,
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    if (scope !== 'gruppe' && scope !== 'zentrum') {
+      throw new BadRequestException(
+        "scope faqat 'gruppe' yoki 'zentrum' bo'lishi mumkin",
+      );
+    }
+    return this.fortschritt.reyting(
+      studentId,
+      companyId,
+      scope as ReytingQamrovi,
+    );
   }
 }

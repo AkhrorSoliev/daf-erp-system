@@ -518,6 +518,28 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /student-portal/lernen/units/:id',
     ],
   },
+  {
+    policy: 'SELF',
+    reason:
+      "Keyed on `@CurrentUser('studentId')` — the response is the caller's own " +
+      "progress or a leaderboard row list, never another student's read by id. " +
+      "`GET .../fortschritt` is SELF in the ordinary sense: every field on it " +
+      "is the caller's own (their total, level, streak, rank). " +
+      "`GET .../reyting` is SELF for the SAME reason (the caller decides which " +
+      "of their two tables to see via `?scope=`), but its `zentrum` branch is " +
+      "DELIBERATELY NOT branch-scoped inside that — this is the one exception " +
+      "in the whole route-branch story, not an oversight. The CEO decided on " +
+      "2026-09-06 that the weekly ranking spans the whole centre: a student in " +
+      "one branch sees the full name of a student in another. Recorded in " +
+      "`docs/superpowers/specs/2026-09-06-ball-va-yol-design.md` section 6.1, " +
+      "and in the comment on `FortschrittService`'s centre query " +
+      "(`fortschritt/fortschritt.service.ts`). Do not add a `branchId` filter " +
+      "there — that would be 'fixing' a considered decision.",
+    routes: [
+      'GET /student-portal/lernen/fortschritt',
+      'GET /student-portal/lernen/reyting',
+    ],
+  },
 ];
 
 /**

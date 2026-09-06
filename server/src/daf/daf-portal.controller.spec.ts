@@ -131,6 +131,7 @@ describe('DafPortalController — mashq javobida sizib chiqish yo`q', () => {
       {} as any,
       {} as any,
       uebung,
+      {} as any,
     );
 
     const fragen = await controller.getUebung(100, 55);
