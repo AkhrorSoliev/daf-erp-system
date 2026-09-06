@@ -769,6 +769,20 @@ describe('UebungService.abschluss', () => {
 describe('pruefen — ball', () => {
   const ctx = { studentId: 55, companyId: 1 };
 
+  /**
+   * `dafLexemeState`ni STATEFUL qiladi — `upsert` haqiqatda saqlanadigan
+   * do'konga yozadi, `findMany`/`findUnique` esa O'SHA do'kondan o'qiydi.
+   *
+   * NEGA STATIK MOCK YETARLI EMAS. Static `jest.fn(async () => state)`
+   * har doim BIR XIL qiymatni qaytaradi — qachon chaqirilishidan qat'i
+   * nazar. Shuning uchun agar kimdir kelajakda `pruefen` ichida muddat
+   * o'qishni `aktualisiereZustand` yozuvidan PASTGA surib qo'ysa (aynan
+   * shu vazifa oldini olishi kerak bo'lgan regressiya), static mock buni
+   * SEZMAYDI: natija bayt-baytiga bir xil chiqadi va test o'tib ketadi.
+   * Do'kon orqali `upsert` yozgan qiymat `findMany` ga haqiqatda ta'sir
+   * qilgani uchun, tartib buzilsa "muddati kelgan" holat allaqachon
+   * kelajakka surilgan bo'lib topiladi va ball 10 o'rniga 0 chiqadi.
+   */
   function fakeMitWort(state: { dueAt: Date; strength: number } | null) {
     const prisma = fakePrisma();
     prisma.dafLexeme.findUnique = jest.fn(async () => ({
@@ -778,13 +792,45 @@ describe('pruefen — ball', () => {
       artikel: 'das',
       unitId: 1,
     })) as any;
-    prisma.dafLexemeState.findMany = jest.fn(async () =>
-      state ? [{ lexemeId: 5, ...state }] : [],
-    ) as any;
-    prisma.dafLexemeState.findUnique = jest.fn(async () => state) as any;
+
+    const zustandStore = new Map<number, { dueAt: Date; strength: number }>();
+    if (state) zustandStore.set(5, state);
+
+    prisma.dafLexemeState.findMany = jest.fn(async ({ where }: any) => {
+      const ids: number[] = where?.lexemeId?.in ?? [];
+      return ids
+        .filter((id) => zustandStore.has(id))
+        .map((id) => ({ lexemeId: id, ...zustandStore.get(id)! }));
+    }) as any;
+
+    prisma.dafLexemeState.findUnique = jest.fn(async ({ where }: any) => {
+      const lexemeId = where.studentId_lexemeId.lexemeId;
+      return zustandStore.get(lexemeId) ?? null;
+    }) as any;
+
+    prisma.dafLexemeState.upsert = jest.fn(async (args: any) => {
+      const lexemeId = args.where.studentId_lexemeId.lexemeId;
+      // `dueAt`/`strength` `create` va `update` shoxobchalarida bir xil
+      // hisoblangan qiymat — qaysinisidan olinishi farq qilmaydi.
+      const yangi = args.update ?? args.create;
+      zustandStore.set(lexemeId, {
+        dueAt: yangi.dueAt,
+        strength: yangi.strength,
+      });
+      return { id: 1 };
+    }) as any;
+
     return prisma;
   }
 
+  // TARTIB TRIPWIRE (1/2): `fakeMitWort` endi STATEFUL, ya'ni
+  // `aktualisiereZustand`ning `upsert`i shu yerdagi `findMany`ga
+  // haqiqatda ta'sir qiladi. Agar `pruefen` ichida muddat o'qishni
+  // yozuvdan PASTGA surib qo'yishsa: bu yerda hali state yo'q edi, lekin
+  // to'g'ri javob `aktualisiereZustand`da YANGI (kelajakdagi) `dueAt`
+  // bilan qator yozadi — o'qish o'sha yozuvdan KEYIN sodir bo'lsa, so'z
+  // "muddati kelmagan" ko'rinadi va bu test 10 o'rniga 0 kutadi, ya'ni
+  // MUVAFFAQIYATSIZ tugaydi.
   it("hech qachon so'ralmagan so'z — 10 ball", async () => {
     const prisma = fakeMitWort(null);
     await new UebungService(prisma as any).pruefen(
@@ -795,6 +841,13 @@ describe('pruefen — ball', () => {
     expect(call.data.points).toBe(10);
   });
 
+  // TARTIB TRIPWIRE (2/2): boshlang'ich `dueAt` O'TGANDA turibdi (muddati
+  // kelgan). Agar o'qish yozuvdan KEYIN sodir bo'lsa, `aktualisiereZustand`
+  // to'g'ri javob uchun `dueAt`ni KELAJAKKA surib ulguradi va shu yerdagi
+  // o'qish endi "muddati kelmagan" deb topadi — kutilgan 10 o'rniga 0
+  // chiqib, test MUVAFFAQIYATSIZ tugaydi. Bu ikkala test ham quyidagi
+  // fix hisobotida qo'lda sinalgan: o'qishni yozuvdan pastga surib
+  // ikkalasi ham qulashi, keyin qaytarib ikkalasi ham o'tishi tasdiqlangan.
   it('muddati kelgan so`z — 10 ball', async () => {
     const prisma = fakeMitWort({
       strength: 2,
