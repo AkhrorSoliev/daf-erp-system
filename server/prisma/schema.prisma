@@ -3201,6 +3201,12 @@ model DafAttempt {
   given      Json
   durationMs Int?
 
+  /// Shu javob uchun berilgan ball. Qoida bitta: muddati kelgan so'zga
+  /// to'g'ri javob 10 ball. `PAAR` to'rt so'zni birdan tekshirgani uchun
+  /// 40 ballgacha berishi mumkin. Ball MIJOZDAN so'ralmaydi — u reytingga
+  /// tushadi, ya'ni soxtalashtirish arziydigan bo'lardi.
+  points     Int     @default(0)
+
   /// Yozish paytida MUHRLANADI, jonli bog'lanishdan o'qilmaydi.
   /// `groupId` — `Group.id` kabi uuid satri, son emas.
   companyId Int
