@@ -7,6 +7,7 @@ import { DafAnswerStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { tryResolveStudentBranchId } from '../common/finance/resolve-branch';
 import { DafDrillService } from './lesson/daf-drill.service';
+import { currentGroupId } from './shared/student-scope';
 
 export interface AttemptResult {
   isCorrect: boolean;
@@ -56,7 +57,7 @@ export class DafAttemptService {
       ctx.studentId,
       ctx.companyId,
     );
-    const groupId = await this.currentGroupId(ctx.studentId);
+    const groupId = await currentGroupId(this.prisma, ctx.studentId);
 
     await this.prisma.dafAttempt.create({
       data: {
@@ -111,7 +112,7 @@ export class DafAttemptService {
       ctx.studentId,
       ctx.companyId,
     );
-    const groupId = await this.currentGroupId(ctx.studentId);
+    const groupId = await currentGroupId(this.prisma, ctx.studentId);
 
     await this.prisma.dafAttempt.create({
       data: {
@@ -143,15 +144,5 @@ export class DafAttemptService {
     const first = answers[0];
     if (typeof first !== 'string') return false;
     return given.trim() === first.trim();
-  }
-
-  /** O'quvchining faol guruhi — muhrlash uchun. Topilmasa `null`. */
-  private async currentGroupId(studentId: number): Promise<string | null> {
-    const enrollment = await this.prisma.enrollment.findFirst({
-      where: { studentId, status: 'ACTIVE' },
-      orderBy: { createdAt: 'desc' },
-      select: { groupId: true },
-    });
-    return enrollment?.groupId ?? null;
   }
 }

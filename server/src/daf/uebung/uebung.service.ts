@@ -5,7 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { tryResolveStudentBranchId } from '../../common/finance/resolve-branch';
+import { currentGroupId } from '../shared/student-scope';
 import { istRichtig } from './antwort';
+import { punkteFuer } from './punkte';
 import type {
   Frage,
   FrageFormat,
@@ -627,14 +630,60 @@ export class UebungService {
       richtig = antwort.richtig;
     }
 
+    // Ball uchun so'zning muddati YOZUVDAN OLDIN o'qiladi: pastdagi
+    // `aktualisiereZustand` uni kelajakka surib yuboradi va keyin
+    // "muddati kelganmidi" degan savolga javob berib bo'lmaydi.
+    const betroffeneWortIds = paarNatijalari
+      ? paarNatijalari.map((p) => p.lexemeId)
+      : itemType === 'WORT'
+        ? [itemId]
+        : [];
+
+    const jetzt = new Date();
+    const zustaende = betroffeneWortIds.length
+      ? ((await this.prisma.dafLexemeState.findMany({
+          where: {
+            studentId: ctx.studentId,
+            lexemeId: { in: betroffeneWortIds },
+          },
+        } as any)) as Array<{ lexemeId: number; dueAt: Date }>)
+      : [];
+    const dueByWort = new Map(zustaende.map((z) => [z.lexemeId, z.dueAt]));
+
+    // Holatsiz so'z — hech qachon so'ralmagan, ya'ni MUDDATI KELGAN.
+    const istFaellig = (lexemeId: number): boolean => {
+      const due = dueByWort.get(lexemeId);
+      return due == null || due.getTime() <= jetzt.getTime();
+    };
+
+    const punkteEingabe = paarNatijalari
+      ? paarNatijalari.map((p) => ({
+          faellig: istFaellig(p.lexemeId),
+          richtig: p.ok,
+        }))
+      : itemType === 'WORT'
+        ? [{ faellig: istFaellig(itemId), richtig: isCorrect }]
+        : [];
+    const points = punkteFuer(punkteEingabe);
+
+    const branchId = await tryResolveStudentBranchId(
+      this.prisma,
+      ctx.studentId,
+      ctx.companyId,
+    );
+    const groupId = await currentGroupId(this.prisma, ctx.studentId);
+
     await this.prisma.dafAttempt.create({
       data: {
         studentId: ctx.studentId,
         companyId: ctx.companyId,
+        branchId,
+        groupId,
         lexemeId: itemType === 'WORT' ? itemId : null,
         isCorrect,
         given,
         durationMs: durationMs ?? null,
+        points,
       },
     } as any);
 

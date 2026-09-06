@@ -215,6 +215,10 @@ function fakePrisma() {
       findUnique: jest.fn(async () => null),
       upsert: jest.fn(async () => ({ id: 1 })),
     },
+    enrollment: { findFirst: jest.fn(async () => null) },
+    // `tryResolveStudentBranchId` avval shu jadvalni so'raydi — bo'sh
+    // qaytarilsa faol ro'yxatga (`enrollment`) tushadi.
+    studentBranch: { findFirst: jest.fn(async () => null) },
   };
 }
 
@@ -759,5 +763,104 @@ describe('UebungService.abschluss', () => {
         ctx,
       ),
     ).rejects.toThrow();
+  });
+});
+
+describe('pruefen — ball', () => {
+  const ctx = { studentId: 55, companyId: 1 };
+
+  function fakeMitWort(state: { dueAt: Date; strength: number } | null) {
+    const prisma = fakePrisma();
+    prisma.dafLexeme.findUnique = jest.fn(async () => ({
+      id: 5,
+      de: 'das Haus',
+      uz: 'uy',
+      artikel: 'das',
+      unitId: 1,
+    })) as any;
+    prisma.dafLexemeState.findMany = jest.fn(async () =>
+      state ? [{ lexemeId: 5, ...state }] : [],
+    ) as any;
+    prisma.dafLexemeState.findUnique = jest.fn(async () => state) as any;
+    return prisma;
+  }
+
+  it("hech qachon so'ralmagan so'z — 10 ball", async () => {
+    const prisma = fakeMitWort(null);
+    await new UebungService(prisma as any).pruefen(
+      { itemType: 'WORT', itemId: 5, format: 'WORT_UZ', given: 'uy' },
+      ctx,
+    );
+    const call = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0];
+    expect(call.data.points).toBe(10);
+  });
+
+  it('muddati kelgan so`z — 10 ball', async () => {
+    const prisma = fakeMitWort({
+      strength: 2,
+      dueAt: new Date(Date.now() - 60_000),
+    });
+    await new UebungService(prisma as any).pruefen(
+      { itemType: 'WORT', itemId: 5, format: 'WORT_UZ', given: 'uy' },
+      ctx,
+    );
+    const call = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0];
+    expect(call.data.points).toBe(10);
+  });
+
+  it("muddati KELMAGAN so'z — nol ball (darsni qayta o'tish)", async () => {
+    const prisma = fakeMitWort({
+      strength: 2,
+      dueAt: new Date(Date.now() + 3 * 86_400_000),
+    });
+    await new UebungService(prisma as any).pruefen(
+      { itemType: 'WORT', itemId: 5, format: 'WORT_UZ', given: 'uy' },
+      ctx,
+    );
+    const call = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0];
+    expect(call.data.points).toBe(0);
+  });
+
+  it('xato javob — nol ball', async () => {
+    const prisma = fakeMitWort(null);
+    await new UebungService(prisma as any).pruefen(
+      { itemType: 'WORT', itemId: 5, format: 'WORT_UZ', given: 'notogri' },
+      ctx,
+    );
+    const call = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0];
+    expect(call.data.points).toBe(0);
+  });
+
+  it('gap savoli — nol ball (Leitner gapni kuzatmaydi)', async () => {
+    const prisma = fakePrisma();
+    prisma.dafSentence.findUnique = jest.fn(async () => ({
+      de: 'Ich bin da',
+      uz: 'Men shu yerdaman',
+    })) as any;
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'SATZ',
+        itemId: 9,
+        format: 'SATZ_UEBERSETZEN',
+        given: 'Men shu yerdaman',
+      },
+      ctx,
+    );
+    const call = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0];
+    expect(call.data.points).toBe(0);
+  });
+
+  it('urinishga filial va guruh MUHRLANADI', async () => {
+    const prisma = fakeMitWort(null);
+    prisma.enrollment.findFirst = jest.fn(async () => ({
+      groupId: 'g-1',
+    })) as any;
+    await new UebungService(prisma as any).pruefen(
+      { itemType: 'WORT', itemId: 5, format: 'WORT_UZ', given: 'uy' },
+      ctx,
+    );
+    const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
+    expect(data.groupId).toBe('g-1');
+    expect(data).toHaveProperty('branchId');
   });
 });
