@@ -437,12 +437,71 @@ describe('wiederholung', () => {
   });
 
   it("faqat MUDDATI KELGAN so'zlarni so'raydi", async () => {
+    // Ikkita so'rov navbati AMALGA OSHISH TARTIBI emas — muhimi, ULARDAN
+    // BIRI muddati kelganlar bo'yicha filtrlaydi. `wiederholung()` endi
+    // chalg'ituvchi puli uchun ALOHIDA (muddatsiz) so'rov ham yuboradi,
+    // shuning uchun BIRINCHI chaqiruvni tekshirish o'rniga BARCHA
+    // chaqiruvlar orasidan muddati kelgan filtrli birini qidiramiz.
     const prisma = fakeMitDue(20);
     await new UebungService(prisma as any).wiederholung(55);
-    const where = (prisma.dafLexemeState.findMany as jest.Mock).mock.calls[0][0]
-      .where;
-    expect(where.studentId).toBe(55);
-    expect(where.dueAt).toHaveProperty('lte');
+    const calls = (prisma.dafLexemeState.findMany as jest.Mock).mock.calls;
+    const dueChaqiruv = calls.find((c) => c[0]?.where?.dueAt);
+    expect(dueChaqiruv).toBeDefined();
+    expect(dueChaqiruv![0].where.studentId).toBe(55);
+    expect(dueChaqiruv![0].where.dueAt).toHaveProperty('lte');
+  });
+
+  // Haqiqiy nuqson: chalg'ituvchi puli FAQAT muddati kelgan so'zlardan
+  // olinsa, `ablenker` (wort-fragen.ts) kamida 3 ta BOSHQA qiymat topa
+  // olmaguncha `null` qaytaradi — ozgina so'z muddati kelgan kunda
+  // (bu ODATIY holat, kamdan-kam emas) deyarli har bir savol "qurib
+  // bo'lmadi" deb tashlab yuboriladi. Uzoq tarixli o'quvchi (o'nlab
+  // so'z bilan tanish) ham shu sababdan bo'sh seans olib qolardi.
+  //
+  // `dafLexeme.findMany` bu yerda `where.id.in`ni HAQIQATDA hisobga
+  // oladi (boshqa testlardagi `fakeMitDue` kabi argumentni e'tiborsiz
+  // qoldirmaydi) — aks holda chalg'ituvchi puli tor bo'lsa ham keng
+  // bo'lsa ham natija farq qilmay, bu test hech narsani isbotlamas edi.
+  it("uzoq tarixli o'quvchida ozgina muddati kelgan so'z bo'lsa ham, savollar qaytaradi", async () => {
+    const now = Date.now();
+    const eski = new Date(now - 1000);
+    const kelajakda = new Date(now + 999_999);
+    // 15 ta so'z bilan tanish (holat yozuvi bor), lekin faqat 3 tasi
+    // bugun muddati kelgan — qolgan 12 tasi hali muddati kelmagan.
+    const barchaHolatlar = Array.from({ length: 15 }, (_, i) => ({
+      lexemeId: i + 1,
+      lastFormat: null,
+      dueAt: i < 3 ? eski : kelajakda,
+    }));
+    const barchaSozlar = Array.from({ length: 15 }, (_, i) => ({
+      id: i + 1,
+      de: `Wort${i + 1}`,
+      uz: `soz${i + 1}`,
+      artikel: null,
+      anzeige: null,
+      sectionId: null,
+      core: true,
+    }));
+
+    const prisma = fakePrisma();
+    prisma.dafLexemeState.findMany = jest.fn(async (args: any) => {
+      const where = args?.where ?? {};
+      if (where.dueAt) {
+        return barchaHolatlar.filter((z) => z.dueAt.getTime() <= now);
+      }
+      return barchaHolatlar;
+    }) as any;
+    prisma.dafLexeme.findMany = jest.fn(async (args: any) => {
+      const ids: number[] | undefined = args?.where?.id?.in;
+      if (!ids) return barchaSozlar;
+      return barchaSozlar.filter((s) => ids.includes(s.id));
+    }) as any;
+
+    const fragen = await new UebungService(prisma as any).wiederholung(55);
+    // Uchta so'z muddati kelgan — hammasi savolga aylanishi kerak,
+    // chunki chalg'ituvchi puli endi 15 ta so'zdan (kengroq, faqat
+    // 3 tadan emas) tuziladi.
+    expect(fragen).toHaveLength(3);
   });
 
   it("bitta so'z ikki marta so'ralmaydi", async () => {

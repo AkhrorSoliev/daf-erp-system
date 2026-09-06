@@ -318,14 +318,28 @@ export class UebungService {
    * beriladi, chunki takrorlash seansining o'zi shu tanlovning o'zidan
    * quriladi — boshqa hech qanday material yo'q.
    *
-   * CHALG'ITUVCHILAR MUDDATI KELGAN SO'ZLARNING O'ZIDAN OLINADI — bu
-   * seans hech qaysi darsga tegishli emas, ya'ni "shu bo'limning
-   * so'zlari" degan tayyor manba yo'q. O'quvchi ko'rmagan so'zdan
-   * chalg'ituvchi qo'yish bilimni emas, taxminni tekshirardi; muddati
-   * kelgan so'z esa ta'rifi bo'yicha o'quvchi allaqachon ko'rgan so'z
-   * (`DafLexemeState` qatori bor). Amalda bu to'plam so'raladigan 12
-   * tadan ancha katta (faol o'quvchida o'nlab so'z muddati keladi),
-   * shuning uchun panelni to'ldirishga yetarli.
+   * CHALG'ITUVCHILAR IKKI XIL TO'PLAMDAN QURILADI, ATAYLAB:
+   * - MUDDATI KELGAN to'plam — bugun haqiqatda SO'RALADIGAN so'zlar.
+   * - KO'RGAN (BARCHA) to'plam — o'quvchining har qanday `DafLexemeState`
+   *   qatori bor so'zlari, MUDDATGA QARAMASDAN — chalg'ituvchi puli aynan
+   *   SHUNDAN quriladi.
+   * Ikkinchisi BIRINCHISINI to'liq qamrab oladi (muddati kelgan so'zning
+   * o'zi ham holat yozuviga ega), shuning uchun ittifoq (union) amalda
+   * ko'rgan to'plamning o'zi — lekin ikkalasi ATAYLAB alohida so'raladi:
+   * ularning vazifasi boshqa-boshqa (kim so'raladi / kim chalg'itadi),
+   * shuning uchun kod ham shu ikkiligini ko'rsatib turishi kerak.
+   *
+   * NEGA FAQAT MUDDATI KELGANLAR YETARLI EMAS EDI (tuzatilgan nuqson).
+   * Chalg'ituvchi puli faqat muddati kelgan so'zlardan olinsa,
+   * `ablenker` (wort-fragen.ts) har bir savol uchun kamida 3 ta BOSHQA
+   * qiymat topa olmaguncha `null` qaytaradi. Kunning aksariyatida
+   * muddati kelgan so'z soni 2-3 ta bo'ladi (BU ODATIY HOLAT, kamdan-kam
+   * emas) — demak deyarli har doim pul juda tor bo'lib, HAR BIR savol
+   * "qurib bo'lmadi" deb tashlab yuboriladi va o'nlab so'z o'rgangan
+   * o'quvchi ham bo'sh seans olib qolardi — aynan tinch kunda, seans
+   * eng kerak bo'lgan paytda. O'quvchi ko'rmagan so'zdan chalg'ituvchi
+   * qo'yish ham noto'g'ri (bilimni emas, taxminni tekshirardi) —
+   * shuning uchun pul "butun lug'at" emas, "o'quvchi ko'rgan so'zlar".
    *
    * Bo'sh ro'yxat XATO EMAS: bugun takrorlanadigan so'z yo'q, xolos.
    */
@@ -341,9 +355,22 @@ export class UebungService {
     // berib bo'lgan). Keyingi so'rovlarga hojat yo'q.
     if (zustaende.length === 0) return [];
 
-    const wortIds = zustaende.map((z) => z.lexemeId);
+    // Chalg'ituvchi manbai — MUDDATGA QARAMASDAN, o'quvchi duch kelgan
+    // BARCHA so'z. Yuqoridagi izohga qarang: tor (faqat muddati kelgan)
+    // pul deyarli har bir savolni qurib bo'lmas holga keltirgan edi.
+    const koergan = (await this.prisma.dafLexemeState.findMany({
+      where: { studentId },
+    } as any)) as Array<{ lexemeId: number }>;
+
+    // Ittifoq: muddati kelgan so'zlarning o'zi ham chalg'ituvchi
+    // panelida BO'LISHI shart — ular ikkala rolda ham ishtirok etadi
+    // (ham so'raladigan, ham boshqa savolga chalg'ituvchi sifatida).
+    const barchaIdlar = [
+      ...new Set([...zustaende, ...koergan].map((z) => z.lexemeId)),
+    ];
+
     const wortRows = (await this.prisma.dafLexeme.findMany({
-      where: { id: { in: wortIds } },
+      where: { id: { in: barchaIdlar } },
     } as any)) as Array<{
       id: number;
       de: string;
