@@ -25,6 +25,13 @@ export interface PublicFrage {
   prompt: string;
   hilfe: string | null;
   options: string[];
+  /**
+   * Qisqa sarlavha — hozircha faqat `DIALOG_LUECKE` to'ldiradi (dialog
+   * nomi). Natija ekrani xato ro'yxatida BUTUN suhbat (`prompt`) o'rniga
+   * shu qisqa nomni ko'rsatadi (ko'rik topilmasi). Boshqa formatlarda
+   * `undefined`.
+   */
+  titel?: string | null;
 }
 
 /** Javob tekshirilgandan KEYIN keladi — faqat shunda to'g'ri javob ma'lum. */

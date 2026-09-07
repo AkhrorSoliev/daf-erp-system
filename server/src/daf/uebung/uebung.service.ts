@@ -28,6 +28,7 @@ import {
   satzBauen,
   satzUebersetzen,
   zuordnen,
+  ZUORDNEN_JUFT,
 } from './satz-fragen';
 import { baueSeans } from './seans';
 import { ohneWiederholteFormate } from './wiederholte-formate';
@@ -828,7 +829,7 @@ export class UebungService {
       // sig'maydi (oltita juftning qaysilari savolga tushgani tasodifiy
       // tanlangan), shuning uchun `richtigeAntwort`ga UMUMAN yetib
       // bormaydi — o'z yo'li bilan (juft-juft) tekshiradi.
-      if (material.unitId == null) {
+      if (itemType !== 'PHRASE' || material.unitId == null) {
         // PAAR bilan bir xil himoya qatlami: `CheckAntwortDto` `itemType`
         // va `format`ni MUSTAQIL tekshiradi, ya'ni mijoz `itemType: 'SATZ'`
         // + `format: 'ZUORDNEN'` yubora oladi. Shu holda `ladeMaterial`
@@ -837,6 +838,13 @@ export class UebungService {
         // `{ unitId: undefined }` filtrini JIMGINA tashlab yuboradi va
         // ibora qidiruvi BUTUN bazaga (barcha unitlarga) tarqaladi —
         // aynan shu funksiyaning shartnomasi taqiqlagan holat.
+        //
+        // FAQAT `material.unitId == null` YETARLI EMAS EDI (ko'rik
+        // topilmasi): `WORT` materiali ham `unitId` bilan qaytadi, ya'ni
+        // mijoz `itemType: 'WORT'` + `format: 'ZUORDNEN'` yuborsa, bu
+        // tekshiruv (faqat `unitId`ga qarasa) OLDIN o'tkazib yuborardi —
+        // xabari "faqat iboraga tegishli" desa ham. `itemType !==
+        // 'PHRASE'` tekshiruvi shuni yopadi.
         throw new BadRequestException('ZUORDNEN savoli faqat iboraga tegishli');
       }
       const natija = await this.pruefeZuordnen(given, material.unitId);
@@ -1040,7 +1048,7 @@ export class UebungService {
       .map((p) => p.split('='))
       .filter((p): p is [string, string] => p.length === 2);
 
-    if (juftlar.length !== 6) {
+    if (juftlar.length !== ZUORDNEN_JUFT) {
       return { isCorrect: false, richtig: '' };
     }
 
@@ -1052,6 +1060,21 @@ export class UebungService {
     const iboralar = (await this.prisma.dafPhrase.findMany({
       where: { funktionUz: { in: vaziyatlar }, unitId },
     } as any)) as Array<{ funktionUz: string; de: string; uz: string }>;
+
+    // FAIL-CLOSED (ko'rik topilmasi, IMPORTANT): `byVaziyat` `funktionUz`
+    // bo'yicha qurilgan `Map` — agar shu unitda ikkita ibora bir xil
+    // `funktionUz`ga ega bo'lib qolsa (schema buni cheklamaydi, faqat
+    // `zuordnen()` bitta savol ICHIDA noyoblikni kafolatlaydi), `Map`
+    // OXIRGI qatorni jimgina g'olib qiladi va to'g'ri juftlashgan
+    // o'quvchi noaniq g'olibga qarshi solishtirilib "xato" deb
+    // belgilanadi — hech qanday iz qoldirmay. `vaziyatlar` allaqachon
+    // yuqorida noyob ekani tekshirilgan, shuning uchun har bir vaziyatga
+    // ANIQ bitta ibora mos kelishi kerak: sonlar mos kelmasa (kollizyadan
+    // ortiqcha qator yoki topilmagan ibora) butun javobni XATO deb
+    // hisoblaymiz — noaniq g'olibga tayanib baholash o'rniga.
+    if (iboralar.length !== vaziyatlar.length) {
+      return { isCorrect: false, richtig: '' };
+    }
     const byVaziyat = new Map(iboralar.map((p) => [p.funktionUz, p]));
 
     const natijalar = juftlar.map(([vaziyat, deGegeben]) => {

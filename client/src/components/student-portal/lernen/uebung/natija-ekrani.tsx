@@ -79,6 +79,56 @@ function useSanaladiganBall(maqsad: number | null): number | null {
 }
 
 /**
+ * Bitta xato satrini o'qish mumkin bo'lgan ko'rinishda chizadi.
+ *
+ * Ko'rik topilmasi (IMPORTANT): eski ko'rinish `prompt` va `richtig`ni
+ * ikkita `span`ga solib, bitta `justify-between` qatorga joylardi.
+ * `DIALOG_LUECKE`da `prompt` BUTUN suhbat (bir necha qator matn),
+ * `ZUORDNEN`da `richtig` esa olti juftlikni pipe bilan ulagan ~300
+ * belgili qator — ikkalasi ham bitta bo'yalgan qatorga sig'maydi.
+ * Bu yerda FORMATga qarab uchta ko'rinish tanlanadi:
+ *  - `DIALOG_LUECKE` — suhbat o'rniga qisqa `titel` (dialog nomi),
+ *    javob (bitta yo'q bo'lgan qator) o'zgarishsiz qoladi.
+ *  - `ZUORDNEN` — `richtig`ni "vaziyat=ibora" juftlariga bo'lib,
+ *    RO'YXAT sifatida chizadi (bitta uzun qalin qator emas).
+ *  - qolgan formatlar — eski ikkita `span`li ko'rinish.
+ */
+function XatoQatori({ xato }: { xato: SeansXato }) {
+  if (xato.format === "ZUORDNEN") {
+    const juftlar = xato.richtig.split("|").map((juft) => {
+      const [vaziyat, ibora] = juft.split("=");
+      return { vaziyat: vaziyat ?? "", ibora: ibora ?? "" };
+    });
+    return (
+      <ul className="space-y-1">
+        {juftlar.map((j, i) => (
+          <li key={i} className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-ink-600">{j.vaziyat}</span>
+            <span className="font-bold text-danger">{j.ibora}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  if (xato.format === "DIALOG_LUECKE") {
+    return (
+      <div className="flex items-center justify-between gap-3">
+        <span className="font-semibold text-ink-800">{xato.titel ?? "Dialog"}</span>
+        <span className="text-sm font-bold text-danger">{xato.richtig}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="font-semibold text-ink-800">{xato.prompt}</span>
+      <span className="text-sm font-bold text-danger">{xato.richtig}</span>
+    </div>
+  );
+}
+
+/**
  * Seans tugagandan keyingi natija ekrani: ball, sarflangan vaqt va
  * xato qilingan so'zlar. To'g'ri javob har bir xato uchun `xatolar`
  * ichida allaqachon bor — bu ekran hech narsani qayta hisoblamaydi,
@@ -186,10 +236,9 @@ export function NatijaEkrani({
                 {xatolar.map((x, i) => (
                   <li
                     key={`${x.itemType}:${x.itemId}:${i}`}
-                    className="flex items-center justify-between gap-3 rounded-xl bg-tint px-3.5 py-2.5"
+                    className="rounded-xl bg-tint px-3.5 py-2.5"
                   >
-                    <span className="font-semibold text-ink-800">{x.prompt}</span>
-                    <span className="text-sm font-bold text-danger">{x.richtig}</span>
+                    <XatoQatori xato={x} />
                   </li>
                 ))}
               </ul>

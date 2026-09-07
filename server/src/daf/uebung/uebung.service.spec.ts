@@ -1516,4 +1516,109 @@ describe('pruefen — ZUORDNEN', () => {
       0,
     );
   });
+
+  // Ko`rik topilmasi (IMPORTANT): `byVaziyat` xaritasi `funktionUz` bo`yicha
+  // qurilgan `Map` — kolliziyada OXIRGI qator g`olib chiqadi. Agar bitta
+  // unit ichida ikkita ibora bir xil `funktionUz`ga ega bo`lib qolsa (schema
+  // buni cheklamaydi), to`g`ri juftlashgan o`quvchi HAM "xato" deb
+  // belgilanadi va buning izi ko`rinmaydi. Tuzatish: nechta noyob vaziyat
+  // yuborilgan bo`lsa, bazadan ANIQ shuncha ibora qaytishi shart — sonlar
+  // mos kelmasa (kollizyadan ortiqcha qator yoki yetishmayotgan ibora),
+  // butun javob XATO deb hisoblanadi — noaniq g`olibga qarab baholanmaydi.
+  it('funktionUz kolliziyasi — to`g`ri juftlash ham BUTUNLAY xato deb baholanadi (fail-closed)', async () => {
+    const prisma = fakePrisma();
+    const phrasenKollizioz = [
+      { id: 1, funktionUz: 'salomlashish', de: 'Hallo!', uz: 'Salom!', unitId: 1 },
+      // KOLLIZIYA: xuddi shu vazifada IKKINCHI ibora — schema'da
+      // funktionUz unique emas, shuning uchun bu nazariy jihatdan mumkin.
+      {
+        id: 7,
+        funktionUz: 'salomlashish',
+        de: 'Guten Tag!',
+        uz: 'Xayrli kun!',
+        unitId: 1,
+      },
+      {
+        id: 2,
+        funktionUz: "o'zini tanishtirish",
+        de: 'Ich bin Anna.',
+        uz: 'Men Annaman.',
+        unitId: 1,
+      },
+      {
+        id: 3,
+        funktionUz: 'xayrlashish',
+        de: 'Auf Wiedersehen!',
+        uz: 'Xayr!',
+        unitId: 1,
+      },
+      {
+        id: 4,
+        funktionUz: 'rahmat aytish',
+        de: 'Danke!',
+        uz: 'Rahmat!',
+        unitId: 1,
+      },
+      {
+        id: 5,
+        funktionUz: "so'rash",
+        de: 'Wie heißen Sie?',
+        uz: 'Ismingiz nima?',
+        unitId: 1,
+      },
+      {
+        id: 6,
+        funktionUz: 'javob berish',
+        de: 'Ich heiße Timur.',
+        uz: 'Mening ismim Timur.',
+        unitId: 1,
+      },
+    ];
+    prisma.dafPhrase.findMany = jest.fn(async (args: any = {}) => {
+      const where = args?.where ?? {};
+      let rows = phrasenKollizioz;
+      if (where.funktionUz?.in) {
+        rows = rows.filter((p) => where.funktionUz.in.includes(p.funktionUz));
+      }
+      if (where.unitId != null) {
+        rows = rows.filter((p) => p.unitId === where.unitId);
+      }
+      return rows;
+    }) as any;
+    prisma.dafPhrase.findUnique = jest.fn(async () => ({
+      de: 'Hallo!',
+      uz: 'Salom!',
+      unitId: 1,
+    })) as any;
+
+    // O'quvchi 'salomlashish' uchun TO'G'RI ibora (id 1, "Hallo!") bilan
+    // juftlagan — kolliziya bo'lmasa bu javob TO'LIQ TO'G'RI bo'lardi.
+    const togriJuftlash = [
+      'salomlashish=Hallo!',
+      "o'zini tanishtirish=Ich bin Anna.",
+      'xayrlashish=Auf Wiedersehen!',
+      'rahmat aytish=Danke!',
+      "so'rash=Wie heißen Sie?",
+      'javob berish=Ich heiße Timur.',
+    ].join('|');
+
+    const r = await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'PHRASE',
+        itemId: 1,
+        format: 'ZUORDNEN',
+        given: togriJuftlash,
+      },
+      ctx,
+    );
+    // DIQQAT: eski (tuzatilmagan) kodda ham `isCorrect` shu holatda `false`
+    // chiqadi — lekin TASODIFAN, chunki `Map` kolliziyada oxirgi qatorni
+    // ("Guten Tag!") g'olib qilib, aynan 'salomlashish' juftini "xato" deb
+    // belgilaydi. Bu ikkalasini FARQLAYDIGAN dalil — `richtig`: eski kodda
+    // u noaniq g'olibdan hisoblangan BO'SH BO'LMAGAN qator qaytaradi
+    // ("salomlashish=Guten Tag!|..."), fail-closed tuzatishda esa bo'sh
+    // qator — "noaniq g'olibga tayanib hisoblanmadi" degani.
+    expect(r.isCorrect).toBe(false);
+    expect(r.richtig).toBe('');
+  });
 });

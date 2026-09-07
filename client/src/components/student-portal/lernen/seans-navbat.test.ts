@@ -63,8 +63,56 @@ describe("birinchi xato javob", () => {
   it("xatoni to`g`ri javobi bilan yozib qo`yadi", () => {
     const { holat } = javobBerildi(boshla([f(1)]), { isCorrect: false, richtig: "das Haus" });
     expect(holat.xatolar).toEqual([
-      { itemType: "WORT", itemId: 1, prompt: "savol 1", richtig: "das Haus" },
+      {
+        itemType: "WORT",
+        itemId: 1,
+        format: "WORT_UZ",
+        prompt: "savol 1",
+        richtig: "das Haus",
+        titel: null,
+      },
     ]);
+  });
+});
+
+describe("xato yozuvi — format va titel", () => {
+  // Ko'rik topilmasi: natija ekrani `DIALOG_LUECKE`/`ZUORDNEN` uchun
+  // qisqa ko'rinish chizishi kerak — buning uchun `format`ni bilishi
+  // shart, `DIALOG_LUECKE` uchun esa suhbat nomini (`titel`) ham.
+  it("DIALOG_LUECKE savolining formati va titeli xato yozuviga o`tadi", () => {
+    const dialogSavoli: PublicFrage = {
+      index: 1,
+      format: "DIALOG_LUECKE",
+      itemType: "DIALOGZEILE",
+      itemId: 9,
+      prompt: "Jonas: ___\nMia: Ja, ich bin Mia.",
+      hilfe: null,
+      options: ["Hallo!", "a", "b", "c"],
+      titel: "Bist du Mia?",
+    };
+    const { holat } = javobBerildi(boshla([dialogSavoli]), {
+      isCorrect: false,
+      richtig: "Hallo!",
+    });
+    expect(holat.xatolar).toEqual([
+      {
+        itemType: "DIALOGZEILE",
+        itemId: 9,
+        format: "DIALOG_LUECKE",
+        prompt: "Jonas: ___\nMia: Ja, ich bin Mia.",
+        richtig: "Hallo!",
+        titel: "Bist du Mia?",
+      },
+    ]);
+  });
+
+  it("titel bo`lmagan savol uchun `null` yoziladi", () => {
+    const { holat } = javobBerildi(boshla([f(1, "ZUORDNEN")]), {
+      isCorrect: false,
+      richtig: "a=b|c=d",
+    });
+    expect(holat.xatolar[0].titel).toBeNull();
+    expect(holat.xatolar[0].format).toBe("ZUORDNEN");
   });
 });
 

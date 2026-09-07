@@ -586,9 +586,13 @@ export function SeansEkrani(props: SeansEkraniProps) {
           // server `prompt`ni tayyor satr qilib yuboradi, mijoz uni faqat
           // chiroyli chizadi.
           <DialogBlok matn={frage.prompt} />
-        ) : (
+        ) : frage.prompt ? (
           <p className="text-2xl font-bold text-ink-900 sm:text-3xl">{frage.prompt}</p>
-        )}
+        ) : null}
+        {/* `ZUORDNEN` uchun server `prompt`ni BO'SH yuboradi (ko'rik
+            topilmasi tuzatildi): yuqoridagi ko'rsatma bilan deyarli bir
+            xil matn ustma-ust chiqib qolardi. Bo'sh bo'lsa hech narsa
+            chizilmaydi — o'rniga savol darrov javob maydoniga o'tadi. */}
         {frage.hilfe ? <p className="text-sm text-ink-500">{frage.hilfe}</p> : null}
 
         {rejim === "TANLASH" ? (

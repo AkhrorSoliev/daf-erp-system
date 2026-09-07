@@ -194,8 +194,15 @@ export function reaktion(
   };
 }
 
-/** `ZUORDNEN` da nechta juft ko'rsatiladi (kurs dizayni 4-jadval). */
-const ZUORDNEN_JUFT = 6;
+/**
+ * `ZUORDNEN` da nechta juft ko'rsatiladi (kurs dizayni 4-jadval).
+ *
+ * EXPORT QILINGAN: `uebung.service.ts`dagi `pruefeZuordnen` javob
+ * shaklini shu songa qarab tekshiradi (`juftlar.length !== ZUORDNEN_JUFT`).
+ * Ilgari u yerda qayta yozilgan qattiq `6` bor edi — ikki nusxa
+ * kelajakda bittasi o'zgarib, ikkinchisi eskirib qolishi mumkin edi.
+ */
+export const ZUORDNEN_JUFT = 6;
 
 /**
  * Vaziyat va iborani juftlash.
@@ -247,7 +254,14 @@ export function zuordnen(
     format: 'ZUORDNEN',
     itemType: 'PHRASE',
     itemId: tanlangan[0].id,
-    prompt: 'Vaziyatni ibora bilan juftlang',
+    // BO'SH: ekrandagi ko'rsatma (`koersatma("ZUORDNEN")` — "Vaziyatni
+    // mos ibora bilan juftlang") shu bilan deyarli bir xil edi va ikkalasi
+    // ustma-ust chiqib qolardi (ko'rik topilmasi). Boshqa formatlar
+    // (`reaktion` kabi) `prompt`ga savolning O'ZINI (vaziyat nomini)
+    // yozadi — `ZUORDNEN`da esa savol olti juftlik, bitta vaziyat nomi
+    // emas, shuning uchun qo'shimcha aytadigan narsa yo'q. Ekran bo'sh
+    // `prompt`ni chizmay o'tkazib yuboradi (`seans-ekrani.tsx`).
+    prompt: '',
     hilfe: null,
     options: [...chap, ...ong],
     richtig: tanlangan.map((p) => `${p.funktionUz}=${p.de}`).join('|'),

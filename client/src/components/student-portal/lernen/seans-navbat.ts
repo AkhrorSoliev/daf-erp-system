@@ -1,11 +1,23 @@
-import type { MaterialTyp, PruefErgebnis, PublicFrage } from "./types";
+import type { FrageFormat, MaterialTyp, PruefErgebnis, PublicFrage } from "./types";
 
-/** Natija ekranida ko'rsatiladigan xato. */
+/**
+ * Natija ekranida ko'rsatiladigan xato.
+ *
+ * `format` VA `titel` qo'shildi (ko'rik topilmasi): `DIALOG_LUECKE`da
+ * `prompt` BUTUN suhbat, `ZUORDNEN`da `richtig` olti juftlik pipe bilan
+ * ajratilgan ~300 belgili qator — ikkalasi ham natija ekranining bitta
+ * `justify-between` qatoriga sig'maydi. `format` ekranga qaysi
+ * formatga xos ko'rinish kerakligini aytadi; `titel` (faqat
+ * `DIALOG_LUECKE`da to'ldirilgan) suhbat o'rniga ko'rsatiladigan qisqa
+ * nom.
+ */
 export interface SeansXato {
   itemType: MaterialTyp;
   itemId: number;
+  format: FrageFormat;
   prompt: string;
   richtig: string;
+  titel?: string | null;
 }
 
 /**
@@ -93,8 +105,10 @@ export function javobBerildi(
         {
           itemType: frage.itemType,
           itemId: frage.itemId,
+          format: frage.format,
           prompt: frage.prompt,
           richtig: natija.richtig,
+          titel: frage.titel ?? null,
         },
       ];
 

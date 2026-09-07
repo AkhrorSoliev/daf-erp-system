@@ -54,6 +54,11 @@ describe('dialogLuecke', () => {
     expect(f.itemId).toBe(zeile.id);
   });
 
+  it('titel — dialogning titelDe`si (natija ekrani qisqa nom sifatida ishlatadi)', () => {
+    const f = dialogLuecke(dialog, andere, rndId)!;
+    expect(f.titel).toBe('Bist du Mia?');
+  });
+
   it('promptda suhbat bor va bo`sh joy belgilangan', () => {
     const f = dialogLuecke(dialog, andere, rndId)!;
     expect(f.prompt).toContain('Jonas');
@@ -117,5 +122,54 @@ describe('dialogLuecke', () => {
     const f = dialogLuecke(dialog, [tinishFarqli, ...andere], rndId)!;
     expect(f.richtig).toBe('Ja, ich bin Mia. Und du?');
     expect(f.options).not.toContain('Ja, ich bin Mia. Und du');
+  });
+
+  // Ko`rik topilmasi (CRITICAL): dialogda BIR XIL matnli satr ikki marta
+  // uchrasa (masalan `u01-d3`da "Guten Tag!" va "Auf Wiedersehen!" ikkitadan
+  // keladi), o`sha matn nishon bo`lib qolsa — bo`shatilgan qatorning javobi
+  // suhbatning BOSHQA qatorida ANIQ shu matn bilan ko`rinib turadi va savol
+  // o`zi javob berib qo`yadi. Bunday satrlar nomzod ro`yxatidan chetlanishi
+  // shart, `normalisieren` bo`yicha solishtirilib (grading ham shu funksiya
+  // orqali ishlaydi).
+  describe('bir necha marta takrorlangan matnli satr nishon bo`lmaydi', () => {
+    // `u01-d3` ("Wie heißen Sie?") shakli: 7 satr, 5 noyob matn —
+    // "Guten Tag!" va "Auf Wiedersehen!" ikkitadan keladi.
+    const takrorliDialog: MaterialDialog = {
+      id: 3,
+      titelDe: 'Wie heißen Sie?',
+      sectionCode: 'u01-s2',
+      zeilen: [
+        z(100, 'Claudia', 'Guten Tag!'),
+        z(101, 'Markus', 'Guten Tag!'),
+        z(102, 'Claudia', 'Wie heißen Sie?'),
+        z(103, 'Markus', 'Ich bin Markus. Und Sie?'),
+        z(104, 'Claudia', 'Ich bin Claudia. Danke!'),
+        z(105, 'Markus', 'Auf Wiedersehen!'),
+        z(106, 'Claudia', 'Auf Wiedersehen!'),
+      ],
+    };
+    // Faqat shu uchtasi noyob — qolgan uch nomzod (101, 105, 106) takroriy
+    // matnli bo`lgani uchun chetlanadi.
+    const noyobJavoblar = new Set([
+      'Wie heißen Sie?',
+      'Ich bin Markus. Und Sie?',
+      'Ich bin Claudia. Danke!',
+    ]);
+
+    it('takrorlangan matn HECH QACHON nishon bo`lmaydi', () => {
+      for (let i = 0; i < 40; i += 1) {
+        const f = dialogLuecke(takrorliDialog, andere, () => i / 40);
+        expect(f).not.toBeNull();
+        expect(f!.richtig).not.toBe('Guten Tag!');
+        expect(f!.richtig).not.toBe('Auf Wiedersehen!');
+      }
+    });
+
+    it('qolgan uchta noyob satrdan savol qurishda davom etadi', () => {
+      for (let i = 0; i < 40; i += 1) {
+        const f = dialogLuecke(takrorliDialog, andere, () => i / 40)!;
+        expect(noyobJavoblar.has(f.richtig)).toBe(true);
+      }
+    });
   });
 });

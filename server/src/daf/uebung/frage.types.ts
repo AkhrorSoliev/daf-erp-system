@@ -71,6 +71,15 @@ export interface Frage {
   richtig: string;
   akzeptiert: string[];
   /**
+   * Qisqa sarlavha — HOZIRCHA FAQAT `DIALOG_LUECKE` to'ldiradi
+   * (`dialog.titelDe`). Savol ekranida ishlatilmaydi (suhbatning o'zi
+   * ko'rsatiladi); natija ekrani xato ro'yxatida BUTUN suhbat o'rniga
+   * shu qisqa nomni ko'rsatish uchun kerak (ko'rik topilmasi — natija
+   * ekrani 300+ belgili prompt/javobni sig'diraolmaydi). Boshqa
+   * formatlarda `undefined` — ularning `prompt`i allaqachon qisqa.
+   */
+  titel?: string | null;
+  /**
    * Shu savol "ishlatib qo'yadigan" barcha material kalitlari
    * (`materialSchluessel` shaklida).
    *
@@ -104,6 +113,8 @@ export interface PublicFrage {
   prompt: string;
   hilfe: string | null;
   options: string[];
+  /** `Frage.titel` bilan bir xil — qarang yuqorida. */
+  titel?: string | null;
 }
 
 export function toPublic(f: Frage, index: number): PublicFrage {
@@ -115,5 +126,6 @@ export function toPublic(f: Frage, index: number): PublicFrage {
     prompt: f.prompt,
     hilfe: f.hilfe,
     options: f.options,
+    titel: f.titel,
   };
 }

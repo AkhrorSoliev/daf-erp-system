@@ -50,6 +50,18 @@ function mischen<T>(items: T[], rnd: () => number): T[] {
  * orqali ishlaydi, xom teng emas solishtirilsa tinish belgisi bilan
  * farq qiladigan nomzod ham "to'g'ri" bo'lib qolardi (`satzUebersetzen`
  * bilan bir xil sabab).
+ *
+ * TAKRORLANGAN MATNLI SATR NISHON BO'LA OLMAYDI (ko'rik topilmasi,
+ * CRITICAL): ba'zi dialoglarda bir xil gap ikki marta aytiladi (masalan
+ * `u01-d3`da ikkala tomon ham "Guten Tag!" deydi, keyin ikkalasi ham
+ * "Auf Wiedersehen!" deydi). Shu matn nishon qilib tanlansa, bo'shatilgan
+ * qatorning javobi suhbatning BOSHQA (bo'shatilmagan) qatorida so'zma-so'z
+ * ko'rinib turadi — savol o'zi javob berib qo'yadi. Shuning uchun butun
+ * dialogda matni BIRDAN ORTIQ marta uchraydigan (`normalisieren` bo'yicha)
+ * har qanday satr — shu jumladan birinchi satr bilan bir xil matnli
+ * ikkinchi nusxa ham — nomzodlar ro'yxatidan chetlanadi. Hech bir nomzod
+ * qolmasa (`u01-d3`da bunday emas — uchta noyob satr qoladi), `null`
+ * qaytariladi: format shunchaki bu dialog uchun ishlamaydi.
  */
 export function dialogLuecke(
   dialog: MaterialDialog,
@@ -58,9 +70,18 @@ export function dialogLuecke(
 ): Frage | null {
   if (dialog.zeilen.length < MIN_ZEILEN) return null;
 
-  // Birinchidan boshqa har qanday satr — pastga qarang, nega bu yerda
-  // chegaralanishi shart.
-  const nomzodlar = dialog.zeilen.slice(1);
+  const matnSoni = new Map<string, number>();
+  for (const z of dialog.zeilen) {
+    const key = normalisieren(z.de);
+    matnSoni.set(key, (matnSoni.get(key) ?? 0) + 1);
+  }
+
+  // Birinchidan boshqa VA matni butun dialogda faqat bitta marta
+  // uchraydigan satrlar — pastga qarang, nega ikkalasi ham shart.
+  const nomzodlar = dialog.zeilen
+    .slice(1)
+    .filter((z) => matnSoni.get(normalisieren(z.de)) === 1);
+  if (nomzodlar.length === 0) return null;
   const ziel = mischen(nomzodlar, rnd)[0];
 
   const eigeneIds = new Set(dialog.zeilen.map((z) => z.id));
@@ -94,5 +115,8 @@ export function dialogLuecke(
     richtig: ziel.de,
     akzeptiert: [],
     belegteItems: [materialSchluessel('DIALOGZEILE', ziel.id)],
+    // Natija ekrani xato ro'yxatida BUTUN suhbat (`prompt`) o'rniga shu
+    // qisqa nomni ko'rsatadi — qarang `frage.types.ts`dagi `titel` izohi.
+    titel: dialog.titelDe,
   };
 }

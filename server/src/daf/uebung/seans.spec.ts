@@ -325,10 +325,32 @@ describe('baueSeans — moyillik', () => {
     expect(xil).toBeGreaterThanOrEqual(MIN_FORMATE);
   });
 
+  // Ko`rik topilmasi: BITTA formatli (10 ta `WORT_UZ`) pool bu testni
+  // hech narsa isbotlamaydigan holga keltirardi — barcha nomzodning
+  // ustunligi bir xil bo'lgani uchun har qanday saralash natijani
+  // o'zgartirmay qoladi (buni hatto olti XIL formatli, lekin bir
+  // xilida uch nusxadan bo'lgan pool bilan ham tekshirib ko'rilgan —
+  // greedy tanlov "band bo'lgan format" mantig'i tufayli qayta
+  // tartiblash baribir ko'rinmay qolardi). Haqiqiy sinov uchun YUQORIDAGI
+  // "afzal formatlar oldinga suriladi" testidagi ANIQ fikstura kerak —
+  // u yerda moyillik borligi/yo'qligi `WORT_UZ` sonini 0 dan (moyillik
+  // yo'q) musbatgacha (moyillik bor) O'ZGARTIRISHI isbotlangan. Shu
+  // fiksturada `bevorzugt`ning sukut qiymati (parametr o'tkazilmagan
+  // chaqiruv) va aniq bo'sh massiv chindan ham BIR XIL xatti-harakat
+  // berishini tekshiramiz: agar kimdir sukut qiymatini `[]`dan BO'SH
+  // BO'LMAGAN massivga o'zgartirib qo'ysa, WORT_UZ soni ikkalasida
+  // farq qilib, bu tekshiruv albatta yiqiladi.
   it('moyillik berilmasa xatti-harakat o`zgarmaydi', () => {
-    const k = Array.from({ length: 10 }, (_, i) => f('WORT_UZ', i));
-    const a = baueSeans(k, 5, () => 0.5);
-    const b = baueSeans(k, 5, () => 0.5, [], []);
+    const k: Frage[] = [
+      ...Array.from({ length: 4 }, (_, i) => f('UZ_WORT', i)),
+      ...Array.from({ length: 4 }, (_, i) => f('PAAR', 100 + i)),
+      ...Array.from({ length: 4 }, (_, i) => f('ARTIKEL', 200 + i)),
+      ...Array.from({ length: 4 }, (_, i) => f('LUECKE', 300 + i)),
+      ...Array.from({ length: 4 }, (_, i) => f('SATZ_BAUEN', 400 + i)),
+      ...Array.from({ length: 4 }, (_, i) => f('WORT_UZ', 500 + i)),
+    ];
+    const a = baueSeans(k, 12, () => 0.9999);
+    const b = baueSeans(k, 12, () => 0.9999, [], []);
     expect(a.fragen.map((q) => q.itemId)).toEqual(
       b.fragen.map((q) => q.itemId),
     );

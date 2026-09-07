@@ -242,6 +242,29 @@ export function ongBosildi(
 }
 
 /**
+ * `juftlar` (indeks juftlari)dan serverga yuboriladigan "chap=o'ng"
+ * qatorlarini quradi. SOF FUNKSIYA — faqat `options`dan chap/o'ng
+ * ustunlarni ajratib, indekslarni matnga aylantiradi.
+ *
+ * ALOHIDA EKSPORT QILINGAN (ko'rik topilmasi): bu qatorning shakli —
+ * ustun tartibi va `=` ajratkichi — serverning `pruefePaar`/
+ * `pruefeZuordnen` parserlari kutgan formatga ANIQ mos kelishi shart,
+ * lekin ilgari `Juftlash` komponenti ICHIDA yashiringan edi va hech
+ * qanday test uni bosmagan edi — zanjirdagi boshqa har bir bo'g'in
+ * (juft soni, indeks juftlash, serverning parseri, uchidan-uchigacha
+ * baholash) sinalgan, faqat shu bitta qator emas.
+ */
+export function juftlarniMatngaAylantir(
+  juftlar: IndexJuft[],
+  options: string[],
+  soni: number,
+): string[] {
+  const chapUstun = options.slice(0, soni);
+  const ongUstun = options.slice(soni, soni * 2);
+  return juftlar.map(({ chapIdx, ongIdx }) => `${chapUstun[chapIdx]}=${ongUstun[ongIdx]}`);
+}
+
+/**
  * Ikki ustunni juftlash: `PAAR` (nemischa/o'zbekcha) VA `ZUORDNEN`
  * (vaziyat/ibora) BITTA mexanizmdan foydalanadi — faqat ustunlar mazmuni
  * farq qiladi, bosish-bekor qilish mantig'i bir xil. Shu sabab ustunlar
@@ -293,9 +316,7 @@ function Juftlash({ format, options, tanlangan, onOzgar, natija, kutilmoqda }: J
   // aylantirib, ikkalasini (mahalliy va parent) BIRGA yangilaydi.
   const yangila = (keyingi: IndexJuft[]) => {
     setJuftlar(keyingi);
-    onOzgar(
-      keyingi.map(({ chapIdx, ongIdx }) => `${chapUstun[chapIdx]}=${ongUstun[ongIdx]}`),
-    );
+    onOzgar(juftlarniMatngaAylantir(keyingi, options, soni));
   };
 
   const holatKlass = (paired: boolean, tanlab: boolean, togri: boolean | null) => {
@@ -326,10 +347,18 @@ function Juftlash({ format, options, tanlangan, onOzgar, natija, kutilmoqda }: J
                 setKutilayotganIdx(natijasi.kutilayotganIdx);
               }}
               className={cn(
-                // `truncate` — olti juftda vaziyat/ibora matni to'rt juftdagi
-                // so'zdan uzunroq, tor telefon ekranida bitta qatorga sig'may
-                // qolishi mumkin; ustun kengligi shu bilan ustuvor bo'lib qoladi.
-                "w-full truncate rounded-2xl border-2 px-3.5 py-3 text-left font-semibold transition-colors",
+                // Ko'rik topilmasi (IMPORTANT): `truncate` bitta qatorga
+                // kesib, ellipsis qo'yardi — `ZUORDNEN`ning olti juftida
+                // haqiqiy vaziyat nomlari ("qayerdanligini so'rash" /
+                // "qayerdanligini aytish" kabi) tor telefon ekranida bir
+                // xil kesilgan ko'rinishga kelib qolardi, ikkita
+                // FARQLANMAYDIGAN tugma bilan juftlash mashqi tanga
+                // aylanardi. Endi matn IKKI QATORGACHA o'raladi
+                // (`line-clamp-2`) — kichikroq shrift va tor qator
+                // oralig'i bilan ko'pchilik ibora nomi to'liq sig'adi.
+                // Ustunlar POZITSIYA bo'yicha tekislanadi, balandlik
+                // bo'yicha emas, shuning uchun notekis qatorlar zararsiz.
+                "line-clamp-2 w-full break-words rounded-2xl border-2 px-3.5 py-3 text-left text-sm font-semibold leading-tight transition-colors",
                 holatKlass(paired, tanlab, natija != null && paired ? togri : null),
                 qulflangan && "cursor-default",
               )}
@@ -357,7 +386,9 @@ function Juftlash({ format, options, tanlangan, onOzgar, natija, kutilmoqda }: J
                 setKutilayotganIdx(natijasi.kutilayotganIdx);
               }}
               className={cn(
-                "w-full truncate rounded-2xl border-2 px-3.5 py-3 text-left font-semibold transition-colors",
+                // Chap ustundagi tugma bilan bir xil tuzatish — yuqorida
+                // shu izoh bor.
+                "line-clamp-2 w-full break-words rounded-2xl border-2 px-3.5 py-3 text-left text-sm font-semibold leading-tight transition-colors",
                 holatKlass(paired, false, natija != null && paired ? togri : null),
                 qulflangan && "cursor-default",
               )}
