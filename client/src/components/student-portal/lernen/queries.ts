@@ -197,11 +197,17 @@ export function useReyting(scope: "gruppe" | "zentrum") {
  *
  * `staleTime: Infinity` va `refetchOnWindowFocus: false` — seans holati
  * mijozda yashaydi, qayta so'rash o'quvchining o'rnini yo'qotardi.
+ *
+ * `enabled` — `SeansEkrani` bu so'rovni ham, dars so'rovini ham DOIM
+ * chaqiradi (React Hooks tartibi shart bo'lgani uchun), faqat `manba`ga
+ * mos kelmagani `enabled: false` bilan o'chiriladi. Standart `true` —
+ * yagona boshqa chaqiruvchi (`wiederholung/page.tsx`) doim yoqiq kerak.
  */
-export function useWiederholung() {
+export function useWiederholung(enabled: boolean = true) {
   return useQuery<PublicFrage[]>({
     queryKey: ["lernen", "wiederholung"],
     queryFn: () => api.get(`${BASE}/wiederholung/uebung`).then((r) => r.data),
+    enabled,
     refetchOnWindowFocus: false,
     staleTime: Infinity,
   });

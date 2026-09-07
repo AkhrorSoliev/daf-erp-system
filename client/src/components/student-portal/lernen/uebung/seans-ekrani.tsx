@@ -4,12 +4,19 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import toast from "react-hot-toast";
-import { Books, X } from "@phosphor-icons/react";
+import { Books, CheckCircle, X } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { Button, EmptyState, LoadingCards, ProgressBar } from "../../lumio";
 import { LernenLessonPage } from "../lernen-lesson-page";
-import { useAbschluss, useErsatz, useLernenLesson, usePruefen, useUebungSeans } from "../queries";
+import {
+  useAbschluss,
+  useErsatz,
+  useLernenLesson,
+  usePruefen,
+  useUebungSeans,
+  useWiederholung,
+} from "../queries";
 import type { PruefErgebnis } from "../types";
 import {
   boshla,
@@ -26,27 +33,46 @@ import { Yigish } from "./yigish";
 import { NatijaEkrani } from "./natija-ekrani";
 
 export interface SeansEkraniProps {
-  lessonId: number;
+  /**
+   * Savol qaysi so'rovdan olinadi. Standart `"dars"` — mavjud
+   * chaqiruvchilar (`lessons/[lessonId]/page.tsx`) o'zgarishsiz ishlaydi.
+   * `"takrorlash"`da `lessonId` berilmaydi: takrorlash hech qanday
+   * darsga tegishli emas (`abschluss` ham shu sabab yuborilmaydi,
+   * pastga qarang).
+   */
+  manba?: "dars" | "takrorlash";
+  /** `manba: "dars"` bo'lganda MAJBURIY. */
+  lessonId?: number;
 }
 
 /**
- * Bitta dars uchun to'liq mashq seansi: bitta savol butun ekranda,
- * tepada ilgarilash, pastda bitta katta tugma, oxirida natija ekrani.
+ * Bitta dars UCHUN HAM, takrorlash UCHUN HAM ishlatiladigan to'liq mashq
+ * seansi: bitta savol butun ekranda, tepada ilgarilash, pastda bitta
+ * katta tugma, oxirida natija ekrani.
  *
- * Barcha ketma-ketlik qarorlari (nechta savol qoldi, qaytish kerakmi,
- * ball) `seans-navbat.ts` da. Bu komponent faqat o'sha holatni o'qiydi
- * va uning funksiyalarini chaqiradi — bu yerda hech qanday sanash yoki
- * hisoblash YO'Q.
+ * Ikkalasining nusxasi OLINMAYDI — savol manbasi va oxirida
+ * `abschluss` yuborilishi-yuborilmasligidan tashqari, ketma-ketlik,
+ * ball va natija ekrani BITTA joyda qoladi. Barcha ketma-ketlik
+ * qarorlari (nechta savol qoldi, qaytish kerakmi, ball) `seans-navbat.ts`
+ * da. Bu komponent faqat o'sha holatni o'qiydi va uning funksiyalarini
+ * chaqiradi — bu yerda hech qanday sanash yoki hisoblash YO'Q.
  */
-export function SeansEkrani({ lessonId }: SeansEkraniProps) {
+export function SeansEkrani({ lessonId, manba = "dars" }: SeansEkraniProps) {
   const router = useRouter();
-  const seans = useUebungSeans(lessonId);
-  const lesson = useLernenLesson(lessonId);
+  const darsMi = manba === "dars";
+
+  // Ikkala so'rov ham DOIM chaqiriladi (Hooks tartibi shart), faqat
+  // `manba`ga mos kelmagani `enabled: false`/`NaN` bilan o'chiriladi.
+  const darsSeans = useUebungSeans(darsMi ? (lessonId ?? NaN) : NaN);
+  const takrorlashSeans = useWiederholung(!darsMi);
+  const seans = darsMi ? darsSeans : takrorlashSeans;
+
+  const lesson = useLernenLesson(darsMi ? (lessonId ?? NaN) : NaN);
   const pruefen = usePruefen();
   const ersatzSorov = useErsatz();
   const abschluss = useAbschluss();
 
-  const unitId = lesson.data?.unit.id ?? null;
+  const unitId = darsMi ? (lesson.data?.unit.id ?? null) : null;
   const chiqishHref = unitId ? `/portal/lernen/units/${unitId}` : "/portal/lernen";
 
   const [holat, setHolat] = React.useState<SeansHolati | null>(null);
@@ -114,18 +140,27 @@ export function SeansEkrani({ lessonId }: SeansEkraniProps) {
 
     let keyingiHolat = yangi;
     if (ersatzSoralsinmi) {
-      // So'rov yiqilsa `null` deb qaraladi: savol tugatilgan hisoblanadi
-      // va seans tugaydi. Aks holda `tugatilgan` hech qachon `jami` ga
-      // yetmay, o'quvchi natija ekranini ko'rmay qolardi.
-      const ersatz = await ersatzSorov
-        .mutateAsync({
-          lessonId,
-          itemType: frage.itemType,
-          itemId: frage.itemId,
-          nichtFormat: frage.format,
-        })
-        .catch(() => null);
-      keyingiHolat = ersatzKeldi(yangi, ersatz);
+      if (darsMi) {
+        // So'rov yiqilsa `null` deb qaraladi: savol tugatilgan hisoblanadi
+        // va seans tugaydi. Aks holda `tugatilgan` hech qachon `jami` ga
+        // yetmay, o'quvchi natija ekranini ko'rmay qolardi.
+        const ersatz = await ersatzSorov
+          .mutateAsync({
+            lessonId: lessonId as number,
+            itemType: frage.itemType,
+            itemId: frage.itemId,
+            nichtFormat: frage.format,
+          })
+          .catch(() => null);
+        keyingiHolat = ersatzKeldi(yangi, ersatz);
+      } else {
+        // Takrorlash hech qanday darsga tegishli emas — server
+        // `lessons/:id/uebung/ersatz`ni faqat dars uchun biladi, shuning
+        // uchun bu yerda so'ralmaydi. Xato qilingan so'z baribir ertaga
+        // Leitner jadvali orqali qaytadi, `null` esa aynan shu holatni
+        // ifodalaydi (o'rinbosar topilmadi, savol tugatilgan hisoblanadi).
+        keyingiHolat = ersatzKeldi(yangi, null);
+      }
     }
 
     setHolat(keyingiHolat);
@@ -150,9 +185,16 @@ export function SeansEkrani({ lessonId }: SeansEkraniProps) {
     if (!holat || !tugadimi(holat) || holat.jami === 0 || yozildi.current) return;
     yozildi.current = true;
     tugashDavomiyligi.current = Date.now() - seansBoshi;
+
+    // Takrorlash hech qanday darsga tegishli emas — `abschluss` bitta
+    // darsni "tugallandi" deb belgilaydi, bu yerda esa belgilanadigan
+    // dars yo'q. Vaqt baribir yuqorida muzlatib qo'yilgan — natija
+    // ekrani uni `manba`dan qat'iy nazar ko'rsatadi.
+    if (!darsMi) return;
+
     abschluss.mutate(
       {
-        lessonId,
+        lessonId: lessonId as number,
         richtig: holat.togri,
         gesamt: holat.jami,
         durationMs: tugashDavomiyligi.current,
@@ -171,8 +213,8 @@ export function SeansEkrani({ lessonId }: SeansEkraniProps) {
     // - `abschluss` — uning `.mutate`si react-query tomonidan barqaror
     //   ulanadi, render sayin o'zgarmaydi.
     // - `tugadimi` — sof, modul darajasidagi import, hech qachon o'zgarmaydi.
-    // - `lessonId` — shu ekran o'rnatilgan davomida o'zgarmaydigan marshrut
-    //   parametri.
+    // - `lessonId`, `darsMi` — shu ekran o'rnatilgan davomida o'zgarmaydigan
+    //   propslar (marshrut/chaqiruvchi belgilaydi, hayot davomida barqaror).
     // - `seansBoshi` — holat, lekin bu effekt HECH QACHON "eski" chaqiruv
     //   sifatida qolib ketmaydi: pastdagi klaviatura effektidan farqli
     //   o'laroq, bu yerda uzoq umr ko'radigan listener O'RNATILMAYDI — u
@@ -294,7 +336,7 @@ export function SeansEkrani({ lessonId }: SeansEkraniProps) {
         <div className="mx-auto w-full max-w-2xl px-4 pt-10">
           <EmptyState
             icon={<Books size={28} weight="bold" />}
-            title="Bu dars topilmadi"
+            title={darsMi ? "Bu dars topilmadi" : "Sahifa topilmadi"}
             action={
               <Button variant="secondary" onClick={() => router.push("/portal/lernen")}>
                 Orqaga
@@ -319,11 +361,30 @@ export function SeansEkrani({ lessonId }: SeansEkraniProps) {
     );
   }
 
-  // Yangi dvigatel bu dars uchun savol qura olmadi (masalan eski DiB
-  // darsi) — Faza 2 ning eski sahifasiga tushiladi, u lug'at + mavjud
-  // mashqlarni ko'rsatadi.
   if (seans.data && seans.data.length === 0) {
-    return <LernenLessonPage lessonId={lessonId} />;
+    if (darsMi) {
+      // Yangi dvigatel bu dars uchun savol qura olmadi (masalan eski DiB
+      // darsi) — Faza 2 ning eski sahifasiga tushiladi, u lug'at + mavjud
+      // mashqlarni ko'rsatadi.
+      return <LernenLessonPage lessonId={lessonId as number} />;
+    }
+    // Takrorlashda bo'sh natija ODATIY holat — hech kimning so'zi
+    // muddati kelmagan bo'lishi mumkin. Xato ko'rinishi ISHLATILMAYDI,
+    // chunki bu XATO EMAS.
+    return (
+      <div className="mx-auto w-full max-w-2xl px-4 pt-10">
+        <EmptyState
+          icon={<CheckCircle size={28} weight="bold" />}
+          title="Bugun takrorlanadigan so'z yo'q"
+          description="Barcha so'zlaringiz hali muddatidan oldin — ertaga qayting."
+          action={
+            <Button variant="secondary" onClick={() => router.push("/portal/lernen")}>
+              Yo&apos;lga qaytish
+            </Button>
+          }
+        />
+      </div>
+    );
   }
 
   // `holat` hali `boshla` bilan o'rnatilmagan (o'tish zumlik fon oralig'i).

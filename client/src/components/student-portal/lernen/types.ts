@@ -36,7 +36,12 @@ export interface AbschlussErgebnis {
   runs: number;
 }
 
-export type DafLevel = "A1_1" | "A1_2" | "A2_1" | "A2_2" | "B1";
+/**
+ * Uchta daraja — backend `DafLevel` enumi (`schema.prisma`) bilan bir xil.
+ * Eski `A1_1`/`A1_2` bo'linishi manbaning yorlig'i edi; A1 migratsiyasi
+ * uni bitta `A1`ga birlashtirdi (`LEVEL_ORDER`, `daf-portal-read.service.ts`).
+ */
+export type DafLevel = "A1" | "A2" | "B1";
 /**
  * Seans turi — A1 kurs xaritasidagi bosqich. Eski nom (`VOCAB`/`GRAMMAR`)
  * darsning MAVZUSINI bildirardi va grammatikani mashqdan uzib qo'yardi;
