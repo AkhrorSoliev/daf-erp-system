@@ -85,4 +85,37 @@ describe('dialogLuecke', () => {
     const f = dialogLuecke(dialog, takror, rndId)!;
     expect(new Set(f.options).size).toBe(f.options.length);
   });
+
+  // `rndId`da olib tashlanadigan satr HAR DOIM id=11 ("Ja, ich bin Mia.
+  // Und du?") — pastdagi ikkala nomzod ATAYLAB shundan BOSHQA satrga
+  // (id=10/id=12) mos qilib tanlangan, shunda ular richtigga tenglik
+  // orqali emas, FAQAT "shu dialogning gapi" tekshiruvi orqali chetlanadi.
+  it('chalg`ituvchi ORASIDA shu dialogning satri (id yoki matn orqali) bo`lsa, u chiqib ketadi', () => {
+    // (1) — dialogning O'ZINING birinchi satri, xuddi shu id bilan.
+    const ozIdOrqali = z(10, 'Jonas', 'Hallo! Bist du Mia?');
+    // (2) — BOSHQA id, lekin MATNI dialogning uchinchi satriga (id 12)
+    // so'zma-so'z teng — chaqiruvchi ularni chetlab o'tishni unutgan
+    // holat, faqat matn orqali aniqlanadigan holat.
+    const ozMatnOrqali = z(777, 'X', 'Ich bin Jonas.');
+
+    const f = dialogLuecke(
+      dialog,
+      [ozIdOrqali, ozMatnOrqali, ...andere],
+      rndId,
+    )!;
+    expect(f.options).not.toContain('Hallo! Bist du Mia?');
+    expect(f.options).not.toContain('Ich bin Jonas.');
+  });
+
+  // Finding (ko`rik): richtigdan FAQAT tinish belgisi bilan farq
+  // qiladigan nomzod ham chalg`ituvchi bo`lmasligi kerak — aks holda
+  // ikkita "to'g'ri" variant chiqib qolardi (`wort-fragen.spec.ts`dagi
+  // xuddi shu himoyaning testi bilan bir xil sabab).
+  it('richtigdan FAQAT tinish belgisi bilan farq qiladigan nomzod chalg`ituvchi bo`lmaydi', () => {
+    // rndId bilan olib tashlanadigan satr — id=11, "Ja, ich bin Mia. Und du?".
+    const tinishFarqli = z(888, 'Y', 'Ja, ich bin Mia. Und du');
+    const f = dialogLuecke(dialog, [tinishFarqli, ...andere], rndId)!;
+    expect(f.richtig).toBe('Ja, ich bin Mia. Und du?');
+    expect(f.options).not.toContain('Ja, ich bin Mia. Und du');
+  });
 });

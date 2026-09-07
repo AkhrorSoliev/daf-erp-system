@@ -37,10 +37,19 @@ function mischen<T>(items: T[], rnd: () => number): T[] {
  * chaqiruvchi ularni chetlab o'tishni unutgan taqdirda ham (himoya
  * qatlami, `wort-fragen.ts`dagi `ablenker`ga o'xshash).
  *
- * `normalisieren` bilan solishtiriladi — grading ham shu funksiya orqali
- * ishlaydi, xom teng emas solishtirilsa richtigdan faqat tinish belgisi
- * bilan farq qiladigan chalg'ituvchi ham "to'g'ri" bo'lib qolardi
- * (`satzUebersetzen`dagi bir xil sabab).
+ * BU TEKSHIRUV IKKI QATLAMLI, IKKALASI HAM SHART: `id` bo'yicha
+ * (`eigeneIds`) VA matn bo'yicha (`eigeneNormTexte`). Faqat `id`
+ * yetarli emas — nomzod boshqa `id` bilan kelib, lekin MATNI shu
+ * dialogning biror satriga (nafaqat olib tashlangan satrga) teng bo'lsa
+ * ham, u haligacha "shu dialogning gapi" va chalg'ituvchi bo'la
+ * olmaydi. Matn to'plami BUTUN dialogni qamrab oladi (faqat olib
+ * tashlangan `ziel` emas): shu bilan bir yo'la richtigdan FAQAT tinish
+ * belgisi bilan farq qiladigan nomzod ham chetlanadi — `ziel`ning o'zi
+ * ham `dialog.zeilen` ichida, demak uning matni ham shu to'plamda.
+ * `normalisieren` bilan solishtiriladi — grading ham shu funksiya
+ * orqali ishlaydi, xom teng emas solishtirilsa tinish belgisi bilan
+ * farq qiladigan nomzod ham "to'g'ri" bo'lib qolardi (`satzUebersetzen`
+ * bilan bir xil sabab).
  */
 export function dialogLuecke(
   dialog: MaterialDialog,
@@ -55,9 +64,13 @@ export function dialogLuecke(
   const ziel = mischen(nomzodlar, rnd)[0];
 
   const eigeneIds = new Set(dialog.zeilen.map((z) => z.id));
-  const zielNorm = normalisieren(ziel.de);
+  const eigeneNormTexte = new Set(
+    dialog.zeilen.map((z) => normalisieren(z.de)),
+  );
   const falschKandidaten = andere
-    .filter((z) => !eigeneIds.has(z.id) && normalisieren(z.de) !== zielNorm)
+    .filter(
+      (z) => !eigeneIds.has(z.id) && !eigeneNormTexte.has(normalisieren(z.de)),
+    )
     .map((z) => z.de);
   const falsch = [...new Set(falschKandidaten)];
   if (falsch.length < 3) return null;
