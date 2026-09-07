@@ -292,25 +292,41 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // Qayta o'tishda seans YANGI so'rov bilan yangilanadi — Leitner
   // jadvali orqali qaytgan so'zlar birinchi safargidan farq qilishi
   // mumkin, shuning uchun eski `seans.data` emas, `refetch` natijasi
-  // ishlatiladi.
+  // ishlatiladi. `fortschritt` ham XUDDI SHUNDAY: ambient `fortschritt.data`
+  // keshiga emas, shu yerda KUTILGAN `refetch()` natijasiga ishoniladi.
+  //
+  // Bu ATAYLAB shunday — avvalgi versiya ambient keshni o'qirdi va faqat
+  // IZOHDA "tugash effektida allaqachon refetch qilingan" deb DA'VO
+  // qilardi, biroq buni hech narsa MAJBURLAMAGAN edi: tugash effektidagi
+  // `fortschritt.refetch()` KUTILMAYDI, "Qayta o'tish" tugmasi esa darhol
+  // bosiladigan. Sekin ulanishda o'quvchi o'sha `refetch` tugashidan OLDIN
+  // bossa, ambient kesh hali BIRINCHI SEANSDAN OLDINGI qiymatni ko'rsatib
+  // turardi — va aynan o'sha eski qiymat retry uchun boshlang'ich sifatida
+  // qulflanib qolardi, natijada ko'rsatilgan farq birinchi seans + retry'ni
+  // BIRGA qamrab olardi (Task 9 review, round 2). Shu sabab bu yerda
+  // `fortschritt.refetch()` ham `seans.refetch()` kabi so'raladi va
+  // KUTILADI — ambient `fortschritt.data`ga umuman qo'l tegilmaydi.
   const qaytaOtish = async () => {
-    const { data } = await seans.refetch();
+    const [seansNatija, fortschrittNatija] = await Promise.all([
+      seans.refetch(),
+      // Ball dekor — muvaffaqiyatsiz yon so'rov qayta o'tishni TO'SMASLIGI
+      // kerak. Xato bo'lsa `null`ga tushadi, pastdagi `fortschrittSurati`
+      // buni tabiiy ravishda "boshlang'ich noma'lum" holatiga aylantiradi
+      // — natija ekranida esa bu allaqachon to'g'ri darajada tushiriladi
+      // (yutuqlar kartasi shunchaki ko'rinmaydi).
+      fortschritt.refetch().catch(() => null),
+    ]);
+    const { data } = seansNatija;
     if (!data) return;
     yozildi.current = false;
     tugashDavomiyligi.current = null;
     // Yangi urinish uchun yangi "boshlang'ich" nuqta — `qaytaOtishMi: true`
     // orqali `keyingiBoshlangichSurati` OLDINGI boshlang'ichni e'tiborsiz
-    // qoldirib, to'g'ridan-to'g'ri joriy `fortschritt.data`ni ishlatadi.
-    // Bu — oldingi seansning YAKUNIY qiymati (tepada, tugash effektida
-    // allaqachon `refetch` qilingan). Ref'ni shunchaki `null`ga qaytarish
-    // ISHLAMAYDI edi: buni to'ldiradigan effekt faqat `fortschritt.data`
-    // REFERENSI o'zgarganda ishga tushadi, u esa retry davomida
-    // o'zgarmasligi mumkin — boshlang'ich butun retry davomida `null`
-    // bo'lib qolib, ball farqi har safar 0ga aylanardi (Task 9 review,
-    // Critical).
+    // qoldirib, YUQORIDA ENDIGINA KUTILGAN `fortschrittNatija`ni ishlatadi
+    // (ambient `fortschritt.data` emas — sabab yuqorida).
     boshlangichFortschritt.current = keyingiBoshlangichSurati(
       boshlangichFortschritt.current,
-      fortschrittSurati(fortschritt.data),
+      fortschrittSurati(fortschrittNatija?.data),
       true,
     );
     setHolat(boshla(data));
