@@ -12,6 +12,7 @@ import { LernenLessonPage } from "../lernen-lesson-page";
 import {
   useAbschluss,
   useErsatz,
+  useFortschritt,
   useLernenLesson,
   usePruefen,
   useUebungSeans,
@@ -91,6 +92,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
   const pruefen = usePruefen();
   const ersatzSorov = useErsatz();
   const abschluss = useAbschluss();
+  const fortschritt = useFortschritt();
 
   const unitId = darsMi ? (lesson.data?.unit.id ?? null) : null;
   const chiqishHref = unitId ? `/portal/lernen/units/${unitId}` : "/portal/lernen";
@@ -113,6 +115,27 @@ export function SeansEkrani(props: SeansEkraniProps) {
     boshlandiMi.current = true;
     setHolat(boshla(seans.data));
   }, [seans.data]);
+
+  // Natija ekranidagi ball/seriya/o'rin FARQ ko'rsatadi — buning uchun
+  // seans BOSHLANGANDAGI qiymat kerak. `fortschritt` seans davomida
+  // o'zgarmaydi (hech qanday invalidatsiya seans tugamaguncha bo'lmaydi),
+  // shuning uchun birinchi kelgan qiymatning o'zi "boshlang'ich" hisoblanadi
+  // — qayta o'qishning hojati yo'q. `qaytaOtish` uni `null`ga qaytarib,
+  // yangi urinish uchun qayta yozdiradi.
+  const boshlangichFortschritt = React.useRef<{
+    gesamt: number;
+    serie: number;
+    wochePlatzGruppe: number | null;
+  } | null>(null);
+  React.useEffect(() => {
+    if (boshlangichFortschritt.current) return;
+    if (!fortschritt.data) return;
+    boshlangichFortschritt.current = {
+      gesamt: fortschritt.data.gesamt,
+      serie: fortschritt.data.serie,
+      wochePlatzGruppe: fortschritt.data.wochePlatzGruppe,
+    };
+  }, [fortschritt.data]);
 
   const frage = holat ? joriy(holat) : null;
   const rejim = frage ? harakat(frage.format) : null;
@@ -206,6 +229,14 @@ export function SeansEkrani(props: SeansEkraniProps) {
     yozildi.current = true;
     tugashDavomiyligi.current = Date.now() - seansBoshi;
 
+    // Natija ekranidagi ball/seriya/o'rin `fortschritt` YANGILANGANIDAN
+    // keyingina to'g'ri ko'rinadi. Dars seansida buni `abschluss`ning
+    // muvaffaqiyati ALLAQACHON qiladi (pastda, `invalidateQueries`
+    // orqali) — lekin takrorlash `abschluss` UMUMAN yubormaydi, shuning
+    // uchun yangilash bu yerda ikkala holat uchun ham so'raladi, o'sha
+    // chaqiruvga osilib qolmay.
+    void fortschritt.refetch();
+
     // Takrorlash hech qanday darsga tegishli emas — `abschluss` bitta
     // darsni "tugallandi" deb belgilaydi, bu yerda esa belgilanadigan
     // dars yo'q. Vaqt baribir yuqorida muzlatib qo'yilgan — natija
@@ -232,6 +263,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
     // Qasddan tushirilgan bog'liqliklar (har biri xavfsiz):
     // - `abschluss` — uning `.mutate`si react-query tomonidan barqaror
     //   ulanadi, render sayin o'zgarmaydi.
+    // - `fortschritt` — xuddi shunday, `.refetch`i barqaror; ro'yxatga
+    //   qo'shilsa har `fortschritt.data` yangilanishida bu butun effekt
+    //   qayta ishga tushib, `abschluss.mutate`ni ikkinchi marta chaqirardi.
     // - `tugadimi` — sof, modul darajasidagi import, hech qachon o'zgarmaydi.
     // - `darsLessonId`, `darsMi` — shu ekran o'rnatilgan davomida
     //   o'zgarmaydigan propslardan hisoblanadi (marshrut/chaqiruvchi
@@ -256,6 +290,12 @@ export function SeansEkrani(props: SeansEkraniProps) {
     if (!data) return;
     yozildi.current = false;
     tugashDavomiyligi.current = null;
+    // Yangi urinish — yangi "boshlang'ich" nuqta kerak. Joriy
+    // `fortschritt.data` allaqachon oldingi seansning YAKUNIY qiymati
+    // (refetch tepada, tugash effektida so'ralgan edi), shuning uchun
+    // qayta `null`ga qaytarish uni to'g'ridan-to'g'ri keyingi "boshida"
+    // sifatida qayta yozdiradi.
+    boshlangichFortschritt.current = null;
     setHolat(boshla(data));
     setNatija(null);
     setTanlangan(null);
@@ -435,6 +475,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
         xatolar={holat.xatolar}
         unitId={unitId}
         onQayta={qaytaOtish}
+        gesamtBoshida={boshlangichFortschritt.current?.gesamt ?? null}
+        serieBoshida={boshlangichFortschritt.current?.serie ?? null}
+        orinBoshida={boshlangichFortschritt.current?.wochePlatzGruppe ?? null}
       />
     );
   }

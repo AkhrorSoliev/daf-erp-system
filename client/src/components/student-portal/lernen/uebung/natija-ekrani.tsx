@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Clock, Trophy } from "@phosphor-icons/react";
-import { Button, Card, FadeIn } from "../../lumio";
+import { Clock, Fire, Star, Trophy } from "@phosphor-icons/react";
+import { Button, Card, FadeIn, StatChip } from "../../lumio";
 import type { SeansXato } from "../seans-navbat";
+import { useFortschritt } from "../queries";
+import { orinXabari } from "./natija-xabari";
 
 export interface NatijaEkraniProps {
   togri: number;
@@ -13,6 +15,15 @@ export interface NatijaEkraniProps {
   xatolar: SeansXato[];
   unitId: number | null;
   onQayta: () => void;
+  /**
+   * Seans BOSHLANGANDAGI `Fortschritt` — bittasi ham serverdan qayta
+   * hisoblanmaydi, faqat seans oxiridagi (`useFortschritt` ning joriy
+   * javobi) qiymat bilan solishtiriladi. Barchasi `null` bo'lishi mumkin:
+   * seans boshlanganda `useFortschritt` hali yuklanmagan bo'lsa.
+   */
+  gesamtBoshida: number | null;
+  serieBoshida: number | null;
+  orinBoshida: number | null;
 }
 
 /** `durationMs` ni `daqiqa:soniya` ko'rinishiga o'tkazadi — masalan 65_000 → "1:05". */
@@ -23,11 +34,62 @@ function vaqtBelgisi(durationMs: number): string {
   return `${daqiqa}:${String(soniya).padStart(2, "0")}`;
 }
 
+const SANOQ_DAVOMIYLIGI = 600;
+
+/**
+ * `maqsad` gacha noldan sanab chiqadigan qiymat — `requestAnimationFrame`
+ * bilan, ~600ms. `prefers-reduced-motion` yoqilgan bo'lsa animatsiya
+ * UMUMAN ishlamaydi, oxirgi qiymat darrov ko'rsatiladi: harakatni
+ * kamaytirishni so'ragan o'quvchi uchun raqamning o'zi muhim, uning
+ * sakrab o'sishi emas.
+ */
+function useSanaladiganBall(maqsad: number | null): number | null {
+  const [qiymat, setQiymat] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (maqsad == null) {
+      setQiymat(null);
+      return;
+    }
+
+    const kamHarakatSoraladi =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (kamHarakatSoraladi || maqsad === 0) {
+      setQiymat(maqsad);
+      return;
+    }
+
+    const boshi = performance.now();
+    let frameId: number;
+
+    const kadr = (hozir: number) => {
+      const foiz = Math.min(1, (hozir - boshi) / SANOQ_DAVOMIYLIGI);
+      setQiymat(Math.round(foiz * maqsad));
+      if (foiz < 1) {
+        frameId = requestAnimationFrame(kadr);
+      }
+    };
+    frameId = requestAnimationFrame(kadr);
+    return () => cancelAnimationFrame(frameId);
+  }, [maqsad]);
+
+  return qiymat;
+}
+
 /**
  * Seans tugagandan keyingi natija ekrani: ball, sarflangan vaqt va
  * xato qilingan so'zlar. To'g'ri javob har bir xato uchun `xatolar`
  * ichida allaqachon bor — bu ekran hech narsani qayta hisoblamaydi,
  * faqat `seans-navbat.ts` yig'gan holatni ko'rsatadi.
+ *
+ * Ball, seriya va o'rin ham xuddi shunday — MIJOZ ULARNI HISOBLAMAYDI.
+ * `useFortschritt` seans boshida bir marta o'qilib (`gesamtBoshida` va
+ * hokazo — chaqiruvchi eslab qoladi), shu yerda ESA joriy (seansdan
+ * keyingi, `useAbschluss`/`SeansEkrani` allaqachon yangilagan) qiymat
+ * bilan solishtiriladi. Ekranda ko'rinadigan raqam shu ikkisining farqi
+ * — ya'ni serverning o'zi bergan raqam, mijoz hisob-kitobi emas.
  */
 export function NatijaEkrani({
   togri,
@@ -36,9 +98,37 @@ export function NatijaEkrani({
   xatolar,
   unitId,
   onQayta,
+  gesamtBoshida,
+  serieBoshida,
+  orinBoshida,
 }: NatijaEkraniProps) {
   const router = useRouter();
+  const fortschritt = useFortschritt();
   const davomHref = unitId ? `/portal/lernen/units/${unitId}` : "/portal/lernen";
+
+  // Farq faqat IKKALA uchi ham ma'lum bo'lganda hisoblanadi — aks holda
+  // "0 ball topdingiz" kabi noto'g'ri xabar chiqib ketardi, holbuki
+  // haqiqatda serverdan javob hali kelmagan, xolos.
+  const topilganBall =
+    gesamtBoshida != null && fortschritt.data
+      ? Math.max(0, fortschritt.data.gesamt - gesamtBoshida)
+      : null;
+  const sanaladiganBall = useSanaladiganBall(topilganBall);
+
+  // Seriya faqat OSHGANDA ko'rsatiladi (bugungi birinchi seans) — buni
+  // aytadigan server, mijoz emas: `serieBoshida` seansdan oldingi qiymat,
+  // `fortschritt.data.serie` esa hozirgisi.
+  const serieOshdimi =
+    serieBoshida != null &&
+    fortschritt.data != null &&
+    fortschritt.data.serie > serieBoshida;
+
+  const orinXabariMatni = orinXabari(
+    orinBoshida,
+    fortschritt.data?.wochePlatzGruppe ?? null,
+  );
+
+  const yutuqlarBormi = sanaladiganBall != null || serieOshdimi || orinXabariMatni != null;
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col justify-center gap-4 px-4 py-8">
@@ -55,6 +145,27 @@ export function NatijaEkrani({
             </p>
           </div>
         </Card>
+
+        {yutuqlarBormi ? (
+          <Card className="flex flex-wrap items-center justify-center gap-2 text-center">
+            {sanaladiganBall != null ? (
+              <StatChip
+                icon={<Star weight="fill" className="text-amber-500" />}
+                value={`+${sanaladiganBall} ball`}
+              />
+            ) : null}
+            {serieOshdimi ? (
+              <StatChip
+                icon={<Fire weight="fill" className="text-coral-500" />}
+                value={`${fortschritt.data?.serie} kun`}
+                label="seriya"
+              />
+            ) : null}
+            {orinXabariMatni ? (
+              <p className="w-full text-sm font-semibold text-ink-700">{orinXabariMatni}</p>
+            ) : null}
+          </Card>
+        ) : null}
 
         <Card className="space-y-3">
           {xatolar.length === 0 ? (
