@@ -129,4 +129,10 @@ export class JuftDto {
   @IsString()
   @MaxLength(200)
   ong!: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(86_400_000)
+  durationMs?: number;
 }

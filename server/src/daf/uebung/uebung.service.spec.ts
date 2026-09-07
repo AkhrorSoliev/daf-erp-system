@@ -250,6 +250,14 @@ function fakePrisma() {
         if (where.de?.in) {
           rows = rows.filter((l) => where.de.in.includes(l.de));
         }
+        // `juft()`ning `PAAR` qidiruvi (Fix 1) `where.de`ni `.in` bilan
+        // emas, DIRECT TENGLIK bilan yuboradi (`{ de: chap, unitId }`) —
+        // haqiqiy Postgres buni ANIQ moslikka toraytiradi, shu sabab
+        // fake ham xuddi shunday qilishi shart, aks holda `chap`ga mos
+        // kelmaydigan nomzodlar sinovda tasodifan qolib ketardi.
+        if (typeof where.de === 'string') {
+          rows = rows.filter((l) => l.de === where.de);
+        }
         if (where.unitId != null) {
           rows = rows.filter((l) => l.unitId === where.unitId);
         }
@@ -1705,14 +1713,26 @@ describe('juft — bitta juftni tekshirish', () => {
     expect((prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data.points).toBe(0);
   });
 
-  it('xato javob Leitner holatini NOLGA tushiradi', async () => {
+  it('xato javob Leitner holatini NOLGA tushiradi va ERTAGA suradi', async () => {
     const prisma = fakeWort({ dueAt: kecha() });
+    const oldin = Date.now();
     await new UebungService(prisma as any).juft(
       { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'stol' },
       ctx,
     );
     const yozilgan = (prisma.dafLexemeState.upsert as jest.Mock).mock.calls[0][0];
-    expect((yozilgan.update ?? yozilgan.create).strength).toBe(0);
+    const yangi = yozilgan.update ?? yozilgan.create;
+    expect(yangi.strength).toBe(0);
+    // `dueAt` — «tuzatish bepul» xususiyatining HAQIQIY tayanchi (Fix 2,
+    // ko'rik topilmasi): faqat `strength`ni tekshirish bu xususiyatning
+    // asosiy qismini SEZMAYDI — agar kimdir kelajakda xato javobning
+    // kunlik intervalini (`leitner.ts`dagi ichki `TAG_MS`) qisqartirib
+    // qo'ysa (masalan bir xil kunga), so'z DARHOL yana "muddati kelgan"
+    // bo'lib qolardi va ikkinchi (to'g'ri) bosish ham ball berardi — bu
+    // test faqat `strength === 0`ni tekshirsa buni ushlab qololmasdi.
+    const kunFarqiMs = yangi.dueAt.getTime() - oldin;
+    expect(kunFarqiMs).toBeGreaterThan(23 * 60 * 60 * 1000);
+    expect(kunFarqiMs).toBeLessThan(25 * 60 * 60 * 1000);
   });
 
   it('ZUORDNEN ball bermaydi va Leitnerga tegmaydi', async () => {
@@ -1734,14 +1754,26 @@ describe('juft — bitta juftni tekshirish', () => {
 
   it('urinishga filial va guruh muhrlanadi', async () => {
     const prisma = fakeWort(null);
-    prisma.enrollment.findFirst = jest.fn(async () => ({ groupId: 'g-1' })) as any;
+    // `groupId` — `currentGroupId`ga; `group.branchId` —
+    // `tryResolveStudentBranchId`ning faol yozuvlarga tushish yo'liga
+    // (bir xil mock ikkalasiga ham xizmat qiladi, ular boshqa-boshqa
+    // `select`lar so'raydi, lekin bu qo'lda yozilgan mock ularni
+    // e'tiborsiz qoldiradi).
+    prisma.enrollment.findFirst = jest.fn(async () => ({
+      groupId: 'g-1',
+      group: { branchId: 7 },
+    })) as any;
     await new UebungService(prisma as any).juft(
       { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'uy' },
       ctx,
     );
     const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
     expect(data.groupId).toBe('g-1');
-    expect(data).toHaveProperty('branchId');
+    // `toHaveProperty('branchId')` (avvalgi versiya) `branchId: undefined`
+    // bo'lsa ham O'TARDI — property mavjudligini tekshiradi, QIYMATNI
+    // emas. Haqiqiy qiymatni tekshirish shart, aks holda bu test
+    // "filial yozildi" degan da'voni isbotlamaydi.
+    expect(data.branchId).toBe(7);
   });
 
   it('material topilmasa xato tashlaydi', async () => {
@@ -1791,6 +1823,25 @@ describe('juft — bitta juftni tekshirish', () => {
     ).rejects.toThrow();
   });
 
+  // Yuqoridagi test faqat BITTA yo'nalishni (WORT+ZUORDNEN) tekshiradi —
+  // qo'riqchining IKKINCHI yarmi (PHRASE+PAAR) ko'rikda sinovsiz qolgan
+  // edi (Fix 2, uchinchi bo'sh joy). Ikkalasi mustaqil `if` shart bo'lgani
+  // uchun (bir tekshiruv ikkinchisini isbotlamaydi) alohida test kerak.
+  it('itemType format bilan mos kelmasa xato tashlaydi (PHRASE + PAAR)', async () => {
+    const prisma = fakePrisma();
+    prisma.dafPhrase.findUnique = jest.fn(async () => ({
+      de: 'Hallo!',
+      uz: 'Salom!',
+      unitId: 1,
+    })) as any;
+    await expect(
+      new UebungService(prisma as any).juft(
+        { itemType: 'PHRASE', itemId: 1, format: 'PAAR', chap: 'salomlashish', ong: 'Hallo!' },
+        ctx,
+      ),
+    ).rejects.toThrow();
+  });
+
   // QO'SHIMCHA TEST — brief'da yo'q, lekin topshiriqda ochiq aytilgan
   // 2-tuzoqni yopadi: `PAAR` savolining `itemId`si to'rtlikning
   // BIRINCHISI, bosilgan juft esa BOSHQASI bo'lishi mumkin. Agar
@@ -1811,6 +1862,74 @@ describe('juft — bitta juftni tekshirish', () => {
     expect(attemptData.lexemeId).toBe(2);
     const holatYozilgan = (prisma.dafLexemeState.upsert as jest.Mock).mock.calls[0][0];
     expect(holatYozilgan.where.studentId_lexemeId.lexemeId).toBe(2);
+  });
+
+  // FIX 1 (IMPORTANT, ko'rik topilmasi): `de` unit ichida NOYOB emas —
+  // bitta unitda ikkita lexeme bir xil nemischa so'zga ega bo'lishi
+  // mumkin ("die Bank" → "bank" id 10, "die Bank" → "o'rindiq" id 40).
+  // Eski kod (`nomzodlar.find((l) => l.de === chap)`) shu ikkalasi
+  // orasidan HAR DOIM birinchisini (massiv tartibidagi) tanlar edi —
+  // o'quvchi ekranda id 40'ni ko'rib, uni to'g'ri ulasa ham server id
+  // 10'ni tekshirar, "xato" derdi, va TEKSHIRISH TUGMASI YO'Q bo'lgani
+  // uchun bu savol HECH QACHON tugamas edi (bir xil noto'g'ri natija
+  // cheksiz takrorlanadi). Tuzatilgan kod avval BOSILGAN javobga mos
+  // kelgan nomzodni tanlaydi.
+  it("bir xil `de`li ikkita nomzod bo'lganda, faqat IKKINCHISI o'quvchi javobiga mos kelsa — javob qabul qilinadi va IKKINCHI lexeme ballanadi", async () => {
+    const prisma = fakePrisma();
+    prisma.dafLexeme.findUnique = jest.fn(async () => ({
+      id: 40,
+      de: 'die Bank',
+      uz: "o'rindiq",
+      artikel: 'die',
+      unitId: 1,
+    })) as any;
+    // Tartib ATAYLAB: "mos kelmaydigan" nomzod (id 10) massivda BIRINCHI
+    // — eski `.find` unga to'xtardi. Agar tuzatish qaytarilib ketsa
+    // (masalan yana `l.de === chap`ga qaytarilsa), bu test id 10'ni
+    // birinchi topib `isCorrect: false` qaytaradi va MUVAFFAQIYATSIZ
+    // tugaydi.
+    prisma.dafLexeme.findMany = jest.fn(async () => [
+      { id: 10, de: 'die Bank', uz: 'bank' },
+      { id: 40, de: 'die Bank', uz: "o'rindiq" },
+    ]) as any;
+    const r = await new UebungService(prisma as any).juft(
+      { itemType: 'WORT', itemId: 40, format: 'PAAR', chap: 'die Bank', ong: "o'rindiq" },
+      ctx,
+    );
+    expect(r).toEqual({ isCorrect: true });
+    const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
+    // Ballanadigan/Leitner yangilanadigan lexeme — o'quvchi HAQIQATDA
+    // ulagan so'z (id 40), massivning birinchi qatori (id 10) emas.
+    expect(data.lexemeId).toBe(40);
+    const holatYozilgan = (prisma.dafLexemeState.upsert as jest.Mock).mock.calls[0][0];
+    expect(holatYozilgan.where.studentId_lexemeId.lexemeId).toBe(40);
+  });
+
+  // Xuddi shu ambiguity `ZUORDNEN`/ibora tomonida ham mavjud (`juft()`
+  // ikkalasida ham bir xil naqsh bilan tuzatilgan) — bir xil `funktionUz`
+  // bilan ikkita ibora, faqat ikkinchisi o'quvchi javobiga mos keladi.
+  it("ZUORDNEN: bir xil `funktionUz`li ikkita nomzoddan faqat IKKINCHISI mos kelsa — javob qabul qilinadi", async () => {
+    const prisma = fakePrisma();
+    prisma.dafPhrase.findUnique = jest.fn(async () => ({
+      de: 'Guten Tag!',
+      uz: 'Xayrli kun!',
+      unitId: 1,
+    })) as any;
+    prisma.dafPhrase.findMany = jest.fn(async () => [
+      { funktionUz: 'salomlashish', de: 'Hallo!' },
+      { funktionUz: 'salomlashish', de: 'Guten Tag!' },
+    ]) as any;
+    const r = await new UebungService(prisma as any).juft(
+      {
+        itemType: 'PHRASE',
+        itemId: 2,
+        format: 'ZUORDNEN',
+        chap: 'salomlashish',
+        ong: 'Guten Tag!',
+      },
+      ctx,
+    );
+    expect(r).toEqual({ isCorrect: true });
   });
 });
 
@@ -1867,5 +1986,32 @@ describe('juft — TARTIB TRIPWIRE (stateful)', () => {
     );
     const call = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0];
     expect(call.data.points).toBe(0);
+  });
+
+  /**
+   * FIX 2 (IMPORTANT): bu — reja aytgan HAQIQIY xususiyatning o'zi,
+   * yuqoridagi test esa uning O'RNIBOSARI edi (rejaning o'zi tan olgan
+   * kamchilik). Yuqoridagi test `dueAt`ni QO'LDA kelajakka o'rnatadi va
+   * nol ball kutadi — bu HAR QANDAY amalga oshirish `dueAt`ni o'qisa
+   * o'tib ketadi, xato javob HAQIQATDA so'zni "muddati kelmagan"ga
+   * surganini HECH QACHON isbotlamaydi. Bu yerda esa haqiqiy ketma-
+   * ketlik: birinchi bosish XATO ('stol'), ikkinchi bosish O'SHA
+   * so'zga TO'G'RI ('uy') — va ikkinchisi ham nol ball berishi kerak,
+   * chunki birinchisi so'zni ertangi kunga surgan. `fakeMitWort`
+   * STATEFUL bo'lgani uchun (yuqoridagi izohga qarang) ikkinchi
+   * chaqiruv birinchisi yozgan `dueAt`ni HAQIQATDA o'qiydi.
+   */
+  it("TUZATISH BEPUL — HAQIQIY ketma-ketlik: xato bosgandan keyin BIR XIL so'zga to'g'ri bosish ham ball bermaydi", async () => {
+    const prisma = fakeMitWort({ strength: 2, dueAt: new Date(Date.now() - 86_400_000) });
+    const svc = new UebungService(prisma as any);
+    await svc.juft(
+      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'stol' },
+      ctx,
+    );
+    await svc.juft(
+      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'uy' },
+      ctx,
+    );
+    expect((prisma.dafAttempt.create as jest.Mock).mock.calls[1][0].data.points).toBe(0);
   });
 });

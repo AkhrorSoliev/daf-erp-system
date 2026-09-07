@@ -27,14 +27,15 @@ describe("juftJavobKeldi", () => {
   const kutayotgan: JonliJuft[] = [{ chapIdx: 0, ongIdx: 2, holat: "kutilmoqda" }];
 
   it("to'g'ri javob juftni yashil qiladi", () => {
-    expect(juftJavobKeldi(kutayotgan, 0, 2, true)).toEqual([
-      { chapIdx: 0, ongIdx: 2, holat: "togri" },
-    ]);
+    expect(juftJavobKeldi(kutayotgan, 0, 2, true)).toEqual({
+      juftlar: [{ chapIdx: 0, ongIdx: 2, holat: "togri" }],
+      xato: false,
+    });
   });
 
   it("xato javob juftni butunlay olib tashlaydi", () => {
     // Ikkala tugma yana bo'sh bo'ladi va qayta bosilishi mumkin.
-    expect(juftJavobKeldi(kutayotgan, 0, 2, false)).toEqual([]);
+    expect(juftJavobKeldi(kutayotgan, 0, 2, false)).toEqual({ juftlar: [], xato: true });
   });
 
   it("boshqa juftlarga tegmaydi", () => {
@@ -42,7 +43,7 @@ describe("juftJavobKeldi", () => {
       { chapIdx: 0, ongIdx: 2, holat: "togri" },
       { chapIdx: 1, ongIdx: 3, holat: "kutilmoqda" },
     ];
-    expect(juftJavobKeldi(ikki, 1, 3, false)).toEqual([ikki[0]]);
+    expect(juftJavobKeldi(ikki, 1, 3, false)).toEqual({ juftlar: [ikki[0]], xato: true });
   });
 
   it("allaqachon yo'q juftga javob kelsa yiqilmaydi", () => {
@@ -53,8 +54,18 @@ describe("juftJavobKeldi", () => {
     // ro'yxatda sezilmay o'tib ketardi (hech narsa o'chadigan joy yo'q),
     // lekin BOR ro'yxatda oxirgi elementni bexosdan o'chirib qo'yardi.
     const boshqalar: JonliJuft[] = [{ chapIdx: 5, ongIdx: 6, holat: "kutilmoqda" }];
-    expect(juftJavobKeldi(boshqalar, 0, 2, true)).toEqual(boshqalar);
-    expect(juftJavobKeldi(boshqalar, 0, 2, false)).toEqual(boshqalar);
+    expect(juftJavobKeldi(boshqalar, 0, 2, true)).toEqual({ juftlar: boshqalar, xato: false });
+    expect(juftJavobKeldi(boshqalar, 0, 2, false)).toEqual({ juftlar: boshqalar, xato: true });
+  });
+
+  // Loyihaning muhim xususiyati: "birinchi urinishdagi xato savolni
+  // ERTAGA suradi" (Leitner). Bu xulosa aynan shu `xato` bayrog'iga
+  // tayanadi — u yo'q bo'lganda bu xususiyat komponent ichidagi
+  // `useRef`da yashardi va sinovsiz qolardi (loyiha qoidasi: "faqat sof
+  // mantiq" testlanadi, render qilinmaydi).
+  it("`xato` faqat noto'g'ri javobda rost bo'ladi, to'g'risida hech qachon", () => {
+    expect(juftJavobKeldi(kutayotgan, 0, 2, true).xato).toBe(false);
+    expect(juftJavobKeldi(kutayotgan, 0, 2, false).xato).toBe(true);
   });
 });
 

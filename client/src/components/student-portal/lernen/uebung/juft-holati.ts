@@ -53,28 +53,52 @@ export function juftQoshildi(
   return [...juftlar, { chapIdx, ongIdx, holat: "kutilmoqda" }];
 }
 
+/** `juftJavobKeldi`ning natijasi: yangilangan ro'yxat + shu javob xato bo'ldimi. */
+export interface JuftJavobNatija {
+  juftlar: JonliJuft[];
+  /**
+   * Shu javob BIRINCHI urinishdagi xato hisoblanadimi. Chaqiruvchi
+   * (`seans-ekrani.tsx`) buni yig'ib boradi — savol tugaganda hech
+   * bo'lmasa bitta `xato: true` bo'lsa, butun savol "birinchi urinishda
+   * xato qilingan" deb hisoblanadi va Leitner qoidasiga ko'ra ERTAGA
+   * QAYTADI. Bu sanoq ILGARI komponentdagi `useRef` sonida yashardi —
+   * u yerda sof funksiya bo'lmagani uchun render qilmasdan sinab
+   * bo'lmasdi (loyihaning "faqat sof mantiq" qoidasi buni taqiqlaydi).
+   * Endi qaror shu yerda: bitta joyda, testlangan.
+   */
+  xato: boolean;
+}
+
 /**
  * Serverdan `{ isCorrect }` javobi kelganda chaqiriladi.
  *
  * To'g'ri bo'lsa mos juft `togri` bo'ladi (yashil, doimiy qoladi). Xato
- * bo'lsa juft RO'YXATDAN BUTUNLAY OLIB TASHLANADI — `xato` holati yo'q,
- * chunki ikkala tugma darhol yana bo'sh (bosilishi mumkin) bo'lishi
- * kerak.
+ * bo'lsa juft RO'YXATDAN BUTUNLAY OLIB TASHLANADI — `xato` HOLATI yo'q
+ * (`JonliJuft.holat`da), chunki ikkala tugma darhol yana bo'sh
+ * (bosilishi mumkin) bo'lishi kerak. `xato` MAYDONI (natijada) esa BOR —
+ * yuqoridagi `JuftJavobNatija`ga qarang, ikkisi boshqa-boshqa narsa.
  *
  * Mos juft topilmasa (masalan javob kelguncha o'sha juft allaqachon
  * boshqa sabab bilan ro'yxatdan chiqib ketgan bo'lsa — tarmoq javoblari
- * tartib bilan kelishi kafolatlanmaydi) ro'yxat o'zgarishsiz qaytadi.
+ * tartib bilan kelishi kafolatlanmaydi) ro'yxat o'zgarishsiz qaytadi,
+ * lekin `xato` BARIBIR `!isCorrect`dan hisoblanadi — server nima dedi,
+ * o'sha muhim, ro'yxatda hozircha bor-yo'qligi emas (chaqiruvchi eski
+ * xulq-atvorni saqlaydi: tarmoq XATOSIDA emas, faqat noto'g'ri JAVOBDA
+ * sanaladi).
  */
 export function juftJavobKeldi(
   juftlar: JonliJuft[],
   chapIdx: number,
   ongIdx: number,
   isCorrect: boolean,
-): JonliJuft[] {
+): JuftJavobNatija {
   const mavjud = juftlar.find((j) => j.chapIdx === chapIdx && j.ongIdx === ongIdx);
-  if (!mavjud) return juftlar;
-  if (!isCorrect) return juftlar.filter((j) => j !== mavjud);
-  return juftlar.map((j) => (j === mavjud ? { ...j, holat: "togri" } : j));
+  if (!mavjud) return { juftlar, xato: !isCorrect };
+  if (!isCorrect) return { juftlar: juftlar.filter((j) => j !== mavjud), xato: true };
+  return {
+    juftlar: juftlar.map((j) => (j === mavjud ? { ...j, holat: "togri" } : j)),
+    xato: false,
+  };
 }
 
 /**

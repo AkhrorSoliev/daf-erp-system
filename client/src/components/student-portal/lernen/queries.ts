@@ -141,7 +141,14 @@ export function useJuftTekshir() {
     // `itemType` ATAYLAB `MaterialTyp` dan tor: server faqat shu ikkitasini
     // qabul qiladi (gap va dialog satrida "juft" degan tushuncha yo'q),
     // va tip buni chaqiruv joyidayoq ushlab qolishi kerak.
-    { itemType: "WORT" | "PHRASE"; itemId: number; format: "PAAR" | "ZUORDNEN"; chap: string; ong: string }
+    {
+      itemType: "WORT" | "PHRASE";
+      itemId: number;
+      format: "PAAR" | "ZUORDNEN";
+      chap: string;
+      ong: string;
+      durationMs?: number;
+    }
   >({
     mutationFn: (body) => api.post(`${BASE}/uebung/juft`, body).then((r) => r.data),
   });

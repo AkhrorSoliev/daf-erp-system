@@ -133,6 +133,20 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // sanoq render'ni qayta chizishga sabab bo'lmasligi kerak — faqat
   // `hammasiTogri` chin bo'lgan render'da bir marta o'qiladi.
   const juftXatoSoni = React.useRef(0);
+  // `xatoIdxlar`ni 500ms dan keyin tozalaydigan `setTimeout` idlari —
+  // TOZALANMASA ikki muammo bor: (1) savol almashsa (`keyingi`/
+  // `qaytaOtish`) eski taymer baribir ishga tushib, YANGI savolning
+  // `xatoIdxlar`iga eskiroq indeks bilan aralashishi mumkin edi; (2)
+  // komponent o'chirilganda (o'quvchi seansdan chiqib ketsa) taymer
+  // baribir `setXatoIdxlar`ni chaqirib, "unmount qilingan komponentda
+  // holat yangilash" ogohlantirishini (va xotira sizishini) keltirib
+  // chiqarardi.
+  const xatoFlashTaymerlari = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  const tozalaFlashTaymerlari = React.useCallback(() => {
+    xatoFlashTaymerlari.current.forEach((id) => clearTimeout(id));
+    xatoFlashTaymerlari.current.clear();
+  }, []);
+  React.useEffect(() => tozalaFlashTaymerlari, [tozalaFlashTaymerlari]);
   const [natija, setNatija] = React.useState<PruefErgebnis | null>(null);
   const [savolBoshi, setSavolBoshi] = React.useState(() => Date.now());
   const [seansBoshi, setSeansBoshi] = React.useState(() => Date.now());
@@ -249,11 +263,28 @@ export function SeansEkrani(props: SeansEkraniProps) {
         format,
         chap: chapUstun[chapIdx],
         ong: ongUstun[ongIdx],
+        // `pruefen`dagi kabi: bu BITTA juftga (savolning o'ziga emas)
+        // ketgan vaqt — `savolBoshi` savol boshlanganda o'rnatiladi.
+        durationMs: Date.now() - savolBoshi,
       },
       {
         onSuccess: (javob) => {
-          setJuftlar((prev) => juftJavobKeldi(prev, chapIdx, ongIdx, javob.isCorrect));
-          if (javob.isCorrect) return;
+          // `juftJavobKeldi` endi `{ juftlar, xato }` qaytaradi (ko'rik
+          // topilmasi tuzatildi): "shu javob birinchi urinishdagi
+          // xatomi" degan qaror endi sof `juft-holati.ts` modulida —
+          // `xato` bayrog'i o'quvchi TAKROR bosgandami yoki bosmagandami,
+          // qat'i nazar `!javob.isCorrect`dan hisoblanadi (eski xulq-atvor
+          // saqlangan). `xatoBoldi` mahalliy o'zgaruvchisi — React
+          // `setJuftlar` yopilishi TASHQARISIDA hali kerak (pastdagi
+          // chaqnash effekti uchun), shuning uchun yopilish ichida
+          // yozib, keyin o'qiladi.
+          let xatoBoldi = false;
+          setJuftlar((prev) => {
+            const natija = juftJavobKeldi(prev, chapIdx, ongIdx, javob.isCorrect);
+            xatoBoldi = natija.xato;
+            return natija.juftlar;
+          });
+          if (!xatoBoldi) return;
 
           juftXatoSoni.current += 1;
 
@@ -268,20 +299,23 @@ export function SeansEkrani(props: SeansEkraniProps) {
           if (kamHarakatSoraladi) return;
 
           setXatoIdxlar((prev) => [...prev, { chapIdx, ongIdx }]);
-          setTimeout(() => {
+          const taymerId = setTimeout(() => {
+            xatoFlashTaymerlari.current.delete(taymerId);
             setXatoIdxlar((prev) =>
               prev.filter((x) => x.chapIdx !== chapIdx || x.ongIdx !== ongIdx),
             );
           }, 500);
+          xatoFlashTaymerlari.current.add(taymerId);
         },
         onError: (err) => {
           // Aloqa uzilsa juft OSILIB QOLMASLIGI kerak — eng yomon holat
           // shu bo'lardi, chunki savol hech qachon tugamas edi.
           // `juftJavobKeldi(..., false)` bilan ikkala tugma yana bo'sh
-          // (bosiladigan) bo'ladi, o'quvchi qayta bosadi. Bu XATO
-          // JAVOB sifatida HISOBLANMAYDI (`juftXatoSoni` oshmaydi) —
-          // server hech narsa demadi, xato demadi.
-          setJuftlar((prev) => juftJavobKeldi(prev, chapIdx, ongIdx, false));
+          // (bosiladigan) bo'ladi, o'quvchi qayta bosadi. Qaytgan `xato`
+          // bayrog'i BU YERDA ATAYLAB O'QILMAYDI — tarmoq xatosi HECH
+          // QACHON `juftXatoSoni`ni oshirmasligi kerak, server hech
+          // narsa demadi, xato demadi.
+          setJuftlar((prev) => juftJavobKeldi(prev, chapIdx, ongIdx, false).juftlar);
           toast.error(getErrorMessage(err, "Yuborib bo'lmadi. Qayta bosing"));
         },
       },
@@ -359,6 +393,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
     setJuftlar(boshlaJuftlar());
     setXatoIdxlar([]);
     juftXatoSoni.current = 0;
+    // Savol almashmoqda — eski savolning chaqnash taymerlari ENDI
+    // HECH QACHON ishga tushmasligi kerak (yuqoridagi izohga qarang).
+    tozalaFlashTaymerlari();
     setSavolBoshi(Date.now());
   };
 
@@ -500,6 +537,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
     setJuftlar(boshlaJuftlar());
     setXatoIdxlar([]);
     juftXatoSoni.current = 0;
+    // Qayta o'tishda ham xuddi `keyingi()`dagi kabi — eski taymer yangi
+    // (birinchi) savolga aralashmasligi kerak.
+    tozalaFlashTaymerlari();
     setSavolBoshi(Date.now());
     setSeansBoshi(Date.now());
   };
@@ -696,11 +736,6 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // "Tekshirish" yo'q. Pastdagi tugma va natija paneli shu bayroqqa
   // qarab boshqa ko'rinishda chiziladi.
   const juftlashRejimi = frage.format === "PAAR" || frage.format === "ZUORDNEN";
-  // Faqat pastdagi "Xato" panelining juftlar ro'yxati uchun — bir marta
-  // hisoblanadi, `juftlar.map` ichida qayta-qayta emas.
-  const juftlashUstunlar = juftlashRejimi
-    ? juftUstunlar(frage.options, frage.format as "PAAR" | "ZUORDNEN")
-    : null;
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col px-4 pb-40 pt-4">
@@ -772,8 +807,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
             // hamon kengroq `FrageFormat` bo'lib qoladi. Toraytirish faqat
             // `frage.format === "PAAR" || ... === "ZUORDNEN"`ni TO'G'RIDAN-
             // TO'G'RI shu joyda yozsa ishlagan bo'lardi, lekin bu shartni
-            // ikkinchi marta takrorlagan bo'lardi — o'rniga `juftlashUstunlar`
-            // (yuqorida) bilan bir xil, ATAYLAB toraytirilgan quyi tur.
+            // ikkinchi marta takrorlagan bo'lardi — o'rniga `juftlashRejimi`
+            // bilan bir xil, ATAYLAB toraytirilgan quyi tur.
             format={frage.format as "PAAR" | "ZUORDNEN"}
             options={frage.options}
             juftlar={juftlar}
@@ -796,40 +831,47 @@ export function SeansEkrani(props: SeansEkraniProps) {
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
         <div className="mx-auto w-full max-w-2xl space-y-2.5">
           {natija ? (
-            <div
-              className={cn(
-                "rounded-2xl px-4 py-3",
-                natija.isCorrect ? "bg-success/10" : "bg-danger/10",
-              )}
-            >
-              <p className={cn("font-bold", natija.isCorrect ? "text-success" : "text-danger")}>
-                {natija.isCorrect ? "To'g'ri!" : "Xato"}
-              </p>
-              {!natija.isCorrect ? (
-                juftlashRejimi ? (
-                  // Jonli juftlashda `natija.richtig` ATAYLAB bo'sh
-                  // (o'quvchi to'g'ri javobni ekranda allaqachon yig'ib
-                  // bo'lgan — qayta ko'rsatishning hojati yo'q). Bu
-                  // panel shu sabab qisqa vaqt (Keyingi darrov bosiladi)
-                  // ko'rinadi, lekin ko'ringan daqiqada bo'sh qator
-                  // o'rniga hozirgi `juftlar` holatidan RO'YXAT chiziladi
-                  // — xuddi seans oxiridagi ro'yxatdagi kabi.
-                  <ul className="mt-1 space-y-0.5">
-                    {juftlar.map((j) => (
-                      <li
-                        key={`${j.chapIdx}-${j.ongIdx}`}
-                        className="flex items-center justify-between gap-3 text-sm font-semibold text-ink-800"
-                      >
-                        <span>{juftlashUstunlar?.chapUstun[j.chapIdx]}</span>
-                        <span>{juftlashUstunlar?.ongUstun[j.ongIdx]}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
+            juftlashRejimi ? (
+              natija.isCorrect ? (
+                <div className="rounded-2xl bg-success/10 px-4 py-3">
+                  <p className="font-bold text-success">To'g'ri!</p>
+                </div>
+              ) : (
+                // Jonli juftlashda bu panel `hammasiTogri` chin bo'lgandan
+                // KEYIN ko'rinadi — ya'ni tepadagi TAXTA ALLAQACHON
+                // to'liq yashil, hech qanday juft xato ko'rinishida
+                // TURMAYDI. Shu sabab bu yerda QIZIL "Xato" sarlavhasi
+                // (avvalgi versiya) YOLG'ON: o'quvchi hech narsani xato
+                // deb ko'rmayapti. `natija.isCorrect === false` faqat
+                // BITTA narsani anglatadi — savolda birinchi urinishda
+                // kamida bitta xato bo'lgan (`juftXatoSoni`), demak bu
+                // savol Leitner qoidasiga ko'ra ERTAGA yana qaytadi.
+                // O'quvchi buni EKRANDAN bila olmaydi (taxta yashil
+                // ko'rinadi) — shuning uchun panel aynan shuni aytadi.
+                // Juftlar ro'yxatini QAYTA chizmaymiz — u allaqachon
+                // yuqorida, taxtaning o'zida turibdi.
+                <div className="rounded-2xl bg-tint px-4 py-3">
+                  <p className="text-sm font-semibold text-ink-700">
+                    Hammasi to&apos;g&apos;ri! Ammo bu savolda birinchi urinishda xato bo&apos;lgani
+                    uchun u keyinroq yana qaytadi.
+                  </p>
+                </div>
+              )
+            ) : (
+              <div
+                className={cn(
+                  "rounded-2xl px-4 py-3",
+                  natija.isCorrect ? "bg-success/10" : "bg-danger/10",
+                )}
+              >
+                <p className={cn("font-bold", natija.isCorrect ? "text-success" : "text-danger")}>
+                  {natija.isCorrect ? "To'g'ri!" : "Xato"}
+                </p>
+                {!natija.isCorrect ? (
                   <p className="mt-0.5 text-sm font-semibold text-ink-800">{natija.richtig}</p>
-                )
-              ) : null}
-            </div>
+                ) : null}
+              </div>
+            )
           ) : yuborishXato ? (
             <p className="text-sm font-semibold text-danger">
               Yuborib bo&apos;lmadi. Qayta urinib ko&apos;ring

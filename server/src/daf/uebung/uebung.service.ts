@@ -185,6 +185,8 @@ export interface JuftInput {
   format: 'PAAR' | 'ZUORDNEN';
   chap: string;
   ong: string;
+  /** `pruefen`dagi bilan bir xil ma'no — shu BITTA juftni bosishga ketgan vaqt. */
+  durationMs?: number;
 }
 
 /**
@@ -958,7 +960,7 @@ export class UebungService {
     input: JuftInput,
     ctx: PruefenContext,
   ): Promise<{ isCorrect: boolean }> {
-    const { itemType, itemId, format, chap, ong } = input;
+    const { itemType, itemId, format, chap, ong, durationMs } = input;
 
     // `itemType` formatga mos kelishi SHART — `pruefen`dagi `ZUORDNEN`
     // qo'riqchisi bilan bir xil sabab (ko'rikda topilgan kamchilik: faqat
@@ -1001,7 +1003,25 @@ export class UebungService {
       const nomzodlar = (await this.prisma.dafLexeme.findMany({
         where: { de: chap, unitId },
       } as any)) as Array<{ id: number; de: string; uz: string }>;
-      const soz = nomzodlar.find((l) => l.de === chap);
+      // NOMZODLAR ORASIDA NOYOBLIK KAFOLATLANMAGAN: bitta unitda ikkita
+      // lexeme bir xil `de`ga ega bo'lishi mumkin (masalan `die Bank` →
+      // `bank` (id 10) va `die Bank` → `o'rindiq` (id 40)) — savol
+      // quruvchilar BITTA SAVOL ICHIDA takrorni yo'q qiladi, lekin butun
+      // unit bo'yicha bunday kafolat yo'q. Shuning uchun avval o'quvchi
+      // bosgan `ong`ga MOS kelgan nomzod tanlanadi, faqat hech biri mos
+      // kelmasa (ikkalasi ham noto'g'ri) birinchisiga tushiladi.
+      //
+      // `pruefeZuordnen` xuddi shu noaniqlikda ATAYLAB boshqacha —
+      // FAIL-CLOSED — ishlaydi (butun javobni xato deb hisoblaydi, ko'rik
+      // topilmasi sifatida qoldirilgan). U yerda "Tekshirish" tugmasi bor
+      // edi: xato chiqsa o'quvchi qayta urinib ko'rardi. Bu yerda tugma
+      // YO'Q — savol har juft yashil bo'lgandagina tugaydi, ya'ni
+      // fail-closed = CHEKSIZ TSIKL (bir xil noto'g'ri natija hech qachon
+      // tuzalmaydi, chunki server doim boshqa lexemeni tekshiradi). Shu
+      // sabab bu yerda mos nomzodni topib qabul qilish tanlandi —
+      // noaniqlikni sukut biri bilan hal qilib, o'quvchini tuzoqdan
+      // chiqaradi va u haqiqatda ulagan so'zni ballaydi.
+      const soz = nomzodlar.find((l) => istRichtig(ong, l.uz)) ?? nomzodlar[0];
       isCorrect = soz != null && istRichtig(ong, soz.uz);
       lexemeId = soz?.id ?? null;
     } else {
@@ -1010,7 +1030,10 @@ export class UebungService {
       const nomzodlar = (await this.prisma.dafPhrase.findMany({
         where: { funktionUz: chap, unitId },
       } as any)) as Array<{ funktionUz: string; de: string }>;
-      const ibora = nomzodlar.find((p) => p.funktionUz === chap);
+      // Yuqoridagi `PAAR` sharhidagi bir xil sabab: mos kelgan nomzod
+      // ustunlik qiladi, aks holda birinchisiga tushiladi.
+      const ibora =
+        nomzodlar.find((p) => istRichtig(ong, p.de)) ?? nomzodlar[0];
       isCorrect = ibora != null && istRichtig(ong, ibora.de);
     }
 
@@ -1041,6 +1064,11 @@ export class UebungService {
         lexemeId: format === 'PAAR' ? lexemeId : null,
         isCorrect,
         given: `${chap}=${ong}`,
+        // `pruefen` buni yozadi, `juft()` avval YO'Q edi — har juftlashuv
+        // urinishi hech qachon davomiylik saqlamasdi. Mijoz allaqachon
+        // shu juftga ketgan vaqtni kuzatadi (`seans-ekrani.tsx`), shuni
+        // qabul qilib yozamiz.
+        durationMs: durationMs ?? null,
         points,
       },
     } as any);
