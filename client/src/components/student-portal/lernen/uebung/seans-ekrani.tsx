@@ -32,18 +32,23 @@ import { Yozish } from "./yozish";
 import { Yigish } from "./yigish";
 import { NatijaEkrani } from "./natija-ekrani";
 
-export interface SeansEkraniProps {
-  /**
-   * Savol qaysi so'rovdan olinadi. Standart `"dars"` — mavjud
-   * chaqiruvchilar (`lessons/[lessonId]/page.tsx`) o'zgarishsiz ishlaydi.
-   * `"takrorlash"`da `lessonId` berilmaydi: takrorlash hech qanday
-   * darsga tegishli emas (`abschluss` ham shu sabab yuborilmaydi,
-   * pastga qarang).
-   */
-  manba?: "dars" | "takrorlash";
-  /** `manba: "dars"` bo'lganda MAJBURIY. */
-  lessonId?: number;
-}
+/**
+ * `manba: "takrorlash"`da `lessonId` UMUMAN QABUL QILINMAYDI — takrorlash
+ * hech qanday darsga tegishli emas (`abschluss` ham shu sabab yuborilmaydi,
+ * pastga qarang).
+ *
+ * Ilgari bu ikkisi mustaqil ixtiyoriy maydon edi (`manba?: ...; lessonId?:
+ * number`), va `<SeansEkrani manba="dars" />` (`lessonId`siz) tur
+ * tekshiruvidan XATOSIZ o'tardi: ikkala so'rov ham abadiy `enabled: false`
+ * qolib, ekran hech qachon xato bermay `<LoadingCards />`da abadiy osilib
+ * qolardi — bo'sh ekrandan HAM YOMONI. Diskriminatsiya qilingan union bu
+ * noto'g'ri kombinatsiyani TUR DARAJASIDA ifodalab bo'lmaydigan qiladi:
+ * `lessonId` `"dars"`da MAJBURIY, `"takrorlash"`da esa umuman berilmaydi
+ * (ortiqcha maydon sifatida rad etiladi).
+ */
+export type SeansEkraniProps =
+  | { manba?: "dars"; lessonId: number }
+  | { manba: "takrorlash" };
 
 /**
  * Bitta dars UCHUN HAM, takrorlash UCHUN HAM ishlatiladigan to'liq mashq
@@ -57,17 +62,32 @@ export interface SeansEkraniProps {
  * da. Bu komponent faqat o'sha holatni o'qiydi va uning funksiyalarini
  * chaqiradi — bu yerda hech qanday sanash yoki hisoblash YO'Q.
  */
-export function SeansEkrani({ lessonId, manba = "dars" }: SeansEkraniProps) {
+export function SeansEkrani(props: SeansEkraniProps) {
   const router = useRouter();
-  const darsMi = manba === "dars";
+
+  // Diskriminatsiya BIR MARTA, shu yerda: `props.manba` to'g'ridan-to'g'ri
+  // tekshirilgani uchun TypeScript shu ifodaning ikkala tarmog'ida `props`ni
+  // to'g'ri toraytiradi — pastda `lessonId`ni yana ajratish yoki uni
+  // "as number" bilan majburlashning hojati yo'q, faqat ushbu ikki
+  // o'zgaruvchi ishlatiladi.
+  const darsMi = props.manba !== "takrorlash";
+  const lessonId = props.manba === "takrorlash" ? null : props.lessonId;
+  // `darsMi` bo'lganda `lessonId` HAR DOIM `number` — yuqoridagi ikki
+  // tayinlashning o'zi buni ta'minlaydi (union boshqa holatni bermaydi).
+  // Pastda uni har safar qayta isbotlash yoki "as number" sepishning
+  // o'rniga, shu BITTA joyda non-null qilib olinadi; faqat `darsMi`
+  // aniqlangan joylarda ishlatiladi.
+  const darsLessonId = lessonId as number;
 
   // Ikkala so'rov ham DOIM chaqiriladi (Hooks tartibi shart), faqat
   // `manba`ga mos kelmagani `enabled: false`/`NaN` bilan o'chiriladi.
-  const darsSeans = useUebungSeans(darsMi ? (lessonId ?? NaN) : NaN);
+  // `lessonId` faqat `!darsMi` bo'lganda `null` — `?? NaN` shu holatni
+  // to'g'ridan-to'g'ri o'chirishga aylantiradi, qo'shimcha shart shart emas.
+  const darsSeans = useUebungSeans(lessonId ?? NaN);
   const takrorlashSeans = useWiederholung(!darsMi);
   const seans = darsMi ? darsSeans : takrorlashSeans;
 
-  const lesson = useLernenLesson(darsMi ? (lessonId ?? NaN) : NaN);
+  const lesson = useLernenLesson(lessonId ?? NaN);
   const pruefen = usePruefen();
   const ersatzSorov = useErsatz();
   const abschluss = useAbschluss();
@@ -146,7 +166,7 @@ export function SeansEkrani({ lessonId, manba = "dars" }: SeansEkraniProps) {
         // yetmay, o'quvchi natija ekranini ko'rmay qolardi.
         const ersatz = await ersatzSorov
           .mutateAsync({
-            lessonId: lessonId as number,
+            lessonId: darsLessonId,
             itemType: frage.itemType,
             itemId: frage.itemId,
             nichtFormat: frage.format,
@@ -194,7 +214,7 @@ export function SeansEkrani({ lessonId, manba = "dars" }: SeansEkraniProps) {
 
     abschluss.mutate(
       {
-        lessonId: lessonId as number,
+        lessonId: darsLessonId,
         richtig: holat.togri,
         gesamt: holat.jami,
         durationMs: tugashDavomiyligi.current,
@@ -213,8 +233,9 @@ export function SeansEkrani({ lessonId, manba = "dars" }: SeansEkraniProps) {
     // - `abschluss` — uning `.mutate`si react-query tomonidan barqaror
     //   ulanadi, render sayin o'zgarmaydi.
     // - `tugadimi` — sof, modul darajasidagi import, hech qachon o'zgarmaydi.
-    // - `lessonId`, `darsMi` — shu ekran o'rnatilgan davomida o'zgarmaydigan
-    //   propslar (marshrut/chaqiruvchi belgilaydi, hayot davomida barqaror).
+    // - `darsLessonId`, `darsMi` — shu ekran o'rnatilgan davomida
+    //   o'zgarmaydigan propslardan hisoblanadi (marshrut/chaqiruvchi
+    //   belgilaydi, hayot davomida barqaror).
     // - `seansBoshi` — holat, lekin bu effekt HECH QACHON "eski" chaqiruv
     //   sifatida qolib ketmaydi: pastdagi klaviatura effektidan farqli
     //   o'laroq, bu yerda uzoq umr ko'radigan listener O'RNATILMAYDI — u
@@ -331,12 +352,17 @@ export function SeansEkrani({ lessonId, manba = "dars" }: SeansEkraniProps) {
 
   if (seans.isError) {
     const status = axios.isAxiosError(seans.error) ? seans.error.response?.status : null;
-    if (status === 404) {
+    // `darsMi`ga bog'langan: 404 faqat "bu ID'dagi dars topilmadi" degani,
+    // va bu tushuncha `wiederholung/uebung`ga tegishli emas — u dinamik
+    // ID olmaydi, shuning uchun bu yerda haqiqatda erishib bo'lmaydi.
+    // Takrorlashda istalgan xato pastdagi umumiy "Qayta urinish" holatiga
+    // tushadi, u ham to'g'ri harakat — sahifa emas, so'rov qayta so'raladi.
+    if (darsMi && status === 404) {
       return (
         <div className="mx-auto w-full max-w-2xl px-4 pt-10">
           <EmptyState
             icon={<Books size={28} weight="bold" />}
-            title={darsMi ? "Bu dars topilmadi" : "Sahifa topilmadi"}
+            title="Bu dars topilmadi"
             action={
               <Button variant="secondary" onClick={() => router.push("/portal/lernen")}>
                 Orqaga
@@ -366,7 +392,7 @@ export function SeansEkrani({ lessonId, manba = "dars" }: SeansEkraniProps) {
       // Yangi dvigatel bu dars uchun savol qura olmadi (masalan eski DiB
       // darsi) — Faza 2 ning eski sahifasiga tushiladi, u lug'at + mavjud
       // mashqlarni ko'rsatadi.
-      return <LernenLessonPage lessonId={lessonId as number} />;
+      return <LernenLessonPage lessonId={darsLessonId} />;
     }
     // Takrorlashda bo'sh natija ODATIY holat — hech kimning so'zi
     // muddati kelmagan bo'lishi mumkin. Xato ko'rinishi ISHLATILMAYDI,

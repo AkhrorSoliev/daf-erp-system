@@ -67,10 +67,11 @@ export interface LernenUnitSummary {
  *
  * Yo'l zigzagida har seans o'z tugunini oladi, shuning uchun bu javob
  * ham bo'lim ekrani bilan bir xil `sections`/`finalTest` shaklini oladi
- * — `yolTugunlari` shu ikkisidan tugunlarni quradi. `LernenUnitSummary`
- * dan ALOHIDA tur: eski `fortschritt.ts` (`unitHolati`) faqat
- * `lessonCount`/`doneCount` bilan ishlaydi va bo'limlarni bilishi shart
- * emas.
+ * — `yolTugunlari` shu ikkisidan tugunlarni quradi. `LernenUnitSummary`ni
+ * KENGAYTIRADI, uni takrorlamaydi: `sections`/`finalTest` faqat yo'lga
+ * kerak, unit haqidagi minimal ma'lumot (`id`/`titleUz`/`lessonCount`/
+ * `doneCount`) esa boshqa joyda ham ishlatiladigan asosiy shakl bo'lib
+ * qoladi.
  */
 export interface LernenLevelUnit extends LernenUnitSummary {
   sections: LernenSectionGroup[];

@@ -6,7 +6,7 @@ import { ArrowsClockwise, CaretRight } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { LessonNode, type LessonNodeTone } from "../../lumio";
 import type { LernenLevel } from "../types";
-import { yolTugunlari, type YolTugun } from "./yol-tuzilishi";
+import { yolQatorMetasi, yolTugunlari, type YolTugun } from "./yol-tuzilishi";
 
 /** Daraja rangi — CEO tasdiqlagan uchlik: A1 koral, A2 teal, B1 uzum. */
 const DARAJA_TONE: Record<string, LessonNodeTone> = {
@@ -38,44 +38,6 @@ const TEKISLASH = [
 
 export interface LernenYolProps {
   levels: LernenLevel[];
-}
-
-interface ZigzagMeta {
-  align: (typeof TEKISLASH)[number];
-  ostyozuvKorinsinmi: boolean;
-}
-
-/**
- * Har tugun uchun zigzag tekislanishi va "bo'lim o'zgardimi" bayrog'ini
- * OLDINDAN, bitta o'tishda hisoblaydi.
- *
- * Bu ataylab render funksiyasidan TASHQARIDA turadi: hisoblash ikkita
- * hisobchini (sanoq, oxirgi ko'rilgan bo'lim) ketma-ket yangilab boradi,
- * va bunday mutatsiyani `.map` chaqiruvi ICHIDA, komponent tanasida
- * saqlangan o'zgaruvchilar orqali qilish React Compiler tomonidan
- * xavfsiz hisoblanmaydi (render sof bo'lishi shart). Alohida sof
- * funksiyada esa hisobchilar shu funksiyaning o'zigagina tegishli.
- */
-function zigzagMetaHisobla(tugunlar: YolTugun[]): ZigzagMeta[] {
-  const natija: ZigzagMeta[] = [];
-  let seansSanoq = 0;
-  let oldingiOstyozuv: string | null = null;
-
-  for (const tugun of tugunlar) {
-    if (tugun.tur === "daraja" || tugun.tur === "unit") {
-      // To'liq kenglikdagi qatorlar — tekislanishga ega emas, zigzag
-      // sanog'ini o'zgartirmaydi.
-      natija.push({ align: TEKISLASH[0], ostyozuvKorinsinmi: false });
-      continue;
-    }
-    const align = TEKISLASH[seansSanoq % TEKISLASH.length];
-    seansSanoq += 1;
-    const ostyozuvKorinsinmi = tugun.ostyozuv !== oldingiOstyozuv;
-    oldingiOstyozuv = tugun.ostyozuv;
-    natija.push({ align, ostyozuvKorinsinmi });
-  }
-
-  return natija;
 }
 
 /** Daraja o'zgargan joydagi ajratuvchi yorliq — masalan "A1". */
@@ -167,7 +129,10 @@ function SeansTuguni({
 export function LernenYol({ levels }: LernenYolProps) {
   const router = useRouter();
   const tugunlar = React.useMemo(() => yolTugunlari(levels), [levels]);
-  const zigzag = React.useMemo(() => zigzagMetaHisobla(tugunlar), [tugunlar]);
+  // Zigzag bosqichi va "bo'lim o'zgardimi" bayrog'i `yol-tuzilishi.ts`da
+  // hisoblanadi va sinaladi (`yol-tuzilishi.test.ts`) — bu komponent faqat
+  // bosqich raqamini Tailwind tekislanish sinfiga aylantiradi.
+  const zigzag = React.useMemo(() => yolQatorMetasi(tugunlar), [tugunlar]);
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-5">
@@ -197,14 +162,15 @@ export function LernenYol({ levels }: LernenYolProps) {
           }
 
           // `seans` va `tez-orada` — zigzagning bosqichi, oldindan
-          // hisoblangan (`zigzagMetaHisobla`) meta bilan.
+          // hisoblangan (`yolQatorMetasi`) meta bilan.
           const meta = zigzag[i];
+          const align = TEKISLASH[meta.zigzagBosqichi % TEKISLASH.length];
 
           return (
             <SeansTuguni
               key={tugun.tur === "seans" ? `seans-${tugun.id}` : `tez-orada-${i}-${tugun.daraja}`}
               tugun={tugun}
-              align={meta.align}
+              align={align}
               ostyozuvKorinsinmi={meta.ostyozuvKorinsinmi}
               onClick={
                 tugun.tur === "seans" && tugun.holat !== "locked"

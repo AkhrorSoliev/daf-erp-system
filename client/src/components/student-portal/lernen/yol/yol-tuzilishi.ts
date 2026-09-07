@@ -136,6 +136,59 @@ export function yolTugunlari(levels: YolDarajaKirish[]): YolTugun[] {
   return tugunlar;
 }
 
+export interface YolQatorMeta {
+  /**
+   * Zigzag bosqichi — faqat `seans`/`tez-orada` tugunlari uchun oshib
+   * boradi (0, 1, 2, …), `daraja`/`unit` uchun har doim `0`. Renderlovchi
+   * (`LernenYol`) bu sonni to'rtta tekislanishdan (markaz/o'ng/markaz/chap)
+   * biriga aylantiradi — bu yerda faqat SANOQ beriladi, Tailwind sinfi
+   * emas, chunki tekislanishning o'zi vizual tanlov, sof mantiq emas.
+   */
+  zigzagBosqichi: number;
+  /** Shu tugun ustida bo'lim nomi (`ostyozuv`) ko'rsatilsinmi. */
+  ostyozuvKorinsinmi: boolean;
+}
+
+/**
+ * Har tugun uchun zigzag bosqichini va "bo'lim nomi ko'rsatilsinmi"
+ * bayrog'ini OLDINDAN, bitta o'tishda hisoblaydi.
+ *
+ * Ikkovi HAR XIL chegara qoidasiga ega, ataylab:
+ *
+ *  - Zigzag bosqichi unit/daraja qatorlari ustidan TO'XTAMASDAN o'tadi —
+ *    ular to'liq kenglikda bo'lsa ham, naqsh davom etishi kerak (aks
+ *    holda har unit boshida markazdan qayta boshlanib, yo'l notekis
+ *    ko'rinardi). Bu chegarani kesish/kesmaslik VIZUAL qaror, shuning
+ *    uchun bu yerda ataylab o'zgartirilmaydi.
+ *
+ *  - Bo'lim yorlig'i xotirasi esa HAR unit/daraja chegarasida TOZALANADI:
+ *    bir unitning oxirgi bo'limi bilan keyingi unitning birinchi bo'limi
+ *    bir xil nomni olib qolishi mumkin (masalan ikkalasi ham "Kirish"),
+ *    va bu holda ular BOSHQA-BOSHQA bo'lim — ikkinchisi ham o'z yorlig'ini
+ *    ko'rsatishi kerak. Tozalanmasa, tasodifan mos kelgan nom joyida
+ *    yorliq JIMgina yo'qolib ketardi — bu mantiqiy xato, vizual tanlov
+ *    emas, shuning uchun mustaqil sinaladi.
+ */
+export function yolQatorMetasi(tugunlar: YolTugun[]): YolQatorMeta[] {
+  const natija: YolQatorMeta[] = [];
+  let zigzagBosqichi = 0;
+  let oldingiOstyozuv: string | null = null;
+
+  for (const tugun of tugunlar) {
+    if (tugun.tur === "daraja" || tugun.tur === "unit") {
+      oldingiOstyozuv = null;
+      natija.push({ zigzagBosqichi: 0, ostyozuvKorinsinmi: false });
+      continue;
+    }
+    const ostyozuvKorinsinmi = tugun.ostyozuv !== oldingiOstyozuv;
+    oldingiOstyozuv = tugun.ostyozuv;
+    natija.push({ zigzagBosqichi, ostyozuvKorinsinmi });
+    zigzagBosqichi += 1;
+  }
+
+  return natija;
+}
+
 /**
  * 1000 dan boshlab `k` bilan qisqartiradi, bitta kasr xonasi bilan
  * (`1.2k`), butun bo'lsa kasrsiz (`16k`). Mingdan kichigi o'zgarmaydi.

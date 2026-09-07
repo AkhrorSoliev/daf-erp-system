@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { qisqaRaqam, yolTugunlari } from "./yol-tuzilishi";
+import { qisqaRaqam, yolQatorMetasi, yolTugunlari } from "./yol-tuzilishi";
 
 const seans = (id: number, done: boolean) => ({
   id, order: id, kind: "SECTION_A" as const, titleDe: "", titleUz: null,
@@ -76,6 +76,67 @@ describe("yolTugunlari", () => {
 
   it("bo'sh ro'yxat bo'sh yo'l", () => {
     expect(yolTugunlari([])).toEqual([]);
+  });
+});
+
+describe("yolQatorMetasi", () => {
+  const seansIndexlari = (t: ReturnType<typeof yolTugunlari>) =>
+    t.map((x, i) => (x.tur === "seans" ? i : null)).filter((i): i is number => i !== null);
+
+  it("zigzag bosqichi unit sarlavhasi ustidan TO'XTAMASDAN o'tadi", () => {
+    // Ikki unit, har biri ikkita seans bilan: unit sarlavhasi orasida
+    // kirib turishi zigzagni 0dan qayta boshlamasligi kerak — aks holda
+    // har unit boshida bir xil tekislanish takrorlanib, naqsh notekis
+    // ko'rinardi.
+    const t = yolTugunlari([
+      lvl("A1", [
+        unit(1, [bolim(1, [seans(100, false), seans(101, false)])]),
+        unit(2, [bolim(2, [seans(200, false), seans(201, false)])]),
+      ]),
+    ]);
+    const meta = yolQatorMetasi(t);
+    const bosqichlar = seansIndexlari(t).map((i) => meta[i].zigzagBosqichi);
+    expect(bosqichlar).toEqual([0, 1, 2, 3]);
+  });
+
+  it("daraja yorlig'i ham zigzag sanog'ini o'zgartirmaydi", () => {
+    const t = yolTugunlari([
+      lvl("A1", [unit(1, [bolim(1, [seans(100, false)])])]),
+      lvl("A2", [unit(2, [bolim(2, [seans(200, false)])])]),
+    ]);
+    const meta = yolQatorMetasi(t);
+    const bosqichlar = seansIndexlari(t).map((i) => meta[i].zigzagBosqichi);
+    expect(bosqichlar).toEqual([0, 1]);
+  });
+
+  it("bitta unit ichida bo'lim o'zgarmasa yorliq faqat birinchi seansda ko'rinadi", () => {
+    const t = yolTugunlari([
+      lvl("A1", [unit(1, [bolim(1, [seans(100, false), seans(101, false)])])]),
+    ]);
+    const meta = yolQatorMetasi(t);
+    const korinadimi = seansIndexlari(t).map((i) => meta[i].ostyozuvKorinsinmi);
+    expect(korinadimi).toEqual([true, false]);
+  });
+
+  it("bo'lim yorlig'i xotirasi UNIT chegarasida tozalanadi — bir xil nomli bo'lim ham qayta ko'rsatiladi", () => {
+    // `bolim(1, ...)` ikkala unitda ham "Bo'lim 1" nomini beradi —
+    // ATAYLAB bir xil. Bular ikki BOSHQA bo'lim (turli unitga tegishli),
+    // shuning uchun ikkinchisi ham o'z yorlig'ini ko'rsatishi kerak;
+    // xotira tozalanmasa, tasodifan mos kelgan nom uni jimgina yutib
+    // yuborardi.
+    const t = yolTugunlari([
+      lvl("A1", [
+        unit(1, [bolim(1, [seans(100, false)])]),
+        unit(2, [bolim(1, [seans(200, false)])]),
+      ]),
+    ]);
+    const meta = yolQatorMetasi(t);
+    const korinadimi = seansIndexlari(t).map((i) => meta[i].ostyozuvKorinsinmi);
+    expect(korinadimi).toEqual([true, true]);
+  });
+
+  it("bo'sh ro'yxat bo'sh meta", () => {
+    expect(yolQatorMetasi([])).toEqual([]);
   });
 });
 
