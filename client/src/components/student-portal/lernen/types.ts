@@ -192,6 +192,12 @@ export interface Fortschritt {
   /** Guruhi yo'q yoki guruh ro'yxati bo'sh bo'lsa `null`. */
   wochePlatzGruppe: number | null;
   wochePlatzZentrum: number;
+  /**
+   * Bugun MUDDATI KELGAN so'zlar soni — Takrorlash tugmasi shu songa
+   * qarab faol/xira bo'ladi (dizayn §4). Nol bo'lsa tugma "bugun
+   * takrorlanadigan so'z yo'q" deb bosilmay qoladi.
+   */
+  faelligeWoerter: number;
 }
 
 /** Reyting jadvalidagi bitta qator. */

@@ -172,6 +172,13 @@ export function useAbschluss() {
       // tugagach ular eski qiymatni ko'rsatib qolardi.
       void qc.invalidateQueries({ queryKey: ["lernen", "fortschritt"] });
       void qc.invalidateQueries({ queryKey: ["lernen", "reyting"] });
+      // Takrorlash so'rovi `staleTime: Infinity` bilan abadiy keshda
+      // turadi (Fix 3) — bu invalidatsiya bo'lmasa, oddiy DARS seansi
+      // ham muddati kelgan so'zlarni "yeb qo'yadi" (Leitner holatini
+      // yangilaydi), lekin takrorlash keshi buni bilmay, o'quvchi
+      // Takrorlashga kirganda ESKI (endi noto'g'ri) 12 savolni ko'rib
+      // qoladi.
+      void qc.invalidateQueries({ queryKey: ["lernen", "wiederholung"] });
     },
   });
 }

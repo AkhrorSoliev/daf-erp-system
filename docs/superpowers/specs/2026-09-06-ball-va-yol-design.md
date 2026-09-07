@@ -234,7 +234,13 @@ jadvalida ko'rinadi.
 
 **Faqat o'quvchilar.** Xodim, o'qituvchi va CEO jadvalga tushmaydi.
 
-**Teng ball** — oldin yetgani yuqorida turadi.
+**Teng ball** — `studentId` bo'yicha o'sish tartibida, barqaror. Haftalik
+yig'indi (`groupBy` + `_sum`) kim tengni QACHON yetganini saqlamaydi — faqat
+oxirgi urinish vaqti bor, u esa tengga yetgan lahza emas — shuning uchun
+"oldin yetgani yuqorida" qoidasi bu ma'lumotdan chiqarib bo'lmaydi.
+Determinstik tartib esa haqiqiy talab: aks holda `groupBy` natijasining
+kafolatlanmagan tartibi tufayli bir xil ball ikki so'rovda ikki xil o'rin
+ko'rsatishi mumkin edi.
 
 ---
 

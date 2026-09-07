@@ -31,6 +31,27 @@ const WORT_FORMATE: FrageFormat[] = ['WORT_UZ', 'UZ_WORT', 'ARTIKEL'];
 const WIEDERHOLUNG_ULUSH = 6;
 const SEANS_UZUNLIGI = 12;
 
+/**
+ * `lexemeId` bo'yicha DEDUPLIKATSIYA — bir xil so'z ro'yxatda ikki marta
+ * bo'lsa, FAQAT BIRINCHI uchrashuv qoladi.
+ *
+ * HIMOYA QATLAMI (Finding 1, `PAAR` ball ko'paytmasi): asosiy to'siq
+ * `pruefePaar`da (to'rtta ANIQ juft talabi) — u bitta so'zni to'rt marta
+ * nomlagan javobni butunlay MALFORMED deb rad etadi. Lekin agar ertaga
+ * kimdir shu talabni chetlab o'tsa ham (masalan boshqa formatga
+ * kengaytirilganda), bu funksiya ikkinchi qatlam bo'lib qoladi: bitta
+ * so'z bir so'rovda bir necha marta ballanib, Leitner holati bir necha
+ * marta yangilanib ketmasin.
+ */
+function dedupeLexemeId<T extends { lexemeId: number }>(items: T[]): T[] {
+  const koerilgan = new Set<number>();
+  return items.filter((item) => {
+    if (koerilgan.has(item.lexemeId)) return false;
+    koerilgan.add(item.lexemeId);
+    return true;
+  });
+}
+
 function mischen<T>(items: T[], rnd: () => number): T[] {
   const out = [...items];
   for (let i = out.length - 1; i > 0; i -= 1) {
@@ -714,49 +735,33 @@ export class UebungService {
       const natija = await this.pruefePaar(given, material.unitId);
       isCorrect = natija.isCorrect;
       richtig = natija.richtig;
-      paarNatijalari = natija.paare
-        .filter((p) => p.lexemeId != null)
-        .map((p) => ({ lexemeId: p.lexemeId as number, ok: p.ok }));
+      // Himoya qatlami: `pruefePaar` allaqachon takrorlangan so'zli
+      // javobni butunlay rad etadi (bo'sh `paare` bilan qaytadi), lekin
+      // bu yerda ham DEDUPLIKATSIYA qilinadi — bitta so'z ikki marta
+      // ballanmasin va Leitner holati bir necha marta yangilanmasin.
+      paarNatijalari = dedupeLexemeId(
+        natija.paare
+          .filter((p) => p.lexemeId != null)
+          .map((p) => ({ lexemeId: p.lexemeId as number, ok: p.ok })),
+      );
     } else {
       const antwort = richtigeAntwort(format, material);
       isCorrect = istRichtig(given, antwort.richtig, antwort.akzeptiert);
       richtig = antwort.richtig;
     }
 
-    // Ball uchun so'zning muddati YOZUVDAN OLDIN o'qiladi: pastdagi
-    // `aktualisiereZustand` uni kelajakka surib yuboradi va keyin
-    // "muddati kelganmidi" degan savolga javob berib bo'lmaydi.
-    const betroffeneWortIds = paarNatijalari
-      ? paarNatijalari.map((p) => p.lexemeId)
+    // Bu javob qaysi so'z(lar)ga tegishli — PAAR uchun deduplikatsiya
+    // qilingan ro'yxat, oddiy WORT savoli uchun bitta so'z, gap/ibora
+    // uchun bo'sh.
+    const betroffeneWoerter = paarNatijalari
+      ? paarNatijalari.map((p) => ({ lexemeId: p.lexemeId, richtig: p.ok }))
       : itemType === 'WORT'
-        ? [itemId]
+        ? [{ lexemeId: itemId, richtig: isCorrect }]
         : [];
-
-    const jetzt = new Date();
-    const zustaende = betroffeneWortIds.length
-      ? ((await this.prisma.dafLexemeState.findMany({
-          where: {
-            studentId: ctx.studentId,
-            lexemeId: { in: betroffeneWortIds },
-          },
-        } as any)) as Array<{ lexemeId: number; dueAt: Date }>)
-      : [];
-    const dueByWort = new Map(zustaende.map((z) => [z.lexemeId, z.dueAt]));
-
-    // Holatsiz so'z — hech qachon so'ralmagan, ya'ni MUDDATI KELGAN.
-    const istFaellig = (lexemeId: number): boolean => {
-      const due = dueByWort.get(lexemeId);
-      return due == null || due.getTime() <= jetzt.getTime();
-    };
-
-    const punkteEingabe = paarNatijalari
-      ? paarNatijalari.map((p) => ({
-          faellig: istFaellig(p.lexemeId),
-          richtig: p.ok,
-        }))
-      : itemType === 'WORT'
-        ? [{ faellig: istFaellig(itemId), richtig: isCorrect }]
-        : [];
+    const punkteEingabe = await this.punkteEingabeFuer(
+      ctx.studentId,
+      betroffeneWoerter,
+    );
     const points = punkteFuer(punkteEingabe);
 
     const branchId = await tryResolveStudentBranchId(
@@ -807,6 +812,41 @@ export class UebungService {
   }
 
   /**
+   * Berilgan so'zlar ball uchun MUDDATI KELGANMI — savolni `punkteFuer`ga
+   * yuboriladigan shaklga o'tkazadi.
+   *
+   * MUDDAT YOZUVDAN OLDIN O'QILADI: chaqiruvchida keyinroq ishlaydigan
+   * `aktualisiereZustand` shu so'zlarning `dueAt`sini kelajakka surib
+   * yuboradi — o'qish o'sha yozuvdan KEYIN sodir bo'lsa, "muddati
+   * kelganmidi" degan savolga to'g'ri javob berib bo'lmaydi (band bo'lgan
+   * holat allaqachon "kelmagan" ko'rinadi).
+   */
+  private async punkteEingabeFuer(
+    studentId: number,
+    woerter: Array<{ lexemeId: number; richtig: boolean }>,
+  ): Promise<Array<{ faellig: boolean; richtig: boolean }>> {
+    const lexemeIds = woerter.map((w) => w.lexemeId);
+    const jetzt = new Date();
+    const zustaende = lexemeIds.length
+      ? ((await this.prisma.dafLexemeState.findMany({
+          where: { studentId, lexemeId: { in: lexemeIds } },
+        } as any)) as Array<{ lexemeId: number; dueAt: Date }>)
+      : [];
+    const dueByWort = new Map(zustaende.map((z) => [z.lexemeId, z.dueAt]));
+
+    // Holatsiz so'z — hech qachon so'ralmagan, ya'ni MUDDATI KELGAN.
+    const istFaellig = (lexemeId: number): boolean => {
+      const due = dueByWort.get(lexemeId);
+      return due == null || due.getTime() <= jetzt.getTime();
+    };
+
+    return woerter.map((w) => ({
+      faellig: istFaellig(w.lexemeId),
+      richtig: w.richtig,
+    }));
+  }
+
+  /**
    * Har juftni (`de=uz`) mustaqil tekshiradi va HAR SO'ZNING o'z
    * natijasini (`lexemeId` + `ok`) qaytaradi — chaqiruvchi shu natija
    * bilan o'sha so'zning Leitner holatini yangilaydi, umumiy verdikt
@@ -843,6 +883,18 @@ export class UebungService {
     }
 
     const deLar = juftlar.map(([de]) => de);
+
+    // TO'RTTA ANIQ SO'Z SHART (Finding 1: PAAR ball ko'paytmasi). `PAAR`
+    // savoli qurilishida to'rt so'z HAR DOIM turlicha — shuning uchun bir
+    // xil nemischa so'z ikki (yoki to'rt) marta kelgan javob savol
+    // shaklini buzadi, xuddi to'rttadan farqli juft soni kabi. Bunday
+    // javobni "qisman to'g'ri" deb hisoblash bitta muddati kelgan so'zni
+    // (masalan `das Haus=uy` to'rt marta) TO'RT MARTA ballash va uning
+    // Leitner holatini bitta so'rovda to'rt marta yangilab, muddatini
+    // kunlar oldinga surib yuborish imkonini berardi.
+    if (new Set(deLar).size !== deLar.length) {
+      return { isCorrect: false, richtig: '', paare: [] };
+    }
     const soezler = (await this.prisma.dafLexeme.findMany({
       where: { de: { in: deLar }, unitId },
     } as any)) as Array<{ id: number; de: string; uz: string }>;

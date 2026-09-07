@@ -23,6 +23,14 @@ export interface YolUnitKirish {
   id: number;
   titleUz: string;
   sections: LernenSectionGroup[];
+  /**
+   * Unitning yakuniy sinovi — bo'lim ekrani (`LernenUnitPage`) uni
+   * `sections`dan KEYIN qulf zanjiriga qo'shadi (Finding 4). Yo'l bu
+   * maydonni e'tiborsiz qoldirsa, o'quvchi bo'limlarni tugatgach yo'l
+   * keyingi unitga o'tib ketadi, bo'lim ekrani esa hamon "Yakuniy sinov
+   * navbatda" deydi — ikki ekran ziddiyatga kelardi.
+   */
+  finalTest: LernenSeans | null;
 }
 
 export interface YolTugun {
@@ -62,6 +70,11 @@ export function yolTugunlari(levels: YolDarajaKirish[]): YolTugun[] {
         for (const seans of bolim.lessons) {
           hammaSeanslar.push({ daraja: daraja.level, seans });
         }
+      }
+      // Yakuniy sinov bo'limlardan KEYIN, bir xil ketma-ketlikda —
+      // qulf zanjiri bo'lim ekrani bilan bir xil tartibni ko'rishi kerak.
+      if (unit.finalTest) {
+        hammaSeanslar.push({ daraja: daraja.level, seans: unit.finalTest });
       }
     }
   }
@@ -129,6 +142,23 @@ export function yolTugunlari(levels: YolDarajaKirish[]): YolTugun[] {
           });
           sanoq += 1;
         }
+      }
+
+      // Bo'lim ekrani (`LernenUnitPage`) yakuniy sinovni "Yakuniy sinov"
+      // sarlavhasi ostida, bo'limlardan KEYIN ko'rsatadi — shu nom
+      // `ostyozuv` sifatida qaytariladi, ikki ekran bir xil yorliqni
+      // ko'rsatsin. Bu tugun ham xuddi shu `holatOl(sanoq)` zanjiridan
+      // holat oladi, alohida hisoblanmaydi.
+      if (unit.finalTest) {
+        tugunlar.push({
+          tur: "seans",
+          id: unit.finalTest.id,
+          matn: unit.finalTest.titleUz ?? unit.finalTest.titleDe,
+          ostyozuv: "Yakuniy sinov",
+          daraja: daraja.level,
+          holat: holatOl(sanoq),
+        });
+        sanoq += 1;
       }
     }
   }

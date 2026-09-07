@@ -1063,3 +1063,110 @@ describe('pruefen — ball', () => {
     expect(data).toHaveProperty('branchId');
   });
 });
+
+describe('PAAR — ball ko`paytmasi (Fix 1: bitta so`z to`rt marta ballanmaydi)', () => {
+  const ctx = { studentId: 55, companyId: 1 };
+
+  /**
+   * `dafLexemeState`ni BIR NECHTA so'z uchun STATEFUL qiladi — "aralash"
+   * testda ba'zi so'zlar muddati kelgan, ba'zilari kelmagan bo'lishi
+   * kerak, buni faqat haqiqiy do'kon beradi (`fakeMitWort`ning yagona
+   * so'zga mo'ljallangan nusxasi buni qila olmaydi).
+   */
+  function fakeMitWoerterState(
+    holatlar: Record<number, { dueAt: Date; strength: number } | undefined>,
+  ) {
+    const prisma = fakePrisma();
+    const zustandStore = new Map<number, { dueAt: Date; strength: number }>();
+    for (const [id, holat] of Object.entries(holatlar)) {
+      if (holat) zustandStore.set(Number(id), holat);
+    }
+
+    prisma.dafLexemeState.findMany = jest.fn(async ({ where }: any) => {
+      const ids: number[] = where?.lexemeId?.in ?? [];
+      return ids
+        .filter((id) => zustandStore.has(id))
+        .map((id) => ({ lexemeId: id, ...zustandStore.get(id)! }));
+    }) as any;
+
+    prisma.dafLexemeState.findUnique = jest.fn(async ({ where }: any) => {
+      const lexemeId = where.studentId_lexemeId.lexemeId;
+      return zustandStore.get(lexemeId) ?? null;
+    }) as any;
+
+    prisma.dafLexemeState.upsert = jest.fn(async (args: any) => {
+      const lexemeId = args.where.studentId_lexemeId.lexemeId;
+      const yangi = args.update ?? args.create;
+      zustandStore.set(lexemeId, {
+        dueAt: yangi.dueAt,
+        strength: yangi.strength,
+      });
+      return { id: 1 };
+    }) as any;
+
+    return prisma;
+  }
+
+  it('to`rtta ANIQ muddati kelgan so`z — 40 ball (4 x 10)', async () => {
+    // hallo(1)/danke(2)/ich(3)/du(4) — hech qaysi holati yo'q, ya'ni
+    // hammasi muddati kelgan (`istFaellig`: holatsiz so'z = muddati kelgan).
+    const prisma = fakePrisma();
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'WORT',
+        itemId: 1,
+        format: 'PAAR',
+        given: 'hallo=salom|danke=rahmat|ich=men|du=sen',
+      },
+      ctx,
+    );
+    const call = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0];
+    expect(call.data.points).toBe(40);
+  });
+
+  // FINDING 1 (CRITICAL): bitta so'zni to'rt marta yuborib, uni to'rt
+  // marta ballash — va Leitner holatini bir so'rovda 0→1→2→3→4 qilib
+  // surib yuborish. Ushbu test FIX'DAN OLDIN qizil (40 ball, 4 marta
+  // upsert), FIX'DAN KEYIN yashil (0 ball — malformed javob, hech
+  // bo'lmasa bitta upsert) bo'lishi kutiladi. Natijalar hisobotda.
+  it("bitta so`zni to`rt marta yuborish — 0 ball, holat ko`pi bilan BIR MARTA yangilanadi", async () => {
+    const prisma = fakePrisma();
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'WORT',
+        itemId: 1,
+        format: 'PAAR',
+        given: 'hallo=salom|hallo=salom|hallo=salom|hallo=salom',
+      },
+      ctx,
+    );
+    const call = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0];
+    expect(call.data.points).toBe(0);
+    expect(
+      (prisma.dafLexemeState.upsert as jest.Mock).mock.calls.length,
+    ).toBeLessThanOrEqual(1);
+  });
+
+  it("aralash: ikkitasi muddati kelgan, ikkitasi kelmagan — faqat kelganlar uchun 20 ball", async () => {
+    const eski = new Date(Date.now() - 60_000);
+    const kelajak = new Date(Date.now() + 3 * 86_400_000);
+    // hallo(1), danke(2) — muddati kelgan; ich(3), du(4) — hali emas.
+    const prisma = fakeMitWoerterState({
+      1: { strength: 2, dueAt: eski },
+      2: { strength: 2, dueAt: eski },
+      3: { strength: 2, dueAt: kelajak },
+      4: { strength: 2, dueAt: kelajak },
+    });
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'WORT',
+        itemId: 1,
+        format: 'PAAR',
+        given: 'hallo=salom|danke=rahmat|ich=men|du=sen',
+      },
+      ctx,
+    );
+    const call = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0];
+    expect(call.data.points).toBe(20);
+  });
+});

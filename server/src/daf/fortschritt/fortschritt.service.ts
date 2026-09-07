@@ -13,6 +13,14 @@ export interface Fortschritt {
   wochePunkte: number;
   wochePlatzGruppe: number | null;
   wochePlatzZentrum: number;
+  /**
+   * Bugun MUDDATI KELGAN so'zlar soni — Takrorlash tugmasi shu songa
+   * qarab faol/xira bo'ladi (Fix 5, dizayn §4). `uebung.wiederholung()`
+   * aynan shu predikat (`dueAt <= hozir`) bilan so'z tanlaydi, shuning
+   * uchun bu son "tugma bosilsa savol chiqadimi" degan savolga aniq
+   * javob beradi — taxmin emas.
+   */
+  faelligeWoerter: number;
 }
 
 export interface ReytingZeile {
@@ -31,7 +39,8 @@ interface HaftalikYigindi {
   _sum: { points: number | null };
 }
 
-/** Markazda TOP 50 dan tashqarida qolgan qatorlarni yuboradi. */
+/** Markaz jadvalida TO'LIQ ko'rsatiladigan yuqori qatorlar soni — undan
+ * pastdagilar faqat o'z qatori sifatida (haqiqiy o'rni bilan) qo'shiladi. */
 const ZENTRUM_TOP_CHEGARA = 50;
 
 function ballOl(satr: HaftalikYigindi): number {
@@ -40,8 +49,12 @@ function ballOl(satr: HaftalikYigindi): number {
 
 /**
  * Ball bo'yicha kamayish, teng bo'lsa `studentId` bo'yicha o'sish tartibida
- * saralaydi — natija har so'rovda BARQAROR bo'lishi uchun (kim oldin
- * yetgani emas, chunki `groupBy` tartibi kafolatlanmagan).
+ * saralaydi — natija har so'rovda BARQAROR bo'lishi uchun.
+ *
+ * Haftalik yig'indi (`groupBy` + `_sum`) kim tengni QACHON yetganini
+ * saqlamaydi — faqat oxirgi urinish vaqti bor, u esa tengga yetgan lahza
+ * emas. `studentId` — bu jadvaldan chiqarib bo'ladigan yagona determinstik
+ * mezon (dizayn §6.2).
  */
 function saralaBarqaror<T extends HaftalikYigindi>(royxat: T[]): T[] {
   return [...royxat].sort((a, b) => {
@@ -72,7 +85,7 @@ export class FortschrittService {
   constructor(private readonly prisma: PrismaService) {}
 
   async uebersicht(studentId: number, companyId: number): Promise<Fortschritt> {
-    const [jamiy, urinishlar, groupId] = await Promise.all([
+    const [jamiy, urinishlar, groupId, faelligeWoerter] = await Promise.all([
       this.prisma.dafAttempt.aggregate({
         where: { studentId },
         _sum: { points: true },
@@ -84,6 +97,13 @@ export class FortschrittService {
         select: { createdAt: true },
       }),
       currentGroupId(this.prisma, studentId),
+      // `uebung.wiederholung()` bilan BIR XIL predikat (`dueAt <= hozir`)
+      // — bu shu o'quvchi uchun so'ragan `student`ga tegishli qatorlar
+      // ustida ishlaydi, deyarli bepul (`DafLexemeState` studentId bo'yicha
+      // indekslangan).
+      this.prisma.dafLexemeState.count({
+        where: { studentId, dueAt: { lte: new Date() } },
+      } as any),
     ]);
 
     const gesamt = jamiy._sum.points ?? 0;
@@ -100,13 +120,17 @@ export class FortschrittService {
 
     const wochenStart = wochenStartUtc(new Date());
 
-    const zentrumHaftalik = await this.prisma.dafAttempt.groupBy({
-      by: ['studentId'],
-      where: { companyId, createdAt: { gte: wochenStart } },
-      _sum: { points: true },
-    });
-    const zentrumSaralangan = saralaBarqaror(
-      oʻziniQoshib(zentrumHaftalik, studentId),
+    // Markaz o'rni `zentrumHaftaligi` orqali hisoblanadi — xuddi shu
+    // funksiya `reyting('zentrum')` jadvalini quradi. Guruh uchun
+    // qilingan tuzatish (pastdagi izohga qarang) markazga tegishli emas
+    // edi: `zentrumReytingi` o'z qatorini FAQAT o'quvchi shu hafta
+    // urinish qilgan bo'lsa qo'shar edi, shuning uchun dushanba ertalab
+    // chip "1-o'rin" deb, Markaz jadvali esa "hech kim ball yig'magan"
+    // deb ikkitasi bir vaqtda ikki xil javob berardi.
+    const zentrumSaralangan = await this.zentrumHaftaligi(
+      studentId,
+      companyId,
+      wochenStart,
     );
     const wochePunkte =
       zentrumSaralangan.find((s) => s.studentId === studentId)?._sum
@@ -141,6 +165,7 @@ export class FortschrittService {
       wochePunkte,
       wochePlatzGruppe,
       wochePlatzZentrum,
+      faelligeWoerter,
     };
   }
 
@@ -253,17 +278,44 @@ export class FortschrittService {
    * o'zgartirish oson unutiladigan xato: "51-o'rin" "TOP 50 + 1" deb 51
    * qilib qayta yozilsa, o'quvchining haqiqiy o'rni (masalan 137) yo'qoladi.
    */
-  private async zentrumReytingi(
+  /**
+   * Markazning haftalik saralangan ro'yxati (o'quvchining O'Z qatori
+   * MAJBURIY qo'shilgan, hatto nol ball bilan) — `uebersicht` (o'z
+   * o'rnini hisoblash uchun) va `zentrumReytingi` (jadval qurish uchun)
+   * IKKALASI HAM shu funksiyani chaqiradi.
+   *
+   * Guruh tomonida xuddi shu nomdagi `gruppeHaftaligi` bilan qilingan
+   * tuzatish shu yerga ham ko'chirildi: ilgari `zentrumReytingi` o'z
+   * qatorini FAQAT `top`da bo'lmasa VA topilsa qo'shar edi — `groupBy`
+   * natijasida esa hech qachon mashq qilmagan o'quvchi umuman yo'q edi.
+   * Natijada `uebersicht`ning chipi (bu funksiya orqali) o'quvchini "1-
+   * o'rin" deb ko'rsatardi, `reyting('zentrum')` esa uni umuman
+   * qatorlarda ko'rsatmasdi — ikki ekran bitta o'quvchiga ikki xil javob
+   * berardi (dizayn 6.2: har bir o'quvchi ikkalasida ham bo'lishi shart).
+   */
+  private async zentrumHaftaligi(
     studentId: number,
     companyId: number,
     wochenStart: Date,
-  ): Promise<ReytingZeile[]> {
+  ): Promise<HaftalikYigindi[]> {
     const haftalik = await this.prisma.dafAttempt.groupBy({
       by: ['studentId'],
       where: { companyId, createdAt: { gte: wochenStart } },
       _sum: { points: true },
     });
-    const saralangan = saralaBarqaror(haftalik);
+    return saralaBarqaror(oʻziniQoshib(haftalik, studentId));
+  }
+
+  private async zentrumReytingi(
+    studentId: number,
+    companyId: number,
+    wochenStart: Date,
+  ): Promise<ReytingZeile[]> {
+    const saralangan = await this.zentrumHaftaligi(
+      studentId,
+      companyId,
+      wochenStart,
+    );
     const darajali = saralangan.map((s, i) => ({
       studentId: s.studentId,
       punkte: ballOl(s),

@@ -11,11 +11,15 @@ const bolim = (id: number, lessons: ReturnType<typeof seans>[]) => ({
   id, order: id, code: `u01-s${id}`, titleUz: `Bo'lim ${id}`, titleDe: `Teil ${id}`, lessons,
 });
 
-const unit = (id: number, sections: ReturnType<typeof bolim>[]) => ({
+const unit = (
+  id: number,
+  sections: ReturnType<typeof bolim>[],
+  finalTest: ReturnType<typeof seans> | null = null,
+) => ({
   id, order: id, titleUz: `Unit ${id}`, titleDe: `Einheit ${id}`,
   lessonCount: sections.flatMap((s) => s.lessons).length,
   doneCount: sections.flatMap((s) => s.lessons).filter((l) => l.completedAt).length,
-  sections, finalTest: null,
+  sections, finalTest,
 });
 
 const lvl = (level: string, units: ReturnType<typeof unit>[]) => ({ level, label: level, units });
@@ -76,6 +80,37 @@ describe("yolTugunlari", () => {
 
   it("bo'sh ro'yxat bo'sh yo'l", () => {
     expect(yolTugunlari([])).toEqual([]);
+  });
+
+  // Finding 4: server `finalTest`ni har unit uchun alohida qaytaradi, lekin
+  // `yolTugunlari` faqat `unit.sections`ni yurar edi — `UNIT_TEST` seansi
+  // hech qanday tugun bermay, qulf zanjiridan butunlay tashqarida qolardi.
+  it("unitning yakuniy sinovi bo'limlardan KEYIN o'z tuguniga ega bo'ladi", () => {
+    const test100 = seans(999, false);
+    const t = yolTugunlari([
+      lvl("A1", [unit(1, [bolim(1, [seans(100, true)])], test100)]),
+    ]);
+    expect(t.map((x) => x.tur)).toEqual(["daraja", "unit", "seans", "seans"]);
+    const seanslar = t.filter((x) => x.tur === "seans");
+    expect(seanslar.map((s) => s.id)).toEqual([100, 999]);
+    // Bo'limning yagona seansi tugatilgan — navbat yakuniy sinovga o'tadi,
+    // xuddi bo'lim ekranidagi qulf zanjiri kabi.
+    expect(seanslar.map((s) => s.holat)).toEqual(["done", "active"]);
+    expect(seanslar[1].ostyozuv).toBe("Yakuniy sinov");
+  });
+
+  it("yakuniy sinov ham BUTUN yo'l qulf zanjiriga qatnashadi — keyingi unit uni kutadi", () => {
+    const test1 = seans(999, false);
+    const t = yolTugunlari([
+      lvl("A1", [
+        unit(1, [bolim(1, [seans(100, true)])], test1),
+        unit(2, [bolim(2, [seans(200, false)])]),
+      ]),
+    ]);
+    const seanslar = t.filter((x) => x.tur === "seans");
+    // 100 — done, 999 (yakuniy sinov) — active, 200 — hali qulf: unit 1
+    // yakuniy sinovi topshirilmaguncha unit 2 boshlanmaydi.
+    expect(seanslar.map((s) => s.holat)).toEqual(["done", "active", "locked"]);
   });
 });
 

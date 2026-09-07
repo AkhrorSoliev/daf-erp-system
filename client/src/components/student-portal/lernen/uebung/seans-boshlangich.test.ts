@@ -15,6 +15,7 @@ describe("fortschrittSurati", () => {
         wochePunkte: 40,
         wochePlatzGruppe: 5,
         wochePlatzZentrum: 12,
+        faelligeWoerter: 0,
       }),
     ).toEqual({ gesamt: 100, serie: 3, wochePlatzGruppe: 5 });
   });

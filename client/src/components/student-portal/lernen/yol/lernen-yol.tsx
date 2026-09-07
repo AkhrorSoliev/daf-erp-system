@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowsClockwise, CaretRight } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { LessonNode, type LessonNodeTone } from "../../lumio";
+import { useFortschritt } from "../queries";
 import type { LernenLevel } from "../types";
 import { yolQatorMetasi, yolTugunlari, type YolTugun } from "./yol-tuzilishi";
 
@@ -134,15 +135,44 @@ export function LernenYol({ levels }: LernenYolProps) {
   // bosqich raqamini Tailwind tekislanish sinfiga aylantiradi.
   const zigzag = React.useMemo(() => yolQatorMetasi(tugunlar), [tugunlar]);
 
+  const fortschritt = useFortschritt();
+  // Dizayn §4: hech qanday so'z muddati kelmagan bo'lsa tugma XIRA va
+  // bosilmaydi — bosilsa o'quvchi bo'sh ekranga tushardi (Fix 5).
+  //
+  // `fortschritt.isError` bo'lganda tugma FAOL qoladi, xira EMAS: ball
+  // va bu son shunchaki bezak, muvaffaqiyatsiz yon so'rov ishlaydigan
+  // funksiyani (Takrorlashning o'zini) o'quvchidan tortib olmasligi
+  // kerak — xuddi `YolTepasi`dagi qoidaning aksi (u yiqilsa yashiradi,
+  // bu yerda esa yiqilsa BAHONA bermay ishlashda davom etadi).
+  const xiraTakrorlash =
+    !fortschritt.isError &&
+    fortschritt.data != null &&
+    fortschritt.data.faelligeWoerter === 0;
+
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-5">
       <button
         type="button"
-        onClick={() => router.push("/portal/lernen/wiederholung")}
-        className="flex items-center justify-center gap-2 rounded-full border border-line bg-surface px-5 py-3 font-display text-sm font-extrabold text-ink-900 shadow-lumio-sm transition-transform active:translate-y-[2px] hover:-translate-y-0.5"
+        disabled={xiraTakrorlash}
+        onClick={
+          xiraTakrorlash
+            ? undefined
+            : () => router.push("/portal/lernen/wiederholung")
+        }
+        aria-disabled={xiraTakrorlash}
+        className={cn(
+          "flex items-center justify-center gap-2 rounded-full border border-line px-5 py-3 font-display text-sm font-extrabold shadow-lumio-sm transition-transform",
+          xiraTakrorlash
+            ? "cursor-not-allowed bg-tint text-ink-400"
+            : "bg-surface text-ink-900 active:translate-y-[2px] hover:-translate-y-0.5",
+        )}
       >
-        <ArrowsClockwise size={18} weight="bold" className="text-coral-500" />
-        Takrorlash
+        <ArrowsClockwise
+          size={18}
+          weight="bold"
+          className={xiraTakrorlash ? "text-ink-400" : "text-coral-500"}
+        />
+        {xiraTakrorlash ? "Bugun takrorlanadigan so'z yo'q" : "Takrorlash"}
       </button>
 
       <div className="flex flex-col gap-5">

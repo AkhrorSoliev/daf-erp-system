@@ -32,7 +32,10 @@ function Belgi({
 }) {
   const badan = (
     <span className="inline-flex items-center gap-1.5 rounded-pill border border-line bg-surface px-2.5 py-1.5 shadow-lumio-sm">
-      <span className={cn("inline-flex shrink-0 text-base", tone)}>
+      {/* `aria-hidden` — atrofdagi matn (qiymat + `ariaLabel`) ma'noni
+          allaqachon o'z ichiga oladi, ikonka faqat vizual bezak; usiz
+          skrin-rider har belgini ikki marta (SVG + matn) e'lon qilardi. */}
+      <span aria-hidden className={cn("inline-flex shrink-0 text-base", tone)}>
         {icon}
       </span>
       <span className="whitespace-nowrap font-display text-sm font-extrabold leading-none text-ink-900">

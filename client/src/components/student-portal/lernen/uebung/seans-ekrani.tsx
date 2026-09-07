@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { Books, CheckCircle, X } from "@phosphor-icons/react";
@@ -70,6 +71,7 @@ export type SeansEkraniProps =
  */
 export function SeansEkrani(props: SeansEkraniProps) {
   const router = useRouter();
+  const qc = useQueryClient();
 
   // Diskriminatsiya BIR MARTA, shu yerda: `props.manba` to'g'ridan-to'g'ri
   // tekshirilgani uchun TypeScript shu ifodaning ikkala tarmog'ida `props`ni
@@ -245,6 +247,16 @@ export function SeansEkrani(props: SeansEkraniProps) {
     // chaqiruvga osilib qolmay.
     void fortschritt.refetch();
 
+    // Takrorlash so'rovi (`useWiederholung`) `staleTime: Infinity` bilan
+    // abadiy keshda turadi va `abschluss` UMUMAN yubormaydi (pastda),
+    // shuning uchun uning `onSuccess`idagi invalidatsiya takrorlash
+    // seansini hech qachon eskirmagan qilib qo'ymaydi. Bu yerda — HAR
+    // IKKALA manba (`dars` ham) uchun — aniq invalidatsiya qilinadi: oddiy
+    // dars seansi ham muddati kelgan so'zlarni "yeb qo'yadi" (Leitner
+    // holatini yangilaydi), shu bois keyingi Takrorlashga kirganda eski
+    // (endi noto'g'ri) 12 savol emas, yangi holat ko'rinishi kerak.
+    void qc.invalidateQueries({ queryKey: ["lernen", "wiederholung"] });
+
     // Takrorlash hech qanday darsga tegishli emas — `abschluss` bitta
     // darsni "tugallandi" deb belgilaydi, bu yerda esa belgilanadigan
     // dars yo'q. Vaqt baribir yuqorida muzlatib qo'yilgan — natija
@@ -274,6 +286,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
     // - `fortschritt` — xuddi shunday, `.refetch`i barqaror; ro'yxatga
     //   qo'shilsa har `fortschritt.data` yangilanishida bu butun effekt
     //   qayta ishga tushib, `abschluss.mutate`ni ikkinchi marta chaqirardi.
+    // - `qc` — `useQueryClient()` bitta Providerdan olingan barqaror
+    //   obyekt, komponent umri davomida o'zgarmaydi.
     // - `tugadimi` — sof, modul darajasidagi import, hech qachon o'zgarmaydi.
     // - `darsLessonId`, `darsMi` — shu ekran o'rnatilgan davomida
     //   o'zgarmaydigan propslardan hisoblanadi (marshrut/chaqiruvchi
