@@ -14,6 +14,7 @@ import {
   useAbschluss,
   useErsatz,
   useFortschritt,
+  useJuftTekshir,
   useLernenLesson,
   usePruefen,
   useUebungSeans,
@@ -28,10 +29,17 @@ import {
   tugadimi,
   type SeansHolati,
 } from "../seans-navbat";
+import {
+  boshlaJuftlar,
+  hammasiTogri,
+  juftJavobKeldi,
+  juftQoshildi,
+  type JonliJuft,
+} from "./juft-holati";
 import { harakat, koersatma } from "./koersatma";
 import { Tanlash } from "./tanlash";
 import { Yozish } from "./yozish";
-import { Yigish, juftSoni } from "./yigish";
+import { Yigish, juftSoni, juftUstunlar } from "./yigish";
 import { DialogBlok } from "./dialog-blok";
 import { NatijaEkrani } from "./natija-ekrani";
 import {
@@ -98,6 +106,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
 
   const lesson = useLernenLesson(lessonId ?? NaN);
   const pruefen = usePruefen();
+  const juftTekshir = useJuftTekshir();
   const ersatzSorov = useErsatz();
   const abschluss = useAbschluss();
   const fortschritt = useFortschritt();
@@ -109,6 +118,20 @@ export function SeansEkrani(props: SeansEkraniProps) {
   const [tanlangan, setTanlangan] = React.useState<string | null>(null);
   const [yozilgan, setYozilgan] = React.useState("");
   const [yigilgan, setYigilgan] = React.useState<string[]>([]);
+  // Jonli juftlash (`PAAR`/`ZUORDNEN`) holati — `Yigish`/`Juftlash`
+  // buni faqat CHIZADI, hamma o'zgarish shu yerda sodir bo'ladi
+  // (`onJuft`, pastda). `yigilgan` bu ikki format uchun ISHLATILMAYDI.
+  const [juftlar, setJuftlar] = React.useState<JonliJuft[]>(boshlaJuftlar());
+  // Endigina xato bo'lgan (shu sabab `juftlar`dan olib tashlangan)
+  // juftlar — qisqa vaqt qizil ko'rsatish uchun (`Juftlash`ga
+  // `xatoIdxlar` sifatida uzatiladi).
+  const [xatoIdxlar, setXatoIdxlar] = React.useState<{ chapIdx: number; ongIdx: number }[]>([]);
+  // Joriy savolda nechta juft BIRINCHI urinishda xato bo'lgani —
+  // savol tugaganda sintetik `natija.isCorrect`ni hisoblash uchun
+  // (pastga qarang, `juftHammasiTogriEffekt`). Holat emas, REF: bu
+  // sanoq render'ni qayta chizishga sabab bo'lmasligi kerak — faqat
+  // `hammasiTogri` chin bo'lgan render'da bir marta o'qiladi.
+  const juftXatoSoni = React.useRef(0);
   const [natija, setNatija] = React.useState<PruefErgebnis | null>(null);
   const [savolBoshi, setSavolBoshi] = React.useState(() => Date.now());
   const [seansBoshi, setSeansBoshi] = React.useState(() => Date.now());
@@ -151,14 +174,17 @@ export function SeansEkrani(props: SeansEkraniProps) {
   const frage = holat ? joriy(holat) : null;
   const rejim = frage ? harakat(frage.format) : null;
 
+  // `PAAR`/`ZUORDNEN` `given`/`tayyor`ga UMUMAN muhtoj emas — ular
+  // `pruefen`ga hech qachon yuborilmaydi (har juft `onJuft` orqali
+  // alohida tekshiriladi, pastda). Shu ikkisi uchun `tayyor` doim
+  // `false`: bu "ikki bosqichli Tekshirish"ga tayyorlik degani, va
+  // ular uchun bunday bosqich yo'q.
   const given =
     rejim === "TANLASH"
       ? (tanlangan ?? "")
       : rejim === "YOZISH"
         ? yozilgan.trim()
-        : frage?.format === "SATZ_BAUEN"
-          ? yigilgan.join(" ")
-          : yigilgan.join("|"); // PAAR/ZUORDNEN: `chap=o'ng|chap=o'ng|…`
+        : yigilgan.join(" "); // SATZ_BAUEN
 
   const tayyor =
     rejim === "TANLASH"
@@ -166,11 +192,18 @@ export function SeansEkrani(props: SeansEkraniProps) {
       : rejim === "YOZISH"
         ? yozilgan.trim().length > 0
         : frage && (frage.format === "PAAR" || frage.format === "ZUORDNEN")
-          ? yigilgan.length === juftSoni(frage.format)
+          ? false
           : yigilgan.length > 0;
 
   const tekshir = () => {
     if (!frage || !tayyor || natija || pruefen.isPending) return;
+    // Eng muhim qoida (task brief): `pruefen` juftlash formatlarida
+    // CHAQIRILMAYDI — har juft allaqachon serverda (`useJuftTekshir`)
+    // baholangan, ikkinchi marta yuborilsa ball ikki karra hisoblanardi.
+    // `tayyor` yuqorida bu ikkisi uchun doim `false` bo'lgani uchun bu
+    // qator amalda yetib bo'lmaydi, lekin Enter klaviatura ushlagichi
+    // ham shu funksiyani chaqiradi — himoya qatlami sifatida qoladi.
+    if (frage.format === "PAAR" || frage.format === "ZUORDNEN") return;
     pruefen.mutate(
       {
         itemType: frage.itemType,
@@ -182,6 +215,91 @@ export function SeansEkrani(props: SeansEkraniProps) {
       { onSuccess: setNatija },
     );
   };
+
+  /**
+   * Chap va o'ng tugma bosilib juft hosil bo'lganda `Juftlash`dan
+   * chaqiriladi (`PAAR`/`ZUORDNEN`gina). So'rovni yuborish, javobni
+   * kutish va qachon savol tugaganini hal qilish — hammasi shu yerda,
+   * komponent esa faqat chizadi (loyihaning o'zgarmas qoidasi).
+   */
+  const onJuft = (chapIdx: number, ongIdx: number) => {
+    if (!frage || natija) return;
+    if (frage.format !== "PAAR" && frage.format !== "ZUORDNEN") return;
+    const format = frage.format;
+
+    // `juftQoshildi` band chap/o'ngni O'ZGARISHSIZ (bir xil massiv
+    // ma'lumotnomasi bilan) qaytaradi — shu orqali "haqiqatan qo'shildimi"
+    // ni bilib olamiz, band bo'lsa server umuman so'ralmaydi. Bu faqat
+    // himoya qatlami: `Juftlash` band tugmani allaqachon `disabled`
+    // qiladi.
+    const keyingiJuftlar = juftQoshildi(juftlar, chapIdx, ongIdx);
+    if (keyingiJuftlar === juftlar) return;
+    setJuftlar(keyingiJuftlar);
+
+    const { chapUstun, ongUstun } = juftUstunlar(frage.options, format);
+    juftTekshir.mutate(
+      {
+        // `frage.itemType` kengroq turga ega (`MaterialTyp`), lekin
+        // server PAAR uchun HAR DOIM `WORT`, ZUORDNEN uchun HAR DOIM
+        // `PHRASE` beradi (`wort-fragen.ts`/`satz-fragen.ts`) — shuning
+        // uchun bu yerda toraytirish xavfsiz.
+        itemType: frage.itemType as "WORT" | "PHRASE",
+        itemId: frage.itemId,
+        format,
+        chap: chapUstun[chapIdx],
+        ong: ongUstun[ongIdx],
+      },
+      {
+        onSuccess: (javob) => {
+          setJuftlar((prev) => juftJavobKeldi(prev, chapIdx, ongIdx, javob.isCorrect));
+          if (javob.isCorrect) return;
+
+          juftXatoSoni.current += 1;
+
+          // Harakatni kamaytirishni so'ragan o'quvchi uchun qizil
+          // chaqnash UMUMAN ko'rsatilmaydi — juft yuqoridagi
+          // `juftJavobKeldi` bilan allaqachon ro'yxatdan olib
+          // tashlangan, rang shu zahoti (oraliq holatsiz) "bo'sh"ga
+          // qaytadi.
+          const kamHarakatSoraladi =
+            typeof window !== "undefined" &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          if (kamHarakatSoraladi) return;
+
+          setXatoIdxlar((prev) => [...prev, { chapIdx, ongIdx }]);
+          setTimeout(() => {
+            setXatoIdxlar((prev) =>
+              prev.filter((x) => x.chapIdx !== chapIdx || x.ongIdx !== ongIdx),
+            );
+          }, 500);
+        },
+        onError: (err) => {
+          // Aloqa uzilsa juft OSILIB QOLMASLIGI kerak — eng yomon holat
+          // shu bo'lardi, chunki savol hech qachon tugamas edi.
+          // `juftJavobKeldi(..., false)` bilan ikkala tugma yana bo'sh
+          // (bosiladigan) bo'ladi, o'quvchi qayta bosadi. Bu XATO
+          // JAVOB sifatida HISOBLANMAYDI (`juftXatoSoni` oshmaydi) —
+          // server hech narsa demadi, xato demadi.
+          setJuftlar((prev) => juftJavobKeldi(prev, chapIdx, ongIdx, false));
+          toast.error(getErrorMessage(err, "Yuborib bo'lmadi. Qayta bosing"));
+        },
+      },
+    );
+  };
+
+  // Juftlash savoli tugaganda (hamma juft yashil): `javobBerildi`ga
+  // sintetik natija beriladi. `isCorrect` — hamma juft BIRINCHI
+  // urinishda to'g'ri bo'lganmi (`juftXatoSoni`), mijoz shuni sanaydi —
+  // xavfsiz, chunki bu faqat savolning KEYINROQ qaytishiga ta'sir
+  // qiladi (`javobBerildi`), ball esa allaqachon serverda hisoblangan.
+  // `richtig: ""` — juftlash savoli to'g'ri javobsiz tugaydi, chunki
+  // o'quvchi uni ekranda allaqachon yig'ib bo'lgan.
+  React.useEffect(() => {
+    if (!frage || natija) return;
+    if (frage.format !== "PAAR" && frage.format !== "ZUORDNEN") return;
+    if (!hammasiTogri(juftlar, juftSoni(frage.format))) return;
+    setNatija({ isCorrect: juftXatoSoni.current === 0, richtig: "" });
+  }, [juftlar, frage, natija]);
 
   const keyingi = async () => {
     // `ersatzSorov.isPending` ham qo'riqlaydi: `ersatz` so'rovi kutilayotgan
@@ -222,6 +340,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
     setTanlangan(null);
     setYozilgan("");
     setYigilgan([]);
+    setJuftlar(boshlaJuftlar());
+    setXatoIdxlar([]);
+    juftXatoSoni.current = 0;
     setSavolBoshi(Date.now());
   };
 
@@ -360,6 +481,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
     setTanlangan(null);
     setYozilgan("");
     setYigilgan([]);
+    setJuftlar(boshlaJuftlar());
+    setXatoIdxlar([]);
+    juftXatoSoni.current = 0;
     setSavolBoshi(Date.now());
     setSeansBoshi(Date.now());
   };
@@ -552,6 +676,15 @@ export function SeansEkrani(props: SeansEkraniProps) {
   }
 
   const yuborishXato = pruefen.isError;
+  // Juftlash formatlari (`PAAR`/`ZUORDNEN`) — jonli javob, ikki bosqichli
+  // "Tekshirish" yo'q. Pastdagi tugma va natija paneli shu bayroqqa
+  // qarab boshqa ko'rinishda chiziladi.
+  const juftlashRejimi = frage.format === "PAAR" || frage.format === "ZUORDNEN";
+  // Faqat pastdagi "Xato" panelining juftlar ro'yxati uchun — bir marta
+  // hisoblanadi, `juftlar.map` ichida qayta-qayta emas.
+  const juftlashUstunlar = juftlashRejimi
+    ? juftUstunlar(frage.options, frage.format as "PAAR" | "ZUORDNEN")
+    : null;
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col px-4 pb-40 pt-4">
@@ -611,9 +744,29 @@ export function SeansEkrani(props: SeansEkraniProps) {
             onEnter={() => (natija ? void keyingi() : tekshir())}
             kutilmoqda={pruefen.isPending}
           />
+        ) : juftlashRejimi ? (
+          // `key`: savol almashganda (itemId+format) `Juftlash` BUTUNLAY
+          // qayta o'rnatiladi — uning yagona mahalliy holati
+          // (`kutilayotganIdx`, ikkinchi tomonni kutayotgan tanlov)
+          // shu bilan avtomatik tozalanadi, alohida effekt kerak emas.
+          <Yigish
+            key={`${frage.itemType}:${frage.itemId}:${frage.format}`}
+            // `juftlashRejimi` — bu yerdagi shart — oddiy `boolean`, TypeScript
+            // uni tur qo'riqchisi sifatida ISHLATA OLMAYDI: `frage.format`
+            // hamon kengroq `FrageFormat` bo'lib qoladi. Toraytirish faqat
+            // `frage.format === "PAAR" || ... === "ZUORDNEN"`ni TO'G'RIDAN-
+            // TO'G'RI shu joyda yozsa ishlagan bo'lardi, lekin bu shartni
+            // ikkinchi marta takrorlagan bo'lardi — o'rniga `juftlashUstunlar`
+            // (yuqorida) bilan bir xil, ATAYLAB toraytirilgan quyi tur.
+            format={frage.format as "PAAR" | "ZUORDNEN"}
+            options={frage.options}
+            juftlar={juftlar}
+            xatoIdxlar={xatoIdxlar}
+            onJuft={onJuft}
+          />
         ) : (
           <Yigish
-            format={frage.format as "SATZ_BAUEN" | "PAAR" | "ZUORDNEN"}
+            format="SATZ_BAUEN"
             options={frage.options}
             tanlangan={yigilgan}
             onOzgar={setYigilgan}
@@ -637,7 +790,28 @@ export function SeansEkrani(props: SeansEkraniProps) {
                 {natija.isCorrect ? "To'g'ri!" : "Xato"}
               </p>
               {!natija.isCorrect ? (
-                <p className="mt-0.5 text-sm font-semibold text-ink-800">{natija.richtig}</p>
+                juftlashRejimi ? (
+                  // Jonli juftlashda `natija.richtig` ATAYLAB bo'sh
+                  // (o'quvchi to'g'ri javobni ekranda allaqachon yig'ib
+                  // bo'lgan — qayta ko'rsatishning hojati yo'q). Bu
+                  // panel shu sabab qisqa vaqt (Keyingi darrov bosiladi)
+                  // ko'rinadi, lekin ko'ringan daqiqada bo'sh qator
+                  // o'rniga hozirgi `juftlar` holatidan RO'YXAT chiziladi
+                  // — xuddi seans oxiridagi ro'yxatdagi kabi.
+                  <ul className="mt-1 space-y-0.5">
+                    {juftlar.map((j) => (
+                      <li
+                        key={`${j.chapIdx}-${j.ongIdx}`}
+                        className="flex items-center justify-between gap-3 text-sm font-semibold text-ink-800"
+                      >
+                        <span>{juftlashUstunlar?.chapUstun[j.chapIdx]}</span>
+                        <span>{juftlashUstunlar?.ongUstun[j.ongIdx]}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-0.5 text-sm font-semibold text-ink-800">{natija.richtig}</p>
+                )
               ) : null}
             </div>
           ) : yuborishXato ? (
@@ -645,13 +819,22 @@ export function SeansEkrani(props: SeansEkraniProps) {
               Yuborib bo&apos;lmadi. Qayta urinib ko&apos;ring
             </p>
           ) : null}
-          <Button
-            className="w-full"
-            onClick={natija ? () => void keyingi() : tekshir}
-            disabled={natija ? ersatzSorov.isPending : !tayyor || pruefen.isPending}
-          >
-            {natija ? "Keyingi" : pruefen.isPending ? "Tekshirilmoqda…" : "Tekshirish"}
-          </Button>
+          {juftlashRejimi ? (
+            // Juftlashda "Tekshirish" bosqichi yo'q — tugma FAQAT
+            // «Keyingi», va u hamma juft yashil bo'lgandagina (`natija`
+            // yuqoridagi effekt orqali o'rnatilganda) faollashadi.
+            <Button className="w-full" onClick={() => void keyingi()} disabled={!natija || ersatzSorov.isPending}>
+              Keyingi
+            </Button>
+          ) : (
+            <Button
+              className="w-full"
+              onClick={natija ? () => void keyingi() : tekshir}
+              disabled={natija ? ersatzSorov.isPending : !tayyor || pruefen.isPending}
+            >
+              {natija ? "Keyingi" : pruefen.isPending ? "Tekshirilmoqda…" : "Tekshirish"}
+            </Button>
+          )}
         </div>
       </div>
     </div>

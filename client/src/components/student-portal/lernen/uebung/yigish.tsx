@@ -3,6 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import type { PruefErgebnis } from "../types";
+import type { JonliJuft } from "./juft-holati";
 
 /**
  * Nechta juft to'liq javob hisoblanadi.
@@ -17,13 +18,35 @@ export function juftSoni(format: "PAAR" | "ZUORDNEN"): number {
   return format === "ZUORDNEN" ? 6 : 4;
 }
 
-export interface YigishProps {
-  format: "SATZ_BAUEN" | "PAAR" | "ZUORDNEN";
+/**
+ * `options`ni chap va o'ng ustunlarga bo'ladi: birinchi yarmi chap ustun
+ * (tartibi o'zgarmaydi), qolgani o'ng ustun (aralashtirilgan) — server
+ * shu tartibda yuboradi (`wort-fragen.ts`/`satz-fragen.ts`).
+ *
+ * ALOHIDA EKSPORT (bir joyda): bu bo'linish ENDI IKKI joyda kerak —
+ * `Juftlash` tugmalarni chizish uchun, `seans-ekrani.tsx` esa `onJuft`
+ * orqali kelgan INDEKSlarni `useJuftTekshir`ga yuboriladigan MATNGA
+ * aylantirish uchun (server `chap`/`ong`ni matn sifatida kutadi, indeks
+ * emas). Bo'linish qoidasi ikkinchi joyda qayta yozilsa, ular kelajakda
+ * bir-biridan uzilib qolishi mumkin edi — xuddi `juftlarniMatngaAylantir`
+ * uchun bo'lgan ko'rik topilmasidagi kabi.
+ */
+export function juftUstunlar(
+  options: string[],
+  format: "PAAR" | "ZUORDNEN",
+): { chapUstun: string[]; ongUstun: string[] } {
+  const soni = juftSoni(format);
+  return { chapUstun: options.slice(0, soni), ongUstun: options.slice(soni, soni * 2) };
+}
+
+/**
+ * `SATZ_BAUEN` — bo'laklardan gap tuzish (eski ikki bosqichli tekshiruv:
+ * tanlash, keyin "Tekshirish").
+ */
+interface SatzBauenProps {
+  format: "SATZ_BAUEN";
   options: string[];
-  /**
-   * `SATZ_BAUEN` — tanlangan so'zlar tartibi.
-   * `PAAR`/`ZUORDNEN` — juftlar, `chap=o'ng` satrlari.
-   */
+  /** Tanlangan so'zlar tartibi. */
   tanlangan: string[];
   onOzgar: (next: string[]) => void;
   natija: PruefErgebnis | null;
@@ -35,26 +58,61 @@ export interface YigishProps {
 }
 
 /**
- * Bo'laklardan yig'ib javob tuzish: `SATZ_BAUEN` (gap tuzish) va `PAAR`
- * (so'z-tarjima juftlash).
+ * `PAAR`/`ZUORDNEN` — jonli juftlash: har juft bosilgan zahoti serverda
+ * tekshiriladi, ikki bosqichli "Tekshirish" yo'q.
+ *
+ * `Juftlash` HOLAT SAQLAMAYDI (juftlarning o'zi uchun) — bu komponent
+ * faqat CHIZADI. Qaysi juft qanday holatda ekani (`juftlar`) va
+ * endigina xato bo'lgan juft qaysi (`xatoIdxlar`) tashqaridan
+ * (`seans-ekrani.tsx`) keladi; so'rovni yuborish va javobni kutish ham
+ * o'sha yerda. Sabab: bu loyihaning o'zgarmas qoidasi — komponentlar
+ * yupqa qolishi kerak, va `juft-holati.ts`dagi sof modul aynan shu
+ * uchun ajratilgan.
+ */
+interface JuftlashDaJonliProps {
+  format: "PAAR" | "ZUORDNEN";
+  options: string[];
+  juftlar: JonliJuft[];
+  /**
+   * Endigina xato bo'lgan (shu sabab `juftlar`dan olib tashlangan)
+   * juftlarning indekslari — qisqa vaqt (≈500ms) qizil ko'rsatish uchun.
+   * `prefers-reduced-motion` yoqilgan bo'lsa chaqiruvchi bu ro'yxatga
+   * umuman qo'shmaydi (`seans-ekrani.tsx`) — rang darhol "bo'sh"ga qaytadi.
+   */
+  xatoIdxlar: { chapIdx: number; ongIdx: number }[];
+  /** Ikkala tomon ham bosilib, yangi juft hosil bo'lganda chaqiriladi. */
+  onJuft: (chapIdx: number, ongIdx: number) => void;
+}
+
+export type YigishProps = SatzBauenProps | JuftlashDaJonliProps;
+
+/**
+ * Bo'laklardan yig'ib javob tuzish: `SATZ_BAUEN` (gap tuzish, eski
+ * ikki bosqichli tekshiruv) va `PAAR`/`ZUORDNEN` (jonli juftlash, har
+ * juft alohida tekshiriladi).
+ *
+ * Ikkalasining prop shakli TUBDAN farq qiladi (diskriminatsiya qilingan
+ * union, yuqorida) — `SATZ_BAUEN` hamon `tanlangan`/`natija`/`kutilmoqda`
+ * bilan ishlaydi, jonli juftlash esa `juftlar`/`onJuft` bilan. Ularni
+ * bitta umumiy prop to'plamiga siqish ikkalasida ham kerak bo'lmagan
+ * maydonlarni ixtiyoriy qilib qo'yardi.
  *
  * TO'G'RI JAVOB PROPS'DA YO'Q — `mc-exercise.tsx` dagi qoida shu yerda
- * ham amal qiladi. Javobning shakli (bo'shliq bilan qo'shilgan gap yoki
- * `de=uz|de=uz|de=uz|de=uz`) yuqoridagi chaqiruvchi (5-vazifa) tomonidan
- * tuziladi — bu komponent faqat `tanlangan` ni yig'adi.
+ * ham amal qiladi.
  */
-export function Yigish({
-  format,
-  options,
-  tanlangan,
-  onOzgar,
-  natija,
-  kutilmoqda = false,
-}: YigishProps) {
-  if (format === "PAAR" || format === "ZUORDNEN") {
+export function Yigish(props: YigishProps) {
+  // MUHIM (TypeScript cheklovi): tekshiruv ATAYLAB `format === "SATZ_BAUEN"`
+  // (BITTA literal) — `props.format === "PAAR" || props.format === "ZUORDNEN"`
+  // ko'rinishida yozilsa, TypeScript qolgan (`else`) tarmoqda `props`ni
+  // `SatzBauenProps`ga TORAYTIRA OLMAYDI, chunki diskriminant ikkinchi
+  // a'zoda ikkita literalning BIRLASHMASI (`"PAAR" | "ZUORDNEN"`) — kompilyator
+  // buni bitta `||` tekshiruvi bilan "qolgan yagona a'zo" deb bog'lay olmaydi
+  // (repro bilan tasdiqlangan). Diskriminantni BITTA literalli tarmoqdan
+  // boshlash — ikkalasi ham to'g'ri toraytiriladi.
+  if (props.format === "SATZ_BAUEN") {
+    const { options, tanlangan, onOzgar, natija, kutilmoqda = false } = props;
     return (
-      <Juftlash
-        format={format}
+      <GapTuzish
         options={options}
         tanlangan={tanlangan}
         onOzgar={onOzgar}
@@ -63,13 +121,14 @@ export function Yigish({
       />
     );
   }
+  const { format, options, juftlar, xatoIdxlar, onJuft } = props;
   return (
-    <GapTuzish
+    <Juftlash
+      format={format}
       options={options}
-      tanlangan={tanlangan}
-      onOzgar={onOzgar}
-      natija={natija}
-      kutilmoqda={kutilmoqda}
+      juftlar={juftlar}
+      xatoIdxlar={xatoIdxlar}
+      onJuft={onJuft}
     />
   );
 }
@@ -172,164 +231,68 @@ function GapTuzish({ options, tanlangan, onOzgar, natija, kutilmoqda }: IchkiPro
   );
 }
 
-interface JuftlashProps extends IchkiProps {
+interface JuftlashProps {
   format: "PAAR" | "ZUORDNEN";
+  options: string[];
+  juftlar: JonliJuft[];
+  xatoIdxlar: { chapIdx: number; ongIdx: number }[];
+  onJuft: (chapIdx: number, ongIdx: number) => void;
 }
 
-/** Bitta tuzilgan juft — chap va o'ng ustundagi POZITSIYA (indeks). */
-export interface IndexJuft {
-  chapIdx: number;
-  ongIdx: number;
-}
+/** Bitta tugmaning besh ko'rinishidan biri (dizayn jadvali, task brief §1). */
+type TugmaHolati = "bosh" | "tanlab" | "kutilmoqda" | "togri" | "xato";
 
-interface BosishNatijasi {
-  juftlar: IndexJuft[];
-  kutilayotganIdx: number | null;
-}
-
-/**
- * Chap ustundagi `chapIdx` bosilganda: band bo'lsa o'sha juftni (ong bilan
- * birga) bekor qiladi; band bo'lmasa uni "kutilayotgan" qiladi (yana
- * bosilsa — bekor).
- *
- * SOF FUNKSIYA, faqat INDEKSLAR bilan ishlaydi — matnni umuman bilmaydi.
- */
-export function chapBosildi(
-  juftlar: IndexJuft[],
-  kutilayotganIdx: number | null,
-  chapIdx: number,
-): BosishNatijasi {
-  const mavjud = juftlar.find((j) => j.chapIdx === chapIdx);
-  if (mavjud) {
-    return { juftlar: juftlar.filter((j) => j !== mavjud), kutilayotganIdx };
+function tugmaSinfi(holat: TugmaHolati): string {
+  switch (holat) {
+    case "togri":
+      return "border-success bg-success/10 text-success";
+    case "xato":
+      return "border-danger bg-danger/10 text-danger";
+    case "tanlab":
+      return "border-coral-500 bg-coral-500/10";
+    case "kutilmoqda":
+      return "border-coral-500 bg-coral-500/10 opacity-50";
+    case "bosh":
+      return "border-transparent bg-tint text-ink-800";
   }
-  return {
-    juftlar,
-    kutilayotganIdx: kutilayotganIdx === chapIdx ? null : chapIdx,
-  };
-}
-
-/**
- * O'ng ustundagi `ongIdx` bosilganda: band bo'lsa o'sha juftni bekor
- * qiladi; kutilayotgan chap bo'lsa u bilan yangi juft tuzadi.
- *
- * SOF FUNKSIYA, faqat INDEKSLAR bilan ishlaydi — MUHIM: bu funksiya
- * ikkita tugmani ularning MATNI emas, pozitsiyasi bo'yicha farqlaydi.
- * Sabab: server `zuordnen()`da ibora matnini (`de`) noyob qiladi, lekin
- * `DafPhrase.de`da unique constraint yo'q — ikki BOSHQA vaziyat
- * nazariy jihatdan bir xil ibora matniga ega bo'lishi mumkin edi. Eski
- * mexanizm juftni MATN bo'yicha qidirardi (`tanlangan.find(p =>
- * p.endsWith(\`=${ong}\`))`) — shu holatda ikkinchi bir xil matnli
- * tugma "allaqachon band" deb topilib, uni HECH QACHON tanlab bo'lmay
- * qolardi (Task 4 ko'rigi). Bu — server tomonidagi dedupe'dan MUSTAQIL
- * ikkinchi himoya qatlami: shu funksiya matnni umuman ko'rmagani uchun
- * bunday chalkashish endi TUZILISHIY jihatdan mumkin emas.
- */
-export function ongBosildi(
-  juftlar: IndexJuft[],
-  kutilayotganIdx: number | null,
-  ongIdx: number,
-): BosishNatijasi {
-  const mavjud = juftlar.find((j) => j.ongIdx === ongIdx);
-  if (mavjud) {
-    return { juftlar: juftlar.filter((j) => j !== mavjud), kutilayotganIdx };
-  }
-  if (kutilayotganIdx == null) return { juftlar, kutilayotganIdx };
-  return {
-    juftlar: [...juftlar, { chapIdx: kutilayotganIdx, ongIdx }],
-    kutilayotganIdx: null,
-  };
-}
-
-/**
- * `juftlar` (indeks juftlari)dan serverga yuboriladigan "chap=o'ng"
- * qatorlarini quradi. SOF FUNKSIYA — allaqachon bo'lingan ustunlarni
- * oladi, indekslarni matnga aylantiradi, xolos.
- *
- * ALOHIDA EKSPORT QILINGAN (ko'rik topilmasi): bu qatorning shakli —
- * ustun tartibi va `=` ajratkichi — serverning `pruefePaar`/
- * `pruefeZuordnen` parserlari kutgan formatga ANIQ mos kelishi shart,
- * lekin ilgari `Juftlash` komponenti ICHIDA yashiringan edi va hech
- * qanday test uni bosmagan edi — zanjirdagi boshqa har bir bo'g'in
- * (juft soni, indeks juftlash, serverning parseri, uchidan-uchigacha
- * baholash) sinalgan, faqat shu bitta qator emas.
- *
- * `options`/`soni`NI EMAS, ALLAQACHON BO'LINGAN `chapUstun`/`ongUstun`NI
- * OLADI (re-review topilmasi, Minor): `Juftlash` bu ikkalasini
- * `options.slice(...)` orqali O'ZI ham hisoblaydi (pastda) — agar bu
- * funksiya `options`+`soni`ni qayta bo'lsa, bo'lish qoidasi IKKI joyda
- * yashardi va ular kelajakda bir-biridan uzilib qolishi mumkin edi.
- * Endi bo'lish FAQAT `Juftlash`da, bir marta sodir bo'ladi.
- */
-export function juftlarniMatngaAylantir(
-  juftlar: IndexJuft[],
-  chapUstun: string[],
-  ongUstun: string[],
-): string[] {
-  return juftlar.map(({ chapIdx, ongIdx }) => `${chapUstun[chapIdx]}=${ongUstun[ongIdx]}`);
 }
 
 /**
  * Ikki ustunni juftlash: `PAAR` (nemischa/o'zbekcha) VA `ZUORDNEN`
  * (vaziyat/ibora) BITTA mexanizmdan foydalanadi — faqat ustunlar mazmuni
- * farq qiladi, bosish-bekor qilish mantig'i bir xil. Shu sabab ustunlar
- * "de"/"uz" emas, umumiy "chap"/"o'ng" deb nomlangan.
+ * farq qiladi, bosish mantig'i bir xil. Shu sabab ustunlar "de"/"uz"
+ * emas, umumiy "chap"/"o'ng" deb nomlangan.
  *
- * TANLASH HOLATI (`juftlar`) INDEKS bo'yicha saqlanadi (`chapBosildi`/
- * `ongBosildi`, yuqorida) — faqat serverga YUBORILADIGAN `tanlangan`
- * (parent'dagi `yigilgan`) matn juftlari (`chap=o'ng`) bo'lib qoladi,
- * chunki server aynan shu shaklni kutadi (`given`, `seans-ekrani.tsx`).
+ * MAHALLIY HOLAT FAQAT BITTA: `kutilayotganIdx` — chap tomondan
+ * tanlanib, hali o'ng juftini kutayotgan tugma. Bu HAQIQIY javob emas
+ * (hali onJuft chaqirilmagan), shuning uchun tashqariga chiqarilmaydi —
+ * xuddi fokus yoki hover kabi, sof ko'rinish holati. Juftlarning o'zi
+ * (`juftlar`) va endigina xato bo'lganlar (`xatoIdxlar`) TO'LIQ
+ * tashqarida (`seans-ekrani.tsx`) yashaydi.
+ *
+ * YANGI SAVOLDA QAYTA TIKLASH: chaqiruvchi bu komponentga `key={...}`
+ * beradi (itemId+format bo'yicha) — savol almashganda butunlay qayta
+ * o'rnatiladi, shuning uchun `kutilayotganIdx` alohida effekt bilan
+ * tozalanishi shart emas.
  */
-function Juftlash({ format, options, tanlangan, onOzgar, natija, kutilmoqda }: JuftlashProps) {
-  // `options` soni har doim `juftSoni(format) * 2`: birinchi yarmi chap
-  // ustun (tartibi o'zgarmaydi), qolgani o'ng ustun (aralashtirilgan).
-  const soni = juftSoni(format);
-  const chapUstun = options.slice(0, soni);
-  const ongUstun = options.slice(soni, soni * 2);
-
-  const [juftlar, setJuftlar] = React.useState<IndexJuft[]>([]);
+function Juftlash({ format, options, juftlar, xatoIdxlar, onJuft }: JuftlashProps) {
+  const { chapUstun, ongUstun } = juftUstunlar(options, format);
   const [kutilayotganIdx, setKutilayotganIdx] = React.useState<number | null>(null);
-  const qulflangan = natija != null || kutilmoqda;
 
-  // Tashqi tozalash: `seans-ekrani.tsx` keyingi savolga o'tishda yoki
-  // qayta boshlashda `yigilgan`ni `[]`ga qaytaradi — bu yerdagi mahalliy
-  // holat ham shu bilan sinxron bo'lishi kerak, aks holda eski
-  // (indekslar bo'yicha saqlangan) juftlar keyingi savolga "yopishib
-  // qolardi", ular endi boshqa `options` ustiga ishora qilsa ham.
-  React.useEffect(() => {
-    if (tanlangan.length === 0 && juftlar.length > 0) {
-      setJuftlar([]);
-      setKutilayotganIdx(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tanlangan.length]);
-
-  // Natija kelganda server `richtig` ni "chap=o'ng|chap=o'ng|…" ko'rinishida
-  // qaytaradi — har bir juftni alohida to'g'ri/xato deb ko'rsatish uchun uni
-  // `chap -> o'ng` xaritasiga aylantiramiz.
-  const togriXarita = React.useMemo(() => {
-    if (!natija) return null;
-    const xarita = new Map<string, string>();
-    for (const juft of natija.richtig.split("|")) {
-      const [chap, ong] = juft.split("=");
-      if (chap != null && ong != null) xarita.set(chap, ong);
-    }
-    return xarita;
-  }, [natija]);
-
-  // `juftlar`dagi indekslarni serverga yuborish uchun matn juftlariga
-  // aylantirib, ikkalasini (mahalliy va parent) BIRGA yangilaydi.
-  const yangila = (keyingi: IndexJuft[]) => {
-    setJuftlar(keyingi);
-    onOzgar(juftlarniMatngaAylantir(keyingi, chapUstun, ongUstun));
+  const chapBosildi = (chapIdx: number) => {
+    // Himoya qatlami: tugma allaqachon `disabled` bo'lishi kerak, lekin
+    // funksiya mustaqil ravishda ham shu qoidani ta'minlaydi.
+    if (juftlar.some((j) => j.chapIdx === chapIdx)) return;
+    if (xatoIdxlar.some((x) => x.chapIdx === chapIdx)) return;
+    setKutilayotganIdx((prev) => (prev === chapIdx ? null : chapIdx));
   };
 
-  const holatKlass = (paired: boolean, tanlab: boolean, togri: boolean | null) => {
-    if (togri === true) return "border-success bg-success/10 text-success";
-    if (togri === false) return "border-danger bg-danger/10 text-danger";
-    if (tanlab) return "border-coral-500 bg-coral-500/10";
-    if (paired) return "border-coral-500 bg-coral-500/10 opacity-50";
-    return "border-transparent bg-tint text-ink-800";
+  const ongBosildi = (ongIdx: number) => {
+    if (juftlar.some((j) => j.ongIdx === ongIdx)) return;
+    if (xatoIdxlar.some((x) => x.ongIdx === ongIdx)) return;
+    if (kutilayotganIdx == null) return;
+    onJuft(kutilayotganIdx, ongIdx);
+    setKutilayotganIdx(null);
   };
 
   return (
@@ -337,20 +300,24 @@ function Juftlash({ format, options, tanlangan, onOzgar, natija, kutilmoqda }: J
       <div className="space-y-2">
         {chapUstun.map((chap, chapIdx) => {
           const juft = juftlar.find((j) => j.chapIdx === chapIdx) ?? null;
-          const paired = juft != null;
-          const tanlab = kutilayotganIdx === chapIdx;
-          const togri = togriXarita && juft ? togriXarita.get(chap) === ongUstun[juft.ongIdx] : null;
+          const xatoBu = xatoIdxlar.some((x) => x.chapIdx === chapIdx);
+          const holat: TugmaHolati = xatoBu
+            ? "xato"
+            : juft?.holat === "togri"
+              ? "togri"
+              : juft?.holat === "kutilmoqda"
+                ? "kutilmoqda"
+                : kutilayotganIdx === chapIdx
+                  ? "tanlab"
+                  : "bosh";
+          const bosilmaydi = juft != null || xatoBu;
 
           return (
             <button
               key={chapIdx}
               type="button"
-              disabled={qulflangan}
-              onClick={() => {
-                const natijasi = chapBosildi(juftlar, kutilayotganIdx, chapIdx);
-                if (natijasi.juftlar !== juftlar) yangila(natijasi.juftlar);
-                setKutilayotganIdx(natijasi.kutilayotganIdx);
-              }}
+              disabled={bosilmaydi}
+              onClick={() => chapBosildi(chapIdx)}
               className={cn(
                 // Ko'rik topilmasi (IMPORTANT): `truncate` bitta qatorga
                 // kesib, ellipsis qo'yardi — `ZUORDNEN`ning olti juftida
@@ -363,9 +330,16 @@ function Juftlash({ format, options, tanlangan, onOzgar, natija, kutilmoqda }: J
                 // oralig'i bilan ko'pchilik ibora nomi to'liq sig'adi.
                 // Ustunlar POZITSIYA bo'yicha tekislanadi, balandlik
                 // bo'yicha emas, shuning uchun notekis qatorlar zararsiz.
-                "line-clamp-2 w-full break-words rounded-2xl border-2 px-3.5 py-3 text-left text-sm font-semibold leading-tight transition-colors",
-                holatKlass(paired, tanlab, natija != null && paired ? togri : null),
-                qulflangan && "cursor-default",
+                //
+                // `motion-reduce:transition-none`: rang o'zgarishi
+                // (masalan "kutilmoqda" → "togri") harakatni kamaytirishni
+                // so'ragan o'quvchi uchun darhol, o'tishsiz sodir bo'ladi.
+                // Xato chaqnashi uchun ASOSIY himoya boshqa joyda —
+                // `seans-ekrani.tsx` reduced-motion'da `xatoIdxlar`ga
+                // umuman qo'shmaydi — bu shunchaki qo'shimcha qatlam.
+                "line-clamp-2 w-full break-words rounded-2xl border-2 px-3.5 py-3 text-left text-sm font-semibold leading-tight transition-colors motion-reduce:transition-none",
+                tugmaSinfi(holat),
+                bosilmaydi && "cursor-default",
               )}
             >
               {chap}
@@ -377,25 +351,28 @@ function Juftlash({ format, options, tanlangan, onOzgar, natija, kutilmoqda }: J
       <div className="space-y-2">
         {ongUstun.map((ong, ongIdx) => {
           const juft = juftlar.find((j) => j.ongIdx === ongIdx) ?? null;
-          const paired = juft != null;
-          const togri = togriXarita && juft ? togriXarita.get(chapUstun[juft.chapIdx]) === ong : null;
+          const xatoBu = xatoIdxlar.some((x) => x.ongIdx === ongIdx);
+          const holat: TugmaHolati = xatoBu
+            ? "xato"
+            : juft?.holat === "togri"
+              ? "togri"
+              : juft?.holat === "kutilmoqda"
+                ? "kutilmoqda"
+                : "bosh";
+          const bosilmaydi = juft != null || xatoBu;
 
           return (
             <button
               key={ongIdx}
               type="button"
-              disabled={qulflangan}
-              onClick={() => {
-                const natijasi = ongBosildi(juftlar, kutilayotganIdx, ongIdx);
-                if (natijasi.juftlar !== juftlar) yangila(natijasi.juftlar);
-                setKutilayotganIdx(natijasi.kutilayotganIdx);
-              }}
+              disabled={bosilmaydi}
+              onClick={() => ongBosildi(ongIdx)}
               className={cn(
                 // Chap ustundagi tugma bilan bir xil tuzatish — yuqorida
                 // shu izoh bor.
-                "line-clamp-2 w-full break-words rounded-2xl border-2 px-3.5 py-3 text-left text-sm font-semibold leading-tight transition-colors",
-                holatKlass(paired, false, natija != null && paired ? togri : null),
-                qulflangan && "cursor-default",
+                "line-clamp-2 w-full break-words rounded-2xl border-2 px-3.5 py-3 text-left text-sm font-semibold leading-tight transition-colors motion-reduce:transition-none",
+                tugmaSinfi(holat),
+                bosilmaydi && "cursor-default",
               )}
             >
               {ong}
