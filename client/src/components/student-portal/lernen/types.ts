@@ -57,10 +57,25 @@ export interface LernenUnitSummary {
   doneCount: number;
 }
 
+/**
+ * `getLevels` javobidagi unit — endi bo'lim ichida sarlab boradi.
+ *
+ * Yo'l zigzagida har seans o'z tugunini oladi, shuning uchun bu javob
+ * ham bo'lim ekrani bilan bir xil `sections`/`finalTest` shaklini oladi
+ * — `yolTugunlari` shu ikkisidan tugunlarni quradi. `LernenUnitSummary`
+ * dan ALOHIDA tur: eski `fortschritt.ts` (`unitHolati`) faqat
+ * `lessonCount`/`doneCount` bilan ishlaydi va bo'limlarni bilishi shart
+ * emas.
+ */
+export interface LernenLevelUnit extends LernenUnitSummary {
+  sections: LernenSectionGroup[];
+  finalTest: LernenSeans | null;
+}
+
 export interface LernenLevel {
   level: DafLevel;
   label: string;
-  units: LernenUnitSummary[];
+  units: LernenLevelUnit[];
 }
 
 /** Unit ichidagi bitta seans — yangi A1 xaritasi ham, eski DiB darsi ham. */
@@ -157,6 +172,29 @@ export interface LernenGrammarItem {
   /** Yo'lda ko'rinadimi — `false` bo'lsa faqat grammatika ro'yxatidan. */
   inPath: boolean;
   exerciseCount: number;
+}
+
+/** Yo'l tepasidagi chiplar uchun umumiy ilgarilash. */
+export interface Fortschritt {
+  gesamt: number;
+  stufe: { de: string; uz: string };
+  /** Eng yuqori darajada `null` — undan keyin daraja yo'q. */
+  naechsteStufe: { de: string; uz: string; ab: number } | null;
+  serie: number;
+  wochePunkte: number;
+  /** Guruhi yo'q yoki guruh ro'yxati bo'sh bo'lsa `null`. */
+  wochePlatzGruppe: number | null;
+  wochePlatzZentrum: number;
+}
+
+/** Reyting jadvalidagi bitta qator. */
+export interface ReytingZeile {
+  studentId: number;
+  name: string;
+  punkte: number;
+  platz: number;
+  /** Shu qator so'rovni yuborgan o'quvchining o'zimi. */
+  selbst: boolean;
 }
 
 export interface AttemptResult {

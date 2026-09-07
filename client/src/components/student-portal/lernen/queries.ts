@@ -7,6 +7,7 @@ import type {
   AttemptResult,
   DrillQuestion,
   DrillResult,
+  Fortschritt,
   FrageFormat,
   LernenGrammarItem,
   LernenLesson,
@@ -15,6 +16,7 @@ import type {
   MaterialTyp,
   PruefErgebnis,
   PublicFrage,
+  ReytingZeile,
 } from "./types";
 
 const BASE = "/student-portal/lernen";
@@ -166,6 +168,41 @@ export function useAbschluss() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["lernen", "levels"] });
       void qc.invalidateQueries({ queryKey: ["lernen", "unit"] });
+      // Yo'l tepasidagi chiplar (ball, daraja, reyting) — usiz seans
+      // tugagach ular eski qiymatni ko'rsatib qolardi.
+      void qc.invalidateQueries({ queryKey: ["lernen", "fortschritt"] });
+      void qc.invalidateQueries({ queryKey: ["lernen", "reyting"] });
     },
+  });
+}
+
+/** Yo'l tepasidagi chiplar — daraja, ball, seriya, haftalik o'rin. */
+export function useFortschritt() {
+  return useQuery<Fortschritt>({
+    queryKey: ["lernen", "fortschritt"],
+    queryFn: () => api.get(`${BASE}/fortschritt`).then((r) => r.data),
+  });
+}
+
+/** Guruh yoki markaz bo'yicha haftalik reyting jadvali. */
+export function useReyting(scope: "gruppe" | "zentrum") {
+  return useQuery<ReytingZeile[]>({
+    queryKey: ["lernen", "reyting", scope],
+    queryFn: () => api.get(`${BASE}/reyting`, { params: { scope } }).then((r) => r.data),
+  });
+}
+
+/**
+ * Takrorlash seansining savollari.
+ *
+ * `staleTime: Infinity` va `refetchOnWindowFocus: false` — seans holati
+ * mijozda yashaydi, qayta so'rash o'quvchining o'rnini yo'qotardi.
+ */
+export function useWiederholung() {
+  return useQuery<PublicFrage[]>({
+    queryKey: ["lernen", "wiederholung"],
+    queryFn: () => api.get(`${BASE}/wiederholung/uebung`).then((r) => r.data),
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
   });
 }
