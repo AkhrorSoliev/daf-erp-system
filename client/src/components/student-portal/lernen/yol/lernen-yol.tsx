@@ -153,7 +153,11 @@ export function LernenYol({ levels }: LernenYolProps) {
     <div className="mx-auto flex w-full max-w-md flex-col gap-5">
       <button
         type="button"
-        disabled={xiraTakrorlash}
+        // `disabled` ATAYLAB QO'YILMAGAN: u tugmani tab tartibidan
+        // chiqarib yuboradi, ya'ni "Bugun takrorlanadigan so'z yo'q"
+        // degan yagona izoh klaviatura bilan yuradigan o'quvchiga
+        // umuman yetmay qolardi. `aria-disabled` holatni e'lon qiladi,
+        // bosishni esa `onClick`ning o'zi to'xtatadi.
         onClick={
           xiraTakrorlash
             ? undefined

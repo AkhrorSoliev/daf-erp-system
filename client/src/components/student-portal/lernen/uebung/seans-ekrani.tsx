@@ -255,7 +255,18 @@ export function SeansEkrani(props: SeansEkraniProps) {
     // dars seansi ham muddati kelgan so'zlarni "yeb qo'yadi" (Leitner
     // holatini yangilaydi), shu bois keyingi Takrorlashga kirganda eski
     // (endi noto'g'ri) 12 savol emas, yangi holat ko'rinishi kerak.
-    void qc.invalidateQueries({ queryKey: ["lernen", "wiederholung"] });
+    //
+    // `refetchType: "none"` SHART. Takrorlash seansida aynan shu so'rov
+    // hozir EKRANNI ushlab turibdi; sukut bo'yicha invalidatsiya uni
+    // darrov qayta yuklardi va o'sha yuklash yiqilsa o'quvchining natija
+    // ekrani "Mashqni ochib bo'lmadi" bilan almashib qolardi — mashqni
+    // endigina tugatgan paytda. Invalidatsiya qilingan so'rov
+    // `staleTime: Infinity` ga qaramay eskirgan hisoblanadi, ya'ni
+    // keyingi kirishda baribir yangilanadi.
+    void qc.invalidateQueries({
+      queryKey: ["lernen", "wiederholung"],
+      refetchType: "none",
+    });
 
     // Takrorlash hech qanday darsga tegishli emas — `abschluss` bitta
     // darsni "tugallandi" deb belgilaydi, bu yerda esa belgilanadigan

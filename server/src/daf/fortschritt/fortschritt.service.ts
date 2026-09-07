@@ -266,17 +266,6 @@ export class FortschrittService {
    *
    * Buni "xato" deb tuzatmang — qaror hujjatda
    * (`docs/superpowers/specs/2026-09-06-ball-va-yol-design.md`, 6.1).
-   *
-   * Ro'yxat markazning TO'LIQ ro'yxati emas — TOP 50 + o'quvchining o'z
-   * qatori (agar u shu haftada mashq qilgan bo'lsa). Markazda yuzlab
-   * o'quvchi bor, hammasini har so'rovda yuborish sahifani sekinlashtiradi;
-   * shu bir `groupBy` so'rovi kifoya, o'quvchilar sonidan mustaqil.
-   *
-   * Qo'shib qo'yilgan o'z qatori TOP 50 ichidagidek qayta raqamlanmaydi —
-   * u TO'LIQ saralangan ro'yxatdagi HAQIQIY o'rnini saqlaydi (`platz`
-   * to'liq ro'yxatdan olinadi, `top.slice`dan keyin emas). Buni
-   * o'zgartirish oson unutiladigan xato: "51-o'rin" "TOP 50 + 1" deb 51
-   * qilib qayta yozilsa, o'quvchining haqiqiy o'rni (masalan 137) yo'qoladi.
    */
   /**
    * Markazning haftalik saralangan ro'yxati (o'quvchining O'Z qatori
@@ -306,6 +295,20 @@ export class FortschrittService {
     return saralaBarqaror(oʻziniQoshib(haftalik, studentId));
   }
 
+  /**
+   * Markaz jadvalining qatorlari.
+   *
+   * Ro'yxat markazning TO'LIQ ro'yxati emas — TOP 50 + o'quvchining o'z
+   * qatori. Markazda yuzlab o'quvchi bor va hammasini har so'rovda
+   * yuborish sahifani sekinlashtiradi.
+   *
+   * QO'SHIB QO'YILGAN O'Z QATORI QAYTA RAQAMLANMAYDI — u to'liq
+   * saralangan ro'yxatdagi HAQIQIY o'rnini saqlaydi (`platz` to'liq
+   * ro'yxatdan olinadi, `slice`dan keyin emas). Buni o'zgartirish oson
+   * unutiladigan xato: "TOP 50 + 1" deb 51 qilib qayta yozilsa,
+   * o'quvchining haqiqiy o'rni (masalan 137) yo'qoladi va u o'zini
+   * borganidan ancha yuqorida deb o'ylab qoladi.
+   */
   private async zentrumReytingi(
     studentId: number,
     companyId: number,
