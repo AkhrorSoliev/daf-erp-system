@@ -301,6 +301,70 @@ function fakePrisma() {
   };
 }
 
+/**
+ * `fakePrisma()`ning STATEFUL kengaytmasi — `dafLexemeState`ning `upsert`i
+ * haqiqatda saqlanadigan do'konga yozadi, `findMany`/`findUnique` esa
+ * O'SHA do'kondan o'qiydi. Word ALWAYS `id: 5` ('das Haus'/'uy', unitId 1)
+ * — `pruefen` va `juft` ikkalasi ham shu bitta so'z bilan test qiladi,
+ * shuning uchun modul darajasiga KO'CHIRILGAN: ikkala describe blok bir
+ * xil tripwire naqshidan ikki marta yozmasdan foydalanadi.
+ *
+ * NEGA STATIK MOCK YETARLI EMAS. Static `jest.fn(async () => state)` har
+ * doim BIR XIL qiymatni qaytaradi — qachon chaqirilishidan qat'i nazar.
+ * Shuning uchun agar kimdir kelajakda `pruefen` YOKI `juft` ichida muddat
+ * o'qishni `aktualisiereZustand` yozuvidan PASTGA surib qo'ysa (aynan shu
+ * regressiyaning oldini olish uchun yozilgan), static mock buni SEZMAYDI:
+ * natija bayt-baytiga bir xil chiqadi va test o'tib ketadi. Do'kon orqali
+ * `upsert` yozgan qiymat `findMany`/`findUnique`ga haqiqatda ta'sir
+ * qilgani uchun, tartib buzilsa "muddati kelgan" holat allaqachon
+ * kelajakka surilgan bo'lib topiladi va ball 10 o'rniga 0 chiqadi.
+ */
+function fakeMitWort(state: { dueAt: Date; strength: number } | null) {
+  const prisma = fakePrisma();
+  prisma.dafLexeme.findUnique = jest.fn(async () => ({
+    id: 5,
+    de: 'das Haus',
+    uz: 'uy',
+    artikel: 'das',
+    unitId: 1,
+  })) as any;
+  // `juft()`dagi PAAR qidiruvi `dafLexeme.findMany({ where: { de, unitId } })`
+  // orqali boradi — `pruefen`ning `findUnique`siga QO'SHIMCHA, uni
+  // ALMASHTIRMAYDI. Ikkalasi ham bir xil so'zni qaytaradi.
+  prisma.dafLexeme.findMany = jest.fn(async () => [
+    { id: 5, de: 'das Haus', uz: 'uy' },
+  ]) as any;
+
+  const zustandStore = new Map<number, { dueAt: Date; strength: number }>();
+  if (state) zustandStore.set(5, state);
+
+  prisma.dafLexemeState.findMany = jest.fn(async ({ where }: any) => {
+    const ids: number[] = where?.lexemeId?.in ?? [];
+    return ids
+      .filter((id) => zustandStore.has(id))
+      .map((id) => ({ lexemeId: id, ...zustandStore.get(id)! }));
+  }) as any;
+
+  prisma.dafLexemeState.findUnique = jest.fn(async ({ where }: any) => {
+    const lexemeId = where.studentId_lexemeId.lexemeId;
+    return zustandStore.get(lexemeId) ?? null;
+  }) as any;
+
+  prisma.dafLexemeState.upsert = jest.fn(async (args: any) => {
+    const lexemeId = args.where.studentId_lexemeId.lexemeId;
+    // `dueAt`/`strength` `create` va `update` shoxobchalarida bir xil
+    // hisoblangan qiymat — qaysinisidan olinishi farq qilmaydi.
+    const yangi = args.update ?? args.create;
+    zustandStore.set(lexemeId, {
+      dueAt: yangi.dueAt,
+      strength: yangi.strength,
+    });
+    return { id: 1 };
+  }) as any;
+
+  return prisma;
+}
+
 describe('UebungService.seans', () => {
   it('savol beradi va to`g`ri javobni YUBORMAYDI', async () => {
     const prisma = fakePrisma();
@@ -1087,60 +1151,6 @@ describe('UebungService.abschluss', () => {
 describe('pruefen — ball', () => {
   const ctx = { studentId: 55, companyId: 1 };
 
-  /**
-   * `dafLexemeState`ni STATEFUL qiladi — `upsert` haqiqatda saqlanadigan
-   * do'konga yozadi, `findMany`/`findUnique` esa O'SHA do'kondan o'qiydi.
-   *
-   * NEGA STATIK MOCK YETARLI EMAS. Static `jest.fn(async () => state)`
-   * har doim BIR XIL qiymatni qaytaradi — qachon chaqirilishidan qat'i
-   * nazar. Shuning uchun agar kimdir kelajakda `pruefen` ichida muddat
-   * o'qishni `aktualisiereZustand` yozuvidan PASTGA surib qo'ysa (aynan
-   * shu vazifa oldini olishi kerak bo'lgan regressiya), static mock buni
-   * SEZMAYDI: natija bayt-baytiga bir xil chiqadi va test o'tib ketadi.
-   * Do'kon orqali `upsert` yozgan qiymat `findMany` ga haqiqatda ta'sir
-   * qilgani uchun, tartib buzilsa "muddati kelgan" holat allaqachon
-   * kelajakka surilgan bo'lib topiladi va ball 10 o'rniga 0 chiqadi.
-   */
-  function fakeMitWort(state: { dueAt: Date; strength: number } | null) {
-    const prisma = fakePrisma();
-    prisma.dafLexeme.findUnique = jest.fn(async () => ({
-      id: 5,
-      de: 'das Haus',
-      uz: 'uy',
-      artikel: 'das',
-      unitId: 1,
-    })) as any;
-
-    const zustandStore = new Map<number, { dueAt: Date; strength: number }>();
-    if (state) zustandStore.set(5, state);
-
-    prisma.dafLexemeState.findMany = jest.fn(async ({ where }: any) => {
-      const ids: number[] = where?.lexemeId?.in ?? [];
-      return ids
-        .filter((id) => zustandStore.has(id))
-        .map((id) => ({ lexemeId: id, ...zustandStore.get(id)! }));
-    }) as any;
-
-    prisma.dafLexemeState.findUnique = jest.fn(async ({ where }: any) => {
-      const lexemeId = where.studentId_lexemeId.lexemeId;
-      return zustandStore.get(lexemeId) ?? null;
-    }) as any;
-
-    prisma.dafLexemeState.upsert = jest.fn(async (args: any) => {
-      const lexemeId = args.where.studentId_lexemeId.lexemeId;
-      // `dueAt`/`strength` `create` va `update` shoxobchalarida bir xil
-      // hisoblangan qiymat — qaysinisidan olinishi farq qilmaydi.
-      const yangi = args.update ?? args.create;
-      zustandStore.set(lexemeId, {
-        dueAt: yangi.dueAt,
-        strength: yangi.strength,
-      });
-      return { id: 1 };
-    }) as any;
-
-    return prisma;
-  }
-
   // TARTIB TRIPWIRE (1/2): `fakeMitWort` endi STATEFUL, ya'ni
   // `aktualisiereZustand`ning `upsert`i shu yerdagi `findMany`ga
   // haqiqatda ta'sir qiladi. Agar `pruefen` ichida muddat o'qishni
@@ -1745,6 +1755,42 @@ describe('juft — bitta juftni tekshirish', () => {
     ).rejects.toThrow();
   });
 
+  // EDGE HOLAT (brief'da sanalgan): `chap` matni HECH QANDAY materialga
+  // mos kelmasa — bu `material topilmasa`dan FARQLI: `itemId` haqiqiy
+  // (WORT #5, unitId 1 topiladi), lekin bosilgan juftning nemischa matni
+  // shu unitda mavjud emas (masalan mijoz tomonidan buzilgan/eskirgan
+  // matn). Kod bunda QULAMASLIGI, xato deb hisoblab, nol ball bilan
+  // urinish yozib, Leitnerga tegmasligi shart.
+  it("chap matni hech qaysi materialga mos kelmasa — xato hisoblanadi, qulamaydi", async () => {
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any).juft(
+      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'mavjud-emas', ong: 'ism' },
+      ctx,
+    );
+    expect(r).toEqual({ isCorrect: false });
+    const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
+    expect(data.points).toBe(0);
+    expect(data.lexemeId).toBeNull();
+    expect(prisma.dafLexemeState.upsert).not.toHaveBeenCalled();
+  });
+
+  // Ko'rikda topilgan bo'shliq: `itemType` va `format` DTOda BIR-BIRIDAN
+  // MUSTAQIL tekshiriladi (ikkalasi ham alohida `IsIn`), ya'ni mijoz
+  // `itemType: 'WORT'` + `format: 'ZUORDNEN'` (yoki aksincha) yuborishi
+  // mumkin. `pruefen`ning `ZUORDNEN` qo'riqchisi xuddi shu sababdan
+  // mavjud (izohida yozilgan: faqat `unitId`ni tekshirish yetarli emas,
+  // chunki `PHRASE` materiali ham `unitId` bilan qaytadi) — `juft` ham
+  // shu naqshni takrorlashi shart.
+  it('itemType format bilan mos kelmasa xato tashlaydi (WORT + ZUORDNEN)', async () => {
+    const prisma = fakeWort(null);
+    await expect(
+      new UebungService(prisma as any).juft(
+        { itemType: 'WORT', itemId: 5, format: 'ZUORDNEN', chap: 'das Haus', ong: 'uy' },
+        ctx,
+      ),
+    ).rejects.toThrow();
+  });
+
   // QO'SHIMCHA TEST — brief'da yo'q, lekin topshiriqda ochiq aytilgan
   // 2-tuzoqni yopadi: `PAAR` savolining `itemId`si to'rtlikning
   // BIRINCHISI, bosilgan juft esa BOSHQASI bo'lishi mumkin. Agar
@@ -1765,5 +1811,61 @@ describe('juft — bitta juftni tekshirish', () => {
     expect(attemptData.lexemeId).toBe(2);
     const holatYozilgan = (prisma.dafLexemeState.upsert as jest.Mock).mock.calls[0][0];
     expect(holatYozilgan.where.studentId_lexemeId.lexemeId).toBe(2);
+  });
+});
+
+describe('juft — TARTIB TRIPWIRE (stateful)', () => {
+  const ctx = { studentId: 55, companyId: 1 };
+
+  /**
+   * Xuddi `pruefen — ball`dagi tripwire juftligi bilan bir xil maqsad,
+   * shu bitta `fakeMitWort` orqali (modul darajasiga ko'chirilgan):
+   * `dafLexemeState` STATEFUL, ya'ni `aktualisiereZustand`ning `upsert`i
+   * shu yerdagi `findMany`ga haqiqatda ta'sir qiladi. Agar kimdir
+   * kelajakda `juft()` ichida muddat o'qishni (`punkteEingabeFuer`)
+   * Leitner yozuvidan (`aktualisiereZustand`) PASTGA surib qo'ysa —
+   * aynan shu vazifaning eng muhim regressiyasi — quyidagi ikkala test
+   * ham 10 o'rniga 0 kutib, MUVAFFAQIYATSIZ tugaydi. Statik `fakeWort`
+   * buni SEZMAYDI (u har doim bir xil qiymat qaytaradi), shuning uchun
+   * bu alohida, stateful tripwire kerak.
+   */
+  it("hech qachon so'ralmagan so'z — 10 ball (juft, PAAR)", async () => {
+    const prisma = fakeMitWort(null);
+    await new UebungService(prisma as any).juft(
+      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'uy' },
+      ctx,
+    );
+    const call = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0];
+    expect(call.data.points).toBe(10);
+  });
+
+  it('muddati kelgan so`z — 10 ball (juft, PAAR)', async () => {
+    const prisma = fakeMitWort({
+      strength: 2,
+      dueAt: new Date(Date.now() - 60_000),
+    });
+    await new UebungService(prisma as any).juft(
+      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'uy' },
+      ctx,
+    );
+    const call = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0];
+    expect(call.data.points).toBe(10);
+  });
+
+  it('muddati KELMAGAN so`z — nol ball (juft, tuzatish bepul haqiqiy do`kon bilan)', async () => {
+    // Statik `fakeWort` bilan yozilgan «TUZATISH BEPUL» testining
+    // stateful nusxasi — bu yerda `dueAt` haqiqiy do'konda saqlanadi,
+    // ya'ni bu test ham tartib buzilishini (o'qish yozuvdan keyin
+    // sodir bo'lsa) alohida sezishi mumkin bo'lgan ikkinchi qatlam.
+    const prisma = fakeMitWort({
+      strength: 2,
+      dueAt: new Date(Date.now() + 3 * 86_400_000),
+    });
+    await new UebungService(prisma as any).juft(
+      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'uy' },
+      ctx,
+    );
+    const call = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0];
+    expect(call.data.points).toBe(0);
   });
 });

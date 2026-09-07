@@ -960,6 +960,21 @@ export class UebungService {
   ): Promise<{ isCorrect: boolean }> {
     const { itemType, itemId, format, chap, ong } = input;
 
+    // `itemType` formatga mos kelishi SHART — `pruefen`dagi `ZUORDNEN`
+    // qo'riqchisi bilan bir xil sabab (ko'rikda topilgan kamchilik: faqat
+    // `unitId`ni tekshirish YETARLI EMAS, chunki `PHRASE` materiali ham
+    // `unitId` bilan qaytadi). `JuftDto`ning `itemType` va `format`
+    // maydonlari BIR-BIRIDAN MUSTAQIL tekshiriladi, ya'ni mijoz
+    // `itemType: 'WORT'` + `format: 'ZUORDNEN'` (yoki aksincha) yubora
+    // oladi. Amalda bu unit-scoping tufayli xavfli emas — lekin noaniq:
+    // aniq rad etish yashirin nomuvofiqlikdan yaxshiroq.
+    if (format === 'PAAR' && itemType !== 'WORT') {
+      throw new BadRequestException("PAAR savoli faqat so'zga tegishli");
+    }
+    if (format === 'ZUORDNEN' && itemType !== 'PHRASE') {
+      throw new BadRequestException('ZUORDNEN savoli faqat iboraga tegishli');
+    }
+
     const material = await this.ladeMaterial(itemType, itemId);
     if (!material) {
       throw new NotFoundException(`Material topilmadi: ${itemType}:${itemId}`);
