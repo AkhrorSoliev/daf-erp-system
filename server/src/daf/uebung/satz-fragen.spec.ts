@@ -1,4 +1,10 @@
-import { luecke, reaktion, satzBauen, satzUebersetzen } from './satz-fragen';
+import {
+  luecke,
+  reaktion,
+  satzBauen,
+  satzUebersetzen,
+  zuordnen,
+} from './satz-fragen';
 import { istRichtig } from './antwort';
 import { baueSeans } from './seans';
 import type { MaterialPhrase, MaterialSatz, MaterialWort } from './frage.types';
@@ -253,5 +259,61 @@ describe('reaktion', () => {
     );
     const f = reaktion(ZIEL, [birXilMatn, ...ANDERE], identityRnd)!;
     expect(f.options).not.toContain('Guten Morgen.');
+  });
+});
+
+describe('zuordnen', () => {
+  // `rnd`ni `() => 0` qilmang: u chap-aylanma beradi, ayniqsatlik emas.
+  // Identik almashtirish uchun `() => 0.9999` ishlatiladi (fayl boshidagi
+  // `reaktion` testlaridagi izohga qarang).
+  const rndId = (): number => 0.9999;
+
+  const olti = [
+    p(1, 'salomlashish', 'Hallo!', 'Salom!'),
+    p(2, "o'zini tanishtirish", 'Ich bin Anna.', 'Men Annaman.'),
+    p(3, 'xayrlashish', 'Auf Wiedersehen!', 'Xayr!'),
+    p(4, 'rahmat aytish', 'Danke!', 'Rahmat!'),
+    p(5, "so'rash", 'Wie heißen Sie?', 'Ismingiz nima?'),
+    p(6, 'javob berish', 'Ich heiße Timur.', 'Mening ismim Timur.'),
+  ];
+
+  it('oltita juft quradi', () => {
+    const f = zuordnen(olti, rndId)!;
+    expect(f).not.toBeNull();
+    expect(f.format).toBe('ZUORDNEN');
+    expect(f.options).toHaveLength(12);
+    expect(f.richtig.split('|')).toHaveLength(6);
+  });
+
+  it("chap ustun vaziyat, o'ng ustun ibora", () => {
+    const f = zuordnen(olti, rndId)!;
+    const chap = f.options.slice(0, 6);
+    const ong = f.options.slice(6);
+    expect(chap).toEqual(expect.arrayContaining(['salomlashish']));
+    expect(ong).toEqual(expect.arrayContaining(['Hallo!']));
+  });
+
+  it("to'g'ri javob `vaziyat=ibora` shaklida", () => {
+    const f = zuordnen(olti, rndId)!;
+    for (const juft of f.richtig.split('|')) {
+      const [v, i] = juft.split('=');
+      expect(olti.some((ph) => ph.funktionUz === v && ph.de === i)).toBe(true);
+    }
+  });
+
+  it('oltitadan kam ibora bo`lsa null', () => {
+    expect(zuordnen(olti.slice(0, 5), rndId)).toBeNull();
+  });
+
+  it('bir xil vaziyat ikki marta tushmaydi', () => {
+    const takror = [...olti.slice(0, 5), p(7, 'salomlashish', 'Hi!', 'Salom!')];
+    // Oltinchi noyob vaziyat topilmadi — savol qurilmaydi.
+    expect(zuordnen(takror, rndId)).toBeNull();
+  });
+
+  it('oltita iborani BAND qiladi', () => {
+    const f = zuordnen(olti, rndId)!;
+    expect(f.belegteItems).toHaveLength(6);
+    expect(new Set(f.belegteItems).size).toBe(6);
   });
 });

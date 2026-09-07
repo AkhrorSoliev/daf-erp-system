@@ -193,3 +193,54 @@ export function reaktion(
     belegteItems: [materialSchluessel('PHRASE', ziel.id)],
   };
 }
+
+/** `ZUORDNEN` da nechta juft ko'rsatiladi (kurs dizayni 4-jadval). */
+const ZUORDNEN_JUFT = 6;
+
+/**
+ * Vaziyat va iborani juftlash.
+ *
+ * `PAAR` DAN FARQI: `PAAR` so'zni tarjimasi bilan juftlaydi — bu lug'at
+ * mashqi. Bu esa VAZIYATNI NUTQ bilan juftlaydi: «xayrlashmoqchisiz —
+ * nima deysiz?». Redemittel aynan shu uchun yozilgan, va shu paytgacha
+ * faqat `REAKTION` uchun ishlatilardi.
+ *
+ * VAZIYAT NOYOB BO'LISHI SHART. Ikki ibora bir xil `funktionUz` bilan
+ * kelsa, o'quvchining juftlashi to'g'ri bo'lsa ham "xato" deb baholanib
+ * qolardi — chap ustunda bir xil ikki yozuv turib, qaysi biri qaysi
+ * iboraga tegishli ekani noaniq bo'lardi.
+ */
+export function zuordnen(
+  phrasen: MaterialPhrase[],
+  rnd: () => number,
+): Frage | null {
+  const korilgan = new Set<string>();
+  const tanlangan: MaterialPhrase[] = [];
+  for (const p of mischen(phrasen, rnd)) {
+    if (korilgan.has(p.funktionUz)) continue;
+    korilgan.add(p.funktionUz);
+    tanlangan.push(p);
+    if (tanlangan.length === ZUORDNEN_JUFT) break;
+  }
+  if (tanlangan.length < ZUORDNEN_JUFT) return null;
+
+  const chap = tanlangan.map((p) => p.funktionUz);
+  const ong = mischen(
+    tanlangan.map((p) => p.de),
+    rnd,
+  );
+
+  return {
+    format: 'ZUORDNEN',
+    itemType: 'PHRASE',
+    itemId: tanlangan[0].id,
+    prompt: 'Vaziyatni ibora bilan juftlang',
+    hilfe: null,
+    options: [...chap, ...ong],
+    richtig: tanlangan.map((p) => `${p.funktionUz}=${p.de}`).join('|'),
+    akzeptiert: [],
+    // Oltitasi ham band: savol ularning hammasini javobi bilan ko'rsatadi,
+    // shuning uchun hech biri shu seansda ikkinchi marta so'ralmaydi.
+    belegteItems: tanlangan.map((p) => materialSchluessel('PHRASE', p.id)),
+  };
+}

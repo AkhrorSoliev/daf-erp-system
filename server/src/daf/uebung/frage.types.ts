@@ -6,7 +6,8 @@ export type FrageFormat =
   | 'LUECKE'
   | 'SATZ_BAUEN'
   | 'SATZ_UEBERSETZEN'
-  | 'REAKTION';
+  | 'REAKTION'
+  | 'ZUORDNEN';
 
 export interface MaterialWort {
   id: number;

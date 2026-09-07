@@ -20,6 +20,7 @@ const FRAGE_FORMATLAR: FrageFormat[] = [
   'SATZ_BAUEN',
   'SATZ_UEBERSETZEN',
   'REAKTION',
+  'ZUORDNEN',
 ];
 
 /**

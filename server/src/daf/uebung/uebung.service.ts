@@ -19,7 +19,13 @@ import type {
 } from './frage.types';
 import { toPublic } from './frage.types';
 import { naechsterZustand } from './leitner';
-import { luecke, reaktion, satzBauen, satzUebersetzen } from './satz-fragen';
+import {
+  luecke,
+  reaktion,
+  satzBauen,
+  satzUebersetzen,
+  zuordnen,
+} from './satz-fragen';
 import { baueSeans } from './seans';
 import { ohneWiederholteFormate } from './wiederholte-formate';
 import { artikel, paar, uzWort, wortUz } from './wort-fragen';
@@ -586,6 +592,11 @@ export class UebungService {
       const re = reaktion(p, phrases, rnd);
       if (re) rohKandidaten.push(re);
     }
+    // Bir marta, `PAAR` kabi uch marta emas: `ZUORDNEN` oltita iborani
+    // oladi va bo'limlarda ibora kam (kamida 3 ta), ya'ni ikkinchi
+    // chaqiruv deyarli har doim bir xil to'plamni qaytaradi.
+    const zu = zuordnen(phrases, rnd);
+    if (zu) rohKandidaten.push(zu);
 
     // Qoida 5 (dizayn 4.3): ketma-ket ikki SEANSDA bir xil (so'z+format)
     // juftligi takrorlanmaydi. Nomzodning O'ZIDAN (`itemType`/`format`
@@ -744,6 +755,20 @@ export class UebungService {
           .filter((p) => p.lexemeId != null)
           .map((p) => ({ lexemeId: p.lexemeId as number, ok: p.ok })),
       );
+    } else if (format === 'ZUORDNEN') {
+      // `ZUORDNEN` ham `PAAR` kabi bitta "to'g'ri javob" satriga
+      // sig'maydi (oltita juftning qaysilari savolga tushgani tasodifiy
+      // tanlangan), shuning uchun `richtigeAntwort`ga UMUMAN yetib
+      // bormaydi — o'z yo'li bilan (juft-juft) tekshiradi.
+      //
+      // `ZUORDNEN`ning `itemType`si doim `PHRASE`, va `DafPhrase.unitId`
+      // sxemada NOT NULL — amalda `material.unitId` doim mavjud.
+      const natija = await this.pruefeZuordnen(
+        given,
+        material.unitId as number,
+      );
+      isCorrect = natija.isCorrect;
+      richtig = natija.richtig;
     } else {
       const antwort = richtigeAntwort(format, material);
       isCorrect = istRichtig(given, antwort.richtig, antwort.akzeptiert);
@@ -913,6 +938,63 @@ export class UebungService {
     };
   }
 
+  /**
+   * Har juftni (`vaziyat=ibora`) mustaqil tekshiradi — `pruefePaar`ning
+   * ibora nusxasi.
+   *
+   * OLTITA JUFT SHART, xuddi `PAAR`da to'rtta so'z shart bo'lgani kabi:
+   * boshqa son savol shaklini buzgan javob va butunlay XATO hisoblanadi.
+   *
+   * VAZIYATLAR NOYOB BO'LISHI SHART: savol qurilishida (`zuordnen`)
+   * ikkita ibora bir xil `funktionUz` bilan kelmaydi, shuning uchun bir
+   * xil vaziyat ikki marta nomlangan javob ham savol shaklini buzadi.
+   *
+   * IBORA QIDIRUVI SHU `unitId`GA CHEKLANADI — `pruefePaar` bilan bir
+   * xil sabab: aks holda boshqa unitdan bir xil `funktionUz`li ibora
+   * nomlab, hech qachon ko'rsatilmagan materialga "to'g'ri" javob olish
+   * mumkin bo'lardi.
+   *
+   * BALL BERILMAYDI: chaqiruvchi (`pruefen`) bu natijani `PAAR`dagi kabi
+   * `lexemeId`larga aylantirmaydi — ibora Leitner jadvaliga kirmaydi,
+   * `itemType === 'WORT'` sharti buni allaqachon ta'minlaydi.
+   */
+  private async pruefeZuordnen(
+    given: string,
+    unitId: number,
+  ): Promise<{ isCorrect: boolean; richtig: string }> {
+    const juftlar = given
+      .split('|')
+      .map((p) => p.split('='))
+      .filter((p): p is [string, string] => p.length === 2);
+
+    if (juftlar.length !== 6) {
+      return { isCorrect: false, richtig: '' };
+    }
+
+    const vaziyatlar = juftlar.map(([vaziyat]) => vaziyat);
+    if (new Set(vaziyatlar).size !== vaziyatlar.length) {
+      return { isCorrect: false, richtig: '' };
+    }
+
+    const iboralar = (await this.prisma.dafPhrase.findMany({
+      where: { funktionUz: { in: vaziyatlar }, unitId },
+    } as any)) as Array<{ funktionUz: string; de: string; uz: string }>;
+    const byVaziyat = new Map(iboralar.map((p) => [p.funktionUz, p]));
+
+    const natijalar = juftlar.map(([vaziyat, deGegeben]) => {
+      const ibora = byVaziyat.get(vaziyat);
+      const ok = ibora != null && istRichtig(deGegeben, ibora.de);
+      return { vaziyat, ok, deRichtig: ibora?.de ?? null };
+    });
+
+    return {
+      isCorrect: natijalar.every((n) => n.ok),
+      richtig: natijalar
+        .map((n) => `${n.vaziyat}=${n.deRichtig ?? ''}`)
+        .join('|'),
+    };
+  }
+
   private async ladeMaterial(
     itemType: PruefenInput['itemType'],
     itemId: number,
@@ -948,6 +1030,8 @@ export class UebungService {
     } as any)) as {
       de: string;
       uz: string;
+      /** `ZUORDNEN` javobini shu unitga cheklash uchun kerak (`PAAR` kabi). */
+      unitId: number;
     } | null;
     return row;
   }

@@ -1129,7 +1129,7 @@ describe('PAAR — ball ko`paytmasi (Fix 1: bitta so`z to`rt marta ballanmaydi)'
   // surib yuborish. Ushbu test FIX'DAN OLDIN qizil (40 ball, 4 marta
   // upsert), FIX'DAN KEYIN yashil (0 ball — malformed javob, hech
   // bo'lmasa bitta upsert) bo'lishi kutiladi. Natijalar hisobotda.
-  it("bitta so`zni to`rt marta yuborish — 0 ball, holat ko`pi bilan BIR MARTA yangilanadi", async () => {
+  it('bitta so`zni to`rt marta yuborish — 0 ball, holat ko`pi bilan BIR MARTA yangilanadi', async () => {
     const prisma = fakePrisma();
     await new UebungService(prisma as any).pruefen(
       {
@@ -1147,7 +1147,7 @@ describe('PAAR — ball ko`paytmasi (Fix 1: bitta so`z to`rt marta ballanmaydi)'
     ).toBeLessThanOrEqual(1);
   });
 
-  it("aralash: ikkitasi muddati kelgan, ikkitasi kelmagan — faqat kelganlar uchun 20 ball", async () => {
+  it('aralash: ikkitasi muddati kelgan, ikkitasi kelmagan — faqat kelganlar uchun 20 ball', async () => {
     const eski = new Date(Date.now() - 60_000);
     const kelajak = new Date(Date.now() + 3 * 86_400_000);
     // hallo(1), danke(2) — muddati kelgan; ich(3), du(4) — hali emas.
@@ -1168,5 +1168,58 @@ describe('PAAR — ball ko`paytmasi (Fix 1: bitta so`z to`rt marta ballanmaydi)'
     );
     const call = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0];
     expect(call.data.points).toBe(20);
+  });
+});
+
+describe('pruefen — ZUORDNEN', () => {
+  const ctx = { studentId: 55, companyId: 1 };
+
+  function fakeMitPhrasen() {
+    const prisma = fakePrisma();
+    prisma.dafPhrase.findMany = jest.fn(async () => [
+      { id: 1, funktionUz: 'salomlashish', de: 'Hallo!', uz: 'Salom!' },
+      {
+        id: 2,
+        funktionUz: "o'zini tanishtirish",
+        de: 'Ich bin Anna.',
+        uz: 'Men Annaman.',
+      },
+    ]) as any;
+    prisma.dafPhrase.findUnique = jest.fn(async () => ({
+      de: 'Hallo!',
+      uz: 'Salom!',
+    })) as any;
+    return prisma;
+  }
+
+  it('oltita juft kelmasa BUTUNLAY xato', async () => {
+    // Xuddi PAAR kabi: juft soni noto'g'ri bo'lsa javob shakli buzilgan.
+    const prisma = fakeMitPhrasen();
+    const r = await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'PHRASE',
+        itemId: 1,
+        format: 'ZUORDNEN',
+        given: 'salomlashish=Hallo!',
+      },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(false);
+  });
+
+  it('ZUORDNEN ball BERMAYDI — ibora Leitnerga kirmaydi', async () => {
+    const prisma = fakeMitPhrasen();
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'PHRASE',
+        itemId: 1,
+        format: 'ZUORDNEN',
+        given: 'salomlashish=Hallo!',
+      },
+      ctx,
+    );
+    expect(
+      (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data.points,
+    ).toBe(0);
   });
 });
