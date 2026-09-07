@@ -319,6 +319,57 @@ describe('getLevels — ilgarilash', () => {
     expect(a1.units[1].doneCount).toBe(0);
   });
 
+  it('tugallanmagan urinish doneCount`ga qo`shilmaydi', async () => {
+    // Bu aynan brief ogohlantirgan xavf: agar TUGALLANMAGAN seans ham
+    // "bajarilgan" deb sanalsa, yo'l sahifasi o'quvchi hali tugatmagan
+    // unitni ochiq deb ko'rsatardi. `completedAt: null` qatori
+    // xotiradagi guruhlashda (`if (!f.completedAt) continue;`)
+    // chetlab o'tilishi kerak.
+    const prisma = fakePrisma();
+    prisma.dafUnit.findMany = jest.fn(async () => [
+      {
+        id: 1,
+        level: 'A1',
+        order: 1,
+        titleUz: 'Salom',
+        titleDe: 'Hallo',
+        _count: { lessons: 2 },
+      },
+    ]);
+    prisma.dafLesson.findMany = jest.fn(async () => [
+      {
+        id: 201,
+        unitId: 1,
+        order: 1,
+        tier: null,
+        kind: 'SECTION_A',
+        sectionId: null,
+        titleDe: 'a',
+        titleUz: 'a',
+        _count: { lexemes: 0, exercises: 0 },
+      },
+      {
+        id: 202,
+        unitId: 1,
+        order: 2,
+        tier: null,
+        kind: 'SECTION_A',
+        sectionId: null,
+        titleDe: 'b',
+        titleUz: 'b',
+        _count: { lexemes: 0, exercises: 0 },
+      },
+    ]);
+    prisma.dafLessonProgress.findMany = jest.fn(async () => [
+      { lessonId: 201, completedAt: new Date('2026-09-01'), bestScore: 12, runs: 1 },
+      // Boshlangan, lekin tugallanmagan urinish — `completedAt: null`.
+      { lessonId: 202, completedAt: null, bestScore: 4, runs: 1 },
+    ]);
+    const levels = await svc(prisma).getLevels(55);
+    const a1 = levels.find((l) => l.level === 'A1')!;
+    expect(a1.units[0].doneCount).toBe(1);
+  });
+
   it('faqat SHU o`quvchining ilgarilashini so`raydi', async () => {
     const prisma = fakePrisma();
     await svc(prisma).getLevels(55);
