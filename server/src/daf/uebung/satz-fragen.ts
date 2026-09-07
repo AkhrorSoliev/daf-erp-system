@@ -209,16 +209,29 @@ const ZUORDNEN_JUFT = 6;
  * kelsa, o'quvchining juftlashi to'g'ri bo'lsa ham "xato" deb baholanib
  * qolardi — chap ustunda bir xil ikki yozuv turib, qaysi biri qaysi
  * iboraga tegishli ekani noaniq bo'lardi.
+ *
+ * IBORA MATNI (`de`) HAM NOYOB BO'LISHI SHART — xuddi `paar()`dagi
+ * `usedDe`/`usedUz` kabi. `DafPhrase.de`da unique constraint YO'Q, ya'ni
+ * ikki BOSHQA vaziyat bir xil nemischa iboraga ega bo'lishi mumkin. Bu
+ * holatda o'ng ustunda ikkita bir xil matnli tugma chiqardi — mijoz
+ * ularni matn bo'yicha farqlaydi (`Juftlash`), ya'ni birinchisi
+ * juftlangach ikkinchisi "allaqachon juftlangan" deb ko'rinib, o'quvchi
+ * ikkinchi juftni HECH QACHON tuza olmay qolardi (Task 4 ko'rigi).
+ * Mijoz tomoni pozitsiya bo'yicha ajratib tuzatilgan, lekin bu tomon
+ * ham noyoblikni ta'minlaydi — ikkalasi MUSTAQIL himoya qatlami: bu
+ * yerda oldini olinsa, mijoz hech qachon bunday savolni ko'rmaydi.
  */
 export function zuordnen(
   phrasen: MaterialPhrase[],
   rnd: () => number,
 ): Frage | null {
   const korilgan = new Set<string>();
+  const korilganDe = new Set<string>();
   const tanlangan: MaterialPhrase[] = [];
   for (const p of mischen(phrasen, rnd)) {
-    if (korilgan.has(p.funktionUz)) continue;
+    if (korilgan.has(p.funktionUz) || korilganDe.has(p.de)) continue;
     korilgan.add(p.funktionUz);
+    korilganDe.add(p.de);
     tanlangan.push(p);
     if (tanlangan.length === ZUORDNEN_JUFT) break;
   }

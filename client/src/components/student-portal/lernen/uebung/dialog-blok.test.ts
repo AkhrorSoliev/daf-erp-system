@@ -38,6 +38,17 @@ describe("ajratDialogQatorlari", () => {
     expect(natija[0].boshMi).toBe(false);
   });
 
+  it("hech qaysi satrda bo'sh joy bo'lmasa — HAMMASI belgilanmaydi", () => {
+    // Bitta satrni emas, butun (bo'shatilmagan) suhbatni tekshiradi —
+    // masalan server hali savol qurmagan yoki boshqa formatdagi matnni
+    // xato uzatib qo'ygan holatni aks ettiradi: ekran shunchaki oddiy
+    // matn sifatida chizishi kerak, birorta qatorni ham ajratib
+    // ko'rsatmasdan.
+    const matn = "Anna: Guten Tag!\nBen: Hallo!\nAnna: Wie geht's?";
+    const natija = ajratDialogQatorlari(matn);
+    expect(natija.every((q) => !q.boshMi)).toBe(true);
+  });
+
   it("bir necha satrni tartibda ajratadi", () => {
     const matn = "Anna: Guten Tag!\nBen: ___\nAnna: Danke, gut.";
     const natija = ajratDialogQatorlari(matn);

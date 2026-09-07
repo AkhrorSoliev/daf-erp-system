@@ -176,11 +176,81 @@ interface JuftlashProps extends IchkiProps {
   format: "PAAR" | "ZUORDNEN";
 }
 
+/** Bitta tuzilgan juft — chap va o'ng ustundagi POZITSIYA (indeks). */
+export interface IndexJuft {
+  chapIdx: number;
+  ongIdx: number;
+}
+
+interface BosishNatijasi {
+  juftlar: IndexJuft[];
+  kutilayotganIdx: number | null;
+}
+
+/**
+ * Chap ustundagi `chapIdx` bosilganda: band bo'lsa o'sha juftni (ong bilan
+ * birga) bekor qiladi; band bo'lmasa uni "kutilayotgan" qiladi (yana
+ * bosilsa — bekor).
+ *
+ * SOF FUNKSIYA, faqat INDEKSLAR bilan ishlaydi — matnni umuman bilmaydi.
+ */
+export function chapBosildi(
+  juftlar: IndexJuft[],
+  kutilayotganIdx: number | null,
+  chapIdx: number,
+): BosishNatijasi {
+  const mavjud = juftlar.find((j) => j.chapIdx === chapIdx);
+  if (mavjud) {
+    return { juftlar: juftlar.filter((j) => j !== mavjud), kutilayotganIdx };
+  }
+  return {
+    juftlar,
+    kutilayotganIdx: kutilayotganIdx === chapIdx ? null : chapIdx,
+  };
+}
+
+/**
+ * O'ng ustundagi `ongIdx` bosilganda: band bo'lsa o'sha juftni bekor
+ * qiladi; kutilayotgan chap bo'lsa u bilan yangi juft tuzadi.
+ *
+ * SOF FUNKSIYA, faqat INDEKSLAR bilan ishlaydi — MUHIM: bu funksiya
+ * ikkita tugmani ularning MATNI emas, pozitsiyasi bo'yicha farqlaydi.
+ * Sabab: server `zuordnen()`da ibora matnini (`de`) noyob qiladi, lekin
+ * `DafPhrase.de`da unique constraint yo'q — ikki BOSHQA vaziyat
+ * nazariy jihatdan bir xil ibora matniga ega bo'lishi mumkin edi. Eski
+ * mexanizm juftni MATN bo'yicha qidirardi (`tanlangan.find(p =>
+ * p.endsWith(\`=${ong}\`))`) — shu holatda ikkinchi bir xil matnli
+ * tugma "allaqachon band" deb topilib, uni HECH QACHON tanlab bo'lmay
+ * qolardi (Task 4 ko'rigi). Bu — server tomonidagi dedupe'dan MUSTAQIL
+ * ikkinchi himoya qatlami: shu funksiya matnni umuman ko'rmagani uchun
+ * bunday chalkashish endi TUZILISHIY jihatdan mumkin emas.
+ */
+export function ongBosildi(
+  juftlar: IndexJuft[],
+  kutilayotganIdx: number | null,
+  ongIdx: number,
+): BosishNatijasi {
+  const mavjud = juftlar.find((j) => j.ongIdx === ongIdx);
+  if (mavjud) {
+    return { juftlar: juftlar.filter((j) => j !== mavjud), kutilayotganIdx };
+  }
+  if (kutilayotganIdx == null) return { juftlar, kutilayotganIdx };
+  return {
+    juftlar: [...juftlar, { chapIdx: kutilayotganIdx, ongIdx }],
+    kutilayotganIdx: null,
+  };
+}
+
 /**
  * Ikki ustunni juftlash: `PAAR` (nemischa/o'zbekcha) VA `ZUORDNEN`
  * (vaziyat/ibora) BITTA mexanizmdan foydalanadi — faqat ustunlar mazmuni
  * farq qiladi, bosish-bekor qilish mantig'i bir xil. Shu sabab ustunlar
  * "de"/"uz" emas, umumiy "chap"/"o'ng" deb nomlangan.
+ *
+ * TANLASH HOLATI (`juftlar`) INDEKS bo'yicha saqlanadi (`chapBosildi`/
+ * `ongBosildi`, yuqorida) — faqat serverga YUBORILADIGAN `tanlangan`
+ * (parent'dagi `yigilgan`) matn juftlari (`chap=o'ng`) bo'lib qoladi,
+ * chunki server aynan shu shaklni kutadi (`given`, `seans-ekrani.tsx`).
  */
 function Juftlash({ format, options, tanlangan, onOzgar, natija, kutilmoqda }: JuftlashProps) {
   // `options` soni har doim `juftSoni(format) * 2`: birinchi yarmi chap
@@ -189,8 +259,22 @@ function Juftlash({ format, options, tanlangan, onOzgar, natija, kutilmoqda }: J
   const chapUstun = options.slice(0, soni);
   const ongUstun = options.slice(soni, soni * 2);
 
-  const [kutilayotgan, setKutilayotgan] = React.useState<string | null>(null);
+  const [juftlar, setJuftlar] = React.useState<IndexJuft[]>([]);
+  const [kutilayotganIdx, setKutilayotganIdx] = React.useState<number | null>(null);
   const qulflangan = natija != null || kutilmoqda;
+
+  // Tashqi tozalash: `seans-ekrani.tsx` keyingi savolga o'tishda yoki
+  // qayta boshlashda `yigilgan`ni `[]`ga qaytaradi — bu yerdagi mahalliy
+  // holat ham shu bilan sinxron bo'lishi kerak, aks holda eski
+  // (indekslar bo'yicha saqlangan) juftlar keyingi savolga "yopishib
+  // qolardi", ular endi boshqa `options` ustiga ishora qilsa ham.
+  React.useEffect(() => {
+    if (tanlangan.length === 0 && juftlar.length > 0) {
+      setJuftlar([]);
+      setKutilayotganIdx(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tanlangan.length]);
 
   // Natija kelganda server `richtig` ni "chap=o'ng|chap=o'ng|…" ko'rinishida
   // qaytaradi — har bir juftni alohida to'g'ri/xato deb ko'rsatish uchun uni
@@ -205,10 +289,14 @@ function Juftlash({ format, options, tanlangan, onOzgar, natija, kutilmoqda }: J
     return xarita;
   }, [natija]);
 
-  const juftTop = (chap: string) => tanlangan.find((p) => p.startsWith(`${chap}=`)) ?? null;
-  const juftOngTop = (ong: string) => tanlangan.find((p) => p.endsWith(`=${ong}`)) ?? null;
-
-  const bekorQil = (juft: string) => onOzgar(tanlangan.filter((p) => p !== juft));
+  // `juftlar`dagi indekslarni serverga yuborish uchun matn juftlariga
+  // aylantirib, ikkalasini (mahalliy va parent) BIRGA yangilaydi.
+  const yangila = (keyingi: IndexJuft[]) => {
+    setJuftlar(keyingi);
+    onOzgar(
+      keyingi.map(({ chapIdx, ongIdx }) => `${chapUstun[chapIdx]}=${ongUstun[ongIdx]}`),
+    );
+  };
 
   const holatKlass = (paired: boolean, tanlab: boolean, togri: boolean | null) => {
     if (togri === true) return "border-success bg-success/10 text-success";
@@ -221,23 +309,21 @@ function Juftlash({ format, options, tanlangan, onOzgar, natija, kutilmoqda }: J
   return (
     <div className="grid grid-cols-2 gap-2.5">
       <div className="space-y-2">
-        {chapUstun.map((chap) => {
-          const juft = juftTop(chap);
+        {chapUstun.map((chap, chapIdx) => {
+          const juft = juftlar.find((j) => j.chapIdx === chapIdx) ?? null;
           const paired = juft != null;
-          const tanlab = kutilayotgan === chap;
-          const togri = togriXarita ? togriXarita.get(chap) === juft?.split("=")[1] : null;
+          const tanlab = kutilayotganIdx === chapIdx;
+          const togri = togriXarita && juft ? togriXarita.get(chap) === ongUstun[juft.ongIdx] : null;
 
           return (
             <button
-              key={chap}
+              key={chapIdx}
               type="button"
               disabled={qulflangan}
               onClick={() => {
-                if (paired && juft) {
-                  bekorQil(juft);
-                  return;
-                }
-                setKutilayotgan(tanlab ? null : chap);
+                const natijasi = chapBosildi(juftlar, kutilayotganIdx, chapIdx);
+                if (natijasi.juftlar !== juftlar) yangila(natijasi.juftlar);
+                setKutilayotganIdx(natijasi.kutilayotganIdx);
               }}
               className={cn(
                 // `truncate` — olti juftda vaziyat/ibora matni to'rt juftdagi
@@ -255,26 +341,20 @@ function Juftlash({ format, options, tanlangan, onOzgar, natija, kutilmoqda }: J
       </div>
 
       <div className="space-y-2">
-        {ongUstun.map((ong) => {
-          const juft = juftOngTop(ong);
+        {ongUstun.map((ong, ongIdx) => {
+          const juft = juftlar.find((j) => j.ongIdx === ongIdx) ?? null;
           const paired = juft != null;
-          const chap = paired ? juft.split("=")[0] : null;
-          const togri = togriXarita && chap ? togriXarita.get(chap) === ong : null;
+          const togri = togriXarita && juft ? togriXarita.get(chapUstun[juft.chapIdx]) === ong : null;
 
           return (
             <button
-              key={ong}
+              key={ongIdx}
               type="button"
               disabled={qulflangan}
               onClick={() => {
-                if (paired && juft) {
-                  bekorQil(juft);
-                  return;
-                }
-                if (kutilayotgan != null) {
-                  onOzgar([...tanlangan, `${kutilayotgan}=${ong}`]);
-                  setKutilayotgan(null);
-                }
+                const natijasi = ongBosildi(juftlar, kutilayotganIdx, ongIdx);
+                if (natijasi.juftlar !== juftlar) yangila(natijasi.juftlar);
+                setKutilayotganIdx(natijasi.kutilayotganIdx);
               }}
               className={cn(
                 "w-full truncate rounded-2xl border-2 px-3.5 py-3 text-left font-semibold transition-colors",
