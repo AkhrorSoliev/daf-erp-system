@@ -84,33 +84,40 @@ function useSanaladiganBall(maqsad: number | null): number | null {
  * Ko'rik topilmasi (IMPORTANT): eski ko'rinish `prompt` va `richtig`ni
  * ikkita `span`ga solib, bitta `justify-between` qatorga joylardi.
  * `DIALOG_LUECKE`da `prompt` BUTUN suhbat (bir necha qator matn),
- * `ZUORDNEN`da `richtig` esa olti juftlikni pipe bilan ulagan ~300
- * belgili qator — ikkalasi ham bitta bo'yalgan qatorga sig'maydi.
+ * `ZUORDNEN`/`PAAR`da `richtig` esa bir necha juftlikni pipe bilan
+ * ulagan uzun qator — ikkalasi ham bitta bo'yalgan qatorga sig'maydi.
  * Bu yerda FORMATga qarab uchta ko'rinish tanlanadi:
  *  - `DIALOG_LUECKE` — suhbat o'rniga qisqa `titel` (dialog nomi),
  *    javob (bitta yo'q bo'lgan qator) o'zgarishsiz qoladi.
- *  - `ZUORDNEN` — `richtig`ni "vaziyat=ibora" juftlariga bo'lib,
+ *  - `ZUORDNEN`/`PAAR` (jonli juftlash, Task 3 ko'rik topilmasi:
+ *    ikkalasi ham "chap=o'ng|…" shaklida BITTA mexanizm — `yigish.tsx`
+ *    dagi izohga qarang) — `richtig`ni "chap=o'ng" juftlariga bo'lib,
  *    RO'YXAT sifatida chizadi (bitta uzun qalin qator emas).
  *  - qolgan formatlar — eski ikkita `span`li ko'rinish.
  */
 function XatoQatori({ xato }: { xato: SeansXato }) {
-  if (xato.format === "ZUORDNEN") {
+  if (xato.format === "ZUORDNEN" || xato.format === "PAAR") {
     // Re-review topilmasi (Minor): `pruefeZuordnen`ning fail-closed yo'li
-    // (`funktionUz` kolliziyasi) `richtig: ''` qaytaradi. `''.split("|")`
+    // (`funktionUz` kolliziyasi) `richtig: ''` qaytarishi mumkin edi —
+    // ZUORDNEN uchun kamdan-kam server-tomon kolliziya. `''.split("|")`
     // BO'SH MASSIV EMAS — `[""]` beradi, ya'ni tuzatilmasa shu yerda
-    // bitta BO'SH qator (vaziyatsiz, iborasiz) tint fon ichida chizilib
-    // qolardi. Bunday holatda umuman ro'yxat chizmaymiz.
+    // bitta BO'SH qator (chapsiz, o'ngsiz) tint fon ichida chizilib
+    // qolardi. Bunday holatda umuman ro'yxat chizmaymiz. Jonli
+    // juftlashda (`seans-ekrani.tsx`, `juftlarniRichtigga`) `richtig`
+    // amalda hech qachon bo'sh kelmaydi — savol faqat BARCHA juft
+    // yashil bo'lgach tugaydi — lekin bu qo'riqchi shart bo'lmagan
+    // taqdirda ham zararsiz.
     if (!xato.richtig) return null;
     const juftlar = xato.richtig.split("|").map((juft) => {
-      const [vaziyat, ibora] = juft.split("=");
-      return { vaziyat: vaziyat ?? "", ibora: ibora ?? "" };
+      const [chap, ong] = juft.split("=");
+      return { chap: chap ?? "", ong: ong ?? "" };
     });
     return (
       <ul className="space-y-1">
         {juftlar.map((j, i) => (
           <li key={i} className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-ink-600">{j.vaziyat}</span>
-            <span className="font-bold text-danger">{j.ibora}</span>
+            <span className="text-ink-600">{j.chap}</span>
+            <span className="font-bold text-danger">{j.ong}</span>
           </li>
         ))}
       </ul>

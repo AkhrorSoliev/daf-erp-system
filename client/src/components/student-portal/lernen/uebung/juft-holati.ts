@@ -88,3 +88,41 @@ export function juftJavobKeldi(
 export function hammasiTogri(juftlar: JonliJuft[], soni: number): boolean {
   return juftlar.length === soni && juftlar.every((j) => j.holat === "togri");
 }
+
+/**
+ * Yakuniy (hammasi yashil) `juftlar`dan `pruefen`ning `richtig`i bilan
+ * BIR XIL shakldagi "chap=o'ng|chap=o'ng|…" qatorini quradi.
+ *
+ * NEGA BU KERAK (ko'rik topilmasi tuzatildi): sintetik natija avval
+ * `richtig: ""` bilan yuborilardi — bu `javobBerildi` orqali
+ * `xatolar`ga tushib, seans oxiridagi xato ko'rigini (`natija-ekrani.tsx`)
+ * BO'SH qoldirardi: `ZUORDNEN`da mavjud `if (!xato.richtig) return null`
+ * qo'riqchisi (kamdan-kam server-tomon kolliziyasi uchun yozilgan edi)
+ * ENDI ODATIY holatda ishga tushib, qatorni butunlay yashirardi;
+ * `PAAR`da esa to'g'ri javob ustuni doim bo'sh chiqardi. Aslida bu
+ * ma'lumot ALLAQACHON mavjud: savol tugagan payt HAR bir juft
+ * serverda alohida tasdiqlangan (`holat === "togri"`), shuning uchun
+ * uni matnga aylantirish JAVOBNI MIJOZGA OSHKOR QILISH emas — mijoz
+ * allaqachon bilgan (va server tasdiqlagan) narsani qayta hisoblab
+ * chiqarish, xolos.
+ *
+ * FAQAT "togri" juftlarni oladi (himoya qatlami): chaqiruvchi buni
+ * `hammasiTogri` rost bo'lgandagina chaqirishi kerak — o'sha paytda
+ * BARCHA juftlar allaqachon "togri" — lekin funksiya bu shartga
+ * mustaqil ravishda ham amal qiladi, shunda nazariy jihatdan noto'g'ri
+ * chaqiruv "kutilmoqda" juftni javobga aralashtirib yubormaydi.
+ *
+ * `chapUstun`/`ongUstun`NI OLADI, `options`NI EMAS — `juftUstunlar`
+ * (`yigish.tsx`) bilan bir xil sabab: bo'lish qoidasi FAQAT bir joyda
+ * yashasin, bu yerda qayta yozilmasin.
+ */
+export function juftlarniRichtigga(
+  juftlar: JonliJuft[],
+  chapUstun: string[],
+  ongUstun: string[],
+): string {
+  return juftlar
+    .filter((j) => j.holat === "togri")
+    .map((j) => `${chapUstun[j.chapIdx]}=${ongUstun[j.ongIdx]}`)
+    .join("|");
+}

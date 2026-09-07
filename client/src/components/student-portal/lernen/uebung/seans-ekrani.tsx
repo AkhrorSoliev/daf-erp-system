@@ -33,6 +33,7 @@ import {
   boshlaJuftlar,
   hammasiTogri,
   juftJavobKeldi,
+  juftlarniRichtigga,
   juftQoshildi,
   type JonliJuft,
 } from "./juft-holati";
@@ -292,13 +293,28 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // urinishda to'g'ri bo'lganmi (`juftXatoSoni`), mijoz shuni sanaydi —
   // xavfsiz, chunki bu faqat savolning KEYINROQ qaytishiga ta'sir
   // qiladi (`javobBerildi`), ball esa allaqachon serverda hisoblangan.
-  // `richtig: ""` — juftlash savoli to'g'ri javobsiz tugaydi, chunki
-  // o'quvchi uni ekranda allaqachon yig'ib bo'lgan.
+  //
+  // `richtig` ENDI BO'SH EMAS (ko'rik topilmasi tuzatildi): avval
+  // `richtig: ""` yuborilardi — bu seans oxiridagi xato ko'rigini
+  // (`natija-ekrani.tsx`) juftlash formatlari uchun BO'SH qoldirardi,
+  // aynan ODATIY holatda (har safar o'quvchi biror juftda xato qilganda),
+  // chunki `ZUORDNEN`ning "bo'sh richtig'ni yashir" qo'riqchisi
+  // (kamdan-kam server kolliziyasi uchun yozilgan edi) shu yerda ham
+  // ishga tushardi, `PAAR`da esa to'g'ri javob ustuni doim bo'sh
+  // ko'rinardi. `juftlarniRichtigga` yakuniy (hammasi yashil) `juftlar`dan
+  // xuddi `pruefen` qaytaradigan "chap=o'ng|…" qatorini quradi — bu
+  // JAVOBNI OSHKOR QILISH emas, chunki har juft ALLAQACHON serverda
+  // alohida tasdiqlangan (`holat === "togri"`); mijoz faqat allaqachon
+  // ma'lum bo'lgan narsani matnga aylantiradi.
   React.useEffect(() => {
     if (!frage || natija) return;
     if (frage.format !== "PAAR" && frage.format !== "ZUORDNEN") return;
     if (!hammasiTogri(juftlar, juftSoni(frage.format))) return;
-    setNatija({ isCorrect: juftXatoSoni.current === 0, richtig: "" });
+    const { chapUstun, ongUstun } = juftUstunlar(frage.options, frage.format);
+    setNatija({
+      isCorrect: juftXatoSoni.current === 0,
+      richtig: juftlarniRichtigga(juftlar, chapUstun, ongUstun),
+    });
   }, [juftlar, frage, natija]);
 
   const keyingi = async () => {
