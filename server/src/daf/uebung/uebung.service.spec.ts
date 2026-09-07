@@ -1174,20 +1174,88 @@ describe('PAAR — ball ko`paytmasi (Fix 1: bitta so`z to`rt marta ballanmaydi)'
 describe('pruefen — ZUORDNEN', () => {
   const ctx = { studentId: 55, companyId: 1 };
 
+  // Barcha oltita juft TO'G'RI — nafaqat ball hisobini, balki
+  // `pruefeZuordnen`ning haqiqatan solishtirish yo'lini ham sinaydi
+  // (Finding 2: 1-juftli "malformed" javob bilan buni isbotlab bo'lmaydi,
+  // chunki u pruefeZuordnen ma'lumot bazasiga yetib bormasdan turib
+  // xato deb belgilanadi).
+  const RICHTIG_GEGEBEN = [
+    'salomlashish=Hallo!',
+    "o'zini tanishtirish=Ich bin Anna.",
+    'xayrlashish=Auf Wiedersehen!',
+    'rahmat aytish=Danke!',
+    "so'rash=Wie heißen Sie?",
+    'javob berish=Ich heiße Timur.',
+  ].join('|');
+
   function fakeMitPhrasen() {
     const prisma = fakePrisma();
-    prisma.dafPhrase.findMany = jest.fn(async () => [
-      { id: 1, funktionUz: 'salomlashish', de: 'Hallo!', uz: 'Salom!' },
+    const phrasen = [
+      {
+        id: 1,
+        funktionUz: 'salomlashish',
+        de: 'Hallo!',
+        uz: 'Salom!',
+        unitId: 1,
+      },
       {
         id: 2,
         funktionUz: "o'zini tanishtirish",
         de: 'Ich bin Anna.',
         uz: 'Men Annaman.',
+        unitId: 1,
       },
-    ]) as any;
+      {
+        id: 3,
+        funktionUz: 'xayrlashish',
+        de: 'Auf Wiedersehen!',
+        uz: 'Xayr!',
+        unitId: 1,
+      },
+      {
+        id: 4,
+        funktionUz: 'rahmat aytish',
+        de: 'Danke!',
+        uz: 'Rahmat!',
+        unitId: 1,
+      },
+      {
+        id: 5,
+        funktionUz: "so'rash",
+        de: 'Wie heißen Sie?',
+        uz: 'Ismingiz nima?',
+        unitId: 1,
+      },
+      {
+        id: 6,
+        funktionUz: 'javob berish',
+        de: 'Ich heiße Timur.',
+        uz: 'Mening ismim Timur.',
+        unitId: 1,
+      },
+    ];
+    // `where.unitId` haqiqatan hisobga olinadi — Finding 1ning himoyasi
+    // (`pruefeZuordnen`ning `unitId` bilan qidiruvi) shu fixture ustida
+    // ham chinakam SINALGAN bo'lishi uchun, boshqa unitdan ibora yo'q
+    // deb qabul qilib o'tirmasdan.
+    prisma.dafPhrase.findMany = jest.fn(async (args: any = {}) => {
+      const where = args?.where ?? {};
+      let rows = phrasen;
+      if (where.funktionUz?.in) {
+        rows = rows.filter((p) => where.funktionUz.in.includes(p.funktionUz));
+      }
+      if (where.unitId != null) {
+        rows = rows.filter((p) => p.unitId === where.unitId);
+      }
+      return rows;
+    }) as any;
+    // `unitId` MAVJUD — Finding 1: himoya qatlami (`material.unitId ==
+    // null` tekshiruvi) shu fixture bilan ishlashi kerak, aks holda
+    // BadRequestException tashlab, quyidagi testlarni yiqitardi.
     prisma.dafPhrase.findUnique = jest.fn(async () => ({
       de: 'Hallo!',
       uz: 'Salom!',
+      unitId: 1,
     })) as any;
     return prisma;
   }
@@ -1207,19 +1275,73 @@ describe('pruefen — ZUORDNEN', () => {
     expect(r.isCorrect).toBe(false);
   });
 
-  it('ZUORDNEN ball BERMAYDI — ibora Leitnerga kirmaydi', async () => {
+  it('bir xil vaziyat ikki marta kelsa BUTUNLAY xato', async () => {
+    // Finding 3: `pruefeZuordnen`ning `new Set(vaziyatlar).size !==
+    // vaziyatlar.length` shartini hech qanday test sinamagan edi.
+    // Oltita juft bor, lekin 'salomlashish' ikki marta — noyoblik
+    // buziladi.
+    const takrorlangan = [
+      'salomlashish=Hallo!',
+      "o'zini tanishtirish=Ich bin Anna.",
+      'xayrlashish=Auf Wiedersehen!',
+      'rahmat aytish=Danke!',
+      "so'rash=Wie heißen Sie?",
+      'salomlashish=Ich heiße Timur.',
+    ].join('|');
     const prisma = fakeMitPhrasen();
-    await new UebungService(prisma as any).pruefen(
+    const r = await new UebungService(prisma as any).pruefen(
       {
         itemType: 'PHRASE',
         itemId: 1,
         format: 'ZUORDNEN',
-        given: 'salomlashish=Hallo!',
+        given: takrorlangan,
       },
       ctx,
     );
+    expect(r.isCorrect).toBe(false);
+  });
+
+  it('oltita juft ham to`g`ri bo`lsa isCorrect true qaytaradi (end-to-end)', async () => {
+    // Finding 3: shu paytgacha faqat "noto'g'ri juft soni" yo'li sinalgan
+    // edi — to'g'ri javobning o'zi hech qachon bazaga tekkanda TO'G'RI
+    // deb tanilishi tekshirilmagan edi.
+    const prisma = fakeMitPhrasen();
+    const r = await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'PHRASE',
+        itemId: 1,
+        format: 'ZUORDNEN',
+        given: RICHTIG_GEGEBEN,
+      },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(true);
+    expect(r.richtig).toBe(RICHTIG_GEGEBEN);
+  });
+
+  it('ZUORDNEN ball BERMAYDI — ibora Leitnerga kirmaydi', async () => {
+    // Finding 2: bu test endi TO'LIQ TO'G'RI oltita juft yuboradi, ya'ni
+    // `isCorrect` haqiqatan `true` bo'ladi va nol ball `itemType ===
+    // 'WORT'` sharti PHRASE uchun ishlamagani sabab keladi — noto'g'ri
+    // javobning "har qanday holatda ham nol" degan tasodifidan emas.
+    const prisma = fakeMitPhrasen();
+    const r = await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'PHRASE',
+        itemId: 1,
+        format: 'ZUORDNEN',
+        given: RICHTIG_GEGEBEN,
+      },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(true);
     expect(
       (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data.points,
     ).toBe(0);
+    // Ibora Leitner jadvaliga umuman kirmaydi — holat yangilanishi
+    // (`dafLexemeState.upsert`) hech qachon chaqirilmaydi.
+    expect((prisma.dafLexemeState.upsert as jest.Mock).mock.calls.length).toBe(
+      0,
+    );
   });
 });

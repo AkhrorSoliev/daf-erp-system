@@ -760,13 +760,18 @@ export class UebungService {
       // sig'maydi (oltita juftning qaysilari savolga tushgani tasodifiy
       // tanlangan), shuning uchun `richtigeAntwort`ga UMUMAN yetib
       // bormaydi — o'z yo'li bilan (juft-juft) tekshiradi.
-      //
-      // `ZUORDNEN`ning `itemType`si doim `PHRASE`, va `DafPhrase.unitId`
-      // sxemada NOT NULL — amalda `material.unitId` doim mavjud.
-      const natija = await this.pruefeZuordnen(
-        given,
-        material.unitId as number,
-      );
+      if (material.unitId == null) {
+        // PAAR bilan bir xil himoya qatlami: `CheckAntwortDto` `itemType`
+        // va `format`ni MUSTAQIL tekshiradi, ya'ni mijoz `itemType: 'SATZ'`
+        // + `format: 'ZUORDNEN'` yubora oladi. Shu holda `ladeMaterial`
+        // `unitId`siz material qaytaradi — himoyasiz qoldirilsa,
+        // `pruefeZuordnen`ga `unitId: undefined` o'tib, Prisma
+        // `{ unitId: undefined }` filtrini JIMGINA tashlab yuboradi va
+        // ibora qidiruvi BUTUN bazaga (barcha unitlarga) tarqaladi —
+        // aynan shu funksiyaning shartnomasi taqiqlagan holat.
+        throw new BadRequestException('ZUORDNEN savoli faqat iboraga tegishli');
+      }
+      const natija = await this.pruefeZuordnen(given, material.unitId);
       isCorrect = natija.isCorrect;
       richtig = natija.richtig;
     } else {
