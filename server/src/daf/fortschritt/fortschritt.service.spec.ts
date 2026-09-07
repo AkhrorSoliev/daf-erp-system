@@ -19,6 +19,12 @@ describe('uebersicht', () => {
     const f = await new FortschrittService(prisma).uebersicht(55, 1);
     expect(f.gesamt).toBe(1_600);
     expect(f.stufe.de).toBe('Kenner');
+    // `stufe.ab` — HOZIRGI darajaning pastki chegarasi, `naechsteStufe.ab`dan
+    // FARQLI: mijoz chiziqni "shu daraja ichida qancha bosib o'tildi" deb
+    // hisoblashi uchun ikkalasi ham kerak — faqat naechsteStufe.ab bo'lsa,
+    // chiziq darajaga yangi kirgan o'quvchida ham noldan boshlanmay,
+    // avvalgi darajaning ballarini hisobga olib qoladi.
+    expect(f.stufe.ab).toBe(1_500);
     expect(f.naechsteStufe?.ab).toBe(4_000);
   });
 
@@ -27,6 +33,7 @@ describe('uebersicht', () => {
     expect(f.gesamt).toBe(0);
     expect(f.serie).toBe(0);
     expect(f.stufe.de).toBe('Anfänger');
+    expect(f.stufe.ab).toBe(0);
     expect(f.wochePlatzGruppe).toBeNull();
   });
 

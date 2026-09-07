@@ -17,7 +17,7 @@ import {
   type SegmentOption,
 } from "../../lumio";
 import { useFortschritt, useReyting } from "../queries";
-import { qisqaRaqam } from "../yol/yol-tuzilishi";
+import { darajaFoizi, qisqaRaqam } from "../yol/yol-tuzilishi";
 import type { ReytingZeile } from "../types";
 
 type ReytingTab = "guruhim" | "markaz" | "darajam";
@@ -116,13 +116,13 @@ function ReytingJadvali({ scope }: { scope: "gruppe" | "zentrum" }) {
  * daraja (nemischa ustida, o'zbekcha ostida), keyingi darajagacha necha
  * ball qolgani.
  *
- * Foiz `gesamt / naechsteStufe.ab` orqali hisoblanadi — hozirgi
- * darajaning PASTKI chegarasi `useFortschritt` javobida yo'q (faqat
- * keyingi darajaniki bor), shuning uchun chiziq "0 balldan keyingi
- * darajagacha" masofani ko'rsatadi, "shu daraja ichida qancha bosib
- * o'tildi"ni emas. Ball dekorativ ko'rsatkich bo'lgani uchun bu
- * taxminiy chiziq maqsadga yetarli — asosiysi 100% aynan daraja
- * ko'tarilgan paytga to'g'ri keladi.
+ * Foiz `darajaFoizi` orqali hisoblanadi — HOZIRGI band ichida qancha
+ * bosib o'tilgani, `stufe.ab` dan `naechsteStufe.ab` gacha. Darajaga
+ * endi kirgan o'quvchida chiziq nolga yaqin ko'rinadi, keyingi chegaraga
+ * yetganda 100% bo'ladi. `gesamt / naechsteStufe.ab` bilan hisoblash
+ * xato edi: u nolldan boshlaydi va Kenner'ga endi yetgan (1500/4000)
+ * o'quvchini "keyingi darajagacha 37% qolgan" deb ko'rsatardi — aslida
+ * u shu band boshida, hali hech narsa bosib o'tmagan.
  */
 function DarajamTab() {
   const { data, isLoading, isError, refetch } = useFortschritt();
@@ -131,9 +131,7 @@ function DarajamTab() {
   if (isError || !data) return <ReytingXatosi onRetry={() => void refetch()} />;
 
   const { gesamt, stufe, naechsteStufe } = data;
-  const foiz = naechsteStufe
-    ? Math.max(0, Math.min(100, (gesamt / naechsteStufe.ab) * 100))
-    : 100;
+  const foiz = darajaFoizi(gesamt, stufe.ab, naechsteStufe?.ab ?? null);
   const qoldi = naechsteStufe ? Math.max(0, naechsteStufe.ab - gesamt) : 0;
 
   return (

@@ -6,7 +6,8 @@ import { serieAus, stufeFuer, wochenStartUtc } from '../uebung/punkte';
 
 export interface Fortschritt {
   gesamt: number;
-  stufe: { de: string; uz: string };
+  /** `ab` — shu darajaning PASTKI chegarasi, `naechsteStufe.ab` bilan simmetrik. */
+  stufe: { de: string; uz: string; ab: number };
   naechsteStufe: { de: string; uz: string; ab: number } | null;
   serie: number;
   wochePunkte: number;
@@ -132,7 +133,7 @@ export class FortschrittService {
 
     return {
       gesamt,
-      stufe: { de: jetzt.de, uz: jetzt.uz },
+      stufe: { de: jetzt.de, uz: jetzt.uz, ab: jetzt.ab },
       naechsteStufe: naechste
         ? { de: naechste.de, uz: naechste.uz, ab: naechste.ab }
         : null,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { qisqaRaqam, yolQatorMetasi, yolTugunlari } from "./yol-tuzilishi";
+import { darajaFoizi, qisqaRaqam, yolQatorMetasi, yolTugunlari } from "./yol-tuzilishi";
 
 const seans = (id: number, done: boolean) => ({
   id, order: id, kind: "SECTION_A" as const, titleDe: "", titleUz: null,
@@ -149,5 +149,24 @@ describe("qisqaRaqam", () => {
   it("mingdan kichigini o'zgartirmaydi", () => {
     expect(qisqaRaqam(0)).toBe("0");
     expect(qisqaRaqam(999)).toBe("999");
+  });
+});
+
+describe("darajaFoizi", () => {
+  it("band boshida 0% (Kenner'ga endi kirgan — 1500/1500..4000)", () => {
+    expect(darajaFoizi(1_500, 1_500, 4_000)).toBe(0);
+  });
+
+  it("band o'rtasida bandning o'zidan hisoblaydi, gesamtdan emas", () => {
+    // 1500..4000 bandining o'rtasi 2750, gesamt/ab (2750/4000=68.75%) EMAS.
+    expect(darajaFoizi(2_750, 1_500, 4_000)).toBe(50);
+  });
+
+  it("keyingi chegaraga aynan yetganda 100%", () => {
+    expect(darajaFoizi(4_000, 1_500, 4_000)).toBe(100);
+  });
+
+  it("eng yuqori darajada (keyingisi yo'q) har doim 100%", () => {
+    expect(darajaFoizi(20_000, 16_000, null)).toBe(100);
   });
 });

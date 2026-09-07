@@ -183,7 +183,8 @@ export interface LernenGrammarItem {
 /** Yo'l tepasidagi chiplar uchun umumiy ilgarilash. */
 export interface Fortschritt {
   gesamt: number;
-  stufe: { de: string; uz: string };
+  /** `ab` — shu darajaning pastki chegarasi, `naechsteStufe.ab` bilan simmetrik. */
+  stufe: { de: string; uz: string; ab: number };
   /** Eng yuqori darajada `null` — undan keyin daraja yo'q. */
   naechsteStufe: { de: string; uz: string; ab: number } | null;
   serie: number;

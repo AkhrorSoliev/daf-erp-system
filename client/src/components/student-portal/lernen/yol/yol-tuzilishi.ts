@@ -199,3 +199,29 @@ export function qisqaRaqam(n: number): string {
   const bitta = Math.round(ming * 10) / 10;
   return Number.isInteger(bitta) ? `${bitta}k` : `${bitta.toFixed(1)}k`;
 }
+
+/**
+ * Joriy daraja BANDI ichida qancha bosib o'tilgani, foizda (0–100).
+ *
+ * `gesamt / naechsteStufe.ab` bilan CHALKASHTIRMASLIK KERAK: o'sha hisob
+ * nolldan boshlaydi va darajaga endi kirgan o'quvchini ham "band ichida
+ * uchdan bir yo'l bosib o'tgan" qilib ko'rsatadi — chiziqning ishi aynan
+ * "keyingisigacha qancha qoldi"ni aytish, "boshidan qancha yig'ilgan"ni
+ * emas. To'g'ri formula bandning PASTKI chegarasini (`stufeAb`) ayirib
+ * tashlaydi, shunda darajaga yangi kirilganda chiziq nolga yaqin, keyingi
+ * chegaraga (`naechsteStufeAb`) yetganda esa aynan 100 bo'ladi.
+ *
+ * `naechsteStufeAb == null` — eng yuqori daraja, undan keyin band yo'q,
+ * chiziq har doim to'liq.
+ */
+export function darajaFoizi(
+  gesamt: number,
+  stufeAb: number,
+  naechsteStufeAb: number | null,
+): number {
+  if (naechsteStufeAb == null) return 100;
+  const bandKengligi = naechsteStufeAb - stufeAb;
+  if (bandKengligi <= 0) return 100;
+  const foiz = ((gesamt - stufeAb) / bandKengligi) * 100;
+  return Math.max(0, Math.min(100, foiz));
+}
