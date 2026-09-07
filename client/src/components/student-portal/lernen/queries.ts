@@ -9,6 +9,7 @@ import type {
   DrillResult,
   Fortschritt,
   FrageFormat,
+  JuftNatija,
   LernenGrammarItem,
   LernenLesson,
   LernenLevel,
@@ -123,6 +124,26 @@ export function usePruefen() {
   >({
     mutationFn: (body) =>
       api.post(`${BASE}/uebung/check`, body).then((r) => r.data),
+  });
+}
+
+/**
+ * Bitta juftni tekshiradi — jonli javob uchun.
+ *
+ * `useMutation`, `useQuery` emas: bu imperativ hodisa (o'quvchi juftni
+ * bosdi), sahifa yuklanishi emas. Keshga ham tushmaydi — bir xil juftni
+ * ikkinchi marta bosish YANGI javob hisoblanadi va serverda yoziladi.
+ */
+export function useJuftTekshir() {
+  return useMutation<
+    JuftNatija,
+    unknown,
+    // `itemType` ATAYLAB `MaterialTyp` dan tor: server faqat shu ikkitasini
+    // qabul qiladi (gap va dialog satrida "juft" degan tushuncha yo'q),
+    // va tip buni chaqiruv joyidayoq ushlab qolishi kerak.
+    { itemType: "WORT" | "PHRASE"; itemId: number; format: "PAAR" | "ZUORDNEN"; chap: string; ong: string }
+  >({
+    mutationFn: (body) => api.post(`${BASE}/uebung/juft`, body).then((r) => r.data),
   });
 }
 

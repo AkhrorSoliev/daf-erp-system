@@ -40,6 +40,17 @@ export interface PruefErgebnis {
   richtig: string;
 }
 
+/**
+ * Jonli juftlash mashqida BITTA juftni tekshirish javobi.
+ *
+ * `PruefErgebnis`dan ATAYLAB tor: `richtig` (to'g'ri javob matni) yo'q —
+ * server buni hech qachon yubormaydi, chunki bitta juft tekshirilganda
+ * qolgan juftlarning javobi hali oshkor bo'lmasligi kerak.
+ */
+export interface JuftNatija {
+  isCorrect: boolean;
+}
+
 export interface AbschlussErgebnis {
   bestScore: number;
   runs: number;
