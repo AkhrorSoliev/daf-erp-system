@@ -155,6 +155,73 @@ function fakePrisma() {
     },
   ];
 
+  const dialog = [
+    {
+      id: 201,
+      titelDe: 'Dialog 1',
+      sectionId: 7,
+      zeilen: [
+        { id: 301, order: 1, sprecher: 'A', de: 'Hallo!', uz: 'Salom!' },
+        {
+          id: 302,
+          order: 2,
+          sprecher: 'B',
+          de: 'Hallo, wie geht es dir?',
+          uz: 'Salom, ahvoling qalay?',
+        },
+        {
+          id: 303,
+          order: 3,
+          sprecher: 'A',
+          de: 'Gut, danke.',
+          uz: 'Yaxshi, rahmat.',
+        },
+        {
+          id: 304,
+          order: 4,
+          sprecher: 'B',
+          de: 'Bis bald!',
+          uz: "Ko'rishguncha!",
+        },
+      ],
+    },
+    {
+      id: 202,
+      titelDe: 'Dialog 2',
+      sectionId: 7,
+      zeilen: [
+        {
+          id: 311,
+          order: 1,
+          sprecher: 'C',
+          de: 'Guten Tag!',
+          uz: 'Kun yaxshi!',
+        },
+        {
+          id: 312,
+          order: 2,
+          sprecher: 'D',
+          de: 'Wie heißen Sie?',
+          uz: 'Ismingiz nima?',
+        },
+        {
+          id: 313,
+          order: 3,
+          sprecher: 'C',
+          de: 'Ich heiße Peter.',
+          uz: 'Mening ismim Piter.',
+        },
+        {
+          id: 314,
+          order: 4,
+          sprecher: 'D',
+          de: 'Freut mich sehr.',
+          uz: 'Judayam xursandman.',
+        },
+      ],
+    },
+  ];
+
   return {
     attempts: [] as unknown[],
     states: new Map<number, { strength: number; dueAt: Date }>(),
@@ -204,6 +271,18 @@ function fakePrisma() {
       findUnique: jest.fn(
         async ({ where }: any) => phrase.find((p) => p.id === where.id) ?? null,
       ),
+    },
+    dafDialog: {
+      findMany: jest.fn(async () => dialog),
+    },
+    dafDialogLine: {
+      findUnique: jest.fn(async ({ where }: any) => {
+        for (const d of dialog) {
+          const z = d.zeilen.find((zeile) => zeile.id === where.id);
+          if (z) return { de: z.de, uz: z.uz };
+        }
+        return null;
+      }),
     },
     dafLexemeState: {
       findMany: jest.fn(async () => []),
@@ -297,6 +376,29 @@ describe('UebungService.seans', () => {
   });
 });
 
+describe('UebungService.seans — DIALOG_LUECKE', () => {
+  it('bo`lim dialoglaridan DIALOG_LUECKE nomzodi quriladi', async () => {
+    // `mulberry32(0)` shu fixture'da ikkala dialogdan ham savol quradi
+    // (har ikkalasida ham 4 tadan satr, boshqa dialogdan yetarli
+    // chalg'ituvchi bor) — `seansda haqiqatda paydo bo`ladi`ni tekshirish
+    // uchun ANIQ shu holatni tanlaymiz, seedni ANIQ shu seans uchun
+    // bo`sh massiv qaytarmasligi oldindan tekshirilgan.
+    const prisma = fakePrisma();
+    const fragen = await new UebungService(prisma as any).seans(
+      100,
+      55,
+      mulberry32(0),
+    );
+    const dialogSavollari = fragen.filter((f) => f.itemType === 'DIALOGZEILE');
+    expect(dialogSavollari.length).toBeGreaterThan(0);
+    for (const f of dialogSavollari) {
+      expect(f.format).toBe('DIALOG_LUECKE');
+      // Mijozga to'g'ri javob YUBORILMAYDI — `PublicFrage`da bu maydonlar yo'q.
+      expect(Object.keys(f)).not.toContain('richtig');
+    }
+  });
+});
+
 describe('UebungService.seans — qaytarish (wiederholung)', () => {
   it('muddati kelgan so`z seansga kiradi, ikkitadan oshmaydi va boshqa formatda so`raladi', async () => {
     const prisma = fakePrisma();
@@ -348,10 +450,19 @@ describe('UebungService.seans — qaytarish (wiederholung)', () => {
   // taqiqlangan format aslida 38% holatda namunaga tushar, so'z esa
   // 15%da seansda UMUMAN chiqmasdi — ikkalasida ham tekshiruv jimgina
   // "o'tib" ketardi. Endi SEEDLANGAN generator beriladi: natija HAR
-  // DOIM bir xil (seed=0 bilan so'z 1 UZ_WORT sifatida chiqishi
+  // DOIM bir xil (seed=1 bilan so'z 1 seansda haqiqatda chiqishi
   // oldindan tekshirilgan), shuning uchun CI'da barqaror va ikkinchi
   // shart (so'zning seansda haqiqatda BORLIGI) ham endi tasdiqlanadi —
   // aks holda ichki `for` sikli bo'sh massivda bekorga "o'tib" ketardi.
+  //
+  // SEED `baueKandidaten`GA YANGI NOMZOD MANBAI (`DIALOG_LUECKE`)
+  // qo'shilganda 0dan 1ga ko'chirildi: barcha kandidat quruvchilar BITTA
+  // umumiy `rnd` oqimini baham ko'radi, ya'ni yangi manba ro'yxatning
+  // OXIRIDA turgan bo'lsa ham undan oldingi chaqiruvlar ketma-ketligini
+  // o'zgartirmaydi — lekin `baueSeans`ning O'ZI xuddi shu `rnd`ni davom
+  // ettirib ishlatadi, shuning uchun panelga bir nechta nomzod qo'shilishi
+  // seansning YAKUNIY tanlovini ham siljitadi. Bu — bitta ulashilgan
+  // generatorga tayangan seedli testlarning tabiiy narxi, xatolik emas.
   it('oddiy so`zning ham avvalgi formatidagi nomzodi qurilmaydi (dizayn qoidasi 5)', async () => {
     const prisma = fakePrisma();
     prisma.dafLexemeState.findMany = jest.fn(async (args: any) => {
@@ -367,7 +478,7 @@ describe('UebungService.seans — qaytarish (wiederholung)', () => {
     const fragen = await new UebungService(prisma as any).seans(
       100,
       55,
-      mulberry32(0),
+      mulberry32(1),
     );
     const soz1Savollari = fragen.filter(
       (f) => f.itemType === 'WORT' && f.itemId === 1,
@@ -738,6 +849,67 @@ describe('UebungService.pruefen', () => {
 
     // 'du' (id 4) — noto'g'ri juftlashgan: kuch nolga tushadi.
     expect(holatBoyicha.get(4).create.strength).toBe(0);
+  });
+
+  it('DIALOG_LUECKE: to`g`ri satrni qabul qiladi', async () => {
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'DIALOGZEILE',
+        itemId: 303,
+        format: 'DIALOG_LUECKE',
+        given: 'Gut, danke.',
+      },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(true);
+    expect(r.richtig).toBe('Gut, danke.');
+  });
+
+  it('DIALOG_LUECKE: xato satrni rad etadi', async () => {
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'DIALOGZEILE',
+        itemId: 303,
+        format: 'DIALOG_LUECKE',
+        given: 'Bis bald!',
+      },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(false);
+  });
+
+  it('DIALOG_LUECKE — nol ball, TO`G`RI javobda ham (fixture aks holda score qilgan bo`lardi)', async () => {
+    // `itemId` ATAYLAB `1`ga teng: bu ID `dafLexeme`da HAQIQIY, hech
+    // qachon so'ralmagan so'z sifatida ham mavjud (`hallo` — "muddati
+    // kelgan" so'zlar bilan bir xil holat, qarang yuqoridagi "hech
+    // qachon so'ralmagan so'z — 10 ball" testi). `dafDialogLine`ni ATAYLAB
+    // shu idga mos qator qaytaradigan qilamiz — agar ball gating
+    // `itemType`ni emas faqat `itemId`ni tekshirsa (yoki `itemType ===
+    // 'WORT'` sharti biror joyda chetlab o'tilsa), bu fixture 10 ball
+    // BERAR EDI va so'z 1ning Leitner holatini ham yangilardi. Nol
+    // natija shuning uchun "hech qachon so'ralmagan" holatning tasodifiy
+    // qulayligi emas — chinakam isbot.
+    const prisma = fakePrisma();
+    prisma.dafDialogLine.findUnique = jest.fn(async () => ({
+      de: 'Freut mich sehr.',
+      uz: 'Judayam xursandman.',
+    })) as any;
+    const r = await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'DIALOGZEILE',
+        itemId: 1,
+        format: 'DIALOG_LUECKE',
+        given: 'Freut mich sehr.',
+      },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(true);
+    const call = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0];
+    expect(call.data.points).toBe(0);
+    expect(call.data.lexemeId).toBeNull();
+    expect(prisma.dafLexemeState.upsert).not.toHaveBeenCalled();
   });
 
   it('LUECKE endi SO`Z savoli sifatida tekshiriladi', async () => {

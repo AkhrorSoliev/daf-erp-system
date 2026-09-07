@@ -7,7 +7,8 @@ export type FrageFormat =
   | 'SATZ_BAUEN'
   | 'SATZ_UEBERSETZEN'
   | 'REAKTION'
-  | 'ZUORDNEN';
+  | 'ZUORDNEN'
+  | 'DIALOG_LUECKE';
 
 export interface MaterialWort {
   id: number;
@@ -34,6 +35,22 @@ export interface MaterialPhrase {
   sectionCode: string;
 }
 
+/** Dialog ichidagi bitta satr — `dialogLuecke` chalg'ituvchi puli sifatida ham ishlatiladi. */
+export interface MaterialDialogZeile {
+  id: number;
+  sprecher: string;
+  de: string;
+  uz: string;
+}
+
+/** Butun dialog — bitta satri bo'shatilib, savolga aylanadi (`DIALOG_LUECKE`). */
+export interface MaterialDialog {
+  id: number;
+  titelDe: string;
+  zeilen: MaterialDialogZeile[];
+  sectionCode: string;
+}
+
 /**
  * Serverdagi to'liq savol — TO'G'RI JAVOB BILAN.
  *
@@ -45,7 +62,7 @@ export interface MaterialPhrase {
  */
 export interface Frage {
   format: FrageFormat;
-  itemType: 'WORT' | 'SATZ' | 'PHRASE';
+  itemType: 'WORT' | 'SATZ' | 'PHRASE' | 'DIALOGZEILE';
   itemId: number;
   prompt: string;
   /** Qo'shimcha ko'rsatma yoki ko'rgazma (raqam, o'zbekcha tarjima). */

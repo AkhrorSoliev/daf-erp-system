@@ -21,6 +21,7 @@ const FRAGE_FORMATLAR: FrageFormat[] = [
   'SATZ_UEBERSETZEN',
   'REAKTION',
   'ZUORDNEN',
+  'DIALOG_LUECKE',
 ];
 
 /**
@@ -35,8 +36,8 @@ const FRAGE_FORMATLAR: FrageFormat[] = [
  * savolni qayta qurib bo'lmaydi.
  */
 export class CheckAntwortDto {
-  @IsIn(['WORT', 'SATZ', 'PHRASE'])
-  itemType!: 'WORT' | 'SATZ' | 'PHRASE';
+  @IsIn(['WORT', 'SATZ', 'PHRASE', 'DIALOGZEILE'])
+  itemType!: 'WORT' | 'SATZ' | 'PHRASE' | 'DIALOGZEILE';
 
   @IsInt()
   itemId!: number;
@@ -64,8 +65,8 @@ export class CheckAntwortDto {
  * `studentId` bu yerda ham YO'Q — tokendan olinadi.
  */
 export class ErsatzQueryDto {
-  @IsIn(['WORT', 'SATZ', 'PHRASE'])
-  itemType!: 'WORT' | 'SATZ' | 'PHRASE';
+  @IsIn(['WORT', 'SATZ', 'PHRASE', 'DIALOGZEILE'])
+  itemType!: 'WORT' | 'SATZ' | 'PHRASE' | 'DIALOGZEILE';
 
   @Type(() => Number)
   @IsInt()

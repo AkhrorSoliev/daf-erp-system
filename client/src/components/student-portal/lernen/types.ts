@@ -12,7 +12,7 @@ export type FrageFormat =
   | "SATZ_UEBERSETZEN"
   | "REAKTION";
 
-export type MaterialTyp = "WORT" | "SATZ" | "PHRASE";
+export type MaterialTyp = "WORT" | "SATZ" | "PHRASE" | "DIALOGZEILE";
 
 /** Serverdan kelgan savol. To'g'ri javob bu yerda YO'Q. */
 export interface PublicFrage {

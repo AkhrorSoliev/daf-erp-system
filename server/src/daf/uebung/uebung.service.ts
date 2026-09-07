@@ -12,12 +12,14 @@ import { punkteFuer } from './punkte';
 import type {
   Frage,
   FrageFormat,
+  MaterialDialog,
   MaterialPhrase,
   MaterialSatz,
   MaterialWort,
   PublicFrage,
 } from './frage.types';
 import { toPublic } from './frage.types';
+import { dialogLuecke } from './dialog-fragen';
 import { naechsterZustand } from './leitner';
 import {
   luecke,
@@ -136,6 +138,11 @@ function richtigeAntwort(
     case 'SATZ_BAUEN':
     case 'LUECKE':
     case 'REAKTION':
+    case 'DIALOG_LUECKE':
+      // `DIALOG_LUECKE` — `LUECKE` bilan bir xil oddiy hol: to'g'ri javob
+      // olib tashlangan satrning nemischasi, boshqa hech narsa hisobga
+      // olinmaydi (dialog satri Leitner narvoniga kirmaydi — pastdagi
+      // `itemType === 'WORT'` sharti buni allaqachon ta'minlaydi).
       return { richtig: material.de, akzeptiert: [] };
     default:
       throw new BadRequestException(
@@ -145,7 +152,7 @@ function richtigeAntwort(
 }
 
 export interface PruefenInput {
-  itemType: 'WORT' | 'SATZ' | 'PHRASE';
+  itemType: 'WORT' | 'SATZ' | 'PHRASE' | 'DIALOGZEILE';
   itemId: number;
   format: FrageFormat;
   given: string;
@@ -250,7 +257,7 @@ export class UebungService {
   async ersatz(
     lessonId: number,
     studentId: number,
-    itemType: 'WORT' | 'SATZ' | 'PHRASE',
+    itemType: 'WORT' | 'SATZ' | 'PHRASE' | 'DIALOGZEILE',
     itemId: number,
     nichtFormat: FrageFormat,
     rnd: () => number = Math.random,
@@ -464,17 +471,22 @@ export class UebungService {
       ]),
     );
 
-    const [lexemeRows, sentenceRows, phraseRows] = await Promise.all([
-      this.prisma.dafLexeme.findMany({
-        where: { sectionId: { in: sectionIds } },
-      } as any),
-      this.prisma.dafSentence.findMany({
-        where: { sectionId: { in: sectionIds } },
-      } as any),
-      this.prisma.dafPhrase.findMany({
-        where: { sectionId: { in: sectionIds } },
-      } as any),
-    ]);
+    const [lexemeRows, sentenceRows, phraseRows, dialogRows] =
+      await Promise.all([
+        this.prisma.dafLexeme.findMany({
+          where: { sectionId: { in: sectionIds } },
+        } as any),
+        this.prisma.dafSentence.findMany({
+          where: { sectionId: { in: sectionIds } },
+        } as any),
+        this.prisma.dafPhrase.findMany({
+          where: { sectionId: { in: sectionIds } },
+        } as any),
+        this.prisma.dafDialog.findMany({
+          where: { sectionId: { in: sectionIds } },
+          include: { zeilen: { orderBy: { order: 'asc' } } },
+        } as any),
+      ]);
 
     interface LexemeRow {
       id: number;
@@ -500,6 +512,12 @@ export class UebungService {
       uz: string;
       sectionId: number | null;
     }
+    interface DialogRow {
+      id: number;
+      titelDe: string;
+      sectionId: number;
+      zeilen: Array<{ id: number; sprecher: string; de: string; uz: string }>;
+    }
 
     const kodVon = (sectionId: number | null): string =>
       (sectionId != null && sectionCodeById.get(sectionId)) || '';
@@ -517,6 +535,17 @@ export class UebungService {
       uz: p.uz,
       sectionCode: kodVon(p.sectionId),
     });
+    const toDialog = (d: DialogRow): MaterialDialog => ({
+      id: d.id,
+      titelDe: d.titelDe,
+      sectionCode: kodVon(d.sectionId),
+      zeilen: d.zeilen.map((z) => ({
+        id: z.id,
+        sprecher: z.sprecher,
+        de: z.de,
+        uz: z.uz,
+      })),
+    });
 
     // `core: false` so'zlar so'ralmaydi VA chalg'ituvchi sifatida ham
     // ishlatilmaydi — o'quvchi ularni o'rganmagan (rule 2).
@@ -533,6 +562,15 @@ export class UebungService {
       toSatz,
     );
     const phrases: MaterialPhrase[] = (phraseRows as PhraseRow[]).map(toPhrase);
+    // `dafDialog.findMany` argumenti `as any` bilan berilgan (Prisma
+    // `include`ni to'g'ri chiqarib bermaydi — xuddi yuqoridagi
+    // `dafLesson`+`section`dagi kabi), shuning uchun natija avval `any`ga
+    // o'tkaziladi: to'g'ridan-to'g'ri `DialogRow[]`ga cast qilish "yetarli
+    // kesishmaydi" xatosini beradi, chunki TS `zeilen`ni bazaviy model
+    // turida ko'rmaydi.
+    const dialoge: MaterialDialog[] = (dialogRows as any as DialogRow[]).map(
+      toDialog,
+    );
 
     // Qaytarish (pflicht) savollari — DUE so'rovi shu yerda, kandidaten
     // qurilishidan OLDIN chaqiriladi, chunki pastdagi `letzterFormatByWort`
@@ -597,6 +635,19 @@ export class UebungService {
     // chaqiruv deyarli har doim bir xil to'plamni qaytaradi.
     const zu = zuordnen(phrases, rnd);
     if (zu) rohKandidaten.push(zu);
+
+    // Har dialog uchun bitta nomzod: chalg'ituvchilar BOSHQA dialoglarning
+    // satrlaridan olinadi (`d.id !== o.id`) — shu dialogning o'zi emas
+    // (qarang `dialog-fragen.ts`dagi izoh: shu dialogning satri savol
+    // kontekstiga haqiqatda mos kelib qolishi mumkin, ya'ni "xato" javob
+    // aslida to'g'ri bo'lib chiqardi).
+    for (const d of dialoge) {
+      const andereZeilen = dialoge
+        .filter((o) => o.id !== d.id)
+        .flatMap((o) => o.zeilen);
+      const dl = dialogLuecke(d, andereZeilen, rnd);
+      if (dl) rohKandidaten.push(dl);
+    }
 
     // Qoida 5 (dizayn 4.3): ketma-ket ikki SEANSDA bir xil (so'z+format)
     // juftligi takrorlanmaydi. Nomzodning O'ZIDAN (`itemType`/`format`
@@ -1023,6 +1074,19 @@ export class UebungService {
     }
     if (itemType === 'SATZ') {
       const row = (await this.prisma.dafSentence.findUnique({
+        where: { id: itemId },
+      } as any)) as {
+        de: string;
+        uz: string;
+      } | null;
+      return row;
+    }
+    if (itemType === 'DIALOGZEILE') {
+      // `DIALOG_LUECKE` — `LUECKE` kabi oddiy hol: `unitId` shart emas,
+      // chunki dialog satri `PAAR`/`ZUORDNEN` kabi bitta unitga cheklab
+      // qidiriladigan javob emas — javob to'g'ridan-to'g'ri shu satrning
+      // `de`si bilan solishtiriladi.
+      const row = (await this.prisma.dafDialogLine.findUnique({
         where: { id: itemId },
       } as any)) as {
         de: string;
