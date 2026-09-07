@@ -172,4 +172,78 @@ describe('dialogLuecke', () => {
       }
     });
   });
+
+  // Ko`rik topilmasi (CRITICAL, ikkinchi mexanizm): birinchi tuzatish
+  // faqat ANIQ TENG matnli takrorni chetlaydi. Lekin javob boshqa
+  // qatorning ICHIDA (qism-satr sifatida) ham ko`rinib qolishi mumkin —
+  // matnlar teng emas, shuning uchun chastota filtri ularni sinamaydi.
+  // Haqiqiy kontentda uchta holat topildi:
+  //  - `u01-d2`: nishon "Guten Abend!" — "Guten Abend, Mia!" ichida bor.
+  //  - `u01-d5`: nishon "Auf Wiedersehen!" — "Bitte! Auf Wiedersehen!"
+  //    ichida bor.
+  //  - `u01-d6`: nishon "W wie Weber." — "Nein, W! W wie Weber." ichida
+  //    bor.
+  // Shu uchtasini sinash uchun `u01-d2`ning aniq shaklini takrorlaymiz.
+  describe('boshqa qatorning ICHIDA yotgan matn ham nishon bo`lmaydi', () => {
+    // `u01-d2` ("Gute Nacht, Mia!") shakli — birinchi qator ("Guten
+    // Abend, Mia!") ikkinchisining ("Guten Abend!") matnini TO`LIQ
+    // o`z ichiga oladi, lekin ular teng EMAS (birinchisida ", Mia!"
+    // qo`shimchasi bor) — chastota filtri buni ushlamaydi.
+    const ichkiMatnliDialog: MaterialDialog = {
+      id: 4,
+      titelDe: 'Gute Nacht, Mia!',
+      sectionCode: 'u01-s1',
+      zeilen: [
+        z(200, 'Walter', 'Guten Abend, Mia!'),
+        z(201, 'Mia', 'Guten Abend!'),
+        z(202, 'Walter', 'Wie geht es dir?'),
+        z(203, 'Mia', 'Gut! Und dir?'),
+        z(204, 'Walter', 'Auch gut. Gute Nacht!'),
+        z(205, 'Mia', 'Gute Nacht! Bis bald.'),
+      ],
+    };
+
+    it('nomzodning matni BOSHQA qatorning ICHIDA bo`lsa, u nishon bo`lmaydi', () => {
+      for (let i = 0; i < 40; i += 1) {
+        const f = dialogLuecke(ichkiMatnliDialog, andere, () => i / 40);
+        expect(f).not.toBeNull();
+        // "Guten Abend!" (id 201) — "Guten Abend, Mia!" (id 200, birinchi
+        // qator) ichida so'zma-so'z bor, shuning uchun hech qachon
+        // nishon bo`lmasligi kerak.
+        expect(f!.richtig).not.toBe('Guten Abend!');
+        // Invariant har doim ushlab turishi kerak: javob promptning
+        // boshqa hech qanday qatorida ko`rinmasin.
+        expect(f!.prompt).not.toContain(f!.richtig);
+      }
+    });
+
+    // `u01-d6` shakli: nishon ("W wie Weber.") boshqa qatorning
+    // O`RTASIDA/OXIRIDA (oldindan so`z qo`shilgan holda) yotadi — birinchi
+    // holatdagi kabi boshida emas. Ikkala yo`nalish ham tekshirilishi
+    // shart.
+    const ortadaYotganDialog: MaterialDialog = {
+      id: 5,
+      titelDe: 'W wie Weber',
+      sectionCode: 'u01-s5',
+      zeilen: [
+        z(300, 'Helga', 'Wie heißen Sie?'),
+        z(301, 'Anna', 'Ich bin Anna Weber.'),
+        z(302, 'Helga', 'Buchstabieren Sie bitte.'),
+        z(303, 'Anna', 'W wie Weber.'),
+        z(304, 'Helga', 'Ist das V?'),
+        z(305, 'Anna', 'Nein, W! W wie Weber.'),
+      ],
+    };
+
+    it('nomzodning matni BOSHQA qatorning ICHIDA (oxirida) bo`lsa ham nishon bo`lmaydi', () => {
+      for (let i = 0; i < 40; i += 1) {
+        const f = dialogLuecke(ortadaYotganDialog, andere, () => i / 40);
+        expect(f).not.toBeNull();
+        // "W wie Weber." (id 303) — "Nein, W! W wie Weber." (id 305)
+        // ichida bor, shuning uchun hech qachon nishon bo`lmasligi kerak.
+        expect(f!.richtig).not.toBe('W wie Weber.');
+        expect(f!.prompt).not.toContain(f!.richtig);
+      }
+    });
+  });
 });

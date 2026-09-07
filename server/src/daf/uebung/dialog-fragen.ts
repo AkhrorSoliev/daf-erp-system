@@ -59,9 +59,25 @@ function mischen<T>(items: T[], rnd: () => number): T[] {
  * ko'rinib turadi — savol o'zi javob berib qo'yadi. Shuning uchun butun
  * dialogda matni BIRDAN ORTIQ marta uchraydigan (`normalisieren` bo'yicha)
  * har qanday satr — shu jumladan birinchi satr bilan bir xil matnli
- * ikkinchi nusxa ham — nomzodlar ro'yxatidan chetlanadi. Hech bir nomzod
- * qolmasa (`u01-d3`da bunday emas — uchta noyob satr qoladi), `null`
- * qaytariladi: format shunchaki bu dialog uchun ishlamaydi.
+ * ikkinchi nusxa ham — nomzodlar ro'yxatidan chetlanadi.
+ *
+ * NOMZODNING MATNI BOSHQA QATORNING ICHIDA YOTGAN BO'LSA HAM CHIQARIB
+ * TASHLANADI (ko'rik topilmasi, CRITICAL — ikkinchi mexanizm). Yuqoridagi
+ * tuzatish faqat ANIQ TENG matnli takrorni ushlaydi. Lekin haqiqiy
+ * kontentda (`u01-d2`, `u01-d5`, `u01-d6`) nishonning matni boshqa
+ * qatorning matni ICHIDA qism-satr sifatida yotadi — matnlar bir-biriga
+ * teng EMAS, shuning uchun chastota filtri buni sinamaydi. Masalan
+ * `u01-d2`da nishon "Guten Abend!" (Mia) — birinchi qator "Guten Abend,
+ * Mia!" (Walter) shu matnni so'zma-so'z o'z ichiga oladi; agar
+ * "Guten Abend!" bo'shatilsa, "Guten Abend, Mia!" o'zgarishsiz ko'rinib,
+ * javobni oshkor qiladi. Shuning uchun nomzodning normallashtirilgan
+ * matni BOSHQA (o'zidan farqli `id`li) hech bir qatorning
+ * normallashtirilgan matni ICHIDA topilmasligi kerak — `includes()`
+ * orqali, ikkala yo'nalishda ham (nishon boshida ham, oxirida ham
+ * yotgan holat) tekshiriladi. Hech bir nomzod qolmasa (`u01-d3`,
+ * `u01-d2`, `u01-d5`, `u01-d6` — hech birida bunday emas: mos ravishda
+ * uch, to'rt, besh va besh nomzod qoladi), `null` qaytariladi: format
+ * shunchaki bu dialog uchun ishlamaydi.
  */
 export function dialogLuecke(
   dialog: MaterialDialog,
@@ -76,11 +92,26 @@ export function dialogLuecke(
     matnSoni.set(key, (matnSoni.get(key) ?? 0) + 1);
   }
 
-  // Birinchidan boshqa VA matni butun dialogda faqat bitta marta
-  // uchraydigan satrlar — pastga qarang, nega ikkalasi ham shart.
+  // Nomzodning matni boshqa BIRON qatorning ICHIDA (qism-satr sifatida)
+  // yotadimi — matnlar teng bo'lmasa ham. Shu bilan bir yo'la ANIQ teng
+  // takrorni ham qamrab oladi (bir satr o'z-o'zining ichida bo'ladi),
+  // lekin u holat allaqachon chastota filtri bilan ham ushlanadi.
+  const ichidaYotadimi = (nomzod: MaterialDialogZeile): boolean => {
+    const nomzodMatni = normalisieren(nomzod.de);
+    return dialog.zeilen.some(
+      (boshqa) =>
+        boshqa.id !== nomzod.id &&
+        normalisieren(boshqa.de).includes(nomzodMatni),
+    );
+  };
+
+  // Birinchidan boshqa, matni butun dialogda faqat bitta marta
+  // uchraydigan VA boshqa hech qanday qatorning ichida yotmagan satrlar
+  // — pastga qarang, nega uchalasi ham shart.
   const nomzodlar = dialog.zeilen
     .slice(1)
-    .filter((z) => matnSoni.get(normalisieren(z.de)) === 1);
+    .filter((z) => matnSoni.get(normalisieren(z.de)) === 1)
+    .filter((z) => !ichidaYotadimi(z));
   if (nomzodlar.length === 0) return null;
   const ziel = mischen(nomzodlar, rnd)[0];
 

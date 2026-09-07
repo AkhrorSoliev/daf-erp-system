@@ -243,8 +243,8 @@ export function ongBosildi(
 
 /**
  * `juftlar` (indeks juftlari)dan serverga yuboriladigan "chap=o'ng"
- * qatorlarini quradi. SOF FUNKSIYA — faqat `options`dan chap/o'ng
- * ustunlarni ajratib, indekslarni matnga aylantiradi.
+ * qatorlarini quradi. SOF FUNKSIYA — allaqachon bo'lingan ustunlarni
+ * oladi, indekslarni matnga aylantiradi, xolos.
  *
  * ALOHIDA EKSPORT QILINGAN (ko'rik topilmasi): bu qatorning shakli —
  * ustun tartibi va `=` ajratkichi — serverning `pruefePaar`/
@@ -253,14 +253,19 @@ export function ongBosildi(
  * qanday test uni bosmagan edi — zanjirdagi boshqa har bir bo'g'in
  * (juft soni, indeks juftlash, serverning parseri, uchidan-uchigacha
  * baholash) sinalgan, faqat shu bitta qator emas.
+ *
+ * `options`/`soni`NI EMAS, ALLAQACHON BO'LINGAN `chapUstun`/`ongUstun`NI
+ * OLADI (re-review topilmasi, Minor): `Juftlash` bu ikkalasini
+ * `options.slice(...)` orqali O'ZI ham hisoblaydi (pastda) — agar bu
+ * funksiya `options`+`soni`ni qayta bo'lsa, bo'lish qoidasi IKKI joyda
+ * yashardi va ular kelajakda bir-biridan uzilib qolishi mumkin edi.
+ * Endi bo'lish FAQAT `Juftlash`da, bir marta sodir bo'ladi.
  */
 export function juftlarniMatngaAylantir(
   juftlar: IndexJuft[],
-  options: string[],
-  soni: number,
+  chapUstun: string[],
+  ongUstun: string[],
 ): string[] {
-  const chapUstun = options.slice(0, soni);
-  const ongUstun = options.slice(soni, soni * 2);
   return juftlar.map(({ chapIdx, ongIdx }) => `${chapUstun[chapIdx]}=${ongUstun[ongIdx]}`);
 }
 
@@ -316,7 +321,7 @@ function Juftlash({ format, options, tanlangan, onOzgar, natija, kutilmoqda }: J
   // aylantirib, ikkalasini (mahalliy va parent) BIRGA yangilaydi.
   const yangila = (keyingi: IndexJuft[]) => {
     setJuftlar(keyingi);
-    onOzgar(juftlarniMatngaAylantir(keyingi, options, soni));
+    onOzgar(juftlarniMatngaAylantir(keyingi, chapUstun, ongUstun));
   };
 
   const holatKlass = (paired: boolean, tanlab: boolean, togri: boolean | null) => {

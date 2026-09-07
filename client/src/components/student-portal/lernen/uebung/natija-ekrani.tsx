@@ -95,6 +95,12 @@ function useSanaladiganBall(maqsad: number | null): number | null {
  */
 function XatoQatori({ xato }: { xato: SeansXato }) {
   if (xato.format === "ZUORDNEN") {
+    // Re-review topilmasi (Minor): `pruefeZuordnen`ning fail-closed yo'li
+    // (`funktionUz` kolliziyasi) `richtig: ''` qaytaradi. `''.split("|")`
+    // BO'SH MASSIV EMAS — `[""]` beradi, ya'ni tuzatilmasa shu yerda
+    // bitta BO'SH qator (vaziyatsiz, iborasiz) tint fon ichida chizilib
+    // qolardi. Bunday holatda umuman ro'yxat chizmaymiz.
+    if (!xato.richtig) return null;
     const juftlar = xato.richtig.split("|").map((juft) => {
       const [vaziyat, ibora] = juft.split("=");
       return { vaziyat: vaziyat ?? "", ibora: ibora ?? "" };

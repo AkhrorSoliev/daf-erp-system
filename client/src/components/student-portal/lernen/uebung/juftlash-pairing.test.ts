@@ -84,16 +84,20 @@ describe("ongBosildi", () => {
  * eksport qilingan — shu yerda mustaqil sinaladi.
  */
 describe("juftlarniMatngaAylantir", () => {
-  it("ZUORDNEN: olti indeks jufti — o'n ikki elementli options'dan server kutgan qatorlarni quradi", () => {
-    // Birinchi olti — chap ustun (vaziyat), keyingi olti — o'ng ustun
-    // (ibora), ARALASHTIRILGAN tartibda (server shunday yuboradi).
-    const options = [
+  it("ZUORDNEN: olti indeks jufti — allaqachon bo'lingan chap/o'ng ustunlardan server kutgan qatorlarni quradi", () => {
+    // `Juftlash` xuddi shu ikkitani `options.slice(...)` orqali tuzadi —
+    // test ham xuddi shu bo'lingan shaklni beradi (re-review: funksiya
+    // endi qayta bo'lmaydi, chaqiruvchi bo'lib beradi).
+    const chapUstun = [
       "salomlashish",
       "o'zini tanishtirish",
       "xayrlashish",
       "rahmat aytish",
       "so'rash",
       "javob berish",
+    ];
+    // O'ng ustun ARALASHTIRILGAN tartibda (server shunday yuboradi).
+    const ongUstun = [
       "Danke!",
       "Hallo!",
       "Ich bin Anna.",
@@ -110,7 +114,7 @@ describe("juftlarniMatngaAylantir", () => {
       { chapIdx: 5, ongIdx: 5 }, // javob berish=Ich heiße Timur.
     ];
 
-    expect(juftlarniMatngaAylantir(juftlar, options, 6)).toEqual([
+    expect(juftlarniMatngaAylantir(juftlar, chapUstun, ongUstun)).toEqual([
       "salomlashish=Hallo!",
       "o'zini tanishtirish=Ich bin Anna.",
       "xayrlashish=Auf Wiedersehen!",
@@ -120,15 +124,16 @@ describe("juftlarniMatngaAylantir", () => {
     ]);
   });
 
-  it("PAAR: to'rt indeks jufti — sakkiz elementli options bilan ham xuddi shu shaklda ishlaydi", () => {
-    const options = ["der Tisch", "das Buch", "die Tür", "das Auto", "eshik", "stol", "kitob", "mashina"];
+  it("PAAR: to'rt indeks jufti — bo'lingan sakkiz elementli ustunlar bilan ham xuddi shu shaklda ishlaydi", () => {
+    const chapUstun = ["der Tisch", "das Buch", "die Tür", "das Auto"];
+    const ongUstun = ["eshik", "stol", "kitob", "mashina"];
     const juftlar: IndexJuft[] = [
       { chapIdx: 0, ongIdx: 1 },
       { chapIdx: 1, ongIdx: 2 },
       { chapIdx: 2, ongIdx: 0 },
       { chapIdx: 3, ongIdx: 3 },
     ];
-    expect(juftlarniMatngaAylantir(juftlar, options, 4)).toEqual([
+    expect(juftlarniMatngaAylantir(juftlar, chapUstun, ongUstun)).toEqual([
       "der Tisch=stol",
       "das Buch=kitob",
       "die Tür=eshik",
@@ -137,7 +142,7 @@ describe("juftlarniMatngaAylantir", () => {
   });
 
   it("bo'sh juftlar ro'yxati — bo'sh massiv qaytaradi", () => {
-    expect(juftlarniMatngaAylantir([], ["a", "b"], 1)).toEqual([]);
+    expect(juftlarniMatngaAylantir([], ["a"], ["b"])).toEqual([]);
   });
 });
 
