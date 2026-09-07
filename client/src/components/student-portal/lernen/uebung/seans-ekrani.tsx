@@ -263,28 +263,35 @@ export function SeansEkrani(props: SeansEkraniProps) {
         format,
         chap: chapUstun[chapIdx],
         ong: ongUstun[ongIdx],
-        // `pruefen`dagi kabi: bu BITTA juftga (savolning o'ziga emas)
-        // ketgan vaqt — `savolBoshi` savol boshlanganda o'rnatiladi.
+        // SAVOL boshlanganidan shu juft javobigacha o'tgan vaqt —
+        // juftning O'ZIGA ketgan vaqt EMAS. Juft qachon "boshlangani"
+        // (chap tomon bosilgan payt) bu komponentda ma'lum emas: kutilayotgan
+        // tanlov `Yigish` ning ichki holati. Shu sabab o'lchov yig'iluvchi
+        // bo'ladi va oxirgi juftning qiymati butun savolning vaqtiga teng
+        // chiqadi — bu `pruefen` boshqa sakkiz formatda yozadigan qiymat
+        // bilan bir xil ma'noda, ya'ni taqqoslanadigan bo'lib qoladi.
         durationMs: Date.now() - savolBoshi,
       },
       {
         onSuccess: (javob) => {
           // `juftJavobKeldi` endi `{ juftlar, xato }` qaytaradi (ko'rik
           // topilmasi tuzatildi): "shu javob birinchi urinishdagi
-          // xatomi" degan qaror endi sof `juft-holati.ts` modulida —
-          // `xato` bayrog'i o'quvchi TAKROR bosgandami yoki bosmagandami,
-          // qat'i nazar `!javob.isCorrect`dan hisoblanadi (eski xulq-atvor
-          // saqlangan). `xatoBoldi` mahalliy o'zgaruvchisi — React
-          // `setJuftlar` yopilishi TASHQARISIDA hali kerak (pastdagi
-          // chaqnash effekti uchun), shuning uchun yopilish ichida
-          // yozib, keyin o'qiladi.
-          let xatoBoldi = false;
-          setJuftlar((prev) => {
-            const natija = juftJavobKeldi(prev, chapIdx, ongIdx, javob.isCorrect);
-            xatoBoldi = natija.xato;
-            return natija.juftlar;
-          });
-          if (!xatoBoldi) return;
+          // xatomi" degan qaror endi sof `juft-holati.ts` modulida.
+          setJuftlar(
+            (prev) => juftJavobKeldi(prev, chapIdx, ongIdx, javob.isCorrect).juftlar,
+          );
+
+          // `xato` ni `setJuftlar` YOPILISHI ICHIDA yozib, keyingi qatorda
+          // O'QISH MUMKIN EMAS: React yangilovchini sinxron chaqirishga
+          // MAJBUR EMAS (u faqat "eager state" yo'lida shunday qiladi).
+          // Ikkita juft bir vaqtda yo'lda bo'lsa ikkinchi yangilovchi
+          // KECHIKTIRILADI, o'zgaruvchi `false` bo'lib qoladi — xato
+          // sanalmaydi va chaqnash ko'rsatilmaydi, ya'ni "savol ertaga
+          // qaytadi" qoidasi jimgina ishlamay qolardi. `juft-holati.ts`
+          // dagi HAR UCH tarmoq `xato` ni `!isCorrect` dan hisoblaydi
+          // (u yerdagi izohga qarang), shuning uchun bu qiymat shu
+          // yerning o'zida, hech qanday tartib bog'liqligisiz ma'lum.
+          if (javob.isCorrect) return;
 
           juftXatoSoni.current += 1;
 
