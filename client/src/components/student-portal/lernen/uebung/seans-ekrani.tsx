@@ -32,6 +32,11 @@ import { Tanlash } from "./tanlash";
 import { Yozish } from "./yozish";
 import { Yigish } from "./yigish";
 import { NatijaEkrani } from "./natija-ekrani";
+import {
+  fortschrittSurati,
+  keyingiBoshlangichSurati,
+  type FortschrittSurati,
+} from "./seans-boshlangich";
 
 /**
  * `manba: "takrorlash"`da `lessonId` UMUMAN QABUL QILINMAYDI — takrorlash
@@ -105,37 +110,40 @@ export function SeansEkrani(props: SeansEkraniProps) {
   const [savolBoshi, setSavolBoshi] = React.useState(() => Date.now());
   const [seansBoshi, setSeansBoshi] = React.useState(() => Date.now());
 
+  // Natija ekranidagi ball/seriya/o'rin FARQ ko'rsatadi — buning uchun
+  // seans BOSHLANGANDAGI surat kerak, va u `keyingiBoshlangichSurati`
+  // (sof mantiq, sinalgan `seans-boshlangich.test.ts`da) orqali hisoblanadi.
+  const boshlangichFortschritt = React.useRef<FortschrittSurati | null>(null);
+
   // Seans faqat serverdan savollar kelganda BIR MARTA boshlanadi — har
   // qayta chizilishda `boshla` chaqirilsa, o'quvchining joriy o'rni
   // yo'qolib, seans qaytadan boshidan tushardi.
+  //
+  // Boshlanish IKKALASINI ham kutadi — `seans.data` VA `fortschritt`ning
+  // "hal bo'lganini" (`data` keldi YOKI so'rov xatoga uchradi). Sabab:
+  // server har javobni DARHOL ballaydi, shuning uchun sekin ulanishda
+  // `fortschritt` hali yuklanayotgan paytda birinchi savolga javob
+  // berilsa, boshlang'ich surat o'sha ballni ALLAQACHON o'z ichiga olib,
+  // seans oxiridagi farqni kamsitib ko'rsatardi (Task 9 review,
+  // Important). Lekin FAQAT `fortschritt.data`ga emas — so'rov XATOGA
+  // uchrasa `data` hech qachon kelmaydi va mashq abadiy shu yerda osilib
+  // qolardi; ball dekor, muvaffaqiyatsiz yon so'rov mashqni to'smasligi
+  // kerak (xuddi `YolTepasi`dagi kabi). Xato yo'lida boshlang'ich `null`
+  // qoladi — bu allaqachon to'g'ri darajada tushiriladi: `yutuqlarBormi`
+  // `natija-ekrani.tsx`da `false` bo'lib, karta shunchaki ko'rinmaydi.
   const boshlandiMi = React.useRef(false);
   React.useEffect(() => {
     if (boshlandiMi.current) return;
     if (!seans.data || seans.data.length === 0) return;
+    if (!fortschritt.data && !fortschritt.isError) return;
     boshlandiMi.current = true;
+    boshlangichFortschritt.current = keyingiBoshlangichSurati(
+      boshlangichFortschritt.current,
+      fortschrittSurati(fortschritt.data),
+      false,
+    );
     setHolat(boshla(seans.data));
-  }, [seans.data]);
-
-  // Natija ekranidagi ball/seriya/o'rin FARQ ko'rsatadi — buning uchun
-  // seans BOSHLANGANDAGI qiymat kerak. `fortschritt` seans davomida
-  // o'zgarmaydi (hech qanday invalidatsiya seans tugamaguncha bo'lmaydi),
-  // shuning uchun birinchi kelgan qiymatning o'zi "boshlang'ich" hisoblanadi
-  // — qayta o'qishning hojati yo'q. `qaytaOtish` uni `null`ga qaytarib,
-  // yangi urinish uchun qayta yozdiradi.
-  const boshlangichFortschritt = React.useRef<{
-    gesamt: number;
-    serie: number;
-    wochePlatzGruppe: number | null;
-  } | null>(null);
-  React.useEffect(() => {
-    if (boshlangichFortschritt.current) return;
-    if (!fortschritt.data) return;
-    boshlangichFortschritt.current = {
-      gesamt: fortschritt.data.gesamt,
-      serie: fortschritt.data.serie,
-      wochePlatzGruppe: fortschritt.data.wochePlatzGruppe,
-    };
-  }, [fortschritt.data]);
+  }, [seans.data, fortschritt.data, fortschritt.isError]);
 
   const frage = holat ? joriy(holat) : null;
   const rejim = frage ? harakat(frage.format) : null;
@@ -290,12 +298,21 @@ export function SeansEkrani(props: SeansEkraniProps) {
     if (!data) return;
     yozildi.current = false;
     tugashDavomiyligi.current = null;
-    // Yangi urinish — yangi "boshlang'ich" nuqta kerak. Joriy
-    // `fortschritt.data` allaqachon oldingi seansning YAKUNIY qiymati
-    // (refetch tepada, tugash effektida so'ralgan edi), shuning uchun
-    // qayta `null`ga qaytarish uni to'g'ridan-to'g'ri keyingi "boshida"
-    // sifatida qayta yozdiradi.
-    boshlangichFortschritt.current = null;
+    // Yangi urinish uchun yangi "boshlang'ich" nuqta — `qaytaOtishMi: true`
+    // orqali `keyingiBoshlangichSurati` OLDINGI boshlang'ichni e'tiborsiz
+    // qoldirib, to'g'ridan-to'g'ri joriy `fortschritt.data`ni ishlatadi.
+    // Bu — oldingi seansning YAKUNIY qiymati (tepada, tugash effektida
+    // allaqachon `refetch` qilingan). Ref'ni shunchaki `null`ga qaytarish
+    // ISHLAMAYDI edi: buni to'ldiradigan effekt faqat `fortschritt.data`
+    // REFERENSI o'zgarganda ishga tushadi, u esa retry davomida
+    // o'zgarmasligi mumkin — boshlang'ich butun retry davomida `null`
+    // bo'lib qolib, ball farqi har safar 0ga aylanardi (Task 9 review,
+    // Critical).
+    boshlangichFortschritt.current = keyingiBoshlangichSurati(
+      boshlangichFortschritt.current,
+      fortschrittSurati(fortschritt.data),
+      true,
+    );
     setHolat(boshla(data));
     setNatija(null);
     setTanlangan(null);

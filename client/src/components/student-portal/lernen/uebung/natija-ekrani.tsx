@@ -114,6 +114,11 @@ export function NatijaEkrani({
       ? Math.max(0, fortschritt.data.gesamt - gesamtBoshida)
       : null;
   const sanaladiganBall = useSanaladiganBall(topilganBall);
+  // Nol — qonuniy natija (masalan takrorlashda hech narsa muddati
+  // kelmagan bo'lishi mumkin), lekin "+0 ball" chipi buzilishdek
+  // o'qiladi. Shuning uchun BALL FAQAT musbat bo'lganda ko'rsatiladi —
+  // seriya va o'rin qatorlari esa nol ball bilan ham o'z holicha turaveradi.
+  const ballKorsatilsinmi = topilganBall != null && topilganBall > 0;
 
   // Seriya faqat OSHGANDA ko'rsatiladi (bugungi birinchi seans) — buni
   // aytadigan server, mijoz emas: `serieBoshida` seansdan oldingi qiymat,
@@ -128,7 +133,7 @@ export function NatijaEkrani({
     fortschritt.data?.wochePlatzGruppe ?? null,
   );
 
-  const yutuqlarBormi = sanaladiganBall != null || serieOshdimi || orinXabariMatni != null;
+  const yutuqlarBormi = ballKorsatilsinmi || serieOshdimi || orinXabariMatni != null;
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col justify-center gap-4 px-4 py-8">
@@ -148,7 +153,7 @@ export function NatijaEkrani({
 
         {yutuqlarBormi ? (
           <Card className="flex flex-wrap items-center justify-center gap-2 text-center">
-            {sanaladiganBall != null ? (
+            {ballKorsatilsinmi && sanaladiganBall != null ? (
               <StatChip
                 icon={<Star weight="fill" className="text-amber-500" />}
                 value={`+${sanaladiganBall} ball`}
