@@ -318,16 +318,12 @@ export class UebungService {
    * beriladi, chunki takrorlash seansining o'zi shu tanlovning o'zidan
    * quriladi — boshqa hech qanday material yo'q.
    *
-   * CHALG'ITUVCHILAR IKKI XIL TO'PLAMDAN QURILADI, ATAYLAB:
-   * - MUDDATI KELGAN to'plam — bugun haqiqatda SO'RALADIGAN so'zlar.
-   * - KO'RGAN (BARCHA) to'plam — o'quvchining har qanday `DafLexemeState`
-   *   qatori bor so'zlari, MUDDATGA QARAMASDAN — chalg'ituvchi puli aynan
-   *   SHUNDAN quriladi.
-   * Ikkinchisi BIRINCHISINI to'liq qamrab oladi (muddati kelgan so'zning
-   * o'zi ham holat yozuviga ega), shuning uchun ittifoq (union) amalda
-   * ko'rgan to'plamning o'zi — lekin ikkalasi ATAYLAB alohida so'raladi:
-   * ularning vazifasi boshqa-boshqa (kim so'raladi / kim chalg'itadi),
-   * shuning uchun kod ham shu ikkiligini ko'rsatib turishi kerak.
+   * CHALG'ITUVCHI PULI — O'QUVCHI KO'RGAN BARCHA SO'Z, muddatiga
+   * qaramasdan. Bu yerda faqat SHU bitta so'rov yuriladi: muddati kelgan
+   * so'zlarni `baueWiederholung` o'zi tanlaydi va o'z so'rovini
+   * chegaralab (`take`) yuritadi, ya'ni ularni bu yerda ikkinchi marta
+   * o'qish ortiqcha ish bo'lardi. Muddati kelgan so'z ko'rgan so'zlar
+   * to'plamining ichida bo'lgani uchun pul baribir to'liq.
    *
    * NEGA FAQAT MUDDATI KELGANLAR YETARLI EMAS EDI (tuzatilgan nuqson).
    * Chalg'ituvchi puli faqat muddati kelgan so'zlardan olinsa,
@@ -347,30 +343,19 @@ export class UebungService {
     studentId: number,
     rnd: () => number = Math.random,
   ): Promise<PublicFrage[]> {
-    const zustaende = (await this.prisma.dafLexemeState.findMany({
-      where: { studentId, dueAt: { lte: new Date() } },
-    } as any)) as Array<{ lexemeId: number }>;
-    // Muddati kelgan so'z umuman yo'q — bu tabiiy holat (masalan,
-    // o'quvchi hali hech narsa o'rganmagan yoki bugun hammasiga javob
-    // berib bo'lgan). Keyingi so'rovlarga hojat yo'q.
-    if (zustaende.length === 0) return [];
-
     // Chalg'ituvchi manbai — MUDDATGA QARAMASDAN, o'quvchi duch kelgan
     // BARCHA so'z. Yuqoridagi izohga qarang: tor (faqat muddati kelgan)
     // pul deyarli har bir savolni qurib bo'lmas holga keltirgan edi.
     const koergan = (await this.prisma.dafLexemeState.findMany({
       where: { studentId },
     } as any)) as Array<{ lexemeId: number }>;
+    // Hech qachon mashq qilmagan o'quvchi — bo'sh ro'yxat, xato emas.
+    if (koergan.length === 0) return [];
 
-    // Ittifoq: muddati kelgan so'zlarning o'zi ham chalg'ituvchi
-    // panelida BO'LISHI shart — ular ikkala rolda ham ishtirok etadi
-    // (ham so'raladigan, ham boshqa savolga chalg'ituvchi sifatida).
-    const barchaIdlar = [
-      ...new Set([...zustaende, ...koergan].map((z) => z.lexemeId)),
-    ];
+    const wortIds = koergan.map((z) => z.lexemeId);
 
     const wortRows = (await this.prisma.dafLexeme.findMany({
-      where: { id: { in: barchaIdlar } },
+      where: { id: { in: wortIds } },
     } as any)) as Array<{
       id: number;
       de: string;
