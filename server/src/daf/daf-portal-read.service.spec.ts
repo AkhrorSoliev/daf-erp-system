@@ -269,10 +269,48 @@ describe('getLevels — ilgarilash', () => {
         _count: { lessons: 0 },
       },
     ]);
+    // Ilgarilash endi BITTA so'rovdan olinadi (`lessonId` orqali), doneCount
+    // shuning uchun `lessons` ro'yxati bilan bog'langan holda hisoblanadi —
+    // shuning uchun unit 1ning darslari ham shu yerda beriladi.
+    prisma.dafLesson.findMany = jest.fn(async () => [
+      {
+        id: 101,
+        unitId: 1,
+        order: 1,
+        tier: null,
+        kind: 'SECTION_A',
+        sectionId: null,
+        titleDe: 'a',
+        titleUz: 'a',
+        _count: { lexemes: 0, exercises: 0 },
+      },
+      {
+        id: 102,
+        unitId: 1,
+        order: 2,
+        tier: null,
+        kind: 'SECTION_A',
+        sectionId: null,
+        titleDe: 'b',
+        titleUz: 'b',
+        _count: { lexemes: 0, exercises: 0 },
+      },
+      {
+        id: 103,
+        unitId: 1,
+        order: 3,
+        tier: null,
+        kind: 'SECTION_A',
+        sectionId: null,
+        titleDe: 'c',
+        titleUz: 'c',
+        _count: { lexemes: 0, exercises: 0 },
+      },
+    ]);
     prisma.dafLessonProgress.findMany = jest.fn(async () => [
-      { lesson: { unitId: 1 } },
-      { lesson: { unitId: 1 } },
-      { lesson: { unitId: 1 } },
+      { lessonId: 101, completedAt: new Date('2026-09-01'), bestScore: 12, runs: 1 },
+      { lessonId: 102, completedAt: new Date('2026-09-01'), bestScore: 12, runs: 1 },
+      { lessonId: 103, completedAt: new Date('2026-09-01'), bestScore: 12, runs: 1 },
     ]);
     const levels = await svc(prisma).getLevels(55);
     const a1 = levels.find((l) => l.level === 'A1')!;
@@ -286,8 +324,65 @@ describe('getLevels — ilgarilash', () => {
     await svc(prisma).getLevels(55);
     const where = prisma.dafLessonProgress.findMany.mock.calls[0][0].where;
     expect(where.studentId).toBe(55);
-    // Tugallanmagan qator "tugallangan" deb sanalmaydi.
-    expect(where.completedAt).toEqual({ not: null });
+  });
+});
+
+describe('getLevels — yo`l uchun bo`limlar', () => {
+  it('har unitga bo`limlarni va ularning seanslarini qo`shadi', async () => {
+    const prisma = fakePrisma();
+    prisma.dafUnit.findMany = jest.fn(async () => [
+      { id: 1, level: 'A1', order: 1, titleUz: 'Salom', titleDe: 'Hallo', _count: { lessons: 2 } },
+    ]);
+    prisma.dafSection.findMany = jest.fn(async () => [
+      { id: 10, unitId: 1, order: 1, code: 'u01-s1', titleUz: 'Bir', titleDe: 'Eins' },
+    ]);
+    prisma.dafLesson.findMany = jest.fn(async () => [
+      { id: 100, unitId: 1, order: 1, tier: null, kind: 'SECTION_A', sectionId: 10, titleDe: 'A', titleUz: 'A', _count: { lexemes: 0, exercises: 0 } },
+      { id: 109, unitId: 1, order: 9, tier: null, kind: 'UNIT_TEST', sectionId: null, titleDe: 'T', titleUz: 'Sinov', _count: { lexemes: 0, exercises: 0 } },
+    ]);
+    const levels = await svc(prisma).getLevels(55);
+    const unit = levels.find((l) => l.level === 'A1')!.units[0] as any;
+    expect(unit.sections[0].lessons.map((l: any) => l.id)).toEqual([100]);
+    expect(unit.finalTest.id).toBe(109);
+  });
+
+  it('ilgarilash har seansga yopishtiriladi', async () => {
+    const prisma = fakePrisma();
+    prisma.dafUnit.findMany = jest.fn(async () => [
+      { id: 1, level: 'A1', order: 1, titleUz: 'Salom', titleDe: 'Hallo', _count: { lessons: 1 } },
+    ]);
+    prisma.dafSection.findMany = jest.fn(async () => [
+      { id: 10, unitId: 1, order: 1, code: 'u01-s1', titleUz: 'Bir', titleDe: 'Eins' },
+    ]);
+    prisma.dafLesson.findMany = jest.fn(async () => [
+      { id: 100, unitId: 1, order: 1, tier: null, kind: 'SECTION_A', sectionId: 10, titleDe: 'A', titleUz: 'A', _count: { lexemes: 0, exercises: 0 } },
+    ]);
+    prisma.dafLessonProgress.findMany = jest.fn(async () => [
+      { lessonId: 100, completedAt: new Date('2026-09-01'), bestScore: 11, runs: 2 },
+    ]);
+    const levels = await svc(prisma).getLevels(55);
+    const s = (levels.find((l) => l.level === 'A1')!.units[0] as any).sections[0].lessons[0];
+    expect(s.bestScore).toBe(11);
+    expect(s.completedAt).not.toBeNull();
+  });
+
+  it('kontenti yo`q daraja bo`sh units bilan qaytadi', async () => {
+    const levels = await svc(fakePrisma()).getLevels(55);
+    expect(levels.map((l) => l.level)).toEqual(['A1', 'A2', 'B1']);
+    expect(levels.every((l) => Array.isArray(l.units))).toBe(true);
+  });
+
+  it('so`rovlar unit soniga qarab KO`PAYMAYDI', async () => {
+    // N+1 bo'lsa 12 unitda 24 ta so'rov ketardi.
+    const prisma = fakePrisma();
+    prisma.dafUnit.findMany = jest.fn(async () => [
+      { id: 1, level: 'A1', order: 1, titleUz: 'a', titleDe: 'a', _count: { lessons: 1 } },
+      { id: 2, level: 'A1', order: 2, titleUz: 'b', titleDe: 'b', _count: { lessons: 1 } },
+      { id: 3, level: 'A1', order: 3, titleUz: 'c', titleDe: 'c', _count: { lessons: 1 } },
+    ]);
+    await svc(prisma).getLevels(55);
+    expect(prisma.dafSection.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.dafLesson.findMany).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { DafLevel } from '@prisma/client';
+import { DafLessonKind, DafLevel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -18,6 +18,31 @@ export const LEVEL_LABEL: Record<DafLevel, string> = {
   [DafLevel.B1]: 'B1',
 };
 
+/** Bitta seans — bo'lim ichidagi ham, yakuniy sinov ham shu shaklda. */
+export interface LernenSeansItem {
+  id: number;
+  order: number;
+  tier: number | null;
+  kind: DafLessonKind | null;
+  titleDe: string;
+  titleUz: string | null;
+  wordCount: number;
+  exerciseCount: number;
+  completedAt: Date | null;
+  bestScore: number;
+  runs: number;
+}
+
+/** Bo'lim guruhi — sarlavha + o'sha bo'limdagi seanslar. */
+export interface BolimGuruhi {
+  id: number;
+  order: number;
+  code: string;
+  titleUz: string;
+  titleDe: string;
+  lessons: LernenSeansItem[];
+}
+
 export interface LevelPathItem {
   level: DafLevel;
   label: string;
@@ -28,7 +53,39 @@ export interface LevelPathItem {
     titleDe: string;
     lessonCount: number;
     doneCount: number;
+    // Yo'l zigzagida har seans o'z tugunini oladi — shuning uchun yo'l
+    // sahifasi ham bo'lim ekrani bilan bir xil `sections`/`finalTest`
+    // shaklini oladi, alohida 12 ta so'rov o'rniga.
+    sections: BolimGuruhi[];
+    finalTest: LernenSeansItem | null;
   }[];
+}
+
+/** `gruppiereLektionen` ga beriladigan xom qatorlar — DB select shakli. */
+interface XomDars {
+  id: number;
+  order: number;
+  tier: number | null;
+  kind: DafLessonKind | null;
+  sectionId: number | null;
+  titleDe: string;
+  titleUz: string | null;
+  _count: { lexemes: number; exercises: number };
+}
+
+interface XomBolim {
+  id: number;
+  order: number;
+  code: string;
+  titleUz: string;
+  titleDe: string;
+}
+
+interface XomFortschritt {
+  lessonId: number;
+  completedAt: Date | null;
+  bestScore: number;
+  runs: number;
 }
 
 @Injectable()
@@ -74,18 +131,81 @@ export class DafPortalReadService {
       },
     });
 
-    // Tugallangan seanslar SANALADI, ro'yxati kerak emas: yo'l kartasida
-    // faqat `4/18` ko'rinadi. `completedAt: { not: null }` shart —
-    // qator seans boshlanganda emas, TUGAGANDA yoziladi, lekin
-    // kelajakda boshqa yozuvchi paydo bo'lsa yarim qator sanalmasin.
-    const bajarilgan = await this.prisma.dafLessonProgress.findMany({
-      where: { studentId, completedAt: { not: null } },
-      select: { lesson: { select: { unitId: true } } },
+    // Yo'l endi seanslarni o'zi ko'rsatadi (Duolingo uslubidagi zigzag),
+    // shuning uchun har unitning bo'limlari ham shu javobga kerak. Buni
+    // unit boshiga bittadan so'rov bilan qilish 12 unitda 12 (yoki
+    // ilgarilash bilan 24) ta so'rov degani edi. O'rniga bo'limlar va
+    // darslar BARCHA unitlar uchun BITTADAN so'rov bilan olinadi
+    // (`unitId: { in: unitIds } }`), so'ng xotirada unit bo'yicha
+    // guruhlanadi.
+    const unitIds = units.map((u) => u.id);
+    const sections = await this.prisma.dafSection.findMany({
+      where: { unitId: { in: unitIds } },
+      orderBy: { order: 'asc' },
+      select: {
+        id: true,
+        unitId: true,
+        order: true,
+        code: true,
+        titleUz: true,
+        titleDe: true,
+      },
     });
+    const lessons = await this.prisma.dafLesson.findMany({
+      where: { unitId: { in: unitIds } },
+      orderBy: { order: 'asc' },
+      select: {
+        id: true,
+        unitId: true,
+        order: true,
+        tier: true,
+        kind: true,
+        sectionId: true,
+        titleDe: true,
+        titleUz: true,
+        _count: { select: { lexemes: true, exercises: true } },
+      },
+    });
+    // BITTA ilgarilash so'rovi ikkala maqsadga xizmat qiladi: yo'l
+    // kartasidagi `4/18` sonini ham, har seansga yopishtiriladigan
+    // to'liq yozuvni (`bestScore`, `runs`, `completedAt`) ham shu
+    // ro'yxatdan olamiz — `getUnit`dagidek, TUGALLANMAGAN urinish ham
+    // hisobga olinishi kerak, shuning uchun `completedAt` bo'yicha
+    // filtr yo'q.
+    const fortschritt = await this.prisma.dafLessonProgress.findMany({
+      where: { studentId, lesson: { unitId: { in: unitIds } } },
+      select: {
+        lessonId: true,
+        completedAt: true,
+        bestScore: true,
+        runs: true,
+      },
+    });
+
+    const bolimlarByUnit = new Map<number, XomBolim[]>();
+    for (const s of sections) {
+      const list = bolimlarByUnit.get(s.unitId) ?? [];
+      list.push(s);
+      bolimlarByUnit.set(s.unitId, list);
+    }
+    const darslarByUnit = new Map<number, XomDars[]>();
+    const unitByLesson = new Map<number, number>();
+    for (const l of lessons) {
+      const list = darslarByUnit.get(l.unitId) ?? [];
+      list.push(l);
+      darslarByUnit.set(l.unitId, list);
+      unitByLesson.set(l.id, l.unitId);
+    }
+
+    // Tugallangan seanslar SANALADI, ro'yxati kerak emas: yo'l kartasida
+    // faqat `4/18` ko'rinadi. Yuqoridagi `fortschritt`dan xotirada
+    // hisoblanadi — `completedAt` bor qatorlar, `lessons` orqali o'z
+    // unitiga bog'lanadi.
     const bajarilganSoni = new Map<number, number>();
-    for (const p of bajarilgan) {
-      const u = p.lesson.unitId;
-      bajarilganSoni.set(u, (bajarilganSoni.get(u) ?? 0) + 1);
+    for (const f of fortschritt) {
+      if (!f.completedAt) continue;
+      const u = unitByLesson.get(f.lessonId);
+      if (u != null) bajarilganSoni.set(u, (bajarilganSoni.get(u) ?? 0) + 1);
     }
 
     return LEVEL_ORDER.map((level) => ({
@@ -93,15 +213,132 @@ export class DafPortalReadService {
       label: LEVEL_LABEL[level],
       units: units
         .filter((u) => u.level === level)
-        .map((u) => ({
-          id: u.id,
-          order: u.order,
-          titleUz: u.titleUz,
-          titleDe: u.titleDe,
-          lessonCount: u._count.lessons,
-          doneCount: bajarilganSoni.get(u.id) ?? 0,
-        })),
+        .map((u) => {
+          const guruh = this.gruppiereLektionen(
+            u.id,
+            darslarByUnit.get(u.id) ?? [],
+            bolimlarByUnit.get(u.id) ?? [],
+            fortschritt,
+          );
+          return {
+            id: u.id,
+            order: u.order,
+            titleUz: u.titleUz,
+            titleDe: u.titleDe,
+            lessonCount: u._count.lessons,
+            doneCount: bajarilganSoni.get(u.id) ?? 0,
+            sections: guruh.sections,
+            finalTest: guruh.finalTest,
+          };
+        }),
     }));
+  }
+
+  /**
+   * Darslarni bo'lim bo'yicha guruhlaydi, yakuniy sinovni ajratadi va
+   * o'quvchining ilgarilashini har seansga yopishtiradi — bitta unit
+   * uchun.
+   *
+   * `getUnit` (bitta unit sahifasi) ham, `getLevels` (butun yo'l, har
+   * unitga) ham shu metodni chaqiradi: guruhlash mantiqi FAQAT shu yerda
+   * yozilgan. Ikkinchi nusxasi yozilsa, ikkalasi asta-sekin bir-biridan
+   * farqlanib ketardi — bittasiga tuzatish kiritilib, ikkinchisi
+   * eskirib qolardi.
+   */
+  private gruppiereLektionen(
+    unitId: number,
+    lessons: XomDars[],
+    sections: XomBolim[],
+    fortschritt: XomFortschritt[],
+  ): {
+    lessons: LernenSeansItem[];
+    sections: BolimGuruhi[];
+    finalTest: LernenSeansItem | null;
+  } {
+    const byLesson = new Map(fortschritt.map((f) => [f.lessonId, f]));
+
+    const toItem = (l: XomDars): LernenSeansItem => {
+      const f = byLesson.get(l.id);
+      return {
+        id: l.id,
+        order: l.order,
+        tier: l.tier,
+        kind: l.kind,
+        titleDe: l.titleDe,
+        titleUz: l.titleUz,
+        wordCount: l._count.lexemes,
+        exerciseCount: l._count.exercises,
+        // `Date` obyekti JSON'da ISO satrga aylanadi — mijoz tipi
+        // (`LernenSeans.completedAt: string | null`) shuni kutadi.
+        completedAt: f?.completedAt ?? null,
+        bestScore: f?.bestScore ?? 0,
+        runs: f?.runs ?? 0,
+      };
+    };
+
+    const alle = lessons.map(toItem);
+
+    // Yakuniy sinov bo'lim ichida emas — u butun unitni sinaydi va
+    // dizaynda oxirida alohida turadi. `.find()` faqat BIRINCHISINI
+    // oladi — bu me'yorda ziyon emas (bitta unitda bitta yakuniy sinov
+    // bo'lishi kerak), lekin seed xatosi bilan ikkinchisi paydo bo'lsa,
+    // u sahifada UMUMAN ko'rinmasdan qoladi. Shuning uchun bu holat
+    // pastda ogohlantiriladi — aks holda xato sukut saqlab yo'qolib
+    // ketardi.
+    const unitTests = alle.filter((l) => l.kind === 'UNIT_TEST');
+    if (unitTests.length > 1) {
+      this.logger.warn(
+        `Unit ${unitId}da ${unitTests.length} ta UNIT_TEST darsi bor — ` +
+          `faqat birinchisi (dars ${unitTests[0].id}) ko'rsatiladi, ` +
+          `qolganlari (dars ${unitTests
+            .slice(1)
+            .map((l) => l.id)
+            .join(', ')}) sahifada ko'rinmaydi. Bu seed xatosi — bitta ` +
+          "unitda bitta yakuniy sinov bo'lishi kerak.",
+      );
+    }
+    const finalTest = unitTests[0] ?? null;
+
+    const bySection = new Map<number, LernenSeansItem[]>();
+    for (const item of alle) {
+      if (item.kind === 'UNIT_TEST') continue;
+      const raw = lessons.find((l) => l.id === item.id)!;
+      if (raw.sectionId == null) {
+        // Bu unitda sectionlar UMUMAN yo'q bo'lsa (eski, nafaqaga
+        // chiqarilmagan DiB darsi kabi) bu me'yor — pastdagi yassi
+        // `lessons` ro'yxati orqali ko'rinadi. Lekin unitda BOSHQA
+        // darslar sectionga ega bo'lsa, bu SEEDING XATOSI: sahifa
+        // `sections` bo'sh bo'lmagan unitda faqat bo'lim guruhlarini
+        // ko'rsatadi, yassi ro'yxatga qaramaydi — demak bu dars
+        // ekranda UMUMAN ko'rinmay qoladi.
+        if (sections.length > 0) {
+          this.logger.warn(
+            `Unit ${unitId}, dars ${item.id} (${item.titleUz}) sectionId'siz, ` +
+              "lekin bu unitda boshqa bo'limlar bor — dars sahifada ko'rinmaydi.",
+          );
+        }
+        continue;
+      }
+      const list = bySection.get(raw.sectionId) ?? [];
+      list.push(item);
+      bySection.set(raw.sectionId, list);
+    }
+
+    // `orderBy` yuqorida DB'ga ishonadi, lekin buni ikkinchi marta
+    // tekshirish arzon: bo'lim ro'yxati ekranda ketma-ket ko'rinishi
+    // shart, tasodifiy tartib bo'lim raqamlarini chalkashtirib yuboradi.
+    const sectionGruppen = [...sections]
+      .sort((a, b) => a.order - b.order)
+      .map((s) => ({
+        id: s.id,
+        order: s.order,
+        code: s.code,
+        titleUz: s.titleUz,
+        titleDe: s.titleDe,
+        lessons: bySection.get(s.id) ?? [],
+      }));
+
+    return { lessons: alle, sections: sectionGruppen, finalTest };
   }
 
   /**
@@ -171,88 +408,15 @@ export class DafPortalReadService {
         runs: true,
       },
     });
-    const byLesson = new Map(fortschritt.map((f) => [f.lessonId, f]));
 
-    const toItem = (l: (typeof lessons)[number]) => {
-      const f = byLesson.get(l.id);
-      return {
-        id: l.id,
-        order: l.order,
-        tier: l.tier,
-        kind: l.kind,
-        titleDe: l.titleDe,
-        titleUz: l.titleUz,
-        wordCount: l._count.lexemes,
-        exerciseCount: l._count.exercises,
-        // `Date` obyekti JSON'da ISO satrga aylanadi — mijoz tipi
-        // (`LernenSeans.completedAt: string | null`) shuni kutadi.
-        completedAt: f?.completedAt ?? null,
-        bestScore: f?.bestScore ?? 0,
-        runs: f?.runs ?? 0,
-      };
-    };
-
-    const alle = lessons.map(toItem);
-
-    // Yakuniy sinov bo'lim ichida emas — u butun unitni sinaydi va
-    // dizaynda oxirida alohida turadi. `.find()` faqat BIRINCHISINI
-    // oladi — bu me'yorda ziyon emas (bitta unitda bitta yakuniy sinov
-    // bo'lishi kerak), lekin seed xatosi bilan ikkinchisi paydo bo'lsa,
-    // u sahifada UMUMAN ko'rinmasdan qoladi. Shuning uchun bu holat
-    // pastda ogohlantiriladi — aks holda xato sukut saqlab yo'qolib
-    // ketardi.
-    const unitTests = alle.filter((l) => l.kind === 'UNIT_TEST');
-    if (unitTests.length > 1) {
-      this.logger.warn(
-        `Unit ${unitId}da ${unitTests.length} ta UNIT_TEST darsi bor — ` +
-          `faqat birinchisi (dars ${unitTests[0].id}) ko'rsatiladi, ` +
-          `qolganlari (dars ${unitTests
-            .slice(1)
-            .map((l) => l.id)
-            .join(', ')}) sahifada ko'rinmaydi. Bu seed xatosi — bitta ` +
-          "unitda bitta yakuniy sinov bo'lishi kerak.",
-      );
-    }
-    const finalTest = unitTests[0] ?? null;
-
-    const bySection = new Map<number, typeof alle>();
-    for (const item of alle) {
-      if (item.kind === 'UNIT_TEST') continue;
-      const raw = lessons.find((l) => l.id === item.id)!;
-      if (raw.sectionId == null) {
-        // Bu unitda sectionlar UMUMAN yo'q bo'lsa (eski, nafaqaga
-        // chiqarilmagan DiB darsi kabi) bu me'yor — pastdagi yassi
-        // `lessons` ro'yxati orqali ko'rinadi. Lekin unitda BOSHQA
-        // darslar sectionga ega bo'lsa, bu SEEDING XATOSI: sahifa
-        // `sections` bo'sh bo'lmagan unitda faqat bo'lim guruhlarini
-        // ko'rsatadi, yassi ro'yxatga qaramaydi — demak bu dars
-        // ekranda UMUMAN ko'rinmay qoladi.
-        if (sections.length > 0) {
-          this.logger.warn(
-            `Unit ${unitId}, dars ${item.id} (${item.titleUz}) sectionId'siz, ` +
-              "lekin bu unitda boshqa bo'limlar bor — dars sahifada ko'rinmaydi.",
-          );
-        }
-        continue;
-      }
-      const list = bySection.get(raw.sectionId) ?? [];
-      list.push(item);
-      bySection.set(raw.sectionId, list);
-    }
-
-    // `orderBy` yuqorida DB'ga ishonadi, lekin buni ikkinchi marta
-    // tekshirish arzon: bo'lim ro'yxati ekranda ketma-ket ko'rinishi
-    // shart, tasodifiy tartib bo'lim raqamlarini chalkashtirib yuboradi.
-    const sectionGruppen = [...sections]
-      .sort((a, b) => a.order - b.order)
-      .map((s) => ({
-        id: s.id,
-        order: s.order,
-        code: s.code,
-        titleUz: s.titleUz,
-        titleDe: s.titleDe,
-        lessons: bySection.get(s.id) ?? [],
-      }));
+    // Guruhlash mantiqi `getLevels` bilan BIR XIL xususiy metodda — u
+    // yerda ham har unit shu tarzda guruhlanadi. Ikkala joyda alohida
+    // yozilsa, ular asta-sekin bir-biridan farqlanib ketardi.
+    const {
+      lessons: alle,
+      sections: sectionGruppen,
+      finalTest,
+    } = this.gruppiereLektionen(unitId, lessons, sections, fortschritt);
 
     const { retiredAt: _retiredAt, ...publicUnit } = unit;
 
