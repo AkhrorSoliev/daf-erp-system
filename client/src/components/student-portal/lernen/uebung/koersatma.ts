@@ -15,6 +15,8 @@ const MATN: Record<FrageFormat, string> = {
   SATZ_BAUEN: "So'zlardan gap tuzing",
   SATZ_UEBERSETZEN: "Gapning tarjimasini tanlang",
   REAKTION: "Nima deb javob berasiz?",
+  ZUORDNEN: "Vaziyatni mos ibora bilan juftlang",
+  DIALOG_LUECKE: "Suhbatda nima aytilgan?",
 };
 
 export function koersatma(format: FrageFormat): string {
@@ -24,6 +26,6 @@ export function koersatma(format: FrageFormat): string {
 /** Format qaysi komponent bilan ko'rsatiladi (dizayn §4.1). */
 export function harakat(format: FrageFormat): "TANLASH" | "YOZISH" | "YIGISH" {
   if (format === "LUECKE") return "YOZISH";
-  if (format === "SATZ_BAUEN" || format === "PAAR") return "YIGISH";
+  if (format === "SATZ_BAUEN" || format === "PAAR" || format === "ZUORDNEN") return "YIGISH";
   return "TANLASH";
 }

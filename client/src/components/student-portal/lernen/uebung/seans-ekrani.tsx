@@ -31,7 +31,8 @@ import {
 import { harakat, koersatma } from "./koersatma";
 import { Tanlash } from "./tanlash";
 import { Yozish } from "./yozish";
-import { Yigish } from "./yigish";
+import { Yigish, juftSoni } from "./yigish";
+import { DialogBlok } from "./dialog-blok";
 import { NatijaEkrani } from "./natija-ekrani";
 import {
   fortschrittSurati,
@@ -157,15 +158,15 @@ export function SeansEkrani(props: SeansEkraniProps) {
         ? yozilgan.trim()
         : frage?.format === "SATZ_BAUEN"
           ? yigilgan.join(" ")
-          : yigilgan.join("|"); // PAAR: `de=uz|de=uz|…`
+          : yigilgan.join("|"); // PAAR/ZUORDNEN: `chap=o'ng|chap=o'ng|…`
 
   const tayyor =
     rejim === "TANLASH"
       ? tanlangan != null
       : rejim === "YOZISH"
         ? yozilgan.trim().length > 0
-        : frage?.format === "PAAR"
-          ? yigilgan.length === 4
+        : frage && (frage.format === "PAAR" || frage.format === "ZUORDNEN")
+          ? yigilgan.length === juftSoni(frage.format)
           : yigilgan.length > 0;
 
   const tekshir = () => {
@@ -580,7 +581,14 @@ export function SeansEkrani(props: SeansEkraniProps) {
         <p className="text-sm font-semibold uppercase tracking-wide text-ink-400">
           {koersatma(frage.format)}
         </p>
-        <p className="text-2xl font-bold text-ink-900 sm:text-3xl">{frage.prompt}</p>
+        {frage.format === "DIALOG_LUECKE" ? (
+          // Butun suhbat ekranda — savol matni o'rniga (dizayn D7 / brief §5):
+          // server `prompt`ni tayyor satr qilib yuboradi, mijoz uni faqat
+          // chiroyli chizadi.
+          <DialogBlok matn={frage.prompt} />
+        ) : (
+          <p className="text-2xl font-bold text-ink-900 sm:text-3xl">{frage.prompt}</p>
+        )}
         {frage.hilfe ? <p className="text-sm text-ink-500">{frage.hilfe}</p> : null}
 
         {rejim === "TANLASH" ? (
@@ -601,7 +609,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
           />
         ) : (
           <Yigish
-            format={frage.format as "SATZ_BAUEN" | "PAAR"}
+            format={frage.format as "SATZ_BAUEN" | "PAAR" | "ZUORDNEN"}
             options={frage.options}
             tanlangan={yigilgan}
             onOzgar={setYigilgan}

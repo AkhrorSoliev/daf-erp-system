@@ -4,12 +4,25 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import type { PruefErgebnis } from "../types";
 
+/**
+ * Nechta juft to'liq javob hisoblanadi.
+ *
+ * Server ham shu sonni talab qiladi: juft soni noto'g'ri bo'lsa javob
+ * shakli buzilgan hisoblanadi va BUTUNLAY xato bo'ladi (server tomoni:
+ * `satz-fragen.ts`dagi `ZUORDNEN_JUFT`). Shuning uchun bu son ikki
+ * tomonda bir xil bo'lishi shart — son shu BITTA joydan olinadi, boshqa
+ * yerda qayta yozilmaydi.
+ */
+export function juftSoni(format: "PAAR" | "ZUORDNEN"): number {
+  return format === "ZUORDNEN" ? 6 : 4;
+}
+
 export interface YigishProps {
-  format: "SATZ_BAUEN" | "PAAR";
+  format: "SATZ_BAUEN" | "PAAR" | "ZUORDNEN";
   options: string[];
   /**
    * `SATZ_BAUEN` — tanlangan so'zlar tartibi.
-   * `PAAR` — juftlar, `de=uz` satrlari.
+   * `PAAR`/`ZUORDNEN` — juftlar, `chap=o'ng` satrlari.
    */
   tanlangan: string[];
   onOzgar: (next: string[]) => void;
@@ -38,9 +51,10 @@ export function Yigish({
   natija,
   kutilmoqda = false,
 }: YigishProps) {
-  if (format === "PAAR") {
+  if (format === "PAAR" || format === "ZUORDNEN") {
     return (
       <Juftlash
+        format={format}
         options={options}
         tanlangan={tanlangan}
         onOzgar={onOzgar}
@@ -158,30 +172,41 @@ function GapTuzish({ options, tanlangan, onOzgar, natija, kutilmoqda }: IchkiPro
   );
 }
 
-function Juftlash({ options, tanlangan, onOzgar, natija, kutilmoqda }: IchkiProps) {
-  // `options` aynan sakkizta: birinchi to'rttasi nemischa (chap ustun,
-  // tartibi o'zgarmaydi), oxirgi to'rttasi o'zbekcha (aralashtirilgan).
-  const nemischa = options.slice(0, 4);
-  const ozbekcha = options.slice(4, 8);
+interface JuftlashProps extends IchkiProps {
+  format: "PAAR" | "ZUORDNEN";
+}
+
+/**
+ * Ikki ustunni juftlash: `PAAR` (nemischa/o'zbekcha) VA `ZUORDNEN`
+ * (vaziyat/ibora) BITTA mexanizmdan foydalanadi — faqat ustunlar mazmuni
+ * farq qiladi, bosish-bekor qilish mantig'i bir xil. Shu sabab ustunlar
+ * "de"/"uz" emas, umumiy "chap"/"o'ng" deb nomlangan.
+ */
+function Juftlash({ format, options, tanlangan, onOzgar, natija, kutilmoqda }: JuftlashProps) {
+  // `options` soni har doim `juftSoni(format) * 2`: birinchi yarmi chap
+  // ustun (tartibi o'zgarmaydi), qolgani o'ng ustun (aralashtirilgan).
+  const soni = juftSoni(format);
+  const chapUstun = options.slice(0, soni);
+  const ongUstun = options.slice(soni, soni * 2);
 
   const [kutilayotgan, setKutilayotgan] = React.useState<string | null>(null);
   const qulflangan = natija != null || kutilmoqda;
 
-  // Natija kelganda server `richtig` ni "de=uz|de=uz|de=uz|de=uz" ko'rinishida
+  // Natija kelganda server `richtig` ni "chap=o'ng|chap=o'ng|…" ko'rinishida
   // qaytaradi — har bir juftni alohida to'g'ri/xato deb ko'rsatish uchun uni
-  // `de -> uz` xaritasiga aylantiramiz.
+  // `chap -> o'ng` xaritasiga aylantiramiz.
   const togriXarita = React.useMemo(() => {
     if (!natija) return null;
     const xarita = new Map<string, string>();
     for (const juft of natija.richtig.split("|")) {
-      const [de, uz] = juft.split("=");
-      if (de != null && uz != null) xarita.set(de, uz);
+      const [chap, ong] = juft.split("=");
+      if (chap != null && ong != null) xarita.set(chap, ong);
     }
     return xarita;
   }, [natija]);
 
-  const juftTop = (de: string) => tanlangan.find((p) => p.startsWith(`${de}=`)) ?? null;
-  const juftUzTop = (uz: string) => tanlangan.find((p) => p.endsWith(`=${uz}`)) ?? null;
+  const juftTop = (chap: string) => tanlangan.find((p) => p.startsWith(`${chap}=`)) ?? null;
+  const juftOngTop = (ong: string) => tanlangan.find((p) => p.endsWith(`=${ong}`)) ?? null;
 
   const bekorQil = (juft: string) => onOzgar(tanlangan.filter((p) => p !== juft));
 
@@ -196,15 +221,15 @@ function Juftlash({ options, tanlangan, onOzgar, natija, kutilmoqda }: IchkiProp
   return (
     <div className="grid grid-cols-2 gap-2.5">
       <div className="space-y-2">
-        {nemischa.map((de) => {
-          const juft = juftTop(de);
+        {chapUstun.map((chap) => {
+          const juft = juftTop(chap);
           const paired = juft != null;
-          const tanlab = kutilayotgan === de;
-          const togri = togriXarita ? togriXarita.get(de) === juft?.split("=")[1] : null;
+          const tanlab = kutilayotgan === chap;
+          const togri = togriXarita ? togriXarita.get(chap) === juft?.split("=")[1] : null;
 
           return (
             <button
-              key={de}
+              key={chap}
               type="button"
               disabled={qulflangan}
               onClick={() => {
@@ -212,30 +237,33 @@ function Juftlash({ options, tanlangan, onOzgar, natija, kutilmoqda }: IchkiProp
                   bekorQil(juft);
                   return;
                 }
-                setKutilayotgan(tanlab ? null : de);
+                setKutilayotgan(tanlab ? null : chap);
               }}
               className={cn(
-                "w-full rounded-2xl border-2 px-3.5 py-3 text-left font-semibold transition-colors",
+                // `truncate` — olti juftda vaziyat/ibora matni to'rt juftdagi
+                // so'zdan uzunroq, tor telefon ekranida bitta qatorga sig'may
+                // qolishi mumkin; ustun kengligi shu bilan ustuvor bo'lib qoladi.
+                "w-full truncate rounded-2xl border-2 px-3.5 py-3 text-left font-semibold transition-colors",
                 holatKlass(paired, tanlab, natija != null && paired ? togri : null),
                 qulflangan && "cursor-default",
               )}
             >
-              {de}
+              {chap}
             </button>
           );
         })}
       </div>
 
       <div className="space-y-2">
-        {ozbekcha.map((uz) => {
-          const juft = juftUzTop(uz);
+        {ongUstun.map((ong) => {
+          const juft = juftOngTop(ong);
           const paired = juft != null;
-          const de = paired ? juft.split("=")[0] : null;
-          const togri = togriXarita && de ? togriXarita.get(de) === uz : null;
+          const chap = paired ? juft.split("=")[0] : null;
+          const togri = togriXarita && chap ? togriXarita.get(chap) === ong : null;
 
           return (
             <button
-              key={uz}
+              key={ong}
               type="button"
               disabled={qulflangan}
               onClick={() => {
@@ -244,17 +272,17 @@ function Juftlash({ options, tanlangan, onOzgar, natija, kutilmoqda }: IchkiProp
                   return;
                 }
                 if (kutilayotgan != null) {
-                  onOzgar([...tanlangan, `${kutilayotgan}=${uz}`]);
+                  onOzgar([...tanlangan, `${kutilayotgan}=${ong}`]);
                   setKutilayotgan(null);
                 }
               }}
               className={cn(
-                "w-full rounded-2xl border-2 px-3.5 py-3 text-left font-semibold transition-colors",
+                "w-full truncate rounded-2xl border-2 px-3.5 py-3 text-left font-semibold transition-colors",
                 holatKlass(paired, false, natija != null && paired ? togri : null),
                 qulflangan && "cursor-default",
               )}
             >
-              {uz}
+              {ong}
             </button>
           );
         })}

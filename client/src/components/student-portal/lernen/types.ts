@@ -10,7 +10,9 @@ export type FrageFormat =
   | "LUECKE"
   | "SATZ_BAUEN"
   | "SATZ_UEBERSETZEN"
-  | "REAKTION";
+  | "REAKTION"
+  | "ZUORDNEN"
+  | "DIALOG_LUECKE";
 
 export type MaterialTyp = "WORT" | "SATZ" | "PHRASE" | "DIALOGZEILE";
 

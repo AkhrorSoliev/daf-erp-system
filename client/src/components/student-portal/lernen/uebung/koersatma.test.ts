@@ -5,10 +5,11 @@ import type { FrageFormat } from "../types";
 const HAMMASI: FrageFormat[] = [
   "WORT_UZ", "UZ_WORT", "PAAR", "ARTIKEL",
   "LUECKE", "SATZ_BAUEN", "SATZ_UEBERSETZEN", "REAKTION",
+  "ZUORDNEN", "DIALOG_LUECKE",
 ];
 
 describe("koersatma", () => {
-  it("har sakkiz formatga matn beradi", () => {
+  it("har o'nta formatga matn beradi", () => {
     for (const f of HAMMASI) {
       expect(koersatma(f).length).toBeGreaterThan(0);
     }
@@ -21,7 +22,7 @@ describe("koersatma", () => {
 });
 
 describe("harakat", () => {
-  it("har sakkiz format uchtadan biriga tushadi", () => {
+  it("har o'nta format uchtadan biriga tushadi", () => {
     for (const f of HAMMASI) {
       expect(["TANLASH", "YOZISH", "YIGISH"]).toContain(harakat(f));
     }
@@ -45,5 +46,18 @@ describe("harakat", () => {
     expect(harakat("ARTIKEL")).toBe("TANLASH");
     expect(harakat("SATZ_UEBERSETZEN")).toBe("TANLASH");
     expect(harakat("REAKTION")).toBe("TANLASH");
+  });
+});
+
+describe("yangi formatlar", () => {
+  it("ikkalasiga ham ko'rsatma bor", () => {
+    expect(koersatma("ZUORDNEN").length).toBeGreaterThan(0);
+    expect(koersatma("DIALOG_LUECKE").length).toBeGreaterThan(0);
+  });
+
+  it("ZUORDNEN — yig'ish, DIALOG_LUECKE — tanlash", () => {
+    // ZUORDNEN juftlaydi (PAAR kabi), DIALOG_LUECKE variant tanlaydi.
+    expect(harakat("ZUORDNEN")).toBe("YIGISH");
+    expect(harakat("DIALOG_LUECKE")).toBe("TANLASH");
   });
 });
