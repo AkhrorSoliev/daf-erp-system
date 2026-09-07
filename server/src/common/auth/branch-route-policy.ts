@@ -507,6 +507,11 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /student-portal/lernen/drill/check',
       'POST /student-portal/lernen/lessons/:id/abschluss',
       'POST /student-portal/lernen/uebung/check',
+      // `uebung/juft` — matching mashqidagi BITTA juftni jonli tekshirish.
+      // Xuddi `uebung/check` bilan bir xil sabab: `@CurrentUser('studentId')`
+      // dan kelinadi, DTOda `studentId` yo'q, va yozuv har bosishda
+      // haqiqiy `dafAttempt` sifatida SHU o'quvchining nomiga muhrlanadi.
+      'POST /student-portal/lernen/uebung/juft',
     ],
   },
   {

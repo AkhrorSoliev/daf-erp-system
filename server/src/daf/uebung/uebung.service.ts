@@ -172,6 +172,22 @@ export interface PruefenErgebnis {
 }
 
 /**
+ * Bitta juftlash bosishi — `juft()` uchun kirish.
+ *
+ * `PruefenInput`dan farqi: bu yerda `given` yo'q, o'rniga `chap`/`ong`
+ * (bosilgan ikkita element) bor. Faqat juftlash formatlari qamrab
+ * olinadi — `PAAR` (so'z=tarjima) va `ZUORDNEN` (vaziyat=ibora); boshqa
+ * sakkiz formatda "juft" degan tushunchaning o'zi yo'q.
+ */
+export interface JuftInput {
+  itemType: 'WORT' | 'PHRASE';
+  itemId: number;
+  format: 'PAAR' | 'ZUORDNEN';
+  chap: string;
+  ong: string;
+}
+
+/**
  * Mashq servisi: materialni bazadan o'qiydi, seans quradi, javobni
  * tekshiradi.
  *
@@ -915,6 +931,117 @@ export class UebungService {
     }
 
     return { isCorrect, richtig };
+  }
+
+  /**
+   * Bitta juftni JONLI tekshiradi — o'quvchi ikkita elementni bir-biriga
+   * ulagan zahoti (butun mashqni tugatmasdan) natija kerak. Direktor
+   * ishlab ko'rgach aynan shuni so'radi: juftlash mashqi juft o'tirgan
+   * zahoti aytishi kerak, hammasini yig'ib bo'lgandan keyin emas.
+   *
+   * REAL URINISH SIFATIDA YOZILADI — `pruefen` bilan bir xil yo'ldan
+   * o'tadi: `dafAttempt` yozuvi, muddati kelgan bo'lsa ball, Leitner
+   * yangilanishi. Bu ATAYLAB shunday: aynan shu qoida "tuzatish bepul"
+   * xususiyatini HECH QANDAY QO'SHIMCHA KOD YOZMASDAN beradi. Xato
+   * bosilgan so'z ertangi kunga suriladi (`aktualisiereZustand`), ya'ni
+   * keyingi (to'g'ri) bosishda u endi "muddati kelmagan" bo'ladi va
+   * `punkteFuer` nol qaytaradi — cheksiz bosib "yashil" qilish ham
+   * bekorga, chunki har muvaffaqiyatsiz urinishdan keyingi urinish xuddi
+   * shu sabab bilan ball bermaydi.
+   *
+   * TARTIB MUHIM: muddat holati (`punkteEingabeFuer`) `aktualisiereZustand`
+   * DAN OLDIN o'qiladi — xuddi yuqoridagi `pruefen`dagidek. Aks holda
+   * Leitner yozuvi "kelajakka surilgan" `dueAt`ni o'qib, "muddati
+   * kelmagan" javobini har doim qaytarardi.
+   */
+  async juft(
+    input: JuftInput,
+    ctx: PruefenContext,
+  ): Promise<{ isCorrect: boolean }> {
+    const { itemType, itemId, format, chap, ong } = input;
+
+    const material = await this.ladeMaterial(itemType, itemId);
+    if (!material) {
+      throw new NotFoundException(`Material topilmadi: ${itemType}:${itemId}`);
+    }
+    if (material.unitId == null) {
+      // `pruefePaar`/`pruefeZuordnen` dagi qoidaning o'zi: qidiruv unitga
+      // cheklanishi shart, aks holda o'quvchi boshqa unitdan (hatto
+      // ko'rsatilmagan darsdan) bir xil nomni aytib, hech qachon
+      // ko'rmagan materialga "to'g'ri" javob olishi mumkin bo'lardi.
+      throw new BadRequestException(
+        "Juft savoli faqat unitga tegishli materialga tegishli",
+      );
+    }
+    const unitId = material.unitId;
+
+    // Baholanadigan so'zning `lexemeId`si — `PAAR`ning `itemId`si emas!
+    // `itemId` to'rtlikning BIRINCHISI, bosilgan juft esa BOSHQASI
+    // bo'lishi mumkin. `null` qoladi: format `ZUORDNEN` bo'lsa (ibora
+    // Leitner narvoniga kirmaydi) yoki so'z topilmasa.
+    let isCorrect: boolean;
+    let lexemeId: number | null = null;
+
+    if (format === 'PAAR') {
+      const nomzodlar = (await this.prisma.dafLexeme.findMany({
+        where: { de: chap, unitId },
+      } as any)) as Array<{ id: number; de: string; uz: string }>;
+      const soz = nomzodlar.find((l) => l.de === chap);
+      isCorrect = soz != null && istRichtig(ong, soz.uz);
+      lexemeId = soz?.id ?? null;
+    } else {
+      // `ZUORDNEN` — ibora Leitner jadvaliga kirmaydi, `lexemeId`
+      // shu sabab `null`ligicha qoladi.
+      const nomzodlar = (await this.prisma.dafPhrase.findMany({
+        where: { funktionUz: chap, unitId },
+      } as any)) as Array<{ funktionUz: string; de: string }>;
+      const ibora = nomzodlar.find((p) => p.funktionUz === chap);
+      isCorrect = ibora != null && istRichtig(ong, ibora.de);
+    }
+
+    // Ball FAQAT `PAAR` uchun va FAQAT so'z topilgan bo'lsa — muddat
+    // holati bu yerda, Leitner yangilanishidan OLDIN o'qiladi (yuqoridagi
+    // izohga qarang).
+    let points = 0;
+    if (format === 'PAAR' && lexemeId != null) {
+      const punkteEingabe = await this.punkteEingabeFuer(ctx.studentId, [
+        { lexemeId, richtig: isCorrect },
+      ]);
+      points = punkteFuer(punkteEingabe);
+    }
+
+    const branchId = await tryResolveStudentBranchId(
+      this.prisma,
+      ctx.studentId,
+      ctx.companyId,
+    );
+    const groupId = await currentGroupId(this.prisma, ctx.studentId);
+
+    await this.prisma.dafAttempt.create({
+      data: {
+        studentId: ctx.studentId,
+        companyId: ctx.companyId,
+        branchId,
+        groupId,
+        lexemeId: format === 'PAAR' ? lexemeId : null,
+        isCorrect,
+        given: `${chap}=${ong}`,
+        points,
+      },
+    } as any);
+
+    // Leitner FAQAT `PAAR` uchun — ibora bu jadvalga kirmaydi.
+    if (format === 'PAAR' && lexemeId != null) {
+      await this.aktualisiereZustand(
+        ctx.studentId,
+        ctx.companyId,
+        lexemeId,
+        isCorrect,
+        format,
+      );
+    }
+
+    return { isCorrect };
   }
 
   /**

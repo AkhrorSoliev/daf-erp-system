@@ -17,6 +17,7 @@ import {
   AbschlussDto,
   CheckAntwortDto,
   ErsatzQueryDto,
+  JuftDto,
 } from './dto/uebung.dto';
 import { DafDrillService } from './lesson/daf-drill.service';
 import { UebungService } from './uebung/uebung.service';
@@ -130,6 +131,22 @@ export class DafPortalController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.uebung.pruefen(dto, { studentId, companyId });
+  }
+
+  /**
+   * Bitta juftni JONLI tekshirish (`PAAR`/`ZUORDNEN`). `studentId`
+   * TOKENDAN olinadi, tanadan emas — xuddi `checkUebung`dagi kabi sabab:
+   * aks holda o'quvchi boshqasining nomidan urinish yozib, uning
+   * natijasini (ball, Leitner holati) buzishi mumkin bo'lardi. Javobda
+   * to'g'ri javobning o'zi yo'q — faqat `{ isCorrect }`.
+   */
+  @Post('uebung/juft')
+  checkJuft(
+    @Body() dto: JuftDto,
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.uebung.juft(dto, { studentId, companyId });
   }
 
   /**

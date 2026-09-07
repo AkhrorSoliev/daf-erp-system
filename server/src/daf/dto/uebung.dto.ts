@@ -104,3 +104,29 @@ export class AbschlussDto {
   @Max(86_400_000)
   durationMs?: number;
 }
+
+/**
+ * Bitta juft — jonli tekshiruv uchun.
+ *
+ * `studentId` maydoni ATAYLAB YO'Q: u tokendan olinadi. Javob ham faqat
+ * `ha`/`yo'q` — to'g'ri javobning o'zi hech qachon qaytarilmaydi.
+ */
+export class JuftDto {
+  @IsIn(['WORT', 'PHRASE'])
+  itemType!: 'WORT' | 'PHRASE';
+
+  @IsInt()
+  itemId!: number;
+
+  // Faqat juftlash formatlari: qolganlarida "juft" degan tushuncha yo'q.
+  @IsIn(['PAAR', 'ZUORDNEN'])
+  format!: 'PAAR' | 'ZUORDNEN';
+
+  @IsString()
+  @MaxLength(200)
+  chap!: string;
+
+  @IsString()
+  @MaxLength(200)
+  ong!: string;
+}

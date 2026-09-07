@@ -1622,3 +1622,148 @@ describe('pruefen — ZUORDNEN', () => {
     expect(r.richtig).toBe('');
   });
 });
+
+describe('juft — bitta juftni tekshirish', () => {
+  const ctx = { studentId: 55, companyId: 1 };
+
+  function fakeWort(state: { dueAt: Date } | null) {
+    const prisma = fakePrisma();
+    // `ladeMaterial('WORT', 5)` shu qatorni qaytaradi.
+    prisma.dafLexeme.findUnique = jest.fn(async () => ({
+      id: 5, de: 'das Haus', uz: 'uy', artikel: 'das', unitId: 1,
+    })) as any;
+    // Juft `de` bo'yicha, unitga cheklab qidiriladi.
+    prisma.dafLexeme.findMany = jest.fn(async () => [
+      { id: 5, de: 'das Haus', uz: 'uy' },
+    ]) as any;
+    prisma.dafLexemeState.findMany = jest.fn(async () =>
+      state ? [{ lexemeId: 5, dueAt: state.dueAt }] : [],
+    ) as any;
+    return prisma;
+  }
+
+  const kecha = () => new Date(Date.now() - 86_400_000);
+  const ertaga = () => new Date(Date.now() + 86_400_000);
+
+  it("to'g'ri juftni to'g'ri deb aytadi", async () => {
+    const prisma = fakeWort(null);
+    const r = await new UebungService(prisma as any).juft(
+      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'uy' },
+      ctx,
+    );
+    expect(r).toEqual({ isCorrect: true });
+  });
+
+  it("xato juftni xato deb aytadi", async () => {
+    const prisma = fakeWort(null);
+    const r = await new UebungService(prisma as any).juft(
+      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'stol' },
+      ctx,
+    );
+    expect(r).toEqual({ isCorrect: false });
+  });
+
+  it("TO'G'RI JAVOBNI YUBORMAYDI", async () => {
+    // Butun dvigatelning asosiy qoidasi: brauzer javobni bilmaydi.
+    const prisma = fakeWort(null);
+    const r = await new UebungService(prisma as any).juft(
+      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'stol' },
+      ctx,
+    );
+    expect(Object.keys(r)).toEqual(['isCorrect']);
+  });
+
+  it("muddati kelgan so'zga to'g'ri javob 10 ball beradi", async () => {
+    const prisma = fakeWort({ dueAt: kecha() });
+    await new UebungService(prisma as any).juft(
+      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'uy' },
+      ctx,
+    );
+    expect((prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data.points).toBe(10);
+  });
+
+  it('TUZATISH BEPUL — muddati kelmagan so`zga ball berilmaydi', async () => {
+    // BU ENG MUHIM TEST. Xato bosgandan keyin so'z ertangi kunga
+    // suriladi; ikkinchi (to'g'ri) bosish shu holatni ko'radi va ball
+    // bermaydi. Dizaynning butun «tuzatish bepul» qoidasi shunga tayanadi
+    // va uni ushlab turadigan alohida kod YO'Q — mavjud qoida bajaradi.
+    const prisma = fakeWort({ dueAt: ertaga() });
+    await new UebungService(prisma as any).juft(
+      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'uy' },
+      ctx,
+    );
+    expect((prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data.points).toBe(0);
+  });
+
+  it('xato javob Leitner holatini NOLGA tushiradi', async () => {
+    const prisma = fakeWort({ dueAt: kecha() });
+    await new UebungService(prisma as any).juft(
+      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'stol' },
+      ctx,
+    );
+    const yozilgan = (prisma.dafLexemeState.upsert as jest.Mock).mock.calls[0][0];
+    expect((yozilgan.update ?? yozilgan.create).strength).toBe(0);
+  });
+
+  it('ZUORDNEN ball bermaydi va Leitnerga tegmaydi', async () => {
+    const prisma = fakePrisma();
+    prisma.dafPhrase.findUnique = jest.fn(async () => ({
+      de: 'Hallo!', uz: 'Salom!', unitId: 1,
+    })) as any;
+    prisma.dafPhrase.findMany = jest.fn(async () => [
+      { id: 1, funktionUz: 'salomlashish', de: 'Hallo!', uz: 'Salom!' },
+    ]) as any;
+    const r = await new UebungService(prisma as any).juft(
+      { itemType: 'PHRASE', itemId: 1, format: 'ZUORDNEN', chap: 'salomlashish', ong: 'Hallo!' },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(true);
+    expect((prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data.points).toBe(0);
+    expect(prisma.dafLexemeState.upsert).not.toHaveBeenCalled();
+  });
+
+  it('urinishga filial va guruh muhrlanadi', async () => {
+    const prisma = fakeWort(null);
+    prisma.enrollment.findFirst = jest.fn(async () => ({ groupId: 'g-1' })) as any;
+    await new UebungService(prisma as any).juft(
+      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'uy' },
+      ctx,
+    );
+    const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
+    expect(data.groupId).toBe('g-1');
+    expect(data).toHaveProperty('branchId');
+  });
+
+  it('material topilmasa xato tashlaydi', async () => {
+    const prisma = fakePrisma();
+    prisma.dafLexeme.findUnique = jest.fn(async () => null) as any;
+    await expect(
+      new UebungService(prisma as any).juft(
+        { itemType: 'WORT', itemId: 999, format: 'PAAR', chap: 'a', ong: 'b' },
+        ctx,
+      ),
+    ).rejects.toThrow();
+  });
+
+  // QO'SHIMCHA TEST — brief'da yo'q, lekin topshiriqda ochiq aytilgan
+  // 2-tuzoqni yopadi: `PAAR` savolining `itemId`si to'rtlikning
+  // BIRINCHISI, bosilgan juft esa BOSHQASI bo'lishi mumkin. Agar
+  // baholanadigan so'z sifatida `itemId` ishlatilsa (topilgan so'z
+  // o'rniga), bu test XATO chiqadi: `itemId=1` ('hallo') o'rniga
+  // 'danke' (id=2) bosilgan, lexemeId ATAYLAB 2 bo'lishi shart.
+  it("PAAR: ball va Leitner BOSILGAN so'zga yoziladi, itemId'ga emas", async () => {
+    const prisma = fakePrisma();
+    // Bazaviy `fakePrisma()`dagi lug'at: id=1 'hallo'/'salom', id=2
+    // 'danke'/'rahmat', ikkalasi ham unitId=1. Savol to'rtlikning
+    // BIRINCHISI sifatida `itemId=1` ('hallo') bilan yuborilgan, lekin
+    // o'quvchi bosgan juft 'danke'=rahmat (id=2).
+    await new UebungService(prisma as any).juft(
+      { itemType: 'WORT', itemId: 1, format: 'PAAR', chap: 'danke', ong: 'rahmat' },
+      ctx,
+    );
+    const attemptData = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
+    expect(attemptData.lexemeId).toBe(2);
+    const holatYozilgan = (prisma.dafLexemeState.upsert as jest.Mock).mock.calls[0][0];
+    expect(holatYozilgan.where.studentId_lexemeId.lexemeId).toBe(2);
+  });
+});
