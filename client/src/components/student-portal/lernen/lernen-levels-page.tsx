@@ -22,6 +22,7 @@ import {
 } from "../lumio";
 import { useLernenLevels } from "./queries";
 import { LernenYol } from "./yol/lernen-yol";
+import { YolTepasi } from "./yol/yol-tepasi";
 
 /**
  * Goethe imtihonining to'rt moduli — o'quv yo'lining MAQSADI.
@@ -72,6 +73,13 @@ export function LernenLevelsPage() {
   return (
     <Screen>
       <ScreenHeader subtitle="Nemis tili" title="Darslar" />
+
+      {/*
+        Yo'l holatidan MUSTAQIL: `YolTepasi` o'z so'rovini o'zi boshqaradi
+        (skelet/yashirish), shuning uchun yo'l hali yuklanayotgan yoki xato
+        bo'lganda ham tepada joyida turadi.
+      */}
+      <YolTepasi />
 
       {isLoading ? (
         <LoadingCards count={3} />
