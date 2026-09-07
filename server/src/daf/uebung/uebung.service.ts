@@ -20,6 +20,7 @@ import type {
 } from './frage.types';
 import { toPublic } from './frage.types';
 import { dialogLuecke } from './dialog-fragen';
+import { bevorzugteFormate } from './kind-formate';
 import { naechsterZustand } from './leitner';
 import {
   luecke,
@@ -216,13 +217,21 @@ export class UebungService {
     // qaytadi — shuning uchun bu yerda 404 EMAS, bo'sh massiv qaytariladi.
     // Darsning O'ZI topilmasa (`null`) `baueKandidaten` hamon 404 tashlaydi.
     if (!natija) return [];
-    const { pflicht, kandidaten } = natija;
+    const { pflicht, kandidaten, kind } = natija;
 
+    // Seans turining moyilligi (Vazifa 3) — QAT'IY BO'LINISH EMAS,
+    // TARTIB. To'liq izoh `kind-formate.ts`da: kurs dizayni 16 format
+    // uchun yozilgan, bugun 10 tasi bor, «Tanishuv»ga tegishlisi esa
+    // uchtasi — qat'iy bo'linsa `MIN_FORMATE` (seans.ts) bilan
+    // to'qnashardi. Shuning uchun mos formatlar `baueSeans` pooli
+    // ichida oldinga suriladi, yetmasa qolganidan olinadi; xilma-xillik
+    // kafolatlari (`baueSeans` ichida) buzilmaydi.
     const { fragen, nichtPlatziert } = baueSeans(
       kandidaten,
       SEANS_UZUNLIGI,
       rnd,
       pflicht,
+      bevorzugteFormate(kind),
     );
 
     if (nichtPlatziert.length > 0) {
@@ -438,7 +447,15 @@ export class UebungService {
     lessonId: number,
     studentId: number,
     rnd: () => number,
-  ): Promise<{ pflicht: Frage[]; kandidaten: Frage[] } | null> {
+  ): Promise<{
+    pflicht: Frage[];
+    kandidaten: Frage[];
+    // Darsning turi (SECTION_A/SECTION_B/BRIDGE/UNIT_TEST) — `seans()`
+    // buni `bevorzugteFormate`ga uzatib, seans turining moyilligini
+    // hisoblaydi. `ersatz()` bu maydonni e'tiborsiz qoldiradi: u bitta
+    // almashtiruvchi savol beradi, moyillikka ehtiyoj yo'q.
+    kind: string | null;
+  } | null> {
     const lesson = await this.prisma.dafLesson.findUnique({
       where: { id: lessonId },
       include: { section: true },
@@ -658,7 +675,7 @@ export class UebungService {
       letzterFormatByWort,
     );
 
-    return { pflicht, kandidaten };
+    return { pflicht, kandidaten, kind: (lesson as any).kind ?? null };
   }
 
   /**

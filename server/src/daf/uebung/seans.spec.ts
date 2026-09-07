@@ -262,3 +262,75 @@ describe('baueSeans', () => {
     expect(fragen[0]).toMatchObject({ format: 'WORT_UZ', itemId: 5 });
   });
 });
+
+describe('baueSeans — moyillik', () => {
+  // Diqqat: brifdagi asl fikstura (bor-yo'g'i 2 xil format: SATZ_BAUEN
+  // va WORT_UZ, 6 tadan) bu testni HECH NARSANI isbotlamaydigan holga
+  // keltirardi — nomzodlarda atigi 2 format bo'lgani uchun
+  // `MIN_FORMATE`(5) qoidasi ikkalasini ham navbat bilan (round-robin)
+  // MAJBUR ravishda ishlatadi, moyillik bor-yo'qligidan qat'i nazar
+  // natija har doim 3-3 chiqadi (tekshirilgan: moyillikni butunlay
+  // o'chirib qo'yganda ham xuddi shu natija). Haqiqiy sinov uchun
+  // `MIN_FORMATE`dan KO'P (oltita) format kerak: shunda dastlabki "har
+  // formatdan bittadan" bosqichi 5 tada to'xtaydi, va navbatdagi
+  // to'ldirish ENDI TARTIBGA qarab tanlaydi — aynan shu yerda moyillik
+  // ko'rinadi. `WORT_UZ` massivda ATAYLAB ENG OXIRIDA turadi: moyillik
+  // bo'lmasa (pool tartibi o'zgarmasa), boshqa beshta format cap`ga
+  // (3 tadan, jami 15) yetguncha uni hech qachon egallamaydi — 12 ta
+  // so'ralganda WORT_UZ 0 marta chiqadi (tekshirilgan). Moyillik uni
+  // oldinga surganda esa cap`iga (3) yetadi.
+  it('afzal formatlar oldinga suriladi', () => {
+    const k: Frage[] = [
+      ...Array.from({ length: 4 }, (_, i) => f('UZ_WORT', i)),
+      ...Array.from({ length: 4 }, (_, i) => f('PAAR', 100 + i)),
+      ...Array.from({ length: 4 }, (_, i) => f('ARTIKEL', 200 + i)),
+      ...Array.from({ length: 4 }, (_, i) => f('LUECKE', 300 + i)),
+      ...Array.from({ length: 4 }, (_, i) => f('SATZ_BAUEN', 400 + i)),
+      ...Array.from({ length: 4 }, (_, i) => f('WORT_UZ', 500 + i)),
+    ];
+    const plan = baueSeans(k, 12, () => 0.9999, [], ['WORT_UZ']);
+    const wortUz = plan.fragen.filter((q) => q.format === 'WORT_UZ').length;
+    const boshqa = plan.fragen.length - wortUz;
+    // Moyillik bo'lmasa (bazaviy holat, tekshirilgan) WORT_UZ 0 marta
+    // chiqadi — massivning oxirida turgani uchun cap'ga yetgan boshqa
+    // beshta format uni hech qachon egallamaydi.
+    expect(wortUz).toBeGreaterThan(0);
+    // Cap baribir ushlab turadi — moyillik uni bekor qilmaydi.
+    expect(wortUz).toBeLessThanOrEqual(FORMAT_MAX_PRO_SEANS);
+    expect(boshqa).toBeGreaterThan(0);
+  });
+
+  // Diqqat: nomzodlarda 6 xil format bor (MIN_FORMATE=5'dan ko'p);
+  // moyillik faqat BITTASINI (`WORT_UZ`, 3 ta nomzod) afzal ko'rsatadi.
+  // Agar moyillik XATO ravishda QAT'IY BO'LINISHGA aylantirilgan bo'lsa
+  // (poolni faqat bevorzugt formatlarga filtrlab tashlasa), pooldan
+  // atigi 3 ta WORT_UZ nomzodi qolardi va 12 ta so'ralganda ham
+  // natijada FAQAT 1 xil format bo'lardi — MIN_FORMATE(5) BUZILARDI.
+  // Barqaror SARALASH (to'g'ri yechim) esa butun poolni saqlab qoladi,
+  // shuning uchun MIN_FORMATE baribir bajariladi.
+  it('moyillik MIN_FORMATE ni buzmaydi (qat`iy bo`linishga aylanmaydi)', () => {
+    const formatlar: FrageFormat[] = [
+      'WORT_UZ',
+      'UZ_WORT',
+      'ARTIKEL',
+      'LUECKE',
+      'SATZ_BAUEN',
+      'SATZ_UEBERSETZEN',
+    ];
+    const k = formatlar.flatMap((fmt, i) =>
+      Array.from({ length: 3 }, (_, j) => f(fmt, i * 10 + j)),
+    );
+    const plan = baueSeans(k, 12, () => 0.9999, [], ['WORT_UZ']);
+    const xil = new Set(plan.fragen.map((q) => q.format)).size;
+    expect(xil).toBeGreaterThanOrEqual(MIN_FORMATE);
+  });
+
+  it('moyillik berilmasa xatti-harakat o`zgarmaydi', () => {
+    const k = Array.from({ length: 10 }, (_, i) => f('WORT_UZ', i));
+    const a = baueSeans(k, 5, () => 0.5);
+    const b = baueSeans(k, 5, () => 0.5, [], []);
+    expect(a.fragen.map((q) => q.itemId)).toEqual(
+      b.fragen.map((q) => q.itemId),
+    );
+  });
+});

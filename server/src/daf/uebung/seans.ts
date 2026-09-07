@@ -55,12 +55,37 @@ export function baueSeans(
   anzahl: number,
   rnd: () => number,
   pflicht: Frage[] = [],
+  // Seans turining moyilligi — QAT'IY BO'LINISH EMAS. To'liq izoh uchun
+  // `kind-formate.ts`ga qarang: kurs dizayni 16 format uchun yozilgan,
+  // bugun 10 tasi bor va «Tanishuv»ga tegishlisi uchtasi — qat'iy
+  // bo'linsa, `MIN_FORMATE` (pastda, 5) talabi bilan to'qnashardi.
+  // Shuning uchun bu faqat TARTIBGA ta'sir qiladi: aralashtirishdan
+  // KEYIN barqaror (stable) saralash qo'llanadi — afzal formatdagi
+  // nomzodlar oldinga o'tadi, qolganlarining o'zaro tartibi
+  // o'zgarmaydi. Joylashtirish sikli, cap, ketma-ketlik va
+  // `MIN_FORMATE` mantig'i pastda BUTUNLAY o'zgarmaydi — moyillik
+  // faqat pooldagi tartibga ta'sir qiladi, shu sababli xilma-xillik
+  // kafolatlari saqlanadi. Bo'sh massiv (sukut) — eski chaqiruvchilar
+  // uchun xatti-harakat aynan avvalgidek qoladi.
+  bevorzugt: FrageFormat[] = [],
 ): SeansPlan {
   const pool = [...kandidaten];
   // Tasodifiy tartib: har seans boshqacha boshlansin.
   for (let i = pool.length - 1; i > 0; i -= 1) {
     const j = Math.floor(rnd() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+
+  // Moyillik — aralashtirishdan KEYIN qo'llanadigan BARQAROR saralash.
+  // `bevorzugt` bo'sh bo'lsa hech narsa o'zgarmaydi (uchinchi
+  // `baueSeans — moyillik` testi shuni qo'riqlaydi). Array#sort — V8'da
+  // barqaror, ya'ni bir xil ustunlikdagi (ikkalasi ham afzal yoki
+  // ikkalasi ham emas) nomzodlarning o'zaro tartibi tasodifiy
+  // aralashtirilganidek qoladi.
+  if (bevorzugt.length > 0) {
+    const afzalligi = (f: Frage): number =>
+      bevorzugt.includes(f.format) ? 0 : 1;
+    pool.sort((a, b) => afzalligi(a) - afzalligi(b));
   }
 
   const fragen: Frage[] = [];
