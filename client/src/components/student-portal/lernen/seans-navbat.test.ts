@@ -17,6 +17,7 @@ function f(id: number, format: PublicFrage["format"] = "WORT_UZ"): PublicFrage {
     prompt: `savol ${id}`,
     hilfe: null,
     options: ["a", "b", "c", "d"],
+    audioUrl: null,
   };
 }
 
@@ -89,6 +90,7 @@ describe("xato yozuvi — format va titel", () => {
       hilfe: null,
       options: ["Hallo!", "a", "b", "c"],
       titel: "Bist du Mia?",
+      audioUrl: null,
     };
     const { holat } = javobBerildi(boshla([dialogSavoli]), {
       isCorrect: false,

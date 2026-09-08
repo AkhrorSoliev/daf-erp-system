@@ -17,6 +17,8 @@ const MATN: Record<FrageFormat, string> = {
   REAKTION: "Nima deb javob berasiz?",
   ZUORDNEN: "Vaziyatni mos ibora bilan juftlang",
   DIALOG_LUECKE: "Suhbatda nima aytilgan?",
+  AUDIO_WORT: "Eshiting va to'g'ri so'zni tanlang",
+  WORT_TIPPEN: "Eshiting va so'zni yozing",
 };
 
 export function koersatma(format: FrageFormat): string {
@@ -25,7 +27,7 @@ export function koersatma(format: FrageFormat): string {
 
 /** Format qaysi komponent bilan ko'rsatiladi (dizayn §4.1). */
 export function harakat(format: FrageFormat): "TANLASH" | "YOZISH" | "YIGISH" {
-  if (format === "LUECKE") return "YOZISH";
+  if (format === "LUECKE" || format === "WORT_TIPPEN") return "YOZISH";
   if (format === "SATZ_BAUEN" || format === "PAAR" || format === "ZUORDNEN") return "YIGISH";
   return "TANLASH";
 }

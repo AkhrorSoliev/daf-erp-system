@@ -61,3 +61,23 @@ describe("yangi formatlar", () => {
     expect(harakat("DIALOG_LUECKE")).toBe("TANLASH");
   });
 });
+
+describe("audio formatlar", () => {
+  it("AUDIO_WORT variant tanlash bilan ko'rsatiladi", () => {
+    expect(harakat("AUDIO_WORT")).toBe("TANLASH");
+  });
+
+  it("WORT_TIPPEN yozish bilan ko'rsatiladi", () => {
+    // Eshitib YOZISH — variant berilmaydi, aks holda mashq
+    // eshitishni emas, tanishni tekshirardi.
+    expect(harakat("WORT_TIPPEN")).toBe("YOZISH");
+  });
+
+  it("ikkalasining ko'rsatmasi bor va bo'sh emas", () => {
+    // `MATN` — `Record<FrageFormat, string>`, ya'ni yangi format
+    // qo'shilganda TypeScript yozuvni majburlaydi. Bu test bo'sh
+    // satr bilan «to'ldirib qo'yish» yo'lini yopadi.
+    expect(koersatma("AUDIO_WORT").length).toBeGreaterThan(0);
+    expect(koersatma("WORT_TIPPEN").length).toBeGreaterThan(0);
+  });
+});

@@ -12,7 +12,9 @@ export type FrageFormat =
   | "SATZ_UEBERSETZEN"
   | "REAKTION"
   | "ZUORDNEN"
-  | "DIALOG_LUECKE";
+  | "DIALOG_LUECKE"
+  | "AUDIO_WORT"
+  | "WORT_TIPPEN";
 
 export type MaterialTyp = "WORT" | "SATZ" | "PHRASE" | "DIALOGZEILE";
 
@@ -32,6 +34,12 @@ export interface PublicFrage {
    * `undefined`.
    */
   titel?: string | null;
+  /**
+   * Aytilgan so'zning R2 kaliti — faqat `AUDIO_WORT`/`WORT_TIPPEN`da
+   * `null`dan farqli. `prompt` bu ikkisida ATAYLAB BO'SH: so'zning o'zi
+   * javob, uni promptga yozsa tinglash mashqi o'qish mashqiga aylanardi.
+   */
+  audioUrl: string | null;
 }
 
 /** Javob tekshirilgandan KEYIN keladi — faqat shunda to'g'ri javob ma'lum. */
