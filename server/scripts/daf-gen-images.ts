@@ -339,4 +339,15 @@ async function main() {
   await prisma.$disconnect();
 }
 
-void main();
+// Faqat to'g'ridan-to'g'ri ishga tushirilganda yuguradi — bu skript
+// PULLIK (fal.ai rasm generatsiyasi + R2 yuklash + baza yozuvi), shuning
+// uchun uni import qilish (masalan kelajakdagi test) hech qachon haqiqiy
+// chaqiruvni ishga tushirmasligi kerak (`daf-mark-picturable.ts`/
+// `daf-voice-samples.ts` dagi bilan bir xil naqsh, bir xil sabab bilan —
+// bitta accident buni allaqachon isbotladi).
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

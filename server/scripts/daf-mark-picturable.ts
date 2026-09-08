@@ -94,6 +94,20 @@ async function markChunk(
   }
 }
 
+export interface GenerateResult {
+  result: PicturableMap;
+  /**
+   * Modelga HAQIQATDA yuborilgan yozuvlar soni — `missing.length` EMAS.
+   * `isNeverPicturable` bilan chetlatilganlar hech qachon promptga
+   * tushmaydi, shuning uchun "so'raldi" so'zi shu sonni anglatishi kerak:
+   * aks holda 20 ta mamlakatdan iborat partiya "So'raldi: 20" deb
+   * ko'rsatardi, holbuki modelga bironta so'rov yuborilmagan bo'lardi —
+   * bu son operator ishonch bilan o'qiydigan yagona ko'rsatkich, shuning
+   * uchun u aynan nima bo'lgani haqida yolg'on gapirmasligi kerak.
+   */
+  askedCount: number;
+}
+
 /**
  * `missing` — faylda hali qarori yo'q yozuvlar (`findMissingPicturable`
  * bilan ajratilgan). Mamlakat/qit'a/son/ibora bo'lganlarni ajratib
@@ -104,7 +118,7 @@ async function markChunk(
 export async function generate(
   missing: Lexeme[],
   model: TranslateModel,
-): Promise<PicturableMap> {
+): Promise<GenerateResult> {
   const result: PicturableMap = {};
   const toAsk: Lexeme[] = [];
   for (const lex of missing) {
@@ -139,12 +153,15 @@ export async function generate(
     console.log(`  ${done}/${toAsk.length}`);
   }
 
-  return result;
+  return { result, askedCount: toAsk.length };
 }
 
 export interface DecidePicturableResult {
   result: PicturableMap;
+  /** Faylda hali qarori yo'q topilgan yozuvlar soni — SO'RALGAN emas. */
   missingCount: number;
+  /** Modelga HAQIQATDA yuborilgan yozuvlar soni (qarang: `GenerateResult`). */
+  askedCount: number;
   additionsCount: number;
 }
 
@@ -180,6 +197,7 @@ export async function decidePicturable(
   const missing = lexemes.filter((l) => missingIds.has(l.sourceId));
 
   let additions: PicturableMap = {};
+  let askedCount = 0;
   if (missing.length === 0) {
     // Modelni HATTO bo'sh partiya bilan ham chaqirmaymiz (`buildModel()`
     // chaqirilmaydi) — apiKey sozlanmagan bo'lsa ham bu holat ishlashi
@@ -191,9 +209,11 @@ export async function decidePicturable(
     );
   } else {
     console.log(
-      `${missing.length} ta yangi so'z topildi (${items.length - missing.length} ta allaqachon hal qilingan), modeldan so'raladi.`,
+      `${missing.length} ta yangi so'z topildi (${items.length - missing.length} ta allaqachon hal qilingan).`,
     );
-    additions = await generate(missing, buildModel());
+    const generated = await generate(missing, buildModel());
+    additions = generated.result;
+    askedCount = generated.askedCount;
   }
 
   let result = mergePicturable(existing, additions);
@@ -205,11 +225,17 @@ export async function decidePicturable(
   result = applyNeverPicturableRule(items, result);
 
   const additionsCount = Object.keys(additions).length;
+  // "So'raldi" — modelga HAQIQATDA yuborilgan son (`askedCount`), YO'Q
+  // "missing" (qaror kutayotgan) son. Ular ORTIQCHA farq qilishi mumkin:
+  // 20 ta mamlakatdan iborat partiyada `missingCount` 20, `askedCount` 0
+  // bo'ladi — bu son operator ishonib o'qiydigan yagona dalil, shuning
+  // uchun ikkisini alohida ko'rsatamiz.
+  const ruleDecidedCount = missing.length - askedCount;
   console.log(
-    `\nSo'raldi: ${missing.length} ta, yozildi: ${additionsCount} ta yangi yozuv.`,
+    `\nModelga so'raldi: ${askedCount} ta, qoida bilan (modelsiz) hal qilindi: ${ruleDecidedCount} ta, yozildi: ${additionsCount} ta yangi yozuv.`,
   );
 
-  return { result, missingCount: missing.length, additionsCount };
+  return { result, missingCount: missing.length, askedCount, additionsCount };
 }
 
 async function main() {

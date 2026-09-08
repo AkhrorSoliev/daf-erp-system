@@ -44,21 +44,45 @@ function lex(sourceId: string, de: string, uz = ''): Lexeme {
 describe('generate', () => {
   it("bo'sh ro'yxat bilan chaqirilganda modelni umuman chaqirmaydi", async () => {
     const model = new FakeModel({});
-    const result = await generate([], model);
+    const { result, askedCount } = await generate([], model);
     expect(result).toEqual({});
+    expect(askedCount).toBe(0);
     expect(model.callCount).toBe(0);
   });
 
   it("mamlakat/son/iborani modeldan so'ramay to'g'ridan-to'g'ri false qiladi", async () => {
     const model = new FakeModel({ Apfel: true });
-    const result = await generate(
+    const { result, askedCount } = await generate(
       [lex('a', 'Deutschland'), lex('b', 'Apfel')],
       model,
     );
     expect(result).toEqual({ a: false, b: true });
     // Faqat "Apfel" so'raldi — "Deutschland" isNeverPicturable tomonidan
-    // model chaqirilishidan OLDIN chetlatildi.
+    // model chaqirilishidan OLDIN chetlatildi. `askedCount` shuni sanaydi
+    // (missing.length EMAS) — chaqiruvchi shu sonni "so'raldi" deb
+    // ko'rsatadi.
+    expect(askedCount).toBe(1);
     expect(model.askedDe).toEqual(['Apfel']);
+  });
+
+  it("hammasi qoida bilan hal qilinsa (masalan 20 ta mamlakat), askedCount 0 bo'ladi", async () => {
+    // Bu aynan kod-ko'rikda topilgan xato: "missing" (qaror kutayotgan)
+    // son bilan "modelga so'ralgan" sonni bir xil deb hisoblash. Bu
+    // partiyada barchasi haqiqiy COUNTRIES ro'yxatidagi davlat — bu
+    // yerda modelga bironta so'rov yuborilmaydi.
+    const allCountries = [
+      'Belgien', 'Italien', 'Deutschland', 'Kanada', 'Luxemburg', 'Polen',
+      'Österreich', 'Mexiko', 'Frankreich', 'Spanien', 'die U.S.A.',
+      'der Irak', 'die Türkei', 'Ungarn', 'die Schweiz', 'die Niederlande',
+    ].map((de, i) => lex(`country-${i}`, de));
+    const model = new FakeModel({});
+
+    const { result, askedCount } = await generate(allCountries, model);
+
+    expect(askedCount).toBe(0);
+    expect(model.callCount).toBe(0);
+    expect(Object.values(result).every((v) => v === false)).toBe(true);
+    expect(Object.keys(result)).toHaveLength(allCountries.length);
   });
 });
 
@@ -73,14 +97,12 @@ describe('decidePicturable', () => {
     const existing: PicturableMap = { 'u01-s1-hallo': true };
     const model = new FakeModel({ Frau: true, hallo: false });
 
-    const { result, missingCount, additionsCount } = await decidePicturable(
-      lexemes,
-      existing,
-      () => model,
-    );
+    const { result, missingCount, askedCount, additionsCount } =
+      await decidePicturable(lexemes, existing, () => model);
 
     expect(result).toEqual({ 'u01-s1-hallo': true, 'u01-s2-frau': true });
     expect(missingCount).toBe(1);
+    expect(askedCount).toBe(1);
     expect(additionsCount).toBe(1);
     // "hallo" uchun model umuman so'ralmadi.
     expect(model.askedDe).toEqual(['Frau']);
@@ -91,14 +113,12 @@ describe('decidePicturable', () => {
     const existing: PicturableMap = { a: true };
     const buildModel = jest.fn<TranslateModel, []>();
 
-    const { result, missingCount, additionsCount } = await decidePicturable(
-      lexemes,
-      existing,
-      buildModel,
-    );
+    const { result, missingCount, askedCount, additionsCount } =
+      await decidePicturable(lexemes, existing, buildModel);
 
     expect(result).toEqual({ a: true });
     expect(missingCount).toBe(0);
+    expect(askedCount).toBe(0);
     expect(additionsCount).toBe(0);
     // `buildModel` chaqirilmadi — apiKey sozlanmagan bo'lsa ham (real
     // skriptda `buildModel` shu yerda throw qilardi) bu holat yiqilmaydi,
@@ -116,9 +136,15 @@ describe('decidePicturable', () => {
     const existing: PicturableMap = { letter: true, number: true };
     const buildModel = jest.fn<TranslateModel, []>();
 
-    const { result } = await decidePicturable(lexemes, existing, buildModel);
+    const { result, askedCount } = await decidePicturable(
+      lexemes,
+      existing,
+      buildModel,
+    );
 
     expect(result).toEqual({ letter: false, number: false });
+    // Ikkalasi ham allaqachon `existing`da bor — model umuman chaqirilmadi.
+    expect(askedCount).toBe(0);
   });
 
   it("missing ichidagi harf/sonni ham modeldan so'ramay false qiladi", async () => {
@@ -129,9 +155,16 @@ describe('decidePicturable', () => {
     const lexemes = [lex('letter', 'Z'), lex('word', 'Apfel')];
     const model = new FakeModel({ Z: true, Apfel: true });
 
-    const { result } = await decidePicturable(lexemes, {}, () => model);
+    const { result, askedCount } = await decidePicturable(
+      lexemes,
+      {},
+      () => model,
+    );
 
     expect(result).toEqual({ letter: false, word: true });
+    // missingCount 2 bo'lardi, lekin askedCount FAQAT haqiqatan modelga
+    // yuborilgan "Apfel"ni sanaydi — "letter" hech qachon so'ralmadi.
+    expect(askedCount).toBe(1);
     expect(model.askedDe).toEqual(['Apfel']);
   });
 });
