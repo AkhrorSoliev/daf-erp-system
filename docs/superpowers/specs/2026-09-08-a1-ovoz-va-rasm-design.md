@@ -81,8 +81,14 @@ Kalit **alohida kontent manifestida** yashaydi —
 (`picturable.json` bilan aynan bir xil naqsh: qaror git'ga chiqadi, baza
 esa muhit). Bazadagi `DafLexeme.audioKey` undan seed orqali to'ldiriladi.
 
-**Nega bazada emas:** seed idempotent va qayta yuritiladi; kalit faqat
-bazada tursa, `daf:inhalt-seed` uni o'chirib yuborardi.
+**Nega bazada emas.** Seed kalitni o'chirmaydi (u `upsert` ning `data`
+obyektida yo'q, ya'ni Prisma unga tegmaydi) — sabab boshqa va kuchliroq:
+**baza muhit, manba emas.** R2 dagi fayllar abadiy turadi, baza esa qayta
+quriladi — 2026-09-07 da prod'dagi mashq jadvallari butunlay tozalangan,
+va deploy migratsiyasi `DafLesson` ni o'chiradi. Kalit faqat bazada
+tursa, shunday holatdan keyin audio jimgina yo'qolardi: fayllar R2 da
+turaveradi, lekin ularga hech kim ishora qilmaydi va 53 so'z qaytadan
+yasalardi.
 
 **Nega `woerter.json` ichida emas:** u qo'lda yozilgan kontent, bu esa
 mashina yasagan natija. Ularni aralashtirish matnni tahrirlagan odamni
