@@ -22,6 +22,66 @@ export interface JonliJuft {
   holat: JuftHolat;
 }
 
+/** Juftlash taxtasining ikki ustuni. */
+export type Tomon = "chap" | "ong";
+
+/** Juftini kutayotgan, hali bosilgan bitta tugma. */
+export interface Tanlov {
+  tomon: Tomon;
+  idx: number;
+}
+
+/** `tugmaBosildi`ning natijasi: yangi kutayotgan tanlov + hosil bo'lgan juft. */
+export interface TanlovNatija {
+  kutilayotgan: Tanlov | null;
+  /** Qarama-qarshi tomon bosilganda to'ladi, aks holda `null`. */
+  juft: { chapIdx: number; ongIdx: number } | null;
+}
+
+/**
+ * Juftlash taxtasida tugma bosilganda holatning o'tishi.
+ *
+ * NEGA BU YERDA, KOMPONENTDA EMAS. Ilgari kutayotgan tanlov `yigish.tsx`
+ * ichida `kutilayotganIdx: number | null` bo'lib turardi — ya'ni FAQAT
+ * CHAP ustunning indeksi. Natijada o'ngdagi tugmadan boshlangan bosish
+ * `if (kutilayotganIdx == null) return;` ga urilib, JIMGINA e'tiborsiz
+ * qolardi: xato ham, belgi ham yo'q, tugma buzuqdek tuyulardi. Juftlash
+ * mashqida esa ikkala tomondan boshlash bir xil tabiiy.
+ *
+ * Tanlov endi «qaysi indeks» emas, «QAYSI TOMONNING qaysi indeksi» bo'lib
+ * saqlanadi va qoida simmetrik bo'ladi. Mantiq sof funksiyaga chiqarildi,
+ * chunki bu repoda komponent render qilib test yozilmaydi — qoida testsiz
+ * qolsa, keyingi tahrirda yana jimgina yo'qolardi.
+ *
+ * Uch holat:
+ * 1. Hech narsa kutmayotgan bo'lsa — bosilgan tugma kutishga o'tadi.
+ * 2. AYNAN o'sha tugma qayta bosilsa — tanlov bekor bo'ladi.
+ * 3. BIR XIL tomonning boshqa tugmasi bosilsa — tanlov o'sha yerga
+ *    ko'chadi (fikridan qaytgan o'quvchi avval bekor qilishga majbur
+ *    bo'lmasin).
+ * 4. QARAMA-QARSHI tomon bosilsa — juft hosil bo'ladi va tanlov bo'shaydi.
+ *
+ * Juft HAR DOIM `{chapIdx, ongIdx}` bo'lib qaytadi, bosish tartibi
+ * qanday bo'lishidan qat'i nazar: `juftQoshildi` ham, server ham shu
+ * tartibni kutadi.
+ */
+export function tugmaBosildi(
+  kutilayotgan: Tanlov | null,
+  tomon: Tomon,
+  idx: number,
+): TanlovNatija {
+  if (kutilayotgan == null) return { kutilayotgan: { tomon, idx }, juft: null };
+
+  if (kutilayotgan.tomon === tomon) {
+    const oziga = kutilayotgan.idx === idx;
+    return { kutilayotgan: oziga ? null : { tomon, idx }, juft: null };
+  }
+
+  const chapIdx = tomon === "chap" ? idx : kutilayotgan.idx;
+  const ongIdx = tomon === "ong" ? idx : kutilayotgan.idx;
+  return { kutilayotgan: null, juft: { chapIdx, ongIdx } };
+}
+
 /**
  * Boshlang'ich (bo'sh) holat.
  *

@@ -5,8 +5,65 @@ import {
   juftJavobKeldi,
   juftlarniRichtigga,
   juftQoshildi,
+  tugmaBosildi,
   type JonliJuft,
 } from "./juft-holati";
+
+describe("tugmaBosildi — juftlash IKKALA tomondan boshlanadi", () => {
+  it("bo'sh holatda chapga bosilsa tanlov chapda kutadi", () => {
+    expect(tugmaBosildi(null, "chap", 1)).toEqual({
+      kutilayotgan: { tomon: "chap", idx: 1 },
+      juft: null,
+    });
+  });
+
+  it("bo'sh holatda O'NGGA bosilsa ham tanlov kutadi", () => {
+    // BU — BUTUN O'ZGARISHNING SABABI. Ilgari kutayotgan tanlov faqat
+    // chap ustunning indeksi edi, shuning uchun o'ngdan boshlangan
+    // bosish JIMGINA e'tiborsiz qolardi: xato ham yo'q, belgi ham yo'q,
+    // odamga tugma buzuqdek tuyulardi.
+    expect(tugmaBosildi(null, "ong", 3)).toEqual({
+      kutilayotgan: { tomon: "ong", idx: 3 },
+      juft: null,
+    });
+  });
+
+  it("o'ngdan boshlab chapga bosilsa juft TO'G'RI tartibda hosil bo'ladi", () => {
+    // Juft har doim {chapIdx, ongIdx} bo'lib chiqadi — bosish tartibi
+    // qanday bo'lishidan qat'i nazar. Server ham, `juftQoshildi` ham
+    // shu tartibni kutadi, shuning uchun almashib ketishi mumkin emas.
+    expect(tugmaBosildi({ tomon: "ong", idx: 3 }, "chap", 1)).toEqual({
+      kutilayotgan: null,
+      juft: { chapIdx: 1, ongIdx: 3 },
+    });
+  });
+
+  it("chapdan boshlab o'ngga bosilsa ham AYNAN o'sha juft chiqadi", () => {
+    expect(tugmaBosildi({ tomon: "chap", idx: 1 }, "ong", 3)).toEqual({
+      kutilayotgan: null,
+      juft: { chapIdx: 1, ongIdx: 3 },
+    });
+  });
+
+  it("o'ziga qayta bosilsa tanlov bekor bo'ladi", () => {
+    expect(tugmaBosildi({ tomon: "ong", idx: 3 }, "ong", 3)).toEqual({
+      kutilayotgan: null,
+      juft: null,
+    });
+  });
+
+  it("bir xil tomonning BOSHQA tugmasiga bosilsa tanlov o'sha yerga ko'chadi", () => {
+    // Fikridan qaytgan o'quvchi avval bekor qilishga majbur bo'lmasin.
+    expect(tugmaBosildi({ tomon: "chap", idx: 1 }, "chap", 2)).toEqual({
+      kutilayotgan: { tomon: "chap", idx: 2 },
+      juft: null,
+    });
+    expect(tugmaBosildi({ tomon: "ong", idx: 3 }, "ong", 0)).toEqual({
+      kutilayotgan: { tomon: "ong", idx: 0 },
+      juft: null,
+    });
+  });
+});
 
 describe("juftQoshildi", () => {
   it("yangi juft kutilmoqda holatida qo'shiladi", () => {

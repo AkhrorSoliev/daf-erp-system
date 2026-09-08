@@ -805,8 +805,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
         ) : juftlashRejimi ? (
           // `key`: savol almashganda (itemId+format) `Juftlash` BUTUNLAY
           // qayta o'rnatiladi — uning yagona mahalliy holati
-          // (`kutilayotganIdx`, ikkinchi tomonni kutayotgan tanlov)
-          // shu bilan avtomatik tozalanadi, alohida effekt kerak emas.
+          // (`kutilayotgan`: qarama-qarshi tomonni kutayotgan tanlov,
+          // chap yoki o'ng bo'lishi mumkin) shu bilan avtomatik
+          // tozalanadi, alohida effekt kerak emas.
           <Yigish
             key={`${frage.itemType}:${frage.itemId}:${frage.format}`}
             // `juftlashRejimi` — bu yerdagi shart — oddiy `boolean`, TypeScript
