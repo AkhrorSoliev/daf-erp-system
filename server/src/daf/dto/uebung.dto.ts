@@ -10,8 +10,17 @@ import {
 } from 'class-validator';
 import type { FrageFormat } from '../uebung/frage.types';
 
-/** `FrageFormat`ning barcha qiymatlari — DTO validatsiyasida bir joydan. */
-const FRAGE_FORMATLAR: FrageFormat[] = [
+/**
+ * `FrageFormat`ning barcha qiymatlari — DTO validatsiyasida bir joydan.
+ *
+ * EXPORT QILINGAN: `FrageFormat` — oddiy union, `Record<FrageFormat, …>`
+ * kabi exhaustive emas — shuning uchun bu ro'yxatga yangi format qo'shish
+ * unutilsa TypeScript SEZMAYDI, faqat `@IsIn` orqali 400 sifatida
+ * ishlaydigan sukut xatti-harakat qoladi. `uebung.dto.spec.ts` shu
+ * ro'yxatning to'liqligini (uzunligi va aniq a'zolarini) pinlaydi —
+ * eksport shu testga kerak.
+ */
+export const FRAGE_FORMATLAR: FrageFormat[] = [
   'WORT_UZ',
   'UZ_WORT',
   'PAAR',

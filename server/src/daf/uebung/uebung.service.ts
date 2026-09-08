@@ -41,8 +41,24 @@ import {
   wortUz,
 } from './wort-fragen';
 
-/** So'z uchun quriladigan formatlar — `PAAR` bu yerda yo'q: u bitta so'zga emas, to'rtlikka tegishli. */
-const WORT_FORMATE: FrageFormat[] = ['WORT_UZ', 'UZ_WORT', 'ARTIKEL'];
+/**
+ * So'z uchun quriladigan formatlar — `PAAR` bu yerda yo'q: u bitta so'zga
+ * emas, to'rtlikka tegishli.
+ *
+ * `AUDIO_WORT`/`WORT_TIPPEN` ATAYLAB shu ro'yxatda: qaytarish — muddati
+ * kelgan so'zning Leitner ko'rigi, eshitib tanish/yozish ham xuddi shu
+ * ko'rikning bir turi, alohida yo'l emas. Ikkalasi ham `audioKey` yo'q
+ * so'zga `null` qaytaradi (`baueWortFrage` buni allaqachon `artikel`
+ * kabi kutadi — pastdagi `if (frage) break` sikli), shuning uchun audio
+ * hali yasalmagan bugun bu ikkisi shunchaki hech qachon tanlanmaydi.
+ */
+const WORT_FORMATE: FrageFormat[] = [
+  'WORT_UZ',
+  'UZ_WORT',
+  'ARTIKEL',
+  'AUDIO_WORT',
+  'WORT_TIPPEN',
+];
 
 /** Har seansda qaytariladigan (pflicht) o'rinlar ulushi — 6dan biri: 12 savolda 2 ta. */
 const WIEDERHOLUNG_ULUSH = 6;

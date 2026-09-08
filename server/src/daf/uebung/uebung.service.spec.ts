@@ -724,6 +724,55 @@ describe('wiederholung', () => {
       new UebungService(prisma as any).wiederholung(55),
     ).resolves.toEqual([]);
   });
+
+  // Ko'rikdan qaytgan topilma (Finding 1): `WORT_FORMATE`ga
+  // `AUDIO_WORT`/`WORT_TIPPEN` qo'shilmasa, bu ikki case `baueWortFrage`
+  // switch'ida hech qachon tanlanmas edi — qaytarish takrorlash bugungi
+  // Leitner ko'rigi bo'lgani uchun eshitish savoli ham shu yerda
+  // qurilishi kerak.
+  //
+  // Chalg'ituvchi puli ATAYLAB shu bitta so'zning o'zidan iborat: shunda
+  // WORT_UZ/UZ_WORT/AUDIO_WORT `ablenker` yetishmagani uchun (kamida 3
+  // ta boshqa so'z kerak) qurilolmaydi, ARTIKEL esa so'zda artikl
+  // yo'qligi uchun qurilolmaydi. Qolgan YAGONA nomzod — `WORT_TIPPEN` —
+  // faqat `audioKey` bo'lsagina quriladi (`wortTippen`ning o'z qorovuli).
+  // Shu bilan natija tasodifga (`rnd`) bog'liq bo'lmay, qat'iy bo'ladi.
+  function fakeBittaMuddatiKelganSoz(audioKey: string | null) {
+    const eski = new Date(Date.now() - 60_000);
+    const prisma = fakePrisma();
+    prisma.dafLexemeState.findMany = jest.fn(async () => [
+      { lexemeId: 1, lastFormat: null, dueAt: eski },
+    ]) as any;
+    prisma.dafLexeme.findMany = jest.fn(async () => [
+      {
+        id: 1,
+        de: 'tschüss',
+        uz: 'xayr',
+        artikel: null,
+        anzeige: null,
+        sectionId: null,
+        core: true,
+        audioKey,
+      },
+    ]) as any;
+    return prisma;
+  }
+
+  it('audioKey bor so`zga eshitish savoli quriladi', async () => {
+    const fragen = await new UebungService(
+      fakeBittaMuddatiKelganSoz('daf/audio/1.mp3') as any,
+    ).wiederholung(55);
+    expect(fragen).toHaveLength(1);
+    expect(fragen[0].format).toBe('WORT_TIPPEN');
+    expect((fragen[0] as any).audioUrl).toBe('daf/audio/1.mp3');
+  });
+
+  it('audioKey yo`q so`zga savolning o`zi qurilmaydi (boshqa format ham imkonsiz)', async () => {
+    const fragen = await new UebungService(
+      fakeBittaMuddatiKelganSoz(null) as any,
+    ).wiederholung(55);
+    expect(fragen).toEqual([]);
+  });
 });
 
 describe('UebungService.pruefen', () => {
@@ -751,6 +800,54 @@ describe('UebungService.pruefen', () => {
       ctx,
     );
     expect(r.isCorrect).toBe(true);
+  });
+
+  // Ko'rikdan qaytgan topilma (Finding 2): `richtigeAntwort` switch'iga
+  // `AUDIO_WORT`/`WORT_TIPPEN` case'lari qo'shilgan edi, lekin bu ENG
+  // JIDDIY tuzatish edi (case'siz `pruefen` HAR DOIM 400 tashlardi) va
+  // hech qanday test uni ushlamagan edi. Bu ikki test aynan shu case'ni
+  // maqsad qiladi: to'g'ri javob material.de'dan (artiklsiz — `ziel.de`,
+  // xuddi `audioWort`/`wortTippen`dagi kabi) hisoblanadi.
+  it('AUDIO_WORT: to`g`ri javobni materialdan hisoblaydi', async () => {
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any).pruefen(
+      { itemType: 'WORT', itemId: 1, format: 'AUDIO_WORT', given: 'hallo' },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(true);
+    expect(r.richtig).toBe('hallo');
+  });
+
+  it('WORT_TIPPEN: to`g`ri javobni materialdan hisoblaydi', async () => {
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any).pruefen(
+      { itemType: 'WORT', itemId: 1, format: 'WORT_TIPPEN', given: 'hallo' },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(true);
+    expect(r.richtig).toBe('hallo');
+  });
+
+  // WORT_TIPPEN'da o'quvchi ESHITIB YOZADI, klaviaturada umlaut bo'lmasligi
+  // mumkin (`antwort.ts`dagi izohga qarang) — bu bilim bo'shlig'i emas,
+  // klaviatura cheklovi, shuning uchun kechirimli solishtiruv shu yerda
+  // ham ishlashi SHART. `dafLexeme.findUnique` shu bitta test uchun
+  // umlautli so'zga almashtiriladi (`fakePrisma`ning umumiy lug'atida
+  // umlautli so'z yo'q).
+  it('WORT_TIPPEN: umlautsiz yozuvni kechiradi (klaviatura cheklovi, bilim emas)', async () => {
+    const prisma = fakePrisma();
+    prisma.dafLexeme.findUnique = jest.fn(async () => ({
+      de: 'tschüss',
+      uz: 'xayr',
+      artikel: null,
+      unitId: 1,
+    })) as any;
+    const r = await new UebungService(prisma as any).pruefen(
+      { itemType: 'WORT', itemId: 1, format: 'WORT_TIPPEN', given: 'tschuess' },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(true);
+    expect(r.richtig).toBe('tschüss');
   });
 
   it('xato javobni rad etadi', async () => {
