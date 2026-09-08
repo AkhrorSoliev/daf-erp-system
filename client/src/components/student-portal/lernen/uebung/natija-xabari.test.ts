@@ -43,4 +43,19 @@ describe("xatoYorligi", () => {
     );
     expect(xatoYorligi("LUECKE", "Ich ___ Student.")).toBe("Ich ___ Student.");
   });
+
+  // Ikkala test ham qaror FORMATga qarab qilinishini isbotlaydi, promptning
+  // BO'SH-EMASLIGIGA emas — ko'rikda topilgan bo'shliq: avvalgi uch test
+  // har audio holatda bo'sh prompt, har audio-bo'lmagan holatda to'ldirilgan
+  // prompt bergani uchun "bo'sh bo'lsa yorliq qaytar" degan NOTO'G'RI
+  // implementatsiya ham ularning barchasidan o'tardi.
+  it("audio-bo'lmagan formatda prompt bo'sh bo'lsa ham bo'sh qaytadi", () => {
+    expect(xatoYorligi("ZUORDNEN", "")).toBe("");
+  });
+
+  it("AUDIO_WORTda prompt to'ldirilgan bo'lsa ham sobit yorliq qaytadi", () => {
+    expect(xatoYorligi("AUDIO_WORT", "bu hech qachon kelmasligi kerak bo'lgan matn")).toBe(
+      "Eshitish savoli",
+    );
+  });
 });

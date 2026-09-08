@@ -20,13 +20,45 @@ import { SpeakerHigh, ArrowClockwise } from "@phosphor-icons/react";
 export function OvozTugmasi({ url }: { url: string }) {
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const [xato, setXato] = React.useState(false);
+  /**
+   * ESKIRGAN `play()` VA'DASIGA QARSHI QO'RIQCHI (ko'rik topilmasi).
+   *
+   * `<audio>` elementi `key`siz — savol almashganda React `src`ni O'SHA
+   * DOM tuguni ustida almashtiradi (yangi element yaratilmaydi). Media
+   * spetsifikatsiyasiga ko'ra, `play()` KUTILAYOTGAN paytda `src`
+   * o'zgarsa, o'sha eski va'da `AbortError` bilan RAD ETILADI — va bu
+   * rad etish ASINXRON: ba'zan YANGI savolning effekti allaqachon
+   * `setXato(false)` chaqirib, yangi faylni ishga tushirib bo'lgandan
+   * KEYIN yetib keladi. Qo'riqchisiz eski `.catch(() => setXato(true))`
+   * o'shanda YANGI (aslida soz ishlayotgan) savolni "Ovoz yuklanmadi"
+   * holatiga o'tkazib qo'yardi — garchi uning audiosi normal
+   * o'ynayotgan bo'lsa ham (masalan sekin tarmoqda, o'quvchi tez-tez
+   * savol almashtirsa).
+   *
+   * Yechim — har bir `play()` urinishi o'zining "raqami"ni oladi
+   * (`joriyUrinish.current`ga yozilgan qiymat). Urinish tugagach
+   * (`.catch`) FAQAT hali ham ENG SO'NGGI urinish bo'lsagina xato
+   * ko'rsatiladi — undan keyin YANGI urinish boshlangan bo'lsa (savol
+   * almashgani UCHUN ham, tugma qayta bosilgani UCHUN ham), eski
+   * rad etish shunchaki e'tiborsiz qoldiriladi. Tugmaning o'zi bosilganda
+   * ham xuddi shu `qoy()` chaqiriladi — demak HAQIQIY xato (masalan
+   * tarmoq chindan uzilgan) hamon ko'rsatiladi, chunki o'sha chaqiruv
+   * ENG SO'NGGI urinish bo'lib qoladi va uni hech kim ORTDAN
+   * bosib o'tmaydi. BU QO'RIQCHINI OLIB TASHLASH sekin tarmoqda faqat
+   * ko'rinadigan, avtomatlashtirilgan test bilan ushlanmaydigan
+   * regressiyani qaytaradi — shuning uchun bu izoh mavjud.
+   */
+  const joriyUrinish = React.useRef(0);
 
   const qoy = React.useCallback(() => {
     const a = audioRef.current;
     if (!a) return;
+    const urinish = ++joriyUrinish.current;
     setXato(false);
     a.currentTime = 0;
-    void a.play().catch(() => setXato(true));
+    void a.play().catch(() => {
+      if (joriyUrinish.current === urinish) setXato(true);
+    });
   }, []);
 
   // Savol almashganda (`url` o'zgaradi) o'zi yangraydi.
