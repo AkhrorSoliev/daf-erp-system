@@ -1,12 +1,13 @@
 /**
  * Jonli juftlash mashqining sof holat mantig'i.
  *
- * `chapBosildi`/`ongBosildi` (`yigish.tsx`) tugma bosishni indeks bo'yicha
- * kuzatadi — bu fayl o'sha g'oyaning DAVOMI: bitta juft tuzilgach server
- * darhol tekshiradi (`useJuftTekshir`, `queries.ts`), va shu javob shu
- * yerda saqlanadi. INDEKS bo'yicha ishlash sababi bir xil qoladi: ikkita
- * tugma bir xil matnga ega bo'lishi mumkin, shuning uchun matn emas,
- * pozitsiya noyob identifikator hisoblanadi.
+ * Bu yerda ikki bosqich yashaydi: `tugmaBosildi` — tugma bosilganda
+ * kutayotgan tanlovning o'tishi (`yigish.tsx` dagi `bosildi` shuni
+ * chaqiradi), va juft tuzilgach server darhol tekshirgan javobning
+ * saqlanishi (`useJuftTekshir`, `queries.ts`). INDEKS bo'yicha ishlash
+ * sababi ikkalasida bir xil: ikkita tugma bir xil matnga ega bo'lishi
+ * mumkin, shuning uchun matn emas, pozitsiya noyob identifikator
+ * hisoblanadi.
  *
  * `xato` HOLATI YO'Q (ataylab): xato juft ekranda qolmaydi, darhol
  * ro'yxatdan olib tashlanadi va ikkala tugma yana bo'sh bo'ladi. Qizil
@@ -53,7 +54,7 @@ export interface TanlovNatija {
  * chunki bu repoda komponent render qilib test yozilmaydi — qoida testsiz
  * qolsa, keyingi tahrirda yana jimgina yo'qolardi.
  *
- * Uch holat:
+ * To'rt holat:
  * 1. Hech narsa kutmayotgan bo'lsa — bosilgan tugma kutishga o'tadi.
  * 2. AYNAN o'sha tugma qayta bosilsa — tanlov bekor bo'ladi.
  * 3. BIR XIL tomonning boshqa tugmasi bosilsa — tanlov o'sha yerga

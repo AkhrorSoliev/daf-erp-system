@@ -265,8 +265,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
         ong: ongUstun[ongIdx],
         // SAVOL boshlanganidan shu juft javobigacha o'tgan vaqt —
         // juftning O'ZIGA ketgan vaqt EMAS. Juft qachon "boshlangani"
-        // (chap tomon bosilgan payt) bu komponentda ma'lum emas: kutilayotgan
-        // tanlov `Yigish` ning ichki holati. Shu sabab o'lchov yig'iluvchi
+        // (birinchi tugma bosilgan payt — u chap ham, o'ng ham bo'lishi
+        // mumkin) bu komponentda ma'lum emas: kutilayotgan tanlov
+        // `Yigish` ning ichki holati. Shu sabab o'lchov yig'iluvchi
         // bo'ladi va oxirgi juftning qiymati butun savolning vaqtiga teng
         // chiqadi — bu `pruefen` boshqa sakkiz formatda yozadigan qiymat
         // bilan bir xil ma'noda, ya'ni taqqoslanadigan bo'lib qoladi.

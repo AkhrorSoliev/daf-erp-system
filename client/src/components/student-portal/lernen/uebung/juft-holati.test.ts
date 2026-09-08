@@ -36,6 +36,16 @@ describe("tugmaBosildi — juftlash IKKALA tomondan boshlanadi", () => {
       kutilayotgan: null,
       juft: { chapIdx: 1, ongIdx: 3 },
     });
+
+    // CHAP INDEKS O'NGDAN KATTA bo'lgan holat — ko'rik topilmasi. Faqat
+    // yuqoridagi (1 < 3) holat tekshirilsa, `tomon`ni UMUMAN o'qimaydigan
+    // `chapIdx = Math.min(...)`, `ongIdx = Math.max(...)` amalga oshirishi
+    // ham hamma testdan o'tib ketardi — va haqiqiy juftlarni jimgina
+    // almashtirib yuborardi. Shu qator o'sha yo'lni yopadi.
+    expect(tugmaBosildi({ tomon: "ong", idx: 0 }, "chap", 3)).toEqual({
+      kutilayotgan: null,
+      juft: { chapIdx: 3, ongIdx: 0 },
+    });
   });
 
   it("chapdan boshlab o'ngga bosilsa ham AYNAN o'sha juft chiqadi", () => {
