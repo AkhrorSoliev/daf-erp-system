@@ -44,3 +44,28 @@ describe('FalClient.speech', () => {
     await expect(c.speech('Hallo')).rejects.toThrow(/ovoz/i);
   });
 });
+
+describe('FalClient.speechMitStimme', () => {
+  it('ElevenLabs modelini ovoz nomi bilan chaqiradi', async () => {
+    const fetchFn = jest.fn(async () => ({
+      ok: true, json: async () => ({ audio: { url: 'https://x/y.mp3' } }),
+    })) as any;
+    const c = new FalClient('kalit', fetchFn);
+    const url = await c.speechMitStimme('hallo', 'Rachel');
+    expect(url).toBe('https://x/y.mp3');
+    const [manzil, opts] = fetchFn.mock.calls[0];
+    expect(manzil).toContain('elevenlabs');
+    const body = JSON.parse(opts.body);
+    expect(body.text).toBe('hallo');
+    expect(body.voice).toBe('Rachel');
+  });
+
+  it('mavjud speech() Chatterbox`da qoladi', async () => {
+    // Namunada uchinchi variant sifatida kerak — o'zgartirilmaydi.
+    const fetchFn = jest.fn(async () => ({
+      ok: true, json: async () => ({ audio: { url: 'https://x/c.mp3' } }),
+    })) as any;
+    await new FalClient('kalit', fetchFn).speech('hallo');
+    expect(fetchFn.mock.calls[0][0]).toContain('chatterbox');
+  });
+});

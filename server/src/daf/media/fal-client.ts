@@ -1,5 +1,6 @@
 const IMAGE_MODEL = 'fal-ai/flux/schnell';
 const TTS_MODEL = 'fal-ai/chatterbox/text-to-speech/multilingual';
+const TTS_ELEVEN_MODEL = 'fal-ai/elevenlabs/tts/turbo-v2.5';
 
 /**
  * fal.ai ga yagona kirish nuqtasi.
@@ -46,6 +47,22 @@ export class FalClient {
 
   async speech(text: string): Promise<string> {
     const out = await this.run(TTS_MODEL, { text, language: 'de' });
+    const url = out?.audio?.url;
+    if (typeof url !== 'string') throw new Error('fal.ai ovoz qaytarmadi');
+    return url;
+  }
+
+  /**
+   * ElevenLabs ovozi bilan nutq.
+   *
+   * NEGA MAVJUD `speech()` YETMAYDI: u Chatterbox'ga qattiq bog'langan
+   * va ovoz tanlash parametri yo'q. `personas.json` esa ElevenLabs
+   * ovozlarini yozib qo'ygan (Rachel, Matilda, ...). Ikkalasi ham
+   * namunada solishtiruv tomoni sifatida kerak, shuning uchun
+   * `speech()` O'ZGARTIRILMAYDI — yangisi yoniga qo'shiladi.
+   */
+  async speechMitStimme(text: string, stimme: string): Promise<string> {
+    const out = await this.run(TTS_ELEVEN_MODEL, { text, voice: stimme });
     const url = out?.audio?.url;
     if (typeof url !== 'string') throw new Error('fal.ai ovoz qaytarmadi');
     return url;
