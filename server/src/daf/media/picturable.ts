@@ -9,10 +9,26 @@
  */
 
 export interface PicturableCandidate {
+  /**
+   * Diagnostika uchun ixtiyoriy — funksiya ichida ishlatilmaydi, faqat
+   * chaqiruvchi (masalan test yoki log) qaysi so'z ekanini ko'rishi uchun.
+   */
+  sourceId?: string;
   /** Nemischa asl matn. */
   de: string;
-  /** Inglizcha izoh — nemischa ko'p ma'noli bo'lganda ma'noni aniqlashtiradi. */
-  en: string;
+  /**
+   * O'zbekcha tarjima — nemischa ko'p ma'noli bo'lganda ma'noni
+   * aniqlashtiradi.
+   *
+   * Ilgari bu yerda inglizcha (`en`) bo'lgan: eski DiB kontenti inglizcha
+   * bilan kelgan. A1 kontentida inglizcha maydon UMUMAN yo'q — seed uni
+   * bo'sh satr qilib yozadi (`inhalt-seed.service.ts`). 53 (va undan ko'p)
+   * so'zni faqat shu tekshiruv uchun inglizchaga tarjima qilish yana bitta
+   * pullik chaqiruv va yana bitta qo'lda tekshiriladigan kontent qatlami
+   * bo'lardi — nemischaning o'zi rasm chizish mumkinligini hal qilish uchun
+   * yetarli, o'zbekcha esa faqat ma'no noaniq bo'lganda yordam beradi.
+   */
+  uz: string;
 }
 
 /**
@@ -351,13 +367,14 @@ export class PicturableCountMismatchError extends Error {
  * Modeldan har so'z uchun "rasm bilan aniq ko'rsatib bo'ladimi" javobini
  * so'raydi.
  *
- * Nemischa va inglizcha ma'no birga beriladi: nemischa yolg'iz ko'p
- * ma'noli bo'lishi mumkin (masalan `Bank` — o'rindiqmi, bankmi), inglizcha
- * izoh shuni aniqlashtiradi.
+ * Nemischa va o'zbekcha ma'no birga beriladi: nemischa yolg'iz ko'p ma'noli
+ * bo'lishi mumkin (masalan `Bank` — o'rindiqmi, bankmi), o'zbekcha tarjima
+ * shuni aniqlashtiradi. Inglizcha ataylab YO'Q — qarang: `PicturableCandidate`
+ * ustidagi izoh.
  */
 export function buildPicturablePrompt(items: PicturableCandidate[]): string {
   const lines = items
-    .map((it, i) => `${i + 1}. ${it.de}  [en: ${it.en}]`)
+    .map((it, i) => `${i + 1}. ${it.de}  [uz: ${it.uz}]`)
     .join('\n');
 
   return [
@@ -371,7 +388,7 @@ export function buildPicturablePrompt(items: PicturableCandidate[]): string {
     '  ibora (masalan: die Verantwortung, weil, Wie heißt du?).',
     '',
     'Qoidalar:',
-    "- Nemischa matn ASOSIY manba. Inglizcha izoh faqat ma'noni",
+    "- Nemischa matn ASOSIY manba. O'zbekcha tarjima faqat ma'noni",
     '  aniqlashtirish uchun berilgan.',
     "- Har qatorga bitta javob, faqat 'ha' yoki 'yo`q'.",
     "- Javob formati qat'iy: '1. ha', '2. yo`q', va hokazo — raqam, nuqta,",

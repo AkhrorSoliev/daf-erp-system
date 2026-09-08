@@ -42,7 +42,12 @@ const BATCH = 40;
  */
 const EXPORT = join(__dirname, '..', 'content', 'daf', 'picturable.json');
 
-type Lexeme = { sourceId: string; de: string; en: string };
+/**
+ * `en` emas `uz` — A1 kontentida inglizcha maydon yo'q (seed uni bo'sh
+ * satr qilib yozadi). Qarang: `picturable.ts`dagi `PicturableCandidate`
+ * izohi — xuddi shu sabab bilan.
+ */
+type Lexeme = { sourceId: string; de: string; uz: string };
 
 /**
  * Guruhni so'raydi; javob soni mos kelmasa guruhni ikkiga bo'lib qayta
@@ -116,7 +121,7 @@ async function generate(lexemes: Lexeme[]): Promise<PicturableMap> {
   for (let i = 0; i < toAsk.length; i += BATCH) {
     const chunk = toAsk.slice(i, i + BATCH);
     const answers = await markChunk(
-      chunk.map((l) => ({ de: l.de, en: l.en })),
+      chunk.map((l) => ({ sourceId: l.sourceId, de: l.de, uz: l.uz })),
       model,
     );
     for (const [j, picturable] of answers.entries()) {
@@ -134,11 +139,16 @@ async function main() {
     adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
   });
 
-  const lexemes = await prisma.dafLexeme.findMany({
+  const rows = await prisma.dafLexeme.findMany({
     where: { unit: { level: 'A1' } },
-    select: { sourceId: true, de: true, en: true },
+    select: { sourceId: true, de: true, uz: true },
     orderBy: { id: 'asc' },
   });
+  // `uz` sxemada ixtiyoriy (`String?`) — hech qachon so'ralmagan eski
+  // yozuvlar uchun `null` bo'lishi mumkin. Bo'sh satr xuddi `en: ''` bilan
+  // bir xil xavfsiz standart: prompt "[uz: ]" deb ko'rsatadi, model baribir
+  // nemischadan hal qiladi.
+  const lexemes: Lexeme[] = rows.map((r) => ({ ...r, uz: r.uz ?? '' }));
   console.log(`A1 lug'at: ${lexemes.length} ta yozuv`);
 
   let result: PicturableMap;

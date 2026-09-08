@@ -216,9 +216,22 @@ describe('parsePicturable', () => {
 });
 
 describe('buildPicturablePrompt', () => {
-  it('nemischa va inglizchani birga beradi', () => {
-    const p = buildPicturablePrompt([{ de: 'der Apfel', en: 'the apple' }]);
+  it('nemischa va o`zbekchani birga beradi', () => {
+    const p = buildPicturablePrompt([{ de: 'der Apfel', uz: 'olma' }]);
     expect(p).toContain('der Apfel');
-    expect(p).toContain('the apple');
+    expect(p).toContain('olma');
+  });
+
+  it('so`rov inglizchasiz, de va uz ustiga quriladi', () => {
+    // A1 kontentida inglizcha maydon YO'Q (`u01/woerter.json` da faqat
+    // `de`, `uz`). 53 so'zni inglizchaga tarjima qilish yana bitta pullik
+    // chaqiruv va yana bitta qo'lda tekshiriladigan kontent qatlami
+    // degani — rasm chizilishini hal qilish uchun bunday narsa kiritish
+    // teskari tartib.
+    const p = buildPicturablePrompt([
+      { sourceId: 'u01-s2-frau', de: 'Frau', uz: 'ayol' },
+    ]);
+    expect(p).toContain('Frau');
+    expect(p).toContain('ayol');
   });
 });
