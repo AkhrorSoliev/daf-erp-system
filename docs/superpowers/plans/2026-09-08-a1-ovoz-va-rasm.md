@@ -210,7 +210,8 @@ git commit -m "Audio kaliti tasodifiy — so'zdan hisoblanmaydi"
 ## Task 2: Manifestdan `DafLexeme.audioKey` ga seed
 
 **Files:**
-- Modify: `server/src/daf/inhalt/inhalt-seed.service.ts` (lexeme `data` obyekti, ~124-148-qatorlar)
+- Modify: `server/src/daf/inhalt/inhalt-seed.service.ts` — `InhaltFiles` (11-qator) va lexeme `data` obyekti (~124-148-qatorlar)
+- Modify: `server/scripts/daf-inhalt-seed.ts` (~52-qator) — manifestni o'qib `files.audio` ga qo'shadi
 - Test: `server/src/daf/inhalt/inhalt-seed.service.spec.ts`
 
 **Interfaces:**
@@ -218,18 +219,25 @@ git commit -m "Audio kaliti tasodifiy — so'zdan hisoblanmaydi"
 
 - [ ] **Step 1: Failing testni yozing**
 
-`inhalt-seed.service.spec.ts` ichiga qo'shing (mavjud `describe` ichiga):
+**Manifest xizmat ichida O'QILMAYDI — `InhaltFiles` ning bir qismi
+sifatida uzatiladi.** `InhaltSeedService.seed(code, files)` allaqachon
+shunday ishlaydi: fayllarni chaqiruvchi o'qiydi, xizmat esa sof qoladi
+va testda disk kerak bo'lmaydi. Manifestni fayldan o'qish `daf:inhalt-seed`
+skriptining ishi.
+
+`inhalt-seed.service.spec.ts` ichiga qo'shing (mavjud `describe` ichiga,
+fayldagi `fakePrisma()` va `files()` yordamchilaridan foydalanib):
 
 ```ts
 it('manifestdagi audio kalitini lexemega yozadi', async () => {
-  const { prisma, calls } = fakeSeedPrisma();
-  await seedWith(prisma, {
-    woerter: [{ sourceId: 'u01-s1-hallo', section: 'u01-s1', de: 'hallo', uz: 'salom', core: true, order: 1 }],
-    audio: { 'u01-s1-hallo': 'daf/audio/abc.mp3' },
-  });
-  const yozilgan = calls.find((c) => c[0].where.sourceId === 'u01-s1-hallo')[0];
-  expect(yozilgan.create.audioKey).toBe('daf/audio/abc.mp3');
-  expect(yozilgan.update.audioKey).toBe('daf/audio/abc.mp3');
+  const prisma = fakePrisma();
+  const f = files();
+  f.audio = { 'u01-s1-hallo': 'daf/audio/abc.mp3' };
+  await new InhaltSeedService(prisma as any).seed('u01', f);
+  const calls = prisma.dafLexeme.upsert.mock.calls as any[];
+  const hallo = calls.find((c) => c[0].create.sourceId === 'u01-s1-hallo')[0];
+  expect(hallo.create.audioKey).toBe('daf/audio/abc.mp3');
+  expect(hallo.update.audioKey).toBe('daf/audio/abc.mp3');
 });
 
 it('manifestda yo`q so`zning audioKey ini null qiladi', async () => {
@@ -238,19 +246,26 @@ it('manifestda yo`q so`zning audioKey ini null qiladi', async () => {
   // bazada eski kalit qolib ketmasligi kerak — aks holda R2 da yo'q
   // faylga ishora qiladigan so'zdan audio savol qurilardi va o'quvchi
   // yangramaydigan tugmani ko'rardi.
-  const { prisma, calls } = fakeSeedPrisma();
-  await seedWith(prisma, {
-    woerter: [{ sourceId: 'u01-s4-eins', section: 'u01-s4', de: 'eins', uz: 'bir', core: true, order: 1 }],
-    audio: {},
-  });
-  const yozilgan = calls.find((c) => c[0].where.sourceId === 'u01-s4-eins')[0];
-  expect(yozilgan.update.audioKey).toBeNull();
+  const prisma = fakePrisma();
+  const f = files();
+  f.audio = {};
+  await new InhaltSeedService(prisma as any).seed('u01', f);
+  const calls = prisma.dafLexeme.upsert.mock.calls as any[];
+  const hallo = calls.find((c) => c[0].create.sourceId === 'u01-s1-hallo')[0];
+  expect(hallo.update.audioKey).toBeNull();
+});
+
+it('manifest umuman berilmasa yiqilmaydi', async () => {
+  // Eski chaqiruvchilar (va boshqa unitlar) `audio` siz chaqiradi.
+  const prisma = fakePrisma();
+  await new InhaltSeedService(prisma as any).seed('u01', files());
+  const calls = prisma.dafLexeme.upsert.mock.calls as any[];
+  expect(calls[0][0].create.audioKey).toBeNull();
 });
 ```
 
-`fakeSeedPrisma` va `seedWith` — faylda mavjud yordamchilar; `audio`
-maydonini qabul qilish uchun `seedWith` ni kengaytiring (manifest fayli
-o'qilishini taqlid qiling, `audio.json` bo'lmasa `{}`).
+`InhaltFiles` tipiga `audio?: AudioManifest` qo'shing (ixtiyoriy —
+qolgan chaqiruvchilar buzilmasin), `files()` yordamchisiga esa tegmang.
 
 - [ ] **Step 2: Testni yuritib, yiqilishini ko'ring**
 
@@ -261,9 +276,7 @@ Kutilgan: FAIL — `audioKey` `undefined`
 
 - [ ] **Step 3: Amalga oshiring**
 
-`inhalt-seed.service.ts` da manifestni o'qing (mavjud `files` o'qish
-naqshiga ergashing; fayl `content/daf/a1/audio.json`, bo'lmasa `{}`) va
-`data` obyektiga qo'shing:
+`InhaltFiles` ga `audio?: AudioManifest` qo'shing va `data` obyektiga:
 
 ```ts
         core: w.core,
@@ -271,8 +284,12 @@ naqshiga ergashing; fayl `content/daf/a1/audio.json`, bo'lmasa `{}`) va
         // eskisi ham o'chadi (`null`). «Tegmaslik» tanlansa, R2 da
         // endi yo'q faylga ishora qiladigan so'z qolib, o'quvchi
         // yangramaydigan tugmani ko'rardi.
-        audioKey: audioSchluesselFuer(audioManifest, w.sourceId),
+        audioKey: audioSchluesselFuer(files.audio ?? {}, w.sourceId),
 ```
+
+Manifestni fayldan o'qish `daf:inhalt-seed` skriptining ishi: u
+`content/daf/a1/audio.json` ni o'qiydi (bo'lmasa `{}`) va `files.audio`
+sifatida uzatadi.
 
 - [ ] **Step 4: Testni yuritib, o'tishini ko'ring**
 
@@ -471,8 +488,35 @@ export function wortTippen(
   SECTION_B: ['UZ_WORT', 'ARTIKEL', 'LUECKE', 'SATZ_BAUEN', 'WORT_TIPPEN'],
 ```
 
-Savol quruvchi ro'yxatiga (`seans.ts` nomzod yig'ish joyi) ikkalasini
-qo'shing va `MaterialWort` o'qiladigan joyda `audioKey` ni tanlang.
+`uebung.service.ts` da **to'rt joy** (Prisma `select` ishlatilmaydi, ya'ni
+ustun allaqachon keladi — faqat TypeScript tip e'lonlari va chaqiruvlar
+kerak):
+
+1. **`toWort` (~86-102)** — kirish tipiga `audioKey: string | null` qo'shing
+   va natijaga `audioKey: l.audioKey` yozing.
+2. **Ikkita `findMany` qator tipi (~421 va ~738)** — `audioKey: string | null`
+   qo'shing.
+3. **Nomzod yig'ish sikli (~642-648)**, `artikel` dan keyin:
+
+```ts
+      const aw = audioWort(w, coreWords, rnd);
+      if (aw) rohKandidaten.push(aw);
+      const wt = wortTippen(w, rnd);
+      if (wt) rohKandidaten.push(wt);
+```
+
+4. **`ersatz` switch (~792-798)**, `ARTIKEL` dan keyin:
+
+```ts
+      case 'AUDIO_WORT':
+        return audioWort(wort, andere, Math.random);
+      case 'WORT_TIPPEN':
+        return wortTippen(wort, Math.random);
+```
+
+**Diqqat — takrorlash seansi (~431, ~435):** u `sectionCode: ''` bilan
+`toWort` chaqiradi. `audioKey` u yerda ham uzatilishi kerak, aks holda
+takrorlash seansida audio savol hech qachon qurilmasdi.
 
 - [ ] **Step 4: Testlarni yuritib, o'tishini ko'ring**
 
