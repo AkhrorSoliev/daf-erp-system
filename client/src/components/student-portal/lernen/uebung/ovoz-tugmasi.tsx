@@ -3,14 +3,6 @@
 import * as React from "react";
 import { SpeakerHigh, ArrowClockwise } from "@phosphor-icons/react";
 
-// SSR paytida `useLayoutEffect` hech narsa qilmaydi va DEV rejimida
-// ogohlantirish chiqaradi (bu komponent "use client" bo'lsa ham, Next.js
-// dastlabki HTML'ni serverda chizadi). Brauzerda haqiqiy layout effektga,
-// serverda esa oddiy effektga (baribir ishlamaydi, lekin ogohlantirmaydi)
-// tushadi.
-const useIsomorphicLayoutEffect =
-  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
-
 /**
  * Savolning ovozi — karnay tugmasi.
  *
@@ -29,86 +21,59 @@ export function OvozTugmasi({ url }: { url: string }) {
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const [xato, setXato] = React.useState(false);
   /**
-   * ESKIRGAN YUKLASH NATIJASIGA QARSHI QO'RIQCHI (ko'rik topilmasi,
-   * IKKI YO'L HAM QOPLANGAN: `play()` va'dasi VA `<audio>`ning `error`
-   * hodisasi).
+   * `<audio key={url}>` PASTDA — bu ikkita ko'rik topilmasining ILDIZ
+   * tuzatishi (avvalgi ikki urinish — hisoblagichni `onError`ga ulash —
+   * ISHLAMAGAN, pastga qarang). `key` bilan React savol almashganda
+   * ESKI DOM tugunini butunlay OLIB TASHLAYDI va YANGISINI yaratadi —
+   * `src`ni bir xil tugunda ALMASHTIRISH o'rniga. Bu ikkita xato yo'lini
+   * TUB SABABIDAN yopadi: endi ikkita savol BITTA DOM tuguni (va shu
+   * bilan BITTA `onError` ulanish nuqtasi)ni BAHAM KO'RMAYDI.
    *
-   * `<audio>` elementi `key`siz — savol almashganda React `src`ni O'SHA
-   * DOM tuguni ustida almashtiradi (yangi element yaratilmaydi). Bitta
-   * DOM tuguniga ikkita mustaqil yo'l orqali "eskirgan natija" kirib
-   * kelishi mumkin:
+   * BIRINCHI (muvaffaqiyatsiz) urinish `a.onerror`ni `joriyUrinish`
+   * bilan bir xil hisoblagichga ulagan edi — lekin bu QURUQ (vacuous)
+   * chiqdi: `a.onerror` — BITTA o'zgaruvchan xususiyat, promise kabi
+   * har chaqiruvga alohida EMAS. Uni HAR safar yangi urinish raqami
+   * bilan qayta ulash (hatto layout effektda, DOM commitidan darhol
+   * keyin bo'lsa ham) shuni anglatadi: qachon YETIB KELMASIN, `error`
+   * hodisasi FAQAT ENG OXIRGI ulangan yopilishga tegadi — va uning
+   * o'zi o'z hisoblagichini o'ziga solishtiradi, shuning uchun tekshiruv
+   * doim TO'G'RI chiqadi (A ning kech kelgan xatosi B ulagandan keyin
+   * yetib kelsa, B ning yopilishi ishlaydi va B ning raqami — albatta —
+   * `joriyUrinish.current`ga teng). Natijada `onError={() => setXato(true)}`
+   * bilan xatti-harakat FARQSIZ edi.
    *
-   * 1) Media spetsifikatsiyasiga ko'ra, `play()` KUTILAYOTGAN paytda
-   *    `src` o'zgarsa, o'sha eski va'da `AbortError` bilan RAD ETILADI —
-   *    va bu rad etish ASINXRON: ba'zan YANGI savolning effekti
-   *    allaqachon `setXato(false)` chaqirib, yangi faylni ishga
-   *    tushirib bo'lgandan KEYIN yetib keladi.
-   * 2) XUDDI SHU sabab bilan `error` hodisasi HAM eskirishi mumkin:
-   *    `src` almashtirilganda eski manba uchun brauzer navbatga qo'ygan
-   *    yuklash xatosi baribir keyinroq YETIB KELISHI mumkin —
-   *    brauzerlar buni bir xilda bostirishga MAJBUR EMAS.
+   * `key={url}` bu muammoni BOSHQA yo'l bilan hal qiladi: hisoblagichni
+   * QAYTA TIKLASH o'rniga, ikkita savolni FIZIK jihatdan ikkita alohida
+   * elementga ajratadi. React eski tugunni olib tashlaganda, o'zi
+   * o'rnatgan (bubble bo'lmaydigan `error` hodisasi uchun DOM'ga
+   * to'g'ridan-to'g'ri ulangan) ushlagichni ham OLIB TASHLAYDI — shuning
+   * uchun A uchun navbatga qo'yilgan `error` KEYINROQ yetib kelsa ham,
+   * uni ESHITADIGAN HECH KIM QOLMAYDI (B — yangi, mustaqil tugun, o'z
+   * mustaqil ushlagichi bilan). Shuning uchun `onError`ga ENDI hech
+   * qanday hisoblagich SHART EMAS — pastdagi oddiy
+   * `onError={() => setXato(true)}` xavfsiz.
    *
-   * Ikkalasida ham natija BIR XIL: qo'riqchisiz YANGI (aslida soz
-   * ishlayotgan) savol "Ovoz yuklanmadi" holatiga o'tib qolardi —
-   * garchi uning audiosi normal o'ynayotgan bo'lsa ham (masalan sekin
-   * tarmoqda, o'quvchi tez-tez savol almashtirsa).
-   *
-   * Yechim — har bir yuklash/o'ynatish URINISHI o'zining "raqami"ni
-   * oladi (`joriyUrinish.current`). Ikkala yo'l HAM (`.play().catch()`
-   * VA `error` hodisasi) natija kelganda FAQAT hali ham ENG SO'NGGI
-   * urinish bo'lsagina `setXato(true)` chaqiradi; undan keyin YANGI
-   * urinish boshlangan bo'lsa (savol almashgani UCHUN ham, tugma qayta
-   * bosilgani UCHUN ham), eski natija shunchaki e'tiborsiz
-   * qoldiriladi. Ikkalasi BITTA hisoblagichni ishlatishi MUHIM — ikkita
-   * mustaqil qo'riqchi bo'lsa, ular bir-biridan bexabar ikki xil
-   * "joriy urinish" tushunchasiga kelib qolishi mumkin edi.
-   *
-   * `error` hodisasi JSX `onError` prop sifatida EMAS, balki
-   * `a.onerror = ...` orqali, QUYIDAGI `useIsomorphicLayoutEffect`
-   * ICHIDA ulanadi. Sabab: `preload="auto"` brauzerni `src` DOM'ga
-   * commit qilinishi bilanoq yuklashni boshlashga majbur qiladi — bu
-   * yuklash oddiy (passiv) `useEffect` (`qoy()`) hali ishga
-   * tushmasdan turib ham muvaffaqiyatsiz bo'lishi mumkin. Oddiy
-   * `useEffect` chizishdan KEYIN, browser bo'sh vaqt topganda ishga
-   * tushadi — bu orada tarmoq xatosi allaqachon kelib ulgurishi mumkin.
-   * Layout effekt esa DOM commit bilan BIR XIL sinxron bosqichda,
-   * chizishdan (va shu sabab har qanday keyingi tarmoq hodisasidan)
-   * OLDIN ishlaydi — shuning uchun hisoblagichning bump'i va
-   * `a.onerror`ning QAYTA ULANISHI bu yerda, render paytida EMAS
-   * (reflar renderda o'qilmaydi/yozilmaydi — loyihaning
-   * `react-hooks/refs` qoidasi).
-   *
-   * Tugma bosilishi (`qaytaBos`) HAM hisoblagichni oshiradi VA
-   * `a.onerror`ni qayta ulaydi — demak HAQIQIY xato (masalan tarmoq
-   * chindan uzilgan) hamon ko'rsatiladi, chunki o'sha chaqiruv ENG
-   * SO'NGGI urinish bo'lib qoladi va uni hech kim ORTDAN bosib
-   * o'tmaydi. BU QO'RIQCHINI OLIB TASHLASH sekin tarmoqda faqat
-   * ko'rinadigan, avtomatlashtirilgan test bilan ushlanmaydigan
-   * regressiyani qaytaradi — shuning uchun bu izoh mavjud.
+   * `joriyUrinish` PASTDA HALI HAM SAQLANADI — lekin ENDI FAQAT
+   * `.play()` va'dasi uchun, va bu boshqa sabab bilan: `.play()`
+   * qaytargan va'da — DOM tuguniga EMAS, shunchaki bir marotabalik JS
+   * obyektiga bog'liq. `key` almashib eski tugun olib tashlansa ham,
+   * eski va'da xotirada QOLAVERADI va OXIR-OQIBAT o'z holicha
+   * (rad etilib) tugaydi — buni HECH NARSA to'xtata olmaydi, chunki
+   * `setXato` xuddi shu, DAVOM ETAYOTGAN `OvozTugmasi` komponent
+   * nusxasining holat funksiyasi (faqat `<audio>` bola elementi qayta
+   * o'rnatiladi, TASHQI komponent EMAS). Bundan tashqari, BITTA savol
+   * ICHIDA ham (`url` o'zgarmasa, `key` ham o'zgarmaydi, tugun BIR XIL
+   * qoladi) — tugma qayta bosilganda (`qoy` pastda `onClick`ga
+   * to'g'ridan-to'g'ri uzatiladi) eski `play()` chaqiruvi hali
+   * tugallanmagan bo'lishi mumkin; hisoblagich buni ham to'g'ri
+   * "eskirgan" deb belgilaydi.
    */
   const joriyUrinish = React.useRef(0);
-
-  // `a.onerror`ni berilgan urinish raqamiga ULAYDI (qayta ishlatiladi:
-  // savol almashganda HAM, tugma bosilganda HAM chaqiriladi).
-  const onerrorniUlash = React.useCallback((urinish: number) => {
-    const a = audioRef.current;
-    if (!a) return;
-    a.onerror = () => {
-      if (joriyUrinish.current === urinish) setXato(true);
-    };
-  }, []);
-
-  // Savol almashganda (`url` o'zgaradi) YANGI urinish ochiladi — DOM
-  // commitidan DARHOL keyin, chizishdan oldin (izohga qarang).
-  useIsomorphicLayoutEffect(() => {
-    joriyUrinish.current += 1;
-    onerrorniUlash(joriyUrinish.current);
-  }, [url, onerrorniUlash]);
 
   const qoy = React.useCallback(() => {
     const a = audioRef.current;
     if (!a) return;
-    const urinish = joriyUrinish.current;
+    const urinish = ++joriyUrinish.current;
     setXato(false);
     a.currentTime = 0;
     void a.play().catch(() => {
@@ -116,24 +81,24 @@ export function OvozTugmasi({ url }: { url: string }) {
     });
   }, []);
 
-  // Tugma bosilishi — qayta urinish. Bu ham YANGI urinish deb
-  // hisoblanadi: eski (hali tugallanmagan) `play()` va'dasi yoki
-  // eskirgan `onerror` ulanishi endi eskirgan deb belgilanadi.
-  const qaytaBos = React.useCallback(() => {
-    joriyUrinish.current += 1;
-    onerrorniUlash(joriyUrinish.current);
-    qoy();
-  }, [qoy, onerrorniUlash]);
-
-  // Savol almashganda (`url` o'zgaradi) o'zi yangraydi.
+  // Savol almashganda (`url` o'zgaradi) o'zi yangraydi. `key={url}`
+  // tufayli bu HAR DOIM YANGI DOM tuguniga ishlaydi (pastga qarang) —
+  // reflar effektlardan OLDIN ulanadi, shuning uchun `audioRef.current`
+  // shu paytda ALLAQACHON yangi tugunga ishora qiladi.
   React.useEffect(() => { qoy(); }, [url, qoy]);
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <audio ref={audioRef} src={url} preload="auto" />
+      <audio
+        key={url}
+        ref={audioRef}
+        src={url}
+        preload="auto"
+        onError={() => setXato(true)}
+      />
       <button
         type="button"
-        onClick={qaytaBos}
+        onClick={qoy}
         aria-label={xato ? "Ovozni qayta yuklash" : "Ovozni eshitish"}
         className="flex size-20 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-95 motion-reduce:transition-none"
       >
