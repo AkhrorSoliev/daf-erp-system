@@ -7,6 +7,8 @@ import type {
   SaetzeFile,
   WoerterFile,
 } from './unit-inhalt.types';
+import type { AudioManifest } from '../media/audio-keys';
+import { audioSchluesselFuer } from '../media/audio-keys';
 
 export interface InhaltFiles {
   woerter: WoerterFile;
@@ -14,6 +16,13 @@ export interface InhaltFiles {
   dialoge: DialogeFile;
   grammatik: GrammatikFile;
   redemittel: RedemittelFile;
+  /**
+   * Ixtiyoriy — audio hali barcha unitlarga yasalmagan va eski
+   * chaqiruvchilar (testlar, boshqa unitlar) buni bermasdan chaqiradi.
+   * Skript (`daf-inhalt-seed.ts`) `content/daf/a1/audio.json`ni
+   * o'qib beradi; xizmatning o'zi diskka tegmaydi.
+   */
+  audio?: AudioManifest;
 }
 
 export interface InhaltSeedReport {
@@ -140,6 +149,11 @@ export class InhaltSeedService {
         // Aktiv/passiv farqi: `true` — mashqda so'raladi, `false` — faqat
         // dialog/matnda uchraydi va hech qachon so'ralmaydi.
         core: w.core,
+        // Manifest MANBA: undan kalit olib tashlangan bo'lsa bazadagi
+        // eskisi ham o'chadi (`null`). «Tegmaslik» tanlansa, R2 da
+        // endi yo'q faylga ishora qiladigan so'z qolib, o'quvchi
+        // yangramaydigan tugmani ko'rardi.
+        audioKey: audioSchluesselFuer(files.audio ?? {}, w.sourceId),
       };
       await this.prisma.dafLexeme.upsert({
         where: { sourceId: w.sourceId },

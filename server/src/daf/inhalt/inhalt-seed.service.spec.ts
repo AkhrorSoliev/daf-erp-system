@@ -621,4 +621,38 @@ describe('InhaltSeedService', () => {
     expect(r.woerter).toBe(1);
     expect(r.dialoge).toBe(1);
   });
+
+  it('manifestdagi audio kalitini lexemega yozadi', async () => {
+    const prisma = fakePrisma();
+    const f = files();
+    f.audio = { 'u01-s1-hallo': 'daf/audio/abc.mp3' };
+    await new InhaltSeedService(prisma as any).seed('u01', f);
+    const calls = prisma.dafLexeme.upsert.mock.calls as any[];
+    const hallo = calls.find((c) => c[0].create.sourceId === 'u01-s1-hallo')[0];
+    expect(hallo.create.audioKey).toBe('daf/audio/abc.mp3');
+    expect(hallo.update.audioKey).toBe('daf/audio/abc.mp3');
+  });
+
+  it('manifestda yo`q so`zning audioKey ini null qiladi', async () => {
+    // ATAYLAB `null`, «tegmaslik» EMAS. Manifest — manba: undan kalit
+    // olib tashlangan bo'lsa (masalan fayl buzuq chiqib qayta yasalgan),
+    // bazada eski kalit qolib ketmasligi kerak — aks holda R2 da yo'q
+    // faylga ishora qiladigan so'zdan audio savol qurilardi va o'quvchi
+    // yangramaydigan tugmani ko'rardi.
+    const prisma = fakePrisma();
+    const f = files();
+    f.audio = {};
+    await new InhaltSeedService(prisma as any).seed('u01', f);
+    const calls = prisma.dafLexeme.upsert.mock.calls as any[];
+    const hallo = calls.find((c) => c[0].create.sourceId === 'u01-s1-hallo')[0];
+    expect(hallo.update.audioKey).toBeNull();
+  });
+
+  it('manifest umuman berilmasa yiqilmaydi', async () => {
+    // Eski chaqiruvchilar (va boshqa unitlar) `audio` siz chaqiradi.
+    const prisma = fakePrisma();
+    await new InhaltSeedService(prisma as any).seed('u01', files());
+    const calls = prisma.dafLexeme.upsert.mock.calls as any[];
+    expect(calls[0][0].create.audioKey).toBeNull();
+  });
 });
