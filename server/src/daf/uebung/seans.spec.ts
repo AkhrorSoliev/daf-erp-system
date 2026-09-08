@@ -16,6 +16,7 @@ function f(
     richtig: 'x',
     akzeptiert: [],
     belegteItems: belegteItems ?? [`WORT:${itemId}`],
+    audioUrl: null,
   };
 }
 

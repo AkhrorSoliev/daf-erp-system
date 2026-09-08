@@ -32,7 +32,14 @@ import {
 } from './satz-fragen';
 import { baueSeans } from './seans';
 import { ohneWiederholteFormate } from './wiederholte-formate';
-import { artikel, paar, uzWort, wortUz } from './wort-fragen';
+import {
+  artikel,
+  audioWort,
+  paar,
+  uzWort,
+  wortTippen,
+  wortUz,
+} from './wort-fragen';
 
 /** So'z uchun quriladigan formatlar — `PAAR` bu yerda yo'q: u bitta so'zga emas, to'rtlikka tegishli. */
 const WORT_FORMATE: FrageFormat[] = ['WORT_UZ', 'UZ_WORT', 'ARTIKEL'];
@@ -89,6 +96,7 @@ function toWort(l: {
   artikel: string | null;
   anzeige: string | null;
   sectionCode: string;
+  audioKey: string | null;
 }): MaterialWort | null {
   if (!l.uz) return null;
   return {
@@ -98,6 +106,7 @@ function toWort(l: {
     artikel: l.artikel,
     anzeige: l.anzeige,
     sectionCode: l.sectionCode,
+    audioKey: l.audioKey,
   };
 }
 
@@ -145,6 +154,14 @@ function richtigeAntwort(
       // olib tashlangan satrning nemischasi, boshqa hech narsa hisobga
       // olinmaydi (dialog satri Leitner narvoniga kirmaydi — pastdagi
       // `itemType === 'WORT'` sharti buni allaqachon ta'minlaydi).
+      return { richtig: material.de, akzeptiert: [] };
+    case 'AUDIO_WORT':
+    case 'WORT_TIPPEN':
+      // Ikkalasida ham to'g'ri javob — eshitilgan so'zning o'zi
+      // (`ziel.de`, artiklsiz — `wort-fragen.ts`dagi `audioWort`/
+      // `wortTippen` bilan bir xil). Bu holat yo'q qolib ketsa, `pruefen`
+      // yuqoridagi `default`ga tushib, savol ko'rsatilgandan keyin
+      // JAVOB BERISHNING O'ZI 400 bilan yiqilardi.
       return { richtig: material.de, akzeptiert: [] };
     default:
       throw new BadRequestException(
@@ -426,6 +443,7 @@ export class UebungService {
       artikel: string | null;
       anzeige: string | null;
       sectionId: number | null;
+      audioKey: string | null;
     }>;
 
     // `sectionCode: ''` — takrorlash seansi hech qaysi bo'limga
@@ -534,6 +552,7 @@ export class UebungService {
       anzeige: string | null;
       core: boolean;
       sectionId: number | null;
+      audioKey: string | null;
     }
     interface SentenceRow {
       id: number;
@@ -645,6 +664,10 @@ export class UebungService {
       if (uw) rohKandidaten.push(uw);
       const art = artikel(w);
       if (art) rohKandidaten.push(art);
+      const aw = audioWort(w, coreWords, rnd);
+      if (aw) rohKandidaten.push(aw);
+      const wt = wortTippen(w, rnd);
+      if (wt) rohKandidaten.push(wt);
     }
     // Bir necha PAAR nomzodi: har chaqiruv `rnd` holatini siljitib, boshqa
     // to'rtlikni tanlaydi. Material yetmasa `paar` `null` qaytaradi.
@@ -743,6 +766,7 @@ export class UebungService {
       artikel: string | null;
       anzeige: string | null;
       sectionId: number | null;
+      audioKey: string | null;
     }>;
     const byId = new Map(dueLexemeRows.map((l) => [l.id, l]));
 
@@ -795,6 +819,10 @@ export class UebungService {
         return uzWort(wort, andere, Math.random);
       case 'ARTIKEL':
         return artikel(wort);
+      case 'AUDIO_WORT':
+        return audioWort(wort, andere, Math.random);
+      case 'WORT_TIPPEN':
+        return wortTippen(wort, Math.random);
       default:
         return null;
     }

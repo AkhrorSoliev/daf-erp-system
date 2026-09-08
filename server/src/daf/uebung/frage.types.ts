@@ -8,7 +8,9 @@ export type FrageFormat =
   | 'SATZ_UEBERSETZEN'
   | 'REAKTION'
   | 'ZUORDNEN'
-  | 'DIALOG_LUECKE';
+  | 'DIALOG_LUECKE'
+  | 'AUDIO_WORT'
+  | 'WORT_TIPPEN';
 
 export interface MaterialWort {
   id: number;
@@ -18,6 +20,8 @@ export interface MaterialWort {
   /** Raqam yoki belgi — so'zning yonida ko'rsatiladi, so'ralmaydi. */
   anzeige: string | null;
   sectionCode: string;
+  /** R2 kaliti; `null` — audio hali yasalmagan, audio savol qurilmaydi. */
+  audioKey: string | null;
 }
 
 export interface MaterialSatz {
@@ -94,6 +98,13 @@ export interface Frage {
    * so'ralishi mumkin bo'lardi.
    */
   belegteItems: string[];
+  /**
+   * Audio formatlarda savolning O'ZI shu manzilda; qolganida `null`.
+   *
+   * `prompt` audio formatlarda ATAYLAB bo'sh: unda so'z tursa, savol
+   * eshitishni emas, o'qishni tekshirardi.
+   */
+  audioUrl: string | null;
 }
 
 /** `belegteItems`/seans ichidagi band material kalitini quradi. */
@@ -115,6 +126,8 @@ export interface PublicFrage {
   options: string[];
   /** `Frage.titel` bilan bir xil — qarang yuqorida. */
   titel?: string | null;
+  /** `Frage.audioUrl` bilan bir xil — qarang yuqorida. */
+  audioUrl: string | null;
 }
 
 export function toPublic(f: Frage, index: number): PublicFrage {
@@ -127,5 +140,6 @@ export function toPublic(f: Frage, index: number): PublicFrage {
     hilfe: f.hilfe,
     options: f.options,
     titel: f.titel,
+    audioUrl: f.audioUrl,
   };
 }

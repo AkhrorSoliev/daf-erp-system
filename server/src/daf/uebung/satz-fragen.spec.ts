@@ -13,7 +13,15 @@ function s(id: number, de: string, uz: string): MaterialSatz {
   return { id, de, uz, sectionCode: 'u01-s1' };
 }
 function w(id: number, de: string, uz: string): MaterialWort {
-  return { id, de, uz, artikel: null, anzeige: null, sectionCode: 'u01-s1' };
+  return {
+    id,
+    de,
+    uz,
+    artikel: null,
+    anzeige: null,
+    sectionCode: 'u01-s1',
+    audioKey: null,
+  };
 }
 function p(
   id: number,

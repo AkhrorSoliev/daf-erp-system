@@ -81,6 +81,7 @@ export function wortUz(
     richtig: ziel.uz,
     akzeptiert: [],
     belegteItems: [materialSchluessel('WORT', ziel.id)],
+    audioUrl: null,
   };
 }
 
@@ -108,6 +109,7 @@ export function uzWort(
     richtig: ziel.de,
     akzeptiert: ziel.artikel ? [anzeigen(ziel)] : [],
     belegteItems: [materialSchluessel('WORT', ziel.id)],
+    audioUrl: null,
   };
 }
 
@@ -177,6 +179,7 @@ export function paar(woerter: MaterialWort[], rnd: () => number): Frage | null {
     // (masalan alohida `WORT_UZ`/`UZ_WORT` savoli sifatida) so'ralmasligi
     // kerak — ular allaqachon shu yerda javobi bilan ko'rsatilgan.
     belegteItems: selected.map((w) => materialSchluessel('WORT', w.id)),
+    audioUrl: null,
   };
 }
 
@@ -191,6 +194,54 @@ export function artikel(ziel: MaterialWort): Frage | null {
     options: ['der', 'die', 'das'],
     richtig: ziel.artikel,
     akzeptiert: [],
+    belegteItems: [materialSchluessel('WORT', ziel.id)],
+    audioUrl: null,
+  };
+}
+
+export function audioWort(
+  ziel: MaterialWort,
+  andere: MaterialWort[],
+  rnd: () => number,
+): Frage | null {
+  // Audiosi yo'q so'zga bu savol qurilmaydi. Shu qorovul tufayli
+  // formatni «yoqish» bayrog'i kerak emas: audio yasalmagan bo'lsa
+  // format o'z-o'zidan ishlamaydi.
+  if (!ziel.audioKey) return null;
+  const falsch = ablenker(ziel, andere, (w) => w.de, rnd);
+  if (!falsch) return null;
+  return {
+    format: 'AUDIO_WORT',
+    itemType: 'WORT',
+    itemId: ziel.id,
+    // BO'SH: so'z javobning o'zi, uni ko'rsatish savolni yo'q qilardi.
+    prompt: '',
+    hilfe: null,
+    options: mischen([ziel.de, ...falsch], rnd),
+    richtig: ziel.de,
+    akzeptiert: [],
+    audioUrl: ziel.audioKey,
+    belegteItems: [materialSchluessel('WORT', ziel.id)],
+  };
+}
+
+export function wortTippen(
+  ziel: MaterialWort,
+  _rnd: () => number,
+): Frage | null {
+  if (!ziel.audioKey) return null;
+  return {
+    format: 'WORT_TIPPEN',
+    itemType: 'WORT',
+    itemId: ziel.id,
+    prompt: '',
+    hilfe: null,
+    // Variant YO'Q: o'quvchi eshitib yozadi. Javobni `istRichtig`
+    // tekshiradi va u umlautsiz yozuvni ham qabul qiladi.
+    options: [],
+    richtig: ziel.de,
+    akzeptiert: [],
+    audioUrl: ziel.audioKey,
     belegteItems: [materialSchluessel('WORT', ziel.id)],
   };
 }

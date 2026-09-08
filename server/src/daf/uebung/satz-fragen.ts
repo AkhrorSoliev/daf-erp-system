@@ -95,6 +95,7 @@ export function luecke(
       materialSchluessel('WORT', ziel.id),
       materialSchluessel('SATZ', satz.id),
     ],
+    audioUrl: null,
   };
 }
 
@@ -112,6 +113,7 @@ export function satzBauen(satz: MaterialSatz, rnd: () => number): Frage | null {
     richtig: satz.de,
     akzeptiert: [],
     belegteItems: [materialSchluessel('SATZ', satz.id)],
+    audioUrl: null,
   };
 }
 
@@ -145,6 +147,7 @@ export function satzUebersetzen(
     richtig: ziel.uz,
     akzeptiert: [],
     belegteItems: [materialSchluessel('SATZ', ziel.id)],
+    audioUrl: null,
   };
 }
 
@@ -191,6 +194,7 @@ export function reaktion(
     richtig: ziel.de,
     akzeptiert: [],
     belegteItems: [materialSchluessel('PHRASE', ziel.id)],
+    audioUrl: null,
   };
 }
 
@@ -269,5 +273,6 @@ export function zuordnen(
     // Oltitasi ham band: savol ularning hammasini javobi bilan ko'rsatadi,
     // shuning uchun hech biri shu seansda ikkinchi marta so'ralmaydi.
     belegteItems: tanlangan.map((p) => materialSchluessel('PHRASE', p.id)),
+    audioUrl: null,
   };
 }

@@ -12,6 +12,7 @@ function f(format: FrageFormat, itemId: number, belegteItems?: string[]): Frage 
     richtig: 'x',
     akzeptiert: [],
     belegteItems: belegteItems ?? [`WORT:${itemId}`],
+    audioUrl: null,
   };
 }
 
@@ -56,6 +57,7 @@ describe('ohneWiederholteFormate', () => {
       richtig: 'x',
       akzeptiert: [],
       belegteItems: ['SATZ:9'],
+      audioUrl: null,
     };
     expect(ohneWiederholteFormate([satzNomzod], letzter)).toEqual([satzNomzod]);
   });

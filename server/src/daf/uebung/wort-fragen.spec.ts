@@ -1,5 +1,5 @@
-import { artikel, paar, uzWort, wortUz } from './wort-fragen';
-import type { MaterialWort } from './frage.types';
+import { artikel, audioWort, paar, uzWort, wortTippen, wortUz } from './wort-fragen';
+import { toPublic, type Frage, type MaterialWort } from './frage.types';
 
 function w(
   id: number,
@@ -7,7 +7,17 @@ function w(
   uz: string,
   art: string | null = null,
 ): MaterialWort {
-  return { id, de, uz, artikel: art, anzeige: null, sectionCode: 'u01-s1' };
+  return {
+    id,
+    de,
+    uz,
+    artikel: art,
+    anzeige: null,
+    sectionCode: 'u01-s1',
+    // Bu yordamchi audio formatlarga tegishli emas — mavjud testlar
+    // audiosiz so'zlar bilan ishlaydi.
+    audioKey: null,
+  };
 }
 
 /** Aralashtirishni bashorat qilib bo'ladigan qilish uchun. */
@@ -72,6 +82,7 @@ describe('wortUz', () => {
       artikel: null,
       anzeige: '8',
       sectionCode: 'u01-s1',
+      audioKey: null,
     };
     const boshqaRaqamlar: MaterialWort[] = [
       {
@@ -81,6 +92,7 @@ describe('wortUz', () => {
         artikel: null,
         anzeige: null,
         sectionCode: 'u01-s1',
+        audioKey: null,
       },
       {
         id: 12,
@@ -89,6 +101,7 @@ describe('wortUz', () => {
         artikel: null,
         anzeige: '3',
         sectionCode: 'u01-s1',
+        audioKey: null,
       },
       {
         id: 13,
@@ -97,6 +110,7 @@ describe('wortUz', () => {
         artikel: null,
         anzeige: '9',
         sectionCode: 'u01-s1',
+        audioKey: null,
       },
     ];
     const f = wortUz(acht, boshqaRaqamlar, rnd)!;
@@ -237,5 +251,59 @@ describe('artikel', () => {
 
   it('artiklsiz so`zga savol qurmaydi', () => {
     expect(artikel(ZIEL)).toBeNull();
+  });
+});
+
+const mitAudio = (id: number, de: string, uz: string): MaterialWort => ({
+  id, de, uz, artikel: null, anzeige: null, sectionCode: 'u01-s1',
+  audioKey: `daf/audio/${id}.mp3`,
+});
+const ohneAudio = (id: number, de: string, uz: string): MaterialWort => ({
+  ...mitAudio(id, de, uz), audioKey: null,
+});
+
+describe('audioWort', () => {
+  it('promptda so`z YO`Q — javob faqat ovozda', () => {
+    // `prompt` mijozga ketadi. Unda so'z tursa, savol eshitishni emas,
+    // o'qishni tekshirardi.
+    const ziel = mitAudio(1, 'hallo', 'salom');
+    const f = audioWort(ziel, [mitAudio(2,'danke','rahmat'), mitAudio(3,'wer','kim'), mitAudio(4,'was','nima')], () => 0.5);
+    expect(f).not.toBeNull();
+    expect(f!.prompt).toBe('');
+    expect(f!.audioUrl).toBe('daf/audio/1.mp3');
+    expect(f!.options).toHaveLength(4);
+    expect(f!.options).toContain('hallo');
+    expect(f!.richtig).toBe('hallo');
+  });
+
+  it('audiosi yo`q so`zga savol qurilmaydi', () => {
+    const ziel = ohneAudio(1, 'hallo', 'salom');
+    expect(audioWort(ziel, [mitAudio(2,'danke','rahmat'), mitAudio(3,'wer','kim'), mitAudio(4,'was','nima')], () => 0.5)).toBeNull();
+  });
+
+  it('chalg`ituvchi yetmasa null', () => {
+    expect(audioWort(mitAudio(1,'hallo','salom'), [mitAudio(2,'danke','rahmat')], () => 0.5)).toBeNull();
+  });
+});
+
+describe('wortTippen', () => {
+  it('promptda so`z YO`Q va variant berilmaydi', () => {
+    const f = wortTippen(mitAudio(1, 'tschüss', 'xayr'), () => 0.5);
+    expect(f).not.toBeNull();
+    expect(f!.prompt).toBe('');
+    expect(f!.options).toEqual([]);
+    expect(f!.audioUrl).toBe('daf/audio/1.mp3');
+    expect(f!.richtig).toBe('tschüss');
+  });
+
+  it('audiosi yo`q so`zga savol qurilmaydi', () => {
+    expect(wortTippen(ohneAudio(1, 'tschüss', 'xayr'), () => 0.5)).toBeNull();
+  });
+});
+
+describe('toPublic', () => {
+  it('audioUrl mijozga uzatiladi', () => {
+    const f: Frage = { format: 'AUDIO_WORT', itemType: 'WORT', itemId: 1, prompt: '', hilfe: null, options: ['a','b','c','d'], richtig: 'a', akzeptiert: [], audioUrl: 'daf/audio/x.mp3', belegteItems: ['WORT:1'] };
+    expect(toPublic(f, 0).audioUrl).toBe('daf/audio/x.mp3');
   });
 });

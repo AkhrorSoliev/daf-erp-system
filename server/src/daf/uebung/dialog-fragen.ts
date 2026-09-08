@@ -149,5 +149,6 @@ export function dialogLuecke(
     // Natija ekrani xato ro'yxatida BUTUN suhbat (`prompt`) o'rniga shu
     // qisqa nomni ko'rsatadi — qarang `frage.types.ts`dagi `titel` izohi.
     titel: dialog.titelDe,
+    audioUrl: null,
   };
 }

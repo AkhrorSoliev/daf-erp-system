@@ -39,6 +39,8 @@ describe('bevorzugteFormate', () => {
       'REAKTION',
       'ZUORDNEN',
       'DIALOG_LUECKE',
+      'AUDIO_WORT',
+      'WORT_TIPPEN',
     ];
     for (const kind of ['SECTION_A', 'SECTION_B', 'BRIDGE', 'UNIT_TEST']) {
       for (const f of bevorzugteFormate(kind)) {

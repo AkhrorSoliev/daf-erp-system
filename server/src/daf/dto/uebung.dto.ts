@@ -22,6 +22,8 @@ const FRAGE_FORMATLAR: FrageFormat[] = [
   'REAKTION',
   'ZUORDNEN',
   'DIALOG_LUECKE',
+  'AUDIO_WORT',
+  'WORT_TIPPEN',
 ];
 
 /**
