@@ -336,6 +336,42 @@ export interface PicturableItem {
 export type PicturableMap = Record<string, boolean>;
 
 /**
+ * `picturable.json`da hali ENTRY'si YO'Q itemlarni ajratadi.
+ *
+ * Faylning haqiqiy shartnomasi "hal qilingan YOZUV hech qachon qayta
+ * so'ralmaydi", "hal qilingan FAYL hech qachon to'ldirilmaydi" emas — bu
+ * ikkisi boshqa-boshqa narsa. Eski kodda ular aralashtirilgan edi: fayl
+ * MAVJUD bo'lishining o'zi "hammasi hal qilingan" deb o'qilardi, shuning
+ * uchun eski (dib-voc-*) yozuvlar bilan fayl allaqachon to'la bo'lgani
+ * sabab, yangi kontent (u01-* va hokazo) UMUMAN so'ralmay, jimgina
+ * "false" bo'lib qolardi — na xato, na ogohlantirish, faqat sukut
+ * standarti. Bu funksiya farqni tiklaydi: fayl EMAS, har bir sourceId
+ * alohida "hal qilingan/qilinmagan" holatda.
+ */
+export function findMissingPicturable(
+  items: PicturableItem[],
+  existing: PicturableMap,
+): PicturableItem[] {
+  return items.filter((it) => !(it.sourceId in existing));
+}
+
+/**
+ * Eski (odam ko'rib chiqqan) qarorlarni yangi javoblar bilan birlashtiradi.
+ *
+ * Tartib ataylab shunday: `existing` OXIRIDA yoziladi, shuning uchun u
+ * `additions` ustidan har doim g'olib chiqadi — hatto kimdir xato qilib
+ * `additions` ichiga allaqachon hal qilingan sourceId'ni qo'shib qo'ysa
+ * ham. "Hal qilingan qaror hech qachon qayta yozilmaydi" degan shartnoma
+ * shu tartibga tayanadi, chaqiruvchining ehtiyotkorligiga emas.
+ */
+export function mergePicturable(
+  existing: PicturableMap,
+  additions: PicturableMap,
+): PicturableMap {
+  return { ...additions, ...existing };
+}
+
+/**
  * `isNeverPicturable` qoidasini natijaga SO'ZSIZ qo'llaydi — manbasidan
  * qat'i nazar (yangi model javobimi, eskidan `picturable.json`dan
  * o'qilganmi). Har doim shu funksiyadan o'tkazilgan natija yoziladi;

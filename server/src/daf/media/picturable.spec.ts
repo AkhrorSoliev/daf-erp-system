@@ -9,6 +9,8 @@ import {
   isPhrase,
   isNeverPicturable,
   applyNeverPicturableRule,
+  findMissingPicturable,
+  mergePicturable,
   COUNTRIES,
   CONTINENTS,
 } from './picturable';
@@ -196,6 +198,53 @@ describe('applyNeverPicturableRule', () => {
       c: false,
       d: true,
     });
+  });
+});
+
+describe('findMissingPicturable', () => {
+  // `content/daf/picturable.json`da hali ENTRY'si yo'q sourceId'larni
+  // ajratadi. `daf-mark-picturable.ts` faqat shularni modeldan so'raydi —
+  // eski (dib-voc-*) yozuvlar bilan fayl to'la bo'lgani sabab, bu ajratish
+  // bo'lmasa yangi (u01-* va hokazo) kontent hech qachon so'ralmay qolardi.
+  it("faylda entry'si bor sourceId'larni tashlab qoldiradi", () => {
+    const items = [
+      { sourceId: 'a', de: 'hallo' },
+      { sourceId: 'b', de: 'Frau' },
+      { sourceId: 'c', de: 'Mann' },
+    ];
+    const existing = { a: true };
+
+    expect(findMissingPicturable(items, existing)).toEqual([
+      { sourceId: 'b', de: 'Frau' },
+      { sourceId: 'c', de: 'Mann' },
+    ]);
+  });
+
+  it("hech narsa yo'qolmagan bo'lsa bo'sh ro'yxat qaytaradi", () => {
+    const items = [{ sourceId: 'a', de: 'hallo' }];
+    expect(findMissingPicturable(items, { a: false })).toEqual([]);
+  });
+});
+
+describe('mergePicturable', () => {
+  // Faylning shartnomasi: hal qilingan qaror hech qachon qayta yozilmaydi.
+  // Tartib buni TA'MINLAYDI (chaqiruvchining ehtiyotkorligiga emas) —
+  // `existing` OXIRIDA yoziladi, shuning uchun `additions` ichida xato
+  // qilib takrorlangan sourceId bo'lsa ham u g'olib chiqmaydi.
+  it('existing yozuvlar additions ustidan g`olib chiqadi', () => {
+    const existing = { a: true, b: false };
+    const additions = { a: false, c: true };
+
+    expect(mergePicturable(existing, additions)).toEqual({
+      a: true,
+      b: false,
+      c: true,
+    });
+  });
+
+  it("bo'sh additions bilan existing o'zgarishsiz qaytadi", () => {
+    const existing = { a: true };
+    expect(mergePicturable(existing, {})).toEqual({ a: true });
   });
 });
 

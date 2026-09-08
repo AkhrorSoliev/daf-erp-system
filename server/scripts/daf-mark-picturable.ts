@@ -6,11 +6,18 @@
  *
  * Natija git'ga chiqadi (`content/daf/picturable.json`): bu qaror BIR
  * MARTA qabul qilinadi va odam ko'rib chiqadi (20 ta tasodifiy `true`
- * so'z qo'lda tekshiriladi — README/brief'ga qarang). Fayl mavjud bo'lsa
- * u MANBA bo'ladi: model qayta so'ralmaydi, faqat bazaga yoziladi — aks
- * holda har yuritishda pul sarflanardi va (model bir xil javob
- * bermagani uchun) natija boshqacha chiqib, odam tasdiqlagan qaror
- * jimgina almashtirilardi.
+ * so'z qo'lda tekshiriladi — README/brief'ga qarang).
+ *
+ * Shartnoma FAYL darajasida emas, YOZUV darajasida: `content/daf/
+ * picturable.json`da allaqachon ENTRY'si bor sourceId hech qachon qayta
+ * so'ralmaydi (odam tasdiqlagan qaror jimgina almashtirilmasin — aks
+ * holda model bir xil javob bermagani uchun natija har safar boshqacha
+ * chiqardi). Faylda hali entry'si YO'Q sourceId'lar esa so'raladi —
+ * eski kod buni "fayl bormi?" bilan tekshirar edi, shuning uchun eski
+ * (dib-voc-*) kontent bilan fayl allaqachon to'la bo'lgani sabab, yangi
+ * kontent (masalan A1 ning u01-* yozuvlari) UMUMAN so'ralmay, sukut
+ * bo'yicha "false" bo'lib qolardi. Qarang: `findMissingPicturable` /
+ * `mergePicturable` (`picturable.ts`).
  */
 import 'dotenv/config';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
@@ -20,7 +27,9 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import {
   applyNeverPicturableRule,
   buildPicturablePrompt,
+  findMissingPicturable,
   isNeverPicturable,
+  mergePicturable,
   parsePicturable,
   PicturableCountMismatchError,
   type PicturableCandidate,
@@ -47,7 +56,7 @@ const EXPORT = join(__dirname, '..', 'content', 'daf', 'picturable.json');
  * satr qilib yozadi). Qarang: `picturable.ts`dagi `PicturableCandidate`
  * izohi — xuddi shu sabab bilan.
  */
-type Lexeme = { sourceId: string; de: string; uz: string };
+export type Lexeme = { sourceId: string; de: string; uz: string };
 
 /**
  * Guruhni so'raydi; javob soni mos kelmasa guruhni ikkiga bo'lib qayta
@@ -86,20 +95,19 @@ async function markChunk(
 }
 
 /**
- * Fayl bo'lmaganda: mamlakat/qit'a/son/ibora bo'lganlarni ajratib
+ * `missing` — faylda hali qarori yo'q yozuvlar (`findMissingPicturable`
+ * bilan ajratilgan). Mamlakat/qit'a/son/ibora bo'lganlarni ajratib
  * (`isNeverPicturable` — pulni behuda sarflamaslik uchun), qolganini
- * modeldan so'raydi.
+ * modeldan so'raydi. Bu funksiya faylning QOLGAN qismiga tegmaydi —
+ * chaqiruvchi natijani `mergePicturable` bilan qo'shadi.
  */
-async function generate(lexemes: Lexeme[]): Promise<PicturableMap> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error('OPENAI_API_KEY sozlanmagan.');
-  }
-  const model = new OpenAiTranslateModel(apiKey);
-
+export async function generate(
+  missing: Lexeme[],
+  model: TranslateModel,
+): Promise<PicturableMap> {
   const result: PicturableMap = {};
   const toAsk: Lexeme[] = [];
-  for (const lex of lexemes) {
+  for (const lex of missing) {
     if (isNeverPicturable(lex.de)) {
       // Mamlakat/qit'a: generatorga tushib qolmasin — Flux bayroq/xaritani
       // xato chizadi. Son: rasm uslubimiz yozuvni taqiqlaydi, sonni
@@ -114,7 +122,7 @@ async function generate(lexemes: Lexeme[]): Promise<PicturableMap> {
     }
   }
   console.log(
-    `${lexemes.length - toAsk.length} ta mamlakat/qit'a/son/ibora chetlatildi, ${toAsk.length} ta modeldan so'raladi`,
+    `${missing.length - toAsk.length} ta mamlakat/qit'a/son/ibora chetlatildi, ${toAsk.length} ta modeldan so'raladi`,
   );
 
   let done = 0;
@@ -134,6 +142,76 @@ async function generate(lexemes: Lexeme[]): Promise<PicturableMap> {
   return result;
 }
 
+export interface DecidePicturableResult {
+  result: PicturableMap;
+  missingCount: number;
+  additionsCount: number;
+}
+
+/**
+ * Butun qaror mantig'i — DB'siz, fayl tizimisiz, sof kirish/chiqish. Shu
+ * ajratish testni imkonli qiladi: Prisma yoki haqiqiy model chaqirmasdan
+ * "existing saqlanib qoladi", "missing so'raladi", "qattiq qoidalar model
+ * javobini yengadi" va "bo'sh missing modelni chaqirmaydi" holatlarini
+ * tekshirish mumkin.
+ *
+ * `buildModel` LAZY — faqat `missing.length > 0` bo'lganda chaqiriladi.
+ * Shu sabab bo'sh partiyada `OPENAI_API_KEY` sozlanmagan bo'lsa ham
+ * (hech narsa so'ralmayotgani uchun) funksiya yiqilmaydi, VA haqiqiy
+ * model hech qachon qurilmaydi — "hatto bo'sh partiya bilan ham
+ * chaqirilmasin" talabi shu orqali ta'minlanadi.
+ */
+export async function decidePicturable(
+  lexemes: Lexeme[],
+  existing: PicturableMap,
+  buildModel: () => TranslateModel,
+): Promise<DecidePicturableResult> {
+  const items: PicturableItem[] = lexemes.map((l) => ({
+    sourceId: l.sourceId,
+    de: l.de,
+  }));
+  const missingIds = new Set(
+    findMissingPicturable(items, existing).map((it) => it.sourceId),
+  );
+  // `findMissingPicturable` ishlaydi `PicturableItem` ({sourceId, de}) bilan
+  // — u faylni tekshirish uchun `uz`ga muhtoj emas. `generate()` esa `uz`ni
+  // promptga qo'shishi kerak, shuning uchun natijani asl `lexemes`dan
+  // (to'liq maydonlar bilan) filtrlaymiz.
+  const missing = lexemes.filter((l) => missingIds.has(l.sourceId));
+
+  let additions: PicturableMap = {};
+  if (missing.length === 0) {
+    // Modelni HATTO bo'sh partiya bilan ham chaqirmaymiz (`buildModel()`
+    // chaqirilmaydi) — apiKey sozlanmagan bo'lsa ham bu holat ishlashi
+    // kerak (hech narsa so'ralmayapti), va operator "hech narsa
+    // qilinmadi" bilan "hammasi allaqachon qilingan"ni ajrata olishi
+    // kerak.
+    console.log(
+      "Yangi so'z yo'q — hammasi allaqachon hal qilingan, model chaqirilmadi.",
+    );
+  } else {
+    console.log(
+      `${missing.length} ta yangi so'z topildi (${items.length - missing.length} ta allaqachon hal qilingan), modeldan so'raladi.`,
+    );
+    additions = await generate(missing, buildModel());
+  }
+
+  let result = mergePicturable(existing, additions);
+
+  // SO'ZSIZ filtr — manbasidan qat'i nazar (yangi model javobimi, eskidan
+  // o'qilganmi). Mamlakat/qit'a/son/ibora hech qachon `true` bo'lib
+  // qolmasligi kerak: agar bu qoida faqat so'rov matni ichida bo'lsa, u
+  // eski (qoidasiz paytda yozilgan) faylga hech qachon ta'sir qilmasdi.
+  result = applyNeverPicturableRule(items, result);
+
+  const additionsCount = Object.keys(additions).length;
+  console.log(
+    `\nSo'raldi: ${missing.length} ta, yozildi: ${additionsCount} ta yangi yozuv.`,
+  );
+
+  return { result, missingCount: missing.length, additionsCount };
+}
+
 async function main() {
   const prisma = new PrismaClient({
     adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -151,23 +229,20 @@ async function main() {
   const lexemes: Lexeme[] = rows.map((r) => ({ ...r, uz: r.uz ?? '' }));
   console.log(`A1 lug'at: ${lexemes.length} ta yozuv`);
 
-  let result: PicturableMap;
-  if (existsSync(EXPORT)) {
-    console.log("Mavjud picturable.json topildi — model qayta so'ralmaydi.");
-    result = JSON.parse(readFileSync(EXPORT, 'utf8')) as PicturableMap;
-  } else {
-    result = await generate(lexemes);
-  }
+  // Fayl bo'lmasa {} — birinchi yurishda HAMMASI "missing" bo'ladi, xuddi
+  // eski xatti-harakat kabi. Fayl bo'lsa, uning ichidagi yozuvlar SAQLANIB
+  // qoladi (`mergePicturable`) — qayta so'ralmaydi.
+  const existing: PicturableMap = existsSync(EXPORT)
+    ? (JSON.parse(readFileSync(EXPORT, 'utf8')) as PicturableMap)
+    : {};
 
-  // SO'ZSIZ filtr — manbasidan qat'i nazar (yangi model javobimi, eskidan
-  // o'qilganmi). Mamlakat/qit'a/son/ibora hech qachon `true` bo'lib
-  // qolmasligi kerak: agar bu qoida faqat so'rov matni ichida bo'lsa, u
-  // eski (qoidasiz paytda yozilgan) faylga hech qachon ta'sir qilmasdi.
-  const items: PicturableItem[] = lexemes.map((l) => ({
-    sourceId: l.sourceId,
-    de: l.de,
-  }));
-  result = applyNeverPicturableRule(items, result);
+  const { result } = await decidePicturable(lexemes, existing, () => {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY sozlanmagan.');
+    }
+    return new OpenAiTranslateModel(apiKey);
+  });
 
   // Fayl har doim shu (filtrlangan) natija bilan qayta yoziladi — hatto
   // mavjud fayldan o'qilgan bo'lsa ham, chunki filtr uni o'zgartirgan
@@ -201,4 +276,14 @@ async function main() {
   await prisma.$disconnect();
 }
 
-void main();
+// Faqat to'g'ridan-to'g'ri ishga tushirilganda yuguradi (`ts-node
+// scripts/daf-mark-picturable.ts`) — testlar bu faylni import qilganda
+// `require.main !== module`, shuning uchun import HECH QANDAY DB
+// ulanishi yoki pullik model chaqiruvi qilmaydi (`daf-voice-samples.ts`
+// dagi bilan bir xil naqsh, bir xil sabab bilan).
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
