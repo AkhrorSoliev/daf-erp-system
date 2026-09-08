@@ -37,7 +37,8 @@
     "daf:mark-picturable": "ts-node scripts/daf-mark-picturable.ts",
     "daf:gen-images": "ts-node scripts/daf-gen-images.ts",
     "daf:gen-saetze": "ts-node scripts/daf-gen-u01-saetze.ts",
-    "daf:inhalt-seed": "ts-node scripts/daf-inhalt-seed.ts"
+    "daf:inhalt-seed": "ts-node scripts/daf-inhalt-seed.ts",
+    "daf:voice-samples": "ts-node scripts/daf-voice-samples.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1016.0",
@@ -113,6 +114,10 @@
       "ts"
     ],
     "rootDir": "src",
+    "roots": [
+      "<rootDir>",
+      "<rootDir>/../scripts"
+    ],
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
