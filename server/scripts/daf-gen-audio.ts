@@ -6,12 +6,15 @@
  *   npm run daf:gen-audio -- --stimme Rachel    — ElevenLabs Rachel
  *   npm run daf:gen-audio -- --stimme Matilda   — ElevenLabs Matilda
  *
- * `--stimme` MAJBURIY, standart qiymati YO'Q. Task-6 (`daf-voice-samples.ts`)
- * uchta variantni odam eshitib solishtirishi uchun namuna tayyorlaydi, va
- * shu tanlov hali qilinmagan — noto'g'ri ovozda 53 so'zni gapirtirish
- * umuman ovozsizlikdan YOMONROQ (audio — talaffuz namunasi). Bayroqni
- * MAJBURIY qilish shu tanlovni skript darajasida kafolatlaydi: uni
- * o'tkazib yuborib xato bilan ham "ishlab ketish" mumkin emas.
+ * `--stimme` MAJBURIY, standart qiymati YO'Q, va qiymat qattiq
+ * `RUXSAT_ETILGAN_STIMMELAR` ro'yxati bilan tekshiriladi (yozuv xatosi —
+ * masalan `Rachell` — `fal.ai`ga yuborilishidan OLDIN rad etiladi). Task-6
+ * (`daf-voice-samples.ts`) uchta variantni odam eshitib solishtirishi
+ * uchun namuna tayyorlaydi, va shu tanlov hali qilinmagan — noto'g'ri
+ * ovozda 53 so'zni gapirtirish umuman ovozsizlikdan YOMONROQ (audio —
+ * talaffuz namunasi). Bayroqni MAJBURIY va ro'yxatga qarshi tekshirilgan
+ * qilish shu tanlovni skript darajasida kafolatlaydi: uni o'tkazib
+ * yuborib ham, yozuv xatosi bilan ham "ishlab ketish" mumkin emas.
  *
  * MUHIM: bu skript PULLIK `fal.ai` chaqiruvi qiladi va R2'ga yozadi.
  * Shuning uchun `main()` faqat fayl to'g'ridan-to'g'ri ishga tushirilganda
@@ -25,7 +28,7 @@
  *   3. manifestda allaqachon kaliti bor so'zni O'TKAZIB YUBORADI — idempotent,
  *      qayta yuritish pul sarflamaydi va audioni almashtirmaydi;
  *   4. qolganlari uchun `tts ?? de` matnini tanlangan ovoz bilan yasaydi,
- *      `neuerAudioSchluessel()` bilan TASODIFIY kalit oladi (so'zdan
+ *      `schluesselFuerWort()` bilan TASODIFIY kalit oladi (so'zdan
  *      chiqarib bo'lmaydigan — `audio-keys.ts` dagi izohga qarang: bu
  *      audio talaffuz mashqida javobning O'ZI, kalitda yozilsa javobni
  *      manzilda ochib qo'yardi);
@@ -165,19 +168,66 @@ export function manifestAktualisieren(
   return yangi;
 }
 
+/**
+ * Bitta so'z uchun R2 kalitini yasaydi. Kod-ko'rikda topilgan bo'shliq:
+ * ilgari `main()` ichida to'g'ridan-to'g'ri `neuerAudioSchluessel()`
+ * chaqirilardi — kalit bilan so'zning HAQIQIY TO'QNASHUV nuqtasi hech
+ * qanday testda yo'q edi (`manifestAktualisieren`ning o'zi tayyor
+ * kalitni faqat KO'CHIRADI, YASAMAYDI, va `neuerAudioSchluessel()`ning
+ * o'zi argument olmagani uchun so'zni HATTO KO'RA OLMAYDI). Bu funksiya
+ * shu nuqtani mustaqil, testlanadigan joyga chiqaradi: `main()` HAR
+ * so'z uchun aynan shuni chaqiradi, va xavfsizlik tripwire testi ham
+ * aynan shu funksiya ustida yuritiladi.
+ *
+ * `wort` parametri ATAYLAB e'tiborsiz qoldiriladi — funksiya faqat
+ * `neuerAudioSchluessel()`ga ishonadi. Agar kimdir buni "optimallashtirib"
+ * kalitni `wort.de`/`wort.sourceId`dan (yoki ularning xeshidan) hisoblab
+ * chiqarsa, tripwire testi buni ushlaydi.
+ */
+export function schluesselFuerWort(wort: SprachEintrag): string {
+  void wort;
+  return neuerAudioSchluessel();
+}
+
+/**
+ * `--stimme`ning ruxsat etilgan qiymatlari — Task-6 namunalarida odam
+ * solishtirgan UCHTA variantning ovoz nomlari (`daf-voice-samples.ts`
+ * dagi `VARIANTEN`ga mos: Chatterbox = `none`, ElevenLabs Rachel/Matilda).
+ *
+ * NEGA QATTIQ RO'YXAT KERAK: yozuv xatosi bilan yuborilgan qiymat
+ * (masalan `Rachell`) `fal.ai`ga borishi mumkin edi — u yerda YO qattiq
+ * rad etiladi, YO (yomonrog'i) jimgina standart ovozga tushib
+ * MUVAFFAQIYATLI qaytadi. Ikkalasi ham 53 so'zni NOTO'G'RI ovozda
+ * PULLIK yasab yuboradi — aynan shu holatni oldini olish uchun
+ * `--stimme` MAJBURIY qilingan edi. Shuning uchun qiymat `fal.ai`ga
+ * yuborilishidan OLDIN shu ro'yxat bilan ANIQ solishtiriladi.
+ */
+export const RUXSAT_ETILGAN_STIMMELAR: readonly string[] = [
+  'none',
+  'Rachel',
+  'Matilda',
+];
+
+/** `--stimme` bayrog'i bilan bog'liq xatolarning umumiy ota klassi. */
+export class StimmeArgError extends Error {}
+
 /** `--stimme` bayrog'i yo'q yoki qiymatsiz bo'lsa tashlanadi. */
-export class MissingStimmeArgError extends Error {}
+export class MissingStimmeArgError extends StimmeArgError {}
+
+/** `--stimme` qiymati `RUXSAT_ETILGAN_STIMMELAR`da yo'q bo'lsa tashlanadi. */
+export class UnknownStimmeArgError extends StimmeArgError {}
 
 /**
  * `--stimme` bayrog'ini o'qiydi. `none` — Chatterbox (stimme'siz
- * `FalClient.speech()`); boshqa har qanday qiymat — ElevenLabs ovoz nomi
- * (`FalClient.speechMitStimme()`ga uzatiladi).
+ * `FalClient.speech()`); `RUXSAT_ETILGAN_STIMMELAR`dagi boshqa qiymat —
+ * ElevenLabs ovoz nomi (`FalClient.speechMitStimme()`ga uzatiladi).
  *
  * Standart qiymat ATAYLAB yo'q: bayroqsiz yugurish `MissingStimmeArgError`
  * bilan yiqiladi. Chatterbox ham "standart" emas, balki `--stimme none`
  * bilan ATAYLAB tanlanadigan variantlardan biri — shu bilan skript hech
  * qachon tasodifan (masalan bayroq yozishni unutib) noto'g'ri ovozda
- * yugurmaydi.
+ * yugurmaydi. Ro'yxatda yo'q qiymat (yozuv xatosi) `UnknownStimmeArgError`
+ * bilan yiqiladi — `fal.ai`ga umuman yuborilmasdan.
  */
 export function parseGenAudioArgs(argv: string[]): { stimme: string | null } {
   const idx = argv.indexOf('--stimme');
@@ -186,6 +236,11 @@ export function parseGenAudioArgs(argv: string[]): { stimme: string | null } {
     throw new MissingStimmeArgError(
       '`--stimme` MAJBURIY — Task-6 namunalarini eshitib tanlangan ovoz. ' +
         'Chatterbox uchun `--stimme none`, ElevenLabs uchun ovoz nomi (masalan `--stimme Rachel`).',
+    );
+  }
+  if (!RUXSAT_ETILGAN_STIMMELAR.includes(value)) {
+    throw new UnknownStimmeArgError(
+      `Noma'lum ovoz: "${value}". Ruxsat etilgan qiymatlar: ${RUXSAT_ETILGAN_STIMMELAR.join(', ')}.`,
     );
   }
   return { stimme: value === 'none' ? null : value };
@@ -201,7 +256,7 @@ async function main() {
   try {
     args = parseGenAudioArgs(process.argv.slice(2));
   } catch (err) {
-    if (err instanceof MissingStimmeArgError) {
+    if (err instanceof StimmeArgError) {
       console.error(err.message);
       process.exitCode = 1;
       return;
@@ -280,11 +335,10 @@ async function main() {
       );
     }
 
-    // Kalit TASODIFIY — so'zdan yoki `sourceId`dan hisoblanmaydi
-    // (`neuerAudioSchluessel()` argument olmaydi). Shu skript kalit bilan
-    // so'zning TO'QNASHGAN yagona joyi, shuning uchun bog'liqlik shu
-    // yerda ham qasddan yaratilmaydi.
-    const key = neuerAudioSchluessel();
+    // Kalit `schluesselFuerWort` orqali yasaladi — bu funksiya so'zni
+    // OLADI, lekin ATAYLAB e'tiborsiz qoldiradi (izohiga qarang). Shu
+    // yagona chaqiruv nuqtasi tripwire testida ham ishlatiladi.
+    const key = schluesselFuerWort(wort);
     keyBySourceId.set(wort.sourceId, key);
     assets.push({
       sourceUrl,

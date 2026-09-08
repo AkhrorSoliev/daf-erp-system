@@ -1,15 +1,16 @@
 import { createHash } from 'crypto';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { neuerAudioSchluessel } from '../src/daf/media/audio-keys';
 import type { WoerterFile } from '../src/daf/inhalt/unit-inhalt.types';
 import {
   BELGI_CHEGARASI,
   MissingStimmeArgError,
+  UnknownStimmeArgError,
   gesamtZeichenzahl,
   manifestAktualisieren,
   parseGenAudioArgs,
   pruefeBudget,
+  schluesselFuerWort,
   sprechtext,
   zuGenerieren,
   type SprachEintrag,
@@ -23,6 +24,15 @@ import {
 // faqat sof funksiyalarni sinaydi.
 
 describe('pruefeBudget', () => {
+  it('chegara qiymati aniq 400 (brifda qat`iy belgilangan)', () => {
+    // Ko'rikda topilgan zaiflik: pastdagi "aynan chegarada" testi
+    // `BELGI_CHEGARASI`ning O'ZIDAN foydalanardi, shuning uchun chegara
+    // qiymati o'zgarib qolsa ham (masalan 400 → 4000) o'sha test hech
+    // qachon buni ushlamas edi (o'z-o'ziga qarshi solishtirilgani uchun
+    // doim to'g'ri chiqadi). Qiymat shu yerda AYNAN raqam bilan qadaladi.
+    expect(BELGI_CHEGARASI).toBe(400);
+  });
+
   it('400 belgidan oshsa to`xtaydi', () => {
     expect(() => pruefeBudget(401)).toThrow(/400/);
   });
@@ -32,7 +42,11 @@ describe('pruefeBudget', () => {
   });
 
   it("chegaraning aynan o'zida o'tadi (qat'iy oshish emas)", () => {
-    expect(() => pruefeBudget(BELGI_CHEGARASI)).not.toThrow();
+    // Literal `400` — `BELGI_CHEGARASI`ga emas, xuddi shu qiymatga
+    // tekshiriladi: yuqoridagi test allaqachon konstantani 400ga
+    // qadagan, shuning uchun bu yerda simvolga ishonish endi ortiqcha
+    // bilvosita bog'liqlik yaratardi.
+    expect(() => pruefeBudget(400)).not.toThrow();
   });
 });
 
@@ -138,15 +152,20 @@ describe('manifestAktualisieren', () => {
 });
 
 describe('manifest xavfsizligi — kalit so`zdan CHIQARIB BO`LMAYDI (tripwire)', () => {
-  // NEGA SHU YERDA: `neuerAudioSchluessel()`ning o'zi argument olmaydi,
-  // shuning uchun uni sinash so'zni HATTO KO'RA OLMAYDI — u yerdagi
-  // tripwire strukturaviy jihatdan zaif. Bu skript esa kalit bilan
-  // so'zning aynan TO'QNASHGAN joyi: manifest `sourceId → kalit`
-  // xaritasi. Shu sababli haqiqiy himoya shu yerda sinaladi — `main()`
-  // qiladigani kabi har so'zga TASODIFIY kalit yasaladi va faqat
-  // MUVAFFAQIYATLI natija manifestga yoziladi (`manifestAktualisieren`),
-  // so'ng manifest qiymatlari so'zning yoki `sourceId`ning o'zidan yoki
-  // xeshidan chiqarib bo'lmasligi tasdiqlanadi.
+  // KO'RIKDAN KEYINGI TUZATISH: birinchi versiya bu yerda to'g'ridan-
+  // to'g'ri `neuerAudioSchluessel()`ni chaqirardi va natijani
+  // `manifestAktualisieren`ga uzatardi — bu ikkita narsani isbotlaydi
+  // (generator tasodifiy, merger sourceId qo'shib yubormaydi), lekin
+  // kalit bilan so'z HAQIQATDA to'qnashadigan joy — `main()`dagi
+  // `schluesselFuerWort(wort)` chaqiruvi — HECH QANDAY testda yo'q edi.
+  // Shu sababli `main()`da kalitni so'zning o'zidan (yoki xeshidan)
+  // hisoblab chiqaradigan dekoy o'zgarish HAMMA 19 testni yashil
+  // qoldirar edi (task-7-report.md'dagi RED/GREEN isboti).
+  //
+  // Tuzatish: tripwire endi `main()` ishlatadigan AYNAN o'sha funksiyani
+  // (`schluesselFuerWort`) chaqiradi, boshqa hech narsani emas — shu
+  // bilan test va ishlab chiqarish kodi bitta chaqiruv nuqtasini
+  // ulashadi va biri ikkinchisidan uzoqlashib keta olmaydi.
   const woerter: SprachEintrag[] = [
     { sourceId: 'u01-s1-hallo', de: 'hallo', tts: null },
     { sourceId: 'u01-s1-tschuess', de: 'tschüss', tts: null },
@@ -156,7 +175,7 @@ describe('manifest xavfsizligi — kalit so`zdan CHIQARIB BO`LMAYDI (tripwire)',
   it('manifest qiymati so`zning, sourceId`ning yoki ularning xeshining substringi emas', () => {
     const natijalar: YuklashNatijasi[] = woerter.map((w) => ({
       sourceId: w.sourceId,
-      key: neuerAudioSchluessel(),
+      key: schluesselFuerWort(w),
       ok: true,
     }));
     const manifest = manifestAktualisieren({}, natijalar);
@@ -184,12 +203,6 @@ describe('manifest xavfsizligi — kalit so`zdan CHIQARIB BO`LMAYDI (tripwire)',
       }
     }
   });
-
-  it('bir xil so`zga har chaqiriqda BOSHQA kalit chiqadi (tasodifiylik)', () => {
-    const bir = neuerAudioSchluessel();
-    const ikki = neuerAudioSchluessel();
-    expect(bir).not.toBe(ikki);
-  });
 });
 
 describe('parseGenAudioArgs', () => {
@@ -213,5 +226,35 @@ describe('parseGenAudioArgs', () => {
     expect(parseGenAudioArgs(['--stimme', 'Rachel'])).toEqual({
       stimme: 'Rachel',
     });
+  });
+
+  it('`--stimme Matilda` — ikkinchi ElevenLabs ovozi ham saqlanadi', () => {
+    expect(parseGenAudioArgs(['--stimme', 'Matilda'])).toEqual({
+      stimme: 'Matilda',
+    });
+  });
+
+  // Ko'rikda topilgan bo'shliq: ro'yxatda YO'Q qiymat (yozuv xatosi,
+  // masalan `Rachel` o'rniga `Rachell`) tekshiruvsiz `fal.ai`ga borishi
+  // mumkin edi — u yerda YO qattiq rad etiladi, YO jimgina standart
+  // ovozga tushib "muvaffaqiyatli" qaytadi. Ikkalasi ham 53 so'zni
+  // NOTO'G'RI ovozda PULLIK yasab yuboradi. Endi bunday qiymat
+  // `fal.ai`ga yuborilishidan OLDIN shu yerda rad etiladi.
+  it('noma`lum ovoz nomi (yozuv xatosi) `fal.ai`ga borishdan OLDIN rad etiladi', () => {
+    expect(() => parseGenAudioArgs(['--stimme', 'Rachell'])).toThrow(
+      UnknownStimmeArgError,
+    );
+    // Xabar NIMA yuborilgani va NIMA ruxsat etilganini aytishi kerak —
+    // operator "nega yiqildi" deb kodni ochmasdan tushunishi uchun.
+    expect(() => parseGenAudioArgs(['--stimme', 'Rachell'])).toThrow(/Rachell/);
+    expect(() => parseGenAudioArgs(['--stimme', 'Rachell'])).toThrow(
+      /none.*Rachel.*Matilda/,
+    );
+  });
+
+  it("bo`sh satr ham noma'lum ovoz sifatida rad etiladi (`none` bilan chalkashtirilmaydi)", () => {
+    expect(() => parseGenAudioArgs(['--stimme', 'chatterbox'])).toThrow(
+      UnknownStimmeArgError,
+    );
   });
 });
