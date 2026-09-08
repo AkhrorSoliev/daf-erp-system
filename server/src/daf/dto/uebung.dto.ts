@@ -11,29 +11,41 @@ import {
 import type { FrageFormat } from '../uebung/frage.types';
 
 /**
- * `FrageFormat`ning barcha qiymatlari — DTO validatsiyasida bir joydan.
+ * `FrageFormat`ning HAR BIR a'zosi — `Record<FrageFormat, true>` orqali,
+ * TypeScript compiler MAJBURLAYDIGAN to'liqlik bilan.
  *
- * EXPORT QILINGAN: `FrageFormat` — oddiy union, `Record<FrageFormat, …>`
- * kabi exhaustive emas — shuning uchun bu ro'yxatga yangi format qo'shish
- * unutilsa TypeScript SEZMAYDI, faqat `@IsIn` orqali 400 sifatida
- * ishlaydigan sukut xatti-harakat qoladi. `uebung.dto.spec.ts` shu
- * ro'yxatning to'liqligini (uzunligi va aniq a'zolarini) pinlaydi —
- * eksport shu testga kerak.
+ * Oddiy `FrageFormat[]` (avvalgi shakl) qo'lda yozilardi va yangi format
+ * `FrageFormat` union'iga qo'shilganda jimgina eskirib qolardi — natija
+ * `@IsIn` orqali o'sha formatdagi HAR BIR to'g'ri javobni 400 bilan rad
+ * etardi (aynan shu narsa `AUDIO_WORT`/`WORT_TIPPEN` bilan sodir bo'lgan
+ * edi). `Record<FrageFormat, true>` kalit tushib qolishini TEST emas,
+ * KOMPILYATOR ushlab turadi: union'ga o'n uchinchi format qo'shilib, shu
+ * yerga yozilmasa, `npm run typecheck` "Property '...' is missing" bilan
+ * yiqiladi — massiv esa shu to'liq ro'yxatdan HOSIL QILINADI, qo'lda emas.
  */
-export const FRAGE_FORMATLAR: FrageFormat[] = [
-  'WORT_UZ',
-  'UZ_WORT',
-  'PAAR',
-  'ARTIKEL',
-  'LUECKE',
-  'SATZ_BAUEN',
-  'SATZ_UEBERSETZEN',
-  'REAKTION',
-  'ZUORDNEN',
-  'DIALOG_LUECKE',
-  'AUDIO_WORT',
-  'WORT_TIPPEN',
-];
+const ALLE_FRAGE_FORMATLAR: Record<FrageFormat, true> = {
+  WORT_UZ: true,
+  UZ_WORT: true,
+  PAAR: true,
+  ARTIKEL: true,
+  LUECKE: true,
+  SATZ_BAUEN: true,
+  SATZ_UEBERSETZEN: true,
+  REAKTION: true,
+  ZUORDNEN: true,
+  DIALOG_LUECKE: true,
+  AUDIO_WORT: true,
+  WORT_TIPPEN: true,
+};
+
+/**
+ * `FrageFormat`ning barcha qiymatlari — DTO validatsiyasida (`@IsIn`)
+ * bir joydan. EXPORT QILINGAN: `uebung.dto.spec.ts` `@IsIn` simini
+ * to'g'ridan-to'g'ri shu massiv orqali tekshiradi.
+ */
+export const FRAGE_FORMATLAR = Object.keys(
+  ALLE_FRAGE_FORMATLAR,
+) as FrageFormat[];
 
 /**
  * Mashq javobi.
