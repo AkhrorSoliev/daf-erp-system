@@ -48,7 +48,8 @@ describe('FalClient.speech', () => {
 describe('FalClient.speechMitStimme', () => {
   it('ElevenLabs modelini ovoz nomi bilan chaqiradi', async () => {
     const fetchFn = jest.fn(async () => ({
-      ok: true, json: async () => ({ audio: { url: 'https://x/y.mp3' } }),
+      ok: true,
+      json: async () => ({ audio: { url: 'https://x/y.mp3' } }),
     })) as any;
     const c = new FalClient('kalit', fetchFn);
     const url = await c.speechMitStimme('hallo', 'Rachel');
@@ -60,10 +61,29 @@ describe('FalClient.speechMitStimme', () => {
     expect(body.voice).toBe('Rachel');
   });
 
+  // Fix 2: `language_code` YO'Q bo'lsa ElevenLabs (inglizcha o'qitilgan
+  // ovoz) matnni inglizcha fonetikaga moslab o'qishi mumkin — bu audio
+  // TALAFFUZ NAMUNASI bo'lgani uchun jim taxmin emas, qat'iy majburlash
+  // kerak (`fal-client.ts`dagi izoh). Namuna skripti chaqiruvi bilan
+  // BIR XIL metod, shuning uchun namunani ko'rish payti ham shu til
+  // bilan bo'lishi shart.
+  it('language_code=de ni QAT`IY yuboradi — namunadan oldin ham', async () => {
+    const fetchFn = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({ audio: { url: 'https://x/y.mp3' } }),
+    })) as any;
+    const c = new FalClient('kalit', fetchFn);
+    await c.speechMitStimme('tschüss', 'Matilda');
+    const [, opts] = fetchFn.mock.calls[0];
+    const body = JSON.parse(opts.body);
+    expect(body.language_code).toBe('de');
+  });
+
   it('mavjud speech() Chatterbox`da qoladi', async () => {
     // Namunada uchinchi variant sifatida kerak — o'zgartirilmaydi.
     const fetchFn = jest.fn(async () => ({
-      ok: true, json: async () => ({ audio: { url: 'https://x/c.mp3' } }),
+      ok: true,
+      json: async () => ({ audio: { url: 'https://x/c.mp3' } }),
     })) as any;
     await new FalClient('kalit', fetchFn).speech('hallo');
     expect(fetchFn.mock.calls[0][0]).toContain('chatterbox');

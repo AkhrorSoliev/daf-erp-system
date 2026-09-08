@@ -4,6 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { tryResolveStudentBranchId } from '../../common/finance/resolve-branch';
 import { currentGroupId } from '../shared/student-scope';
@@ -247,7 +248,34 @@ export interface JuftInput {
 export class UebungService {
   private readonly logger = new Logger(UebungService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  // `config` IXTIYORIY: bu klass o'nlab testda `new UebungService(prisma)`
+  // shaklida to'g'ridan-to'g'ri (Nest DI'siz) quriladi va ularning aksariyati
+  // audio bilan umuman ishlamaydi. Productionda Nest uni har doim inyeksiya
+  // qiladi (`ConfigModule` global) — ixtiyoriylik shu yerda faqat testlarni
+  // buzmaslik uchun, ishlab chiqarish xatti-harakatida bo'shliq emas: audio
+  // yo'lini ishlatadigan ikkita test (`uebung.service.spec.ts`) `config`ni
+  // aniq beradi.
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config?: ConfigService,
+  ) {}
+
+  /**
+   * R2 kalitini ommaviy manzilga aylantiradi — xuddi shu naqsh
+   * `daf-portal-read.service.ts`/`daf-drill.service.ts`da ham bor,
+   * uchinchi marta boshqacha yozilmaydi.
+   *
+   * `R2_PUBLIC_URL` sozlanmagan (yoki testda `config` berilmagan) bo'lsa
+   * `null` qaytadi. `audioWort`/`wortTippen` buni `audioKey` yo'qligi
+   * bilan BIR XIL ko'radi — savol shunchaki qurilmaydi. Muqobili — bo'sh
+   * bazani baribir manzilga yopishtirib yuborish — aynan shu ko'rikda
+   * topilgan doimiy "Ovoz yuklanmadi" nosozligini boshqa shaklda
+   * qaytarardi.
+   */
+  private mediaUrl(key: string): string | null {
+    const base = this.config?.get<string>('R2_PUBLIC_URL');
+    return base ? `${base.replace(/\/$/, '')}/${key}` : null;
+  }
 
   /**
    * `rnd` ixtiyoriy — sukut bo'yicha `Math.random`. Faqat testlar uchun:
@@ -680,9 +708,9 @@ export class UebungService {
       if (uw) rohKandidaten.push(uw);
       const art = artikel(w);
       if (art) rohKandidaten.push(art);
-      const aw = audioWort(w, coreWords, rnd);
+      const aw = audioWort(w, coreWords, rnd, (key) => this.mediaUrl(key));
       if (aw) rohKandidaten.push(aw);
-      const wt = wortTippen(w, rnd);
+      const wt = wortTippen(w, rnd, (key) => this.mediaUrl(key));
       if (wt) rohKandidaten.push(wt);
     }
     // Bir necha PAAR nomzodi: har chaqiruv `rnd` holatini siljitib, boshqa
@@ -836,9 +864,11 @@ export class UebungService {
       case 'ARTIKEL':
         return artikel(wort);
       case 'AUDIO_WORT':
-        return audioWort(wort, andere, Math.random);
+        return audioWort(wort, andere, Math.random, (key) =>
+          this.mediaUrl(key),
+        );
       case 'WORT_TIPPEN':
-        return wortTippen(wort, Math.random);
+        return wortTippen(wort, Math.random, (key) => this.mediaUrl(key));
       default:
         return null;
     }
@@ -1031,7 +1061,7 @@ export class UebungService {
       // ko'rsatilmagan darsdan) bir xil nomni aytib, hech qachon
       // ko'rmagan materialga "to'g'ri" javob olishi mumkin bo'lardi.
       throw new BadRequestException(
-        "Juft savoli faqat unitga tegishli materialga tegishli",
+        'Juft savoli faqat unitga tegishli materialga tegishli',
       );
     }
     const unitId = material.unitId;

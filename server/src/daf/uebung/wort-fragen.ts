@@ -199,15 +199,36 @@ export function artikel(ziel: MaterialWort): Frage | null {
   };
 }
 
+/**
+ * R2 kalitini mijoz o'qiy oladigan to'liq manzilga aylantiradi.
+ *
+ * `audioWort`/`wortTippen` o'zi Config'ga bog'lanmaydi — bu funksiyalar
+ * pure va DI'siz sinaladi (`wort-fragen.spec.ts`). Shuning uchun manzil
+ * qurish qoidasi chaqiruvchidan (`UebungService`) parametr sifatida
+ * KIRITILADI, xuddi `daf-portal-read.service.ts`/`daf-drill.service.ts`
+ * dagi `mediaUrl` bilan bir xil qoida (`R2_PUBLIC_URL + '/' + kalit`) —
+ * faqat shu yerda uchinchi nusxa yozilmasin deb, funksiya sifatida.
+ */
+export type MediaUrlResolver = (key: string) => string | null;
+
 export function audioWort(
   ziel: MaterialWort,
   andere: MaterialWort[],
   rnd: () => number,
+  mediaUrl: MediaUrlResolver,
 ): Frage | null {
   // Audiosi yo'q so'zga bu savol qurilmaydi. Shu qorovul tufayli
   // formatni «yoqish» bayrog'i kerak emas: audio yasalmagan bo'lsa
   // format o'z-o'zidan ishlamaydi.
   if (!ziel.audioKey) return null;
+  // `R2_PUBLIC_URL` sozlanmagan bo'lsa `mediaUrl` `null` qaytaradi — bu
+  // holat ATAYLAB xuddi audiosi yo'q so'z bilan bir xil munosabatda:
+  // savol UMUMAN QURILMAYDI. Muqobili — bo'sh manzilni `<audio src>`ga
+  // yubormoq — aynan shu tuzatilayotgan nosozlik (doimiy "Ovoz
+  // yuklanmadi" xatosi), shuning uchun jimgina buzuq manzil chiqarish
+  // o'rniga format shunchaki tanlanmaydi.
+  const audioUrl = mediaUrl(ziel.audioKey);
+  if (!audioUrl) return null;
   const falsch = ablenker(ziel, andere, (w) => w.de, rnd);
   if (!falsch) return null;
   return {
@@ -220,7 +241,7 @@ export function audioWort(
     options: mischen([ziel.de, ...falsch], rnd),
     richtig: ziel.de,
     akzeptiert: [],
-    audioUrl: ziel.audioKey,
+    audioUrl,
     belegteItems: [materialSchluessel('WORT', ziel.id)],
   };
 }
@@ -228,8 +249,13 @@ export function audioWort(
 export function wortTippen(
   ziel: MaterialWort,
   _rnd: () => number,
+  mediaUrl: MediaUrlResolver,
 ): Frage | null {
   if (!ziel.audioKey) return null;
+  // Qarang `audioWort`dagi izoh — sozlanmagan `R2_PUBLIC_URL` audioKey
+  // yo'qligi bilan BIR XIL yo'l bilan ko'riladi: savol qurilmaydi.
+  const audioUrl = mediaUrl(ziel.audioKey);
+  if (!audioUrl) return null;
   return {
     format: 'WORT_TIPPEN',
     itemType: 'WORT',
@@ -241,7 +267,7 @@ export function wortTippen(
     options: [],
     richtig: ziel.de,
     akzeptiert: [],
-    audioUrl: ziel.audioKey,
+    audioUrl,
     belegteItems: [materialSchluessel('WORT', ziel.id)],
   };
 }

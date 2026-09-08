@@ -758,18 +758,38 @@ describe('wiederholung', () => {
     return prisma;
   }
 
-  it('audioKey bor so`zga eshitish savoli quriladi', async () => {
+  /** `R2_PUBLIC_URL` sozlangan soxta ConfigService — `mediaUrl` shu asosda quradi. */
+  const fakeConfig = { get: () => 'https://media.example.com' } as any;
+
+  it('audioKey bor so`zga eshitish savoli quriladi, audioUrl TO`LIQ manzil', async () => {
     const fragen = await new UebungService(
       fakeBittaMuddatiKelganSoz('daf/audio/1.mp3') as any,
+      fakeConfig,
     ).wiederholung(55);
     expect(fragen).toHaveLength(1);
     expect(fragen[0].format).toBe('WORT_TIPPEN');
-    expect((fragen[0] as any).audioUrl).toBe('daf/audio/1.mp3');
+    // Finding 1 (KRITIK): bu ilgari YALANG'OCH R2 kaliti edi
+    // (`daf/audio/1.mp3`) — portalning o'z originiga qarshi 404 berardi.
+    expect((fragen[0] as any).audioUrl).toBe(
+      'https://media.example.com/daf/audio/1.mp3',
+    );
   });
 
   it('audioKey yo`q so`zga savolning o`zi qurilmaydi (boshqa format ham imkonsiz)', async () => {
     const fragen = await new UebungService(
       fakeBittaMuddatiKelganSoz(null) as any,
+      fakeConfig,
+    ).wiederholung(55);
+    expect(fragen).toEqual([]);
+  });
+
+  // Fix 1 qarori: `R2_PUBLIC_URL` sozlanmagan (yoki testdagi kabi `config`
+  // umuman berilmagan) bo'lsa ham natija BIR XIL — savol qurilmaydi, hech
+  // qachon buzuq manzil chiqmaydi.
+  it('R2_PUBLIC_URL sozlanmagan bo`lsa audioKey bor so`zga ham savol qurilmaydi', async () => {
+    const fragen = await new UebungService(
+      fakeBittaMuddatiKelganSoz('daf/audio/1.mp3') as any,
+      // `config` ataylab berilmagan.
     ).wiederholung(55);
     expect(fragen).toEqual([]);
   });
@@ -1643,7 +1663,13 @@ describe('pruefen — ZUORDNEN', () => {
   it('funktionUz kolliziyasi — to`g`ri juftlash ham BUTUNLAY xato deb baholanadi (fail-closed)', async () => {
     const prisma = fakePrisma();
     const phrasenKollizioz = [
-      { id: 1, funktionUz: 'salomlashish', de: 'Hallo!', uz: 'Salom!', unitId: 1 },
+      {
+        id: 1,
+        funktionUz: 'salomlashish',
+        de: 'Hallo!',
+        uz: 'Salom!',
+        unitId: 1,
+      },
       // KOLLIZIYA: xuddi shu vazifada IKKINCHI ibora — schema'da
       // funktionUz unique emas, shuning uchun bu nazariy jihatdan mumkin.
       {
@@ -1745,7 +1771,11 @@ describe('juft — bitta juftni tekshirish', () => {
     const prisma = fakePrisma();
     // `ladeMaterial('WORT', 5)` shu qatorni qaytaradi.
     prisma.dafLexeme.findUnique = jest.fn(async () => ({
-      id: 5, de: 'das Haus', uz: 'uy', artikel: 'das', unitId: 1,
+      id: 5,
+      de: 'das Haus',
+      uz: 'uy',
+      artikel: 'das',
+      unitId: 1,
     })) as any;
     // Juft `de` bo'yicha, unitga cheklab qidiriladi.
     prisma.dafLexeme.findMany = jest.fn(async () => [
@@ -1763,16 +1793,28 @@ describe('juft — bitta juftni tekshirish', () => {
   it("to'g'ri juftni to'g'ri deb aytadi", async () => {
     const prisma = fakeWort(null);
     const r = await new UebungService(prisma as any).juft(
-      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'uy' },
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'PAAR',
+        chap: 'das Haus',
+        ong: 'uy',
+      },
       ctx,
     );
     expect(r).toEqual({ isCorrect: true });
   });
 
-  it("xato juftni xato deb aytadi", async () => {
+  it('xato juftni xato deb aytadi', async () => {
     const prisma = fakeWort(null);
     const r = await new UebungService(prisma as any).juft(
-      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'stol' },
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'PAAR',
+        chap: 'das Haus',
+        ong: 'stol',
+      },
       ctx,
     );
     expect(r).toEqual({ isCorrect: false });
@@ -1782,7 +1824,13 @@ describe('juft — bitta juftni tekshirish', () => {
     // Butun dvigatelning asosiy qoidasi: brauzer javobni bilmaydi.
     const prisma = fakeWort(null);
     const r = await new UebungService(prisma as any).juft(
-      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'stol' },
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'PAAR',
+        chap: 'das Haus',
+        ong: 'stol',
+      },
       ctx,
     );
     expect(Object.keys(r)).toEqual(['isCorrect']);
@@ -1791,10 +1839,18 @@ describe('juft — bitta juftni tekshirish', () => {
   it("muddati kelgan so'zga to'g'ri javob 10 ball beradi", async () => {
     const prisma = fakeWort({ dueAt: kecha() });
     await new UebungService(prisma as any).juft(
-      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'uy' },
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'PAAR',
+        chap: 'das Haus',
+        ong: 'uy',
+      },
       ctx,
     );
-    expect((prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data.points).toBe(10);
+    expect(
+      (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data.points,
+    ).toBe(10);
   });
 
   it('TUZATISH BEPUL — muddati kelmagan so`zga ball berilmaydi', async () => {
@@ -1804,20 +1860,35 @@ describe('juft — bitta juftni tekshirish', () => {
     // va uni ushlab turadigan alohida kod YO'Q — mavjud qoida bajaradi.
     const prisma = fakeWort({ dueAt: ertaga() });
     await new UebungService(prisma as any).juft(
-      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'uy' },
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'PAAR',
+        chap: 'das Haus',
+        ong: 'uy',
+      },
       ctx,
     );
-    expect((prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data.points).toBe(0);
+    expect(
+      (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data.points,
+    ).toBe(0);
   });
 
   it('xato javob Leitner holatini NOLGA tushiradi va ERTAGA suradi', async () => {
     const prisma = fakeWort({ dueAt: kecha() });
     const oldin = Date.now();
     await new UebungService(prisma as any).juft(
-      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'stol' },
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'PAAR',
+        chap: 'das Haus',
+        ong: 'stol',
+      },
       ctx,
     );
-    const yozilgan = (prisma.dafLexemeState.upsert as jest.Mock).mock.calls[0][0];
+    const yozilgan = (prisma.dafLexemeState.upsert as jest.Mock).mock
+      .calls[0][0];
     const yangi = yozilgan.update ?? yozilgan.create;
     expect(yangi.strength).toBe(0);
     // `dueAt` — «tuzatish bepul» xususiyatining HAQIQIY tayanchi (Fix 2,
@@ -1835,17 +1906,27 @@ describe('juft — bitta juftni tekshirish', () => {
   it('ZUORDNEN ball bermaydi va Leitnerga tegmaydi', async () => {
     const prisma = fakePrisma();
     prisma.dafPhrase.findUnique = jest.fn(async () => ({
-      de: 'Hallo!', uz: 'Salom!', unitId: 1,
+      de: 'Hallo!',
+      uz: 'Salom!',
+      unitId: 1,
     })) as any;
     prisma.dafPhrase.findMany = jest.fn(async () => [
       { id: 1, funktionUz: 'salomlashish', de: 'Hallo!', uz: 'Salom!' },
     ]) as any;
     const r = await new UebungService(prisma as any).juft(
-      { itemType: 'PHRASE', itemId: 1, format: 'ZUORDNEN', chap: 'salomlashish', ong: 'Hallo!' },
+      {
+        itemType: 'PHRASE',
+        itemId: 1,
+        format: 'ZUORDNEN',
+        chap: 'salomlashish',
+        ong: 'Hallo!',
+      },
       ctx,
     );
     expect(r.isCorrect).toBe(true);
-    expect((prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data.points).toBe(0);
+    expect(
+      (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data.points,
+    ).toBe(0);
     expect(prisma.dafLexemeState.upsert).not.toHaveBeenCalled();
   });
 
@@ -1861,7 +1942,13 @@ describe('juft — bitta juftni tekshirish', () => {
       group: { branchId: 7 },
     })) as any;
     await new UebungService(prisma as any).juft(
-      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'uy' },
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'PAAR',
+        chap: 'das Haus',
+        ong: 'uy',
+      },
       ctx,
     );
     const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
@@ -1890,10 +1977,16 @@ describe('juft — bitta juftni tekshirish', () => {
   // shu unitda mavjud emas (masalan mijoz tomonidan buzilgan/eskirgan
   // matn). Kod bunda QULAMASLIGI, xato deb hisoblab, nol ball bilan
   // urinish yozib, Leitnerga tegmasligi shart.
-  it("chap matni hech qaysi materialga mos kelmasa — xato hisoblanadi, qulamaydi", async () => {
+  it('chap matni hech qaysi materialga mos kelmasa — xato hisoblanadi, qulamaydi', async () => {
     const prisma = fakePrisma();
     const r = await new UebungService(prisma as any).juft(
-      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'mavjud-emas', ong: 'ism' },
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'PAAR',
+        chap: 'mavjud-emas',
+        ong: 'ism',
+      },
       ctx,
     );
     expect(r).toEqual({ isCorrect: false });
@@ -1914,7 +2007,13 @@ describe('juft — bitta juftni tekshirish', () => {
     const prisma = fakeWort(null);
     await expect(
       new UebungService(prisma as any).juft(
-        { itemType: 'WORT', itemId: 5, format: 'ZUORDNEN', chap: 'das Haus', ong: 'uy' },
+        {
+          itemType: 'WORT',
+          itemId: 5,
+          format: 'ZUORDNEN',
+          chap: 'das Haus',
+          ong: 'uy',
+        },
         ctx,
       ),
     ).rejects.toThrow();
@@ -1933,7 +2032,13 @@ describe('juft — bitta juftni tekshirish', () => {
     })) as any;
     await expect(
       new UebungService(prisma as any).juft(
-        { itemType: 'PHRASE', itemId: 1, format: 'PAAR', chap: 'salomlashish', ong: 'Hallo!' },
+        {
+          itemType: 'PHRASE',
+          itemId: 1,
+          format: 'PAAR',
+          chap: 'salomlashish',
+          ong: 'Hallo!',
+        },
         ctx,
       ),
     ).rejects.toThrow();
@@ -1952,12 +2057,20 @@ describe('juft — bitta juftni tekshirish', () => {
     // BIRINCHISI sifatida `itemId=1` ('hallo') bilan yuborilgan, lekin
     // o'quvchi bosgan juft 'danke'=rahmat (id=2).
     await new UebungService(prisma as any).juft(
-      { itemType: 'WORT', itemId: 1, format: 'PAAR', chap: 'danke', ong: 'rahmat' },
+      {
+        itemType: 'WORT',
+        itemId: 1,
+        format: 'PAAR',
+        chap: 'danke',
+        ong: 'rahmat',
+      },
       ctx,
     );
-    const attemptData = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
+    const attemptData = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0]
+      .data;
     expect(attemptData.lexemeId).toBe(2);
-    const holatYozilgan = (prisma.dafLexemeState.upsert as jest.Mock).mock.calls[0][0];
+    const holatYozilgan = (prisma.dafLexemeState.upsert as jest.Mock).mock
+      .calls[0][0];
     expect(holatYozilgan.where.studentId_lexemeId.lexemeId).toBe(2);
   });
 
@@ -1990,7 +2103,13 @@ describe('juft — bitta juftni tekshirish', () => {
       { id: 40, de: 'die Bank', uz: "o'rindiq" },
     ]) as any;
     const r = await new UebungService(prisma as any).juft(
-      { itemType: 'WORT', itemId: 40, format: 'PAAR', chap: 'die Bank', ong: "o'rindiq" },
+      {
+        itemType: 'WORT',
+        itemId: 40,
+        format: 'PAAR',
+        chap: 'die Bank',
+        ong: "o'rindiq",
+      },
       ctx,
     );
     expect(r).toEqual({ isCorrect: true });
@@ -1998,14 +2117,15 @@ describe('juft — bitta juftni tekshirish', () => {
     // Ballanadigan/Leitner yangilanadigan lexeme — o'quvchi HAQIQATDA
     // ulagan so'z (id 40), massivning birinchi qatori (id 10) emas.
     expect(data.lexemeId).toBe(40);
-    const holatYozilgan = (prisma.dafLexemeState.upsert as jest.Mock).mock.calls[0][0];
+    const holatYozilgan = (prisma.dafLexemeState.upsert as jest.Mock).mock
+      .calls[0][0];
     expect(holatYozilgan.where.studentId_lexemeId.lexemeId).toBe(40);
   });
 
   // Xuddi shu ambiguity `ZUORDNEN`/ibora tomonida ham mavjud (`juft()`
   // ikkalasida ham bir xil naqsh bilan tuzatilgan) — bir xil `funktionUz`
   // bilan ikkita ibora, faqat ikkinchisi o'quvchi javobiga mos keladi.
-  it("ZUORDNEN: bir xil `funktionUz`li ikkita nomzoddan faqat IKKINCHISI mos kelsa — javob qabul qilinadi", async () => {
+  it('ZUORDNEN: bir xil `funktionUz`li ikkita nomzoddan faqat IKKINCHISI mos kelsa — javob qabul qilinadi', async () => {
     const prisma = fakePrisma();
     prisma.dafPhrase.findUnique = jest.fn(async () => ({
       de: 'Guten Tag!',
@@ -2048,7 +2168,13 @@ describe('juft — TARTIB TRIPWIRE (stateful)', () => {
   it("hech qachon so'ralmagan so'z — 10 ball (juft, PAAR)", async () => {
     const prisma = fakeMitWort(null);
     await new UebungService(prisma as any).juft(
-      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'uy' },
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'PAAR',
+        chap: 'das Haus',
+        ong: 'uy',
+      },
       ctx,
     );
     const call = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0];
@@ -2061,7 +2187,13 @@ describe('juft — TARTIB TRIPWIRE (stateful)', () => {
       dueAt: new Date(Date.now() - 60_000),
     });
     await new UebungService(prisma as any).juft(
-      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'uy' },
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'PAAR',
+        chap: 'das Haus',
+        ong: 'uy',
+      },
       ctx,
     );
     const call = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0];
@@ -2078,7 +2210,13 @@ describe('juft — TARTIB TRIPWIRE (stateful)', () => {
       dueAt: new Date(Date.now() + 3 * 86_400_000),
     });
     await new UebungService(prisma as any).juft(
-      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'uy' },
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'PAAR',
+        chap: 'das Haus',
+        ong: 'uy',
+      },
       ctx,
     );
     const call = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0];
@@ -2099,16 +2237,33 @@ describe('juft — TARTIB TRIPWIRE (stateful)', () => {
    * chaqiruv birinchisi yozgan `dueAt`ni HAQIQATDA o'qiydi.
    */
   it("TUZATISH BEPUL — HAQIQIY ketma-ketlik: xato bosgandan keyin BIR XIL so'zga to'g'ri bosish ham ball bermaydi", async () => {
-    const prisma = fakeMitWort({ strength: 2, dueAt: new Date(Date.now() - 86_400_000) });
+    const prisma = fakeMitWort({
+      strength: 2,
+      dueAt: new Date(Date.now() - 86_400_000),
+    });
     const svc = new UebungService(prisma as any);
     await svc.juft(
-      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'stol' },
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'PAAR',
+        chap: 'das Haus',
+        ong: 'stol',
+      },
       ctx,
     );
     await svc.juft(
-      { itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'das Haus', ong: 'uy' },
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'PAAR',
+        chap: 'das Haus',
+        ong: 'uy',
+      },
       ctx,
     );
-    expect((prisma.dafAttempt.create as jest.Mock).mock.calls[1][0].data.points).toBe(0);
+    expect(
+      (prisma.dafAttempt.create as jest.Mock).mock.calls[1][0].data.points,
+    ).toBe(0);
   });
 });

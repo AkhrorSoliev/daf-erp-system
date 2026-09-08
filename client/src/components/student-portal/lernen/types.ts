@@ -35,9 +35,13 @@ export interface PublicFrage {
    */
   titel?: string | null;
   /**
-   * Aytilgan so'zning R2 kaliti — faqat `AUDIO_WORT`/`WORT_TIPPEN`da
-   * `null`dan farqli. `prompt` bu ikkisida ATAYLAB BO'SH: so'zning o'zi
-   * javob, uni promptga yozsa tinglash mashqi o'qish mashqiga aylanardi.
+   * Aytilgan so'zning TO'LIQ eshitiladigan manzili (`<audio src>`ga
+   * to'g'ridan-to'g'ri beriladi) — faqat `AUDIO_WORT`/`WORT_TIPPEN`da
+   * `null`dan farqli. Server buni R2 kalitidan (`R2_PUBLIC_URL + '/' +
+   * kalit`) quradi; mijozga xom kalit YETIB KELMAYDI — kalitning o'zi
+   * hech qanday originga qarshi ochilmaydigan manzil bo'lardi (Finding 1).
+   * `prompt` bu ikkisida ATAYLAB BO'SH: so'zning o'zi javob, uni promptga
+   * yozsa tinglash mashqi o'qish mashqiga aylanardi.
    */
   audioUrl: string | null;
 }

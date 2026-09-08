@@ -60,9 +60,28 @@ export class FalClient {
    * ovozlarini yozib qo'ygan (Rachel, Matilda, ...). Ikkalasi ham
    * namunada solishtiruv tomoni sifatida kerak, shuning uchun
    * `speech()` O'ZGARTIRILMAYDI — yangisi yoniga qo'shiladi.
+   *
+   * `language_code: 'de'` QAT'IY yuboriladi, TAXMIN QILINMAYDI: bu audio
+   * boshlang'ich uchun TALAFFUZ NAMUNASI (`daf-voice-samples.ts`dagi
+   * izohga qarang), `personas.json`dagi ElevenLabs ovozlari esa
+   * INGLIZCHA o'qitilgan — til kodisiz model matnni inglizcha
+   * fonetikaga moslab o'qishi mumkin (masalan `tschüss` yoki harf nomi
+   * `Zett`), bu esa noto'g'ri talaffuzni "namunaviy" qilib ko'rsatardi.
+   * Chatterbox yo'li (`speech()`) buni allaqachon qiladi (`language:
+   * 'de'`) — bu yerda parametr nomi boshqa (`language_code`), chunki
+   * ElevenLabs modeli shu nomni kutadi.
+   *
+   * Bu sozlama NAMUNA (`daf-voice-samples.ts`) chaqiruvidan OLDIN
+   * kiritiladi, keyin emas: namunani eshitib CEO tanlagan ovoz aynan
+   * shu til majburlash bilan tanlangan bo'lishi kerak — keyin qo'shilsa
+   * tanlov haqiqiy ishlab chiqarish ovozini aks ettirmay qolardi.
    */
   async speechMitStimme(text: string, stimme: string): Promise<string> {
-    const out = await this.run(TTS_ELEVEN_MODEL, { text, voice: stimme });
+    const out = await this.run(TTS_ELEVEN_MODEL, {
+      text,
+      voice: stimme,
+      language_code: 'de',
+    });
     const url = out?.audio?.url;
     if (typeof url !== 'string') throw new Error('fal.ai ovoz qaytarmadi');
     return url;

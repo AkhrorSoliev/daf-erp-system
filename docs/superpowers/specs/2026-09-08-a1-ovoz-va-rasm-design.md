@@ -70,6 +70,11 @@ to'g'ri javob mijozga hech qachon yuborilmaydi (kurs dizayni D6/D7).
 Ilgari bu qoida savol tanasiga tegishli edi; audio uni **manzilga** ham
 kengaytiradi.
 
+**ANIQLIK (ko'rikdan keyin qo'shildi, 2026-09):** yuqoridagi "javob
+manzilning o'zida yozilgan bo'ladi" muammosiga tasodifiy kalit **FAQAT
+BITTA** yo'lni yopadi — quyida 3.3 ga qarang. U to'liq "javob hech qachon
+brauzerga yetib bormaydi" kafolati EMAS.
+
 ### 3.1 Tasodifiy kalit saqlanishi SHART
 
 Tasodifiy kalit hisoblab topilmagani uchun uni saqlash kerak. Saqlanmasa,
@@ -101,8 +106,42 @@ Audio R2 dan to'g'ridan-to'g'ri uzatiladi (`R2_PUBLIC_URL + '/' + kalit`),
 xuddi rasm kabi. Ya'ni serverga yangi route qo'shilmaydi va
 `branch-route-policy.ts` manifestiga yangi yozuv kerak emas.
 
-Kalit tasodifiy bo'lgani uchun R2 ning ochiqligi javobni oshkor qilmaydi:
-manzilni bilish uchun o'sha savolni allaqachon olgan bo'lish kerak.
+Kalit tasodifiy bo'lgani uchun R2 ning ochiqligi manzilni **taxmin qilib
+topish**dan himoya qiladi: boshqa so'zning yoki boshqa savolning
+manzilini oldindan hisoblab yoki taxmin qilib topib bo'lmaydi — manzilni
+bilish uchun o'sha ANIQ savolni allaqachon olgan bo'lish kerak.
+
+### 3.3 Kalit nimani TO'SMAYDI (ko'rikdan keyin qo'shildi, 2026-09)
+
+Yuqoridagi ikkala band ("javob mijozga hech qachon yetib bormaydi") **faqat
+manzilni URL orqali tekshirishga** tegishli. Kalit boshqa, mustaqil bir
+yo'lni yopmaydi:
+
+- `PublicFrage.itemId` — bu `DafLexeme.id`, savol bilan birga mijozga
+  ALLAQACHON yuboriladi (`toPublic`, `frage.types.ts`).
+- Talaba-portal endpointi `GET /api/student-portal/lernen/lessons/:id`
+  (`daf-portal.controller.ts:66-68` → `daf-portal-read.service.ts`ning
+  `getLesson`, `lexemes` maydoni :503-508) shu darsning BARCHA
+  leksemalarini `{ id, de, uz }` shaklida qaytaradi — talaba o'zi
+  allaqachon kira oladigan darsning sahifasini bir marta so'rasa,
+  `itemId → de/uz` xaritasi qo'lida bo'ladi.
+- Demak: audio savoli kelganda talaba `itemId`ni o'sha xaritada
+  qidirib, ovozni umuman eshitmasdan yoki manzilni ochmasdan to'g'ri
+  javobni bilib olishi mumkin. Tasodifiy kalit bu yo'lga HECH QANDAY
+  ta'sir qilmaydi — chunki bu yo'l manzilga umuman tegmaydi.
+
+**Bu KAMChilik audio uchun YANGI EMAS — butun kursda bor.** Har qanday
+boshqa format ham (`WORT_UZ`, `ARTIKEL`, `PAAR`, ...) xuddi shu
+`itemId`ni yuboradi va xuddi shu darslik endpointi orqali oshkor
+bo'ladi. Audio bu masalada boshqalardan farq qilmaydi — u shunchaki
+"eshitib toping" mashqi, va uni "o'qib toping"ga aylantirish yo'li
+avvaldan, boshqa formatlar bilan birga ochiq turgan.
+
+**Shuning uchun kod O'ZGARTIRILMAYDI.** Buni yopish (masalan `itemId`ni
+darslik endpointidan olib tashlash yoki xiralashtirish) butun kursning
+qayta dizaynini talab qiladi va bu hujjatning doirasidan tashqarida —
+bu yerdagi yagona tuzatish HUJJATNING O'ZI: yuqoridagi da'vo haqiqiy
+chegaradan kattaroq kafolat va'da qilgan, shu band uni to'g'irlaydi.
 
 ---
 

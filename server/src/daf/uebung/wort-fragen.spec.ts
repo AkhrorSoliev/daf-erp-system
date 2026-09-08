@@ -1,4 +1,11 @@
-import { artikel, audioWort, paar, uzWort, wortTippen, wortUz } from './wort-fragen';
+import {
+  artikel,
+  audioWort,
+  paar,
+  uzWort,
+  wortTippen,
+  wortUz,
+} from './wort-fragen';
 import { toPublic, type Frage, type MaterialWort } from './frage.types';
 
 function w(
@@ -255,22 +262,47 @@ describe('artikel', () => {
 });
 
 const mitAudio = (id: number, de: string, uz: string): MaterialWort => ({
-  id, de, uz, artikel: null, anzeige: null, sectionCode: 'u01-s1',
+  id,
+  de,
+  uz,
+  artikel: null,
+  anzeige: null,
+  sectionCode: 'u01-s1',
   audioKey: `daf/audio/${id}.mp3`,
 });
 const ohneAudio = (id: number, de: string, uz: string): MaterialWort => ({
-  ...mitAudio(id, de, uz), audioKey: null,
+  ...mitAudio(id, de, uz),
+  audioKey: null,
 });
 
+// Haqiqiy `UebungService.mediaUrl` bilan bir xil qoida
+// (`R2_PUBLIC_URL + '/' + kalit`) — bu yerda soxta bazaga qarshi.
+const mediaUrl = (key: string): string | null =>
+  `https://media.example.com/${key}`;
+/** `R2_PUBLIC_URL` sozlanmagan holatni taqlid qiladi. */
+const mediaUrlYoq = (): string | null => null;
+
 describe('audioWort', () => {
-  it('promptda so`z YO`Q — javob faqat ovozda', () => {
+  it('promptda so`z YO`Q — javob faqat ovozda, audioUrl TO`LIQ manzil', () => {
     // `prompt` mijozga ketadi. Unda so'z tursa, savol eshitishni emas,
     // o'qishni tekshirardi.
     const ziel = mitAudio(1, 'hallo', 'salom');
-    const f = audioWort(ziel, [mitAudio(2,'danke','rahmat'), mitAudio(3,'wer','kim'), mitAudio(4,'was','nima')], () => 0.5);
+    const f = audioWort(
+      ziel,
+      [
+        mitAudio(2, 'danke', 'rahmat'),
+        mitAudio(3, 'wer', 'kim'),
+        mitAudio(4, 'was', 'nima'),
+      ],
+      () => 0.5,
+      mediaUrl,
+    );
     expect(f).not.toBeNull();
     expect(f!.prompt).toBe('');
-    expect(f!.audioUrl).toBe('daf/audio/1.mp3');
+    // Finding 1 (KRITIK): bu ilgari YALANG'OCH R2 kaliti edi
+    // (`daf/audio/1.mp3`) — `<audio src>`ga shu holicha ketsa portalning
+    // o'z originiga qarshi 404 beradi. Endi to'liq manzil.
+    expect(f!.audioUrl).toBe('https://media.example.com/daf/audio/1.mp3');
     expect(f!.options).toHaveLength(4);
     expect(f!.options).toContain('hallo');
     expect(f!.richtig).toBe('hallo');
@@ -278,32 +310,87 @@ describe('audioWort', () => {
 
   it('audiosi yo`q so`zga savol qurilmaydi', () => {
     const ziel = ohneAudio(1, 'hallo', 'salom');
-    expect(audioWort(ziel, [mitAudio(2,'danke','rahmat'), mitAudio(3,'wer','kim'), mitAudio(4,'was','nima')], () => 0.5)).toBeNull();
+    expect(
+      audioWort(
+        ziel,
+        [
+          mitAudio(2, 'danke', 'rahmat'),
+          mitAudio(3, 'wer', 'kim'),
+          mitAudio(4, 'was', 'nima'),
+        ],
+        () => 0.5,
+        mediaUrl,
+      ),
+    ).toBeNull();
   });
 
   it('chalg`ituvchi yetmasa null', () => {
-    expect(audioWort(mitAudio(1,'hallo','salom'), [mitAudio(2,'danke','rahmat')], () => 0.5)).toBeNull();
+    expect(
+      audioWort(
+        mitAudio(1, 'hallo', 'salom'),
+        [mitAudio(2, 'danke', 'rahmat')],
+        () => 0.5,
+        mediaUrl,
+      ),
+    ).toBeNull();
+  });
+
+  // Fix 1 qarori: `R2_PUBLIC_URL` sozlanmagan bo'lsa buzuq manzil
+  // chiqarish O'RNIGA savol umuman qurilmaydi — audioKey yo'qligi bilan
+  // BIR XIL munosabat.
+  it('R2_PUBLIC_URL sozlanmagan bo`lsa savol qurilmaydi (buzuq manzil chiqarilmaydi)', () => {
+    const ziel = mitAudio(1, 'hallo', 'salom');
+    const f = audioWort(
+      ziel,
+      [
+        mitAudio(2, 'danke', 'rahmat'),
+        mitAudio(3, 'wer', 'kim'),
+        mitAudio(4, 'was', 'nima'),
+      ],
+      () => 0.5,
+      mediaUrlYoq,
+    );
+    expect(f).toBeNull();
   });
 });
 
 describe('wortTippen', () => {
-  it('promptda so`z YO`Q va variant berilmaydi', () => {
-    const f = wortTippen(mitAudio(1, 'tschüss', 'xayr'), () => 0.5);
+  it('promptda so`z YO`Q va variant berilmaydi, audioUrl TO`LIQ manzil', () => {
+    const f = wortTippen(mitAudio(1, 'tschüss', 'xayr'), () => 0.5, mediaUrl);
     expect(f).not.toBeNull();
     expect(f!.prompt).toBe('');
     expect(f!.options).toEqual([]);
-    expect(f!.audioUrl).toBe('daf/audio/1.mp3');
+    expect(f!.audioUrl).toBe('https://media.example.com/daf/audio/1.mp3');
     expect(f!.richtig).toBe('tschüss');
   });
 
   it('audiosi yo`q so`zga savol qurilmaydi', () => {
-    expect(wortTippen(ohneAudio(1, 'tschüss', 'xayr'), () => 0.5)).toBeNull();
+    expect(
+      wortTippen(ohneAudio(1, 'tschüss', 'xayr'), () => 0.5, mediaUrl),
+    ).toBeNull();
+  });
+
+  it('R2_PUBLIC_URL sozlanmagan bo`lsa savol qurilmaydi (buzuq manzil chiqarilmaydi)', () => {
+    expect(
+      wortTippen(mitAudio(1, 'tschüss', 'xayr'), () => 0.5, mediaUrlYoq),
+    ).toBeNull();
   });
 });
 
 describe('toPublic', () => {
   it('audioUrl mijozga uzatiladi', () => {
-    const f: Frage = { format: 'AUDIO_WORT', itemType: 'WORT', itemId: 1, prompt: '', hilfe: null, options: ['a','b','c','d'], richtig: 'a', akzeptiert: [], audioUrl: 'daf/audio/x.mp3', belegteItems: ['WORT:1'] };
+    const f: Frage = {
+      format: 'AUDIO_WORT',
+      itemType: 'WORT',
+      itemId: 1,
+      prompt: '',
+      hilfe: null,
+      options: ['a', 'b', 'c', 'd'],
+      richtig: 'a',
+      akzeptiert: [],
+      audioUrl: 'daf/audio/x.mp3',
+      belegteItems: ['WORT:1'],
+    };
     expect(toPublic(f, 0).audioUrl).toBe('daf/audio/x.mp3');
   });
 });
