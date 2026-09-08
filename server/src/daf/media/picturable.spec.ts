@@ -143,6 +143,26 @@ describe('isPhrase', () => {
   });
 });
 
+describe('yakka harf hech qachon picturable emas', () => {
+  it('lotin harfini rad etadi', () => {
+    // Rasm uslubimiz matn, harf va yozuvni QAT'IY taqiqlaydi (Flux
+    // harflarni buzib chizadi, va yozuv javobni oshkor qilardi) — ya'ni
+    // harfni rasm qilib bo'lmaydi. Eski DiB kontentida alifbo bo'limi
+    // bo'lmagani uchun bu qoida hech qachon kerak bo'lmagan; A1 ning
+    // 1-uniti uni birinchi marta ochdi.
+    for (const h of ['C', 'E', 'H', 'I', 'J', 'V', 'W', 'Y', 'Z', 'a', 'z']) {
+      expect(isNeverPicturable(h)).toBe(true);
+    }
+  });
+
+  it('bir harfli SO`Z emas, faqat yakka harf', () => {
+    // Nemischada bir harfli so'z yo'q, lekin qoida keng bo'lmasligi
+    // uchun: ikki va undan ortiq belgili so'zga tegmaydi.
+    expect(isNeverPicturable('in')).toBe(false);
+    expect(isNeverPicturable('Ei')).toBe(false);
+  });
+});
+
 describe('isNeverPicturable', () => {
   it("mamlakat, qit'a, son va iborani birlashtirib ushlaydi", () => {
     expect(isNeverPicturable('Deutschland')).toBe(true);

@@ -278,6 +278,17 @@ export function isPhrase(de: string): boolean {
 }
 
 /**
+ * Yakka lotin harfi — alifbo bo'limi uchun.
+ *
+ * Sonlar qoidasi bilan bir xil mulohaza: rasm uslubimiz matn va harfni
+ * qat'iy taqiqlaydi, ya'ni harfning rasmi bo'lishi mumkin emas. Ustiga,
+ * chizilgan harf javobning O'ZI bo'lardi.
+ */
+function isSingleLetter(de: string): boolean {
+  return /^[A-Za-zÄÖÜäöü]$/.test(de.trim());
+}
+
+/**
  * Model nima desa ham (yoki `picturable.json` allaqachon nima yozgan
  * bo'lsa ham) `true` BO'LMASLIGI kerak bo'lgan yozuvlar.
  *
@@ -293,7 +304,12 @@ export function isPhrase(de: string): boolean {
  * sifatida ham (modelga behuda so'ramaslik uchun).
  */
 export function isNeverPicturable(de: string): boolean {
-  return isGeographicProperNoun(de) || isNumeric(de) || isPhrase(de);
+  return (
+    isGeographicProperNoun(de) ||
+    isNumeric(de) ||
+    isPhrase(de) ||
+    isSingleLetter(de)
+  );
 }
 
 export interface PicturableItem {
