@@ -6,7 +6,7 @@ import { Clock, Fire, Star, Trophy } from "@phosphor-icons/react";
 import { Button, Card, FadeIn, StatChip } from "../../lumio";
 import type { SeansXato } from "../seans-navbat";
 import { useFortschritt } from "../queries";
-import { orinXabari } from "./natija-xabari";
+import { orinXabari, xatoYorligi } from "./natija-xabari";
 
 export interface NatijaEkraniProps {
   togri: number;
@@ -93,7 +93,11 @@ function useSanaladiganBall(maqsad: number | null): number | null {
  *    ikkalasi ham "chap=o'ng|…" shaklida BITTA mexanizm — `yigish.tsx`
  *    dagi izohga qarang) — `richtig`ni "chap=o'ng" juftlariga bo'lib,
  *    RO'YXAT sifatida chizadi (bitta uzun qalin qator emas).
- *  - qolgan formatlar — eski ikkita `span`li ko'rinish.
+ *  - qolgan formatlar — eski ikkita `span`li ko'rinish; chap ustun
+ *    `xatoYorligi()` orqali tanlanadi (`AUDIO_WORT`/`WORT_TIPPEN`da
+ *    `prompt` bo'sh bo'lgani uchun sobit "Eshitish savoli" yorlig'iga
+ *    almashtiriladi — Task 4 ko'rik topilmasi, `natija-xabari.ts`ga
+ *    qarang).
  */
 function XatoQatori({ xato }: { xato: SeansXato }) {
   if (xato.format === "ZUORDNEN" || xato.format === "PAAR") {
@@ -135,7 +139,7 @@ function XatoQatori({ xato }: { xato: SeansXato }) {
 
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="font-semibold text-ink-800">{xato.prompt}</span>
+      <span className="font-semibold text-ink-800">{xatoYorligi(xato.format, xato.prompt)}</span>
       <span className="text-sm font-bold text-danger">{xato.richtig}</span>
     </div>
   );

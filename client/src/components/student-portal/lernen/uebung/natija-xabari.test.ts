@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { orinXabari } from "./natija-xabari";
+import { orinXabari, xatoYorligi } from "./natija-xabari";
 
 describe("orinXabari", () => {
   it("ko'tarilganda nechta pog'ona ko'tarilganini aytadi", () => {
@@ -23,5 +23,24 @@ describe("orinXabari", () => {
   it("o'rin noma'lum bo'lsa jim turadi", () => {
     expect(orinXabari(3, null)).toBeNull();
     expect(orinXabari(null, null)).toBeNull();
+  });
+});
+
+describe("xatoYorligi", () => {
+  it("AUDIO_WORT uchun sobit yorliq qaytaradi, promptni emas", () => {
+    // Server bu format uchun `prompt`ni ATAYLAB bo'sh yuboradi (so'zning
+    // o'zi javob) — bo'sh qatorni chizish o'rniga qat'iy yorliq kerak.
+    expect(xatoYorligi("AUDIO_WORT", "")).toBe("Eshitish savoli");
+  });
+
+  it("WORT_TIPPEN uchun ham xuddi shu yorliq", () => {
+    expect(xatoYorligi("WORT_TIPPEN", "")).toBe("Eshitish savoli");
+  });
+
+  it("qolgan formatlarda promptning o'zini qaytaradi", () => {
+    expect(xatoYorligi("WORT_UZ", "Bu so'z nimani anglatadi?")).toBe(
+      "Bu so'z nimani anglatadi?",
+    );
+    expect(xatoYorligi("LUECKE", "Ich ___ Student.")).toBe("Ich ___ Student.");
   });
 });

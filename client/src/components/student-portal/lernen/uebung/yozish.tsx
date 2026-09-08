@@ -20,7 +20,19 @@ export interface YozishProps {
 const UMLAUT = ["ä", "ö", "ü", "ß"];
 
 /**
- * Kirish maydoni orqali javob yozish: faqat `LUECKE`.
+ * Kirish maydoni orqali javob yozish: `harakat() === "YOZISH"` bo'lgan
+ * har qanday format — bugungi kunda `LUECKE` (bo'sh joyni to'ldirish)
+ * va `WORT_TIPPEN` (eshitib so'zni yozish, Task 4).
+ *
+ * Ikkalasi ham BIR XIL erkin matn kiritish UI'siga muhtoj: bitta
+ * kirish maydoni, klaviaturada yo'q nemis harflari uchun umlaut
+ * tugmalari, avtomatik to'g'rilash/tuzatishning O'CHIRILGANI (nemis
+ * imlosi Android/iOS'ning ingliz lug'ati bilan buzilib ketmasligi
+ * uchun) va bir xil kechirimli baholash (`antwort.ts`). Bu ikkisi
+ * uchun ALOHIDA komponent yasash shu umumiy UI'ni ikki joyda saqlashni
+ * anglatardi — format farqi faqat YUQORIDA, `seans-ekrani.tsx`dagi
+ * ko'rsatma matnida (`koersatma.ts`) va bu komponentga uzatiladigan
+ * `natija`da.
  *
  * TO'G'RI JAVOB PROPS'DA YO'Q — `mc-exercise.tsx` va `Tanlash` dagi
  * qoida shu yerda ham amal qiladi.
