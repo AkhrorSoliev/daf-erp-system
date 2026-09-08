@@ -136,6 +136,65 @@ export async function ovozniYukla(
   writeFileSync(faylYoli, bytes);
 }
 
+/**
+ * `FalClient`ning shu skriptga kerakli qismi — testda soxta (fake)
+ * klient bilan almashtirish uchun ajratilgan tor interfeys.
+ */
+export interface SpeechClient {
+  speech(text: string): Promise<string>;
+  speechMitStimme(text: string, stimme: string): Promise<string>;
+}
+
+/** Bitta variant/so'z juftligi uchun olingan manzil. */
+export interface AudioAnfrage {
+  variant: Variante;
+  wort: string;
+  url: string;
+}
+
+/**
+ * Har variant/so'z juftligi uchun TO'G'RI metodni tanlaydi va chaqiradi:
+ * `stimme` bor variant — `speechMitStimme`, yo'q variant (Chatterbox) —
+ * `speech`.
+ *
+ * NEGA ALOHIDA FUNKSIYA (kod-ko'rikdan keyin ajratildi): shu tanlov
+ * (`variant.stimme ? ... : ...`) skriptning BUTUN maqsadi — uch
+ * variantni SOLISHTIRISH. Bu bitta qator `main()` ichida ko'milib
+ * yotganda hech qanday test uni ushlamas edi: ikkala shoxcha ham
+ * xato bilan `speech()`ga borsa ham, yugurish MUVAFFAQIYATLI tugaydi —
+ * 15 ta fayl yaraladi, jadval chiqadi — va odam UCHTA BIR XIL
+ * Chatterbox namunasini solishtirib "g'olib" tanlab qo'yadi. Xato hech
+ * qayerda ko'rinmaydi, chunki natija HAR DOIM to'g'ri ko'rinadi. Shu
+ * sababli tanlov mustaqil, soxta klient bilan sinaladigan funksiyaga
+ * chiqarilgan (`daf-voice-samples.spec.ts`dagi RED/GREEN isboti).
+ */
+export async function sammleAudioUrls(
+  client: SpeechClient,
+  variants: Variante[] = VARIANTEN,
+  woerter: string[] = PROBEWOERTER,
+): Promise<AudioAnfrage[]> {
+  const natijalar: AudioAnfrage[] = [];
+  for (const variant of variants) {
+    for (const wort of woerter) {
+      let url: string;
+      try {
+        url = variant.stimme
+          ? await client.speechMitStimme(wort, variant.stimme)
+          : await client.speech(wort);
+      } catch (err) {
+        // Qaysi variant/so'z yiqilganini ANIQ aytish — operator 15 ta
+        // chaqiruvdan qaysi biri yiqilganini bilishi kerak, umumiy
+        // "fal.ai xato berdi" emas.
+        throw new Error(
+          `"${wort}" so'zi uchun "${variant.id}" varianti yiqildi: ${(err as Error).message}`,
+        );
+      }
+      natijalar.push({ variant, wort, url });
+    }
+  }
+  return natijalar;
+}
+
 interface KorikQatori {
   variant: string;
   soz: string;
@@ -165,21 +224,24 @@ async function main() {
   }
 
   const fal = new FalClient(apiKey);
-  const korik: KorikQatori[] = [];
+  const anfragen = await sammleAudioUrls(fal);
 
   for (const variant of VARIANTEN) {
     mkdirSync(join(CHIQISH_KATALOGI, variant.id), { recursive: true });
+  }
 
-    for (const wort of PROBEWOERTER) {
-      const url = variant.stimme
-        ? await fal.speechMitStimme(wort, variant.stimme)
-        : await fal.speech(wort);
-
-      const faylYoli = dateiYoli(variant.id, wort);
+  const korik: KorikQatori[] = [];
+  for (const { variant, wort, url } of anfragen) {
+    const faylYoli = dateiYoli(variant.id, wort);
+    try {
       await ovozniYukla(url, faylYoli);
-      korik.push({ variant: variant.label, soz: wort, fayl: faylYoli });
-      console.log(`  ${variant.label} — "${wort}" → ${faylYoli}`);
+    } catch (err) {
+      throw new Error(
+        `"${wort}" so'zi ("${variant.id}") diskka yozilmadi: ${(err as Error).message}`,
+      );
     }
+    korik.push({ variant: variant.label, soz: wort, fayl: faylYoli });
+    console.log(`  ${variant.label} — "${wort}" → ${faylYoli}`);
   }
 
   console.log('\nKO`RIK RO`YXATI — har birini eshitib solishtiring:');
@@ -188,7 +250,13 @@ async function main() {
 
 // Faqat to'g'ridan-to'g'ri ishga tushirilganda yuguradi — testlar bu
 // faylni import qilganda `require.main !== module`, shuning uchun
-// hech qanday pullik chaqiruv testda ishlamaydi.
+// hech qanday pullik chaqiruv testda ishlamaydi. Sibling skriptlardagi
+// bilan bir xil naqsh (`main().catch(...)`) — xato bo'lsa operator
+// yalang'och "unhandled rejection" izi emas, tepadagi xabar (qaysi
+// so'z, qaysi variant) va toza chiqish kodini ko'radi.
 if (require.main === module) {
-  void main();
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
 }

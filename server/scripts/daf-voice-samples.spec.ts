@@ -5,18 +5,20 @@ import {
   BELGI_CHEGARASI,
   PROBEWOERTER,
   VARIANTEN,
+  type SpeechClient,
   dateiYoli,
   faylNomiUchunSlug,
   gesamtZeichenzahl,
   ovozniYukla,
   pruefeBudget,
+  sammleAudioUrls,
 } from './daf-voice-samples';
 
 // Bu fayl `daf-voice-samples.ts`ni IMPORT qiladi, lekin `main()` faqat
 // `require.main === module`da yuguradi (skriptning o'zidagi izohga
 // qarang) — shuning uchun shu import HECH QANDAY tarmoq so'rovi yoki
 // pullik chaqiruv qilmaydi. Quyidagi testlar ham faqat sof funksiyalarni
-// va soxta (fake) `fetch`ni sinaydi — haqiqiy `fal.ai`ga chiqilmaydi.
+// va soxta (fake) `fetch`/klientni sinaydi — haqiqiy `fal.ai`ga chiqilmaydi.
 
 function fetchStub(bytes: string, ok = true): typeof fetch {
   return (async () => ({
@@ -24,6 +26,28 @@ function fetchStub(bytes: string, ok = true): typeof fetch {
     status: ok ? 200 : 500,
     arrayBuffer: async () => Buffer.from(bytes, 'utf8'),
   })) as unknown as typeof fetch;
+}
+
+/**
+ * Har chaqiruvni ID BILAN yozib boradigan soxta klient — kod-ko'rikda
+ * topilgan bo'shliqni yopadi: variant→metod bog'lanishi (`sammleAudioUrls`
+ * ichidagi ternary) haqiqiy `fal.ai`siz sinalishi kerak, aks holda ikkala
+ * shoxcha ham `speech()`ga borib qolsa ham hech qanday test buni ushlamaydi
+ * — yugurish "muvaffaqiyatli" tugaydi, faqat uchta bir xil ovoz bilan.
+ */
+class FakeSpeechClient implements SpeechClient {
+  calls: { method: 'speech' | 'speechMitStimme'; text: string; stimme?: string }[] =
+    [];
+
+  async speech(text: string): Promise<string> {
+    this.calls.push({ method: 'speech', text });
+    return `url:speech:${text}`;
+  }
+
+  async speechMitStimme(text: string, stimme: string): Promise<string> {
+    this.calls.push({ method: 'speechMitStimme', text, stimme });
+    return `url:eleven:${stimme}:${text}`;
+  }
 }
 
 describe('pruefeBudget', () => {
@@ -63,10 +87,21 @@ describe('gesamtZeichenzahl', () => {
       'Zett',
       'Auf Wiedersehen',
     ]);
-    expect(VARIANTEN.map((v) => v.id)).toEqual([
-      'chatterbox',
-      'eleven-rachel',
-      'eleven-matilda',
+    // `stimme` va `label` ham qattiq tekshiriladi — faqat `id`ni solishtirish
+    // 'Rachel'ni boshqa ovozga almashtirsa ham testni yashil qoldirar edi,
+    // aynan shu qiymat tanlangan ovozni belgilaydigan yagona joy bo'lsa ham.
+    expect(VARIANTEN).toEqual([
+      { id: 'chatterbox', label: "Chatterbox (mavjud)" },
+      {
+        id: 'eleven-rachel',
+        label: 'ElevenLabs — Rachel (Anna)',
+        stimme: 'Rachel',
+      },
+      {
+        id: 'eleven-matilda',
+        label: 'ElevenLabs — Matilda (Sabine)',
+        stimme: 'Matilda',
+      },
     ]);
   });
 });
@@ -125,5 +160,76 @@ describe('ovozniYukla', () => {
       ovozniYukla('https://example.invalid/x.mp3', faylYoli, fetchStub('', false)),
     ).rejects.toThrow(/500/);
     expect(existsSync(faylYoli)).toBe(false);
+  });
+});
+
+describe('sammleAudioUrls (variant→metod bog`lanishi)', () => {
+  // Kod-ko'rikda topilgan asosiy bo'shliq: `chatterbox`ni ElevenLabs
+  // metodiga (yoki teskarisiga) yuborib qo'ysa, hech qanday oldingi test
+  // buni ushlamas edi — yugurish baribir "muvaffaqiyatli" ko'rinardi.
+
+  it('chatterbox variantida FAQAT speech() chaqiriladi, speechMitStimme HECH QACHON', async () => {
+    const client = new FakeSpeechClient();
+    await sammleAudioUrls(client);
+
+    // chatterboxning stimme'i yo'q — shuning uchun uning besh so'zi
+    // AYNAN `speech()` chaqiruvlarining o'zi bo'lishi kerak, boshqa hech
+    // narsa emas. `speechMitStimme` chatterbox uchun umuman ishlamaydi.
+    const speechChaqiruvlari = client.calls.filter((c) => c.method === 'speech');
+    expect(speechChaqiruvlari).toHaveLength(PROBEWOERTER.length);
+    expect(speechChaqiruvlari.map((c) => c.text).sort()).toEqual(
+      [...PROBEWOERTER].sort(),
+    );
+  });
+
+  it('eleven-rachel HAR so`z uchun speechMitStimme(..., "Rachel") chaqiradi', async () => {
+    const client = new FakeSpeechClient();
+    await sammleAudioUrls(client);
+    const rachelChaqiruvlari = client.calls.filter(
+      (c) => c.method === 'speechMitStimme' && c.stimme === 'Rachel',
+    );
+    expect(rachelChaqiruvlari).toHaveLength(PROBEWOERTER.length);
+    expect(rachelChaqiruvlari.map((c) => c.text).sort()).toEqual(
+      [...PROBEWOERTER].sort(),
+    );
+  });
+
+  it('eleven-matilda HAR so`z uchun speechMitStimme(..., "Matilda") chaqiradi', async () => {
+    const client = new FakeSpeechClient();
+    await sammleAudioUrls(client);
+    const matildaChaqiruvlari = client.calls.filter(
+      (c) => c.method === 'speechMitStimme' && c.stimme === 'Matilda',
+    );
+    expect(matildaChaqiruvlari).toHaveLength(PROBEWOERTER.length);
+    expect(matildaChaqiruvlari.map((c) => c.text).sort()).toEqual(
+      [...PROBEWOERTER].sort(),
+    );
+  });
+
+  it('besh so`z HAR uch variant orqali o`tadi (3x5 = 15 chaqiruv, boshqa son emas)', async () => {
+    const client = new FakeSpeechClient();
+    const natijalar = await sammleAudioUrls(client);
+    expect(client.calls).toHaveLength(VARIANTEN.length * PROBEWOERTER.length);
+    expect(natijalar).toHaveLength(VARIANTEN.length * PROBEWOERTER.length);
+    for (const variant of VARIANTEN) {
+      const shuVariantUchun = natijalar.filter((n) => n.variant.id === variant.id);
+      expect(shuVariantUchun.map((n) => n.wort).sort()).toEqual(
+        [...PROBEWOERTER].sort(),
+      );
+    }
+  });
+
+  it('xato variant ID va so`z bilan boyitilib qayta tashlanadi', async () => {
+    const buzuqKlient: SpeechClient = {
+      speech: async () => {
+        throw new Error('tarmoq xatosi');
+      },
+      speechMitStimme: async () => {
+        throw new Error('tarmoq xatosi');
+      },
+    };
+    await expect(sammleAudioUrls(buzuqKlient)).rejects.toThrow(
+      /"hallo".*"chatterbox"/,
+    );
   });
 });
