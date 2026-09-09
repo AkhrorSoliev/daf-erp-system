@@ -25,6 +25,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { MediaFragenPanel } from "./media-fragen-panel";
 import { MediaInhaltPanel } from "./media-inhalt-panel";
 import type {
   MediaCoverageOverview,
@@ -162,6 +163,21 @@ function SectionRow({ s, index }: { s: MediaSectionCoverage; index: number }) {
         <TableRow className="hover:bg-transparent">
           <TableCell colSpan={SECTION_COLUMN_COUNT} className="bg-muted/20 p-0">
             <MediaInhaltPanel sectionId={s.sectionId} />
+            {/* Ikkalasi ham FAQAT bo'lim ochilganda so'raladi (`open`) —
+                material "nima bor"ni ko'rsatadi, savollar dvigatel undan
+                "nima quradi"ni. Bitta so'rov ikkinchisini bloklamasin deb
+                ikkala panel MUSTAQIL fetch qiladi — biri sekinlashsa
+                ikkinchisi kutib turmaydi. */}
+            <div className="border-t px-4 pt-4">
+              <h3 className="text-sm font-semibold">
+                Savollar (oldindan ko&apos;rish)
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Dvigatel shu materialdan quradigan barcha savol — to&apos;g&apos;ri
+                javobi bilan.
+              </p>
+            </div>
+            <MediaFragenPanel sectionId={s.sectionId} />
           </TableCell>
         </TableRow>
       )}
