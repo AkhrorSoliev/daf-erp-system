@@ -53,4 +53,10 @@ export const routeLabels: Record<string, string> = {
   portal: "Bosh sahifa",
   ai: "Sun'iy intellekt",
   search: "Qidiruv natijalari",
+  // /media — kurs qamrovi (unit/bo'lim daraxti). /media/sections/[id] o'sha
+  // daraxtdagi bitta bo'limning sahifasi; "sections" o'zi navigatsiya
+  // qilinadigan ro'yxat emas ("profile" segmenti kabi o'tish bosqichi),
+  // lekin xom "sections" so'zi ko'rinib qolmasin deb nom berilgan.
+  media: "Media",
+  sections: "Bo'limlar",
 };

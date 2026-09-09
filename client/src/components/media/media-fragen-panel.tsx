@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, RotateCcw } from "lucide-react";
 import api from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import {
   juftlarniAjrat,
   vorschauShakli,
 } from "./media-fragen-utils";
+import { boshlangichFormat } from "./section-detail-utils";
 import type { FrageFormat, VorschauFrage } from "./media-fragen-types";
 
 /**
@@ -230,14 +231,122 @@ function FormatGuruhi({
 }
 
 /**
- * Bo'limdan qurilishi mumkin bo'lgan BARCHA savol — javobi bilan.
+ * Bitta format tugmasi — nomi va soni, tanlangani ajratilgan
+ * (`aria-current` + to'q fon). Format o'zi navigatsiya birligi bo'lgani
+ * uchun (brief: "340 ta savolni bitta ro'yxatda ko'rsatmaslik — format
+ * NAVIGATSIYAGA aylanadi"), bu ro'yxat oddiy `<Badge>` emas — bosiladigan
+ * `<button>`.
+ */
+function FormatTugmasi({
+  format,
+  soni,
+  tanlangan,
+  onSelect,
+}: {
+  format: FrageFormat;
+  soni: number;
+  tanlangan: boolean;
+  onSelect: (format: FrageFormat) => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-current={tanlangan}
+      onClick={() => onSelect(format)}
+      className={cn(
+        "flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors",
+        tanlangan
+          ? "bg-primary text-primary-foreground"
+          : "text-foreground hover:bg-muted",
+      )}
+    >
+      <span className="truncate">{FORMAT_NOMLARI[format]}</span>
+      <Badge
+        variant={tanlangan ? "secondary" : "outline"}
+        className={cn(
+          "shrink-0 font-mono text-[11px] font-normal",
+          !tanlangan && "text-muted-foreground",
+        )}
+      >
+        {soni}
+      </Badge>
+    </button>
+  );
+}
+
+/**
+ * Formatlar yon ro'yxati — sahifaning butun "navigatsiya" g'oyasi shu
+ * yerda. Bitta bo'limdan 340 tagacha savol chiqishi mumkin; ularni ketma-
+ * ket qo'yish o'sha uyumni kichikroq qutida qaytaradi. O'quvchi "hamma
+ * savolni" o'qimaydi — "bu FORMAT yaxshimi?" deb keladi (brief).
+ */
+function FormatYonRoyxati({
+  formatlar,
+  tanlangan,
+  onSelect,
+}: {
+  formatlar: { format: FrageFormat; soni: number }[];
+  tanlangan: FrageFormat | null;
+  onSelect: (format: FrageFormat) => void;
+}) {
+  return (
+    <nav aria-label="Savol formatlari" className="flex flex-col gap-1">
+      {formatlar.map(({ format, soni }) => (
+        <FormatTugmasi
+          key={format}
+          format={format}
+          soni={soni}
+          tanlangan={format === tanlangan}
+          onSelect={onSelect}
+        />
+      ))}
+    </nav>
+  );
+}
+
+/**
+ * Bo'limdan qurilishi mumkin bo'lgan savollar — javobi bilan.
  *
  * `MediaInhaltPanel` "nima bor" deydi (so'z/gap/ibora/dialogning o'zi);
  * bu panel dvigatel o'sha materialdan NIMA SAVOL QURISHINI ko'rsatadi.
  * Ikkalasi ham bo'lim ochilganda, alohida so'rov bilan yuklanadi (brief:
  * "bo'lim ochilganda").
+ *
+ * **Ikki rejim, BITTA fetch.** `selectedFormat` berilmasa (`undefined` —
+ * `media-coverage-section.tsx`dagi eski oldindan ko'rish qatori), panel
+ * eski xatti-harakatda qoladi: barcha formatlar ketma-ket, navigatsiyasiz
+ * (bu chaqiruv Task 3'da olib tashlanadi, lekin hozircha ishlayotgani
+ * kerak). `selectedFormat` (hatto `null` ham — "manzilda hali format
+ * yo'q") berilsa, `/media/sections/[id]` sahifasi navigatsiya rejimini
+ * so'ragan bo'ladi: formatlar yon ro'yxatga chiqadi, faqat BITTA
+ * formatning savoli ko'rsatiladi. Ikkala rejim ham bitta `useEffect`dan
+ * kelgan bitta `data`dan ishlaydi — rejim farqi faqat RENDER'da, fetch
+ * ikki marta bo'lmaydi.
  */
-export function MediaFragenPanel({ sectionId }: { sectionId: number }) {
+export function MediaFragenPanel({
+  sectionId,
+  selectedFormat,
+  onSelectFormat,
+  onFormatsLoaded,
+}: {
+  sectionId: number;
+  /**
+   * `undefined` — eski, navigatsiyasiz rejim. `string | null` — manzildan
+   * kelgan, HALI TEKSHIRILMAGAN qiymat (`searchParams.get("format")`ning
+   * o'zi); tekshiruv (bu bo'limda bormi, yo'qmi) `boshlangichFormat`
+   * ichida bo'ladi — chaqiruvchi buni oldindan bilishi shart emas.
+   */
+  selectedFormat?: string | null;
+  /** Foydalanuvchi yon ro'yxatdan boshqa formatni bossa chaqiriladi. */
+  onSelectFormat?: (format: FrageFormat) => void;
+  /**
+   * Savollar yuklanib formatlarga guruhlangach BIR MARTA chaqiriladi —
+   * `section-detail-client.tsx` shundan "sukut format qaysi edi" (URL'ga
+   * yozish/yozmaslikni hal qilish uchun) va sarlavhadagi umumiy sonni
+   * biladi.
+   */
+  onFormatsLoaded?: (formatlar: { format: FrageFormat; soni: number }[]) => void;
+}) {
   const [data, setData] = useState<VorschauFrage[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   // "Qayta urinib ko'rish" effektni qayta yugurtiradi — boshqa media
@@ -268,6 +377,38 @@ export function MediaFragenPanel({ sectionId }: { sectionId: number }) {
     setError(null);
     setRetryKey((k) => k + 1);
   }, []);
+
+  // `selectedFormat` faqat `undefined` bo'lganda ("bu prop umuman
+  // berilmagan") eski, navigatsiyasiz rejim tanlanadi — `null` esa
+  // "manzilda hali format yo'q, lekin navigatsiya kerak" degani
+  // (`section-detail-client.tsx`).
+  const navigatsiya = selectedFormat !== undefined;
+
+  // Guruhlash ikkala rejimda ham kerak — eski rejim hammasini ketma-ket
+  // chizadi, yangisi yon ro'yxat + tanlangan formatning o'zini. Bitta
+  // joydan hisoblanadi, ikki marta emas.
+  const guruhlar = useMemo(() => formatlarBoyichaGuruhla(data ?? []), [data]);
+
+  // Ota komponent (`section-detail-client.tsx`) shu orqali "qaysi format
+  // sukut" (URL'ga yozish/yozmaslikni hal qilish uchun `engKopSavolliFormat`
+  // bilan bir xil hisobni ishlatadi) va formatlar sonini biladi — ikkinchi
+  // marta `/fragen`ga so'rov yubormasdan.
+  useEffect(() => {
+    if (!data || !onFormatsLoaded) return;
+    onFormatsLoaded(
+      Array.from(guruhlar, ([format, fragen]) => ({
+        format,
+        soni: fragen.length,
+      })),
+    );
+  }, [data, guruhlar, onFormatsLoaded]);
+
+  // Navigatsiya rejimida ko'rsatiladigan format — manzildagi qiymat shu
+  // bo'limda haqiqatan bormi tekshiriladi, bo'lmasa eng ko'p savollisiga
+  // tushiladi (`boshlangichFormat`, `section-detail-utils.ts`).
+  const effectiveFormat = navigatsiya
+    ? boshlangichFormat(data ?? [], selectedFormat ?? null)
+    : null;
 
   return (
     <div className="space-y-6 p-4">
@@ -323,9 +464,35 @@ export function MediaFragenPanel({ sectionId }: { sectionId: number }) {
         </Card>
       )}
 
-      {!loading && !error && data && data.length > 0 && (
+      {!loading && !error && data && data.length > 0 && navigatsiya && (
+        // Navigatsiya rejimi — bu vazifaning o'zagi: 340 ta savolni bitta
+        // ustunda emas, formatlar ro'yxati + BITTA formatning savoli
+        // qilib ko'rsatish (brief).
+        <div className="grid gap-4 md:grid-cols-[220px_1fr]">
+          <FormatYonRoyxati
+            formatlar={Array.from(guruhlar, ([format, fragen]) => ({
+              format,
+              soni: fragen.length,
+            }))}
+            tanlangan={effectiveFormat}
+            onSelect={onSelectFormat ?? (() => {})}
+          />
+          <div className="min-w-0">
+            {effectiveFormat && (
+              <FormatGuruhi
+                format={effectiveFormat}
+                fragen={guruhlar.get(effectiveFormat) ?? []}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && data && data.length > 0 && !navigatsiya && (
+        // Eski, navigatsiyasiz rejim — `media-coverage-section.tsx`dagi
+        // oldindan ko'rish qatori (Task 3'da olib tashlanadi).
         <>
-          {Array.from(formatlarBoyichaGuruhla(data)).map(([format, fragen]) => (
+          {Array.from(guruhlar).map(([format, fragen]) => (
             <FormatGuruhi key={format} format={format} fragen={fragen} />
           ))}
         </>
