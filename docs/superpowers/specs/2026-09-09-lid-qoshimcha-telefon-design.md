@@ -38,7 +38,7 @@ Migratsiya `prisma migrate diff` + `db execute` + `migrate resolve` orqali
 | Fayl | O'zgarish |
 |---|---|
 | `dto/create-lead.dto.ts` | `extraPhone?: string` — `@IsOptional()` + `@Matches(/^\d{9}$/)`, o'quvchi DTO'sidagi xabar bilan bir xil |
-| `dto/update-lead.dto.ts` | xuddi shunday; bo'sh satr = tozalash (`sourceId` naqshi) |
+| `dto/update-lead.dto.ts` | `extraPhone?: string` — `@Matches(/^(\d{9})?$/)`, ya'ni 9 xonali raqam yoki bo'sh satr; bo'sh satr = tozalash (`sourceId` naqshi) |
 | `leads.service.ts` `create()` | `extraPhone: dto.extraPhone || null` |
 | `leads.service.ts` `update()` | `dto.extraPhone !== undefined` bo'lsa yozadi; `EntityHistory` old/new qiymatlariga qo'shiladi |
 | `leads.service.ts` `findOne()` | select'ga `extraPhone` (detal drawer) |
