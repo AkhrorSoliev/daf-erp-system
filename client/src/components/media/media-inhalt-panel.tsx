@@ -181,6 +181,22 @@ export function MediaInhaltPanel({ sectionId }: { sectionId: number }) {
 
   return (
     <div className="space-y-6 p-4">
+      {/* Ko'lam yorlig'i — bu panel bilan pastdagi "Savollar" panelining
+          bir xil ochiq qatorda, ikkinchisiga qaramay ko'rinishi mumkin,
+          lekin ikkalasi BOSHQA-BOSHQA to'plamni sanaydi (bu — faqat shu
+          bo'lim; savollar — shu bo'lim + undan oldingi barchasi). Yorliqsiz
+          o'quvchi ikkalasini bir xil ro'yxat deb o'ylab, sonlar mos
+          kelmasa (masalan `ZUORDNEN` variantida bu yerda yo'q ibora
+          chiqsa) sahifani buzuq deb hisoblardi — aslida ikkalasi ham
+          to'g'ri, faqat ko'lami boshqa. */}
+      <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+        <span className="font-medium text-foreground">Ko&apos;lam:</span>{" "}
+        faqat SHU bo&apos;limning materiali. Oldingi bo&apos;limlarga
+        tegishli so&apos;z, gap yoki ibora bu ro&apos;yxatda
+        ko&apos;rinmaydi — pastdagi &quot;Savollar&quot; paneli esa ularni
+        ham hisobga oladi.
+      </div>
+
       {loading && (
         <div className="space-y-2">
           {Array.from({ length: 4 }).map((_, i) => (

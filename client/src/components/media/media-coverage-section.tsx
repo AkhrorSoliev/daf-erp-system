@@ -173,8 +173,11 @@ function SectionRow({ s, index }: { s: MediaSectionCoverage; index: number }) {
                 Savollar (oldindan ko&apos;rish)
               </h3>
               <p className="text-xs text-muted-foreground">
-                Dvigatel shu materialdan quradigan barcha savol — to&apos;g&apos;ri
-                javobi bilan.
+                Dvigatel shu bo&apos;lim + shu unitdagi undan oldingi
+                bo&apos;limlar materialidan quradigan barcha savol —
+                to&apos;g&apos;ri javobi bilan. Ko&apos;lam yuqoridagi
+                material panelidan KENGROQ — tafsilot pastdagi &quot;Ko&apos;lam&quot;
+                yorlig&apos;ida.
               </p>
             </div>
             <MediaFragenPanel sectionId={s.sectionId} />

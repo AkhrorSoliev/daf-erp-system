@@ -111,8 +111,18 @@ function mulberry32(seed: number): () => number {
  *
  * Har quruvchi shu yerda TO'G'RIDAN-TO'G'RI chaqiriladi — nusxasi
  * yozilmaydi (vazifaning o'zagi, qarang faylning tepasidagi izoh).
- * `PAAR`/`ZUORDNEN` bitta chaqiruvda bitta savol quradi (butun to'plamni
- * bittada ko'rsatadi), qolganlari har material birligi uchun bittadan.
+ * `PAAR`/`ZUORDNEN` bitta chaqiruvda bitta savol quradi, qolganlari har
+ * material birligi uchun bittadan.
+ *
+ * DIQQAT — `PAAR`/`ZUORDNEN` "bitta savol" BUTUN TO'PLAMNI ko'rsatadi
+ * DEGANI EMAS: `paar()` (`wort-fragen.ts`) to'plamdan tasodifiy TO'RT
+ * so'z, `zuordnen()` (`satz-fragen.ts`) tasodifiy OLTI ibora tanlaydi —
+ * 50 so'zli bo'limda oldindan ko'rish PAAR ostida faqat o'sha to'rttasini
+ * ko'rsatadi, qolgan qirq oltitasini emas. Haqiqiy seansda dvigatel
+ * `paar`ni bir necha marta (hozircha uchtagacha) chaqiradi, har safar
+ * boshqa to'rttasini tanlab — bu yerdagi bitta chaqiruv shundan FAQAT
+ * bittasining namunasi, to'plamning to'liq ro'yxati emas. CEO panelni
+ * "PAAR uchun 50/50 so'z tayyor" deb o'qimasligi kerak.
  */
 export const VORSCHAU_BAUER: Record<
   FrageFormat,

@@ -214,8 +214,15 @@ function FormatGuruhi({
         </span>
       </h3>
       <div className="space-y-2">
-        {fragen.map((f) => (
-          <SavolQatori key={`${f.format}:${f.itemType}:${f.itemId}`} f={f} />
+        {/* Indeks HAM kalitga kiradi: `LUECKE`da `itemId` gap emas, gapdan
+            bo'shatilgan SO'Z (`satz-fragen.ts`dagi `luecke()`) — bir nechta
+            gap bir xil so'zni bo'shatishi mumkin (masalan "wie", "ich",
+            "wer" haqiqiy kontentda uch-ikki marta uchraydi), shuning uchun
+            `format:itemType:itemId` yolg'iz TAKRORLANADI. Indeks bu holatda
+            ham kalitni noyob qiladi — ro'yxat statik (bir marta yuklanadi,
+            qayta tartiblanmaydi), shuning uchun indeksga tayanish xavfsiz. */}
+        {fragen.map((f, i) => (
+          <SavolQatori key={`${f.format}:${f.itemType}:${f.itemId}:${i}`} f={f} />
         ))}
       </div>
     </div>
@@ -264,6 +271,23 @@ export function MediaFragenPanel({ sectionId }: { sectionId: number }) {
 
   return (
     <div className="space-y-6 p-4">
+      {/* Ko'lam yorlig'i — `MediaInhaltPanel`dagi bilan JUFT: bu panel
+          `daf-media-fragen.service.ts`dagi qoida bo'yicha shu bo'lim VA shu
+          unitdagi undan oldingi BARCHA bo'limlar materialidan pul yig'adi
+          (chalg'ituvchilar ham shu yerdan), yuqoridagi material paneli esa
+          FAQAT shu bo'limni ko'rsatadi. Yorliqsiz ikkalasi bir xil to'plam
+          deb o'qilardi — masalan `ZUORDNEN` olti ibora ko'rsatadi-yu,
+          uchtasi yuqoridagi ro'yxatda yo'q bo'lishi mumkin, chunki ular
+          oldingi bo'limdan kelgan. */}
+      <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+        <span className="font-medium text-foreground">Ko&apos;lam:</span> shu
+        bo&apos;lim + shu unitdagi undan oldingi BARCHA bo&apos;limlar
+        materiali birlashtirilgan (dvigatel chalg&apos;ituvchilarni ham shu
+        puldan oladi). Shuning uchun pastda yuqoridagi &quot;Bo&apos;lim
+        materiali&quot; ro&apos;yxatida (faqat shu bo&apos;lim) yo&apos;q
+        so&apos;z, gap yoki ibora ko&apos;rinishi mumkin — bu xato emas.
+      </div>
+
       {loading && (
         <div className="space-y-2">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -287,10 +311,14 @@ export function MediaFragenPanel({ sectionId }: { sectionId: number }) {
       {!loading && !error && data && data.length === 0 && (
         <Card>
           <CardContent className="p-4 text-sm text-muted-foreground">
-            Bu bo&apos;limdan hali bironta savol qurib bo&apos;lmaydi — material
-            (so&apos;z, gap, ibora yoki dialog) yetarli emas. Qarang:
-            yuqoridagi &quot;Bo&apos;lim materiali&quot; qismi nechtasi
-            yozilganini ko&apos;rsatadi.
+            Bu bo&apos;limdan hali bironta savol qurib bo&apos;lmaydi — shu
+            bo&apos;lim VA undan oldingi bo&apos;limlar materiali
+            (so&apos;z, gap, ibora yoki dialog) birgalikda yetarli emas.
+            Diqqat: yuqoridagi &quot;Bo&apos;lim materiali&quot; ro&apos;yxati
+            FAQAT shu bo&apos;limni ko&apos;rsatadi (yuqoridagi &quot;Ko&apos;lam&quot;
+            yorlig&apos;iga qarang) — kamchilik shu unitning OLDINGI
+            bo&apos;limida bo&apos;lishi ham mumkin, u yerni ko&apos;rish
+            uchun o&apos;sha bo&apos;limni oching.
           </CardContent>
         </Card>
       )}
