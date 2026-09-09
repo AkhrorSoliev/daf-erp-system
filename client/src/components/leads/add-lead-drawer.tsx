@@ -33,11 +33,13 @@ import {
   type LeadSourceOption,
 } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
+import { LeadAdditionalFields } from "./lead-additional-fields";
 
 interface AddLeadValues {
   firstName: string;
   lastName: string;
   phone: string;
+  extraPhone: string;
   sectionId: string;
   sourceId: string;
 }
@@ -46,6 +48,7 @@ const EMPTY_VALUES: AddLeadValues = {
   firstName: "",
   lastName: "",
   phone: "",
+  extraPhone: "",
   sectionId: "",
   sourceId: "",
 };
@@ -118,6 +121,7 @@ export function AddLeadDrawer() {
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
         phone: values.phone,
+        extraPhone: values.extraPhone || undefined,
         sectionId: values.sectionId,
         sourceId: values.sourceId || undefined,
       });
@@ -305,6 +309,22 @@ export function AddLeadDrawer() {
                   </button>
                 )}
               </div>
+
+              <Controller
+                name="extraPhone"
+                control={control}
+                rules={{
+                  validate: (v) =>
+                    !v || v.length === 9 || "Telefon raqamini to'liq kiriting",
+                }}
+                render={({ field }) => (
+                  <LeadAdditionalFields
+                    value={field.value}
+                    onChange={field.onChange}
+                    error={errors.extraPhone?.message}
+                  />
+                )}
+              />
             </form>
           </div>
         )}

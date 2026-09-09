@@ -101,6 +101,7 @@ export class LeadsService {
         { firstName: { contains: search, mode: 'insensitive' } },
         { lastName: { contains: search, mode: 'insensitive' } },
         { phone: { contains: search } },
+        { extraPhone: { contains: search } },
       ];
     }
     if (query.sourceId?.length) where.sourceId = equalsOrIn(query.sourceId);
@@ -146,6 +147,7 @@ export class LeadsService {
           firstName: true,
           lastName: true,
           phone: true,
+          extraPhone: true,
           statusEnum: true,
           createdAt: true,
           source: { select: { id: true, name: true } },
@@ -216,6 +218,7 @@ export class LeadsService {
         firstName: true,
         lastName: true,
         phone: true,
+        extraPhone: true,
         statusEnum: true,
         convertedStudentId: true,
         statusChangeReason: true,
@@ -434,6 +437,7 @@ export class LeadsService {
         firstName,
         lastName,
         phone: dto.phone,
+        extraPhone: dto.extraPhone || null,
         sectionId: dto.sectionId,
         sourceId: dto.sourceId ?? null,
         order: (maxOrder._max.order ?? -1) + 1,
@@ -452,6 +456,9 @@ export class LeadsService {
         firstName: created.firstName,
         lastName: created.lastName,
         phone: created.phone,
+        // Not part of LEAD_CARD_SELECT (the board card never shows it), so the
+        // recorded value comes from the request rather than the created row.
+        extraPhone: dto.extraPhone || null,
         statusEnum: created.statusEnum,
       },
       changedById: userId ?? undefined,
@@ -477,7 +484,13 @@ export class LeadsService {
       // because a lead from the public form has no branch until someone picks
       // one; it is excluded from branch ANALYTICS separately.
       where: { id, deletedAt: null, companyId, ...leadBranchWhere(scope) },
-      select: { id: true, firstName: true, lastName: true, phone: true },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        extraPhone: true,
+      },
     });
     if (!existing) {
       throw new NotFoundException('Lid topilmadi');
@@ -501,6 +514,10 @@ export class LeadsService {
     }
     if (dto.phone !== undefined) {
       data.phone = dto.phone;
+    }
+    // Empty string clears the extra phone; absent leaves it untouched.
+    if (dto.extraPhone !== undefined) {
+      data.extraPhone = dto.extraPhone || null;
     }
     if (dto.sourceId !== undefined) {
       if (dto.sourceId) {
@@ -528,11 +545,16 @@ export class LeadsService {
         firstName: existing.firstName,
         lastName: existing.lastName,
         phone: existing.phone,
+        extraPhone: existing.extraPhone,
       },
       newValues: {
         firstName: updated.firstName,
         lastName: updated.lastName,
         phone: updated.phone,
+        extraPhone:
+          dto.extraPhone !== undefined
+            ? dto.extraPhone || null
+            : existing.extraPhone,
       },
       changedById: userId,
       companyId,
@@ -809,6 +831,7 @@ export class LeadsService {
         lastName: true,
         phone: true,
         gender: true,
+        extraPhone: true,
         telegram: true,
         parentPhone: true,
         parentName: true,
@@ -889,6 +912,7 @@ export class LeadsService {
           firstName: lead.firstName,
           lastName: lead.lastName,
           phone: lead.phone,
+          extraPhone: lead.extraPhone ?? undefined,
           gender: lead.gender ?? undefined,
           telegram: lead.telegram ?? undefined,
           parentPhone: lead.parentPhone ?? undefined,

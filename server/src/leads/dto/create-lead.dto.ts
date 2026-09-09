@@ -21,6 +21,16 @@ export class CreateLeadDto {
   })
   phone: string;
 
+  /**
+   * Optional second contact number, entered from the "Qo'shimcha ma'lumotlar"
+   * panel. Same 9-digit raw format as `phone`.
+   */
+  @IsOptional()
+  @Matches(/^\d{9}$/, {
+    message: "Qo'shimcha telefon raqami 9 ta raqamdan iborat bo'lishi kerak",
+  })
+  extraPhone?: string;
+
   @IsString()
   sectionId: string;
 

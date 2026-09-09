@@ -31,6 +31,7 @@ export interface EditLeadTarget {
   firstName: string;
   lastName: string;
   phone: string;
+  extraPhone: string;
   sourceId: string;
 }
 
