@@ -1,13 +1,23 @@
+import { NotFoundException } from '@nestjs/common';
 import { DafMediaInhaltService } from './daf-media-inhalt.service';
 
 const config = { get: (k: string) => (k === 'R2_PUBLIC_URL' ? 'https://r2.example' : undefined) };
 
 function fakePrisma(rows: any) {
+  const sectionMock = jest.fn(async () =>
+    rows.section ?? {
+      code: 'u01-s1',
+      titleUz: 'Bo\'lim',
+      unit: { code: 'u01', titleUz: 'Unit' },
+    },
+  );
+
   return {
     dafLexeme: { findMany: jest.fn(async () => rows.woerter ?? []) },
     dafSentence: { findMany: jest.fn(async () => rows.saetze ?? []) },
     dafPhrase: { findMany: jest.fn(async () => rows.phrasen ?? []) },
     dafDialogLine: { findMany: jest.fn(async () => rows.zeilen ?? []) },
+    dafSection: { findUnique: sectionMock },
   };
 }
 
@@ -65,5 +75,32 @@ describe('DafMediaInhaltService', () => {
     expect(
       (p.dafDialogLine.findMany as jest.Mock).mock.calls[0][0].where,
     ).toMatchObject({ dialog: { sectionId: 7 } });
+  });
+
+  it('bo`lim va unit nomini qaytaradi', async () => {
+    const p = fakePrisma({});
+    p.dafSection = {
+      findUnique: jest.fn(async () => ({
+        code: 'u01-s1',
+        titleUz: 'Salom va xayr',
+        unit: { code: 'u01', titleUz: 'Salom!' },
+      })),
+    } as any;
+    const r = await new DafMediaInhaltService(p as any, config as any).inhalt(7);
+    expect(r.sectionCode).toBe('u01-s1');
+    expect(r.sectionTitleUz).toBe('Salom va xayr');
+    expect(r.unitTitleUz).toBe('Salom!');
+    expect(r.unitCode).toBe('u01');
+  });
+
+  it('bo`lim topilmasa 404', async () => {
+    // Sahifa mavjud bo'lmagan bo'limni ochsa, bo'sh ro'yxat emas, aniq
+    // xato ko'rsatilishi kerak — aks holda "material hali yo'q" deb
+    // o'qilib, odam kutib qoladi.
+    const p = fakePrisma({});
+    p.dafSection = { findUnique: jest.fn(async () => null) } as any;
+    await expect(
+      new DafMediaInhaltService(p as any, config as any).inhalt(999),
+    ).rejects.toThrow(NotFoundException);
   });
 });

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -43,6 +43,10 @@ export interface InhaltDialogZeile {
 }
 
 export interface SectionInhalt {
+  sectionCode: string;
+  sectionTitleUz: string;
+  unitCode: string | null;
+  unitTitleUz: string;
   woerter: InhaltWort[];
   saetze: InhaltZeile[];
   phrasen: InhaltZeile[];
@@ -75,6 +79,16 @@ export class DafMediaInhaltService {
   }
 
   async inhalt(sectionId: number): Promise<SectionInhalt> {
+    // Bo'limni unit bilan birga yuklang — sarlavhasi uchun kerak.
+    const section = await this.prisma.dafSection.findUnique({
+      where: { id: sectionId },
+      include: { unit: true },
+    } as any);
+
+    if (!section) {
+      throw new NotFoundException(`Bo'lim topilmadi: ${sectionId}`);
+    }
+
     const [woerterRows, saetzeRows, phrasenRows, dialogZeilenRows] =
       await Promise.all([
         this.prisma.dafLexeme.findMany({
@@ -164,6 +178,15 @@ export class DafMediaInhaltService {
       audioUrl: this.mediaUrl(d.audioKey),
     }));
 
-    return { woerter, saetze, phrasen, dialogZeilen };
+    return {
+      sectionCode: (section as any).code,
+      sectionTitleUz: (section as any).titleUz,
+      unitCode: (section as any).unit?.code ?? null,
+      unitTitleUz: (section as any).unit?.titleUz,
+      woerter,
+      saetze,
+      phrasen,
+      dialogZeilen,
+    };
   }
 }
