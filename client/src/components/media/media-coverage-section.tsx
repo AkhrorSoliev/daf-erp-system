@@ -25,6 +25,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { MediaInhaltPanel } from "./media-inhalt-panel";
 import type {
   MediaCoverageOverview,
   MediaSectionCoverage,
@@ -73,6 +74,9 @@ function CoverageCell({
   );
 }
 
+/** Bo'lim jadvalidagi ustunlar soni — pastdagi kengaytirilgan qator shuncha ustunni bosib o'tadi. */
+const SECTION_COLUMN_COUNT = 7;
+
 function SectionRow({ s, index }: { s: MediaSectionCoverage; index: number }) {
   // Rangni ham, `pictureEligible`/`total` kabi kamchilik nisbatini ham BIR
   // joydan — `sectionStatuses`dan — olamiz. Har bir hujayra o'zicha
@@ -82,53 +86,86 @@ function SectionRow({ s, index }: { s: MediaSectionCoverage; index: number }) {
   // media-coverage-utils.test.ts'da sinaladi, shuning uchun rang shu orqali
   // kelishi kerak, mustaqil hisoblanmasligi kerak.
   const status = sectionStatuses(s);
+  // Bo'lim qatori bosilganda material paneli ochiladi. Panel FAQAT `open`
+  // paytida render qilinadi — shuning uchun `GET .../inhalt` yopiq bo'lim
+  // uchun umuman so'ralmaydi (brief: "yopiq bo'lim hech narsa yuklamaydi").
+  const [open, setOpen] = useState(false);
+  const toggle = useCallback(() => setOpen((o) => !o), []);
   return (
-    <TableRow>
-      <TableCell className="w-12 border-r text-muted-foreground">
-        {index + 1}
-      </TableCell>
-      <TableCell>
-        <div className="font-medium">{s.titleUz}</div>
-        <div className="font-mono text-[11px] text-muted-foreground">
-          {s.code}
-        </div>
-      </TableCell>
-      <TableCell>
-        <CoverageCell
-          status={status.wordsAudio}
-          have={s.words.withAudio}
-          total={s.words.total}
-        />
-      </TableCell>
-      <TableCell>
-        <CoverageCell
-          status={status.wordsImage}
-          have={s.words.withImage}
-          total={s.words.pictureEligible}
-        />
-      </TableCell>
-      <TableCell>
-        <CoverageCell
-          status={status.sentences}
-          have={s.sentences.withAudio}
-          total={s.sentences.total}
-        />
-      </TableCell>
-      <TableCell>
-        <CoverageCell
-          status={status.phrases}
-          have={s.phrases.withAudio}
-          total={s.phrases.total}
-        />
-      </TableCell>
-      <TableCell>
-        <CoverageCell
-          status={status.dialogLines}
-          have={s.dialogLines.withAudio}
-          total={s.dialogLines.total}
-        />
-      </TableCell>
-    </TableRow>
+    <>
+      <TableRow
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        onClick={toggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggle();
+          }
+        }}
+        className="cursor-pointer hover:bg-muted/50"
+      >
+        <TableCell className="w-12 border-r text-muted-foreground">
+          <span className="flex items-center gap-1">
+            {open ? (
+              <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+            )}
+            {index + 1}
+          </span>
+        </TableCell>
+        <TableCell>
+          <div className="font-medium">{s.titleUz}</div>
+          <div className="font-mono text-[11px] text-muted-foreground">
+            {s.code}
+          </div>
+        </TableCell>
+        <TableCell>
+          <CoverageCell
+            status={status.wordsAudio}
+            have={s.words.withAudio}
+            total={s.words.total}
+          />
+        </TableCell>
+        <TableCell>
+          <CoverageCell
+            status={status.wordsImage}
+            have={s.words.withImage}
+            total={s.words.pictureEligible}
+          />
+        </TableCell>
+        <TableCell>
+          <CoverageCell
+            status={status.sentences}
+            have={s.sentences.withAudio}
+            total={s.sentences.total}
+          />
+        </TableCell>
+        <TableCell>
+          <CoverageCell
+            status={status.phrases}
+            have={s.phrases.withAudio}
+            total={s.phrases.total}
+          />
+        </TableCell>
+        <TableCell>
+          <CoverageCell
+            status={status.dialogLines}
+            have={s.dialogLines.withAudio}
+            total={s.dialogLines.total}
+          />
+        </TableCell>
+      </TableRow>
+      {open && (
+        <TableRow className="hover:bg-transparent">
+          <TableCell colSpan={SECTION_COLUMN_COUNT} className="bg-muted/20 p-0">
+            <MediaInhaltPanel sectionId={s.sectionId} />
+          </TableCell>
+        </TableRow>
+      )}
+    </>
   );
 }
 

@@ -17,7 +17,29 @@ import { SpeakerHigh, ArrowClockwise } from "@phosphor-icons/react";
  * CHEKSIZ QAYTA ESHITISH — A1 darajasida takror eshitish o'rganishning
  * bir qismi; chegaralash jazoga aylanardi.
  */
-export function OvozTugmasi({ url }: { url: string }) {
+export function OvozTugmasi({
+  url,
+  autoPlay = true,
+  compact = false,
+}: {
+  url: string;
+  /**
+   * Mashq ekranida savol chiqishi bilan ovoz o'zi yangraydi — TO'G'RI xatti-
+   * harakat, yuqoridagi izohga qarang. `/media` ro'yxati kabi ko'p qatorli
+   * joylarda buni O'CHIRISH SHART: bo'lim ochilganda 53 fayl birdan
+   * yangrardi. Standart `true` — yagona hozirgi chaqiruvchi (`seans-ekrani.tsx`)
+   * aynan shuni kutadi.
+   */
+  autoPlay?: boolean;
+  /**
+   * Ro'yxat qatoriga mo'ljallangan kichik ko'rinish: mashq ekranidagi katta
+   * (`size-20`) doira tugma va pastidagi xato matni jadval qatoriga sig'maydi.
+   * FAQAT taqdimot (o'lcham, joylashuv) o'zgaradi — xato holatining o'zi
+   * (`xato`, `qoy`, `key={url}` fokusi, yuqoridagi izohdagi ikki ko'rikdan
+   * o'tgan tuzatish) BITTA manbada qoladi, ikkinchi marta yozilmaydi.
+   */
+  compact?: boolean;
+}) {
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const [xato, setXato] = React.useState(false);
   /**
@@ -84,18 +106,48 @@ export function OvozTugmasi({ url }: { url: string }) {
   // Savol almashganda (`url` o'zgaradi) o'zi yangraydi. `key={url}`
   // tufayli bu HAR DOIM YANGI DOM tuguniga ishlaydi (pastga qarang) —
   // reflar effektlardan OLDIN ulanadi, shuning uchun `audioRef.current`
-  // shu paytda ALLAQACHON yangi tugunga ishora qiladi.
-  React.useEffect(() => { qoy(); }, [url, qoy]);
+  // shu paytda ALLAQACHON yangi tugunga ishora qiladi. Ro'yxat ko'rinishida
+  // (`autoPlay={false}`) bu effekt shunchaki hech narsa qilmaydi — tugma
+  // faqat bosilganda yangraydi.
+  React.useEffect(() => {
+    if (!autoPlay) return;
+    qoy();
+  }, [url, qoy, autoPlay]);
+
+  const audio = (
+    <audio
+      key={url}
+      ref={audioRef}
+      src={url}
+      preload="auto"
+      onError={() => setXato(true)}
+    />
+  );
+
+  if (compact) {
+    return (
+      <div className="inline-flex items-center gap-1.5">
+        {audio}
+        <button
+          type="button"
+          onClick={qoy}
+          aria-label={xato ? "Ovozni qayta yuklash" : "Ovozni eshitish"}
+          // Matn o'rniga `title` — jadval qatorida xato paragrafiga joy yo'q,
+          // lekin xatoni yashirmaslik kerak (brief: "hali ham ko'rsatishi
+          // kerak"). Ikonka almashishi (karnay → qayta yuklash) allaqachon
+          // ko'zga ko'rinadigan signal, `title` uni gapga aylantiradi.
+          title={xato ? "Ovoz yuklanmadi — qayta urinib ko'ring" : undefined}
+          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-transform hover:bg-primary/20 active:scale-95 motion-reduce:transition-none"
+        >
+          {xato ? <ArrowClockwise size={16} weight="bold" /> : <SpeakerHigh size={16} weight="fill" />}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <audio
-        key={url}
-        ref={audioRef}
-        src={url}
-        preload="auto"
-        onError={() => setXato(true)}
-      />
+      {audio}
       <button
         type="button"
         onClick={qoy}
