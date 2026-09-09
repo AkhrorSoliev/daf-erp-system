@@ -132,6 +132,11 @@ export function SectionDetailClient({ sectionId }: { sectionId: number }) {
       // "Omit the default tab from the URL".
       if (value === "material") {
         params.delete("tab");
+        // `?format=` faqat "Savollar" yorlig'ida ma'no anglatadi. Uni
+        // "Material"ga o'tganda ham manzilda qoldirish — ishlatilmaydigan
+        // holatni tashib yurish (ko'rik: Minor topilma) — sukutlar
+        // manzilda bo'lmasligi kerak degan qoidaning o'zi.
+        params.delete("format");
       } else {
         params.set("tab", value);
       }

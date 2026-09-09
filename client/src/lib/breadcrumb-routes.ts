@@ -54,9 +54,9 @@ export const routeLabels: Record<string, string> = {
   ai: "Sun'iy intellekt",
   search: "Qidiruv natijalari",
   // /media — kurs qamrovi (unit/bo'lim daraxti). /media/sections/[id] o'sha
-  // daraxtdagi bitta bo'limning sahifasi; "sections" o'zi navigatsiya
-  // qilinadigan ro'yxat emas ("profile" segmenti kabi o'tish bosqichi),
-  // lekin xom "sections" so'zi ko'rinib qolmasin deb nom berilgan.
+  // daraxtdagi bitta bo'limning sahifasi; "sections" segmentiga label
+  // KERAK EMAS — u "profile" kabi pass-through, `app-breadcrumb.tsx` uni
+  // butunlay o'tkazib yuboradi (aks holda mavjud bo'lmagan
+  // "/media/sections" ro'yxatiga havola bo'lib qolardi).
   media: "Media",
-  sections: "Bo'limlar",
 };

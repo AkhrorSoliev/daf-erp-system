@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, RotateCcw } from "lucide-react";
 import api from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
@@ -319,7 +320,7 @@ function FormatYonRoyxati({
  * kerak). `selectedFormat` (hatto `null` ham — "manzilda hali format
  * yo'q") berilsa, `/media/sections/[id]` sahifasi navigatsiya rejimini
  * so'ragan bo'ladi: formatlar yon ro'yxatga chiqadi, faqat BITTA
- * formatning savoli ko'rsatiladi. Ikkala rejim ham bitta `useEffect`dan
+ * formatning savoli ko'rsatiladi. Ikkala rejim ham bitta `useQuery`dan
  * kelgan bitta `data`dan ishlaydi — rejim farqi faqat RENDER'da, fetch
  * ikki marta bo'lmaydi.
  */
@@ -347,36 +348,25 @@ export function MediaFragenPanel({
    */
   onFormatsLoaded?: (formatlar: { format: FrageFormat; soni: number }[]) => void;
 }) {
-  const [data, setData] = useState<VorschauFrage[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  // "Qayta urinib ko'rish" effektni qayta yugurtiradi — boshqa media
-  // panellari bilan bir xil naqsh (`MediaInhaltPanel`).
-  const [retryKey, setRetryKey] = useState(0);
-  const loading = !data && !error;
-
-  // Faqat bo'lim ochilganda DOM'ga qo'shiladi (`media-coverage-section.tsx`
-  // `open` bilan boshqaradi) — shuning uchun bu ham oddiy mount-based
-  // fetch, alohida bayroqsiz.
-  useEffect(() => {
-    let cancelled = false;
-    api
-      .get<VorschauFrage[]>(`/daf/media/sections/${sectionId}/fragen`)
-      .then(({ data }) => {
-        if (!cancelled) setData(data);
-      })
-      .catch(() => {
-        if (!cancelled) setError("Savollar olinmadi");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [sectionId, retryKey]);
-
-  const handleRetry = useCallback(() => {
-    setData(null);
-    setError(null);
-    setRetryKey((k) => k + 1);
-  }, []);
+  // `useQuery` — oddiy `useState`+`useEffect` emas, xuddi `MediaInhaltPanel`
+  // dagi bilan bir xil sababga ko'ra: bu panel "Savollar" YORLIG'I ichida,
+  // Radix `<Tabs>` esa faol bo'lmagan `<TabsContent>`ni DOM'dan olib
+  // tashlaydi — "Material"ga o'tib qaytganda bu 340 tagacha savolni QAYTA
+  // so'raydi va qayta skeleton ko'rsatardi (ko'rik: Minor topilma). Global
+  // `staleTime` (`QueryProvider`, 5 daqiqa) shu `sectionId` bilan qayta
+  // mount bo'lganda keshdan darhol o'qiydi.
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ["media-fragen", sectionId],
+    queryFn: () =>
+      api
+        .get<VorschauFrage[]>(`/daf/media/sections/${sectionId}/fragen`)
+        .then((r) => r.data),
+  });
 
   // `selectedFormat` faqat `undefined` bo'lganda ("bu prop umuman
   // berilmagan") eski, navigatsiyasiz rejim tanlanadi — `null` esa
@@ -415,21 +405,23 @@ export function MediaFragenPanel({
       {/* Ko'lam yorlig'i — `MediaInhaltPanel`dagi bilan JUFT: bu panel
           `daf-media-fragen.service.ts`dagi qoida bo'yicha shu bo'lim VA shu
           unitdagi undan oldingi BARCHA bo'limlar materialidan pul yig'adi
-          (chalg'ituvchilar ham shu yerdan), yuqoridagi material paneli esa
-          FAQAT shu bo'limni ko'rsatadi. Yorliqsiz ikkalasi bir xil to'plam
-          deb o'qilardi — masalan `ZUORDNEN` olti ibora ko'rsatadi-yu,
-          uchtasi yuqoridagi ro'yxatda yo'q bo'lishi mumkin, chunki ular
-          oldingi bo'limdan kelgan. */}
+          (chalg'ituvchilar ham shu yerdan), "Material" yorlig'i esa FAQAT
+          shu bo'limni ko'rsatadi. Ikkalasi bo'lim sahifasida ikkita
+          alohida YORLIQ — stacked emas, shuning uchun "yuqorida/pastda"
+          emas, boshqa yorliqning nomi bilan aytiladi. Yorliqsiz ikkalasi
+          bir xil to'plam deb o'qilardi — masalan `ZUORDNEN` olti ibora
+          ko'rsatadi-yu, uchtasi "Material" yorlig'ida yo'q bo'lishi
+          mumkin, chunki ular oldingi bo'limdan kelgan. */}
       <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">Ko&apos;lam:</span> shu
         bo&apos;lim + shu unitdagi undan oldingi BARCHA bo&apos;limlar
         materiali birlashtirilgan (dvigatel chalg&apos;ituvchilarni ham shu
-        puldan oladi). Shuning uchun pastda yuqoridagi &quot;Bo&apos;lim
-        materiali&quot; ro&apos;yxatida (faqat shu bo&apos;lim) yo&apos;q
-        so&apos;z, gap yoki ibora ko&apos;rinishi mumkin — bu xato emas.
+        puldan oladi). Shuning uchun boshqa yorliqdagi &quot;Material&quot;
+        ro&apos;yxatida (faqat shu bo&apos;lim) yo&apos;q so&apos;z, gap
+        yoki ibora bu yerda ko&apos;rinishi mumkin — bu xato emas.
       </div>
 
-      {loading && (
+      {isLoading && (
         <div className="space-y-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-16 w-full rounded-lg" />
@@ -437,11 +429,11 @@ export function MediaFragenPanel({
         </div>
       )}
 
-      {!loading && error && (
+      {!isLoading && isError && (
         <Card>
           <CardContent className="flex items-center justify-between gap-3 p-4 text-sm text-muted-foreground">
-            <span>{error}</span>
-            <Button variant="outline" size="sm" onClick={handleRetry}>
+            <span>Savollar olinmadi</span>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
               <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
               Qayta urinib ko&apos;rish
             </Button>
@@ -449,22 +441,23 @@ export function MediaFragenPanel({
         </Card>
       )}
 
-      {!loading && !error && data && data.length === 0 && (
+      {!isLoading && !isError && data && data.length === 0 && (
         <Card>
           <CardContent className="p-4 text-sm text-muted-foreground">
             Bu bo&apos;limdan hali bironta savol qurib bo&apos;lmaydi — shu
             bo&apos;lim VA undan oldingi bo&apos;limlar materiali
             (so&apos;z, gap, ibora yoki dialog) birgalikda yetarli emas.
-            Diqqat: yuqoridagi &quot;Bo&apos;lim materiali&quot; ro&apos;yxati
+            Diqqat: boshqa yorliqdagi &quot;Material&quot; ro&apos;yxati
             FAQAT shu bo&apos;limni ko&apos;rsatadi (yuqoridagi &quot;Ko&apos;lam&quot;
             yorlig&apos;iga qarang) — kamchilik shu unitning OLDINGI
-            bo&apos;limida bo&apos;lishi ham mumkin, u yerni ko&apos;rish
-            uchun o&apos;sha bo&apos;limni oching.
+            bo&apos;limida bo&apos;lishi ham mumkin, uni ko&apos;rish uchun
+            &quot;Media&quot; ro&apos;yxatidan o&apos;sha bo&apos;lim
+            sahifasiga o&apos;ting.
           </CardContent>
         </Card>
       )}
 
-      {!loading && !error && data && data.length > 0 && navigatsiya && (
+      {!isLoading && !isError && data && data.length > 0 && navigatsiya && (
         // Navigatsiya rejimi — bu vazifaning o'zagi: 340 ta savolni bitta
         // ustunda emas, formatlar ro'yxati + BITTA formatning savoli
         // qilib ko'rsatish (brief).
@@ -488,7 +481,7 @@ export function MediaFragenPanel({
         </div>
       )}
 
-      {!loading && !error && data && data.length > 0 && !navigatsiya && (
+      {!isLoading && !isError && data && data.length > 0 && !navigatsiya && (
         // Eski, navigatsiyasiz rejim — `media-coverage-section.tsx`dagi
         // oldindan ko'rish qatori (Task 3'da olib tashlanadi).
         <>

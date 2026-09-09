@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { RotateCcw } from "lucide-react";
 import api from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
@@ -147,57 +147,54 @@ function DialogBlock({ rows }: { rows: InhaltDialogZeile[] }) {
  * ularni birma-bir eshitib tekshirishning boshqa yo'li yo'q edi).
  */
 export function MediaInhaltPanel({ sectionId }: { sectionId: number }) {
-  const [data, setData] = useState<SectionInhalt | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  // "Qayta urinib ko'rish" effektni qayta yugurtiradi — `MediaCoverageSection`
-  // dagi bilan bir xil naqsh.
-  const [retryKey, setRetryKey] = useState(0);
-  const loading = !data && !error;
-
-  // Bu komponent FAQAT bo'lim ochilganda DOM'ga qo'shiladi (qarang:
-  // `media-coverage-section.tsx`) — shuning uchun "faqat ochiq bo'lim
-  // so'raydi" qoidasi alohida bayroqsiz, oddiy mount-based fetch bilan
-  // bajariladi: yopiq bo'lim bu komponentni umuman render qilmaydi.
-  useEffect(() => {
-    let cancelled = false;
-    api
-      .get<SectionInhalt>(`/daf/media/sections/${sectionId}/inhalt`)
-      .then(({ data }) => {
-        if (!cancelled) setData(data);
-      })
-      .catch(() => {
-        if (!cancelled) setError("Bo'lim materiali olinmadi");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [sectionId, retryKey]);
-
-  const handleRetry = useCallback(() => {
-    setData(null);
-    setError(null);
-    setRetryKey((k) => k + 1);
-  }, []);
+  // `useQuery` — oddiy `useState`+`useEffect` emas, ATAYLAB: bu panel
+  // `/media/sections/[id]`da "Material" YORLIG'I ichida turadi, va Radix
+  // `<Tabs>` default holatda faol bo'lmagan `<TabsContent>`ni DOM'dan olib
+  // tashlaydi — demak "Savollar"ga o'tib qaytganda bu komponent QAYTA
+  // MOUNT bo'ladi. Xom `useState` bilan bu HAR SAFAR qayta so'rov +
+  // skeleton yaltirashi degani edi (ko'rik: Minor topilma — tablar aynan
+  // shu ikki tomon orasida tez-tez ko'chib yurish uchun tanlangan, "bu
+  // so'z g'alati eshitildi — savoli qanday ekan?"). `QueryProvider`dagi
+  // global `staleTime` (5 daqiqa) tufayli xuddi shu `sectionId` bilan
+  // qayta mount bo'lganda keshdan darhol o'qiydi — tarmoqqa so'rov
+  // yubormasdan, yaltirashsiz. Bo'lim yopiq bo'lsa bu komponent umuman
+  // render qilinmaydi (`media-coverage-section.tsx`), shuning uchun
+  // "faqat ochiq bo'lim so'raydi" qoidasi buzilmaydi — birinchi mount
+  // hamon bitta tarmoq so'rovi.
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ["media-inhalt", sectionId],
+    queryFn: () =>
+      api
+        .get<SectionInhalt>(`/daf/media/sections/${sectionId}/inhalt`)
+        .then((r) => r.data),
+  });
 
   return (
     <div className="space-y-6 p-4">
-      {/* Ko'lam yorlig'i — bu panel bilan pastdagi "Savollar" panelining
-          bir xil ochiq qatorda, ikkinchisiga qaramay ko'rinishi mumkin,
-          lekin ikkalasi BOSHQA-BOSHQA to'plamni sanaydi (bu — faqat shu
-          bo'lim; savollar — shu bo'lim + undan oldingi barchasi). Yorliqsiz
-          o'quvchi ikkalasini bir xil ro'yxat deb o'ylab, sonlar mos
-          kelmasa (masalan `ZUORDNEN` variantida bu yerda yo'q ibora
-          chiqsa) sahifani buzuq deb hisoblardi — aslida ikkalasi ham
-          to'g'ri, faqat ko'lami boshqa. */}
+      {/* Ko'lam yorlig'i — bu panel ("Material" yorlig'i) va "Savollar"
+          yorlig'i BOSHQA-BOSHQA to'plamni sanaydi (bu — faqat shu bo'lim;
+          savollar — shu bo'lim + undan oldingi barchasi). Ikkalasi
+          bo'lim sahifasida ikkita alohida YORLIQ (`section-detail-client.tsx`)
+          — stacked emas, shuning uchun bu izoh "pastda/yuqorida" emas,
+          ikkinchi yorliqning nomini aytadi. Yorliqsiz o'quvchi ikkalasini
+          bir xil ro'yxat deb o'ylab, sonlar mos kelmasa (masalan
+          `ZUORDNEN` variantida bu yerda yo'q ibora chiqsa) sahifani buzuq
+          deb hisoblardi — aslida ikkalasi ham to'g'ri, faqat ko'lami
+          boshqa. */}
       <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">Ko&apos;lam:</span>{" "}
         faqat SHU bo&apos;limning materiali. Oldingi bo&apos;limlarga
         tegishli so&apos;z, gap yoki ibora bu ro&apos;yxatda
-        ko&apos;rinmaydi — pastdagi &quot;Savollar&quot; paneli esa ularni
+        ko&apos;rinmaydi — &quot;Savollar&quot; yorlig&apos;i esa ularni
         ham hisobga oladi.
       </div>
 
-      {loading && (
+      {isLoading && (
         <div className="space-y-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-9 w-full rounded" />
@@ -205,11 +202,11 @@ export function MediaInhaltPanel({ sectionId }: { sectionId: number }) {
         </div>
       )}
 
-      {!loading && error && (
+      {!isLoading && isError && (
         <Card>
           <CardContent className="flex items-center justify-between gap-3 p-4 text-sm text-muted-foreground">
-            <span>{error}</span>
-            <Button variant="outline" size="sm" onClick={handleRetry}>
+            <span>Bo&apos;lim materiali olinmadi</span>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
               <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
               Qayta urinib ko&apos;rish
             </Button>
@@ -217,7 +214,7 @@ export function MediaInhaltPanel({ sectionId }: { sectionId: number }) {
         </Card>
       )}
 
-      {!loading && !error && data && sectionInhaltBosh(data) && (
+      {!isLoading && !isError && data && sectionInhaltBosh(data) && (
         <Card>
           <CardContent className="p-4 text-sm text-muted-foreground">
             Bu bo&apos;limda hali material yo&apos;q — kontentni bazaga
@@ -227,7 +224,7 @@ export function MediaInhaltPanel({ sectionId }: { sectionId: number }) {
         </Card>
       )}
 
-      {!loading && !error && data && !sectionInhaltBosh(data) && (
+      {!isLoading && !isError && data && !sectionInhaltBosh(data) && (
         <>
           <WoerterBlock woerter={data.woerter} />
           <ZeileBlock title="Gaplar" rows={data.saetze} />
