@@ -57,5 +57,13 @@ describe('DafMediaInhaltService', () => {
     for (const t of [p.dafLexeme, p.dafSentence, p.dafPhrase]) {
       expect((t.findMany as jest.Mock).mock.calls[0][0].where).toMatchObject({ sectionId: 7 });
     }
+    // DafDialogLine o'zining sectionId'siga ega emas — DafDialog orqali
+    // bog'lanadi. Bu YAGONA bilvosita bog'lanish, brief buni ataylab
+    // ajratib ko'rsatgan: shu joydagi noto'g'ri/qiyshiq join boshqa
+    // bo'limning dialogini shu ro'yxatga sizdirishi mumkin, lekin yuqoridagi
+    // uchta assertion buni sezmaydi — shuning uchun alohida tekshiriladi.
+    expect(
+      (p.dafDialogLine.findMany as jest.Mock).mock.calls[0][0].where,
+    ).toMatchObject({ dialog: { sectionId: 7 } });
   });
 });

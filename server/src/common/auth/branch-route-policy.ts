@@ -463,11 +463,12 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'every branch, which is why the `Daf*` content tables carry no `companyId` ' +
       'at all. The media inventory endpoints return generated content (audio, ' +
       'images, character profiles) produced alongside the catalogue, read either ' +
-      'from on-disk JSON manifests or, for the unit/section coverage view, ' +
-      'directly by aggregating the `Daf*` content tables — either way this ' +
-      'content is identical per branch and carries no `companyId`. Scoping these ' +
-      'reads by branch would answer a question nobody asks and imply the ' +
-      'catalogue differs per branch, which it does not.',
+      'from on-disk JSON manifests or, for the unit/section coverage view and the ' +
+      'per-section material list behind it, directly by aggregating the `Daf*` ' +
+      'content tables — either way this content is identical per branch and ' +
+      'carries no `companyId`. Scoping these reads by branch would answer a ' +
+      'question nobody asks and imply the catalogue differs per branch, which it ' +
+      'does not.',
     routes: [
       'GET /daf/media/coverage',
       'GET /daf/media/overview',
