@@ -197,14 +197,19 @@ export class DafMediaFragenService {
     // `baueKandidaten` bilan AYNAN bir xil qoida (`sections` so'rovi
     // o'sha yerda ham `order: { lte: section.order }`).
     //
-    // Bu ixtiyoriy kengaytma emas: `ZUORDNEN` oltita, `REAKTION` esa
-    // kamida to'rtta iborani talab qiladi, va A1 unit-1 bo'limlarida
-    // hech biri o'zi bunga yetmaydi (4/4/4/3/3 ibora) — dvigatel ularni
-    // 3-bo'limdan boshlab quradi, chunki pul birlashtirilgan. Faqat SHU
-    // bo'limning o'zini so'rasak, oldindan ko'rish haqiqatda mavjud
-    // savolni "bu formatda savol yo'q" deb ko'rsatib qo'yardi — aynan
-    // vazifaning o'zagi bo'lgan "sahifa dvigateldan ajralib ketmasin"
-    // qoidasini buzardi.
+    // Bu ixtiyoriy kengaytma emas. Bir nechta NOYOB material birligini
+    // talab qiladigan formatlar (masalan `ZUORDNEN` — oltita noyob ibora)
+    // yetarli sondagi ibora hali to'planmagan bo'limda hech qachon
+    // qurilmaydi; ibora yoki dialog soni oz bo'lgan bo'limlarda
+    // `REAKTION`/`DIALOG_LUECKE` ham xuddi shu sababdan puldan
+    // foydalanadi (chalg'ituvchiga yetarli nomzod topish uchun). Aniq
+    // sonlarni bu yerga yozish o'zi xato bo'lardi — unit tarkibi
+    // o'zgarganda eskirib qoladi; haqiqiy sonlar
+    // `daf-media-fragen.service.spec.ts`dagi test fixture'sida
+    // tekshiriladi. Faqat SHU bo'limning o'zini so'rasak, oldindan
+    // ko'rish haqiqatda mavjud savolni "bu formatda savol yo'q" deb
+    // ko'rsatib qo'yardi — aynan vazifaning o'zagi bo'lgan "sahifa
+    // dvigateldan ajralib ketmasin" qoidasini buzardi.
     const sections = await this.prisma.dafSection.findMany({
       where: { unitId, order: { lte: order } },
       select: { id: true },
