@@ -111,14 +111,38 @@ export class DafMediaCoverageService {
           titleUz: true,
         },
       }),
+      // `audioKey` bugun IKKI XIL faylni bildiradi (schema.prisma'dagi izohga
+      // qarang): eski o'zlashtirilgan kontentda BIR audioKey bir nechta
+      // so'zga umumiy (butun bo'lim fayli) va faqat `audioStartMs/EndMs`
+      // BOR bo'lganda o'sha so'z chindan o'ynaydi; A1 generatori esa har
+      // so'zga ALOHIDA fayl yozadi va oraliqni ataylab `null` qoldiradi —
+      // o'sha holatda butun fayl javobning o'zi, oraliq shart emas. Ikkala
+      // holat ustunlar darajasida bir xil ko'rinadi (`audioKey` bor,
+      // oraliq `null`), shuning uchun ularni FAQAT audioKey nechta so'zga
+      // tegishli ekanidan (`keyUsage`) ajratib bo'ladi: agar audioKey
+      // yagona so'zniki bo'lsa — A1 uslubi, o'ynaydi; bir nechtaga umumiy
+      // bo'lsa-yu oraliq yo'q bo'lsa — align qilinmagan bo'lim fayli,
+      // o'ynamaydi. `vocab-drill.ts` bundan qat'i nazar faqat oraliq
+      // BORlarni so'raydi (audio — javobning o'zi, oraliqsiz to'g'ri
+      // so'zni ajratib bo'lmaydi) — bu yerdagi "qamrov" va u yerdagi
+      // "mashqqa yaroqli" ataylab boshqa-boshqa savol.
       this.prisma.$queryRaw<RawWordSectionCount[]>`
+          WITH w AS (
+            SELECT "sectionId", "picturable", "imageKey",
+              "audioKey" IS NOT NULL AS "hasKey",
+              "audioStartMs" IS NOT NULL AND "audioEndMs" IS NOT NULL AS "hasRange",
+              COUNT(*) OVER (PARTITION BY "audioKey") AS "keyUsage"
+            FROM "DafLexeme"
+            WHERE "sectionId" IS NOT NULL
+          )
           SELECT "sectionId",
             COUNT(*) AS total,
-            COUNT(*) FILTER (WHERE "audioKey" IS NOT NULL) AS "withAudio",
+            COUNT(*) FILTER (
+              WHERE "hasKey" AND ("hasRange" OR "keyUsage" = 1)
+            ) AS "withAudio",
             COUNT(*) FILTER (WHERE "picturable" = true) AS "pictureEligible",
             COUNT(*) FILTER (WHERE "picturable" = true AND "imageKey" IS NOT NULL) AS "withImage"
-          FROM "DafLexeme"
-          WHERE "sectionId" IS NOT NULL
+          FROM w
           GROUP BY "sectionId"
         `,
       this.prisma.$queryRaw<RawSectionCount[]>`
@@ -129,6 +153,10 @@ export class DafMediaCoverageService {
           WHERE "sectionId" IS NOT NULL
           GROUP BY "sectionId"
         `,
+      // `DafPhrase.sectionId` — singlilaridan farqli — schema'da NOT NULL,
+      // shuning uchun `WHERE "sectionId" IS NOT NULL` bu yerda hech narsani
+      // filtrlamaydi (har doim true). Boshqalarga moslash uchun qo'shilmadi —
+      // yo'qligi baribir to'g'ri, faqat ataylab qoldirilgan.
       this.prisma.$queryRaw<RawSectionCount[]>`
           SELECT "sectionId",
             COUNT(*) AS total,

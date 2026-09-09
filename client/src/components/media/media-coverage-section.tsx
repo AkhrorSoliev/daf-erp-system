@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { ChevronDown, ChevronRight, RotateCcw } from "lucide-react";
 import api from "@/lib/api";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -33,6 +34,7 @@ import {
   type CoverageStatus,
   coverageLabel,
   coverageStatus,
+  sectionStatuses,
   unitHasNoMaterial,
   unitTotals,
   worstStatus,
@@ -52,8 +54,15 @@ const STATUS_LEGEND: { status: CoverageStatus; label: string }[] = [
   { status: "na", label: "Kerak emas" },
 ];
 
-function CoverageCell({ have, total }: { have: number; total: number }) {
-  const status = coverageStatus(have, total);
+function CoverageCell({
+  status,
+  have,
+  total,
+}: {
+  status: CoverageStatus;
+  have: number;
+  total: number;
+}) {
   return (
     <span className="inline-flex items-center gap-1.5 tabular-nums">
       <span
@@ -65,6 +74,14 @@ function CoverageCell({ have, total }: { have: number; total: number }) {
 }
 
 function SectionRow({ s, index }: { s: MediaSectionCoverage; index: number }) {
+  // Rangni ham, `pictureEligible`/`total` kabi kamchilik nisbatini ham BIR
+  // joydan — `sectionStatuses`dan — olamiz. Har bir hujayra o'zicha
+  // `coverageStatus(have, total)` chaqirganda, `have`/`total` juftligini
+  // shu yerda xato ustunga almashtirib qo'yish (masalan rasm ustuniga
+  // `s.words.total`ni) hech qanday testda ko'rinmasdi — `sectionStatuses`
+  // media-coverage-utils.test.ts'da sinaladi, shuning uchun rang shu orqali
+  // kelishi kerak, mustaqil hisoblanmasligi kerak.
+  const status = sectionStatuses(s);
   return (
     <TableRow>
       <TableCell className="w-12 border-r text-muted-foreground">
@@ -77,25 +94,36 @@ function SectionRow({ s, index }: { s: MediaSectionCoverage; index: number }) {
         </div>
       </TableCell>
       <TableCell>
-        <CoverageCell have={s.words.withAudio} total={s.words.total} />
+        <CoverageCell
+          status={status.wordsAudio}
+          have={s.words.withAudio}
+          total={s.words.total}
+        />
       </TableCell>
       <TableCell>
         <CoverageCell
+          status={status.wordsImage}
           have={s.words.withImage}
           total={s.words.pictureEligible}
         />
       </TableCell>
       <TableCell>
         <CoverageCell
+          status={status.sentences}
           have={s.sentences.withAudio}
           total={s.sentences.total}
         />
       </TableCell>
       <TableCell>
-        <CoverageCell have={s.phrases.withAudio} total={s.phrases.total} />
+        <CoverageCell
+          status={status.phrases}
+          have={s.phrases.withAudio}
+          total={s.phrases.total}
+        />
       </TableCell>
       <TableCell>
         <CoverageCell
+          status={status.dialogLines}
           have={s.dialogLines.withAudio}
           total={s.dialogLines.total}
         />
@@ -112,6 +140,13 @@ function UnitBlock({
   defaultOpen: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  // `empty` ("hech qanday material yo'q") va `noSections` ("hatto bo'lim
+  // ro'yxati ham yo'q") ATAYLAB ikki xil holat: bo'limlari seedlangan-u,
+  // material hali yozilmagan unit ("mana shu unitning bo'limlari, hammasi
+  // nol") ochilishi kerak — aks holda o'sha bo'lim ro'yxatining o'zi
+  // ko'rinmay qoladi, holbuki aynan shuni ko'rish uchun sahifa ochiladi.
+  // Faqat bo'lim RO'YXATI ham yo'q bo'lganda ko'rsatadigan jadval yo'q.
+  const noSections = unit.sections.length === 0;
   const empty = unitHasNoMaterial(unit);
   const totals = unitTotals(unit);
   const worst = worstStatus([
@@ -124,18 +159,18 @@ function UnitBlock({
 
   return (
     <Collapsible
-      open={open && !empty}
+      open={open && !noSections}
       onOpenChange={setOpen}
       className="rounded-lg border"
     >
       <CollapsibleTrigger
-        disabled={empty}
+        disabled={noSections}
         className={cn(
           "flex w-full items-center gap-3 p-3 text-left",
-          !empty && "hover:bg-muted/50",
+          !noSections && "hover:bg-muted/50",
         )}
       >
-        {empty ? (
+        {noSections ? (
           <span className="h-4 w-4 shrink-0" />
         ) : open ? (
           <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -153,9 +188,14 @@ function UnitBlock({
               </span>
             )}
           </div>
-          {empty ? (
+          {noSections ? (
             <div className="text-xs text-muted-foreground">
-              Hali material yo&apos;q
+              Hali bo&apos;lim yaratilmagan
+            </div>
+          ) : empty ? (
+            <div className="text-xs text-muted-foreground">
+              {unit.sections.length} ta bo&apos;lim — hali hech qanday
+              material yo&apos;q
             </div>
           ) : (
             <div className="text-xs text-muted-foreground">
@@ -177,9 +217,17 @@ function UnitBlock({
         )}
       </CollapsibleTrigger>
 
-      {!empty && (
+      {!noSections && (
         <CollapsibleContent>
           <div className="border-t">
+            {/* Sahifalash yo'q, client/CLAUDE.md'dagi "istisnosiz" qoidaga
+                qaramay — ATAYLAB: kurs dizayni bitta unitga amalda ~6 tadan
+                ortiq bo'lim qo'ymaydi, shuning uchun bu jadval hech qachon
+                sahifalashni talab qiladigan uzunlikka yetmaydi. Unit soni
+                o'sishi mumkin (har biri o'z <UnitBlock>ida), lekin BITTA
+                unit ichidagi bo'lim soni emas — agar bu taxmin kelajakda
+                noto'g'ri chiqsa (masalan unit qayta bo'linsa), shu yerga
+                sahifalash qo'shiladi. */}
             <Table>
               <TableHeader>
                 <TableRow>
@@ -226,8 +274,13 @@ function UnitBlock({
  */
 export function MediaCoverageSection() {
   const [data, setData] = useState<MediaCoverageOverview | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // "Qayta urinib ko'rish" bosilganda effektni qayta yugurtirish uchun —
+  // client/CLAUDE.md talab qiladigan "xato holati qayta urinish imkonini
+  // berishi kerak" qoidasi shu orqali bajariladi. `loading` alohida state
+  // emas — `data`/`error` ikkalasi ham hali kelmagan payt shuning o'zi.
+  const [retryKey, setRetryKey] = useState(0);
+  const loading = !data && !error;
 
   useEffect(() => {
     let cancelled = false;
@@ -238,13 +291,16 @@ export function MediaCoverageSection() {
       })
       .catch(() => {
         if (!cancelled) setError("Qamrov ma'lumoti olinmadi");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
+  }, [retryKey]);
+
+  const handleRetry = useCallback(() => {
+    setData(null);
+    setError(null);
+    setRetryKey((k) => k + 1);
   }, []);
 
   return (
@@ -285,8 +341,12 @@ export function MediaCoverageSection() {
 
       {!loading && error && (
         <Card>
-          <CardContent className="p-4 text-sm text-muted-foreground">
-            {error}
+          <CardContent className="flex items-center justify-between gap-3 p-4 text-sm text-muted-foreground">
+            <span>{error}</span>
+            <Button variant="outline" size="sm" onClick={handleRetry}>
+              <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+              Qayta urinib ko&apos;rish
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -296,7 +356,9 @@ export function MediaCoverageSection() {
           {data.levels.length === 0 && (
             <Card>
               <CardContent className="p-4 text-sm text-muted-foreground">
-                Hali hech qanday unit yaratilmagan.
+                Hali hech qanday unit yaratilmagan — kontentni bazaga
+                yozadigan seed skriptini (`daf-seed`/`inhalt-seed`) ishga
+                tushiring.
               </CardContent>
             </Card>
           )}

@@ -2985,14 +2985,29 @@ model DafLexeme {
   translationSource DafTranslationSource?
   /// R2 kaliti, to'liq manzil emas — manzil `R2_PUBLIC_URL` bilan quriladi.
   ///
-  /// Fayl BUTUN BO'LIMniki: bitta mp3 o'ntacha so'zni ketma-ket o'qiydi.
-  /// Shuning uchun so'zning o'zi `audioStartMs`/`audioEndMs` oraliqda
-  /// yashaydi — usiz tugma har safar butun faylni boshidan o'ynatardi.
+  /// Bu ustun IKKI XIL faylni bildiradi — farqi `audioStartMs`/`audioEndMs`da:
+  ///  - oraliq BOR (eski, o'zlashtirilgan A2/B1 kontent) — fayl BUTUN
+  ///    BO'LIMniki, bitta mp3 o'ntacha so'zni ketma-ket o'qiydi, so'zning
+  ///    o'zi shu oraliqda yashaydi;
+  ///  - oraliq `null` (yangi A1 generatori, `daf-gen-audio.ts`) — fayl
+  ///    FAQAT shu so'zniki, bitta so'z uchun bitta fayl, oraliq shart emas
+  ///    chunki butun fayl javobning o'zi.
+  /// Ikkala holatda ham tugma faylni to'liq ochadi/oynatadi — farq shu
+  /// EMAS. Farq shundaki, oraliqsiz BO'LIM faylini oynatish har safar
+  /// butun faylni boshidan boshlab yuborardi (o'sha so'z faylning
+  /// o'rtasida bo'lgani uchun) — shuning uchun align qilinmagan bo'lim
+  /// fayliga hech qachon audioKey bitta so'z uchun yolg'iz beriladigan
+  /// A1 yo'li qo'llanilmaydi.
   audioKey          String?
-  /// So'zning fayl ichidagi boshlanishi va tugashi, millisekundda.
-  /// Whisper matni + jimlik chegarasidan olinadi. Ishonchli topilmasa
-  /// IKKALASI HAM `null` bo'lib qoladi: noto'g'ri oraliq «audio bor» deb
-  /// ko'rsatib, boshqa so'zni o'ynatardi.
+  /// So'zning fayl ichidagi boshlanishi va tugashi, millisekundda —
+  /// FAQAT bo'lim faylida (audioKey bir nechta so'zga umumiy bo'lganda)
+  /// ma'noli. Whisper matni + jimlik chegarasidan olinadi. Ishonchli
+  /// topilmasa IKKALASI HAM `null` bo'lib qoladi: noto'g'ri oraliq
+  /// «audio bor» deb ko'rsatib, boshqa so'zni o'ynatardi. A1 generatori
+  /// ham ataylab ikkalasini `null` qoldiradi — bitta so'zga bitta fayl
+  /// yozgani uchun oraliqqa umuman ehtiyoj yo'q. Xulosa: `audioKey`ning
+  /// o'zi YETARLI EMAS — align skriptini A1 ustida qayta yurgizish bu
+  /// ustunlarni bekorga to'ldirib, hech narsani tuzatmaydi.
   audioStartMs      Int?
   audioEndMs        Int?
   imageKey          String?
