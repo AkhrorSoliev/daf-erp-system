@@ -19,6 +19,10 @@ import {
   DafMediaInhaltService,
   type SectionInhalt,
 } from './media/daf-media-inhalt.service';
+import {
+  DafMediaFragenService,
+  type VorschauFrage,
+} from './media/daf-media-fragen.service';
 
 /**
  * Media bo'limi — yasalgan kontentni KO'RSATADI, yaratmaydi.
@@ -32,6 +36,7 @@ export class DafMediaController {
     private readonly service: DafMediaOverviewService,
     private readonly coverageService: DafMediaCoverageService,
     private readonly inhaltService: DafMediaInhaltService,
+    private readonly fragenService: DafMediaFragenService,
   ) {}
 
   @Get('overview')
@@ -57,5 +62,20 @@ export class DafMediaController {
   @Get('sections/:id/inhalt')
   inhalt(@Param('id', ParseIntPipe) id: number): Promise<SectionInhalt> {
     return this.inhaltService.inhalt(id);
+  }
+
+  /**
+   * Bo'lim materialidan quriladigan BARCHA savollar — javobi bilan.
+   *
+   * Savollar bazada saqlanmaydi (dizayn D7, `frage.types.ts`): dvigatel
+   * ularni har so'rovda materialdan qayta quradi, shuning uchun bu yo'l
+   * ham xuddi shu 12 quruvchini ishlatadi (`DafMediaFragenService`), o'z
+   * nusxasini yozmaydi. Studentga bog'liq emas — `studentId` yo'q, chunki
+   * bitta seansga tegadigan o'n ikkitasi emas, qurilishi mumkin bo'lgan
+   * HAMMASI qaytadi.
+   */
+  @Get('sections/:id/fragen')
+  fragen(@Param('id', ParseIntPipe) id: number): Promise<VorschauFrage[]> {
+    return this.fragenService.fragen(id);
   }
 }

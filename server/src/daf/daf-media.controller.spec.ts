@@ -4,6 +4,7 @@ import { DafMediaController } from './daf-media.controller';
 import { DafMediaOverviewService } from './media/daf-media-overview.service';
 import { DafMediaCoverageService } from './media/daf-media-coverage.service';
 import { DafMediaInhaltService } from './media/daf-media-inhalt.service';
+import { DafMediaFragenService } from './media/daf-media-fragen.service';
 import { RolesGuard } from '../common/guards';
 import { ROLES_KEY } from '../common/decorators';
 
@@ -28,6 +29,9 @@ describe('DafMediaController — role guard', () => {
       .fn()
       .mockResolvedValue({ woerter: [], saetze: [], phrasen: [], dialogZeilen: [] }),
   };
+  const fragenService = {
+    fragen: jest.fn().mockResolvedValue([]),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -36,6 +40,7 @@ describe('DafMediaController — role guard', () => {
         { provide: DafMediaOverviewService, useValue: overviewService },
         { provide: DafMediaCoverageService, useValue: coverageService },
         { provide: DafMediaInhaltService, useValue: inhaltService },
+        { provide: DafMediaFragenService, useValue: fragenService },
       ],
     }).compile();
 
@@ -88,5 +93,11 @@ describe('DafMediaController — role guard', () => {
       phrasen: [],
       dialogZeilen: [],
     });
+  });
+
+  it('fragen() DafMediaFragenService.fragen()ga delegatsiya qiladi', async () => {
+    const result = await controller.fragen(7);
+    expect(fragenService.fragen).toHaveBeenCalledWith(7);
+    expect(result).toEqual([]);
   });
 });
