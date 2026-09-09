@@ -3,6 +3,16 @@ const TTS_MODEL = 'fal-ai/chatterbox/text-to-speech/multilingual';
 const TTS_ELEVEN_MODEL = 'fal-ai/elevenlabs/tts/turbo-v2.5';
 
 /**
+ * `fal-ai/elevenlabs/tts/turbo-v2.5` hujjatida qat'iy belgilangan `speed`
+ * oralig'i — bundan tashqari qiymatni model o'zi rad etadi. Bu yerda
+ * konstanta qilib chiqarilgan, chunki chaqiruvchi tomon (skriptlar) HAM
+ * yuborishdan OLDIN shu bilan tekshiradi — 30-so'zdan keyin fal.ai'dan
+ * rad javobi olishdan ko'ra, birinchi so'zdayoq mahalliy xato yaxshiroq.
+ */
+export const OVOZ_TEZLIGI_MIN = 0.7;
+export const OVOZ_TEZLIGI_MAX = 1.2;
+
+/**
  * fal.ai ga yagona kirish nuqtasi.
  *
  * Interfeys ataylab tor — ikkita metod, ikkalasi ham manzil qaytaradi.
@@ -75,12 +85,37 @@ export class FalClient {
    * kiritiladi, keyin emas: namunani eshitib CEO tanlagan ovoz aynan
    * shu til majburlash bilan tanlangan bo'lishi kerak — keyin qo'shilsa
    * tanlov haqiqiy ishlab chiqarish ovozini aks ettirmay qolardi.
+   *
+   * `speed` ATAYLAB MAJBURIY parametr, ixtiyoriy-standartli emas: CEO
+   * namunalarni eshitib aynan Rachel + 0.85 tanladi, va standart qiymat
+   * (masalan `1.0`) qo'yilgan bo'lganda uni yozishni unutish xuddi shu
+   * tanlovni sukut bo'yicha bekor qilardi — jimgina, xatosiz ko'rinib.
+   * Majburiy parametr bu unutishni COMPILE VAQTIDA xatoga aylantiradi:
+   * chaqiruvchi tomon (`daf-gen-audio.ts`, `daf-voice-samples.ts`)
+   * tezlikni ANIQ aytishga majbur, aks holda TypeScript qabul qilmaydi.
+   *
+   * Oraliq (`OVOZ_TEZLIGI_MIN`–`OVOZ_TEZLIGI_MAX`) `fal.ai`ga
+   * yuborishdan OLDIN shu yerda tekshiriladi — model buni baribir rad
+   * etardi, lekin 53 so'zdan 31-chisida (pullik chaqiruvlardan keyin)
+   * emas, birinchi chaqiruvdayoq.
    */
-  async speechMitStimme(text: string, stimme: string): Promise<string> {
+  async speechMitStimme(
+    text: string,
+    stimme: string,
+    speed: number,
+  ): Promise<string> {
+    if (speed < OVOZ_TEZLIGI_MIN || speed > OVOZ_TEZLIGI_MAX) {
+      throw new Error(
+        `Ovoz tezligi (${speed}) ruxsat etilgan oraliqdan tashqarida: ` +
+          `${OVOZ_TEZLIGI_MIN}–${OVOZ_TEZLIGI_MAX}. Chaqiruv TO'XTATILDI, ` +
+          "hech narsa fal.ai'ga yuborilmadi.",
+      );
+    }
     const out = await this.run(TTS_ELEVEN_MODEL, {
       text,
       voice: stimme,
       language_code: 'de',
+      speed,
     });
     const url = out?.audio?.url;
     if (typeof url !== 'string') throw new Error('fal.ai ovoz qaytarmadi');

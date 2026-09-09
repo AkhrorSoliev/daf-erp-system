@@ -4,7 +4,11 @@ import { join } from 'path';
 import type { WoerterFile } from '../src/daf/inhalt/unit-inhalt.types';
 import {
   BELGI_CHEGARASI,
+  InvalidSpeedArgError,
+  MissingSpeedArgError,
   MissingStimmeArgError,
+  SpeedNotAllowedWithNoneArgError,
+  SpeedOutOfRangeArgError,
   UnknownStimmeArgError,
   gesamtZeichenzahl,
   manifestAktualisieren,
@@ -216,22 +220,85 @@ describe('parseGenAudioArgs', () => {
     );
   });
 
-  it('`--stimme none` — Chatterbox (stimme null)', () => {
+  it('`--stimme none` — Chatterbox (stimme va speed ikkalasi ham null)', () => {
     expect(parseGenAudioArgs(['--stimme', 'none'])).toEqual({
       stimme: null,
+      speed: null,
     });
   });
 
-  it('`--stimme Rachel` — ElevenLabs ovoz nomi saqlanadi', () => {
-    expect(parseGenAudioArgs(['--stimme', 'Rachel'])).toEqual({
+  it('`--stimme Rachel --speed 0.85` — ovoz nomi va tezlik ikkalasi ham saqlanadi', () => {
+    expect(
+      parseGenAudioArgs(['--stimme', 'Rachel', '--speed', '0.85']),
+    ).toEqual({
       stimme: 'Rachel',
+      speed: 0.85,
     });
   });
 
-  it('`--stimme Matilda` — ikkinchi ElevenLabs ovozi ham saqlanadi', () => {
-    expect(parseGenAudioArgs(['--stimme', 'Matilda'])).toEqual({
+  it('`--stimme Matilda --speed 1.0` — ikkinchi ElevenLabs ovozi ham saqlanadi', () => {
+    expect(
+      parseGenAudioArgs(['--stimme', 'Matilda', '--speed', '1.0']),
+    ).toEqual({
       stimme: 'Matilda',
+      speed: 1.0,
     });
+  });
+
+  // Bu brifning markaziy talabi: CEO Rachel + 0.85ni tanladi, va
+  // `--speed` yo'qligida standart qiymatga (masalan 1.0) tushib qolish
+  // shu tanlovni jimgina bekor qilardi. Agar `parseGenAudioArgs` `speed`
+  // uchun ANIQ standart qo'ysa (masalan `speedRaw ?? '1.0'`), bu test
+  // qizil bo'ladi.
+  it('ElevenLabs ovozi bilan `--speed` yo`q bo`lsa yiqiladi', () => {
+    expect(() => parseGenAudioArgs(['--stimme', 'Rachel'])).toThrow(
+      MissingSpeedArgError,
+    );
+  });
+
+  it('`--speed` qiymatsiz bo`lsa ham yiqiladi', () => {
+    expect(() => parseGenAudioArgs(['--stimme', 'Rachel', '--speed'])).toThrow(
+      MissingSpeedArgError,
+    );
+  });
+
+  it('`--speed` son bo`lmasa yiqiladi', () => {
+    expect(() =>
+      parseGenAudioArgs(['--stimme', 'Rachel', '--speed', 'sekin']),
+    ).toThrow(InvalidSpeedArgError);
+  });
+
+  // Model 0.7–1.2 oralig'idan tashqarini rad etadi — bu tekshiruv
+  // `fal.ai`ga yuborishdan OLDIN shu yerda bo'lishi kerak (skript
+  // darajasida), FalClient darajasidagi tekshiruvga qo'shimcha
+  // himoya sifatida: birinchi so'zdayoq, hatto FalClient
+  // yaratilmasdan oldin to'xtash kerak.
+  it('`--speed` 0.7–1.2 oralig`idan tashqari bo`lsa yiqiladi', () => {
+    expect(() =>
+      parseGenAudioArgs(['--stimme', 'Rachel', '--speed', '0.5']),
+    ).toThrow(SpeedOutOfRangeArgError);
+    expect(() =>
+      parseGenAudioArgs(['--stimme', 'Rachel', '--speed', '1.5']),
+    ).toThrow(SpeedOutOfRangeArgError);
+  });
+
+  it('`--speed` oralig`ning ikkala chetida ham o`tadi', () => {
+    expect(parseGenAudioArgs(['--stimme', 'Rachel', '--speed', '0.7'])).toEqual(
+      { stimme: 'Rachel', speed: 0.7 },
+    );
+    expect(parseGenAudioArgs(['--stimme', 'Rachel', '--speed', '1.2'])).toEqual(
+      { stimme: 'Rachel', speed: 1.2 },
+    );
+  });
+
+  // Chatterbox (`--stimme none`) tezlik parametrini QABUL QILMAYDI —
+  // `--speed` shu bilan birga berilsa jimgina yutib yuborilmasligi
+  // kerak, aks holda operator "tezlik qo'llandi" deb noto'g'ri
+  // o'ylab qolardi.
+  it('`--stimme none` bilan `--speed` BIRGA berilsa yiqiladi', () => {
+    expect(() =>
+      parseGenAudioArgs(['--stimme', 'none', '--speed', '0.85']),
+    ).toThrow(SpeedNotAllowedWithNoneArgError);
   });
 
   // Ko'rikda topilgan bo'shliq: ro'yxatda YO'Q qiymat (yozuv xatosi,

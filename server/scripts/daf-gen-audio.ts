@@ -2,9 +2,9 @@
  * 1-bo'limning 53 so'ziga TALAFFUZ audiosi yasaydi (tanlangan ovoz bilan)
  * va R2'ga yuklaydi.
  *
- *   npm run daf:gen-audio -- --stimme none      — Chatterbox (stimme'siz)
- *   npm run daf:gen-audio -- --stimme Rachel    — ElevenLabs Rachel
- *   npm run daf:gen-audio -- --stimme Matilda   — ElevenLabs Matilda
+ *   npm run daf:gen-audio -- --stimme none                    — Chatterbox (stimme'siz, tezliksiz)
+ *   npm run daf:gen-audio -- --stimme Rachel --speed 0.85     — ElevenLabs Rachel, sekin
+ *   npm run daf:gen-audio -- --stimme Matilda --speed 1.0     — ElevenLabs Matilda, oddiy tezlik
  *
  * `--stimme` MAJBURIY, standart qiymati YO'Q, va qiymat qattiq
  * `RUXSAT_ETILGAN_STIMMELAR` ro'yxati bilan tekshiriladi (yozuv xatosi —
@@ -15,6 +15,17 @@
  * talaffuz namunasi). Bayroqni MAJBURIY va ro'yxatga qarshi tekshirilgan
  * qilish shu tanlovni skript darajasida kafolatlaydi: uni o'tkazib
  * yuborib ham, yozuv xatosi bilan ham "ishlab ketish" mumkin emas.
+ *
+ * `--speed` ElevenLabs ovozi bilan BIRGA MAJBURIY, xuddi `--stimme`ning
+ * o'zi kabi: CEO namunalarni eshitib "Rachel + 0.85" (sekin) ni tanladi,
+ * va standart qiymat (masalan `1.0`) qo'yilgan bo'lganda uni yozishni
+ * unutish aynan shu tanlovni sukut bo'yicha bekor qilardi — kurs
+ * dizayni "sekin" ni majburiy talab qiladi (task-7-brief.md). `none`
+ * (Chatterbox) bilan esa `--speed` UMUMAN BERILMASLIGI kerak: Chatterbox
+ * yo'li (`FalClient.speech()`) tezlik parametrini qabul qilmaydi, va uni
+ * jimgina e'tiborsiz qoldirish operatorga "tezlik qo'llandi" degan
+ * noto'g'ri taassurot qoldirardi — shuning uchun bu kombinatsiya rad
+ * etiladi, jimgina yutib yuborilmaydi.
  *
  * MUHIM: bu skript PULLIK `fal.ai` chaqiruvi qiladi va R2'ga yozadi.
  * Shuning uchun `main()` faqat fayl to'g'ridan-to'g'ri ishga tushirilganda
@@ -43,7 +54,11 @@ import { join } from 'path';
 import { S3Client } from '@aws-sdk/client-s3';
 import { R2Uploader } from '../src/daf-content/media/r2-uploader';
 import type { AssetRef } from '../src/daf-content/dataset.types';
-import { FalClient } from '../src/daf/media/fal-client';
+import {
+  FalClient,
+  OVOZ_TEZLIGI_MAX,
+  OVOZ_TEZLIGI_MIN,
+} from '../src/daf/media/fal-client';
 import {
   audioSchluesselFuer,
   neuerAudioSchluessel,
@@ -208,7 +223,7 @@ export const RUXSAT_ETILGAN_STIMMELAR: readonly string[] = [
   'Matilda',
 ];
 
-/** `--stimme` bayrog'i bilan bog'liq xatolarning umumiy ota klassi. */
+/** `--stimme`/`--speed` bayroqlari bilan bog'liq xatolarning umumiy ota klassi. */
 export class StimmeArgError extends Error {}
 
 /** `--stimme` bayrog'i yo'q yoki qiymatsiz bo'lsa tashlanadi. */
@@ -217,10 +232,43 @@ export class MissingStimmeArgError extends StimmeArgError {}
 /** `--stimme` qiymati `RUXSAT_ETILGAN_STIMMELAR`da yo'q bo'lsa tashlanadi. */
 export class UnknownStimmeArgError extends StimmeArgError {}
 
+/** ElevenLabs ovozi bilan `--speed` berilmasa tashlanadi. */
+export class MissingSpeedArgError extends StimmeArgError {}
+
+/** `--speed` qiymati son emas bo'lsa tashlanadi. */
+export class InvalidSpeedArgError extends StimmeArgError {}
+
+/** `--speed` `OVOZ_TEZLIGI_MIN`–`OVOZ_TEZLIGI_MAX` oralig'idan tashqarida bo'lsa tashlanadi. */
+export class SpeedOutOfRangeArgError extends StimmeArgError {}
+
 /**
- * `--stimme` bayrog'ini o'qiydi. `none` — Chatterbox (stimme'siz
- * `FalClient.speech()`); `RUXSAT_ETILGAN_STIMMELAR`dagi boshqa qiymat —
- * ElevenLabs ovoz nomi (`FalClient.speechMitStimme()`ga uzatiladi).
+ * `--stimme none` bilan `--speed` BIRGA berilsa tashlanadi — Chatterbox
+ * yo'li tezlik parametrini qabul qilmaydi, shuning uchun uni jimgina
+ * yutib yuborish operatorga noto'g'ri taassurot qoldiradi.
+ */
+export class SpeedNotAllowedWithNoneArgError extends StimmeArgError {}
+
+/**
+ * `parseGenAudioArgs()` natijasi — ATAYLAB diskriminatsiyalangan union,
+ * `if (args.stimme)` orqali obyektga emas.
+ *
+ * NEGA UNION, IXTIYORIY MAYDON EMAS: agar `speed` oddiy `number | null`
+ * bo'lganda, `main()` uni ElevenLabs shoxchasida `args.speed!` bilan
+ * ishlatishga majbur bo'lardi — bu xuddi shu turdagi "unutish" xatosini
+ * TypeScript darajasida qayta ochib qo'yardi (kompilyator `!`ga ishonib
+ * qoladi). Union bilan `stimme` string bo'lganda `speed` HAM ANIQ
+ * `number`, kompilyator buni narrowing orqali o'zi isbotlaydi — qo'lda
+ * tasdiqlash (`!`) umuman kerak emas.
+ */
+export type GenAudioArgs =
+  | { stimme: null; speed: null }
+  | { stimme: string; speed: number };
+
+/**
+ * `--stimme` va `--speed` bayroqlarini o'qiydi. `none` — Chatterbox
+ * (stimme'siz `FalClient.speech()`, tezliksiz); `RUXSAT_ETILGAN_STIMMELAR`dagi
+ * boshqa qiymat — ElevenLabs ovoz nomi (`FalClient.speechMitStimme()`ga
+ * uzatiladi, `speed` bilan birga).
  *
  * Standart qiymat ATAYLAB yo'q: bayroqsiz yugurish `MissingStimmeArgError`
  * bilan yiqiladi. Chatterbox ham "standart" emas, balki `--stimme none`
@@ -228,22 +276,62 @@ export class UnknownStimmeArgError extends StimmeArgError {}
  * qachon tasodifan (masalan bayroq yozishni unutib) noto'g'ri ovozda
  * yugurmaydi. Ro'yxatda yo'q qiymat (yozuv xatosi) `UnknownStimmeArgError`
  * bilan yiqiladi — `fal.ai`ga umuman yuborilmasdan.
+ *
+ * `--speed` xuddi shu mantiq bilan ElevenLabs ovozi tanlanganda MAJBURIY:
+ * standart qiymat yo'q, chunki CEO namunalarni eshitib ANIQ 0.85ni
+ * tanladi — standart (masalan 1.0) qo'yilsa, uni yozishni unutish shu
+ * tanlovni sukut bo'yicha bekor qilardi. `none` bilan esa `--speed`
+ * berish RAD ETILADI (yuqoridagi klass izohiga qarang).
  */
-export function parseGenAudioArgs(argv: string[]): { stimme: string | null } {
-  const idx = argv.indexOf('--stimme');
-  const value = idx === -1 ? undefined : argv[idx + 1];
-  if (!value) {
+export function parseGenAudioArgs(argv: string[]): GenAudioArgs {
+  const stimmeIdx = argv.indexOf('--stimme');
+  const stimmeValue = stimmeIdx === -1 ? undefined : argv[stimmeIdx + 1];
+  if (!stimmeValue) {
     throw new MissingStimmeArgError(
       '`--stimme` MAJBURIY — Task-6 namunalarini eshitib tanlangan ovoz. ' +
         'Chatterbox uchun `--stimme none`, ElevenLabs uchun ovoz nomi (masalan `--stimme Rachel`).',
     );
   }
-  if (!RUXSAT_ETILGAN_STIMMELAR.includes(value)) {
+  if (!RUXSAT_ETILGAN_STIMMELAR.includes(stimmeValue)) {
     throw new UnknownStimmeArgError(
-      `Noma'lum ovoz: "${value}". Ruxsat etilgan qiymatlar: ${RUXSAT_ETILGAN_STIMMELAR.join(', ')}.`,
+      `Noma'lum ovoz: "${stimmeValue}". Ruxsat etilgan qiymatlar: ${RUXSAT_ETILGAN_STIMMELAR.join(', ')}.`,
     );
   }
-  return { stimme: value === 'none' ? null : value };
+
+  const speedIdx = argv.indexOf('--speed');
+  const speedRaw = speedIdx === -1 ? undefined : argv[speedIdx + 1];
+
+  if (stimmeValue === 'none') {
+    if (speedRaw !== undefined) {
+      throw new SpeedNotAllowedWithNoneArgError(
+        '`--speed` `--stimme none` bilan BIRGA berilmaydi — Chatterbox ' +
+          "yo'li (`FalClient.speech()`) tezlik parametrini qabul qilmaydi, " +
+          'shuning uchun bu qiymat jimgina yutib yuboriladi va operator ' +
+          "tezlik qo'llandi deb noto'g'ri o'ylab qolardi.",
+      );
+    }
+    return { stimme: null, speed: null };
+  }
+
+  if (speedRaw === undefined) {
+    throw new MissingSpeedArgError(
+      '`--speed` MAJBURIY ElevenLabs ovozi (`--stimme Rachel`/`Matilda`) bilan — ' +
+        'CEO namunalarni eshitib ANIQ tezlikni tanladi, standart qiymat yo`q.',
+    );
+  }
+  const speed = Number(speedRaw);
+  if (!Number.isFinite(speed)) {
+    throw new InvalidSpeedArgError(
+      `\`--speed\` son bo'lishi kerak, "${speedRaw}" emas.`,
+    );
+  }
+  if (speed < OVOZ_TEZLIGI_MIN || speed > OVOZ_TEZLIGI_MAX) {
+    throw new SpeedOutOfRangeArgError(
+      `\`--speed\` ${OVOZ_TEZLIGI_MIN}–${OVOZ_TEZLIGI_MAX} oralig'ida bo'lishi kerak, ${speed} emas.`,
+    );
+  }
+
+  return { stimme: stimmeValue, speed };
 }
 
 function manifestOquv(): AudioManifest {
@@ -252,7 +340,7 @@ function manifestOquv(): AudioManifest {
 }
 
 async function main() {
-  let args: { stimme: string | null };
+  let args: GenAudioArgs;
   try {
     args = parseGenAudioArgs(process.argv.slice(2));
   } catch (err) {
@@ -313,7 +401,7 @@ async function main() {
   const uploader = new R2Uploader(s3, process.env.R2_BUCKET_NAME!);
 
   const attribution = args.stimme
-    ? `DaF Sprachzentrum — fal.ai ElevenLabs (${args.stimme})`
+    ? `DaF Sprachzentrum — fal.ai ElevenLabs (${args.stimme}, tezlik ${args.speed})`
     : 'DaF Sprachzentrum — fal.ai Chatterbox';
 
   const assets: AssetRef[] = [];
@@ -325,7 +413,7 @@ async function main() {
     let sourceUrl: string;
     try {
       sourceUrl = args.stimme
-        ? await fal.speechMitStimme(text, args.stimme)
+        ? await fal.speechMitStimme(text, args.stimme, args.speed)
         : await fal.speech(text);
     } catch (err) {
       // Qaysi so'z yiqilganini ANIQ aytish — 53 tadan qaysi biri

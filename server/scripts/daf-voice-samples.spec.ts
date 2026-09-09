@@ -12,6 +12,7 @@ import {
   ovozniYukla,
   pruefeBudget,
   sammleAudioUrls,
+  type Variante,
 } from './daf-voice-samples';
 
 // Bu fayl `daf-voice-samples.ts`ni IMPORT qiladi, lekin `main()` faqat
@@ -36,26 +37,34 @@ function fetchStub(bytes: string, ok = true): typeof fetch {
  * — yugurish "muvaffaqiyatli" tugaydi, faqat uchta bir xil ovoz bilan.
  */
 class FakeSpeechClient implements SpeechClient {
-  calls: { method: 'speech' | 'speechMitStimme'; text: string; stimme?: string }[] =
-    [];
+  calls: {
+    method: 'speech' | 'speechMitStimme';
+    text: string;
+    stimme?: string;
+    speed?: number;
+  }[] = [];
 
   async speech(text: string): Promise<string> {
     this.calls.push({ method: 'speech', text });
     return `url:speech:${text}`;
   }
 
-  async speechMitStimme(text: string, stimme: string): Promise<string> {
-    this.calls.push({ method: 'speechMitStimme', text, stimme });
+  async speechMitStimme(
+    text: string,
+    stimme: string,
+    speed: number,
+  ): Promise<string> {
+    this.calls.push({ method: 'speechMitStimme', text, stimme, speed });
     return `url:eleven:${stimme}:${text}`;
   }
 }
 
 describe('pruefeBudget', () => {
-  it("300 belgidan oshsa to`xtaydi", () => {
+  it('300 belgidan oshsa to`xtaydi', () => {
     expect(() => pruefeBudget(301)).toThrow(/300/);
   });
 
-  it("chegara ichida o`tadi", () => {
+  it('chegara ichida o`tadi', () => {
     expect(() => pruefeBudget(180)).not.toThrow();
   });
 
@@ -87,20 +96,23 @@ describe('gesamtZeichenzahl', () => {
       'Zett',
       'Auf Wiedersehen',
     ]);
-    // `stimme` va `label` ham qattiq tekshiriladi — faqat `id`ni solishtirish
-    // 'Rachel'ni boshqa ovozga almashtirsa ham testni yashil qoldirar edi,
-    // aynan shu qiymat tanlangan ovozni belgilaydigan yagona joy bo'lsa ham.
+    // `stimme`, `speed` va `label` ham qattiq tekshiriladi — faqat `id`ni
+    // solishtirish 'Rachel'ni boshqa ovozga (yoki tezlikni boshqa songa)
+    // almashtirsa ham testni yashil qoldirar edi, aynan shu qiymatlar
+    // tanlangan ovoz/tezlikni belgilaydigan yagona joy bo'lsa ham.
     expect(VARIANTEN).toEqual([
-      { id: 'chatterbox', label: "Chatterbox (mavjud)" },
+      { id: 'chatterbox', label: 'Chatterbox (mavjud)' },
       {
         id: 'eleven-rachel',
         label: 'ElevenLabs — Rachel (Anna)',
         stimme: 'Rachel',
+        speed: 1.0,
       },
       {
         id: 'eleven-matilda',
         label: 'ElevenLabs — Matilda (Sabine)',
         stimme: 'Matilda',
+        speed: 1.0,
       },
     ]);
   });
@@ -149,7 +161,11 @@ describe('ovozniYukla', () => {
 
   it('soxta fetch orqali baytlarni faylga yozadi (tarmoqqa chiqmaydi)', async () => {
     const faylYoli = join(dir, 'namuna.mp3');
-    await ovozniYukla('https://example.invalid/x.mp3', faylYoli, fetchStub('OVOZ'));
+    await ovozniYukla(
+      'https://example.invalid/x.mp3',
+      faylYoli,
+      fetchStub('OVOZ'),
+    );
     expect(existsSync(faylYoli)).toBe(true);
     expect(readFileSync(faylYoli, 'utf8')).toBe('OVOZ');
   });
@@ -157,7 +173,11 @@ describe('ovozniYukla', () => {
   it('javob muvaffaqiyatsiz bo`lsa yiqiladi va fayl yozilmaydi', async () => {
     const faylYoli = join(dir, 'yoq.mp3');
     await expect(
-      ovozniYukla('https://example.invalid/x.mp3', faylYoli, fetchStub('', false)),
+      ovozniYukla(
+        'https://example.invalid/x.mp3',
+        faylYoli,
+        fetchStub('', false),
+      ),
     ).rejects.toThrow(/500/);
     expect(existsSync(faylYoli)).toBe(false);
   });
@@ -175,7 +195,9 @@ describe('sammleAudioUrls (variant→metod bog`lanishi)', () => {
     // chatterboxning stimme'i yo'q — shuning uchun uning besh so'zi
     // AYNAN `speech()` chaqiruvlarining o'zi bo'lishi kerak, boshqa hech
     // narsa emas. `speechMitStimme` chatterbox uchun umuman ishlamaydi.
-    const speechChaqiruvlari = client.calls.filter((c) => c.method === 'speech');
+    const speechChaqiruvlari = client.calls.filter(
+      (c) => c.method === 'speech',
+    );
     expect(speechChaqiruvlari).toHaveLength(PROBEWOERTER.length);
     expect(speechChaqiruvlari.map((c) => c.text).sort()).toEqual(
       [...PROBEWOERTER].sort(),
@@ -212,11 +234,44 @@ describe('sammleAudioUrls (variant→metod bog`lanishi)', () => {
     expect(client.calls).toHaveLength(VARIANTEN.length * PROBEWOERTER.length);
     expect(natijalar).toHaveLength(VARIANTEN.length * PROBEWOERTER.length);
     for (const variant of VARIANTEN) {
-      const shuVariantUchun = natijalar.filter((n) => n.variant.id === variant.id);
+      const shuVariantUchun = natijalar.filter(
+        (n) => n.variant.id === variant.id,
+      );
       expect(shuVariantUchun.map((n) => n.wort).sort()).toEqual(
         [...PROBEWOERTER].sort(),
       );
     }
+  });
+
+  // `speechMitStimme` endi `speed`ni MAJBURIY qabul qiladi (fal-client.ts) —
+  // agar `sammleAudioUrls` variantning O'Z `speed` qiymatini uzatmasa
+  // (masalan hardcoded `1.0` yoki `undefined` yuborsa), namuna aynan
+  // ishlab chiqarish audiosi ishlatadigan tezlikni aks ettirmay qoladi.
+  // Bu test har chaqiruvning `speed`i variantning o'zida yozilgan
+  // qiymatga TENG ekanini qadaydi.
+  it('har ElevenLabs chaqiruvi variantning O`Z speed qiymatini fal.ai`ga uzatadi', async () => {
+    // Standart `VARIANTEN`ning ikkala ElevenLabs yozuvi bugun tasodifan
+    // BIR XIL tezlikka (1.0) ega — shuning uchun kod hardcoded `1.0`
+    // yuborsa ham shu ikkitasi ustida test farqni sezmas edi. Ikki
+    // XILDA tezlikli maxsus variantlar bilan chaqirib, `sammleAudioUrls`
+    // HAQIQATDA variantning o'z qiymatini uzatishini (umumiy konstantani
+    // emas) qadaymiz.
+    const client = new FakeSpeechClient();
+    const maxsusVariantlar: Variante[] = [
+      { id: 'v-tez', label: 'Tez', stimme: 'Rachel', speed: 1.2 },
+      { id: 'v-sekin', label: 'Sekin', stimme: 'Rachel', speed: 0.7 },
+    ];
+    await sammleAudioUrls(client, maxsusVariantlar, ['hallo']);
+
+    const tezChaqiruv = client.calls.find(
+      (c) => c.method === 'speechMitStimme' && c.speed === 1.2,
+    );
+    const sekinChaqiruv = client.calls.find(
+      (c) => c.method === 'speechMitStimme' && c.speed === 0.7,
+    );
+    expect(tezChaqiruv).toBeDefined();
+    expect(sekinChaqiruv).toBeDefined();
+    expect(client.calls).toHaveLength(2);
   });
 
   it('xato variant ID va so`z bilan boyitilib qayta tashlanadi', async () => {

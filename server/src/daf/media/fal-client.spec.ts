@@ -1,4 +1,4 @@
-import { FalClient } from './fal-client';
+import { FalClient, OVOZ_TEZLIGI_MAX, OVOZ_TEZLIGI_MIN } from './fal-client';
 
 function fetchStub(body: unknown, ok = true): typeof fetch {
   return (async () => ({
@@ -52,13 +52,65 @@ describe('FalClient.speechMitStimme', () => {
       json: async () => ({ audio: { url: 'https://x/y.mp3' } }),
     })) as any;
     const c = new FalClient('kalit', fetchFn);
-    const url = await c.speechMitStimme('hallo', 'Rachel');
+    const url = await c.speechMitStimme('hallo', 'Rachel', 0.85);
     expect(url).toBe('https://x/y.mp3');
     const [manzil, opts] = fetchFn.mock.calls[0];
     expect(manzil).toContain('elevenlabs');
     const body = JSON.parse(opts.body);
     expect(body.text).toBe('hallo');
     expect(body.voice).toBe('Rachel');
+  });
+
+  // CEO namunalarni eshitib Rachel + 0.85 tanladi — agar `speed` so'rov
+  // tanasiga yetib bormasa, tanlov jimgina bekor bo'ladi va fal.ai
+  // standart (1.0) tezlikda gapiradi. Bu test aynan shu yetib borishni
+  // qadaydi: `speechMitStimme` `speed` argumentini butunlay e'tiborsiz
+  // qoldirib qo'ysa (yoki so'rov tanasiga qo'shmasa) qizil bo'ladi.
+  it('speed maydonini so`rov tanasiga ANIQ yuborilgan qiymat bilan qo`shadi', async () => {
+    const fetchFn = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({ audio: { url: 'https://x/y.mp3' } }),
+    })) as any;
+    const c = new FalClient('kalit', fetchFn);
+    await c.speechMitStimme('hallo', 'Rachel', 0.85);
+    const [, opts] = fetchFn.mock.calls[0];
+    const body = JSON.parse(opts.body);
+    expect(body.speed).toBe(0.85);
+  });
+
+  // Model 0.7–1.2 oralig'idan tashqari qiymatni rad etadi — lekin bu
+  // tekshiruv `fal.ai`ga yuborishdan OLDIN, mahalliy bo'lishi kerak:
+  // 30 ta pullik so'rovdan keyin rad javobi olishdan ko'ra, birinchi
+  // so'zdayoq (chaqiruvsiz) to'xtash yaxshiroq. Agar tekshiruv olib
+  // tashlansa (yoki `run()`dan keyinga ko'chirilsa) bu test `fetchFn`
+  // chaqirilganini ko'rib qizil bo'ladi.
+  it('oraliqdan tashqari tezlikni fal.ai`ga yuborishdan OLDIN rad etadi', async () => {
+    const fetchFn = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({ audio: { url: 'https://x/y.mp3' } }),
+    })) as any;
+    const c = new FalClient('kalit', fetchFn);
+    await expect(c.speechMitStimme('hallo', 'Rachel', 0.5)).rejects.toThrow(
+      /0\.7.*1\.2/,
+    );
+    await expect(c.speechMitStimme('hallo', 'Rachel', 1.5)).rejects.toThrow(
+      /0\.7.*1\.2/,
+    );
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  it('oraliqning ikkala chetida ham o`tadi (qat`iy oshish emas)', async () => {
+    const fetchFn = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({ audio: { url: 'https://x/y.mp3' } }),
+    })) as any;
+    const c = new FalClient('kalit', fetchFn);
+    await expect(
+      c.speechMitStimme('hallo', 'Rachel', OVOZ_TEZLIGI_MIN),
+    ).resolves.toBe('https://x/y.mp3');
+    await expect(
+      c.speechMitStimme('hallo', 'Rachel', OVOZ_TEZLIGI_MAX),
+    ).resolves.toBe('https://x/y.mp3');
   });
 
   // Fix 2: `language_code` YO'Q bo'lsa ElevenLabs (inglizcha o'qitilgan
@@ -73,7 +125,7 @@ describe('FalClient.speechMitStimme', () => {
       json: async () => ({ audio: { url: 'https://x/y.mp3' } }),
     })) as any;
     const c = new FalClient('kalit', fetchFn);
-    await c.speechMitStimme('tschüss', 'Matilda');
+    await c.speechMitStimme('tschüss', 'Matilda', 1.0);
     const [, opts] = fetchFn.mock.calls[0];
     const body = JSON.parse(opts.body);
     expect(body.language_code).toBe('de');

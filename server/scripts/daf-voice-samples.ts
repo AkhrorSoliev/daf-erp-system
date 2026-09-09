@@ -41,24 +41,40 @@ export const PROBEWOERTER = [
   'Auf Wiedersehen', // ko'p bo'g'inli, uzun
 ];
 
-export interface Variante {
-  id: string;
-  label: string;
-  /** Faqat ElevenLabs variantlarida bor — Chatterbox ovoz tanlamaydi. */
-  stimme?: string;
-}
+/**
+ * ATAYLAB diskriminatsiyalangan union — `daf-gen-audio.ts`dagi
+ * `GenAudioArgs` bilan bir xil naqsh, bir xil sabab bilan: bu skript
+ * `FalClient.speechMitStimme()`ni `daf-gen-audio.ts` bilan AYNAN BIR XIL
+ * imzo bilan chaqiradi (`speed` majburiy), shuning uchun namuna
+ * ishlab chiqarish audiosidan farqli tezlikda chiqib qolmasligi kerak.
+ * Agar `speed` oddiy ixtiyoriy maydon (`stimme?: string; speed?: number`)
+ * bo'lganda, `sammleAudioUrls` uni `variant.speed ?? 1.0` bilan jimgina
+ * to'ldirib yuborardi — bu esa aynan `speechMitStimme`da MAN etilgan
+ * "unutilgan tezlik standartga tushib qoladi" xatosini shu yerda qayta
+ * ochardi. `stimme` bor variant ENDI `speed`ni ham ANIQ aytishga
+ * majbur — kompilyator buni tekshiradi.
+ */
+export type Variante =
+  | { id: string; label: string; stimme?: undefined; speed?: undefined }
+  | { id: string; label: string; stimme: string; speed: number };
 
 export const VARIANTEN: Variante[] = [
-  { id: 'chatterbox', label: "Chatterbox (mavjud)" },
+  { id: 'chatterbox', label: 'Chatterbox (mavjud)' },
   {
     id: 'eleven-rachel',
     label: 'ElevenLabs — Rachel (Anna)',
     stimme: 'Rachel',
+    // Uchta variantni birinchi marta solishtirganda tezlik parametri
+    // hali mavjud emas edi — o'sha vaqtdagi haqiqiy chaqiruv fal.ai
+    // standarti (1.0) bilan bo'lgan. `speed: 1.0` shu tarixni
+    // yashirmasdan ANIQ yozadi, jimgina standartga tayanmaydi.
+    speed: 1.0,
   },
   {
     id: 'eleven-matilda',
     label: 'ElevenLabs — Matilda (Sabine)',
     stimme: 'Matilda',
+    speed: 1.0,
   },
 ];
 
@@ -142,7 +158,7 @@ export async function ovozniYukla(
  */
 export interface SpeechClient {
   speech(text: string): Promise<string>;
-  speechMitStimme(text: string, stimme: string): Promise<string>;
+  speechMitStimme(text: string, stimme: string, speed: number): Promise<string>;
 }
 
 /** Bitta variant/so'z juftligi uchun olingan manzil. */
@@ -179,7 +195,7 @@ export async function sammleAudioUrls(
       let url: string;
       try {
         url = variant.stimme
-          ? await client.speechMitStimme(wort, variant.stimme)
+          ? await client.speechMitStimme(wort, variant.stimme, variant.speed)
           : await client.speech(wort);
       } catch (err) {
         // Qaysi variant/so'z yiqilganini ANIQ aytish — operator 15 ta
