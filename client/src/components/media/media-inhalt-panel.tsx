@@ -140,8 +140,9 @@ function DialogBlock({ rows }: { rows: InhaltDialogZeile[] }) {
 }
 
 /**
- * Bitta bo'limning to'liq materiali — `MediaCoverageSection` bo'lim qatorini
- * ochganda shu yerga tushadi. Qamrov jadvali "nechta" deydi; bu panel
+ * Bitta bo'limning to'liq materiali — `MediaCoverageSection`dagi bo'lim
+ * qatoridan (endi havola) `/media/sections/[id]`ga o'tilib, "Material"
+ * yorlig'ida shu yerga tushiladi. Qamrov jadvali "nechta" deydi; bu panel
  * "nima" ni ko'rsatadi: har bir so'z/gap/ibora/dialog qatorini, tinglash
  * uchun tugma bilan — bu panelning butun maqsadi (53 ovoz yozildi-yu,
  * ularni birma-bir eshitib tekshirishning boshqa yo'li yo'q edi).
@@ -161,6 +162,14 @@ export function MediaInhaltPanel({ sectionId }: { sectionId: number }) {
   // render qilinmaydi (`media-coverage-section.tsx`), shuning uchun
   // "faqat ochiq bo'lim so'raydi" qoidasi buzilmaydi — birinchi mount
   // hamon bitta tarmoq so'rovi.
+  //
+  // `queryKey` ATAYLAB `section-detail-client.tsx`dagi sarlavha
+  // so'rovi bilan BAYTMA-BAYT bir xil (`["media-inhalt", sectionId]`,
+  // shu endpoint) — ikkalasi bir xil javobning turli maydonlarini
+  // o'qiydi (`SectionInhalt`, `media-inhalt-types.ts`). Kalit teng
+  // bo'lgani uchun React Query ularni BITTA keshdan ta'minlaydi: bo'lim
+  // ochilganda `/inhalt`ga bitta GET, va ikkalasidan istalgani `refetch()`
+  // chaqirsa — ikkalasi ham yangilanadi.
   const {
     data,
     isLoading,

@@ -45,7 +45,20 @@ export interface InhaltDialogZeile {
   audioUrl: string | null;
 }
 
+/**
+ * Sarlavha maydonlari (`sectionCode`..`unitTitleUz`) va to'liq material
+ * (`woerter`..`dialogZeilen`) BITTA javobda keladi — server bitta `inhalt()`
+ * chaqiruvi ikkalasini ham qaytaradi. Shu sabab `SectionDetailClient`
+ * (sarlavha) va `MediaInhaltPanel` (jadvallar) bir xil `useQuery`
+ * kalitidan (`["media-inhalt", sectionId]`) o'qiydi: ikkitasi ikki xil
+ * turdagi javob deb hisoblansa, bo'lim ochilganda xuddi shu URL ikki
+ * marta so'raladi (ko'rikda topilgan xato).
+ */
 export interface SectionInhalt {
+  sectionCode: string;
+  sectionTitleUz: string;
+  unitCode: string | null;
+  unitTitleUz: string;
   woerter: InhaltWort[];
   saetze: InhaltZeile[];
   phrasen: InhaltZeile[];

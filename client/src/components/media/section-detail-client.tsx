@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, RotateCcw } from "lucide-react";
 import api from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
@@ -15,20 +16,7 @@ import { MediaFragenPanel } from "./media-fragen-panel";
 import { MediaInhaltPanel } from "./media-inhalt-panel";
 import { engKopSavolliFormat, tanlanganTab } from "./section-detail-utils";
 import type { FrageFormat } from "./media-fragen-types";
-
-/**
- * Sahifa sarlavhasi uchun kerakli maydonlar — `SectionInhalt`ning
- * to'liq shakli (`media-inhalt-types.ts`) emas, ATAYLAB shu 4 tasi.
- * `MediaInhaltPanel` bir xil yo'lni to'liq material bilan o'zi qayta
- * so'raydi (brief: uni qayta yozmaslik) — bu yerdagi so'rov faqat
- * sarlavha uchun, ikkinchisiga bog'liq emas.
- */
-interface SectionBoshi {
-  sectionCode: string;
-  sectionTitleUz: string;
-  unitCode: string | null;
-  unitTitleUz: string;
-}
+import type { SectionInhalt } from "./media-inhalt-types";
 
 /** Sarlavha yuklanayotganda — matn qatorlari o'rnida skeleton. */
 function BoshiSkeleton() {
@@ -84,11 +72,6 @@ export function SectionDetailClient({ sectionId }: { sectionId: number }) {
   const searchParams = useSearchParams();
   const setName = useBreadcrumbName((s) => s.setName);
 
-  const [boshi, setBoshi] = useState<SectionBoshi | null>(null);
-  const [boshiXato, setBoshiXatoState] = useState(false);
-  const [retryKey, setRetryKey] = useState(0);
-  const boshiLoading = !boshi && !boshiXato;
-
   // Formatlar ro'yxati `MediaFragenPanel`dan keladi (`onFormatsLoaded`) —
   // ikkinchi marta `/fragen`ga so'rov yubormasdan, "sukut format qaysi
   // edi" savoliga shu yerda ham javob berish uchun (pastdagi
@@ -97,30 +80,33 @@ export function SectionDetailClient({ sectionId }: { sectionId: number }) {
     { format: FrageFormat; soni: number }[]
   >([]);
 
-  useEffect(() => {
-    let cancelled = false;
-    api
-      .get<SectionBoshi>(`/daf/media/sections/${sectionId}/inhalt`)
-      .then(({ data }) => {
-        if (cancelled) return;
-        setBoshi(data);
-        // Breadcrumb'dagi raqam o'rniga bo'lim nomi — loyiha qoidasi
-        // (`client/CLAUDE.md`: "Breadcrumbs").
-        setName(String(sectionId), data.sectionTitleUz);
-      })
-      .catch(() => {
-        if (!cancelled) setBoshiXatoState(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [sectionId, retryKey, setName]);
+  // `queryKey`/`queryFn` `media-inhalt-panel.tsx`dagi bilan BAYTMA-BAYT
+  // bir xil ATAYLAB — sarlavha (bu yer, faqat 4 maydon o'qiydi) va
+  // "Material" yorlig'i (to'liq javob) bir xil `/inhalt` javobining
+  // ikki qismini ko'rsatadi. Kalitlar teng bo'lgani uchun React Query
+  // ikkalasiga BITTA keshdan xizmat qiladi — bo'lim ochilganda bitta GET,
+  // va istalgan tarafning "Qayta urinib ko'rish"i ikkalasini yangilaydi
+  // (ko'rikda topilgan xato: sarlavha xom `axios`da qolib, panel bilan
+  // bir xil URL'ni ikkinchi marta so'rardi).
+  const {
+    data: boshi,
+    isLoading: boshiLoading,
+    isError: boshiXato,
+    refetch: handleRetry,
+  } = useQuery({
+    queryKey: ["media-inhalt", sectionId],
+    queryFn: () =>
+      api
+        .get<SectionInhalt>(`/daf/media/sections/${sectionId}/inhalt`)
+        .then((r) => r.data),
+  });
 
-  const handleRetry = useCallback(() => {
-    setBoshi(null);
-    setBoshiXatoState(false);
-    setRetryKey((k) => k + 1);
-  }, []);
+  useEffect(() => {
+    if (!boshi) return;
+    // Breadcrumb'dagi raqam o'rniga bo'lim nomi — loyiha qoidasi
+    // (`client/CLAUDE.md`: "Breadcrumbs").
+    setName(String(sectionId), boshi.sectionTitleUz);
+  }, [boshi, sectionId, setName]);
 
   const tab = tanlanganTab(searchParams.get("tab"));
   const formatParam = searchParams.get("format");
@@ -130,13 +116,16 @@ export function SectionDetailClient({ sectionId }: { sectionId: number }) {
       const params = new URLSearchParams(searchParams.toString());
       // Sukut ("material") manzilga yozilmaydi — `client/CLAUDE.md`:
       // "Omit the default tab from the URL".
+      //
+      // `?format=` ATAYLAB o'chirilmaydi. Tablarning butun sababi shu
+      // round-trip: o'quvchi "bu so'z g'alati eshitildi" deb Materialga
+      // o'tadi-yu, orqaga qaytganda o'sha 12 savolli formatni emas, sukut
+      // (ehtimol 120 ta PAAR) formatni ko'rsa — joyi yo'qoladi. Chinakam
+      // eskirgan format (masalan boshqa bo'limga o'tilgan havola) xavfli
+      // emas: `boshlangichFormat` uni shu bo'limda tekshirib, topmasa eng
+      // ko'p savollisiga qaytaradi.
       if (value === "material") {
         params.delete("tab");
-        // `?format=` faqat "Savollar" yorlig'ida ma'no anglatadi. Uni
-        // "Material"ga o'tganda ham manzilda qoldirish — ishlatilmaydigan
-        // holatni tashib yurish (ko'rik: Minor topilma) — sukutlar
-        // manzilda bo'lmasligi kerak degan qoidaning o'zi.
-        params.delete("format");
       } else {
         params.set("tab", value);
       }
@@ -175,7 +164,7 @@ export function SectionDetailClient({ sectionId }: { sectionId: number }) {
 
   if (boshiLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 p-4 md:p-6">
         <BoshiSkeleton />
         <Skeleton className="h-64 w-full rounded-lg" />
       </div>
@@ -184,7 +173,7 @@ export function SectionDetailClient({ sectionId }: { sectionId: number }) {
 
   if (boshiXato || !boshi) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 p-4 md:p-6">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href="/media">
             <ArrowLeft className="mr-1.5 h-4 w-4" />
@@ -197,7 +186,7 @@ export function SectionDetailClient({ sectionId }: { sectionId: number }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-6">
       <div className="space-y-1">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href="/media">

@@ -23,7 +23,16 @@ describe("wortMatni", () => {
 });
 
 function boshInhalt(): SectionInhalt {
-  return { woerter: [], saetze: [], phrasen: [], dialogZeilen: [] };
+  return {
+    sectionCode: "A1.1",
+    sectionTitleUz: "Sinov bo'limi",
+    unitCode: "U1",
+    unitTitleUz: "Sinov uniti",
+    woerter: [],
+    saetze: [],
+    phrasen: [],
+    dialogZeilen: [],
+  };
 }
 
 describe("sectionInhaltBosh", () => {

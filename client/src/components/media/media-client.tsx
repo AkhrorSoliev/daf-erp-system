@@ -1,24 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import {
-  BookOpen,
-  ClipboardList,
-  FolderArchive,
-  Sparkles,
-  Video,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { FolderArchive } from "lucide-react";
 import { MediaCoverageSection } from "./media-coverage-section";
-
-/** Kelajakdagi imkoniyatlar — hozircha faqat e'lon, bosilmaydi. */
-const TEZ_KUNDA = [
-  { icon: Sparkles, title: "Kontent yasash", desc: "Matnni o'zingiz yozasiz yoki AI yozib beradi" },
-  { icon: BookOpen, title: "Dars yasash", desc: "Bo'limni qo'lda yig'ish: matn, audio, rasm, mashq" },
-  { icon: ClipboardList, title: "Test yasash", desc: "Mashq turini tanlab, savollarni tuzish" },
-  { icon: Video, title: "Video darslar", desc: "Videoga subtitr va mashq biriktirish" },
-];
 
 export function MediaClient() {
   return (
@@ -43,29 +27,6 @@ export function MediaClient() {
       </div>
 
       <MediaCoverageSection />
-
-      <div>
-        <h2 className="mb-1 text-lg font-semibold">Tez kunda</h2>
-        <p className="mb-3 text-sm text-muted-foreground">
-          Bu imkoniyatlar tayyorlanmoqda.
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {TEZ_KUNDA.map(({ icon: Icon, title, desc }) => (
-            <Card key={title} className="border-dashed">
-              <CardContent className="space-y-1.5 p-4">
-                <div className="flex items-center gap-2">
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{title}</span>
-                </div>
-                <p className="text-xs text-muted-foreground">{desc}</p>
-                <Badge variant="outline" className="text-[10px]">
-                  tez kunda
-                </Badge>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

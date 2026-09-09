@@ -313,16 +313,13 @@ function FormatYonRoyxati({
  * Ikkalasi ham bo'lim ochilganda, alohida so'rov bilan yuklanadi (brief:
  * "bo'lim ochilganda").
  *
- * **Ikki rejim, BITTA fetch.** `selectedFormat` berilmasa (`undefined` —
- * `media-coverage-section.tsx`dagi eski oldindan ko'rish qatori), panel
- * eski xatti-harakatda qoladi: barcha formatlar ketma-ket, navigatsiyasiz
- * (bu chaqiruv Task 3'da olib tashlanadi, lekin hozircha ishlayotgani
- * kerak). `selectedFormat` (hatto `null` ham — "manzilda hali format
- * yo'q") berilsa, `/media/sections/[id]` sahifasi navigatsiya rejimini
- * so'ragan bo'ladi: formatlar yon ro'yxatga chiqadi, faqat BITTA
- * formatning savoli ko'rsatiladi. Ikkala rejim ham bitta `useQuery`dan
- * kelgan bitta `data`dan ishlaydi — rejim farqi faqat RENDER'da, fetch
- * ikki marta bo'lmaydi.
+ * Navigatsiya rejimi — bu vazifaning o'zagi: 340 ta savolni bitta ustunda
+ * emas, formatlar yon ro'yxati + faqat BITTA tanlangan formatning savoli
+ * qilib ko'rsatish (brief). `selectedFormat` `null` bo'lishi mumkin
+ * ("manzilda hali format yo'q") — bo'lim navigatsiyasiz eski rejimi olib
+ * tashlangan (`media-coverage-section.tsx`dagi oldindan ko'rish qatori
+ * bilan birga), shuning uchun bu yerga har doim `/media/sections/[id]`dan
+ * keladi.
  */
 export function MediaFragenPanel({
   sectionId,
@@ -332,21 +329,21 @@ export function MediaFragenPanel({
 }: {
   sectionId: number;
   /**
-   * `undefined` — eski, navigatsiyasiz rejim. `string | null` — manzildan
-   * kelgan, HALI TEKSHIRILMAGAN qiymat (`searchParams.get("format")`ning
-   * o'zi); tekshiruv (bu bo'limda bormi, yo'qmi) `boshlangichFormat`
-   * ichida bo'ladi — chaqiruvchi buni oldindan bilishi shart emas.
+   * Manzildan kelgan, HALI TEKSHIRILMAGAN qiymat
+   * (`searchParams.get("format")`ning o'zi); tekshiruv (bu bo'limda
+   * bormi, yo'qmi) `boshlangichFormat` ichida bo'ladi — chaqiruvchi buni
+   * oldindan bilishi shart emas.
    */
-  selectedFormat?: string | null;
+  selectedFormat: string | null;
   /** Foydalanuvchi yon ro'yxatdan boshqa formatni bossa chaqiriladi. */
-  onSelectFormat?: (format: FrageFormat) => void;
+  onSelectFormat: (format: FrageFormat) => void;
   /**
    * Savollar yuklanib formatlarga guruhlangach BIR MARTA chaqiriladi —
    * `section-detail-client.tsx` shundan "sukut format qaysi edi" (URL'ga
    * yozish/yozmaslikni hal qilish uchun) va sarlavhadagi umumiy sonni
    * biladi.
    */
-  onFormatsLoaded?: (formatlar: { format: FrageFormat; soni: number }[]) => void;
+  onFormatsLoaded: (formatlar: { format: FrageFormat; soni: number }[]) => void;
 }) {
   // `useQuery` — oddiy `useState`+`useEffect` emas, xuddi `MediaInhaltPanel`
   // dagi bilan bir xil sababga ko'ra: bu panel "Savollar" YORLIG'I ichida,
@@ -368,15 +365,7 @@ export function MediaFragenPanel({
         .then((r) => r.data),
   });
 
-  // `selectedFormat` faqat `undefined` bo'lganda ("bu prop umuman
-  // berilmagan") eski, navigatsiyasiz rejim tanlanadi — `null` esa
-  // "manzilda hali format yo'q, lekin navigatsiya kerak" degani
-  // (`section-detail-client.tsx`).
-  const navigatsiya = selectedFormat !== undefined;
-
-  // Guruhlash ikkala rejimda ham kerak — eski rejim hammasini ketma-ket
-  // chizadi, yangisi yon ro'yxat + tanlangan formatning o'zini. Bitta
-  // joydan hisoblanadi, ikki marta emas.
+  // Yon ro'yxat + tanlangan formatning savoli shu guruhlashdan chiziladi.
   const guruhlar = useMemo(() => formatlarBoyichaGuruhla(data ?? []), [data]);
 
   // Ota komponent (`section-detail-client.tsx`) shu orqali "qaysi format
@@ -384,7 +373,7 @@ export function MediaFragenPanel({
   // bilan bir xil hisobni ishlatadi) va formatlar sonini biladi — ikkinchi
   // marta `/fragen`ga so'rov yubormasdan.
   useEffect(() => {
-    if (!data || !onFormatsLoaded) return;
+    if (!data) return;
     onFormatsLoaded(
       Array.from(guruhlar, ([format, fragen]) => ({
         format,
@@ -393,12 +382,10 @@ export function MediaFragenPanel({
     );
   }, [data, guruhlar, onFormatsLoaded]);
 
-  // Navigatsiya rejimida ko'rsatiladigan format — manzildagi qiymat shu
-  // bo'limda haqiqatan bormi tekshiriladi, bo'lmasa eng ko'p savollisiga
-  // tushiladi (`boshlangichFormat`, `section-detail-utils.ts`).
-  const effectiveFormat = navigatsiya
-    ? boshlangichFormat(data ?? [], selectedFormat ?? null)
-    : null;
+  // Ko'rsatiladigan format — manzildagi qiymat shu bo'limda haqiqatan
+  // bormi tekshiriladi, bo'lmasa eng ko'p savollisiga tushiladi
+  // (`boshlangichFormat`, `section-detail-utils.ts`).
+  const effectiveFormat = boshlangichFormat(data ?? [], selectedFormat);
 
   return (
     <div className="space-y-6 p-4">
@@ -457,10 +444,10 @@ export function MediaFragenPanel({
         </Card>
       )}
 
-      {!isLoading && !isError && data && data.length > 0 && navigatsiya && (
-        // Navigatsiya rejimi — bu vazifaning o'zagi: 340 ta savolni bitta
-        // ustunda emas, formatlar ro'yxati + BITTA formatning savoli
-        // qilib ko'rsatish (brief).
+      {!isLoading && !isError && data && data.length > 0 && (
+        // Bu vazifaning o'zagi: 340 ta savolni bitta ustunda emas,
+        // formatlar ro'yxati + BITTA formatning savoli qilib ko'rsatish
+        // (brief).
         <div className="grid gap-4 md:grid-cols-[220px_1fr]">
           <FormatYonRoyxati
             formatlar={Array.from(guruhlar, ([format, fragen]) => ({
@@ -468,7 +455,7 @@ export function MediaFragenPanel({
               soni: fragen.length,
             }))}
             tanlangan={effectiveFormat}
-            onSelect={onSelectFormat ?? (() => {})}
+            onSelect={onSelectFormat}
           />
           <div className="min-w-0">
             {effectiveFormat && (
@@ -479,16 +466,6 @@ export function MediaFragenPanel({
             )}
           </div>
         </div>
-      )}
-
-      {!isLoading && !isError && data && data.length > 0 && !navigatsiya && (
-        // Eski, navigatsiyasiz rejim — `media-coverage-section.tsx`dagi
-        // oldindan ko'rish qatori (Task 3'da olib tashlanadi).
-        <>
-          {Array.from(guruhlar).map(([format, fragen]) => (
-            <FormatGuruhi key={format} format={format} fragen={fragen} />
-          ))}
-        </>
       )}
     </div>
   );
