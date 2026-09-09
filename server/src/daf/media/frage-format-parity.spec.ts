@@ -30,6 +30,25 @@ import { VORSCHAU_BAUER } from './daf-media-fragen.service';
  * bo'lmaydi, faqat ikki tomon ROZI bo'lishini tekshiradi.
  */
 describe("FrageFormat parity — server VORSCHAU_BAUER vs client e'loni", () => {
+  /**
+   * Izohlarni (`//...` va `/* ... *\/`) olib tashlaydi — ITTIFOQ TANASINI
+   * `matchAll`ga berishdan OLDIN.
+   *
+   * Ko'rik topilmasi (CRITICAL): izoh ichida eski format nomi qolib
+   * ketishi mumkin, masalan kimdir `WORT_TIPPEN`ni ittifoqdan o'chirib,
+   * yoniga `// keyingi: "WORT_TIPPEN"` degan izoh yozib ketsa —
+   * izohni olib tashlamasdan `matchAll` uni HAM literal deb hisoblab,
+   * son mos kelib, test SOXTA yashil chiqar edi (ikki tomon aslida
+   * ajralgan bo'lsa ham). Bu ANIQ shu qorovul TO'XTATISHI kerak bo'lgan
+   * holat — soxta rozillik ushlanmagan drift'dan ham yomonroq, chunki u
+   * "hammasi joyida" deb yolg'on gapiradi.
+   */
+  function izohlarsiz(matn: string): string {
+    return matn
+      .replace(/\/\*[\s\S]*?\*\//g, '') // /* ... */ blok izohlari
+      .replace(/\/\/.*$/gm, ''); // // qator izohlari
+  }
+
   function clientFrageFormatlari(): string[] {
     const clientPath = path.join(
       __dirname,
@@ -44,7 +63,7 @@ describe("FrageFormat parity — server VORSCHAU_BAUER vs client e'loni", () => 
           "moslashtiring (regex endi ishlamaydi, qo'lda solishtirish ham yaramaydi)",
       );
     }
-    return Array.from(match[1].matchAll(/["']([A-Z_]+)["']/g)).map(
+    return Array.from(izohlarsiz(match[1]).matchAll(/["']([A-Z_]+)["']/g)).map(
       (m) => m[1],
     );
   }
