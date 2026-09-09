@@ -31,11 +31,13 @@ import {
   type LeadSourceOption,
 } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
+import { LeadAdditionalFields } from "./lead-additional-fields";
 
 interface EditLeadValues {
   firstName: string;
   lastName: string;
   phone: string;
+  extraPhone: string;
   sourceId: string;
 }
 
@@ -54,7 +56,13 @@ export function EditLeadDrawer() {
     reset,
     formState: { errors },
   } = useForm<EditLeadValues>({
-    defaultValues: { firstName: "", lastName: "", phone: "", sourceId: "" },
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      phone: "",
+      extraPhone: "",
+      sourceId: "",
+    },
   });
 
   const open = !!editLead;
@@ -65,6 +73,7 @@ export function EditLeadDrawer() {
       firstName: editLead.firstName,
       lastName: editLead.lastName,
       phone: editLead.phone,
+      extraPhone: editLead.extraPhone,
       sourceId: editLead.sourceId,
     });
     setSubmitting(false);
@@ -84,6 +93,8 @@ export function EditLeadDrawer() {
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
         phone: values.phone,
+        // Always sent: an empty string is how the panel clears a saved number.
+        extraPhone: values.extraPhone,
         sourceId: values.sourceId,
       });
       applyLeadUpdate(editLead.sectionId, data);
@@ -188,6 +199,22 @@ export function EditLeadDrawer() {
                 )}
               />
             </div>
+
+            <Controller
+              name="extraPhone"
+              control={control}
+              rules={{
+                validate: (v) =>
+                  !v || v.length === 9 || "Telefon raqamini to'liq kiriting",
+              }}
+              render={({ field }) => (
+                <LeadAdditionalFields
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.extraPhone?.message}
+                />
+              )}
+            />
           </form>
         </div>
 

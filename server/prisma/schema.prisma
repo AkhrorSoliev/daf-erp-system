@@ -587,6 +587,9 @@ model Lead {
   firstName   String
   lastName    String
   phone       String
+  // Second contact number, captured from the "Qo'shimcha ma'lumotlar" panel in
+  // the add/edit drawers. Carried over to `Student.extraPhone` on conversion.
+  extraPhone  String?
   gender      Gender?
   telegram    String?
   parentPhone String?

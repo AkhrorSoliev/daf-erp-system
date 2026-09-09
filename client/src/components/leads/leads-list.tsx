@@ -53,6 +53,7 @@ interface LeadListRow {
   firstName: string;
   lastName: string;
   phone: string;
+  extraPhone: string | null;
   statusEnum: LeadStatus;
   createdAt: string;
   source: { id: string; name: string } | null;
@@ -202,6 +203,7 @@ export function LeadsList() {
                               firstName: lead.firstName,
                               lastName: lead.lastName,
                               phone: lead.phone,
+                              extraPhone: lead.extraPhone ?? "",
                               sourceId: lead.source?.id ?? "",
                             })
                           }
