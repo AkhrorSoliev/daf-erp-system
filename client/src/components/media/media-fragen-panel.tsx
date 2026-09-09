@@ -48,10 +48,43 @@ function ToGriJavob({ children }: { children: string }) {
 }
 
 /**
+ * Javob HAR DOIM shu yerda, o'z alohida qatorida — variantlar
+ * ro'yxatidagi biror satr bilan MOS KELISHIGA HECH QACHON BOG'LIQ
+ * EMAS.
+ *
+ * Ko'rik topilmasi (CRITICAL): oldingi variantda javob FAQAT
+ * `options`dan `richtig`ga teng bo'lakni topib ko'rsatilardi. Bu ikki
+ * formatda hech qachon ishlamaydi — `LUECKE`ning `options`i ATAYLAB
+ * bo'sh (`server/src/daf/uebung/satz-fragen.ts`dagi `luecke()`:
+ * o'quvchi yozadi, tanlamaydi), `SATZ_BAUEN`ning `richtig`si esa BUTUN
+ * gap, `options` esa o'sha gapning ALOHIDA so'zlari (`satzBauen()`) —
+ * gap hech qachon bitta so'zga teng bo'lmaydi. Ikkalasida ham sahifa
+ * "to'liq" ko'rinib turardi-yu, aynan kelgan odam qidirgan narsani
+ * bermas edi. Shuning uchun `richtig` endi bevosita, string
+ * solishtirishsiz chiqariladi; variantlar (pastda) faqat QO'SHIMCHA
+ * ko'rsatma.
+ */
+function ToGriJavobQatori({ richtig }: { richtig: string }) {
+  return (
+    <div className="flex flex-wrap items-baseline gap-1.5">
+      <span className="text-xs font-medium text-muted-foreground">
+        To&apos;g&apos;ri javob:
+      </span>
+      <ToGriJavob>{richtig}</ToGriJavob>
+    </div>
+  );
+}
+
+/**
  * Variantlar ro'yxati — to'g'ri javob yashil, qolgani neytral. O'quvchi
  * ko'radigan variantlar bilan BIR XIL tartibda (server allaqachon
  * aralashtirgan) — CEO chalg'ituvchilarning qanchalik "yaqinligini" ham
  * baholay olishi kerak.
+ *
+ * Bu QO'SHIMCHA ko'rsatma — javobning yagona manbai EMAS (qarang
+ * `ToGriJavobQatori`dagi izoh). Variant bo'lmasa (masalan `LUECKE`,
+ * `WORT_TIPPEN`) shunchaki "—" ko'rsatiladi, javob esa yuqorida
+ * allaqachon ko'rsatilgan bo'ladi.
  */
 function VariantlarRoyxati({
   options,
@@ -60,66 +93,53 @@ function VariantlarRoyxati({
   options: string[];
   richtig: string;
 }) {
-  if (options.length === 0) {
-    return <span className="text-xs text-muted-foreground">—</span>;
-  }
   return (
-    <div className="flex flex-wrap gap-1">
-      {options.map((o, i) => (
-        <Badge
-          key={`${o}-${i}`}
-          variant={o === richtig ? "default" : "outline"}
-          className={cn(
-            "font-normal",
-            o === richtig
-              ? "bg-emerald-600 text-white hover:bg-emerald-600"
-              : "text-muted-foreground",
-          )}
-        >
-          {o}
-        </Badge>
-      ))}
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="text-xs font-medium text-muted-foreground">
+        Variantlar:
+      </span>
+      {options.length === 0 ? (
+        <span className="text-xs text-muted-foreground">—</span>
+      ) : (
+        <div className="flex flex-wrap gap-1">
+          {options.map((o, i) => (
+            <Badge
+              key={`${o}-${i}`}
+              variant={o === richtig ? "default" : "outline"}
+              className={cn(
+                "font-normal",
+                o === richtig
+                  ? "bg-emerald-600 text-white hover:bg-emerald-600"
+                  : "text-muted-foreground",
+              )}
+            >
+              {o}
+            </Badge>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 /**
  * Bitta savol — to'rt shaklga qarab boshqacha chiziladi
- * (`vorschauShakli`). Har shaklda ham "variantlar" va "to'g'ri javob"
- * alohida ko'rinadi (brief: javob string bilan ro'yxatni solishtirib
- * topish shart bo'lmasin).
+ * (`vorschauShakli`). Har bir savolda ikkita narsa doim, MUSTAQIL
+ * ravishda ko'rinadi: savolning o'zi (prompt/audio/dialog/juftlar) va
+ * to'g'ri javob (`ToGriJavobQatori` yoki `JUFT` uchun pastdagi
+ * juftlar ro'yxati — ikkalasi ham `richtig`dan TO'G'RIDAN-TO'G'RI
+ * o'qiladi, variantlar bilan solishtirib emas).
  */
 function SavolQatori({ f }: { f: VorschauFrage }) {
   const shakl = vorschauShakli(f.format);
 
   return (
     <div className="space-y-2 rounded-lg border p-3">
-      {shakl === "OVOZ" && (
-        <div className="flex flex-wrap items-center gap-3">
-          {/* `autoPlay={false}` — bu ro'yxat, mashq ekrani emas: bir
-              vaqtda o'nlab so'z yangramasligi kerak (`OvozTugmasi` bilan
-              bir xil sabab, `media-inhalt-panel.tsx`dagi `OvozHujayrasi`). */}
-          {f.audioUrl && (
-            <OvozTugmasi url={f.audioUrl} autoPlay={false} compact />
-          )}
-          <ToGriJavob>{f.richtig}</ToGriJavob>
-        </div>
-      )}
-
-      {shakl === "JUFT" && (
-        <div className="flex flex-wrap gap-2">
-          {juftlarniAjrat(f.richtig).map((j, i) => (
-            <span
-              key={i}
-              className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-sm dark:bg-emerald-950/30"
-            >
-              <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
-              <span className="font-medium">{j.chap}</span>
-              <span className="text-muted-foreground">=</span>
-              <span>{j.ong}</span>
-            </span>
-          ))}
-        </div>
+      {shakl === "OVOZ" && f.audioUrl && (
+        // `autoPlay={false}` — bu ro'yxat, mashq ekrani emas: bir vaqtda
+        // o'nlab so'z yangramasligi kerak (`OvozTugmasi` bilan bir xil
+        // sabab, `media-inhalt-panel.tsx`dagi `OvozHujayrasi`).
+        <OvozTugmasi url={f.audioUrl} autoPlay={false} compact />
       )}
 
       {shakl === "DIALOG" && (
@@ -139,10 +159,31 @@ function SavolQatori({ f }: { f: VorschauFrage }) {
 
       {shakl === "MATN" && <div className="text-sm">{f.prompt}</div>}
 
-      {(shakl === "MATN" || shakl === "DIALOG") && (
-        <VariantlarRoyxati options={f.options} richtig={f.richtig} />
+      {shakl === "JUFT" ? (
+        // Juftlar `richtig`dan TO'G'RIDAN-TO'G'RI o'qiladi
+        // (`juftlarniAjrat`) — bu ham `VariantlarRoyxati`dagi kabi
+        // "options bilan solishtirib topish" emas, o'zi to'liq javob.
+        <div className="flex flex-wrap gap-2">
+          {juftlarniAjrat(f.richtig).map((j, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-sm dark:bg-emerald-950/30"
+            >
+              <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <span className="font-medium">{j.chap}</span>
+              <span className="text-muted-foreground">=</span>
+              <span>{j.ong}</span>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <ToGriJavobQatori richtig={f.richtig} />
       )}
-      {shakl === "OVOZ" && f.options.length > 0 && (
+
+      {/* `JUFT`da variantlar ro'yxati qo'shimcha hech narsa aytmaydi —
+          yuqoridagi juftlar allaqachon TO'LIQ javob; qolgan uch shaklda
+          esa chalg'ituvchilarni ko'rish uchun qoladi. */}
+      {shakl !== "JUFT" && (
         <VariantlarRoyxati options={f.options} richtig={f.richtig} />
       )}
 

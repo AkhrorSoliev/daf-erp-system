@@ -9,23 +9,37 @@ import type { FrageFormat, VorschauFrage } from "./media-fragen-types";
  */
 export type VorschauShakli = "OVOZ" | "JUFT" | "DIALOG" | "MATN";
 
+/**
+ * `Record<FrageFormat, ...>` ATAYLAB, `switch`+`default` EMAS — server
+ * tomonidagi `VORSCHAU_BAUER` bilan bir xil sabab (qarang
+ * `daf-media-fragen.service.ts`dagi izoh): `default` bo'lgan `switch`
+ * o'n uchinchi format qo'shilganda uni jimgina "MATN" deb hisoblab
+ * qo'yardi — kompilyator susinmasdi, test ham bunga tayanmaydi (kod
+ * ko'rigi: "testga ishonib bo'lmaydi, uni ham hech kim yangilamaydi").
+ * `Record` bilan yangi format `FrageFormat` ittifoqiga qo'shilib, shu
+ * yerga yozilmasa — TypeScript build YIQILADI, MAJBURAN.
+ */
+const VORSCHAU_SHAKLI: Record<FrageFormat, VorschauShakli> = {
+  WORT_UZ: "MATN",
+  UZ_WORT: "MATN",
+  PAAR: "JUFT",
+  ARTIKEL: "MATN",
+  LUECKE: "MATN",
+  SATZ_BAUEN: "MATN",
+  SATZ_UEBERSETZEN: "MATN",
+  REAKTION: "MATN",
+  // Javob bitta satr emas — juftlar to'plami (`richtig` "de=uz|de=uz|...").
+  ZUORDNEN: "JUFT",
+  // `prompt` — butun suhbat, bitta qatori `___` bilan bo'shatilgan.
+  DIALOG_LUECKE: "DIALOG",
+  // `prompt` bu ikkalasida ATAYLAB bo'sh — so'zning o'zi javob.
+  // Matn o'rniga karnay ko'rsatilmasa, savol bo'sh qator bo'lib qolardi.
+  AUDIO_WORT: "OVOZ",
+  WORT_TIPPEN: "OVOZ",
+};
+
 export function vorschauShakli(format: FrageFormat): VorschauShakli {
-  switch (format) {
-    // `prompt` bu ikkalasida ATAYLAB bo'sh — so'zning o'zi javob.
-    // Matn o'rniga karnay ko'rsatilmasa, savol bo'sh qator bo'lib qolardi.
-    case "AUDIO_WORT":
-    case "WORT_TIPPEN":
-      return "OVOZ";
-    // Javob bitta satr emas — juftlar to'plami (`richtig` "de=uz|de=uz|...").
-    case "PAAR":
-    case "ZUORDNEN":
-      return "JUFT";
-    // `prompt` — butun suhbat, bitta qatori `___` bilan bo'shatilgan.
-    case "DIALOG_LUECKE":
-      return "DIALOG";
-    default:
-      return "MATN";
-  }
+  return VORSCHAU_SHAKLI[format];
 }
 
 /**
