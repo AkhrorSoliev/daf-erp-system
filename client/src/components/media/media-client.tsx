@@ -25,6 +25,7 @@ import {
   TabsContent,
 } from "@/components/ui/tabs";
 import { AssetList } from "./asset-list";
+import { MediaCoverageSection } from "./media-coverage-section";
 import {
   BEREICH_LABEL,
   hajm,
@@ -310,6 +311,8 @@ export function MediaClient() {
           </Tabs>
         </>
       )}
+
+      <MediaCoverageSection />
 
       <div>
         <h2 className="mb-1 text-lg font-semibold">Tez kunda</h2>
