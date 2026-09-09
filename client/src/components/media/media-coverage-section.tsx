@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronRight, RotateCcw } from "lucide-react";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -25,8 +26,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { MediaFragenPanel } from "./media-fragen-panel";
-import { MediaInhaltPanel } from "./media-inhalt-panel";
 import type {
   MediaCoverageOverview,
   MediaSectionCoverage,
@@ -75,9 +74,6 @@ function CoverageCell({
   );
 }
 
-/** Bo'lim jadvalidagi ustunlar soni — pastdagi kengaytirilgan qator shuncha ustunni bosib o'tadi. */
-const SECTION_COLUMN_COUNT = 7;
-
 function SectionRow({ s, index }: { s: MediaSectionCoverage; index: number }) {
   // Rangni ham, `pictureEligible`/`total` kabi kamchilik nisbatini ham BIR
   // joydan — `sectionStatuses`dan — olamiz. Har bir hujayra o'zicha
@@ -87,104 +83,74 @@ function SectionRow({ s, index }: { s: MediaSectionCoverage; index: number }) {
   // media-coverage-utils.test.ts'da sinaladi, shuning uchun rang shu orqali
   // kelishi kerak, mustaqil hisoblanmasligi kerak.
   const status = sectionStatuses(s);
-  // Bo'lim qatori bosilganda material paneli ochiladi. Panel FAQAT `open`
-  // paytida render qilinadi — shuning uchun `GET .../inhalt` yopiq bo'lim
-  // uchun umuman so'ralmaydi (brief: "yopiq bo'lim hech narsa yuklamaydi").
-  const [open, setOpen] = useState(false);
-  const toggle = useCallback(() => setOpen((o) => !o), []);
+  const router = useRouter();
+  // Bo'lim materiali va savollari endi shu bo'limning o'z sahifasida
+  // (`/media/sections/[id]`) — qator bosilganda o'sha sahifaga o'tadi.
+  // O'zgargani (`open` state, `MediaInhaltPanel`/`MediaFragenPanel` shu
+  // yerda) bo'lim sahifasiga ko'chdi, `/media` faqat raqamlarni ko'rsatadi.
+  const href = `/media/sections/${s.sectionId}`;
+  const goToSection = useCallback(() => router.push(href), [router, href]);
   return (
-    <>
-      <TableRow
-        role="button"
-        tabIndex={0}
-        aria-expanded={open}
-        onClick={toggle}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            toggle();
-          }
-        }}
-        className="cursor-pointer hover:bg-muted/50"
-      >
-        <TableCell className="w-12 border-r text-muted-foreground">
-          <span className="flex items-center gap-1">
-            {open ? (
-              <ChevronDown className="h-3.5 w-3.5 shrink-0" />
-            ) : (
-              <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-            )}
-            {index + 1}
-          </span>
-        </TableCell>
-        <TableCell>
-          <div className="font-medium">{s.titleUz}</div>
-          <div className="font-mono text-[11px] text-muted-foreground">
-            {s.code}
-          </div>
-        </TableCell>
-        <TableCell>
-          <CoverageCell
-            status={status.wordsAudio}
-            have={s.words.withAudio}
-            total={s.words.total}
-          />
-        </TableCell>
-        <TableCell>
-          <CoverageCell
-            status={status.wordsImage}
-            have={s.words.withImage}
-            total={s.words.pictureEligible}
-          />
-        </TableCell>
-        <TableCell>
-          <CoverageCell
-            status={status.sentences}
-            have={s.sentences.withAudio}
-            total={s.sentences.total}
-          />
-        </TableCell>
-        <TableCell>
-          <CoverageCell
-            status={status.phrases}
-            have={s.phrases.withAudio}
-            total={s.phrases.total}
-          />
-        </TableCell>
-        <TableCell>
-          <CoverageCell
-            status={status.dialogLines}
-            have={s.dialogLines.withAudio}
-            total={s.dialogLines.total}
-          />
-        </TableCell>
-      </TableRow>
-      {open && (
-        <TableRow className="hover:bg-transparent">
-          <TableCell colSpan={SECTION_COLUMN_COUNT} className="bg-muted/20 p-0">
-            <MediaInhaltPanel sectionId={s.sectionId} />
-            {/* Ikkalasi ham FAQAT bo'lim ochilganda so'raladi (`open`) —
-                material "nima bor"ni ko'rsatadi, savollar dvigatel undan
-                "nima quradi"ni. Bitta so'rov ikkinchisini bloklamasin deb
-                ikkala panel MUSTAQIL fetch qiladi — biri sekinlashsa
-                ikkinchisi kutib turmaydi. */}
-            <div className="border-t px-4 pt-4">
-              <h3 className="text-sm font-semibold">
-                Savollar (oldindan ko&apos;rish)
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                Dvigatel shu bo&apos;lim + shu unitdagi undan oldingi
-                bo&apos;limlar materialidan quradigan barcha savol —
-                to&apos;g&apos;ri javobi bilan. Ko&apos;lam yuqoridagi
-                material panelidan KENGROQ — tafsilot pastdagi &quot;Ko&apos;lam&quot;
-                yorlig&apos;ida.
-              </p>
-            </div>
-            <MediaFragenPanel sectionId={s.sectionId} />
-          </TableCell>
-        </TableRow>
-      )}
-    </>
+    <TableRow
+      role="link"
+      tabIndex={0}
+      onClick={goToSection}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          goToSection();
+        }
+      }}
+      className="cursor-pointer hover:bg-muted/50"
+    >
+      <TableCell className="w-12 border-r text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+          {index + 1}
+        </span>
+      </TableCell>
+      <TableCell>
+        <div className="font-medium">{s.titleUz}</div>
+        <div className="font-mono text-[11px] text-muted-foreground">
+          {s.code}
+        </div>
+      </TableCell>
+      <TableCell>
+        <CoverageCell
+          status={status.wordsAudio}
+          have={s.words.withAudio}
+          total={s.words.total}
+        />
+      </TableCell>
+      <TableCell>
+        <CoverageCell
+          status={status.wordsImage}
+          have={s.words.withImage}
+          total={s.words.pictureEligible}
+        />
+      </TableCell>
+      <TableCell>
+        <CoverageCell
+          status={status.sentences}
+          have={s.sentences.withAudio}
+          total={s.sentences.total}
+        />
+      </TableCell>
+      <TableCell>
+        <CoverageCell
+          status={status.phrases}
+          have={s.phrases.withAudio}
+          total={s.phrases.total}
+        />
+      </TableCell>
+      <TableCell>
+        <CoverageCell
+          status={status.dialogLines}
+          have={s.dialogLines.withAudio}
+          total={s.dialogLines.total}
+        />
+      </TableCell>
+    </TableRow>
   );
 }
 

@@ -59,4 +59,9 @@ export const routeLabels: Record<string, string> = {
   // butunlay o'tkazib yuboradi (aks holda mavjud bo'lmagan
   // "/media/sections" ro'yxatiga havola bo'lib qolardi).
   media: "Media",
+  // /media/assets — eski quvurdan qolgan obrazlar/fayllar ro'yxati. Bu
+  // "sections" kabi pass-through EMAS — o'zi to'liq ro'yxat sahifasi
+  // (haqiqatan "/media/assets" mavjud), shuning uchun breadcrumbda ko'rinishi
+  // kerak.
+  assets: "Media fayllari",
 };
