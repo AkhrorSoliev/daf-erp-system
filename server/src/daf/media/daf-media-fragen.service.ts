@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import type {
@@ -183,10 +183,38 @@ export class DafMediaFragenService {
   }
 
   async fragen(sectionId: number): Promise<VorschauFrage[]> {
+    const section = await this.prisma.dafSection.findUnique({
+      where: { id: sectionId },
+      select: { id: true, unitId: true, order: true },
+    } as any);
+    if (!section) {
+      throw new NotFoundException(`Bo'lim topilmadi: ${sectionId}`);
+    }
+    const { unitId, order } = section as { unitId: number; order: number };
+
+    // Chalg'ituvchi puli SHU bo'lim BILAN BIRGA undan oldingi (kichikroq
+    // `order`) bo'limlar materialidan yig'iladi — `uebung.service.ts`dagi
+    // `baueKandidaten` bilan AYNAN bir xil qoida (`sections` so'rovi
+    // o'sha yerda ham `order: { lte: section.order }`).
+    //
+    // Bu ixtiyoriy kengaytma emas: `ZUORDNEN` oltita, `REAKTION` esa
+    // kamida to'rtta iborani talab qiladi, va A1 unit-1 bo'limlarida
+    // hech biri o'zi bunga yetmaydi (4/4/4/3/3 ibora) — dvigatel ularni
+    // 3-bo'limdan boshlab quradi, chunki pul birlashtirilgan. Faqat SHU
+    // bo'limning o'zini so'rasak, oldindan ko'rish haqiqatda mavjud
+    // savolni "bu formatda savol yo'q" deb ko'rsatib qo'yardi — aynan
+    // vazifaning o'zagi bo'lgan "sahifa dvigateldan ajralib ketmasin"
+    // qoidasini buzardi.
+    const sections = await this.prisma.dafSection.findMany({
+      where: { unitId, order: { lte: order } },
+      select: { id: true },
+    } as any);
+    const sectionIds = (sections as Array<{ id: number }>).map((s) => s.id);
+
     const [woerterRows, saetzeRows, phrasenRows, dialogRows] =
       await Promise.all([
         this.prisma.dafLexeme.findMany({
-          where: { sectionId },
+          where: { sectionId: { in: sectionIds } },
           orderBy: { order: 'asc' },
           select: {
             id: true,
@@ -199,20 +227,21 @@ export class DafMediaFragenService {
           },
         } as any),
         this.prisma.dafSentence.findMany({
-          where: { sectionId },
+          where: { sectionId: { in: sectionIds } },
           orderBy: { order: 'asc' },
           select: { id: true, de: true, uz: true },
         } as any),
         this.prisma.dafPhrase.findMany({
-          where: { sectionId },
+          where: { sectionId: { in: sectionIds } },
           orderBy: { id: 'asc' },
           select: { id: true, de: true, uz: true, funktionUz: true },
         } as any),
         // `DafDialog` sectionId'ga TO'G'RIDAN-TO'G'RI ega (satrlari esa
         // dialog orqali) — xuddi `uebung.service.ts`dagi `baueKandidaten`
-        // kabi, `include` bilan bitta so'rovda.
+        // kabi, `in: sectionIds` bilan bitta so'rovda (shu bo'lim +
+        // undan oldingilar).
         this.prisma.dafDialog.findMany({
-          where: { sectionId },
+          where: { sectionId: { in: sectionIds } },
           include: { zeilen: { orderBy: { order: 'asc' } } },
         } as any),
       ]);
@@ -257,7 +286,8 @@ export class DafMediaFragenService {
         artikel: l.artikel,
         anzeige: l.anzeige,
         // Quruvchilar `sectionCode`ni o'qimaydi (12 formatning hech biri
-        // undan foydalanmaydi) — bo'lim bitta bo'lgani uchun bo'sh qoldi.
+        // undan foydalanmaydi) — pul bir necha bo'limdan yig'ilsa ham
+        // bo'sh qoldirish xavfsiz.
         sectionCode: '',
         audioKey: l.audioKey,
       }));
