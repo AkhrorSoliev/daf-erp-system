@@ -1,4 +1,10 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  UseGuards,
+} from '@nestjs/common';
 import { Roles } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 import {
@@ -9,6 +15,10 @@ import {
   DafMediaCoverageService,
   type MediaCoverageOverview,
 } from './media/daf-media-coverage.service';
+import {
+  DafMediaInhaltService,
+  type SectionInhalt,
+} from './media/daf-media-inhalt.service';
 
 /**
  * Media bo'limi — yasalgan kontentni KO'RSATADI, yaratmaydi.
@@ -21,6 +31,7 @@ export class DafMediaController {
   constructor(
     private readonly service: DafMediaOverviewService,
     private readonly coverageService: DafMediaCoverageService,
+    private readonly inhaltService: DafMediaInhaltService,
   ) {}
 
   @Get('overview')
@@ -36,5 +47,15 @@ export class DafMediaController {
   @Get('coverage')
   coverage(): Promise<MediaCoverageOverview> {
     return this.coverageService.coverage();
+  }
+
+  /**
+   * Bitta bo'limning to'liq materiali — «nechta» emas, «nima» savoliga
+   * javob. `coverage()` sonlarni beradi, bu yo'l o'sha sonlar ortidagi
+   * so'z/gap/ibora/dialogni o'zini qaytaradi (audio manzillari bilan).
+   */
+  @Get('sections/:id/inhalt')
+  inhalt(@Param('id', ParseIntPipe) id: number): Promise<SectionInhalt> {
+    return this.inhaltService.inhalt(id);
   }
 }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { DafMediaController } from './daf-media.controller';
 import { DafMediaOverviewService } from './media/daf-media-overview.service';
 import { DafMediaCoverageService } from './media/daf-media-coverage.service';
+import { DafMediaInhaltService } from './media/daf-media-inhalt.service';
 import { DafPortalController } from './daf-portal.controller';
 import { DafPortalReadService } from './daf-portal-read.service';
 import { DafAttemptService } from './daf-attempt.service';
@@ -21,6 +22,7 @@ import { FortschrittService } from './fortschritt/fortschritt.service';
     DafSeedService,
     DafMediaOverviewService,
     DafMediaCoverageService,
+    DafMediaInhaltService,
     KursSeedService,
     InhaltSeedService,
     UebungService,

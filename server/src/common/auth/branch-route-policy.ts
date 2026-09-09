@@ -471,6 +471,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     routes: [
       'GET /daf/media/coverage',
       'GET /daf/media/overview',
+      'GET /daf/media/sections/:id/inhalt',
       'GET /student-portal/lernen/grammar',
       'GET /student-portal/lernen/lessons/:id',
       'GET /student-portal/lernen/lessons/:id/drill',

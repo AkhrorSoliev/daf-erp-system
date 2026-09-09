@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { DafMediaController } from './daf-media.controller';
 import { DafMediaOverviewService } from './media/daf-media-overview.service';
 import { DafMediaCoverageService } from './media/daf-media-coverage.service';
+import { DafMediaInhaltService } from './media/daf-media-inhalt.service';
 import { RolesGuard } from '../common/guards';
 import { ROLES_KEY } from '../common/decorators';
 
@@ -22,6 +23,11 @@ describe('DafMediaController — role guard', () => {
   const coverageService = {
     coverage: jest.fn().mockResolvedValue({ levels: [] }),
   };
+  const inhaltService = {
+    inhalt: jest
+      .fn()
+      .mockResolvedValue({ woerter: [], saetze: [], phrasen: [], dialogZeilen: [] }),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -29,6 +35,7 @@ describe('DafMediaController — role guard', () => {
       providers: [
         { provide: DafMediaOverviewService, useValue: overviewService },
         { provide: DafMediaCoverageService, useValue: coverageService },
+        { provide: DafMediaInhaltService, useValue: inhaltService },
       ],
     }).compile();
 
@@ -70,5 +77,16 @@ describe('DafMediaController — role guard', () => {
     const result = controller.overview();
     expect(overviewService.overview).toHaveBeenCalled();
     expect(result).toEqual({ vorhanden: false });
+  });
+
+  it('inhalt() DafMediaInhaltService.inhalt()ga delegatsiya qiladi', async () => {
+    const result = await controller.inhalt(7);
+    expect(inhaltService.inhalt).toHaveBeenCalledWith(7);
+    expect(result).toEqual({
+      woerter: [],
+      saetze: [],
+      phrasen: [],
+      dialogZeilen: [],
+    });
   });
 });
