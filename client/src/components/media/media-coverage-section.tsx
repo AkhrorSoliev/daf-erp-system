@@ -394,7 +394,7 @@ export function MediaCoverageSection() {
             <Card>
               <CardContent className="p-4 text-sm text-muted-foreground">
                 Hali hech qanday unit yaratilmagan — kontentni bazaga
-                yozadigan seed skriptini (`daf-seed`/`inhalt-seed`) ishga
+                yozadigan seed skriptini (`daf:seed`/`daf:inhalt-seed`) ishga
                 tushiring.
               </CardContent>
             </Card>

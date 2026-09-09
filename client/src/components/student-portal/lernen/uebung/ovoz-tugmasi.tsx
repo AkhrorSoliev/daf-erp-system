@@ -19,16 +19,18 @@ import { SpeakerHigh, ArrowClockwise } from "@phosphor-icons/react";
  */
 export function OvozTugmasi({
   url,
-  autoPlay = true,
+  autoPlay = false,
   compact = false,
 }: {
   url: string;
   /**
-   * Mashq ekranida savol chiqishi bilan ovoz o'zi yangraydi — TO'G'RI xatti-
-   * harakat, yuqoridagi izohga qarang. `/media` ro'yxati kabi ko'p qatorli
-   * joylarda buni O'CHIRISH SHART: bo'lim ochilganda 53 fayl birdan
-   * yangrardi. Standart `true` — yagona hozirgi chaqiruvchi (`seans-ekrani.tsx`)
-   * aynan shuni kutadi.
+   * Standart `false` — UNUTILGANDA ZARAR KELTIRMAYDIGAN tomonda. Mashq
+   * ekranida savol chiqishi bilan ovoz o'zi yangrashi TO'G'RI (yuqoridagi
+   * izohga qarang), lekin buni standart qilib qo'ysak, ro'yxat kabi ko'p
+   * qatorli har qanday KELAJAKDAGI chaqiruvchi joy — hech narsa bermay
+   * shunchaki `<OvozTugmasi url={...} />` yozsa — 53 faylni birdan
+   * yangratib yuboradi. Yagona hozirgi chaqiruvchi (`seans-ekrani.tsx`)
+   * `autoPlay` ni ANIQ o'zi beradi — standartga suyanmaydi.
    */
   autoPlay?: boolean;
   /**

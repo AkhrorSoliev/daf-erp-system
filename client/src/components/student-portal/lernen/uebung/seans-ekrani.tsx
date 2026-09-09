@@ -776,8 +776,12 @@ export function SeansEkrani(props: SeansEkraniProps) {
         </p>
         {/* `AUDIO_WORT`/`WORT_TIPPEN`da `prompt` ATAYLAB bo'sh (server
             Task 3) — so'zning o'zi javob, tugma savol matnining o'rnini
-            egallaydi. */}
-        {frage.audioUrl ? <OvozTugmasi url={frage.audioUrl} /> : null}
+            egallaydi. `autoPlay` ANIQ beriladi (standart endi `false`) —
+            savol chiqishi bilan ovoz o'zi yangrashi FAQAT shu ekranda
+            to'g'ri, standartga suyanib qolmaslik kerak. */}
+        {frage.audioUrl ? (
+          <OvozTugmasi url={frage.audioUrl} autoPlay />
+        ) : null}
         {frage.format === "DIALOG_LUECKE" ? (
           // Butun suhbat ekranda — savol matni o'rniga (dizayn D7 / brief §5):
           // server `prompt`ni tayyor satr qilib yuboradi, mijoz uni faqat

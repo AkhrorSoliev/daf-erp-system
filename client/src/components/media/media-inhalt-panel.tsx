@@ -205,7 +205,7 @@ export function MediaInhaltPanel({ sectionId }: { sectionId: number }) {
         <Card>
           <CardContent className="p-4 text-sm text-muted-foreground">
             Bu bo&apos;limda hali material yo&apos;q — kontentni bazaga
-            yozadigan seed skriptini (`daf-seed`/`inhalt-seed`) ishga
+            yozadigan seed skriptini (`daf:seed`/`daf:inhalt-seed`) ishga
             tushiring.
           </CardContent>
         </Card>
