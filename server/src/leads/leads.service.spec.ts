@@ -402,11 +402,7 @@ describe('LeadsService', () => {
         statusEnum: 'NEW',
       });
 
-      await service.create(
-        { ...validDto, extraPhone: '911112233' },
-        1001,
-        1,
-      );
+      await service.create({ ...validDto, extraPhone: '911112233' }, 1001, 1);
 
       expect(prisma.lead.create).toHaveBeenCalledWith(
         expect.objectContaining({
