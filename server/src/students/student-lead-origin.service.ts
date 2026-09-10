@@ -56,18 +56,20 @@ export class StudentLeadOriginService {
       select: { id: true },
     });
 
+    const conversionFields = {
+      statusEnum: LeadStatus.CONVERTED,
+      status: 'converted',
+      convertedStudentId: params.studentId,
+      statusChangedAt: now,
+      statusChangedById: params.userId ?? null,
+    };
+
     if (matched.length > 0) {
       // Mavjud lid o'z bo'limida va o'z manbasi bilan qoladi — uning kelib
       // chiqishi haqiqat, admin endi tanlagan manba emas.
       await tx.lead.updateMany({
         where: { id: { in: matched.map((l) => l.id) } },
-        data: {
-          statusEnum: LeadStatus.CONVERTED,
-          status: 'converted',
-          convertedStudentId: params.studentId,
-          statusChangedAt: now,
-          statusChangedById: params.userId ?? null,
-        },
+        data: conversionFields,
       });
       return;
     }
@@ -81,11 +83,7 @@ export class StudentLeadOriginService {
         branchId: params.branchId,
         sectionId: null,
         sourceId: params.sourceId,
-        statusEnum: LeadStatus.CONVERTED,
-        status: 'converted',
-        convertedStudentId: params.studentId,
-        statusChangedAt: now,
-        statusChangedById: params.userId ?? null,
+        ...conversionFields,
       },
     });
   }
