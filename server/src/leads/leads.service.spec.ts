@@ -35,7 +35,11 @@ describe('LeadsService', () => {
       group: { findFirst: jest.fn() },
       // Phone-based duplicate lookup (findOne matched-student + convert guard).
       // Defaults to "no existing student" so create/convert paths proceed.
-      student: { findFirst: jest.fn().mockResolvedValue(null) },
+      // findMany backs the "aylanganlar" name lookup in findAll.
+      student: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       mockExamParticipant: { findMany: jest.fn().mockResolvedValue([]) },
       // Comment counts are grouped, not relation-counted (polymorphic table).
       comment: {
@@ -292,6 +296,52 @@ describe('LeadsService', () => {
           }),
         }),
       );
+    });
+  });
+
+  describe('LeadsService.findAll — aylanganlar hisoboti', () => {
+    it("aylangan lidga o'quvchi ma'lumotini biriktiradi", async () => {
+      prisma.lead.findMany.mockResolvedValue([
+        {
+          id: 'lead-1',
+          firstName: 'Ali',
+          lastName: 'Valiyev',
+          phone: '901234567',
+          statusEnum: 'CONVERTED',
+          createdAt: new Date('2026-09-01'),
+          statusChangedAt: new Date('2026-09-05'),
+          convertedStudentId: 555,
+          source: null,
+          section: null,
+        },
+      ]);
+      prisma.lead.count.mockResolvedValue(1);
+      prisma.student.findMany.mockResolvedValue([
+        { id: 555, firstName: 'Ali', lastName: 'Valiyev' },
+      ]);
+
+      const res = await service.findAll({} as any, 1001, null);
+
+      expect(res.data[0].convertedStudent).toEqual({
+        id: 555,
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+      });
+    });
+
+    it("dateField=statusChangedAt bo'lsa sana filtri aylangan sanaga tushadi", async () => {
+      prisma.lead.findMany.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+
+      await service.findAll(
+        { dateField: 'statusChangedAt', startDate: '2026-09-01' } as any,
+        1001,
+        null,
+      );
+
+      const where = prisma.lead.findMany.mock.calls[0][0].where;
+      expect(where.statusChangedAt).toBeDefined();
+      expect(where.createdAt).toBeUndefined();
     });
   });
 

@@ -10,6 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import Link from "next/link";
 import toast from "react-hot-toast";
 import {
   Table,
@@ -46,7 +47,11 @@ import {
   type LeadStatus,
 } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
-import { LEAD_FILTER_SCHEMA, leadHolatiParams } from "./lead-filter-schema";
+import {
+  LEAD_FILTER_SCHEMA,
+  leadDateFieldIsConversion,
+  leadHolatiParams,
+} from "./lead-filter-schema";
 
 interface LeadListRow {
   id: string;
@@ -56,6 +61,12 @@ interface LeadListRow {
   extraPhone: string | null;
   statusEnum: LeadStatus;
   createdAt: string;
+  statusChangedAt: string | null;
+  convertedStudent: {
+    id: number;
+    firstName: string;
+    lastName: string;
+  } | null;
   source: { id: string; name: string } | null;
   section: {
     id: string;
@@ -92,6 +103,9 @@ export function LeadsList() {
       Object.assign(params, leadHolatiParams(filters.holati));
       if (filters.startDate) params.startDate = filters.startDate;
       if (filters.endDate) params.endDate = filters.endDate;
+      if (leadDateFieldIsConversion(filters.holati)) {
+        params.dateField = "statusChangedAt";
+      }
 
       const { data } = await api.get("/leads", { params });
       setRows(data.data);
@@ -129,9 +143,11 @@ export function LeadsList() {
               <TableHead>Ism familya</TableHead>
               <TableHead>Telefon</TableHead>
               <TableHead>Holati</TableHead>
+              <TableHead>O&apos;quvchi</TableHead>
               <TableHead>Manba</TableHead>
               <TableHead>Joylashuvi</TableHead>
               <TableHead>Sana</TableHead>
+              <TableHead>Aylangan sana</TableHead>
               <TableHead className="w-12 text-right">Amal</TableHead>
             </TableRow>
           </TableHeader>
@@ -139,7 +155,7 @@ export function LeadsList() {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 8 }).map((_, c) => (
+                  {Array.from({ length: 10 }).map((_, c) => (
                     <TableCell key={c}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -149,7 +165,7 @@ export function LeadsList() {
             ) : rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={10}
                   className="h-24 text-center text-muted-foreground"
                 >
                   Filtrga mos lid topilmadi
@@ -174,6 +190,19 @@ export function LeadsList() {
                       {LEAD_STATUS_LABELS[lead.statusEnum]}
                     </Badge>
                   </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    {lead.convertedStudent ? (
+                      <Link
+                        href={`/students/profile/${lead.convertedStudent.id}`}
+                        className="text-primary hover:underline"
+                      >
+                        {lead.convertedStudent.firstName}{" "}
+                        {lead.convertedStudent.lastName}
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
                   <TableCell>{lead.source?.name ?? "—"}</TableCell>
                   <TableCell>
                     {lead.section
@@ -182,6 +211,11 @@ export function LeadsList() {
                   </TableCell>
                   <TableCell>
                     {format(parseISO(lead.createdAt), "dd.MM.yyyy")}
+                  </TableCell>
+                  <TableCell>
+                    {lead.statusChangedAt
+                      ? format(parseISO(lead.statusChangedAt), "dd.MM.yyyy")
+                      : "—"}
                   </TableCell>
                   <TableCell
                     className="text-right"
@@ -267,9 +301,7 @@ export function LeadsList() {
               ))}
             </SelectContent>
           </Select>
-          <p className="text-sm text-muted-foreground">
-            Jami: {total} ta lid
-          </p>
+          <p className="text-sm text-muted-foreground">Jami: {total} ta lid</p>
         </div>
         <div className="flex items-center gap-2">
           <Button

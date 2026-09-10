@@ -129,8 +129,18 @@ export class LeadsService {
       where.id = query.hasComments === 'true' ? { in: ids } : { notIn: ids };
     }
 
-    const createdAt = tashkentRangeFilter(query.startDate, query.endDate);
-    if (createdAt) where.createdAt = createdAt;
+    // Date range targets `statusChangedAt` (when a lead CONVERTED) instead of
+    // `createdAt` (when the lead arrived) — the "aylanganlar" report needs the
+    // former to answer "how many became students this month". Same Tashkent
+    // day-boundary helper either way; only the target field switches.
+    const range = tashkentRangeFilter(query.startDate, query.endDate);
+    if (range) {
+      if (query.dateField === 'statusChangedAt') {
+        where.statusChangedAt = range;
+      } else {
+        where.createdAt = range;
+      }
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.lead.findMany({
@@ -143,6 +153,8 @@ export class LeadsService {
           extraPhone: true,
           statusEnum: true,
           createdAt: true,
+          statusChangedAt: true,
+          convertedStudentId: true,
           source: { select: { id: true, name: true } },
           section: {
             select: {
@@ -159,7 +171,37 @@ export class LeadsService {
       this.prisma.lead.count({ where }),
     ]);
 
-    return { data, total, page, pageSize };
+    // `Lead.convertedStudentId` has NO Prisma relation to `Student` on purpose
+    // — a relation would need a FK constraint and a migration. Resolve names
+    // with one extra query and map in memory (same shape as `commentCountsFor`
+    // above), skipped entirely when nothing on the page converted.
+    const studentIds = [
+      ...new Set(
+        data
+          .map((l) => l.convertedStudentId)
+          .filter((id): id is number => id !== null),
+      ),
+    ];
+    const students = studentIds.length
+      ? await this.prisma.student.findMany({
+          where: { id: { in: studentIds } },
+          select: { id: true, firstName: true, lastName: true },
+        })
+      : [];
+    const byId = new Map(students.map((s) => [s.id, s]));
+
+    return {
+      data: data.map((l) => ({
+        ...l,
+        convertedStudent:
+          l.convertedStudentId !== null
+            ? (byId.get(l.convertedStudentId) ?? null)
+            : null,
+      })),
+      total,
+      page,
+      pageSize,
+    };
   }
 
   /** Leads inside one section, ordered for board display. */
