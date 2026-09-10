@@ -168,7 +168,12 @@ ko'rinishi kerak.
   "O'quvchiga aylangan" ro'yxatida ko'rinadi.
 - Har bir yangi o'quvchining manbasi yoziladi → "qaysi reklama pul keltirdi" savoliga
   hisobot javob bera boshlaydi.
-- Doskadagi 21 ta o'lik kartochka o'zi yopiladi va yangilari to'planmaydi.
+- Yangi o'lik kartochkalar to'planmaydi. **Doskadagi mavjud 21 tasi o'zi
+  yopilmaydi**: ular allaqachon o'quvchi bo'lgan odamlarga tegishli, ya'ni ular
+  uchun boshqa `POST /students` hech qachon yuborilmaydi va orqaga qarab
+  to'ldirish (backfill) skripti ham yo'q. Ularni tozalash uchun har birini
+  qo'lda "biriktirish" oqimidan o'tkazish kerak (lid kartochkasi →
+  "O'quvchiga aylantirish" → mavjud o'quvchini tanlash).
 - Konversiya foizi tuzatish sanasidan keyingi davrlar uchun haqiqiy bo'ladi.
 
 ## Tekshirish

@@ -30,14 +30,26 @@ type StudentOrigin =
 `DIRECT` yo'lida (`/students` eshigi) `StudentLeadOriginService.recordDirectOrigin`
 lid yozuvini **o'quvchi yaratilayotgan tranzaksiya ichida** yozadi:
 
-- shu kompaniyada, shu telefon bilan jonli lid (`deletedAt: null`,
-  bosqich NEW/CONTACTED/TRIAL/LOST) topilsa — **barchasi** `CONVERTED`
-  qilinadi va yangi o'quvchiga bog'lanadi, lekin o'z bo'limi va o'z manbasi
-  bilan qoladi (bu odamning haqiqiy kelib chiqishi — adminning hozir
-  tanlagan manbasi emas);
+- shu kompaniyada, shu telefon bilan mos lid topilsa — **barchasi**
+  `CONVERTED` qilinadi va yangi o'quvchiga bog'lanadi, lekin o'z bo'limi va
+  o'z manbasi bilan qoladi (bu odamning haqiqiy kelib chiqishi — adminning
+  hozir tanlagan manbasi emas). Moslik to'plami ikkitadan iborat: doskadagi
+  jonli lid (`deletedAt: null`, bosqich NEW/CONTACTED/TRIAL) **va** arxivdagi
+  `LOST` lid. Ikkinchisi shart, chunki `LeadsService.remove` `LOST` bosqichini
+  har doim `deletedAt` bilan birga yozadi — faqat `deletedAt: null`
+  qidirilganda "yo'qotilgan odam qaytib kelsa eski kartochkasiga ulanadi"
+  degan va'da hech qachon bajarilmasdi. Aylantirilgan `LOST` lid arxivdan
+  qaytariladi (`deletedAt`, `deletedById`, `deletionBatchId`, `lostReason`
+  tozalanadi) — u endi arxiv qatori emas, haqiqiy konversiya. Arxivning
+  boshqa hech qanday bosqichi bu moslikka kirmaydi;
+- mos lidning **filiali esa o'quvchinikiga tenglashtiriladi** (quyida —
+  "Telefon mosligi kompaniya bo'ylab");
 - topilmasa — **bo'limsiz** (`sectionId: null`) lid darhol `CONVERTED`
   bosqichida yaratiladi, o'quvchining filiali va adminning tanlagan
-  manbasi bilan.
+  manbasi bilan. Manba `Lead.sourceId` tashqi kalitiga tushgani uchun u
+  tranzaksiyadan **oldin** (`assertSourceUsable`, `companyId` sharti bilan)
+  tekshiriladi: aks holda yolg'on id tranzaksiya ichida Prisma P2003 berardi
+  va repoda global Prisma xato filtri yo'q — admin o'quvchisiz 500 olardi.
 
 `LEAD` yo'lida (`LeadsService.convert`) lid allaqachon bor — ikkinchisi
 yaratilmaydi.
@@ -45,6 +57,23 @@ yaratilmaydi.
 `origin` **ixtiyoriy emas**: `sourceId`ni HTTP darajasida `CreateStudentDirectDto`
 majburlaydi, `AddStudentDialog`dagi "Qayerdan bildi?" select manba
 tanlanmasdan saqlashga yo'l qo'ymaydi.
+
+### Telefon mosligi kompaniya bo'ylab, filial bo'yicha emas
+
+Bu **ongli murosa**. Telefon qidiruvi `companyId` bilan chegaralanadi, lekin
+filial bilan **emas**: 9 xonali raqam odamni bildiradi, filialni emas. Filial
+bo'yicha chegaralansa, bitta odam har bir filialda alohida lid olib yurardi —
+bu hozirgi holatdan yomonroq, chunki keyin "necha kishi keldi?" degan savolga
+javob dublikatlar ustida qurilardi.
+
+Murosaning narxi: bir filialning admini boshqa filial doskasidagi lidni
+aylantirib yuborishi mumkin. Uni **filial o'quvchidan meros olishi** qoplaydi —
+aylantirilgan har bir mos lidning `branchId` maydoni o'quvchining filialiga
+tenglashtiriladi (faqat filiali `null` bo'lganlarga emas). Qoida bitta jumlada:
+**konversiya odam haqiqatda o'qiy boshlagan filialda sanaladi.** Bu ikkita
+holni birdan yopadi — ochiq formadan kelgan filialsiz lid hech qaysi filialda
+sanalmasdi, va Farg'ona admini Namangan lidini aylantirsa konversiya noto'g'ri
+filialga yozilardi.
 
 ## Ko'rib chiqilgan muqobillar
 
@@ -77,10 +106,25 @@ majbur qiladi.
 
 **Yutuq:** Bu nuqtadan boshlab har bir yangi o'quvchining kelib chiqish
 manbasi bor — yo o'z lididan meros, yo admin tanlagan manba bilan yaratilgan.
-Voronka va manba statistikasi endi haqiqiy hisoblanadi. `/leads` ro'yxati
+`/leads` ro'yxati
 `statusChangedAt` va `convertedStudent`ni ko'rsatadi; "Holati" filtri
 "O'quvchiga aylangan" tanlanganda sana oralig'i konversiya sanasiga
 (`dateField: 'statusChangedAt'`) qarab ishlaydi, yaratilish sanasiga emas.
+
+**Voronka foizi endi nimani sanaydi.** Avtomatik kelib chiqish lidi voronka
+o'lchoviga **kirmaydi**: `reports-overview.service.ts` dagi har bir voronka
+so'rovi `sectionId: { not: null }` sharti bilan chegaralangan, ya'ni foiz
+faqat doskadan o'tgan lidlarni sanaydi. To'g'ridan kirganlar (`sectionId IS
+NULL`) ataylab chiqarib tashlangan — ular ham suratga, ham maxrajga tushsa,
+har bir kelib qo'shilgan odam foizni 100 % ga surardi (prodda nisbat taxminan
+408 to'g'ridan / 34 voronkadan, ya'ni signal 12:1 bo'g'ilardi). Ta'sir
+qiladigan joylar: `leadConversionRate`, voronka taqsimoti,
+`conversionRateOverTime` va aylanishgacha o'rtacha kun.
+
+**Manba statistikasi esa aksincha — HAR BIR lidni sanaydi**, to'g'ridan
+kirganlarni ham. U voronka natijasi emas, "qaysi reklama pul keltirdi?" degan
+savolga javob; to'g'ridan kelgan odamning manbasi ham xuddi shu savolning bir
+qismi.
 
 **Narx:** Tuzatishdan oldingi 892 ta lidsiz o'quvchiga **ataylab** tegilmadi
 (CEO qarori, 10.09.2026) — ularni orqaga qarab lid bilan bog'lash
@@ -89,6 +133,14 @@ Natijada tuzatish sanasidan oldingi davrlar uchun konversiya foizi eskicha
 noto'g'ri bo'lib qolaveradi, va eski hamda yangi davrni bitta grafikda
 taqqoslab bo'lmaydi — grafik chizilganda bu chegara alohida belgilanishi
 kerak.
+
+Xuddi shu sababdan **doskadagi 21 ta o'lik kartochka o'zi yopilmaydi.** Ular
+allaqachon o'quvchi bo'lgan odamlarga tegishli, ya'ni ular uchun boshqa
+`POST /students` hech qachon yuborilmaydi va bu qaror orqaga qarab
+to'ldirmaydi. Bu yerdagi tuzatish faqat **yangilari to'planmasligini**
+kafolatlaydi; mavjud 21 tasini tozalash uchun har birini qo'lda "biriktirish"
+oqimidan o'tkazish kerak (lid kartochkasi → "O'quvchiga aylantirish" → mavjud
+o'quvchini tanlash).
 
 **Endi taqiqlangan:** o'quvchi `origin`siz yaratilishi mumkin emas — buni
 tip darajasida kompilyator ushlaydi.
