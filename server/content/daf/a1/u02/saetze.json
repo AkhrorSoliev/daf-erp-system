@@ -1,0 +1,373 @@
+{
+ "unit": "u02",
+ "saetze": [
+  {
+   "sourceId": "u02-s1-01",
+   "section": "u02-s1",
+   "de": "Das ist meine Mutter.",
+   "uz": "Bu mening onam.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s1-02",
+   "section": "u02-s1",
+   "de": "Mein Vater ist hier.",
+   "uz": "Mening otam bu yerda.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s1-03",
+   "section": "u02-s1",
+   "de": "Wo ist meine Schwester?",
+   "uz": "Opam qayerda?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s1-04",
+   "section": "u02-s1",
+   "de": "Sie ist meine Tochter.",
+   "uz": "U mening qizim.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s1-05",
+   "section": "u02-s1",
+   "de": "Wie heißt dein Vater?",
+   "uz": "Sening otangning ismi nima?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s1-06",
+   "section": "u02-s1",
+   "de": "Wo ist deine Tochter?",
+   "uz": "Sening qizing qayerda?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s1-07",
+   "section": "u02-s1",
+   "de": "Das ist mein Kind.",
+   "uz": "Bu mening bolam.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s1-08",
+   "section": "u02-s1",
+   "de": "Wo ist dein Sohn?",
+   "uz": "Sening o'g'ling qayerda?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s2-01",
+   "section": "u02-s2",
+   "de": "Mein Vater ist fünfzig.",
+   "uz": "Otam ellik yoshda.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s2-02",
+   "section": "u02-s2",
+   "de": "Meine Mutter ist sechzig.",
+   "uz": "Onam oltmish yoshda.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s2-03",
+   "section": "u02-s2",
+   "de": "Meine Tochter ist dreißig.",
+   "uz": "Qizim o'ttiz yoshda.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s2-04",
+   "section": "u02-s2",
+   "de": "Meine Oma ist achtzig.",
+   "uz": "Buvim sakson yoshda.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s2-05",
+   "section": "u02-s2",
+   "de": "Meine Schwester ist vierzig.",
+   "uz": "Opam qirq yoshda.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s2-06",
+   "section": "u02-s2",
+   "de": "Mein Sohn ist zwanzig.",
+   "uz": "O'g'lim yigirma yoshda.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s2-07",
+   "section": "u02-s2",
+   "de": "Ich heiße Anna und bin dreißig.",
+   "uz": "Mening ismim Anna, men o'ttiz yoshdaman.",
+   "wordCount": 6,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s2-08",
+   "section": "u02-s2",
+   "de": "Ich habe eine Schwester.",
+   "uz": "Mening opam bor.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s2-09",
+   "section": "u02-s2",
+   "de": "Mein Bruder hat ein Kind.",
+   "uz": "Akamning bitta bolasi bor.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s2-10",
+   "section": "u02-s2",
+   "de": "Mein Vater hat zwei Kinder.",
+   "uz": "Otamning ikkita bolasi bor.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s3-01",
+   "section": "u02-s3",
+   "de": "Ich bin Lehrer.",
+   "uz": "Men o'qituvchiman.",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s3-02",
+   "section": "u02-s3",
+   "de": "Sie ist Lehrerin.",
+   "uz": "U o'qituvchi (ayol).",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s3-03",
+   "section": "u02-s3",
+   "de": "Mein Vater ist Arzt.",
+   "uz": "Mening otam shifokor.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s3-04",
+   "section": "u02-s3",
+   "de": "Meine Mutter ist Ärztin.",
+   "uz": "Onam shifokor.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s3-05",
+   "section": "u02-s3",
+   "de": "Er ist Chef in der Firma.",
+   "uz": "U firmada boshliq.",
+   "wordCount": 6,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s3-06",
+   "section": "u02-s3",
+   "de": "Meine Tochter arbeitet in der Schule.",
+   "uz": "Mening qizim maktabda ishlaydi.",
+   "wordCount": 6,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-01",
+   "section": "u02-s4",
+   "de": "Mein Vater ist alt.",
+   "uz": "Otam keksa.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-02",
+   "section": "u02-s4",
+   "de": "Meine Schwester ist jung.",
+   "uz": "Opam yosh.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-03",
+   "section": "u02-s4",
+   "de": "Das Kind ist klein.",
+   "uz": "Bola kichkina.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-04",
+   "section": "u02-s4",
+   "de": "Mein Bruder ist müde.",
+   "uz": "Mening akam charchagan.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-05",
+   "section": "u02-s4",
+   "de": "Wir sind glücklich.",
+   "uz": "Biz baxtlimiz.",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-06",
+   "section": "u02-s4",
+   "de": "Sie ist ledig.",
+   "uz": "U turmush qurmagan.",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-07",
+   "section": "u02-s4",
+   "de": "Er ist verheiratet.",
+   "uz": "U uylangan.",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-08",
+   "section": "u02-s4",
+   "de": "Mein Sohn ist lustig.",
+   "uz": "O'g'lim quvnoq.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-09",
+   "section": "u02-s4",
+   "de": "Die Eltern sind glücklich.",
+   "uz": "Ota-ona baxtli.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-10",
+   "section": "u02-s4",
+   "de": "Die Lehrerin ist jung.",
+   "uz": "O'qituvchi (ayol) yosh.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-11",
+   "section": "u02-s4",
+   "de": "Wie alt ist dein Vater?",
+   "uz": "Otang necha yoshda?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-12",
+   "section": "u02-s4",
+   "de": "Wir sind ledig und glücklich.",
+   "uz": "Biz turmush qurmaganmiz va baxtlimiz.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s5-01",
+   "section": "u02-s5",
+   "de": "Sie ist meine Freundin.",
+   "uz": "U mening dugonam.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s5-02",
+   "section": "u02-s5",
+   "de": "Er ist mein Kollege.",
+   "uz": "U mening hamkasbim.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s5-03",
+   "section": "u02-s5",
+   "de": "Wir lernen zusammen.",
+   "uz": "Biz birga o'rganamiz.",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s5-04",
+   "section": "u02-s5",
+   "de": "Das Mädchen ist jung.",
+   "uz": "Qiz bola yosh.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s5-05",
+   "section": "u02-s5",
+   "de": "Der Junge macht das.",
+   "uz": "O'g'il bola buni qiladi.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s5-06",
+   "section": "u02-s5",
+   "de": "Die Leute sind glücklich.",
+   "uz": "Odamlar baxtli.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s5-07",
+   "section": "u02-s5",
+   "de": "Wir sind glücklich zusammen.",
+   "uz": "Biz birga baxtlimiz.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s5-08",
+   "section": "u02-s5",
+   "de": "Mein Kollege ist lustig.",
+   "uz": "Hamkasbim quvnoq.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s5-09",
+   "section": "u02-s5",
+   "de": "Der Mann ist verheiratet.",
+   "uz": "Erkak uylangan.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s5-10",
+   "section": "u02-s5",
+   "de": "Wir machen das zusammen.",
+   "uz": "Biz buni birga qilamiz.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  }
+ ]
+}

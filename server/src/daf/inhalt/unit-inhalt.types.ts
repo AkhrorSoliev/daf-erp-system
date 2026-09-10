@@ -134,3 +134,32 @@ export interface SaetzeFile {
   unit: string;
   saetze: Satz[];
 }
+
+/**
+ * Yordamchi so'z — lug'atga kirmaydigan, lekin matnda uchraydigan so'z.
+ *
+ * NEGA KONTENTDA, KODDA EMAS. Progressiya qo'riqchisi «bu so'z hali
+ * o'rgatilmagan» deb yiqiladi, va uni jimlatishning yagona yo'li so'zni
+ * shu ro'yxatga qo'shish. Kodda yozilganida ro'yxat uch joyda nusxalanib
+ * bir-biridan uzoqlashib ketgan edi. Endi bitta fayl, va har yozuvda
+ * `grund` MAJBURIY: sababsiz jimlatib bo'lmaydi.
+ */
+export interface Hilfswort {
+  wort: string;
+  grund: string;
+  /**
+   * Shu BO'LIMDAN boshlab ruxsat etiladi (masalan `u02-s2`).
+   *
+   * Yordamchi so'z progressiyadan ozod — aynan shuning uchun tuslangan
+   * fe'l shakli («hast») lemmasi («haben») o'rgatiladigan bo'limdan
+   * OLDIN ham ishlatilaverardi. Bu maydon o'sha teshikni yopadi:
+   * shakl o'z qoidasi bilan birga ochiladi.
+   *
+   * Yozilmasa — hamma joyda ruxsat (artikl, bog'lovchi, atoqli ot).
+   */
+  abSection?: string;
+}
+
+export interface HilfswoerterFile {
+  eintraege: Hilfswort[];
+}

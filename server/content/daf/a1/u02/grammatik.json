@@ -1,0 +1,70 @@
+{
+  "unit": "u02",
+  "regeln": [
+    {
+      "section": "u02-s1",
+      "titelDe": "Possessivartikel: mein und dein",
+      "titelUz": "Egalik artikli: mein va dein",
+      "erklaerungUz": "«mein» — mening, «dein» — sening. Erkak va o'rta jinsdagi so'z oldida «mein/dein» turadi: mein Vater, dein Kind. Ayol jinsdagi so'z oldida va ko'plikda oxiriga «-e» qo'shiladi: meine Mutter, deine Eltern.",
+      "beispiele": [
+        { "de": "Das ist mein Vater.", "uz": "Bu mening otam." },
+        { "de": "Das ist meine Mutter.", "uz": "Bu mening onam." },
+        { "de": "Ist das dein Bruder?", "uz": "Bu sening akangmi?" },
+        { "de": "Meine Schwester ist hier.", "uz": "Opam shu yerda." },
+        { "de": "Deine Eltern wohnen in Usbekistan.", "uz": "Ota-onang O'zbekistonda yashaydi." }
+      ]
+    },
+    {
+      "section": "u02-s2",
+      "titelDe": "Verb haben, Zahlen 20–100",
+      "titelUz": "haben fe'li va 20–100 sonlari",
+      "erklaerungUz": "«haben» — ega bo'lmoq. Tuslanishi: ich habe, du hast, er/sie hat, wir haben. O'nliklar «-zig» bilan tugaydi: zwanzig, vierzig, fünfzig. Ikkitasi boshqacha: dreißig («-ßig») va sechzig, siebzig (sechs va sieben qisqaradi).",
+      "beispiele": [
+        { "de": "Ich habe zwei Kinder.", "uz": "Mening ikkita bolam bor." },
+        { "de": "Hast du eine Schwester?", "uz": "Sening opang bormi?" },
+        { "de": "Meine Oma ist achtzig.", "uz": "Buvim sakson yoshda." },
+        { "de": "Mein Bruder ist dreißig.", "uz": "Akam o'ttiz yoshda." },
+        { "de": "Sie hat drei Kinder.", "uz": "Uning uchta bolasi bor." }
+      ]
+    },
+    {
+      "section": "u02-s3",
+      "titelDe": "Beruf ohne Artikel, Endung -in",
+      "titelUz": "Kasb artiklsiz aytiladi, «-in» qo'shimchasi",
+      "erklaerungUz": "Kasbni aytganda artikl QO'YILMAYDI: «Ich bin Lehrer.» — «Ich bin ein Lehrer.» emas. Ayol kishining kasbi oxiriga «-in» qo'shiladi: Lehrer → Lehrerin, Arzt → Ärztin (a harfi ä ga aylanadi).",
+      "beispiele": [
+        { "de": "Ich bin Lehrer.", "uz": "Men o'qituvchiman." },
+        { "de": "Meine Mutter ist Ärztin.", "uz": "Onam shifokor." },
+        { "de": "Mein Vater ist Arzt.", "uz": "Otam shifokor." },
+        { "de": "Was ist dein Beruf?", "uz": "Kasbing nima?" },
+        { "de": "Mein Bruder arbeitet in Deutschland.", "uz": "Akam Germaniyada ishlaydi." }
+      ]
+    },
+    {
+      "section": "u02-s4",
+      "titelDe": "sein + Adjektiv",
+      "titelUz": "sein fe'li va sifat",
+      "erklaerungUz": "«sein» fe'lidan keyin sifat O'ZGARMAYDI — hech qanday qo'shimcha olmaydi: Er ist alt. Sie ist jung. Wir sind müde. Shuning uchun bu eng oson qolip: sifatni lug'atdagi holicha qo'yaverasiz.",
+      "beispiele": [
+        { "de": "Mein Vater ist alt.", "uz": "Otam keksa." },
+        { "de": "Meine Schwester ist jung.", "uz": "Opam yosh." },
+        { "de": "Bist du müde?", "uz": "Charchadingmi?" },
+        { "de": "Wir sind glücklich.", "uz": "Biz baxtlimiz." },
+        { "de": "Das Kind ist klein.", "uz": "Bola kichkina." }
+      ]
+    },
+    {
+      "section": "u02-s5",
+      "titelDe": "Personalpronomen er, sie, wir",
+      "titelUz": "er, sie va wir olmoshlari",
+      "erklaerungUz": "«er» — u (erkak), «sie» — u (ayol) yoki ular, «wir» — biz. Fe'l oxiri olmoshga qarab o'zgaradi: er lernt, sie lernt, wir lernen. «sie» ko'plikda kelsa fe'l «wir» dagidek bo'ladi: sie lernen.",
+      "beispiele": [
+        { "de": "Er ist mein Freund.", "uz": "U mening do'stim." },
+        { "de": "Sie ist meine Freundin.", "uz": "U mening dugonam." },
+        { "de": "Wir lernen zusammen.", "uz": "Biz birga o'rganamiz." },
+        { "de": "Er arbeitet hier.", "uz": "U shu yerda ishlaydi." },
+        { "de": "Sie sind meine Kollegen.", "uz": "Ular mening hamkasblarim." }
+      ]
+    }
+  ]
+}

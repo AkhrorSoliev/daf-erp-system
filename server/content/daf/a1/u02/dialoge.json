@@ -1,0 +1,233 @@
+{
+ "unit": "u02",
+ "dialoge": [
+  {
+   "id": "u02-d1",
+   "section": "u02-s1",
+   "titelDe": "Meine Familie",
+   "titelUz": "Mening oilam",
+   "zeilen": [
+    {
+     "sprecher": "Mia",
+     "de": "Ist das deine Familie?",
+     "uz": "Bu sening oilangmi?"
+    },
+    {
+     "sprecher": "Timur",
+     "de": "Ja, das ist meine Familie.",
+     "uz": "Ha, bu mening oilam."
+    },
+    {
+     "sprecher": "Mia",
+     "de": "Wer ist das?",
+     "uz": "Bu kim?"
+    },
+    {
+     "sprecher": "Timur",
+     "de": "Das ist mein Vater.",
+     "uz": "Bu mening otam."
+    },
+    {
+     "sprecher": "Mia",
+     "de": "Und das? Ist das deine Mutter?",
+     "uz": "Bu-chi? Bu sening onangmi?"
+    },
+    {
+     "sprecher": "Timur",
+     "de": "Ja, das ist meine Mutter.",
+     "uz": "Ha, bu mening onam."
+    }
+   ]
+  },
+  {
+   "id": "u02-d2",
+   "section": "u02-s1",
+   "titelDe": "Meine Schwester",
+   "titelUz": "Mening opam",
+   "zeilen": [
+    {
+     "sprecher": "Anna",
+     "de": "Ist das deine Schwester?",
+     "uz": "Bu sening opangmi?"
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "Nein, das ist meine Tochter.",
+     "uz": "Yo'q, bu mening qizim."
+    },
+    {
+     "sprecher": "Anna",
+     "de": "Wie heißt sie?",
+     "uz": "Uning ismi nima?"
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "Sie heißt Nodira.",
+     "uz": "Uning ismi Nodira."
+    },
+    {
+     "sprecher": "Anna",
+     "de": "Und deine Eltern? Wo wohnen sie?",
+     "uz": "Ota-onang-chi? Ular qayerda yashaydi?"
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "Meine Eltern wohnen in Deutschland.",
+     "uz": "Ota-onam Germaniyada yashaydi."
+    }
+   ]
+  },
+  {
+   "id": "u02-d3",
+   "section": "u02-s2",
+   "titelDe": "Zwei Kinder",
+   "titelUz": "Ikkita bola",
+   "zeilen": [
+    {
+     "sprecher": "Claudia",
+     "de": "Hast du Kinder?",
+     "uz": "Bolalaring bormi?"
+    },
+    {
+     "sprecher": "Timur",
+     "de": "Ja, ich habe zwei Kinder.",
+     "uz": "Ha, mening ikkita bolam bor."
+    },
+    {
+     "sprecher": "Claudia",
+     "de": "Und dein Bruder?",
+     "uz": "Akang-chi?"
+    },
+    {
+     "sprecher": "Timur",
+     "de": "Er hat drei Kinder.",
+     "uz": "Uning uchta bolasi bor."
+    },
+    {
+     "sprecher": "Claudia",
+     "de": "Und deine Oma?",
+     "uz": "Buving-chi?"
+    },
+    {
+     "sprecher": "Timur",
+     "de": "Meine Oma ist neunzig.",
+     "uz": "Buvim to'qson yoshda."
+    }
+   ]
+  },
+  {
+   "id": "u02-d4",
+   "section": "u02-s3",
+   "titelDe": "Was ist dein Beruf?",
+   "titelUz": "Kasbing nima?",
+   "zeilen": [
+    {
+     "sprecher": "Markus",
+     "de": "Was ist dein Beruf?",
+     "uz": "Kasbing nima?"
+    },
+    {
+     "sprecher": "Nodira",
+     "de": "Ich bin Ärztin. Und du?",
+     "uz": "Men shifokorman. Sen-chi?"
+    },
+    {
+     "sprecher": "Markus",
+     "de": "Ich bin Lehrer.",
+     "uz": "Men o'qituvchiman."
+    },
+    {
+     "sprecher": "Nodira",
+     "de": "Wo arbeitest du?",
+     "uz": "Qayerda ishlaysan?"
+    },
+    {
+     "sprecher": "Markus",
+     "de": "Ich arbeite hier.",
+     "uz": "Men shu yerda ishlayman."
+    },
+    {
+     "sprecher": "Nodira",
+     "de": "Meine Schwester ist auch Lehrerin.",
+     "uz": "Mening opam ham o'qituvchi."
+    }
+   ]
+  },
+  {
+   "id": "u02-d5",
+   "section": "u02-s4",
+   "titelDe": "Wie ist er?",
+   "titelUz": "U qanday odam?",
+   "zeilen": [
+    {
+     "sprecher": "Mia",
+     "de": "Wie alt ist dein Chef?",
+     "uz": "Rahbaring necha yoshda?"
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "Er ist fünfzig.",
+     "uz": "U ellik yoshda."
+    },
+    {
+     "sprecher": "Mia",
+     "de": "Und wie ist er?",
+     "uz": "U qanday odam?"
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "Er ist sehr lustig.",
+     "uz": "U juda quvnoq."
+    },
+    {
+     "sprecher": "Mia",
+     "de": "Bist du müde?",
+     "uz": "Charchadingmi?"
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "Ja, ich bin müde. Und du?",
+     "uz": "Ha, charchadim. Sen-chi?"
+    }
+   ]
+  },
+  {
+   "id": "u02-d6",
+   "section": "u02-s5",
+   "titelDe": "Freunde und Kollegen",
+   "titelUz": "Do'stlar va hamkasblar",
+   "zeilen": [
+    {
+     "sprecher": "Anna",
+     "de": "Wer ist das? Ist das dein Kollege?",
+     "uz": "Bu kim? Bu sening hamkasbingmi?"
+    },
+    {
+     "sprecher": "Nodira",
+     "de": "Nein, er ist mein Freund.",
+     "uz": "Yo'q, u mening do'stim."
+    },
+    {
+     "sprecher": "Anna",
+     "de": "Was macht er?",
+     "uz": "U nima qiladi?"
+    },
+    {
+     "sprecher": "Nodira",
+     "de": "Er studiert in Deutschland.",
+     "uz": "U Germaniyada o'qiydi."
+    },
+    {
+     "sprecher": "Anna",
+     "de": "Und ihr? Lernt ihr zusammen?",
+     "uz": "Sizlar-chi? Birga o'rganasizlarmi?"
+    },
+    {
+     "sprecher": "Nodira",
+     "de": "Ja, wir lernen zusammen.",
+     "uz": "Ha, biz birga o'rganamiz."
+    }
+   ]
+  }
+ ]
+}

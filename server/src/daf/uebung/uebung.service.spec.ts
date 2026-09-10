@@ -870,6 +870,65 @@ describe('UebungService.pruefen', () => {
     expect(r.richtig).toBe('tschüss');
   });
 
+  // Ot artikli bilan o'rganiladi (`UZ_WORT`ning to'g'ri javobi aynan
+  // `der Name`), shuning uchun eshitib yozayotgan o'quvchi artiklni
+  // yozishi bilim BELGISI — uni "xato" deb belgilash `UZ_WORT` bilan
+  // ziddiyat bo'lardi. Audio faqat so'zni aytadi, shuning uchun artiklsiz
+  // yozuv ASOSIY javob bo'lib qoladi.
+  it('WORT_TIPPEN: artiklli yozuvni ham qabul qiladi', async () => {
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any).pruefen(
+      { itemType: 'WORT', itemId: 5, format: 'WORT_TIPPEN', given: 'der Name' },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(true);
+    expect(r.richtig).toBe('Name');
+  });
+
+  it('WORT_TIPPEN: artiklsiz yozuv ham to`g`ri', async () => {
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any).pruefen(
+      { itemType: 'WORT', itemId: 5, format: 'WORT_TIPPEN', given: 'Name' },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(true);
+  });
+
+  // `AUDIO_WORT` TANLASH savoli va variantlari `de`dan quriladi, ya'ni
+  // artiklli shakl ekranda umuman yo'q — uni qabul qilish variantlardan
+  // tashqari javobga yo'l ochardi.
+  it('AUDIO_WORT: artiklli yozuv qabul qilinmaydi', async () => {
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any).pruefen(
+      { itemType: 'WORT', itemId: 5, format: 'AUDIO_WORT', given: 'der Name' },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(false);
+  });
+
+  // `ZUORDNEN`da yopilgan teshikning aynan o'zi: ibora materiali ham
+  // `unitId` bilan qaytadi, shuning uchun faqat `unitId`ga qaragan qorovul
+  // `itemType: 'PHRASE'` + `format: 'PAAR'` ni o'tkazib yuborardi.
+  it('PAAR: ibora `itemType`i bilan chaqirilsa rad etiladi', async () => {
+    const prisma = fakePrisma();
+    prisma.dafPhrase.findUnique = jest.fn(async () => ({
+      de: 'Hallo!',
+      uz: 'Salom!',
+      unitId: 1,
+    })) as any;
+    await expect(
+      new UebungService(prisma as any).pruefen(
+        {
+          itemType: 'PHRASE',
+          itemId: 21,
+          format: 'PAAR',
+          given: 'hallo=salom',
+        },
+        ctx,
+      ),
+    ).rejects.toThrow("PAAR savoli faqat so'zga tegishli");
+  });
+
   it('xato javobni rad etadi', async () => {
     const prisma = fakePrisma();
     const r = await new UebungService(prisma as any).pruefen(

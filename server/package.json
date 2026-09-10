@@ -36,7 +36,7 @@
     "daf:gen-sentences": "ts-node scripts/daf-gen-sentences.ts",
     "daf:mark-picturable": "ts-node scripts/daf-mark-picturable.ts",
     "daf:gen-images": "ts-node scripts/daf-gen-images.ts",
-    "daf:gen-saetze": "ts-node scripts/daf-gen-u01-saetze.ts",
+    "daf:gen-saetze": "ts-node scripts/daf-gen-saetze.ts",
     "daf:inhalt-seed": "ts-node scripts/daf-inhalt-seed.ts",
     "daf:voice-samples": "ts-node scripts/daf-voice-samples.ts",
     "daf:gen-audio": "ts-node scripts/daf-gen-audio.ts"
