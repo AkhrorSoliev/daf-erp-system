@@ -143,18 +143,26 @@ export class StudentsReadService {
     }
 
     // Stats queries use baseWhere (no status filter) so they reflect the full filtered set
+    //
+    // Kartochkadagi «Faol» soni va «Faol» filtri BITTA ta'rifdan qurilishi
+    // shart — ular bitta ekranda, bitta so'z bilan turadi va foydalanuvchi
+    // sonni bosib ro'yxatni ochadi. Ilgari kartochka `isActive: true` va
+    // «o'chirilmagan BIROR yozuv» derdi: yozuv DROPPED bo'lsa ham, guruh
+    // tugagan bo'lsa ham sanardi. 2026-09-10, Farg'ona filiali — kartochka
+    // 486 derdi, o'sha «Faol» ni bosganda 331 ta qator chiqardi.
     const activeStatsWhere: Prisma.StudentWhereInput = {
       ...baseWhere,
-      isActive: true,
+      ...activeStudentWhere(),
     };
     if (baseWhere.enrollments) {
+      // O'qituvchi/guruh/daraja filtri ham yozuvlarga tegadi, ta'rif ham.
+      // Yuqoridagi spread ulardan birini yo'q qilib yuborardi, shuning uchun
+      // ikkovi AND ichida yonma-yon yashaydi.
       activeStatsWhere.AND = [
         { enrollments: baseWhere.enrollments },
-        { enrollments: { some: { deletedAt: null } } },
+        { enrollments: activeStatsWhere.enrollments },
       ];
       delete activeStatsWhere.enrollments;
-    } else {
-      activeStatsWhere.enrollments = { some: { deletedAt: null } };
     }
 
     // Daraja bo'yicha o'quvchilar soni — filtrlar panelidagi daraja

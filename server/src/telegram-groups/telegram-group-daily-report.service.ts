@@ -10,6 +10,7 @@ import {
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
 import { leadAttributionWhere } from '../leads/shared/lead-scope';
+import { activeStudentWhere } from '../students/shared/active-student-where';
 import {
   escapeHtml,
   firstOfThisMonthDate,
@@ -163,11 +164,12 @@ export class TelegramGroupDailyReportService {
         where: { id: companyId },
         select: { name: true },
       }),
+      // «Faol o'quvchilar» — bosh sahifadagi bilan bitta ta'rif.
       this.prisma.student.count({
         where: {
           companyId,
           deletedAt: null,
-          status: 'ACTIVE',
+          ...activeStudentWhere(),
           ...studentBranchWhere(branchIds),
         },
       }),

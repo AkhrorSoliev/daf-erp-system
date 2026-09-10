@@ -7,6 +7,7 @@ import {
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
 import { TelegramGroupDailyReportService } from './telegram-group-daily-report.service';
+import { activeStudentWhere } from '../students/shared/active-student-where';
 import {
   firstOfThisMonthDate,
   firstOfThisMonthUtc,
@@ -53,11 +54,12 @@ export class TelegramGroupStatsService {
 
     const [active, todayNew, monthNew, frozen, expelledMonth] =
       await Promise.all([
+        // «Faol» — bosh sahifadagi bilan bitta ta'rif.
         this.prisma.student.count({
           where: {
             companyId,
             deletedAt: null,
-            status: 'ACTIVE',
+            ...activeStudentWhere(),
             ...studentBranchWhere(branchIds),
           },
         }),
@@ -336,11 +338,12 @@ export class TelegramGroupStatsService {
       monthlyIncome,
       monthlyExpenses,
     ] = await Promise.all([
+      // «Faol o'quvchilar» — bosh sahifadagi bilan bitta ta'rif.
       this.prisma.student.count({
         where: {
           companyId,
           deletedAt: null,
-          status: 'ACTIVE',
+          ...activeStudentWhere(),
           ...studentBranchWhere(branchIds),
         },
       }),
