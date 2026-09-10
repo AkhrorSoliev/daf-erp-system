@@ -6,6 +6,7 @@ import {
   loadDepartedStudents,
   DEPARTED_STATUS_LABELS,
 } from './shared/departed-students-dataset';
+import { tashkentRangeUtc } from '../common/date/tashkent';
 
 @Injectable()
 export class ReportsDepartedListsService {
@@ -157,14 +158,17 @@ export class ReportsDepartedListsService {
   ) {
     const page = Math.max(1, params.page ?? 1);
     const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 10));
-    const start = new Date(params.startDate);
-    const end = new Date(params.endDate);
-    end.setHours(23, 59, 59, 999);
+    // TIMESTAMP columns — the picked days are Tashkent days, and `end` is the
+    // EXCLUSIVE start of the day after (see common/date/tashkent).
+    const { gte: start, lt: end } = tashkentRangeUtc(
+      params.startDate,
+      params.endDate,
+    );
 
     const where: any = {
       ...buildDepartedEnrollmentWhere(companyId, params),
       status: 'DROPPED' as const,
-      statusChangedAt: { gte: start, lte: end },
+      statusChangedAt: { gte: start, lt: end },
     };
     // "null" literal → enrollments with no reason set; otherwise exact match.
     if (params.departureReasonId !== undefined) {

@@ -16,6 +16,11 @@ import {
   tashkentMonthEndBoundary,
   tashkentMonthKey,
 } from './debt-history.util';
+import {
+  tashkentDateStr,
+  tashkentMonthRangeUtc,
+  tashkentRangeUtc,
+} from '../common/date/tashkent';
 
 @Injectable()
 export class ReportsFinancialService {
@@ -60,10 +65,7 @@ export class ReportsFinancialService {
       companyId,
       type: TransactionType.DEBT_WRITE_OFF,
       reversedAt: null,
-      createdAt: {
-        gte: new Date(periodStart),
-        lte: new Date(periodEnd + 'T23:59:59.999Z'),
-      },
+      createdAt: tashkentRangeUtc(periodStart, periodEnd),
       // Both a `branchId` and a `branchIds` used to be spread here, the second
       // silently clobbering the first — the same class of bug the resolved
       // scope exists to make unrepresentable.
@@ -110,17 +112,14 @@ export class ReportsFinancialService {
     const employeeFilter =
       branchIds === null ? {} : { user: userBranchWhere(branchIds) };
     const now = new Date();
-    const start =
-      query.startDate ??
-      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    const start = query.startDate ?? `${tashkentMonthKey(now)}-01`;
     const end =
       query.endDate ??
-      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
+      tashkentDateStr(
+        new Date(tashkentMonthRangeUtc(tashkentMonthKey(now)).lt.getTime() - 1),
+      );
 
-    const dateFilter = {
-      gte: new Date(start),
-      lte: new Date(end + 'T23:59:59.999Z'),
-    };
+    const dateFilter = tashkentRangeUtc(start, end);
 
     const actualIncome = await this.prisma.payment.aggregate({
       where: {

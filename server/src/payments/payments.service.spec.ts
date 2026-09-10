@@ -608,9 +608,10 @@ describe('PaymentsService', () => {
       );
 
       const findManyCall = prisma.payment.findMany.mock.calls[0][0];
+      // Tashkent day window: 01.01 00:00 → 01.02 00:00 (exclusive), stored UTC.
       expect(findManyCall.where.createdAt).toEqual({
-        gte: new Date('2026-01-01'),
-        lte: new Date('2026-01-31T23:59:59.999Z'),
+        gte: new Date('2025-12-31T19:00:00.000Z'),
+        lt: new Date('2026-01-31T19:00:00.000Z'),
       });
     });
   });

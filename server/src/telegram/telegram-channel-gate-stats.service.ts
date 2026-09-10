@@ -174,7 +174,8 @@ export class TelegramChannelGateStatsService {
       range?.from || range?.to
         ? {
             ...(range.from ? { gte: range.from } : {}),
-            ...(range.to ? { lte: range.to } : {}),
+            // `to` — chegaradan tashqari (keyingi oy boshi).
+            ...(range.to ? { lt: range.to } : {}),
           }
         : undefined;
 

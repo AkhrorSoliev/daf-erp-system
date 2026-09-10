@@ -50,6 +50,21 @@ tahrirlanmaydi; eskirsa yangi ADR yoziladi va eskisining holati
 - Use `PrismaService` for all database access. Prefer the Prisma query builder; raw SQL is allowed **only** via the tagged-template `$queryRaw`/`$executeRaw` (parameterized — values become `$1,$2…`). **Never** use `$queryRawUnsafe`/`$executeRawUnsafe` (string-built — SQL-injection risk). Tagged-template raw SQL is used in some production services (e.g. `billing/lesson-billing.service.ts` for a `NOT EXISTS` unpaid-lesson scan) as well as one-off backfill scripts in `server/scripts/`. As of 2026-08 `src/` contains **zero** `*Unsafe` calls; the 7 that exist are all in `server/scripts/`, where the interpolated values are table names from a hardcoded list and never user input. That is the only place the exception has ever applied — a new one in `src/` is a bug, not a precedent.
 - `PrismaModule` is global — no need to import it per module
 
+### Day boundaries (`src/common/date/tashkent.ts`)
+
+The center is in Asia/Tashkent (UTC+5, no DST) and every timestamp column stores a UTC instant. A day a user picks in a filter is a **Tashkent** day, and `new Date('2026-08-05')` is 00:00 **UTC** — 05:00 Tashkent. Build every bound through `common/date/tashkent`, never by hand.
+
+| Column type | Examples                                                            | Helper                                                             |
+| ----------- | ------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `timestamp` | `Payment.createdAt`, `Enrollment.statusChangedAt`, `Lead.createdAt` | `tashkentRangeUtc`, `tashkentRangeFilter`, `tashkentMonthRangeUtc` |
+| `@db.Date`  | `Attendance.date`, `Expense.date`, `SalaryAccrual.lessonDate`       | `utcMidnightFromDateStr`                                           |
+
+Upper bounds are **exclusive** (`lt`), never `lte` — adjacent days then leave no gap and no overlap.
+
+**Banned, and enforced by `common/date/tashkent.single-source.spec.ts` (build fails):** `setHours(23, 59, 59, …)` (reads the PROCESS timezone), the `'T23:59:59.999Z'` literal (04:59 next morning in Tashkent), `new Date(query.startDate)` for a range bound, and mixing a timestamp bound with a `@db.Date` bound in one filter.
+
+**Why it matters:** a Click payment at `2026-08-05T19:18:44Z` is 06.08 00:18 in Tashkent and the student's receipt says 06.08 — the report listed it under 05.08. The `@db.Date` half of the same mistake once inflated a month of teacher salary by 1 819 343 so'm (ADR-0006, ADR-0016).
+
 ### Naming Conventions
 
 - **Files:** kebab-case — `create-student.dto.ts`, `jwt-auth.guard.ts`

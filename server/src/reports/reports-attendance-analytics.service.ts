@@ -12,6 +12,7 @@ import {
   getSystemStartDate,
   floorStart,
 } from '../common/finance/system-start-date';
+import { endOfUtcDay, utcMidnightFromDateStr } from '../common/date/tashkent';
 
 const MONTH_LABELS_UZ = [
   'Yan',
@@ -870,10 +871,13 @@ export class ReportsAttendanceAnalyticsService {
     // (mid-April go-live) data never surfaces — even when an explicit
     // startDate before the floor is requested, or no startDate is given.
     const gte = floorStart(
-      query.startDate ? new Date(query.startDate) : undefined,
+      query.startDate ? utcMidnightFromDateStr(query.startDate) : undefined,
       systemStart,
     );
-    const lte = query.endDate ? new Date(query.endDate) : undefined;
+    // Attendance.date is @db.Date — a plain UTC midnight is the right bound.
+    const lte = query.endDate
+      ? utcMidnightFromDateStr(query.endDate)
+      : undefined;
     if (gte || lte) {
       filter.date = {};
       if (gte) filter.date.gte = gte;
@@ -895,10 +899,10 @@ export class ReportsAttendanceAnalyticsService {
   ): { start: Date; end: Date } {
     const start =
       floorStart(
-        query.startDate ? new Date(query.startDate) : undefined,
+        query.startDate ? utcMidnightFromDateStr(query.startDate) : undefined,
         systemStart,
       ) ?? new Date(0);
-    const end = query.endDate ? new Date(query.endDate) : new Date();
+    const end = query.endDate ? endOfUtcDay(query.endDate) : new Date();
     return { start, end };
   }
 
@@ -1045,14 +1049,14 @@ export class ReportsAttendanceAnalyticsService {
       return { start, end };
     }
     // week — ISO week, Monday-start
+    // ISO week buckets, walked in UTC so the bucket a date lands in does not
+    // change with the machine's timezone.
     const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
-    const dayOffset = (d.getDay() + 6) % 7; // Mon=0..Sun=6
+    d.setUTCHours(0, 0, 0, 0);
+    const dayOffset = (d.getUTCDay() + 6) % 7; // Mon=0..Sun=6
     const start = new Date(d);
-    start.setDate(d.getDate() - dayOffset);
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
+    start.setUTCDate(d.getUTCDate() - dayOffset);
+    const end = new Date(start.getTime() + 7 * 86_400_000 - 1);
     return { start, end };
   }
 

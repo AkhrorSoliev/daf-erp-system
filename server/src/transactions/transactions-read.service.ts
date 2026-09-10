@@ -22,6 +22,7 @@ import { projectLessonDates } from '../common/finance/project-lesson-dates';
 import { buildScheduleDayResolver } from '../attendance/shared/schedule-resolver';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { buildHolidayDateSet } from '../holidays/holiday-date-set';
+import { tashkentRangeUtc } from '../common/date/tashkent';
 
 /**
  * What the "To'lovlar" tab renders under a payment. `reconciled: false` means
@@ -233,10 +234,7 @@ export class TransactionsReadService {
       ...(typesFilter && { type: { in: typesFilter } }),
       ...(query.startDate &&
         query.endDate && {
-          createdAt: {
-            gte: new Date(query.startDate),
-            lte: new Date(query.endDate + 'T23:59:59.999Z'),
-          },
+          createdAt: tashkentRangeUtc(query.startDate, query.endDate),
         }),
     };
 
@@ -524,10 +522,7 @@ export class TransactionsReadService {
       ...(query.type && { type: query.type }),
       ...(query.startDate &&
         query.endDate && {
-          createdAt: {
-            gte: new Date(query.startDate),
-            lte: new Date(query.endDate + 'T23:59:59.999Z'),
-          },
+          createdAt: tashkentRangeUtc(query.startDate, query.endDate),
         }),
     };
 
@@ -595,10 +590,7 @@ export class TransactionsReadService {
       ...(options.contractId && { contractId: options.contractId }),
       ...(options.from &&
         options.to && {
-          createdAt: {
-            gte: new Date(options.from),
-            lte: new Date(options.to + 'T23:59:59.999Z'),
-          },
+          createdAt: tashkentRangeUtc(options.from, options.to),
         }),
     };
 
@@ -796,10 +788,7 @@ export class TransactionsReadService {
       ...(query.type && { type: query.type }),
       ...(query.startDate &&
         query.endDate && {
-          createdAt: {
-            gte: new Date(query.startDate),
-            lte: new Date(query.endDate + 'T23:59:59.999Z'),
-          },
+          createdAt: tashkentRangeUtc(query.startDate, query.endDate),
         }),
     };
 
@@ -869,10 +858,7 @@ export class TransactionsReadService {
       ...(options.performedById && { performedById: options.performedById }),
       ...(options.from &&
         options.to && {
-          createdAt: {
-            gte: new Date(options.from),
-            lte: new Date(options.to + 'T23:59:59.999Z'),
-          },
+          createdAt: tashkentRangeUtc(options.from, options.to),
         }),
     };
 

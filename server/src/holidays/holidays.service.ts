@@ -155,8 +155,10 @@ export class HolidaysService {
   }
 
   async create(dto: CreateHolidayDto, userId: number, companyId: number) {
-    const start = new Date(dto.date);
-    const end = dto.endDate ? new Date(dto.endDate) : new Date(dto.date);
+    const start = utcMidnightFromDateStr(dto.date);
+    const end = dto.endDate
+      ? utcMidnightFromDateStr(dto.endDate)
+      : utcMidnightFromDateStr(dto.date);
 
     this.validateRange(start, end);
 
@@ -217,11 +219,13 @@ export class HolidaysService {
         );
       }
 
-      const nextStart = dto.date ? new Date(dto.date) : holiday.date;
+      const nextStart = dto.date
+        ? utcMidnightFromDateStr(dto.date)
+        : holiday.date;
       const nextEnd = dto.endDate
-        ? new Date(dto.endDate)
+        ? utcMidnightFromDateStr(dto.endDate)
         : dto.date
-          ? new Date(dto.date)
+          ? utcMidnightFromDateStr(dto.date)
           : holiday.endDate;
       this.validateRange(nextStart, nextEnd);
     }
@@ -230,11 +234,13 @@ export class HolidaysService {
       where: { id },
       data: {
         ...(dto.name !== undefined ? { name: dto.name } : {}),
-        ...(dto.date !== undefined ? { date: new Date(dto.date) } : {}),
+        ...(dto.date !== undefined
+          ? { date: utcMidnightFromDateStr(dto.date) }
+          : {}),
         ...(dto.endDate !== undefined
-          ? { endDate: new Date(dto.endDate) }
+          ? { endDate: utcMidnightFromDateStr(dto.endDate) }
           : dto.date !== undefined
-            ? { endDate: new Date(dto.date) }
+            ? { endDate: utcMidnightFromDateStr(dto.date) }
             : {}),
       },
     });
