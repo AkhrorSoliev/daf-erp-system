@@ -1,75 +1,320 @@
 {
   "eintraege": [
-    { "wort": "er", "grund": "shaxs olmoshi — grammatik ko'makchi" },
-    { "wort": "es", "grund": "shaxs olmoshi — grammatik ko'makchi" },
-    { "wort": "wir", "grund": "shaxs olmoshi — grammatik ko'makchi" },
-    { "wort": "ihr", "grund": "shaxs olmoshi — grammatik ko'makchi" },
-    { "wort": "bin", "grund": "sein fe'lining ich shakli" },
-    { "wort": "bist", "grund": "sein fe'lining du shakli" },
-    { "wort": "ist", "grund": "sein fe'lining er/sie shakli" },
-    { "wort": "sind", "grund": "sein fe'lining wir/sie shakli" },
-    { "wort": "seid", "grund": "sein fe'lining ihr shakli" },
-    { "wort": "und", "grund": "bog'lovchi" },
-    { "wort": "oder", "grund": "bog'lovchi" },
-    { "wort": "nicht", "grund": "inkor yuklamasi" },
-    { "wort": "ja", "grund": "tasdiq yuklamasi" },
-    { "wort": "nein", "grund": "inkor javobi" },
-    { "wort": "das", "grund": "artikl / ko'rsatish olmoshi" },
-    { "wort": "der", "grund": "artikl" },
-    { "wort": "die", "grund": "artikl" },
-    { "wort": "ein", "grund": "noaniq artikl" },
-    { "wort": "eine", "grund": "noaniq artikl" },
+    {
+      "wort": "er",
+      "grund": "shaxs olmoshi — grammatik ko'makchi"
+    },
+    {
+      "wort": "es",
+      "grund": "shaxs olmoshi — grammatik ko'makchi"
+    },
+    {
+      "wort": "wir",
+      "grund": "shaxs olmoshi — grammatik ko'makchi"
+    },
+    {
+      "wort": "ihr",
+      "grund": "shaxs olmoshi — grammatik ko'makchi"
+    },
+    {
+      "wort": "bin",
+      "grund": "sein fe'lining ich shakli"
+    },
+    {
+      "wort": "bist",
+      "grund": "sein fe'lining du shakli"
+    },
+    {
+      "wort": "ist",
+      "grund": "sein fe'lining er/sie shakli"
+    },
+    {
+      "wort": "sind",
+      "grund": "sein fe'lining wir/sie shakli"
+    },
+    {
+      "wort": "seid",
+      "grund": "sein fe'lining ihr shakli"
+    },
+    {
+      "wort": "und",
+      "grund": "bog'lovchi"
+    },
+    {
+      "wort": "oder",
+      "grund": "bog'lovchi"
+    },
+    {
+      "wort": "nicht",
+      "grund": "inkor yuklamasi"
+    },
+    {
+      "wort": "ja",
+      "grund": "tasdiq yuklamasi"
+    },
+    {
+      "wort": "nein",
+      "grund": "inkor javobi"
+    },
+    {
+      "wort": "das",
+      "grund": "artikl / ko'rsatish olmoshi"
+    },
+    {
+      "wort": "der",
+      "grund": "artikl"
+    },
+    {
+      "wort": "die",
+      "grund": "artikl"
+    },
+    {
+      "wort": "ein",
+      "grund": "noaniq artikl"
+    },
+    {
+      "wort": "eine",
+      "grund": "noaniq artikl"
+    },
     {
       "wort": "mein",
-      "grund": "egalik artikli — u02-s1 uni QOIDA sifatida o'rgatadi, lug'at so'zi sifatida emas (u01 matnida allaqachon ishlatilgan)"
+      "grund": "egalik artikli — u02-s1 uni QOIDA sifatida o'rgatadi, lug'at so'zi sifatida emas (u01 matnida allaqachon ishlatilgan)",
+      "abSection": "u01-s1"
     },
     {
       "wort": "meine",
-      "grund": "egalik artiklining ayol/ko'plik shakli — u02-s1 qoidasi"
+      "grund": "egalik artiklining ayol/ko'plik shakli — u02-s1 qoidasi",
+      "abSection": "u01-s1"
     },
     {
       "wort": "dein",
-      "grund": "egalik artikli — u02-s1 uni QOIDA sifatida o'rgatadi, lug'at so'zi sifatida emas (u01 matnida allaqachon ishlatilgan)"
+      "grund": "egalik artikli — u02-s1 uni QOIDA sifatida o'rgatadi, lug'at so'zi sifatida emas (u01 matnida allaqachon ishlatilgan)",
+      "abSection": "u01-s1"
     },
     {
       "wort": "deine",
-      "grund": "egalik artiklining ayol/ko'plik shakli — u02-s1 qoidasi"
+      "grund": "egalik artiklining ayol/ko'plik shakli — u02-s1 qoidasi",
+      "abSection": "u01-s1"
     },
-    { "wort": "sehr", "grund": "daraja ravishi" },
-    { "wort": "auch", "grund": "ravish — ko'makchi" },
-    { "wort": "bitte", "grund": "muomala so'zi, iboraning bo'lagi" },
-    { "wort": "hier", "grund": "o'rin ravishi" },
+    {
+      "wort": "sehr",
+      "grund": "daraja ravishi"
+    },
+    {
+      "wort": "auch",
+      "grund": "ravish — ko'makchi"
+    },
+    {
+      "wort": "bitte",
+      "grund": "muomala so'zi, iboraning bo'lagi"
+    },
+    {
+      "wort": "hier",
+      "grund": "o'rin ravishi"
+    },
     {
       "wort": "man",
       "grund": "shaxssiz olmosh — «Wie schreibt man das?» iborasida"
     },
-    { "wort": "gut", "grund": "«Gut, danke.» qotma javobining bo'lagi" },
-    { "wort": "geht", "grund": "«Wie geht's?» qotma savolining bo'lagi" },
-    { "wort": "dir", "grund": "«Wie geht es dir?» iborasidagi jo'nalish" },
-    { "wort": "ihnen", "grund": "«Wie geht es Ihnen?» iborasidagi jo'nalish" },
-    { "wort": "mir", "grund": "«Es geht mir gut.» iborasidagi jo'nalish" },
-    { "wort": "heisse", "grund": "heißen fe'lining ich shakli (u01-s2)" },
-    { "wort": "heisst", "grund": "heißen fe'lining du/er shakli (u01-s2)" },
-    { "wort": "heiße", "grund": "heißen fe'lining ich shakli, ß bilan" },
-    { "wort": "heißt", "grund": "heißen fe'lining du/er shakli, ß bilan" },
-    { "wort": "komme", "grund": "kommen fe'lining ich shakli (u01-s3)" },
-    { "wort": "kommst", "grund": "kommen fe'lining du shakli (u01-s3)" },
-    { "wort": "kommt", "grund": "kommen fe'lining er/sie shakli (u01-s3)" },
-    { "wort": "wohne", "grund": "wohnen fe'lining ich shakli (u01-s3)" },
-    { "wort": "wohnst", "grund": "wohnen fe'lining du shakli (u01-s3)" },
-    { "wort": "wohnt", "grund": "wohnen fe'lining er/sie shakli (u01-s3)" },
-    { "wort": "spreche", "grund": "sprechen fe'lining ich shakli (u01-s3)" },
-    { "wort": "sprichst", "grund": "sprechen fe'lining du shakli (u01-s3)" },
-    { "wort": "spricht", "grund": "sprechen fe'lining er/sie shakli (u01-s3)" },
-    { "wort": "anna", "grund": "atoqli ot — dialog obrazining ismi" },
-    { "wort": "timur", "grund": "atoqli ot — dialog obrazining ismi" },
-    { "wort": "nodira", "grund": "atoqli ot — dialog obrazining ismi" },
-    { "wort": "karimova", "grund": "atoqli ot — familiya" },
-    { "wort": "karimov", "grund": "atoqli ot — familiya" },
-    { "wort": "mia", "grund": "atoqli ot — dialog obrazining ismi" },
-    { "wort": "jonas", "grund": "atoqli ot — dialog obrazining ismi" },
-    { "wort": "claudia", "grund": "atoqli ot — dialog obrazining ismi" },
-    { "wort": "markus", "grund": "atoqli ot — dialog obrazining ismi" },
-    { "wort": "weber", "grund": "atoqli ot — familiya (u01-d6 harflab aytiladi)" }
+    {
+      "wort": "gut",
+      "grund": "«Gut, danke.» qotma javobining bo'lagi"
+    },
+    {
+      "wort": "geht",
+      "grund": "«Wie geht's?» qotma savolining bo'lagi"
+    },
+    {
+      "wort": "dir",
+      "grund": "«Wie geht es dir?» iborasidagi jo'nalish"
+    },
+    {
+      "wort": "ihnen",
+      "grund": "«Wie geht es Ihnen?» iborasidagi jo'nalish"
+    },
+    {
+      "wort": "mir",
+      "grund": "«Es geht mir gut.» iborasidagi jo'nalish"
+    },
+    {
+      "wort": "heisse",
+      "grund": "heißen fe'lining ich shakli (u01-s2)",
+      "abSection": "u01-s2"
+    },
+    {
+      "wort": "heisst",
+      "grund": "heißen fe'lining du/er shakli (u01-s2)",
+      "abSection": "u01-s2"
+    },
+    {
+      "wort": "heiße",
+      "grund": "heißen fe'lining ich shakli, ß bilan",
+      "abSection": "u01-s2"
+    },
+    {
+      "wort": "heißt",
+      "grund": "heißen fe'lining du/er shakli, ß bilan",
+      "abSection": "u01-s2"
+    },
+    {
+      "wort": "komme",
+      "grund": "kommen fe'lining ich shakli (u01-s3)",
+      "abSection": "u01-s3"
+    },
+    {
+      "wort": "kommst",
+      "grund": "kommen fe'lining du shakli (u01-s3)",
+      "abSection": "u01-s3"
+    },
+    {
+      "wort": "kommt",
+      "grund": "kommen fe'lining er/sie shakli (u01-s3)",
+      "abSection": "u01-s3"
+    },
+    {
+      "wort": "wohne",
+      "grund": "wohnen fe'lining ich shakli (u01-s3)",
+      "abSection": "u01-s3"
+    },
+    {
+      "wort": "wohnst",
+      "grund": "wohnen fe'lining du shakli (u01-s3)",
+      "abSection": "u01-s3"
+    },
+    {
+      "wort": "wohnt",
+      "grund": "wohnen fe'lining er/sie shakli (u01-s3)",
+      "abSection": "u01-s3"
+    },
+    {
+      "wort": "spreche",
+      "grund": "sprechen fe'lining ich shakli (u01-s3)",
+      "abSection": "u01-s3"
+    },
+    {
+      "wort": "sprichst",
+      "grund": "sprechen fe'lining du shakli (u01-s3)",
+      "abSection": "u01-s3"
+    },
+    {
+      "wort": "spricht",
+      "grund": "sprechen fe'lining er/sie shakli (u01-s3)",
+      "abSection": "u01-s3"
+    },
+    {
+      "wort": "anna",
+      "grund": "atoqli ot — dialog obrazining ismi"
+    },
+    {
+      "wort": "timur",
+      "grund": "atoqli ot — dialog obrazining ismi"
+    },
+    {
+      "wort": "nodira",
+      "grund": "atoqli ot — dialog obrazining ismi"
+    },
+    {
+      "wort": "karimova",
+      "grund": "atoqli ot — familiya"
+    },
+    {
+      "wort": "karimov",
+      "grund": "atoqli ot — familiya"
+    },
+    {
+      "wort": "mia",
+      "grund": "atoqli ot — dialog obrazining ismi"
+    },
+    {
+      "wort": "jonas",
+      "grund": "atoqli ot — dialog obrazining ismi"
+    },
+    {
+      "wort": "claudia",
+      "grund": "atoqli ot — dialog obrazining ismi"
+    },
+    {
+      "wort": "markus",
+      "grund": "atoqli ot — dialog obrazining ismi"
+    },
+    {
+      "wort": "weber",
+      "grund": "atoqli ot — familiya (u01-d6 harflab aytiladi)"
+    },
+    {
+      "wort": "habe",
+      "grund": "haben fe'lining ich shakli (u02-s2 qoidasi)",
+      "abSection": "u02-s2"
+    },
+    {
+      "wort": "hast",
+      "grund": "haben fe'lining du shakli (u02-s2 qoidasi)",
+      "abSection": "u02-s2"
+    },
+    {
+      "wort": "hat",
+      "grund": "haben fe'lining er/sie shakli (u02-s2 qoidasi)",
+      "abSection": "u02-s2"
+    },
+    {
+      "wort": "arbeite",
+      "grund": "arbeiten fe'lining ich shakli (u02-s3)",
+      "abSection": "u02-s3"
+    },
+    {
+      "wort": "arbeitest",
+      "grund": "arbeiten fe'lining du shakli (u02-s3)",
+      "abSection": "u02-s3"
+    },
+    {
+      "wort": "arbeitet",
+      "grund": "arbeiten fe'lining er/sie shakli (u02-s3)",
+      "abSection": "u02-s3"
+    },
+    {
+      "wort": "studiere",
+      "grund": "studieren fe'lining ich shakli (u02-s3)",
+      "abSection": "u02-s3"
+    },
+    {
+      "wort": "studierst",
+      "grund": "studieren fe'lining du shakli (u02-s3)",
+      "abSection": "u02-s3"
+    },
+    {
+      "wort": "studiert",
+      "grund": "studieren fe'lining er/sie shakli (u02-s3)",
+      "abSection": "u02-s3"
+    },
+    {
+      "wort": "lerne",
+      "grund": "lernen fe'lining ich shakli (u02-s5)",
+      "abSection": "u02-s5"
+    },
+    {
+      "wort": "lernst",
+      "grund": "lernen fe'lining du shakli (u02-s5)",
+      "abSection": "u02-s5"
+    },
+    {
+      "wort": "lernt",
+      "grund": "lernen fe'lining er/sie shakli (u02-s5)",
+      "abSection": "u02-s5"
+    },
+    {
+      "wort": "mache",
+      "grund": "machen fe'lining ich shakli (u02-s5)",
+      "abSection": "u02-s5"
+    },
+    {
+      "wort": "machst",
+      "grund": "machen fe'lining du shakli (u02-s5)",
+      "abSection": "u02-s5"
+    },
+    {
+      "wort": "macht",
+      "grund": "machen fe'lining er/sie shakli (u02-s5)",
+      "abSection": "u02-s5"
+    }
   ]
 }

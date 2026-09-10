@@ -18,7 +18,7 @@ import {
 import {
   sectionsInCourseOrder,
   knownWordsBySection,
-  hilfsSet,
+  hilfsSetFor,
   tokensOf,
   unknownWordsIn,
 } from '../src/daf/inhalt/progression';
@@ -132,6 +132,23 @@ const SECTION_EXAMPLES: Record<string, string[]> = {
     'Ist das ein C oder ein E?',
     'Ist das ein H oder ein J?',
   ],
+  'u02-s1': [
+    'Das ist mein Vater.',
+    'Ist das deine Mutter?',
+    'Meine Schwester wohnt in Deutschland.',
+  ],
+  'u02-s2': [
+    'Ich habe zwei Kinder.',
+    'Meine Oma ist neunzig.',
+    'Mein Bruder ist dreißig.',
+  ],
+  'u02-s3': ['Ich bin Lehrerin.', 'Mein Vater ist Arzt.', 'Ich arbeite hier.'],
+  'u02-s4': ['Mein Bruder ist jung.', 'Wie alt bist du?', 'Wir sind müde.'],
+  'u02-s5': [
+    'Er ist mein Freund.',
+    'Wir lernen zusammen.',
+    'Sie studiert in Deutschland.',
+  ],
 };
 
 /**
@@ -158,6 +175,22 @@ const UNIT_GUIDANCE: Record<string, string> = {
     '  "kommen" (nur "komme"/"kommst"), "wohnen" (nur "wohne"/"wohnst"),',
     '  "sprechen" (nur "sprechen"), "buchstabieren" (nur "buchstabieren").',
     '  Kein anderes Verb (kein "haben", "machen", "geben", "mögen", usw.).',
+  ].join('\n'),
+  u02: [
+    '',
+    'Qo`shimcha qoidalar:',
+    '- Erfinde KEINE Namen, Tiere, Orte, Sprachen, Wörter wie "Jahre",',
+    '  "viele", "aber", "sehr gut", "Freundin" (außer sie stehen in der',
+    '  Liste oben) — nur Wörter aus der Liste und den bekannten Wörtern.',
+    '- KEIN Dativ: kein "einer", "einem", "meiner", "meinem".',
+    '- Benutze NUR diese Verben, und NUR in diesen Formen:',
+    '  "sein" (bin/bist/ist/sind/seid), "haben" (habe/hast/hat/haben),',
+    '  "arbeiten" (arbeite/arbeitest/arbeitet), "studieren"',
+    '  (studiere/studierst/studiert), "lernen" (lerne/lernst/lernt/lernen),',
+    '  "machen" (mache/machst/macht), "wohnen" (wohne/wohnst/wohnt/wohnen),',
+    '  "kommen" (komme/kommst/kommt), "heißen" (heiße/heißt).',
+    '- Adjektive stehen NUR nach "sein" und bleiben unverändert:',
+    '  "Er ist alt." — nicht "der alte Mann".',
   ].join('\n'),
 };
 
@@ -205,6 +238,9 @@ const SECTION_EXTRA: Record<string, string> = {
  */
 const THEMA_PFLICHT: Record<string, 'alle' | string[]> = {
   u01: ['u01-s4', 'u01-s5'],
+  // u02 ning har bo'limi aniq lug'atga ega (oila, sonlar, kasb, sifat,
+  // do'stlar), ya'ni bo'lim so'zisiz gap o'sha bo'limni mashq qilmaydi.
+  u02: 'alle',
 };
 
 function sectionWordSet(sectionWoerter: Wort[]): Set<string> {
@@ -246,11 +282,9 @@ async function main(): Promise<void> {
   const woerter = JSON.parse(
     readFileSync(join(A1, code, 'woerter.json'), 'utf8'),
   ) as WoerterFile;
-  const hilfs = hilfsSet(
-    JSON.parse(
-      readFileSync(join(A1, 'hilfswoerter.json'), 'utf8'),
-    ) as HilfswoerterFile,
-  );
+  const hilfswoerter = JSON.parse(
+    readFileSync(join(A1, 'hilfswoerter.json'), 'utf8'),
+  ) as HilfswoerterFile;
 
   // Tanish so'zlar OLDINGI unitlarni ham qamraydi: u02 ning gapida u01
   // so'zi tanish. Faqat shu unitning lug'atiga qarash modelning to'g'ri
@@ -288,7 +322,15 @@ async function main(): Promise<void> {
       (w) => w.section === s.code && w.core,
     );
     const words = sectionWoerter.map((w) => w.de);
-    const topicWords = sectionWordSet(sectionWoerter);
+    // Bo'lim mavzusiga TUSLANGAN SHAKLLAR ham kiradi: «Ich habe eine
+    // Schwester.» aynan `haben` bo'limining gapi, lekin unda `haben`
+    // emas, `habe` turadi — faqat lug'at shakliga qaragan filtr uni
+    // «mavzudan tashqari» deb rad etardi (bir yuritishda 4 ta to'g'ri
+    // gap shu sababdan yo'qoldi).
+    const themaTokens = sectionWordSet(sectionWoerter);
+    for (const e of hilfswoerter.eintraege) {
+      if (e.abSection === s.code) themaTokens.add(e.wort.toLowerCase());
+    }
 
     if (only !== null && !only.has(s.code)) {
       oldingi.push(...words);
@@ -361,7 +403,7 @@ async function main(): Promise<void> {
       const unknown = unknownWordsIn(
         g.de,
         known.get(s.code) ?? new Set<string>(),
-        hilfs,
+        hilfsSetFor(s.code, hilfswoerter, sectionsInCourseOrder(kurs)),
       );
       if (unknown.length > 0) {
         report.rejectedUnknown.push({ de: g.de, unknown });
@@ -375,12 +417,18 @@ async function main(): Promise<void> {
       const pflicht = THEMA_PFLICHT[code];
       const themaPflichtig =
         pflicht === 'alle' || (pflicht?.includes(s.code) ?? false);
-      if (themaPflichtig && !tokensOf(g.de).some((t) => topicWords.has(t))) {
+      if (themaPflichtig && !tokensOf(g.de).some((t) => themaTokens.has(t))) {
         report.rejectedOffTopic.push(g.de);
         continue;
       }
 
+      // `sourceId` — bo'lim + BO'LIM ICHIDAGI tartib raqami
+      // (`u02-s3-04`), massivdagi pozitsiya emas: seed shu kalit
+      // bo'yicha yangilaydi, ya'ni o'rtadan bitta gap o'chirilsa
+      // qolganlarining audiosi va tarjimasi joyida qoladi.
+      const nr = file.saetze.filter((x) => x.section === s.code).length + 1;
       const satz: Satz = {
+        sourceId: `${s.code}-${String(nr).padStart(2, '0')}`,
         section: s.code,
         de: g.de,
         uz: g.uz,

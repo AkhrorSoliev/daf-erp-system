@@ -147,6 +147,17 @@ export interface SaetzeFile {
 export interface Hilfswort {
   wort: string;
   grund: string;
+  /**
+   * Shu BO'LIMDAN boshlab ruxsat etiladi (masalan `u02-s2`).
+   *
+   * Yordamchi so'z progressiyadan ozod — aynan shuning uchun tuslangan
+   * fe'l shakli («hast») lemmasi («haben») o'rgatiladigan bo'limdan
+   * OLDIN ham ishlatilaverardi. Bu maydon o'sha teshikni yopadi:
+   * shakl o'z qoidasi bilan birga ochiladi.
+   *
+   * Yozilmasa — hamma joyda ruxsat (artikl, bog'lovchi, atoqli ot).
+   */
+  abSection?: string;
 }
 
 export interface HilfswoerterFile {

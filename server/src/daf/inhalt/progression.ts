@@ -42,6 +42,15 @@ export function knownWordsBySection(
       const wOrder = orderOf.get(w.section);
       if (wOrder !== undefined && wOrder <= maxOrder) {
         for (const tok of w.de.toLowerCase().split(/\s+/)) known.add(tok);
+        // Ko'plik shakli AYNAN shu yozuvning bo'lagi — o'quvchi so'zni
+        // «das Kind, die Kinder» bo'lib ko'radi. Uni tanish deb
+        // hisoblamaslik «Ich habe zwei Kinder.» kabi eng oddiy gapni
+        // notanish so'z sababli rad etardi, va uni yordamchi ro'yxatga
+        // qo'shish esa ro'yxatni lug'atning ikkinchi nusxasiga
+        // aylantirardi.
+        for (const tok of (w.plural ?? '').toLowerCase().split(/\s+/)) {
+          if (tok !== '') known.add(tok);
+        }
       }
     }
     result.set(code, known);
@@ -50,9 +59,29 @@ export function knownWordsBySection(
   return result;
 }
 
-/** Yordamchi so'zlar to'plami — progressiyadan ozod so'zlar. */
-export function hilfsSet(file: HilfswoerterFile): Set<string> {
-  return new Set(file.eintraege.map((e) => e.wort.toLowerCase()));
+/**
+ * Berilgan bo'limda RUXSAT ETILGAN yordamchi so'zlar.
+ *
+ * `abSection` yozilgan yozuv o'sha bo'limdan oldin ochilmaydi: tuslangan
+ * fe'l shakli («hast») o'z qoidasi («haben», u02-s2) bilan birga keladi.
+ * Aks holda yordamchi ro'yxat progressiyani chetlab o'tish yo'liga
+ * aylanardi — so'zning lemmasi kech o'rgatilsa ham shakli birinchi
+ * bo'limdayoq ishlatilaverardi.
+ */
+export function hilfsSetFor(
+  sectionCode: string,
+  file: HilfswoerterFile,
+  sectionsOrdered: string[],
+): Set<string> {
+  const orderOf = new Map(sectionsOrdered.map((code, i) => [code, i]));
+  const jetzt = orderOf.get(sectionCode) ?? Number.MAX_SAFE_INTEGER;
+  const out = new Set<string>();
+  for (const e of file.eintraege) {
+    const ab =
+      e.abSection === undefined ? -1 : (orderOf.get(e.abSection) ?? -1);
+    if (ab <= jetzt) out.add(e.wort.toLowerCase());
+  }
+  return out;
 }
 
 /** Matnni so'zlarga ajratadi — tinish belgilarisiz, kichik harfda. */

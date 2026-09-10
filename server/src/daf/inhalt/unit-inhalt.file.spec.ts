@@ -18,7 +18,7 @@ import type {
 import {
   sectionsInCourseOrder,
   knownWordsBySection,
-  hilfsSet,
+  hilfsSetFor,
   unknownWordsIn,
 } from './progression';
 import type { KursFile } from '../kurs/kurs.types';
@@ -27,6 +27,18 @@ import type { GoetheFile } from './goethe-parse';
 const A1 = join(__dirname, '..', '..', '..', 'content', 'daf', 'a1');
 const read = <T>(...p: string[]): T =>
   JSON.parse(readFileSync(join(A1, ...p), 'utf8')) as T;
+
+/**
+ * Yo'q faylni BO'SH tuzilma bilan almashtiradi.
+ *
+ * `describe.each` bloklari fayllarni describe vaqtida o'qiydi, ya'ni
+ * yarim yozilgan unitda `readFileSync` BUTUN to'plamni «failed to run»
+ * bilan yiqitardi — sabab esa bitta satrda ko'rinmasdi. Endi «beshta
+ * fayl ham bor» testi aniq yiqiladi va qolgan tekshiruvlar o'z
+ * xabarini beradi.
+ */
+const readOrEmpty = <T>(fallback: T, ...p: string[]): T =>
+  existsSync(join(A1, ...p)) ? read<T>(...p) : fallback;
 
 const kurs = read<KursFile>('kurs.json');
 const goethe = read<GoetheFile>('goethe-a1.json');
@@ -59,13 +71,23 @@ const ALLE_WOERTER: Wort[] = UNITS.flatMap(
   (code) => read<WoerterFile>(code, 'woerter.json').woerter,
 );
 
-const HILFS = hilfsSet(hilfswoerter);
+/** Har bo'limda ruxsat etilgan yordamchi so'zlar (`abSection` bo'yicha). */
+const HILFS_FUER = new Map(
+  ALLE_SECTIONS.map((code) => [
+    code,
+    hilfsSetFor(code, hilfswoerter, ALLE_SECTIONS),
+  ]),
+);
 
 const KNOWN = knownWordsBySection(ALLE_SECTIONS, ALLE_WOERTER);
 
 /** Matndagi notanish so'zlar — gap yasovchi skript bilan BIR XIL qoida. */
 function unbekannteWoerter(sectionCode: string, text: string): string[] {
-  return unknownWordsIn(text, KNOWN.get(sectionCode) ?? new Set(), HILFS);
+  return unknownWordsIn(
+    text,
+    KNOWN.get(sectionCode) ?? new Set(),
+    HILFS_FUER.get(sectionCode) ?? new Set(),
+  );
 }
 
 const sectionsOf = (unit: string): string[] =>
@@ -193,8 +215,16 @@ describe.each(UNITS)('%s — so`zlar', (unit) => {
 });
 
 describe.each(UNITS)('%s — grammatika va iboralar', (unit) => {
-  const grammatik = read<GrammatikFile>(unit, 'grammatik.json');
-  const redemittel = read<RedemittelFile>(unit, 'redemittel.json');
+  const grammatik = readOrEmpty<GrammatikFile>(
+    { unit, regeln: [] },
+    unit,
+    'grammatik.json',
+  );
+  const redemittel = readOrEmpty<RedemittelFile>(
+    { unit, phrasen: [] },
+    unit,
+    'redemittel.json',
+  );
   const sections = sectionsOf(unit);
 
   it('har bo`limning qoidasi bor', () => {
@@ -241,7 +271,11 @@ describe.each(UNITS)('%s — grammatika va iboralar', (unit) => {
 });
 
 describe.each(UNITS)('%s — dialoglar', (unit) => {
-  const dialoge = read<DialogeFile>(unit, 'dialoge.json');
+  const dialoge = readOrEmpty<DialogeFile>(
+    { unit, dialoge: [] },
+    unit,
+    'dialoge.json',
+  );
   const sections = new Set(sectionsOf(unit));
 
   it('kamida 6 ta dialog bor', () => {
@@ -334,7 +368,11 @@ describe.each(UNITS)('%s — dialoglar', (unit) => {
 });
 
 describe.each(UNITS)('%s — gaplar', (unit) => {
-  const saetze = read<SaetzeFile>(unit, 'saetze.json');
+  const saetze = readOrEmpty<SaetzeFile>(
+    { unit, saetze: [] },
+    unit,
+    'saetze.json',
+  );
   const sections = sectionsOf(unit);
 
   it('har bo`limda kamida 6 gap bor', () => {
