@@ -121,12 +121,20 @@ export class DafMediaOverviewService {
       };
     }
 
-    const personas = this.read<{ personas: PersonaRow[] }>(dir, 'personas.json', {
-      personas: [],
-    }).personas;
-    const assets = this.read<{ assets: GeneratedAsset[] }>(dir, 'generated-manifest.json', {
-      assets: [],
-    }).assets;
+    const personas = this.read<{ personas: PersonaRow[] }>(
+      dir,
+      'personas.json',
+      {
+        personas: [],
+      },
+    ).personas;
+    const assets = this.read<{ assets: GeneratedAsset[] }>(
+      dir,
+      'generated-manifest.json',
+      {
+        assets: [],
+      },
+    ).assets;
 
     const tally = (pick: (a: GeneratedAsset) => string) => {
       const m = new Map<string, { anzahl: number; bytes: number }>();
@@ -156,7 +164,10 @@ export class DafMediaOverviewService {
         url: this.mediaUrl(rest.key),
       })),
       nachArt: [...byKind.entries()].map(([kind, v]) => ({ kind, ...v })),
-      nachBereich: [...byBereich.entries()].map(([bereich, v]) => ({ bereich, ...v })),
+      nachBereich: [...byBereich.entries()].map(([bereich, v]) => ({
+        bereich,
+        ...v,
+      })),
       summe: {
         anzahl: assets.length,
         bytes: assets.reduce((s, a) => s + a.bytes, 0),

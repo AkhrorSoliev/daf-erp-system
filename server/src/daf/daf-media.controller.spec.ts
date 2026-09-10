@@ -25,9 +25,12 @@ describe('DafMediaController — role guard', () => {
     coverage: jest.fn().mockResolvedValue({ levels: [] }),
   };
   const inhaltService = {
-    inhalt: jest
-      .fn()
-      .mockResolvedValue({ woerter: [], saetze: [], phrasen: [], dialogZeilen: [] }),
+    inhalt: jest.fn().mockResolvedValue({
+      woerter: [],
+      saetze: [],
+      phrasen: [],
+      dialogZeilen: [],
+    }),
   };
   const fragenService = {
     fragen: jest.fn().mockResolvedValue([]),

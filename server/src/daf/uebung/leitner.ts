@@ -28,5 +28,8 @@ export function naechsterZustand(
     return { strength: 0, dueAt: new Date(jetzt.getTime() + TAG_MS) };
   }
   const neu = Math.min(INTERVALLE.length - 1, strength + 1);
-  return { strength: neu, dueAt: new Date(jetzt.getTime() + INTERVALLE[neu] * TAG_MS) };
+  return {
+    strength: neu,
+    dueAt: new Date(jetzt.getTime() + INTERVALLE[neu] * TAG_MS),
+  };
 }

@@ -1,8 +1,12 @@
 import type { FrageFormat } from '../uebung/frage.types';
-import { DafMediaFragenService, VORSCHAU_BAUER } from './daf-media-fragen.service';
+import {
+  DafMediaFragenService,
+  VORSCHAU_BAUER,
+} from './daf-media-fragen.service';
 
 const config = {
-  get: (k: string) => (k === 'R2_PUBLIC_URL' ? 'https://r2.example' : undefined),
+  get: (k: string) =>
+    k === 'R2_PUBLIC_URL' ? 'https://r2.example' : undefined,
 };
 
 /**
@@ -79,7 +83,14 @@ describe('VORSCHAU_BAUER', () => {
 
 describe('DafMediaFragenService', () => {
   it('savol JAVOBI bilan qaytadi', async () => {
-    const svc = yasa({ woerter: [w(1, 'hallo', 'salom'), w(2, 'danke', 'rahmat'), w(3, 'wer', 'kim'), w(4, 'was', 'nima')] });
+    const svc = yasa({
+      woerter: [
+        w(1, 'hallo', 'salom'),
+        w(2, 'danke', 'rahmat'),
+        w(3, 'wer', 'kim'),
+        w(4, 'was', 'nima'),
+      ],
+    });
     const r = await svc.fragen(7);
     const wu = r.find((f) => f.format === 'WORT_UZ')!;
     expect(wu.richtig).toBe('salom');
@@ -94,7 +105,15 @@ describe('DafMediaFragenService', () => {
     // Ikkala tarafni ham tekshiramiz: `richtig === 'va'` faqat SO'RALISHNI
     // yopadi — passiv so'z variantlar ichida (`options`) chalg'ituvchi
     // sifatida chiqib qolsa ham shu tekshiruv sezmasdi.
-    const svc = yasa({ woerter: [w(1, 'hallo', 'salom'), w(2, 'danke', 'rahmat'), w(3, 'wer', 'kim'), w(4, 'was', 'nima'), { ...w(5, 'und', 'va'), core: false }] });
+    const svc = yasa({
+      woerter: [
+        w(1, 'hallo', 'salom'),
+        w(2, 'danke', 'rahmat'),
+        w(3, 'wer', 'kim'),
+        w(4, 'was', 'nima'),
+        { ...w(5, 'und', 'va'), core: false },
+      ],
+    });
     const r = await svc.fragen(7);
     expect(r.some((f) => f.richtig === 'va')).toBe(false);
     expect(r.some((f) => f.options.includes('va'))).toBe(false);
@@ -102,7 +121,12 @@ describe('DafMediaFragenService', () => {
   });
 
   it('audiosi yo`q so`zdan AUDIO_WORT chiqmaydi', async () => {
-    const svc = yasa({ woerter: [1, 2, 3, 4].map((i) => ({ ...w(i, `w${i}`, `u${i}`), audioKey: null })) });
+    const svc = yasa({
+      woerter: [1, 2, 3, 4].map((i) => ({
+        ...w(i, `w${i}`, `u${i}`),
+        audioKey: null,
+      })),
+    });
     const r = await svc.fragen(7);
     expect(r.some((f) => f.format === 'AUDIO_WORT')).toBe(false);
   });
@@ -111,15 +135,33 @@ describe('DafMediaFragenService', () => {
     // Quruvchilar variantlarni aralashtiradi. Urug' barqaror bo'lmasa
     // sahifa har yangilanganda boshqa savol ko'rsatardi va CEO ko'rgan
     // narsasini ikkinchi marta topa olmasdi.
-    const svc = yasa({ woerter: [w(1, 'hallo', 'salom'), w(2, 'danke', 'rahmat'), w(3, 'wer', 'kim'), w(4, 'was', 'nima')] });
-    expect(JSON.stringify(await svc.fragen(7))).toBe(JSON.stringify(await svc.fragen(7)));
+    const svc = yasa({
+      woerter: [
+        w(1, 'hallo', 'salom'),
+        w(2, 'danke', 'rahmat'),
+        w(3, 'wer', 'kim'),
+        w(4, 'was', 'nima'),
+      ],
+    });
+    expect(JSON.stringify(await svc.fragen(7))).toBe(
+      JSON.stringify(await svc.fragen(7)),
+    );
   });
 
   it('BOSHQA bo`lim boshqa urug` oladi', async () => {
     // Aks holda hamma bo'lim bir xil tartibda chiqib, tasodifiylik
     // yo'qolardi.
-    const svc = yasa({ woerter: [w(1, 'hallo', 'salom'), w(2, 'danke', 'rahmat'), w(3, 'wer', 'kim'), w(4, 'was', 'nima')] });
-    expect(JSON.stringify(await svc.fragen(7))).not.toBe(JSON.stringify(await svc.fragen(8)));
+    const svc = yasa({
+      woerter: [
+        w(1, 'hallo', 'salom'),
+        w(2, 'danke', 'rahmat'),
+        w(3, 'wer', 'kim'),
+        w(4, 'was', 'nima'),
+      ],
+    });
+    expect(JSON.stringify(await svc.fragen(7))).not.toBe(
+      JSON.stringify(await svc.fragen(8)),
+    );
   });
 
   it('chalg`ituvchi puli UNIT ICHIDAGI OLDINGI bo`limlar bilan birlashtiriladi', async () => {

@@ -49,7 +49,9 @@ describe('audioSchluesselFuer', () => {
   const manifest: AudioManifest = { 'u01-s1-hallo': 'daf/audio/abc.mp3' };
 
   it('manifestdagi kalitni qaytaradi', () => {
-    expect(audioSchluesselFuer(manifest, 'u01-s1-hallo')).toBe('daf/audio/abc.mp3');
+    expect(audioSchluesselFuer(manifest, 'u01-s1-hallo')).toBe(
+      'daf/audio/abc.mp3',
+    );
   });
 
   it('manifestda yo`q so`zga null qaytaradi', () => {

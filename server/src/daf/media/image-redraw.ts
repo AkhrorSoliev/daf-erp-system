@@ -51,7 +51,7 @@ export function parseRedrawMap(raw: unknown): RedrawMap {
   }
 
   const map: RedrawMap = {};
-  for (const [sourceId, value] of Object.entries(raw as object)) {
+  for (const [sourceId, value] of Object.entries(raw)) {
     if (value === null || typeof value !== 'object' || Array.isArray(value)) {
       throw new Error(
         `image-redraw.json: "${sourceId}" uchun obyekt kutilgan, berildi ` +

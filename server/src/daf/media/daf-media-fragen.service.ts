@@ -128,8 +128,10 @@ export const VORSCHAU_BAUER: Record<
   FrageFormat,
   (m: Material, rnd: () => number) => Frage[]
 > = {
-  WORT_UZ: (m, r) => m.woerter.map((w) => wortUz(w, m.woerter, r)).filter(nichtNull),
-  UZ_WORT: (m, r) => m.woerter.map((w) => uzWort(w, m.woerter, r)).filter(nichtNull),
+  WORT_UZ: (m, r) =>
+    m.woerter.map((w) => wortUz(w, m.woerter, r)).filter(nichtNull),
+  UZ_WORT: (m, r) =>
+    m.woerter.map((w) => uzWort(w, m.woerter, r)).filter(nichtNull),
   PAAR: (m, r) => {
     const f = paar(m.woerter, r);
     return f ? [f] : [];
@@ -141,11 +143,13 @@ export const VORSCHAU_BAUER: Record<
       .filter(nichtNull),
   WORT_TIPPEN: (m, r) =>
     m.woerter.map((w) => wortTippen(w, r, m.mediaUrl)).filter(nichtNull),
-  LUECKE: (m, r) => m.saetze.map((s) => luecke(s, m.woerter, r)).filter(nichtNull),
+  LUECKE: (m, r) =>
+    m.saetze.map((s) => luecke(s, m.woerter, r)).filter(nichtNull),
   SATZ_BAUEN: (m, r) => m.saetze.map((s) => satzBauen(s, r)).filter(nichtNull),
   SATZ_UEBERSETZEN: (m, r) =>
     m.saetze.map((s) => satzUebersetzen(s, m.saetze, r)).filter(nichtNull),
-  REAKTION: (m, r) => m.phrasen.map((p) => reaktion(p, m.phrasen, r)).filter(nichtNull),
+  REAKTION: (m, r) =>
+    m.phrasen.map((p) => reaktion(p, m.phrasen, r)).filter(nichtNull),
   ZUORDNEN: (m, r) => {
     const f = zuordnen(m.phrasen, r);
     return f ? [f] : [];
@@ -314,15 +318,13 @@ export class DafMediaFragenService {
       sectionCode: '',
     }));
 
-    const phrasen: MaterialPhrase[] = (phrasenRows as PhraseRow[]).map(
-      (p) => ({
-        id: p.id,
-        funktionUz: p.funktionUz,
-        de: p.de,
-        uz: p.uz,
-        sectionCode: '',
-      }),
-    );
+    const phrasen: MaterialPhrase[] = (phrasenRows as PhraseRow[]).map((p) => ({
+      id: p.id,
+      funktionUz: p.funktionUz,
+      de: p.de,
+      uz: p.uz,
+      sectionCode: '',
+    }));
 
     // `as any as DialogRow[]` — xuddi `uebung.service.ts`dagi
     // `baueKandidaten` bilan bir xil sabab: Prisma `include`ni to'g'ri
@@ -352,9 +354,9 @@ export class DafMediaFragenService {
     };
     const rnd = mulberry32(sectionId);
 
-    const alle: Frage[] = (Object.keys(VORSCHAU_BAUER) as FrageFormat[]).flatMap(
-      (format) => VORSCHAU_BAUER[format](material, rnd),
-    );
+    const alle: Frage[] = (
+      Object.keys(VORSCHAU_BAUER) as FrageFormat[]
+    ).flatMap((format) => VORSCHAU_BAUER[format](material, rnd));
 
     return alle.map(toVorschau);
   }

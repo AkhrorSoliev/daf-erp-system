@@ -7,7 +7,10 @@ function fakePrisma() {
       findMany: jest.fn(async () => []),
       groupBy: jest.fn(async () => []),
     },
-    enrollment: { findFirst: jest.fn(async () => null), findMany: jest.fn(async () => []) },
+    enrollment: {
+      findFirst: jest.fn(async () => null),
+      findMany: jest.fn(async () => []),
+    },
     student: { findMany: jest.fn(async () => []) },
     // Fix 5: Takrorlash tugmasi shu songa qarab faol/xira bo'ladi.
     dafLexemeState: { count: jest.fn(async () => 0) },
@@ -15,9 +18,11 @@ function fakePrisma() {
 }
 
 describe('uebersicht', () => {
-  it("umumiy balldan darajani chiqaradi", async () => {
+  it('umumiy balldan darajani chiqaradi', async () => {
     const prisma = fakePrisma();
-    prisma.dafAttempt.aggregate = jest.fn(async () => ({ _sum: { points: 1_600 } }));
+    prisma.dafAttempt.aggregate = jest.fn(async () => ({
+      _sum: { points: 1_600 },
+    }));
     const f = await new FortschrittService(prisma).uebersicht(55, 1);
     expect(f.gesamt).toBe(1_600);
     expect(f.stufe.de).toBe('Kenner');
@@ -50,8 +55,8 @@ describe('uebersicht', () => {
       expect(f.faelligeWoerter).toBe(3);
       // So'ragan STUDENT bo'yicha, MUDDATI KELGAN predikat bilan —
       // `uebung.wiederholung()` bilan bir xil filtr.
-      const where = (prisma.dafLexemeState.count as jest.Mock).mock
-        .calls[0][0].where;
+      const where = (prisma.dafLexemeState.count as jest.Mock).mock.calls[0][0]
+        .where;
       expect(where.studentId).toBe(55);
       expect(where.dueAt).toHaveProperty('lte');
     },
@@ -93,7 +98,8 @@ describe('reyting', () => {
     const prisma = fakePrisma();
     prisma.enrollment.findFirst = jest.fn(async () => ({ groupId: 'g-1' }));
     prisma.enrollment.findMany = jest.fn(async () => [
-      { studentId: 55 }, { studentId: 7 },
+      { studentId: 55 },
+      { studentId: 7 },
     ]);
     prisma.dafAttempt.groupBy = jest.fn(async () => []);
     const r = await new FortschrittService(prisma).reyting(55, 1, 'gruppe');

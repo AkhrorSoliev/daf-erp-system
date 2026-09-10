@@ -14,8 +14,24 @@ function kurs(): KursFile {
         titleUz: 'Salom!',
         theme: 'tanishuv',
         sections: [
-          { order: 1, code: 'u01-s1', titleDe: 'A', titleUz: 'A', grammar: 'g', grammarUz: 'g', wordBudget: 10 },
-          { order: 2, code: 'u01-s2', titleDe: 'B', titleUz: 'B', grammar: 'g', grammarUz: 'g', wordBudget: 10 },
+          {
+            order: 1,
+            code: 'u01-s1',
+            titleDe: 'A',
+            titleUz: 'A',
+            grammar: 'g',
+            grammarUz: 'g',
+            wordBudget: 10,
+          },
+          {
+            order: 2,
+            code: 'u01-s2',
+            titleDe: 'B',
+            titleUz: 'B',
+            grammar: 'g',
+            grammarUz: 'g',
+            wordBudget: 10,
+          },
         ],
       },
     ],
@@ -49,13 +65,18 @@ function goetheFor(entries: WortEintrag[]): GoetheFile {
 
 describe('validateWortliste', () => {
   it('to`g`ri taqsimotda muammo topmaydi', () => {
-    const eintraege = [...fullSection('u01-s1', 'a'), ...fullSection('u01-s2', 'b')];
+    const eintraege = [
+      ...fullSection('u01-s1', 'a'),
+      ...fullSection('u01-s2', 'b'),
+    ];
     const file: WortlisteFile = { level: 'A1', eintraege };
     expect(validateWortliste(file, kurs(), goetheFor(eintraege))).toEqual([]);
   });
 
   it('bo`sh taqsimotni qabul qiladi — fayl bosqichma-bosqich to`ladi', () => {
-    expect(validateWortliste({ level: 'A1', eintraege: [] }, kurs(), GOETHE)).toEqual([]);
+    expect(
+      validateWortliste({ level: 'A1', eintraege: [] }, kurs(), GOETHE),
+    ).toEqual([]);
   });
 
   it('bir so`z ikki bo`limda turolmasligini aytadi', () => {
@@ -93,11 +114,41 @@ describe('validateWortliste', () => {
   it('unitning 50 so`z chegarasini aytadi', () => {
     const k = kurs();
     k.units[0].sections.push(
-      { order: 3, code: 'u01-s3', titleDe: 'C', titleUz: 'C', grammar: 'g', grammarUz: 'g', wordBudget: 10 },
-      { order: 4, code: 'u01-s4', titleDe: 'D', titleUz: 'D', grammar: 'g', grammarUz: 'g', wordBudget: 10 },
-      { order: 5, code: 'u01-s5', titleDe: 'E', titleUz: 'E', grammar: 'g', grammarUz: 'g', wordBudget: 10 },
+      {
+        order: 3,
+        code: 'u01-s3',
+        titleDe: 'C',
+        titleUz: 'C',
+        grammar: 'g',
+        grammarUz: 'g',
+        wordBudget: 10,
+      },
+      {
+        order: 4,
+        code: 'u01-s4',
+        titleDe: 'D',
+        titleUz: 'D',
+        grammar: 'g',
+        grammarUz: 'g',
+        wordBudget: 10,
+      },
+      {
+        order: 5,
+        code: 'u01-s5',
+        titleDe: 'E',
+        titleUz: 'E',
+        grammar: 'g',
+        grammarUz: 'g',
+        wordBudget: 10,
+      },
     );
-    const eintraege = ['u01-s1', 'u01-s2', 'u01-s3', 'u01-s4', 'u01-s5'].flatMap((c, n) =>
+    const eintraege = [
+      'u01-s1',
+      'u01-s2',
+      'u01-s3',
+      'u01-s4',
+      'u01-s5',
+    ].flatMap((c, n) =>
       Array.from({ length: 11 }, (_, i) => eintrag(`w${n}_${i}`, c)),
     );
     const file: WortlisteFile = { level: 'A1', eintraege };
@@ -109,7 +160,7 @@ describe('validateWortliste', () => {
     const eintraege = fullSection('u01-s1', 'a');
     const file: WortlisteFile = { level: 'A1', eintraege };
     const p = validateWortliste(file, kurs(), GOETHE);
-    expect(p.some((x) => x.includes("ro`yxatida yo`q"))).toBe(true);
+    expect(p.some((x) => x.includes('ro`yxatida yo`q'))).toBe(true);
   });
 
   it('sabab yozilgan so`zni qabul qiladi', () => {

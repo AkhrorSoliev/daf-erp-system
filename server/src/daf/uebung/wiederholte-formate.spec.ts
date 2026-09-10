@@ -1,7 +1,11 @@
 import { ohneWiederholteFormate } from './wiederholte-formate';
 import type { Frage, FrageFormat } from './frage.types';
 
-function f(format: FrageFormat, itemId: number, belegteItems?: string[]): Frage {
+function f(
+  format: FrageFormat,
+  itemId: number,
+  belegteItems?: string[],
+): Frage {
   return {
     format,
     itemType: 'WORT',
@@ -19,7 +23,10 @@ function f(format: FrageFormat, itemId: number, belegteItems?: string[]): Frage 
 describe('ohneWiederholteFormate', () => {
   it('so`z avvalgi safar aynan SHU formatda so`ralgan bo`lsa, nomzod chetlatiladi', () => {
     const letzter = new Map<number, string | null>([[5, 'WORT_UZ']]);
-    const natija = ohneWiederholteFormate([f('WORT_UZ', 5), f('UZ_WORT', 5)], letzter);
+    const natija = ohneWiederholteFormate(
+      [f('WORT_UZ', 5), f('UZ_WORT', 5)],
+      letzter,
+    );
     expect(natija.map((k) => k.format)).toEqual(['UZ_WORT']);
   });
 
@@ -29,7 +36,10 @@ describe('ohneWiederholteFormate', () => {
   // hech qanday hand-listed ro'yxatga qo'shilmasdan.
   it('LUECKE ham xuddi shu qoidaga bo`ysunadi — hand-listed ro`yxatda YO`Q edi', () => {
     const letzter = new Map<number, string | null>([[5, 'LUECKE']]);
-    const natija = ohneWiederholteFormate([f('LUECKE', 5), f('WORT_UZ', 5)], letzter);
+    const natija = ohneWiederholteFormate(
+      [f('LUECKE', 5), f('WORT_UZ', 5)],
+      letzter,
+    );
     expect(natija.map((k) => k.format)).toEqual(['WORT_UZ']);
   });
 
@@ -41,7 +51,10 @@ describe('ohneWiederholteFormate', () => {
 
   it('boshqa so`z yoki boshqa formatga tegmaydi', () => {
     const letzter = new Map<number, string | null>([[5, 'WORT_UZ']]);
-    const natija = ohneWiederholteFormate([f('WORT_UZ', 6), f('UZ_WORT', 5)], letzter);
+    const natija = ohneWiederholteFormate(
+      [f('WORT_UZ', 6), f('UZ_WORT', 5)],
+      letzter,
+    );
     expect(natija).toHaveLength(2);
   });
 
@@ -64,7 +77,10 @@ describe('ohneWiederholteFormate', () => {
 
   it('lastFormat null yoki xarita ichida yo`q bo`lsa — hech narsa chetlatilmaydi', () => {
     const letzter = new Map<number, string | null>([[5, null]]);
-    const natija = ohneWiederholteFormate([f('WORT_UZ', 5), f('UZ_WORT', 7)], letzter);
+    const natija = ohneWiederholteFormate(
+      [f('WORT_UZ', 5), f('UZ_WORT', 7)],
+      letzter,
+    );
     expect(natija).toHaveLength(2);
   });
 });

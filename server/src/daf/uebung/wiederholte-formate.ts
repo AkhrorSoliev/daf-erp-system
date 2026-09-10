@@ -29,7 +29,9 @@ export function ohneWiederholteFormate(
   kandidaten: Frage[],
   letzterFormatByWort: Map<number, string | null>,
 ): Frage[] {
-  return kandidaten.filter((f) => !bandSoezShuFormatdaTakrorlandi(f, letzterFormatByWort));
+  return kandidaten.filter(
+    (f) => !bandSoezShuFormatdaTakrorlandi(f, letzterFormatByWort),
+  );
 }
 
 function bandSoezShuFormatdaTakrorlandi(
