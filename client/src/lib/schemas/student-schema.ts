@@ -61,6 +61,9 @@ export const addStudentSchema = z.object({
     .length(9, "Telefon raqam 9 ta raqamdan iborat bo'lishi kerak")
     .regex(/^\d{9}$/, "Faqat raqamlar kiritilishi mumkin"),
   groupId: z.string().optional(),
+  // Har bir o'quvchi lid sifatida tug'iladi: to'g'ridan qo'shilgan o'quvchining
+  // manbasi boshqa hech qayerdan bilinmaydi, shuning uchun majburiy.
+  sourceId: z.string().min(1, "«Qayerdan bildi?» maydonini tanlang"),
 });
 
 export type AddStudentFormValues = z.infer<typeof addStudentSchema>;

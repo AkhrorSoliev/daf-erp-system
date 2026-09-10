@@ -21,6 +21,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PhoneInput } from "@/components/ui/phone-input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   addStudentSchema,
   type AddStudentFormValues,
 } from "@/lib/schemas/student-schema";
@@ -37,6 +44,11 @@ function extractErrorMessage(err: unknown, fallback: string): string {
   if (Array.isArray(msg)) return msg[0] ?? fallback;
   if (typeof msg === "string" && msg.length > 0) return msg;
   return fallback;
+}
+
+interface LeadSourceOption {
+  id: string;
+  name: string;
 }
 
 interface GroupTeacher {
@@ -91,6 +103,7 @@ export function AddStudentDialog({
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [groupSearch, setGroupSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [sources, setSources] = useState<LeadSourceOption[]>([]);
 
   const form = useForm<AddStudentFormValues>({
     resolver: zodResolver(addStudentSchema),
@@ -99,6 +112,7 @@ export function AddStudentDialog({
       lastName: "",
       phone: "",
       groupId: undefined,
+      sourceId: "",
     },
   });
 
@@ -139,10 +153,27 @@ export function AddStudentDialog({
         lastName: "",
         phone: "",
         groupId: undefined,
+        sourceId: "",
       });
       setGroupSearch("");
     }
   }, [open, form]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    api
+      .get<LeadSourceOption[]>("/lead-sources")
+      .then(({ data }) => {
+        if (!cancelled) setSources(data);
+      })
+      .catch(() => {
+        if (!cancelled) setSources([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   const onSubmit = async (values: AddStudentFormValues) => {
     if (!selectedBranch) {
@@ -156,6 +187,7 @@ export function AddStudentDialog({
         lastName: values.lastName.trim(),
         phone: values.phone,
         branchIds: [selectedBranch.id],
+        sourceId: values.sourceId,
       });
 
       if (values.groupId) {
@@ -192,7 +224,8 @@ export function AddStudentDialog({
         <DialogHeader>
           <DialogTitle>Yangi o&apos;quvchi qo&apos;shish</DialogTitle>
           <DialogDescription>
-            Ism, familiya va telefon raqamini kiriting. Guruh tanlash ixtiyoriy.
+            Ism, familiya, telefon raqami va o&apos;quvchi markazni qayerdan
+            bilganini kiriting. Guruh tanlash ixtiyoriy.
           </DialogDescription>
         </DialogHeader>
 
@@ -248,6 +281,35 @@ export function AddStudentDialog({
             {form.formState.errors.phone && (
               <p className="text-xs text-destructive">
                 {form.formState.errors.phone.message}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="sourceId">
+              Qayerdan bildi? <span className="text-destructive">*</span>
+            </Label>
+            <Controller
+              control={form.control}
+              name="sourceId"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger id="sourceId">
+                    <SelectValue placeholder="Manbani tanlang" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sources.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {form.formState.errors.sourceId && (
+              <p className="text-sm text-destructive">
+                {form.formState.errors.sourceId.message}
               </p>
             )}
           </div>
