@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CreateStudentDto } from './dto/create-student.dto';
+import { StudentOrigin } from './student-origin.types';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentQueryDto } from './dto/student-query.dto';
 import { ChangeStudentStatusDto } from './dto/change-student-status.dto';
@@ -105,8 +106,13 @@ export class StudentsService {
   }
 
   // Writes
-  create(dto: CreateStudentDto, companyId: number, userId?: number) {
-    return this.write.create(dto, companyId, userId);
+  create(
+    dto: CreateStudentDto,
+    companyId: number,
+    userId: number | undefined,
+    origin: StudentOrigin,
+  ) {
+    return this.write.create(dto, companyId, userId, origin);
   }
   update(
     id: number,

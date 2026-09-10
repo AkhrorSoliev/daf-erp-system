@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { StudentsReadService } from './students-read.service';
 import { StudentsWriteService } from './students-write.service';
+import { StudentLeadOriginService } from './student-lead-origin.service';
 import { StudentsStatusService } from './students-status.service';
 import { StudentEnrollmentService } from './student-enrollment.service';
 import { StudentsController } from './students.controller';
@@ -30,6 +31,7 @@ import { BillingModule } from '../billing/billing.module';
     StudentsService,
     StudentsReadService,
     StudentsWriteService,
+    StudentLeadOriginService,
     StudentsStatusService,
     StudentEnrollmentService,
     StudentPortalService,

@@ -914,6 +914,7 @@ export class LeadsService {
         },
         companyId,
         userId,
+        { kind: 'LEAD', leadId: lead.id },
       );
       studentId = student.id;
 

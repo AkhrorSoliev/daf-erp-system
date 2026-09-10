@@ -14,6 +14,8 @@ import { EntityHistoryService } from '../common/entity-history';
 import { TransactionsService } from '../transactions/transactions.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
+import { StudentLeadOriginService } from './student-lead-origin.service';
+import { StudentOrigin } from './student-origin.types';
 import { generatePassword } from '../common/utils/password.util';
 import {
   STUDENT_ROLE_ID,
@@ -32,6 +34,7 @@ export class StudentsWriteService {
     private entityHistoryService: EntityHistoryService,
     private eventEmitter: EventEmitter2,
     private transactionsService: TransactionsService,
+    private leadOrigin: StudentLeadOriginService,
   ) {}
 
   /**
@@ -65,7 +68,12 @@ export class StudentsWriteService {
     }
   }
 
-  async create(dto: CreateStudentDto, companyId: number, userId?: number) {
+  async create(
+    dto: CreateStudentDto,
+    companyId: number,
+    userId: number | undefined,
+    origin: StudentOrigin,
+  ) {
     // Phone is the student-portal login identifier → must be globally unique,
     // not scoped to companyId (otherwise two students in different companies
     // could share a login and auth lookup would be ambiguous).
@@ -111,6 +119,21 @@ export class StudentsWriteService {
               studentId: created.id,
               branchId,
             })),
+          });
+        }
+
+        // Har bir o'quvchi lid sifatida tug'iladi. Shu tranzaksiya ichida:
+        // lid yozilmasa, o'quvchi ham yozilmaydi.
+        if (origin.kind === 'DIRECT') {
+          await this.leadOrigin.recordDirectOrigin(tx, {
+            studentId: created.id,
+            firstName: created.firstName,
+            lastName: created.lastName,
+            phone: dto.phone,
+            branchId: dto.branchIds?.[0] ?? null,
+            companyId,
+            sourceId: origin.sourceId,
+            userId,
           });
         }
 

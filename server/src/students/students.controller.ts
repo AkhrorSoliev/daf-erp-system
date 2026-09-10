@@ -13,7 +13,7 @@ import {
 import { StudentsService } from './students.service';
 import { StudentEnrollmentService } from './student-enrollment.service';
 import { SmsService } from '../sms/sms.service';
-import { CreateStudentDto } from './dto/create-student.dto';
+import { CreateStudentDirectDto } from './dto/create-student-direct.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentQueryDto } from './dto/student-query.dto';
 import { ChangeStudentStatusDto } from './dto/change-student-status.dto';
@@ -90,11 +90,14 @@ export class StudentsController {
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')
   create(
-    @Body() dto: CreateStudentDto,
+    @Body() dto: CreateStudentDirectDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
   ) {
-    return this.studentsService.create(dto, companyId, userId);
+    return this.studentsService.create(dto, companyId, userId, {
+      kind: 'DIRECT',
+      sourceId: dto.sourceId,
+    });
   }
 
   @Patch(':id')

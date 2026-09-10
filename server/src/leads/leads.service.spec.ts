@@ -800,6 +800,7 @@ describe('LeadsService', () => {
         }),
         1001,
         1,
+        { kind: 'LEAD', leadId: 'lead-1' },
       );
       expect(prisma.lead.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -849,6 +850,7 @@ describe('LeadsService', () => {
         expect.objectContaining({ extraPhone: '911112233' }),
         1001,
         1,
+        { kind: 'LEAD', leadId: 'lead-1' },
       );
     });
 
@@ -874,6 +876,7 @@ describe('LeadsService', () => {
         expect.objectContaining({ branchIds: [7] }),
         1001,
         1,
+        { kind: 'LEAD', leadId: 'lead-1' },
       );
       expect(enrollment.enrollToGroup).toHaveBeenCalledWith(
         10008,

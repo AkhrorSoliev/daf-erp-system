@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { StudentsWriteService } from './students-write.service';
+import { StudentLeadOriginService } from './student-lead-origin.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { StatusHistoryService } from '../common/status/status-history.service';
@@ -62,28 +63,47 @@ describe('StudentsWriteService — branch validation', () => {
         },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: TransactionsService, useValue: {} },
+        {
+          provide: StudentLeadOriginService,
+          useValue: { recordDirectOrigin: jest.fn() },
+        },
       ],
     }).compile();
 
     service = module.get(StudentsWriteService);
   });
 
+  // Bu testlar filial tekshiruvi haqida, lid kelib chiqishi haqida emas —
+  // tranzaksiyaga yetib bormasdan yiqiladi, shuning uchun LEAD origin
+  // ishlatiladi (u lid yozuvi yaratmaydi).
+  const LEAD_ORIGIN = { kind: 'LEAD' as const, leadId: 'lead-test' };
+
   it('refuses to create a student with no branch', async () => {
-    await expect(service.create(baseDto, COMPANY)).rejects.toThrow(
-      /filial tanlanishi shart/,
-    );
+    await expect(
+      service.create(baseDto, COMPANY, undefined, LEAD_ORIGIN),
+    ).rejects.toThrow(/filial tanlanishi shart/);
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('refuses an empty branch list', async () => {
     await expect(
-      service.create({ ...baseDto, branchIds: [] }, COMPANY),
+      service.create(
+        { ...baseDto, branchIds: [] },
+        COMPANY,
+        undefined,
+        LEAD_ORIGIN,
+      ),
     ).rejects.toThrow(/filial tanlanishi shart/);
   });
 
   it('refuses two branches at once', async () => {
     await expect(
-      service.create({ ...baseDto, branchIds: [1, 2] }, COMPANY),
+      service.create(
+        { ...baseDto, branchIds: [1, 2] },
+        COMPANY,
+        undefined,
+        LEAD_ORIGIN,
+      ),
     ).rejects.toThrow(/faqat bitta filialga/);
   });
 
@@ -91,7 +111,12 @@ describe('StudentsWriteService — branch validation', () => {
     prisma.branch.findFirst.mockResolvedValue(null);
 
     await expect(
-      service.create({ ...baseDto, branchIds: [99] }, COMPANY),
+      service.create(
+        { ...baseDto, branchIds: [99] },
+        COMPANY,
+        undefined,
+        LEAD_ORIGIN,
+      ),
     ).rejects.toThrow(/Filial #99 topilmadi/);
     expect(prisma.branch.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -106,7 +131,7 @@ describe('StudentsWriteService — branch validation', () => {
     // The write itself needs far more of Prisma than this unit test mocks;
     // what matters here is that validation passed and the write was reached.
     await service
-      .create({ ...baseDto, branchIds: [1] }, COMPANY)
+      .create({ ...baseDto, branchIds: [1] }, COMPANY, undefined, LEAD_ORIGIN)
       .catch(() => undefined);
 
     expect(prisma.$transaction).toHaveBeenCalled();
