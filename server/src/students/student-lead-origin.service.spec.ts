@@ -94,7 +94,7 @@ describe('StudentLeadOriginService', () => {
     expect(data).not.toHaveProperty('sourceId');
   });
 
-  it("faqat tirik va aylantirilmagan lidlarni qidiradi", async () => {
+  it('faqat tirik va aylantirilmagan lidlarni qidiradi', async () => {
     await service.recordDirectOrigin(tx, baseParams);
 
     expect(tx.lead.findMany).toHaveBeenCalledWith({
