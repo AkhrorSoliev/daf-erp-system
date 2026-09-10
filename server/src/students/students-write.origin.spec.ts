@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { StudentsWriteService } from './students-write.service';
 import { StudentLeadOriginService } from './student-lead-origin.service';
@@ -15,7 +16,8 @@ import { TransactionsService } from '../transactions/transactions.service';
  */
 describe('StudentsWriteService — lid kelib chiqishi', () => {
   let service: StudentsWriteService;
-  let origin: { recordDirectOrigin: jest.Mock };
+  let origin: { recordDirectOrigin: jest.Mock; assertSourceUsable: jest.Mock };
+  let prisma: any;
   let tx: any;
 
   const COMPANY = 1001;
@@ -47,7 +49,7 @@ describe('StudentsWriteService — lid kelib chiqishi', () => {
       },
     };
 
-    const prisma = {
+    prisma = {
       student: { findFirst: jest.fn().mockResolvedValue(null) },
       studentBranch: {
         findFirst: jest.fn().mockResolvedValue({ branchId: 7 }),
@@ -64,7 +66,10 @@ describe('StudentsWriteService — lid kelib chiqishi', () => {
       $transaction: jest.fn(async (cb: any) => cb(tx)),
     };
 
-    origin = { recordDirectOrigin: jest.fn().mockResolvedValue(undefined) };
+    origin = {
+      recordDirectOrigin: jest.fn().mockResolvedValue(undefined),
+      assertSourceUsable: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -110,12 +115,43 @@ describe('StudentsWriteService — lid kelib chiqishi', () => {
     });
   });
 
-  it("LEAD bo'lsa ikkinchi lid yozuvi yaratilmaydi", async () => {
+  // F1 — noto'g'ri `sourceId` tranzaksiya ichida Prisma P2003 beradi va repoda
+  // global Prisma xato filtri yo'q: admin 500 oladi, o'quvchi esa yaratilmaydi.
+  // Shuning uchun manba tranzaksiyadan OLDIN tekshiriladi.
+  it('manba tranzaksiyadan oldin tekshiriladi', async () => {
+    await service.create(dto, COMPANY, 42, {
+      kind: 'DIRECT',
+      sourceId: 'src-instagram',
+    });
+
+    expect(origin.assertSourceUsable).toHaveBeenCalledWith(
+      'src-instagram',
+      COMPANY,
+    );
+  });
+
+  it("manba topilmasa o'quvchi umuman yaratilmaydi", async () => {
+    origin.assertSourceUsable.mockRejectedValue(
+      new NotFoundException('Lid manbasi topilmadi'),
+    );
+
+    await expect(
+      service.create(dto, COMPANY, 42, {
+        kind: 'DIRECT',
+        sourceId: "yo'q-manba",
+      }),
+    ).rejects.toThrow(NotFoundException);
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("LEAD bo'lsa manba tekshirilmaydi va ikkinchi lid yozuvi yaratilmaydi", async () => {
     await service.create(dto, COMPANY, 42, {
       kind: 'LEAD',
       leadId: 'lead-1',
     });
 
     expect(origin.recordDirectOrigin).not.toHaveBeenCalled();
+    expect(origin.assertSourceUsable).not.toHaveBeenCalled();
   });
 });

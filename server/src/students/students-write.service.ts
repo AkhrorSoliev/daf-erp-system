@@ -88,6 +88,13 @@ export class StudentsWriteService {
 
     await this.assertSingleValidBranch(dto.branchIds, companyId);
 
+    // Manba tranzaksiyadan OLDIN tekshiriladi: `Lead.sourceId` tashqi kalit,
+    // ya'ni yolg'on id tranzaksiya ichida Prisma P2003 beradi va admin
+    // tushunarsiz 500 oladi — o'quvchisi ham yaratilmagan holda.
+    if (origin.kind === 'DIRECT') {
+      await this.leadOrigin.assertSourceUsable(origin.sourceId, companyId);
+    }
+
     const student = await this.prisma.$transaction(
       async (tx) => {
         const created = await tx.student.create({
