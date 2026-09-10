@@ -179,12 +179,15 @@ export class LeadsService {
       ...new Set(
         data
           .map((l) => l.convertedStudentId)
-          .filter((id): id is number => id !== null),
+          .filter((id): id is number => typeof id === 'number'),
       ),
     ];
+    // `companyId` + `deletedAt` shart: arxivlangan o'quvchi 404 beradigan
+    // havola bo'lib chiqardi, so'rov esa ijarachi chegarasidan bitta xatolik
+    // narida turardi.
     const students = studentIds.length
       ? await this.prisma.student.findMany({
-          where: { id: { in: studentIds } },
+          where: { id: { in: studentIds }, companyId, deletedAt: null },
           select: { id: true, firstName: true, lastName: true },
         })
       : [];

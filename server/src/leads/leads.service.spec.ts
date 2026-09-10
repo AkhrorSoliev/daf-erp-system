@@ -329,6 +329,35 @@ describe('LeadsService', () => {
       });
     });
 
+    // F3 — o'quvchi qidiruvi kompaniya va arxiv bo'yicha ham chegaralanadi:
+    // arxivlangan o'quvchi 404 beradigan havola bo'lib chiqardi, so'rovning
+    // o'zi esa ijarachi chegarasidan bitta xatolik narida turardi.
+    it("aylangan o'quvchini kompaniya ichidan va arxivsiz qidiradi", async () => {
+      prisma.lead.findMany.mockResolvedValue([
+        {
+          id: 'lead-1',
+          firstName: 'Ali',
+          lastName: 'Valiyev',
+          phone: '901234567',
+          statusEnum: 'CONVERTED',
+          createdAt: new Date('2026-09-01'),
+          statusChangedAt: new Date('2026-09-05'),
+          convertedStudentId: 555,
+          source: null,
+          section: null,
+        },
+      ]);
+      prisma.lead.count.mockResolvedValue(1);
+      prisma.student.findMany.mockResolvedValue([]);
+
+      await service.findAll({} as any, 1001, null);
+
+      expect(prisma.student.findMany).toHaveBeenCalledWith({
+        where: { id: { in: [555] }, companyId: 1001, deletedAt: null },
+        select: { id: true, firstName: true, lastName: true },
+      });
+    });
+
     it("dateField=statusChangedAt bo'lsa sana filtri aylangan sanaga tushadi", async () => {
       prisma.lead.findMany.mockResolvedValue([]);
       prisma.lead.count.mockResolvedValue(0);
