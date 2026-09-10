@@ -159,7 +159,11 @@ ko'rinishi kerak.
   foizi eskicha yolg'on bo'lib qolaveradi va buni bilib turish kerak.
 - Lid doskasi, ustunlar, bo'limlar tuzilishi.
 - Mavjud "O'quvchiga aylantirish" tugmasi va uning mantig'i.
-- Hisobotdagi konversiya foizi formulasi — kirish ma'lumoti to'g'rilanadi, formula emas.
+- ~~Hisobotdagi konversiya foizi formulasi — kirish ma'lumoti to'g'rilanadi, formula
+  emas.~~ **Bu qamrov o'zgardi:** `reports-overview.service.ts` dagi voronka so'rovlari
+  `sectionId IS NOT NULL` bilan toraytirildi, ya'ni to'g'ridan kirganlar voronka
+  ko'rsatkichlaridan chiqarildi (manba bo'yicha statistika esa har bir lidni sanashda
+  davom etadi). Sababi: ADR-0017.
 - `CONTACTED` / `TRIAL` bosqichlarini majburiy qilish — alohida ish.
 
 ## Kutilayotgan natija
