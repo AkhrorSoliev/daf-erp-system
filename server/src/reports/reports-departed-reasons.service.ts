@@ -3,6 +3,7 @@ import { ExitType, StudentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { buildDepartedEnrollmentWhere } from './shared/departed-filter';
 import { equalsOrIn } from '../common/dto/to-array';
+import { tashkentRangeUtc } from '../common/date/tashkent';
 
 const EXIT_TYPE_TO_STATUS: Record<ExitType, StudentStatus | null> = {
   GROUP_REMOVAL: null, // enrollment-based, not student-status-based
@@ -26,14 +27,17 @@ export class ReportsDepartedReasonsService {
       endDate: string;
     },
   ) {
-    const start = new Date(params.startDate);
-    const end = new Date(params.endDate);
-    end.setHours(23, 59, 59, 999);
+    // TIMESTAMP columns — the picked days are Tashkent days, and `end` is the
+    // EXCLUSIVE start of the day after (see common/date/tashkent).
+    const { gte: start, lt: end } = tashkentRangeUtc(
+      params.startDate,
+      params.endDate,
+    );
 
     const where = {
       ...buildDepartedEnrollmentWhere(companyId, params),
       status: 'DROPPED' as const,
-      statusChangedAt: { gte: start, lte: end },
+      statusChangedAt: { gte: start, lt: end },
     };
 
     const grouped = await this.prisma.enrollment.groupBy({
@@ -83,9 +87,12 @@ export class ReportsDepartedReasonsService {
       endDate: string;
     },
   ) {
-    const start = new Date(params.startDate);
-    const end = new Date(params.endDate);
-    end.setHours(23, 59, 59, 999);
+    // TIMESTAMP columns — the picked days are Tashkent days, and `end` is the
+    // EXCLUSIVE start of the day after (see common/date/tashkent).
+    const { gte: start, lt: end } = tashkentRangeUtc(
+      params.startDate,
+      params.endDate,
+    );
 
     const groupFilter: any = { companyId, deletedAt: null };
     if (params.branchId !== undefined) groupFilter.branchId = params.branchId;
@@ -100,7 +107,7 @@ export class ReportsDepartedReasonsService {
     const grouped = await this.prisma.groupTeacherHistory.groupBy({
       by: ['changeReasonId'],
       where: {
-        createdAt: { gte: start, lte: end },
+        createdAt: { gte: start, lt: end },
         group: groupFilter,
       },
       _count: { _all: true },
@@ -155,14 +162,17 @@ export class ReportsDepartedReasonsService {
       return { data: [] };
     }
 
-    const start = new Date(params.startDate);
-    const end = new Date(params.endDate);
-    end.setHours(23, 59, 59, 999);
+    // TIMESTAMP columns — the picked days are Tashkent days, and `end` is the
+    // EXCLUSIVE start of the day after (see common/date/tashkent).
+    const { gte: start, lt: end } = tashkentRangeUtc(
+      params.startDate,
+      params.endDate,
+    );
 
     const where: any = {
       companyId,
       status: targetStatus,
-      statusChangedAt: { gte: start, lte: end },
+      statusChangedAt: { gte: start, lt: end },
     };
     if (params.branchId !== undefined) {
       where.branches = { some: { branchId: params.branchId } };
@@ -216,14 +226,17 @@ export class ReportsDepartedReasonsService {
       endDate: string;
     },
   ) {
-    const start = new Date(params.startDate);
-    const end = new Date(params.endDate);
-    end.setHours(23, 59, 59, 999);
+    // TIMESTAMP columns — the picked days are Tashkent days, and `end` is the
+    // EXCLUSIVE start of the day after (see common/date/tashkent).
+    const { gte: start, lt: end } = tashkentRangeUtc(
+      params.startDate,
+      params.endDate,
+    );
 
     const where = {
       ...buildDepartedEnrollmentWhere(companyId, params),
       status: 'TRANSFERRED' as const,
-      statusChangedAt: { gte: start, lte: end },
+      statusChangedAt: { gte: start, lt: end },
     };
 
     const grouped = await this.prisma.enrollment.groupBy({

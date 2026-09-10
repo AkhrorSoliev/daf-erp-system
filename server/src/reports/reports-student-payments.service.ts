@@ -6,6 +6,7 @@ import {
   userBranchWhere,
 } from '../common/finance/report-branch-scope';
 import { equalsOrIn } from '../common/dto/to-array';
+import { tashkentRangeFilter } from '../common/date/tashkent';
 
 @Injectable()
 export class ReportsStudentPaymentsService {
@@ -37,15 +38,10 @@ export class ReportsStudentPaymentsService {
       where.branchId = params.branchId;
     }
 
-    if (params.startDate || params.endDate) {
-      where.createdAt = {};
-      if (params.startDate) where.createdAt.gte = new Date(params.startDate);
-      if (params.endDate) {
-        const end = new Date(params.endDate);
-        end.setHours(23, 59, 59, 999);
-        where.createdAt.lte = end;
-      }
-    }
+    // Payment.createdAt is a TIMESTAMP, and the day the user picked is a
+    // Tashkent calendar day — see common/date/tashkent.
+    const createdAt = tashkentRangeFilter(params.startDate, params.endDate);
+    if (createdAt) where.createdAt = createdAt;
 
     if (params.methods && params.methods.length > 0) {
       where.method = { in: params.methods };

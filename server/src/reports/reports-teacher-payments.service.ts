@@ -1,5 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  addDaysToDateStr,
+  tashkentDayStartUtc,
+  tashkentMonthKey,
+  tashkentMonthRangeUtc,
+} from '../common/date/tashkent';
 
 @Injectable()
 export class ReportsTeacherPaymentsService {
@@ -62,7 +68,7 @@ export class ReportsTeacherPaymentsService {
         where: {
           companyId,
           status: 'COMPLETED',
-          createdAt: { gte: range.start, lte: range.end },
+          createdAt: { gte: range.start, lt: range.end },
           contract: { groupId: { in: allGroupIds } },
         },
         select: {
@@ -211,7 +217,7 @@ export class ReportsTeacherPaymentsService {
         where: {
           companyId,
           status: 'COMPLETED',
-          createdAt: { gte: range.start, lte: range.end },
+          createdAt: { gte: range.start, lt: range.end },
           contract: { groupId: { in: groupIds } },
         },
         select: {
@@ -306,14 +312,14 @@ export class ReportsTeacherPaymentsService {
     };
   }
 
+  /** TIMESTAMP bounds for a Tashkent day range; `end` is EXCLUSIVE. */
   private resolveRange(startDate?: string, endDate?: string) {
-    const now = new Date();
-    const start = startDate
-      ? new Date(startDate + 'T00:00:00.000Z')
-      : new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = endDate
-      ? new Date(endDate + 'T23:59:59.999Z')
-      : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-    return { start, end };
+    const thisMonth = tashkentMonthRangeUtc(tashkentMonthKey(new Date()));
+    return {
+      start: startDate ? tashkentDayStartUtc(startDate) : thisMonth.gte,
+      end: endDate
+        ? tashkentDayStartUtc(addDaysToDateStr(endDate, 1))
+        : thisMonth.lt,
+    };
   }
 }

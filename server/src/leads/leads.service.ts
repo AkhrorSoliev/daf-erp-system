@@ -22,6 +22,7 @@ import { ConvertLeadDto } from './dto/convert-lead.dto';
 import { MarkCalledLeadDto } from './dto/mark-called-lead.dto';
 import { RemoveLeadDto } from './dto/remove-lead.dto';
 import { equalsOrIn } from '../common/dto/to-array';
+import { tashkentRangeFilter } from '../common/date/tashkent';
 
 // Sentinel stored in Lead.statusChangeReason when a lead is CONVERTED by being
 // linked to an already-existing student (no new account minted) rather than by
@@ -128,16 +129,8 @@ export class LeadsService {
       where.id = query.hasComments === 'true' ? { in: ids } : { notIn: ids };
     }
 
-    if (query.startDate || query.endDate) {
-      const createdAt: Prisma.DateTimeFilter = {};
-      if (query.startDate) createdAt.gte = new Date(query.startDate);
-      if (query.endDate) {
-        const end = new Date(query.endDate);
-        end.setHours(23, 59, 59, 999);
-        createdAt.lte = end;
-      }
-      where.createdAt = createdAt;
-    }
+    const createdAt = tashkentRangeFilter(query.startDate, query.endDate);
+    if (createdAt) where.createdAt = createdAt;
 
     const [data, total] = await Promise.all([
       this.prisma.lead.findMany({

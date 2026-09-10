@@ -5,13 +5,19 @@
  * and the timestamp-vs-date-only column boundary handling.
  */
 import { Prisma } from '@prisma/client';
+import { tashkentRangeUtc, utcMidnightFromDateStr } from '../date/tashkent';
 
 export interface ResolvedPeriod {
   startStr: string; // 'YYYY-MM-DD'
   endStr: string; // 'YYYY-MM-DD'
-  start: Date; // midnight of startStr — gte bound for any column
-  endTs: Date; // end-of-day of endStr — lte bound for TIMESTAMP columns
-  endDate: Date; // midnight of endStr — lte bound for @db.Date columns
+  /** 00:00 Tashkent of startStr — `gte` bound for TIMESTAMP columns. */
+  start: Date;
+  /** Last ms before 00:00 Tashkent of the day after endStr — `lte` for TIMESTAMP columns. */
+  endTs: Date;
+  /** Plain UTC midnight of startStr — `gte` bound for `@db.Date` columns. */
+  startDate: Date;
+  /** Plain UTC midnight of endStr — `lte` bound for `@db.Date` columns. */
+  endDate: Date;
 }
 
 /** Resolve a [start, end] period, defaulting to the current calendar month. */
@@ -28,12 +34,15 @@ export function resolvePeriod(
     endDate ??
     `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
+  // Two pairs, because the column type decides the bound (see common/date/tashkent).
+  const { gte, lt } = tashkentRangeUtc(startStr, endStr);
   return {
     startStr,
     endStr,
-    start: new Date(startStr),
-    endTs: new Date(endStr + 'T23:59:59.999Z'),
-    endDate: new Date(endStr),
+    start: gte,
+    endTs: new Date(lt.getTime() - 1),
+    startDate: utcMidnightFromDateStr(startStr),
+    endDate: utcMidnightFromDateStr(endStr),
   };
 }
 

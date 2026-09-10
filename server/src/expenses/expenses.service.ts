@@ -19,6 +19,7 @@ import {
 import { renderPdf } from '../receipts/pdf/render';
 import { buildExpensesDoc, type ExpensesPdfRow } from './pdf/expenses-template';
 import { formatDate } from './pdf/format.util';
+import { utcMidnightFromDateStr } from '../common/date/tashkent';
 
 const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   RENT: 'Ijara',
@@ -209,8 +210,10 @@ export class ExpensesService {
       // whole `endDate`. Either bound works on its own (one-sided range).
       ...((query.startDate || query.endDate) && {
         date: {
-          ...(query.startDate && { gte: new Date(query.startDate) }),
-          ...(query.endDate && { lte: new Date(query.endDate) }),
+          ...(query.startDate && {
+            gte: utcMidnightFromDateStr(query.startDate),
+          }),
+          ...(query.endDate && { lte: utcMidnightFromDateStr(query.endDate) }),
         },
       }),
     };
@@ -326,7 +329,7 @@ export class ExpensesService {
     const where: Prisma.ExpenseWhereInput = {
       companyId,
       deletedAt: null,
-      date: { gte: period.start, lte: period.endDate },
+      date: { gte: period.startDate, lte: period.endDate },
       ...branch,
     };
 

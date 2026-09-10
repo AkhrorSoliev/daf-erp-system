@@ -5,6 +5,13 @@ import {
   branchIdWhere,
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
+import {
+  addDaysToDateStr,
+  addMonthsToMonthKey,
+  tashkentDayStartUtc,
+  tashkentMonthKey,
+  tashkentMonthRangeUtc,
+} from '../common/date/tashkent';
 
 // Above this many rows a single detail sheet stops being readable and starts
 // bloating the workbook — cap the query and let the caller flag truncation.
@@ -82,7 +89,9 @@ export class ReportsPaymentsService {
   ) {
     const period = resolvePeriod(query.startDate, query.endDate);
     const tsFilter = { gte: period.start, lte: period.endTs };
-    const dateFilter = { gte: period.start, lte: period.endDate };
+    // Expense.date is @db.Date — plain UTC midnights, or Postgres truncates a
+    // Tashkent-shifted instant down to the previous calendar day.
+    const dateFilter = { gte: period.startDate, lte: period.endDate };
 
     const [branches, incomeByBranch, expenseByBranch, advanceByBranch] =
       await Promise.all([
@@ -165,16 +174,19 @@ export class ReportsPaymentsService {
     const branchId = options.branchId;
     const branchFilter = branchId ? { branchId } : {};
 
-    const now = new Date();
+    // Payment.createdAt is a TIMESTAMP; the picked days are Tashkent days.
+    // `end` is EXCLUSIVE throughout, so the previous window is simply the same
+    // length of time ending where the current one starts.
+    const thisMonth = tashkentMonthRangeUtc(tashkentMonthKey(new Date()));
     const currentStart = options.startDate
-      ? new Date(options.startDate + 'T00:00:00.000Z')
-      : new Date(now.getFullYear(), now.getMonth(), 1);
+      ? tashkentDayStartUtc(options.startDate)
+      : thisMonth.gte;
     const currentEnd = options.endDate
-      ? new Date(options.endDate + 'T23:59:59.999Z')
-      : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      ? tashkentDayStartUtc(addDaysToDateStr(options.endDate, 1))
+      : thisMonth.lt;
 
     const durationMs = currentEnd.getTime() - currentStart.getTime();
-    const previousEnd = new Date(currentStart.getTime() - 1);
+    const previousEnd = currentStart;
     const previousStart = new Date(previousEnd.getTime() - durationMs);
 
     const currentPeriod = {
@@ -345,22 +357,16 @@ export class ReportsPaymentsService {
     return studentLessonsBefore % lessonPaymentCount === 0;
   }
 
+  /** `anchor` is the EXCLUSIVE end of the current window; the last trend month
+   *  is the one that window ends in. Months are Tashkent months. */
   private buildMonthlyPeriodsEndingAt(anchor: Date, count: number) {
     const periods: { label: string; start: Date; end: Date }[] = [];
+    const anchorKey = tashkentMonthKey(new Date(anchor.getTime() - 1));
     for (let i = count - 1; i >= 0; i--) {
-      const d = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1);
-      const start = new Date(d.getFullYear(), d.getMonth(), 1);
-      const end = new Date(
-        d.getFullYear(),
-        d.getMonth() + 1,
-        0,
-        23,
-        59,
-        59,
-        999,
-      );
-      const label = `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-      periods.push({ label, start, end });
+      const key = addMonthsToMonthKey(anchorKey, -i);
+      const { gte: start, lt: end } = tashkentMonthRangeUtc(key);
+      const [y, m] = key.split('-');
+      periods.push({ label: `${m}/${y}`, start, end });
     }
     return periods;
   }
@@ -370,7 +376,7 @@ export class ReportsPaymentsService {
     period: { label: string; start: Date; end: Date },
     branchFilter: { branchId?: number },
   ) {
-    const dateFilter = { gte: period.start, lte: period.end };
+    const dateFilter = { gte: period.start, lt: period.end };
 
     const [paymentsAgg, payments, refundsAgg] = await Promise.all([
       this.prisma.payment.aggregate({
@@ -440,7 +446,7 @@ export class ReportsPaymentsService {
         where: {
           companyId,
           status: 'COMPLETED',
-          createdAt: { gte: period.start, lte: period.end },
+          createdAt: { gte: period.start, lt: period.end },
         },
         _sum: { amount: true },
       }),

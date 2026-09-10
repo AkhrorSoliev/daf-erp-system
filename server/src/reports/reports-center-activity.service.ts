@@ -6,6 +6,11 @@ import {
   CenterActivityQueryDto,
 } from './dto/center-activity-query.dto';
 import { HolidaysService } from '../holidays/holidays.service';
+import {
+  endOfUtcDay,
+  tashkentMonthKey,
+  utcMidnightFromDateStr,
+} from '../common/date/tashkent';
 
 const DEFAULT_WORK_START = '09:00';
 const DEFAULT_WORK_END = '21:00';
@@ -716,13 +721,15 @@ export class ReportsCenterActivityService {
         const start =
           bucket === 'weekly'
             ? this.weekStart(d.date)
-            : new Date(d.date.getFullYear(), d.date.getMonth(), 1);
+            : new Date(
+                Date.UTC(d.date.getUTCFullYear(), d.date.getUTCMonth(), 1),
+              );
         map.set(key, {
           bucketStart: this.toIsoDate(start),
           label:
             bucket === 'weekly'
               ? `${this.formatDayLabel(start)} haftasi`
-              : UZ_MONTHS[start.getMonth()],
+              : UZ_MONTHS[start.getUTCMonth()],
           sumUtil: d.utilizationPct,
           sumEmpty: d.emptyHours,
           sumStudents: d.activeStudents,
@@ -977,15 +984,19 @@ export class ReportsCenterActivityService {
   private resolveRange(query: CenterActivityQueryDto): ResolvedRange {
     let start: Date;
     let end: Date;
+    // This report WALKS calendar days (a per-day cursor, day labels, holiday
+    // sets), so its bounds are UTC calendar dates rather than a Tashkent
+    // instant window — but built with UTC arithmetic, so the answer no longer
+    // depends on the timezone of the machine running it.
     if (query.startDate && query.endDate) {
-      start = this.parseIso(query.startDate);
-      end = this.parseIso(query.endDate);
+      start = utcMidnightFromDateStr(query.startDate);
+      end = endOfUtcDay(query.endDate);
     } else {
-      const now = new Date();
-      start = new Date(now.getFullYear(), now.getMonth(), 1);
-      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const monthKey = tashkentMonthKey(new Date());
+      const [y, m] = monthKey.split('-').map(Number);
+      start = new Date(Date.UTC(y, m - 1, 1));
+      end = new Date(new Date(Date.UTC(y, m, 1)).getTime() - 1);
     }
-    end.setHours(23, 59, 59, 999);
     const days =
       Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     return {
@@ -1107,19 +1118,15 @@ export class ReportsCenterActivityService {
   }
 
   private toIsoDate(d: Date): string {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
+    return d.toISOString().slice(0, 10);
   }
 
   private parseIso(iso: string): Date {
-    const [y, m, d] = iso.split('-').map(Number);
-    return new Date(y, m - 1, d);
+    return utcMidnightFromDateStr(iso);
   }
 
   private formatDayLabel(d: Date): string {
-    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
   }
 
   private weekKey(d: Date): string {
@@ -1127,16 +1134,19 @@ export class ReportsCenterActivityService {
     return this.toIsoDate(monday);
   }
 
+  // The day cursor is built on UTC calendar dates (see resolveRange), so every
+  // bucket boundary reads the same UTC clock — otherwise a bucket start could
+  // render as the last day of the previous month on a non-UTC machine.
   private weekStart(d: Date): Date {
-    const day = d.getDay();
+    const day = d.getUTCDay();
     const diff = day === 0 ? -6 : 1 - day; // Monday-start
     const monday = new Date(d);
-    monday.setDate(monday.getDate() + diff);
-    monday.setHours(0, 0, 0, 0);
+    monday.setUTCDate(monday.getUTCDate() + diff);
+    monday.setUTCHours(0, 0, 0, 0);
     return monday;
   }
 
   private monthKey(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`;
   }
 }

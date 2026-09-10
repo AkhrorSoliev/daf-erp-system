@@ -104,16 +104,17 @@ describe('TelegramChannelReportController', () => {
       await controller.summary('2026-07');
 
       const range = gateStats.getSummary.mock.calls[0][0];
-      expect(range.from.toISOString()).toBe('2026-07-01T00:00:00.000Z');
-      // Iyul 31 kun — oxirgi kun 31-i bo'lishi shart (keyingi oyga o'tib ketmasin)
-      expect(range.to.toISOString()).toBe('2026-07-31T23:59:59.999Z');
+      // Toshkent iyuli: 01.07 00:00 dan 01.08 00:00 gacha (chegaradan tashqari).
+      expect(range.from.toISOString()).toBe('2026-06-30T19:00:00.000Z');
+      expect(range.to.toISOString()).toBe('2026-07-31T19:00:00.000Z');
     });
 
     it("fevralning oxirgi kunini to'g'ri hisoblaydi", async () => {
       await controller.summary('2026-02');
 
       const range = gateStats.getSummary.mock.calls[0][0];
-      expect(range.to.toISOString()).toBe('2026-02-28T23:59:59.999Z');
+      // 2026 kabisa yili emas — fevral 28 kun, mart 1-idan oldin tugaydi.
+      expect(range.to.toISOString()).toBe('2026-02-28T19:00:00.000Z');
     });
 
     it("noto'g'ri oy formatida davr filtri qo'llanmaydi", async () => {

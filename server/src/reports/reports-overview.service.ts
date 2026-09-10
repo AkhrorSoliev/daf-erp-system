@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { activeStudentWhere } from '../students/shared/active-student-where';
+import { tashkentRangeFilter } from '../common/date/tashkent';
 
 @Injectable()
 export class ReportsOverviewService {
@@ -321,11 +322,9 @@ export class ReportsOverviewService {
   }
 
   async getLeadAnalytics(query: ReportsQueryDto) {
-    const dateFilter: any = {};
-    if (query.startDate) dateFilter.gte = new Date(query.startDate);
-    if (query.endDate) dateFilter.lte = new Date(query.endDate);
-    const createdAtFilter =
-      Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {};
+    // Lead.createdAt is a TIMESTAMP — bound it by Tashkent day, not UTC day.
+    const dateFilter = tashkentRangeFilter(query.startDate, query.endDate);
+    const createdAtFilter = dateFilter ? { createdAt: dateFilter } : {};
 
     const [funnel, convertedLeads] = await Promise.all([
       this.prisma.lead.groupBy({

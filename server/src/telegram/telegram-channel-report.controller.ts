@@ -3,6 +3,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { TelegramService } from './telegram.service';
 import { TelegramChannelGateStatsService } from './telegram-channel-gate-stats.service';
+import { tashkentMonthRangeUtc } from '../common/date/tashkent';
 
 /**
  * "Bot hisoboti" sahifasining ma'lumot manbai (`/reports/bot` frontendda).
@@ -61,16 +62,16 @@ export class TelegramChannelReportController {
 }
 
 /**
- * "YYYY-MM" ni oy boshidan oy oxirigacha oraliqqa aylantiradi.
+ * "YYYY-MM" ni Toshkent oyining boshidan keyingi oy boshigacha oraliqqa
+ * aylantiradi — `to` CHEGARADAN TASHQARI (`lt`), shuning uchun oyning oxirgi
+ * kechasi soat 00:00 dan keyin bo'lgan hodisa keyingi oyga tushadi.
  * Noto'g'ri qiymatda `undefined` — davr filtri qo'llanmaydi (butun davr).
  */
 function parseMonth(month?: string): { from: Date; to: Date } | undefined {
   if (!month || !/^\d{4}-\d{2}$/.test(month)) return undefined;
-  const [y, m] = month.split('-').map(Number);
+  const [, m] = month.split('-').map(Number);
   if (m < 1 || m > 12) return undefined;
-  return {
-    from: new Date(Date.UTC(y, m - 1, 1, 0, 0, 0)),
-    // Keyingi oyning 0-kuni = shu oyning oxirgi kuni.
-    to: new Date(Date.UTC(y, m, 0, 23, 59, 59, 999)),
-  };
+  // Toshkent oyi: `to` — keyingi oy boshlanishi, ya'ni CHEGARADAN TASHQARI.
+  const { gte, lt } = tashkentMonthRangeUtc(month);
+  return { from: gte, to: lt };
 }
