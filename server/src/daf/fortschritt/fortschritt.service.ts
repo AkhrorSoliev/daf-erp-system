@@ -133,8 +133,8 @@ export class FortschrittService {
       wochenStart,
     );
     const wochePunkte =
-      zentrumSaralangan.find((s) => s.studentId === studentId)?._sum
-        .points ?? 0;
+      zentrumSaralangan.find((s) => s.studentId === studentId)?._sum.points ??
+      0;
     const wochePlatzZentrum = platziniTop(zentrumSaralangan, studentId);
 
     // Guruh o'rni `gruppeHaftaligi` orqali hisoblanadi — xuddi shu funksiya

@@ -59,7 +59,7 @@ describe("FrageFormat parity — server VORSCHAU_BAUER vs client e'loni", () => 
     if (!match) {
       throw new Error(
         "media-fragen-types.ts'dan FrageFormat e'loni topilmadi — fayl " +
-          'boshqacha tuzilishga o\'tgan bo\'lishi mumkin, shu testni ham ' +
+          "boshqacha tuzilishga o'tgan bo'lishi mumkin, shu testni ham " +
           "moslashtiring (regex endi ishlamaydi, qo'lda solishtirish ham yaramaydi)",
       );
     }

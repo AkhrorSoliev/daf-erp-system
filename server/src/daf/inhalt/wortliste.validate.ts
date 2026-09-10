@@ -66,13 +66,17 @@ export function validateWortliste(
 
   for (const [code, n] of bySection) {
     if (n < WORDS_MIN || n > WORDS_MAX) {
-      problems.push(`${code}: ${n} so\`z — ${WORDS_MIN}–${WORDS_MAX} bo\`lishi kerak`);
+      problems.push(
+        `${code}: ${n} so\`z — ${WORDS_MIN}–${WORDS_MAX} bo\`lishi kerak`,
+      );
     }
   }
 
   for (const [code, n] of byUnit) {
     if (n > UNIT_WORDS_MAX) {
-      problems.push(`${code}: jami ${n} so\`z — ${UNIT_WORDS_MAX} so\`zdan ko\`p`);
+      problems.push(
+        `${code}: jami ${n} so\`z — ${UNIT_WORDS_MAX} so\`zdan ko\`p`,
+      );
     }
   }
 

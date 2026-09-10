@@ -9,7 +9,8 @@ import type { ConfigService } from '@nestjs/config';
  */
 describe('DafMediaOverviewService', () => {
   const config = {
-    get: (k: string) => (k === 'R2_PUBLIC_URL' ? 'https://media.example.com' : undefined),
+    get: (k: string) =>
+      k === 'R2_PUBLIC_URL' ? 'https://media.example.com' : undefined,
   } as unknown as ConfigService;
   const service = new DafMediaOverviewService(config);
 

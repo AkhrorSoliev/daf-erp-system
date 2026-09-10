@@ -319,7 +319,7 @@ describe('zuordnen', () => {
     expect(zuordnen(takror, rndId)).toBeNull();
   });
 
-  it("bir xil ibora matni ikki BOSHQA vaziyatga tushsa ham qurilmaydi", () => {
+  it('bir xil ibora matni ikki BOSHQA vaziyatga tushsa ham qurilmaydi', () => {
     // `funktionUz` ikkalasida ham noyob, lekin `de` bir xil ("Hallo!") —
     // `DafPhrase.de`da unique constraint yo'q, shuning uchun bu haqiqiy
     // holat. Mijozda o'ng ustunda ikkita bir xil matnli tugma chiqib,
@@ -327,7 +327,7 @@ describe('zuordnen', () => {
     // (Task 4 ko'rigi) — server bu savolni umuman qurmasligi kerak.
     const takrorDe = [
       ...olti.slice(0, 5),
-      p(7, "yana bir vaziyat", 'Hallo!', 'Yana salom!'),
+      p(7, 'yana bir vaziyat', 'Hallo!', 'Yana salom!'),
     ];
     // Oltinchi vaziyat noyob, lekin uning iborasi #1nikiga teng —
     // noyob `de`li oltinchi topilmadi, savol qurilmaydi.

@@ -45,7 +45,7 @@ describe('stufeFuer', () => {
     expect(stufeFuer(0).naechste?.ab).toBe(300);
   });
 
-  it("chegaraning AYNAN ustidagi ball yangi darajani beradi", () => {
+  it('chegaraning AYNAN ustidagi ball yangi darajani beradi', () => {
     expect(stufeFuer(299).jetzt.de).toBe('Anfänger');
     expect(stufeFuer(300).jetzt.de).toBe('Lerner');
   });
@@ -87,7 +87,9 @@ describe('wochenStartUtc', () => {
 
 describe('serieAus', () => {
   it('bugun mashq qilingan bo`lsa seriya bugundan sanaladi', () => {
-    expect(serieAus(['2026-09-06', '2026-09-05', '2026-09-04'], '2026-09-06')).toBe(3);
+    expect(
+      serieAus(['2026-09-06', '2026-09-05', '2026-09-04'], '2026-09-06'),
+    ).toBe(3);
   });
 
   it('bugun hali mashq qilinmagan bo`lsa seriya SAQLANADI', () => {

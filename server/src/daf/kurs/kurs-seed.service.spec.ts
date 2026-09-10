@@ -201,7 +201,7 @@ describe('KursSeedService', () => {
     const prisma = fakePrisma();
     await new KursSeedService(prisma as any).seed(kurs());
 
-    const call = prisma.dafSection.upsert.mock.calls[0][0] as any;
+    const call = prisma.dafSection.upsert.mock.calls[0][0];
     expect(call.create.unitId).toBe(1);
     expect(call.create.code).toBe('u01-s1');
   });

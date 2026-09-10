@@ -20,9 +20,9 @@ describe('ReytingQueryDto', () => {
     await expect(pipe.transform({ scope: 'gruppe' }, meta)).resolves.toEqual({
       scope: 'gruppe',
     });
-    await expect(pipe.transform({ scope: 'zentrum' }, meta)).resolves.toEqual(
-      { scope: 'zentrum' },
-    );
+    await expect(pipe.transform({ scope: 'zentrum' }, meta)).resolves.toEqual({
+      scope: 'zentrum',
+    });
   });
 
   it("noto'g'ri qiymatni rad etadi", async () => {

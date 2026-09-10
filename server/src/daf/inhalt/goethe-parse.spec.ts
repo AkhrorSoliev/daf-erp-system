@@ -15,9 +15,9 @@ describe('parseGoetheLines', () => {
   });
 
   it('artiklni ajratadi', () => {
-    expect(parseGoetheLines(['die Adresse,-en Koennen Sie mir helfen?'])).toEqual([
-      { artikel: 'die', wort: 'Adresse' },
-    ]);
+    expect(
+      parseGoetheLines(['die Adresse,-en Koennen Sie mir helfen?']),
+    ).toEqual([{ artikel: 'die', wort: 'Adresse' }]);
   });
 
   it('ko`plik qo`shimchasini tashlaydi', () => {
@@ -28,9 +28,12 @@ describe('parseGoetheLines', () => {
   it('misol gapning davomini so`z deb olmaydi', () => {
     // Ikkinchi satr — birinchi so'zning ikkinchi misoli. Katta harf bilan
     // boshlanadi, lekin bosh so'z emas: undan oldin bo'shliq turadi.
-    expect(parseGoetheLines(['abholen Wann kannst du kommen?', '  Wir muessen ihn abholen.'])).toEqual([
-      { artikel: null, wort: 'abholen' },
-    ]);
+    expect(
+      parseGoetheLines([
+        'abholen Wann kannst du kommen?',
+        '  Wir muessen ihn abholen.',
+      ]),
+    ).toEqual([{ artikel: null, wort: 'abholen' }]);
   });
 
   it('sahifa sarlavhasini tashlaydi', () => {
@@ -138,7 +141,10 @@ describe('Goethe A1 Wortgruppen', () => {
 
   it('jahreszeiten guruhi tadbiq etiladi', () => {
     expect(GOETHE_JAHRESZEITEN).toHaveLength(4);
-    expect(GOETHE_JAHRESZEITEN).toContainEqual({ artikel: 'der', wort: 'Sommer' });
+    expect(GOETHE_JAHRESZEITEN).toContainEqual({
+      artikel: 'der',
+      wort: 'Sommer',
+    });
   });
 });
 

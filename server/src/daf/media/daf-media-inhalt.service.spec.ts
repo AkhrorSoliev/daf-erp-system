@@ -1,15 +1,19 @@
 import { NotFoundException } from '@nestjs/common';
 import { DafMediaInhaltService } from './daf-media-inhalt.service';
 
-const config = { get: (k: string) => (k === 'R2_PUBLIC_URL' ? 'https://r2.example' : undefined) };
+const config = {
+  get: (k: string) =>
+    k === 'R2_PUBLIC_URL' ? 'https://r2.example' : undefined,
+};
 
 function fakePrisma(rows: any) {
-  const sectionMock = jest.fn(async () =>
-    rows.section ?? {
-      code: 'u01-s1',
-      titleUz: 'Bo\'lim',
-      unit: { code: 'u01', titleUz: 'Unit' },
-    },
+  const sectionMock = jest.fn(
+    async () =>
+      rows.section ?? {
+        code: 'u01-s1',
+        titleUz: "Bo'lim",
+        unit: { code: 'u01', titleUz: 'Unit' },
+      },
   );
 
   return {
@@ -26,17 +30,45 @@ describe('DafMediaInhaltService', () => {
     // Xom kalit `<audio src>` ga tushsa portal manziliga nisbatan
     // yechiladi va 404 beradi — 2026-09-08 dagi Critical aynan shu edi.
     const p = fakePrisma({
-      woerter: [{ id: 1, de: 'hallo', uz: 'salom', artikel: null, anzeige: null, core: true, audioKey: 'daf/audio/x.mp3', imageKey: null, picturable: false }],
+      woerter: [
+        {
+          id: 1,
+          de: 'hallo',
+          uz: 'salom',
+          artikel: null,
+          anzeige: null,
+          core: true,
+          audioKey: 'daf/audio/x.mp3',
+          imageKey: null,
+          picturable: false,
+        },
+      ],
     });
-    const r = await new DafMediaInhaltService(p as any, config as any).inhalt(7);
+    const r = await new DafMediaInhaltService(p as any, config as any).inhalt(
+      7,
+    );
     expect(r.woerter[0].audioUrl).toBe('https://r2.example/daf/audio/x.mp3');
   });
 
   it('audiosi yo`q so`zda audioUrl null', async () => {
     const p = fakePrisma({
-      woerter: [{ id: 1, de: 'hallo', uz: 'salom', artikel: null, anzeige: null, core: true, audioKey: null, imageKey: null, picturable: false }],
+      woerter: [
+        {
+          id: 1,
+          de: 'hallo',
+          uz: 'salom',
+          artikel: null,
+          anzeige: null,
+          core: true,
+          audioKey: null,
+          imageKey: null,
+          picturable: false,
+        },
+      ],
     });
-    const r = await new DafMediaInhaltService(p as any, config as any).inhalt(7);
+    const r = await new DafMediaInhaltService(p as any, config as any).inhalt(
+      7,
+    );
     expect(r.woerter[0].audioUrl).toBeNull();
   });
 
@@ -46,18 +78,47 @@ describe('DafMediaInhaltService', () => {
     // yerda ko'rinishi kerak, shuning uchun ro'yxatdan CHIQARILMAYDI —
     // faqat belgilanadi.
     const p = fakePrisma({
-      woerter: [{ id: 2, de: 'und', uz: 'va', artikel: null, anzeige: null, core: false, audioKey: null, imageKey: null, picturable: false }],
+      woerter: [
+        {
+          id: 2,
+          de: 'und',
+          uz: 'va',
+          artikel: null,
+          anzeige: null,
+          core: false,
+          audioKey: null,
+          imageKey: null,
+          picturable: false,
+        },
+      ],
     });
-    const r = await new DafMediaInhaltService(p as any, config as any).inhalt(7);
+    const r = await new DafMediaInhaltService(p as any, config as any).inhalt(
+      7,
+    );
     expect(r.woerter).toHaveLength(1);
     expect(r.woerter[0].core).toBe(false);
   });
 
   it('R2_PUBLIC_URL sozlanmagan bo`lsa audioUrl null, kalit sizib chiqmaydi', async () => {
     const p = fakePrisma({
-      woerter: [{ id: 1, de: 'hallo', uz: 'salom', artikel: null, anzeige: null, core: true, audioKey: 'daf/audio/x.mp3', imageKey: null, picturable: false }],
+      woerter: [
+        {
+          id: 1,
+          de: 'hallo',
+          uz: 'salom',
+          artikel: null,
+          anzeige: null,
+          core: true,
+          audioKey: 'daf/audio/x.mp3',
+          imageKey: null,
+          picturable: false,
+        },
+      ],
     });
-    const r = await new DafMediaInhaltService(p as any, { get: () => undefined } as any).inhalt(7);
+    const r = await new DafMediaInhaltService(
+      p as any,
+      { get: () => undefined } as any,
+    ).inhalt(7);
     expect(r.woerter[0].audioUrl).toBeNull();
   });
 
@@ -65,7 +126,9 @@ describe('DafMediaInhaltService', () => {
     const p = fakePrisma({});
     await new DafMediaInhaltService(p as any, config as any).inhalt(7);
     for (const t of [p.dafLexeme, p.dafSentence, p.dafPhrase]) {
-      expect((t.findMany as jest.Mock).mock.calls[0][0].where).toMatchObject({ sectionId: 7 });
+      expect((t.findMany as jest.Mock).mock.calls[0][0].where).toMatchObject({
+        sectionId: 7,
+      });
     }
     // DafDialogLine o'zining sectionId'siga ega emas — DafDialog orqali
     // bog'lanadi. Bu YAGONA bilvosita bog'lanish, brief buni ataylab
@@ -86,7 +149,9 @@ describe('DafMediaInhaltService', () => {
         unit: { code: 'u01', titleUz: 'Salom!' },
       })),
     } as any;
-    const r = await new DafMediaInhaltService(p as any, config as any).inhalt(7);
+    const r = await new DafMediaInhaltService(p as any, config as any).inhalt(
+      7,
+    );
     expect(r.sectionCode).toBe('u01-s1');
     expect(r.sectionTitleUz).toBe('Salom va xayr');
     expect(r.unitTitleUz).toBe('Salom!');

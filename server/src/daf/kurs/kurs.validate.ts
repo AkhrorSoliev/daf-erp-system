@@ -46,7 +46,9 @@ export function validateKurs(file: KursFile): string[] {
 
     const wantCode = `u${String(u.order).padStart(2, '0')}`;
     if (u.code !== wantCode) {
-      problems.push(`${u.order}-unit kaliti ${wantCode} bo'lishi kerak: ${u.code}`);
+      problems.push(
+        `${u.order}-unit kaliti ${wantCode} bo'lishi kerak: ${u.code}`,
+      );
     }
     if (u.titleDe.trim() === '' || u.titleUz.trim() === '') {
       problems.push(`${u.code}: unit sarlavhasi bo'sh`);
@@ -66,7 +68,9 @@ export function validateKurs(file: KursFile): string[] {
     const sOrders = u.sections.map((s) => s.order);
     const sExpected = u.sections.map((_, i) => i + 1);
     if (sOrders.join(',') !== sExpected.join(',')) {
-      problems.push(`${u.code}: bo'lim tartibi uzluksiz emas: ${sOrders.join(', ')}`);
+      problems.push(
+        `${u.code}: bo'lim tartibi uzluksiz emas: ${sOrders.join(', ')}`,
+      );
     }
 
     let words = 0;
@@ -94,7 +98,9 @@ export function validateKurs(file: KursFile): string[] {
     }
 
     if (words > UNIT_WORDS_MAX) {
-      problems.push(`${u.code}: jami ${words} so'z — ${UNIT_WORDS_MAX} so'zdan ko'p`);
+      problems.push(
+        `${u.code}: jami ${words} so'z — ${UNIT_WORDS_MAX} so'zdan ko'p`,
+      );
     }
   }
 

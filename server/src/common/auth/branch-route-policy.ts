@@ -466,9 +466,9 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'from on-disk JSON manifests or, for the unit/section coverage view, the ' +
       'per-section material list, and the per-section exercise-question preview ' +
       'behind them, directly by aggregating the `Daf*` content tables — the ' +
-      "question preview takes no `studentId` (it re-derives every question the " +
+      'question preview takes no `studentId` (it re-derives every question the ' +
       'engine could build from the material, not the subset one student would ' +
-      "see, so there is nothing student- or branch-specific to scope) — either " +
+      'see, so there is nothing student- or branch-specific to scope) — either ' +
       'way this content is identical per branch and carries no `companyId`. ' +
       'Scoping these reads by branch would answer a ' +
       'question nobody asks and imply the catalogue differs per branch, which it ' +

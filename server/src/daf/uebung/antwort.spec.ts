@@ -15,7 +15,9 @@ describe('normalisieren', () => {
   });
 
   it('tinish belgisi va ortiqcha bo`shliqni tashlaydi', () => {
-    expect(normalisieren('  Ich bin Anna. ')).toBe(normalisieren('ich bin anna'));
+    expect(normalisieren('  Ich bin Anna. ')).toBe(
+      normalisieren('ich bin anna'),
+    );
   });
 
   it('so`z orasidagi ikki bo`shliqni bittaga keltiradi', () => {
@@ -39,10 +41,12 @@ describe('istRichtig', () => {
   it('qabul qilinadigan variantlardan birini ham to`g`ri deb biladi', () => {
     // Bir necha to'g'ri javob bo'lishi mumkin: «Men O'zbekistondanman»
     // va «O'zbekistondanman» ikkalasi ham to'g'ri.
-    expect(istRichtig('ich bin Anna', 'Ich heiße Anna', ['Ich bin Anna'])).toBe(true);
+    expect(istRichtig('ich bin Anna', 'Ich heiße Anna', ['Ich bin Anna'])).toBe(
+      true,
+    );
   });
 
-  it('bo`sh javobni rad etadi, hatto to\'g\'ri javob tinish belgisi bo\'lsa ham', () => {
+  it("bo`sh javobni rad etadi, hatto to'g'ri javob tinish belgisi bo'lsa ham", () => {
     // Agar to'g'ri javob faqat tinish belgisi bo'lsa, masalan ".",
     // u normalisieren shundan so'ng bo'sh satr qaytaradi. O'quvchi bo'sh yozdi deb
     // javobni to'g'ri deb belgilash xato: tinish belgisini bilishi keraki.
