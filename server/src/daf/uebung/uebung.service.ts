@@ -173,13 +173,30 @@ function richtigeAntwort(
       // `itemType === 'WORT'` sharti buni allaqachon ta'minlaydi).
       return { richtig: material.de, akzeptiert: [] };
     case 'AUDIO_WORT':
-    case 'WORT_TIPPEN':
-      // Ikkalasida ham to'g'ri javob — eshitilgan so'zning o'zi
-      // (`ziel.de`, artiklsiz — `wort-fragen.ts`dagi `audioWort`/
-      // `wortTippen` bilan bir xil). Bu holat yo'q qolib ketsa, `pruefen`
-      // yuqoridagi `default`ga tushib, savol ko'rsatilgandan keyin
-      // JAVOB BERISHNING O'ZI 400 bilan yiqilardi.
+      // To'g'ri javob — eshitilgan so'zning o'zi (`ziel.de`, artiklsiz —
+      // `wort-fragen.ts`dagi `audioWort` bilan bir xil). Bu holat yo'q
+      // qolib ketsa, `pruefen` yuqoridagi `default`ga tushib, savol
+      // ko'rsatilgandan keyin JAVOB BERISHNING O'ZI 400 bilan yiqilardi.
+      //
+      // `akzeptiert` BO'SH bo'lishi shart: bu TANLASH savoli va
+      // variantlar `ziel.de` dan quriladi, ya'ni artiklli shakl ekranda
+      // umuman yo'q. Uni qabul qilinadigan qilish hech kimga yordam
+      // bermaydi, lekin variantlardan tashqari javobga yo'l ochardi.
       return { richtig: material.de, akzeptiert: [] };
+    case 'WORT_TIPPEN':
+      // YOZISH savoli, shuning uchun `AUDIO_WORT` dan farq qiladi: ot
+      // artikli bilan o'rganiladi (`UZ_WORT` ning to'g'ri javobi aynan
+      // `der Name`), va eshitib yozayotgan o'quvchi shuni yozishi tabiiy.
+      // Audio faqat so'zning o'zini aytadi, shuning uchun ASOSIY javob
+      // `material.de` bo'lib qoladi va artiklli shakl QO'SHIMCHA qabul
+      // qilinadi. Teskarisi — artiklni majburlash — o'quvchini eshitmagan
+      // so'zini yozishga majburlardi.
+      return {
+        richtig: material.de,
+        akzeptiert: material.artikel
+          ? [`${material.artikel} ${material.de}`]
+          : [],
+      };
     default:
       throw new BadRequestException(
         `${format} javobi hozircha tekshirilmaydi — savol o'zligi kengayishi kerak`,
@@ -899,9 +916,15 @@ export class UebungService {
       // tanlangan va bu yerda qayta tiklanmaydi. Shuning uchun har juft
       // (de=uz) MUSTAQIL tekshiriladi — savol qaysi to'rtlikni ko'rsatgani
       // bilan ishimiz yo'q, faqat har bir juftlashning o'zi to'g'rimi.
-      if (material.unitId == null) {
-        // Amalda yetib bo'lmaydi: `PAAR`ning `itemType`si doim `WORT`,
-        // va WORT materiali doim `unitId` bilan qaytadi. Himoya sifatida.
+      if (itemType !== 'WORT' || material.unitId == null) {
+        // `ZUORDNEN` dagi bilan AYNAN BIR XIL himoya, va aynan shu sababdan:
+        // `CheckAntwortDto` `itemType` va `format`ni MUSTAQIL tekshiradi,
+        // ya'ni mijoz `itemType: 'PHRASE'` + `format: 'PAAR'` yubora oladi.
+        // Ibora materiali ham `unitId` bilan qaytadi, ya'ni faqat
+        // `material.unitId == null` ga qaragan tekshiruv uni O'TKAZIB
+        // YUBORARDI — xabari "faqat so'zga tegishli" desa ham. Keyin
+        // `pruefePaar` so'zlarni ibora unitida qidirib, javobni jimgina
+        // xato deb belgilardi.
         throw new BadRequestException("PAAR savoli faqat so'zga tegishli");
       }
       const natija = await this.pruefePaar(given, material.unitId);

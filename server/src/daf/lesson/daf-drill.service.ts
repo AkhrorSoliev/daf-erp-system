@@ -59,6 +59,22 @@ export class DafDrillService {
     };
   }
 
+  /**
+   * R2 kalitini ommaviy manzilga aylantiradi — `daf-portal-read.service.ts`
+   * va `daf-media-inhalt.service.ts` dagi `mediaUrl` bilan BIR XIL qoida.
+   *
+   * `R2_PUBLIC_URL` sozlanmagan bo'lsa javob `null`: bo'sh baza bilan
+   * `${base}/${key}` yozish `/daf/audio/x.mp3` beradi, ya'ni XOM KALIT
+   * portalning O'Z manziliga nisbatan so'raladi va har savol
+   * «Ovoz yuklanmadi» bo'lardi. Bu 2026-09-08 dagi xatoning aynan o'zi,
+   * shu faylda qolib ketgan nusxasi.
+   */
+  private mediaUrl(key: string | null): string | null {
+    if (!key) return null;
+    const base = this.config.get<string>('R2_PUBLIC_URL');
+    return base ? `${base.replace(/\/$/, '')}/${key}` : null;
+  }
+
   private async questions(lessonId: number): Promise<DrillQuestion[]> {
     const lexemes = await this.prisma.dafLexeme.findMany({
       where: { lessonId },
@@ -83,10 +99,6 @@ export class DafDrillService {
     });
     if (!lesson) throw new NotFoundException('Dars topilmadi');
 
-    const base = (this.config.get<string>('R2_PUBLIC_URL') ?? '').replace(
-      /\/$/,
-      '',
-    );
     const keyByLexeme = new Map(
       (
         await this.prisma.dafLexeme.findMany({
@@ -96,20 +108,19 @@ export class DafDrillService {
       ).map((l) => [l.id, l.audioKey]),
     );
 
-    return (await this.questions(lessonId)).map((q, index) => ({
-      index,
-      kind: q.kind,
-      prompt: q.prompt,
-      options: q.options,
-      audio:
-        q.audio && keyByLexeme.get(q.lexemeId)
-          ? {
-              url: `${base}/${keyByLexeme.get(q.lexemeId)!}`,
-              startMs: q.audio.startMs,
-              endMs: q.audio.endMs,
-            }
-          : null,
-    }));
+    return (await this.questions(lessonId)).map((q, index) => {
+      const url = this.mediaUrl(keyByLexeme.get(q.lexemeId) ?? null);
+      return {
+        index,
+        kind: q.kind,
+        prompt: q.prompt,
+        options: q.options,
+        audio:
+          q.audio && url
+            ? { url, startMs: q.audio.startMs, endMs: q.audio.endMs }
+            : null,
+      };
+    });
   }
 
   /**

@@ -8,10 +8,12 @@
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { validateWortliste } from '../src/daf/inhalt/wortliste.validate';
+import { validateEindeutigkeit } from '../src/daf/inhalt/unit-inhalt.validate';
 import type { WortlisteFile } from '../src/daf/inhalt/wortliste.types';
 import type {
   WoerterFile,
   GrammatikFile,
+  RedemittelFile,
 } from '../src/daf/inhalt/unit-inhalt.types';
 import type { KursFile } from '../src/daf/kurs/kurs.types';
 import type { GoetheFile } from '../src/daf/inhalt/goethe-parse';
@@ -43,7 +45,20 @@ function main(): void {
   } else {
     const w = read<WoerterFile>(code, 'woerter.json');
     const core = w.woerter.filter((x) => x.core).length;
-    if (core !== 50) problems.push(`${code}: ${core} ta asosiy so'z — 50 kerak`);
+    if (core !== 50)
+      problems.push(`${code}: ${core} ta asosiy so'z — 50 kerak`);
+
+    // Iboralar fayli bo'lmasligi mumkin (unit hali yozilayotgan bo'lsa) —
+    // u holda so'zlar baribir tekshiriladi.
+    const redemittelPath = join(A1, code, 'redemittel.json');
+    problems.push(
+      ...validateEindeutigkeit(
+        w,
+        existsSync(redemittelPath)
+          ? read<RedemittelFile>(code, 'redemittel.json')
+          : null,
+      ),
+    );
   }
 
   const grammatikPath = join(A1, code, 'grammatik.json');
