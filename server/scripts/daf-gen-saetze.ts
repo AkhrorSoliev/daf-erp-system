@@ -15,100 +15,30 @@ import {
   parseSentences,
   materialWords,
 } from '../src/daf/sentence/sentence-generate';
+import {
+  sectionsInCourseOrder,
+  knownWordsBySection,
+  hilfsSet,
+  tokensOf,
+  unknownWordsIn,
+} from '../src/daf/inhalt/progression';
 import type { KursFile } from '../src/daf/kurs/kurs.types';
 import type {
   SaetzeFile,
   Satz,
   WoerterFile,
   Wort,
+  HilfswoerterFile,
 } from '../src/daf/inhalt/unit-inhalt.types';
 
 const A1 = join(__dirname, '..', 'content', 'daf', 'a1');
 const PRO_ABSCHNITT = 12;
-
-/**
- * `unit-inhalt.file.spec.ts` dagi "gaplarda notanish so'z yo'q" testi
- * bilan ATAYLAB BIR XIL ro'yxat.
- *
- * Nusxalanishning sababi — kafolat: skript shu ro'yxat bilan filtrlasa,
- * faylga yozilgan har bir gap o'sha testdan albatta o'tadi. Ikkisi
- * uzoqlashib ketsa (masalan test yangilanib bu yerda unutilsa) skript
- * yana ham qattiqroq filtrlagani uchun xavfsiz tomonda qoladi — faqat
- * ba'zi yaroqli gap keraksiz rad etiladi, hech qachon aksincha emas.
- */
-const HILFS = new Set([
-  'ich',
-  'du',
-  'sie',
-  'er',
-  'es',
-  'wir',
-  'ihr',
-  'bin',
-  'bist',
-  'ist',
-  'sind',
-  'seid',
-  'und',
-  'oder',
-  'nicht',
-  'ja',
-  'nein',
-  'wie',
-  'wo',
-  'was',
-  'wer',
-  'woher',
-  'das',
-  'der',
-  'die',
-  'ein',
-  'eine',
-  'mein',
-  'dein',
-  'sehr',
-  'auch',
-  'bitte',
-  'danke',
-  'in',
-  'aus',
-  'heisse',
-  'heisst',
-  'komme',
-  'kommst',
-  'wohne',
-  'wohnst',
-  'geht',
-  'gut',
-  'dir',
-  'ihnen',
-  'mir',
-  'hier',
-]);
 
 function wordCount(de: string): number {
   return de
     .replace(/[.,!?]/g, '')
     .trim()
     .split(/\s+/).length;
-}
-
-function tokensOf(de: string): string[] {
-  return de
-    .toLowerCase()
-    .replace(/[.,!?]/g, '')
-    .split(/\s+/)
-    .filter((w) => w !== '');
-}
-
-function bekanntSet(woerter: WoerterFile): Set<string> {
-  return new Set(
-    woerter.woerter.flatMap((w) => w.de.toLowerCase().split(/\s+/)),
-  );
-}
-
-function unknownWordsIn(de: string, bekannt: Set<string>): string[] {
-  return tokensOf(de).filter((w) => !bekannt.has(w) && !HILFS.has(w));
 }
 
 function sentenceKey(de: string): string {
@@ -167,17 +97,16 @@ function letterTtsMap(woerter: WoerterFile): Map<string, string> {
 }
 
 /**
- * Bo'lim uslub namunalari — QO'LDA yozilgan, `unknownWordsIn`/`HILFS`
- * dan albatta o'tadigan gaplar.
+ * Bo'lim uslub namunalari — QO'LDA yozilgan, progressiya filtridan
+ * albatta o'tadigan gaplar. Kalit — BO'LIM kodi, ya'ni yangi unit
+ * o'z namunalarini shu yerga qo'shadi.
  *
- * Birinchi yuritishda (5 chaqiruv, 17 gap) rad etishning aksariyati
- * ikki turkumdan edi: modelning O'ZI o'ylab topgan otlar/ismlar
- * (Freund, Müller, Katzen, Jahre) va HILFS ro'yxatida yo'q fe'l
- * shakllari (heiße/heißt — ß bilan, HILFS esa "heisse"/"heisst" ASCII
- * yozuvini biladi; spreche/sprichst — sprechen HILFS'da umuman yo'q;
- * kommt/wohnt — 3-shaxs, HILFS faqat 1/2-shaxsni biladi). Namunalar bu
- * ikkalasidan ham QOCHADI, shuning uchun model qanday gap qurish
- * kerakligini so'z bilan emas, misol bilan ko'radi.
+ * u01 ning birinchi yuritishida (5 chaqiruv, 17 gap) rad etishning
+ * aksariyati ikki turkumdan edi: modelning O'ZI o'ylab topgan
+ * otlar/ismlar (Freund, Müller, Katzen, Jahre) va yordamchi ro'yxatda
+ * yo'q fe'l shakllari. Namunalar bu ikkalasidan ham QOCHADI, shuning
+ * uchun model qanday gap qurish kerakligini so'z bilan emas, misol
+ * bilan ko'radi.
  */
 const SECTION_EXAMPLES: Record<string, string[]> = {
   'u01-s1': [
@@ -209,22 +138,28 @@ const SECTION_EXAMPLES: Record<string, string[]> = {
  * `buildSentencePrompt` ga QO'SHIMCHA — funksiyaning o'zi o'zgartirilmaydi
  * (u boshqa chaqiruvchida ham ishlatiladi va u yerda sinovdan o'tgan).
  * Bu qo'shimcha faqat shu skriptning so'roviga qo'shiladi, chunki u
- * birinchi yuritishning ANIQ ikkita rad etish sababini yopadi.
+ * yuritishlarning ANIQ rad etish sabablarini yopadi.
+ *
+ * UNIT BO'YICHA: har unitning o'z fe'llari va o'z tuzoqlari bor, ya'ni
+ * bitta umumiy matn ikkinchi unitda noto'g'ri fe'l ro'yxatini
+ * majburlagan bo'lardi.
  */
-const EXTRA_GUIDANCE = [
-  '',
-  'Qo`shimcha qoidalar:',
-  '- Erfinde KEINE Namen (Vor- oder Nachnamen), Tiere, Verwandte,',
-  '  Sprachenlisten, Alter, Zahlen von Geschwistern/Büchern, Wörter wie',
-  '  "Freund", "müde", "dort", "heute", "machen", "Wort", "kein",',
-  '  "Englisch", "viele" — nur Wörter aus der Liste oben und den',
-  '  bekannten Wörtern.',
-  '- Benutze NUR diese Verben, und NUR in diesen Formen:',
-  '  "sein" (bin/bist/ist/sind/seid), "heißen" (nur "heißen"),',
-  '  "kommen" (nur "komme"/"kommst"), "wohnen" (nur "wohne"/"wohnst"),',
-  '  "sprechen" (nur "sprechen"), "buchstabieren" (nur "buchstabieren").',
-  '  Kein anderes Verb (kein "haben", "machen", "geben", "mögen", usw.).',
-].join('\n');
+const UNIT_GUIDANCE: Record<string, string> = {
+  u01: [
+    '',
+    'Qo`shimcha qoidalar:',
+    '- Erfinde KEINE Namen (Vor- oder Nachnamen), Tiere, Verwandte,',
+    '  Sprachenlisten, Alter, Zahlen von Geschwistern/Büchern, Wörter wie',
+    '  "Freund", "müde", "dort", "heute", "machen", "Wort", "kein",',
+    '  "Englisch", "viele" — nur Wörter aus der Liste oben und den',
+    '  bekannten Wörtern.',
+    '- Benutze NUR diese Verben, und NUR in diesen Formen:',
+    '  "sein" (bin/bist/ist/sind/seid), "heißen" (nur "heißen"),',
+    '  "kommen" (nur "komme"/"kommst"), "wohnen" (nur "wohne"/"wohnst"),',
+    '  "sprechen" (nur "sprechen"), "buchstabieren" (nur "buchstabieren").',
+    '  Kein anderes Verb (kein "haben", "machen", "geben", "mögen", usw.).',
+  ].join('\n'),
+};
 
 /**
  * Bo'lim-maxsus qo'shimcha qoida.
@@ -256,6 +191,20 @@ const SECTION_EXTRA: Record<string, string> = {
     '- VERBOTEN: Sätze ohne Buchstaben, die nur Namen/Länder/Grüße',
     '  wiederholen.',
   ].join('\n'),
+};
+
+/**
+ * Qaysi bo'limlarda gap bo'limning O'Z so'zini o'z ichiga OLISHI shart.
+ *
+ * u01 da bu faqat sonlar va alifbo uchun edi: model "Ich bin aus
+ * Deutschland." kabi to'g'ri, lekin bo'lim materialini umuman mashq
+ * qilmaydigan gapni sonlar bo'limi ostiga qo'yardi. Boshqa bo'limlarda
+ * umumiy takrorlash foydali, shuning uchun majburlanmagan.
+ *
+ * `'alle'` — unitning hamma bo'limi uchun majburiy.
+ */
+const THEMA_PFLICHT: Record<string, 'alle' | string[]> = {
+  u01: ['u01-s4', 'u01-s5'],
 };
 
 function sectionWordSet(sectionWoerter: Wort[]): Set<string> {
@@ -297,6 +246,27 @@ async function main(): Promise<void> {
   const woerter = JSON.parse(
     readFileSync(join(A1, code, 'woerter.json'), 'utf8'),
   ) as WoerterFile;
+  const hilfs = hilfsSet(
+    JSON.parse(
+      readFileSync(join(A1, 'hilfswoerter.json'), 'utf8'),
+    ) as HilfswoerterFile,
+  );
+
+  // Tanish so'zlar OLDINGI unitlarni ham qamraydi: u02 ning gapida u01
+  // so'zi tanish. Faqat shu unitning lug'atiga qarash modelning to'g'ri
+  // gaplarini keraksiz rad etardi.
+  const alleWoerter: Wort[] = kurs.units
+    .map((u) => u.code)
+    .filter((c) => existsSync(join(A1, c, 'woerter.json')))
+    .flatMap(
+      (c) =>
+        (
+          JSON.parse(
+            readFileSync(join(A1, c, 'woerter.json'), 'utf8'),
+          ) as WoerterFile
+        ).woerter,
+    );
+  const known = knownWordsBySection(sectionsInCourseOrder(kurs), alleWoerter);
 
   const out = join(A1, code, 'saetze.json');
   const file: SaetzeFile = existsSync(out)
@@ -307,7 +277,6 @@ async function main(): Promise<void> {
   const unit = kurs.units.find((u) => u.code === code);
   if (!unit) throw new Error(`Xaritada yo'q unit: ${code}`);
 
-  const bekannt = bekanntSet(woerter);
   const letterTts = letterTtsMap(woerter);
   const oldingi: string[] = [];
   const reports: SectionReport[] = [];
@@ -355,7 +324,7 @@ async function main(): Promise<void> {
         ask,
         materialWords(oldingi),
       ) +
-      EXTRA_GUIDANCE +
+      (UNIT_GUIDANCE[code] ?? '') +
       (SECTION_EXTRA[s.code] ?? '');
 
     const raw = await model.complete(prompt);
@@ -386,21 +355,27 @@ async function main(): Promise<void> {
         continue;
       }
 
-      const unknown = unknownWordsIn(g.de, bekannt);
+      // Progressiya BO'LIM darajasida tekshiriladi (test ham shunday):
+      // keyingi bo'limning so'zini ishlatgan gap qabul qilinsa, u
+      // faylga tushib, keyin qo'riqchida yiqilardi.
+      const unknown = unknownWordsIn(
+        g.de,
+        known.get(s.code) ?? new Set<string>(),
+        hilfs,
+      );
       if (unknown.length > 0) {
         report.rejectedUnknown.push({ de: g.de, unknown });
         continue;
       }
 
-      // Bo'lim gapiga bo'limning O'ZIGA xos so'zi topilmasa, u shu
+      // Bo'lim gapida bo'limning O'ZIGA xos so'zi topilmasa, u shu
       // bo'limning yangi materialini mashq qilmaydi (masalan "Ich bin
-      // aus Deutschland." u01-s4 ostida — raqamsiz). Faqat s4/s5 uchun
-      // majburiy: qolgan bo'limlarda umumiy takrorlash foydali bo'lishi
-      // mumkin (masalan "Wie geht es dir?").
-      if (
-        (s.code === 'u01-s4' || s.code === 'u01-s5') &&
-        !tokensOf(g.de).some((t) => topicWords.has(t))
-      ) {
+      // aus Deutschland." u01-s4 ostida — raqamsiz). Qaysi bo'limlarda
+      // majburiy ekani `THEMA_PFLICHT` da.
+      const pflicht = THEMA_PFLICHT[code];
+      const themaPflichtig =
+        pflicht === 'alle' || (pflicht?.includes(s.code) ?? false);
+      if (themaPflichtig && !tokensOf(g.de).some((t) => topicWords.has(t))) {
         report.rejectedOffTopic.push(g.de);
         continue;
       }

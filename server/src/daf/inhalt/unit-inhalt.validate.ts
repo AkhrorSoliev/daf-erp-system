@@ -1,4 +1,9 @@
-import type { WoerterFile, RedemittelFile } from './unit-inhalt.types';
+import type {
+  WoerterFile,
+  RedemittelFile,
+  HilfswoerterFile,
+  Wort,
+} from './unit-inhalt.types';
 
 /**
  * Unit ichida matn NOYOB bo'lishi.
@@ -64,4 +69,51 @@ function duplikate(
   return [...anzahl.entries()]
     .filter(([, n]) => n > 1)
     .map(([text, n]) => nachricht(text, n));
+}
+
+/**
+ * Yordamchi so'zlar ro'yxatining o'zi tekshiriladi.
+ *
+ * ENG MUHIM QOIDA — ro'yxatda hech bir unitning ASOSIY so'zi turmasin.
+ * Yordamchi so'z progressiya tekshiruvidan OZOD, ya'ni o'rgatilgan
+ * bo'limdan qat'i nazar hamma joyda ishlatilaveradi. Asosiy so'z u yerga
+ * tushib qolsa, u o'z bo'limidan OLDIN ishlatilganda ham qo'riqchi
+ * jim qoladi — ya'ni ro'yxat qo'riqchini o'chirish tugmasiga aylanadi.
+ *
+ * `grund` majburiy bo'lishining sababi ham shu: «notanish so'z» xatosini
+ * ko'rgan odam so'zni ro'yxatga qo'shib qutulishi mumkin, va yozilgan
+ * sabab shu qadamni ko'rinadigan qiladi.
+ */
+export function validateHilfswoerter(
+  hilfs: HilfswoerterFile,
+  alleWoerter: Wort[],
+): string[] {
+  const problems: string[] = [];
+
+  const kern = new Map<string, string>();
+  for (const w of alleWoerter) {
+    if (w.core) kern.set(w.de.toLowerCase(), w.sourceId);
+  }
+
+  const gesehen = new Set<string>();
+  for (const e of hilfs.eintraege) {
+    const wort = e.wort.toLowerCase();
+
+    if (gesehen.has(wort)) problems.push(`${e.wort}: ro'yxatda ikki marta`);
+    gesehen.add(wort);
+
+    if (e.grund.trim() === '') {
+      problems.push(`${e.wort}: sababi yozilmagan`);
+    }
+
+    const kernId = kern.get(wort);
+    if (kernId !== undefined) {
+      problems.push(
+        `${e.wort}: asosiy so'z (${kernId}) — yordamchi ro'yxatda tura olmaydi, ` +
+          `aks holda o'z bo'limidan oldin ishlatilgani ko'rinmay qoladi`,
+      );
+    }
+  }
+
+  return problems;
 }
