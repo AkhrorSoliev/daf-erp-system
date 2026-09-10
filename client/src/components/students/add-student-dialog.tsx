@@ -168,7 +168,13 @@ export function AddStudentDialog({
         if (!cancelled) setSources(data);
       })
       .catch(() => {
-        if (!cancelled) setSources([]);
+        if (cancelled) return;
+        setSources([]);
+        // Ro'yxat kelmasa "Qayerdan bildi?" majburiy maydonini to'ldirib
+        // bo'lmaydi va o'quvchi qo'shish sababi aytilmagan tupikka aylanadi.
+        toast.error(
+          "Manbalar ro'yxati yuklanmadi — o'quvchi qo'shish uchun sahifani yangilang",
+        );
       });
     return () => {
       cancelled = true;
@@ -308,7 +314,7 @@ export function AddStudentDialog({
               )}
             />
             {form.formState.errors.sourceId && (
-              <p className="text-sm text-destructive">
+              <p className="text-xs text-destructive">
                 {form.formState.errors.sourceId.message}
               </p>
             )}
@@ -515,11 +521,7 @@ export function AddStudentDialog({
           >
             Bekor qilish
           </Button>
-          <Button
-            type="submit"
-            form="add-student-form"
-            disabled={submitting}
-          >
+          <Button type="submit" form="add-student-form" disabled={submitting}>
             {submitting && <Loader2 className="mr-1.5 size-4 animate-spin" />}
             Saqlash
           </Button>

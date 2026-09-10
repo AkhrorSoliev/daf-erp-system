@@ -52,6 +52,7 @@ import {
   leadDateFieldIsConversion,
   leadHolatiParams,
 } from "./lead-filter-schema";
+import { aylanganSana } from "./aylangan-sana";
 
 interface LeadListRow {
   id: string;
@@ -212,11 +213,7 @@ export function LeadsList() {
                   <TableCell>
                     {format(parseISO(lead.createdAt), "dd.MM.yyyy")}
                   </TableCell>
-                  <TableCell>
-                    {lead.statusChangedAt
-                      ? format(parseISO(lead.statusChangedAt), "dd.MM.yyyy")
-                      : "—"}
-                  </TableCell>
+                  <TableCell>{aylanganSana(lead) ?? "—"}</TableCell>
                   <TableCell
                     className="text-right"
                     onClick={(e) => e.stopPropagation()}
