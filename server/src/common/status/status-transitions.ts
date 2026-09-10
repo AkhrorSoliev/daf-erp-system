@@ -51,7 +51,10 @@ export const STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
     CONTACTED: ['TRIAL', 'LOST'],
     TRIAL: ['CONVERTED', 'LOST'],
     CONVERTED: ['ARCHIVED'],
-    LOST: ['NEW', 'ARCHIVED'],
+    // Qaytib kelgan odam: yo'qotilgan deb belgilangan lid o'quvchiga aylanishi
+    // mumkin. To'g'ridan qo'shilgan o'quvchi telefoni bo'yicha eski LOST lidiga
+    // bog'lanadi (StudentLeadOriginService), shuning uchun bu o'tish ochiq.
+    LOST: ['NEW', 'CONVERTED', 'ARCHIVED'],
     ARCHIVED: ['NEW'],
   },
 
