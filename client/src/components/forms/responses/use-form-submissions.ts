@@ -83,23 +83,27 @@ export function useFormSubmissions(formId: string) {
       const caller = user
         ? { id: user.id, firstName: user.firstName, lastName: user.lastName }
         : null;
+      const optimisticAt = called ? new Date().toISOString() : null;
+      const optimisticBy = called ? caller : null;
 
-      setResult((cur) =>
-        cur &&
-        withCalled(
-          cur,
-          rowId,
-          called ? new Date().toISOString() : null,
-          called ? caller : null,
-        ),
-      );
+      setResult((cur) => cur && withCalled(cur, rowId, optimisticAt, optimisticBy));
       try {
         await api.patch(`/leads/${row.lead.id}/called`, { called });
         return true;
       } catch (error) {
-        setResult((cur) =>
-          cur && withCalled(cur, rowId, previous.calledAt, previous.calledBy),
-        );
+        setResult((cur) => {
+          if (!cur) return cur;
+          // A refetch (triggered by a filter/page change while this PATCH was
+          // in flight) may have already replaced `cur` with a fresh server
+          // payload. Roll back only if the row still shows OUR optimistic
+          // write — otherwise the fresh data is newer than `previous` and
+          // must not be clobbered by this stale pre-click snapshot.
+          const current = cur.data.find((r) => r.id === rowId);
+          if (!current?.lead || current.lead.calledAt !== optimisticAt) {
+            return cur;
+          }
+          return withCalled(cur, rowId, previous.calledAt, previous.calledBy);
+        });
         toast.error(
           getErrorMessage(error, "Qo'ng'iroq belgisini saqlashda xatolik"),
         );
