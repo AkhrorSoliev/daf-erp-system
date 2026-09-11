@@ -23,6 +23,8 @@ import {
 } from './progression';
 import type { KursFile } from '../kurs/kurs.types';
 import type { GoetheFile } from './goethe-parse';
+import { validateHoerFragen } from './hoer-fragen.validate';
+import { validateDialogAudio, type DialogAudioManifest } from './dialog-audio';
 
 const A1 = join(__dirname, '..', '..', '..', 'content', 'daf', 'a1');
 const read = <T>(...p: string[]): T =>
@@ -364,6 +366,22 @@ describe.each(UNITS)('%s — dialoglar', (unit) => {
       }
     }
     expect([...unbekannt]).toEqual([]);
+  });
+
+  it('har dialogda 2 ta eshitish savoli bor va ular qoidadan o`tadi', () => {
+    // Savol, javob va chalg'ituvchining har so'zi shu bo'limgacha tanish —
+    // gap va dialog bilan BIR XIL progressiya funksiyasi.
+    const problems = dialoge.dialoge.flatMap((d) =>
+      validateHoerFragen(d, (text) => unbekannteWoerter(d.section, text)),
+    );
+    expect(problems).toEqual([]);
+  });
+
+  it('audio manifesti dialog matni bilan mos', () => {
+    // Ovoz yasalgandan keyin matn tahrirlansa, audio eski matnni
+    // aytadi — bu qoida buni commit'dan OLDIN ushlaydi.
+    const manifest = readOrEmpty<DialogAudioManifest>({}, 'dialog-audio.json');
+    expect(validateDialogAudio(dialoge.dialoge, manifest)).toEqual([]);
   });
 });
 

@@ -42,6 +42,10 @@
           "de": "Tschüss! Bis bald.",
           "uz": "Xayr! Tez orada ko'rishamiz."
         }
+      ],
+      "fragen": [
+        { "frageDe": "Ist das Mia, Anna oder Claudia?", "frageUz": "Bu Mia, Anna yoki Claudiami?", "richtig": "Mia", "falsch": ["Anna", "Claudia"] },
+        { "frageDe": "Wie geht es Jonas?", "frageUz": "Jonasning ahvoli qanday?", "richtig": "gut", "falsch": ["nicht gut", "nicht sehr gut"] }
       ]
     },
     {
@@ -80,6 +84,10 @@
           "de": "Gute Nacht! Bis bald.",
           "uz": "Xayrli tun! Tez orada ko'rishamiz."
         }
+      ],
+      "fragen": [
+        { "frageDe": "Ist es Morgen oder Abend?", "frageUz": "Hozir ertalabmi yoki kech?", "richtig": "Abend", "falsch": ["Morgen", "Nacht"] },
+        { "frageDe": "Wie geht es Mia?", "frageUz": "Mianing ahvoli qanday?", "richtig": "gut", "falsch": ["nicht gut", "nicht sehr gut"] }
       ]
     },
     {
@@ -123,6 +131,10 @@
           "de": "Auf Wiedersehen!",
           "uz": "Xayr!"
         }
+      ],
+      "fragen": [
+        { "frageDe": "Wie heißt der Herr?", "frageUz": "Janobning ismi nima?", "richtig": "Markus", "falsch": ["Jonas", "Timur"] },
+        { "frageDe": "Wie heißt die Frau?", "frageUz": "Ayolning ismi nima?", "richtig": "Claudia", "falsch": ["Anna", "Mia"] }
       ]
     },
     {
@@ -161,6 +173,10 @@
           "de": "Ich wohne auch in Deutschland.",
           "uz": "Men ham Germaniyada yashayman."
         }
+      ],
+      "fragen": [
+        { "frageDe": "Woher kommt Doniyor?", "frageUz": "Doniyor qayerdan?", "richtig": "aus Usbekistan", "falsch": ["aus Deutschland", "aus Usbekistan und aus Deutschland"] },
+        { "frageDe": "Wo wohnt Doniyor?", "frageUz": "Doniyor qayerda yashaydi?", "richtig": "in Deutschland", "falsch": ["in Usbekistan", "nicht in Deutschland"] }
       ]
     },
     {
@@ -204,6 +220,10 @@
           "de": "Auf Wiedersehen!",
           "uz": "Xayr!"
         }
+      ],
+      "fragen": [
+        { "frageDe": "Ist es vier oder fünf?", "frageUz": "To'rtmi yoki besh?", "richtig": "vier", "falsch": ["fünf", "neun"] },
+        { "frageDe": "Null, sieben, zwei, neun, vier und?", "frageUz": "Nol, yetti, ikki, to'qqiz, to'rt va …?", "richtig": "elf", "falsch": ["eins", "drei"] }
       ]
     },
     {
@@ -250,6 +270,10 @@
           "de": "Gut, danke!",
           "uz": "Yaxshi, rahmat!"
         }
+      ],
+      "fragen": [
+        { "frageDe": "Wie heißt die Frau?", "frageUz": "Ayolning ismi nima?", "richtig": "Anna Weber", "falsch": ["Anna Karimova", "Mia Weber"] },
+        { "frageDe": "Ist das V oder W?", "frageUz": "Bu V mi yoki W?", "richtig": "W", "falsch": ["V", "Y"] }
       ]
     }
   ]
