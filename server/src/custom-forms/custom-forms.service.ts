@@ -22,6 +22,7 @@ import {
   ReportBranchIds,
   branchIdWhere,
 } from '../common/finance/report-branch-scope';
+import { stageWhere } from './submission-stage';
 
 const SLUG_LENGTH = 10;
 const FIELD_ID_LENGTH = 8;
@@ -41,6 +42,18 @@ type PublicFieldShape = Pick<
  * One answer to one form field. Deliberately NOT `unknown`: see `coerceValue`.
  */
 type FormFieldValue = string | number | boolean;
+
+interface FormSubmissionStats {
+  lastSubmittedAt: Date | null;
+  convertedCount: number;
+  awaitingCallCount: number;
+}
+
+const EMPTY_STATS: FormSubmissionStats = {
+  lastSubmittedAt: null,
+  convertedCount: 0,
+  awaitingCallCount: 0,
+};
 
 @Injectable()
 export class CustomFormsService {
@@ -84,10 +97,56 @@ export class CustomFormsService {
       },
     });
 
+    const stats = await this.submissionStatsFor(forms.map((f) => f.id));
     return forms.map(({ _count, ...rest }) => ({
       ...rest,
       submissionCount: _count.submissions,
+      ...(stats.get(rest.id) ?? EMPTY_STATS),
     }));
+  }
+
+  /**
+   * Ro'yxatdagi har bir forma uchun uchta son: oxirgi javob, o'quvchi
+   * bo'lganlar, qo'ng'iroq kutayotganlar. Formalar soniga qaramay uchta so'rov.
+   */
+  private async submissionStatsFor(
+    formIds: string[],
+  ): Promise<Map<string, FormSubmissionStats>> {
+    const stats = new Map<string, FormSubmissionStats>();
+    if (!formIds.length) return stats;
+
+    const [latest, converted, awaiting] = await Promise.all([
+      this.prisma.customFormSubmission.groupBy({
+        by: ['formId'],
+        where: { formId: { in: formIds } },
+        _max: { submittedAt: true },
+      }),
+      this.prisma.customFormSubmission.groupBy({
+        by: ['formId'],
+        where: { formId: { in: formIds }, AND: [stageWhere('converted')] },
+        _count: { _all: true },
+      }),
+      this.prisma.customFormSubmission.groupBy({
+        by: ['formId'],
+        where: { formId: { in: formIds }, AND: [stageWhere('awaiting')] },
+        _count: { _all: true },
+      }),
+    ]);
+
+    for (const id of formIds) stats.set(id, { ...EMPTY_STATS });
+    for (const row of latest) {
+      const s = stats.get(row.formId);
+      if (s) s.lastSubmittedAt = row._max.submittedAt;
+    }
+    for (const row of converted) {
+      const s = stats.get(row.formId);
+      if (s) s.convertedCount = row._count._all;
+    }
+    for (const row of awaiting) {
+      const s = stats.get(row.formId);
+      if (s) s.awaitingCallCount = row._count._all;
+    }
+    return stats;
   }
 
   async findOne(id: string, companyId: number, scope: ReportBranchIds) {
@@ -117,16 +176,6 @@ export class CustomFormsService {
           },
         },
         source: { select: { id: true, name: true } },
-        submissions: {
-          orderBy: { submittedAt: 'desc' },
-          take: 10,
-          select: {
-            id: true,
-            data: true,
-            submittedAt: true,
-            lead: { select: { id: true, firstName: true, lastName: true } },
-          },
-        },
       },
     });
     if (!form) {
