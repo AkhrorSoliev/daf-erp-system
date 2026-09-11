@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, type ReactNode } from "react";
+import { useCallback, useEffect, type ReactNode } from "react";
 import { PhoneCall, SearchX, Share2, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyFormLinkButton } from "../copy-form-link-dialog";
@@ -25,6 +25,18 @@ export function FormResponsesBody({ slug, submissions, onOpenLead, onRestore }: 
     [setFilters],
   );
 
+  // Sahifa jami natijadan oshib qolishi mumkin — masalan boshqa oynada
+  // qolgan barcha qatorlar «qo'ng'iroq qilindi» deb belgilanib jami kamaysa,
+  // yoki eski ?page= havolasi ochilsa. Bunday holatda bo'sh holat ko'rsatish
+  // o'rniga oxirgi mavjud sahifaga qaytariladi.
+  useEffect(() => {
+    if (!result || loading) return;
+    if (result.data.length !== 0 || result.total === 0 || filters.page <= 1) {
+      return;
+    }
+    setFilters({ page: Math.max(1, Math.ceil(result.total / filters.pageSize)) });
+  }, [result, loading, filters.page, filters.pageSize, setFilters]);
+
   if (!result) {
     return (
       <ResponsesTable
@@ -45,7 +57,11 @@ export function FormResponsesBody({ slug, submissions, onOpenLead, onRestore }: 
   const otherFilters = Boolean(
     filters.source.length || filters.search || filters.startDate || filters.endDate,
   );
-  const empty = !loading && result.data.length === 0;
+  // Sahifa hozircha noto'g'ri — yuqoridagi effekt uni tuzatmoqda. Bo'sh
+  // holat o'rniga jadval yuklanish ko'rinishida turadi.
+  const pageOverflow =
+    result.data.length === 0 && result.total > 0 && filters.page > 1;
+  const empty = !loading && result.total === 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -76,7 +92,7 @@ export function FormResponsesBody({ slug, submissions, onOpenLead, onRestore }: 
         <ResponsesTable
           rows={result.data}
           columns={[...result.fields, ...result.legacyFields]}
-          loading={loading}
+          loading={loading || pageOverflow}
           offset={(filters.page - 1) * filters.pageSize}
           onToggleCalled={toggleCalled}
           onOpenLead={onOpenLead}
