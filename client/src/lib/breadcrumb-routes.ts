@@ -12,6 +12,7 @@ export const routeLabels: Record<string, string> = {
   form: "Forma sozlash",
   forms: "Formalar",
   new: "Yangi",
+  tahrirlash: "Tahrirlash",
   groups: "Guruhlar",
   schedule: "Jadval",
 
