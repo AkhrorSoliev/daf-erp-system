@@ -4,6 +4,7 @@ import { LeadsModule } from '../leads/leads.module';
 import { CustomFormsController } from './custom-forms.controller';
 import { CustomFormsPublicController } from './custom-forms-public.controller';
 import { CustomFormsService } from './custom-forms.service';
+import { CustomFormSubmissionsService } from './custom-form-submissions.service';
 
 @Module({
   imports: [
@@ -11,6 +12,6 @@ import { CustomFormsService } from './custom-forms.service';
     ThrottlerModule.forRoot([{ name: 'default', ttl: 600_000, limit: 30 }]),
   ],
   controllers: [CustomFormsController, CustomFormsPublicController],
-  providers: [CustomFormsService],
+  providers: [CustomFormsService, CustomFormSubmissionsService],
 })
 export class CustomFormsModule {}

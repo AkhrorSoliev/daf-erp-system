@@ -6,11 +6,14 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CustomFormsService } from './custom-forms.service';
+import { CustomFormSubmissionsService } from './custom-form-submissions.service';
 import { CreateCustomFormDto } from './dto/create-custom-form.dto';
 import { UpdateCustomFormDto } from './dto/update-custom-form.dto';
+import { SubmissionQueryDto } from './dto/submission-query.dto';
 import { BranchScope, CurrentUser, Roles } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
@@ -22,7 +25,10 @@ import { RolesGuard } from '../common/guards';
 @UseGuards(RolesGuard)
 @Roles('CEO', 'Branch Director', 'Administrator')
 export class CustomFormsController {
-  constructor(private readonly service: CustomFormsService) {}
+  constructor(
+    private readonly service: CustomFormsService,
+    private readonly submissions: CustomFormSubmissionsService,
+  ) {}
 
   @Get()
   list(
@@ -39,6 +45,26 @@ export class CustomFormsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.service.findOne(id, companyId, scope);
+  }
+
+  @Get(':id/submissions')
+  listSubmissions(
+    @Param('id') id: string,
+    @Query() query: SubmissionQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.submissions.list(id, query, companyId, scope);
+  }
+
+  @Get(':id/submissions/export')
+  exportSubmissions(
+    @Param('id') id: string,
+    @Query() query: SubmissionQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.submissions.export(id, query, companyId, scope);
   }
 
   @Post()
