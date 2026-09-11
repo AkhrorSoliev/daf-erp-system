@@ -190,8 +190,9 @@ Sxema, migratsiya, ADR kerak emas.
 - Qatorni bosish → `/leads/forms/[id]`. Havola, ⋯ va sariq son bosilganda qator bosilishi
   ishlamaydi (`stopPropagation`).
 - `#` ustuni `border-r`; sahifalash 10/20/30/40/50 (loyiha qoidasi — doim ko'rsatiladi).
-- **`< sm`:** har forma ikki qatorli kartochka: nom + belgi / «45 javob · 3 kutmoqda ·
-  10.09.2026», o'ngda Havola va ⋯.
+- **`< sm`:** har forma uch qatorli kartochka: nom + belgi / kulrang «ustun → bo'lim» /
+  «45 javob · 3 kutmoqda · 10.09.2026», o'ngda Havola va ⋯. (Ustun → bo'lim qatori nomi
+  o'xshash formalarni ajratish uchun qoldirildi — 11.09.2026 qarori.)
 - Skeleton qatorlar; bo'sh holat hozirgidek («Birinchi formani yaratish»).
 
 ### 2. Javoblar sahifasi (`/leads/forms/[id]`)
