@@ -77,7 +77,8 @@ teng. Ustuvorlik yuqoridan pastga, birinchi mos kelgani yutadi:
 | Qo'ng'iroq kutmoqda | `awaiting` | qolgan hammasi (amalda: `NEW`, `calledAt = null`, arxivda emas) |
 
 - `leadId = null` faqat CEO lidni arxivdan butunlay o'chirganda bo'ladi (optional FK
-  `SetNull`). Bunday javob «Yo'qotildi» ga tushadi, qatorda «Lid o'chirilgan» yoziladi.
+  `SetNull`). Bunday javob «Yo'qotildi» ga tushadi; ism va telefon formaga yozilgan
+  javobdan (`submitted`) olinadi, ostida «Lid o'chirilgan» yoziladi.
 - **Bir manba:** bosqich serverda bitta toza funksiyada hisoblanadi
   (`submissionStage(lead)`), filtr uchun esa unga mos Prisma `where` quruvchi bor
   (`stageWhere(stage)`). Ikkalasi bir-biriga zid ketmasligini test barcha kombinatsiyalar
@@ -134,6 +135,7 @@ SubmissionRow = {
   data: Record<string, string | number | boolean>;
   stage: 'awaiting' | 'contacted' | 'converted' | 'lost';
   isRepeat: boolean;
+  submitted: { firstName: string; lastName: string; phone: string }; // formaga yozilgani (mapsTo bo'yicha)
   lead: {
     id: string; firstName: string; lastName: string; phone: string;
     statusEnum: LeadStatus; archived: boolean;
