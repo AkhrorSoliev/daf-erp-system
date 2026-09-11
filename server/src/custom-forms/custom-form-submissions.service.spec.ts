@@ -361,6 +361,32 @@ describe('CustomFormSubmissionsService', () => {
       ]);
     });
 
+    it('telefon qidiruvi +998 formatidagi qiymatni ham topadi', async () => {
+      await service.list(
+        'form-1',
+        query({ search: '+998 90 123 45 67' }),
+        1,
+        null,
+      );
+      expect(whereOfPage().AND).toEqual([
+        { lead: { is: { phone: { contains: '901234567' } } } },
+      ]);
+    });
+
+    it('telefon qidiruvi 998siz 9 xonali qiymatni ham topadi', async () => {
+      await service.list('form-1', query({ search: '901234567' }), 1, null);
+      expect(whereOfPage().AND).toEqual([
+        { lead: { is: { phone: { contains: '901234567' } } } },
+      ]);
+    });
+
+    it('telefon qidiruvi qisman raqamni ham topadi', async () => {
+      await service.list('form-1', query({ search: '90 123' }), 1, null);
+      expect(whereOfPage().AND).toEqual([
+        { lead: { is: { phone: { contains: '90123' } } } },
+      ]);
+    });
+
     it("filtrsiz so'rovda AND yo'q, eng yangisi tepada, sahifa hisoblanadi", async () => {
       await service.list('form-1', query({ page: 3, pageSize: 20 }), 1, null);
       const call = prisma.customFormSubmission.findMany.mock.calls.find(

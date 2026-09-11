@@ -209,17 +209,34 @@ export class CustomFormSubmissionsService {
       and.push({ OR: or });
     }
 
-    // Har bir so'z ism, familiya yoki telefonda bo'lishi kerak — «Ali Valiyev»
-    // ikkala so'z bo'yicha topiladi.
-    const tokens = query.search?.trim().split(/\s+/).filter(Boolean) ?? [];
-    for (const token of tokens) {
-      const or: Prisma.LeadWhereInput[] = [
-        { firstName: { contains: token, mode: 'insensitive' } },
-        { lastName: { contains: token, mode: 'insensitive' } },
-      ];
-      const digits = token.replace(/\D/g, '');
-      if (digits.length >= 2) or.push({ phone: { contains: digits } });
-      and.push({ lead: { is: { OR: or } } });
+    // Qidiruv: yoki BITTA telefon so'rovi (jadval «+998 XX XXX XX XX»
+    // ko'rinishida chiqaradi — shu formatdagi qiymat ko'chirib qo'yilishi
+    // kerak), yoki har bir so'z ism/familiya/telefonda bo'lishi shart bo'lgan
+    // token'lar («Ali Valiyev» ikkala so'z bo'yicha topiladi).
+    const rawSearch = query.search?.trim();
+    if (rawSearch) {
+      const isPhoneLikeQuery = /^[\d\s+\-()]+$/.test(rawSearch);
+      const allDigits = rawSearch.replace(/\D/g, '');
+      if (isPhoneLikeQuery && allDigits.length >= 2) {
+        and.push({
+          lead: {
+            is: { phone: { contains: stripLeadingCountryCode(allDigits) } },
+          },
+        });
+      } else {
+        const tokens = rawSearch.split(/\s+/).filter(Boolean);
+        for (const token of tokens) {
+          const or: Prisma.LeadWhereInput[] = [
+            { firstName: { contains: token, mode: 'insensitive' } },
+            { lastName: { contains: token, mode: 'insensitive' } },
+          ];
+          const digits = token.replace(/\D/g, '');
+          if (digits.length >= 2) {
+            or.push({ phone: { contains: stripLeadingCountryCode(digits) } });
+          }
+          and.push({ lead: { is: { OR: or } } });
+        }
+      }
     }
 
     const range = tashkentRangeFilter(query.startDate, query.endDate);
@@ -377,6 +394,19 @@ export class CustomFormSubmissionsService {
     }
     return repeat;
   }
+}
+
+/**
+ * Stored phones are 9 digits, no `998`. A search query copied straight out
+ * of the "+998 XX XXX XX XX" column carries the country code, so a naive
+ * digit match against `lead.phone` never hits. Only strip it when the digit
+ * count is actually longer than a bare 9-digit number — a short query like
+ * "90 123" must never be mistaken for a `998`-prefixed one.
+ */
+function stripLeadingCountryCode(digits: string): string {
+  return digits.length > 9 && digits.startsWith('998')
+    ? digits.slice(3)
+    : digits;
 }
 
 function toAnswers(raw: Prisma.JsonValue): Record<string, AnswerValue> {
