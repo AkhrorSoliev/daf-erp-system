@@ -63,10 +63,15 @@ materiali bo'lib turibdi.
   bosib ochgan, brauzer ruxsat beradi; bermasa — tugma qoladi).
 - **Ball bermaydi** — ball faqat so'zga (mavjud qoida, `punkte.ts`).
 - **Seansda ko'pi bilan 1 ta** eshitish savoli: har biri 30–60 soniya.
-- **Xato javob navbat oxiriga QAYTMAYDI.** Boshqa formatlarda xato savol
-  boshqa formatda qaytadi; bu yerda muqobil format yo'q, xuddi o'sha
-  savolni qayta berish esa javobni eslatib qo'yadi. O'rniga — javobdan
-  keyin ochiladigan matn.
+- **Xato javob navbat oxiriga QAYTMAYDI — va buning uchun yangi kod
+  yozilmaydi.** Mijoz birinchi xatoda serverdan boshqa formatdagi
+  almashtiruvchi savol so'raydi (`ersatz`); server o'sha
+  `itemType:itemId` ni boshqa formatda topolmasa `null` qaytaradi va
+  mijoz savolni tugatilgan hisoblaydi (`seans-navbat.ts`, `ersatzKeldi`).
+  Eshitish savolining boshqa formati yo'q — demak xatti-harakat mavjud
+  yo'ldan o'zi kelib chiqadi. Test shu `null` yo'lini eshitish savoli
+  uchun ham tasdiqlaydi. O'rniga o'quvchi javobdan keyin ochiladigan
+  matnni ko'radi.
 
 ---
 
@@ -134,28 +139,74 @@ bo'yicha yangilaydi.
 
 Migratsiya `prisma migrate dev` bilan emas — bu yerda u ishlamaydi;
 `migrate diff` + `db execute` + `migrate resolve` tartibida. Ikkala
-o'zgarish ham faqat QO'SHADI — mavjud qatorga tegmaydi.
+o'zgarish ham faqat QO'SHADI — mavjud qatorga tegmaydi. Prodga
+migratsiya fayli commit bilan boradi va `start:prod` uni o'zi qo'llaydi
+(`prisma migrate deploy`); undan keyin seed.
+
+### 5.1 Seed (`inhalt-seed.service.ts`) — uchta o'zgarish
+
+1. **Dialog upsert `audioKey` ni manifestdan yozadi** — har safar,
+   `create` da ham, `update` da ham. Manifestda yozuv bo'lmasa `null`
+   yoziladi: manifest — yagona manba, baza — muhit. Bugungi upsert
+   `audioKey` ga umuman tegmaydi, ya'ni manifest → baza yo'li YO'Q.
+2. **Fayldan yo'qolgan dialogni o'chirishda avval uning savollari
+   o'chiriladi**, keyin satrlari, keyin o'zi — `DafHoerFrage` ham satr
+   kabi `ON DELETE RESTRICT` FK bilan bog'lanadi. Bu bosqich yozilmasa
+   seed «faqat qo'shadi» degan gapga qaramay YIQILADI.
+3. Savollar `code` bo'yicha upsert; faylda endi yo'q tartib raqamlari
+   (`order > fragen.length`) satrlardagi qoida bilan o'chiriladi.
 
 ---
 
 ## 6. Dvigatel
 
 - Yangi format `HOEREN_WAHL`, yangi `itemType: 'HOERFRAGE'`.
+- **`itemType` ro'yxati kompilyator qo'riqlaydigan shaklga o'tadi.**
+  Formatlar `Record<FrageFormat, true>` bilan majburlangan, `itemType`
+  esa `CheckAntwortDto` va `ErsatzDto` da QO'LDA yozilgan massiv
+  (`@IsIn(['WORT', 'SATZ', 'PHRASE', 'DIALOGZEILE'])`). Unutilsa har
+  eshitish javobi 400 bilan qaytadi — aynan `AUDIO_WORT` bilan bo'lgan
+  xato. `ItemType` alohida tipga chiqariladi va `Record<ItemType, true>`
+  dan massiv hosil qilinadi; `PruefenInput`, `ersatz()`, `ladeMaterial`
+  va mijozdagi `MaterialTyp` shu tipdan yuradi.
 - Quruvchi — `uebung/hoer-fragen.ts` (sof funksiya): kumulyativ puldan
   `audioKey` si bor va savoli bor dialog tanlanadi, savol tasodifiy,
-  variantlar aralashtiriladi.
+  variantlar aralashtiriladi. `MaterialDialog` ga `audioKey` va
+  `fragen` qo'shiladi.
+- **`PublicFrage` ga yangi maydon kerak EMAS:** `frageUz` → `hilfe`
+  (izohida allaqachon «o'zbekcha tarjima» deyilgan), suhbat nomi →
+  `titel` (natija ekranidagi xato ro'yxati uchun, `DIALOG_LUECKE`
+  kabi), audio → `audioUrl`, `prompt` → `frageDe`.
+- **Bir suhbat bir seansda ikki marta chiqmaydi.** Eshitish savolining
+  `belegteItems` i suhbatning HAMMA satrini (`DIALOGZEILE:id`) band
+  qiladi. `DIALOG_LUECKE` ham shunday qilishga o'tadi — bugun u faqat
+  olib tashlangan satrni band qiladi (`dialog-fragen.ts`), ya'ni
+  (a) eshitish savoli bilan o'sha suhbatning matnli savoli bitta
+  seansga tushib, o'quvchi avval matnni O'QIB, keyin «eshitib» javob
+  berishi mumkin edi; (b) allaqachon mavjud teshik: bitta suhbatning
+  ikki xil bo'sh joyi bir seansda chiqsa, ikkinchisi birinchisining
+  javobini ko'rsatib turadi. Seans quruvchisining 4-qoidasi
+  (`belegteItems` kesishmasin) ikkalasini bir yo'la yopadi.
+- **Seansda ko'pi bilan 1 ta:** `seans.ts` ga format bo'yicha chegara
+  (`FORMAT_MAX_PRO_SEANS` umumiy 3 bo'lib qoladi, `HOEREN_WAHL: 1`
+  ustidan yoziladi), testi bilan.
 - **`audioKey` yo'q dialogdan savol qurilmaydi** (so'z audiosidagi kabi):
   ovoz yasalmaguncha format o'z-o'zidan o'chiq turadi.
 - Audio manzili umumiy `mediaUrl` qoidasi bilan (`R2_PUBLIC_URL`
   sozlanmasa — savol qurilmaydi, xom kalit sizmaydi).
-- Moyillik: `UNIT_TEST` seansida oldinga suriladi (`kind-formate.ts`);
-  boshqa seanslarda ham chiqishi mumkin, lekin seansda ko'pi bilan 1 ta.
+- Moyillik: `UNIT_TEST` seansida oldinga suriladi (`kind-formate.ts`).
 - `pruefen`: `richtigeAntwort` ga `HOEREN_WAHL` holati — `DafHoerFrage`
-  dan `richtig` o'qiladi. Javobda qo'shimcha `transkript` (satrlar:
-  gapiruvchi, `de`, `uz`) — FAQAT shu format uchun va FAQAT javobdan keyin.
+  dan `richtig` o'qiladi (`akzeptiert` bo'sh — variantlar aynan).
+  `PruefenErgebnis` ga ixtiyoriy `transkript` (satrlar: gapiruvchi,
+  `de`, `uz`) qo'shiladi — FAQAT shu formatda to'ldiriladi, mijozdagi
+  `PruefErgebnis` tipi ham. Ball yo'q, Leitner yo'q: `betroffeneWoerter`
+  bo'sh (`itemType !== 'WORT'`), mavjud qoida.
 - To'g'ri javob mijozga savol bilan birga **yuborilmaydi** (D6/D7).
 - `/media` sahifasi: `VORSCHAU_BAUER` (`Record<FrageFormat, ...>`) yangi
-  formatni majburan talab qiladi; mijozdagi `FrageFormat` parity testi ham.
+  formatni majburan talab qiladi; mijozdagi `FrageFormat` parity testi
+  ham. Material ro'yxatida (`inhalt`) har dialog o'z karnay tugmasi va
+  savollari (javobi bilan) bilan ko'rinadi — CEO ovozni va savolni
+  shu yerda ko'rib chiqadi.
 
 ---
 
@@ -171,17 +222,27 @@ skript to'xtaydi (jimgina «standart ovoz» qo'yilmaydi).
 
 ### 7.2 Skript
 
-`npm run daf:gen-dialog-audio -- --dialog u02-d1` (bitta) yoki
+`npm run daf:gen-dialog-audio -- --dialog u02-d2` (bitta) yoki
 `--unit 2` (unitning hammasi). `text-to-dialogue/eleven-v3`,
-`language_code: "de"`, satr matni `tts ?? de`. Natija R2 ga
-**tasodifiy kalit** bilan yuklanadi (so'z audiosidagi qoida).
+`language_code: "de"`, `stability: 0.5` (sinovdan keyin O'ZGARMAYDI —
+aks holda 12 dialog bir-biridan farq qilib eshitiladi), satr matni
+`tts ?? de`. Natija R2 ga **tasodifiy kalit** bilan yuklanadi (so'z
+audiosidagi qoida). Skript qisman yiqilsa R2 da yetim fayl qolishi
+mumkin — so'z audiosidagi ochiq qarz, bu yerda ham shunday; manifestga
+faqat muvaffaqiyatli yuklangan kalit yoziladi.
+
+**Namuna dialogi — `u02-d2`** («Meine Schwester»): unda «Nodira» ismi
+bor. Nemis TTS o'zbek ismlarini (Doniyor, Timur, Nodira, Karimova)
+xato o'qishi mumkin — darvoza aynan shuni sinashi kerak. Xato o'qisa
+yechim satrning `tts` maydoni (masalan `Nodiera`), ovozni almashtirish
+emas. Namuna `/media` sahifasida eshitiladi — alohida sahifa yo'q.
 
 ### 7.3 Manifest va eskirishdan himoya
 
 `content/daf/a1/dialog-audio.json`:
 
 ```json
-{ "u02-d1": { "key": "daf/audio/9f3c….mp3", "textHash": "…" } }
+{ "u02-d2": { "key": "daf/audio/9f3c….mp3", "textHash": "…" } }
 ```
 
 `textHash` — satrlarning `sprecher` + `tts ?? de` dan hisoblangan xesh.
@@ -195,7 +256,7 @@ keyin boshqa narsani o'qirdi. Seed `audioKey` ni manifestdan oladi
 `get_pricing` (2026-09-11): **$0.10 / 1000 belgi**. 12 dialog = 1 592
 belgi = **≈ $0.16**; qayta yasash zaxirasi bilan ≤ $0.30.
 
-1. **Bitta** dialog (≈ $0.01) → CEO eshitadi (namuna sahifasi).
+1. **Bitta** dialog (`u02-d2`, ≈ $0.01) → CEO `/media` da eshitadi.
 2. Tasdiqlansa — qolgan 11 ta (≈ $0.15).
 
 Har bosqichdan oldin narx qayta tekshiriladi va summa aytiladi.
@@ -209,9 +270,9 @@ Har bosqichdan oldin narx qayta tekshiriladi va summa aytiladi.
 | 1 | Migratsiya + seed + qo'riqchi qoidalari | testlar |
 | 2 | 24 savol matni (u01, u02) | qo'riqchi o'tadi |
 | 3 | Dvigatel: quruvchi, tekshiruv, transkript | testlar |
-| 4 | Mijoz: pleyer (0.8×), savol ekrani, javobdan keyin matn; `/media` | testlar |
+| 4 | Mijoz: pleyer (0.8×), savol ekrani, javobdan keyin matn; `/media` da dialog karnayi va savollar | testlar |
 | 5 | Ovoz skripti + 1 dialog namunasi | **CEO eshitadi** |
-| 6 | Qolgan 11 dialog, prodga chiqarish (deploy → `daf:inhalt-seed`) | **CEO ruxsati** |
+| 6 | Qolgan 11 dialog, prodga chiqarish (deploy → migratsiya o'zi qo'llanadi → `daf:inhalt-seed` u01 va u02) | **CEO ruxsati** |
 
 ## 9. Bu bosqichda QILINMAYDI
 
@@ -228,3 +289,7 @@ satr darajasidagi audio (`DafDialogLine.audioKey`) · eshitish uchun ball.
 | Ovoz yoqmaydi | 1 dialogdan keyin to'xtash darvozasi |
 | Seans uzayib ketadi | seansda ko'pi bilan 1 ta eshitish savoli |
 | Javob brauzerga sizadi | javob faqat serverda; matn faqat javobdan keyin; kalit tasodifiy |
+| O'quvchi suhbat matnini o'sha seansda o'qib bo'lgan | ikkala dialog formati suhbatning hamma satrini band qiladi |
+| TTS o'zbek ismini xato o'qiydi | namuna dialogida ism bor; yechim satrning `tts` maydoni |
+| `itemType` DTO'da unutiladi (har javob 400) | `Record<ItemType, true>` — kompilyator yiqitadi |
+| Seed yangi jadval tufayli yiqiladi | fayldan yo'qolgan dialogning savollari satrlaridan OLDIN o'chiriladi |
