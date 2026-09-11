@@ -141,9 +141,9 @@ describe("buildSubmissionsCsv", () => {
       fields: [{ id: "lvl", label: "Daraja", options: [{ value: "a1", label: "A1" }] }],
       legacyFields: [],
     });
-    const [header, first] = csv.replace("﻿", "").split("\r\n");
-    expect(csv.startsWith("﻿")).toBe(true);
-    expect(header).toBe("Ism,Familiya,Telefon,Manba,Yuborildi,Bosqich,Qo'ng'iroq qilingan,Daraja");
+    const [header, first] = csv.replace("\uFEFF", "").split("\r\n");
+    expect(csv.startsWith("\uFEFF")).toBe(true);
+    expect(header).toBe("Ism,Familiya,Telefon,Manba,Yuborildi,Bosqich,Qo'ng'iroq qilingan sana,Daraja");
     expect(first).toBe("Ali,Valiyev,+998 90 123 45 67,Instagram,10.09.2026 14:05,Qo'ng'iroq kutmoqda,,A1");
   });
 });

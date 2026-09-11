@@ -94,7 +94,7 @@ const CSV_HEADERS = [
   "Manba",
   "Yuborildi",
   "Bosqich",
-  "Qo'ng'iroq qilingan",
+  "Qo'ng'iroq qilingan sana",
 ];
 
 const PHONE_LIKE = /^\+?\d[\d ]*$/;
@@ -128,7 +128,7 @@ export function buildSubmissionsCsv(exp: SubmissionsExport): string {
     ];
   });
   return (
-    "﻿" +
+    "\uFEFF" +
     [header, ...lines].map((cells) => cells.map(csvCell).join(",")).join("\r\n")
   );
 }
