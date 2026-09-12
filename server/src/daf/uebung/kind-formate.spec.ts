@@ -20,7 +20,12 @@ describe('bevorzugteFormate', () => {
 
   it('Yakuniy sinov vaziyatga suyanadi', () => {
     expect(bevorzugteFormate('UNIT_TEST')).toEqual(
-      expect.arrayContaining(['REAKTION', 'ZUORDNEN', 'DIALOG_LUECKE']),
+      expect.arrayContaining([
+        'REAKTION',
+        'ZUORDNEN',
+        'DIALOG_LUECKE',
+        'HOEREN_WAHL',
+      ]),
     );
   });
 
@@ -41,6 +46,7 @@ describe('bevorzugteFormate', () => {
       'DIALOG_LUECKE',
       'AUDIO_WORT',
       'WORT_TIPPEN',
+      'HOEREN_WAHL',
     ];
     for (const kind of ['SECTION_A', 'SECTION_B', 'BRIDGE', 'UNIT_TEST']) {
       for (const f of bevorzugteFormate(kind)) {

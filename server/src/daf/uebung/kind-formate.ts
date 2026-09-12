@@ -21,7 +21,13 @@ const XARITA: Record<string, FrageFormat[]> = {
   SECTION_A: ['WORT_UZ', 'PAAR', 'ZUORDNEN', 'AUDIO_WORT'],
   SECTION_B: ['UZ_WORT', 'ARTIKEL', 'LUECKE', 'SATZ_BAUEN', 'WORT_TIPPEN'],
   BRIDGE: [],
-  UNIT_TEST: ['REAKTION', 'ZUORDNEN', 'DIALOG_LUECKE', 'SATZ_UEBERSETZEN'],
+  UNIT_TEST: [
+    'REAKTION',
+    'ZUORDNEN',
+    'DIALOG_LUECKE',
+    'SATZ_UEBERSETZEN',
+    'HOEREN_WAHL',
+  ],
 };
 
 export function bevorzugteFormate(kind: string | null): FrageFormat[] {
