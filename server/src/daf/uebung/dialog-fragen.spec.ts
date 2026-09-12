@@ -254,4 +254,17 @@ describe('dialogLuecke', () => {
       }
     });
   });
+
+  it('suhbatning HAMMA satrini band qiladi — bir seansda ikki marta chiqmasin', () => {
+    // Faqat olib tashlangan satr band bo'lsa, o'sha suhbatning ikkinchi
+    // bo'sh joyi (yoki eshitish savoli) bitta seansga tushardi — va
+    // ikkinchisi birinchisining javobini ko'rsatib turardi.
+    const f = dialogLuecke(dialog, andere, rndId)!;
+    expect(f.belegteItems.sort()).toEqual([
+      'DIALOGZEILE:10',
+      'DIALOGZEILE:11',
+      'DIALOGZEILE:12',
+      'DIALOGZEILE:13',
+    ]);
+  });
 });
