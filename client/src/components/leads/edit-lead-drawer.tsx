@@ -16,22 +16,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/ui/phone-input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import {
-  useLeadsBoard,
-  type LeadCard,
-  type LeadSourceOption,
-} from "@/hooks/use-leads-board";
+import { useLeadsBoard, type LeadCard } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
 import { LeadAdditionalFields } from "./lead-additional-fields";
+import { LeadSourcePicker } from "./lead-source-picker";
 
 interface EditLeadValues {
   firstName: string;
@@ -46,7 +36,6 @@ export function EditLeadDrawer() {
   const closeEditLead = useLeadsUi((s) => s.closeEditLead);
   const applyLeadUpdate = useLeadsBoard((s) => s.applyLeadUpdate);
 
-  const [sources, setSources] = useState<LeadSourceOption[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   const {
@@ -77,12 +66,6 @@ export function EditLeadDrawer() {
       sourceId: editLead.sourceId,
     });
     setSubmitting(false);
-    api
-      .get<LeadSourceOption[]>("/lead-sources")
-      .then(({ data }) => setSources(data))
-      .catch((error) =>
-        toast.error(getErrorMessage(error, "Manbalarni yuklashda xatolik")),
-      );
   }, [editLead, reset]);
 
   async function onSubmit(values: EditLeadValues) {
@@ -178,27 +161,20 @@ export function EditLeadDrawer() {
               )}
             </div>
 
-            <div className="space-y-1.5">
-              <Label>Lid manbasi (ixtiyoriy)</Label>
-              <Controller
-                name="sourceId"
-                control={control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Manbani tanlang" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sources.map((source) => (
-                        <SelectItem key={source.id} value={source.id}>
-                          {source.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
+            <Controller
+              name="sourceId"
+              control={control}
+              render={({ field }) => (
+                <LeadSourcePicker
+                  open={open}
+                  value={field.value}
+                  onChange={field.onChange}
+                  label="Lid manbasi (ixtiyoriy)"
+                  id="edit-lead-sourceId"
+                  loadErrorMessage="Manbalarni yuklashda xatolik"
+                />
+              )}
+            />
 
             <Controller
               name="extraPhone"

@@ -20,13 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PhoneInput } from "@/components/ui/phone-input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { LeadSourcePicker } from "@/components/leads/lead-source-picker";
 import {
   addStudentSchema,
   type AddStudentFormValues,
@@ -44,11 +38,6 @@ function extractErrorMessage(err: unknown, fallback: string): string {
   if (Array.isArray(msg)) return msg[0] ?? fallback;
   if (typeof msg === "string" && msg.length > 0) return msg;
   return fallback;
-}
-
-interface LeadSourceOption {
-  id: string;
-  name: string;
 }
 
 interface GroupTeacher {
@@ -103,7 +92,6 @@ export function AddStudentDialog({
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [groupSearch, setGroupSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [sources, setSources] = useState<LeadSourceOption[]>([]);
 
   const form = useForm<AddStudentFormValues>({
     resolver: zodResolver(addStudentSchema),
@@ -158,28 +146,6 @@ export function AddStudentDialog({
       setGroupSearch("");
     }
   }, [open, form]);
-
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    api
-      .get<LeadSourceOption[]>("/lead-sources")
-      .then(({ data }) => {
-        if (!cancelled) setSources(data);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setSources([]);
-        // Ro'yxat kelmasa "Qayerdan bildi?" majburiy maydonini to'ldirib
-        // bo'lmaydi va o'quvchi qo'shish sababi aytilmagan tupikka aylanadi.
-        toast.error(
-          "Manbalar ro'yxati yuklanmadi — o'quvchi qo'shish uchun sahifani yangilang",
-        );
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [open]);
 
   const onSubmit = async (values: AddStudentFormValues) => {
     if (!selectedBranch) {
@@ -291,34 +257,21 @@ export function AddStudentDialog({
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="sourceId">
-              Qayerdan bildi? <span className="text-destructive">*</span>
-            </Label>
-            <Controller
-              control={form.control}
-              name="sourceId"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="sourceId">
-                    <SelectValue placeholder="Manbani tanlang" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sources.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {form.formState.errors.sourceId && (
-              <p className="text-xs text-destructive">
-                {form.formState.errors.sourceId.message}
-              </p>
+          <Controller
+            control={form.control}
+            name="sourceId"
+            render={({ field }) => (
+              <LeadSourcePicker
+                open={open}
+                value={field.value}
+                onChange={field.onChange}
+                label="Qayerdan bildi?"
+                required
+                error={form.formState.errors.sourceId?.message}
+                loadErrorMessage="Manbalar ro'yxati yuklanmadi — o'quvchi qo'shish uchun sahifani yangilang"
+              />
             )}
-          </div>
+          />
 
           <div className="space-y-2 pt-2">
             <div className="flex items-center justify-between">
