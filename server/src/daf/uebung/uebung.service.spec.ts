@@ -160,6 +160,8 @@ function fakePrisma() {
       id: 201,
       titelDe: 'Dialog 1',
       sectionId: 7,
+      audioKey: null,
+      fragen: [],
       zeilen: [
         { id: 301, order: 1, sprecher: 'A', de: 'Hallo!', uz: 'Salom!' },
         {
@@ -189,6 +191,8 @@ function fakePrisma() {
       id: 202,
       titelDe: 'Dialog 2',
       sectionId: 7,
+      audioKey: null,
+      fragen: [],
       zeilen: [
         {
           id: 311,

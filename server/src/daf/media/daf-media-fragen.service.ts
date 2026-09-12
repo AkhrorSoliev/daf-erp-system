@@ -166,6 +166,12 @@ export const VORSCHAU_BAUER: Record<
         return dialogLuecke(d, andere, r);
       })
       .filter(nichtNull),
+  // PLACEHOLDER: `Record<FrageFormat, ...>` `HOEREN_WAHL`ni ham majburlaydi —
+  // quruvchining o'zi Task 6'da yoziladi. Hozircha bo'sh massiv qaytaradi:
+  // yuqoridagi `dialoge` shu faylda `fragen: []` bilan quriladi (Task 9
+  // haqiqiy qiymat beradi), ya'ni haqiqiy quruvchi yozilsa ham bugun
+  // natija baribir bo'sh bo'lardi.
+  HOEREN_WAHL: () => [],
 };
 
 /**
@@ -342,6 +348,9 @@ export class DafMediaFragenService {
           de: z.de,
           uz: z.uz,
         })),
+        // PLACEHOLDER: Task 9 haqiqiy ustunlarni o'qiydi.
+        audioKey: null,
+        fragen: [],
       }),
     );
 

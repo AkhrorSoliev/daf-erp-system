@@ -13,6 +13,7 @@ import { punkteFuer } from './punkte';
 import type {
   Frage,
   FrageFormat,
+  ItemType,
   MaterialDialog,
   MaterialPhrase,
   MaterialSatz,
@@ -205,7 +206,7 @@ function richtigeAntwort(
 }
 
 export interface PruefenInput {
-  itemType: 'WORT' | 'SATZ' | 'PHRASE' | 'DIALOGZEILE';
+  itemType: ItemType;
   itemId: number;
   format: FrageFormat;
   given: string;
@@ -363,7 +364,7 @@ export class UebungService {
   async ersatz(
     lessonId: number,
     studentId: number,
-    itemType: 'WORT' | 'SATZ' | 'PHRASE' | 'DIALOGZEILE',
+    itemType: ItemType,
     itemId: number,
     nichtFormat: FrageFormat,
     rnd: () => number = Math.random,
@@ -661,6 +662,9 @@ export class UebungService {
         de: z.de,
         uz: z.uz,
       })),
+      // PLACEHOLDER: Task 8 haqiqiy ustunlarni o'qiydi.
+      audioKey: null,
+      fragen: [],
     });
 
     // `core: false` so'zlar so'ralmaydi VA chalg'ituvchi sifatida ham
@@ -1359,7 +1363,7 @@ export class UebungService {
   }
 
   private async ladeMaterial(
-    itemType: PruefenInput['itemType'],
+    itemType: ItemType,
     itemId: number,
   ): Promise<{
     de: string;

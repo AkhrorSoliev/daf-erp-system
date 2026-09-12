@@ -8,7 +8,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import type { FrageFormat } from '../uebung/frage.types';
+import type { FrageFormat, ItemType } from '../uebung/frage.types';
 
 /**
  * `FrageFormat`ning HAR BIR a'zosi — `Record<FrageFormat, true>` orqali,
@@ -36,6 +36,7 @@ const ALLE_FRAGE_FORMATLAR: Record<FrageFormat, true> = {
   DIALOG_LUECKE: true,
   AUDIO_WORT: true,
   WORT_TIPPEN: true,
+  HOEREN_WAHL: true,
 };
 
 /**
@@ -46,6 +47,21 @@ const ALLE_FRAGE_FORMATLAR: Record<FrageFormat, true> = {
 export const FRAGE_FORMATLAR = Object.keys(
   ALLE_FRAGE_FORMATLAR,
 ) as FrageFormat[];
+
+/**
+ * `ItemType`ning HAR BIR a'zosi — `FrageFormat` bilan bir xil sabab:
+ * ro'yxat ikki DTO'da qo'lda yozilgan edi va yangi tur (`HOERFRAGE`)
+ * unutilsa har javob `@IsIn` da 400 bilan qaytardi.
+ */
+const ALLE_ITEM_TYPEN: Record<ItemType, true> = {
+  WORT: true,
+  SATZ: true,
+  PHRASE: true,
+  DIALOGZEILE: true,
+  HOERFRAGE: true,
+};
+
+export const ITEM_TYPEN = Object.keys(ALLE_ITEM_TYPEN) as ItemType[];
 
 /**
  * Mashq javobi.
@@ -59,8 +75,8 @@ export const FRAGE_FORMATLAR = Object.keys(
  * savolni qayta qurib bo'lmaydi.
  */
 export class CheckAntwortDto {
-  @IsIn(['WORT', 'SATZ', 'PHRASE', 'DIALOGZEILE'])
-  itemType!: 'WORT' | 'SATZ' | 'PHRASE' | 'DIALOGZEILE';
+  @IsIn(ITEM_TYPEN)
+  itemType!: ItemType;
 
   @IsInt()
   itemId!: number;
@@ -88,8 +104,8 @@ export class CheckAntwortDto {
  * `studentId` bu yerda ham YO'Q — tokendan olinadi.
  */
 export class ErsatzQueryDto {
-  @IsIn(['WORT', 'SATZ', 'PHRASE', 'DIALOGZEILE'])
-  itemType!: 'WORT' | 'SATZ' | 'PHRASE' | 'DIALOGZEILE';
+  @IsIn(ITEM_TYPEN)
+  itemType!: ItemType;
 
   @Type(() => Number)
   @IsInt()
