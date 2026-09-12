@@ -1,1 +1,50 @@
-{}
+{
+  "u01-d1": {
+    "key": "daf/audio/e965bb10cd5b307db00c63a034b622fb.mp3",
+    "textHash": "00d51b6b114fb4b6"
+  },
+  "u01-d2": {
+    "key": "daf/audio/2e249e7fd81bc2e56d4692a22c906744.mp3",
+    "textHash": "3c7a430bbdd18f2f"
+  },
+  "u01-d3": {
+    "key": "daf/audio/2bf3097089ff25237cfb88bc9712f6af.mp3",
+    "textHash": "43f161dd53aac654"
+  },
+  "u01-d4": {
+    "key": "daf/audio/9ee872aadb29da78519ee698c9e47814.mp3",
+    "textHash": "2154ac7e530c367c"
+  },
+  "u01-d5": {
+    "key": "daf/audio/2acf1e61219b08bc2c2d6c09edcb8207.mp3",
+    "textHash": "ea1ca01dfa6432f7"
+  },
+  "u01-d6": {
+    "key": "daf/audio/19de99782ce8c0b22df93eae80be28b6.mp3",
+    "textHash": "3ca51d98dde4a628"
+  },
+  "u02-d1": {
+    "key": "daf/audio/57270438e98aa7f9bfb6011ce785f522.mp3",
+    "textHash": "aaf51da38d55f470"
+  },
+  "u02-d2": {
+    "key": "daf/audio/e0b946e901f6ba1c3598fe5c39d3bea6.mp3",
+    "textHash": "f2542b99964777a0"
+  },
+  "u02-d3": {
+    "key": "daf/audio/481dec362800f5da89b025dcbf9e5c19.mp3",
+    "textHash": "732b4765357a1435"
+  },
+  "u02-d4": {
+    "key": "daf/audio/14870c5e3e3e33a573e3c6341b3ed0d2.mp3",
+    "textHash": "0a92c417fdc96295"
+  },
+  "u02-d5": {
+    "key": "daf/audio/b8f3e3f9f4874ad58d93364789f0419f.mp3",
+    "textHash": "0b88e2496fbdd552"
+  },
+  "u02-d6": {
+    "key": "daf/audio/6542e4eea14d8d2996514c8265fb0c27.mp3",
+    "textHash": "24ff43bc58e05f03"
+  }
+}
