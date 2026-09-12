@@ -10,6 +10,7 @@ import type {
   MaterialWort,
 } from '../uebung/frage.types';
 import { dialogLuecke } from '../uebung/dialog-fragen';
+import { hoerenWahl } from '../uebung/hoer-fragen';
 import {
   luecke,
   reaktion,
@@ -166,12 +167,8 @@ export const VORSCHAU_BAUER: Record<
         return dialogLuecke(d, andere, r);
       })
       .filter(nichtNull),
-  // PLACEHOLDER: `Record<FrageFormat, ...>` `HOEREN_WAHL`ni ham majburlaydi —
-  // quruvchining o'zi Task 6'da yoziladi. Hozircha bo'sh massiv qaytaradi:
-  // yuqoridagi `dialoge` shu faylda `fragen: []` bilan quriladi (Task 9
-  // haqiqiy qiymat beradi), ya'ni haqiqiy quruvchi yozilsa ham bugun
-  // natija baribir bo'sh bo'lardi.
-  HOEREN_WAHL: () => [],
+  HOEREN_WAHL: (m, r) =>
+    m.dialoge.map((d) => hoerenWahl(d, r, m.mediaUrl)).filter(nichtNull),
 };
 
 /**
@@ -267,7 +264,10 @@ export class DafMediaFragenService {
         // undan oldingilar).
         this.prisma.dafDialog.findMany({
           where: { sectionId: { in: sectionIds } },
-          include: { zeilen: { orderBy: { order: 'asc' } } },
+          include: {
+            zeilen: { orderBy: { order: 'asc' } },
+            fragen: { orderBy: { order: 'asc' } },
+          },
         } as any),
       ]);
 
@@ -295,6 +295,14 @@ export class DafMediaFragenService {
       id: number;
       titelDe: string;
       zeilen: Array<{ id: number; sprecher: string; de: string; uz: string }>;
+      audioKey: string | null;
+      fragen: Array<{
+        id: number;
+        frageDe: string;
+        frageUz: string;
+        richtig: string;
+        falsch: string[];
+      }>;
     }
 
     // `core: true` VA tarjimasi bor so'zlargina — xuddi `baueKandidaten`
@@ -348,9 +356,8 @@ export class DafMediaFragenService {
           de: z.de,
           uz: z.uz,
         })),
-        // PLACEHOLDER: Task 9 haqiqiy ustunlarni o'qiydi.
-        audioKey: null,
-        fragen: [],
+        audioKey: d.audioKey,
+        fragen: d.fragen,
       }),
     );
 

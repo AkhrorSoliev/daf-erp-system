@@ -21,6 +21,7 @@ function fakePrisma(rows: any) {
     dafSentence: { findMany: jest.fn(async () => rows.saetze ?? []) },
     dafPhrase: { findMany: jest.fn(async () => rows.phrasen ?? []) },
     dafDialogLine: { findMany: jest.fn(async () => rows.zeilen ?? []) },
+    dafDialog: { findMany: jest.fn(async () => rows.dialoge ?? []) },
     dafSection: { findUnique: sectionMock },
   };
 }
@@ -156,6 +157,50 @@ describe('DafMediaInhaltService', () => {
     expect(r.sectionTitleUz).toBe('Salom va xayr');
     expect(r.unitTitleUz).toBe('Salom!');
     expect(r.unitCode).toBe('u01');
+  });
+
+  it('dialoglarni audio manzili va savollari bilan qaytaradi', async () => {
+    const p = fakePrisma({
+      dialoge: [
+        {
+          id: 9,
+          code: 'u02-d2',
+          titelDe: 'Meine Schwester',
+          titelUz: 'Mening opam',
+          audioKey: 'daf/audio/d.mp3',
+          fragen: [
+            {
+              code: 'u02-d2-f1',
+              frageDe: 'Wer ist Nodira?',
+              frageUz: 'Nodira kim?',
+              richtig: 'die Tochter',
+              falsch: ['die Schwester', 'die Mutter'],
+            },
+          ],
+        },
+      ],
+    });
+    const r = await new DafMediaInhaltService(p as any, config as any).inhalt(
+      7,
+    );
+    expect(r.dialoge).toEqual([
+      {
+        id: 9,
+        code: 'u02-d2',
+        titelDe: 'Meine Schwester',
+        titelUz: 'Mening opam',
+        audioUrl: 'https://r2.example/daf/audio/d.mp3',
+        fragen: [
+          {
+            code: 'u02-d2-f1',
+            frageDe: 'Wer ist Nodira?',
+            frageUz: 'Nodira kim?',
+            richtig: 'die Tochter',
+            falsch: ['die Schwester', 'die Mutter'],
+          },
+        ],
+      },
+    ]);
   });
 
   it('bo`lim topilmasa 404', async () => {

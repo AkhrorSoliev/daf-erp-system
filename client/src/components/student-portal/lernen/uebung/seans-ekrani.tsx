@@ -44,6 +44,8 @@ import { Yozish } from "./yozish";
 import { Yigish, juftSoni, juftUstunlar } from "./yigish";
 import { DialogBlok } from "./dialog-blok";
 import { NatijaEkrani } from "./natija-ekrani";
+import { SuhbatPleyer } from "./suhbat-pleyer";
+import { TranskriptBlok } from "./transkript-blok";
 import {
   fortschrittSurati,
   keyingiBoshlangichSurati,
@@ -779,7 +781,11 @@ export function SeansEkrani(props: SeansEkraniProps) {
             egallaydi. `autoPlay` ANIQ beriladi (standart endi `false`) —
             savol chiqishi bilan ovoz o'zi yangrashi FAQAT shu ekranda
             to'g'ri, standartga suyanib qolmaslik kerak. */}
-        {frage.audioUrl ? (
+        {frage.format === "HOEREN_WAHL" && frage.audioUrl ? (
+          // Suhbat — to'liq pleyer (pauza, vaqt, 0.8×). Savol paytida
+          // MATN YO'Q; u `natija.transkript` bilan javobdan keyin keladi.
+          <SuhbatPleyer url={frage.audioUrl} />
+        ) : frage.audioUrl ? (
           <OvozTugmasi url={frage.audioUrl} autoPlay />
         ) : null}
         {frage.format === "DIALOG_LUECKE" ? (
@@ -843,6 +849,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
             kutilmoqda={pruefen.isPending}
           />
         )}
+        {natija?.transkript ? <TranskriptBlok zeilen={natija.transkript} /> : null}
       </main>
 
       {/* Pastdagi yopishqoq panel — natija ham, tugma ham shu yerda. */}

@@ -19,6 +19,7 @@ const MATN: Record<FrageFormat, string> = {
   DIALOG_LUECKE: "Suhbatda nima aytilgan?",
   AUDIO_WORT: "Eshiting va to'g'ri so'zni tanlang",
   WORT_TIPPEN: "Eshiting va so'zni yozing",
+  HOEREN_WAHL: "Suhbatni tinglang va savolga javob bering",
 };
 
 export function koersatma(format: FrageFormat): string {

@@ -18,6 +18,7 @@ import {
 import { OvozTugmasi } from "@/components/student-portal/lernen/uebung/ovoz-tugmasi";
 import { sectionInhaltBosh, wortMatni } from "./media-inhalt-utils";
 import type {
+  InhaltDialog,
   InhaltDialogZeile,
   InhaltWort,
   InhaltZeile,
@@ -106,35 +107,62 @@ function ZeileBlock({ title, rows }: { title: string; rows: InhaltZeile[] }) {
   );
 }
 
-function DialogBlock({ rows }: { rows: InhaltDialogZeile[] }) {
-  if (rows.length === 0) return null;
+function DialogBlock({
+  dialoge,
+  rows,
+}: {
+  dialoge: InhaltDialog[];
+  rows: InhaltDialogZeile[];
+}) {
+  if (dialoge.length === 0 && rows.length === 0) return null;
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-semibold">Dialog qatorlari</h3>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-28">So&apos;zlovchi</TableHead>
-            <TableHead>Nemischa</TableHead>
-            <TableHead>Tarjima</TableHead>
-            <TableHead className="w-14">Ovoz</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((r) => (
-            <TableRow key={r.id}>
-              <TableCell className="text-muted-foreground">
-                {r.sprecher}
-              </TableCell>
-              <TableCell className="font-medium">{r.de}</TableCell>
-              <TableCell className="text-muted-foreground">{r.uz}</TableCell>
-              <TableCell>
-                <OvozHujayrasi url={r.audioUrl} />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <div className="space-y-4">
+      <h3 className="text-sm font-semibold">Dialoglar</h3>
+      {dialoge.map((d) => (
+        <div key={d.id} className="space-y-2 rounded-md border p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="font-medium">{d.titelDe}</div>
+              <div className="text-xs text-muted-foreground">{d.titelUz} · {d.code}</div>
+            </div>
+            {/* Butun suhbatning ovozi — CEO namunani shu yerda eshitadi. */}
+            <OvozHujayrasi url={d.audioUrl} />
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-28">So&apos;zlovchi</TableHead>
+                <TableHead>Nemischa</TableHead>
+                <TableHead>Tarjima</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows
+                .filter((r) => r.dialogId === d.id)
+                .map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="text-muted-foreground">{r.sprecher}</TableCell>
+                    <TableCell className="font-medium">{r.de}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.uz}</TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+          {d.fragen.length > 0 && (
+            <ul className="space-y-1 text-sm">
+              {d.fragen.map((f) => (
+                <li key={f.code}>
+                  <span className="font-medium">{f.frageDe}</span>{" "}
+                  <span className="text-muted-foreground">({f.frageUz})</span>
+                  {" → "}
+                  <span className="text-emerald-700 dark:text-emerald-400">{f.richtig}</span>
+                  <span className="text-muted-foreground"> · {f.falsch.join(" · ")}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -238,7 +266,7 @@ export function MediaInhaltPanel({ sectionId }: { sectionId: number }) {
           <WoerterBlock woerter={data.woerter} />
           <ZeileBlock title="Gaplar" rows={data.saetze} />
           <ZeileBlock title="Iboralar" rows={data.phrasen} />
-          <DialogBlock rows={data.dialogZeilen} />
+          <DialogBlock dialoge={data.dialoge} rows={data.dialogZeilen} />
         </>
       )}
     </div>
