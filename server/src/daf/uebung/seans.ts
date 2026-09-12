@@ -38,7 +38,7 @@ export interface SeansPlan {
  * shundan tug'iladi, materialning kamligidan emas.
  *
  * QOIDALAR (kod haqiqatda shularni ta'minlaydi):
- * 1. Bitta format seansda `FORMAT_MAX_PRO_SEANS` martadan ko'p emas.
+ * 1. Bitta format seansda o'zining chegara qiymatidan ko'p emas (`capFuer(format)` — `FORMAT_MAX_PRO_SEANS` odatiy hal).
  * 2. Ketma-ket ikki savol bir formatda emas.
  * 3. Nomzodlar panelida yetarli xillik bo'lsa, kamida `MIN_FORMATE` xil
  *    format ishlatiladi: panel hali shu songa yetmaguncha, ishlatilmagan
