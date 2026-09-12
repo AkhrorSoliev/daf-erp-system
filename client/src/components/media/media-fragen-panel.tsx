@@ -221,10 +221,7 @@ function FormatGuruhi({
     <div className="space-y-2">
       <h3 className="flex flex-wrap items-center gap-2 text-sm font-semibold">
         {FORMAT_NOMLARI[format]}
-        <Badge
-          variant="secondary"
-          className="font-mono text-[11px] font-normal"
-        >
+        <Badge variant="secondary" className="font-mono text-[11px] font-normal">
           {format}
         </Badge>
         <span className="text-xs font-normal text-muted-foreground">
@@ -240,10 +237,7 @@ function FormatGuruhi({
             ham kalitni noyob qiladi — ro'yxat statik (bir marta yuklanadi,
             qayta tartiblanmaydi), shuning uchun indeksga tayanish xavfsiz. */}
         {fragen.map((f, i) => (
-          <SavolQatori
-            key={`${f.format}:${f.itemType}:${f.itemId}:${i}`}
-            f={f}
-          />
+          <SavolQatori key={`${f.format}:${f.itemType}:${f.itemId}:${i}`} f={f} />
         ))}
       </div>
     </div>
@@ -371,7 +365,12 @@ export function MediaFragenPanel({
   // so'raydi va qayta skeleton ko'rsatardi (ko'rik: Minor topilma). Global
   // `staleTime` (`QueryProvider`, 5 daqiqa) shu `sectionId` bilan qayta
   // mount bo'lganda keshdan darhol o'qiydi.
-  const { data, isLoading, isError, refetch } = useQuery({
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["media-fragen", sectionId],
     queryFn: () =>
       api
@@ -415,11 +414,11 @@ export function MediaFragenPanel({
           mumkin, chunki ular oldingi bo'limdan kelgan. */}
       <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">Ko&apos;lam:</span> shu
-        bo&apos;lim + shu unitdagi undan oldingi BARCHA bo&apos;limlar materiali
-        birlashtirilgan (dvigatel chalg&apos;ituvchilarni ham shu puldan oladi).
-        Shuning uchun boshqa yorliqdagi &quot;Material&quot; ro&apos;yxatida
-        (faqat shu bo&apos;lim) yo&apos;q so&apos;z, gap yoki ibora bu yerda
-        ko&apos;rinishi mumkin — bu xato emas.
+        bo&apos;lim + shu unitdagi undan oldingi BARCHA bo&apos;limlar
+        materiali birlashtirilgan (dvigatel chalg&apos;ituvchilarni ham shu
+        puldan oladi). Shuning uchun boshqa yorliqdagi &quot;Material&quot;
+        ro&apos;yxatida (faqat shu bo&apos;lim) yo&apos;q so&apos;z, gap
+        yoki ibora bu yerda ko&apos;rinishi mumkin — bu xato emas.
       </div>
 
       {isLoading && (
@@ -446,14 +445,14 @@ export function MediaFragenPanel({
         <Card>
           <CardContent className="p-4 text-sm text-muted-foreground">
             Bu bo&apos;limdan hali bironta savol qurib bo&apos;lmaydi — shu
-            bo&apos;lim VA undan oldingi bo&apos;limlar materiali (so&apos;z,
-            gap, ibora yoki dialog) birgalikda yetarli emas. Diqqat: boshqa
-            yorliqdagi &quot;Material&quot; ro&apos;yxati FAQAT shu
-            bo&apos;limni ko&apos;rsatadi (yuqoridagi &quot;Ko&apos;lam&quot;
+            bo&apos;lim VA undan oldingi bo&apos;limlar materiali
+            (so&apos;z, gap, ibora yoki dialog) birgalikda yetarli emas.
+            Diqqat: boshqa yorliqdagi &quot;Material&quot; ro&apos;yxati
+            FAQAT shu bo&apos;limni ko&apos;rsatadi (yuqoridagi &quot;Ko&apos;lam&quot;
             yorlig&apos;iga qarang) — kamchilik shu unitning OLDINGI
             bo&apos;limida bo&apos;lishi ham mumkin, uni ko&apos;rish uchun
-            &quot;Media&quot; ro&apos;yxatidan o&apos;sha bo&apos;lim sahifasiga
-            o&apos;ting.
+            &quot;Media&quot; ro&apos;yxatidan o&apos;sha bo&apos;lim
+            sahifasiga o&apos;ting.
           </CardContent>
         </Card>
       )}
