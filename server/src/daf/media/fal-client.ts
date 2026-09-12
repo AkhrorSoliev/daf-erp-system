@@ -1,6 +1,7 @@
 const IMAGE_MODEL = 'fal-ai/flux/schnell';
 const TTS_MODEL = 'fal-ai/chatterbox/text-to-speech/multilingual';
 const TTS_ELEVEN_MODEL = 'fal-ai/elevenlabs/tts/turbo-v2.5';
+const DIALOG_MODEL = 'fal-ai/elevenlabs/text-to-dialogue/eleven-v3';
 
 /**
  * `fal-ai/elevenlabs/tts/turbo-v2.5` hujjatida qat'iy belgilangan `speed`
@@ -119,6 +120,27 @@ export class FalClient {
     });
     const url = out?.audio?.url;
     if (typeof url !== 'string') throw new Error('fal.ai ovoz qaytarmadi');
+    return url;
+  }
+
+  /**
+   * Butun suhbat BITTA so'rovda — gapiruvchilar bir-biriga javob
+   * beradi, ohang tabiiy chiqadi (ovoz tizimi qarori, 2026-09-02).
+   * `language_code: 'de'` qat'iy (ingliz fonetikasiga tushmasin),
+   * `stability: 0.5` sinovdan keyin O'ZGARMAYDI — aks holda 12 dialog
+   * bir-biridan farq qilib eshitiladi. Tezlik parametri modelda YO'Q —
+   * sekin variant mijoz pleyerida (0.8×).
+   */
+  async dialog(
+    inputs: Array<{ voice: string; text: string }>,
+  ): Promise<string> {
+    const out = await this.run(DIALOG_MODEL, {
+      inputs,
+      language_code: 'de',
+      stability: 0.5,
+    });
+    const url = out?.audio?.url;
+    if (typeof url !== 'string') throw new Error('fal.ai suhbat qaytarmadi');
     return url;
   }
 }
