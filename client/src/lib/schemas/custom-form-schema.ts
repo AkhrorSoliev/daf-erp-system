@@ -121,24 +121,35 @@ export type CustomFormFormValues = z.infer<typeof customFormSchema>;
 
 // Sensible defaults — every new form starts with the three required Lead
 // fields already mapped, so admins only need to add their custom fields.
+//
+// These three ids are FIXED, not `makeFieldId()`-random: `defaultFormFields()`
+// runs inside `useForm({ defaultValues: {...} })` in `form-builder-client.tsx`,
+// which Next.js evaluates once during the server render and again during
+// client hydration. A random id there produced a different value each time,
+// so the server-rendered `field-<id>` DOM attributes never matched the
+// client's — a hydration mismatch on every fresh load of `/leads/forms/new`.
+// A fixed id only needs to be unique among the three defaults, which a
+// literal string already guarantees; `addField()` below still calls
+// `makeFieldId()` for fields added after mount (a client-only event, so no
+// SSR/CSR mismatch risk there).
 export function defaultFormFields(): FormFieldShape[] {
   return [
     {
-      id: makeFieldId(),
+      id: "default-first-name",
       type: "text",
       label: "Ismingiz",
       required: true,
       mapsTo: "firstName",
     },
     {
-      id: makeFieldId(),
+      id: "default-last-name",
       type: "text",
       label: "Familyangiz",
       required: true,
       mapsTo: "lastName",
     },
     {
-      id: makeFieldId(),
+      id: "default-phone",
       type: "phone",
       label: "Telefon raqamingiz",
       required: true,

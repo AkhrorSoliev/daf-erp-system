@@ -38,7 +38,7 @@ export function CallCell({ row, onToggle }: Props) {
               className="font-medium text-primary hover:underline"
               onClick={() => {
                 toast.dismiss(t.id);
-                void onToggle(row.id, false);
+                void toggle(false);
               }}
             >
               Bekor qilish
