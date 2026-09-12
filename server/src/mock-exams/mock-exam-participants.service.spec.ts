@@ -72,8 +72,9 @@ describe('MockExamParticipantsService', () => {
         {
           provide: StudentLeadOriginService,
           useValue: {
-            resolveSelfSignupSourceId: jest.fn().mockResolvedValue('src-mock'),
-            recordDirectOrigin: jest.fn().mockResolvedValue(undefined),
+            recordSelfSignupOrigin: jest
+              .fn()
+              .mockResolvedValue({ kind: 'created', leadId: 'lead-mock' }),
           },
         },
       ],

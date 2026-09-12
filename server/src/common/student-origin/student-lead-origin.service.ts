@@ -43,6 +43,20 @@ export interface DirectOriginParams {
   userId?: number;
 }
 
+/** O'zi ro'yxatdan o'tadigan yo'l uchun: manbani chaqiruvchi emas, xizmat hal qiladi. */
+export type SelfSignupOriginParams = Omit<DirectOriginParams, 'sourceId'>;
+
+/**
+ * Nima qilingani. Chaqiruvchilarning ko'pi e'tibor bermaydi, lekin to'ldirish
+ * skripti uchun bu hal qiluvchi: u faqat O'ZI YARATGAN lidning sanasini
+ * o'quvchiniki bilan tenglashtirishi kerak. Telefon bo'yicha ulangan eski
+ * kartochka — doskada haftalar oldin ochilgan haqiqiy lid — o'z sanasini
+ * saqlashi shart, aks holda voronka odam qachon kelganini yo'qotadi.
+ */
+export type OriginOutcome =
+  | { kind: 'created'; leadId: string }
+  | { kind: 'matched'; leadIds: string[] };
+
 @Injectable()
 export class StudentLeadOriginService {
   constructor(private prisma: PrismaService) {}
@@ -72,11 +86,18 @@ export class StudentLeadOriginService {
    * o'tadigan yo'llar uchun (Telegram boti, mock imtihon), ularda manbani
    * tanlaydigan admin yo'q.
    *
-   * Poyga xavfsiz: ikkita bot ro'yxati bir vaqtda kelsa ikkovi ham topa
-   * olmay yaratishga urinadi, shuning uchun yaratish xatosidan keyin bir
-   * marta qayta qidiriladi. Nomi bo'yicha unikal indeks yo'q, ya'ni eng
-   * yomon holatda ikkita bir xil nomli manba qoladi — bu ma'lumotni
-   * buzmaydi, admin birini o'chiradi.
+   * POYGA HAQIDA HALOL: `LeadSource.name` da unikal cheklov yo'q, shuning
+   * uchun ikkita ro'yxat bir vaqtda kelsa ikkovi ham topa olmay, ikkovi ham
+   * MUVAFFAQIYATLI yaratadi — xato bo'lmaydi. Natija ikkita bir xil nomli
+   * manba. Bu ma'lumotni buzmaydi (lidlar ikkala id ga bo'linadi, admin
+   * birini o'chirib ikkinchisiga birlashtiradi), va buni to'liq yopish unikal
+   * cheklov, ya'ni migratsiya talab qiladi.
+   *
+   * Xato ushlanmaydi: Postgres interaktiv tranzaksiyada yiqilgan so'rovdan
+   * keyin butun tranzaksiyani "aborted" holatiga o'tkazadi, ya'ni o'sha `tx`
+   * orqali qayta qidirish baribir yiqiladi. Ushlash faqat asl xatoning
+   * nomini yashirardi — ulanish yoki tashqi kalit xatosi noto'g'ri xabar
+   * ostida chiqib, keyingi tuzatuvchini adashtirardi.
    */
   async resolveSelfSignupSourceId(
     tx: Prisma.TransactionClient,
@@ -89,40 +110,27 @@ export class StudentLeadOriginService {
     });
     if (existing) return existing.id;
 
-    try {
-      const created = await tx.leadSource.create({
-        data: { name, companyId },
-        select: { id: true },
-      });
-      return created.id;
-    } catch {
-      const raced = await tx.leadSource.findFirst({
-        where: { name, deletedAt: null, companyId },
-        select: { id: true },
-      });
-      if (raced) return raced.id;
-      throw new NotFoundException("Lid manbasini yaratib bo'lmadi");
-    }
+    const created = await tx.leadSource.create({
+      data: { name, companyId },
+      select: { id: true },
+    });
+    return created.id;
   }
 
   /**
-   * `LeadsService` ni import QILMAYDI: `LeadsModule` allaqachon `StudentsModule`
-   * ni import qiladi, teskari import halqa yasaydi. Bu yerda doska mantig'i
-   * kerak emas, shuning uchun `prisma.lead` ga to'g'ridan yoziladi.
-   *
-   * `tx` — o'quvchi yaratilayotgan tranzaksiya. Lid yozilmasa o'quvchi ham
-   * yozilmaydi; hodisa (event) mexanizmi bu kafolatni bera olmaydi.
+   * Telefon bo'yicha ulanadigan lidlar. Faqat o'qiydi — to'ldirish skriptining
+   * quruq ishga tushirishi ham shu predikatdan foydalanadi, shunda "kim ulanadi,
+   * kim yaratiladi" ko'rsatuvi haqiqiy yozuv bilan hech qachon farq qilmaydi.
    */
-  async recordDirectOrigin(
-    tx: Prisma.TransactionClient,
-    params: DirectOriginParams,
-  ): Promise<void> {
-    const now = new Date();
-
-    const matched = await tx.lead.findMany({
+  async findMatchingLeadIds(
+    db: Prisma.TransactionClient,
+    phone: string,
+    companyId: number,
+  ): Promise<string[]> {
+    const matched = await db.lead.findMany({
       where: {
-        phone: params.phone,
-        companyId: params.companyId,
+        phone,
+        companyId,
         OR: [
           // Doskadagi tirik lid.
           { deletedAt: null, statusEnum: { in: LIVE_MATCHABLE_STAGES } },
@@ -137,6 +145,54 @@ export class StudentLeadOriginService {
       },
       select: { id: true },
     });
+    return matched.map((l) => l.id);
+  }
+
+  /**
+   * `/students` eshigi uchun — manbani admin tanlagan.
+   *
+   * `LeadsService` ni import QILMAYDI: `LeadsModule` allaqachon `StudentsModule`
+   * ni import qiladi, teskari import halqa yasaydi. Bu yerda doska mantig'i
+   * kerak emas, shuning uchun `prisma.lead` ga to'g'ridan yoziladi.
+   *
+   * `tx` — o'quvchi yaratilayotgan tranzaksiya. Lid yozilmasa o'quvchi ham
+   * yozilmaydi; hodisa (event) mexanizmi bu kafolatni bera olmaydi.
+   */
+  async recordDirectOrigin(
+    tx: Prisma.TransactionClient,
+    params: DirectOriginParams,
+  ): Promise<OriginOutcome> {
+    return this.applyOrigin(tx, params, () => Promise.resolve(params.sourceId));
+  }
+
+  /**
+   * O'zi ro'yxatdan o'tadigan yo'llar uchun (Telegram boti, mock imtihon).
+   *
+   * Manba faqat YANGI lid yaratilganda hal qilinadi. Telefon eski kartochkaga
+   * ulansa, u kartochka o'z manbasini saqlaydi — oldindan manba yaratish esa
+   * hech qaysi lid ko'rsatmaydigan bo'sh qatorni ro'yxatda qoldirardi.
+   */
+  async recordSelfSignupOrigin(
+    tx: Prisma.TransactionClient,
+    params: SelfSignupOriginParams,
+    sourceName: string,
+  ): Promise<OriginOutcome> {
+    return this.applyOrigin(tx, params, () =>
+      this.resolveSelfSignupSourceId(tx, sourceName, params.companyId),
+    );
+  }
+
+  private async applyOrigin(
+    tx: Prisma.TransactionClient,
+    params: SelfSignupOriginParams,
+    resolveSourceId: () => Promise<string>,
+  ): Promise<OriginOutcome> {
+    const now = new Date();
+    const matchedIds = await this.findMatchingLeadIds(
+      tx,
+      params.phone,
+      params.companyId,
+    );
 
     const conversionFields = {
       statusEnum: LeadStatus.CONVERTED,
@@ -149,7 +205,7 @@ export class StudentLeadOriginService {
       statusChangeReason: null,
     };
 
-    if (matched.length > 0) {
+    if (matchedIds.length > 0) {
       // Mavjud lid o'z bo'limida va o'z manbasi bilan qoladi — uning kelib
       // chiqishi haqiqat, admin endi tanlagan manba emas. Filial esa AKSINCHA:
       // konversiya odam haqiqatda o'qiy boshlagan filialda sanaladi, shuning
@@ -161,7 +217,7 @@ export class StudentLeadOriginService {
       // Arxivdan qaytarish maydonlari bilan birga: aylantirilgan LOST lid
       // endi arxiv qatori emas, haqiqiy konversiya.
       await tx.lead.updateMany({
-        where: { id: { in: matched.map((l) => l.id) } },
+        where: { id: { in: matchedIds } },
         data: {
           ...conversionFields,
           branchId: params.branchId,
@@ -171,10 +227,10 @@ export class StudentLeadOriginService {
           lostReason: null,
         },
       });
-      return;
+      return { kind: 'matched', leadIds: matchedIds };
     }
 
-    await tx.lead.create({
+    const created = await tx.lead.create({
       data: {
         firstName: params.firstName,
         lastName: params.lastName,
@@ -182,9 +238,11 @@ export class StudentLeadOriginService {
         companyId: params.companyId,
         branchId: params.branchId,
         sectionId: null,
-        sourceId: params.sourceId,
+        sourceId: await resolveSourceId(),
         ...conversionFields,
       },
+      select: { id: true },
     });
+    return { kind: 'created', leadId: created.id };
   }
 }

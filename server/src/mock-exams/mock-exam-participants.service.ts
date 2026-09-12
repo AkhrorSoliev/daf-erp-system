@@ -381,21 +381,19 @@ export class MockExamParticipantsService {
       // 3. Har bir o'quvchi lid yozuvi qoldiradi (ADR-0017). Bu yo'l ham
       //    `/students` eshigidan o'tmaydi, shuning uchun lidni o'zi yozadi.
       //    O'sha tranzaksiya ichida: lid yozilmasa o'quvchi ham yozilmaydi.
-      const sourceId = await this.leadOrigin.resolveSelfSignupSourceId(
+      await this.leadOrigin.recordSelfSignupOrigin(
         tx,
+        {
+          studentId: created.id,
+          firstName: created.firstName,
+          lastName: created.lastName,
+          phone: created.phone,
+          branchId: dto.branchId,
+          companyId,
+          userId,
+        },
         SELF_SIGNUP_SOURCE.MOCK_EXAM,
-        companyId,
       );
-      await this.leadOrigin.recordDirectOrigin(tx, {
-        studentId: created.id,
-        firstName: created.firstName,
-        lastName: created.lastName,
-        phone: created.phone,
-        branchId: dto.branchId,
-        companyId,
-        sourceId,
-        userId,
-      });
 
       // 4. Link the participant to the new student.
       await tx.mockExamParticipant.update({

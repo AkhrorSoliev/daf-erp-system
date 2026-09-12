@@ -14,8 +14,10 @@ import { EntityHistoryService } from '../common/entity-history';
 import { TransactionsService } from '../transactions/transactions.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
-import { StudentLeadOriginService } from '../common/student-origin/student-lead-origin.service';
-import { StudentOrigin } from '../common/student-origin/student-origin.types';
+import {
+  StudentLeadOriginService,
+  type StudentOrigin,
+} from '../common/student-origin';
 import { generatePassword } from '../common/utils/password.util';
 import {
   STUDENT_ROLE_ID,

@@ -30,16 +30,38 @@ ma'lumoti tekshirilganda aniqlandi.
 
 ## Qaror
 
-**Kafolat tip tizimida emas, matn darajasidagi qorovulda beriladi.**
+**Kafolat IKKI qatlamda beriladi, chunki har biri yolg'iz yetarli emas.**
 
+**1-qatlam — matn qorovuli.**
 `common/student-origin/student-origin.single-source.spec.ts` butun `src/` ni
-o'qiydi va `student.create(` yozadigan har bir faylni topadi. Fayl ruxsat
-etilgan ro'yxatda bo'lmasa — **build yiqiladi**. Ro'yxatdagi har bir fayl
-`recordDirectOrigin` ni ham chaqirishi shart.
+o'qiydi va Student qatorini yozadigan har bir faylni topadi
+(`.student.create(`, `createMany(`, `upsert(` — o'zgaruvchi nomidan qat'i
+nazar). Fayl ruxsat ro'yxatida bo'lmasa — **build yiqiladi**. Ro'yxatdagi har
+bir fayl lid yozuvini ham chaqirishi shart.
 
 Loyihada bu amaliyot yangi emas: kun chegarasi (ADR-0016) va «faol o'quvchi»
-ta'rifi (ADR-0015) ham aynan shunday qorovul bilan ushlab turiladi. Farqi
-shundaki, u yerda qorovul birinchi urinishdayoq tanlangan edi.
+ta'rifi (ADR-0015) ham aynan shunday qorovul bilan ushlab turiladi.
+
+**2-qatlam — har yo'lning xatti-harakat testi.**
+Qorovul chaqiruv faylda BORLIGINI ko'radi, u haqiqatan ishlashini emas. Bu
+tekshirildi: chaqiruv o'lik shox ichiga (`if (false)`) yashirilganda qorovul
+**o'tib ketdi**, xatti-harakat testi esa **yiqildi**. Shuning uchun uchala
+yo'lning har birida lid O'SHA tranzaksiya ichida, to'g'ri qiymatlar bilan
+yozilishini va lid yozuvi yiqilsa o'quvchi ham yozilmasligini tekshiradigan
+test bor:
+
+- `students/students-write.origin.spec.ts`
+- `telegram/scenes/student-registration-flow.spec.ts`
+- `mock-exams/mock-exam-participants.convert-origin.spec.ts`
+
+Qorovul yangi yo'lni **topadi**, test esa uning **to'g'ri** ekanini
+isbotlaydi. Qorovulning xabari yangi yo'l qo'shuvchidan test yozishni ham
+talab qiladi.
+
+**Qorovul nimani ushlamaydi — ochiq yozib qo'yilgan:** boshqa modeldan
+ichma-ich yozuv (`enrollment.create({ data: { student: { create } } })`) —
+hozir bunday yo'l yo'q va repoda odat emas; va `scripts/`, `prisma/seed.ts`
+dagi dev ma'lumot urug'lari — ular prod voronkasiga tushmaydi.
 
 **Uchala yo'l ham endi lid yozadi**, har biri o'z tranzaksiyasi ichida:
 lid yozilmasa o'quvchi ham yozilmaydi.
@@ -54,7 +76,22 @@ import qiladi, ya'ni `StudentsModule` ichida qolsa modul halqasi yasalardi.
 odam yo'q, lekin «qayerdan keldi» savoliga javob baribir bor. Shuning uchun
 manba `null` qoldirilmaydi — «Telegram bot» va «Mock imtihon» nomli manba
 topiladi, bo'lmasa yaratiladi. Admin ularni oddiy manba ro'yxatida qayta
-nomlashi mumkin; qidiruv nomdan keyin id bo'yicha ketadi.
+nomlashi mumkin.
+
+Manba **faqat yangi lid yaratilganda** hal qilinadi. Telefon eski kartochkaga
+ulansa, u kartochka o'z manbasini saqlaydi — oldindan manba yaratish ro'yxatda
+hech qaysi lid ko'rsatmaydigan bo'sh qator qoldirardi.
+
+**Poyga haqida halol:** `LeadSource.name` da unikal cheklov yo'q. Ikkita
+ro'yxat bir vaqtda kelsa ikkovi ham topa olmay, ikkovi ham **muvaffaqiyatli**
+yaratadi — natija ikkita bir xil nomli manba. Bu ma'lumotni buzmaydi (admin
+birini o'chiradi), va to'liq yopish migratsiya talab qiladi, bu ish esa
+migratsiyasiz. Xato ataylab ushlanmaydi: Postgres interaktiv tranzaksiyada
+yiqilgan so'rovdan keyin butun tranzaksiyani «aborted» qiladi, ya'ni qayta
+qidirish baribir yiqilardi — ushlash faqat asl xatoning nomini yashirardi.
+
+**Xizmat nima qilganini qaytaradi** (`created` yoki `matched`). Bu to'ldirish
+skripti uchun hal qiluvchi — pastda.
 
 ## Ko'rib chiqilgan muqobillar
 
@@ -81,6 +118,20 @@ Ular tuzatish ishlaganda lidga ega bo'lishi kerak edi. Bu ADR-0017 ning
 «eski 892 o'quvchiga tegilmaydi» qaroriga zid emas: chegara — tuzatish sanasi,
 va o'sha kuni tuzatishdan **oldin** kelganlar ham tegilmaydigan to'plamda
 qoladi. Shuning uchun skript kun emas, soat qabul qiladi.
+
+**Skript faqat O'ZI YARATGAN lidning sanasini o'zgartiradi.** Yangi lidning
+`createdAt` i o'quvchiniki bilan tenglanadi — aks holda voronka uni bugun
+kelgan deb sanardi. Lekin telefon bo'yicha **eski kartochkaga ulangan**
+o'quvchida sana o'zgartirilmaydi: u kartochka doskada haftalar oldin
+ochilgan haqiqiy lid, uning `createdAt` i odam qachon kelganining yagona
+yozuvi. Birinchi versiya ikkala holni ham qayta yozardi — bu bazani
+tiklamasdan qaytarib bo'lmaydigan xato edi, ko'rikda topildi va skript
+xizmatning `created`/`matched` natijasi bo'yicha ajratadigan qilindi. Quruq
+ishga tushirish har o'quvchi uchun qaysi hol ekanini oldindan ko'rsatadi
+(10.09 dagi 13 ta holatda hammasi yangi lid edi).
+
+Skript idempotent: ikkinchi marta ishga tushsa lidsiz o'quvchi qolmagani
+uchun hech narsa yozmaydi.
 
 **Manba ro'yxatiga ikkita yangi qator qo'shiladi** («Telegram bot»,
 «Mock imtihon») — birinchi marta o'sha yo'ldan o'quvchi kelganda.

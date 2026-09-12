@@ -241,30 +241,80 @@ describe('StudentLeadOriginService', () => {
       });
     });
 
-    it('poygada yaratish yiqilsa qayta qidiradi', async () => {
-      // Ikkita bot ro'yxati bir vaqtda kelsa ikkovi ham topa olmay
-      // yaratishga uriniladi — g'olibi topilishi kerak, xato emas.
-      tx.leadSource.create.mockRejectedValue(new Error('unique violation'));
-      tx.leadSource.findFirst
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ id: 'src-raqib' });
-
-      const id = await service.resolveSelfSignupSourceId(
-        tx,
-        'Telegram bot',
-        COMPANY,
-      );
-
-      expect(id).toBe('src-raqib');
-    });
-
-    it('poygadan keyin ham topilmasa xato beradi', async () => {
-      tx.leadSource.create.mockRejectedValue(new Error('boshqa xato'));
-      tx.leadSource.findFirst.mockResolvedValue(null);
+    // Poyga uchun "qayta qidirish" yo'q, ataylab: `LeadSource.name` da unikal
+    // cheklov yo'q, ya'ni poyga xato bermaydi — ikkovi ham yaratadi. Xato esa
+    // Postgres interaktiv tranzaksiyasini "aborted" qiladi, shuning uchun
+    // o'sha `tx` bilan qayta qidirish baribir yiqilardi. Asl xato o'z nomi
+    // bilan chiqishi kerak.
+    it("yaratish xatosini yashirmaydi — asl xato o'z nomi bilan chiqadi", async () => {
+      tx.leadSource.create.mockRejectedValue(new Error('ulanish uzildi'));
 
       await expect(
         service.resolveSelfSignupSourceId(tx, 'Telegram bot', COMPANY),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow('ulanish uzildi');
+      expect(tx.leadSource.findFirst).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // Natija to'ldirish skripti uchun hal qiluvchi: u faqat O'ZI YARATGAN lidning
+  // sanasini o'zgartirishi kerak. Telefon bo'yicha ulangan eski kartochka
+  // haftalar oldin ochilgan haqiqiy lid — uning sanasi saqlanishi shart.
+  describe('natija (OriginOutcome)', () => {
+    it("yangi lid yaratilganda 'created' va uning id sini qaytaradi", async () => {
+      tx.lead.create.mockResolvedValue({ id: 'lead-yangi' });
+
+      await expect(service.recordDirectOrigin(tx, baseParams)).resolves.toEqual(
+        { kind: 'created', leadId: 'lead-yangi' },
+      );
+    });
+
+    it("mavjud lidga ulanganda 'matched' va ulangan id larni qaytaradi", async () => {
+      tx.lead.findMany.mockResolvedValue([{ id: 'lead-1' }, { id: 'lead-2' }]);
+
+      await expect(service.recordDirectOrigin(tx, baseParams)).resolves.toEqual(
+        { kind: 'matched', leadIds: ['lead-1', 'lead-2'] },
+      );
+    });
+  });
+
+  describe('recordSelfSignupOrigin', () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { sourceId: _unused, ...selfParams } = baseParams;
+
+    it("yangi lid yaratganda manbani nomi bo'yicha hal qiladi", async () => {
+      tx.leadSource.findFirst.mockResolvedValue({ id: 'src-bot' });
+
+      await service.recordSelfSignupOrigin(tx, selfParams, 'Telegram bot');
+
+      expect(tx.lead.create.mock.calls[0][0].data).toMatchObject({
+        sourceId: 'src-bot',
+        sectionId: null,
+        convertedStudentId: 555,
+      });
+    });
+
+    // Eski kartochka o'z manbasini saqlaydi, shuning uchun manba umuman kerak
+    // emas — oldindan yaratish ro'yxatda hech qaysi lid ko'rsatmaydigan bo'sh
+    // qator qoldirardi.
+    it('mavjud lidga ulanganda manbani na qidiradi, na yaratadi', async () => {
+      tx.lead.findMany.mockResolvedValue([{ id: 'lead-1' }]);
+
+      await service.recordSelfSignupOrigin(tx, selfParams, 'Telegram bot');
+
+      expect(tx.leadSource.findFirst).not.toHaveBeenCalled();
+      expect(tx.leadSource.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findMatchingLeadIds', () => {
+    it("faqat o'qiydi va id lar ro'yxatini qaytaradi", async () => {
+      tx.lead.findMany.mockResolvedValue([{ id: 'a' }, { id: 'b' }]);
+
+      await expect(
+        service.findMatchingLeadIds(tx, '901234567', COMPANY),
+      ).resolves.toEqual(['a', 'b']);
+      expect(tx.lead.updateMany).not.toHaveBeenCalled();
+      expect(tx.lead.create).not.toHaveBeenCalled();
     });
   });
 });

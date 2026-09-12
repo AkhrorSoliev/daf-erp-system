@@ -94,22 +94,20 @@ export async function registerStudentFromTelegram(
       },
     });
 
-    const sourceId = await leadOrigin.resolveSelfSignupSourceId(
+    await leadOrigin.recordSelfSignupOrigin(
       tx,
+      {
+        studentId: created.id,
+        firstName: created.firstName,
+        lastName: created.lastName,
+        phone: created.phone,
+        branchId: data.branchId,
+        companyId: DEFAULT_COMPANY_ID,
+        // Bot orqali odam O'ZI ro'yxatdan o'tadi — aylantirgan admin yo'q.
+        userId: undefined,
+      },
       SELF_SIGNUP_SOURCE.TELEGRAM_BOT,
-      DEFAULT_COMPANY_ID,
     );
-    await leadOrigin.recordDirectOrigin(tx, {
-      studentId: created.id,
-      firstName: created.firstName,
-      lastName: created.lastName,
-      phone: created.phone,
-      branchId: data.branchId,
-      companyId: DEFAULT_COMPANY_ID,
-      sourceId,
-      // Bot orqali odam O'ZI ro'yxatdan o'tadi — aylantirgan admin yo'q.
-      userId: undefined,
-    });
 
     return created;
   });

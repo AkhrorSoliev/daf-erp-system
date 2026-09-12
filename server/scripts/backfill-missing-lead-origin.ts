@@ -100,40 +100,53 @@ async function main(prisma: PrismaClient) {
       continue;
     }
 
+    // Quruq ishga tushirishda ham yozuv bilan AYNAN bir predikat — "kim
+    // ulanadi, kim yaratiladi" ko'rsatuvi haqiqiy natijadan farq qilmaydi.
+    const matches = await origin.findMatchingLeadIds(
+      prisma as never,
+      s.phone,
+      s.companyId,
+    );
+    const action = matches.length
+      ? `eski kartochkaga ulanadi (${matches.length} ta) — sanasi O'ZGARMAYDI`
+      : `yangi lid yaratiladi, manba: ${sourceName}`;
     console.log(
-      `  #${s.id} ${s.firstName} ${s.lastName} | ${s.createdAt.toISOString().slice(0, 10)} | manba: ${sourceName}`,
+      `  #${s.id} ${s.firstName} ${s.lastName} | ${s.createdAt.toISOString().slice(0, 10)} | ${action}`,
     );
     if (!apply) continue;
 
     await prisma.$transaction(async (tx) => {
-      const sourceId = await origin.resolveSelfSignupSourceId(
+      const outcome = await origin.recordSelfSignupOrigin(
         tx,
+        {
+          studentId: s.id,
+          firstName: s.firstName,
+          lastName: s.lastName,
+          phone: s.phone,
+          branchId,
+          companyId: s.companyId,
+        },
         sourceName,
-        s.companyId,
       );
-      await origin.recordDirectOrigin(tx, {
-        studentId: s.id,
-        firstName: s.firstName,
-        lastName: s.lastName,
-        phone: s.phone,
-        branchId,
-        companyId: s.companyId,
-        sourceId,
-      });
-      // Lid o'quvchi bilan bir vaqtda tug'ilishi kerak edi, shuning uchun
-      // yozuv sanasi ham o'quvchining sanasi bo'ladi — aks holda voronka
-      // ularni bugun kelgan deb sanaydi.
-      await tx.lead.updateMany({
-        where: { convertedStudentId: s.id },
-        data: { createdAt: s.createdAt, statusChangedAt: s.createdAt },
-      });
+
+      // Sana faqat O'ZIMIZ YARATGAN lidda o'quvchinikiga tenglanadi: u o'quvchi
+      // bilan bir vaqtda tug'ilishi kerak edi, aks holda voronka uni bugun
+      // kelgan deb sanaydi. Ulangan eski kartochka esa haftalar oldin doskada
+      // ochilgan haqiqiy lid — uning `createdAt` i odam qachon kelganining
+      // yagona yozuvi, qayta yozilsa bazani tiklamasdan qaytarib bo'lmaydi.
+      if (outcome.kind === 'created') {
+        await tx.lead.update({
+          where: { id: outcome.leadId },
+          data: { createdAt: s.createdAt, statusChangedAt: s.createdAt },
+        });
+      }
     });
     written++;
   }
 
   console.log(
     apply
-      ? `\nYozildi: ${written} ta lid.`
+      ? `\nYozildi: ${written} ta o'quvchi.`
       : "\nHech narsa yozilmadi. Yozish uchun --apply qo'shing.",
   );
 }
