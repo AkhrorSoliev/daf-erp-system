@@ -37,16 +37,22 @@ export function FormResponsesClient({ formId }: { formId: string }) {
   const [restoreTarget, setRestoreTarget] = useState<RestoreLeadTarget | null>(null);
 
   useEffect(() => {
+    let ignore = false;
     api
       .get<CustomFormDetail>(`/custom-forms/${formId}`)
       .then(({ data }) => {
+        if (ignore) return;
         setForm(data);
         setName(formId, data.title);
       })
       .catch((error) => {
+        if (ignore) return;
         toast.error(getErrorMessage(error, "Formani yuklashda xatolik"));
-        router.push("/leads/forms");
+        router.replace("/leads/forms");
       });
+    return () => {
+      ignore = true;
+    };
   }, [formId, router, setName]);
 
   // Lid kartasidagi «Ko'chirish», «O'quvchiga aylantirish» va tiklash dialogi

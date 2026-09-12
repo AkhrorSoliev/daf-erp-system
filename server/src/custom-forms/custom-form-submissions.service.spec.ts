@@ -414,6 +414,10 @@ describe('CustomFormSubmissionsService', () => {
       { id: 'old1', label: "O'chirilgan maydon 1" },
       { id: 'old2', label: "O'chirilgan maydon 2" },
     ]);
+    const legacyScanCall = prisma.customFormSubmission.findMany.mock.calls.find(
+      ([args]: [any]) => !args.select.id,
+    )[0];
+    expect(legacyScanCall.orderBy).toEqual({ submittedAt: 'asc' });
   });
 
   it("export sahifasiz, eng ko'pi 5000 qator", async () => {

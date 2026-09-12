@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, type ReactNode } from "react";
-import { PhoneCall, SearchX, Share2, type LucideIcon } from "lucide-react";
+import {
+  AlertCircle,
+  PhoneCall,
+  SearchX,
+  Share2,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyFormLinkButton } from "../copy-form-link-dialog";
 import { TablePagination } from "../table-pagination";
@@ -18,8 +24,16 @@ interface Props {
 }
 
 export function FormResponsesBody({ slug, submissions, onOpenLead, onRestore }: Props) {
-  const { result, loading, filters, setFilters, resetFilters, toggleCalled } =
-    submissions;
+  const {
+    result,
+    loading,
+    error,
+    filters,
+    setFilters,
+    resetFilters,
+    toggleCalled,
+    refetch,
+  } = submissions;
   const changeFilters = useCallback(
     (updates: Partial<ToolbarFilters>) => setFilters({ ...updates, page: 1 }),
     [setFilters],
@@ -38,6 +52,24 @@ export function FormResponsesBody({ slug, submissions, onOpenLead, onRestore }: 
   }, [result, loading, filters.page, filters.pageSize, setFilters]);
 
   if (!result) {
+    // Filtr o'zi 400 bilan yiqilishi mumkin (masalan eski/qo'lda o'zgartirilgan
+    // ?stage= havolasi) — bunday holda toolbar ko'rsatilmagani uchun
+    // foydalanuvchi filtrni tozalay olmay qoladi. Xatolik bo'lsa qayta urinish
+    // tugmasi bilan ko'rsatiladi, aks holda jadval yuklanish holatida turadi.
+    if (!loading && error) {
+      return (
+        <EmptyState
+          icon={AlertCircle}
+          title="Javoblarni yuklab bo'lmadi"
+          description={error}
+          action={
+            <Button variant="outline" onClick={() => void refetch()}>
+              Qayta urinish
+            </Button>
+          }
+        />
+      );
+    }
     return (
       <ResponsesTable
         rows={[]}
@@ -129,16 +161,23 @@ function NoResponsesYet({ slug }: { slug: string }) {
 function EmptyState({
   icon: Icon,
   title,
+  description,
   action,
 }: {
   icon: LucideIcon;
   title: string;
+  description?: string;
   action: ReactNode;
 }) {
   return (
     <div className="flex flex-col items-center gap-3 rounded-md border px-4 py-12 text-center">
       <Icon className="size-7 text-muted-foreground" />
-      <p className="text-sm text-muted-foreground">{title}</p>
+      <div className="space-y-1">
+        <p className="text-sm text-muted-foreground">{title}</p>
+        {description && (
+          <p className="text-sm text-muted-foreground/80">{description}</p>
+        )}
+      </div>
       {action}
     </div>
   );

@@ -11,7 +11,24 @@ import {
   submissionsCsvFileName,
   withCalled,
 } from "./submission-format";
-import type { SubmissionsExport, SubmissionsResponse } from "./types";
+import {
+  SUBMISSION_STAGES,
+  type SubmissionsExport,
+  type SubmissionsResponse,
+  type SubmissionStage,
+} from "./types";
+
+/**
+ * Hand-edited/stale `?stage=` qiymati DTO'ning `@IsIn(SUBMISSION_STAGES)`
+ * tekshiruvidan o'tmaydi va har bir so'rovda 400 qaytarib sahifani
+ * ishlatib bo'lmaydigan holga keltiradi. Noma'lum qiymat "bosqich
+ * tanlanmagan" deb o'qiladi.
+ */
+function clampStage(stage: string): SubmissionStage | "" {
+  return (SUBMISSION_STAGES as readonly string[]).includes(stage)
+    ? (stage as SubmissionStage)
+    : "";
+}
 
 export const SUBMISSION_FILTER_SCHEMA = {
   stage: { type: "string" as const, defaultValue: "" },
@@ -24,13 +41,23 @@ export const SUBMISSION_FILTER_SCHEMA = {
 };
 
 export function useFormSubmissions(formId: string) {
-  const { filters, setFilters, resetFilters } = useUrlFilters(
+  const { filters: rawFilters, setFilters, resetFilters } = useUrlFilters(
     SUBMISSION_FILTER_SCHEMA,
   );
   const user = useAuth((s) => s.user);
   const [result, setResult] = useState<SubmissionsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+
+  // Hand-edited/stale `?stage=` havolasi noma'lum bosqichni yuboradi —
+  // bunday qiymat "bosqich tanlanmagan" deb o'qiladi, so'rov va chip
+  // holati bir xil manbadan keladi.
+  const stage = clampStage(rawFilters.stage);
+  const filters = useMemo(
+    () => ({ ...rawFilters, stage }),
+    [rawFilters, stage],
+  );
 
   // «Bekor qilish» toast'i qator o'zgarganidan keyin chaqiriladi — eng oxirgi
   // holatni o'qish uchun.
@@ -41,13 +68,13 @@ export function useFormSubmissions(formId: string) {
 
   const queryParams = useMemo(
     () => ({
-      stage: filters.stage || undefined,
+      stage: stage || undefined,
       source: listParam(filters.source),
       search: filters.search.trim() || undefined,
       startDate: filters.startDate || undefined,
       endDate: filters.endDate || undefined,
     }),
-    [filters.stage, filters.source, filters.search, filters.startDate, filters.endDate],
+    [stage, filters.source, filters.search, filters.startDate, filters.endDate],
   );
 
   const refetch = useCallback(async () => {
@@ -64,8 +91,10 @@ export function useFormSubmissions(formId: string) {
         },
       );
       setResult(data);
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Javoblarni yuklashda xatolik"));
+      setError(null);
+    } catch (err) {
+      setError(getErrorMessage(err, "Javoblarni yuklashda xatolik"));
+      toast.error(getErrorMessage(err, "Javoblarni yuklashda xatolik"));
     } finally {
       setLoading(false);
     }
@@ -141,6 +170,7 @@ export function useFormSubmissions(formId: string) {
     resetFilters,
     result,
     loading,
+    error,
     refetch,
     toggleCalled,
     exporting,

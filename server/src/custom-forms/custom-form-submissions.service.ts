@@ -309,6 +309,7 @@ export class CustomFormSubmissionsService {
     const records = await this.prisma.customFormSubmission.findMany({
       where: { formId },
       select: { data: true },
+      orderBy: { submittedAt: 'asc' },
     });
     const legacy: string[] = [];
     for (const { data } of records) {
