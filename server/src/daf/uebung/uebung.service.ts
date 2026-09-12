@@ -22,6 +22,7 @@ import type {
 } from './frage.types';
 import { toPublic } from './frage.types';
 import { dialogLuecke } from './dialog-fragen';
+import { hoerenWahl } from './hoer-fragen';
 import { bevorzugteFormate } from './kind-formate';
 import { naechsterZustand } from './leitner';
 import {
@@ -173,6 +174,10 @@ function richtigeAntwort(
       // olinmaydi (dialog satri Leitner narvoniga kirmaydi — pastdagi
       // `itemType === 'WORT'` sharti buni allaqachon ta'minlaydi).
       return { richtig: material.de, akzeptiert: [] };
+    case 'HOEREN_WAHL':
+      // `ladeMaterial` `de`ga `DafHoerFrage.richtig`ni qo'yadi.
+      // `akzeptiert` bo'sh: variantlar aynan, yozish yo'q.
+      return { richtig: material.de, akzeptiert: [] };
     case 'AUDIO_WORT':
       // To'g'ri javob — eshitilgan so'zning o'zi (`ziel.de`, artiklsiz —
       // `wort-fragen.ts`dagi `audioWort` bilan bir xil). Bu holat yo'q
@@ -221,6 +226,12 @@ export interface PruefenContext {
 export interface PruefenErgebnis {
   isCorrect: boolean;
   richtig: string;
+  /**
+   * FAQAT `HOEREN_WAHL` — suhbat matni javobdan KEYIN ochiladi
+   * (o'quvchi nimani eshitmaganini ko'radi). Boshqa formatda `undefined`,
+   * savol bilan birga hech qachon yuborilmaydi (D6/D7).
+   */
+  transkript?: Array<{ sprecher: string; de: string; uz: string }>;
 }
 
 /**
@@ -600,7 +611,10 @@ export class UebungService {
         } as any),
         this.prisma.dafDialog.findMany({
           where: { sectionId: { in: sectionIds } },
-          include: { zeilen: { orderBy: { order: 'asc' } } },
+          include: {
+            zeilen: { orderBy: { order: 'asc' } },
+            fragen: { orderBy: { order: 'asc' } },
+          },
         } as any),
       ]);
 
@@ -634,6 +648,14 @@ export class UebungService {
       titelDe: string;
       sectionId: number;
       zeilen: Array<{ id: number; sprecher: string; de: string; uz: string }>;
+      audioKey: string | null;
+      fragen: Array<{
+        id: number;
+        frageDe: string;
+        frageUz: string;
+        richtig: string;
+        falsch: string[];
+      }>;
     }
 
     const kodVon = (sectionId: number | null): string =>
@@ -662,9 +684,14 @@ export class UebungService {
         de: z.de,
         uz: z.uz,
       })),
-      // PLACEHOLDER: Task 8 haqiqiy ustunlarni o'qiydi.
-      audioKey: null,
-      fragen: [],
+      audioKey: d.audioKey,
+      fragen: d.fragen.map((f) => ({
+        id: f.id,
+        frageDe: f.frageDe,
+        frageUz: f.frageUz,
+        richtig: f.richtig,
+        falsch: f.falsch,
+      })),
     });
 
     // `core: false` so'zlar so'ralmaydi VA chalg'ituvchi sifatida ham
@@ -771,6 +798,14 @@ export class UebungService {
         .flatMap((o) => o.zeilen);
       const dl = dialogLuecke(d, andereZeilen, rnd);
       if (dl) rohKandidaten.push(dl);
+    }
+
+    // Eshitish savoli — audiosi va savoli bor har dialog uchun bitta
+    // nomzod. `hoerenWahl` audiosiz dialogda `null` qaytaradi, ya'ni
+    // ovoz yasalmaguncha format o'z-o'zidan o'chiq.
+    for (const d of dialoge) {
+      const hw = hoerenWahl(d, rnd, (key) => this.mediaUrl(key));
+      if (hw) rohKandidaten.push(hw);
     }
 
     // Qoida 5 (dizayn 4.3): ketma-ket ikki SEANSDA bir xil (so'z+format)
@@ -906,6 +941,14 @@ export class UebungService {
       throw new NotFoundException(`Material topilmadi: ${itemType}:${itemId}`);
     }
 
+    if (format === 'HOEREN_WAHL' && itemType !== 'HOERFRAGE') {
+      // `PAAR`/`ZUORDNEN` qorovuli bilan bir xil sabab: DTO `itemType` va
+      // `format`ni mustaqil tekshiradi.
+      throw new BadRequestException(
+        'HOEREN_WAHL savoli faqat eshitish savoliga tegishli',
+      );
+    }
+
     let isCorrect: boolean;
     let richtig: string;
     // `PAAR` uchun har bir juftning O'Z natijasi — Leitner holatini
@@ -1033,6 +1076,14 @@ export class UebungService {
       );
     }
 
+    if (format === 'HOEREN_WAHL' && material.dialogId != null) {
+      const zeilen = (await this.prisma.dafDialogLine.findMany({
+        where: { dialogId: material.dialogId },
+        orderBy: { order: 'asc' },
+        select: { sprecher: true, de: true, uz: true },
+      } as any)) as Array<{ sprecher: string; de: string; uz: string }>;
+      return { isCorrect, richtig, transkript: zeilen };
+    }
     return { isCorrect, richtig };
   }
 
@@ -1371,6 +1422,8 @@ export class UebungService {
     artikel?: string | null;
     /** Faqat `WORT` uchun — `PAAR` javobini shu unitga cheklash uchun kerak. */
     unitId?: number;
+    /** Faqat `HOERFRAGE` uchun — javobdan keyin transkriptni ochish uchun. */
+    dialogId?: number;
   } | null> {
     if (itemType === 'WORT') {
       const row = (await this.prisma.dafLexeme.findUnique({
@@ -1404,6 +1457,21 @@ export class UebungService {
         uz: string;
       } | null;
       return row;
+    }
+    if (itemType === 'HOERFRAGE') {
+      // `de` — to'g'ri javob (`richtigeAntwort` shu maydonni o'qiydi),
+      // `uz` — savolning o'zbekchasi (hech qayerda solishtirilmaydi).
+      // `dialogId` — javobdan keyin transkriptni ochish uchun.
+      const row = (await this.prisma.dafHoerFrage.findUnique({
+        where: { id: itemId },
+      } as any)) as {
+        richtig: string;
+        frageUz: string;
+        dialogId: number;
+      } | null;
+      return row
+        ? { de: row.richtig, uz: row.frageUz, dialogId: row.dialogId }
+        : null;
     }
     const row = (await this.prisma.dafPhrase.findUnique({
       where: { id: itemId },

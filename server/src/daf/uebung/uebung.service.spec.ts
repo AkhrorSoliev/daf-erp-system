@@ -160,8 +160,16 @@ function fakePrisma() {
       id: 201,
       titelDe: 'Dialog 1',
       sectionId: 7,
-      audioKey: null,
-      fragen: [],
+      audioKey: 'daf/audio/d1.mp3',
+      fragen: [
+        {
+          id: 401,
+          frageDe: 'Wie geht es A?',
+          frageUz: 'A qalay?',
+          richtig: 'gut',
+          falsch: ['nicht gut', 'sehr gut'],
+        },
+      ],
       zeilen: [
         { id: 301, order: 1, sprecher: 'A', de: 'Hallo!', uz: 'Salom!' },
         {
@@ -292,6 +300,25 @@ function fakePrisma() {
         for (const d of dialog) {
           const z = d.zeilen.find((zeile) => zeile.id === where.id);
           if (z) return { de: z.de, uz: z.uz };
+        }
+        return null;
+      }),
+      findMany: jest.fn(
+        async ({ where }: any) =>
+          dialog
+            .find((d) => d.id === where.dialogId)
+            ?.zeilen.map((z) => ({
+              sprecher: z.sprecher,
+              de: z.de,
+              uz: z.uz,
+            })) ?? [],
+      ),
+    },
+    dafHoerFrage: {
+      findUnique: jest.fn(async ({ where }: any) => {
+        for (const d of dialog) {
+          const f = d.fragen.find((x: any) => x.id === where.id);
+          if (f) return { ...f, dialogId: d.id };
         }
         return null;
       }),
@@ -2328,5 +2355,141 @@ describe('juft — TARTIB TRIPWIRE (stateful)', () => {
     expect(
       (prisma.dafAttempt.create as jest.Mock).mock.calls[1][0].data.points,
     ).toBe(0);
+  });
+});
+
+describe('HOEREN_WAHL', () => {
+  const ctx = { studentId: 55, companyId: 1 };
+  const config = {
+    get: (k: string) =>
+      k === 'R2_PUBLIC_URL' ? 'https://r2.example' : undefined,
+  };
+
+  it('audiosi va savoli bor dialogdan nomzod quriladi, audiosiz dialogdan emas', async () => {
+    // `UNIT_TEST` `HOEREN_WAHL` ni HAM, `DIALOG_LUECKE` ni HAM afzal
+    // ko'radi, va Task 6 dan beri ikkala format suhbatning HAMMA satrini
+    // band qiladi — ya'ni bitta suhbat ikkalasiga yetmaydi va qaysi biri
+    // joylashishi `rnd` ga bog'liq. Shuning uchun bitta urug'ga tayanish
+    // testni omadga bog'lab qo'yardi; o'rniga KO'P urug' bo'ylab ikkita
+    // xossa tekshiriladi: (1) chegara HECH QACHON buzilmaydi, (2) format
+    // ULANGAN — hech bo'lmasa ba'zi urug'larda chiqadi.
+    const prisma = fakePrisma();
+    prisma.dafLesson.findUnique = jest.fn(async () => ({
+      id: 100,
+      unitId: 1,
+      sectionId: 7,
+      kind: 'UNIT_TEST',
+      section: { id: 7, code: 'u01-s1', order: 1, unitId: 1 },
+    })) as any;
+    const svc = new UebungService(prisma as any, config as any);
+
+    let chiqqan = 0;
+    for (let i = 0; i < 20; i += 1) {
+      const fragen = await svc.seans(100, 55, mulberry32(i));
+      const hoeren = fragen.filter((f) => f.format === 'HOEREN_WAHL');
+      // Chegara: hech qachon bittadan ko'p emas.
+      expect(hoeren.length).toBeLessThanOrEqual(1);
+      for (const h of hoeren) {
+        // Faqat AUDIOSI bor dialogdan (201) — audiosiz 202 dan emas.
+        expect(h.itemType).toBe('HOERFRAGE');
+        expect(h.itemId).toBe(401);
+        expect(h.audioUrl).toBe('https://r2.example/daf/audio/d1.mp3');
+        // To'g'ri javob mijozga ketmaydi (D6/D7).
+        expect((h as any).richtig).toBeUndefined();
+        chiqqan += 1;
+      }
+    }
+    expect(chiqqan).toBeGreaterThan(0);
+  });
+
+  it('config yo`q (R2_PUBLIC_URL sozlanmagan) — eshitish savoli qurilmaydi', async () => {
+    const prisma = fakePrisma();
+    const fragen = await new UebungService(prisma as any).seans(
+      100,
+      55,
+      () => 0.5,
+    );
+    expect(fragen.filter((f) => f.format === 'HOEREN_WAHL')).toEqual([]);
+  });
+
+  it('pruefen: to`g`ri javob, transkript faqat javobdan keyin', async () => {
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any, config as any).pruefen(
+      {
+        itemType: 'HOERFRAGE',
+        itemId: 401,
+        format: 'HOEREN_WAHL',
+        given: 'gut',
+      },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(true);
+    expect(r.richtig).toBe('gut');
+    expect(r.transkript).toEqual([
+      { sprecher: 'A', de: 'Hallo!', uz: 'Salom!' },
+      {
+        sprecher: 'B',
+        de: 'Hallo, wie geht es dir?',
+        uz: 'Salom, ahvoling qalay?',
+      },
+      { sprecher: 'A', de: 'Gut, danke.', uz: 'Yaxshi, rahmat.' },
+      { sprecher: 'B', de: 'Bis bald!', uz: "Ko'rishguncha!" },
+    ]);
+  });
+
+  it('pruefen: xato javob ham transkriptni ochadi, ball yo`q, Leitner yo`q', async () => {
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any, config as any).pruefen(
+      {
+        itemType: 'HOERFRAGE',
+        itemId: 401,
+        format: 'HOEREN_WAHL',
+        given: 'nicht gut',
+      },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(false);
+    expect(r.transkript).toHaveLength(4);
+    // Ball va Leitner — mavjud `itemType !== 'WORT'` qoidasi: urinish
+    // yoziladi (0 ball, lexemeId null), holat jadvaliga tegilmaydi.
+    const attempt = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0]
+      .data;
+    expect(attempt.points).toBe(0);
+    expect(attempt.lexemeId).toBeNull();
+    expect(prisma.dafLexemeState.upsert).not.toHaveBeenCalled();
+  });
+
+  it('boshqa formatda transkript YO`Q', async () => {
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any, config as any).pruefen(
+      { itemType: 'WORT', itemId: 1, format: 'WORT_UZ', given: 'salom' },
+      ctx,
+    );
+    expect(r.transkript).toBeUndefined();
+  });
+
+  it('ersatz: eshitish savoliga o`rinbosar yo`q — null', async () => {
+    // Mijoz `null` ni «savol tugatildi» deb oladi (`ersatzKeldi`) —
+    // xato javob qaytmaydi, yangi kod yo'q.
+    const prisma = fakePrisma();
+    const e = await new UebungService(prisma as any, config as any).ersatz(
+      100,
+      55,
+      'HOERFRAGE',
+      401,
+      'HOEREN_WAHL',
+      () => 0.5,
+    );
+    expect(e).toBeNull();
+  });
+
+  it('itemType mos kelmasa rad etadi', async () => {
+    const prisma = fakePrisma();
+    await expect(
+      new UebungService(prisma as any, config as any).pruefen(
+        { itemType: 'WORT', itemId: 1, format: 'HOEREN_WAHL', given: 'gut' },
+        ctx,
+      ),
+    ).rejects.toThrow('HOEREN_WAHL savoli faqat eshitish savoliga tegishli');
   });
 });
