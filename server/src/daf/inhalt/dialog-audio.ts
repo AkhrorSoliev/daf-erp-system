@@ -8,10 +8,16 @@ import type { Dialog, DialogZeile } from './unit-inhalt.types';
  * — ovoz YASALGAN paytdagi matnning izi: matn keyin tahrirlansa
  * qo'riqchi yiqiladi, aks holda o'quvchi bir narsani eshitib, javobdan
  * keyin boshqa narsani o'qirdi.
+ *
+ * `polster` (Task 11e) — boshi/oxiriga jimlik qo'shilganini bildiradi:
+ * qiymati `audio-polster.ts`dagi `POLSTER_KENNUNG` ("700/1000", ms).
+ * Yo'q — hali ishlanmagan (eski yozuv yoki hali generatsiya qilinmagan);
+ * `daf-polster-dialog-audio.ts` shu maydon orqali qayta ishlashdan
+ * o'zini himoya qiladi.
  */
 export type DialogAudioManifest = Record<
   string,
-  { key: string; textHash: string }
+  { key: string; textHash: string; polster?: string }
 >;
 
 /**

@@ -175,4 +175,23 @@ export class R2Uploader {
 
     return { uploaded, skipped, failed };
   }
+
+  /**
+   * Baytlarni to'g'ridan-to'g'ri R2'ga yuklaydi — manba URL YO'Q holatlar
+   * uchun (Task 11e: ffmpeg bilan jimlik qo'shilgan audio). `uploadMissing`
+   * dan farqli o'laroq HECH QANDAY mavjudlikni tekshirmaydi va HECH QACHON
+   * o'tkazib yubormaydi — chaqiruvchi tomonidan TASODIFIY yangi kalit
+   * (`neuerAudioSchluessel()`) hosil qilinadi, demak kalit hech qachon
+   * oldin band bo'lmagan. Xato bo'lsa chaqiruvchiga uloqtiriladi.
+   */
+  async uploadBytes(key: string, body: Buffer): Promise<void> {
+    await this.s3.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: body,
+        ContentType: contentTypeOf(key),
+      }),
+    );
+  }
 }

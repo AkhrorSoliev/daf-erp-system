@@ -5,9 +5,11 @@ import {
   zuGenerierenDialoge,
   parseAuswahl,
   generiereDialogeNacheinander,
+  erstelleGeneriere,
   BELGI_CHEGARASI_DIALOG,
 } from './daf-gen-dialog-audio';
 import { dialogTextHash } from '../src/daf/inhalt/dialog-audio';
+import { POLSTER_KENNUNG } from '../src/daf/media/audio-polster';
 import type { Dialog } from '../src/daf/inhalt/unit-inhalt.types';
 import type { DialogAudioManifest } from '../src/daf/inhalt/dialog-audio';
 
@@ -161,6 +163,96 @@ describe('generiereDialogeNacheinander', () => {
     expect(manifest[a.id]?.key).toBe('daf/audio/a.mp3');
     expect(manifest[b.id]?.key).toBe('daf/audio/b.mp3');
     expect(speichereManifest).toHaveBeenCalledTimes(2);
+  });
+
+  // Task 11e: `generiere` `polster` maydonini qaytarsa, manifestga
+  // yoziladi. Bu ESKI testlarni buzmasligi kerak — ular `polster`siz
+  // `{key}` qaytaradi, va yuqoridagi ikkala testda ham manifest yozuvi
+  // shu maydonsiz TEKSHIRILADI (`toEqual({key, textHash})`, qo`shimcha
+  // maydonsiz). Demak `polster` chindan ixtiyoriy ekani ikki tomondan
+  // dalillanadi.
+  it('`generiere` `polster` bilan qaytarsa, manifestga shu ham yoziladi', async () => {
+    const a = d('u02-d1');
+    const manifest: DialogAudioManifest = {};
+    const inputsById = new Map([[a.id, dialogInputs(a, stimmen)]]);
+    const generiere = jest
+      .fn()
+      .mockResolvedValueOnce({
+        key: 'daf/audio/a.mp3',
+        polster: POLSTER_KENNUNG,
+      });
+    const speichereManifest = jest.fn();
+
+    await generiereDialogeNacheinander(
+      [a],
+      inputsById,
+      manifest,
+      generiere,
+      speichereManifest,
+    );
+
+    expect(manifest[a.id]).toEqual({
+      key: 'daf/audio/a.mp3',
+      textHash: dialogTextHash(a.zeilen),
+      polster: POLSTER_KENNUNG,
+    });
+  });
+});
+
+// Task 11e: bitta dialog uchun to'liq quvur — fal → yuklab oladi →
+// jimlik qo'shadi → YANGI kalit bilan yuklaydi. Bog'liqliklar
+// (fal/uploader/fetch/polster) INJEKTSIYA qilinadi, shuning uchun bu
+// yerda HECH QANDAY tarmoqqa chiqilmaydi — hammasi soxta.
+describe('erstelleGeneriere', () => {
+  it('fal → yuklab oladi → jimlik qo`shadi → YANGI kalit bilan yuklaydi, natijada polster bor', async () => {
+    const fal = { dialog: jest.fn().mockResolvedValue('https://fal.ai/x.mp3') };
+    const fetchFn = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
+    });
+    const polster = jest.fn().mockResolvedValue(Buffer.from([9, 9]));
+    const uploadBytes = jest.fn().mockResolvedValue(undefined);
+    const uploader = { uploadBytes };
+
+    const generiere = erstelleGeneriere(
+      fal as never,
+      uploader as never,
+      fetchFn as never,
+      polster,
+    );
+    const dialog = d('u02-d2');
+    const inputs = dialogInputs(dialog, stimmen);
+    const result = await generiere(dialog, inputs);
+
+    expect(fal.dialog).toHaveBeenCalledWith(inputs);
+    expect(fetchFn).toHaveBeenCalledWith('https://fal.ai/x.mp3');
+    // Jimlik qadami RAW (asl, ishlanmagan) baytlar bilan chaqirildi.
+    expect(polster).toHaveBeenCalledWith(Buffer.from([1, 2, 3]));
+    // Natija (jimlik qo'shilgan baytlar) YUKLANDI.
+    expect(uploadBytes).toHaveBeenCalledTimes(1);
+    const [yangiKalit, yuklanganBaytlar] = uploadBytes.mock.calls[0];
+    expect(yuklanganBaytlar).toEqual(Buffer.from([9, 9]));
+    expect(typeof yangiKalit).toBe('string');
+    expect(result).toEqual({ key: yangiKalit, polster: POLSTER_KENNUNG });
+  });
+
+  it('fal audiosi yuklab olinmasa (HTTP xato), TO`XTAYDI — jimlik va yuklash chaqirilmaydi', async () => {
+    const fal = { dialog: jest.fn().mockResolvedValue('https://fal.ai/x.mp3') };
+    const fetchFn = jest.fn().mockResolvedValue({ ok: false, status: 500 });
+    const polster = jest.fn();
+    const uploadBytes = jest.fn();
+
+    const generiere = erstelleGeneriere(
+      fal as never,
+      { uploadBytes } as never,
+      fetchFn as never,
+      polster,
+    );
+
+    await expect(generiere(d('u02-d2'), [])).rejects.toThrow(/HTTP 500/);
+    expect(polster).not.toHaveBeenCalled();
+    expect(uploadBytes).not.toHaveBeenCalled();
   });
 });
 

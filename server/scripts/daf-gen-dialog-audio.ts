@@ -39,9 +39,9 @@ import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { S3Client } from '@aws-sdk/client-s3';
 import { R2Uploader } from '../src/daf-content/media/r2-uploader';
-import type { AssetRef } from '../src/daf-content/dataset.types';
 import { FalClient } from '../src/daf/media/fal-client';
 import { neuerAudioSchluessel } from '../src/daf/media/audio-keys';
+import { polstereMp3, POLSTER_KENNUNG } from '../src/daf/media/audio-polster';
 import {
   dialogTextHash,
   type DialogAudioManifest,
@@ -186,7 +186,7 @@ function ladeDialoge(): Dialog[] {
 export type DialogGenerierFn = (
   dialog: Dialog,
   inputs: Array<{ voice: string; text: string }>,
-) => Promise<{ key: string }>;
+) => Promise<{ key: string; polster?: string }>;
 
 /**
  * Dialoglarni BIRIN-KETIN ishlaydi (2026-09-12 ko'rik, F2): har biri
@@ -214,7 +214,7 @@ export async function generiereDialogeNacheinander(
   speichereManifest: (manifest: DialogAudioManifest) => void,
 ): Promise<void> {
   for (const d of dialoge) {
-    let result: { key: string };
+    let result: { key: string; polster?: string };
     try {
       result = await generiere(d, inputsById.get(d.id)!);
     } catch (err) {
@@ -222,12 +222,53 @@ export async function generiereDialogeNacheinander(
         `"${d.titelDe}" (${d.id}) yasalmadi/yuklanmadi: ${(err as Error).message}`,
       );
     }
-    manifest[d.id] = { key: result.key, textHash: dialogTextHash(d.zeilen) };
+    manifest[d.id] = {
+      key: result.key,
+      textHash: dialogTextHash(d.zeilen),
+      // Task 11e: `generiere` jimlik qo'shgan bo'lsa (`polster` maydoni
+      // bilan qaytsa) shu yerda yoziladi. Eski chaqiruvchilar (testlar)
+      // `polster`siz `{key}` qaytaradi — u holda maydon UMUMAN
+      // qo'shilmaydi, mavjud "faqat key+textHash" assertsiyalari buzilmaydi.
+      ...(result.polster ? { polster: result.polster } : {}),
+    };
     speichereManifest(manifest);
     console.log(
       `  ${d.id}: ${d.titelDe} → yasaldi, yuklandi, manifestga yozildi`,
     );
   }
+}
+
+/**
+ * Bitta dialog uchun to'liq quvur (Task 11e): fal.ai orqali yasaydi,
+ * baytlarni yuklab oladi, JIMLIK QO'SHADI (`polster`), YANGI tasodifiy
+ * kalit bilan R2'ga yuklaydi.
+ *
+ * Bog'liqliklar (fal, uploader, fetchFn, polster) INJEKTSIYA QILINADI —
+ * `main()` haqiqiy nusxalarni beradi, testlar esa soxta (network'siz)
+ * nusxalar bilan «jimlik chaqirildi, natija yuklandi» ni tekshiradi.
+ *
+ * Eski `uploadMissing` yo'li BU YERDA ishlatilmaydi: kalit har doim
+ * YANGI va tasodifiy (`neuerAudioSchluessel()`), demak R2'da hech qachon
+ * oldindan mavjud bo'lmaydi — mavjudlikni tekshirish keraksiz.
+ */
+export function erstelleGeneriere(
+  fal: Pick<FalClient, 'dialog'>,
+  uploader: Pick<R2Uploader, 'uploadBytes'>,
+  fetchFn: typeof fetch,
+  polster: (bytes: Buffer) => Promise<Buffer>,
+): DialogGenerierFn {
+  return async (_d, inputs) => {
+    const sourceUrl = await fal.dialog(inputs);
+    const res = await fetchFn(sourceUrl);
+    if (!res.ok) {
+      throw new Error(`fal.ai audiosi yuklab olinmadi — HTTP ${res.status}`);
+    }
+    const roh = Buffer.from(await res.arrayBuffer());
+    const gepolstert = await polster(roh);
+    const key = neuerAudioSchluessel();
+    await uploader.uploadBytes(key, gepolstert);
+    return { key, polster: POLSTER_KENNUNG };
+  };
 }
 
 async function main(): Promise<void> {
@@ -271,27 +312,12 @@ async function main(): Promise<void> {
   });
   const uploader = new R2Uploader(s3, process.env.R2_BUCKET_NAME!);
 
-  // Bitta dialog uchun to'liq quvur: fal.ai orqali yasaydi, R2'ga BITTA
-  // aktiv sifatida yuklaydi. Muvaffaqiyatsiz yuklash uloqtiriladi —
+  // Bitta dialog uchun to'liq quvur: fal.ai orqali yasaydi, baytlarni
+  // yuklab oladi, JIMLIK QO'SHADI (Task 11e), R2'ga YANGI kalit bilan
+  // yuklaydi. Muvaffaqiyatsiz bosqich uloqtiriladi —
   // `generiereDialogeNacheinander` buni "bu dialog to'liq muvaffaqiyatsiz"
   // deb talqin qiladi va manifestga yozmaydi (F2).
-  const generiere: DialogGenerierFn = async (d, inputs) => {
-    const sourceUrl = await fal.dialog(inputs);
-    const key = neuerAudioSchluessel();
-    const asset: AssetRef = {
-      sourceUrl,
-      key,
-      kind: 'AUDIO',
-      license: 'Generated',
-      attribution: 'DaF Sprachzentrum — fal.ai ElevenLabs text-to-dialogue v3',
-      title: d.titelDe,
-    };
-    const r = await uploader.uploadMissing([asset]);
-    if (r.failed.length > 0) {
-      throw new Error(`R2 ga yuklanmadi — ${r.failed[0].reason}`);
-    }
-    return { key };
-  };
+  const generiere = erstelleGeneriere(fal, uploader, fetch, polstereMp3);
 
   await generiereDialogeNacheinander(
     qoldi,
