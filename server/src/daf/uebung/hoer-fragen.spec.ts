@@ -15,8 +15,8 @@ const dialog = (): MaterialDialog => ({
   fragen: [
     {
       id: 71,
-      frageDe: 'Wer ist Nodira?',
-      frageUz: 'Nodira kim?',
+      frageDe: 'Wer ist Lena?',
+      frageUz: 'Lena kim?',
       richtig: 'die Tochter',
       falsch: ['die Schwester', 'die Mutter'],
     },
@@ -39,8 +39,8 @@ describe('hoerenWahl', () => {
     expect(f.format).toBe('HOEREN_WAHL');
     expect(f.itemType).toBe('HOERFRAGE');
     expect(f.itemId).toBe(71);
-    expect(f.prompt).toBe('Wer ist Nodira?');
-    expect(f.hilfe).toBe('Nodira kim?');
+    expect(f.prompt).toBe('Wer ist Lena?');
+    expect(f.hilfe).toBe('Lena kim?');
     expect(f.options).toHaveLength(3);
     expect(f.options).toContain('die Tochter');
     expect(f.richtig).toBe('die Tochter');

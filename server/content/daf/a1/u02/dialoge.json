@@ -13,7 +13,7 @@
      "uz": "Bu sening oilangmi?"
     },
     {
-     "sprecher": "Timur",
+     "sprecher": "Thomas",
      "de": "Ja, das ist meine Familie.",
      "uz": "Ha, bu mening oilam."
     },
@@ -23,7 +23,7 @@
      "uz": "Bu kim?"
     },
     {
-     "sprecher": "Timur",
+     "sprecher": "Thomas",
      "de": "Das ist mein Vater.",
      "uz": "Bu mening otam."
     },
@@ -33,7 +33,7 @@
      "uz": "Bu-chi? Bu sening onangmi?"
     },
     {
-     "sprecher": "Timur",
+     "sprecher": "Thomas",
      "de": "Ja, das ist meine Mutter.",
      "uz": "Ha, bu mening onam."
     }
@@ -66,8 +66,8 @@
     },
     {
      "sprecher": "Jonas",
-     "de": "Sie heißt Nodira.",
-     "uz": "Uning ismi Nodira."
+     "de": "Sie heißt Lena.",
+     "uz": "Uning ismi Lena."
     },
     {
      "sprecher": "Anna",
@@ -81,7 +81,7 @@
     }
    ],
    "fragen": [
-    { "frageDe": "Wer ist Nodira?", "frageUz": "Nodira kim?", "richtig": "die Tochter", "falsch": ["die Schwester", "die Mutter"] },
+    { "frageDe": "Wer ist Lena?", "frageUz": "Lena kim?", "richtig": "die Tochter", "falsch": ["die Schwester", "die Mutter"] },
     { "frageDe": "Wo wohnen die Eltern?", "frageUz": "Ota-onasi qayerda yashaydi?", "richtig": "in Deutschland", "falsch": ["in Usbekistan", "hier"] }
    ]
   },
@@ -97,7 +97,7 @@
      "uz": "Bolalaring bormi?"
     },
     {
-     "sprecher": "Timur",
+     "sprecher": "Thomas",
      "de": "Ja, ich habe zwei Kinder.",
      "uz": "Ha, mening ikkita bolam bor."
     },
@@ -107,7 +107,7 @@
      "uz": "Akang-chi?"
     },
     {
-     "sprecher": "Timur",
+     "sprecher": "Thomas",
      "de": "Er hat drei Kinder.",
      "uz": "Uning uchta bolasi bor."
     },
@@ -117,13 +117,13 @@
      "uz": "Buving-chi?"
     },
     {
-     "sprecher": "Timur",
+     "sprecher": "Thomas",
      "de": "Meine Oma ist neunzig.",
      "uz": "Buvim to'qson yoshda."
     }
    ],
    "fragen": [
-    { "frageDe": "Hat Timur ein Kind, zwei Kinder oder drei Kinder?", "frageUz": "Timurning bitta, ikkita yoki uchta bolasi bormi?", "richtig": "zwei Kinder", "falsch": ["ein Kind", "drei Kinder"] },
+    { "frageDe": "Hat Thomas ein Kind, zwei Kinder oder drei Kinder?", "frageUz": "Thomasning bitta, ikkita yoki uchta bolasi bormi?", "richtig": "zwei Kinder", "falsch": ["ein Kind", "drei Kinder"] },
     { "frageDe": "Ist die Oma achtzig oder neunzig?", "frageUz": "Buvisi saksonmi yoki to'qson?", "richtig": "neunzig", "falsch": ["achtzig", "siebzig"] }
    ]
   },
@@ -139,7 +139,7 @@
      "uz": "Kasbing nima?"
     },
     {
-     "sprecher": "Nodira",
+     "sprecher": "Lena",
      "de": "Ich bin Ärztin. Und du?",
      "uz": "Men shifokorman. Sen-chi?"
     },
@@ -149,7 +149,7 @@
      "uz": "Men o'qituvchiman."
     },
     {
-     "sprecher": "Nodira",
+     "sprecher": "Lena",
      "de": "Wo arbeitest du?",
      "uz": "Qayerda ishlaysan?"
     },
@@ -159,13 +159,13 @@
      "uz": "Men shu yerda ishlayman."
     },
     {
-     "sprecher": "Nodira",
+     "sprecher": "Lena",
      "de": "Meine Schwester ist auch Lehrerin.",
      "uz": "Mening opam ham o'qituvchi."
     }
    ],
    "fragen": [
-    { "frageDe": "Ist Nodira Ärztin oder Lehrerin?", "frageUz": "Nodira shifokormi yoki o'qituvchi?", "richtig": "Ärztin", "falsch": ["Lehrerin", "Chef"] },
+    { "frageDe": "Ist Lena Ärztin oder Lehrerin?", "frageUz": "Lena shifokormi yoki o'qituvchi?", "richtig": "Ärztin", "falsch": ["Lehrerin", "Chef"] },
     { "frageDe": "Was ist Markus? Lehrer oder Arzt?", "frageUz": "Markus kim? O'qituvchimi yoki shifokor?", "richtig": "Lehrer", "falsch": ["Arzt", "Chef"] }
    ]
   },
@@ -223,7 +223,7 @@
      "uz": "Bu kim? Bu sening hamkasbingmi?"
     },
     {
-     "sprecher": "Nodira",
+     "sprecher": "Lena",
      "de": "Nein, er ist mein Freund.",
      "uz": "Yo'q, u mening do'stim."
     },
@@ -233,7 +233,7 @@
      "uz": "U nima qiladi?"
     },
     {
-     "sprecher": "Nodira",
+     "sprecher": "Lena",
      "de": "Er studiert in Deutschland.",
      "uz": "U Germaniyada o'qiydi."
     },
@@ -243,7 +243,7 @@
      "uz": "Sizlar-chi? Birga o'rganasizlarmi?"
     },
     {
-     "sprecher": "Nodira",
+     "sprecher": "Lena",
      "de": "Ja, wir lernen zusammen.",
      "uz": "Ha, biz birga o'rganamiz."
     }

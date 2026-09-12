@@ -14,8 +14,8 @@ const basis = (): Dialog => ({
   ],
   fragen: [
     {
-      frageDe: 'Wer ist Nodira?',
-      frageUz: 'Nodira kim?',
+      frageDe: 'Wer ist Lena?',
+      frageUz: 'Lena kim?',
       richtig: 'die Tochter',
       falsch: ['die Schwester', 'die Mutter'],
     },

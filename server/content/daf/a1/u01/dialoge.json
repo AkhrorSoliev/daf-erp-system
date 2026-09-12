@@ -133,7 +133,7 @@
         }
       ],
       "fragen": [
-        { "frageDe": "Wie heißt der Herr?", "frageUz": "Janobning ismi nima?", "richtig": "Markus", "falsch": ["Jonas", "Timur"] },
+        { "frageDe": "Wie heißt der Herr?", "frageUz": "Janobning ismi nima?", "richtig": "Markus", "falsch": ["Jonas", "Thomas"] },
         { "frageDe": "Wie heißt die Frau?", "frageUz": "Ayolning ismi nima?", "richtig": "Claudia", "falsch": ["Anna", "Mia"] }
       ]
     },
@@ -144,7 +144,7 @@
       "titelUz": "Sen qayerdansan?",
       "zeilen": [
         {
-          "sprecher": "Doniyor",
+          "sprecher": "Lukas",
           "de": "Woher kommst du?",
           "uz": "Sen qayerdansan?"
         },
@@ -154,7 +154,7 @@
           "uz": "Men Germaniyadanman. Sen-chi?"
         },
         {
-          "sprecher": "Doniyor",
+          "sprecher": "Lukas",
           "de": "Ich komme aus Usbekistan.",
           "uz": "Men O'zbekistondanman."
         },
@@ -164,7 +164,7 @@
           "uz": "Sen qayerda yashaysan?"
         },
         {
-          "sprecher": "Doniyor",
+          "sprecher": "Lukas",
           "de": "Ich wohne in Deutschland. Und du?",
           "uz": "Men Germaniyada yashayman. Sen-chi?"
         },
@@ -175,8 +175,8 @@
         }
       ],
       "fragen": [
-        { "frageDe": "Woher kommt Doniyor?", "frageUz": "Doniyor qayerdan?", "richtig": "aus Usbekistan", "falsch": ["aus Deutschland", "aus Usbekistan und aus Deutschland"] },
-        { "frageDe": "Wo wohnt Doniyor?", "frageUz": "Doniyor qayerda yashaydi?", "richtig": "in Deutschland", "falsch": ["in Usbekistan", "nicht in Deutschland"] }
+        { "frageDe": "Woher kommt Lukas?", "frageUz": "Lukas qayerdan?", "richtig": "aus Usbekistan", "falsch": ["aus Deutschland", "aus Usbekistan und aus Deutschland"] },
+        { "frageDe": "Wo wohnt Lukas?", "frageUz": "Lukas qayerda yashaydi?", "richtig": "in Deutschland", "falsch": ["in Usbekistan", "nicht in Deutschland"] }
       ]
     },
     {
@@ -272,7 +272,7 @@
         }
       ],
       "fragen": [
-        { "frageDe": "Wie heißt die Frau?", "frageUz": "Ayolning ismi nima?", "richtig": "Anna Weber", "falsch": ["Anna Karimova", "Mia Weber"] },
+        { "frageDe": "Wie heißt die Frau?", "frageUz": "Ayolning ismi nima?", "richtig": "Anna Weber", "falsch": ["Anna Neumann", "Mia Weber"] },
         { "frageDe": "Ist das V oder W?", "frageUz": "Bu V mi yoki W?", "richtig": "W", "falsch": ["V", "Y"] }
       ]
     }

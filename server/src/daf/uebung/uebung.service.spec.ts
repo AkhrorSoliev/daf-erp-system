@@ -120,7 +120,7 @@ function fakePrisma() {
   ];
   const sentence = [
     { id: 11, de: 'Ich bin Anna.', uz: 'Men Annaman.', sectionId: 7 },
-    { id: 12, de: 'Du bist Timur.', uz: 'Sen Timursan.', sectionId: 7 },
+    { id: 12, de: 'Du bist Thomas.', uz: 'Sen Thomassan.', sectionId: 7 },
     { id: 13, de: 'Ich bin hier.', uz: 'Men bu yerdaman.', sectionId: 7 },
     { id: 14, de: 'Wie geht es dir?', uz: 'Ahvoling qanday?', sectionId: 7 },
   ];
@@ -1582,7 +1582,7 @@ describe('pruefen — ZUORDNEN', () => {
     'xayrlashish=Auf Wiedersehen!',
     'rahmat aytish=Danke!',
     "so'rash=Wie heißen Sie?",
-    'javob berish=Ich heiße Timur.',
+    'javob berish=Ich heiße Thomas.',
   ].join('|');
 
   function fakeMitPhrasen() {
@@ -1626,8 +1626,8 @@ describe('pruefen — ZUORDNEN', () => {
       {
         id: 6,
         funktionUz: 'javob berish',
-        de: 'Ich heiße Timur.',
-        uz: 'Mening ismim Timur.',
+        de: 'Ich heiße Thomas.',
+        uz: 'Mening ismim Thomas.',
         unitId: 1,
       },
     ];
@@ -1683,7 +1683,7 @@ describe('pruefen — ZUORDNEN', () => {
       'xayrlashish=Auf Wiedersehen!',
       'rahmat aytish=Danke!',
       "so'rash=Wie heißen Sie?",
-      'salomlashish=Ich heiße Timur.',
+      'salomlashish=Ich heiße Thomas.',
     ].join('|');
     const prisma = fakeMitPhrasen();
     const r = await new UebungService(prisma as any).pruefen(
@@ -1800,8 +1800,8 @@ describe('pruefen — ZUORDNEN', () => {
       {
         id: 6,
         funktionUz: 'javob berish',
-        de: 'Ich heiße Timur.',
-        uz: 'Mening ismim Timur.',
+        de: 'Ich heiße Thomas.',
+        uz: 'Mening ismim Thomas.',
         unitId: 1,
       },
     ];
@@ -1830,7 +1830,7 @@ describe('pruefen — ZUORDNEN', () => {
       'xayrlashish=Auf Wiedersehen!',
       'rahmat aytish=Danke!',
       "so'rash=Wie heißen Sie?",
-      'javob berish=Ich heiße Timur.',
+      'javob berish=Ich heiße Thomas.',
     ].join('|');
 
     const r = await new UebungService(prisma as any).pruefen(

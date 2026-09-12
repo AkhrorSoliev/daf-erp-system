@@ -9,7 +9,7 @@ export const FRAGEN_PRO_DIALOG = 2;
  * «To'g'ri javob suhbatda aytilgan» tekshiruvida HISOBGA OLINMAYDIGAN
  * so'zlar: artikl, old ko'makchi, `sein` shakllari, olmosh, bog'lovchi.
  *
- * `hilfswoerter.json` EMAS — u yerda atoqli otlar ham bor, «Nodira»
+ * `hilfswoerter.json` EMAS — u yerda atoqli otlar ham bor, «Lena»
  * esa aynan tekshirilishi kerak bo'lgan javob. Ro'yxat ataylab qisqa
  * va yopiq: kengaytirish qoidani bo'shatadi.
  */
