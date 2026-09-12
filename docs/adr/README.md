@@ -74,5 +74,6 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0015](0015-faol-oquvchi-tarifi-manifest.md) | «Faol o'quvchi» sanog'i manifest bilan majburlanadi | Qabul qilindi | 2026-09-10 |
 | [0016](0016-kun-chegarasi-toshkent-boyicha.md) | Kun chegarasi Toshkent bo'yicha, ustun tipiga qarab | Qabul qilindi | 2026-09-10 |
 | [0017](0017-har-bir-oquvchi-lid-sifatida-tugiladi.md) | Har bir o'quvchi lid sifatida tug'iladi | Qabul qilindi | 2026-09-10 |
+| [0018](0018-oquvchi-lidsiz-tugilmaydi-qorovul-bilan.md) | O'quvchi lidsiz tug'ilmaydi — kafolat qorovul bilan | Qabul qilindi | 2026-09-13 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.

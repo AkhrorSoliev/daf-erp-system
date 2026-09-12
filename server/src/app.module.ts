@@ -23,6 +23,7 @@ import { TelegramGroupsModule } from './telegram-groups/telegram-groups.module';
 import { ArchiveModule } from './archive/archive.module';
 import { StatusHistoryModule } from './common/status';
 import { EntityHistoryModule } from './common/entity-history';
+import { StudentOriginModule } from './common/student-origin';
 import { CommentsModule } from './comments/comments.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SmsModule } from './sms/sms.module';
@@ -94,6 +95,7 @@ import { validateEnv } from './config/env.validation';
     ArchiveModule,
     StatusHistoryModule,
     EntityHistoryModule,
+    StudentOriginModule,
     CommentsModule,
     NotificationsModule,
     SmsModule,

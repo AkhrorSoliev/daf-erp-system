@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { StudentsWriteService } from './students-write.service';
-import { StudentLeadOriginService } from './student-lead-origin.service';
+import { StudentLeadOriginService } from '../common/student-origin/student-lead-origin.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { StatusHistoryService } from '../common/status/status-history.service';

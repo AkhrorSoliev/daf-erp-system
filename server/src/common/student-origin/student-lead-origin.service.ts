@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { LeadStatus, Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 /**
  * Bo'limsiz lid — bu doskadagi kartochka emas, kelib chiqish yozuvi.
@@ -16,6 +16,21 @@ const LIVE_MATCHABLE_STAGES: LeadStatus[] = [
   LeadStatus.CONTACTED,
   LeadStatus.TRIAL,
 ];
+
+/**
+ * Odam o'zi ro'yxatdan o'tadigan yo'llarning manbasi.
+ *
+ * `/students` eshigida manbani admin tanlaydi, bu ikkovida esa tanlaydigan
+ * odam yo'q — lekin "qayerdan keldi" savoliga javob baribir bor: u botdan
+ * kelgan yoki mock imtihondan. Shuning uchun manba `null` qoldirilmaydi,
+ * shu nomlar bilan yoziladi. Admin keyin ularni oddiy manba ro'yxatida
+ * qayta nomlashi mumkin — bu nomlar faqat BIRINCHI yaratishda ishlatiladi,
+ * qidiruv esa id bo'yicha ketadi.
+ */
+export const SELF_SIGNUP_SOURCE = {
+  TELEGRAM_BOT: 'Telegram bot',
+  MOCK_EXAM: 'Mock imtihon',
+} as const;
 
 export interface DirectOriginParams {
   studentId: number;
@@ -49,6 +64,44 @@ export class StudentLeadOriginService {
     });
     if (!source) {
       throw new NotFoundException('Lid manbasi topilmadi');
+    }
+  }
+
+  /**
+   * Nomi bo'yicha manbani topadi, bo'lmasa yaratadi — o'zi ro'yxatdan
+   * o'tadigan yo'llar uchun (Telegram boti, mock imtihon), ularda manbani
+   * tanlaydigan admin yo'q.
+   *
+   * Poyga xavfsiz: ikkita bot ro'yxati bir vaqtda kelsa ikkovi ham topa
+   * olmay yaratishga urinadi, shuning uchun yaratish xatosidan keyin bir
+   * marta qayta qidiriladi. Nomi bo'yicha unikal indeks yo'q, ya'ni eng
+   * yomon holatda ikkita bir xil nomli manba qoladi — bu ma'lumotni
+   * buzmaydi, admin birini o'chiradi.
+   */
+  async resolveSelfSignupSourceId(
+    tx: Prisma.TransactionClient,
+    name: string,
+    companyId: number,
+  ): Promise<string> {
+    const existing = await tx.leadSource.findFirst({
+      where: { name, deletedAt: null, companyId },
+      select: { id: true },
+    });
+    if (existing) return existing.id;
+
+    try {
+      const created = await tx.leadSource.create({
+        data: { name, companyId },
+        select: { id: true },
+      });
+      return created.id;
+    } catch {
+      const raced = await tx.leadSource.findFirst({
+        where: { name, deletedAt: null, companyId },
+        select: { id: true },
+      });
+      if (raced) return raced.id;
+      throw new NotFoundException("Lid manbasini yaratib bo'lmadi");
     }
   }
 

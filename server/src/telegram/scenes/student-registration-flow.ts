@@ -5,6 +5,10 @@ import { DEFAULT_COMPANY_ID } from '../constants';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
 import { EntityHistoryService } from '../../common/entity-history';
+import {
+  SELF_SIGNUP_SOURCE,
+  StudentLeadOriginService,
+} from '../../common/student-origin';
 import { generatePassword } from '../../common/utils/password.util';
 import { downloadFile } from '../utils/download.util';
 
@@ -67,21 +71,47 @@ export async function uploadStudentPhoto(
 export async function registerStudentFromTelegram(
   prisma: PrismaService,
   entityHistoryService: EntityHistoryService,
+  leadOrigin: StudentLeadOriginService,
   data: RegistrationData,
   chatId: string,
 ): Promise<{ plainPassword: string }> {
-  const student = await prisma.student.create({
-    data: {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      phone: data.phone,
-      photo: data.photo,
-      telegramChatId: chatId,
-      companyId: DEFAULT_COMPANY_ID,
-      branches: {
-        create: [{ branchId: data.branchId }],
+  // Har bir o'quvchi lid yozuvi qoldiradi (ADR-0017). Bu yo'l `/students`
+  // eshigidan o'tmaydi — bazaga to'g'ridan yozadi — shuning uchun lidni
+  // o'zi yozishi kerak. O'quvchi va lid bitta tranzaksiyada: lid yozilmasa
+  // o'quvchi ham yozilmaydi, aks holda voronkada yana teshik qolardi.
+  const student = await prisma.$transaction(async (tx) => {
+    const created = await tx.student.create({
+      data: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone,
+        photo: data.photo,
+        telegramChatId: chatId,
+        companyId: DEFAULT_COMPANY_ID,
+        branches: {
+          create: [{ branchId: data.branchId }],
+        },
       },
-    },
+    });
+
+    const sourceId = await leadOrigin.resolveSelfSignupSourceId(
+      tx,
+      SELF_SIGNUP_SOURCE.TELEGRAM_BOT,
+      DEFAULT_COMPANY_ID,
+    );
+    await leadOrigin.recordDirectOrigin(tx, {
+      studentId: created.id,
+      firstName: created.firstName,
+      lastName: created.lastName,
+      phone: created.phone,
+      branchId: data.branchId,
+      companyId: DEFAULT_COMPANY_ID,
+      sourceId,
+      // Bot orqali odam O'ZI ro'yxatdan o'tadi — aylantirgan admin yo'q.
+      userId: undefined,
+    });
+
+    return created;
   });
 
   await entityHistoryService.recordCreate({

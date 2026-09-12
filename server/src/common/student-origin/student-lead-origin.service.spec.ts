@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { LeadStatus } from '@prisma/client';
 import { StudentLeadOriginService } from './student-lead-origin.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 /**
  * O'quvchi lidsiz tug'ilmasligi kerak. Prodda 936 o'quvchidan atigi 44 tasi
@@ -31,6 +31,10 @@ describe('StudentLeadOriginService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         create: jest.fn().mockResolvedValue({ id: 'lead-new' }),
+      },
+      leadSource: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'src-yangi' }),
       },
     };
 
@@ -202,6 +206,65 @@ describe('StudentLeadOriginService', () => {
         where: { id: 'src-instagram', deletedAt: null, companyId: COMPANY },
         select: { id: true },
       });
+    });
+  });
+
+  describe('resolveSelfSignupSourceId', () => {
+    it('mavjud manbani qaytaradi va yangisini yaratmaydi', async () => {
+      tx.leadSource.findFirst.mockResolvedValue({ id: 'src-bot' });
+
+      const id = await service.resolveSelfSignupSourceId(
+        tx,
+        'Telegram bot',
+        COMPANY,
+      );
+
+      expect(id).toBe('src-bot');
+      expect(tx.leadSource.create).not.toHaveBeenCalled();
+      expect(tx.leadSource.findFirst).toHaveBeenCalledWith({
+        where: { name: 'Telegram bot', deletedAt: null, companyId: COMPANY },
+        select: { id: true },
+      });
+    });
+
+    it('topilmasa yaratadi — bot uchun manbani hech kim tanlamaydi', async () => {
+      const id = await service.resolveSelfSignupSourceId(
+        tx,
+        'Telegram bot',
+        COMPANY,
+      );
+
+      expect(id).toBe('src-yangi');
+      expect(tx.leadSource.create).toHaveBeenCalledWith({
+        data: { name: 'Telegram bot', companyId: COMPANY },
+        select: { id: true },
+      });
+    });
+
+    it('poygada yaratish yiqilsa qayta qidiradi', async () => {
+      // Ikkita bot ro'yxati bir vaqtda kelsa ikkovi ham topa olmay
+      // yaratishga uriniladi — g'olibi topilishi kerak, xato emas.
+      tx.leadSource.create.mockRejectedValue(new Error('unique violation'));
+      tx.leadSource.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 'src-raqib' });
+
+      const id = await service.resolveSelfSignupSourceId(
+        tx,
+        'Telegram bot',
+        COMPANY,
+      );
+
+      expect(id).toBe('src-raqib');
+    });
+
+    it('poygadan keyin ham topilmasa xato beradi', async () => {
+      tx.leadSource.create.mockRejectedValue(new Error('boshqa xato'));
+      tx.leadSource.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.resolveSelfSignupSourceId(tx, 'Telegram bot', COMPANY),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });
