@@ -14,6 +14,25 @@
  *
  * `main()` faqat fayl to'g'ridan-to'g'ri ishga tushirilganda yuguradi
  * (`require.main === module`) — testlar import qilganda tarmoq yo'q.
+ *
+ * Pul xavfsizligi (2026-09-12 ko'rikda topilgan, shu faylda tuzatilgan):
+ *
+ * 1. Takroriy `--unit`/`--dialog` bayrog'i (masalan `--unit 2 --unit 2`)
+ *    bitta martalik tanlovga tushadi (`parseAuswahl`) — aks holda bitta
+ *    unit ikki marta yuklanib, ichidagi har bir dialog ikki marta PULLIK
+ *    generatsiya qilinardi. Ikkinchi qatlam sifatida yuklangan
+ *    ro'yxatning O'ZIDA ham bir xil `id` faqat BIR marta ishlanadi
+ *    (`zuGenerierenDialoge` ichida) — hech qanday kirish shakli bitta
+ *    dialogni ikki marta to'lamasin.
+ * 2. Har dialog BITTALAB ishlanadi (`generiereDialogeNacheinander`):
+ *    yasaladi → R2'ga yuklanadi → DARHOL manifestga yoziladi va fayl
+ *    saqlanadi, keyingisiga o'tishdan OLDIN. Ilgari BUTUN partiya
+ *    tugagandan keyin bitta yozuv bo'lgan — o'rtadagi bitta dialog
+ *    yiqilsa, undan oldingi PULLIK yasalgan dialoglarning kaliti hech
+ *    qayerga yozilmasdan yo'qolardi, keyingi yuritish esa ularni QAYTA
+ *    to'lardi. Endi N-dialog yiqilsa faqat O'SHA dialog "havoda qoladi";
+ *    1..N-1 allaqachon manifestda, xesh tekshiruvi ularni qayta
+ *    yasashdan saqlaydi.
  */
 import 'dotenv/config';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
@@ -66,14 +85,30 @@ export function dialogInputs(
   });
 }
 
-/** Manifestda xeshi mos dialoglar o'tkazib yuboriladi — idempotentlik. */
+/**
+ * Manifestda xeshi mos dialoglar o'tkazib yuboriladi — idempotentlik.
+ *
+ * Ikkinchi qatlam (2026-09-12 ko'rik, F1): ro'yxatda bir xil `id` IKKI
+ * marta kelib qolsa — argument tahlili qatlamida chetlab o'tilgan
+ * qanday yo'l bilan bo'lmasin — faqat BIRINCHISI qoladi. Bu funksiya
+ * generatsiyaga yuboriladigan RO'YXATNING O'ZI, shuning uchun himoya
+ * shu yerda eng kuchli: hech qanday kirish shakli bitta dialogni ikki
+ * marta PULLIK generatsiya qildirmasin.
+ */
 export function zuGenerierenDialoge(
   dialoge: Dialog[],
   manifest: DialogAudioManifest,
 ): Dialog[] {
-  return dialoge.filter(
-    (d) => manifest[d.id]?.textHash !== dialogTextHash(d.zeilen),
-  );
+  const korilganIdlar = new Set<string>();
+  const natija: Dialog[] = [];
+  for (const d of dialoge) {
+    if (korilganIdlar.has(d.id)) continue;
+    korilganIdlar.add(d.id);
+    if (manifest[d.id]?.textHash !== dialogTextHash(d.zeilen)) {
+      natija.push(d);
+    }
+  }
+  return natija;
 }
 
 export function gesamtZeichenDialoge(dialoge: Dialog[]): number {
@@ -92,26 +127,51 @@ export function pruefeDialogBudget(zeichen: number): void {
   }
 }
 
-function argValues(flag: string): string[] {
+function argValues(argv: string[], flag: string): string[] {
   const out: string[] = [];
-  process.argv.forEach((a, i) => {
-    if (a === flag && process.argv[i + 1]) out.push(process.argv[i + 1]);
+  argv.forEach((a, i) => {
+    if (a === flag && argv[i + 1]) out.push(argv[i + 1]);
   });
   return out;
 }
 
-function ladeDialoge(): Dialog[] {
-  const units = argValues('--unit').map(
-    (n) => `u${String(Number(n)).padStart(2, '0')}`,
+export interface Auswahl {
+  units: string[];
+  dialoge: string[];
+}
+
+/**
+ * `--unit`/`--dialog` bayroqlaridan tanlovni o'qiydi — DUBLIKATSIZ.
+ *
+ * F1 (2026-09-12 ko'rik): ilgari takroriy bayroq (masalan
+ * `--unit 2 --unit 2`) BIR XIL faylni IKKI marta yuklardi — 6 dialogli
+ * unit 12 ta yozuvga aylanardi, va har biri PULLIK ravishda IKKI marta
+ * generatsiya qilinardi (manifestda faqat OXIRGI kalit qolib,
+ * birinchisi R2'da yetim bo'lib qolardi). Shuning uchun `units` HAM,
+ * `dialoge` HAM `Set` orqali dublikatsizlanadi — bayroq bir marta
+ * yozilgani ham, ikki marta yozilgani ham bir xil natija beradi.
+ */
+export function parseAuswahl(argv: string[]): Auswahl {
+  const units = Array.from(
+    new Set(
+      argValues(argv, '--unit').map(
+        (n) => `u${String(Number(n)).padStart(2, '0')}`,
+      ),
+    ),
   );
-  const einzeln = argValues('--dialog');
-  if (units.length === 0 && einzeln.length === 0) {
+  const dialoge = Array.from(new Set(argValues(argv, '--dialog')));
+  if (units.length === 0 && dialoge.length === 0) {
     throw new Error('Kerak: --unit <raqam> yoki --dialog <kod>');
   }
-  for (const code of einzeln) {
+  for (const code of dialoge) {
     const unit = code.slice(0, 3);
     if (!units.includes(unit)) units.push(unit);
   }
+  return { units, dialoge };
+}
+
+function ladeDialoge(): Dialog[] {
+  const { units, dialoge: einzeln } = parseAuswahl(process.argv);
   const alle = units.flatMap(
     (u) =>
       (
@@ -121,6 +181,53 @@ function ladeDialoge(): Dialog[] {
       ).dialoge,
   );
   return einzeln.length > 0 ? alle.filter((d) => einzeln.includes(d.id)) : alle;
+}
+
+export type DialogGenerierFn = (
+  dialog: Dialog,
+  inputs: Array<{ voice: string; text: string }>,
+) => Promise<{ key: string }>;
+
+/**
+ * Dialoglarni BIRIN-KETIN ishlaydi (2026-09-12 ko'rik, F2): har biri
+ * `generiere` bilan yasaladi/yuklanadi, DARHOL manifestga yoziladi va
+ * `speichereManifest` bilan diskka saqlanadi — keyingisiga o'tishdan
+ * OLDIN.
+ *
+ * Ilgari BUTUN partiya tugagandan keyin bitta yozuv bo'lgan: o'rtadagi
+ * bitta dialog yiqilsa, undan OLDINGI PULLIK yasalgan dialoglarning
+ * kaliti hech qayerga yozilmasdan yo'qolardi, va keyingi yuritish
+ * ularni QAYTA to'lardi. Endi N-dialog yiqilsa xato tashqariga
+ * uloqtiriladi va sikl TO'XTAYDI, lekin 1..N-1 allaqachon manifestda VA
+ * diskda saqlangan — pul yo'qolmaydi, qayta yuritish faqat to'xtagan
+ * joydan davom etadi (xesh tekshiruvi ularni qayta yasashdan saqlaydi).
+ *
+ * `manifest` argument sifatida MUTATSIYA qilinadi (nusxa emas) — shuning
+ * uchun xato tashlangandan keyin ham chaqiruvchi allaqachon yozilgan
+ * yozuvlarni o'sha ob'ektning o'zidan ko'ra oladi.
+ */
+export async function generiereDialogeNacheinander(
+  dialoge: Dialog[],
+  inputsById: Map<string, Array<{ voice: string; text: string }>>,
+  manifest: DialogAudioManifest,
+  generiere: DialogGenerierFn,
+  speichereManifest: (manifest: DialogAudioManifest) => void,
+): Promise<void> {
+  for (const d of dialoge) {
+    let result: { key: string };
+    try {
+      result = await generiere(d, inputsById.get(d.id)!);
+    } catch (err) {
+      throw new Error(
+        `"${d.titelDe}" (${d.id}) yasalmadi/yuklanmadi: ${(err as Error).message}`,
+      );
+    }
+    manifest[d.id] = { key: result.key, textHash: dialogTextHash(d.zeilen) };
+    speichereManifest(manifest);
+    console.log(
+      `  ${d.id}: ${d.titelDe} → yasaldi, yuklandi, manifestga yozildi`,
+    );
+  }
 }
 
 async function main(): Promise<void> {
@@ -164,47 +271,46 @@ async function main(): Promise<void> {
   });
   const uploader = new R2Uploader(s3, process.env.R2_BUCKET_NAME!);
 
-  const assets: AssetRef[] = [];
-  const keyById = new Map<string, string>();
-  for (const d of qoldi) {
-    const sourceUrl = await fal.dialog(inputsById.get(d.id)!);
+  // Bitta dialog uchun to'liq quvur: fal.ai orqali yasaydi, R2'ga BITTA
+  // aktiv sifatida yuklaydi. Muvaffaqiyatsiz yuklash uloqtiriladi —
+  // `generiereDialogeNacheinander` buni "bu dialog to'liq muvaffaqiyatsiz"
+  // deb talqin qiladi va manifestga yozmaydi (F2).
+  const generiere: DialogGenerierFn = async (d, inputs) => {
+    const sourceUrl = await fal.dialog(inputs);
     const key = neuerAudioSchluessel();
-    keyById.set(d.id, key);
-    assets.push({
+    const asset: AssetRef = {
       sourceUrl,
       key,
       kind: 'AUDIO',
       license: 'Generated',
       attribution: 'DaF Sprachzentrum — fal.ai ElevenLabs text-to-dialogue v3',
       title: d.titelDe,
-    });
-    console.log(`  ${d.id}: ${d.titelDe} → yasaldi`);
-  }
-
-  const r = await uploader.uploadMissing(assets);
-  console.log(
-    `R2: yuklandi ${r.uploaded}, o'tkazildi ${r.skipped}, yiqildi ${r.failed.length}`,
-  );
-  const failed = new Set(r.failed.map((f) => f.key));
-
-  // FAQAT muvaffaqiyatli yuklangan kalit manifestga — aks holda o'quvchi
-  // yangramaydigan pleyerni ko'rardi.
-  for (const d of qoldi) {
-    const key = keyById.get(d.id)!;
-    if (failed.has(key)) {
-      console.error(`  DIQQAT: ${d.id} R2 ga yuklanmadi, manifestga YOZILMADI`);
-      process.exitCode = 1;
-      continue;
+    };
+    const r = await uploader.uploadMissing([asset]);
+    if (r.failed.length > 0) {
+      throw new Error(`R2 ga yuklanmadi — ${r.failed[0].reason}`);
     }
-    manifest[d.id] = { key, textHash: dialogTextHash(d.zeilen) };
-  }
-  writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + '\n');
-  console.log(`Manifest yangilandi: ${MANIFEST_PATH}`);
+    return { key };
+  };
+
+  await generiereDialogeNacheinander(
+    qoldi,
+    inputsById,
+    manifest,
+    generiere,
+    (m) => writeFileSync(MANIFEST_PATH, JSON.stringify(m, null, 2) + '\n'),
+  );
+  console.log(
+    `Manifest yangilandi: ${MANIFEST_PATH} (${qoldi.length} ta dialog).`,
+  );
 }
 
 if (require.main === module) {
   void main().catch((e: unknown) => {
-    console.error((e as Error).message);
+    // Butun xatoni (stack bilan) chop etadi — faqat `.message` emas,
+    // Error bo'lmagan uloqtirish ham `undefined` bo'lib qolmasin
+    // (2026-09-12 ko'rik, F5; `daf-gen-audio.ts` dagi bilan bir xil naqsh).
+    console.error(e);
     process.exit(1);
   });
 }
