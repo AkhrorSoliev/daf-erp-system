@@ -129,15 +129,27 @@ async function main(prisma: PrismaClient) {
         sourceName,
       );
 
-      // Sana faqat O'ZIMIZ YARATGAN lidda o'quvchinikiga tenglanadi: u o'quvchi
-      // bilan bir vaqtda tug'ilishi kerak edi, aks holda voronka uni bugun
-      // kelgan deb sanaydi. Ulangan eski kartochka esa haftalar oldin doskada
-      // ochilgan haqiqiy lid — uning `createdAt` i odam qachon kelganining
-      // yagona yozuvi, qayta yozilsa bazani tiklamasdan qaytarib bo'lmaydi.
+      // Ikki sana, ikki xil qoida.
+      //
+      // `statusChangedAt` — odam QACHON o'quvchi bo'ldi. Bu ikkala holda ham
+      // o'quvchining ro'yxatdan o'tgan vaqti, skript ishga tushgan kun emas:
+      // «aylanganlar» hisoboti shu maydon bo'yicha filtrlaydi, aks holda
+      // 10–12.09 da o'quvchi bo'lganlar skript kuni aylangan deb sanalardi.
+      //
+      // `createdAt` — odam QACHON lid bo'lib keldi. Bu faqat O'ZIMIZ YARATGAN
+      // lidda o'zgaradi (u o'quvchi bilan bir vaqtda tug'ilishi kerak edi).
+      // Ulangan eski kartochka esa haftalar oldin doskada ochilgan haqiqiy lid —
+      // uning `createdAt` i odam qachon kelganining yagona yozuvi, qayta
+      // yozilsa bazani tiklamasdan qaytarib bo'lmaydi.
       if (outcome.kind === 'created') {
         await tx.lead.update({
           where: { id: outcome.leadId },
           data: { createdAt: s.createdAt, statusChangedAt: s.createdAt },
+        });
+      } else {
+        await tx.lead.updateMany({
+          where: { id: { in: outcome.leadIds } },
+          data: { statusChangedAt: s.createdAt },
         });
       }
     });

@@ -22,7 +22,7 @@ import { join, relative } from 'path';
  * - Chaqiruv faylda BORLIGINI tekshiradi, u haqiqatan ishlashini emas. O'lik
  *   shox ichidagi chaqiruv ham o'tib ketadi. Bu qismni har yo'lning o'z
  *   xatti-harakat testi ushlaydi (`student-registration-flow.spec.ts`,
- *   `mock-exam-participants.service.spec.ts`, `students-write.origin.spec.ts`).
+ *   `mock-exam-participants.convert-origin.spec.ts`, `students-write.origin.spec.ts`).
  * - Boshqa modeldan ichma-ich yozuvni (`enrollment.create({ data: { student:
  *   { create } } })`) ko'rmaydi. Hozir bunday yo'l yo'q va repoda odat emas.
  * - Faqat `src/` ni o'qiydi. `scripts/` va `prisma/seed.ts` dagi o'quvchi
