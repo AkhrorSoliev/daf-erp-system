@@ -267,6 +267,7 @@ export function AddStudentDialog({
                 onChange={field.onChange}
                 label="Qayerdan bildi?"
                 required
+                id="add-student-sourceId"
                 error={form.formState.errors.sourceId?.message}
                 loadErrorMessage="Manbalar ro'yxati yuklanmadi — o'quvchi qo'shish uchun sahifani yangilang"
               />
