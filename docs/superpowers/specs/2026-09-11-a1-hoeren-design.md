@@ -93,7 +93,7 @@ Savollar `uNN/dialoge.json` dagi har dialogning ichida:
       "frageDe": "Wo wohnen die Eltern?",
       "frageUz": "Ota-onasi qayerda yashaydi?",
       "richtig": "in Deutschland",
-      "falsch": ["in Usbekistan", "hier"]
+      "falsch": ["in Usbekistan", "in Usbekistan und in Deutschland"]
     }
   ]
 }
@@ -116,7 +116,7 @@ bo'yicha yangilaydi.
    bitta so'zi suhbat satrlarida (`normalisieren` bo'yicha) uchrashi
    SHART. Hisobga olinmaydigan so'zlar — artikl, shaxs olmoshi, `sein`
    shakllari va bog'lovchilar: ular kodda yopiq kichik ro'yxat
-   (`hilfswoerter.json` EMAS — u yerda atoqli otlar ham bor, «Nodira»
+   (`hilfswoerter.json` EMAS — u yerda atoqli otlar ham bor, «Lena»
    esa aynan tekshirilishi kerak bo'lgan javob). Bu «suhbatda umuman
    yo'q narsani so'rash»ni to'xtatadi. `richtig` faqat shunday
    so'zlardan iborat bo'lsa (masalan `ja`), qoida qo'llanmaydi — faqat
@@ -174,9 +174,11 @@ migratsiya fayli commit bilan boradi va `start:prod` uni o'zi qo'llaydi
   variantlar aralashtiriladi. `MaterialDialog` ga `audioKey` va
   `fragen` qo'shiladi.
 - **`PublicFrage` ga yangi maydon kerak EMAS:** `frageUz` → `hilfe`
-  (izohida allaqachon «o'zbekcha tarjima» deyilgan), suhbat nomi →
-  `titel` (natija ekranidagi xato ro'yxati uchun, `DIALOG_LUECKE`
-  kabi), audio → `audioUrl`, `prompt` → `frageDe`.
+  (izohida allaqachon «o'zbekcha tarjima» deyilgan), audio →
+  `audioUrl`, `prompt` → `frageDe`. **`titel` yuborilmaydi** (yakuniy
+  ko'rik, 2026-09-13): dialog nomi 24 savoldan 5 tasida javobni ochib
+  beradi («Zwei Kinder» → «zwei Kinder», «Null bis elf» → «elf»), mijoz
+  esa bu formatda uni ko'rsatmaydi — natija ekrani `prompt` ni oladi.
 - **Bir suhbat bir seansda ikki marta chiqmaydi.** Eshitish savolining
   `belegteItems` i suhbatning HAMMA satrini (`DIALOGZEILE:id`) band
   qiladi. `DIALOG_LUECKE` ham shunday qilishga o'tadi — bugun u faqat
@@ -195,6 +197,13 @@ migratsiya fayli commit bilan boradi va `start:prod` uni o'zi qo'llaydi
 - Audio manzili umumiy `mediaUrl` qoidasi bilan (`R2_PUBLIC_URL`
   sozlanmasa — savol qurilmaydi, xom kalit sizmaydi).
 - Moyillik: `UNIT_TEST` seansida oldinga suriladi (`kind-formate.ts`).
+  **Hozircha uxlab turadi** (yakuniy ko'rik, 2026-09-13): `UNIT_TEST`
+  darsi bo'limsiz seed qilinadi, dvigatel bo'limsiz darsga savol
+  qurmaydi va mijoz eski dars sahifasiga tushadi — bu shoxdan oldin bor
+  holat. Moyillik qat'iy bo'linish emas, shuning uchun eshitish savoli
+  amalda `SECTION_A` / `SECTION_B` / `BRIDGE` seanslarida chiqadi (u01-s1
+  va u02-s1 da taxminan har ikkinchi seansda). Yakuniy sinovni dvigatelga
+  ulash — alohida ish.
 - `pruefen`: `richtigeAntwort` ga `HOEREN_WAHL` holati — `DafHoerFrage`
   dan `richtig` o'qiladi (`akzeptiert` bo'sh — variantlar aynan).
   `PruefenErgebnis` ga ixtiyoriy `transkript` (satrlar: gapiruvchi,
@@ -215,8 +224,12 @@ migratsiya fayli commit bilan boradi va `start:prod` uni o'zi qo'llaydi
 ### 7.1 Ovozlar
 
 `content/daf/a1/stimmen.json` — gapiruvchi ismi → ElevenLabs ovozi.
-12 ism (u01: Jonas, Mia, Walter, Claudia, Markus, Doniyor, Anna, Sabine,
-Peter, Helga; u02: Timur, Nodira). Jinsi va yoshiga qarab tanlanadi va
+12 ism (u01: Jonas, Mia, Walter, Claudia, Markus, Lukas, Anna, Sabine,
+Peter, Helga; u02: Thomas, Lena). **Ismlar doim nemischa** (CEO qarori,
+2026-09-12): namunani eshitgach Doniyor→Lukas, Timur→Thomas,
+Nodira→Lena, Karimova→Neumann almashtirildi. Ovozni CEO eshitib
+tanlaydi (Anna — Matilda, Jonas — Liam; Aria «tabiiy emas» deb rad
+etildi). Jinsi va yoshiga qarab tanlanadi va
 **butun kurs davomida o'zgarmaydi**. Ro'yxatda yo'q gapiruvchi uchun
 skript to'xtaydi (jimgina «standart ovoz» qo'yilmaydi).
 
@@ -231,18 +244,22 @@ audiosidagi qoida). Skript qisman yiqilsa R2 da yetim fayl qolishi
 mumkin — so'z audiosidagi ochiq qarz, bu yerda ham shunday; manifestga
 faqat muvaffaqiyatli yuklangan kalit yoziladi.
 
-**Namuna dialogi — `u02-d2`** («Meine Schwester»): unda «Nodira» ismi
-bor. Nemis TTS o'zbek ismlarini (Doniyor, Timur, Nodira, Karimova)
-xato o'qishi mumkin — darvoza aynan shuni sinashi kerak. Xato o'qisa
-yechim satrning `tts` maydoni (masalan `Nodiera`), ovozni almashtirish
-emas. Namuna `/media` sahifasida eshitiladi — alohida sahifa yo'q.
+**Namuna dialogi — `u02-d2`** («Meine Schwester»). Rejada o'zbek
+ismlarining talaffuzini sinash kerak edi; namuna o'rniga ikki qarorga olib
+keldi: ismlar nemischa bo'ldi (7.1) va ayol ovozlari qayta tanlandi.
+To'liq 12 suhbatni eshitgach yana ikkitasi: (1) harflab aytish
+(`u01-d6`) satrda haqiqiy harflar bilan yoziladi, talaffuzi `tts` da
+(«Weh. Eh. Beh. Eh. Err.»); (2) har faylning boshiga 0.7 s va oxiriga
+1 s jimlik qo'shiladi (`audio-polster.ts`, ffmpeg) — aks holda nutq
+birinchi soniyadayoq boshlanib, oxiri uzilib qolardi. Namunalar `/media`
+da va CEO uchun alohida eshitish sahifasida eshitildi.
 
 ### 7.3 Manifest va eskirishdan himoya
 
 `content/daf/a1/dialog-audio.json`:
 
 ```json
-{ "u02-d2": { "key": "daf/audio/9f3c….mp3", "textHash": "…" } }
+{ "u02-d2": { "key": "daf/audio/9f3c….mp3", "textHash": "…", "polster": "700/1000" } }
 ```
 
 `textHash` — satrlarning `sprecher` + `tts ?? de` dan hisoblangan xesh.
@@ -258,6 +275,10 @@ belgi = **≈ $0.16**; qayta yasash zaxirasi bilan ≤ $0.30.
 
 1. **Bitta** dialog (`u02-d2`, ≈ $0.01) → CEO `/media` da eshitadi.
 2. Tasdiqlansa — qolgan 11 ta (≈ $0.15).
+
+Amalda (2026-09-12): namuna $0.015 + uch ayol ovozi taqqoslash $0.044 +
+yangi ovozlar bilan 12 dialog $0.159 + `u01-d6` qayta yozish $0.013 ≈
+**$0.23**. Jimlik mavjud fayllarga bepul (ffmpeg) qo'shildi.
 
 Har bosqichdan oldin narx qayta tekshiriladi va summa aytiladi.
 
