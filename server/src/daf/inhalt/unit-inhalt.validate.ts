@@ -3,7 +3,9 @@ import type {
   RedemittelFile,
   HilfswoerterFile,
   Wort,
+  Satz,
 } from './unit-inhalt.types';
+import { normalisieren } from '../uebung/antwort';
 
 /**
  * Unit ichida matn NOYOB bo'lishi.
@@ -112,6 +114,49 @@ export function validateHilfswoerter(
         `${e.wort}: asosiy so'z (${kernId}) — yordamchi ro'yxatda tura olmaydi, ` +
           `aks holda o'z bo'limidan oldin ishlatilgani ko'rinmay qoladi`,
       );
+    }
+  }
+
+  return problems;
+}
+
+/**
+ * Gapning muqobil so'z tartiblari (`akzeptiert`) tekshiriladi.
+ *
+ * `SATZ_BAUEN` o'quvchiga FAQAT `de` ning so'zlarini aralashtirib beradi.
+ * Muqobil tartib boshqa so'z bilan (yoki bitta so'z ortiq yoki kam)
+ * yozilsa, o'quvchi uni hech qachon tuza olmaydi — ro'yxat yolg'on va'da
+ * bo'lib qoladi va xato hech qayerda ko'rinmaydi. Shuning uchun har
+ * muqobil aynan o'sha so'zlar to'plamidan tuzilgan bo'lishi, gapning
+ * o'zi bilan ham, boshqa muqobil bilan ham bir xil bo'lmasligi shart.
+ *
+ * Solishtiruv javob tekshiruvidagi bilan BIR XIL (`normalisieren`):
+ * katta-kichik harf va tinish belgisi hisobga olinmaydi — o'quvchi
+ * tuzgan javob ham aynan shunday solishtiriladi.
+ */
+export function validateSatzAlternativen(saetze: Satz[]): string[] {
+  const problems: string[] = [];
+  const soezlar = (text: string): string =>
+    normalisieren(text).split(' ').sort().join(' ');
+
+  for (const satz of saetze) {
+    const asl = normalisieren(satz.de);
+    const koerilgan = new Set<string>([asl]);
+    for (const muqobil of satz.akzeptiert ?? []) {
+      const n = normalisieren(muqobil);
+      if (koerilgan.has(n)) {
+        problems.push(
+          `${satz.sourceId}: «${muqobil}» — gapning o'zi yoki takroriy muqobil`,
+        );
+        continue;
+      }
+      koerilgan.add(n);
+      if (soezlar(muqobil) !== soezlar(satz.de)) {
+        problems.push(
+          `${satz.sourceId}: «${muqobil}» «${satz.de}» ning so'zlaridan ` +
+            `tuzilmagan — SATZ_BAUEN uni hech qachon tuza olmaydi`,
+        );
+      }
     }
   }
 

@@ -251,7 +251,7 @@ export class DafMediaFragenService {
         this.prisma.dafSentence.findMany({
           where: { sectionId: { in: sectionIds } },
           orderBy: { order: 'asc' },
-          select: { id: true, de: true, uz: true },
+          select: { id: true, de: true, uz: true, akzeptiert: true },
         } as any),
         this.prisma.dafPhrase.findMany({
           where: { sectionId: { in: sectionIds } },
@@ -284,6 +284,7 @@ export class DafMediaFragenService {
       id: number;
       de: string;
       uz: string;
+      akzeptiert: string[];
     }
     interface PhraseRow {
       id: number;
@@ -330,6 +331,7 @@ export class DafMediaFragenService {
       de: s.de,
       uz: s.uz,
       sectionCode: '',
+      akzeptiert: s.akzeptiert,
     }));
 
     const phrasen: MaterialPhrase[] = (phrasenRows as PhraseRow[]).map((p) => ({

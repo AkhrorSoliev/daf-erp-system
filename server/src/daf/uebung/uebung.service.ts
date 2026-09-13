@@ -147,7 +147,12 @@ function toWort(l: {
  */
 function richtigeAntwort(
   format: FrageFormat,
-  material: { de: string; uz: string; artikel?: string | null },
+  material: {
+    de: string;
+    uz: string;
+    artikel?: string | null;
+    akzeptiert?: string[];
+  },
 ): { richtig: string; akzeptiert: string[] } {
   switch (format) {
     case 'WORT_UZ':
@@ -166,6 +171,13 @@ function richtigeAntwort(
       }
       return { richtig: material.artikel, akzeptiert: [] };
     case 'SATZ_BAUEN':
+      // Gapning boshqa to'g'ri so'z tartiblari ham qabul qilinadi
+      // («In Deutschland wohne ich.» ↔ «Ich wohne in Deutschland.») —
+      // o'quvchi aynan shu so'zlardan to'g'ri nemischa gap tuzgan bo'lsa,
+      // uni «xato» deyish to'g'ri javobni jazolash bo'lardi. Ro'yxat
+      // kontentda qo'lda yoziladi (`saetze.json` → `akzeptiert`), qo'riqchi
+      // har biri aynan o'sha so'zlardan tuzilganini tekshiradi.
+      return { richtig: material.de, akzeptiert: material.akzeptiert ?? [] };
     case 'LUECKE':
     case 'REAKTION':
     case 'DIALOG_LUECKE':
@@ -635,6 +647,7 @@ export class UebungService {
       de: string;
       uz: string;
       sectionId: number | null;
+      akzeptiert: string[];
     }
     interface PhraseRow {
       id: number;
@@ -666,6 +679,7 @@ export class UebungService {
       de: s.de,
       uz: s.uz,
       sectionCode: kodVon(s.sectionId),
+      akzeptiert: s.akzeptiert,
     });
     const toPhrase = (p: PhraseRow): MaterialPhrase => ({
       id: p.id,
@@ -1424,6 +1438,8 @@ export class UebungService {
     unitId?: number;
     /** Faqat `HOERFRAGE` uchun — javobdan keyin transkriptni ochish uchun. */
     dialogId?: number;
+    /** Faqat `SATZ` uchun — gapning boshqa to'g'ri so'z tartiblari. */
+    akzeptiert?: string[];
   } | null> {
     if (itemType === 'WORT') {
       const row = (await this.prisma.dafLexeme.findUnique({
@@ -1442,6 +1458,7 @@ export class UebungService {
       } as any)) as {
         de: string;
         uz: string;
+        akzeptiert: string[];
       } | null;
       return row;
     }

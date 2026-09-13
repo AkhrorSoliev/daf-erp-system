@@ -206,6 +206,7 @@ export class InhaltSeedService {
         tts: s.tts ?? null,
         wordCount: s.wordCount,
         origin: s.origin,
+        akzeptiert: s.akzeptiert ?? [],
         // Ko'rsatish tartibi — hech kim bu qatorga ISHORA qilmaydi,
         // shuning uchun bu faqat displey uchun, identifikatsiya emas.
         order: i + 1,

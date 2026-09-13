@@ -3287,6 +3287,12 @@ model DafSentence {
   audioKey  String?
   wordCount Int
   origin    DafSentenceOrigin
+  /// Gapning BOSHQA to'g'ri so'z tartiblari (o'sha so'zlar, boshqa tartib):
+  /// `SATZ_BAUEN` ularni ham to'g'ri deb qabul qiladi. «Ich wohne in
+  /// Deutschland» va «In Deutschland wohne ich» — ikkalasi ham to'g'ri
+  /// nemischa; bittasini talab qilish to'g'ri javobni jazolaydi. Manba —
+  /// `saetze.json` dagi `akzeptiert`; bo'sh — tartib bitta.
+  akzeptiert String[]        @default([])
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
   sectionId Int?
