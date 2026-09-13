@@ -7,13 +7,13 @@ import {
 } from './format-skill';
 
 describe('format-skill reyestri', () => {
-  it("har bir jonli format ko`nikmaga ega", () => {
+  it('har bir jonli format ko`nikmaga ega', () => {
     for (const format of FRAGE_FORMATLAR) {
       expect(skillFuer(format)).not.toBeNull();
     }
   });
 
-  it("CEO tasdiqlagan xarita (13.09.2026): amalda nima qilyapti", () => {
+  it('CEO tasdiqlagan xarita (13.09.2026): amalda nima qilyapti', () => {
     expect(FORMAT_SKILL.ARTIKEL).toBe('WORTSCHATZ');
     expect(FORMAT_SKILL.REAKTION).toBe('WORTSCHATZ');
     expect(FORMAT_SKILL.ZUORDNEN).toBe('WORTSCHATZ');

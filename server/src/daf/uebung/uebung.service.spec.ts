@@ -1417,7 +1417,7 @@ describe('seans yakuni', () => {
     expect(lp.create.bestScore).toBe(10);
   });
 
-  it("abschluss: sessionId topilmagan seansga ishora qilsa ham DafLessonProgress yoziladi (403/404 yutiladi)", async () => {
+  it('abschluss: sessionId topilmagan seansga ishora qilsa ham DafLessonProgress yoziladi (403/404 yutiladi)', async () => {
     const prisma = fakePrisma();
     prisma.dafSession.findUnique = jest.fn(async () => null) as any;
     const r = await new UebungService(prisma as any).abschluss(

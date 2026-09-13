@@ -54,9 +54,7 @@ export const FORMAT_SKILL: Record<FrageFormat, DafSkill> = {
  */
 export const NAFAQADAGI_FORMAT_SKILL: Record<string, DafSkill> = {};
 
-export function skillFuer(
-  format: string | null | undefined,
-): DafSkill | null {
+export function skillFuer(format: string | null | undefined): DafSkill | null {
   if (!format) return null;
   if (format in FORMAT_SKILL) return FORMAT_SKILL[format as FrageFormat];
   return NAFAQADAGI_FORMAT_SKILL[format] ?? null;

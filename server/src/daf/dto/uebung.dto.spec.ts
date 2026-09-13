@@ -53,42 +53,81 @@ const UUID = '3f2a9c1e-7b4d-4e8a-9c2f-1a2b3c4d5e6f';
 describe('seans maydonlari', () => {
   it('CheckAntwortDto: seans maydonlarisiz ham o`tadi (eski klient)', async () => {
     const dto = plainToInstance(CheckAntwortDto, {
-      itemType: 'WORT', itemId: 5, format: 'WORT_UZ', given: 'uy',
+      itemType: 'WORT',
+      itemId: 5,
+      format: 'WORT_UZ',
+      given: 'uy',
     });
     expect(await validate(dto)).toHaveLength(0);
   });
 
   it('CheckAntwortDto: to`liq seans maydonlari o`tadi', async () => {
     const dto = plainToInstance(CheckAntwortDto, {
-      itemType: 'WORT', itemId: 5, format: 'WORT_UZ', given: 'uy',
-      sessionId: UUID, questionIndex: 3, attemptNo: 2, lessonId: 100,
+      itemType: 'WORT',
+      itemId: 5,
+      format: 'WORT_UZ',
+      given: 'uy',
+      sessionId: UUID,
+      questionIndex: 3,
+      attemptNo: 2,
+      lessonId: 100,
     });
     expect(await validate(dto)).toHaveLength(0);
   });
 
   it('CheckAntwortDto: uuid bo`lmagan sessionId, attemptNo 3, manfiy questionIndex rad etiladi', async () => {
     const dto = plainToInstance(CheckAntwortDto, {
-      itemType: 'WORT', itemId: 5, format: 'WORT_UZ', given: 'uy',
-      sessionId: 'seans-1', questionIndex: -1, attemptNo: 3,
+      itemType: 'WORT',
+      itemId: 5,
+      format: 'WORT_UZ',
+      given: 'uy',
+      sessionId: 'seans-1',
+      questionIndex: -1,
+      attemptNo: 3,
     });
     const xatolar = await validate(dto);
-    expect(xatolar.map((x) => x.property).sort()).toEqual(
-      ['attemptNo', 'questionIndex', 'sessionId'],
-    );
+    expect(xatolar.map((x) => x.property).sort()).toEqual([
+      'attemptNo',
+      'questionIndex',
+      'sessionId',
+    ]);
   });
 
   it('JuftDto ham seans maydonlarini qabul qiladi', async () => {
     const dto = plainToInstance(JuftDto, {
-      itemType: 'WORT', itemId: 5, format: 'PAAR', chap: 'Haus', ong: 'uy',
-      sessionId: UUID, questionIndex: 0, attemptNo: 1, lessonId: 100,
+      itemType: 'WORT',
+      itemId: 5,
+      format: 'PAAR',
+      chap: 'Haus',
+      ong: 'uy',
+      sessionId: UUID,
+      questionIndex: 0,
+      attemptNo: 1,
+      lessonId: 100,
     });
     expect(await validate(dto)).toHaveLength(0);
   });
 
   it('AbschlussDto.sessionId ixtiyoriy, WiederholungAbschlussDto.sessionId majburiy', async () => {
-    expect(await validate(plainToInstance(AbschlussDto, { richtig: 9, gesamt: 12 }))).toHaveLength(0);
-    expect(await validate(plainToInstance(AbschlussDto, { richtig: 9, gesamt: 12, sessionId: UUID }))).toHaveLength(0);
-    expect(await validate(plainToInstance(WiederholungAbschlussDto, {}))).toHaveLength(1);
-    expect(await validate(plainToInstance(WiederholungAbschlussDto, { sessionId: UUID }))).toHaveLength(0);
+    expect(
+      await validate(plainToInstance(AbschlussDto, { richtig: 9, gesamt: 12 })),
+    ).toHaveLength(0);
+    expect(
+      await validate(
+        plainToInstance(AbschlussDto, {
+          richtig: 9,
+          gesamt: 12,
+          sessionId: UUID,
+        }),
+      ),
+    ).toHaveLength(0);
+    expect(
+      await validate(plainToInstance(WiederholungAbschlussDto, {})),
+    ).toHaveLength(1);
+    expect(
+      await validate(
+        plainToInstance(WiederholungAbschlussDto, { sessionId: UUID }),
+      ),
+    ).toHaveLength(0);
   });
 });

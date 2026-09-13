@@ -57,7 +57,13 @@ describe('seansYigindisi', () => {
 
   it('sessionId`siz (eski) satrlar — questionIndex null — chetda qoladi', () => {
     const r = seansYigindisi([
-      { questionIndex: null, attemptNo: null, format: null, score: null, gradingStatus: 'GRADED' },
+      {
+        questionIndex: null,
+        attemptNo: null,
+        format: null,
+        score: null,
+        gradingStatus: 'GRADED',
+      },
       s(0, 1, 1),
     ]);
     expect(r).toEqual({ questionCount: 1, firstTryCorrect: 1 });
