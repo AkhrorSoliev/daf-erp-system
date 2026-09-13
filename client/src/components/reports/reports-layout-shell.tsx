@@ -5,14 +5,19 @@ import { useEffect } from "react";
 import { ReportsMobileMenu } from "./reports-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { canOpenReportPath } from "@/lib/reports-nav";
 
 export function ReportsLayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const isMobile = useIsMobile();
   const user = useAuth((s) => s.user);
-  const canViewReports =
-    user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+  // Sahifa bo'yicha: administrator faqat Lidlar hisobotini ochadi
+  // (`reports-nav.ts`). Backend ham qolgan hisobotlarni rad etadi.
+  const canViewReports = canOpenReportPath(
+    user?.roles.map((r) => r.id) ?? [],
+    pathname,
+  );
 
   useEffect(() => {
     if (user && !canViewReports) {
