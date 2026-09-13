@@ -9,13 +9,29 @@ import {
 /** Savol qurish uchun dialogda kamida shuncha satr bo'lishi shart. */
 const MIN_ZEILEN = 4;
 
-function mischen<T>(items: T[], rnd: () => number): T[] {
+export function mischen<T>(items: T[], rnd: () => number): T[] {
   const out = [...items];
   for (let i = out.length - 1; i > 0; i -= 1) {
     const j = Math.floor(rnd() * (i + 1));
     [out[i], out[j]] = [out[j], out[i]];
   }
   return out;
+}
+
+/**
+ * Suhbatning HAMMA satri — `belegteItems` uchun.
+ *
+ * `DIALOG_LUECKE` ilgari faqat olib tashlangan satrni band qilardi,
+ * ya'ni (a) bitta suhbatning ikki xil bo'sh joyi bir seansga tushib,
+ * ikkinchisi birinchisining javobini ko'rsatib turardi; (b) eshitish
+ * savoli (`HOEREN_WAHL`) bilan o'sha suhbatning matnli savoli bitta
+ * seansga tushib, o'quvchi avval matnni O'QIB, keyin «eshitib» javob
+ * berardi. Seans quruvchisining 4-qoidasi (`belegteItems` kesishmasin)
+ * ikkalasini bir yo'la yopadi — agar ikkala format ham BUTUN suhbatni
+ * band qilsa.
+ */
+export function dialogBelegt(dialog: MaterialDialog): string[] {
+  return dialog.zeilen.map((z) => materialSchluessel('DIALOGZEILE', z.id));
 }
 
 /**
@@ -76,8 +92,9 @@ function mischen<T>(items: T[], rnd: () => number): T[] {
  * orqali, ikkala yo'nalishda ham (nishon boshida ham, oxirida ham
  * yotgan holat) tekshiriladi. Hech bir nomzod qolmasa (`u01-d3`,
  * `u01-d2`, `u01-d5`, `u01-d6` — hech birida bunday emas: mos ravishda
- * uch, to'rt, besh va besh nomzod qoladi), `null` qaytariladi: format
- * shunchaki bu dialog uchun ishlamaydi.
+ * uch, to'rt, besh va olti nomzod qoladi — `u01-d6` satr 4 "W, E, B, E,
+ * R."ga o'zgargach besh o'rniga olti nomzod qoladi), `null` qaytariladi:
+ * format shunchaki bu dialog uchun ishlamaydi.
  */
 export function dialogLuecke(
   dialog: MaterialDialog,
@@ -145,7 +162,7 @@ export function dialogLuecke(
     options: mischen([ziel.de, ...mischen(falsch, rnd).slice(0, 3)], rnd),
     richtig: ziel.de,
     akzeptiert: [],
-    belegteItems: [materialSchluessel('DIALOGZEILE', ziel.id)],
+    belegteItems: dialogBelegt(dialog),
     // Natija ekrani xato ro'yxatida BUTUN suhbat (`prompt`) o'rniga shu
     // qisqa nomni ko'rsatadi — qarang `frage.types.ts`dagi `titel` izohi.
     titel: dialog.titelDe,

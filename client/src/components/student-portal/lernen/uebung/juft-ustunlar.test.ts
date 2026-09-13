@@ -20,7 +20,16 @@ import { juftUstunlar } from "./yigish";
  */
 describe("juftUstunlar", () => {
   it("PAAR: 8 elementli options'ni 4+4 ga bo'ladi", () => {
-    const options = ["der Tisch", "das Buch", "die Tür", "das Auto", "eshik", "stol", "kitob", "mashina"];
+    const options = [
+      "der Tisch",
+      "das Buch",
+      "die Tür",
+      "das Auto",
+      "eshik",
+      "stol",
+      "kitob",
+      "mashina",
+    ];
     expect(juftUstunlar(options, "PAAR")).toEqual({
       chapUstun: ["der Tisch", "das Buch", "die Tür", "das Auto"],
       ongUstun: ["eshik", "stol", "kitob", "mashina"],
@@ -42,7 +51,7 @@ describe("juftUstunlar", () => {
       "Auf Wiedersehen!",
       "Danke!",
       "Wie heißen Sie?",
-      "Ich heiße Timur.",
+      "Ich heiße Thomas.",
     ];
     expect(juftUstunlar([...chapUstun, ...ongUstun], "ZUORDNEN")).toEqual({
       chapUstun,
@@ -59,7 +68,18 @@ describe("juftUstunlar", () => {
     // testda options QASDDAN uzunroq (orqasida "ortiqcha" elementlar
     // bilan) beriladi — faqat ANIQ yuqori chegara bilan kesilgan kod
     // bu ortiqchani chiqarib tashlaydi.
-    const options = ["a", "b", "c", "d", "e", "f", "g", "h", "ORTIQCHA-1", "ORTIQCHA-2"];
+    const options = [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e",
+      "f",
+      "g",
+      "h",
+      "ORTIQCHA-1",
+      "ORTIQCHA-2",
+    ];
     const { chapUstun, ongUstun } = juftUstunlar(options, "PAAR");
     expect(chapUstun).toEqual(["a", "b", "c", "d"]);
     expect(ongUstun).toEqual(["e", "f", "g", "h"]);

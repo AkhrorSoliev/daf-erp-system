@@ -2866,6 +2866,19 @@ enum DafLessonKind {
   UNIT_TEST
 }
 
+/// Mashq natijasining umumiy shartnomasi (dizayn 5.2): har qanday format
+/// shu uchta holatdan birini yozadi. Statistika faqat shuni o'qiydi.
+enum DafGradingStatus {
+  GRADED
+  PENDING
+  UNGRADED
+}
+
+enum DafSessionKind {
+  LESSON
+  REVIEW
+}
+
 /// O'quv yo'lining bosqichi. Manba bobi unga BIRIKTIRILADI — bo'lim
 /// manbadan kelib chiqmaydi (ADR-0011).
 model DafUnit {
@@ -3105,12 +3118,17 @@ model DafDialog {
   sectionId Int
   titelDe   String
   titelUz   String
+  /// Butun suhbatning R2 kaliti — `text-to-dialogue` bitta fayl beradi,
+  /// satrma-satr emas. `null` — ovoz hali yasalmagan, eshitish savoli
+  /// qurilmaydi. Manba — `content/daf/a1/dialog-audio.json`.
+  audioKey  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   unit    DafUnit         @relation(fields: [unitId], references: [id])
   section DafSection      @relation(fields: [sectionId], references: [id])
   zeilen  DafDialogLine[]
+  fragen  DafHoerFrage[]
 
   @@index([sectionId])
 }
@@ -3128,6 +3146,28 @@ model DafDialogLine {
   tts      String?
   uz       String
   audioKey String?
+
+  dialog DafDialog @relation(fields: [dialogId], references: [id])
+
+  @@unique([dialogId, order])
+  @@index([dialogId])
+}
+
+/// Suhbatni eshitgandan keyingi tushunish savoli (`HOEREN_WAHL`).
+///
+/// O'z `id` si bor, chunki javob tekshiruvi materialni `itemType`+`itemId`
+/// bo'yicha o'qiydi (D7). `falsch` — ikki chalg'ituvchi; to'g'ri javob
+/// `richtig`. Ballga tegmaydi, Leitner kuzatmaydi.
+model DafHoerFrage {
+  id       Int      @id @default(autoincrement())
+  /// Barqaror kalit: `u02-d2-f1` (dialog kaliti + tartib).
+  code     String   @unique
+  dialogId Int
+  order    Int
+  frageDe  String
+  frageUz  String
+  richtig  String
+  falsch   String[]
 
   dialog DafDialog @relation(fields: [dialogId], references: [id])
 
@@ -3225,6 +3265,26 @@ model DafAttempt {
   /// tushadi, ya'ni soxtalashtirish arziydigan bo'lardi.
   points     Int     @default(0)
 
+  /// Seans konteksti (dizayn 5.3). Hammasi ixtiyoriy: eski klient va eski
+  /// DiB yo'llari (`drill/check`, `attempts`) bularni yozmaydi — ular savolga
+  /// asoslangan ko'rsatkichlardan chetda qoladi, mashq kunida sanaladi.
+  sessionId     String?
+  /// Asl savolning `PublicFrage.index`i. O'rinbosar savol ham SHU indeks
+  /// bilan keladi — u yangi savol emas, o'sha savolning 2-urinishi.
+  questionIndex Int?
+  /// 1 — asl savol, 2 — xatodan keyingi o'rinbosar.
+  attemptNo     Int?
+  /// Takrorlash seansida bo'sh.
+  lessonId      Int?
+  itemType      String?
+  itemId        Int?
+  /// Matn, enum emas: yangi format migratsiya talab qilmaydi. Ko'nikma bu
+  /// yerda YO'Q — o'qishda `format-skill.ts` reyestridan olinadi.
+  format        String?
+  /// 0..1. Hozirgi formatlarda 0 yoki 1.
+  score         Float?
+  gradingStatus DafGradingStatus @default(GRADED)
+
   /// Yozish paytida MUHRLANADI, jonli bog'lanishdan o'qilmaydi.
   /// `groupId` — `Group.id` kabi uuid satri, son emas.
   companyId Int
@@ -3242,6 +3302,33 @@ model DafAttempt {
   @@index([lexemeId])
   @@index([companyId, createdAt])
   @@index([branchId, createdAt])
+  @@index([sessionId])
+  @@index([studentId, sessionId])
+}
+
+/// Bitta mashq seansi. Klient uuid yaratadi; server birinchi urinishda
+/// yaratadi, yakunda natijani URINISHLARDAN o'zi hisoblaydi — klient aytgan
+/// `richtig`ga ishonmaydi (dizayn 5.3, 5.5).
+model DafSession {
+  id              String         @id
+  studentId       Int
+  companyId       Int
+  /// Yozish paytida MUHRLANADI — `DafAttempt` dagi kabi.
+  branchId        Int?
+  groupId         String?
+  kind            DafSessionKind
+  lessonId        Int?
+  startedAt       DateTime
+  /// Tugatilmagan (tashlab ketilgan) seans — null.
+  finishedAt      DateTime?
+  questionCount   Int?
+  firstTryCorrect Int?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([studentId, startedAt])
+  @@index([groupId, startedAt])
+  @@index([companyId, startedAt])
 }
 
 /// Mashq uchun gap.

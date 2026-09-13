@@ -18,6 +18,7 @@ import {
   CheckAntwortDto,
   ErsatzQueryDto,
   JuftDto,
+  WiederholungAbschlussDto,
 } from './dto/uebung.dto';
 import { DafDrillService } from './lesson/daf-drill.service';
 import { UebungService } from './uebung/uebung.service';
@@ -183,6 +184,19 @@ export class DafPortalController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.uebung.abschluss(id, dto, { studentId, companyId });
+  }
+
+  /**
+   * Takrorlash seansi yakuni. `lessons/` OSTIDA EMAS — `getWiederholung`
+   * bilan bir xil sabab. `studentId` TOKENDAN.
+   */
+  @Post('wiederholung/abschluss')
+  postWiederholungAbschluss(
+    @Body() dto: WiederholungAbschlussDto,
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.uebung.wiederholungAbschluss(dto, { studentId, companyId });
   }
 
   /**

@@ -1,4 +1,4 @@
-import { baueSeans, FORMAT_MAX_PRO_SEANS, MIN_FORMATE } from './seans';
+import { baueSeans, FORMAT_MAX_PRO_SEANS, MIN_FORMATE, capFuer } from './seans';
 import type { Frage, FrageFormat } from './frage.types';
 
 function f(
@@ -261,6 +261,40 @@ describe('baueSeans', () => {
     const { fragen } = baueSeans(nomzodlar, 5, rnd, [f('WORT_UZ', 5)]);
     expect(fragen.filter((q) => q.itemId === 5)).toHaveLength(1);
     expect(fragen[0]).toMatchObject({ format: 'WORT_UZ', itemId: 5 });
+  });
+
+  it('HOEREN_WAHL seansda ko`pi bilan bitta — har biri 30–60 soniya', () => {
+    const hoeren = Array.from({ length: 5 }, (_, j) =>
+      f('HOEREN_WAHL', 900 + j, [`HOERFRAGE:${900 + j}`]),
+    );
+    const { fragen } = baueSeans([...hoeren, ...kandidaten()], 12, rnd);
+    expect(fragen.filter((q) => q.format === 'HOEREN_WAHL')).toHaveLength(1);
+    expect(fragen).toHaveLength(12);
+  });
+
+  it('boshqa formatlar uchun umumiy chegara o`zgarmaydi', () => {
+    expect(capFuer('WORT_UZ')).toBe(FORMAT_MAX_PRO_SEANS);
+    expect(capFuer('HOEREN_WAHL')).toBe(1);
+  });
+
+  // Diqqat: majburiy yo'l boshqa ikki tekshiruvdan (`capToldi`, bo'shliq
+  // qidiruvi) o'tadi, oddiy nomzod yo'li esa faqat `mosKeladi` dan.
+  // Birinchi test (pflichtsiz) faqat `mosKeladi` ni sinaidi. Bu test majburiy
+  // yo'lni sinaidi: agar cap'ni buzmasa, majburiy HOEREN_WAHL bittasigina
+  // joylashadi.
+  it('majburiy HOEREN_WAHL seansda ko`pi bilan bitta — capToldi va bo`shliq', () => {
+    // Majburiy savollar: 4 ta HOEREN_WAHL, har biri alohida material
+    const hoeren_pflicht = Array.from({ length: 4 }, (_, j) =>
+      f('HOEREN_WAHL', 910 + j, [`HOERFRAGE:${910 + j}`]),
+    );
+    // Oddiy nomzodlar
+    const nomzodlar = kandidaten();
+    // Majburiylar bilan seansni quraylik
+    const { fragen } = baueSeans(nomzodlar, 12, rnd, hoeren_pflicht);
+    // Seansda majburiy yo'ldan birta joylashish kerak, cap sababli qolganlari
+    // nichtPlatziert'da qolishi kerak
+    expect(fragen.filter((q) => q.format === 'HOEREN_WAHL')).toHaveLength(1);
+    expect(fragen).toHaveLength(12);
   });
 });
 

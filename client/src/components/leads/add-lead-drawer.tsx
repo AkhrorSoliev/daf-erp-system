@@ -27,13 +27,10 @@ import {
 } from "@/components/ui/select";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import {
-  useLeadsBoard,
-  type LeadCard,
-  type LeadSourceOption,
-} from "@/hooks/use-leads-board";
+import { useLeadsBoard, type LeadCard } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
 import { LeadAdditionalFields } from "./lead-additional-fields";
+import { LeadSourcePicker } from "./lead-source-picker";
 
 interface AddLeadValues {
   firstName: string;
@@ -59,18 +56,13 @@ export function AddLeadDrawer() {
   const board = useLeadsBoard((s) => s.board);
   const addLead = useLeadsBoard((s) => s.addLead);
 
-  const [sources, setSources] = useState<LeadSourceOption[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [addingSource, setAddingSource] = useState(false);
-  const [newSource, setNewSource] = useState("");
-  const [savingSource, setSavingSource] = useState(false);
 
   const {
     register,
     handleSubmit,
     control,
     reset,
-    setValue,
     formState: { errors },
   } = useForm<AddLeadValues>({ defaultValues: EMPTY_VALUES });
 
@@ -80,39 +72,8 @@ export function AddLeadDrawer() {
   useEffect(() => {
     if (!open) return;
     reset({ ...EMPTY_VALUES, sectionId: presetSectionId ?? "" });
-    setAddingSource(false);
-    setNewSource("");
     setSubmitting(false);
-    api
-      .get<LeadSourceOption[]>("/lead-sources")
-      .then(({ data }) => setSources(data))
-      .catch((error) =>
-        toast.error(getErrorMessage(error, "Manbalarni yuklashda xatolik")),
-      );
   }, [open, presetSectionId, reset]);
-
-  async function handleCreateSource() {
-    const name = newSource.trim();
-    if (!name) {
-      toast.error("Manba nomini kiriting");
-      return;
-    }
-    setSavingSource(true);
-    try {
-      const { data } = await api.post<LeadSourceOption>("/lead-sources", {
-        name,
-      });
-      setSources((prev) => [...prev, data]);
-      setValue("sourceId", data.id);
-      setAddingSource(false);
-      setNewSource("");
-      toast.success("Manba qo'shildi");
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Manba qo'shishda xatolik"));
-    } finally {
-      setSavingSource(false);
-    }
-  }
 
   async function onSubmit(values: AddLeadValues) {
     setSubmitting(true);
@@ -250,65 +211,20 @@ export function AddLeadDrawer() {
                 )}
               </div>
 
-              <div className="space-y-1.5">
-                <Label>Lid manbasi (ixtiyoriy)</Label>
-                <Controller
-                  name="sourceId"
-                  control={control}
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Manbani tanlang" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sources.map((source) => (
-                          <SelectItem key={source.id} value={source.id}>
-                            {source.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {addingSource ? (
-                  <div className="flex items-center gap-2 pt-1">
-                    <Input
-                      value={newSource}
-                      onChange={(e) => setNewSource(e.target.value)}
-                      placeholder="Yangi manba nomi"
-                      maxLength={100}
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleCreateSource}
-                      disabled={savingSource}
-                    >
-                      {savingSource && (
-                        <Loader2 className="size-4 animate-spin" />
-                      )}
-                      Qo&apos;shish
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setAddingSource(false)}
-                      disabled={savingSource}
-                    >
-                      Bekor
-                    </Button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setAddingSource(true)}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    + Yangi manba qo&apos;shish
-                  </button>
+              <Controller
+                name="sourceId"
+                control={control}
+                render={({ field }) => (
+                  <LeadSourcePicker
+                    open={open}
+                    value={field.value}
+                    onChange={field.onChange}
+                    label="Lid manbasi (ixtiyoriy)"
+                    id="add-lead-sourceId"
+                    loadErrorMessage="Manbalarni yuklashda xatolik"
+                  />
                 )}
-              </div>
+              />
 
               <Controller
                 name="extraPhone"

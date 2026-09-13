@@ -168,7 +168,7 @@ describe('satzBauen', () => {
 describe('satzUebersetzen', () => {
   const ZIEL = s(1, 'Ich bin Anna.', 'Men Annaman.');
   const ANDERE = [
-    s(2, 'Du bist Timur.', 'Sen Timursan.'),
+    s(2, 'Du bist Thomas.', 'Sen Thomassan.'),
     s(3, 'Ich bin hier.', 'Men bu yerdaman.'),
     s(4, 'Wie geht es dir?', 'Ahvoling qanday?'),
   ];
@@ -282,7 +282,7 @@ describe('zuordnen', () => {
     p(3, 'xayrlashish', 'Auf Wiedersehen!', 'Xayr!'),
     p(4, 'rahmat aytish', 'Danke!', 'Rahmat!'),
     p(5, "so'rash", 'Wie heißen Sie?', 'Ismingiz nima?'),
-    p(6, 'javob berish', 'Ich heiße Timur.', 'Mening ismim Timur.'),
+    p(6, 'javob berish', 'Ich heiße Thomas.', 'Mening ismim Thomas.'),
   ];
 
   it('oltita juft quradi', () => {

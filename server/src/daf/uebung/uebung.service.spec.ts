@@ -1,3 +1,5 @@
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { UebungService } from './uebung.service';
 
 /**
@@ -120,7 +122,7 @@ function fakePrisma() {
   ];
   const sentence = [
     { id: 11, de: 'Ich bin Anna.', uz: 'Men Annaman.', sectionId: 7 },
-    { id: 12, de: 'Du bist Timur.', uz: 'Sen Timursan.', sectionId: 7 },
+    { id: 12, de: 'Du bist Thomas.', uz: 'Sen Thomassan.', sectionId: 7 },
     { id: 13, de: 'Ich bin hier.', uz: 'Men bu yerdaman.', sectionId: 7 },
     { id: 14, de: 'Wie geht es dir?', uz: 'Ahvoling qanday?', sectionId: 7 },
   ];
@@ -160,6 +162,16 @@ function fakePrisma() {
       id: 201,
       titelDe: 'Dialog 1',
       sectionId: 7,
+      audioKey: 'daf/audio/d1.mp3',
+      fragen: [
+        {
+          id: 401,
+          frageDe: 'Wie geht es A?',
+          frageUz: 'A qalay?',
+          richtig: 'gut',
+          falsch: ['nicht gut', 'sehr gut'],
+        },
+      ],
       zeilen: [
         { id: 301, order: 1, sprecher: 'A', de: 'Hallo!', uz: 'Salom!' },
         {
@@ -189,6 +201,8 @@ function fakePrisma() {
       id: 202,
       titelDe: 'Dialog 2',
       sectionId: 7,
+      audioKey: null,
+      fragen: [],
       zeilen: [
         {
           id: 311,
@@ -291,13 +305,40 @@ function fakePrisma() {
         }
         return null;
       }),
+      findMany: jest.fn(
+        async ({ where }: any) =>
+          dialog
+            .find((d) => d.id === where.dialogId)
+            ?.zeilen.map((z) => ({
+              sprecher: z.sprecher,
+              de: z.de,
+              uz: z.uz,
+            })) ?? [],
+      ),
+    },
+    dafHoerFrage: {
+      findUnique: jest.fn(async ({ where }: any) => {
+        for (const d of dialog) {
+          const f = d.fragen.find((x: any) => x.id === where.id);
+          if (f) return { ...f, dialogId: d.id };
+        }
+        return null;
+      }),
     },
     dafLexemeState: {
       findMany: jest.fn(async () => []),
       findUnique: jest.fn(async () => null),
       upsert: jest.fn(async () => ({ id: 1 })),
     },
-    dafAttempt: { create: jest.fn(async () => ({ id: 1 })) },
+    dafAttempt: {
+      create: jest.fn(async () => ({ id: 1 })),
+      findMany: jest.fn(async () => []),
+    },
+    dafSession: {
+      findUnique: jest.fn(async () => null),
+      create: jest.fn(async (args: any) => args.data),
+      update: jest.fn(async (args: any) => args.data),
+    },
     dafLessonProgress: {
       findUnique: jest.fn(async () => null),
       upsert: jest.fn(async () => ({ id: 1 })),
@@ -1332,6 +1373,150 @@ describe('UebungService.abschluss', () => {
   });
 });
 
+describe('seans yakuni', () => {
+  const ctx = { studentId: 55, companyId: 1 };
+  const UUID = '3f2a9c1e-7b4d-4e8a-9c2f-1a2b3c4d5e6f';
+  const satr = (
+    questionIndex: number,
+    attemptNo: number,
+    score: number,
+    format = 'WORT_UZ',
+  ) => ({ questionIndex, attemptNo, format, score, gradingStatus: 'GRADED' });
+
+  function prismaMitSeans(studentId = 55, finishedAt: Date | null = null) {
+    const prisma = fakePrisma();
+    prisma.dafSession.findUnique = jest.fn(async () => ({
+      id: UUID,
+      studentId,
+      finishedAt,
+      questionCount: finishedAt ? 12 : null,
+      firstTryCorrect: finishedAt ? 9 : null,
+    })) as any;
+    prisma.dafAttempt.findMany = jest.fn(async () => [
+      satr(0, 1, 1),
+      satr(1, 1, 0),
+      satr(1, 2, 1),
+      satr(2, 1, 1),
+    ]) as any;
+    return prisma;
+  }
+
+  it('abschluss sessionId bilan: DafSession urinishlardan yakunlanadi, DafLessonProgress avvalgidek', async () => {
+    const prisma = prismaMitSeans();
+    await new UebungService(prisma as any).abschluss(
+      100,
+      { richtig: 10, gesamt: 12, sessionId: UUID },
+      ctx,
+    );
+    const upd = (prisma.dafSession.update as jest.Mock).mock.calls[0][0];
+    expect(upd.where).toEqual({ id: UUID });
+    expect(upd.data).toMatchObject({ questionCount: 3, firstTryCorrect: 2 });
+    expect(upd.data.finishedAt).toBeInstanceOf(Date);
+    // Klient aytgan 10 seansga EMAS, faqat dars progressiga ketadi.
+    const lp = (prisma.dafLessonProgress.upsert as jest.Mock).mock.calls[0][0];
+    expect(lp.create.bestScore).toBe(10);
+  });
+
+  it('abschluss: sessionId topilmagan seansga ishora qilsa ham DafLessonProgress yoziladi (403/404 yutiladi)', async () => {
+    const prisma = fakePrisma();
+    prisma.dafSession.findUnique = jest.fn(async () => null) as any;
+    const r = await new UebungService(prisma as any).abschluss(
+      100,
+      { richtig: 10, gesamt: 12, sessionId: UUID },
+      ctx,
+    );
+    expect(r).toEqual({ bestScore: 10, runs: 1 });
+    const lp = (prisma.dafLessonProgress.upsert as jest.Mock).mock.calls[0][0];
+    expect(lp.create.bestScore).toBe(10);
+    expect(prisma.dafSession.update).not.toHaveBeenCalled();
+  });
+
+  it("abschluss: boshqa o'quvchining seansiga ishora qilsa ham DafLessonProgress yoziladi", async () => {
+    const prisma = prismaMitSeans(99);
+    const r = await new UebungService(prisma as any).abschluss(
+      100,
+      { richtig: 10, gesamt: 12, sessionId: UUID },
+      ctx,
+    );
+    expect(r).toEqual({ bestScore: 10, runs: 1 });
+    const lp = (prisma.dafLessonProgress.upsert as jest.Mock).mock.calls[0][0];
+    expect(lp.create.bestScore).toBe(10);
+    expect(prisma.dafSession.update).not.toHaveBeenCalled();
+  });
+
+  it('abschluss: seans tekshiruvida kutilmagan xato (DB) tepaga chiqadi', async () => {
+    const prisma = fakePrisma();
+    prisma.dafSession.findUnique = jest.fn(async () => {
+      throw new Error('DB down');
+    }) as any;
+    await expect(
+      new UebungService(prisma as any).abschluss(
+        100,
+        { richtig: 10, gesamt: 12, sessionId: UUID },
+        ctx,
+      ),
+    ).rejects.toThrow('DB down');
+  });
+
+  it('abschluss sessionId siz (eski klient): seansga tegilmaydi', async () => {
+    const prisma = fakePrisma();
+    await new UebungService(prisma as any).abschluss(
+      100,
+      { richtig: 10, gesamt: 12 },
+      ctx,
+    );
+    expect(prisma.dafSession.findUnique).not.toHaveBeenCalled();
+    expect(prisma.dafSession.update).not.toHaveBeenCalled();
+  });
+
+  it('wiederholungAbschluss natijani qaytaradi va DafLessonProgress ga tegmaydi', async () => {
+    const prisma = prismaMitSeans();
+    const r = await new UebungService(prisma as any).wiederholungAbschluss(
+      { sessionId: UUID },
+      ctx,
+    );
+    expect(r).toEqual({ questionCount: 3, firstTryCorrect: 2 });
+    expect(prisma.dafLessonProgress.upsert).not.toHaveBeenCalled();
+  });
+
+  it('allaqachon yakunlangan seans qayta yozilmaydi — saqlangan natija qaytadi (idempotent)', async () => {
+    const prisma = prismaMitSeans(55, new Date());
+    const r = await new UebungService(prisma as any).wiederholungAbschluss(
+      { sessionId: UUID },
+      ctx,
+    );
+    expect(r).toEqual({ questionCount: 12, firstTryCorrect: 9 });
+    expect(prisma.dafSession.update).not.toHaveBeenCalled();
+  });
+
+  it("boshqa o'quvchining seansi — 403; yo'q seans — 404", async () => {
+    await expect(
+      new UebungService(prismaMitSeans(99) as any).wiederholungAbschluss(
+        { sessionId: UUID },
+        ctx,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    const prisma = fakePrisma();
+    await expect(
+      new UebungService(prisma as any).wiederholungAbschluss(
+        { sessionId: UUID },
+        ctx,
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it("dafAttempt.findMany o'sha o'quvchiga cheklanadi va createdAt bo'yicha tartiblanadi (M4)", async () => {
+    const prisma = prismaMitSeans();
+    await new UebungService(prisma as any).wiederholungAbschluss(
+      { sessionId: UUID },
+      ctx,
+    );
+    const args = (prisma.dafAttempt.findMany as jest.Mock).mock.calls[0][0];
+    expect(args.where).toEqual({ sessionId: UUID, studentId: ctx.studentId });
+    expect(args.orderBy).toEqual({ createdAt: 'asc' });
+  });
+});
+
 describe('pruefen — ball', () => {
   const ctx = { studentId: 55, companyId: 1 };
 
@@ -1427,6 +1612,292 @@ describe('pruefen — ball', () => {
     const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
     expect(data.groupId).toBe('g-1');
     expect(data).toHaveProperty('branchId');
+  });
+});
+
+describe('pruefen/juft — seans konteksti', () => {
+  const ctx = { studentId: 55, companyId: 1 };
+  const UUID = '3f2a9c1e-7b4d-4e8a-9c2f-1a2b3c4d5e6f';
+
+  it('pruefen seans maydonlarini va score/gradingStatus ni yozadi', async () => {
+    const prisma = fakeMitWort(null);
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'WORT_UZ',
+        given: 'uy',
+        sessionId: UUID,
+        questionIndex: 3,
+        attemptNo: 1,
+        lessonId: 100,
+      },
+      ctx,
+    );
+    const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      sessionId: UUID,
+      questionIndex: 3,
+      attemptNo: 1,
+      lessonId: 100,
+      itemType: 'WORT',
+      itemId: 5,
+      format: 'WORT_UZ',
+      score: 1,
+      gradingStatus: 'GRADED',
+    });
+  });
+
+  it('xato javobda score 0', async () => {
+    const prisma = fakeMitWort(null);
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'WORT_UZ',
+        given: 'noto`g`ri',
+        sessionId: UUID,
+        questionIndex: 0,
+        attemptNo: 1,
+        lessonId: 100,
+      },
+      ctx,
+    );
+    const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
+    expect(data.score).toBe(0);
+  });
+
+  it('birinchi urinishda DafSession yaratiladi (LESSON, muhrlangan branch/group)', async () => {
+    const prisma = fakeMitWort(null);
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'WORT_UZ',
+        given: 'uy',
+        sessionId: UUID,
+        questionIndex: 0,
+        attemptNo: 1,
+        lessonId: 100,
+      },
+      ctx,
+    );
+    const data = (prisma.dafSession.create as jest.Mock).mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      id: UUID,
+      studentId: 55,
+      companyId: 1,
+      kind: 'LESSON',
+      lessonId: 100,
+    });
+    expect(data.startedAt).toBeInstanceOf(Date);
+  });
+
+  it('lessonId siz seans REVIEW', async () => {
+    const prisma = fakeMitWort(null);
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'WORT_UZ',
+        given: 'uy',
+        sessionId: UUID,
+        questionIndex: 0,
+        attemptNo: 1,
+      },
+      ctx,
+    );
+    const data = (prisma.dafSession.create as jest.Mock).mock.calls[0][0].data;
+    expect(data.kind).toBe('REVIEW');
+    expect(data.lessonId).toBeNull();
+  });
+
+  it('seans allaqachon bor — qayta yaratilmaydi', async () => {
+    const prisma = fakeMitWort(null);
+    prisma.dafSession.findUnique = jest.fn(async () => ({
+      id: UUID,
+      studentId: 55,
+    })) as any;
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'WORT_UZ',
+        given: 'uy',
+        sessionId: UUID,
+        questionIndex: 1,
+        attemptNo: 1,
+        lessonId: 100,
+      },
+      ctx,
+    );
+    expect(prisma.dafSession.create).not.toHaveBeenCalled();
+  });
+
+  it("boshqa o'quvchining sessionId si — 403, urinish yozilmaydi", async () => {
+    const prisma = fakeMitWort(null);
+    prisma.dafSession.findUnique = jest.fn(async () => ({
+      id: UUID,
+      studentId: 99,
+    })) as any;
+    await expect(
+      new UebungService(prisma as any).pruefen(
+        {
+          itemType: 'WORT',
+          itemId: 5,
+          format: 'WORT_UZ',
+          given: 'uy',
+          sessionId: UUID,
+          questionIndex: 0,
+          attemptNo: 1,
+          lessonId: 100,
+        },
+        ctx,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.dafAttempt.create).not.toHaveBeenCalled();
+  });
+
+  it('sessionId siz (eski klient) — seans yaratilmaydi, maydonlar null', async () => {
+    const prisma = fakeMitWort(null);
+    await new UebungService(prisma as any).pruefen(
+      { itemType: 'WORT', itemId: 5, format: 'WORT_UZ', given: 'uy' },
+      ctx,
+    );
+    expect(prisma.dafSession.findUnique).not.toHaveBeenCalled();
+    const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
+    expect(data.sessionId).toBeNull();
+    expect(data.questionIndex).toBeNull();
+    // format/itemType/itemId baribir yoziladi — ular so'rovning o'zida bor.
+    expect(data.format).toBe('WORT_UZ');
+    expect(data.score).toBe(1);
+  });
+
+  it('juft: PAAR da itemId bosilgan juftning O`Z so`zi, seans maydonlari yoziladi', async () => {
+    const prisma = fakeMitWort(null);
+    await new UebungService(prisma as any).juft(
+      // `itemId: 1` — to'rtlikning birinchisi; bosilgan juft esa 5-so'z.
+      {
+        itemType: 'WORT',
+        itemId: 1,
+        format: 'PAAR',
+        chap: 'das Haus',
+        ong: 'uy',
+        sessionId: UUID,
+        questionIndex: 2,
+        attemptNo: 1,
+        lessonId: 100,
+      },
+      ctx,
+    );
+    const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      sessionId: UUID,
+      questionIndex: 2,
+      attemptNo: 1,
+      lessonId: 100,
+      format: 'PAAR',
+      itemType: 'WORT',
+      gradingStatus: 'GRADED',
+    });
+    expect(data.itemId).toBe(5); // bosilgan so'z, `input.itemId` (1) emas
+    expect(data.score).toBe(1);
+  });
+
+  // Poyga (race) himoyasi: ikkita bir vaqtdagi so'rov bir xil YANGI
+  // `sessionId` bilan keldi — ikkalasi ham birinchi `findUnique`da `null`
+  // ko'radi, ikkinchisi `create`da P2002 (unique violation) bilan uriladi.
+  // `sicherSeans` buni "allaqachon yaratilgan" deb qabul qilib, EGALIKNI
+  // qayta tekshiradi (xuddi birinchi `findUnique` topgan holatdagidek).
+  it('create P2002 bilan rad etadi, qayta o`qish O`Z seansini topadi — urinish yoziladi, xato yo`q', async () => {
+    const prisma = fakeMitWort(null);
+    let chaqiruv = 0;
+    prisma.dafSession.findUnique = jest.fn(async () => {
+      chaqiruv += 1;
+      if (chaqiruv === 1) return null;
+      return { id: UUID, studentId: 55 };
+    }) as any;
+    prisma.dafSession.create = jest.fn(async () => {
+      throw new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        { code: 'P2002', clientVersion: '5.0.0' },
+      );
+    }) as any;
+
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'WORT_UZ',
+        given: 'uy',
+        sessionId: UUID,
+        questionIndex: 0,
+        attemptNo: 1,
+        lessonId: 100,
+      },
+      ctx,
+    );
+
+    expect(prisma.dafAttempt.create).toHaveBeenCalledTimes(1);
+    const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
+    expect(data.sessionId).toBe(UUID);
+  });
+
+  it("create P2002 bilan rad etadi, qayta o`qish BOSHQA o'quvchini topadi — 403, urinish yozilmaydi", async () => {
+    const prisma = fakeMitWort(null);
+    let chaqiruv = 0;
+    prisma.dafSession.findUnique = jest.fn(async () => {
+      chaqiruv += 1;
+      if (chaqiruv === 1) return null;
+      return { id: UUID, studentId: 99 };
+    }) as any;
+    prisma.dafSession.create = jest.fn(async () => {
+      throw new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        { code: 'P2002', clientVersion: '5.0.0' },
+      );
+    }) as any;
+
+    await expect(
+      new UebungService(prisma as any).pruefen(
+        {
+          itemType: 'WORT',
+          itemId: 5,
+          format: 'WORT_UZ',
+          given: 'uy',
+          sessionId: UUID,
+          questionIndex: 0,
+          attemptNo: 1,
+          lessonId: 100,
+        },
+        ctx,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.dafAttempt.create).not.toHaveBeenCalled();
+  });
+
+  it('create P2002 BO`LMAGAN xato bilan rad etsa — o`sha xato tarqaladi', async () => {
+    const prisma = fakeMitWort(null);
+    prisma.dafSession.create = jest.fn(async () => {
+      throw new Error('DB down');
+    }) as any;
+
+    await expect(
+      new UebungService(prisma as any).pruefen(
+        {
+          itemType: 'WORT',
+          itemId: 5,
+          format: 'WORT_UZ',
+          given: 'uy',
+          sessionId: UUID,
+          questionIndex: 0,
+          attemptNo: 1,
+          lessonId: 100,
+        },
+        ctx,
+      ),
+    ).rejects.toThrow('DB down');
+    expect(prisma.dafAttempt.create).not.toHaveBeenCalled();
   });
 });
 
@@ -1551,7 +2022,7 @@ describe('pruefen — ZUORDNEN', () => {
     'xayrlashish=Auf Wiedersehen!',
     'rahmat aytish=Danke!',
     "so'rash=Wie heißen Sie?",
-    'javob berish=Ich heiße Timur.',
+    'javob berish=Ich heiße Thomas.',
   ].join('|');
 
   function fakeMitPhrasen() {
@@ -1595,8 +2066,8 @@ describe('pruefen — ZUORDNEN', () => {
       {
         id: 6,
         funktionUz: 'javob berish',
-        de: 'Ich heiße Timur.',
-        uz: 'Mening ismim Timur.',
+        de: 'Ich heiße Thomas.',
+        uz: 'Mening ismim Thomas.',
         unitId: 1,
       },
     ];
@@ -1652,7 +2123,7 @@ describe('pruefen — ZUORDNEN', () => {
       'xayrlashish=Auf Wiedersehen!',
       'rahmat aytish=Danke!',
       "so'rash=Wie heißen Sie?",
-      'salomlashish=Ich heiße Timur.',
+      'salomlashish=Ich heiße Thomas.',
     ].join('|');
     const prisma = fakeMitPhrasen();
     const r = await new UebungService(prisma as any).pruefen(
@@ -1769,8 +2240,8 @@ describe('pruefen — ZUORDNEN', () => {
       {
         id: 6,
         funktionUz: 'javob berish',
-        de: 'Ich heiße Timur.',
-        uz: 'Mening ismim Timur.',
+        de: 'Ich heiße Thomas.',
+        uz: 'Mening ismim Thomas.',
         unitId: 1,
       },
     ];
@@ -1799,7 +2270,7 @@ describe('pruefen — ZUORDNEN', () => {
       'xayrlashish=Auf Wiedersehen!',
       'rahmat aytish=Danke!',
       "so'rash=Wie heißen Sie?",
-      'javob berish=Ich heiße Timur.',
+      'javob berish=Ich heiße Thomas.',
     ].join('|');
 
     const r = await new UebungService(prisma as any).pruefen(
@@ -2324,5 +2795,148 @@ describe('juft — TARTIB TRIPWIRE (stateful)', () => {
     expect(
       (prisma.dafAttempt.create as jest.Mock).mock.calls[1][0].data.points,
     ).toBe(0);
+  });
+});
+
+describe('HOEREN_WAHL', () => {
+  const ctx = { studentId: 55, companyId: 1 };
+  const config = {
+    get: (k: string) =>
+      k === 'R2_PUBLIC_URL' ? 'https://r2.example' : undefined,
+  };
+
+  it('audiosi va savoli bor dialogdan nomzod quriladi, audiosiz dialogdan emas', async () => {
+    // `kind: 'BRIDGE'` — HAQIQIY o'quvchi shu turdagi (bo'limga bog'langan)
+    // darsda `HOEREN_WAHL`ni oladi. `UNIT_TEST` bunga yaramaydi: seed
+    // (`kurs-lessons.ts`: `push('UNIT_TEST', null, ...)`) uni HAR DOIM
+    // bo'limsiz (`sectionId: null`) yaratadi, `UebungService` esa bo'limi
+    // yo'q darsda `null` qaytaradi — ya'ni oldingi fixture aslida hech
+    // qachon sodir bo'lmaydigan holatni sinar edi. `BRIDGE` moyilliksiz
+    // (`kind-formate.ts`dagi `XARITA.BRIDGE = []`), lekin bu yerda baribir
+    // KO'P urug' kerak: Task 6 dan beri `HOEREN_WAHL` ham, `DIALOG_LUECKE`
+    // ham suhbatning HAMMA satrini band qiladi — ya'ni bitta suhbat
+    // ikkalasiga yetmaydi va qaysi biri joylashishi `rnd`ga bog'liq.
+    // Shuning uchun bitta urug'ga tayanish testni omadga bog'lab qo'yardi;
+    // o'rniga KO'P urug' bo'ylab ikkita xossa tekshiriladi: (1) chegara
+    // HECH QACHON buzilmaydi, (2) format ULANGAN — hech bo'lmasa ba'zi
+    // urug'larda chiqadi.
+    const prisma = fakePrisma();
+    prisma.dafLesson.findUnique = jest.fn(async () => ({
+      id: 100,
+      unitId: 1,
+      sectionId: 7,
+      kind: 'BRIDGE',
+      section: { id: 7, code: 'u01-s1', order: 1, unitId: 1 },
+    })) as any;
+    const svc = new UebungService(prisma as any, config as any);
+
+    let chiqqan = 0;
+    for (let i = 0; i < 20; i += 1) {
+      const fragen = await svc.seans(100, 55, mulberry32(i));
+      const hoeren = fragen.filter((f) => f.format === 'HOEREN_WAHL');
+      // Chegara: hech qachon bittadan ko'p emas.
+      expect(hoeren.length).toBeLessThanOrEqual(1);
+      for (const h of hoeren) {
+        // Faqat AUDIOSI bor dialogdan (201) — audiosiz 202 dan emas.
+        expect(h.itemType).toBe('HOERFRAGE');
+        expect(h.itemId).toBe(401);
+        expect(h.audioUrl).toBe('https://r2.example/daf/audio/d1.mp3');
+        // To'g'ri javob mijozga ketmaydi (D6/D7).
+        expect((h as any).richtig).toBeUndefined();
+        chiqqan += 1;
+      }
+    }
+    expect(chiqqan).toBeGreaterThan(0);
+  });
+
+  it('config yo`q (R2_PUBLIC_URL sozlanmagan) — eshitish savoli qurilmaydi', async () => {
+    const prisma = fakePrisma();
+    const fragen = await new UebungService(prisma as any).seans(
+      100,
+      55,
+      () => 0.5,
+    );
+    expect(fragen.filter((f) => f.format === 'HOEREN_WAHL')).toEqual([]);
+  });
+
+  it('pruefen: to`g`ri javob, transkript faqat javobdan keyin', async () => {
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any, config as any).pruefen(
+      {
+        itemType: 'HOERFRAGE',
+        itemId: 401,
+        format: 'HOEREN_WAHL',
+        given: 'gut',
+      },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(true);
+    expect(r.richtig).toBe('gut');
+    expect(r.transkript).toEqual([
+      { sprecher: 'A', de: 'Hallo!', uz: 'Salom!' },
+      {
+        sprecher: 'B',
+        de: 'Hallo, wie geht es dir?',
+        uz: 'Salom, ahvoling qalay?',
+      },
+      { sprecher: 'A', de: 'Gut, danke.', uz: 'Yaxshi, rahmat.' },
+      { sprecher: 'B', de: 'Bis bald!', uz: "Ko'rishguncha!" },
+    ]);
+  });
+
+  it('pruefen: xato javob ham transkriptni ochadi, ball yo`q, Leitner yo`q', async () => {
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any, config as any).pruefen(
+      {
+        itemType: 'HOERFRAGE',
+        itemId: 401,
+        format: 'HOEREN_WAHL',
+        given: 'nicht gut',
+      },
+      ctx,
+    );
+    expect(r.isCorrect).toBe(false);
+    expect(r.transkript).toHaveLength(4);
+    // Ball va Leitner — mavjud `itemType !== 'WORT'` qoidasi: urinish
+    // yoziladi (0 ball, lexemeId null), holat jadvaliga tegilmaydi.
+    const attempt = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0]
+      .data;
+    expect(attempt.points).toBe(0);
+    expect(attempt.lexemeId).toBeNull();
+    expect(prisma.dafLexemeState.upsert).not.toHaveBeenCalled();
+  });
+
+  it('boshqa formatda transkript YO`Q', async () => {
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any, config as any).pruefen(
+      { itemType: 'WORT', itemId: 1, format: 'WORT_UZ', given: 'salom' },
+      ctx,
+    );
+    expect(r.transkript).toBeUndefined();
+  });
+
+  it('ersatz: eshitish savoliga o`rinbosar yo`q — null', async () => {
+    // Mijoz `null` ni «savol tugatildi» deb oladi (`ersatzKeldi`) —
+    // xato javob qaytmaydi, yangi kod yo'q.
+    const prisma = fakePrisma();
+    const e = await new UebungService(prisma as any, config as any).ersatz(
+      100,
+      55,
+      'HOERFRAGE',
+      401,
+      'HOEREN_WAHL',
+      () => 0.5,
+    );
+    expect(e).toBeNull();
+  });
+
+  it('itemType mos kelmasa rad etadi', async () => {
+    const prisma = fakePrisma();
+    await expect(
+      new UebungService(prisma as any, config as any).pruefen(
+        { itemType: 'WORT', itemId: 1, format: 'HOEREN_WAHL', given: 'gut' },
+        ctx,
+      ),
+    ).rejects.toThrow('HOEREN_WAHL savoli faqat eshitish savoliga tegishli');
   });
 });

@@ -41,6 +41,20 @@ function files(): InhaltFiles {
             { sprecher: 'Anna', de: 'Hallo!', uz: 'Salom!' },
             { sprecher: 'Jonas', de: 'Hallo Anna!', uz: 'Salom Anna!' },
           ],
+          fragen: [
+            {
+              frageDe: 'Wer ist das?',
+              frageUz: 'Bu kim?',
+              richtig: 'Anna',
+              falsch: ['Mia', 'Jonas'],
+            },
+            {
+              frageDe: 'Ist das Jonas?',
+              frageUz: 'Bu Jonasmi?',
+              richtig: 'ja',
+              falsch: ['nein', 'nicht'],
+            },
+          ],
         },
       ],
     },
@@ -178,6 +192,7 @@ function fakePrisma() {
     seqRef,
   );
   const phrase = fakeTable((a) => a.where.code, seqRef);
+  const hoerFrage = fakeTable((a) => a.where.code, seqRef);
 
   return {
     rows: {
@@ -188,6 +203,7 @@ function fakePrisma() {
       grammar: grammar.map,
       beispiel: beispiel.map,
       phrase: phrase.map,
+      hoerFrage: hoerFrage.map,
     },
     dafSection: {
       findMany: jest.fn(async () => [{ id: 7, code: 'u01-s1', unitId: 1 }]),
@@ -216,6 +232,11 @@ function fakePrisma() {
       deleteMany: phrase.deleteMany,
       count: phrase.count,
     },
+    dafHoerFrage: {
+      upsert: hoerFrage.upsert,
+      deleteMany: hoerFrage.deleteMany,
+      count: hoerFrage.count,
+    },
   };
 }
 
@@ -230,6 +251,7 @@ describe('InhaltSeedService', () => {
       zeilen: 2,
       regeln: 1,
       phrasen: 1,
+      hoerFragen: 2,
       staleWoerter: 0,
     });
   });
@@ -654,5 +676,77 @@ describe('InhaltSeedService', () => {
     await new InhaltSeedService(prisma as any).seed('u01', files());
     const calls = prisma.dafLexeme.upsert.mock.calls as any[];
     expect(calls[0][0].create.audioKey).toBeNull();
+  });
+
+  it('eshitish savollarini dialog kaliti + tartib bilan yozadi', async () => {
+    const prisma = fakePrisma();
+    await new InhaltSeedService(prisma as any).seed('u01', files());
+    const codes = [...prisma.rows.hoerFrage.values()].map((r) => r.code);
+    expect(codes).toEqual(['u01-d1-f1', 'u01-d1-f2']);
+    const f1 = prisma.dafHoerFrage.upsert.mock.calls[0][0];
+    expect(f1.create).toMatchObject({
+      order: 1,
+      frageDe: 'Wer ist das?',
+      richtig: 'Anna',
+      falsch: ['Mia', 'Jonas'],
+    });
+  });
+
+  it('dialog audioKey ni manifestdan yozadi, yo`q bo`lsa null', async () => {
+    const prisma = fakePrisma();
+    const f = files();
+    f.dialogAudio = {
+      'u01-d1': { key: 'daf/audio/abc.mp3', textHash: 'irrelevant' },
+    };
+    await new InhaltSeedService(prisma as any).seed('u01', f);
+    expect(prisma.dafDialog.upsert.mock.calls[0][0].create.audioKey).toBe(
+      'daf/audio/abc.mp3',
+    );
+    expect(prisma.dafDialog.upsert.mock.calls[0][0].update.audioKey).toBe(
+      'daf/audio/abc.mp3',
+    );
+
+    // Manifestdan olib tashlansa — baza ham null ga qaytadi (manifest manba).
+    const yana = files();
+    await new InhaltSeedService(prisma as any).seed('u01', yana);
+    expect(prisma.dafDialog.upsert.mock.calls[1][0].update.audioKey).toBeNull();
+  });
+
+  it('fayldan yo`qolgan dialogning savollari satrlaridan OLDIN o`chiriladi', async () => {
+    const prisma = fakePrisma();
+    await new InhaltSeedService(prisma as any).seed('u01', files());
+    const f = files();
+    f.dialoge.dialoge[0].id = 'u01-d9';
+    await new InhaltSeedService(prisma as any).seed('u01', f);
+    // Uchala o'chirish SHAKLI bo'yicha tanlanadi, `[0]` bo'yicha emas:
+    // `dafHoerFrage`/`dafDialogLine`ning `deleteMany`i har dialogda
+    // ORTIQCHA qatorlarni kesish uchun ham chaqiriladi, ya'ni birinchi
+    // chaqiruv stale tozalash EMAS.
+    const staleCall = (mock: jest.Mock, kalit: string): number => {
+      const i = mock.mock.calls.findIndex(
+        (c: any[]) => c[0].where[kalit]?.in !== undefined,
+      );
+      expect(i).toBeGreaterThanOrEqual(0);
+      return mock.mock.invocationCallOrder[i];
+    };
+    const tartib = [
+      staleCall(prisma.dafHoerFrage.deleteMany, 'dialogId'),
+      staleCall(prisma.dafDialogLine.deleteMany, 'dialogId'),
+      staleCall(prisma.dafDialog.deleteMany, 'id'),
+    ];
+    expect(tartib).toEqual([...tartib].sort((a, b) => a - b));
+    expect([...prisma.rows.hoerFrage.values()].map((r) => r.code)).toEqual([
+      'u01-d9-f1',
+      'u01-d9-f2',
+    ]);
+  });
+
+  it('ortiqcha savol tartibi o`chiriladi', async () => {
+    const prisma = fakePrisma();
+    await new InhaltSeedService(prisma as any).seed('u01', files());
+    const call = (prisma.dafHoerFrage.deleteMany.mock.calls as any[]).find(
+      (c: any[]) => c[0].where.order?.gt !== undefined,
+    );
+    expect(call[0].where.order.gt).toBe(2);
   });
 });

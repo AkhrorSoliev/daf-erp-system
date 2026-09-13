@@ -206,19 +206,15 @@
       "grund": "atoqli ot — dialog obrazining ismi"
     },
     {
-      "wort": "timur",
+      "wort": "thomas",
       "grund": "atoqli ot — dialog obrazining ismi"
     },
     {
-      "wort": "nodira",
+      "wort": "lena",
       "grund": "atoqli ot — dialog obrazining ismi"
     },
     {
-      "wort": "karimova",
-      "grund": "atoqli ot — familiya"
-    },
-    {
-      "wort": "karimov",
+      "wort": "neumann",
       "grund": "atoqli ot — familiya"
     },
     {
@@ -240,6 +236,26 @@
     {
       "wort": "weber",
       "grund": "atoqli ot — familiya (u01-d6 harflab aytiladi)"
+    },
+    {
+      "wort": "walter",
+      "grund": "atoqli ot — dialog obrazining ismi (u01-d2)"
+    },
+    {
+      "wort": "lukas",
+      "grund": "atoqli ot — dialog obrazining ismi (u01-d4)"
+    },
+    {
+      "wort": "sabine",
+      "grund": "atoqli ot — dialog obrazining ismi (u01-d5)"
+    },
+    {
+      "wort": "peter",
+      "grund": "atoqli ot — dialog obrazining ismi (u01-d5)"
+    },
+    {
+      "wort": "helga",
+      "grund": "atoqli ot — dialog obrazining ismi (u01-d6)"
     },
     {
       "wort": "habe",
@@ -315,6 +331,16 @@
       "wort": "macht",
       "grund": "machen fe'lining er/sie shakli (u02-s5)",
       "abSection": "u02-s5"
+    },
+    {
+      "wort": "b",
+      "grund": "harf — familiyani harflash uchun; lug'at so'zi emas (u01-s5 faqat 9 ta qiyin harfni o'rgatadi)",
+      "abSection": "u01-s5"
+    },
+    {
+      "wort": "r",
+      "grund": "harf — familiyani harflash uchun; lug'at so'zi emas (u01-s5 faqat 9 ta qiyin harfni o'rgatadi)",
+      "abSection": "u01-s5"
     }
   ]
 }

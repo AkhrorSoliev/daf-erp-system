@@ -6,10 +6,11 @@ const HAMMASI: FrageFormat[] = [
   "WORT_UZ", "UZ_WORT", "PAAR", "ARTIKEL",
   "LUECKE", "SATZ_BAUEN", "SATZ_UEBERSETZEN", "REAKTION",
   "ZUORDNEN", "DIALOG_LUECKE",
+  "AUDIO_WORT", "WORT_TIPPEN", "HOEREN_WAHL",
 ];
 
 describe("koersatma", () => {
-  it("har o'nta formatga matn beradi", () => {
+  it("har bir formatga matn beradi", () => {
     for (const f of HAMMASI) {
       expect(koersatma(f).length).toBeGreaterThan(0);
     }
@@ -22,7 +23,7 @@ describe("koersatma", () => {
 });
 
 describe("harakat", () => {
-  it("har o'nta format uchtadan biriga tushadi", () => {
+  it("har bir format uchtadan biriga tushadi", () => {
     for (const f of HAMMASI) {
       expect(["TANLASH", "YOZISH", "YIGISH"]).toContain(harakat(f));
     }
@@ -79,5 +80,9 @@ describe("audio formatlar", () => {
     // satr bilan «to'ldirib qo'yish» yo'lini yopadi.
     expect(koersatma("AUDIO_WORT").length).toBeGreaterThan(0);
     expect(koersatma("WORT_TIPPEN").length).toBeGreaterThan(0);
+  });
+
+  it("HOEREN_WAHL — TANLASH", () => {
+    expect(harakat("HOEREN_WAHL")).toBe("TANLASH");
   });
 });

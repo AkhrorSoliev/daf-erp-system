@@ -141,3 +141,42 @@ describe('FalClient.speechMitStimme', () => {
     expect(fetchFn.mock.calls[0][0]).toContain('chatterbox');
   });
 });
+
+describe('FalClient.dialog', () => {
+  it('butun suhbatni bitta so`rovda yuboradi, de tili va stability bilan', async () => {
+    const calls: Array<{ url: string; body: any }> = [];
+    const fetchFn = (async (url: string, init: any) => {
+      calls.push({ url, body: JSON.parse(init.body) });
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ audio: { url: 'https://x/d.mp3' }, seed: 1 }),
+        text: async () => '',
+      };
+    }) as unknown as typeof fetch;
+    const c = new FalClient('k', fetchFn);
+    const url = await c.dialog([
+      { voice: 'Aria', text: 'Ist das deine Schwester?' },
+      { voice: 'Liam', text: 'Nein.' },
+    ]);
+    expect(url).toBe('https://x/d.mp3');
+    expect(calls[0].url).toBe(
+      'https://fal.run/fal-ai/elevenlabs/text-to-dialogue/eleven-v3',
+    );
+    expect(calls[0].body).toEqual({
+      inputs: [
+        { voice: 'Aria', text: 'Ist das deine Schwester?' },
+        { voice: 'Liam', text: 'Nein.' },
+      ],
+      language_code: 'de',
+      stability: 0.5,
+    });
+  });
+
+  it('audio qaytmasa yiqiladi', async () => {
+    const c = new FalClient('k', fetchStub({ seed: 1 }));
+    await expect(c.dialog([{ voice: 'Aria', text: 'x' }])).rejects.toThrow(
+      /suhbat/i,
+    );
+  });
+});

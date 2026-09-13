@@ -18,6 +18,7 @@ import type {
   PruefErgebnis,
   PublicFrage,
   ReytingZeile,
+  SeansYakun,
 } from "./types";
 
 const BASE = "/student-portal/lernen";
@@ -120,6 +121,10 @@ export function usePruefen() {
       format: FrageFormat;
       given: string;
       durationMs?: number;
+      sessionId?: string;
+      questionIndex?: number;
+      attemptNo?: 1 | 2;
+      lessonId?: number;
     }
   >({
     mutationFn: (body) =>
@@ -148,6 +153,10 @@ export function useJuftTekshir() {
       chap: string;
       ong: string;
       durationMs?: number;
+      sessionId?: string;
+      questionIndex?: number;
+      attemptNo?: 1 | 2;
+      lessonId?: number;
     }
   >({
     mutationFn: (body) => api.post(`${BASE}/uebung/juft`, body).then((r) => r.data),
@@ -187,7 +196,13 @@ export function useAbschluss() {
   return useMutation<
     AbschlussErgebnis,
     unknown,
-    { lessonId: number; richtig: number; gesamt: number; durationMs?: number }
+    {
+      lessonId: number;
+      richtig: number;
+      gesamt: number;
+      durationMs?: number;
+      sessionId?: string;
+    }
   >({
     mutationFn: ({ lessonId, ...body }) =>
       api.post(`${BASE}/lessons/${lessonId}/abschluss`, body).then((r) => r.data),
@@ -208,6 +223,18 @@ export function useAbschluss() {
       // qoladi.
       void qc.invalidateQueries({ queryKey: ["lernen", "wiederholung"] });
     },
+  });
+}
+
+/**
+ * Takrorlash seansi yakuni — `DafSession` ni yopadi. `abschluss` dan farqi:
+ * dars yo'q, ilgarilash keshi (`levels`/`unit`) o'zgarmaydi; `fortschritt`
+ * ni `seans-ekrani` o'zi yangilaydi.
+ */
+export function useWiederholungAbschluss() {
+  return useMutation<SeansYakun, unknown, { sessionId: string }>({
+    mutationFn: (body) =>
+      api.post(`${BASE}/wiederholung/abschluss`, body).then((r) => r.data),
   });
 }
 

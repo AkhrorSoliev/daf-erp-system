@@ -10,6 +10,7 @@ import type {
   MaterialWort,
 } from '../uebung/frage.types';
 import { dialogLuecke } from '../uebung/dialog-fragen';
+import { hoerenWahl } from '../uebung/hoer-fragen';
 import {
   luecke,
   reaktion,
@@ -166,6 +167,8 @@ export const VORSCHAU_BAUER: Record<
         return dialogLuecke(d, andere, r);
       })
       .filter(nichtNull),
+  HOEREN_WAHL: (m, r) =>
+    m.dialoge.map((d) => hoerenWahl(d, r, m.mediaUrl)).filter(nichtNull),
 };
 
 /**
@@ -261,7 +264,10 @@ export class DafMediaFragenService {
         // undan oldingilar).
         this.prisma.dafDialog.findMany({
           where: { sectionId: { in: sectionIds } },
-          include: { zeilen: { orderBy: { order: 'asc' } } },
+          include: {
+            zeilen: { orderBy: { order: 'asc' } },
+            fragen: { orderBy: { order: 'asc' } },
+          },
         } as any),
       ]);
 
@@ -289,6 +295,14 @@ export class DafMediaFragenService {
       id: number;
       titelDe: string;
       zeilen: Array<{ id: number; sprecher: string; de: string; uz: string }>;
+      audioKey: string | null;
+      fragen: Array<{
+        id: number;
+        frageDe: string;
+        frageUz: string;
+        richtig: string;
+        falsch: string[];
+      }>;
     }
 
     // `core: true` VA tarjimasi bor so'zlargina — xuddi `baueKandidaten`
@@ -342,6 +356,8 @@ export class DafMediaFragenService {
           de: z.de,
           uz: z.uz,
         })),
+        audioKey: d.audioKey,
+        fragen: d.fragen,
       }),
     );
 

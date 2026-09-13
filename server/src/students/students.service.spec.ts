@@ -3,7 +3,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { StudentsReadService } from './students-read.service';
 import { StudentsWriteService } from './students-write.service';
-import { StudentLeadOriginService } from './student-lead-origin.service';
+import { StudentLeadOriginService } from '../common/student-origin/student-lead-origin.service';
 import { StudentsStatusService } from './students-status.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';

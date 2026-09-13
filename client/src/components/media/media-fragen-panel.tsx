@@ -37,6 +37,7 @@ const FORMAT_NOMLARI: Record<FrageFormat, string> = {
   DIALOG_LUECKE: "Dialogdagi bo'shliqni to'ldirish",
   AUDIO_WORT: "Eshitilgan so'zni topish",
   WORT_TIPPEN: "Eshitilgan so'zni yozish",
+  HOEREN_WAHL: "Suhbatni eshitib savolga javob berish",
 };
 
 /** To'g'ri javobni ajratib ko'rsatadi — bu panelning butun maqsadi. */
@@ -156,6 +157,18 @@ function SavolQatori({ f }: { f: VorschauFrage }) {
           <pre className="whitespace-pre-wrap rounded bg-muted/40 p-2 font-sans text-sm">
             {f.prompt}
           </pre>
+        </div>
+      )}
+
+      {shakl === "HOEREN" && f.audioUrl && (
+        <div className="space-y-1.5">
+          {f.titel && (
+            <div className="text-xs font-medium text-muted-foreground">
+              {f.titel}
+            </div>
+          )}
+          <OvozTugmasi url={f.audioUrl} autoPlay={false} compact />
+          <div className="text-sm">{f.prompt}</div>
         </div>
       )}
 

@@ -18,7 +18,8 @@ export type FrageFormat =
   | "ZUORDNEN"
   | "DIALOG_LUECKE"
   | "AUDIO_WORT"
-  | "WORT_TIPPEN";
+  | "WORT_TIPPEN"
+  | "HOEREN_WAHL";
 
 /**
  * Bu — mijozga (CEO ko'rigi) ketadigan savol, TO'G'RI JAVOB BILAN.
@@ -28,7 +29,7 @@ export type FrageFormat =
  */
 export interface VorschauFrage {
   format: FrageFormat;
-  itemType: "WORT" | "SATZ" | "PHRASE" | "DIALOGZEILE";
+  itemType: "WORT" | "SATZ" | "PHRASE" | "DIALOGZEILE" | "HOERFRAGE";
   itemId: number;
   prompt: string;
   hilfe: string | null;

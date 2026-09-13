@@ -12,6 +12,8 @@ const dialog: MaterialDialog = {
   id: 1,
   titelDe: 'Bist du Mia?',
   sectionCode: 'u01-s1',
+  audioKey: null,
+  fragen: [],
   zeilen: [
     z(10, 'Jonas', 'Hallo! Bist du Mia?'),
     z(11, 'Mia', 'Ja, ich bin Mia. Und du?'),
@@ -138,6 +140,8 @@ describe('dialogLuecke', () => {
       id: 3,
       titelDe: 'Wie heißen Sie?',
       sectionCode: 'u01-s2',
+      audioKey: null,
+      fragen: [],
       zeilen: [
         z(100, 'Claudia', 'Guten Tag!'),
         z(101, 'Markus', 'Guten Tag!'),
@@ -193,6 +197,8 @@ describe('dialogLuecke', () => {
       id: 4,
       titelDe: 'Gute Nacht, Mia!',
       sectionCode: 'u01-s1',
+      audioKey: null,
+      fragen: [],
       zeilen: [
         z(200, 'Walter', 'Guten Abend, Mia!'),
         z(201, 'Mia', 'Guten Abend!'),
@@ -225,6 +231,8 @@ describe('dialogLuecke', () => {
       id: 5,
       titelDe: 'W wie Weber',
       sectionCode: 'u01-s5',
+      audioKey: null,
+      fragen: [],
       zeilen: [
         z(300, 'Helga', 'Wie heißen Sie?'),
         z(301, 'Anna', 'Ich bin Anna Weber.'),
@@ -245,5 +253,18 @@ describe('dialogLuecke', () => {
         expect(f!.prompt).not.toContain(f!.richtig);
       }
     });
+  });
+
+  it('suhbatning HAMMA satrini band qiladi — bir seansda ikki marta chiqmasin', () => {
+    // Faqat olib tashlangan satr band bo'lsa, o'sha suhbatning ikkinchi
+    // bo'sh joyi (yoki eshitish savoli) bitta seansga tushardi — va
+    // ikkinchisi birinchisining javobini ko'rsatib turardi.
+    const f = dialogLuecke(dialog, andere, rndId)!;
+    expect(f.belegteItems.sort()).toEqual([
+      'DIALOGZEILE:10',
+      'DIALOGZEILE:11',
+      'DIALOGZEILE:12',
+      'DIALOGZEILE:13',
+    ]);
   });
 });

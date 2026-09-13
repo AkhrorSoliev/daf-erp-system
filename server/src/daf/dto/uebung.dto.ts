@@ -4,11 +4,12 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
 } from 'class-validator';
-import type { FrageFormat } from '../uebung/frage.types';
+import type { FrageFormat, ItemType } from '../uebung/frage.types';
 
 /**
  * `FrageFormat`ning HAR BIR a'zosi — `Record<FrageFormat, true>` orqali,
@@ -36,6 +37,7 @@ const ALLE_FRAGE_FORMATLAR: Record<FrageFormat, true> = {
   DIALOG_LUECKE: true,
   AUDIO_WORT: true,
   WORT_TIPPEN: true,
+  HOEREN_WAHL: true,
 };
 
 /**
@@ -46,6 +48,21 @@ const ALLE_FRAGE_FORMATLAR: Record<FrageFormat, true> = {
 export const FRAGE_FORMATLAR = Object.keys(
   ALLE_FRAGE_FORMATLAR,
 ) as FrageFormat[];
+
+/**
+ * `ItemType`ning HAR BIR a'zosi — `FrageFormat` bilan bir xil sabab:
+ * ro'yxat ikki DTO'da qo'lda yozilgan edi va yangi tur (`HOERFRAGE`)
+ * unutilsa har javob `@IsIn` da 400 bilan qaytardi.
+ */
+const ALLE_ITEM_TYPEN: Record<ItemType, true> = {
+  WORT: true,
+  SATZ: true,
+  PHRASE: true,
+  DIALOGZEILE: true,
+  HOERFRAGE: true,
+};
+
+export const ITEM_TYPEN = Object.keys(ALLE_ITEM_TYPEN) as ItemType[];
 
 /**
  * Mashq javobi.
@@ -59,8 +76,8 @@ export const FRAGE_FORMATLAR = Object.keys(
  * savolni qayta qurib bo'lmaydi.
  */
 export class CheckAntwortDto {
-  @IsIn(['WORT', 'SATZ', 'PHRASE', 'DIALOGZEILE'])
-  itemType!: 'WORT' | 'SATZ' | 'PHRASE' | 'DIALOGZEILE';
+  @IsIn(ITEM_TYPEN)
+  itemType!: ItemType;
 
   @IsInt()
   itemId!: number;
@@ -77,6 +94,34 @@ export class CheckAntwortDto {
   @Min(0)
   @Max(86_400_000)
   durationMs?: number;
+
+  /**
+   * Seans konteksti (dizayn 5.3). Hammasi IXTIYORIY: deploy oynasida eski
+   * klient bularsiz yuboradi va `forbidNonWhitelisted` ostida rad
+   * etilmasligi kerak. Bularsiz kelgan urinish savolga asoslangan
+   * ko'rsatkichlardan chetda qoladi, xolos.
+   */
+  @IsOptional()
+  @IsUUID('4')
+  sessionId?: string;
+
+  /** Asl savolning `PublicFrage.index`i — o'rinbosar ham SHU indeks bilan. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  questionIndex?: number;
+
+  /** 1 — asl savol, 2 — xatodan keyingi o'rinbosar. */
+  @IsOptional()
+  @IsIn([1, 2])
+  attemptNo?: 1 | 2;
+
+  /** Takrorlash seansida yuborilmaydi. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  lessonId?: number;
 }
 
 /**
@@ -88,8 +133,8 @@ export class CheckAntwortDto {
  * `studentId` bu yerda ham YO'Q — tokendan olinadi.
  */
 export class ErsatzQueryDto {
-  @IsIn(['WORT', 'SATZ', 'PHRASE', 'DIALOGZEILE'])
-  itemType!: 'WORT' | 'SATZ' | 'PHRASE' | 'DIALOGZEILE';
+  @IsIn(ITEM_TYPEN)
+  itemType!: ItemType;
 
   @Type(() => Number)
   @IsInt()
@@ -126,6 +171,11 @@ export class AbschlussDto {
   @Min(0)
   @Max(86_400_000)
   durationMs?: number;
+
+  /** Seans yakunini `DafSession` ga yozish uchun; eski klient yubormaydi. */
+  @IsOptional()
+  @IsUUID('4')
+  sessionId?: string;
 }
 
 /**
@@ -158,4 +208,42 @@ export class JuftDto {
   @Min(0)
   @Max(86_400_000)
   durationMs?: number;
+
+  /**
+   * Seans konteksti (dizayn 5.3). Hammasi IXTIYORIY: deploy oynasida eski
+   * klient bularsiz yuboradi va `forbidNonWhitelisted` ostida rad
+   * etilmasligi kerak. Bularsiz kelgan urinish savolga asoslangan
+   * ko'rsatkichlardan chetda qoladi, xolos.
+   */
+  @IsOptional()
+  @IsUUID('4')
+  sessionId?: string;
+
+  /** Asl savolning `PublicFrage.index`i — o'rinbosar ham SHU indeks bilan. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  questionIndex?: number;
+
+  /** 1 — asl savol, 2 — xatodan keyingi o'rinbosar. */
+  @IsOptional()
+  @IsIn([1, 2])
+  attemptNo?: 1 | 2;
+
+  /** Takrorlash seansida yuborilmaydi. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  lessonId?: number;
+}
+
+/**
+ * Takrorlash seansi yakuni. Dars yo'q — faqat seans. `sessionId` MAJBURIY:
+ * bu endpoint faqat yangi klientdan chaqiriladi, unda yozadigan boshqa
+ * hech narsa yo'q.
+ */
+export class WiederholungAbschlussDto {
+  @IsUUID('4')
+  sessionId!: string;
 }

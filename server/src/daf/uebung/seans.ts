@@ -3,6 +3,19 @@ import type { Frage, FrageFormat } from './frage.types';
 export const FORMAT_MAX_PRO_SEANS = 3;
 export const MIN_FORMATE = 5;
 
+/**
+ * Format bo'yicha ALOHIDA chegara — umumiy `FORMAT_MAX_PRO_SEANS`
+ * ustidan. `HOEREN_WAHL` bittasi 30–60 soniya oladi: uchtasi seansni
+ * uch daqiqa uzaytirardi. Yozilmagan format umumiy chegarani oladi.
+ */
+export const FORMAT_CAP: Partial<Record<FrageFormat, number>> = {
+  HOEREN_WAHL: 1,
+};
+
+export function capFuer(format: FrageFormat): number {
+  return FORMAT_CAP[format] ?? FORMAT_MAX_PRO_SEANS;
+}
+
 export interface SeansPlan {
   fragen: Frage[];
   verwendeteFormate: FrageFormat[];
@@ -25,7 +38,7 @@ export interface SeansPlan {
  * shundan tug'iladi, materialning kamligidan emas.
  *
  * QOIDALAR (kod haqiqatda shularni ta'minlaydi):
- * 1. Bitta format seansda `FORMAT_MAX_PRO_SEANS` martadan ko'p emas.
+ * 1. Bitta format seansda o'zining chegara qiymatidan ko'p emas (`capFuer(format)` — `FORMAT_MAX_PRO_SEANS` odatiy hal).
  * 2. Ketma-ket ikki savol bir formatda emas.
  * 3. Nomzodlar panelida yetarli xillik bo'lsa, kamida `MIN_FORMATE` xil
  *    format ishlatiladi: panel hali shu songa yetmaguncha, ishlatilmagan
@@ -111,7 +124,7 @@ export function baueSeans(
     // yordam bermaydigan holatlar — darhol hisobotga o'tkaziladi.
     const qoladigan: Frage[] = [];
     for (const f of qoldi) {
-      const capToldi = (proFormat.get(f.format) ?? 0) >= FORMAT_MAX_PRO_SEANS;
+      const capToldi = (proFormat.get(f.format) ?? 0) >= capFuer(f.format);
       const ishlatilgan = f.belegteItems.some((k) => benutzteItems.has(k));
       if (capToldi || ishlatilgan) {
         nichtPlatziert.push(f);
@@ -134,7 +147,7 @@ export function baueSeans(
     const spacerIdx = pool.findIndex(
       (f) =>
         f.format !== letzte &&
-        (proFormat.get(f.format) ?? 0) < FORMAT_MAX_PRO_SEANS &&
+        (proFormat.get(f.format) ?? 0) < capFuer(f.format) &&
         !f.belegteItems.some((k) => benutzteItems.has(k)),
     );
     if (spacerIdx === -1) {
@@ -155,7 +168,7 @@ export function baueSeans(
     const letzte = fragen[fragen.length - 1]?.format;
     const mosKeladi = (f: Frage): boolean =>
       f.format !== letzte &&
-      (proFormat.get(f.format) ?? 0) < FORMAT_MAX_PRO_SEANS &&
+      (proFormat.get(f.format) ?? 0) < capFuer(f.format) &&
       !f.belegteItems.some((k) => benutzteItems.has(k));
 
     // Besh xil formatga yetmaguncha ishlatilmagan format ustunlik

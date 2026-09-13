@@ -6,6 +6,7 @@ import { SCENES } from '../constants';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
 import { EntityHistoryService } from '../../common/entity-history';
+import { StudentLeadOriginService } from '../../common/student-origin';
 import { ALLOWED_IMAGE_MIMES } from '../../upload/upload.constraints';
 import {
   ASK_FIRST_NAME,
@@ -46,6 +47,7 @@ export function createStudentRegistrationScene(
   uploadService: UploadService,
   _bot: Telegraf<BotContext>,
   entityHistoryService: EntityHistoryService,
+  leadOrigin: StudentLeadOriginService,
 ): Scenes.BaseScene<BotContext> {
   const logger = new Logger('StudentRegistrationScene');
   const scene = new Scenes.BaseScene<BotContext>(SCENES.STUDENT_REGISTRATION);
@@ -421,6 +423,7 @@ export function createStudentRegistrationScene(
       const { plainPassword } = await registerStudentFromTelegram(
         prisma,
         entityHistoryService,
+        leadOrigin,
         data,
         chatId,
       );
