@@ -66,11 +66,24 @@ export function buildFunnelRows(
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * Voronka shu kundan boshlab sanaydi (CEO qarori, 13.09.2026): 10.09.2026 dan
+ * har bir yangi o'quvchi lid qoldiradi, undan oldingi davr to'liq emas va
+ * ko'rsatilmaydi. Server ham xuddi shu chegarani qo'yadi —
+ * server/src/reports/lead-funnel/lead-funnel.math.ts `FUNNEL_START_DATE`.
+ */
+export const FUNNEL_START_DATE = "2026-09-10";
+
+const later = (a: string, b: string) => (a > b ? a : b);
+
 function lastDayOfMonth(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
-/** Joriy Toshkent oyi: 1-kundan oxirgi kungacha. */
+/**
+ * Joriy Toshkent oyi: 1-kundan oxirgi kungacha. Voronka boshlangan oyda
+ * boshlanish `FUNNEL_START_DATE` ga suriladi.
+ */
 export function currentMonthRange(now: Date = new Date()): {
   startDate: string;
   endDate: string;
@@ -78,14 +91,16 @@ export function currentMonthRange(now: Date = new Date()): {
   const [y, m] = tashkentNow(now).dateStr.split("-").map(Number);
   const mm = String(m).padStart(2, "0");
   return {
-    startDate: `${y}-${mm}-01`,
+    startDate: later(`${y}-${mm}-01`, FUNNEL_START_DATE),
     endDate: `${y}-${mm}-${String(lastDayOfMonth(y, m)).padStart(2, "0")}`,
   };
 }
 
 /**
- * URL'dagi oraliqni o'qiydi. Ikkalasi ham to'g'ri va tartibli bo'lmasa joriy
- * oyga qaytadi — yarim buzilgan havola jim ravishda boshqa davr ko'rsatmasin.
+ * URL'dagi oraliqni o'qiydi. Ikkalasi ham to'g'ri va tartibli bo'lmasa, yoki
+ * butunlay voronka boshlanishidan oldin bo'lsa, joriy oyga qaytadi — yarim
+ * buzilgan havola jim ravishda boshqa davr ko'rsatmasin. Boshlanish esa
+ * `FUNNEL_START_DATE` dan oldin bo'lsa o'sha kunga suriladi.
  */
 export function resolveRange(
   startRaw: string | null,
@@ -97,9 +112,14 @@ export function resolveRange(
     endRaw &&
     DATE_RE.test(startRaw) &&
     DATE_RE.test(endRaw) &&
-    startRaw <= endRaw
+    startRaw <= endRaw &&
+    endRaw >= FUNNEL_START_DATE
   ) {
-    return { startDate: startRaw, endDate: endRaw, isDefault: false };
+    return {
+      startDate: later(startRaw, FUNNEL_START_DATE),
+      endDate: endRaw,
+      isDefault: false,
+    };
   }
   return { ...currentMonthRange(now), isDefault: true };
 }
@@ -126,14 +146,3 @@ export function displayDate(value: string): string {
   return `${d}.${m}.${y}`;
 }
 
-/**
- * Doskadan tashqari kirishlar faqat 10.09.2026 dan beri lid qoldiradi
- * (ADR-0018). Oraliq undan oldin boshlansa, «to'g'ridan» soni to'liq emas.
- */
-export const DIRECT_LEADS_SINCE = "2026-09-10";
-
-export function rangeStartsBeforeDirectLeads(range: {
-  startDate: string;
-}): boolean {
-  return range.startDate < DIRECT_LEADS_SINCE;
-}

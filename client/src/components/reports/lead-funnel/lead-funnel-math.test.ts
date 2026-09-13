@@ -3,8 +3,8 @@ import {
   buildFunnelRows,
   currentMonthRange,
   displayDate,
+  FUNNEL_START_DATE,
   rangeIncludesToday,
-  rangeStartsBeforeDirectLeads,
   resolveRange,
 } from "./lead-funnel-math";
 
@@ -57,9 +57,16 @@ describe("buildFunnelRows", () => {
 
 describe("currentMonthRange", () => {
   it("Toshkent oyini oladi, UTC oyini emas", () => {
-    // 31.08 20:00 UTC = 01.09 01:00 Toshkent.
-    expect(currentMonthRange(new Date("2026-08-31T20:00:00Z"))).toEqual({
-      startDate: "2026-09-01",
+    // 30.09 20:00 UTC = 01.10 01:00 Toshkent.
+    expect(currentMonthRange(new Date("2026-09-30T20:00:00Z"))).toEqual({
+      startDate: "2026-10-01",
+      endDate: "2026-10-31",
+    });
+  });
+
+  it("voronka boshlangan oyda 10.09 dan boshlanadi", () => {
+    expect(currentMonthRange(new Date("2026-09-13T10:00:00Z"))).toEqual({
+      startDate: FUNNEL_START_DATE,
       endDate: "2026-09-30",
     });
   });
@@ -75,8 +82,16 @@ describe("resolveRange", () => {
   const now = new Date("2026-09-13T10:00:00Z");
 
   it("to'g'ri oraliqni qabul qiladi", () => {
+    expect(resolveRange("2026-10-01", "2026-11-30", now)).toEqual({
+      startDate: "2026-10-01",
+      endDate: "2026-11-30",
+      isDefault: false,
+    });
+  });
+
+  it("10.09 dan oldingi boshlanishni shu kunga suradi", () => {
     expect(resolveRange("2026-06-01", "2026-09-30", now)).toEqual({
-      startDate: "2026-06-01",
+      startDate: "2026-09-10",
       endDate: "2026-09-30",
       isDefault: false,
     });
@@ -87,9 +102,10 @@ describe("resolveRange", () => {
     ["2026-06-01", null],
     ["2026-09-30", "2026-06-01"],
     ["01.06.2026", "2026-09-30"],
+    ["2026-08-01", "2026-08-31"],
   ])("buzilgan oraliq (%s, %s) joriy oyga qaytadi", (s, e) => {
     expect(resolveRange(s, e, now)).toMatchObject({
-      startDate: "2026-09-01",
+      startDate: "2026-09-10",
       isDefault: true,
     });
   });
@@ -118,12 +134,4 @@ describe("izoh shartlari", () => {
     ).toBe(false);
   });
 
-  it("10.09 dan oldingi boshlanish", () => {
-    expect(rangeStartsBeforeDirectLeads({ startDate: "2026-09-01" })).toBe(
-      true,
-    );
-    expect(rangeStartsBeforeDirectLeads({ startDate: "2026-09-10" })).toBe(
-      false,
-    );
-  });
 });

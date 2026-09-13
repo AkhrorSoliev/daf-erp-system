@@ -52,7 +52,20 @@ ochiq forma) lidlar filial bo'yicha qaralganda sanalmaydi, CEO umumiy
 ko'rinishida sanaladi. Aylangan lidning filiali o'quvchinikiga tenglangan
 (ADR-0017, A qarori).
 
+**Boshlanish sanasi — 10.09.2026 (CEO qarori, 13.09.2026).** Voronka shu kundan
+oldingi lidlarni SANAMAYDI: shu kundan har bir yangi o'quvchi lid qoldiradi,
+eski o'quvchilarga orqaga qarab lid yaratilmagan («faqat bugundan boshlaymiz»).
+Boshlanish undan oldin bo'lsa server 10.09 ga suradi, butun oraliq undan oldin
+bo'lsa 400; kalendarda undan oldingi kun tanlanmaydi. Birinchi versiya eski
+davrni izoh bilan ko'rsatgan edi — bu kelishuvga zid bo'lgani uchun olib tashlandi.
+
 ## «Darsga kelyapti, lekin to'lamagan» kartasi
+
+**O'zgardi (CEO qarori, 13.09.2026):** karta endi faqat voronkadagilarni sanaydi —
+10.09.2026 dan bugungacha lid bo'lib kelgan, darsga kelgan, lekin hali to'lov
+qilmagan odamlar (tanlangan davrga bog'liq emas). Quyidagi birinchi versiya lidsiz
+eski o'quvchilarni ham sanardi (205) va voronka raqamlari bilan aralashardi.
+
 
 Voronkadan boshqa o'lchov: **bugungi holat**, davrga bog'liq emas. Tirik o'quvchilar
 (`studentBranchWhere`), kamida bitta `PRESENT`/`LATE` davomat, birorta ham

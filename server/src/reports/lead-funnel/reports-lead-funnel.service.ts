@@ -1,19 +1,18 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { AttendanceStatus, PaymentStatus, Prisma } from '@prisma/client';
+import { AttendanceStatus, PaymentStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import {
-  type ReportBranchIds,
-  studentBranchWhere,
-} from '../../common/finance/report-branch-scope';
+import { type ReportBranchIds } from '../../common/finance/report-branch-scope';
 import { leadAttributionWhere } from '../../leads/shared/lead-scope';
 import {
   addDaysToDateStr,
   addMonthsToMonthKey,
+  tashkentDateStr,
   tashkentMonthKey,
   tashkentRangeUtc,
 } from '../../common/date/tashkent';
 import {
   countStages,
+  FUNNEL_START_DATE,
   type FunnelMode,
   type FunnelPerson,
   type FunnelStage,
@@ -66,14 +65,14 @@ export class ReportsLeadFunnelService {
   ) {
     const period = resolvePeriod(input);
     const { persons, sets } = await this.loadCohort(companyId, period, scope);
-    const unpaid = await this.loadUnpaid(companyId, scope, {
-      status: true,
-    });
+    const unpaid = await this.loadUnpaid(companyId, scope);
 
     return {
       period,
       ...countStages(persons, sets),
-      unpaid: splitByStatus(unpaid),
+      unpaid: splitByStatus(
+        unpaid.map((r) => ({ status: r.studentStatus ?? '' })),
+      ),
     };
   }
 
@@ -86,26 +85,13 @@ export class ReportsLeadFunnelService {
     const start = (page - 1) * pageSize;
 
     if (input.stage === 'unpaid') {
-      const all = await this.loadUnpaid(companyId, scope, {
-        id: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        status: true,
-        createdAt: true,
-      });
-      const data: FunnelPersonRow[] = all
-        .slice(start, start + pageSize)
-        .map((s) => ({
-          key: `s:${s.id}`,
-          name: `${s.firstName} ${s.lastName}`.trim(),
-          phone: s.phone,
-          studentId: s.id,
-          studentStatus: s.status,
-          source: null,
-          createdAt: s.createdAt,
-        }));
-      return { data, total: all.length, page, pageSize };
+      const all = await this.loadUnpaid(companyId, scope);
+      return {
+        data: all.slice(start, start + pageSize),
+        total: all.length,
+        page,
+        pageSize,
+      };
     }
 
     const period = resolvePeriod(input);
@@ -219,29 +205,26 @@ export class ReportsLeadFunnelService {
   }
 
   /**
-   * Darsga kelgan, lekin birorta ham yakunlangan to'lovi yo'q tirik o'quvchilar.
+   * Voronkaga 10.09.2026 dan beri kirgan, darsga kelgan, lekin hali to'lov
+   * qilmagan odamlar — bugungi holat bilan.
    *
-   * Bugungi holat — davr filtriga bog'liq emas. Holat bo'yicha bo'linish
-   * chaqiruvchida: prodda bu guruhning yarmidan ko'pi muzlatilgan yoki
-   * chetlatilgan, ya'ni bo'linmagan jami «hozir qo'ng'iroq qilinadiganlar»
-   * deb noto'g'ri o'qiladi. Ro'yxat yuzlab qator — xotirada sahifalanadi.
+   * Davr filtriga bog'liq EMAS: boshlanishdan bugungacha hamma. CEO qarori
+   * (13.09.2026): karta voronkadagilar bilan cheklanadi — birinchi versiya
+   * lidsiz eski o'quvchilarni ham sanardi (205 kishi) va voronka raqamlari
+   * bilan aralashardi. Holat bo'yicha bo'linish chaqiruvchida.
    */
-  private loadUnpaid<S extends Prisma.StudentSelect>(
+  private async loadUnpaid(
     companyId: number,
     scope: ReportBranchIds,
-    select: S,
-  ) {
-    return this.prisma.student.findMany({
-      where: {
-        companyId,
-        deletedAt: null,
-        ...studentBranchWhere(scope),
-        attendances: { some: { status: { in: ATTENDED } } },
-        payments: { none: { status: PaymentStatus.COMPLETED } },
-      },
-      select,
-      orderBy: [{ status: 'asc' }, { lastName: 'asc' }],
-    });
+  ): Promise<FunnelPersonRow[]> {
+    const { persons, sets } = await this.loadCohort(
+      companyId,
+      { startDate: FUNNEL_START_DATE, endDate: tashkentDateStr(new Date()) },
+      scope,
+    );
+    return this.withStudentStatus(
+      personsAtStage(persons, sets, 'attended', 'stuck'),
+    );
   }
 
   private async withStudentStatus(
@@ -253,10 +236,17 @@ export class ReportsLeadFunnelService {
     const statuses = ids.length
       ? await this.prisma.student.findMany({
           where: { id: { in: ids } },
-          select: { id: true, status: true },
+          select: { id: true, status: true, deletedAt: true },
         })
       : [];
-    const byId = new Map(statuses.map((s) => [s.id, s.status as string]));
+    // O'chirilgan (arxivlangan) o'quvchi holati «Arxivlangan» deb ko'rinadi —
+    // aks holda uni hali faol deb o'qish mumkin edi.
+    const byId = new Map(
+      statuses.map((s) => [
+        s.id,
+        s.deletedAt ? 'ARCHIVED' : (s.status as string),
+      ]),
+    );
 
     return persons.map((p) => ({
       key: p.key,
@@ -305,6 +295,10 @@ function isRealDate(s: string): boolean {
 /**
  * Sana berilmasa — joriy Toshkent oyi. Yarim oraliq yoki teskari oraliq rad
  * etiladi: jim nollar «bu davrda hech kim kelmagan» deb o'qilardi.
+ *
+ * Boshlanish `FUNNEL_START_DATE` dan oldin bo'lsa o'sha kunga suriladi;
+ * butun oraliq undan oldin bo'lsa rad etiladi. Qaytgan `period` — haqiqatda
+ * sanalgan oraliq, klient sarlavhada shuni ko'rsatadi.
  */
 export function resolvePeriod(input: FunnelPeriodInput): {
   startDate: string;
@@ -324,12 +318,25 @@ export function resolvePeriod(input: FunnelPeriodInput): {
         "Boshlanish sanasi tugash sanasidan keyin bo'lishi mumkin emas",
       );
     }
-    return { startDate: input.startDate, endDate: input.endDate };
+    if (input.endDate < FUNNEL_START_DATE) {
+      throw new BadRequestException(
+        'Voronka 10.09.2026 dan boshlab hisoblanadi',
+      );
+    }
+    return {
+      startDate: maxDate(input.startDate, FUNNEL_START_DATE),
+      endDate: input.endDate,
+    };
   }
   const month = tashkentMonthKey(new Date());
   const next = addMonthsToMonthKey(month, 1);
   return {
-    startDate: input.startDate ?? `${month}-01`,
-    endDate: input.endDate ?? addDaysToDateStr(`${next}-01`, -1),
+    startDate: maxDate(`${month}-01`, FUNNEL_START_DATE),
+    endDate: addDaysToDateStr(`${next}-01`, -1),
   };
+}
+
+/** "YYYY-MM-DD" satrlari leksik tartibda ham sana tartibida. */
+function maxDate(a: string, b: string): string {
+  return a > b ? a : b;
 }

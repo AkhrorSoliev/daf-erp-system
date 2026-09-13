@@ -2,6 +2,7 @@
 
 import { ChevronRight, WalletCards } from "lucide-react";
 import { formatNumber } from "@/lib/format-utils";
+import { displayDate, FUNNEL_START_DATE } from "./lead-funnel-math";
 import type { LeadFunnelResponse } from "./lead-funnel-types";
 
 interface LeadFunnelUnpaidCardProps {
@@ -10,7 +11,8 @@ interface LeadFunnelUnpaidCardProps {
 }
 
 /**
- * Voronkadan boshqa o'lchov: davrga emas, BUGUNGA bog'liq. Holat bo'yicha
+ * Voronkaga 10.09.2026 dan beri kirgan, darsga kelgan, lekin hali to'lamagan
+ * odamlar. Tanlangan davrga emas, BUGUNGI holatga bog'liq. Holat bo'yicha
  * bo'linadi — aks holda jami «hozir qo'ng'iroq qilinadiganlar» deb o'qilardi,
  * vaholanki ularning bir qismi allaqachon chetlatilgan.
  *
@@ -50,7 +52,8 @@ export function LeadFunnelUnpaidCard({
           {formatNumber(unpaid.total)}
         </span>
         <span className="block text-xs text-muted-foreground">
-          bugungi holat · tanlangan davrga bog&apos;liq emas
+          {displayDate(FUNNEL_START_DATE)} dan beri voronkaga kirganlar ·
+          bugungi holat
         </span>
       </span>
 

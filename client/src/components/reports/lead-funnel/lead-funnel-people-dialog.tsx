@@ -24,7 +24,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DialogPaginationFooter } from "@/components/reports/departed-students/dialog-pagination-footer";
-import { displayDate, STAGE_LABELS, STUCK_LABELS } from "./lead-funnel-math";
+import {
+  displayDate,
+  FUNNEL_START_DATE,
+  STAGE_LABELS,
+  STUCK_LABELS,
+} from "./lead-funnel-math";
 import type {
   FunnelPeopleResponse,
   PeopleMode,
@@ -70,7 +75,8 @@ function PeopleBody({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // `unpaid` bugungi holat — davrga bog'liq emas, shuning uchun sana yuborilmaydi.
+  // `unpaid` voronka boshlanishidan bugungacha — tanlangan davrga bog'liq emas,
+  // shuning uchun sana yuborilmaydi.
   const params = {
     stage,
     mode,
@@ -103,7 +109,7 @@ function PeopleBody({
         <DialogTitle>{STAGE_LABELS[stage]}</DialogTitle>
         <DialogDescription>
           {stage === "unpaid"
-            ? "Kamida bir marta darsga kelgan, lekin birorta ham to'lov qilmagan o'quvchilar — bugungi holat."
+            ? `${displayDate(FUNNEL_START_DATE)} dan beri lid bo'lib kelgan, darsga kelgan, lekin hali to'lov qilmaganlar — bugungi holat.`
             : `${displayDate(range.startDate)} — ${displayDate(range.endDate)} oralig'ida kelgan lidlar.`}
         </DialogDescription>
       </DialogHeader>
