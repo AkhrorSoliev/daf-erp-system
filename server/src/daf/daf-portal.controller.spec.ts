@@ -109,6 +109,14 @@ describe('DafPortalController — ruxsat', () => {
       expect(roles).not.toContain(staff);
     }
   });
+
+  it('wiederholung/abschluss route mavjud va Student roliga qaraydi', () => {
+    const proto = DafPortalController.prototype as any;
+    expect(typeof proto.postWiederholungAbschluss).toBe('function');
+    expect(Reflect.getMetadata('path', proto.postWiederholungAbschluss)).toBe(
+      'wiederholung/abschluss',
+    );
+  });
 });
 
 /**

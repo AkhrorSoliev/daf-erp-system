@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { UebungService } from './uebung.service';
 
@@ -1370,6 +1370,98 @@ describe('UebungService.abschluss', () => {
         ctx,
       ),
     ).rejects.toThrow();
+  });
+});
+
+describe('seans yakuni', () => {
+  const ctx = { studentId: 55, companyId: 1 };
+  const UUID = '3f2a9c1e-7b4d-4e8a-9c2f-1a2b3c4d5e6f';
+  const satr = (
+    questionIndex: number,
+    attemptNo: number,
+    score: number,
+    format = 'WORT_UZ',
+  ) => ({ questionIndex, attemptNo, format, score, gradingStatus: 'GRADED' });
+
+  function prismaMitSeans(studentId = 55, finishedAt: Date | null = null) {
+    const prisma = fakePrisma();
+    prisma.dafSession.findUnique = jest.fn(async () => ({
+      id: UUID,
+      studentId,
+      finishedAt,
+      questionCount: finishedAt ? 12 : null,
+      firstTryCorrect: finishedAt ? 9 : null,
+    })) as any;
+    prisma.dafAttempt.findMany = jest.fn(async () => [
+      satr(0, 1, 1),
+      satr(1, 1, 0),
+      satr(1, 2, 1),
+      satr(2, 1, 1),
+    ]) as any;
+    return prisma;
+  }
+
+  it('abschluss sessionId bilan: DafSession urinishlardan yakunlanadi, DafLessonProgress avvalgidek', async () => {
+    const prisma = prismaMitSeans();
+    await new UebungService(prisma as any).abschluss(
+      100,
+      { richtig: 10, gesamt: 12, sessionId: UUID },
+      ctx,
+    );
+    const upd = (prisma.dafSession.update as jest.Mock).mock.calls[0][0];
+    expect(upd.where).toEqual({ id: UUID });
+    expect(upd.data).toMatchObject({ questionCount: 3, firstTryCorrect: 2 });
+    expect(upd.data.finishedAt).toBeInstanceOf(Date);
+    // Klient aytgan 10 seansga EMAS, faqat dars progressiga ketadi.
+    const lp = (prisma.dafLessonProgress.upsert as jest.Mock).mock.calls[0][0];
+    expect(lp.create.bestScore).toBe(10);
+  });
+
+  it('abschluss sessionId siz (eski klient): seansga tegilmaydi', async () => {
+    const prisma = fakePrisma();
+    await new UebungService(prisma as any).abschluss(
+      100,
+      { richtig: 10, gesamt: 12 },
+      ctx,
+    );
+    expect(prisma.dafSession.findUnique).not.toHaveBeenCalled();
+    expect(prisma.dafSession.update).not.toHaveBeenCalled();
+  });
+
+  it('wiederholungAbschluss natijani qaytaradi va DafLessonProgress ga tegmaydi', async () => {
+    const prisma = prismaMitSeans();
+    const r = await new UebungService(prisma as any).wiederholungAbschluss(
+      { sessionId: UUID },
+      ctx,
+    );
+    expect(r).toEqual({ questionCount: 3, firstTryCorrect: 2 });
+    expect(prisma.dafLessonProgress.upsert).not.toHaveBeenCalled();
+  });
+
+  it('allaqachon yakunlangan seans qayta yozilmaydi — saqlangan natija qaytadi (idempotent)', async () => {
+    const prisma = prismaMitSeans(55, new Date());
+    const r = await new UebungService(prisma as any).wiederholungAbschluss(
+      { sessionId: UUID },
+      ctx,
+    );
+    expect(r).toEqual({ questionCount: 12, firstTryCorrect: 9 });
+    expect(prisma.dafSession.update).not.toHaveBeenCalled();
+  });
+
+  it("boshqa o'quvchining seansi — 403; yo'q seans — 404", async () => {
+    await expect(
+      new UebungService(prismaMitSeans(99) as any).wiederholungAbschluss(
+        { sessionId: UUID },
+        ctx,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    const prisma = fakePrisma();
+    await expect(
+      new UebungService(prisma as any).wiederholungAbschluss(
+        { sessionId: UUID },
+        ctx,
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });
 

@@ -36,6 +36,7 @@ import {
   ZUORDNEN_JUFT,
 } from './satz-fragen';
 import { baueSeans } from './seans';
+import { seansYigindisi } from './seans-natija';
 import { ohneWiederholteFormate } from './wiederholte-formate';
 import {
   artikel,
@@ -425,7 +426,12 @@ export class UebungService {
     // saqlanmaydi: `DafLessonProgress`da bu qiymat uchun ustun yo'q. Bu
     // funksiya uni pastda hech qayerda o'qimaydi — kelajakda haqiqatda
     // yozish kerak bo'lsa, DTOsi allaqachon tayyor.
-    input: { richtig: number; gesamt: number; durationMs?: number },
+    input: {
+      richtig: number;
+      gesamt: number;
+      durationMs?: number;
+      sessionId?: string;
+    },
     ctx: { studentId: number; companyId: number },
   ): Promise<{ bestScore: number; runs: number }> {
     if (input.gesamt <= 0) {
@@ -435,6 +441,12 @@ export class UebungService {
       throw new BadRequestException(
         "To'g'ri javob soni savol sonidan oshib ketdi",
       );
+    }
+
+    // Seans natijasi URINISHLARDAN — klient aytgan `richtig` faqat
+    // `DafLessonProgress.bestScore` ga ketadi (yo'l ekrani, avvalgidek).
+    if (input.sessionId) {
+      await this.seansniYakunla(input.sessionId, ctx);
     }
 
     const oldingi = await this.prisma.dafLessonProgress.findUnique({
@@ -460,6 +472,71 @@ export class UebungService {
     } as any);
 
     return { bestScore, runs };
+  }
+
+  /**
+   * Takrorlash seansi yakuni. Dars yo'q, `DafLessonProgress` ga tegilmaydi
+   * — faqat `DafSession`. Hozirgacha takrorlash hech narsa yubormasdi va
+   * tarixda qolmasdi (dizayn 5.1).
+   */
+  async wiederholungAbschluss(
+    input: { sessionId: string },
+    ctx: PruefenContext,
+  ): Promise<{ questionCount: number; firstTryCorrect: number }> {
+    return this.seansniYakunla(input.sessionId, ctx);
+  }
+
+  /**
+   * `DafSession.finishedAt/questionCount/firstTryCorrect` ni urinishlardan
+   * yozadi. IDEMPOTENT: yakunlangan seans qayta hisoblanmaydi — ikki marta
+   * bosilgan «Tugatish» yoki qayta yuborilgan so'rov natijani o'zgartirmaydi.
+   */
+  private async seansniYakunla(
+    sessionId: string,
+    ctx: PruefenContext,
+  ): Promise<{ questionCount: number; firstTryCorrect: number }> {
+    const seans = (await this.prisma.dafSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        id: true,
+        studentId: true,
+        finishedAt: true,
+        questionCount: true,
+        firstTryCorrect: true,
+      },
+    } as any)) as {
+      id: string;
+      studentId: number;
+      finishedAt: Date | null;
+      questionCount: number | null;
+      firstTryCorrect: number | null;
+    } | null;
+    if (!seans) throw new NotFoundException('Seans topilmadi');
+    if (seans.studentId !== ctx.studentId) {
+      throw new ForbiddenException("Bu seans boshqa o'quvchiga tegishli");
+    }
+    if (seans.finishedAt) {
+      return {
+        questionCount: seans.questionCount ?? 0,
+        firstTryCorrect: seans.firstTryCorrect ?? 0,
+      };
+    }
+    const satrlar = (await this.prisma.dafAttempt.findMany({
+      where: { sessionId },
+      select: {
+        questionIndex: true,
+        attemptNo: true,
+        format: true,
+        score: true,
+        gradingStatus: true,
+      },
+    } as any)) as Parameters<typeof seansYigindisi>[0];
+    const natija = seansYigindisi(satrlar);
+    await this.prisma.dafSession.update({
+      where: { id: sessionId },
+      data: { finishedAt: new Date(), ...natija },
+    } as any);
+    return natija;
   }
 
   /**
