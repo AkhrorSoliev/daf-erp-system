@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Pause, Play, ArrowClockwise } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { ovozXatosiMi } from "./oynatish-xatosi";
 import { formatVaqt } from "./pleyer-vaqt";
 
 /** O'quvchi tanlaydigan ikki tezlik — dizayn Q3: sekin variant faylsiz. */
@@ -27,12 +28,25 @@ export function SuhbatPleyer({ url }: { url: string }) {
   const [davomiylik, setDavomiylik] = React.useState(0);
   const [tezlik, setTezlik] = React.useState<(typeof TEZLIKLAR)[number]>(1);
   const [xato, setXato] = React.useState(false);
+  // `ovoz-tugmasi.tsx`dagi bilan bir xil himoya, bir xil sabab bilan:
+  // `.play()` va'dasi DOM tuguniga emas, bir martalik JS obyektiga
+  // bog'liq — tez pauza/qayta bosish eski urinishni "havoda" qoldirishi
+  // mumkin, va uning KECH kelgan rad etilishi ENDIGI (muvaffaqiyatli)
+  // urinishning holatini buzmasligi kerak.
+  const joriyUrinish = React.useRef(0);
 
   const qoy = React.useCallback(() => {
     const a = audioRef.current;
     if (!a) return;
+    const urinish = ++joriyUrinish.current;
     setXato(false);
-    void a.play().catch(() => setXato(true));
+    void a.play().catch((sabab: unknown) => {
+      if (joriyUrinish.current !== urinish) return;
+      // `AbortError` (pauza/manba almashishi to'xtatdi) va `NotAllowedError`
+      // (avtomatik ijro bloklandi) HAQIQIY xato emas — qarang
+      // `oynatish-xatosi.ts`.
+      if (ovozXatosiMi(sabab)) setXato(true);
+    });
   }, []);
 
   React.useEffect(() => {
@@ -59,7 +73,13 @@ export function SuhbatPleyer({ url }: { url: string }) {
   };
 
   return (
-    <div className="space-y-3 rounded-2xl border border-line bg-surface p-4">
+    // `data-suhbat-pleyer` — `seans-ekrani.tsx`dagi global Enter ushlagichi
+    // shu belgi orqali pleyer ichidagi tugmani (Play, "0.8×") tanib, o'z
+    // `preventDefault()`ini bosilmasin deb qaytarib yuboradi.
+    <div
+      data-suhbat-pleyer=""
+      className="space-y-3 rounded-2xl border border-line bg-surface p-4"
+    >
       <audio
         key={url}
         ref={audioRef}
@@ -79,7 +99,9 @@ export function SuhbatPleyer({ url }: { url: string }) {
         <button
           type="button"
           onClick={togla}
-          aria-label={xato ? "Ovozni qayta yuklash" : oynayapti ? "Pauza" : "Eshitish"}
+          aria-label={
+            xato ? "Ovozni qayta yuklash" : oynayapti ? "Pauza" : "Eshitish"
+          }
           className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-95 motion-reduce:transition-none"
         >
           {xato ? (
@@ -116,7 +138,9 @@ export function SuhbatPleyer({ url }: { url: string }) {
             aria-pressed={tezlik === t}
             className={cn(
               "rounded-full px-3 py-1 text-sm font-semibold transition-colors",
-              tezlik === t ? "bg-coral-500/10 text-coral-500" : "bg-tint text-ink-600",
+              tezlik === t
+                ? "bg-coral-500/10 text-coral-500"
+                : "bg-tint text-ink-600",
             )}
           >
             {t === 1 ? "1×" : "🐢 0.8×"}
@@ -124,7 +148,9 @@ export function SuhbatPleyer({ url }: { url: string }) {
         ))}
       </div>
       {xato ? (
-        <p className="text-sm text-muted-foreground">Ovoz yuklanmadi — qayta urinib ko&apos;ring</p>
+        <p className="text-sm text-muted-foreground">
+          Ovoz yuklanmadi — qayta urinib ko&apos;ring
+        </p>
       ) : null}
     </div>
   );

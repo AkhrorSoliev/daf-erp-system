@@ -108,10 +108,13 @@ function ZeileBlock({ title, rows }: { title: string; rows: InhaltZeile[] }) {
 }
 
 function DialogBlock({
-  dialoge,
+  // Standart `[]` — `dialoge` ixtiyoriy (`media-inhalt-types.ts`dagi izoh):
+  // eski serverdan (deploy tartibi yoki rollback) kelgan javobda bu maydon
+  // umuman yo'q bo'lishi mumkin, `undefined.length` esa sahifani yiqitardi.
+  dialoge = [],
   rows,
 }: {
-  dialoge: InhaltDialog[];
+  dialoge?: InhaltDialog[];
   rows: InhaltDialogZeile[];
 }) {
   if (dialoge.length === 0 && rows.length === 0) return null;
@@ -123,7 +126,9 @@ function DialogBlock({
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="font-medium">{d.titelDe}</div>
-              <div className="text-xs text-muted-foreground">{d.titelUz} · {d.code}</div>
+              <div className="text-xs text-muted-foreground">
+                {d.titelUz} · {d.code}
+              </div>
             </div>
             {/* Butun suhbatning ovozi — CEO namunani shu yerda eshitadi. */}
             <OvozHujayrasi url={d.audioUrl} />
@@ -141,9 +146,13 @@ function DialogBlock({
                 .filter((r) => r.dialogId === d.id)
                 .map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="text-muted-foreground">{r.sprecher}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {r.sprecher}
+                    </TableCell>
                     <TableCell className="font-medium">{r.de}</TableCell>
-                    <TableCell className="text-muted-foreground">{r.uz}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {r.uz}
+                    </TableCell>
                   </TableRow>
                 ))}
             </TableBody>
@@ -155,8 +164,13 @@ function DialogBlock({
                   <span className="font-medium">{f.frageDe}</span>{" "}
                   <span className="text-muted-foreground">({f.frageUz})</span>
                   {" → "}
-                  <span className="text-emerald-700 dark:text-emerald-400">{f.richtig}</span>
-                  <span className="text-muted-foreground"> · {f.falsch.join(" · ")}</span>
+                  <span className="text-emerald-700 dark:text-emerald-400">
+                    {f.richtig}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    · {f.falsch.join(" · ")}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -198,12 +212,7 @@ export function MediaInhaltPanel({ sectionId }: { sectionId: number }) {
   // bo'lgani uchun React Query ularni BITTA keshdan ta'minlaydi: bo'lim
   // ochilganda `/inhalt`ga bitta GET, va ikkalasidan istalgani `refetch()`
   // chaqirsa — ikkalasi ham yangilanadi.
-  const {
-    data,
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["media-inhalt", sectionId],
     queryFn: () =>
       api
@@ -224,11 +233,10 @@ export function MediaInhaltPanel({ sectionId }: { sectionId: number }) {
           deb hisoblardi — aslida ikkalasi ham to'g'ri, faqat ko'lami
           boshqa. */}
       <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">Ko&apos;lam:</span>{" "}
-        faqat SHU bo&apos;limning materiali. Oldingi bo&apos;limlarga
-        tegishli so&apos;z, gap yoki ibora bu ro&apos;yxatda
-        ko&apos;rinmaydi — &quot;Savollar&quot; yorlig&apos;i esa ularni
-        ham hisobga oladi.
+        <span className="font-medium text-foreground">Ko&apos;lam:</span> faqat
+        SHU bo&apos;limning materiali. Oldingi bo&apos;limlarga tegishli
+        so&apos;z, gap yoki ibora bu ro&apos;yxatda ko&apos;rinmaydi —
+        &quot;Savollar&quot; yorlig&apos;i esa ularni ham hisobga oladi.
       </div>
 
       {isLoading && (

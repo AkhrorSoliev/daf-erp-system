@@ -138,3 +138,29 @@ export const moreRoutes = [
   "/portal/faq",
   "/portal/about",
 ];
+
+/**
+ * An exercise session (`SeansEkrani` — question, "Tekshirish"/"Keyingi"
+ * action bar, result) draws its own `fixed bottom-0` panel in the exact
+ * spot the floating bottom nav (`LumioBottomNav`,
+ * `fixed inset-x-4 bottom-...`) already occupies (production finding): on
+ * a phone the nav pill sits on top of the button text, and a tap lands on
+ * the nav instead. The session has its own exit (X) and is a focused,
+ * full-screen flow, so the floating nav is not rendered at all on these
+ * two routes.
+ *
+ * Only these exact two routes (and their trailing-slash form):
+ * `/portal/lernen/lessons/<lessonId>` (`[lessonId]` can be any value) and
+ * `/portal/lernen/wiederholung`. Every other `/portal/lernen/*` route
+ * (units, reyting) never renders `SeansEkrani`, so the nav stays for them.
+ *
+ * The legacy lesson page (what `SeansEkrani` falls back to for a lesson
+ * with no engine questions) lives on the same route and loses the nav
+ * too — acceptable, since that page has its own back header.
+ */
+export function isBottomNavHiddenRoute(pathname: string): boolean {
+  return (
+    /^\/portal\/lernen\/lessons\/[^/]+\/?$/.test(pathname) ||
+    /^\/portal\/lernen\/wiederholung\/?$/.test(pathname)
+  );
+}

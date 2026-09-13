@@ -67,8 +67,7 @@ import {
  * (ortiqcha maydon sifatida rad etiladi).
  */
 export type SeansEkraniProps =
-  | { manba?: "dars"; lessonId: number }
-  | { manba: "takrorlash" };
+  { manba?: "dars"; lessonId: number } | { manba: "takrorlash" };
 
 /**
  * Bitta dars UCHUN HAM, takrorlash UCHUN HAM ishlatiladigan to'liq mashq
@@ -116,7 +115,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
   const fortschritt = useFortschritt();
 
   const unitId = darsMi ? (lesson.data?.unit.id ?? null) : null;
-  const chiqishHref = unitId ? `/portal/lernen/units/${unitId}` : "/portal/lernen";
+  const chiqishHref = unitId
+    ? `/portal/lernen/units/${unitId}`
+    : "/portal/lernen";
 
   const [holat, setHolat] = React.useState<SeansHolati | null>(null);
   const [tanlangan, setTanlangan] = React.useState<string | null>(null);
@@ -129,7 +130,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // Endigina xato bo'lgan (shu sabab `juftlar`dan olib tashlangan)
   // juftlar — qisqa vaqt qizil ko'rsatish uchun (`Juftlash`ga
   // `xatoIdxlar` sifatida uzatiladi).
-  const [xatoIdxlar, setXatoIdxlar] = React.useState<{ chapIdx: number; ongIdx: number }[]>([]);
+  const [xatoIdxlar, setXatoIdxlar] = React.useState<
+    { chapIdx: number; ongIdx: number }[]
+  >([]);
   // Joriy savolda nechta juft BIRINCHI urinishda xato bo'lgani —
   // savol tugaganda sintetik `natija.isCorrect`ni hisoblash uchun
   // (pastga qarang, `juftHammasiTogriEffekt`). Holat emas, REF: bu
@@ -144,7 +147,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // baribir `setXatoIdxlar`ni chaqirib, "unmount qilingan komponentda
   // holat yangilash" ogohlantirishini (va xotira sizishini) keltirib
   // chiqarardi.
-  const xatoFlashTaymerlari = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  const xatoFlashTaymerlari = React.useRef<Set<ReturnType<typeof setTimeout>>>(
+    new Set(),
+  );
   const tozalaFlashTaymerlari = React.useCallback(() => {
     xatoFlashTaymerlari.current.forEach((id) => clearTimeout(id));
     xatoFlashTaymerlari.current.clear();
@@ -282,7 +287,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
           // topilmasi tuzatildi): "shu javob birinchi urinishdagi
           // xatomi" degan qaror endi sof `juft-holati.ts` modulida.
           setJuftlar(
-            (prev) => juftJavobKeldi(prev, chapIdx, ongIdx, javob.isCorrect).juftlar,
+            (prev) =>
+              juftJavobKeldi(prev, chapIdx, ongIdx, javob.isCorrect).juftlar,
           );
 
           // `xato` ni `setJuftlar` YOPILISHI ICHIDA yozib, keyingi qatorda
@@ -326,7 +332,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
           // bayrog'i BU YERDA ATAYLAB O'QILMAYDI — tarmoq xatosi HECH
           // QACHON `juftXatoSoni`ni oshirmasligi kerak, server hech
           // narsa demadi, xato demadi.
-          setJuftlar((prev) => juftJavobKeldi(prev, chapIdx, ongIdx, false).juftlar);
+          setJuftlar(
+            (prev) => juftJavobKeldi(prev, chapIdx, ongIdx, false).juftlar,
+          );
           toast.error(getErrorMessage(err, "Yuborib bo'lmadi. Qayta bosing"));
         },
       },
@@ -421,7 +429,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // natija ekranidagi vaqtni har safar biroz oshirib ko'rsatardi.
   const tugashDavomiyligi = React.useRef<number | null>(null);
   React.useEffect(() => {
-    if (!holat || !tugadimi(holat) || holat.jami === 0 || yozildi.current) return;
+    if (!holat || !tugadimi(holat) || holat.jami === 0 || yozildi.current)
+      return;
     yozildi.current = true;
     tugashDavomiyligi.current = Date.now() - seansBoshi;
 
@@ -474,7 +483,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
         // shart — natija ekrani muvaffaqiyatning o'zi, shuning uchun
         // faqat xato holatida tost chiqadi.
         onError: (err) =>
-          toast.error(getErrorMessage(err, "Natija saqlanmadi. Internetni tekshiring")),
+          toast.error(
+            getErrorMessage(err, "Natija saqlanmadi. Internetni tekshiring"),
+          ),
       },
     );
     // Qasddan tushirilgan bog'liqliklar (har biri xavfsiz):
@@ -567,6 +578,18 @@ export function SeansEkrani(props: SeansEkraniProps) {
       // Yozish rejimida raqamlar javobning O'ZI — ularni tortib
       // olsak, o'quvchi «7» yoza olmasdi.
       if (e.key === "Enter") {
+        // Pleyer ichidagi tugma (Play, "0.8×" — `suhbat-pleyer.tsx`dagi
+        // `data-suhbat-pleyer`) fokusda bo'lsa, bu yerga tegmaymiz:
+        // pastdagi shartsiz `preventDefault()` aks holda tugmaning O'Z
+        // Enter faollashuvini (brauzerning standart `<button>`
+        // xatti-harakati) o'ldirardi — Play ovoz chalmas, "0.8×" tezlikni
+        // almashtirmas edi (ko'rik topilmasi).
+        if (
+          e.target instanceof Element &&
+          e.target.closest("[data-suhbat-pleyer]")
+        ) {
+          return;
+        }
         // Tekshirish bosqichida (`natija` hali yo'q) `Yozish` maydoni
         // Enter'ni O'ZI ushlaydi (`onEnter` orqali) va hodisa shu yerga
         // baribir ko'tarilib keladi (bubbling) — qayta ishlasak,
@@ -641,7 +664,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
   }
 
   if (seans.isError) {
-    const status = axios.isAxiosError(seans.error) ? seans.error.response?.status : null;
+    const status = axios.isAxiosError(seans.error)
+      ? seans.error.response?.status
+      : null;
     // `darsMi`ga bog'langan: 404 faqat "bu ID'dagi dars topilmadi" degani,
     // va bu tushuncha `wiederholung/uebung`ga tegishli emas — u dinamik
     // ID olmaydi, shuning uchun bu yerda haqiqatda erishib bo'lmaydi.
@@ -654,7 +679,10 @@ export function SeansEkrani(props: SeansEkraniProps) {
             icon={<Books size={28} weight="bold" />}
             title="Bu dars topilmadi"
             action={
-              <Button variant="secondary" onClick={() => router.push("/portal/lernen")}>
+              <Button
+                variant="secondary"
+                onClick={() => router.push("/portal/lernen")}
+              >
                 Orqaga
               </Button>
             }
@@ -694,7 +722,10 @@ export function SeansEkrani(props: SeansEkraniProps) {
           title="Bugun takrorlanadigan so'z yo'q"
           description="Barcha so'zlaringiz hali muddatidan oldin — ertaga qayting."
           action={
-            <Button variant="secondary" onClick={() => router.push("/portal/lernen")}>
+            <Button
+              variant="secondary"
+              onClick={() => router.push("/portal/lernen")}
+            >
               Yo&apos;lga qaytish
             </Button>
           }
@@ -794,13 +825,17 @@ export function SeansEkrani(props: SeansEkraniProps) {
           // chiroyli chizadi.
           <DialogBlok matn={frage.prompt} />
         ) : frage.prompt ? (
-          <p className="text-2xl font-bold text-ink-900 sm:text-3xl">{frage.prompt}</p>
+          <p className="text-2xl font-bold text-ink-900 sm:text-3xl">
+            {frage.prompt}
+          </p>
         ) : null}
         {/* `ZUORDNEN` uchun server `prompt`ni BO'SH yuboradi (ko'rik
             topilmasi tuzatildi): yuqoridagi ko'rsatma bilan deyarli bir
             xil matn ustma-ust chiqib qolardi. Bo'sh bo'lsa hech narsa
             chizilmaydi — o'rniga savol darrov javob maydoniga o'tadi. */}
-        {frage.hilfe ? <p className="text-sm text-ink-500">{frage.hilfe}</p> : null}
+        {frage.hilfe ? (
+          <p className="text-sm text-ink-500">{frage.hilfe}</p>
+        ) : null}
 
         {rejim === "TANLASH" ? (
           <Tanlash
@@ -849,7 +884,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
             kutilmoqda={pruefen.isPending}
           />
         )}
-        {natija?.transkript ? <TranskriptBlok zeilen={natija.transkript} /> : null}
+        {natija?.transkript ? (
+          <TranskriptBlok zeilen={natija.transkript} />
+        ) : null}
       </main>
 
       {/* Pastdagi yopishqoq panel — natija ham, tugma ham shu yerda. */}
@@ -877,8 +914,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
                 // yuqorida, taxtaning o'zida turibdi.
                 <div className="rounded-2xl bg-tint px-4 py-3">
                   <p className="text-sm font-semibold text-ink-700">
-                    Hammasi to&apos;g&apos;ri! Ammo bu savolda birinchi urinishda xato bo&apos;lgani
-                    uchun u keyinroq yana qaytadi.
+                    Hammasi to&apos;g&apos;ri! Ammo bu savolda birinchi
+                    urinishda xato bo&apos;lgani uchun u keyinroq yana qaytadi.
                   </p>
                 </div>
               )
@@ -889,11 +926,18 @@ export function SeansEkrani(props: SeansEkraniProps) {
                   natija.isCorrect ? "bg-success/10" : "bg-danger/10",
                 )}
               >
-                <p className={cn("font-bold", natija.isCorrect ? "text-success" : "text-danger")}>
+                <p
+                  className={cn(
+                    "font-bold",
+                    natija.isCorrect ? "text-success" : "text-danger",
+                  )}
+                >
                   {natija.isCorrect ? "To'g'ri!" : "Xato"}
                 </p>
                 {!natija.isCorrect ? (
-                  <p className="mt-0.5 text-sm font-semibold text-ink-800">{natija.richtig}</p>
+                  <p className="mt-0.5 text-sm font-semibold text-ink-800">
+                    {natija.richtig}
+                  </p>
                 ) : null}
               </div>
             )
@@ -906,16 +950,26 @@ export function SeansEkrani(props: SeansEkraniProps) {
             // Juftlashda "Tekshirish" bosqichi yo'q — tugma FAQAT
             // «Keyingi», va u hamma juft yashil bo'lgandagina (`natija`
             // yuqoridagi effekt orqali o'rnatilganda) faollashadi.
-            <Button className="w-full" onClick={() => void keyingi()} disabled={!natija || ersatzSorov.isPending}>
+            <Button
+              className="w-full"
+              onClick={() => void keyingi()}
+              disabled={!natija || ersatzSorov.isPending}
+            >
               Keyingi
             </Button>
           ) : (
             <Button
               className="w-full"
               onClick={natija ? () => void keyingi() : tekshir}
-              disabled={natija ? ersatzSorov.isPending : !tayyor || pruefen.isPending}
+              disabled={
+                natija ? ersatzSorov.isPending : !tayyor || pruefen.isPending
+              }
             >
-              {natija ? "Keyingi" : pruefen.isPending ? "Tekshirilmoqda…" : "Tekshirish"}
+              {natija
+                ? "Keyingi"
+                : pruefen.isPending
+                  ? "Tekshirilmoqda…"
+                  : "Tekshirish"}
             </Button>
           )}
         </div>

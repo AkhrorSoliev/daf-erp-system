@@ -79,5 +79,10 @@ export interface SectionInhalt {
   saetze: InhaltZeile[];
   phrasen: InhaltZeile[];
   dialogZeilen: InhaltDialogZeile[];
-  dialoge: InhaltDialog[];
+  /**
+   * Ixtiyoriy (ko'rik topilmasi): eski serverdan (deploy tartibi yoki
+   * rollback) kelgan javobda bu maydon umuman yo'q bo'lishi mumkin —
+   * `?? []` bilan o'qiladi (`media-inhalt-panel.tsx`dagi `DialogBlock`).
+   */
+  dialoge?: InhaltDialog[];
 }
