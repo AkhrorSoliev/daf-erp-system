@@ -3,6 +3,7 @@ import api from "@/lib/api";
 import {
   ALL_BRANCHES,
   BRANCH_STORAGE_KEY,
+  branchScopeChanged,
   resolveStoredBranch,
 } from "@/lib/branch-header";
 
@@ -30,6 +31,13 @@ interface BranchSwitcherState {
   loaded: boolean;
   /** True when the user may pick "Barcha filiallar" (CEO only). */
   canSelectAll: boolean;
+  /**
+   * Bumps each time the saved selection changes what requests claim — a real
+   * switch, or resolving away from a saved branch that is no longer allowed.
+   * `BranchScopedMain` keys the page content on it. Resolving to the branch
+   * already saved does NOT bump it; see `branchScopeChanged`.
+   */
+  scopeVersion: number;
   selectBranch: (branch: BranchSelection) => void;
   fetchBranches: () => Promise<void>;
   refetchBranches: () => Promise<void>;
@@ -49,11 +57,16 @@ async function loadBranches(): Promise<BranchItem[]> {
   return data;
 }
 
-function persist(selection: BranchSelection) {
-  localStorage.setItem(
-    BRANCH_STORAGE_KEY,
-    selection ? String(selection.id) : ALL_BRANCHES,
-  );
+/** Save the selection; returns true when that changed what requests claim. */
+function persist(selection: BranchSelection): boolean {
+  const previous = localStorage.getItem(BRANCH_STORAGE_KEY);
+  const next = selection ? String(selection.id) : ALL_BRANCHES;
+  localStorage.setItem(BRANCH_STORAGE_KEY, next);
+  return branchScopeChanged(previous, next);
+}
+
+function nextScopeVersion(state: BranchSwitcherState, changed: boolean): number {
+  return changed ? state.scopeVersion + 1 : state.scopeVersion;
 }
 
 /** Restore the previous selection, dropping it when it is no longer legal. */
@@ -73,16 +86,26 @@ export const useBranchSwitcher = create<BranchSwitcherState>((set, get) => ({
   selectedBranch: null,
   loaded: false,
   canSelectAll: false,
+  scopeVersion: 0,
 
   selectBranch: (branch) => {
-    persist(branch);
-    set({ selectedBranch: branch });
+    const changed = persist(branch);
+    set((s) => ({
+      selectedBranch: branch,
+      scopeVersion: nextScopeVersion(s, changed),
+    }));
   },
 
   hydrateFor: (branches, canSelectAll) => {
     const selected = restoreSelection(branches, canSelectAll);
-    persist(selected);
-    set({ branches, selectedBranch: selected, canSelectAll, loaded: true });
+    const changed = persist(selected);
+    set((s) => ({
+      branches,
+      selectedBranch: selected,
+      canSelectAll,
+      loaded: true,
+      scopeVersion: nextScopeVersion(s, changed),
+    }));
   },
 
   fetchBranches: async () => {
@@ -91,8 +114,13 @@ export const useBranchSwitcher = create<BranchSwitcherState>((set, get) => ({
       const data = await loadBranches();
       const canSelectAll = get().canSelectAll;
       const selected = restoreSelection(data, canSelectAll);
-      persist(selected);
-      set({ branches: data, selectedBranch: selected, loaded: true });
+      const changed = persist(selected);
+      set((s) => ({
+        branches: data,
+        selectedBranch: selected,
+        loaded: true,
+        scopeVersion: nextScopeVersion(s, changed),
+      }));
     } catch {
       // silently fail
     }
@@ -111,8 +139,13 @@ export const useBranchSwitcher = create<BranchSwitcherState>((set, get) => ({
       const next = stillValid
         ? selectedBranch
         : restoreSelection(data, canSelectAll);
-      persist(next);
-      set({ branches: data, selectedBranch: next, loaded: true });
+      const changed = persist(next);
+      set((s) => ({
+        branches: data,
+        selectedBranch: next,
+        loaded: true,
+        scopeVersion: nextScopeVersion(s, changed),
+      }));
     } catch {
       // silently fail
     }

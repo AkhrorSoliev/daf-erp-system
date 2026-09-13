@@ -1,7 +1,6 @@
 "use client";
 
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
-import { branchScopeKey } from "@/lib/branch-header";
 
 /**
  * The dashboard's `<main>`, remounted whenever the active branch changes.
@@ -28,21 +27,23 @@ import { branchScopeKey } from "@/lib/branch-header";
  * so it is never torn down by its own selection.
  *
  * COST: scroll position and component-local UI state (open dialogs, expanded
- * rows) reset. That is the intended reading of the action — switching branch is
- * a deliberate change of context, not a filter tweak. Filters survive because
+ * rows, typed form input) reset. That is the intended reading of a switch — a
+ * deliberate change of context, not a filter tweak. Filters survive because
  * this codebase keeps them in the URL.
+ *
+ * WHICH IS WHY THE KEY IS `scopeVersion`, NOT THE SELECTION. The selection also
+ * changes when the switcher first RESOLVES on page load, and keying on it (even
+ * behind a "not loaded yet" sentinel) remounted every page once per hard load,
+ * after `GET /branches` returned — wiping whatever had been typed by then and
+ * repeating the page's first requests. `scopeVersion` bumps only when the
+ * branch requests claim actually changes (`lib/branch-header.ts`,
+ * `branchScopeChanged`).
  */
 export function BranchScopedMain({ children }: { children: React.ReactNode }) {
-  const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
-  const loaded = useBranchSwitcher((s) => s.loaded);
-
-  // Pure and tested in `lib/branch-header.ts` — the sentinel it returns before
-  // the branch resolves is the difference between "remount on every switch" and
-  // "remount every page once on first paint, discarding the initial load".
-  const key = branchScopeKey(selectedBranch, loaded);
+  const scopeVersion = useBranchSwitcher((s) => s.scopeVersion);
 
   return (
-    <main key={key} className="min-w-0 flex-1 p-3 sm:p-6">
+    <main key={scopeVersion} className="min-w-0 flex-1 p-3 sm:p-6">
       {children}
     </main>
   );
