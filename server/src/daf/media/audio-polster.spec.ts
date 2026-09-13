@@ -109,9 +109,21 @@ describe('polstereMp3 (integratsiya)', () => {
     20000,
   );
 
-  it('ffmpeg yiqilsa (yaroqsiz MP3), ANIQ xabar bilan xato tashlaydi — asl baytlarni jimgina qaytarmaydi', async () => {
-    await expect(polstereMp3(Buffer.from('bu mp3 emas'))).rejects.toThrow(
-      /ffmpeg/i,
-    );
-  });
+  // ffmpeg O'ZI yo'q muhitda (CI) `execFileAsync('ffmpeg', ...)` xom
+  // spawn `ENOENT` bilan yiqiladi — bu ham `/ffmpeg/i`ga mos keladi,
+  // shuning uchun avvalgi versiya ffmpegSIZ ham YASHIL edi, holbuki
+  // pastdagi haqiqiy yo'l (ffmpeg BOR-u, kirish yaroqsiz) hech qachon
+  // ishlamagan edi. `integrationTest` bilan CI'da o'tkazib yuboriladi,
+  // va endi ANIQ wrapper xabari (`audio-polster.ts`dagi
+  // "ffmpeg jimlik qo'sha olmadi") tekshiriladi — umumiy `/ffmpeg/i` emas.
+  integrationTest(
+    FFMPEG_BOR
+      ? 'ffmpeg yiqilsa (yaroqsiz MP3), ANIQ xabar bilan xato tashlaydi — asl baytlarni jimgina qaytarmaydi'
+      : "ffmpeg topilmadi — bu muhitda o'tkazib yuborildi",
+    async () => {
+      await expect(polstereMp3(Buffer.from('bu mp3 emas'))).rejects.toThrow(
+        "ffmpeg jimlik qo'sha olmadi",
+      );
+    },
+  );
 });

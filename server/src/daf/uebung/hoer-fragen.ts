@@ -20,6 +20,14 @@ import {
  *
  * `belegteItems` suhbatning HAMMA satrini oladi (`dialogBelegt`) —
  * `DIALOG_LUECKE` bilan bir seansga tushmasin.
+ *
+ * `titel` YUBORILMAYDI (ko'rik topilmasi): `dialog.titelDe` ba'zi
+ * suhbatlarda javobning O'ZI ("Zwei Kinder" → "zwei Kinder", "Bist du
+ * Mia?" → "Mia", "W wie Weber" → "W", "Null bis elf" → "elf") — savol
+ * bilan birga yuborilsa, javob eshitishdan OLDIN oshkor bo'lardi. Mijoz
+ * bu format uchun `titel`ni baribir ko'rsatmaydi (natija ekrani
+ * `prompt`dan foydalanadi, qarang `frage.types.ts`dagi `Frage.titel`
+ * izohi), shuning uchun uni umuman qoldirish xavfsiz.
  */
 export function hoerenWahl(
   dialog: MaterialDialog,
@@ -45,7 +53,6 @@ export function hoerenWahl(
       ...dialogBelegt(dialog),
       materialSchluessel('HOERFRAGE', frage.id),
     ],
-    titel: dialog.titelDe,
     audioUrl,
   };
 }

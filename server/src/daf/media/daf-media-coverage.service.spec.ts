@@ -258,4 +258,36 @@ describe('DafMediaCoverageService', () => {
     const sql = strings.join(' ');
     expect(sql).toContain('"sectionId" IS NOT NULL');
   });
+
+  it('dialog so‘rovi qator audiosi YO‘Q, lekin BUTUN suhbat audiosi bor holatni ham "withAudio" deb sanaydi', async () => {
+    // Ko'rik topilmasi: dialog audiosi endi `DafDialog.audioKey`da (bitta
+    // yozuv butun suhbatga umumiy), `DafDialogLine.audioKey` esa bunday
+    // holatda bo'sh qoladi. SQL matnida ikkala ustun ham (`dl` VA `d`
+    // taxallusi bilan) borligini to'g'ridan-to'g'ri tekshiramiz — mock
+    // qatorlar orqali bu farqni ko'rsatib bo'lmaydi, chunki `withAudio`
+    // hisobi butunlay SQL ichida ($queryRaw natijasi tayyor son sifatida
+    // qaytadi).
+    const prisma = buildPrismaMock({
+      units: [
+        { id: 1, level: 'A1', order: 1, code: 'u01', titleUz: 'Tanishuv' },
+      ],
+      sections: [
+        { id: 10, unitId: 1, order: 1, code: 'u01-s1', titleUz: 'Salom' },
+      ],
+    });
+    const service = new DafMediaCoverageService(prisma);
+    await service.coverage();
+
+    const queryRawMock = prisma.$queryRaw as unknown as jest.Mock;
+    const dialogQueryCall = queryRawMock.mock.calls.find(([strings]) =>
+      (Array.isArray(strings) ? strings.join(' ') : String(strings)).includes(
+        '"DafDialogLine"',
+      ),
+    );
+    expect(dialogQueryCall).toBeDefined();
+    const [strings] = dialogQueryCall as [TemplateStringsArray];
+    const sql = strings.join(' ');
+    expect(sql).toContain('dl."audioKey" IS NOT NULL');
+    expect(sql).toContain('d."audioKey" IS NOT NULL');
+  });
 });

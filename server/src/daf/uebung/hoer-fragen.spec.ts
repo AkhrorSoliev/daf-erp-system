@@ -45,7 +45,11 @@ describe('hoerenWahl', () => {
     expect(f.options).toContain('die Tochter');
     expect(f.richtig).toBe('die Tochter');
     expect(f.audioUrl).toBe('https://r2.example/daf/audio/abc.mp3');
-    expect(f.titel).toBe('Meine Schwester');
+    // `titel` YO'Q (ko'rik topilmasi): `dialog.titelDe` ba'zi suhbatlarda
+    // javobning o'zi ("W wie Weber" → "W" kabi) — savol bilan birga
+    // yuborilsa, javobni oldindan oshkor qilardi. Mijoz bu format uchun
+    // `titel`ni baribir ko'rsatmaydi (qarang `hoer-fragen.ts` boshidagi izoh).
+    expect(f.titel).toBeUndefined();
   });
 
   it('rnd savolni tanlaydi', () => {

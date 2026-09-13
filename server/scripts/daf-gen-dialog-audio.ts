@@ -257,8 +257,16 @@ export function erstelleGeneriere(
   fetchFn: typeof fetch,
   polster: (bytes: Buffer) => Promise<Buffer>,
 ): DialogGenerierFn {
-  return async (_d, inputs) => {
+  return async (d, inputs) => {
     const sourceUrl = await fal.dialog(inputs);
+    // Pul xavfsizligi (2026-09-12 ko'rikning davomi): bu yerdan keyin HALI
+    // uchta bosqich bor (yuklab olish, jimlik, R2'ga yuklash) — birortasi
+    // yiqilsa, ENDIGINA PULLIK yasalgan audio hech qayerga yozilmagan
+    // bo'lardi va uni QAYTA to'lab yasashga to'g'ri kelardi. `sourceUrl`
+    // fal.ai'ning VAQTINCHALIK ommaviy manzili (sir emas) — konsolga
+    // chiqarilishi keyingi muvaffaqiyatsizlikda qo'lda tiklab olish
+    // imkonini beradi.
+    console.log(`    ${d.id}: fal.ai natijasi — ${sourceUrl}`);
     const res = await fetchFn(sourceUrl);
     if (!res.ok) {
       throw new Error(`fal.ai audiosi yuklab olinmadi — HTTP ${res.status}`);

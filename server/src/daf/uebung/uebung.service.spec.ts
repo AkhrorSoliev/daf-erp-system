@@ -2366,19 +2366,26 @@ describe('HOEREN_WAHL', () => {
   };
 
   it('audiosi va savoli bor dialogdan nomzod quriladi, audiosiz dialogdan emas', async () => {
-    // `UNIT_TEST` `HOEREN_WAHL` ni HAM, `DIALOG_LUECKE` ni HAM afzal
-    // ko'radi, va Task 6 dan beri ikkala format suhbatning HAMMA satrini
-    // band qiladi — ya'ni bitta suhbat ikkalasiga yetmaydi va qaysi biri
-    // joylashishi `rnd` ga bog'liq. Shuning uchun bitta urug'ga tayanish
-    // testni omadga bog'lab qo'yardi; o'rniga KO'P urug' bo'ylab ikkita
-    // xossa tekshiriladi: (1) chegara HECH QACHON buzilmaydi, (2) format
-    // ULANGAN — hech bo'lmasa ba'zi urug'larda chiqadi.
+    // `kind: 'BRIDGE'` — HAQIQIY o'quvchi shu turdagi (bo'limga bog'langan)
+    // darsda `HOEREN_WAHL`ni oladi. `UNIT_TEST` bunga yaramaydi: seed
+    // (`kurs-lessons.ts`: `push('UNIT_TEST', null, ...)`) uni HAR DOIM
+    // bo'limsiz (`sectionId: null`) yaratadi, `UebungService` esa bo'limi
+    // yo'q darsda `null` qaytaradi — ya'ni oldingi fixture aslida hech
+    // qachon sodir bo'lmaydigan holatni sinar edi. `BRIDGE` moyilliksiz
+    // (`kind-formate.ts`dagi `XARITA.BRIDGE = []`), lekin bu yerda baribir
+    // KO'P urug' kerak: Task 6 dan beri `HOEREN_WAHL` ham, `DIALOG_LUECKE`
+    // ham suhbatning HAMMA satrini band qiladi — ya'ni bitta suhbat
+    // ikkalasiga yetmaydi va qaysi biri joylashishi `rnd`ga bog'liq.
+    // Shuning uchun bitta urug'ga tayanish testni omadga bog'lab qo'yardi;
+    // o'rniga KO'P urug' bo'ylab ikkita xossa tekshiriladi: (1) chegara
+    // HECH QACHON buzilmaydi, (2) format ULANGAN — hech bo'lmasa ba'zi
+    // urug'larda chiqadi.
     const prisma = fakePrisma();
     prisma.dafLesson.findUnique = jest.fn(async () => ({
       id: 100,
       unitId: 1,
       sectionId: 7,
-      kind: 'UNIT_TEST',
+      kind: 'BRIDGE',
       section: { id: 7, code: 'u01-s1', order: 1, unitId: 1 },
     })) as any;
     const svc = new UebungService(prisma as any, config as any);
