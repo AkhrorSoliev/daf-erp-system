@@ -4,304 +4,373 @@
   {
    "sourceId": "u01-s1-01",
    "section": "u01-s1",
-   "de": "Guten Morgen, wie geht es dir?",
-   "uz": "Xayrli tong, ahvoling qanday?",
+   "de": "Guten Morgen! Wie geht es dir?",
+   "uz": "Xayrli tong! Ahvoling qanday?",
    "wordCount": 6,
    "origin": "GENERATED"
   },
   {
    "sourceId": "u01-s1-02",
    "section": "u01-s1",
-   "de": "Tschüss, bis bald!",
-   "uz": "Xayr, tez orada ko'rishamiz!",
+   "de": "Gut, und dir?",
+   "uz": "Yaxshi, o'zingda-chi?",
    "wordCount": 3,
    "origin": "GENERATED"
   },
   {
    "sourceId": "u01-s1-03",
    "section": "u01-s1",
-   "de": "Ich bin hier.",
-   "uz": "Men bu yerdaman.",
-   "wordCount": 3,
-   "origin": "GENERATED"
+   "de": "Hallo, ich bin Jonas. Und du?",
+   "uz": "Salom, men Jonasman. Sen-chi?",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Hallo, Jonas bin ich. Und du?"
+   ]
   },
   {
    "sourceId": "u01-s1-04",
    "section": "u01-s1",
-   "de": "Wie ist dein Name?",
-   "uz": "Isming nima?",
+   "de": "Mein Name ist Anna.",
+   "uz": "Mening ismim Anna.",
    "wordCount": 4,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u01-s2-01",
-   "section": "u01-s2",
-   "de": "Wie heißen Sie?",
-   "uz": "Sizning ismingiz nima?",
-   "wordCount": 3,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u01-s2-02",
-   "section": "u01-s2",
-   "de": "Wer ist das?",
-   "uz": "Bu kim?",
-   "wordCount": 3,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u01-s3-01",
-   "section": "u01-s3",
-   "de": "Ich komme aus Deutschland.",
-   "uz": "Men Germaniyadanman.",
-   "wordCount": 4,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u01-s3-02",
-   "section": "u01-s3",
-   "de": "Woher kommst du?",
-   "uz": "Sen qayerdansan?",
-   "wordCount": 3,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u01-s3-03",
-   "section": "u01-s3",
-   "de": "Ich wohne in Usbekistan.",
-   "uz": "Men O'zbekistonda yashayman.",
-   "wordCount": 4,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u01-s3-04",
-   "section": "u01-s3",
-   "de": "Wo wohnst du?",
-   "uz": "Sen qayerda yashaysan?",
-   "wordCount": 3,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Anna ist mein Name."
+   ]
   },
   {
    "sourceId": "u01-s1-05",
    "section": "u01-s1",
-   "de": "Ich bin hier, und du?",
-   "uz": "Men bu yerdaman, sen-chi?",
-   "wordCount": 5,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u01-s2-03",
-   "section": "u01-s2",
-   "de": "Wer ist das, bitte?",
-   "uz": "Bu kim, iltimos?",
-   "wordCount": 4,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u01-s4-01",
-   "section": "u01-s4",
-   "de": "Wir sind fünf.",
-   "uz": "Biz beshtamiz.",
-   "wordCount": 3,
+   "de": "Bist du Thomas? Ja, das bin ich.",
+   "uz": "Sen Thomasmisan? Ha, o'zimman.",
+   "wordCount": 7,
    "origin": "GENERATED"
   },
   {
    "sourceId": "u01-s1-06",
    "section": "u01-s1",
-   "de": "Wie geht es dir?",
-   "uz": "Ahvoling qanday?",
-   "wordCount": 4,
-   "origin": "GENERATED"
+   "de": "Nein, ich bin nicht Mia.",
+   "uz": "Yo'q, men Mia emasman.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Nein, Mia bin ich nicht."
+   ]
   },
   {
    "sourceId": "u01-s1-07",
    "section": "u01-s1",
-   "de": "Bist du hier?",
-   "uz": "Sen bu yerdamisan?",
+   "de": "Tschüss, bis bald!",
+   "uz": "Xayr, ko'rishguncha!",
    "wordCount": 3,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bis bald, tschüss!"
+   ]
   },
   {
-   "sourceId": "u01-s2-04",
+   "sourceId": "u01-s2-01",
    "section": "u01-s2",
-   "de": "Guten Tag, ich bin hier.",
-   "uz": "Xayrli kun, men bu yerdaman.",
+   "de": "Guten Tag! Wie heißen Sie?",
+   "uz": "Xayrli kun! Ismingiz nima?",
    "wordCount": 5,
    "origin": "GENERATED"
   },
   {
+   "sourceId": "u01-s2-02",
+   "section": "u01-s2",
+   "de": "Ich heiße Markus Neumann.",
+   "uz": "Mening ismim Markus Neumann.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Markus Neumann heiße ich."
+   ]
+  },
+  {
+   "sourceId": "u01-s2-03",
+   "section": "u01-s2",
+   "de": "Wer ist das? Das ist Frau Weber.",
+   "uz": "Bu kim? Bu Weber xonim.",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Wer ist das? Frau Weber ist das."
+   ]
+  },
+  {
+   "sourceId": "u01-s2-04",
+   "section": "u01-s2",
+   "de": "Wer sind Sie, bitte?",
+   "uz": "Kechirasiz, siz kimsiz?",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bitte, wer sind Sie?"
+   ]
+  },
+  {
    "sourceId": "u01-s2-05",
    "section": "u01-s2",
-   "de": "Wie heißen Sie, bitte?",
-   "uz": "Sizning ismingiz nima, iltimos?",
-   "wordCount": 4,
-   "origin": "GENERATED"
+   "de": "Danke, Herr Neumann!",
+   "uz": "Rahmat, janob Neumann!",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Herr Neumann, danke!"
+   ]
   },
   {
    "sourceId": "u01-s2-06",
    "section": "u01-s2",
-   "de": "Auf Wiedersehen, bis bald!",
-   "uz": "Xayrli qoling, tez orada ko'rishamiz!",
+   "de": "Auf Wiedersehen, Frau Neumann!",
+   "uz": "Xayr, Neumann xonim!",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Frau Neumann, auf Wiedersehen!"
+   ]
+  },
+  {
+   "sourceId": "u01-s3-01",
+   "section": "u01-s3",
+   "de": "Woher kommen Sie, Herr Weber?",
+   "uz": "Qayerdansiz, janob Weber?",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Herr Weber, woher kommen Sie?"
+   ]
+  },
+  {
+   "sourceId": "u01-s3-02",
+   "section": "u01-s3",
+   "de": "Anna kommt aus Deutschland.",
+   "uz": "Anna Germaniyadan.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Aus Deutschland kommt Anna."
+   ]
+  },
+  {
+   "sourceId": "u01-s3-03",
+   "section": "u01-s3",
+   "de": "Kommst du auch aus Usbekistan?",
+   "uz": "Sen ham O'zbekistondanmisan?",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Kommst auch du aus Usbekistan?"
+   ]
+  },
+  {
+   "sourceId": "u01-s3-04",
+   "section": "u01-s3",
+   "de": "Woher kommt Frau Neumann?",
+   "uz": "Neumann xonim qayerdan?",
    "wordCount": 4,
    "origin": "GENERATED"
   },
   {
    "sourceId": "u01-s3-05",
    "section": "u01-s3",
-   "de": "Wo ist dein Land?",
-   "uz": "Sening mamlakating qayerda?",
+   "de": "Wo wohnst du, Lena?",
+   "uz": "Lena, qayerda yashaysan?",
    "wordCount": 4,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Lena, wo wohnst du?"
+   ]
   },
   {
    "sourceId": "u01-s3-06",
    "section": "u01-s3",
-   "de": "Wie geht es Ihnen?",
-   "uz": "Ahvolingiz qanday?",
-   "wordCount": 4,
-   "origin": "GENERATED"
+   "de": "Wir wohnen auch in Deutschland.",
+   "uz": "Biz ham Germaniyada yashaymiz.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "In Deutschland wohnen wir auch.",
+    "Auch wir wohnen in Deutschland.",
+    "In Deutschland wohnen auch wir."
+   ]
   },
   {
    "sourceId": "u01-s3-07",
    "section": "u01-s3",
-   "de": "Wo ist Deutschland?",
-   "uz": "Germaniya qayerda?",
-   "wordCount": 3,
+   "de": "Jonas wohnt nicht in Usbekistan.",
+   "uz": "Jonas O'zbekistonda yashamaydi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "In Usbekistan wohnt Jonas nicht."
+   ]
+  },
+  {
+   "sourceId": "u01-s3-08",
+   "section": "u01-s3",
+   "de": "Wie heißt die Stadt?",
+   "uz": "Shaharning nomi nima?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s4-01",
+   "section": "u01-s4",
+   "de": "Ich bin neun, und du?",
+   "uz": "Men to'qqiz yoshdaman, sen-chi?",
+   "wordCount": 5,
    "origin": "GENERATED"
   },
   {
    "sourceId": "u01-s4-02",
    "section": "u01-s4",
-   "de": "Wir sind drei.",
-   "uz": "Biz uchtamiz.",
-   "wordCount": 3,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u01-s5-01",
-   "section": "u01-s5",
-   "de": "Buchstabieren Sie das, bitte.",
-   "uz": "Buni harflab ayting, iltimos.",
-   "wordCount": 4,
-   "origin": "GENERATED"
-  },
-  {
-   "sourceId": "u01-s5-02",
-   "section": "u01-s5",
-   "de": "Wir buchstabieren I, C, H.",
-   "uz": "Biz I, C, H deb harflaymiz.",
-   "wordCount": 5,
+   "de": "Mia ist zehn, Jonas ist elf.",
+   "uz": "Mia o'n yoshda, Jonas o'n bir yoshda.",
+   "wordCount": 6,
    "origin": "GENERATED",
-   "tts": "Wir buchstabieren Ih, Tseh, Hah."
-  },
-  {
-   "sourceId": "u01-s5-03",
-   "section": "u01-s5",
-   "de": "Ja, das ist ein C.",
-   "uz": "Ha, bu C harfi.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "tts": "Ja, das ist ein Tseh."
-  },
-  {
-   "sourceId": "u01-s5-04",
-   "section": "u01-s5",
-   "de": "Nein, das ist ein E.",
-   "uz": "Yo'q, bu E harfi.",
-   "wordCount": 5,
-   "origin": "GENERATED",
-   "tts": "Nein, das ist ein Eh."
-  },
-  {
-   "sourceId": "u01-s5-05",
-   "section": "u01-s5",
-   "de": "Ist das ein H oder ein J?",
-   "uz": "Bu H-mi yoki J-mi?",
-   "wordCount": 7,
-   "origin": "GENERATED",
-   "tts": "Ist das ein Hah oder ein Jott?"
-  },
-  {
-   "sourceId": "u01-s5-06",
-   "section": "u01-s5",
-   "de": "Ist das ein I oder ein Z?",
-   "uz": "Bu I-mi yoki Z-mi?",
-   "wordCount": 7,
-   "origin": "GENERATED",
-   "tts": "Ist das ein Ih oder ein Zett?"
-  },
-  {
-   "sourceId": "u01-s5-07",
-   "section": "u01-s5",
-   "de": "Ist das ein V oder ein W?",
-   "uz": "Bu V-mi yoki W-mi?",
-   "wordCount": 7,
-   "origin": "GENERATED",
-   "tts": "Ist das ein Fau oder ein Weh?"
-  },
-  {
-   "sourceId": "u01-s3-08",
-   "section": "u01-s3",
-   "de": "Wo wohnen wir?",
-   "uz": "Biz qayerda yashaymiz?",
-   "wordCount": 3,
-   "origin": "GENERATED"
+   "akzeptiert": [
+    "Jonas ist elf, Mia ist zehn."
+   ]
   },
   {
    "sourceId": "u01-s4-03",
    "section": "u01-s4",
-   "de": "Wir sind sechs.",
-   "uz": "Biz oltitamiz.",
-   "wordCount": 3,
-   "origin": "GENERATED"
+   "de": "Bist du zehn oder elf?",
+   "uz": "Sen o'n yoshdamisan yoki o'n bir?",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bist du elf oder zehn?"
+   ]
   },
   {
    "sourceId": "u01-s4-04",
    "section": "u01-s4",
-   "de": "Fünf und vier ist neun.",
-   "uz": "Besh va to'rt - to'qqiz bo'ladi.",
-   "wordCount": 5,
-   "origin": "GENERATED"
+   "de": "Ich heiße Lena und bin acht.",
+   "uz": "Mening ismim Lena, sakkiz yoshdaman.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ich bin acht und heiße Lena."
+   ]
   },
   {
    "sourceId": "u01-s4-05",
    "section": "u01-s4",
-   "de": "Zwei und drei ist fünf.",
-   "uz": "Ikki va uch - besh bo'ladi.",
-   "wordCount": 5,
-   "origin": "GENERATED"
+   "de": "Ist das eine Eins oder eine Sieben?",
+   "uz": "Bu birmi yoki yettimi?",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ist das eine Sieben oder eine Eins?"
+   ]
   },
   {
    "sourceId": "u01-s4-06",
    "section": "u01-s4",
-   "de": "Wir sind sieben.",
-   "uz": "Biz yettitamiz.",
-   "wordCount": 3,
-   "origin": "GENERATED"
+   "de": "Nein, nicht acht. Elf!",
+   "uz": "Yo'q, sakkiz emas. O'n bir!",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Nein, elf, nicht acht."
+   ]
   },
   {
    "sourceId": "u01-s4-07",
    "section": "u01-s4",
-   "de": "Wir sind acht.",
-   "uz": "Biz sakkiztamiz.",
-   "wordCount": 3,
+   "de": "Null, sieben, eins, fünf, drei.",
+   "uz": "Nol, yetti, bir, besh, uch.",
+   "wordCount": 5,
    "origin": "GENERATED"
   },
   {
    "sourceId": "u01-s4-08",
    "section": "u01-s4",
-   "de": "Zehn und eins ist elf.",
-   "uz": "O'n va bir - o'n bir bo'ladi.",
-   "wordCount": 5,
-   "origin": "GENERATED"
+   "de": "Wir sind drei, bitte.",
+   "uz": "Biz uch kishimiz, iltimos.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bitte, wir sind drei."
+   ]
   },
   {
    "sourceId": "u01-s4-09",
    "section": "u01-s4",
-   "de": "Drei und fünf ist acht.",
-   "uz": "Uch va besh - sakkiz bo'ladi.",
+   "de": "Zwei und drei ist fünf.",
+   "uz": "Ikki qo'shuv uch — besh.",
    "wordCount": 5,
    "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s5-01",
+   "section": "u01-s5",
+   "de": "Buchstabieren Sie das bitte.",
+   "uz": "Buni harflab ayting, iltimos.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Bitte buchstabieren Sie das.",
+    "Buchstabieren Sie bitte das."
+   ]
+  },
+  {
+   "sourceId": "u01-s5-02",
+   "section": "u01-s5",
+   "de": "Weber? Ist das ein W?",
+   "uz": "Weber? Bu W harfimi?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s5-03",
+   "section": "u01-s5",
+   "de": "Ja, W wie Walter.",
+   "uz": "Ha, «Walter»dagi W.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s5-04",
+   "section": "u01-s5",
+   "de": "Ein J? Ja, J wie Jonas.",
+   "uz": "J harfimi? Ha, «Jonas»dagi J.",
+   "wordCount": 6,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s5-05",
+   "section": "u01-s5",
+   "de": "Ist das ein V oder ein W?",
+   "uz": "Bu V harfimi yoki W?",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ist das ein W oder ein V?"
+   ]
+  },
+  {
+   "sourceId": "u01-s5-06",
+   "section": "u01-s5",
+   "de": "Ist das ein C? Nein, ein Z.",
+   "uz": "Bu C harfimi? Yo'q, Z.",
+   "wordCount": 7,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u01-s5-07",
+   "section": "u01-s5",
+   "de": "Nein, das ist ein E.",
+   "uz": "Yo'q, bu E harfi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Nein, ein E ist das."
+   ]
   }
  ]
 }
