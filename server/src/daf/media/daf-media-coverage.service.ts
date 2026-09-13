@@ -165,10 +165,17 @@ export class DafMediaCoverageService {
           GROUP BY "sectionId"
         `,
       // DafDialogLine o'zi sectionId tashimaydi — u DafDialog orqali keladi.
+      // Satr audiosi ("withAudio") ikki yo'l bilan tayyor bo'lishi mumkin:
+      // qatorning O'ZIDA (`dl.audioKey`, eski — har satr alohida fayl) yoki
+      // butun suhbatda (`d.audioKey`, Task 11e — bitta yozuv HAMMA satrga
+      // umumiy). Faqat `dl.audioKey`ni hisoblasa, dialog audiosi butunlay
+      // ovoz yasalgan bo'lsa ham qamrov 0% ko'rsatardi.
       this.prisma.$queryRaw<RawSectionCount[]>`
           SELECT d."sectionId" AS "sectionId",
             COUNT(*) AS total,
-            COUNT(*) FILTER (WHERE dl."audioKey" IS NOT NULL) AS "withAudio"
+            COUNT(*) FILTER (
+              WHERE dl."audioKey" IS NOT NULL OR d."audioKey" IS NOT NULL
+            ) AS "withAudio"
           FROM "DafDialogLine" dl
           JOIN "DafDialog" d ON d.id = dl."dialogId"
           GROUP BY d."sectionId"

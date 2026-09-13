@@ -21,6 +21,7 @@ import type {
   SaetzeFile,
   WoerterFile,
 } from '../src/daf/inhalt/unit-inhalt.types';
+import type { DialogAudioManifest } from '../src/daf/inhalt/dialog-audio';
 
 function readUnitCode(): string {
   const i = process.argv.indexOf('--unit');
@@ -45,6 +46,18 @@ async function main(): Promise<void> {
     ? (JSON.parse(readFileSync(audioPath, 'utf8')) as AudioManifest)
     : {};
 
+  const dialogAudioPath = join(
+    __dirname,
+    '..',
+    'content',
+    'daf',
+    'a1',
+    'dialog-audio.json',
+  );
+  const dialogAudio: DialogAudioManifest = existsSync(dialogAudioPath)
+    ? (JSON.parse(readFileSync(dialogAudioPath, 'utf8')) as DialogAudioManifest)
+    : {};
+
   const files = {
     woerter: read<WoerterFile>('woerter.json'),
     saetze: read<SaetzeFile>('saetze.json'),
@@ -52,6 +65,7 @@ async function main(): Promise<void> {
     grammatik: read<GrammatikFile>('grammatik.json'),
     redemittel: read<RedemittelFile>('redemittel.json'),
     audio,
+    dialogAudio,
   };
 
   const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });

@@ -14,9 +14,10 @@ export type FrageFormat =
   | "ZUORDNEN"
   | "DIALOG_LUECKE"
   | "AUDIO_WORT"
-  | "WORT_TIPPEN";
+  | "WORT_TIPPEN"
+  | "HOEREN_WAHL";
 
-export type MaterialTyp = "WORT" | "SATZ" | "PHRASE" | "DIALOGZEILE";
+export type MaterialTyp = "WORT" | "SATZ" | "PHRASE" | "DIALOGZEILE" | "HOERFRAGE";
 
 /** Serverdan kelgan savol. To'g'ri javob bu yerda YO'Q. */
 export interface PublicFrage {
@@ -50,6 +51,12 @@ export interface PublicFrage {
 export interface PruefErgebnis {
   isCorrect: boolean;
   richtig: string;
+  /**
+   * FAQAT `HOEREN_WAHL` — suhbat matni javobdan KEYIN keladi. Savol bilan
+   * birga hech qachon kelmaydi: kelsa, eshitish mashqi o'qish mashqiga
+   * aylanardi.
+   */
+  transkript?: Array<{ sprecher: string; de: string; uz: string }>;
 }
 
 /**

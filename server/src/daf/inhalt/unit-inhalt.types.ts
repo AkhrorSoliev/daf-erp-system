@@ -96,6 +96,21 @@ export interface DialogZeile extends Sprechbar {
   sprecher: string;
 }
 
+/**
+ * Suhbatni eshitgandan keyingi tushunish savoli (`HOEREN_WAHL`).
+ *
+ * Dialog faylining ICHIDA (dizayn Q4): savol o'z suhbatisiz ma'nosiz —
+ * bittasi o'zgarsa ikkinchisi ko'z oldida. Barqaror kalit seedda
+ * dialog kaliti + tartibdan yasaladi (`u02-d2-f1`).
+ */
+export interface HoerFrage {
+  frageDe: string;
+  frageUz: string;
+  richtig: string;
+  /** Ikki chalg'ituvchi — odam yozadi, har biri suhbatdan aniq xato. */
+  falsch: string[];
+}
+
 export interface Dialog {
   /** Barqaror kalit: `u01-d1`. */
   id: string;
@@ -103,6 +118,13 @@ export interface Dialog {
   titelDe: string;
   titelUz: string;
   zeilen: DialogZeile[];
+  /**
+   * Ixtiyoriy TIPDA, MAJBURIY QO'RIQCHIDA: matni yozilgan unitda har
+   * dialogda aniq 2 savol bo'lishi kerak (`unit-inhalt.file.spec.ts`).
+   * Tip ixtiyoriy, chunki eski testlar va yarim yozilgan unit
+   * `fragen`siz dialog beradi.
+   */
+  fragen?: HoerFrage[];
 }
 
 export interface DialogeFile {

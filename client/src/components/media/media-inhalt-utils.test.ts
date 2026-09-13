@@ -32,6 +32,7 @@ function boshInhalt(): SectionInhalt {
     saetze: [],
     phrasen: [],
     dialogZeilen: [],
+    dialoge: [],
   };
 }
 

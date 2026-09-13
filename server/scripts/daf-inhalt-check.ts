@@ -9,11 +9,25 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { validateWortliste } from '../src/daf/inhalt/wortliste.validate';
 import { validateEindeutigkeit } from '../src/daf/inhalt/unit-inhalt.validate';
+import { validateHoerFragen } from '../src/daf/inhalt/hoer-fragen.validate';
+import {
+  validateDialogAudio,
+  type DialogAudioManifest,
+} from '../src/daf/inhalt/dialog-audio';
+import {
+  sectionsInCourseOrder,
+  knownWordsBySection,
+  hilfsSetFor,
+  unknownWordsIn,
+} from '../src/daf/inhalt/progression';
 import type { WortlisteFile } from '../src/daf/inhalt/wortliste.types';
 import type {
   WoerterFile,
   GrammatikFile,
   RedemittelFile,
+  DialogeFile,
+  HilfswoerterFile,
+  Wort,
 } from '../src/daf/inhalt/unit-inhalt.types';
 import type { KursFile } from '../src/daf/kurs/kurs.types';
 import type { GoetheFile } from '../src/daf/inhalt/goethe-parse';
@@ -71,6 +85,39 @@ function main(): void {
     if (g.regeln.length !== want) {
       problems.push(`${code}: ${g.regeln.length} qoida — ${want} kerak`);
     }
+  }
+
+  const dialogePath = join(A1, code, 'dialoge.json');
+  if (!existsSync(dialogePath)) {
+    problems.push(`${code}: dialoge.json yo'q`);
+  } else {
+    const dialoge = read<DialogeFile>(code, 'dialoge.json');
+    const kurs = read<KursFile>('kurs.json');
+    const hilfswoerter = read<HilfswoerterFile>('hilfswoerter.json');
+    const sections = sectionsInCourseOrder(kurs);
+    // Tanish so'zlar — testdagi bilan bir xil manba: matni bor hamma unit.
+    const alleWoerter: Wort[] = kurs.units
+      .map((u) => u.code)
+      .filter((c) => existsSync(join(A1, c, 'woerter.json')))
+      .flatMap((c) => read<WoerterFile>(c, 'woerter.json').woerter);
+    const known = knownWordsBySection(sections, alleWoerter);
+    const unbekannt = (section: string) => (text: string) =>
+      unknownWordsIn(
+        text,
+        known.get(section) ?? new Set<string>(),
+        hilfsSetFor(section, hilfswoerter, sections),
+      );
+    problems.push(
+      ...dialoge.dialoge.flatMap((d) =>
+        validateHoerFragen(d, unbekannt(d.section)),
+      ),
+    );
+
+    const manifestPath = join(A1, 'dialog-audio.json');
+    const manifest: DialogAudioManifest = existsSync(manifestPath)
+      ? read<DialogAudioManifest>('dialog-audio.json')
+      : {};
+    problems.push(...validateDialogAudio(dialoge.dialoge, manifest));
   }
 
   if (problems.length > 0) {

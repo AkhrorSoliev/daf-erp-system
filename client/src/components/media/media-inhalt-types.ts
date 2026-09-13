@@ -45,6 +45,22 @@ export interface InhaltDialogZeile {
   audioUrl: string | null;
 }
 
+/** Butun dialog — karnay va savollar shu yerda (server: `InhaltDialog`). */
+export interface InhaltDialog {
+  id: number;
+  code: string;
+  titelDe: string;
+  titelUz: string;
+  audioUrl: string | null;
+  fragen: Array<{
+    code: string;
+    frageDe: string;
+    frageUz: string;
+    richtig: string;
+    falsch: string[];
+  }>;
+}
+
 /**
  * Sarlavha maydonlari (`sectionCode`..`unitTitleUz`) va to'liq material
  * (`woerter`..`dialogZeilen`) BITTA javobda keladi — server bitta `inhalt()`
@@ -63,4 +79,10 @@ export interface SectionInhalt {
   saetze: InhaltZeile[];
   phrasen: InhaltZeile[];
   dialogZeilen: InhaltDialogZeile[];
+  /**
+   * Ixtiyoriy (ko'rik topilmasi): eski serverdan (deploy tartibi yoki
+   * rollback) kelgan javobda bu maydon umuman yo'q bo'lishi mumkin —
+   * `?? []` bilan o'qiladi (`media-inhalt-panel.tsx`dagi `DialogBlock`).
+   */
+  dialoge?: InhaltDialog[];
 }

@@ -25,6 +25,11 @@ describe("vorschauShakli", () => {
     expect(vorschauShakli("WORT_UZ")).toBe("MATN");
     expect(vorschauShakli("LUECKE")).toBe("MATN");
   });
+  it("eshitib-tushunish formatida audio + savol matni birga", () => {
+    // Suhbat karnagi, ostida savolning o'zi — dialog (butun suhbat) yoki
+    // oddiy audio (faqat karnay) bilan bir xil emas.
+    expect(vorschauShakli("HOEREN_WAHL")).toBe("HOEREN");
+  });
 });
 
 describe("juftlarniAjrat", () => {

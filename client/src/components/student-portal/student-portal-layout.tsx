@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import { isBottomNavHiddenRoute } from "@/lib/student-nav-items";
 import { LumioBottomNav } from "./lumio/bottom-nav";
 import { LumioSideRail } from "./lumio/side-rail";
 import { RadioHost } from "./radio/radio-host";
@@ -27,6 +28,7 @@ export function StudentPortalLayout({
 }) {
   const user = useAuth((s) => s.user);
   const router = useRouter();
+  const pathname = usePathname();
   // Drives the extra bottom padding that keeps the last row of a screen clear
   // of the docked player.
   const radioActive = useRadio((s) => s.stationId !== null);
@@ -86,8 +88,16 @@ export function StudentPortalLayout({
         </main>
       </div>
 
-      {/* Floating bottom nav — mobile only; the rail takes over from md up */}
-      <LumioBottomNav className="md:hidden" />
+      {/*
+        Floating bottom nav — mobile only; the rail takes over from md up.
+        Suppressed on an exercise session route: SeansEkrani's own fixed
+        bottom action bar sits in the same spot, and on a phone the nav pill
+        was intercepting taps meant for "Tekshirish"/"Keyingi" (production
+        finding). See isBottomNavHiddenRoute's own doc comment.
+      */}
+      {!isBottomNavHiddenRoute(pathname) && (
+        <LumioBottomNav className="md:hidden" />
+      )}
 
       {/*
         Radio lives in the shell, not in a page. The audio element itself is a

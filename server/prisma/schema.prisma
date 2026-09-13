@@ -3105,12 +3105,17 @@ model DafDialog {
   sectionId Int
   titelDe   String
   titelUz   String
+  /// Butun suhbatning R2 kaliti — `text-to-dialogue` bitta fayl beradi,
+  /// satrma-satr emas. `null` — ovoz hali yasalmagan, eshitish savoli
+  /// qurilmaydi. Manba — `content/daf/a1/dialog-audio.json`.
+  audioKey  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   unit    DafUnit         @relation(fields: [unitId], references: [id])
   section DafSection      @relation(fields: [sectionId], references: [id])
   zeilen  DafDialogLine[]
+  fragen  DafHoerFrage[]
 
   @@index([sectionId])
 }
@@ -3128,6 +3133,28 @@ model DafDialogLine {
   tts      String?
   uz       String
   audioKey String?
+
+  dialog DafDialog @relation(fields: [dialogId], references: [id])
+
+  @@unique([dialogId, order])
+  @@index([dialogId])
+}
+
+/// Suhbatni eshitgandan keyingi tushunish savoli (`HOEREN_WAHL`).
+///
+/// O'z `id` si bor, chunki javob tekshiruvi materialni `itemType`+`itemId`
+/// bo'yicha o'qiydi (D7). `falsch` — ikki chalg'ituvchi; to'g'ri javob
+/// `richtig`. Ballga tegmaydi, Leitner kuzatmaydi.
+model DafHoerFrage {
+  id       Int      @id @default(autoincrement())
+  /// Barqaror kalit: `u02-d2-f1` (dialog kaliti + tartib).
+  code     String   @unique
+  dialogId Int
+  order    Int
+  frageDe  String
+  frageUz  String
+  richtig  String
+  falsch   String[]
 
   dialog DafDialog @relation(fields: [dialogId], references: [id])
 

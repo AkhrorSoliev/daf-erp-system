@@ -9,6 +9,7 @@ import type {
 } from './unit-inhalt.types';
 import type { AudioManifest } from '../media/audio-keys';
 import { audioSchluesselFuer } from '../media/audio-keys';
+import type { DialogAudioManifest } from './dialog-audio';
 
 export interface InhaltFiles {
   woerter: WoerterFile;
@@ -23,6 +24,13 @@ export interface InhaltFiles {
    * o'qib beradi; xizmatning o'zi diskka tegmaydi.
    */
   audio?: AudioManifest;
+  /**
+   * Dialog audiosi manifesti — `content/daf/a1/dialog-audio.json`.
+   * Ixtiyoriy, `audio` bilan bir xil sabab. `DafDialog.audioKey` HAR
+   * upsertda shundan yoziladi: manifest — yagona manba, baza — muhit;
+   * yozuv yo'q bo'lsa `null` (eski kalit qolib ketmaydi).
+   */
+  dialogAudio?: DialogAudioManifest;
 }
 
 export interface InhaltSeedReport {
@@ -32,6 +40,7 @@ export interface InhaltSeedReport {
   zeilen: number;
   regeln: number;
   phrasen: number;
+  hoerFragen: number;
   /**
    * Faylda endi YO'Q, lekin bazada BOR so'z soni.
    *
@@ -219,6 +228,12 @@ export class InhaltSeedService {
     });
     if (staleDialoge.length > 0) {
       const staleDialogIds = staleDialoge.map((d) => d.id);
+      // Savollar satrlardan OLDIN — `DafHoerFrage.dialogId` ham
+      // `ON DELETE RESTRICT`. Bu qator yozilmasa, dialogni o'chirish
+      // «faqat qo'shadi» degan migratsiyaga qaramay yiqiladi.
+      await this.prisma.dafHoerFrage.deleteMany({
+        where: { dialogId: { in: staleDialogIds } },
+      });
       await this.prisma.dafDialogLine.deleteMany({
         where: { dialogId: { in: staleDialogIds } },
       });
@@ -229,12 +244,14 @@ export class InhaltSeedService {
 
     let dialoge = 0;
     let zeilen = 0;
+    let hoerFragen = 0;
     for (const d of files.dialoge.dialoge) {
       const data = {
         unitId: unit.id,
         sectionId: sectionId.get(d.section) as number,
         titelDe: d.titelDe,
         titelUz: d.titelUz,
+        audioKey: files.dialogAudio?.[d.id]?.key ?? null,
       };
       const row = await this.prisma.dafDialog.upsert({
         where: { code: d.id },
@@ -264,6 +281,33 @@ export class InhaltSeedService {
       // ORTIQDA qolgan (endi ishlatilmagan) `order` qatorlari qoladi.
       await this.prisma.dafDialogLine.deleteMany({
         where: { dialogId: row.id, order: { gt: d.zeilen.length } },
+      });
+
+      // Eshitish savollari — `code` = dialog kaliti + tartib. Kalit
+      // dialog ICHIDAGI tartibdan: o'rtadagi savol o'chirilsa qolgani
+      // qayta raqamlanadi, ORTIQDA qolgani pastda o'chiriladi.
+      for (const [i, f] of (d.fragen ?? []).entries()) {
+        const order = i + 1;
+        const fData = {
+          frageDe: f.frageDe,
+          frageUz: f.frageUz,
+          richtig: f.richtig,
+          falsch: f.falsch,
+        };
+        await this.prisma.dafHoerFrage.upsert({
+          where: { code: `${d.id}-f${order}` },
+          create: {
+            code: `${d.id}-f${order}`,
+            dialogId: row.id,
+            order,
+            ...fData,
+          },
+          update: fData,
+        });
+        hoerFragen += 1;
+      }
+      await this.prisma.dafHoerFrage.deleteMany({
+        where: { dialogId: row.id, order: { gt: (d.fragen ?? []).length } },
       });
     }
 
@@ -359,6 +403,7 @@ export class InhaltSeedService {
       zeilen,
       regeln,
       phrasen,
+      hoerFragen,
       staleWoerter,
     };
     this.logger.log(`${unitCode} matni: ${JSON.stringify(report)}`);

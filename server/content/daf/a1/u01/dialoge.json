@@ -42,6 +42,26 @@
           "de": "Tschüss! Bis bald.",
           "uz": "Xayr! Tez orada ko'rishamiz."
         }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Ist das Mia, Anna oder Claudia?",
+          "frageUz": "Bu Mia, Anna yoki Claudiami?",
+          "richtig": "Mia",
+          "falsch": [
+            "Anna",
+            "Claudia"
+          ]
+        },
+        {
+          "frageDe": "Wie geht es Jonas?",
+          "frageUz": "Jonasning ahvoli qanday?",
+          "richtig": "gut",
+          "falsch": [
+            "nicht gut",
+            "nicht sehr gut"
+          ]
+        }
       ]
     },
     {
@@ -79,6 +99,26 @@
           "sprecher": "Mia",
           "de": "Gute Nacht! Bis bald.",
           "uz": "Xayrli tun! Tez orada ko'rishamiz."
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Ist das Mia oder Anna?",
+          "frageUz": "Bu Mia mi yoki Anna?",
+          "richtig": "Mia",
+          "falsch": [
+            "Anna",
+            "Claudia"
+          ]
+        },
+        {
+          "frageDe": "Wie geht es Mia?",
+          "frageUz": "Mianing ahvoli qanday?",
+          "richtig": "gut",
+          "falsch": [
+            "nicht gut",
+            "nicht sehr gut"
+          ]
         }
       ]
     },
@@ -123,6 +163,26 @@
           "de": "Auf Wiedersehen!",
           "uz": "Xayr!"
         }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wie heißt der Herr?",
+          "frageUz": "Janobning ismi nima?",
+          "richtig": "Markus",
+          "falsch": [
+            "Jonas",
+            "Thomas"
+          ]
+        },
+        {
+          "frageDe": "Wie heißt die Frau?",
+          "frageUz": "Ayolning ismi nima?",
+          "richtig": "Claudia",
+          "falsch": [
+            "Anna",
+            "Mia"
+          ]
+        }
       ]
     },
     {
@@ -132,7 +192,7 @@
       "titelUz": "Sen qayerdansan?",
       "zeilen": [
         {
-          "sprecher": "Doniyor",
+          "sprecher": "Lukas",
           "de": "Woher kommst du?",
           "uz": "Sen qayerdansan?"
         },
@@ -142,7 +202,7 @@
           "uz": "Men Germaniyadanman. Sen-chi?"
         },
         {
-          "sprecher": "Doniyor",
+          "sprecher": "Lukas",
           "de": "Ich komme aus Usbekistan.",
           "uz": "Men O'zbekistondanman."
         },
@@ -152,7 +212,7 @@
           "uz": "Sen qayerda yashaysan?"
         },
         {
-          "sprecher": "Doniyor",
+          "sprecher": "Lukas",
           "de": "Ich wohne in Deutschland. Und du?",
           "uz": "Men Germaniyada yashayman. Sen-chi?"
         },
@@ -160,6 +220,26 @@
           "sprecher": "Anna",
           "de": "Ich wohne auch in Deutschland.",
           "uz": "Men ham Germaniyada yashayman."
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Woher kommt Lukas?",
+          "frageUz": "Lukas qayerdan?",
+          "richtig": "aus Usbekistan",
+          "falsch": [
+            "aus Deutschland",
+            "aus Usbekistan und aus Deutschland"
+          ]
+        },
+        {
+          "frageDe": "Wo wohnt Lukas?",
+          "frageUz": "Lukas qayerda yashaydi?",
+          "richtig": "in Deutschland",
+          "falsch": [
+            "in Usbekistan",
+            "nicht in Deutschland"
+          ]
         }
       ]
     },
@@ -204,6 +284,26 @@
           "de": "Auf Wiedersehen!",
           "uz": "Xayr!"
         }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Ist es vier oder fünf?",
+          "frageUz": "To'rtmi yoki besh?",
+          "richtig": "vier",
+          "falsch": [
+            "fünf",
+            "neun"
+          ]
+        },
+        {
+          "frageDe": "Null, sieben, zwei, neun, vier und?",
+          "frageUz": "Nol, yetti, ikki, to'qqiz, to'rt va …?",
+          "richtig": "elf",
+          "falsch": [
+            "eins",
+            "drei"
+          ]
+        }
       ]
     },
     {
@@ -229,26 +329,46 @@
         },
         {
           "sprecher": "Anna",
-          "de": "W wie Weber.",
-          "tts": "Weh wie Weber.",
-          "uz": "Weber so'zidagi 'W'."
+          "de": "W, E, B, E, R.",
+          "tts": "Weh. Eh. Beh. Eh. Err.",
+          "uz": "W, E, B, E, R."
         },
         {
           "sprecher": "Helga",
           "de": "Ist das V?",
           "tts": "Ist das Fau?",
-          "uz": "Bu 'V'mi?"
+          "uz": "Bu V mi?"
         },
         {
           "sprecher": "Anna",
           "de": "Nein, W! W wie Weber.",
           "tts": "Nein, Weh! Weh wie Weber.",
-          "uz": "Yo'q, 'W'! Weber so'zidagi 'W'."
+          "uz": "Yo'q, W! Weber dagi W."
         },
         {
           "sprecher": "Helga",
           "de": "Gut, danke!",
           "uz": "Yaxshi, rahmat!"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wie heißt die Frau?",
+          "frageUz": "Ayolning ismi nima?",
+          "richtig": "Anna Weber",
+          "falsch": [
+            "Anna Neumann",
+            "Mia Weber"
+          ]
+        },
+        {
+          "frageDe": "Ist das V oder W?",
+          "frageUz": "Bu V mi yoki W?",
+          "richtig": "W",
+          "falsch": [
+            "V",
+            "Y"
+          ]
         }
       ]
     }

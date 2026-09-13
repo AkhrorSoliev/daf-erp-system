@@ -10,7 +10,8 @@ export type FrageFormat =
   | 'ZUORDNEN'
   | 'DIALOG_LUECKE'
   | 'AUDIO_WORT'
-  | 'WORT_TIPPEN';
+  | 'WORT_TIPPEN'
+  | 'HOEREN_WAHL';
 
 export interface MaterialWort {
   id: number;
@@ -47,12 +48,32 @@ export interface MaterialDialogZeile {
   uz: string;
 }
 
+/**
+ * Savol o'zligining birinchi yarmi — material turi. `Frage.itemType`,
+ * DTO'lar, `ladeMaterial` va mijozning `MaterialTyp`i shu BITTA tipdan
+ * yuradi: yangi tur qo'shilib bittasida unutilsa kompilyator yiqitadi
+ * (`uebung.dto.ts`dagi `Record<ItemType, true>`).
+ */
+export type ItemType = 'WORT' | 'SATZ' | 'PHRASE' | 'DIALOGZEILE' | 'HOERFRAGE';
+
+/** Suhbatni eshitgandan keyingi tushunish savoli — `HOEREN_WAHL` materiali. */
+export interface MaterialHoerFrage {
+  id: number;
+  frageDe: string;
+  frageUz: string;
+  richtig: string;
+  falsch: string[];
+}
+
 /** Butun dialog — bitta satri bo'shatilib, savolga aylanadi (`DIALOG_LUECKE`). */
 export interface MaterialDialog {
   id: number;
   titelDe: string;
   zeilen: MaterialDialogZeile[];
   sectionCode: string;
+  /** Butun suhbatning R2 kaliti; `null` — ovoz yo'q, eshitish savoli qurilmaydi. */
+  audioKey: string | null;
+  fragen: MaterialHoerFrage[];
 }
 
 /**
@@ -66,7 +87,7 @@ export interface MaterialDialog {
  */
 export interface Frage {
   format: FrageFormat;
-  itemType: 'WORT' | 'SATZ' | 'PHRASE' | 'DIALOGZEILE';
+  itemType: ItemType;
   itemId: number;
   prompt: string;
   /** Qo'shimcha ko'rsatma yoki ko'rgazma (raqam, o'zbekcha tarjima). */
@@ -108,10 +129,7 @@ export interface Frage {
 }
 
 /** `belegteItems`/seans ichidagi band material kalitini quradi. */
-export function materialSchluessel(
-  itemType: Frage['itemType'],
-  itemId: number,
-): string {
+export function materialSchluessel(itemType: ItemType, itemId: number): string {
   return `${itemType}:${itemId}`;
 }
 
@@ -119,7 +137,7 @@ export function materialSchluessel(
 export interface PublicFrage {
   index: number;
   format: FrageFormat;
-  itemType: Frage['itemType'];
+  itemType: ItemType;
   itemId: number;
   prompt: string;
   hilfe: string | null;

@@ -42,6 +42,22 @@ export interface InhaltDialogZeile {
   audioUrl: string | null;
 }
 
+/** Butun dialog — CEO ovozini shu yerda eshitadi, savollarini shu yerda ko'radi. */
+export interface InhaltDialog {
+  id: number;
+  code: string;
+  titelDe: string;
+  titelUz: string;
+  audioUrl: string | null;
+  fragen: Array<{
+    code: string;
+    frageDe: string;
+    frageUz: string;
+    richtig: string;
+    falsch: string[];
+  }>;
+}
+
 export interface SectionInhalt {
   sectionCode: string;
   sectionTitleUz: string;
@@ -51,6 +67,7 @@ export interface SectionInhalt {
   saetze: InhaltZeile[];
   phrasen: InhaltZeile[];
   dialogZeilen: InhaltDialogZeile[];
+  dialoge: InhaltDialog[];
 }
 
 /**
@@ -89,7 +106,7 @@ export class DafMediaInhaltService {
       throw new NotFoundException(`Bo'lim topilmadi: ${sectionId}`);
     }
 
-    const [woerterRows, saetzeRows, phrasenRows, dialogZeilenRows] =
+    const [woerterRows, saetzeRows, phrasenRows, dialogZeilenRows, dialogRows] =
       await Promise.all([
         this.prisma.dafLexeme.findMany({
           where: { sectionId },
@@ -138,6 +155,11 @@ export class DafMediaInhaltService {
             audioKey: true,
           },
         }),
+        this.prisma.dafDialog.findMany({
+          where: { sectionId },
+          orderBy: { id: 'asc' },
+          include: { fragen: { orderBy: { order: 'asc' } } },
+        } as any),
       ]);
 
     const woerter: InhaltWort[] = woerterRows.map((w) => ({
@@ -178,6 +200,21 @@ export class DafMediaInhaltService {
       audioUrl: this.mediaUrl(d.audioKey),
     }));
 
+    const dialoge: InhaltDialog[] = (dialogRows as any[]).map((d) => ({
+      id: d.id,
+      code: d.code,
+      titelDe: d.titelDe,
+      titelUz: d.titelUz,
+      audioUrl: this.mediaUrl(d.audioKey),
+      fragen: (d.fragen as any[]).map((f) => ({
+        code: f.code,
+        frageDe: f.frageDe,
+        frageUz: f.frageUz,
+        richtig: f.richtig,
+        falsch: f.falsch,
+      })),
+    }));
+
     return {
       sectionCode: (section as any).code,
       sectionTitleUz: (section as any).titleUz,
@@ -187,6 +224,7 @@ export class DafMediaInhaltService {
       saetze,
       phrasen,
       dialogZeilen,
+      dialoge,
     };
   }
 }

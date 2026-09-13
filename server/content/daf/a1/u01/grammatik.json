@@ -8,9 +8,9 @@
       "erklaerungUz": "Nemis tilida gapiruvchi kim ekani olmosh bilan ko'rsatiladi: o'zim haqimda gapirsam ich, suhbatdoshimga to'g'ridan-to'g'ri murojaat qilsam du ishlataman. sein (bo'lmoq) fe'li ular bilan birga o'zgaradi: ich bin, du bist.",
       "beispiele": [
         { "de": "Hallo! Ich bin Anna.", "uz": "Salom! Men Annaman." },
-        { "de": "Bist du Timur?", "uz": "Sen Timurmisan?" },
-        { "de": "Ja, ich bin Timur.", "uz": "Ha, men Timurman." },
-        { "de": "Nein, ich bin nicht Timur. Ich bin Nodira.", "uz": "Yo'q, men Timur emasman. Men Nodiraman." },
+        { "de": "Bist du Thomas?", "uz": "Sen Thomasmisan?" },
+        { "de": "Ja, ich bin Thomas.", "uz": "Ha, men Thomasman." },
+        { "de": "Nein, ich bin nicht Thomas. Ich bin Lena.", "uz": "Yo'q, men Thomas emasman. Men Lenaman." },
         { "de": "Wie ist dein Name?", "uz": "Isming nima?" },
         { "de": "Mein Name ist Anna.", "uz": "Mening ismim Anna." }
       ]
@@ -21,11 +21,11 @@
       "titelUz": "Sie shakli va so'roq gap",
       "erklaerungUz": "Notanish yoki katta yoshli odamga hurmat bilan murojaat qilganda du emas, Sie ishlatiladi — bu 'Siz' ma'nosini beradi va fe'l infinitiv bilan bir xil bo'ladi: Sie heißen, Sie sind. Savol so'zi (wer — kim, wie — qanday) gap boshida turadi: Wie heißen Sie?",
       "beispiele": [
-        { "de": "Guten Tag, Frau Karimova!", "uz": "Xayrli kun, Karimova xonim!" },
-        { "de": "Guten Tag, Herr Karimov!", "uz": "Xayrli kun, janob Karimov!" },
+        { "de": "Guten Tag, Frau Neumann!", "uz": "Xayrli kun, Neumann xonim!" },
+        { "de": "Guten Tag, Herr Neumann!", "uz": "Xayrli kun, janob Neumann!" },
         { "de": "Wie heißen Sie?", "uz": "Ismingiz nima (rasmiy)?" },
         { "de": "Wer sind Sie?", "uz": "Siz kimsiz?" },
-        { "de": "Auf Wiedersehen, Frau Karimova!", "uz": "Xayr, Karimova xonim!" },
+        { "de": "Auf Wiedersehen, Frau Neumann!", "uz": "Xayr, Neumann xonim!" },
         { "de": "Danke!", "uz": "Rahmat!" }
       ]
     },
