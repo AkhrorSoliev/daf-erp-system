@@ -111,6 +111,21 @@ export const useBranchSwitcher = create<BranchSwitcherState>((set, get) => ({
   },
 
   hydrateFor: (branches, canSelectAll) => {
+    // `BranchSwitcher` re-runs this whenever the `user` object changes — every
+    // token refresh, every profile save. Once resolved, keep THIS tab's
+    // selection while it is still allowed (as `refetchBranches` does): re-reading
+    // the shared key would adopt another tab's switch, remount this page
+    // mid-task and overwrite the key that tab's own requests rely on.
+    const { loaded, selectedBranch } = get();
+    const stillAllowed =
+      selectedBranch === null
+        ? canSelectAll
+        : branches.some((b) => b.id === selectedBranch.id);
+    if (loaded && stillAllowed) {
+      set({ branches, canSelectAll });
+      return;
+    }
+
     const selected = restoreSelection(branches, canSelectAll);
     const changed = persist(get(), selected);
     set((s) => ({

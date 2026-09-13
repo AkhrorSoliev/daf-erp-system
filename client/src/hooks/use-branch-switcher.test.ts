@@ -124,6 +124,32 @@ describe("scopeVersion — when the page content must remount", () => {
     expect(store().scopeVersion).toBe(1);
   });
 
+  it("keeps this tab's branch when the user is re-hydrated after another tab switched", () => {
+    // `BranchSwitcher` re-runs `hydrateFor` whenever the `user` object changes —
+    // every token refresh, every profile save. Re-reading the shared key there
+    // would adopt tab B's switch in tab A, remount tab A mid-task (wiping a
+    // half-filled form) and overwrite the key tab B's own requests rely on.
+    localStorage.setItem(BRANCH_STORAGE_KEY, "1");
+    store().hydrateFor([FARGONA, NAMANGAN], false);
+    localStorage.setItem(BRANCH_STORAGE_KEY, "2"); // tab B
+
+    store().hydrateFor([FARGONA, NAMANGAN], false); // token refresh in tab A
+
+    expect(store().selectedBranch).toEqual(FARGONA);
+    expect(store().scopeVersion).toBe(0);
+    expect(localStorage.getItem(BRANCH_STORAGE_KEY)).toBe("2");
+  });
+
+  it("re-selects when a re-hydrated user lost access to this tab's branch", () => {
+    localStorage.setItem(BRANCH_STORAGE_KEY, "1");
+    store().hydrateFor([FARGONA, NAMANGAN], false);
+
+    store().hydrateFor([NAMANGAN], false); // Fargona was taken away
+
+    expect(store().selectedBranch).toEqual(NAMANGAN);
+    expect(store().scopeVersion).toBe(1);
+  });
+
   it("remounts on every real switch, including switching back", () => {
     localStorage.setItem(BRANCH_STORAGE_KEY, "1");
     store().hydrateFor([FARGONA, NAMANGAN], true);
