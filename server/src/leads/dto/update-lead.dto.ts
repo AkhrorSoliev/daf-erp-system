@@ -1,4 +1,10 @@
-import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 export class UpdateLeadDto {
   @IsOptional()
@@ -27,8 +33,11 @@ export class UpdateLeadDto {
   })
   extraPhone?: string;
 
-  // Empty string clears the source; an id sets it; absent leaves it unchanged.
+  // An id sets the source; absent leaves it unchanged. An empty string used to
+  // clear it — no longer: a lead may not lose its source once it has one
+  // (CEO decision 13.09.2026, the create path requires it too).
   @IsOptional()
   @IsString()
+  @IsNotEmpty({ message: "Lid manbasini olib tashlab bo'lmaydi" })
   sourceId?: string;
 }
