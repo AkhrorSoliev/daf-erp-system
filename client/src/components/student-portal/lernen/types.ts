@@ -277,3 +277,9 @@ export interface DrillResult {
   isCorrect: boolean;
   answer: string;
 }
+
+/** `POST wiederholung/abschluss` va (kelajakda) seans statistikasi javobi. */
+export interface SeansYakun {
+  questionCount: number;
+  firstTryCorrect: number;
+}

@@ -1,10 +1,12 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { tryResolveStudentBranchId } from '../../common/finance/resolve-branch';
 import { currentGroupId } from '../shared/student-scope';
@@ -34,6 +36,7 @@ import {
   ZUORDNEN_JUFT,
 } from './satz-fragen';
 import { baueSeans } from './seans';
+import { seansYigindisi } from './seans-natija';
 import { ohneWiederholteFormate } from './wiederholte-formate';
 import {
   artikel,
@@ -216,6 +219,10 @@ export interface PruefenInput {
   format: FrageFormat;
   given: string;
   durationMs?: number;
+  sessionId?: string;
+  questionIndex?: number;
+  attemptNo?: 1 | 2;
+  lessonId?: number;
 }
 
 export interface PruefenContext {
@@ -250,6 +257,10 @@ export interface JuftInput {
   ong: string;
   /** `pruefen`dagi bilan bir xil ma'no — shu BITTA juftni bosishga ketgan vaqt. */
   durationMs?: number;
+  sessionId?: string;
+  questionIndex?: number;
+  attemptNo?: 1 | 2;
+  lessonId?: number;
 }
 
 /**
@@ -415,7 +426,12 @@ export class UebungService {
     // saqlanmaydi: `DafLessonProgress`da bu qiymat uchun ustun yo'q. Bu
     // funksiya uni pastda hech qayerda o'qimaydi — kelajakda haqiqatda
     // yozish kerak bo'lsa, DTOsi allaqachon tayyor.
-    input: { richtig: number; gesamt: number; durationMs?: number },
+    input: {
+      richtig: number;
+      gesamt: number;
+      durationMs?: number;
+      sessionId?: string;
+    },
     ctx: { studentId: number; companyId: number },
   ): Promise<{ bestScore: number; runs: number }> {
     if (input.gesamt <= 0) {
@@ -427,6 +443,10 @@ export class UebungService {
       );
     }
 
+    // `DafLessonProgress` AVVAL yoziladi — bu yo'l ekranining yagona
+    // manbasi va klient shu javobni kutadi. Seans yakunlash (pastda)
+    // ikkinchi darajali: muvaffaqiyatsiz bo'lsa ham, dars tugallangani
+    // yo'qolib qolmasligi kerak.
     const oldingi = await this.prisma.dafLessonProgress.findUnique({
       where: { studentId_lessonId: { studentId: ctx.studentId, lessonId } },
     } as any);
@@ -449,7 +469,104 @@ export class UebungService {
       update: { completedAt: new Date(), bestScore, runs },
     } as any);
 
+    // Seans natijasi URINISHLARDAN — klient aytgan `richtig` faqat
+    // yuqoridagi `DafLessonProgress.bestScore`ga ketadi. Bu ikkinchi
+    // darajali yozuv: `sessionId` yaroqsiz (topilmadi/boshqa o'quvchiniki)
+    // bo'lsa ham, yo'l ekraniga endi yozilgan progress YO'QOLMASLIGI kerak
+    // — shuning uchun faqat shu ikki holatni yutamiz va ogohlantirib
+    // qo'yamiz. Boshqa (kutilmagan, masalan DB) xatolar tepaga chiqadi.
+    if (input.sessionId) {
+      try {
+        await this.seansniYakunla(input.sessionId, ctx);
+      } catch (err) {
+        if (
+          err instanceof NotFoundException ||
+          err instanceof ForbiddenException
+        ) {
+          this.logger.warn(
+            `Seansni yakunlab bo'lmadi (lessonId=${lessonId}, studentId=${ctx.studentId}, ` +
+              `sessionId=${input.sessionId}): ${(err as Error).message}`,
+          );
+        } else {
+          throw err;
+        }
+      }
+    }
+
     return { bestScore, runs };
+  }
+
+  /**
+   * Takrorlash seansi yakuni. Dars yo'q, `DafLessonProgress` ga tegilmaydi
+   * — faqat `DafSession`. Hozirgacha takrorlash hech narsa yubormasdi va
+   * tarixda qolmasdi (dizayn 5.1).
+   */
+  async wiederholungAbschluss(
+    input: { sessionId: string },
+    ctx: PruefenContext,
+  ): Promise<{ questionCount: number; firstTryCorrect: number }> {
+    return this.seansniYakunla(input.sessionId, ctx);
+  }
+
+  /**
+   * `DafSession.finishedAt/questionCount/firstTryCorrect` ni urinishlardan
+   * yozadi. IDEMPOTENT: yakunlangan seans qayta hisoblanmaydi — ikki marta
+   * bosilgan «Tugatish» yoki qayta yuborilgan so'rov natijani o'zgartirmaydi.
+   */
+  private async seansniYakunla(
+    sessionId: string,
+    ctx: PruefenContext,
+  ): Promise<{ questionCount: number; firstTryCorrect: number }> {
+    const seans = (await this.prisma.dafSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        id: true,
+        studentId: true,
+        finishedAt: true,
+        questionCount: true,
+        firstTryCorrect: true,
+      },
+    } as any)) as {
+      id: string;
+      studentId: number;
+      finishedAt: Date | null;
+      questionCount: number | null;
+      firstTryCorrect: number | null;
+    } | null;
+    if (!seans) throw new NotFoundException('Seans topilmadi');
+    if (seans.studentId !== ctx.studentId) {
+      throw new ForbiddenException("Bu seans boshqa o'quvchiga tegishli");
+    }
+    if (seans.finishedAt) {
+      return {
+        questionCount: seans.questionCount ?? 0,
+        firstTryCorrect: seans.firstTryCorrect ?? 0,
+      };
+    }
+    const satrlar = (await this.prisma.dafAttempt.findMany({
+      // `studentId` — himoya qatlami: yuqoridagi tekshiruv seansning
+      // egasini allaqachon tasdiqladi, lekin `[studentId, sessionId]`
+      // indeksidan foydalanish va boshqa o'quvchining qatorini bu yerga
+      // aralashtirmaslik uchun so'rovning o'zida ham cheklanadi.
+      // `orderBy` — natija DETERMINISTIK bo'lishi uchun: `seansYigindisi`
+      // o'zi tartibga bog'liq emas, lekin qator tartibi so'rovdan
+      // so'rovga o'zgarmasligi kerak.
+      where: { sessionId, studentId: ctx.studentId },
+      select: {
+        questionIndex: true,
+        attemptNo: true,
+        format: true,
+        score: true,
+        gradingStatus: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    } as any)) as Parameters<typeof seansYigindisi>[0];
+    const natija = seansYigindisi(satrlar);
+    await this.prisma.dafSession.update({
+      where: { id: sessionId },
+      data: { finishedAt: new Date(), ...natija },
+    } as any);
+    return natija;
   }
 
   /**
@@ -1039,6 +1156,8 @@ export class UebungService {
     );
     const groupId = await currentGroupId(this.prisma, ctx.studentId);
 
+    await this.sicherSeans(input, ctx, branchId, groupId);
+
     await this.prisma.dafAttempt.create({
       data: {
         studentId: ctx.studentId,
@@ -1050,6 +1169,7 @@ export class UebungService {
         given,
         durationMs: durationMs ?? null,
         points,
+        ...this.seansMaydonlari(input, itemType, itemId, format, isCorrect),
       },
     } as any);
 
@@ -1150,6 +1270,10 @@ export class UebungService {
     // Leitner narvoniga kirmaydi) yoki so'z topilmasa.
     let isCorrect: boolean;
     let lexemeId: number | null = null;
+    // `ZUORDNEN` uchun bosilgan iboraning O'Z id'si (dizayn 5.5) — `PAAR`
+    // dagi `lexemeId` bilan bir xil rol, faqat ibora Leitner narvoniga
+    // kirmagani uchun bu qiymat FAQAT `seansMaydonlari`ga ketadi.
+    let iboraId: number | null = null;
 
     if (format === 'PAAR') {
       const nomzodlar = (await this.prisma.dafLexeme.findMany({
@@ -1181,12 +1305,13 @@ export class UebungService {
       // shu sabab `null`ligicha qoladi.
       const nomzodlar = (await this.prisma.dafPhrase.findMany({
         where: { funktionUz: chap, unitId },
-      } as any)) as Array<{ funktionUz: string; de: string }>;
+      } as any)) as Array<{ id: number; funktionUz: string; de: string }>;
       // Yuqoridagi `PAAR` sharhidagi bir xil sabab: mos kelgan nomzod
       // ustunlik qiladi, aks holda birinchisiga tushiladi.
       const ibora =
         nomzodlar.find((p) => istRichtig(ong, p.de)) ?? nomzodlar[0];
       isCorrect = ibora != null && istRichtig(ong, ibora.de);
+      iboraId = ibora?.id ?? null;
     }
 
     // Ball FAQAT `PAAR` uchun va FAQAT so'z topilgan bo'lsa — muddat
@@ -1207,6 +1332,8 @@ export class UebungService {
     );
     const groupId = await currentGroupId(this.prisma, ctx.studentId);
 
+    await this.sicherSeans(input, ctx, branchId, groupId);
+
     await this.prisma.dafAttempt.create({
       data: {
         studentId: ctx.studentId,
@@ -1222,6 +1349,16 @@ export class UebungService {
         // qabul qilib yozamiz.
         durationMs: durationMs ?? null,
         points,
+        // Har juft qatoriga shu juftning O'Z materiali (dizayn 5.5):
+        // `PAAR` — bosilgan so'z, `ZUORDNEN` — bosilgan ibora. `input.itemId`
+        // to'rtlik/oltilikning BIRINCHISI, bosilgan juft esa boshqasi.
+        ...this.seansMaydonlari(
+          input,
+          itemType,
+          format === 'PAAR' ? (lexemeId ?? itemId) : (iboraId ?? itemId),
+          format,
+          isCorrect,
+        ),
       },
     } as any);
 
@@ -1237,6 +1374,92 @@ export class UebungService {
     }
 
     return { isCorrect };
+  }
+
+  /**
+   * Seans qatori birinchi urinishda yaratiladi (dizayn 5.3). `sessionId`
+   * boshqa o'quvchiga tegishli bo'lsa — 403: aks holda o'quvchi birovning
+   * seansiga urinish yozib, uning natijasini buzishi mumkin bo'lardi.
+   * `sessionId` yo'q (eski klient) — hech narsa qilinmaydi.
+   */
+  private async sicherSeans(
+    input: { sessionId?: string; lessonId?: number },
+    ctx: PruefenContext,
+    branchId: number | null,
+    groupId: string | null,
+  ): Promise<void> {
+    if (!input.sessionId) return;
+    const mavjud = (await this.prisma.dafSession.findUnique({
+      where: { id: input.sessionId },
+      select: { id: true, studentId: true },
+    } as any)) as { id: string; studentId: number } | null;
+    if (mavjud) {
+      if (mavjud.studentId !== ctx.studentId) {
+        throw new ForbiddenException("Bu seans boshqa o'quvchiga tegishli");
+      }
+      return;
+    }
+    try {
+      await this.prisma.dafSession.create({
+        data: {
+          id: input.sessionId,
+          studentId: ctx.studentId,
+          companyId: ctx.companyId,
+          branchId,
+          groupId,
+          kind: input.lessonId ? 'LESSON' : 'REVIEW',
+          lessonId: input.lessonId ?? null,
+          startedAt: new Date(),
+        },
+      } as any);
+    } catch (err) {
+      if (
+        !(err instanceof Prisma.PrismaClientKnownRequestError) ||
+        err.code !== 'P2002'
+      ) {
+        throw err;
+      }
+      // POYGA (race): ikkita bir vaqtdagi so'rov bir xil YANGI `sessionId`
+      // bilan keldi — ikkalasi ham yuqoridagi `findUnique`da `null` ko'rdi,
+      // g'olib allaqachon qatorni yozib ulgurdi va bu — ikkinchi so'rov —
+      // shu yerda P2002 (unique violation) bilan urildi. Qatorni
+      // "allaqachon yaratilgan" deb qabul qilamiz va EGALIKNI qayta
+      // tekshiramiz — xuddi yuqoridagi `mavjud` sinovidagidek, aks holda
+      // g'olibning seansiga BOSHQA o'quvchi nomidan urinish yozilib qolardi.
+      const qayta = (await this.prisma.dafSession.findUnique({
+        where: { id: input.sessionId },
+        select: { id: true, studentId: true },
+      } as any)) as { id: string; studentId: number } | null;
+      if (qayta && qayta.studentId !== ctx.studentId) {
+        throw new ForbiddenException("Bu seans boshqa o'quvchiga tegishli");
+      }
+    }
+  }
+
+  /** `dafAttempt.create` uchun seans maydonlari — `pruefen` va `juft` bir xil yozadi. */
+  private seansMaydonlari(
+    input: {
+      sessionId?: string;
+      questionIndex?: number;
+      attemptNo?: 1 | 2;
+      lessonId?: number;
+    },
+    itemType: string,
+    itemId: number,
+    format: string,
+    isCorrect: boolean,
+  ) {
+    return {
+      sessionId: input.sessionId ?? null,
+      questionIndex: input.questionIndex ?? null,
+      attemptNo: input.attemptNo ?? null,
+      lessonId: input.lessonId ?? null,
+      itemType,
+      itemId,
+      format,
+      score: isCorrect ? 1 : 0,
+      gradingStatus: 'GRADED' as const,
+    };
   }
 
   /**

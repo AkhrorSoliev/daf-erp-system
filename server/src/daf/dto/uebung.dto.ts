@@ -4,6 +4,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
@@ -93,6 +94,34 @@ export class CheckAntwortDto {
   @Min(0)
   @Max(86_400_000)
   durationMs?: number;
+
+  /**
+   * Seans konteksti (dizayn 5.3). Hammasi IXTIYORIY: deploy oynasida eski
+   * klient bularsiz yuboradi va `forbidNonWhitelisted` ostida rad
+   * etilmasligi kerak. Bularsiz kelgan urinish savolga asoslangan
+   * ko'rsatkichlardan chetda qoladi, xolos.
+   */
+  @IsOptional()
+  @IsUUID('4')
+  sessionId?: string;
+
+  /** Asl savolning `PublicFrage.index`i — o'rinbosar ham SHU indeks bilan. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  questionIndex?: number;
+
+  /** 1 — asl savol, 2 — xatodan keyingi o'rinbosar. */
+  @IsOptional()
+  @IsIn([1, 2])
+  attemptNo?: 1 | 2;
+
+  /** Takrorlash seansida yuborilmaydi. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  lessonId?: number;
 }
 
 /**
@@ -142,6 +171,11 @@ export class AbschlussDto {
   @Min(0)
   @Max(86_400_000)
   durationMs?: number;
+
+  /** Seans yakunini `DafSession` ga yozish uchun; eski klient yubormaydi. */
+  @IsOptional()
+  @IsUUID('4')
+  sessionId?: string;
 }
 
 /**
@@ -174,4 +208,42 @@ export class JuftDto {
   @Min(0)
   @Max(86_400_000)
   durationMs?: number;
+
+  /**
+   * Seans konteksti (dizayn 5.3). Hammasi IXTIYORIY: deploy oynasida eski
+   * klient bularsiz yuboradi va `forbidNonWhitelisted` ostida rad
+   * etilmasligi kerak. Bularsiz kelgan urinish savolga asoslangan
+   * ko'rsatkichlardan chetda qoladi, xolos.
+   */
+  @IsOptional()
+  @IsUUID('4')
+  sessionId?: string;
+
+  /** Asl savolning `PublicFrage.index`i — o'rinbosar ham SHU indeks bilan. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  questionIndex?: number;
+
+  /** 1 — asl savol, 2 — xatodan keyingi o'rinbosar. */
+  @IsOptional()
+  @IsIn([1, 2])
+  attemptNo?: 1 | 2;
+
+  /** Takrorlash seansida yuborilmaydi. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  lessonId?: number;
+}
+
+/**
+ * Takrorlash seansi yakuni. Dars yo'q — faqat seans. `sessionId` MAJBURIY:
+ * bu endpoint faqat yangi klientdan chaqiriladi, unda yozadigan boshqa
+ * hech narsa yo'q.
+ */
+export class WiederholungAbschlussDto {
+  @IsUUID('4')
+  sessionId!: string;
 }

@@ -515,6 +515,9 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /student-portal/lernen/attempts',
       'POST /student-portal/lernen/drill/check',
       'POST /student-portal/lernen/lessons/:id/abschluss',
+      // Takrorlash seansi yakuni — `DafSession` shu o'quvchining nomiga,
+      // `sessionId` egaligi servisda tekshiriladi (403).
+      'POST /student-portal/lernen/wiederholung/abschluss',
       'POST /student-portal/lernen/uebung/check',
       // `uebung/juft` — matching mashqidagi BITTA juftni jonli tekshirish.
       // Xuddi `uebung/check` bilan bir xil sabab: `@CurrentUser('studentId')`
