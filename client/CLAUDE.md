@@ -838,6 +838,17 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 - Shared data helpers: `student-portal/lib/queries.ts` + `lib/types.ts`
 - Login uses a dedicated Lumio-skinned `app/(auth)/login/student-login-form.tsx`
 
+#### Activity tracking (whole `/portal/*` shell)
+
+Time spent in the app is measured on the client and sent to `POST /student-portal/activity` (ADR-0020). Do not try to derive it from API traffic.
+
+- `ActivityHost` (`activity/activity-host.tsx`) is rendered once in `student-portal-layout.tsx`, next to `RadioHost`, so navigation never interrupts it.
+- The rule lives in the pure module `lib/activity-tracker.ts` (unit-tested): active = page visible AND window focused AND (input within 2 min OR lesson audio playing). Radio time is measured from the player's `currentTime` advance and is never counted as active time.
+- Browser wiring is `lib/activity-runtime.ts`: 1 s tick, `localStorage` every 15 s (`daf.faollik.joriy`, `daf.faollik.kutilmoqda`), send every 60 s and on `visibilitychange → hidden` / `pagehide`, via `fetch(..., { keepalive: true })`. If `localStorage` is unavailable it falls back to in-memory storage, so tracking still works.
+- The pending-queue entries (`daf.faollik.kutilmoqda`) are keyed by `userId`. On logout the current session can still land in the queue with no valid token to send it; on the next login `kutilmoqdaOqi` returns only the entries belonging to the now-current user and drops (never re-sends, never re-attributes) any entry — malformed, legacy (no `userId`), or another user's — permanently from storage.
+- **Any new lesson audio player MUST call `registerMedia(el)` from `lib/media-registry.ts`** (and unregister on unmount), otherwise a student listening without touching the screen is counted as idle. The radio element is deliberately NOT registered.
+- Values sent are running totals for the session, never deltas — the server takes `max` and clamps by wall-clock time.
+
 #### Radio (`/portal/radio`)
 
 German-language live radio, so a student can keep the language playing while they

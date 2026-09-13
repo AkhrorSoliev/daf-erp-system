@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { isBottomNavHiddenRoute } from "@/lib/student-nav-items";
+import { ActivityHost } from "./activity/activity-host";
 import { LumioBottomNav } from "./lumio/bottom-nav";
 import { LumioSideRail } from "./lumio/side-rail";
 import { RadioHost } from "./radio/radio-host";
@@ -105,6 +106,7 @@ export function StudentPortalLayout({
         never interrupts the stream; these three only render its controls.
       */}
       <RadioHost />
+      <ActivityHost />
       <RadioMiniPlayer />
       <RadioNowPlaying />
     </div>

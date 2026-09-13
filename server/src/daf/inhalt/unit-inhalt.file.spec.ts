@@ -4,6 +4,7 @@ import { validateWortliste, UNIT_WORDS_MAX } from './wortliste.validate';
 import {
   validateEindeutigkeit,
   validateHilfswoerter,
+  validateSatzAlternativen,
 } from './unit-inhalt.validate';
 import type { WortlisteFile } from './wortliste.types';
 import type {
@@ -436,6 +437,10 @@ describe.each(UNITS)('%s — gaplar', (unit) => {
   it('gap kaliti takrorlanmaydi', () => {
     const ids = saetze.saetze.map((s) => s.sourceId);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('muqobil so`z tartiblari aynan gapning so`zlaridan tuzilgan', () => {
+    expect(validateSatzAlternativen(saetze.saetze)).toEqual([]);
   });
 
   it('gaplarda shu bo`lim yoki oldingisidan tashqari notanish so`z yo`q', () => {

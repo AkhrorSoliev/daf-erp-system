@@ -278,7 +278,6 @@ describe('StudentLeadOriginService', () => {
   });
 
   describe('recordSelfSignupOrigin', () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { sourceId: _unused, ...selfParams } = baseParams;
 
     it("yangi lid yaratganda manbani nomi bo'yicha hal qiladi", async () => {

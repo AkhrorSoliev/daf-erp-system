@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { SpeakerHigh, ArrowClockwise } from "@phosphor-icons/react";
+import { registerMedia } from "../../lib/media-registry";
 
 /**
  * Savolning ovozi — karnay tugmasi.
@@ -43,6 +44,14 @@ export function OvozTugmasi({
   compact?: boolean;
 }) {
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  // Faollik hisobi: bu audio ijro etilayotganda o'quvchi ekranga tegmasa ham
+  // faol (dizayn 4.5). `<audio key={url}>` url almashganda qayta yaratiladi —
+  // effekt ham url bilan qayta ulanadi.
+  React.useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    return registerMedia(a);
+  }, [url]);
   const [xato, setXato] = React.useState(false);
   /**
    * `<audio key={url}>` PASTDA — bu ikkita ko'rik topilmasining ILDIZ

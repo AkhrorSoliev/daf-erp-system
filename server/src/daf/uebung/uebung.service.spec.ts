@@ -121,10 +121,34 @@ function fakePrisma() {
     },
   ];
   const sentence = [
-    { id: 11, de: 'Ich bin Anna.', uz: 'Men Annaman.', sectionId: 7 },
-    { id: 12, de: 'Du bist Thomas.', uz: 'Sen Thomassan.', sectionId: 7 },
-    { id: 13, de: 'Ich bin hier.', uz: 'Men bu yerdaman.', sectionId: 7 },
-    { id: 14, de: 'Wie geht es dir?', uz: 'Ahvoling qanday?', sectionId: 7 },
+    {
+      id: 11,
+      de: 'Ich bin Anna.',
+      uz: 'Men Annaman.',
+      sectionId: 7,
+      akzeptiert: [],
+    },
+    {
+      id: 12,
+      de: 'Du bist Thomas.',
+      uz: 'Sen Thomassan.',
+      sectionId: 7,
+      akzeptiert: [],
+    },
+    {
+      id: 13,
+      de: 'Ich bin hier.',
+      uz: 'Men bu yerdaman.',
+      sectionId: 7,
+      akzeptiert: [],
+    },
+    {
+      id: 14,
+      de: 'Wie geht es dir?',
+      uz: 'Ahvoling qanday?',
+      sectionId: 7,
+      akzeptiert: [],
+    },
   ];
   const phrase = [
     {
@@ -838,6 +862,49 @@ describe('wiederholung', () => {
 
 describe('UebungService.pruefen', () => {
   const ctx = { studentId: 55, companyId: 1 };
+
+  describe('SATZ_BAUEN — boshqa to`g`ri so`z tartibi', () => {
+    const mitSatz = () => {
+      const prisma = fakePrisma();
+      prisma.dafSentence.findUnique = jest.fn(async () => ({
+        de: 'Ich wohne in Deutschland.',
+        uz: 'Men Germaniyada yashayman.',
+        akzeptiert: ['In Deutschland wohne ich.'],
+      })) as any;
+      return prisma;
+    };
+    const bauen = (given: string) => ({
+      itemType: 'SATZ' as const,
+      itemId: 15,
+      format: 'SATZ_BAUEN' as const,
+      given,
+    });
+
+    it('kontentda yozilgan boshqa tartib to`g`ri deb qabul qilinadi', async () => {
+      const r = await new UebungService(mitSatz() as any).pruefen(
+        bauen('In Deutschland wohne Ich'),
+        ctx,
+      );
+      expect(r.isCorrect).toBe(true);
+    });
+
+    it('asosiy tartib ham qabul qilinadi, ko`rsatiladigan javob — asosiy gap', async () => {
+      const r = await new UebungService(mitSatz() as any).pruefen(
+        bauen('Ich wohne in Deutschland'),
+        ctx,
+      );
+      expect(r.isCorrect).toBe(true);
+      expect(r.richtig).toBe('Ich wohne in Deutschland.');
+    });
+
+    it('yozilmagan tartib qabul qilinmaydi', async () => {
+      const r = await new UebungService(mitSatz() as any).pruefen(
+        bauen('Wohne ich in Deutschland'),
+        ctx,
+      );
+      expect(r.isCorrect).toBe(false);
+    });
+  });
 
   it('to`g`ri javobni qabul qiladi va to`g`ri javobni qaytaradi', async () => {
     const prisma = fakePrisma();

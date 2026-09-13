@@ -9,8 +9,13 @@ import { istRichtig } from './antwort';
 import { baueSeans } from './seans';
 import type { MaterialPhrase, MaterialSatz, MaterialWort } from './frage.types';
 
-function s(id: number, de: string, uz: string): MaterialSatz {
-  return { id, de, uz, sectionCode: 'u01-s1' };
+function s(
+  id: number,
+  de: string,
+  uz: string,
+  akzeptiert: string[] = [],
+): MaterialSatz {
+  return { id, de, uz, sectionCode: 'u01-s1', akzeptiert };
 }
 function w(id: number, de: string, uz: string): MaterialWort {
   return {
@@ -143,6 +148,20 @@ describe('satzBauen', () => {
     expect(f.prompt).toBe('Men Annaman.');
     expect(f.options.sort()).toEqual(['Anna', 'Ich', 'bin'].sort());
     expect(f.richtig).toBe('Ich bin Anna.');
+  });
+
+  it('gapning boshqa to`g`ri tartiblarini savolga olib o`tadi', () => {
+    const f = satzBauen(
+      s(2, 'Ich wohne in Deutschland.', 'Men Germaniyada yashayman.', [
+        'In Deutschland wohne ich.',
+      ]),
+      rnd,
+    )!;
+    expect(f.akzeptiert).toEqual(['In Deutschland wohne ich.']);
+    // Chiplardan tuzilgan muqobil tartib baholovchida to'g'ri.
+    expect(
+      istRichtig('In Deutschland wohne Ich', f.richtig, f.akzeptiert),
+    ).toBe(true);
   });
 
   it('ikki so`zli gapga savol qurmaydi', () => {

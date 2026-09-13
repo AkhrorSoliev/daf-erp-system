@@ -529,6 +529,16 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'SELF',
     reason:
+      "Keyed on `@CurrentUser('studentId')` — the caller is the subject and the " +
+      'DTO has no `studentId`. A session id owned by another student is refused ' +
+      "(403). The row's branch is STAMPED from the student's own record on the " +
+      'first write, never taken from a header, so a later transfer does not move ' +
+      'past activity into the new branch.',
+    routes: ['POST /student-portal/activity'],
+  },
+  {
+    policy: 'SELF',
+    reason:
       'The catalogue itself is COMPANY_WIDE (see above) — these two routes moved ' +
       'out of that block because the RESPONSE is no longer just the catalogue. ' +
       "`getLevels`/`getUnit` now read `DafLessonProgress` for the caller's own " +

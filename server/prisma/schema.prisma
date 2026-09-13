@@ -563,6 +563,7 @@ model Student {
   salaryAccruals    SalaryAccrual[]     @relation("StudentSalaryAccruals")
   paymentPromises   PaymentPromise[]
   dafAttempts       DafAttempt[]
+  appSessions       StudentAppSession[]
   dafLexemeStates   DafLexemeState[]
   dafLessonProgress DafLessonProgress[]
   callLogs          CallLog[]
@@ -3331,6 +3332,42 @@ model DafSession {
   @@index([companyId, startedAt])
 }
 
+/// Faollik seansi qaysi klientdan kelgani (dizayn 4.4).
+enum AppPlatform {
+  WEB
+  ANDROID
+  IOS
+}
+
+/// Bitta faollik seansi (dizayn 4). Klient seans boshidan JAMI qiymatlarni
+/// yuboradi; server har maydonda `max` oladi va soat bilan qirqadi, shuning
+/// uchun takroriy so'rov vaqtni ko'paytirmaydi. `id` — klient yaratgan uuid.
+model StudentAppSession {
+  id            String      @id
+  studentId     Int
+  companyId     Int
+  /// Birinchi yozuvda MUHRLANADI — jonli bog'lanishdan o'qilmaydi.
+  branchId      Int?
+  platform      AppPlatform
+  appVersion    String?
+  /// Toshkent kuni (`firstSeenAt` dan). Bitta seans hech qachon ikki kunga tushmaydi.
+  day           DateTime    @db.Date
+  firstSeenAt   DateTime
+  lastSeenAt    DateTime
+  activeSeconds Int         @default(0)
+  radioSeconds  Int         @default(0)
+  /// `{ LERNEN?: number, OTHER?: number }` — faol vaqtning taqsimoti, soniya.
+  sections      Json        @default("{}")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@index([studentId, day])
+  @@index([companyId, day])
+  @@index([branchId, day])
+}
+
 /// Mashq uchun gap.
 ///
 /// Manbadan olinmaydi: A1 dagi 252 qisqa gapning atigi 68 tasi (27 %)
@@ -3347,6 +3384,12 @@ model DafSentence {
   audioKey  String?
   wordCount Int
   origin    DafSentenceOrigin
+  /// Gapning BOSHQA to'g'ri so'z tartiblari (o'sha so'zlar, boshqa tartib):
+  /// `SATZ_BAUEN` ularni ham to'g'ri deb qabul qiladi. «Ich wohne in
+  /// Deutschland» va «In Deutschland wohne ich» — ikkalasi ham to'g'ri
+  /// nemischa; bittasini talab qilish to'g'ri javobni jazolaydi. Manba —
+  /// `saetze.json` dagi `akzeptiert`; bo'sh — tartib bitta.
+  akzeptiert String[]        @default([])
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
   sectionId Int?

@@ -150,6 +150,15 @@ export interface Satz extends Sprechbar {
   section: string;
   wordCount: number;
   origin: 'GENERATED';
+  /**
+   * Shu gapning BOSHQA to'g'ri so'z tartiblari — aynan o'sha so'zlar,
+   * boshqa tartibda («In Deutschland wohne ich.» ↔ «Ich wohne in
+   * Deutschland.»). `SATZ_BAUEN` o'quvchiga shu gapning so'zlarini
+   * aralashtirib beradi va faqat `de` ni qabul qilsa, to'g'ri nemischa
+   * gapni «xato» deb belgilardi. Yo'q yoki bo'sh — tartib bitta.
+   * Qo'riqchi: `validateSatzAlternativen`.
+   */
+  akzeptiert?: string[];
 }
 
 export interface SaetzeFile {
