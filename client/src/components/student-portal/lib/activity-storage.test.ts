@@ -31,15 +31,24 @@ describe("joriy seans", () => {
     const s = xotira();
     const seans = { ...yangiSeans(7, T0, "s1"), activeMs: 5000 };
     joriyniSaqla(s, seans);
-    expect(joriyniOqi(s, 7, T0 + 60_000)).toEqual({ davom: seans, yopilgan: null });
+    expect(joriyniOqi(s, 7, T0 + 60_000)).toEqual({
+      davom: seans,
+      yopilgan: null,
+    });
   });
 
   it("30 daqiqadan eski yoki boshqa kun — davom etmaydi, yopilgan sifatida qaytadi", () => {
     const s = xotira();
     const seans = yangiSeans(7, T0, "s1");
     joriyniSaqla(s, seans);
-    expect(joriyniOqi(s, 7, T0 + 31 * 60_000)).toEqual({ davom: null, yopilgan: seans });
-    expect(joriyniOqi(s, 7, T0 + 86_400_000)).toEqual({ davom: null, yopilgan: seans });
+    expect(joriyniOqi(s, 7, T0 + 31 * 60_000)).toEqual({
+      davom: null,
+      yopilgan: seans,
+    });
+    expect(joriyniOqi(s, 7, T0 + 86_400_000)).toEqual({
+      davom: null,
+      yopilgan: seans,
+    });
   });
 
   it("boshqa foydalanuvchiniki yoki buzilgan JSON — hech narsa qaytmaydi", () => {
@@ -70,7 +79,7 @@ describe("joriy seans", () => {
     };
     expect(() => joriyniSaqla(buzuq, yangiSeans(7, T0, "s1"))).not.toThrow();
     expect(joriyniOqi(buzuq, 7, T0)).toEqual({ davom: null, yopilgan: null });
-    expect(kutilmoqdaOqi(buzuq)).toEqual([]);
+    expect(kutilmoqdaOqi(buzuq, 7)).toEqual([]);
   });
 });
 
@@ -78,23 +87,69 @@ describe("yuborilmaganlar", () => {
   it("bir xil seans qayta qo'shilsa eskisi almashtiriladi; o'chirish ishlaydi", () => {
     const s = xotira();
     const a = payloadFor({ ...yangiSeans(7, T0, "a"), activeMs: 10_000 });
-    kutilmoqdaQosh(s, a);
-    kutilmoqdaQosh(s, { ...a, activeSeconds: 20 });
-    expect(kutilmoqdaOqi(s)).toEqual([{ ...a, activeSeconds: 20 }]);
+    kutilmoqdaQosh(s, 7, a);
+    kutilmoqdaQosh(s, 7, { ...a, activeSeconds: 20 });
+    expect(kutilmoqdaOqi(s, 7)).toEqual([{ ...a, activeSeconds: 20 }]);
     kutilmoqdaOchir(s, "a");
-    expect(kutilmoqdaOqi(s)).toEqual([]);
+    expect(kutilmoqdaOqi(s, 7)).toEqual([]);
   });
 
   it("ko'pi bilan 20 ta, eng eskilari tushib qoladi; buzilgan elementlar e'tiborga olinmaydi", () => {
     const s = xotira();
     for (let i = 0; i < KUTILMOQDA_MAX + 3; i++) {
-      kutilmoqdaQosh(s, payloadFor(yangiSeans(7, T0, `s${i}`)));
+      kutilmoqdaQosh(s, 7, payloadFor(yangiSeans(7, T0, `s${i}`)));
     }
-    const royxat = kutilmoqdaOqi(s);
+    const royxat = kutilmoqdaOqi(s, 7);
     expect(royxat).toHaveLength(KUTILMOQDA_MAX);
     expect(royxat[0].sessionId).toBe("s3");
-    s.setItem(KUTILMOQDA_KALIT, JSON.stringify([{ foo: 1 }, royxat[0]]));
-    expect(kutilmoqdaOqi(s)).toEqual([royxat[0]]);
+    s.setItem(
+      KUTILMOQDA_KALIT,
+      JSON.stringify([{ foo: 1 }, { userId: 7, payload: royxat[0] }]),
+    );
+    expect(kutilmoqdaOqi(s, 7)).toEqual([royxat[0]]);
+  });
+
+  it("boshqa foydalanuvchining yozuvi qaytarilmaydi va saqlagichdan o'chib ketadi; ID'siz (eski) yozuv ham", () => {
+    const s = xotira();
+    const mening = payloadFor(yangiSeans(7, T0, "mening"));
+    const begona = payloadFor(yangiSeans(9, T0, "begona"));
+    s.setItem(
+      KUTILMOQDA_KALIT,
+      JSON.stringify([
+        { userId: 9, payload: begona },
+        { userId: 7, payload: mening },
+        begona, // eski format: userId'siz yozuv (begona bilan bir xil sessionId, lekin baribir yo'q qilinadi)
+      ]),
+    );
+    // Faqat 7-foydalanuvchining yozuvi qaytadi — 9-foydalanuvchiniki hech qachon
+    // yuborilmaydi (boshqa birovning tokeni bilan uni yuborib bo'lmaydi).
+    expect(kutilmoqdaOqi(s, 7)).toEqual([mening]);
+    // Begona va ID'siz yozuvlar saqlagichdan butunlay olib tashlangan — keyinroq
+    // qayta o'qishda ham qaytib kelmaydi, boshqa foydalanuvchiga ham yozilmaydi.
+    expect(JSON.parse(s.data.get(KUTILMOQDA_KALIT)!)).toEqual([
+      { userId: 7, payload: mening },
+    ]);
+    expect(kutilmoqdaOqi(s, 9)).toEqual([]);
+  });
+
+  it("ortiqcha maydonli yozuv qabul qilinadi, lekin qayta qurilganda faqat shartnoma maydonlari qoladi", () => {
+    const s = xotira();
+    const p = payloadFor(yangiSeans(7, T0, "x"));
+    s.setItem(
+      KUTILMOQDA_KALIT,
+      JSON.stringify([
+        {
+          userId: 7,
+          payload: {
+            ...p,
+            studentId: 99999,
+            extra: "boo",
+            sections: { ...p.sections, FOO: 1 },
+          },
+        },
+      ]),
+    );
+    expect(kutilmoqdaOqi(s, 7)).toEqual([p]);
   });
 });
 
@@ -114,8 +169,14 @@ describe("xotiraSaqlagichi", () => {
     const s = xotiraSaqlagichi();
     const seans = { ...yangiSeans(7, T0, "s1"), activeMs: 5000 };
     joriyniSaqla(s, seans);
-    expect(joriyniOqi(s, 7, T0 + 60_000)).toEqual({ davom: seans, yopilgan: null });
+    expect(joriyniOqi(s, 7, T0 + 60_000)).toEqual({
+      davom: seans,
+      yopilgan: null,
+    });
     joriyniOchir(s);
-    expect(joriyniOqi(s, 7, T0 + 60_000)).toEqual({ davom: null, yopilgan: null });
+    expect(joriyniOqi(s, 7, T0 + 60_000)).toEqual({
+      davom: null,
+      yopilgan: null,
+    });
   });
 });

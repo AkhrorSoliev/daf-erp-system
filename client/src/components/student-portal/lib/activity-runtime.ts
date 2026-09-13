@@ -47,7 +47,13 @@ function xavfsizSaqlagich(): Saqlagich {
 const TICK_MS = 1_000;
 const SAQLASH_MS = 15_000;
 const YUBORISH_MS = 60_000;
-const HODISALAR = ["pointerdown", "keydown", "touchstart", "wheel", "scroll"] as const;
+const HODISALAR = [
+  "pointerdown",
+  "keydown",
+  "touchstart",
+  "wheel",
+  "scroll",
+] as const;
 
 export function faollikniBoshla(userId: number): () => void {
   const storage = xavfsizSaqlagich();
@@ -55,7 +61,7 @@ export function faollikniBoshla(userId: number): () => void {
 
   const oldingi = joriyniOqi(storage, userId, Date.now());
   if (oldingi.yopilgan && yuborishgaArziydi(oldingi.yopilgan)) {
-    kutilmoqdaQosh(storage, payloadFor(oldingi.yopilgan));
+    kutilmoqdaQosh(storage, userId, payloadFor(oldingi.yopilgan));
   }
   let holat: TrackerHolati = boshlangichHolat(
     oldingi.davom ?? yangiSeans(userId, Date.now(), seansIdYarat()),
@@ -68,13 +74,19 @@ export function faollikniBoshla(userId: number): () => void {
     if (kutilganlarYuborilmoqda) return;
     kutilganlarYuborilmoqda = true;
     try {
-      for (const p of kutilmoqdaOqi(storage)) {
-        if ((await yubor(p)) !== "xato") kutilmoqdaOchir(storage, p.sessionId);
+      for (const p of kutilmoqdaOqi(storage, userId)) {
+        if ((await yubor(p)).natija !== "xato")
+          kutilmoqdaOchir(storage, p.sessionId);
       }
     } finally {
       kutilganlarYuborilmoqda = false;
     }
   };
+
+  // Doimiy 400 — kontrakt buzilganini bildiradi (403/409 esa kutilgan holat:
+  // begona yoki kuni o'tgan seans). Faqat BIR marta ogohlantiradi, aylanishni
+  // o'zgartirmaydi — buzuq seans baribir yangisiga almashtirilaveradi.
+  let ogohlantirilgan400 = false;
 
   let joriyYuborilmoqda = false;
   const joriyniYubor = async () => {
@@ -82,10 +94,19 @@ export function faollikniBoshla(userId: number): () => void {
     if (joriyYuborilmoqda || !yuborishgaArziydi(seans)) return;
     joriyYuborilmoqda = true;
     try {
-      const natija = await yubor(payloadFor(seans));
+      const javob = await yubor(payloadFor(seans));
+      if (javob.status === 400 && !ogohlantirilgan400) {
+        ogohlantirilgan400 = true;
+        console.warn(
+          "[faollik] Server 400 bilan rad etdi — yukning shakli shartnomaga mos kelmayapti (seans baribir yangisiga almashtiriladi)",
+        );
+      }
       // Server seansni rad etdi (kuni o'tgan yoki begona) — yangi seans ochiladi.
-      if (natija === "rad" && holat.seans.sessionId === seans.sessionId) {
-        holat = boshlangichHolat(yangiSeans(userId, Date.now(), seansIdYarat()), Date.now());
+      if (javob.natija === "rad" && holat.seans.sessionId === seans.sessionId) {
+        holat = boshlangichHolat(
+          yangiSeans(userId, Date.now(), seansIdYarat()),
+          Date.now(),
+        );
         joriyniSaqla(storage, holat.seans);
       }
     } finally {
@@ -114,15 +135,21 @@ export function faollikniBoshla(userId: number): () => void {
     holat = natija.holat;
     if (natija.yopilgan) {
       if (yuborishgaArziydi(natija.yopilgan)) {
-        kutilmoqdaQosh(storage, payloadFor(natija.yopilgan));
+        kutilmoqdaQosh(storage, userId, payloadFor(natija.yopilgan));
         void kutilganlarniYubor();
       }
       joriyniSaqla(storage, holat.seans);
     }
   }, TICK_MS);
 
-  const saqlashTaymer = window.setInterval(() => joriyniSaqla(storage, holat.seans), SAQLASH_MS);
-  const yuborishTaymer = window.setInterval(() => void joriyniYubor(), YUBORISH_MS);
+  const saqlashTaymer = window.setInterval(
+    () => joriyniSaqla(storage, holat.seans),
+    SAQLASH_MS,
+  );
+  const yuborishTaymer = window.setInterval(
+    () => void joriyniYubor(),
+    YUBORISH_MS,
+  );
 
   const yashirinish = () => {
     if (document.visibilityState !== "hidden") return;
@@ -150,7 +177,8 @@ export function faollikniBoshla(userId: number): () => void {
     }
     document.removeEventListener("visibilitychange", yashirinish);
     window.removeEventListener("pagehide", ketish);
-    if (yuborishgaArziydi(holat.seans)) kutilmoqdaQosh(storage, payloadFor(holat.seans));
+    if (yuborishgaArziydi(holat.seans))
+      kutilmoqdaQosh(storage, userId, payloadFor(holat.seans));
     joriyniOchir(storage);
     void kutilganlarniYubor();
   };

@@ -39,3 +39,23 @@ uni guruh, filial va profilga bog'lab bo'lmaydi.
   audio tinglab turganda «faol emas» deb sanaladi.
 - Native ilova (Android/iOS) aynan shu qoida va shu endpoint bilan o'lchashi kerak va
   bu birinchi do'kon relizidan oldin tayyor bo'lishi kerak (dizayn 8-bo'lim).
+- Server qirqishi bitta SEANS ichida ishlaydi — bir o'quvchining kunlik jami
+  vaqti seanslar bo'yicha CHEKLANMAYDI (chaqqon klient bir vaqtda bir necha
+  parallel seans ochishi mumkin). 3-bosqich statistikasi kunlik yig'indini
+  seanslarning `[firstSeenAt, lastSeenAt]` oraliqlari birlashmasi (yoki devor
+  soati) bilan cheklashi SHART; bu ma'lumotdan pul yoki mukofot hisoblanmaydi.
+- Bir nechta tab bir seansni ulashadi (`daf.faollik.joriy` bitta kalit) va server
+  har maydonda `max` oladi — shuning uchun ko'p tabda vaqt kam sanalishi mumkin,
+  hech qachon ko'p emas.
+- Faqat sichqonchani qimirlatish faollik hisoblanmaydi — bosish, klaviatura,
+  aylantirish, teginish sanaladi (`FAOLSIZLIK_MS` ichida).
+- Chiqishda (logout) oxirgi ≤ 60 s yo'qolishi mumkin — `token` cookie holat
+  tozalanishidan OLDIN o'chadi, shuning uchun qobiq yopilganda oxirgi yuborish
+  tokensiz muvaffaqiyatsiz bo'ladi. Navbat endi foydalanuvchiga bog'langan
+  (`{ userId, payload }`): shu seans keyinroq navbatga tushib qolsa ham, faqat
+  o'sha foydalanuvchi qayta kirganda yuboriladi — boshqa o'quvchi hisobiga
+  hech qachon yozilmaydi (begona/eski yozuvlar o'qishda butunlay tashlanadi).
+- Token yangilanmaydi (masalan, tarmoq uzilgan yoki tab uzoq fonda qolgan):
+  faqat o'qib/tinglab turgan o'quvchida yuborish token yangilanguncha to'xtaydi.
+  Qiymat jami (delta emas) bo'lgani uchun seans davom etar ekan hech narsa
+  yo'qolmaydi — keyingi muvaffaqiyatli yuborish to'liq holatni yetkazadi.

@@ -13,6 +13,17 @@ import type { FaollikPayload } from "./activity-tracker";
  */
 export type YuborishNatija = "ok" | "rad" | "xato";
 
+/**
+ * `status` — HTTP status kodi (javob kelgan bo'lsa). Chaqiruvchiga kerak
+ * bo'lganda (masalan, doimiy 400ni bir marta ogohlantirish uchun) xom
+ * kodni ko'rish imkonini beradi; `natija` esa asosiy tasnif — aksariyat
+ * chaqiruvchilar faqat shuni tekshiradi.
+ */
+export interface YuborishJavobi {
+  natija: YuborishNatija;
+  status: number | null;
+}
+
 export interface YuborishMuhiti {
   fetchFn: typeof fetch;
   token: string | undefined;
@@ -36,8 +47,8 @@ export function natijaFor(status: number): YuborishNatija {
 export async function yubor(
   payload: FaollikPayload,
   muhit: YuborishMuhiti = brauzerMuhiti(),
-): Promise<YuborishNatija> {
-  if (!muhit.token || !muhit.base) return "xato";
+): Promise<YuborishJavobi> {
+  if (!muhit.token || !muhit.base) return { natija: "xato", status: null };
   try {
     const res = await muhit.fetchFn(`${muhit.base}/student-portal/activity`, {
       method: "POST",
@@ -48,8 +59,8 @@ export async function yubor(
       },
       body: JSON.stringify(payload),
     });
-    return natijaFor(res.status);
+    return { natija: natijaFor(res.status), status: res.status };
   } catch {
-    return "xato";
+    return { natija: "xato", status: null };
   }
 }

@@ -39,7 +39,8 @@ function yoz(s: Saqlagich, kalit: string, qiymat: unknown): void {
   }
 }
 
-const son = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+const son = (v: unknown): v is number =>
+  typeof v === "number" && Number.isFinite(v);
 
 function seansmi(v: unknown): v is FaollikSeansi {
   if (!v || typeof v !== "object") return false;
@@ -58,19 +59,54 @@ function seansmi(v: unknown): v is FaollikSeansi {
   );
 }
 
-function payloadmi(v: unknown): v is FaollikPayload {
-  if (!v || typeof v !== "object") return false;
+/**
+ * `v`ni shartnoma maydonlariga qarab tekshiradi va FAQAT o'sha 5 maydondan
+ * qaytadan quradi — ortiqcha maydon bo'lsa ham tashlab ketiladi. Shu tufayli
+ * serverga hech qachon `forbidNonWhitelisted` bilan rad etiladigan tana
+ * yuborilmaydi, saqlagichda qanday shakl yotgan bo'lishidan qat'iy nazar.
+ */
+function payloadQur(v: unknown): FaollikPayload | null {
+  if (!v || typeof v !== "object") return null;
   const o = v as Record<string, unknown>;
   const sections = o.sections as Record<string, unknown> | undefined;
-  return (
-    typeof o.sessionId === "string" &&
-    o.platform === "WEB" &&
-    son(o.activeSeconds) &&
-    son(o.radioSeconds) &&
-    !!sections &&
-    son(sections.LERNEN) &&
-    son(sections.OTHER)
-  );
+  if (
+    typeof o.sessionId !== "string" ||
+    o.platform !== "WEB" ||
+    !son(o.activeSeconds) ||
+    !son(o.radioSeconds) ||
+    !sections ||
+    !son(sections.LERNEN) ||
+    !son(sections.OTHER)
+  ) {
+    return null;
+  }
+  return {
+    sessionId: o.sessionId,
+    platform: "WEB",
+    activeSeconds: o.activeSeconds,
+    radioSeconds: o.radioSeconds,
+    sections: { LERNEN: sections.LERNEN, OTHER: sections.OTHER },
+  };
+}
+
+interface KutilmoqdaYozuv {
+  userId: number;
+  payload: FaollikPayload;
+}
+
+/** Xom ro'yxatni o'qiydi: `userId`si va tanasi to'g'ri kelmagan yozuvlar tushib qoladi. */
+function kutilmoqdaXomniOqi(s: Saqlagich): KutilmoqdaYozuv[] {
+  const v = oqi(s, KUTILMOQDA_KALIT);
+  if (!Array.isArray(v)) return [];
+  const natija: KutilmoqdaYozuv[] = [];
+  for (const x of v) {
+    if (!x || typeof x !== "object") continue;
+    const o = x as Record<string, unknown>;
+    if (!son(o.userId)) continue;
+    const p = payloadQur(o.payload);
+    if (p) natija.push({ userId: o.userId, payload: p });
+  }
+  return natija;
 }
 
 export function joriyniSaqla(s: Saqlagich, seans: FaollikSeansi): void {
@@ -89,8 +125,10 @@ export function joriyniOqi(
   now: number,
 ): { davom: FaollikSeansi | null; yopilgan: FaollikSeansi | null } {
   const v = oqi(s, JORIY_KALIT);
-  if (!seansmi(v) || v.userId !== userId) return { davom: null, yopilgan: null };
-  const yangi = v.kun === tashkentKuni(now) && now - v.lastActiveAt <= SEANS_TANAFFUSI_MS;
+  if (!seansmi(v) || v.userId !== userId)
+    return { davom: null, yopilgan: null };
+  const yangi =
+    v.kun === tashkentKuni(now) && now - v.lastActiveAt <= SEANS_TANAFFUSI_MS;
   return yangi ? { davom: v, yopilgan: null } : { davom: null, yopilgan: v };
 }
 
@@ -102,14 +140,30 @@ export function joriyniOchir(s: Saqlagich): void {
   }
 }
 
-export function kutilmoqdaOqi(s: Saqlagich): FaollikPayload[] {
-  const v = oqi(s, KUTILMOQDA_KALIT);
-  return Array.isArray(v) ? v.filter(payloadmi) : [];
+/**
+ * Shu `userId`ga tegishli yuborilmagan yuklarni qaytaradi. Boshqa
+ * foydalanuvchining yozuvlari (va eski, `userId`siz yozuvlar) hech qachon
+ * qaytarilmaydi — chiqishda navbatga tushib qolgan seans keyingi kirgan
+ * boshqa o'quvchiga yozilib ketmasligi uchun. Bunday begona/buzilgan
+ * yozuvlar shu o'qishda saqlagichdan ham butunlay olib tashlanadi: ular hech
+ * qachon to'g'ri egasiga qayta biriktirilmaydi, faqat tashlab yuboriladi.
+ */
+export function kutilmoqdaOqi(s: Saqlagich, userId: number): FaollikPayload[] {
+  const hammasi = kutilmoqdaXomniOqi(s);
+  const shu = hammasi.filter((y) => y.userId === userId);
+  if (shu.length !== hammasi.length) yoz(s, KUTILMOQDA_KALIT, shu);
+  return shu.map((y) => y.payload);
 }
 
-export function kutilmoqdaQosh(s: Saqlagich, p: FaollikPayload): void {
-  const royxat = kutilmoqdaOqi(s).filter((x) => x.sessionId !== p.sessionId);
-  royxat.push(p);
+export function kutilmoqdaQosh(
+  s: Saqlagich,
+  userId: number,
+  p: FaollikPayload,
+): void {
+  const royxat = kutilmoqdaXomniOqi(s).filter(
+    (y) => y.payload.sessionId !== p.sessionId,
+  );
+  royxat.push({ userId, payload: p });
   yoz(s, KUTILMOQDA_KALIT, royxat.slice(-KUTILMOQDA_MAX));
 }
 
@@ -117,7 +171,7 @@ export function kutilmoqdaOchir(s: Saqlagich, sessionId: string): void {
   yoz(
     s,
     KUTILMOQDA_KALIT,
-    kutilmoqdaOqi(s).filter((x) => x.sessionId !== sessionId),
+    kutilmoqdaXomniOqi(s).filter((y) => y.payload.sessionId !== sessionId),
   );
 }
 
