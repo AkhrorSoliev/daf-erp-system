@@ -14,6 +14,7 @@ import {
 } from '../../common/date/tashkent';
 import {
   countStages,
+  FUNNEL_START_DATE,
   type FunnelMode,
   type FunnelPerson,
   type FunnelStage,
@@ -305,6 +306,10 @@ function isRealDate(s: string): boolean {
 /**
  * Sana berilmasa — joriy Toshkent oyi. Yarim oraliq yoki teskari oraliq rad
  * etiladi: jim nollar «bu davrda hech kim kelmagan» deb o'qilardi.
+ *
+ * Boshlanish `FUNNEL_START_DATE` dan oldin bo'lsa o'sha kunga suriladi;
+ * butun oraliq undan oldin bo'lsa rad etiladi. Qaytgan `period` — haqiqatda
+ * sanalgan oraliq, klient sarlavhada shuni ko'rsatadi.
  */
 export function resolvePeriod(input: FunnelPeriodInput): {
   startDate: string;
@@ -324,12 +329,25 @@ export function resolvePeriod(input: FunnelPeriodInput): {
         "Boshlanish sanasi tugash sanasidan keyin bo'lishi mumkin emas",
       );
     }
-    return { startDate: input.startDate, endDate: input.endDate };
+    if (input.endDate < FUNNEL_START_DATE) {
+      throw new BadRequestException(
+        'Voronka 10.09.2026 dan boshlab hisoblanadi',
+      );
+    }
+    return {
+      startDate: maxDate(input.startDate, FUNNEL_START_DATE),
+      endDate: input.endDate,
+    };
   }
   const month = tashkentMonthKey(new Date());
   const next = addMonthsToMonthKey(month, 1);
   return {
-    startDate: input.startDate ?? `${month}-01`,
-    endDate: input.endDate ?? addDaysToDateStr(`${next}-01`, -1),
+    startDate: maxDate(`${month}-01`, FUNNEL_START_DATE),
+    endDate: addDaysToDateStr(`${next}-01`, -1),
   };
+}
+
+/** "YYYY-MM-DD" satrlari leksik tartibda ham sana tartibida. */
+function maxDate(a: string, b: string): string {
+  return a > b ? a : b;
 }

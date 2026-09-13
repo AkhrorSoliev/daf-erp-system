@@ -65,7 +65,7 @@ describe('ReportsLeadFunnelService', () => {
   it("bosqichlar, bo'linish va to'lamaganlarni qaytaradi", async () => {
     const r = await service.getFunnel(
       COMPANY,
-      { startDate: '2026-09-01', endDate: '2026-09-30' },
+      { startDate: '2026-10-01', endDate: '2026-10-31' },
       null,
     );
 
@@ -79,24 +79,24 @@ describe('ReportsLeadFunnelService', () => {
       other: 0,
     });
     expect(r.period).toEqual({
-      startDate: '2026-09-01',
-      endDate: '2026-09-30',
+      startDate: '2026-10-01',
+      endDate: '2026-10-31',
     });
   });
 
   it('kogortani Toshkent kuni chegarasi va kompaniya bilan cheklaydi', async () => {
     await service.getFunnel(
       COMPANY,
-      { startDate: '2026-09-01', endDate: '2026-09-30' },
+      { startDate: '2026-10-01', endDate: '2026-10-31' },
       null,
     );
 
     const where = prisma.lead.findMany.mock.calls[0][0].where;
     expect(where.companyId).toBe(COMPANY);
-    // 01.09 00:00 Toshkent = 31.08 19:00 UTC; yuqori chegara ochiq (lt).
+    // 01.10 00:00 Toshkent = 30.09 19:00 UTC; yuqori chegara ochiq (lt).
     expect(where.createdAt).toEqual({
-      gte: new Date('2026-08-31T19:00:00.000Z'),
-      lt: new Date('2026-09-30T19:00:00.000Z'),
+      gte: new Date('2026-09-30T19:00:00.000Z'),
+      lt: new Date('2026-10-31T19:00:00.000Z'),
     });
   });
 
@@ -143,9 +143,48 @@ describe('ReportsLeadFunnelService', () => {
     );
   });
 
+  describe('boshlanish sanasi (10.09.2026)', () => {
+    it('undan oldingi boshlanishni shu kunga suradi', async () => {
+      const r = await service.getFunnel(
+        COMPANY,
+        { startDate: '2026-09-01', endDate: '2026-09-30' },
+        null,
+      );
+      expect(r.period).toEqual({
+        startDate: '2026-09-10',
+        endDate: '2026-09-30',
+      });
+      // 10.09 00:00 Toshkent = 09.09 19:00 UTC.
+      expect(prisma.lead.findMany.mock.calls[0][0].where.createdAt.gte).toEqual(
+        new Date('2026-09-09T19:00:00.000Z'),
+      );
+    });
+
+    it('butunlay undan oldingi oraliqni rad etadi', async () => {
+      await expect(
+        service.getFunnel(
+          COMPANY,
+          { startDate: '2026-08-01', endDate: '2026-08-31' },
+          null,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('keyingi oylarga tegmaydi', async () => {
+      const r = await service.getFunnel(
+        COMPANY,
+        { startDate: '2026-10-01', endDate: '2026-10-31' },
+        null,
+      );
+      expect(r.period.startDate).toBe('2026-10-01');
+    });
+  });
+
   it('sana berilmasa joriy Toshkent oyini oladi', async () => {
     const r = await service.getFunnel(COMPANY, {}, null);
-    expect(r.period.startDate).toMatch(/^\d{4}-\d{2}-01$/);
+    // Oyning 1-kuni, yoki sentyabr 2026 da — voronka boshlangan kun.
+    expect(r.period.startDate >= '2026-09-10').toBe(true);
+    expect(r.period.startDate).toMatch(/^\d{4}-\d{2}-(01|10)$/);
   });
 
   describe('filial qamrovi', () => {

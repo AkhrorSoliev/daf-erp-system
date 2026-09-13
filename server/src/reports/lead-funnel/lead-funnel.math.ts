@@ -7,6 +7,18 @@
  */
 
 export const FUNNEL_STAGES = ['lead', 'enrolled', 'attended', 'paid'] as const;
+
+/**
+ * Voronka shu kundan boshlab sanaydi (CEO qarori, 13.09.2026).
+ *
+ * 10.09.2026 dan har bir yangi o'quvchi lid yozuvi qoldiradi — doskadan,
+ * to'g'ridan qo'shilgan va botdan kelgan (ADR-0018). Undan oldingi davrda
+ * to'g'ridan kelganlar lidsiz, ya'ni voronka yarim bo'lardi. Eski o'quvchilarga
+ * orqaga qarab lid yaratilmagan («faqat bugundan boshlaymiz»), shuning uchun
+ * oldingi davr ko'rsatilmaydi — izoh bilan emas, umuman.
+ * Klientdagi nusxasi: client/src/components/reports/lead-funnel/lead-funnel-math.ts
+ */
+export const FUNNEL_START_DATE = '2026-09-10';
 export type FunnelStage = (typeof FUNNEL_STAGES)[number];
 export type FunnelMode = 'all' | 'stuck';
 

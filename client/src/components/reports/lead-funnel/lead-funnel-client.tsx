@@ -14,8 +14,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LeadFunnelChart } from "./lead-funnel-chart";
 import {
   buildFunnelRows,
+  displayDate,
+  FUNNEL_START_DATE,
   rangeIncludesToday,
-  rangeStartsBeforeDirectLeads,
   resolveRange,
 } from "./lead-funnel-math";
 import { LeadFunnelPeopleDialog } from "./lead-funnel-people-dialog";
@@ -93,6 +94,7 @@ export function LeadFunnelClient() {
   const conversion = rows.length ? rows[rows.length - 1].pctOfFirst : null;
   const start = toPickerDate(range.startDate);
   const end = toPickerDate(range.endDate);
+  const floor = toPickerDate(FUNNEL_START_DATE);
 
   return (
     <div className="space-y-4">
@@ -113,6 +115,7 @@ export function LeadFunnelClient() {
             onChange={(d) => setBound("startDate", d)}
             placeholder="Boshi"
             className="h-9 w-[140px]"
+            minDate={floor}
             maxDate={end}
             defaultMonth={end}
           />
@@ -232,11 +235,9 @@ function FunnelNotes({
       "Davr hali tugamagan: yaqinda kelganlar keyingi bosqichlarga ulgurmagan, shuning uchun foizlar keyinroq oshadi.",
     );
   }
-  if (rangeStartsBeforeDirectLeads(range)) {
-    notes.push(
-      "10.09.2026 gacha to'g'ridan-to'g'ri guruhga qo'shilganlar lid qoldirmagan — o'sha kunlar uchun voronka faqat doska lidlarini ko'rsatadi.",
-    );
-  }
+  notes.push(
+    `Voronka ${displayDate(FUNNEL_START_DATE)} dan boshlab sanaydi — shu kundan har bir yangi o'quvchi lid yozuvi qoldiradi. Undan oldingi sanani tanlab bo'lmaydi.`,
+  );
 
   return (
     <aside className="rounded-xl border bg-muted/30 p-4 text-sm">

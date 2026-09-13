@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   buildFunnelRows,
   currentMonthRange,
+  displayDate,
 } from "@/components/reports/lead-funnel/lead-funnel-math";
 import type { LeadFunnelResponse } from "@/components/reports/lead-funnel/lead-funnel-types";
 
@@ -49,7 +50,12 @@ export function HomeLeadFunnelStrip({ showDetails }: { showDetails: boolean }) {
     <section className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-xl border bg-card px-4 py-3">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Filter className="size-4" />
-        <span>Lid voronkasi · shu oy</span>
+        <span>
+          Lid voronkasi ·{" "}
+          {range.startDate.endsWith("-01")
+            ? "shu oy"
+            : `${displayDate(range.startDate)} dan`}
+        </span>
       </div>
 
       <ol className="flex flex-1 flex-wrap items-center gap-x-2 gap-y-1">
