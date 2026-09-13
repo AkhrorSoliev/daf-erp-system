@@ -50,6 +50,18 @@ export function seansYigindisi(satrlar: UrinishSatri[]): SeansYigindi {
   for (const urinishlar of savollar.values()) {
     const format = urinishlar[0].format;
     if (juftFormatmi(format)) {
+      // SHARTNOMA: bu tarmoq PAAR/ZUORDNEN qatorlari `juft()`dan kelgani
+      // — har bosish o'z alohida qatori (yuqoridagi izohga qarang) — deb
+      // faraz qiladi. Butun savolni bitta so'rovda baholaydigan eski
+      // `pruefen` yo'li (4 juftni bir yo'la) shu formatga SHU YERGA hech
+      // qachon yetib kelmaydi — veb klient PAAR/ZUORDNEN uchun faqat
+      // `juft()`ni chaqiradi. Agar u baribir bitta yaxlit qator sifatida
+      // kelsa, bu yerda 4/6 taning FAQAT BITTASI deb hisoblanadi va savol
+      // hech qachon "hal bo'lgan" holatiga yetmaydi (pastdagi "hal
+      // bo'lmagan" shoxobchasiga tushadi). Kelajakda boshqa mijoz (masalan
+      // native ilova) qo'shilsa, u ham juftlash javobini `juft()` orqali,
+      // juft-juft yuborishi SHART — bitta yaxlit PAAR/ZUORDNEN qatori
+      // yubormasin.
       const xatoBor = urinishlar.some((u) => (u.score ?? 0) < 1);
       const togriSoni = urinishlar.filter((u) => u.score === 1).length;
       if (xatoBor) {

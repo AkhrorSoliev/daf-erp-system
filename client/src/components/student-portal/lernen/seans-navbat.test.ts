@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PublicFrage } from "./types";
 import {
   boshla,
   ersatzKeldi,
   javobBerildi,
   joriy,
+  seansIdYarat,
   tugadimi,
   urinishRaqami,
 } from "./seans-navbat";
@@ -220,5 +221,38 @@ describe("seans konteksti", () => {
     const ersatz = { ...f(7, "UZ_WORT"), index: 0 };
     const h2 = ersatzKeldi(holat, ersatz, 7);
     expect(h2.navbat[h2.navbat.length - 1].index).toBe(7);
+  });
+});
+
+describe("seansIdYarat — zaxira (I2)", () => {
+  const asliyCrypto = globalThis.crypto;
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("crypto.randomUUID yo`q eski brauzerda ham v4 uuid yaratadi", () => {
+    // `crypto.randomUUID` YO'Q soxta `crypto` — eski telefon/WebView holati.
+    vi.stubGlobal("crypto", {
+      getRandomValues: asliyCrypto.getRandomValues.bind(asliyCrypto),
+    });
+    const id = seansIdYarat();
+    expect(id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+  });
+
+  it("zaxira yo`lida ham ikki chaqiruv boshqa-boshqa id beradi", () => {
+    vi.stubGlobal("crypto", {
+      getRandomValues: asliyCrypto.getRandomValues.bind(asliyCrypto),
+    });
+    expect(seansIdYarat()).not.toBe(seansIdYarat());
+  });
+
+  it("crypto.randomUUID bor bo`lsa o`shani ishlatadi", () => {
+    const id = seansIdYarat();
+    expect(id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
   });
 });

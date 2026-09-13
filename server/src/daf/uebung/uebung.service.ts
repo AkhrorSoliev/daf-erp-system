@@ -544,7 +544,14 @@ export class UebungService {
       };
     }
     const satrlar = (await this.prisma.dafAttempt.findMany({
-      where: { sessionId },
+      // `studentId` — himoya qatlami: yuqoridagi tekshiruv seansning
+      // egasini allaqachon tasdiqladi, lekin `[studentId, sessionId]`
+      // indeksidan foydalanish va boshqa o'quvchining qatorini bu yerga
+      // aralashtirmaslik uchun so'rovning o'zida ham cheklanadi.
+      // `orderBy` — natija DETERMINISTIK bo'lishi uchun: `seansYigindisi`
+      // o'zi tartibga bog'liq emas, lekin qator tartibi so'rovdan
+      // so'rovga o'zgarmasligi kerak.
+      where: { sessionId, studentId: ctx.studentId },
       select: {
         questionIndex: true,
         attemptNo: true,
@@ -552,6 +559,7 @@ export class UebungService {
         score: true,
         gradingStatus: true,
       },
+      orderBy: { createdAt: 'asc' },
     } as any)) as Parameters<typeof seansYigindisi>[0];
     const natija = seansYigindisi(satrlar);
     await this.prisma.dafSession.update({
@@ -1369,16 +1377,6 @@ export class UebungService {
   }
 
   /**
-   * Berilgan so'zlar ball uchun MUDDATI KELGANMI — savolni `punkteFuer`ga
-   * yuboriladigan shaklga o'tkazadi.
-   *
-   * MUDDAT YOZUVDAN OLDIN O'QILADI: chaqiruvchida keyinroq ishlaydigan
-   * `aktualisiereZustand` shu so'zlarning `dueAt`sini kelajakka surib
-   * yuboradi — o'qish o'sha yozuvdan KEYIN sodir bo'lsa, "muddati
-   * kelganmidi" degan savolga to'g'ri javob berib bo'lmaydi (band bo'lgan
-   * holat allaqachon "kelmagan" ko'rinadi).
-   */
-  /**
    * Seans qatori birinchi urinishda yaratiladi (dizayn 5.3). `sessionId`
    * boshqa o'quvchiga tegishli bo'lsa — 403: aks holda o'quvchi birovning
    * seansiga urinish yozib, uning natijasini buzishi mumkin bo'lardi.
@@ -1464,6 +1462,16 @@ export class UebungService {
     };
   }
 
+  /**
+   * Berilgan so'zlar ball uchun MUDDATI KELGANMI — savolni `punkteFuer`ga
+   * yuboriladigan shaklga o'tkazadi.
+   *
+   * MUDDAT YOZUVDAN OLDIN O'QILADI: chaqiruvchida keyinroq ishlaydigan
+   * `aktualisiereZustand` shu so'zlarning `dueAt`sini kelajakka surib
+   * yuboradi — o'qish o'sha yozuvdan KEYIN sodir bo'lsa, "muddati
+   * kelganmidi" degan savolga to'g'ri javob berib bo'lmaydi (band bo'lgan
+   * holat allaqachon "kelmagan" ko'rinadi).
+   */
   private async punkteEingabeFuer(
     studentId: number,
     woerter: Array<{ lexemeId: number; richtig: boolean }>,

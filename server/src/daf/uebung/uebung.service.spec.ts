@@ -1504,6 +1504,17 @@ describe('seans yakuni', () => {
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
+
+  it("dafAttempt.findMany o'sha o'quvchiga cheklanadi va createdAt bo'yicha tartiblanadi (M4)", async () => {
+    const prisma = prismaMitSeans();
+    await new UebungService(prisma as any).wiederholungAbschluss(
+      { sessionId: UUID },
+      ctx,
+    );
+    const args = (prisma.dafAttempt.findMany as jest.Mock).mock.calls[0][0];
+    expect(args.where).toEqual({ sessionId: UUID, studentId: ctx.studentId });
+    expect(args.orderBy).toEqual({ createdAt: 'asc' });
+  });
 });
 
 describe('pruefen — ball', () => {

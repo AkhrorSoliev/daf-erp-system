@@ -1461,7 +1461,45 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 ## Deploy eslatmasi (reja tashqarisida, CEO ruxsati bilan)
 
-1. PR → `main` (asosiy katalogga `checkout` qilinmaydi: `git branch -f main <shox>`).
-2. Prod migratsiya **backenddan oldin**: `railway run -- npx prisma migrate deploy` (shadow DB kerak emas).
-3. Backend: `railway up` (Railway GitHub'ga ulanmagan). Klient: Vercel avtomatik.
-4. Deploydan keyin prod da bitta seans ishlab, Task 8 Step 7 dagi so'rov bilan `DafSession` qatorlarini tekshirish.
+**Muhim: PR merge ≠ deploy.** Vercel klient PR `main`ga qo'shilishi bilan
+o'zi avtomatik deploy qiladi. Railway backend esa GitHub'ga ULANMAGAN — u
+faqat qo'lda `railway up` bilan chiqadi. Bu ikkisi mustaqil, shuning uchun
+tartib QAT'IY:
+
+1. **Prod migratsiya — backenddan HAM, mergedan HAM oldin.** Avval holatni
+   tekshiring: `railway run -- npx prisma migrate status` — `main`dagi
+   `20260911120000_daf_hoer_frage` allaqachon qo'llanganini tasdiqlang.
+   Keyin: `railway run -- npx prisma migrate deploy` — bu
+   `20260913120000_daf_session_and_attempt_context`ni qo'llaydi (shadow DB
+   kerak emas). Migratsiya serverdan OLDIN kelishi SHART: yangi server har
+   javobda (`pruefen`/`juft`) yangi ustunlarga (`sessionId`,
+   `questionIndex`, ...) yozadi — ustunlar yo'q bo'lsa har bir yozuv
+   yiqiladi.
+2. **Backend: `railway up` — SHU SHOXNING kodidan.** Push emas, mahalliy
+   `railway up` (`project_railway_manual_deploy`). Ishchi katalogda saqlanib
+   qolgan tugallanmagan ish bo'lsa, oldin uni noyob teg bilan vaqtincha
+   chetga surib qo'ying (`git stash push -u -m "<noyob-teg>"`), keyin
+   qaytaring — bare `git stash`/`git stash pop` ishlatilmaydi (stash stack
+   boshqa sessiyalar bilan umumiy). Bu bosqichda ESKI klient hali
+   ishlayapti: yangi maydonlar hammasi ixtiyoriy bo'lgani uchun eski klient
+   yangi server bilan muammosiz ishlaydi.
+3. **Faqat SHUNDAN KEYIN PR `main`ga qo'shiladi** (oddiy GitHub merge; agar
+   mahalliy birlashtirilsa, asosiy katalogda `main`ni `checkout` qilmasdan
+   `git branch -f main <shox>` — repo amaliyoti). Aynan shu qadam Vercel
+   klient deployini ishga tushiradi.
+
+   **OGOHLANTIRISH:** agar klient serverdan OLDIN chiqib ketsa (masalan PR
+   birinchi bosqichlardan oldin tasodifan mergelansa), YANGI klient
+   `sessionId`/`questionIndex`/`attemptNo`/`lessonId` bilan ESKI serverga
+   so'rov yuboradi. Eski serverda `forbidNonWhitelisted: true` yoqilgan
+   bo'lgani uchun bu maydonlar bilan kelgan HAR BIR `uebung/check` va
+   `uebung/juft` so'rovi 400 bilan rad etiladi — o'quvchilar mashqqa umuman
+   javob bera olmay qoladi — va `POST
+   .../wiederholung/abschluss` (eski serverda yo'q route) 404 qaytaradi.
+   Shuning uchun tartib teskari bo'lmasligi SHART: server (1-2 qadam)
+   HAR DOIM klientdan (3-qadam) oldin.
+4. **Deploydan keyin tekshiruv:** prodda bitta dars seansi va bitta
+   takrorlash (wiederholung) seansi o'tkazib ko'ring, keyin `DafSession`
+   qatorlarini (`finishedAt`, `questionCount`, `firstTryCorrect`) va
+   `sessionId`si to'ldirilgan `DafAttempt` qatorlarini tekshiring (Task 8
+   Step 7 dagi so'rov).

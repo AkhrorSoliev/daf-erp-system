@@ -1,3 +1,4 @@
+import { RequestMethod } from '@nestjs/common';
 import { DafPortalController } from './daf-portal.controller';
 import { RolesGuard } from '../common/guards';
 import { CheckAntwortDto } from './dto/uebung.dto';
@@ -110,12 +111,23 @@ describe('DafPortalController — ruxsat', () => {
     }
   });
 
-  it('wiederholung/abschluss route mavjud va Student roliga qaraydi', () => {
+  it('wiederholung/abschluss route POST mavjud va sinf darajasidagi Student roliga qaraydi', () => {
     const proto = DafPortalController.prototype as any;
     expect(typeof proto.postWiederholungAbschluss).toBe('function');
     expect(Reflect.getMetadata('path', proto.postWiederholungAbschluss)).toBe(
       'wiederholung/abschluss',
     );
+    expect(Reflect.getMetadata('method', proto.postWiederholungAbschluss)).toBe(
+      RequestMethod.POST,
+    );
+    // Metodning o'zida `@Roles` yo'q — sinf darajasidagi dekoratorga
+    // tayanadi. Shu sababli bu yerda ANIQ o'sha metadatani (yuqoridagi
+    // 'Student rolini talab qiladi' testidagi bilan bir xil) qayta
+    // tekshiramiz — "mavjud" degan da'vo faqat yo'l borligini emas,
+    // Student qamrovi haqiqatda ishlashini isbotlaydi.
+    expect(Reflect.getMetadata('roles', DafPortalController)).toEqual([
+      'Student',
+    ]);
   });
 });
 

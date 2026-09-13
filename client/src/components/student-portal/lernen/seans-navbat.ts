@@ -50,9 +50,39 @@ function kalit(f: PublicFrage): string {
   return `${f.itemType}:${f.itemId}`;
 }
 
+/**
+ * Seans uchun v4 uuid — server `@IsUUID('4')` bilan tekshiradigan aynan shu
+ * shakl.
+ *
+ * `crypto.randomUUID` xavfsiz kontekst va yangi brauzer talab qiladi
+ * (Chrome 92+, Safari 15.4+) — eski o'quvchi telefoni yoki WebView'da yo'q
+ * bo'lishi mumkin, va yo'q bo'lganda funksiya CHAQIRILGANDA emas,
+ * `boshla`ning sukut parametri HISOBLANGANDA yiqiladi — ya'ni mashq
+ * ekrani ochilishning o'zida buziladi. Shuning uchun zaxira yo'l:
+ * `crypto.getRandomValues` (kengroq qo'llab-quvvatlanadi) bilan 16 tasodifiy
+ * baytdan RFC 4122 v4 uuid qo'lda quriladi — versiya nibble'i `4`ga,
+ * variant bitlari `10xx`ga o'rnatiladi.
+ */
+export function seansIdYarat(): string {
+  if (typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  const baytlar = crypto.getRandomValues(new Uint8Array(16));
+  baytlar[6] = (baytlar[6] & 0x0f) | 0x40; // versiya 4
+  baytlar[8] = (baytlar[8] & 0x3f) | 0x80; // variant 10xx
+  const hex = Array.from(baytlar, (b) => b.toString(16).padStart(2, "0"));
+  return [
+    hex.slice(0, 4).join(""),
+    hex.slice(4, 6).join(""),
+    hex.slice(6, 8).join(""),
+    hex.slice(8, 10).join(""),
+    hex.slice(10, 16).join(""),
+  ].join("-");
+}
+
 export function boshla(
   fragen: PublicFrage[],
-  seansId: string = crypto.randomUUID(),
+  seansId: string = seansIdYarat(),
 ): SeansHolati {
   return {
     seansId,
