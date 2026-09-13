@@ -51,8 +51,8 @@ describe("resolveHomeSections", () => {
     expect(s.people).toBe(true);
     expect(s.attentionOutreachRows).toBe(true);
     expect(s.leadFunnel).toBe(true);
-    // Hisobotlar bo'limi administratorga yopiq — havola ham chiqmaydi.
-    expect(s.leadFunnelDetails).toBe(false);
+    // Lidlar hisoboti administratorga ham ochiq — havola chiqadi.
+    expect(s.leadFunnelDetails).toBe(true);
   });
 
   it("kassir pulni ham outreach qatorlarini ham ko'rmaydi", () => {

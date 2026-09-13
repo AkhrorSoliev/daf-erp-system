@@ -75,7 +75,8 @@ export const navItems: NavItem[] = [
     title: "Hisobotlar",
     url: "/reports",
     icon: BarChart3,
-    visibleForRoles: [1, 2],
+    // Administrator faqat Lidlar hisobotini ko'radi — bolalar ro'yxati filtrlaydi.
+    visibleForRoles: [1, 2, 3],
     children: reportsChildren,
   },
   {

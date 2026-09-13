@@ -4,6 +4,7 @@ import {
   currentMonthRange,
   displayDate,
   FUNNEL_START_DATE,
+  peopleQueryParams,
   rangeIncludesToday,
   resolveRange,
 } from "./lead-funnel-math";
@@ -108,6 +109,29 @@ describe("resolveRange", () => {
       startDate: "2026-09-10",
       isDefault: true,
     });
+  });
+});
+
+describe("peopleQueryParams", () => {
+  const range = { startDate: "2026-09-10", endDate: "2026-09-30", isDefault: true };
+
+  it("faqat server biladigan maydonlarni yuboradi — isDefault yo'q", () => {
+    expect(
+      peopleQueryParams({ stage: "lead", mode: "all", page: 1, pageSize: 10, range }),
+    ).toEqual({
+      stage: "lead",
+      mode: "all",
+      page: 1,
+      pageSize: 10,
+      startDate: "2026-09-10",
+      endDate: "2026-09-30",
+    });
+  });
+
+  it("unpaid uchun sana yubormaydi", () => {
+    expect(
+      peopleQueryParams({ stage: "unpaid", mode: "all", page: 2, pageSize: 20, range }),
+    ).toEqual({ stage: "unpaid", mode: "all", page: 2, pageSize: 20 });
   });
 });
 

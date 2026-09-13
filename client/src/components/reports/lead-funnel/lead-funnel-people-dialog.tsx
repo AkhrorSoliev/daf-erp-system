@@ -27,6 +27,7 @@ import { DialogPaginationFooter } from "@/components/reports/departed-students/d
 import {
   displayDate,
   FUNNEL_START_DATE,
+  peopleQueryParams,
   STAGE_LABELS,
   STUCK_LABELS,
 } from "./lead-funnel-math";
@@ -75,15 +76,7 @@ function PeopleBody({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // `unpaid` voronka boshlanishidan bugungacha — tanlangan davrga bog'liq emas,
-  // shuning uchun sana yuborilmaydi.
-  const params = {
-    stage,
-    mode,
-    page,
-    pageSize,
-    ...(stage === "unpaid" ? {} : range),
-  };
+  const params = peopleQueryParams({ stage, mode, page, pageSize, range });
 
   const { data, isLoading, isError } = useQuery({
     queryKey: [

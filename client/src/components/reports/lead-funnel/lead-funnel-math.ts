@@ -124,6 +124,32 @@ export function resolveRange(
   return { ...currentMonthRange(now), isDefault: true };
 }
 
+/**
+ * Bosqich ro'yxati so'rovining parametrlari. FAQAT server DTO'si biladigan
+ * maydonlar: global ValidationPipe `forbidNonWhitelisted` — `resolveRange`
+ * qaytaradigan `isDefault` ni ham yuborish har so'rovni 400 qilgan edi.
+ * `unpaid` davrga bog'liq emas, unga sana yuborilmaydi.
+ */
+export function peopleQueryParams(input: {
+  stage: PeopleStage;
+  mode: "all" | "stuck";
+  page: number;
+  pageSize: number;
+  range: { startDate: string; endDate: string };
+}): Record<string, string | number> {
+  const params: Record<string, string | number> = {
+    stage: input.stage,
+    mode: input.mode,
+    page: input.page,
+    pageSize: input.pageSize,
+  };
+  if (input.stage !== "unpaid") {
+    params.startDate = input.range.startDate;
+    params.endDate = input.range.endDate;
+  }
+  return params;
+}
+
 /** Oraliq bugungi kunni qamrab oladimi — kogorta izohini ko'rsatish uchun. */
 export function rangeIncludesToday(
   range: { startDate: string; endDate: string },

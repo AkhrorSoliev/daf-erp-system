@@ -32,9 +32,8 @@ export interface HomeSections {
   /** Lid voronkasi chizig'i — backend CEO/BD/Administrator ga ochiq. */
   leadFunnel: boolean;
   /**
-   * «Batafsil» havolasi `/reports/leads` ga. Hisobotlar bo'limi frontendda
-   * faqat CEO/BD ga ochiq (`reports-layout-shell.tsx`), administratorni u
-   * ochib bo'lmaydigan sahifaga yubormaymiz.
+   * «Batafsil» havolasi `/reports/leads` ga. Administrator ham ochadi (CEO
+   * qarori, 13.09.2026) — `reports-nav.ts` da shu sahifa unga ochiq.
    */
   leadFunnelDetails: boolean;
 }
@@ -62,7 +61,7 @@ export function resolveHomeSections(roleIds: number[]): HomeSections {
     attentionOutreachRows: outreach,
     nextLessons: staff,
     leadFunnel: outreach,
-    leadFunnelDetails: money,
+    leadFunnelDetails: outreach,
   };
 }
 
