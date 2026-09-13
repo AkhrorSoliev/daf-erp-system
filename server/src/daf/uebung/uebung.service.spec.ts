@@ -1417,6 +1417,47 @@ describe('seans yakuni', () => {
     expect(lp.create.bestScore).toBe(10);
   });
 
+  it("abschluss: sessionId topilmagan seansga ishora qilsa ham DafLessonProgress yoziladi (403/404 yutiladi)", async () => {
+    const prisma = fakePrisma();
+    prisma.dafSession.findUnique = jest.fn(async () => null) as any;
+    const r = await new UebungService(prisma as any).abschluss(
+      100,
+      { richtig: 10, gesamt: 12, sessionId: UUID },
+      ctx,
+    );
+    expect(r).toEqual({ bestScore: 10, runs: 1 });
+    const lp = (prisma.dafLessonProgress.upsert as jest.Mock).mock.calls[0][0];
+    expect(lp.create.bestScore).toBe(10);
+    expect(prisma.dafSession.update).not.toHaveBeenCalled();
+  });
+
+  it("abschluss: boshqa o'quvchining seansiga ishora qilsa ham DafLessonProgress yoziladi", async () => {
+    const prisma = prismaMitSeans(99);
+    const r = await new UebungService(prisma as any).abschluss(
+      100,
+      { richtig: 10, gesamt: 12, sessionId: UUID },
+      ctx,
+    );
+    expect(r).toEqual({ bestScore: 10, runs: 1 });
+    const lp = (prisma.dafLessonProgress.upsert as jest.Mock).mock.calls[0][0];
+    expect(lp.create.bestScore).toBe(10);
+    expect(prisma.dafSession.update).not.toHaveBeenCalled();
+  });
+
+  it('abschluss: seans tekshiruvida kutilmagan xato (DB) tepaga chiqadi', async () => {
+    const prisma = fakePrisma();
+    prisma.dafSession.findUnique = jest.fn(async () => {
+      throw new Error('DB down');
+    }) as any;
+    await expect(
+      new UebungService(prisma as any).abschluss(
+        100,
+        { richtig: 10, gesamt: 12, sessionId: UUID },
+        ctx,
+      ),
+    ).rejects.toThrow('DB down');
+  });
+
   it('abschluss sessionId siz (eski klient): seansga tegilmaydi', async () => {
     const prisma = fakePrisma();
     await new UebungService(prisma as any).abschluss(

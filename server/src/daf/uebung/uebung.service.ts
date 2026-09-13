@@ -443,12 +443,10 @@ export class UebungService {
       );
     }
 
-    // Seans natijasi URINISHLARDAN — klient aytgan `richtig` faqat
-    // `DafLessonProgress.bestScore` ga ketadi (yo'l ekrani, avvalgidek).
-    if (input.sessionId) {
-      await this.seansniYakunla(input.sessionId, ctx);
-    }
-
+    // `DafLessonProgress` AVVAL yoziladi — bu yo'l ekranining yagona
+    // manbasi va klient shu javobni kutadi. Seans yakunlash (pastda)
+    // ikkinchi darajali: muvaffaqiyatsiz bo'lsa ham, dars tugallangani
+    // yo'qolib qolmasligi kerak.
     const oldingi = await this.prisma.dafLessonProgress.findUnique({
       where: { studentId_lessonId: { studentId: ctx.studentId, lessonId } },
     } as any);
@@ -470,6 +468,30 @@ export class UebungService {
       },
       update: { completedAt: new Date(), bestScore, runs },
     } as any);
+
+    // Seans natijasi URINISHLARDAN — klient aytgan `richtig` faqat
+    // yuqoridagi `DafLessonProgress.bestScore`ga ketadi. Bu ikkinchi
+    // darajali yozuv: `sessionId` yaroqsiz (topilmadi/boshqa o'quvchiniki)
+    // bo'lsa ham, yo'l ekraniga endi yozilgan progress YO'QOLMASLIGI kerak
+    // — shuning uchun faqat shu ikki holatni yutamiz va ogohlantirib
+    // qo'yamiz. Boshqa (kutilmagan, masalan DB) xatolar tepaga chiqadi.
+    if (input.sessionId) {
+      try {
+        await this.seansniYakunla(input.sessionId, ctx);
+      } catch (err) {
+        if (
+          err instanceof NotFoundException ||
+          err instanceof ForbiddenException
+        ) {
+          this.logger.warn(
+            `Seansni yakunlab bo'lmadi (lessonId=${lessonId}, studentId=${ctx.studentId}, ` +
+              `sessionId=${input.sessionId}): ${(err as Error).message}`,
+          );
+        } else {
+          throw err;
+        }
+      }
+    }
 
     return { bestScore, runs };
   }
