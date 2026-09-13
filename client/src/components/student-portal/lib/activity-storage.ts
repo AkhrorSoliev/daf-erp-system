@@ -120,3 +120,19 @@ export function kutilmoqdaOchir(s: Saqlagich, sessionId: string): void {
     kutilmoqdaOqi(s).filter((x) => x.sessionId !== sessionId),
   );
 }
+
+/**
+ * Xotiradagi zaxira saqlagich. `window.localStorage`ga qo'l tegizishning
+ * o'zi ba'zi brauzerlarda (qattiq maxfiylik rejimi, bloklangan sayt
+ * ma'lumotlari, ba'zi webview'lar) `SecurityError` tashlaydi — bu holatda
+ * hisob shu saqlagichga o'tadi: seans davomida o'lchash va yuborish davom
+ * etadi, faqat sahifa yangilanganda saqlanib qolmaydi.
+ */
+export function xotiraSaqlagichi(): Saqlagich {
+  const xotira = new Map<string, string>();
+  return {
+    getItem: (k) => xotira.get(k) ?? null,
+    setItem: (k, v) => void xotira.set(k, v),
+    removeItem: (k) => void xotira.delete(k),
+  };
+}

@@ -10,6 +10,7 @@ import {
   kutilmoqdaOchir,
   kutilmoqdaOqi,
   kutilmoqdaQosh,
+  xotiraSaqlagichi,
   type Saqlagich,
 } from "./activity-storage";
 
@@ -94,5 +95,27 @@ describe("yuborilmaganlar", () => {
     expect(royxat[0].sessionId).toBe("s3");
     s.setItem(KUTILMOQDA_KALIT, JSON.stringify([{ foo: 1 }, royxat[0]]));
     expect(kutilmoqdaOqi(s)).toEqual([royxat[0]]);
+  });
+});
+
+describe("xotiraSaqlagichi", () => {
+  it("getItem/setItem/removeItem to'g'ri ishlaydi", () => {
+    const s = xotiraSaqlagichi();
+    expect(s.getItem("k")).toBeNull();
+    s.setItem("k", "v1");
+    expect(s.getItem("k")).toBe("v1");
+    s.setItem("k", "v2");
+    expect(s.getItem("k")).toBe("v2");
+    s.removeItem("k");
+    expect(s.getItem("k")).toBeNull();
+  });
+
+  it("joriyniSaqla/joriyniOqi bu saqlagich bilan ham ishlaydi (localStorage'siz zaxira)", () => {
+    const s = xotiraSaqlagichi();
+    const seans = { ...yangiSeans(7, T0, "s1"), activeMs: 5000 };
+    joriyniSaqla(s, seans);
+    expect(joriyniOqi(s, 7, T0 + 60_000)).toEqual({ davom: seans, yopilgan: null });
+    joriyniOchir(s);
+    expect(joriyniOqi(s, 7, T0 + 60_000)).toEqual({ davom: null, yopilgan: null });
   });
 });

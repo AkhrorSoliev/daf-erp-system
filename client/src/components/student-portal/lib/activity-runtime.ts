@@ -16,8 +16,27 @@ import {
   kutilmoqdaOchir,
   kutilmoqdaOqi,
   kutilmoqdaQosh,
+  xotiraSaqlagichi,
+  type Saqlagich,
 } from "./activity-storage";
 import { yubor } from "./activity-sender";
+
+/**
+ * `window.localStorage`ga murojaatning o'zi ba'zi brauzerlarda (qattiq
+ * maxfiylik rejimi, bloklangan sayt ma'lumotlari, ba'zi webview'lar)
+ * sinxron `SecurityError` tashlaydi — `try/catch` bilan o'ralmagan getter
+ * ekanligi sababli oddiy null-tekshiruv yordam bermaydi. Bunday holatda
+ * xotiradagi zaxiraga o'tiladi: hisob shu seans davomida ishlayveradi,
+ * faqat sahifa yangilanganda saqlanib qolmaydi — kuzatuvni butunlay
+ * o'chirib qo'yish o'rniga.
+ */
+function xavfsizSaqlagich(): Saqlagich {
+  try {
+    return window.localStorage;
+  } catch {
+    return xotiraSaqlagichi();
+  }
+}
 
 /**
  * Faollik hisobini brauzerga ulaydi (dizayn 4.5): har 1 s o'lchaydi, har 15 s
@@ -31,7 +50,7 @@ const YUBORISH_MS = 60_000;
 const HODISALAR = ["pointerdown", "keydown", "touchstart", "wheel", "scroll"] as const;
 
 export function faollikniBoshla(userId: number): () => void {
-  const storage = window.localStorage;
+  const storage = xavfsizSaqlagich();
   let lastInputAt = Date.now();
 
   const oldingi = joriyniOqi(storage, userId, Date.now());
