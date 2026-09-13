@@ -41,6 +41,8 @@ export const FORMAT_SKILL: Record<FrageFormat, DafSkill> = {
   SATZ_UEBERSETZEN: 'LESEN',
   DIALOG_LUECKE: 'LESEN',
   AUDIO_WORT: 'HOEREN',
+  // Suhbatni eshitib savolga javob — tinglash.
+  HOEREN_WAHL: 'HOEREN',
   WORT_TIPPEN: 'SCHREIBEN',
 };
 

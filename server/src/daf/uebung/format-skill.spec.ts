@@ -23,6 +23,7 @@ describe('format-skill reyestri', () => {
     expect(FORMAT_SKILL.DIALOG_LUECKE).toBe('LESEN');
     expect(FORMAT_SKILL.AUDIO_WORT).toBe('HOEREN');
     expect(FORMAT_SKILL.WORT_TIPPEN).toBe('SCHREIBEN');
+    expect(FORMAT_SKILL.HOEREN_WAHL).toBe('HOEREN');
   });
 
   it('nafaqadagi format ham ko`nikma beradi, noma`lum format null', () => {
