@@ -563,6 +563,7 @@ model Student {
   salaryAccruals    SalaryAccrual[]     @relation("StudentSalaryAccruals")
   paymentPromises   PaymentPromise[]
   dafAttempts       DafAttempt[]
+  appSessions       StudentAppSession[]
   dafLexemeStates   DafLexemeState[]
   dafLessonProgress DafLessonProgress[]
   callLogs          CallLog[]
@@ -3329,6 +3330,42 @@ model DafSession {
   @@index([studentId, startedAt])
   @@index([groupId, startedAt])
   @@index([companyId, startedAt])
+}
+
+/// Faollik seansi qaysi klientdan kelgani (dizayn 4.4).
+enum AppPlatform {
+  WEB
+  ANDROID
+  IOS
+}
+
+/// Bitta faollik seansi (dizayn 4). Klient seans boshidan JAMI qiymatlarni
+/// yuboradi; server har maydonda `max` oladi va soat bilan qirqadi, shuning
+/// uchun takroriy so'rov vaqtni ko'paytirmaydi. `id` — klient yaratgan uuid.
+model StudentAppSession {
+  id            String      @id
+  studentId     Int
+  companyId     Int
+  /// Birinchi yozuvda MUHRLANADI — jonli bog'lanishdan o'qilmaydi.
+  branchId      Int?
+  platform      AppPlatform
+  appVersion    String?
+  /// Toshkent kuni (`firstSeenAt` dan). Bitta seans hech qachon ikki kunga tushmaydi.
+  day           DateTime    @db.Date
+  firstSeenAt   DateTime
+  lastSeenAt    DateTime
+  activeSeconds Int         @default(0)
+  radioSeconds  Int         @default(0)
+  /// `{ LERNEN?: number, OTHER?: number }` — faol vaqtning taqsimoti, soniya.
+  sections      Json        @default("{}")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@index([studentId, day])
+  @@index([companyId, day])
+  @@index([branchId, day])
 }
 
 /// Mashq uchun gap.
