@@ -26,6 +26,13 @@ export interface SeansXato {
  * o'zgartirilgan obyekt qayta chizilmaydi.
  */
 export interface SeansHolati {
+  /**
+   * Seansning uuid'i — server `DafSession` qatorini shu id bilan yaratadi.
+   * Klient yaratadi: seans serverda saqlanmaydi (D6), server esa birinchi
+   * urinishda qatorni ochadi. Holat bilan birga yashaydi — qayta chizilishda
+   * o'zgarmaydi.
+   */
+  seansId: string;
   /** Boshlang'ich savol soni. Almashtiruvchilar buni oshirmaydi. */
   jami: number;
   /** Qolgan savollar; birinchisi — joriy. */
@@ -43,8 +50,12 @@ function kalit(f: PublicFrage): string {
   return `${f.itemType}:${f.itemId}`;
 }
 
-export function boshla(fragen: PublicFrage[]): SeansHolati {
+export function boshla(
+  fragen: PublicFrage[],
+  seansId: string = crypto.randomUUID(),
+): SeansHolati {
   return {
+    seansId,
     jami: fragen.length,
     navbat: [...fragen],
     tugatilgan: 0,
@@ -56,6 +67,15 @@ export function boshla(fragen: PublicFrage[]): SeansHolati {
 
 export function joriy(h: SeansHolati): PublicFrage | null {
   return h.navbat[0] ?? null;
+}
+
+/**
+ * Serverga yuboriladigan `attemptNo`: qaytish huquqini ishlatgan material
+ * — o'rinbosar savol — 2, aks holda 1. `qaytganlar` allaqachon aynan shu
+ * ma'lumotni saqlaydi; alohida bayroq kerak emas.
+ */
+export function urinishRaqami(h: SeansHolati, frage: PublicFrage): 1 | 2 {
+  return h.qaytganlar.includes(kalit(frage)) ? 2 : 1;
 }
 
 export function tugadimi(h: SeansHolati): boolean {
@@ -137,13 +157,19 @@ export function javobBerildi(
  *
  * `null` — bu material uchun boshqa format qurib bo'lmadi. Savol
  * tugatilgan hisoblanadi: so'z ertaga Leitner jadvali orqali qaytadi.
+ *
+ * `aslIndex` — asl savolning `index`i. Server o'rinbosarni doim `index: 0`
+ * bilan qaytaradi (`toPublic(nomzod, 0)`); statistikada esa o'rinbosar
+ * YANGI savol emas, o'sha savolning 2-urinishi (dizayn 3-bo'lim), shuning
+ * uchun `questionIndex` asl savolniki bo'lishi shart.
  */
 export function ersatzKeldi(
   h: SeansHolati,
   frage: PublicFrage | null,
+  aslIndex: number,
 ): SeansHolati {
   if (!frage) {
     return { ...h, tugatilgan: h.tugatilgan + 1 };
   }
-  return { ...h, navbat: [...h.navbat, frage] };
+  return { ...h, navbat: [...h.navbat, { ...frage, index: aslIndex }] };
 }

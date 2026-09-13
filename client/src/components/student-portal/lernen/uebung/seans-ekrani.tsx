@@ -19,6 +19,7 @@ import {
   usePruefen,
   useUebungSeans,
   useWiederholung,
+  useWiederholungAbschluss,
 } from "../queries";
 import type { PruefErgebnis } from "../types";
 import {
@@ -27,6 +28,7 @@ import {
   javobBerildi,
   joriy,
   tugadimi,
+  urinishRaqami,
   type SeansHolati,
 } from "../seans-navbat";
 import {
@@ -112,6 +114,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
   const juftTekshir = useJuftTekshir();
   const ersatzSorov = useErsatz();
   const abschluss = useAbschluss();
+  const wiederholungAbschluss = useWiederholungAbschluss();
   const fortschritt = useFortschritt();
 
   const unitId = darsMi ? (lesson.data?.unit.id ?? null) : null;
@@ -234,6 +237,13 @@ export function SeansEkrani(props: SeansEkraniProps) {
         format: frage.format,
         given,
         durationMs: Date.now() - savolBoshi,
+        // Seans konteksti (dizayn 5.3): server urinishni seans, savol va
+        // urinish raqami bilan yozadi. `holat` bu yerda `frage` bor ekan,
+        // bo'sh emas (frage `joriy(holat)` dan keladi).
+        sessionId: holat?.seansId,
+        questionIndex: frage.index,
+        attemptNo: holat ? urinishRaqami(holat, frage) : 1,
+        lessonId: darsMi ? darsLessonId : undefined,
       },
       { onSuccess: setNatija },
     );
@@ -280,6 +290,13 @@ export function SeansEkrani(props: SeansEkraniProps) {
         // chiqadi — bu `pruefen` boshqa sakkiz formatda yozadigan qiymat
         // bilan bir xil ma'noda, ya'ni taqqoslanadigan bo'lib qoladi.
         durationMs: Date.now() - savolBoshi,
+        // Seans konteksti (dizayn 5.3): server urinishni seans, savol va
+        // urinish raqami bilan yozadi. `holat` bu yerda `frage` bor ekan,
+        // bo'sh emas (frage `joriy(holat)` dan keladi).
+        sessionId: holat?.seansId,
+        questionIndex: frage.index,
+        attemptNo: holat ? urinishRaqami(holat, frage) : 1,
+        lessonId: darsMi ? darsLessonId : undefined,
       },
       {
         onSuccess: (javob) => {
@@ -393,14 +410,14 @@ export function SeansEkrani(props: SeansEkraniProps) {
             nichtFormat: frage.format,
           })
           .catch(() => null);
-        keyingiHolat = ersatzKeldi(yangi, ersatz);
+        keyingiHolat = ersatzKeldi(yangi, ersatz, frage.index);
       } else {
         // Takrorlash hech qanday darsga tegishli emas — server
         // `lessons/:id/uebung/ersatz`ni faqat dars uchun biladi, shuning
         // uchun bu yerda so'ralmaydi. Xato qilingan so'z baribir ertaga
         // Leitner jadvali orqali qaytadi, `null` esa aynan shu holatni
         // ifodalaydi (o'rinbosar topilmadi, savol tugatilgan hisoblanadi).
-        keyingiHolat = ersatzKeldi(yangi, null);
+        keyingiHolat = ersatzKeldi(yangi, null, frage.index);
       }
     }
 
@@ -467,7 +484,18 @@ export function SeansEkrani(props: SeansEkraniProps) {
     // darsni "tugallandi" deb belgilaydi, bu yerda esa belgilanadigan
     // dars yo'q. Vaqt baribir yuqorida muzlatib qo'yilgan — natija
     // ekrani uni `manba`dan qat'iy nazar ko'rsatadi.
-    if (!darsMi) return;
+    if (!darsMi) {
+      // Takrorlash endi ham tarixda qoladi (dizayn 5.1): dars yo'q, lekin
+      // seans bor. Xato jim yutilmaydi — dars yakunidagi bilan bir xil sabab.
+      wiederholungAbschluss.mutate(
+        { sessionId: holat.seansId },
+        {
+          onError: (err) =>
+            toast.error(getErrorMessage(err, "Natija saqlanmadi. Internetni tekshiring")),
+        },
+      );
+      return;
+    }
 
     abschluss.mutate(
       {
@@ -475,6 +503,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
         richtig: holat.togri,
         gesamt: holat.jami,
         durationMs: tugashDavomiyligi.current,
+        sessionId: holat.seansId,
       },
       {
         // `ersatz`ning jimligi ataylab — o'rinbosar savol topilmasligi
@@ -491,6 +520,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
     // Qasddan tushirilgan bog'liqliklar (har biri xavfsiz):
     // - `abschluss` — uning `.mutate`si react-query tomonidan barqaror
     //   ulanadi, render sayin o'zgarmaydi.
+    // - `wiederholungAbschluss` — xuddi `abschluss` bilan bir xil sabab:
+    //   uning `.mutate`si ham react-query'ning barqaror ulanishi.
     // - `fortschritt` — xuddi shunday, `.refetch`i barqaror; ro'yxatga
     //   qo'shilsa har `fortschritt.data` yangilanishida bu butun effekt
     //   qayta ishga tushib, `abschluss.mutate`ni ikkinchi marta chaqirardi.
