@@ -57,10 +57,24 @@ async function loadBranches(): Promise<BranchItem[]> {
   return data;
 }
 
-/** Save the selection; returns true when that changed what requests claim. */
-function persist(selection: BranchSelection): boolean {
-  const previous = localStorage.getItem(BRANCH_STORAGE_KEY);
-  const next = selection ? String(selection.id) : ALL_BRANCHES;
+function storedValue(selection: BranchSelection): string {
+  return selection ? String(selection.id) : ALL_BRANCHES;
+}
+
+/**
+ * Save the selection; returns true when that changed the scope THIS tab's data
+ * on screen was fetched under.
+ *
+ * Before the switcher resolves, that scope is whatever was saved — the page's
+ * first requests read it from `localStorage`. After it resolves, it is this
+ * tab's own selection, NOT `localStorage`: another tab may have rewritten the
+ * shared key, and this tab's rows still belong to what it selected.
+ */
+function persist(state: BranchSwitcherState, selection: BranchSelection): boolean {
+  const previous = state.loaded
+    ? storedValue(state.selectedBranch)
+    : localStorage.getItem(BRANCH_STORAGE_KEY);
+  const next = storedValue(selection);
   localStorage.setItem(BRANCH_STORAGE_KEY, next);
   return branchScopeChanged(previous, next);
 }
@@ -89,7 +103,7 @@ export const useBranchSwitcher = create<BranchSwitcherState>((set, get) => ({
   scopeVersion: 0,
 
   selectBranch: (branch) => {
-    const changed = persist(branch);
+    const changed = persist(get(), branch);
     set((s) => ({
       selectedBranch: branch,
       scopeVersion: nextScopeVersion(s, changed),
@@ -98,7 +112,7 @@ export const useBranchSwitcher = create<BranchSwitcherState>((set, get) => ({
 
   hydrateFor: (branches, canSelectAll) => {
     const selected = restoreSelection(branches, canSelectAll);
-    const changed = persist(selected);
+    const changed = persist(get(), selected);
     set((s) => ({
       branches,
       selectedBranch: selected,
@@ -114,7 +128,7 @@ export const useBranchSwitcher = create<BranchSwitcherState>((set, get) => ({
       const data = await loadBranches();
       const canSelectAll = get().canSelectAll;
       const selected = restoreSelection(data, canSelectAll);
-      const changed = persist(selected);
+      const changed = persist(get(), selected);
       set((s) => ({
         branches: data,
         selectedBranch: selected,
@@ -139,7 +153,7 @@ export const useBranchSwitcher = create<BranchSwitcherState>((set, get) => ({
       const next = stillValid
         ? selectedBranch
         : restoreSelection(data, canSelectAll);
-      const changed = persist(next);
+      const changed = persist(get(), next);
       set((s) => ({
         branches: data,
         selectedBranch: next,

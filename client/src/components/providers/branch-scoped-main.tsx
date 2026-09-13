@@ -3,7 +3,8 @@
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
 /**
- * The dashboard's `<main>`, remounted whenever the active branch changes.
+ * The dashboard's `<main>`, remounted whenever the branch requests claim
+ * changes — a switch, or a first resolution that replaced the saved branch.
  *
  * WHY: about 47 components fetch with `useState` + `useEffect` + `api.get`
  * rather than React Query — students, teachers, groups, every settings page,

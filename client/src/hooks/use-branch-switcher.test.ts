@@ -31,6 +31,9 @@ const store = () => useBranchSwitcher.getState();
 beforeEach(() => {
   globalThis.localStorage = new MemoryStorage() as unknown as Storage;
   useBranchSwitcher.setState(useBranchSwitcher.getInitialState(), true);
+  // Drops any queued `mockResolvedValueOnce` so one test cannot leak into the next.
+  vi.mocked(api.get).mockReset();
+  vi.mocked(api.get).mockResolvedValue({ data: [FARGONA, NAMANGAN] });
 });
 
 /**
@@ -84,6 +87,40 @@ describe("scopeVersion — when the page content must remount", () => {
 
     expect(store().selectedBranch).toEqual(NAMANGAN);
     expect(localStorage.getItem(BRANCH_STORAGE_KEY)).toBe("2");
+    expect(store().scopeVersion).toBe(1);
+  });
+
+  it("remounts when a non-CEO logs in with nothing saved and gets their first branch", () => {
+    // The most common bump: logout clears the saved branch, so the page's first
+    // requests went out with no header — the user's whole scope. For someone
+    // with two branches that is the union of both, and it must be discarded.
+    store().hydrateFor([FARGONA, NAMANGAN], false);
+
+    expect(store().selectedBranch).toEqual(FARGONA);
+    expect(store().scopeVersion).toBe(1);
+  });
+
+  it("keeps 'Barcha filiallar' across a refetch without remounting", async () => {
+    localStorage.setItem(BRANCH_STORAGE_KEY, "all");
+    useBranchSwitcher.setState({ canSelectAll: true });
+    await store().fetchBranches();
+
+    await store().refetchBranches();
+
+    expect(store().selectedBranch).toBeNull();
+    expect(store().scopeVersion).toBe(0);
+  });
+
+  it("compares against this tab's own selection once resolved, not another tab's write", () => {
+    // Tab A shows Fargona; tab B switches to Namangan and rewrites the shared
+    // storage. When tab A then picks Namangan, its on-screen rows are still
+    // Fargona's — that is a switch for tab A even though storage already says 2.
+    localStorage.setItem(BRANCH_STORAGE_KEY, "1");
+    store().hydrateFor([FARGONA, NAMANGAN], true);
+    localStorage.setItem(BRANCH_STORAGE_KEY, "2"); // tab B
+
+    store().selectBranch(NAMANGAN);
+
     expect(store().scopeVersion).toBe(1);
   });
 
