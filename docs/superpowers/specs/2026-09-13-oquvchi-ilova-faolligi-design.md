@@ -1,7 +1,7 @@
 # O'quvchining ilova faolligi va mashq statistikasi
 
 **Sana:** 13.09.2026
-**Holati:** dizayn CEO tomonidan tasdiqlangan (13.09.2026); 1-bosqich (mashq yozuvini boyitish) kodda, deploy qilinmagan; 2–4 bosqichlar amalga oshirilmagan
+**Holati:** dizayn CEO tomonidan tasdiqlangan (13.09.2026); 1-bosqich (mashq yozuvi) PRODDA (PR #485); 2-bosqich (vaqt hisobi, veb) kodda, deploy qilinmagan; 3–4 bosqichlar amalga oshirilmagan
 **Bog'liq:** ADR-0011 (o'quv o'zagi Goethe standartiga bog'lanadi), ADR-0016 (kun chegarasi
 Toshkent bo'yicha), [Ball va yo'l dizayni](2026-09-06-ball-va-yol-design.md),
 demo shoxi `demo/ilova-faolligi` (faqat frontend, soxta raqamlar)
