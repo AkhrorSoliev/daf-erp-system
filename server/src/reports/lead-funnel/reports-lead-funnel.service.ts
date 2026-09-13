@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { AttendanceStatus, PaymentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -73,12 +73,7 @@ export class ReportsLeadFunnelService {
     return {
       period,
       ...countStages(persons, sets),
-      unpaid: {
-        total: unpaid.length,
-        active: unpaid.filter((s) => s.status === 'ACTIVE').length,
-        frozen: unpaid.filter((s) => s.status === 'FROZEN').length,
-        expelled: unpaid.filter((s) => s.status === 'EXPELLED').length,
-      },
+      unpaid: splitByStatus(unpaid),
     };
   }
 
@@ -179,31 +174,37 @@ export class ReportsLeadFunnelService {
 
     // Har bosqich oldingisining ichidan qidiriladi — voronka qat'iy ichma-ich,
     // va keyingi so'rov kichikroq ro'yxat bilan ishlaydi.
-    const enrolled = await this.distinctStudents(studentIds, (ids) =>
-      this.prisma.enrollment.findMany({
+    //
+    // `groupBy`, `findMany({ distinct })` emas: Prisma `distinct` ni xotirada
+    // bajaradi, ya'ni uzoq davrda kogortaning HAR davomat qatori yuklanardi.
+    // GROUP BY bazada bajariladi va har o'quvchiga bitta qator qaytaradi.
+    // Natija alohida o'zgaruvchiga olinadi: Prisma `groupBy` generigi lambda
+    // qaytish tipidan kontekst olsa, argument tipini noto'g'ri chiqaradi.
+    const enrolled = await this.distinctStudents(studentIds, async (ids) => {
+      const rows = await this.prisma.enrollment.groupBy({
+        by: ['studentId'],
         where: { studentId: { in: ids } },
-        select: { studentId: true },
-        distinct: ['studentId'],
-      }),
-    );
-    const attended = await this.distinctStudents([...enrolled], (ids) =>
-      this.prisma.attendance.findMany({
+      });
+      return rows;
+    });
+    const attended = await this.distinctStudents([...enrolled], async (ids) => {
+      const rows = await this.prisma.attendance.groupBy({
+        by: ['studentId'],
         where: { companyId, studentId: { in: ids }, status: { in: ATTENDED } },
-        select: { studentId: true },
-        distinct: ['studentId'],
-      }),
-    );
-    const paid = await this.distinctStudents([...attended], (ids) =>
-      this.prisma.payment.findMany({
+      });
+      return rows;
+    });
+    const paid = await this.distinctStudents([...attended], async (ids) => {
+      const rows = await this.prisma.payment.groupBy({
+        by: ['studentId'],
         where: {
           companyId,
           studentId: { in: ids },
           status: PaymentStatus.COMPLETED,
         },
-        select: { studentId: true },
-        distinct: ['studentId'],
-      }),
-    );
+      });
+      return rows;
+    });
 
     return { persons, sets: { enrolled, attended, paid } };
   }
@@ -270,12 +271,59 @@ export class ReportsLeadFunnelService {
   }
 }
 
-/** Sana berilmasa — joriy Toshkent oyi. */
-function resolvePeriod(input: FunnelPeriodInput): {
+/**
+ * Muzlatilgan va eski «INACTIVE» bitta guruh (klient ham ularni bir xil
+ * «Muzlatilgan» deb ko'rsatadi). Qolgan holatlar — bitirgan, arxiv, mock —
+ * `other` ga tushadi: aks holda bo'laklar yig'indisi jamiga teng bo'lmasdi.
+ */
+export function splitByStatus(students: { status: string }[]) {
+  const count = (...statuses: string[]) =>
+    students.filter((s) => statuses.includes(s.status)).length;
+  const active = count('ACTIVE');
+  const frozen = count('FROZEN', 'INACTIVE');
+  const expelled = count('EXPELLED');
+  return {
+    total: students.length,
+    active,
+    frozen,
+    expelled,
+    other: students.length - active - frozen - expelled,
+  };
+}
+
+/** Kalendarda haqiqatan bor kun (2026-02-31 emas). */
+function isRealDate(s: string): boolean {
+  const [y, m, d] = s.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return (
+    dt.getUTCFullYear() === y &&
+    dt.getUTCMonth() === m - 1 &&
+    dt.getUTCDate() === d
+  );
+}
+
+/**
+ * Sana berilmasa — joriy Toshkent oyi. Yarim oraliq yoki teskari oraliq rad
+ * etiladi: jim nollar «bu davrda hech kim kelmagan» deb o'qilardi.
+ */
+export function resolvePeriod(input: FunnelPeriodInput): {
   startDate: string;
   endDate: string;
 } {
+  if (Boolean(input.startDate) !== Boolean(input.endDate)) {
+    throw new BadRequestException(
+      'Boshlanish va tugash sanasi birga yuborilishi kerak',
+    );
+  }
   if (input.startDate && input.endDate) {
+    if (!isRealDate(input.startDate) || !isRealDate(input.endDate)) {
+      throw new BadRequestException("Bunday sana kalendarda yo'q");
+    }
+    if (input.startDate > input.endDate) {
+      throw new BadRequestException(
+        "Boshlanish sanasi tugash sanasidan keyin bo'lishi mumkin emas",
+      );
+    }
     return { startDate: input.startDate, endDate: input.endDate };
   }
   const month = tashkentMonthKey(new Date());

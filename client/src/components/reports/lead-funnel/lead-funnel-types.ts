@@ -6,7 +6,14 @@ export interface LeadFunnelResponse {
   period: { startDate: string; endDate: string };
   stages: Record<FunnelStage, number>;
   leadSplit: { board: number; direct: number };
-  unpaid: { total: number; active: number; frozen: number; expelled: number };
+  unpaid: {
+    total: number;
+    active: number;
+    frozen: number;
+    expelled: number;
+    /** Bitirgan, arxivlangan va h.k. — bo'laklar yig'indisi jamiga teng bo'lsin. */
+    other: number;
+  };
 }
 
 export interface FunnelPerson {

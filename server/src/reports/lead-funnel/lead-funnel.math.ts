@@ -61,11 +61,14 @@ export function toPersons(leads: CohortLead[]): FunnelPerson[] {
     }
 
     // Bitta odamning bir nechta lidi: doskadan bittasi bo'lsa ham odam doskadan
-    // kelgan, va u BIRINCHI marta kelgan vaqti bilan sanaladi.
+    // kelgan, va u BIRINCHI marta kelgan vaqti bilan sanaladi. Ism, telefon
+    // va manba ham o'sha birinchi liddan — bir qatorda ikki xil lid aralashmasin.
     existing.board = existing.board || l.board;
     if (l.createdAt < existing.createdAt) {
       existing.createdAt = l.createdAt;
       existing.leadId = l.id;
+      existing.name = `${l.firstName} ${l.lastName}`.trim();
+      existing.phone = l.phone;
       existing.source = l.source ?? existing.source;
     }
   }

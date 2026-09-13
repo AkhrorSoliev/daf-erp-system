@@ -18,7 +18,7 @@ export const STAGE_LABELS: Record<PeopleStage, string> = {
   enrolled: "Guruhga yozildi",
   attended: "Darsga keldi",
   paid: "To'lov qildi",
-  unpaid: "Darsga kelyapti, to'lamagan",
+  unpaid: "Darsga kelgan, lekin to'lamagan",
 };
 
 /** «Keyingi bosqichga o'tmaganlar» tugmasining har bosqichdagi ma'nosi. */

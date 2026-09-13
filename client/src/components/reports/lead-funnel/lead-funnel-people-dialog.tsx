@@ -65,7 +65,8 @@ function PeopleBody({
 }) {
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const hasStuck = stage !== "paid" && stage !== "unpaid";
-  const [mode, setMode] = useState<PeopleMode>(hasStuck ? "stuck" : "all");
+  // «Hammasi» dan ochiladi: ro'yxat jami bosilgan bosqichdagi son bilan bir xil.
+  const [mode, setMode] = useState<PeopleMode>("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -109,26 +110,25 @@ function PeopleBody({
 
       {hasStuck && (
         <div
-          role="tablist"
+          role="group"
           aria-label="Ro'yxat turi"
           className="inline-flex w-fit rounded-lg border bg-muted/40 p-0.5 text-sm"
         >
           {(
             [
-              ["stuck", STUCK_LABELS[stage as keyof typeof STUCK_LABELS]],
               ["all", "Hammasi"],
+              ["stuck", STUCK_LABELS[stage as keyof typeof STUCK_LABELS]],
             ] as const
           ).map(([value, label]) => (
             <button
               key={value}
               type="button"
-              role="tab"
-              aria-selected={mode === value}
+              aria-pressed={mode === value}
               onClick={() => {
                 setMode(value);
                 setPage(1);
               }}
-              className="rounded-md px-3 py-1 transition-colors aria-selected:bg-background aria-selected:font-medium aria-selected:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="rounded-md px-3 py-1 transition-colors aria-pressed:bg-background aria-pressed:font-medium aria-pressed:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {label}
             </button>

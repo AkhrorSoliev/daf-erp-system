@@ -34,6 +34,32 @@ describe('toPersons', () => {
     expect(persons[0].createdAt).toEqual(new Date('2026-09-02'));
   });
 
+  it('ism, telefon va manba birinchi liddan olinadi', () => {
+    const [p] = toPersons([
+      lead({
+        id: 'a',
+        studentId: 11,
+        firstName: 'Keyin',
+        phone: '1',
+        source: 'Telegram',
+        createdAt: new Date('2026-09-05'),
+      }),
+      lead({
+        id: 'b',
+        studentId: 11,
+        firstName: 'Avval',
+        phone: '2',
+        source: 'Instagram',
+        createdAt: new Date('2026-09-02'),
+      }),
+    ]);
+    expect(p).toMatchObject({
+      name: 'Avval Valiyev',
+      phone: '2',
+      source: 'Instagram',
+    });
+  });
+
   it("bog'langan lidlardan biri doskadan bo'lsa, odam doskadan kelgan", () => {
     const [p] = toPersons([
       lead({ id: 'a', studentId: 11, board: false }),

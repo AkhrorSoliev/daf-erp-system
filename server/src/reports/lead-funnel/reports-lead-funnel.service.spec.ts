@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReportsLeadFunnelService } from './reports-lead-funnel.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -34,12 +35,12 @@ describe('ReportsLeadFunnelService', () => {
         ]),
       },
       enrollment: {
-        findMany: jest.fn().mockResolvedValue([{ studentId: 10 }]),
+        groupBy: jest.fn().mockResolvedValue([{ studentId: 10 }]),
       },
       attendance: {
-        findMany: jest.fn().mockResolvedValue([{ studentId: 10 }]),
+        groupBy: jest.fn().mockResolvedValue([{ studentId: 10 }]),
       },
-      payment: { findMany: jest.fn().mockResolvedValue([]) },
+      payment: { groupBy: jest.fn().mockResolvedValue([]) },
       student: {
         findMany: jest
           .fn()
@@ -70,7 +71,13 @@ describe('ReportsLeadFunnelService', () => {
 
     expect(r.stages).toEqual({ lead: 2, enrolled: 1, attended: 1, paid: 0 });
     expect(r.leadSplit).toEqual({ board: 1, direct: 1 });
-    expect(r.unpaid).toEqual({ total: 4, active: 2, frozen: 1, expelled: 1 });
+    expect(r.unpaid).toEqual({
+      total: 4,
+      active: 2,
+      frozen: 1,
+      expelled: 1,
+      other: 0,
+    });
     expect(r.period).toEqual({
       startDate: '2026-09-01',
       endDate: '2026-09-30',
@@ -99,6 +106,40 @@ describe('ReportsLeadFunnelService', () => {
     await service.getFunnel(COMPANY, {}, null);
     expect(prisma.lead.findMany.mock.calls[0][0].where).not.toHaveProperty(
       'deletedAt',
+    );
+  });
+
+  it("bitirgan/eski holatlar ham bo'laklarga tushadi — yig'indi jamiga teng", async () => {
+    prisma.student.findMany.mockResolvedValueOnce([
+      { status: 'ACTIVE' },
+      { status: 'INACTIVE' },
+      { status: 'GRADUATED' },
+      { status: 'EXPELLED' },
+    ]);
+    const { unpaid } = await service.getFunnel(COMPANY, {}, null);
+    expect(unpaid).toEqual({
+      total: 4,
+      active: 1,
+      frozen: 1,
+      expelled: 1,
+      other: 1,
+    });
+  });
+
+  it("bosqich to'plamlari bazada GROUP BY bilan olinadi", async () => {
+    await service.getFunnel(COMPANY, {}, null);
+    expect(prisma.attendance.groupBy.mock.calls[0][0]).toMatchObject({
+      by: ['studentId'],
+    });
+  });
+
+  it.each([
+    [{ startDate: '2026-09-01' }],
+    [{ startDate: '2026-09-30', endDate: '2026-09-01' }],
+    [{ startDate: '2026-02-31', endDate: '2026-03-10' }],
+  ])('buzilgan oraliqni rad etadi: %j', async (input) => {
+    await expect(service.getFunnel(COMPANY, input, null)).rejects.toThrow(
+      BadRequestException,
     );
   });
 

@@ -69,7 +69,7 @@ export function HomeLeadFunnelStrip({ showDetails }: { showDetails: boolean }) {
         ))}
       </ol>
 
-      <div className="flex items-center gap-4 text-sm">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
         <span className="text-muted-foreground">
           Liddan to&apos;lovgacha{" "}
           <span className="font-semibold text-foreground tabular-nums">
@@ -77,7 +77,7 @@ export function HomeLeadFunnelStrip({ showDetails }: { showDetails: boolean }) {
           </span>
         </span>
         <span className="text-muted-foreground">
-          Kelyapti, to&apos;lamagan{" "}
+          To&apos;lamagan faol o&apos;quvchi{" "}
           <span className="font-semibold text-foreground tabular-nums">
             {formatNumber(data.unpaid.active)}
           </span>

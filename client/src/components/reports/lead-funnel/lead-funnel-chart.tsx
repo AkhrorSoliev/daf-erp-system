@@ -30,11 +30,13 @@ function stageFill(
     case "lead":
       return palette.series1;
     case "enrolled":
-      return isDark ? "#3f78c9" : "#3b82c4";
+      return isDark ? "#3f78c9" : "#2f6fb0";
     case "attended":
-      return isDark ? "#2a8a9e" : "#2a9aa8";
+      return isDark ? "#2a8a9e" : "#237f8b";
     case "paid":
-      return palette.series3;
+      // Yorug' rejimdagi palitra yashili (#1baf7a) oq raqam bilan ~2.6:1 —
+      // o'qilmaydi. Shu blok uchun to'qroq tus.
+      return isDark ? palette.series3 : "#13875d";
   }
 }
 
@@ -58,6 +60,10 @@ export function LeadFunnelChart({
         const next = rows[i + 1];
         // Oxirgi blok to'g'ri to'rtburchak: undan keyin torayadigan joy yo'q.
         const bottom = next ? width(next.widthRatio) : top;
+        // Raqam blokning o'rta balandligida turadi, joyni o'sha kenglik hal
+        // qiladi. Tashqi raqam faqat tor blokda (mid < 0.2) — demak har doim
+        // karta ichida qoladi.
+        const mid = (top + bottom) / 2;
         const l1 = (1 - top) / 2;
         const l2 = (1 - bottom) / 2;
         const points = `${l1},0 ${1 - l1},0 ${1 - l2},1 ${l2},1`;
@@ -111,7 +117,7 @@ export function LeadFunnelChart({
                     className="opacity-90 transition-opacity group-hover:opacity-100"
                   />
                 </svg>
-                {Math.min(top, bottom) >= NUMBER_INSIDE_MIN ? (
+                {mid >= NUMBER_INSIDE_MIN ? (
                   <span className="absolute inset-0 flex items-center justify-center text-lg font-semibold text-white tabular-nums drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)] sm:text-xl">
                     {formatNumber(row.count)}
                   </span>
@@ -120,7 +126,7 @@ export function LeadFunnelChart({
                   // qoladi — shuning uchun blokning o'ng yonida, matn rangida.
                   <span
                     className="absolute inset-y-0 flex items-center pl-2 text-lg font-semibold tabular-nums sm:text-xl"
-                    style={{ left: `${(50 + (top * 100) / 2).toFixed(2)}%` }}
+                    style={{ left: `${(50 + (mid * 100) / 2).toFixed(2)}%` }}
                   >
                     {formatNumber(row.count)}
                   </span>

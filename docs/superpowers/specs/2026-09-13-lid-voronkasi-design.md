@@ -85,7 +85,7 @@ umumiy qoidasi), `@BranchScope()`, bo'sh qamrov → 403.
 
 - `GET /reports/lead-funnel?startDate&endDate` →
   `{ period, stages: { lead, enrolled, attended, paid }, leadSplit: { board, direct },
-  unpaid: { total, active, frozen, expelled } }`
+  unpaid: { total, active, frozen, expelled, other } }` — `frozen` eski INACTIVE ni ham oladi, `other` bitirgan/arxiv va h.k., bo'laklar yig'indisi jamiga teng
 - `GET /reports/lead-funnel/people?stage&mode&startDate&endDate&page&pageSize` →
   `{ data: [{ key, name, phone, studentId, studentStatus, source, createdAt }], total, page, pageSize }`
   - `stage`: `lead | enrolled | attended | paid | unpaid`
