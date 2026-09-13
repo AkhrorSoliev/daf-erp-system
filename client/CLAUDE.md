@@ -780,6 +780,24 @@ The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth
 - Used during transition from old finance systems to enter a student's outstanding balance. Backend partial unique index `(studentId) WHERE type='INITIAL_BALANCE' AND reversedAt IS NULL` enforces "exactly one per student" — second submit returns 400 with "Boshlang'ich balans bu o'quvchi uchun allaqachon kiritilgan".
 - Form: amount (`PriceInput`, min 0) + optional note (`Input`, maxLength 500).
 
+### Lead Forms and Their Responses (`/leads/forms`)
+
+Public sign-up forms (shared on Instagram/Telegram) turn every submission into a lead. Three routes:
+
+| Route | Component | Purpose |
+|-------|-----------|---------|
+| `/leads/forms` | `forms/forms-list-client.tsx` | Table of forms: responses (+ "N tasi o'quvchi bo'ldi"), **Qo'ng'iroq kutmoqda** (amber, deep-links to `?stage=awaiting`), last response. Cards below `sm`. |
+| `/leads/forms/[id]` | `forms/responses/form-responses-client.tsx` | **Who registered.** Opening a form shows its responses — NOT the editor. |
+| `/leads/forms/[id]/tahrirlash` | `forms/form-builder-client.tsx` | The builder. Save returns to the responses page; create lands on the new form's (empty) responses page. |
+
+- **The stage is computed on the server, never on the client.** Four mutually exclusive stages (`awaiting` · `contacted` · `converted` · `lost`) always sum to the form's total; the chips are the page's ONLY status filter (single-select). Counts beside chips and sources are whole-form and do not move with other filters.
+- **"Telefon qildim" is marked in the table itself** through the existing `PATCH /leads/:id/called`, optimistically, with an undo toast. `withCalled` (`responses/submission-format.ts`) moves the chip counts with the row, and under `?stage=awaiting` a just-marked row deliberately stays on screen until the next fetch so rows do not jump mid-call-list. The rollback only fires if the row still holds the optimistic value, so a refetch that landed meanwhile is never overwritten.
+- **The lead drawer and its dialogs are mounted on this page too** (`LeadDetailDrawer`, edit, move, convert, delete). The page refetches when that flow closes — it deliberately does not key off the board's `revision`.
+- Archived (lost) rows restore through `leads/restore-lead-dialog.tsx`, shared with the leads archive page.
+- **CSV export is built client-side** from `GET /custom-forms/:id/submissions/export` (same filters). `csvCell` neutralises cells starting with `= + - @` — the data comes from an anonymous public form — with phone numbers exempt.
+- An unknown `?stage=` is clamped to "no stage" before it reaches the API (the DTO would 400 it).
+- **Default field ids in `defaultFormFields()` must stay literal strings.** They are evaluated during both the server render and hydration; random ids caused a hydration mismatch on `/leads/forms/new`.
+
 ### Student Portal (`src/components/student-portal/`)
 
 Student-facing portal at `student.dafzentrum.uz` — students can view their profile, schedule, attendance, and make payments. The portal is skinned with the **Lumio** design system (ported from the student-app), a playful "clay" look with Baloo 2 / Nunito fonts, applied via a scoped `.lumio` class + tokens.
