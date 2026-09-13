@@ -416,7 +416,15 @@ export class LeadsService {
 
   // `userId` is nullable because public-form submissions create leads with no
   // authenticated user — the audit row records `changedBy = NULL` (system).
-  async create(dto: CreateLeadDto, companyId: number, userId: number | null) {
+  /**
+   * `sourceId` bu yerda ixtiyoriy: HTTP yo'li uni `CreateLeadDto` da majburiy
+   * qiladi, ochiq forma esa manbasiz havoladan kelishi mumkin.
+   */
+  async create(
+    dto: Omit<CreateLeadDto, 'sourceId'> & { sourceId?: string | null },
+    companyId: number,
+    userId: number | null,
+  ) {
     const firstName = dto.firstName.trim();
     const lastName = dto.lastName.trim();
     if (!firstName || !lastName) {

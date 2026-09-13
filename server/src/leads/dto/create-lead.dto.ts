@@ -1,5 +1,6 @@
 import {
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
@@ -34,9 +35,15 @@ export class CreateLeadDto {
   @IsString()
   sectionId: string;
 
-  @IsOptional()
+  /**
+   * «Qayerdan bildi?» — MAJBURIY (CEO qarori, 13.09.2026). Manbasiz lid
+   * voronka va manba hisobotida «noma'lum» bo'lib qoladi. Bu DTO faqat admin
+   * doskaga qo'shadigan lid uchun; ochiq forma lidni `LeadsService.create` ni
+   * to'g'ridan chaqirib yaratadi va manbasi havola tegidan keladi.
+   */
   @IsString()
-  sourceId?: string;
+  @IsNotEmpty({ message: 'Lid manbasini tanlang' })
+  sourceId!: string;
 
   /**
    * Which branch this lead belongs to. OPTIONAL by design — a lead from the

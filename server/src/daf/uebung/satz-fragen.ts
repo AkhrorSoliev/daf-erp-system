@@ -111,7 +111,10 @@ export function satzBauen(satz: MaterialSatz, rnd: () => number): Frage | null {
     hilfe: null,
     options: mischen(woerter, rnd),
     richtig: satz.de,
-    akzeptiert: [],
+    // Nemischada bir gap ko'pincha bir necha tartibda to'g'ri. Tekshiruv
+    // (`pruefen`) buni bazadan qayta o'qiydi; bu yerda — `/media`
+    // oldindan ko'rish uchun.
+    akzeptiert: satz.akzeptiert,
     belegteItems: [materialSchluessel('SATZ', satz.id)],
     audioUrl: null,
   };

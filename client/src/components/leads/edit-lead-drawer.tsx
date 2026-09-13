@@ -78,7 +78,7 @@ export function EditLeadDrawer() {
         phone: values.phone,
         // Always sent: an empty string is how the panel clears a saved number.
         extraPhone: values.extraPhone,
-        sourceId: values.sourceId,
+        sourceId: values.sourceId || undefined,
       });
       applyLeadUpdate(editLead.sectionId, data);
       toast.success("Lid yangilandi");
@@ -161,15 +161,26 @@ export function EditLeadDrawer() {
               )}
             </div>
 
+            {/* Manbasi bor lid uni yo'qotmaydi (server ham rad etadi). Manbasiz
+                eski lidni esa boshqa maydonini tuzatish uchun ham manba
+                so'ralmaydi — lekin tanlab qo'yish mumkin. */}
             <Controller
               name="sourceId"
               control={control}
+              rules={{
+                validate: (v) =>
+                  !editLead?.sourceId ||
+                  Boolean(v) ||
+                  "Lid manbasini olib tashlab bo'lmaydi",
+              }}
               render={({ field }) => (
                 <LeadSourcePicker
                   open={open}
                   value={field.value}
                   onChange={field.onChange}
-                  label="Lid manbasi (ixtiyoriy)"
+                  label="Qayerdan bildi?"
+                  required={Boolean(editLead?.sourceId)}
+                  error={errors.sourceId?.message}
                   id="edit-lead-sourceId"
                   loadErrorMessage="Manbalarni yuklashda xatolik"
                 />

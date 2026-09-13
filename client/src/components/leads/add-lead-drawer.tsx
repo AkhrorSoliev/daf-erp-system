@@ -84,7 +84,7 @@ export function AddLeadDrawer() {
         phone: values.phone,
         extraPhone: values.extraPhone || undefined,
         sectionId: values.sectionId,
-        sourceId: values.sourceId || undefined,
+        sourceId: values.sourceId,
       });
       addLead(values.sectionId, data);
       toast.success("Yangi lid qo'shildi");
@@ -214,14 +214,17 @@ export function AddLeadDrawer() {
               <Controller
                 name="sourceId"
                 control={control}
+                rules={{ required: "Lid manbasini tanlang" }}
                 render={({ field }) => (
                   <LeadSourcePicker
                     open={open}
                     value={field.value}
                     onChange={field.onChange}
-                    label="Lid manbasi (ixtiyoriy)"
+                    label="Qayerdan bildi?"
+                    required
+                    error={errors.sourceId?.message}
                     id="add-lead-sourceId"
-                    loadErrorMessage="Manbalarni yuklashda xatolik"
+                    loadErrorMessage="Manbalar ro'yxati yuklanmadi — lid qo'shish uchun sahifani yangilang"
                   />
                 )}
               />

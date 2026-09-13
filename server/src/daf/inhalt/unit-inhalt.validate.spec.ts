@@ -1,7 +1,10 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { validateEindeutigkeit } from './unit-inhalt.validate';
-import type { WoerterFile, RedemittelFile } from './unit-inhalt.types';
+import {
+  validateEindeutigkeit,
+  validateSatzAlternativen,
+} from './unit-inhalt.validate';
+import type { WoerterFile, RedemittelFile, Satz } from './unit-inhalt.types';
 
 const A1 = join(__dirname, '..', '..', '..', 'content', 'daf', 'a1');
 const read = <T>(...p: string[]): T =>
@@ -82,5 +85,69 @@ describe('unit ichida matn noyobligi', () => {
         read<RedemittelFile>('u01', 'redemittel.json'),
       ),
     ).toEqual([]);
+  });
+});
+
+describe('gapning muqobil so`z tartiblari', () => {
+  const satz = (de: string, akzeptiert?: string[]): Satz => ({
+    sourceId: 'u01-s3-01',
+    section: 'u01-s3',
+    de,
+    uz: 'x',
+    wordCount: de
+      .replace(/[.,!?]/g, '')
+      .trim()
+      .split(/\s+/).length,
+    origin: 'GENERATED',
+    akzeptiert,
+  });
+
+  it('o`sha so`zlardan tuzilgan muqobil — toza', () => {
+    expect(
+      validateSatzAlternativen([
+        satz('Ich wohne in Deutschland.', ['In Deutschland wohne ich.']),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('muqobili yo`q gap — toza', () => {
+    expect(validateSatzAlternativen([satz('Wie heißt du?')])).toEqual([]);
+  });
+
+  it('katta-kichik harf va tinish belgisi farqi hisobga olinmaydi', () => {
+    // `Ich` gap o'rtasiga o'tganda kichik harf bilan yoziladi — bu boshqa
+    // so'z EMAS, o'quvchiga baribir o'sha chip beriladi.
+    expect(
+      validateSatzAlternativen([
+        satz('Ich bin heute müde.', ['Heute bin ich müde!']),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('boshqa so`z qo`shilgan muqobil — xato (o`quvchi uni tuza olmaydi)', () => {
+    const p = validateSatzAlternativen([
+      satz('Ich wohne in Deutschland.', ['In Deutschland wohne ich jetzt.']),
+    ]);
+    expect(p).toHaveLength(1);
+    expect(p[0]).toContain('tuzilmagan');
+  });
+
+  it('so`zi yetishmaydigan muqobil — xato', () => {
+    expect(
+      validateSatzAlternativen([
+        satz('Ich wohne in Deutschland.', ['In Deutschland wohne.']),
+      ]),
+    ).toHaveLength(1);
+  });
+
+  it('gapning o`zini takrorlagan yoki ikki marta yozilgan muqobil — xato', () => {
+    const p = validateSatzAlternativen([
+      satz('Ich wohne in Deutschland.', [
+        'ich wohne in Deutschland',
+        'In Deutschland wohne ich.',
+        'In Deutschland wohne ich!',
+      ]),
+    ]);
+    expect(p).toHaveLength(2);
   });
 });
