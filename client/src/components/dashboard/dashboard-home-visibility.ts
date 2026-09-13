@@ -29,6 +29,14 @@ export interface HomeSections {
   attentionOutreachRows: boolean;
   /** Keyingi darslar bloki. */
   nextLessons: boolean;
+  /** Lid voronkasi chizig'i — backend CEO/BD/Administrator ga ochiq. */
+  leadFunnel: boolean;
+  /**
+   * «Batafsil» havolasi `/reports/leads` ga. Hisobotlar bo'limi frontendda
+   * faqat CEO/BD ga ochiq (`reports-layout-shell.tsx`), administratorni u
+   * ochib bo'lmaydigan sahifaga yubormaymiz.
+   */
+  leadFunnelDetails: boolean;
 }
 
 /**
@@ -53,6 +61,8 @@ export function resolveHomeSections(roleIds: number[]): HomeSections {
     attention: staff,
     attentionOutreachRows: outreach,
     nextLessons: staff,
+    leadFunnel: outreach,
+    leadFunnelDetails: money,
   };
 }
 

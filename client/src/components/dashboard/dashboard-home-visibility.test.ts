@@ -36,6 +36,8 @@ describe("resolveHomeSections", () => {
       attention: true,
       attentionOutreachRows: true,
       nextLessons: true,
+      leadFunnel: true,
+      leadFunnelDetails: true,
     });
   });
 
@@ -48,6 +50,9 @@ describe("resolveHomeSections", () => {
     expect(s.money).toBe(false);
     expect(s.people).toBe(true);
     expect(s.attentionOutreachRows).toBe(true);
+    expect(s.leadFunnel).toBe(true);
+    // Hisobotlar bo'limi administratorga yopiq — havola ham chiqmaydi.
+    expect(s.leadFunnelDetails).toBe(false);
   });
 
   it("kassir pulni ham outreach qatorlarini ham ko'rmaydi", () => {
@@ -56,6 +61,7 @@ describe("resolveHomeSections", () => {
     expect(s.attentionOutreachRows).toBe(false);
     expect(s.attention).toBe(true);
     expect(s.people).toBe(true);
+    expect(s.leadFunnel).toBe(false);
   });
 });
 

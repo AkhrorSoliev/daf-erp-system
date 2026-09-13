@@ -9,6 +9,7 @@ import type { DashboardSummary } from "./dashboard-summary-types";
 import { HomeAttentionList } from "./home-attention-list";
 import { HomeCharts } from "./home-charts";
 import { HomeErrorNote } from "./home-error-note";
+import { HomeLeadFunnelStrip } from "./home-lead-funnel-strip";
 import { HomeLoadError } from "./home-load-error";
 import { HomeMoneyCards } from "./home-money-cards";
 import { HomeNextLessons } from "./home-next-lessons";
@@ -71,6 +72,10 @@ export function HomeOverview() {
         ) : failed("people") ? (
           <HomeErrorNote label="O'quvchilar" />
         ) : null)}
+
+      {sections.leadFunnel && (
+        <HomeLeadFunnelStrip showDetails={sections.leadFunnelDetails} />
+      )}
 
       {/* Chapda bugun qilinadigan ish, o'ngda bugun bo'ladigan dars. Mobilda
           biri ikkinchisining ostiga tushadi — «e'tibor» birinchi bo'ladi,
