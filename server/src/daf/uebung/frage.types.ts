@@ -30,6 +30,8 @@ export interface MaterialSatz {
   de: string;
   uz: string;
   sectionCode: string;
+  /** Boshqa to'g'ri so'z tartiblari — `SATZ_BAUEN` ularni ham qabul qiladi. */
+  akzeptiert: string[];
 }
 
 export interface MaterialPhrase {
