@@ -61,6 +61,12 @@ davrni izoh bilan ko'rsatgan edi — bu kelishuvga zid bo'lgani uchun olib tashl
 
 ## «Darsga kelyapti, lekin to'lamagan» kartasi
 
+**O'zgardi (CEO qarori, 13.09.2026):** karta endi faqat voronkadagilarni sanaydi —
+10.09.2026 dan bugungacha lid bo'lib kelgan, darsga kelgan, lekin hali to'lov
+qilmagan odamlar (tanlangan davrga bog'liq emas). Quyidagi birinchi versiya lidsiz
+eski o'quvchilarni ham sanardi (205) va voronka raqamlari bilan aralashardi.
+
+
 Voronkadan boshqa o'lchov: **bugungi holat**, davrga bog'liq emas. Tirik o'quvchilar
 (`studentBranchWhere`), kamida bitta `PRESENT`/`LATE` davomat, birorta ham
 `COMPLETED` to'lov yo'q.
