@@ -20,11 +20,40 @@ describe('zuPolsterndeEintraege', () => {
     expect(zuPolsterndeEintraege(manifest)).toEqual([]);
   });
 
-  it('boshqa qiymatli (eski/mos kelmagan) `polster`ni ham qayta ishlaydi', () => {
+  // Ko'rik (2026-09-13): ilgari bu holat "qayta ishlash kerak" deb
+  // TANLANARDI — lekin R2'da faqat PADDED audio bor, xom asl nusxa
+  // saqlanmagan, shuning uchun "qayta ishlash" aslida ALLAQACHON
+  // jimlik qo'shilgan faylni yana bir bor ishlab, ustiga yana jimlik
+  // qo'shib qo'yardi (masalan boshida 700+700=1400 ms). Endi bunday
+  // yozuv TANLANMAYDI — funksiyaning O'ZI xato tashlab TO'XTAYDI,
+  // hech qanday yuklab olish/yuklash boshlanmasdan OLDIN.
+  it('joriy bilan mos kelmagan `polster`li yozuv topilsa — TO`XTAYDI (qayta ishlamaydi)', () => {
     const manifest: DialogAudioManifest = {
       'u01-d1': { key: 'a.mp3', textHash: 'h1', polster: '100/100' },
     };
-    expect(zuPolsterndeEintraege(manifest)).toEqual(['u01-d1']);
+    expect(() => zuPolsterndeEintraege(manifest)).toThrow(/u01-d1/);
+  });
+
+  it('xato xabarida ESKI va JORIY qiymatlarning ikkalasi ham bor', () => {
+    const manifest: DialogAudioManifest = {
+      'u01-d1': { key: 'a.mp3', textHash: 'h1', polster: '100/100' },
+    };
+    expect(() => zuPolsterndeEintraege(manifest)).toThrow(
+      new RegExp(`100/100.*${POLSTER_KENNUNG}|${POLSTER_KENNUNG}.*100/100`),
+    );
+  });
+
+  it('mos kelmagan `polster` topilsa, undan OLDINGI to`g`ri yozuvlarni ham tekshirmasdan to`xtaydi', () => {
+    // "Hech qanday yuklab olish/yuklashdan OLDIN to'xtash" talabi: bu
+    // funksiya SOF va tarmoqqa chiqmaydi, shuning uchun bu yerda faqat
+    // "chaqiruv umuman natija QAYTARMAYDI, xato tashlaydi" tekshiriladi
+    // — chaqiruvchi (`main()`) natija olmasa, pastdagi `for` sikli
+    // (yuklab olish/yuklash) UMUMAN boshlanmaydi.
+    const manifest: DialogAudioManifest = {
+      'u01-d1': { key: 'a.mp3', textHash: 'h1' }, // o'zi ishlanishi kerak edi
+      'u01-d2': { key: 'b.mp3', textHash: 'h2', polster: '100/100' }, // mos kelmaydi
+    };
+    expect(() => zuPolsterndeEintraege(manifest)).toThrow(/u01-d2/);
   });
 
   it('aralash manifestda faqat ishlanmagan yozuvlarni qaytaradi — tartib saqlanadi', () => {
@@ -67,7 +96,7 @@ describe('polstereEintrag', () => {
     expect(natija).toEqual({ key: yangiKalit, polster: POLSTER_KENNUNG });
   });
 
-  it('ochirg`ich (trailing) slashsiz manzil bilan ham to`g`ri URL quradi', async () => {
+  it('ochirg`ich (trailing) SLASH BILAN manzilda ham to`g`ri URL quradi (ikkilanmaydi)', async () => {
     const fetchFn = jest.fn().mockResolvedValue({
       ok: true,
       status: 200,

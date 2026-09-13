@@ -12,7 +12,10 @@
  * Qayta ishlashdan himoya: `polster === POLSTER_KENNUNG` bo'lgan yozuv
  * `zuPolsterndeEintraege` tomonidan O'TKAZIB YUBORILADI — jimlik
  * ALLAQACHON qo'shilgan, qayta qo'shish boshida 1.4 s, oxirida 2.0 s
- * jimlik yasardi. Maydon YO'Q yozuv — hali ishlanmagan.
+ * jimlik yasardi. Maydon YO'Q yozuv — hali ishlanmagan, TANLANADI.
+ * Maydon BOR-u JORIY qiymatga mos KELMASA — `zuPolsterndeEintraege`
+ * XATO TASHLAYDI (R2'da faqat allaqachon ishlangan audio bor, xom
+ * asl nusxa yo'q; qayta yozish uchun fal.ai kerak, bu skript emas).
  *
  * Har yozuvdan keyin manifest DARHOL saqlanadi (`daf-gen-dialog-audio.ts`
  * dagi bilan bir xil naqsh) — o'rtada yiqilsa, qayta yuritish faqat
@@ -48,17 +51,47 @@ const REQUIRED_ENV = [
 ];
 
 /**
- * Manifestdan hali jimlik olmagan yozuvlarni tanlaydi — SOF funksiya.
+ * Manifestdan hali jimlik OLMAGAN yozuvlarni tanlaydi — SOF funksiya.
  *
- * `polster === POLSTER_KENNUNG` bo'lgan yozuv o'tkazib yuboriladi.
- * Boshqa har qanday holat (maydon yo'q, yoki eski/mos kelmagan qiymat)
- * qayta ishlanadi — kelajakda `POLSTER` qiymatlari o'zgarsa, eski
- * yozuvlar avtomatik ravishda "ishlanmagan" deb topiladi.
+ * Uch holat:
+ *   1. `polster` maydoni YO'Q — hali ishlanmagan → TANLANADI.
+ *   2. `polster === POLSTER_KENNUNG` — joriy qiymat bilan ALLAQACHON
+ *      ishlangan → O'TKAZIB YUBORILADI.
+ *   3. `polster` BOR, lekin JORIY qiymatga mos KELMAYDI — bu R2'dagi
+ *      audio ALLAQACHON (eski qiymat bilan) ishlangan degani, va R2'da
+ *      xom (jimliksiz) asl nusxa SAQLANMAGAN. Bunday yozuvni "qayta
+ *      ishlash" aslida allaqachon jimlik qo'shilgan faylni yana bir
+ *      bor R2'dan yuklab, USTIGA yana jimlik qo'shib qo'yardi (masalan
+ *      boshida 700+700=1400 ms) — shuning uchun bu holat TANLANMAYDI,
+ *      funksiya hech qanday yuklab olish/yuklashdan OLDIN XATO
+ *      TASHLAYDI. To'g'ri qayta ishlash uchun fal.ai orqali QAYTA
+ *      YOZISH kerak (`daf:gen-dialog-audio`), bu skript bilan emas.
+ *
+ * Ko'rik (2026-09-13): ilgari 3-holat ham "qayta ishlanadi" deb
+ * tanlanardi — bu xato edi, chunki `POLSTER` qiymatlari kelajakda
+ * o'zgarsa, allaqachon ishlangan fayllarga jimlik ustma-ust
+ * qo'shilardi. Endi kod O'ZI to'xtaydi; izoh esa faqat ko'rsatkich.
  */
 export function zuPolsterndeEintraege(manifest: DialogAudioManifest): string[] {
-  return Object.keys(manifest).filter(
-    (id) => manifest[id].polster !== POLSTER_KENNUNG,
-  );
+  const natija: string[] = [];
+  for (const id of Object.keys(manifest)) {
+    const polster = manifest[id].polster;
+    if (polster === undefined) {
+      natija.push(id);
+    } else if (polster !== POLSTER_KENNUNG) {
+      throw new Error(
+        `${id}: polster mos kelmaydi (yozilgan: "${polster}", joriy: "${POLSTER_KENNUNG}"). ` +
+          "Bu audio ALLAQACHON eski qiymat bilan ishlangan — R2'da xom " +
+          '(jimliksiz) asl nusxa saqlanmagan, shuning uchun qayta ishlash ' +
+          "ustiga yana bir bor jimlik qo'shib qo'yardi. To'g'ri qayta " +
+          'ishlash uchun fal.ai orqali QAYTA YOZING (daf:gen-dialog-audio), ' +
+          'bu skript bilan emas.',
+      );
+    }
+    // polster === POLSTER_KENNUNG — allaqachon joriy qiymat bilan
+    // ishlangan, o'tkazib yuboriladi (natijaga qo'shilmaydi).
+  }
+  return natija;
 }
 
 export type PolsterFn = (bytes: Buffer) => Promise<Buffer>;

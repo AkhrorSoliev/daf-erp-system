@@ -13,6 +13,14 @@ const execFileAsync = promisify(execFile);
  * nutq faylning 0.09–0.12 s ida boshlanardi, ba'zilarida oxirgi bo'g'in
  * bilan tugab, jimlik 0 s edi. O'quvchi «Play» bosishi bilan birinchi
  * so'z yo'qolar, oxiri esa kesilgandek eshitilardi.
+ *
+ * DIQQAT — bu qiymatlarni o'zgartirish ESKI (allaqachon shu qiymatlar
+ * bilan ishlangan) fayllarni AVTOMATIK qayta ishlamaydi. R2'da faqat
+ * PADDED audio saqlanadi, xom (jimliksiz) asl nusxa yo'q — shuning uchun
+ * `daf-polster-dialog-audio.ts`dagi `zuPolsterndeEintraege` boshqa
+ * `polster` bilan belgilangan yozuvni qayta yuklab ustiga yana bir bor
+ * jimlik qo'shish o'rniga XATO bilan TO'XTAYDI. Qiymat o'zgarganda eski
+ * yozuvlarni to'g'ri yangilash uchun fal.ai orqali QAYTA YOZISH kerak.
  */
 export const POLSTER = { vorneMs: 700, hintenMs: 1000 } as const;
 
