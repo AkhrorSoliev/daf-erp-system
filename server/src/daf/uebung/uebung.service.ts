@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -216,6 +217,10 @@ export interface PruefenInput {
   format: FrageFormat;
   given: string;
   durationMs?: number;
+  sessionId?: string;
+  questionIndex?: number;
+  attemptNo?: 1 | 2;
+  lessonId?: number;
 }
 
 export interface PruefenContext {
@@ -250,6 +255,10 @@ export interface JuftInput {
   ong: string;
   /** `pruefen`dagi bilan bir xil ma'no — shu BITTA juftni bosishga ketgan vaqt. */
   durationMs?: number;
+  sessionId?: string;
+  questionIndex?: number;
+  attemptNo?: 1 | 2;
+  lessonId?: number;
 }
 
 /**
@@ -1039,6 +1048,8 @@ export class UebungService {
     );
     const groupId = await currentGroupId(this.prisma, ctx.studentId);
 
+    await this.sicherSeans(input, ctx, branchId, groupId);
+
     await this.prisma.dafAttempt.create({
       data: {
         studentId: ctx.studentId,
@@ -1050,6 +1061,7 @@ export class UebungService {
         given,
         durationMs: durationMs ?? null,
         points,
+        ...this.seansMaydonlari(input, itemType, itemId, format, isCorrect),
       },
     } as any);
 
@@ -1150,6 +1162,10 @@ export class UebungService {
     // Leitner narvoniga kirmaydi) yoki so'z topilmasa.
     let isCorrect: boolean;
     let lexemeId: number | null = null;
+    // `ZUORDNEN` uchun bosilgan iboraning O'Z id'si (dizayn 5.5) — `PAAR`
+    // dagi `lexemeId` bilan bir xil rol, faqat ibora Leitner narvoniga
+    // kirmagani uchun bu qiymat FAQAT `seansMaydonlari`ga ketadi.
+    let iboraId: number | null = null;
 
     if (format === 'PAAR') {
       const nomzodlar = (await this.prisma.dafLexeme.findMany({
@@ -1181,12 +1197,13 @@ export class UebungService {
       // shu sabab `null`ligicha qoladi.
       const nomzodlar = (await this.prisma.dafPhrase.findMany({
         where: { funktionUz: chap, unitId },
-      } as any)) as Array<{ funktionUz: string; de: string }>;
+      } as any)) as Array<{ id: number; funktionUz: string; de: string }>;
       // Yuqoridagi `PAAR` sharhidagi bir xil sabab: mos kelgan nomzod
       // ustunlik qiladi, aks holda birinchisiga tushiladi.
       const ibora =
         nomzodlar.find((p) => istRichtig(ong, p.de)) ?? nomzodlar[0];
       isCorrect = ibora != null && istRichtig(ong, ibora.de);
+      iboraId = ibora?.id ?? null;
     }
 
     // Ball FAQAT `PAAR` uchun va FAQAT so'z topilgan bo'lsa — muddat
@@ -1207,6 +1224,8 @@ export class UebungService {
     );
     const groupId = await currentGroupId(this.prisma, ctx.studentId);
 
+    await this.sicherSeans(input, ctx, branchId, groupId);
+
     await this.prisma.dafAttempt.create({
       data: {
         studentId: ctx.studentId,
@@ -1222,6 +1241,16 @@ export class UebungService {
         // qabul qilib yozamiz.
         durationMs: durationMs ?? null,
         points,
+        // Har juft qatoriga shu juftning O'Z materiali (dizayn 5.5):
+        // `PAAR` — bosilgan so'z, `ZUORDNEN` — bosilgan ibora. `input.itemId`
+        // to'rtlik/oltilikning BIRINCHISI, bosilgan juft esa boshqasi.
+        ...this.seansMaydonlari(
+          input,
+          itemType,
+          format === 'PAAR' ? (lexemeId ?? itemId) : (iboraId ?? itemId),
+          format,
+          isCorrect,
+        ),
       },
     } as any);
 
@@ -1249,6 +1278,69 @@ export class UebungService {
    * kelganmidi" degan savolga to'g'ri javob berib bo'lmaydi (band bo'lgan
    * holat allaqachon "kelmagan" ko'rinadi).
    */
+  /**
+   * Seans qatori birinchi urinishda yaratiladi (dizayn 5.3). `sessionId`
+   * boshqa o'quvchiga tegishli bo'lsa — 403: aks holda o'quvchi birovning
+   * seansiga urinish yozib, uning natijasini buzishi mumkin bo'lardi.
+   * `sessionId` yo'q (eski klient) — hech narsa qilinmaydi.
+   */
+  private async sicherSeans(
+    input: { sessionId?: string; lessonId?: number },
+    ctx: PruefenContext,
+    branchId: number | null,
+    groupId: string | null,
+  ): Promise<void> {
+    if (!input.sessionId) return;
+    const mavjud = (await this.prisma.dafSession.findUnique({
+      where: { id: input.sessionId },
+      select: { id: true, studentId: true },
+    } as any)) as { id: string; studentId: number } | null;
+    if (mavjud) {
+      if (mavjud.studentId !== ctx.studentId) {
+        throw new ForbiddenException("Bu seans boshqa o'quvchiga tegishli");
+      }
+      return;
+    }
+    await this.prisma.dafSession.create({
+      data: {
+        id: input.sessionId,
+        studentId: ctx.studentId,
+        companyId: ctx.companyId,
+        branchId,
+        groupId,
+        kind: input.lessonId ? 'LESSON' : 'REVIEW',
+        lessonId: input.lessonId ?? null,
+        startedAt: new Date(),
+      },
+    } as any);
+  }
+
+  /** `dafAttempt.create` uchun seans maydonlari — `pruefen` va `juft` bir xil yozadi. */
+  private seansMaydonlari(
+    input: {
+      sessionId?: string;
+      questionIndex?: number;
+      attemptNo?: 1 | 2;
+      lessonId?: number;
+    },
+    itemType: string,
+    itemId: number,
+    format: string,
+    isCorrect: boolean,
+  ) {
+    return {
+      sessionId: input.sessionId ?? null,
+      questionIndex: input.questionIndex ?? null,
+      attemptNo: input.attemptNo ?? null,
+      lessonId: input.lessonId ?? null,
+      itemType,
+      itemId,
+      format,
+      score: isCorrect ? 1 : 0,
+      gradingStatus: 'GRADED' as const,
+    };
+  }
+
   private async punkteEingabeFuer(
     studentId: number,
     woerter: Array<{ lexemeId: number; richtig: boolean }>,

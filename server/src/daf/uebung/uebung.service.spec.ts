@@ -1,3 +1,4 @@
+import { ForbiddenException } from '@nestjs/common';
 import { UebungService } from './uebung.service';
 
 /**
@@ -328,7 +329,15 @@ function fakePrisma() {
       findUnique: jest.fn(async () => null),
       upsert: jest.fn(async () => ({ id: 1 })),
     },
-    dafAttempt: { create: jest.fn(async () => ({ id: 1 })) },
+    dafAttempt: {
+      create: jest.fn(async () => ({ id: 1 })),
+      findMany: jest.fn(async () => []),
+    },
+    dafSession: {
+      findUnique: jest.fn(async () => null),
+      create: jest.fn(async (args: any) => args.data),
+      update: jest.fn(async (args: any) => args.data),
+    },
     dafLessonProgress: {
       findUnique: jest.fn(async () => null),
       upsert: jest.fn(async () => ({ id: 1 })),
@@ -1458,6 +1467,196 @@ describe('pruefen — ball', () => {
     const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
     expect(data.groupId).toBe('g-1');
     expect(data).toHaveProperty('branchId');
+  });
+});
+
+describe('pruefen/juft — seans konteksti', () => {
+  const ctx = { studentId: 55, companyId: 1 };
+  const UUID = '3f2a9c1e-7b4d-4e8a-9c2f-1a2b3c4d5e6f';
+
+  it('pruefen seans maydonlarini va score/gradingStatus ni yozadi', async () => {
+    const prisma = fakeMitWort(null);
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'WORT_UZ',
+        given: 'uy',
+        sessionId: UUID,
+        questionIndex: 3,
+        attemptNo: 1,
+        lessonId: 100,
+      },
+      ctx,
+    );
+    const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      sessionId: UUID,
+      questionIndex: 3,
+      attemptNo: 1,
+      lessonId: 100,
+      itemType: 'WORT',
+      itemId: 5,
+      format: 'WORT_UZ',
+      score: 1,
+      gradingStatus: 'GRADED',
+    });
+  });
+
+  it('xato javobda score 0', async () => {
+    const prisma = fakeMitWort(null);
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'WORT_UZ',
+        given: 'noto`g`ri',
+        sessionId: UUID,
+        questionIndex: 0,
+        attemptNo: 1,
+        lessonId: 100,
+      },
+      ctx,
+    );
+    const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
+    expect(data.score).toBe(0);
+  });
+
+  it('birinchi urinishda DafSession yaratiladi (LESSON, muhrlangan branch/group)', async () => {
+    const prisma = fakeMitWort(null);
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'WORT_UZ',
+        given: 'uy',
+        sessionId: UUID,
+        questionIndex: 0,
+        attemptNo: 1,
+        lessonId: 100,
+      },
+      ctx,
+    );
+    const data = (prisma.dafSession.create as jest.Mock).mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      id: UUID,
+      studentId: 55,
+      companyId: 1,
+      kind: 'LESSON',
+      lessonId: 100,
+    });
+    expect(data.startedAt).toBeInstanceOf(Date);
+  });
+
+  it('lessonId siz seans REVIEW', async () => {
+    const prisma = fakeMitWort(null);
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'WORT_UZ',
+        given: 'uy',
+        sessionId: UUID,
+        questionIndex: 0,
+        attemptNo: 1,
+      },
+      ctx,
+    );
+    const data = (prisma.dafSession.create as jest.Mock).mock.calls[0][0].data;
+    expect(data.kind).toBe('REVIEW');
+    expect(data.lessonId).toBeNull();
+  });
+
+  it('seans allaqachon bor — qayta yaratilmaydi', async () => {
+    const prisma = fakeMitWort(null);
+    prisma.dafSession.findUnique = jest.fn(async () => ({
+      id: UUID,
+      studentId: 55,
+    })) as any;
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'WORT_UZ',
+        given: 'uy',
+        sessionId: UUID,
+        questionIndex: 1,
+        attemptNo: 1,
+        lessonId: 100,
+      },
+      ctx,
+    );
+    expect(prisma.dafSession.create).not.toHaveBeenCalled();
+  });
+
+  it("boshqa o'quvchining sessionId si — 403, urinish yozilmaydi", async () => {
+    const prisma = fakeMitWort(null);
+    prisma.dafSession.findUnique = jest.fn(async () => ({
+      id: UUID,
+      studentId: 99,
+    })) as any;
+    await expect(
+      new UebungService(prisma as any).pruefen(
+        {
+          itemType: 'WORT',
+          itemId: 5,
+          format: 'WORT_UZ',
+          given: 'uy',
+          sessionId: UUID,
+          questionIndex: 0,
+          attemptNo: 1,
+          lessonId: 100,
+        },
+        ctx,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.dafAttempt.create).not.toHaveBeenCalled();
+  });
+
+  it('sessionId siz (eski klient) — seans yaratilmaydi, maydonlar null', async () => {
+    const prisma = fakeMitWort(null);
+    await new UebungService(prisma as any).pruefen(
+      { itemType: 'WORT', itemId: 5, format: 'WORT_UZ', given: 'uy' },
+      ctx,
+    );
+    expect(prisma.dafSession.findUnique).not.toHaveBeenCalled();
+    const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
+    expect(data.sessionId).toBeNull();
+    expect(data.questionIndex).toBeNull();
+    // format/itemType/itemId baribir yoziladi — ular so'rovning o'zida bor.
+    expect(data.format).toBe('WORT_UZ');
+    expect(data.score).toBe(1);
+  });
+
+  it('juft: PAAR da itemId bosilgan juftning O`Z so`zi, seans maydonlari yoziladi', async () => {
+    const prisma = fakeMitWort(null);
+    await new UebungService(prisma as any).juft(
+      // `itemId: 1` — to'rtlikning birinchisi; bosilgan juft esa 5-so'z.
+      {
+        itemType: 'WORT',
+        itemId: 1,
+        format: 'PAAR',
+        chap: 'das Haus',
+        ong: 'uy',
+        sessionId: UUID,
+        questionIndex: 2,
+        attemptNo: 1,
+        lessonId: 100,
+      },
+      ctx,
+    );
+    const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      sessionId: UUID,
+      questionIndex: 2,
+      attemptNo: 1,
+      lessonId: 100,
+      format: 'PAAR',
+      itemType: 'WORT',
+      gradingStatus: 'GRADED',
+    });
+    expect(data.itemId).toBe(5); // bosilgan so'z, `input.itemId` (1) emas
+    expect(data.score).toBe(1);
   });
 });
 
