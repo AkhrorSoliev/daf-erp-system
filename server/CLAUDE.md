@@ -1133,6 +1133,23 @@ When an enrollment closes (TRANSFERRED or DROPPED), unused prepaid lessons are c
   - `DELETE /api/notifications/push/unsubscribe` — push unsubscribe
   - `GET /api/notifications/vapid-public-key` — VAPID public key
 
+### Custom Form Submissions (`src/custom-forms/`)
+
+Every public form submission creates a lead and a `CustomFormSubmission` row (`data` keyed by `FormField.id`). Admin read endpoints on `CustomFormsController` (`@Roles('CEO','Branch Director','Administrator')`, `@BranchScope()`):
+
+- `GET /custom-forms` — each form also carries `lastSubmittedAt`, `convertedCount`, `awaitingCallCount` (three `groupBy` queries, independent of form count).
+- `GET /custom-forms/:id/submissions` — paginated responses (`submittedAt DESC`) with `?stage` (one value), `?source` (comma ids, `none` = no source), `?search` (name tokens; a digits-only query is ONE phone number with a leading `998` stripped), `?startDate/endDate` (Tashkent days). Returns whole-form `counts.stages` + `counts.sources` (never affected by filters), current extra `fields`, and `legacyFields` (answers to fields since deleted from the form).
+- `GET /custom-forms/:id/submissions/export` — same filters, no pagination, max 5000 rows.
+- `GET /custom-forms/:id` no longer returns `submissions`.
+
+Rules:
+
+- **`submission-stage.ts` is the single definition of a submission's stage.** Priority: `converted` (CONVERTED) → `lost` (no lead, LOST/ARCHIVED, or `deletedAt` set) → `contacted` (`calledAt` set, or TRIAL/CONTACTED) → `awaiting`. `submissionStage()` classifies a row in memory; `stageWhere()` builds the matching Prisma filter. The spec evaluates `stageWhere` against every `statusEnum × deletedAt × calledAt × no-lead` combination and asserts exactly one stage matches and equals `submissionStage` — so chip counts and table rows cannot drift. Change both functions together or the test fails.
+- **Branch scope is the form's chain**: `form → section → column → branchIdWhere(scope)`, identical to `findOne`; every later query is anchored on the already-scoped `formId`.
+- `isRepeat` marks a lead whose phone already existed EARLIER as another lead's `phone` or `extraPhone` (company-wide). It is a badge only — lead creation is unchanged.
+- A lead hard-deleted from the archive leaves `leadId = null` (optional FK); such a submission is `lost`, and `submitted` still carries the name/phone taken from the form answers.
+- Known cost: `findLegacyFields` scans the `data` of every submission of the form per request. Fine at current volumes (largest form ≈ 45); bound it before any form grows into thousands.
+
 ### Student Search & Filters
 
 - **Unified search** (`?search=`): searches across `firstName`, `lastName`, `phone`, and `id` (numeric) in a single query — the frontend sends one search string for all fields

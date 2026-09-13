@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/tooltip";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import { useLeadsBoard } from "@/hooks/use-leads-board";
 import {
   customFormSchema,
@@ -66,6 +67,9 @@ interface Props {
 
 export function FormBuilderClient({ formId }: Props) {
   const router = useRouter();
+  const setName = useBreadcrumbName((s) => s.setName);
+  // Tahrirlashda javoblar sahifasiga, yaratishda ro'yxatga qaytiladi.
+  const backHref = formId ? `/leads/forms/${formId}` : "/leads/forms";
   const board = useLeadsBoard((s) => s.board);
   const fetchBoard = useLeadsBoard((s) => s.fetchBoard);
 
@@ -133,6 +137,7 @@ export function FormBuilderClient({ formId }: Props) {
       .get<CustomFormDetail>(`/custom-forms/${formId}`)
       .then(({ data }) => {
         setSlug(data.slug);
+        setName(formId, data.title);
         reset({
           title: data.title,
           description: data.description ?? "",
@@ -146,7 +151,7 @@ export function FormBuilderClient({ formId }: Props) {
         router.push("/leads/forms");
       })
       .finally(() => setLoading(false));
-  }, [formId, reset, router]);
+  }, [formId, reset, router, setName]);
 
   const availableSections = useMemo(() => {
     if (!selectedColumnId) return [];
@@ -200,11 +205,15 @@ export function FormBuilderClient({ formId }: Props) {
       if (formId) {
         await api.patch<CustomFormSummary>(`/custom-forms/${formId}`, payload);
         toast.success("Forma yangilandi");
+        router.push(`/leads/forms/${formId}`);
       } else {
-        await api.post<CustomFormSummary>("/custom-forms", payload);
+        const { data } = await api.post<CustomFormSummary>(
+          "/custom-forms",
+          payload,
+        );
         toast.success("Forma yaratildi");
+        router.push(`/leads/forms/${data.id}`);
       }
-      router.push("/leads/forms");
     } catch (error) {
       toast.error(getErrorMessage(error, "Saqlashda xatolik"));
     } finally {
@@ -224,7 +233,7 @@ export function FormBuilderClient({ formId }: Props) {
     <form onSubmit={handleSubmit(onSubmit)} className="pb-24">
       <div className="mb-4 flex items-center justify-between gap-3">
         <Button asChild type="button" variant="ghost" size="sm">
-          <Link href="/leads/forms">
+          <Link href={backHref}>
             <ArrowLeft className="size-4" />
             Orqaga
           </Link>
@@ -410,7 +419,7 @@ export function FormBuilderClient({ formId }: Props) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.push("/leads/forms")}
+              onClick={() => router.push(backHref)}
               disabled={saving}
             >
               Bekor qilish

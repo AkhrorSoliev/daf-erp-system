@@ -18,6 +18,9 @@ export interface CustomFormSummary {
   };
   source: { id: string; name: string } | null;
   submissionCount: number;
+  lastSubmittedAt: string | null;
+  convertedCount: number;
+  awaitingCallCount: number;
 }
 
 export interface CustomFormDetail extends CustomFormSummary {
@@ -25,12 +28,6 @@ export interface CustomFormDetail extends CustomFormSummary {
   sectionId: string;
   sourceId: string | null;
   fields: FormFieldShape[];
-  submissions: Array<{
-    id: string;
-    data: Record<string, unknown>;
-    submittedAt: string;
-    lead: { id: string; firstName: string; lastName: string } | null;
-  }>;
 }
 
 export function useCustomForms(open: boolean) {
