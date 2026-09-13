@@ -624,6 +624,15 @@ The system runs several branches, and a record written to the wrong one is wrong
 
 When a backend guard rejects a cross-branch action, surface the server's Uzbek message via `getErrorMessage` — it explains which branch each side belongs to.
 
+### Branch Switch: One Rule for Remount and Cache
+
+Two things react to a branch switch: `BranchScopedMain` remounts the page content (for the ~47 components fetching with `useState` + `useEffect`), and `BranchQuerySync` (via `useBranchChange`) clears the React Query cache and the branch-scoped zustand stores. **Both read `useBranchSwitcher`'s `scopeVersion` and nothing else.**
+
+- `scopeVersion` bumps only when the branch that requests claim actually changes (`branchScopeChanged` in `lib/branch-header.ts`): a real switch, or a first resolution that replaced the saved branch. Resolving to the branch already saved does NOT bump it — `api.ts` reads the header from `localStorage`, so the page's first requests already used that branch.
+- **Never key `<main>` on `selectedBranch`/`loaded`**, not even behind a "not loaded yet" sentinel. That was a key change on every hard load: the page remounted right after `GET /branches` returned, wiping typed input (e.g. the title on `/leads/forms/new`) and repeating the page's first requests. `lib/branch-scope-single-rule.test.ts` fails if either consumer reads the selection again.
+- Once resolved, `hydrateFor` keeps the tab's own selection while it is still allowed (it re-runs on every token refresh), and `persist` compares against the tab's own selection rather than the shared `localStorage` key.
+- Known limit: all tabs still share one `branchId` key, so a switch in one tab changes the header of another tab's later requests.
+
 ### Student Filters
 
 - **Single search field** for name, phone, and ID — placeholder: "Ism, telefon yoki ID bo'yicha..."
