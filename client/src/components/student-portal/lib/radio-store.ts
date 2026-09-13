@@ -249,3 +249,19 @@ export const useRadio = create<RadioState>((set, get) => {
     },
   };
 });
+
+/**
+ * Faollik hisobi uchun radio holati (dizayn 4.5): pozitsiya (`currentTime`,
+ * soniya) va ovoz hozir haqiqatan eshitilyaptimi. Element hali yaratilmagan
+ * bo'lsa `null`. Radio vaqti soat bilan emas, pozitsiya o'sishi bilan
+ * o'lchanadi — brauzer fon tabida taymerlarni uxlatsa ham siljish yo'qolmaydi,
+ * yuklanish (buffering) paytida esa pozitsiya o'smaydi.
+ */
+export function radioOvozHolati(): { position: number; audible: boolean } | null {
+  if (!audio) return null;
+  const { status, muted, volume } = useRadio.getState();
+  return {
+    position: audio.currentTime,
+    audible: status === "playing" && !audio.paused && !muted && volume > 0,
+  };
+}

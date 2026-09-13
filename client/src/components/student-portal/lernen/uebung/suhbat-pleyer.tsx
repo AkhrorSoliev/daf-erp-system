@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Pause, Play, ArrowClockwise } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { registerMedia } from "../../lib/media-registry";
 import { ovozXatosiMi } from "./oynatish-xatosi";
 import { formatVaqt } from "./pleyer-vaqt";
 
@@ -23,6 +24,14 @@ const TEZLIKLAR = [1, 0.8] as const;
  */
 export function SuhbatPleyer({ url }: { url: string }) {
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  // Faollik hisobi: bu audio ijro etilayotganda o'quvchi ekranga tegmasa ham
+  // faol (dizayn 4.5). `<audio key={url}>` url almashganda qayta yaratiladi —
+  // effekt ham url bilan qayta ulanadi.
+  React.useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    return registerMedia(a);
+  }, [url]);
   const [oynayapti, setOynayapti] = React.useState(false);
   const [vaqt, setVaqt] = React.useState(0);
   const [davomiylik, setDavomiylik] = React.useState(0);
