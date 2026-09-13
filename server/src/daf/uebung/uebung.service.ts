@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { tryResolveStudentBranchId } from '../../common/finance/resolve-branch';
 import { currentGroupId } from '../shared/student-scope';
@@ -1301,18 +1302,41 @@ export class UebungService {
       }
       return;
     }
-    await this.prisma.dafSession.create({
-      data: {
-        id: input.sessionId,
-        studentId: ctx.studentId,
-        companyId: ctx.companyId,
-        branchId,
-        groupId,
-        kind: input.lessonId ? 'LESSON' : 'REVIEW',
-        lessonId: input.lessonId ?? null,
-        startedAt: new Date(),
-      },
-    } as any);
+    try {
+      await this.prisma.dafSession.create({
+        data: {
+          id: input.sessionId,
+          studentId: ctx.studentId,
+          companyId: ctx.companyId,
+          branchId,
+          groupId,
+          kind: input.lessonId ? 'LESSON' : 'REVIEW',
+          lessonId: input.lessonId ?? null,
+          startedAt: new Date(),
+        },
+      } as any);
+    } catch (err) {
+      if (
+        !(err instanceof Prisma.PrismaClientKnownRequestError) ||
+        err.code !== 'P2002'
+      ) {
+        throw err;
+      }
+      // POYGA (race): ikkita bir vaqtdagi so'rov bir xil YANGI `sessionId`
+      // bilan keldi — ikkalasi ham yuqoridagi `findUnique`da `null` ko'rdi,
+      // g'olib allaqachon qatorni yozib ulgurdi va bu — ikkinchi so'rov —
+      // shu yerda P2002 (unique violation) bilan urildi. Qatorni
+      // "allaqachon yaratilgan" deb qabul qilamiz va EGALIKNI qayta
+      // tekshiramiz — xuddi yuqoridagi `mavjud` sinovidagidek, aks holda
+      // g'olibning seansiga BOSHQA o'quvchi nomidan urinish yozilib qolardi.
+      const qayta = (await this.prisma.dafSession.findUnique({
+        where: { id: input.sessionId },
+        select: { id: true, studentId: true },
+      } as any)) as { id: string; studentId: number } | null;
+      if (qayta && qayta.studentId !== ctx.studentId) {
+        throw new ForbiddenException("Bu seans boshqa o'quvchiga tegishli");
+      }
+    }
   }
 
   /** `dafAttempt.create` uchun seans maydonlari — `pruefen` va `juft` bir xil yozadi. */

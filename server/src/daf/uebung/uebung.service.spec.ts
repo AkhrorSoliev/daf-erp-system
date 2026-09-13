@@ -1,4 +1,5 @@
 import { ForbiddenException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { UebungService } from './uebung.service';
 
 /**
@@ -1657,6 +1658,102 @@ describe('pruefen/juft — seans konteksti', () => {
     });
     expect(data.itemId).toBe(5); // bosilgan so'z, `input.itemId` (1) emas
     expect(data.score).toBe(1);
+  });
+
+  // Poyga (race) himoyasi: ikkita bir vaqtdagi so'rov bir xil YANGI
+  // `sessionId` bilan keldi — ikkalasi ham birinchi `findUnique`da `null`
+  // ko'radi, ikkinchisi `create`da P2002 (unique violation) bilan uriladi.
+  // `sicherSeans` buni "allaqachon yaratilgan" deb qabul qilib, EGALIKNI
+  // qayta tekshiradi (xuddi birinchi `findUnique` topgan holatdagidek).
+  it('create P2002 bilan rad etadi, qayta o`qish O`Z seansini topadi — urinish yoziladi, xato yo`q', async () => {
+    const prisma = fakeMitWort(null);
+    let chaqiruv = 0;
+    prisma.dafSession.findUnique = jest.fn(async () => {
+      chaqiruv += 1;
+      if (chaqiruv === 1) return null;
+      return { id: UUID, studentId: 55 };
+    }) as any;
+    prisma.dafSession.create = jest.fn(async () => {
+      throw new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        { code: 'P2002', clientVersion: '5.0.0' },
+      );
+    }) as any;
+
+    await new UebungService(prisma as any).pruefen(
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'WORT_UZ',
+        given: 'uy',
+        sessionId: UUID,
+        questionIndex: 0,
+        attemptNo: 1,
+        lessonId: 100,
+      },
+      ctx,
+    );
+
+    expect(prisma.dafAttempt.create).toHaveBeenCalledTimes(1);
+    const data = (prisma.dafAttempt.create as jest.Mock).mock.calls[0][0].data;
+    expect(data.sessionId).toBe(UUID);
+  });
+
+  it("create P2002 bilan rad etadi, qayta o`qish BOSHQA o'quvchini topadi — 403, urinish yozilmaydi", async () => {
+    const prisma = fakeMitWort(null);
+    let chaqiruv = 0;
+    prisma.dafSession.findUnique = jest.fn(async () => {
+      chaqiruv += 1;
+      if (chaqiruv === 1) return null;
+      return { id: UUID, studentId: 99 };
+    }) as any;
+    prisma.dafSession.create = jest.fn(async () => {
+      throw new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        { code: 'P2002', clientVersion: '5.0.0' },
+      );
+    }) as any;
+
+    await expect(
+      new UebungService(prisma as any).pruefen(
+        {
+          itemType: 'WORT',
+          itemId: 5,
+          format: 'WORT_UZ',
+          given: 'uy',
+          sessionId: UUID,
+          questionIndex: 0,
+          attemptNo: 1,
+          lessonId: 100,
+        },
+        ctx,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.dafAttempt.create).not.toHaveBeenCalled();
+  });
+
+  it('create P2002 BO`LMAGAN xato bilan rad etsa — o`sha xato tarqaladi', async () => {
+    const prisma = fakeMitWort(null);
+    prisma.dafSession.create = jest.fn(async () => {
+      throw new Error('DB down');
+    }) as any;
+
+    await expect(
+      new UebungService(prisma as any).pruefen(
+        {
+          itemType: 'WORT',
+          itemId: 5,
+          format: 'WORT_UZ',
+          given: 'uy',
+          sessionId: UUID,
+          questionIndex: 0,
+          attemptNo: 1,
+          lessonId: 100,
+        },
+        ctx,
+      ),
+    ).rejects.toThrow('DB down');
+    expect(prisma.dafAttempt.create).not.toHaveBeenCalled();
   });
 });
 
