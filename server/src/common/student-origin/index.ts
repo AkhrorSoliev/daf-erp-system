@@ -2,6 +2,7 @@ export { StudentOriginModule } from './student-origin.module';
 export {
   StudentLeadOriginService,
   SELF_SIGNUP_SOURCE,
+  isSelfSignupSourceName,
   type DirectOriginParams,
   type SelfSignupOriginParams,
   type OriginOutcome,

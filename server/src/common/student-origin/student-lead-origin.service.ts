@@ -32,6 +32,16 @@ export const SELF_SIGNUP_SOURCE = {
   MOCK_EXAM: 'Mock imtihon',
 } as const;
 
+/**
+ * Tizim manbasi nomimi (katta-kichik harfsiz). Forma havolasi tegi bu nomlarni
+ * ololmaydi: aks holda formadan kelgan lid «botdan o'zi ro'yxatdan o'tgan»
+ * bilan aralashardi. Klientdagi nusxasi: client/src/lib/reserved-lead-sources.ts
+ */
+export function isSelfSignupSourceName(name: string): boolean {
+  const key = name.trim().toLowerCase();
+  return Object.values(SELF_SIGNUP_SOURCE).some((n) => n.toLowerCase() === key);
+}
+
 export interface DirectOriginParams {
   studentId: number;
   firstName: string;

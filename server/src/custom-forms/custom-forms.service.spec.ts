@@ -427,6 +427,24 @@ describe('CustomFormsService', () => {
       );
     });
 
+    it.each(['Telegram bot', 'telegram BOT', 'Mock imtihon'])(
+      'ignores a reserved system source tag (%s) and uses the form source',
+      async (tag) => {
+        await service.submit(
+          'abc1234567',
+          { data: { fn: 'Aziz', ln: 'Karimov', ph: '901234567' }, source: tag },
+          {},
+        );
+        expect(prisma.leadSource.findFirst).not.toHaveBeenCalled();
+        expect(prisma.leadSource.create).not.toHaveBeenCalled();
+        expect(leads.create).toHaveBeenCalledWith(
+          expect.objectContaining({ sourceId: 'src-1' }),
+          1,
+          null,
+        );
+      },
+    );
+
     it('falls back to the form source when no link tag is supplied', async () => {
       await service.submit(
         'abc1234567',

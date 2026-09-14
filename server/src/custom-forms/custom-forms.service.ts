@@ -8,6 +8,7 @@ import { shortId } from './short-id.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { LeadsService } from '../leads/leads.service';
+import { isSelfSignupSourceName } from '../common/student-origin';
 import { CreateCustomFormDto } from './dto/create-custom-form.dto';
 import { UpdateCustomFormDto } from './dto/update-custom-form.dto';
 import {
@@ -429,7 +430,11 @@ export class CustomFormsService {
     companyId: number,
   ): Promise<string | undefined> {
     const name = rawSource?.trim();
-    if (!name) return fallbackSourceId ?? undefined;
+    // Tizim manbasi («Telegram bot», «Mock imtihon») havola tegi bo'la olmaydi —
+    // tegsiz havola kabi formaning o'z manbasiga tushadi.
+    if (!name || isSelfSignupSourceName(name)) {
+      return fallbackSourceId ?? undefined;
+    }
 
     const existing = await this.prisma.leadSource.findFirst({
       where: { name: { equals: name, mode: 'insensitive' }, deletedAt: null },
