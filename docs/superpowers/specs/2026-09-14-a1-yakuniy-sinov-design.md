@@ -30,6 +30,10 @@ eshitish dizayni `2026-09-11-a1-hoeren-design.md` (§6 moyillik).
 4. O'tgandan keyin sinovni mashq sifatida qayta ishlash mumkin; natija pasaysa
    ham **ochilgan unit yopilmaydi**.
 5. O'tish-o'tmaslikni **server** hisoblaydi — mijoz yuborgan songa ishonilmaydi.
+6. **Ma'lumot bugundan yig'iladi, ko'rinishi «Ilova» tabi bilan birga** (CEO,
+   2026-09-14): har urinishning natijasi (o'tdi/o'tmadi) seans yozuviga muhrlanadi;
+   «Yakuniy sinovlar» bloki `2026-09-13-oquvchi-ilova-faolligi-design.md` ning
+   3-bosqichida (statistika va ekranlar) quriladi — bu shox ekran qurmaydi.
 
 ## 3. O'quvchi tajribasi
 
@@ -89,6 +93,10 @@ yuborilmaydi (D6/D7).
 - Konstantalar: `UNIT_TEST_SAVOLLAR = 15`, `UNIT_TEST_OTISH_ULUSHI = 0.9`,
   `kerak = Math.ceil(0.9 × 15) = 14`.
 - `bestanden = questionCount >= 15 && firstTryCorrect >= kerak`.
+- **`DafSession.passed`** (`Boolean?`, yangi ustun) — shu seans uchun o'tish qarori
+  muhrlanadi (`true`/`false`); yakuniy sinov bo'lmagan seanslarda `null`. Nega
+  muhrlanadi: keyin ulush (90 %) o'zgarsa ham «nechanchi urinishda o'tgan» tarixi
+  o'sha kungi qoida bilan qoladi, o'qiyotgan tomon qayta hisoblamaydi.
 - `DafLessonProgress`: `runs` + 1; `bestScore = max(eski, firstTryCorrect)`;
   **`completedAt` faqat o'tganda yoziladi**; avval o'tilgan bo'lsa (`completedAt`
   bor) keyingi muvaffaqiyatsiz urinish uni o'zgartirmaydi.
@@ -110,7 +118,10 @@ Boshqa dars turlari — hozirgidek (klientning `richtig` i, har yakun `completed
 
 ## 7. Qamrovdan tashqari
 
-- Migratsiya yo'q (`DafLessonProgress.completedAt` nullable, `DafSession` bor).
+- Bitta qo'shuvchi migratsiya: `DafSession.passed BOOLEAN NULL` (boshqa hech narsa
+  o'zgarmaydi; `DafLessonProgress.completedAt` allaqachon nullable).
+- Statistika ekrani («Yakuniy sinovlar» bloki) — «Ilova» tabi bilan birga, o'sha
+  dizaynning 3-bosqichida (6-bandga qarang).
 - Unit oxiridagi «eng ko'p adashgan so'zlar» bloki (kurs dizayni 5-bo'limi) — keyin.
 - Imtihon rejimi (taymer, savol qaytmasligi) — yo'q.
 - Native ilova — keyingi alohida PR (web/native parity qoidasi).
@@ -131,7 +142,8 @@ Boshqa dars turlari — hozirgidek (klientning `richtig` i, har yakun `completed
 
 ## 9. Deploy
 
-Backend (Railway) birinchi, keyin Vercel. Migratsiya va seed yo'q. Tekshiruv:
+Backend (Railway) birinchi — `start:prod` migratsiyani o'zi qo'llaydi — keyin Vercel.
+Seed yo'q. Tekshiruv:
 CEO telefonda u01 yakuniy sinovini ochadi.
 
 ## 10. Xavflar
