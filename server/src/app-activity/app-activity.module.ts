@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
+import { DafModule } from '../daf/daf.module';
 import { StudentActivityController } from './student-activity.controller';
 import { AppActivityWriteService } from './app-activity-write.service';
+import { AppActivityStatsService } from './app-activity-stats.service';
 
 @Module({
+  imports: [DafModule],
   controllers: [StudentActivityController],
-  providers: [AppActivityWriteService],
+  providers: [AppActivityWriteService, AppActivityStatsService],
   exports: [AppActivityWriteService],
 })
 export class AppActivityModule {}
