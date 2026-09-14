@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, RotateCcw } from "lucide-react";
 import api from "@/lib/api";
+import { FORMAT_NOMLARI } from "@/lib/daf-format-nomlari";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,28 +18,6 @@ import {
 } from "./media-fragen-utils";
 import { boshlangichFormat } from "./section-detail-utils";
 import type { FrageFormat, VorschauFrage } from "./media-fragen-types";
-
-/**
- * Format kodi → o'zbekcha nom. Ro'yxat elementlari CEOga tanish bo'lgan
- * ekran-nomlarga emas, formatning O'ZI nima qilishiga qarab yozilgan —
- * bu panel o'quvchi ko'radigan mashqni emas, dvigatelning qurish
- * qoidasini ko'rsatadi (server: `VORSCHAU_BAUER`).
- */
-const FORMAT_NOMLARI: Record<FrageFormat, string> = {
-  WORT_UZ: "So'zdan tarjimani topish",
-  UZ_WORT: "Tarjimadan so'zni topish",
-  PAAR: "Juftlash — so'z va tarjima",
-  ARTIKEL: "Artikl tanlash",
-  LUECKE: "Gapdagi bo'shliqni to'ldirish",
-  SATZ_BAUEN: "So'zlardan gap qurish",
-  SATZ_UEBERSETZEN: "Gap tarjimasini topish",
-  REAKTION: "Vaziyatga mos iborani topish",
-  ZUORDNEN: "Juftlash — vaziyat va ibora",
-  DIALOG_LUECKE: "Dialogdagi bo'shliqni to'ldirish",
-  AUDIO_WORT: "Eshitilgan so'zni topish",
-  WORT_TIPPEN: "Eshitilgan so'zni yozish",
-  HOEREN_WAHL: "Suhbatni eshitib savolga javob berish",
-};
 
 /** To'g'ri javobni ajratib ko'rsatadi — bu panelning butun maqsadi. */
 function ToGriJavob({ children }: { children: string }) {
