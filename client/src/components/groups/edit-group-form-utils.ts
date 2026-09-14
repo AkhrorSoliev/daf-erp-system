@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { tashkentDayAsLocalDate } from "@/lib/tashkent-time";
 import type { EditGroupFormValues } from "@/lib/schemas/group-schema";
 import type { GroupData } from "@/hooks/use-edit-group";
 
@@ -51,7 +52,9 @@ export function groupToForm(group: GroupData | null): EditGroupFormValues {
     lessonEndTime: group.lessonEndTime ?? "",
     lessonMinutes: group.lessonMinutes ?? undefined,
     status: group.status,
-    startDate: group.startDate ? new Date(group.startDate) : undefined,
+    startDate: group.startDate
+      ? tashkentDayAsLocalDate(group.startDate)
+      : undefined,
     comment: group.comment ?? "",
     teacherId: group.teachers[0]?.id,
   };
