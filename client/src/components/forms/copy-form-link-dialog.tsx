@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ClipboardCopy, Link2, Loader2, Plus } from "lucide-react";
+import { ClipboardCopy, Loader2, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   Dialog,
@@ -14,7 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import api from "@/lib/api";
-import { buildPublicFormLink, buildTaggedFormLink } from "@/lib/public-form-link";
+import { buildTaggedFormLink } from "@/lib/public-form-link";
+import { isReservedLeadSource } from "@/lib/reserved-lead-sources";
 
 interface LeadSourceLite {
   id: string;
@@ -45,6 +46,12 @@ interface Props {
  * tag (`?source=<name>`) so leads arriving through it are attributed to that
  * channel/ad. Offers Telegram + Instagram by default, lists previously-used
  * sources, and lets the user add a custom name.
+ *
+ * Two things are deliberately NOT offered (CEO decision 13.09.2026):
+ * - an untagged link — its leads arrive with no source and blur the funnel;
+ * - the system sources («Telegram bot», «Mock imtihon») — they mark students
+ *   who signed up by themselves, and a form lead must not be mixed into them.
+ *   The server ignores such a tag too.
  */
 export function CopyFormLinkButton({ slug, label = "Havolani nusxalash", className }: Props) {
   const [open, setOpen] = useState(false);
@@ -70,6 +77,12 @@ export function CopyFormLinkButton({ slug, label = "Havolani nusxalash", classNa
   async function addAndCopy() {
     const name = custom.trim();
     if (!name) return;
+    if (isReservedLeadSource(name)) {
+      toast.error(
+        `«${name}» — tizim manbasi, havola uchun boshqa nom tanlang`,
+      );
+      return;
+    }
     setAdding(true);
     try {
       // Persist so it's remembered next time. Ignore failures (e.g. it already
@@ -143,31 +156,21 @@ export function CopyFormLinkButton({ slug, label = "Havolani nusxalash", classNa
               Qo&apos;shish
             </Button>
           </div>
-
-          <button
-            type="button"
-            onClick={() =>
-              copyText(buildPublicFormLink(slug), "Havola nusxalandi (manbasiz)")
-            }
-            className="flex w-full items-center justify-center gap-1.5 rounded-md py-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <Link2 className="size-3.5" />
-            Manbasiz havolani nusxalash
-          </button>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-// Defaults first, then unique custom/DB names (case-insensitive dedupe).
+// Defaults first, then unique custom/DB names (case-insensitive dedupe),
+// system sources left out.
 function mergeSources(names: string[]): string[] {
   const seen = new Set(DEFAULT_SOURCES.map((s) => s.toLowerCase()));
   const out = [...DEFAULT_SOURCES];
   for (const n of names) {
     const trimmed = n.trim();
     const key = trimmed.toLowerCase();
-    if (trimmed && !seen.has(key)) {
+    if (trimmed && !seen.has(key) && !isReservedLeadSource(trimmed)) {
       seen.add(key);
       out.push(trimmed);
     }
