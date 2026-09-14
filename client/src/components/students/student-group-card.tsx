@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { format } from "date-fns";
+import { tashkentDayAsLocalDate } from "@/lib/tashkent-time";
 import { CalendarIcon, ClockIcon, UsersIcon, UserMinus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,9 +68,9 @@ export function StudentGroupCard({
           {group.startDate && (
             <span className="flex items-center gap-1">
               <CalendarIcon className="size-3.5" />
-              {format(new Date(group.startDate), "dd.MM.yyyy")}
+              {format(tashkentDayAsLocalDate(group.startDate), "dd.MM.yyyy")}
               {group.endDate &&
-                ` – ${format(new Date(group.endDate), "dd.MM.yyyy")}`}
+                ` – ${format(tashkentDayAsLocalDate(group.endDate), "dd.MM.yyyy")}`}
             </span>
           )}
         </div>

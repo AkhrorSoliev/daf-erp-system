@@ -42,3 +42,20 @@ export function tashkentNow(now: Date = new Date()): TashkentNow {
     seconds: hour * 3600 + minute * 60 + second,
   };
 }
+
+/**
+ * Local midnight of the TASHKENT calendar day an instant falls on — the value
+ * to hand a `<DatePicker>`, or `format(…, "dd.MM.yyyy")`, for a column the
+ * server reads as a Tashkent day (`Group.startDate`, `Group.endDate`).
+ *
+ * Those columns hold local midnight of whichever browser saved them, so one
+ * calendar day arrives as `…T19:00Z` (Tashkent), `…T21:00Z` (UTC+3) or
+ * `…T00:00Z` (the calendar-date shape of ADR-0016). `new Date(stored)` shows —
+ * and a form then saves — the PREVIOUS day for a reader in another zone.
+ */
+export function tashkentDayAsLocalDate(instant: string | Date): Date {
+  const [year, month, day] = tashkentNow(new Date(instant))
+    .dateStr.split("-")
+    .map(Number);
+  return new Date(year, month - 1, day);
+}
