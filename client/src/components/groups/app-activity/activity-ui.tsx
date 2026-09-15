@@ -79,6 +79,25 @@ export function KpiCard({
   );
 }
 
+/** Bir kunning tooltip matni — `DayBars` va `XaritaBolimi` heatmapida bitta manba. */
+export function KunTooltipIchi({ kun }: { kun: KunSurati }) {
+  return (
+    <div className="flex flex-col">
+      <span className="font-medium">{formatKunYorligi(kun.sana)}</span>
+      {!kun.kuzatilgan ? (
+        <span>Kuzatuv boshlanmagan</span>
+      ) : (
+        <>
+          <span>{kun.shugullangan ? "Shug'ullangan kun" : kun.kirdi ? "Faqat kirgan" : "Kirmagan"}</span>
+          {kun.savollar > 0 && <span>Savollar: {kun.savollar}</span>}
+          {kun.faolSoniya > 0 && <span>Faol: {formatDavomiylik(kun.faolSoniya)}</span>}
+          {kun.radioSoniya > 0 && <span>Radio: {formatDavomiylik(kun.radioSoniya)}</span>}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function DayBars({ kunlar, className }: { kunlar: KunSurati[]; className?: string }) {
   const max = Math.max(1800, ...kunlar.map((k) => k.faolSoniya));
   const tor = kunlar.length > 7;
@@ -102,19 +121,7 @@ export function DayBars({ kunlar, className }: { kunlar: KunSurati[]; className?
               </span>
             </TooltipTrigger>
             <TooltipContent>
-              <div className="flex flex-col">
-                <span className="font-medium">{formatKunYorligi(kun.sana)}</span>
-                {!kun.kuzatilgan ? (
-                  <span>Kuzatuv boshlanmagan</span>
-                ) : (
-                  <>
-                    <span>{kun.shugullangan ? "Shug'ullangan kun" : kun.kirdi ? "Faqat kirgan" : "Kirmagan"}</span>
-                    {kun.savollar > 0 && <span>Savollar: {kun.savollar}</span>}
-                    {kun.faolSoniya > 0 && <span>Faol: {formatDavomiylik(kun.faolSoniya)}</span>}
-                    {kun.radioSoniya > 0 && <span>Radio: {formatDavomiylik(kun.radioSoniya)}</span>}
-                  </>
-                )}
-              </div>
+              <KunTooltipIchi kun={kun} />
             </TooltipContent>
           </Tooltip>
         );

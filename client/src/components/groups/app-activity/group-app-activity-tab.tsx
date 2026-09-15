@@ -8,6 +8,7 @@ import { formatDavomiylik, foizRangi } from "./activity-format";
 import { DifficultItems } from "./difficult-items";
 import { GroupActivityTable } from "./group-activity-table";
 import { ActivityExplainer } from "./activity-explainer";
+import { StudentActivitySheet } from "./student-activity-sheet";
 import { useGuruhFaolligi } from "./use-app-activity";
 
 function TabSkeleton() {
@@ -114,6 +115,13 @@ export function GroupAppActivityTab({ groupId }: { groupId: string }) {
           <ActivityExplainer kuzatuvBoshi={data.kuzatuvBoshi} />
         </>
       )}
+      <StudentActivitySheet
+        groupId={groupId}
+        studentId={selectedId}
+        davr={davr}
+        onDavrChange={setDavr}
+        onClose={() => setSelectedId(null)}
+      />
     </div>
   );
 }
