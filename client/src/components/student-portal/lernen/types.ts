@@ -17,7 +17,8 @@ export type FrageFormat =
   | "WORT_TIPPEN"
   | "HOEREN_WAHL";
 
-export type MaterialTyp = "WORT" | "SATZ" | "PHRASE" | "DIALOGZEILE" | "HOERFRAGE";
+export type MaterialTyp =
+  "WORT" | "SATZ" | "PHRASE" | "DIALOGZEILE" | "HOERFRAGE";
 
 /** Serverdan kelgan savol. To'g'ri javob bu yerda YO'Q. */
 export interface PublicFrage {
@@ -70,9 +71,21 @@ export interface JuftNatija {
   isCorrect: boolean;
 }
 
+/** Yakuniy sinov (`UNIT_TEST`) yakunidagi server qarori. */
+export interface YakuniySinovNatijasi {
+  bestanden: boolean;
+  /** Bu yakundan OLDIN sinovdan o'tilgan edi — keyingi unit ochiq. */
+  avvalOtilgan: boolean;
+  togri: number;
+  jami: number;
+  kerak: number;
+}
+
 export interface AbschlussErgebnis {
   bestScore: number;
   runs: number;
+  /** Faqat yakuniy sinov darsida. */
+  sinov?: YakuniySinovNatijasi;
 }
 
 /**

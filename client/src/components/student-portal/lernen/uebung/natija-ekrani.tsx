@@ -2,11 +2,13 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { Clock, Fire, Star, Trophy } from "@phosphor-icons/react";
 import { Button, Card, FadeIn, StatChip } from "../../lumio";
 import type { SeansXato } from "../seans-navbat";
 import { useFortschritt } from "../queries";
 import { orinXabari, xatoYorligi } from "./natija-xabari";
+import { sinovKorinishi, type SinovHolati } from "./sinov-natijasi";
 
 export interface NatijaEkraniProps {
   togri: number;
@@ -24,6 +26,10 @@ export interface NatijaEkraniProps {
   gesamtBoshida: number | null;
   serieBoshida: number | null;
   orinBoshida: number | null;
+  /** Yakuniy sinov darsida — server qarori holati; oddiy darsda yo'q. */
+  sinov?: SinovHolati | null;
+  /** `sinov.tur === "xato"` bo'lganda natijani qayta yuborish. */
+  onNatijaQaytaYubor?: () => void;
 }
 
 /** `durationMs` ni `daqiqa:soniya` ko'rinishiga o'tkazadi — masalan 65_000 → "1:05". */
@@ -119,7 +125,10 @@ function XatoQatori({ xato }: { xato: SeansXato }) {
     return (
       <ul className="space-y-1">
         {juftlar.map((j, i) => (
-          <li key={i} className="flex items-center justify-between gap-3 text-sm">
+          <li
+            key={i}
+            className="flex items-center justify-between gap-3 text-sm"
+          >
             <span className="text-ink-600">{j.chap}</span>
             <span className="font-bold text-danger">{j.ong}</span>
           </li>
@@ -131,7 +140,9 @@ function XatoQatori({ xato }: { xato: SeansXato }) {
   if (xato.format === "DIALOG_LUECKE") {
     return (
       <div className="flex items-center justify-between gap-3">
-        <span className="font-semibold text-ink-800">{xato.titel ?? "Dialog"}</span>
+        <span className="font-semibold text-ink-800">
+          {xato.titel ?? "Dialog"}
+        </span>
         <span className="text-sm font-bold text-danger">{xato.richtig}</span>
       </div>
     );
@@ -139,7 +150,9 @@ function XatoQatori({ xato }: { xato: SeansXato }) {
 
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="font-semibold text-ink-800">{xatoYorligi(xato.format, xato.prompt)}</span>
+      <span className="font-semibold text-ink-800">
+        {xatoYorligi(xato.format, xato.prompt)}
+      </span>
       <span className="text-sm font-bold text-danger">{xato.richtig}</span>
     </div>
   );
@@ -168,10 +181,15 @@ export function NatijaEkrani({
   gesamtBoshida,
   serieBoshida,
   orinBoshida,
+  sinov,
+  onNatijaQaytaYubor,
 }: NatijaEkraniProps) {
   const router = useRouter();
   const fortschritt = useFortschritt();
-  const davomHref = unitId ? `/portal/lernen/units/${unitId}` : "/portal/lernen";
+  const davomHref = unitId
+    ? `/portal/lernen/units/${unitId}`
+    : "/portal/lernen";
+  const korinish = sinov ? sinovKorinishi(sinov) : null;
 
   // Farq faqat IKKALA uchi ham ma'lum bo'lganda hisoblanadi — aks holda
   // "0 ball topdingiz" kabi noto'g'ri xabar chiqib ketardi, holbuki
@@ -200,7 +218,8 @@ export function NatijaEkrani({
     fortschritt.data?.wochePlatzGruppe ?? null,
   );
 
-  const yutuqlarBormi = ballKorsatilsinmi || serieOshdimi || orinXabariMatni != null;
+  const yutuqlarBormi =
+    ballKorsatilsinmi || serieOshdimi || orinXabariMatni != null;
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col justify-center gap-4 px-4 py-8">
@@ -218,6 +237,23 @@ export function NatijaEkrani({
           </div>
         </Card>
 
+        {korinish ? (
+          <Card
+            role="status"
+            aria-live="polite"
+            className={cn(
+              "space-y-1 text-center",
+              korinish.ohang === "muvaffaqiyat" && "bg-success/10",
+              korinish.ohang === "xavf" && "bg-danger/10",
+            )}
+          >
+            <p className="font-display text-xl font-bold text-ink-900">
+              {korinish.sarlavha}
+            </p>
+            <p className="font-semibold text-ink-600">{korinish.matn}</p>
+          </Card>
+        ) : null}
+
         {yutuqlarBormi ? (
           <Card className="flex flex-wrap items-center justify-center gap-2 text-center">
             {ballKorsatilsinmi && sanaladiganBall != null ? (
@@ -234,7 +270,9 @@ export function NatijaEkrani({
               />
             ) : null}
             {orinXabariMatni ? (
-              <p className="w-full text-sm font-semibold text-ink-700">{orinXabariMatni}</p>
+              <p className="w-full text-sm font-semibold text-ink-700">
+                {orinXabariMatni}
+              </p>
             ) : null}
           </Card>
         ) : null}
@@ -264,12 +302,51 @@ export function NatijaEkrani({
         </Card>
 
         <div className="flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={onQayta}>
-            Qayta o&apos;tish
-          </Button>
-          <Button className="flex-1" onClick={() => router.push(davomHref)}>
-            Davom etish
-          </Button>
+          {korinish?.asosiy === "qayta-yubor" ? (
+            <>
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => router.push(davomHref)}
+              >
+                Chiqish
+              </Button>
+              <Button className="flex-1" onClick={onNatijaQaytaYubor}>
+                Qayta yuborish
+              </Button>
+            </>
+          ) : korinish?.asosiy === "qayta" ? (
+            <>
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => router.push(davomHref)}
+              >
+                Yo&apos;lga qaytish
+              </Button>
+              <Button className="flex-1" onClick={onQayta}>
+                Qayta urinish
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={onQayta}
+                disabled={korinish?.asosiy === null}
+              >
+                {korinish ? "Qayta urinish" : "Qayta o'tish"}
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={() => router.push(davomHref)}
+                disabled={korinish?.asosiy === null}
+              >
+                Davom etish
+              </Button>
+            </>
+          )}
         </div>
       </FadeIn>
     </div>
