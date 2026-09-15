@@ -3324,6 +3324,10 @@ model DafSession {
   finishedAt      DateTime?
   questionCount   Int?
   firstTryCorrect Int?
+  /// Yakuniy sinov (`UNIT_TEST` darsi) seansida o'tish qarori, yakunda
+  /// muhrlanadi; boshqa seanslarda `null`. Keyin o'tish ulushi o'zgarsa
+  /// ham «nechanchi urinishda o'tgan» tarixi o'sha kungi qoida bilan qoladi.
+  passed          Boolean?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 

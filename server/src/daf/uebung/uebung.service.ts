@@ -38,6 +38,7 @@ import {
 import { baueSeans } from './seans';
 import { seansYigindisi } from './seans-natija';
 import { ohneWiederholteFormate } from './wiederholte-formate';
+import { otishUchunKerak, sinovdanOtdimi } from './yakuniy-sinov';
 import {
   artikel,
   audioWort,
@@ -240,6 +241,23 @@ export interface PruefenInput {
 export interface PruefenContext {
   studentId: number;
   companyId: number;
+}
+
+/** Yakuniy sinov yakunining natijasi — mijoz natija ekrani shuni ko'rsatadi. */
+export interface YakuniySinovNatijasi {
+  bestanden: boolean;
+  /** Bu yakundan OLDIN darsda `completedAt` bor edi — keyingi unit ochiq. */
+  avvalOtilgan: boolean;
+  togri: number;
+  jami: number;
+  kerak: number;
+}
+
+export interface AbschlussNatija {
+  bestScore: number;
+  runs: number;
+  /** Faqat `UNIT_TEST` darsida. */
+  sinov?: YakuniySinovNatijasi;
 }
 
 export interface PruefenErgebnis {
@@ -445,7 +463,7 @@ export class UebungService {
       sessionId?: string;
     },
     ctx: { studentId: number; companyId: number },
-  ): Promise<{ bestScore: number; runs: number }> {
+  ): Promise<AbschlussNatija> {
     if (input.gesamt <= 0) {
       throw new BadRequestException("Seansda savol bo'lmagan");
     }
@@ -453,6 +471,16 @@ export class UebungService {
       throw new BadRequestException(
         "To'g'ri javob soni savol sonidan oshib ketdi",
       );
+    }
+
+    // Yakuniy sinov — o'tish qarori SERVERDA, shu seansning urinishlaridan
+    // (dizayn 2026-09-14 §5). Oddiy darslar pastdagi o'zgarmagan yo'ldan.
+    const dars = (await this.prisma.dafLesson.findUnique({
+      where: { id: lessonId },
+      select: { kind: true },
+    } as any)) as { kind: string | null } | null;
+    if (dars?.kind === 'UNIT_TEST') {
+      return this.yakuniySinovAbschluss(lessonId, input.sessionId, ctx);
     }
 
     // `DafLessonProgress` AVVAL yoziladi — bu yo'l ekranining yagona
@@ -506,6 +534,115 @@ export class UebungService {
     }
 
     return { bestScore, runs };
+  }
+
+  /**
+   * Yakuniy sinov yakuni. Oddiy `abschluss` dan uch farqi:
+   * (1) o'tish qarori mijoz aytgan `richtig` dan EMAS, shu seansning
+   *     urinishlaridan (`seansniYakunla`);
+   * (2) `completedAt` FAQAT o'tganda yoziladi — yo'l keyingi unitni shu
+   *     maydonga qarab ochadi; avval o'tilgan bo'lsa, keyingi past natija
+   *     uni o'chirmaydi (CEO: ochilgan unit yopilmaydi);
+   * (3) qaror `DafSession.passed` ga muhrlanadi.
+   */
+  private async yakuniySinovAbschluss(
+    lessonId: number,
+    sessionId: string | undefined,
+    ctx: PruefenContext,
+  ): Promise<AbschlussNatija> {
+    const baho = await this.yakuniySinovniBaholash(lessonId, sessionId, ctx);
+    const oldingi = (await this.prisma.dafLessonProgress.findUnique({
+      where: { studentId_lessonId: { studentId: ctx.studentId, lessonId } },
+    } as any)) as {
+      bestScore: number;
+      runs: number;
+      completedAt: Date | null;
+    } | null;
+
+    const avvalOtilgan = oldingi?.completedAt != null;
+    const bestScore = Math.max(oldingi?.bestScore ?? 0, baho.togri);
+    const runs = (oldingi?.runs ?? 0) + 1;
+    const completedAt = avvalOtilgan
+      ? (oldingi?.completedAt ?? null)
+      : baho.bestanden
+        ? new Date()
+        : null;
+
+    await this.prisma.dafLessonProgress.upsert({
+      where: { studentId_lessonId: { studentId: ctx.studentId, lessonId } },
+      create: {
+        studentId: ctx.studentId,
+        lessonId,
+        companyId: ctx.companyId,
+        completedAt,
+        bestScore,
+        runs,
+      },
+      update: { completedAt, bestScore, runs },
+    } as any);
+
+    return {
+      bestScore,
+      runs,
+      sinov: {
+        bestanden: baho.bestanden,
+        avvalOtilgan,
+        togri: baho.togri,
+        jami: baho.jami,
+        kerak: otishUchunKerak(),
+      },
+    };
+  }
+
+  /**
+   * Seans shu o'quvchiga VA shu darsga tegishli bo'lsagina baholanadi —
+   * aks holda boshqa darsning oson seansi bilan sinovdan o'tib bo'lardi.
+   * Yaroqsiz seans xato tashlamaydi: natija «o'tmadi», o'quvchi qayta
+   * topshiradi (dars progressi baribir yoziladi).
+   */
+  private async yakuniySinovniBaholash(
+    lessonId: number,
+    sessionId: string | undefined,
+    ctx: PruefenContext,
+  ): Promise<{ bestanden: boolean; togri: number; jami: number }> {
+    const otmadi = { bestanden: false, togri: 0, jami: 0 };
+    if (!sessionId) return otmadi;
+
+    const seans = (await this.prisma.dafSession.findUnique({
+      where: { id: sessionId },
+      select: { studentId: true, lessonId: true, passed: true },
+    } as any)) as {
+      studentId: number;
+      lessonId: number | null;
+      passed: boolean | null;
+    } | null;
+    if (
+      !seans ||
+      seans.studentId !== ctx.studentId ||
+      seans.lessonId !== lessonId
+    ) {
+      this.logger.warn(
+        `Yakuniy sinov seansi yaroqsiz (lessonId=${lessonId}, ` +
+          `studentId=${ctx.studentId}, sessionId=${sessionId})`,
+      );
+      return otmadi;
+    }
+
+    const { questionCount, firstTryCorrect } = await this.seansniYakunla(
+      sessionId,
+      ctx,
+    );
+    // Muhrlangan qaror QAYTA HISOBLANMAYDI — takror yuborilgan yakun yoki
+    // keyin o'zgargan ulush o'sha kungi natijani o'zgartirmasin.
+    const bestanden =
+      seans.passed ?? sinovdanOtdimi({ questionCount, firstTryCorrect });
+    if (seans.passed == null) {
+      await this.prisma.dafSession.update({
+        where: { id: sessionId },
+        data: { passed: bestanden },
+      } as any);
+    }
+    return { bestanden, togri: firstTryCorrect, jami: questionCount };
   }
 
   /**
