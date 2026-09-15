@@ -33,6 +33,42 @@ export function dayStr(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Prisma `StudentAppSession` qatorini `SeansSatri` shakliga o'tkazadi. */
+export function seansSatri(s: {
+  day: Date;
+  firstSeenAt: Date;
+  lastSeenAt: Date;
+  activeSeconds: number;
+  radioSeconds: number;
+  platform: Platforma;
+  sections: unknown;
+}): SeansSatri {
+  return {
+    day: dayStr(s.day),
+    firstSeenAt: s.firstSeenAt,
+    lastSeenAt: s.lastSeenAt,
+    activeSeconds: s.activeSeconds,
+    radioSeconds: s.radioSeconds,
+    platform: s.platform,
+    sections: s.sections,
+  };
+}
+
+/** Umumiy qator ro'yxatini kalit (masalan `studentId`) bo'yicha guruhlaydi. */
+export function guruhla<T>(
+  rows: T[],
+  kalit: (r: T) => number,
+): Map<number, T[]> {
+  const m = new Map<number, T[]>();
+  for (const r of rows) {
+    const k = kalit(r);
+    const royxat = m.get(k) ?? [];
+    royxat.push(r);
+    m.set(k, royxat);
+  }
+  return m;
+}
+
 /** Oraliqlar (ms) birlashmasining uzunligi, butun soniyalarda. */
 export function birlashmaSoniyasi(oraliqlar: [number, number][]): number {
   const tartib = [...oraliqlar].sort((a, b) => a[0] - b[0]);

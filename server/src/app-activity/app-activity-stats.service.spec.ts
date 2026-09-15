@@ -1,4 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
+import { AppActivityStatsQueries } from './app-activity-stats.queries';
 import {
   AppActivityStatsService,
   guruhTartibi,
@@ -98,6 +99,20 @@ function soroqlarSoni(prisma: ReturnType<typeof soxtaPrisma>): number {
   return jami;
 }
 
+/**
+ * Servisni SOXTA prisma ustidan HAQIQIY `AppActivityStatsQueries` bilan
+ * quradi — shu bilan `soroqlarSoni` xom SQL/agregat so'rovlarni ham
+ * hisoblaydi (fayl ajratilgandan keyin ham so'rovlar soni testi to'g'ri
+ * qoladi).
+ */
+function servis(prisma: object): AppActivityStatsService {
+  return new AppActivityStatsService(
+    prisma as never,
+    fortschritt as never,
+    new AppActivityStatsQueries(prisma as never),
+  );
+}
+
 const fortschritt = {
   uebersicht: jest.fn().mockResolvedValue({
     gesamt: 120,
@@ -114,24 +129,15 @@ const fortschritt = {
 describe('AppActivityStatsService.guruhFaolligi', () => {
   it('so`rovlar soni o`quvchilar soniga bog`liq emas (dizayn 6.6)', async () => {
     const bir = soxtaPrisma(1);
-    await new AppActivityStatsService(
-      bir as never,
-      fortschritt as never,
-    ).guruhFaolligi('g1', 1, 7, NOW);
+    await servis(bir).guruhFaolligi('g1', 1, 7, NOW);
     const yigirma = soxtaPrisma(20);
-    await new AppActivityStatsService(
-      yigirma as never,
-      fortschritt as never,
-    ).guruhFaolligi('g1', 1, 7, NOW);
+    await servis(yigirma).guruhFaolligi('g1', 1, 7, NOW);
     expect(soroqlarSoni(yigirma)).toBe(soroqlarSoni(bir));
   });
 
   it('qator va kartalar bitta ta`rifdan', async () => {
     const prisma = soxtaPrisma(3);
-    const n = await new AppActivityStatsService(
-      prisma as never,
-      fortschritt as never,
-    ).guruhFaolligi('g1', 1, 7, NOW);
+    const n = await servis(prisma).guruhFaolligi('g1', 1, 7, NOW);
     expect(n.oquvchilar).toHaveLength(3);
     expect(n.oquvchilar[0]).toMatchObject({
       akkaunt: true,
@@ -159,23 +165,29 @@ describe('AppActivityStatsService.guruhFaolligi', () => {
     ]);
   });
 
+  it(
+    'dafAttempt.findMany createdAt asc bilan chaqiriladi (attemptNo=1 ' +
+      'takrorlanishida deterministik natija uchun)',
+    async () => {
+      const prisma = soxtaPrisma(1);
+      await servis(prisma).guruhFaolligi('g1', 1, 7, NOW);
+      expect(prisma.dafAttempt.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ orderBy: { createdAt: 'asc' } }),
+      );
+    },
+  );
+
   it('guruh topilmasa 404', async () => {
     const prisma = soxtaPrisma(1);
     prisma.group.findFirst.mockResolvedValue(null);
     await expect(
-      new AppActivityStatsService(
-        prisma as never,
-        fortschritt as never,
-      ).guruhFaolligi('g1', 1, 7, NOW),
+      servis(prisma).guruhFaolligi('g1', 1, 7, NOW),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('bo`sh guruh — bo`sh ro`yxat, xatosiz', async () => {
     const prisma = soxtaPrisma(0);
-    const n = await new AppActivityStatsService(
-      prisma as never,
-      fortschritt as never,
-    ).guruhFaolligi('g1', 1, 7, NOW);
+    const n = await servis(prisma).guruhFaolligi('g1', 1, 7, NOW);
     expect(n.oquvchilar).toEqual([]);
     expect(n.kartalar.kirganlar).toBe(0);
   });
@@ -186,10 +198,7 @@ describe('AppActivityStatsService.guruhAzosiEkaniniTekshir', () => {
     const prisma = soxtaPrisma(1);
     prisma.enrollment.findFirst.mockResolvedValue(null);
     await expect(
-      new AppActivityStatsService(
-        prisma as never,
-        fortschritt as never,
-      ).guruhAzosiEkaniniTekshir('g1', 10001),
+      servis(prisma).guruhAzosiEkaniniTekshir('g1', 10001),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.enrollment.findFirst).toHaveBeenCalledWith({
       where: {
@@ -280,10 +289,7 @@ describe('AppActivityStatsService.oquvchiFaolligi', () => {
 
   it('panel ma`lumoti bitta javobda', async () => {
     const p = oquvchiPrisma(true);
-    const n = await new AppActivityStatsService(
-      p as never,
-      fortschritt as never,
-    ).oquvchiFaolligi(10001, 1, 7, NOW);
+    const n = await servis(p).oquvchiFaolligi(10001, 1, 7, NOW);
     expect(n).toMatchObject({
       akkaunt: true,
       ism: 'Ali Valiyev',
@@ -314,22 +320,39 @@ describe('AppActivityStatsService.oquvchiFaolligi', () => {
     });
   });
 
+  it(
+    'guruh sahifasi yon oynasi: LESSON seansi yo`q bo`lsa guruh darajasi ' +
+      'ishlatiladi (jadval bilan bir xil bo`lishi uchun, topilma 6)',
+    async () => {
+      const p = oquvchiPrisma(true);
+      const n = await servis(p).oquvchiFaolligi(10001, 1, 7, NOW, 'A2');
+      expect(n.joriyDaraja).toMatchObject({ daraja: 'A2', holat: 'KURS_YOQ' });
+    },
+  );
+
   it('akkauntsiz o`quvchi', async () => {
-    const n = await new AppActivityStatsService(
-      oquvchiPrisma(false) as never,
-      fortschritt as never,
-    ).oquvchiFaolligi(10001, 1, 7, NOW);
+    const n = await servis(oquvchiPrisma(false)).oquvchiFaolligi(
+      10001,
+      1,
+      7,
+      NOW,
+    );
     expect(n.akkaunt).toBe(false);
+  });
+
+  it('dafAttempt.findMany createdAt asc bilan chaqiriladi', async () => {
+    const p = oquvchiPrisma(true);
+    await servis(p).oquvchiFaolligi(10001, 1, 7, NOW);
+    expect(p.dafAttempt.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ orderBy: { createdAt: 'asc' } }),
+    );
   });
 
   it('o`quvchi topilmasa 404', async () => {
     const p = oquvchiPrisma(true);
     (p.student as { findFirst: jest.Mock }).findFirst.mockResolvedValue(null);
     await expect(
-      new AppActivityStatsService(
-        p as never,
-        fortschritt as never,
-      ).oquvchiFaolligi(10001, 1, 7, NOW),
+      servis(p).oquvchiFaolligi(10001, 1, 7, NOW),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

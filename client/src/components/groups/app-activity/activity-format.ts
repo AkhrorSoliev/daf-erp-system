@@ -1,4 +1,4 @@
-import type { DafSkill, DarajaHolati, Platforma } from "./types";
+import type { DafSkill, DarajaHolati, OquvchiFaolligi, Platforma } from "./types";
 
 export const PLATFORMA_NOMLARI: Record<Platforma, string> = {
   WEB: "Veb",
@@ -37,6 +37,24 @@ export function formatKunOy(sana: string): string {
   return `${sana.slice(8, 10)}.${sana.slice(5, 7)}`;
 }
 
+type FaollikXulosasi = Pick<OquvchiFaolligi, "oxirgiFaollik" | "fortschritt" | "darajalar" | "mashq">;
+
+/**
+ * O'quvchi ROSTDAN ham ilovaga hech qachon kirmaganmi (topilma 2) — panel
+ * "hali kirmagan" holatini faqat shu HAQIQIY bo'sh holatda ko'rsatsin: ilova
+ * seansi, ball, tugatilgan dars va mashq javobi — hech biri yo'q. Faqat
+ * `oxirgiFaollik === null` (mashq qilingan, lekin ilova seansi qayd
+ * etilmagan) yolg'on "hali kirmagan" xabarini chiqarmasligi kerak.
+ */
+export function hechQachonKirmaganmi(data: FaollikXulosasi): boolean {
+  return (
+    !data.oxirgiFaollik &&
+    data.fortschritt.gesamt === 0 &&
+    data.darajalar.every((d) => d.tugatilgan === 0) &&
+    data.mashq.savollar === 0
+  );
+}
+
 const HAFTA = ["Yak", "Du", "Se", "Chor", "Pay", "Ju", "Sha"];
 
 export function haftaKuni(sana: string): string {
@@ -69,6 +87,16 @@ export function formatOxirgiFaollik(iso: string | null, now: Date): string {
 export function formatSanaVaqt(iso: string): string {
   const d = new Date(iso);
   return `${formatKunOy(kunKaliti(d))} · ${soatDaqiqa(d)}`;
+}
+
+/**
+ * UTC ISO vaqtni Toshkent KUNIGA (`DD.MM`) o'giradi — `d.slice(0, 10)` kabi
+ * to'g'ridan-to'g'ri ISO'dan kesish emas. 00:00–04:59 Toshkentda hali UTC
+ * bo'yicha KECHAGI kun bo'ladi (topilma 4): masalan `...T20:30:00Z` Toshkentda
+ * ertasi kun 01:30 — `d.slice(0,10)` bir kun oldingi sanani ko'rsatardi.
+ */
+export function formatSanaToshkent(iso: string): string {
+  return formatKunOy(kunKaliti(new Date(iso)));
 }
 
 /**

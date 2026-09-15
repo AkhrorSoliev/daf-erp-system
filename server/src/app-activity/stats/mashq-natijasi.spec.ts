@@ -64,4 +64,28 @@ describe('mashqNatijasi', () => {
     expect(foizi(0, 0)).toBeNull();
     expect(foizi(2, 3)).toBe(67);
   });
+
+  it(
+    'ikkita attemptNo=1 qator bir xil savolga — massivda BIRINCHISI ' +
+      "g'alaba qiladi (DafAttempt'da noyob cheklov yo'q); shuning uchun " +
+      "so'rov `orderBy: createdAt asc` bilan kelishi shart",
+    () => {
+      const ertaroq = u({
+        questionIndex: 0,
+        score: 1,
+        createdAt: new Date('2026-09-13T05:00:00Z'),
+      });
+      const kechroq = u({
+        questionIndex: 0,
+        score: 0,
+        createdAt: new Date('2026-09-13T05:05:00Z'),
+      });
+      // `createdAt asc` bilan kelgan massiv — ertaroq qator birinchi.
+      expect(mashqNatijasi([ertaroq, kechroq])).toMatchObject({ togri: 1 });
+      // Tartib buzilsa (masalan orderBy yo'q bo'lganda DB har xil tartibda
+      // qaytarishi mumkin) natija boshqacha bo'ladi — aynan shu determinizm
+      // xavfi servisdagi `orderBy: { createdAt: 'asc' }` bilan yopiladi.
+      expect(mashqNatijasi([kechroq, ertaroq])).toMatchObject({ togri: 0 });
+    },
+  );
 });

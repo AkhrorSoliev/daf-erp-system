@@ -18,7 +18,11 @@ function mockExecutionContext(handler: unknown, roles: string[]) {
 describe('GroupAppActivityController', () => {
   const reflector = new Reflector();
   const guard = new RolesGuard(reflector);
-  const prisma = {};
+  const prisma = {
+    group: {
+      findFirst: jest.fn().mockResolvedValue({ level: 'A2' }),
+    },
+  };
   const stats = {
     guruhFaolligi: jest.fn().mockResolvedValue({ ok: 1 }),
     oquvchiFaolligi: jest.fn().mockResolvedValue({ ok: 2 }),
@@ -82,15 +86,31 @@ describe('GroupAppActivityController', () => {
     expect(stats.guruhFaolligi).not.toHaveBeenCalled();
   });
 
-  it('oquvchi: qorovul, a`zolik, keyin servis; standart davr 7', async () => {
+  it('oquvchi: qorovul, a`zolik, keyin servis; standart davr 7; guruh darajasi uzatiladi', async () => {
     await controller.oquvchi('g1', 10001, {}, 5, ['Administrator'], 1);
     expect(groupScope.assertCallerMayTouchGroup).toHaveBeenCalled();
     expect(stats.guruhAzosiEkaniniTekshir).toHaveBeenCalledWith('g1', 10001);
+    expect(prisma.group.findFirst).toHaveBeenCalledWith({
+      where: { id: 'g1', companyId: 1, deletedAt: null },
+      select: { level: true },
+    });
     expect(stats.oquvchiFaolligi).toHaveBeenCalledWith(
       10001,
       1,
       7,
       expect.any(Date),
+      'A2',
     );
+  });
+
+  it('oquvchi: qorovul rad etsa a`zolik ham, servis ham chaqirilmaydi', async () => {
+    (groupScope.assertCallerMayTouchGroup as jest.Mock).mockRejectedValueOnce(
+      new ForbiddenException(),
+    );
+    await expect(
+      controller.oquvchi('g1', 10001, {}, 5, ['Administrator'], 1),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(stats.guruhAzosiEkaniniTekshir).not.toHaveBeenCalled();
+    expect(stats.oquvchiFaolligi).not.toHaveBeenCalled();
   });
 });

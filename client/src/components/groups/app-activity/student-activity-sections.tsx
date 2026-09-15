@@ -10,6 +10,7 @@ import {
   PLATFORMA_NOMLARI,
   formatDavomiylik,
   formatKunOy,
+  formatSanaToshkent,
   formatSanaVaqt,
   foizRangi,
   foizUstunRangi,
@@ -210,7 +211,7 @@ export function KursBolimi({ data }: { data: OquvchiFaolligi }) {
                     <span>
                       {d.tugatilgan}/{d.jami} dars
                     </span>
-                    {d.tugatilganSana && <span>{formatKunOy(d.tugatilganSana.slice(0, 10))}</span>}
+                    {d.tugatilganSana && <span>{formatSanaToshkent(d.tugatilganSana)}</span>}
                   </div>
                   <ProgressLine value={d.tugatilgan} total={d.jami} />
                 </div>

@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { ActivityError, PeriodToggle } from "./activity-ui";
-import { formatOxirgiFaollik, PLATFORMA_NOMLARI } from "./activity-format";
+import { formatOxirgiFaollik, hechQachonKirmaganmi, PLATFORMA_NOMLARI } from "./activity-format";
 import {
   KursBolimi,
   MashqBolimi,
@@ -92,23 +92,31 @@ function PanelTanasi({
       )}
       {!data.akkaunt ? (
         <BoshHolat sarlavha="Akkaunt yo'q" matn="O'quvchiga ilova akkaunti ochilmagan — faollikni o'lchab bo'lmaydi." />
-      ) : !data.oxirgiFaollik && data.mashq.savollar === 0 ? (
-        <BoshHolat
-          sarlavha="O'quvchi ilovaga hali kirmagan"
-          matn="Na vebdan, na telefondan kirish qayd etilmagan. Ota-onasi yoki o'quvchining o'zi bilan gaplashib ko'rish mumkin."
-        />
       ) : (
         <>
+          {/* Davr tanlovi akkaunti bor har bir o'quvchi uchun doim ko'rinadi
+              (topilma 2) — aks holda foydalanuvchi ma'lumot yo'q davrda
+              qolib ketadi va bosh sarlavhadagi ball/seriya bilan ziddiyat
+              chiqadi. */}
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-muted-foreground">Davr</span>
             <PeriodToggle value={davr} onChange={onDavrChange} />
           </div>
-          <VaqtBolimi data={data} />
-          <XaritaBolimi data={data} />
-          <MashqBolimi data={data} />
-          <KursBolimi data={data} />
-          <SozlarBolimi data={data} />
-          <SeanslarBolimi data={data} />
+          {hechQachonKirmaganmi(data) ? (
+            <BoshHolat
+              sarlavha="O'quvchi ilovaga hali kirmagan"
+              matn="Na vebdan, na telefondan kirish qayd etilmagan. Ota-onasi yoki o'quvchining o'zi bilan gaplashib ko'rish mumkin."
+            />
+          ) : (
+            <>
+              <VaqtBolimi data={data} />
+              <XaritaBolimi data={data} />
+              <MashqBolimi data={data} />
+              <KursBolimi data={data} />
+              <SozlarBolimi data={data} />
+              <SeanslarBolimi data={data} />
+            </>
+          )}
         </>
       )}
     </>
