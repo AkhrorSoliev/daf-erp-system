@@ -401,6 +401,7 @@ maxraj     = bugun − hisobBoshi + 1
 | Eng qiyin so'zlar | `strength ≤ 2`, `wrongCount` kamayishi, teng bo'lsa `lastSeenAt` | `DafLexemeState` |
 | Ball, daraja, seriya, bugun takrorlanadigan so'zlar | **mavjud** `FortschrittService.uebersicht` | — |
 | Guruh qiynalayotgan so'z va gaplar | 6.5-bo'lim | `DafAttempt` |
+| **Yakuniy sinovlar** (CEO, 2026-09-14) | har unit bo'yicha: boshlangan urinishlar (`kind = LESSON`, darsi `UNIT_TEST` bo'lgan seanslar), tugatilganlar (`finishedAt` bor), eng yaxshi natija (`max firstTryCorrect` / `questionCount`), **nechanchi urinishda o'tgan** (`startedAt` bo'yicha tartiblanganda birinchi `passed = true` seansning o'rni), oxirgi urinishdagi xato savollar (`attemptNo = 1`, `isCorrect = false` qatorlar, `itemType`/`itemId` bo'yicha savol matni) | `DafSession.passed` + `DafAttempt` — `2026-09-14-a1-yakuniy-sinov-design.md` |
 
 Guruh kartalari: ilovaga kirganlar soni (3-bo'lim, «Ilovaga kirgan»), kirganlar orasida o'rtacha
 faol vaqt, guruh to'g'ri javob % (barcha a'zolar savollari birga), davrdagi tugatilgan darslar,
@@ -485,7 +486,9 @@ standart qiymatlar URL'dan olib tashlanadi):
 (faol / radio, platforma va bo'lim bo'yicha) · 30 kunlik xarita (rang — faol vaqt, shug'ullangan
 kunlar belgilangan, tooltip bilan) · mashqlar
 (to'g'ri %, savollar, xatolar, ko'nikma bo'yicha) · kurs progressi (darajalar bo'yicha) · so'zlar ·
-eng qiyin so'zlar · seanslar tarixi (oxirgi 10 ta). Kirmagan o'quvchi uchun alohida holat.
+eng qiyin so'zlar · seanslar tarixi (oxirgi 10 ta) · **yakuniy sinovlar** (CEO, 2026-09-14: unit
+bo'yicha urinishlar soni, tugatilgani, eng yaxshi natija, nechanchi urinishda o'tgani, oxirgi
+urinishdagi xato savollar — 6.3). Kirmagan o'quvchi uchun alohida holat.
 
 **O'quvchi profili → «Ilova» tabi** (CEO, BD, Admin): yon oynadagi panelning o'zi, sahifa ichida.
 Komponent bitta.

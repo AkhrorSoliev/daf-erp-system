@@ -21,15 +21,9 @@ const XARITA: Record<string, FrageFormat[]> = {
   SECTION_A: ['WORT_UZ', 'PAAR', 'ZUORDNEN', 'AUDIO_WORT'],
   SECTION_B: ['UZ_WORT', 'ARTIKEL', 'LUECKE', 'SATZ_BAUEN', 'WORT_TIPPEN'],
   BRIDGE: [],
-  // BUGUN O'LIK: `UNIT_TEST` darsi `kurs-lessons.ts`da HAR DOIM
-  // bo'limsiz yaratiladi (`push('UNIT_TEST', null, ...)`), dvigatel esa
-  // bo'limi yo'q dars uchun umuman seans QURMAYDI (`UebungService`
-  // bunday darsda `null` qaytaradi) — mijoz eski dars sahifasiga
-  // tushadi, bu XARITAga hech qachon murojaat qilinmaydi. Shuning uchun
-  // `HOEREN_WAHL` bugun faqat `SECTION_A`/`SECTION_B`/`BRIDGE`
-  // seanslarida (moyilliksiz, oddiy nomzod sifatida) chiqadi. Yozuv
-  // o'chirilmaydi — yakuniy sinov dvigatelga ulanganda (alohida ish)
-  // bu moyillik shu zahoti kuchga kiradi.
+  // Yakuniy sinov (2026-09-14 dan dvigatelda): vaziyatga suyangan formatlar
+  // oldinga suriladi — kurs dizaynidagi «Kurz und klar». Material unitning
+  // hamma bo'limidan, seans 15 savol (`yakuniy-sinov.ts`).
   UNIT_TEST: [
     'REAKTION',
     'ZUORDNEN',

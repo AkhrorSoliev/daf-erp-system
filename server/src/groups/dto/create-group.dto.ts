@@ -76,6 +76,9 @@ export class CreateGroupDto {
 
   @IsOptional()
   @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: "Sana formati YYYY-MM-DD bo'lishi kerak",
+  })
   startDate?: string;
 
   @IsOptional()

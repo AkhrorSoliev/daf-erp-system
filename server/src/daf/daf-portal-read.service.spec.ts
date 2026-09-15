@@ -144,6 +144,17 @@ describe('DafPortalReadService', () => {
     expect(select.answers).toBeUndefined();
   });
 
+  // Seans ekrani yakuniy sinovni natija KELMASDAN OLDIN taniydi (kutish va
+  // «Qayta yuborish» holatlari) — dars turi javobda bo'lmasa, internet
+  // sekin yoki uzilganda o'quvchi oddiy natija ekranini ko'rib, sinovni
+  // tugatdim deb o'ylardi (yakuniy ko'rik topilmasi, 2026-09-15).
+  it('dars turini (kind) ham qaytaradi', async () => {
+    await service.getLesson(3);
+    const select = prisma.dafLesson.findUnique.mock.calls[0][0]
+      .select as Record<string, unknown>;
+    expect(select.kind).toBe(true);
+  });
+
   // Nafaqadagi mashq ro'yxatda ko'rinmaydi, lekin bazada qoladi: unga
   // ishora qiluvchi urinish tarixi saqlanadi.
   it("nafaqaga chiqarilgan mashqni so'ramaydi", async () => {

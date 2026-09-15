@@ -32,37 +32,32 @@ export interface BranchOption {
   id: number;
 }
 
-/** What the switcher has resolved to, if anything. */
-export const BRANCH_KEY_BOOT = "boot";
-
 /**
- * The React `key` that scopes the dashboard's page content to a branch.
+ * Whether replacing the saved selection changes what requests claim.
  *
- * `BranchScopedMain` puts this on `<main>`, so a change unmounts the whole page
- * subtree and every mount-time effect runs again. That is what reloads the ~47
+ * `BranchScopedMain` remounts the dashboard's page content exactly when this is
+ * true (via the switcher's `scopeVersion`). A remount is what reloads the ~47
  * components that fetch with `useState` + `useEffect` instead of React Query —
- * they never consult the query cache, so clearing it did nothing for them, and a
- * branch switch left them showing the previous branch's rows until the user
- * pressed refresh.
+ * but it also throws away everything local to the page, typed form input
+ * included, so it must happen only when the data on screen is actually stale.
  *
- * Two values must not collide, which is why this is a function and not
- * `String(id)`:
+ * The comparison is on the HEADER, not on the selection object, because the
+ * header is what the page's requests used: `api.ts` reads it from
+ * `localStorage` on every request, including those fired before the switcher
+ * resolved. So resolving to the branch already saved changes nothing, while
+ * resolving away from a saved branch the user may no longer see does.
  *
- *   - `null` is a real selection ("Barcha filiallar"), not "nothing chosen";
- *   - before the branch list resolves there is no selection at all, and keying
- *     on the unresolved value would remount every page once on first paint,
- *     throwing away the initial load's own in-flight requests.
- *
- * So "not resolved yet" gets a sentinel OUTSIDE the id space, and the first real
- * resolution is the first key change — which is a no-op, because the page
- * mounting for the first time has nothing stale to discard.
+ * This replaced a React key that went from a "boot" sentinel to the branch id
+ * when the switcher resolved. That was a key change too: every hard load
+ * remounted every page once, after `GET /branches` returned — erasing the title
+ * typed into `/leads/forms/new` on a slow connection, and firing every page's
+ * first requests twice on any connection.
  */
-export function branchScopeKey(
-  selectedBranch: BranchOption | null,
-  loaded: boolean,
-): string {
-  if (!loaded) return BRANCH_KEY_BOOT;
-  return selectedBranch ? String(selectedBranch.id) : ALL_BRANCHES;
+export function branchScopeChanged(
+  previousStored: string | null,
+  nextStored: string | null,
+): boolean {
+  return branchHeaderValue(previousStored) !== branchHeaderValue(nextStored);
 }
 
 /**

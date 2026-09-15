@@ -49,10 +49,12 @@ import { resetBranchScopedStores } from "@/lib/branch-scoped-stores";
 export function BranchQuerySync() {
   const queryClient = useQueryClient();
 
-  // "A switch happened" is defined once, in `useBranchChange` — including the
-  // two traps (`null` is a selection; the first resolution is not a switch).
-  // The global search dropdown needs exactly the same rule, and two copies of
-  // it would be free to disagree.
+  // "A switch happened" is defined once, in `useBranchChange`, from the same
+  // `scopeVersion` that keys `BranchScopedMain` — so the cache is cleared
+  // exactly when the page remounts. That includes a first resolution that
+  // replaced the saved branch (its early responses belong to another scope)
+  // and excludes one that merely confirmed it. The global search dropdown needs
+  // the same rule, and two copies of it would be free to disagree.
   useBranchChange(() => {
     void queryClient.cancelQueries();
     queryClient.removeQueries();

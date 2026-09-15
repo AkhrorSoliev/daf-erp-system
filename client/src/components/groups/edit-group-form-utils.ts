@@ -1,3 +1,5 @@
+import { format } from "date-fns";
+import { tashkentDayAsLocalDate } from "@/lib/tashkent-time";
 import type { EditGroupFormValues } from "@/lib/schemas/group-schema";
 import type { GroupData } from "@/hooks/use-edit-group";
 
@@ -50,8 +52,21 @@ export function groupToForm(group: GroupData | null): EditGroupFormValues {
     lessonEndTime: group.lessonEndTime ?? "",
     lessonMinutes: group.lessonMinutes ?? undefined,
     status: group.status,
-    startDate: group.startDate ? new Date(group.startDate) : undefined,
+    startDate: group.startDate
+      ? tashkentDayAsLocalDate(group.startDate)
+      : undefined,
     comment: group.comment ?? "",
     teacherId: group.teachers[0]?.id,
   };
+}
+
+/**
+ * The calendar day the admin picked, as 'YYYY-MM-DD' — the only shape the API
+ * accepts for Group.startDate, which it reads through `utcMidnightFromDateStr`
+ * (ADR-0016). Never `toISOString()`: for a Tashkent-midnight Date that is
+ * 19:00 UTC of the PREVIOUS day, and the server turned that string into an
+ * Invalid Date — every group create returned 500 from 10.09 to 14.09.2026.
+ */
+export function toApiDateStr(date: Date): string {
+  return format(date, "yyyy-MM-dd");
 }

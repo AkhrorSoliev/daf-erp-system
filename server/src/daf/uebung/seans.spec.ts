@@ -296,6 +296,17 @@ describe('baueSeans', () => {
     expect(fragen.filter((q) => q.format === 'HOEREN_WAHL')).toHaveLength(1);
     expect(fragen).toHaveLength(12);
   });
+  it('15 savollik seans (yakuniy sinov) ham barcha qoidalar bilan to`ladi', () => {
+    const s = baueSeans(kandidaten(), 15, rnd);
+    expect(s.fragen).toHaveLength(15);
+    const soni = new Map<FrageFormat, number>();
+    for (const q of s.fragen) soni.set(q.format, (soni.get(q.format) ?? 0) + 1);
+    for (const [fmt, n] of soni) expect(n).toBeLessThanOrEqual(capFuer(fmt));
+    for (let i = 1; i < s.fragen.length; i += 1) {
+      expect(s.fragen[i].format).not.toBe(s.fragen[i - 1].format);
+    }
+    expect(soni.size).toBeGreaterThanOrEqual(MIN_FORMATE);
+  });
 });
 
 describe('baueSeans — moyillik', () => {
