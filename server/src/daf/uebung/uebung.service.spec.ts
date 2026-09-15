@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { UebungService } from './uebung.service';
 import * as seansModul from './seans';
@@ -3183,7 +3183,34 @@ describe('seans — yakuniy sinov (UNIT_TEST)', () => {
     kind: 'UNIT_TEST',
     section: null,
   });
+  // Test materiali kichik — yakuniy sinov seansi 15 ga yetmaydi va servis
+  // ogohlantiradi; chiqish toza qolishi uchun `warn` ushlanadi.
+  let warn: jest.SpyInstance;
+  beforeEach(() => {
+    warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+  });
   afterEach(() => jest.restoreAllMocks());
+
+  it('15 tadan qisqa yakuniy sinov seansi ogohlantirish bilan yoziladi', async () => {
+    const prisma = fakePrisma();
+    prisma.dafLesson.findUnique = jest.fn(async () => unitTestDars()) as any;
+    const fragen = await new UebungService(prisma as any).seans(
+      300,
+      55,
+      () => 0.5,
+    );
+    expect(fragen.length).toBeLessThan(15);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('Yakuniy sinov seansi qisqa'),
+    );
+  });
+
+  it('oddiy darsda qisqa seans uchun bu ogohlantirish yozilmaydi', async () => {
+    await new UebungService(fakePrisma() as any).seans(100, 55, () => 0.5);
+    expect(warn).not.toHaveBeenCalledWith(
+      expect.stringContaining('Yakuniy sinov seansi qisqa'),
+    );
+  });
 
   it('material unitning HAMMA bo`limidan olinadi (tartib cheklovisiz)', async () => {
     const prisma = fakePrisma();

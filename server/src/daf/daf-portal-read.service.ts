@@ -454,6 +454,9 @@ export class DafPortalReadService {
         id: true,
         order: true,
         tier: true,
+        // Seans ekrani yakuniy sinovni (`UNIT_TEST`) natija kelmasdan oldin
+        // taniydi — kutish va «Qayta yuborish» holatlari shunga bog'liq.
+        kind: true,
         titleDe: true,
         titleUz: true,
         unit: { select: { id: true, titleUz: true, level: true } },

@@ -390,6 +390,17 @@ export class UebungService {
       bevorzugteFormate(kind),
     );
 
+    // Yakuniy sinovdan faqat to'liq 15 savolli seansda o'tiladi
+    // (`yakuniy-sinov.ts`). Material yetmay seans qisqa qurilsa, hech kim
+    // o'ta olmaydi — buni jim qoldirmaslik uchun ogohlantirish yoziladi
+    // (yangi unit qo'shilganda material yetishmovchiligi shu yerda ko'rinadi).
+    if (kind === 'UNIT_TEST' && fragen.length < UNIT_TEST_SAVOLLAR) {
+      this.logger.warn(
+        `Yakuniy sinov seansi qisqa: ${fragen.length}/${UNIT_TEST_SAVOLLAR} savol ` +
+          `(lessonId=${lessonId}) — bu seans bilan sinovdan o'tib bo'lmaydi`,
+      );
+    }
+
     if (nichtPlatziert.length > 0) {
       this.logger.warn(
         `Muddati kelgan ${nichtPlatziert.length} savol seansga joylashmadi ` +
