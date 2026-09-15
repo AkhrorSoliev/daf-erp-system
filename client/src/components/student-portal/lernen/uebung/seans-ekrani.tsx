@@ -784,10 +784,6 @@ export function SeansEkrani(props: SeansEkraniProps) {
     );
   }
 
-  // MUHIM: bu tekshiruv `!frage` dan OLDIN kelishi kerak. Oxirgi savol
-  // javob berilganda `navbat` bo'shaydi va `joriy(holat)` `null`
-  // qaytaradi — agar tartib teskari bo'lsa, natija ekrani hech qachon
-  // ko'rinmay, o'quvchi abadiy yuklanish holatida qolib ketardi.
   const natijaniQaytaYubor = () => {
     if (!oxirgiYakun.current) return;
     abschluss.mutate(oxirgiYakun.current, {
@@ -813,11 +809,22 @@ export function SeansEkrani(props: SeansEkraniProps) {
           ? null // eski server: `sinov` yo'q — oddiy natija ekrani
           : { tur: "kutilmoqda" };
 
+  // MUHIM: bu tekshiruv `!frage` dan OLDIN kelishi kerak. Oxirgi savol
+  // javob berilganda `navbat` bo'shaydi va `joriy(holat)` `null`
+  // qaytaradi — agar tartib teskari bo'lsa, natija ekrani hech qachon
+  // ko'rinmay, o'quvchi abadiy yuklanish holatida qolib ketardi.
   if (tugadimi(holat)) {
     return (
       <NatijaEkrani
-        togri={holat.togri}
-        jami={holat.jami}
+        // Yakuniy sinovda server hisobi ko'rsatiladi — sinov kartasi bilan
+        // bir ekranda ikki xil raqam chiqmasin (javob yo'qolgan urinishda
+        // mijoz sanog'i serverdan farq qilishi mumkin).
+        togri={
+          sinovHolati?.tur === "tayyor" ? sinovHolati.natija.togri : holat.togri
+        }
+        jami={
+          sinovHolati?.tur === "tayyor" ? sinovHolati.natija.jami : holat.jami
+        }
         durationMs={tugashDavomiyligi.current ?? Date.now() - seansBoshi}
         xatolar={holat.xatolar}
         unitId={unitId}

@@ -328,21 +328,29 @@ export function NatijaEkrani({
                 Qayta urinish
               </Button>
             </>
-          ) : (
+          ) : korinish?.asosiy === null ? (
+            // Natija kutilmoqda: davom etish (o'tdi/o'tmadi noma'lum) o'chiq,
+            // lekin CHIQISH ochiq — internet osilib qolsa o'quvchi bu ekranda
+            // qamalib qolmasin (pastki menyu seans sahifasida yo'q). So'rov
+            // fonda davom etadi va yo'l keshini o'zi yangilaydi.
             <>
               <Button
                 variant="secondary"
                 className="flex-1"
-                onClick={onQayta}
-                disabled={korinish?.asosiy === null}
+                onClick={() => router.push(davomHref)}
               >
+                Chiqish
+              </Button>
+              <Button className="flex-1" disabled>
+                Davom etish
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="secondary" className="flex-1" onClick={onQayta}>
                 {korinish ? "Qayta urinish" : "Qayta o'tish"}
               </Button>
-              <Button
-                className="flex-1"
-                onClick={() => router.push(davomHref)}
-                disabled={korinish?.asosiy === null}
-              >
+              <Button className="flex-1" onClick={() => router.push(davomHref)}>
                 Davom etish
               </Button>
             </>
