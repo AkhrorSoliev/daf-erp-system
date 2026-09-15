@@ -38,7 +38,11 @@ import {
 import { baueSeans } from './seans';
 import { seansYigindisi } from './seans-natija';
 import { ohneWiederholteFormate } from './wiederholte-formate';
-import { otishUchunKerak, sinovdanOtdimi } from './yakuniy-sinov';
+import {
+  otishUchunKerak,
+  sinovdanOtdimi,
+  UNIT_TEST_SAVOLLAR,
+} from './yakuniy-sinov';
 import {
   artikel,
   audioWort,
@@ -376,9 +380,11 @@ export class UebungService {
     // to'qnashardi. Shuning uchun mos formatlar `baueSeans` pooli
     // ichida oldinga suriladi, yetmasa qolganidan olinadi; xilma-xillik
     // kafolatlari (`baueSeans` ichida) buzilmaydi.
+    // Yakuniy sinov 15 savol (kurs dizayni 3-bo'limi), qolgan darslar 12.
+    const uzunlik = kind === 'UNIT_TEST' ? UNIT_TEST_SAVOLLAR : SEANS_UZUNLIGI;
     const { fragen, nichtPlatziert } = baueSeans(
       kandidaten,
-      SEANS_UZUNLIGI,
+      uzunlik,
       rnd,
       pflicht,
       bevorzugteFormate(kind),
@@ -839,20 +845,31 @@ export class UebungService {
     if (!lesson) {
       throw new NotFoundException(`Dars topilmadi: ${lessonId}`);
     }
-    if (!(lesson as any).section) {
-      return null;
-    }
     const section = (lesson as any).section as {
       id: number;
       order: number;
       unitId: number;
-    };
+    } | null;
+    const kind: string | null = (lesson as any).kind ?? null;
 
     // Chalg'ituvchilar shu darsning bo'limi va undan OLDINGI bo'limlar
     // materialidan olinadi — o'quvchi hali o'qimagan mavzudan chalg'ituvchi
     // taxminni emas, bilimni tekshiradi.
+    //
+    // YAKUNIY SINOV (`UNIT_TEST`) bo'limsiz seed qilinadi (`kurs-lessons.ts`)
+    // va BUTUN unitni tekshiradi — material unitning HAMMA bo'limidan, ya'ni
+    // oxirgi bo'limning kumulyativ puli bilan bir xil. Bo'limsiz boshqa dars
+    // (eski DiB) — avvalgidek `null`, mijoz eski sahifaga tushadi.
+    let bolimlarShart: { unitId: number; order?: { lte: number } };
+    if (section) {
+      bolimlarShart = { unitId: section.unitId, order: { lte: section.order } };
+    } else if (kind === 'UNIT_TEST' && (lesson as any).unitId != null) {
+      bolimlarShart = { unitId: (lesson as any).unitId as number };
+    } else {
+      return null;
+    }
     const sections = await this.prisma.dafSection.findMany({
-      where: { unitId: section.unitId, order: { lte: section.order } },
+      where: bolimlarShart,
     } as any);
     const sectionIds = (sections as Array<{ id: number; code: string }>).map(
       (s) => s.id,
@@ -1085,7 +1102,7 @@ export class UebungService {
       letzterFormatByWort,
     );
 
-    return { pflicht, kandidaten, kind: (lesson as any).kind ?? null };
+    return { pflicht, kandidaten, kind };
   }
 
   /**

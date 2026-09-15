@@ -1,6 +1,7 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { UebungService } from './uebung.service';
+import * as seansModul from './seans';
 
 /**
  * Seedlangan pseudo-tasodifiy generator (mulberry32) — `seans()`ga
@@ -3171,5 +3172,60 @@ describe('abschluss — yakuniy sinov (UNIT_TEST)', () => {
     expect(r).toEqual({ bestScore: 3, runs: 1 });
     const lp = (prisma.dafLessonProgress.upsert as jest.Mock).mock.calls[0][0];
     expect(lp.create.completedAt).toBeInstanceOf(Date);
+  });
+});
+
+describe('seans — yakuniy sinov (UNIT_TEST)', () => {
+  const unitTestDars = () => ({
+    id: 300,
+    unitId: 1,
+    sectionId: null,
+    kind: 'UNIT_TEST',
+    section: null,
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('material unitning HAMMA bo`limidan olinadi (tartib cheklovisiz)', async () => {
+    const prisma = fakePrisma();
+    prisma.dafLesson.findUnique = jest.fn(async () => unitTestDars()) as any;
+    const fragen = await new UebungService(prisma as any).seans(
+      300,
+      55,
+      () => 0.5,
+    );
+    expect(prisma.dafSection.findMany).toHaveBeenCalledWith({
+      where: { unitId: 1 },
+    });
+    expect(fragen.length).toBeGreaterThan(0);
+  });
+
+  it('yakuniy sinov 15 savolga, oddiy dars 12 savolga quriladi', async () => {
+    const spy = jest.spyOn(seansModul, 'baueSeans');
+    const prisma = fakePrisma();
+    prisma.dafLesson.findUnique = jest.fn(async () => unitTestDars()) as any;
+    await new UebungService(prisma as any).seans(300, 55, () => 0.5);
+    expect(spy.mock.calls[0][1]).toBe(15);
+
+    spy.mockClear();
+    await new UebungService(fakePrisma() as any).seans(100, 55, () => 0.5);
+    expect(spy.mock.calls[0][1]).toBe(12);
+  });
+
+  it('bo`limsiz boshqa dars (eski DiB) — avvalgidek bo`sh', async () => {
+    const prisma = fakePrisma();
+    prisma.dafLesson.findUnique = jest.fn(async () => ({
+      id: 400,
+      unitId: 9,
+      sectionId: null,
+      kind: null,
+      section: null,
+    })) as any;
+    const fragen = await new UebungService(prisma as any).seans(
+      400,
+      55,
+      () => 0.5,
+    );
+    expect(fragen).toEqual([]);
+    expect(prisma.dafSection.findMany).not.toHaveBeenCalled();
   });
 });

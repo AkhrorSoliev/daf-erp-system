@@ -197,13 +197,10 @@ migratsiya fayli commit bilan boradi va `start:prod` uni o'zi qo'llaydi
 - Audio manzili umumiy `mediaUrl` qoidasi bilan (`R2_PUBLIC_URL`
   sozlanmasa — savol qurilmaydi, xom kalit sizmaydi).
 - Moyillik: `UNIT_TEST` seansida oldinga suriladi (`kind-formate.ts`).
-  **Hozircha uxlab turadi** (yakuniy ko'rik, 2026-09-13): `UNIT_TEST`
-  darsi bo'limsiz seed qilinadi, dvigatel bo'limsiz darsga savol
-  qurmaydi va mijoz eski dars sahifasiga tushadi — bu shoxdan oldin bor
-  holat. Moyillik qat'iy bo'linish emas, shuning uchun eshitish savoli
-  amalda `SECTION_A` / `SECTION_B` / `BRIDGE` seanslarida chiqadi (u01-s1
-  va u02-s1 da taxminan har ikkinchi seansda). Yakuniy sinovni dvigatelga
-  ulash — alohida ish.
+  **2026-09-14 dan ishlaydi:** yakuniy sinov dvigatelga ulandi
+  (`2026-09-14-a1-yakuniy-sinov-design.md`) — eshitish savoli `UNIT_TEST`
+  seansida ham, `SECTION_A` / `SECTION_B` / `BRIDGE` da ham chiqadi
+  (seansda ko'pi bilan 1 ta).
 - `pruefen`: `richtigeAntwort` ga `HOEREN_WAHL` holati — `DafHoerFrage`
   dan `richtig` o'qiladi (`akzeptiert` bo'sh — variantlar aynan).
   `PruefenErgebnis` ga ixtiyoriy `transkript` (satrlar: gapiruvchi,
