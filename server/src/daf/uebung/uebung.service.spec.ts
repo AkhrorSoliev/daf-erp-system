@@ -1,6 +1,7 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { UebungService } from './uebung.service';
+import * as seansModul from './seans';
 
 /**
  * Seedlangan pseudo-tasodifiy generator (mulberry32) — `seans()`ga
@@ -3005,5 +3006,253 @@ describe('HOEREN_WAHL', () => {
         ctx,
       ),
     ).rejects.toThrow('HOEREN_WAHL savoli faqat eshitish savoliga tegishli');
+  });
+});
+
+describe('abschluss — yakuniy sinov (UNIT_TEST)', () => {
+  const ctx = { studentId: 55, companyId: 1 };
+  const UUID = '8b1e2c3d-4f5a-4b6c-8d7e-9f0a1b2c3d4e';
+  const satr = (questionIndex: number, score: number) => ({
+    questionIndex,
+    attemptNo: 1,
+    format: 'WORT_UZ',
+    score,
+    gradingStatus: 'GRADED',
+  });
+
+  function prismaSinov(opts: {
+    togri: number;
+    jami: number;
+    lessonId?: number;
+    studentId?: number;
+    passed?: boolean | null;
+    oldingi?: { bestScore: number; runs: number; completedAt: Date | null };
+  }) {
+    const prisma = fakePrisma();
+    prisma.dafLesson.findUnique = jest.fn(async () => ({
+      id: 300,
+      unitId: 1,
+      sectionId: null,
+      kind: 'UNIT_TEST',
+      section: null,
+    })) as any;
+    prisma.dafSession.findUnique = jest.fn(async () => ({
+      id: UUID,
+      studentId: opts.studentId ?? 55,
+      lessonId: opts.lessonId ?? 300,
+      finishedAt: null,
+      questionCount: null,
+      firstTryCorrect: null,
+      passed: opts.passed ?? null,
+    })) as any;
+    prisma.dafAttempt.findMany = jest.fn(async () =>
+      Array.from({ length: opts.jami }, (_, i) =>
+        satr(i, i < opts.togri ? 1 : 0),
+      ),
+    ) as any;
+    if (opts.oldingi) {
+      prisma.dafLessonProgress.findUnique = jest.fn(
+        async () => opts.oldingi,
+      ) as any;
+    }
+    return prisma;
+  }
+
+  const yakun = (prisma: any, input: Record<string, unknown> = {}) =>
+    new UebungService(prisma).abschluss(
+      300,
+      { richtig: 15, gesamt: 15, sessionId: UUID, ...input } as any,
+      ctx,
+    );
+
+  const passedYozuvi = (prisma: any) =>
+    (prisma.dafSession.update as jest.Mock).mock.calls
+      .map((c) => c[0])
+      .find((a) => 'passed' in a.data);
+
+  it('14/15 — o`tdi: completedAt yoziladi, passed muhrlanadi', async () => {
+    const prisma = prismaSinov({ togri: 14, jami: 15 });
+    const r = await yakun(prisma);
+    expect(r.sinov).toEqual({
+      bestanden: true,
+      avvalOtilgan: false,
+      togri: 14,
+      jami: 15,
+      kerak: 14,
+    });
+    const lp = (prisma.dafLessonProgress.upsert as jest.Mock).mock.calls[0][0];
+    expect(lp.create.completedAt).toBeInstanceOf(Date);
+    expect(lp.create.bestScore).toBe(14);
+    expect(lp.create.runs).toBe(1);
+    expect(passedYozuvi(prisma).data).toEqual({ passed: true });
+  });
+
+  it('13/15 — o`tmadi: completedAt null, passed false', async () => {
+    const prisma = prismaSinov({ togri: 13, jami: 15 });
+    const r = await yakun(prisma);
+    expect(r.sinov?.bestanden).toBe(false);
+    expect(r.sinov?.kerak).toBe(14);
+    const lp = (prisma.dafLessonProgress.upsert as jest.Mock).mock.calls[0][0];
+    expect(lp.create.completedAt).toBeNull();
+    expect(lp.update.completedAt).toBeNull();
+    expect(passedYozuvi(prisma).data).toEqual({ passed: false });
+  });
+
+  it('mijoz aytgan richtig hisobga olinmaydi — urinishlar hal qiladi', async () => {
+    const prisma = prismaSinov({ togri: 10, jami: 15 });
+    const r = await yakun(prisma, { richtig: 15 });
+    expect(r.sinov?.bestanden).toBe(false);
+    expect(r.bestScore).toBe(10);
+  });
+
+  it('15 tadan kam savolga javob — 14/14 ham o`tmaydi', async () => {
+    const prisma = prismaSinov({ togri: 14, jami: 14 });
+    const r = await yakun(prisma);
+    expect(r.sinov?.bestanden).toBe(false);
+  });
+
+  it('sessionId yo`q — o`tmadi, seansga tegilmaydi', async () => {
+    const prisma = prismaSinov({ togri: 15, jami: 15 });
+    const r = await yakun(prisma, { sessionId: undefined });
+    expect(r.sinov).toEqual({
+      bestanden: false,
+      avvalOtilgan: false,
+      togri: 0,
+      jami: 0,
+      kerak: 14,
+    });
+    expect(prisma.dafSession.update).not.toHaveBeenCalled();
+    const lp = (prisma.dafLessonProgress.upsert as jest.Mock).mock.calls[0][0];
+    expect(lp.create.completedAt).toBeNull();
+  });
+
+  it('boshqa darsning seansi — o`tmadi', async () => {
+    const prisma = prismaSinov({ togri: 15, jami: 15, lessonId: 301 });
+    const r = await yakun(prisma);
+    expect(r.sinov?.bestanden).toBe(false);
+    expect(prisma.dafSession.update).not.toHaveBeenCalled();
+  });
+
+  it('boshqa o`quvchining seansi — o`tmadi', async () => {
+    const prisma = prismaSinov({ togri: 15, jami: 15, studentId: 99 });
+    const r = await yakun(prisma);
+    expect(r.sinov?.bestanden).toBe(false);
+    expect(prisma.dafSession.update).not.toHaveBeenCalled();
+  });
+
+  it('avval o`tgan, bu safar 12/15 — completedAt saqlanadi, avvalOtilgan true', async () => {
+    const oldinOtgan = new Date('2026-09-10T10:00:00Z');
+    const prisma = prismaSinov({
+      togri: 12,
+      jami: 15,
+      oldingi: { bestScore: 14, runs: 2, completedAt: oldinOtgan },
+    });
+    const r = await yakun(prisma);
+    expect(r.sinov).toMatchObject({ bestanden: false, avvalOtilgan: true });
+    expect(r.bestScore).toBe(14);
+    expect(r.runs).toBe(3);
+    const lp = (prisma.dafLessonProgress.upsert as jest.Mock).mock.calls[0][0];
+    expect(lp.update.completedAt).toBe(oldinOtgan);
+  });
+
+  it('muhrlangan passed qayta hisoblanmaydi (ikkinchi yuborilgan yakun)', async () => {
+    const prisma = prismaSinov({ togri: 5, jami: 15, passed: true });
+    const r = await yakun(prisma);
+    expect(r.sinov?.bestanden).toBe(true);
+    expect(passedYozuvi(prisma)).toBeUndefined();
+  });
+
+  it('oddiy dars (SECTION_A) — eski yo`l: sinov maydoni yo`q, completedAt har doim', async () => {
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any).abschluss(
+      100,
+      { richtig: 3, gesamt: 12 },
+      ctx,
+    );
+    expect(r).toEqual({ bestScore: 3, runs: 1 });
+    const lp = (prisma.dafLessonProgress.upsert as jest.Mock).mock.calls[0][0];
+    expect(lp.create.completedAt).toBeInstanceOf(Date);
+  });
+});
+
+describe('seans — yakuniy sinov (UNIT_TEST)', () => {
+  const unitTestDars = () => ({
+    id: 300,
+    unitId: 1,
+    sectionId: null,
+    kind: 'UNIT_TEST',
+    section: null,
+  });
+  // Test materiali kichik — yakuniy sinov seansi 15 ga yetmaydi va servis
+  // ogohlantiradi; chiqish toza qolishi uchun `warn` ushlanadi.
+  let warn: jest.SpyInstance;
+  beforeEach(() => {
+    warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('15 tadan qisqa yakuniy sinov seansi ogohlantirish bilan yoziladi', async () => {
+    const prisma = fakePrisma();
+    prisma.dafLesson.findUnique = jest.fn(async () => unitTestDars()) as any;
+    const fragen = await new UebungService(prisma as any).seans(
+      300,
+      55,
+      () => 0.5,
+    );
+    expect(fragen.length).toBeLessThan(15);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('Yakuniy sinov seansi qisqa'),
+    );
+  });
+
+  it('oddiy darsda qisqa seans uchun bu ogohlantirish yozilmaydi', async () => {
+    await new UebungService(fakePrisma() as any).seans(100, 55, () => 0.5);
+    expect(warn).not.toHaveBeenCalledWith(
+      expect.stringContaining('Yakuniy sinov seansi qisqa'),
+    );
+  });
+
+  it('material unitning HAMMA bo`limidan olinadi (tartib cheklovisiz)', async () => {
+    const prisma = fakePrisma();
+    prisma.dafLesson.findUnique = jest.fn(async () => unitTestDars()) as any;
+    const fragen = await new UebungService(prisma as any).seans(
+      300,
+      55,
+      () => 0.5,
+    );
+    expect(prisma.dafSection.findMany).toHaveBeenCalledWith({
+      where: { unitId: 1 },
+    });
+    expect(fragen.length).toBeGreaterThan(0);
+  });
+
+  it('yakuniy sinov 15 savolga, oddiy dars 12 savolga quriladi', async () => {
+    const spy = jest.spyOn(seansModul, 'baueSeans');
+    const prisma = fakePrisma();
+    prisma.dafLesson.findUnique = jest.fn(async () => unitTestDars()) as any;
+    await new UebungService(prisma as any).seans(300, 55, () => 0.5);
+    expect(spy.mock.calls[0][1]).toBe(15);
+
+    spy.mockClear();
+    await new UebungService(fakePrisma() as any).seans(100, 55, () => 0.5);
+    expect(spy.mock.calls[0][1]).toBe(12);
+  });
+
+  it('bo`limsiz boshqa dars (eski DiB) — avvalgidek bo`sh', async () => {
+    const prisma = fakePrisma();
+    prisma.dafLesson.findUnique = jest.fn(async () => ({
+      id: 400,
+      unitId: 9,
+      sectionId: null,
+      kind: null,
+      section: null,
+    })) as any;
+    const fragen = await new UebungService(prisma as any).seans(
+      400,
+      55,
+      () => 0.5,
+    );
+    expect(fragen).toEqual([]);
+    expect(prisma.dafSection.findMany).not.toHaveBeenCalled();
   });
 });

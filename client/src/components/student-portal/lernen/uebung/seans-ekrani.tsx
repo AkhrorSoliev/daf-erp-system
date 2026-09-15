@@ -46,6 +46,7 @@ import { Yozish } from "./yozish";
 import { Yigish, juftSoni, juftUstunlar } from "./yigish";
 import { DialogBlok } from "./dialog-blok";
 import { NatijaEkrani } from "./natija-ekrani";
+import type { SinovHolati } from "./sinov-natijasi";
 import { SuhbatPleyer } from "./suhbat-pleyer";
 import { TranskriptBlok } from "./transkript-blok";
 import {
@@ -445,6 +446,11 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // `abschluss.mutate` o'zi keltirgan qayta chizilish (pending → success)
   // natija ekranidagi vaqtni har safar biroz oshirib ko'rsatardi.
   const tugashDavomiyligi = React.useRef<number | null>(null);
+  // Oxirgi yuborilgan yakun — yakuniy sinov natijasini tekshirish yiqilsa,
+  // «Qayta yuborish» aynan shu so'rovni takrorlaydi (yangi hisob-kitobsiz).
+  const oxirgiYakun = React.useRef<
+    Parameters<typeof abschluss.mutate>[0] | null
+  >(null);
   React.useEffect(() => {
     if (!holat || !tugadimi(holat) || holat.jami === 0 || yozildi.current)
       return;
@@ -491,32 +497,33 @@ export function SeansEkrani(props: SeansEkraniProps) {
         { sessionId: holat.seansId },
         {
           onError: (err) =>
-            toast.error(getErrorMessage(err, "Natija saqlanmadi. Internetni tekshiring")),
+            toast.error(
+              getErrorMessage(err, "Natija saqlanmadi. Internetni tekshiring"),
+            ),
         },
       );
       return;
     }
 
-    abschluss.mutate(
-      {
-        lessonId: darsLessonId,
-        richtig: holat.togri,
-        gesamt: holat.jami,
-        durationMs: tugashDavomiyligi.current,
-        sessionId: holat.seansId,
-      },
-      {
-        // `ersatz`ning jimligi ataylab — o'rinbosar savol topilmasligi
-        // oddiy holat. Bu yerda esa yo'qotish HAQIQIY: ball yozilmasa,
-        // o'quvchining ilgarilashi saqlanmay qoladi va buni ko'rsatish
-        // shart — natija ekrani muvaffaqiyatning o'zi, shuning uchun
-        // faqat xato holatida tost chiqadi.
-        onError: (err) =>
-          toast.error(
-            getErrorMessage(err, "Natija saqlanmadi. Internetni tekshiring"),
-          ),
-      },
-    );
+    const yakun = {
+      lessonId: darsLessonId,
+      richtig: holat.togri,
+      gesamt: holat.jami,
+      durationMs: tugashDavomiyligi.current,
+      sessionId: holat.seansId,
+    };
+    oxirgiYakun.current = yakun;
+    abschluss.mutate(yakun, {
+      // `ersatz`ning jimligi ataylab — o'rinbosar savol topilmasligi
+      // oddiy holat. Bu yerda esa yo'qotish HAQIQIY: ball yozilmasa,
+      // o'quvchining ilgarilashi saqlanmay qoladi va buni ko'rsatish
+      // shart — natija ekrani muvaffaqiyatning o'zi, shuning uchun
+      // faqat xato holatida tost chiqadi.
+      onError: (err) =>
+        toast.error(
+          getErrorMessage(err, "Natija saqlanmadi. Internetni tekshiring"),
+        ),
+    });
     // Qasddan tushirilgan bog'liqliklar (har biri xavfsiz):
     // - `abschluss` — uning `.mutate`si react-query tomonidan barqaror
     //   ulanadi, render sayin o'zgarmaydi.
@@ -572,6 +579,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
     const { data } = seansNatija;
     if (!data) return;
     yozildi.current = false;
+    // Oldingi urinishning natijasi (masalan «Hali o'tmadingiz») yangi
+    // urinishning natija ekraniga o'tib qolmasin.
+    abschluss.reset();
     tugashDavomiyligi.current = null;
     // Yangi urinish uchun yangi "boshlang'ich" nuqta — `qaytaOtishMi: true`
     // orqali `keyingiBoshlangichSurati` OLDINGI boshlang'ichni e'tiborsiz
@@ -774,6 +784,31 @@ export function SeansEkrani(props: SeansEkraniProps) {
     );
   }
 
+  const natijaniQaytaYubor = () => {
+    if (!oxirgiYakun.current) return;
+    abschluss.mutate(oxirgiYakun.current, {
+      onError: (err) =>
+        toast.error(
+          getErrorMessage(err, "Natija saqlanmadi. Internetni tekshiring"),
+        ),
+    });
+  };
+
+  // Dars turi `useLernenLesson` dan; javobning o'zi `sinov` olib kelsa ham
+  // (masalan dars ma'lumoti hali yuklanmagan bo'lsa) sinov rejimi yoqiladi.
+  const sinovMi =
+    darsMi &&
+    (lesson.data?.kind === "UNIT_TEST" || abschluss.data?.sinov != null);
+  const sinovHolati: SinovHolati | null = !sinovMi
+    ? null
+    : abschluss.isError
+      ? { tur: "xato" }
+      : abschluss.data?.sinov
+        ? { tur: "tayyor", natija: abschluss.data.sinov }
+        : abschluss.data
+          ? null // eski server: `sinov` yo'q — oddiy natija ekrani
+          : { tur: "kutilmoqda" };
+
   // MUHIM: bu tekshiruv `!frage` dan OLDIN kelishi kerak. Oxirgi savol
   // javob berilganda `navbat` bo'shaydi va `joriy(holat)` `null`
   // qaytaradi — agar tartib teskari bo'lsa, natija ekrani hech qachon
@@ -781,8 +816,15 @@ export function SeansEkrani(props: SeansEkraniProps) {
   if (tugadimi(holat)) {
     return (
       <NatijaEkrani
-        togri={holat.togri}
-        jami={holat.jami}
+        // Yakuniy sinovda server hisobi ko'rsatiladi — sinov kartasi bilan
+        // bir ekranda ikki xil raqam chiqmasin (javob yo'qolgan urinishda
+        // mijoz sanog'i serverdan farq qilishi mumkin).
+        togri={
+          sinovHolati?.tur === "tayyor" ? sinovHolati.natija.togri : holat.togri
+        }
+        jami={
+          sinovHolati?.tur === "tayyor" ? sinovHolati.natija.jami : holat.jami
+        }
         durationMs={tugashDavomiyligi.current ?? Date.now() - seansBoshi}
         xatolar={holat.xatolar}
         unitId={unitId}
@@ -790,6 +832,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
         gesamtBoshida={boshlangichFortschritt.current?.gesamt ?? null}
         serieBoshida={boshlangichFortschritt.current?.serie ?? null}
         orinBoshida={boshlangichFortschritt.current?.wochePlatzGruppe ?? null}
+        sinov={sinovHolati}
+        onNatijaQaytaYubor={natijaniQaytaYubor}
       />
     );
   }

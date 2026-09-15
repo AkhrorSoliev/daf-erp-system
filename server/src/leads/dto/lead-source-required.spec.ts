@@ -21,7 +21,7 @@ const base = {
   sectionId: 'sec-1',
 };
 
-describe("lid manbasi majburiyligi", () => {
+describe('lid manbasi majburiyligi', () => {
   describe('CreateLeadDto', () => {
     it('manbasiz lidni rad etadi', async () => {
       expect(await errorsOn(CreateLeadDto, base, 'sourceId')).toHaveLength(1);
@@ -38,7 +38,11 @@ describe("lid manbasi majburiyligi", () => {
 
     it('manba bilan qabul qiladi', async () => {
       expect(
-        await errorsOn(CreateLeadDto, { ...base, sourceId: 'src-1' }, 'sourceId'),
+        await errorsOn(
+          CreateLeadDto,
+          { ...base, sourceId: 'src-1' },
+          'sourceId',
+        ),
       ).toHaveLength(0);
     });
   });
