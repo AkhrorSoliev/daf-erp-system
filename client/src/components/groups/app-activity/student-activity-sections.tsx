@@ -123,7 +123,7 @@ export function XaritaBolimi({ data }: { data: OquvchiFaolligi }) {
                   kun.kuzatilgan ? heatClass(kun.faolSoniya) : "bg-muted/40",
                 )}
               >
-                {kun.shugullangan && <span className="size-1.5 rounded-full bg-primary-foreground" />}
+                {kun.shugullangan && <span className="size-2 rounded-full bg-background ring-2 ring-primary" />}
               </div>
             </TooltipTrigger>
             <TooltipContent>
