@@ -731,6 +731,15 @@ The financial section lives under `/payments/*` with these sub-pages:
 - **Do NOT show `User.balance` as a staff salary figure.** It is a running ledger that only rises on accruals, falls only when a salary is marked PAID, and never subtracts advances already handed over. `MobileProfileHeader`'s `balance` prop is now for the **student** prepaid banner only; staff pass `salaryDueUserId` (+ `salaryDueScope="me"` on one's own profile).
 - Parity guard: `server/scripts/verify-per-user-salary-parity.ts` compares every teacher's table row against their single-row response field by field.
 
+### App Activity Tab (Group Detail) and Student Activity Panel
+
+- **Tab "Ilova faolligi"** (URL value `ilova`, period `?period=30`, default 7 omitted) on `/groups/[id]` → `groups/app-activity/group-app-activity-tab.tsx`. Visible to every role that opens the group page, teachers included — the server scopes a pure teacher to their own groups (`GET /groups/:id/app-activity`, `assertCallerMayTouchGroup`).
+- Every number comes from the server (`AppActivityStatsService`, design doc sections 3 and 6). **Do not recompute any metric client-side** — the group row, the student sheet and the profile tab must never disagree about one student.
+- The roster table is **deliberately not paginated** (design section 7): a teacher compares the whole group at a glance and groups are small. This is a conscious exception to the pagination rule.
+- Row click opens `student-activity-sheet.tsx`; the profile tab `students/student-app-activity-tab.tsx` (`?tab=ilova`, CEO/BD/Admin) renders the same `StudentActivityPanel`. There is one panel component — do not fork it.
+- Daily bar chart (seven or thirty days): bar height represents active time in seconds. Each bar has four possible states via theme tokens: `bg-primary` (practice day: ≥1 exercise answer or ≥5 min radio), `bg-primary/35` (opened and active but not practiced), `bg-muted` (tracked but never opened), `bg-muted/40` (before tracking started). In the 30-day heatmap grid below, a practice day is marked with a small ring-outlined dot (`size-2 rounded-full bg-background ring-2 ring-primary`) overlaid on the cell.
+- Accuracy and difficulty indicators use `yellow-*` theme colors (never `amber-*` — the latter is colourless in admin). This applies to accuracy percentage text and progress bars in `activity-format.ts` (`foizRangi`, `foizUstunRangi`) and to the word-learning status indicators in `student-activity-sections.tsx`.
+
 ### Lesson Changes Tab (Group Detail)
 
 - **Tab "Dars o'zgarishlari"** (URL value `bekor-qilingan`) on `/groups/[id]` → `lesson-changes-tab.tsx`. Visible to CEO / BD / Administrator (`canManage` gate). Covers both cancellations and reschedules.
@@ -748,7 +757,7 @@ The financial section lives under `/payments/*` with these sub-pages:
 
 ### Student Profile Tabs
 
-The student profile (`/students/profile/[id]`) has **8 tabs** (URL `?tab=<value>`):
+The student profile (`/students/profile/[id]`) has **10 tabs** (URL `?tab=<value>`):
 
 | Tab | URL value | Purpose |
 |-----|-----------|---------|
@@ -760,6 +769,8 @@ The student profile (`/students/profile/[id]`) has **8 tabs** (URL `?tab=<value>
 | SMS | `sms` | SMS history |
 | Tarix | `tarix` | Entity history (shared `EntityHistoryTable`) |
 | Lid | `lid` | Lead/source info |
+| Mock imtihonlar | `mock-imtihonlar` | Mock exam attempts and results |
+| Ilova | `ilova` | App usage: active time, radio, practice days, exercise accuracy, course progress (CEO/BD/Admin). Same panel as the group sheet |
 
 The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth below because they share an endpoint family and have a near-strict separation contract: every `Transaction` type belongs to exactly one tab — **except `LESSON_DEDUCTION`, which intentionally appears on both**. `LESSON_DEDUCTION` is a real money-flow row (it moves the balance), so it shows on "To'lovlar" to explain balance drops; it is also part of the lesson story, so it stays on "Darslar". `LESSON_CONSUMPTION` (amount=0) stays exclusive to "Darslar". Do not move any other type across tabs.
 

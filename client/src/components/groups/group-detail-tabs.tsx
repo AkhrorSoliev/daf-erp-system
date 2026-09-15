@@ -14,6 +14,7 @@ import { AttendanceTab } from "./attendance/attendance-tab";
 import { AttendanceStats } from "./attendance/attendance-stats";
 import { AttendanceDotsTab } from "./attendance/attendance-dots-tab";
 import { LessonChangesTab } from "./lesson-changes-tab";
+import { GroupAppActivityTab } from "./app-activity/group-app-activity-tab";
 import { EditStudentDrawer } from "@/components/students/edit-student-drawer";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
@@ -55,6 +56,8 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
   const commentsShown = useRef(false);
   const [cancellationsVisible, setCancellationsVisible] = useState(false);
   const cancellationsShown = useRef(false);
+  const [ilovaVisible, setIlovaVisible] = useState(false);
+  const ilovaShown = useRef(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>([]);
 
   const handleOptimisticAdd = useCallback((comment: CommentData) => {
@@ -109,6 +112,9 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
     } else if (tab === "bekor-qilingan" && !cancellationsShown.current) {
       cancellationsShown.current = true;
       setCancellationsVisible(true);
+    } else if (tab === "ilova" && !ilovaShown.current) {
+      ilovaShown.current = true;
+      setIlovaVisible(true);
     }
   }, [activeTab, fetchStudents]);
 
@@ -139,6 +145,10 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
       cancellationsShown.current = true;
       setCancellationsVisible(true);
     }
+    if (value === "ilova" && !ilovaShown.current) {
+      ilovaShown.current = true;
+      setIlovaVisible(true);
+    }
   };
 
   const handleStudentSaved = useCallback(() => {
@@ -158,6 +168,7 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
         <TabsTrigger value="davomat">Davomat</TabsTrigger>
         <TabsTrigger value="darslar">Darslar</TabsTrigger>
         <TabsTrigger value="oquvchilar">O&apos;quvchilar</TabsTrigger>
+        <TabsTrigger value="ilova">Ilova faolligi</TabsTrigger>
         <TabsTrigger value="materiallar">Materiallar</TabsTrigger>
         <TabsTrigger value="imtihonlar">Imtihonlar</TabsTrigger>
         {canManage && (
@@ -198,6 +209,11 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
             onStudentDeleted={(id) => setStudents((prev) => prev.filter((s) => s.id !== id))}
           />
         )}
+      </TabsContent>
+
+      {/* Ilova faolligi */}
+      <TabsContent value="ilova">
+        {ilovaVisible && <GroupAppActivityTab groupId={group.id} />}
       </TabsContent>
 
       {/* Materiallar */}

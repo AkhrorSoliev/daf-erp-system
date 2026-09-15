@@ -30,6 +30,6 @@ import { FortschrittService } from './fortschritt/fortschritt.service';
     UebungService,
     FortschrittService,
   ],
-  exports: [DafSeedService],
+  exports: [DafSeedService, FortschrittService],
 })
 export class DafModule {}

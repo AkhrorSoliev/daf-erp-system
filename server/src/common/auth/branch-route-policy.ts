@@ -315,6 +315,20 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
+      "Ilova faolligi statistikasi (dizayn 6.1, ADR-0020). Guruh route'lari " +
+      "`assertCallerMayTouchGroup` — sof o'qituvchi uchun biriktirilganlik, " +
+      "qolganlar uchun filial; yon oyna qo'shimcha ravishda o'quvchi shu " +
+      "guruhning faol a'zosi ekanini tekshiradi. Profil route'i " +
+      '`assertCallerMayTouchStudent`.',
+    routes: [
+      'GET /groups/:id/app-activity',
+      'GET /groups/:id/app-activity/students/:studentId',
+      'GET /students/:id/app-activity',
+    ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
       'Comments, gated by the record they hang off. `entityType` was a free ' +
       'string and NOTHING checked the entity — not that it existed, not the ' +
       'company, not the branch — so `?entityType=Student&entityId=<any id>` ' +

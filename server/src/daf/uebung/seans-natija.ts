@@ -18,11 +18,20 @@ export interface UrinishSatri {
   format: string | null;
   score: number | null;
   gradingStatus: 'GRADED' | 'PENDING' | 'UNGRADED';
+  createdAt?: Date;
 }
 
 export interface SeansYigindi {
   questionCount: number;
   firstTryCorrect: number;
+}
+
+export interface SavolNatijasi {
+  questionIndex: number;
+  format: string | null;
+  togri: boolean;
+  /** Savolning eng erta birinchi urinishi — kunlik savollar soni uchun. */
+  vaqt: Date | null;
 }
 
 /** Klientdagi `juftSoni()` bilan BIR XIL: PAAR 4, ZUORDNEN 6. */
@@ -35,7 +44,19 @@ function juftFormatmi(format: string | null): format is 'PAAR' | 'ZUORDNEN' {
   return format === 'PAAR' || format === 'ZUORDNEN';
 }
 
-export function seansYigindisi(satrlar: UrinishSatri[]): SeansYigindi {
+function engErta(urinishlar: UrinishSatri[]): Date | null {
+  let min: Date | null = null;
+  for (const u of urinishlar) {
+    if (u.createdAt && (min === null || u.createdAt < min)) min = u.createdAt;
+  }
+  return min;
+}
+
+/**
+ * Har savolning birinchi urinish natijasi (yuqoridagi qoidalar). Statistika
+ * (dizayn 6.3) va seans yakuni bitta qoidani shu yerdan oladi.
+ */
+export function savolNatijalari(satrlar: UrinishSatri[]): SavolNatijasi[] {
   const savollar = new Map<number, UrinishSatri[]>();
   for (const satr of satrlar) {
     if (satr.questionIndex == null || satr.attemptNo !== 1) continue;
@@ -45,10 +66,10 @@ export function seansYigindisi(satrlar: UrinishSatri[]): SeansYigindi {
     savollar.set(satr.questionIndex, royxat);
   }
 
-  let questionCount = 0;
-  let firstTryCorrect = 0;
-  for (const urinishlar of savollar.values()) {
+  const natija: SavolNatijasi[] = [];
+  for (const [questionIndex, urinishlar] of savollar) {
     const format = urinishlar[0].format;
+    const vaqt = engErta(urinishlar);
     if (juftFormatmi(format)) {
       // SHARTNOMA: bu tarmoq PAAR/ZUORDNEN qatorlari `juft()`dan kelgani
       // — har bosish o'z alohida qatori (yuqoridagi izohga qarang) — deb
@@ -65,16 +86,27 @@ export function seansYigindisi(satrlar: UrinishSatri[]): SeansYigindi {
       const xatoBor = urinishlar.some((u) => (u.score ?? 0) < 1);
       const togriSoni = urinishlar.filter((u) => u.score === 1).length;
       if (xatoBor) {
-        questionCount += 1;
+        natija.push({ questionIndex, format, togri: false, vaqt });
       } else if (togriSoni >= JUFT_SONI[format]) {
-        questionCount += 1;
-        firstTryCorrect += 1;
+        natija.push({ questionIndex, format, togri: true, vaqt });
       }
       // Xato yo'q, lekin juftlar yetmagan — hal bo'lmagan, sanalmaydi.
       continue;
     }
-    questionCount += 1;
-    if (urinishlar[0].score === 1) firstTryCorrect += 1;
+    natija.push({
+      questionIndex,
+      format,
+      togri: urinishlar[0].score === 1,
+      vaqt,
+    });
   }
-  return { questionCount, firstTryCorrect };
+  return natija.sort((a, b) => a.questionIndex - b.questionIndex);
+}
+
+export function seansYigindisi(satrlar: UrinishSatri[]): SeansYigindi {
+  const natija = savolNatijalari(satrlar);
+  return {
+    questionCount: natija.length,
+    firstTryCorrect: natija.filter((n) => n.togri).length,
+  };
 }
