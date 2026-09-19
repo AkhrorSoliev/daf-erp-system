@@ -52,6 +52,7 @@ import { LessonReschedulesModule } from './lesson-reschedules/lesson-reschedules
 import { BillingModule } from './billing/billing.module';
 import { ReceiptsModule } from './receipts/receipts.module';
 import { OutreachModule } from './outreach/outreach.module';
+import { AbsencePauseModule } from './absence-pause/absence-pause.module';
 import { PlannedAbsencesModule } from './planned-absences/planned-absences.module';
 import { PaymentPromisesModule } from './payment-promises/payment-promises.module';
 import { CallLogsModule } from './call-logs/call-logs.module';
@@ -125,6 +126,7 @@ import { validateEnv } from './config/env.validation';
     LessonReschedulesModule,
     ReceiptsModule,
     OutreachModule,
+    AbsencePauseModule,
     PlannedAbsencesModule,
     PaymentPromisesModule,
     CallLogsModule,

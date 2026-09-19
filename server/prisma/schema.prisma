@@ -142,6 +142,8 @@ enum NotificationType {
   LESSON_RESCHEDULED
   LESSON_CANCELLED
   PAYMENT_PROMISE_OVERDUE
+  ABSENCE_WARNING
+  ENROLLMENT_AUTO_PAUSED
 }
 
 enum TaskPriority {
@@ -3264,7 +3266,7 @@ model DafAttempt {
   /// to'g'ri javob 10 ball. `PAAR` to'rt so'zni birdan tekshirgani uchun
   /// 40 ballgacha berishi mumkin. Ball MIJOZDAN so'ralmaydi — u reytingga
   /// tushadi, ya'ni soxtalashtirish arziydigan bo'lardi.
-  points     Int     @default(0)
+  points Int @default(0)
 
   /// Seans konteksti (dizayn 5.3). Hammasi ixtiyoriy: eski klient va eski
   /// DiB yo'llari (`drill/check`, `attempts`) bularni yozmaydi — ular savolga
@@ -3379,30 +3381,30 @@ model StudentAppSession {
 /// ya'ni gap mashq emas, to'siq bo'lardi. Shuning uchun gap bo'limning
 /// O'Z lug'atidan yasaladi va validator har so'zni tekshiradi.
 model DafSentence {
-  id        Int               @id @default(autoincrement())
-  unitId    Int
-  order     Int
-  de        String
-  uz        String
+  id         Int               @id @default(autoincrement())
+  unitId     Int
+  order      Int
+  de         String
+  uz         String
   /// R2 kaliti — TTS bilan yasalgan ovoz.
-  audioKey  String?
-  wordCount Int
-  origin    DafSentenceOrigin
+  audioKey   String?
+  wordCount  Int
+  origin     DafSentenceOrigin
   /// Gapning BOSHQA to'g'ri so'z tartiblari (o'sha so'zlar, boshqa tartib):
   /// `SATZ_BAUEN` ularni ham to'g'ri deb qabul qiladi. «Ich wohne in
   /// Deutschland» va «In Deutschland wohne ich» — ikkalasi ham to'g'ri
   /// nemischa; bittasini talab qilish to'g'ri javobni jazolaydi. Manba —
   /// `saetze.json` dagi `akzeptiert`; bo'sh — tartib bitta.
-  akzeptiert String[]        @default([])
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-  sectionId Int?
-  tts       String?
+  akzeptiert String[]          @default([])
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  sectionId  Int?
+  tts        String?
   /// Barqaror kalit: `u01-s3-04` (bo'lim + bo'lim ichidagi tartib
   /// raqami). Seed shu bo'yicha yangilaydi/o'chiradi — `order` faqat
   /// displey uchun. Eski (yangi unit matnidan oldingi) qatorlarda
   /// `null` qoladi, shuning uchun ixtiyoriy.
-  sourceId  String?           @unique
+  sourceId   String?           @unique
 
   unit    DafUnit     @relation(fields: [unitId], references: [id])
   section DafSection? @relation(fields: [sectionId], references: [id])
@@ -3434,7 +3436,7 @@ model DafLexemeState {
   /// Qaytarish savoli SHUNDAN boshqa formatda quriladi: bir so'zni har
   /// safar bir xil tarzda so'rash uni tanish qiladi, bilinadigan emas —
   /// o'quvchi savolning shaklini yodlab qo'yadi, so'zni emas.
-  lastFormat String?
+  lastFormat   String?
 
   student Student   @relation(fields: [studentId], references: [id])
   lexeme  DafLexeme @relation(fields: [lexemeId], references: [id])
@@ -3461,4 +3463,58 @@ model DafLessonProgress {
   @@unique([studentId, lessonId])
   @@index([studentId])
   @@index([companyId])
+}
+
+/// Avtomatik pauza qoidasi — kompaniyaga bitta qator.
+///
+/// SCD2 EMAS (SalaryPeriodSetting dan farqi shu): bu sozlama prognozga ham,
+/// oylik hisobiga ham kirmaydi, shuning uchun o'tmishni "o'sha kuni chegara
+/// nechta edi" deb qayta o'qishning hojati yo'q. O'zgarish tarixi
+/// EntityHistory ga tushadi.
+///
+/// `enabled` sukut bo'yicha FALSE — migratsiya o'z-o'zidan hech kimni
+/// muzlatmasligi uchun. Yoqish CEO ning ongli qadami; 2026-07-14 da
+/// avtomatik guruh yopishni o'chirish uchun deploy kerak bo'lgan edi.
+///
+/// Company ga relation qo'yilmagan — SalaryPeriodSetting bilan bir xil
+/// naqsh; teskari maydon qo'shish Company modelini o'zgartirishni talab
+/// qilardi va bu yerda FK dan foyda yo'q.
+model AbsencePauseSetting {
+  id             String   @id @default(uuid())
+  companyId      Int      @unique
+  enabled        Boolean  @default(false)
+  warnThreshold  Int      @default(2)
+  pauseThreshold Int      @default(3)
+  dailyCap       Int      @default(10)
+  updatedById    Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+/// Yuborilgan ogohlantirishlar jurnali.
+///
+/// IKKI VAZIFASI BOR:
+///  1. Takrorni to'xtatadi. Cron har kuni yuradi, sanoq esa keyingi darsgacha
+///     o'zgarmaydi — kunlik marker bo'lsa o'quvchi har kuni bir xil xabar
+///     olardi. Unique kaliti `(enrollmentId, absenceDate)`: bir qoldirish —
+///     bir xabar.
+///  2. Samaradorlik jurnali. Bir oydan keyin "ogohlantirilganlarning
+///     nechtasi qaytdi?" savoliga javob beradigan yagona yozuv shu.
+///
+/// Enrollment ga relation qo'yilmagan — yozuvlar hech qachon qattiq
+/// o'chirilmaydi (soft delete), shuning uchun FK dan foyda yo'q.
+model AbsenceWarningLog {
+  id            String   @id @default(uuid())
+  enrollmentId  String
+  studentId     Int
+  groupId       String
+  absenceDate   DateTime @db.Date
+  streak        Int
+  sentToStudent Boolean  @default(false)
+  companyId     Int
+  createdAt     DateTime @default(now())
+
+  @@unique([enrollmentId, absenceDate])
+  @@index([companyId, createdAt])
+  @@index([studentId])
 }
