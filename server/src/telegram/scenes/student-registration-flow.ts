@@ -10,6 +10,7 @@ import {
   StudentLeadOriginService,
 } from '../../common/student-origin';
 import { generatePassword } from '../../common/utils/password.util';
+import { loginForPhone } from '../../common/auth/phone-account-rules';
 import { downloadFile } from '../utils/download.util';
 
 const STUDENT_ROLE_ID = 6;
@@ -173,12 +174,15 @@ export async function registerStudentFromTelegram(
     companyId: DEFAULT_COMPANY_ID,
   });
 
+  // Kirish nomi — telefon, agar bo'sh bo'lsa; aks holda bo'sh (yuqoridagi
+  // `createStudentUser` bilan bir xil sabab).
+  const login = await loginForPhone(prisma, data.phone);
   const plainPassword = generatePassword();
   const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
   const user = await prisma.user.create({
     data: {
-      login: data.phone,
+      login,
       password: hashedPassword,
       firstName: data.firstName,
       lastName: data.lastName,
