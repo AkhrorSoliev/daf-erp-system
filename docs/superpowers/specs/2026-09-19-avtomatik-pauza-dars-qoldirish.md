@@ -241,10 +241,16 @@ Har kompaniya uchun:
    ham shu holat bo'lsa — yana xabar; CEO chegarani oshiradi yoki ma'lumotni
    tuzatadi; shu orada admin `/outreach` dan qo'lda muzlatadi.
    Ogohlantirishlar chegaraga bog'liq emas — yuboriladi.
-4. Har bir nomzod alohida `Serializable` tranzaksiyada: yozuv va o'quvchi
-   **qayta o'qiladi** (hamon `ACTIVE` mi — admin shu paytda chiqarib
-   yuborgan bo'lishi mumkin), keyin tizim aktori bilan `FROZEN`. Bittasi
-   yiqilsa — log, qolganlari davom etadi; xatolar CEO xabariga qo'shiladi.
+4. Har bir nomzod alohida qayta ishlanadi: o'quvchi **qayta o'qiladi**
+   (hamon `ACTIVE` mi — admin shu paytda chiqarib yuborgan bo'lishi mumkin),
+   keyin tizim aktori bilan `FROZEN`. Bittasi yiqilsa — log, qolganlari
+   davom etadi; xatolar CEO xabariga qo'shiladi.
+   **Bitta yurish yaxlit tranzaksiya EMAS:** mavjud status oqimi
+   (`changeStatus`) tranzaksion emas — ichida faqat oldindan to'langan
+   darslarni qaytarish o'z `Serializable` tranzaksiyasida ketadi. Buni
+   yaxlitlash butun status oqimini qayta yozishni talab qiladi va bu ishning
+   doirasidan tashqarida; oqibati esa bezarar — nomzodlar bir-biridan
+   mustaqil.
 5. Ogohlantirishlar yuboriladi, `AbsenceWarningLog` ga yoziladi.
 
 ### 6. Pauzadan keyin
@@ -270,8 +276,9 @@ Har kompaniya uchun:
 - **Ko'chirish:** pauzadagi o'quvchini boshqa guruhga qo'shish —
   `enrollToGroup` faol yozuv topmaydi va yangi yozuv ochadi, muzlatilgan
   eski yozuv ochiq qoladi. Bu mavjud xatti-harakat (qo'lda muzlatilganlar
-  uchun ham shunday) va bu ishning doirasidan tashqarida; admin avval
-  faollashtirib, keyin ko'chirsin — dialog shuni aytadi.
+  uchun ham shunday) va bu ishning doirasidan tashqarida — ko'chirish
+  dialogiga **hech narsa qo'shilmaydi**. To'g'ri tartib: avval
+  faollashtirish, keyin ko'chirish.
 
 ### 7. Sozlamalar
 
@@ -318,10 +325,12 @@ ta'sir qiladi). O'qish — CEO / Branch Director.
 ### 8. `/outreach`
 
 - **«Ko'p dars qoldirganlar»** tabi: chegara `3` qat'iy edi — endi
-  sozlamadagi `warnThreshold` (2). Ustun: «pauzagacha N dars», belgi:
-  «Ogohlantirildi 12.09» (`AbsenceWarningLog` dan). Avtomatika yoqilgach bu
-  ro'yxat — adminning qo'ng'iroq ro'yxati: 3 ga yetganlar ertalab o'zi
-  pauzaga tushadi.
+  sozlamadagi `warnThreshold` (2). Javobga `pauseThreshold` qo'shiladi
+  («pauzagacha N dars» ustuni shundan hisoblanadi) va har qatorga
+  `warnedAt` — o'quvchi ogohlantirilgan sana (`AbsenceWarningLog` dan),
+  «Ogohlantirildi 12.09» belgisi uchun. Avtomatika yoqilgach bu ro'yxat —
+  adminning qo'ng'iroq ro'yxati: chegaraga yetganlar ertalab o'zi pauzaga
+  tushadi.
 - **«Pauzadagilar»** — yangi 4-tab, `GET /outreach/auto-paused`: `status =
   FROZEN` va `statusChangeReason` `Avtomatik pauza` bilan boshlanadigan
   o'quvchilar; qachon, necha darsdan keyin, oxirgi kelgan sanasi, qarzi,
