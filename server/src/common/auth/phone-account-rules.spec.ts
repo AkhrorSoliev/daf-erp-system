@@ -30,9 +30,11 @@ describe('findLiveStaffByPhone', () => {
     expect(select).toEqual({ id: true, firstName: true, lastName: true });
   });
 
-  it("topilmasa null", async () => {
+  it('topilmasa null', async () => {
     const findFirst = jest.fn().mockResolvedValue(null);
-    expect(await findLiveStaffByPhone(buildPrisma(findFirst), '901112233')).toBeNull();
+    expect(
+      await findLiveStaffByPhone(buildPrisma(findFirst), '901112233'),
+    ).toBeNull();
   });
 });
 
@@ -40,14 +42,16 @@ describe('loginForPhone', () => {
   it("nom bo'sh bo'lsa telefonni qaytaradi", async () => {
     const findFirst = jest.fn().mockResolvedValue(null);
 
-    expect(await loginForPhone(buildPrisma(findFirst), '901112233')).toBe('901112233');
+    expect(await loginForPhone(buildPrisma(findFirst), '901112233')).toBe(
+      '901112233',
+    );
     expect(findFirst.mock.calls[0][0].where).toEqual({
       login: '901112233',
       deletedAt: null,
     });
   });
 
-  it('nom tirik hisobda band bo\'lsa null - hech narsa uydirilmaydi', async () => {
+  it("nom tirik hisobda band bo'lsa null - hech narsa uydirilmaydi", async () => {
     const findFirst = jest.fn().mockResolvedValue({ id: 5 });
     expect(await loginForPhone(buildPrisma(findFirst), '901112233')).toBeNull();
   });
