@@ -7,6 +7,10 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { EntityHistoryService } from '../../common/entity-history';
 import {
+  CONTACT_NOT_OWN,
+  contactBelongsToSender,
+} from '../utils/contact-ownership';
+import {
   checkThrottle,
   findStudentByChatId,
   findStudentByPhone,
@@ -68,14 +72,11 @@ export function createPasswordResetScene(
     const chatId = String(ctx.chat.id);
     const contact = ctx.message.contact;
 
-    // Telegram only lets a user share their OWN contact through this button —
-    // we still defensively check that the contact's user_id matches the chat
-    // owner so a forwarded contact card cannot impersonate another user.
-    if (contact.user_id && contact.user_id !== ctx.from?.id) {
-      await ctx.reply(
-        "Iltimos, faqat o'zingizning telefon raqamingizni ulashing.",
-        Markup.removeKeyboard(),
-      );
+    // Faqat odamning O'Z tasdiqlangan raqami o'tadi. `user_id`siz karta ham
+    // rad etiladi — aks holda begona raqam yozilgan karta bilan boshqa
+    // o'quvchining hisobini o'ziga bog'lab, parolini olib bo'lardi.
+    if (!contactBelongsToSender(contact, ctx.from)) {
+      await ctx.reply(CONTACT_NOT_OWN, Markup.removeKeyboard());
       return;
     }
 
