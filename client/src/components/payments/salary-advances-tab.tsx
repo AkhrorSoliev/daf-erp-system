@@ -10,7 +10,7 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import api from "@/lib/api";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { SummaryCard } from "./summary-card";
-import { SalaryAddAdvanceDialog } from "./salary-add-advance-dialog";
+import { SalaryAdvanceDialog } from "./salary-advance-dialog";
 import { SalaryAdvanceCalendar } from "./salary-advance-calendar";
 import { SalaryAdvanceDayPanel } from "./salary-advance-day-panel";
 import { currentMonthKey } from "./salary-utils";
@@ -222,7 +222,7 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
         </div>
       )}
 
-      <SalaryAddAdvanceDialog
+      <SalaryAdvanceDialog
         open={addOpen}
         onOpenChange={(v) => {
           setAddOpen(v);

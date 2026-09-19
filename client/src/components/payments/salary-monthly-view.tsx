@@ -52,7 +52,7 @@ import {
 import { SalaryInactiveBadge } from "./salary-inactive-badge";
 import { SalarySettingsSheet } from "./salary-settings-sheet";
 import { SettleMonthDialog } from "./salary-settle-month-dialog";
-import { SalaryAddAdvanceDialog } from "./salary-add-advance-dialog";
+import { SalaryAdvanceDialog } from "./salary-advance-dialog";
 import {
   SalaryAdvanceBreakdownDrawer,
   type AdvanceTarget,
@@ -652,7 +652,7 @@ export function SalaryMonthlyView({
 
       {/* Avans qo'shish — CEO/BD */}
       {canPay && (
-        <SalaryAddAdvanceDialog
+        <SalaryAdvanceDialog
           open={addAdvanceOpen}
           onOpenChange={setAddAdvanceOpen}
           onSaved={bumpRefresh}
