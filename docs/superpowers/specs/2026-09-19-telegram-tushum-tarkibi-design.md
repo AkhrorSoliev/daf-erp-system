@@ -77,25 +77,31 @@ currentMonth + lateTotal`** (o'sha funksiyaning `return` i shunday qurilgan), ya
 uch qator har doim qo'shiladi — bu xususiyat matnni yozishda emas, xizmatning
 o'zida ta'minlangan.
 
-**Muhim tuzatish — sarlavha raqami ham shu manbadan olinadi.** Hozir
-«Tushum (haqiqiy)» qatori alohida `payment.aggregate` bilan hisoblanadi
-(`createdAt >= firstOfThisMonthUtc()`), taqsimot esa `getIncomeMonthAttribution`
-dan keladi (`startDate = firstOfThisMonthDate()` → oynasi UTC yarim tunidan).
-Ikki oyna **5 soatga** farq qiladi: oyning 1-kuni Toshkent vaqti bilan
-00:00–05:00 orasida tushgan to'lov birinchisiga kiradi, ikkinchisiga kirmaydi.
+**Sarlavha raqami ham shu manbadan olinadi.** Sabab bitta va oddiy: pastdagi
+uch qator yuqoridagi raqamning **bo'linishi**, shuning uchun ikkisi bitta
+obyektdan kelishi kerak. Boshqa manbadan olingan sarlavha ostida turgan
+taqsimot — qo'shilmay qolishi mumkin bo'lgan taqsimot.
 
-Prod bazasida o'lchandi (2026-09-19, faqat o'qildi):
+**Ikki manbaning farqi — oyna emas, asos.** Dastlab bu hujjatda «oynalar 5
+soatga farq qiladi» deb yozilgan edi; bu **noto'g'ri** (eski `resolvePeriod`
+ga qarab yozilgan — ADR-0016 dan keyin u ham Toshkent yarim tunidan boshlanadi,
+`common/finance/period-helpers.ts` → `tashkentRangeUtc`). Haqiqiy farq:
+`mtdIncome` — `Payment` jadvalining yig'indisi, `attribution.total` — o'sha
+oynadagi amaldagi ledger'ning `PAYMENT` qatorlari yig'indisi. Ular
+«har bir COMPLETED to'lovga aynan bitta tirik PAYMENT tranzaksiyasi to'g'ri
+keladi» sharti bajarilganda teng bo'ladi — bu shart
+`scripts/audit-finance-reconciliation.ts` dagi **G1** tekshiruvi (oxirgi prod
+yurishida o'tgan).
 
-| Tekshiruv | Natija |
-| --- | --- |
-| 2026-04 … 2026-09 oylarining 1-kuni, 00:00–05:00 oralig'idagi to'lovlar | **0 ta** (6 oyning hammasida) |
-| Oxirgi 120 kunda **00:00–04:59** (farq oynasi) ichida tushgan to'lovlar, istalgan kun | **6 ta** (soat 05:00 da yana 3 ta — ular oynadan tashqarida) |
+Shu sababli kod ikkalasini solishtirib turadi: teng bo'lmasa jurnalga
+ogohlantirish yoziladi (`logIncomeBasisDrift`), lekin xabar baribir chiqadi —
+jim qolgan kichik raqam aynan shu yerda ko'rinmay qolishi kerak emas.
 
-Ya'ni bugungacha farq chiqmagan, lekin kechasi to'lov tushishi real hodisa —
-oyning 1-kuniga to'g'ri kelsa, xabarda «31.2 + 11.3 ≠ 42.6» ko'rinishi mumkin edi.
-Shuning uchun bosma qator `attribution.total` dan olinadi. Yon foydasi: bu oyna
-saytdagi «Tushumlar» kartasining oynasi bilan bir xil, demak bot va sayt bitta
-raqamni aytadi.
+**Kartochkada oy ochiq aytiladi.** `getIncomeMonthAttribution` ni sanasiz
+chaqirish mumkin emas: `resolvePeriod` ning standart oyi **server vaqt
+mintaqasi** bo'yicha (Railway'da UTC), kartochka sarlavhasi esa Toshkent
+bo'yicha — oyning 1-kuni 00:00–05:00 orasida kartochka o'tgan oy pulini shu oy
+sarlavhasi ostida ko'rsatgan bo'lardi.
 
 **`DailyFinancialSnapshot` ga yoziladigan `mtdIncome` o'zgarmaydi** — eski
 `payment.aggregate` bo'yicha qoladi. Sababi: o'sha qatorni 23:40 dagi

@@ -436,6 +436,36 @@ describe('TelegramGroupDailyReportService', () => {
     expect(message).not.toContain('Eski qarzlar uchun');
   });
 
+  it('still splits the cash in a month with no lessons held yet', async () => {
+    // `collectionPct` is null exactly when `lessonsValue` is 0 (the 1st of the
+    // month, a holiday week). The composition of the cash is still a real
+    // answer, so it must survive the ratio's absence — the helper this replaced
+    // returned null here and would have dropped the split with it.
+    const state = defaultState();
+    const service = await buildService(makePrisma(state), makeSalary(state), {
+      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getIncomeMonthAttribution: jest
+        .fn()
+        .mockResolvedValue(
+          fullAttribution({ lessonsValue: 0, collectionPct: null }),
+        ),
+      getMonthlyExpectation: jest
+        .fn()
+        .mockResolvedValue({ expectedValue: 62_400_000 }),
+    });
+
+    const { message: raw } = await service.build(1001, null);
+    const message = raw.replace(/\u00A0/g, ' ');
+
+    expect(message).toContain("   Shu oy uchun: <b>31 200 000 so'm</b> (73%)");
+    // No lessons held → no ratio, and no "null%" anywhere near it.
+    expect(message).not.toContain("Shundan yig'ildi");
+    expect(message).not.toContain('null');
+    // The month-plan reading divides by the month EXPECTATION, not by the
+    // lessons held, so it is still answerable: 31 200 000 / 62 400 000.
+    expect(message).toContain("• Oy rejasidan yig'ildi: <b>50%</b>");
+  });
+
   it('keeps the income line on its old basis when attribution fails', async () => {
     const state = defaultState();
     const service = await buildService(makePrisma(state), makeSalary(state), {

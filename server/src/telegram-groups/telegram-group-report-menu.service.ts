@@ -274,27 +274,26 @@ export class TelegramGroupReportMenuService {
       // declaration mandatory. Passing `null` handed a branch-confined group
       // the other branch's figures.
       const branchIds = reportBranchIdsForGroup(group);
-      const o = await this.reportsFinancial.getFinancialOverview(
-        group.companyId,
-        { branchIds },
-      );
       const monthKey = this.currentMonth();
       const month = this.monthLabel(monthKey);
+      // Three independent reads — the split is new work (the daily report gets
+      // it for free, this card does not), so it runs alongside the other two
+      // rather than after them.
+      //
       // `o.netProfit` is the legacy cash figure (kassa tushumi − NAQD to'langan
       // oylik). Payroll is paid the following cycle, so its paid leg is ~0 and
       // profit reads far too high — the "+78M June" bug the code names itself.
       // Read the canonical figure the Foyda card and Excel «Sof foyda» use.
-      const canonical = await this.canonicalNetProfit(
-        group.companyId,
-        monthKey,
-        branchIds,
-      );
-      // Which months this month's cash actually belongs to — the same split the
-      // /payments/overview "Tushum tarkibi" drill-down and the 21:00 report
-      // show. No dates passed, exactly like `getFinancialOverview` above, so
-      // both cover the same whole month and the lines below decompose the
-      // figure they sit under rather than answering from a second window.
-      const split = await this.incomeSplit(group.companyId, branchIds);
+      const [o, canonical, split] = await Promise.all([
+        this.reportsFinancial.getFinancialOverview(group.companyId, {
+          branchIds,
+        }),
+        this.canonicalNetProfit(group.companyId, monthKey, branchIds),
+        // Which months this month's cash actually belongs to — the same split
+        // the /payments/overview "Tushum tarkibi" drill-down and the 21:00
+        // report show, over the month this card is titled with.
+        this.incomeSplit(group.companyId, branchIds, monthKey),
+      ]);
       const scopeLabel = branchLabelForGroup(
         group,
         await this.branchNames(group.companyId),
@@ -332,10 +331,18 @@ export class TelegramGroupReportMenuService {
    *
    * Returns null on failure: a broken split costs the card its three extra
    * lines, never the card itself.
+   *
+   * The month is passed EXPLICITLY, not left to default. `resolvePeriod` builds
+   * its default window from `now.getFullYear()/getMonth()` — the PROCESS
+   * timezone, which is UTC on Railway — while this card's title and every other
+   * figure on it resolve the month in Tashkent. Between 00:00 and 05:00
+   * Tashkent on the 1st those two disagree, and the card would have printed
+   * last month's cash under this month's heading.
    */
   private async incomeSplit(
     companyId: number,
     branchIds: ReportBranchIds,
+    monthKey: string,
   ): Promise<{
     total: number;
     currentMonth: number;
@@ -343,9 +350,10 @@ export class TelegramGroupReportMenuService {
     late: Array<{ label: string; amount: number }>;
   } | null> {
     try {
+      const { startDate, endDate } = this.monthRange(monthKey);
       const a = await this.reportsFinancial.getIncomeMonthAttribution(
         companyId,
-        { branchIds },
+        { branchIds, startDate, endDate },
       );
       return {
         total: a.total,

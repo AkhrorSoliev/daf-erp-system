@@ -36,7 +36,8 @@ import { buildIncomeSplitLines } from './utils/income-split.util';
  *   👥 O'quvchilar harakati — new vs departed students (net) + new leads
  *   🎓 Bugungi o'quv jarayoni — lessons held + attendance breakdown
  *   📌 Hozirgi holat        — active students + debt (with day-over-day ▲/▼)
- *   📅 Oy boshidan          — MTD income / expense / net + lesson collection %
+ *   📅 Oy boshidan          — MTD income (+ this-month / old-debt split, per
+ *                             month) / expense / net + lesson collection %
  *   💵 Ustozlar oyligi      — deserved / students-paid / center-funded, MTD
  *   🚩 Diqqat               — self-suppressing flags (refund / write-off / …)
  *
@@ -45,7 +46,10 @@ import { buildIncomeSplitLines } from './utils/income-split.util';
  * every day at 23:40, including the Sundays and holidays this report skips.
  *
  * Metric semantics mirror the CEO's `/payments/salary` and financial pages:
- *  - "Tushum (haqiqiy)" = cash actually received (COMPLETED payments), NOT billed.
+ *  - "Tushum (haqiqiy)" = cash actually received, NOT billed — read from
+ *    `getIncomeMonthAttribution` so the two lines under it («Shu oy uchun» and
+ *    «Eski qarzlar uchun», per month) decompose the figure printed above them.
+ *    The `Payment` aggregate of the same window still feeds the snapshot.
  *  - "Shu oyning darslari" / "Shundan yig'ildi" = the collection ratio, taken
  *    from `getIncomeMonthAttribution` so the bot and /payments/overview divide
  *    the SAME two figures. Never re-derive it here.
@@ -467,12 +471,18 @@ export class TelegramGroupDailyReportService {
     lines.push(`📅 <b>Oy boshidan (1–${dayNum} ${monthName})</b>`);
     // The income figure and its composition come from ONE attribution result,
     // so the lines underneath are a decomposition of the number above them.
-    // `mtdIncome` is a separate aggregate whose window starts at TASHKENT
-    // midnight while the attribution's starts at UTC midnight — five hours
-    // apart, so a payment made between 00:00 and 05:00 on the 1st lands in one
-    // and not the other, and printing one while splitting the other can fail to
-    // add up. The snapshot below keeps the aggregate on purpose: `DailySnapshot
-    // Cron` writes the same row on that basis, and the two writers must agree.
+    //
+    // The two figures share a window (both start at Tashkent midnight of the
+    // 1st) but not a BASIS: `mtdIncome` sums the `Payment` table, while
+    // `attribution.total` tallies the in-window PAYMENT rows of the effective
+    // ledger. They agree while every COMPLETED payment has exactly one active
+    // PAYMENT transaction of the same amount — the invariant
+    // `scripts/audit-finance-reconciliation.ts` checks as G1 — and `logIncome
+    // BasisDrift` below says so in the log if that ever stops holding.
+    //
+    // The snapshot keeps the aggregate on purpose: `DailySnapshotCron` writes
+    // the same row on that basis, and the two writers must agree.
+    this.logIncomeBasisDrift(companyId, attribution, mtdIncome);
     lines.push(
       `• Tushum (haqiqiy): <b>${formatSum(attribution ? attribution.total : mtdIncome)}</b>`,
     );
@@ -765,6 +775,30 @@ export class TelegramGroupDailyReportService {
    * matching the "Oy boshidan" block it sits in. Returns null on failure so the
    * lines are simply dropped.
    */
+  /**
+   * The printed income line reads the ledger tally; the `Payment` aggregate
+   * still feeds the snapshot. The two are the same money counted from two
+   * tables, so a difference is not a rounding artefact — it means a COMPLETED
+   * payment has no live PAYMENT transaction behind it (or carries a different
+   * amount or branch), which is the G1 invariant of
+   * `scripts/audit-finance-reconciliation.ts`.
+   *
+   * Logged rather than surfaced: the reader cannot act on it, and a report that
+   * starts explaining its own plumbing is a report nobody finishes. Nothing is
+   * suppressed either — a silently smaller headline is exactly the failure this
+   * makes findable.
+   */
+  private logIncomeBasisDrift(
+    companyId: number,
+    attribution: { total: number } | null,
+    mtdIncome: number,
+  ): void {
+    if (!attribution || attribution.total === mtdIncome) return;
+    this.logger.warn(
+      `Income basis drift for company ${companyId}: ledger ${attribution.total} vs payments ${mtdIncome} (diff ${attribution.total - mtdIncome}) — check audit-finance-reconciliation G1`,
+    );
+  }
+
   private async computeIncomeAttribution(
     companyId: number,
     branchIds: ReportBranchIds,

@@ -28,6 +28,29 @@ describe('buildIncomeSplitLines', () => {
     ]);
   });
 
+  it('prints an old-debt total the month rows below it add up to', () => {
+    const lines = plain(
+      buildIncomeSplitLines({
+        total: 10_000_000,
+        currentMonth: 4_000_000,
+        lateTotal: 6_000_000,
+        late: [
+          { label: 'Iyul 2026', amount: 4_500_000 },
+          { label: 'Iyun 2026', amount: 1_500_000 },
+        ],
+      }),
+    );
+    const sum = lines
+      .slice(2)
+      .map((l) =>
+        Number(l.match(/<b>([\d ]+) so'm<\/b>/)![1].replace(/ /g, '')),
+      )
+      .reduce((a, b) => a + b, 0);
+
+    expect(lines[1]).toContain("6 000 000 so'm");
+    expect(sum).toBe(6_000_000);
+  });
+
   it('keeps the two percentages at exactly 100', () => {
     const lines = plain(
       buildIncomeSplitLines({
