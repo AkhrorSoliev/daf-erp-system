@@ -20,7 +20,7 @@
 - Buyruqlar `server/` katalogidan: bitta spec — `npx jest <yo'l>`; tip — `npm run typecheck`; hammasi — `npm test`.
 - Har testdan oldin `npx prisma generate` bir marta bajarilgan bo'lishi kerak (worktree'da bajarilgan).
 - `git reset --hard` va yalang'och `git stash` ishlatilmaydi.
-- Commit xabari o'zbekcha, oxirida `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`.
+- Commit xabari o'zbekcha, oxirida `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`.
 
 ---
 
@@ -141,7 +141,7 @@ Expected: PASS (5 ta test)
 git add server/src/telegram/utils/contact-ownership.ts server/src/telegram/utils/contact-ownership.spec.ts
 git commit -m "Bot kontakti yuboruvchiniki ekanini aytadigan yordamchi
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -301,7 +301,7 @@ Expected: PASS (5 ta test)
 git add server/src/common/auth/phone-account-rules.ts server/src/common/auth/phone-account-rules.spec.ts
 git commit -m "Telefonga bitta xodim hisobi va kirish nomi qoidalari — bitta joyda
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -569,7 +569,7 @@ Expected: xatosiz. (`ctx.from` `Context` da `User | undefined`; `contact.user_id
 git add server/src/telegram/scenes/employee-registration.scene.ts server/src/telegram/scenes/employee-registration.scene.spec.ts
 git commit -m "Bot xodim sahnasi: o'quvchi va o'chirilgan hisob to'sqinlik qilmaydi, begona kontakt rad etiladi
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -730,7 +730,7 @@ Expected: PASS
 git add server/src/telegram/scenes/password-reset.scene.ts server/src/telegram/scenes/password-reset.scene.spec.ts
 git commit -m "Parol tiklash: user_id'siz kontakt kartasi endi o'tmaydi
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -990,7 +990,7 @@ Expected: PASS
 git add server/src/telegram/scenes/student-registration.scene.ts server/src/telegram/scenes/student-registration.scene.spec.ts server/src/telegram/scenes/mock-exam-registration.scene.ts server/src/telegram/scenes/mock-exam-registration.scene.spec.ts
 git commit -m "O'quvchi va mock-imtihon sahnalari ham faqat o'z kontaktini qabul qiladi
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -1148,7 +1148,7 @@ Expected: PASS
 git add server/src/teachers/teachers.service.ts server/src/teachers/teachers.service.spec.ts
 git commit -m "O'qituvchi qo'shish: o'quvchi raqami to'sqinlik qilmaydi, ikkinchi xodim hisobi ochilmaydi
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -1277,7 +1277,7 @@ Expected: PASS (barcha `users*` spec'lar — `users.service.spec.ts` ning `creat
 git add server/src/users/users.service.ts server/src/users/users-self-registration.spec.ts
 git commit -m "Xodim hisobi: bitta telefonga bitta ishlab turgan hisob — kafolat UsersService.create da
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -1409,7 +1409,7 @@ Expected: PASS
 git add server/src/students/students-write.service.ts server/src/students/students.service.spec.ts server/src/telegram/scenes/student-registration-flow.ts server/src/telegram/scenes/student-registration-flow.spec.ts
 git commit -m "O'quvchi kirish hisobi nom band bo'lsa ham ochiladi
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -1498,7 +1498,7 @@ Expected: PASS
 git add server/src/common/password-reset/portal-password-reset.service.ts server/src/common/password-reset/portal-password-reset.service.spec.ts
 git commit -m "Xodim parol tiklashi ham jurnalga tushadi
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -1635,7 +1635,7 @@ Expected: faqat yangi matnlar (har birida `phone` unique emasligi va `login` tir
 git add server/CLAUDE.md server/src/auth/auth.service.ts server/src/auth/telegram-oauth/telegram-oauth.service.ts server/src/common/password-reset/portal-password-reset.service.ts docs/adr/0021-bir-odam-har-rolga-alohida-hisob.md docs/adr/README.md docs/superpowers/specs/2026-09-19-xodim-hisobi-va-telegram-design.md docs/superpowers/plans/2026-09-19-xodim-hisobi-bosqich-1.md
 git commit -m "ADR-0021: bir odam — har rolga alohida hisob; «login unique emas» izohlari tuzatildi
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
 ---
