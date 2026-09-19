@@ -134,10 +134,9 @@ function MoneyOrDash({
   value: number | null;
   className?: string;
 }) {
-  if (value == null) return <span className="text-muted-foreground">—</span>;
-  return (
-    <span className={cn("tabular-nums", className)}>{formatPrice(value)}</span>
-  );
+  if (value == null)
+    return <span className="text-muted-foreground">—</span>;
+  return <span className={cn("tabular-nums", className)}>{formatPrice(value)}</span>;
 }
 
 /**
@@ -230,7 +229,8 @@ export function SalaryMonthlyView({
   const floorMonth = data?.floorMonth ?? FALLBACK_FLOOR;
   // The server clamps the month up to the floor — reflect that in the picker.
   const shownMonth = data?.month ?? month;
-  const monthHasNoData = rows.length > 0 && rows.every((r) => !r.hasLessonData);
+  const monthHasNoData =
+    rows.length > 0 && rows.every((r) => !r.hasLessonData);
 
   // How many payroll rows this month still carries as unpaid. Read from the
   // settle preview, not from the table: the table shows one payment per
@@ -286,7 +286,10 @@ export function SalaryMonthlyView({
           </SelectContent>
         </Select>
         {canPay && (
-          <Button className="shrink-0" onClick={() => setAddAdvanceOpen(true)}>
+          <Button
+            className="shrink-0"
+            onClick={() => setAddAdvanceOpen(true)}
+          >
             <HandCoins className="size-4" />
             Avans qo&apos;shish
           </Button>
@@ -318,208 +321,199 @@ export function SalaryMonthlyView({
         <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
           <Info className="mt-0.5 size-4 shrink-0" />
           <span>
-            {monthLabel(shownMonth)} — bu oy qo&apos;lda kiritilgan,
-            dars-by-dars ma&apos;lumot yo&apos;q. Faqat kiritilgan summa va
-            avans ko&apos;rsatilgan.
+            {monthLabel(shownMonth)} — bu oy qo&apos;lda kiritilgan, dars-by-dars
+            ma&apos;lumot yo&apos;q. Faqat kiritilgan summa va avans ko&apos;rsatilgan.
           </span>
         </div>
       )}
 
       {/* Teachers */}
       {filters.kim !== "staff" && (
-        <div className="overflow-hidden rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12 border-r">#</TableHead>
-                <TableHead>O&apos;qituvchi</TableHead>
-                <TableHead className="text-right">
-                  To&apos;liq ishlangan
-                </TableHead>
-                <TableHead className="text-right">
-                  O&apos;quvchilar to&apos;lagan
-                </TableHead>
-                <TableHead className="text-right">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger className="inline-flex items-center gap-1">
-                        Markaz qo&apos;shdi
-                        <Info className="size-3.5 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-64">
-                        Markazning o&apos;z hisobidan bergan qismi. Oy
-                        yopilmaguncha bu prognoz — o&apos;quvchi to&apos;lasa
-                        kamayadi; oy yopilgach markaz haqiqatan bergan summa
-                        bo&apos;lib qoladi. Keyin o&apos;quvchi to&apos;lasa,
-                        pul markazga qaytadi (pastdagi &laquo;undirildi&raquo;),
-                        ustozga qayta yozilmaydi.
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </TableHead>
-                <TableHead className="text-right">Avans</TableHead>
-                <TableHead className="text-right">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger className="inline-flex items-center gap-1">
-                        To&apos;lanishi kerak
-                        <Info className="size-3.5 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-56">
-                        O&apos;qituvchiga to&apos;lanishi kerak bo&apos;lgan sof
-                        summa: to&apos;liq ishlangan (markaz qo&apos;shimchasi
-                        bilan) − avans. Hisoblab bo&apos;lingan oylar uchun
-                        haqiqiy to&apos;langan summa ko&apos;rsatiladi.
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </TableHead>
-                <TableHead>Holat</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell colSpan={8}>
-                      <Skeleton className="h-9 w-full" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : rows.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={8}
-                    className="py-10 text-center text-sm text-muted-foreground"
-                  >
-                    Bu oyda o&apos;qituvchi topilmadi — oyni yoki qidiruvni
-                    o&apos;zgartirib ko&apos;ring.
+      <div className="overflow-hidden rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12 border-r">#</TableHead>
+              <TableHead>O&apos;qituvchi</TableHead>
+              <TableHead className="text-right">To&apos;liq ishlangan</TableHead>
+              <TableHead className="text-right">O&apos;quvchilar to&apos;lagan</TableHead>
+              <TableHead className="text-right">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger className="inline-flex items-center gap-1">
+                      Markaz qo&apos;shdi
+                      <Info className="size-3.5 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64">
+                      Markazning o&apos;z hisobidan bergan qismi. Oy yopilmaguncha
+                      bu prognoz — o&apos;quvchi to&apos;lasa kamayadi; oy yopilgach
+                      markaz haqiqatan bergan summa bo&apos;lib qoladi. Keyin
+                      o&apos;quvchi to&apos;lasa, pul markazga qaytadi (pastdagi
+                      &laquo;undirildi&raquo;), ustozga qayta yozilmaydi.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
+              <TableHead className="text-right">Avans</TableHead>
+              <TableHead className="text-right">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger className="inline-flex items-center gap-1">
+                      To&apos;lanishi kerak
+                      <Info className="size-3.5 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-56">
+                      O&apos;qituvchiga to&apos;lanishi kerak bo&apos;lgan sof summa:
+                      to&apos;liq ishlangan (markaz qo&apos;shimchasi bilan) − avans.
+                      Hisoblab bo&apos;lingan oylar uchun haqiqiy to&apos;langan summa
+                      ko&apos;rsatiladi.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
+              <TableHead>Holat</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell colSpan={8}>
+                    <Skeleton className="h-9 w-full" />
                   </TableCell>
                 </TableRow>
-              ) : (
-                rows.map((row, idx) => {
-                  const p = row.payment;
-                  return (
-                    <TableRow
-                      key={row.user.id}
-                      className={cn(p && "cursor-pointer")}
-                      onClick={p ? () => onOpenBreakdown(p.id) : undefined}
-                    >
-                      <TableCell className="border-r text-muted-foreground tabular-nums">
-                        {idx + 1}
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Link
-                          href={`/teachers/profile/${row.user.id}?tab=ish-haqi`}
-                          className="font-medium hover:underline"
-                        >
-                          {row.user.firstName} {row.user.lastName}
-                        </Link>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          #{row.user.id}
-                          {row.user.branch ? ` · ${row.user.branch.name}` : ""}
-                          {row.isFixedMonthly && (
-                            <Badge
-                              variant="outline"
-                              className="h-4 px-1 text-[10px] font-normal"
-                            >
-                              Oylik
-                            </Badge>
-                          )}
-                          {/* Faol emas ustoz bu yerga faqat puli qolganda
+              ))
+            ) : rows.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={8}
+                  className="py-10 text-center text-sm text-muted-foreground"
+                >
+                  Bu oyda o&apos;qituvchi topilmadi — oyni yoki qidiruvni
+                  o&apos;zgartirib ko&apos;ring.
+                </TableCell>
+              </TableRow>
+            ) : (
+              rows.map((row, idx) => {
+                const p = row.payment;
+                return (
+                  <TableRow
+                    key={row.user.id}
+                    className={cn(p && "cursor-pointer")}
+                    onClick={p ? () => onOpenBreakdown(p.id) : undefined}
+                  >
+                    <TableCell className="border-r text-muted-foreground tabular-nums">
+                      {idx + 1}
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Link
+                        href={`/teachers/profile/${row.user.id}?tab=ish-haqi`}
+                        className="font-medium hover:underline"
+                      >
+                        {row.user.firstName} {row.user.lastName}
+                      </Link>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        #{row.user.id}
+                        {row.user.branch ? ` · ${row.user.branch.name}` : ""}
+                        {row.isFixedMonthly && (
+                          <Badge
+                            variant="outline"
+                            className="h-4 px-1 text-[10px] font-normal"
+                          >
+                            Oylik
+                          </Badge>
+                        )}
+                        {/* Faol emas ustoz bu yerga faqat puli qolganda
                             tushadi — belgi "nega hali ro'yxatda?" degan
                             savolga javob beradi. */}
-                          {!row.user.isActive && <SalaryInactiveBadge />}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        <MoneyOrDash value={row.fullDeserved} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <MoneyOrDash value={row.covered} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <MoneyOrDash
-                          value={row.centerFunded}
-                          className={cn(
-                            row.centerFunded &&
-                              row.centerFunded > 0 &&
-                              "font-medium text-amber-700 dark:text-amber-400",
-                          )}
-                        />
-                      </TableCell>
-                      <TableCell
-                        className="text-right tabular-nums"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {row.advances > 0 ? (
-                          <button
-                            type="button"
-                            className="font-medium text-amber-700 hover:underline dark:text-amber-400"
-                            onClick={() =>
-                              setAdvanceTarget({
-                                userId: row.user.id,
-                                name: `${row.user.firstName} ${row.user.lastName}`,
-                                month: shownMonth,
-                              })
-                            }
-                          >
-                            {formatPrice(row.advances)}
-                          </button>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
+                        {!row.user.isActive && <SalaryInactiveBadge />}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      <MoneyOrDash value={row.fullDeserved} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <MoneyOrDash value={row.covered} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <MoneyOrDash
+                        value={row.centerFunded}
+                        className={cn(
+                          row.centerFunded &&
+                            row.centerFunded > 0 &&
+                            "font-medium text-amber-700 dark:text-amber-400",
                         )}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold tabular-nums">
-                        {formatPrice(row.netToPay)}
-                      </TableCell>
-                      <TableCell>
-                        {p ? (
-                          <Badge
-                            className={cn(
-                              "font-normal",
-                              SALARY_STATUS_BADGE[p.status],
-                            )}
-                          >
-                            {SALARY_STATUS_LABELS[p.status] ?? p.status}
-                          </Badge>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            Hisoblanmagan
-                          </span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-            {!isLoading && rows.length > 0 && totals && (
-              <TableFooter>
-                <TableRow>
-                  <TableCell className="border-r" />
-                  <TableCell className="font-semibold">Jami</TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums">
-                    {formatPrice(totals.fullDeserved)}
-                  </TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums">
-                    {formatPrice(totals.covered)}
-                  </TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums text-amber-700 dark:text-amber-400">
-                    {formatPrice(totals.centerFunded)}
-                  </TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums">
-                    {formatPrice(totals.advances)}
-                  </TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums">
-                    {formatPrice(totals.netToPay)}
-                  </TableCell>
-                  <TableCell />
-                </TableRow>
-              </TableFooter>
+                      />
+                    </TableCell>
+                    <TableCell
+                      className="text-right tabular-nums"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {row.advances > 0 ? (
+                        <button
+                          type="button"
+                          className="font-medium text-amber-700 hover:underline dark:text-amber-400"
+                          onClick={() =>
+                            setAdvanceTarget({
+                              userId: row.user.id,
+                              name: `${row.user.firstName} ${row.user.lastName}`,
+                              month: shownMonth,
+                            })
+                          }
+                        >
+                          {formatPrice(row.advances)}
+                        </button>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-semibold tabular-nums">
+                      {formatPrice(row.netToPay)}
+                    </TableCell>
+                    <TableCell>
+                      {p ? (
+                        <Badge
+                          className={cn("font-normal", SALARY_STATUS_BADGE[p.status])}
+                        >
+                          {SALARY_STATUS_LABELS[p.status] ?? p.status}
+                        </Badge>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          Hisoblanmagan
+                        </span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
-          </Table>
-        </div>
+          </TableBody>
+          {!isLoading && rows.length > 0 && totals && (
+            <TableFooter>
+              <TableRow>
+                <TableCell className="border-r" />
+                <TableCell className="font-semibold">Jami</TableCell>
+                <TableCell className="text-right font-semibold tabular-nums">
+                  {formatPrice(totals.fullDeserved)}
+                </TableCell>
+                <TableCell className="text-right font-semibold tabular-nums">
+                  {formatPrice(totals.covered)}
+                </TableCell>
+                <TableCell className="text-right font-semibold tabular-nums text-amber-700 dark:text-amber-400">
+                  {formatPrice(totals.centerFunded)}
+                </TableCell>
+                <TableCell className="text-right font-semibold tabular-nums">
+                  {formatPrice(totals.advances)}
+                </TableCell>
+                <TableCell className="text-right font-semibold tabular-nums">
+                  {formatPrice(totals.netToPay)}
+                </TableCell>
+                <TableCell />
+              </TableRow>
+            </TableFooter>
+          )}
+        </Table>
+      </div>
       )}
 
       {/* Markaz qo'shimchasi lifecycle (company-level) — shown only for months
@@ -535,8 +529,8 @@ export function SalaryMonthlyView({
                 </TooltipTrigger>
                 <TooltipContent className="max-w-64">
                   Markaz o&apos;quvchilar to&apos;lamagan qismni ustozlarga
-                  qo&apos;shib bergan. O&apos;quvchilar keyin to&apos;lasa, u
-                  pul markazga qaytadi (undirildi) va ustozga qayta yozilmaydi.
+                  qo&apos;shib bergan. O&apos;quvchilar keyin to&apos;lasa, u pul
+                  markazga qaytadi (undirildi) va ustozga qayta yozilmaydi.
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -629,8 +623,8 @@ export function SalaryMonthlyView({
           <span>Jami: {rows.length} ta o&apos;qituvchi</span>
           {rows.some((r) => !r.hasLessonData && r.payment) && (
             <span>
-              Qo&apos;lda kiritilgan oylar &quot;to&apos;liq / to&apos;lagan /
-              qo&apos;shilishi&quot; jamiga qo&apos;shilmagan
+              Qo&apos;lda kiritilgan oylar &quot;to&apos;liq / to&apos;lagan / qo&apos;shilishi&quot;
+              jamiga qo&apos;shilmagan
             </span>
           )}
         </div>
