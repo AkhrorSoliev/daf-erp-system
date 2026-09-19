@@ -36,6 +36,8 @@ import { BillingModule } from '../billing/billing.module';
     StudentPortalReadService,
     StudentPortalWriteService,
   ],
-  exports: [StudentsService, StudentEnrollmentService],
+  // `StudentsStatusService` — avtomatik pauza cron'i uchun
+  // (`pauseForAbsence`, tizim aktori bilan).
+  exports: [StudentsService, StudentEnrollmentService, StudentsStatusService],
 })
 export class StudentsModule {}
