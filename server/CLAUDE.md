@@ -481,6 +481,66 @@ The group "Davomat (nuqtalar)" tab (`attendance-dots-tab.tsx`) renders one dot p
 - **Consume:** `AttendanceSaveService.save` stamps `consumedAt` on the date's pending pre-marks inside the same Serializable transaction and writes an `Oldindan: sababli/sababsiz` marker onto the `EXCUSED` attendance note when the note is empty (teachers can't write notes themselves).
 - **Billing is untouched.** A pre-mark never bills. On finalize both kinds default to `EXCUSED` (no charge); if the student actually shows up the teacher marks `PRESENT` and normal billing applies. **Consequence:** a pre-announced `SABABSIZ` lands as `EXCUSED`, so it does NOT count toward the 3-strike removal streak (accepted product decision).
 
+#### Automatic pause after consecutive absences
+
+Three or more consecutive unexcused absences freeze the student, which stops
+the meter: they leave the attendance roster, so no lesson is billed and no
+salary accrues. Measured on production over 90 days, 2 812 `ABSENT` lessons
+cost 43,3 mln so'm of teacher salary — 7,7 mln of it fronted by the centre,
+4,3 mln never recovered. See ADR-0023 for the decision and its numbers.
+
+- **`AbsenceStreakService.computeStreaks` is the ONE definition of a streak.**
+  Both the `/outreach` list and the cron read it; a second copy is how the
+  list and the action would come to disagree. Three rules are NOT obvious and
+  all three live INSIDE the raw SQL, before the `rn <= 10` window — outside it,
+  a row being excluded would occupy one of the ten slots and hide a real
+  attendance behind it:
+  - **The counting window** (`streakWindowStart` = the later of
+    `startDate ?? createdAt` and `statusChangedAt`). Reactivation resets the
+    count. Without it the cron re-pauses a reactivated student the next
+    morning — they have not reached a lesson yet, so the last three rows are
+    still `ABSENT` — and the admin can never win that loop. It also stops a
+    student re-enrolled into the same group from inheriting the old absences.
+  - **A planned `SABABSIZ` absence counts**, even though it lands as `EXCUSED`.
+    Otherwise a student calls ahead every time and escapes the rule forever.
+    `SABABLI` (ill) still breaks the streak.
+  - **A cancelled lesson (`cancellationId`) is invisible** — the centre
+    cancelling a lesson is neither the student's fault nor a favour that
+    washes their streak away.
+- **The pause IS the existing student-level `FROZEN`**, run under a `system`
+  actor (`StatusChangeActor`, ADR-0008's pattern). The system path skips the
+  branch check and the reason list and writes `changedById = undefined`, so it
+  knows **only** `ACTIVE → FROZEN`. Do not widen it. A student who is no longer
+  `ACTIVE` when the cron reaches them is skipped silently — an admin may have
+  removed them between the sweep and the write.
+- **No enrollment-level pause exists, and none is needed.** One student holds
+  at most one ACTIVE enrollment (`enrollToGroup` closes an existing one as
+  `TRANSFERRED`); production has 449 active students and 449 active enrollments.
+- **The daily cap is FAIL-CLOSED.** Over `dailyCap` candidates in one run,
+  NOBODY is paused and every CEO is alerted. Do not "fix" this by pausing the
+  first N — which N is arbitrary. Warnings are deliberately NOT capped.
+- **`AbsenceWarningLog` is keyed `(enrollmentId, absenceDate)`** — one absence,
+  one message. The cron runs daily while the streak does not change until the
+  next lesson, so a per-day marker would re-send the same warning every
+  morning. The table doubles as the record that answers "how many of the
+  warned students came back?".
+- **The cron runs at 07:30 Tashkent, not at night.** The earliest lesson is
+  08:00 and the latest ends 20:00; 5,6% of attendance is corrected on a later
+  day, which an evening run would miss, and a student should not receive the
+  message at midnight.
+- **`AbsencePauseSetting.enabled` defaults to `false`** — the migration pauses
+  nobody by itself. Enabling is the CEO's separate, deliberate step, and
+  disabling is a toggle rather than a deploy (in 2026-07 turning off automatic
+  group closure required one).
+- **The setting lives in its own module** (`AbsencePauseSettingModule`) so
+  `OutreachModule` (which reads the threshold) and `AbsencePauseModule` (which
+  reads `AbsenceStreakService` for the cron) do not form a cycle. `forwardRef`
+  would hide the cycle; a small module removes it.
+- `/outreach` gains a **"Pauzadagilar"** tab reading `GET /outreach/auto-paused`,
+  which separates automatic freezes from the 209 manual ones by the reason
+  prefix (`AUTO_PAUSE_REASON_PREFIX` — one constant, read by both the writer
+  and the reader).
+
 ### Financial System
 
 The financial system is built on an **append-only ledger** principle — financial rows are never destructively edited. Corrections are written as reversal entries linked via `reversedTransactionId`.

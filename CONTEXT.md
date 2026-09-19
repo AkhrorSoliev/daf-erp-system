@@ -79,6 +79,15 @@ hamma o'quvchini qoplaydi. Ilgari uch xil ta'rif bor edi va 496 ta o'quvchi
 ikkala ro'yxatda ham turardi.
 `students/shared/active-student-where.ts`
 
+**Avtomatik pauza** — ketma-ket sababsiz dars qoldirgan o'quvchini tizim
+har kuni ertalab 07:30 da o'zi muzlatadi (`FROZEN`), guruhdan **chiqarmaydi**.
+Pauzadagi o'quvchi davomat ro'yxatidan chiqadi, ya'ni undan pul yechilmaydi
+va ustozga oylik yozilmaydi; mavjud qarziga tegilmaydi. Sanoq faollashtirish
+sanasidan boshlanadi, oldindan aytilgan «sababsiz» qoldirish sanaladi, bekor
+qilingan dars esa umuman ko'rinmaydi. Chegara CEO sozlamasida (ADR-0023).
+`absence-pause/absence-auto-pause.cron.service.ts`,
+`outreach/absence-streak.service.ts`
+
 **Lead** — hali o'quvchi bo'lmagan potensial mijoz. Kanban doskasida yuradi;
 ustun = filial. O'chirish = `LOST` holatiga o'tkazish + majburiy sabab.
 `leads/leads.service.ts`
