@@ -259,8 +259,11 @@ describe('TelegramGroupDailyReportService', () => {
   it('prints the shared collection ratio and the month-end expectation', async () => {
     const state = defaultState();
     const getIncomeMonthAttribution = jest.fn().mockResolvedValue({
-      lessonsValue: 173_783_991,
+      total: 142_000_000,
       currentMonth: 142_000_000,
+      lateTotal: 0,
+      late: [],
+      lessonsValue: 173_783_991,
       collectionPct: 82,
     });
     const getMonthlyExpectation = jest
@@ -338,6 +341,116 @@ describe('TelegramGroupDailyReportService', () => {
 
     expect(message).toContain('Oy oxiriga kutilyapti');
     expect(message).not.toContain("Oy rejasidan yig'ildi");
+  });
+
+  /**
+   * The shape the real `getIncomeMonthAttribution` returns. Kept whole so a
+   * test never asserts against a half-mock the service could not receive in
+   * production.
+   */
+  function fullAttribution(overrides: Record<string, unknown> = {}) {
+    return {
+      total: 42_500_000,
+      currentMonth: 31_200_000,
+      lateTotal: 11_300_000,
+      late: [
+        { monthKey: '2026-06', label: 'Iyun 2026', amount: 7_900_000 },
+        { monthKey: '2026-05', label: 'May 2026', amount: 3_400_000 },
+      ],
+      lessonsValue: 40_000_000,
+      collectionPct: 78,
+      ...overrides,
+    };
+  }
+
+  it('breaks the month income into this-month vs each older month', async () => {
+    const state = defaultState();
+    const service = await buildService(makePrisma(state), makeSalary(state), {
+      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getIncomeMonthAttribution: jest.fn().mockResolvedValue(fullAttribution()),
+      getMonthlyExpectation: jest.fn().mockResolvedValue({ expectedValue: 1 }),
+    });
+
+    const { message: raw } = await service.build(1001, null);
+    const message = raw.replace(/ /g, ' ');
+
+    // The headline comes from the SAME object as the split, so the figures
+    // printed here always add up in front of the reader.
+    expect(message).toContain("• Tushum (haqiqiy): <b>42 500 000 so'm</b>");
+    expect(message).toContain("   Shu oy uchun: <b>31 200 000 so'm</b> (73%)");
+    expect(message).toContain(
+      "   Eski qarzlar uchun: <b>11 300 000 so'm</b> (27%)",
+    );
+    // EVERY older month is listed (CEO decision), newest first.
+    expect(message).toContain("      Iyun 2026 — <b>7 900 000 so'm</b>");
+    expect(message).toContain("      May 2026 — <b>3 400 000 so'm</b>");
+    expect(message.indexOf('Iyun 2026')).toBeLessThan(
+      message.indexOf('May 2026'),
+    );
+  });
+
+  it('adds the split up to the printed income figure', async () => {
+    const state = defaultState();
+    const service = await buildService(makePrisma(state), makeSalary(state), {
+      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getIncomeMonthAttribution: jest.fn().mockResolvedValue(fullAttribution()),
+      getMonthlyExpectation: jest.fn().mockResolvedValue({ expectedValue: 1 }),
+    });
+
+    const { message: raw } = await service.build(1001, null);
+    const message = raw.replace(/ /g, ' ');
+    const money = (label: string) =>
+      Number(
+        message
+          .match(new RegExp(`${label}: <b>([\\d ]+) so'm</b>`))![1]
+          .replace(/ /g, ''),
+      );
+    // Only the indented month rows — anchored, because the debt line elsewhere
+    // in the report is also "… — <b>N so'm</b>" and would be swept in.
+    const monthSum = [
+      ...message.matchAll(/^ {6}.+ — <b>([\d ]+) so'm<\/b>$/gm),
+    ].reduce((sum, m) => sum + Number(m[1].replace(/ /g, '')), 0);
+
+    expect(money('Shu oy uchun') + monthSum).toBe(
+      money('Tushum \\(haqiqiy\\)'),
+    );
+  });
+
+  it('says there is no old debt in one line when none was settled', async () => {
+    const state = defaultState();
+    const service = await buildService(makePrisma(state), makeSalary(state), {
+      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getIncomeMonthAttribution: jest
+        .fn()
+        .mockResolvedValue(
+          fullAttribution({ total: 31_200_000, lateTotal: 0, late: [] }),
+        ),
+      getMonthlyExpectation: jest.fn().mockResolvedValue({ expectedValue: 1 }),
+    });
+
+    const { message } = await service.build(1001, null);
+
+    expect(message).toContain(
+      "Hammasi shu oy uchun — eski qarz uchun to'lov yo'q",
+    );
+    expect(message).not.toContain('Eski qarzlar uchun');
+  });
+
+  it('keeps the income line on its old basis when attribution fails', async () => {
+    const state = defaultState();
+    const service = await buildService(makePrisma(state), makeSalary(state), {
+      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getIncomeMonthAttribution: jest.fn().mockRejectedValue(new Error('boom')),
+      getMonthlyExpectation: jest.fn().mockResolvedValue({ expectedValue: 1 }),
+    });
+
+    const { message: raw } = await service.build(1001, null);
+    const message = raw.replace(/ /g, ' ');
+
+    // state.mtdIncome — the pre-existing aggregate, untouched by this feature.
+    expect(message).toContain("• Tushum (haqiqiy): <b>280 000 000 so'm</b>");
+    expect(message).not.toContain('Shu oy uchun');
+    expect(message).not.toContain('Eski qarzlar uchun');
   });
 
   it('queries Attendance.date as a single DATE, never a {gte,lt} window (regression)', async () => {
