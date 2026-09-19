@@ -28,7 +28,7 @@ const MAX_CANDIDATES = 10;
  *
  * IMPORTANT: `User.phone` is not unique (and `login` may be null), so a phone
  * can map to several accounts (siblings, a shared number, or one person with
- * one account per role — ADR-0021). Within the allowed roles we pick the
+ * one account per role — ADR-0022). Within the allowed roles we pick the
  * status ACTIVE/INACTIVE account that was most recently updated — the same
  * tiebreak `validateUser` uses.
  *

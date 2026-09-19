@@ -272,7 +272,7 @@ export class TeachersService {
 
     // Faqat ISHLAB TURGAN XODIM hisobi to'xtatadi. O'quvchi hisobi (odam
     // o'quvchidan ustozga aylanayotgan bo'lishi mumkin) va o'chirilgan
-    // hisob — yo'q (ADR-0021).
+    // hisob — yo'q (ADR-0022).
     const liveStaff = await findLiveStaffByPhone(this.prisma, dto.phone);
     if (liveStaff) {
       throw new BadRequestException(

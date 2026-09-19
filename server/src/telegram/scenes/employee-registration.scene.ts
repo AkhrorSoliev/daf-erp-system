@@ -239,7 +239,7 @@ export function createEmployeeRegistrationScene(
 
     // Faqat ISHLAB TURGAN XODIM hisobi to'xtatadi. O'quvchi hisobi yoki
     // o'chirilgan hisob — yo'q: bu odam o'quvchidan ustozga aylanayotgan
-    // yoki sinov hisobi o'chirilgan odam bo'lishi mumkin (ADR-0021). Bu
+    // yoki sinov hisobi o'chirilgan odam bo'lishi mumkin (ADR-0022). Bu
     // erta tekshiruv — rasm yuklatib keyin rad etmaslik uchun; kafolat
     // `UsersService.create` da.
     const liveStaff = await findLiveStaffByPhone(prisma, phone);

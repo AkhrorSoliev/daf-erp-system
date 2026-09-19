@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 /**
  * Tizimga kira oladigan xodim rollari: CEO, Filial direktori, Administrator,
  * O'qituvchi, Kassir. O'quvchi (6) bu yerda YO'Q — o'quvchi hisobi xodim
- * hisobi bilan bitta telefonda yonma-yon yashaydi (ADR-0021).
+ * hisobi bilan bitta telefonda yonma-yon yashaydi (ADR-0022).
  */
 export const STAFF_ROLE_IDS = [1, 2, 3, 4, 5] as const;
 

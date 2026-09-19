@@ -41,6 +41,8 @@ describe('SalaryAdvanceCalendarService', () => {
         firstName: 'Admin',
         lastName: 'A',
       },
+      settledBySalaryPaymentId: over.settledBySalaryPaymentId ?? null,
+      settledBySalaryPayment: over.settledBySalaryPayment ?? null,
     };
   }
 
@@ -255,5 +257,35 @@ describe('SalaryAdvanceCalendarService', () => {
       expect(res.totals.outsideRoster).toEqual({ count: 0, total: 0 });
       expect(prisma.employeeSalaryConfig.findMany).not.toHaveBeenCalled();
     });
+  });
+  it('hisoblangan avansni belgilaydi va oylik davrini qaytaradi', async () => {
+    prisma.expense.findMany.mockResolvedValue([
+      advance({ id: 'open' }),
+      advance({
+        id: 'settled',
+        settledBySalaryPaymentId: 'sp-1',
+        settledBySalaryPayment: {
+          periodStart: new Date('2026-07-01T00:00:00.000Z'),
+          periodEnd: new Date('2026-07-31T00:00:00.000Z'),
+        },
+      }),
+    ]);
+
+    const res = await service.getCalendar({ month: '2026-07' }, 1, 10001);
+
+    const open = res.advances.find((a) => a.id === 'open');
+    const settled = res.advances.find((a) => a.id === 'settled');
+
+    expect(open?.settled).toBe(false);
+    expect(open?.settledPeriodStart).toBeNull();
+    expect(open?.settledPeriodEnd).toBeNull();
+
+    expect(settled?.settled).toBe(true);
+    expect(settled?.settledPeriodStart).toEqual(
+      new Date('2026-07-01T00:00:00.000Z'),
+    );
+    expect(settled?.settledPeriodEnd).toEqual(
+      new Date('2026-07-31T00:00:00.000Z'),
+    );
   });
 });

@@ -32,6 +32,7 @@ import {
   type EmployeeOption,
 } from "./employee-advance-select";
 import { EXPENSE_METHOD_LABELS } from "./expenses-filter-bar";
+import type { EditableAdvance } from "./advance-row-actions";
 
 interface Props {
   open: boolean;
@@ -43,21 +44,31 @@ interface Props {
    * «Bu kunga avans qo'shish» bosilganda o'sha kun keladi. Berilmasa — bugun.
    */
   defaultDate?: Date | null;
+  /**
+   * Berilsa — tahrirlash rejimi. Xodim o'zgarmaydi (CEO qarori): noto'g'ri
+   * odamga yozilgan avans o'chirilib, to'g'ri odamga yangisi yoziladi —
+   * shunda tarixda ikkita aniq harakat qoladi.
+   */
+  advance?: EditableAdvance | null;
 }
 
 /**
- * "Avans qo'shish" — records a TEACHER_ADVANCE expense from the Ish haqi page.
- * The advance is still stored as an Expense (so the salary settlement logic is
- * unchanged); it just no longer lives on the Xarajatlar page. The recipient's
- * "Avans" cell in the salary table updates once this saves.
+ * Avans oynasi — ikki rejimda. `advance` berilmasa yangi TEACHER_ADVANCE
+ * xarajati yoziladi; berilsa mavjudi tahrirlanadi (summa, sana, naqd/karta,
+ * izoh — xodim emas). Bitta oyna, chunki maydonlar, summa formatlash va
+ * validatsiya bir xil: ikki nusxa muqarrar ravishda bir-biridan ajralib
+ * ketardi. Avans Expense bo'lib saqlanadi, shuning uchun oylik hisobidagi
+ * ushlab qolish mantig'i o'zgarmaydi.
  */
-export function SalaryAddAdvanceDialog({
+export function SalaryAdvanceDialog({
   open,
   onOpenChange,
   onSaved,
   defaultDate,
+  advance,
 }: Props) {
   const { selectedBranch } = useBranchSwitcher();
+  const isEdit = !!advance;
 
   const [relatedUserId, setRelatedUserId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD">("CASH");
@@ -69,12 +80,20 @@ export function SalaryAddAdvanceDialog({
   // Reset to defaults every time the dialog opens.
   useEffect(() => {
     if (!open) return;
+    if (advance) {
+      setRelatedUserId("");
+      setPaymentMethod(advance.paymentMethod);
+      setAmount(advance.amount.toLocaleString("uz-UZ"));
+      setDescription(advance.description);
+      setDate(new Date(`${advance.date}T00:00:00`));
+      return;
+    }
     setRelatedUserId("");
     setPaymentMethod("CASH");
     setAmount("");
     setDescription("Avans");
     setDate(defaultDate ?? new Date());
-  }, [open, defaultDate]);
+  }, [open, defaultDate, advance]);
 
   // Staff who can receive an advance — loaded only while the dialog is open.
   const { data: employees, isLoading: employeesLoading } = useQuery({
@@ -88,7 +107,7 @@ export function SalaryAddAdvanceDialog({
           },
         })
         .then((r) => r.data.data),
-    enabled: open,
+    enabled: open && !isEdit,
   });
 
   const rawAmount = parseInt(amount.replace(/\D/g, ""), 10) || 0;
@@ -99,22 +118,38 @@ export function SalaryAddAdvanceDialog({
   };
 
   const canSubmit =
-    !!relatedUserId && rawAmount >= 1 && !!description.trim() && !!date;
+    (isEdit || !!relatedUserId) &&
+    rawAmount >= 1 &&
+    !!description.trim() &&
+    !!date;
 
   const handleSubmit = async () => {
     if (!canSubmit || !date) return;
     setSubmitting(true);
     try {
-      await api.post("/expenses", {
-        category: "TEACHER_ADVANCE",
-        paymentMethod,
-        amount: rawAmount,
-        description: description.trim(),
-        date: format(date, "yyyy-MM-dd"),
-        relatedUserId: parseInt(relatedUserId, 10),
-        branchId: selectedBranch?.id,
-      });
-      toast.success("Avans qo'shildi");
+      if (advance) {
+        // Faqat to'rt maydon. `category`, `relatedUserId` va `branchId`
+        // ataylab yuborilmaydi — yuborilmagan maydon o'zgarmaydi, va server
+        // avansning xodimini almashtirishni baribir rad etadi.
+        await api.patch(`/expenses/${advance.id}`, {
+          paymentMethod,
+          amount: rawAmount,
+          description: description.trim(),
+          date: format(date, "yyyy-MM-dd"),
+        });
+        toast.success("Avans yangilandi");
+      } else {
+        await api.post("/expenses", {
+          category: "TEACHER_ADVANCE",
+          paymentMethod,
+          amount: rawAmount,
+          description: description.trim(),
+          date: format(date, "yyyy-MM-dd"),
+          relatedUserId: parseInt(relatedUserId, 10),
+          branchId: selectedBranch?.id,
+        });
+        toast.success("Avans qo'shildi");
+      }
       onOpenChange(false);
       onSaved();
     } catch (err: unknown) {
@@ -133,21 +168,38 @@ export function SalaryAddAdvanceDialog({
     >
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         <DialogHeader className="border-b px-6 py-4">
-          <DialogTitle>Avans qo&apos;shish</DialogTitle>
+          <DialogTitle>
+            {isEdit ? "Avansni tahrirlash" : "Avans qo'shish"}
+          </DialogTitle>
         </DialogHeader>
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
           <div className="space-y-2">
             <Label>Xodim</Label>
-            <EmployeeAdvanceSelect
-              value={relatedUserId}
-              onChange={setRelatedUserId}
-              employees={employees ?? []}
-              loading={employeesLoading}
-            />
-            <p className="text-xs text-muted-foreground">
-              Avans keyingi oylik hisobida ushbu xodimning oyligidan avtomatik
-              ushlab qolinadi
-            </p>
+            {isEdit ? (
+              <>
+                <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                  {advance?.employeeName}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Xodim o&apos;zgarmaydi. Avans boshqa odamga yozilgan
+                  bo&apos;lsa — buni o&apos;chirib, to&apos;g&apos;ri xodimga
+                  yangi avans yozing.
+                </p>
+              </>
+            ) : (
+              <>
+                <EmployeeAdvanceSelect
+                  value={relatedUserId}
+                  onChange={setRelatedUserId}
+                  employees={employees ?? []}
+                  loading={employeesLoading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Avans keyingi oylik hisobida ushbu xodimning oyligidan
+                  avtomatik ushlab qolinadi
+                </p>
+              </>
+            )}
           </div>
           <div className="space-y-2">
             <Label>To&apos;lov turi</Label>
@@ -198,6 +250,12 @@ export function SalaryAddAdvanceDialog({
               onChange={(d) => setDate(d ?? null)}
               placeholder="Sanani tanlang"
             />
+            {isEdit && (
+              <p className="text-xs text-muted-foreground">
+                Sana o&apos;zgarsa avans hisobotlarda yangi kunga ko&apos;chadi,
+                Kassa oqimidagi harakat esa kiritilgan kunida qoladi.
+              </p>
+            )}
           </div>
         </div>
         <DialogFooter className="border-t px-6 py-4">

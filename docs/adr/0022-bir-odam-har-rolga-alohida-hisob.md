@@ -1,4 +1,4 @@
-# ADR-0021: Bir odam — har rolga alohida hisob; kimlik telefon emas, bog'lanish
+# ADR-0022: Bir odam — har rolga alohida hisob; kimlik telefon emas, bog'lanish
 
 **Holat:** Qabul qilingan · **Sana:** 2026-09-19
 

@@ -529,7 +529,7 @@ export class UsersService {
       },
     );
 
-    // Bitta telefonga bitta ISHLAB TURGAN xodim hisobi (ADR-0021). Qoida
+    // Bitta telefonga bitta ISHLAB TURGAN xodim hisobi (ADR-0022). Qoida
     // shu yerda turadi, chunki xodim hisobi ochiladigan har ikki eshik —
     // admin formasi ham, bot ham — shu funksiyadan o'tadi. O'quvchi hisobi
     // va o'chirilgan hisob to'sqinlik qilmaydi; rolsiz xodimga qoida
