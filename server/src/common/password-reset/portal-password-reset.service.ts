@@ -99,8 +99,12 @@ export class PortalPasswordResetService {
   }
 
   /**
-   * Hash and set a new password on the user, then record a Student audit entry.
-   * `channelLabel` describes the reset source, e.g. "SMS orqali tiklandi".
+   * Parolni xeshlab yozadi va tiklashni jurnalga tushiradi.
+   *
+   * NEGA ikki yozuv: o'quvchiniki o'quvchi kartochkasida (`Student`) ko'rinadi,
+   * xodimniki xodim yozuvida (`User`). Ilgari xodim parolini SMS orqali
+   * tiklash umuman iz qoldirmasdi. `channelLabel` — manba, masalan
+   * "SMS orqali tiklandi".
    */
   async applyNewPassword(
     target: ResettableTarget,
@@ -113,15 +117,13 @@ export class PortalPasswordResetService {
       data: { password: hashed },
     });
 
-    if (target.studentId) {
-      await this.entityHistory.recordUpdate({
-        entityType: 'Student',
-        entityId: target.studentId,
-        oldValues: { parol: '***' },
-        newValues: { parol: channelLabel },
-        changedById: target.userId,
-        companyId: target.companyId ?? undefined,
-      });
-    }
+    await this.entityHistory.recordUpdate({
+      entityType: target.studentId ? 'Student' : 'User',
+      entityId: target.studentId ?? target.userId,
+      oldValues: { parol: '***' },
+      newValues: { parol: channelLabel },
+      changedById: target.userId,
+      companyId: target.companyId ?? undefined,
+    });
   }
 }
