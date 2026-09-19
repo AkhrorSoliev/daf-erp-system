@@ -26,10 +26,11 @@ const MAX_CANDIDATES = 10;
  * across accounts resets the right one. `null`/undefined = no role restriction
  * (localhost/dev).
  *
- * IMPORTANT: neither `User.login`/`phone` is unique, so a phone can map to
- * several accounts (siblings, a shared number, or one person with multiple
- * roles). Within the allowed roles we pick the status ACTIVE/INACTIVE account
- * that was most recently updated — the same tiebreak `validateUser` uses.
+ * IMPORTANT: `User.phone` is not unique (and `login` may be null), so a phone
+ * can map to several accounts (siblings, a shared number, or one person with
+ * one account per role — ADR-0021). Within the allowed roles we pick the
+ * status ACTIVE/INACTIVE account that was most recently updated — the same
+ * tiebreak `validateUser` uses.
  *
  * That tiebreak is safe for LOGIN, where the caller proves which account is
  * theirs by knowing its password. It is not safe ACROSS COMPANIES: this is a

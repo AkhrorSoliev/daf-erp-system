@@ -122,8 +122,10 @@ export class AuthService {
    * Xuddi shu shart bilan BIR NECHTA mos akkauntni qaytaradi (`take` bilan
    * cheklangan, tartib `findAccountByIdentifier` bilan bir xil).
    *
-   * NEGA KERAK: na `User.login`, na `User.phone` unique emas, ya'ni bitta
-   * telefon bir necha akkauntga tegishli bo'lishi mumkin (masalan ofis
+   * NEGA KERAK: `User.phone` unique emas, `User.login` esa faqat tirik
+   * qatorlar orasida unique va yangi hisobda bo'sh bo'lishi mumkin — ya'ni
+   * bitta telefon bir necha akkauntga tegishli bo'lishi mumkin (bir odam —
+   * har rolga alohida hisob, ADR-0021; yoki ofis
    * raqami — kassirda ham, administratorda ham). Parol bilan kirishda
    * `updatedAt desc` bo'yicha "g'olib"ni tanlash zararsiz: o'sha akkauntga
    * kirish uchun baribir O'SHA akkauntning paroli kerak. Parolsiz yo'lda
