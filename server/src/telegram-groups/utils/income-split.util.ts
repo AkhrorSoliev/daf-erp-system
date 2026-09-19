@@ -39,6 +39,8 @@ export function buildIncomeSplitLines(split: IncomeSplitInput): string[] {
   return [
     `   Shu oy uchun: <b>${formatSum(split.currentMonth)}</b> (${currentPct}%)`,
     `   Eski qarzlar uchun: <b>${formatSum(split.lateTotal)}</b> (${latePct}%)`,
-    ...split.late.map((m) => `      ${m.label} — <b>${formatSum(m.amount)}</b>`),
+    ...split.late.map(
+      (m) => `      ${m.label} — <b>${formatSum(m.amount)}</b>`,
+    ),
   ];
 }

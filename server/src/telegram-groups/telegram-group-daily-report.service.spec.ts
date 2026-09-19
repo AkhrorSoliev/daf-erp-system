@@ -372,7 +372,7 @@ describe('TelegramGroupDailyReportService', () => {
     });
 
     const { message: raw } = await service.build(1001, null);
-    const message = raw.replace(/ /g, ' ');
+    const message = raw.replace(/\u00A0/g, ' ');
 
     // The headline comes from the SAME object as the split, so the figures
     // printed here always add up in front of the reader.
@@ -398,7 +398,7 @@ describe('TelegramGroupDailyReportService', () => {
     });
 
     const { message: raw } = await service.build(1001, null);
-    const message = raw.replace(/ /g, ' ');
+    const message = raw.replace(/\u00A0/g, ' ');
     const money = (label: string) =>
       Number(
         message
@@ -445,7 +445,7 @@ describe('TelegramGroupDailyReportService', () => {
     });
 
     const { message: raw } = await service.build(1001, null);
-    const message = raw.replace(/ /g, ' ');
+    const message = raw.replace(/\u00A0/g, ' ');
 
     // state.mtdIncome — the pre-existing aggregate, untouched by this feature.
     expect(message).toContain("• Tushum (haqiqiy): <b>280 000 000 so'm</b>");

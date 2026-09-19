@@ -1,7 +1,8 @@
 import { buildIncomeSplitLines } from './income-split.util';
 
-/** Tests read the message the way a human does: NBSP-free. */
-const plain = (lines: string[]) => lines.map((l) => l.replace(/ /g, ' '));
+/** `formatSum` groups digits with non-breaking spaces; read them as a human does. */
+const NBSP = String.fromCharCode(160);
+const plain = (lines: string[]) => lines.map((l) => l.split(NBSP).join(' '));
 
 describe('buildIncomeSplitLines', () => {
   it('splits the income into this-month vs old-debt, oldest months listed too', () => {

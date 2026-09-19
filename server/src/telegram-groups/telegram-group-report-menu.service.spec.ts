@@ -354,7 +354,7 @@ describe('TelegramGroupReportMenuService', () => {
 
     await service.sendFinancialCard(ctx);
 
-    const text = (ctx.reply.mock.calls[0][0] as string).replace(/ /g, ' ');
+    const text = (ctx.reply.mock.calls[0][0] as string).replace(/\u00A0/g, ' ');
     expect(text).toContain("• Tushum (haqiqiy): <b>280 000 000 so'm</b>");
     expect(text).toContain("   Shu oy uchun: <b>210 000 000 so'm</b> (75%)");
     expect(text).toContain(
@@ -379,7 +379,7 @@ describe('TelegramGroupReportMenuService', () => {
 
     await service.sendFinancialCard(ctx);
 
-    const text = (ctx.reply.mock.calls[0][0] as string).replace(/ /g, ' ');
+    const text = (ctx.reply.mock.calls[0][0] as string).replace(/\u00A0/g, ' ');
     // The card keeps its own income figure and simply loses the split.
     expect(text).toContain("• Tushum (haqiqiy): <b>280 000 000 so'm</b>");
     expect(text).not.toContain('Shu oy uchun');
