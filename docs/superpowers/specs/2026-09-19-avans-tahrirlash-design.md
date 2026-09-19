@@ -80,17 +80,18 @@ kichik tugma (`ghost`, `size-8`): **qalam** (`Pencil`) va **savat**
 │ Thomas Weber                   700 000  ⊘ ⊘ │
 │ O'qituvchi                                   │
 │ [Karta]  Avans  · Aziz S. bergan             │
-│ Sentyabr oyligiga hisoblangan                │
+│ Sentabr 2026 oyligiga hisoblangan            │
 ├──────────────────────────────────────────────┤
 │        [ Bu kunga avans qo'shish ]           │
 └──────────────────────────────────────────────┘
 ```
 
 **Oylikka hisoblangan avans:** ikkala tugma `disabled`, qator ostida kichik
-kulrang matn — `«<Oy> oyligiga hisoblangan»`. Tugma ustida `title` bilan
-to'liq sabab: `«Bu avans <Oy> oyligiga hisoblangan — o'zgartirib bo'lmaydi»`.
-Sabab **doim ko'rinadi** (faqat hover'ga tashlab qo'yilmaydi), chunki o'chiq
-tugma sababsiz bo'lsa buzuq tuyuladi.
+kulrang matn — `«Sentabr 2026 oyligiga hisoblangan»` (davr oxiri qaysi oyga
+tushsa). Tugma ustida `title` bilan aniq davr:
+`«Bu avans 01.09.2026–30.09.2026 oyligiga hisoblangan — o'zgartirib
+bo'lmaydi»`. Sabab **doim ko'rinadi** (faqat hover'ga tashlab qo'yilmaydi),
+chunki o'chiq tugma sababsiz bo'lsa buzuq tuyuladi.
 
 ### 4.2. «Avans» katagi ro'yxati
 
@@ -179,9 +180,15 @@ UI tugmani o'chirish uchun avansning hisoblangan yoki hisoblanmaganini bilishi
 kerak. Ikkala ro'yxat endpoint'iga bir xil ikki maydon qo'shiladi:
 
 ```ts
-settled: boolean;              // settledBySalaryPaymentId !== null
-settledPeriodEnd: string | null; // "YYYY-MM-DD", tugma izohidagi oy nomi uchun
+settled: boolean;                  // settledBySalaryPaymentId !== null
+settledPeriodStart: string | null; // ISO, tugma izohidagi aniq sana uchun
+settledPeriodEnd: string | null;   // ISO, qator ostidagi oy nomi uchun ham
 ```
+
+Nega ikkita sana: oylik davri `cycleStartDay` ga qarab kalendar oyga to'g'ri
+kelmasligi mumkin (masalan 08.05–07.06). Qisqa matnda oy nomi yetarli, lekin
+tugma izohida aniq davr ko'rsatiladi — noto'g'ri oy nomi pul masalasida
+chalkashlik keltiradi.
 
 - `salary-advance-calendar.service.ts` → `AdvanceCalendarRow`
   (`select` ga `settledBySalaryPaymentId` va
@@ -233,8 +240,8 @@ ichida.
 
 `salary-advance-calendar.service.spec.ts` va `salary-monthly.service.spec.ts`:
 
-- `settled` va `settledPeriodEnd` to'g'ri qaytishi (hisoblangan va
-  hisoblanmagan ikkita avans bilan)
+- `settled`, `settledPeriodStart`, `settledPeriodEnd` to'g'ri qaytishi
+  (hisoblangan va hisoblanmagan ikkita avans bilan)
 
 `salary-breakdown.service.spec.ts`:
 
