@@ -226,3 +226,95 @@ describe('TeachersService — status methods', () => {
     });
   });
 });
+
+describe('TeachersService.create — telefon va kirish nomi qoidasi', () => {
+  let service: TeachersService;
+  let prisma: any;
+  let liveStaff: any;
+  let loginTaken: any;
+
+  const dto = {
+    firstName: 'Dilnoza',
+    lastName: 'Karimova',
+    phone: '901112233',
+    gender: 'FEMALE',
+  } as any;
+
+  beforeEach(async () => {
+    liveStaff = null;
+    loginTaken = null;
+    prisma = {
+      user: {
+        findFirst: jest.fn().mockImplementation(({ where }: any) => {
+          if (where?.roles) return Promise.resolve(liveStaff);
+          if (where?.login) return Promise.resolve(loginTaken);
+          return Promise.resolve(null);
+        }),
+        create: jest.fn().mockImplementation(({ data }: any) =>
+          Promise.resolve({
+            id: 501,
+            ...data,
+            roles: [{ role: { id: 4, name: 'Teacher' } }],
+            branches: [],
+            groupTeachers: [],
+          }),
+        ),
+      },
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        TeachersService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: UploadService, useValue: { deleteFile: jest.fn() } },
+        {
+          provide: RedisService,
+          useValue: { set: jest.fn(), del: jest.fn(), get: jest.fn() },
+        },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: StatusHistoryService, useValue: {} },
+        {
+          provide: EntityHistoryService,
+          useValue: { recordCreate: jest.fn(), recordUpdate: jest.fn() },
+        },
+      ],
+    }).compile();
+
+    service = module.get(TeachersService);
+  });
+
+  it("o'quvchi hisobidagi raqam bilan ustoz yaratiladi", async () => {
+    const result = await service.create(dto, 1001);
+
+    expect(prisma.user.create).toHaveBeenCalledTimes(1);
+    expect(prisma.user.create.mock.calls[0][0].data.login).toBe('901112233');
+    expect(result.generatedLogin).toBe('901112233');
+    // Faqat xodim rolli hisoblar so'raladi — o'quvchi hisobi to'sqinlik qilmaydi.
+    const staffLookup = prisma.user.findFirst.mock.calls.find(
+      ([args]: any[]) => args?.where?.roles,
+    );
+    expect(staffLookup[0].where.roles).toEqual({
+      some: { roleId: { in: [1, 2, 3, 4, 5] } },
+    });
+  });
+
+  it('ishlab turgan xodim raqami bilan ikkinchi hisob ochilmaydi', async () => {
+    liveStaff = { id: 10924, firstName: 'Nodira', lastName: 'Yusupova' };
+
+    await expect(service.create(dto, 1001)).rejects.toThrow(
+      /xodim hisobi allaqachon bor/,
+    );
+    expect(prisma.user.create).not.toHaveBeenCalled();
+  });
+
+  it("kirish nomi band bo'lsa nom yozilmaydi, hisob ochiladi", async () => {
+    loginTaken = { id: 10018 };
+
+    const result = await service.create(dto, 1001);
+
+    expect(prisma.user.create.mock.calls[0][0].data.login).toBeNull();
+    expect(prisma.user.create.mock.calls[0][0].data.phone).toBe('901112233');
+    // Odam baribir telefon bilan kiradi — shuni ko'rsatamiz.
+    expect(result.generatedLogin).toBe('901112233');
+  });
+});

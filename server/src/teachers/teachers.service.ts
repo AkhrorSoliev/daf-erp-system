@@ -26,6 +26,10 @@ import {
 } from '../common/finance/report-branch-scope';
 import { assertCallerMayTouchUser } from '../common/auth/user-branch-scope';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
+import {
+  findLiveStaffByPhone,
+  loginForPhone,
+} from '../common/auth/phone-account-rules';
 
 const TEACHER_ROLE_ID = 4;
 
@@ -266,17 +270,19 @@ export class TeachersService {
       );
     }
 
-    // Telefon raqam tekshirish
-    const existing = await this.prisma.user.findFirst({
-      where: { phone: dto.phone, deletedAt: null },
-    });
-    if (existing) {
+    // Faqat ISHLAB TURGAN XODIM hisobi to'xtatadi. O'quvchi hisobi (odam
+    // o'quvchidan ustozga aylanayotgan bo'lishi mumkin) va o'chirilgan
+    // hisob — yo'q (ADR-0021).
+    const liveStaff = await findLiveStaffByPhone(this.prisma, dto.phone);
+    if (liveStaff) {
       throw new BadRequestException(
-        'Bu telefon raqam allaqachon tizimda mavjud',
+        `Bu telefon raqam bilan xodim hisobi allaqachon bor: ${liveStaff.firstName} ${liveStaff.lastName} (#${liveStaff.id}). Yangi rol kerak bo'lsa o'sha hisobga qo'shing.`,
       );
     }
 
-    // Login = telefon raqam. Yuqorida shu telefon band emasligi tekshirilgan.
+    // Kirish nomi — telefon, agar u boshqa tirik hisobning nomi bo'lmasa;
+    // aks holda bo'sh. Kirish baribir telefon bilan.
+    const login = await loginForPhone(this.prisma, dto.phone);
     const password = generatePassword();
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -287,7 +293,7 @@ export class TeachersService {
         phone: dto.phone,
         photo: dto.photo,
         gender: dto.gender,
-        login: dto.phone,
+        login,
         password: hashedPassword,
         companyId,
         mainBranch: dto.branchId ?? null,
