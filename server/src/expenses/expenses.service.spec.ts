@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { ExpenseCategory, ExpensePaymentMethod } from '@prisma/client';
 import { ExpensesService } from './expenses.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -10,8 +14,14 @@ import { ExpenseQueryDto } from './dto/expense-query.dto';
 describe('ExpensesService — findAll filters + summary', () => {
   let service: ExpensesService;
 
-  // tx client handed to the $transaction callback.
-  const tx = { expense: { update: jest.fn() } };
+  // tx client handed to the $transaction callback. `update` looks the original
+  // ledger entry up through the SAME tx client (not `prisma`), so the stub
+  // needs its own `transaction.findFirst` — `remove` is the one that reads it
+  // off `prisma`.
+  const tx = {
+    expense: { update: jest.fn() },
+    transaction: { findFirst: jest.fn() },
+  };
 
   const prisma = {
     expense: {
@@ -391,6 +401,193 @@ describe('ExpensesService — findAll filters + summary', () => {
         'Xarajat topilmadi',
       );
       expect(entityHistoryService.recordDelete).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * Avans (TEACHER_ADVANCE) oddiy xarajatdan ikki narsa bilan farq qiladi:
+   * u xodimga bog'langan va u keyingi oylikdan ushlab qolinadi. Ushlab
+   * qolingandan keyin uning summasini o'zgartirish yoki o'chirish
+   * SalaryPayment'ni eski raqam bo'yicha kamaytirilgan holda qoldiradi —
+   * oylik varaqasi bilan haqiqat farq qila boshlaydi.
+   */
+  describe('avans qorovullari', () => {
+    const openAdvance = {
+      id: 'adv-open',
+      category: ExpenseCategory.TEACHER_ADVANCE,
+      amount: 500_000,
+      branchId: 1,
+      companyId: COMPANY_ID,
+      deletedAt: null,
+      relatedUserId: 10005,
+      settledBySalaryPaymentId: null,
+    };
+
+    const settledAdvance = {
+      ...openAdvance,
+      id: 'adv-settled',
+      settledBySalaryPaymentId: 'sp-1',
+    };
+
+    it('oylikka hisoblangan avansni tahrirlashni rad etadi', async () => {
+      prisma.expense.findFirst.mockResolvedValue(settledAdvance);
+
+      await expect(
+        service.update(
+          'adv-settled',
+          { amount: 600_000 } as any,
+          42,
+          COMPANY_ID,
+        ),
+      ).rejects.toThrow(ConflictException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it("oylikka hisoblangan avansni o'chirishni rad etadi", async () => {
+      prisma.expense.findFirst.mockResolvedValue(settledAdvance);
+
+      await expect(
+        service.remove('adv-settled', 42, COMPANY_ID),
+      ).rejects.toThrow(ConflictException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('hisoblanmagan avans summasini tuzatadi va daftarni qayta yozadi', async () => {
+      prisma.expense.findFirst.mockResolvedValue(openAdvance);
+      tx.transaction.findFirst.mockResolvedValue({ id: 'tx-7' });
+      tx.expense.update.mockResolvedValue({
+        ...openAdvance,
+        amount: 600_000,
+        description: 'Avans',
+        paymentMethod: ExpensePaymentMethod.CASH,
+      });
+
+      await service.update(
+        'adv-open',
+        { amount: 600_000 } as any,
+        42,
+        COMPANY_ID,
+      );
+
+      expect(transactionsService.reverseTransaction).toHaveBeenCalledWith(
+        'tx-7',
+        expect.objectContaining({ performedById: 42 }),
+        tx,
+      );
+      expect(transactionsService.recordExpense).toHaveBeenCalledWith(
+        expect.objectContaining({ expenseId: 'adv-open', amount: 600_000 }),
+        tx,
+      );
+    });
+
+    it('faqat sana tuzatilsa daftarga tegmaydi', async () => {
+      prisma.expense.findFirst.mockResolvedValue(openAdvance);
+      tx.expense.update.mockResolvedValue({ ...openAdvance });
+
+      await service.update(
+        'adv-open',
+        { date: '2026-09-15' } as any,
+        42,
+        COMPANY_ID,
+      );
+
+      expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
+      expect(transactionsService.recordExpense).not.toHaveBeenCalled();
+    });
+
+    it('avansni boshqa toifaga aylantirishni rad etadi', async () => {
+      prisma.expense.findFirst.mockResolvedValue(openAdvance);
+
+      await expect(
+        service.update(
+          'adv-open',
+          { category: ExpenseCategory.RENT } as any,
+          42,
+          COMPANY_ID,
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('avansning xodimini almashtirishni rad etadi', async () => {
+      prisma.expense.findFirst.mockResolvedValue(openAdvance);
+
+      await expect(
+        service.update(
+          'adv-open',
+          { relatedUserId: 10006 } as any,
+          42,
+          COMPANY_ID,
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('avansdan xodim biriktirmasini uzishni rad etadi (relatedUserId: null)', async () => {
+      // `expense-form-dialog.tsx` har saqlashda `relatedUserId: null` yuboradi.
+      // U oyna avansga ochilmaydi, lekin ochilib qolsa jimgina emas, baland
+      // ovoz bilan to'xtasin.
+      prisma.expense.findFirst.mockResolvedValue(openAdvance);
+
+      await expect(
+        service.update(
+          'adv-open',
+          { relatedUserId: null } as any,
+          42,
+          COMPANY_ID,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('oddiy xarajatni avansga aylantirishda xodim talab qiladi', async () => {
+      prisma.expense.findFirst.mockResolvedValue({
+        id: 'exp-plain',
+        category: ExpenseCategory.RENT,
+        amount: 100,
+        branchId: 1,
+        companyId: COMPANY_ID,
+        deletedAt: null,
+        relatedUserId: null,
+        settledBySalaryPaymentId: null,
+      });
+
+      await expect(
+        service.update(
+          'exp-plain',
+          { category: ExpenseCategory.TEACHER_ADVANCE } as any,
+          42,
+          COMPANY_ID,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("avans bo'lmagan xarajatga qorovul tegmaydi", async () => {
+      // `settledBySalaryPaymentId` faqat avansda ma'noga ega — boshqa toifa
+      // uchun eski xatti-harakat o'zgarmasligi kerak.
+      prisma.expense.findFirst.mockResolvedValue({
+        id: 'exp-plain-2',
+        category: ExpenseCategory.RENT,
+        amount: 100,
+        branchId: 1,
+        companyId: COMPANY_ID,
+        deletedAt: null,
+        relatedUserId: null,
+        settledBySalaryPaymentId: 'sp-1',
+      });
+      tx.transaction.findFirst.mockResolvedValue(null);
+      tx.expense.update.mockResolvedValue({
+        id: 'exp-plain-2',
+        amount: 200,
+        branchId: 1,
+        companyId: COMPANY_ID,
+        relatedUserId: null,
+        description: 'Ijara',
+        paymentMethod: ExpensePaymentMethod.CASH,
+      });
+
+      await expect(
+        service.update('exp-plain-2', { amount: 200 } as any, 42, COMPANY_ID),
+      ).resolves.toBeDefined();
     });
   });
 });

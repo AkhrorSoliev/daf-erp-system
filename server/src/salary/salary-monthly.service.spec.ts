@@ -723,6 +723,8 @@ describe('SalaryMonthlyService', () => {
           description: '1-qism',
           createdAt: new Date('2026-06-05'),
           createdBy: { id: 2, firstName: 'Admin', lastName: 'A' },
+          settledBySalaryPaymentId: null,
+          settledBySalaryPayment: null,
         },
         {
           id: 'a2',
@@ -732,6 +734,8 @@ describe('SalaryMonthlyService', () => {
           description: '2-qism',
           createdAt: new Date('2026-06-20'),
           createdBy: { id: 2, firstName: 'Admin', lastName: 'A' },
+          settledBySalaryPaymentId: null,
+          settledBySalaryPayment: null,
         },
       ]);
 
@@ -754,6 +758,53 @@ describe('SalaryMonthlyService', () => {
       });
       expect(where.date.gte).toBeInstanceOf(Date);
       expect(where.date.lt).toBeInstanceOf(Date);
+    });
+
+    it('har bir avansda hisoblangan-hisoblanmaganini qaytaradi', async () => {
+      prisma.expense.findMany.mockResolvedValue([
+        {
+          id: 'a1',
+          amount: 300_000,
+          date: new Date('2026-06-05'),
+          paymentMethod: 'CASH',
+          description: '1-qism',
+          createdAt: new Date('2026-06-05'),
+          createdBy: { id: 2, firstName: 'Admin', lastName: 'A' },
+          settledBySalaryPaymentId: null,
+          settledBySalaryPayment: null,
+        },
+        {
+          id: 'a2',
+          amount: 200_000,
+          date: new Date('2026-06-20'),
+          paymentMethod: 'CARD',
+          description: '2-qism',
+          createdAt: new Date('2026-06-20'),
+          createdBy: { id: 2, firstName: 'Admin', lastName: 'A' },
+          settledBySalaryPaymentId: 'sp-9',
+          settledBySalaryPayment: {
+            periodStart: new Date('2026-06-01'),
+            periodEnd: new Date('2026-06-30'),
+          },
+        },
+      ]);
+
+      const res = await service.getAdvancesForUser(
+        10010,
+        { month: '2026-06' },
+        1,
+        999,
+      );
+
+      expect(res.total).toBe(500_000);
+      expect(res.advances[0]).toMatchObject({
+        id: 'a1',
+        settled: false,
+        settledPeriodStart: null,
+        settledPeriodEnd: null,
+      });
+      expect(res.advances[1]).toMatchObject({ id: 'a2', settled: true });
+      expect(res.advances[1].settledPeriodEnd).toEqual(new Date('2026-06-30'));
     });
   });
 

@@ -19,6 +19,11 @@ export interface AdvanceCalendarRow {
   paymentMethod: 'CASH' | 'CARD';
   description: string;
   createdAt: Date;
+  /** Bu avans allaqachon bitta oylik to'loviga hisoblangan (qulflangan). */
+  settled: boolean;
+  /** Qaysi oylik davriga hisoblangani — hisoblanmagan bo'lsa `null`. */
+  settledPeriodStart: Date | null;
+  settledPeriodEnd: Date | null;
   user: {
     id: number;
     firstName: string;
@@ -118,6 +123,10 @@ export class SalaryAdvanceCalendarService {
         paymentMethod: true,
         description: true,
         createdAt: true,
+        settledBySalaryPaymentId: true,
+        settledBySalaryPayment: {
+          select: { periodStart: true, periodEnd: true },
+        },
         relatedUser: {
           select: {
             id: true,
@@ -143,6 +152,9 @@ export class SalaryAdvanceCalendarService {
               paymentMethod: e.paymentMethod as 'CASH' | 'CARD',
               description: e.description,
               createdAt: e.createdAt,
+              settled: e.settledBySalaryPaymentId !== null,
+              settledPeriodStart: e.settledBySalaryPayment?.periodStart ?? null,
+              settledPeriodEnd: e.settledBySalaryPayment?.periodEnd ?? null,
               user: {
                 id: e.relatedUser.id,
                 firstName: e.relatedUser.firstName,

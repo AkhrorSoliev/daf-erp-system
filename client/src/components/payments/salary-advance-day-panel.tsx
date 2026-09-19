@@ -7,6 +7,11 @@ import { formatBalance, formatPrice } from "@/lib/format-utils";
 import { EXPENSE_METHOD_LABELS } from "./expenses-filter-bar";
 import { employeeRoleLabel } from "./employee-advance-select";
 import type { AdvanceRow } from "./salary-advances-tab";
+import {
+  AdvanceRowActions,
+  settledLabel,
+  type EditableAdvance,
+} from "./advance-row-actions";
 
 /** "2026-07-15" → "15.07.2026". */
 function longDay(iso: string): string {
@@ -24,11 +29,15 @@ export function SalaryAdvanceDayPanel({
   advances,
   canPay,
   onAdd,
+  onEdit,
+  onDelete,
 }: {
   date: string | null;
   advances: AdvanceRow[];
   canPay: boolean;
   onAdd: (date: string) => void;
+  onEdit: (a: EditableAdvance) => void;
+  onDelete: (a: EditableAdvance) => void;
 }) {
   if (date === null) {
     return (
@@ -42,6 +51,22 @@ export function SalaryAdvanceDayPanel({
 
   const rows = advances.filter((a) => a.date === date);
   const total = rows.reduce((s, a) => s + a.amount, 0);
+
+  /**
+   * Kun paneli qatorini umumiy shaklga keltiradi. Kalendar `date` ni
+   * allaqachon "YYYY-MM-DD" qilib qaytaradi, shuning uchun kesish shart emas.
+   */
+  const toEditable = (a: AdvanceRow): EditableAdvance => ({
+    id: a.id,
+    date: a.date,
+    amount: a.amount,
+    paymentMethod: a.paymentMethod,
+    description: a.description,
+    employeeName: `${a.user.firstName} ${a.user.lastName}`,
+    settled: a.settled,
+    settledPeriodStart: a.settledPeriodStart,
+    settledPeriodEnd: a.settledPeriodEnd,
+  });
 
   return (
     <div className="flex flex-col rounded-lg border">
@@ -69,9 +94,18 @@ export function SalaryAdvanceDayPanel({
                     {employeeRoleLabel(a.user.roles)}
                   </p>
                 </div>
-                <span className="shrink-0 font-semibold tabular-nums">
-                  {formatPrice(a.amount)}
-                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="font-semibold tabular-nums">
+                    {formatPrice(a.amount)}
+                  </span>
+                  {canPay && (
+                    <AdvanceRowActions
+                      advance={toEditable(a)}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                    />
+                  )}
+                </div>
               </div>
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className="font-normal">
@@ -88,6 +122,13 @@ export function SalaryAdvanceDayPanel({
                   </span>
                 )}
               </div>
+              {/* O'chiq tugma sababsiz bo'lsa buzuq tuyuladi — sabab
+                  `title` ga tashlanmaydi, matn bo'lib turadi. */}
+              {a.settled && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {settledLabel(toEditable(a))}
+                </p>
+              )}
             </div>
           ))
         )}

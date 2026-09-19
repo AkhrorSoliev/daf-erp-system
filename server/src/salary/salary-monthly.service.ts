@@ -710,11 +710,31 @@ export class SalaryMonthlyService {
         description: true,
         createdAt: true,
         createdBy: { select: { id: true, firstName: true, lastName: true } },
+        settledBySalaryPaymentId: true,
+        settledBySalaryPayment: {
+          select: { periodStart: true, periodEnd: true },
+        },
       },
       orderBy: { date: 'asc' },
     });
 
-    const total = advances.reduce((s, a) => s + a.amount, 0);
-    return { month, userId, count: advances.length, total, advances };
+    // Qulflangan avansni UI o'chiq tugma bilan ko'rsatadi, shuning uchun
+    // «hisoblangan» belgisi ro'yxat bilan birga keladi — alohida so'rov
+    // qilinmaydi.
+    const rows = advances.map((a) => ({
+      id: a.id,
+      amount: a.amount,
+      date: a.date,
+      paymentMethod: a.paymentMethod,
+      description: a.description,
+      createdAt: a.createdAt,
+      createdBy: a.createdBy,
+      settled: a.settledBySalaryPaymentId !== null,
+      settledPeriodStart: a.settledBySalaryPayment?.periodStart ?? null,
+      settledPeriodEnd: a.settledBySalaryPayment?.periodEnd ?? null,
+    }));
+
+    const total = rows.reduce((s, a) => s + a.amount, 0);
+    return { month, userId, count: rows.length, total, advances: rows };
   }
 }
