@@ -5,6 +5,10 @@ import {
   GroupStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  tashkentDateStr,
+  utcMidnightFromDateStr,
+} from '../attendance/shared/date-utils';
 
 export interface StreakRow {
   enrollmentId: string;
@@ -54,6 +58,24 @@ export class AbsenceStreakService {
    * Reads up to the last 10 attendances per enrollment. That covers any
    * realistic streak (3-strike is the trigger; longer streaks just keep
    * incrementing) without paging the full attendance history.
+   *
+   * Uchta istisno — uchalasi ham xom SQL ichida, `rn <= 10` oynasidan OLDIN
+   * (aks holda chiqarib tashlanadigan qator o'nlikdan joy egallab, haqiqiy
+   * davomatni ko'rinmas qilib qo'yardi):
+   *
+   *  - **Sanoq oynasi** (`streakWindowStart`) — faollashtirishdan oldingi
+   *    davomat sanalmaydi.
+   *  - **Oldindan aytilgan SABABSIZ qoldirish** — `EXCUSED` bo'lib tushadi,
+   *    lekin ABSENT deb sanaladi. Aks holda har safar oldindan qo'ng'iroq
+   *    qilib pauzadan cheksiz qochish mumkin edi. `SABABLI` (kasal)
+   *    avvalgidek uzadi.
+   *  - **Bekor qilingan dars** (`cancellationId`) — umuman ko'rinmaydi.
+   *    Markaz darsni bekor qilgani o'quvchining aybi ham emas, uning
+   *    ketma-ketligini yuvib yuboradigan xizmat ham emas.
+   *
+   * Bu YAGONA ta'rif: `/outreach` ro'yxati ham, avtomatik pauza cron'i ham
+   * shu funksiyadan o'qiydi, shuning uchun ro'yxat va harakat hech qachon
+   * bir-biriga zid bo'lmaydi.
    */
   async computeStreaks(params: {
     companyId: number;
@@ -80,10 +102,21 @@ export class AbsenceStreakService {
         id: true,
         studentId: true,
         groupId: true,
+        startDate: true,
+        createdAt: true,
+        statusChangedAt: true,
       },
     });
 
     if (enrollments.length === 0) return [];
+
+    // Har yozuv o'z oynasi bilan ketadi — so'rovga uchinchi massiv bo'lib
+    // uzatiladi va "shu sanadan oldingi davomatni ko'rsatma" degani.
+    const windows = enrollments.map((e) => ({
+      studentId: e.studentId,
+      groupId: e.groupId,
+      since: streakWindowStart(e),
+    }));
 
     // Har bir yozuvning oxirgi 10 ta davomati — BITTA so'rovda.
     //
@@ -96,7 +129,7 @@ export class AbsenceStreakService {
     // to'g'ri beradi, ya'ni saralash uchun qo'shimcha ish qilinmaydi.
     const lastTenByPair = await this.fetchLastTenPerPair(
       params.companyId,
-      enrollments,
+      windows,
     );
 
     const qualifying: {
@@ -129,6 +162,10 @@ export class AbsenceStreakService {
               studentId: e.studentId,
               groupId: e.groupId,
               companyId: params.companyId,
+              // Oynasiz bu so'rov boshqa davrdagi darsni "oxirgi kelgan"
+              // deb ko'rsatardi — admin kartadagi sanaga ishonmay qolardi.
+              cancellationId: null,
+              date: { gte: utcMidnightFromDateStr(streakWindowStart(e)) },
               status: {
                 in: [AttendanceStatus.PRESENT, AttendanceStatus.LATE],
               },
@@ -154,7 +191,8 @@ export class AbsenceStreakService {
   }
 
   /**
-   * `(studentId, groupId)` juftliklarining har biri uchun oxirgi 10 ta davomat.
+   * Har bir `(studentId, groupId)` juftligi uchun oxirgi 10 ta SANALADIGAN
+   * davomat, o'z sanoq oynasi ichida.
    *
    * Sana MATN sifatida o'qiladi va UTC yarim tuniga o'giriladi. Sababi nozik:
    * `Attendance.date` — `@db.Date` ustuni, Prisma uni UTC yarim tuni qilib
@@ -165,18 +203,24 @@ export class AbsenceStreakService {
    * jadvalidagi unique indeks aynan shu tartibda (groupId, studentId, date),
    * shuning uchun Postgres oynani qo'shimcha saralashsiz hisoblaydi. Teskari
    * tartibda natija bir xil bo'lardi, lekin ortiqcha saralash paydo bo'lardi.
+   *
+   * Uchala qoida (oyna, bekor qilingan dars, oldindan aytilgan SABABSIZ
+   * qoldirish) `rn <= 10` dan OLDIN — ichki so'rovda. Agar ular tashqarida
+   * bo'lsa, chiqarib tashlanadigan qator o'nlikdan joy egallab, undan
+   * oldingi haqiqiy davomatni ko'rinmas qilib qo'yardi.
    */
   private async fetchLastTenPerPair(
     companyId: number,
-    pairs: { studentId: number; groupId: string }[],
+    windows: { studentId: number; groupId: string; since: string }[],
   ): Promise<Map<string, AttendanceRow[]>> {
     const byPair = new Map<string, AttendanceRow[]>();
 
     // Juda katta ro'yxatda bitta so'rov cheksiz o'smasin.
-    for (let i = 0; i < pairs.length; i += PAIR_CHUNK_SIZE) {
-      const chunk = pairs.slice(i, i + PAIR_CHUNK_SIZE);
+    for (let i = 0; i < windows.length; i += PAIR_CHUNK_SIZE) {
+      const chunk = windows.slice(i, i + PAIR_CHUNK_SIZE);
       const studentIds = chunk.map((p) => p.studentId);
       const groupIds = chunk.map((p) => p.groupId);
+      const sinceDates = chunk.map((p) => p.since);
 
       const rows = await this.prisma.$queryRaw<RawAttendanceRow[]>`
         SELECT t."studentId", t."groupId", t."dateStr", t."status"
@@ -184,16 +228,30 @@ export class AbsenceStreakService {
           SELECT a."studentId",
                  a."groupId",
                  to_char(a."date", 'YYYY-MM-DD') AS "dateStr",
-                 a."status",
+                 CASE
+                   WHEN a."status" = 'EXCUSED' AND pa."kind" = 'SABABSIZ'
+                     THEN 'ABSENT'
+                   ELSE a."status"::text
+                 END AS "status",
                  ROW_NUMBER() OVER (
                    PARTITION BY a."groupId", a."studentId"
                    ORDER BY a."date" DESC
                  ) AS rn
           FROM "Attendance" a
+          JOIN unnest(
+                 ${studentIds}::int[],
+                 ${groupIds}::text[],
+                 ${sinceDates}::date[]
+               ) AS w("studentId", "groupId", "since")
+            ON w."studentId" = a."studentId"
+           AND w."groupId" = a."groupId"
+          LEFT JOIN "PlannedAbsence" pa
+            ON pa."studentId" = a."studentId"
+           AND pa."groupId" = a."groupId"
+           AND pa."date" = a."date"
           WHERE a."companyId" = ${companyId}
-            AND (a."studentId", a."groupId") IN (
-              SELECT * FROM unnest(${studentIds}::int[], ${groupIds}::text[])
-            )
+            AND a."cancellationId" IS NULL
+            AND a."date" >= w."since"
         ) t
         WHERE t.rn <= ${LAST_N_ATTENDANCES}
         ORDER BY t."groupId", t."studentId", t."dateStr" DESC
@@ -213,6 +271,36 @@ export class AbsenceStreakService {
 
     return byPair;
   }
+}
+
+/**
+ * Sanoq oynasining boshi — bu sanadan OLDINGI davomat umuman sanalmaydi.
+ *
+ * NEGA KERAK: davomat `(studentId, groupId)` bo'yicha saqlanadi, yozuvga
+ * (`Enrollment`) bog'lanmagan. Oynasiz ikkita xato chiqadi:
+ *
+ *  1. Cheksiz halqa. Admin pauzadagi o'quvchini faollashtiradi; u hali
+ *     darsga kelmagan, oxirgi 3 qator hamon ABSENT — ertasi ertalab cron
+ *     uni YANA pauza qiladi va admin bu halqadan chiqa olmaydi.
+ *  2. Meros. Guruhdan chiqib, keyin o'sha guruhga qayta yozilgan o'quvchi
+ *     eski ABSENT lari bilan keladi va birinchi kuniyoq pauzaga tushadi.
+ *
+ * `statusChangedAt` — cascade `FROZEN → ACTIVE` qaytarganda yozadigan
+ * maydon, ya'ni FAOLLASHTIRISH SANOQNI NOLDAN BOSHLAYDI: o'quvchi yangi
+ * imkoniyat (chegaracha dars) oladi.
+ *
+ * Sanalar MATN sifatida solishtiriladi — `YYYY-MM-DD` da leksikografik
+ * tartib xronologik tartibga teng, va bu `@db.Date` (UTC yarim tuni) bilan
+ * haqiqiy vaqt belgisini bitta `>` da aralashtirib yuborish xavfini yopadi.
+ */
+export function streakWindowStart(e: {
+  startDate: Date | null;
+  createdAt: Date;
+  statusChangedAt: Date | null;
+}): string {
+  const dates = [tashkentDateStr(e.startDate ?? e.createdAt)];
+  if (e.statusChangedAt) dates.push(tashkentDateStr(e.statusChangedAt));
+  return dates.reduce((a, b) => (a > b ? a : b));
 }
 
 /**
