@@ -7,6 +7,7 @@ import { ReportsFinancialService } from '../reports/reports-financial.service';
 import { ReportsService } from '../reports/reports.service';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { formatSum } from './utils/format.util';
+import { buildIncomeSplitLines } from './utils/income-split.util';
 import {
   branchLabelForGroup,
   isLegacyUnscopedGroup,
@@ -288,6 +289,12 @@ export class TelegramGroupReportMenuService {
         monthKey,
         branchIds,
       );
+      // Which months this month's cash actually belongs to — the same split the
+      // /payments/overview "Tushum tarkibi" drill-down and the 21:00 report
+      // show. No dates passed, exactly like `getFinancialOverview` above, so
+      // both cover the same whole month and the lines below decompose the
+      // figure they sit under rather than answering from a second window.
+      const split = await this.incomeSplit(group.companyId, branchIds);
       const scopeLabel = branchLabelForGroup(
         group,
         await this.branchNames(group.companyId),
@@ -296,7 +303,8 @@ export class TelegramGroupReportMenuService {
         `💰 <b>Moliyaviy xulosa — ${month}</b>`,
         `<i>${scopeLabel}</i>`,
         ``,
-        `• Tushum (haqiqiy): <b>${formatSum(o.income.actual)}</b>`,
+        `• Tushum (haqiqiy): <b>${formatSum(split ? split.total : o.income.actual)}</b>`,
+        ...(split ? buildIncomeSplitLines(split) : []),
         `• Oy oxiriga kutilyapti: <b>${formatSum(o.income.expected)}</b>`,
         `• Xarajat: <b>${formatSum(o.expenses)}</b>`,
         `• Ustoz oyligi (to'langan): <b>${formatSum(o.salary.paid)}</b>`,
@@ -313,6 +321,41 @@ export class TelegramGroupReportMenuService {
         .catch(() => undefined);
     } finally {
       this.generating.delete(key);
+    }
+  }
+
+  /**
+   * The «Tushum tarkibi» figures for the card's month — how much of the cash is
+   * this month's own income and how much settled older months' debt, per month.
+   * Same service the /payments/overview drill-down and the 21:00 report read,
+   * so the three surfaces cannot disagree.
+   *
+   * Returns null on failure: a broken split costs the card its three extra
+   * lines, never the card itself.
+   */
+  private async incomeSplit(
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ): Promise<{
+    total: number;
+    currentMonth: number;
+    lateTotal: number;
+    late: Array<{ label: string; amount: number }>;
+  } | null> {
+    try {
+      const a = await this.reportsFinancial.getIncomeMonthAttribution(
+        companyId,
+        { branchIds },
+      );
+      return {
+        total: a.total,
+        currentMonth: a.currentMonth,
+        lateTotal: a.lateTotal,
+        late: a.late,
+      };
+    } catch (err: any) {
+      this.logger.warn(`Income split failed: ${err?.message ?? err}`);
+      return null;
     }
   }
 

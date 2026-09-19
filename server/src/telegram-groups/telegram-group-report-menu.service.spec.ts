@@ -337,6 +337,54 @@ describe('TelegramGroupReportMenuService', () => {
     expect(ctx.replyWithDocument).not.toHaveBeenCalled();
   });
 
+  it('sendFinancialCard shows which months the cash belongs to', async () => {
+    const { service, reportsFinancial } = makeDeps();
+    const ctx = makeCtx();
+    reportsFinancial.getIncomeMonthAttribution = jest.fn().mockResolvedValue({
+      total: 280_000_000,
+      currentMonth: 210_000_000,
+      lateTotal: 70_000_000,
+      late: [
+        { monthKey: '2026-06', label: 'Iyun 2026', amount: 50_000_000 },
+        { monthKey: '2026-05', label: 'May 2026', amount: 20_000_000 },
+      ],
+      lessonsValue: 1,
+      collectionPct: 1,
+    });
+
+    await service.sendFinancialCard(ctx);
+
+    const text = (ctx.reply.mock.calls[0][0] as string).replace(/ /g, ' ');
+    expect(text).toContain("• Tushum (haqiqiy): <b>280 000 000 so'm</b>");
+    expect(text).toContain("   Shu oy uchun: <b>210 000 000 so'm</b> (75%)");
+    expect(text).toContain(
+      "   Eski qarzlar uchun: <b>70 000 000 so'm</b> (25%)",
+    );
+    expect(text).toContain("      Iyun 2026 — <b>50 000 000 so'm</b>");
+    expect(text).toContain("      May 2026 — <b>20 000 000 so'm</b>");
+    // The same window as the income figure it decomposes: the card's own month,
+    // which is what `getFinancialOverview` defaults to when given no dates.
+    expect(reportsFinancial.getIncomeMonthAttribution).toHaveBeenCalledWith(
+      1001,
+      { branchIds: null },
+    );
+  });
+
+  it('sendFinancialCard survives an attribution failure', async () => {
+    const { service, reportsFinancial } = makeDeps();
+    const ctx = makeCtx();
+    reportsFinancial.getIncomeMonthAttribution = jest
+      .fn()
+      .mockRejectedValue(new Error('boom'));
+
+    await service.sendFinancialCard(ctx);
+
+    const text = (ctx.reply.mock.calls[0][0] as string).replace(/ /g, ' ');
+    // The card keeps its own income figure and simply loses the split.
+    expect(text).toContain("• Tushum (haqiqiy): <b>280 000 000 so'm</b>");
+    expect(text).not.toContain('Shu oy uchun');
+  });
+
   it('openMenu posts a fresh menu message with the root keyboard', async () => {
     const { service } = makeDeps();
     const ctx = makeCtx();
