@@ -489,6 +489,9 @@ describe('StudentsService — status methods', () => {
 
   describe('createStudentUser', () => {
     it('creates a User with Student role and links to student', async () => {
+      // Birinchi `findFirst` — kirish nomi bo'shligi so'rovi.
+      prisma.user.findFirst.mockResolvedValueOnce(null);
+
       const result = await service.createStudentUser(
         1,
         '901234567',
@@ -518,6 +521,26 @@ describe('StudentsService — status methods', () => {
       expect(result.userId).toBe(10001);
       expect(result.plainPassword).toBeDefined();
       expect(result.plainPassword.length).toBe(8);
+    });
+
+    it("kirish nomi boshqa hisobda band bo'lsa nom yozilmaydi, hisob baribir ochiladi", async () => {
+      prisma.user.findFirst.mockResolvedValueOnce({ id: 10018 });
+
+      const result = await service.createStudentUser(
+        1,
+        '901234567',
+        'Ali',
+        'Valiyev',
+        1001,
+      );
+
+      expect(prisma.user.create.mock.calls[0][0].data.login).toBeNull();
+      expect(prisma.user.create.mock.calls[0][0].data.phone).toBe('901234567');
+      expect(prisma.student.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { userId: 10001 },
+      });
+      expect(result.userId).toBe(10001);
     });
   });
 

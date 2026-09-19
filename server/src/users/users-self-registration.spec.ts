@@ -93,9 +93,13 @@ describe('UsersService — self-registration through the bot', () => {
 
   it('never asks the branch-scope resolver about a caller that does not exist', async () => {
     await service.create(teacherPayload, { kind: 'self-registration' });
-    // `resolveCallerBranchScope` is what threw; it loads the caller with
-    // `user.findFirst`. Nothing may look a caller up when there is none.
-    expect(prisma.user.findFirst).not.toHaveBeenCalled();
+    // `resolveCallerBranchScope` chaqiruvchini `user.findFirst({ where: { id } })`
+    // bilan yuklaydi. Chaqiruvchi yo'q — hech kim uni qidirmasligi kerak.
+    // (Telefon qoidasi ham `findFirst` ishlatadi, lekin `where.id` siz.)
+    const callerLookups = prisma.user.findFirst.mock.calls.filter(
+      ([args]: any[]) => args?.where?.id !== undefined,
+    );
+    expect(callerLookups).toHaveLength(0);
   });
 
   it('still enforces every rule that is not about the caller', async () => {
@@ -122,5 +126,51 @@ describe('UsersService — self-registration through the bot', () => {
       service.create(teacherPayload, { kind: 'user', id: undefined as any }),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(prisma.user.create).not.toHaveBeenCalled();
+  });
+
+  it('ishlab turgan xodim raqami bilan ikkinchi xodim hisobi ochilmaydi', async () => {
+    prisma.user.findFirst.mockImplementation(({ where }: any) =>
+      Promise.resolve(
+        where?.roles
+          ? { id: 10924, firstName: 'Nodira', lastName: 'Yusupova' }
+          : null,
+      ),
+    );
+
+    await expect(
+      service.create(teacherPayload, { kind: 'self-registration' }),
+    ).rejects.toThrow(/xodim hisobi allaqachon bor/);
+    expect(prisma.user.create).not.toHaveBeenCalled();
+  });
+
+  it("o'quvchi hisobidagi raqam bilan xodim hisobi ochiladi", async () => {
+    // Faqat xodim rolli hisoblar so'raladi — o'quvchi hisobi topilmaydi.
+    prisma.user.findFirst.mockImplementation(({ where }: any) =>
+      Promise.resolve(where?.roles ? null : { id: 10018 }),
+    );
+
+    await service.create(teacherPayload, { kind: 'self-registration' });
+    expect(prisma.user.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("rolsiz xodimga telefon qoidasi qo'llanmaydi", async () => {
+    await service.create(
+      {
+        firstName: 'Olim',
+        lastName: 'Toshev',
+        companyId: 1001,
+        phone: '901234567',
+        position: 'Farrosh',
+        roleIds: [],
+        branchIds: [NAMANGAN],
+      },
+      { kind: 'self-registration' },
+    );
+
+    const staffLookups = prisma.user.findFirst.mock.calls.filter(
+      ([args]: any[]) => args?.where?.roles,
+    );
+    expect(staffLookups).toHaveLength(0);
+    expect(prisma.user.create).toHaveBeenCalledTimes(1);
   });
 });

@@ -19,6 +19,7 @@ import {
   type StudentOrigin,
 } from '../common/student-origin';
 import { generatePassword } from '../common/utils/password.util';
+import { loginForPhone } from '../common/auth/phone-account-rules';
 import {
   STUDENT_ROLE_ID,
   studentSelect,
@@ -423,12 +424,16 @@ export class StudentsWriteService {
     lastName: string,
     companyId: number,
   ): Promise<{ userId: number; plainPassword: string }> {
+    // Kirish nomi — telefon, agar u boshqa tirik hisobning nomi bo'lmasa
+    // (masalan, xodim yoki aka-uka hisobi). Aks holda bo'sh — ilgari bu
+    // holatda `create` bazada yiqilib, o'quvchi kirish hisobisiz qolardi.
+    const login = await loginForPhone(this.prisma, phone);
     const plainPassword = generatePassword();
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
     const user = await this.prisma.user.create({
       data: {
-        login: phone,
+        login,
         password: hashedPassword,
         firstName,
         lastName,

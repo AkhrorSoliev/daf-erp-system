@@ -48,7 +48,10 @@ describe('registerStudentFromTelegram — lid kelib chiqishi', () => {
           .mockResolvedValue({ id: 'enr-1', createdAt: new Date() }),
       },
       enrollmentStateLog: { create: jest.fn().mockResolvedValue({}) },
-      user: { create: jest.fn().mockResolvedValue({ id: 20001 }) },
+      user: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 20001 }),
+      },
       student: { update: jest.fn().mockResolvedValue({}) },
     };
     leadOrigin = {
@@ -104,5 +107,24 @@ describe('registerStudentFromTelegram — lid kelib chiqishi', () => {
     // login yaratish ham. Real Prisma o'quvchi qatorini ham orqaga qaytaradi.
     expect(prisma.enrollment.create).not.toHaveBeenCalled();
     expect(prisma.user.create).not.toHaveBeenCalled();
+  });
+
+  it("kirish nomi bo'sh bo'lsa telefon yoziladi", async () => {
+    await run();
+    expect(prisma.user.create.mock.calls[0][0].data.login).toBe('901112233');
+  });
+
+  it("kirish nomi band bo'lsa ham o'quvchi hisobi ochiladi — nomsiz", async () => {
+    // Prodda 4 o'quvchi aynan shu sabab kirish hisobisiz qolgan edi.
+    prisma.user.findFirst.mockResolvedValue({ id: 10018 });
+
+    await run();
+
+    expect(prisma.user.create).toHaveBeenCalledTimes(1);
+    expect(prisma.user.create.mock.calls[0][0].data.login).toBeNull();
+    expect(prisma.student.update).toHaveBeenCalledWith({
+      where: { id: 11094 },
+      data: { userId: 20001 },
+    });
   });
 });

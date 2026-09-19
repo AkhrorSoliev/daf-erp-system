@@ -137,15 +137,25 @@ describe('PortalPasswordResetService', () => {
       );
     });
 
-    it('skips the audit when there is no linked student', async () => {
+    it("o'quvchisi yo'q hisobda (xodim) jurnal User yozuviga tushadi", async () => {
       const { service, prisma, entityHistory } = build();
+
       await service.applyNewPassword(
-        { userId: 10001, companyId: null },
+        { userId: 10001, companyId: 1001 },
         'newpass123',
         'SMS orqali tiklandi',
       );
+
       expect(prisma.user.update).toHaveBeenCalled();
-      expect(entityHistory.recordUpdate).not.toHaveBeenCalled();
+      expect(entityHistory.recordUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'User',
+          entityId: 10001,
+          newValues: { parol: 'SMS orqali tiklandi' },
+          changedById: 10001,
+          companyId: 1001,
+        }),
+      );
     });
   });
 });

@@ -26,10 +26,11 @@ const MAX_CANDIDATES = 10;
  * across accounts resets the right one. `null`/undefined = no role restriction
  * (localhost/dev).
  *
- * IMPORTANT: neither `User.login`/`phone` is unique, so a phone can map to
- * several accounts (siblings, a shared number, or one person with multiple
- * roles). Within the allowed roles we pick the status ACTIVE/INACTIVE account
- * that was most recently updated — the same tiebreak `validateUser` uses.
+ * IMPORTANT: `User.phone` is not unique (and `login` may be null), so a phone
+ * can map to several accounts (siblings, a shared number, or one person with
+ * one account per role — ADR-0022). Within the allowed roles we pick the
+ * status ACTIVE/INACTIVE account that was most recently updated — the same
+ * tiebreak `validateUser` uses.
  *
  * That tiebreak is safe for LOGIN, where the caller proves which account is
  * theirs by knowing its password. It is not safe ACROSS COMPANIES: this is a
@@ -99,8 +100,12 @@ export class PortalPasswordResetService {
   }
 
   /**
-   * Hash and set a new password on the user, then record a Student audit entry.
-   * `channelLabel` describes the reset source, e.g. "SMS orqali tiklandi".
+   * Parolni xeshlab yozadi va tiklashni jurnalga tushiradi.
+   *
+   * NEGA ikki yozuv: o'quvchiniki o'quvchi kartochkasida (`Student`) ko'rinadi,
+   * xodimniki xodim yozuvida (`User`). Ilgari xodim parolini SMS orqali
+   * tiklash umuman iz qoldirmasdi. `channelLabel` — manba, masalan
+   * "SMS orqali tiklandi".
    */
   async applyNewPassword(
     target: ResettableTarget,
@@ -113,15 +118,13 @@ export class PortalPasswordResetService {
       data: { password: hashed },
     });
 
-    if (target.studentId) {
-      await this.entityHistory.recordUpdate({
-        entityType: 'Student',
-        entityId: target.studentId,
-        oldValues: { parol: '***' },
-        newValues: { parol: channelLabel },
-        changedById: target.userId,
-        companyId: target.companyId ?? undefined,
-      });
-    }
+    await this.entityHistory.recordUpdate({
+      entityType: target.studentId ? 'Student' : 'User',
+      entityId: target.studentId ?? target.userId,
+      oldValues: { parol: '***' },
+      newValues: { parol: channelLabel },
+      changedById: target.userId,
+      companyId: target.companyId ?? undefined,
+    });
   }
 }
