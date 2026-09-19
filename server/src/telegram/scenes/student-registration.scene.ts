@@ -21,6 +21,10 @@ import {
   SHARED_PHONE_INVALID,
 } from '../../common/utils/phone.util';
 import {
+  CONTACT_NOT_OWN,
+  contactBelongsToSender,
+} from '../utils/contact-ownership';
+import {
   buildTeachersKeyboard,
   daysMap,
   formatQrGroupInfo,
@@ -317,6 +321,19 @@ export function createStudentRegistrationScene(
     if (ctx.session.processing) return;
 
     const contact = ctx.message.contact;
+    // Faqat odamning O'Z tasdiqlangan raqami o'tadi — begona raqamga
+    // o'quvchi hisobi ochib bo'lmasin.
+    if (!contactBelongsToSender(contact, ctx.from)) {
+      await ctx.reply(
+        CONTACT_NOT_OWN,
+        Markup.keyboard([
+          [Markup.button.contactRequest('📱 Telefon raqamni yuborish')],
+        ])
+          .resize()
+          .oneTime(),
+      );
+      return;
+    }
     // Kontakt tugmasidan kelgan raqamni Telegram o'zi beradi — chet el
     // raqami ham qabul qilinadi (o'zbek raqami 9 xonaga keltiriladi).
     const phone = normalizeSharedPhone(contact.phone_number);

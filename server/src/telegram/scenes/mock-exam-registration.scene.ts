@@ -13,6 +13,10 @@ import {
   normalizeSharedPhone,
   SHARED_PHONE_INVALID,
 } from '../../common/utils/phone.util';
+import {
+  CONTACT_NOT_OWN,
+  contactBelongsToSender,
+} from '../utils/contact-ownership';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentLinkService } from '../../payment-gateways/payment-link.service';
 import { resolveParticipantFee } from '../../mock-exams/mock-exam-pricing.util';
@@ -249,6 +253,14 @@ export function createMockExamRegistrationScene(
   scene.on(message('contact'), async (ctx) => {
     const field = currentField(ctx);
     if (!field || field.type !== 'phone') return;
+
+    // Bu sahna telefon bo'yicha mavjud o'quvchini topib chatni unga
+    // bog'laydi — begona karta bilan begona o'quvchining bog'lanishini
+    // egallab bo'lmasin.
+    if (!contactBelongsToSender(ctx.message.contact, ctx.from)) {
+      await ctx.reply(CONTACT_NOT_OWN);
+      return;
+    }
 
     // Kontakt tugmasidan kelgan raqamni Telegram o'zi beradi — chet el
     // raqami ham qabul qilinadi (o'zbek raqami 9 xonaga keltiriladi).
