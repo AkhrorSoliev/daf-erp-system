@@ -23,7 +23,7 @@
 - Buyruqlar: server — `cd server && npx jest <yo'l>`, `npm run typecheck`, `npm run lint`; klient — `cd client && npx vitest run <yo'l>`, `npm run typecheck`, `npm run lint`.
 - Prisma migratsiyasi: `prisma migrate dev` bu loyihada **ishlamaydi** — `migrate diff` → tozalash → `db execute` → `migrate resolve` (2-vazifa).
 - `git reset --hard` va yalang'och `git stash` ishlatilmaydi.
-- Commit xabari o'zbekcha, oxirida bo'sh qatordan keyin `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`.
+- Commit xabari o'zbekcha, oxirida bo'sh qatordan keyin `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
 
 ---
 
@@ -66,7 +66,7 @@
 | `components/settings/settings-layout-shell.tsx` | `/settings/daf` faqat CEO |
 | `components/settings/daf-norma-settings-client.tsx` | Norma formasi |
 | `app/(dashboard)/settings/daf/page.tsx` | Sahifa |
-| `app/(dashboard)/daf/layout.tsx`, `daf/page.tsx`, `daf/oquvchilar/page.tsx` | Yo'llar |
+| `app/(dashboard)/daf/layout.tsx` (12), `daf/page.tsx` (14), `daf/oquvchilar/page.tsx` (15) | Yo'llar — har sahifa o'z komponenti bilan bir vazifada |
 | `components/daf-center/daf-layout-shell.tsx` | Rol qorovuli |
 | `components/daf-center/types.ts` | Server shartnomasi 1:1 |
 | `components/daf-center/oquvchilar-filtr.ts` + `.test.ts` | URL ↔ filtr (toza) |
@@ -179,7 +179,7 @@ DaF markaz so'rovi kunlik seanslarni tsrange birlashmasi bilan qirqadi
 (PG 14+). Kod yozishdan oldin bazada bor-yo'qligini bir buyruq bilan
 ko'rish uchun.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 MSG
 )"
 ```
@@ -253,7 +253,7 @@ Kunlik daqiqa, kunlik savol, haftalik faol kun (yashil) va sariq
 chegarasi. Sozlamalardan o'zgartiriladi — kodga yozilsa hamma qizil yoki
 hamma yashil chiqib qolgan normani tuzatish deploy talab qilardi.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 MSG
 )"
 ```
@@ -525,7 +525,7 @@ DaF normasi: faol kun va holat — bitta toza modul
 holat = maxrajga mutanosib chegaralar. SQL ga kirmaydi — ADR-0015 dagi
 kabi qoida ikki joyda yashab ketmasin.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 MSG
 )"
 ```
@@ -701,7 +701,7 @@ Company PATCH: DaF normasi maydonlari va sariq < haftalik sharti
 Yangi manzil ochilmaydi — mavjud GET/PATCH /company/:id ishlatiladi
 (yangi yo'l @Get(':id') bilan to'qnashardi).
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 MSG
 )"
 ```
@@ -1005,7 +1005,7 @@ Sozlamalar: DaF normasi sahifasi (faqat CEO)
 To'rt raqam va jonli tushuntirish — CEO normani real taqsimotga qarab
 o'zgartira oladi, deploy kutmaydi.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 MSG
 )"
 ```
@@ -1422,7 +1422,7 @@ DaF markaz: javob shartnomasi va kunlik qatorlardan o'quvchi surati
 SQL kunga yig'gan qatorlarni bitta o'quvchi suratiga aylantiradigan toza
 funksiya; faol kun qarori norma.ts dan.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 MSG
 )"
 ```
@@ -1798,7 +1798,7 @@ DaF markaz: ro'yxat filtri, saralash va sahifalash — toza funksiyalar
 Standart tartib «eng muammolisi yuqorida»; telefon qidiruvi kamida uch
 raqamdan.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 MSG
 )"
 ```
@@ -1986,7 +1986,7 @@ Kunlik seanslar range_agg bilan kunlikYigindi() qoidasida qirqiladi;
 savollar tugatilgan seanslardan; hech qachon kirmaganlar; tugatilgan
 darslar. Qaror yo'q — faqat sonlar.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 MSG
 )"
 ```
@@ -2196,7 +2196,7 @@ Kunlik qirqish qoidasi ikki joyda (TS va SQL) — bu skript ikkisini bir
 xil kirish ustida yuritib, farqni chiqaradi. Relizdan oldin prodda bir
 marta, keyin shubha tug'ilganda.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 MSG
 )"
 ```
@@ -2881,7 +2881,7 @@ Prisma activeStudentWhere() + filial qamrovi → to'rt xom yig'indi → holat,
 saralash, sahifalash TypeScript da. Kurs ustuni faqat sahifadagi 50 kishi
 uchun. Bo'sh qamrovda bazaga so'rov ketmaydi.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 MSG
 )"
 ```
@@ -3264,7 +3264,7 @@ DaF markaz: uch GET manzil — summary, students, students/phones
 Rollar CEO / Filial direktori / Administrator; filial @BranchScope()
 orqali, manifestga yozuv kerak emas. O'qituvchi ko'rmaydi.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 MSG
 )"
 ```
@@ -3277,10 +3277,11 @@ MSG
 - Create: `client/src/lib/daf-nav.ts`, `client/src/lib/daf-nav.test.ts`
 - Modify: `client/src/lib/nav-items.ts`
 - Create: `client/src/components/daf-center/daf-layout-shell.tsx`
-- Create: `client/src/app/(dashboard)/daf/layout.tsx`, `client/src/app/(dashboard)/daf/page.tsx`, `client/src/app/(dashboard)/daf/oquvchilar/page.tsx`
+- Create: `client/src/app/(dashboard)/daf/layout.tsx`
 
 **Interfaces:**
-- Produces: `dafNavItems`, `canEnterDaf(roleIds)`, `canOpenDafPath(roleIds, pathname)`; `/daf` va `/daf/oquvchilar` yo'llari (hozircha 14–15-vazifalardagi komponentlarni import qiladi — ular yozilguncha `page.tsx` lar keyingi qadamda to'ldiriladi).
+- Produces: `dafNavItems`, `canEnterDaf(roleIds)`, `canOpenDafPath(roleIds, pathname)`, `DafLayoutShell`.
+- **Sahifa fayllari bu vazifada yaratilmaydi** — `/daf/page.tsx` 14-vazifada, `/daf/oquvchilar/page.tsx` 15-vazifada, o'z klient komponenti bilan birga. Shuning uchun bu vazifadan keyin menyu havolasi 404 beradi; bu kutilgan va 14-vazifada yopiladi. Vaqtinchalik «tez orada» komponentlari yozilmaydi.
 
 - [ ] **Step 1: Test**
 
@@ -3428,67 +3429,14 @@ export default function DafLayout({ children }: { children: React.ReactNode }) {
 }
 ```
 
-- [ ] **Step 7: Sahifalar (hozircha vaqtinchalik matn — 14–15-vazifalar almashtiradi)**
-
-`client/src/app/(dashboard)/daf/page.tsx`:
-
-```tsx
-import { Suspense } from "react";
-import { DafUmumiyClient } from "@/components/daf-center/daf-umumiy-client";
-
-export default function DafUmumiyPage() {
-  // `useSearchParams` Suspense chegarasisiz build'ni yiqitadi.
-  return (
-    <Suspense fallback={null}>
-      <DafUmumiyClient />
-    </Suspense>
-  );
-}
-```
-
-`client/src/app/(dashboard)/daf/oquvchilar/page.tsx`:
-
-```tsx
-import { Suspense } from "react";
-import { DafOquvchilarClient } from "@/components/daf-center/daf-oquvchilar-client";
-
-export default function DafOquvchilarPage() {
-  return (
-    <Suspense fallback={null}>
-      <DafOquvchilarClient />
-    </Suspense>
-  );
-}
-```
-
-Ikkala klient komponent hali yo'q — typecheck o'tishi uchun **vaqtinchalik** ikki fayl yarating (14- va 15-vazifalarda to'liq versiya ustidan yoziladi):
-
-`client/src/components/daf-center/daf-umumiy-client.tsx`:
-```tsx
-"use client";
-
-export function DafUmumiyClient() {
-  return <p className="text-sm text-muted-foreground">Umumiy holat — tez orada</p>;
-}
-```
-
-`client/src/components/daf-center/daf-oquvchilar-client.tsx`:
-```tsx
-"use client";
-
-export function DafOquvchilarClient() {
-  return <p className="text-sm text-muted-foreground">O&apos;quvchilar — tez orada</p>;
-}
-```
-
-- [ ] **Step 8: Tekshirish**
+- [ ] **Step 7: Tekshirish**
 
 ```bash
 cd client && npm run typecheck && npx eslint src/lib/daf-nav.ts src/lib/nav-items.ts src/components/daf-center "src/app/(dashboard)/daf"
 ```
-Expected: toza. Qo'lda: CEO bilan yon menyuda «DaF ilovasi» ochiladi, ikki bola; `/daf` va `/daf/oquvchilar` vaqtinchalik matnni ko'rsatadi; o'qituvchi bilan `/daf` → bosh sahifaga qaytaradi.
+Expected: toza. Qo'lda: CEO bilan yon menyuda «DaF ilovasi» ochiladi va ikki bolasi ko'rinadi. Havolani bosganda 404 — sahifa fayllari 14- va 15-vazifalarda qo'shiladi; bu kutilgan holat.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add src/lib/daf-nav.ts src/lib/daf-nav.test.ts src/lib/nav-items.ts src/components/daf-center "src/app/(dashboard)/daf"
@@ -3496,9 +3444,10 @@ git commit -m "$(cat <<'MSG'
 Yon menyu: «DaF ilovasi» bo'limi, rol qorovuli va yo'llar
 
 Umumiy holat va O'quvchilar — CEO, filial direktori, administrator.
-Menyuda yo'q yangi yo'l faqat CEO ga qoladi.
+Menyuda yo'q yangi yo'l faqat CEO ga qoladi. Sahifa fayllari keyingi
+ikki vazifada, o'z komponenti bilan birga.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 MSG
 )"
 ```
@@ -3998,7 +3947,7 @@ DaF markaz klienti: turlar, URL filtri, hook'lar, holat belgisi
 DayBars tooltip yorlig'i parametr bo'ldi — markazda «shug'ullangan» norma
 bo'yicha faol kun, guruh tabida boshqa ma'no.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 MSG
 )"
 ```
@@ -4008,8 +3957,9 @@ MSG
 ## Task 14: «Umumiy holat» sahifasi
 
 **Files:**
-- Modify (to'liq): `client/src/components/daf-center/daf-umumiy-client.tsx`
+- Create: `client/src/components/daf-center/daf-umumiy-client.tsx`
 - Create: `client/src/components/daf-center/daf-kpi-cards.tsx`, `daf-voronka.tsx`, `daf-trend-chart.tsx`, `daf-filiallar-table.tsx`
+- Create: `client/src/app/(dashboard)/daf/page.tsx`
 
 **Interfaces:**
 - Consumes: `useMarkazUmumiy`, `MarkazUmumiy` va bo'laklari (13), `PeriodToggle`, `KpiCard`, `ActivityError`, `usePeriodParam` (`activity-ui`), `formatDavomiylik`, `foizRangi`, `formatKunOy` (`activity-format`), `ActivityExplainer`, `ChartCard`, `useBranchSwitcher`, `filtrniUrlgaYoz`, `STANDART_FILTR`.
@@ -4300,7 +4250,23 @@ export function DafFiliallarTable({ qatorlar }: { qatorlar: MarkazFilialQatori[]
 }
 ```
 
-- [ ] **Step 5: Sahifa (vaqtinchalikni almashtiradi)**
+- [ ] **Step 5: Sahifa**
+
+`client/src/app/(dashboard)/daf/page.tsx`:
+
+```tsx
+import { Suspense } from "react";
+import { DafUmumiyClient } from "@/components/daf-center/daf-umumiy-client";
+
+export default function DafUmumiyPage() {
+  // `useSearchParams` Suspense chegarasisiz build'ni yiqitadi.
+  return (
+    <Suspense fallback={null}>
+      <DafUmumiyClient />
+    </Suspense>
+  );
+}
+```
 
 `client/src/components/daf-center/daf-umumiy-client.tsx`:
 
@@ -4377,19 +4343,19 @@ export function DafUmumiyClient() {
 ```bash
 cd client && npm run typecheck && npx eslint src/components/daf-center
 ```
-Expected: toza. Qo'lda (`npm run dev`, server ham ishlab tursin): `/daf` — kartalar, voronka, trend, (CEO + «Barcha filiallar» da) filiallar jadvali; davr 7↔30; voronkadagi yo'qotish havolasi `/daf/oquvchilar?status=...` ga olib o'tadi (hozircha vaqtinchalik matn). Dev bazada sonlar nol yoki kichik — bu normal.
+Expected: toza. Qo'lda (`npm run dev`, server ham ishlab tursin): `/daf` — kartalar, voronka, trend, (CEO + «Barcha filiallar» da) filiallar jadvali; davr 7↔30; voronkadagi yo'qotish havolasi `/daf/oquvchilar?status=...` ga olib o'tadi (u sahifa 15-vazifagacha 404 — kutilgan). Dev bazada sonlar nol yoki kichik — bu normal.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/components/daf-center
+git add src/components/daf-center "src/app/(dashboard)/daf/page.tsx"
 git commit -m "$(cat <<'MSG'
 DaF ilovasi: «Umumiy holat» sahifasi
 
 Oltita karta, bosiladigan voronka, 30 kunlik ikki chiziqli trend,
 CEO uchun filiallar jadvali. Filial — global tanlagichdan.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 MSG
 )"
 ```
@@ -4399,8 +4365,9 @@ MSG
 ## Task 15: «O'quvchilar» sahifasi
 
 **Files:**
-- Modify (to'liq): `client/src/components/daf-center/daf-oquvchilar-client.tsx`
+- Create: `client/src/components/daf-center/daf-oquvchilar-client.tsx`
 - Create: `client/src/components/daf-center/daf-oquvchilar-filter-bar.tsx`, `daf-oquvchilar-table.tsx`, `daf-oquvchi-sheet.tsx`, `daf-royxat-nusxalash.tsx`
+- Create: `client/src/app/(dashboard)/daf/oquvchilar/page.tsx`
 
 **Interfaces:**
 - Consumes: `useMarkazOquvchilar`, `markazTelefonlarniOl`, `OquvchilarFiltri`, `filtrniUrldanOqi`, `filtrniUrlgaYoz`, `STANDART_FILTR`, `SAHIFA_HAJMI`, `HolatBadge`, `HOLAT_MATNI`, `HOLATLAR`, `SARALASHLAR`, `DayBars`, `ProgressLine`, `PeriodToggle`, `ActivityError`, `StudentActivityPanel`, `oxirgiFaollikMatni`, `formatDavomiylik`, `formatKunOy`, `formatOxirgiFaollik`, `foizRangi`, `formatPhone`, `MultiSelectCombobox` (`options`, `selected`, `onChange`, `placeholder`, `countSuffix`), `Select*`, `Input`, `Button`, `Avatar*`, `Badge`, `Table*`, `Sheet*`, `Tooltip*`.
@@ -4838,7 +4805,23 @@ export function DafRoyxatNusxalash({ filtr, jami }: { filtr: OquvchilarFiltri; j
 }
 ```
 
-- [ ] **Step 4: Sahifa (vaqtinchalikni almashtiradi)**
+- [ ] **Step 4: Sahifa**
+
+`client/src/app/(dashboard)/daf/oquvchilar/page.tsx`:
+
+```tsx
+import { Suspense } from "react";
+import { DafOquvchilarClient } from "@/components/daf-center/daf-oquvchilar-client";
+
+export default function DafOquvchilarPage() {
+  // `useSearchParams` Suspense chegarasisiz build'ni yiqitadi.
+  return (
+    <Suspense fallback={null}>
+      <DafOquvchilarClient />
+    </Suspense>
+  );
+}
+```
 
 `client/src/components/daf-center/daf-oquvchilar-client.tsx`:
 
@@ -4965,14 +4948,14 @@ Expected: toza, testlar PASS. Qo'lda: `/daf/oquvchilar` — ro'yxat, filtrlar UR
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/components/daf-center
+git add src/components/daf-center "src/app/(dashboard)/daf/oquvchilar/page.tsx"
 git commit -m "$(cat <<'MSG'
 DaF ilovasi: «O'quvchilar» sahifasi
 
 Filtrlar URL da, saralanadigan jadval, 50 talik sahifalash, mavjud
 o'quvchi yon oynasi, joriy filtr bo'yicha ro'yxatni nusxalash.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 MSG
 )"
 ```
@@ -5127,7 +5110,7 @@ git add docs/adr/0024-daf-faollik-normasi-yigindi-sql-qaror-ts.md docs/adr/READM
 git commit -m "$(cat <<'MSG'
 ADR-0024: DaF faollik normasi sozlamada; yig'indi SQL da, qaror TypeScript da
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 MSG
 )"
 ```
@@ -5235,4 +5218,7 @@ Merge va deploy **qo'lda** (memory: Railway/Vercel GitHub ga ulanmagan). Deploy 
 
 **Tip izchilligi:** `KunlikSeans`/`KunlikSavol` (6) ↔ `kunlikSeanslar`/`kunlikSavollar` (8) ↔ servis (10); `OquvchilarSorovi`/`SAHIFA_HAJMI` (7) ↔ `sorovniOqi` (11) ↔ klient `sorovParametrlari` (13, `pageSize: 50`); `Holat`/`HOLATLAR` (3) ↔ DTO (11) ↔ klient `types.ts` (13); `MarkazOquvchilar.filialUstuni`, `sahifaHajmi` (6) ↔ jadval (15); `DayBars.shugullanganMatni` (13) ↔ jadval (15); `useBranchSwitcher().selectBranch(BranchItem)` (14) mavjud imzo.
 
-**Placeholder:** yo'q — har qadamda kod yoki buyruq bor. 12-vazifadagi ikki «vaqtinchalik» komponent typecheck uchun ataylab va 14–15 da ustidan yoziladi.
+**Placeholder:** yo'q — har qadamda kod yoki buyruq bor. Sahifa fayli har doim o'z klient
+komponenti bilan bitta vazifada yaratiladi, shuning uchun vaqtinchalik «tez orada» komponentlari
+ham yo'q; 12-vazifadan keyin menyu havolasi 14-vazifagacha 404 beradi va bu vazifa matnida
+yozilgan.
