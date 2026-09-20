@@ -69,7 +69,14 @@ export function guruhla<T>(
   return m;
 }
 
-/** Oraliqlar (ms) birlashmasining uzunligi, butun soniyalarda. */
+/**
+ * Oraliqlar (ms) birlashmasining uzunligi, butun soniyalarda.
+ *
+ * I6: markazda shu formulaning SQL nusxasi bor
+ * (`app-activity/center/center-app-activity.queries.ts`, `kunlikSeanslar` —
+ * `range_agg`/`unnest`). Ikkovi BIRGA o'zgartiriladi;
+ * `server/scripts/check-daf-markaz.ts` ularni solishtiradi.
+ */
 export function birlashmaSoniyasi(oraliqlar: [number, number][]): number {
   const tartib = [...oraliqlar].sort((a, b) => a[0] - b[0]);
   let jami = 0;
@@ -94,6 +101,11 @@ export function birlashmaSoniyasi(oraliqlar: [number, number][]): number {
  * faol va radio yig'indisi shu kun seanslarining `[firstSeenAt, lastSeenAt +
  * 120 s]` birlashmasidan oshmaydi. Platforma va bo'limlar faol vaqt bilan bir
  * xil nisbatda qisqaradi.
+ *
+ * I6: markazda shu qoidaning SQL nusxasi bor
+ * (`app-activity/center/center-app-activity.queries.ts`, `kunlikSeanslar`) —
+ * ikkovi BIRGA o'zgartiriladi, `server/scripts/check-daf-markaz.ts` ularni
+ * solishtiradi.
  */
 export function kunlikYigindi(
   seanslar: SeansSatri[],
