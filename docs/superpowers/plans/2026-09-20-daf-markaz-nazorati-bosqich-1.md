@@ -4627,7 +4627,14 @@ export function DafOquvchilarFilterBar({
 
       <div className="relative">
         <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ism yoki telefon" className="h-9 w-52 pl-8" />
+        {/* `maxLength` server DTO si bilan bir xil: 100 dan oshsa so'rov 400 bilan rad etiladi. */}
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Ism yoki telefon"
+          maxLength={100}
+          className="h-9 w-52 pl-8"
+        />
       </div>
 
       {filtrBor && (
