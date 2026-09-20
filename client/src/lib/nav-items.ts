@@ -12,12 +12,14 @@ import {
   UsersRound,
   ListTodo,
   Images,
+  Smartphone,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { paymentsNavItems } from "./payments-nav";
 import { reportsNavSections } from "./reports-nav";
 import { settingsNavSections } from "./settings-nav";
+import { dafNavItems } from "./daf-nav";
 
 export interface NavItemChild {
   title: string;
@@ -39,22 +41,60 @@ export interface NavItem {
   children?: NavItemChild[];
 }
 
-const reportsChildren: NavItemChild[] = reportsNavSections.flatMap((s) => s.items);
-const settingsChildren: NavItemChild[] = settingsNavSections.flatMap((s) => s.items);
+const reportsChildren: NavItemChild[] = reportsNavSections.flatMap(
+  (s) => s.items,
+);
+const settingsChildren: NavItemChild[] = settingsNavSections.flatMap(
+  (s) => s.items,
+);
 
 export const navItems: NavItem[] = [
   { title: "Bosh sahifa", url: "/", icon: LayoutDashboard },
   // Kunlik jadval ilgari bosh sahifaning o'zi edi. Bosh sahifa boshqaruv
   // paneliga aylangach u alohida sahifaga chiqdi — hamma rol ko'radi.
   { title: "Jadval", url: "/schedule", icon: CalendarDays },
-  { title: "O'qituvchilar", url: "/teachers", icon: GraduationCap, visibleForRoles: [1, 2, 3] },
-  { title: "O'quvchilar", url: "/students", icon: BookOpen, visibleForRoles: [1, 2, 3] },
-  { title: "Lidlar", url: "/leads", icon: UserPlus, visibleForRoles: [1, 2, 3] },
-  { title: "Aloqa markazi", url: "/outreach", icon: PhoneCall, visibleForRoles: [1, 2, 3] },
-  { title: "Mock imtihonlar", url: "/mock-exams", icon: ClipboardCheck, visibleForRoles: [1, 2, 3] },
+  {
+    title: "O'qituvchilar",
+    url: "/teachers",
+    icon: GraduationCap,
+    visibleForRoles: [1, 2, 3],
+  },
+  {
+    title: "O'quvchilar",
+    url: "/students",
+    icon: BookOpen,
+    visibleForRoles: [1, 2, 3],
+  },
+  {
+    title: "Lidlar",
+    url: "/leads",
+    icon: UserPlus,
+    visibleForRoles: [1, 2, 3],
+  },
+  {
+    title: "Aloqa markazi",
+    url: "/outreach",
+    icon: PhoneCall,
+    visibleForRoles: [1, 2, 3],
+  },
+  {
+    title: "Mock imtihonlar",
+    url: "/mock-exams",
+    icon: ClipboardCheck,
+    visibleForRoles: [1, 2, 3],
+  },
   { title: "Guruhlar", url: "/groups", icon: UsersRound },
   { title: "Topshiriqlar", url: "/tasks", icon: ListTodo },
   { title: "Media", url: "/media", icon: Images, visibleForRoles: [1, 2, 3] },
+  // DaF ilovasi nazorati — markaz bo'yicha faollik. O'qituvchi bu bo'limni
+  // ko'rmaydi: u o'z guruhidagi «Ilova faolligi» tabidan foydalanadi.
+  {
+    title: "DaF ilovasi",
+    url: "/daf",
+    icon: Smartphone,
+    visibleForRoles: [1, 2, 3],
+    children: dafNavItems,
+  },
   // Lehrer portal — only Teachers see this. Backend `/salary/me/*`
   // endpoints scope by @CurrentUser('id') so a teacher only sees their own.
   {
