@@ -34,31 +34,35 @@ export function LeadFunnelUnpaidTiles({ unpaid, onOpen }: Props) {
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center gap-2">
-        <h3 className="font-semibold">Darsga kelgan, lekin to&apos;lamagan</h3>
-        <span className="text-xs text-muted-foreground">
-          {displayDate(FUNNEL_START_DATE)} dan beri · bugungi holat ·{" "}
-          <span className="tabular-nums">{formatNumber(unpaid.total)} kishi</span>
-        </span>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label="Tushuntirish"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <Info className="size-4" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-xs">
-            Voronkaga kirgan, kamita bir darsga kelgan va hali birorta to&apos;lov
-            qilmaganlar. Davr filtriga bog&apos;liq emas: boshlanishdan bugungacha,
-            o&apos;quvchining hozirgi holati bo&apos;yicha.
-          </TooltipContent>
-        </Tooltip>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2">
+          <div className="space-y-0.5">
+            <h3 className="font-semibold">Darsga kelgan, lekin to&apos;lamagan</h3>
+            <span className="text-xs text-muted-foreground">
+              {displayDate(FUNNEL_START_DATE)} dan beri · bugungi holat ·{" "}
+              <span className="tabular-nums">{formatNumber(unpaid.total)} kishi</span>
+            </span>
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="Tushuntirish"
+                className="text-muted-foreground transition-colors hover:text-foreground mt-1"
+              >
+                <Info className="size-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              Voronkaga kirgan, kamida bir darsga kelgan va hali birorta to&apos;lov
+              qilmaganlar. Davr filtriga bog&apos;liq emas: boshlanishdan bugungacha,
+              o&apos;quvchining hozirgi holati bo&apos;yicha.
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
 
-      <div className={cn("grid gap-3", tiles.length === 4 ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3")}>
+      <div className={cn("grid gap-3", tiles.length === 4 ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2 sm:grid-cols-3")}>
         {tiles.map((t) => {
           const value = unpaid[t.status];
           return (
