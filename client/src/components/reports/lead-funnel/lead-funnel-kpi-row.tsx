@@ -15,7 +15,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 import { conversionPct, displayDate, wholePercent } from "./lead-funnel-math";
 import type { LeadFunnelResponse } from "./lead-funnel-types";
 
@@ -25,10 +24,9 @@ interface CardProps {
   value: string;
   sub: string;
   tooltip: string;
-  valueClass?: string;
 }
 
-function KpiCard({ icon: Icon, label, value, sub, tooltip, valueClass }: CardProps) {
+function KpiCard({ icon: Icon, label, value, sub, tooltip }: CardProps) {
   return (
     <div className="space-y-2 rounded-xl border bg-card p-4">
       <div className="flex items-center justify-between gap-2">
@@ -43,7 +41,7 @@ function KpiCard({ icon: Icon, label, value, sub, tooltip, valueClass }: CardPro
               aria-label="Tushuntirish"
               className="text-muted-foreground transition-colors hover:text-foreground"
             >
-              <Info className="size-4" />
+              <Info className="size-4" aria-hidden="true" />
             </button>
           </TooltipTrigger>
           <TooltipContent className="max-w-xs whitespace-pre-line">
@@ -51,7 +49,7 @@ function KpiCard({ icon: Icon, label, value, sub, tooltip, valueClass }: CardPro
           </TooltipContent>
         </Tooltip>
       </div>
-      <div className={cn("text-2xl font-semibold tabular-nums", valueClass)}>
+      <div className="text-2xl font-semibold tabular-nums">
         {value}
       </div>
       <p className="text-xs text-muted-foreground tabular-nums">{sub}</p>

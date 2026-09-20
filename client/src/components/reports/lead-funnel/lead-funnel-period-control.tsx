@@ -57,7 +57,7 @@ export function LeadFunnelPeriodControl({
       <div
         role="group"
         aria-label="Davr"
-        className="inline-flex w-fit rounded-lg border bg-muted/40 p-0.5 text-sm"
+        className="inline-flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-0.5 text-sm w-fit"
       >
         {presets.map((p) => (
           <button
