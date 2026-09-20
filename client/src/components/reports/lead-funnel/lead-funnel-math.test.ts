@@ -317,6 +317,63 @@ describe("collapseSources", () => {
       paid: 0,
     });
   });
+
+  it("6 nomlangan manba + manbasiz qator: manbasiz hech qachon Boshqalar'ga qo'shilmaydi", () => {
+    const residual = { ...row("z", 4), id: null, name: null, enrolled: 2, attended: 1 };
+    // Manbasiz qator kiritishda ataylab OXIRIDA emas — server har doim oxiriga
+    // qo'yadi, lekin funksiya pozitsiyaga emas, id'ga qarab topishi kerak.
+    const out = collapseSources([
+      row("a", 9),
+      row("b", 8),
+      row("c", 7),
+      residual,
+      row("d", 6),
+      row("e", 5),
+      row("f", 2),
+    ]);
+    expect(out).toHaveLength(7);
+    expect(out.slice(0, 5).map((r) => r.key)).toEqual(["a", "b", "c", "d", "e"]);
+    expect(out[5]).toMatchObject({
+      key: "rest",
+      isRest: true,
+      name: "Boshqalar (1 ta manba)",
+      lead: 2,
+      enrolled: 0,
+      attended: 0,
+      paid: 0,
+    });
+    expect(out[6]).toMatchObject({
+      key: "none",
+      isRest: false,
+      lead: 4,
+      enrolled: 2,
+      attended: 1,
+      paid: 0,
+    });
+  });
+
+  it("aniq 5 ta nomlangan manba, manbasiz qator yo'q — hech narsa yig'ilmaydi", () => {
+    const out = collapseSources([
+      row("a", 9), row("b", 8), row("c", 7), row("d", 6), row("e", 5),
+    ]);
+    expect(out).toHaveLength(5);
+    expect(out.map((r) => r.key)).toEqual(["a", "b", "c", "d", "e"]);
+    expect(out.every((r) => !r.isRest)).toBe(true);
+  });
+
+  it("6 ta nomlangan manba, manbasiz qator yo'q — beshtadan keyin Boshqalar", () => {
+    const out = collapseSources([
+      row("a", 9), row("b", 8), row("c", 7), row("d", 6), row("e", 5), row("f", 2),
+    ]);
+    expect(out).toHaveLength(6);
+    expect(out[5]).toMatchObject({
+      key: "rest",
+      isRest: true,
+      name: "Boshqalar (1 ta manba)",
+      lead: 2,
+      paid: 0,
+    });
+  });
 });
 
 describe("peopleQueryParams — manba va holat", () => {

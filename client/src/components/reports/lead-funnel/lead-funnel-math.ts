@@ -295,7 +295,15 @@ export type SourceListRow = SourceBreakdownRow & { key: string; isRest: boolean 
 
 export const TOP_SOURCES = 5;
 
-/** Loyiha qoidasi: uzun dum «Boshqalar (N ta manba)» ga yig'iladi, u bosilmaydi. */
+/**
+ * Loyiha qoidasi: uzun dum «Boshqalar (N ta manba)» ga yig'iladi, u
+ * bosilmaydi. Manbasi yo'q qator (`id: null` — lidga hech qanday manba
+ * yozilmagan) Boshqalar'ga HECH QACHON qo'shilmaydi: aks holda "manba
+ * umuman yo'q" holati "yana bir marketing kanali" bo'lib ko'rinib qolardi
+ * va CEO uchun eng muhim son — necha lid manbasiz kelgani — natijadan
+ * butunlay yo'qolardi. Shu sabab u alohida ajratiladi va ro'yxat oxiriga,
+ * o'z holicha, o'zgarishsiz qo'shiladi.
+ */
 export function collapseSources(
   rows: SourceBreakdownRow[],
   top: number = TOP_SOURCES,
@@ -305,9 +313,15 @@ export function collapseSources(
     key: r.id ?? "none",
     isRest: false,
   });
-  if (rows.length <= top) return rows.map(toRow);
-  const head = rows.slice(0, top).map(toRow);
-  const tail = rows.slice(top);
+  // Manbasiz qator pozitsiyasiga qaramay (server doim oxiriga qo'yadi, lekin
+  // bu yerda shunga tayanilmaydi) id'i bo'yicha topiladi va yig'ish
+  // mantiqidan butunlay chetlab o'tiladi.
+  const residual = rows.find((r) => r.id === null);
+  const named = rows.filter((r) => r.id !== null);
+  const residualRow = residual ? [toRow(residual)] : [];
+  if (named.length <= top) return [...named.map(toRow), ...residualRow];
+  const head = named.slice(0, top).map(toRow);
+  const tail = named.slice(top);
   const sum = (k: "lead" | "enrolled" | "attended" | "paid") =>
     tail.reduce((acc, r) => acc + r[k], 0);
   return [
@@ -322,5 +336,6 @@ export function collapseSources(
       key: "rest",
       isRest: true,
     },
+    ...residualRow,
   ];
 }
