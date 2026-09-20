@@ -200,6 +200,22 @@ export class CenterAppActivityService {
   ): Promise<Yigindi> {
     const bosh30 = davrOynasi(XARITA_KUNLARI, now, now, null);
     const boshDavr = davrOynasi(davr, now, now, null);
+
+    // Bo'sh qamrov tekshiruvi normani o'qishdan ham OLDIN turadi (ADR-0002).
+    // O'qiladigan narsa filialga bog'liq bo'lmagan kompaniya sozlamasi, ya'ni
+    // hech narsa sizmaydi — lekin bu klassning o'z shartnomasi «bazaga so'rov
+    // ketmaydi» deydi, va yarim bajarilgan va'da keyingi o'quvchini adashtiradi.
+    // Javobda standart norma qaytadi: ekranda rang beradigan o'quvchi yo'q.
+    if (isEmptyScope(scope)) {
+      return {
+        norma: STANDART_NORMA,
+        bugun: bosh30.bugun,
+        kuzatuvBoshi: null,
+        kunlar30: bosh30.kunlar,
+        hisoblar: [],
+      };
+    }
+
     const company = await this.prisma.company.findUnique({
       where: { id: companyId },
       select: {
@@ -217,7 +233,6 @@ export class CenterAppActivityService {
       kunlar30: bosh30.kunlar,
       hisoblar: [],
     };
-    if (isEmptyScope(scope)) return bosh;
 
     const [oquvchilar, kuzatuvBoshi] = await Promise.all([
       this.prisma.student.findMany({
