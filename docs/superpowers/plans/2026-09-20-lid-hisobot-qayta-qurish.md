@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Ish joyi: `/Users/a1111/Desktop/daf-erp-system/.worktrees/lid-hisobot-ux`, shox `ux/lid-hisobot`. Asosiy katalogga tegilmaydi. `git add` faqat aniq fayl yo'llari bilan.
-- Har commit oxirida bo'sh qator va `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`.
+- Har commit oxirida bo'sh qator va `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
 - UI matni faqat lotin o'zbekchada. UI matnida em-dash yo'q (`·`, `:` yoki `,`); bo'sh katak uchun yolg'iz `—` mumkin.
 - **Rang:** chiziqlar `useChartTheme().palette.series1`, «To'lov qildi» `series3`; matn faqat `foreground`/`muted-foreground`, hech qachon seriya rangida. Ogohlantirish (To'lamagan faol): `text-orange-600 dark:text-orange-400`. **`amber-*` va `sky-*` ishlatilmaydi** (admin panelda rangsiz).
 - Rangli chap/o'ng chiziq (`border-l-*` > 1px) yo'q. Chiziqlarga `opacity` bilan hover yo'q.
@@ -79,6 +79,7 @@ Hujjat: `client/CLAUDE.md`, `server/CLAUDE.md` (Task 11).
   - `previousPeriod(period: { startDate; endDate }): { startDate; endDate } | null`
   - `matchesSource(person: FunnelPerson, sourceId: string | undefined): boolean` (`'none'` = manbasiz)
   - `NO_SOURCE = 'none'`
+  - `UNPAID_STATUS_BUCKETS = ['active','frozen','expelled','other'] as const` va `type UnpaidStatusBucket` — **shu faylda**, chunki DTO allaqachon `lead-funnel.math` dan import qiladi (`FUNNEL_STAGES`), servisdan import qilsa halqa xavfi tug'ilardi
 
 - [ ] **Step 1: Failing testlar**
 
@@ -309,6 +310,18 @@ export function stageDepth(person: FunnelPerson, sets: StageSets): number {
 ```ts
 export const NO_SOURCE = 'none';
 
+/**
+ * To'lamaganlar ro'yxatining holat guruhlari. DTO ham, servis ham shu yerdan
+ * oladi: DTO servisni import qilsa halqa bo'lardi.
+ */
+export const UNPAID_STATUS_BUCKETS = [
+  'active',
+  'frozen',
+  'expelled',
+  'other',
+] as const;
+export type UnpaidStatusBucket = (typeof UNPAID_STATUS_BUCKETS)[number];
+
 export interface SourceBreakdownRow {
   id: string | null;
   name: string | null;
@@ -451,8 +464,7 @@ git commit -m "Lid voronkasi hisobi: manba, filial va oldingi davr"
   - `getFunnel` javobi: `{ period, stages, leadSplit, previous: { period; stages } | null, bySource: SourceBreakdownRow[], byBranch: BranchBreakdownRow[], unpaid }`
   - `FunnelPeopleInput` ga `sourceId?: string; status?: UnpaidStatusBucket`
   - `FunnelPersonRow` ga `sourceId: string | null`
-  - `export type UnpaidStatusBucket = 'active' | 'frozen' | 'expelled' | 'other'`; `export const UNPAID_STATUS_BUCKETS`
-  - `statusBucket(status: string | null): UnpaidStatusBucket`
+  - `statusBucket(status: string | null): UnpaidStatusBucket` (tip va ro'yxat Task 1 dagi `lead-funnel.math.ts` dan import qilinadi)
 
 - [ ] **Step 1: Failing testlar**
 
@@ -553,18 +565,10 @@ Expected: FAIL (`previous` undefined, `statusBucket` yo'q)
 
 `reports-lead-funnel.service.ts`:
 
-1. Importga qo'shing: `countBySource, countByBranch, matchesSource, previousPeriod` (`./lead-funnel.math` dan).
+1. Importga qo'shing: `countBySource, countByBranch, matchesSource, previousPeriod, type UnpaidStatusBucket` (`./lead-funnel.math` dan).
 2. Tiplar:
 
 ```ts
-export const UNPAID_STATUS_BUCKETS = [
-  'active',
-  'frozen',
-  'expelled',
-  'other',
-] as const;
-export type UnpaidStatusBucket = (typeof UNPAID_STATUS_BUCKETS)[number];
-
 export interface FunnelPeopleInput extends FunnelPeriodInput {
   stage: FunnelPeopleStage;
   mode: FunnelMode;
@@ -737,7 +741,7 @@ Expected: FAIL (`sourceId`/`status` uzatilmaydi; DTO validatsiyasi `status` ni w
 
 - [ ] **Step 3: DTO va controller**
 
-`lead-funnel-query.dto.ts`: importga `IsString, MaxLength` qo'shing va `import { UNPAID_STATUS_BUCKETS } from './reports-lead-funnel.service';`. `LeadFunnelPeopleQueryDto` ga:
+`lead-funnel-query.dto.ts`: importga `IsString, MaxLength` qo'shing va mavjud `./lead-funnel.math` importiga `UNPAID_STATUS_BUCKETS` ni qo'shing (u yerda `FUNNEL_STAGES` allaqachon olinadi). `LeadFunnelPeopleQueryDto` ga:
 
 ```ts
   /** Manba id'si yoki `none` (manbasizlar). */
@@ -751,8 +755,6 @@ Expected: FAIL (`sourceId`/`status` uzatilmaydi; DTO validatsiyasi `status` ni w
   @IsIn(UNPAID_STATUS_BUCKETS)
   status?: (typeof UNPAID_STATUS_BUCKETS)[number];
 ```
-
-(Agar servis → DTO import halqasi bo'lsa — `reports-lead-funnel.service.ts` DTO'ni import qilmaydi, halqa yo'q — baribir tekshiring: `UNPAID_STATUS_BUCKETS` ni `lead-funnel.math.ts` ga ko'chirib, ikkala fayl undan import qilsin.)
 
 `reports-lead-funnel.controller.ts` `getPeople` da servisga uzatiladigan obyektga `sourceId: query.sourceId, status: query.status,` qo'shing.
 
