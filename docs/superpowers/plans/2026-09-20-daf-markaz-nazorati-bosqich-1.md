@@ -869,6 +869,9 @@ export function DafNormaSettingsClient() {
   const sariqNotogri = form.sariqKun >= form.haftalikKun;
   const locked = !canEdit || save.isPending;
   const set = (k: keyof DafNorma) => (n: number) => setDraft({ ...form, [k]: n });
+  // Sariq oralig'i faqat norma to'g'ri bo'lganda ma'noga ega: sariq yashildan
+  // katta bo'lsa `4–3 kun` kabi teskari oraliq chiqardi. Bunday paytda butun
+  // tushuntirish o'rniga bitta yo'naltiruvchi qator ko'rsatiladi.
   const sariqOraliq =
     form.sariqKun === form.haftalikKun - 1
       ? `${form.sariqKun} kun`
@@ -926,11 +929,17 @@ export function DafNormaSettingsClient() {
       )}
 
       <p className="rounded-lg border bg-muted/40 p-4 text-sm leading-relaxed">
-        Hozirgi norma: o&apos;quvchi kuniga kamida <b>{form.kunlikDaqiqa} daqiqa</b> o&apos;quv
-        bo&apos;limida ishlashi yoki <b>{form.kunlikSavol} ta</b> savolga javob berishi kerak.
-        Haftada shunday <b>{form.haftalikKun} kun</b> bo&apos;lsa — yashil, <b>{sariqOraliq}</b>{" "}
-        bo&apos;lsa — sariq, kamroq bo&apos;lsa — qizil. Norma o&apos;zgartirilsa o&apos;tmish ham
-        yangi norma bilan hisoblanadi.
+        {sariqNotogri ? (
+          <>Sariq chegarasi to&apos;g&apos;rilangach, normaning izohi shu yerda ko&apos;rinadi.</>
+        ) : (
+          <>
+            Hozirgi norma: o&apos;quvchi kuniga kamida <b>{form.kunlikDaqiqa} daqiqa</b> o&apos;quv
+            bo&apos;limida ishlashi yoki <b>{form.kunlikSavol} ta</b> savolga javob berishi kerak.
+            Haftada shunday <b>{form.haftalikKun} kun</b> bo&apos;lsa — yashil, <b>{sariqOraliq}</b>{" "}
+            bo&apos;lsa — sariq, kamroq bo&apos;lsa — qizil. Norma o&apos;zgartirilsa o&apos;tmish ham
+            yangi norma bilan hisoblanadi.
+          </>
+        )}
       </p>
 
       {canEdit && (
@@ -988,6 +997,8 @@ export default function DafNormaSettingsPage() {
 
 ```ts
   daf: "DaF ilovasi",
+  // `/daf/oquvchilar` 15-vazifada paydo bo'ladi; yorliq shu yerda turadi, chunki
+  // breadcrumb jadvali bitta fayl va uni ikki marta ochish keraksiz.
   oquvchilar: "O'quvchilar",
 ```
 
