@@ -8,6 +8,7 @@ import {
   Building,
   Building2,
   Send,
+  Smartphone,
   type LucideIcon,
 } from "lucide-react";
 
@@ -51,6 +52,7 @@ export const settingsNavSections: SettingsNavSection[] = [
         icon: Archive,
         visibleForRoles: [1],
       },
+      { title: "DaF normasi", url: "/settings/daf", icon: Smartphone, visibleForRoles: [1] },
     ],
   },
   {

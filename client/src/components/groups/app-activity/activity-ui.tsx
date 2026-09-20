@@ -79,8 +79,19 @@ export function KpiCard({
   );
 }
 
-/** Bir kunning tooltip matni — `DayBars` va `XaritaBolimi` heatmapida bitta manba. */
-export function KunTooltipIchi({ kun }: { kun: KunSurati }) {
+/**
+ * Bir kunning tooltip matni — `DayBars` va `XaritaBolimi` heatmapida bitta manba.
+ * `shugullanganMatni` — markaz sahifasida `shugullangan` = norma bo'yicha faol
+ * kun, guruh tabida esa «mashq yoki 5 daqiqa radio»; bir xil so'z ikki ma'noda
+ * turmasin.
+ */
+export function KunTooltipIchi({
+  kun,
+  shugullanganMatni = "Shug'ullangan kun",
+}: {
+  kun: KunSurati;
+  shugullanganMatni?: string;
+}) {
   return (
     <div className="flex flex-col">
       <span className="font-medium">{formatKunYorligi(kun.sana)}</span>
@@ -88,7 +99,7 @@ export function KunTooltipIchi({ kun }: { kun: KunSurati }) {
         <span>Kuzatuv boshlanmagan</span>
       ) : (
         <>
-          <span>{kun.shugullangan ? "Shug'ullangan kun" : kun.kirdi ? "Faqat kirgan" : "Kirmagan"}</span>
+          <span>{kun.shugullangan ? shugullanganMatni : kun.kirdi ? "Faqat kirgan" : "Kirmagan"}</span>
           {kun.savollar > 0 && <span>Savollar: {kun.savollar}</span>}
           {kun.faolSoniya > 0 && <span>Faol: {formatDavomiylik(kun.faolSoniya)}</span>}
           {kun.radioSoniya > 0 && <span>Radio: {formatDavomiylik(kun.radioSoniya)}</span>}
@@ -98,7 +109,15 @@ export function KunTooltipIchi({ kun }: { kun: KunSurati }) {
   );
 }
 
-export function DayBars({ kunlar, className }: { kunlar: KunSurati[]; className?: string }) {
+export function DayBars({
+  kunlar,
+  className,
+  shugullanganMatni,
+}: {
+  kunlar: KunSurati[];
+  className?: string;
+  shugullanganMatni?: string;
+}) {
   const max = Math.max(1800, ...kunlar.map((k) => k.faolSoniya));
   const tor = kunlar.length > 7;
   return (
@@ -121,7 +140,7 @@ export function DayBars({ kunlar, className }: { kunlar: KunSurati[]; className?
               </span>
             </TooltipTrigger>
             <TooltipContent>
-              <KunTooltipIchi kun={kun} />
+              <KunTooltipIchi kun={kun} shugullanganMatni={shugullanganMatni} />
             </TooltipContent>
           </Tooltip>
         );

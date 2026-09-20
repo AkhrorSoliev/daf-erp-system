@@ -110,6 +110,15 @@ to'plami. `endDate` **avtomatik yopilmaydi** — CEO qarori bilan cron o'chirilg
 shu darajada yuritiladi, o'quvchi darajasida emas.
 `prisma/schema.prisma`
 
+**Faol kun (DaF)** — o'quvchi o'sha Toshkent kunida ilovaning o'quv (`LERNEN`)
+bo'limida normadagi daqiqadan kam bo'lmagan vaqt o'tkazgan **yoki** tugatilgan
+seanslarda normadagi sondan kam bo'lmagan savolga javob bergan kun. Norma
+`Company` da sozlanadi (`dafKunlikDaqiqa`, `dafKunlikSavol`, `dafHaftalikKun`,
+`dafSariqKun`, `/settings/daf`). Holat (qizil / sariq / yashil) maxrajga
+mutanosib chegaradan chiqadi va **faqat** `app-activity/norma/norma.ts` da
+hisoblanadi — SQL faqat sonlarni yig'adi (ADR-0024).
+`app-activity/norma/norma.ts`
+
 **Attendance** — bitta o'quvchining bitta darsdagi holati:
 `PRESENT` · `LATE` · `ABSENT` · `EXCUSED`.
 `attendance/attendance-save.service.ts`

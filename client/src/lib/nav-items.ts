@@ -12,12 +12,14 @@ import {
   UsersRound,
   ListTodo,
   Images,
+  Smartphone,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { paymentsNavItems } from "./payments-nav";
 import { reportsNavSections } from "./reports-nav";
 import { settingsNavSections } from "./settings-nav";
+import { dafNavItems } from "./daf-nav";
 
 export interface NavItemChild {
   title: string;
@@ -55,6 +57,15 @@ export const navItems: NavItem[] = [
   { title: "Guruhlar", url: "/groups", icon: UsersRound },
   { title: "Topshiriqlar", url: "/tasks", icon: ListTodo },
   { title: "Media", url: "/media", icon: Images, visibleForRoles: [1, 2, 3] },
+  // DaF ilovasi nazorati — markaz bo'yicha faollik. O'qituvchi bu bo'limni
+  // ko'rmaydi: u o'z guruhidagi «Ilova faolligi» tabidan foydalanadi.
+  {
+    title: "DaF ilovasi",
+    url: "/daf",
+    icon: Smartphone,
+    visibleForRoles: [1, 2, 3],
+    children: dafNavItems,
+  },
   // Lehrer portal — only Teachers see this. Backend `/salary/me/*`
   // endpoints scope by @CurrentUser('id') so a teacher only sees their own.
   {

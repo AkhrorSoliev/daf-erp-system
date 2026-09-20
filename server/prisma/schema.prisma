@@ -1468,6 +1468,13 @@ model Company {
   // not count or display data before this date — used at the May-1 cutover so
   // mid-April go-live noise never surfaces. NULL = no floor (count everything).
   systemStartDate DateTime?
+  // DaF ilovasi faollik normasi (dizayn 2026-09-20, 3.4-bo'lim). Sozlamalarda
+  // o'zgartiriladi; holat rangi FAQAT `app-activity/norma/norma.ts` da chiqadi —
+  // bu ustunlar raqam, qoida emas.
+  dafKunlikDaqiqa Int @default(10)
+  dafKunlikSavol  Int @default(12)
+  dafHaftalikKun  Int @default(4)
+  dafSariqKun     Int @default(2)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

@@ -32,6 +32,10 @@ export const routeLabels: Record<string, string> = {
   employees: "Xodimlar",
   rooms: "Xonalar",
   holidays: "Dam olish kunlari",
+  daf: "DaF ilovasi",
+  // `/daf/oquvchilar` sahifasi allaqachon bor; yorliq shu yerda turadi, chunki
+  // breadcrumb jadvali bitta fayl va uni ikki marta ochish keraksiz.
+  oquvchilar: "O'quvchilar",
   "absence-pause": "Avtomatik pauza",
   tasks: "Topshiriqlar",
   archive: "Arxiv",
