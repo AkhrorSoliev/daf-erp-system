@@ -1,5 +1,11 @@
+import { formatPercent } from "@/lib/format-utils";
 import { tashkentNow } from "@/lib/tashkent-time";
-import type { FunnelStage, PeopleStage } from "./lead-funnel-types";
+import type {
+  FunnelPeriod,
+  FunnelStage,
+  PeopleStage,
+  SourceBreakdownRow,
+} from "./lead-funnel-types";
 
 /**
  * Voronkaning ko'rinish mantiqi — sof funksiyalar, chunki vitest `node`
@@ -28,6 +34,19 @@ export const STUCK_LABELS: Record<Exclude<FunnelStage, "paid">, string> = {
   attended: "To'lov qilmaganlar",
 };
 
+/** Yo'qotish qatori: «↓ N kishi <shu bosqichga o'tmadi>». Kalit — o'tilmagan bosqich. */
+export const LOSS_LABELS: Record<Exclude<FunnelStage, "lead">, string> = {
+  enrolled: "guruhga yozilmadi",
+  attended: "darsga kelmadi",
+  paid: "to'lov qilmadi",
+};
+
+export const PEOPLE_STAGES: PeopleStage[] = [...FUNNEL_ORDER, "unpaid"];
+
+export function isPeopleStage(value: string): value is PeopleStage {
+  return (PEOPLE_STAGES as string[]).includes(value);
+}
+
 export interface FunnelRow {
   stage: FunnelStage;
   label: string;
@@ -40,6 +59,8 @@ export interface FunnelRow {
   pctOfPrev: number | null;
   /** Blok kengligi, 0–1. Birinchi bosqich 0 bo'lsa hammasi 0. */
   widthRatio: number;
+  /** Oldingi bosqichdan o'tmaganlar ulushi, butun foiz; birinchi bosqichda null. */
+  lostPct: number | null;
 }
 
 const pct = (part: number, whole: number) =>
@@ -60,6 +81,10 @@ export function buildFunnelRows(
       lostFromPrev: prev === null ? null : Math.max(prev - count, 0),
       pctOfPrev: prev === null ? null : pct(count, prev),
       widthRatio: first > 0 ? Math.min(count / first, 1) : 0,
+      lostPct:
+        prev === null || prev === 0
+          ? null
+          : Math.round(((prev - count) / prev) * 100),
     };
   });
 }
@@ -136,6 +161,8 @@ export function peopleQueryParams(input: {
   page: number;
   pageSize: number;
   range: { startDate: string; endDate: string };
+  sourceId?: string;
+  status?: string;
 }): Record<string, string | number> {
   const params: Record<string, string | number> = {
     stage: input.stage,
@@ -146,6 +173,9 @@ export function peopleQueryParams(input: {
   if (input.stage !== "unpaid") {
     params.startDate = input.range.startDate;
     params.endDate = input.range.endDate;
+    if (input.sourceId) params.sourceId = input.sourceId;
+  } else if (input.status) {
+    params.status = input.status;
   }
   return params;
 }
@@ -172,3 +202,125 @@ export function displayDate(value: string): string {
   return `${d}.${m}.${y}`;
 }
 
+export const PERIOD_PRESETS = ["shu-oy", "otgan-oy", "boshidan", "oraliq"] as const;
+export type PeriodPreset = (typeof PERIOD_PRESETS)[number];
+export const DEFAULT_PRESET: PeriodPreset = "shu-oy";
+
+export const PRESET_LABELS: Record<PeriodPreset, string> = {
+  "shu-oy": "Shu oy",
+  "otgan-oy": "O'tgan oy",
+  boshidan: "Boshidan",
+  oraliq: "Oraliq",
+};
+
+/**
+ * Preset'ning hisoblangan oralig'i. `null` — oraliq butunlay voronka
+ * chegarasidan oldin (sentyabr 2026 da «O'tgan oy» = avgust): server bunday
+ * so'rovni 400 bilan rad etadi, shuning uchun tugma ham ko'rsatilmaydi.
+ */
+export function presetRange(
+  preset: Exclude<PeriodPreset, "oraliq">,
+  now: Date = new Date(),
+): FunnelPeriod | null {
+  const today = tashkentNow(now).dateStr;
+  switch (preset) {
+    case "shu-oy":
+      return currentMonthRange(now);
+    case "otgan-oy": {
+      const [y, m] = today.split("-").map(Number);
+      const py = m === 1 ? y - 1 : y;
+      const pm = m === 1 ? 12 : m - 1;
+      const mm = String(pm).padStart(2, "0");
+      const endDate = `${py}-${mm}-${String(lastDayOfMonth(py, pm)).padStart(2, "0")}`;
+      if (endDate < FUNNEL_START_DATE) return null;
+      return { startDate: later(`${py}-${mm}-01`, FUNNEL_START_DATE), endDate };
+    }
+    case "boshidan":
+      return { startDate: FUNNEL_START_DATE, endDate: today };
+  }
+}
+
+export function visiblePresets(now: Date = new Date()): PeriodPreset[] {
+  return PERIOD_PRESETS.filter(
+    (p) => p === "oraliq" || presetRange(p, now) !== null,
+  );
+}
+
+/**
+ * URL → davr. `oraliq` sanalari `resolveRange` orqali tekshiriladi (buzilgan
+ * bo'lsa joriy oyga qaytadi); ko'rinmaydigan yoki noma'lum preset ham joriy
+ * oyga qaytadi — yarim buzilgan havola jim boshqa davr ko'rsatmasin.
+ */
+export function resolvePeriodFilter(
+  input: { period: string; startDate: string; endDate: string },
+  now: Date = new Date(),
+): { preset: PeriodPreset; startDate: string; endDate: string } {
+  if (input.period === "oraliq") {
+    const r = resolveRange(input.startDate || null, input.endDate || null, now);
+    if (!r.isDefault) {
+      return { preset: "oraliq", startDate: r.startDate, endDate: r.endDate };
+    }
+  } else if (
+    input.period === "otgan-oy" ||
+    input.period === "boshidan"
+  ) {
+    const range = presetRange(input.period, now);
+    if (range) return { preset: input.period, ...range };
+  }
+  return { preset: DEFAULT_PRESET, ...currentMonthRange(now) };
+}
+
+/** Kishi soni bo'yicha eng katta yo'qotish bo'lgan bosqich (o'tilmagan bosqich). */
+export function biggestLossStage(rows: FunnelRow[]): FunnelStage | null {
+  let best: FunnelRow | null = null;
+  for (const row of rows) {
+    if (row.lostFromPrev !== null && row.lostFromPrev > 0) {
+      if (!best || row.lostFromPrev > (best.lostFromPrev ?? 0)) best = row;
+    }
+  }
+  return best?.stage ?? null;
+}
+
+/** Liddan to'lovgacha, butun foiz; lid 0 bo'lsa null. */
+export function conversionPct(lead: number, paid: number): number | null {
+  return lead > 0 ? Math.round((paid / lead) * 100) : null;
+}
+
+/** 146 lidda 0,1 % aniqlik yolg'on — shu hisobotda foizlar butun sonda. */
+export function wholePercent(value: number | null): string {
+  return formatPercent(value, { maximumFractionDigits: 0 });
+}
+
+export type SourceListRow = SourceBreakdownRow & { key: string; isRest: boolean };
+
+export const TOP_SOURCES = 5;
+
+/** Loyiha qoidasi: uzun dum «Boshqalar (N ta manba)» ga yig'iladi, u bosilmaydi. */
+export function collapseSources(
+  rows: SourceBreakdownRow[],
+  top: number = TOP_SOURCES,
+): SourceListRow[] {
+  const toRow = (r: SourceBreakdownRow): SourceListRow => ({
+    ...r,
+    key: r.id ?? "none",
+    isRest: false,
+  });
+  if (rows.length <= top) return rows.map(toRow);
+  const head = rows.slice(0, top).map(toRow);
+  const tail = rows.slice(top);
+  const sum = (k: "lead" | "enrolled" | "attended" | "paid") =>
+    tail.reduce((acc, r) => acc + r[k], 0);
+  return [
+    ...head,
+    {
+      id: null,
+      name: `Boshqalar (${tail.length} ta manba)`,
+      lead: sum("lead"),
+      enrolled: sum("enrolled"),
+      attended: sum("attended"),
+      paid: sum("paid"),
+      key: "rest",
+      isRest: true,
+    },
+  ];
+}
