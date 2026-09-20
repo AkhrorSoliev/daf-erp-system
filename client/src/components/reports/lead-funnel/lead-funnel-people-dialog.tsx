@@ -125,7 +125,7 @@ function PeopleBody({
     status: status || undefined,
   });
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isPending, isError } = useQuery({
     queryKey: [
       "reports",
       "lead-funnel",
@@ -197,7 +197,7 @@ function PeopleBody({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {isPending ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={`sk-${i}`}>
                     {Array.from({ length: 6 }).map((__, j) => (
@@ -270,7 +270,7 @@ function PeopleBody({
         </div>
 
         <ul className="min-h-0 flex-1 divide-y overflow-auto rounded-lg border sm:hidden">
-          {isLoading ? (
+          {isPending ? (
             Array.from({ length: 4 }).map((_, i) => (
               <li key={`sk-${i}`} className="p-3">
                 <Skeleton className="h-10 w-full" />
@@ -327,7 +327,7 @@ function PeopleBody({
 
       <div className="border-t px-6 py-3">
         <DialogPaginationFooter
-          isLoading={isLoading}
+          isLoading={isPending}
           total={total}
           page={page}
           pageSize={pageSize}
