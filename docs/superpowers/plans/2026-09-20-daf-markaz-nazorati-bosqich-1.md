@@ -20,7 +20,13 @@
 - `amber-*` sinflar ishlatilmaydi (admin mavzusida rangsiz). Holat ranglari: `green-*`, `yellow-*`, `red-*`, `muted`.
 - Barcha UI matni va yangi izohlar **lotin alifbosidagi o'zbekcha**, izohlar NEGA ekanini tushuntiradi. Test nomlari o'zbekcha.
 - Kodda haqiqiy ism, telefon yoki prod ID yo'q; misollar uydirma (`Nodira Yusupova`, `901112233`, `10001`).
-- Buyruqlar: server — `cd server && npx jest <yo'l>`, `npm run typecheck`, `npm run lint`; klient — `cd client && npx vitest run <yo'l>`, `npm run typecheck`, `npm run lint`.
+- Buyruqlar: server — `cd server && npx jest <yo'l>`, `npm run typecheck`; klient — `cd client && npx vitest run <yo'l>`, `npm run typecheck`.
+- **Har vazifa oxirida, commitdan OLDIN:** o'zgartirgan fayllaringizga `npx prettier --write <fayllar>`, so'ng
+  `npx eslint <fayllar>` toza ekanini tasdiqlang. CI `npx eslint src` ni yuritadi va XATOlarda yiqiladi;
+  formatlash Prettier'niki va u ESLint orqali majburlanadi. Bu rejadagi kod bloklari prettier formatida
+  yozilmagan, shuning uchun aynan ko'chirilgan fayl lint xatosi beradi — ko'chiring, keyin formatlang.
+  `npm run lint` (`--fix` bilan, butun repo) ISHLATILMAYDI: u vazifangizdan tashqaridagi fayllarni ham
+  o'zgartiradi.
 - Prisma migratsiyasi: `prisma migrate dev` bu loyihada **ishlamaydi** — `migrate diff` → tozalash → `db execute` → `migrate resolve` (2-vazifa).
 - `git reset --hard` va yalang'och `git stash` ishlatilmaydi.
 - Commit xabari o'zbekcha, oxirida bo'sh qatordan keyin `Co-Authored-By:` qatori. **Qaysi model nomi
