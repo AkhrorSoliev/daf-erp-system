@@ -153,6 +153,8 @@ describe('CenterAppActivityService.umumiy', () => {
       birMartaKirganlar: 1,
       davrdaKirganlar: 1,
       yashillar: 1,
+      normaFoiz: 33, // foizi(1, 3) — I3/I4: serverda hisoblanadi
+      kerakliKun: 4, // kerakliKunlar(7, norma).kerakliKun
       ortachaFaolKunHaftada: 4,
       ortachaKunlikSoniya: 343, // 2400 / 7
       savollar: 12,
@@ -224,6 +226,17 @@ describe('CenterAppActivityService.umumiy', () => {
     const dan: Date = queries.tugatilganDarsSoni.mock.calls[0][2];
     // 2026-08-22 Toshkent 00:00 = 2026-08-21T19:00:00Z
     expect(dan.toISOString()).toBe('2026-08-21T19:00:00.000Z');
+  });
+
+  it('kerakliKun tanlangan davrga mutanosib — I3/I4 (davr=7 va davr=30 farqli)', async () => {
+    // Bosh ko'rsatkichning yashil chegarasi butun DAVR uzunligidan chiqadi
+    // (7 yoki 30), o'quvchining o'z maxrajidan emas — shu farq I3 xato
+    // tooltipini («7 kunga nisbatan» hammasida) to'g'rilaydi.
+    const { service } = qur();
+    const yetti = await service.umumiy(1001, null, 7, NOW);
+    const ottiz = await service.umumiy(1001, null, 30, NOW);
+    expect(yetti.kartalar.kerakliKun).toBe(4);
+    expect(ottiz.kartalar.kerakliKun).toBe(17);
   });
 });
 

@@ -57,6 +57,8 @@ export interface MarkazKartalari {
   birMartaKirganlar: number;
   davrdaKirganlar: number;
   yashillar: number;
+  normaFoiz: number | null;
+  kerakliKun: number;
   ortachaFaolKunHaftada: number | null;
   ortachaKunlikSoniya: number | null;
   savollar: number;

@@ -82,13 +82,23 @@ export class CenterAppActivityService {
     const kirganlar = y.hisoblar.filter((h) => h.kirdi);
     const savollar = jam(y.hisoblar, (h) => h.savollar);
     const togri = jam(y.hisoblar, (h) => h.togri);
+    const yashillar = y.hisoblar.filter((h) => h.holat === 'YASHIL').length;
     const kartalar = {
       oquvchilar: y.hisoblar.length,
       akkauntlar: y.hisoblar.filter((h) => h.akkaunt).length,
       birMartaKirganlar: y.hisoblar.filter((h) => h.akkaunt && !h.hechKirmagan)
         .length,
       davrdaKirganlar: kirganlar.length,
-      yashillar: y.hisoblar.filter((h) => h.holat === 'YASHIL').length,
+      yashillar,
+      // Filiallar jadvali (`filialQatorlari`, pastda) bilan bitta ta'rif —
+      // brauzer bu nisbatni o'zi qayta hisoblamaydi (I3/I4).
+      normaFoiz: foizi(yashillar, y.hisoblar.length),
+      // Butun tanlangan davr kuzatilgan o'quvchi uchun yashil chegara —
+      // kartaning tooltipi shu sonni ko'rsatadi (I3). Har bir qatorning o'z
+      // `kerakliKun`i o'z `maxraj`idan chiqadi (`markaz-royxat.ts`); bu yerdagi
+      // `davr` esa maxrajning YUQORI chegarasi (7 yoki 30) — «kechroq
+      // qo'shilganlar kam talab qilinadi» aynan shu tafovutdan ko'rinadi.
+      kerakliKun: kerakliKunlar(davr, y.norma).kerakliKun,
       // O'rtachalar davrda kirganlar orasida — nollar o'rtachani yutmasin
       // (guruh tabi ham shunday, dizayn 5.1).
       ortachaFaolKunHaftada: ortacha(

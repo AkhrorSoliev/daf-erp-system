@@ -6,14 +6,12 @@ import { formatDavomiylik, foizRangi } from "@/components/groups/app-activity/ac
 import { formatNumber } from "@/lib/format-utils";
 import type { MarkazKartalari, Norma } from "./types";
 
-const foiz = (qism: number, jami: number) => (jami === 0 ? null : Math.round((qism * 100) / jami));
 /** 2.7 → «2,7» — o'zbekcha kasr belgisi. */
 const kasr = (n: number) => String(n).replace(".", ",");
 
 export function DafKpiCards({ k, norma }: { k: MarkazKartalari; norma: Norma }) {
   const akkauntsiz = k.oquvchilar - k.akkauntlar;
   const hechKirmagan = k.akkauntlar - k.birMartaKirganlar;
-  const normaFoiz = foiz(k.yashillar, k.oquvchilar);
   const farq = k.ortachaFaolKunHaftada === null ? null : k.ortachaFaolKunHaftada - norma.haftalikKun;
 
   return (
@@ -28,10 +26,10 @@ export function DafKpiCards({ k, norma }: { k: MarkazKartalari; norma: Norma }) 
       <KpiCard
         icon={CheckCircle2}
         label="Normani bajarmoqda"
-        value={normaFoiz === null ? "—" : `${normaFoiz}%`}
-        valueClassName={foizRangi(normaFoiz)}
+        value={k.normaFoiz === null ? "—" : `${k.normaFoiz}%`}
+        valueClassName={foizRangi(k.normaFoiz)}
         hint={`${formatNumber(k.yashillar)} o'quvchi · haftada ${norma.haftalikKun} faol kun`}
-        tooltip={`Yashil holatdagilar: davrda kamida ${norma.haftalikKun} kun (7 kunga nisbatan) faol bo'lganlar. Faol kun — kuniga ${norma.kunlikDaqiqa} daqiqa o'quv bo'limida yoki ${norma.kunlikSavol} ta savol.`}
+        tooltip={`Yashil holatdagilar: tanlangan davrda kamida ${k.kerakliKun} kun faol bo'lganlar (me'yor — haftasiga ${norma.haftalikKun} kun; o'quvchi keyinroq qo'shilgan bo'lsa chegara mutanosib kamayadi). Faol kun — kuniga ${norma.kunlikDaqiqa} daqiqa o'quv bo'limida yoki ${norma.kunlikSavol} ta savol.`}
       />
       <KpiCard
         icon={CalendarCheck}

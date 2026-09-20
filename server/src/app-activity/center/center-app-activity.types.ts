@@ -91,6 +91,10 @@ export interface MarkazKartalari {
   /** Tanlangan davr ichida kirgan. */
   davrdaKirganlar: number;
   yashillar: number;
+  /** Yashillar ulushi — serverda hisoblanadi, klient qayta hisoblamaydi. */
+  normaFoiz: number | null;
+  /** Butun davr kuzatilgan o'quvchi uchun yashil chegara. Kechroq qo'shilganda mutanosib kamayadi. */
+  kerakliKun: number;
   /** Davrda kirganlar orasida, `faolKun / maxraj × 7`, 1 kasr. */
   ortachaFaolKunHaftada: number | null;
   /** Davrda kirganlar orasida, `lernenSoniya / maxraj`. */
