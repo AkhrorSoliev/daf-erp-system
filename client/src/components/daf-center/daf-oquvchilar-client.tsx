@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber } from "@/lib/format-utils";
 import { ActivityError } from "@/components/groups/app-activity/activity-ui";
+import { DafExplainer } from "./daf-explainer";
 import { DafOquvchiSheet } from "./daf-oquvchi-sheet";
 import { DafOquvchilarFilterBar } from "./daf-oquvchilar-filter-bar";
 import { DafOquvchilarTable } from "./daf-oquvchilar-table";
@@ -103,6 +104,11 @@ export function DafOquvchilarClient() {
               </Button>
             </div>
           )}
+
+          {/* I7: "Qisman"/"Normada" so'zlari faqat shu sahifada ko'rinadi —
+              ta'rifi ham shu yerda bo'lishi shart, umumiy sahifadan havola
+              qilib bo'lmaydi (CEO ikkalasini alohida ochib solishtirmaydi). */}
+          <DafExplainer norma={data.norma} kuzatuvBoshi={data.kuzatuvBoshi} />
         </>
       )}
 

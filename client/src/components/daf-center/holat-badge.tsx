@@ -26,9 +26,26 @@ const MATN: Record<Holat, string> = {
   YASHIL: "text-green-600 dark:text-green-400",
 };
 
+/**
+ * I7: badge matni ma'no bilan nomlangan («Qisman»), tushuntiruvchi joylar esa
+ * rang bilan gapiradi («yashil uchun N kun kerak») — CEO ikkovini bog'lay
+ * olmasdi. Badge matnini o'zi uzaytirish jadvalni buzadi (`min-w-40`,
+ * `whitespace-nowrap`), shuning uchun rang bog'lanishi shu yerda — faqat
+ * me'yor asosidagi uch holat uchun — `title` orqali beriladi.
+ */
+const HOLAT_RANGI: Partial<Record<Holat, string>> = {
+  QIZIL: "qizil",
+  SARIQ: "sariq",
+  YASHIL: "yashil",
+};
+
 export function HolatBadge({ holat, className }: { holat: Holat; className?: string }) {
+  const rang = HOLAT_RANGI[holat];
   return (
-    <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium", MATN[holat], className)}>
+    <span
+      title={rang ? `${HOLAT_MATNI[holat]} (${rang})` : undefined}
+      className={cn("inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium", MATN[holat], className)}
+    >
       <span aria-hidden className={cn("size-2 shrink-0 rounded-full", NUQTA[holat])} />
       {HOLAT_MATNI[holat]}
     </span>

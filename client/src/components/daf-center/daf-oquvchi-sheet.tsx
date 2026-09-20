@@ -31,28 +31,40 @@ export function DafOquvchiSheet({
             onDavrChange={onDavrChange}
             bodyClassName="flex-1 overflow-y-auto px-6 py-5"
             renderHeader={(data, meta) => (
-              <SheetHeader className="border-b px-6 py-4">
-                {data ? (
-                  <>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="size-11">
-                        <AvatarImage src={data.photo ?? undefined} alt="" />
-                        <AvatarFallback>{data.ism.split(" ").filter(Boolean).slice(0, 2).map((s) => s[0]).join("").toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <SheetTitle className="truncate">{data.ism}</SheetTitle>
-                        <SheetDescription>Oxirgi faollik: {oxirgiFaollikMatni(data)}</SheetDescription>
+              <>
+                <SheetHeader className="border-b px-6 py-4">
+                  {data ? (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="size-11">
+                          <AvatarImage src={data.photo ?? undefined} alt="" />
+                          <AvatarFallback>{data.ism.split(" ").filter(Boolean).slice(0, 2).map((s) => s[0]).join("").toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <SheetTitle className="truncate">{data.ism}</SheetTitle>
+                          <SheetDescription>Oxirgi faollik: {oxirgiFaollikMatni(data)}</SheetDescription>
+                        </div>
                       </div>
-                    </div>
-                    {data.akkaunt && meta}
-                  </>
-                ) : (
-                  <>
-                    <SheetTitle className="sr-only">O&apos;quvchi faolligi</SheetTitle>
-                    <Skeleton className="h-11 w-56" />
-                  </>
+                      {data.akkaunt && meta}
+                    </>
+                  ) : (
+                    <>
+                      <SheetTitle className="sr-only">O&apos;quvchi faolligi</SheetTitle>
+                      <Skeleton className="h-11 w-56" />
+                    </>
+                  )}
+                </SheetHeader>
+                {data && (
+                  // I5: bu yerdagi "shug'ullangan kun" guruh tabi qoidasidan (mashq
+                  // yoki 5 daqiqa radio), jadvaldagi "Faol kun" esa markaz normasidan
+                  // (LERNEN daqiqa yoki savol, radio sanalmaydi) — ikkovi bir xil emas.
+                  <p className="border-b px-6 py-2 text-xs text-muted-foreground">
+                    Bu oynadagi «shug&apos;ullangan kun» guruh tabidagi qoida bo&apos;yicha
+                    (mashq yoki 5 daqiqa radio). Jadvaldagi «Faol kun» esa markaz
+                    normasi bo&apos;yicha — shuning uchun sonlar farq qilishi mumkin.
+                  </p>
                 )}
-              </SheetHeader>
+              </>
             )}
           />
         )}
