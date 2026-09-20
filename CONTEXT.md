@@ -115,8 +115,8 @@ bo'limida normadagi daqiqadan kam bo'lmagan vaqt o'tkazgan **yoki** tugatilgan
 seanslarda normadagi sondan kam bo'lmagan savolga javob bergan kun. Norma
 `Company` da sozlanadi (`dafKunlikDaqiqa`, `dafKunlikSavol`, `dafHaftalikKun`,
 `dafSariqKun`, `/settings/daf`). Holat (qizil / sariq / yashil) maxrajga
-mutanosib chegaradan chiqadi va **faqat** `norma.ts` da hisoblanadi — SQL
-faqat sonlarni yig'adi (ADR-0024).
+mutanosib chegaradan chiqadi va **faqat** `app-activity/norma/norma.ts` da
+hisoblanadi — SQL faqat sonlarni yig'adi (ADR-0024).
 `app-activity/norma/norma.ts`
 
 **Attendance** — bitta o'quvchining bitta darsdagi holati:
