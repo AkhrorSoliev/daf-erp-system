@@ -2405,6 +2405,8 @@ describe('CenterAppActivityService.umumiy', () => {
   it("bo'sh qamrov ([]) — hech qaysi so'rov ketmaydi, natija bo'sh (fail-closed)", async () => {
     const { service, prisma, queries } = qur();
     const r = await service.umumiy(1001, [], 7, NOW);
+    // Normani o'qish ham so'rov — «bazaga so'rov ketmaydi» shu demak.
+    expect(prisma.company.findUnique).not.toHaveBeenCalled();
     expect(prisma.student.findMany).not.toHaveBeenCalled();
     expect(queries.kunlikSeanslar).not.toHaveBeenCalled();
     expect(r.kartalar.oquvchilar).toBe(0);
@@ -2466,10 +2468,12 @@ describe('CenterAppActivityService.oquvchilar', () => {
     expect(umumiyQueries.tugatilganDarslar).toHaveBeenLastCalledWith([10001]);
   });
 
-  it("bo'sh qamrov — bo'sh ro'yxat, kurs so'rovlari chaqirilmaydi", async () => {
-    const { service, umumiyQueries } = qur();
+  it("bo'sh qamrov — bo'sh ro'yxat, hech qaysi so'rov chaqirilmaydi", async () => {
+    const { service, prisma, umumiyQueries } = qur();
     const r = await service.oquvchilar(1001, [], SOROV, NOW);
     expect(r).toMatchObject({ jami: 0, qatorlar: [], filialUstuni: false });
+    expect(prisma.company.findUnique).not.toHaveBeenCalled();
+    expect(prisma.student.findMany).not.toHaveBeenCalled();
     expect(umumiyQueries.kursJamisi).not.toHaveBeenCalled();
   });
 });
@@ -2703,6 +2707,22 @@ export class CenterAppActivityService {
   ): Promise<Yigindi> {
     const bosh30 = davrOynasi(XARITA_KUNLARI, now, now, null);
     const boshDavr = davrOynasi(davr, now, now, null);
+
+    // Bo'sh qamrov tekshiruvi normani o'qishdan ham OLDIN turadi (ADR-0002).
+    // O'qiladigan narsa filialga bog'liq bo'lmagan kompaniya sozlamasi, ya'ni
+    // hech narsa sizmaydi — lekin bu klassning o'z shartnomasi «bazaga so'rov
+    // ketmaydi» deydi, va yarim bajarilgan va'da keyingi o'quvchini adashtiradi.
+    // Javobda standart norma qaytadi: ekranda rang beradigan o'quvchi yo'q.
+    if (isEmptyScope(scope)) {
+      return {
+        norma: STANDART_NORMA,
+        bugun: bosh30.bugun,
+        kuzatuvBoshi: null,
+        kunlar30: bosh30.kunlar,
+        hisoblar: [],
+      };
+    }
+
     const company = await this.prisma.company.findUnique({
       where: { id: companyId },
       select: {
@@ -2720,7 +2740,6 @@ export class CenterAppActivityService {
       kunlar30: bosh30.kunlar,
       hisoblar: [],
     };
-    if (isEmptyScope(scope)) return bosh;
 
     const [oquvchilar, kuzatuvBoshi] = await Promise.all([
       this.prisma.student.findMany({
