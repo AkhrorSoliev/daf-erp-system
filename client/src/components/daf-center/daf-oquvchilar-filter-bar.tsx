@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PeriodToggle } from "@/components/groups/app-activity/activity-ui";
+import { DafQidiruvliSelect } from "./daf-qidiruvli-select";
 import { HOLAT_MATNI } from "./holat-badge";
 import { STANDART_FILTR, type OquvchilarFiltri } from "./oquvchilar-filtr";
 import { HOLATLAR, type Daraja, type Holat, type MarkazFiltrVariantlari } from "./types";
@@ -24,10 +25,23 @@ export function DafOquvchilarFilterBar({
 }) {
   // Qidiruv: har tugmada URL yozilmasin — 300 ms kutib, keyin bitta marta.
   const [q, setQ] = useState(filtr.q);
-  useEffect(() => setQ(filtr.q), [filtr.q]);
+  // `filtr.q` o'zgarishi ikki sababdan bo'ladi: tashqaridan (Tozalash, brauzer
+  // orqaga, voronka havolasi) yoki shu komponentning o'z yuborgani qaytib
+  // kelgani. Ikkinchisida qayta o'rnatish kerak emas — debounce ishlagandan
+  // keyin, URL yangilangunicha yozilgan harfni o'chirib yuborardi.
+  const oxirgiYuborilgan = useRef(filtr.q);
+  useEffect(() => {
+    if (filtr.q !== oxirgiYuborilgan.current) {
+      oxirgiYuborilgan.current = filtr.q;
+      setQ(filtr.q);
+    }
+  }, [filtr.q]);
   useEffect(() => {
     if (q === filtr.q) return;
-    const t = setTimeout(() => onChange({ ...filtr, q, page: 1 }), 300);
+    const t = setTimeout(() => {
+      oxirgiYuborilgan.current = q;
+      onChange({ ...filtr, q, page: 1 });
+    }, 300);
     return () => clearTimeout(t);
   }, [q, filtr, onChange]);
 
@@ -58,25 +72,21 @@ export function DafOquvchilarFilterBar({
         </SelectContent>
       </Select>
 
-      <Select value={filtr.groupId ?? HAMMASI} onValueChange={(v) => oz({ groupId: v === HAMMASI ? null : v })}>
-        <SelectTrigger className="h-9 w-44"><SelectValue placeholder="Barcha guruhlar" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value={HAMMASI}>Barcha guruhlar</SelectItem>
-          {(variantlar?.guruhlar ?? []).map((g) => (
-            <SelectItem key={g.id} value={g.id}>{g.nomi}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <DafQidiruvliSelect
+        value={filtr.groupId}
+        onChange={(v) => oz({ groupId: v })}
+        variantlar={(variantlar?.guruhlar ?? []).map((g) => ({ value: g.id, label: g.nomi }))}
+        hammasiMatni="Barcha guruhlar"
+        className="w-44"
+      />
 
-      <Select value={filtr.teacherId === null ? HAMMASI : String(filtr.teacherId)} onValueChange={(v) => oz({ teacherId: v === HAMMASI ? null : Number(v) })}>
-        <SelectTrigger className="h-9 w-48"><SelectValue placeholder="Barcha o'qituvchilar" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value={HAMMASI}>Barcha o&apos;qituvchilar</SelectItem>
-          {(variantlar?.oqituvchilar ?? []).map((o) => (
-            <SelectItem key={o.id} value={String(o.id)}>{o.ism}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <DafQidiruvliSelect
+        value={filtr.teacherId === null ? null : String(filtr.teacherId)}
+        onChange={(v) => oz({ teacherId: v === null ? null : Number(v) })}
+        variantlar={(variantlar?.oqituvchilar ?? []).map((o) => ({ value: String(o.id), label: o.ism }))}
+        hammasiMatni="Barcha o'qituvchilar"
+        className="w-48"
+      />
 
       <Select value={filtr.level ?? HAMMASI} onValueChange={(v) => oz({ level: v === HAMMASI ? null : (v as Daraja) })}>
         <SelectTrigger className="h-9 w-36"><SelectValue placeholder="Daraja" /></SelectTrigger>

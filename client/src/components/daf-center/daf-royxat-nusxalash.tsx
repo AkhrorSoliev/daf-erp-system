@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Copy, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
-import { formatPhone } from "@/lib/format-utils";
+import { formatNumber, formatPhone } from "@/lib/format-utils";
 import type { OquvchilarFiltri } from "./oquvchilar-filtr";
 import { markazTelefonlarniOl } from "./use-daf-center";
 
@@ -36,8 +36,8 @@ export function DafRoyxatNusxalash({ filtr, jami }: { filtr: OquvchilarFiltri; j
       await navigator.clipboard.writeText(matn);
       toast.success(
         t.qisqartirildi
-          ? `${t.qatorlar.length} qator nusxalandi — ro'yxat qisqartirildi (jami ${t.jami})`
-          : `${t.qatorlar.length} qator nusxalandi`,
+          ? `${formatNumber(t.qatorlar.length)} qator nusxalandi — ro'yxat qisqartirildi (jami ${formatNumber(t.jami)})`
+          : `${formatNumber(t.qatorlar.length)} qator nusxalandi`,
       );
     } catch {
       toast.error("Nusxalab bo'lmadi");

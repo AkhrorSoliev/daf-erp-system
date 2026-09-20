@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DayBars, ProgressLine } from "@/components/groups/app-activity/activity-ui";
 import { formatDavomiylik, formatKunOy, formatOxirgiFaollik, foizRangi } from "@/components/groups/app-activity/activity-format";
+import { formatNumber } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { HolatBadge } from "./holat-badge";
 import type { MarkazOquvchiQatori, Saralash, Yonalish } from "./types";
@@ -82,7 +83,17 @@ export function DafOquvchilarTable({
             <SortHead kalit="holat" matn="Holat" className="min-w-40" {...s} />
             <SortHead kalit="faolKun" matn="Faol kun" className="min-w-40" {...s} />
             <SortHead kalit="vaqt" matn="Vaqt" className="min-w-24 text-right" {...s} />
-            <SortHead kalit="foiz" matn="To'g'ri javob" className="min-w-28 text-right" {...s} />
+            <TableHead className="min-w-28 text-right">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" onClick={() => s.onSort("foiz")} className={cn("inline-flex items-center gap-1 hover:text-foreground", s.sort === "foiz" && "text-foreground")}>
+                    To&apos;g&apos;ri javob
+                    {s.sort === "foiz" ? (s.dir === "asc" ? <ArrowUp className="size-3.5" /> : <ArrowDown className="size-3.5" />) : <ArrowUpDown className="size-3.5" />}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Birinchi urinishda to&apos;g&apos;ri topilgan savollar — tugatilgan seanslar bo&apos;yicha.</TooltipContent>
+              </Tooltip>
+            </TableHead>
             <TableHead className="hidden min-w-40 xl:table-cell">Kurs</TableHead>
             <SortHead kalit="oxirgi" matn="Oxirgi kirish" className="min-w-32" {...s} />
           </TableRow>
@@ -152,7 +163,7 @@ export function DafOquvchilarTable({
                 {row.akkaunt && row.foiz !== null ? (
                   <div className="flex flex-col items-end">
                     <span className={cn("font-medium tabular-nums", foizRangi(row.foiz))}>{row.foiz}%</span>
-                    <span className="text-xs text-muted-foreground">{row.savollar} savol</span>
+                    <span className="text-xs text-muted-foreground">{formatNumber(row.savollar)} savol</span>
                   </div>
                 ) : (
                   <span className="text-muted-foreground">—</span>

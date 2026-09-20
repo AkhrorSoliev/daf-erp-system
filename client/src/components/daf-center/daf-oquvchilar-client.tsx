@@ -1,10 +1,16 @@
 "use client";
 
+// Sahifada 50 qator, hajm tanlagichisiz — CEO qarori (20.09.2026), CLAUDE.md
+// sahifalash qoidasiga ongli istisno. Bu ish ro'yxati: 400 o'quvchi 50 talikda
+// 8 sahifa, 10 talikda 40 sahifa bo'lardi va qo'ng'iroq ro'yxatini ko'rib
+// chiqish cho'zilardi. Guruh roster jadvali ham shu sababdan istisno.
+
 import { useCallback, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatNumber } from "@/lib/format-utils";
 import { ActivityError } from "@/components/groups/app-activity/activity-ui";
 import { DafOquvchiSheet } from "./daf-oquvchi-sheet";
 import { DafOquvchilarFilterBar } from "./daf-oquvchilar-filter-bar";
@@ -19,7 +25,8 @@ export function DafOquvchilarClient() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   // Holat URL da (dizayn 6.1) — havola bilan ulashiladi, voronka shu yerga olib keladi.
-  const filtr = useMemo(() => filtrniUrldanOqi(new URLSearchParams(searchParams.toString())), [searchParams]);
+  const searchString = searchParams.toString();
+  const filtr = useMemo(() => filtrniUrldanOqi(new URLSearchParams(searchString)), [searchString]);
   const setFiltr = useCallback(
     (next: OquvchilarFiltri) => router.replace(`${pathname}${filtrniUrlgaYoz(next)}`, { scroll: false }),
     [router, pathname],
@@ -61,7 +68,7 @@ export function DafOquvchilarClient() {
         <>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">{data.jami}</span> ta o&apos;quvchi topildi
+              <span className="font-medium text-foreground">{formatNumber(data.jami)}</span> ta o&apos;quvchi topildi
               {isFetching && " · yangilanmoqda…"}
             </p>
             <DafRoyxatNusxalash filtr={filtr} jami={data.jami} />
