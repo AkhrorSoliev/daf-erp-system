@@ -217,6 +217,14 @@ export class CenterAppActivityService {
     davr: Davr,
     now: Date,
   ): Promise<Yigindi> {
+    // `akkauntYaratilgan=now, kuzatuvBoshi=null` — buni xavfsiz qiladigan narsa:
+    // ikkalasidan FAQAT `.bugun` / `.davrBoshi` / `.kunlar` o'qiladi (trend
+    // xaritasi va tugatilganDarsSoni oynasi uchun), `.hisobBoshi` / `.maxraj`
+    // hech qachon emas — ular bilan `now` "akkaunt kuni" bo'lib qolsa,
+    // `hisobBoshi` doim bugunga tushib qoladi. Kelajakda bu ikkovini
+    // o'quvchiga xos qiymatga "tuzatish" xato: trend indeksi (`kunlar30`)
+    // BUTUN kompaniya uchun bitta sana ro'yxati bo'lishiga tayanadi (`umumiy()`
+    // dagi `y.kunlar30.map(...)`), o'quvchiga xos hisobBoshi esa uni buzadi.
     const bosh30 = davrOynasi(XARITA_KUNLARI, now, now, null);
     const boshDavr = davrOynasi(davr, now, now, null);
 

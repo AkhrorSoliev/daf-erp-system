@@ -38,10 +38,19 @@ export function canEnterDaf(roleIds: number[]): boolean {
 /**
  * Bu sahifani ocha oladimi. Menyuda yo'q yangi yo'l (kelajakdagi /daf/kontent
  * kabi) faqat CEO ga qoladi — yangi sahifa o'z-o'zidan adminga ochilib
- * ketmasin (`reports-nav.ts` dagi qoida).
+ * ketmasin. `reports-nav.ts`dagi `canOpenReportPath` xuddi shu g'oyadan, lekin
+ * qattiqroq: o'sha yerda mos kelmagan yo'l CEO+BD ga qaytadi ([1,2]), bu yerda
+ * esa faqat CEO ga ([1]).
  */
 export function canOpenDafPath(roleIds: number[], pathname: string): boolean {
   const path = pathname.replace(/\/+$/, "") || "/";
+  // `i.url !== "/daf"` sharti bo'lmasa: "/daf" — ro'yxatdagi ROOT element,
+  // `find` esa birinchi mosni oladi. Shu shartsiz "/daf" o'zini har qanday
+  // `/daf/...` pastki yo'liga ham prefiks sifatida moslashtirar edi (masalan
+  // kelajakda qo'shiladigan, menyuda yo'q "/daf/kontent"), va u holda pastdagi
+  // `if (!item) return roleIds.includes(1)` qorovuli hech qachon ishlamay,
+  // "/daf" ning CEO_BD_ADMIN ruxsati barcha kelajakdagi pastki yo'llarga ham
+  // sirg'alib o'tardi.
   const item = dafNavItems.find(
     (i) => path === i.url || (i.url !== "/daf" && path.startsWith(`${i.url}/`)),
   );

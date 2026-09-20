@@ -34,7 +34,7 @@ describe('CompanyService.update — DaF normasi tekshiruvi', () => {
     });
   });
 
-  it("normaga tegmaydigan o'zgarish tekshiruvsiz o'tadi", async () => {
+  it("normaga tegmaydigan o'zgarish ham tekshiruvdan o'tadi — mavjud sariq/haftalik to'g'ri bo'lgani uchun", async () => {
     await service.update(1001, { name: 'Sprachzentrum' });
     expect(prisma.company.update).toHaveBeenCalled();
   });

@@ -41,9 +41,11 @@ export function DafExplainer({
           Ilgari kirib, keyin tashlab ketgan o&apos;quvchi «hech qachon kirmagan» emas.
         </p>
         <p>
-          <b className="text-foreground">O&apos;rtachalar</b> davrda kirganlar orasida hisoblanadi,{" "}
-          <b className="text-foreground">foizlar</b> esa barcha faol o&apos;quvchiga nisbatan —
-          akkaunti yo&apos;qlar ham maxrajda turadi.
+          <b className="text-foreground">O&apos;rtachalar</b> davrda kirganlar orasida hisoblanadi.{" "}
+          <b className="text-foreground">Normani bajarmoqda %</b> barcha faol o&apos;quvchiga
+          nisbatan — akkaunti yo&apos;qlar ham maxrajda turadi.{" "}
+          <b className="text-foreground">To&apos;g&apos;ri javob %</b> esa boshqacha: uning
+          maxraji — javob berilgan savollar soni, o&apos;quvchilar soni emas.
         </p>
         <p>
           <b className="text-foreground">To&apos;g&apos;ri javob</b> — tugatilgan seanslar

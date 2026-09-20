@@ -56,7 +56,7 @@ export class CompanyService {
     const haftalik = dto.dafHaftalikKun ?? mavjud.dafHaftalikKun;
     if (sariq >= haftalik) {
       throw new BadRequestException(
-        "Sariq chegarasi haftalik normadan kichik bo'lishi kerak",
+        `Sariq chegarasi haftalik normadan kichik bo'lishi kerak (sariq=${sariq}, haftalik=${haftalik})`,
       );
     }
 

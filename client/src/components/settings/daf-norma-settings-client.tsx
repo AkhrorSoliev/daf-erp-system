@@ -37,6 +37,14 @@ const CHEGARA: Record<keyof DafNorma, { min: number; max: number }> = {
   sariqKun: { min: 1, max: 7 },
 };
 
+/** Chegaradan chiqqan xabarda qaysi maydon ekanini aytish uchun — `NumberField` labeli bilan bir xil. */
+const MAYDON_NOMI: Record<keyof DafNorma, string> = {
+  kunlikDaqiqa: "Kunlik eng kam vaqt",
+  kunlikSavol: "Kunlik eng kam savol",
+  haftalikKun: "Haftada eng kam faol kun",
+  sariqKun: "Sariq chegarasi",
+};
+
 function NumberField({
   id,
   label,
@@ -131,9 +139,12 @@ export function DafNormaSettingsClient() {
     );
   }
 
-  const chegaradanTashqari = (Object.keys(CHEGARA) as (keyof DafNorma)[]).some(
-    (k) => form[k] < CHEGARA[k].min || form[k] > CHEGARA[k].max,
-  );
+  // `.find()` — qaysi maydon chegaradan chiqqanini xabarda aytish uchun (I8
+  // kichik tuzatish: avval faqat "qiymat chegaradan tashqarida" deyilardi).
+  const chegaradanTashqariMaydon =
+    (Object.keys(CHEGARA) as (keyof DafNorma)[]).find(
+      (k) => form[k] < CHEGARA[k].min || form[k] > CHEGARA[k].max,
+    ) ?? null;
   // Teng bo'lsa sariq oraliq yo'qoladi. Server ham tekshiradi.
   const sariqNotogri = form.sariqKun >= form.haftalikKun;
   const locked = !canEdit || save.isPending;
@@ -193,8 +204,11 @@ export function DafNormaSettingsClient() {
           Sariq chegarasi haftalik normadan kichik bo&apos;lishi kerak
         </p>
       )}
-      {chegaradanTashqari && (
-        <p className="text-sm text-destructive">Qiymat ruxsat etilgan oraliqdan tashqarida</p>
+      {chegaradanTashqariMaydon && (
+        <p className="text-sm text-destructive">
+          {MAYDON_NOMI[chegaradanTashqariMaydon]} ruxsat etilgan oraliqdan tashqarida (
+          {CHEGARA[chegaradanTashqariMaydon].min}–{CHEGARA[chegaradanTashqariMaydon].max})
+        </p>
       )}
 
       <p className="rounded-lg border bg-muted/40 p-4 text-sm leading-relaxed">
@@ -214,7 +228,7 @@ export function DafNormaSettingsClient() {
       {canEdit && (
         <div className="flex justify-end">
           <Button
-            disabled={locked || sariqNotogri || chegaradanTashqari || draft === null}
+            disabled={locked || sariqNotogri || chegaradanTashqariMaydon !== null || draft === null}
             onClick={() => save.mutate(form)}
           >
             {save.isPending ? (
