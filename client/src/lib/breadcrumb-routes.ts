@@ -32,6 +32,8 @@ export const routeLabels: Record<string, string> = {
   employees: "Xodimlar",
   rooms: "Xonalar",
   holidays: "Dam olish kunlari",
+  daf: "DaF ilovasi",
+  oquvchilar: "O'quvchilar",
   "absence-pause": "Avtomatik pauza",
   tasks: "Topshiriqlar",
   archive: "Arxiv",
