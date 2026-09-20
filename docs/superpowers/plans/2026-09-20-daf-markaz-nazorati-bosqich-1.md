@@ -95,6 +95,7 @@
 | `components/daf-center/daf-explainer.tsx` | «Raqamlar qanday hisoblanadi» — markazning O'Z qoidalari |
 | `components/daf-center/daf-oquvchilar-client.tsx` | «O'quvchilar» sahifasi |
 | `components/daf-center/daf-oquvchilar-filter-bar.tsx` | Filtrlar |
+| `components/daf-center/daf-qidiruvli-select.tsx` | Uzun ro'yxat uchun qidiruvli bitta tanlovli tanlagich |
 | `components/daf-center/daf-oquvchilar-table.tsx` | Jadval, saralanadigan sarlavhalar |
 | `components/daf-center/daf-oquvchi-sheet.tsx` | Yon oyna (mavjud `StudentActivityPanel`) |
 | `components/daf-center/daf-royxat-nusxalash.tsx` | «Ro'yxatni nusxalash» |
@@ -4524,13 +4525,24 @@ MSG
 
 **Files:**
 - Create: `client/src/components/daf-center/daf-oquvchilar-client.tsx`
-- Create: `client/src/components/daf-center/daf-oquvchilar-filter-bar.tsx`, `daf-oquvchilar-table.tsx`, `daf-oquvchi-sheet.tsx`, `daf-royxat-nusxalash.tsx`
+- Create: `client/src/components/daf-center/daf-qidiruvli-select.tsx`, `daf-oquvchilar-filter-bar.tsx`, `daf-oquvchilar-table.tsx`, `daf-oquvchi-sheet.tsx`, `daf-royxat-nusxalash.tsx`
 - Create: `client/src/app/(dashboard)/daf/oquvchilar/page.tsx`
 
 **Interfaces:**
 - Consumes: `useMarkazOquvchilar`, `markazTelefonlarniOl`, `OquvchilarFiltri`, `filtrniUrldanOqi`, `filtrniUrlgaYoz`, `STANDART_FILTR`, `SAHIFA_HAJMI`, `HolatBadge`, `HOLAT_MATNI`, `HOLATLAR`, `SARALASHLAR`, `DayBars`, `ProgressLine`, `PeriodToggle`, `ActivityError`, `StudentActivityPanel`, `oxirgiFaollikMatni`, `formatDavomiylik`, `formatKunOy`, `formatOxirgiFaollik`, `foizRangi`, `formatPhone`, `MultiSelectCombobox` (`options`, `selected`, `onChange`, `placeholder`, `countSuffix`), `Select*`, `Input`, `Button`, `Avatar*`, `Badge`, `Table*`, `Sheet*`, `Tooltip*`.
 
 - [ ] **Step 1: Filtr paneli**
+
+**Ikki qaror (CEO, 20.09.2026):**
+
+1. **Sahifada 50 qator, tanlagichsiz.** `client/CLAUDE.md` har jadvalga 10/20/30/40/50
+   tanlagichini talab qiladi, lekin bu ish ro'yxati: 400 o'quvchi 50 talikda 8 sahifa, 10 talikda
+   40 sahifa bo'ladi va qo'ng'iroq ro'yxatini ko'rib chiqish cho'ziladi. Guruh roster jadvali ham
+   xuddi shu sababdan ongli istisno. Istisno `daf-oquvchilar-client.tsx` boshida izoh bilan
+   yozib qo'yiladi, roster faylidagi kabi.
+2. **Guruh va o'qituvchi tanlagichlari qidiruvli.** `client/CLAUDE.md` «Searchable Select» bo'limi
+   aynan shu ikki ro'yxatni nomma-nom sanaydi; CEO hamma filialni ko'rganda ular 40–50 tagacha
+   yetadi. Daraja uchta variantdan iborat — oddiy `<Select>` qoladi.
 
 `client/src/components/daf-center/daf-oquvchilar-filter-bar.tsx`:
 
