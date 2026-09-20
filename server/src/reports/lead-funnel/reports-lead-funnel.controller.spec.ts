@@ -1,11 +1,8 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { plainToInstance } from 'class-transformer';
-import { validate } from 'class-validator';
 import { ReportsLeadFunnelController } from './reports-lead-funnel.controller';
 import { RolesGuard } from '../../common/guards';
 import { ROLES_KEY } from '../../common/decorators';
-import { LeadFunnelPeopleQueryDto } from './lead-funnel-query.dto';
 
 describe('ReportsLeadFunnelController', () => {
   const service = {
@@ -71,42 +68,5 @@ describe('ReportsLeadFunnelController', () => {
       }),
       [7],
     );
-  });
-
-  it("'people' da manba va holat filtrini uzatadi", async () => {
-    await controller.getPeople(
-      { stage: 'unpaid', sourceId: 'none', status: 'active' } as never,
-      1001,
-      [7],
-    );
-    expect(service.getPeople).toHaveBeenCalledWith(
-      1001,
-      expect.objectContaining({
-        stage: 'unpaid',
-        sourceId: 'none',
-        status: 'active',
-      }),
-      [7],
-    );
-  });
-
-  describe('LeadFunnelPeopleQueryDto', () => {
-    it('ruxsat etilgan holat qiymatlarini qabul qiladi', async () => {
-      const dto = plainToInstance(LeadFunnelPeopleQueryDto, {
-        stage: 'unpaid',
-        status: 'frozen',
-        sourceId: 'src-1',
-      });
-      expect(await validate(dto)).toHaveLength(0);
-    });
-
-    it("noma'lum holatni rad etadi", async () => {
-      const dto = plainToInstance(LeadFunnelPeopleQueryDto, {
-        stage: 'unpaid',
-        status: 'paid',
-      });
-      const errors = await validate(dto);
-      expect(errors.map((e) => e.property)).toEqual(['status']);
-    });
   });
 });

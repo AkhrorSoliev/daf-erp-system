@@ -54,8 +54,6 @@ export class ReportsLeadFunnelController {
         endDate: query.endDate,
         page: query.page ?? 1,
         pageSize: query.pageSize ?? 10,
-        sourceId: query.sourceId,
-        status: query.status,
       },
       scope,
     );
