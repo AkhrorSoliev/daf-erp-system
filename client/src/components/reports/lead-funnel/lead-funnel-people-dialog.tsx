@@ -244,7 +244,7 @@ function PeopleBody({
                     <TableCell className="tabular-nums">
                       {p.phone ? formatPhone(p.phone) : "—"}
                     </TableCell>
-                    <TableCell>{p.source ?? "—"}</TableCell>
+                    <TableCell>{p.source ?? "Manbasiz"}</TableCell>
                     <TableCell>
                       {p.studentStatus ? (
                         <StatusBadge

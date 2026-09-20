@@ -1,260 +1,255 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
-import { Info, RotateCcw } from "lucide-react";
+import { Info } from "lucide-react";
 import api from "@/lib/api";
-import { formatNumber, formatPercent } from "@/lib/format-utils";
+import { formatNumber } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 import { Button } from "@/components/ui/button";
-import { DatePicker } from "@/components/ui/date-picker";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LeadFunnelChart } from "./lead-funnel-chart";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { LeadFunnelBars } from "./lead-funnel-bars";
+import {
+  LeadFunnelBreakdownCard,
+  type BreakdownRow,
+} from "./lead-funnel-breakdown-card";
+import { LeadFunnelKpiRow } from "./lead-funnel-kpi-row";
+import {
+  biggestLossStage,
   buildFunnelRows,
+  collapseSources,
   displayDate,
-  FUNNEL_START_DATE,
+  isPeopleStage,
   rangeIncludesToday,
-  resolveRange,
+  resolvePeriodFilter,
+  type PeriodPreset,
 } from "./lead-funnel-math";
 import { LeadFunnelPeopleDialog } from "./lead-funnel-people-dialog";
-import type { LeadFunnelResponse, PeopleStage } from "./lead-funnel-types";
-import { LeadFunnelUnpaidCard } from "./lead-funnel-unpaid-card";
+import { LeadFunnelPeriodControl } from "./lead-funnel-period-control";
+import type {
+  FunnelStage,
+  LeadFunnelResponse,
+  UnpaidStatusBucket,
+} from "./lead-funnel-types";
+import { LeadFunnelUnpaidTiles } from "./lead-funnel-unpaid-tiles";
 
-/** "YYYY-MM-DD" → mahalliy yarim tun (kalendar shu kunni belgilasin). */
-function toPickerDate(s: string): Date {
-  const [y, m, d] = s.split("-").map(Number);
-  return new Date(y, m - 1, d);
-}
+const FILTER_SCHEMA = {
+  period: { type: "string" as const, defaultValue: "" },
+  startDate: { type: "string" as const, defaultValue: "" },
+  endDate: { type: "string" as const, defaultValue: "" },
+  people: { type: "string" as const, defaultValue: "" },
+  source: { type: "string" as const, defaultValue: "" },
+  status: { type: "string" as const, defaultValue: "" },
+};
+
+const HOW_TO_READ =
+  "Davrda kelgan lidlar olinadi va keyingi qadamlari davrdan keyin bo'lsa ham kuzatiladi. Bir odamning bir nechta lidi bitta hisoblanadi.\n\nVoronka 10.09.2026 dan sanaydi: shu kundan har bir yangi o'quvchi lid yozuvi qoldiradi. Undan oldingi sanani tanlab bo'lmaydi.";
+
+const STILL_RUNNING =
+  "Davr hali tugamagan: yaqinda kelganlar keyingi bosqichlarga ulgurmagan, shuning uchun foizlar keyinroq oshadi.";
 
 export function LeadFunnelClient() {
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const router = useRouter();
+  const { filters, setFilters } = useUrlFilters(FILTER_SCHEMA);
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
-  const [openStage, setOpenStage] = useState<PeopleStage | null>(null);
 
-  const range = useMemo(
+  const period = useMemo(
     () =>
-      resolveRange(searchParams.get("startDate"), searchParams.get("endDate")),
-    [searchParams],
+      resolvePeriodFilter({
+        period: filters.period,
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+      }),
+    [filters.period, filters.startDate, filters.endDate],
   );
-
-  const writeRange = useCallback(
-    (next: { startDate: string; endDate: string } | null) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (next) {
-        params.set("startDate", next.startDate);
-        params.set("endDate", next.endDate);
-      } else {
-        params.delete("startDate");
-        params.delete("endDate");
-      }
-      const qs = params.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-    },
-    [searchParams, pathname, router],
-  );
-
-  const setBound = (key: "startDate" | "endDate", d: Date | undefined) => {
-    if (!d) return;
-    const value = format(d, "yyyy-MM-dd");
-    const next = { startDate: range.startDate, endDate: range.endDate };
-    next[key] = value;
-    // Oraliq buzilmasin: pickerlar bir-birini cheklaydi, bu esa URL'dan
-    // qo'lda kiritilgan qiymat uchun zaxira.
-    if (next.startDate > next.endDate) {
-      if (key === "startDate") next.endDate = value;
-      else next.startDate = value;
-    }
-    writeRange(next);
-  };
+  const range = { startDate: period.startDate, endDate: period.endDate };
 
   const { data, isPending, isError, refetch } = useQuery({
-    queryKey: [
-      "reports",
-      "lead-funnel",
-      selectedBranch?.id ?? "all",
-      range.startDate,
-      range.endDate,
-    ],
+    queryKey: ["reports", "lead-funnel", selectedBranch?.id ?? "all", range.startDate, range.endDate],
     queryFn: () =>
       api
-        .get<LeadFunnelResponse>("/reports/lead-funnel", {
-          params: { startDate: range.startDate, endDate: range.endDate },
-        })
+        .get<LeadFunnelResponse>("/reports/lead-funnel", { params: range })
         .then((r) => r.data),
     enabled: branchLoaded,
   });
 
   const rows = useMemo(() => (data ? buildFunnelRows(data.stages) : []), [data]);
-  const conversion = rows.length ? rows[rows.length - 1].pctOfFirst : null;
-  const start = toPickerDate(range.startDate);
-  const end = toPickerDate(range.endDate);
-  const floor = toPickerDate(FUNNEL_START_DATE);
+  const biggestLoss = useMemo(() => biggestLossStage(rows), [rows]);
+  const sourceRows = useMemo(() => collapseSources(data?.bySource ?? []), [data]);
+  const byBranch = data?.byBranch ?? [];
+
+  const setPreset = useCallback(
+    (preset: Exclude<PeriodPreset, "oraliq">) =>
+      setFilters({ period: preset === "shu-oy" ? "" : preset, startDate: "", endDate: "" }),
+    [setFilters],
+  );
+  const setCustomRange = useCallback(
+    (next: { startDate: string; endDate: string }) =>
+      setFilters({ period: "oraliq", ...next }),
+    [setFilters],
+  );
+
+  // Ochiq ro'yxat URL'da yashaydi (drawer/dialog qoidasi); yopilganda uchalasi o'chadi.
+  const openPeople = useCallback(
+    (stage: string, extra: { source?: string; status?: string } = {}) =>
+      setFilters({ people: stage, source: extra.source ?? "", status: extra.status ?? "" }),
+    [setFilters],
+  );
+  const closePeople = useCallback(
+    () => setFilters({ people: "", source: "", status: "" }),
+    [setFilters],
+  );
+  const openStage = isPeopleStage(filters.people) ? filters.people : null;
+  const sourceName =
+    data?.bySource.find((s) => (s.id ?? "none") === filters.source)?.name ?? null;
+
+  const branchRows: BreakdownRow[] = byBranch.map((b) => ({
+    key: b.id === null ? "none" : String(b.id),
+    name: b.name ?? "Belgilanmagan",
+    lead: b.lead,
+    paid: b.paid,
+    clickable: false,
+  }));
+  const sourceList: BreakdownRow[] = sourceRows.map((s) => ({
+    key: s.key,
+    name: s.isRest ? (s.name ?? "") : (s.name ?? "Manbasiz"),
+    lead: s.lead,
+    paid: s.paid,
+    clickable: !s.isRest,
+  }));
+  const showBranches = byBranch.length >= 2;
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-heading text-xl font-bold tracking-tight">
-            Lidlar hisoboti
-          </h2>
+          <h2 className="font-heading text-xl font-bold tracking-tight">Lidlar hisoboti</h2>
           <p className="text-sm text-muted-foreground">
             Markazga kelgan odam to&apos;lovgacha qaysi bosqichda tushib qolmoqda
           </p>
         </div>
-
-        <div className="flex items-center gap-1">
-          <DatePicker
-            id="lead-funnel-start"
-            value={start}
-            onChange={(d) => setBound("startDate", d)}
-            placeholder="Boshi"
-            className="h-9 w-[140px]"
-            minDate={floor}
-            maxDate={end}
-            defaultMonth={end}
-          />
-          <span className="text-sm text-muted-foreground">—</span>
-          <DatePicker
-            id="lead-funnel-end"
-            value={end}
-            onChange={(d) => setBound("endDate", d)}
-            placeholder="Oxiri"
-            className="h-9 w-[140px]"
-            minDate={start}
-            defaultMonth={start}
-          />
-          {!range.isDefault && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 shrink-0"
-              onClick={() => writeRange(null)}
-              aria-label="Joriy oyga qaytish"
-              title="Joriy oyga qaytish"
-            >
-              <RotateCcw className="size-4" />
-            </Button>
-          )}
-        </div>
+        <LeadFunnelPeriodControl
+          preset={period.preset}
+          startDate={period.startDate}
+          endDate={period.endDate}
+          onPreset={setPreset}
+          onCustomRange={setCustomRange}
+        />
       </div>
+
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground tabular-nums">
+        <span>
+          {displayDate(data?.period.startDate ?? range.startDate)} –{" "}
+          {displayDate(data?.period.endDate ?? range.endDate)}
+        </span>
+        {rangeIncludesToday(range) && (
+          <span className="rounded bg-muted px-1.5 py-0.5 text-xs">davom etmoqda</span>
+        )}
+        <span>· {selectedBranch?.name ?? "Barcha filiallar"}</span>
+        {data && <span>· {formatNumber(data.stages.lead)} kishi kuzatildi</span>}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label="Qanday o'qiladi"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Info className="size-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-sm whitespace-pre-line">
+            {rangeIncludesToday(range) ? `${STILL_RUNNING}\n\n${HOW_TO_READ}` : HOW_TO_READ}
+          </TooltipContent>
+        </Tooltip>
+      </p>
 
       {isError ? (
         <div className="flex flex-col items-center gap-3 rounded-xl border bg-card px-4 py-12 text-center">
-          <p className="text-sm text-muted-foreground">
-            Voronkani yuklab bo&apos;lmadi.
-          </p>
+          <p className="text-sm text-muted-foreground">Hisobotni yuklab bo&apos;lmadi.</p>
           <Button variant="outline" size="sm" onClick={() => void refetch()}>
             Qayta urinish
           </Button>
         </div>
+      ) : isPending || !data ? (
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-28 rounded-xl" />
+            ))}
+          </div>
+          <div className="space-y-2 rounded-xl border bg-card p-5">
+            {[1, 0.4, 0.32, 0.09].map((w) => (
+              <Skeleton key={w} className="h-7" style={{ width: `${w * 100}%` }} />
+            ))}
+          </div>
+        </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-5">
-          <section className="rounded-xl border bg-card p-4 sm:p-5 lg:col-span-3">
-            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-              <h3 className="font-semibold">Lid voronkasi</h3>
-              {data && (
-                <p className="text-sm text-muted-foreground">
-                  Liddan to&apos;lovgacha:{" "}
-                  <span className="font-semibold text-foreground tabular-nums">
-                    {formatPercent(conversion)}
-                  </span>
-                </p>
-              )}
-            </div>
+        <>
+          <LeadFunnelKpiRow
+            data={data}
+            onOpenUnpaidActive={() => openPeople("unpaid", { status: "active" })}
+          />
 
-            {isPending || !data ? (
-              <div className="space-y-3">
-                {[1, 0.7, 0.5, 0.35].map((w) => (
-                  <Skeleton
-                    key={w}
-                    className="mx-auto h-14 sm:h-16"
-                    style={{ width: `${w * 100}%` }}
-                  />
-                ))}
-              </div>
-            ) : data.stages.lead === 0 ? (
+          <section className="rounded-xl border bg-card p-4 sm:p-5">
+            <h3 className="mb-3 font-semibold">Lid voronkasi</h3>
+            {data.stages.lead === 0 ? (
               <p className="py-12 text-center text-sm text-muted-foreground">
-                Tanlangan davrda lid yo&apos;q — davrni kengaytirib ko&apos;ring.
+                Tanlangan davrda lid yo&apos;q: davrni kengaytirib ko&apos;ring.
               </p>
             ) : (
-              <LeadFunnelChart
+              <LeadFunnelBars
                 rows={rows}
                 leadSplit={data.leadSplit}
-                onStageClick={setOpenStage}
+                biggestLoss={biggestLoss}
+                onStageClick={(stage: FunnelStage) => openPeople(stage)}
+                onLossClick={(stage) => openPeople(stage, { status: "stuck" })}
               />
             )}
-
             <p className="mt-4 text-xs text-muted-foreground">
-              Bosqichni bosing — o&apos;sha bosqichdagi odamlar ro&apos;yxati
-              ochiladi.
+              Bosqichni bosing: o&apos;sha bosqichdagi odamlar ro&apos;yxati ochiladi.
             </p>
           </section>
 
-          <div className="flex flex-col gap-4 lg:col-span-2">
-            {isPending || !data ? (
-              <Skeleton className="h-48 rounded-xl" />
-            ) : (
-              <LeadFunnelUnpaidCard
-                unpaid={data.unpaid}
-                onOpen={() => setOpenStage("unpaid")}
+          <div className={showBranches ? "grid gap-4 lg:grid-cols-2" : "grid gap-4"}>
+            <LeadFunnelBreakdownCard
+              title="Manba bo'yicha"
+              tooltip="Har manbadan kelganlarning necha foizi to'lov qildi. Qatorni bosing: o'sha manbadan kelganlar ro'yxati."
+              rows={sourceList}
+              emptyMessage="Bu davrda lid yo'q"
+              onRowClick={(key) => openPeople("lead", { source: key })}
+            />
+            {showBranches && (
+              <LeadFunnelBreakdownCard
+                title="Filial bo'yicha"
+                tooltip="Lid qaysi filialga tegishli bo'lsa, o'sha yerda sanaladi. «Belgilanmagan»: hali filialga biriktirilmagan lidlar."
+                rows={branchRows}
+                emptyMessage="Bu davrda lid yo'q"
               />
             )}
-
-            <FunnelNotes range={range} total={data?.stages.lead} />
           </div>
-        </div>
+
+          <LeadFunnelUnpaidTiles
+            unpaid={data.unpaid}
+            onOpen={(status: UnpaidStatusBucket) => openPeople("unpaid", { status })}
+          />
+        </>
       )}
 
       <LeadFunnelPeopleDialog
         stage={openStage}
+        sourceId={filters.source}
+        sourceName={sourceName}
+        status={filters.status}
+        initialMode={filters.status === "stuck" ? "stuck" : "all"}
         range={range}
-        onOpenChange={(open) => !open && setOpenStage(null)}
+        onOpenChange={(open) => !open && closePeople()}
       />
     </div>
-  );
-}
-
-function FunnelNotes({
-  range,
-  total,
-}: {
-  range: { startDate: string; endDate: string };
-  total: number | undefined;
-}) {
-  const notes = [
-    "Davrda kelgan lidlar olinadi va keyingi qadamlari davrdan keyin bo'lsa ham kuzatiladi. Bir odamning bir nechta lidi bitta hisoblanadi.",
-  ];
-  if (rangeIncludesToday(range)) {
-    notes.push(
-      "Davr hali tugamagan: yaqinda kelganlar keyingi bosqichlarga ulgurmagan, shuning uchun foizlar keyinroq oshadi.",
-    );
-  }
-  notes.push(
-    `Voronka ${displayDate(FUNNEL_START_DATE)} dan boshlab sanaydi — shu kundan har bir yangi o'quvchi lid yozuvi qoldiradi. Undan oldingi sanani tanlab bo'lmaydi.`,
-  );
-
-  return (
-    <aside className="rounded-xl border bg-muted/30 p-4 text-sm">
-      <p className="mb-2 flex items-center gap-2 font-medium">
-        <Info className="size-4 text-muted-foreground" />
-        Qanday o&apos;qiladi
-      </p>
-      <ul className="list-disc space-y-1.5 pl-5 text-muted-foreground">
-        {notes.map((n) => (
-          <li key={n}>{n}</li>
-        ))}
-      </ul>
-      {total !== undefined && total > 0 && (
-        <p className="mt-3 text-xs text-muted-foreground tabular-nums">
-          Jami {formatNumber(total)} kishi kuzatildi.
-        </p>
-      )}
-    </aside>
   );
 }
