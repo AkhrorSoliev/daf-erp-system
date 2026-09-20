@@ -23,7 +23,10 @@
 - Buyruqlar: server — `cd server && npx jest <yo'l>`, `npm run typecheck`, `npm run lint`; klient — `cd client && npx vitest run <yo'l>`, `npm run typecheck`, `npm run lint`.
 - Prisma migratsiyasi: `prisma migrate dev` bu loyihada **ishlamaydi** — `migrate diff` → tozalash → `db execute` → `migrate resolve` (2-vazifa).
 - `git reset --hard` va yalang'och `git stash` ishlatilmaydi.
-- Commit xabari o'zbekcha, oxirida bo'sh qatordan keyin `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
+- Commit xabari o'zbekcha, oxirida bo'sh qatordan keyin `Co-Authored-By:` qatori. **Qaysi model nomi
+  yozilishini o'z sessiyangizdagi tizim eslatmasi belgilaydi** — quyidagi vazifa matnlaridagi
+  `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>` shunchaki namuna; commit'ni
+  yozayotgan model o'z eslatmasidagi qatorni ishlatadi va bu chetlanish emas.
 
 ---
 
