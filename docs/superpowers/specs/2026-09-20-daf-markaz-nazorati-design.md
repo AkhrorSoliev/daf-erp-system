@@ -20,6 +20,15 @@ Tasdiqlangan dizayndan farq qiladigan joylar — CEO ko'rib chiqishi kerak:
 | 6.4 | Nusxalanadigan matn: yalang'och raqamlar emas, «Ism — guruh — telefon — ota-ona telefoni» qatorlari | Administrator qo'ng'iroq qilishi uchun ism kerak; A1 o'quvchilarining ko'pi bola — ota-ona telefoni asosiy |
 | 9.3 | Saralash va sahifalash SQL da emas, serverda (TypeScript da) | Holat rangi normadan chiqadi; norma SQL ga kirsa qoida ikki joyda bo'ladi. O'quvchi soni (≤ 3 000) buni bemalol ko'taradi |
 
+### 3-o'qishdagi tahrirlar (20.09.2026, reja tuzishda)
+
+| Bo'lim | Nima o'zgardi | Nega |
+| --- | --- | --- |
+| 2, 5, 9.2 | Filial cheklovi `@BranchScope()` dekoratori orqali (sarlavhadagi tanlov ∩ ruxsat); sahifada alohida filial filtri **yo'q** — yuqoridagi global filial tanlagichi ishlatiladi; `?branchId` URL da saqlanmaydi | Loyihada bu tayyor va idiomatik: guard `X-Branch-Id` ni har so'rovda o'qiydi, `BranchScopedMain` filial o'zgarsa sahifani qayta yuklaydi, `BranchQuerySync` keshni tozalaydi. Manifest testi `@BranchScope()` li route'ni o'zi taniydi va **qayta e'lon qilishni rad etadi** — shuning uchun `branch-route-policy.ts` ga yozuv qo'shilmaydi |
+| 5.3 | Trend grafigida dam olish kunlari foni **yo'q** (birinchi versiya) | Kategorik o'qda bir kunlik fon chizish qiyin; ikki chiziq (kirgan / faol) asosiy ma'noni beradi |
+| 9.3 (7-so'rov) | «Kurs» ustuni `tugatilganDarslar` + `kursJamisi` + `oxirgiDarsDarajalari` dan (guruh tabi kabi), `birlikProgressi` dan emas | `birlikProgressi` bitta o'quvchining unit tafsiloti; jadval ustuniga daraja va dars soni yetadi |
+| 6.4 | Telefonlar `formatPhone()` bilan (`+998 90 123 45 67`) | Bazada 9 xonali saqlanadi; nusxada odam o'qiydigan ko'rinish kerak |
+
 ---
 
 ## 1. Muammo
@@ -84,8 +93,9 @@ boshqaruvi va ovozlar bilan kengayadi — o'sha paytda hisobotlar ichida turishi
 
 `/settings/daf` — faqat CEO (1).
 
-Filial cheklovi frontendda emas, **serverda** amalga oshiriladi: `resolveCallerReportBranchIds()`
-HTTP chegarasida bir marta chaqiriladi, `[]` qaytsa natija bo'sh bo'ladi (fail-closed).
+Filial cheklovi frontendda emas, **serverda** amalga oshiriladi: `@BranchScope()` dekoratori
+(3-o'qish) sarlavhadagi tanlovni ruxsat bilan kesishtirib `ReportBranchIds` beradi; `[]` qaytsa
+natija bo'sh bo'ladi (fail-closed). Sahifada alohida filial filtri yo'q — global tanlagich.
 
 ---
 
@@ -279,9 +289,8 @@ Tekshiruv DTO da: 3.4-jadvaldagi chegaralar; `dafSariqKun >= dafHaftalikKun` →
 
 ## 5. 1-sahifa — «Umumiy holat» (`/daf`)
 
-Filtr: **davr** (7 / 30 kun) va **filial** (CEO uchun; FD/Administratorda ko'rinmaydi yoki
-qulflangan). Ikkalasi ham URL da saqlanadi (`?period=30&branchId=2`), sahifa havolasi bilan
-ulashiladi.
+Filtr: **davr** (7 / 30 kun), URL da saqlanadi (`?period=30`). Filial — yuqoridagi global
+filial tanlagichi (3-o'qish); CEO «Barcha filiallar» yoki bittasini tanlaydi.
 
 ### 5.1 Oltita karta
 
@@ -332,15 +341,15 @@ doim 30 kunlik kunlik qatorlarni oladi va 7 kunlik kartalarni shu qatorlardan ch
 
 ### 5.4 Filiallar jadvali
 
-Faqat CEO da va faqat «hamma filial» tanlanganda (raqamlar — misol):
+Faqat CEO da va faqat tanlagichda «Barcha filiallar» turganda (raqamlar — misol):
 
 | Filial | O'quvchi | Qamrov | Norma | O'rt. faol kun | To'g'ri javob | Tugatilgan dars |
 | --- | --- | --- | --- | --- | --- | --- |
 | Filial A | 420 | 82% | 44% | 3,1 | 78% | 1 040 |
 | Filial B | 310 | 71% | 31% | 2,2 | 74% | 620 |
 
-Foizlar mavjud `foizRangi()` yordamchisi bilan ranglanadi. Qatorga bosilsa — o'sha filial
-tanlangan holda sahifa qayta yuklanadi. O'quvchining filiali — `StudentBranch` bog'lanishi
+Foizlar mavjud `foizRangi()` yordamchisi bilan ranglanadi. Qatorga bosilsa — global
+tanlagichda o'sha filial tanlanadi (`useBranchSwitcher().selectBranch`), sahifa o'zi qayta yuklanadi. O'quvchining filiali — `StudentBranch` bog'lanishi
 (`studentBranchWhere`), seans qatoridagi muhrlangan `branchId` emas (o'quvchi filial o'zgartirgan
 bo'lsa, u hozirgi filialida ko'rinadi).
 
@@ -464,8 +473,8 @@ Fayllar:
 
 ### 9.2 Filial cheklovi
 
-`resolveCallerReportBranchIds(prisma, userId, requestedBranchId)` kontrollerda bir marta
-chaqiriladi:
+Kontroller `@BranchScope() scope: ReportBranchIds` parametrini oladi (3-o'qish) — guard
+sarlavhadagi tanlovni ruxsat bilan kesishtirib bergan javob:
 
 - `null` → hamma filial (faqat CEO)
 - `[1, 4]` → shu filiallar
@@ -477,10 +486,10 @@ so'rovlar shu ro'yxatning `id` lari bilan ishlaydi (`"studentId" = ANY($1)`) va 
 (o'quvchi filial o'zgartirgan bo'lsa, uning butun tarixi hozirgi filialida ko'rinadi; buni
 o'quvchi profilidagi tab ham shunday qiladi).
 
-Barcha yangi manzillar `server/src/common/auth/branch-route-policy.ts` manifestiga
-**`BRANCH_SCOPED_BY_SERVICE`** toifasi bilan yoziladi — bu toifa aynan «route o'z chegarasini
-`resolveCallerReportBranchIds` orqali hal qiladi» degani (ADR-0003 majburiy qiladi — manifestda
-yo'q route CI da yiqiladi).
+Manifestga (`branch-route-policy.ts`) yozuv **qo'shilmaydi**: `@BranchScope()` li route
+`BRANCH_SCOPED_BY_HEADER` deb manbadan o'zi aniqlanadi, manifest testi qayta e'lon qilishni rad
+etadi («does not re-declare a route the source already evidences»). ADR-0003 talabi shu yo'l
+bilan bajariladi.
 
 ### 9.3 So'rov dizayni — eng muhim texnik qaror
 
@@ -502,7 +511,7 @@ olib kiradi — qoida ikki joyda. Yechim: **yig'indi SQL da, qaror va tartib Typ
 | 4 | SQL: `StudentAppSession`, butun tarix, `studentId` bo'yicha | `hechKirmagan = NOT BOOL_OR(activeSeconds >= 10)`, `oxirgi = MAX(lastSeenAt)` | 1 qator / o'quvchi |
 | 5 | SQL: `DafLessonProgress`, `completedAt` davr ichida, `studentId` bo'yicha | `tugatilganDars` | 1 qator / o'quvchi |
 | 6 | mavjud `kuzatuvBoshi(companyId)` | sana | 1 |
-| 7 | mavjud `birlikProgressi` + `oxirgiDarsDarajalari` — **faqat sahifadagi 50 o'quvchi** uchun | kurs progressi | 50 |
+| 7 | mavjud `kursJamisi` + `tugatilganDarslar` + `oxirgiDarsDarajalari` — **faqat sahifadagi 50 o'quvchi** uchun | kurs (daraja, tugatilgan/jami) | 50 |
 
 TypeScript da (`center-app-activity.service.ts`): har o'quvchi uchun `davrOynasi()` → `maxraj`;
 har kun uchun `faolKunmi()`; `holat()`; saralash; 50 taga qirqish; keyin 7-so'rov. `summary` ham
@@ -614,8 +623,8 @@ keyin, chunki real foydalanish keyingi ikkitasining shaklini o'zgartirishi mumki
 - `resolveCallerReportBranchIds` `[]` qaytarsa → bo'sh javob, so'rovlar chaqirilmaydi
 - `period` faqat `7` yoki `30`; boshqa qiymat → 400
 
-**Mavjud qorovullar o'zi ushlaydi:** yangi manzillar manifestda yo'q bo'lsa —
-`branch-route-policy` CI testi; o'quvchilar ro'yxati `activeStudentWhere()` siz olinsa —
+**Mavjud qorovullar o'zi ushlaydi:** `@BranchScope()` unutilsa yangi manzil manifestda ham
+yo'q bo'lib `branch-route-policy` CI testi yiqiladi; o'quvchilar ro'yxati `activeStudentWhere()` siz olinsa —
 `active-student-policy.spec.ts`. (Moliya hisobotlaridagi «har so'rovda filial sharti» qorovuli
 bu modulga taalluqli emas — u faqat `ReportsFinancialService` ni tekshiradi.)
 
