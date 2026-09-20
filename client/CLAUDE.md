@@ -818,6 +818,17 @@ Public sign-up forms (shared on Instagram/Telegram) turn every submission into a
 - An unknown `?stage=` is clamped to "no stage" before it reaches the API (the DTO would 400 it).
 - **Default field ids in `defaultFormFields()` must stay literal strings.** They are evaluated during both the server render and hydration; random ids caused a hydration mismatch on `/leads/forms/new`.
 
+### Lead Funnel Report (`/reports/leads`)
+
+`reports/lead-funnel/lead-funnel-client.tsx`. Stages (Lid → Guruhga yozildi → Darsga keldi → To'lov qildi) are counted on the server from 10.09.2026; the page only renders.
+
+- **The funnel is a left-aligned bar list (`lead-funnel-bars.tsx`), not a funnel picture.** The old trapezoid drew each block with the NEXT stage's width at its base, so its area was the mean of two stages (146 → 55 read as 2× instead of 2.65×), and an 8 % minimum width inflated small stages. Bars are exactly `count / lead` wide with no floor; the number always sits beside the bar. Do not bring back a funnel shape or a min-width.
+- One hue (`palette.series1`) for every stage, `series3` only for «To'lov qildi». Text never takes a series color. The drop-off row between stages («↓ 91 kishi guruhga yozilmadi · 62 %») is `text-sm`, always rendered (even at 0), clickable into the `stuck` list; the biggest loss is labelled.
+- Percentages in this report are **whole numbers** (`wholePercent`); 146 leads do not support a decimal.
+- Period is a preset in the URL: `?period=otgan-oy|boshidan|oraliq` (`shu-oy` is the default and is omitted). «O'tgan oy» is hidden while the previous month ends before 10.09.2026 (`visiblePresets`). The custom range keeps the paired `DatePicker`s.
+- The open people list lives in the URL (`?people=<stage>&source=<id|none>&status=<bucket|stuck>`) and is cleared on close.
+- `amber-*` and `sky-*` render as no color in the admin panel (`globals.css` maps them to `.lumio` variables); the urgent tile uses `orange-600`/`orange-400`.
+
 ### Student Portal (`src/components/student-portal/`)
 
 Student-facing portal at `student.dafzentrum.uz` — students can view their profile, schedule, attendance, and make payments. The portal is skinned with the **Lumio** design system (ported from the student-app), a playful "clay" look with Baloo 2 / Nunito fonts, applied via a scoped `.lumio` class + tokens.
