@@ -21,12 +21,15 @@
 - Barcha UI matni va yangi izohlar **lotin alifbosidagi o'zbekcha**, izohlar NEGA ekanini tushuntiradi. Test nomlari o'zbekcha.
 - Kodda haqiqiy ism, telefon yoki prod ID yo'q; misollar uydirma (`Nodira Yusupova`, `901112233`, `10001`).
 - Buyruqlar: server — `cd server && npx jest <yo'l>`, `npm run typecheck`; klient — `cd client && npx vitest run <yo'l>`, `npm run typecheck`.
-- **Har vazifa oxirida, commitdan OLDIN:** o'zgartirgan fayllaringizga `npx prettier --write <fayllar>`, so'ng
-  `npx eslint <fayllar>` toza ekanini tasdiqlang. CI `npx eslint src` ni yuritadi va XATOlarda yiqiladi;
-  formatlash Prettier'niki va u ESLint orqali majburlanadi. Bu rejadagi kod bloklari prettier formatida
-  yozilmagan, shuning uchun aynan ko'chirilgan fayl lint xatosi beradi — ko'chiring, keyin formatlang.
-  `npm run lint` (`--fix` bilan, butun repo) ISHLATILMAYDI: u vazifangizdan tashqaridagi fayllarni ham
-  o'zgartiradi.
+- **Faqat SERVERDA, har vazifa oxirida, commitdan oldin:** `cd server && npx prettier --write <yangi fayllar>`,
+  so'ng `npx eslint <fayllar>` toza ekanini tasdiqlang. Server eslint konfiguratsiyasida `prettier/prettier`
+  XATO darajasida va CI shunda yiqiladi; rejadagi kod bloklari esa prettier formatida yozilmagan.
+- **KLIENTDA prettier YURITILMAYDI.** Klient eslint konfiguratsiyasida prettier yo'q, `origin/main` dagi
+  fayllar ham prettier formatida emas. `nav-items.ts` kabi umumiy faylni formatlash 40 qator aloqasiz
+  o'zgarish yasaydi va repodagi o'nlab shox bilan birlashtirish nizosi chiqaradi. Klientda faqat
+  `npx eslint <fayllar>` yuritiladi.
+- **Mavjud faylni tahrirlaganda o'zgarish faqat qo'shimcha bo'ladi:** tegmagan qatorlar qayta formatlanmaydi,
+  qayta tartiblanmaydi. `npm run lint` (`--fix` bilan, butun repo) hech qachon ISHLATILMAYDI.
 - Prisma migratsiyasi: `prisma migrate dev` bu loyihada **ishlamaydi** — `migrate diff` → tozalash → `db execute` → `migrate resolve` (2-vazifa).
 - `git reset --hard` va yalang'och `git stash` ishlatilmaydi.
 - Commit xabari o'zbekcha, oxirida bo'sh qatordan keyin `Co-Authored-By:` qatori. **Qaysi model nomi
