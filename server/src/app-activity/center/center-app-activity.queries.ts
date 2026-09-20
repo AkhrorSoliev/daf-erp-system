@@ -106,7 +106,10 @@ export class CenterAppActivityQueries {
    * Butun tarixda kamida bitta seansda >= 10 s bo'lganlar — «hech qachon
    * kirmagan» (dizayn 3.2) ning teskarisi. Davrga bog'liq emas.
    */
-  async umumanKirganlar(companyId: number, ids: number[]): Promise<Set<number>> {
+  async umumanKirganlar(
+    companyId: number,
+    ids: number[],
+  ): Promise<Set<number>> {
     const rows = await this.prisma.$queryRaw<{ studentId: number }[]>`
       SELECT DISTINCT "studentId"
       FROM "StudentAppSession"
@@ -127,7 +130,9 @@ export class CenterAppActivityQueries {
     ids: number[],
     dan: Date,
   ): Promise<Map<number, number>> {
-    const rows = await this.prisma.$queryRaw<{ studentId: number; soni: number }[]>`
+    const rows = await this.prisma.$queryRaw<
+      { studentId: number; soni: number }[]
+    >`
       SELECT p."studentId", COUNT(*)::int AS soni
       FROM "DafLessonProgress" p
       JOIN "DafLesson" l ON l.id = p."lessonId"

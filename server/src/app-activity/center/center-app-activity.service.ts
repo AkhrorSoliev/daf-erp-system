@@ -85,13 +85,22 @@ export class CenterAppActivityService {
     const kartalar = {
       oquvchilar: y.hisoblar.length,
       akkauntlar: y.hisoblar.filter((h) => h.akkaunt).length,
-      birMartaKirganlar: y.hisoblar.filter((h) => h.akkaunt && !h.hechKirmagan).length,
+      birMartaKirganlar: y.hisoblar.filter((h) => h.akkaunt && !h.hechKirmagan)
+        .length,
       davrdaKirganlar: kirganlar.length,
       yashillar: y.hisoblar.filter((h) => h.holat === 'YASHIL').length,
       // O'rtachalar davrda kirganlar orasida — nollar o'rtachani yutmasin
       // (guruh tabi ham shunday, dizayn 5.1).
-      ortachaFaolKunHaftada: ortacha(kirganlar, (h) => (h.faolKun / h.maxraj) * 7, 1),
-      ortachaKunlikSoniya: ortacha(kirganlar, (h) => h.lernenSoniya / h.maxraj, 0),
+      ortachaFaolKunHaftada: ortacha(
+        kirganlar,
+        (h) => (h.faolKun / h.maxraj) * 7,
+        1,
+      ),
+      ortachaKunlikSoniya: ortacha(
+        kirganlar,
+        (h) => h.lernenSoniya / h.maxraj,
+        0,
+      ),
       savollar,
       togri,
       foiz: foizi(togri, savollar),
@@ -287,10 +296,23 @@ export class CenterAppActivityService {
 
     const [seanslar, savollar, umumanKirganlar, darslar, oxirgilar] =
       await Promise.all([
-        this.queries.kunlikSeanslar(companyId, ids, bosh30.davrBoshi, bosh30.bugun),
-        this.queries.kunlikSavollar(companyId, ids, tashkentDayStartUtc(bosh30.davrBoshi)),
+        this.queries.kunlikSeanslar(
+          companyId,
+          ids,
+          bosh30.davrBoshi,
+          bosh30.bugun,
+        ),
+        this.queries.kunlikSavollar(
+          companyId,
+          ids,
+          tashkentDayStartUtc(bosh30.davrBoshi),
+        ),
         this.queries.umumanKirganlar(companyId, ids),
-        this.queries.tugatilganDarsSoni(companyId, ids, tashkentDayStartUtc(boshDavr.davrBoshi)),
+        this.queries.tugatilganDarsSoni(
+          companyId,
+          ids,
+          tashkentDayStartUtc(boshDavr.davrBoshi),
+        ),
         this.umumiyQueries.oxirgiFaolliklar(ids),
       ]);
     const seansMap = guruhla(seanslar, (r) => r.studentId);
@@ -300,7 +322,12 @@ export class CenterAppActivityService {
       const akkaunt = s.user !== null;
       const akkauntKuni = s.user?.createdAt ?? s.createdAt;
       const oyna = davrOynasi(davr, now, akkauntKuni, kuzatuvBoshi);
-      const surat = oquvchiSurati(oyna, seansMap.get(s.id) ?? [], savolMap.get(s.id) ?? [], norma);
+      const surat = oquvchiSurati(
+        oyna,
+        seansMap.get(s.id) ?? [],
+        savolMap.get(s.id) ?? [],
+        norma,
+      );
       const surat30 =
         davr === XARITA_KUNLARI
           ? surat
@@ -320,7 +347,15 @@ export class CenterAppActivityService {
         akkaunt,
         hechKirmagan,
         kirdi: surat.kirdi,
-        holat: holat({ akkaunt, hechKirmagan, faolKun: surat.faolKun, maxraj: oyna.maxraj }, norma),
+        holat: holat(
+          {
+            akkaunt,
+            hechKirmagan,
+            faolKun: surat.faolKun,
+            maxraj: oyna.maxraj,
+          },
+          norma,
+        ),
         faolKun: surat.faolKun,
         maxraj: oyna.maxraj,
         hisobBoshi: oyna.hisobBoshi,
@@ -353,7 +388,13 @@ export class CenterAppActivityService {
       };
     });
 
-    return { norma, bugun: bosh30.bugun, kuzatuvBoshi, kunlar30: bosh30.kunlar, hisoblar };
+    return {
+      norma,
+      bugun: bosh30.bugun,
+      kuzatuvBoshi,
+      kunlar30: bosh30.kunlar,
+      hisoblar,
+    };
   }
 }
 
@@ -405,7 +446,10 @@ function filialQatorlari(hisoblar: OquvchiHisobi[]): MarkazFilialQatori[] {
   const guruhlar = new Map<number, { nomi: string; royxat: OquvchiHisobi[] }>();
   for (const h of hisoblar) {
     const kalit = h.filial?.id ?? 0;
-    const g = guruhlar.get(kalit) ?? { nomi: h.filial?.nomi ?? 'Filialsiz', royxat: [] };
+    const g = guruhlar.get(kalit) ?? {
+      nomi: h.filial?.nomi ?? 'Filialsiz',
+      royxat: [],
+    };
     g.royxat.push(h);
     guruhlar.set(kalit, g);
   }
@@ -418,9 +462,19 @@ function filialQatorlari(hisoblar: OquvchiHisobi[]): MarkazFilialQatori[] {
         branchId,
         nomi: g.nomi,
         oquvchilar: g.royxat.length,
-        qamrovFoiz: foizi(g.royxat.filter((h) => h.akkaunt && !h.hechKirmagan).length, g.royxat.length),
-        normaFoiz: foizi(g.royxat.filter((h) => h.holat === 'YASHIL').length, g.royxat.length),
-        ortachaFaolKunHaftada: ortacha(kirganlar, (h) => (h.faolKun / h.maxraj) * 7, 1),
+        qamrovFoiz: foizi(
+          g.royxat.filter((h) => h.akkaunt && !h.hechKirmagan).length,
+          g.royxat.length,
+        ),
+        normaFoiz: foizi(
+          g.royxat.filter((h) => h.holat === 'YASHIL').length,
+          g.royxat.length,
+        ),
+        ortachaFaolKunHaftada: ortacha(
+          kirganlar,
+          (h) => (h.faolKun / h.maxraj) * 7,
+          1,
+        ),
         foiz: foizi(togri, savollar),
         tugatilganDarslar: jam(g.royxat, (h) => h.tugatilganDarslar),
       };

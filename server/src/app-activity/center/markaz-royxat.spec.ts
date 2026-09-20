@@ -51,18 +51,69 @@ function hisob(qism: Partial<OquvchiHisobi>): OquvchiHisobi {
   };
 }
 
-const HECH = hisob({ studentId: 1, ism: 'Bekzod', holat: 'HECH_KIRMAGAN', kirdi: false, faolKun: 0, oxirgiFaollik: null });
-const QIZIL_ESKI = hisob({ studentId: 2, ism: 'Aziza', holat: 'QIZIL', kirdi: false, faolKun: 0, oxirgiFaollik: { vaqt: '2026-08-01T05:00:00.000Z', platforma: 'WEB' } });
-const QIZIL_YANGI = hisob({ studentId: 3, ism: 'Dilnoza', holat: 'QIZIL', kirdi: true, faolKun: 1, oxirgiFaollik: { vaqt: '2026-09-19T05:00:00.000Z', platforma: 'WEB' } });
-const SARIQ = hisob({ studentId: 4, ism: 'Sardor', holat: 'SARIQ', faolKun: 3, foiz: null, savollar: 0, togri: 0 });
-const YASHIL = hisob({ studentId: 5, ism: 'Malika', holat: 'YASHIL', faolKun: 6, lernenSoniya: 7200, guruhlar: [guruh('g-a2', 'A2-01', 'A2', 20002)], telefon: '935556677', otaOnaTelefoni: '901234567' });
-const AKKAUNTSIZ = hisob({ studentId: 6, ism: 'Zafar', akkaunt: false, holat: 'AKKAUNT_YOQ', kirdi: false, faolKun: 0, oxirgiFaollik: null });
+const HECH = hisob({
+  studentId: 1,
+  ism: 'Bekzod',
+  holat: 'HECH_KIRMAGAN',
+  kirdi: false,
+  faolKun: 0,
+  oxirgiFaollik: null,
+});
+const QIZIL_ESKI = hisob({
+  studentId: 2,
+  ism: 'Aziza',
+  holat: 'QIZIL',
+  kirdi: false,
+  faolKun: 0,
+  oxirgiFaollik: { vaqt: '2026-08-01T05:00:00.000Z', platforma: 'WEB' },
+});
+const QIZIL_YANGI = hisob({
+  studentId: 3,
+  ism: 'Dilnoza',
+  holat: 'QIZIL',
+  kirdi: true,
+  faolKun: 1,
+  oxirgiFaollik: { vaqt: '2026-09-19T05:00:00.000Z', platforma: 'WEB' },
+});
+const SARIQ = hisob({
+  studentId: 4,
+  ism: 'Sardor',
+  holat: 'SARIQ',
+  faolKun: 3,
+  foiz: null,
+  savollar: 0,
+  togri: 0,
+});
+const YASHIL = hisob({
+  studentId: 5,
+  ism: 'Malika',
+  holat: 'YASHIL',
+  faolKun: 6,
+  lernenSoniya: 7200,
+  guruhlar: [guruh('g-a2', 'A2-01', 'A2', 20002)],
+  telefon: '935556677',
+  otaOnaTelefoni: '901234567',
+});
+const AKKAUNTSIZ = hisob({
+  studentId: 6,
+  ism: 'Zafar',
+  akkaunt: false,
+  holat: 'AKKAUNT_YOQ',
+  kirdi: false,
+  faolKun: 0,
+  oxirgiFaollik: null,
+});
 const HAMMA = [YASHIL, AKKAUNTSIZ, SARIQ, QIZIL_YANGI, HECH, QIZIL_ESKI];
 
 describe('sarala — standart tartib (dizayn 6.2)', () => {
   it("holat: hech kirmagan → qizil (eng eski kirish oldin) → sariq → yashil → akkaunt yo'q", () => {
     expect(sarala(HAMMA, 'holat', 'asc').map((h) => h.ism)).toEqual([
-      'Bekzod', 'Aziza', 'Dilnoza', 'Sardor', 'Malika', 'Zafar',
+      'Bekzod',
+      'Aziza',
+      'Dilnoza',
+      'Sardor',
+      'Malika',
+      'Zafar',
     ]);
   });
 
@@ -74,11 +125,11 @@ describe('sarala — standart tartib (dizayn 6.2)', () => {
     expect(sarala(HAMMA, 'vaqt', 'desc')[0].ism).toBe('Malika');
   });
 
-  it("foiz: null eng pastda (asc da boshida) — Sardor", () => {
+  it('foiz: null eng pastda (asc da boshida) — Sardor', () => {
     expect(sarala(HAMMA, 'foiz', 'asc')[0].ism).toBe('Sardor');
   });
 
-  it("oxirgi: hech qachon kirmaganlar eng yuqorida, keyin eng eskisi", () => {
+  it('oxirgi: hech qachon kirmaganlar eng yuqorida, keyin eng eskisi', () => {
     const tartib = sarala(HAMMA, 'oxirgi', 'asc').map((h) => h.ism);
     expect(tartib.slice(0, 2).sort()).toEqual(['Bekzod', 'Zafar']);
     expect(tartib[2]).toBe('Aziza');
@@ -86,13 +137,23 @@ describe('sarala — standart tartib (dizayn 6.2)', () => {
 
   it("ism bo'yicha asc — alifbo tartibi", () => {
     expect(sarala(HAMMA, 'ism', 'asc').map((h) => h.ism)).toEqual([
-      'Aziza', 'Bekzod', 'Dilnoza', 'Malika', 'Sardor', 'Zafar',
+      'Aziza',
+      'Bekzod',
+      'Dilnoza',
+      'Malika',
+      'Sardor',
+      'Zafar',
     ]);
   });
 
   it("faolKun bo'yicha asc — eng kam faol kun yuqorida, teng bo'lsa ism", () => {
     expect(sarala(HAMMA, 'faolKun', 'asc').map((h) => h.ism)).toEqual([
-      'Aziza', 'Bekzod', 'Zafar', 'Dilnoza', 'Sardor', 'Malika',
+      'Aziza',
+      'Bekzod',
+      'Zafar',
+      'Dilnoza',
+      'Sardor',
+      'Malika',
     ]);
   });
 
@@ -109,28 +170,46 @@ describe('sarala — standart tartib (dizayn 6.2)', () => {
 });
 
 describe('filtrla (dizayn 6.1)', () => {
-  it('holat ro\'yxati — bir nechtasi birga', () => {
-    expect(filtrla(HAMMA, { status: ['QIZIL', 'SARIQ'] }).map((h) => h.studentId).sort()).toEqual([2, 3, 4]);
+  it("holat ro'yxati — bir nechtasi birga", () => {
+    expect(
+      filtrla(HAMMA, { status: ['QIZIL', 'SARIQ'] })
+        .map((h) => h.studentId)
+        .sort(),
+    ).toEqual([2, 3, 4]);
   });
 
-  it("kirgan=false — davrda kirmaganlar (hech kirmagan, eski qizil, akkauntsiz)", () => {
-    expect(filtrla(HAMMA, { kirgan: false }).map((h) => h.studentId).sort()).toEqual([1, 2, 6]);
+  it('kirgan=false — davrda kirmaganlar (hech kirmagan, eski qizil, akkauntsiz)', () => {
+    expect(
+      filtrla(HAMMA, { kirgan: false })
+        .map((h) => h.studentId)
+        .sort(),
+    ).toEqual([1, 2, 6]);
   });
 
   it("guruh, o'qituvchi, daraja — istalgan faol guruh mos kelsa", () => {
-    expect(filtrla(HAMMA, { groupId: 'g-a2' }).map((h) => h.ism)).toEqual(['Malika']);
-    expect(filtrla(HAMMA, { teacherId: 20002 }).map((h) => h.ism)).toEqual(['Malika']);
-    expect(filtrla(HAMMA, { level: 'A2' }).map((h) => h.ism)).toEqual(['Malika']);
+    expect(filtrla(HAMMA, { groupId: 'g-a2' }).map((h) => h.ism)).toEqual([
+      'Malika',
+    ]);
+    expect(filtrla(HAMMA, { teacherId: 20002 }).map((h) => h.ism)).toEqual([
+      'Malika',
+    ]);
+    expect(filtrla(HAMMA, { level: 'A2' }).map((h) => h.ism)).toEqual([
+      'Malika',
+    ]);
     expect(filtrla(HAMMA, { level: 'B1' })).toEqual([]);
   });
 
   it("qidiruv: ism bo'yicha katta-kichik harfsiz, telefon bo'yicha raqamlar", () => {
     expect(filtrla(HAMMA, { q: 'mali' }).map((h) => h.ism)).toEqual(['Malika']);
-    expect(filtrla(HAMMA, { q: '93 555' }).map((h) => h.ism)).toEqual(['Malika']);
-    expect(filtrla(HAMMA, { q: '9012345' }).map((h) => h.ism)).toEqual(['Malika']); // ota-ona telefoni
+    expect(filtrla(HAMMA, { q: '93 555' }).map((h) => h.ism)).toEqual([
+      'Malika',
+    ]);
+    expect(filtrla(HAMMA, { q: '9012345' }).map((h) => h.ism)).toEqual([
+      'Malika',
+    ]); // ota-ona telefoni
   });
 
-  it("ikki xonali raqam telefonga mos deb olinmaydi", () => {
+  it('ikki xonali raqam telefonga mos deb olinmaydi', () => {
     // '90' hamma telefonda bor — ism bo'yicha ham mos kelmasa bo'sh.
     expect(filtrla(HAMMA, { q: '90' })).toEqual([]);
   });
@@ -153,7 +232,10 @@ describe('sahifala', () => {
 describe('filtrVariantlari va korsatiladiganGuruh', () => {
   it("guruhlar va o'qituvchilar takrorsiz, ism bo'yicha; darajalar mavjudlari", () => {
     const v = filtrVariantlari(HAMMA);
-    expect(v.guruhlar).toEqual([{ id: 'g-a1', nomi: 'A1-07' }, { id: 'g-a2', nomi: 'A2-01' }]);
+    expect(v.guruhlar).toEqual([
+      { id: 'g-a1', nomi: 'A1-07' },
+      { id: 'g-a2', nomi: 'A2-01' },
+    ]);
     expect(v.oqituvchilar.map((o) => o.id)).toEqual([20001, 20002]);
     expect(v.darajalar).toEqual(['A1', 'A2']);
   });
@@ -173,8 +255,10 @@ describe('filtrVariantlari va korsatiladiganGuruh', () => {
     expect(korsatiladiganGuruh(hisob({ guruhlar: [] }))).toBeNull();
   });
 
-  it("mos kelmaydigan groupId berilsa birinchi guruh qaytadi, null emas", () => {
-    const ikki = hisob({ guruhlar: [guruh('g-1', 'A', 'A1'), guruh('g-2', 'B', 'A2', 20002)] });
+  it('mos kelmaydigan groupId berilsa birinchi guruh qaytadi, null emas', () => {
+    const ikki = hisob({
+      guruhlar: [guruh('g-1', 'A', 'A1'), guruh('g-2', 'B', 'A2', 20002)],
+    });
     expect(korsatiladiganGuruh(ikki, 'boshqa-guruh')?.id).toBe('g-1');
   });
 });

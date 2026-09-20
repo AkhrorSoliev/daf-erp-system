@@ -14,16 +14,16 @@ describe('CompanyService.update — DaF normasi tekshiruvi', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it("sariq chegarasi haftalikka teng bo'lsa — 400", async () => {
-    await expect(service.update(1001, { dafSariqKun: 4 })).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(
+      service.update(1001, { dafSariqKun: 4 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.company.update).not.toHaveBeenCalled();
   });
 
-  it("haftalik norma sariqqa tushib qolsa ham — 400 (mavjud sariq 2, yangi haftalik 2)", async () => {
-    await expect(service.update(1001, { dafHaftalikKun: 2 })).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+  it('haftalik norma sariqqa tushib qolsa ham — 400 (mavjud sariq 2, yangi haftalik 2)', async () => {
+    await expect(
+      service.update(1001, { dafHaftalikKun: 2 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it("ikkalasi birga to'g'ri kelsa saqlanadi", async () => {

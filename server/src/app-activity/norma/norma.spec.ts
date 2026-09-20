@@ -31,7 +31,7 @@ describe('faolKunmi — kun faolmi (dizayn 3.3)', () => {
 describe('kerakliKunlar — norma davrga mutanosib (dizayn 3.4)', () => {
   const n = STANDART_NORMA; // 4 / 2
 
-  it('7 kunlik maxraj — normaning o\'si', () => {
+  it("7 kunlik maxraj — normaning o'si", () => {
     expect(kerakliKunlar(7, n)).toEqual({ kerakliKun: 4, sariqKerak: 2 });
   });
 
@@ -57,11 +57,15 @@ describe('holat — belgi (dizayn 3.4)', () => {
   const bor = { akkaunt: true, hechKirmagan: false, maxraj: 7 };
 
   it("akkaunt yo'q — faol kun qanchaligi muhim emas", () => {
-    expect(holat({ ...bor, akkaunt: false, faolKun: 7 }, n)).toBe('AKKAUNT_YOQ');
+    expect(holat({ ...bor, akkaunt: false, faolKun: 7 }, n)).toBe(
+      'AKKAUNT_YOQ',
+    );
   });
 
   it('hech qachon kirmagan — normadan oldin tekshiriladi', () => {
-    expect(holat({ ...bor, hechKirmagan: true, faolKun: 0 }, n)).toBe('HECH_KIRMAGAN');
+    expect(holat({ ...bor, hechKirmagan: true, faolKun: 0 }, n)).toBe(
+      'HECH_KIRMAGAN',
+    );
   });
 
   it('chegaralar: 0,1 qizil; 2,3 sariq; 4+ yashil', () => {
@@ -73,7 +77,7 @@ describe('holat — belgi (dizayn 3.4)', () => {
     expect(holat({ ...bor, faolKun: 7 }, n)).toBe('YASHIL');
   });
 
-  it("30 kunlik maxrajda 17 yashil, 16 sariq", () => {
+  it('30 kunlik maxrajda 17 yashil, 16 sariq', () => {
     expect(holat({ ...bor, maxraj: 30, faolKun: 17 }, n)).toBe('YASHIL');
     expect(holat({ ...bor, maxraj: 30, faolKun: 16 }, n)).toBe('SARIQ');
   });
@@ -89,7 +93,17 @@ describe('holat — belgi (dizayn 3.4)', () => {
 describe('normaniOqi — Company ustunlaridan', () => {
   it('nomlarni tarjima qiladi', () => {
     expect(
-      normaniOqi({ dafKunlikDaqiqa: 15, dafKunlikSavol: 20, dafHaftalikKun: 5, dafSariqKun: 3 }),
-    ).toEqual({ kunlikDaqiqa: 15, kunlikSavol: 20, haftalikKun: 5, sariqKun: 3 });
+      normaniOqi({
+        dafKunlikDaqiqa: 15,
+        dafKunlikSavol: 20,
+        dafHaftalikKun: 5,
+        dafSariqKun: 3,
+      }),
+    ).toEqual({
+      kunlikDaqiqa: 15,
+      kunlikSavol: 20,
+      haftalikKun: 5,
+      sariqKun: 3,
+    });
   });
 });

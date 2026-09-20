@@ -8,80 +8,145 @@ const GURUH = {
   id: 'g-a1',
   name: 'A1-07',
   level: 'A1',
-  teachers: [{ teacher: { id: 20001, firstName: 'Sardor', lastName: 'Karimov' } }],
+  teachers: [
+    { teacher: { id: 20001, firstName: 'Sardor', lastName: 'Karimov' } },
+  ],
 };
 const FILIAL = { branch: { id: 1, name: 'Filial A' } };
-const yozuv = { startDate: new Date('2026-09-01T00:00:00Z'), createdAt: new Date('2026-09-01T00:00:00Z'), group: GURUH };
+const yozuv = {
+  startDate: new Date('2026-09-01T00:00:00Z'),
+  createdAt: new Date('2026-09-01T00:00:00Z'),
+  group: GURUH,
+};
 
 const OQUVCHILAR = [
   {
-    id: 10001, firstName: 'Nodira', lastName: 'Yusupova', photo: null, phone: '901112233', parentPhone: null,
-    createdAt: new Date('2026-06-01T00:00:00Z'), user: { createdAt: new Date('2026-08-01T00:00:00Z') },
-    branches: [FILIAL], enrollments: [yozuv],
+    id: 10001,
+    firstName: 'Nodira',
+    lastName: 'Yusupova',
+    photo: null,
+    phone: '901112233',
+    parentPhone: null,
+    createdAt: new Date('2026-06-01T00:00:00Z'),
+    user: { createdAt: new Date('2026-08-01T00:00:00Z') },
+    branches: [FILIAL],
+    enrollments: [yozuv],
   },
   {
-    id: 10002, firstName: 'Bekzod', lastName: 'Rasulov', photo: null, phone: '902223344', parentPhone: '905556677',
-    createdAt: new Date('2026-06-01T00:00:00Z'), user: { createdAt: new Date('2026-09-01T00:00:00Z') },
-    branches: [FILIAL], enrollments: [yozuv],
+    id: 10002,
+    firstName: 'Bekzod',
+    lastName: 'Rasulov',
+    photo: null,
+    phone: '902223344',
+    parentPhone: '905556677',
+    createdAt: new Date('2026-06-01T00:00:00Z'),
+    user: { createdAt: new Date('2026-09-01T00:00:00Z') },
+    branches: [FILIAL],
+    enrollments: [yozuv],
   },
   {
-    id: 10003, firstName: 'Zafar', lastName: 'Toshev', photo: null, phone: '903334455', parentPhone: null,
-    createdAt: new Date('2026-06-01T00:00:00Z'), user: null,
-    branches: [FILIAL], enrollments: [yozuv],
+    id: 10003,
+    firstName: 'Zafar',
+    lastName: 'Toshev',
+    photo: null,
+    phone: '903334455',
+    parentPhone: null,
+    createdAt: new Date('2026-06-01T00:00:00Z'),
+    user: null,
+    branches: [FILIAL],
+    enrollments: [yozuv],
   },
 ];
 
 const seans = (sana: string) => ({
-  studentId: 10001, sana, faolSoniya: 700, radioSoniya: 0, lernenSoniya: 600, kirdi: true,
+  studentId: 10001,
+  sana,
+  faolSoniya: 700,
+  radioSoniya: 0,
+  lernenSoniya: 600,
+  kirdi: true,
 });
 
 function qur() {
   const prisma = {
     company: {
       findUnique: jest.fn().mockResolvedValue({
-        dafKunlikDaqiqa: 10, dafKunlikSavol: 12, dafHaftalikKun: 4, dafSariqKun: 2,
+        dafKunlikDaqiqa: 10,
+        dafKunlikSavol: 12,
+        dafHaftalikKun: 4,
+        dafSariqKun: 2,
       }),
     },
     student: { findMany: jest.fn().mockResolvedValue(OQUVCHILAR) },
   };
   const queries = {
-    kunlikSeanslar: jest.fn().mockResolvedValue([
-      seans('2026-09-14'), seans('2026-09-15'), seans('2026-09-16'), seans('2026-09-17'),
-    ]),
-    kunlikSavollar: jest.fn().mockResolvedValue([
-      { studentId: 10001, sana: '2026-09-14', savollar: 12, togri: 9 },
-    ]),
+    kunlikSeanslar: jest
+      .fn()
+      .mockResolvedValue([
+        seans('2026-09-14'),
+        seans('2026-09-15'),
+        seans('2026-09-16'),
+        seans('2026-09-17'),
+      ]),
+    kunlikSavollar: jest
+      .fn()
+      .mockResolvedValue([
+        { studentId: 10001, sana: '2026-09-14', savollar: 12, togri: 9 },
+      ]),
     umumanKirganlar: jest.fn().mockResolvedValue(new Set([10001])),
     tugatilganDarsSoni: jest.fn().mockResolvedValue(new Map([[10001, 2]])),
   };
   const umumiyQueries = {
     kuzatuvBoshi: jest.fn().mockResolvedValue('2026-09-13'),
-    oxirgiFaolliklar: jest.fn().mockResolvedValue(
-      new Map([[10001, { vaqt: '2026-09-17T06:00:00.000Z', platforma: 'WEB' }]]),
-    ),
+    oxirgiFaolliklar: jest
+      .fn()
+      .mockResolvedValue(
+        new Map([
+          [10001, { vaqt: '2026-09-17T06:00:00.000Z', platforma: 'WEB' }],
+        ]),
+      ),
     kursJamisi: jest.fn().mockResolvedValue({ A1: 24 }),
-    tugatilganDarslar: jest.fn().mockResolvedValue(new Map([[10001, { A1: 2 }]])),
+    tugatilganDarslar: jest
+      .fn()
+      .mockResolvedValue(new Map([[10001, { A1: 2 }]])),
     oxirgiDarsDarajalari: jest.fn().mockResolvedValue(new Map([[10001, 'A1']])),
   };
   const service = new CenterAppActivityService(
-    prisma as never, queries as never, umumiyQueries as never,
+    prisma as never,
+    queries as never,
+    umumiyQueries as never,
   );
   return { prisma, queries, umumiyQueries, service };
 }
 
-const SOROV: OquvchilarSorovi = { davr: 7, sort: 'holat', dir: 'asc', page: 1, pageSize: 50 };
+const SOROV: OquvchilarSorovi = {
+  davr: 7,
+  sort: 'holat',
+  dir: 'asc',
+  page: 1,
+  pageSize: 50,
+};
 
 describe('CenterAppActivityService.umumiy', () => {
-  it('kartalar, voronka, trend va filiallar bitta o\'tishda (dizayn 5)', async () => {
+  it("kartalar, voronka, trend va filiallar bitta o'tishda (dizayn 5)", async () => {
     const { service, prisma } = qur();
     const r = await service.umumiy(1001, null, 7, NOW);
 
     expect(prisma.student.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ companyId: 1001, deletedAt: null, status: 'ACTIVE' }),
+        where: expect.objectContaining({
+          companyId: 1001,
+          deletedAt: null,
+          status: 'ACTIVE',
+        }),
       }),
     );
-    expect(r.norma).toEqual({ kunlikDaqiqa: 10, kunlikSavol: 12, haftalikKun: 4, sariqKun: 2 });
+    expect(r.norma).toEqual({
+      kunlikDaqiqa: 10,
+      kunlikSavol: 12,
+      haftalikKun: 4,
+      sariqKun: 2,
+    });
     expect(r.kartalar).toEqual({
       oquvchilar: 3,
       akkauntlar: 2,
@@ -96,20 +161,34 @@ describe('CenterAppActivityService.umumiy', () => {
       tugatilganDarslar: 2,
     });
     expect(r.voronka).toEqual({
-      faolOquvchi: 3, akkauntiBor: 2, birMartaKirgan: 1, davrdaKirgan: 1, normaniBajargan: 1,
+      faolOquvchi: 3,
+      akkauntiBor: 2,
+      birMartaKirgan: 1,
+      davrdaKirgan: 1,
+      normaniBajargan: 1,
     });
     expect(r.trend).toHaveLength(30);
     expect(r.trend[0].sana).toBe('2026-08-22');
     expect(r.trend.find((t) => t.sana === '2026-09-14')).toEqual({
-      sana: '2026-09-14', kirganlar: 1, faollar: 1,
+      sana: '2026-09-14',
+      kirganlar: 1,
+      faollar: 1,
     });
     expect(r.trend.find((t) => t.sana === '2026-09-19')).toEqual({
-      sana: '2026-09-19', kirganlar: 0, faollar: 0,
+      sana: '2026-09-19',
+      kirganlar: 0,
+      faollar: 0,
     });
     expect(r.filiallar).toEqual([
       expect.objectContaining({
-        branchId: 1, nomi: 'Filial A', oquvchilar: 3, qamrovFoiz: 33, normaFoiz: 33,
-        ortachaFaolKunHaftada: 4, foiz: 75, tugatilganDarslar: 2,
+        branchId: 1,
+        nomi: 'Filial A',
+        oquvchilar: 3,
+        qamrovFoiz: 33,
+        normaFoiz: 33,
+        ortachaFaolKunHaftada: 4,
+        foiz: 75,
+        tugatilganDarslar: 2,
       }),
     ]);
   });
@@ -120,7 +199,9 @@ describe('CenterAppActivityService.umumiy', () => {
     expect(r.filiallar).toEqual([]);
     expect(prisma.student.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ branches: { some: { branchId: { in: [1] } } } }),
+        where: expect.objectContaining({
+          branches: { some: { branchId: { in: [1] } } },
+        }),
       }),
     );
   });
@@ -147,7 +228,7 @@ describe('CenterAppActivityService.umumiy', () => {
 });
 
 describe('CenterAppActivityService.oquvchilar', () => {
-  it('standart tartib: hech kirmagan → yashil → akkaunt yo\'q; kurs faqat sahifadagilar uchun', async () => {
+  it("standart tartib: hech kirmagan → yashil → akkaunt yo'q; kurs faqat sahifadagilar uchun", async () => {
     const { service, umumiyQueries } = qur();
     const r = await service.oquvchilar(1001, null, SOROV, NOW);
 
@@ -163,12 +244,24 @@ describe('CenterAppActivityService.oquvchilar', () => {
       guruh: { id: 'g-a1', nomi: 'A1-07', daraja: 'A1' },
       oqituvchi: { id: 20001, ism: 'Sardor Karimov' },
       filial: { id: 1, nomi: 'Filial A' },
-      kirdi: true, faolKun: 4, maxraj: 7, kerakliKun: 4, sariqKerak: 2,
-      lernenSoniya: 2400, ortachaKunlikSoniya: 343, savollar: 12, togri: 9, foiz: 75,
+      kirdi: true,
+      faolKun: 4,
+      maxraj: 7,
+      kerakliKun: 4,
+      sariqKerak: 2,
+      lernenSoniya: 2400,
+      ortachaKunlikSoniya: 343,
+      savollar: 12,
+      togri: 9,
+      foiz: 75,
       kurs: { daraja: 'A1', tugatilgan: 2, jami: 24 },
     });
     expect(nodira.kunlar).toHaveLength(7);
-    expect(nodira.kunlar[0]).toMatchObject({ sana: '2026-09-14', shugullangan: true, kirdi: true });
+    expect(nodira.kunlar[0]).toMatchObject({
+      sana: '2026-09-14',
+      shugullangan: true,
+      kirdi: true,
+    });
 
     expect(r.filtrVariantlari).toEqual({
       guruhlar: [{ id: 'g-a1', nomi: 'A1-07' }],
@@ -176,16 +269,28 @@ describe('CenterAppActivityService.oquvchilar', () => {
       darajalar: ['A1'],
     });
     expect(r.filialUstuni).toBe(true);
-    expect(umumiyQueries.tugatilganDarslar).toHaveBeenCalledWith([10002, 10001, 10003]);
+    expect(umumiyQueries.tugatilganDarslar).toHaveBeenCalledWith([
+      10002, 10001, 10003,
+    ]);
   });
 
   it('holat filtri va sahifalash', async () => {
     const { service, umumiyQueries } = qur();
-    const r = await service.oquvchilar(1001, null, { ...SOROV, status: ['YASHIL'] }, NOW);
+    const r = await service.oquvchilar(
+      1001,
+      null,
+      { ...SOROV, status: ['YASHIL'] },
+      NOW,
+    );
     expect(r.jami).toBe(1);
     expect(r.qatorlar[0].studentId).toBe(10001);
 
-    const s = await service.oquvchilar(1001, null, { ...SOROV, pageSize: 1, page: 2 }, NOW);
+    const s = await service.oquvchilar(
+      1001,
+      null,
+      { ...SOROV, pageSize: 1, page: 2 },
+      NOW,
+    );
     expect(s).toMatchObject({ jami: 3, sahifa: 2, sahifaHajmi: 1 });
     expect(s.qatorlar.map((q) => q.studentId)).toEqual([10001]);
     expect(umumiyQueries.tugatilganDarslar).toHaveBeenLastCalledWith([10001]);
@@ -204,12 +309,22 @@ describe('CenterAppActivityService.oquvchilar', () => {
 describe('CenterAppActivityService.telefonlar', () => {
   it("joriy filtr bo'yicha hamma qator, ism/guruh/telefonlar bilan", async () => {
     const { service } = qur();
-    const r = await service.telefonlar(1001, null, { ...SOROV, status: ['HECH_KIRMAGAN'] }, NOW);
+    const r = await service.telefonlar(
+      1001,
+      null,
+      { ...SOROV, status: ['HECH_KIRMAGAN'] },
+      NOW,
+    );
     expect(r).toEqual({
       jami: 1,
       qisqartirildi: false,
       qatorlar: [
-        { ism: 'Bekzod Rasulov', guruh: 'A1-07', telefon: '902223344', otaOnaTelefoni: '905556677' },
+        {
+          ism: 'Bekzod Rasulov',
+          guruh: 'A1-07',
+          telefon: '902223344',
+          otaOnaTelefoni: '905556677',
+        },
       ],
     });
   });

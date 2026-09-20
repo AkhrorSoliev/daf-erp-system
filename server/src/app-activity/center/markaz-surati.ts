@@ -64,8 +64,7 @@ export function oquvchiSurati(
     const q = savolMap.get(sana);
     const kuzatilgan = sana >= oyna.hisobBoshi;
     const faol =
-      kuzatilgan &&
-      faolKunmi(s?.lernenSoniya ?? 0, q?.savollar ?? 0, norma);
+      kuzatilgan && faolKunmi(s?.lernenSoniya ?? 0, q?.savollar ?? 0, norma);
     if (kuzatilgan) {
       if (faol) faolKun += 1;
       lernenSoniya += s?.lernenSoniya ?? 0;
@@ -85,5 +84,13 @@ export function oquvchiSurati(
     };
   });
 
-  return { kunlar, faolKun, lernenSoniya, faolSoniya, kirdi, savollar: savolJami, togri };
+  return {
+    kunlar,
+    faolKun,
+    lernenSoniya,
+    faolSoniya,
+    kirdi,
+    savollar: savolJami,
+    togri,
+  };
 }
