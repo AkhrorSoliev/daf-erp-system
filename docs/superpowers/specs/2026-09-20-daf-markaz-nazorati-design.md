@@ -518,6 +518,13 @@ har kun uchun `faolKunmi()`; `holat()`; saralash; 50 taga qirqish; keyin 7-so'ro
 xuddi shu 1–6 so'rovlardan yig'iladi — kartalar, voronka, trend va filiallar jadvali bitta
 o'tishda chiqadi.
 
+> **Amalda (20.09.2026):** 4-so'rov ikkiga bo'lindi — `umumanKirganlar`
+> (`activeSeconds >= 10`) va mavjud `oxirgiFaolliklar` (filtrsiz, `DISTINCT ON`,
+> guruh tabi bilan umumiy) — va 7-qator aslida uchta so'rov. Shuning uchun haqiqiy
+> son: umumiy holat 8 ta, o'quvchilar sahifasi 11 ta. Jadvaldagi «yetti» — dastlabki
+> mo'ljal; o'zgarmagani va muhimi shu: hech bir so'rov o'quvchilar soniga qarab
+> ko'paymaydi. Batafsil: ADR-0024.
+
 **Hajm chegarasi, ochiq:** 2- va 3-so'rovlar eng ko'pi `o'quvchi × 30` qator qaytaradi — 1000
 o'quvchida 30 000 kichik qator, ~1 MB. Bu CEO sahifasi (kuniga bir necha marta ochiladi, klientda
 60 s kesh) uchun yetarli. Faol o'quvchi 3 000 dan oshsa yoki so'rov 2 s dan uzoq bo'lsa —

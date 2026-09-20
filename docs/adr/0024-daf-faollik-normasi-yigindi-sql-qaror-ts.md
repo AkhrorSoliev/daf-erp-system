@@ -88,7 +88,15 @@ so'rov ketmaydi (ADR-0002).
   `norma.ts` dan chiqadi. Guruh tabi holat ko'rsatadigan bo'lsa — shu fayldan.
 - Norma bugundan sozlanadi; birinchi haftadagi «hamma qizil / hamma yashil»
   xavfi kod o'zgarishisiz yopiladi.
-- Markaz so'rovlari soni o'quvchilar sonidan qat'i nazar doimiy (7 ta).
+- Markaz so'rovlari soni o'quvchilar sonidan qat'i nazar doimiy: umumiy holat
+  va telefon ro'yxati uchun 8 ta, o'quvchilar sahifasi uchun 11 ta (oxirgi
+  uchtasi — kurs ustuni, faqat ekrandagi 50 qator uchun). Dizayn 9.3 «yetti»
+  degan edi: u `hechKirmagan` va `oxirgi` ni bitta so'rovda mo'ljallagan, amalda
+  esa `umumanKirganlar` (`activeSeconds >= 10` filtri bilan) va mavjud
+  `oxirgiFaolliklar` (filtrsiz, `DISTINCT ON`) alohida qoldi — ikkinchisi guruh
+  tabi bilan umumiy, uni markazga ko'chirish nusxa yasardi. Muhimi son emas,
+  uning o'quvchilar soniga bog'liq emasligi: har bir so'rov butun `ids` ro'yxati
+  ustidan bitta marta ketadi.
 - Yangi filial route'lari manifestga yozilmaydi — dekorator manbada dalil.
 
 **Narxi:**
