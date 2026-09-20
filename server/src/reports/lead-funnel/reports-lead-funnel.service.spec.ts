@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import {
   ReportsLeadFunnelService,
   splitByStatus,
+  statusBucket,
 } from './reports-lead-funnel.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -24,6 +25,9 @@ describe('ReportsLeadFunnelService', () => {
             phone: '901',
             createdAt: new Date('2026-09-02T05:00:00Z'),
             source: { name: 'Instagram' },
+            sourceId: 'src-ig',
+            branchId: 1,
+            branch: { id: 1, name: "Farg'ona" },
           },
           {
             id: 'b',
@@ -34,6 +38,9 @@ describe('ReportsLeadFunnelService', () => {
             phone: '902',
             createdAt: new Date('2026-09-03T05:00:00Z'),
             source: { name: 'Telegram bot' },
+            sourceId: 'src-tg',
+            branchId: 2,
+            branch: { id: 2, name: 'Namangan' },
           },
         ]),
       },
@@ -232,6 +239,21 @@ describe('ReportsLeadFunnelService', () => {
       });
     });
 
+    it('oldingi davr kogortasi ham xuddi shu predikat bilan', async () => {
+      // Oldingi davr kogortasi faqat u mavjud bo'lganda so'raladi (3-chaqiruv)
+      // — shuning uchun bo'sh davr o'rniga oldingi davri bor aniq oraliq
+      // beriladi (xuddi «oldingi davr, manba va filial taqsimotini
+      // qaytaradi» testidagi kabi).
+      await service.getFunnel(
+        COMPANY,
+        { startDate: '2026-10-01', endDate: '2026-10-31' },
+        [7],
+      );
+      expect(prisma.lead.findMany.mock.calls[2][0].where.branchId).toEqual({
+        in: [7],
+      });
+    });
+
     it("CEO uchun hech qanday filial predikati qo'shmaydi", async () => {
       await service.getFunnel(COMPANY, {}, null);
       expect(prisma.lead.findMany.mock.calls[0][0].where).not.toHaveProperty(
@@ -273,5 +295,123 @@ describe('ReportsLeadFunnelService', () => {
         studentStatus: 'FROZEN',
       });
     });
+  });
+
+  it('oldingi davr, manba va filial taqsimotini qaytaradi', async () => {
+    const r = await service.getFunnel(
+      COMPANY,
+      { startDate: '2026-10-01', endDate: '2026-10-31' },
+      null,
+    );
+
+    expect(r.previous).toEqual({
+      period: { startDate: '2026-09-10', endDate: '2026-09-30' },
+      stages: { lead: 2, enrolled: 1, attended: 1, paid: 0 },
+    });
+    expect(r.bySource).toEqual([
+      {
+        id: 'src-ig',
+        name: 'Instagram',
+        lead: 1,
+        enrolled: 0,
+        attended: 0,
+        paid: 0,
+      },
+      {
+        id: 'src-tg',
+        name: 'Telegram bot',
+        lead: 1,
+        enrolled: 1,
+        attended: 1,
+        paid: 0,
+      },
+    ]);
+    expect(r.byBranch).toEqual([
+      { id: 1, name: "Farg'ona", lead: 1, paid: 0 },
+      { id: 2, name: 'Namangan', lead: 1, paid: 0 },
+    ]);
+    // Uchinchi chaqiruv — oldingi davr kogortasi: chaqiruvlar soni yagona
+    // o'zi noto'g'ri sana oralig'i yuborilishini ushlamaydi, shuning uchun
+    // aynan shu chaqiruvning `where.createdAt` chegarasi tekshiriladi.
+    // 10.09 00:00 Toshkent = 09.09 19:00 UTC; yuqori chegara ochiq (lt) —
+    // 01.10 00:00 Toshkent = 30.09 19:00 UTC.
+    expect(prisma.lead.findMany.mock.calls[2][0].where.createdAt).toEqual({
+      gte: new Date('2026-09-09T19:00:00.000Z'),
+      lt: new Date('2026-09-30T19:00:00.000Z'),
+    });
+    // Oldingi davr uchun alohida kogorta so'rovi: jami 3 (joriy, to'lamaganlar, oldingi).
+    expect(prisma.lead.findMany).toHaveBeenCalledTimes(3);
+  });
+
+  it("voronka boshlangan oyda oldingi davr yo'q", async () => {
+    const r = await service.getFunnel(
+      COMPANY,
+      { startDate: '2026-09-10', endDate: '2026-09-30' },
+      null,
+    );
+    expect(r.previous).toBeNull();
+    expect(prisma.lead.findMany).toHaveBeenCalledTimes(2);
+  });
+
+  it("odamlar ro'yxati manba bo'yicha filtrlanadi", async () => {
+    const ig = await service.getPeople(
+      COMPANY,
+      {
+        stage: 'lead',
+        mode: 'all',
+        sourceId: 'src-ig',
+        page: 1,
+        pageSize: 10,
+        startDate: '2026-10-01',
+        endDate: '2026-10-31',
+      },
+      null,
+    );
+    expect(ig.total).toBe(1);
+    expect(ig.data[0]).toMatchObject({
+      name: 'Ali Valiyev',
+      sourceId: 'src-ig',
+    });
+
+    const none = await service.getPeople(
+      COMPANY,
+      {
+        stage: 'lead',
+        mode: 'all',
+        sourceId: 'none',
+        page: 1,
+        pageSize: 10,
+        startDate: '2026-10-01',
+        endDate: '2026-10-31',
+      },
+      null,
+    );
+    expect(none.total).toBe(0);
+  });
+
+  it("to'lamaganlar holat bo'yicha filtrlanadi", async () => {
+    const active = await service.getPeople(
+      COMPANY,
+      { stage: 'unpaid', mode: 'all', status: 'active', page: 1, pageSize: 10 },
+      null,
+    );
+    expect(active.total).toBe(1);
+    const frozen = await service.getPeople(
+      COMPANY,
+      { stage: 'unpaid', mode: 'all', status: 'frozen', page: 1, pageSize: 10 },
+      null,
+    );
+    expect(frozen.total).toBe(0);
+  });
+});
+
+describe('statusBucket', () => {
+  it('FROZEN va INACTIVE bitta guruh, noma\'lumlar "other"', () => {
+    expect(statusBucket('ACTIVE')).toBe('active');
+    expect(statusBucket('FROZEN')).toBe('frozen');
+    expect(statusBucket('INACTIVE')).toBe('frozen');
+    expect(statusBucket('EXPELLED')).toBe('expelled');
+    expect(statusBucket('GRADUATED')).toBe('other');
+    expect(statusBucket(null)).toBe('other');
   });
 });
