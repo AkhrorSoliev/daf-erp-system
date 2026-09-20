@@ -37,7 +37,11 @@ const CHEGARA: Record<keyof DafNorma, { min: number; max: number }> = {
   sariqKun: { min: 1, max: 7 },
 };
 
-/** Chegaradan chiqqan xabarda qaysi maydon ekanini aytish uchun — `NumberField` labeli bilan bir xil. */
+/**
+ * Chegaradan chiqqan xabarda qaysi maydon ekanini aytish uchun. Ekrandagi
+ * label bilan bir xil, faqat qavs ichidagi birlik («(daqiqa)», «(kun)»)
+ * olib tashlangan — xabar oxirida baribir ruxsat etilgan oraliq yoziladi.
+ */
 const MAYDON_NOMI: Record<keyof DafNorma, string> = {
   kunlikDaqiqa: "Kunlik eng kam vaqt",
   kunlikSavol: "Kunlik eng kam savol",
