@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
@@ -42,7 +46,19 @@ export class CompanyService {
   }
 
   async update(id: number, dto: UpdateCompanyDto) {
-    await this.findOne(id);
+    const mavjud = await this.findOne(id);
+
+    // Sariq chegarasi yashil chegaradan kichik bo'lishi shart — teng bo'lsa
+    // sariq oraliq yo'qoladi va «qisman» degan holat hech qachon chiqmaydi.
+    // Ikki maydon alohida kelishi mumkin, shuning uchun mavjud qiymat bilan
+    // birga tekshiriladi.
+    const sariq = dto.dafSariqKun ?? mavjud.dafSariqKun;
+    const haftalik = dto.dafHaftalikKun ?? mavjud.dafHaftalikKun;
+    if (sariq >= haftalik) {
+      throw new BadRequestException(
+        "Sariq chegarasi haftalik normadan kichik bo'lishi kerak",
+      );
+    }
 
     return this.prisma.company.update({
       where: { id },
