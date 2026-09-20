@@ -6,6 +6,11 @@
  * alohida sanash birinchi blokni shishirib, konversiyani yolg'on pasaytirardi.
  */
 
+import {
+  addDaysToDateStr,
+  utcMidnightFromDateStr,
+} from '../../common/date/tashkent';
+
 export const FUNNEL_STAGES = ['lead', 'enrolled', 'attended', 'paid'] as const;
 
 /**
@@ -31,6 +36,9 @@ export interface CohortLead {
   lastName: string;
   phone: string;
   source: string | null;
+  sourceId: string | null;
+  branchId: number | null;
+  branchName: string | null;
   createdAt: Date;
 }
 
@@ -42,6 +50,9 @@ export interface FunnelPerson {
   name: string;
   phone: string;
   source: string | null;
+  sourceId: string | null;
+  branchId: number | null;
+  branchName: string | null;
   createdAt: Date;
 }
 
@@ -67,6 +78,9 @@ export function toPersons(leads: CohortLead[]): FunnelPerson[] {
         name: `${l.firstName} ${l.lastName}`.trim(),
         phone: l.phone,
         source: l.source,
+        sourceId: l.sourceId,
+        branchId: l.branchId,
+        branchName: l.branchName,
         createdAt: l.createdAt,
       });
       continue;
@@ -82,6 +96,17 @@ export function toPersons(leads: CohortLead[]): FunnelPerson[] {
       existing.name = `${l.firstName} ${l.lastName}`.trim();
       existing.phone = l.phone;
       existing.source = l.source ?? existing.source;
+      existing.sourceId = l.sourceId ?? existing.sourceId;
+      if (l.branchId != null) {
+        existing.branchId = l.branchId;
+        existing.branchName = l.branchName;
+      }
+    }
+    // Filial lid ochiq formadan kelganda hali noma'lum bo'ladi va keyingi lidda
+    // (yoki aylantirishda) paydo bo'ladi — birinchi lidda yo'q bo'lsa, borida olinadi.
+    if (existing.branchId == null && l.branchId != null) {
+      existing.branchId = l.branchId;
+      existing.branchName = l.branchName;
     }
   }
 
@@ -96,7 +121,7 @@ export function toPersons(leads: CohortLead[]): FunnelPerson[] {
  * davomat blokidan kattaroq chiqib, voronka torayish o'rniga kengayishi va
  * yo'qotish raqamlari manfiy bo'lishi mumkin edi.
  */
-function depthOf(person: FunnelPerson, sets: StageSets): number {
+export function stageDepth(person: FunnelPerson, sets: StageSets): number {
   const id = person.studentId;
   if (id == null || !sets.enrolled.has(id)) return 0;
   if (!sets.attended.has(id)) return 1;
@@ -109,7 +134,7 @@ export function countStages(persons: FunnelPerson[], sets: StageSets) {
   let board = 0;
 
   for (const p of persons) {
-    const depth = depthOf(p, sets);
+    const depth = stageDepth(p, sets);
     for (let i = 0; i <= depth; i++) reached[i]++;
     if (p.board) board++;
   }
@@ -143,8 +168,132 @@ export function personsAtStage(
 
   return persons
     .filter((p) => {
-      const depth = depthOf(p, sets);
+      const depth = stageDepth(p, sets);
       return mode === 'stuck' && !isLast ? depth === target : depth >= target;
     })
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+}
+
+export const NO_SOURCE = 'none';
+
+/**
+ * To'lamaganlar ro'yxatining holat guruhlari. DTO ham, servis ham shu yerdan
+ * oladi: DTO servisni import qilsa halqa bo'lardi.
+ */
+export const UNPAID_STATUS_BUCKETS = [
+  'active',
+  'frozen',
+  'expelled',
+  'other',
+] as const;
+export type UnpaidStatusBucket = (typeof UNPAID_STATUS_BUCKETS)[number];
+
+export interface SourceBreakdownRow {
+  id: string | null;
+  name: string | null;
+  lead: number;
+  enrolled: number;
+  attended: number;
+  paid: number;
+}
+
+export interface BranchBreakdownRow {
+  id: number | null;
+  name: string | null;
+  lead: number;
+  paid: number;
+}
+
+/**
+ * Manba bo'yicha voronka. Har odam bitta manbada (birinchi lidiniki); manbasiz
+ * odamlar `id: null` qatorida. Lid soni bo'yicha kamayib, teng bo'lsa nom
+ * bo'yicha — «Instagram 30 → 0» ni «Telegram bot 39 → 7» yonida ko'rsatish shu
+ * hisobotning asosiy maqsadi.
+ */
+export function countBySource(
+  persons: FunnelPerson[],
+  sets: StageSets,
+): SourceBreakdownRow[] {
+  const rows = new Map<string, SourceBreakdownRow>();
+  for (const p of persons) {
+    const key = p.sourceId ?? NO_SOURCE;
+    let row = rows.get(key);
+    if (!row) {
+      row = {
+        id: p.sourceId,
+        name: p.sourceId ? p.source : null,
+        lead: 0,
+        enrolled: 0,
+        attended: 0,
+        paid: 0,
+      };
+      rows.set(key, row);
+    }
+    const depth = stageDepth(p, sets);
+    row.lead++;
+    if (depth >= 1) row.enrolled++;
+    if (depth >= 2) row.attended++;
+    if (depth >= 3) row.paid++;
+  }
+  return [...rows.values()].sort(
+    (a, b) => b.lead - a.lead || (a.name ?? '').localeCompare(b.name ?? ''),
+  );
+}
+
+/** Filial bo'yicha lid va to'lov. Filiali belgilanmagan odamlar `id: null`. */
+export function countByBranch(
+  persons: FunnelPerson[],
+  sets: StageSets,
+): BranchBreakdownRow[] {
+  const rows = new Map<string, BranchBreakdownRow>();
+  for (const p of persons) {
+    const key = p.branchId == null ? 'none' : String(p.branchId);
+    let row = rows.get(key);
+    if (!row) {
+      row = { id: p.branchId, name: p.branchName, lead: 0, paid: 0 };
+      rows.set(key, row);
+    }
+    row.lead++;
+    if (stageDepth(p, sets) >= 3) row.paid++;
+  }
+  return [...rows.values()].sort(
+    (a, b) => b.lead - a.lead || (a.name ?? '￿').localeCompare(b.name ?? '￿'),
+  );
+}
+
+function daysInclusive(startDate: string, endDate: string): number {
+  const ms =
+    utcMidnightFromDateStr(endDate).getTime() -
+    utcMidnightFromDateStr(startDate).getTime();
+  return Math.round(ms / 86_400_000) + 1;
+}
+
+/**
+ * Tanlangan davr uzunligidagi, undan bevosita oldingi oraliq — KPI
+ * kartasidagi «oldingi davr N %» uchun. Boshlanishi voronka chegarasiga
+ * qirqiladi; oraliq butunlay chegaradan oldin bo'lsa `null` («oldingi davr
+ * yo'q»). Oktyabr uchun bu 10.09–30.09, sentyabr uchun `null`.
+ */
+export function previousPeriod(period: {
+  startDate: string;
+  endDate: string;
+}): { startDate: string; endDate: string } | null {
+  const endDate = addDaysToDateStr(period.startDate, -1);
+  if (endDate < FUNNEL_START_DATE) return null;
+  const days = daysInclusive(period.startDate, period.endDate);
+  const rawStart = addDaysToDateStr(endDate, -(days - 1));
+  return {
+    startDate: rawStart > FUNNEL_START_DATE ? rawStart : FUNNEL_START_DATE,
+    endDate,
+  };
+}
+
+/** Odamlar ro'yxatidagi manba filtri; `'none'` — manbasi yo'qlar. */
+export function matchesSource(
+  person: FunnelPerson,
+  sourceId: string | undefined,
+): boolean {
+  if (sourceId === undefined) return true;
+  if (sourceId === NO_SOURCE) return person.sourceId == null;
+  return person.sourceId === sourceId;
 }
