@@ -239,6 +239,21 @@ describe('ReportsLeadFunnelService', () => {
       });
     });
 
+    it('oldingi davr kogortasi ham xuddi shu predikat bilan', async () => {
+      // Oldingi davr kogortasi faqat u mavjud bo'lganda so'raladi (3-chaqiruv)
+      // — shuning uchun bo'sh davr o'rniga oldingi davri bor aniq oraliq
+      // beriladi (xuddi «oldingi davr, manba va filial taqsimotini
+      // qaytaradi» testidagi kabi).
+      await service.getFunnel(
+        COMPANY,
+        { startDate: '2026-10-01', endDate: '2026-10-31' },
+        [7],
+      );
+      expect(prisma.lead.findMany.mock.calls[2][0].where.branchId).toEqual({
+        in: [7],
+      });
+    });
+
     it("CEO uchun hech qanday filial predikati qo'shmaydi", async () => {
       await service.getFunnel(COMPANY, {}, null);
       expect(prisma.lead.findMany.mock.calls[0][0].where).not.toHaveProperty(

@@ -190,6 +190,23 @@ export function rangeIncludesToday(
 }
 
 /**
+ * Davr necha kunligi, ikkala chegara ham hisobga olinadi (inklyuziv):
+ * 10.09–30.09 = 21 kun. KPI qatoridagi «oldingi davr» taqqoslash sonini
+ * izohlash uchun — server davrni voronka boshlanishiga qirqib qo'yishi
+ * mumkin, shunda oldingi davr tanlangan davrdan qisqaroq bo'ladi.
+ * Sana satrlarini `Date` konstruktoriga bermay, qo'lda bo'lib hisoblaydi —
+ * ISO satr UTC yarim tuni deb o'qilishi va brauzer mintaqasida bir kun
+ * siljishi mumkin edi.
+ */
+export function periodDayCount(period: FunnelPeriod): number {
+  const [sy, sm, sd] = period.startDate.split("-").map(Number);
+  const [ey, em, ed] = period.endDate.split("-").map(Number);
+  const start = Date.UTC(sy, sm - 1, sd);
+  const end = Date.UTC(ey, em - 1, ed);
+  return Math.round((end - start) / (24 * 60 * 60 * 1000)) + 1;
+}
+
+/**
  * "YYYY-MM-DD" yoki ISO vaqtni Toshkent kuni sifatida "dd.MM.yyyy" ga
  * aylantiradi. Sana satri `new Date()` ga berilmaydi — u UTC yarim tuni bo'lib
  * brauzer mintaqasida bir kun orqaga siljishi mumkin.

@@ -9,6 +9,7 @@ import {
   FUNNEL_START_DATE,
   isPeopleStage,
   peopleQueryParams,
+  periodDayCount,
   presetRange,
   rangeIncludesToday,
   resolvePeriodFilter,
@@ -151,6 +152,32 @@ describe("displayDate", () => {
   it("ISO vaqtni Toshkent kuniga o'giradi", () => {
     // 19:30 UTC = ertasi 00:30 Toshkent.
     expect(displayDate("2026-09-05T19:30:00.000Z")).toBe("06.09.2026");
+  });
+});
+
+describe("periodDayCount", () => {
+  it("teng uzunlikdagi juft — ikkalasi ham 7 kun", () => {
+    expect(
+      periodDayCount({ startDate: "2026-09-10", endDate: "2026-09-16" }),
+    ).toBe(7);
+    expect(
+      periodDayCount({ startDate: "2026-09-17", endDate: "2026-09-23" }),
+    ).toBe(7);
+  });
+
+  it("qirqilgan oktyabr jufti — joriy 31 kun, oldingi 21 kun", () => {
+    expect(
+      periodDayCount({ startDate: "2026-10-01", endDate: "2026-10-31" }),
+    ).toBe(31);
+    expect(
+      periodDayCount({ startDate: "2026-09-10", endDate: "2026-09-30" }),
+    ).toBe(21);
+  });
+
+  it("bir kunlik davr — 1", () => {
+    expect(
+      periodDayCount({ startDate: "2026-09-15", endDate: "2026-09-15" }),
+    ).toBe(1);
   });
 });
 

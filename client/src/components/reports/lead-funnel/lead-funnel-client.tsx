@@ -10,10 +10,10 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { LeadFunnelBars } from "./lead-funnel-bars";
 import {
   LeadFunnelBreakdownCard,
@@ -153,20 +153,20 @@ export function LeadFunnelClient() {
         )}
         <span>· {selectedBranch?.name ?? "Barcha filiallar"}</span>
         {data && <span>· {formatNumber(data.stages.lead)} kishi kuzatildi</span>}
-        <Tooltip>
-          <TooltipTrigger asChild>
+        <Popover>
+          <PopoverTrigger asChild>
             <button
               type="button"
               aria-label="Qanday o'qiladi"
               className="text-muted-foreground transition-colors hover:text-foreground"
             >
-              <Info className="size-4" />
+              <Info className="size-4" aria-hidden="true" />
             </button>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-sm whitespace-pre-line">
+          </PopoverTrigger>
+          <PopoverContent className="w-80 whitespace-pre-line">
             {rangeIncludesToday(range) ? `${STILL_RUNNING}\n\n${HOW_TO_READ}` : HOW_TO_READ}
-          </TooltipContent>
-        </Tooltip>
+          </PopoverContent>
+        </Popover>
       </p>
 
       {isError ? (

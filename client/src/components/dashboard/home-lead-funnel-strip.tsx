@@ -4,13 +4,14 @@ import Link from "next/link";
 import { ChevronRight, Filter } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
-import { formatNumber, formatPercent } from "@/lib/format-utils";
+import { formatNumber } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   buildFunnelRows,
   currentMonthRange,
   displayDate,
+  wholePercent,
 } from "@/components/reports/lead-funnel/lead-funnel-math";
 import type { LeadFunnelResponse } from "@/components/reports/lead-funnel/lead-funnel-types";
 
@@ -79,7 +80,7 @@ export function HomeLeadFunnelStrip({ showDetails }: { showDetails: boolean }) {
         <span className="text-muted-foreground">
           Liddan to&apos;lovgacha{" "}
           <span className="font-semibold text-foreground tabular-nums">
-            {formatPercent(conversion)}
+            {wholePercent(conversion)}
           </span>
         </span>
         <span className="text-muted-foreground">
