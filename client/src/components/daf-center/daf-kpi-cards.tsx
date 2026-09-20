@@ -63,8 +63,8 @@ export function DafKpiCards({ k, norma }: { k: MarkazKartalari; norma: Norma }) 
         icon={BookOpenCheck}
         label="Tugatilgan darslar"
         value={formatNumber(k.tugatilganDarslar)}
-        hint="davr ichida"
-        tooltip="Davrda oxirigacha ishlangan darslar. Qayta tugatilgan dars ham sanaladi."
+        hint="butun tanlangan davr"
+        tooltip="Davrda oxirigacha ishlangan darslar. Qayta tugatilgan dars ham sanaladi. Bu ko'rsatkich ilova faolligi kuzatuvi boshlanishidan oldingi darslarni ham sanaydi, shuning uchun qo'shni kartalardan kengroq davrni qamrashi mumkin."
       />
     </div>
   );

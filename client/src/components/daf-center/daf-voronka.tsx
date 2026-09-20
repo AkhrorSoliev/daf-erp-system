@@ -19,12 +19,12 @@ function pogonalar(v: MarkazVoronka): Pogona[] {
     { nomi: "Faol o'quvchi", son: v.faolOquvchi, yoqotish: null },
     { nomi: "Akkaunti bor", son: v.akkauntiBor, yoqotish: { izoh: "akkaunt yo'q", filtr: { status: ["AKKAUNT_YOQ"] } } },
     {
-      nomi: "Bir marta bo'lsa ham kirgan",
+      nomi: "Bir marta bo'lsa ham kirgan (butun tarix)",
       son: v.birMartaKirgan,
       yoqotish: { izoh: "hech qachon kirmagan", filtr: { status: ["HECH_KIRMAGAN"] } },
     },
     {
-      nomi: "Davr ichida kirgan",
+      nomi: "Davr ichida kirgan (tanlangan davr)",
       son: v.davrdaKirgan,
       yoqotish: { izoh: "kirgan edi, bu davrda yo'q", filtr: { status: ["QIZIL", "SARIQ", "YASHIL"], kirgan: "yoq" } },
     },
