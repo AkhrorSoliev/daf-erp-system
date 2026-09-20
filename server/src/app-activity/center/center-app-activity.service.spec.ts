@@ -238,6 +238,40 @@ describe('CenterAppActivityService.umumiy', () => {
     expect(yetti.kartalar.kerakliKun).toBe(4);
     expect(ottiz.kartalar.kerakliKun).toBe(17);
   });
+
+  it("7 kunlik davrda tugatilgan darslar 7 kun boshidan so'raladi — XARITA_KUNLARI (30) bilan aralashtirilmaydi", async () => {
+    // Item 11: avvalgi test faqat davr=30 da edi. XARITA_KUNLARI ham 30
+    // bo'lgani uchun bosh30.davrBoshi va boshDavr.davrBoshi davr=30 da
+    // TASODIFAN bir xil qiymat chiqaradi — agar servis xato qilib
+    // tugatilganDarsSoni'ga har doim `bosh30.davrBoshi` (trendning doim-30-kun
+    // oynasi) uzatsa ham, o'sha yagona testda bu ko'rinmay qolardi. davr=7 da
+    // ikkala oyna boshqa-boshqa sanaga tushadi, shuning uchun xato shu yerda
+    // ushlanadi.
+    const { service, queries } = qur();
+    await service.umumiy(1001, null, 7, NOW);
+    const dan: Date = queries.tugatilganDarsSoni.mock.calls[0][2];
+    // 2026-09-14 Toshkent 00:00 = 2026-09-13T19:00:00Z (bugun − 6 kun).
+    expect(dan.toISOString()).toBe('2026-09-13T19:00:00.000Z');
+  });
+
+  it("filiali yo'q o'quvchi 'Filialsiz' guruhida hisoblanadi (filialQatorlari zaxira yo'li)", async () => {
+    // Item 12: `filialQatorlari` eksport qilinmagan — faqat `umumiy()` orqali
+    // (scope=null) sinaladi. `StudentBranch` yozuvi yo'q bo'lsa `filial: null`
+    // bo'ladi (`yig()`), `filialQatorlari` esa `branchId: 0, nomi: 'Filialsiz'`
+    // ga tushiradi.
+    const { service, prisma } = qur();
+    prisma.student.findMany.mockResolvedValue([
+      { ...OQUVCHILAR[0], branches: [] },
+    ]);
+    const r = await service.umumiy(1001, null, 7, NOW);
+    expect(r.filiallar).toEqual([
+      expect.objectContaining({
+        branchId: 0,
+        nomi: 'Filialsiz',
+        oquvchilar: 1,
+      }),
+    ]);
+  });
 });
 
 describe('CenterAppActivityService.oquvchilar', () => {

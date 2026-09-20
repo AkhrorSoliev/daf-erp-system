@@ -111,4 +111,29 @@ describe("oquvchiSurati — kunlik qatorlardan bitta o'quvchi surati (dizayn 3.3
     expect(s.faolKun).toBe(0);
     expect(s.lernenSoniya).toBe(0);
   });
+
+  it("seans qatori YO'Q, lekin savol qatori BOR kun — faolKun savoldan hisoblanadi, lernenSoniya 0 qoladi", () => {
+    // Item 13: mavjud testlarda savol bo'lgan kunda seans ham bor edi. Bu
+    // holat tugatilgan seansda savol yozilib, lekin StudentAppSession qatori
+    // hali kelmagan (yoki hech kelmagan) kunni tekshiradi — `s` (seansMap
+    // natijasi) undefined bo'lganda `oquvchiSurati` yiqilmasligi kerak.
+    const s = oquvchiSurati(
+      oyna,
+      [], // seans YO'Q
+      [savol('2026-09-15', 12, 10)], // STANDART_NORMA.kunlikSavol = 12
+      STANDART_NORMA,
+    );
+    const kun15 = s.kunlar.find((k) => k.sana === '2026-09-15');
+    expect(kun15).toMatchObject({
+      shugullangan: true, // 12 savol >= norma.kunlikSavol — vaqt kerak emas
+      kirdi: false, // seans yo'q — kirdi ham false
+      savollar: 12,
+      faolSoniya: 0,
+    });
+    expect(s.faolKun).toBe(1);
+    expect(s.lernenSoniya).toBe(0);
+    expect(s.savollar).toBe(12);
+    expect(s.togri).toBe(10);
+    expect(s.kirdi).toBe(false); // hech bir kunda seans yo'q
+  });
 });

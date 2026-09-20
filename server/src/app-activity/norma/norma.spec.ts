@@ -68,6 +68,15 @@ describe('holat — belgi (dizayn 3.4)', () => {
     );
   });
 
+  it("akkaunt yo'q HECH_KIRMAGAN dan OLDIN hal qilinadi (ikkalasi bir vaqtda bo'lsa ham)", () => {
+    // Akkaunti yo'q o'quvchi "hech qachon kirmagan" ham bo'ladi — ikkalasi
+    // birga kelganda AKKAUNT_YOQ g'alaba qilishi shart, chunki u bilan ish
+    // boshqa (akkaunt ochish), ilovaga undash emas (HOLAT_TARTIBI shu tartibda).
+    expect(
+      holat({ akkaunt: false, hechKirmagan: true, faolKun: 0, maxraj: 7 }, n),
+    ).toBe('AKKAUNT_YOQ');
+  });
+
   it('chegaralar: 0,1 qizil; 2,3 sariq; 4+ yashil', () => {
     expect(holat({ ...bor, faolKun: 0 }, n)).toBe('QIZIL');
     expect(holat({ ...bor, faolKun: 1 }, n)).toBe('QIZIL');
