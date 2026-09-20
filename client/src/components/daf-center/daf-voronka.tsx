@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { formatNumber } from "@/lib/format-utils";
 import { filtrniUrlgaYoz, STANDART_FILTR, type OquvchilarFiltri } from "./oquvchilar-filtr";
 import type { Davr, MarkazVoronka } from "./types";
 
@@ -53,7 +54,7 @@ export function DafVoronka({ voronka, davr }: { voronka: MarkazVoronka; davr: Da
               <div className="min-w-0">
                 <div className="flex items-baseline justify-between gap-2 text-sm">
                   <span className="truncate">{p.nomi}</span>
-                  <span className="font-semibold tabular-nums">{p.son}</span>
+                  <span className="font-semibold tabular-nums">{formatNumber(p.son)}</span>
                 </div>
                 <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
                   <div className="h-full rounded-full bg-primary" style={{ width: `${(p.son / max) * 100}%` }} />
@@ -65,7 +66,7 @@ export function DafVoronka({ voronka, davr }: { voronka: MarkazVoronka; davr: Da
                     href={`/daf/oquvchilar${filtrniUrlgaYoz({ ...STANDART_FILTR, davr, ...p.yoqotish.filtr })}`}
                     className="inline-flex items-center gap-1 text-red-600 hover:underline dark:text-red-400"
                   >
-                    −{farq} · {p.yoqotish.izoh}
+                    −{formatNumber(farq)} · {p.yoqotish.izoh}
                     <ChevronRight className="size-3" />
                   </Link>
                 ) : (

@@ -1,8 +1,8 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { ActivityExplainer } from "@/components/groups/app-activity/activity-explainer";
 import { ActivityError, PeriodToggle, usePeriodParam } from "@/components/groups/app-activity/activity-ui";
+import { DafExplainer } from "./daf-explainer";
 import { DafFiliallarTable } from "./daf-filiallar-table";
 import { DafKpiCards } from "./daf-kpi-cards";
 import { DafTrendChart } from "./daf-trend-chart";
@@ -57,7 +57,7 @@ export function DafUmumiyClient() {
             <DafTrendChart trend={data.trend} />
           </div>
           {data.filiallar.length > 0 && <DafFiliallarTable qatorlar={data.filiallar} />}
-          <ActivityExplainer kuzatuvBoshi={data.kuzatuvBoshi} />
+          <DafExplainer norma={data.norma} kuzatuvBoshi={data.kuzatuvBoshi} />
         </>
       )}
     </div>

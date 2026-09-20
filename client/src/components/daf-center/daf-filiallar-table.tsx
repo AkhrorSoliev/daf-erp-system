@@ -2,6 +2,7 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { foizRangi } from "@/components/groups/app-activity/activity-format";
+import { formatNumber } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { cn } from "@/lib/utils";
 import type { MarkazFilialQatori } from "./types";
@@ -47,12 +48,12 @@ export function DafFiliallarTable({ qatorlar }: { qatorlar: MarkazFilialQatori[]
                   onClick={() => filial && selectBranch(filial)}
                 >
                   <TableCell className="font-medium">{q.nomi}</TableCell>
-                  <TableCell className="text-right tabular-nums">{q.oquvchilar}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatNumber(q.oquvchilar)}</TableCell>
                   <TableCell className={cn("text-right tabular-nums", foizRangi(q.qamrovFoiz))}>{foizMatn(q.qamrovFoiz)}</TableCell>
                   <TableCell className={cn("text-right tabular-nums", foizRangi(q.normaFoiz))}>{foizMatn(q.normaFoiz)}</TableCell>
                   <TableCell className="text-right tabular-nums">{kasr(q.ortachaFaolKunHaftada)}</TableCell>
                   <TableCell className={cn("text-right tabular-nums", foizRangi(q.foiz))}>{foizMatn(q.foiz)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{q.tugatilganDarslar}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatNumber(q.tugatilganDarslar)}</TableCell>
                 </TableRow>
               );
             })}

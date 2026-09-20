@@ -3,6 +3,7 @@
 import { BookOpenCheck, CalendarCheck, CheckCircle2, Clock, Target, Users } from "lucide-react";
 import { KpiCard } from "@/components/groups/app-activity/activity-ui";
 import { formatDavomiylik, foizRangi } from "@/components/groups/app-activity/activity-format";
+import { formatNumber } from "@/lib/format-utils";
 import type { MarkazKartalari, Norma } from "./types";
 
 const foiz = (qism: number, jami: number) => (jami === 0 ? null : Math.round((qism * 100) / jami));
@@ -20,8 +21,8 @@ export function DafKpiCards({ k, norma }: { k: MarkazKartalari; norma: Norma }) 
       <KpiCard
         icon={Users}
         label="Qamrov"
-        value={`${k.birMartaKirganlar} / ${k.oquvchilar}`}
-        hint={`${akkauntsiz} tasida akkaunt yo'q, ${hechKirmagan} tasi hech qachon kirmagan`}
+        value={`${formatNumber(k.birMartaKirganlar)} / ${formatNumber(k.oquvchilar)}`}
+        hint={`${formatNumber(akkauntsiz)} tasida akkaunt yo'q, ${formatNumber(hechKirmagan)} tasi hech qachon kirmagan`}
         tooltip="Faol o'quvchilardan nechtasi ilovaga hech bo'lmasa bir marta kirgan (butun tarix bo'yicha)."
       />
       <KpiCard
@@ -29,8 +30,8 @@ export function DafKpiCards({ k, norma }: { k: MarkazKartalari; norma: Norma }) 
         label="Normani bajarmoqda"
         value={normaFoiz === null ? "—" : `${normaFoiz}%`}
         valueClassName={foizRangi(normaFoiz)}
-        hint={`${k.yashillar} o'quvchi · haftada ${norma.haftalikKun} faol kun`}
-        tooltip={`Yashil holatdagilar: davrda kamita ${norma.haftalikKun} kun (7 kunga nisbatan) faol bo'lganlar. Faol kun — kuniga ${norma.kunlikDaqiqa} daqiqa o'quv bo'limida yoki ${norma.kunlikSavol} ta savol.`}
+        hint={`${formatNumber(k.yashillar)} o'quvchi · haftada ${norma.haftalikKun} faol kun`}
+        tooltip={`Yashil holatdagilar: davrda kamida ${norma.haftalikKun} kun (7 kunga nisbatan) faol bo'lganlar. Faol kun — kuniga ${norma.kunlikDaqiqa} daqiqa o'quv bo'limida yoki ${norma.kunlikSavol} ta savol.`}
       />
       <KpiCard
         icon={CalendarCheck}
@@ -57,13 +58,13 @@ export function DafKpiCards({ k, norma }: { k: MarkazKartalari; norma: Norma }) 
         label="To'g'ri javob"
         value={k.foiz === null ? "—" : `${k.foiz}%`}
         valueClassName={foizRangi(k.foiz)}
-        hint={`tugatilgan seanslar bo'yicha · ${k.savollar} savol`}
+        hint={`tugatilgan seanslar bo'yicha · ${formatNumber(k.savollar)} savol`}
         tooltip="Birinchi urinishda to'g'ri topilgan savollar ulushi — tugatilgan seanslar bo'yicha. Tashlab ketilgan seans kirmaydi, shuning uchun guruh tabidan 1–2 % farq qilishi mumkin."
       />
       <KpiCard
         icon={BookOpenCheck}
         label="Tugatilgan darslar"
-        value={String(k.tugatilganDarslar)}
+        value={formatNumber(k.tugatilganDarslar)}
         hint="davr ichida"
         tooltip="Davrda oxirigacha ishlangan darslar. Qayta tugatilgan dars ham sanaladi."
       />
