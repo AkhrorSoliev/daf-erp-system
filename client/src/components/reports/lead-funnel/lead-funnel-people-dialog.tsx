@@ -107,6 +107,7 @@ function PeopleBody({
   range: { startDate: string; endDate: string };
 }) {
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
+  const branchLoaded = useBranchSwitcher((s) => s.loaded);
   const hasStuck = stage !== "paid" && stage !== "unpaid";
   // «Hammasi» dan ochiladi: ro'yxat jami bosilgan bosqichdagi son bilan bir xil.
   // Yo'qotish qatoridan ochilganda `initialMode` "stuck" bo'lib keladi.
@@ -136,6 +137,7 @@ function PeopleBody({
       api
         .get<FunnelPeopleResponse>("/reports/lead-funnel/people", { params })
         .then((r) => r.data),
+    enabled: branchLoaded,
   });
 
   const total = data?.total ?? 0;

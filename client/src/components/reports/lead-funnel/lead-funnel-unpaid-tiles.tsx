@@ -14,6 +14,8 @@ import type { LeadFunnelResponse, UnpaidStatusBucket } from "./lead-funnel-types
 interface Props {
   unpaid: LeadFunnelResponse["unpaid"];
   onOpen: (status: UnpaidStatusBucket) => void;
+  /** Jamlangan ro'yxat — holat filtrisiz, hammasi birga. */
+  onOpenAll?: () => void;
 }
 
 const TILES: { status: UnpaidStatusBucket; label: string; urgent: boolean }[] = [
@@ -27,9 +29,12 @@ const TILES: { status: UnpaidStatusBucket; label: string; urgent: boolean }[] = 
  * Voronkaga 10.09.2026 dan beri kirgan, darsga kelgan, lekin hali to'lamagan
  * odamlar — BUGUNGI holat, tanlangan davrga bog'liq emas. 6–40 kishi uchun
  * grafik emas, raqamlar: har holat o'z ro'yxatini ochadi. «Faol» eng
- * shoshilinchi — darsga kelayotgan, lekin to'lamayotgan odam.
+ * shoshilinchi — darsga kelayotgan, lekin to'lamayotgan odam. Sarlavhadagi
+ * jami son ham bosiladigan — hammasini bitta ro'yxatda, holat filtrisiz
+ * ko'rish uchun (eski kartochka shuni qilardi, plitkalar esa har biri o'z
+ * holatiga qulflangan).
  */
-export function LeadFunnelUnpaidTiles({ unpaid, onOpen }: Props) {
+export function LeadFunnelUnpaidTiles({ unpaid, onOpen, onOpenAll }: Props) {
   const tiles = TILES.filter((t) => t.status !== "other" || unpaid.other > 0);
 
   return (
@@ -40,7 +45,13 @@ export function LeadFunnelUnpaidTiles({ unpaid, onOpen }: Props) {
             <h3 className="font-semibold">Darsga kelgan, lekin to&apos;lamagan</h3>
             <span className="text-xs text-muted-foreground">
               {displayDate(FUNNEL_START_DATE)} dan beri · bugungi holat ·{" "}
-              <span className="tabular-nums">{formatNumber(unpaid.total)} kishi</span>
+              <button
+                type="button"
+                onClick={onOpenAll}
+                className="rounded tabular-nums transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span>{formatNumber(unpaid.total)} kishi</span>
+              </button>
             </span>
           </div>
           <Tooltip>

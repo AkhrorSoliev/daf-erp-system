@@ -237,6 +237,7 @@ export function LeadFunnelClient() {
           <LeadFunnelUnpaidTiles
             unpaid={data.unpaid}
             onOpen={(status: UnpaidStatusBucket) => openPeople("unpaid", { status })}
+            onOpenAll={() => openPeople("unpaid", { status: "" })}
           />
         </>
       )}
