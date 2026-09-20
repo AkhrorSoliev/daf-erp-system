@@ -64,12 +64,14 @@ export interface StageSets {
 
 export function toPersons(leads: CohortLead[]): FunnelPerson[] {
   const byKey = new Map<string, FunnelPerson>();
-  // Odamning joriy filiali qaysi lidning natijasi ekanini kuzatadi. Lidlar
-  // xronologik tartibda kelishi kafolatlanmagan (servis so'rovida `orderBy`
-  // yo'q), shuning uchun filial shaxs maydonlari (ism/telefon/manba) bilan
-  // bir xil «birinchi kelgan lid» mezoniga bog'lanmaydi — filiali BOR eng
-  // ERTA lid g'olib chiqadi, u identifikatsiya uchun tanlangan lid bilan bir
-  // xil bo'lmasa ham.
+  // Odamning joriy filiali qaysi lidning natijasi ekanini kuzatadi. Servis
+  // so'rovi endi `createdAt` bo'yicha o'suvchi tartibda so'raydi (`orderBy`),
+  // lekin bu funksiya baribir har bir lidning `createdAt` ini aniq
+  // solishtiradi (pastda) — shuning uchun natija kirish tartibidan MUSTAQIL:
+  // filial shaxs maydonlari (ism/telefon/manba) bilan bir xil «birinchi
+  // kelgan lid» mezoniga bog'lanmaydi — filiali BOR eng ERTA lid g'olib
+  // chiqadi, u identifikatsiya uchun tanlangan lid bilan bir xil bo'lmasa
+  // ham.
   const branchAsOf = new Map<string, Date>();
 
   for (const l of leads) {

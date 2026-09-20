@@ -315,7 +315,16 @@ describe('ReportsLeadFunnelService', () => {
       { id: 1, name: "Farg'ona", lead: 1, paid: 0 },
       { id: 2, name: 'Namangan', lead: 1, paid: 0 },
     ]);
-    // Oldingi davr uchun alohida kogorta so'rovi: jami 3 (joriy, oldingi, to'lamaganlar).
+    // Uchinchi chaqiruv — oldingi davr kogortasi: chaqiruvlar soni yagona
+    // o'zi noto'g'ri sana oralig'i yuborilishini ushlamaydi, shuning uchun
+    // aynan shu chaqiruvning `where.createdAt` chegarasi tekshiriladi.
+    // 10.09 00:00 Toshkent = 09.09 19:00 UTC; yuqori chegara ochiq (lt) —
+    // 01.10 00:00 Toshkent = 30.09 19:00 UTC.
+    expect(prisma.lead.findMany.mock.calls[2][0].where.createdAt).toEqual({
+      gte: new Date('2026-09-09T19:00:00.000Z'),
+      lt: new Date('2026-09-30T19:00:00.000Z'),
+    });
+    // Oldingi davr uchun alohida kogorta so'rovi: jami 3 (joriy, to'lamaganlar, oldingi).
     expect(prisma.lead.findMany).toHaveBeenCalledTimes(3);
   });
 

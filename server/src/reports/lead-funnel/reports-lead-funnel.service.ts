@@ -166,8 +166,9 @@ export class ReportsLeadFunnelService {
       // `toPersons` ism/telefon/manbani ENG BIRINCHI lidga qarab tanlaydi;
       // aniq tartib bo'lmasa, bitta odam so'rovdan-so'rovga boshqa manbaga
       // bog'lanishi mumkin edi — manbalarni solishtiradigan hisobot uchun bu
-      // jiddiy nuqson bo'lardi.
-      orderBy: { createdAt: 'asc' },
+      // jiddiy nuqson bo'lardi. `id` — bir xil `createdAt`li lidlar uchun
+      // qo'shimcha, barqaror kalit.
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       select: {
         id: true,
         convertedStudentId: true,
