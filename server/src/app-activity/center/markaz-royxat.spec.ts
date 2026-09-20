@@ -162,6 +162,30 @@ describe('sarala — standart tartib (dizayn 6.2)', () => {
     expect(sarala(HAMMA, 'guruh', 'desc')[0].ism).toBe('Malika');
   });
 
+  it("vaqt: JAMI emas, KUNIGA O'RTACHA bo'yicha desc — I2 (daf-markaz-nazorati final fix)", () => {
+    // Katta jami + katta maxraj (o'rtachasi kichik) vs kichik jami + kichik
+    // maxraj (o'rtachasi katta). Jadval `ortachaKunlikSoniya` ni chizadi —
+    // jami bo'yicha saralansa ikkinchisi birinchisidan pastda chiqib qolardi.
+    const kattaJamiKattaMaxraj = hisob({
+      studentId: 101,
+      ism: 'KattaJami',
+      lernenSoniya: 6000, // 30 kunda ≈ 200 s/kun
+      maxraj: 30,
+    });
+    const kichikJamiKichikMaxraj = hisob({
+      studentId: 102,
+      ism: 'KichikJami',
+      lernenSoniya: 3600, // 7 kunda ≈ 514 s/kun — o'rtachasi kattaroq
+      maxraj: 7,
+    });
+    const natija = sarala(
+      [kattaJamiKattaMaxraj, kichikJamiKichikMaxraj],
+      'vaqt',
+      'desc',
+    );
+    expect(natija.map((h) => h.ism)).toEqual(['KichikJami', 'KattaJami']);
+  });
+
   it("kirishni o'zgartirmaydi", () => {
     const nusxa = [...HAMMA];
     sarala(HAMMA, 'ism', 'asc');

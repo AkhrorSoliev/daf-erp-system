@@ -101,7 +101,13 @@ const ASOSIY: Record<Saralash, Taqqos> = {
   holat: (a, b) =>
     HOLAT_TARTIBI[a.holat] - HOLAT_TARTIBI[b.holat] || oxirgiTartib(a, b),
   faolKun: (a, b) => a.faolKun - b.faolKun,
-  vaqt: (a, b) => a.lernenSoniya - b.lernenSoniya,
+  // Jadval JAMIni emas, KUNIGA O'RTACHAni chizadi (`ortachaKunlikSoniya` —
+  // daf-oquvchilar-table.tsx). `maxraj` o'quvchida har xil, shuning uchun jami
+  // bo'yicha saralansa, kam kunlik-lekin-band o'quvchi ko'p kunlik-lekin-kam
+  // ishlagan o'quvchidan pastda chiqib qolardi (I2).
+  vaqt: (a, b) =>
+    a.lernenSoniya / Math.max(1, a.maxraj) -
+    b.lernenSoniya / Math.max(1, b.maxraj),
   // Foiz yo'q (savol yo'q) — 0 % dan ham past deb olinadi.
   foiz: (a, b) => (a.foiz ?? -1) - (b.foiz ?? -1),
   oxirgi: oxirgiTartib,
@@ -133,7 +139,13 @@ export function sahifala<T>(
   return { jami, sahifa: s, qatorlar: royxat.slice((s - 1) * hajm, s * hajm) };
 }
 
-/** Filtr tanlagichlari populyatsiyadan — variantlar ma'lumot bilan doim mos. */
+/**
+ * Filtr tanlagichlari populyatsiyadan — variantlar ma'lumot bilan doim mos.
+ * Chaqiruvchi FILTRLANMAGAN to'liq populyatsiyani uzatishi SHART (servisda
+ * `filtrla()`dan OLDINGI ro'yxat) — aks holda tanlangan filtr o'z
+ * variantlarini yashirib qo'yadi (masalan bitta guruh tanlansa, tanlagichda
+ * boshqa guruhlar yo'qolib qoladi).
+ */
 export function filtrVariantlari(
   hisoblar: OquvchiHisobi[],
 ): MarkazFiltrVariantlari {
