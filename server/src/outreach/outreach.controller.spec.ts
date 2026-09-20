@@ -15,6 +15,7 @@ describe('OutreachController — role guards', () => {
     getStats: jest.fn().mockResolvedValue({}),
     getTodayAbsentees: jest.fn().mockResolvedValue({}),
     getRemovalQueue: jest.fn().mockResolvedValue({}),
+    getAutoPaused: jest.fn().mockResolvedValue({}),
     getActivePromises: jest.fn().mockResolvedValue({}),
   };
 

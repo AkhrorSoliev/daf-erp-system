@@ -451,6 +451,17 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'COMPANY_WIDE',
     reason:
+      'The automatic-pause rule is one row per company, by deliberate design: ' +
+      'both branches follow the same threshold and a per-branch setting was ' +
+      'explicitly left out (YAGNI). That is also why the WRITE is CEO-only — a ' +
+      'Branch Director changing it would move the other branch without seeing ' +
+      'it. The cron it configures runs company-wide and resolves each ' +
+      "student's branch from the student, never from the caller.",
+    routes: ['GET /absence-pause/settings', 'PATCH /absence-pause/settings'],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
       'Company-level configuration, not branch data. A salary RATE and the ' +
       'payroll cycle apply to the whole company by design (a rate is per employee, ' +
       'and the employee already carries a branch); `POST /salary/calculate` is ' +

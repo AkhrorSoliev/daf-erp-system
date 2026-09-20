@@ -79,5 +79,6 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0020](0020-ilova-faolligi-klientda-olchanadi.md) | Ilova faolligi klientda o'lchanadi, server jami qiymatni qirqadi | Qabul qilindi | 2026-09-13 |
 | [0021](0021-bosma-pul-raqami-va-bolinishi-bitta-manbadan.md) | Bosma pul raqami va uning bo'linishi bitta manbadan olinadi | Qabul qilindi | 2026-09-19 |
 | [0022](0022-bir-odam-har-rolga-alohida-hisob.md) | Bir odam — har rolga alohida hisob; kimlik telefon emas, bog'lanish | Qabul qilindi | 2026-09-19 |
+| [0023](0023-avtomatik-pauza-chiqarmaydi.md) | Avtomatik pauza o'quvchini guruhdan chiqarmaydi | Qabul qilindi | 2026-09-19 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.

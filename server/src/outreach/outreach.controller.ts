@@ -54,6 +54,21 @@ export class OutreachController {
     });
   }
 
+  @Get('auto-paused')
+  getAutoPaused(
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') roles: string[],
+    @BranchScope() branchScope: ReportBranchIds,
+  ) {
+    return this.outreach.getAutoPaused({
+      userId,
+      companyId,
+      roles,
+      branchScope,
+    });
+  }
+
   @Get('promises')
   getActivePromises(
     @CurrentUser('id') userId: number,

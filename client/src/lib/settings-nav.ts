@@ -2,6 +2,7 @@ import {
   BookOpen,
   DoorOpen,
   CalendarOff,
+  PauseCircle,
   Archive,
   Users,
   Building,
@@ -31,8 +32,25 @@ export const settingsNavSections: SettingsNavSection[] = [
     items: [
       { title: "Kurslar", url: "/settings/courses", icon: BookOpen },
       { title: "Xonalar", url: "/settings/rooms", icon: DoorOpen },
-      { title: "Dam olish kunlari", url: "/settings/holidays", icon: CalendarOff },
-      { title: "Arxiv", url: "/settings/archive", icon: Archive, visibleForRoles: [1] },
+      {
+        title: "Dam olish kunlari",
+        url: "/settings/holidays",
+        icon: CalendarOff,
+      },
+      {
+        // O'qish CEO va filial direktoriga; yozish serverda faqat CEO —
+        // sozlama butun kompaniyaga taalluqli.
+        title: "Avtomatik pauza",
+        url: "/settings/absence-pause",
+        icon: PauseCircle,
+        visibleForRoles: [1, 2],
+      },
+      {
+        title: "Arxiv",
+        url: "/settings/archive",
+        icon: Archive,
+        visibleForRoles: [1],
+      },
     ],
   },
   {
@@ -44,8 +62,18 @@ export const settingsNavSections: SettingsNavSection[] = [
         icon: Building,
         visibleForRoles: [1, 2, 3],
       },
-      { title: "Xodimlar", url: "/settings/employees", icon: Users, visibleForRoles: [1, 2] },
-      { title: "Filiallar", url: "/settings/branches", icon: Building2, visibleForRoles: [1, 2] },
+      {
+        title: "Xodimlar",
+        url: "/settings/employees",
+        icon: Users,
+        visibleForRoles: [1, 2],
+      },
+      {
+        title: "Filiallar",
+        url: "/settings/branches",
+        icon: Building2,
+        visibleForRoles: [1, 2],
+      },
       {
         title: "Telegram guruhlar",
         url: "/settings/telegram-groups",

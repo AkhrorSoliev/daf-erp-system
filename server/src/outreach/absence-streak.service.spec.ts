@@ -2,6 +2,7 @@ import { AttendanceStatus } from '@prisma/client';
 import {
   AbsenceStreakService,
   consecutiveAbsentCount,
+  streakWindowStart,
 } from './absence-streak.service';
 
 const A = AttendanceStatus.ABSENT;
@@ -65,7 +66,18 @@ describe("AbsenceStreakService.computeStreaks — bitta so'rovli yo'l", () => {
   ) {
     const queryRaw = jest.fn().mockResolvedValue(rawRows);
     const prisma = {
-      enrollment: { findMany: jest.fn().mockResolvedValue(enrollments) },
+      enrollment: {
+        findMany: jest.fn().mockResolvedValue(
+          // Sanoq oynasi maydonlari — testlar ularni ataylab ko'rsatmaydi,
+          // chunki bu yerdagi mavzu oyna emas, juftlikka ajratish.
+          enrollments.map((e) => ({
+            startDate: null,
+            createdAt: new Date('2020-01-01T00:00:00.000Z'),
+            statusChangedAt: null,
+            ...e,
+          })),
+        ),
+      },
       attendance: { findFirst: jest.fn().mockResolvedValue(earlierPresent) },
       $queryRaw: queryRaw,
     };
@@ -172,5 +184,234 @@ describe("AbsenceStreakService.computeStreaks — bitta so'rovli yo'l", () => {
       service.computeStreaks({ companyId, threshold: 3 }),
     ).resolves.toEqual([]);
     expect(queryRaw).not.toHaveBeenCalled();
+  });
+});
+
+describe('streakWindowStart', () => {
+  it("startDate bo'lsa o'shani oladi", () => {
+    expect(
+      streakWindowStart({
+        startDate: new Date('2026-09-01T00:00:00.000Z'),
+        createdAt: new Date('2026-08-20T10:00:00.000Z'),
+        statusChangedAt: null,
+      }),
+    ).toBe('2026-09-01');
+  });
+
+  it("startDate yo'q bo'lsa createdAt ga tushadi", () => {
+    expect(
+      streakWindowStart({
+        startDate: null,
+        createdAt: new Date('2026-08-20T10:00:00.000Z'),
+        statusChangedAt: null,
+      }),
+    ).toBe('2026-08-20');
+  });
+
+  it("faollashtirilgan kun kechroq — oyna o'shandan boshlanadi", () => {
+    expect(
+      streakWindowStart({
+        startDate: new Date('2026-09-01T00:00:00.000Z'),
+        createdAt: new Date('2026-08-20T10:00:00.000Z'),
+        statusChangedAt: new Date('2026-09-15T06:00:00.000Z'),
+      }),
+    ).toBe('2026-09-15');
+  });
+
+  it("muzlatilgan kun oynadan oldin bo'lsa startDate g'olib", () => {
+    // FROZEN ga o'tish ham statusChangedAt ni yozadi — lekin u yozuv
+    // boshlanishidan oldin bo'lishi mumkin emas, shuning uchun eng
+    // kechigi olinadi.
+    expect(
+      streakWindowStart({
+        startDate: new Date('2026-09-20T00:00:00.000Z'),
+        createdAt: new Date('2026-09-20T00:00:00.000Z'),
+        statusChangedAt: new Date('2026-09-10T06:00:00.000Z'),
+      }),
+    ).toBe('2026-09-20');
+  });
+
+  it("Toshkent kuni bo'yicha: UTC 20:00 — ertangi kun", () => {
+    // 2026-09-15T20:00Z = Toshkentda 16-sentabr 01:00
+    expect(
+      streakWindowStart({
+        startDate: null,
+        createdAt: new Date('2026-09-15T20:00:00.000Z'),
+        statusChangedAt: null,
+      }),
+    ).toBe('2026-09-16');
+  });
+});
+
+/**
+ * Sanoq oynasi — pauza avtomatikasining eng nozik qismi. Oynasiz cron
+ * faollashtirilgan o'quvchini ertasi kuni YANA pauza qilardi (u hali darsga
+ * ulgurmagan, oxirgi qatorlar hamon ABSENT), va admin bu halqadan hech
+ * qachon chiqa olmasdi.
+ */
+describe("AbsenceStreakService — sanoq oynasi so'rovga uzatiladi", () => {
+  const companyId = 1001;
+
+  function makeService(
+    enrollments: {
+      id: string;
+      studentId: number;
+      groupId: string;
+      startDate: Date | null;
+      createdAt: Date;
+      statusChangedAt: Date | null;
+    }[],
+    rawRows: {
+      studentId: number;
+      groupId: string;
+      dateStr: string;
+      status: AttendanceStatus;
+    }[],
+  ) {
+    const queryRaw = jest.fn().mockResolvedValue(rawRows);
+    const prisma = {
+      enrollment: { findMany: jest.fn().mockResolvedValue(enrollments) },
+      attendance: { findFirst: jest.fn().mockResolvedValue(null) },
+      $queryRaw: queryRaw,
+    };
+    return {
+      service: new AbsenceStreakService(prisma as never),
+      prisma,
+      queryRaw,
+    };
+  }
+
+  const reactivated = {
+    id: 'e1',
+    studentId: 10001,
+    groupId: 'g1',
+    startDate: null,
+    createdAt: new Date('2026-09-01T06:00:00.000Z'),
+    statusChangedAt: new Date('2026-09-10T06:00:00.000Z'),
+  };
+
+  it('xom SQL ga har yozuvning oyna sanasi uzatiladi', async () => {
+    const { service, queryRaw } = makeService([reactivated], []);
+    await service.computeStreaks({ companyId });
+
+    // Tagged template: [strings, ...values]. Oyna sanalari — alohida massiv.
+    const values = queryRaw.mock.calls[0].slice(1);
+    expect(values).toContainEqual(['2026-09-10']);
+  });
+
+  it("oynadan keyingi bitta ABSENT — streak 1, eskisi qo'shilmaydi", async () => {
+    const { service } = makeService(
+      [reactivated],
+      [
+        {
+          studentId: 10001,
+          groupId: 'g1',
+          dateStr: '2026-09-12',
+          status: AttendanceStatus.ABSENT,
+        },
+      ],
+    );
+    const rows = await service.computeStreaks({ companyId, threshold: 1 });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].consecutiveAbsentCount).toBe(1);
+  });
+
+  it('chegaradan past streak qaytarilmaydi', async () => {
+    const { service } = makeService(
+      [reactivated],
+      [
+        {
+          studentId: 10001,
+          groupId: 'g1',
+          dateStr: '2026-09-12',
+          status: AttendanceStatus.ABSENT,
+        },
+      ],
+    );
+    const rows = await service.computeStreaks({ companyId, threshold: 2 });
+    expect(rows).toHaveLength(0);
+  });
+
+  it('oxirgi kelgan kunni izlash ham oyna bilan chegaralanadi', async () => {
+    const { service, prisma } = makeService(
+      [reactivated],
+      [
+        {
+          studentId: 10001,
+          groupId: 'g1',
+          dateStr: '2026-09-12',
+          status: AttendanceStatus.ABSENT,
+        },
+      ],
+    );
+    await service.computeStreaks({ companyId, threshold: 1 });
+
+    // Oynasiz bu so'rov boshqa davrdagi darsni "oxirgi kelgan" deb
+    // ko'rsatardi — admin kartadagi sanaga ishonmay qolardi.
+    expect(prisma.attendance.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          cancellationId: null,
+          date: { gte: new Date('2026-09-10T00:00:00.000Z') },
+        }),
+      }),
+    );
+  });
+});
+
+/**
+ * Xom SQL ning o'zi mock qilinadi, shuning uchun bu testlar so'rov MATNINI
+ * tekshiradi. Uchala qoida `rn <= 10` oynasidan OLDIN turishi shart: aks
+ * holda bekor qilingan dars o'nlikdan joy egallab, haqiqiy davomatni
+ * ko'rinmas qilib qo'yardi.
+ */
+describe("AbsenceStreakService — so'rovdagi uchta qoida", () => {
+  const companyId = 1001;
+
+  async function capturedSql(): Promise<string> {
+    const queryRaw = jest.fn().mockResolvedValue([]);
+    const prisma = {
+      enrollment: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'e1',
+            studentId: 10001,
+            groupId: 'g1',
+            startDate: null,
+            createdAt: new Date('2026-09-01T06:00:00.000Z'),
+            statusChangedAt: null,
+          },
+        ]),
+      },
+      attendance: { findFirst: jest.fn().mockResolvedValue(null) },
+      $queryRaw: queryRaw,
+    };
+    const service = new AbsenceStreakService(prisma as never);
+    await service.computeStreaks({ companyId });
+    return (queryRaw.mock.calls[0][0] as string[]).join('?');
+  }
+
+  it('bekor qilingan darsni chiqarib tashlaydi', async () => {
+    expect(await capturedSql()).toContain('"cancellationId" IS NULL');
+  });
+
+  it('oldindan aytilgan SABABSIZ qoldirishni ABSENT deb sanaydi', async () => {
+    const sql = await capturedSql();
+    expect(sql).toContain('PlannedAbsence');
+    expect(sql).toContain("'SABABSIZ'");
+  });
+
+  it('sanoq oynasidan oldingi davomatni olmaydi', async () => {
+    expect(await capturedSql()).toContain('a."date" >= w."since"');
+  });
+
+  it("uchala filtr ham rn oynasidan OLDIN — ichki so'rovda", async () => {
+    const sql = await capturedSql();
+    const innerEnd = sql.indexOf(') t');
+    expect(innerEnd).toBeGreaterThan(-1);
+    const inner = sql.slice(0, innerEnd);
+    expect(inner).toContain('"cancellationId" IS NULL');
+    expect(inner).toContain('a."date" >= w."since"');
+    expect(inner).toContain('PlannedAbsence');
   });
 });
