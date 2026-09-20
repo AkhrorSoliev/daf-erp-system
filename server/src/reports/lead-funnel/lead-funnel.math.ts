@@ -64,6 +64,13 @@ export interface StageSets {
 
 export function toPersons(leads: CohortLead[]): FunnelPerson[] {
   const byKey = new Map<string, FunnelPerson>();
+  // Odamning joriy filiali qaysi lidning natijasi ekanini kuzatadi. Lidlar
+  // xronologik tartibda kelishi kafolatlanmagan (servis so'rovida `orderBy`
+  // yo'q), shuning uchun filial shaxs maydonlari (ism/telefon/manba) bilan
+  // bir xil «birinchi kelgan lid» mezoniga bog'lanmaydi — filiali BOR eng
+  // ERTA lid g'olib chiqadi, u identifikatsiya uchun tanlangan lid bilan bir
+  // xil bo'lmasa ham.
+  const branchAsOf = new Map<string, Date>();
 
   for (const l of leads) {
     const key = l.studentId != null ? `s:${l.studentId}` : `l:${l.id}`;
@@ -83,6 +90,7 @@ export function toPersons(leads: CohortLead[]): FunnelPerson[] {
         branchName: l.branchName,
         createdAt: l.createdAt,
       });
+      if (l.branchId != null) branchAsOf.set(key, l.createdAt);
       continue;
     }
 
@@ -97,16 +105,20 @@ export function toPersons(leads: CohortLead[]): FunnelPerson[] {
       existing.phone = l.phone;
       existing.source = l.source ?? existing.source;
       existing.sourceId = l.sourceId ?? existing.sourceId;
-      if (l.branchId != null) {
+    }
+    // Filial lid ochiq formadan kelganda hali noma'lum bo'ladi va keyingi
+    // lidda (yoki aylantirishda) paydo bo'ladi. Bu tekshiruv shaxs
+    // maydonlaridan MUSTAQIL ishlaydi: qaysi lid identifikatsiya uchun
+    // «birinchi» deb tanlangani emas, balki filiali bor lidlarning o'zi
+    // orasidagi eng erta sana g'olib chiqadi — massivdagi kelish tartibi
+    // ahamiyatsiz.
+    if (l.branchId != null) {
+      const knownAsOf = branchAsOf.get(key);
+      if (knownAsOf === undefined || l.createdAt < knownAsOf) {
         existing.branchId = l.branchId;
         existing.branchName = l.branchName;
+        branchAsOf.set(key, l.createdAt);
       }
-    }
-    // Filial lid ochiq formadan kelganda hali noma'lum bo'ladi va keyingi lidda
-    // (yoki aylantirishda) paydo bo'ladi — birinchi lidda yo'q bo'lsa, borida olinadi.
-    if (existing.branchId == null && l.branchId != null) {
-      existing.branchId = l.branchId;
-      existing.branchName = l.branchName;
     }
   }
 
@@ -205,6 +217,21 @@ export interface BranchBreakdownRow {
 }
 
 /**
+ * Lid soni bo'yicha kamayib; teng bo'lsa nom bo'yicha. Manbasiz/filialsiz
+ * qator (nomi `null`) doim oxirida: u qoldiq to'plam, nomli manbani
+ * ro'yxatning yuqori qismidan siqib chiqarmasligi kerak.
+ */
+function compareBreakdownRows(
+  a: { lead: number; name: string | null },
+  b: { lead: number; name: string | null },
+): number {
+  if (a.lead !== b.lead) return b.lead - a.lead;
+  if (a.name === null) return b.name === null ? 0 : 1;
+  if (b.name === null) return -1;
+  return a.name.localeCompare(b.name);
+}
+
+/**
  * Manba bo'yicha voronka. Har odam bitta manbada (birinchi lidiniki); manbasiz
  * odamlar `id: null` qatorida. Lid soni bo'yicha kamayib, teng bo'lsa nom
  * bo'yicha — «Instagram 30 → 0» ni «Telegram bot 39 → 7» yonida ko'rsatish shu
@@ -235,9 +262,7 @@ export function countBySource(
     if (depth >= 2) row.attended++;
     if (depth >= 3) row.paid++;
   }
-  return [...rows.values()].sort(
-    (a, b) => b.lead - a.lead || (a.name ?? '').localeCompare(b.name ?? ''),
-  );
+  return [...rows.values()].sort(compareBreakdownRows);
 }
 
 /** Filial bo'yicha lid va to'lov. Filiali belgilanmagan odamlar `id: null`. */
@@ -256,9 +281,7 @@ export function countByBranch(
     row.lead++;
     if (stageDepth(p, sets) >= 3) row.paid++;
   }
-  return [...rows.values()].sort(
-    (a, b) => b.lead - a.lead || (a.name ?? '￿').localeCompare(b.name ?? '￿'),
-  );
+  return [...rows.values()].sort(compareBreakdownRows);
 }
 
 function daysInclusive(startDate: string, endDate: string): number {

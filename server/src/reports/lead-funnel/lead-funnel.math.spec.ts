@@ -236,6 +236,40 @@ describe('toPersons — manba va filial', () => {
     expect(p.branchId).toBe(2);
     expect(p.branchName).toBe('Namangan');
   });
+
+  // Massivdagi kelish tartibi ahamiyatsiz bo'lishi kerak: filiali bor eng
+  // ERTA lid g'olib chiqadi, identifikatsiya uchun «birinchi» deb tanlangan
+  // lid (bu yerda — filialsiz eng erta lid) bilan bir xil bo'lmasa ham.
+  it("filial — kelish tartibidan qat'i nazar, filiali bor eng erta lid g'olib chiqadi", () => {
+    const latestWithBranchA: CohortLead = {
+      ...base,
+      id: 'latest',
+      branchId: 1,
+      branchName: "Farg'ona",
+      createdAt: new Date('2026-09-15T05:00:00Z'),
+    };
+    const earliestWithoutBranch: CohortLead = {
+      ...base,
+      id: 'earliest',
+      branchId: null,
+      branchName: null,
+      createdAt: new Date('2026-09-10T05:00:00Z'),
+    };
+    const middleWithBranchB: CohortLead = {
+      ...base,
+      id: 'middle',
+      branchId: 2,
+      branchName: 'Namangan',
+      createdAt: new Date('2026-09-12T05:00:00Z'),
+    };
+    const [p] = toPersons([
+      latestWithBranchA,
+      earliestWithoutBranch,
+      middleWithBranchB,
+    ]);
+    expect(p.branchId).toBe(2);
+    expect(p.branchName).toBe('Namangan');
+  });
 });
 
 describe('stageDepth', () => {
@@ -304,6 +338,19 @@ describe('countBySource', () => {
     );
     expect(rows.map((r) => r.name)).toEqual(['Instagram', 'Tanishlar']);
   });
+
+  // Manbasiz qator qoldiq to'plam: teng lid sonida ham nomli manbani
+  // ro'yxatning yuqori qismidan siqib chiqarmasligi kerak.
+  it('teng lid sonida manbasiz qator oxirida turadi', () => {
+    const rows = countBySource(
+      [
+        person({ leadId: 'x', sourceId: null, source: null }),
+        person({ leadId: 'y', sourceId: 'ig', source: 'Instagram' }),
+      ],
+      SETS,
+    );
+    expect(rows.map((r) => r.name)).toEqual(['Instagram', null]);
+  });
 });
 
 describe('countByBranch', () => {
@@ -334,6 +381,19 @@ describe('countByBranch', () => {
       { id: 2, name: 'Namangan', lead: 1, paid: 0 },
       { id: null, name: null, lead: 1, paid: 0 },
     ]);
+  });
+
+  // countBySource bilan bir xil qoidani ishlatadi: filialsiz qator qoldiq
+  // to'plam, teng lid sonida ham nomli filialni siqib chiqarmaydi.
+  it('teng lid sonida filialsiz qator oxirida turadi', () => {
+    const rows = countByBranch(
+      [
+        person({ leadId: 'x', branchId: null, branchName: null }),
+        person({ leadId: 'y', branchId: 2, branchName: 'Namangan' }),
+      ],
+      SETS,
+    );
+    expect(rows.map((r) => r.name)).toEqual(['Namangan', null]);
   });
 });
 
