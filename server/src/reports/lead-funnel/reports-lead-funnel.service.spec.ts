@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import {
   ReportsLeadFunnelService,
   splitByStatus,
+  statusBucket,
 } from './reports-lead-funnel.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -24,6 +25,9 @@ describe('ReportsLeadFunnelService', () => {
             phone: '901',
             createdAt: new Date('2026-09-02T05:00:00Z'),
             source: { name: 'Instagram' },
+            sourceId: 'src-ig',
+            branchId: 1,
+            branch: { id: 1, name: "Farg'ona" },
           },
           {
             id: 'b',
@@ -34,6 +38,9 @@ describe('ReportsLeadFunnelService', () => {
             phone: '902',
             createdAt: new Date('2026-09-03T05:00:00Z'),
             source: { name: 'Telegram bot' },
+            sourceId: 'src-tg',
+            branchId: 2,
+            branch: { id: 2, name: 'Namangan' },
           },
         ]),
       },
@@ -273,5 +280,114 @@ describe('ReportsLeadFunnelService', () => {
         studentStatus: 'FROZEN',
       });
     });
+  });
+
+  it('oldingi davr, manba va filial taqsimotini qaytaradi', async () => {
+    const r = await service.getFunnel(
+      COMPANY,
+      { startDate: '2026-10-01', endDate: '2026-10-31' },
+      null,
+    );
+
+    expect(r.previous).toEqual({
+      period: { startDate: '2026-09-10', endDate: '2026-09-30' },
+      stages: { lead: 2, enrolled: 1, attended: 1, paid: 0 },
+    });
+    expect(r.bySource).toEqual([
+      {
+        id: 'src-ig',
+        name: 'Instagram',
+        lead: 1,
+        enrolled: 0,
+        attended: 0,
+        paid: 0,
+      },
+      {
+        id: 'src-tg',
+        name: 'Telegram bot',
+        lead: 1,
+        enrolled: 1,
+        attended: 1,
+        paid: 0,
+      },
+    ]);
+    expect(r.byBranch).toEqual([
+      { id: 1, name: "Farg'ona", lead: 1, paid: 0 },
+      { id: 2, name: 'Namangan', lead: 1, paid: 0 },
+    ]);
+    // Oldingi davr uchun alohida kogorta so'rovi: jami 3 (joriy, oldingi, to'lamaganlar).
+    expect(prisma.lead.findMany).toHaveBeenCalledTimes(3);
+  });
+
+  it("voronka boshlangan oyda oldingi davr yo'q", async () => {
+    const r = await service.getFunnel(
+      COMPANY,
+      { startDate: '2026-09-10', endDate: '2026-09-30' },
+      null,
+    );
+    expect(r.previous).toBeNull();
+    expect(prisma.lead.findMany).toHaveBeenCalledTimes(2);
+  });
+
+  it("odamlar ro'yxati manba bo'yicha filtrlanadi", async () => {
+    const ig = await service.getPeople(
+      COMPANY,
+      {
+        stage: 'lead',
+        mode: 'all',
+        sourceId: 'src-ig',
+        page: 1,
+        pageSize: 10,
+        startDate: '2026-10-01',
+        endDate: '2026-10-31',
+      },
+      null,
+    );
+    expect(ig.total).toBe(1);
+    expect(ig.data[0]).toMatchObject({
+      name: 'Ali Valiyev',
+      sourceId: 'src-ig',
+    });
+
+    const none = await service.getPeople(
+      COMPANY,
+      {
+        stage: 'lead',
+        mode: 'all',
+        sourceId: 'none',
+        page: 1,
+        pageSize: 10,
+        startDate: '2026-10-01',
+        endDate: '2026-10-31',
+      },
+      null,
+    );
+    expect(none.total).toBe(0);
+  });
+
+  it("to'lamaganlar holat bo'yicha filtrlanadi", async () => {
+    const active = await service.getPeople(
+      COMPANY,
+      { stage: 'unpaid', mode: 'all', status: 'active', page: 1, pageSize: 10 },
+      null,
+    );
+    expect(active.total).toBe(1);
+    const frozen = await service.getPeople(
+      COMPANY,
+      { stage: 'unpaid', mode: 'all', status: 'frozen', page: 1, pageSize: 10 },
+      null,
+    );
+    expect(frozen.total).toBe(0);
+  });
+});
+
+describe('statusBucket', () => {
+  it('FROZEN va INACTIVE bitta guruh, noma\'lumlar "other"', () => {
+    expect(statusBucket('ACTIVE')).toBe('active');
+    expect(statusBucket('FROZEN')).toBe('frozen');
+    expect(statusBucket('INACTIVE')).toBe('frozen');
+    expect(statusBucket('EXPELLED')).toBe('expelled');
+    expect(statusBucket('GRADUATED')).toBe('other');
+    expect(statusBucket(null)).toBe('other');
   });
 });

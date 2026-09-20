@@ -11,14 +11,19 @@ import {
   tashkentRangeUtc,
 } from '../../common/date/tashkent';
 import {
+  countByBranch,
+  countBySource,
   countStages,
   FUNNEL_START_DATE,
   type FunnelMode,
   type FunnelPerson,
   type FunnelStage,
+  matchesSource,
   personsAtStage,
+  previousPeriod,
   type StageSets,
   toPersons,
+  type UnpaidStatusBucket,
 } from './lead-funnel.math';
 
 export type FunnelPeopleStage = FunnelStage | 'unpaid';
@@ -31,6 +36,10 @@ export interface FunnelPeriodInput {
 export interface FunnelPeopleInput extends FunnelPeriodInput {
   stage: FunnelPeopleStage;
   mode: FunnelMode;
+  /** Manba id'si yoki `'none'` (manbasizlar); `unpaid` da e'tiborsiz. */
+  sourceId?: string;
+  /** Faqat `stage === 'unpaid'` da ma'noli. */
+  status?: UnpaidStatusBucket;
   page: number;
   pageSize: number;
 }
@@ -42,6 +51,7 @@ export interface FunnelPersonRow {
   studentId: number | null;
   studentStatus: string | null;
   source: string | null;
+  sourceId: string | null;
   createdAt: Date;
 }
 
@@ -67,9 +77,26 @@ export class ReportsLeadFunnelService {
     const { persons, sets } = await this.loadCohort(companyId, period, scope);
     const unpaid = await this.loadUnpaid(companyId, scope);
 
+    // KPI kartasidagi «oldingi davr N %» — alohida kogorta; sentyabrda `null`.
+    const prevPeriod = previousPeriod(period);
+    let previous: {
+      period: { startDate: string; endDate: string };
+      stages: Record<FunnelStage, number>;
+    } | null = null;
+    if (prevPeriod) {
+      const prev = await this.loadCohort(companyId, prevPeriod, scope);
+      previous = {
+        period: prevPeriod,
+        stages: countStages(prev.persons, prev.sets).stages,
+      };
+    }
+
     return {
       period,
       ...countStages(persons, sets),
+      previous,
+      bySource: countBySource(persons, sets),
+      byBranch: countByBranch(persons, sets),
       unpaid: splitByStatus(
         unpaid.map((r) => ({ status: r.studentStatus ?? '' })),
       ),
@@ -85,7 +112,9 @@ export class ReportsLeadFunnelService {
     const start = (page - 1) * pageSize;
 
     if (input.stage === 'unpaid') {
-      const all = await this.loadUnpaid(companyId, scope);
+      const all = (await this.loadUnpaid(companyId, scope)).filter(
+        (r) => !input.status || statusBucket(r.studentStatus) === input.status,
+      );
       return {
         data: all.slice(start, start + pageSize),
         total: all.length,
@@ -96,7 +125,12 @@ export class ReportsLeadFunnelService {
 
     const period = resolvePeriod(input);
     const { persons, sets } = await this.loadCohort(companyId, period, scope);
-    const matched = personsAtStage(persons, sets, input.stage, input.mode);
+    const matched = personsAtStage(
+      persons,
+      sets,
+      input.stage,
+      input.mode,
+    ).filter((p) => matchesSource(p, input.sourceId));
     const slice = matched.slice(start, start + pageSize);
 
     return {
@@ -129,6 +163,11 @@ export class ReportsLeadFunnelService {
         createdAt: tashkentRangeUtc(period.startDate, period.endDate),
         ...leadAttributionWhere(scope),
       },
+      // `toPersons` ism/telefon/manbani ENG BIRINCHI lidga qarab tanlaydi;
+      // aniq tartib bo'lmasa, bitta odam so'rovdan-so'rovga boshqa manbaga
+      // bog'lanishi mumkin edi — manbalarni solishtiradigan hisobot uchun bu
+      // jiddiy nuqson bo'lardi.
+      orderBy: { createdAt: 'asc' },
       select: {
         id: true,
         convertedStudentId: true,
@@ -138,6 +177,9 @@ export class ReportsLeadFunnelService {
         phone: true,
         createdAt: true,
         source: { select: { name: true } },
+        sourceId: true,
+        branchId: true,
+        branch: { select: { id: true, name: true } },
       },
     });
 
@@ -150,6 +192,9 @@ export class ReportsLeadFunnelService {
         lastName: l.lastName,
         phone: l.phone,
         source: l.source?.name ?? null,
+        sourceId: l.sourceId,
+        branchId: l.branchId,
+        branchName: l.branch?.name ?? null,
         createdAt: l.createdAt,
       })),
     );
@@ -256,6 +301,7 @@ export class ReportsLeadFunnelService {
       studentStatus:
         p.studentId != null ? (byId.get(p.studentId) ?? null) : null,
       source: p.source,
+      sourceId: p.sourceId,
       createdAt: p.createdAt,
     }));
   }
@@ -264,21 +310,26 @@ export class ReportsLeadFunnelService {
 /**
  * Muzlatilgan va eski «INACTIVE» bitta guruh (klient ham ularni bir xil
  * «Muzlatilgan» deb ko'rsatadi). Qolgan holatlar — bitirgan, arxiv, mock —
- * `other` ga tushadi: aks holda bo'laklar yig'indisi jamiga teng bo'lmasdi.
+ * `other`: aks holda bo'laklar yig'indisi jamiga teng bo'lmasdi.
  */
+export function statusBucket(status: string | null): UnpaidStatusBucket {
+  switch (status) {
+    case 'ACTIVE':
+      return 'active';
+    case 'FROZEN':
+    case 'INACTIVE':
+      return 'frozen';
+    case 'EXPELLED':
+      return 'expelled';
+    default:
+      return 'other';
+  }
+}
+
 export function splitByStatus(students: { status: string }[]) {
-  const count = (...statuses: string[]) =>
-    students.filter((s) => statuses.includes(s.status)).length;
-  const active = count('ACTIVE');
-  const frozen = count('FROZEN', 'INACTIVE');
-  const expelled = count('EXPELLED');
-  return {
-    total: students.length,
-    active,
-    frozen,
-    expelled,
-    other: students.length - active - frozen - expelled,
-  };
+  const counts = { active: 0, frozen: 0, expelled: 0, other: 0 };
+  for (const s of students) counts[statusBucket(s.status)]++;
+  return { total: students.length, ...counts };
 }
 
 /** Kalendarda haqiqatan bor kun (2026-02-31 emas). */
