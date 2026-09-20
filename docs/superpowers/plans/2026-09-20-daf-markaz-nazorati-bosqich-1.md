@@ -2116,6 +2116,10 @@ async function main(prisma: PrismaClient) {
     prisma.studentAppSession.findMany({
       where: {
         studentId: { in: ids },
+        // SQL tomoni ham `companyId` bo'yicha cheklangan (`queries.ts`). Ikki
+        // tomon AYNAN bir xil qatorlarni ko'rmasa, skript o'zi yolg'on farq
+        // yasaydi va prod yurishida «SQL buzilgan» deb noto'g'ri xabar beradi.
+        companyId,
         day: {
           gte: utcMidnightFromDateStr(davrBoshi),
           lte: utcMidnightFromDateStr(bugun),
