@@ -18,6 +18,9 @@
 - Har xom so'rov `"companyId" = ${companyId}` shartini oladi va `ids` bo'sh bo'lsa **chaqirilmaydi** (`Prisma.join([])` xato beradi).
 - Kun chegarasi: TS da `common/date/tashkent` yordamchilari; SQL da Toshkent kuni `timestamp(3)` ustunlarda `+ 5 soat` bilan (`TASHKENT_OFFSET_MS` dan), `@db.Date` ustunda to'g'ridan-to'g'ri.
 - `amber-*` sinflar ishlatilmaydi (admin mavzusida rangsiz). Holat ranglari: `green-*`, `yellow-*`, `red-*`, `muted`.
+- **Mingdan oshishi mumkin bo'lgan har bir son `formatNumber()` (`@/lib/format-utils`) orqali chiqariladi** —
+  `uz-UZ` bo'shliqli ajratgich bilan (`42 300`, `1 840`). Bu `client/CLAUDE.md` talabi. Foizlarga va 7 dan
+  kichik kun sonlariga kerak emas.
 - Barcha UI matni va yangi izohlar **lotin alifbosidagi o'zbekcha**, izohlar NEGA ekanini tushuntiradi. Test nomlari o'zbekcha.
 - Kodda haqiqiy ism, telefon yoki prod ID yo'q; misollar uydirma (`Nodira Yusupova`, `901112233`, `10001`).
 - Buyruqlar: server — `cd server && npx jest <yo'l>`, `npm run typecheck`; klient — `cd client && npx vitest run <yo'l>`, `npm run typecheck`.
@@ -89,6 +92,7 @@
 | `components/daf-center/daf-voronka.tsx` | Voronka, bosiladigan yo'qotishlar |
 | `components/daf-center/daf-trend-chart.tsx` | 30 kunlik ikki chiziq |
 | `components/daf-center/daf-filiallar-table.tsx` | Filiallar jadvali (CEO) |
+| `components/daf-center/daf-explainer.tsx` | «Raqamlar qanday hisoblanadi» — markazning O'Z qoidalari |
 | `components/daf-center/daf-oquvchilar-client.tsx` | «O'quvchilar» sahifasi |
 | `components/daf-center/daf-oquvchilar-filter-bar.tsx` | Filtrlar |
 | `components/daf-center/daf-oquvchilar-table.tsx` | Jadval, saralanadigan sarlavhalar |
@@ -4332,6 +4336,78 @@ export function DafFiliallarTable({ qatorlar }: { qatorlar: MarkazFilialQatori[]
 }
 ```
 
+- [ ] **Step 4b: «Raqamlar qanday hisoblanadi» — markazning o'z tushuntirishi**
+
+Guruh tabidagi `ActivityExplainer` bu yerda ISHLATILMAYDI: u «shug'ullangan kun» ni «mashq yoki
+5 daqiqa radio» deb tushuntiradi, markazda esa radio umuman sanalmaydi (dizayn 3.3-a). Bitta so'z
+ikki ma'noda tursa, qoidani bilmoqchi bo'lgan odam aynan shu yerdan noto'g'ri javob oladi.
+
+`client/src/components/daf-center/daf-explainer.tsx`:
+
+```tsx
+"use client";
+
+import { formatKunOy } from "@/components/groups/app-activity/activity-format";
+import type { Norma } from "./types";
+
+/**
+ * Bu sahifadagi raqamlar qanday hisoblanishi. Guruh tabidagi `ActivityExplainer`
+ * bu yerda QAYTA ISHLATILMAYDI — u «shug'ullangan kun» ni «mashq yoki 5 daqiqa
+ * radio» deb ta'riflaydi, markazda esa radio sanalmaydi (dizayn 3.3-a). Matn
+ * normadan o'qiladi, shuning uchun CEO sozlamani o'zgartirsa shu yerda ham
+ * darhol yangi raqam turadi.
+ */
+export function DafExplainer({
+  norma,
+  kuzatuvBoshi,
+}: {
+  norma: Norma;
+  kuzatuvBoshi: string | null;
+}) {
+  return (
+    <details className="rounded-xl border bg-card px-4 py-3 text-sm">
+      <summary className="cursor-pointer font-medium">Raqamlar qanday hisoblanadi</summary>
+      <div className="mt-3 space-y-3 text-muted-foreground">
+        <p>
+          <b className="text-foreground">Faol kun</b> — o&apos;quvchi o&apos;sha kuni o&apos;quv
+          bo&apos;limida kamida <b className="text-foreground">{norma.kunlikDaqiqa} daqiqa</b>{" "}
+          ishlagan yoki tugatilgan seanslarda kamida{" "}
+          <b className="text-foreground">{norma.kunlikSavol} ta</b> savolga javob bergan kun. Radio
+          tinglash bunga kirmaydi.
+        </p>
+        <p>
+          <b className="text-foreground">Holat</b> — haftada{" "}
+          <b className="text-foreground">{norma.haftalikKun} kun</b> faol bo&apos;lsa yashil,{" "}
+          <b className="text-foreground">{norma.sariqKun} kundan</b> boshlab sariq, kamroq
+          bo&apos;lsa qizil. 30 kunlik davrda talab shunga mutanosib o&apos;sadi. Normani CEO
+          sozlamalarda o&apos;zgartiradi.
+        </p>
+        <p>
+          <b className="text-foreground">Ikki xil «kirgan»</b> — «bir marta bo&apos;lsa ham kirgan»
+          butun tarix bo&apos;yicha, «davr ichida kirgan» esa faqat tanlangan davr bo&apos;yicha.
+          Ilgari kirib, keyin tashlab ketgan o&apos;quvchi «hech qachon kirmagan» emas.
+        </p>
+        <p>
+          <b className="text-foreground">O&apos;rtachalar</b> davrda kirganlar orasida hisoblanadi,{" "}
+          <b className="text-foreground">foizlar</b> esa barcha faol o&apos;quvchiga nisbatan —
+          akkaunti yo&apos;qlar ham maxrajda turadi.
+        </p>
+        <p>
+          <b className="text-foreground">To&apos;g&apos;ri javob</b> — tugatilgan seanslar
+          bo&apos;yicha. Guruh sahifasidagi foiz urinishlardan hisoblanadi, shuning uchun 1–2 foiz
+          farq qilishi mumkin.
+        </p>
+        <p>
+          {kuzatuvBoshi
+            ? `Kuzatuv ${formatKunOy(kuzatuvBoshi)} dan boshlangan — undan oldingi kunlar hech kimga hisoblanmaydi.`
+            : "Ilova faolligi hali qayd etilmagan."}
+        </p>
+      </div>
+    </details>
+  );
+}
+```
+
 - [ ] **Step 5: Sahifa**
 
 `client/src/app/(dashboard)/daf/page.tsx`:
@@ -4356,8 +4432,8 @@ export default function DafUmumiyPage() {
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { ActivityExplainer } from "@/components/groups/app-activity/activity-explainer";
 import { ActivityError, PeriodToggle, usePeriodParam } from "@/components/groups/app-activity/activity-ui";
+import { DafExplainer } from "./daf-explainer";
 import { DafFiliallarTable } from "./daf-filiallar-table";
 import { DafKpiCards } from "./daf-kpi-cards";
 import { DafTrendChart } from "./daf-trend-chart";
@@ -4412,7 +4488,7 @@ export function DafUmumiyClient() {
             <DafTrendChart trend={data.trend} />
           </div>
           {data.filiallar.length > 0 && <DafFiliallarTable qatorlar={data.filiallar} />}
-          <ActivityExplainer kuzatuvBoshi={data.kuzatuvBoshi} />
+          <DafExplainer norma={data.norma} kuzatuvBoshi={data.kuzatuvBoshi} />
         </>
       )}
     </div>
