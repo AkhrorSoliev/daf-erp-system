@@ -31,7 +31,7 @@ export interface OquvchiSurati {
   faolKun: number;
   lernenSoniya: number;
   faolSoniya: number;
-  /** Davr ichida kamita bitta kunda kirdi. */
+  /** Davr ichida kamida bitta kunda kirdi. */
   kirdi: boolean;
   savollar: number;
   togri: number;

@@ -31,7 +31,7 @@ describe('faolKunmi — kun faolmi (dizayn 3.3)', () => {
 describe('kerakliKunlar — norma davrga mutanosib (dizayn 3.4)', () => {
   const n = STANDART_NORMA; // 4 / 2
 
-  it("7 kunlik maxraj — normaning o'si", () => {
+  it("7 kunlik maxraj — normaning o'zi", () => {
     expect(kerakliKunlar(7, n)).toEqual({ kerakliKun: 4, sariqKerak: 2 });
   });
 

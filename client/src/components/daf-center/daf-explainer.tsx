@@ -23,8 +23,8 @@ export function DafExplainer({
       <div className="mt-3 space-y-3 text-muted-foreground">
         <p>
           <b className="text-foreground">Faol kun</b> — o&apos;quvchi o&apos;sha kuni o&apos;quv
-          bo&apos;limida kamita <b className="text-foreground">{norma.kunlikDaqiqa} daqiqa</b>{" "}
-          ishlagan yoki tugatilgan seanslarda kamita{" "}
+          bo&apos;limida kamida <b className="text-foreground">{norma.kunlikDaqiqa} daqiqa</b>{" "}
+          ishlagan yoki tugatilgan seanslarda kamida{" "}
           <b className="text-foreground">{norma.kunlikSavol} ta</b> savolga javob bergan kun. Radio
           tinglash bunga kirmaydi.
         </p>

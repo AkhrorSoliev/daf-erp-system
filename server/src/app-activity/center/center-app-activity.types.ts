@@ -22,7 +22,7 @@ export interface GuruhAzoligi {
 }
 
 /**
- * Servisning ICHKI qatori — populyatsiya + yig'undi + qaror. Filtr, saralash
+ * Servisning ICHKI qatori — populyatsiya + yig'indi + qaror. Filtr, saralash
  * va sahifalash shu ustida ishlaydi (`markaz-royxat.ts`), tashqariga
  * `MarkazOquvchiQatori` chiqadi.
  */
@@ -34,7 +34,7 @@ export interface OquvchiHisobi {
   otaOnaTelefoni: string | null;
   akkaunt: boolean;
   hechKirmagan: boolean;
-  /** Tanlangan davr ichida kamita bitta seansda >= 10 s. */
+  /** Tanlangan davr ichida kamida bitta seansda >= 10 s. */
   kirdi: boolean;
   holat: Holat;
   faolKun: number;
@@ -86,7 +86,7 @@ export interface MarkazOquvchiQatori {
 export interface MarkazKartalari {
   oquvchilar: number;
   akkauntlar: number;
-  /** Butun tarixda kamita bir marta kirgan. */
+  /** Butun tarixda kamida bir marta kirgan. */
   birMartaKirganlar: number;
   /** Tanlangan davr ichida kirgan. */
   davrdaKirganlar: number;
