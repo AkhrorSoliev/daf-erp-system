@@ -40,6 +40,11 @@ export interface ExpectationGroup {
    * Ko'chirilgan darsning YANGI kuni ataylab sanalmaydi — hisob ham asl
    * kunni o'rnida qoldiradi, shuning uchun ikkala tomon bitta kunni
    * sanaydi va jami bir xil chiqadi.
+   *
+   * Qoplama kuni guruhning O'Z jadvalidagi kun bo'lsa bu to'plamga
+   * TUSHMAYDI: oyda dars kunlari soni o'zgarmaydi, hisob ham bayramni
+   * rejadan chiqaradi. Filtr `ReportsExpectationService` da, guruh jadvali
+   * ma'lum bo'ladigan joyda qo'llanadi.
    */
   holidayMakeupDates: Set<string>;
   /** Attendances WITH a live LESSON_CONSUMPTION — already paid. */

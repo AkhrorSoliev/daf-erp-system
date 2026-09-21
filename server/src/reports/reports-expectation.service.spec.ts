@@ -407,7 +407,13 @@ describe('ReportsExpectationService', () => {
         new Set(['2026-08-03']),
       );
       prisma.lessonReschedule.findMany.mockResolvedValueOnce([
-        { groupId: 'g1', originalDate: new Date('2026-08-03') },
+        {
+          groupId: 'g1',
+          originalDate: new Date('2026-08-03'),
+          // 04.08 — seshanba, guruh jadvalida YO'Q kun: oyga yangi dars
+          // kuni qo'shiladi.
+          newDate: new Date('2026-08-04'),
+        },
       ]);
 
       const r = await service.getMonthlyExpectation(1, {
@@ -416,6 +422,35 @@ describe('ReportsExpectationService', () => {
       });
 
       expect(r.remainingLessons).toBe(5);
+      expect(r.expectedValue).toBe(450_000);
+    });
+
+    it('qoplama JADVALDAGI kunga tushsa prognoz ham bayramni sanamaydi', async () => {
+      // 03.08 darsi 10.08 ga ko'chirildi — lekin 10.08 ham DUSHANBA, ya'ni
+      // guruhning o'z dars kuni. Oyda dars kunlari soni o'zgarmaydi,
+      // `resolveMonthPlan` bayramni rejadan CHIQARADI (450 000 / 4).
+      // Prognoz ham 4 ta darsni ko'rishi shart.
+      prisma.group.findMany.mockResolvedValueOnce([monthlyGroup()]);
+      prisma.enrollmentMonthlyCharge.findMany.mockResolvedValueOnce(
+        frozen(112_500),
+      );
+      holidays.buildHolidayDateSet.mockResolvedValueOnce(
+        new Set(['2026-08-03']),
+      );
+      prisma.lessonReschedule.findMany.mockResolvedValueOnce([
+        {
+          groupId: 'g1',
+          originalDate: new Date('2026-08-03'),
+          newDate: new Date('2026-08-10'),
+        },
+      ]);
+
+      const r = await service.getMonthlyExpectation(1, {
+        month: '2026-08',
+        branchIds: null,
+      });
+
+      expect(r.remainingLessons).toBe(4);
       expect(r.expectedValue).toBe(450_000);
     });
 
@@ -429,7 +464,13 @@ describe('ReportsExpectationService', () => {
         new Set(['2026-08-03']),
       );
       prisma.lessonReschedule.findMany.mockResolvedValueOnce([
-        { groupId: 'g1', originalDate: new Date('2026-08-03') },
+        {
+          groupId: 'g1',
+          originalDate: new Date('2026-08-03'),
+          // 04.08 — seshanba, guruh jadvalida YO'Q kun: oyga yangi dars
+          // kuni qo'shiladi.
+          newDate: new Date('2026-08-04'),
+        },
       ]);
 
       const r = await service.getMonthlyExpectation(1, {

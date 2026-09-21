@@ -77,6 +77,13 @@ describe('MonthlyChargeService', () => {
       // Bayram darsini shu oy ichida qayta o'tish — `LessonReschedule`.
       // Odatiy: ko'chirish yo'q.
       lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
+      // Qoplama kuni guruh jadvalidagi kun EMASligini tekshirish uchun —
+      // `resolveMonthPlan` bu so'rovni faqat ko'chirish topilganda yuboradi.
+      group: {
+        findUnique: jest.fn().mockResolvedValue({
+          exactDays: ['saturday', 'thursday', 'tuesday'],
+        }),
+      },
       enrollment: {
         findMany: jest.fn().mockResolvedValue([]),
         // Default shape for reverseChargeForDeparture's own lookup —
@@ -481,11 +488,13 @@ describe('MonthlyChargeService', () => {
       expect(charge?.chargedAmount).toBe(450_000);
     });
 
-    it("bayram darsi SHU OY ichida boshqa kunga ko'chirilgan bo'lsa rejada QOLADI", async () => {
-      // Admin `LessonReschedule` yozdi: 1-sentabr darsi 5-sentabrga o'tdi.
-      // Dars yo'qolmagan — oyda yana 13 ta davomat bo'ladi (asl kunga emas,
-      // yangi kunga), shuning uchun reja 13 da qoladi va 13 ga bo'lingan
-      // narx bilan ustoz oyning aniq ulushini oladi.
+    it("bayram darsi SHU OY ichida REJADA BO'LMAGAN kunga ko'chirilsa rejada QOLADI", async () => {
+      // Admin `LessonReschedule` yozdi: 1-sentabr (seshanba) darsi
+      // 4-sentabrga (juma — guruh jadvalida YO'Q kun) o'tdi. Oyga yangi
+      // dars kuni qo'shildi, dars yo'qolmagan — oyda yana 13 ta davomat
+      // bo'ladi (asl kunga emas, yangi kunga), shuning uchun reja 13 da
+      // qoladi va 13 ga bo'lingan narx bilan ustoz oyning aniq ulushini
+      // oladi.
       prismaMock.holiday.findMany.mockResolvedValueOnce([
         {
           date: new Date('2026-09-01T00:00:00Z'),
@@ -493,7 +502,10 @@ describe('MonthlyChargeService', () => {
         },
       ]);
       prismaMock.lessonReschedule.findMany.mockResolvedValueOnce([
-        { originalDate: new Date('2026-09-01T00:00:00Z') },
+        {
+          originalDate: new Date('2026-09-01T00:00:00Z'),
+          newDate: new Date('2026-09-04T00:00:00Z'),
+        },
       ]);
 
       const charge = await service.createChargeForEnrollment(tx, {
@@ -506,6 +518,163 @@ describe('MonthlyChargeService', () => {
       expect(charge?.plannedLessons).toBe(13);
       expect(charge?.perLessonCost).toBe(34_615); // 450 000 / 13
       expect(charge?.chargedAmount).toBe(450_000);
+    });
+
+    it("qoplama JADVALDAGI kunga tushsa bayram baribir CHIQADI — oyga yangi dars kuni qo'shilmaydi", async () => {
+      // 1-sentabr (seshanba) darsi 5-sentabrga ko'chirildi, lekin 5-sentabr
+      // SHANBA — guruhning o'z dars kuni. `AttendanceReadService
+      // .applyLessonModifications` dars kunlarini TO'PLAM qilib qo'shadi,
+      // shuning uchun 5-sentabr ikki marta paydo bo'lmaydi: oyda baribir
+      // 12 ta dars kuni qoladi. Reja 13 deb muzlatilsa, 13 ga bo'lingan
+      // narx bilan 12 ta davomat yozilib ustozga oy ulushidan KAM
+      // to'lanardi (1-javob).
+      prismaMock.holiday.findMany.mockResolvedValueOnce([
+        {
+          date: new Date('2026-09-01T00:00:00Z'),
+          endDate: new Date('2026-09-01T00:00:00Z'),
+        },
+      ]);
+      prismaMock.lessonReschedule.findMany.mockResolvedValueOnce([
+        {
+          originalDate: new Date('2026-09-01T00:00:00Z'),
+          newDate: new Date('2026-09-05T00:00:00Z'),
+        },
+      ]);
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(charge?.plannedLessons).toBe(12);
+      expect(charge?.perLessonCost).toBe(37_500); // 450 000 / 12
+      // Guruh jadvali aynan shu tekshiruv uchun so'raladi.
+      expect(prismaMock.group.findUnique).toHaveBeenCalledWith({
+        where: { id: 'grp-1' },
+        select: { exactDays: true },
+      });
+    });
+
+    it('qoplangan bayramda `coveredDates` ga ASL kun emas, QOPLAMA kuni yoziladi', async () => {
+      // 22-sentabr (seshanba) bayrami 30-sentabrga (chorshanba — jadvalda
+      // yo'q kun) ko'chirildi. Dars aynan 30-sentabrda o'tiladi, shuning
+      // uchun "qoplangan kunlar" ro'yxatida ham o'sha kun turishi kerak:
+      // aks holda oy o'rtasida ketgan o'quvchi hali O'TILMAGAN darsni
+      // qoplangan deb qoldirib ketardi.
+      prismaMock.holiday.findMany.mockResolvedValueOnce([
+        {
+          date: new Date('2026-09-22T00:00:00Z'),
+          endDate: new Date('2026-09-22T00:00:00Z'),
+        },
+      ]);
+      prismaMock.lessonReschedule.findMany.mockResolvedValueOnce([
+        {
+          originalDate: new Date('2026-09-22T00:00:00Z'),
+          newDate: new Date('2026-09-30T00:00:00Z'),
+        },
+      ]);
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(charge?.plannedLessons).toBe(13);
+      expect(charge?.coveredDates).toHaveLength(13);
+      expect(charge?.coveredDates).toContain('2026-09-30');
+      expect(charge?.coveredDates).not.toContain('2026-09-22');
+      // Tartib buzilmaydi — `reverseChargeForDeparture` satr solishtiradi.
+      expect(charge?.coveredDates).toEqual([...charge!.coveredDates].sort());
+    });
+
+    it("ketgan o'quvchiga ketishdan KEYINGI qoplama darsining puli qaytadi", async () => {
+      // Yuqoridagi qoida pulda qanday ko'rinishi: 22-sentabr bayrami
+      // 30-sentabrga ko'chirilgan, o'quvchi 26-sentabrda ketadi. Ketguncha
+      // o'tilgan darslar qoladi, 29- va 30-sentabr darslarining puli
+      // qaytadi. Asl kun (22-sentabr) qoldirilganda 30-sentabr darsi
+      // "ketishdan oldin o'tilgan" deb sanalib, bitta darsning puli
+      // markazda qolib ketardi.
+      prismaMock.holiday.findMany.mockResolvedValueOnce([
+        {
+          date: new Date('2026-09-22T00:00:00Z'),
+          endDate: new Date('2026-09-22T00:00:00Z'),
+        },
+      ]);
+      prismaMock.lessonReschedule.findMany.mockResolvedValueOnce([
+        {
+          originalDate: new Date('2026-09-22T00:00:00Z'),
+          newDate: new Date('2026-09-30T00:00:00Z'),
+        },
+      ]);
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValueOnce({
+        ...charge,
+        id: 'chg-dep',
+        status: 'CHARGED',
+        frozenOutDates: [],
+      });
+
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-09-26T00:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqdi',
+        today: '2026-09-26',
+      });
+
+      // 29- va 30-sentabr = 2 dars × 34 615.
+      expect(res?.refunded).toBe(69_230);
+    });
+
+    it("hisob YOZILGANDAN KEYIN yozilgan qoplama muzlatilgan rejani o'zgartirmaydi (ma'lum cheklov)", async () => {
+      // Bu test kamchilikni PINLAYDI, tasdiqlamaydi. `MonthlyBillingCron
+      // Service` hisobni oyning belgilangan kunida yozadi; admin qoplamani
+      // odatda keyinroq yozadi. `CHARGED` qator qayta hisoblanmaydi, demak
+      // reja 12 da qolib oyda 13 ta davomat bo'ladi va ustoz o'sha guruh
+      // uchun oyning 13/12 ulushini oladi. To'liq yechim — ko'chirish
+      // voqeasida hisobni qayta hisoblash — alohida vazifa (dizayn §4).
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        id: 'chg-1',
+        status: 'CHARGED',
+        plannedLessons: 12,
+        perLessonCost: 37_500,
+      });
+      prismaMock.holiday.findMany.mockResolvedValueOnce([
+        {
+          date: new Date('2026-09-01T00:00:00Z'),
+          endDate: new Date('2026-09-01T00:00:00Z'),
+        },
+      ]);
+      prismaMock.lessonReschedule.findMany.mockResolvedValueOnce([
+        {
+          originalDate: new Date('2026-09-01T00:00:00Z'),
+          newDate: new Date('2026-09-04T00:00:00Z'),
+        },
+      ]);
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(charge?.plannedLessons).toBe(12);
+      expect(charge?.perLessonCost).toBe(37_500);
+      // Ko'chirish umuman O'QILMAYDI — muzlatilgan qator darrov qaytariladi.
+      expect(prismaMock.lessonReschedule.findMany).not.toHaveBeenCalled();
+      expect(prismaMock.enrollmentMonthlyCharge.update).not.toHaveBeenCalled();
     });
 
     it('keyingi oyga surilgan qoplama dars bu oyni QUTQARMAYDI', async () => {
@@ -528,6 +697,13 @@ describe('MonthlyChargeService', () => {
 
       expect(charge?.plannedLessons).toBe(12);
       const where = prismaMock.lessonReschedule.findMany.mock.calls[0][0].where;
+      // Guruh chegarasi — boshqa guruhning ko'chirishi bu guruhning
+      // bayramini rejada qoldirib yuborishi mumkin emas.
+      expect(where.groupId).toBe('grp-1');
+      expect(where.originalDate).toEqual({
+        gte: new Date(Date.UTC(2026, 8, 1)),
+        lt: new Date(Date.UTC(2026, 9, 1)),
+      });
       expect(where.newDate).toEqual({
         gte: new Date(Date.UTC(2026, 8, 1)),
         lt: new Date(Date.UTC(2026, 9, 1)),

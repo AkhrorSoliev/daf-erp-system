@@ -12,7 +12,11 @@ import {
   isEmptyScope,
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
-import { tashkentDateStr } from '../attendance/shared/date-utils';
+import {
+  dayOfWeekForDateStr,
+  tashkentDateStr,
+} from '../attendance/shared/date-utils';
+import { buildScheduleDayResolver } from '../attendance/shared/schedule-resolver';
 import {
   splitMonthLessons,
   type ExpectationGroup,
@@ -175,7 +179,7 @@ export class ReportsExpectationService {
             newDate: { gte: startDate, lt: endDateExcl },
             group: groupWhere,
           },
-          select: { groupId: true, originalDate: true },
+          select: { groupId: true, originalDate: true, newDate: true },
         }),
       ]);
     if (groups.length === 0) return empty;
@@ -243,11 +247,19 @@ export class ReportsExpectationService {
       cancelledByGroup.set(c.groupId, set);
     }
 
-    const movedWithinMonthByGroup = new Map<string, Set<string>>();
+    // Guruh bo'yicha ajratiladi, lekin qaysi ko'chirish HISOBGA olinishi
+    // guruh jadvaliga bog'liq — u pastda, `groups.map` ichida ma'lum bo'ladi.
+    const reschedulesByGroup = new Map<
+      string,
+      { originalDay: string; newDay: string }[]
+    >();
     for (const r of reschedules) {
-      const set = movedWithinMonthByGroup.get(r.groupId) ?? new Set<string>();
-      set.add(tashkentDateStr(r.originalDate));
-      movedWithinMonthByGroup.set(r.groupId, set);
+      const list = reschedulesByGroup.get(r.groupId) ?? [];
+      list.push({
+        originalDay: tashkentDateStr(r.originalDate),
+        newDay: tashkentDateStr(r.newDate),
+      });
+      reschedulesByGroup.set(r.groupId, list);
     }
 
     const attByGroup = new Map<string, typeof attendances>();
@@ -256,6 +268,28 @@ export class ReportsExpectationService {
       if (list) list.push(a);
       else attByGroup.set(a.groupId, [a]);
     }
+
+    // Ko'chirish oyga YANGI dars kuni qo'shsagina bayram rejada qoladi.
+    // Qoplama kuni allaqachon jadvaldagi kun bo'lsa (shanba darsi boshqa
+    // shanbaga ko'chirilsa) oyda dars kunlari soni o'zgarmaydi va
+    // `MonthlyChargeService.resolveMonthPlan` bayramni rejadan CHIQARADI —
+    // prognoz ham xuddi shunday qilishi shart, aks holda muzlatilgan narxga
+    // ko'paytirilgan jami hisoblangan puldan farq qiladi.
+    const holidayMakeupsFor = (g: (typeof groups)[number]): Set<string> => {
+      const rows = reschedulesByGroup.get(g.id);
+      if (!rows || rows.length === 0) return new Set<string>();
+      const resolveDays = buildScheduleDayResolver(
+        g.scheduleSnapshots,
+        g.exactDays ?? [],
+      );
+      const out = new Set<string>();
+      for (const r of rows) {
+        const days = resolveDays(r.newDay);
+        if (days && days.includes(dayOfWeekForDateStr(r.newDay))) continue;
+        out.add(r.originalDay);
+      }
+      return out;
+    };
 
     const inputs: ExpectationGroup[] = groups.map((g) => {
       const contractFor = (studentId: number) =>
@@ -343,7 +377,7 @@ export class ReportsExpectationService {
         // yo'q, shuning uchun u yerdagi xulq ataylab tegilmay qoladi.
         holidayMakeupDates:
           g.course.paymentModel === PaymentModel.MONTHLY
-            ? (movedWithinMonthByGroup.get(g.id) ?? new Set<string>())
+            ? holidayMakeupsFor(g)
             : new Set<string>(),
         coveredAttendances: covered,
         uncoveredAttendances: uncovered,
