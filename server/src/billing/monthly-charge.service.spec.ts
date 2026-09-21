@@ -452,15 +452,36 @@ describe('MonthlyChargeService', () => {
       });
     });
 
-    it('bayram kunlarini rejadan chiqaradi va dars narxini oshiradi', async () => {
-      // 1-sentabr 2026 — seshanba, ya'ni rejadagi kunlardan biri.
-      // `buildHolidayDateSet` `date` va `endDate` ikkalasini o'qiydi, shu
-      // sababli bir kunlik bayram uchun ham ikkalasini beramiz.
+    it("bayram kuni rejadan CHIQMAYDI — bayram darsi shu oyda qayta o'tiladi (CEO 21.09.2026, 10-javob)", async () => {
+      // 1-sentabr 2026 — seshanba, rejadagi kun. Bayram bo'lsa ham dars
+      // yo'qolmaydi: shu oy ichida boshqa kunga ko'chirib o'tiladi. Shuning
+      // uchun rejalashtirilgan dars soni 13 da qoladi va dars narxi
+      // oshmaydi — aks holda ko'chirilgan (13-) dars ustozga oydan ORTIQCHA
+      // haq yozardi (1-javob: ustoz oyligi dars soniga bog'liq emas).
       prismaMock.holiday.findMany.mockResolvedValueOnce([
         {
           date: new Date('2026-09-01T00:00:00Z'),
           endDate: new Date('2026-09-01T00:00:00Z'),
         },
+      ]);
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(charge?.plannedLessons).toBe(13);
+      expect(charge?.perLessonCost).toBe(34_615); // 450 000 / 13
+      expect(charge?.chargedAmount).toBe(450_000);
+      // Bayram jadvali umuman so'ralmaydi — bekor qilingan dars yagona istisno.
+      expect(prismaMock.holiday.findMany).not.toHaveBeenCalled();
+    });
+
+    it("bekor qilingan (ko'chirilmagan) dars rejadan CHIQADI — u haqiqatan yo'qolgan dars", async () => {
+      prismaMock.lessonCancellation.findMany.mockResolvedValueOnce([
+        { date: new Date('2026-09-01T00:00:00Z') },
       ]);
 
       const charge = await service.createChargeForEnrollment(tx, {
