@@ -1064,6 +1064,8 @@ describe('MonthlyChargeService', () => {
         departureDate: new Date('2026-09-30T00:00:00Z'),
         companyId: 1,
         reason: 'Guruhdan chiqdi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-09-30',
       });
 
       expect(res).toBeNull();
@@ -1387,6 +1389,12 @@ describe('MonthlyChargeService', () => {
         returnDate: new Date('2026-10-15T00:00:00.000Z'),
         companyId: 1001,
         reason: 'Muzlatishdan chiqarildi',
+        // `restoreChargeForReturn` da ham AYNAN shunday qorovul bor
+        // (`returnDate < today` — monthly-charge.service.ts:758), shuning
+        // uchun bu yerdagi "bugun" ham qotiriladi. Aks holda test o'zi
+        // sinayotgan kodga emas, yurgizilgan KUNGA bog'liq bo'lib qoladi va
+        // sana o'tishi bilan o'z-o'zidan qizil bo'ladi.
+        today: '2026-10-15',
       });
 
       expect(res).toEqual({ charged: 225_001, lessons: 7 });
@@ -1433,6 +1441,8 @@ describe('MonthlyChargeService', () => {
         returnDate: new Date('2026-10-15T00:00:00.000Z'),
         companyId: 1001,
         reason: 'Muzlatishdan chiqarildi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-10-15',
       };
 
       const first = await service.restoreChargeForReturn(tx, params);
@@ -1458,6 +1468,8 @@ describe('MonthlyChargeService', () => {
         returnDate: new Date('2026-10-15T00:00:00.000Z'),
         companyId: 1001,
         reason: 'Muzlatishdan chiqarildi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-10-15',
       });
 
       // 7 x applyDiscount(32 143, 50) = 7 x 16 072 = 112 504
@@ -1475,6 +1487,8 @@ describe('MonthlyChargeService', () => {
         returnDate: new Date('2026-10-15T00:00:00.000Z'),
         companyId: 1001,
         reason: 'Muzlatishdan chiqarildi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-10-15',
       });
 
       expect(res).toBeNull();
@@ -1489,6 +1503,8 @@ describe('MonthlyChargeService', () => {
         returnDate: new Date('2026-11-05T00:00:00.000Z'),
         companyId: 1001,
         reason: 'Muzlatishdan chiqarildi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-11-05',
       });
 
       expect(res).toBeNull();
@@ -1558,6 +1574,8 @@ describe('MonthlyChargeService', () => {
         departureDate: new Date('2026-10-10T00:00:00.000Z'),
         companyId: 1001,
         reason: 'Muzlatish',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-10-10',
       });
       expect(freeze1?.refunded).toBe(289_287); // 9 x 32 143
 
@@ -1566,6 +1584,8 @@ describe('MonthlyChargeService', () => {
         returnDate: new Date('2026-10-15T00:00:00.000Z'),
         companyId: 1001,
         reason: 'Muzlatishdan chiqarildi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-10-15',
       });
       expect(ret).toEqual({ charged: 225_001, lessons: 7 });
 
@@ -1582,6 +1602,8 @@ describe('MonthlyChargeService', () => {
         departureDate: new Date('2026-10-20T00:00:00.000Z'),
         companyId: 1001,
         reason: 'Guruhdan chiqdi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-10-20',
       });
       expect(departure?.refunded).toBe(160_715); // 5 x 32 143
 
@@ -1608,6 +1630,8 @@ describe('MonthlyChargeService', () => {
         departureDate: new Date('2026-10-06T00:00:00.000Z'),
         companyId: 1001,
         reason: 'Muzlatish',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-10-06',
       });
       expect(freeze?.refunded).toBe(353_573); // 11 x 32 143
 
@@ -1616,6 +1640,8 @@ describe('MonthlyChargeService', () => {
         returnDate: new Date('2026-10-27T00:00:00.000Z'),
         companyId: 1001,
         reason: 'Muzlatishdan chiqarildi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-10-27',
       };
 
       const results: Array<{ charged: number; lessons: number } | null> = [];
@@ -1655,6 +1681,8 @@ describe('MonthlyChargeService', () => {
         departureDate: new Date('2026-10-24T00:00:00.000Z'),
         companyId: 1001,
         reason: 'Muzlatish',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-10-24',
       });
 
       const returnParams = {
@@ -1662,6 +1690,8 @@ describe('MonthlyChargeService', () => {
         returnDate: new Date('2026-10-29T00:00:00.000Z'),
         companyId: 1001,
         reason: 'Muzlatishdan chiqarildi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-10-29',
       };
 
       const first = await service.restoreChargeForReturn(tx, returnParams);
@@ -1688,6 +1718,8 @@ describe('MonthlyChargeService', () => {
         departureDate: new Date('2026-10-01T00:00:00.000Z'),
         companyId: 1001,
         reason: 'Muzlatish',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-10-01',
       });
       expect(freeze?.refunded).toBe(353_571); // qopqoq ishladi (13x32143=417 859 emas)
       expect(state.current.chargedAmount).toBe(0);
@@ -1699,6 +1731,8 @@ describe('MonthlyChargeService', () => {
         returnDate: new Date('2026-10-04T00:00:00.000Z'),
         companyId: 1001,
         reason: 'Muzlatishdan chiqarildi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-10-04',
       });
 
       expect(ret?.lessons).toBe(12); // sana-darajasida to'g'ri hisoblandi
@@ -1724,6 +1758,8 @@ describe('MonthlyChargeService', () => {
         departureDate: new Date('2026-09-29T00:00:00.000Z'), // oy boshidan OLDIN
         companyId: 1001,
         reason: 'Muzlatish',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-09-29',
       });
       // 14 x 32 143 = 450 002, lekin chargedAmount 450 000 dan oshib
       // qaytmaydi — qopqoq shu YERDA ham ishlaydi.
@@ -1736,6 +1772,8 @@ describe('MonthlyChargeService', () => {
         returnDate: new Date('2026-09-30T00:00:00.000Z'), // hamon oy boshidan OLDIN
         companyId: 1001,
         reason: 'Muzlatishdan chiqarildi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-09-30',
       });
 
       expect(ret?.lessons).toBe(14); // barcha 14 ta sana tiklandi
