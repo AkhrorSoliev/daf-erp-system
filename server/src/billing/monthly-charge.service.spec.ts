@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { BadRequestException, Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
@@ -1955,5 +1957,65 @@ describe('MonthlyChargeService', () => {
 
       expect(prismaMock.salaryAccrual.updateMany).not.toHaveBeenCalled();
     });
+  });
+});
+
+/**
+ * Bu blok spec'ning O'ZINI tekshiradi, servisni emas.
+ *
+ * `reverseChargeForDeparture` ham, `restoreChargeForReturn` ham bir xil
+ * qorovulni olib yuradi: `departureDate`/`returnDate` bugundan oldin
+ * bo'lsa — rad etiladi (monthly-charge.service.ts:575 va :758). Agar test
+ * qotirilgan sanani uzatib, "bugun"ni uzatmasa, u kodga emas, YURGIZILGAN
+ * KUNGA bog'lanib qoladi: sana o'tishi bilan test o'z-o'zidan qizil
+ * bo'ladi, garchi kodda hech narsa o'zgarmagan bo'lsa ham.
+ *
+ * Shu sinf xatosi bu faylda ikki marta yuz berdi: avval 9 ta
+ * `departureDate` chaqiruvi 20.09.2026 dan keyin yiqildi, keyin esa
+ * tekshiruvda yana 17 ta xuddi shunday chaqiruv (shu jumladan BARCHA
+ * `restoreChargeForReturn` testlari) topildi — ular 30.09.2026 dan
+ * boshlab birin-ketin chiriydigan edi. Uchinchi marta bo'lmasin: bu
+ * qorovul yangi chaqiruv `today` siz qo'shilsa, DARHOL yiqiladi.
+ */
+describe("spec devor soatiga bog'lanmaydi (vaqt bombasi qorovuli)", () => {
+  const SPEC = readFileSync(
+    join(__dirname, 'monthly-charge.service.spec.ts'),
+    'utf8',
+  );
+
+  /**
+   * Ataylab `today` siz qoldirilgan yagona chaqiruv: qorovulning O'ZINI
+   * sinaydigan test (`rejects.toThrow`). 2020-01-01 abadiy o'tmishda —
+   * u devor soati qanday bo'lishidan qat'i nazar barqaror.
+   */
+  const ATAYLAB_TODAYSIZ = ['2020-01-01T00:00:00Z'];
+
+  /** Har bir `departureDate:`/`returnDate:` chaqiruvining obyekt matni. */
+  function chaqiruvlar(): Array<{ qator: number; matn: string }> {
+    const lines = SPEC.split('\n');
+    const out: Array<{ qator: number; matn: string }> = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (!/\b(departureDate|returnDate): new Date\(/.test(lines[i])) continue;
+      const chunk: string[] = [];
+      for (let j = i; j < lines.length; j++) {
+        chunk.push(lines[j]);
+        if (/^\s*\}[),;]/.test(lines[j])) break;
+      }
+      out.push({ qator: i + 1, matn: chunk.join('\n') });
+    }
+    return out;
+  }
+
+  it('har bir departureDate/returnDate chaqiruvi `today` ni ham qotiradi', () => {
+    const sites = chaqiruvlar();
+    // Skaner haqiqatan ishlayotganiga ishonch: regex jim qolib ketmasin.
+    expect(sites.length).toBeGreaterThanOrEqual(20);
+
+    const ochiq = sites
+      .filter((s) => !/\btoday: '\d{4}-\d{2}-\d{2}'/.test(s.matn))
+      .filter((s) => !ATAYLAB_TODAYSIZ.some((d) => s.matn.includes(d)))
+      .map((s) => `${s.qator}-qator`);
+
+    expect(ochiq).toEqual([]);
   });
 });
