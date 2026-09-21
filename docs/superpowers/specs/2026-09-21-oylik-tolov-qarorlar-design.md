@@ -260,10 +260,13 @@ Bularsiz tizim CEO qoidasiga zid pul hisoblaydi:
 1. `FIXED_PER_STUDENT` bo'luvchisi → `plannedLessons` (1-javob)
 2. `includedDates` — ko'chirilgan dars ustozga qo'shimcha haq yozmasin (1, 10)
 3. `payment.debtWriteOffEnabled=false` — kechirish yopiladi (9)
-4. `payment.excusedMode` sozlamasi, boshlang'ich `CREDIT` — mavjud
-   mexanizm 18-javobdagi «ikkalasi»ning bir yo'li sifatida chiqadi;
-   qayta dars mexanizmi keyin qo'shiladi
-5. Migratsiya hisobotini bugungi bazada qayta yurgizish
+4. ~~`payment.excusedMode`~~ — **kiritilmaydi.** 18-javob «ikkalasi ham»
+   dedi, lekin `RETEACH` mexanizmi yo'q; faqat `CREDIT` bor bo'lgan enum
+   dekorativ variant bo'lardi (reyestr qoidasi: sozlama faqat iste'molchisi
+   bilan). Mavjud `payment.excusedCreditEnabled` kredit yo'lining o'zi;
+   `excusedMode` 4-bosqichda `RETEACH` bilan birga keladi
+5. Migratsiya hisobotini bugungi bazada qayta yurgizish — **sxema chiqqandan
+   KEYIN** (pastga qarang)
 
 ### Chiqishdan KEYIN — bosqichlar
 
@@ -293,11 +296,19 @@ administrator hozirgi «avtomatik balansga qaytadi» yo'lini oladi, bu
 
 ## 10. Keyingi qadamlar
 
-1. 9-bo'limdagi «chiqishdan oldin» ro'yxati uchun **amalga oshirish rejasi** yoziladi
-2. Shox bugungi `main` ustiga ko'chiriladi (508 commit orqada)
-3. Migratsiyaning **sinov hisoboti** bugungi bazada yurgiziladi
-4. CEO hisobotni o'qib tasdiqlaydi
-5. Prodga chiqariladi
+1. ✅ Amalga oshirish rejasi: [2026-09-21-oylik-tolov-chiqishdan-oldin.md](../plans/2026-09-21-oylik-tolov-chiqishdan-oldin.md)
+2. Reja bo'yicha 5 ish shoxda bajariladi
+3. Shox bugungi `main` ustiga ko'chiriladi (508 commit orqada)
+4. **Sxema + kod prodga chiqariladi** — xatti-harakat o'zgarmaydi:
+   `Course.paymentModel` DEFAULT `LESSON_PACK`, `payment.defaultModel`
+   boshlang'ichi `LESSON_PACK`, cron oylik kurs topmaydi
+5. Migratsiyaning **sinov hisoboti** prodda yurgiziladi — u
+   `EnrollmentMonthlyCharge` jadvaliga murojaat qiladi (`scopeWhere`),
+   shuning uchun sxemadan OLDIN yurolmaydi. Avvalgi «hisobot → chiqarish»
+   tartibi shu sababdan teskarisiga o'zgardi
+6. CEO hisobotni o'qib tasdiqlaydi
+7. `--apply --limit=5` → `verify` → limitsiz `--apply` → `verify`
+8. CEO Sozlamalar → To'lov da standart modelni **Oylik** qiladi
 
 **Dasturdan tashqari:** shartnoma yurist bilan tuzatilishi kerak —
 narxlar yangilanadi, «oyiga 12 dars» olib tashlanadi, markaz aybi bilan
