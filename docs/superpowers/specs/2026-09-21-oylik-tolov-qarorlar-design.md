@@ -47,7 +47,7 @@ qo'shilishi kerak.
 |---|---|---|
 | §3 Q3/Q4: uzrli dars → **kredit** (keyingi oy to'lovi kamayadi) | **Asosiysi — dars qayta o'tiladi.** Kredit — ikkinchi yo'l, imkoni bo'lmaganda | §5.2 dagi `excusedLessons` mexanizmi **ixtiyoriy** bo'ladi; qayta dars mexanizmi **yangi** |
 | §5.4: o'rtada ketganda pul **avtomatik** balansga qaytadi | **Administrator tanlaydi:** pul o'quvchigami yoki markazga | Yangi dialog + tanlov oqibatini ko'rsatish |
-| §5.5: 14-dars o'tilsa **o'qituvchiga haq yoziladi** (markaz ko'taradi) | **Ustoz oyligi dars soniga bog'liq emas** — 13 ham, 14 ham bir xil | ⚠️ Eng katta kod ta'siri — 4-bo'limga qara |
+| §5.5: 14-dars o'tilsa **o'qituvchiga haq yoziladi** (markaz ko'taradi) | **Ustoz oyligi dars soniga bog'liq emas** — 13 ham, 14 ham bir xil | `PERCENTAGE` allaqachon shunday; `FIXED_PER_STUDENT` bo'luvchisi va ko'chirilgan dars qoidasi — 4-bo'lim |
 | §8: 6 ta sozlama, kompaniya darajasida | **~25 ta sozlama, filial darajasida** | Sozlamalar sahifasi qayta quriladi |
 | §12: «guruh/o'quvchi darajasida to'lov turini ustidan yozish» keyingi bosqichga | Eski **12 talik usul saqlanadi** (`LESSON_PACK`) | Qo'shimcha ish emas — mavjud `Course.paymentModel` yetarli, faqat o'chirmaslik kerak |
 
@@ -60,35 +60,35 @@ qo'shilishi kerak.
 
 ---
 
-## 4. ⚠️ Ustoz oyligi — eng katta kod ta'siri
+## 4. Ustoz oyligi — kod tekshirildi, ta'siri kutilgandan kichik
 
 CEO: «Oyda dars soni o'zgarsa, ustoz oyligi o'zgarmasin.»
 
-Hozirgi tizimda ustoz **dars boshiga** haq oladi (`PERCENTAGE` yoki
-`FIXED_PER_STUDENT`), ya'ni 14 darslik oyda 13 darslik oydan ko'proq
-oladi. Asl dizayn (§5.5) buni ataylab saqlagan edi.
+Dastlab bu «eng katta kod ta'siri» deb baholangan edi. Kod tekshirilgach
+(`salary/shared/deserved-math.ts`, `monthly-charge.service.ts`) rasm
+boshqacha:
 
-**Yangi qoidada bu ishlamaydi.** Ikki yo'l bor:
+**`PERCENTAGE` — allaqachon to'g'ri.** Oylik yo'lda ustoz haqi
+`perLessonCost` dan hisoblanadi, u esa hisob yaratilganda
+`oylik narx / o'sha oydagi dars soni` sifatida **muzlatiladi**. 13 darslik
+oyda har dars qimmatroq, 14 darslikda arzonroq — jami bir xil. Bu aynan
+o'quvchi tomonidagi qoida, va u allaqachon ishlaydi.
 
-**A) Ustozni `FIXED_MONTHLY` ga o'tkazish** — rad etiladi. O'rtada
-qo'shilgan/ketgan o'quvchi uchun proratsiya buziladi, `SalaryAccrual`
-o'quvchi boshiga yozilishi yo'qoladi, va «markaz qo'shimchasi»
-mexanizmi ishlamay qoladi.
+**`FIXED_PER_STUDENT` — bitta bo'luvchi noto'g'ri.** Hozir
+`value / lessonPaymentCount` (kursdagi 12). 14 darslik oyda
+14 × value/12 chiqadi — oydan oshadi. Oylik kursda bo'luvchi
+`plannedLessons` bo'lishi kerak. Bir qatorlik o'zgarish + test.
 
-**B) Dars narxini OYDAN kelib chiqib hisoblash** — tanlanadi:
+**Ko'chirilgan dars — `plannedLessons` ni buzadi.** `lessonDatesInMonth`
+bayram va bekor qilingan kunlarni **chiqarib tashlaydi**
+(`excludedDates`), lekin ko'chirilgan darsning **yangi kunini
+qo'shmaydi**. Bayram darsi boshqa kunga ko'chirilsa (10-javob), o'sha kun
+rejaga kirmaydi → 14-dars sifatida §5.5 bo'yicha ustozga qo'shimcha haq
+yoziladi → 1-javobga zid. Yechim: `includedDates` parametri
+(`LessonReschedule` maqsad kunlari). Shunda ko'chirilgan dars bayram
+o'rnini egallaydi, sanoq o'zgarmaydi, qo'shimcha haq yozilmaydi.
 
-```
-perLessonAccrual = oylik haq / o'sha oydagi dars soni
-```
-
-13 darslik oy: har dars qimmatroq. 14 darslik oy: har dars arzonroq.
-**Oylik jami — bir xil.** Bu o'quvchi tomonidagi mantiqning aynan
-ko'zgusi (`oylik narx / o'sha oydagi dars soni`), shuning uchun ikkala
-tomon ham bitta qoida bilan yuradi.
-
-Ta'sir qiladigan joylar: `salary/shared/deserved-math.ts`
-(`perLessonAccrual`), `salary-accrual.service.ts`, va gap-sweep
-(`computeGapAccruals`). `FIXED_MONTHLY` xodimlarga tegmaydi.
+`FIXED_MONTHLY` xodimlarga tegmaydi.
 
 ---
 
@@ -169,31 +169,39 @@ Har biri kompaniya **va** filial darajasida. `payment.` prefiksi bilan.
 7. **Uzrli darsni qayta o'tish mexanizmi** — hozir yo'q. Mavjud
    `LessonReschedule` butun guruhni ko'chiradi; bu esa bitta o'quvchiga
    qarzdor bo'lingan darsni kuzatishi kerak.
-8. **Ustoz oyligini oydan normallashtirish** — 4-bo'limga qara.
+8. **`FIXED_PER_STUDENT` bo'luvchisi + `includedDates`** — 4-bo'limga qara. Kichik.
 
 ---
 
 ## 7. ⚠️ Mavjud tizim bilan ziddiyatlar
 
-### 7.1 Qarz kechirish — CEO taqiqladi, tizimda esa bor
+### 7.1 Qarz kechirish — CEO taqiqladi, tizimda esa ochiq amal sifatida bor
 
 CEO: «Qarz kechirilishi bo'lmaydi. Ketgan o'quvchi 1 yildan keyin qaytsa
 ham uni qayta aniqlay olishimiz kerak. Qancha vaqt o'tsa ham qachon
 qancha qarz qolganini bilishimiz kerak.»
 
-Tizimda esa:
+Tizimda kechirish **avtomatik emas** — bu ataylab qilinadigan amal:
 
-- `student-enrollment.service.ts` guruhdan chiqarishda `DEBT_WRITE_OFF`
-  qatori yozadi — ya'ni **qarzni o'chiradi**
-- `/payments/debt` sahifasida «Kechirilganlar» tabi bor
-- `POST /billing/debt-write-offs/:id/reverse` (CEO) qaytarish yo'li bor
+- `POST /students/:id/enrollments/:enrollmentId/write-off-cycle-debt` —
+  faqat DROPPED/FROZEN yozuv uchun, `reason` + `confirmAmount` majburiy,
+  `@Roles('CEO', 'Branch Director', 'Administrator')`
+- `removeFromGroup` da `writeOffCycleDebt=true` bayrog'i — chiqarish
+  vaqtida ixtiyoriy
+- `/payments/debt` → «Kechirilganlar» tabi va CEO uchun qaytarish yo'li
 
-**Qaror kerak:** chiqarishdagi avtomatik kechirish olib tashlanadimi,
-yoki sozlama bilan o'chiriladimi? Va prodda allaqachon yozilgan
-kechirilgan qarzlar bilan nima qilinadi?
+Hech kim hech narsani bexosdan o'chirmaydi. Lekin 9-javobga ko'ra bu
+amal umuman bo'lmasligi kerak — va hozir uni Administrator ham qila
+oladi.
 
-«Qachon qancha qarz qolgan» talabi allaqachon bajarilgan:
-`ReportsDebtHistoryService` qarzni paydo bo'lgan oyi bo'yicha ajratadi.
+**Qaror:** amal `payment.debtWriteOffEnabled` sozlamasi bilan yopiladi
+(boshlang'ich `false`), tugma va bayroq yashiriladi, server rad etadi.
+O'chirib tashlash o'rniga sozlama — chunki prodda allaqachon kechirilgan
+qarzlar bor va ularning tarixi «Kechirilganlar» tabida ko'rinib turishi
+kerak (9-javobning «qachon qancha qarz qolgan» talabi).
+
+«Qachon qancha qarz qolgan» — `ReportsDebtHistoryService` qarzni paydo
+bo'lgan oyi bo'yicha allaqachon ajratadi. Yangi mantiq shart emas.
 
 ### 7.2 `chargeDayOfMonth` kompaniya darajasiga qulflangan
 
@@ -218,15 +226,74 @@ Direktorlar va administratorlar uchun cheklov yo'qligi saqlanadi.
 1. **Muzlatishda:** administrator «sababli» desa-yu, o'quvchi baribir
    qaytmasa — `frozenMoneyHoldDays` muhlati baribir ishlaydimi va pul
    markazga o'tadimi?
-2. **Qarz kechirish:** 7.1 dagi qaror.
+2. **Qarz kechirish:** 7.1 dagi yechim (sozlama bilan yopish) CEO tasdig'ini kutadi.
 3. **`attendanceGraceHours`** boshlang'ich qiymati belgilanmagan.
 4. **`minStudentPaymentPercent`** yuqori chegarasi belgilanmagan.
 
 ---
 
-## 9. Keyingi qadamlar
+## 9. Mavjud rejaning ko'rigi (21.09)
 
-1. Bu hujjat asosida **amalga oshirish rejasi** yoziladi
+`2026-09-02-oylik-tolov-yadro.md` — 10 vazifa, hammasi commit qilingan.
+Har biri 26 javob bilan solishtirildi.
+
+| Vazifa | Holati | Izoh |
+|---|---|---|
+| 1 Sxema | ✅ turadi | `PaymentModel` ikkala usulni saqlaydi (23-javob). Qo'shimcha: muzlatish muddati muhri, kurs narxi amal sanasi |
+| 2 Oylik arifmetika | ✅ turadi | Kredit qo'llash (`applyLessonCredit`) `excusedMode` ga bog'lanadi |
+| 3 Oydagi dars kunlari | ⚠️ kichik | `includedDates` qo'shiladi — ko'chirilgan dars sanoqni buzmasin (4-bo'lim) |
+| 4 Ledger yozuvi | ✅ turadi | — |
+| 5 `MonthlyChargeService` | ⚠️ | Kredit ixtiyoriy bo'ladi; muzlatish oqimi qayta ishlanadi (19-javob) |
+| 6 Davomat `MONTHLY` shoxi | ⚠️ kichik | `FIXED_PER_STUDENT` bo'luvchisi; `EXCUSED` → kredit faqat sozlama ruxsat bersa |
+| 7 Oy boshi croni | ⚠️ | Filial bo'yicha yurishi kerak (7.2) — 3-bosqichga |
+| 8 O'rtada qo'shilgan/ketgan | ⚠️ | Kurs almashish **allaqachon har guruh o'z dars soni bilan** (13-javob) ✅ — test qo'shiladi. Ketish: pul manzili parametr bo'ladi (6-javob); `dropWithholdPercent` (20-javob) |
+| 9 Migratsiya hisoboti | ⚠️ | Bugungi bazada qayta yurgiziladi; sana 01.09 → yangi sana |
+| 10 Migratsiya qo'llash | ✅ turadi | Sana o'zgaradi |
+
+**Xulosa:** 10 vazifadan hech biri bekor bo'lmadi. Ikkitasi bir qatorlik
+tuzatish, uchtasi yangi parametr, bittasi (cron) keyingi bosqichga.
+
+### Chiqishdan OLDIN shart bo'lganlar
+
+Bularsiz tizim CEO qoidasiga zid pul hisoblaydi:
+
+1. `FIXED_PER_STUDENT` bo'luvchisi → `plannedLessons` (1-javob)
+2. `includedDates` — ko'chirilgan dars ustozga qo'shimcha haq yozmasin (1, 10)
+3. `payment.debtWriteOffEnabled=false` — kechirish yopiladi (9)
+4. `payment.excusedMode` sozlamasi, boshlang'ich `CREDIT` — mavjud
+   mexanizm 18-javobdagi «ikkalasi»ning bir yo'li sifatida chiqadi;
+   qayta dars mexanizmi keyin qo'shiladi
+5. Migratsiya hisobotini bugungi bazada qayta yurgizish
+
+### Chiqishdan KEYIN — bosqichlar
+
+**2-bosqich — pul qarorlari dialoglari.** Muzlatilgan pul: ushlab
+turish + administrator sababli/sababsiz tanlovi + muddat muhri (19).
+Ketish: pul o'quvchigami/markazgami (6). `dropWithholdPercent` (20).
+Ikkala dialog uchun **bitta umumiy «oqibat ko'rsatuvchi»** komponent —
+CEO talabi: tanlashdan oldin summa ko'rinib turadi.
+
+**3-bosqich — sozlamalar kengayishi.** Filial darajasida tahrirlash.
+`chargeDayOfMonth` filialga + cron filial bo'yicha (7.2). Davomat
+muhlati (2). Uzrli dars: soat + ma'lumotnoma bayrog'i (8, 24). Qarz
+ko'rinish/ogohlantirish kunlari (21).
+
+**4-bosqich — yangi ekranlar.** Qayta dars mexanizmi (18). Imtiyozlilar
+ro'yxati + 100% taqiqi (17). Kurs narxiga amal sanasi (26). Asl
+dizaynning 3-bosqichi: profil nishoni, balans kartasi, qarzdorlar
+ro'yxati, Telegram matnlari.
+
+**Nega shu tartib:** 1-bosqich o'quvchidan noto'g'ri pul olmaydi va
+ustozga noto'g'ri haq yozmaydi. 2–4 bosqichlar qulaylik va nazorat
+qo'shadi, lekin ularsiz ham hisob to'g'ri — yo'q dialog o'rnida
+administrator hozirgi «avtomatik balansga qaytadi» yo'lini oladi, bu
+19-javobdagi «sababli» natijaning o'zi.
+
+---
+
+## 10. Keyingi qadamlar
+
+1. 9-bo'limdagi «chiqishdan oldin» ro'yxati uchun **amalga oshirish rejasi** yoziladi
 2. Shox bugungi `main` ustiga ko'chiriladi (508 commit orqada)
 3. Migratsiyaning **sinov hisoboti** bugungi bazada yurgiziladi
 4. CEO hisobotni o'qib tasdiqlaydi
