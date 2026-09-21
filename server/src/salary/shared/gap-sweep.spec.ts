@@ -142,6 +142,13 @@ describe('sweepGapLessons — MONTHLY kurs narxi', () => {
       }),
     );
     expect(eight.lessons[0].amount).toBe(15_000);
+
+    // Bo'luvchi darsning O'ZIDA ham olib chiqiladi. Cron summani qayta
+    // ishonmaydi: u `createAccrual` ga `lessonDivisor` sifatida shuni
+    // uzatadi va summa O'SHA YERDA qaytadan hisoblanadi — bo'luvchi
+    // yo'qolsa cron yana 12 ga bo'lib pul YOZARDI.
+    expect(thirteen.lessons[0].divisor).toBe(13);
+    expect(eight.lessons[0].divisor).toBe(8);
   });
 
   it("muzlatilgan hisob yo'q bo'lsa — narxlamaydi, SANAYDI", () => {
@@ -192,6 +199,8 @@ describe("sweepGapLessons — LESSON_PACK o'zgarmaydi", () => {
     const res = sweepGapLessons(buildInput(PACK_COURSE, FIXED_PER_STUDENT));
 
     expect(res.lessons[0].amount).toBe(10_000); // 120 000 / 12
+    // 12 talik yo'lda bo'luvchi — kursning `lessonPaymentCount` i.
+    expect(res.lessons[0].divisor).toBe(12);
   });
 
   it("lessonPaymentCount = 0 bo'lsa 12 ga tushadi (eski zaxira)", () => {

@@ -209,6 +209,75 @@ describe('SalaryCalculationService', () => {
       );
     });
 
+    // Oylik kursda cron `createAccrual` ga BO'LUVCHINI ham berishi kerak.
+    // `createAccrual` summani o'zi qaytadan hisoblaydi; bo'luvchi
+    // berilmasa u kursning `lessonPaymentCount` iga (12) qaytadi va
+    // markaz qo'shimchasi 13 darslik oyda ham 12 ga bo'linib YOZILARDI.
+    it("MONTHLY: markaz qo'shimchasi oyning bo'luvchisi bilan yoziladi", async () => {
+      prisma.attendance.findMany.mockResolvedValue([
+        {
+          id: 'att-1',
+          studentId: 100,
+          groupId: 'g1',
+          date: new Date('2026-07-10'),
+        },
+      ]);
+      prisma.attendance.groupBy.mockResolvedValue([
+        { studentId: 100, groupId: 'g1', _count: { _all: 6 } },
+      ]);
+      // `lessonPaymentCount: 12` ATAYLAB qoldirilgan: oylik kursda u
+      // ma'nosiz va natijaga TEGMASLIGI kerak.
+      prisma.group.findMany.mockResolvedValue([
+        {
+          id: 'g1',
+          course: {
+            price: 400_000,
+            lessonPaymentCount: 12,
+            paymentModel: 'MONTHLY',
+          },
+        },
+      ]);
+      // Muzlatilgan iyul hisobi — 13 darslik oy.
+      prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+        {
+          studentId: 100,
+          groupId: 'g1',
+          periodYear: 2026,
+          periodMonth: 7,
+          perLessonCost: 30_769,
+          plannedLessons: 13,
+        },
+      ]);
+      prisma.groupTeacher.findMany.mockResolvedValue([
+        { groupId: 'g1', teacherId: 10010 },
+      ]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          salaryType: 'FIXED_PER_STUDENT',
+          value: 120_000,
+          effectiveFrom: new Date('2026-05-01'),
+          effectiveTo: null,
+          config: {
+            userId: 10010,
+            groupId: null,
+            salaryType: 'FIXED_PER_STUDENT',
+          },
+        },
+      ]);
+
+      await service.calculateMonthlySalaries(1, {
+        asOfDate: julyAsOf,
+        now: julyNow,
+      });
+
+      expect(accrualService.createAccrual).toHaveBeenCalledTimes(1);
+      const arg = accrualService.createAccrual.mock.calls[0][0];
+      expect(arg.perLessonCost).toBe(30_769);
+      expect(arg.centerFunded).toBe(true);
+      // 13, 12 EMAS: 120 000 / 13 = 9 231, 12 ga bo'lish 10 000 berardi.
+      expect(arg.lessonDivisor).toBe(13);
+    });
+
     it('BR-09: withholds the center top-up for a new student below the lesson threshold', async () => {
       prisma.attendance.findMany.mockResolvedValue([
         {
