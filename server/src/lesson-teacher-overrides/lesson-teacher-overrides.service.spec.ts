@@ -258,6 +258,30 @@ describe('LessonTeacherOverridesService', () => {
       expect(tx.transaction.findMany).not.toHaveBeenCalled();
     });
 
+    it('muzlatilgan `plannedLessons` ni `lessonDivisor` sifatida uzatadi', async () => {
+      // 13 — ATAYLAB 12 dan farqli son. `createAccrual` bo'luvchi
+      // berilmasa kursning `lessonPaymentCount` (12) iga qaytadi, shuning
+      // uchun uzatish yo'qolsa bu test yiqiladi.
+      monthlyCharge.findChargeForLesson.mockResolvedValue({
+        perLessonCost: 30_769,
+        plannedLessons: 13,
+        transactionId: 'mon-tx-1',
+      });
+
+      await service.upsert(
+        'group-1',
+        wednesday,
+        { teacherIds: [10042] },
+        1,
+        99,
+      );
+
+      expect(salaryAccrual.createAccrual).toHaveBeenCalledTimes(1);
+      expect(salaryAccrual.createAccrual.mock.calls[0][0].lessonDivisor).toBe(
+        13,
+      );
+    });
+
     it('oylik hisob topilmasa haq yozmaydi va xatoni jurnalga tushiradi', async () => {
       const errorSpy = jest
         .spyOn((service as any).logger, 'error')
@@ -275,6 +299,58 @@ describe('LessonTeacherOverridesService', () => {
       expect(salaryAccrual.createAccrual).not.toHaveBeenCalled();
       expect(errorSpy).toHaveBeenCalled();
       errorSpy.mockRestore();
+    });
+  });
+
+  // LESSON_PACK yo'li o'zgarmasligi — qat'iy cheklov. Oylik bo'luvchi
+  // faqat oylik shoxda tug'iladi; bu yerda `createAccrual` uni OLMASLIGI
+  // kerak, aks holda kursning `lessonPaymentCount` i chetlab o'tilardi.
+  describe('recomputeAccruals — LESSON_PACK kurs', () => {
+    const wednesday = '2026-05-13';
+
+    beforeEach(() => {
+      tx.group.findFirst.mockResolvedValue({
+        id: 'group-1',
+        exactDays: ['wednesday'],
+      });
+      tx.lessonTeacherOverride.findFirst.mockResolvedValue(null);
+      tx.lessonTeacherOverride.create.mockResolvedValue({ id: 'override-1' });
+      tx.groupTeacher.findMany.mockResolvedValue([{ teacherId: 10001 }]);
+      tx.attendance.findMany.mockResolvedValue([
+        { id: 'att-1', studentId: 30001 },
+      ]);
+      tx.transaction.findMany.mockResolvedValue([
+        {
+          attendanceId: 'att-1',
+          metadata: { perLessonCost: 33_333 },
+          createdAt: new Date('2026-05-13T04:30:00.000Z'),
+        },
+      ]);
+      // 1-chaqiruv — `resolveBilledEnrollmentId` (darsni hisoblagan
+      // yozilish), 2-chaqiruv — `resolveFundingDeductionId` dagi
+      // LESSON_DEDUCTION.
+      tx.transaction.findFirst
+        .mockResolvedValueOnce({ enrollmentId: 'enr-1' })
+        .mockResolvedValueOnce({ id: 'ded-1' });
+      tx.salaryAccrual = { findFirst: jest.fn().mockResolvedValue(null) };
+    });
+
+    it("`lessonDivisor` uzatilmaydi — 12 talik yo'l o'zgarmaydi", async () => {
+      await service.upsert(
+        'group-1',
+        wednesday,
+        { teacherIds: [10042] },
+        1,
+        99,
+      );
+
+      expect(salaryAccrual.createAccrual).toHaveBeenCalledTimes(1);
+      const arg = salaryAccrual.createAccrual.mock.calls[0][0];
+      expect(arg.perLessonCost).toBe(33_333);
+      expect(arg.deductionTransactionId).toBe('ded-1');
+      expect(arg.lessonDivisor).toBeUndefined();
+      // Oylik hisob bu yo'lda umuman so'ralmaydi.
+      expect(monthlyCharge.findChargeForLesson).not.toHaveBeenCalled();
     });
   });
 
