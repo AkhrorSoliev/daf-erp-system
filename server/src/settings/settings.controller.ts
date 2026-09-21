@@ -82,6 +82,9 @@ export class SettingsController {
     if (dto.chargeDayOfMonth !== undefined) {
       edits.push(['payment.chargeDayOfMonth', dto.chargeDayOfMonth]);
     }
+    if (dto.debtWriteOffEnabled !== undefined) {
+      edits.push(['payment.debtWriteOffEnabled', dto.debtWriteOffEnabled]);
+    }
 
     if (edits.length === 0) {
       throw new BadRequestException('Kamida bitta sozlama yuborilishi kerak');

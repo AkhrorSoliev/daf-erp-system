@@ -50,7 +50,7 @@ describe('SettingsService', () => {
   describe('get', () => {
     it('never returns undefined — falls back to the coded default when nothing is stored', async () => {
       const value = await service.get(COMPANY_ID, 'payment.defaultModel');
-      expect(value).toBe('MONTHLY');
+      expect(value).toBe('LESSON_PACK');
     });
 
     it('company value wins over the coded default', async () => {
@@ -91,7 +91,7 @@ describe('SettingsService', () => {
     it('degrades to the DB when redis read fails, never throws', async () => {
       redis.get.mockRejectedValue(new Error('ECONNREFUSED'));
       const value = await service.get(COMPANY_ID, 'payment.defaultModel');
-      expect(value).toBe('MONTHLY');
+      expect(value).toBe('LESSON_PACK');
       expect(prisma.setting.findMany).toHaveBeenCalled();
     });
   });
@@ -104,10 +104,11 @@ describe('SettingsService', () => {
       const all = await service.getMany(COMPANY_ID);
       expect(prisma.setting.findMany).toHaveBeenCalledTimes(1);
       expect(all).toEqual({
-        'payment.defaultModel': 'MONTHLY',
+        'payment.defaultModel': 'LESSON_PACK',
         'payment.excusedCreditEnabled': false,
         'payment.excusedCreditMonthlyCap': null,
         'payment.chargeDayOfMonth': 1,
+        'payment.debtWriteOffEnabled': false,
       });
     });
   });
@@ -128,6 +129,7 @@ describe('SettingsService', () => {
         'payment.excusedCreditEnabled': [3, 7],
         'payment.excusedCreditMonthlyCap': [3],
         'payment.chargeDayOfMonth': [],
+        'payment.debtWriteOffEnabled': [],
       });
     });
 

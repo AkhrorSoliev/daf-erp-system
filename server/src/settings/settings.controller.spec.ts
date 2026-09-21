@@ -14,10 +14,11 @@ describe('SettingsController — role guard', () => {
 
   const mockSettingsService = {
     getMany: jest.fn().mockResolvedValue({
-      'payment.defaultModel': 'MONTHLY',
+      'payment.defaultModel': 'LESSON_PACK',
       'payment.excusedCreditEnabled': true,
       'payment.excusedCreditMonthlyCap': null,
       'payment.chargeDayOfMonth': 1,
+      'payment.debtWriteOffEnabled': false,
     }),
     set: jest.fn(),
   };
@@ -103,10 +104,11 @@ describe('SettingsController — branch scope', () => {
   beforeEach(() => {
     settingsService = {
       getMany: jest.fn().mockResolvedValue({
-        'payment.defaultModel': 'MONTHLY',
+        'payment.defaultModel': 'LESSON_PACK',
         'payment.excusedCreditEnabled': true,
         'payment.excusedCreditMonthlyCap': null,
         'payment.chargeDayOfMonth': 1,
+        'payment.debtWriteOffEnabled': false,
       }),
       set: jest.fn().mockResolvedValue(undefined),
       getBranchOverrides: jest.fn().mockResolvedValue({
@@ -114,6 +116,7 @@ describe('SettingsController — branch scope', () => {
         'payment.excusedCreditEnabled': [5],
         'payment.excusedCreditMonthlyCap': [],
         'payment.chargeDayOfMonth': [],
+        'payment.debtWriteOffEnabled': [],
       }),
     };
     prisma = {
@@ -142,6 +145,7 @@ describe('SettingsController — branch scope', () => {
       'payment.excusedCreditEnabled': [5],
       'payment.excusedCreditMonthlyCap': [],
       'payment.chargeDayOfMonth': [],
+      'payment.debtWriteOffEnabled': [],
     });
   });
 
@@ -188,6 +192,22 @@ describe('SettingsController — branch scope', () => {
       1001,
       'payment.chargeDayOfMonth',
       10,
+      2,
+      5,
+    );
+  });
+
+  it('debtWriteOffEnabled is written through its registry key (branch-level for a Branch Director)', async () => {
+    prisma.user.findFirst.mockResolvedValue(bdUser);
+    await controller.updatePayment(
+      { debtWriteOffEnabled: true } as any,
+      2,
+      1001,
+    );
+    expect(settingsService.set).toHaveBeenCalledWith(
+      1001,
+      'payment.debtWriteOffEnabled',
+      true,
       2,
       5,
     );
