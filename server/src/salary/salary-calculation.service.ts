@@ -34,6 +34,12 @@ interface GapSpec {
   // has closed, the current open period start to credit it to. Undefined for an
   // ordinary in-period gap (bucketed by lessonDate).
   creditPeriodDate?: Date;
+  // `FIXED_PER_STUDENT` bo'luvchisi — `resolveLessonPricing().divisor` dan,
+  // sweep va BR-09b tsikli ikkalasi ham to'ldiradi. `writeCenterTopUpAccruals`
+  // buni `createAccrual({ lessonDivisor })` ga uzatadi; aks holda oylik
+  // kursda cron yana kursning `lessonPaymentCount` (12) siga bo'lib yozadi —
+  // report to'g'ri ko'rsatib, pul noto'g'ri yozilib qolardi.
+  lessonDivisor?: number;
 }
 
 @Injectable()
@@ -479,6 +485,7 @@ export class SalaryCalculationService {
                 attendanceId: g.attendanceId,
                 lessonDate: g.lessonDate,
                 perLessonCost: g.perLessonCost,
+                lessonDivisor: g.lessonDivisor,
                 companyId,
                 centerFunded: true,
                 // BR-09b: a backfilled lesson is credited to the current open
@@ -752,6 +759,7 @@ export class SalaryCalculationService {
         attendanceId: lesson.attendanceId,
         lessonDate: lesson.lessonDate,
         perLessonCost: lesson.perLessonCost,
+        lessonDivisor: lesson.divisor,
       });
       gapByUser.set(lesson.teacherId, arr);
     }
@@ -827,6 +835,7 @@ export class SalaryCalculationService {
             attendanceId: att.id,
             lessonDate: att.date,
             perLessonCost,
+            lessonDivisor: divisor,
             creditPeriodDate: periodStart,
           });
           gapByUser.set(tid, arr);

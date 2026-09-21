@@ -30,6 +30,16 @@ export interface GapLesson {
   amount: number;
   /** Full lesson price, frozen from the course at sweep time. */
   perLessonCost: number;
+  /**
+   * `FIXED_PER_STUDENT` bo'luvchisi — 12 talik kursda `lessonPaymentCount`,
+   * oylik kursda o'sha oyning muzlatilgan `plannedLessons`i
+   * (`resolveLessonPricing().divisor` bilan bir xil). Chaqiruvchi buni
+   * `createAccrual`ga `lessonDivisor` sifatida ELTISHI SHART — aks holda
+   * cron oylik kursni yana 12 ga bo'lib yozadi (bu vazifa yo'qotmoqchi
+   * bo'lgan xato jonli davomat yo'lida tuzatilgan, lekin markaz
+   * qo'shimchasini YOZADIGAN shu yo'lda unutilgan edi).
+   */
+  divisor: number;
 }
 
 export interface GapSweepInput {
@@ -226,6 +236,7 @@ export function sweepGapLessons(input: GapSweepInput): GapSweepResult {
         lessonDate: att.date,
         amount,
         perLessonCost,
+        divisor,
       });
     }
   }
