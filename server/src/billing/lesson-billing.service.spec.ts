@@ -1359,8 +1359,10 @@ describe('LessonBillingService', () => {
       const txLocal: any = {
         enrollment: { findUnique: jest.fn() },
         // 2026-04-01 — chorshanba, guruhning dars kuni (mon/wed/fri) — shu
-        // kunga bayram qo'yilgan, shuning uchun rejalashtirilgan darslar
-        // sonidan bittasi tushib qolishi kerak.
+        // kunga bayram qo'yilgan. 10-javobdan keyin bayram rejadan
+        // CHIQMAYDI: ikkala yo'l ham 13 ni ko'rishi va bir xil narx
+        // berishi kerak. Bayram jadvali bu yerda ataylab qoldirilgan —
+        // u E'TIBORSIZ qolishini ham shu test isbotlaydi.
         holiday: {
           findMany: jest.fn().mockResolvedValue([
             {
@@ -1489,8 +1491,8 @@ describe('LessonBillingService', () => {
         },
       );
 
-      // 450_000 / 12 (13 rejalashtirilgan dars − 1 bayram) = 37_500.
-      expect(realCharge?.perLessonCost).toBe(37_500);
+      // 450_000 / 13 — bayram rejadan chiqmaydi (10-javob), 13 dars.
+      expect(realCharge?.perLessonCost).toBe(34_615);
       expect(fallbackPerLessonCost).toBe(realCharge?.perLessonCost);
 
       // 3) Bu tsiklning O'ZI markaz qoplagani bayrog'ining tozalanadigan

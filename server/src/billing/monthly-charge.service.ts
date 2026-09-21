@@ -10,7 +10,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsWriteService } from '../transactions/transactions-write.service';
 import { SettingsService } from '../settings/settings.service';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
-import { buildHolidayDateSet } from '../holidays/holiday-date-set';
 import { lessonDatesInMonth } from './planned-lessons';
 import {
   applyDiscount,
@@ -1068,46 +1067,51 @@ export class MonthlyChargeService {
   }
 
   /**
-   * Bayramlar + bekor qilingan darslar, 'YYYY-MM-DD' ro'yxati.
+   * Rejadan CHIQADIGAN kunlar, 'YYYY-MM-DD' ro'yxati — faqat bekor qilingan
+   * darslar (`LessonCancellation`).
    *
-   * Bayramlar `buildHolidayDateSet` orqali olinadi — u ko'p kunlik
-   * bayramlarni (date..endDate), filial qamrovini (global + shu filial) va
-   * `deletedAt`/`status` filtrlarini to'g'ri hisobga oladi. Bularni shu
-   * yerda qaytadan yozish oson xato qiladi (masalan, faqat `date`
-   * ustunini tekshirib, oy ichiga tushgan ko'p kunlik bayramni o'tkazib
-   * yuborish).
+   * Bayramlar ATAYLAB kirmaydi (CEO, 21.09.2026, 10-javob): bayram kuniga
+   * tushgan dars yo'qolmaydi — shu oy ichida boshqa kunga ko'chirib
+   * o'tiladi (oy oxirida bo'lsa keyingi oyga suriladi, pulga tegilmaydi).
+   * Demak oyda dars soni o'zgarmaydi va dars narxi ham. Bayramni chiqarib
+   * tashlash 13 darslik oyni 12 deb muzlatardi; keyin ko'chirilgan dars
+   * 13- davomat sifatida ustozga oydan ORTIQCHA haq yozardi — 1-javobga zid
+   * (ustoz oyligi dars soniga bog'liq emas). Ko'chirilgan dars asl kunning
+   * o'rnini egallaydi: asl kunga davomat yozilmaydi, yangi kunga yoziladi,
+   * sanoq 13 da qoladi.
    *
-   * PUBLIC ataylab: `LessonBillingService`ning zaxira narx hisob-kitobi
-   * (`fallbackMonthlyPerLessonCost`, cron ulgurmagan holat uchun) HAM shu
-   * metoddan foydalanadi — aks holda ikkita mustaqil "qaysi kunlar
-   * hisobga kirmaydi" mantig'i bir-biridan uzoqlashib, bayram yoki
-   * bekor qilingan dars bo'lgan oyda zaxira narx REAL hisobdan farq
-   * qilib qolardi (narx "muzlatilmagan" emas, sonli NOTO'G'RI bo'lardi).
+   * Bekor qilingan dars — ko'chirilmagan dars, u haqiqatan yo'qolgan
+   * (spec 5.5: o'quvchiga pul qaytmaydi, ustozga haq yozilmaydi), shuning
+   * uchun rejadan chiqadi.
+   *
+   * PUBLIC ataylab: `LessonBillingService.fallbackMonthlyPerLessonCost`,
+   * `scripts/migrate-to-monthly.ts` va `scripts/verify-monthly-migration.ts`
+   * HAM shu metoddan o'qiydi — "qaysi kunlar hisobga kirmaydi" mantig'ining
+   * ikkinchi nusxasi yozilmaydi (Task 6 buzilgan sabab shu edi).
+   *
+   * `_branchId` imzoda qoladi: chaqiruvchilar uzatadi, va filialga bog'liq
+   * istisno kerak bo'lib qolsa shu yerga tushadi.
    */
   async resolveExcludedDates(
     tx: Prisma.TransactionClient,
     groupId: string,
-    branchId: number,
+    _branchId: number,
     year: number,
     month: number,
   ): Promise<string[]> {
     const monthStart = new Date(Date.UTC(year, month - 1, 1));
     const monthEndExclusive = new Date(Date.UTC(year, month, 1));
-    const monthEndInclusive = new Date(Date.UTC(year, month, 0));
 
-    const [holidayDates, cancellations] = await Promise.all([
-      buildHolidayDateSet(tx, monthStart, monthEndInclusive, branchId),
-      tx.lessonCancellation.findMany({
-        where: {
-          groupId,
-          deletedAt: null,
-          date: { gte: monthStart, lt: monthEndExclusive },
-        },
-        select: { date: true },
-      }),
-    ]);
+    const cancellations = await tx.lessonCancellation.findMany({
+      where: {
+        groupId,
+        deletedAt: null,
+        date: { gte: monthStart, lt: monthEndExclusive },
+      },
+      select: { date: true },
+    });
 
-    const excluded = new Set(holidayDates);
+    const excluded = new Set<string>();
     for (const c of cancellations) excluded.add(tashkentDateStr(c.date));
     return [...excluded];
   }
