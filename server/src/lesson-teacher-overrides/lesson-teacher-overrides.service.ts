@@ -376,6 +376,12 @@ export class LessonTeacherOverridesService {
 
       let perLessonCost: number;
       let deductionTransactionId: string | null;
+      // Oylik kursda FIXED_PER_STUDENT bo'luvchisi — shu oyning muzlatilgan
+      // `plannedLessons`i (1-javob; `accrueMonthlySalary` bilan bir xil
+      // qoida). Berilmasa `createAccrual` kursning `lessonPaymentCount`iga
+      // (12) qaytardi, ya'ni o'rinbosar ustoz oylik kursda ham 12 ga bo'lib
+      // olardi. LESSON_PACKda `undefined` qoladi — eski yo'l o'zgarmaydi.
+      let lessonDivisor: number | undefined;
 
       if (isMonthly) {
         // Muzlatilgan narx — o'quvchi to'lagan oyning O'ZIDAN. Bu ATAYLAB
@@ -396,6 +402,7 @@ export class LessonTeacherOverridesService {
         }
         perLessonCost = charge.perLessonCost;
         deductionTransactionId = charge.transactionId;
+        lessonDivisor = charge.plannedLessons;
       } else {
         // The payment that funded THIS lesson. Resolved per attendance, not
         // cached per enrollment: a cycle can roll over mid-day, and the cache
@@ -417,6 +424,7 @@ export class LessonTeacherOverridesService {
           attendanceId: att.id,
           lessonDate: p.date,
           perLessonCost,
+          lessonDivisor,
           companyId: p.companyId,
           deductionTransactionId,
           tx,
