@@ -54,6 +54,13 @@ interface SettingDefinition<K extends SettingKey> {
    * cron/watchdog kompaniya darajasida ishlaydi, `branchId` bilan
    * hech qachon o'qimaydi — filial qiymati saqlansa ham HECH QACHON
    * ishlatilmasdi).
+   *
+   * IKKINCHI sabab — SIYOSAT. Sozlama filial bo'yicha o'qilsa ham,
+   * qiymatni filialda O'ZGARTIRISH huquqi noto'g'ri bo'lishi mumkin:
+   * `payment.debtWriteOffEnabled` ni CEO butun kompaniya uchun hal qildi,
+   * va `PATCH /settings/payment` Branch Director'ga ham ochiq — filial
+   * darajasida yozishga ruxsat bersak, direktor taqiqni o'ziga qayta
+   * yoqib olardi. Bunday kalit ham shu bayroq bilan qulflanadi.
    */
   companyLevelOnly?: boolean;
 }
@@ -140,10 +147,19 @@ export const SETTING_DEFINITIONS: {
     // o'rniga sozlama: prodda allaqachon yozilgan DEBT_WRITE_OFF qatorlari
     // bor va ularning tarixi «Kechirilganlar» tabida ko'rinib turishi
     // kerak. Iste'molchi — `StudentEnrollmentService` (eligibility + ikkala
-    // yozish yo'li), o'quvchi guruhining `branchId`si bilan o'qiydi, shuning
-    // uchun filial darajasida yozilishi ma'noli (companyLevelOnly EMAS).
+    // yozish yo'li), o'quvchi guruhining `branchId`si bilan o'qiydi.
     defaultValue: false,
     parse: (raw) => parseBoolean('payment.debtWriteOffEnabled', raw),
+    // O'QISH filial bo'yicha, YOZISH esa faqat kompaniya darajasida.
+    // `PATCH /settings/payment` Branch Director'ga ham ochiq va kontroller
+    // uning yozuvini jimgina o'z filialiga qulflaydi (`resolveWriteBranchId`
+    // hech qachon rad etmaydi) — filial qiymati kompaniya qiymatidan ustun
+    // bo'lgani uchun direktor CEO butun kompaniya uchun taqiqlagan amalni
+    // AYNAN O'ZIGA qayta yoqib olardi. Qarz kechirish tugmalari esa aynan
+    // Branch Director va Administrator qo'lida (`students.controller.ts`).
+    // Shu bayroq bilan `SettingsService.set` har qanday filial yozuvini rad
+    // etadi: yagona qiymatni faqat CEO o'zgartiradi.
+    companyLevelOnly: true,
   },
 };
 

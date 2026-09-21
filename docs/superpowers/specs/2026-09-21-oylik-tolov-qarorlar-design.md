@@ -168,7 +168,14 @@ Har biri kompaniya **va** filial darajasida. `payment.` prefiksi bilan.
 
 | Kalit | Ma'nosi | Boshlang'ich |
 |---|---|---|
-| `debtWriteOffEnabled` | qarz kechirish amaliga ruxsat (9-javob: yo'q) | `false` |
+| `debtWriteOffEnabled` | qarz kechirish amaliga ruxsat (9-javob: yo'q) | `false` (faqat kompaniya darajasida — filialda o'zgartirilmaydi) |
+
+`debtWriteOffEnabled` — yuqoridagi «kompaniya **va** filial» qoidasidan
+istisno. Qiymat filial bo'yicha O'QILADI, lekin faqat kompaniya darajasida
+YOZILADI (`companyLevelOnly`): `PATCH /settings/payment` Branch Director'ga
+ham ochiq, qarz kechirish tugmalari esa aynan uning qo'lida — filialda
+yozishga ruxsat bersak, direktor CEO taqiqlagan amalni o'ziga qayta yoqib
+olardi.
 
 ### Uzrli dars
 

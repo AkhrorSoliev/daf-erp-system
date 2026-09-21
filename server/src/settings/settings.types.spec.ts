@@ -50,11 +50,16 @@ describe('SETTING_DEFINITIONS registry', () => {
       expect(def.defaultValue).toBe(true);
     });
 
-    it('accepts booleans only', () => {
+    it('accepts booleans only, and names ITSELF in the error', () => {
       expect(def.parse(true)).toBe(true);
       expect(def.parse(false)).toBe(false);
       expect(() => def.parse('true')).toThrow(BadRequestException);
       expect(() => def.parse(1)).toThrow(BadRequestException);
+      // Ikkala boolean kalitning `parse` qatori bir xil ko'rinadi —
+      // xabardagi kalit nomi almashib ketmasligi shu yerda qotiriladi.
+      expect(() => def.parse('true')).toThrow(
+        /payment\.excusedCreditEnabled faqat true\/false/,
+      );
     });
   });
 
@@ -112,14 +117,23 @@ describe('SETTING_DEFINITIONS registry', () => {
       expect(def.parse(false)).toBe(false);
     });
 
-    it('rejects non-booleans with an Uzbek message', () => {
+    it('rejects non-booleans with an Uzbek message that names THIS key', () => {
       expect(() => def.parse('ha')).toThrow(BadRequestException);
       expect(() => def.parse(1)).toThrow(BadRequestException);
       expect(() => def.parse(null)).toThrow(BadRequestException);
+      // Kalit nomi xabarga QO'LDA yoziladi (`parseBoolean('payment.…', raw)`)
+      // va qo'shni ta'rifdagi qator bilan bir xil ko'rinadi — nusxa olinsa
+      // CEO noto'g'ri sozlama nomini ko'rardi. Xabarning o'zi tekshiriladi.
+      expect(() => def.parse('ha')).toThrow(
+        /payment\.debtWriteOffEnabled faqat true\/false/,
+      );
     });
 
-    it('may be written at branch level (not companyLevelOnly)', () => {
-      expect(def.companyLevelOnly).toBeUndefined();
+    it('is company-level only — a Branch Director must not re-enable it for their own branch', () => {
+      // CEO (21.09.2026, 9-javob) butun kompaniya uchun qaror qildi; qarz
+      // kechirish tugmalari esa Branch Director qo'lida. Filial darajasida
+      // yozilsa, direktor taqiqni o'ziga qayta yoqib olardi.
+      expect(def.companyLevelOnly).toBe(true);
     });
   });
 });

@@ -165,6 +165,22 @@ describe('SettingsService', () => {
       expect(prisma.setting.update).not.toHaveBeenCalled();
     });
 
+    it('rejects a branch-scoped write of payment.debtWriteOffEnabled and never writes', async () => {
+      // CEO (21.09.2026, 9-javob): qarz kechirilmaydi — bu KOMPANIYA
+      // siyosati. `PATCH /settings/payment` Branch Director'ga ochiq va
+      // kontroller uning yozuvini har doim o'z filialiga qulflaydi, filial
+      // qiymati esa kompaniya qiymatidan ustun. Demak bu yagona to'siq:
+      // usiz direktor CEO taqiqlagan amalni o'z filialida qayta yoqardi.
+      await expect(
+        service.set(COMPANY_ID, 'payment.debtWriteOffEnabled', true, 42, 5),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.set(COMPANY_ID, 'payment.debtWriteOffEnabled', true, 42, 5),
+      ).rejects.toThrow(/kompaniya darajasida/);
+      expect(prisma.setting.create).not.toHaveBeenCalled();
+      expect(prisma.setting.update).not.toHaveBeenCalled();
+    });
+
     it('still allows a company-level write of payment.chargeDayOfMonth (branchId omitted)', async () => {
       prisma.setting.findFirst.mockResolvedValue(null);
       prisma.setting.create.mockResolvedValue({

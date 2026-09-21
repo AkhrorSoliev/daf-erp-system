@@ -197,19 +197,57 @@ describe('SettingsController — branch scope', () => {
     );
   });
 
-  it('debtWriteOffEnabled is written through its registry key (branch-level for a Branch Director)', async () => {
-    prisma.user.findFirst.mockResolvedValue(bdUser);
+  it('debtWriteOffEnabled is written through its registry key, company-level (CEO)', async () => {
+    prisma.user.findFirst.mockResolvedValue(ceoUser);
     await controller.updatePayment(
       { debtWriteOffEnabled: true } as any,
-      2,
+      1,
       1001,
     );
+    expect(settingsService.set).toHaveBeenCalledTimes(1);
     expect(settingsService.set).toHaveBeenCalledWith(
       1001,
       'payment.debtWriteOffEnabled',
       true,
-      2,
-      5,
+      1,
+      undefined,
+    );
+  });
+
+  it('debtWriteOffEnabled: false is written too — OFF is the direction the CEO decided', async () => {
+    // `if (dto.debtWriteOffEnabled)` (truthiness) bilan bu so'rov bo'sh
+    // `edits` bergan va "Kamida bitta sozlama yuborilishi kerak" bilan
+    // yiqilgan bo'lardi — ya'ni CEO tugmani qayta O'CHIRA olmasdi.
+    prisma.user.findFirst.mockResolvedValue(ceoUser);
+    await controller.updatePayment(
+      { debtWriteOffEnabled: false } as any,
+      1,
+      1001,
+    );
+    expect(settingsService.set).toHaveBeenCalledTimes(1);
+    expect(settingsService.set).toHaveBeenCalledWith(
+      1001,
+      'payment.debtWriteOffEnabled',
+      false,
+      1,
+      undefined,
+    );
+  });
+
+  it('excusedCreditEnabled: false is written too (same !== undefined guard)', async () => {
+    prisma.user.findFirst.mockResolvedValue(ceoUser);
+    await controller.updatePayment(
+      { excusedCreditEnabled: false } as any,
+      1,
+      1001,
+    );
+    expect(settingsService.set).toHaveBeenCalledTimes(1);
+    expect(settingsService.set).toHaveBeenCalledWith(
+      1001,
+      'payment.excusedCreditEnabled',
+      false,
+      1,
+      undefined,
     );
   });
 
