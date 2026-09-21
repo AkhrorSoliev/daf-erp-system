@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsWriteService } from '../transactions/transactions-write.service';
 import { SettingsService } from '../settings/settings.service';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
+import { buildHolidayDateSet } from '../holidays/holiday-date-set';
 import { lessonDatesInMonth } from './planned-lessons';
 import {
   applyDiscount,
@@ -1067,51 +1068,88 @@ export class MonthlyChargeService {
   }
 
   /**
-   * Rejadan CHIQADIGAN kunlar, 'YYYY-MM-DD' ro'yxati — faqat bekor qilingan
-   * darslar (`LessonCancellation`).
+   * Rejadan CHIQADIGAN kunlar, 'YYYY-MM-DD' ro'yxati: bekor qilingan darslar
+   * (`LessonCancellation`) va SHU OY ICHIDA qoplanmaydigan bayram kunlari.
    *
-   * Bayramlar ATAYLAB kirmaydi (CEO, 21.09.2026, 10-javob): bayram kuniga
-   * tushgan dars yo'qolmaydi — shu oy ichida boshqa kunga ko'chirib
-   * o'tiladi (oy oxirida bo'lsa keyingi oyga suriladi, pulga tegilmaydi).
-   * Demak oyda dars soni o'zgarmaydi va dars narxi ham. Bayramni chiqarib
-   * tashlash 13 darslik oyni 12 deb muzlatardi; keyin ko'chirilgan dars
-   * 13- davomat sifatida ustozga oydan ORTIQCHA haq yozardi — 1-javobga zid
-   * (ustoz oyligi dars soniga bog'liq emas). Ko'chirilgan dars asl kunning
-   * o'rnini egallaydi: asl kunga davomat yozilmaydi, yangi kunga yoziladi,
-   * sanoq 13 da qoladi.
+   * Bayram qoidasi CEO 10-javobidan (21.09.2026) kelib chiqadi: bayramga
+   * tushgan dars yo'qolmaydi, boshqa kunga ko'chirib o'tiladi. Lekin bu
+   * ko'chirish O'Z-O'ZIDAN bo'lmaydi — bayram e'lon qilinganda tizim faqat
+   * guruhning `endDate` ini uzaytiradi (`extendGroupEndDateForHoliday`),
+   * ya'ni qoplama dars KURS OXIRIGA, boshqa oyga tushadi. Dars aynan shu oy
+   * ichida qayta o'tilishi uchun admin `LessonReschedule` yozishi shart.
+   * Shuning uchun bayram kuni rejada faqat SHU OY ichiga ko'chirish yozilgan
+   * bo'lsa qoladi:
+   *
+   *  - ko'chirish BOR  -> reja 13 da qoladi, narx 450 000/13, oyda 13 ta
+   *    davomat bo'ladi (asl kunga emas, yangi kunga);
+   *  - ko'chirish YO'Q -> reja 12 ga tushadi, narx 450 000/12, oyda 12 ta
+   *    davomat bo'ladi.
+   *
+   * Ikkala holatda ham davomat soni reja soniga teng, demak ustoz oyning
+   * ANIQ ulushini oladi va haqi dars soniga bog'lanib qolmaydi (1-javob).
+   * Bayramni so'zsiz rejada qoldirish 13 ga bo'lib 12 ta davomat yozardi —
+   * ustozga oy ulushidan KAM to'lanardi; bayramni so'zsiz chiqarib tashlash
+   * esa 12 ga bo'lib 13 ta davomat yozardi — ORTIQCHA to'lanardi.
+   *
+   * O'quvchi to'laydigan oy narxi ikkala holatda ham 450 000 da qoladi:
+   * `proratedMonthlyAmount` rejani bo'luvchi ham, ko'paytiruvchi ham qilib
+   * ishlatadi, shuning uchun bayram narxga UMUMAN tegmaydi.
    *
    * Bekor qilingan dars — ko'chirilmagan dars, u haqiqatan yo'qolgan
    * (spec 5.5: o'quvchiga pul qaytmaydi, ustozga haq yozilmaydi), shuning
-   * uchun rejadan chiqadi.
+   * uchun har doim rejadan chiqadi.
+   *
+   * Bayramlar `buildHolidayDateSet` orqali olinadi — u ko'p kunlik
+   * bayramlarni (date..endDate), filial qamrovini (global + shu filial) va
+   * `deletedAt`/`status` filtrlarini to'g'ri hisobga oladi.
    *
    * PUBLIC ataylab: `LessonBillingService.fallbackMonthlyPerLessonCost`,
    * `scripts/migrate-to-monthly.ts` va `scripts/verify-monthly-migration.ts`
    * HAM shu metoddan o'qiydi — "qaysi kunlar hisobga kirmaydi" mantig'ining
    * ikkinchi nusxasi yozilmaydi (Task 6 buzilgan sabab shu edi).
-   *
-   * `_branchId` imzoda qoladi: chaqiruvchilar uzatadi, va filialga bog'liq
-   * istisno kerak bo'lib qolsa shu yerga tushadi.
    */
   async resolveExcludedDates(
     tx: Prisma.TransactionClient,
     groupId: string,
-    _branchId: number,
+    branchId: number,
     year: number,
     month: number,
   ): Promise<string[]> {
     const monthStart = new Date(Date.UTC(year, month - 1, 1));
     const monthEndExclusive = new Date(Date.UTC(year, month, 1));
+    const monthEndInclusive = new Date(Date.UTC(year, month, 0));
 
-    const cancellations = await tx.lessonCancellation.findMany({
-      where: {
-        groupId,
-        deletedAt: null,
-        date: { gte: monthStart, lt: monthEndExclusive },
-      },
-      select: { date: true },
-    });
+    const [holidayDates, cancellations, reschedules] = await Promise.all([
+      buildHolidayDateSet(tx, monthStart, monthEndInclusive, branchId),
+      tx.lessonCancellation.findMany({
+        where: {
+          groupId,
+          deletedAt: null,
+          date: { gte: monthStart, lt: monthEndExclusive },
+        },
+        select: { date: true },
+      }),
+      // `newDate` ham SHU OY ichida bo'lishi shart: qoplama dars keyingi
+      // oyga surilgan bo'lsa, bu oyda dars soni rostdan kamayadi.
+      tx.lessonReschedule.findMany({
+        where: {
+          groupId,
+          deletedAt: null,
+          originalDate: { gte: monthStart, lt: monthEndExclusive },
+          newDate: { gte: monthStart, lt: monthEndExclusive },
+        },
+        select: { originalDate: true },
+      }),
+    ]);
+
+    const movedWithinMonth = new Set(
+      reschedules.map((r) => tashkentDateStr(r.originalDate)),
+    );
 
     const excluded = new Set<string>();
+    for (const day of holidayDates) {
+      if (!movedWithinMonth.has(day)) excluded.add(day);
+    }
     for (const c of cancellations) excluded.add(tashkentDateStr(c.date));
     return [...excluded];
   }

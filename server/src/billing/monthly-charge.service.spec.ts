@@ -74,6 +74,9 @@ describe('MonthlyChargeService', () => {
       salaryAccrual: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
       lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
+      // Bayram darsini shu oy ichida qayta o'tish — `LessonReschedule`.
+      // Odatiy: ko'chirish yo'q.
+      lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
       enrollment: {
         findMany: jest.fn().mockResolvedValue([]),
         // Default shape for reverseChargeForDeparture's own lookup —
@@ -452,12 +455,12 @@ describe('MonthlyChargeService', () => {
       });
     });
 
-    it("bayram kuni rejadan CHIQMAYDI — bayram darsi shu oyda qayta o'tiladi (CEO 21.09.2026, 10-javob)", async () => {
-      // 1-sentabr 2026 — seshanba, rejadagi kun. Bayram bo'lsa ham dars
-      // yo'qolmaydi: shu oy ichida boshqa kunga ko'chirib o'tiladi. Shuning
-      // uchun rejalashtirilgan dars soni 13 da qoladi va dars narxi
-      // oshmaydi — aks holda ko'chirilgan (13-) dars ustozga oydan ORTIQCHA
-      // haq yozardi (1-javob: ustoz oyligi dars soniga bog'liq emas).
+    it("bayram kuni SHU OY ichida qayta o'tilmasa rejadan CHIQADI (CEO 21.09.2026, 10-javob)", async () => {
+      // 1-sentabr 2026 — seshanba, rejadagi kun. Bayram e'lon qilinsa tizim
+      // o'zi faqat guruhning `endDate` ini uzaytiradi, ya'ni qoplama dars
+      // KURS OXIRIGA (boshqa oyga) tushadi. Demak shu oyda rostdan 12 ta
+      // dars bo'ladi: reja 13 da qolsa, 13 ga bo'lingan narx bilan 12 ta
+      // davomat yozilib, ustozga oy ulushidan KAM to'lanardi (1-javob).
       prismaMock.holiday.findMany.mockResolvedValueOnce([
         {
           date: new Date('2026-09-01T00:00:00Z'),
@@ -472,11 +475,64 @@ describe('MonthlyChargeService', () => {
         companyId: 1,
       });
 
+      expect(charge?.plannedLessons).toBe(12);
+      expect(charge?.perLessonCost).toBe(37_500); // 450 000 / 12
+      // Oy narxi bayramdan MUTLAQO o'zgarmaydi — 10-javob shuni talab qiladi.
+      expect(charge?.chargedAmount).toBe(450_000);
+    });
+
+    it("bayram darsi SHU OY ichida boshqa kunga ko'chirilgan bo'lsa rejada QOLADI", async () => {
+      // Admin `LessonReschedule` yozdi: 1-sentabr darsi 5-sentabrga o'tdi.
+      // Dars yo'qolmagan — oyda yana 13 ta davomat bo'ladi (asl kunga emas,
+      // yangi kunga), shuning uchun reja 13 da qoladi va 13 ga bo'lingan
+      // narx bilan ustoz oyning aniq ulushini oladi.
+      prismaMock.holiday.findMany.mockResolvedValueOnce([
+        {
+          date: new Date('2026-09-01T00:00:00Z'),
+          endDate: new Date('2026-09-01T00:00:00Z'),
+        },
+      ]);
+      prismaMock.lessonReschedule.findMany.mockResolvedValueOnce([
+        { originalDate: new Date('2026-09-01T00:00:00Z') },
+      ]);
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
       expect(charge?.plannedLessons).toBe(13);
       expect(charge?.perLessonCost).toBe(34_615); // 450 000 / 13
       expect(charge?.chargedAmount).toBe(450_000);
-      // Bayram jadvali umuman so'ralmaydi — bekor qilingan dars yagona istisno.
-      expect(prismaMock.holiday.findMany).not.toHaveBeenCalled();
+    });
+
+    it("keyingi oyga surilgan qoplama dars bu oyni QUTQARMAYDI", async () => {
+      // So'rovning O'ZI `newDate` ni shu oy bilan cheklaydi, shuning uchun
+      // keyingi oyga ko'chirilgan dars umuman qaytmaydi — bu yerda bo'sh
+      // javob aynan shuni bildiradi. Bayram chiqadi, reja 12.
+      prismaMock.holiday.findMany.mockResolvedValueOnce([
+        {
+          date: new Date('2026-09-01T00:00:00Z'),
+          endDate: new Date('2026-09-01T00:00:00Z'),
+        },
+      ]);
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(charge?.plannedLessons).toBe(12);
+      const where = prismaMock.lessonReschedule.findMany.mock.calls[0][0].where;
+      expect(where.newDate).toEqual({
+        gte: new Date(Date.UTC(2026, 8, 1)),
+        lt: new Date(Date.UTC(2026, 9, 1)),
+      });
+      expect(where.deletedAt).toBeNull();
     });
 
     it("bekor qilingan (ko'chirilmagan) dars rejadan CHIQADI — u haqiqatan yo'qolgan dars", async () => {
