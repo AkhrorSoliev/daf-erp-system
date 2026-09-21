@@ -3,6 +3,7 @@ import {
   DoorOpen,
   CalendarOff,
   PauseCircle,
+  ListChecks,
   Archive,
   Users,
   Building,
@@ -37,6 +38,16 @@ export const settingsNavSections: SettingsNavSection[] = [
         title: "Dam olish kunlari",
         url: "/settings/holidays",
         icon: CalendarOff,
+      },
+      {
+        // Backend: /student-exit-reasons, /enrollment-transfer-reasons,
+        // /group-teacher-change-reasons — @Roles('CEO', 'Branch Director',
+        // 'Administrator'). visibleForRoles shu qamrovga ANIQ mos: 403ga
+        // olib boradigan havola havolaning yo'qligidan yomonroq.
+        title: "Sabablar",
+        url: "/settings/reasons",
+        icon: ListChecks,
+        visibleForRoles: [1, 2, 3],
       },
       {
         // O'qish CEO va filial direktoriga; yozish serverda faqat CEO —

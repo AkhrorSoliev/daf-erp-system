@@ -28,12 +28,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ArrowUpRight, Plus } from "lucide-react";
+import Link from "next/link";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import toast from "react-hot-toast";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatBalance, formatPrice } from "@/lib/format-utils";
 
@@ -109,9 +110,12 @@ export function EnrollToGroupDialog({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [transferReasonId, setTransferReasonId] = useState<string | undefined>();
+  const [addingReason, setAddingReason] = useState(false);
+  const [newReasonName, setNewReasonName] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [studentBalance, setStudentBalance] = useState<number>(0);
 
+  const qc = useQueryClient();
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
 
   const branchId = studentBranchId ?? selectedBranch?.id ?? null;
@@ -146,6 +150,8 @@ export function EnrollToGroupDialog({
       setSelectedId(null);
       setSearch("");
       setTransferReasonId(undefined);
+      setAddingReason(false);
+      setNewReasonName("");
       setStartDate(undefined);
     }
   }, [open]);
@@ -185,7 +191,7 @@ export function EnrollToGroupDialog({
     (oldTeacherIds.length !== newTeacherIds.length ||
       oldTeacherIds.some((t, i) => t !== newTeacherIds[i]));
 
-  const { data: transferReasons = [] } = useQuery<
+  const { data: transferReasons = [], isLoading: reasonsLoading } = useQuery<
     { id: string; name: string }[]
   >({
     queryKey: ["enrollment-transfer-reasons"],
@@ -196,6 +202,76 @@ export function EnrollToGroupDialog({
     enabled: open && teachersDiffer,
     staleTime: 60_000,
   });
+
+  /**
+   * The reason is mandatory here, so a reason nobody has configured yet must
+   * not send the user off to Sozlamalar mid-transfer. Anyone allowed to move
+   * a student is also allowed to POST a reason (both are CEO / Branch
+   * Director / Administrator), so the list can be extended in place.
+   */
+  const createReason = useMutation({
+    mutationFn: (name: string) =>
+      api
+        .post<{ id: string; name: string }>("/enrollment-transfer-reasons", {
+          name,
+        })
+        .then((r) => r.data),
+    onSuccess: (created) => {
+      // Seed the cache before invalidating: with an empty list the picker is
+      // replaced by the add form, and waiting for the refetch would blink it
+      // back to an empty form for a frame.
+      qc.setQueryData<{ id: string; name: string }[]>(
+        ["enrollment-transfer-reasons"],
+        (prev) =>
+          [...(prev ?? []), { id: created.id, name: created.name }].sort(
+            (a, b) => a.name.localeCompare(b.name),
+          ),
+      );
+      qc.invalidateQueries({ queryKey: ["enrollment-transfer-reasons"] });
+      setTransferReasonId(created.id);
+      setAddingReason(false);
+      setNewReasonName("");
+      toast.success("Sabab qo'shildi");
+    },
+    onError: async (error, submittedName) => {
+      const status = (error as { response?: { status?: number } }).response
+        ?.status;
+      // 409 — o'sha nomdagi sabab allaqachon bor (masalan boshqa admin
+      // hozirgina qo'shgan). Xato ko'rsatib to'xtatishdan ko'ra mavjudini
+      // tanlab bergan ma'qul.
+      if (status === 409) {
+        try {
+          const { data } = await api.get<{ id: string; name: string }[]>(
+            "/enrollment-transfer-reasons",
+          );
+          qc.setQueryData(["enrollment-transfer-reasons"], data);
+          const wanted = submittedName.trim().toLowerCase();
+          const match = data.find((r) => r.name.toLowerCase() === wanted);
+          if (match) {
+            setTransferReasonId(match.id);
+            setAddingReason(false);
+            setNewReasonName("");
+            toast.success("Bu sabab allaqachon bor — tanlandi");
+            return;
+          }
+        } catch {
+          // Ro'yxatni qayta o'qib bo'lmadi — pastdagi xabar chiqadi.
+        }
+      }
+      toast.error(getErrorMessage(error, "Sabab qo'shilmadi"));
+    },
+  });
+
+  const submitNewReason = () => {
+    const name = newReasonName.trim();
+    if (!name || createReason.isPending) return;
+    createReason.mutate(name);
+  };
+
+  const hasReasons = transferReasons.length > 0;
+  // An empty list leaves nothing to pick, so the input opens straight away
+  // and there is no "Bekor qilish" out of it.
+  const isAddingReason = !reasonsLoading && (addingReason || !hasReasons);
 
   const handleEnroll = async () => {
     if (!selectedId) return;
@@ -489,26 +565,98 @@ export function EnrollToGroupDialog({
                 </div>
               </div>
             </div>
-            <Select
-              value={transferReasonId ?? ""}
-              onValueChange={(v) => setTransferReasonId(v || undefined)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Transfer sababini tanlang..." />
-              </SelectTrigger>
-              <SelectContent>
-                {transferReasons.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    {r.name}
-                  </SelectItem>
-                ))}
-                {transferReasons.length === 0 && (
-                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                    Sabab ro&apos;yxati bo&apos;sh. Sozlamalardan qo&apos;shing.
-                  </div>
-                )}
-              </SelectContent>
-            </Select>
+            {reasonsLoading ? (
+              <Skeleton className="h-9 w-full" />
+            ) : isAddingReason ? (
+              <div className="space-y-2">
+                <Input
+                  value={newReasonName}
+                  onChange={(e) => setNewReasonName(e.target.value)}
+                  placeholder="Sababni yozing, masalan: Ish jadvali o'zgardi"
+                  autoFocus
+                  maxLength={100}
+                  disabled={createReason.isPending}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      submitNewReason();
+                    } else if (e.key === "Escape" && hasReasons) {
+                      e.preventDefault();
+                      setAddingReason(false);
+                      setNewReasonName("");
+                    }
+                  }}
+                />
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={submitNewReason}
+                    disabled={!newReasonName.trim() || createReason.isPending}
+                  >
+                    {createReason.isPending ? (
+                      <Loader2 className="mr-1.5 size-4 animate-spin" />
+                    ) : (
+                      <Plus className="mr-1.5 size-4" />
+                    )}
+                    Qo&apos;shib tanlash
+                  </Button>
+                  {hasReasons && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setAddingReason(false);
+                        setNewReasonName("");
+                      }}
+                      disabled={createReason.isPending}
+                    >
+                      Bekor qilish
+                    </Button>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Yangi sabab ro&apos;yxatga qo&apos;shiladi va keyingi
+                  o&apos;tkazishlarda ham chiqadi.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Select
+                  value={transferReasonId ?? ""}
+                  onValueChange={(v) => setTransferReasonId(v || undefined)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Transfer sababini tanlang..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {transferReasons.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center justify-between gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto px-1 py-0.5 text-xs text-amber-800 hover:text-amber-900 dark:text-amber-300"
+                    onClick={() => setAddingReason(true)}
+                  >
+                    <Plus className="mr-1 size-3" />
+                    Sabab boshqa — yangi qo&apos;shish
+                  </Button>
+                  <Link
+                    href="/settings/reasons?tab=transfer"
+                    className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground hover:underline"
+                  >
+                    Ro&apos;yxatni boshqarish
+                    <ArrowUpRight className="size-3" />
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
