@@ -79,27 +79,73 @@ o'quvchi tomonidagi qoida, va u allaqachon ishlaydi.
 14 × value/12 chiqadi — oydan oshadi. Oylik kursda bo'luvchi
 `plannedLessons` bo'lishi kerak. Bir qatorlik o'zgarish + test.
 
-**Bayram rejada faqat SHU OY ichida qoplansa qoladi.** Ustoz haqi oyda
-nechta davomat yozilganiga qarab yig'iladi, shuning uchun reja soni
-davomat soniga teng bo'lishi shart — aks holda ustoz oyning ulushidan
-ko'p yoki kam oladi (1-javobga zid). Bayram darsi o'z-o'zidan qayta
-o'tilmaydi: bayram e'lon qilinganda tizim faqat guruhning `endDate` ini
-uzaytiradi (`extendGroupEndDateForHoliday`), ya'ni qoplama dars kurs
-oxiriga, boshqa oyga tushadi. Demak `resolveExcludedDates` qoidasi:
-bayram kuni rejada faqat shu oy ichiga `LessonReschedule` yozilgan bo'lsa
-qoladi (13 reja, 13 davomat), aks holda rejadan chiqadi (12 reja, 12
-davomat). O'quvchi to'laydigan oy narxi ikkala holatda ham o'zgarmaydi
-(10-javob) — bayram faqat bo'luvchiga tegadi. Bekor qilingan
-(ko'chirilmagan) dars har doim chiqadi. (Avval rejalashtirilgan
-`includedDates` yechimi bekor: u faqat hisob yaratilishidan OLDIN ma'lum
-ko'chirishlarni ko'rardi, o'rta oyda qilinganlarni emas.)
+**Bayram rejada faqat SHU OY ichida, JADVALDAN TASHQARI kunga qoplansa
+qoladi.** Ustoz haqi oyda nechta davomat yozilganiga qarab yig'iladi,
+shuning uchun reja soni davomat soniga teng bo'lishi shart — aks holda
+ustoz oyning ulushidan ko'p yoki kam oladi (1-javobga zid). Bayram darsi
+o'z-o'zidan qayta o'tilmaydi: bayram e'lon qilinganda tizim faqat
+guruhning `endDate` ini uzaytiradi (`extendGroupEndDateForHoliday`), ya'ni
+qoplama dars kurs oxiriga, boshqa oyga tushadi. Demak
+`MonthlyChargeService.resolveMonthPlan` qoidasi:
+
+| Holat | reja | dars narxi | oydagi davomat |
+| --- | --- | --- | --- |
+| qoplama yo'q | 12 | 450 000/12 | 12 |
+| qoplama bor, yangi kun jadvalda YO'Q | 13 | 450 000/13 | 13 |
+| qoplama bor, yangi kun jadvalda BOR | 12 | 450 000/12 | 12 |
+
+Uchinchi qatorning sababi: `AttendanceReadService.applyLessonModifications`
+dars kunlarini TO'PLAM qilib qo'shadi — asl kunni tashlaydi, yangi kunni
+qo'shadi. Yangi kun allaqachon jadvaldagi kun bo'lsa (shanba darsi boshqa
+shanbaga ko'chirilsa) to'plamda yangi kun paydo bo'lmaydi va oyda baribir
+12 ta dars kuni qoladi. Har uch qatorda reja soni davomat soniga teng.
+
+O'quvchi to'laydigan oy narxi uchala holatda ham o'zgarmaydi (10-javob) —
+bayram faqat bo'luvchiga tegadi. Bekor qilingan (ko'chirilmagan) dars har
+doim chiqadi, ko'chirish yozilgan bo'lsa ham. Qoplangan bayramda
+`coveredDates` ga asl kun emas, QOPLAMA kuni yoziladi: dars aynan o'sha
+kuni o'tiladi, shuning uchun bayram bilan qoplama orasida ketgan o'quvchi
+hali o'tilmagan darsning pulini qaytarib oladi.
+
+**MA'LUM CHEKLOV — qoplama hisobdan KEYIN yozilsa ko'rinmaydi.**
+`resolveMonthPlan` faqat hisob yozilayotgan daqiqada bazada turgan
+`LessonReschedule` qatorlarini ko'radi. `MonthlyBillingCronService` hisobni
+oyning belgilangan kunida (odatda 1-sana) yozadi, `createChargeForEnrollment`
+esa `CHARGED` qatorni qayta hisoblamaydi va `plannedLessons` ni boshqa hech
+kim yangilamaydi. Demak admin qoplamani oy o'rtasida yozsa: reja 12 da
+qoladi, oyda 13 ta davomat bo'ladi va ustoz o'sha guruh uchun oyning 13/12
+ulushini oladi. Bu bekor qilingan `includedDates` yechimining kamchiligi
+bilan BIR XIL — «faqat hisobdan oldin ma'lum ko'chirishlarni ko'radi» —
+ya'ni tanlangan yechim bu jihatdan yaxshiroq emas, faqat soddaroq
+(bitta jadvaldan o'qiydi, yangi ustun qo'shmaydi). To'liq yechim —
+`lesson-reschedule.created/updated/deleted` da shu oyning hisobini qayta
+hisoblash — ALOHIDA vazifa: u pul qatorlariga (`TransactionsWriteService`)
+va prorata summalarga ham tegadi, shuning uchun bu brif doirasidan
+tashqarida qoldirildi. Kamchilik `monthly-charge.service.spec.ts` dagi
+«hisob YOZILGANDAN KEYIN yozilgan qoplama muzlatilgan rejani
+o'zgartirmaydi» testi bilan PINLANGAN — jim o'zgarmaydi.
+
+**TASDIQLASH KUTILMOQDA (brifdan chetlashish).** Task 2 brifi «bayram
+HECH QACHON rejadan chiqmaydi» deb yozgan edi (10-javobning to'g'ridan
+to'g'ri o'qilishi). Amalga oshirishda aniqlandi: tizim bayram darsini
+o'zi hech qayerga ko'chirmaydi, shuning uchun o'sha qoida qoplamasiz
+oyda 13 ga bo'lib 12 ta davomat yozardi — ustozga oyning 12/13 ulushi,
+ya'ni 1-javobning teskari tomondan buzilishi. Yuqoridagi shartli qoida
+shu sababli tanlandi. Qoida CEO javobining MATNIDAN emas, uning MAQSADIDAN
+(1-javob) kelib chiqadi, shuning uchun chiqarishdan oldin tasdiqlanishi
+kerak.
 
 **«Oy oxiriga kutilyapti» AYNAN shu shartni takrorlaydi.**
 `splitMonthLessons` oyning kunlarini o'zi aylanib chiqadi va muzlatilgan
 dars narxini ishlatadi, shuning uchun u bayramni boshqacha hisoblasa
 bitta oy uchun ikki xil raqam chiqadi (12 × 34 615 = 415 380, olingani
-450 000). Prognoz endi `holidayMakeupDates` ni oladi — shu oy ichiga
-ko'chirilgan bayram kunlari — va faqat oylik guruhlarda qo'llaydi.
+450 000). Prognoz endi `holidayMakeupDates` ni oladi — shu oy ichiga,
+jadvaldan tashqari kunga ko'chirilgan bayram kunlari — va faqat oylik
+guruhlarda qo'llaydi. Bu Task 2 brifi nomlamagan ikkita faylga
+(`reports/expectation-math.ts`, `reports/reports-expectation.service.ts`)
+tegadi: kengaytma 1-tuzatish davrining tasdiqlangan topilmalaridan kelib
+chiqqan — reja bilan prognoz ajralib qolgan edi. `LESSON_PACK` prognozi
+ataylab tegilmagan.
 
 `FIXED_MONTHLY` xodimlarga tegmaydi.
 
@@ -182,7 +228,7 @@ Har biri kompaniya **va** filial darajasida. `payment.` prefiksi bilan.
 7. **Uzrli darsni qayta o'tish mexanizmi** — hozir yo'q. Mavjud
    `LessonReschedule` butun guruhni ko'chiradi; bu esa bitta o'quvchiga
    qarzdor bo'lingan darsni kuzatishi kerak.
-8. **`FIXED_PER_STUDENT` bo'luvchisi + bayram qoidasi (qoplansa rejada qoladi)** — 4-bo'limga qara. Kichik.
+8. **`FIXED_PER_STUDENT` bo'luvchisi + bayram qoidasi (jadvaldan tashqari kunga qoplansa rejada qoladi)** — 4-bo'limga qara. Kichik.
 
 ---
 
@@ -254,7 +300,7 @@ Har biri 26 javob bilan solishtirildi.
 |---|---|---|
 | 1 Sxema | ✅ turadi | `PaymentModel` ikkala usulni saqlaydi (23-javob). Qo'shimcha: muzlatish muddati muhri, kurs narxi amal sanasi |
 | 2 Oylik arifmetika | ✅ turadi | Kredit qo'llash (`applyLessonCredit`) `excusedMode` ga bog'lanadi |
-| 3 Oydagi dars kunlari | ✅ turadi | Sof funksiya o'zgarmaydi; `resolveExcludedDates` bayramni shu oyda qoplansagina qoldiradi (4-bo'lim) |
+| 3 Oydagi dars kunlari | ✅ turadi | Sof funksiya o'zgarmaydi; `resolveMonthPlan` bayramni jadvaldan tashqari kunga qoplansagina qoldiradi (4-bo'lim) |
 | 4 Ledger yozuvi | ✅ turadi | — |
 | 5 `MonthlyChargeService` | ⚠️ | Kredit ixtiyoriy bo'ladi; muzlatish oqimi qayta ishlanadi (19-javob) |
 | 6 Davomat `MONTHLY` shoxi | ⚠️ kichik | `FIXED_PER_STUDENT` bo'luvchisi; `EXCUSED` → kredit faqat sozlama ruxsat bersa |
@@ -271,7 +317,7 @@ tuzatish, uchtasi yangi parametr, bittasi (cron) keyingi bosqichga.
 Bularsiz tizim CEO qoidasiga zid pul hisoblaydi:
 
 1. `FIXED_PER_STUDENT` bo'luvchisi → `plannedLessons` (1-javob)
-2. Bayram qoidasi: shu oyda qoplansa rejada qoladi, aks holda chiqadi — reja soni davomat soniga teng bo'lsin; prognoz ham shu shartni takrorlaydi (1, 10)
+2. Bayram qoidasi: shu oyda, jadvaldan tashqari kunga qoplansa rejada qoladi, aks holda chiqadi — reja soni davomat soniga teng bo'lsin; prognoz ham shu shartni takrorlaydi (1, 10). Hisobdan keyin yozilgan qoplama ko'rinmaydi — 4-bo'limdagi «ma'lum cheklov»
 3. `payment.debtWriteOffEnabled=false` — kechirish yopiladi (9)
 4. ~~`payment.excusedMode`~~ — **kiritilmaydi.** 18-javob «ikkalasi ham»
    dedi, lekin `RETEACH` mexanizmi yo'q; faqat `CREDIT` bor bo'lgan enum

@@ -240,7 +240,8 @@ async function main(prisma: PrismaClient) {
     prisma as unknown as never,
     undefined as unknown as never,
     // SettingsService — `resolveExcludedDates` unga tegmaydi, shuning uchun
-    // bu skriptda hech qachon chaqirilmaydi.
+    // bu skriptda hech qachon chaqirilmaydi. (Metod `this.resolveMonthPlan`
+    // ni chaqiradi, shuning uchun instansiya `new` bilan yasalishi shart.)
     undefined as unknown as never,
   );
   const readTx = prisma as unknown as Prisma.TransactionClient;

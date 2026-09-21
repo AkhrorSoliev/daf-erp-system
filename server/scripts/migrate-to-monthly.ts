@@ -680,9 +680,11 @@ async function main(prisma: PrismaClient) {
       : `MIGRATSIYA OLDINDAN HISOBOTI — davr ${period} — DRY RUN, HECH NARSA YOZILMAYDI`,
   );
 
-  // resolveExcludedDates() `this`ga tegmaydi (faqat o'z parametrlaridan
-  // ishlaydi) — shuning uchun servisni to'liq Nest DI grafigisiz, faqat
-  // shu bitta metod uchun qo'lda yasash xavfsiz. TransactionsWriteService
+  // resolveExcludedDates() (va uning ichidagi resolveMonthPlan) INJEKSIYA
+  // QILINGAN bog'liqliklarga tegmaydi — faqat o'z parametrlaridan va `tx`
+  // dan ishlaydi. Shuning uchun servisni to'liq Nest DI grafigisiz, faqat
+  // shu bitta metod uchun qo'lda yasash xavfsiz (lekin `new` SHART:
+  // metod `this.resolveMonthPlan` ni chaqiradi). TransactionsWriteService
   // hech qachon chaqirilmaydi.
   const chargeService = new MonthlyChargeService(
     prisma as unknown as never,
