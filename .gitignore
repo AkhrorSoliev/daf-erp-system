@@ -36,3 +36,4 @@ server/scripts/_*.ts
 server/.tmp-*
 server/*.xlsx
 server/scripts/backups/
+.superpowers/

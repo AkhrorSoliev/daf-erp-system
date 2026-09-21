@@ -71,6 +71,7 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0008](0008-royxatdan-otish-aktori-oshkora.md) | Chaqiruvchisi yo'q yozuv o'zini oshkora e'lon qiladi | Qabul qilindi | 2026-08-19 |
 | [0009](0009-deutsch-tutor-olib-tashlandi.md) | Deutsch Tutor noldan qayta quriladi, eski qatlam olib tashlandi | Qabul qilindi | 2026-08-19 |
 | [0012](0012-bosh-sahifa-qayta-hisoblamaydi.md) | Bosh sahifa paneli raqamlarni qayta hisoblamaydi | Qabul qilindi | 2026-09-02 |
+| [0013](0013-majburiy-royxat-boshqaruvsiz-qolmaydi.md) | Majburiy tanlov ro'yxati boshqaruv sahifasisiz qolmaydi | Qabul qilindi | 2026-09-03 |
 | [0015](0015-faol-oquvchi-tarifi-manifest.md) | «Faol o'quvchi» sanog'i manifest bilan majburlanadi | Qabul qilindi | 2026-09-10 |
 | [0016](0016-kun-chegarasi-toshkent-boyicha.md) | Kun chegarasi Toshkent bo'yicha, ustun tipiga qarab | Qabul qilindi | 2026-09-10 |
 | [0017](0017-har-bir-oquvchi-lid-sifatida-tugiladi.md) | Har bir o'quvchi lid sifatida tug'iladi | Qabul qilindi | 2026-09-10 |
