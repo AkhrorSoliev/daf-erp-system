@@ -508,7 +508,7 @@ describe('MonthlyChargeService', () => {
       expect(charge?.chargedAmount).toBe(450_000);
     });
 
-    it("keyingi oyga surilgan qoplama dars bu oyni QUTQARMAYDI", async () => {
+    it('keyingi oyga surilgan qoplama dars bu oyni QUTQARMAYDI', async () => {
       // So'rovning O'ZI `newDate` ni shu oy bilan cheklaydi, shuning uchun
       // keyingi oyga ko'chirilgan dars umuman qaytmaydi — bu yerda bo'sh
       // javob aynan shuni bildiradi. Bayram chiqadi, reja 12.
