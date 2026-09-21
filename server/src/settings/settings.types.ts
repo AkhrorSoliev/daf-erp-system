@@ -25,13 +25,15 @@ export type SettingKey =
   | 'payment.defaultModel'
   | 'payment.excusedCreditEnabled'
   | 'payment.excusedCreditMonthlyCap'
-  | 'payment.chargeDayOfMonth';
+  | 'payment.chargeDayOfMonth'
+  | 'payment.debtWriteOffEnabled';
 
 export interface SettingValueMap {
   'payment.defaultModel': PaymentModel;
   'payment.excusedCreditEnabled': boolean;
   'payment.excusedCreditMonthlyCap': number | null;
   'payment.chargeDayOfMonth': number;
+  'payment.debtWriteOffEnabled': boolean;
 }
 
 interface SettingDefinition<K extends SettingKey> {
@@ -102,7 +104,12 @@ export const SETTING_DEFINITIONS: {
 } = {
   'payment.defaultModel': {
     key: 'payment.defaultModel',
-    defaultValue: PaymentModel.MONTHLY,
+    // Cutover'gacha LESSON_PACK: `Course.paymentModel` ustuni ham shu
+    // DEFAULT bilan — sxema chiqsa mavjud kurslar o'zgarmaydi. Bu sozlama
+    // esa YANGI kursga qo'llanadi (`CoursesService.create`); MONTHLY bo'lsa
+    // kod chiqqan kuni yaratilgan birinchi kurs jimgina oylik bo'lib
+    // qolardi. `--apply` kuni CEO Sozlamalar → To'lov dan MONTHLY qiladi.
+    defaultValue: PaymentModel.LESSON_PACK,
     parse: parsePaymentModel,
   },
   'payment.excusedCreditEnabled': {
@@ -125,6 +132,18 @@ export const SETTING_DEFINITIONS: {
     // yo'q. Filial darajasida saqlab qo'yish shuning uchun hech qachon
     // ishlatilmaydigan qiymat yozardi (dekorativ boshqaruv).
     companyLevelOnly: true,
+  },
+  'payment.debtWriteOffEnabled': {
+    key: 'payment.debtWriteOffEnabled',
+    // CEO (21.09.2026, 9-javob): «Qarz kechirilishi bo'lmaydi» — qarz
+    // butun tarixi bilan saqlanadi. Boshlang'ich `false`. O'chirib tashlash
+    // o'rniga sozlama: prodda allaqachon yozilgan DEBT_WRITE_OFF qatorlari
+    // bor va ularning tarixi «Kechirilganlar» tabida ko'rinib turishi
+    // kerak. Iste'molchi — `StudentEnrollmentService` (eligibility + ikkala
+    // yozish yo'li), o'quvchi guruhining `branchId`si bilan o'qiydi, shuning
+    // uchun filial darajasida yozilishi ma'noli (companyLevelOnly EMAS).
+    defaultValue: false,
+    parse: (raw) => parseBoolean('payment.debtWriteOffEnabled', raw),
   },
 };
 

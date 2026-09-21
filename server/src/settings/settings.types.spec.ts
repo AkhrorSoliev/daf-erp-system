@@ -7,10 +7,11 @@ import {
 } from './settings.types';
 
 describe('SETTING_DEFINITIONS registry', () => {
-  it('covers exactly the four shipped payment keys', () => {
+  it('covers exactly the five shipped payment keys', () => {
     expect(SETTING_KEYS.sort()).toEqual(
       [
         'payment.chargeDayOfMonth',
+        'payment.debtWriteOffEnabled',
         'payment.defaultModel',
         'payment.excusedCreditEnabled',
         'payment.excusedCreditMonthlyCap',
@@ -26,8 +27,8 @@ describe('SETTING_DEFINITIONS registry', () => {
   describe('payment.defaultModel', () => {
     const def = getSettingDefinition('payment.defaultModel');
 
-    it('defaults to MONTHLY', () => {
-      expect(def.defaultValue).toBe(PaymentModel.MONTHLY);
+    it('defaults to LESSON_PACK until the cutover — a course made after deploy must not silently go monthly', () => {
+      expect(def.defaultValue).toBe(PaymentModel.LESSON_PACK);
     });
 
     it('accepts both enum values', () => {
@@ -96,6 +97,29 @@ describe('SETTING_DEFINITIONS registry', () => {
       expect(() => def.parse(29)).toThrow(BadRequestException);
       expect(() => def.parse(30)).toThrow(BadRequestException);
       expect(() => def.parse(15.5)).toThrow(BadRequestException);
+    });
+  });
+
+  describe('payment.debtWriteOffEnabled', () => {
+    const def = getSettingDefinition('payment.debtWriteOffEnabled');
+
+    it('defaults to false — CEO (21.09.2026, 9-javob): qarz kechirilmaydi', () => {
+      expect(def.defaultValue).toBe(false);
+    });
+
+    it('accepts booleans', () => {
+      expect(def.parse(true)).toBe(true);
+      expect(def.parse(false)).toBe(false);
+    });
+
+    it('rejects non-booleans with an Uzbek message', () => {
+      expect(() => def.parse('ha')).toThrow(BadRequestException);
+      expect(() => def.parse(1)).toThrow(BadRequestException);
+      expect(() => def.parse(null)).toThrow(BadRequestException);
+    });
+
+    it('may be written at branch level (not companyLevelOnly)', () => {
+      expect(def.companyLevelOnly).toBeUndefined();
     });
   });
 });
