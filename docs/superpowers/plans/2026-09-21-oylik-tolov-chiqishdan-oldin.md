@@ -28,7 +28,7 @@ klient (vitest), Railway CLI (`railway run`), `tsx`.
 
 - **Til:** foydalanuvchi matni, izohlar va commit xabarlari lotin o'zbekchada. Kirill yoki arab harflari ishlatilmaydi.
 - **Ish joyi:** `/Users/a1111/Desktop/daf-erp-system/.worktrees/oylik-tolov`, shox `feat/oylik-tolov-tizimi`. `main` bilan birlashtirish **bu rejaga kirmaydi** (508 commit farq — alohida ish, 6-vazifadan oldin).
-- **Har commit:** `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>` bilan tugaydi.
+- **Har commit:** `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>` bilan tugaydi.
 - **`LESSON_PACK` yo'li o'zgarmaydi.** Har vazifadan keyin `npx jest src/billing src/salary` to'liq yashil.
 - **Pul yozuvi faqat `TransactionsWriteService` orqali** — bu rejada yangi pul yozuvi yo'q.
 - **`Math.abs` taqiqi** (ADR-0004) — tegishli kod yo'q, lekin qoida amal qiladi.
@@ -341,7 +341,7 @@ ustoz 13 × value/12 olardi. Cron va hisobot (resolveLessonPricing.divisor)
 buni allaqachon plannedLessons bilan qilardi — endi createAccrual ham,
 chaqiruvchi lessonDivisor uzatadi.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 EOF
 )"
 ```
@@ -556,7 +556,7 @@ ko'chirilgan dars asl kun o'rnini egallaydi, sanoq o'zgarmaydi.
 Skriptlar (migrate/verify) va zaxira narx yo'li shu metoddan o'qiydi,
 shuning uchun o'z-o'zidan moslashadi.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 EOF
 )"
 ```
@@ -806,7 +806,7 @@ ustuni allaqachon LESSON_PACK default bilan, lekin yangi kurs shu sozlamani
 oladi — kod chiqqan kuni yaratilgan kurs jimgina oylik bo'lib qolardi.
 --apply kuni CEO panelda MONTHLY qiladi.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 EOF
 )"
 ```
@@ -1296,7 +1296,7 @@ kechirish va chiqarish-bilan-kechirish ForbiddenException.
 tegilmaydi — ular «qachon qancha qarz qolgan» tarixining bir qismi.
 Sozlamalar → To'lov da «Qarz kechirishga ruxsat» tugmasi (CEO/BD).
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 EOF
 )"
 ```
@@ -1412,7 +1412,7 @@ har guruh o'z exactDays idan plannedLessons oladi. Test raqamlarni
 qotiradi: 403 636 + 207 695. CEO misoli dars boshiga yaxlitlab 611 322
 bergan, kod 611 331 — 9 so'm yaxlitlash farqi, usul bir xil.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 EOF
 )"
 ```
@@ -1525,7 +1525,7 @@ Migratsiya oldidan majburiy hisobot (dizayn 02.09, §9) bugungi bazada.
 CSV docs/ da; raqamlar dizayn hujjatining 11-bo'limida 02.09 bilan
 yonma-yon. --apply CEO o'qib tasdiqlagandan keyin, avval --limit=5.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 EOF
 )"
 ```
