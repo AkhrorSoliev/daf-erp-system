@@ -89,6 +89,16 @@ export class SalaryAccrualService {
     // instead of bucketing by lessonDate, so the current open settlement pays
     // it. Left undefined for an ordinary in-period top-up.
     creditPeriodDateOverride?: Date;
+    /**
+     * Oylik (`MONTHLY`) kursda — shu oyning rejalashtirilgan dars soni
+     * (`EnrollmentMonthlyCharge.plannedLessons`). `FIXED_PER_STUDENT`
+     * bo'luvchisi shu bo'ladi; berilmasa kursning `lessonPaymentCount`
+     * (12 talik yo'l, avvalgidek). `PERCENTAGE` ga ta'sir qilmaydi — u
+     * `perLessonCost` dan hisoblanadi, u esa oylik yo'lda allaqachon
+     * oy narxi / oydagi dars soni. CEO (21.09.2026, 1-javob): ustoz
+     * oyligi dars soniga bog'liq emas — 13 darslik oy ham, 14 ham bir xil.
+     */
+    lessonDivisor?: number;
   }) {
     const centerFunded = params.centerFunded ?? false;
     if (!centerFunded && !params.deductionTransactionId) {
@@ -196,11 +206,16 @@ export class SalaryAccrualService {
     if (version.salaryType === SalaryType.PERCENTAGE) {
       amount = Math.round((params.perLessonCost * version.value) / 100);
     } else {
-      // FIXED_PER_STUDENT: `value` is the per-cycle amount. Divide by the
-      // course's lessonPaymentCount to get per-lesson. This used to write
-      // the full value per lesson, which silently multiplied teacher pay
-      // by lessonPaymentCount — fixed in Faza 2.
-      const lessonCount = await this.getCourseLessonCount(db, params.groupId);
+      // FIXED_PER_STUDENT: `value` — bir SIKLDA bir o'quvchidan tushadigan
+      // haq. 12 talik kursda sikl = kursning `lessonPaymentCount`; OYLIK
+      // kursda sikl = o'sha oyning rejalashtirilgan dars soni, chaqiruvchi
+      // uni `lessonDivisor` sifatida uzatadi. Aks holda 13 darslik oyda
+      // 13 × value/12 — oydan oshib ketadi (1-javob). Bu `gap-sweep.ts`
+      // `resolveLessonPricing().divisor` bilan bir xil qoida — cron va
+      // hisobot allaqachon shunday, bu jonli davomat yo'li.
+      const lessonCount =
+        params.lessonDivisor ??
+        (await this.getCourseLessonCount(db, params.groupId));
       amount =
         lessonCount > 0
           ? Math.round(version.value / lessonCount)

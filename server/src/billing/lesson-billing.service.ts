@@ -219,6 +219,10 @@ export class LessonBillingService {
     );
 
     let perLessonCost = charge?.perLessonCost ?? 0;
+    // Oylik kursda FIXED_PER_STUDENT bo'luvchisi — shu oyning rejalashtirilgan
+    // dars soni (1-javob). Hisob bo'lsa muzlatilgan qatordan, bo'lmasa
+    // zaxira hisob-kitobdan (u ham `resolveExcludedDates` bilan bir manba).
+    let lessonDivisor: number | undefined = charge?.plannedLessons;
     let deductionTransactionId: string | null = charge?.transactionId ?? null;
 
     if (!charge) {
@@ -236,6 +240,7 @@ export class LessonBillingService {
       );
       const fallback = await this.fallbackMonthlyPerLessonCost(tx, params);
       perLessonCost = fallback.perLessonCost;
+      lessonDivisor = fallback.plannedLessons;
       deductionTransactionId = null;
     }
 
@@ -255,6 +260,7 @@ export class LessonBillingService {
           attendanceId: params.attendanceId,
           lessonDate: params.lessonDate,
           perLessonCost,
+          lessonDivisor,
           companyId: params.companyId,
           deductionTransactionId,
           // Hisob yo'q bo'lsa o'quvchi tomonidan qoplanmagan — markaz
@@ -279,7 +285,7 @@ export class LessonBillingService {
   private async fallbackMonthlyPerLessonCost(
     tx: Prisma.TransactionClient,
     params: ProcessAttendanceBillingParams,
-  ): Promise<{ perLessonCost: number }> {
+  ): Promise<{ perLessonCost: number; plannedLessons: number }> {
     const enr = await tx.enrollment.findUnique({
       where: { id: params.enrollmentId },
       select: {
@@ -288,7 +294,7 @@ export class LessonBillingService {
         },
       },
     });
-    if (!enr) return { perLessonCost: 0 };
+    if (!enr) return { perLessonCost: 0, plannedLessons: 0 };
 
     const day = tashkentDateStr(params.lessonDate);
     const periodYear = Number(day.slice(0, 4));
@@ -318,6 +324,7 @@ export class LessonBillingService {
 
     return {
       perLessonCost: perLessonCostForMonth(enr.group.course.price, planned),
+      plannedLessons: planned,
     };
   }
 

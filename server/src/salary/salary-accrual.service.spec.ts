@@ -476,6 +476,52 @@ describe('SalaryAccrualService', () => {
         }),
       );
     });
+
+    it("FIXED_PER_STUDENT + lessonDivisor (oylik kurs): oyning rejalashtirilgan dars soniga bo'ladi, kursning 12 siga emas", async () => {
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce({
+        id: 'v1',
+        salaryType: 'FIXED_PER_STUDENT',
+        value: 250_000, // bir sikl (= bir oy) uchun
+      });
+      // Kurs kartochkasida 12 turadi — lekin oylik yo'lda bu son ma'nosiz.
+      prisma.group.findUnique.mockResolvedValue({
+        course: { lessonPaymentCount: 12 },
+        branchId: 2,
+      });
+      prisma.salaryAccrual.upsert.mockResolvedValue({});
+
+      await service.createAccrual({ ...baseParams, lessonDivisor: 13 });
+
+      // 250 000 / 13 = 19 230.77 → 19 231. 12 ga bo'linsa 20 833 chiqardi:
+      // 13 darslik oyda ustoz 13 × 20 833 = 270 833 — oydan 20 833 ortiq
+      // (CEO, 21.09.2026, 1-javob: ustoz oyligi dars soniga bog'liq emas).
+      expect(prisma.salaryAccrual.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ amount: 19_231 }),
+        }),
+      );
+    });
+
+    it("lessonDivisor berilmasa (12 talik yo'l) avvalgidek lessonPaymentCount ga bo'ladi", async () => {
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce({
+        id: 'v1',
+        salaryType: 'FIXED_PER_STUDENT',
+        value: 250_000,
+      });
+      prisma.group.findUnique.mockResolvedValue({
+        course: { lessonPaymentCount: 12 },
+        branchId: 2,
+      });
+      prisma.salaryAccrual.upsert.mockResolvedValue({});
+
+      await service.createAccrual(baseParams);
+
+      expect(prisma.salaryAccrual.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ amount: 20_833 }),
+        }),
+      );
+    });
   });
 
   describe('persisted audit', () => {

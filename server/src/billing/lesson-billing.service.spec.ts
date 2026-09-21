@@ -1180,6 +1180,7 @@ describe('LessonBillingService', () => {
       monthlyChargeService.findChargeForLesson.mockResolvedValue({
         id: 'chg-1',
         perLessonCost: 34_615,
+        plannedLessons: 13,
         transactionId: 'tx-monthly-1',
       });
     });
@@ -1211,6 +1212,7 @@ describe('LessonBillingService', () => {
       expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
         expect.objectContaining({
           perLessonCost: 34_615,
+          lessonDivisor: 13,
           deductionTransactionId: 'tx-monthly-1',
         }),
       );
@@ -1332,6 +1334,7 @@ describe('LessonBillingService', () => {
       expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
         expect.objectContaining({
           perLessonCost: 34_615,
+          lessonDivisor: 13,
           deductionTransactionId: null,
           centerFunded: true,
         }),
