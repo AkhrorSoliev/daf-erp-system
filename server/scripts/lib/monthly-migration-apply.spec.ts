@@ -88,6 +88,10 @@ function makeDeps(over: Partial<ApplyMigrationDeps> = {}): ApplyMigrationDeps {
       chargedAmount: 450_000,
       perLessonCost: 34_615,
       transactionId: 'tx-charge-1',
+      // 13 ATAYLAB — kursning `lessonPaymentCount`i (12) emas. Bo'luvchi
+      // uzatilmay qolsa `createAccrual` 12 ga tushadi va pastdagi test
+      // yiqiladi.
+      plannedLessons: 13,
     }),
     reverseAccrualForAttendance: jest.fn().mockResolvedValue(null),
     createAccrual: jest.fn().mockResolvedValue({ id: 'accrual-1' }),
@@ -185,6 +189,61 @@ describe('applyMigrationForStudent', () => {
     });
   });
 
+  // ── Oylik bo'luvchi: ledger CEOga ko'rsatilgan hisobot bilan bir xil
+  // raqamni yozishi shart ────────────────────────────────────────────────
+  it("accrual oyning muzlatilgan dars soniga bo'linadi, kursdagi 12 ga emas", async () => {
+    const tx = makeTx({
+      transaction: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'ded-1' }]),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'ded-aug',
+          createdAt: new Date('2026-08-04T09:00:00.000Z'),
+        }),
+      },
+      attendance: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            { id: 'att-1', date: new Date('2026-09-02'), groupId: 'grp-1' },
+          ]),
+      },
+      groupTeacher: {
+        findMany: jest.fn().mockResolvedValue([{ teacherId: 777 }]),
+      },
+      student: {
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValueOnce({ balance: -120_000 })
+          .mockResolvedValueOnce({ balance: -342_500 }),
+      },
+    });
+    const deps = makeDeps();
+
+    await applyMigrationForStudent({
+      tx,
+      deps,
+      studentId: 10453,
+      companyId: 1,
+      performedById: 999,
+      periodYear: 2026,
+      periodMonth: 9,
+      periodGte: PERIOD_GTE,
+      periodLt: PERIOD_LT,
+      enrollments: [makeEnrollment()],
+    });
+
+    // `FIXED_PER_STUDENT` stavkasi shu bo'luvchiga bo'linadi. Uzatilmasa
+    // `createAccrual` kursning `lessonPaymentCount`iga (12) tushadi — o'shanda
+    // 13 darslik oyda ustoz bir oylik stavkadan 8.3% ko'p olardi, migratsiya
+    // hisoboti esa (`migrate-to-monthly.ts`: `perLessonAccrual(version,
+    // newPerLesson, plannedLessons)`) CEOga BOSHQA summani ko'rsatardi.
+    expect(deps.createAccrual).toHaveBeenCalledTimes(1);
+    const accrualArgs = (deps.createAccrual as jest.Mock).mock.calls[0][0];
+    expect(accrualArgs.lessonDivisor).toBe(13);
+    expect(accrualArgs.perLessonCost).toBe(34_615);
+    expect(accrualArgs.teacherId).toBe(777);
+  });
+
   it("qayta ishga tushirish (resume): hammasi allaqachon bajarilgan bo'lsa, ikkinchi marta hisoblamaydi", async () => {
     const tx = makeTx({
       // reverseTransaction uchun qator topilmadi (allaqachon teskari).
@@ -211,6 +270,7 @@ describe('applyMigrationForStudent', () => {
         chargedAmount: 450_000,
         perLessonCost: 34_615,
         transactionId: 'tx-charge-1',
+        plannedLessons: 13,
       }),
     });
 
@@ -315,6 +375,7 @@ describe('applyMigrationForStudent', () => {
         chargedAmount: 450_000,
         perLessonCost: 34_615,
         transactionId: 'tx-x',
+        plannedLessons: 13,
       }),
     });
 
@@ -542,6 +603,7 @@ describe('applyMigrationForStudent', () => {
         chargedAmount: 450_000,
         perLessonCost: 34_615,
         transactionId: null,
+        plannedLessons: 13,
       }),
     });
 

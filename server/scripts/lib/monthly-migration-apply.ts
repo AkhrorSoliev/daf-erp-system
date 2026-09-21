@@ -137,6 +137,15 @@ export interface ApplyMigrationDeps {
     chargedAmount: number;
     perLessonCost: number;
     transactionId: string | null;
+    /**
+     * Shu oyning muzlatilgan dars soni. `createAccrual`ga `lessonDivisor`
+     * sifatida ELTILADI — aks holda oylik kursda `FIXED_PER_STUDENT`
+     * o'qituvchi 12 ga bo'lib olardi, migratsiya hisoboti esa
+     * (`migrate-to-monthly.ts` dagi `teacherPayDelta`) o'sha raqamni
+     * `plannedLessons`ga bo'lib ko'rsatardi — CEOga aytilgan summa
+     * ledgerdagidan farq qilardi.
+     */
+    plannedLessons: number;
   } | null>;
   reverseAccrualForAttendance: (params: {
     teacherId: number;
@@ -162,6 +171,13 @@ export interface ApplyMigrationDeps {
     perLessonCost: number;
     companyId: number;
     deductionTransactionId?: string | null;
+    /**
+     * Oylik kursdagi `FIXED_PER_STUDENT` bo'luvchisi. ATAYLAB MAJBURIY,
+     * `createAccrual`ning o'zida ixtiyoriy bo'lsa ham: bu skript FAQAT
+     * oylik yo'lni yozadi, va maydon tipda umuman yo'q bo'lganda
+     * `npm run typecheck` uzatilmaganini ko'ra olmasdi.
+     */
+    lessonDivisor: number;
     tx: Prisma.TransactionClient;
   }) => Promise<{ id: string } | null>;
 }
@@ -513,6 +529,12 @@ export async function applyMigrationForStudent(
             attendanceId: lesson.id,
             lessonDate: lesson.date,
             perLessonCost: charge.perLessonCost,
+            // Oylik yo'lda bo'luvchi — oyning muzlatilgan dars soni, kursdagi
+            // `lessonPaymentCount` (12) emas. CEO (21.09.2026, 1-javob):
+            // ustoz oyligi oydagi dars soniga bog'liq emas. Usiz migratsiya
+            // ledgerga `value/12` yozar, CEOga ko'rsatilgan hisobot esa
+            // `value/plannedLessons` deb aytardi.
+            lessonDivisor: charge.plannedLessons,
             companyId: params.companyId,
             deductionTransactionId: charge.transactionId,
             tx,
