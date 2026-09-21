@@ -538,6 +538,88 @@ describe('SalaryCalculationService', () => {
       );
     });
 
+    /**
+     * BR-09b PUL YOZADIGAN yo'l: yopilgan davrdagi oylik darsni markaz
+     * oldindan qoplaydi. `createAccrual` summani O'ZI qaytadan hisoblaydi,
+     * shuning uchun bo'luvchi u yerga YETIB BORISHI shart — aks holda
+     * kursning `lessonPaymentCount` iga (12) tushadi.
+     *
+     * Yuqoridagi ikkita BR-09b testi buni ushlay olmaydi: biri 12 talik
+     * kursda `PERCENTAGE` stavka bilan yuradi (bo'luvchi ta'sir qilmaydi),
+     * ikkinchisida esa accrual umuman yozilmaydi.
+     */
+    it("BR-09b: OYLIK backlog darsi oyning bo'luvchisi bilan yoziladi", async () => {
+      const augNow = new Date('2026-09-20T08:00:00.000Z');
+      const augAsOf = new Date('2026-08-15T00:00:00.000Z');
+      prisma.attendance.findMany.mockResolvedValue([]); // davr ichida dars yo'q
+      prisma.attendance.groupBy.mockResolvedValue([
+        { studentId: 100, groupId: 'g1', _count: { _all: 5 } },
+      ]);
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          id: 'jul-att',
+          studentId: 100,
+          groupId: 'g1',
+          date: new Date('2026-07-10'),
+        },
+      ]);
+      // `lessonPaymentCount: 12` ATAYLAB — oylik kursda natijaga tegmasligi
+      // kerak.
+      prisma.group.findMany.mockResolvedValue([
+        {
+          id: 'g1',
+          course: {
+            price: 400_000,
+            lessonPaymentCount: 12,
+            paymentModel: 'MONTHLY',
+          },
+        },
+      ]);
+      // Muzlatilgan iyul hisobi — 13 darslik oy. Shu mock backlog
+      // `loadFrozenMonthlyCharges` chaqiruviga ham xizmat qiladi.
+      prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+        {
+          studentId: 100,
+          groupId: 'g1',
+          periodYear: 2026,
+          periodMonth: 7,
+          perLessonCost: 30_769,
+          plannedLessons: 13,
+        },
+      ]);
+      prisma.groupTeacher.findMany.mockResolvedValue([
+        { groupId: 'g1', teacherId: 10010 },
+      ]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          salaryType: 'FIXED_PER_STUDENT',
+          value: 120_000,
+          effectiveFrom: new Date('2026-05-01'),
+          effectiveTo: null,
+          config: {
+            userId: 10010,
+            groupId: null,
+            salaryType: 'FIXED_PER_STUDENT',
+          },
+        },
+      ]);
+
+      await service.calculateMonthlySalaries(1, {
+        asOfDate: augAsOf,
+        now: augNow,
+      });
+
+      expect(accrualService.createAccrual).toHaveBeenCalledTimes(1);
+      const arg = accrualService.createAccrual.mock.calls[0][0];
+      expect(arg.attendanceId).toBe('jul-att');
+      expect(arg.centerFunded).toBe(true);
+      // Yopilgan iyul davriga emas, joriy ochiq davrga yoziladi.
+      expect(arg.creditPeriodDateOverride).toEqual(expect.any(Date));
+      expect(arg.perLessonCost).toBe(30_769);
+      // 13, 12 EMAS: 120 000 / 13 = 9 231, 12 ga bo'lish 10 000 berardi.
+      expect(arg.lessonDivisor).toBe(13);
+    });
+
     it('does NOT run the gap sweep for a pre-July (covered-only) period', async () => {
       // Default `now` (2026-06-20) settles the completed May period.
       await service.calculateMonthlySalaries(1, { now });
