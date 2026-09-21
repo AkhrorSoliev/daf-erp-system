@@ -159,10 +159,20 @@ Har biri kompaniya **va** filial darajasida. `payment.` prefiksi bilan.
 
 | Kalit | Ma'nosi | Boshlang'ich |
 |---|---|---|
-| `defaultModel` | yangi kurs uchun standart model | `LESSON_PACK` cutover'gacha, keyin CEO `MONTHLY` qiladi |
+| `defaultModel` | yangi kurs uchun standart model | `LESSON_PACK` cutover'gacha; `--apply` toza tugagach skriptning o'zi `MONTHLY` yozadi |
 | `chargeDayOfMonth` | hisob yaratiladigan kun | `1` |
 | `debtVisibleFromDay` | qarz qaysi kundan **ko'rinadi** | `1` |
 | `debtWarnFromDay` | qaysi kundan **ogohlantiriladi** | `10` |
+
+`defaultModel` — boshlang'ich ATAYLAB `LESSON_PACK`: sozlama YANGI kursga
+qo'llanadi (`CoursesService.create`), ya'ni `MONTHLY` bo'lsa kod chiqqan kuni
+ochilgan birinchi kurs jimgina oylik bo'lib qolardi. Teskari teshik ham bor:
+migratsiya MAVJUD kurslarni `MONTHLY` qiladi, sozlama esa `LESSON_PACK`
+bo'lib qolsa cutover'dan KEYIN ochilgan kurs paketda tug'ilardi — cron unga
+oylik hisob yozmaydi va o'sha guruh oylik hisob/qarz hisobotlarida umuman
+ko'rinmaydi. Shuning uchun ikkala bayroqni `migrate-to-monthly.ts --apply`
+ning toza yakuni BIRGA almashtiradi (`flipDefaultModelSettingToMonthly`);
+kafolat qo'lda bosiladigan tugmaga qoldirilmaydi.
 
 ### Qarz
 
@@ -380,7 +390,12 @@ administrator hozirgi «avtomatik balansga qaytadi» yo'lini oladi, bu
    tartibi shu sababdan teskarisiga o'zgardi
 6. CEO hisobotni o'qib tasdiqlaydi
 7. `--apply --limit=5` → `verify` → limitsiz `--apply` → `verify`
-8. CEO Sozlamalar → To'lov da standart modelni **Oylik** qiladi
+8. `--apply` toza tugagach **standart modelni skriptning o'zi** `MONTHLY`
+   qiladi (kurs bayrog'i bilan bitta qadamda). CEO Sozlamalar → To'lov da
+   buni ko'z bilan TASDIQLAYDI: sozlamalar keshi 5 daqiqa yashaydi, shu
+   oynada yangi kurs yaratilmasin, va skript filialda alohida qiymat
+   topsa uni baland aytadi — o'sha filial qiymati kompaniya qiymatidan
+   ustun bo'lgani uchun qo'lda tuzatiladi
 
 **Dasturdan tashqari:** shartnoma yurist bilan tuzatilishi kerak —
 narxlar yangilanadi, «oyiga 12 dars» olib tashlanadi, markaz aybi bilan

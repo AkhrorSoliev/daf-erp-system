@@ -82,7 +82,10 @@ import {
   resolvePrepaidRefundTotal,
   type PrepaidRefundBatch,
 } from './lib/prepaid-refund-price';
-import { flipCoursesToMonthly } from './lib/monthly-course-flip';
+import {
+  flipCoursesToMonthly,
+  flipDefaultModelSettingToMonthly,
+} from './lib/monthly-course-flip';
 import {
   applyMigrationForStudent,
   type ApplyMigrationDeps,
@@ -617,6 +620,38 @@ async function runApply(params: RunApplyParams): Promise<void> {
           `hisobsiz qolgan faol yozilish bor. Bayroqni shunday almashtirish ` +
           `kunlik qorovulga o'sha yozilishlarga to'liq oylik hisob yozdirardi.`,
       );
+    } else {
+      // Kurs bayrog'i faqat MAVJUD kurslarni ko'chiradi; cutover'dan keyin
+      // ochilgan YANGI kurs modelni `payment.defaultModel` dan oladi va
+      // uning kodlangan boshlang'ichi ataylab `LESSON_PACK`. Ikkalasi shu
+      // yerda BIRGA almashadi — aks holda kafolat qo'lda bosiladigan
+      // tugmaga qolardi va unutilgan bosish jim kutib turardi.
+      const companyIds = [
+        ...new Set([...migrateByStudent.values()].map((b) => b.companyId)),
+      ];
+      const setting = await flipDefaultModelSettingToMonthly({
+        prisma,
+        companyIds,
+      });
+      console.log(
+        `payment.defaultModel = MONTHLY: ${setting.written.length} ta kompaniyaga yozildi` +
+          (setting.alreadyMonthly.length
+            ? `, ${setting.alreadyMonthly.length} tasida allaqachon MONTHLY edi`
+            : ''),
+      );
+      console.log(
+        `Sozlamalar keshi (TTL 5 daqiqa) o'zi yangilanadi — shu oynada YANGI\n` +
+          `KURS yaratmang, u hali LESSON_PACK olishi mumkin.`,
+      );
+      for (const o of setting.branchOverrides) {
+        // Filial qiymati kompaniya qiymatidan USTUN — jim qoldirilsa
+        // o'sha filialda ochilgan yangi kurs paketda qolaverardi.
+        console.log(
+          `  DIQQAT: filial #${o.branchId} (kompaniya ${o.companyId}) uchun ` +
+            `alohida qiymat saqlangan: ${JSON.stringify(o.value)}. Uni ` +
+            `Sozlamalar → To'lov dan MONTHLY qiling yoki o'chiring.`,
+        );
+      }
     }
   }
 
@@ -629,6 +664,10 @@ async function runApply(params: RunApplyParams): Promise<void> {
   console.log('');
   console.log(
     "Migratsiya tugadi. Hech qanday xato yo'q.\n" +
+      (limit === null
+        ? `Kurs bayrog'i ham, \`payment.defaultModel\` sozlamasi ham MONTHLY —\n` +
+          `keyin ochilgan yangi kurs ham oylik bo'ladi.\n`
+        : '') +
       `Endi tekshiruvni ishga tushiring:\n` +
       `  npx ts-node scripts/verify-monthly-migration.ts --period=${period}`,
   );

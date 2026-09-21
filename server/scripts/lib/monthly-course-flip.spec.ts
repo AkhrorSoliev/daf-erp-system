@@ -1,5 +1,10 @@
 import { PaymentModel, PrismaClient } from '@prisma/client';
-import { flipCoursesToMonthly } from './monthly-course-flip';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import {
+  flipCoursesToMonthly,
+  flipDefaultModelSettingToMonthly,
+} from './monthly-course-flip';
 
 /**
  * C1 — `Course.paymentModel` migratsiyaning ENG XAVFLI bitta qatori.
@@ -139,5 +144,195 @@ describe('flipCoursesToMonthly', () => {
     expect(res.flipped).toEqual([]);
     expect(res.blocked).toHaveLength(1);
     expect(prisma.enrollment.count).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Kurs bayrog'i migratsiyaning yarmi — ikkinchi yarmi `payment.defaultModel`.
+ *
+ * `flipCoursesToMonthly` faqat MAVJUD kurslarni ko'chiradi. Cutover'dan
+ * keyin ochilgan YANGI kurs modelni sozlamadan oladi
+ * (`CoursesService.create`), uning kodlangan boshlang'ichi esa ataylab
+ * `LESSON_PACK`. Sozlama qo'lda qolsa, `--apply` toza tugagandan keyin
+ * ochilgan birinchi kurs 12 talik paketda qolardi: kunlik cron unga oylik
+ * hisob yozmaydi va o'sha guruh oylik hisob/qarz hisobotlarida umuman
+ * ko'rinmaydi — jim, uzoq yashaydigan xato. Shuning uchun bayroq va
+ * sozlama BITTA qadamda almashadi.
+ */
+describe('flipDefaultModelSettingToMonthly', () => {
+  type Row = { id: number; branchId: number | null; value: unknown };
+
+  const makePrisma = (rowsPerCall: Row[][]) => {
+    const findMany = jest.fn();
+    for (const rows of rowsPerCall) findMany.mockResolvedValueOnce(rows);
+    return {
+      setting: {
+        findMany,
+        update: jest.fn().mockResolvedValue({}),
+        create: jest.fn().mockResolvedValue({}),
+      },
+    } as unknown as PrismaClient;
+  };
+
+  it("qator yo'q bo'lsa kompaniya darajasida MONTHLY yozadi", async () => {
+    const prisma = makePrisma([[]]);
+
+    const res = await flipDefaultModelSettingToMonthly({
+      prisma,
+      companyIds: [1001],
+    });
+
+    expect(res.written).toEqual([1001]);
+    expect(res.alreadyMonthly).toEqual([]);
+    expect(prisma.setting.create).toHaveBeenCalledWith({
+      data: {
+        companyId: 1001,
+        branchId: null,
+        key: 'payment.defaultModel',
+        value: PaymentModel.MONTHLY,
+      },
+    });
+    expect(prisma.setting.update).not.toHaveBeenCalled();
+  });
+
+  it('mavjud LESSON_PACK qatorini id bo`yicha yangilaydi (upsert emas)', async () => {
+    // `@@unique([companyId, branchId, key])` da `branchId = null` Postgres
+    // uchun har doim "boshqa" qiymat — `upsert` har ishga tushishda YANGI
+    // qator yasab, kompaniya qiymatini ikkilantirib yuborardi.
+    const prisma = makePrisma([
+      [{ id: 7, branchId: null, value: PaymentModel.LESSON_PACK }],
+    ]);
+
+    const res = await flipDefaultModelSettingToMonthly({
+      prisma,
+      companyIds: [1001],
+    });
+
+    expect(res.written).toEqual([1001]);
+    expect(prisma.setting.update).toHaveBeenCalledWith({
+      where: { id: 7 },
+      data: { value: PaymentModel.MONTHLY },
+    });
+    expect(prisma.setting.create).not.toHaveBeenCalled();
+  });
+
+  it('allaqachon MONTHLY bo`lsa qayta yozmaydi', async () => {
+    const prisma = makePrisma([
+      [{ id: 7, branchId: null, value: PaymentModel.MONTHLY }],
+    ]);
+
+    const res = await flipDefaultModelSettingToMonthly({
+      prisma,
+      companyIds: [1001],
+    });
+
+    expect(res.written).toEqual([]);
+    expect(res.alreadyMonthly).toEqual([1001]);
+    expect(prisma.setting.update).not.toHaveBeenCalled();
+    expect(prisma.setting.create).not.toHaveBeenCalled();
+  });
+
+  it('filialning MONTHLY bo`lmagan qiymatini BALAND aytadi va tegmaydi', async () => {
+    // Filial qiymati kompaniya qiymatidan USTUN — jim qoldirilsa o'sha
+    // filialda ochilgan yangi kurs paketda qolaverardi. Skript uni o'zi
+    // o'chirmaydi (CEO qarori), lekin ekranda ko'rsatadi.
+    const prisma = makePrisma([
+      [
+        { id: 7, branchId: null, value: PaymentModel.LESSON_PACK },
+        { id: 8, branchId: 5, value: PaymentModel.LESSON_PACK },
+      ],
+    ]);
+
+    const res = await flipDefaultModelSettingToMonthly({
+      prisma,
+      companyIds: [1001],
+    });
+
+    expect(res.branchOverrides).toEqual([
+      { companyId: 1001, branchId: 5, value: PaymentModel.LESSON_PACK },
+    ]);
+    expect(res.written).toEqual([1001]);
+    // Faqat kompaniya qatori yangilandi, filial qatori o'z holicha qoldi.
+    expect(prisma.setting.update).toHaveBeenCalledTimes(1);
+    expect(prisma.setting.update).toHaveBeenCalledWith({
+      where: { id: 7 },
+      data: { value: PaymentModel.MONTHLY },
+    });
+  });
+
+  it('allaqachon MONTHLY bo`lgan filial qatori ogohlantirish bermaydi', async () => {
+    const prisma = makePrisma([
+      [
+        { id: 7, branchId: null, value: PaymentModel.LESSON_PACK },
+        { id: 8, branchId: 5, value: PaymentModel.MONTHLY },
+      ],
+    ]);
+
+    const res = await flipDefaultModelSettingToMonthly({
+      prisma,
+      companyIds: [1001],
+    });
+
+    expect(res.branchOverrides).toEqual([]);
+  });
+
+  it('har bir kompaniyaga alohida yozadi', async () => {
+    const prisma = makePrisma([
+      [],
+      [{ id: 9, branchId: null, value: PaymentModel.MONTHLY }],
+    ]);
+
+    const res = await flipDefaultModelSettingToMonthly({
+      prisma,
+      companyIds: [1001, 1002],
+    });
+
+    expect(res.written).toEqual([1001]);
+    expect(res.alreadyMonthly).toEqual([1002]);
+    expect(prisma.setting.findMany).toHaveBeenCalledTimes(2);
+    expect(
+      (prisma.setting.findMany as jest.Mock).mock.calls.map(
+        (c) => c[0].where.companyId,
+      ),
+    ).toEqual([1001, 1002]);
+  });
+});
+
+/**
+ * Yuqoridagi funksiya yozilgani yetmaydi — u `migrate-to-monthly.ts` ning
+ * TOZA yakun shoxida chaqirilishi kerak. Skriptni testga import qilib
+ * bo'lmaydi (fayl oxirida `run(main)` bor — import qilish uni ISHGA
+ * TUSHIRARDI), shuning uchun manba matni o'qiladi; naqsh repo'da bor
+ * (`src/common/finance/per-lesson-price.single-source.spec.ts`).
+ */
+describe('migrate-to-monthly — yakuniy qadam IKKALA bayroqni ham almashtiradi', () => {
+  const src = readFileSync(
+    join(__dirname, '..', 'migrate-to-monthly.ts'),
+    'utf8',
+  );
+
+  const courseFlipAt = src.indexOf('const flip = await flipCoursesToMonthly(');
+  const blockedCheckAt = src.indexOf('if (flip.blocked.length > 0) {');
+  const settingFlipAt = src.indexOf('await flipDefaultModelSettingToMonthly({');
+  const failGateAt = src.indexOf("section('TEKSHIRUV YIQILDI')");
+
+  it('sozlamani ham almashtiradi — aks holda kafolat qo`lda bosiladigan tugmaga qolardi', () => {
+    expect(settingFlipAt).toBeGreaterThan(-1);
+  });
+
+  it('chaqiruv kurs bayrog`i BLOKLANMAGAN shoxida turadi', () => {
+    // `--limit` bilan ham, tekshiruvlar yiqilganda ham, bloklangan kurs
+    // qolganda ham sozlama almashmasligi kerak: yarim ko'chgan bazada
+    // yangi kurs oylik bo'lib tug'ilsa, hali paketda turgan kursdoshlari
+    // bilan bir guruhda ikki xil hisob-kitob paydo bo'lardi.
+    expect(courseFlipAt).toBeGreaterThan(-1);
+    expect(blockedCheckAt).toBeGreaterThan(courseFlipAt);
+    expect(settingFlipAt).toBeGreaterThan(blockedCheckAt);
+    expect(settingFlipAt).toBeLessThan(failGateAt);
+  });
+
+  it('muvaffaqiyat xabari sozlamani ham nomlab aytadi', () => {
+    const epilogue = src.slice(src.indexOf('Migratsiya tugadi.'));
+    expect(epilogue).toContain('payment.defaultModel');
   });
 });

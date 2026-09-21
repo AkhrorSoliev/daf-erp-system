@@ -11,6 +11,7 @@ import {
   PaymentModel,
   PrismaClient,
 } from '@prisma/client';
+import type { SettingKey } from '../../src/settings/settings.types';
 
 /**
  * YAKUNIY QADAM: kurslarni `MONTHLY` ga o'tkazish.
@@ -98,4 +99,97 @@ export async function flipCoursesToMonthly(params: {
   }
 
   return { flipped, blocked };
+}
+
+/**
+ * YAKUNIY QADAMNING IKKINCHI YARMI: `payment.defaultModel = MONTHLY`.
+ *
+ * `flipCoursesToMonthly` faqat MAVJUD kurslarni ko'chiradi. Cutover'dan
+ * KEYIN ochilgan YANGI kurs esa modelni shu sozlamadan oladi
+ * (`CoursesService.create`), uning kodlangan boshlang'ichi esa ataylab
+ * `LESSON_PACK` — kod chiqqan kuni yaratilgan kurs jimgina oylikka o'tib
+ * ketmasligi uchun. Ya'ni migratsiyadan keyin ikkinchi, teskari teshik
+ * ochiladi: `--apply` toza tugagach ochilgan birinchi kurs 12 talik
+ * paketda qolardi, `MonthlyBillingCronService` unga hisob yozmasdi va
+ * o'sha guruh oylik hisob va qarz hisobotlarida umuman ko'rinmasdi.
+ * Kafolat «CEO panelda tugmani bosishni unutmasin» bo'lib qolmasligi
+ * uchun bayroq va sozlama BITTA qadamda almashadi.
+ *
+ * `upsert` EMAS: `Setting` ning `@@unique([companyId, branchId, key])`
+ * indeksida `branchId = null` Postgres uchun har doim "boshqa" qiymat —
+ * `SettingsService.set` dagi `findFirst` + create/update naqshi (u yerda
+ * sabab to'liq yozilgan).
+ *
+ * Sozlamalar keshi (`settings:company:<id>`, TTL 5 daqiqa) bu yerdan
+ * o'chirilmaydi: skript Redis'siz DI grafigi bilan ishlaydi
+ * (`MigrationModule` ataylab RedisModule'ni ko'tarmaydi). Kesh o'zi
+ * eskiradi, shuning uchun chaqiruvchi shu 5 daqiqa oynasini baland aytadi.
+ *
+ * `branchOverrides` — shu kalit bo'yicha saqlangan filial qatorlari.
+ * Ular kompaniya qiymatidan USTUN, shuning uchun jim qoldirilmaydi.
+ *
+ * Yozuv `EntityHistory` ga TUSHMAYDI (yonidagi `flipCoursesToMonthly` dagi
+ * `Course.paymentModel` yozuvi ham shunday): skript `SettingsService` ni
+ * emas, `PrismaClient` ni ishlatadi. Dalil — migratsiyaning o'z hisoboti va
+ * shu yerdagi konsol yozuvlari; sozlamani keyin kim o'zgartirgani esa
+ * panel orqali odatdagidek tarixga tushadi.
+ */
+export async function flipDefaultModelSettingToMonthly(params: {
+  prisma: PrismaClient;
+  companyIds: number[];
+}): Promise<{
+  written: number[];
+  alreadyMonthly: number[];
+  branchOverrides: { companyId: number; branchId: number; value: unknown }[];
+}> {
+  const key: SettingKey = 'payment.defaultModel';
+  const written: number[] = [];
+  const alreadyMonthly: number[] = [];
+  const branchOverrides: {
+    companyId: number;
+    branchId: number;
+    value: unknown;
+  }[] = [];
+
+  for (const companyId of params.companyIds) {
+    const rows = await params.prisma.setting.findMany({
+      where: { companyId, key },
+      select: { id: true, branchId: true, value: true },
+    });
+
+    for (const row of rows) {
+      if (row.branchId != null && row.value !== PaymentModel.MONTHLY) {
+        branchOverrides.push({
+          companyId,
+          branchId: row.branchId,
+          value: row.value,
+        });
+      }
+    }
+
+    const companyRow = rows.find((r) => r.branchId === null);
+    if (companyRow && companyRow.value === PaymentModel.MONTHLY) {
+      alreadyMonthly.push(companyId);
+      continue;
+    }
+
+    if (companyRow) {
+      await params.prisma.setting.update({
+        where: { id: companyRow.id },
+        data: { value: PaymentModel.MONTHLY },
+      });
+    } else {
+      await params.prisma.setting.create({
+        data: {
+          companyId,
+          branchId: null,
+          key,
+          value: PaymentModel.MONTHLY,
+        },
+      });
+    }
+    written.push(companyId);
+  }
+
+  return { written, alreadyMonthly, branchOverrides };
 }
