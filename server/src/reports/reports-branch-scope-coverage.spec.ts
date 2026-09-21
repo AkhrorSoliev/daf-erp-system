@@ -207,6 +207,7 @@ describe('branch scope coverage — expectation service', () => {
       attendance: { findMany: jest.fn().mockResolvedValue([]) },
       transaction: { findMany: jest.fn().mockResolvedValue([]) },
       lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
+      lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
       // Oylik hisoblar zanjirning ichida: guruh so'rovi qaytargan
       // id'lardan filtrlanadi, o'zi filial predikatini tashimaydi.
       enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
@@ -245,6 +246,9 @@ describe('branch scope coverage — expectation service', () => {
     expect(
       prisma.lessonCancellation.findMany.mock.calls[0][0].where.group.branchId,
     ).toEqual({ in: [7] });
+    expect(
+      prisma.lessonReschedule.findMany.mock.calls[0][0].where.group.branchId,
+    ).toEqual({ in: [7] });
     // The chain: attendance sees ONLY the ids the scoped group query returned.
     expect(prisma.attendance.findMany.mock.calls[0][0].where.groupId).toEqual({
       in: ['g-in-scope'],
@@ -262,6 +266,9 @@ describe('branch scope coverage — expectation service', () => {
     ).toBeUndefined();
     expect(
       prisma.lessonCancellation.findMany.mock.calls[0][0].where.group.branchId,
+    ).toBeUndefined();
+    expect(
+      prisma.lessonReschedule.findMany.mock.calls[0][0].where.group.branchId,
     ).toBeUndefined();
   });
 

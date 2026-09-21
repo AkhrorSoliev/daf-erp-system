@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PaymentModel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { HolidaysService } from '../holidays/holidays.service';
 import { RedisService } from '../redis/redis.service';
@@ -117,46 +118,66 @@ export class ReportsExpectationService {
       ...(branchIds && { branchId: { in: branchIds } }),
     };
 
-    const [groups, holidayDates, cancellations] = await Promise.all([
-      this.prisma.group.findMany({
-        where: groupWhere,
-        select: {
-          id: true,
-          statusEnum: true,
-          deletedAt: true,
-          exactDays: true,
-          startDate: true,
-          endDate: true,
-          scheduleSnapshots: {
-            select: { exactDays: true, validFrom: true, validTo: true },
-          },
-          course: { select: { price: true, lessonPaymentCount: true } },
-          contracts: {
-            where: { status: 'ACTIVE', deletedAt: null },
-            select: { studentId: true, totalAmount: true },
-          },
-          enrollments: {
-            where: { deletedAt: null, status: 'ACTIVE' },
-            select: {
-              studentId: true,
-              student: { select: { discountPercent: true } },
+    const [groups, holidayDates, cancellations, reschedules] =
+      await Promise.all([
+        this.prisma.group.findMany({
+          where: groupWhere,
+          select: {
+            id: true,
+            statusEnum: true,
+            deletedAt: true,
+            exactDays: true,
+            startDate: true,
+            endDate: true,
+            scheduleSnapshots: {
+              select: { exactDays: true, validFrom: true, validTo: true },
+            },
+            course: {
+              select: {
+                price: true,
+                lessonPaymentCount: true,
+                paymentModel: true,
+              },
+            },
+            contracts: {
+              where: { status: 'ACTIVE', deletedAt: null },
+              select: { studentId: true, totalAmount: true },
+            },
+            enrollments: {
+              where: { deletedAt: null, status: 'ACTIVE' },
+              select: {
+                studentId: true,
+                student: { select: { discountPercent: true } },
+              },
             },
           },
-        },
-      }),
-      this.holidays.buildHolidayDateSet(
-        startDate,
-        new Date(endDateExcl.getTime() - DAY_MS),
-      ),
-      this.prisma.lessonCancellation.findMany({
-        where: {
-          deletedAt: null,
-          date: { gte: startDate, lt: endDateExcl },
-          group: groupWhere,
-        },
-        select: { groupId: true, date: true },
-      }),
-    ]);
+        }),
+        this.holidays.buildHolidayDateSet(
+          startDate,
+          new Date(endDateExcl.getTime() - DAY_MS),
+        ),
+        this.prisma.lessonCancellation.findMany({
+          where: {
+            deletedAt: null,
+            date: { gte: startDate, lt: endDateExcl },
+            group: groupWhere,
+          },
+          select: { groupId: true, date: true },
+        }),
+        // Bayram darsi SHU OY ichida boshqa kunga ko'chirilgan bo'lsa — dars
+        // yo'qolmagan. `MonthlyChargeService.resolveExcludedDates` aynan shu
+        // shartni qo'yadi (`newDate` ham shu oy ichida), demak muzlatilgan
+        // `plannedLessons` o'sha kunni sanaydi; prognoz ham sanashi kerak.
+        this.prisma.lessonReschedule.findMany({
+          where: {
+            deletedAt: null,
+            originalDate: { gte: startDate, lt: endDateExcl },
+            newDate: { gte: startDate, lt: endDateExcl },
+            group: groupWhere,
+          },
+          select: { groupId: true, originalDate: true },
+        }),
+      ]);
     if (groups.length === 0) return empty;
 
     const groupIds = groups.map((g) => g.id);
@@ -220,6 +241,13 @@ export class ReportsExpectationService {
       const set = cancelledByGroup.get(c.groupId) ?? new Set<string>();
       set.add(tashkentDateStr(c.date));
       cancelledByGroup.set(c.groupId, set);
+    }
+
+    const movedWithinMonthByGroup = new Map<string, Set<string>>();
+    for (const r of reschedules) {
+      const set = movedWithinMonthByGroup.get(r.groupId) ?? new Set<string>();
+      set.add(tashkentDateStr(r.originalDate));
+      movedWithinMonthByGroup.set(r.groupId, set);
     }
 
     const attByGroup = new Map<string, typeof attendances>();
@@ -310,6 +338,13 @@ export class ReportsExpectationService {
           : [],
         datesWithAttendance,
         cancelledDates: cancelledByGroup.get(g.id) ?? new Set<string>(),
+        // FAQAT oylik guruhlar uchun. 12 talik (LESSON_PACK) yo'lda hech
+        // qanday `plannedLessons` muzlatilmaydi — moslashtiradigan narsa
+        // yo'q, shuning uchun u yerdagi xulq ataylab tegilmay qoladi.
+        holidayMakeupDates:
+          g.course.paymentModel === PaymentModel.MONTHLY
+            ? (movedWithinMonthByGroup.get(g.id) ?? new Set<string>())
+            : new Set<string>(),
         coveredAttendances: covered,
         uncoveredAttendances: uncovered,
       };
