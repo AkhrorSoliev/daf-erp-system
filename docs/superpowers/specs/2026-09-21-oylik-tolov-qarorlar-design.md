@@ -159,10 +159,16 @@ Har biri kompaniya **va** filial darajasida. `payment.` prefiksi bilan.
 
 | Kalit | Ma'nosi | Boshlang'ich |
 |---|---|---|
-| `defaultModel` | yangi kurs uchun standart model | `MONTHLY` |
+| `defaultModel` | yangi kurs uchun standart model | `LESSON_PACK` cutover'gacha, keyin CEO `MONTHLY` qiladi |
 | `chargeDayOfMonth` | hisob yaratiladigan kun | `1` |
 | `debtVisibleFromDay` | qarz qaysi kundan **ko'rinadi** | `1` |
 | `debtWarnFromDay` | qaysi kundan **ogohlantiriladi** | `10` |
+
+### Qarz
+
+| Kalit | Ma'nosi | Boshlang'ich |
+|---|---|---|
+| `debtWriteOffEnabled` | qarz kechirish amaliga ruxsat (9-javob: yo'q) | `false` |
 
 ### Uzrli dars
 
