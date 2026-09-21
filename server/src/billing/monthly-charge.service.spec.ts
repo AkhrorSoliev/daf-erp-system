@@ -974,6 +974,11 @@ describe('MonthlyChargeService', () => {
         departureDate: new Date('2026-09-20T00:00:00Z'),
         companyId: 1,
         reason: 'Guruhdan chiqdi',
+        // Test devor soatidan mustaqil bo'lishi uchun "bugun" ham
+        // qotiriladi: servisda `departureDate < today` qorovuli bor
+        // (monthly-charge.service.ts:576), shusiz bu testlar 20.09.2026
+        // dan keyin o'z-o'zidan yiqilardi.
+        today: '2026-09-20',
       });
 
       expect(res?.refunded).toBe(138_460); // 4 x 34 615
@@ -1033,6 +1038,8 @@ describe('MonthlyChargeService', () => {
         departureDate: new Date('2026-09-20T00:00:00Z'),
         companyId: 1,
         reason: 'Guruhdan chiqdi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-09-20',
       });
 
       expect(res?.refunded).toBe(138_460); // 4 x 34 615, 5 x emas
@@ -1081,6 +1088,8 @@ describe('MonthlyChargeService', () => {
         departureDate: new Date('2026-09-20T00:00:00Z'),
         companyId: 1,
         reason: 'Guruhdan chiqdi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-09-20',
       });
 
       expect(res?.refunded).toBe(5);
@@ -1109,6 +1118,8 @@ describe('MonthlyChargeService', () => {
         departureDate: new Date('2026-09-20T00:00:00Z'),
         companyId: 1,
         reason: 'Guruhdan chiqdi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-09-20',
       });
 
       expect(res?.refunded).toBe(69_232);
@@ -1139,6 +1150,8 @@ describe('MonthlyChargeService', () => {
         departureDate: new Date('2026-09-20T00:00:00Z'),
         companyId: 1,
         reason: 'Guruhdan chiqdi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-09-20',
       });
 
       expect(res?.refunded).toBe(138_460); // 4 x 34 615, eskisi bilan bir xil
@@ -1165,6 +1178,8 @@ describe('MonthlyChargeService', () => {
         departureDate: new Date('2026-09-20T00:00:00Z'),
         companyId: 1,
         reason: 'Guruhdan chiqdi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-09-20',
       });
 
       expect(res?.refunded).toBe(5);
@@ -1177,6 +1192,8 @@ describe('MonthlyChargeService', () => {
         departureDate: new Date('2026-09-20T00:00:00Z'),
         companyId: 1,
         reason: 'Guruhdan chiqdi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-09-20',
       });
       expect(res).toBeNull();
       expect(txWriteMock.createAdjustment).not.toHaveBeenCalled();
@@ -1199,6 +1216,8 @@ describe('MonthlyChargeService', () => {
         departureDate: new Date('2026-09-20T00:00:00Z'),
         companyId: 1,
         reason: 'Guruhdan chiqdi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-09-20',
       });
 
       expect(res).toBeNull();
@@ -1236,6 +1255,8 @@ describe('MonthlyChargeService', () => {
         departureDate: new Date('2026-09-20T00:00:00Z'),
         companyId: 1,
         reason: 'Guruhdan chiqdi',
+        // Devor soatidan mustaqil — yuqoridagi izohga qarang.
+        today: '2026-09-20',
       };
 
       const first = await service.reverseChargeForDeparture(tx, params);
