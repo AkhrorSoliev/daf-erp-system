@@ -79,14 +79,16 @@ o'quvchi tomonidagi qoida, va u allaqachon ishlaydi.
 14 × value/12 chiqadi — oydan oshadi. Oylik kursda bo'luvchi
 `plannedLessons` bo'lishi kerak. Bir qatorlik o'zgarish + test.
 
-**Ko'chirilgan dars — `plannedLessons` ni buzadi.** `lessonDatesInMonth`
-bayram va bekor qilingan kunlarni **chiqarib tashlaydi**
-(`excludedDates`), lekin ko'chirilgan darsning **yangi kunini
-qo'shmaydi**. Bayram darsi boshqa kunga ko'chirilsa (10-javob), o'sha kun
-rejaga kirmaydi → 14-dars sifatida §5.5 bo'yicha ustozga qo'shimcha haq
-yoziladi → 1-javobga zid. Yechim: `includedDates` parametri
-(`LessonReschedule` maqsad kunlari). Shunda ko'chirilgan dars bayram
-o'rnini egallaydi, sanoq o'zgarmaydi, qo'shimcha haq yozilmaydi.
+**Ko'chirilgan dars — bayram rejadan CHIQMAYDI.** `resolveExcludedDates`
+bayram kunlarini `plannedLessons` dan chiqarib tashlardi: 13 darslik oy 12
+deb muzlatilar, keyin bayram darsi boshqa kunga ko'chirilib o'tilganda
+(10-javob) o'sha davomat 13- dars sifatida §5.5 bo'yicha ustozga qo'shimcha
+haq yozardi → 1-javobga zid. Yechim: bayram rejada qoladi, faqat bekor
+qilingan (ko'chirilmagan) dars chiqadi. Ko'chirilgan dars asl kunning
+o'rnini egallaydi — asl kunga davomat yozilmaydi, yangi kunga yoziladi,
+sanoq 13 da qoladi. (Avval rejalashtirilgan `includedDates` yechimi bekor:
+u faqat hisob yaratilishidan OLDIN ma'lum ko'chirishlarni ko'rardi, o'rta
+oyda qilinganlarni emas.)
 
 `FIXED_MONTHLY` xodimlarga tegmaydi.
 
@@ -169,7 +171,7 @@ Har biri kompaniya **va** filial darajasida. `payment.` prefiksi bilan.
 7. **Uzrli darsni qayta o'tish mexanizmi** — hozir yo'q. Mavjud
    `LessonReschedule` butun guruhni ko'chiradi; bu esa bitta o'quvchiga
    qarzdor bo'lingan darsni kuzatishi kerak.
-8. **`FIXED_PER_STUDENT` bo'luvchisi + `includedDates`** — 4-bo'limga qara. Kichik.
+8. **`FIXED_PER_STUDENT` bo'luvchisi + bayram rejadan chiqmaydi** — 4-bo'limga qara. Kichik.
 
 ---
 
@@ -241,7 +243,7 @@ Har biri 26 javob bilan solishtirildi.
 |---|---|---|
 | 1 Sxema | ✅ turadi | `PaymentModel` ikkala usulni saqlaydi (23-javob). Qo'shimcha: muzlatish muddati muhri, kurs narxi amal sanasi |
 | 2 Oylik arifmetika | ✅ turadi | Kredit qo'llash (`applyLessonCredit`) `excusedMode` ga bog'lanadi |
-| 3 Oydagi dars kunlari | ⚠️ kichik | `includedDates` qo'shiladi — ko'chirilgan dars sanoqni buzmasin (4-bo'lim) |
+| 3 Oydagi dars kunlari | ✅ turadi | Sof funksiya o'zgarmaydi; `resolveExcludedDates` bayramni chiqarmaydi (4-bo'lim) |
 | 4 Ledger yozuvi | ✅ turadi | — |
 | 5 `MonthlyChargeService` | ⚠️ | Kredit ixtiyoriy bo'ladi; muzlatish oqimi qayta ishlanadi (19-javob) |
 | 6 Davomat `MONTHLY` shoxi | ⚠️ kichik | `FIXED_PER_STUDENT` bo'luvchisi; `EXCUSED` → kredit faqat sozlama ruxsat bersa |
@@ -258,7 +260,7 @@ tuzatish, uchtasi yangi parametr, bittasi (cron) keyingi bosqichga.
 Bularsiz tizim CEO qoidasiga zid pul hisoblaydi:
 
 1. `FIXED_PER_STUDENT` bo'luvchisi → `plannedLessons` (1-javob)
-2. `includedDates` — ko'chirilgan dars ustozga qo'shimcha haq yozmasin (1, 10)
+2. Bayram rejadan chiqmaydi — ko'chirilgan dars ustozga qo'shimcha haq yozmasin (1, 10)
 3. `payment.debtWriteOffEnabled=false` — kechirish yopiladi (9)
 4. ~~`payment.excusedMode`~~ — **kiritilmaydi.** 18-javob «ikkalasi ham»
    dedi, lekin `RETEACH` mexanizmi yo'q; faqat `CREDIT` bor bo'lgan enum
