@@ -591,6 +591,43 @@ describe('MonthlyChargeService', () => {
       expect(charge?.coveredDates).toEqual([...charge!.coveredDates].sort());
     });
 
+    it("o'quvchi qo'shilishidan OLDIN o'tilgan qoplama darsi unga yozilmaydi", async () => {
+      // Kam uchraydigan holat: 22-sentabr bayrami OLDINGI kunga —
+      // 4-sentabrga ko'chirilgan, o'quvchi esa 10-sentabrda qo'shilgan.
+      // Dars u kelishidan oldin o'tib bo'lgan, demak uning pulini ham
+      // to'lamaydi. Asl kun (22-sentabr) qoldirilganda o'quvchi olmagan
+      // darsga pul to'lardi.
+      prismaMock.holiday.findMany.mockResolvedValueOnce([
+        {
+          date: new Date('2026-09-22T00:00:00Z'),
+          endDate: new Date('2026-09-22T00:00:00Z'),
+        },
+      ]);
+      prismaMock.lessonReschedule.findMany.mockResolvedValueOnce([
+        {
+          originalDate: new Date('2026-09-22T00:00:00Z'),
+          newDate: new Date('2026-09-04T00:00:00Z'),
+        },
+      ]);
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment({
+          startDate: new Date('2026-09-10T00:00:00Z'),
+        }),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      // Reja baribir 13 — guruhda 13 ta dars bor.
+      expect(charge?.plannedLessons).toBe(13);
+      // 10,12,15,17,19,24,26,29 = 8 ta (22 -> 04 ga ko'chdi va tushib qoldi).
+      expect(charge?.coveredLessons).toBe(8);
+      expect(charge?.coveredDates).not.toContain('2026-09-04');
+      expect(charge?.coveredDates).not.toContain('2026-09-22');
+      expect(charge?.chargedAmount).toBe(276_923); // 450 000 * 8/13
+    });
+
     it("ketgan o'quvchiga ketishdan KEYINGI qoplama darsining puli qaytadi", async () => {
       // Yuqoridagi qoida pulda qanday ko'rinishi: 22-sentabr bayrami
       // 30-sentabrga ko'chirilgan, o'quvchi 26-sentabrda ketadi. Ketguncha
