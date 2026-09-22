@@ -26,6 +26,7 @@ interface PaymentSettingsValues {
   "payment.excusedCreditEnabled": boolean;
   "payment.excusedCreditMonthlyCap": number | null;
   "payment.chargeDayOfMonth": number;
+  "payment.debtWriteOffEnabled": boolean;
 }
 
 /** Har bir sozlama kaliti uchun — o'ziga xos qiymatga ega filiallar ro'yxati. */
@@ -294,6 +295,38 @@ export function PaymentSettingsClient() {
           {/* chargeDayOfMonth companyLevelOnly — filial override HECH
               QACHON bo'lmaydi (backend uni rad etadi), shuning uchun bu
               yerda override eslatmasi ko'rsatilmaydi. */}
+        </div>
+
+        <Separator />
+
+        {/* Qarz kechirishga ruxsat */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between rounded-lg border px-4 py-3">
+            <div className="pr-4">
+              <p className="text-sm font-medium">
+                Qarz kechirishga ruxsat
+              </p>
+              <p className="text-xs text-muted-foreground">
+                O&apos;chirilgan bo&apos;lsa (standart holat) — o&apos;quvchining
+                qarzi hech qachon kechirilmaydi: guruhdan chiqarish oynasidagi
+                va profildagi hisobdan chiqarish tugmasi ishlamaydi, server ham
+                so&apos;rovni rad etadi, qarz butun tarixi bilan joyida qoladi.
+                Yoqilgan bo&apos;lsa — administrator sabab yozib va summani
+                qaytadan terib qarzni kechira oladi.
+              </p>
+            </div>
+            <Switch
+              checked={settings["payment.debtWriteOffEnabled"]}
+              disabled={!canEdit || saving}
+              onCheckedChange={(checked) =>
+                saveField({ debtWriteOffEnabled: checked })
+              }
+            />
+          </div>
+          {/* debtWriteOffEnabled ham companyLevelOnly — CEO buni butun
+              kompaniya uchun hal qildi va backend filial bo'yicha yozishni
+              rad etadi, shuning uchun filial override eslatmasi bu yerda
+              hech qachon ma'noga ega bo'lmaydi. */}
         </div>
       </div>
 
