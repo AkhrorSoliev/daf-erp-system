@@ -1149,32 +1149,38 @@ export class MonthlyChargeService {
     const monthStartStr = tashkentDateStr(monthStart);
     const monthEndStr = tashkentDateStr(monthEndInclusive);
 
-    const [holidayDates, cancellations, reschedules] = await Promise.all([
-      buildHolidayDateSet(tx, monthStart, monthEndInclusive, branchId),
-      tx.lessonCancellation.findMany({
-        where: {
-          groupId,
-          deletedAt: null,
-          date: { gte: monthStart, lt: monthEndExclusive },
-        },
-        select: { date: true },
-      }),
-      // ASL kun YOKI yangi kun shu oyga tegsa — qator kerak. Faqat `newDate`
-      // bo'yicha so'rash keyingi oyga surilgan darsni ko'rinmas qilardi,
-      // faqat `originalDate` bo'yicha so'rash esa boshqa oydan ko'chirib
-      // kelingan darsni. `AttendanceReadService` ham aynan shu OR ni yozadi.
-      tx.lessonReschedule.findMany({
-        where: {
-          groupId,
-          deletedAt: null,
-          OR: [
-            { originalDate: { gte: monthStart, lt: monthEndExclusive } },
-            { newDate: { gte: monthStart, lt: monthEndExclusive } },
-          ],
-        },
-        select: { originalDate: true, newDate: true },
-      }),
-    ]);
+    const [group, holidayDates, cancellations, reschedules] = await Promise.all(
+      [
+        tx.group.findUnique({
+          where: { id: groupId },
+          select: { startDate: true, endDate: true },
+        }),
+        buildHolidayDateSet(tx, monthStart, monthEndInclusive, branchId),
+        tx.lessonCancellation.findMany({
+          where: {
+            groupId,
+            deletedAt: null,
+            date: { gte: monthStart, lt: monthEndExclusive },
+          },
+          select: { date: true },
+        }),
+        // ASL kun YOKI yangi kun shu oyga tegsa — qator kerak. Faqat `newDate`
+        // bo'yicha so'rash keyingi oyga surilgan darsni ko'rinmas qilardi,
+        // faqat `originalDate` bo'yicha so'rash esa boshqa oydan ko'chirib
+        // kelingan darsni. `AttendanceReadService` ham aynan shu OR ni yozadi.
+        tx.lessonReschedule.findMany({
+          where: {
+            groupId,
+            deletedAt: null,
+            OR: [
+              { originalDate: { gte: monthStart, lt: monthEndExclusive } },
+              { newDate: { gte: monthStart, lt: monthEndExclusive } },
+            ],
+          },
+          select: { originalDate: true, newDate: true },
+        }),
+      ],
+    );
 
     // `vetoed` — davomatdagi `exclude` to'plami: bu kunlarda dars YO'Q va
     // bu kunlarga boshqa darsni ko'chirib kelib ham bo'lmaydi.
@@ -1188,10 +1194,35 @@ export class MonthlyChargeService {
     const excluded = new Set<string>(vetoed);
     for (const day of holidayDates) excluded.add(day);
 
+    // Guruhning FAOL OYNASI — ko'chirib kelingan kunga (va FAQAT unga)
+    // qo'llanadi. `AttendanceReadService.getLessonDates` butun oyni
+    // `[group.startDate, group.endDate]` ga qisadi, shuning uchun o'sha
+    // oynadan tashqariga ko'chirilgan dars davomatda HECH QACHON o'tmaydi;
+    // uni rejaga qo'shish `plannedLessons`ni oshirib, dars narxini
+    // pasaytirar va `FIXED_PER_STUDENT` bo'luvchisini kattalashtirardi.
+    // Misol: guruh 20.09 da tugaydi, dars 29.08 -> 25.09 ga ko'chirilgan —
+    // reja 14, davomat 9.
+    //
+    // ASOS RO'YXAT esa ATAYLAB qisilmaydi. Guruh oy o'rtasida boshlansa
+    // `plannedLessons` baribir butun oyning dars kunlari bo'lib qoladi:
+    // dars narxi `oy narxi / plannedLessons` va u BARCHA guruhlarda bir xil
+    // bo'lishi kerak. 7 ga qisilsa, 15-sentabrda boshlangan guruhning bitta
+    // darsi 64 286 so'mga chiqib ketardi (450 000 / 7), ya'ni o'quvchi
+    // guruhi kech boshlangani uchun ikki baravar to'lardi. Hozirgi holda
+    // u 450 000 x 7/13 to'laydi va ustoz ham o'sha ulushni oladi —
+    // ikkalasi ham proporsional. Demak bu yerda «reja = davomat» tengligi
+    // ataylab buziladi; buning sababi dizayn hujjati §4 da yozilgan.
+    const groupStartStr = group?.startDate
+      ? tashkentDateStr(group.startDate)
+      : null;
+    const groupEndStr = group?.endDate ? tashkentDateStr(group.endDate) : null;
+
     const added = new Set<string>();
     for (const r of reschedules) {
       const newDay = tashkentDateStr(r.newDate);
       if (newDay < monthStartStr || newDay > monthEndStr) continue;
+      if (groupStartStr && newDay < groupStartStr) continue;
+      if (groupEndStr && newDay > groupEndStr) continue;
       if (vetoed.has(newDay)) continue;
       added.add(newDay);
     }

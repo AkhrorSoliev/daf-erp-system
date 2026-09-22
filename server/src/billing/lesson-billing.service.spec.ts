@@ -1375,6 +1375,14 @@ describe('LessonBillingService', () => {
         lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
         // Bayram darsini shu oy ichida qoplaydigan ko'chirish yo'q.
         lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
+        // `resolveMonthPlan` guruhning faol oynasini o'qiydi — ko'chirib
+        // kelingan kun shu oynadan tashqarida bo'lsa rejaga qo'shilmaydi.
+        // Bu testda ko'chirish yo'q, shuning uchun oyna cheksiz beriladi.
+        group: {
+          findUnique: jest
+            .fn()
+            .mockResolvedValue({ startDate: null, endDate: null }),
+        },
         enrollmentMonthlyCharge: {
           // Fallback yo'li: bu oy uchun hisob hali yo'q (cron ulgurmagan).
           findUnique: jest.fn().mockResolvedValue(null),

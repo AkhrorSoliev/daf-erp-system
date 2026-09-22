@@ -37,6 +37,13 @@ interface Fixture {
   holidays?: { date: string; endDate?: string }[];
   reschedules?: { originalDate: string; newDate: string }[];
   cancellations?: string[];
+  /**
+   * Guruhning faol oynasi. Berilmasa butun yil — ya'ni oyni qismaydi.
+   * `AttendanceReadService.getLessonDates` oyni shu oynaga qisadi, shuning
+   * uchun oyna oy o'rtasiga tushganda ikkala tomon ham shuni bilishi kerak.
+   */
+  groupStart?: string;
+  groupEnd?: string;
 }
 
 type WhereValue = unknown;
@@ -79,6 +86,8 @@ function matchesWhere(
 }
 
 function buildFakePrisma(fx: Fixture) {
+  const groupStart = d(fx.groupStart ?? '2026-01-01');
+  const groupEnd = d(fx.groupEnd ?? '2026-12-31');
   const holidayRows = (fx.holidays ?? []).map((h) => ({
     date: d(h.date),
     endDate: d(h.endDate ?? h.date),
@@ -116,10 +125,16 @@ function buildFakePrisma(fx: Fixture) {
         id: GROUP_ID,
         name: 'Standart-A',
         exactDays: EXACT_DAYS,
-        startDate: d('2026-01-01'),
-        endDate: d('2026-12-31'),
+        startDate: groupStart,
+        endDate: groupEnd,
         scheduleSnapshots: [],
         _count: { enrollments: 18 },
+      }),
+      // Reja tomoni guruhning faol oynasini SHU so'rov bilan oladi —
+      // davomat tomoni bilan bir xil sanalardan.
+      findUnique: jest.fn().mockResolvedValue({
+        startDate: groupStart,
+        endDate: groupEnd,
       }),
     },
   };
@@ -263,5 +278,65 @@ describe('oylik reja davomat kalendariga TENG', () => {
     expect(plan).toEqual(attendance);
     // 13 - 03(bayram) + 04 - 29 + 09 - 24 - 12(bekor) = 11
     expect(plan).toHaveLength(11);
+  });
+});
+
+/**
+ * Guruhning faol oynasi (`startDate`/`endDate`) oy o'rtasiga tushsa,
+ * reja bilan davomat ATAYLAB teng bo'lmaydi — yuqoridagi tenglik shu
+ * yerda qo'llanmaydi.
+ *
+ * Sabab pul hisobida. `plannedLessons` — oy narxi bo'linadigan son, va u
+ * BARCHA guruhlarda oyning to'liq dars kunlari bo'lishi kerak. Agar u
+ * guruh oynasiga qisilsa, 15-sentabrda boshlangan guruhning bitta darsi
+ * 450 000 / 7 = 64 286 so'mga chiqib ketardi va o'quvchi guruhi kech
+ * boshlangani uchun bir darsga ikki baravar to'lardi. Qisilmagan holda
+ * dars narxi 450 000 / 13 = 34 615 bo'lib qoladi, o'quvchidan esa
+ * `coveredDates` (u `enrollment.startDate` bilan qisiladi) orqali
+ * 450 000 x 7/13 olinadi — ya'ni proporsional. Ustoz ham o'sha ulushni
+ * oladi.
+ *
+ * Qisiladigan YAGONA narsa — KO'CHIRIB kelingan kun: oyna tashqarisiga
+ * ko'chirilgan darsda davomat hech qachon o'tmaydi, demak u rejani
+ * oshirib, dars narxini pasaytirib yuborardi.
+ */
+describe('guruhning faol oynasi', () => {
+  it('oyna tashqarisiga ko`chirilgan dars rejaga QO`SHILMAYDI', async () => {
+    // Guruh 20-sentabrda tugaydi; 29-avgust darsi 25-sentabrga ko'chirilgan.
+    const fx: Fixture = {
+      groupEnd: '2026-09-20',
+      reschedules: [{ originalDate: '2026-08-29', newDate: '2026-09-25' }],
+    };
+    const plan = await planDays(fx);
+    expect(plan).not.toContain('2026-09-25');
+    // Asos ro'yxat qisilmaydi: sentabrning o'z 13 ta dars kuni qoladi.
+    expect(plan).toHaveLength(13);
+  });
+
+  it('guruh boshlanishidan OLDINGI kunga ko`chirilgan dars ham qo`shilmaydi', async () => {
+    // Guruh 15-sentabrda boshlanadi; 17-sentabr darsi 9-sentabrga ko'chdi.
+    const fx: Fixture = {
+      groupStart: '2026-09-15',
+      reschedules: [{ originalDate: '2026-09-17', newDate: '2026-09-09' }],
+    };
+    const plan = await planDays(fx);
+    expect(plan).not.toContain('2026-09-09');
+    // 17-sentabr ko'chirilgani uchun rejadan chiqadi, 9-sentabr esa
+    // oyna tashqarisida bo'lgani uchun qo'shilmaydi: 13 - 1 = 12.
+    expect(plan).not.toContain('2026-09-17');
+    expect(plan).toHaveLength(12);
+  });
+
+  it('oyna ICHIDAGI kunga ko`chirilgan dars odatdagidek qo`shiladi', async () => {
+    // Qorovul faqat oyna tashqarisini to'sadi — ichkarisiga tegmaydi.
+    const fx: Fixture = {
+      groupStart: '2026-09-01',
+      groupEnd: '2026-09-30',
+      reschedules: [{ originalDate: '2026-09-17', newDate: '2026-09-18' }],
+    };
+    const plan = await planDays(fx);
+    expect(plan).toContain('2026-09-18');
+    expect(plan).not.toContain('2026-09-17');
+    expect(plan).toHaveLength(13);
   });
 });
