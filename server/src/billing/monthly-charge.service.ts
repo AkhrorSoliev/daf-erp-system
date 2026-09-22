@@ -128,7 +128,7 @@ export class MonthlyChargeService {
       return existing;
     }
 
-    const { excludedDates, holidayMakeups } = await this.resolveMonthPlan(
+    const { excludedDates, addedDates } = await this.resolveMonthPlan(
       tx,
       enr.groupId,
       enr.group.branchId,
@@ -142,6 +142,7 @@ export class MonthlyChargeService {
       month: periodMonth,
       exactDays: enr.group.exactDays,
       excludedDates,
+      addedDates,
     });
     const plannedLessons = groupDates.length;
     if (plannedLessons === 0) return null;
@@ -151,27 +152,23 @@ export class MonthlyChargeService {
     // nechtasi qoplangan edi" degan savolga JONLI kalendardan emas, shu
     // muzlatilgan ro'yxatdan javob berishi kerak (schema izohi).
     const fromDate = enr.startDate ? tashkentDateStr(enr.startDate) : null;
-    // Bayram darsi shu oy ichida qoplangan bo'lsa, `coveredDates` ga asl
-    // (bayram) kun emas, QOPLAMA kuni yoziladi — dars aynan o'sha kuni
-    // o'tiladi. Aks holda oy o'rtasida ketgan o'quvchi hali o'tilmagan
-    // darsni "qoplangan" deb qoldirib ketardi: `reverseChargeForDeparture`
-    // faqat `d > ketgan kun` bo'lganlarini qaytaradi, bayram kuni esa ketish
+    // Ko'chirilgan dars `coveredDates` ga ASL kuni bilan emas, o'zi ROSTDAN
+    // o'tiladigan kuni bilan tushadi — reja bilan bir xil kalendardan.
+    // Aks holda oy o'rtasida ketgan o'quvchi hali o'tilmagan darsni
+    // "qoplangan" deb qoldirib ketardi: `reverseChargeForDeparture` faqat
+    // `d > ketgan kun` bo'lganlarini qaytaradi, bayram kuni esa ketish
     // kunidan OLDIN turardi (1-sentabr bayrami 25-sentabrga ko'chirilgan,
     // o'quvchi 10-sentabrda ketgan — bitta dars puli markazda qolib
-    // ketardi). Sanoq o'zgarmaydi: bitta kun bitta kunga almashadi.
+    // ketardi). `fromDate` ham shu yerda qo'llanadi: o'quvchi qo'shilishidan
+    // OLDIN o'tilgan qoplama darsini u olmagan, demak to'lamaydi ham.
     const coveredDates = lessonDatesInMonth({
       year: periodYear,
       month: periodMonth,
       exactDays: enr.group.exactDays,
       excludedDates,
+      addedDates,
       fromDate,
-    })
-      .map((d) => holidayMakeups.get(d) ?? d)
-      // Qoplama o'quvchi qo'shilishidan OLDIN o'tilgan bo'lsa (qoplama
-      // bayramdan oldinga ko'chirilgan kam uchraydigan holat) — o'quvchi u
-      // darsni olmagan, demak uning pulini ham to'lamaydi.
-      .filter((d) => !fromDate || d >= fromDate)
-      .sort();
+    });
     const coveredLessons = coveredDates.length;
     if (coveredLessons === 0) return null;
 
@@ -646,7 +643,7 @@ export class MonthlyChargeService {
       // o'zi yo'q — `frozenOutDates` to'plam sifatida ishlay olmaydi, eski
       // SON-asosli xatti-harakat saqlanadi (muqobili "hech narsa
       // qaytarmaslik" bo'lardi).
-      const excludedDates = await this.resolveExcludedDates(
+      const { excludedDates, addedDates } = await this.resolveMonthPlanDates(
         tx,
         charge.groupId,
         enr.group.branchId,
@@ -658,6 +655,7 @@ export class MonthlyChargeService {
         month: periodMonth,
         exactDays: enr.group.exactDays,
         excludedDates,
+        addedDates,
         fromDate: enr.startDate ? tashkentDateStr(enr.startDate) : null,
         toDate: day,
       }).length;
@@ -1083,58 +1081,56 @@ export class MonthlyChargeService {
   }
 
   /**
-   * Oyning MUZLATILADIGAN rejasi: rejadan chiqadigan kunlar + bayram
-   * darsining shu oy ichidagi qoplama kuni.
+   * Oyning MUZLATILADIGAN rejasi — DAVOMAT KALENDARINING KO'ZGUSI.
    *
-   * `holidayMakeups`: asl (bayram) kun -> qoplama kuni, ikkalasi ham shu oy
-   * ichida. Faqat `resolveExcludedDates` rejada QOLDIRGAN bayramlar tushadi,
-   * shuning uchun bitta so'rovdan ikkala javob ham chiqadi va chaqiruvchilar
-   * ikkinchi marta bazaga bormaydi.
+   * Qaytaradi:
+   *  - `excludedDates` — jadvaldagi kunlardan CHIQADIGANLARI;
+   *  - `addedDates` — jadvalda yo'q, lekin oyga QO'SHILADIGAN kunlar
+   *    (ko'chirilgan darsning yangi kuni).
    *
-   * Bayram qoidasi CEO 10-javobidan (21.09.2026) kelib chiqadi: bayramga
-   * tushgan dars yo'qolmaydi, boshqa kunga ko'chirib o'tiladi. Lekin bu
-   * ko'chirish O'Z-O'ZIDAN bo'lmaydi — bayram e'lon qilinganda tizim faqat
-   * guruhning `endDate` ini uzaytiradi (`extendGroupEndDateForHoliday`),
-   * ya'ni qoplama dars KURS OXIRIGA, boshqa oyga tushadi. Dars aynan shu oy
-   * ichida qayta o'tilishi uchun admin `LessonReschedule` yozishi shart.
-   * Shuning uchun bayram kuni rejada faqat SHU OY ichiga, va REJADA
-   * BO'LMAGAN kunga ko'chirish yozilgan bo'lsa qoladi:
+   * QOIDA BITTA: reja soni oyda ROSTDAN o'tiladigan darslar soniga teng
+   * bo'lishi shart. `plannedLessons` endi ikki narsani belgilaydi — bir
+   * darsning muzlatilgan narxi (oy narxi / reja) va FIXED_PER_STUDENT
+   * o'qituvchi haqining bo'luvchisi (1-javob: haq oydagi dars soniga
+   * bog'liq bo'lmasligi kerak). Reja davomatdan bitta kunga farq qilsa,
+   * ustoz oyning 12/13 yoki 14/13 ulushini oladi.
    *
-   *  - qoplama BOR  -> reja 13 da qoladi, narx 450 000/13, oyda 13 ta
-   *    davomat bo'ladi (asl kunga emas, yangi kunga);
-   *  - qoplama YO'Q -> reja 12 ga tushadi, narx 450 000/12, oyda 12 ta
-   *    davomat bo'ladi.
+   * Shuning uchun bu metod `AttendanceReadService.applyLessonModifications`
+   * ni AYNAN takrorlaydi — u "qaysi kun dars kuni" degan savolning yagona
+   * javobi:
+   *  - bayram kuni asos ro'yxatdan chiqadi (davomatda ham bayram asos
+   *    kunlar ichida yo'q);
+   *  - bekor qilingan dars chiqadi VA o'sha kunga ko'chirib kelishni ham
+   *    to'sadi (davomatdagi `exclude` to'plami);
+   *  - ko'chirilgan darsning ASL kuni chiqadi — yangi kun qayerda
+   *    bo'lishidan qat'i nazar;
+   *  - ko'chirilgan darsning YANGI kuni shu oy ichida bo'lsa qo'shiladi.
+   *    Kun allaqachon jadvalda bo'lsa TO'PLAM uni takrorlamaydi, ya'ni oyga
+   *    ikkinchi dars qo'shilmaydi.
    *
-   * Ikkala holatda ham davomat soni reja soniga teng, demak ustoz oyning
-   * ANIQ ulushini oladi va haqi dars soniga bog'lanib qolmaydi (1-javob).
-   * Bayramni so'zsiz rejada qoldirish 13 ga bo'lib 12 ta davomat yozardi —
-   * ustozga oy ulushidan KAM to'lanardi; bayramni so'zsiz chiqarib tashlash
-   * esa 12 ga bo'lib 13 ta davomat yozardi — ORTIQCHA to'lanardi.
+   * Ilgari bu yerda faqat BAYRAM ko'chirishlari hisobga olinardi
+   * (`newDate` shu oy ichida + asl kun bayram bo'lishi shart edi), shuning
+   * uchun uchta oddiy ko'chirish rejani davomatdan ayirib yuborardi:
+   * keyingi oyga surish (so'rov qatorni umuman qaytarmasdi), jadvaldagi
+   * kunga surish (bayram emas deb tashlab ketilardi) va boshqa oydan
+   * ko'chirib kelish (reja 13, davomat 14).
    *
-   * NEGA qoplama kuni REJADAGI kun bo'lmasligi shart: `AttendanceReadService
-   * .applyLessonModifications` dars kunlarini TO'PLAM qilib qo'shadi — asl
-   * kunni tashlaydi, yangi kunni qo'shadi. Yangi kun allaqachon jadvaldagi
-   * kun bo'lsa (masalan shanba darsi boshqa shanbaga ko'chirilsa) to'plamda
-   * yangi kun PAYDO BO'LMAYDI: oyda baribir 12 ta dars kuni qoladi. Bunday
-   * ko'chirishda bayramni rejada qoldirish 13 ga bo'lib 12 ta davomat
-   * yozardi — ustozga kam to'lanardi.
+   * Bayramning shu oy ichidagi qoplamasi endi ALOHIDA qoida emas: bayram
+   * rejadan chiqadi, qoplama kuni esa qo'shiladi — sanoq o'zgarmaydi va
+   * `coveredDates` ga dars ROSTDAN o'tiladigan kun tushadi. Qoplama bekor
+   * qilingan bo'lsa (1-topilma) yangi kun `vetoed` ichida bo'lgani uchun
+   * umuman qo'shilmaydi va bayram rejadan chiqib ketaveradi — alohida
+   * "teskari yozuv" qoidasi kerak emas.
    *
-   * CHEKLOV — QOPLAMA HISOBDAN KEYIN YOZILSA KO'RINMAYDI. Bu yerda faqat
-   * hisob yozilayotgan DAQIQADA bazada turgan ko'chirishlar ko'rinadi.
-   * `MonthlyBillingCronService` hisobni oyning belgilangan kunida (odatda
-   * 1-sana) yozadi va `createChargeForEnrollment` `CHARGED` qatorni qayta
-   * hisoblamaydi, `plannedLessons` ni esa boshqa hech kim yangilamaydi.
-   * Demak admin qoplamani oy o'rtasida yozsa reja 12 da qolib, oyda 13 ta
-   * davomat bo'ladi va ustoz o'sha guruh uchun oyning 13/12 ulushini oladi.
-   * Bu MA'LUM va hozircha QABUL QILINGAN kamchilik (dizayn hujjati §4):
-   * to'liq yechim `lesson-reschedule.created/updated/deleted` da hisobni
-   * qayta hisoblashni talab qiladi va bu alohida vazifa — u pul qatorlariga
-   * (`TransactionsWriteService`) ham tegadi, shuning uchun bu brif doirasida
-   * qilinmaydi.
-   *
-   * Bekor qilingan dars — ko'chirilmagan dars, u haqiqatan yo'qolgan
-   * (spec 5.5: o'quvchiga pul qaytmaydi, ustozga haq yozilmaydi), shuning
-   * uchun har doim rejadan chiqadi — bayramdan ham, qoplamadan ham ustun.
+   * CHEKLOV — HISOBDAN KEYIN YOZILGAN KO'CHIRISH KO'RINMAYDI. Bu yerda
+   * faqat hisob yozilayotgan DAQIQADA bazada turgan qatorlar ko'rinadi.
+   * `MonthlyBillingCronService` hisobni oyning belgilangan kunida yozadi va
+   * `createChargeForEnrollment` `CHARGED` qatorni qayta hisoblamaydi,
+   * `plannedLessons` ni esa boshqa hech kim yangilamaydi. Bu MA'LUM va
+   * QABUL QILINGAN kamchilik (dizayn hujjati §4): to'liq yechim
+   * `lesson-reschedule.created/updated/deleted` da hisobni qayta
+   * hisoblashni talab qiladi va u pul qatorlariga (`TransactionsWrite
+   * Service`) ham tegadi — alohida vazifa.
    *
    * Bayramlar `buildHolidayDateSet` orqali olinadi — u ko'p kunlik
    * bayramlarni (date..endDate), filial qamrovini (global + shu filial) va
@@ -1146,10 +1142,12 @@ export class MonthlyChargeService {
     branchId: number,
     year: number,
     month: number,
-  ): Promise<{ excludedDates: string[]; holidayMakeups: Map<string, string> }> {
+  ): Promise<{ excludedDates: string[]; addedDates: string[] }> {
     const monthStart = new Date(Date.UTC(year, month - 1, 1));
     const monthEndExclusive = new Date(Date.UTC(year, month, 1));
     const monthEndInclusive = new Date(Date.UTC(year, month, 0));
+    const monthStartStr = tashkentDateStr(monthStart);
+    const monthEndStr = tashkentDateStr(monthEndInclusive);
 
     const [holidayDates, cancellations, reschedules] = await Promise.all([
       buildHolidayDateSet(tx, monthStart, monthEndInclusive, branchId),
@@ -1161,86 +1159,68 @@ export class MonthlyChargeService {
         },
         select: { date: true },
       }),
-      // `newDate` ham SHU OY ichida bo'lishi shart: qoplama dars keyingi
-      // oyga surilgan bo'lsa, bu oyda dars soni rostdan kamayadi.
+      // ASL kun YOKI yangi kun shu oyga tegsa — qator kerak. Faqat `newDate`
+      // bo'yicha so'rash keyingi oyga surilgan darsni ko'rinmas qilardi,
+      // faqat `originalDate` bo'yicha so'rash esa boshqa oydan ko'chirib
+      // kelingan darsni. `AttendanceReadService` ham aynan shu OR ni yozadi.
       tx.lessonReschedule.findMany({
         where: {
           groupId,
           deletedAt: null,
-          originalDate: { gte: monthStart, lt: monthEndExclusive },
-          newDate: { gte: monthStart, lt: monthEndExclusive },
+          OR: [
+            { originalDate: { gte: monthStart, lt: monthEndExclusive } },
+            { newDate: { gte: monthStart, lt: monthEndExclusive } },
+          ],
         },
         select: { originalDate: true, newDate: true },
       }),
     ]);
 
-    // Guruh jadvali FAQAT ko'chirish bo'lsa so'raladi: oyliklarning aksariyat
-    // oyida bitta ham ko'chirish yo'q, hisob yozish esa yuzlab yozilish
-    // ustidan yuguradigan issiq tsikl — bo'sh holatda qo'shimcha so'rov
-    // yubormaydi.
-    let scheduledDays = new Set<string>();
-    if (reschedules.length > 0) {
-      const group = await tx.group.findUnique({
-        where: { id: groupId },
-        select: { exactDays: true },
-      });
-      scheduledDays = new Set(
-        lessonDatesInMonth({
-          year,
-          month,
-          exactDays: group?.exactDays ?? [],
-        }),
-      );
-    }
+    // `vetoed` — davomatdagi `exclude` to'plami: bu kunlarda dars YO'Q va
+    // bu kunlarga boshqa darsni ko'chirib kelib ham bo'lmaydi.
+    const vetoed = new Set<string>();
+    for (const c of cancellations) vetoed.add(tashkentDateStr(c.date));
+    for (const r of reschedules) vetoed.add(tashkentDateStr(r.originalDate));
 
-    const holidayMakeups = new Map<string, string>();
+    // Bayram asos ro'yxatdan chiqadi, LEKIN ko'chirib kelishni to'smaydi:
+    // admin darsni ataylab bayram kuniga ko'chirgan bo'lsa davomat o'sha
+    // kuni dars deb sanaydi (`applyLessonModifications` aynan shunday).
+    const excluded = new Set<string>(vetoed);
+    for (const day of holidayDates) excluded.add(day);
+
+    const added = new Set<string>();
     for (const r of reschedules) {
-      const originalDay = tashkentDateStr(r.originalDate);
       const newDay = tashkentDateStr(r.newDate);
-      // Jadvaldagi kunga ko'chirish oyga YANGI dars kuni qo'shmaydi.
-      if (scheduledDays.has(newDay)) continue;
-      if (!holidayDates.has(originalDay)) continue;
-      holidayMakeups.set(originalDay, newDay);
+      if (newDay < monthStartStr || newDay > monthEndStr) continue;
+      if (vetoed.has(newDay)) continue;
+      added.add(newDay);
     }
 
-    const excluded = new Set<string>();
-    for (const day of holidayDates) {
-      if (!holidayMakeups.has(day)) excluded.add(day);
-    }
-    // Bekor qilingan dars ustun: ko'chirish yozilgan bo'lsa ham u yo'qolgan.
-    for (const c of cancellations) {
-      const day = tashkentDateStr(c.date);
-      excluded.add(day);
-      holidayMakeups.delete(day);
-    }
-    return { excludedDates: [...excluded], holidayMakeups };
+    return { excludedDates: [...excluded], addedDates: [...added] };
   }
 
   /**
-   * Rejadan CHIQADIGAN kunlar, 'YYYY-MM-DD' ro'yxati: bekor qilingan darslar
-   * (`LessonCancellation`) va SHU OY ICHIDA qoplanmaydigan bayram kunlari.
-   * Qoidaning to'liq bayoni va ma'lum cheklovi — `resolveMonthPlan` JSDoc'ida.
+   * Oyning dars kunlari rejasi: CHIQADIGAN va QO'SHILADIGAN kunlar,
+   * 'YYYY-MM-DD' ro'yxatlari. Ikkalasi ham `lessonDatesInMonth` ga
+   * uzatiladi — qoidaning to'liq bayoni `resolveMonthPlan` JSDoc'ida.
    *
    * PUBLIC ataylab: `LessonBillingService.fallbackMonthlyPerLessonCost`,
    * `scripts/migrate-to-monthly.ts` va `scripts/verify-monthly-migration.ts`
-   * HAM shu metoddan o'qiydi — "qaysi kunlar hisobga kirmaydi" mantig'ining
+   * HAM shu metoddan o'qiydi — "oyda qaysi kunlar dars kuni" mantig'ining
    * ikkinchi nusxasi yozilmaydi (Task 6 buzilgan sabab shu edi).
+   *
+   * Nomi ATAYLAB o'zgardi (`resolveExcludedDates` emas): chiqadigan
+   * kunlarni olib, qo'shiladiganlarini unutgan chaqiruvchi rejani davomatdan
+   * kam sanaydi. Endi bunday chaqiruvchi kompilyatsiyadan o'tmaydi.
    */
-  async resolveExcludedDates(
+  async resolveMonthPlanDates(
     tx: Prisma.TransactionClient,
     groupId: string,
     branchId: number,
     year: number,
     month: number,
-  ): Promise<string[]> {
-    const plan = await this.resolveMonthPlan(
-      tx,
-      groupId,
-      branchId,
-      year,
-      month,
-    );
-    return plan.excludedDates;
+  ): Promise<{ excludedDates: string[]; addedDates: string[] }> {
+    return this.resolveMonthPlan(tx, groupId, branchId, year, month);
   }
 
   /**

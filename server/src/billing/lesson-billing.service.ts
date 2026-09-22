@@ -221,7 +221,7 @@ export class LessonBillingService {
     let perLessonCost = charge?.perLessonCost ?? 0;
     // Oylik kursda FIXED_PER_STUDENT bo'luvchisi — shu oyning rejalashtirilgan
     // dars soni (1-javob). Hisob bo'lsa muzlatilgan qatordan, bo'lmasa
-    // zaxira hisob-kitobdan (u ham `resolveExcludedDates` bilan bir manba).
+    // zaxira hisob-kitobdan (u ham `resolveMonthPlanDates` bilan bir manba).
     let lessonDivisor: number | undefined = charge?.plannedLessons;
     let deductionTransactionId: string | null = charge?.transactionId ?? null;
 
@@ -305,21 +305,23 @@ export class LessonBillingService {
     // hisoblash (excludedDates'siz) `planned` sonini oshirib yuboradi va
     // zaxira narx REAL EnrollmentMonthlyCharge muzlatgan narxdan sonli
     // farq qilib qoladi — "muzlatilmagan" emas, NOTO'G'RI bo'ladi. Shu
-    // sababli `MonthlyChargeService.resolveExcludedDates` (createChargeForEnrollment
-    // ishlatadigan xuddi o'sha metod) chaqiriladi.
-    const excludedDates = await this.monthlyChargeService.resolveExcludedDates(
-      tx,
-      params.groupId,
-      params.branchId,
-      periodYear,
-      periodMonth,
-    );
+    // sababli `MonthlyChargeService.resolveMonthPlanDates` (createChargeFor
+    // Enrollment ishlatadigan xuddi o'sha metod) chaqiriladi.
+    const { excludedDates, addedDates } =
+      await this.monthlyChargeService.resolveMonthPlanDates(
+        tx,
+        params.groupId,
+        params.branchId,
+        periodYear,
+        periodMonth,
+      );
 
     const planned = lessonDatesInMonth({
       year: periodYear,
       month: periodMonth,
       exactDays: enr.group.exactDays,
       excludedDates,
+      addedDates,
     }).length;
 
     return {

@@ -55,9 +55,11 @@ describe('LessonBillingService', () => {
       createChargeForEnrollment: jest.fn(),
       recordExcusedLesson: jest.fn().mockResolvedValue(undefined),
       findChargeForLesson: jest.fn().mockResolvedValue(null),
-      // Default: no exclusions. Tests exercising the fallback with a
-      // holiday/cancellation override this per-call.
-      resolveExcludedDates: jest.fn().mockResolvedValue([]),
+      // Default: no exclusions, no additions. Tests exercising the fallback
+      // with a holiday/cancellation/reschedule override this per-call.
+      resolveMonthPlanDates: jest
+        .fn()
+        .mockResolvedValue({ excludedDates: [], addedDates: [] }),
     };
 
     // tx is the same object as prisma — so $queryRaw and findUnique etc.
@@ -1347,7 +1349,7 @@ describe('LessonBillingService', () => {
   // ============================================================
   // Review finding #1 (Task 6 fix-up): zaxira narx REAL charge bilan
   // bir xil manbadan (bayram/bekor qilingan dars) hisoblanishi kerak.
-  // Bu yerda MonthlyChargeService MOCK emas — `resolveExcludedDates`
+  // Bu yerda MonthlyChargeService MOCK emas — `resolveMonthPlanDates`
   // ikkala yo'lda (fallback va createChargeForEnrollment) haqiqatda
   // bitta metod ekanini isbotlash uchun ikkalasi ham REAL instansiya
   // orqali sinaladi.

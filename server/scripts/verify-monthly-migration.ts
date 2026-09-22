@@ -232,45 +232,50 @@ async function main(prisma: PrismaClient) {
     (e) => e.group.statusEnum === GroupStatus.ACTIVE,
   );
 
-  // Dars kunlari YAGONA manbadan — `MonthlyChargeService.resolveExcludedDates`
+  // Dars kunlari YAGONA manbadan — `MonthlyChargeService.resolveMonthPlanDates`
   // + `lessonDatesInMonth`, xuddi hisob yozadigan yo'l kabi. Ikkinchi nusxa
   // yozilmaydi. Faqat hisobsiz qolgan (odatda juda kam) yozilishlar uchun
   // hisoblanadi.
   const chargeService = new MonthlyChargeService(
     prisma as unknown as never,
     undefined as unknown as never,
-    // SettingsService — `resolveExcludedDates` unga tegmaydi, shuning uchun
+    // SettingsService — `resolveMonthPlanDates` unga tegmaydi, shuning uchun
     // bu skriptda hech qachon chaqirilmaydi. (Metod `this.resolveMonthPlan`
     // ni chaqiradi, shuning uchun instansiya `new` bilan yasalishi shart.)
     undefined as unknown as never,
   );
   const readTx = prisma as unknown as Prisma.TransactionClient;
-  const excludedCache = new Map<string, string[]>();
+  const planCache = new Map<
+    string,
+    { excludedDates: string[]; addedDates: string[] }
+  >();
   const noLessonDays: typeof unchargedActiveGroup = [];
   const genuinelyUncharged: typeof unchargedActiveGroup = [];
   for (const e of unchargedActiveGroup) {
-    let excluded = excludedCache.get(e.groupId);
-    if (!excluded) {
-      excluded = await chargeService.resolveExcludedDates(
+    let plan = planCache.get(e.groupId);
+    if (!plan) {
+      plan = await chargeService.resolveMonthPlanDates(
         readTx,
         e.groupId,
         e.group.branchId,
         year,
         month,
       );
-      excludedCache.set(e.groupId, excluded);
+      planCache.set(e.groupId, plan);
     }
     const planned = lessonDatesInMonth({
       year,
       month,
       exactDays: e.group.exactDays,
-      excludedDates: excluded,
+      excludedDates: plan.excludedDates,
+      addedDates: plan.addedDates,
     }).length;
     const covered = lessonDatesInMonth({
       year,
       month,
       exactDays: e.group.exactDays,
-      excludedDates: excluded,
+      excludedDates: plan.excludedDates,
+      addedDates: plan.addedDates,
       fromDate: e.startDate ? tashkentDateStr(e.startDate) : null,
     }).length;
     if (planned === 0 || covered === 0) noLessonDays.push(e);

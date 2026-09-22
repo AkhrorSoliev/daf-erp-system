@@ -21,7 +21,7 @@
  *
  * Arifmetika `scripts/lib/monthly-migration-report.ts` (buildMigrationPlan)
  * dan keladi — bu skript faqat MigrationRow[] ni bazadan yig'adi. Dars
- * kunlari va bayramlar `MonthlyChargeService.resolveExcludedDates` orqali —
+ * kunlari va bayramlar `MonthlyChargeService.resolveMonthPlanDates` orqali —
  * bu YAGONA manba, ikkinchi nusxasi yozilmaydi (Task 6 buzilgan sabab shu
  * edi).
  *
@@ -719,7 +719,7 @@ async function main(prisma: PrismaClient) {
       : `MIGRATSIYA OLDINDAN HISOBOTI — davr ${period} — DRY RUN, HECH NARSA YOZILMAYDI`,
   );
 
-  // resolveExcludedDates() (va uning ichidagi resolveMonthPlan) INJEKSIYA
+  // resolveMonthPlanDates() (va uning ichidagi resolveMonthPlan) INJEKSIYA
   // QILINGAN bog'liqliklarga tegmaydi — faqat o'z parametrlaridan va `tx`
   // dan ishlaydi. Shuning uchun servisni to'liq Nest DI grafigisiz, faqat
   // shu bitta metod uchun qo'lda yasash xavfsiz (lekin `new` SHART:
@@ -728,7 +728,7 @@ async function main(prisma: PrismaClient) {
   const chargeService = new MonthlyChargeService(
     prisma as unknown as never,
     undefined as unknown as never,
-    // SettingsService — `resolveExcludedDates` unga tegmaydi, shuning uchun
+    // SettingsService — `resolveMonthPlanDates` unga tegmaydi, shuning uchun
     // bu skriptda hech qachon chaqirilmaydi.
     undefined as unknown as never,
   );
@@ -849,11 +849,14 @@ async function main(prisma: PrismaClient) {
     >();
     for (const e of enrollments) uniqueGroups.set(e.groupId, e.group);
 
-    const excludedByGroup = new Map<string, string[]>();
+    const planByGroup = new Map<
+      string,
+      { excludedDates: string[]; addedDates: string[] }
+    >();
     for (const [groupId, group] of uniqueGroups) {
-      excludedByGroup.set(
+      planByGroup.set(
         groupId,
-        await chargeService.resolveExcludedDates(
+        await chargeService.resolveMonthPlanDates(
           tx,
           groupId,
           group.branchId,
@@ -865,13 +868,15 @@ async function main(prisma: PrismaClient) {
 
     const plannedByGroup = new Map<string, number>();
     for (const [groupId, group] of uniqueGroups) {
+      const plan = planByGroup.get(groupId);
       plannedByGroup.set(
         groupId,
         lessonDatesInMonth({
           year,
           month,
           exactDays: group.exactDays,
-          excludedDates: excludedByGroup.get(groupId),
+          excludedDates: plan?.excludedDates,
+          addedDates: plan?.addedDates,
         }).length,
       );
     }
@@ -1026,7 +1031,8 @@ async function main(prisma: PrismaClient) {
         year,
         month,
         exactDays: e.group.exactDays,
-        excludedDates: excludedByGroup.get(e.groupId),
+        excludedDates: planByGroup.get(e.groupId)?.excludedDates,
+        addedDates: planByGroup.get(e.groupId)?.addedDates,
         fromDate: e.startDate ? tashkentDateStr(e.startDate) : null,
       }).length;
 
@@ -1113,7 +1119,8 @@ async function main(prisma: PrismaClient) {
           year,
           month,
           exactDays: group.exactDays,
-          excludedDates: excludedByGroup.get(groupId),
+          excludedDates: planByGroup.get(groupId)?.excludedDates,
+          addedDates: planByGroup.get(groupId)?.addedDates,
           fromDate: e.startDate ? tashkentDateStr(e.startDate) : null,
         }).length;
         const full = proratedMonthlyAmount(

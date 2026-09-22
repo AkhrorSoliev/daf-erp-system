@@ -527,7 +527,9 @@ describe('MonthlyChargeService', () => {
       // shuning uchun 5-sentabr ikki marta paydo bo'lmaydi: oyda baribir
       // 12 ta dars kuni qoladi. Reja 13 deb muzlatilsa, 13 ga bo'lingan
       // narx bilan 12 ta davomat yozilib ustozga oy ulushidan KAM
-      // to'lanardi (1-javob).
+      // to'lanardi (1-javob). Takrorlanishni TO'PLAMning o'zi to'sadi —
+      // `lessonDatesInMonth` qo'shiladigan kunni jadvalga birlashtiradi,
+      // shuning uchun bu yerda guruh jadvalini alohida so'rash kerak emas.
       prismaMock.holiday.findMany.mockResolvedValueOnce([
         {
           date: new Date('2026-09-01T00:00:00Z'),
@@ -550,11 +552,11 @@ describe('MonthlyChargeService', () => {
 
       expect(charge?.plannedLessons).toBe(12);
       expect(charge?.perLessonCost).toBe(37_500); // 450 000 / 12
-      // Guruh jadvali aynan shu tekshiruv uchun so'raladi.
-      expect(prismaMock.group.findUnique).toHaveBeenCalledWith({
-        where: { id: 'grp-1' },
-        select: { exactDays: true },
-      });
+      // 5-sentabr bitta marta sanaladi, ikkita emas.
+      expect(
+        charge?.coveredDates.filter((d) => d === '2026-09-05'),
+      ).toHaveLength(1);
+      expect(charge?.coveredDates).not.toContain('2026-09-01');
     });
 
     it('qoplangan bayramda `coveredDates` ga ASL kun emas, QOPLAMA kuni yoziladi', async () => {
@@ -714,10 +716,11 @@ describe('MonthlyChargeService', () => {
       expect(prismaMock.enrollmentMonthlyCharge.update).not.toHaveBeenCalled();
     });
 
-    it('keyingi oyga surilgan qoplama dars bu oyni QUTQARMAYDI', async () => {
-      // So'rovning O'ZI `newDate` ni shu oy bilan cheklaydi, shuning uchun
-      // keyingi oyga ko'chirilgan dars umuman qaytmaydi — bu yerda bo'sh
-      // javob aynan shuni bildiradi. Bayram chiqadi, reja 12.
+    it("qoplamasiz bayram rejadan chiqadi va ko'chirish so'rovi OYGA TEGADIGAN hamma qatorni oladi", async () => {
+      // Ko'chirish qatori ASL kuni YOKI yangi kuni shu oyga tegsa kerak
+      // bo'ladi: faqat `newDate` bo'yicha so'rash keyingi oyga surilgan
+      // darsni, faqat `originalDate` bo'yicha so'rash esa boshqa oydan
+      // ko'chirib kelingan darsni ko'rinmas qilardi.
       prismaMock.holiday.findMany.mockResolvedValueOnce([
         {
           date: new Date('2026-09-01T00:00:00Z'),
@@ -735,17 +738,23 @@ describe('MonthlyChargeService', () => {
       expect(charge?.plannedLessons).toBe(12);
       const where = prismaMock.lessonReschedule.findMany.mock.calls[0][0].where;
       // Guruh chegarasi — boshqa guruhning ko'chirishi bu guruhning
-      // bayramini rejada qoldirib yuborishi mumkin emas.
+      // rejasini o'zgartirib yuborishi mumkin emas.
       expect(where.groupId).toBe('grp-1');
-      expect(where.originalDate).toEqual({
-        gte: new Date(Date.UTC(2026, 8, 1)),
-        lt: new Date(Date.UTC(2026, 9, 1)),
-      });
-      expect(where.newDate).toEqual({
-        gte: new Date(Date.UTC(2026, 8, 1)),
-        lt: new Date(Date.UTC(2026, 9, 1)),
-      });
       expect(where.deletedAt).toBeNull();
+      expect(where.OR).toEqual([
+        {
+          originalDate: {
+            gte: new Date(Date.UTC(2026, 8, 1)),
+            lt: new Date(Date.UTC(2026, 9, 1)),
+          },
+        },
+        {
+          newDate: {
+            gte: new Date(Date.UTC(2026, 8, 1)),
+            lt: new Date(Date.UTC(2026, 9, 1)),
+          },
+        },
+      ]);
     });
 
     it("bekor qilingan (ko'chirilmagan) dars rejadan CHIQADI — u haqiqatan yo'qolgan dars", async () => {
