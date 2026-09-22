@@ -664,6 +664,43 @@ describe('StudentEnrollmentService', () => {
       );
     });
 
+    // Ruxsat berilgan yo'l: sozlama YOQILGAN bo'lsa qorovul o'tkazib
+    // yuboradi va kechirish aynan SHU tranzaksiya ichida yoziladi.
+    // O'CHIQ testi faqat «chaqirilmadi»ni isbotlaydi; bu test esa
+    // `$transaction` tanasidagi kechirish bloki tasodifan yo'qolsa
+    // yiqiladi — aks holda guruhdan chiqarish muvaffaqiyatli tugab,
+    // qarz o'quvchida jimgina qolib ketardi.
+    it("qarz kechirish YOQILGAN: kechirish o'sha tranzaksiya ichida bajariladi", async () => {
+      settingsMock.get.mockResolvedValue(true);
+      prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+        id: 'reason-1',
+        name: 'Moliyaviy sabablar',
+        companyId: 1001,
+        appliesTo: ['GROUP_REMOVAL'],
+      });
+
+      await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+        departureReasonId: 'reason-1',
+        writeOffCycleDebt: true,
+        writeOffReason: "Yo'qolgan o'quvchi",
+        writeOffConfirmAmount: 100_000,
+      });
+
+      expect(debtWriteOffMock.executeWriteOff).toHaveBeenCalledWith(
+        expect.objectContaining({
+          enrollmentId: 'enroll-1',
+          companyId: 1001,
+          performedById: 10001,
+          reason: "Yo'qolgan o'quvchi",
+          confirmAmount: 100_000,
+        }),
+        // `$transaction` mock'i callback'ga aynan `prisma`ni uzatadi, ya'ni
+        // bu ikkinchi argument kechirish tranzaksiya ICHIDA ekanini pinlaydi.
+        prisma,
+      );
+      expect(prisma.enrollment.update).toHaveBeenCalled();
+    });
+
     it("kechirish so'ralmasa sozlama umuman o'qilmaydi — oddiy chiqarish o'zgarmaydi", async () => {
       prisma.studentExitReason.findFirst.mockResolvedValueOnce({
         id: 'reason-1',
