@@ -96,6 +96,66 @@ describe('lessonDatesInMonth', () => {
     ).toHaveLength(13);
   });
 
+  it('ko`chirib kelingan kun oyga QO`SHILADI', () => {
+    // Juma — jadvalda yo'q kun; ko'chirilgan dars o'sha kunga tushgan.
+    const days = lessonDatesInMonth({
+      year: 2026,
+      month: 9,
+      exactDays: TUE_THU_SAT,
+      excludedDates: ['2026-09-01'],
+      addedDates: ['2026-09-04'],
+    });
+    expect(days).toHaveLength(13);
+    expect(days).toContain('2026-09-04');
+    expect(days).not.toContain('2026-09-01');
+    expect(days).toEqual([...days].sort());
+  });
+
+  it('ko`chirib kelingan kun ALLAQACHON jadvalda bo`lsa ikkinchi dars qo`shmaydi', () => {
+    // 5-sentabr — shanba, guruhning o'z dars kuni.
+    const days = lessonDatesInMonth({
+      year: 2026,
+      month: 9,
+      exactDays: TUE_THU_SAT,
+      excludedDates: ['2026-09-01'],
+      addedDates: ['2026-09-05'],
+    });
+    expect(days).toHaveLength(12);
+    expect(days.filter((d) => d === '2026-09-05')).toHaveLength(1);
+  });
+
+  it('boshqa oyning kuni qo`shilmaydi', () => {
+    expect(
+      lessonDatesInMonth({
+        year: 2026,
+        month: 9,
+        exactDays: TUE_THU_SAT,
+        addedDates: ['2026-10-01'],
+      }),
+    ).toHaveLength(13);
+  });
+
+  it('ko`chirib kelingan kun fromDate/toDate chegarasiga bo`ysunadi', () => {
+    expect(
+      lessonDatesInMonth({
+        year: 2026,
+        month: 9,
+        exactDays: TUE_THU_SAT,
+        addedDates: ['2026-09-04'],
+        fromDate: '2026-09-10',
+      }),
+    ).not.toContain('2026-09-04');
+    expect(
+      lessonDatesInMonth({
+        year: 2026,
+        month: 9,
+        exactDays: TUE_THU_SAT,
+        addedDates: ['2026-09-30'],
+        toDate: '2026-09-26',
+      }),
+    ).not.toContain('2026-09-30');
+  });
+
   it('fevral kabi qisqa oyni to`g`ri sanaydi', () => {
     // 2028 — kabisa yili, fevral 29 kun. Du/Cho/Ju: 02-dan 28-gacha 12 ta.
     expect(

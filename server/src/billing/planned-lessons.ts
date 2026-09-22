@@ -27,6 +27,18 @@ export interface LessonDatesParams {
   exactDays: string[];
   /** Bayramlar va bekor qilingan darslar: 'YYYY-MM-DD'. */
   excludedDates?: string[];
+  /**
+   * Jadvalda YO'Q, lekin oyga QO'SHILADIGAN kunlar: 'YYYY-MM-DD'. Ko'chirilgan
+   * darsning yangi kuni shu yerdan keladi.
+   *
+   * `excludedDates` bu ro'yxatga TA'SIR QILMAYDI — chaqiruvchi ro'yxatni
+   * allaqachon saralab beradi (`MonthlyChargeService.resolveMonthPlan`).
+   * Sabab: `AttendanceReadService.applyLessonModifications` ham ko'chirish
+   * kunini bayram ustiga qo'ya oladi (bayram asos ro'yxatdan chiqarilgan,
+   * lekin qo'shishni to'smaydi), demak bu yerda ikkinchi marta filtrlash
+   * reja bilan davomatni ayirib yuborardi.
+   */
+  addedDates?: string[];
   /** Shu kundan boshlab (o'rtada qo'shilgan o'quvchi). Kiritiladi. */
   fromDate?: string | null;
   /** Shu kungacha (o'rtada ketgan o'quvchi). Kiritiladi. */
@@ -54,15 +66,29 @@ export function lessonDatesInMonth(params: LessonDatesParams): string[] {
   // 0-kun = keyingi oyning nol-kuni = shu oyning oxirgi kuni.
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
 
-  const out: string[] = [];
+  const monthStart = iso(year, month, 1);
+  const monthEnd = iso(year, month, daysInMonth);
+  const inRange = (date: string): boolean => {
+    if (date < monthStart || date > monthEnd) return false;
+    if (from && date < from) return false;
+    if (to && date > to) return false;
+    return true;
+  };
+
+  const out = new Set<string>();
   for (let day = 1; day <= daysInMonth; day++) {
     const date = iso(year, month, day);
-    if (from && date < from) continue;
-    if (to && date > to) continue;
+    if (!inRange(date)) continue;
     if (excluded.has(date)) continue;
 
     const weekday = WEEKDAY_KEYS[new Date(`${date}T00:00:00.000Z`).getUTCDay()];
-    if (wanted.has(weekday)) out.push(date);
+    if (wanted.has(weekday)) out.add(date);
   }
-  return out;
+  // Ko'chirib kelingan kunlar — TO'PLAMGA qo'shiladi, xuddi davomat
+  // kalendaridagidek: kun allaqachon jadvalda bo'lsa oyga IKKINCHI dars
+  // qo'shilmaydi.
+  for (const date of params.addedDates ?? []) {
+    if (inRange(date)) out.add(date);
+  }
+  return [...out].sort();
 }
