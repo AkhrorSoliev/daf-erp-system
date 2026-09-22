@@ -1617,6 +1617,87 @@ describe('MonthlyChargeService', () => {
     });
   });
 
+  describe("kurs almashish — har kurs o'z narxi va o'sha oydagi o'z dars soni bilan (CEO 21.09.2026, 13-javob)", () => {
+    // Prod, 21.09.2026: Standart 450 000 (haftada 3 kun), Intensive 740 000
+    // (haftada 5 kun). O'quvchi 15-oktabrda Standart → Intensive o'tadi.
+    // Oktabr 2026: 1-oktabr payshanba. Du/chor/ju = 13 dars, du–ju = 22 dars.
+    const MON_WED_FRI = ['friday', 'monday', 'wednesday'];
+    const MON_TO_FRI = ['friday', 'monday', 'thursday', 'tuesday', 'wednesday'];
+
+    it("yangi kurs (Intensive): 22 darslik oyning 12 tasi — 740 000 × 12/22, bo'luvchi Standartning 13 i EMAS", async () => {
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment({
+          id: 'enr-intensive',
+          startDate: new Date('2026-10-15T00:00:00Z'),
+          group: {
+            id: 'grp-intensive',
+            branchId: 1,
+            companyId: 1,
+            statusEnum: 'ACTIVE',
+            exactDays: MON_TO_FRI,
+            course: {
+              price: 740_000,
+              paymentModel: 'MONTHLY',
+              lessonPaymentCount: 20,
+            },
+          },
+        }),
+        periodYear: 2026,
+        periodMonth: 10,
+        companyId: 1,
+      });
+
+      expect(charge?.plannedLessons).toBe(22);
+      // 15,16,19,20,21,22,23,26,27,28,29,30
+      expect(charge?.coveredLessons).toBe(12);
+      expect(charge?.perLessonCost).toBe(33_636); // 740 000 / 22
+      expect(charge?.chargedAmount).toBe(403_636); // 740 000 × 12/22
+      // Standartning 13 iga bo'linsa 500 000 × 12/13 kabi ma'nosiz raqam
+      // chiqardi — CEO rad etgan variant (dizayn 21.09, §3 jadvali).
+    });
+
+    it("eski kurs (Standart): 14-oktabrdan keyingi 7 dars qaytadi — 13 darslik oyning O'Z narxida", async () => {
+      // Ketish yo'li guruh jadvalini o'zi o'qiydi — du/chor/ju.
+      prismaMock.enrollment.findUnique.mockResolvedValueOnce({
+        studentId: 10453,
+        group: { branchId: 1, exactDays: MON_WED_FRI },
+      });
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        id: 'chg-standart',
+        groupId: 'grp-1',
+        plannedLessons: 13,
+        coveredLessons: 13,
+        perLessonCost: 34_615, // 450 000 / 13
+        chargedAmount: 450_000,
+        transactionId: 'tx-1',
+        status: 'CHARGED',
+      });
+
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-14T00:00:00Z'),
+        // `today` ATAYLAB qotirilgan: kod `departureDate < bugun` bo'lsa rad
+        // etadi, shuning uchun `today`siz bu test 2026-10-14 o'tishi bilan
+        // o'z-o'zidan yiqilardi (vaqt bombasi — shu faylning oxiridagi
+        // qorovul aynan shuni qidiradi).
+        today: '2026-10-14',
+        companyId: 1,
+        reason: "Boshqa kursga o'tdi",
+      });
+
+      // Oktabr du/chor/ju: 2,5,7,9,12,14 | 16,19,21,23,26,28,30 → 14-dan keyin 7.
+      expect(res?.refunded).toBe(242_305); // 7 × 34 615
+      expect(prismaMock.enrollmentMonthlyCharge.update).toHaveBeenCalledWith({
+        where: { id: 'chg-standart' },
+        data: { coveredLessons: 6, chargedAmount: 207_695 },
+      });
+      // Oktabr jami: 207 695 (Standart) + 403 636 (Intensive) = 611 331.
+      // CEO tasdiqlagan misol dars boshiga yaxlitlab 611 322 bergan — 9 so'm
+      // farq yaxlitlash tartibidan (kod oy ulushini yaxlitlaydi, sikl narxi
+      // qoldig'i muammosini qaytarmaslik uchun — monthly-price.ts sarlavhasi).
+    });
+  });
+
   describe('restoreChargeForReturn', () => {
     // 14 ta oktabr sanasi — Task 1B brifidagi misol bilan bir xil.
     const octoberDates = [
