@@ -630,6 +630,49 @@ describe('MonthlyChargeService', () => {
       expect(charge?.chargedAmount).toBe(276_923); // 450 000 * 8/13
     });
 
+    it("o'quvchi qo'shilgandan KEYIN o'tiladigan qoplama darsi unga YOZILADI", async () => {
+      // Yuqoridagi testning ko'zgusi va ASOSIY holat: bayram 1-sentabrda
+      // (o'quvchi qo'shilishidan OLDIN), qoplama esa 16-sentabrda (u
+      // qo'shilgandan KEYIN). O'quvchi o'sha darsga boradi, demak puli
+      // ham undan olinadi.
+      //
+      // Ilgari bu dars BEPUL o'tardi: `coveredDates` avval `fromDate`
+      // bilan qisilar, bayramning ASL kuni (1-sentabr) shu qisishda tushib
+      // qolar, keyingina qoplama almashtiruvi ishlardi — almashtiradigan
+      // kun esa ro'yxatda yo'q edi. Ustozga esa o'sha dars uchun haq
+      // yozilardi, ya'ni yig'ilmagan puldan to'lanardi.
+      prismaMock.holiday.findMany.mockResolvedValueOnce([
+        {
+          date: new Date('2026-09-01T00:00:00Z'),
+          endDate: new Date('2026-09-01T00:00:00Z'),
+        },
+      ]);
+      prismaMock.lessonReschedule.findMany.mockResolvedValueOnce([
+        {
+          originalDate: new Date('2026-09-01T00:00:00Z'),
+          // Chorshanba — guruh jadvalida yo'q kun.
+          newDate: new Date('2026-09-16T00:00:00Z'),
+        },
+      ]);
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment({
+          startDate: new Date('2026-09-10T00:00:00Z'),
+        }),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      // 13 - 01(bayram) + 16(qoplama) = 13.
+      expect(charge?.plannedLessons).toBe(13);
+      // 10,12,15,16,17,19,22,24,26,29 = 10 ta — qoplama kuni ICHIDA.
+      expect(charge?.coveredLessons).toBe(10);
+      expect(charge?.coveredDates).toContain('2026-09-16');
+      expect(charge?.coveredDates).not.toContain('2026-09-01');
+      expect(charge?.chargedAmount).toBe(346_154); // 450 000 * 10/13
+    });
+
     it("ketgan o'quvchiga ketishdan KEYINGI qoplama darsining puli qaytadi", async () => {
       // Yuqoridagi qoida pulda qanday ko'rinishi: 22-sentabr bayrami
       // 30-sentabrga ko'chirilgan, o'quvchi 26-sentabrda ketadi. Ketguncha
