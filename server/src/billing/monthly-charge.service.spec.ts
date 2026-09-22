@@ -757,6 +757,115 @@ describe('MonthlyChargeService', () => {
       ]);
     });
 
+    it('KEYINGI OYGA surilgan dars rejadan chiqadi — 13 emas, 12', async () => {
+      // 29-sentabr (seshanba) darsi 1-oktabrga ko'chdi. Oyda 12 ta davomat
+      // bo'ladi; reja 13 da qolsa, 13 ga bo'lingan narx bilan 12 ta accrual
+      // yozilib FIXED_PER_STUDENT ustozga oyning 12/13 ulushi to'lanardi.
+      prismaMock.lessonReschedule.findMany.mockResolvedValueOnce([
+        {
+          originalDate: new Date('2026-09-29T00:00:00Z'),
+          newDate: new Date('2026-10-01T00:00:00Z'),
+        },
+      ]);
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(charge?.plannedLessons).toBe(12);
+      expect(charge?.perLessonCost).toBe(37_500); // 450 000 / 12
+      expect(charge?.chargedAmount).toBe(450_000);
+      expect(charge?.coveredDates).not.toContain('2026-09-29');
+    });
+
+    it("bayram bo'lmagan dars JADVALDAGI kunga surilsa ham reja 12 ga tushadi", async () => {
+      // 29-sentabr darsi 26-sentabrga (shanba — guruhning o'z kuni) ko'chdi:
+      // davomat kalendari kunlarni TO'PLAM qiladi, oyda 12 ta dars qoladi.
+      // Ilgari halqa bayram bo'lmagan asl kunni tashlab ketardi.
+      prismaMock.lessonReschedule.findMany.mockResolvedValueOnce([
+        {
+          originalDate: new Date('2026-09-29T00:00:00Z'),
+          newDate: new Date('2026-09-26T00:00:00Z'),
+        },
+      ]);
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(charge?.plannedLessons).toBe(12);
+      expect(charge?.perLessonCost).toBe(37_500);
+      expect(
+        charge?.coveredDates.filter((d) => d === '2026-09-26'),
+      ).toHaveLength(1);
+    });
+
+    it("BOSHQA OYDAN ko'chirib kelingan dars rejaga QO'SHILADI — 13 emas, 14", async () => {
+      // 29-avgust darsi 2-sentabrga ko'chdi (chorshanba — jadvalda yo'q).
+      // Oyda 14 ta davomat bo'ladi; reja 13 da qolsa ustozga ORTIQCHA
+      // to'lanardi.
+      prismaMock.lessonReschedule.findMany.mockResolvedValueOnce([
+        {
+          originalDate: new Date('2026-08-29T00:00:00Z'),
+          newDate: new Date('2026-09-02T00:00:00Z'),
+        },
+      ]);
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(charge?.plannedLessons).toBe(14);
+      expect(charge?.perLessonCost).toBe(32_143); // 450 000 / 14
+      expect(charge?.chargedAmount).toBe(450_000);
+      expect(charge?.coveredDates).toContain('2026-09-02');
+    });
+
+    it('BEKOR QILINGAN bayram qoplamasi bayramni rejaga QAYTARMAYDI', async () => {
+      // 1-sentabr bayrami 16-sentabrga ko'chirilgan, keyin 16-sentabr bekor
+      // qilingan: ikkala kunda ham dars yo'q, demak reja 12. Ilgari bekor
+      // qilish YANGI kunni olib kelardi, qoplama jadvali esa ASL kun
+      // bo'yicha kalitlangan edi — mos kelmasdi va bayram rejada qolardi.
+      prismaMock.holiday.findMany.mockResolvedValueOnce([
+        {
+          date: new Date('2026-09-01T00:00:00Z'),
+          endDate: new Date('2026-09-01T00:00:00Z'),
+        },
+      ]);
+      prismaMock.lessonReschedule.findMany.mockResolvedValueOnce([
+        {
+          originalDate: new Date('2026-09-01T00:00:00Z'),
+          newDate: new Date('2026-09-16T00:00:00Z'),
+        },
+      ]);
+      prismaMock.lessonCancellation.findMany.mockResolvedValueOnce([
+        { date: new Date('2026-09-16T00:00:00Z') },
+      ]);
+
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(charge?.plannedLessons).toBe(12);
+      expect(charge?.perLessonCost).toBe(37_500); // 450 000 / 12
+      // `coveredDates` da o'tilmagan kun turmaydi — mid-oy ketishda
+      // qaytariladigan pul fantom kundan hisoblanmaydi.
+      expect(charge?.coveredDates).not.toContain('2026-09-01');
+      expect(charge?.coveredDates).not.toContain('2026-09-16');
+    });
+
     it("bekor qilingan (ko'chirilmagan) dars rejadan CHIQADI — u haqiqatan yo'qolgan dars", async () => {
       prismaMock.lessonCancellation.findMany.mockResolvedValueOnce([
         { date: new Date('2026-09-01T00:00:00Z') },
