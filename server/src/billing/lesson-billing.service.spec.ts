@@ -1,9 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AttendanceStatus, LessonDeductionMode } from '@prisma/client';
-import { LessonBillingService } from './lesson-billing.service';
+import {
+  AttendanceStatus,
+  LessonDeductionMode,
+  PaymentModel,
+} from '@prisma/client';
+import {
+  LessonBillingService,
+  ProcessAttendanceBillingParams,
+} from './lesson-billing.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
+import {
+  ChargeableEnrollment,
+  MonthlyChargeService,
+} from './monthly-charge.service';
+import { TransactionsWriteService } from '../transactions/transactions-write.service';
+import { SettingsService } from '../settings/settings.service';
 
 /**
  * Tests cover the 6-row status transition matrix and the 3 financial
@@ -16,6 +29,7 @@ describe('LessonBillingService', () => {
   let prisma: any;
   let transactionsService: any;
   let salaryAccrualService: any;
+  let monthlyChargeService: any;
   let tx: any;
 
   const baseGroup = {
@@ -37,6 +51,16 @@ describe('LessonBillingService', () => {
       createAccrual: jest.fn().mockResolvedValue(null),
       reverseAccrualForAttendance: jest.fn().mockResolvedValue(null),
     };
+    monthlyChargeService = {
+      createChargeForEnrollment: jest.fn(),
+      recordExcusedLesson: jest.fn().mockResolvedValue(undefined),
+      findChargeForLesson: jest.fn().mockResolvedValue(null),
+      // Default: no exclusions, no additions. Tests exercising the fallback
+      // with a holiday/cancellation/reschedule override this per-call.
+      resolveMonthPlanDates: jest
+        .fn()
+        .mockResolvedValue({ excludedDates: [], addedDates: [] }),
+    };
 
     // tx is the same object as prisma — so $queryRaw and findUnique etc.
     // share the same jest.fn instances across the inner and outer scope.
@@ -53,7 +77,16 @@ describe('LessonBillingService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         update: jest.fn().mockResolvedValue({}),
       },
-      enrollment: { update: jest.fn().mockResolvedValue({}) },
+      enrollment: {
+        update: jest.fn().mockResolvedValue({}),
+        // `resolvePaymentModel` reads this on every call. Default to
+        // LESSON_PACK so every pre-existing test (which never touches
+        // MONTHLY) keeps exercising the unchanged package path without
+        // having to mock this itself.
+        findUnique: jest.fn().mockResolvedValue({
+          group: { course: { paymentModel: PaymentModel.LESSON_PACK } },
+        }),
+      },
       group: { findUnique: jest.fn().mockResolvedValue(baseGroup) },
       student: { findUnique: jest.fn() },
       // `settleDeferredAccruals` resolves the deduction's linked Attendance
@@ -79,6 +112,7 @@ describe('LessonBillingService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: TransactionsService, useValue: transactionsService },
         { provide: SalaryAccrualService, useValue: salaryAccrualService },
+        { provide: MonthlyChargeService, useValue: monthlyChargeService },
       ],
     }).compile();
 
@@ -1104,6 +1138,491 @@ describe('LessonBillingService', () => {
         expect.any(Function),
         expect.objectContaining({ isolationLevel: 'Serializable' }),
       );
+    });
+  });
+
+  // ============================================================
+  // MONTHLY kurs — davomat balansga tegmaydi (Task 6)
+  // ============================================================
+
+  /**
+   * `tx.enrollment.findUnique` bitta mock bo'lgani uchun (Prisma `select`
+   * haqiqiy filtrlamaydi) qaytariladigan obyekt HAR IKKI chaqiruvchini
+   * qondirishi kerak: `resolvePaymentModel` (`group.course.paymentModel`)
+   * va zaxira yo'l `fallbackMonthlyPerLessonCost`
+   * (`group.exactDays` + `group.course.price`).
+   */
+  function monthlyEnrollmentRow() {
+    return {
+      group: {
+        exactDays: ['monday', 'wednesday', 'friday'],
+        course: { paymentModel: PaymentModel.MONTHLY, price: 450_000 },
+      },
+    };
+  }
+
+  function monthlyParams(
+    over: Pick<ProcessAttendanceBillingParams, 'oldStatus' | 'newStatus'>,
+  ): ProcessAttendanceBillingParams {
+    tx.enrollment.findUnique.mockResolvedValue(monthlyEnrollmentRow());
+    return { ...baseParams, ...over };
+  }
+
+  function packParams(
+    over: Pick<ProcessAttendanceBillingParams, 'oldStatus' | 'newStatus'>,
+  ): ProcessAttendanceBillingParams {
+    tx.enrollment.findUnique.mockResolvedValue({
+      group: { course: { paymentModel: PaymentModel.LESSON_PACK } },
+    });
+    return { ...baseParams, ...over };
+  }
+
+  describe('MONTHLY kurs — davomat balansga tegmaydi', () => {
+    beforeEach(() => {
+      monthlyChargeService.findChargeForLesson.mockResolvedValue({
+        id: 'chg-1',
+        perLessonCost: 34_615,
+        plannedLessons: 13,
+        transactionId: 'tx-monthly-1',
+      });
+    });
+
+    it('PRESENT belgilanganda balansdan hech narsa yechmaydi', async () => {
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({
+          oldStatus: null,
+          newStatus: AttendanceStatus.PRESENT,
+        }),
+      );
+
+      expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
+      expect(
+        transactionsService.recordLessonConsumption,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('PRESENT belgilanganda o`qituvchiga muzlatilgan narx bo`yicha haq yozadi', async () => {
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({
+          oldStatus: null,
+          newStatus: AttendanceStatus.PRESENT,
+        }),
+      );
+
+      expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
+        expect.objectContaining({
+          perLessonCost: 34_615,
+          lessonDivisor: 13,
+          deductionTransactionId: 'tx-monthly-1',
+        }),
+      );
+    });
+
+    it('ABSENT ham to`langan dars — o`qituvchi haqi yoziladi', async () => {
+      // Dars o'tdi, o'quvchi kelmadi: oylik modelda ham dars hisoblanadi.
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({ oldStatus: null, newStatus: AttendanceStatus.ABSENT }),
+      );
+      expect(salaryAccrualService.createAccrual).toHaveBeenCalled();
+    });
+
+    it('birinchi marta EXCUSED belgilanganda o`qituvchiga haq yozmaydi va kredit qo`shadi', async () => {
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({
+          oldStatus: null,
+          newStatus: AttendanceStatus.EXCUSED,
+        }),
+      );
+
+      expect(salaryAccrualService.createAccrual).not.toHaveBeenCalled();
+      expect(monthlyChargeService.recordExcusedLesson).toHaveBeenCalledWith(
+        tx,
+        expect.objectContaining({ delta: 1 }),
+      );
+    });
+
+    it('EXCUSED -> EXCUSED hech narsa qilmaydi (haqiqiy o`zgarish yo`q)', async () => {
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({
+          oldStatus: AttendanceStatus.EXCUSED,
+          newStatus: AttendanceStatus.EXCUSED,
+        }),
+      );
+
+      expect(salaryAccrualService.createAccrual).not.toHaveBeenCalled();
+      expect(monthlyChargeService.recordExcusedLesson).not.toHaveBeenCalled();
+      expect(
+        salaryAccrualService.reverseAccrualForAttendance,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('PRESENT -> LATE hech narsa qilmaydi (ikkalasi ham billable)', async () => {
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({
+          oldStatus: AttendanceStatus.PRESENT,
+          newStatus: AttendanceStatus.LATE,
+        }),
+      );
+
+      expect(salaryAccrualService.createAccrual).not.toHaveBeenCalled();
+      expect(monthlyChargeService.recordExcusedLesson).not.toHaveBeenCalled();
+    });
+
+    it('PRESENT -> EXCUSED tuzatishida haqni teskari qiladi va kredit qo`shadi', async () => {
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({
+          oldStatus: AttendanceStatus.PRESENT,
+          newStatus: AttendanceStatus.EXCUSED,
+        }),
+      );
+
+      expect(
+        salaryAccrualService.reverseAccrualForAttendance,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          groupId: baseParams.groupId,
+          studentId: baseParams.studentId,
+        }),
+      );
+      expect(monthlyChargeService.recordExcusedLesson).toHaveBeenCalledWith(
+        tx,
+        expect.objectContaining({ delta: 1 }),
+      );
+      // Balans yo'liga umuman tegmaydi.
+      expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
+    });
+
+    it('EXCUSED -> PRESENT tuzatishida kreditni qaytarib oladi', async () => {
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({
+          oldStatus: AttendanceStatus.EXCUSED,
+          newStatus: AttendanceStatus.PRESENT,
+        }),
+      );
+
+      expect(monthlyChargeService.recordExcusedLesson).toHaveBeenCalledWith(
+        tx,
+        expect.objectContaining({ delta: -1 }),
+      );
+      expect(salaryAccrualService.createAccrual).toHaveBeenCalled();
+    });
+
+    it('oylik hisob topilmasa ham o`qituvchi haqsiz qolmaydi (zaxira narx + markaz moliyalashtiradi)', async () => {
+      // Cron ishlamay qolgan holat: narx joyida hisoblanadi va xatolik
+      // jurnalga yoziladi (recordExcusedLesson'dagi xatti-harakat singari).
+      monthlyChargeService.findChargeForLesson.mockResolvedValue(null);
+      const errorSpy = jest
+        .spyOn((service as any).logger, 'error')
+        .mockImplementation();
+
+      await service.processAttendanceBilling(
+        tx,
+        monthlyParams({
+          oldStatus: null,
+          newStatus: AttendanceStatus.PRESENT,
+        }),
+      );
+
+      // exactDays = [mon, wed, fri] → 2026-04 da 13 ta dars kuni.
+      // 450_000 / 13 = 34_615 (yaxlitlangan).
+      expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
+        expect.objectContaining({
+          perLessonCost: 34_615,
+          lessonDivisor: 13,
+          deductionTransactionId: null,
+          centerFunded: true,
+        }),
+      );
+      expect(errorSpy).toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
+  });
+
+  // ============================================================
+  // Review finding #1 (Task 6 fix-up): zaxira narx REAL charge bilan
+  // bir xil manbadan (bayram/bekor qilingan dars) hisoblanishi kerak.
+  // Bu yerda MonthlyChargeService MOCK emas — `resolveMonthPlanDates`
+  // ikkala yo'lda (fallback va createChargeForEnrollment) haqiqatda
+  // bitta metod ekanini isbotlash uchun ikkalasi ham REAL instansiya
+  // orqali sinaladi.
+  // ============================================================
+
+  describe('zaxira narx real oylik hisob bilan bir xil manbadan (bayramli oy)', () => {
+    it('bayram kuni bo`lgan oyda fallback narxi createChargeForEnrollment muzlatadigan narx bilan mos keladi', async () => {
+      let lastRealCharge: any = null;
+      const txLocal: any = {
+        enrollment: { findUnique: jest.fn() },
+        // 2026-04-01 — chorshanba, guruhning dars kuni (mon/wed/fri) — shu
+        // kunga bayram qo'yilgan va shu oy ichiga ko'chirish YOZILMAGAN,
+        // demak dars rostdan yo'qoldi: ikkala yo'l ham 13 emas, 12 ni
+        // ko'rishi va bir xil narx berishi kerak.
+        holiday: {
+          findMany: jest.fn().mockResolvedValue([
+            {
+              date: new Date('2026-04-01T00:00:00Z'),
+              endDate: new Date('2026-04-01T00:00:00Z'),
+            },
+          ]),
+        },
+        lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
+        // Bayram darsini shu oy ichida qoplaydigan ko'chirish yo'q.
+        lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
+        // `resolveMonthPlan` guruhning faol oynasini o'qiydi — ko'chirib
+        // kelingan kun shu oynadan tashqarida bo'lsa rejaga qo'shilmaydi.
+        // Bu testda ko'chirish yo'q, shuning uchun oyna cheksiz beriladi.
+        group: {
+          findUnique: jest
+            .fn()
+            .mockResolvedValue({ startDate: null, endDate: null }),
+        },
+        enrollmentMonthlyCharge: {
+          // Fallback yo'li: bu oy uchun hisob hali yo'q (cron ulgurmagan).
+          findUnique: jest.fn().mockResolvedValue(null),
+          // `createChargeForEnrollment` create() dan keyin update()ni HAM
+          // chaqiradi (transactionId qo'yish uchun) — ikkalasi bitta
+          // yopiq o'zgaruvchida qo'shilishi kerak, aks holda update()
+          // qaytargan qator faqat {id, transactionId} bo'lib qoladi va
+          // perLessonCost kabi maydonlar yo'qoladi (task-5's spec pattern).
+          create: jest.fn(({ data }: any) => {
+            lastRealCharge = { id: 'charge-real-1', ...data };
+            return Promise.resolve(lastRealCharge);
+          }),
+          update: jest.fn(({ data }: any) => {
+            lastRealCharge = { ...lastRealCharge, ...data };
+            return Promise.resolve(lastRealCharge);
+          }),
+        },
+        lessonTeacherOverride: {
+          findFirst: jest.fn().mockResolvedValue(null),
+        },
+        groupTeacher: {
+          findMany: jest.fn().mockResolvedValue([{ teacherId: 20001 }]),
+        },
+        // Hisob yozilganda markaz qoplagani bayrog'ini tozalaydi.
+        salaryAccrual: {
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
+      };
+
+      const groupExactDays = ['monday', 'wednesday', 'friday'];
+      const coursePrice = 450_000;
+
+      txLocal.enrollment.findUnique.mockResolvedValue({
+        group: {
+          exactDays: groupExactDays,
+          course: {
+            paymentModel: PaymentModel.MONTHLY,
+            price: coursePrice,
+          },
+        },
+      });
+
+      const transactionsMock = {
+        deductLessonFee: jest.fn(),
+        recordLessonConsumption: jest.fn(),
+        reverseLessonConsumption: jest.fn(),
+        reverseTransaction: jest.fn(),
+      };
+      const salaryMock = {
+        createAccrual: jest.fn().mockResolvedValue(null),
+        reverseAccrualForAttendance: jest.fn().mockResolvedValue(null),
+      };
+      const txWriteMock = {
+        chargeMonthlyFee: jest.fn().mockResolvedValue({ id: 'txn-real-1' }),
+      };
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          LessonBillingService,
+          MonthlyChargeService,
+          { provide: PrismaService, useValue: txLocal },
+          { provide: TransactionsService, useValue: transactionsMock },
+          { provide: SalaryAccrualService, useValue: salaryMock },
+          { provide: TransactionsWriteService, useValue: txWriteMock },
+          {
+            provide: SettingsService,
+            useValue: {
+              get: jest.fn((_companyId: number, key: string) => {
+                if (key === 'payment.excusedCreditEnabled')
+                  return Promise.resolve(true);
+                if (key === 'payment.excusedCreditMonthlyCap')
+                  return Promise.resolve(null);
+                return Promise.resolve(undefined);
+              }),
+            },
+          },
+        ],
+      }).compile();
+
+      const lessonBillingReal = module.get(LessonBillingService);
+      const monthlyChargeReal = module.get(MonthlyChargeService);
+
+      // 1) Zaxira yo'l: davomat PRESENT deb belgilanadi, hisob yo'q —
+      // fallback narx hisoblanadi va shu narx bilan o'qituvchiga yoziladi.
+      await lessonBillingReal.processAttendanceBilling(txLocal, {
+        ...baseParams,
+        oldStatus: null,
+        newStatus: AttendanceStatus.PRESENT,
+      });
+      const fallbackPerLessonCost =
+        salaryMock.createAccrual.mock.calls[0][0].perLessonCost;
+
+      // 2) Xuddi shu oy uchun REAL hisob yaratilsa (masalan cron keyinroq
+      // yugursa) — muzlatadigan narx.
+      const enrollment: ChargeableEnrollment = {
+        id: baseParams.enrollmentId,
+        studentId: baseParams.studentId,
+        groupId: baseParams.groupId,
+        status: 'ACTIVE' as any,
+        startDate: null,
+        group: {
+          id: baseParams.groupId,
+          branchId: baseParams.branchId,
+          companyId: baseParams.companyId,
+          statusEnum: 'ACTIVE' as any,
+          exactDays: groupExactDays,
+          course: { price: coursePrice, paymentModel: PaymentModel.MONTHLY },
+        },
+      };
+      const realCharge = await monthlyChargeReal.createChargeForEnrollment(
+        txLocal,
+        {
+          enrollment,
+          periodYear: 2026,
+          periodMonth: 4,
+          companyId: baseParams.companyId,
+        },
+      );
+
+      // 450_000 / 12 — qoplanmagan bayram rejadan chiqadi, 12 dars qoladi.
+      expect(realCharge?.perLessonCost).toBe(37_500);
+      expect(fallbackPerLessonCost).toBe(realCharge?.perLessonCost);
+
+      // 3) Bu tsiklning O'ZI markaz qoplagani bayrog'ining tozalanadigan
+      // paytini ko'rsatadi: 1-qadamda hisob yo'q edi, shuning uchun accrual
+      // `centerFunded: true` bilan yozildi; 2-qadamdagi hisob esa o'sha
+      // davrni o'quvchi zimmasiga o'tkazadi. Oylik yo'lda o'tgan darsga
+      // qayta accrual yozilmagani uchun bayroqni boshqa hech nima
+      // tozalamasdi.
+      expect(salaryMock.createAccrual).toHaveBeenCalledWith(
+        expect.objectContaining({ centerFunded: true }),
+      );
+      expect(txLocal.salaryAccrual.updateMany).toHaveBeenCalledWith({
+        where: {
+          companyId: baseParams.companyId,
+          studentId: baseParams.studentId,
+          groupId: baseParams.groupId,
+          isCenterTopUp: true,
+          reversedAt: null,
+          lessonDate: {
+            gte: new Date('2026-04-01T00:00:00.000Z'),
+            lt: new Date('2026-05-01T00:00:00.000Z'),
+          },
+        },
+        // Yopishqoq `wasCenterTopUp` saqlanadi, `amount` o'zgarmaydi —
+        // shuning uchun o'qituvchi balansi ham, ledger ham qimirlamaydi.
+        data: { isCenterTopUp: false },
+      });
+      // Accrual QAYTA yozilmadi (aks holda `applyAccrualToBalance` ning
+      // idempotentligi tufayli qator yangi narxda, pul esa eskisida qolardi
+      // — `accrueMonthlySalary` izohidagi taqiq).
+      expect(salaryMock.createAccrual).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('LESSON_PACK kurs — eski yo`l o`zgarmaydi (Task 6 shoxlanishi)', () => {
+    beforeEach(() => {
+      tx.$queryRaw.mockResolvedValue([
+        { id: 'enroll-1', prepaidLessonsRemaining: 0, cycleLessonIndex: 0 },
+      ]);
+      tx.student.findUnique.mockResolvedValue({ balance: 400_000 });
+    });
+
+    it('PRESENT da avvalgidek balansdan yechadi', async () => {
+      await service.processAttendanceBilling(
+        tx,
+        packParams({ oldStatus: null, newStatus: AttendanceStatus.PRESENT }),
+      );
+      expect(transactionsService.deductLessonFee).toHaveBeenCalled();
+      expect(monthlyChargeService.recordExcusedLesson).not.toHaveBeenCalled();
+      expect(monthlyChargeService.findChargeForLesson).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('reverseLessonDeduction — oylik qatorlar boshqa yo`ldan boradi', () => {
+    beforeEach(() => {
+      // `reverseLessonDeduction` o'z tranzaksiyasini ochadi.
+      prisma.$transaction = jest.fn((cb: any) => cb(tx));
+      tx.salaryAccrual = {
+        findMany: jest.fn().mockResolvedValue([]),
+        update: jest.fn().mockResolvedValue({}),
+      };
+      monthlyChargeService.reverseMonthlyCharge = jest
+        .fn()
+        .mockResolvedValue({ chargeId: 'chg-1' });
+    });
+
+    it('MONTHLY_PERIOD qatorini reverseMonthlyCharge orqali bekor qiladi', async () => {
+      tx.transaction.findFirst.mockResolvedValueOnce({
+        id: 'mon-1',
+        enrollmentId: 'enroll-1',
+        reversedAt: null,
+        metadata: { mode: 'MONTHLY_PERIOD', period: '2026-09' },
+      });
+
+      await service.reverseLessonDeduction('mon-1', {
+        performedById: 7,
+        reason: 'Xato hisoblandi',
+        companyId: 1,
+      });
+
+      expect(monthlyChargeService.reverseMonthlyCharge).toHaveBeenCalledWith(
+        tx,
+        expect.objectContaining({
+          transactionId: 'mon-1',
+          companyId: 1,
+          reason: 'Xato hisoblandi',
+        }),
+      );
+      // Umumiy reverseTransaction ATAYLAB chaqirilmaydi: u `metadata.mode`
+      // ni tekshirmaydi va hisob qatorini `CHARGED` bo'lib qoldirardi.
+      expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
+      // Oylik yo'lda LESSON_CONSUMPTION ham, prepaid hisoblagichi ham yo'q.
+      expect(tx.enrollment.update).not.toHaveBeenCalled();
+    });
+
+    it('LESSON_PACK qatorida eski yo`l o`zgarmaydi', async () => {
+      tx.transaction.findFirst.mockResolvedValueOnce({
+        id: 'ded-9',
+        enrollmentId: 'enroll-1',
+        reversedAt: null,
+        metadata: { mode: LessonDeductionMode.FULL_CYCLE },
+      });
+      tx.transaction.findMany.mockResolvedValueOnce([]);
+
+      await service.reverseLessonDeduction('ded-9', {
+        performedById: 7,
+        companyId: 1,
+      });
+
+      expect(transactionsService.reverseTransaction).toHaveBeenCalledWith(
+        'ded-9',
+        expect.any(Object),
+        tx,
+      );
+      expect(monthlyChargeService.reverseMonthlyCharge).not.toHaveBeenCalled();
+      expect(tx.enrollment.update).toHaveBeenCalledWith({
+        where: { id: 'enroll-1' },
+        data: { prepaidLessonsRemaining: 0 },
+      });
     });
   });
 });

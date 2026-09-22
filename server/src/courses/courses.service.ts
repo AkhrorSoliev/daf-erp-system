@@ -3,6 +3,7 @@ import { CourseStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
+import { SettingsService } from '../settings/settings.service';
 import { CourseQueryDto } from './dto/course-query.dto';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -19,6 +20,7 @@ export class CoursesService {
     private statusHistoryService: StatusHistoryService,
     private statusCascadeService: StatusCascadeService,
     private entityHistoryService: EntityHistoryService,
+    private settingsService: SettingsService,
   ) {}
 
   async findAll(
@@ -44,6 +46,7 @@ export class CoursesService {
           description: true,
           price: true,
           lessonPaymentCount: true,
+          paymentModel: true,
           courseDuration: true,
           lessonDuration: true,
           lessonMinutes: true,
@@ -86,6 +89,19 @@ export class CoursesService {
       throw new NotFoundException(`Filial #${dto.branchId} topilmadi`);
     }
 
+    // Kurs `paymentModel`ni ANIQ ko'rsatmasa — `payment.defaultModel`
+    // sozlamasi ishlatiladi (filial darajasi bo'lsa ustidan yozadi). Bu
+    // CEOning "to'lov modelini istalgan payt almashtira olamizmi" degan
+    // savoliga javob: yangi kurslar panel orqali boshqariladi, kod
+    // ichidagi qattiq yozilgan qiymat emas.
+    const paymentModel =
+      dto.paymentModel ??
+      (await this.settingsService.get(
+        companyId,
+        'payment.defaultModel',
+        dto.branchId ?? undefined,
+      ));
+
     const course = await this.prisma.course.create({
       data: {
         name: dto.name,
@@ -94,6 +110,7 @@ export class CoursesService {
         lessonDuration: dto.lessonDuration,
         courseDuration: dto.courseDuration,
         lessonPaymentCount: dto.lessonPaymentCount,
+        paymentModel,
         price: dto.price,
         branchId: dto.branchId,
         companyId,

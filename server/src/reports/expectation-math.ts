@@ -26,6 +26,28 @@ export interface ExpectationGroup {
   datesWithAttendance: Set<string>;
   /** Tashkent dates with an active LessonCancellation. */
   cancelledDates: Set<string>;
+  /**
+   * Bayram kunlari, lekin dars SHU OY ichida boshqa kunga ko'chirilgan —
+   * ya'ni dars yo'qolmagan.
+   *
+   * `MonthlyChargeService.resolveMonthPlan` bunday bayramni yo'qotmaydi:
+   * bayram kuni rejadan chiqadi, QOPLAMA kuni esa qo'shiladi — sanoq
+   * o'zgarmaydi va muzlatilgan `plannedLessons` o'sha darsni sanaydi.
+   * Prognoz ham sanashi SHART: aks holda oy narxi 13 ga bo'linib,
+   * prognozda 12 ta dars ko'rinardi va bitta oy uchun hisoblangan pul
+   * bilan kutilayotgan pul bir-biriga to'g'ri kelmasdi.
+   *
+   * Ko'chirilgan darsning YANGI kuni bu yerda ataylab sanalmaydi: yurish
+   * faqat JADVALDAGI kunlar ustidan yuradi, qoplama kuni esa jadvalda
+   * yo'q. Shuning uchun ikkala tomon bitta kunni sanaydi (hisob qoplama
+   * kunini, prognoz asl kunni) va jami bir xil chiqadi.
+   *
+   * Qoplama kuni guruhning O'Z jadvalidagi kun bo'lsa bu to'plamga
+   * TUSHMAYDI: oyda dars kunlari soni o'zgarmaydi, hisob ham bayramni
+   * rejadan chiqaradi. Filtr `ReportsExpectationService` da, guruh jadvali
+   * ma'lum bo'ladigan joyda qo'llanadi.
+   */
+  holidayMakeupDates: Set<string>;
   /** Attendances WITH a live LESSON_CONSUMPTION — already paid. */
   coveredAttendances: PricedAttendance[];
   /** Attendances WITHOUT one — taught, not yet paid. */
@@ -120,7 +142,11 @@ export function splitMonthLessons(
       g.endDateStr && g.endDateStr < monthEndStr ? g.endDateStr : monthEndStr;
 
     for (let d = from; d <= to; d = addDaysToDateStr(d, 1)) {
-      if (holidayDates.has(d)) continue;
+      // Bayram — dars yo'q, MAGAR u shu oy ichida qayta o'tilmasa. Sanoq
+      // `resolveMonthPlan` niki bilan bir xil bo'lishi kerak: reja va
+      // prognoz bitta oyga ikki xil dars sonini ko'rsa, muzlatilgan narxga
+      // ko'paytirilgan jami hisoblangan puldan farq qiladi.
+      if (holidayDates.has(d) && !g.holidayMakeupDates.has(d)) continue;
       if (g.cancelledDates.has(d)) continue;
       if (g.datesWithAttendance.has(d)) continue;
       // History with no attendance row: no evidence, no projection.

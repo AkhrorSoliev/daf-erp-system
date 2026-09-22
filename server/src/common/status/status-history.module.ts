@@ -5,8 +5,10 @@ import { BillingModule } from '../../billing/billing.module';
 
 @Global()
 @Module({
-  // BillingModule provides EnrollmentBillingService — the cascade must
-  // refund unused prepaid lessons before closing enrollments.
+  // BillingModule provides EnrollmentBillingService (LESSON_PACK prepaid
+  // refund) and MonthlyChargeService (MONTHLY departure refund) — the
+  // cascade must refund unused money before closing enrollments, whichever
+  // billing model the student's course uses.
   imports: [BillingModule],
   providers: [StatusHistoryService, StatusCascadeService],
   exports: [StatusHistoryService, StatusCascadeService],

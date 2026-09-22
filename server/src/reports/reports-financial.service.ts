@@ -3,6 +3,11 @@ import { Prisma, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolvePeriod } from '../common/finance/period-helpers';
 import {
+  loadFrozenMonthlyPerLesson,
+  monthlyPerLessonKeyForLesson,
+  periodsInRange,
+} from '../common/finance/monthly-per-lesson';
+import {
   branchIdWhere,
   isEmptyScope,
   studentBranchWhere,
@@ -412,6 +417,14 @@ export class ReportsFinancialService {
    * window. Sums `metadata.perLessonCost` over live LESSON_CONSUMPTION rows
    * joined to their attendance (a consumption exists only for a paid lesson).
    *
+   * OYLIK (MONTHLY) yozilishlarda `LESSON_CONSUMPTION` UMUMAN yozilmaydi —
+   * pul oy boshida bitta `MONTHLY_PERIOD` yechimi bilan olinadi. Ular uchun
+   * dars qiymati `EnrollmentMonthlyCharge.perLessonCost` dan olinadi
+   * (`common/finance/monthly-per-lesson.ts` — `reports-expectation.service`
+   * ham AYNAN shu manbadan o'qiydi). Busiz oylik o'quvchining har bir darsi
+   * nolga hisoblanardi, o'qituvchi haqi esa hisoblanaverardi: «Sof foyda»
+   * va Foyda kartasi 01.09 dan boshlab soxta ZARAR ko'rsatardi.
+   *
    * Unlike cash income (Payment by `createdAt`), this isolates a month to its
    * OWN lessons: a late-paid lesson recognizes in the month it was HELD, and a
    * prepayment recognizes only as the future lessons are held. It pairs exactly
@@ -442,6 +455,9 @@ export class ReportsFinancialService {
       },
       select: {
         id: true,
+        studentId: true,
+        groupId: true,
+        date: true,
         group: {
           select: {
             course: { select: { price: true, lessonPaymentCount: true } },
@@ -453,6 +469,7 @@ export class ReportsFinancialService {
 
     const attById = new Map(atts.map((a) => [a.id, a]));
     const attIds = atts.map((a) => a.id);
+    const consumedAttIds = new Set<string>();
     let revenue = 0;
     // Chunk the `in` list — a month can hold several thousand attendances.
     for (let i = 0; i < attIds.length; i += 1000) {
@@ -466,6 +483,7 @@ export class ReportsFinancialService {
         select: { attendanceId: true, metadata: true },
       });
       for (const c of cons) {
+        if (c.attendanceId) consumedAttIds.add(c.attendanceId);
         const meta = c.metadata as { perLessonCost?: number } | null;
         let per = meta?.perLessonCost;
         if (per == null) {
@@ -477,6 +495,29 @@ export class ReportsFinancialService {
         revenue += per;
       }
     }
+
+    // Oylik yo'l: `LESSON_CONSUMPTION` qatori yo'q darslar. Ularning qiymati
+    // hisob yozilgan paytdagi MUZLATILGAN `perLessonCost` — 12 talik yo'ldagi
+    // `metadata.perLessonCost` bilan bir xil ma'noda (ikkalasi ham
+    // chegirmasiz: "nima hisoblangan", "bugun qancha olinardi" emas).
+    // LESSON_PACK darsida hisob qatori bo'lmaydi, ya'ni u avvalgidek 0
+    // qo'shadi (balansi yetmagan, hali hisoblanmagan dars).
+    const unconsumed = atts.filter((a) => !consumedAttIds.has(a.id));
+    if (unconsumed.length > 0) {
+      const frozen = await loadFrozenMonthlyPerLesson(this.prisma, {
+        companyId,
+        studentIds: unconsumed.map((a) => a.studentId),
+        groupIds: unconsumed.map((a) => a.groupId),
+        periods: periodsInRange(start, end),
+      });
+      for (const a of unconsumed) {
+        revenue +=
+          frozen.get(
+            monthlyPerLessonKeyForLesson(a.studentId, a.groupId, a.date),
+          ) ?? 0;
+      }
+    }
+
     return revenue;
   }
 

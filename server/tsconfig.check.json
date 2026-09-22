@@ -9,9 +9,30 @@
   // an argument its method never accepted, and Click webhook fixtures typed as
   // free-form literals.
   //
-  // `scripts/` stays out for now — 28 errors there are mostly one-off
-  // operational scripts hunting for states the schema no longer permits.
+  // `scripts/` as a whole stays out — ~150 errors there are one-off
+  // operational scripts hunting for states the schema no longer permits, and
+  // fixing them is a separate job from any given feature.
+  //
+  // EXCEPTION: the oylik-to'lov migration scripts. They rewrite ~370 students'
+  // balances in one run, and their spec shipped with two type errors nobody
+  // saw precisely because `scripts/` was excluded ("typecheck toza" was true
+  // and meaningless). A script that moves money is held to `src/` standards.
+  // Adding another money-moving script? Add it to this list.
   "extends": "./tsconfig.json",
-  "include": ["src/**/*", "test/**/*"],
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "scripts/migrate-to-monthly.ts",
+    "scripts/verify-monthly-migration.ts",
+    "scripts/lib/monthly-course-flip.ts",
+    "scripts/lib/monthly-course-flip.spec.ts",
+    "scripts/lib/monthly-migration-apply.ts",
+    "scripts/lib/monthly-migration-apply.spec.ts",
+    "scripts/lib/monthly-migration-report.ts",
+    "scripts/lib/monthly-migration-report.spec.ts",
+    "scripts/lib/prepaid-refund-price.ts",
+    "scripts/lib/prepaid-refund-price.spec.ts",
+    "scripts/lib/check-cli.ts"
+  ],
   "exclude": ["node_modules", "dist", "src/generated"]
 }

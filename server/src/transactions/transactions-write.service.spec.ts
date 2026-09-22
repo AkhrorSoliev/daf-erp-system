@@ -369,3 +369,317 @@ describe('TransactionsWriteService.createAdjustment', () => {
     expect('metadata' in data).toBe(false);
   });
 });
+
+/**
+ * Oylik to'lov ledger yozuvi.
+ *
+ * `chargeMonthlyFee` ataylab LESSON_DEDUCTION turida yoziladi (qarz/hisobot/
+ * kassa so'rovlarining o'nlab joyi shu turga tayanadi) va `metadata.mode`
+ * bilan ajratiladi. `lessonsCovered` metadataga ATAYLAB yozilmaydi —
+ * `lesson-coverage.helper` shu kalitni "sikl ochildi" belgisi deb o'qiydi.
+ */
+describe('TransactionsWriteService.chargeMonthlyFee', () => {
+  let service: TransactionsWriteService;
+  let prisma: any;
+
+  const STUDENT = 10453;
+
+  beforeEach(async () => {
+    prisma = {
+      $transaction: jest.fn((cb: any) => cb(prisma)),
+      $queryRaw: jest
+        .fn()
+        .mockResolvedValue([{ id: STUDENT, balance: 1_000_000 }]),
+      // Echo the create payload back with the fields a real Prisma row would
+      // carry — the brief's assertions read the RETURN value, not just the
+      // mock's call args, so a bare `{ id: 'tx-1' }` stub is not enough here.
+      transaction: {
+        create: jest.fn(({ data }: any) =>
+          Promise.resolve({
+            id: 'tx-1',
+            attendanceId: null,
+            reversedTransactionId: null,
+            reversedAt: null,
+            ...data,
+          }),
+        ),
+      },
+      student: { update: jest.fn() },
+      studentBranch: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
+      },
+      enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        TransactionsWriteService,
+        { provide: PrismaService, useValue: prisma },
+        {
+          provide: CashMovementsService,
+          useValue: { recordInflow: jest.fn(), recordOutflow: jest.fn() },
+        },
+      ],
+    }).compile();
+
+    service = module.get(TransactionsWriteService);
+  });
+
+  it('oylik to`lovni manfiy summa bilan LESSON_DEDUCTION sifatida yozadi', async () => {
+    // Oylik qator mavjud hisobot va qarz so'rovlarini buzmasligi uchun
+    // ataylab LESSON_DEDUCTION turida yoziladi — metadata bilan ajratiladi.
+    const tx = await service.chargeMonthlyFee({
+      studentId: 10453,
+      amount: 450_000,
+      enrollmentId: 'enr-1',
+      companyId: 1,
+      branchId: 1,
+      periodYear: 2026,
+      periodMonth: 9,
+      monthlyPrice: 450_000,
+      plannedLessons: 13,
+      coveredLessons: 13,
+      perLessonCost: 34_615,
+      creditLessons: 0,
+    });
+
+    expect(tx.type).toBe('LESSON_DEDUCTION');
+    expect(tx.amount).toBe(-450_000);
+    expect(tx.attendanceId).toBeNull();
+    expect(tx.metadata).toMatchObject({
+      mode: 'MONTHLY_PERIOD',
+      period: '2026-09',
+      perLessonCost: 34_615,
+      plannedLessons: 13,
+    });
+  });
+
+  it('metadataga lessonsCovered YOZMAYDI — sikl dvigateli uni yutib yubormasligi uchun', async () => {
+    // lesson-coverage.helper `lessonsCovered` bo'yicha sikl ochilganini
+    // aniqlaydi. Oylik qatorda u bo'lsa, qoplama hisobi buzilardi.
+    const written = await service.chargeMonthlyFee({
+      studentId: 10453,
+      amount: 450_000,
+      enrollmentId: 'enr-1',
+      companyId: 1,
+      periodYear: 2026,
+      periodMonth: 9,
+      monthlyPrice: 450_000,
+      plannedLessons: 13,
+      coveredLessons: 13,
+      perLessonCost: 34_615,
+      creditLessons: 0,
+    });
+    expect(Object.keys(written.metadata as object)).not.toContain(
+      'lessonsCovered',
+    );
+  });
+
+  it('summa 0 bo`lsa ham qator yozadi — kredit oyni to`liq yopgani ko`rinishi kerak', async () => {
+    const tx = await service.chargeMonthlyFee({
+      studentId: 10453,
+      amount: 0,
+      enrollmentId: 'enr-1',
+      companyId: 1,
+      periodYear: 2026,
+      periodMonth: 10,
+      monthlyPrice: 450_000,
+      plannedLessons: 13,
+      coveredLessons: 13,
+      perLessonCost: 34_615,
+      creditLessons: 13,
+    });
+    expect(tx.amount).toBe(0);
+    expect(tx.balanceBefore).toBe(tx.balanceAfter);
+  });
+
+  it('manfiy summani rad etadi', async () => {
+    await expect(
+      service.chargeMonthlyFee({
+        studentId: 10453,
+        amount: -1,
+        enrollmentId: 'enr-1',
+        companyId: 1,
+        periodYear: 2026,
+        periodMonth: 9,
+        monthlyPrice: 450_000,
+        plannedLessons: 13,
+        coveredLessons: 13,
+        perLessonCost: 34_615,
+        creditLessons: 0,
+      }),
+    ).rejects.toThrow();
+  });
+});
+
+/**
+ * Oylik to'lov qatorini teskari qilish.
+ *
+ * ADR-0004: teskari summa asl qatorning ISHORASIDAN kelib chiqadi
+ * (`-original.amount`), `Math.abs` ishlatilmaydi — aks holda noto'g'ri
+ * ishorali asl qator "to'g'ri" ko'rinishdagi teskari qatorga yuvilib ketardi.
+ */
+describe('TransactionsWriteService.reverseMonthlyFee', () => {
+  let service: TransactionsWriteService;
+  let prisma: any;
+
+  const COMPANY = 1;
+  const STUDENT = 10453;
+
+  beforeEach(async () => {
+    prisma = {
+      $transaction: jest.fn((cb: any) => cb(prisma)),
+      $queryRaw: jest
+        .fn()
+        .mockResolvedValue([{ id: STUDENT, balance: -450_000 }]),
+      transaction: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'tx-1',
+          type: 'LESSON_DEDUCTION',
+          amount: -450_000,
+          studentId: STUDENT,
+          enrollmentId: 'enr-1',
+          branchId: 1,
+          companyId: COMPANY,
+          metadata: { mode: 'MONTHLY_PERIOD', period: '2026-09' },
+          reversedAt: null,
+        }),
+        create: jest.fn(({ data }: any) =>
+          Promise.resolve({ id: 'tx-2', ...data }),
+        ),
+        update: jest.fn(),
+      },
+      student: { update: jest.fn() },
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        TransactionsWriteService,
+        { provide: PrismaService, useValue: prisma },
+        {
+          provide: CashMovementsService,
+          useValue: { recordInflow: jest.fn(), recordOutflow: jest.fn() },
+        },
+      ],
+    }).compile();
+
+    service = module.get(TransactionsWriteService);
+  });
+
+  it('asl qatorning teskarisini yozadi — Math.abs ishlatmasdan', async () => {
+    // ADR-0004: teskari qator asl qatorning ishorasidan kelib chiqadi.
+    const rev = await service.reverseMonthlyFee({
+      transactionId: 'tx-1',
+      companyId: 1,
+      reason: 'Oylikka o`tish migratsiyasi',
+    });
+    expect(rev.amount).toBe(450_000);
+    expect(rev.reversedTransactionId).toBe('tx-1');
+  });
+
+  it('topilmagan yoki allaqachon teskari qilingan qatorni rad etadi', async () => {
+    prisma.transaction.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.reverseMonthlyFee({
+        transactionId: 'tx-missing',
+        companyId: 1,
+        reason: 'test',
+      }),
+    ).rejects.toThrow();
+  });
+
+  // Ushbu metod FAQAT oylik to'lov qatorlarini teskari qiladi. PAYMENT/
+  // REFUND/SALARY_PAYMENT/EXPENSE kabi turlar kassa harakatiga ega — ular
+  // shu yo'l bilan teskari qilinsa, balans va kassa abadiy ajralib qolardi.
+  // Umumiy reverseTransaction() bunday qatorlar uchun mo'ljallangan.
+  it('oylik bo`lmagan (masalan PAYMENT) qatorni rad etadi', async () => {
+    prisma.transaction.findFirst.mockResolvedValue({
+      id: 'tx-1',
+      type: 'PAYMENT',
+      amount: 400_000,
+      studentId: STUDENT,
+      enrollmentId: null,
+      branchId: 1,
+      companyId: COMPANY,
+      metadata: null,
+      reversedAt: null,
+    });
+
+    await expect(
+      service.reverseMonthlyFee({
+        transactionId: 'tx-1',
+        companyId: 1,
+        reason: 'test',
+      }),
+    ).rejects.toThrow();
+
+    expect(prisma.transaction.create).not.toHaveBeenCalled();
+    expect(prisma.transaction.update).not.toHaveBeenCalled();
+  });
+
+  it('LESSON_DEDUCTION turida lekin MONTHLY_PERIOD metadatasiz qatorni rad etadi', async () => {
+    // masalan paket sikli LESSON_DEDUCTION qatori — mode boshqa yoki yo'q.
+    prisma.transaction.findFirst.mockResolvedValue({
+      id: 'tx-1',
+      type: 'LESSON_DEDUCTION',
+      amount: -450_000,
+      studentId: STUDENT,
+      enrollmentId: 'enr-1',
+      branchId: 1,
+      companyId: COMPANY,
+      metadata: { mode: 'FULL_CYCLE' },
+      reversedAt: null,
+    });
+
+    await expect(
+      service.reverseMonthlyFee({
+        transactionId: 'tx-1',
+        companyId: 1,
+        reason: 'test',
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('asl summa 0 bo`lganda teskarisini ham 0 sifatida yozadi (-0 emas)', async () => {
+    prisma.transaction.findFirst.mockResolvedValue({
+      id: 'tx-1',
+      type: 'LESSON_DEDUCTION',
+      amount: 0,
+      studentId: STUDENT,
+      enrollmentId: 'enr-1',
+      branchId: 1,
+      companyId: COMPANY,
+      metadata: { mode: 'MONTHLY_PERIOD', period: '2026-10' },
+      reversedAt: null,
+    });
+
+    const rev = await service.reverseMonthlyFee({
+      transactionId: 'tx-1',
+      companyId: 1,
+      reason: 'test',
+    });
+    expect(rev.amount).toBe(0);
+    expect(Object.is(rev.amount, -0)).toBe(false);
+  });
+
+  it('teskari qatordan oldin asl qatorni reversedAt bilan belgilaydi', async () => {
+    const calls: string[] = [];
+    prisma.transaction.update.mockImplementation(() => {
+      calls.push('update');
+      return Promise.resolve({});
+    });
+    prisma.transaction.create.mockImplementation(({ data }: any) => {
+      calls.push('create');
+      return Promise.resolve({ id: 'tx-2', ...data });
+    });
+
+    await service.reverseMonthlyFee({
+      transactionId: 'tx-1',
+      companyId: 1,
+      reason: 'test',
+    });
+
+    expect(calls).toEqual(['update', 'create']);
+  });
+});

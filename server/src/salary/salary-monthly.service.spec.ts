@@ -52,6 +52,9 @@ describe('SalaryMonthlyService', () => {
       group: { findMany: jest.fn().mockResolvedValue([]) },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
       lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
+      // Oylik kursning MUZLATILGAN dars narxi (`loadFrozenMonthlyCharges`).
+      // Odatiy — bo'sh: bu testlarning kurslari 12 talik modelda.
+      enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
       employeeSalaryConfigVersion: {
         findMany: jest.fn().mockResolvedValue([]),
       },
@@ -476,6 +479,113 @@ describe('SalaryMonthlyService', () => {
     expect(row.centerFunded).toBeNull();
     expect(row.netToPay).toBe(20_840_343); // the entered manual amount
     expect(row.payment?.status).toBe('CALCULATED');
+  });
+
+  /**
+   * Narxlanmagan darslar ekranga chiqishi kerak — aks holda o'qituvchining
+   * qatori sababsiz kam ko'rinadi va buning sababini faqat serverning
+   * jurnalidan bilish mumkin bo'lardi.
+   *
+   * `noConfigUnits` bu paytgacha `Agg` ichida yig'ilardi-yu, javobga
+   * umuman qo'shilmasdi — ya'ni sanoq bor, ko'radigan hech kim yo'q edi.
+   */
+  it("stavkasi yo'q darslarni qatorda SANAB ko'rsatadi (noConfigUnits)", async () => {
+    prisma.user.findMany.mockResolvedValue([teacher(10010, 'Jamsher')]);
+    prisma.group.findMany.mockResolvedValue([
+      { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } },
+    ]);
+    prisma.groupTeacher.findMany.mockResolvedValue([
+      { groupId: 'g1', teacherId: 10010 },
+    ]);
+    // Stavka faqat 2026-08 dan kuchga kiradi — iyul darsini qamramaydi.
+    prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+      {
+        salaryType: 'PERCENTAGE',
+        value: 30,
+        effectiveFrom: new Date('2026-08-01'),
+        effectiveTo: null,
+        config: { userId: 10010, groupId: null, salaryType: 'PERCENTAGE' },
+      },
+    ]);
+    prisma.salaryAccrual.findMany.mockResolvedValue([]);
+    prisma.attendance.findMany.mockResolvedValue([
+      {
+        id: 'a1',
+        studentId: 20001,
+        groupId: 'g1',
+        date: new Date('2026-07-10'),
+      },
+    ]);
+    prisma.attendance.groupBy.mockResolvedValue([
+      { studentId: 20001, groupId: 'g1', _count: { _all: 8 } },
+    ]);
+
+    const res = await service.getMonthly({ month: '2026-07' }, 1, 999);
+
+    const row = res.data[0];
+    expect(row.noConfigUnits).toBe(1);
+    expect(row.noChargeUnits).toBe(0);
+    // Stavka to'qib chiqarilmaydi, shuning uchun narxlangan dars ham yo'q:
+    // qatorning pul ustunlari BO'SH bo'lib qoladi. Ya'ni bu sanagich —
+    // "dars o'tilgan, lekin narxlanmagan" ni ko'rsatadigan YAGONA belgi.
+    expect(row.hasLessonData).toBe(false);
+    expect(row.centerFunded).toBeNull();
+  });
+
+  /**
+   * Oylik kursda muzlatilgan `EnrollmentMonthlyCharge` topilmasa dars
+   * narxlanmaydi (`Course.price` bir OYning narxi — uni 12 ga bo'lish
+   * o'qituvchiga noto'g'ri haq yozardi). Bu «stavka yo'q» dan BOSHQA
+   * sabab, shuning uchun alohida sanagichda.
+   */
+  it("oylik kursda muzlatilgan hisobsiz darslarni SANAB ko'rsatadi (noChargeUnits)", async () => {
+    prisma.user.findMany.mockResolvedValue([teacher(10010, 'Jamsher')]);
+    prisma.group.findMany.mockResolvedValue([
+      {
+        id: 'g1',
+        course: {
+          price: 240_000,
+          lessonPaymentCount: 12,
+          paymentModel: 'MONTHLY',
+        },
+      },
+    ]);
+    prisma.groupTeacher.findMany.mockResolvedValue([
+      { groupId: 'g1', teacherId: 10010 },
+    ]);
+    prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+      {
+        salaryType: 'PERCENTAGE',
+        value: 30,
+        effectiveFrom: new Date('2026-05-01'),
+        effectiveTo: null,
+        config: { userId: 10010, groupId: null, salaryType: 'PERCENTAGE' },
+      },
+    ]);
+    prisma.salaryAccrual.findMany.mockResolvedValue([]);
+    prisma.attendance.findMany.mockResolvedValue([
+      {
+        id: 'a1',
+        studentId: 20001,
+        groupId: 'g1',
+        date: new Date('2026-07-10'),
+      },
+    ]);
+    prisma.attendance.groupBy.mockResolvedValue([
+      { studentId: 20001, groupId: 'g1', _count: { _all: 8 } },
+    ]);
+    // Muzlatilgan hisob yo'q (odatiy mock — bo'sh ro'yxat).
+
+    const res = await service.getMonthly({ month: '2026-07' }, 1, 999);
+
+    const row = res.data[0];
+    expect(row.noChargeUnits).toBe(1);
+    // Stavka BOR edi — bu «konfiguratsiya yo'q» holati emas.
+    expect(row.noConfigUnits).toBe(0);
+    // Narx taxmin qilinmagani uchun bo'shliq narxlanmaydi va pul ustunlari
+    // bo'sh qoladi — sanagich yagona belgi bo'lib qoladi.
+    expect(row.hasLessonData).toBe(false);
+    expect(row.centerFunded).toBeNull();
   });
 
   it('does NOT double-subtract advances from a settled payment (net = payment amount)', async () => {

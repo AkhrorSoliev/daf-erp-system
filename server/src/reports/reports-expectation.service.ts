@@ -1,13 +1,22 @@
 import { Injectable } from '@nestjs/common';
+import { PaymentModel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { HolidaysService } from '../holidays/holidays.service';
 import { RedisService } from '../redis/redis.service';
 import { perLessonPrice } from '../common/finance/per-lesson-price';
 import {
+  loadFrozenMonthlyPerLesson,
+  monthlyPerLessonKey,
+} from '../common/finance/monthly-per-lesson';
+import {
   isEmptyScope,
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
-import { tashkentDateStr } from '../attendance/shared/date-utils';
+import {
+  dayOfWeekForDateStr,
+  tashkentDateStr,
+} from '../attendance/shared/date-utils';
+import { buildScheduleDayResolver } from '../attendance/shared/schedule-resolver';
 import {
   splitMonthLessons,
   type ExpectationGroup,
@@ -113,46 +122,74 @@ export class ReportsExpectationService {
       ...(branchIds && { branchId: { in: branchIds } }),
     };
 
-    const [groups, holidayDates, cancellations] = await Promise.all([
-      this.prisma.group.findMany({
-        where: groupWhere,
-        select: {
-          id: true,
-          statusEnum: true,
-          deletedAt: true,
-          exactDays: true,
-          startDate: true,
-          endDate: true,
-          scheduleSnapshots: {
-            select: { exactDays: true, validFrom: true, validTo: true },
-          },
-          course: { select: { price: true, lessonPaymentCount: true } },
-          contracts: {
-            where: { status: 'ACTIVE', deletedAt: null },
-            select: { studentId: true, totalAmount: true },
-          },
-          enrollments: {
-            where: { deletedAt: null, status: 'ACTIVE' },
-            select: {
-              studentId: true,
-              student: { select: { discountPercent: true } },
+    const [groups, holidayDates, cancellations, reschedules] =
+      await Promise.all([
+        this.prisma.group.findMany({
+          where: groupWhere,
+          select: {
+            id: true,
+            statusEnum: true,
+            deletedAt: true,
+            exactDays: true,
+            startDate: true,
+            endDate: true,
+            scheduleSnapshots: {
+              select: { exactDays: true, validFrom: true, validTo: true },
+            },
+            course: {
+              select: {
+                price: true,
+                lessonPaymentCount: true,
+                paymentModel: true,
+              },
+            },
+            contracts: {
+              where: { status: 'ACTIVE', deletedAt: null },
+              select: { studentId: true, totalAmount: true },
+            },
+            enrollments: {
+              where: { deletedAt: null, status: 'ACTIVE' },
+              select: {
+                studentId: true,
+                student: { select: { discountPercent: true } },
+              },
             },
           },
-        },
-      }),
-      this.holidays.buildHolidayDateSet(
-        startDate,
-        new Date(endDateExcl.getTime() - DAY_MS),
-      ),
-      this.prisma.lessonCancellation.findMany({
-        where: {
-          deletedAt: null,
-          date: { gte: startDate, lt: endDateExcl },
-          group: groupWhere,
-        },
-        select: { groupId: true, date: true },
-      }),
-    ]);
+        }),
+        this.holidays.buildHolidayDateSet(
+          startDate,
+          new Date(endDateExcl.getTime() - DAY_MS),
+        ),
+        this.prisma.lessonCancellation.findMany({
+          where: {
+            deletedAt: null,
+            date: { gte: startDate, lt: endDateExcl },
+            group: groupWhere,
+          },
+          select: { groupId: true, date: true },
+        }),
+        // Bayram darsi SHU OY ichida boshqa kunga ko'chirilgan bo'lsa — dars
+        // yo'qolmagan, demak muzlatilgan `plannedLessons` bitta kunni
+        // sanaydi (hisob QOPLAMA kunini, prognoz esa ASL kunni — sanoq bir
+        // xil) va prognoz ham sanashi kerak.
+        //
+        // CHEKLOV: prognoz BAYRAM bo'lmagan ko'chirishni ko'rmaydi.
+        // `MonthlyChargeService.resolveMonthPlan` 2026-09 dan boshlab har
+        // qanday ko'chirishni hisobga oladi (7-topilma), shuning uchun
+        // oddiy ko'chirish bo'lgan oyda prognoz rejadan bitta dars kuniga
+        // farq qilishi mumkin. To'g'irlash uchun bu so'rov ham `OR`
+        // oynasiga o'tishi va yurish asl kunni tashlab, yangi kunni
+        // qo'shishi kerak — alohida vazifa, pul qatorlariga tegmaydi.
+        this.prisma.lessonReschedule.findMany({
+          where: {
+            deletedAt: null,
+            originalDate: { gte: startDate, lt: endDateExcl },
+            newDate: { gte: startDate, lt: endDateExcl },
+            group: groupWhere,
+          },
+          select: { groupId: true, originalDate: true, newDate: true },
+        }),
+      ]);
     if (groups.length === 0) return empty;
 
     const groupIds = groups.map((g) => g.id);
@@ -192,11 +229,45 @@ export class ReportsExpectationService {
       }
     }
 
+    // OYLIK yozilishlar `LESSON_CONSUMPTION` YOZMAYDI — pul oy boshida bitta
+    // `MONTHLY_PERIOD` yechimi bilan olinadi. Yuqoridagi `consumed` xaritasi
+    // ularni hech qachon topmaydi, ya'ni o'tilgan oylik dars "hali to'lanmagan"
+    // (remaining) tarafga tushardi va narxi 12 talik formulasi bilan
+    // (450 000/12 = 37 500, to'g'risi 34 615) hisoblanardi. Muzlatilgan narx
+    // `getRecognizedRevenue` bilan AYNAN bitta funksiyadan o'qiladi — aks
+    // holda «Sof foyda» va bu prognoz bir oyga ikki xil raqam berardi.
+    const frozenMonthly = await loadFrozenMonthlyPerLesson(this.prisma, {
+      companyId,
+      studentIds: [
+        ...attendances.map((a) => a.studentId),
+        ...groups.flatMap((g) => g.enrollments.map((e) => e.studentId)),
+      ],
+      groupIds,
+      periods: [
+        { year: Number(month.slice(0, 4)), month: Number(month.slice(5, 7)) },
+      ],
+    });
+
     const cancelledByGroup = new Map<string, Set<string>>();
     for (const c of cancellations) {
       const set = cancelledByGroup.get(c.groupId) ?? new Set<string>();
       set.add(tashkentDateStr(c.date));
       cancelledByGroup.set(c.groupId, set);
+    }
+
+    // Guruh bo'yicha ajratiladi, lekin qaysi ko'chirish HISOBGA olinishi
+    // guruh jadvaliga bog'liq — u pastda, `groups.map` ichida ma'lum bo'ladi.
+    const reschedulesByGroup = new Map<
+      string,
+      { originalDay: string; newDay: string }[]
+    >();
+    for (const r of reschedules) {
+      const list = reschedulesByGroup.get(r.groupId) ?? [];
+      list.push({
+        originalDay: tashkentDateStr(r.originalDate),
+        newDay: tashkentDateStr(r.newDate),
+      });
+      reschedulesByGroup.set(r.groupId, list);
     }
 
     const attByGroup = new Map<string, typeof attendances>();
@@ -205,6 +276,28 @@ export class ReportsExpectationService {
       if (list) list.push(a);
       else attByGroup.set(a.groupId, [a]);
     }
+
+    // Ko'chirish oyga YANGI dars kuni qo'shsagina bayram rejada qoladi.
+    // Qoplama kuni allaqachon jadvaldagi kun bo'lsa (shanba darsi boshqa
+    // shanbaga ko'chirilsa) oyda dars kunlari soni o'zgarmaydi va
+    // `MonthlyChargeService.resolveMonthPlan` bayramni rejadan CHIQARADI —
+    // prognoz ham xuddi shunday qilishi shart, aks holda muzlatilgan narxga
+    // ko'paytirilgan jami hisoblangan puldan farq qiladi.
+    const holidayMakeupsFor = (g: (typeof groups)[number]): Set<string> => {
+      const rows = reschedulesByGroup.get(g.id);
+      if (!rows || rows.length === 0) return new Set<string>();
+      const resolveDays = buildScheduleDayResolver(
+        g.scheduleSnapshots,
+        g.exactDays ?? [],
+      );
+      const out = new Set<string>();
+      for (const r of rows) {
+        const days = resolveDays(r.newDay);
+        if (days && days.includes(dayOfWeekForDateStr(r.newDay))) continue;
+        out.add(r.originalDay);
+      }
+      return out;
+    };
 
     const inputs: ExpectationGroup[] = groups.map((g) => {
       const contractFor = (studentId: number) =>
@@ -223,6 +316,10 @@ export class ReportsExpectationService {
         ]),
       );
 
+      /** Oylik hisob yozilgan bo'lsa — muzlatilgan dars narxi, aks holda undefined. */
+      const monthlyPerLesson = (studentId: number) =>
+        frozenMonthly.get(monthlyPerLessonKey(studentId, g.id, month));
+
       const covered: PricedAttendance[] = [];
       const uncovered: PricedAttendance[] = [];
       const datesWithAttendance = new Set<string>();
@@ -239,6 +336,14 @@ export class ReportsExpectationService {
               stored ??
               Math.round(g.course.price / (g.course.lessonPaymentCount || 12)),
           });
+          continue;
+        }
+        const frozen = monthlyPerLesson(a.studentId);
+        if (frozen !== undefined) {
+          // Oylik hisob yozilgan -> bu dars TO'LANGAN (pul oy boshida
+          // olingan), demak `covered` tarafda. Narx muzlatilgan, chegirmasiz —
+          // xuddi `LESSON_CONSUMPTION.metadata.perLessonCost` kabi.
+          covered.push({ perLesson: frozen });
         } else {
           uncovered.push({
             perLesson: priceFor(
@@ -265,11 +370,23 @@ export class ReportsExpectationService {
         roster: projectable
           ? g.enrollments.map((e) => ({
               studentId: e.studentId,
-              perLesson: priceFor(e.studentId, e.student?.discountPercent ?? 0),
+              // Oylik yozilishda kelajakdagi darslar ham muzlatilgan narxda
+              // baholanadi — aks holda bitta oyning o'tgan yarmi 34 615,
+              // qolgan yarmi 37 500 bo'lib, jami hech narsaga to'g'ri kelmasdi.
+              perLesson:
+                monthlyPerLesson(e.studentId) ??
+                priceFor(e.studentId, e.student?.discountPercent ?? 0),
             }))
           : [],
         datesWithAttendance,
         cancelledDates: cancelledByGroup.get(g.id) ?? new Set<string>(),
+        // FAQAT oylik guruhlar uchun. 12 talik (LESSON_PACK) yo'lda hech
+        // qanday `plannedLessons` muzlatilmaydi — moslashtiradigan narsa
+        // yo'q, shuning uchun u yerdagi xulq ataylab tegilmay qoladi.
+        holidayMakeupDates:
+          g.course.paymentModel === PaymentModel.MONTHLY
+            ? holidayMakeupsFor(g)
+            : new Set<string>(),
         coveredAttendances: covered,
         uncoveredAttendances: uncovered,
       };

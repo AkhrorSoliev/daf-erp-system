@@ -21,6 +21,7 @@ const group = (over: Partial<ExpectationGroup> = {}): ExpectationGroup => ({
   ],
   datesWithAttendance: new Set<string>(),
   cancelledDates: new Set<string>(),
+  holidayMakeupDates: new Set<string>(),
   coveredAttendances: [],
   uncoveredAttendances: [],
   ...over,
@@ -47,6 +48,18 @@ describe('splitMonthLessons', () => {
   it('drops holidays', () => {
     const r = splitMonthLessons([group()], opts(['2026-08-03', '2026-08-05']));
     expect(r.remainingLessons).toBe(22); // 11 sana × 2
+  });
+
+  it("shu oy ichida qayta o'tiladigan bayram darsi SANALADI", () => {
+    // Bayram kuniga `LessonReschedule` yozilgan — dars yo'qolmagan.
+    // `MonthlyChargeService.resolveExcludedDates` ham bu kunni rejadan
+    // chiqarmaydi, ya'ni oy narxi 13 ga bo'linadi; prognoz 12 ni ko'rsa
+    // bitta oy uchun ikki xil raqam chiqardi.
+    const r = splitMonthLessons(
+      [group({ holidayMakeupDates: new Set(['2026-08-03']) })],
+      opts(['2026-08-03', '2026-08-05']),
+    );
+    expect(r.remainingLessons).toBe(24); // 12 sana × 2 (faqat 05.08 chiqdi)
   });
 
   it('drops cancelled lessons', () => {

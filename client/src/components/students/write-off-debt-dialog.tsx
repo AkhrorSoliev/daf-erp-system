@@ -20,7 +20,10 @@ import { Textarea } from "@/components/ui/textarea";
 import api from "@/lib/api";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
-import type { DebtWriteOffEligibility } from "./debt-write-off-types";
+import {
+  writeOffNoticeCopy,
+  type DebtWriteOffEligibility,
+} from "./debt-write-off-types";
 
 interface WriteOffDebtDialogProps {
   open: boolean;
@@ -166,21 +169,14 @@ function IneligibleNotice({
 }: {
   eligibility: DebtWriteOffEligibility;
 }) {
-  const reasonMessage: Record<string, string> = {
-    NO_DEBT: "Bu yozuv uchun balans manfiy emas — hisobdan chiqarishga hojat yo'q.",
-    STUDENT_ATTENDED:
-      "O'quvchi joriy siklda darslarga qatnashgan — bu yozuv qarzi haqiqiy qarz hisoblanadi.",
-    NO_ABSENT_IN_CYCLE:
-      "Joriy siklda 'ABSENT' (kelmagan) belgilangan davomat yo'q.",
-  };
+  // Sarlavha va matn qarori sof funksiyada turadi (debt-write-off-types.ts)
+  // — yonidagi .test.ts uni qulflaydi, chunki client testlari komponentni
+  // chizmaydi va JSX ichidagi shart hech qanday qorovulsiz qolardi.
+  const copy = writeOffNoticeCopy(eligibility.reason);
   return (
     <div className="rounded-md border border-muted-foreground/30 bg-muted/40 p-3 text-sm">
-      <p className="font-medium">Hisobdan chiqarish sharti bajarilmadi</p>
-      <p className="mt-1 text-muted-foreground">
-        {eligibility.reason
-          ? reasonMessage[eligibility.reason]
-          : "Sharti bajarilmadi."}
-      </p>
+      <p className="font-medium">{copy.heading}</p>
+      <p className="mt-1 text-muted-foreground">{copy.body}</p>
       <div className="mt-2 text-xs text-muted-foreground">
         Joriy balans: <strong>{formatBalance(eligibility.details.currentBalance)}</strong>
       </div>

@@ -87,6 +87,73 @@ describe('CoursesController — role guards', () => {
       const ctx = mockExecutionContext(controller.update, ['Teacher']);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
+
+    // The @Roles() guard above lets Administrator through the endpoint for
+    // ordinary field edits (name, price...) — but paymentModel is a money
+    // decision (it moves every group on the course onto different billing
+    // rules), and the settings panel + course CREATE already gate that to
+    // CEO/BD. The guard can't express "this endpoint, except this one
+    // field, for this one role", so `update()` checks it by hand — these
+    // tests call the controller METHOD directly, not just the guard.
+    describe('paymentModel field-level restriction', () => {
+      it('rejects an Administrator changing paymentModel, even though the guard admits them', () => {
+        // The check throws SYNCHRONOUSLY (update() is not async) — assert
+        // on the call itself, not a rejected promise.
+        expect(() =>
+          controller.update(
+            'course-1',
+            { paymentModel: 'MONTHLY' } as any,
+            10,
+            1,
+            ['Administrator'],
+          ),
+        ).toThrow(ForbiddenException);
+        expect(mockService.update).not.toHaveBeenCalled();
+      });
+
+      it('allows CEO to change paymentModel', async () => {
+        await controller.update(
+          'course-1',
+          { paymentModel: 'MONTHLY' } as any,
+          10,
+          1,
+          ['CEO'],
+        );
+        expect(mockService.update).toHaveBeenCalledWith(
+          'course-1',
+          { paymentModel: 'MONTHLY' },
+          10,
+          1,
+        );
+      });
+
+      it('allows Branch Director to change paymentModel', async () => {
+        await controller.update(
+          'course-1',
+          { paymentModel: 'LESSON_PACK' } as any,
+          10,
+          1,
+          ['Branch Director'],
+        );
+        expect(mockService.update).toHaveBeenCalled();
+      });
+
+      it('allows Administrator to update other fields (no paymentModel in the body)', async () => {
+        await controller.update(
+          'course-1',
+          { name: 'Yangi nom' } as any,
+          10,
+          1,
+          ['Administrator'],
+        );
+        expect(mockService.update).toHaveBeenCalledWith(
+          'course-1',
+          { name: 'Yangi nom' },
+          10,
+          1,
+        );
+      });
+    });
   });
 
   describe('delete()', () => {

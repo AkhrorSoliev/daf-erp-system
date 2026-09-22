@@ -9,6 +9,7 @@ import {
   Building,
   Building2,
   Send,
+  Wallet,
   Smartphone,
   type LucideIcon,
 } from "lucide-react";
@@ -91,6 +92,15 @@ export const settingsNavSections: SettingsNavSection[] = [
         title: "Telegram guruhlar",
         url: "/settings/telegram-groups",
         icon: Send,
+        visibleForRoles: [1, 2],
+      },
+      {
+        // Backend: GET/PATCH /settings/payment — @Roles('CEO', 'Branch
+        // Director'). visibleForRoles quyida shu qamrovga ANIQ mos —
+        // 403ga olib boradigan havola havolaning yo'qligidan yomonroq.
+        title: "To'lov",
+        url: "/settings/payment",
+        icon: Wallet,
         visibleForRoles: [1, 2],
       },
     ],

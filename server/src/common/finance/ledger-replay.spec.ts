@@ -5,6 +5,11 @@ import {
   type LessonSlice,
   type ReplayRow,
 } from './ledger-replay';
+import {
+  applyLessonCredit,
+  perLessonCostForMonth,
+  proratedMonthlyAmount,
+} from '../../billing/monthly-price';
 
 const d = (iso: string) => new Date(`${iso}T00:00:00Z`);
 
@@ -60,6 +65,130 @@ describe('splitLessonSlices', () => {
     expect(splitLessonSlices(-33333, null, [])).toEqual([
       { cost: 33333, date: null },
     ]);
+  });
+});
+
+describe('splitLessonSlices — oylik qator', () => {
+  const monthlyMeta = {
+    mode: 'MONTHLY_PERIOD',
+    period: '2026-09',
+    monthlyPrice: 450_000,
+    plannedLessons: 13,
+    coveredLessons: 13,
+    perLessonCost: 34_615,
+    creditLessons: 2,
+  };
+
+  it('sig`imni metadatadan oladi, summadan teskari hisoblamaydi', () => {
+    // coveredLessons=13, creditLessons=5 -> paidLessons=8. Summa (300 000)
+    // ATAYLAB paidLessons*perLessonCost (276 920) EMAS — agar kod hali ham
+    // eski `round(total / perLessonCost)` zaxira yo'liga tushib qolsa,
+    // round(300000/34615)=9 chiqadi, 8 emas. Raqamlar ataylab bir-biridan
+    // farq qiladi, shuning uchun test chindan ham metadata yo'lini tekshiradi.
+    const slices = splitLessonSlices(
+      -300_000,
+      { ...monthlyMeta, creditLessons: 5 },
+      [],
+    );
+    expect(slices).toHaveLength(8);
+    expect(slices.reduce((s, x) => s + x.cost, 0)).toBe(300_000);
+  });
+
+  it('kredit oyni butunlay yopsa, bo`lak qoldirmaydi', () => {
+    // Haqiqiy funksiyalardan olingan "toza" holat: dars narxi oy narxini
+    // qoldiqsiz bo'ladi (350 000 / 10 = 35 000), shuning uchun kredit butun
+    // oyni yopganda qoldiq HAQIQATAN nolga teng — bu yaxlitlash artefakti
+    // emas (pastdagi testdagidan farqli).
+    const monthlyPrice = 350_000;
+    const plannedLessons = 10;
+    const coveredLessons = 10;
+    const perLessonCost = perLessonCostForMonth(monthlyPrice, plannedLessons);
+    const gross = proratedMonthlyAmount(
+      monthlyPrice,
+      plannedLessons,
+      coveredLessons,
+    );
+    const credit = applyLessonCredit(gross, perLessonCost, 10);
+    expect(credit.chargedAmount).toBe(0);
+
+    // Pul harakat qilmagan -> «bu pul ketdi» da ko'rsatadigan narsa yo'q.
+    const slices = splitLessonSlices(
+      -credit.chargedAmount,
+      {
+        mode: 'MONTHLY_PERIOD',
+        period: '2026-09',
+        monthlyPrice,
+        plannedLessons,
+        coveredLessons,
+        perLessonCost,
+        creditLessons: credit.creditLessonsUsed,
+      },
+      [],
+    );
+    expect(slices).toHaveLength(0);
+  });
+
+  it('paidLessons 0 bo`lsa ham, yaxlitlash qoldig`ini yo`qotmaydi', () => {
+    // REGRESSIYA: `proratedMonthlyAmount` va `applyLessonCredit` mustaqil
+    // yaxlitlaydi, shuning uchun `paidLessons` (coveredLessons-creditLessons)
+    // 0 bo'lganda ham `chargedAmount` kichik yaxlitlash qoldig'i sifatida
+    // noldan farqli qolishi mumkin. Haqiqiy raqamlar (34 615/dars, 13 dars,
+    // 13 ta kredit): creditAmount 449 995, chargedAmount 5 — bu 5 so'm
+    // hech qayerga yo'qolmasligi kerak.
+    const monthlyPrice = 450_000;
+    const plannedLessons = 13;
+    const coveredLessons = 13;
+    const perLessonCost = perLessonCostForMonth(monthlyPrice, plannedLessons);
+    const gross = proratedMonthlyAmount(
+      monthlyPrice,
+      plannedLessons,
+      coveredLessons,
+    );
+    const credit = applyLessonCredit(gross, perLessonCost, 13);
+    expect(credit.creditLessonsUsed).toBe(13);
+    expect(credit.chargedAmount).toBe(5);
+    expect(coveredLessons - credit.creditLessonsUsed).toBe(0);
+
+    const slices = splitLessonSlices(
+      -credit.chargedAmount,
+      {
+        mode: 'MONTHLY_PERIOD',
+        period: '2026-09',
+        monthlyPrice,
+        plannedLessons,
+        coveredLessons,
+        perLessonCost,
+        creditLessons: credit.creditLessonsUsed,
+      },
+      [],
+    );
+    expect(slices).toEqual([{ cost: 5, date: null }]);
+  });
+
+  it('berilgan sanalarni bo`laklarga qo`yadi', () => {
+    // coveredLessons=3, creditLessons=1 -> paidLessons=2. Summa (50 000)
+    // ATAYLAB paidLessons*perLessonCost (69 230) EMAS — eski zaxira yo'l
+    // round(50000/34615)=1 bergan bo'lardi, 2 emas.
+    const dates = [new Date('2026-09-01'), new Date('2026-09-03')];
+    const slices = splitLessonSlices(
+      -50_000,
+      { ...monthlyMeta, coveredLessons: 3, creditLessons: 1 },
+      dates,
+    );
+    expect(slices).toHaveLength(2);
+    expect(slices.map((s) => s.date)).toEqual(dates);
+    expect(slices.reduce((s, x) => s + x.cost, 0)).toBe(50_000);
+  });
+
+  it('paket qatorini o`zgartirmaydi', () => {
+    // Regressiya qorovuli: eski yo'l tegilmagan bo'lishi kerak.
+    const slices = splitLessonSlices(
+      -400_000,
+      { lessonsCovered: 12, perLessonCost: 33_333 },
+      [],
+    );
+    expect(slices).toHaveLength(12);
+    expect(slices.reduce((s, x) => s + x.cost, 0)).toBe(400_000);
   });
 });
 

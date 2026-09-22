@@ -4,12 +4,14 @@ import { CoursesService } from './courses.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
+import { SettingsService } from '../settings/settings.service';
 
 describe('CoursesService — status methods', () => {
   let service: CoursesService;
   let prisma: any;
   let statusHistoryService: any;
   let statusCascadeService: any;
+  let settingsMock: any;
 
   const mockCourse = {
     id: 'course-1',
@@ -59,6 +61,12 @@ describe('CoursesService — status methods', () => {
             recordStatusChange: jest.fn(),
             recordRestore: jest.fn(),
           },
+        },
+        {
+          provide: SettingsService,
+          useValue: (settingsMock = {
+            get: jest.fn().mockResolvedValue('MONTHLY'),
+          }),
         },
       ],
     }).compile();
@@ -201,6 +209,57 @@ describe('CoursesService — status methods', () => {
       expect(prisma.course.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ lessonPaymentCount: undefined }),
+        }),
+      );
+    });
+  });
+
+  describe('create — payment.defaultModel wiring', () => {
+    beforeEach(() => {
+      prisma.branch.findFirst.mockResolvedValue({ id: 1, companyId: 1001 });
+      prisma.course.create.mockImplementation(({ data }: any) =>
+        Promise.resolve({ ...mockCourse, ...data, createdAt: new Date() }),
+      );
+      prisma.coursePriceSnapshot = { create: jest.fn().mockResolvedValue({}) };
+    });
+
+    it('DTOda paymentModel ko`rsatilmasa — payment.defaultModel sozlamasi ishlatiladi', async () => {
+      settingsMock.get.mockResolvedValueOnce('MONTHLY');
+
+      await service.create(
+        { name: 'Standard', price: 400_000, branchId: 1 } as any,
+        1001,
+        1,
+      );
+
+      expect(settingsMock.get).toHaveBeenCalledWith(
+        1001,
+        'payment.defaultModel',
+        1,
+      );
+      expect(prisma.course.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ paymentModel: 'MONTHLY' }),
+        }),
+      );
+    });
+
+    it('DTOda paymentModel aniq ko`rsatilsa — sozlamadan qat`i nazar shu qiymat yoziladi', async () => {
+      await service.create(
+        {
+          name: 'Eski uslub',
+          price: 400_000,
+          branchId: 1,
+          paymentModel: 'LESSON_PACK',
+        } as any,
+        1001,
+        1,
+      );
+
+      expect(settingsMock.get).not.toHaveBeenCalled();
+      expect(prisma.course.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ paymentModel: 'LESSON_PACK' }),
         }),
       );
     });

@@ -102,8 +102,12 @@ export function allocateCoverage(
 
     for (const tx of ordered) {
       if (tx.type === TransactionType.LESSON_DEDUCTION) {
-        cycleSeq += 1;
         const md = (tx.metadata ?? {}) as Record<string, unknown>;
+        // Oylik to'lov qatori sikl OCHMAYDI — u butun oyni qoplaydi va
+        // dars birligida sanalmaydi. Bu tekshiruvsiz oylik qator paket
+        // sikliga aylanib, qoplama hisobini buzardi.
+        if (md.mode === 'MONTHLY_PERIOD') continue;
+        cycleSeq += 1;
         // Metadatasiz eski qatorlar (PRODda ~128 ta) uchun sig'imni summadan
         // tiklaymiz — aks holda `capacity = 0` bo'lib, bucket hech qachon
         // dars qabul qilmaydi va darslar jimgina yo'qoladi.

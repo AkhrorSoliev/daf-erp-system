@@ -55,6 +55,7 @@ import { OutreachModule } from './outreach/outreach.module';
 import { AbsencePauseModule } from './absence-pause/absence-pause.module';
 import { PlannedAbsencesModule } from './planned-absences/planned-absences.module';
 import { PaymentPromisesModule } from './payment-promises/payment-promises.module';
+import { SettingsModule } from './settings/settings.module';
 import { CallLogsModule } from './call-logs/call-logs.module';
 import { JwtAuthGuard, BranchScopeGuard } from './common/guards';
 import { validateEnv } from './config/env.validation';
@@ -124,6 +125,7 @@ import { validateEnv } from './config/env.validation';
     LessonCancellationsModule,
     LessonTeacherOverridesModule,
     LessonReschedulesModule,
+    SettingsModule,
     ReceiptsModule,
     OutreachModule,
     AbsencePauseModule,

@@ -7,6 +7,7 @@ import { RedisService } from '../redis/redis.service';
 describe('ReportsExpectationService', () => {
   let service: ReportsExpectationService;
   let prisma: any;
+  let holidays: any;
 
   // The service projects only from TODAY onwards, so a floating clock would
   // make these counts shrink as August 2026 passes. Pin it to the 1st.
@@ -21,6 +22,11 @@ describe('ReportsExpectationService', () => {
       attendance: { findMany: jest.fn().mockResolvedValue([]) },
       transaction: { findMany: jest.fn().mockResolvedValue([]) },
       lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
+      // Bayram darsini shu oy ichida qoplaydigan ko'chirish. Odatiy: yo'q.
+      lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
+      // Oylik hisoblar — muzlatilgan dars narxi manbasi. Bo'sh: bu testlar
+      // 12 talik (LESSON_PACK) yo'lni tasvirlaydi.
+      enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -28,9 +34,9 @@ describe('ReportsExpectationService', () => {
         { provide: PrismaService, useValue: prisma },
         {
           provide: HolidaysService,
-          useValue: {
+          useValue: (holidays = {
             buildHolidayDateSet: jest.fn().mockResolvedValue(new Set()),
-          },
+          }),
         },
         {
           provide: RedisService,
@@ -180,6 +186,58 @@ describe('ReportsExpectationService', () => {
     expect(r.expectedValue).toBe(500_000);
   });
 
+  // I1 — oylik yozilishda `LESSON_CONSUMPTION` UMUMAN yozilmaydi. Busiz
+  // o'tilgan oylik dars "hali to'lanmagan" (remaining) tarafga tushardi va
+  // 12 talik formulasi bilan narxlanardi (450 000/12 = 37 500, to'g'risi
+  // 34 615) — «Sof foyda» bilan bir oyga ikki xil raqam.
+  it('oylik darsni muzlatilgan narxda TO`LANGAN deb hisoblaydi', async () => {
+    prisma.group.findMany.mockResolvedValueOnce([
+      {
+        id: 'g1',
+        statusEnum: 'ACTIVE',
+        deletedAt: null,
+        exactDays: ['monday'],
+        startDate: null,
+        endDate: null,
+        scheduleSnapshots: [],
+        course: { price: 450_000, lessonPaymentCount: 12 },
+        contracts: [],
+        enrollments: [{ studentId: 10001, student: { discountPercent: 0 } }],
+      },
+    ]);
+    prisma.attendance.findMany.mockResolvedValueOnce([
+      {
+        id: 'a1',
+        groupId: 'g1',
+        studentId: 10001,
+        date: new Date('2026-08-03'),
+      },
+    ]);
+    // Oylik yo'lda dars-boshiga qator yo'q.
+    prisma.transaction.findMany.mockResolvedValueOnce([]);
+    prisma.enrollmentMonthlyCharge.findMany.mockResolvedValueOnce([
+      {
+        studentId: 10001,
+        groupId: 'g1',
+        periodYear: 2026,
+        periodMonth: 8,
+        perLessonCost: 34_615,
+      },
+    ]);
+
+    const r = await service.getMonthlyExpectation(1, {
+      month: '2026-08',
+      branchIds: null,
+    });
+
+    expect(r.heldLessons).toBe(1);
+    expect(r.heldValue).toBe(34_615); // 37 500 EMAS
+    // Qolgan dushanbalar (10,17,24,31) ham muzlatilgan narxda —
+    // bitta oyning ikki yarmi ikki xil narxda bo'lmaydi.
+    expect(r.remainingLessons).toBe(4);
+    expect(r.remainingValue).toBe(138_460);
+  });
+
   it('prices covered lessons exactly like getRecognizedRevenue does', async () => {
     // Ikkalasi ham: metadata.perLessonCost, yo'q bo'lsa course.price / lpc
     // CHEGIRMASIZ. Chegirma qo'llansa bu test yiqiladi — u atayin shunday.
@@ -285,5 +343,143 @@ describe('ReportsExpectationService', () => {
 
     const where = prisma.attendance.findMany.mock.calls[0][0].where;
     expect(where.date.lt).toEqual(new Date(Date.UTC(2026, 7, 11)));
+  });
+
+  // Reja va prognoz BITTA oyga bitta dars sonini ko'rishi shart: muzlatilgan
+  // narx `plannedLessons` ga bo'linadi, prognoz esa o'sha narxni har bir
+  // dars kuniga ko'paytiradi. Ikkisi ajralsa, o'quvchidan olingan 450 000
+  // bilan «Oy oxiriga kutilyapti» to'g'ri kelmay qoladi.
+  describe('bayramli oy — prognoz hisoblangan oy narxiga TENG', () => {
+    const monthlyGroup = () => ({
+      id: 'g1',
+      statusEnum: 'ACTIVE',
+      deletedAt: null,
+      exactDays: ['monday'], // avgust 2026: 3,10,17,24,31 = 5 dushanba
+      startDate: null,
+      endDate: null,
+      scheduleSnapshots: [],
+      course: {
+        price: 450_000,
+        lessonPaymentCount: 12,
+        paymentModel: 'MONTHLY',
+      },
+      contracts: [],
+      enrollments: [{ studentId: 10001, student: { discountPercent: 0 } }],
+    });
+    const frozen = (perLessonCost: number) => [
+      {
+        studentId: 10001,
+        groupId: 'g1',
+        periodYear: 2026,
+        periodMonth: 8,
+        perLessonCost,
+      },
+    ];
+
+    it("qoplanmagan bayram: reja 4 ga tushadi, prognoz ham 4 ta darsni ko'radi", async () => {
+      // `resolveExcludedDates` 03.08 ni rejadan chiqaradi -> 450 000 / 4.
+      prisma.group.findMany.mockResolvedValueOnce([monthlyGroup()]);
+      prisma.enrollmentMonthlyCharge.findMany.mockResolvedValueOnce(
+        frozen(112_500),
+      );
+      holidays.buildHolidayDateSet.mockResolvedValueOnce(
+        new Set(['2026-08-03']),
+      );
+
+      const r = await service.getMonthlyExpectation(1, {
+        month: '2026-08',
+        branchIds: null,
+      });
+
+      expect(r.remainingLessons).toBe(4);
+      expect(r.expectedValue).toBe(450_000);
+    });
+
+    it("shu oyda qoplanadigan bayram: reja 5 da qoladi, prognoz ham 5 ta darsni ko'radi", async () => {
+      // Admin 03.08 darsini 04.08 ga ko'chirgan -> dars yo'qolmagan,
+      // `resolveExcludedDates` 03.08 ni rejada QOLDIRADI -> 450 000 / 5.
+      // Bayramni so'zsiz tashlab ketish 4 × 90 000 = 360 000 berardi.
+      prisma.group.findMany.mockResolvedValueOnce([monthlyGroup()]);
+      prisma.enrollmentMonthlyCharge.findMany.mockResolvedValueOnce(
+        frozen(90_000),
+      );
+      holidays.buildHolidayDateSet.mockResolvedValueOnce(
+        new Set(['2026-08-03']),
+      );
+      prisma.lessonReschedule.findMany.mockResolvedValueOnce([
+        {
+          groupId: 'g1',
+          originalDate: new Date('2026-08-03'),
+          // 04.08 — seshanba, guruh jadvalida YO'Q kun: oyga yangi dars
+          // kuni qo'shiladi.
+          newDate: new Date('2026-08-04'),
+        },
+      ]);
+
+      const r = await service.getMonthlyExpectation(1, {
+        month: '2026-08',
+        branchIds: null,
+      });
+
+      expect(r.remainingLessons).toBe(5);
+      expect(r.expectedValue).toBe(450_000);
+    });
+
+    it('qoplama JADVALDAGI kunga tushsa prognoz ham bayramni sanamaydi', async () => {
+      // 03.08 darsi 10.08 ga ko'chirildi — lekin 10.08 ham DUSHANBA, ya'ni
+      // guruhning o'z dars kuni. Oyda dars kunlari soni o'zgarmaydi,
+      // `resolveMonthPlan` bayramni rejadan CHIQARADI (450 000 / 4).
+      // Prognoz ham 4 ta darsni ko'rishi shart.
+      prisma.group.findMany.mockResolvedValueOnce([monthlyGroup()]);
+      prisma.enrollmentMonthlyCharge.findMany.mockResolvedValueOnce(
+        frozen(112_500),
+      );
+      holidays.buildHolidayDateSet.mockResolvedValueOnce(
+        new Set(['2026-08-03']),
+      );
+      prisma.lessonReschedule.findMany.mockResolvedValueOnce([
+        {
+          groupId: 'g1',
+          originalDate: new Date('2026-08-03'),
+          newDate: new Date('2026-08-10'),
+        },
+      ]);
+
+      const r = await service.getMonthlyExpectation(1, {
+        month: '2026-08',
+        branchIds: null,
+      });
+
+      expect(r.remainingLessons).toBe(4);
+      expect(r.expectedValue).toBe(450_000);
+    });
+
+    it('12 talik (LESSON_PACK) guruhda bayram baribir chiqadi', async () => {
+      // Oylik bo'lmagan yo'lda hech qanday `plannedLessons` muzlatilmaydi,
+      // shuning uchun moslashtiradigan narsa yo'q va xulq o'zgarmaydi.
+      const pack = monthlyGroup();
+      pack.course.paymentModel = 'LESSON_PACK';
+      prisma.group.findMany.mockResolvedValueOnce([pack]);
+      holidays.buildHolidayDateSet.mockResolvedValueOnce(
+        new Set(['2026-08-03']),
+      );
+      prisma.lessonReschedule.findMany.mockResolvedValueOnce([
+        {
+          groupId: 'g1',
+          originalDate: new Date('2026-08-03'),
+          // 04.08 — seshanba, guruh jadvalida YO'Q kun: oyga yangi dars
+          // kuni qo'shiladi.
+          newDate: new Date('2026-08-04'),
+        },
+      ]);
+
+      const r = await service.getMonthlyExpectation(1, {
+        month: '2026-08',
+        branchIds: null,
+      });
+
+      expect(r.remainingLessons).toBe(4); // 12 talik narx: 450 000 / 12
+      expect(r.remainingValue).toBe(150_000);
+    });
   });
 });

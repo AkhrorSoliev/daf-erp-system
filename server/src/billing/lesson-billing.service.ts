@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
   AttendanceStatus,
   LessonDeductionMode,
+  PaymentModel,
   Prisma,
   TransactionType,
 } from '@prisma/client';
@@ -17,6 +18,14 @@ import {
   SalaryAccrualService,
   CarriedOverAccrual,
 } from '../salary/salary-accrual.service';
+import { MonthlyChargeService } from './monthly-charge.service';
+import { tashkentDateStr } from '../attendance/shared/date-utils';
+import { lessonDatesInMonth } from './planned-lessons';
+import {
+  applyDiscount,
+  clampDiscount,
+  perLessonCostForMonth,
+} from './monthly-price';
 
 // Business rule: a lesson held = a lesson paid. The student's prepaid
 // quota is consumed (and the teacher earns) for any status that confirms
@@ -28,17 +37,6 @@ const BILLABLE: ReadonlySet<AttendanceStatus> = new Set([
   AttendanceStatus.LATE,
   AttendanceStatus.ABSENT,
 ]);
-
-function clampDiscount(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.max(0, Math.min(100, Math.trunc(value)));
-}
-
-function applyDiscount(fullAmount: number, discountPercent: number): number {
-  if (discountPercent <= 0) return fullAmount;
-  if (discountPercent >= 100) return 0;
-  return Math.round((fullAmount * (100 - discountPercent)) / 100);
-}
 
 export interface ProcessAttendanceBillingParams {
   attendanceId: string;
@@ -87,12 +85,22 @@ export class LessonBillingService {
     private prisma: PrismaService,
     private transactionsService: TransactionsService,
     private salaryAccrualService: SalaryAccrualService,
+    private monthlyChargeService: MonthlyChargeService,
   ) {}
 
   async processAttendanceBilling(
     tx: Prisma.TransactionClient,
     params: ProcessAttendanceBillingParams,
   ): Promise<void> {
+    const paymentModel = await this.resolvePaymentModel(
+      tx,
+      params.enrollmentId,
+    );
+    if (paymentModel === PaymentModel.MONTHLY) {
+      await this.processMonthlyAttendance(tx, params);
+      return;
+    }
+
     const wasBillable =
       params.oldStatus !== null && BILLABLE.has(params.oldStatus);
     const isBillable = BILLABLE.has(params.newStatus);
@@ -103,6 +111,223 @@ export class LessonBillingService {
       await this.reverse(tx, params);
     }
     // Other transitions: no-op.
+  }
+
+  /** Yozilishning kursi qaysi to'lov modelida ekanini aniqlaydi. */
+  private async resolvePaymentModel(
+    tx: Prisma.TransactionClient,
+    enrollmentId: string,
+  ): Promise<PaymentModel> {
+    const enr = await tx.enrollment.findUnique({
+      where: { id: enrollmentId },
+      select: {
+        group: { select: { course: { select: { paymentModel: true } } } },
+      },
+    });
+    return enr?.group.course.paymentModel ?? PaymentModel.LESSON_PACK;
+  }
+
+  /**
+   * Oylik kursda davomat BALANSGA TEGMAYDI — oy boshida to'langan.
+   * Davomat faqat ikki narsani hal qiladi: o'qituvchi haq oladimi, va
+   * uzrli dars keyingi oyga kredit bo'lib o'tadimi.
+   */
+  private async processMonthlyAttendance(
+    tx: Prisma.TransactionClient,
+    params: ProcessAttendanceBillingParams,
+  ): Promise<void> {
+    const wasBillable =
+      params.oldStatus !== null && BILLABLE.has(params.oldStatus);
+    const isBillable = BILLABLE.has(params.newStatus);
+    // Haqiqiy "hech narsa o'zgarmadi" holatigina o'tkazib yuboriladi: avvalgi
+    // holat BOR edi va uning billable-toifasi o'zgarmadi (EXCUSED→EXCUSED,
+    // yoki PRESENT→LATE kabi billable→billable). `oldStatus === null`
+    // (yangi davomat) BU QOIDAGA kirmaydi — birinchi marta EXCUSED deb
+    // belgilash ham uzrli dars hisoblanadi va kredit yozilishi kerak, aks
+    // holda kredit izsiz yo'qoladi.
+    if (params.oldStatus !== null && wasBillable === isBillable) return;
+
+    if (isBillable) {
+      // Uzrli edi, endi dars hisoblanadi: kreditni qaytarib olamiz.
+      if (params.oldStatus === AttendanceStatus.EXCUSED) {
+        await this.monthlyChargeService.recordExcusedLesson(tx, {
+          enrollmentId: params.enrollmentId,
+          lessonDate: params.lessonDate,
+          delta: -1,
+        });
+      }
+      await this.accrueMonthlySalary(tx, params);
+      return;
+    }
+
+    // Dars hisoblanardi, endi uzrli: haqni qaytarib, kredit yozamiz.
+    // `reverseAccrualForAttendance` O'QITUVCHI bo'yicha ishlaydi
+    // (`salary-accrual.service.ts:391`), shuning uchun darsning
+    // o'qituvchilari avval aniqlanadi.
+    const teacherIds = await this.resolveTeachersForLesson(
+      tx,
+      params.groupId,
+      params.lessonDate,
+    );
+    for (const teacherId of teacherIds) {
+      await this.salaryAccrualService.reverseAccrualForAttendance({
+        teacherId,
+        studentId: params.studentId,
+        groupId: params.groupId,
+        lessonDate: params.lessonDate,
+        reversedById: params.performedById,
+        reversalReason: 'Dars uzrli deb belgilandi',
+        tx,
+      });
+    }
+    await this.monthlyChargeService.recordExcusedLesson(tx, {
+      enrollmentId: params.enrollmentId,
+      lessonDate: params.lessonDate,
+      delta: 1,
+    });
+  }
+
+  /**
+   * Oylik kursda o'qituvchi haqi — narx muzlatilgan hisobdan olinadi.
+   *
+   * MUHIM INVARIANT (Task 6 sharhi, topilma #2): bu metod BIR marta bir
+   * davomat uchun (attendanceId, teacherId) juftligiga faqat oldindan
+   * `salaryAccrualService.reverseAccrualForAttendance` chaqirilgandan
+   * KEYIN qayta chaqirilishi mumkin. `createAccrual` ichidagi
+   * `applyAccrualToBalance` (`salary-accrual.service.ts`) shu juftlik
+   * uchun bekor qilinmagan SALARY_ACCRUAL Transaction allaqachon bo'lsa —
+   * BALANSGA TEGMAYDI (jim o'tkazib yuboradi), holbuki `SalaryAccrual`
+   * qatorining o'zi (amount) YANGI narx bilan qayta yoziladi. Ya'ni:
+   * reversalsiz qayta chaqiruv `SalaryAccrual.amount`ni yangilaydi, lekin
+   * pul (Transaction + o'qituvchi balansi) ESKI narxda qoladi — yozuv va
+   * pul JIMGINA kelishmay qoladi. Bu xatti-harakat `salary-accrual.service
+   * .spec.ts`dagi "reprocessing without reversal" testida ATAYLAB
+   * pinlangan (tuzatilmagan, faqat hujjatlashtirilgan). Shuning uchun:
+   * shu funksiyani chaqiradigan HAR QANDAY yo'l (jumladan 7-vazifadagi
+   * cron) bitta davomatni ikki marta narxlash kerak bo'lsa, avval
+   * `reverseAccrualForAttendance` orqali eskisini bekor qilishi SHART —
+   * aks holda xatolik yuqorida tavsiflangan tarzda jim yuz beradi.
+   */
+  private async accrueMonthlySalary(
+    tx: Prisma.TransactionClient,
+    params: ProcessAttendanceBillingParams,
+  ): Promise<void> {
+    const charge = await this.monthlyChargeService.findChargeForLesson(
+      tx,
+      params.enrollmentId,
+      params.lessonDate,
+    );
+
+    let perLessonCost = charge?.perLessonCost ?? 0;
+    // Oylik kursda FIXED_PER_STUDENT bo'luvchisi — shu oyning rejalashtirilgan
+    // dars soni (1-javob). Hisob bo'lsa muzlatilgan qatordan, bo'lmasa
+    // zaxira hisob-kitobdan (u ham `resolveMonthPlanDates` bilan bir manba).
+    let lessonDivisor: number | undefined = charge?.plannedLessons;
+    let deductionTransactionId: string | null = charge?.transactionId ?? null;
+
+    if (!charge) {
+      // Oylik hisob topilmadi — bu holatda YANGI hisob bu yerda YARATILMAYDI:
+      // davomat belgilash admin uchun kutilmagan 450 000 so'mlik yechimga
+      // aylanmasligi kerak. Buning o'rniga kamchilik LOG orqali ko'rinadigan
+      // qilinadi (7-vazifadagi cron bu bo'shliqni o'zi to'ldiradi), narx esa
+      // shu yerda zaxira hisob-kitob orqali topiladi — o'qituvchi haqsiz
+      // qolmaydi.
+      const periodDay = tashkentDateStr(params.lessonDate);
+      this.logger.error(
+        `Oylik hisob topilmadi: enrollment=${params.enrollmentId} ` +
+          `davr=${periodDay.slice(0, 7)} sana=${periodDay} — bu darsga ` +
+          `hech qanday EnrollmentMonthlyCharge yozuvi yo'q`,
+      );
+      const fallback = await this.fallbackMonthlyPerLessonCost(tx, params);
+      perLessonCost = fallback.perLessonCost;
+      lessonDivisor = fallback.plannedLessons;
+      deductionTransactionId = null;
+    }
+
+    if (perLessonCost <= 0) return;
+
+    const teacherIds = await this.resolveTeachersForLesson(
+      tx,
+      params.groupId,
+      params.lessonDate,
+    );
+    for (const teacherId of teacherIds) {
+      try {
+        await this.salaryAccrualService.createAccrual({
+          teacherId,
+          studentId: params.studentId,
+          groupId: params.groupId,
+          attendanceId: params.attendanceId,
+          lessonDate: params.lessonDate,
+          perLessonCost,
+          lessonDivisor,
+          companyId: params.companyId,
+          deductionTransactionId,
+          // Hisob yo'q bo'lsa o'quvchi tomonidan qoplanmagan — markaz
+          // qoplaydi, aks holda createAccrual null qaytarib chiqib ketardi.
+          centerFunded: !charge,
+          tx,
+        });
+      } catch (err) {
+        this.logger.error(
+          `Oylik salary accrual failed for teacher ${teacherId}`,
+          err,
+        );
+      }
+    }
+  }
+
+  /**
+   * Zaxira narx hisob-kitobi — oylik hisob topilmagan holatda ishlatiladi
+   * (masalan cron ishlamay qolgan bo'lsa). Guruhning shu oydagi rejalashtirilgan
+   * dars sonidan kurs narxining bir darsga to'g'ri keladigan ulushini topadi.
+   */
+  private async fallbackMonthlyPerLessonCost(
+    tx: Prisma.TransactionClient,
+    params: ProcessAttendanceBillingParams,
+  ): Promise<{ perLessonCost: number; plannedLessons: number }> {
+    const enr = await tx.enrollment.findUnique({
+      where: { id: params.enrollmentId },
+      select: {
+        group: {
+          select: { exactDays: true, course: { select: { price: true } } },
+        },
+      },
+    });
+    if (!enr) return { perLessonCost: 0, plannedLessons: 0 };
+
+    const day = tashkentDateStr(params.lessonDate);
+    const periodYear = Number(day.slice(0, 4));
+    const periodMonth = Number(day.slice(5, 7));
+
+    // BAYRAMLAR VA BEKOR QILINGAN DARSLAR real hisob bilan BIR XIL manbadan
+    // olinishi SHART. Bu yerda mustaqil ravishda faqat exactDays'dan
+    // hisoblash (excludedDates'siz) `planned` sonini oshirib yuboradi va
+    // zaxira narx REAL EnrollmentMonthlyCharge muzlatgan narxdan sonli
+    // farq qilib qoladi — "muzlatilmagan" emas, NOTO'G'RI bo'ladi. Shu
+    // sababli `MonthlyChargeService.resolveMonthPlanDates` (createChargeFor
+    // Enrollment ishlatadigan xuddi o'sha metod) chaqiriladi.
+    const { excludedDates, addedDates } =
+      await this.monthlyChargeService.resolveMonthPlanDates(
+        tx,
+        params.groupId,
+        params.branchId,
+        periodYear,
+        periodMonth,
+      );
+
+    const planned = lessonDatesInMonth({
+      year: periodYear,
+      month: periodMonth,
+      exactDays: enr.group.exactDays,
+      excludedDates,
+      addedDates,
+    }).length;
+
+    return {
+      perLessonCost: perLessonCostForMonth(enr.group.course.price, planned),
+      plannedLessons: planned,
+    };
   }
 
   /**
@@ -813,6 +1038,17 @@ export class LessonBillingService {
    * the cycle was triggered for the wrong group. Distinct from a lesson-level
    * attendance flip — this is a "this whole batch never should have been
    * billed" undo, not "this one lesson didn't happen".
+   *
+   * OYLIK (`metadata.mode === 'MONTHLY_PERIOD'`) qatorlari BOSHQA yo'ldan
+   * boradi. Ular ham `LESSON_DEDUCTION` turida (bu ATAYLAB — mavjud ko'p
+   * so'rov shu turga tayanadi), lekin ularda na `attendanceId`, na
+   * `LESSON_CONSUMPTION` qatorlari, na prepaid hisoblagichi bor, va ular
+   * ortida `EnrollmentMonthlyCharge` qatori turadi. Umumiy yo'l bilan bekor
+   * qilinsa balans tiklanar, ammo hisob qatori `CHARGED` bo'lib qolardi —
+   * va o'sha oy boshqa HECH QACHON yozilmasdi (bosishiga 450 000 so'm bepul
+   * o'qish). Shuning uchun ular `MonthlyChargeService.reverseMonthlyCharge`
+   * ga yo'naltiriladi: u pulni `reverseMonthlyFee` orqali qaytaradi va
+   * hisob qatorini `REVERSED` qilib belgilaydi.
    */
   async reverseLessonDeduction(
     deductionTransactionId: string,
@@ -840,16 +1076,31 @@ export class LessonBillingService {
           throw new Error('Bu yozuv allaqachon bekor qilingan');
         }
 
+        const isMonthly =
+          ((deduction.metadata ?? {}) as { mode?: string }).mode ===
+          'MONTHLY_PERIOD';
+
         // Reverse the deduction itself (balance is restored, original is
-        // marked reversedAt by reverseTransaction).
-        await this.transactionsService.reverseTransaction(
-          deduction.id,
-          {
-            performedById: params.performedById,
+        // marked reversedAt). Monthly rows go through the charge service so
+        // the `EnrollmentMonthlyCharge` row is marked REVERSED in the same
+        // transaction — see the method comment.
+        if (isMonthly) {
+          await this.monthlyChargeService.reverseMonthlyCharge(tx, {
+            transactionId: deduction.id,
+            companyId: params.companyId,
             reason: params.reason ?? 'Admin tomonidan bekor qilindi',
-          },
-          tx,
-        );
+            performedById: params.performedById,
+          });
+        } else {
+          await this.transactionsService.reverseTransaction(
+            deduction.id,
+            {
+              performedById: params.performedById,
+              reason: params.reason ?? 'Admin tomonidan bekor qilindi',
+            },
+            tx,
+          );
+        }
 
         // Reverse all SalaryAccrual rows that referenced this deduction.
         const accruals = await tx.salaryAccrual.findMany({
@@ -874,7 +1125,13 @@ export class LessonBillingService {
         // Reverse all LESSON_CONSUMPTION rows for the same enrollment that
         // were created after this deduction (i.e. the audit rows that drew
         // down its prepaid balance).
-        if (deduction.enrollmentId) {
+        //
+        // Oylik yo'lda bu blok ATAYLAB o'tkazib yuboriladi: oylik hisob
+        // `LESSON_CONSUMPTION` yozmaydi, prepaid hisoblagichini esa umuman
+        // o'qimaydi. Uni nolga tushirish yozilishning LESSON_PACK davridan
+        // qolgan (migratsiya paytida ataylab saqlangan) holatini jimgina
+        // buzardi.
+        if (!isMonthly && deduction.enrollmentId) {
           const consumptions = await tx.transaction.findMany({
             where: {
               enrollmentId: deduction.enrollmentId,

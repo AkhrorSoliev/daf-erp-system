@@ -12,6 +12,7 @@ import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { CorrectPaymentDto } from './dto/correct-payment.dto';
 import { PaymentQueryDto } from './dto/payment-query.dto';
+import { FrozenBalancesQueryDto } from './dto/frozen-balances-query.dto';
 import { AttachExternalPaymentDto } from './dto/attach-external.dto';
 import { CurrentUser, Roles, BranchScope } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
@@ -174,6 +175,28 @@ export class PaymentsController {
     return this.paymentsService.getDebtorSummary(companyId, {
       branchId: query.branchId,
       status: query.studentStatus ?? 'all',
+      userId,
+      roles,
+    });
+  }
+
+  /**
+   * «Muzlatilgan puli» tabi: muzlatilgan, balansi musbat va 30 kundan
+   * ortiq shu holatda turgan o'quvchilar ro'yxati. Jonli hisoblanadi — cron
+   * yo'q, saqlangan jadval yo'q. Same branch scope + role pattern as
+   * `/payments/debtors`.
+   */
+  @Get('frozen-balances')
+  getFrozenBalances(
+    @Query() query: FrozenBalancesQueryDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') roles: string[],
+  ) {
+    return this.paymentsService.getFrozenBalances(companyId, {
+      branchId: query.branchId,
+      page: query.page,
+      pageSize: query.pageSize,
       userId,
       roles,
     });

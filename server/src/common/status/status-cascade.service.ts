@@ -1,15 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   GroupStatus,
   EnrollmentStatus,
   RoomStatus,
   BranchStatus,
   CourseStatus,
+  PaymentModel,
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EntityHistoryService } from '../entity-history';
 import { EnrollmentBillingService } from '../../billing/enrollment-billing.service';
+import { MonthlyChargeService } from '../../billing/monthly-charge.service';
+import { tashkentDateStr } from '../../attendance/shared/date-utils';
 
 interface CascadeResult {
   entity: string;
@@ -19,10 +22,13 @@ interface CascadeResult {
 
 @Injectable()
 export class StatusCascadeService {
+  private readonly logger = new Logger(StatusCascadeService.name);
+
   constructor(
     private prisma: PrismaService,
     private entityHistoryService: EntityHistoryService,
     private enrollmentBillingService: EnrollmentBillingService,
+    private monthlyChargeService: MonthlyChargeService,
   ) {}
 
   /**
@@ -40,7 +46,15 @@ export class StatusCascadeService {
   ): Promise<{ count: number }> {
     const matches = await this.prisma.enrollment.findMany({
       where: filter,
-      select: { id: true },
+      select: {
+        id: true,
+        group: {
+          select: {
+            companyId: true,
+            course: { select: { paymentModel: true } },
+          },
+        },
+      },
     });
 
     // Closing an enrollment (DROPPED/COMPLETED) strands any unused prepaid
@@ -50,26 +64,134 @@ export class StatusCascadeService {
     // paths (student EXPELLED/ARCHIVED, group CANCELLED/COMPLETED, branch
     // close, course archive) silently lose the student's money — the
     // 2026-06 audit found 7 production victims (~630k so'm).
+    //
+    // The MONTHLY counterpart runs in the SAME per-enrollment tx, right
+    // alongside the LESSON_PACK refund — mirrors removeFromGroup(). The two
+    // calls are mutually exclusive in practice without needing to branch on
+    // `Course.paymentModel` here: `refundPrepaidToBalance` no-ops when
+    // `prepaidLessonsRemaining` is 0 (always true for a MONTHLY enrollment),
+    // and `reverseChargeForDeparture` no-ops when no `EnrollmentMonthlyCharge`
+    // row exists for the period (always true for LESSON_PACK, since only
+    // the MONTHLY billing path ever writes that table). Before this, a
+    // MONTHLY student dropped through ANY cascade route (group cancelled,
+    // student EXPELLED/ARCHIVED, branch closed, course archived) kept a
+    // full un-refunded charge for lessons they would never take — same bug
+    // shape as the missing prepaid refund above, just for the newer model.
     if (
       newStatus === EnrollmentStatus.DROPPED ||
       newStatus === EnrollmentStatus.COMPLETED
     ) {
+      const departureDate =
+        (auditFields.statusChangedAt as Date | undefined) ?? new Date();
+      // Captured ONCE, alongside departureDate, and threaded into every
+      // iteration below as `reverseChargeForDeparture`'s `today` — a batch
+      // of hundreds of enrollments (branch close) can straddle Toshkent
+      // yarim tun across its per-enrollment transactions; re-deriving "bugun"
+      // fresh on each iteration would let a later one see a new day and
+      // reject `departureDate` as backdated even though the whole batch is
+      // the SAME departure event. One clock for the whole batch.
+      const departureToday = tashkentDateStr(departureDate);
       for (const m of matches) {
-        await this.prisma.$transaction(
-          (tx) =>
-            this.enrollmentBillingService.refundPrepaidToBalance(tx, {
-              enrollmentId: m.id,
-              reason: reason
-                ? `Qoldiq oldindan to'langan darslar balansga qaytarildi (${reason})`
-                : undefined,
-              performedById: userId,
-            }),
-          {
-            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-            maxWait: 10_000,
-            timeout: 15_000,
-          },
-        );
+        // One enrollment's refund failing (DB hiccup, lock timeout) must
+        // not abort the cascade for the rest — same resilience pattern as
+        // `MonthlyChargeService.createChargesForPeriod`. Before this
+        // wrapping, an uncaught throw here (e.g. a genuinely backdated
+        // departureDate, or any other error) would bail out of the `for`
+        // loop entirely, so `enrollment.updateMany` below would NEVER run —
+        // leaving every earlier iteration's refund already committed
+        // against an enrollment still sitting ACTIVE.
+        try {
+          await this.prisma.$transaction(
+            async (tx) => {
+              await this.enrollmentBillingService.refundPrepaidToBalance(tx, {
+                enrollmentId: m.id,
+                reason: reason
+                  ? `Qoldiq oldindan to'langan darslar balansga qaytarildi (${reason})`
+                  : undefined,
+                performedById: userId,
+              });
+              await this.monthlyChargeService.reverseChargeForDeparture(tx, {
+                enrollmentId: m.id,
+                departureDate,
+                today: departureToday,
+                companyId: m.group.companyId,
+                reason: reason ?? 'Cascade orqali guruhdan chiqarildi',
+                performedById: userId,
+              });
+            },
+            {
+              isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+              maxWait: 10_000,
+              timeout: 15_000,
+            },
+          );
+        } catch (err) {
+          this.logger.error(
+            `Cascade: enrollment=${m.id} uchun pul qaytarish yiqildi ` +
+              `(newStatus=${newStatus}) — qolgan yozilishlar davom etadi`,
+            err,
+          );
+        }
+      }
+    }
+
+    // Task 1B: FROZEN -> ACTIVE (muzlatishdan chiqish) — Task 1 muzlatishda
+    // oyning qolgan darslari pulini balansga qaytargan edi
+    // (`reverseChargeForDeparture` shu yo'l bilan chaqiriladi, yuqoridagi
+    // blok). Bu YERDA teskarisi bajariladi: o'quvchi qaytganda, qaytgan
+    // kundan keyingi darslar puli QAYTA balansdan yechiladi — aks holda
+    // o'quvchi oyning qolgan qismini TEKIN o'qir edi (pul balansda yotadi,
+    // dars berilgan, hech qanday hisob yo'q).
+    //
+    // `LESSON_PACK` yozilishlar bu yo'lga UMUMAN yetib bormasligi kerak —
+    // `restoreChargeForReturn`ning o'zi topilmagan hisobda `null` qaytaradi,
+    // lekin shunga tayanib qolish o'rniga bu YERDA `paymentModel` bo'yicha
+    // ANIQ filtrlanadi (brief talabi): har bir LESSON_PACK yozilish uchun
+    // bekorga bir so'rov yubormaslik + kelajakda funksiya xatti-harakati
+    // o'zgarsa ham bu yo'l xavfsiz qolishi uchun.
+    if (newStatus === EnrollmentStatus.ACTIVE) {
+      const monthlyMatches = matches.filter(
+        (m) => m.group.course.paymentModel === PaymentModel.MONTHLY,
+      );
+      if (monthlyMatches.length > 0) {
+        const returnDate =
+          (auditFields.statusChangedAt as Date | undefined) ?? new Date();
+        // Xuddi yuqoridagi `departureToday` kabi — sikl o'nlab yozilishni
+        // ketma-ket Serializable tranzaksiyalarda ishlaydi va real vaqtda
+        // Toshkent yarim tunidan o'tib ketishi mumkin. BIR marta hisoblanib,
+        // har bir iteratsiyaga bab-baravar uzatiladi (Task 8'da xuddi shu
+        // sabab bilan aynan shu joyda ikki marta tuzatilgan xato).
+        const returnToday = tashkentDateStr(returnDate);
+        for (const m of monthlyMatches) {
+          // Bitta yozilishning qayta hisob-kitobi yiqilishi qolgan
+          // yozilishlarni to'xtatmasligi kerak — yuqoridagi DROPPED/COMPLETED
+          // blokidagi bilan bir xil chidamlilik namunasi.
+          try {
+            await this.prisma.$transaction(
+              async (tx) => {
+                await this.monthlyChargeService.restoreChargeForReturn(tx, {
+                  enrollmentId: m.id,
+                  returnDate,
+                  today: returnToday,
+                  companyId: m.group.companyId,
+                  reason: reason ?? 'Cascade orqali muzlatishdan chiqarildi',
+                  performedById: userId,
+                });
+              },
+              {
+                isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+                maxWait: 10_000,
+                timeout: 15_000,
+              },
+            );
+          } catch (err) {
+            this.logger.error(
+              `Cascade: enrollment=${m.id} uchun qayta hisoblash yiqildi ` +
+                `(newStatus=${newStatus}) — qolgan yozilishlar davom etadi`,
+              err,
+            );
+          }
+        }
       }
     }
 

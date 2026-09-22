@@ -87,6 +87,10 @@ describe('SalaryCenterTopUpService', () => {
       // deduction row means nothing has been paid against the lesson, so the
       // centre's whole advance is still out — the state these tests describe.
       transaction: { findMany: jest.fn().mockResolvedValue([]) },
+      // Oylik model: shu (o'quvchi, guruh, oy) uchun kuchdagi hisob bo'lsa,
+      // markazning avansi o'sha hisob orqali qaytgan. Standart — bo'sh,
+      // ya'ni bu testlar eski (LESSON_PACK) yo'lni tasvirlaydi.
+      enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
       group: {
         findMany: jest.fn().mockResolvedValue([
           { id: 'g1', name: '#001' },
@@ -391,5 +395,39 @@ describe('SalaryCenterTopUpService', () => {
     expect(res.totals.centerPaid).toBe(60_000);
     // ...and the page can say why it exceeds the rows on screen.
     expect(res.totals.repaidStudentCount).toBe(1);
+  });
+
+  // I5 — OYLIK modelda "qoplanmagan qism" dars boshiga yozilmaydi.
+  //
+  // `EnrollmentMonthlyCharge` OY bo'yicha yoziladi va o'sha ledger qatorida
+  // na `attendanceId`, na `uncoveredAmount` bor. Shuning uchun yuqoridagi
+  // `transaction.findMany` so'rovi oylik darsni HECH QACHON topmasdi va
+  // har biri "o'quvchi bir tiyin ham to'lamagan" zaxirasiga qulardi.
+  it('oylik hisob yozilgan dars uchun markazning avansi qaytgan hisoblanadi', async () => {
+    prisma.salaryAccrual.findMany.mockResolvedValue([
+      accrual({ studentId: 10001, attendanceId: 'a1' }),
+      accrual({ studentId: 10002, attendanceId: 'a2', groupId: 'g2' }),
+    ]);
+    prisma.student.findMany.mockResolvedValue([
+      student(10001, { balance: -400_000 }),
+      student(10002, { balance: -400_000 }),
+    ]);
+    // Oylik yo'lda dars-boshiga yechim qatori YO'Q.
+    prisma.transaction.findMany.mockResolvedValue([]);
+    // #10001 ning iyul oyi hisoblangan; #10002 niki emas (masalan cron
+    // bo'shlig'i — aynan shu holatda accrual `centerFunded` bo'ladi).
+    prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+      { studentId: 10001, groupId: 'g1', periodYear: 2026, periodMonth: 7 },
+    ]);
+
+    const res = await service.getStudents({ month: '2026-07' }, 1001, 1);
+
+    // Hisobi bor o'quvchi ro'yxatdan tushadi: markazga qaytariladigan narsa
+    // qolmagan (qarzi bo'lsa u BALANSDA, bu tabda emas).
+    expect(res.data.map((r) => r.student.id)).toEqual([10002]);
+    expect(res.data[0].centerUnrecovered).toBe(20_000);
+    // Sarflangan pul o'zgarmaydi — u kassadan chiqib bo'lgan.
+    expect(res.totals.centerPaid).toBe(40_000);
+    expect(res.totals.centerUnrecovered).toBe(20_000);
   });
 });

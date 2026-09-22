@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { PaymentModel } from "@/lib/payment-model";
 
 export interface Course {
   id: string;
@@ -11,6 +12,7 @@ export interface Course {
   price: number;
   isActive: boolean;
   branchId: number | null;
+  paymentModel: PaymentModel;
 }
 
 type DrawerMode = "add" | "edit";

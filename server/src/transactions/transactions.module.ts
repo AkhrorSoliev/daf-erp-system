@@ -13,6 +13,10 @@ import { CashAccountsModule } from '../cash-accounts/cash-accounts.module';
     TransactionsWriteService,
     TransactionsReadService,
   ],
-  exports: [TransactionsService],
+  // `TransactionsWriteService` exported alongside `TransactionsService`:
+  // `MonthlyChargeService` (billing module) calls `chargeMonthlyFee`/
+  // `reverseMonthlyFee` directly, so it needs this provider visible outside
+  // this module too.
+  exports: [TransactionsService, TransactionsWriteService],
 })
 export class TransactionsModule {}

@@ -32,6 +32,21 @@ const CASH_FLOW_TYPES: ReadonlySet<TransactionType> = new Set([
   TransactionType.REFUND,
 ]);
 
+const MONTH_NAMES_UZ = [
+  'Yanvar',
+  'Fevral',
+  'Mart',
+  'Aprel',
+  'May',
+  'Iyun',
+  'Iyul',
+  'Avgust',
+  'Sentabr',
+  'Oktabr',
+  'Noyabr',
+  'Dekabr',
+] as const;
+
 @Injectable()
 export class TransactionsWriteService {
   constructor(
@@ -242,6 +257,204 @@ export class TransactionsWriteService {
       });
 
       return transaction;
+    }, tx);
+  }
+
+  /**
+   * Bir oylik to'lovni balansdan yechish.
+   *
+   * Ataylab `LESSON_DEDUCTION` turida yoziladi: qarz, hisobot va kassa
+   * so'rovlarining o'nlab joyi shu turga tayanadi, yangi tur qo'shish
+   * ularning hammasini qayta yozishni talab qilardi. Oylik qatorni
+   * `metadata.mode === 'MONTHLY_PERIOD'` ajratib turadi.
+   *
+   * `lessonsCovered` metadataga ATAYLAB yozilmaydi — `lesson-coverage.helper`
+   * o'sha kalit bo'yicha "sikl ochildi" deb hisoblaydi va oylik qatorni
+   * paket sikliga aylantirib yuborardi.
+   */
+  async chargeMonthlyFee(
+    params: {
+      studentId: number;
+      /** Balansdan yechiladigan summa; 0 bo'lishi mumkin, manfiy emas. */
+      amount: number;
+      enrollmentId: string;
+      companyId: number;
+      branchId?: number;
+      periodYear: number;
+      periodMonth: number;
+      monthlyPrice: number;
+      plannedLessons: number;
+      coveredLessons: number;
+      perLessonCost: number;
+      creditLessons: number;
+      /**
+       * O'quvchi chegirmasi (0-100) va chegirmasiz to'liq summa. 12 talik
+       * yo'ldagi `LESSON_DEDUCTION` metadatasi ham AYNAN shu ikki kalitni
+       * saqlaydi (`billing/lesson-billing.service.ts`), shunda hisobotlar
+       * ikkala yo'lni bir xil o'qiydi.
+       */
+      discountPercent?: number;
+      fullAmount?: number;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    if (!Number.isFinite(params.amount) || params.amount < 0) {
+      throw new BadRequestException(
+        `Oylik to'lov summasi manfiy bo'lishi mumkin emas: ${params.amount}`,
+      );
+    }
+
+    return this.runInTx(async (client) => {
+      const student = await this.lockStudent(client, params.studentId);
+      const balanceBefore = student.balance;
+      const balanceAfter = balanceBefore - params.amount;
+      const branchId = await this.branchForStudent(
+        client,
+        params.studentId,
+        params.companyId,
+        params.branchId,
+      );
+
+      const period = `${params.periodYear}-${String(params.periodMonth).padStart(2, '0')}`;
+
+      const transaction = await client.transaction.create({
+        data: {
+          type: TransactionType.LESSON_DEDUCTION,
+          // `-params.amount` produces `-0` when amount is exactly 0 (a fully
+          // credit-covered month) — normalize it so the stored/returned
+          // amount is a plain 0, not a sign-bit oddity.
+          amount: -params.amount || 0,
+          balanceBefore,
+          balanceAfter,
+          studentId: params.studentId,
+          enrollmentId: params.enrollmentId,
+          branchId,
+          companyId: params.companyId,
+          description: `${MONTH_NAMES_UZ[params.periodMonth - 1]} ${params.periodYear} oylik to'lovi`,
+          metadata: {
+            mode: 'MONTHLY_PERIOD',
+            period,
+            monthlyPrice: params.monthlyPrice,
+            plannedLessons: params.plannedLessons,
+            coveredLessons: params.coveredLessons,
+            perLessonCost: params.perLessonCost,
+            creditLessons: params.creditLessons,
+            ...(params.discountPercent !== undefined && {
+              discountPercent: params.discountPercent,
+            }),
+            ...(params.fullAmount !== undefined && {
+              fullAmount: params.fullAmount,
+            }),
+          },
+        },
+      });
+
+      if (balanceAfter !== balanceBefore) {
+        await client.student.update({
+          where: { id: params.studentId },
+          data: { balance: balanceAfter },
+        });
+      }
+
+      return transaction;
+    }, tx);
+  }
+
+  /**
+   * Oylik to'lov qatorini teskari qilish (o'quvchi ketdi, migratsiya, tuzatish).
+   *
+   * Teskari summa asl qatorning ishorasidan kelib chiqadi — `Math.abs`
+   * ishlatilmaydi (ADR-0004). Asl qator manfiy edi, teskarisi musbat.
+   */
+  async reverseMonthlyFee(
+    params: {
+      transactionId: string;
+      companyId: number;
+      reason: string;
+      performedById?: number;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.runInTx(async (client) => {
+      const original = await client.transaction.findFirst({
+        where: {
+          id: params.transactionId,
+          companyId: params.companyId,
+          reversedAt: null,
+        },
+      });
+      if (!original) {
+        throw new NotFoundException(
+          `Teskari qilinadigan oylik to'lov topilmadi: ${params.transactionId}`,
+        );
+      }
+      // Bu metod FAQAT oylik to'lov qatorlarini teskari qiladi. Umumiy
+      // `reverseTransaction()` PAYMENT/REFUND/SALARY_PAYMENT/EXPENSE kabi
+      // haqiqiy pul harakatini kassa yozuviga ham ko'chiradi — bu yerda esa
+      // bunday sinxronizatsiya yo'q, shuning uchun boshqa turdagi qatorni
+      // shu yo'l bilan teskari qilish balans va kassani abadiy ajratib
+      // yuboradi.
+      const md = (original.metadata ?? {}) as Record<string, unknown>;
+      if (
+        original.type !== TransactionType.LESSON_DEDUCTION ||
+        md.mode !== 'MONTHLY_PERIOD'
+      ) {
+        throw new BadRequestException(
+          `Bu qator oylik to'lov emas, reverseMonthlyFee bilan teskari qilinmaydi: ${params.transactionId}`,
+        );
+      }
+      if (!original.studentId) {
+        throw new BadRequestException(
+          `Oylik to'lov qatorida o'quvchi yo'q: ${params.transactionId}`,
+        );
+      }
+
+      const student = await this.lockStudent(client, original.studentId);
+      const balanceBefore = student.balance;
+      // Asl qator manfiy -> teskarisi musbat. Ishora asl qatordan olinadi.
+      // `-original.amount` asl summa 0 bo'lganda `-0` beradi (masalan, kredit
+      // butun oyni yopgan qator) — shu sababli `chargeMonthlyFee` dagi kabi
+      // normallashtiriladi.
+      const reversalAmount = -original.amount || 0;
+      const balanceAfter = balanceBefore + reversalAmount;
+
+      // Asl qatorni AVVAL "reversedAt" bilan belgilaymiz, keyin teskari
+      // qatorni yozamiz — xuddi shu fayldagi `reverseTransaction()` kabi.
+      // Sabab: `reversedAt IS NULL` ga qamrab olingan partial unique
+      // indexlar (masalan, attendanceId yoki studentId bo'yicha) aks holda
+      // ikkala qator bir lahza faol turgan payt P2002 bilan yiqilishi
+      // mumkin. Hozircha LESSON_DEDUCTION uchun bunday index yo'q, lekin
+      // faylning hujjatlashtirilgan tartibiga ergashamiz.
+      await client.transaction.update({
+        where: { id: original.id },
+        data: { reversedAt: new Date(), reversedById: params.performedById },
+      });
+
+      const reversal = await client.transaction.create({
+        data: {
+          type: original.type,
+          amount: reversalAmount,
+          balanceBefore,
+          balanceAfter,
+          studentId: original.studentId,
+          enrollmentId: original.enrollmentId,
+          branchId: original.branchId,
+          companyId: params.companyId,
+          description: `Bekor qilindi: ${params.reason}`,
+          reversedTransactionId: original.id,
+          reversedById: params.performedById,
+          metadata: original.metadata ?? undefined,
+        },
+      });
+
+      if (balanceAfter !== balanceBefore) {
+        await client.student.update({
+          where: { id: original.studentId },
+          data: { balance: balanceAfter },
+        });
+      }
+
+      return reversal;
     }, tx);
   }
 

@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { CourseQueryDto } from './dto/course-query.dto';
@@ -22,6 +23,15 @@ import {
 } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
+
+// `PATCH /courses/:id` is open to Administrator too (ordinary field edits —
+// name, price, description), but `paymentModel` is a money decision: it
+// moves every group on the course onto different billing rules at once
+// (the settings panel and course CREATE already gate it to these two).
+// The `@Roles()` guard above can't express "allowed for this endpoint,
+// except this one field, for this one role" — so it's checked by hand
+// inside `update()` below.
+const PAYMENT_MODEL_ROLES = ['CEO', 'Branch Director'];
 
 @Controller('courses')
 export class CoursesController {
@@ -71,7 +81,16 @@ export class CoursesController {
     @Body() dto: UpdateCourseDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') callerRoles: string[],
   ) {
+    if (
+      dto.paymentModel !== undefined &&
+      !PAYMENT_MODEL_ROLES.some((r) => callerRoles?.includes(r))
+    ) {
+      throw new ForbiddenException(
+        "Kursning to'lov modelini faqat CEO yoki Filial direktori o'zgartira oladi",
+      );
+    }
     return this.coursesService.update(id, dto, userId, companyId);
   }
 

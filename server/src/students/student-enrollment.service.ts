@@ -2,14 +2,41 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { Prisma, StudentStatus } from '@prisma/client';
+import {
+  EnrollmentStatus,
+  GroupStatus,
+  PaymentModel,
+  Prisma,
+  StudentStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { EntityHistoryService } from '../common/entity-history';
+
+/**
+ * Yopilgan yozilish holatlari — `removeFromGroup` shularni rad etadi.
+ *
+ * `FROZEN` ataylab bu ro'yxatda YO'Q: muzlatilgan o'quvchi hali guruhda
+ * turadi va uni chiqarish kerakli amal. Ro'yxat takroriy chaqiruvni
+ * (ikki marta bosish, timeout'dan keyingi qayta urinish) to'sish uchun,
+ * holatga qarab filtrlash uchun emas.
+ */
+const CLOSED_ENROLLMENT_STATUSES: ReadonlySet<EnrollmentStatus> = new Set([
+  EnrollmentStatus.DROPPED,
+  EnrollmentStatus.TRANSFERRED,
+  EnrollmentStatus.COMPLETED,
+]);
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
 import { DebtWriteOffService } from '../billing/debt-write-off.service';
+import {
+  ChargeableEnrollment,
+  MonthlyChargeService,
+} from '../billing/monthly-charge.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SettingsService } from '../settings/settings.service';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
 import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
@@ -28,8 +55,31 @@ export class StudentEnrollmentService {
     private entityHistoryService: EntityHistoryService,
     private enrollmentBillingService: EnrollmentBillingService,
     private debtWriteOffService: DebtWriteOffService,
+    private monthlyChargeService: MonthlyChargeService,
     private eventEmitter: EventEmitter2,
+    private settingsService: SettingsService,
   ) {}
+
+  /**
+   * Qarz kechirish yoqilganmi — `payment.debtWriteOffEnabled`.
+   * CEO (21.09.2026, 9-javob): boshlang'ich holatda O'CHIQ, qarz butun
+   * tarixi bilan saqlanadi. Sozlama ATAYLAB kompaniya darajasida
+   * (`companyLevelOnly`): filial qiymati kompaniyanikidan ustun bo'lgani
+   * uchun, filial darajasida yozilsa Branch Director CEO taqiqlagan
+   * narsani aynan o'ziga qayta yoqib olardi — kechirish tugmalari esa
+   * aynan BD va Administrator qo'lida.
+   */
+  private async assertDebtWriteOffEnabled(companyId: number): Promise<void> {
+    const enabled = await this.settingsService.get(
+      companyId,
+      'payment.debtWriteOffEnabled',
+    );
+    if (!enabled) {
+      throw new ForbiddenException(
+        "Qarz kechirish o'chirilgan — qarz butun tarixi bilan saqlanadi (Sozlamalar → To'lov → «Qarz kechirishga ruxsat»)",
+      );
+    }
+  }
 
   async enrollToGroup(
     studentId: number,
@@ -54,7 +104,9 @@ export class StudentEnrollmentService {
     const group = await this.prisma.group.findFirst({
       where: { id: groupId, deletedAt: null, companyId },
       include: {
-        course: { select: { name: true } },
+        // price/paymentModel: needed to charge a mid-month MONTHLY join
+        // immediately below — see chargeMidMonthJoin.
+        course: { select: { name: true, price: true, paymentModel: true } },
         teachers: { select: { teacherId: true } },
       },
     });
@@ -237,6 +289,14 @@ export class StudentEnrollmentService {
               changedById: userId,
             },
           });
+          await this.chargeMidMonthJoin(
+            tx,
+            fresh,
+            group,
+            companyId,
+            userId,
+            student.discountPercent,
+          );
           return fresh;
         },
         {
@@ -248,22 +308,44 @@ export class StudentEnrollmentService {
       // Atomic block already created the new enrollment + state log.
       enrollment = transferred;
     } else {
-      enrollment = await this.prisma.enrollment.create({
-        data: {
-          studentId,
-          groupId,
-          startDate: resolvedStartDate,
-        },
-      });
+      // Wrapped in a transaction (previously a bare create) so the
+      // mid-month MONTHLY proration charge below is atomic with the
+      // enrollment itself — either both land or neither does.
+      enrollment = await this.prisma.$transaction(
+        async (tx) => {
+          const fresh = await tx.enrollment.create({
+            data: {
+              studentId,
+              groupId,
+              startDate: resolvedStartDate,
+            },
+          });
 
-      await this.prisma.enrollmentStateLog.create({
-        data: {
-          enrollmentId: enrollment.id,
-          status: 'ACTIVE',
-          transitionAt: enrollment.createdAt!,
-          changedById: userId,
+          await tx.enrollmentStateLog.create({
+            data: {
+              enrollmentId: fresh.id,
+              status: 'ACTIVE',
+              transitionAt: fresh.createdAt,
+              changedById: userId,
+            },
+          });
+
+          await this.chargeMidMonthJoin(
+            tx,
+            fresh,
+            group,
+            companyId,
+            userId,
+            student.discountPercent,
+          );
+          return fresh;
         },
-      });
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          maxWait: 10_000,
+          timeout: 15_000,
+        },
+      );
     }
 
     // Prepaid model (post-audit): do NOT deduct a cycle at enrollment.
@@ -348,6 +430,74 @@ export class StudentEnrollmentService {
     return enrollment;
   }
 
+  /**
+   * Oylik kursda o'rtada qo'shilgan o'quvchi cronni kutmaydi: uning
+   * proratsiya qilingan JORIY DAVR hisobi yozilish yaratilgan zahoti
+   * chiqadi — aks holda oy boshi cron/kunlik qorovul ishlaguncha
+   * (keyingi oygacha) bepul o'qib yurardi.
+   *
+   * `createChargeForEnrollment` oylik bo'lmagan kursda (`LESSON_PACK`),
+   * guruh hali ACTIVE bo'lmaganda (FORMING/PAUSED) yoki `startDate`
+   * joriy davrdan keyingi oyga tushganda `null` qaytaradi — bu holatlarda
+   * hech narsa yozilmaydi va LESSON_PACK yo'liga ta'sir qilmaydi. Agar
+   * `startDate` KEYINGI oyga tushsa, o'sha oyning hisobini oy boshi
+   * cron'i o'zi yaratadi.
+   */
+  private async chargeMidMonthJoin(
+    tx: Prisma.TransactionClient,
+    created: {
+      id: string;
+      studentId: number;
+      groupId: string;
+      status: string;
+      startDate: Date | null;
+    },
+    group: {
+      id: string;
+      branchId: number;
+      companyId: number;
+      statusEnum: string;
+      exactDays: string[];
+      course: { price: number; paymentModel: string };
+    },
+    companyId: number,
+    userId: number,
+    discountPercent: number,
+  ): Promise<void> {
+    // Qaysi OY uchun hisob yoziladi — shu qator hal qiladi. Toshkent kuni
+    // yagona umumiy yordamchidan olinadi; qo'lda `+5 soat` surish bu kod
+    // bazasida ikkinchi (va bir kun adashishi mumkin bo'lgan) nusxa edi.
+    const today = tashkentDateStr(new Date());
+
+    const chargeableEnrollment: ChargeableEnrollment = {
+      id: created.id,
+      studentId: created.studentId,
+      groupId: created.groupId,
+      status: created.status as EnrollmentStatus,
+      startDate: created.startDate,
+      group: {
+        id: group.id,
+        branchId: group.branchId,
+        companyId: group.companyId,
+        statusEnum: group.statusEnum as GroupStatus,
+        exactDays: group.exactDays,
+        course: {
+          price: group.course.price,
+          paymentModel: group.course.paymentModel as PaymentModel,
+        },
+      },
+    };
+
+    await this.monthlyChargeService.createChargeForEnrollment(tx, {
+      enrollment: chargeableEnrollment,
+      periodYear: Number(today.slice(0, 4)),
+      periodMonth: Number(today.slice(5, 7)),
+      companyId,
+      performedById: userId,
+      discountPercent,
+    });
+  }
+
   async removeFromGroup(
     _studentId: number,
     enrollmentId: string,
@@ -370,6 +520,26 @@ export class StudentEnrollmentService {
     });
     if (!enrollment) {
       throw new NotFoundException('Faol yozuv topilmadi');
+    }
+
+    // Refuses a SECOND call on the same enrollment (double-click, a client
+    // retry after a request that timed out but actually committed). Without
+    // this, `reverseChargeForDeparture` was the only guard against re-running
+    // the whole departure transaction — and it stayed silent on a repeat
+    // (idempotent refund math), so nothing here would have surfaced a
+    // double-submit at all. This turns it into an explicit, loud 400 instead
+    // of a silent no-op two-refund-attempts-deep in the tx.
+    //
+    // Faqat ALLAQACHON YOPILGAN yozilish rad etiladi. MUZLATILGAN emas:
+    // muzlatilgan o'quvchi guruhda turaveradi, uni chiqarish esa oddiy va
+    // kerakli amal — guruhda faqat faol o'quvchilar qolishi kerak (CEO
+    // qarori, 2026-09-03). Avvalgi `!== 'ACTIVE'` sharti buni ham to'sib
+    // qo'ygan edi: qorovul takroriy chaqiruv uchun yozilgan, holat
+    // filtri sifatida emas.
+    if (CLOSED_ENROLLMENT_STATUSES.has(enrollment.status)) {
+      throw new BadRequestException(
+        "Bu yozilish allaqachon yopilgan — qayta chiqarib bo'lmaydi",
+      );
     }
 
     // Anchored on the ENROLLMENT's own student, never the `:id` in the path —
@@ -448,6 +618,9 @@ export class StudentEnrollmentService {
     // Validate write-off inputs upfront (cheap check, before the tx).
     // Eligibility itself is re-verified inside the tx for race safety.
     if (input.writeOffCycleDebt) {
+      // Eng avval — hech narsa yozilmasidan oldin. Kechirish so'ralmasa
+      // sozlama umuman o'qilmaydi: oddiy guruhdan chiqarish o'zgarmaydi.
+      await this.assertDebtWriteOffEnabled(companyId);
       if (!input.writeOffReason || input.writeOffReason.trim().length < 5) {
         throw new BadRequestException(
           'Hisobdan chiqarish izohi majburiy (kamida 5 belgi)',
@@ -461,6 +634,11 @@ export class StudentEnrollmentService {
       }
     }
 
+    // Same instant reused below for the state log, the status flip and the
+    // monthly-charge departure refund, so all three agree on exactly when
+    // the student left (which lessons still count as "held").
+    const departureAt = new Date();
+
     // Atomic: refund unused prepaid lessons + (optional) write off the
     // current-cycle debt + flip enrollment to DROPPED + write the state
     // log. Order matters:
@@ -468,6 +646,12 @@ export class StudentEnrollmentService {
     //      credits the balance. May shrink the negative balance the
     //      write-off then targets, which is correct (we never write off
     //      more than the post-refund debt).
+    //   1b. Monthly-model counterpart of the same idea: refund the share of
+    //      THIS month's frozen charge covering lessons not yet held. The two
+    //      are mutually exclusive in practice — `prepaidLessonsRemaining` is
+    //      only ever non-zero for LESSON_PACK enrollments, and an
+    //      EnrollmentMonthlyCharge row only ever exists for MONTHLY ones —
+    //      so at most one of the two actually credits anything.
     //   2. Write-off (if requested) — clears the joriy-sikl portion.
     //      DebtWriteOffService.executeWriteOff recomputes eligibility
     //      inside the same tx and compares the freshly-suggested amount
@@ -480,6 +664,14 @@ export class StudentEnrollmentService {
           enrollmentId,
           performedById: userId,
           reason: 'Guruhdan chiqarilganda qoldiq darslar uchun balans tiklash',
+        });
+
+        await this.monthlyChargeService.reverseChargeForDeparture(tx, {
+          enrollmentId,
+          departureDate: departureAt,
+          companyId,
+          reason: 'Guruhdan chiqarilganda',
+          performedById: userId,
         });
 
         if (input.writeOffCycleDebt) {
@@ -499,7 +691,7 @@ export class StudentEnrollmentService {
           data: {
             enrollmentId,
             status: 'DROPPED',
-            transitionAt: new Date(),
+            transitionAt: departureAt,
             reason: reasonText,
             changedById: userId,
           },
@@ -508,7 +700,7 @@ export class StudentEnrollmentService {
           where: { id: enrollmentId },
           data: {
             status: 'DROPPED',
-            statusChangedAt: new Date(),
+            statusChangedAt: departureAt,
             statusChangedById: userId,
             statusChangeReason: reasonText,
             departureReasonId,
@@ -618,7 +810,22 @@ export class StudentEnrollmentService {
       enrollment.studentId,
       companyId,
     );
-    return this.debtWriteOffService.computeEligibility(enrollmentId, companyId);
+    const eligibility = await this.debtWriteOffService.computeEligibility(
+      enrollmentId,
+      companyId,
+    );
+
+    // Sozlama o'chiq bo'lsa hisob-kitob baribir qaytadi — admin summani va
+    // sikl ko'rsatkichlarini ko'radi, faqat AMAL yopiladi.
+    const enabled = await this.settingsService.get(
+      companyId,
+      'payment.debtWriteOffEnabled',
+    );
+    if (!enabled) {
+      return { ...eligibility, eligible: false, reason: 'DISABLED' as const };
+    }
+
+    return eligibility;
   }
 
   /**
@@ -665,6 +872,8 @@ export class StudentEnrollmentService {
       enrollment.studentId,
       companyId,
     );
+
+    await this.assertDebtWriteOffEnabled(companyId);
 
     const result = await this.debtWriteOffService.executeWriteOff({
       enrollmentId,

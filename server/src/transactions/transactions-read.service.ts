@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, TransactionType } from '@prisma/client';
+import { AttendanceStatus, Prisma, TransactionType } from '@prisma/client';
 import { TransactionQueryDto } from './dto/transaction-query.dto';
 import {
   computeEnrollmentCoverage,
@@ -366,16 +366,26 @@ export class TransactionsReadService {
       enrollmentIds,
     );
 
+    // Oylik qatorlar uchun sanalar davomatdan olinadi — `lesson-coverage.helper`
+    // ularni ataylab tashlab ketadi (Task 4), shuning uchun `byDeduction` doim
+    // bo'sh. Timeline aylanishidan OLDIN, bitta so'rov bilan yig'ib olamiz —
+    // har qator uchun alohida so'rov 370 o'quvchilik sahifada N+1 bo'lardi.
+    const monthlyDatesByRow = await this.loadMonthlyAttendanceDates(
+      studentId,
+      timeline,
+    );
+
     const lessonSlices = new Map<string, LessonSlice[]>();
     for (const row of timeline) {
       if (row.type !== TransactionType.LESSON_DEDUCTION) continue;
+      const md = (row.metadata ?? {}) as Record<string, unknown>;
+      const consumedDates =
+        md.mode === 'MONTHLY_PERIOD'
+          ? (monthlyDatesByRow.get(row.id) ?? [])
+          : (byDeduction.get(row.id)?.consumedDates ?? []);
       lessonSlices.set(
         row.id,
-        splitLessonSlices(
-          row.amount,
-          row.metadata,
-          byDeduction.get(row.id)?.consumedDates ?? [],
-        ),
+        splitLessonSlices(row.amount, row.metadata, consumedDates),
       );
     }
 
@@ -404,6 +414,116 @@ export class TransactionsReadService {
       });
     }
 
+    return result;
+  }
+
+  /**
+   * Oylik `LESSON_DEDUCTION` qatorlari uchun sanalarni davomatdan yig'adi.
+   *
+   * `lesson-coverage.helper` `MONTHLY_PERIOD` qatorlarini ataylab bilmaydi
+   * (Task 4 qarori), shuning uchun ularning sanasi boshqa yo'l bilan
+   * topilishi kerak: o'sha `enrollmentId`ning guruhida, o'sha `period`
+   * ('YYYY-MM') oyi ichida bo'lgan PRESENT/LATE/ABSENT davomatlar — bular
+   * haqiqatan billinglanadigan darslar (bekor qilingan/EXCUSED darslar
+   * kirmaydi).
+   *
+   * Bitta so'rov bilan: avval oylik qatorlarning `enrollmentId` -> `groupId`
+   * xaritasi, keyin studentId + har bir (groupId, oy oralig'i) juftligini
+   * OR bilan birlashtirgan bitta `attendance.findMany`. Sahifadagi qatorlar
+   * soni qancha bo'lmasin (370 o'quvchilik jadvalda ham), bu ikkita so'rov —
+   * har qator uchun alohida so'rov yo'q.
+   */
+  private async loadMonthlyAttendanceDates(
+    studentId: number,
+    timeline: Array<{
+      id: string;
+      type: TransactionType;
+      enrollmentId: string | null;
+      metadata: Prisma.JsonValue;
+    }>,
+  ): Promise<Map<string, Date[]>> {
+    const result = new Map<string, Date[]>();
+
+    type MonthlyRow = { id: string; enrollmentId: string; period: string };
+    const monthlyRows: MonthlyRow[] = [];
+    for (const row of timeline) {
+      if (row.type !== TransactionType.LESSON_DEDUCTION || !row.enrollmentId) {
+        continue;
+      }
+      const md = (row.metadata ?? {}) as Record<string, unknown>;
+      if (md.mode !== 'MONTHLY_PERIOD' || typeof md.period !== 'string') {
+        continue;
+      }
+      monthlyRows.push({
+        id: row.id,
+        enrollmentId: row.enrollmentId,
+        period: md.period,
+      });
+    }
+    if (monthlyRows.length === 0) return result;
+
+    const enrollmentIds = Array.from(
+      new Set(monthlyRows.map((r) => r.enrollmentId)),
+    );
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: { id: { in: enrollmentIds } },
+      select: { id: true, groupId: true },
+    });
+    const groupIdByEnrollment = new Map(
+      enrollments.map((e) => [e.id, e.groupId]),
+    );
+
+    // Oyning UTC-yarim tunidagi chegaralari — `Attendance.date` xuddi shu
+    // shaklda saqlanadi (kalendar kun, real vaqt belgisi emas), shuning
+    // uchun bu Toshkent kunini to'g'ri qamraydi, offset shart emas.
+    const windows: Array<{
+      rowId: string;
+      groupId: string;
+      gte: Date;
+      lt: Date;
+    }> = [];
+    for (const row of monthlyRows) {
+      const groupId = groupIdByEnrollment.get(row.enrollmentId);
+      const match = /^(\d{4})-(\d{2})$/.exec(row.period);
+      if (!groupId || !match) continue;
+      const year = Number(match[1]);
+      const month = Number(match[2]);
+      windows.push({
+        rowId: row.id,
+        groupId,
+        gte: new Date(Date.UTC(year, month - 1, 1)),
+        lt: new Date(Date.UTC(year, month, 1)),
+      });
+    }
+    if (windows.length === 0) return result;
+
+    const attendance = await this.prisma.attendance.findMany({
+      where: {
+        studentId,
+        status: {
+          in: [
+            AttendanceStatus.PRESENT,
+            AttendanceStatus.LATE,
+            AttendanceStatus.ABSENT,
+          ],
+        },
+        OR: windows.map((w) => ({
+          groupId: w.groupId,
+          date: { gte: w.gte, lt: w.lt },
+        })),
+      },
+      select: { groupId: true, date: true },
+      orderBy: { date: 'asc' },
+    });
+
+    for (const w of windows) {
+      const dates = attendance
+        .filter(
+          (a) => a.groupId === w.groupId && a.date >= w.gte && a.date < w.lt,
+        )
+        .map((a) => a.date);
+      result.set(w.rowId, dates);
+    }
     return result;
   }
 

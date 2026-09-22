@@ -3,10 +3,12 @@ import {
   IsOptional,
   IsInt,
   IsBoolean,
+  IsEnum,
   Min,
   Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PaymentModel } from '@prisma/client';
 
 export class UpdateCourseDto {
   @IsOptional()
@@ -54,4 +56,11 @@ export class UpdateCourseDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  // Mavjud kursning to'lov modelini almashtirish — pul bilan bog'liq qaror,
+  // shuning uchun har o'zgarish `EntityHistory`ga yoziladi (odatiy
+  // `CoursesService.update` oqimi orqali, alohida kod yo'q).
+  @IsOptional()
+  @IsEnum(PaymentModel)
+  paymentModel?: PaymentModel;
 }

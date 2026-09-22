@@ -63,6 +63,9 @@ describe('SalaryCalculationService', () => {
       group: { findMany: jest.fn().mockResolvedValue([]) },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
       lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
+      // Oylik kursning MUZLATILGAN dars narxi (`loadFrozenMonthlyCharges`).
+      // Odatiy — bo'sh: bu testlarning kurslari 12 talik modelda.
+      enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
       // BR-09b backlog scan (un-accrued top-up-era lessons); default none.
       $queryRaw: jest.fn().mockResolvedValue([]),
       $transaction: jest.fn(async (cb: any) => cb(tx)),
@@ -204,6 +207,75 @@ describe('SalaryCalculationService', () => {
           centerFunded: true,
         }),
       );
+    });
+
+    // Oylik kursda cron `createAccrual` ga BO'LUVCHINI ham berishi kerak.
+    // `createAccrual` summani o'zi qaytadan hisoblaydi; bo'luvchi
+    // berilmasa u kursning `lessonPaymentCount` iga (12) qaytadi va
+    // markaz qo'shimchasi 13 darslik oyda ham 12 ga bo'linib YOZILARDI.
+    it("MONTHLY: markaz qo'shimchasi oyning bo'luvchisi bilan yoziladi", async () => {
+      prisma.attendance.findMany.mockResolvedValue([
+        {
+          id: 'att-1',
+          studentId: 100,
+          groupId: 'g1',
+          date: new Date('2026-07-10'),
+        },
+      ]);
+      prisma.attendance.groupBy.mockResolvedValue([
+        { studentId: 100, groupId: 'g1', _count: { _all: 6 } },
+      ]);
+      // `lessonPaymentCount: 12` ATAYLAB qoldirilgan: oylik kursda u
+      // ma'nosiz va natijaga TEGMASLIGI kerak.
+      prisma.group.findMany.mockResolvedValue([
+        {
+          id: 'g1',
+          course: {
+            price: 400_000,
+            lessonPaymentCount: 12,
+            paymentModel: 'MONTHLY',
+          },
+        },
+      ]);
+      // Muzlatilgan iyul hisobi — 13 darslik oy.
+      prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+        {
+          studentId: 100,
+          groupId: 'g1',
+          periodYear: 2026,
+          periodMonth: 7,
+          perLessonCost: 30_769,
+          plannedLessons: 13,
+        },
+      ]);
+      prisma.groupTeacher.findMany.mockResolvedValue([
+        { groupId: 'g1', teacherId: 10010 },
+      ]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          salaryType: 'FIXED_PER_STUDENT',
+          value: 120_000,
+          effectiveFrom: new Date('2026-05-01'),
+          effectiveTo: null,
+          config: {
+            userId: 10010,
+            groupId: null,
+            salaryType: 'FIXED_PER_STUDENT',
+          },
+        },
+      ]);
+
+      await service.calculateMonthlySalaries(1, {
+        asOfDate: julyAsOf,
+        now: julyNow,
+      });
+
+      expect(accrualService.createAccrual).toHaveBeenCalledTimes(1);
+      const arg = accrualService.createAccrual.mock.calls[0][0];
+      expect(arg.perLessonCost).toBe(30_769);
+      expect(arg.centerFunded).toBe(true);
+      // 13, 12 EMAS: 120 000 / 13 = 9 231, 12 ga bo'lish 10 000 berardi.
+      expect(arg.lessonDivisor).toBe(13);
     });
 
     it('BR-09: withholds the center top-up for a new student below the lesson threshold', async () => {
@@ -399,6 +471,153 @@ describe('SalaryCalculationService', () => {
           creditPeriodDateOverride: expect.any(Date),
         }),
       );
+    });
+
+    /**
+     * BR-09b tsikli oylik kursda ham `resolveLessonPricing` dan o'tadi:
+     * `Course.price` bir OYning narxi, uni 12 ga bo'lish o'qituvchiga
+     * noto'g'ri haq yozardi. Muzlatilgan hisob topilmasa dars NARXLANMAYDI
+     * — lekin jim ham yo'qolmaydi: supurgi bilan BITTA sanagichga tushadi
+     * va cron ogohlantiradi.
+     */
+    it('BR-09b: muzlatilgan hisobsiz OYLIK dars narxlanmaydi va SANALADI', async () => {
+      const warn = jest
+        .spyOn((service as any).logger, 'warn')
+        .mockImplementation(() => undefined);
+
+      const augNow = new Date('2026-09-20T08:00:00.000Z');
+      const augAsOf = new Date('2026-08-15T00:00:00.000Z');
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.attendance.groupBy.mockResolvedValue([
+        { studentId: 100, groupId: 'g1', _count: { _all: 5 } },
+      ]);
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          id: 'jul-att',
+          studentId: 100,
+          groupId: 'g1',
+          date: new Date('2026-07-10'),
+        },
+      ]);
+      prisma.group.findMany.mockResolvedValue([
+        {
+          id: 'g1',
+          course: {
+            price: 240_000,
+            lessonPaymentCount: 12,
+            paymentModel: 'MONTHLY',
+          },
+        },
+      ]);
+      prisma.groupTeacher.findMany.mockResolvedValue([
+        { groupId: 'g1', teacherId: 10010 },
+      ]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          salaryType: 'PERCENTAGE',
+          value: 30,
+          effectiveFrom: new Date('2026-05-01'),
+          effectiveTo: null,
+          config: { userId: 10010, groupId: null, salaryType: 'PERCENTAGE' },
+        },
+      ]);
+      // Muzlatilgan hisob yo'q (odatiy mock — bo'sh ro'yxat).
+
+      await service.calculateMonthlySalaries(1, {
+        asOfDate: augAsOf,
+        now: augNow,
+      });
+
+      // Taxminiy narx bilan PUL YOZILMAYDI.
+      expect(accrualService.createAccrual).not.toHaveBeenCalledWith(
+        expect.objectContaining({ attendanceId: 'jul-att' }),
+      );
+      // Lekin jim ham yo'qolmaydi.
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('1 ta oylik dars narxlanmadi'),
+      );
+    });
+
+    /**
+     * BR-09b PUL YOZADIGAN yo'l: yopilgan davrdagi oylik darsni markaz
+     * oldindan qoplaydi. `createAccrual` summani O'ZI qaytadan hisoblaydi,
+     * shuning uchun bo'luvchi u yerga YETIB BORISHI shart — aks holda
+     * kursning `lessonPaymentCount` iga (12) tushadi.
+     *
+     * Yuqoridagi ikkita BR-09b testi buni ushlay olmaydi: biri 12 talik
+     * kursda `PERCENTAGE` stavka bilan yuradi (bo'luvchi ta'sir qilmaydi),
+     * ikkinchisida esa accrual umuman yozilmaydi.
+     */
+    it("BR-09b: OYLIK backlog darsi oyning bo'luvchisi bilan yoziladi", async () => {
+      const augNow = new Date('2026-09-20T08:00:00.000Z');
+      const augAsOf = new Date('2026-08-15T00:00:00.000Z');
+      prisma.attendance.findMany.mockResolvedValue([]); // davr ichida dars yo'q
+      prisma.attendance.groupBy.mockResolvedValue([
+        { studentId: 100, groupId: 'g1', _count: { _all: 5 } },
+      ]);
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          id: 'jul-att',
+          studentId: 100,
+          groupId: 'g1',
+          date: new Date('2026-07-10'),
+        },
+      ]);
+      // `lessonPaymentCount: 12` ATAYLAB — oylik kursda natijaga tegmasligi
+      // kerak.
+      prisma.group.findMany.mockResolvedValue([
+        {
+          id: 'g1',
+          course: {
+            price: 400_000,
+            lessonPaymentCount: 12,
+            paymentModel: 'MONTHLY',
+          },
+        },
+      ]);
+      // Muzlatilgan iyul hisobi — 13 darslik oy. Shu mock backlog
+      // `loadFrozenMonthlyCharges` chaqiruviga ham xizmat qiladi.
+      prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+        {
+          studentId: 100,
+          groupId: 'g1',
+          periodYear: 2026,
+          periodMonth: 7,
+          perLessonCost: 30_769,
+          plannedLessons: 13,
+        },
+      ]);
+      prisma.groupTeacher.findMany.mockResolvedValue([
+        { groupId: 'g1', teacherId: 10010 },
+      ]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          salaryType: 'FIXED_PER_STUDENT',
+          value: 120_000,
+          effectiveFrom: new Date('2026-05-01'),
+          effectiveTo: null,
+          config: {
+            userId: 10010,
+            groupId: null,
+            salaryType: 'FIXED_PER_STUDENT',
+          },
+        },
+      ]);
+
+      await service.calculateMonthlySalaries(1, {
+        asOfDate: augAsOf,
+        now: augNow,
+      });
+
+      expect(accrualService.createAccrual).toHaveBeenCalledTimes(1);
+      const arg = accrualService.createAccrual.mock.calls[0][0];
+      expect(arg.attendanceId).toBe('jul-att');
+      expect(arg.centerFunded).toBe(true);
+      // Yopilgan iyul davriga emas, joriy ochiq davrga yoziladi.
+      expect(arg.creditPeriodDateOverride).toEqual(expect.any(Date));
+      expect(arg.perLessonCost).toBe(30_769);
+      // 13, 12 EMAS: 120 000 / 13 = 9 231, 12 ga bo'lish 10 000 berardi.
+      expect(arg.lessonDivisor).toBe(13);
     });
 
     it('does NOT run the gap sweep for a pre-July (covered-only) period', async () => {

@@ -21,20 +21,24 @@ export interface RateVersion {
  * Per-lesson accrual for one student, by salary type. Identical to
  * `SalaryAccrualService.createAccrual`'s amount branch:
  *  - PERCENTAGE        → round(perLessonCost * value / 100)
- *  - FIXED_PER_STUDENT → round(value / lessonPaymentCount)   (value is per-cycle)
+ *  - FIXED_PER_STUDENT → round(value / lessonDivisor)   (value is per-cycle)
  *  - FIXED_MONTHLY     → 0 (flat salary, not per-lesson)
+ *
+ * `lessonDivisor` — sikldagi dars soni: 12 talik kursda `lessonPaymentCount`,
+ * oylik kursda o'sha oyning `plannedLessons` (`resolveLessonPricing().divisor`).
+ * `createAccrual` ham xuddi shu bo'luvchini `lessonDivisor` sifatida oladi.
  */
 export function perLessonAccrual(
   version: RateVersion,
   perLessonCost: number,
-  lessonPaymentCount: number,
+  lessonDivisor: number,
 ): number {
   if (version.salaryType === 'PERCENTAGE') {
     return Math.round((perLessonCost * version.value) / 100);
   }
   if (version.salaryType === 'FIXED_PER_STUDENT') {
-    return lessonPaymentCount > 0
-      ? Math.round(version.value / lessonPaymentCount)
+    return lessonDivisor > 0
+      ? Math.round(version.value / lessonDivisor)
       : version.value;
   }
   return 0; // FIXED_MONTHLY

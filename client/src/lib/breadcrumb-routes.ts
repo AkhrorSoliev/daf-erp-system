@@ -28,6 +28,10 @@ export const routeLabels: Record<string, string> = {
   settings: "Sozlamalar",
   general: "Umumiy sozlamalar",
   courses: "Kurslar",
+  // /settings/payment — "To'lov" sozlamalar bo'limi (defaultModel, sababli
+  // dars krediti, hisob-kitob kuni). "payments" (ko'plik) esa /payments —
+  // Moliya bo'limi, alohida kalit yuqorida.
+  payment: "To'lov",
   branches: "Filiallar",
   employees: "Xodimlar",
   rooms: "Xonalar",

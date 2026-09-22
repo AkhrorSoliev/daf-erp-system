@@ -476,6 +476,52 @@ describe('SalaryAccrualService', () => {
         }),
       );
     });
+
+    it("FIXED_PER_STUDENT + lessonDivisor (oylik kurs): oyning rejalashtirilgan dars soniga bo'ladi, kursning 12 siga emas", async () => {
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce({
+        id: 'v1',
+        salaryType: 'FIXED_PER_STUDENT',
+        value: 250_000, // bir sikl (= bir oy) uchun
+      });
+      // Kurs kartochkasida 12 turadi — lekin oylik yo'lda bu son ma'nosiz.
+      prisma.group.findUnique.mockResolvedValue({
+        course: { lessonPaymentCount: 12 },
+        branchId: 2,
+      });
+      prisma.salaryAccrual.upsert.mockResolvedValue({});
+
+      await service.createAccrual({ ...baseParams, lessonDivisor: 13 });
+
+      // 250 000 / 13 = 19 230.77 → 19 231. 12 ga bo'linsa 20 833 chiqardi:
+      // 13 darslik oyda ustoz 13 × 20 833 = 270 833 — oydan 20 833 ortiq
+      // (CEO, 21.09.2026, 1-javob: ustoz oyligi dars soniga bog'liq emas).
+      expect(prisma.salaryAccrual.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ amount: 19_231 }),
+        }),
+      );
+    });
+
+    it("lessonDivisor berilmasa (12 talik yo'l) avvalgidek lessonPaymentCount ga bo'ladi", async () => {
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce({
+        id: 'v1',
+        salaryType: 'FIXED_PER_STUDENT',
+        value: 250_000,
+      });
+      prisma.group.findUnique.mockResolvedValue({
+        course: { lessonPaymentCount: 12 },
+        branchId: 2,
+      });
+      prisma.salaryAccrual.upsert.mockResolvedValue({});
+
+      await service.createAccrual(baseParams);
+
+      expect(prisma.salaryAccrual.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ amount: 20_833 }),
+        }),
+      );
+    });
   });
 
   describe('persisted audit', () => {
@@ -677,6 +723,79 @@ describe('SalaryAccrualService', () => {
       });
       expect(result).toBeNull();
       expect(prisma.salaryAccrual.update).not.toHaveBeenCalled();
+    });
+  });
+
+  // ============================================================
+  // Task 6 review finding #2: reprocessing an already-accrued attendance at
+  // a NEW price without an intervening `reverseAccrualForAttendance` call.
+  //
+  // `createAccrual` upserts `SalaryAccrual` on its natural key (always
+  // writes the latest `amount`), but `applyAccrualToBalance` skips writing
+  // the mirrored SALARY_ACCRUAL Transaction + teacher balance update when a
+  // non-reversed one already exists for (attendanceId, teacherId). So a
+  // second `createAccrual` call for the SAME attendance/teacher at a
+  // DIFFERENT price updates the `SalaryAccrual` row but leaves the ledger
+  // Transaction and the teacher's balance at the FIRST price — the record
+  // and the money silently disagree.
+  //
+  // This is NOT reachable through any wiring in this codebase today: every
+  // caller that might re-bill the same attendance at a different price
+  // (attendance status flips, monthly fallback re-runs) goes through
+  // `reverseAccrualForAttendance` first, which marks the accrual reversed
+  // and reverses the balance mirror, so the NEXT `createAccrual` finds no
+  // non-reversed Transaction and re-applies cleanly. This test does NOT
+  // exercise that safe path — it deliberately skips the reversal to pin
+  // today's unsafe fallback behaviour, so a future change (e.g. Task 7's
+  // cron calling `createAccrual` twice without reversing first) fails
+  // loudly here instead of drifting silently in production.
+  // ============================================================
+  describe('reprocessing without reversal (Task 6 review finding #2 — pinned, not fixed)', () => {
+    it('a second createAccrual at a different price updates the SalaryAccrual row but does NOT touch the balance mirror again', async () => {
+      prisma.salaryAccrual.upsert.mockResolvedValue({});
+
+      // First write: no prior balance mirror exists yet → applies normally.
+      prisma.transaction.findFirst.mockResolvedValueOnce(null);
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce({
+        id: 'v1',
+        salaryType: 'PERCENTAGE',
+        value: 30,
+      });
+      await service.createAccrual({ ...baseParams, perLessonCost: 33_333 });
+
+      // Second write: SAME attendanceId + teacherId, but no
+      // `reverseAccrualForAttendance` happened in between, and the price
+      // changed (simulating a re-bill at a different frozen/fallback rate).
+      // A non-reversed SALARY_ACCRUAL transaction for this (attendanceId,
+      // teacherId) already exists — this is what makes
+      // `applyAccrualToBalance` skip on the second call.
+      prisma.transaction.findFirst.mockResolvedValueOnce({ id: 'txn-1' });
+      prisma.employeeSalaryConfigVersion.findFirst.mockResolvedValueOnce({
+        id: 'v1',
+        salaryType: 'PERCENTAGE',
+        value: 30,
+      });
+      await service.createAccrual({ ...baseParams, perLessonCost: 50_000 });
+
+      // The SalaryAccrual row DOES pick up the new price...
+      expect(prisma.salaryAccrual.upsert).toHaveBeenCalledTimes(2);
+      expect(prisma.salaryAccrual.upsert).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          update: expect.objectContaining({ amount: 15_000 }), // 50_000 × 30%
+        }),
+      );
+
+      // ...but the ledger Transaction and the teacher's balance were
+      // written EXACTLY ONCE — at the FIRST price (10_000 = 33_333 × 30%).
+      // This is the drift the review flagged: the accrual record and the
+      // actual money moved no longer agree after the second call.
+      expect(prisma.transaction.create).toHaveBeenCalledTimes(1);
+      expect(prisma.transaction.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ amount: 10_000 }),
+        }),
+      );
+      expect(prisma.user.update).toHaveBeenCalledTimes(1);
     });
   });
 });

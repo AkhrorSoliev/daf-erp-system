@@ -6,6 +6,7 @@ import {
 import {
   EnrollmentStatus,
   ExitType,
+  PaymentModel,
   Prisma,
   StudentStatus,
 } from '@prisma/client';
@@ -14,6 +15,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
+import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import {
   ChangeStudentStatusDto,
   validateFrozenRefundOverrides,
@@ -56,6 +58,7 @@ export class StudentsStatusService {
     private statusCascadeService: StatusCascadeService,
     private entityHistoryService: EntityHistoryService,
     private enrollmentBillingService: EnrollmentBillingService,
+    private monthlyChargeService: MonthlyChargeService,
   ) {}
 
   /** Odam qiladigan status o'zgartirish — `PATCH /students/:id/status`. */
@@ -218,6 +221,19 @@ export class StudentsStatusService {
     // this in its own Serializable transaction — the outer status flow
     // isn't transactional today and rewriting it is out of scope. Failure
     // here aborts the whole status change (we never reach the cascade).
+    //
+    // `refundPrepaidForFreeze` (LESSON_PACK) and `refundMonthlyForFreeze`
+    // (MONTHLY) below are now TWO separate `$transaction`s run one after
+    // the other, not one. For a student holding enrollments in both
+    // billing models, the first can commit and the second can throw —
+    // leaving the LESSON_PACK money already refunded to balance while the
+    // student's status never flips to FROZEN. This straddle did not exist
+    // before this method had a second transaction. It is recoverable: a
+    // retry re-runs `refundPrepaidForFreeze` safely because it only
+    // selects enrollments with `prepaidLessonsRemaining > 0` (or an
+    // explicit override), and the first, already-committed run zeroed
+    // that counter — so the retry finds nothing left to re-refund on the
+    // LESSON_PACK leg and simply proceeds to (retry) the MONTHLY leg.
     let frozenRefundResults: Array<{
       enrollmentId: string;
       refunded: number;
@@ -231,6 +247,12 @@ export class StudentsStatusService {
         actorId,
         dto.frozenRefundOverrides,
       );
+      // MONTHLY-course counterpart of the refund above. LESSON_PACK
+      // enrollments already got their unused prepaid back via
+      // `refundPrepaidForFreeze` — this method is deliberately scoped to
+      // MONTHLY-course enrollments only (query filter, not a runtime no-op)
+      // so the two refund paths never touch the same enrollment.
+      await this.refundMonthlyForFreeze(id, actorId, new Date());
     }
 
     const auditData = await this.statusHistoryService.changeStatus({
@@ -342,6 +364,75 @@ export class StudentsStatusService {
             });
           if (result) {
             results.push({ enrollmentId: enr.id, ...result });
+          }
+        }
+        return results;
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10_000,
+        timeout: 15_000,
+      },
+    );
+  }
+
+  /**
+   * MONTHLY-course counterpart of `refundPrepaidForFreeze`. Freezing a
+   * student is, in money terms, the same operation as their departure from
+   * the group — minus closing the enrollment — so this reuses
+   * `MonthlyChargeService.reverseChargeForDeparture` rather than
+   * recomputing the "o'tmagan darslar puli" arithmetic a second time.
+   *
+   * Scoped to **MONTHLY-course ACTIVE yozilishlar** at the query level
+   * (`group.course.paymentModel === MONTHLY`), not by relying on
+   * `reverseChargeForDeparture`'s own no-op for a LESSON_PACK enrollment
+   * (it returns `null` there today because no `EnrollmentMonthlyCharge`
+   * row exists). `refundPrepaidForFreeze` above has already refunded any
+   * LESSON_PACK enrollment's unused prepaid — calling this function on the
+   * same enrollment too is exactly how a double refund gets introduced,
+   * so the query keeps the two paths mutually exclusive by construction.
+   *
+   * Single Serializable transaction, same as `refundPrepaidForFreeze` —
+   * every balance movement here goes through `TransactionsWriteService`
+   * (via `reverseChargeForDeparture`), never new money arithmetic.
+   */
+  private async refundMonthlyForFreeze(
+    studentId: number,
+    // `undefined` — TIZIM aktyori (ADR-0008): avtomatik pauza cron'i
+    // hech kimning nomidan ish ko'rmaydi. Qo'shni `refundPrepaidForFreeze`
+    // ham aynan shu turni oladi, va `reverseChargeForDeparture` ning
+    // `performedById` maydoni ixtiyoriy — ya'ni pastda hech narsa
+    // o'zgarmaydi. Tor `number` turi bu yerda avtomatik pauzani
+    // kompilyatsiyadan o'tkazmasdi.
+    userId: number | undefined,
+    freezeDate: Date,
+  ): Promise<Array<{ enrollmentId: string; refunded: number }>> {
+    const activeMonthlyEnrollments = await this.prisma.enrollment.findMany({
+      where: {
+        studentId,
+        status: EnrollmentStatus.ACTIVE,
+        deletedAt: null,
+        group: { course: { paymentModel: PaymentModel.MONTHLY } },
+      },
+      select: { id: true, group: { select: { companyId: true } } },
+    });
+
+    if (activeMonthlyEnrollments.length === 0) return [];
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const results: Array<{ enrollmentId: string; refunded: number }> = [];
+        for (const enr of activeMonthlyEnrollments) {
+          const result =
+            await this.monthlyChargeService.reverseChargeForDeparture(tx, {
+              enrollmentId: enr.id,
+              departureDate: freezeDate,
+              companyId: enr.group.companyId,
+              reason: "Muzlatish — o'tmagan darslar puli balansga qaytarildi",
+              performedById: userId,
+            });
+          if (result) {
+            results.push({ enrollmentId: enr.id, refunded: result.refunded });
           }
         }
         return results;

@@ -195,6 +195,16 @@ enum LessonDeductionMode {
   SINGLE_UNCOVERED
 }
 
+enum PaymentModel {
+  LESSON_PACK // hozirgi: price / lessonPaymentCount
+  MONTHLY // yangi: price = bir oy narxi
+}
+
+enum MonthlyChargeStatus {
+  CHARGED
+  REVERSED
+}
+
 enum ContractStatus {
   DRAFT
   ACTIVE
@@ -377,6 +387,8 @@ model User {
 
   approvedTelegramGroups TelegramGroup[] @relation("TelegramGroupApprovedBy")
 
+  updatedSettings Setting[] @relation("SettingUpdatedBy")
+
   @@index([deletedAt])
   @@index([status])
 }
@@ -433,9 +445,41 @@ model Branch {
   leadColumns     LeadColumn[]
   mockExams       MockExam[]
   holidays        Holiday[]
+  monthlyCharges  EnrollmentMonthlyCharge[]
+  settings        Setting[]
 
   @@index([deletedAt])
   @@index([status])
+}
+
+/// Markaziy sozlamalar panelining saqlash joyi (`/settings`).
+///
+/// Bitta kalit ikki darajada yozilishi mumkin: kompaniya darajasida
+/// (`branchId = null`) va filial darajasida (`branchId` bilan) — filial
+/// qiymati kompaniya qiymatini USTIDAN yozadi (`SettingsService.get`).
+/// `value` — `Json`, lekin bu jadvalga hech qanday chaqiruvchi to'g'ridan-
+/// to'g'ri yozmaydi/o'qimaydi: yagona kirish nuqtasi `SettingsService`,
+/// u `SETTING_DEFINITIONS` ro'yxati orqali tipli qiymatga aylantiradi.
+model Setting {
+  id          String   @id @default(uuid())
+  companyId   Int
+  company     Company  @relation(fields: [companyId], references: [id])
+  branchId    Int?
+  branch      Branch?  @relation(fields: [branchId], references: [id])
+  key         String
+  value       Json
+  updatedById Int?
+  updatedBy   User?    @relation("SettingUpdatedBy", fields: [updatedById], references: [id])
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  /// Postgres treats NULLs in a UNIQUE index as distinct, so this does NOT
+  /// stop a second company-wide row (`branchId = null`) for the same key —
+  /// the partial index `setting_company_row_unique` (see the migration)
+  /// does. Same pattern as `DailyFinancialSnapshot`. `SettingsService.set`
+  /// therefore does `findFirst` + create/update, never `upsert`.
+  @@unique([companyId, branchId, key])
+  @@index([companyId, key])
 }
 
 model Room {
@@ -473,6 +517,9 @@ model Course {
   description        String?
   price              Int
   lessonPaymentCount Int          @default(12)
+  // MONTHLY da `price` bir OY narxi, `lessonPaymentCount` o'qilmaydi.
+  // LESSON_PACK — mavjud xatti-harakat, hech narsa o'zgarmaydi.
+  paymentModel       PaymentModel @default(LESSON_PACK)
   courseDuration     Int?
   lessonDuration     Int?
   lessonMinutes      Int?
@@ -559,10 +606,10 @@ model Student {
 
   // Financial relations
   payments          Payment[]
-  transactions      Transaction[]       @relation("StudentTransactions")
+  transactions      Transaction[]             @relation("StudentTransactions")
   contracts         Contract[]
   refunds           Refund[]
-  salaryAccruals    SalaryAccrual[]     @relation("StudentSalaryAccruals")
+  salaryAccruals    SalaryAccrual[]           @relation("StudentSalaryAccruals")
   paymentPromises   PaymentPromise[]
   dafAttempts       DafAttempt[]
   appSessions       StudentAppSession[]
@@ -571,6 +618,7 @@ model Student {
   callLogs          CallLog[]
   discounts         Discount[]
   scholarships      Scholarship[]
+  monthlyCharges    EnrollmentMonthlyCharge[]
 
   @@index([deletedAt])
   @@index([status])
@@ -1189,11 +1237,12 @@ model Group {
   salaryAccruals SalaryAccrual[]        @relation("GroupSalaryAccruals")
 
   scheduleSnapshots      GroupScheduleSnapshot[]
-  lessonCancellations    LessonCancellation[]    @relation("LessonCancellationGroup")
-  lessonTeacherOverrides LessonTeacherOverride[] @relation("LessonTeacherOverrideGroup")
-  lessonReschedules      LessonReschedule[]      @relation("LessonRescheduleGroup")
+  lessonCancellations    LessonCancellation[]      @relation("LessonCancellationGroup")
+  lessonTeacherOverrides LessonTeacherOverride[]   @relation("LessonTeacherOverrideGroup")
+  lessonReschedules      LessonReschedule[]        @relation("LessonRescheduleGroup")
   holidayExtensions      GroupHolidayExtension[]
   plannedAbsences        PlannedAbsence[]
+  monthlyCharges         EnrollmentMonthlyCharge[]
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -1278,13 +1327,89 @@ model Enrollment {
   deletedBy       User?     @relation("EnrollmentDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  stateLog EnrollmentStateLog[]
-  refunds  Refund[]
+  stateLog       EnrollmentStateLog[]
+  refunds        Refund[]
+  monthlyCharges EnrollmentMonthlyCharge[]
 
   @@index([deletedAt])
   @@index([status])
   @@index([departureReasonId])
   @@index([transferReasonId])
+}
+
+/// Oylik to'lov modelining yagona haqiqat manbasi: har yozilish, har oy
+/// uchun bitta qator. plannedLessons/perLessonCost/monthlyPrice MUZLATILADI
+/// — jadval oy o'rtasida o'zgarsa ham o'quvchining hisobi va o'qituvchining
+/// haqi qimirlamaydi.
+model EnrollmentMonthlyCharge {
+  id           String     @id @default(uuid())
+  enrollmentId String
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id])
+  studentId    Int
+  student      Student    @relation(fields: [studentId], references: [id])
+  groupId      String
+  group        Group      @relation(fields: [groupId], references: [id])
+  branchId     Int
+  branch       Branch     @relation(fields: [branchId], references: [id])
+  companyId    Int
+  company      Company    @relation(fields: [companyId], references: [id])
+
+  periodYear  Int
+  periodMonth Int
+
+  plannedLessons Int
+  perLessonCost  Int
+  monthlyPrice   Int
+  coveredLessons Int
+  /// Hisob yozilgan paytdagi qoplangan dars SANALARI ('YYYY-MM-DD'),
+  /// MUZLATILGAN. `coveredLessons` shu ro'yxatning uzunligi.
+  ///
+  /// Nega saqlanadi: `reverseChargeForDeparture` "ketgan kungacha nechta
+  /// dars qoplangan edi" degan savolga javob berishi kerak, va uni JONLI
+  /// kalendardan (bayram + bekor qilingan dars) qayta hisoblash muzlatish
+  /// invariantini buzardi — oy o'rtasida bitta dars bekor qilinsa, ketayotgan
+  /// o'quvchiga o'sha dars uchun ham pul qaytarilardi (spec 5.5), va
+  /// idempotentlik ham buzilardi (ikkinchi chaqiruvda farq yana paydo
+  /// bo'lardi). Bo'sh massiv = shu ustun qo'shilishidan OLDIN yozilgan
+  /// qator (hisob hech qachon `coveredLessons = 0` bilan yozilmaydi).
+  coveredDates   String[] @default([])
+  /// `coveredDates`ning HOZIRGI muzlatib chiqarilgan qism-to'plami (freeze
+  /// bilan olib tashlangan, hali return orqali qaytarilmagan sanalar).
+  /// `coveredLessons = coveredDates.length - frozenOutDates.length` — bu
+  /// HOSILA, moslik uchun saqlanadi (2026-09 review, HIGH-1/2/3): eski
+  /// dizaynda `coveredLessons` faqat SON edi va `coveredDates`ning
+  /// PREFIKSI (boshidan N tasi) qoplangan deb faraz qilardi — bu muzlatish
+  /// (pastdan kesish) uchun xavfsiz edi, lekin qaytish (yuqoridan
+  /// qo'shish, ya'ni SUFFIKS) buni buzdi: `prefiks ∪ suffiks` endi son
+  /// bilan ifodalanmaydi. Bo'sh massiv = hech narsa muzlatib chiqarilmagan
+  /// (barcha eski qatorlar uchun xavfsiz standart — xatti-harakat
+  /// o'zgarmaydi). Faqat `reverseChargeForDeparture` (muzlatish/ketish) va
+  /// `restoreChargeForReturn` (qaytish) o'zgartiradi — union/difference
+  /// sifatida, hech qachon boshqa joydan qayta hisoblanmaydi.
+  frozenOutDates String[] @default([])
+  creditLessons  Int      @default(0)
+  creditAmount   Int      @default(0)
+  chargedAmount  Int
+
+  /// Oy davomida to'planadi; keyingi oyning creditLessons'iga aylanadi.
+  excusedLessons Int @default(0)
+
+  // Hisob yozilgan paytdagi o'quvchi chegirmasi (0-100), muzlatiladi.
+  // `perLessonCost` ATAYLAB chegirmasiz qoladi: o'qituvchi haqi undan
+  // hisoblanadi va chegirma faqat markaz zimmasida (schema.prisma dagi
+  // Student.discountPercent izohiga qara).
+  discountPercent Int @default(0)
+
+  status        MonthlyChargeStatus @default(CHARGED)
+  transactionId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([enrollmentId, periodYear, periodMonth])
+  @@index([studentId, periodYear, periodMonth])
+  @@index([groupId, periodYear, periodMonth])
+  @@index([branchId, periodYear, periodMonth])
 }
 
 model Holiday {
@@ -1503,6 +1628,8 @@ model Company {
   mockExams                   MockExam[]
   mockExamParticipants        MockExamParticipant[]
   holidays                    Holiday[]
+  monthlyCharges              EnrollmentMonthlyCharge[]
+  settings                    Setting[]
 }
 
 enum TelegramGroupStatus {

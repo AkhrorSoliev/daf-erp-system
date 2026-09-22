@@ -6,6 +6,7 @@ import { DebtorsView } from "./debtors-view";
 import { CenterTopUpView } from "./center-topup-view";
 import { MonthlyDebtView } from "./monthly-debt-view";
 import { WriteOffsView } from "./write-offs-view";
+import { FrozenBalanceView } from "./frozen-balance-view";
 
 /**
  * One page for everything to do with money owed to the center.
@@ -31,6 +32,7 @@ const TABS = [
   { value: "markaz", label: "Markaz qoplagani" },
   { value: "oylik", label: "Oylik qarzdorlik" },
   { value: "kechirilgan", label: "Kechirilganlar" },
+  { value: "muzlatilgan", label: "Muzlatilgan puli" },
 ] as const;
 
 export function DebtPageClient() {
@@ -85,6 +87,9 @@ function DebtPageTabs() {
         </TabsContent>
         <TabsContent value="kechirilgan" className="mt-6">
           <WriteOffsView />
+        </TabsContent>
+        <TabsContent value="muzlatilgan" className="mt-6">
+          <FrozenBalanceView />
         </TabsContent>
       </Tabs>
     </div>

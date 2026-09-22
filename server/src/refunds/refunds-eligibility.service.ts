@@ -48,6 +48,28 @@ export class RefundsEligibilityService {
       throw new NotFoundException("O'quvchi topilmadi");
     }
 
+    // A frozen student's enrollments are all FROZEN (freezing cascades every
+    // enrollment) — there is no ACTIVE one to scope the refund to. Detect that
+    // BEFORE `resolveEnrollment` so a caller who did not name an enrollment
+    // gets the balance-only quote instead of "faol guruhi yo'q". An explicit
+    // `enrollmentId` always goes through the unchanged path below — the
+    // caller picked a specific group and `resolveEnrollment` still enforces
+    // ACTIVE on it.
+    if (!enrollmentId) {
+      const activeEnrollment = await this.prisma.enrollment.findFirst({
+        where: {
+          studentId,
+          deletedAt: null,
+          status: EnrollmentStatus.ACTIVE,
+          group: { companyId },
+        },
+        select: { id: true },
+      });
+      if (!activeEnrollment) {
+        return this.previewBalanceOnlyRefund(studentId, companyId, student);
+      }
+    }
+
     const enrollment = await this.resolveEnrollment(
       studentId,
       companyId,
@@ -167,6 +189,87 @@ export class RefundsEligibilityService {
       maxRefundable,
       suggestedAmount,
       warning,
+    };
+  }
+
+  /**
+   * Balance-only refund quote: no ACTIVE enrollment funds it, so the whole
+   * quote is the student's free balance. Freezing already ran
+   * `refundPrepaidForFreeze` and `refundMonthlyForFreeze` — both credited the
+   * balance and zeroed what was held against the enrollment — so there is
+   * nothing left on the enrollment side to draw on. This mirrors the shape
+   * `previewRefund` returns for the ACTIVE path so the existing refund dialog
+   * renders it unchanged: fields that have no meaning here (group, lessons,
+   * prepaid) are reported honestly as empty/zero rather than invented.
+   */
+  private async previewBalanceOnlyRefund(
+    studentId: number,
+    companyId: number,
+    student: { balance: number },
+  ) {
+    const paymentsAgg = await this.prisma.payment.aggregate({
+      where: {
+        studentId,
+        companyId,
+        status: PaymentStatus.COMPLETED,
+      },
+      _sum: { amount: true },
+    });
+    const paidAmount = paymentsAgg._sum.amount ?? 0;
+
+    const lastPaymentRow = await this.prisma.payment.findFirst({
+      where: {
+        studentId,
+        companyId,
+        status: PaymentStatus.COMPLETED,
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { amount: true, method: true, createdAt: true },
+    });
+    const lastPayment = lastPaymentRow
+      ? {
+          amount: lastPaymentRow.amount,
+          method: lastPaymentRow.method,
+          paidAt: lastPaymentRow.createdAt,
+        }
+      : null;
+
+    // No single enrollment to scope prior refunds to any more (a frozen
+    // student may have several, all closed) — the honest total is every
+    // completed/approved refund this student has ever had.
+    const priorRefunds = await this.prisma.refund.aggregate({
+      where: {
+        studentId,
+        status: {
+          in: [
+            RefundStatus.APPROVED,
+            RefundStatus.PROCESSING,
+            RefundStatus.COMPLETED,
+          ],
+        },
+      },
+      _sum: { approvedAmount: true },
+    });
+    const previousRefundsTotal = priorRefunds._sum.approvedAmount ?? 0;
+
+    const maxRefundable = Math.max(0, student.balance);
+
+    return {
+      enrollmentId: null,
+      groupId: null,
+      groupName: '',
+      courseName: '',
+      paidAmount,
+      lastPayment,
+      studentBalance: student.balance,
+      lessonsAttended: 0,
+      prepaidLessons: 0,
+      prepaidValue: 0,
+      perLessonCost: 0,
+      previousRefunds: previousRefundsTotal,
+      maxRefundable,
+      suggestedAmount: maxRefundable,
+      warning: "Faol guruhi yo'q — pul faqat hisobidagi balansdan qaytariladi",
     };
   }
 

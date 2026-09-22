@@ -9,7 +9,7 @@ describe('TransactionsReadService', () => {
     transaction: { findMany: jest.Mock; count: jest.Mock };
     attendance: { findMany: jest.Mock; findFirst: jest.Mock };
     student: { findFirst: jest.Mock };
-    enrollment: { findFirst: jest.Mock };
+    enrollment: { findFirst: jest.Mock; findMany: jest.Mock };
     lessonCancellation: { findMany: jest.Mock };
     holiday: { findMany: jest.Mock };
   };
@@ -25,7 +25,10 @@ describe('TransactionsReadService', () => {
         findFirst: jest.fn().mockResolvedValue(null),
       },
       student: { findFirst: jest.fn().mockResolvedValue(null) },
-      enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
+      enrollment: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
     };
@@ -188,6 +191,98 @@ describe('TransactionsReadService', () => {
         // Enrollment topilmadi (mock `null`) — oxirini aytolmaymiz.
         projectedLastLessonDate: null,
       });
+    });
+
+    it('sources dates for a MONTHLY_PERIOD row from attendance, not coverage', async () => {
+      const ts = (v: string) => new Date(`${v}T00:00:00Z`);
+      // Task 5B: `lesson-coverage.helper` ataylab MONTHLY_PERIOD qatorlarini
+      // tashlab ketadi (Task 4), shuning uchun `byDeduction` bo'sh keladi.
+      // Sanalar davomatdan (PRESENT/LATE/ABSENT) olinishi kerak.
+      const monthlyMeta = {
+        mode: 'MONTHLY_PERIOD',
+        period: '2026-09',
+        monthlyPrice: 450000,
+        plannedLessons: 13,
+        coveredLessons: 2,
+        perLessonCost: 34615,
+        creditLessons: 0,
+      };
+      const pageRows = [
+        {
+          id: 'p1',
+          type: 'PAYMENT',
+          amount: 69230,
+          balanceBefore: 0,
+          balanceAfter: 69230,
+          enrollmentId: null,
+          metadata: null,
+        },
+      ];
+      const timeline = [
+        { ...pageRows[0] },
+        {
+          id: 'dm1',
+          type: 'LESSON_DEDUCTION',
+          amount: -69230,
+          balanceBefore: 69230,
+          balanceAfter: 0,
+          enrollmentId: 'enr-m1',
+          metadata: monthlyMeta,
+        },
+      ];
+
+      prisma.transaction.findMany.mockImplementation((args: any) => {
+        const where = args?.where ?? {};
+        if (where.enrollmentId)
+          return Promise.resolve([
+            {
+              id: 'dm1',
+              type: 'LESSON_DEDUCTION',
+              amount: -69230,
+              enrollmentId: 'enr-m1',
+              attendanceId: null,
+              metadata: monthlyMeta,
+              createdAt: ts('2026-09-03'),
+            },
+          ]);
+        if (where.amount) return Promise.resolve(timeline);
+        return Promise.resolve(pageRows);
+      });
+      prisma.transaction.count.mockResolvedValueOnce(1);
+      prisma.enrollment.findMany.mockResolvedValueOnce([
+        { id: 'enr-m1', groupId: 'g1' },
+      ]);
+      // Bitta batch so'rov: studentId + guruh/oy oynalarining OR'i.
+      prisma.attendance.findMany.mockImplementation((args: any) => {
+        const where = args?.where ?? {};
+        if (where.studentId) {
+          return Promise.resolve([
+            { groupId: 'g1', date: ts('2026-09-01') },
+            { groupId: 'g1', date: ts('2026-09-03') },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+
+      const res = await service.findByStudent(
+        10777,
+        {} as TransactionQueryDto,
+        1001,
+        null,
+      );
+
+      const dest = res.data[0].destination!;
+      expect(dest.lessonCount).toBe(2);
+      expect(dest.heldLessonCount).toBe(2);
+      expect(dest.pendingLessonCount).toBe(0);
+      expect(dest.firstLessonDate).toEqual(ts('2026-09-01'));
+      expect(dest.lastLessonDate).toEqual(ts('2026-09-03'));
+
+      // Bitta so'rov, sahifadagi oylik qatorlar sonidan qat'i nazar — N+1 yo'q.
+      const attendanceCalls = prisma.attendance.findMany.mock.calls.filter(
+        (c) => c[0]?.where?.studentId,
+      );
+      expect(attendanceCalls).toHaveLength(1);
     });
 
     it('projects when the prepaid lessons ahead will run out', async () => {

@@ -1,20 +1,26 @@
+import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { StatusCascadeService } from './status-cascade.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EntityHistoryService } from '../entity-history';
 import { EnrollmentBillingService } from '../../billing/enrollment-billing.service';
+import { MonthlyChargeService } from '../../billing/monthly-charge.service';
 
 describe('StatusCascadeService', () => {
   let service: StatusCascadeService;
   let prisma: any;
   let entityHistoryService: any;
   let enrollmentBillingService: any;
+  let monthlyChargeService: any;
 
   const mockEnrollmentWithStudent = [
     {
       id: 'enr-1',
       groupId: 'group-1',
-      group: { companyId: 1001 },
+      group: {
+        companyId: 1001,
+        course: { paymentModel: 'MONTHLY' },
+      },
       student: { firstName: 'Ali', lastName: 'Valiyev' },
     },
   ];
@@ -61,6 +67,11 @@ describe('StatusCascadeService', () => {
         .mockResolvedValue({ refunded: 0, lessons: 0 }),
     };
 
+    monthlyChargeService = {
+      reverseChargeForDeparture: jest.fn().mockResolvedValue(null),
+      restoreChargeForReturn: jest.fn().mockResolvedValue(null),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StatusCascadeService,
@@ -70,6 +81,7 @@ describe('StatusCascadeService', () => {
           provide: EnrollmentBillingService,
           useValue: enrollmentBillingService,
         },
+        { provide: MonthlyChargeService, useValue: monthlyChargeService },
       ],
     }).compile();
 
@@ -223,8 +235,8 @@ describe('StatusCascadeService', () => {
 
     it('COMPLETED: auto-graduates students with no remaining active enrollments', async () => {
       prisma.enrollment.findMany.mockResolvedValue([
-        { studentId: 100 },
-        { studentId: 101 },
+        { id: 'enr-100', studentId: 100, group: { companyId: 1 } },
+        { id: 'enr-101', studentId: 101, group: { companyId: 1 } },
       ]);
       prisma.enrollment.count.mockResolvedValue(0);
       prisma.student.findFirst.mockResolvedValue({
@@ -262,7 +274,9 @@ describe('StatusCascadeService', () => {
     });
 
     it('COMPLETED: does NOT graduate students who have other active enrollments', async () => {
-      prisma.enrollment.findMany.mockResolvedValue([{ studentId: 100 }]);
+      prisma.enrollment.findMany.mockResolvedValue([
+        { id: 'enr-100', studentId: 100, group: { companyId: 1 } },
+      ]);
       prisma.enrollment.count.mockResolvedValue(2);
 
       await service.cascade('Group', 'group-1', 'COMPLETED', 1);
@@ -442,6 +456,133 @@ describe('StatusCascadeService', () => {
       ).toHaveBeenCalled();
     });
 
+    it('EXPELLED: also reverses the MONTHLY-model departure charge (paymentModel-agnostic wiring)', async () => {
+      await service.cascade('Student', '100', 'EXPELLED', 42);
+
+      expect(
+        monthlyChargeService.reverseChargeForDeparture,
+      ).toHaveBeenCalledWith(
+        prisma, // tx from the mocked $transaction
+        expect.objectContaining({
+          enrollmentId: 'enr-1',
+          companyId: 1001, // mockEnrollmentWithStudent's group.companyId
+          performedById: 42,
+        }),
+      );
+    });
+
+    it('Group CANCELLED: also reverses the MONTHLY-model departure charge', async () => {
+      await service.cascade('Group', 'group-1', 'CANCELLED', 1);
+      expect(
+        monthlyChargeService.reverseChargeForDeparture,
+      ).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({ enrollmentId: 'enr-1' }),
+      );
+    });
+
+    it('no departure-reversal calls when no enrollments match', async () => {
+      prisma.enrollment.findMany.mockResolvedValue([]);
+      await service.cascade('Student', '100', 'EXPELLED', 1);
+      expect(
+        monthlyChargeService.reverseChargeForDeparture,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('bitta yozilishning muvaffaqiyatsizligi qolganlarini to`xtatmaydi', async () => {
+      // Round-3 finding: try/catch'siz sikl BIRINCHI xatoda butun cascade'ni
+      // to'xtatib qo'yardi — oldingi iteratsiyalar allaqachon commit qilingan
+      // (pul qaytarilgan), lekin `enrollment.updateMany` (DROPPED/COMPLETED
+      // flip) hech qachon yetib bormas edi.
+      const twoEnrollments = [
+        {
+          id: 'enr-1',
+          groupId: 'group-1',
+          group: { companyId: 1001 },
+          student: { firstName: 'Ali', lastName: 'Valiyev' },
+        },
+        {
+          id: 'enr-2',
+          groupId: 'group-1',
+          group: { companyId: 1001 },
+          student: { firstName: 'Vali', lastName: 'Aliyev' },
+        },
+      ];
+      prisma.enrollment.findMany.mockResolvedValue(twoEnrollments);
+      enrollmentBillingService.refundPrepaidToBalance
+        .mockRejectedValueOnce(new Error('DB vaqtincha ishlamadi'))
+        .mockResolvedValue({ refunded: 0, lessons: 0 });
+      const errorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
+
+      await service.cascade('Student', '100', 'EXPELLED', 1);
+
+      // Ikkinchi yozilish uchun ham urinib ko'rilgan — sikl birinchidan
+      // keyin to'xtamagan.
+      expect(
+        enrollmentBillingService.refundPrepaidToBalance,
+      ).toHaveBeenCalledTimes(2);
+      expect(
+        enrollmentBillingService.refundPrepaidToBalance,
+      ).toHaveBeenNthCalledWith(
+        1,
+        prisma,
+        expect.objectContaining({ enrollmentId: 'enr-1' }),
+      );
+      expect(
+        enrollmentBillingService.refundPrepaidToBalance,
+      ).toHaveBeenNthCalledWith(
+        2,
+        prisma,
+        expect.objectContaining({ enrollmentId: 'enr-2' }),
+      );
+      // Xatolik jurnalga yozildi — jim yutilmadi.
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('enr-1'),
+        expect.any(Error),
+      );
+      // ENG MUHIMI: bulk status-flip hali ham ishga tushdi — sikl to'liq
+      // aylanib chiqdi, birinchi xato uni to'xtatmadi.
+      expect(prisma.enrollment.updateMany).toHaveBeenCalled();
+
+      errorSpy.mockRestore();
+    });
+
+    it('butun partiya BITTA "bugun"ga qarab baholanadi (tun yarmi bo`linishi)', async () => {
+      // Round-3 finding: `today` har bir iteratsiyada QAYTA hisoblanmasligi
+      // kerak — bo'lmasa uzoq (yuzlab yozilishli) cascade tun yarmidan
+      // o'tib ketganda, kechroq iteratsiyalar `departureDate`ni noto'g'ri
+      // "backdated" deb rad etardi.
+      const twoEnrollments = [
+        {
+          id: 'enr-1',
+          groupId: 'group-1',
+          group: { companyId: 1001 },
+          student: { firstName: 'Ali', lastName: 'Valiyev' },
+        },
+        {
+          id: 'enr-2',
+          groupId: 'group-1',
+          group: { companyId: 1001 },
+          student: { firstName: 'Vali', lastName: 'Aliyev' },
+        },
+      ];
+      prisma.enrollment.findMany.mockResolvedValue(twoEnrollments);
+
+      await service.cascade('Student', '100', 'EXPELLED', 1);
+
+      expect(
+        monthlyChargeService.reverseChargeForDeparture,
+      ).toHaveBeenCalledTimes(2);
+      const calls = (
+        monthlyChargeService.reverseChargeForDeparture as jest.Mock
+      ).mock.calls;
+      const todayValues = calls.map(([, params]: any) => params.today);
+      expect(todayValues[0]).toBeDefined();
+      expect(todayValues[0]).toBe(todayValues[1]);
+    });
+
     it('Branch CLOSED: refunds unused prepaid', async () => {
       await service.cascade('Branch', '1', 'CLOSED', 1);
       expect(
@@ -476,6 +617,116 @@ describe('StatusCascadeService', () => {
       expect(
         enrollmentBillingService.refundPrepaidToBalance,
       ).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── Task 1B: recharge on unfreeze return ──────────
+  describe('FROZEN -> ACTIVE: restoreChargeForReturn wiring', () => {
+    beforeEach(() => {
+      prisma.enrollment.findMany.mockResolvedValue(mockEnrollmentWithStudent);
+    });
+
+    it('MONTHLY yozilish uchun restoreChargeForReturn chaqiriladi', async () => {
+      await service.cascade('Student', '100', 'ACTIVE', 42);
+
+      expect(monthlyChargeService.restoreChargeForReturn).toHaveBeenCalledWith(
+        prisma, // tx from the mocked $transaction
+        expect.objectContaining({
+          enrollmentId: 'enr-1',
+          companyId: 1001, // mockEnrollmentWithStudent's group.companyId
+          performedById: 42,
+        }),
+      );
+    });
+
+    it('LESSON_PACK yozilish uchun restoreChargeForReturn UMUMAN chaqirilmaydi', async () => {
+      prisma.enrollment.findMany.mockResolvedValue([
+        {
+          id: 'enr-2',
+          groupId: 'group-2',
+          group: {
+            companyId: 1001,
+            course: { paymentModel: 'LESSON_PACK' },
+          },
+          student: { firstName: 'Vali', lastName: 'Aliyev' },
+        },
+      ]);
+
+      await service.cascade('Student', '100', 'ACTIVE', 1);
+
+      expect(
+        monthlyChargeService.restoreChargeForReturn,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('boshqa (DROPPED/COMPLETED) kaskadlarda chaqirilmaydi', async () => {
+      await service.cascade('Student', '100', 'EXPELLED', 1);
+
+      expect(
+        monthlyChargeService.restoreChargeForReturn,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('bitta yozilishning muvaffaqiyatsizligi qolganlarini to`xtatmaydi', async () => {
+      const twoEnrollments = [
+        {
+          id: 'enr-1',
+          groupId: 'group-1',
+          group: { companyId: 1001, course: { paymentModel: 'MONTHLY' } },
+          student: { firstName: 'Ali', lastName: 'Valiyev' },
+        },
+        {
+          id: 'enr-2',
+          groupId: 'group-1',
+          group: { companyId: 1001, course: { paymentModel: 'MONTHLY' } },
+          student: { firstName: 'Vali', lastName: 'Aliyev' },
+        },
+      ];
+      prisma.enrollment.findMany.mockResolvedValue(twoEnrollments);
+      monthlyChargeService.restoreChargeForReturn
+        .mockRejectedValueOnce(new Error('DB vaqtincha ishlamadi'))
+        .mockResolvedValue(null);
+      const errorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
+
+      await service.cascade('Student', '100', 'ACTIVE', 1);
+
+      expect(monthlyChargeService.restoreChargeForReturn).toHaveBeenCalledTimes(
+        2,
+      );
+      expect(prisma.enrollment.updateMany).toHaveBeenCalled();
+
+      errorSpy.mockRestore();
+    });
+
+    it('butun partiya BITTA "bugun"ga qarab baholanadi (tun yarmi bo`linishi)', async () => {
+      const twoEnrollments = [
+        {
+          id: 'enr-1',
+          groupId: 'group-1',
+          group: { companyId: 1001, course: { paymentModel: 'MONTHLY' } },
+          student: { firstName: 'Ali', lastName: 'Valiyev' },
+        },
+        {
+          id: 'enr-2',
+          groupId: 'group-1',
+          group: { companyId: 1001, course: { paymentModel: 'MONTHLY' } },
+          student: { firstName: 'Vali', lastName: 'Aliyev' },
+        },
+      ];
+      prisma.enrollment.findMany.mockResolvedValue(twoEnrollments);
+
+      await service.cascade('Student', '100', 'ACTIVE', 1);
+
+      expect(monthlyChargeService.restoreChargeForReturn).toHaveBeenCalledTimes(
+        2,
+      );
+      const calls = (monthlyChargeService.restoreChargeForReturn as jest.Mock)
+        .mock.calls;
+      const todayValues = calls.map(([, params]: any) => params.today);
+      expect(todayValues[0]).toBeDefined();
+      expect(todayValues[0]).toBe(todayValues[1]);
     });
   });
 
