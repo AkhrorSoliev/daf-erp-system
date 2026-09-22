@@ -79,35 +79,59 @@ o'quvchi tomonidagi qoida, va u allaqachon ishlaydi.
 14 × value/12 chiqadi — oydan oshadi. Oylik kursda bo'luvchi
 `plannedLessons` bo'lishi kerak. Bir qatorlik o'zgarish + test.
 
-**Bayram rejada faqat SHU OY ichida, JADVALDAN TASHQARI kunga qoplansa
-qoladi.** Ustoz haqi oyda nechta davomat yozilganiga qarab yig'iladi,
-shuning uchun reja soni davomat soniga teng bo'lishi shart — aks holda
-ustoz oyning ulushidan ko'p yoki kam oladi (1-javobga zid). Bayram darsi
-o'z-o'zidan qayta o'tilmaydi: bayram e'lon qilinganda tizim faqat
-guruhning `endDate` ini uzaytiradi (`extendGroupEndDateForHoliday`), ya'ni
-qoplama dars kurs oxiriga, boshqa oyga tushadi. Demak
-`MonthlyChargeService.resolveMonthPlan` qoidasi:
+**Reja — DAVOMAT KALENDARINING KO'ZGUSI.** Ustoz haqi oyda nechta davomat
+yozilganiga qarab yig'iladi, shuning uchun reja soni oyda ROSTDAN
+o'tiladigan darslar soniga teng bo'lishi shart — aks holda ustoz oyning
+ulushidan ko'p yoki kam oladi (1-javobga zid). Bayram darsi o'z-o'zidan
+qayta o'tilmaydi: bayram e'lon qilinganda tizim faqat guruhning `endDate`
+ini uzaytiradi (`extendGroupEndDateForHoliday`), ya'ni qoplama dars kurs
+oxiriga, boshqa oyga tushadi; dars shu oy ichida qayta o'tilishi uchun
+admin `LessonReschedule` yozishi shart.
+
+Qoida BITTA: `MonthlyChargeService.resolveMonthPlan`
+`AttendanceReadService.applyLessonModifications` ni AYNAN takrorlaydi —
+u «qaysi kun dars kuni» degan savolning yagona javobi:
+
+- bayram kuni asos ro'yxatdan chiqadi (davomatda ham bayram dars kuni
+  emas), LEKIN o'sha kunga ko'chirib kelishni to'smaydi;
+- bekor qilingan dars chiqadi VA o'sha kunga ko'chirib kelishni to'sadi;
+- ko'chirilgan darsning ASL kuni chiqadi — yangi kun qayerda bo'lishidan
+  qat'i nazar;
+- ko'chirilgan darsning YANGI kuni shu oy ichida va bekor qilinmagan
+  bo'lsa qo'shiladi; kun allaqachon jadvalda bo'lsa TO'PLAM uni
+  takrorlamaydi, ya'ni oyga ikkinchi dars qo'shilmaydi.
+
+Shundan kelib chiqadigan holatlar (sentabr 2026, 13 dars kunlik guruh,
+450 000 so'mlik oy):
 
 | Holat | reja | dars narxi | oydagi davomat |
 | --- | --- | --- | --- |
-| qoplama yo'q | 12 | 450 000/12 | 12 |
-| qoplama bor, yangi kun jadvalda YO'Q | 13 | 450 000/13 | 13 |
-| qoplama bor, yangi kun jadvalda BOR | 12 | 450 000/12 | 12 |
+| qoplamasiz bayram | 12 | 450 000/12 | 12 |
+| bayram qoplandi, yangi kun jadvalda YO'Q | 13 | 450 000/13 | 13 |
+| bayram qoplandi, yangi kun jadvalda BOR | 12 | 450 000/12 | 12 |
+| bayram qoplamasi keyin BEKOR qilindi | 12 | 450 000/12 | 12 |
+| dars KEYINGI OYGA surildi | 12 | 450 000/12 | 12 |
+| dars jadvaldagi boshqa kunga surildi | 12 | 450 000/12 | 12 |
+| BOSHQA OYDAN dars ko'chirib kelindi | 14 | 450 000/14 | 14 |
 
-Uchinchi qatorning sababi: `AttendanceReadService.applyLessonModifications`
-dars kunlarini TO'PLAM qilib qo'shadi — asl kunni tashlaydi, yangi kunni
-qo'shadi. Yangi kun allaqachon jadvaldagi kun bo'lsa (shanba darsi boshqa
-shanbaga ko'chirilsa) to'plamda yangi kun paydo bo'lmaydi va oyda baribir
-12 ta dars kuni qoladi. Har uch qatorda reja soni davomat soniga teng.
+Har bir qatorda reja soni davomat soniga teng — `month-plan-attendance-
+parity.spec.ts` ikkala tomonni bitta fiksturadan qurib shuni tekshiradi.
 
-O'quvchi to'laydigan oy narxi uchala holatda ham o'zgarmaydi (10-javob) —
-bayram faqat bo'luvchiga tegadi. Bekor qilingan (ko'chirilmagan) dars har
-doim chiqadi, ko'chirish yozilgan bo'lsa ham. Qoplangan bayramda
-`coveredDates` ga asl kun emas, QOPLAMA kuni yoziladi: dars aynan o'sha
-kuni o'tiladi, shuning uchun bayram bilan qoplama orasida ketgan o'quvchi
-hali o'tilmagan darsning pulini qaytarib oladi.
+O'quvchi to'laydigan oy narxi hamma holatda o'zgarmaydi (10-javob) —
+ko'chirish faqat bo'luvchiga tegadi. `coveredDates` ga dars ROSTDAN
+o'tiladigan kun tushadi (asl kun emas), shuning uchun oy o'rtasida ketgan
+o'quvchi hali o'tilmagan darsning pulini qaytarib oladi.
 
-**MA'LUM CHEKLOV — qoplama hisobdan KEYIN yozilsa ko'rinmaydi.**
+**BU QOIDA AVVAL BAYRAMGA TORAYTIRILGAN EDI — xato edi (7- va
+1-topilma).** `resolveMonthPlan` ko'chirishlarni faqat `newDate` shu oy
+ichida bo'lsa so'rardi va asl kuni bayram bo'lmaganini tashlab ketardi.
+Natijada uchta oddiy ko'chirish rejani davomatdan ayirardi (keyingi oyga
+surish, jadvaldagi kunga surish, boshqa oydan ko'chirib kelish), bekor
+qilingan bayram qoplamasi esa bayramni rejada qoldirardi. 18 o'quvchilik
+guruhda 250 000 so'mlik stavkada bu bitta oyda 346 104 so'm edi.
+
+**MA'LUM CHEKLOV — ko'chirish hisobdan KEYIN yozilsa ko'rinmaydi.**
+(Faqat bayram qoplamasi emas, HAR QANDAY `LessonReschedule` uchun.)
 `resolveMonthPlan` faqat hisob yozilayotgan daqiqada bazada turgan
 `LessonReschedule` qatorlarini ko'radi. `MonthlyBillingCronService` hisobni
 oyning belgilangan kunida (odatda 1-sana) yozadi, `createChargeForEnrollment`
@@ -340,7 +364,7 @@ tuzatish, uchtasi yangi parametr, bittasi (cron) keyingi bosqichga.
 Bularsiz tizim CEO qoidasiga zid pul hisoblaydi:
 
 1. `FIXED_PER_STUDENT` bo'luvchisi → `plannedLessons` (1-javob)
-2. Bayram qoidasi: shu oyda, jadvaldan tashqari kunga qoplansa rejada qoladi, aks holda chiqadi — reja soni davomat soniga teng bo'lsin; prognoz ham shu shartni takrorlaydi (1, 10). Hisobdan keyin yozilgan qoplama ko'rinmaydi — 4-bo'limdagi «ma'lum cheklov»
+2. Reja qoidasi: `resolveMonthPlan` davomat kalendarini (`applyLessonModifications`) aynan takrorlaydi — bayram, bekor qilish va HAR QANDAY ko'chirish bir xil hisobga olinadi, reja soni davomat soniga teng bo'lsin (1, 10). Hisobdan keyin yozilgan ko'chirish ko'rinmaydi — 4-bo'limdagi «ma'lum cheklov»
 3. `payment.debtWriteOffEnabled=false` — kechirish yopiladi (9)
 4. ~~`payment.excusedMode`~~ — **kiritilmaydi.** 18-javob «ikkalasi ham»
    dedi, lekin `RETEACH` mexanizmi yo'q; faqat `CREDIT` bor bo'lgan enum
