@@ -1000,9 +1000,13 @@ every list renders; the roles are only access.
 - **This file (CLAUDE.md) must be written entirely in English.** All section headings, descriptions, rules, and comments must use English only.
 - Uzbek text is acceptable **only** when quoting exact UI strings, error messages, or placeholder text that appears in the application (e.g. `"Barcha holatlar"`, `"Saqlashda xatolik yuz berdi"`).
 - When adding new sections or editing existing ones, always write in English.
-- **This rule governs this file alone.** It is not a rule about the codebase:
-  ADRs under `docs/adr/` are written in Uzbek by design, and code comments use
-  whichever language explains the thing best.
+- **Since 2026-09-22, this extends beyond this file: PR titles/descriptions, git
+  commit messages, and NEW code comments are written in English.** Existing
+  Uzbek comments are left as they are — this is forward-only, not a rewrite
+  pass over the codebase. ADRs under `docs/adr/` stay in Uzbek by design; they
+  record business decisions the team discusses in Uzbek. Uzbek inside code is
+  still fine when it is quoting an exact UI string, error message, or other
+  user-facing text — that is the literal string, not an explanatory comment.
 
 ## Available Skills
 
