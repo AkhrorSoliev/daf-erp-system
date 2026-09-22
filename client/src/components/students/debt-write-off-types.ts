@@ -4,7 +4,13 @@
 
 // STUDENT_ATTENDED was removed when eligibility was relaxed — admin now
 // makes the call via the UI even when the student attended a few lessons.
-export type DebtWriteOffEligibilityReason = "NO_DEBT" | "NO_ABSENT_IN_CYCLE";
+// DISABLED — `payment.debtWriteOffEnabled` sozlamasi o'chiq bo'lsa server
+// shu sababni qaytaradi: bu "shart bajarilmadi" emas, "bu imkoniyat
+// umuman yoqilmagan" degani.
+export type DebtWriteOffEligibilityReason =
+  | "NO_DEBT"
+  | "NO_ABSENT_IN_CYCLE"
+  | "DISABLED";
 
 export interface DebtWriteOffEligibilityDetails {
   studentId: number;
