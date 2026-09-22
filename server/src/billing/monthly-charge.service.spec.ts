@@ -1652,8 +1652,10 @@ describe('MonthlyChargeService', () => {
       expect(charge?.coveredLessons).toBe(12);
       expect(charge?.perLessonCost).toBe(33_636); // 740 000 / 22
       expect(charge?.chargedAmount).toBe(403_636); // 740 000 × 12/22
-      // Standartning 13 iga bo'linsa 500 000 × 12/13 kabi ma'nosiz raqam
-      // chiqardi — CEO rad etgan variant (dizayn 21.09, §3 jadvali).
+      // Bo'luvchi eski kursning 13 i bo'lganda 740 000 × 12/13 = 683 077
+      // chiqardi: o'quvchi endi o'qimaydigan kursning dars soniga qarab
+      // to'lardi. CEO rad etgan variant — «oylik narx dars soniga bog'liq
+      // emas» (dizayn 21.09, §3 «Tasdiqlangan qarorlar»).
     });
 
     it("eski kurs (Standart): 14-oktabrdan keyingi 7 dars qaytadi — 13 darslik oyning O'Z narxida", async () => {
