@@ -169,9 +169,17 @@ export class ReportsExpectationService {
           select: { groupId: true, date: true },
         }),
         // Bayram darsi SHU OY ichida boshqa kunga ko'chirilgan bo'lsa — dars
-        // yo'qolmagan. `MonthlyChargeService.resolveExcludedDates` aynan shu
-        // shartni qo'yadi (`newDate` ham shu oy ichida), demak muzlatilgan
-        // `plannedLessons` o'sha kunni sanaydi; prognoz ham sanashi kerak.
+        // yo'qolmagan, demak muzlatilgan `plannedLessons` bitta kunni
+        // sanaydi (hisob QOPLAMA kunini, prognoz esa ASL kunni — sanoq bir
+        // xil) va prognoz ham sanashi kerak.
+        //
+        // CHEKLOV: prognoz BAYRAM bo'lmagan ko'chirishni ko'rmaydi.
+        // `MonthlyChargeService.resolveMonthPlan` 2026-09 dan boshlab har
+        // qanday ko'chirishni hisobga oladi (7-topilma), shuning uchun
+        // oddiy ko'chirish bo'lgan oyda prognoz rejadan bitta dars kuniga
+        // farq qilishi mumkin. To'g'irlash uchun bu so'rov ham `OR`
+        // oynasiga o'tishi va yurish asl kunni tashlab, yangi kunni
+        // qo'shishi kerak — alohida vazifa, pul qatorlariga tegmaydi.
         this.prisma.lessonReschedule.findMany({
           where: {
             deletedAt: null,

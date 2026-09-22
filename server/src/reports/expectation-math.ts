@@ -30,16 +30,17 @@ export interface ExpectationGroup {
    * Bayram kunlari, lekin dars SHU OY ichida boshqa kunga ko'chirilgan —
    * ya'ni dars yo'qolmagan.
    *
-   * `MonthlyChargeService.resolveExcludedDates` aynan shu shart bo'yicha
-   * bayram kunini rejadan CHIQARMAYDI, demak muzlatilgan `plannedLessons`
-   * uni sanaydi va `perLessonCost` o'sha songa bo'linadi. Prognoz ham
-   * sanashi SHART: aks holda oy narxi 13 ga bo'linib, prognozda 12 ta dars
-   * ko'rinardi va bitta oy uchun hisoblangan pul bilan kutilayotgan pul
-   * bir-biriga to'g'ri kelmasdi.
+   * `MonthlyChargeService.resolveMonthPlan` bunday bayramni yo'qotmaydi:
+   * bayram kuni rejadan chiqadi, QOPLAMA kuni esa qo'shiladi — sanoq
+   * o'zgarmaydi va muzlatilgan `plannedLessons` o'sha darsni sanaydi.
+   * Prognoz ham sanashi SHART: aks holda oy narxi 13 ga bo'linib,
+   * prognozda 12 ta dars ko'rinardi va bitta oy uchun hisoblangan pul
+   * bilan kutilayotgan pul bir-biriga to'g'ri kelmasdi.
    *
-   * Ko'chirilgan darsning YANGI kuni ataylab sanalmaydi — hisob ham asl
-   * kunni o'rnida qoldiradi, shuning uchun ikkala tomon bitta kunni
-   * sanaydi va jami bir xil chiqadi.
+   * Ko'chirilgan darsning YANGI kuni bu yerda ataylab sanalmaydi: yurish
+   * faqat JADVALDAGI kunlar ustidan yuradi, qoplama kuni esa jadvalda
+   * yo'q. Shuning uchun ikkala tomon bitta kunni sanaydi (hisob qoplama
+   * kunini, prognoz asl kunni) va jami bir xil chiqadi.
    *
    * Qoplama kuni guruhning O'Z jadvalidagi kun bo'lsa bu to'plamga
    * TUSHMAYDI: oyda dars kunlari soni o'zgarmaydi, hisob ham bayramni
@@ -141,8 +142,8 @@ export function splitMonthLessons(
       g.endDateStr && g.endDateStr < monthEndStr ? g.endDateStr : monthEndStr;
 
     for (let d = from; d <= to; d = addDaysToDateStr(d, 1)) {
-      // Bayram — dars yo'q, MAGAR u shu oy ichida qayta o'tilmasa. Shart
-      // `resolveExcludedDates` dagi bilan bir xil bo'lishi kerak: reja va
+      // Bayram — dars yo'q, MAGAR u shu oy ichida qayta o'tilmasa. Sanoq
+      // `resolveMonthPlan` niki bilan bir xil bo'lishi kerak: reja va
       // prognoz bitta oyga ikki xil dars sonini ko'rsa, muzlatilgan narxga
       // ko'paytirilgan jami hisoblangan puldan farq qiladi.
       if (holidayDates.has(d) && !g.holidayMakeupDates.has(d)) continue;
