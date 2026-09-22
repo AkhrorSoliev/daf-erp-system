@@ -7,6 +7,7 @@ import { EntityHistoryService } from '../common/entity-history';
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
 import { DebtWriteOffService } from '../billing/debt-write-off.service';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
+import { SettingsService } from '../settings/settings.service';
 
 /**
  * Enrollment moves money, and three of its four routes are addressed by an
@@ -110,6 +111,13 @@ describe('StudentEnrollmentService — branch confinement', () => {
           },
         },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          // Bu yerda filial qorovuli sinaladi, qarz kechirish sozlamasi
+          // emas — shuning uchun kechirish ataylab YOQIQ: rad etish
+          // sababi faqat filial chegarasi bo'lib qolsin.
+          provide: SettingsService,
+          useValue: { get: jest.fn().mockResolvedValue(true) },
+        },
       ],
     }).compile();
 
