@@ -34,11 +34,25 @@ describe("payment.debtWriteOffEnabled sozlamasi UI'da", () => {
     expect(SOURCE).toContain("saveField({ debtWriteOffEnabled: checked })");
   });
 
-  it("ruxsatsiz yoki saqlash paytida tugma qulflanadi", () => {
+  it("tugma FAQAT CEO uchun ochiq — filial direktoriga emas", () => {
+    // `canEdit` filial direktorini ham o'z ichiga oladi, lekin sozlama
+    // `companyLevelOnly` va `SettingsService.set` uning har bir yozuvini
+    // rad etadi. `canEdit` ga qaytarilsa direktor bosadigan, lekin hech
+    // qachon saqlanmaydigan tugmaga ega bo'ladi.
     const row = SOURCE.slice(
       SOURCE.indexOf('checked={settings["payment.debtWriteOffEnabled"]}'),
     ).slice(0, 300);
-    expect(row).toContain("disabled={!canEdit || saving}");
+    expect(row).toContain("disabled={!isCeo || saving}");
+    expect(row).not.toContain("disabled={!canEdit || saving}");
+  });
+
+  it("direktorga NEGA o'zgartira olmasligi aytiladi", () => {
+    // Sababsiz qulflangan tugma buzuq tugmadan farq qilmaydi.
+    const block = SOURCE.slice(
+      SOURCE.indexOf('checked={settings["payment.debtWriteOffEnabled"]}'),
+    ).slice(0, 900);
+    expect(block).toContain("{!isCeo && canEdit && (");
+    expect(block).toContain("faqat CEO o&apos;zgartira oladi");
   });
 
   it("CEO ko'radigan nom va tushuntirish joyida", () => {

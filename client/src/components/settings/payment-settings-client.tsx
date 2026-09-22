@@ -118,7 +118,9 @@ export function PaymentSettingsClient() {
     if (!settings) return;
     const v = Number(dayInput);
     if (!Number.isInteger(v) || v < 1 || v > 28) {
-      toast.error("Hisob-kitob kuni 1 dan 28 gacha bo'lgan butun son bo'lishi kerak");
+      toast.error(
+        "Hisob-kitob kuni 1 dan 28 gacha bo'lgan butun son bo'lishi kerak",
+      );
       setDayInput(String(settings["payment.chargeDayOfMonth"]));
       return;
     }
@@ -185,9 +187,8 @@ export function PaymentSettingsClient() {
             Yangi kurslar uchun standart to&apos;lov modeli
           </Label>
           <p className="text-xs text-muted-foreground">
-            Yangi kurs qo&apos;shilganda, agar kurs uchun aniq model
-            tanlanmasa, shu model ishlatiladi. Mavjud kurslarga ta&apos;sir
-            qilmaydi.
+            Yangi kurs qo&apos;shilganda, agar kurs uchun aniq model tanlanmasa,
+            shu model ishlatiladi. Mavjud kurslarga ta&apos;sir qilmaydi.
           </p>
           <Select
             value={settings["payment.defaultModel"]}
@@ -244,8 +245,8 @@ export function PaymentSettingsClient() {
           </Label>
           <p className="text-xs text-muted-foreground">
             Yuqoridagi sozlama yoqilgan bo&apos;lsa ishlaydi. Bo&apos;sh
-            qoldirilsa — cheklov yo&apos;q, istalgan sondagi sababli dars
-            kredit sifatida keyingi oyga o&apos;tishi mumkin.
+            qoldirilsa — cheklov yo&apos;q, istalgan sondagi sababli dars kredit
+            sifatida keyingi oyga o&apos;tishi mumkin.
           </p>
           <Input
             id="excusedCreditMonthlyCap"
@@ -255,7 +256,9 @@ export function PaymentSettingsClient() {
             placeholder="Cheklovsiz"
             className="w-full sm:max-w-xs"
             value={capInput}
-            disabled={!canEdit || saving || !settings["payment.excusedCreditEnabled"]}
+            disabled={
+              !canEdit || saving || !settings["payment.excusedCreditEnabled"]
+            }
             onChange={(e) => setCapInput(e.target.value)}
             onBlur={handleCapBlur}
           />
@@ -270,9 +273,9 @@ export function PaymentSettingsClient() {
             Oyning qaysi kunida oylik hisob-kitob yaratiladi
           </Label>
           <p className="text-xs text-muted-foreground">
-            &laquo;Oylik&raquo; modelidagi kurslar uchun har oy shu kunda
-            yangi to&apos;lov talabi (charge) hosil bo&apos;ladi. 1 dan 28
-            gacha — fevral oyi uchun cheklov.
+            &laquo;Oylik&raquo; modelidagi kurslar uchun har oy shu kunda yangi
+            to&apos;lov talabi (charge) hosil bo&apos;ladi. 1 dan 28 gacha —
+            fevral oyi uchun cheklov.
           </p>
           <Input
             id="chargeDayOfMonth"
@@ -287,9 +290,9 @@ export function PaymentSettingsClient() {
           />
           {!canEditChargeDay && canEdit && (
             <p className="text-xs text-muted-foreground">
-              Bu qiymat filial bo&apos;yicha emas — butun kompaniya uchun
-              bitta (oylik hisob-kitob croni shunday ishlaydi), shuning
-              uchun faqat CEO o&apos;zgartira oladi.
+              Bu qiymat filial bo&apos;yicha emas — butun kompaniya uchun bitta
+              (oylik hisob-kitob croni shunday ishlaydi), shuning uchun faqat
+              CEO o&apos;zgartira oladi.
             </p>
           )}
           {/* chargeDayOfMonth companyLevelOnly — filial override HECH
@@ -303,30 +306,41 @@ export function PaymentSettingsClient() {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between rounded-lg border px-4 py-3">
             <div className="pr-4">
-              <p className="text-sm font-medium">
-                Qarz kechirishga ruxsat
-              </p>
+              <p className="text-sm font-medium">Qarz kechirishga ruxsat</p>
               <p className="text-xs text-muted-foreground">
-                O&apos;chirilgan bo&apos;lsa (standart holat) — o&apos;quvchining
-                qarzi hech qachon kechirilmaydi: guruhdan chiqarish oynasidagi
-                va profildagi hisobdan chiqarish tugmasi ishlamaydi, server ham
-                so&apos;rovni rad etadi, qarz butun tarixi bilan joyida qoladi.
-                Yoqilgan bo&apos;lsa — administrator sabab yozib va summani
-                qaytadan terib qarzni kechira oladi.
+                O&apos;chirilgan bo&apos;lsa (standart holat) —
+                o&apos;quvchining qarzi hech qachon kechirilmaydi: guruhdan
+                chiqarish oynasidagi va profildagi hisobdan chiqarish tugmasi
+                ishlamaydi, server ham so&apos;rovni rad etadi, qarz butun
+                tarixi bilan joyida qoladi. Yoqilgan bo&apos;lsa — administrator
+                sabab yozib va summani qaytadan terib qarzni kechira oladi.
               </p>
             </div>
             <Switch
               checked={settings["payment.debtWriteOffEnabled"]}
-              disabled={!canEdit || saving}
+              disabled={!isCeo || saving}
               onCheckedChange={(checked) =>
                 saveField({ debtWriteOffEnabled: checked })
               }
             />
           </div>
+          {!isCeo && canEdit && (
+            <p className="text-xs text-muted-foreground">
+              Bu qiymat filial bo&apos;yicha emas — butun kompaniya uchun bitta,
+              shuning uchun faqat CEO o&apos;zgartira oladi.
+            </p>
+          )}
           {/* debtWriteOffEnabled ham companyLevelOnly — CEO buni butun
               kompaniya uchun hal qildi va backend filial bo'yicha yozishni
               rad etadi, shuning uchun filial override eslatmasi bu yerda
-              hech qachon ma'noga ega bo'lmaydi. */}
+              hech qachon ma'noga ega bo'lmaydi.
+
+              Tugma ham `isCeo` bilan qulflanadi (`canEdit` emas): `canEdit`
+              filial direktorini ham o'z ichiga oladi, lekin uning har bir
+              yozuvini `SettingsService.set` rad etadi — ya'ni u bosadigan,
+              lekin hech qachon saqlanmaydigan tugma bo'lardi va xato
+              xabarida unga sozlama kalitining o'zi ko'rinardi. Yuqoridagi
+              `chargeDayOfMonth` bloki aynan shu naqshni ishlatadi. */}
         </div>
       </div>
 
