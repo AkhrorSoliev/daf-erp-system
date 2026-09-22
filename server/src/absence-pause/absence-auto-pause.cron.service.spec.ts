@@ -36,6 +36,7 @@ describe('AbsenceAutoPauseCronService.runForCompany', () => {
         overrides.pauseForAbsence ?? jest.fn().mockResolvedValue(undefined),
     };
     const notify = {
+      nudgeStudent: jest.fn().mockResolvedValue(true),
       warnStudent: jest.fn().mockResolvedValue(true),
       announcePause: jest.fn().mockResolvedValue(undefined),
       alertCeos: jest.fn().mockResolvedValue(undefined),
@@ -111,13 +112,13 @@ describe('AbsenceAutoPauseCronService.runForCompany', () => {
     expect(statusService.pauseForAbsence).not.toHaveBeenCalled();
   });
 
-  it("sanoq BITTA so'rovda, ogohlantirish chegarasidan boshlab olinadi", async () => {
+  it("sanoq BITTA so'rovda, birinchi qoldirishdan boshlab olinadi", async () => {
     const { service, streakService } = makeService(on, []);
     await service.runForCompany(companyId);
     expect(streakService.computeStreaks).toHaveBeenCalledTimes(1);
     expect(streakService.computeStreaks).toHaveBeenCalledWith({
       companyId,
-      threshold: 2,
+      threshold: 1,
     });
   });
 
@@ -132,6 +133,20 @@ describe('AbsenceAutoPauseCronService.runForCompany', () => {
     expect(statusService.pauseForAbsence).toHaveBeenCalledTimes(2);
     expect(notify.announcePause).toHaveBeenCalledTimes(2);
     expect(notify.warnStudent).toHaveBeenCalledTimes(1);
+    expect(notify.nudgeStudent).not.toHaveBeenCalled();
+  });
+
+  it('birinchi qoldirishda 1-bosqich (nudge) yuboriladi, ogohlantirish emas', async () => {
+    const { service, notify, prisma } = makeService(on, [streak(10001, 1)]);
+    const r = await service.runForCompany(companyId);
+    expect(r.warned).toBe(1);
+    expect(notify.nudgeStudent).toHaveBeenCalledWith(
+      expect.objectContaining({ streak: 1 }),
+    );
+    expect(notify.warnStudent).not.toHaveBeenCalled();
+    expect(prisma.absenceWarningLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ enrollmentId: 'e-10001', streak: 1 }),
+    });
   });
 
   it('chegaradan oshganda HECH KIM pauza qilinmaydi, CEO xabar oladi', async () => {
