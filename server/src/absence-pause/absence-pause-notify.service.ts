@@ -6,8 +6,6 @@ import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { PushService } from '../notifications/push.service';
 import { TelegramService } from '../telegram/telegram.service';
 
-const STUDENT_PORTAL_URL = 'https://student.dafzentrum.uz';
-
 /** Xabar yuborish uchun kerak bo'lgan hamma narsa, bitta joyda. */
 export interface PauseTarget {
   enrollmentId: string;
@@ -25,12 +23,24 @@ export interface PauseTarget {
     id: string;
     name: string;
     branchId: number;
+    /** Xom holatda, `Branch.phone` dan — o'quvchiga qaysi raqamga
+     * qo'ng'iroq qilish kerakligini ko'rsatish uchun. Umumiy link o'rniga
+     * shu: o'quvchi o'z filialiga qo'ng'iroq qilishi kerak, boshqasiga
+     * emas. */
+    branchPhone: string | null;
     teachers: { teacherId: number }[];
   };
 }
 
 /**
- * Avtomatik pauza xabarlari.
+ * Avtomatik pauza xabarlari — uch bosqich.
+ *
+ * NEGA UCH BOSQICH: bitta qattiq ogohlantirish o'rniga ohang asta kuchayadi
+ * — birinchi qoldirishda shunchaki so'rash, ketma-ket ogohlantirish
+ * chegarasida tashvish bildirish, pauza chegarasida esa holatni ma'lum
+ * qilish. Uchalasi ham bir xil manba — `AbsenceStreakService` — dan
+ * o'qiydi, shuning uchun qaysi bosqichda ekanligi hech qachon ro'yxat bilan
+ * zid kelmaydi.
  *
  * YUBORISH XATOSI HECH QACHON PAUZANI YIQITMAYDI. Pul oqimini to'xtatish
  * xabardan muhimroq: Telegram vaqtincha ishlamagani uchun o'quvchining
@@ -50,7 +60,23 @@ export class AbsencePauseNotifyService {
   ) {}
 
   /**
-   * Ogohlantirish — o'quvchining o'ziga va filial adminlariga.
+   * 1-bosqich — birinchi qoldirish(lar)da, ogohlantirish chegarasiga
+   * yetmagan paytda. Faqat o'quvchiga: bitta dars qoldirish uchun admin va
+   * ustozni xabardor qilish shovqin bo'lardi, ular 2 va 3-bosqichda
+   * baribir xabar oladi.
+   */
+  async nudgeStudent(target: PauseTarget): Promise<boolean> {
+    const text =
+      `👋 <b>Bugun darsda ko'rinmadingiz</b>\n\n` +
+      `${target.group.name} guruhidagi darsingizga kelmadingiz. Hammasi joyidami?\n\n` +
+      `Kelasi darsda kutamiz!` +
+      phoneLine(target.group.branchPhone);
+
+    return this.sendToStudent(target.student.telegramChatId, text);
+  }
+
+  /**
+   * 2-bosqich — ogohlantirish. O'quvchining o'ziga va filial adminlariga.
    * Qaytaradi: Telegram yetib bordimi (`AbsenceWarningLog.sentToStudent`).
    */
   async warnStudent(
@@ -58,10 +84,11 @@ export class AbsencePauseNotifyService {
     remainingLessons: number,
   ): Promise<boolean> {
     const text =
-      `⚠️ <b>Darslarni qoldiryapsiz</b>\n\n` +
+      `😕 <b>Ketma-ket ${target.streak} ta darsni qoldirdingiz</b>\n\n` +
       `${target.group.name} guruhida ketma-ket <b>${target.streak} ta</b> darsga kelmadingiz.\n\n` +
-      `Yana <b>${remainingLessons} ta</b> dars qoldirsangiz, guruhdagi o'rningiz vaqtincha to'xtatiladi.\n\n` +
-      `Agar sabab bo'lsa, iltimos markazga xabar bering.\n🔗 ${STUDENT_PORTAL_URL}`;
+      `Agar biror sabab bo'lsa, bizga ayting — birga yechim topamiz. ` +
+      `Yana <b>${remainingLessons} ta</b> dars qoldirilsa, joyingiz vaqtincha to'xtatiladi.` +
+      phoneLine(target.group.branchPhone);
 
     const sent = await this.sendToStudent(target.student.telegramChatId, text);
 
@@ -75,13 +102,14 @@ export class AbsencePauseNotifyService {
     return sent;
   }
 
-  /** Pauza bo'lgandan keyin — o'quvchiga, filial adminlariga va ustozga. */
+  /** 3-bosqich — pauza bo'lgandan keyin. O'quvchiga, filial adminlariga va ustozga. */
   async announcePause(target: PauseTarget): Promise<void> {
     const text =
-      `⏸ <b>Guruhdagi o'rningiz vaqtincha to'xtatildi</b>\n\n` +
-      `${target.group.name} guruhida ketma-ket <b>${target.streak} ta</b> darsga kelmadingiz.\n\n` +
-      `Darslaringiz uchun endi hisob yozilmaydi. Qaytishni xohlasangiz, ` +
-      `markazga murojaat qiling — o'rningiz tiklanadi.`;
+      `⏸️ <b>Vaqtincha to'xtatib turdik</b>\n\n` +
+      `${target.group.name} guruhida ketma-ket <b>${target.streak} ta</b> darsga kelmadingiz, ` +
+      `shuning uchun joyingizni vaqtincha bo'shatdik.\n\n` +
+      `Istalgan payt qaytishingiz mumkin — bizga qo'ng'iroq qiling.` +
+      phoneLine(target.group.branchPhone);
 
     await this.sendToStudent(target.student.telegramChatId, text);
 
@@ -242,4 +270,24 @@ export class AbsencePauseNotifyService {
       }
     }
   }
+}
+
+/**
+ * `905351099` → `+998 90 535 10 99`. O'zbekiston raqami 9 xonali saqlanadi
+ * (`Branch.phone`), shuning uchun formatlash shu uzunlikka mo'ljallangan;
+ * boshqa uzunlik kelsa (noto'g'ri kiritilgan bo'lishi mumkin) xom holida
+ * ko'rsatiladi — o'quvchiga umuman raqamsiz xabar yuborishdan ko'ra
+ * to'g'irroq.
+ */
+function formatBranchPhone(phone: string | null): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length !== 9) return `+998 ${digits}`;
+  return `+998 ${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 7)} ${digits.slice(7, 9)}`;
+}
+
+/** Filial raqami bo'lmasa xabar shunchaki qisqaroq bo'ladi — bo'sh qator qolmaydi. */
+function phoneLine(phone: string | null): string {
+  const formatted = formatBranchPhone(phone);
+  return formatted ? `\n\n📞 ${formatted}` : '';
 }
