@@ -6,6 +6,8 @@ import {
   consecutiveAbsentCount,
 } from './absence-streak.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AUTO_PAUSE_REASON_PREFIX } from '../absence-pause/absence-pause.constants';
+import { AbsencePauseSettingService } from '../absence-pause/absence-pause-setting.service';
 import {
   tashkentDateStr,
   utcMidnightFromDateStr,
@@ -87,6 +89,19 @@ describe('OutreachService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn().mockResolvedValue(0),
       },
+      absenceWarningLog: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+
+    // Sukut sozlama — hozirgi prod qiymatlari (ogohlantirish 2, pauza 3).
+    // Testlar chegaraning qayerdan kelishini emas, ro'yxat shaklini
+    // tekshiradi; chegara o'zi alohida testda.
+    const pauseSettings = {
+      get: jest.fn().mockResolvedValue({
+        enabled: true,
+        warnThreshold: 2,
+        pauseThreshold: 3,
+        dailyCap: 10,
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -94,6 +109,7 @@ describe('OutreachService', () => {
         OutreachService,
         AbsenceStreakService,
         { provide: PrismaService, useValue: prisma },
+        { provide: AbsencePauseSettingService, useValue: pauseSettings },
       ],
     }).compile();
 
@@ -388,3 +404,171 @@ function enrollmentRow(id: string, studentId: number, groupId: string) {
     },
   };
 }
+
+/**
+ * «Pauzadagilar» tabi qo'lda muzlatilganlar bilan aralashmasligi kerak —
+ * prodda 209 ta muzlatilgan o'quvchi bor va ularning aksariyati boshqa
+ * sabab bilan muzlatilgan.
+ */
+describe('OutreachService.getAutoPaused', () => {
+  const companyId = 1001;
+
+  function makeService(students: Record<string, unknown>[]) {
+    const prisma = {
+      student: { findMany: jest.fn().mockResolvedValue(students) },
+      callLog: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const streaks = { computeStreaks: jest.fn().mockResolvedValue([]) };
+    const settings = {
+      get: jest.fn().mockResolvedValue({
+        enabled: true,
+        warnThreshold: 2,
+        pauseThreshold: 3,
+        dailyCap: 10,
+      }),
+    };
+    return {
+      service: new OutreachService(
+        prisma as never,
+        streaks as never,
+        settings as never,
+      ),
+      prisma,
+      settings,
+    };
+  }
+
+  const ctx = {
+    userId: 1,
+    companyId,
+    roles: ['CEO'],
+    branchScope: null as number[] | null,
+  };
+
+  it("faqat AVTOMATIK muzlatilganlarni so'raydi", async () => {
+    const { service, prisma } = makeService([]);
+    await service.getAutoPaused({ ...ctx });
+    expect(prisma.student.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: 'FROZEN',
+          statusChangeReason: { startsWith: AUTO_PAUSE_REASON_PREFIX },
+        }),
+      }),
+    );
+  });
+
+  it("bo'sh filial qamrovida bazaga umuman murojaat qilmaydi", async () => {
+    const { service, prisma } = makeService([]);
+    const r = await service.getAutoPaused({ ...ctx, branchScope: [] });
+    expect(r).toEqual({ total: 0, items: [] });
+    expect(prisma.student.findMany).not.toHaveBeenCalled();
+  });
+
+  it("filial tanlanganda o'quvchilarni filial bo'yicha toraytiradi", async () => {
+    const { service, prisma } = makeService([]);
+    await service.getAutoPaused({ ...ctx, branchScope: [2] });
+    expect(prisma.student.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          branches: { some: { branchId: { in: [2] } } },
+        }),
+      }),
+    );
+  });
+
+  it('qatorni sabab, sana, guruh va balans bilan qaytaradi', async () => {
+    const { service } = makeService([
+      {
+        id: 10001,
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+        phone: '901234567',
+        parentPhone: null,
+        photo: null,
+        balance: -150000,
+        statusChangedAt: new Date('2026-09-19T02:30:00.000Z'),
+        statusChangeReason: `${AUTO_PAUSE_REASON_PREFIX} 3 ta ketma-ket dars qoldirildi (oxirgisi 12.09.2026)`,
+        enrollments: [
+          {
+            id: 'e1',
+            group: {
+              id: 'g1',
+              name: '#001',
+              course: { id: 'c1', name: 'A1' },
+              branch: { id: 1, name: "Farg'ona" },
+            },
+          },
+        ],
+      },
+    ]);
+    const r = await service.getAutoPaused({ ...ctx });
+    expect(r.total).toBe(1);
+    expect(r.items[0]).toEqual(
+      expect.objectContaining({
+        studentId: 10001,
+        pausedAt: '2026-09-19T02:30:00.000Z',
+        calledToday: false,
+        group: expect.objectContaining({ name: '#001' }),
+      }),
+    );
+    expect(r.items[0].student.balance).toBe(-150000);
+  });
+
+  it("guruhsiz qolgan yozuvda group null bo'ladi, yiqilmaydi", async () => {
+    const { service } = makeService([
+      {
+        id: 10002,
+        firstName: 'Vali',
+        lastName: 'Aliyev',
+        phone: null,
+        parentPhone: null,
+        photo: null,
+        balance: 0,
+        statusChangedAt: null,
+        statusChangeReason: `${AUTO_PAUSE_REASON_PREFIX} 3 ta`,
+        enrollments: [],
+      },
+    ]);
+    const r = await service.getAutoPaused({ ...ctx });
+    expect(r.items[0].group).toBeNull();
+    expect(r.items[0].pausedAt).toBeNull();
+  });
+});
+
+describe('OutreachService — chegara sozlamadan keladi', () => {
+  it("qat'iy 3 emas, sozlamadagi warnThreshold ishlatiladi", async () => {
+    const prisma = {
+      enrollment: { findMany: jest.fn().mockResolvedValue([]) },
+      callLog: { findMany: jest.fn().mockResolvedValue([]) },
+      absenceWarningLog: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const streaks = { computeStreaks: jest.fn().mockResolvedValue([]) };
+    const settings = {
+      get: jest.fn().mockResolvedValue({
+        enabled: true,
+        warnThreshold: 2,
+        pauseThreshold: 4,
+        dailyCap: 10,
+      }),
+    };
+    const service = new OutreachService(
+      prisma as never,
+      streaks as never,
+      settings as never,
+    );
+
+    const r = await service.getRemovalQueue({
+      userId: 1,
+      companyId: 1001,
+      roles: ['CEO'],
+      branchScope: null,
+    });
+
+    expect(streaks.computeStreaks).toHaveBeenCalledWith(
+      expect.objectContaining({ threshold: 2 }),
+    );
+    // Klient «pauzagacha N dars» ni shundan hisoblaydi.
+    expect(r.pauseThreshold).toBe(4);
+  });
+});

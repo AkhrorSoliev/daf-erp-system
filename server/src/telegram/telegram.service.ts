@@ -25,6 +25,7 @@ import {
   GRANTABLE_ROLE_IDS,
 } from './constants';
 import { createTeacherRegistrationScene } from './scenes/teacher-registration.scene';
+import { StudentLeadOriginService } from '../common/student-origin';
 import { createStudentRegistrationScene } from './scenes/student-registration.scene';
 import { createEmployeeRegistrationScene } from './scenes/employee-registration.scene';
 import { createMockExamRegistrationScene } from './scenes/mock-exam-registration.scene';
@@ -98,6 +99,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     private entityHistoryService: EntityHistoryService,
     private paymentLinkService: PaymentLinkService,
     private gateStats: TelegramChannelGateStatsService,
+    private leadOrigin: StudentLeadOriginService,
   ) {}
 
   async onModuleInit() {
@@ -221,6 +223,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.uploadService,
       this.bot,
       this.entityHistoryService,
+      this.leadOrigin,
     );
 
     const employeeScene = createEmployeeRegistrationScene(

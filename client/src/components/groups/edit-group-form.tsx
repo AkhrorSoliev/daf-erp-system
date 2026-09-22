@@ -25,6 +25,7 @@ import { GroupCourseSelect } from "./group-course-select";
 import {
   calcEndTime,
   groupToForm,
+  toApiDateStr,
   type CourseOption,
 } from "./edit-group-form-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -222,7 +223,7 @@ export function EditGroupForm({
       if (values.lessonStartTime) payload.lessonStartTime = values.lessonStartTime;
       if (values.lessonEndTime) payload.lessonEndTime = values.lessonEndTime;
       payload.lessonMinutes = values.lessonMinutes ?? null;
-      if (values.startDate) payload.startDate = values.startDate.toISOString();
+      if (values.startDate) payload.startDate = toApiDateStr(values.startDate);
       if (values.comment) payload.comment = values.comment;
 
       if (isAdd) {

@@ -71,5 +71,16 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0008](0008-royxatdan-otish-aktori-oshkora.md) | Chaqiruvchisi yo'q yozuv o'zini oshkora e'lon qiladi | Qabul qilindi | 2026-08-19 |
 | [0009](0009-deutsch-tutor-olib-tashlandi.md) | Deutsch Tutor noldan qayta quriladi, eski qatlam olib tashlandi | Qabul qilindi | 2026-08-19 |
 | [0012](0012-bosh-sahifa-qayta-hisoblamaydi.md) | Bosh sahifa paneli raqamlarni qayta hisoblamaydi | Qabul qilindi | 2026-09-02 |
+| [0013](0013-majburiy-royxat-boshqaruvsiz-qolmaydi.md) | Majburiy tanlov ro'yxati boshqaruv sahifasisiz qolmaydi | Qabul qilindi | 2026-09-03 |
+| [0015](0015-faol-oquvchi-tarifi-manifest.md) | «Faol o'quvchi» sanog'i manifest bilan majburlanadi | Qabul qilindi | 2026-09-10 |
+| [0016](0016-kun-chegarasi-toshkent-boyicha.md) | Kun chegarasi Toshkent bo'yicha, ustun tipiga qarab | Qabul qilindi | 2026-09-10 |
+| [0017](0017-har-bir-oquvchi-lid-sifatida-tugiladi.md) | Har bir o'quvchi lid sifatida tug'iladi | Qabul qilindi | 2026-09-10 |
+| [0018](0018-oquvchi-lidsiz-tugilmaydi-qorovul-bilan.md) | O'quvchi lidsiz tug'ilmaydi — kafolat qorovul bilan | Qabul qilindi | 2026-09-13 |
+| [0019](0019-mashq-natijasi-umumiy-shartnoma.md) | Mashq natijasi umumiy shartnomaga yoziladi, ko'nikma o'qishda hisoblanadi | Qabul qilindi | 2026-09-13 |
+| [0020](0020-ilova-faolligi-klientda-olchanadi.md) | Ilova faolligi klientda o'lchanadi, server jami qiymatni qirqadi | Qabul qilindi | 2026-09-13 |
+| [0021](0021-bosma-pul-raqami-va-bolinishi-bitta-manbadan.md) | Bosma pul raqami va uning bo'linishi bitta manbadan olinadi | Qabul qilindi | 2026-09-19 |
+| [0022](0022-bir-odam-har-rolga-alohida-hisob.md) | Bir odam — har rolga alohida hisob; kimlik telefon emas, bog'lanish | Qabul qilindi | 2026-09-19 |
+| [0023](0023-avtomatik-pauza-chiqarmaydi.md) | Avtomatik pauza o'quvchini guruhdan chiqarmaydi | Qabul qilindi | 2026-09-19 |
+| [0024](0024-daf-faollik-normasi-yigindi-sql-qaror-ts.md) | DaF faollik normasi sozlamada; yig'indi SQL da, qaror TypeScript da | Qabul qilindi | 2026-09-20 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.

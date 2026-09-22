@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
+import { activeStudentWhere } from '../students/shared/active-student-where';
+import { tashkentRangeFilter } from '../common/date/tashkent';
 
 @Injectable()
 export class ReportsOverviewService {
@@ -33,20 +35,26 @@ export class ReportsOverviewService {
       totalLeads,
       convertedLeads,
     ] = await Promise.all([
+      // «Faol o'quvchi» ta'rifi bitta joyda — `activeStudentWhere`. Bu yerda
+      // ilgari faqat `status: 'ACTIVE'` turgan edi, ya'ni guruhga
+      // biriktirilmagan o'quvchi ham faol sanalardi (2026-09-02 o'lchovi:
+      // 12 011 dan 1 348 tasi guruhsiz edi).
       this.prisma.student.count({
         where: {
           companyId,
           deletedAt: null,
-          status: 'ACTIVE',
+          ...activeStudentWhere(),
           ...branchStudentFilter,
         },
       }),
 
+      // Trend uchun taqqoslash bazasi — AYNI ta'rif bilan, aks holda trend
+      // ikki xil o'lchovni bir-biriga bo'lgan bo'lardi.
       this.prisma.student.count({
         where: {
           companyId,
           deletedAt: null,
-          status: 'ACTIVE',
+          ...activeStudentWhere(),
           createdAt: { lt: firstOfMonth },
           ...branchStudentFilter,
         },
@@ -99,12 +107,22 @@ export class ReportsOverviewService {
         _count: { id: true },
       }),
 
+      // Voronka konversiyasi FAQAT voronka lidlarini sanaydi. `sectionId: null`
+      // = odam voronkaga umuman kirmagan, to'g'ridan /students eshigidan
+      // qo'shilgan (tizim unga avtomatik kelib chiqish lidini yozadi). Bunday
+      // lid ham suratga, ham maxrajga tushsa har bir kelib qo'shilgan odam
+      // foizni 100 % ga suradi — prodda nisbat taxminan 408 to'g'ridan / 34
+      // voronkadan, ya'ni signal 12:1 bo'g'ilardi.
       this.prisma.lead.count({
-        where: { deletedAt: null },
+        where: { deletedAt: null, sectionId: { not: null } },
       }),
 
       this.prisma.lead.count({
-        where: { deletedAt: null, statusEnum: 'CONVERTED' },
+        where: {
+          deletedAt: null,
+          statusEnum: 'CONVERTED',
+          sectionId: { not: null },
+        },
       }),
     ]);
 
@@ -314,22 +332,27 @@ export class ReportsOverviewService {
   }
 
   async getLeadAnalytics(query: ReportsQueryDto) {
-    const dateFilter: any = {};
-    if (query.startDate) dateFilter.gte = new Date(query.startDate);
-    if (query.endDate) dateFilter.lte = new Date(query.endDate);
-    const createdAtFilter =
-      Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {};
+    // Lead.createdAt is a TIMESTAMP — bound it by Tashkent day, not UTC day.
+    const dateFilter = tashkentRangeFilter(query.startDate, query.endDate);
+    const createdAtFilter = dateFilter ? { createdAt: dateFilter } : {};
+
+    // Voronka natijasini o'lchaydigan har bir so'rov to'g'ridan kirgan lidlarni
+    // chetlab o'tadi: `sectionId: null` = voronkaga umuman kirmagan, /students
+    // eshigidan qo'shilgan odam. Manba bo'yicha statistika bunga kirmaydi — u
+    // voronka natijasi emas va HAR BIR lidni sanashda davom etadi.
+    const funnelOnly = { sectionId: { not: null } };
 
     const [funnel, convertedLeads] = await Promise.all([
       this.prisma.lead.groupBy({
         by: ['statusEnum'],
-        where: { deletedAt: null, ...createdAtFilter },
+        where: { deletedAt: null, ...funnelOnly, ...createdAtFilter },
         _count: { id: true },
       }),
 
       this.prisma.lead.findMany({
         where: {
           deletedAt: null,
+          ...funnelOnly,
           statusEnum: 'CONVERTED',
           statusChangedAt: { not: null },
         },
@@ -345,9 +368,12 @@ export class ReportsOverviewService {
     const now = new Date();
     const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
 
+    // Oylik konversiya foizi ham voronka o'lchovi — to'g'ridan kirganlar
+    // (`sectionId: null`) bu yerda ham sanalmaydi.
     const leadsCreatedByMonth = await this.prisma.lead.findMany({
       where: {
         deletedAt: null,
+        ...funnelOnly,
         createdAt: { gte: sixMonthsAgo },
       },
       select: { createdAt: true, statusEnum: true },

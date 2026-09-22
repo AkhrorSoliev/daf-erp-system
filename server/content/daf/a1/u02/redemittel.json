@@ -1,0 +1,110 @@
+{
+  "unit": "u02",
+  "phrasen": [
+    {
+      "section": "u02-s1",
+      "funktion": "die Familie zeigen",
+      "funktionUz": "oilani ko'rsatish",
+      "de": "Das ist meine Familie.",
+      "uz": "Bu mening oilam."
+    },
+    {
+      "section": "u02-s1",
+      "funktion": "nach einer Person fragen",
+      "funktionUz": "kim ekanini so'rash",
+      "de": "Ist das deine Schwester?",
+      "uz": "Bu sening opangmi?"
+    },
+    {
+      "section": "u02-s1",
+      "funktion": "über die Eltern sprechen",
+      "funktionUz": "ota-onasi haqida gapirish",
+      "de": "Meine Eltern wohnen in Deutschland.",
+      "uz": "Ota-onam Germaniyada yashaydi."
+    },
+    {
+      "section": "u02-s2",
+      "funktion": "die Anzahl nennen",
+      "funktionUz": "nechtaligini aytish",
+      "de": "Ich habe drei Kinder.",
+      "uz": "Mening uchta bolam bor."
+    },
+    {
+      "section": "u02-s2",
+      "funktion": "nach Geschwistern fragen",
+      "funktionUz": "aka-uka haqida so'rash",
+      "de": "Hast du Brüder?",
+      "uz": "Akalaring bormi?"
+    },
+    {
+      "section": "u02-s2",
+      "funktion": "das Alter nennen",
+      "funktionUz": "yoshini aytish",
+      "de": "Ich bin dreißig.",
+      "uz": "Men o'ttiz yoshdaman."
+    },
+    {
+      "section": "u02-s3",
+      "funktion": "den Beruf nennen",
+      "funktionUz": "kasbini aytish",
+      "de": "Ich bin Lehrerin.",
+      "uz": "Men o'qituvchiman (ayol)."
+    },
+    {
+      "section": "u02-s3",
+      "funktion": "nach dem Beruf fragen",
+      "funktionUz": "kasbini so'rash",
+      "de": "Was ist Ihr Beruf?",
+      "uz": "Sizning kasbingiz nima?"
+    },
+    {
+      "section": "u02-s3",
+      "funktion": "sagen, wo man studiert",
+      "funktionUz": "qayerda o'qishini aytish",
+      "de": "Ich studiere in Usbekistan.",
+      "uz": "Men O'zbekistonda o'qiyman."
+    },
+    {
+      "section": "u02-s4",
+      "funktion": "nach dem Alter fragen",
+      "funktionUz": "yoshini so'rash",
+      "de": "Wie alt bist du?",
+      "uz": "Necha yoshdasan?"
+    },
+    {
+      "section": "u02-s4",
+      "funktion": "eine Person beschreiben",
+      "funktionUz": "odamni ta'riflash",
+      "de": "Er ist sehr lustig.",
+      "uz": "U juda quvnoq."
+    },
+    {
+      "section": "u02-s4",
+      "funktion": "den eigenen Zustand nennen",
+      "funktionUz": "o'z holatini aytish",
+      "de": "Ich bin müde.",
+      "uz": "Men charchadim."
+    },
+    {
+      "section": "u02-s5",
+      "funktion": "einen Freund vorstellen",
+      "funktionUz": "do'stini tanishtirish",
+      "de": "Das ist mein Freund Jonas.",
+      "uz": "Bu mening do'stim Jonas."
+    },
+    {
+      "section": "u02-s5",
+      "funktion": "etwas gemeinsam vorschlagen",
+      "funktionUz": "birga qilishni taklif qilish",
+      "de": "Lernen wir zusammen!",
+      "uz": "Kel, birga o'rganamiz!"
+    },
+    {
+      "section": "u02-s5",
+      "funktion": "einen Kollegen nennen",
+      "funktionUz": "hamkasbi haqida aytish",
+      "de": "Er ist mein Kollege.",
+      "uz": "U mening hamkasbim."
+    }
+  ]
+}

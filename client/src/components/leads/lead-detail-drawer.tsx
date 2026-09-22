@@ -72,6 +72,7 @@ interface LeadDetail {
   firstName: string;
   lastName: string;
   phone: string;
+  extraPhone: string | null;
   statusEnum: LeadStatus;
   convertedStudentId: number | null;
   statusChangeReason: string | null;
@@ -484,6 +485,12 @@ export function LeadDetailDrawer() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <DetailRow label="Telefon" value={formatPhone(lead.phone)} />
+                  {lead.extraPhone && (
+                    <DetailRow
+                      label="Qo'shimcha telefon"
+                      value={formatPhone(lead.extraPhone)}
+                    />
+                  )}
                   <DetailRow label="Manba" value={lead.source?.name} />
                   <DetailRow
                     label="Joylashuvi"
@@ -699,6 +706,7 @@ export function LeadDetailDrawer() {
                       firstName: lead.firstName,
                       lastName: lead.lastName,
                       phone: lead.phone,
+                      extraPhone: lead.extraPhone ?? "",
                       sourceId: lead.source?.id ?? "",
                     });
                     handleCloseDetail();

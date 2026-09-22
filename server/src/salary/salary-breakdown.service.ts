@@ -60,7 +60,13 @@ export class SalaryBreakdownService {
     //   grossTotal (earned/owed before advances) − settledAdvancesTotal
     //     = payment.amount (net cash transferred in the salary run).
     const settledAdvances = await this.prisma.expense.findMany({
-      where: { settledBySalaryPaymentId: salaryPaymentId, companyId },
+      // `deletedAt: null` — o'chirilgan avans varaqada qolsa, sahifadagi
+      // «grossTotal − avanslar = to'langan» tenglamasi buziladi.
+      where: {
+        settledBySalaryPaymentId: salaryPaymentId,
+        companyId,
+        deletedAt: null,
+      },
       select: { id: true, amount: true, description: true, date: true },
       orderBy: { date: 'asc' },
     });

@@ -1,0 +1,257 @@
+{
+ "unit": "u02",
+ "dialoge": [
+  {
+   "id": "u02-d1",
+   "section": "u02-s1",
+   "titelDe": "Meine Familie",
+   "titelUz": "Mening oilam",
+   "zeilen": [
+    {
+     "sprecher": "Mia",
+     "de": "Ist das deine Familie?",
+     "uz": "Bu sening oilangmi?"
+    },
+    {
+     "sprecher": "Thomas",
+     "de": "Ja, das ist meine Familie.",
+     "uz": "Ha, bu mening oilam."
+    },
+    {
+     "sprecher": "Mia",
+     "de": "Wer ist das?",
+     "uz": "Bu kim?"
+    },
+    {
+     "sprecher": "Thomas",
+     "de": "Das ist mein Vater.",
+     "uz": "Bu mening otam."
+    },
+    {
+     "sprecher": "Mia",
+     "de": "Und das? Ist das deine Mutter?",
+     "uz": "Bu-chi? Bu sening onangmi?"
+    },
+    {
+     "sprecher": "Thomas",
+     "de": "Ja, das ist meine Mutter.",
+     "uz": "Ha, bu mening onam."
+    }
+   ],
+   "fragen": [
+    { "frageDe": "Ist das der Vater oder der Bruder?", "frageUz": "Bu otasimi yoki akasi?", "richtig": "der Vater", "falsch": ["der Bruder", "der Sohn"] },
+    { "frageDe": "Wer ist das? Die Mutter, die Schwester oder die Oma?", "frageUz": "Bu kim? Ona, opa yoki buvi?", "richtig": "die Mutter", "falsch": ["die Schwester", "die Oma"] }
+   ]
+  },
+  {
+   "id": "u02-d2",
+   "section": "u02-s1",
+   "titelDe": "Meine Schwester",
+   "titelUz": "Mening opam",
+   "zeilen": [
+    {
+     "sprecher": "Anna",
+     "de": "Ist das deine Schwester?",
+     "uz": "Bu sening opangmi?"
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "Nein, das ist meine Tochter.",
+     "uz": "Yo'q, bu mening qizim."
+    },
+    {
+     "sprecher": "Anna",
+     "de": "Wie heißt sie?",
+     "uz": "Uning ismi nima?"
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "Sie heißt Lena.",
+     "uz": "Uning ismi Lena."
+    },
+    {
+     "sprecher": "Anna",
+     "de": "Und deine Eltern? Wo wohnen sie?",
+     "uz": "Ota-onang-chi? Ular qayerda yashaydi?"
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "Meine Eltern wohnen in Deutschland.",
+     "uz": "Ota-onam Germaniyada yashaydi."
+    }
+   ],
+   "fragen": [
+    { "frageDe": "Wer ist Lena?", "frageUz": "Lena kim?", "richtig": "die Tochter", "falsch": ["die Schwester", "die Mutter"] },
+    { "frageDe": "Wo wohnen die Eltern?", "frageUz": "Ota-onasi qayerda yashaydi?", "richtig": "in Deutschland", "falsch": ["in Usbekistan", "in Usbekistan und in Deutschland"] }
+   ]
+  },
+  {
+   "id": "u02-d3",
+   "section": "u02-s2",
+   "titelDe": "Ich bin Oma!",
+   "titelUz": "Men buviman!",
+   "zeilen": [
+    {
+     "sprecher": "Claudia",
+     "de": "Hallo, Thomas! Hast du Kinder?",
+     "uz": "Salom, Thomas! Bolalaring bormi?"
+    },
+    {
+     "sprecher": "Thomas",
+     "de": "Ja, ich habe zwei Kinder. Und du?",
+     "uz": "Ha, ikkita bolam bor. Sen-chi?"
+    },
+    {
+     "sprecher": "Claudia",
+     "de": "Ich habe eine Tochter. Sie ist dreißig.",
+     "uz": "Bitta qizim bor. U o'ttiz yoshda."
+    },
+    {
+     "sprecher": "Thomas",
+     "de": "Hat deine Tochter auch Kinder?",
+     "uz": "Qizingning ham bolalari bormi?"
+    },
+    {
+     "sprecher": "Claudia",
+     "de": "Ja, ein Kind. Ich bin Oma!",
+     "uz": "Ha, bitta bolasi bor. Men buviman!"
+    },
+    {
+     "sprecher": "Thomas",
+     "de": "Das ist sehr gut!",
+     "uz": "Bu juda yaxshi!"
+    }
+   ],
+   "fragen": [
+    { "frageDe": "Hat Thomas ein Kind, zwei Kinder oder drei Kinder?", "frageUz": "Thomasning bitta, ikkita yoki uchta bolasi bormi?", "richtig": "zwei Kinder", "falsch": ["ein Kind", "drei Kinder"] },
+    { "frageDe": "Ist die Tochter zwanzig, dreißig oder vierzig?", "frageUz": "Qizi yigirma, o'ttiz yoki qirq yoshdami?", "richtig": "dreißig", "falsch": ["zwanzig", "vierzig"] }
+   ]
+  },
+  {
+   "id": "u02-d4",
+   "section": "u02-s3",
+   "titelDe": "Ich bin Ärztin",
+   "titelUz": "Men shifokorman",
+   "zeilen": [
+    {
+     "sprecher": "Markus",
+     "de": "Hallo, Julia! Was ist dein Beruf?",
+     "uz": "Salom, Julia! Kasbing nima?"
+    },
+    {
+     "sprecher": "Julia",
+     "de": "Ich bin Ärztin. Und du, Markus?",
+     "uz": "Men shifokorman. Sen-chi, Markus?"
+    },
+    {
+     "sprecher": "Markus",
+     "de": "Ich bin Lehrer.",
+     "uz": "Men o'qituvchiman."
+    },
+    {
+     "sprecher": "Julia",
+     "de": "Wo arbeitest du?",
+     "uz": "Qayerda ishlaysan?"
+    },
+    {
+     "sprecher": "Markus",
+     "de": "Ich arbeite hier in der Schule.",
+     "uz": "Shu yerda, maktabda ishlayman."
+    },
+    {
+     "sprecher": "Julia",
+     "de": "Mein Bruder ist auch Lehrer!",
+     "uz": "Akam ham o'qituvchi!"
+    }
+   ],
+   "fragen": [
+    { "frageDe": "Was ist Julia?", "frageUz": "Julia kim bo'lib ishlaydi?", "richtig": "Ärztin", "falsch": ["Lehrerin", "Chef"] },
+    { "frageDe": "Wo arbeitet Markus?", "frageUz": "Markus qayerda ishlaydi?", "richtig": "in der Schule", "falsch": ["in der Firma", "nicht hier"] }
+   ]
+  },
+  {
+   "id": "u02-d5",
+   "section": "u02-s4",
+   "titelDe": "Der Chef ist neu",
+   "titelUz": "Rahbar yangi",
+   "zeilen": [
+    {
+     "sprecher": "Mia",
+     "de": "Hallo, Jonas! Ist der Chef neu?",
+     "uz": "Salom, Jonas! Rahbar yangimi?"
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "Ja, er ist neu und sehr jung.",
+     "uz": "Ha, u yangi va juda yosh."
+    },
+    {
+     "sprecher": "Mia",
+     "de": "Wie alt ist er?",
+     "uz": "U necha yoshda?"
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "Er ist dreißig. Und er ist lustig.",
+     "uz": "O'ttiz yoshda. Quvnoq odam."
+    },
+    {
+     "sprecher": "Mia",
+     "de": "Ist er verheiratet?",
+     "uz": "U oilalimi?"
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "Nein, er ist ledig.",
+     "uz": "Yo'q, u turmush qurmagan."
+    }
+   ],
+   "fragen": [
+    { "frageDe": "Wie alt ist der Chef?", "frageUz": "Rahbar necha yoshda?", "richtig": "dreißig", "falsch": ["zwanzig", "fünfzig"] },
+    { "frageDe": "Wie ist der Chef?", "frageUz": "Rahbar qanday odam?", "richtig": "jung und lustig", "falsch": ["alt und lustig", "alt und müde"] }
+   ]
+  },
+  {
+   "id": "u02-d6",
+   "section": "u02-s5",
+   "titelDe": "Wir lernen zusammen",
+   "titelUz": "Biz birga o'qiymiz",
+   "zeilen": [
+    {
+     "sprecher": "Anna",
+     "de": "Hallo, Julia! Wer ist das?",
+     "uz": "Salom, Julia! Bu kim?"
+    },
+    {
+     "sprecher": "Julia",
+     "de": "Das ist Jonas, mein Freund.",
+     "uz": "Bu Jonas, mening do'stim."
+    },
+    {
+     "sprecher": "Anna",
+     "de": "Ist er dein Kollege?",
+     "uz": "U hamkasbingmi?"
+    },
+    {
+     "sprecher": "Julia",
+     "de": "Nein, er studiert hier.",
+     "uz": "Yo'q, u shu yerda o'qiydi."
+    },
+    {
+     "sprecher": "Anna",
+     "de": "Und du? Was machst du?",
+     "uz": "Sen-chi? Nima bilan shug'ullanasan?"
+    },
+    {
+     "sprecher": "Julia",
+     "de": "Ich studiere auch. Wir lernen zusammen.",
+     "uz": "Men ham o'qiyman. Birga o'qiymiz."
+    }
+   ],
+   "fragen": [
+    { "frageDe": "Wer ist Jonas?", "frageUz": "Jonas kim?", "richtig": "ihr Freund", "falsch": ["ihr Kollege", "ihr Bruder"] },
+    { "frageDe": "Was macht Jonas?", "frageUz": "Jonas nima qiladi?", "richtig": "Er studiert.", "falsch": ["Er arbeitet.", "Er ist Lehrer."] }
+   ]
+  }
+ ]
+}

@@ -135,3 +135,44 @@ describe('R2Uploader.uploadMissing', () => {
     });
   });
 });
+
+// Task 11e: mavjudlikni tekshirmasdan, to'g'ridan-to'g'ri baytlarni
+// yuklaydigan yo'l — manba URL yo'q holatlar uchun (ffmpeg bilan
+// ishlangan audio). `uploadMissing`ga TEGILMAYDI.
+describe('R2Uploader.uploadBytes', () => {
+  it("to'g'ri Bucket/Key/Body/ContentType bilan yuklaydi", async () => {
+    const { up, send } = make();
+    send.mockResolvedValueOnce({});
+
+    await up.uploadBytes('daf/audio/x.mp3', Buffer.from('abc'));
+
+    expect(send).toHaveBeenCalledTimes(1);
+    const put = send.mock.calls[0][0];
+    expect(put.input).toEqual({
+      Bucket: 'bucket',
+      Key: 'daf/audio/x.mp3',
+      Body: Buffer.from('abc'),
+      ContentType: 'audio/mpeg',
+    });
+  });
+
+  it('kengaytmaga mos Content-Type tanlaydi', async () => {
+    const { up, send } = make();
+    send.mockResolvedValueOnce({});
+
+    await up.uploadBytes('dib/pdf/k_01.xyz', Buffer.from('x'));
+
+    expect(send.mock.calls[0][0].input.ContentType).toBe(
+      'application/octet-stream',
+    );
+  });
+
+  it('S3 xato tashlasa, yuqoriga uloqtiriladi — jimgina yutilmaydi', async () => {
+    const { up, send } = make();
+    send.mockRejectedValueOnce(new Error('S3 boom'));
+
+    await expect(
+      up.uploadBytes('daf/audio/x.mp3', Buffer.from('abc')),
+    ).rejects.toThrow('S3 boom');
+  });
+});

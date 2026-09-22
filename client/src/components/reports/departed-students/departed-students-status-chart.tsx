@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import api from "@/lib/api";
-import { ChartCard } from "./chart-card";
+import { ChartCard } from "@/components/shared/chart-card";
 
 interface StatusResponse {
   data: { status: string; label: string; count: number }[];

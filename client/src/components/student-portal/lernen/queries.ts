@@ -1,15 +1,24 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import type {
+  AbschlussErgebnis,
   AttemptResult,
   DrillQuestion,
   DrillResult,
+  Fortschritt,
+  FrageFormat,
+  JuftNatija,
   LernenGrammarItem,
   LernenLesson,
   LernenLevel,
   LernenUnit,
+  MaterialTyp,
+  PruefErgebnis,
+  PublicFrage,
+  ReytingZeile,
+  SeansYakun,
 } from "./types";
 
 const BASE = "/student-portal/lernen";
@@ -84,5 +93,184 @@ export function useRecordAttempt() {
   >({
     mutationFn: (body) =>
       api.post(`${BASE}/attempts`, body).then((r) => r.data),
+  });
+}
+
+/** Darsning 12 savoli. To'g'ri javoblar ichida YO'Q. */
+export function useUebungSeans(lessonId: number) {
+  return useQuery<PublicFrage[]>({
+    queryKey: ["lernen", "uebung", lessonId],
+    queryFn: () =>
+      api.get(`${BASE}/lessons/${lessonId}/uebung`).then((r) => r.data),
+    enabled: Number.isFinite(lessonId),
+    // Seans holati mijozda; qayta so'rash yangi 12 savol keltirardi va
+    // o'quvchining o'rnini yo'qotardi.
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
+  });
+}
+
+/** Javobni tekshiradi. To'g'ri javob FAQAT shu javobda keladi. */
+export function usePruefen() {
+  return useMutation<
+    PruefErgebnis,
+    unknown,
+    {
+      itemType: MaterialTyp;
+      itemId: number;
+      format: FrageFormat;
+      given: string;
+      durationMs?: number;
+      sessionId?: string;
+      questionIndex?: number;
+      attemptNo?: 1 | 2;
+      lessonId?: number;
+    }
+  >({
+    mutationFn: (body) =>
+      api.post(`${BASE}/uebung/check`, body).then((r) => r.data),
+  });
+}
+
+/**
+ * Bitta juftni tekshiradi — jonli javob uchun.
+ *
+ * `useMutation`, `useQuery` emas: bu imperativ hodisa (o'quvchi juftni
+ * bosdi), sahifa yuklanishi emas. Keshga ham tushmaydi — bir xil juftni
+ * ikkinchi marta bosish YANGI javob hisoblanadi va serverda yoziladi.
+ */
+export function useJuftTekshir() {
+  return useMutation<
+    JuftNatija,
+    unknown,
+    // `itemType` ATAYLAB `MaterialTyp` dan tor: server faqat shu ikkitasini
+    // qabul qiladi (gap va dialog satrida "juft" degan tushuncha yo'q),
+    // va tip buni chaqiruv joyidayoq ushlab qolishi kerak.
+    {
+      itemType: "WORT" | "PHRASE";
+      itemId: number;
+      format: "PAAR" | "ZUORDNEN";
+      chap: string;
+      ong: string;
+      durationMs?: number;
+      sessionId?: string;
+      questionIndex?: number;
+      attemptNo?: 1 | 2;
+      lessonId?: number;
+    }
+  >({
+    mutationFn: (body) => api.post(`${BASE}/uebung/juft`, body).then((r) => r.data),
+  });
+}
+
+/**
+ * Xato javobdan keyingi almashtiruvchi savol — boshqa formatda.
+ *
+ * `useQuery` emas, `useMutation`: u imperativ chaqiriladi (javob
+ * xato bo'lgan paytda), sahifa yuklanganda emas.
+ */
+export function useErsatz() {
+  return useMutation<
+    PublicFrage | null,
+    unknown,
+    { lessonId: number; itemType: MaterialTyp; itemId: number; nichtFormat: FrageFormat }
+  >({
+    mutationFn: ({ lessonId, itemType, itemId, nichtFormat }) =>
+      api
+        .get(`${BASE}/lessons/${lessonId}/uebung/ersatz`, {
+          params: { itemType, itemId, nichtFormat },
+        })
+        // `??` EMAS: Nest `null` javobini bo'sh tanaga (`response.send()`
+        // argumentsiz) aylantiradi, shuning uchun axios `r.data` ni `""`
+        // qilib qaytaradi — `"" ?? null` esa `""` bo'lib qoladi, `null`
+        // emas. `||` bo'sh satrni ham, `undefined`ni ham `null`ga
+        // aylantiradi, shu bilan e'lon qilingan `PublicFrage | null` tur
+        // ishonchli bo'ladi.
+        .then((r) => r.data || null),
+  });
+}
+
+/** Seans tugaganini yozadi va ilgarilash keshini bekor qiladi. */
+export function useAbschluss() {
+  const qc = useQueryClient();
+  return useMutation<
+    AbschlussErgebnis,
+    unknown,
+    {
+      lessonId: number;
+      richtig: number;
+      gesamt: number;
+      durationMs?: number;
+      sessionId?: string;
+    }
+  >({
+    mutationFn: ({ lessonId, ...body }) =>
+      api.post(`${BASE}/lessons/${lessonId}/abschluss`, body).then((r) => r.data),
+    // Yo'l va unit sahifalari ilgarilashni ko'rsatadi — usiz o'quvchi
+    // orqaga qaytganda keyingi dars hamon qulflangan bo'lib ko'rinardi.
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["lernen", "levels"] });
+      void qc.invalidateQueries({ queryKey: ["lernen", "unit"] });
+      // Yo'l tepasidagi chiplar (ball, daraja, reyting) — usiz seans
+      // tugagach ular eski qiymatni ko'rsatib qolardi.
+      void qc.invalidateQueries({ queryKey: ["lernen", "fortschritt"] });
+      void qc.invalidateQueries({ queryKey: ["lernen", "reyting"] });
+      // Takrorlash so'rovi `staleTime: Infinity` bilan abadiy keshda
+      // turadi (Fix 3) — bu invalidatsiya bo'lmasa, oddiy DARS seansi
+      // ham muddati kelgan so'zlarni "yeb qo'yadi" (Leitner holatini
+      // yangilaydi), lekin takrorlash keshi buni bilmay, o'quvchi
+      // Takrorlashga kirganda ESKI (endi noto'g'ri) 12 savolni ko'rib
+      // qoladi.
+      void qc.invalidateQueries({ queryKey: ["lernen", "wiederholung"] });
+    },
+  });
+}
+
+/**
+ * Takrorlash seansi yakuni — `DafSession` ni yopadi. `abschluss` dan farqi:
+ * dars yo'q, ilgarilash keshi (`levels`/`unit`) o'zgarmaydi; `fortschritt`
+ * ni `seans-ekrani` o'zi yangilaydi.
+ */
+export function useWiederholungAbschluss() {
+  return useMutation<SeansYakun, unknown, { sessionId: string }>({
+    mutationFn: (body) =>
+      api.post(`${BASE}/wiederholung/abschluss`, body).then((r) => r.data),
+  });
+}
+
+/** Yo'l tepasidagi chiplar — daraja, ball, seriya, haftalik o'rin. */
+export function useFortschritt() {
+  return useQuery<Fortschritt>({
+    queryKey: ["lernen", "fortschritt"],
+    queryFn: () => api.get(`${BASE}/fortschritt`).then((r) => r.data),
+  });
+}
+
+/** Guruh yoki markaz bo'yicha haftalik reyting jadvali. */
+export function useReyting(scope: "gruppe" | "zentrum") {
+  return useQuery<ReytingZeile[]>({
+    queryKey: ["lernen", "reyting", scope],
+    queryFn: () => api.get(`${BASE}/reyting`, { params: { scope } }).then((r) => r.data),
+  });
+}
+
+/**
+ * Takrorlash seansining savollari.
+ *
+ * `staleTime: Infinity` va `refetchOnWindowFocus: false` — seans holati
+ * mijozda yashaydi, qayta so'rash o'quvchining o'rnini yo'qotardi.
+ *
+ * `enabled` — `SeansEkrani` bu so'rovni ham, dars so'rovini ham DOIM
+ * chaqiradi (React Hooks tartibi shart bo'lgani uchun), faqat `manba`ga
+ * mos kelmagani `enabled: false` bilan o'chiriladi. Standart `true` —
+ * yagona boshqa chaqiruvchi (`wiederholung/page.tsx`) doim yoqiq kerak.
+ */
+export function useWiederholung(enabled: boolean = true) {
+  return useQuery<PublicFrage[]>({
+    queryKey: ["lernen", "wiederholung"],
+    queryFn: () => api.get(`${BASE}/wiederholung/uebung`).then((r) => r.data),
+    enabled,
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
   });
 }

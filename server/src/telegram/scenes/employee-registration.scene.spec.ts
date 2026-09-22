@@ -1,6 +1,7 @@
 import { Context } from 'telegraf';
 import type { UserFromGetMe } from 'telegraf/types';
 import { createEmployeeRegistrationScene } from './employee-registration.scene';
+import { CONTACT_NOT_OWN } from '../utils/contact-ownership';
 
 // Telegraf's Context requires the bot's own identity. These tests never read
 // it, but `undefined` is not what the constructor accepts and the cast that
@@ -50,13 +51,51 @@ function buildConfirmCtx(sessionData: Record<string, any>) {
   return ctx;
 }
 
-function buildScene(usersService: { create: jest.Mock }) {
+function buildPrisma(findFirst?: jest.Mock) {
+  return {
+    user: { findFirst: findFirst ?? jest.fn().mockResolvedValue(null) },
+  } as any;
+}
+
+function buildScene(
+  usersService: { create: jest.Mock },
+  prisma: any = buildPrisma(),
+) {
   return createEmployeeRegistrationScene(
-    {} as any, // prisma — unused on this path
+    prisma,
     { deleteFile: jest.fn() } as any,
     usersService as any,
     {} as any, // bot — unused (`_bot`)
   );
+}
+
+/**
+ * Kontakt qadami (`step 3`): odam «📱 Telefon raqamni yuborish» tugmasini
+ * bosdi yoki istalgan kontakt kartasini yubordi. `from.id` — yuboruvchi.
+ */
+function buildContactCtx(
+  contact: { phone_number: string; first_name: string; user_id?: number },
+  fromId = 999,
+) {
+  const update = {
+    update_id: 2,
+    message: {
+      message_id: 2,
+      date: 0,
+      chat: { id: 555222, type: 'private' },
+      from: { id: fromId, is_bot: false, first_name: 'T' },
+      contact,
+    },
+  };
+  const ctx = new Context(update as any, {} as any, BOT_INFO) as any;
+  ctx.session = {
+    step: 3,
+    data: { branchId: 7, roleIds: [4] },
+    processing: false,
+  };
+  ctx.scene = { leave: jest.fn().mockResolvedValue(undefined) };
+  ctx.reply = jest.fn().mockResolvedValue(undefined);
+  return ctx;
 }
 
 describe('employee-registration.scene — confirm_registration', () => {
@@ -127,5 +166,109 @@ describe('employee-registration.scene — confirm_registration', () => {
     await scene.middleware()(ctx, async () => {});
 
     expect(usersService.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('employee-registration.scene — kontakt qadami', () => {
+  const OWN = { phone_number: '+998901112233', first_name: 'T', user_id: 999 };
+
+  it("begona kontakt kartasi (boshqa user_id) rad etiladi, baza so'ralmaydi", async () => {
+    const prisma = buildPrisma();
+    const scene = buildScene({ create: jest.fn() }, prisma);
+    const ctx = buildContactCtx({ ...OWN, user_id: 1 });
+
+    await scene.middleware()(ctx, async () => {});
+
+    expect(ctx.reply.mock.calls[0][0]).toBe(CONTACT_NOT_OWN);
+    expect(prisma.user.findFirst).not.toHaveBeenCalled();
+    expect(ctx.session.step).toBe(3);
+    expect(ctx.scene.leave).not.toHaveBeenCalled();
+  });
+
+  it("user_id'siz karta ham rad etiladi", async () => {
+    const prisma = buildPrisma();
+    const scene = buildScene({ create: jest.fn() }, prisma);
+    const ctx = buildContactCtx({
+      phone_number: '+998901112233',
+      first_name: 'T',
+    });
+
+    await scene.middleware()(ctx, async () => {});
+
+    expect(ctx.reply.mock.calls[0][0]).toBe(CONTACT_NOT_OWN);
+    expect(prisma.user.findFirst).not.toHaveBeenCalled();
+    expect(ctx.session.step).toBe(3);
+  });
+
+  it("o'quvchi hisobidagi raqam xodim bo'lishga to'sqinlik qilmaydi", async () => {
+    // Rolsiz so'rov bu raqamda o'quvchi hisobini topardi; xodim roli bilan
+    // so'ralsa — yo'q. Sahna aynan xodim roli bilan so'rashi kerak.
+    const findFirst = jest
+      .fn()
+      .mockImplementation(({ where }: any) =>
+        Promise.resolve(where.roles ? null : { id: 10018 }),
+      );
+    const scene = buildScene({ create: jest.fn() }, buildPrisma(findFirst));
+    const ctx = buildContactCtx(OWN);
+
+    await scene.middleware()(ctx, async () => {});
+
+    expect(findFirst.mock.calls[0][0].where.roles).toBeDefined();
+    expect(ctx.session.step).toBe(4);
+    expect(ctx.session.data.phone).toBe('901112233');
+    expect(ctx.scene.leave).not.toHaveBeenCalled();
+  });
+
+  it("ishlab turgan xodim raqami to'xtatadi va adminga yo'naltiradi", async () => {
+    const findFirst = jest.fn().mockResolvedValue({
+      id: 10924,
+      firstName: 'Nodira',
+      lastName: 'Yusupova',
+    });
+    const scene = buildScene({ create: jest.fn() }, buildPrisma(findFirst));
+    const ctx = buildContactCtx(OWN);
+
+    await scene.middleware()(ctx, async () => {});
+
+    expect(ctx.reply.mock.calls[0][0]).toMatch(/xodim hisobi allaqachon bor/);
+    expect(ctx.scene.leave).toHaveBeenCalled();
+    expect(ctx.session.step).toBe(3);
+  });
+});
+
+describe('employee-registration.scene — kirish nomi', () => {
+  const data = {
+    firstName: 'Nodira',
+    lastName: 'Yusupova',
+    phone: '901112233',
+    gender: 'FEMALE',
+    photo: 'https://example.com/photo.jpg',
+    branchId: 7,
+    roleIds: [3],
+  };
+
+  it("telefon bo'sh bo'lsa kirish nomi = telefon", async () => {
+    const usersService = { create: jest.fn().mockResolvedValue({ id: 1 }) };
+    const scene = buildScene(usersService, buildPrisma());
+
+    await scene.middleware()(buildConfirmCtx(data), async () => {});
+
+    expect(usersService.create.mock.calls[0][0].login).toBe('901112233');
+  });
+
+  it("telefon boshqa hisobning kirish nomi bo'lsa nom yuborilmaydi, hisob baribir ochiladi", async () => {
+    const findFirst = jest
+      .fn()
+      .mockImplementation(({ where }: any) =>
+        Promise.resolve(where.login ? { id: 10018 } : null),
+      );
+    const usersService = { create: jest.fn().mockResolvedValue({ id: 1 }) };
+    const scene = buildScene(usersService, buildPrisma(findFirst));
+
+    await scene.middleware()(buildConfirmCtx(data), async () => {});
+
+    expect(usersService.create).toHaveBeenCalledTimes(1);
+    expect(usersService.create.mock.calls[0][0].login).toBeUndefined();
+    expect(usersService.create.mock.calls[0][0].phone).toBe('901112233');
   });
 });

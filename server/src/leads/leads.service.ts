@@ -22,6 +22,7 @@ import { ConvertLeadDto } from './dto/convert-lead.dto';
 import { MarkCalledLeadDto } from './dto/mark-called-lead.dto';
 import { RemoveLeadDto } from './dto/remove-lead.dto';
 import { equalsOrIn } from '../common/dto/to-array';
+import { tashkentRangeFilter } from '../common/date/tashkent';
 
 // Sentinel stored in Lead.statusChangeReason when a lead is CONVERTED by being
 // linked to an already-existing student (no new account minted) rather than by
@@ -101,6 +102,7 @@ export class LeadsService {
         { firstName: { contains: search, mode: 'insensitive' } },
         { lastName: { contains: search, mode: 'insensitive' } },
         { phone: { contains: search } },
+        { extraPhone: { contains: search } },
       ];
     }
     if (query.sourceId?.length) where.sourceId = equalsOrIn(query.sourceId);
@@ -127,15 +129,17 @@ export class LeadsService {
       where.id = query.hasComments === 'true' ? { in: ids } : { notIn: ids };
     }
 
-    if (query.startDate || query.endDate) {
-      const createdAt: Prisma.DateTimeFilter = {};
-      if (query.startDate) createdAt.gte = new Date(query.startDate);
-      if (query.endDate) {
-        const end = new Date(query.endDate);
-        end.setHours(23, 59, 59, 999);
-        createdAt.lte = end;
+    // Date range targets `statusChangedAt` (when a lead CONVERTED) instead of
+    // `createdAt` (when the lead arrived) — the "aylanganlar" report needs the
+    // former to answer "how many became students this month". Same Tashkent
+    // day-boundary helper either way; only the target field switches.
+    const range = tashkentRangeFilter(query.startDate, query.endDate);
+    if (range) {
+      if (query.dateField === 'statusChangedAt') {
+        where.statusChangedAt = range;
+      } else {
+        where.createdAt = range;
       }
-      where.createdAt = createdAt;
     }
 
     const [data, total] = await Promise.all([
@@ -146,8 +150,11 @@ export class LeadsService {
           firstName: true,
           lastName: true,
           phone: true,
+          extraPhone: true,
           statusEnum: true,
           createdAt: true,
+          statusChangedAt: true,
+          convertedStudentId: true,
           source: { select: { id: true, name: true } },
           section: {
             select: {
@@ -164,7 +171,40 @@ export class LeadsService {
       this.prisma.lead.count({ where }),
     ]);
 
-    return { data, total, page, pageSize };
+    // `Lead.convertedStudentId` has NO Prisma relation to `Student` on purpose
+    // — a relation would need a FK constraint and a migration. Resolve names
+    // with one extra query and map in memory (same shape as `commentCountsFor`
+    // above), skipped entirely when nothing on the page converted.
+    const studentIds = [
+      ...new Set(
+        data
+          .map((l) => l.convertedStudentId)
+          .filter((id): id is number => typeof id === 'number'),
+      ),
+    ];
+    // `companyId` + `deletedAt` shart: arxivlangan o'quvchi 404 beradigan
+    // havola bo'lib chiqardi, so'rov esa ijarachi chegarasidan bitta xatolik
+    // narida turardi.
+    const students = studentIds.length
+      ? await this.prisma.student.findMany({
+          where: { id: { in: studentIds }, companyId, deletedAt: null },
+          select: { id: true, firstName: true, lastName: true },
+        })
+      : [];
+    const byId = new Map(students.map((s) => [s.id, s]));
+
+    return {
+      data: data.map((l) => ({
+        ...l,
+        convertedStudent:
+          l.convertedStudentId !== null
+            ? (byId.get(l.convertedStudentId) ?? null)
+            : null,
+      })),
+      total,
+      page,
+      pageSize,
+    };
   }
 
   /** Leads inside one section, ordered for board display. */
@@ -216,6 +256,7 @@ export class LeadsService {
         firstName: true,
         lastName: true,
         phone: true,
+        extraPhone: true,
         statusEnum: true,
         convertedStudentId: true,
         statusChangeReason: true,
@@ -375,7 +416,15 @@ export class LeadsService {
 
   // `userId` is nullable because public-form submissions create leads with no
   // authenticated user — the audit row records `changedBy = NULL` (system).
-  async create(dto: CreateLeadDto, companyId: number, userId: number | null) {
+  /**
+   * `sourceId` bu yerda ixtiyoriy: HTTP yo'li uni `CreateLeadDto` da majburiy
+   * qiladi, ochiq forma esa manbasiz havoladan kelishi mumkin.
+   */
+  async create(
+    dto: Omit<CreateLeadDto, 'sourceId'> & { sourceId?: string | null },
+    companyId: number,
+    userId: number | null,
+  ) {
     const firstName = dto.firstName.trim();
     const lastName = dto.lastName.trim();
     if (!firstName || !lastName) {
@@ -434,6 +483,7 @@ export class LeadsService {
         firstName,
         lastName,
         phone: dto.phone,
+        extraPhone: dto.extraPhone || null,
         sectionId: dto.sectionId,
         sourceId: dto.sourceId ?? null,
         order: (maxOrder._max.order ?? -1) + 1,
@@ -452,6 +502,9 @@ export class LeadsService {
         firstName: created.firstName,
         lastName: created.lastName,
         phone: created.phone,
+        // Not part of LEAD_CARD_SELECT (the board card never shows it), so the
+        // recorded value comes from the request rather than the created row.
+        extraPhone: dto.extraPhone || null,
         statusEnum: created.statusEnum,
       },
       changedById: userId ?? undefined,
@@ -477,7 +530,13 @@ export class LeadsService {
       // because a lead from the public form has no branch until someone picks
       // one; it is excluded from branch ANALYTICS separately.
       where: { id, deletedAt: null, companyId, ...leadBranchWhere(scope) },
-      select: { id: true, firstName: true, lastName: true, phone: true },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        extraPhone: true,
+      },
     });
     if (!existing) {
       throw new NotFoundException('Lid topilmadi');
@@ -501,6 +560,10 @@ export class LeadsService {
     }
     if (dto.phone !== undefined) {
       data.phone = dto.phone;
+    }
+    // Empty string clears the extra phone; absent leaves it untouched.
+    if (dto.extraPhone !== undefined) {
+      data.extraPhone = dto.extraPhone || null;
     }
     if (dto.sourceId !== undefined) {
       if (dto.sourceId) {
@@ -528,11 +591,16 @@ export class LeadsService {
         firstName: existing.firstName,
         lastName: existing.lastName,
         phone: existing.phone,
+        extraPhone: existing.extraPhone,
       },
       newValues: {
         firstName: updated.firstName,
         lastName: updated.lastName,
         phone: updated.phone,
+        extraPhone:
+          dto.extraPhone !== undefined
+            ? dto.extraPhone || null
+            : existing.extraPhone,
       },
       changedById: userId,
       companyId,
@@ -809,6 +877,7 @@ export class LeadsService {
         lastName: true,
         phone: true,
         gender: true,
+        extraPhone: true,
         telegram: true,
         parentPhone: true,
         parentName: true,
@@ -889,6 +958,7 @@ export class LeadsService {
           firstName: lead.firstName,
           lastName: lead.lastName,
           phone: lead.phone,
+          extraPhone: lead.extraPhone ?? undefined,
           gender: lead.gender ?? undefined,
           telegram: lead.telegram ?? undefined,
           parentPhone: lead.parentPhone ?? undefined,
@@ -897,6 +967,7 @@ export class LeadsService {
         },
         companyId,
         userId,
+        { kind: 'LEAD', leadId: lead.id },
       );
       studentId = student.id;
 

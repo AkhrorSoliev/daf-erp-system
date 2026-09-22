@@ -67,9 +67,22 @@ describe('SalaryBreakdownService', () => {
 
     expect(prisma.expense.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { settledBySalaryPaymentId: 'sp1', companyId: 1 },
+        where: {
+          settledBySalaryPaymentId: 'sp1',
+          companyId: 1,
+          deletedAt: null,
+        },
       }),
     );
+  });
+
+  it("o'chirilgan avansni varaqaga qo'shmaydi", async () => {
+    // Avansni o'chirish endi saytdan mumkin. O'chirilgan avans varaqada
+    // qolsa, «grossTotal − avanslar = to'langan» tenglamasi buziladi.
+    await service.getPaymentBreakdown('sp1', 1);
+
+    const where = prisma.expense.findMany.mock.calls[0][0].where;
+    expect(where.deletedAt).toBeNull();
   });
 
   it('reports zero advances when none were settled against the payment', async () => {

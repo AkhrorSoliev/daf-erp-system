@@ -208,6 +208,28 @@ describe('ReportsService', () => {
       expect(result.averageAttendance).toBe(0);
       expect(result.leadConversionRate).toBe(0);
     });
+
+    // RULING C — voronka konversiyasi faqat voronka lidlarini sanaydi.
+    // To'g'ridan qo'shilgan o'quvchining avtomatik lidida `sectionId` `null`;
+    // u ham surat, ham maxrajga tushsa foiz 100 % ga siljiydi (prodda nisbat
+    // taxminan 408 to'g'ridan / 34 voronkadan — signal 12:1 bo'g'ilardi).
+    it("konversiya foizidan to'g'ridan kirgan lidlar chiqariladi", async () => {
+      prisma.student.count.mockResolvedValue(0);
+      prisma.group.count.mockResolvedValue(0);
+      prisma.enrollment.count.mockResolvedValue(0);
+      prisma.attendance.groupBy.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+
+      await service.getKpis(1, {});
+
+      const leadWheres = prisma.lead.count.mock.calls.map(
+        (c: any[]) => c[0].where,
+      );
+      expect(leadWheres).toHaveLength(2);
+      for (const where of leadWheres) {
+        expect(where.sectionId).toEqual({ not: null });
+      }
+    });
   });
 
   describe('getRoomUtilization', () => {
@@ -400,6 +422,28 @@ describe('ReportsService', () => {
       const result = await service.getLeadAnalytics({});
 
       expect(result.averageDaysToConversion).toBeNull();
+    });
+
+    // RULING C — voronka ko'rsatkichlarining HAMMASI (voronka taqsimoti,
+    // oylik konversiya foizi va aylanishgacha o'rtacha kun) faqat voronkadan
+    // o'tgan lidlarni oladi. `sectionId: null` = to'g'ridan /students eshigidan
+    // kirgan, doskaga umuman tushmagan odam.
+    it("voronka ko'rsatkichlaridan to'g'ridan kirgan lidlar chiqariladi", async () => {
+      prisma.lead.groupBy.mockResolvedValue([]);
+      prisma.lead.findMany.mockResolvedValue([]);
+
+      await service.getLeadAnalytics({});
+
+      const groupByWhere = prisma.lead.groupBy.mock.calls[0][0].where;
+      expect(groupByWhere.sectionId).toEqual({ not: null });
+
+      const findManyWheres = prisma.lead.findMany.mock.calls.map(
+        (c: any[]) => c[0].where,
+      );
+      expect(findManyWheres).toHaveLength(2);
+      for (const where of findManyWheres) {
+        expect(where.sectionId).toEqual({ not: null });
+      }
     });
   });
 

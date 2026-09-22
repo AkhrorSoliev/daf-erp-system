@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { LeadSourcePicker } from "@/components/leads/lead-source-picker";
 import {
   addStudentSchema,
   type AddStudentFormValues,
@@ -99,6 +100,7 @@ export function AddStudentDialog({
       lastName: "",
       phone: "",
       groupId: undefined,
+      sourceId: "",
     },
   });
 
@@ -139,6 +141,7 @@ export function AddStudentDialog({
         lastName: "",
         phone: "",
         groupId: undefined,
+        sourceId: "",
       });
       setGroupSearch("");
     }
@@ -156,6 +159,7 @@ export function AddStudentDialog({
         lastName: values.lastName.trim(),
         phone: values.phone,
         branchIds: [selectedBranch.id],
+        sourceId: values.sourceId,
       });
 
       if (values.groupId) {
@@ -192,7 +196,8 @@ export function AddStudentDialog({
         <DialogHeader>
           <DialogTitle>Yangi o&apos;quvchi qo&apos;shish</DialogTitle>
           <DialogDescription>
-            Ism, familiya va telefon raqamini kiriting. Guruh tanlash ixtiyoriy.
+            Ism, familiya, telefon raqami va o&apos;quvchi markazni qayerdan
+            bilganini kiriting. Guruh tanlash ixtiyoriy.
           </DialogDescription>
         </DialogHeader>
 
@@ -251,6 +256,23 @@ export function AddStudentDialog({
               </p>
             )}
           </div>
+
+          <Controller
+            control={form.control}
+            name="sourceId"
+            render={({ field }) => (
+              <LeadSourcePicker
+                open={open}
+                value={field.value}
+                onChange={field.onChange}
+                label="Qayerdan bildi?"
+                required
+                id="add-student-sourceId"
+                error={form.formState.errors.sourceId?.message}
+                loadErrorMessage="Manbalar ro'yxati yuklanmadi — o'quvchi qo'shish uchun sahifani yangilang"
+              />
+            )}
+          />
 
           <div className="space-y-2 pt-2">
             <div className="flex items-center justify-between">
@@ -453,11 +475,7 @@ export function AddStudentDialog({
           >
             Bekor qilish
           </Button>
-          <Button
-            type="submit"
-            form="add-student-form"
-            disabled={submitting}
-          >
+          <Button type="submit" form="add-student-form" disabled={submitting}>
             {submitting && <Loader2 className="mr-1.5 size-4 animate-spin" />}
             Saqlash
           </Button>

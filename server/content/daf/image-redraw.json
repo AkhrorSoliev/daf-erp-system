@@ -1,0 +1,67 @@
+{
+  "dib-voc-03-01#25": {
+    "attempt": 2,
+    "de": "sich die Zähne putzen",
+    "reason": "model sahnani O'ZBEKCHA yozgan, FLUX tushunmay ma'nosiz shakl chizgan (1-urinish)"
+  },
+  "dib-voc-03-02#10": {
+    "attempt": 1,
+    "de": "der Honig",
+    "reason": "rasmda suv belgisi: \"www.Speccitle.com\" — yozuv taqiqi buzilgan"
+  },
+  "dib-voc-03-02#14": {
+    "attempt": 1,
+    "de": "der Käse",
+    "reason": "kadrda oshpaz va makaron kosasi hukmron — o'quvchi \"makaron\" deb javob berardi"
+  },
+  "dib-voc-03-02#20": {
+    "attempt": 1,
+    "de": "der Quark",
+    "reason": "band sahna, uslub siljigan"
+  },
+  "dib-voc-03-02#13": {
+    "attempt": 1,
+    "de": "der Kakao",
+    "reason": "band sahna, uslub siljigan"
+  },
+  "dib-voc-03-02#9": {
+    "attempt": 1,
+    "de": "das Getränk",
+    "reason": "band sahna, uslub siljigan"
+  },
+  "dib-voc-03-02#12": {
+    "attempt": 1,
+    "de": "der Kaffee",
+    "reason": "band sahna, uslub siljigan"
+  },
+  "dib-voc-03-02#5": {
+    "attempt": 1,
+    "de": "das Brötchen, die Semmel",
+    "reason": "band sahna, uslub siljigan"
+  },
+  "dib-voc-03-02#11": {
+    "attempt": 1,
+    "de": "der Joghurt",
+    "reason": "band sahna, uslub siljigan"
+  },
+  "dib-voc-03-01#16": {
+    "attempt": 1,
+    "de": "sich die Haare bürsten",
+    "reason": "band sahna, uslub siljigan"
+  },
+  "dib-voc-03-01#17": {
+    "attempt": 1,
+    "de": "sich die Haare kämmen",
+    "reason": "band sahna, uslub siljigan"
+  },
+  "dib-voc-03-01#18": {
+    "attempt": 2,
+    "de": "in die Kurse gehen",
+    "reason": "model sahnani O'ZBEKCHA yozgan, FLUX tushunmay ma'nosiz shakl chizgan (1-urinish)"
+  },
+  "dib-voc-03-01#24": {
+    "attempt": 2,
+    "de": "zur Uni gehen",
+    "reason": "model sahnani O'ZBEKCHA yozgan, FLUX tushunmay ma'nosiz shakl chizgan (1-urinish)"
+  }
+}

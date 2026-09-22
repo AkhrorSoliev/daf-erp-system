@@ -624,6 +624,15 @@ The system runs several branches, and a record written to the wrong one is wrong
 
 When a backend guard rejects a cross-branch action, surface the server's Uzbek message via `getErrorMessage` — it explains which branch each side belongs to.
 
+### Branch Switch: One Rule for Remount and Cache
+
+Two things react to a branch switch: `BranchScopedMain` remounts the page content (for the ~47 components fetching with `useState` + `useEffect`), and `BranchQuerySync` (via `useBranchChange`) clears the React Query cache and the branch-scoped zustand stores. **Both read `useBranchSwitcher`'s `scopeVersion` and nothing else.**
+
+- `scopeVersion` bumps only when the branch that requests claim actually changes (`branchScopeChanged` in `lib/branch-header.ts`): a real switch, or a first resolution that replaced the saved branch. Resolving to the branch already saved does NOT bump it — `api.ts` reads the header from `localStorage`, so the page's first requests already used that branch.
+- **Never key `<main>` on `selectedBranch`/`loaded`**, not even behind a "not loaded yet" sentinel. That was a key change on every hard load: the page remounted right after `GET /branches` returned, wiping typed input (e.g. the title on `/leads/forms/new`) and repeating the page's first requests. `lib/branch-scope-single-rule.test.ts` fails if either consumer reads the selection again.
+- Once resolved, `hydrateFor` keeps the tab's own selection while it is still allowed (it re-runs on every token refresh), and `persist` compares against the tab's own selection rather than the shared `localStorage` key.
+- Known limit: all tabs still share one `branchId` key, so a switch in one tab changes the header of another tab's later requests.
+
 ### Student Filters
 
 - **Single search field** for name, phone, and ID — placeholder: "Ism, telefon yoki ID bo'yicha..."
@@ -673,6 +682,8 @@ The financial section lives under `/payments/*` with these sub-pages:
   - **Why staff need their own list rather than a widened `/salary/overview`:** that endpoint computes groups, active students and `actualEarned` per teacher, all structurally 0 for a fixed-monthly administrator — rows that read "earned nothing" next to a full month's salary. It is also the reason the "Xodimlar oyligi" section of the report sat empty from July 2026 until this shipped: the report lists staff who HAVE a rate, and there was no screen on which to set one.
 - **`salary-period-control.tsx`** — cycle-start-day control. Now embedded inside `salary-settings-sheet` (was previously at the top of the overview). Shows the current period range + day; CEO changes the day via a select → confirm `AlertDialog` → `POST /salary/period-settings`.
 - **`salary-config-bulk-dialog.tsx`** + **`salary-config-row-sheet.tsx`** — CEO assigns salary rates: bulk dialog applies a rate to many selected teachers; row sheet edits one teacher's rules (select type FIXED_MONTHLY / PERCENTAGE / FIXED_PER_STUDENT → enter value → save). PERCENTAGE and FIXED_PER_STUDENT only shown for teachers (role id 4). Both are now invoked **inline** from `salary-overview-view` (the standalone config page was removed).
+  - **The row sheet also reads the rate's history** (`GET /salary/config-history/:userId`, which already existed and had no caller): each active rule carries the date it took effect, and a **Tarix** section below lists every version per config, newest first, with who changed it. Deactivated configs stay in that list, tagged `o'chirilgan`. Before this the sheet asked for an effective date on write and never showed one back — so "what was this teacher's rate in July, and who set it?" had no answer on any screen, which is how six fixed rates dated `01.08` (one of them for an employee who had already left) produced a phantom salary that was only caught a month later.
+  - **The date arithmetic belongs to `salary-config-history.ts`, not to the JSX** (`currentVersionFor` / `effectivePeriodLabel` / `groupVersionsByConfig`, unit-tested). Two traps live there: `effectiveTo` is **exclusive** — the server closes a version by stamping it with the NEXT version's start, so the last day a rate applied is the day BEFORE it — and the instants are Tashkent midnights (01.06.2026 arrives as `2026-05-31T19:00:00Z`), so formatting goes through `tashkentNow` and never through browser-local time.
 - **`possible-deductions-info.tsx`** — pure-static info card listing the deductions that may be applied outside the system. Takes a `variant` prop: `"teacher"` shows only "Ustoz oyligidan — 12%", `"all"` (default) shows all six items (Ustoz 12%, Markaz qo'shimchasi 12%, Markaz daromad 4%, Click/Payme/Uzum 2%). Rendered in: salary-breakdown-drawer (default `"all"` — part of the company-wide /payments/salary admin page), teacher-salary-client (lehrer portal, `"teacher"` — teacher viewing their own salary), teacher-profile-tabs and employee-profile-tabs (admin Ish haqi tab, `"teacher"` — view scoped to one teacher's salary). Has no state, no API calls, no calculations. Numbers are documentation, not configuration — not enforced by any code.
 - **`record-payment-dialog.tsx`** — Manual payment entry: student select, amount, method, contract (optional), receipt number
 - **`payments-overview.tsx`** — KPI cards fetching from `GET /reports/financial-overview`. Uses `staleTime: 0` to always show fresh data.
@@ -720,6 +731,15 @@ The financial section lives under `/payments/*` with these sub-pages:
 - **Do NOT show `User.balance` as a staff salary figure.** It is a running ledger that only rises on accruals, falls only when a salary is marked PAID, and never subtracts advances already handed over. `MobileProfileHeader`'s `balance` prop is now for the **student** prepaid banner only; staff pass `salaryDueUserId` (+ `salaryDueScope="me"` on one's own profile).
 - Parity guard: `server/scripts/verify-per-user-salary-parity.ts` compares every teacher's table row against their single-row response field by field.
 
+### App Activity Tab (Group Detail) and Student Activity Panel
+
+- **Tab "Ilova faolligi"** (URL value `ilova`, period `?period=30`, default 7 omitted) on `/groups/[id]` → `groups/app-activity/group-app-activity-tab.tsx`. Visible to every role that opens the group page, teachers included — the server scopes a pure teacher to their own groups (`GET /groups/:id/app-activity`, `assertCallerMayTouchGroup`).
+- Every number comes from the server (`AppActivityStatsService`, design doc sections 3 and 6). **Do not recompute any metric client-side** — the group row, the student sheet and the profile tab must never disagree about one student.
+- The roster table is **deliberately not paginated** (design section 7): a teacher compares the whole group at a glance and groups are small. This is a conscious exception to the pagination rule.
+- Row click opens `student-activity-sheet.tsx`; the profile tab `students/student-app-activity-tab.tsx` (`?tab=ilova`, CEO/BD/Admin) renders the same `StudentActivityPanel`. There is one panel component — do not fork it.
+- Daily bar chart (seven or thirty days): bar height represents active time in seconds. Each bar has four possible states via theme tokens: `bg-primary` (practice day: ≥1 exercise answer or ≥5 min radio), `bg-primary/35` (opened and active but not practiced), `bg-muted` (tracked but never opened), `bg-muted/40` (before tracking started). In the 30-day heatmap grid below, a practice day is marked with a small ring-outlined dot (`size-2 rounded-full bg-background ring-2 ring-primary`) overlaid on the cell.
+- Accuracy and difficulty indicators use `yellow-*` theme colors (never `amber-*` — the latter is colourless in admin). This applies to accuracy percentage text and progress bars in `activity-format.ts` (`foizRangi`, `foizUstunRangi`) and to the word-learning status indicators in `student-activity-sections.tsx`.
+
 ### Lesson Changes Tab (Group Detail)
 
 - **Tab "Dars o'zgarishlari"** (URL value `bekor-qilingan`) on `/groups/[id]` → `lesson-changes-tab.tsx`. Visible to CEO / BD / Administrator (`canManage` gate). Covers both cancellations and reschedules.
@@ -737,7 +757,7 @@ The financial section lives under `/payments/*` with these sub-pages:
 
 ### Student Profile Tabs
 
-The student profile (`/students/profile/[id]`) has **8 tabs** (URL `?tab=<value>`):
+The student profile (`/students/profile/[id]`) has **10 tabs** (URL `?tab=<value>`):
 
 | Tab | URL value | Purpose |
 |-----|-----------|---------|
@@ -749,6 +769,8 @@ The student profile (`/students/profile/[id]`) has **8 tabs** (URL `?tab=<value>
 | SMS | `sms` | SMS history |
 | Tarix | `tarix` | Entity history (shared `EntityHistoryTable`) |
 | Lid | `lid` | Lead/source info |
+| Mock imtihonlar | `mock-imtihonlar` | Mock exam attempts and results |
+| Ilova | `ilova` | App usage: active time, radio, practice days, exercise accuracy, course progress (CEO/BD/Admin). Same panel as the group sheet |
 
 The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth below because they share an endpoint family and have a near-strict separation contract: every `Transaction` type belongs to exactly one tab — **except `LESSON_DEDUCTION`, which intentionally appears on both**. `LESSON_DEDUCTION` is a real money-flow row (it moves the balance), so it shows on "To'lovlar" to explain balance drops; it is also part of the lesson story, so it stays on "Darslar". `LESSON_CONSUMPTION` (amount=0) stays exclusive to "Darslar". Do not move any other type across tabs.
 
@@ -777,6 +799,24 @@ The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth
 - **`initial-balance-dialog.tsx`** — accessed via student profile `To'lov ▼` dropdown → "Boshlang'ich balans". CEO-only menu item (`isCeo` gate); backend write is `@Roles('CEO')`.
 - Used during transition from old finance systems to enter a student's outstanding balance. Backend partial unique index `(studentId) WHERE type='INITIAL_BALANCE' AND reversedAt IS NULL` enforces "exactly one per student" — second submit returns 400 with "Boshlang'ich balans bu o'quvchi uchun allaqachon kiritilgan".
 - Form: amount (`PriceInput`, min 0) + optional note (`Input`, maxLength 500).
+
+### Lead Forms and Their Responses (`/leads/forms`)
+
+Public sign-up forms (shared on Instagram/Telegram) turn every submission into a lead. Three routes:
+
+| Route | Component | Purpose |
+|-------|-----------|---------|
+| `/leads/forms` | `forms/forms-list-client.tsx` | Table of forms: responses (+ "N tasi o'quvchi bo'ldi"), **Qo'ng'iroq kutmoqda** (amber, deep-links to `?stage=awaiting`), last response. Cards below `sm`. |
+| `/leads/forms/[id]` | `forms/responses/form-responses-client.tsx` | **Who registered.** Opening a form shows its responses — NOT the editor. |
+| `/leads/forms/[id]/tahrirlash` | `forms/form-builder-client.tsx` | The builder. Save returns to the responses page; create lands on the new form's (empty) responses page. |
+
+- **The stage is computed on the server, never on the client.** Four mutually exclusive stages (`awaiting` · `contacted` · `converted` · `lost`) always sum to the form's total; the chips are the page's ONLY status filter (single-select). Counts beside chips and sources are whole-form and do not move with other filters.
+- **"Telefon qildim" is marked in the table itself** through the existing `PATCH /leads/:id/called`, optimistically, with an undo toast. `withCalled` (`responses/submission-format.ts`) moves the chip counts with the row, and under `?stage=awaiting` a just-marked row deliberately stays on screen until the next fetch so rows do not jump mid-call-list. The rollback only fires if the row still holds the optimistic value, so a refetch that landed meanwhile is never overwritten.
+- **The lead drawer and its dialogs are mounted on this page too** (`LeadDetailDrawer`, edit, move, convert, delete). The page refetches when that flow closes — it deliberately does not key off the board's `revision`.
+- Archived (lost) rows restore through `leads/restore-lead-dialog.tsx`, shared with the leads archive page.
+- **CSV export is built client-side** from `GET /custom-forms/:id/submissions/export` (same filters). `csvCell` neutralises cells starting with `= + - @` — the data comes from an anonymous public form — with phone numbers exempt.
+- An unknown `?stage=` is clamped to "no stage" before it reaches the API (the DTO would 400 it).
+- **Default field ids in `defaultFormFields()` must stay literal strings.** They are evaluated during both the server render and hydration; random ids caused a hydration mismatch on `/leads/forms/new`.
 
 ### Student Portal (`src/components/student-portal/`)
 
@@ -817,6 +857,17 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 - `student-logout-button.tsx` — logout action
 - Shared data helpers: `student-portal/lib/queries.ts` + `lib/types.ts`
 - Login uses a dedicated Lumio-skinned `app/(auth)/login/student-login-form.tsx`
+
+#### Activity tracking (whole `/portal/*` shell)
+
+Time spent in the app is measured on the client and sent to `POST /student-portal/activity` (ADR-0020). Do not try to derive it from API traffic.
+
+- `ActivityHost` (`activity/activity-host.tsx`) is rendered once in `student-portal-layout.tsx`, next to `RadioHost`, so navigation never interrupts it.
+- The rule lives in the pure module `lib/activity-tracker.ts` (unit-tested): active = page visible AND window focused AND (input within 2 min OR lesson audio playing). Radio time is measured from the player's `currentTime` advance and is never counted as active time.
+- Browser wiring is `lib/activity-runtime.ts`: 1 s tick, `localStorage` every 15 s (`daf.faollik.joriy`, `daf.faollik.kutilmoqda`), send every 60 s and on `visibilitychange → hidden` / `pagehide`, via `fetch(..., { keepalive: true })`. If `localStorage` is unavailable it falls back to in-memory storage, so tracking still works.
+- The pending-queue entries (`daf.faollik.kutilmoqda`) are keyed by `userId`. On logout the current session can still land in the queue with no valid token to send it; on the next login `kutilmoqdaOqi` returns only the entries belonging to the now-current user and drops (never re-sends, never re-attributes) any entry — malformed, legacy (no `userId`), or another user's — permanently from storage.
+- **Any new lesson audio player MUST call `registerMedia(el)` from `lib/media-registry.ts`** (and unregister on unmount), otherwise a student listening without touching the screen is counted as idle. The radio element is deliberately NOT registered.
+- Values sent are running totals for the session, never deltas — the server takes `max` and clamps by wall-clock time.
 
 #### Radio (`/portal/radio`)
 

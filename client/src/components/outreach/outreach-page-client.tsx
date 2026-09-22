@@ -5,13 +5,14 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TodayAbsenteesTab } from "./today-absentees-tab";
 import { RemovalQueueTab } from "./removal-queue-tab";
+import { PausedTab } from "./paused-tab";
 import { CallHistoryTab } from "./call-history-tab";
 import { LogCallDialog, type LogCallPrefill } from "./log-call-dialog";
 import { OutreachStatsWidget } from "./outreach-stats";
 import { OverduePromisesBanner } from "./overdue-promises-banner";
 
 const DEFAULT_TAB = "absentees";
-const VALID_TABS = new Set(["absentees", "removals", "history"]);
+const VALID_TABS = new Set(["absentees", "removals", "paused", "history"]);
 
 export function OutreachPageClient() {
   const router = useRouter();
@@ -59,7 +60,10 @@ export function OutreachPageClient() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="absentees">Bugungi kelmaganlar</TabsTrigger>
-          <TabsTrigger value="removals">Ko&apos;p dars qoldirganlar</TabsTrigger>
+          <TabsTrigger value="removals">
+            Ko&apos;p dars qoldirganlar
+          </TabsTrigger>
+          <TabsTrigger value="paused">Pauzadagilar</TabsTrigger>
           <TabsTrigger value="history">Qo&apos;ng&apos;iroq tarixi</TabsTrigger>
         </TabsList>
 
@@ -75,6 +79,12 @@ export function OutreachPageClient() {
         <TabsContent value="removals" className="mt-4">
           <RemovalQueueTab
             isActive={activeTab === "removals"}
+            onLogCall={openLogCall}
+          />
+        </TabsContent>
+        <TabsContent value="paused" className="mt-4">
+          <PausedTab
+            isActive={activeTab === "paused"}
             onLogCall={openLogCall}
           />
         </TabsContent>

@@ -23,6 +23,7 @@ import {
   LEAD_FILTER_SCHEMA,
   LEAD_HOLATI_GROUPS,
   LEAD_HOLATI_OPTIONS,
+  leadDateFieldIsConversion,
   leadFiltersActive,
 } from "./lead-filter-schema";
 
@@ -37,18 +38,18 @@ interface FilterSource {
  * Variantlar guruh tartibida tekislanadi — `MultiSelectCombobox` sarlavhani
  * guruh o'zgargan joyda chizadi, shuning uchun tartib muhim.
  */
-const HOLATI_OPTIONS: MultiSelectOption[] = LEAD_HOLATI_GROUPS.flatMap((group) =>
-  LEAD_HOLATI_OPTIONS.filter((o) => o.group === group).map((o) => ({
-    value: o.value,
-    label: o.label,
-    group,
-  })),
+const HOLATI_OPTIONS: MultiSelectOption[] = LEAD_HOLATI_GROUPS.flatMap(
+  (group) =>
+    LEAD_HOLATI_OPTIONS.filter((o) => o.group === group).map((o) => ({
+      value: o.value,
+      label: o.label,
+      group,
+    })),
 );
 
 export function LeadsFilterBar() {
-  const { filters, setFilters, resetFilters } = useUrlFilters(
-    LEAD_FILTER_SCHEMA,
-  );
+  const { filters, setFilters, resetFilters } =
+    useUrlFilters(LEAD_FILTER_SCHEMA);
   const columns = useLeadsBoard((s) => s.board);
 
   const [sources, setSources] = useState<FilterSource[]>([]);
@@ -67,6 +68,11 @@ export function LeadsFilterBar() {
 
   const startDate = filters.startDate ? parseISO(filters.startDate) : null;
   const endDate = filters.endDate ? parseISO(filters.endDate) : null;
+
+  // Sana tanlagichlarining yorlig'i qaysi sana filtrlanayotganini aytib tursin.
+  const dateLabel = leadDateFieldIsConversion(filters.holati)
+    ? "Aylangan sana"
+    : "Sana";
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -115,7 +121,7 @@ export function LeadsFilterBar() {
 
       <DatePicker
         value={startDate}
-        placeholder="Sana: boshi"
+        placeholder={`${dateLabel}: boshi`}
         maxDate={endDate ?? undefined}
         defaultMonth={endDate ?? undefined}
         onChange={(d) =>
@@ -125,7 +131,7 @@ export function LeadsFilterBar() {
       />
       <DatePicker
         value={endDate}
-        placeholder="Sana: oxiri"
+        placeholder={`${dateLabel}: oxiri`}
         minDate={startDate ?? undefined}
         defaultMonth={startDate ?? undefined}
         onChange={(d) =>

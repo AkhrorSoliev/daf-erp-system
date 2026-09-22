@@ -36,6 +36,20 @@ async function main() {
     ? (JSON.parse(readFileSync(TRANSLATIONS, 'utf8')) as TranslationFile)
     : undefined;
 
+  // `content/daf/a1-units.json` ATAYLAB o'qilmaydi: A1 xaritasi endi
+  // `content/daf/a1/kurs.json` + `npm run daf:a1-seed` orqali boshqariladi,
+  // eski DiB A1 bo'limlari esa nafaqaga chiqarilgan (manfiy order). Bu
+  // faylni bu yerga uzatish `DafSeedService.seed()`ni rad ettiradi —
+  // qarang shu servisning `assertA1NotProvided`i.
+
+  // `content/daf/sentences.json` ATAYLAB o'qilmaydi: u A1 ning ESKI 20
+  // bo'limlik tuzilishiga (order 1..20) qarab yasalgan, yangi qo'lda
+  // chizilgan A1 (u01..u12) bilan aloqasi yo'q. Bu faylni shu yerga
+  // uzatish `DafSeedService.seed()`ni rad ettiradi — qarang shu
+  // servisning `assertSentencesNotProvided`i. Yangi tuzilish uchun gaplar
+  // qayta yasalgach, ular `seedSentences`ni boshqa chaqiruvchidan
+  // ishlatadi, bu skriptdan emas.
+
   const prisma = new PrismaClient({
     adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
   });

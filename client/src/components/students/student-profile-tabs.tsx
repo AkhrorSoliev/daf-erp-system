@@ -17,6 +17,7 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import type { Student } from "@/data/student-model";
 import { useAuth } from "@/hooks/use-auth";
+import { StudentAppActivityTab } from "./student-app-activity-tab";
 import { StudentGroupCard } from "./student-group-card";
 import { StudentPaymentsTable } from "./student-payments-table";
 import { LessonTrailTab } from "./lesson-trail-tab";
@@ -64,6 +65,8 @@ export function StudentProfileTabs({
   const paymentsShown = useRef(false);
   const [darslarVisible, setDarslarVisible] = useState(false);
   const darslarShown = useRef(false);
+  const [ilovaVisible, setIlovaVisible] = useState(false);
+  const ilovaShown = useRef(false);
   const [transactions, setTransactions] = useState<StudentTransaction[]>([]);
   const [balanceSummary, setBalanceSummary] =
     useState<BalanceSummary | null>(null);
@@ -190,6 +193,10 @@ export function StudentProfileTabs({
       if (value === "darslar" && !darslarShown.current) {
         darslarShown.current = true;
         setDarslarVisible(true);
+      }
+      if (value === "ilova" && !ilovaShown.current) {
+        ilovaShown.current = true;
+        setIlovaVisible(true);
       }
     },
     [loadPayments],
@@ -334,6 +341,7 @@ export function StudentProfileTabs({
           {canManage && (
             <TabsTrigger value="mock-imtihonlar">Mock imtihonlar</TabsTrigger>
           )}
+          {canManage && <TabsTrigger value="ilova">Ilova</TabsTrigger>}
         </TabsList>
 
         {/* Guruhlar */}
@@ -464,6 +472,13 @@ export function StudentProfileTabs({
         <TabsContent value="mock-imtihonlar">
           <StudentMockExamsTab studentId={student.id} />
         </TabsContent>
+
+        {/* Ilova — ilovadagi faollik */}
+        {canManage && (
+          <TabsContent value="ilova">
+            {ilovaVisible && <StudentAppActivityTab studentId={student.id} />}
+          </TabsContent>
+        )}
       </Tabs>
 
       <StudentRemoveFromGroupDialog

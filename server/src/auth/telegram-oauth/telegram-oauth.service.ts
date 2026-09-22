@@ -124,7 +124,8 @@ export class TelegramOauthService {
       2,
     );
     if (matches.length > 1) {
-      // NA `User.login`, NA `User.phone` unique EMAS (server/CLAUDE.md), va
+      // `User.phone` unique EMAS (login faqat tirik qatorlar orasida unique
+      // va bo'sh bo'lishi mumkin — server/CLAUDE.md), va
       // bazada haqiqiy dublikat bor. Parol yo'lida `updatedAt desc` g'olibini
       // tanlash zararsiz — o'sha akkauntning paroli baribir kerak. Bu yerda
       // parol yo'q, ya'ni g'olibni tanlash odamni BEGONA akkauntga (masalan

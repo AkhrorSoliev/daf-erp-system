@@ -6,6 +6,11 @@ import {
   studentBranchWhere,
   groupBranchWhere,
 } from '../common/finance/report-branch-scope';
+import {
+  ACTIVE_ENROLLMENT_WHERE,
+  activeStudentWhere,
+  ungroupedStudentWhere,
+} from '../students/shared/active-student-where';
 
 export interface StudentFlow {
   month: string;
@@ -107,12 +112,16 @@ export class ReportsStudentFlowService {
         where: { companyId, deletedAt: null, ...studentScope },
         _count: true,
       }),
+      // «Guruhda» va «guruhsiz» ta'rifi `students/shared/active-student-where`
+      // dan keladi. Bu yerda ilgari `enrollments: { some: { status: 'ACTIVE' } }`
+      // turgan edi — unda yozuvning `deletedAt: null` i ham, guruhning holati
+      // ham tekshirilmasdi, shuning uchun u 372 qaytarardi, bosh sahifa va
+      // /students esa 365. Ta'rif CONTEXT.md da yozilgan, bitta bo'lishi shart.
       this.prisma.student.count({
         where: {
           companyId,
           deletedAt: null,
-          status: 'ACTIVE',
-          enrollments: { some: { status: 'ACTIVE' } },
+          ...activeStudentWhere(),
           ...studentScope,
         },
       }),
@@ -120,8 +129,7 @@ export class ReportsStudentFlowService {
         where: {
           companyId,
           deletedAt: null,
-          status: 'ACTIVE',
-          NOT: { enrollments: { some: { status: 'ACTIVE' } } },
+          ...ungroupedStudentWhere(),
           ...studentScope,
         },
       }),
@@ -178,7 +186,12 @@ export class ReportsStudentFlowService {
           select: {
             id: true,
             status: true,
-            enrollments: { where: { status: 'ACTIVE' }, select: { id: true } },
+            // Ayni ta'rif: «hali boshqa guruhda o'qiyaptimi?» degan savol ham
+            // o'chirilgan yozuvni yoki yopilgan guruhni hisobga olmasligi kerak.
+            enrollments: {
+              where: ACTIVE_ENROLLMENT_WHERE,
+              select: { id: true },
+            },
           },
         })
       : [];

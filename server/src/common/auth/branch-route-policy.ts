@@ -316,6 +316,20 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
+      "Ilova faolligi statistikasi (dizayn 6.1, ADR-0020). Guruh route'lari " +
+      "`assertCallerMayTouchGroup` — sof o'qituvchi uchun biriktirilganlik, " +
+      "qolganlar uchun filial; yon oyna qo'shimcha ravishda o'quvchi shu " +
+      "guruhning faol a'zosi ekanini tekshiradi. Profil route'i " +
+      '`assertCallerMayTouchStudent`.',
+    routes: [
+      'GET /groups/:id/app-activity',
+      'GET /groups/:id/app-activity/students/:studentId',
+      'GET /students/:id/app-activity',
+    ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
       'Comments, gated by the record they hang off. `entityType` was a free ' +
       'string and NOTHING checked the entity — not that it existed, not the ' +
       'company, not the branch — so `?entityType=Student&entityId=<any id>` ' +
@@ -438,6 +452,17 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'COMPANY_WIDE',
     reason:
+      'The automatic-pause rule is one row per company, by deliberate design: ' +
+      'both branches follow the same threshold and a per-branch setting was ' +
+      'explicitly left out (YAGNI). That is also why the WRITE is CEO-only — a ' +
+      'Branch Director changing it would move the other branch without seeing ' +
+      'it. The cron it configures runs company-wide and resolves each ' +
+      "student's branch from the student, never from the caller.",
+    routes: ['GET /absence-pause/settings', 'PATCH /absence-pause/settings'],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
       'Company-level configuration, not branch data. A salary RATE and the ' +
       'payroll cycle apply to the whole company by design (a rate is per employee, ' +
       'and the employee already carries a branch); `POST /salary/calculate` is ' +
@@ -462,14 +487,46 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'The DaF learning catalogue is reference content, not branch data. It is ' +
       "COERLL's CC BY 4.0 material: the same units, vocabulary and exercises for " +
       'every branch, which is why the `Daf*` content tables carry no `companyId` ' +
-      'at all. Scoping these reads by branch would answer a question nobody asks ' +
-      'and imply the catalogue differs per branch, which it does not.',
+      'at all. The media inventory endpoints return generated content (audio, ' +
+      'images, character profiles) produced alongside the catalogue, read either ' +
+      'from on-disk JSON manifests or, for the unit/section coverage view, the ' +
+      'per-section material list, and the per-section exercise-question preview ' +
+      'behind them, directly by aggregating the `Daf*` content tables — the ' +
+      'question preview takes no `studentId` (it re-derives every question the ' +
+      'engine could build from the material, not the subset one student would ' +
+      'see, so there is nothing student- or branch-specific to scope) — either ' +
+      'way this content is identical per branch and carries no `companyId`. ' +
+      'Scoping these reads by branch would answer a ' +
+      'question nobody asks and imply the catalogue differs per branch, which it ' +
+      'does not.',
     routes: [
+      'GET /daf/media/coverage',
+      'GET /daf/media/overview',
+      'GET /daf/media/sections/:id/fragen',
+      'GET /daf/media/sections/:id/inhalt',
       'GET /student-portal/lernen/grammar',
       'GET /student-portal/lernen/lessons/:id',
       'GET /student-portal/lernen/lessons/:id/drill',
-      'GET /student-portal/lernen/levels',
-      'GET /student-portal/lernen/units/:id',
+    ],
+  },
+  {
+    policy: 'SELF',
+    reason:
+      'The catalogue itself is COMPANY_WIDE (see above), but these three build a ' +
+      'SESSION from it, not the catalogue verbatim. `seans()` and `ersatz()` ' +
+      "both read the caller's own Leitner state (`DafLexemeState` — which " +
+      'words are due, which format each was last asked in) to decide which ' +
+      'questions to build, so the response is a payload that differs per ' +
+      'student even though the underlying material is shared — exactly what ' +
+      'COMPANY_WIDE promises it does not. `wiederholung()` goes further: it ' +
+      'belongs to no lesson at all — the whole session (both which words are ' +
+      "asked and which words supply distractors) is built from the caller's " +
+      'own due `DafLexemeState` rows, so there is no catalogue-verbatim part ' +
+      'to it in the first place.',
+    routes: [
+      'GET /student-portal/lernen/lessons/:id/uebung',
+      'GET /student-portal/lernen/lessons/:id/uebung/ersatz',
+      'GET /student-portal/lernen/wiederholung/uebung',
     ],
   },
   {
@@ -483,6 +540,62 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     routes: [
       'POST /student-portal/lernen/attempts',
       'POST /student-portal/lernen/drill/check',
+      'POST /student-portal/lernen/lessons/:id/abschluss',
+      // Takrorlash seansi yakuni — `DafSession` shu o'quvchining nomiga,
+      // `sessionId` egaligi servisda tekshiriladi (403).
+      'POST /student-portal/lernen/wiederholung/abschluss',
+      'POST /student-portal/lernen/uebung/check',
+      // `uebung/juft` — matching mashqidagi BITTA juftni jonli tekshirish.
+      // Xuddi `uebung/check` bilan bir xil sabab: `@CurrentUser('studentId')`
+      // dan kelinadi, DTOda `studentId` yo'q, va yozuv har bosishda
+      // haqiqiy `dafAttempt` sifatida SHU o'quvchining nomiga muhrlanadi.
+      'POST /student-portal/lernen/uebung/juft',
+    ],
+  },
+  {
+    policy: 'SELF',
+    reason:
+      "Keyed on `@CurrentUser('studentId')` — the caller is the subject and the " +
+      'DTO has no `studentId`. A session id owned by another student is refused ' +
+      "(403). The row's branch is STAMPED from the student's own record on the " +
+      'first write, never taken from a header, so a later transfer does not move ' +
+      'past activity into the new branch.',
+    routes: ['POST /student-portal/activity'],
+  },
+  {
+    policy: 'SELF',
+    reason:
+      'The catalogue itself is COMPANY_WIDE (see above) — these two routes moved ' +
+      'out of that block because the RESPONSE is no longer just the catalogue. ' +
+      "`getLevels`/`getUnit` now read `DafLessonProgress` for the caller's own " +
+      '`studentId` and attach it (`doneCount`, per-lesson `completedAt`/' +
+      '`bestScore`/`runs`) — the same content, but the payload differs per ' +
+      'student, which is exactly what COMPANY_WIDE promises it does not.',
+    routes: [
+      'GET /student-portal/lernen/levels',
+      'GET /student-portal/lernen/units/:id',
+    ],
+  },
+  {
+    policy: 'SELF',
+    reason:
+      "Keyed on `@CurrentUser('studentId')` — the response is the caller's own " +
+      "progress or a leaderboard row list, never another student's read by id. " +
+      '`GET .../fortschritt` is SELF in the ordinary sense: every field on it ' +
+      "is the caller's own (their total, level, streak, rank). " +
+      '`GET .../reyting` is SELF for the SAME reason (the caller decides which ' +
+      'of their two tables to see via `?scope=`), but its `zentrum` branch is ' +
+      'DELIBERATELY NOT branch-scoped inside that — this is the one exception ' +
+      'in the whole route-branch story, not an oversight. The CEO decided on ' +
+      '2026-09-06 that the weekly ranking spans the whole centre: a student in ' +
+      'one branch sees the full name of a student in another. Recorded in ' +
+      '`docs/superpowers/specs/2026-09-06-ball-va-yol-design.md` section 6.1, ' +
+      "and in the comment on `FortschrittService`'s centre query " +
+      '(`fortschritt/fortschritt.service.ts`). Do not add a `branchId` filter ' +
+      "there — that would be 'fixing' a considered decision.",
+    routes: [
+      'GET /student-portal/lernen/fortschritt',
+      'GET /student-portal/lernen/reyting',
     ],
   },
   {

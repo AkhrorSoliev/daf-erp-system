@@ -14,6 +14,7 @@ import { CoursesModule } from './courses/courses.module';
 import { TeachersModule } from './teachers/teachers.module';
 import { StudentsModule } from './students/students.module';
 import { DafModule } from './daf/daf.module';
+import { AppActivityModule } from './app-activity/app-activity.module';
 import { GroupsModule } from './groups/groups.module';
 import { HolidaysModule } from './holidays/holidays.module';
 import { CompanyModule } from './company/company.module';
@@ -23,6 +24,7 @@ import { TelegramGroupsModule } from './telegram-groups/telegram-groups.module';
 import { ArchiveModule } from './archive/archive.module';
 import { StatusHistoryModule } from './common/status';
 import { EntityHistoryModule } from './common/entity-history';
+import { StudentOriginModule } from './common/student-origin';
 import { CommentsModule } from './comments/comments.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SmsModule } from './sms/sms.module';
@@ -50,6 +52,7 @@ import { LessonReschedulesModule } from './lesson-reschedules/lesson-reschedules
 import { BillingModule } from './billing/billing.module';
 import { ReceiptsModule } from './receipts/receipts.module';
 import { OutreachModule } from './outreach/outreach.module';
+import { AbsencePauseModule } from './absence-pause/absence-pause.module';
 import { PlannedAbsencesModule } from './planned-absences/planned-absences.module';
 import { PaymentPromisesModule } from './payment-promises/payment-promises.module';
 import { SettingsModule } from './settings/settings.module';
@@ -86,6 +89,7 @@ import { validateEnv } from './config/env.validation';
     TeachersModule,
     StudentsModule,
     DafModule,
+    AppActivityModule,
     GroupsModule,
     HolidaysModule,
     CompanyModule,
@@ -95,6 +99,7 @@ import { validateEnv } from './config/env.validation';
     ArchiveModule,
     StatusHistoryModule,
     EntityHistoryModule,
+    StudentOriginModule,
     CommentsModule,
     NotificationsModule,
     SmsModule,
@@ -123,6 +128,7 @@ import { validateEnv } from './config/env.validation';
     SettingsModule,
     ReceiptsModule,
     OutreachModule,
+    AbsencePauseModule,
     PlannedAbsencesModule,
     PaymentPromisesModule,
     CallLogsModule,

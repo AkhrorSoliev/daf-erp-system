@@ -13,7 +13,7 @@ import {
   YAxis,
 } from "recharts";
 import api from "@/lib/api";
-import { ChartCard } from "./chart-card";
+import { ChartCard } from "@/components/shared/chart-card";
 
 interface DynamicsResponse {
   data: { date: string; count: number }[];

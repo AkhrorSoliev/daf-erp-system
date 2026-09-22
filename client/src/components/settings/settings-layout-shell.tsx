@@ -22,10 +22,11 @@ export function SettingsLayoutShell({ children }: { children: React.ReactNode })
   const isAdminRestricted =
     pathname.startsWith("/settings/employees") ||
     pathname.startsWith("/settings/branches");
-  // Arxiv sahifasi backend'da faqat CEO uchun (@Roles('CEO')) — CEO bo'lmaganlar
-  // linkni ko'rmaydi va sahifaga kirsa 403 oladi, shuning uchun bu yerda ham to'sib qo'yamiz.
+  // Arxiv va DaF normasi backend'da faqat CEO uchun — CEO bo'lmaganlar linkni
+  // ko'rmaydi va sahifaga kirsa 403 oladi, shuning uchun bu yerda ham to'siladi.
   const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
-  const isCeoRestricted = pathname.startsWith("/settings/archive");
+  const isCeoRestricted =
+    pathname.startsWith("/settings/archive") || pathname.startsWith("/settings/daf");
   const blockCeoRoute = !!user && isCeoRestricted && !isCeo;
   // To'lov sozlamalari backend'da @Roles('CEO', 'Branch Director') — boshqa
   // rol (Admin, Kassir, O'qituvchi) sahifaga to'g'ridan-to'g'ri havola bilan

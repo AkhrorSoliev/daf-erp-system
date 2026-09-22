@@ -12,6 +12,10 @@ import {
   studentBranchWhere,
 } from '../common/finance/report-branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
+import {
+  SELF_SIGNUP_SOURCE,
+  StudentLeadOriginService,
+} from '../common/student-origin';
 import { MockExamBillingService } from './mock-exam-billing.service';
 import { AddManualParticipantDto } from './dto/add-manual-participant.dto';
 import { ConvertMockParticipantDto } from './dto/convert-mock-participant.dto';
@@ -59,6 +63,7 @@ export class MockExamParticipantsService {
     private entityHistoryService: EntityHistoryService,
     private mockExamBilling: MockExamBillingService,
     private eventEmitter: EventEmitter2,
+    private leadOrigin: StudentLeadOriginService,
   ) {}
 
   async list(
@@ -373,7 +378,24 @@ export class MockExamParticipantsService {
         },
       });
 
-      // 3. Link the participant to the new student.
+      // 3. Har bir o'quvchi lid yozuvi qoldiradi (ADR-0017). Bu yo'l ham
+      //    `/students` eshigidan o'tmaydi, shuning uchun lidni o'zi yozadi.
+      //    O'sha tranzaksiya ichida: lid yozilmasa o'quvchi ham yozilmaydi.
+      await this.leadOrigin.recordSelfSignupOrigin(
+        tx,
+        {
+          studentId: created.id,
+          firstName: created.firstName,
+          lastName: created.lastName,
+          phone: created.phone,
+          branchId: dto.branchId,
+          companyId,
+          userId,
+        },
+        SELF_SIGNUP_SOURCE.MOCK_EXAM,
+      );
+
+      // 4. Link the participant to the new student.
       await tx.mockExamParticipant.update({
         where: { id: participant.id },
         data: {

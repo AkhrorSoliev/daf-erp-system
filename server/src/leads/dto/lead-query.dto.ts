@@ -3,6 +3,7 @@ import {
   IsBooleanString,
   IsDateString,
   IsEnum,
+  IsIn,
   IsOptional,
   IsString,
 } from 'class-validator';
@@ -51,6 +52,15 @@ export class LeadQueryDto extends PaginationDto {
   @IsOptional()
   @IsBooleanString()
   hasComments?: string;
+
+  /**
+   * Sana oralig'i qaysi maydonga tushishi. Standart `createdAt` (lid qachon
+   * kelgani). `statusChangedAt` — lid qachon o'quvchiga aylangani; "shu oyda
+   * nechta odam o'quvchi bo'ldi" savoliga aynan shu javob beradi.
+   */
+  @IsOptional()
+  @IsIn(['createdAt', 'statusChangedAt'])
+  dateField?: 'createdAt' | 'statusChangedAt';
 
   // createdAt range (yyyy-MM-dd).
   @IsOptional()

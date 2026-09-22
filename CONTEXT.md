@@ -71,6 +71,23 @@ tizimga kira olmaydi.** Ilgari bu ikkisi bir narsa deb qaralardi.
 **Student** — o'quvchi. `Student.balance` — uning puli (manfiy = qarz).
 `prisma/schema.prisma`
 
+**Faol o'quvchi** — statusi `ACTIVE` **va** hozir faol guruhda faol yozuvi bor
+o'quvchi. Statusi faol, lekin guruhsiz qolgani — «guruhlashtirilmagan»: u faol
+emas, joylashtirilishi kerak. Ikki toifa **bitta** shartning `some` va `none`
+ko'rinishi, shuning uchun ular ustma-ust tushmaydi va birgalikda statusi faol
+hamma o'quvchini qoplaydi. Ilgari uch xil ta'rif bor edi va 496 ta o'quvchi
+ikkala ro'yxatda ham turardi.
+`students/shared/active-student-where.ts`
+
+**Avtomatik pauza** — ketma-ket sababsiz dars qoldirgan o'quvchini tizim
+har kuni ertalab 07:30 da o'zi muzlatadi (`FROZEN`), guruhdan **chiqarmaydi**.
+Pauzadagi o'quvchi davomat ro'yxatidan chiqadi, ya'ni undan pul yechilmaydi
+va ustozga oylik yozilmaydi; mavjud qarziga tegilmaydi. Sanoq faollashtirish
+sanasidan boshlanadi, oldindan aytilgan «sababsiz» qoldirish sanaladi, bekor
+qilingan dars esa umuman ko'rinmaydi. Chegara CEO sozlamasida (ADR-0023).
+`absence-pause/absence-auto-pause.cron.service.ts`,
+`outreach/absence-streak.service.ts`
+
 **Lead** — hali o'quvchi bo'lmagan potensial mijoz. Kanban doskasida yuradi;
 ustun = filial. O'chirish = `LOST` holatiga o'tkazish + majburiy sabab.
 `leads/leads.service.ts`
@@ -92,6 +109,15 @@ to'plami. `endDate` **avtomatik yopilmaydi** — CEO qarori bilan cron o'chirilg
 **Enrollment** — o'quvchining **bitta guruhdagi** a'zoligi. Pul hisob-kitobi
 shu darajada yuritiladi, o'quvchi darajasida emas.
 `prisma/schema.prisma`
+
+**Faol kun (DaF)** — o'quvchi o'sha Toshkent kunida ilovaning o'quv (`LERNEN`)
+bo'limida normadagi daqiqadan kam bo'lmagan vaqt o'tkazgan **yoki** tugatilgan
+seanslarda normadagi sondan kam bo'lmagan savolga javob bergan kun. Norma
+`Company` da sozlanadi (`dafKunlikDaqiqa`, `dafKunlikSavol`, `dafHaftalikKun`,
+`dafSariqKun`, `/settings/daf`). Holat (qizil / sariq / yashil) maxrajga
+mutanosib chegaradan chiqadi va **faqat** `app-activity/norma/norma.ts` da
+hisoblanadi — SQL faqat sonlarni yig'adi (ADR-0024).
+`app-activity/norma/norma.ts`
 
 **Attendance** — bitta o'quvchining bitta darsdagi holati:
 `PRESENT` · `LATE` · `ABSENT` · `EXCUSED`.

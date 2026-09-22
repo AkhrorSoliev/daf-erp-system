@@ -31,6 +31,12 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPrice } from "@/lib/format-utils";
 import { positionLabel } from "./salary-utils";
+import {
+  currentVersionFor,
+  effectivePeriodLabel,
+  groupVersionsByConfig,
+  type SalaryConfigVersion,
+} from "./salary-config-history";
 
 interface SimpleEmployee {
   id: number;
@@ -108,6 +114,21 @@ export function SalaryConfigRowSheet({ userId, employee, onClose, onSaved }: Pro
     enabled: open,
   });
 
+  /**
+   * The SCD2 trail behind the rules above. It answers "since when?" on each
+   * active rule and "what was it in July?" in the history block — the question
+   * the sheet could not answer before, which is how a rate set from the wrong
+   * date stayed invisible until payroll had already run on it.
+   */
+  const historyQuery = useQuery({
+    queryKey: ["salary-config-history", userId],
+    queryFn: () =>
+      api
+        .get<SalaryConfigVersion[]>(`/salary/config-history/${userId}`)
+        .then((r) => r.data),
+    enabled: open,
+  });
+
   const groupsQuery = useQuery<GroupOption[]>({
     queryKey: ["teacher-groups", userId],
     queryFn: () =>
@@ -132,6 +153,16 @@ export function SalaryConfigRowSheet({ userId, employee, onClose, onSaved }: Pro
       return (a.group?.name ?? "").localeCompare(b.group?.name ?? "");
     });
   }, [configsQuery.data]);
+
+  const versions = useMemo(() => historyQuery.data ?? [], [historyQuery.data]);
+  const historyGroups = useMemo(
+    () => groupVersionsByConfig(versions),
+    [versions],
+  );
+  const activeConfigIds = useMemo(
+    () => new Set(sortedConfigs.map((c) => c.id)),
+    [sortedConfigs],
+  );
 
   const numericValue = useMemo(() => {
     if (salaryType === "PERCENTAGE") {
@@ -164,7 +195,7 @@ export function SalaryConfigRowSheet({ userId, employee, onClose, onSaved }: Pro
       setPercentValue("");
       setEffectiveFrom(undefined);
       setGroupId("__global__");
-      await configsQuery.refetch();
+      await Promise.all([configsQuery.refetch(), historyQuery.refetch()]);
       onSaved();
     } catch (err) {
       toast.error(getErrorMessage(err, "Saqlashda xatolik"));
@@ -185,7 +216,7 @@ export function SalaryConfigRowSheet({ userId, employee, onClose, onSaved }: Pro
     try {
       await api.patch(`/salary/config/${configId}`, { isActive: false });
       toast.success("Oylik qoidasi o'chirildi");
-      await configsQuery.refetch();
+      await Promise.all([configsQuery.refetch(), historyQuery.refetch()]);
       onSaved();
     } catch (err) {
       toast.error(getErrorMessage(err, "O'chirishda xatolik"));
@@ -244,45 +275,114 @@ export function SalaryConfigRowSheet({ userId, employee, onClose, onSaved }: Pro
               </div>
             ) : (
               <ul className="space-y-2">
-                {sortedConfigs.map((c) => (
-                  <li
-                    key={c.id}
-                    className="flex items-start justify-between gap-3 rounded-md border p-3"
-                  >
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge
-                          variant={c.groupId ? "default" : "secondary"}
-                          className="text-xs"
-                        >
-                          {c.groupId ? `${c.group?.name ?? "?"} guruh` : "Umumiy"}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {SALARY_TYPE_LABEL[c.salaryType] ?? c.salaryType}
-                        </Badge>
-                      </div>
-                      <p className="text-base font-semibold">
-                        {c.salaryType === "PERCENTAGE"
-                          ? `${c.value}%`
-                          : `${formatPrice(c.value)} so'm`}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeactivate(c.id)}
-                      disabled={deletingId === c.id}
-                      className="text-destructive hover:text-destructive shrink-0"
+                {sortedConfigs.map((c) => {
+                  const inForce = currentVersionFor(c.id, versions);
+                  return (
+                    <li
+                      key={c.id}
+                      className="flex items-start justify-between gap-3 rounded-md border p-3"
                     >
-                      {deletingId === c.id ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="size-4" />
-                      )}
-                    </Button>
-                  </li>
-                ))}
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge
+                            variant={c.groupId ? "default" : "secondary"}
+                            className="text-xs"
+                          >
+                            {c.groupId
+                              ? `${c.group?.name ?? "?"} guruh`
+                              : "Umumiy"}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {SALARY_TYPE_LABEL[c.salaryType] ?? c.salaryType}
+                          </Badge>
+                        </div>
+                        <p className="text-base font-semibold">
+                          {c.salaryType === "PERCENTAGE"
+                            ? `${c.value}%`
+                            : `${formatPrice(c.value)} so'm`}
+                        </p>
+                        {/* Since when. The rule is otherwise indistinguishable
+                          from one that starts next month. */}
+                        {inForce && (
+                          <p className="text-xs text-muted-foreground">
+                            {effectivePeriodLabel(inForce)}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeactivate(c.id)}
+                        disabled={deletingId === c.id}
+                        className="text-destructive hover:text-destructive shrink-0"
+                      >
+                        {deletingId === c.id ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="size-4" />
+                        )}
+                      </Button>
+                    </li>
+                  );
+                })}
               </ul>
+            )}
+          </section>
+
+          {/* Tarix — har o'zgarish, eng yangisi tepada. Faol qoidalar
+              ro'yxati faqat BUGUNGI holatni ko'rsatadi; bu blok esa
+              "iyulda stavka qanday edi, kim o'zgartirgan" savoliga javob
+              beradi va o'chirilgan qoidalarni ham saqlab qoladi. */}
+          <section className="space-y-3 border-t px-6 py-5">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Tarix
+            </h3>
+
+            {historyQuery.isLoading ? (
+              <Skeleton className="h-14 w-full" />
+            ) : historyGroups.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                O&apos;zgarishlar tarixi yo&apos;q.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {historyGroups.map((g) => (
+                  <div key={g.configId} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium">{g.label}</span>
+                      {!activeConfigIds.has(g.configId) && (
+                        <Badge
+                          variant="outline"
+                          className="text-[11px] font-normal text-muted-foreground"
+                        >
+                          o&apos;chirilgan
+                        </Badge>
+                      )}
+                    </div>
+                    <ol className="space-y-1.5 border-l pl-3">
+                      {g.versions.map((v) => (
+                        <li key={v.id} className="text-sm">
+                          <span className="font-medium">
+                            {v.salaryType === "PERCENTAGE"
+                              ? `${v.value}%`
+                              : `${formatPrice(v.value)} so'm`}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {" · "}
+                            {effectivePeriodLabel(v)}
+                          </span>
+                          {v.changedBy && (
+                            <span className="text-muted-foreground">
+                              {" · "}
+                              {v.changedBy.firstName} {v.changedBy.lastName}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ))}
+              </div>
             )}
           </section>
 
@@ -325,7 +425,9 @@ export function SalaryConfigRowSheet({ userId, employee, onClose, onSaved }: Pro
             )}
 
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Hisoblash turi</Label>
+              <Label className="text-xs text-muted-foreground">
+                Hisoblash turi
+              </Label>
               <Select value={salaryType} onValueChange={setSalaryType}>
                 <SelectTrigger>
                   <SelectValue />

@@ -15,6 +15,7 @@ import { CashAccountQueryDto } from './dto/cash-account-query.dto';
 import { MovementQueryDto } from './dto/movement-query.dto';
 import { TransferDto } from './dto/transfer.dto';
 import { ReconcileDto } from './dto/reconcile.dto';
+import { tashkentRangeFilter } from '../common/date/tashkent';
 
 const TX = {
   isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -199,10 +200,7 @@ export class CashAccountsService {
       companyId,
       ...(query.type && { type: query.type }),
       ...((query.startDate || query.endDate) && {
-        createdAt: {
-          ...(query.startDate && { gte: new Date(query.startDate) }),
-          ...(query.endDate && { lte: new Date(query.endDate) }),
-        },
+        createdAt: tashkentRangeFilter(query.startDate, query.endDate),
       }),
     };
 

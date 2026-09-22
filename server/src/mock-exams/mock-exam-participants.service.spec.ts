@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { MockExamStatus, Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { StudentLeadOriginService } from '../common/student-origin';
 import { MockExamParticipantsService } from './mock-exam-participants.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
@@ -68,6 +69,14 @@ describe('MockExamParticipantsService', () => {
         { provide: EntityHistoryService, useValue: history },
         { provide: MockExamBillingService, useValue: billing },
         { provide: EventEmitter2, useValue: eventEmitter },
+        {
+          provide: StudentLeadOriginService,
+          useValue: {
+            recordSelfSignupOrigin: jest
+              .fn()
+              .mockResolvedValue({ kind: 'created', leadId: 'lead-mock' }),
+          },
+        },
       ],
     }).compile();
     service = mod.get(MockExamParticipantsService);

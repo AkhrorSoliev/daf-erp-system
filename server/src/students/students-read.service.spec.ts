@@ -36,6 +36,35 @@ describe('StudentsReadService', () => {
     service = module.get(StudentsReadService);
   });
 
+  describe('findAll — active filter', () => {
+    it('faqat faol guruhda faol yozuvi borlarni oladi', async () => {
+      await service.findAll(
+        { status: ['active'] } as StudentQueryDto,
+        1001,
+        null,
+      );
+
+      const where = prisma.student.findMany.mock.calls[0][0].where;
+      // Ilgari bu shart shunchaki «o'chirilmagan biror yozuvi bor» edi, ya'ni
+      // guruhini tashlab ketgan (DROPPED) o'quvchi ham «faol» sanalardi — va
+      // ayni paytda «guruhlashtirilmagan» ro'yxatiga ham tushardi. Ikki toifa
+      // endi bitta shartning `some`/`none` ko'rinishi, shuning uchun ular
+      // hech qachon ustma-ust tushmaydi.
+      expect(where.AND).toEqual([
+        {
+          status: 'ACTIVE',
+          enrollments: {
+            some: {
+              deletedAt: null,
+              status: 'ACTIVE',
+              group: { deletedAt: null, statusEnum: 'ACTIVE' },
+            },
+          },
+        },
+      ]);
+    });
+  });
+
   describe('findAll — ungrouped filter', () => {
     it('matches active students not in any active group (dropped-out students included)', async () => {
       await service.findAll(

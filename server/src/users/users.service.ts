@@ -28,6 +28,10 @@ import {
   assertCallerMayTouchUserRecord,
 } from '../common/auth/user-branch-scope';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
+import {
+  findLiveStaffByPhone,
+  STAFF_ROLE_IDS,
+} from '../common/auth/phone-account-rules';
 
 const userSelect = {
   id: true,
@@ -524,6 +528,23 @@ export class UsersService {
         passwordAfter: !!data.password,
       },
     );
+
+    // Bitta telefonga bitta ISHLAB TURGAN xodim hisobi (ADR-0022). Qoida
+    // shu yerda turadi, chunki xodim hisobi ochiladigan har ikki eshik —
+    // admin formasi ham, bot ham — shu funksiyadan o'tadi. O'quvchi hisobi
+    // va o'chirilgan hisob to'sqinlik qilmaydi; rolsiz xodimga qoida
+    // qo'llanmaydi — u kira olmaydi, ya'ni raqam noaniqligi zararsiz.
+    const grantsStaffRole = (data.roleIds ?? []).some((id) =>
+      (STAFF_ROLE_IDS as readonly number[]).includes(id),
+    );
+    if (grantsStaffRole && data.phone) {
+      const liveStaff = await findLiveStaffByPhone(this.prisma, data.phone);
+      if (liveStaff) {
+        throw new BadRequestException(
+          `Bu telefon raqam bilan xodim hisobi allaqachon bor: ${liveStaff.firstName} ${liveStaff.lastName} (#${liveStaff.id}). Yangi rol kerak bo'lsa o'sha hisobga qo'shing.`,
+        );
+      }
+    }
 
     const hashedPassword = data.password
       ? await bcrypt.hash(data.password, 10)

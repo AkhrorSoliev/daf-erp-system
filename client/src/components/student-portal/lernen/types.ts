@@ -2,8 +2,105 @@
 // kerak: u faqat urinishdan keyin, `AttemptResult` ichida keladi. Mijozga
 // oldindan yuborilsa, uni brauzerning tarmoq oynasida ko'rish mumkin bo'lardi.
 
-export type DafLevel = "A1_1" | "A1_2" | "A2_1" | "A2_2" | "B1";
-export type DafLessonKind = "VOCAB" | "GRAMMAR";
+export type FrageFormat =
+  | "WORT_UZ"
+  | "UZ_WORT"
+  | "PAAR"
+  | "ARTIKEL"
+  | "LUECKE"
+  | "SATZ_BAUEN"
+  | "SATZ_UEBERSETZEN"
+  | "REAKTION"
+  | "ZUORDNEN"
+  | "DIALOG_LUECKE"
+  | "AUDIO_WORT"
+  | "WORT_TIPPEN"
+  | "HOEREN_WAHL";
+
+export type MaterialTyp =
+  "WORT" | "SATZ" | "PHRASE" | "DIALOGZEILE" | "HOERFRAGE";
+
+/** Serverdan kelgan savol. To'g'ri javob bu yerda YO'Q. */
+export interface PublicFrage {
+  index: number;
+  format: FrageFormat;
+  itemType: MaterialTyp;
+  itemId: number;
+  prompt: string;
+  hilfe: string | null;
+  options: string[];
+  /**
+   * Qisqa sarlavha — hozircha faqat `DIALOG_LUECKE` to'ldiradi (dialog
+   * nomi). Natija ekrani xato ro'yxatida BUTUN suhbat (`prompt`) o'rniga
+   * shu qisqa nomni ko'rsatadi (ko'rik topilmasi). Boshqa formatlarda
+   * `undefined`.
+   */
+  titel?: string | null;
+  /**
+   * Aytilgan so'zning TO'LIQ eshitiladigan manzili (`<audio src>`ga
+   * to'g'ridan-to'g'ri beriladi) — faqat `AUDIO_WORT`/`WORT_TIPPEN`da
+   * `null`dan farqli. Server buni R2 kalitidan (`R2_PUBLIC_URL + '/' +
+   * kalit`) quradi; mijozga xom kalit YETIB KELMAYDI — kalitning o'zi
+   * hech qanday originga qarshi ochilmaydigan manzil bo'lardi (Finding 1).
+   * `prompt` bu ikkisida ATAYLAB BO'SH: so'zning o'zi javob, uni promptga
+   * yozsa tinglash mashqi o'qish mashqiga aylanardi.
+   */
+  audioUrl: string | null;
+}
+
+/** Javob tekshirilgandan KEYIN keladi — faqat shunda to'g'ri javob ma'lum. */
+export interface PruefErgebnis {
+  isCorrect: boolean;
+  richtig: string;
+  /**
+   * FAQAT `HOEREN_WAHL` — suhbat matni javobdan KEYIN keladi. Savol bilan
+   * birga hech qachon kelmaydi: kelsa, eshitish mashqi o'qish mashqiga
+   * aylanardi.
+   */
+  transkript?: Array<{ sprecher: string; de: string; uz: string }>;
+}
+
+/**
+ * Jonli juftlash mashqida BITTA juftni tekshirish javobi.
+ *
+ * `PruefErgebnis`dan ATAYLAB tor: `richtig` (to'g'ri javob matni) yo'q —
+ * server buni hech qachon yubormaydi, chunki bitta juft tekshirilganda
+ * qolgan juftlarning javobi hali oshkor bo'lmasligi kerak.
+ */
+export interface JuftNatija {
+  isCorrect: boolean;
+}
+
+/** Yakuniy sinov (`UNIT_TEST`) yakunidagi server qarori. */
+export interface YakuniySinovNatijasi {
+  bestanden: boolean;
+  /** Bu yakundan OLDIN sinovdan o'tilgan edi — keyingi unit ochiq. */
+  avvalOtilgan: boolean;
+  togri: number;
+  jami: number;
+  kerak: number;
+}
+
+export interface AbschlussErgebnis {
+  bestScore: number;
+  runs: number;
+  /** Faqat yakuniy sinov darsida. */
+  sinov?: YakuniySinovNatijasi;
+}
+
+/**
+ * Uchta daraja — backend `DafLevel` enumi (`schema.prisma`) bilan bir xil.
+ * Eski `A1_1`/`A1_2` bo'linishi manbaning yorlig'i edi; A1 migratsiyasi
+ * uni bitta `A1`ga birlashtirdi (`LEVEL_ORDER`, `daf-portal-read.service.ts`).
+ */
+export type DafLevel = "A1" | "A2" | "B1";
+/**
+ * Seans turi — A1 kurs xaritasidagi bosqich. Eski nom (`VOCAB`/`GRAMMAR`)
+ * darsning MAVZUSINI bildirardi va grammatikani mashqdan uzib qo'yardi;
+ * server enumi (`schema.prisma`) allaqachon shu to'rttasiga o'tgan.
+ * `null` — eski DiB darsi, unda seans turi umuman yo'q.
+ */
+export type DafLessonKind = "SECTION_A" | "SECTION_B" | "BRIDGE" | "UNIT_TEST";
 export type DafExerciseKind = "GAP" | "MC" | "CLOZE" | "REORDER" | "FREE_WRITE";
 export type DafAnswerStatus = "FROM_SOURCE" | "PARTIAL" | "OPEN";
 
@@ -13,22 +110,54 @@ export interface LernenUnitSummary {
   titleUz: string;
   titleDe: string;
   lessonCount: number;
+  /** Shu o'quvchi shu unitda tugatgan seanslar soni. */
+  doneCount: number;
+}
+
+/**
+ * `getLevels` javobidagi unit — endi bo'lim ichida sarlab boradi.
+ *
+ * Yo'l zigzagida har seans o'z tugunini oladi, shuning uchun bu javob
+ * ham bo'lim ekrani bilan bir xil `sections`/`finalTest` shaklini oladi
+ * — `yolTugunlari` shu ikkisidan tugunlarni quradi. `LernenUnitSummary`ni
+ * KENGAYTIRADI, uni takrorlamaydi: `sections`/`finalTest` faqat yo'lga
+ * kerak, unit haqidagi minimal ma'lumot (`id`/`titleUz`/`lessonCount`/
+ * `doneCount`) esa boshqa joyda ham ishlatiladigan asosiy shakl bo'lib
+ * qoladi.
+ */
+export interface LernenLevelUnit extends LernenUnitSummary {
+  sections: LernenSectionGroup[];
+  finalTest: LernenSeans | null;
 }
 
 export interface LernenLevel {
   level: DafLevel;
   label: string;
-  units: LernenUnitSummary[];
+  units: LernenLevelUnit[];
 }
 
-export interface LernenLessonSummary {
+/** Unit ichidagi bitta seans — yangi A1 xaritasi ham, eski DiB darsi ham. */
+export interface LernenSeans {
   id: number;
   order: number;
-  kind: DafLessonKind;
+  kind: DafLessonKind | null;
   titleDe: string;
   titleUz: string | null;
   wordCount: number;
   exerciseCount: number;
+  completedAt: string | null;
+  bestScore: number;
+  runs: number;
+}
+
+/** Unit ichidagi MAVZULI bo'lim — o'z sahifasi yo'q, faqat sarlavha. */
+export interface LernenSectionGroup {
+  id: number;
+  order: number;
+  code: string;
+  titleUz: string;
+  titleDe: string;
+  lessons: LernenSeans[];
 }
 
 export interface LernenUnit {
@@ -38,7 +167,14 @@ export interface LernenUnit {
   order: number;
   titleUz: string;
   titleDe: string;
-  lessons: LernenLessonSummary[];
+  /**
+   * Yassi ro'yxat — eski DiB unitlarida (`sections` bo'sh) shu yerdan
+   * o'qiladi. Yangi A1 unitlarida `sections.flatMap` + `finalTest` bilan
+   * bir xil to'plam, faqat guruhlanmagan.
+   */
+  lessons: LernenSeans[];
+  sections: LernenSectionGroup[];
+  finalTest: LernenSeans | null;
 }
 
 export interface LernenLexeme {
@@ -67,7 +203,8 @@ export interface LernenExercise {
 export interface LernenLesson {
   id: number;
   order: number;
-  kind: DafLessonKind;
+  /** Eski DiB darsida seans turi yo'q — `null`. */
+  kind: DafLessonKind | null;
   titleDe: string;
   titleUz: string | null;
   label: string;
@@ -93,6 +230,36 @@ export interface LernenGrammarItem {
   /** Yo'lda ko'rinadimi — `false` bo'lsa faqat grammatika ro'yxatidan. */
   inPath: boolean;
   exerciseCount: number;
+}
+
+/** Yo'l tepasidagi chiplar uchun umumiy ilgarilash. */
+export interface Fortschritt {
+  gesamt: number;
+  /** `ab` — shu darajaning pastki chegarasi, `naechsteStufe.ab` bilan simmetrik. */
+  stufe: { de: string; uz: string; ab: number };
+  /** Eng yuqori darajada `null` — undan keyin daraja yo'q. */
+  naechsteStufe: { de: string; uz: string; ab: number } | null;
+  serie: number;
+  wochePunkte: number;
+  /** Guruhi yo'q yoki guruh ro'yxati bo'sh bo'lsa `null`. */
+  wochePlatzGruppe: number | null;
+  wochePlatzZentrum: number;
+  /**
+   * Bugun MUDDATI KELGAN so'zlar soni — Takrorlash tugmasi shu songa
+   * qarab faol/xira bo'ladi (dizayn §4). Nol bo'lsa tugma "bugun
+   * takrorlanadigan so'z yo'q" deb bosilmay qoladi.
+   */
+  faelligeWoerter: number;
+}
+
+/** Reyting jadvalidagi bitta qator. */
+export interface ReytingZeile {
+  studentId: number;
+  name: string;
+  punkte: number;
+  platz: number;
+  /** Shu qator so'rovni yuborgan o'quvchining o'zimi. */
+  selbst: boolean;
 }
 
 export interface AttemptResult {
@@ -122,4 +289,10 @@ export interface DrillQuestion {
 export interface DrillResult {
   isCorrect: boolean;
   answer: string;
+}
+
+/** `POST wiederholung/abschluss` va (kelajakda) seans statistikasi javobi. */
+export interface SeansYakun {
+  questionCount: number;
+  firstTryCorrect: number;
 }

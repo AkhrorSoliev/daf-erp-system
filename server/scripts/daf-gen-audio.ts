@@ -1,0 +1,489 @@
+/**
+ * 1-bo'limning 53 so'ziga TALAFFUZ audiosi yasaydi (tanlangan ovoz bilan)
+ * va R2'ga yuklaydi.
+ *
+ *   npm run daf:gen-audio -- --stimme none                    — Chatterbox (stimme'siz, tezliksiz)
+ *   npm run daf:gen-audio -- --stimme Rachel --speed 0.85     — ElevenLabs Rachel, sekin
+ *   npm run daf:gen-audio -- --stimme Matilda --speed 1.0     — ElevenLabs Matilda, oddiy tezlik
+ *
+ * `--stimme` MAJBURIY, standart qiymati YO'Q, va qiymat qattiq
+ * `RUXSAT_ETILGAN_STIMMELAR` ro'yxati bilan tekshiriladi (yozuv xatosi —
+ * masalan `Rachell` — `fal.ai`ga yuborilishidan OLDIN rad etiladi). Task-6
+ * (`daf-voice-samples.ts`) uchta variantni odam eshitib solishtirishi
+ * uchun namuna tayyorlaydi, va shu tanlov hali qilinmagan — noto'g'ri
+ * ovozda 53 so'zni gapirtirish umuman ovozsizlikdan YOMONROQ (audio —
+ * talaffuz namunasi). Bayroqni MAJBURIY va ro'yxatga qarshi tekshirilgan
+ * qilish shu tanlovni skript darajasida kafolatlaydi: uni o'tkazib
+ * yuborib ham, yozuv xatosi bilan ham "ishlab ketish" mumkin emas.
+ *
+ * `--speed` ElevenLabs ovozi bilan BIRGA MAJBURIY, xuddi `--stimme`ning
+ * o'zi kabi: CEO namunalarni eshitib "Rachel + 0.85" (sekin) ni tanladi,
+ * va standart qiymat (masalan `1.0`) qo'yilgan bo'lganda uni yozishni
+ * unutish aynan shu tanlovni sukut bo'yicha bekor qilardi — kurs
+ * dizayni "sekin" ni majburiy talab qiladi (task-7-brief.md). `none`
+ * (Chatterbox) bilan esa `--speed` UMUMAN BERILMASLIGI kerak: Chatterbox
+ * yo'li (`FalClient.speech()`) tezlik parametrini qabul qilmaydi, va uni
+ * jimgina e'tiborsiz qoldirish operatorga "tezlik qo'llandi" degan
+ * noto'g'ri taassurot qoldirardi — shuning uchun bu kombinatsiya rad
+ * etiladi, jimgina yutib yuborilmaydi.
+ *
+ * MUHIM: bu skript PULLIK `fal.ai` chaqiruvi qiladi va R2'ga yozadi.
+ * Shuning uchun `main()` faqat fayl to'g'ridan-to'g'ri ishga tushirilganda
+ * yuguradi (`require.main === module`) — testlar bu faylni import
+ * qilganda HECH QANDAY tarmoq so'rovi yubormaydi (`daf-voice-samples.ts`
+ * dagi bilan bir xil naqsh, bir xil sabab bilan).
+ *
+ * Oqim (task-7-brief.md):
+ *   1. `content/daf/a1/u01/woerter.json` ni o'qiydi;
+ *   2. mavjud `content/daf/a1/audio.json` manifestini o'qiydi (bo'lmasa `{}`);
+ *   3. manifestda allaqachon kaliti bor so'zni O'TKAZIB YUBORADI — idempotent,
+ *      qayta yuritish pul sarflamaydi va audioni almashtirmaydi;
+ *   4. qolganlari uchun `tts ?? de` matnini tanlangan ovoz bilan yasaydi,
+ *      `schluesselFuerWort()` bilan TASODIFIY kalit oladi (so'zdan
+ *      chiqarib bo'lmaydigan — `audio-keys.ts` dagi izohga qarang: bu
+ *      audio talaffuz mashqida javobning O'ZI, kalitda yozilsa javobni
+ *      manzilda ochib qo'yardi);
+ *   5. `R2Uploader.uploadMissing()` bilan yuklaydi;
+ *   6. FAQAT MUVAFFAQIYATLI yuklangan kalitni manifestga yozadi va faylni
+ *      saqlaydi — aks holda manifest R2'da yo'q faylga ishora qilib,
+ *      o'quvchi yangramaydigan tugmani ko'rardi.
+ */
+import 'dotenv/config';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
+import { S3Client } from '@aws-sdk/client-s3';
+import { R2Uploader } from '../src/daf-content/media/r2-uploader';
+import type { AssetRef } from '../src/daf-content/dataset.types';
+import {
+  FalClient,
+  OVOZ_TEZLIGI_MAX,
+  OVOZ_TEZLIGI_MIN,
+} from '../src/daf/media/fal-client';
+import {
+  audioSchluesselFuer,
+  neuerAudioSchluessel,
+  type AudioManifest,
+} from '../src/daf/media/audio-keys';
+import type { Wort, WoerterFile } from '../src/daf/inhalt/unit-inhalt.types';
+
+const WOERTER_PATH = join(
+  __dirname,
+  '..',
+  'content',
+  'daf',
+  'a1',
+  'u01',
+  'woerter.json',
+);
+const MANIFEST_PATH = join(
+  __dirname,
+  '..',
+  'content',
+  'daf',
+  'a1',
+  'audio.json',
+);
+
+/** Har generatsiya qilingan audioga yoziladigan litsenziya. */
+const LICENSE = 'Generated';
+
+/**
+ * Narx chegarasi (belgi soni). Brifda qat'iy belgilangan — 53 so'z = 278
+ * belgi, chegara 400: xato kirish ma'lumotidan (masalan butun boshqa
+ * unit tasodifan qo'shilib qolishi) saqlaydi.
+ */
+export const BELGI_CHEGARASI = 400;
+
+/**
+ * Haqiqiy chaqiruv (dry-run emas) uchun kerak bo'ladigan muhit
+ * o'zgaruvchilari — `daf-gen-images.ts` dagi bilan bir xil naqsh: hammasi
+ * bir joyda tekshiriladi, yarim ishlab keyin yiqilish yo'q.
+ */
+const REQUIRED_ENV = [
+  'FAL_KEY',
+  'R2_ENDPOINT',
+  'R2_ACCESS_KEY_ID',
+  'R2_SECRET_ACCESS_KEY',
+  'R2_BUCKET_NAME',
+];
+
+/**
+ * `zuGenerieren`/`sprechtext` uchun minimal shakl. `Wort`ning o'zi emas —
+ * bu yerda faqat uchta maydon kerak, va `tts` `null` bo'lishi ham mumkin
+ * (spec testlarida ishlatilgan qiymat), `Wort.tts` esa faqat
+ * `string | undefined`. Haqiqiy `Wort[]` (JSON'dan o'qilgan) shu tipga
+ * strukturaviy mos keladi — ortiqcha maydonlar muammo emas.
+ */
+export type SprachEintrag = Pick<Wort, 'sourceId' | 'de'> & {
+  tts?: string | null;
+};
+
+/**
+ * Chaqiruvdan OLDIN to'xtatuvchi himoya. Har qanday `fal.ai` so'rovidan
+ * OLDIN chaqiriladi — noto'g'ri kirish ma'lumoti pulni sarflab bo'lgandan
+ * keyin emas, sarflashdan OLDIN to'xtaydi.
+ */
+export function pruefeBudget(zeichenzahl: number): void {
+  if (zeichenzahl > BELGI_CHEGARASI) {
+    throw new Error(
+      `Narx chegarasi oshib ketdi: ${zeichenzahl} belgi (chegara ${BELGI_CHEGARASI}). Chaqiruv TO'XTATILDI, hech narsa yuborilmadi.`,
+    );
+  }
+}
+
+/**
+ * TTS'ga yuboriladigan matn. Harf va raqamlar uchun kritik: `Z` ni TTS
+ * inglizcha o'qiydi, `Zett` esa nemischa — shuning uchun `tts` bor bo'lsa
+ * O'SHA ishlatiladi, aks holda `de`ning o'zi.
+ */
+export function sprechtext(wort: Pick<SprachEintrag, 'de' | 'tts'>): string {
+  return wort.tts ?? wort.de;
+}
+
+/** Berilgan so'zlar ro'yxatining jami belgi soni (`sprechtext` bo'yicha). */
+export function gesamtZeichenzahl(woerter: SprachEintrag[]): number {
+  return woerter.reduce((sum, w) => sum + sprechtext(w).length, 0);
+}
+
+/**
+ * Manifestda ALLAQACHON kaliti bor so'zlarni chiqarib tashlaydi —
+ * idempotentlikning yuragi. Qayta yuritish shu funksiya tufayli pul
+ * sarflamaydi va mavjud audioni almashtirmaydi.
+ */
+export function zuGenerieren(
+  woerter: SprachEintrag[],
+  manifest: AudioManifest,
+): SprachEintrag[] {
+  return woerter.filter(
+    (w) => audioSchluesselFuer(manifest, w.sourceId) === null,
+  );
+}
+
+/** Bitta so'zning yuklash natijasi — kalit va muvaffaqiyat belgisi. */
+export interface YuklashNatijasi {
+  sourceId: string;
+  key: string;
+  ok: boolean;
+}
+
+/**
+ * Manifestni FAQAT muvaffaqiyatli yuklangan kalitlar bilan yangilaydi.
+ * `ok: false` bo'lgan yozuv manifestga hech qachon tushmaydi — aks holda
+ * u R2'da yo'q faylga ishora qilardi va o'quvchi yangramaydigan tugmani
+ * ko'rardi.
+ */
+export function manifestAktualisieren(
+  manifest: AudioManifest,
+  natijalar: YuklashNatijasi[],
+): AudioManifest {
+  const yangi: AudioManifest = { ...manifest };
+  for (const n of natijalar) {
+    if (n.ok) yangi[n.sourceId] = n.key;
+  }
+  return yangi;
+}
+
+/**
+ * Bitta so'z uchun R2 kalitini yasaydi. Kod-ko'rikda topilgan bo'shliq:
+ * ilgari `main()` ichida to'g'ridan-to'g'ri `neuerAudioSchluessel()`
+ * chaqirilardi — kalit bilan so'zning HAQIQIY TO'QNASHUV nuqtasi hech
+ * qanday testda yo'q edi (`manifestAktualisieren`ning o'zi tayyor
+ * kalitni faqat KO'CHIRADI, YASAMAYDI, va `neuerAudioSchluessel()`ning
+ * o'zi argument olmagani uchun so'zni HATTO KO'RA OLMAYDI). Bu funksiya
+ * shu nuqtani mustaqil, testlanadigan joyga chiqaradi: `main()` HAR
+ * so'z uchun aynan shuni chaqiradi, va xavfsizlik tripwire testi ham
+ * aynan shu funksiya ustida yuritiladi.
+ *
+ * `wort` parametri ATAYLAB e'tiborsiz qoldiriladi — funksiya faqat
+ * `neuerAudioSchluessel()`ga ishonadi. Agar kimdir buni "optimallashtirib"
+ * kalitni `wort.de`/`wort.sourceId`dan (yoki ularning xeshidan) hisoblab
+ * chiqarsa, tripwire testi buni ushlaydi.
+ */
+export function schluesselFuerWort(wort: SprachEintrag): string {
+  void wort;
+  return neuerAudioSchluessel();
+}
+
+/**
+ * `--stimme`ning ruxsat etilgan qiymatlari — Task-6 namunalarida odam
+ * solishtirgan UCHTA variantning ovoz nomlari (`daf-voice-samples.ts`
+ * dagi `VARIANTEN`ga mos: Chatterbox = `none`, ElevenLabs Rachel/Matilda).
+ *
+ * NEGA QATTIQ RO'YXAT KERAK: yozuv xatosi bilan yuborilgan qiymat
+ * (masalan `Rachell`) `fal.ai`ga borishi mumkin edi — u yerda YO qattiq
+ * rad etiladi, YO (yomonrog'i) jimgina standart ovozga tushib
+ * MUVAFFAQIYATLI qaytadi. Ikkalasi ham 53 so'zni NOTO'G'RI ovozda
+ * PULLIK yasab yuboradi — aynan shu holatni oldini olish uchun
+ * `--stimme` MAJBURIY qilingan edi. Shuning uchun qiymat `fal.ai`ga
+ * yuborilishidan OLDIN shu ro'yxat bilan ANIQ solishtiriladi.
+ */
+export const RUXSAT_ETILGAN_STIMMELAR: readonly string[] = [
+  'none',
+  'Rachel',
+  'Matilda',
+];
+
+/** `--stimme`/`--speed` bayroqlari bilan bog'liq xatolarning umumiy ota klassi. */
+export class StimmeArgError extends Error {}
+
+/** `--stimme` bayrog'i yo'q yoki qiymatsiz bo'lsa tashlanadi. */
+export class MissingStimmeArgError extends StimmeArgError {}
+
+/** `--stimme` qiymati `RUXSAT_ETILGAN_STIMMELAR`da yo'q bo'lsa tashlanadi. */
+export class UnknownStimmeArgError extends StimmeArgError {}
+
+/** ElevenLabs ovozi bilan `--speed` berilmasa tashlanadi. */
+export class MissingSpeedArgError extends StimmeArgError {}
+
+/** `--speed` qiymati son emas bo'lsa tashlanadi. */
+export class InvalidSpeedArgError extends StimmeArgError {}
+
+/** `--speed` `OVOZ_TEZLIGI_MIN`–`OVOZ_TEZLIGI_MAX` oralig'idan tashqarida bo'lsa tashlanadi. */
+export class SpeedOutOfRangeArgError extends StimmeArgError {}
+
+/**
+ * `--stimme none` bilan `--speed` BIRGA berilsa tashlanadi — Chatterbox
+ * yo'li tezlik parametrini qabul qilmaydi, shuning uchun uni jimgina
+ * yutib yuborish operatorga noto'g'ri taassurot qoldiradi.
+ */
+export class SpeedNotAllowedWithNoneArgError extends StimmeArgError {}
+
+/**
+ * `parseGenAudioArgs()` natijasi — ATAYLAB diskriminatsiyalangan union,
+ * `if (args.stimme)` orqali obyektga emas.
+ *
+ * NEGA UNION, IXTIYORIY MAYDON EMAS: agar `speed` oddiy `number | null`
+ * bo'lganda, `main()` uni ElevenLabs shoxchasida `args.speed!` bilan
+ * ishlatishga majbur bo'lardi — bu xuddi shu turdagi "unutish" xatosini
+ * TypeScript darajasida qayta ochib qo'yardi (kompilyator `!`ga ishonib
+ * qoladi). Union bilan `stimme` string bo'lganda `speed` HAM ANIQ
+ * `number`, kompilyator buni narrowing orqali o'zi isbotlaydi — qo'lda
+ * tasdiqlash (`!`) umuman kerak emas.
+ */
+export type GenAudioArgs =
+  | { stimme: null; speed: null }
+  | { stimme: string; speed: number };
+
+/**
+ * `--stimme` va `--speed` bayroqlarini o'qiydi. `none` — Chatterbox
+ * (stimme'siz `FalClient.speech()`, tezliksiz); `RUXSAT_ETILGAN_STIMMELAR`dagi
+ * boshqa qiymat — ElevenLabs ovoz nomi (`FalClient.speechMitStimme()`ga
+ * uzatiladi, `speed` bilan birga).
+ *
+ * Standart qiymat ATAYLAB yo'q: bayroqsiz yugurish `MissingStimmeArgError`
+ * bilan yiqiladi. Chatterbox ham "standart" emas, balki `--stimme none`
+ * bilan ATAYLAB tanlanadigan variantlardan biri — shu bilan skript hech
+ * qachon tasodifan (masalan bayroq yozishni unutib) noto'g'ri ovozda
+ * yugurmaydi. Ro'yxatda yo'q qiymat (yozuv xatosi) `UnknownStimmeArgError`
+ * bilan yiqiladi — `fal.ai`ga umuman yuborilmasdan.
+ *
+ * `--speed` xuddi shu mantiq bilan ElevenLabs ovozi tanlanganda MAJBURIY:
+ * standart qiymat yo'q, chunki CEO namunalarni eshitib ANIQ 0.85ni
+ * tanladi — standart (masalan 1.0) qo'yilsa, uni yozishni unutish shu
+ * tanlovni sukut bo'yicha bekor qilardi. `none` bilan esa `--speed`
+ * berish RAD ETILADI (yuqoridagi klass izohiga qarang).
+ */
+export function parseGenAudioArgs(argv: string[]): GenAudioArgs {
+  const stimmeIdx = argv.indexOf('--stimme');
+  const stimmeValue = stimmeIdx === -1 ? undefined : argv[stimmeIdx + 1];
+  if (!stimmeValue) {
+    throw new MissingStimmeArgError(
+      '`--stimme` MAJBURIY — Task-6 namunalarini eshitib tanlangan ovoz. ' +
+        'Chatterbox uchun `--stimme none`, ElevenLabs uchun ovoz nomi (masalan `--stimme Rachel`).',
+    );
+  }
+  if (!RUXSAT_ETILGAN_STIMMELAR.includes(stimmeValue)) {
+    throw new UnknownStimmeArgError(
+      `Noma'lum ovoz: "${stimmeValue}". Ruxsat etilgan qiymatlar: ${RUXSAT_ETILGAN_STIMMELAR.join(', ')}.`,
+    );
+  }
+
+  const speedIdx = argv.indexOf('--speed');
+  const speedRaw = speedIdx === -1 ? undefined : argv[speedIdx + 1];
+
+  if (stimmeValue === 'none') {
+    if (speedRaw !== undefined) {
+      throw new SpeedNotAllowedWithNoneArgError(
+        '`--speed` `--stimme none` bilan BIRGA berilmaydi — Chatterbox ' +
+          "yo'li (`FalClient.speech()`) tezlik parametrini qabul qilmaydi, " +
+          'shuning uchun bu qiymat jimgina yutib yuboriladi va operator ' +
+          "tezlik qo'llandi deb noto'g'ri o'ylab qolardi.",
+      );
+    }
+    return { stimme: null, speed: null };
+  }
+
+  if (speedRaw === undefined) {
+    throw new MissingSpeedArgError(
+      '`--speed` MAJBURIY ElevenLabs ovozi (`--stimme Rachel`/`Matilda`) bilan — ' +
+        'CEO namunalarni eshitib ANIQ tezlikni tanladi, standart qiymat yo`q.',
+    );
+  }
+  const speed = Number(speedRaw);
+  if (!Number.isFinite(speed)) {
+    throw new InvalidSpeedArgError(
+      `\`--speed\` son bo'lishi kerak, "${speedRaw}" emas.`,
+    );
+  }
+  if (speed < OVOZ_TEZLIGI_MIN || speed > OVOZ_TEZLIGI_MAX) {
+    throw new SpeedOutOfRangeArgError(
+      `\`--speed\` ${OVOZ_TEZLIGI_MIN}–${OVOZ_TEZLIGI_MAX} oralig'ida bo'lishi kerak, ${speed} emas.`,
+    );
+  }
+
+  return { stimme: stimmeValue, speed };
+}
+
+function manifestOquv(): AudioManifest {
+  if (!existsSync(MANIFEST_PATH)) return {};
+  return JSON.parse(readFileSync(MANIFEST_PATH, 'utf8')) as AudioManifest;
+}
+
+async function main() {
+  let args: GenAudioArgs;
+  try {
+    args = parseGenAudioArgs(process.argv.slice(2));
+  } catch (err) {
+    if (err instanceof StimmeArgError) {
+      console.error(err.message);
+      process.exitCode = 1;
+      return;
+    }
+    throw err;
+  }
+
+  const dataset: WoerterFile = JSON.parse(readFileSync(WOERTER_PATH, 'utf8'));
+  const manifest = manifestOquv();
+
+  const qoldi = zuGenerieren(dataset.woerter, manifest);
+  console.log(
+    `${dataset.unit}: ${dataset.woerter.length} so'zdan ${qoldi.length} tasiga audio kerak ` +
+      `(${dataset.woerter.length - qoldi.length} tasi manifestda allaqachon bor).`,
+  );
+
+  if (qoldi.length === 0) {
+    console.log("Qilinadigan ish yo'q — hammasida allaqachon audio bor.");
+    return;
+  }
+
+  // Budjet — birinchi `fal.ai` so'rovidan OLDIN, FAL_KEY tekshiruvidan
+  // ham OLDIN: noto'g'ri kirish ma'lumoti pul sarflashdan oldin to'xtashi
+  // kerak, muhit sozlanmagani aniqlangandan keyin emas.
+  const gesamt = gesamtZeichenzahl(qoldi);
+  console.log(`Jami belgi soni: ${gesamt} (chegara ${BELGI_CHEGARASI}).`);
+  try {
+    pruefeBudget(gesamt);
+  } catch (err) {
+    console.error((err as Error).message);
+    process.exitCode = 1;
+    return;
+  }
+
+  const missingEnv = REQUIRED_ENV.filter((k) => !process.env[k]);
+  if (missingEnv.length > 0) {
+    console.error(
+      `Sozlanmagan muhit o'zgaruvchisi: ${missingEnv.join(', ')}.\n` +
+        "Ovoz generatsiyasi TO'XTATILDI — hech narsa chaqirilmadi, hech narsa yozilmadi.",
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  const fal = new FalClient(process.env.FAL_KEY!);
+  const s3 = new S3Client({
+    region: 'auto',
+    endpoint: process.env.R2_ENDPOINT!,
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+    },
+  });
+  const uploader = new R2Uploader(s3, process.env.R2_BUCKET_NAME!);
+
+  const attribution = args.stimme
+    ? `DaF Sprachzentrum — fal.ai ElevenLabs (${args.stimme}, tezlik ${args.speed})`
+    : 'DaF Sprachzentrum — fal.ai Chatterbox';
+
+  const assets: AssetRef[] = [];
+  const keyBySourceId = new Map<string, string>();
+
+  let done = 0;
+  for (const wort of qoldi) {
+    const text = sprechtext(wort);
+    let sourceUrl: string;
+    try {
+      sourceUrl = args.stimme
+        ? await fal.speechMitStimme(text, args.stimme, args.speed)
+        : await fal.speech(text);
+    } catch (err) {
+      // Qaysi so'z yiqilganini ANIQ aytish — 53 tadan qaysi biri
+      // muammoli ekanini operator darhol bilishi kerak.
+      throw new Error(
+        `"${wort.de}" (${wort.sourceId}) uchun ovoz yasalmadi: ${(err as Error).message}`,
+      );
+    }
+
+    // Kalit `schluesselFuerWort` orqali yasaladi — bu funksiya so'zni
+    // OLADI, lekin ATAYLAB e'tiborsiz qoldiradi (izohiga qarang). Shu
+    // yagona chaqiruv nuqtasi tripwire testida ham ishlatiladi.
+    const key = schluesselFuerWort(wort);
+    keyBySourceId.set(wort.sourceId, key);
+    assets.push({
+      sourceUrl,
+      key,
+      kind: 'AUDIO',
+      license: LICENSE,
+      attribution,
+      title: wort.de,
+    });
+    done++;
+    console.log(`  ${done}/${qoldi.length}: ${wort.de} → "${text}"`);
+  }
+
+  const uploadResult = await uploader.uploadMissing(assets);
+  console.log(
+    `\nR2: yuklandi ${uploadResult.uploaded}, o'tkazildi ${uploadResult.skipped}, yiqildi ${uploadResult.failed.length}`,
+  );
+  const failedKeys = new Set(uploadResult.failed.map((f) => f.key));
+  for (const f of uploadResult.failed) {
+    console.error(`  - ${f.key}: ${f.reason}`);
+  }
+
+  // FAQAT muvaffaqiyatli yuklangan kalit manifestga yoziladi — Step 6
+  // talabi. `keyBySourceId` har `qoldi` a'zosi uchun to'ldirilgan
+  // (yuqoridagi siklda), shuning uchun `!` xavfsiz.
+  const natijalar: YuklashNatijasi[] = qoldi.map((wort) => {
+    const key = keyBySourceId.get(wort.sourceId)!;
+    return { sourceId: wort.sourceId, key, ok: !failedKeys.has(key) };
+  });
+
+  const yangiManifest = manifestAktualisieren(manifest, natijalar);
+  writeFileSync(MANIFEST_PATH, JSON.stringify(yangiManifest, null, 2) + '\n');
+  console.log(`\nManifest yangilandi: ${MANIFEST_PATH}`);
+
+  const muvaffaqiyatsiz = natijalar.filter((n) => !n.ok);
+  if (muvaffaqiyatsiz.length > 0) {
+    console.error(
+      `\nDIQQAT: ${muvaffaqiyatsiz.length} ta so'z audiosi R2'ga yuklanmadi, manifestga YOZILMADI:`,
+    );
+    for (const n of muvaffaqiyatsiz) console.error(`  - ${n.sourceId}`);
+    process.exitCode = 1;
+  }
+
+  console.log(
+    `\n${natijalar.length - muvaffaqiyatsiz.length}/${natijalar.length} ta so'z audiosi muvaffaqiyatli yuklandi.`,
+  );
+}
+
+// Faqat to'g'ridan-to'g'ri ishga tushirilganda yuguradi — bu skript
+// PULLIK (fal.ai ovoz generatsiyasi + R2 yuklash) va TASODIFIY ovoz bilan
+// yugursa, ovoz tanlovi hali qilinmagani sababli xato natija chiqaradi.
+// Testlar bu faylni import qilganda `require.main !== module`, shuning
+// uchun hech qanday tarmoq so'rovi test paytida ishga tushmaydi
+// (`daf-voice-samples.ts`/`daf-gen-images.ts` dagi bilan bir xil naqsh).
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

@@ -40,7 +40,9 @@ export class ReportsProfitLossService {
     const branchScopeIds = query.branchIds;
 
     const tsFilter = { gte: period.start, lte: period.endTs };
-    const dateFilter = { gte: period.start, lte: period.endDate };
+    // Expense.date is @db.Date — plain UTC midnights, or Postgres truncates a
+    // Tashkent-shifted instant down to the previous calendar day.
+    const dateFilter = { gte: period.startDate, lte: period.endDate };
 
     const [revenueByType, expenseByCategory, paidSalaries] = await Promise.all([
       // Revenue by type — COMPLETED payments in the period.

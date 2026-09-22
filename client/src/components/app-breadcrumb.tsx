@@ -21,16 +21,22 @@ export function AppBreadcrumb() {
 
   if (segments.length === 0) return null;
 
-  // "profile" segment ni o'tkazib yuborish — /students/profile/123 → Bosh sahifa > O'quvchilar > [Ism]
-  const filtered = segments.filter((s) => s !== "profile");
+  // Pass-through segmentlar — o'zi ochiladigan sahifa emas, ID'li haqiqiy
+  // sahifaga o'tishdagi oraliq bosqich: /students/profile/123 da "profile",
+  // /media/sections/7 da "sections". Breadcrumbda ko'rinmaydi — aks holda
+  // mavjud bo'lmagan "/students/profile" yoki "/media/sections" ro'yxatiga
+  // havola bo'lib qolardi (ko'rik: "Bo'limlar" degan label 404'ga olib
+  // borardi — to'g'ri tuzatish label emas, shu filtr edi).
+  const PASS_THROUGH_SEGMENTS = new Set(["profile", "sections"]);
+  const filtered = segments.filter((s) => !PASS_THROUGH_SEGMENTS.has(s));
 
   const crumbs = filtered.map((segment, index) => {
     const url = "/" + segments.slice(0, segments.indexOf(segment) + 1).join("/");
     const label = routeLabels[segment] ?? names[segment] ?? segment;
     const isLast = index === filtered.length - 1;
 
-    // profile dan keyingi segment uchun to'liq URL berish
-    const actualUrl = isLast && segments.includes("profile")
+    // Pass-through segmentdan keyingi so'nggi segment uchun to'liq URL berish
+    const actualUrl = isLast && segments.some((s) => PASS_THROUGH_SEGMENTS.has(s))
       ? "/" + segments.join("/")
       : url;
 

@@ -6,6 +6,7 @@ import { SCENES } from '../constants';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
 import { EntityHistoryService } from '../../common/entity-history';
+import { StudentLeadOriginService } from '../../common/student-origin';
 import { ALLOWED_IMAGE_MIMES } from '../../upload/upload.constraints';
 import {
   ASK_FIRST_NAME,
@@ -19,6 +20,10 @@ import {
   normalizeSharedPhone,
   SHARED_PHONE_INVALID,
 } from '../../common/utils/phone.util';
+import {
+  CONTACT_NOT_OWN,
+  contactBelongsToSender,
+} from '../utils/contact-ownership';
 import {
   buildTeachersKeyboard,
   daysMap,
@@ -46,6 +51,7 @@ export function createStudentRegistrationScene(
   uploadService: UploadService,
   _bot: Telegraf<BotContext>,
   entityHistoryService: EntityHistoryService,
+  leadOrigin: StudentLeadOriginService,
 ): Scenes.BaseScene<BotContext> {
   const logger = new Logger('StudentRegistrationScene');
   const scene = new Scenes.BaseScene<BotContext>(SCENES.STUDENT_REGISTRATION);
@@ -315,6 +321,19 @@ export function createStudentRegistrationScene(
     if (ctx.session.processing) return;
 
     const contact = ctx.message.contact;
+    // Faqat odamning O'Z tasdiqlangan raqami o'tadi — begona raqamga
+    // o'quvchi hisobi ochib bo'lmasin.
+    if (!contactBelongsToSender(contact, ctx.from)) {
+      await ctx.reply(
+        CONTACT_NOT_OWN,
+        Markup.keyboard([
+          [Markup.button.contactRequest('📱 Telefon raqamni yuborish')],
+        ])
+          .resize()
+          .oneTime(),
+      );
+      return;
+    }
     // Kontakt tugmasidan kelgan raqamni Telegram o'zi beradi — chet el
     // raqami ham qabul qilinadi (o'zbek raqami 9 xonaga keltiriladi).
     const phone = normalizeSharedPhone(contact.phone_number);
@@ -421,6 +440,7 @@ export function createStudentRegistrationScene(
       const { plainPassword } = await registerStudentFromTelegram(
         prisma,
         entityHistoryService,
+        leadOrigin,
         data,
         chatId,
       );

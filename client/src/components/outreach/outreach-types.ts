@@ -69,11 +69,20 @@ export const CALL_OUTCOME_INFO: Record<
   CallOutcome,
   { label: string; className: string }
 > = {
-  ANSWERED: { label: "Gaplashildi", className: "bg-emerald-100 text-emerald-700" },
-  NO_ANSWER: { label: "Javob bermadi", className: "bg-slate-100 text-slate-700" },
+  ANSWERED: {
+    label: "Gaplashildi",
+    className: "bg-emerald-100 text-emerald-700",
+  },
+  NO_ANSWER: {
+    label: "Javob bermadi",
+    className: "bg-slate-100 text-slate-700",
+  },
   WILL_COME: { label: "Keladi", className: "bg-indigo-100 text-indigo-700" },
   WILL_PAY: { label: "To'laydi", className: "bg-blue-100 text-blue-700" },
-  PROMISED: { label: "Keladi / to'laydi", className: "bg-violet-100 text-violet-700" },
+  PROMISED: {
+    label: "Keladi / to'laydi",
+    className: "bg-violet-100 text-violet-700",
+  },
   LEFT: { label: "O'qishni tashladi", className: "bg-red-100 text-red-700" },
 };
 
@@ -103,6 +112,9 @@ export interface RemovalQueueItem {
   enrollmentId: string;
   consecutiveAbsentCount: number;
   lastAbsenceDate: string;
+  // Shu qoldirish uchun ogohlantirish yuborilgan sana (null = yuborilmagan).
+  // Admin takror qo'ng'iroq qilmasligi uchun qatorda belgilanadi.
+  warnedAt: string | null;
   // Oxirgi marta PRESENT/LATE bo'lgan dars sanasi (null = hech qachon
   // kelmagan).
   lastPresentDate: string | null;
@@ -115,7 +127,25 @@ export interface RemovalQueueItem {
 
 export interface RemovalQueueResponse {
   total: number;
+  // Sozlamadagi pauza chegarasi — «pauzagacha N dars» shundan hisoblanadi.
+  pauseThreshold: number;
   items: RemovalQueueItem[];
+}
+
+export interface AutoPausedItem {
+  studentId: number;
+  // Qachon pauzaga o'tkazilgan (ISO). null = eski yozuv.
+  pausedAt: string | null;
+  // "Avtomatik pauza: 3 ta ketma-ket dars qoldirildi (oxirgisi 12.09.2026)"
+  reason: string | null;
+  calledToday: boolean;
+  student: OutreachStudentWithParent & { balance: number };
+  group: OutreachGroupSummary | null;
+}
+
+export interface AutoPausedResponse {
+  total: number;
+  items: AutoPausedItem[];
 }
 
 export interface ActivePromiseItem {

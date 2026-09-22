@@ -35,7 +35,11 @@ describe('LeadsService', () => {
       group: { findFirst: jest.fn() },
       // Phone-based duplicate lookup (findOne matched-student + convert guard).
       // Defaults to "no existing student" so create/convert paths proceed.
-      student: { findFirst: jest.fn().mockResolvedValue(null) },
+      // findMany backs the "aylanganlar" name lookup in findAll.
+      student: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       mockExamParticipant: { findMany: jest.fn().mockResolvedValue([]) },
       // Comment counts are grouped, not relation-counted (polymorphic table).
       comment: {
@@ -295,6 +299,81 @@ describe('LeadsService', () => {
     });
   });
 
+  describe('LeadsService.findAll — aylanganlar hisoboti', () => {
+    it("aylangan lidga o'quvchi ma'lumotini biriktiradi", async () => {
+      prisma.lead.findMany.mockResolvedValue([
+        {
+          id: 'lead-1',
+          firstName: 'Ali',
+          lastName: 'Valiyev',
+          phone: '901234567',
+          statusEnum: 'CONVERTED',
+          createdAt: new Date('2026-09-01'),
+          statusChangedAt: new Date('2026-09-05'),
+          convertedStudentId: 555,
+          source: null,
+          section: null,
+        },
+      ]);
+      prisma.lead.count.mockResolvedValue(1);
+      prisma.student.findMany.mockResolvedValue([
+        { id: 555, firstName: 'Ali', lastName: 'Valiyev' },
+      ]);
+
+      const res = await service.findAll({} as any, 1001, null);
+
+      expect(res.data[0].convertedStudent).toEqual({
+        id: 555,
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+      });
+    });
+
+    // F3 — o'quvchi qidiruvi kompaniya va arxiv bo'yicha ham chegaralanadi:
+    // arxivlangan o'quvchi 404 beradigan havola bo'lib chiqardi, so'rovning
+    // o'zi esa ijarachi chegarasidan bitta xatolik narida turardi.
+    it("aylangan o'quvchini kompaniya ichidan va arxivsiz qidiradi", async () => {
+      prisma.lead.findMany.mockResolvedValue([
+        {
+          id: 'lead-1',
+          firstName: 'Ali',
+          lastName: 'Valiyev',
+          phone: '901234567',
+          statusEnum: 'CONVERTED',
+          createdAt: new Date('2026-09-01'),
+          statusChangedAt: new Date('2026-09-05'),
+          convertedStudentId: 555,
+          source: null,
+          section: null,
+        },
+      ]);
+      prisma.lead.count.mockResolvedValue(1);
+      prisma.student.findMany.mockResolvedValue([]);
+
+      await service.findAll({} as any, 1001, null);
+
+      expect(prisma.student.findMany).toHaveBeenCalledWith({
+        where: { id: { in: [555] }, companyId: 1001, deletedAt: null },
+        select: { id: true, firstName: true, lastName: true },
+      });
+    });
+
+    it("dateField=statusChangedAt bo'lsa sana filtri aylangan sanaga tushadi", async () => {
+      prisma.lead.findMany.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+
+      await service.findAll(
+        { dateField: 'statusChangedAt', startDate: '2026-09-01' } as any,
+        1001,
+        null,
+      );
+
+      const where = prisma.lead.findMany.mock.calls[0][0].where;
+      expect(where.statusChangedAt).toBeDefined();
+      expect(where.createdAt).toBeUndefined();
+    });
+  });
+
   describe('findOne', () => {
     it('throws NotFound when the lead is missing', async () => {
       prisma.lead.findFirst.mockResolvedValue(null);
@@ -386,6 +465,54 @@ describe('LeadsService', () => {
         }),
       );
     });
+
+    it("qo'shimcha telefon berilsa uni saqlaydi", async () => {
+      prisma.leadSection.findFirst.mockResolvedValue({
+        id: 'sec-1',
+        column: { systemKey: 'NEW' },
+      });
+      prisma.lead.aggregate.mockResolvedValue({ _max: { order: null } });
+      prisma.lead.create.mockResolvedValue({
+        id: 'lead-1',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+        extraPhone: '911112233',
+        statusEnum: 'NEW',
+      });
+
+      await service.create({ ...validDto, extraPhone: '911112233' }, 1001, 1);
+
+      expect(prisma.lead.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ extraPhone: '911112233' }),
+        }),
+      );
+    });
+
+    it("qo'shimcha telefon berilmasa null yozadi", async () => {
+      prisma.leadSection.findFirst.mockResolvedValue({
+        id: 'sec-1',
+        column: { systemKey: 'NEW' },
+      });
+      prisma.lead.aggregate.mockResolvedValue({ _max: { order: null } });
+      prisma.lead.create.mockResolvedValue({
+        id: 'lead-1',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+        extraPhone: null,
+        statusEnum: 'NEW',
+      });
+
+      await service.create(validDto, 1001, 1);
+
+      expect(prisma.lead.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ extraPhone: null }),
+        }),
+      );
+    });
   });
 
   describe('update', () => {
@@ -444,6 +571,90 @@ describe('LeadsService', () => {
         }),
       );
       expect(history.recordUpdate).toHaveBeenCalled();
+    });
+
+    it("qo'shimcha telefonni yangilaydi", async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-1',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+        extraPhone: null,
+      });
+      prisma.lead.update.mockResolvedValue({
+        id: 'lead-1',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+        extraPhone: '911112233',
+      });
+
+      await service.update(
+        'lead-1',
+        { extraPhone: '911112233' },
+        1001,
+        1,
+        null,
+      );
+
+      expect(prisma.lead.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { extraPhone: '911112233' } }),
+      );
+    });
+
+    it("bo'sh satr yuborilsa qo'shimcha telefonni tozalaydi", async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-1',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+        extraPhone: '911112233',
+      });
+      prisma.lead.update.mockResolvedValue({
+        id: 'lead-1',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+        extraPhone: null,
+      });
+
+      await service.update('lead-1', { extraPhone: '' }, 1001, 1, null);
+
+      expect(prisma.lead.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { extraPhone: null } }),
+      );
+    });
+
+    it("qo'shimcha telefon o'zgarishini tarixga yozadi", async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-1',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+        extraPhone: null,
+      });
+      prisma.lead.update.mockResolvedValue({
+        id: 'lead-1',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+        extraPhone: '911112233',
+      });
+
+      await service.update(
+        'lead-1',
+        { extraPhone: '911112233' },
+        1001,
+        1,
+        null,
+      );
+
+      expect(history.recordUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          oldValues: expect.objectContaining({ extraPhone: null }),
+          newValues: expect.objectContaining({ extraPhone: '911112233' }),
+        }),
+      );
     });
   });
 
@@ -668,6 +879,7 @@ describe('LeadsService', () => {
         }),
         1001,
         1,
+        { kind: 'LEAD', leadId: 'lead-1' },
       );
       expect(prisma.lead.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -703,6 +915,24 @@ describe('LeadsService', () => {
       convertedStudentId: null,
     };
 
+    it("lidning qo'shimcha telefonini yangi o'quvchiga ko'chiradi", async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        ...convertibleLead,
+        extraPhone: '911112233',
+      });
+      students.create.mockResolvedValue({ id: 10008 });
+      prisma.lead.update.mockResolvedValue({ id: 'lead-1' });
+
+      await service.convert('lead-1', { branchId: 5 }, 1001, 1, null);
+
+      expect(students.create).toHaveBeenCalledWith(
+        expect.objectContaining({ extraPhone: '911112233' }),
+        1001,
+        1,
+        { kind: 'LEAD', leadId: 'lead-1' },
+      );
+    });
+
     it('enrolls the new student into the chosen group using the group branch', async () => {
       prisma.lead.findFirst.mockResolvedValue({ ...convertibleLead });
       // Group lives in branch 7 — that branch must win over dto.branchId (5).
@@ -725,6 +955,7 @@ describe('LeadsService', () => {
         expect.objectContaining({ branchIds: [7] }),
         1001,
         1,
+        { kind: 'LEAD', leadId: 'lead-1' },
       );
       expect(enrollment.enrollToGroup).toHaveBeenCalledWith(
         10008,

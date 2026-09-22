@@ -116,6 +116,25 @@ describe('DafDrillService', () => {
     });
   });
 
+  // `R2_PUBLIC_URL` sozlanmagan bo'lsa xom kalit («daf/audio/x.mp3»)
+  // manzil o'rniga tushib, portalning O'Z domeniga nisbatan so'ralardi va
+  // har savol «Ovoz yuklanmadi» bo'lardi. Ovozsiz savol — to'g'ri
+  // degradatsiya; buzuq manzilli savol emas.
+  it('R2_PUBLIC_URL sozlanmagan bo`lsa audio null, xom kalit sizib chiqmaydi', async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        DafDrillService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: ConfigService, useValue: { get: () => undefined } },
+      ],
+    }).compile();
+
+    const fragen = await module.get(DafDrillService).getDrill(3);
+
+    expect(fragen.every((q) => q.audio === null)).toBe(true);
+    expect(JSON.stringify(fragen)).not.toContain('dib/audio/x.mp3');
+  });
+
   it("mavjud bo'lmagan darsda 404 beradi", async () => {
     prisma.dafLesson.findUnique.mockResolvedValue(null);
     await expect(service.getDrill(99)).rejects.toBeInstanceOf(

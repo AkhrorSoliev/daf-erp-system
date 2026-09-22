@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   ALL_BRANCHES,
-  BRANCH_KEY_BOOT,
   branchHeaderValue,
-  branchScopeKey,
+  branchScopeChanged,
   resolveStoredBranch,
 } from "./branch-header";
 
@@ -76,57 +75,38 @@ describe("resolveStoredBranch — a stale selection must not survive", () => {
 });
 
 /**
- * The remount key for the dashboard's page content.
+ * Whether a change to the saved selection changes what requests claim.
  *
- * This is the half of the fix that `BranchQuerySync` cannot do: it clears the
- * React Query cache, but ~47 components fetch with `useState` + `useEffect` and
- * never consult that cache. Changing this key unmounts them, so their effects
- * re-run. Get it wrong and either nothing reloads (the reported bug) or every
- * page remounts on first paint and throws away its own initial load.
+ * This decides when the dashboard's page content remounts — the half of the
+ * branch-switch fix that `BranchQuerySync` cannot do, since ~47 components
+ * fetch with `useState` + `useEffect` and never consult the query cache. Get it
+ * wrong in one direction and a switch leaves the previous branch's rows on
+ * screen; in the other, the page is thrown away for nothing, typed input
+ * included.
  */
-describe("branchScopeKey", () => {
-  it("returns a sentinel before the branch list resolves", () => {
-    // Keying on the not-yet-known selection would make the first resolution look
-    // like a switch and remount every page mid-load.
-    expect(branchScopeKey(null, false)).toBe(BRANCH_KEY_BOOT);
-    expect(branchScopeKey({ id: 1 }, false)).toBe(BRANCH_KEY_BOOT);
-  });
-
-  it("distinguishes 'Barcha filiallar' from 'not resolved yet'", () => {
-    // Both are `selectedBranch === null`. Collapsing them would mean a CEO
-    // switching from Fargona to "Barcha filiallar" produced the boot key —
-    // matching the pre-load value and skipping the remount.
-    expect(branchScopeKey(null, true)).toBe(ALL_BRANCHES);
-    expect(branchScopeKey(null, true)).not.toBe(BRANCH_KEY_BOOT);
-  });
-
+describe("branchScopeChanged", () => {
   it("changes on every switch that changes what the server returns", () => {
-    const fargona = branchScopeKey({ id: 1 }, true);
-    const namangan = branchScopeKey({ id: 2 }, true);
-    const all = branchScopeKey(null, true);
-
     // The reported bug: Fargona → Namangan showed Fargona's leads until refresh.
-    expect(fargona).not.toBe(namangan);
+    expect(branchScopeChanged("1", "2")).toBe(true);
     // And both directions out of the consolidated view.
-    expect(all).not.toBe(fargona);
-    expect(all).not.toBe(namangan);
-    expect(new Set([fargona, namangan, all]).size).toBe(3);
+    expect(branchScopeChanged(ALL_BRANCHES, "1")).toBe(true);
+    expect(branchScopeChanged("2", ALL_BRANCHES)).toBe(true);
   });
 
-  it("is stable for the same selection", () => {
-    // A re-render that did not change the branch must not remount the page —
-    // that would discard in-flight requests and reset scroll on every keystroke
-    // in an unrelated store.
-    expect(branchScopeKey({ id: 2 }, true)).toBe(branchScopeKey({ id: 2 }, true));
+  it("does not change when the same branch is saved again", () => {
+    // What resolving the switcher does on nearly every page load. Treating it
+    // as a change remounted every page once, after `GET /branches` returned.
+    expect(branchScopeChanged("2", "2")).toBe(false);
   });
 
-  it("never collides a branch id with the sentinels", () => {
-    // A branch literally named 0, or an id stringifying to "all"/"boot", would
-    // silently suppress a remount.
-    for (const id of [0, 1, 2, 99, 1001]) {
-      const key = branchScopeKey({ id }, true);
-      expect(key).not.toBe(BRANCH_KEY_BOOT);
-      expect(key).not.toBe(ALL_BRANCHES);
-    }
+  it("treats 'nothing saved' and 'Barcha filiallar' as the same scope", () => {
+    // Both send no header, so the server returned the same data for both.
+    expect(branchScopeChanged(null, ALL_BRANCHES)).toBe(false);
+    expect(branchScopeChanged(ALL_BRANCHES, null)).toBe(false);
+  });
+
+  it("changes when a first-ever selection names a branch", () => {
+    // Requests made with nothing saved asked for the caller's whole scope.
+    expect(branchScopeChanged(null, "2")).toBe(true);
   });
 });

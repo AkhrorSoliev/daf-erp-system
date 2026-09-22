@@ -168,3 +168,18 @@ describe('getAllowedTransitions', () => {
     expect(getAllowedTransitions('Holiday', 'CANCELLED')).toEqual(['ACTIVE']);
   });
 });
+
+describe('Lead status transitions', () => {
+  /**
+   * Yo'qotilgan deb belgilangan odam qaytib kelib ro'yxatdan o'tishi mumkin.
+   * Bu taqiqlangan bo'lsa, uning lidi eskicha qolib ketadi va u hisobotda
+   * o'quvchiga aylangan sifatida ko'rinmaydi.
+   */
+  it("yo'qotilgan lid o'quvchiga aylanishi mumkin", () => {
+    expect(isValidTransition('Lead', 'LOST', 'CONVERTED')).toBe(true);
+  });
+
+  it("o'quvchiga aylangan lid qayta yangi bo'la olmaydi", () => {
+    expect(isValidTransition('Lead', 'CONVERTED', 'NEW')).toBe(false);
+  });
+});

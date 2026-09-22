@@ -18,9 +18,11 @@ import {
   IconTile,
   EmptyState,
   LoadingCards,
+  Button,
 } from "../lumio";
 import { useLernenLevels } from "./queries";
-import { LessonPath, flattenPath } from "./lesson-path";
+import { LernenYol } from "./yol/lernen-yol";
+import { YolTepasi } from "./yol/yol-tepasi";
 
 /**
  * Goethe imtihonining to'rt moduli — o'quv yo'lining MAQSADI.
@@ -65,11 +67,19 @@ const SKILLS = [
 ];
 
 export function LernenLevelsPage() {
-  const { data, isLoading, isError } = useLernenLevels();
+  const { data, isLoading, isError, refetch } = useLernenLevels();
+  const yolBosh = data != null && data.length === 0;
 
   return (
     <Screen>
       <ScreenHeader subtitle="Nemis tili" title="Darslar" />
+
+      {/*
+        Yo'l holatidan MUSTAQIL: `YolTepasi` o'z so'rovini o'zi boshqaradi
+        (skelet/yashirish), shuning uchun yo'l hali yuklanayotgan yoki xato
+        bo'lganda ham tepada joyida turadi.
+      */}
+      <YolTepasi />
 
       {isLoading ? (
         <LoadingCards count={3} />
@@ -78,15 +88,21 @@ export function LernenLevelsPage() {
           icon={<BookOpen size={28} weight="bold" />}
           title="Ma'lumotni yuklab bo'lmadi"
           description="Internet aloqasini tekshirib, qayta urinib ko'ring."
+          action={
+            <Button variant="secondary" onClick={() => void refetch()}>
+              Qayta urinish
+            </Button>
+          }
+        />
+      ) : yolBosh ? (
+        <EmptyState
+          icon={<BookOpen size={28} weight="bold" />}
+          title="O'quv yo'li hali tayyor emas"
+          description="Material tez orada qo'shiladi."
         />
       ) : (
         <FadeIn className="space-y-4">
-          {/* Yo'l uzluksiz: A1.1 dan B1 gacha bitta zigzag, darajalar
-              rang bilan ajraladi. Avval har daraja alohida blokda edi va
-              ular orasidagi bog'lanish ko'rinmasdi. */}
-          <section>
-            <LessonPath units={flattenPath(data)} />
-          </section>
+          <LernenYol levels={data} />
 
           <section className="space-y-3">
             <h2 className="font-display text-sm font-bold uppercase tracking-wide text-ink-500">

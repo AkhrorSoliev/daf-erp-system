@@ -1,0 +1,34 @@
+import type { FrageFormat } from "../types";
+
+/**
+ * Savol ustidagi bir qatorlik ko'rsatma.
+ *
+ * Server buni yubormaydi: bu interfeys matni, kontent emas. Serverga
+ * qo'yilsa, matnni o'zgartirish uchun backend deploy kerak bo'lardi.
+ */
+const MATN: Record<FrageFormat, string> = {
+  WORT_UZ: "Bu so'z nimani anglatadi?",
+  UZ_WORT: "Nemischasini tanlang",
+  PAAR: "So'zlarni tarjimasi bilan juftlang",
+  ARTIKEL: "Artiklni tanlang",
+  LUECKE: "Bo'sh joyni to'ldiring",
+  SATZ_BAUEN: "So'zlardan gap tuzing",
+  SATZ_UEBERSETZEN: "Gapning tarjimasini tanlang",
+  REAKTION: "Nima deb javob berasiz?",
+  ZUORDNEN: "Vaziyatni mos ibora bilan juftlang",
+  DIALOG_LUECKE: "Suhbatda nima aytilgan?",
+  AUDIO_WORT: "Eshiting va to'g'ri so'zni tanlang",
+  WORT_TIPPEN: "Eshiting va so'zni yozing",
+  HOEREN_WAHL: "Suhbatni tinglang va savolga javob bering",
+};
+
+export function koersatma(format: FrageFormat): string {
+  return MATN[format];
+}
+
+/** Format qaysi komponent bilan ko'rsatiladi (dizayn §4.1). */
+export function harakat(format: FrageFormat): "TANLASH" | "YOZISH" | "YIGISH" {
+  if (format === "LUECKE" || format === "WORT_TIPPEN") return "YOZISH";
+  if (format === "SATZ_BAUEN" || format === "PAAR" || format === "ZUORDNEN") return "YIGISH";
+  return "TANLASH";
+}

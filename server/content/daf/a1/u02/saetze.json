@@ -1,0 +1,487 @@
+{
+ "unit": "u02",
+ "saetze": [
+  {
+   "sourceId": "u02-s1-01",
+   "section": "u02-s1",
+   "de": "Ist das deine Mutter?",
+   "uz": "Bu sening onangmi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s1-02",
+   "section": "u02-s1",
+   "de": "Nein, das ist meine Oma.",
+   "uz": "Yo'q, bu mening buvim.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Nein, meine Oma ist das."
+   ]
+  },
+  {
+   "sourceId": "u02-s1-03",
+   "section": "u02-s1",
+   "de": "Wer ist das? Dein Bruder?",
+   "uz": "Bu kim? Akangmi?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s1-04",
+   "section": "u02-s1",
+   "de": "Ja, das ist mein Bruder Lukas.",
+   "uz": "Ha, bu akam Lukas.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ja, mein Bruder Lukas ist das.",
+    "Ja, das ist Lukas, mein Bruder."
+   ]
+  },
+  {
+   "sourceId": "u02-s1-05",
+   "section": "u02-s1",
+   "de": "Wo wohnt deine Familie?",
+   "uz": "Oilang qayerda yashaydi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s1-06",
+   "section": "u02-s1",
+   "de": "Meine Eltern wohnen in Usbekistan.",
+   "uz": "Ota-onam O'zbekistonda yashaydi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "In Usbekistan wohnen meine Eltern."
+   ]
+  },
+  {
+   "sourceId": "u02-s1-07",
+   "section": "u02-s1",
+   "de": "Meine Tochter heißt Lena.",
+   "uz": "Qizimning ismi Lena.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Lena heißt meine Tochter."
+   ]
+  },
+  {
+   "sourceId": "u02-s1-08",
+   "section": "u02-s1",
+   "de": "Meine Schwester wohnt auch hier.",
+   "uz": "Opam ham shu yerda yashaydi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Hier wohnt meine Schwester auch.",
+    "Auch meine Schwester wohnt hier.",
+    "Hier wohnt auch meine Schwester.",
+    "Meine Schwester wohnt hier auch."
+   ]
+  },
+  {
+   "sourceId": "u02-s2-01",
+   "section": "u02-s2",
+   "de": "Hast du Kinder?",
+   "uz": "Bolalaring bormi?",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s2-02",
+   "section": "u02-s2",
+   "de": "Ja, ich habe zwei Kinder.",
+   "uz": "Ha, ikkita bolam bor.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ja, zwei Kinder habe ich."
+   ]
+  },
+  {
+   "sourceId": "u02-s2-03",
+   "section": "u02-s2",
+   "de": "Hat deine Schwester Kinder?",
+   "uz": "Opangning bolalari bormi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s2-04",
+   "section": "u02-s2",
+   "de": "Ja, sie hat drei Kinder.",
+   "uz": "Ha, uning uchta bolasi bor.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ja, drei Kinder hat sie."
+   ]
+  },
+  {
+   "sourceId": "u02-s2-05",
+   "section": "u02-s2",
+   "de": "Hast du eine Schwester?",
+   "uz": "Opang bormi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s2-06",
+   "section": "u02-s2",
+   "de": "Ich habe zwei Brüder.",
+   "uz": "Ikkita akam bor.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Zwei Brüder habe ich."
+   ]
+  },
+  {
+   "sourceId": "u02-s2-07",
+   "section": "u02-s2",
+   "de": "Wir haben ein Kind.",
+   "uz": "Bizning bitta bolamiz bor.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ein Kind haben wir."
+   ]
+  },
+  {
+   "sourceId": "u02-s2-08",
+   "section": "u02-s2",
+   "de": "Mein Bruder ist dreißig, ich bin zwanzig.",
+   "uz": "Akam o'ttiz yoshda, men yigirma yoshdaman.",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ich bin zwanzig, mein Bruder ist dreißig."
+   ]
+  },
+  {
+   "sourceId": "u02-s2-09",
+   "section": "u02-s2",
+   "de": "Mein Vater ist sechzig, meine Mutter fünfzig.",
+   "uz": "Otam oltmish yoshda, onam ellik yoshda.",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Meine Mutter ist fünfzig, mein Vater sechzig."
+   ]
+  },
+  {
+   "sourceId": "u02-s2-10",
+   "section": "u02-s2",
+   "de": "Meine Oma ist neunzig.",
+   "uz": "Buvim to'qson yoshda.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s3-01",
+   "section": "u02-s3",
+   "de": "Was ist dein Beruf?",
+   "uz": "Kasbing nima?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s3-02",
+   "section": "u02-s3",
+   "de": "Ich heiße Anna und bin Ärztin.",
+   "uz": "Mening ismim Anna, men shifokorman.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ich bin Ärztin und heiße Anna."
+   ]
+  },
+  {
+   "sourceId": "u02-s3-03",
+   "section": "u02-s3",
+   "de": "Herr Weber ist mein Lehrer.",
+   "uz": "Janob Weber mening o'qituvchim.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Mein Lehrer ist Herr Weber."
+   ]
+  },
+  {
+   "sourceId": "u02-s3-04",
+   "section": "u02-s3",
+   "de": "Wo arbeitest du?",
+   "uz": "Qayerda ishlaysan?",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s3-05",
+   "section": "u02-s3",
+   "de": "Arbeitest du auch in der Firma?",
+   "uz": "Sen ham shu firmada ishlaysanmi?",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Arbeitest auch du in der Firma?"
+   ]
+  },
+  {
+   "sourceId": "u02-s3-06",
+   "section": "u02-s3",
+   "de": "Mein Bruder studiert in Deutschland.",
+   "uz": "Akam Germaniyada o'qiydi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "In Deutschland studiert mein Bruder."
+   ]
+  },
+  {
+   "sourceId": "u02-s3-07",
+   "section": "u02-s3",
+   "de": "Ist Herr Neumann dein Chef?",
+   "uz": "Janob Neumann sening rahbaringmi?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s3-08",
+   "section": "u02-s3",
+   "de": "Der Chef ist nicht hier.",
+   "uz": "Rahbar bu yerda emas.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Hier ist der Chef nicht."
+   ]
+  },
+  {
+   "sourceId": "u02-s3-09",
+   "section": "u02-s3",
+   "de": "Meine Mutter ist Lehrerin, mein Vater Arzt.",
+   "uz": "Onam o'qituvchi, otam shifokor.",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Mein Vater ist Arzt, meine Mutter Lehrerin."
+   ]
+  },
+  {
+   "sourceId": "u02-s4-01",
+   "section": "u02-s4",
+   "de": "Wie alt bist du?",
+   "uz": "Necha yoshdasan?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-02",
+   "section": "u02-s4",
+   "de": "Wie alt ist deine Tochter?",
+   "uz": "Qizing necha yoshda?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-03",
+   "section": "u02-s4",
+   "de": "Mein Sohn ist groß, meine Tochter klein.",
+   "uz": "O'g'lim katta, qizim kichkina.",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Meine Tochter ist klein, mein Sohn groß."
+   ]
+  },
+  {
+   "sourceId": "u02-s4-04",
+   "section": "u02-s4",
+   "de": "Bist du verheiratet?",
+   "uz": "Oilalimisan?",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-05",
+   "section": "u02-s4",
+   "de": "Nein, ich bin ledig.",
+   "uz": "Yo'q, turmush qurmaganman.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-06",
+   "section": "u02-s4",
+   "de": "Ich bin dreißig und ledig.",
+   "uz": "O'ttiz yoshdaman, turmush qurmaganman.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ich bin ledig und dreißig."
+   ]
+  },
+  {
+   "sourceId": "u02-s4-07",
+   "section": "u02-s4",
+   "de": "Bist du müde? Ja, sehr.",
+   "uz": "Charchadingmi? Ha, juda.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-08",
+   "section": "u02-s4",
+   "de": "Die Kinder sind müde.",
+   "uz": "Bolalar charchagan.",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-09",
+   "section": "u02-s4",
+   "de": "Der Chef ist neu und sehr jung.",
+   "uz": "Rahbar yangi va juda yosh.",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Der Chef ist sehr jung und neu."
+   ]
+  },
+  {
+   "sourceId": "u02-s4-10",
+   "section": "u02-s4",
+   "de": "Meine Oma ist alt und lustig.",
+   "uz": "Buvim keksa va quvnoq.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Meine Oma ist lustig und alt."
+   ]
+  },
+  {
+   "sourceId": "u02-s4-11",
+   "section": "u02-s4",
+   "de": "Ist die Schule neu?",
+   "uz": "Maktab yangimi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s4-12",
+   "section": "u02-s4",
+   "de": "Die Eltern sind sehr glücklich.",
+   "uz": "Ota-ona juda baxtli.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s5-01",
+   "section": "u02-s5",
+   "de": "Das ist meine Freundin Mia.",
+   "uz": "Bu mening dugonam Mia.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Das ist Mia, meine Freundin."
+   ]
+  },
+  {
+   "sourceId": "u02-s5-02",
+   "section": "u02-s5",
+   "de": "Ist er dein Freund oder dein Kollege?",
+   "uz": "U do'stingmi yoki hamkasbingmi?",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ist er dein Kollege oder dein Freund?"
+   ]
+  },
+  {
+   "sourceId": "u02-s5-03",
+   "section": "u02-s5",
+   "de": "Die Kinder lernen zusammen.",
+   "uz": "Bolalar birga o'qishadi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Zusammen lernen die Kinder."
+   ]
+  },
+  {
+   "sourceId": "u02-s5-04",
+   "section": "u02-s5",
+   "de": "Was machst du hier?",
+   "uz": "Bu yerda nima qilyapsan?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s5-05",
+   "section": "u02-s5",
+   "de": "Wer ist der Mann?",
+   "uz": "U erkak kim?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s5-06",
+   "section": "u02-s5",
+   "de": "Der Junge ist mein Sohn.",
+   "uz": "U bola mening o'g'lim.",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u02-s5-07",
+   "section": "u02-s5",
+   "de": "Das Mädchen heißt Lena.",
+   "uz": "Qizchaning ismi Lena.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Lena heißt das Mädchen."
+   ]
+  },
+  {
+   "sourceId": "u02-s5-08",
+   "section": "u02-s5",
+   "de": "Die Leute hier sind sehr lustig.",
+   "uz": "Bu yerdagi odamlar juda quvnoq.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Hier sind die Leute sehr lustig.",
+    "Die Leute sind hier sehr lustig."
+   ]
+  },
+  {
+   "sourceId": "u02-s5-09",
+   "section": "u02-s5",
+   "de": "Wir machen das zusammen.",
+   "uz": "Buni birga qilamiz.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Das machen wir zusammen.",
+    "Zusammen machen wir das."
+   ]
+  },
+  {
+   "sourceId": "u02-s5-10",
+   "section": "u02-s5",
+   "de": "Mein Kollege kommt aus Usbekistan.",
+   "uz": "Hamkasbim O'zbekistondan.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Aus Usbekistan kommt mein Kollege."
+   ]
+  }
+ ]
+}

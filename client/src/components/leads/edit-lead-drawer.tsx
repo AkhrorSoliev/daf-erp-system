@@ -16,26 +16,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/ui/phone-input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import {
-  useLeadsBoard,
-  type LeadCard,
-  type LeadSourceOption,
-} from "@/hooks/use-leads-board";
+import { useLeadsBoard, type LeadCard } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
+import { LeadAdditionalFields } from "./lead-additional-fields";
+import { LeadSourcePicker } from "./lead-source-picker";
 
 interface EditLeadValues {
   firstName: string;
   lastName: string;
   phone: string;
+  extraPhone: string;
   sourceId: string;
 }
 
@@ -44,7 +36,6 @@ export function EditLeadDrawer() {
   const closeEditLead = useLeadsUi((s) => s.closeEditLead);
   const applyLeadUpdate = useLeadsBoard((s) => s.applyLeadUpdate);
 
-  const [sources, setSources] = useState<LeadSourceOption[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   const {
@@ -54,7 +45,13 @@ export function EditLeadDrawer() {
     reset,
     formState: { errors },
   } = useForm<EditLeadValues>({
-    defaultValues: { firstName: "", lastName: "", phone: "", sourceId: "" },
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      phone: "",
+      extraPhone: "",
+      sourceId: "",
+    },
   });
 
   const open = !!editLead;
@@ -65,15 +62,10 @@ export function EditLeadDrawer() {
       firstName: editLead.firstName,
       lastName: editLead.lastName,
       phone: editLead.phone,
+      extraPhone: editLead.extraPhone,
       sourceId: editLead.sourceId,
     });
     setSubmitting(false);
-    api
-      .get<LeadSourceOption[]>("/lead-sources")
-      .then(({ data }) => setSources(data))
-      .catch((error) =>
-        toast.error(getErrorMessage(error, "Manbalarni yuklashda xatolik")),
-      );
   }, [editLead, reset]);
 
   async function onSubmit(values: EditLeadValues) {
@@ -84,7 +76,9 @@ export function EditLeadDrawer() {
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
         phone: values.phone,
-        sourceId: values.sourceId,
+        // Always sent: an empty string is how the panel clears a saved number.
+        extraPhone: values.extraPhone,
+        sourceId: values.sourceId || undefined,
       });
       applyLeadUpdate(editLead.sectionId, data);
       toast.success("Lid yangilandi");
@@ -167,27 +161,47 @@ export function EditLeadDrawer() {
               )}
             </div>
 
-            <div className="space-y-1.5">
-              <Label>Lid manbasi (ixtiyoriy)</Label>
-              <Controller
-                name="sourceId"
-                control={control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Manbani tanlang" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sources.map((source) => (
-                        <SelectItem key={source.id} value={source.id}>
-                          {source.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
+            {/* Manbasi bor lid uni yo'qotmaydi (server ham rad etadi). Manbasiz
+                eski lidni esa boshqa maydonini tuzatish uchun ham manba
+                so'ralmaydi — lekin tanlab qo'yish mumkin. */}
+            <Controller
+              name="sourceId"
+              control={control}
+              rules={{
+                validate: (v) =>
+                  !editLead?.sourceId ||
+                  Boolean(v) ||
+                  "Lid manbasini olib tashlab bo'lmaydi",
+              }}
+              render={({ field }) => (
+                <LeadSourcePicker
+                  open={open}
+                  value={field.value}
+                  onChange={field.onChange}
+                  label="Qayerdan bildi?"
+                  required={Boolean(editLead?.sourceId)}
+                  error={errors.sourceId?.message}
+                  id="edit-lead-sourceId"
+                  loadErrorMessage="Manbalarni yuklashda xatolik"
+                />
+              )}
+            />
+
+            <Controller
+              name="extraPhone"
+              control={control}
+              rules={{
+                validate: (v) =>
+                  !v || v.length === 9 || "Telefon raqamini to'liq kiriting",
+              }}
+              render={({ field }) => (
+                <LeadAdditionalFields
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.extraPhone?.message}
+                />
+              )}
+            />
           </form>
         </div>
 

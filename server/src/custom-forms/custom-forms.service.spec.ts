@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { LeadsService } from '../leads/leads.service';
 import { FormFieldDto } from './dto/form-field.dto';
+import { stageWhere } from './submission-stage';
 function fields(...overrides: Partial<FormFieldDto>[]): FormFieldDto[] {
   return overrides.map((o, i) => ({
     id: o.id ?? `f${i}`,
@@ -57,6 +58,7 @@ describe('CustomFormsService', () => {
       },
       customFormSubmission: {
         create: jest.fn().mockResolvedValue({ id: 'sub-1' }),
+        groupBy: jest.fn().mockResolvedValue([]),
       },
       leadSection: { findFirst: jest.fn().mockResolvedValue({ id: 'sec-1' }) },
       leadSource: {
@@ -425,6 +427,24 @@ describe('CustomFormsService', () => {
       );
     });
 
+    it.each(['Telegram bot', 'telegram BOT', 'Mock imtihon'])(
+      'ignores a reserved system source tag (%s) and uses the form source',
+      async (tag) => {
+        await service.submit(
+          'abc1234567',
+          { data: { fn: 'Aziz', ln: 'Karimov', ph: '901234567' }, source: tag },
+          {},
+        );
+        expect(prisma.leadSource.findFirst).not.toHaveBeenCalled();
+        expect(prisma.leadSource.create).not.toHaveBeenCalled();
+        expect(leads.create).toHaveBeenCalledWith(
+          expect.objectContaining({ sourceId: 'src-1' }),
+          1,
+          null,
+        );
+      },
+    );
+
     it('falls back to the form source when no link tag is supplied', async () => {
       await service.submit(
         'abc1234567',
@@ -466,6 +486,86 @@ describe('CustomFormsService', () => {
           {},
         ),
       ).rejects.toThrow(/noto'g'ri qiymat/);
+    });
+  });
+
+  describe('list', () => {
+    const baseForm = (id: string, submissions: number) => ({
+      id,
+      slug: `slug-${id}`,
+      title: `Forma ${id}`,
+      isActive: true,
+      createdAt: new Date('2026-09-01T00:00:00Z'),
+      updatedAt: new Date('2026-09-01T00:00:00Z'),
+      section: {
+        id: 'sec-1',
+        name: "Bo'lim",
+        column: { id: 'col-1', name: 'Ustun' },
+      },
+      source: null,
+      _count: { submissions },
+    });
+
+    it("har formaga oxirgi javob vaqti, o'quvchi bo'lganlar va qo'ng'iroq kutayotganlar sonini qo'shadi", async () => {
+      prisma.customForm.findMany.mockResolvedValue([
+        baseForm('f1', 3),
+        baseForm('f2', 0),
+      ]);
+      const last = new Date('2026-09-10T09:00:00Z');
+      prisma.customFormSubmission.groupBy
+        .mockResolvedValueOnce([{ formId: 'f1', _max: { submittedAt: last } }])
+        .mockResolvedValueOnce([{ formId: 'f1', _count: { _all: 1 } }])
+        .mockResolvedValueOnce([{ formId: 'f1', _count: { _all: 2 } }]);
+
+      const result = await service.list(1, null);
+
+      expect(result[0]).toMatchObject({
+        id: 'f1',
+        submissionCount: 3,
+        lastSubmittedAt: last,
+        convertedCount: 1,
+        awaitingCallCount: 2,
+      });
+      expect(result[1]).toMatchObject({
+        id: 'f2',
+        submissionCount: 0,
+        lastSubmittedAt: null,
+        convertedCount: 0,
+        awaitingCallCount: 0,
+      });
+      expect(prisma.customFormSubmission.groupBy).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          where: {
+            formId: { in: ['f1', 'f2'] },
+            AND: [stageWhere('converted')],
+          },
+        }),
+      );
+      expect(prisma.customFormSubmission.groupBy).toHaveBeenNthCalledWith(
+        3,
+        expect.objectContaining({
+          where: {
+            formId: { in: ['f1', 'f2'] },
+            AND: [stageWhere('awaiting')],
+          },
+        }),
+      );
+    });
+
+    it("forma bo'lmasa sanoq so'rovlari yuborilmaydi", async () => {
+      prisma.customForm.findMany.mockResolvedValue([]);
+      await expect(service.list(1, null)).resolves.toEqual([]);
+      expect(prisma.customFormSubmission.groupBy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findOne', () => {
+    it("javoblarni endi qaytarmaydi — ular alohida endpoint'da", async () => {
+      prisma.customForm.findFirst.mockResolvedValue({ id: 'f1' });
+      await service.findOne('f1', 1, null);
+      const select = prisma.customForm.findFirst.mock.calls[0][0].select;
+      expect(select.submissions).toBeUndefined();
     });
   });
 });

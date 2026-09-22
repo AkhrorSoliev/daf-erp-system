@@ -3,59 +3,57 @@
 import { useEffect, useRef } from "react";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
-/** Not-yet-resolved. `null` cannot serve — it is a real selection. */
-type BranchState = number | null | undefined;
+/** A `scopeVersion` value, or `undefined` before this caller has seen one. */
+type ScopeState = number | undefined;
 
 /**
- * Decide whether a branch VALUE change is a switch the app must react to.
+ * Decide whether the branch scope changed since the caller last looked.
  *
  * Pure so the rule can be tested without mounting React, and shared so there is
- * one definition of "the branch changed". There are two non-obvious cases and
- * both have cost a bug before:
+ * one definition of "the branch changed". It reads the switcher's
+ * `scopeVersion` — the SAME counter that keys `BranchScopedMain` — so the page
+ * remount and the cache/store reset cannot disagree about what a switch is.
  *
- *   - `null` is a real selection ("Barcha filiallar"), so it cannot double as
- *     "nothing chosen yet". The sentinel has to live outside the value space,
- *     which is why `previous` is `undefined` rather than `null` at boot.
- *   - The FIRST resolution after login is not a switch. Treating it as one
- *     throws away the initial page load's own in-flight requests — the page
- *     would blank out and refetch everything it had just asked for.
+ *   - The first value a caller sees is adopted, not reported: a caller that
+ *     mounts after a switch has nothing stale to clear.
+ *   - Any later change is a switch. That includes the FIRST resolution when it
+ *     replaced the saved branch — e.g. a non-CEO right after login, whose first
+ *     requests went out with no branch header (their whole scope). The version
+ *     moves only then; resolving to the branch already saved leaves it alone,
+ *     so a normal page load is not thrown away.
  */
 export function resolveBranchSwitch(
-  previous: BranchState,
-  current: number | null,
-): { switched: boolean; next: number | null } {
+  previous: ScopeState,
+  current: number,
+): { switched: boolean; next: number } {
   if (previous === undefined) return { switched: false, next: current };
   return { switched: previous !== current, next: current };
 }
 
 /**
- * Run `onSwitch` when the user changes branch — never on the first resolution.
+ * Run `onSwitch` when the branch requests claim changes.
  *
  * WHO NEEDS THIS: anything holding branch-scoped state that `BranchScopedMain`
  * cannot reach. That remount covers the page content, which is most of the app,
  * but NOT what sits beside it in the dashboard layout — the header and sidebar
  * stay mounted on purpose, because the branch switcher lives there and must not
- * unmount itself mid-selection.
+ * unmount itself mid-selection — nor the React Query cache and zustand stores
+ * cleared by `BranchQuerySync`.
  *
  * `onSwitch` sits in the dependency array rather than behind a ref. A ref would
  * have to be written during render, which the React Compiler forbids — and it
  * buys nothing here: an inline arrow does re-arm the effect every render, but
- * the effect's first act is to ask whether the branch changed, and on a plain
+ * the effect's first act is to ask whether the scope changed, and on a plain
  * re-render the answer is no. Re-running a no-op costs a comparison.
  */
 export function useBranchChange(onSwitch: () => void): void {
-  const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
-  const loaded = useBranchSwitcher((s) => s.loaded);
+  const scopeVersion = useBranchSwitcher((s) => s.scopeVersion);
 
-  const previous = useRef<BranchState>(undefined);
+  const previous = useRef<ScopeState>(undefined);
 
   useEffect(() => {
-    if (!loaded) return;
-    const { switched, next } = resolveBranchSwitch(
-      previous.current,
-      selectedBranch?.id ?? null,
-    );
+    const { switched, next } = resolveBranchSwitch(previous.current, scopeVersion);
     previous.current = next;
     if (switched) onSwitch();
-  }, [selectedBranch, loaded, onSwitch]);
+  }, [scopeVersion, onSwitch]);
 }

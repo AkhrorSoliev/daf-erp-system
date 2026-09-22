@@ -25,10 +25,7 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import type { DebtWriteOffEligibility } from "@/components/students/debt-write-off-types";
-import type {
-  RemovalQueueItem,
-  RemovalQueueResponse,
-} from "./outreach-types";
+import type { RemovalQueueItem, RemovalQueueResponse } from "./outreach-types";
 import type { LogCallPrefill } from "./log-call-dialog";
 import { TablePagination } from "./table-pagination";
 
@@ -50,10 +47,7 @@ const FILTER_SCHEMA = {
   rm_size: { type: "number", defaultValue: 10 },
 } as const;
 
-export function RemovalQueueTab({
-  isActive,
-  onLogCall,
-}: RemovalQueueTabProps) {
+export function RemovalQueueTab({ isActive, onLogCall }: RemovalQueueTabProps) {
   const queryClient = useQueryClient();
   const [target, setTarget] = useState<RemoveTarget | null>(null);
   const [reasonId, setReasonId] = useState<string | null>(null);
@@ -147,7 +141,11 @@ export function RemovalQueueTab({
       } = {};
       if (reasonId) payload.departureReasonId = reasonId;
       if (trimmedReason) payload.reason = trimmedReason;
-      if (writeOff && eligibility?.eligible && resolvedWriteOffAmount !== null) {
+      if (
+        writeOff &&
+        eligibility?.eligible &&
+        resolvedWriteOffAmount !== null
+      ) {
         payload.writeOffCycleDebt = true;
         payload.writeOffReason = writeOffReason.trim();
         payload.writeOffConfirmAmount = resolvedWriteOffAmount;
@@ -164,7 +162,9 @@ export function RemovalQueueTab({
       // Invalidate all 3 list queries + the stats widget — the removed student
       // likely appears in the today-absentees list too (since 3-strike implies
       // they were ABSENT today).
-      queryClient.invalidateQueries({ queryKey: ["outreach", "removal-queue"] });
+      queryClient.invalidateQueries({
+        queryKey: ["outreach", "removal-queue"],
+      });
       queryClient.invalidateQueries({
         queryKey: ["outreach", "today-absentees"],
       });
@@ -203,7 +203,8 @@ export function RemovalQueueTab({
     <>
       {total === 0 ? (
         <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-          Ketma-ket 3 va undan ko&apos;p marta darsga kelmagan o&apos;quvchi yo&apos;q
+          Ketma-ket 3 va undan ko&apos;p marta darsga kelmagan o&apos;quvchi
+          yo&apos;q
         </div>
       ) : (
         <div className="space-y-3">
@@ -218,6 +219,7 @@ export function RemovalQueueTab({
                   <TableHead>Guruh / kurs</TableHead>
                   <TableHead>O&apos;qituvchi</TableHead>
                   <TableHead>Ketma-ket kelmagan</TableHead>
+                  <TableHead>Pauzagacha</TableHead>
                   <TableHead>Oxirgi marta kelgan</TableHead>
                   <TableHead className="w-72">Amal</TableHead>
                 </TableRow>
@@ -228,6 +230,7 @@ export function RemovalQueueTab({
                     key={row.enrollmentId}
                     row={row}
                     index={(page - 1) * pageSize + idx}
+                    pauseThreshold={data?.pauseThreshold ?? 3}
                     onCall={() =>
                       onLogCall({
                         studentId: row.student.id,
@@ -289,17 +292,21 @@ export function RemovalQueueTab({
 function Row({
   row,
   index,
+  pauseThreshold,
   onCall,
   onRemove,
 }: {
   row: RemovalQueueItem;
   index: number;
+  pauseThreshold: number;
   onCall: () => void;
   onRemove: () => void;
 }) {
   return (
     <TableRow>
-      <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>
+      <TableCell className="border-r text-muted-foreground">
+        {index + 1}
+      </TableCell>
       <TableCell className="font-medium">
         <Link
           href={`/students/profile/${row.student.id}`}
@@ -336,6 +343,13 @@ function Row({
       <TableCell>
         <StreakBadge count={row.consecutiveAbsentCount} />
       </TableCell>
+      <TableCell>
+        <PauseCountdown
+          streak={row.consecutiveAbsentCount}
+          pauseThreshold={pauseThreshold}
+          warnedAt={row.warnedAt}
+        />
+      </TableCell>
       <TableCell className="text-sm text-muted-foreground">
         {row.lastPresentDate ? formatDate(row.lastPresentDate) : "Hech qachon"}
       </TableCell>
@@ -361,6 +375,40 @@ function Row({
         </div>
       </TableCell>
     </TableRow>
+  );
+}
+
+/**
+ * «Pauzagacha N dars» + «Ogohlantirildi» belgisi.
+ *
+ * Avtomatika yoqilgach bu ro'yxat adminning QO'NG'IROQ ro'yxatiga aylanadi:
+ * chegaraga yetganlar ertalab o'zi pauzaga tushadi, shuning uchun har
+ * qatorda qancha vaqt qolgani ko'rinib turishi kerak. Ogohlantirish belgisi
+ * esa bir xil o'quvchiga ikki marta qo'ng'iroq qilishdan saqlaydi.
+ */
+function PauseCountdown({
+  streak,
+  pauseThreshold,
+  warnedAt,
+}: {
+  streak: number;
+  pauseThreshold: number;
+  warnedAt: string | null;
+}) {
+  const left = pauseThreshold - streak;
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {left <= 0 ? (
+        <Badge variant="destructive">Pauza yoqasida</Badge>
+      ) : (
+        <span className="text-sm text-muted-foreground">{left} ta dars</span>
+      )}
+      {warnedAt && (
+        <Badge variant="outline" className="text-xs">
+          Ogohlantirildi {formatDate(warnedAt)}
+        </Badge>
+      )}
+    </div>
   );
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { registerMedia } from "../lib/media-registry";
 
 export interface Clip {
   url: string;
@@ -25,6 +26,8 @@ export interface Clip {
 export function useClipPlayer(clip: Clip | null) {
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Faollik hisobi uchun reyestrdan chiqaruvchi (dizayn 4.5).
+  const unregisterRef = React.useRef<(() => void) | null>(null);
 
   const stop = React.useCallback(() => {
     if (timerRef.current !== null) {
@@ -35,9 +38,18 @@ export function useClipPlayer(clip: Clip | null) {
   }, []);
 
   // Ekrandan chiqilganda ovoz qolib ketmasligi kerak.
-  React.useEffect(() => stop, [stop]);
+  React.useEffect(
+    () => () => {
+      stop();
+      unregisterRef.current?.();
+      unregisterRef.current = null;
+    },
+    [stop],
+  );
   React.useEffect(() => {
     stop();
+    unregisterRef.current?.();
+    unregisterRef.current = null;
     audioRef.current = null;
   }, [clip?.url, stop]);
 
@@ -45,7 +57,10 @@ export function useClipPlayer(clip: Clip | null) {
     if (!clip) return;
     stop();
 
-    audioRef.current ??= new Audio(clip.url);
+    if (!audioRef.current) {
+      audioRef.current = new Audio(clip.url);
+      unregisterRef.current = registerMedia(audioRef.current);
+    }
     const el = audioRef.current;
 
     if (clip.startMs === null || clip.endMs === null) {

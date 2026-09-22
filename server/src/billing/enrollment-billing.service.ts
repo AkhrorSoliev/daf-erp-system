@@ -277,7 +277,11 @@ export class EnrollmentBillingService {
     tx: Prisma.TransactionClient,
     params: {
       enrollmentId: string;
-      performedById: number;
+      // Tizim nomidan bajarilgan muzlatishda egasi yo'q (avtomatik pauza).
+      // Bu holatda override ham bo'lmaydi, ya'ni pastdagi `reverseTransaction`
+      // / `reverseAccrualForAttendance` shoxiga umuman kirilmaydi — ikkalasi
+      // ham ixtiyoriy id qabul qiladi.
+      performedById?: number;
       overrideLessons?: number;
       reason?: string;
     },

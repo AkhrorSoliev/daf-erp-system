@@ -30,6 +30,7 @@ import {
 } from './shared/group-include';
 import { GroupHolidayCascadeService } from './group-holiday-cascade.service';
 import { computeNextGroupNumber } from './shared/next-group-number';
+import { utcMidnightFromDateStr } from '../common/date/tashkent';
 
 @Injectable()
 export class GroupsWriteService {
@@ -92,9 +93,9 @@ export class GroupsWriteService {
 
     let endDate: Date | undefined;
     if (dto.startDate && course.courseDuration) {
-      const start = new Date(dto.startDate);
+      const start = utcMidnightFromDateStr(dto.startDate);
       endDate = new Date(start);
-      endDate.setMonth(endDate.getMonth() + course.courseDuration);
+      endDate.setUTCMonth(endDate.getUTCMonth() + course.courseDuration);
     }
 
     const teacherData = dto.teacherIds?.length
@@ -129,7 +130,9 @@ export class GroupsWriteService {
             statusEnum:
               INT_TO_GROUP_STATUS[dto.status ?? 2] ?? GroupStatus.FORMING,
             comment: dto.comment,
-            startDate: dto.startDate ? new Date(dto.startDate) : undefined,
+            startDate: dto.startDate
+              ? utcMidnightFromDateStr(dto.startDate)
+              : undefined,
             endDate,
             teachers: teacherData,
           },
@@ -402,7 +405,9 @@ export class GroupsWriteService {
         where: { id },
         data: {
           ...updateData,
-          startDate: dto.startDate ? new Date(dto.startDate) : undefined,
+          startDate: dto.startDate
+            ? utcMidnightFromDateStr(dto.startDate)
+            : undefined,
           exactDays: dto.exactDays ?? undefined,
         },
         include: groupInclude,

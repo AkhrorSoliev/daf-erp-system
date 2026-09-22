@@ -138,3 +138,13 @@ export function leadHolatiParams(
   }
   return params;
 }
+
+/**
+ * Faqat «O'quvchiga aylangan» tanlangan bo'lsa sana oralig'i lid yaratilgan
+ * sanaga emas, AYLANGAN sanaga tushadi — «shu oyda nechta odam o'quvchi bo'ldi»
+ * savoliga javob beradigan yagona o'lchov shu. Boshqa har qanday tanlovda
+ * (aralash bosqichlar, bo'sh filtr) `createdAt` qoladi.
+ */
+export function leadDateFieldIsConversion(holati: readonly string[]): boolean {
+  return holati.length === 1 && holati[0] === "CONVERTED";
+}

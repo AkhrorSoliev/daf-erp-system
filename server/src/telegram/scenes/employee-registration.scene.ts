@@ -18,6 +18,14 @@ import {
   normalizeSharedPhone,
   SHARED_PHONE_INVALID,
 } from '../../common/utils/phone.util';
+import {
+  CONTACT_NOT_OWN,
+  contactBelongsToSender,
+} from '../utils/contact-ownership';
+import {
+  findLiveStaffByPhone,
+  loginForPhone,
+} from '../../common/auth/phone-account-rules';
 import { generatePassword } from '../../common/utils/password.util';
 import { buildStaffCredentialsMessage } from './staff-credentials-message';
 import { downloadFile } from '../utils/download.util';
@@ -191,6 +199,25 @@ export function createEmployeeRegistrationScene(
     if (ctx.session.processing) return;
 
     const contact = ctx.message.contact;
+
+    // Faqat odamning O'Z tasdiqlangan raqami o'tadi — begona karta bilan
+    // begonaning raqamiga xodim hisobi ochib bo'lmasin.
+    if (!contactBelongsToSender(contact, ctx.from)) {
+      await ctx.reply(
+        CONTACT_NOT_OWN,
+        Markup.keyboard([
+          [
+            Markup.button.contactRequest(
+              '\uD83D\uDCF1 Telefon raqamni yuborish',
+            ),
+          ],
+        ])
+          .resize()
+          .oneTime(),
+      );
+      return;
+    }
+
     // Kontakt tugmasidan kelgan raqamni Telegram o'zi beradi — chet el
     // raqami ham qabul qilinadi (o'zbek raqami 9 xonaga keltiriladi).
     const phone = normalizeSharedPhone(contact.phone_number);
@@ -210,11 +237,15 @@ export function createEmployeeRegistrationScene(
       return;
     }
 
-    const existingUser = await prisma.user.findFirst({ where: { phone } });
-    if (existingUser) {
+    // Faqat ISHLAB TURGAN XODIM hisobi to'xtatadi. O'quvchi hisobi yoki
+    // o'chirilgan hisob — yo'q: bu odam o'quvchidan ustozga aylanayotgan
+    // yoki sinov hisobi o'chirilgan odam bo'lishi mumkin (ADR-0022). Bu
+    // erta tekshiruv — rasm yuklatib keyin rad etmaslik uchun; kafolat
+    // `UsersService.create` da.
+    const liveStaff = await findLiveStaffByPhone(prisma, phone);
+    if (liveStaff) {
       await ctx.reply(
-        "Bu telefon raqam allaqachon tizimda ro'yxatdan o'tgan. " +
-          "Muammo bo'lsa administrator bilan bog'laning.",
+        "Bu raqam bilan xodim hisobi allaqachon bor. Yangi lavozim kerak bo'lsa, administrator uni mavjud hisobingizga qo'shib beradi.",
         Markup.removeKeyboard(),
       );
       await ctx.scene.leave();
@@ -370,7 +401,9 @@ export function createEmployeeRegistrationScene(
     }
 
     try {
-      // Login = telefon raqam (o'quvchilarda ham shunday). Parol tasodifiy.
+      // Kirish nomi — telefon, agar u boshqa tirik hisobning nomi bo'lmasa;
+      // aks holda bo'sh (kirish baribir telefon bilan). Parol tasodifiy.
+      const login = await loginForPhone(prisma, data.phone);
       const password = generatePassword();
 
       await usersService.create(
@@ -380,7 +413,7 @@ export function createEmployeeRegistrationScene(
           phone: data.phone,
           photo: data.photo,
           gender: data.gender,
-          login: data.phone,
+          login: login ?? undefined,
           password,
           companyId: DEFAULT_COMPANY_ID,
           mainBranch: data.branchId ?? undefined,

@@ -5,6 +5,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser, Roles } from '../common/decorators';
@@ -12,7 +13,17 @@ import { RolesGuard } from '../common/guards';
 import { DafPortalReadService } from './daf-portal-read.service';
 import { DafAttemptService } from './daf-attempt.service';
 import { CheckDrillDto, CreateAttemptDto } from './dto/create-attempt.dto';
+import {
+  AbschlussDto,
+  CheckAntwortDto,
+  ErsatzQueryDto,
+  JuftDto,
+  WiederholungAbschlussDto,
+} from './dto/uebung.dto';
 import { DafDrillService } from './lesson/daf-drill.service';
+import { UebungService } from './uebung/uebung.service';
+import { FortschrittService } from './fortschritt/fortschritt.service';
+import { ReytingQueryDto } from './dto/reyting-query.dto';
 
 /**
  * O'quvchi portalining o'quv bo'limi.
@@ -29,16 +40,28 @@ export class DafPortalController {
     private readonly read: DafPortalReadService,
     private readonly attempts: DafAttemptService,
     private readonly drills: DafDrillService,
+    private readonly uebung: UebungService,
+    private readonly fortschritt: FortschrittService,
   ) {}
 
+  /**
+   * `studentId` TOKENDAN olinadi: javob endi shu o'quvchining
+   * ilgarilashiga (`doneCount`) bog'liq, boshqasining tanasidan yoki
+   * so'rov parametridan olinsa, birov boshqaning natijasini ko'rishi
+   * mumkin bo'lardi.
+   */
   @Get('levels')
-  getLevels() {
-    return this.read.getLevels();
+  getLevels(@CurrentUser('studentId') studentId: number) {
+    return this.read.getLevels(studentId);
   }
 
+  /** Xuddi shu sabab: javobga har darsning ilgarilashi (`completedAt`/`bestScore`/`runs`) qo'shiladi. */
   @Get('units/:id')
-  getUnit(@Param('id', ParseIntPipe) id: number) {
-    return this.read.getUnit(id);
+  getUnit(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('studentId') studentId: number,
+  ) {
+    return this.read.getUnit(id, studentId);
   }
 
   @Get('lessons/:id')
@@ -86,5 +109,133 @@ export class DafPortalController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.attempts.record(dto, { studentId, companyId });
+  }
+
+  /** Darsning 12 savoli. To'g'ri javoblar ichida YO'Q. */
+  @Get('lessons/:id/uebung')
+  getUebung(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('studentId') studentId: number,
+  ) {
+    return this.uebung.seans(id, studentId);
+  }
+
+  /**
+   * Mashq javobi. `studentId` TOKENDAN olinadi, tanadan emas — aks holda
+   * o'quvchi boshqasining nomidan javob yozib, uning natijasini buzishi
+   * mumkin bo'lardi.
+   */
+  @Post('uebung/check')
+  checkUebung(
+    @Body() dto: CheckAntwortDto,
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.uebung.pruefen(dto, { studentId, companyId });
+  }
+
+  /**
+   * Bitta juftni JONLI tekshirish (`PAAR`/`ZUORDNEN`). `studentId`
+   * TOKENDAN olinadi, tanadan emas — xuddi `checkUebung`dagi kabi sabab:
+   * aks holda o'quvchi boshqasining nomidan urinish yozib, uning
+   * natijasini (ball, Leitner holati) buzishi mumkin bo'lardi. Javobda
+   * to'g'ri javobning o'zi yo'q — faqat `{ isCorrect }`.
+   */
+  @Post('uebung/juft')
+  checkJuft(
+    @Body() dto: JuftDto,
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.uebung.juft(dto, { studentId, companyId });
+  }
+
+  /**
+   * Noto'g'ri javob berilgan material haqida boshqa formatda savol.
+   * Kurs kontenti kabi filialga bog'liq emas, lekin savolning o'zi
+   * SHU o'quvchining Leitner holatiga qarab quriladi — shuning uchun
+   * `studentId` tokendan kerak (kirish huquqiga emas, savol tarkibiga).
+   */
+  @Get('lessons/:id/uebung/ersatz')
+  getErsatz(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: ErsatzQueryDto,
+    @CurrentUser('studentId') studentId: number,
+  ) {
+    return this.uebung.ersatz(
+      id,
+      studentId,
+      query.itemType,
+      query.itemId,
+      query.nichtFormat,
+    );
+  }
+
+  /**
+   * Seans tugaganini yozadi. `studentId` TOKENDAN olinadi, tanadan emas —
+   * aks holda o'quvchi boshqasining nomidan yakun yozib, uning
+   * ilgarilashini buzishi mumkin bo'lardi.
+   */
+  @Post('lessons/:id/abschluss')
+  postAbschluss(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AbschlussDto,
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.uebung.abschluss(id, dto, { studentId, companyId });
+  }
+
+  /**
+   * Takrorlash seansi yakuni. `lessons/` OSTIDA EMAS — `getWiederholung`
+   * bilan bir xil sabab. `studentId` TOKENDAN.
+   */
+  @Post('wiederholung/abschluss')
+  postWiederholungAbschluss(
+    @Body() dto: WiederholungAbschlussDto,
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.uebung.wiederholungAbschluss(dto, { studentId, companyId });
+  }
+
+  /**
+   * Takrorlash seansi. Yo'l `lessons/` OSTIDA EMAS — bu seans hech qanday
+   * darsga tegishli emas va `lessons/:id` uni son deb o'qishga urinardi.
+   */
+  @Get('wiederholung/uebung')
+  getWiederholung(@CurrentUser('studentId') studentId: number) {
+    return this.uebung.wiederholung(studentId);
+  }
+
+  /**
+   * O'quvchining o'z ilgarilashi: umumiy ball, daraja, seriya, haftalik
+   * ball va o'rin. `studentId` TOKENDAN olinadi — bu javob shu
+   * o'quvchining shaxsiy ko'rsatkichi, so'rov parametridan olinsa birov
+   * boshqasining natijasini ko'rishi mumkin bo'lardi.
+   */
+  @Get('fortschritt')
+  getFortschritt(
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.fortschritt.uebersicht(studentId, companyId);
+  }
+
+  /**
+   * Haftalik reyting jadvali. `scope=gruppe` — o'quvchining o'z guruhi,
+   * `scope=zentrum` — butun markaz (filialga cheklanmagani sababi
+   * `fortschritt.service.ts`dagi izohda va `branch-route-policy.ts`da
+   * yozilgan). Noto'g'ri `scope` global `ValidationPipe` tomonidan
+   * `ReytingQueryDto` orqali rad etiladi — kontrollerda qo'lda tekshiruv
+   * shart emas.
+   */
+  @Get('reyting')
+  getReyting(
+    @Query() query: ReytingQueryDto,
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.fortschritt.reyting(studentId, companyId, query.scope);
   }
 }

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportsService } from '../reports/reports.service';
+import { activeStudentWhere } from '../students/shared/active-student-where';
 import {
   firstOfThisMonthDate,
   firstOfThisMonthUtc,
@@ -77,11 +78,14 @@ export class DailySnapshotService {
           _sum: { balance: true },
           _count: true,
         }),
+        // «Faol o'quvchilar» — bosh sahifadagi bilan bitta ta'rif. Bu son
+        // kunlik suratga YOZILADI va keyin hisobotda ko'rsatiladi, shuning
+        // uchun bu yerdagi chetlanish tarixga ham ko'chib qolardi.
         this.prisma.student.count({
           where: {
             companyId,
             deletedAt: null,
-            status: 'ACTIVE',
+            ...activeStudentWhere(),
             ...studentBranch,
           },
         }),

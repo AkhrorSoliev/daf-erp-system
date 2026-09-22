@@ -14,7 +14,12 @@ import { EntityHistoryService } from '../common/entity-history';
 import { TransactionsService } from '../transactions/transactions.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
+import {
+  StudentLeadOriginService,
+  type StudentOrigin,
+} from '../common/student-origin';
 import { generatePassword } from '../common/utils/password.util';
+import { loginForPhone } from '../common/auth/phone-account-rules';
 import {
   STUDENT_ROLE_ID,
   studentSelect,
@@ -32,6 +37,7 @@ export class StudentsWriteService {
     private entityHistoryService: EntityHistoryService,
     private eventEmitter: EventEmitter2,
     private transactionsService: TransactionsService,
+    private leadOrigin: StudentLeadOriginService,
   ) {}
 
   /**
@@ -65,7 +71,12 @@ export class StudentsWriteService {
     }
   }
 
-  async create(dto: CreateStudentDto, companyId: number, userId?: number) {
+  async create(
+    dto: CreateStudentDto,
+    companyId: number,
+    userId: number | undefined,
+    origin: StudentOrigin,
+  ) {
     // Phone is the student-portal login identifier → must be globally unique,
     // not scoped to companyId (otherwise two students in different companies
     // could share a login and auth lookup would be ambiguous).
@@ -79,6 +90,13 @@ export class StudentsWriteService {
     }
 
     await this.assertSingleValidBranch(dto.branchIds, companyId);
+
+    // Manba tranzaksiyadan OLDIN tekshiriladi: `Lead.sourceId` tashqi kalit,
+    // ya'ni yolg'on id tranzaksiya ichida Prisma P2003 beradi va admin
+    // tushunarsiz 500 oladi — o'quvchisi ham yaratilmagan holda.
+    if (origin.kind === 'DIRECT') {
+      await this.leadOrigin.assertSourceUsable(origin.sourceId, companyId);
+    }
 
     const student = await this.prisma.$transaction(
       async (tx) => {
@@ -111,6 +129,21 @@ export class StudentsWriteService {
               studentId: created.id,
               branchId,
             })),
+          });
+        }
+
+        // Har bir o'quvchi lid sifatida tug'iladi. Shu tranzaksiya ichida:
+        // lid yozilmasa, o'quvchi ham yozilmaydi.
+        if (origin.kind === 'DIRECT') {
+          await this.leadOrigin.recordDirectOrigin(tx, {
+            studentId: created.id,
+            firstName: created.firstName,
+            lastName: created.lastName,
+            phone: dto.phone,
+            branchId: dto.branchIds?.[0] ?? null,
+            companyId,
+            sourceId: origin.sourceId,
+            userId,
           });
         }
 
@@ -391,12 +424,16 @@ export class StudentsWriteService {
     lastName: string,
     companyId: number,
   ): Promise<{ userId: number; plainPassword: string }> {
+    // Kirish nomi — telefon, agar u boshqa tirik hisobning nomi bo'lmasa
+    // (masalan, xodim yoki aka-uka hisobi). Aks holda bo'sh — ilgari bu
+    // holatda `create` bazada yiqilib, o'quvchi kirish hisobisiz qolardi.
+    const login = await loginForPhone(this.prisma, phone);
     const plainPassword = generatePassword();
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
     const user = await this.prisma.user.create({
       data: {
-        login: phone,
+        login,
         password: hashedPassword,
         firstName,
         lastName,

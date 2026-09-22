@@ -2,47 +2,135 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen } from "@phosphor-icons/react";
+import { BookOpen, CheckCircle } from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
 import {
   Screen,
   StackHeader,
   Stagger,
-  CategoryCard,
+  Button,
   EmptyState,
   LoadingCards,
 } from "../lumio";
 import { useLernenUnit } from "./queries";
-import type { LernenLessonSummary } from "./types";
+import { seansHolatlari, type SeansHolatBelgisi } from "./fortschritt";
+import type { LernenSeans } from "./types";
 
 /**
- * Bo'lim — dizayn tizimidagi «Unit 1.1» ekrani.
- *
- * Maketda bo'lim kategoriyalarga bo'linadi (Video / Vocabulary /
- * Homework). Bizda video hali yo'q, shuning uchun ikkita haqiqiy
- * kategoriya: lug'at va grammatika.
- *
- * Darslar UZUN RO'YXAT bo'lib to'kilmaydi. Avvalgi versiya 26 ta bir xil
- * qatorni ketma-ket chiqarardi va o'quvchi qayerdan boshlashini
- * bilmasdi — aynan shu «chalkash» edi. Endi ular kategoriya ostida,
- * ikki ustunli to'rda, raqamlangan holda turadi.
+ * Seans nomi `kind`dan kelib chiqadi — MAVZU emas, A1 xaritasidagi
+ * BOSQICH. `null` — eski DiB darsi, uning o'z nomi bor.
  */
-function lessonHref(lesson: LernenLessonSummary): string {
-  return `/portal/lernen/lessons/${lesson.id}`;
+function seansNomi(seans: LernenSeans): string {
+  switch (seans.kind) {
+    case "SECTION_A":
+      return "Tanishuv";
+    case "SECTION_B":
+      return "Ishlatish";
+    case "BRIDGE":
+      return "O'tish sinovi";
+    case "UNIT_TEST":
+      return "Yakuniy sinov";
+    default:
+      return seans.titleUz ?? seans.titleDe;
+  }
 }
 
+/** Holat doirachasi: bajarilgan — belgi, navbatdagi — to'ldirilgan, qulf — bo'sh. */
+function SeansBelgi({ holat }: { holat: SeansHolatBelgisi }) {
+  if (holat === "BAJARILGAN") {
+    return (
+      <CheckCircle size={26} weight="fill" className="shrink-0 text-success" />
+    );
+  }
+  if (holat === "NAVBATDAGI") {
+    return (
+      <span
+        aria-hidden
+        className="size-[22px] shrink-0 rounded-full bg-coral-500"
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden
+      className="size-[22px] shrink-0 rounded-full border-2 border-line"
+    />
+  );
+}
+
+function SeansRow({
+  seans,
+  holat,
+  onOpen,
+}: {
+  seans: LernenSeans;
+  holat: SeansHolatBelgisi;
+  onOpen: (id: number) => void;
+}) {
+  const qulf = holat === "QULF";
+  return (
+    <button
+      type="button"
+      disabled={qulf}
+      onClick={() => onOpen(seans.id)}
+      className={cn(
+        "flex w-full items-center gap-3.5 rounded-card border border-line bg-surface px-4 py-3.5 text-left shadow-lumio-sm transition-transform",
+        qulf
+          ? "opacity-60"
+          : "active:translate-y-[2px] hover:-translate-y-0.5",
+      )}
+    >
+      <SeansBelgi holat={holat} />
+      <span
+        className={cn(
+          "min-w-0 flex-1 truncate font-semibold",
+          qulf ? "text-ink-400" : "text-ink-900",
+        )}
+      >
+        {seansNomi(seans)}
+      </span>
+    </button>
+  );
+}
+
+/**
+ * Unit — bo'limlar ostida guruhlangan seanslar ro'yxati.
+ *
+ * Qulf butun UNIT bo'yicha hisoblanadi, bo'lim ichida emas: agar har
+ * bo'lim o'z navbatini alohida hisoblasa, bir vaqtning o'zida uchta
+ * seans «navbatdagi» bo'lib ko'rinardi (har bo'limda bittadan).
+ */
 export function LernenUnitPage({ unitId }: { unitId: number }) {
   const router = useRouter();
   const { data, isLoading, isError } = useLernenUnit(unitId);
 
-  const vocab = data?.lessons.filter((l) => l.kind === "VOCAB") ?? [];
-  const grammar = data?.lessons.filter((l) => l.kind === "GRAMMAR") ?? [];
+  const holatMap = React.useMemo(() => {
+    if (!data) return new Map<number, SeansHolatBelgisi>();
+    const hammasi = [
+      ...data.sections.flatMap((s) => s.lessons),
+      ...(data.finalTest ? [data.finalTest] : []),
+    ];
+    const holatlar = seansHolatlari(hammasi);
+    return new Map(hammasi.map((l, i) => [l.id, holatlar[i]]));
+  }, [data]);
+
+  // Eski DiB uniti: bo'lim tushunchasi umuman yo'q, shuning uchun yassi
+  // ro'yxat o'z navbatini alohida hisoblaydi (butun unit emas).
+  const yassiHolatMap = React.useMemo(() => {
+    if (!data || data.sections.length > 0) {
+      return new Map<number, SeansHolatBelgisi>();
+    }
+    const holatlar = seansHolatlari(data.lessons);
+    return new Map(data.lessons.map((l, i) => [l.id, holatlar[i]]));
+  }, [data]);
+
+  const openLesson = (id: number) => router.push(`/portal/lernen/lessons/${id}`);
+
+  const boshMi = data && data.sections.length === 0 && data.lessons.length === 0;
 
   return (
     <Screen narrow>
-      <StackHeader
-        title={data?.titleUz ?? "Bo'lim"}
-        backHref="/portal/lernen"
-      />
+      <StackHeader title={data?.titleUz ?? "Bo'lim"} backHref="/portal/lernen" />
 
       {isLoading ? (
         <LoadingCards count={3} />
@@ -52,71 +140,76 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
           title="Bo'limni yuklab bo'lmadi"
           description="Internet aloqasini tekshirib, qayta urinib ko'ring."
         />
-      ) : data.lessons.length === 0 ? (
+      ) : boshMi ? (
         <EmptyState
           icon={<BookOpen size={28} weight="bold" />}
-          title="Bu bo'limda dars yo'q"
+          title="Bu unitning mashqlari hali tayyor emas"
           description="Material tez orada qo'shiladi."
+          action={
+            <Button
+              variant="secondary"
+              onClick={() => router.push("/portal/lernen")}
+            >
+              Orqaga
+            </Button>
+          }
         />
-      ) : (
-        <Stagger className="space-y-4">
+      ) : data.sections.length > 0 ? (
+        <Stagger className="space-y-5">
           <p className="px-1 text-sm font-semibold text-ink-500">
             {data.label} · {data.titleDe}
           </p>
 
-          {vocab.length > 0 ? (
-            <CategoryCard
-              tone="mint"
-              title="Lug'at"
-              value={vocab.length}
-              onClick={() => router.push(lessonHref(vocab[0]))}
-            />
-          ) : null}
-
-          {grammar.length > 0 ? (
-            <CategoryCard
-              tone="grape"
-              title="Grammatika"
-              value={grammar.length}
-              onClick={() => router.push(lessonHref(grammar[0]))}
-            />
-          ) : null}
-
-          {[
-            { title: "Lug'at darslari", items: vocab },
-            { title: "Grammatika darslari", items: grammar },
-          ]
-            .filter((g) => g.items.length > 0)
-            .map((group) => (
-              <section key={group.title} className="space-y-2">
-                <h2 className="px-1 font-display text-sm font-bold uppercase tracking-wide text-ink-500">
-                  {group.title}
+          {data.sections.map((section) => (
+            <section key={section.id} className="space-y-2">
+              <div className="px-1">
+                <h2 className="font-display text-base font-extrabold text-ink-900">
+                  {section.order}. {section.titleUz}
                 </h2>
-                <div className="lumio-stagger grid grid-cols-2 gap-2.5">
-                  {group.items.map((l, i) => (
-                    <button
-                      key={l.id}
-                      type="button"
-                      onClick={() => router.push(lessonHref(l))}
-                      style={{ ["--i" as string]: i } as React.CSSProperties}
-                      className="flex flex-col gap-1 rounded-card border border-line bg-surface px-3.5 py-3 text-left shadow-lumio-sm transition-transform active:translate-y-[2px] hover:-translate-y-0.5"
-                    >
-                      <span className="font-display text-xs font-bold text-ink-400">
-                        {i + 1}
-                      </span>
-                      <span className="line-clamp-2 font-semibold leading-snug text-ink-900">
-                        {l.titleUz ?? l.titleDe}
-                      </span>
-                      <span className="text-xs font-semibold text-ink-500">
-                        {l.kind === "VOCAB"
-                          ? `${l.wordCount} so'z`
-                          : `${l.exerciseCount} mashq`}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            ))}
+                <p className="text-xs font-semibold text-ink-400">
+                  {section.titleDe}
+                </p>
+              </div>
+              <div className="space-y-2">
+                {section.lessons.map((l) => (
+                  <SeansRow
+                    key={l.id}
+                    seans={l}
+                    holat={holatMap.get(l.id) ?? "QULF"}
+                    onOpen={openLesson}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+
+          {data.finalTest ? (
+            <section className="space-y-2 border-t border-line pt-4">
+              <h2 className="px-1 font-display text-base font-extrabold text-ink-900">
+                Yakuniy sinov
+              </h2>
+              <SeansRow
+                seans={data.finalTest}
+                holat={holatMap.get(data.finalTest.id) ?? "QULF"}
+                onOpen={openLesson}
+              />
+            </section>
+          ) : null}
+        </Stagger>
+      ) : (
+        // Eski DiB uniti: bo'lim yo'q, darslar guruhsiz ro'yxat.
+        <Stagger className="space-y-2">
+          <p className="px-1 text-sm font-semibold text-ink-500">
+            {data.label} · {data.titleDe}
+          </p>
+          {data.lessons.map((l) => (
+            <SeansRow
+              key={l.id}
+              seans={l}
+              holat={yassiHolatMap.get(l.id) ?? "QULF"}
+              onOpen={openLesson}
+            />
+          ))}
         </Stagger>
       )}
     </Screen>

@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { AttendanceStatus } from '@prisma/client';
+import {
+  AttendanceStatus,
+  EnrollmentStatus,
+  StudentStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import {
@@ -8,6 +12,8 @@ import {
   utcMidnightFromDateStr,
 } from '../attendance/shared/date-utils';
 import { AbsenceStreakService } from './absence-streak.service';
+import { AbsencePauseSettingService } from '../absence-pause/absence-pause-setting.service';
+import { AUTO_PAUSE_REASON_PREFIX } from '../absence-pause/absence-pause.constants';
 
 interface UserContext {
   userId: number;
@@ -22,6 +28,7 @@ export class OutreachService {
   constructor(
     private prisma: PrismaService,
     private absenceStreak: AbsenceStreakService,
+    private pauseSettings: AbsencePauseSettingService,
   ) {}
 
   /**
@@ -156,6 +163,10 @@ export class OutreachService {
     // Attendance.date is stored at UTC-midnight, so it uses the plain date.
     const today = utcMidnightFromDateStr(todayStr);
 
+    // Chegaralar sozlamadan — bosh sahifadagi «e'tibor» raqami va
+    // `/outreach` ro'yxati bir xil qoidadan oziqlansin.
+    const settings = await this.pauseSettings.get(ctx.companyId);
+
     const [todayAbsentees, streaks, activePromises, callsToday] =
       await Promise.all([
         this.prisma.attendance.count({
@@ -173,7 +184,7 @@ export class OutreachService {
         this.absenceStreak.computeStreaks({
           companyId: ctx.companyId,
           branchIds,
-          threshold: 3,
+          threshold: settings.warnThreshold,
         }),
         this.prisma.paymentPromise.count({
           where: {
@@ -195,7 +206,11 @@ export class OutreachService {
 
     return {
       todayAbsentees,
-      removalQueue: streaks.length,
+      // Hisoblagich PAUZA yoqasidagilarni sanaydi, ogohlantirilganlarni
+      // emas — bosh sahifadagi «e'tibor» raqami shu bo'lib qolsin.
+      removalQueue: streaks.filter(
+        (s) => s.consecutiveAbsentCount >= settings.pauseThreshold,
+      ).length,
       activePromises,
       callsToday,
     };
@@ -274,13 +289,24 @@ export class OutreachService {
       return { total: 0, items: [] };
     }
 
+    // Chegara sozlamadan — CEO uni 3 dan 4 ga o'zgartirsa bu ro'yxat ham
+    // darhol ergashadi. Qat'iy 3 qolsa, avtomatika bir chegarada ishlab,
+    // admin boshqa ro'yxatni ko'rib turardi.
+    const settings = await this.pauseSettings.get(ctx.companyId);
+
     const streaks = await this.absenceStreak.computeStreaks({
       companyId: ctx.companyId,
       branchIds,
-      threshold: 3,
+      threshold: settings.warnThreshold,
     });
 
-    if (streaks.length === 0) return { total: 0, items: [] };
+    if (streaks.length === 0) {
+      return {
+        total: 0,
+        pauseThreshold: settings.pauseThreshold,
+        items: [],
+      };
+    }
 
     const enrollmentIds = streaks.map((s) => s.enrollmentId);
     const enrollments = await this.prisma.enrollment.findMany({
@@ -323,6 +349,20 @@ export class OutreachService {
       tashkentDateStr(new Date()),
     );
 
+    // «Ogohlantirildi 12.09» belgisi — admin takror qo'ng'iroq qilmasin.
+    // Bitta so'rov; har yozuv uchun eng oxirgi jurnal qatori olinadi.
+    const warnLogs = await this.prisma.absenceWarningLog.findMany({
+      where: { enrollmentId: { in: enrollmentIds } },
+      orderBy: { absenceDate: 'desc' },
+      select: { enrollmentId: true, absenceDate: true },
+    });
+    const warnedAtByEnrollment = new Map<string, Date>();
+    for (const w of warnLogs) {
+      if (!warnedAtByEnrollment.has(w.enrollmentId)) {
+        warnedAtByEnrollment.set(w.enrollmentId, w.absenceDate);
+      }
+    }
+
     const items = streaks
       .map((s) => {
         const e = enrollMap.get(s.enrollmentId);
@@ -332,6 +372,8 @@ export class OutreachService {
           consecutiveAbsentCount: s.consecutiveAbsentCount,
           lastAbsenceDate: s.lastAbsenceDate.toISOString(),
           lastPresentDate: s.lastPresentDate?.toISOString() ?? null,
+          warnedAt:
+            warnedAtByEnrollment.get(s.enrollmentId)?.toISOString() ?? null,
           calledToday: calledSet.has(e.student.id),
           student: e.student,
           group: {
@@ -351,6 +393,91 @@ export class OutreachService {
       })
       .filter((x): x is NonNullable<typeof x> => x !== null)
       .sort((a, b) => b.consecutiveAbsentCount - a.consecutiveAbsentCount);
+
+    return {
+      total: items.length,
+      pauseThreshold: settings.pauseThreshold,
+      items,
+    };
+  }
+
+  /**
+   * Avtomatik pauzaga tushgan o'quvchilar — «Pauzadagilar» tabi.
+   *
+   * Qo'lda muzlatilganlar ARALASHMAYDI: prodda 209 ta muzlatilgan o'quvchi
+   * bor va ularning aksariyati boshqa sabablar bilan muzlatilgan. Ajratish
+   * belgisi — sabab matnining boshlanishi (`AUTO_PAUSE_REASON_PREFIX`);
+   * cron ham, bu yer ham bitta konstantadan o'qiydi, shuning uchun matn
+   * o'zgarsa ro'yxat jimgina bo'shab qolmaydi.
+   */
+  async getAutoPaused(ctx: UserContext) {
+    const branchIds = this.toBranchIds(ctx.branchScope);
+    if (branchIds && branchIds.length === 0) {
+      return { total: 0, items: [] };
+    }
+
+    const students = await this.prisma.student.findMany({
+      where: {
+        companyId: ctx.companyId,
+        deletedAt: null,
+        status: StudentStatus.FROZEN,
+        statusChangeReason: { startsWith: AUTO_PAUSE_REASON_PREFIX },
+        ...(branchIds
+          ? { branches: { some: { branchId: { in: branchIds } } } }
+          : {}),
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        parentPhone: true,
+        photo: true,
+        balance: true,
+        statusChangedAt: true,
+        statusChangeReason: true,
+        enrollments: {
+          where: { status: EnrollmentStatus.FROZEN, deletedAt: null },
+          orderBy: { statusChangedAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            group: {
+              select: {
+                id: true,
+                name: true,
+                course: { select: { id: true, name: true } },
+                branch: { select: { id: true, name: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { statusChangedAt: 'desc' },
+    });
+
+    const calledSet = await this.getCalledStudentIds(
+      ctx.companyId,
+      students.map((s) => s.id),
+      tashkentDateStr(new Date()),
+    );
+
+    const items = students.map((s) => ({
+      studentId: s.id,
+      pausedAt: s.statusChangedAt?.toISOString() ?? null,
+      reason: s.statusChangeReason,
+      calledToday: calledSet.has(s.id),
+      student: {
+        id: s.id,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        phone: s.phone,
+        parentPhone: s.parentPhone,
+        photo: s.photo,
+        balance: s.balance,
+      },
+      group: s.enrollments[0]?.group ?? null,
+    }));
 
     return { total: items.length, items };
   }

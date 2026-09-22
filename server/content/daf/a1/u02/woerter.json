@@ -1,0 +1,460 @@
+{
+ "unit": "u02",
+ "woerter": [
+  {
+   "sourceId": "u02-s1-familie",
+   "section": "u02-s1",
+   "de": "Familie",
+   "artikel": "die",
+   "plural": "Familien",
+   "uz": "oila",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u02-s1-mutter",
+   "section": "u02-s1",
+   "de": "Mutter",
+   "artikel": "die",
+   "plural": "Mütter",
+   "uz": "ona",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u02-s1-vater",
+   "section": "u02-s1",
+   "de": "Vater",
+   "artikel": "der",
+   "plural": "Väter",
+   "uz": "ota",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u02-s1-bruder",
+   "section": "u02-s1",
+   "de": "Bruder",
+   "artikel": "der",
+   "plural": "Brüder",
+   "uz": "aka",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u02-s1-schwester",
+   "section": "u02-s1",
+   "de": "Schwester",
+   "artikel": "die",
+   "plural": "Schwestern",
+   "uz": "opa",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u02-s1-kind",
+   "section": "u02-s1",
+   "de": "Kind",
+   "artikel": "das",
+   "plural": "Kinder",
+   "uz": "bola",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u02-s1-eltern",
+   "section": "u02-s1",
+   "de": "Eltern",
+   "uz": "ota-ona",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u02-s1-sohn",
+   "section": "u02-s1",
+   "de": "Sohn",
+   "artikel": "der",
+   "plural": "Söhne",
+   "uz": "o'g'il",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u02-s1-tochter",
+   "section": "u02-s1",
+   "de": "Tochter",
+   "artikel": "die",
+   "plural": "Töchter",
+   "uz": "qiz",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u02-s1-oma",
+   "section": "u02-s1",
+   "de": "Oma",
+   "artikel": "die",
+   "plural": "Omas",
+   "uz": "buvi",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u02-s2-haben",
+   "section": "u02-s2",
+   "de": "haben",
+   "uz": "ega bo'lmoq",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u02-s2-zwanzig",
+   "section": "u02-s2",
+   "de": "zwanzig",
+   "uz": "yigirma",
+   "anzeige": "20",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u02-s2-dreissig",
+   "section": "u02-s2",
+   "de": "dreißig",
+   "uz": "o'ttiz",
+   "anzeige": "30",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u02-s2-vierzig",
+   "section": "u02-s2",
+   "de": "vierzig",
+   "uz": "qirq",
+   "anzeige": "40",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u02-s2-fuenfzig",
+   "section": "u02-s2",
+   "de": "fünfzig",
+   "uz": "ellik",
+   "anzeige": "50",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u02-s2-sechzig",
+   "section": "u02-s2",
+   "de": "sechzig",
+   "uz": "oltmish",
+   "anzeige": "60",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u02-s2-siebzig",
+   "section": "u02-s2",
+   "de": "siebzig",
+   "uz": "yetmish",
+   "anzeige": "70",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u02-s2-achtzig",
+   "section": "u02-s2",
+   "de": "achtzig",
+   "uz": "sakson",
+   "anzeige": "80",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u02-s2-neunzig",
+   "section": "u02-s2",
+   "de": "neunzig",
+   "uz": "to'qson",
+   "anzeige": "90",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u02-s2-hundert",
+   "section": "u02-s2",
+   "de": "hundert",
+   "uz": "yuz",
+   "anzeige": "100",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u02-s3-beruf",
+   "section": "u02-s3",
+   "de": "Beruf",
+   "artikel": "der",
+   "plural": "Berufe",
+   "uz": "kasb",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u02-s3-arbeiten",
+   "section": "u02-s3",
+   "de": "arbeiten",
+   "uz": "ishlamoq",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u02-s3-lehrer",
+   "section": "u02-s3",
+   "de": "Lehrer",
+   "artikel": "der",
+   "plural": "Lehrer",
+   "uz": "o'qituvchi",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u02-s3-lehrerin",
+   "section": "u02-s3",
+   "de": "Lehrerin",
+   "artikel": "die",
+   "plural": "Lehrerinnen",
+   "uz": "o'qituvchi ayol",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u02-s3-arzt",
+   "section": "u02-s3",
+   "de": "Arzt",
+   "artikel": "der",
+   "plural": "Ärzte",
+   "uz": "shifokor",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u02-s3-aerztin",
+   "section": "u02-s3",
+   "de": "Ärztin",
+   "artikel": "die",
+   "plural": "Ärztinnen",
+   "uz": "shifokor ayol",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u02-s3-studieren",
+   "section": "u02-s3",
+   "de": "studieren",
+   "uz": "oliygohda o'qimoq",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u02-s3-firma",
+   "section": "u02-s3",
+   "de": "Firma",
+   "artikel": "die",
+   "plural": "Firmen",
+   "uz": "firma",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u02-s3-chef",
+   "section": "u02-s3",
+   "de": "Chef",
+   "artikel": "der",
+   "plural": "Chefs",
+   "uz": "rahbar",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u02-s3-schule",
+   "section": "u02-s3",
+   "de": "Schule",
+   "artikel": "die",
+   "plural": "Schulen",
+   "uz": "maktab",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u02-s4-alt",
+   "section": "u02-s4",
+   "de": "alt",
+   "uz": "keksa",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u02-s4-jung",
+   "section": "u02-s4",
+   "de": "jung",
+   "uz": "yosh",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u02-s4-klein",
+   "section": "u02-s4",
+   "de": "klein",
+   "uz": "kichkina",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u02-s4-gross",
+   "section": "u02-s4",
+   "de": "groß",
+   "uz": "katta",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u02-s4-neu",
+   "section": "u02-s4",
+   "de": "neu",
+   "uz": "yangi",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u02-s4-ledig",
+   "section": "u02-s4",
+   "de": "ledig",
+   "uz": "turmush qurmagan",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u02-s4-verheiratet",
+   "section": "u02-s4",
+   "de": "verheiratet",
+   "uz": "oilali",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u02-s4-muede",
+   "section": "u02-s4",
+   "de": "müde",
+   "uz": "charchagan",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u02-s4-gluecklich",
+   "section": "u02-s4",
+   "de": "glücklich",
+   "uz": "baxtli",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u02-s4-lustig",
+   "section": "u02-s4",
+   "de": "lustig",
+   "uz": "quvnoq",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u02-s5-freund",
+   "section": "u02-s5",
+   "de": "Freund",
+   "artikel": "der",
+   "plural": "Freunde",
+   "uz": "do'st",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u02-s5-freundin",
+   "section": "u02-s5",
+   "de": "Freundin",
+   "artikel": "die",
+   "plural": "Freundinnen",
+   "uz": "dugona",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u02-s5-kollege",
+   "section": "u02-s5",
+   "de": "Kollege",
+   "artikel": "der",
+   "plural": "Kollegen",
+   "uz": "hamkasb",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u02-s5-leute",
+   "section": "u02-s5",
+   "de": "Leute",
+   "uz": "odamlar",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u02-s5-mann",
+   "section": "u02-s5",
+   "de": "Mann",
+   "artikel": "der",
+   "plural": "Männer",
+   "uz": "erkak",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u02-s5-junge",
+   "section": "u02-s5",
+   "de": "Junge",
+   "artikel": "der",
+   "plural": "Jungen",
+   "uz": "o'g'il bola",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u02-s5-maedchen",
+   "section": "u02-s5",
+   "de": "Mädchen",
+   "artikel": "das",
+   "plural": "Mädchen",
+   "uz": "qiz bola",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u02-s5-zusammen",
+   "section": "u02-s5",
+   "de": "zusammen",
+   "uz": "birga",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u02-s5-lernen",
+   "section": "u02-s5",
+   "de": "lernen",
+   "uz": "o'rganmoq",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u02-s5-machen",
+   "section": "u02-s5",
+   "de": "machen",
+   "uz": "qilmoq",
+   "core": true,
+   "order": 10
+  }
+ ]
+}

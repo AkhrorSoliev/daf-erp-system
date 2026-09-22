@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
   DafAnswerStatus,
-  DafLessonKind,
   DafLevel,
   DafTranslationSource,
   Prisma,
@@ -12,7 +11,10 @@ import type {
   DafDataset,
   GapExercise,
 } from '../../daf-content/dataset.types';
+import type { A1UnitsFile } from '../units/a1-units.types';
+import { validateA1Units } from '../units/a1-units.validate';
 import { DAF_UNIT_TITLES, orderWithinLevel } from './daf-unit-titles';
+import { seedSentences, type SentenceFile } from './daf-sentence-seed';
 
 export interface SeedReport {
   units: number;
@@ -26,6 +28,8 @@ export interface SeedReport {
   lexemesRemoved: number;
   /** Fayldan qo'yilgan tarjimalar. */
   translationsApplied: number;
+  /** Fayldan yozilgan gaplar (Hören/Sätze mashqi uchun). */
+  sentences: number;
 }
 
 /** `content/daf/translations.json` ning shakli. */
@@ -51,9 +55,50 @@ export interface TranslationFile {
   }[];
 }
 
-/** `A1.1` → `A1_1`. Prisma enum nuqtani qabul qilmaydi. */
 export function toDafLevel(level: CefrLevel): DafLevel {
-  return level.replace('.', '_') as DafLevel;
+  // A1.1/A1.2 bo'linishi manbaning yorlig'i edi. O'quvchi va Goethe
+  // imtihoni uchun daraja bitta: A1.
+  if (level === 'A1.1' || level === 'A1.2') return DafLevel.A1;
+  if (level === 'A2.1' || level === 'A2.2') return DafLevel.A2;
+  return DafLevel.B1;
+}
+
+/**
+ * Dars identifikatori — bo'lim va bosqichdan, manbadan emas.
+ *
+ * Avval kalit manbanikidan olinardi (`dib-voc-01-01`, `gram:no_02`), ya'ni
+ * dars manbaning bo'linishini takrorlardi. Endi dars bo'limning ichki
+ * bosqichi, shuning uchun kalit ham shundan quriladi. Barqarorligi shart:
+ * o'zgarsa, har seed eski darsni tashlab yangisini yaratardi va o'quvchining
+ * `DafLessonProgress` tarixi darssiz qolardi.
+ */
+export function lessonSourceId(
+  level: DafLevel,
+  order: number,
+  tier: number,
+): string {
+  return `lesson_${level}_${order}_t${tier}`;
+}
+
+/**
+ * Bosqich nomlari — har bo'limda bir xil beshta.
+ *
+ * Bosqich dars TURI emas, qiyinlik pog'onasi: tanishishdan sinovgacha.
+ * Shuning uchun nomlar manbadan olinmaydi, ular yo'lning o'z atamalari.
+ */
+export const TIER_TITLES: { de: string; uz: string }[] = [
+  { de: 'Kennenlernen', uz: 'Tanish' },
+  { de: 'Bedeutung', uz: "Ma'no" },
+  { de: 'Sätze', uz: 'Gap' },
+  { de: 'Schreiben', uz: 'Yozish' },
+  { de: 'Test', uz: 'Sinov' },
+];
+
+/** Bo'lim — seed ichida darslar va lug'at unga suyanadi. */
+interface SeededUnit {
+  id: number;
+  level: DafLevel;
+  order: number;
 }
 
 /**
@@ -127,34 +172,51 @@ export class DafSeedService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * @param a1Units ENDI QO'LLAB-QUVVATLANMAYDI — berilsa `seed()` rad
+   * etadi. A1 endi `content/daf/a1/kurs.json` + `npm run daf:a1-seed`
+   * orqali boshqariladi (`KursSeedService`); eski `a1-units.json`dagi DiB
+   * A1 bo'limlari nafaqaga chiqarilgan va manfiy tartibda saqlanadi. Bu
+   * parametr faqat eski chaqiruvchini ushlab qolish uchun qoldirilgan —
+   * qarang {@link assertA1NotProvided}.
+   * @param sentences ENDI QO'LLAB-QUVVATLANMAYDI — berilsa `seed()` rad
+   * etadi. `content/daf/sentences.json` eski 20 bo'limlik A1 tuzilishiga
+   * qarab yasalgan (order 1..20), yangi qo'lda chizilgan A1 (u01..u12,
+   * order 1..12) bilan hech qanday aloqasi yo'q. Qarang
+   * {@link assertSentencesNotProvided}.
+   */
   async seed(
     dataset: DafDataset,
     translations?: TranslationFile,
+    a1Units?: A1UnitsFile,
+    sentences?: SentenceFile,
   ): Promise<SeedReport> {
-    const unitIdByChapter = await this.seedUnits(dataset);
-    const grammarIdByCode = await this.seedGrammar(dataset, unitIdByChapter);
-    const lessonIdBySource = await this.seedLessons(
+    this.assertA1NotProvided(a1Units);
+    this.assertSentencesNotProvided(sentences);
+
+    const { unitIdBySection, unitIdByChapter, units } = await this.seedUnits(
+      dataset,
+      a1Units,
+    );
+    const grammarIdByCode = await this.seedGrammar(
       dataset,
       unitIdByChapter,
-      grammarIdByCode,
+      unitIdBySection,
+      a1Units,
     );
-    const lexemes = await this.seedLexemes(
-      dataset,
-      unitIdByChapter,
-      lessonIdBySource,
-    );
-    const exercises = await this.seedExercises(
-      dataset,
-      grammarIdByCode,
-      lessonIdBySource,
-    );
+    const lessonIdBySource = await this.seedLessons(units);
+    const lexemes = await this.seedLexemes(dataset, unitIdBySection);
+    const exercises = await this.seedExercises(dataset, grammarIdByCode);
 
     const retired = await this.retireMissingExercises(dataset);
     const lexemesRemoved = await this.removeMissingLexemes(dataset);
     const translationsApplied = await this.applyTranslations(translations);
+    const sentenceCount = sentences
+      ? await seedSentences(this.prisma, sentences)
+      : 0;
 
     return {
-      units: unitIdByChapter.size,
+      units: units.length,
       lessons: lessonIdBySource.size,
       lexemes,
       grammar: grammarIdByCode.size,
@@ -162,7 +224,51 @@ export class DafSeedService {
       retired,
       lexemesRemoved,
       translationsApplied,
+      sentences: sentenceCount,
     };
+  }
+
+  /**
+   * `a1-units.json` endi o'lik fayl: eski DiB A1 bo'limlari nafaqaga
+   * chiqarilgan va `order = -id` ga o'tkazilgan (A1 xaritasi migratsiyasi).
+   * Shu holatda `level_order` bo'yicha upsert eski `order`larni ENDI TOPA
+   * OLMAYDI — ular endi manfiy — va buning o'rniga YANGI 12 unitning
+   * (`u01`..`u12`, `order` 1..12) ustidan yozib, ularning sarlavhasini DiB
+   * sarlavhasi bilan almashtiradi, so'ng qolgan orderlarga yana 8 ta A1
+   * unit qo'shib qo'yadi. Bu funksiya shu yo'lni butunlay yopadi: A1 endi
+   * FAQAT `npm run daf:a1-seed` (`KursSeedService`) orqali yoziladi.
+   */
+  private assertA1NotProvided(a1Units?: A1UnitsFile): void {
+    if (!a1Units) return;
+    throw new Error(
+      'A1 endi bu yerdan seed qilinmaydi: `npm run daf:a1-seed` A1 xaritasining yagona egasi, ' +
+        "eski DiB A1 bo'limlari esa nafaqaga chiqarilgan (retiredAt + manfiy order). " +
+        "`a1-units.json`ni `DafSeedService.seed()`ga uzatish endi shu eski bo'limlarning " +
+        "o'rniga YANGI A1 unitlarini (u01..u12) chalkashtirib yuborardi.",
+    );
+  }
+
+  /**
+   * `sentences.json` A1 ning ESKI 20 bo'limlik tuzilishiga (order 1..20)
+   * qarab yasalgan, `npm run daf:a1-seed`dan keyingi 12 unitga (order
+   * 1..12) emas. Shu faylni bu yerga uzatish ikki xil noto'g'ri narsa
+   * qilardi: order 1..12 endi YANGI unitlarga to'g'ri kelib, ularga
+   * tegishli bo'lmagan 508 ta gap yopishtirilardi, order 13..20 esa
+   * hech qanday bo'limga tushmay, `seedSentences` `Bo'lim topilmadi: A1
+   * #13` bilan yiqilib, butun `daf:seed`ni yarim yo'lda to'xtatardi.
+   * `seedSentences`ning o'zi qoladi — u yangi tuzilish uchun qayta
+   * yasalgan gaplar bilan boshqa chaqiruvchidan ishlatiladi; shu yo'l esa
+   * faqat eski faylni ushlab qolgan `daf:seed` skripti uchun yopiladi.
+   */
+  private assertSentencesNotProvided(sentences?: SentenceFile): void {
+    if (!sentences) return;
+    throw new Error(
+      'Gap fayli endi bu yerdan seed qilinmaydi: `sentences.json` A1 ning ESKI 20 ' +
+        "bo'limlik tuzilishiga (order 1..20) qarab yasalgan, `npm run daf:a1-seed`dan " +
+        'keyingi 12 unitga (order 1..12) emas. Bu faylni `DafSeedService.seed()`ga ' +
+        "uzatish yangi unitlarga tegishli bo'lmagan gaplarni yopishtirar yoki 13-bo'lim " +
+        'topilmagani uchun yiqilardi.',
+    );
   }
 
   /**
@@ -269,142 +375,216 @@ export class DafSeedService {
       : DafTranslationSource.MODEL;
   }
 
-  private async seedUnits(dataset: DafDataset): Promise<Map<number, number>> {
-    const byChapter = new Map<number, number>();
+  /**
+   * Bo'limlar IKKI yo'ldan quriladi.
+   *
+   * `a1-units.json` da'vo qilgan mavzular uning bo'limlariga tushadi —
+   * A1 ning chegarasi qo'lda chizilgan, chunki manbaning bobi o'quv
+   * bosqichi emas (bitta bobda 226 so'z bor edi). Fayl tegmagan boblar
+   * esa avvalgidek bob-bo'lim bo'lib qoladi: A2 va B1 hali qo'lda
+   * chizilmagan, va ularni shu o'zgarish bilan buzib bo'lmaydi.
+   *
+   * A1 ENDI shu ikki yo'lning hech biriga kirmaydi — `assertA1NotProvided`
+   * `a1Units` uzatilishini butunlay rad etgani uchun birinchi yo'l allaqachon
+   * o'lik, lekin ikkinchisi ("fayl da'vo qilmagan boblar") A1 ning DiB
+   * boblarini (1..4) hamon ko'rar edi. `npm run daf:a1-seed` migratsiyasi
+   * o'sha boblarni retiredAt + manfiy order bilan chetlatgan, ammo ularning
+   * ESKI order'i (1..4) endi YANGI qo'lda chizilgan A1 unitlari (u01..u04)
+   * ning order'i bilan bir xil — shuning uchun legacy yo'l `level_order`
+   * bo'yicha aynan o'sha yangi unitlarni topib, ularning sarlavhasini DiB
+   * bilan almashtirar, `sourceChapter`ni yolg'on to'ldirar va 5 ta ortiqcha
+   * DiB darsini ularga yopishtirardi. A1 endi FAQAT `KursSeedService`ning
+   * ishi — shu funksiya ichida darajasi A1 bo'lgan bob butunlay tashlab
+   * ketiladi (pastda, `level === DafLevel.A1` tekshiruvi).
+   */
+  private async seedUnits(
+    dataset: DafDataset,
+    a1Units?: A1UnitsFile,
+  ): Promise<{
+    unitIdBySection: Map<string, number>;
+    unitIdByChapter: Map<number, number>;
+    units: SeededUnit[];
+  }> {
+    const unitIdBySection = new Map<string, number>();
+    const unitIdByChapter = new Map<number, number>();
+    const units: SeededUnit[] = [];
 
+    // Bob darajasi manbada bob yozuvida turadi, mavzuda emas.
+    const levelByChapter = new Map<number, DafLevel>();
     for (const ch of dataset.chapters) {
+      if (ch.level) levelByChapter.set(ch.chapter, toDafLevel(ch.level));
+    }
+
+    const claimed = new Set<string>(
+      a1Units?.units.flatMap((u) => u.sections) ?? [],
+    );
+
+    if (a1Units) {
+      // A1 ga tegishli mavzular — fayl aynan shularni qoplashi shart.
+      // Tekshiruv seed'ning ichida turadi, chunki jimgina yo'qolgan
+      // mavzu faqat o'quvchida ko'rinardi: bo'lim ochiladi, so'z esa yo'q.
+      const a1Sections = dataset.sections.filter(
+        (s) => levelByChapter.get(s.chapter) === DafLevel.A1,
+      );
+      const sizes = new Map(
+        a1Sections.map((s) => [s.id, s.entries.length] as const),
+      );
+      const problems = validateA1Units(
+        a1Units,
+        sizes,
+        a1Sections.map((s) => s.id),
+        dataset.grammar.map((g) => g.code),
+      );
+      if (problems.length > 0) {
+        throw new Error(`a1-units.json noto'g'ri:\n${problems.join('\n')}`);
+      }
+
+      for (const u of a1Units.units) {
+        const row = await this.prisma.dafUnit.upsert({
+          where: { level_order: { level: DafLevel.A1, order: u.order } },
+          create: {
+            level: DafLevel.A1,
+            order: u.order,
+            titleUz: u.titleUz,
+            titleDe: u.titleDe,
+            // `sourceChapter` ATAYLAB bo'sh: bu bo'lim bobdan tug'ilmagan,
+            // u bir necha bobning mavzusini yig'ishi mumkin. Eski
+            // qatorda qolgan raqam yolg'on kelib chiqish ko'rsatardi.
+            sourceChapter: null,
+          },
+          update: {
+            titleUz: u.titleUz,
+            titleDe: u.titleDe,
+            sourceChapter: null,
+          },
+        });
+        for (const s of u.sections) unitIdBySection.set(s, row.id);
+        units.push({ id: row.id, level: DafLevel.A1, order: u.order });
+      }
+    }
+
+    // Fayl da'vo qilmagan boblar — eski yo'l (A2, B1).
+    //
+    // Tartib daraja ICHIDA sanaladi va daraja BAZANIKI (`A2`), manbaniki
+    // (`A2.1`/`A2.2`) emas: aks holda 5-bob (A2.2) ham, 6-bob (A2.1) ham
+    // «A2 ning 1-bo'limi» bo'lib, bittasi ikkinchisini bosib o'tardi.
+    const mapped = dataset.chapters.map((c) => ({
+      chapter: c.chapter,
+      level: c.level ? toDafLevel(c.level) : undefined,
+    }));
+
+    for (const section of dataset.sections) {
+      if (claimed.has(section.id)) continue;
+
       // Darajasi hisoblanmagan bob bo'lim bo'la olmaydi: yo'l darajaga
       // qurilgan, va darajasiz bo'limni qayerga qo'yishni hech kim
       // ayta olmaydi.
-      if (!ch.level) continue;
+      const level = levelByChapter.get(section.chapter);
+      if (!level) continue;
 
-      const title = DAF_UNIT_TITLES.find((t) => t.chapter === ch.chapter);
+      // A1 bu yo'lning ishi EMAS — qasddan chegara, tasodif emas. A1
+      // xaritasining yagona egasi `KursSeedService` (`npm run daf:a1-seed`);
+      // bu yerda davom etish yuqoridagi izohda tasvirlangan to'qnashuvni
+      // qaytaradi (yangi u01..u04 ustidan yozish + begona DiB darslari).
+      if (level === DafLevel.A1) continue;
+
+      const title = DAF_UNIT_TITLES.find((t) => t.chapter === section.chapter);
       if (!title) continue;
 
-      const level = toDafLevel(ch.level);
-      const order = orderWithinLevel(ch.chapter, ch.level, dataset.chapters);
-
-      const unit = await this.prisma.dafUnit.upsert({
-        where: { level_order: { level, order } },
-        create: {
-          level,
-          order,
-          titleDe: title.titleDe,
-          titleUz: title.titleUz,
-          sourceChapter: ch.chapter,
-        },
-        update: {
-          titleDe: title.titleDe,
-          titleUz: title.titleUz,
-          sourceChapter: ch.chapter,
-        },
-      });
-      byChapter.set(ch.chapter, unit.id);
+      let unitId = unitIdByChapter.get(section.chapter);
+      if (unitId === undefined) {
+        const order = orderWithinLevel(section.chapter, level, mapped);
+        const unit = await this.prisma.dafUnit.upsert({
+          where: { level_order: { level, order } },
+          create: {
+            level,
+            order,
+            titleDe: title.titleDe,
+            titleUz: title.titleUz,
+            sourceChapter: section.chapter,
+          },
+          update: {
+            titleDe: title.titleDe,
+            titleUz: title.titleUz,
+            sourceChapter: section.chapter,
+          },
+        });
+        unitId = unit.id;
+        unitIdByChapter.set(section.chapter, unitId);
+        units.push({ id: unitId, level, order });
+      }
+      unitIdBySection.set(section.id, unitId);
     }
 
-    return byChapter;
+    return { unitIdBySection, unitIdByChapter, units };
   }
 
   /**
-   * Darslar — bo'lim ichidagi bosqichlar.
+   * Darslar — bo'lim ichidagi BESHTA bosqich, boshqa hech narsa.
    *
-   * Tartib ATAYLAB shunday: avval lug'at darslari, keyin grammatika.
-   * So'zsiz grammatika ma'nosiz — o'quvchi qoidani biladi, lekin uni
-   * qo'llaydigan so'zi yo'q.
+   * Avval dars manbaning bo'linishini takrorlardi: har lug'at mavzusi
+   * bitta dars, har grammatika sahifasi yana bitta — bir bo'limda 26
+   * tagacha. Endi bo'lim ichida aynan 5 bosqich bor va ular turi bilan
+   * emas, qiyinligi bilan farq qiladi: har bosqichda ham lug'at, ham
+   * grammatika, ham eshitish bo'ladi.
    *
-   * Dars kaliti manbanikidan quriladi (`dib-voc-01-01`, `gram:no_02`),
-   * shuning uchun qayta yuritish darslarni takrorlamaydi.
+   * Darsning KONTENTI shu yerda biriktirilmaydi. So'z bo'limga tegishli
+   * (`DafLexeme.unitId`), mashq esa grammatika orqali bo'limga bog'langan;
+   * bosqich ularni ish vaqtida oladi. Shuning uchun `grammarId` ham
+   * qo'yilmaydi — bitta bo'limda bir necha grammatika sahifasi bor, va
+   * bosqichni ulardan bittasiga qadab qo'yish qolganini ko'rinmas qilardi.
    */
-  private async seedLessons(
-    dataset: DafDataset,
-    unitIdByChapter: Map<number, number>,
-    grammarIdByCode: Map<string, number>,
-  ): Promise<Map<string, number>> {
-    const byUnit = new Map<
-      number,
-      {
-        sourceId: string;
-        kind: DafLessonKind;
-        titleDe: string;
-        grammarId: number | null;
-      }[]
-    >();
-
-    for (const section of dataset.sections) {
-      const unitId = unitIdByChapter.get(section.chapter);
-      if (unitId === undefined) continue;
-      const list = byUnit.get(unitId) ?? [];
-      list.push({
-        sourceId: section.id,
-        kind: DafLessonKind.VOCAB,
-        titleDe: section.titleDe,
-        grammarId: null,
-      });
-      byUnit.set(unitId, list);
-    }
-
-    // Grammatika darsi FAQAT bo'limga biriktirilgan sahifadan tug'iladi.
-    // Bo'limsiz 34 sahifa yo'lda ko'rinmaydi, lekin ular yo'qolmaydi —
-    // grammatika ro'yxati ularni alohida ko'rsatadi.
-    for (const g of dataset.grammar) {
-      const grammarId = grammarIdByCode.get(g.code);
-      if (grammarId === undefined) continue;
-      const row = await this.prisma.dafGrammar.findUnique({
-        where: { id: grammarId },
-        select: { unitId: true },
-      });
-      if (!row?.unitId) continue;
-      const list = byUnit.get(row.unitId) ?? [];
-      list.push({
-        sourceId: `gram:${g.code}`,
-        kind: DafLessonKind.GRAMMAR,
-        titleDe: g.titleDe,
-        grammarId,
-      });
-      byUnit.set(row.unitId, list);
-    }
-
+  private async seedLessons(units: SeededUnit[]): Promise<Map<string, number>> {
     const bySource = new Map<string, number>();
-    for (const [unitId, list] of byUnit) {
-      for (const [i, l] of list.entries()) {
+
+    for (const unit of units) {
+      for (const [i, t] of TIER_TITLES.entries()) {
+        const tier = i + 1;
+        const sourceId = lessonSourceId(unit.level, unit.order, tier);
         const data = {
-          unitId,
-          order: i + 1,
-          kind: l.kind,
-          titleDe: l.titleDe,
-          grammarId: l.grammarId,
+          unitId: unit.id,
+          tier,
+          order: tier,
+          titleDe: t.de,
         };
         const row = await this.prisma.dafLesson.upsert({
-          where: { sourceId: l.sourceId },
-          create: { sourceId: l.sourceId, ...data },
-          // `titleUz` `update` da YO'Q: o'qituvchi tuzatgan tarjima seed
-          // qayta yuritilganda yo'qolmasligi kerak.
+          where: { sourceId },
+          // `titleUz` faqat `create` da: bosqich nomini o'qituvchi
+          // tuzatgan bo'lsa, seed uni qayta yuritilganda bosib o'tmasin.
+          create: { sourceId, ...data, titleUz: t.uz },
           update: data,
         });
-        bySource.set(l.sourceId, row.id);
+        bySource.set(sourceId, row.id);
       }
     }
 
     return bySource;
   }
 
+  /**
+   * Lug'at BO'LIMga yoziladi, darsga emas.
+   *
+   * Mavzu → bo'lim xaritasi ikkala yo'lni ham qamraydi: `a1-units.json`
+   * da'vo qilgan mavzu o'z bo'limiga, qolgani bobining bo'limiga tushadi.
+   */
   private async seedLexemes(
     dataset: DafDataset,
-    unitIdByChapter: Map<number, number>,
-    lessonIdBySource: Map<string, number>,
+    unitIdBySection: Map<string, number>,
   ): Promise<number> {
     const writes: Prisma.PrismaPromise<unknown>[] = [];
 
     for (const section of dataset.sections) {
-      const unitId = unitIdByChapter.get(section.chapter);
-      const lessonId = lessonIdBySource.get(section.id);
-      if (unitId === undefined || lessonId === undefined) continue;
+      const unitId = unitIdBySection.get(section.id);
+      if (unitId === undefined) continue;
 
       for (const [i, entry] of section.entries.entries()) {
         const sourceId = lexemeSourceId(section.id, i);
         const data = {
           unitId,
-          lessonId,
+          // So'z hech qaysi bosqichga qadalmaydi: bosqich so'zlarni ish
+          // vaqtida, o'quvchining holatiga qarab oladi. Eski qiymat
+          // qolib ketmasligi uchun `null` ATAYLAB yoziladi.
+          lessonId: null,
           de: entry.de,
           en: entry.en,
           audioKey: section.audio?.key ?? null,
@@ -446,10 +626,32 @@ export class DafSeedService {
     }
   }
 
+  /**
+   * Grammatika sahifasini bo'limga biriktiradi.
+   *
+   * `a1-units.json` ko'rsatgan biriktirish USTUN turadi. Sabab o'lchangan:
+   * bob biriktiruvida 1 180 mashqning 459 tasi (39 %) hech qaysi bo'limga
+   * yetib bormasdi, chunki ularning sahifasini hech bir bob o'z mavzusi
+   * deb ko'rsatmagan. Fayl bu bog'lanishni qo'lda yozadi, ya'ni yetim
+   * sahifa ham kerakli bo'limga ulanadi va mashqi o'quvchiga yetib boradi.
+   *
+   * Fayl ko'rsatmagan sahifa avvalgidek o'z bobining bo'limiga tushadi.
+   */
   private async seedGrammar(
     dataset: DafDataset,
     unitIdByChapter: Map<number, number>,
+    unitIdBySection: Map<string, number>,
+    a1Units?: A1UnitsFile,
   ): Promise<Map<string, number>> {
+    // Bo'limning id'si uning birinchi mavzusi orqali topiladi — mavzusiz
+    // bo'lim bo'lmaydi (validator har bo'limda kamida 30 so'z talab qiladi).
+    const unitIdByGrammar = new Map<string, number>();
+    for (const u of a1Units?.units ?? []) {
+      const unitId = unitIdBySection.get(u.sections[0]);
+      if (unitId === undefined) continue;
+      for (const g of u.grammar) unitIdByGrammar.set(g, unitId);
+    }
+
     // Bitta grammatika sahifasi bir necha bobda uchraydi. Bo'lim sifatida
     // uni BIRINCHI marta `grammarFocus` sifatida ko'rsatgan bob olinadi —
     // «tavsiya» dan ko'ra «asosiy» kuchliroq bog'lanish. Hech qaysi bob
@@ -471,8 +673,9 @@ export class DafSeedService {
 
     for (const g of dataset.grammar) {
       const chapter = focusChapter.get(g.code);
-      const unitId =
+      const byChapter =
         chapter === undefined ? null : (unitIdByChapter.get(chapter) ?? null);
+      const unitId = unitIdByGrammar.get(g.code) ?? byChapter;
 
       const row = await this.prisma.dafGrammar.upsert({
         where: { sourceId: g.code },
@@ -497,10 +700,14 @@ export class DafSeedService {
     return byCode;
   }
 
+  /**
+   * Mashq grammatika sahifasi ORQALI bo'limga yetib boradi: sahifa qaysi
+   * bo'limda tursa, uning mashqlari ham o'sha bo'limda. Bosqichga
+   * biriktirilmaydi — bosqich mashqni ish vaqtida bo'limdan oladi.
+   */
   private async seedExercises(
     dataset: DafDataset,
     grammarIdByCode: Map<string, number>,
-    lessonIdBySource: Map<string, number>,
   ): Promise<number> {
     // Bo'limlar bitta so'rovda o'qiladi: sahifa boshiga alohida
     // `findUnique` 92 ta ortiqcha borish-kelish edi.
@@ -516,13 +723,8 @@ export class DafSeedService {
       const unitId =
         grammarId === null ? null : (unitIdByGrammarId.get(grammarId) ?? null);
 
-      // Mashq grammatika DARSIGA biriktiriladi. Darsi yo'q (bo'limsiz)
-      // sahifaning mashqlari `lessonId: null` bo'lib qoladi — ular
-      // yo'lda emas, lekin grammatika ro'yxatida ko'rinadi.
-      const lessonId = lessonIdBySource.get(`gram:${page.code}`) ?? null;
-
       for (const [i, ex] of page.exercises.entries()) {
-        const data = this.exerciseData(ex, grammarId, unitId, lessonId, i);
+        const data = this.exerciseData(ex, grammarId, unitId, i);
         writes.push(
           this.prisma.dafExercise.upsert({
             where: { sourceId: ex.id },
@@ -544,14 +746,15 @@ export class DafSeedService {
     ex: GapExercise,
     grammarId: number | null,
     unitId: number | null,
-    lessonId: number | null,
     index: number,
   ): Prisma.DafExerciseUncheckedCreateInput {
     return {
       sourceId: ex.id,
       grammarId,
       unitId,
-      lessonId,
+      // Bosqich mashqni ish vaqtida oladi; eski bog'lanish qolib
+      // ketmasligi uchun `null` ATAYLAB yoziladi.
+      lessonId: null,
       kind: ex.kind,
       prompt: ex.sentenceDe,
       options: ex.options ?? [],

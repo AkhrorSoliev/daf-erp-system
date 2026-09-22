@@ -10,6 +10,7 @@ import {
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
 import { leadAttributionWhere } from '../leads/shared/lead-scope';
+import { activeStudentWhere } from '../students/shared/active-student-where';
 import {
   escapeHtml,
   firstOfThisMonthDate,
@@ -20,6 +21,7 @@ import {
   tashkentDayRange,
   tashkentTodayDate,
 } from './utils/format.util';
+import { buildIncomeSplitLines } from './utils/income-split.util';
 
 /**
  * Builds the once-a-day 21:00 Telegram daily report — the center's end-of-day
@@ -34,7 +36,8 @@ import {
  *   👥 O'quvchilar harakati — new vs departed students (net) + new leads
  *   🎓 Bugungi o'quv jarayoni — lessons held + attendance breakdown
  *   📌 Hozirgi holat        — active students + debt (with day-over-day ▲/▼)
- *   📅 Oy boshidan          — MTD income / expense / net + lesson collection %
+ *   📅 Oy boshidan          — MTD income (+ this-month / old-debt split, per
+ *                             month) / expense / net + lesson collection %
  *   💵 Ustozlar oyligi      — deserved / students-paid / center-funded, MTD
  *   🚩 Diqqat               — self-suppressing flags (refund / write-off / …)
  *
@@ -43,7 +46,10 @@ import {
  * every day at 23:40, including the Sundays and holidays this report skips.
  *
  * Metric semantics mirror the CEO's `/payments/salary` and financial pages:
- *  - "Tushum (haqiqiy)" = cash actually received (COMPLETED payments), NOT billed.
+ *  - "Tushum (haqiqiy)" = cash actually received, NOT billed — read from
+ *    `getIncomeMonthAttribution` so the two lines under it («Shu oy uchun» and
+ *    «Eski qarzlar uchun», per month) decompose the figure printed above them.
+ *    The `Payment` aggregate of the same window still feeds the snapshot.
  *  - "Shu oyning darslari" / "Shundan yig'ildi" = the collection ratio, taken
  *    from `getIncomeMonthAttribution` so the bot and /payments/overview divide
  *    the SAME two figures. Never re-derive it here.
@@ -163,11 +169,12 @@ export class TelegramGroupDailyReportService {
         where: { id: companyId },
         select: { name: true },
       }),
+      // «Faol o'quvchilar» — bosh sahifadagi bilan bitta ta'rif.
       this.prisma.student.count({
         where: {
           companyId,
           deletedAt: null,
-          status: 'ACTIVE',
+          ...activeStudentWhere(),
           ...studentBranchWhere(branchIds),
         },
       }),
@@ -337,14 +344,13 @@ export class TelegramGroupDailyReportService {
     // wrapped so a failure degrades gracefully rather than killing the report).
     // Tashkent calendar month of "today" — the window the MTD block reports on.
     const monthKey = tashkentTodayDate().toISOString().slice(0, 7);
-    const [expectedValue, salary, canonicalNet, collection] = await Promise.all(
-      [
+    const [expectedValue, salary, canonicalNet, attribution] =
+      await Promise.all([
         this.computeExpectation(companyId, monthKey, branchIds),
         this.computeSalaryTopUp(companyId, branchIds),
         this.computeCanonicalNetProfit(companyId, monthKey, branchIds),
-        this.computeCollection(companyId, branchIds),
-      ],
-    );
+        this.computeIncomeAttribution(companyId, branchIds),
+      ]);
 
     // ── Derive figures ────────────────────────────────────────────────────
     const todayIncome = todayPayments._sum.amount ?? 0;
@@ -463,7 +469,26 @@ export class TelegramGroupDailyReportService {
 
     // 📅 Oy boshidan
     lines.push(`📅 <b>Oy boshidan (1–${dayNum} ${monthName})</b>`);
-    lines.push(`• Tushum (haqiqiy): <b>${formatSum(mtdIncome)}</b>`);
+    // The income figure and its composition come from ONE attribution result,
+    // so the lines underneath are a decomposition of the number above them.
+    //
+    // The two figures share a window (both start at Tashkent midnight of the
+    // 1st) but not a BASIS: `mtdIncome` sums the `Payment` table, while
+    // `attribution.total` tallies the in-window PAYMENT rows of the effective
+    // ledger. They agree while every COMPLETED payment has exactly one active
+    // PAYMENT transaction of the same amount — the invariant
+    // `scripts/audit-finance-reconciliation.ts` checks as G1 — and `logIncome
+    // BasisDrift` below says so in the log if that ever stops holding.
+    //
+    // The snapshot keeps the aggregate on purpose: `DailySnapshotCron` writes
+    // the same row on that basis, and the two writers must agree.
+    this.logIncomeBasisDrift(companyId, attribution, mtdIncome);
+    lines.push(
+      `• Tushum (haqiqiy): <b>${formatSum(attribution ? attribution.total : mtdIncome)}</b>`,
+    );
+    if (attribution) {
+      for (const line of buildIncomeSplitLines(attribution)) lines.push(line);
+    }
     lines.push(`• Xarajat: <b>${formatSum(mtdExpense)}</b>`);
     if (mtdAdvance > 0) {
       lines.push(`• Avans (ustozlarga): <b>${formatSum(mtdAdvance)}</b>`);
@@ -484,12 +509,12 @@ export class TelegramGroupDailyReportService {
     // `MTD cash ÷ forecast` — two different things over a denominator that is
     // a schedule guess, so it printed 109–115% while the web page called the
     // same month 83%. Now both surfaces divide the SAME two figures.
-    if (collection && collection.lessonsValue > 0) {
+    if (attribution && attribution.lessonsValue > 0) {
       lines.push(
-        `• Shu oyning darslari: <b>${formatSum(collection.lessonsValue)}</b>`,
+        `• Shu oyning darslari: <b>${formatSum(attribution.lessonsValue)}</b>`,
       );
       lines.push(
-        `• Shundan yig'ildi: <b>${formatSum(collection.collected)}</b> (<b>${collection.pct}%</b>)`,
+        `• Shundan yig'ildi: <b>${formatSum(attribution.currentMonth)}</b> (<b>${attribution.pct}%</b>)`,
       );
     }
     if (expectedValue !== null && expectedValue > 0) {
@@ -507,9 +532,9 @@ export class TelegramGroupDailyReportService {
       //
       // Deliberately unclamped: a reading above 100% would mean more was
       // collected than the month is worth, and that should stay visible.
-      if (collection) {
+      if (attribution) {
         const monthPlanPct = Math.round(
-          (collection.collected / expectedValue) * 100,
+          (attribution.currentMonth / expectedValue) * 100,
         );
         lines.push(`• Oy rejasidan yig'ildi: <b>${monthPlanPct}%</b>`);
       }
@@ -733,28 +758,57 @@ export class TelegramGroupDailyReportService {
    * Returns null (block hidden) when no such user exists or the compute fails.
    */
   /**
-   * Month-to-date collection on the SAME basis as the /overview "Tushum
-   * tarkibi" panel — `ReportsFinancialService.getIncomeMonthAttribution`, which
-   * returns both sides of the ratio (`lessonsValue`, `currentMonth`) already
-   * computed against one window.
+   * Month-to-date income composition on the SAME basis as the /overview "Tushum
+   * tarkibi" drill-down — `ReportsFinancialService.getIncomeMonthAttribution`,
+   * which returns the cash total, the split between this month's own income and
+   * late payments settling older debt (broken out per month), and both sides of
+   * the collection ratio, all computed against ONE window.
    *
-   * The previous line divided MTD cash by the schedule forecast, a different
-   * numerator over a different denominator than anything on the web page: the
-   * bot said 109–115% while /payments/overview called the same month 83%.
-   * Calling the shared service is what makes a repeat of that impossible —
-   * there is no second formula to drift.
+   * Three lines of the message read this: the income figure and its split, and
+   * the collection ratio. The previous ratio line divided MTD cash by the
+   * schedule forecast — a different numerator over a different denominator than
+   * anything on the web page, so the bot said 109–115% while /payments/overview
+   * called the same month 83%. Calling the shared service is what makes a
+   * repeat of that impossible — there is no second formula to drift.
    *
    * Scoped to the asking group's branches, and MTD (1st → today, Tashkent),
    * matching the "Oy boshidan" block it sits in. Returns null on failure so the
-   * block is simply dropped.
+   * lines are simply dropped.
    */
-  private async computeCollection(
+  /**
+   * The printed income line reads the ledger tally; the `Payment` aggregate
+   * still feeds the snapshot. The two are the same money counted from two
+   * tables, so a difference is not a rounding artefact — it means a COMPLETED
+   * payment has no live PAYMENT transaction behind it (or carries a different
+   * amount or branch), which is the G1 invariant of
+   * `scripts/audit-finance-reconciliation.ts`.
+   *
+   * Logged rather than surfaced: the reader cannot act on it, and a report that
+   * starts explaining its own plumbing is a report nobody finishes. Nothing is
+   * suppressed either — a silently smaller headline is exactly the failure this
+   * makes findable.
+   */
+  private logIncomeBasisDrift(
+    companyId: number,
+    attribution: { total: number } | null,
+    mtdIncome: number,
+  ): void {
+    if (!attribution || attribution.total === mtdIncome) return;
+    this.logger.warn(
+      `Income basis drift for company ${companyId}: ledger ${attribution.total} vs payments ${mtdIncome} (diff ${attribution.total - mtdIncome}) — check audit-finance-reconciliation G1`,
+    );
+  }
+
+  private async computeIncomeAttribution(
     companyId: number,
     branchIds: ReportBranchIds,
   ): Promise<{
+    total: number;
+    currentMonth: number;
+    lateTotal: number;
+    late: Array<{ label: string; amount: number }>;
     lessonsValue: number;
-    collected: number;
-    pct: number;
+    pct: number | null;
   } | null> {
     try {
       const attribution = await this.reports.getIncomeMonthAttribution(
@@ -765,15 +819,22 @@ export class TelegramGroupDailyReportService {
           endDate: tashkentTodayDate().toISOString().slice(0, 10),
         },
       );
-      if (attribution.collectionPct === null) return null;
+      // A month with no lessons held yet has no collection RATIO, but its cash
+      // still has a composition — returning null on a null `collectionPct`
+      // (which is what this did while it only served the ratio) would drop the
+      // income split with it. The ratio lines guard on `lessonsValue` instead,
+      // and `collectionPct` is null only when that is 0.
       return {
+        total: attribution.total,
+        currentMonth: attribution.currentMonth,
+        lateTotal: attribution.lateTotal,
+        late: attribution.late,
         lessonsValue: attribution.lessonsValue,
-        collected: attribution.currentMonth,
         pct: attribution.collectionPct,
       };
     } catch (e) {
       this.logger.warn(
-        `Collection ratio failed for company ${companyId}: ${e}`,
+        `Income attribution failed for company ${companyId}: ${e}`,
       );
       return null;
     }

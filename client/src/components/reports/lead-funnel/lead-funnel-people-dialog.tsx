@@ -1,0 +1,237 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
+import { formatPhone } from "@/lib/format-utils";
+import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { DialogPaginationFooter } from "@/components/reports/departed-students/dialog-pagination-footer";
+import {
+  displayDate,
+  FUNNEL_START_DATE,
+  peopleQueryParams,
+  STAGE_LABELS,
+  STUCK_LABELS,
+} from "./lead-funnel-math";
+import type {
+  FunnelPeopleResponse,
+  PeopleMode,
+  PeopleStage,
+} from "./lead-funnel-types";
+
+interface LeadFunnelPeopleDialogProps {
+  stage: PeopleStage | null;
+  range: { startDate: string; endDate: string };
+  onOpenChange: (open: boolean) => void;
+}
+
+/**
+ * Bosqichdagi odamlar. Holat (sahifa, rejim) oyna yopilganda tashlanadi —
+ * `key` bilan qayta o'rnatiladi, shuning uchun boshqa bosqich har doim
+ * birinchi sahifadan ochiladi.
+ */
+export function LeadFunnelPeopleDialog({
+  stage,
+  range,
+  onOpenChange,
+}: LeadFunnelPeopleDialogProps) {
+  return (
+    <Dialog open={stage !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="!max-w-[min(960px,95vw)] w-[min(960px,95vw)] max-h-[85vh] overflow-hidden flex flex-col gap-4 p-6">
+        {stage && <PeopleBody key={stage} stage={stage} range={range} />}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PeopleBody({
+  stage,
+  range,
+}: {
+  stage: PeopleStage;
+  range: { startDate: string; endDate: string };
+}) {
+  const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
+  const hasStuck = stage !== "paid" && stage !== "unpaid";
+  // «Hammasi» dan ochiladi: ro'yxat jami bosilgan bosqichdagi son bilan bir xil.
+  const [mode, setMode] = useState<PeopleMode>("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const params = peopleQueryParams({ stage, mode, page, pageSize, range });
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: [
+      "reports",
+      "lead-funnel",
+      "people",
+      selectedBranch?.id ?? "all",
+      params,
+    ],
+    queryFn: () =>
+      api
+        .get<FunnelPeopleResponse>("/reports/lead-funnel/people", { params })
+        .then((r) => r.data),
+  });
+
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const rows = data?.data ?? [];
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>{STAGE_LABELS[stage]}</DialogTitle>
+        <DialogDescription>
+          {stage === "unpaid"
+            ? `${displayDate(FUNNEL_START_DATE)} dan beri lid bo'lib kelgan, darsga kelgan, lekin hali to'lov qilmaganlar — bugungi holat.`
+            : `${displayDate(range.startDate)} — ${displayDate(range.endDate)} oralig'ida kelgan lidlar.`}
+        </DialogDescription>
+      </DialogHeader>
+
+      {hasStuck && (
+        <div
+          role="group"
+          aria-label="Ro'yxat turi"
+          className="inline-flex w-fit rounded-lg border bg-muted/40 p-0.5 text-sm"
+        >
+          {(
+            [
+              ["all", "Hammasi"],
+              ["stuck", STUCK_LABELS[stage as keyof typeof STUCK_LABELS]],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={mode === value}
+              onClick={() => {
+                setMode(value);
+                setPage(1);
+              }}
+              className="rounded-md px-3 py-1 transition-colors aria-pressed:bg-background aria-pressed:font-medium aria-pressed:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="min-h-0 flex-1 overflow-auto rounded-lg border">
+        <Table>
+          <TableHeader className="sticky top-0 z-10 bg-muted/40">
+            <TableRow>
+              <TableHead className="w-12 border-r">#</TableHead>
+              <TableHead>Ism</TableHead>
+              <TableHead>Telefon</TableHead>
+              <TableHead>Manba</TableHead>
+              <TableHead>Holati</TableHead>
+              <TableHead>Kelgan sana</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={`sk-${i}`}>
+                  {Array.from({ length: 6 }).map((__, j) => (
+                    <TableCell key={j} className={j === 0 ? "border-r" : ""}>
+                      <Skeleton className="h-4 w-full" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : isError ? (
+              <TableRow>
+                <TableCell
+                  colSpan={6}
+                  className="py-10 text-center text-sm text-destructive"
+                >
+                  Ro&apos;yxatni yuklab bo&apos;lmadi. Oynani yopib qayta oching.
+                </TableCell>
+              </TableRow>
+            ) : rows.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={6}
+                  className="py-10 text-center text-sm text-muted-foreground"
+                >
+                  Bu ro&apos;yxatda hech kim yo&apos;q.
+                </TableCell>
+              </TableRow>
+            ) : (
+              rows.map((p, i) => (
+                <TableRow key={p.key}>
+                  <TableCell className="border-r tabular-nums text-muted-foreground">
+                    {(page - 1) * pageSize + i + 1}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {p.studentId ? (
+                      <Link
+                        href={`/students/profile/${p.studentId}`}
+                        className="hover:underline"
+                      >
+                        {p.name}
+                      </Link>
+                    ) : (
+                      p.name
+                    )}
+                  </TableCell>
+                  <TableCell className="tabular-nums">
+                    {p.phone ? formatPhone(p.phone) : "—"}
+                  </TableCell>
+                  <TableCell>{p.source ?? "—"}</TableCell>
+                  <TableCell>
+                    {p.studentStatus ? (
+                      <StatusBadge
+                        entityType="students"
+                        status={p.studentStatus}
+                      />
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        Lid
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="tabular-nums">
+                    {displayDate(p.createdAt)}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <DialogPaginationFooter
+        isLoading={isLoading}
+        total={total}
+        page={page}
+        pageSize={pageSize}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        onPageSizeChange={(next) => {
+          setPageSize(next);
+          setPage(1);
+        }}
+      />
+    </>
+  );
+}

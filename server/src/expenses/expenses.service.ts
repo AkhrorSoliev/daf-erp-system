@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -19,6 +20,7 @@ import {
 import { renderPdf } from '../receipts/pdf/render';
 import { buildExpensesDoc, type ExpensesPdfRow } from './pdf/expenses-template';
 import { formatDate } from './pdf/format.util';
+import { utcMidnightFromDateStr } from '../common/date/tashkent';
 
 const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   RENT: 'Ijara',
@@ -85,24 +87,53 @@ export class ExpensesService {
     );
   }
 
+  /**
+   * TEACHER_ADVANCE oluvchi xodimni nomlashi shart, va u xodim shu kompaniyada
+   * bo'lishi kerak. `create` va `update` (bir qator avansga aylantirilganda)
+   * uchun bitta joy — ikki nusxa muqarrar ravishda bir-biridan ajralib
+   * ketardi.
+   */
+  private async assertAdvanceRecipient(
+    relatedUserId: number | null | undefined,
+    companyId: number,
+  ): Promise<void> {
+    if (!relatedUserId) {
+      throw new BadRequestException(
+        "TEACHER_ADVANCE xarajati uchun xodim (relatedUserId) ko'rsatilishi shart",
+      );
+    }
+    const user = await this.prisma.user.findFirst({
+      where: { id: relatedUserId, companyId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!user) {
+      throw new BadRequestException('Xodim topilmadi');
+    }
+  }
+
+  /**
+   * Oylikdan ushlab qolingan avans qulflanadi. `applyPendingAdvances` uni
+   * bitta SalaryPayment'ga bog'lab, o'sha to'lov summasini aynan shu avans
+   * miqdoriga kamaytirgan. Endi summasini o'zgartirish yoki o'chirish o'sha
+   * to'lovni eski raqam bo'yicha qoldiradi — oylik varaqasidagi
+   * «grossTotal − avanslar = to'langan» tenglama buziladi. Tuzatishning
+   * yagona to'g'ri yo'li: avval o'sha oylikni bekor qilish.
+   */
+  private assertAdvanceUnsettled(expense: {
+    settledBySalaryPaymentId: string | null;
+  }): void {
+    if (expense.settledBySalaryPaymentId !== null) {
+      throw new ConflictException(
+        "Bu avans oylikka hisoblangan — o'zgartirib bo'lmaydi. Avval o'sha oylikni bekor qiling.",
+      );
+    }
+  }
+
   async create(dto: CreateExpenseDto, userId: number, companyId: number) {
     await this.assertBranchWritable(dto.branchId, companyId, userId);
 
-    // TEACHER_ADVANCE must name the recipient employee, and that employee
-    // must belong to this company.
     if (dto.category === ExpenseCategory.TEACHER_ADVANCE) {
-      if (!dto.relatedUserId) {
-        throw new BadRequestException(
-          "TEACHER_ADVANCE xarajati uchun xodim (relatedUserId) ko'rsatilishi shart",
-        );
-      }
-      const user = await this.prisma.user.findFirst({
-        where: { id: dto.relatedUserId, companyId, deletedAt: null },
-        select: { id: true },
-      });
-      if (!user) {
-        throw new BadRequestException('Xodim topilmadi');
-      }
+      await this.assertAdvanceRecipient(dto.relatedUserId, companyId);
     }
 
     // Atomic: expense row + ledger entry are all-or-nothing.
@@ -209,8 +240,10 @@ export class ExpensesService {
       // whole `endDate`. Either bound works on its own (one-sided range).
       ...((query.startDate || query.endDate) && {
         date: {
-          ...(query.startDate && { gte: new Date(query.startDate) }),
-          ...(query.endDate && { lte: new Date(query.endDate) }),
+          ...(query.startDate && {
+            gte: utcMidnightFromDateStr(query.startDate),
+          }),
+          ...(query.endDate && { lte: utcMidnightFromDateStr(query.endDate) }),
         },
       }),
     };
@@ -326,7 +359,7 @@ export class ExpensesService {
     const where: Prisma.ExpenseWhereInput = {
       companyId,
       deletedAt: null,
-      date: { gte: period.start, lte: period.endDate },
+      date: { gte: period.startDate, lte: period.endDate },
       ...branch,
     };
 
@@ -439,6 +472,32 @@ export class ExpensesService {
       await this.assertBranchWritable(dto.branchId, companyId, userId);
     }
 
+    // Avans qoidalari. Xodimni almashtirish va toifani o'zgartirish ataylab
+    // taqiqlangan: pul bir xodimdan ikkinchisiga jimgina ko'chib qolmasin,
+    // tarixda ikkita aniq harakat (o'chirish + yangi avans) qolsin.
+    if (existing.category === ExpenseCategory.TEACHER_ADVANCE) {
+      this.assertAdvanceUnsettled(existing);
+
+      if (
+        dto.category !== undefined &&
+        dto.category !== ExpenseCategory.TEACHER_ADVANCE
+      ) {
+        throw new BadRequestException(
+          "Avansni boshqa toifaga o'tkazib bo'lmaydi — o'chirib, yangi xarajat yozing",
+        );
+      }
+      if (
+        dto.relatedUserId !== undefined &&
+        dto.relatedUserId !== existing.relatedUserId
+      ) {
+        throw new BadRequestException(
+          "Avansning xodimini almashtirib bo'lmaydi — o'chirib, to'g'ri xodimga yangi avans yozing",
+        );
+      }
+    } else if (dto.category === ExpenseCategory.TEACHER_ADVANCE) {
+      await this.assertAdvanceRecipient(dto.relatedUserId, companyId);
+    }
+
     // Detect if the change touches financial fields. Description/date/branch/
     // receiptUrl edits do not require a ledger correction; amount or category
     // changes must be reflected in Transaction or cash-flow reports drift.
@@ -539,6 +598,10 @@ export class ExpensesService {
     // Delete REVERSES a ledger entry and moves cash back into the branch's
     // kassa, so it needs the same branch check as create/update.
     await this.assertBranchWritable(existing.branchId, companyId, userId);
+
+    if (existing.category === ExpenseCategory.TEACHER_ADVANCE) {
+      this.assertAdvanceUnsettled(existing);
+    }
 
     // Find the associated EXPENSE ledger entry so we can reverse it.
     const ledgerEntry = await this.prisma.transaction.findFirst({

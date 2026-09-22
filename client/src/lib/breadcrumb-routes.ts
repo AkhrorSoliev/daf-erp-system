@@ -12,6 +12,7 @@ export const routeLabels: Record<string, string> = {
   form: "Forma sozlash",
   forms: "Formalar",
   new: "Yangi",
+  tahrirlash: "Tahrirlash",
   groups: "Guruhlar",
   schedule: "Jadval",
 
@@ -35,6 +36,12 @@ export const routeLabels: Record<string, string> = {
   employees: "Xodimlar",
   rooms: "Xonalar",
   holidays: "Dam olish kunlari",
+  reasons: "Sabablar",
+  daf: "DaF ilovasi",
+  // `/daf/oquvchilar` sahifasi allaqachon bor; yorliq shu yerda turadi, chunki
+  // breadcrumb jadvali bitta fayl va uni ikki marta ochish keraksiz.
+  oquvchilar: "O'quvchilar",
+  "absence-pause": "Avtomatik pauza",
   tasks: "Topshiriqlar",
   archive: "Arxiv",
   overview: "Umumiy ma'lumotlar",
@@ -57,4 +64,15 @@ export const routeLabels: Record<string, string> = {
   portal: "Bosh sahifa",
   ai: "Sun'iy intellekt",
   search: "Qidiruv natijalari",
+  // /media — kurs qamrovi (unit/bo'lim daraxti). /media/sections/[id] o'sha
+  // daraxtdagi bitta bo'limning sahifasi; "sections" segmentiga label
+  // KERAK EMAS — u "profile" kabi pass-through, `app-breadcrumb.tsx` uni
+  // butunlay o'tkazib yuboradi (aks holda mavjud bo'lmagan
+  // "/media/sections" ro'yxatiga havola bo'lib qolardi).
+  media: "Media",
+  // /media/assets — eski quvurdan qolgan obrazlar/fayllar ro'yxati. Bu
+  // "sections" kabi pass-through EMAS — o'zi to'liq ro'yxat sahifasi
+  // (haqiqatan "/media/assets" mavjud), shuning uchun breadcrumbda ko'rinishi
+  // kerak.
+  assets: "Media fayllari",
 };

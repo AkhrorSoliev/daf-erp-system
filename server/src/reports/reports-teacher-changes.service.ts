@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { buildDepartedEnrollmentWhere } from './shared/departed-filter';
 import { equalsOrIn } from '../common/dto/to-array';
+import { tashkentRangeUtc } from '../common/date/tashkent';
 
 @Injectable()
 export class ReportsTeacherChangesService {
@@ -21,9 +22,12 @@ export class ReportsTeacherChangesService {
       reasonId?: string;
     },
   ) {
-    const start = new Date(params.startDate);
-    const end = new Date(params.endDate);
-    end.setHours(23, 59, 59, 999);
+    // TIMESTAMP columns — the picked days are Tashkent days, and `end` is the
+    // EXCLUSIVE start of the day after (see common/date/tashkent).
+    const { gte: start, lt: end } = tashkentRangeUtc(
+      params.startDate,
+      params.endDate,
+    );
 
     const groupFilter: any = { companyId, deletedAt: null };
     if (params.branchId !== undefined) groupFilter.branchId = params.branchId;
@@ -36,7 +40,7 @@ export class ReportsTeacherChangesService {
     }
 
     const where: any = {
-      createdAt: { gte: start, lte: end },
+      createdAt: { gte: start, lt: end },
       group: groupFilter,
     };
     if (params.reasonId !== undefined) {
@@ -124,14 +128,17 @@ export class ReportsTeacherChangesService {
   ) {
     const page = Math.max(1, params.page ?? 1);
     const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 10));
-    const start = new Date(params.startDate);
-    const end = new Date(params.endDate);
-    end.setHours(23, 59, 59, 999);
+    // TIMESTAMP columns — the picked days are Tashkent days, and `end` is the
+    // EXCLUSIVE start of the day after (see common/date/tashkent).
+    const { gte: start, lt: end } = tashkentRangeUtc(
+      params.startDate,
+      params.endDate,
+    );
 
     const where: any = {
       ...buildDepartedEnrollmentWhere(companyId, params),
       status: 'TRANSFERRED' as const,
-      statusChangedAt: { gte: start, lte: end },
+      statusChangedAt: { gte: start, lt: end },
     };
     if (params.transferReasonId !== undefined) {
       where.transferReasonId =
@@ -214,16 +221,19 @@ export class ReportsTeacherChangesService {
   ) {
     const LESSON_WINDOW = 5;
 
-    const start = new Date(params.startDate);
-    const end = new Date(params.endDate);
-    end.setHours(23, 59, 59, 999);
+    // TIMESTAMP columns — the picked days are Tashkent days, and `end` is the
+    // EXCLUSIVE start of the day after (see common/date/tashkent).
+    const { gte: start, lt: end } = tashkentRangeUtc(
+      params.startDate,
+      params.endDate,
+    );
 
     const groupFilter: any = { companyId, deletedAt: null };
     if (params.branchId !== undefined) groupFilter.branchId = params.branchId;
 
     const changes = await this.prisma.groupTeacherHistory.findMany({
       where: {
-        createdAt: { gte: start, lte: end },
+        createdAt: { gte: start, lt: end },
         group: groupFilter,
       },
       select: {

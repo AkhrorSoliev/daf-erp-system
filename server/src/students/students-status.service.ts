@@ -27,6 +27,21 @@ import {
   EXIT_REASON_COMMENT_MIN_LENGTH,
   exitReasonRequiresComment,
 } from '../common/exit-reason-comment';
+import { buildAutoPauseReason } from '../absence-pause/absence-pause.constants';
+
+/**
+ * Status o'zgartirishni KIM so'rayotgani — oshkora, chunki ikki chaqiruvchi
+ * ikki xil tekshiruvdan o'tadi.
+ *
+ * Bu ADR-0008 dagi naqsh. «userId yo'q = tekshiruvni o'tkazib yubor» degan
+ * JIM qoida o'sha ADR yozilishiga sabab bo'lgan xatoning o'zi: bot — tizimdagi
+ * yagona egasiz yo'l edi, filial qorovuli uni rad etdi va xatolik jimgina
+ * yutildi. Cron ham xuddi shunday egasiz, shuning uchun u o'zini shunday deb
+ * ataydi.
+ */
+export type StatusChangeActor =
+  | { kind: 'user'; id: number }
+  | { kind: 'system' };
 
 const STATUS_TO_EXIT_TYPE: Partial<Record<StudentStatus, ExitType>> = {
   FROZEN: ExitType.FREEZE,
@@ -46,12 +61,69 @@ export class StudentsStatusService {
     private monthlyChargeService: MonthlyChargeService,
   ) {}
 
+  /** Odam qiladigan status o'zgartirish — `PATCH /students/:id/status`. */
   async changeStatus(
     id: number,
     dto: ChangeStudentStatusDto,
     userId: number,
     companyId: number,
   ) {
+    return this.applyStatusChange(
+      id,
+      dto,
+      { kind: 'user', id: userId },
+      companyId,
+    );
+  }
+
+  /**
+   * Avtomatik pauza — cron chaqiradigan yagona kirish nuqtasi.
+   *
+   * Nega alohida metod, `applyStatusChange` ni ochiq qilish emas: bu yo'l
+   * FAQAT `ACTIVE → FROZEN` ni biladi. Tizim aktori filial tekshiruvini
+   * chetlab o'tadi, shuning uchun u bajara oladigan amallar ro'yxati eng
+   * tor bo'lishi kerak — `EXPELLED` yoki `ARCHIVED` hech qachon avtomatik
+   * bo'lmaydi.
+   *
+   * ACTIVE bo'lmagan o'quvchi JIMGINA o'tkazib yuboriladi: cron nomzodlarni
+   * yig'gani bilan pauza qilgani orasida admin uni chiqarib yuborgan yoki
+   * o'zi muzlatgan bo'lishi mumkin, va bu xato emas.
+   */
+  async pauseForAbsence(params: {
+    studentId: number;
+    companyId: number;
+    streak: number;
+    lastAbsenceDate: Date;
+  }): Promise<void> {
+    const student = await this.prisma.student.findFirst({
+      where: {
+        id: params.studentId,
+        deletedAt: null,
+        companyId: params.companyId,
+      },
+      select: { id: true, status: true },
+    });
+    if (!student || student.status !== StudentStatus.ACTIVE) return;
+
+    await this.applyStatusChange(
+      params.studentId,
+      {
+        status: StudentStatus.FROZEN,
+        reason: buildAutoPauseReason(params.streak, params.lastAbsenceDate),
+      } as ChangeStudentStatusDto,
+      { kind: 'system' },
+      params.companyId,
+    );
+  }
+
+  private async applyStatusChange(
+    id: number,
+    dto: ChangeStudentStatusDto,
+    actor: StatusChangeActor,
+    companyId: number,
+  ) {
+    const actorId = actor.kind === 'user' ? actor.id : undefined;
+
     const student = await this.prisma.student.findFirst({
       where: { id, deletedAt: null, companyId },
     });
@@ -63,7 +135,13 @@ export class StudentsStatusService {
     // enrolments, which stops their lessons and their teacher's accruals. Done
     // to another branch's student that is someone else's roster and someone
     // else's payroll.
-    await assertCallerMayTouchStudent(this.prisma, userId, id, companyId);
+    //
+    // Cron uchun filial tushunchasi yo'q — u butun kompaniya bo'yicha yuradi.
+    // Qamrov o'rniga uni kunlik chegara (fail-closed) va sozlamadagi
+    // o'chirish tugmasi ushlab turadi.
+    if (actor.kind === 'user') {
+      await assertCallerMayTouchStudent(this.prisma, actor.id, id, companyId);
+    }
 
     // GRADUATED is automatic only — set by StatusCascadeService when a
     // group's status flips to COMPLETED. Manual selection is rejected.
@@ -79,52 +157,61 @@ export class StudentsStatusService {
     let reasonId: string | null = null;
     let reasonText: string | null = dto.reason?.trim() || null;
 
-    if (dto.reasonId) {
-      if (!exitType) {
-        throw new BadRequestException(
-          'Bu status uchun sabab tanlash kerak emas',
-        );
-      }
-      const reason = await this.prisma.studentExitReason.findFirst({
-        where: {
-          id: dto.reasonId,
-          companyId,
-          deletedAt: null,
-          appliesTo: { has: exitType },
-        },
-      });
-      if (!reason) {
-        throw new NotFoundException(
-          'Sabab topilmadi yoki bu holatga taalluqli emas',
-        );
-      }
-      reasonId = reason.id;
-      // "Boshqa sabab" carries no information on its own — the comment IS
-      // the reason, so it becomes mandatory. Other reasons keep it optional.
-      if (
-        exitReasonRequiresComment(reason.name) &&
-        (!reasonText || reasonText.length < EXIT_REASON_COMMENT_MIN_LENGTH)
-      ) {
-        throw new BadRequestException(EXIT_REASON_COMMENT_ERROR);
-      }
-      // Use the reason name as the audit text (free-text reason is appended)
-      reasonText = reasonText ? `${reason.name} — ${reasonText}` : reason.name;
-    } else if (exitType) {
-      // No reasonId — check whether configured reasons exist for this exit
-      // type. If yes, force the user to pick one. If not, fall back to
-      // requiring free-text reason.
-      const configured = await this.prisma.studentExitReason.count({
-        where: {
-          companyId,
-          deletedAt: null,
-          appliesTo: { has: exitType },
-        },
-      });
-      if (configured > 0) {
-        throw new BadRequestException('Sababni tanlash majburiy');
-      }
-      if (!reasonText) {
-        throw new BadRequestException('Sababni kiritish majburiy');
+    // Sabab ro'yxati — odam uchun majburiy, tizim uchun ma'nosiz.
+    // «Avtomatik pauza» degan qator ro'yxatda yo'q va uni sozlamalarga
+    // qo'shish adminni chalg'itardi: u qo'lda tanlanadigan sabab emas.
+    // Tizim o'z sababini matn bilan yozadi (`buildAutoPauseReason`) va
+    // `reasonId` ni null qoldiradi.
+    if (actor.kind === 'user') {
+      if (dto.reasonId) {
+        if (!exitType) {
+          throw new BadRequestException(
+            'Bu status uchun sabab tanlash kerak emas',
+          );
+        }
+        const reason = await this.prisma.studentExitReason.findFirst({
+          where: {
+            id: dto.reasonId,
+            companyId,
+            deletedAt: null,
+            appliesTo: { has: exitType },
+          },
+        });
+        if (!reason) {
+          throw new NotFoundException(
+            'Sabab topilmadi yoki bu holatga taalluqli emas',
+          );
+        }
+        reasonId = reason.id;
+        // "Boshqa sabab" carries no information on its own — the comment IS
+        // the reason, so it becomes mandatory. Other reasons keep it optional.
+        if (
+          exitReasonRequiresComment(reason.name) &&
+          (!reasonText || reasonText.length < EXIT_REASON_COMMENT_MIN_LENGTH)
+        ) {
+          throw new BadRequestException(EXIT_REASON_COMMENT_ERROR);
+        }
+        // Use the reason name as the audit text (free-text reason is appended)
+        reasonText = reasonText
+          ? `${reason.name} — ${reasonText}`
+          : reason.name;
+      } else if (exitType) {
+        // No reasonId — check whether configured reasons exist for this exit
+        // type. If yes, force the user to pick one. If not, fall back to
+        // requiring free-text reason.
+        const configured = await this.prisma.studentExitReason.count({
+          where: {
+            companyId,
+            deletedAt: null,
+            appliesTo: { has: exitType },
+          },
+        });
+        if (configured > 0) {
+          throw new BadRequestException('Sababni tanlash majburiy');
+        }
+        if (!reasonText) {
+          throw new BadRequestException('Sababni kiritish majburiy');
+        }
       }
     }
 
@@ -157,7 +244,7 @@ export class StudentsStatusService {
       validateFrozenRefundOverrides(dto.frozenRefundOverrides);
       frozenRefundResults = await this.refundPrepaidForFreeze(
         id,
-        userId,
+        actorId,
         dto.frozenRefundOverrides,
       );
       // MONTHLY-course counterpart of the refund above. LESSON_PACK
@@ -165,7 +252,7 @@ export class StudentsStatusService {
       // `refundPrepaidForFreeze` — this method is deliberately scoped to
       // MONTHLY-course enrollments only (query filter, not a runtime no-op)
       // so the two refund paths never touch the same enrollment.
-      await this.refundMonthlyForFreeze(id, userId, new Date());
+      await this.refundMonthlyForFreeze(id, actorId, new Date());
     }
 
     const auditData = await this.statusHistoryService.changeStatus({
@@ -174,7 +261,7 @@ export class StudentsStatusService {
       fromStatus: student.status,
       toStatus: dto.status,
       reason: reasonText ?? undefined,
-      changedById: userId,
+      changedById: actorId,
       companyId: student.companyId ?? undefined,
     });
 
@@ -196,7 +283,7 @@ export class StudentsStatusService {
       entityId: id,
       oldValues: { status: student.status },
       newValues: { status: dto.status, reason: reasonText ?? undefined },
-      changedById: userId,
+      changedById: actorId,
       companyId: student.companyId ?? undefined,
     });
 
@@ -205,7 +292,7 @@ export class StudentsStatusService {
       'Student',
       String(id),
       dto.status,
-      userId,
+      actorId,
     );
 
     const formatted = formatStudent(updated);
@@ -230,7 +317,7 @@ export class StudentsStatusService {
    */
   private async refundPrepaidForFreeze(
     studentId: number,
-    userId: number,
+    userId: number | undefined,
     overrides: Record<string, number> | undefined,
   ): Promise<
     Array<{
@@ -311,7 +398,13 @@ export class StudentsStatusService {
    */
   private async refundMonthlyForFreeze(
     studentId: number,
-    userId: number,
+    // `undefined` — TIZIM aktyori (ADR-0008): avtomatik pauza cron'i
+    // hech kimning nomidan ish ko'rmaydi. Qo'shni `refundPrepaidForFreeze`
+    // ham aynan shu turni oladi, va `reverseChargeForDeparture` ning
+    // `performedById` maydoni ixtiyoriy — ya'ni pastda hech narsa
+    // o'zgarmaydi. Tor `number` turi bu yerda avtomatik pauzani
+    // kompilyatsiyadan o'tkazmasdi.
+    userId: number | undefined,
     freezeDate: Date,
   ): Promise<Array<{ enrollmentId: string; refunded: number }>> {
     const activeMonthlyEnrollments = await this.prisma.enrollment.findMany({

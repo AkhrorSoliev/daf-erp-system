@@ -3,6 +3,7 @@
 import { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { tashkentDayAsLocalDate } from "@/lib/tashkent-time";
 import {
   Pencil,
   QrCode,
@@ -164,13 +165,13 @@ export function GroupInfoCard({
         {group.startDate && (
           <InfoRow
             label="Boshlanish"
-            value={format(new Date(group.startDate), "dd.MM.yyyy")}
+            value={format(tashkentDayAsLocalDate(group.startDate), "dd.MM.yyyy")}
           />
         )}
         {group.endDate && (
           <InfoRow
             label="Tugash"
-            value={format(new Date(group.endDate), "dd.MM.yyyy")}
+            value={format(tashkentDayAsLocalDate(group.endDate), "dd.MM.yyyy")}
           />
         )}
         <InfoRow

@@ -39,3 +39,4 @@ server/scripts/backups/
 # migrate-to-monthly.ts dry-run output — regenerated per run, dated by day.
 docs/migration-preview-*.csv
 docs/migration-outcome-*.csv
+.superpowers/

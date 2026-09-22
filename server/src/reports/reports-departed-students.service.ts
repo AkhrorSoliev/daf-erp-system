@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { loadDepartedStudents } from './shared/departed-students-dataset';
+import { tashkentRangeUtc } from '../common/date/tashkent';
 
 @Injectable()
 export class ReportsDepartedStudentsService {
@@ -97,9 +98,12 @@ export class ReportsDepartedStudentsService {
         durationCount > 0 ? durationSum / durationCount / MS_PER_MONTH : 0;
     }
 
-    const start = new Date(params.startDate);
-    const end = new Date(params.endDate);
-    end.setHours(23, 59, 59, 999);
+    // TIMESTAMP columns — the picked days are Tashkent days, and `end` is the
+    // EXCLUSIVE start of the day after (see common/date/tashkent).
+    const { gte: start, lt: end } = tashkentRangeUtc(
+      params.startDate,
+      params.endDate,
+    );
     const { totalTeacherChanges, departedAfterTeacherChange } =
       await this.getTeacherChangeRetentionMetrics(companyId, {
         branchId: params.branchId,
@@ -130,6 +134,7 @@ export class ReportsDepartedStudentsService {
    */
   private async getTeacherChangeRetentionMetrics(
     companyId: number,
+    // `end` is EXCLUSIVE: 00:00 Tashkent of the day after the range.
     params: { branchId?: number; start: Date; end: Date },
   ) {
     const LESSON_WINDOW = 5;
@@ -142,7 +147,7 @@ export class ReportsDepartedStudentsService {
 
     const changes = await this.prisma.groupTeacherHistory.findMany({
       where: {
-        createdAt: { gte: params.start, lte: params.end },
+        createdAt: { gte: params.start, lt: params.end },
         group: groupWhere,
       },
       select: { id: true, groupId: true, createdAt: true },

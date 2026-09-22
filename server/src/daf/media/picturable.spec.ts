@@ -1,0 +1,286 @@
+import {
+  buildPicturablePrompt,
+  parsePicturable,
+  isCountry,
+  isContinent,
+  isGeographicProperNoun,
+  isNumberWord,
+  isNumeric,
+  isPhrase,
+  isNeverPicturable,
+  applyNeverPicturableRule,
+  findMissingPicturable,
+  mergePicturable,
+  COUNTRIES,
+  CONTINENTS,
+} from './picturable';
+
+describe('isCountry', () => {
+  // Flux bayroqlarni xato chizadi. Mamlakatlar uchun tayyor bayroq
+  // aktivlari ishlatiladi, generatsiya emas.
+  it('mamlakat nomini taniydi', () => {
+    expect(isCountry('Deutschland')).toBe(true);
+    expect(isCountry('die Schweiz')).toBe(true);
+    expect(isCountry('gehen')).toBe(false);
+  });
+
+  it('A1 dagi 12 mamlakatni qamraydi', () => {
+    for (const c of [
+      'Belgien',
+      'Italien',
+      'Deutschland',
+      'Kanada',
+      'Luxemburg',
+      'Polen',
+      'Österreich',
+      'Mexiko',
+      'Frankreich',
+      'Spanien',
+    ])
+      expect(COUNTRIES.has(c)).toBe(true);
+  });
+
+  // Haqiqiy bazada "die Niederlande" so'zi yolg'iz emas — qavs ichida
+  // izoh bilan keladi: "die Niederlande (Holland)". Bu tekshiruv
+  // haqiqiy chaqiruv yo'lidan o'tadi: `mark-picturable` skripti buni
+  // to'g'ridan-to'g'ri bazadan olib shu funksiyaga beradi. Qavsni
+  // tashlamasdan solishtirsa, bu so'z modelga tushib qolardi — mamlakat
+  // ekanini bilmagan holda.
+  it('qavs ichidagi izohni tashlab mamlakatni taniydi', () => {
+    expect(isCountry('die Niederlande (Holland)')).toBe(true);
+  });
+
+  // Dastlabki ro'yxatda yo'q edi, keyin bazadan tasdiqlanib qo'shildi.
+  it("keyin qo'shilgan mamlakatlarni ham taniydi", () => {
+    expect(isCountry('die U.S.A.')).toBe(true);
+    expect(isCountry('der Irak')).toBe(true);
+    expect(isCountry('die Türkei')).toBe(true);
+    expect(isCountry('Ungarn')).toBe(true);
+  });
+});
+
+describe('isContinent', () => {
+  // Xuddi mamlakatlar kabi: Flux qit'a shaklini/xaritasini xato chizadi.
+  it("qit'a nomini taniydi", () => {
+    expect(isContinent('Afrika')).toBe(true);
+    expect(isContinent('Europa')).toBe(true);
+    expect(isContinent('Asien')).toBe(true);
+    expect(isContinent('Australien')).toBe(true);
+    expect(isContinent('Deutschland')).toBe(false);
+  });
+
+  // Haqiqiy bazada "Amerika" yolg'iz emas — qismlarini sanovchi qavs
+  // bilan keladi: "Amerika (Nord-, Mittel-, Südamerika)".
+  it("qavs ichidagi izohni tashlab qit'ani taniydi", () => {
+    expect(isContinent('Amerika (Nord-, Mittel-, Südamerika)')).toBe(true);
+  });
+
+  it("A1 dagi 5 ta qit'ani qamraydi", () => {
+    for (const c of ['Afrika', 'Amerika', 'Asien', 'Australien', 'Europa'])
+      expect(CONTINENTS.has(c)).toBe(true);
+  });
+});
+
+describe('isGeographicProperNoun', () => {
+  it("mamlakat YOKI qit'a bo'lsa true qaytaradi", () => {
+    expect(isGeographicProperNoun('Deutschland')).toBe(true);
+    expect(isGeographicProperNoun('Europa')).toBe(true);
+    expect(isGeographicProperNoun('der Apfel')).toBe(false);
+  });
+});
+
+describe('isNumberWord', () => {
+  it('sodda son so`zlarini taniydi', () => {
+    expect(isNumberWord('zwei')).toBe(true);
+    expect(isNumberWord('null')).toBe(true);
+    expect(isNumberWord('zwölf')).toBe(true);
+  });
+
+  it("qo'shma son so'zlarini taniydi", () => {
+    expect(isNumberWord('siebenundsiebzig')).toBe(true);
+    expect(isNumberWord('zweihundert')).toBe(true);
+  });
+
+  // Bazada "101" aynan shu qavsli shaklda yozilgan.
+  it("qavs ichidagi muqobil shaklni ('und') qo'shib o'qiydi", () => {
+    expect(isNumberWord('hundert(und)eins')).toBe(true);
+  });
+
+  // ICHIDA "zahl" bo'lgani uchun noto'g'ri ushlanmasligi kerak — bu
+  // ANIQ so'z solishtiruvi, pastki qator qidiruvi emas.
+  it("son bo'lmagan so'zni sonning bir qismi deb aralashtirmaydi", () => {
+    expect(isNumberWord('die Postleitzahl')).toBe(false);
+    expect(isNumberWord('der Apfel')).toBe(false);
+  });
+});
+
+describe('isNumeric', () => {
+  // Bularning o'zi son emas, sonlash haqidagi mavhum ot — lekin ularga
+  // ham (matn taqiqi tufayli) rasm chizib bo'lmaydi.
+  it('son tushunchasi haqidagi otlarni ham ushlaydi', () => {
+    expect(isNumeric('die Zahl (Zahlen)')).toBe(true);
+    expect(isNumeric('die Nummer (Nummern)')).toBe(true);
+  });
+
+  it('oddiy konkret otni son deb hisoblamaydi', () => {
+    expect(isNumeric('das Zimmer (Zimmer)')).toBe(false);
+  });
+});
+
+describe('isPhrase', () => {
+  it('gap tugash belgisi bilan tugagan yozuvni ibora deb taniydi', () => {
+    expect(isPhrase('Wie heißt du?')).toBe(true);
+    expect(isPhrase('Guten Tag!')).toBe(true);
+    expect(isPhrase('Ich heiße…')).toBe(true);
+  });
+
+  it("'/' bilan ikki shakl bergan yozuvni ibora deb taniydi", () => {
+    expect(isPhrase('Ich bin Student/Studentin')).toBe(true);
+  });
+
+  // Qavsli ko'plik ibora emas — u oddiy ot, chizsa bo'ladi.
+  it("qavsli ko'plikni ibora deb hisoblamaydi", () => {
+    expect(isPhrase('das Land (die Länder)')).toBe(false);
+    expect(isPhrase('der Apfel')).toBe(false);
+  });
+});
+
+describe('yakka harf hech qachon picturable emas', () => {
+  it('lotin harfini rad etadi', () => {
+    // Rasm uslubimiz matn, harf va yozuvni QAT'IY taqiqlaydi (Flux
+    // harflarni buzib chizadi, va yozuv javobni oshkor qilardi) — ya'ni
+    // harfni rasm qilib bo'lmaydi. Eski DiB kontentida alifbo bo'limi
+    // bo'lmagani uchun bu qoida hech qachon kerak bo'lmagan; A1 ning
+    // 1-uniti uni birinchi marta ochdi.
+    for (const h of ['C', 'E', 'H', 'I', 'J', 'V', 'W', 'Y', 'Z', 'a', 'z']) {
+      expect(isNeverPicturable(h)).toBe(true);
+    }
+  });
+
+  it('bir harfli SO`Z emas, faqat yakka harf', () => {
+    // Nemischada bir harfli so'z yo'q, lekin qoida keng bo'lmasligi
+    // uchun: ikki va undan ortiq belgili so'zga tegmaydi.
+    expect(isNeverPicturable('in')).toBe(false);
+    expect(isNeverPicturable('Ei')).toBe(false);
+  });
+});
+
+describe('isNeverPicturable', () => {
+  it("mamlakat, qit'a, son va iborani birlashtirib ushlaydi", () => {
+    expect(isNeverPicturable('Deutschland')).toBe(true);
+    expect(isNeverPicturable('Europa')).toBe(true);
+    expect(isNeverPicturable('zwei')).toBe(true);
+    expect(isNeverPicturable('Wie heißt du?')).toBe(true);
+    expect(isNeverPicturable('der Apfel')).toBe(false);
+  });
+});
+
+describe('applyNeverPicturableRule', () => {
+  // Bu haqiqiy chaqiruv yo'lidan o'tadigan tekshiruv: mark-picturable
+  // skripti model/eski fayldan "true" deb o'qigan bo'lsa ham, bu filtr
+  // SO'ZSIZ qo'llanadi. Filtr faqat so'rov matni ichida bo'lganda, u
+  // allaqachon yozilgan (eski, qoidasiz) faylga hech qachon ta'sir
+  // qilmasdi — bu reja davomida bir necha marta chiqqan xato naqshi.
+  it("model yoki eski fayl 'true' deb yozgan bo'lsa ham, mamlakat/son/iborani false ga qaytaradi", () => {
+    const items = [
+      { sourceId: 'a', de: 'Deutschland' },
+      { sourceId: 'b', de: 'zwei' },
+      { sourceId: 'c', de: 'Wie heißt du?' },
+      { sourceId: 'd', de: 'der Apfel' },
+    ];
+    // Xuddi eski, qoidasiz bosqichda model/fayl noto'g'ri "true" deb
+    // yozib qo'ygandek simulyatsiya qilinadi.
+    const staleResult = { a: true, b: true, c: true, d: true };
+
+    expect(applyNeverPicturableRule(items, staleResult)).toEqual({
+      a: false,
+      b: false,
+      c: false,
+      d: true,
+    });
+  });
+});
+
+describe('findMissingPicturable', () => {
+  // `content/daf/picturable.json`da hali ENTRY'si yo'q sourceId'larni
+  // ajratadi. `daf-mark-picturable.ts` faqat shularni modeldan so'raydi —
+  // eski (dib-voc-*) yozuvlar bilan fayl to'la bo'lgani sabab, bu ajratish
+  // bo'lmasa yangi (u01-* va hokazo) kontent hech qachon so'ralmay qolardi.
+  it("faylda entry'si bor sourceId'larni tashlab qoldiradi", () => {
+    const items = [
+      { sourceId: 'a', de: 'hallo' },
+      { sourceId: 'b', de: 'Frau' },
+      { sourceId: 'c', de: 'Mann' },
+    ];
+    const existing = { a: true };
+
+    expect(findMissingPicturable(items, existing)).toEqual([
+      { sourceId: 'b', de: 'Frau' },
+      { sourceId: 'c', de: 'Mann' },
+    ]);
+  });
+
+  it("hech narsa yo'qolmagan bo'lsa bo'sh ro'yxat qaytaradi", () => {
+    const items = [{ sourceId: 'a', de: 'hallo' }];
+    expect(findMissingPicturable(items, { a: false })).toEqual([]);
+  });
+});
+
+describe('mergePicturable', () => {
+  // Faylning shartnomasi: hal qilingan qaror hech qachon qayta yozilmaydi.
+  // Tartib buni TA'MINLAYDI (chaqiruvchining ehtiyotkorligiga emas) —
+  // `existing` OXIRIDA yoziladi, shuning uchun `additions` ichida xato
+  // qilib takrorlangan sourceId bo'lsa ham u g'olib chiqmaydi.
+  it('existing yozuvlar additions ustidan g`olib chiqadi', () => {
+    const existing = { a: true, b: false };
+    const additions = { a: false, c: true };
+
+    expect(mergePicturable(existing, additions)).toEqual({
+      a: true,
+      b: false,
+      c: true,
+    });
+  });
+
+  it("bo'sh additions bilan existing o'zgarishsiz qaytadi", () => {
+    const existing = { a: true };
+    expect(mergePicturable(existing, {})).toEqual({ a: true });
+  });
+});
+
+describe('parsePicturable', () => {
+  it('ha/yo`q javobini o`qiydi', () => {
+    expect(parsePicturable('1. ha\n2. yo`q\n3. ha', 3)).toEqual([
+      true,
+      false,
+      true,
+    ]);
+  });
+
+  // Javob soni so'ralganidan farq qilsa, qaysi so'zga qaysi javob
+  // tegishli ekani noma'lum bo'lib qoladi.
+  it('javob soni mos kelmasa yiqiladi', () => {
+    expect(() => parsePicturable('1. ha', 3)).toThrow(/3/);
+  });
+});
+
+describe('buildPicturablePrompt', () => {
+  it('nemischa va o`zbekchani birga beradi', () => {
+    const p = buildPicturablePrompt([{ de: 'der Apfel', uz: 'olma' }]);
+    expect(p).toContain('der Apfel');
+    expect(p).toContain('olma');
+  });
+
+  it('so`rov inglizchasiz, de va uz ustiga quriladi', () => {
+    // A1 kontentida inglizcha maydon YO'Q (`u01/woerter.json` da faqat
+    // `de`, `uz`). 53 so'zni inglizchaga tarjima qilish yana bitta pullik
+    // chaqiruv va yana bitta qo'lda tekshiriladigan kontent qatlami
+    // degani — rasm chizilishini hal qilish uchun bunday narsa kiritish
+    // teskari tartib.
+    const p = buildPicturablePrompt([
+      { sourceId: 'u01-s2-frau', de: 'Frau', uz: 'ayol' },
+    ]);
+    expect(p).toContain('Frau');
+    expect(p).toContain('ayol');
+  });
+});

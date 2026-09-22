@@ -10,7 +10,9 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import api from "@/lib/api";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { SummaryCard } from "./summary-card";
-import { SalaryAddAdvanceDialog } from "./salary-add-advance-dialog";
+import { SalaryAdvanceDialog } from "./salary-advance-dialog";
+import { SalaryDeleteAdvanceDialog } from "./salary-delete-advance-dialog";
+import type { EditableAdvance } from "./advance-row-actions";
 import { SalaryAdvanceCalendar } from "./salary-advance-calendar";
 import { SalaryAdvanceDayPanel } from "./salary-advance-day-panel";
 import { currentMonthKey } from "./salary-utils";
@@ -30,6 +32,9 @@ export interface AdvanceRow {
   paymentMethod: "CASH" | "CARD";
   description: string;
   createdAt: string;
+  settled: boolean;
+  settledPeriodStart: string | null;
+  settledPeriodEnd: string | null;
   user: {
     id: number;
     firstName: string;
@@ -83,6 +88,12 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   // Panel orqali ochilganda dialogga uzatiladigan sana.
   const [addDate, setAddDate] = useState<Date | null>(null);
+  // Tahrirlanayotgan va o'chirilayotgan avans — ikkalasi ham vaqtinchalik UI
+  // holati, URL'ga yozilmaydi.
+  const [editAdvance, setEditAdvance] = useState<EditableAdvance | null>(null);
+  const [deleteAdvance, setDeleteAdvance] = useState<EditableAdvance | null>(
+    null,
+  );
 
   const maxMonth = currentMonthKey();
   const month = filters.month || maxMonth;
@@ -91,7 +102,9 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
     queryKey: ["salary-advance-calendar", month],
     queryFn: () =>
       api
-        .get<CalendarResponse>("/salary/advance-calendar", { params: { month } })
+        .get<CalendarResponse>("/salary/advance-calendar", {
+          params: { month },
+        })
         .then((r) => r.data),
     staleTime: 0,
   });
@@ -145,7 +158,9 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
             }
             tone="blue"
             label="Berilgan kunlar"
-            value={totals ? `${formatNumber(totals.daysWithAdvances)} kun` : "—"}
+            value={
+              totals ? `${formatNumber(totals.daysWithAdvances)} kun` : "—"
+            }
           />
           <SummaryCard
             icon={
@@ -204,6 +219,8 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
               setAddDate(new Date(`${d}T00:00:00`));
               setAddOpen(true);
             }}
+            onEdit={setEditAdvance}
+            onDelete={setDeleteAdvance}
           />
         </div>
       )}
@@ -222,7 +239,7 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
         </div>
       )}
 
-      <SalaryAddAdvanceDialog
+      <SalaryAdvanceDialog
         open={addOpen}
         onOpenChange={(v) => {
           setAddOpen(v);
@@ -230,6 +247,24 @@ export function SalaryAdvancesTab({ canPay }: { canPay: boolean }) {
         }}
         onSaved={() => refetch()}
         defaultDate={addDate}
+      />
+
+      {/* Tahrirlash — xuddi shu oyna, `advance` berilgan rejimda */}
+      <SalaryAdvanceDialog
+        open={!!editAdvance}
+        onOpenChange={(v) => {
+          if (!v) setEditAdvance(null);
+        }}
+        onSaved={() => refetch()}
+        advance={editAdvance}
+      />
+
+      <SalaryDeleteAdvanceDialog
+        advance={deleteAdvance}
+        onOpenChange={(v) => {
+          if (!v) setDeleteAdvance(null);
+        }}
+        onDeleted={() => refetch()}
       />
     </div>
   );

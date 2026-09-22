@@ -3,6 +3,7 @@ import api from "@/lib/api";
 import {
   ALL_BRANCHES,
   BRANCH_STORAGE_KEY,
+  branchScopeChanged,
   resolveStoredBranch,
 } from "@/lib/branch-header";
 
@@ -30,6 +31,13 @@ interface BranchSwitcherState {
   loaded: boolean;
   /** True when the user may pick "Barcha filiallar" (CEO only). */
   canSelectAll: boolean;
+  /**
+   * Bumps each time the saved selection changes what requests claim — a real
+   * switch, or resolving away from a saved branch that is no longer allowed.
+   * `BranchScopedMain` keys the page content on it. Resolving to the branch
+   * already saved does NOT bump it; see `branchScopeChanged`.
+   */
+  scopeVersion: number;
   selectBranch: (branch: BranchSelection) => void;
   fetchBranches: () => Promise<void>;
   refetchBranches: () => Promise<void>;
@@ -49,11 +57,30 @@ async function loadBranches(): Promise<BranchItem[]> {
   return data;
 }
 
-function persist(selection: BranchSelection) {
-  localStorage.setItem(
-    BRANCH_STORAGE_KEY,
-    selection ? String(selection.id) : ALL_BRANCHES,
-  );
+function storedValue(selection: BranchSelection): string {
+  return selection ? String(selection.id) : ALL_BRANCHES;
+}
+
+/**
+ * Save the selection; returns true when that changed the scope THIS tab's data
+ * on screen was fetched under.
+ *
+ * Before the switcher resolves, that scope is whatever was saved — the page's
+ * first requests read it from `localStorage`. After it resolves, it is this
+ * tab's own selection, NOT `localStorage`: another tab may have rewritten the
+ * shared key, and this tab's rows still belong to what it selected.
+ */
+function persist(state: BranchSwitcherState, selection: BranchSelection): boolean {
+  const previous = state.loaded
+    ? storedValue(state.selectedBranch)
+    : localStorage.getItem(BRANCH_STORAGE_KEY);
+  const next = storedValue(selection);
+  localStorage.setItem(BRANCH_STORAGE_KEY, next);
+  return branchScopeChanged(previous, next);
+}
+
+function nextScopeVersion(state: BranchSwitcherState, changed: boolean): number {
+  return changed ? state.scopeVersion + 1 : state.scopeVersion;
 }
 
 /** Restore the previous selection, dropping it when it is no longer legal. */
@@ -73,16 +100,41 @@ export const useBranchSwitcher = create<BranchSwitcherState>((set, get) => ({
   selectedBranch: null,
   loaded: false,
   canSelectAll: false,
+  scopeVersion: 0,
 
   selectBranch: (branch) => {
-    persist(branch);
-    set({ selectedBranch: branch });
+    const changed = persist(get(), branch);
+    set((s) => ({
+      selectedBranch: branch,
+      scopeVersion: nextScopeVersion(s, changed),
+    }));
   },
 
   hydrateFor: (branches, canSelectAll) => {
+    // `BranchSwitcher` re-runs this whenever the `user` object changes — every
+    // token refresh, every profile save. Once resolved, keep THIS tab's
+    // selection while it is still allowed (as `refetchBranches` does): re-reading
+    // the shared key would adopt another tab's switch, remount this page
+    // mid-task and overwrite the key that tab's own requests rely on.
+    const { loaded, selectedBranch } = get();
+    const stillAllowed =
+      selectedBranch === null
+        ? canSelectAll
+        : branches.some((b) => b.id === selectedBranch.id);
+    if (loaded && stillAllowed) {
+      set({ branches, canSelectAll });
+      return;
+    }
+
     const selected = restoreSelection(branches, canSelectAll);
-    persist(selected);
-    set({ branches, selectedBranch: selected, canSelectAll, loaded: true });
+    const changed = persist(get(), selected);
+    set((s) => ({
+      branches,
+      selectedBranch: selected,
+      canSelectAll,
+      loaded: true,
+      scopeVersion: nextScopeVersion(s, changed),
+    }));
   },
 
   fetchBranches: async () => {
@@ -91,8 +143,13 @@ export const useBranchSwitcher = create<BranchSwitcherState>((set, get) => ({
       const data = await loadBranches();
       const canSelectAll = get().canSelectAll;
       const selected = restoreSelection(data, canSelectAll);
-      persist(selected);
-      set({ branches: data, selectedBranch: selected, loaded: true });
+      const changed = persist(get(), selected);
+      set((s) => ({
+        branches: data,
+        selectedBranch: selected,
+        loaded: true,
+        scopeVersion: nextScopeVersion(s, changed),
+      }));
     } catch {
       // silently fail
     }
@@ -111,8 +168,13 @@ export const useBranchSwitcher = create<BranchSwitcherState>((set, get) => ({
       const next = stillValid
         ? selectedBranch
         : restoreSelection(data, canSelectAll);
-      persist(next);
-      set({ branches: data, selectedBranch: next, loaded: true });
+      const changed = persist(get(), next);
+      set((s) => ({
+        branches: data,
+        selectedBranch: next,
+        loaded: true,
+        scopeVersion: nextScopeVersion(s, changed),
+      }));
     } catch {
       // silently fail
     }

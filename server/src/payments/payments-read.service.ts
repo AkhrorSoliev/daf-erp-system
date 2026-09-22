@@ -6,6 +6,7 @@ import {
   ReportBranchIds,
   branchIdWhere,
 } from '../common/finance/report-branch-scope';
+import { tashkentRangeUtc } from '../common/date/tashkent';
 
 /**
  * Payment reads are branch-confined.
@@ -50,10 +51,7 @@ export class PaymentsReadService {
         : { status: { not: PaymentStatus.REVERSED } }),
       ...(query.startDate &&
         query.endDate && {
-          createdAt: {
-            gte: new Date(query.startDate),
-            lte: new Date(query.endDate + 'T23:59:59.999Z'),
-          },
+          createdAt: tashkentRangeUtc(query.startDate, query.endDate),
         }),
     };
 
@@ -137,10 +135,7 @@ export class PaymentsReadService {
         : { status: { not: PaymentStatus.REVERSED } }),
       ...(query.startDate &&
         query.endDate && {
-          createdAt: {
-            gte: new Date(query.startDate),
-            lte: new Date(query.endDate + 'T23:59:59.999Z'),
-          },
+          createdAt: tashkentRangeUtc(query.startDate, query.endDate),
         }),
     };
 
