@@ -74,18 +74,21 @@ export class AbsenceAutoPauseCronService {
       return { paused: 0, warned: 0, blockedByCap: false };
     }
 
-    // BITTA so'rov: ogohlantirish chegarasidan boshlab hammasi. Pauza
-    // ro'yxati shundan ajratiladi — ikkinchi marta hisoblash ro'yxat bilan
-    // harakatning zid bo'lishiga yo'l ochardi.
+    // BITTA so'rov: BIRINCHI qoldirishdan boshlab hammasi. Pauza ro'yxati
+    // shundan ajratiladi — ikkinchi marta hisoblash ro'yxat bilan
+    // harakatning zid bo'lishiga yo'l ochardi. Threshold har doim 1: uch
+    // bosqichning eng yengili (`nudgeStudent`) aynan birinchi qoldirishda
+    // ishga tushadi, `sendReminders` esa har bir qatorni o'z chegarasiga
+    // qarab ikkinchi yoki uchinchi bosqichga yo'naltiradi.
     const rows = await this.streaks.computeStreaks({
       companyId,
-      threshold: settings.warnThreshold,
+      threshold: 1,
     });
 
     const toPause = rows.filter(
       (r) => r.consecutiveAbsentCount >= settings.pauseThreshold,
     );
-    const toWarn = rows.filter(
+    const toRemind = rows.filter(
       (r) => r.consecutiveAbsentCount < settings.pauseThreshold,
     );
 
@@ -142,10 +145,11 @@ export class AbsenceAutoPauseCronService {
       }
     }
 
-    const warned = await this.sendWarnings(
+    const warned = await this.sendReminders(
       companyId,
-      toWarn,
+      toRemind,
       targets,
+      settings.warnThreshold,
       settings.pauseThreshold,
     );
 
@@ -166,12 +170,16 @@ export class AbsenceAutoPauseCronService {
    *
    * Cron har kuni yuradi, sanoq esa keyingi darsgacha o'zgarmaydi. Kunlik
    * marker bo'lsa o'quvchi bir xil xabarni har kuni olardi, shuning uchun
-   * marker — qoldirish SANASI (`AbsenceWarningLog` unique kaliti).
+   * marker — qoldirish SANASI (`AbsenceWarningLog` unique kaliti). Marker
+   * ikkala bosqich (1 va 2) uchun bitta jadvalda — qaysi bosqich ekani
+   * `streak` va `warnThreshold` solishtirilib qayta chiqariladi, alohida
+   * ustun kerak emas.
    */
-  private async sendWarnings(
+  private async sendReminders(
     companyId: number,
     rows: StreakRow[],
     targets: Map<string, PauseTarget>,
+    warnThreshold: number,
     pauseThreshold: number,
   ): Promise<number> {
     if (rows.length === 0) return 0;
@@ -188,18 +196,23 @@ export class AbsenceAutoPauseCronService {
     });
     const sentSet = new Set(already.map((a) => a.enrollmentId));
 
-    let warned = 0;
+    let sent = 0;
     for (const row of rows) {
       if (sentSet.has(row.enrollmentId)) continue;
       const target = targets.get(row.enrollmentId);
       if (!target) continue;
 
-      const remaining = pauseThreshold - row.consecutiveAbsentCount;
+      const isWarnTier = row.consecutiveAbsentCount >= warnThreshold;
       try {
-        const sentToStudent = await this.notify.warnStudent(
-          { ...target, streak: row.consecutiveAbsentCount },
-          remaining,
-        );
+        const sentToStudent = isWarnTier
+          ? await this.notify.warnStudent(
+              { ...target, streak: row.consecutiveAbsentCount },
+              pauseThreshold - row.consecutiveAbsentCount,
+            )
+          : await this.notify.nudgeStudent({
+              ...target,
+              streak: row.consecutiveAbsentCount,
+            });
         await this.prisma.absenceWarningLog.create({
           data: {
             enrollmentId: row.enrollmentId,
@@ -211,14 +224,14 @@ export class AbsenceAutoPauseCronService {
             companyId,
           },
         });
-        warned++;
+        sent++;
       } catch (err) {
         this.logger.warn(
           `Ogohlantirish yiqildi #${row.studentId}: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
     }
-    return warned;
+    return sent;
   }
 
   /** Xabar uchun kerak bo'lgan ism, guruh, filial va ustozlar — bitta so'rov. */
@@ -247,6 +260,7 @@ export class AbsenceAutoPauseCronService {
             name: true,
             branchId: true,
             teachers: { select: { teacherId: true } },
+            branch: { select: { phone: true } },
           },
         },
       },
@@ -261,7 +275,13 @@ export class AbsenceAutoPauseCronService {
           streak: 0,
           companyId,
           student: e.student,
-          group: e.group,
+          group: {
+            id: e.group.id,
+            name: e.group.name,
+            branchId: e.group.branchId,
+            branchPhone: e.group.branch?.phone ?? null,
+            teachers: e.group.teachers,
+          },
         },
       ]),
     );
