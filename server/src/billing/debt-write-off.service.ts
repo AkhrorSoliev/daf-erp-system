@@ -449,7 +449,13 @@ function countByStatus(records: { status: AttendanceStatus }[]) {
 // STUDENT_ATTENDED was removed when eligibility was relaxed — admin now
 // makes the decision via the UI even when the student attended a few
 // lessons. The constant is no longer emitted by the service.
-export type DebtWriteOffEligibilityReason = 'NO_DEBT' | 'NO_ABSENT_IN_CYCLE';
+// `DISABLED` ni bu servis EMAS, `StudentEnrollmentService` qo'yadi:
+// `payment.debtWriteOffEnabled` o'chiq bo'lsa hisob-kitob baribir
+// ko'rsatiladi, lekin `eligible: false` bilan (CEO, 21.09.2026, 9-javob).
+export type DebtWriteOffEligibilityReason =
+  | 'NO_DEBT'
+  | 'NO_ABSENT_IN_CYCLE'
+  | 'DISABLED';
 
 export interface DebtWriteOffEligibilityDetails {
   studentId: number;

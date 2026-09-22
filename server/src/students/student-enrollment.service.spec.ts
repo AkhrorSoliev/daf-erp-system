@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { StudentEnrollmentService } from './student-enrollment.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
@@ -7,11 +11,14 @@ import { EnrollmentBillingService } from '../billing/enrollment-billing.service'
 import { DebtWriteOffService } from '../billing/debt-write-off.service';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SettingsService } from '../settings/settings.service';
 
 describe('StudentEnrollmentService', () => {
   let service: StudentEnrollmentService;
   let prisma: any;
   let monthlyChargeMock: any;
+  let settingsMock: any;
+  let debtWriteOffMock: any;
 
   const mockStudent = {
     id: 1,
@@ -117,7 +124,7 @@ describe('StudentEnrollmentService', () => {
         },
         {
           provide: DebtWriteOffService,
-          useValue: {
+          useValue: (debtWriteOffMock = {
             computeEligibility: jest.fn(),
             executeWriteOff: jest.fn().mockResolvedValue({
               transaction: { id: 'tx-1' },
@@ -125,7 +132,15 @@ describe('StudentEnrollmentService', () => {
               balanceAfter: 0,
             }),
             reverseWriteOff: jest.fn(),
-          },
+          }),
+        },
+        {
+          // Boshlang'ich: kechirish O'CHIQ (9-javob). Yoqadigan testlar
+          // mockResolvedValue(true) bilan qayta belgilaydi.
+          provide: SettingsService,
+          useValue: (settingsMock = {
+            get: jest.fn().mockResolvedValue(false),
+          }),
         },
         {
           provide: MonthlyChargeService,
@@ -617,6 +632,133 @@ describe('StudentEnrollmentService', () => {
           enrollmentId: 'enroll-1',
           companyId: 1001,
           performedById: 10001,
+        }),
+      );
+    });
+
+    it("qarz kechirish O'CHIQ (boshlang'ich): writeOffCycleDebt=true rad etiladi, yozilish tegilmaydi", async () => {
+      prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+        id: 'reason-1',
+        name: 'Moliyaviy sabablar',
+        companyId: 1001,
+        appliesTo: ['GROUP_REMOVAL'],
+      });
+
+      await expect(
+        service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+          departureReasonId: 'reason-1',
+          writeOffCycleDebt: true,
+          writeOffReason: "Yo'qolgan o'quvchi",
+          writeOffConfirmAmount: 100_000,
+        }),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(prisma.enrollment.update).not.toHaveBeenCalled();
+      expect(debtWriteOffMock.executeWriteOff).not.toHaveBeenCalled();
+      // Sozlama KOMPANIYA darajasida o'qiladi: `payment.debtWriteOffEnabled`
+      // `companyLevelOnly` — filial qiymati umuman saqlanmaydi, shuning
+      // uchun `branchId` uzatilmaydi.
+      expect(settingsMock.get).toHaveBeenCalledWith(
+        1001,
+        'payment.debtWriteOffEnabled',
+      );
+    });
+
+    it("kechirish so'ralmasa sozlama umuman o'qilmaydi — oddiy chiqarish o'zgarmaydi", async () => {
+      prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+        id: 'reason-1',
+        name: 'Moliyaviy sabablar',
+        companyId: 1001,
+        appliesTo: ['GROUP_REMOVAL'],
+      });
+
+      await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+        departureReasonId: 'reason-1',
+      });
+
+      expect(prisma.enrollment.update).toHaveBeenCalled();
+      expect(settingsMock.get).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getDebtWriteOffEligibility', () => {
+    it("sozlama o'chiq bo'lsa eligible=false, reason=DISABLED — hisob ko'rinadi, amal yo'q", async () => {
+      prisma.enrollment.findFirst.mockResolvedValue({ studentId: 1 });
+      debtWriteOffMock.computeEligibility.mockResolvedValue({
+        eligible: true,
+        details: { currentBalance: -100_000 },
+      });
+
+      const res = await service.getDebtWriteOffEligibility(
+        1,
+        'enroll-1',
+        1001,
+        10001,
+      );
+
+      expect(res).toMatchObject({
+        eligible: false,
+        reason: 'DISABLED',
+        details: { currentBalance: -100_000 },
+      });
+    });
+
+    it("sozlama yoqiq bo'lsa DebtWriteOffService javobi o'zgarishsiz qaytadi", async () => {
+      settingsMock.get.mockResolvedValue(true);
+      prisma.enrollment.findFirst.mockResolvedValue({ studentId: 1 });
+      debtWriteOffMock.computeEligibility.mockResolvedValue({
+        eligible: true,
+        details: { currentBalance: -100_000 },
+      });
+
+      const res = await service.getDebtWriteOffEligibility(
+        1,
+        'enroll-1',
+        1001,
+        10001,
+      );
+
+      expect(res).toEqual({
+        eligible: true,
+        details: { currentBalance: -100_000 },
+      });
+    });
+  });
+
+  describe('writeOffDroppedEnrollmentDebt', () => {
+    beforeEach(() => {
+      prisma.enrollment.findFirst.mockResolvedValue({
+        id: 'enroll-1',
+        status: 'DROPPED',
+        studentId: 1,
+      });
+    });
+
+    it("sozlama o'chiq bo'lsa ForbiddenException, executeWriteOff chaqirilmaydi", async () => {
+      await expect(
+        service.writeOffDroppedEnrollmentDebt(1, 'enroll-1', 10001, 1001, {
+          reason: "Yo'qolgan o'quvchi",
+          confirmAmount: 100_000,
+        }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(debtWriteOffMock.executeWriteOff).not.toHaveBeenCalled();
+    });
+
+    it("sozlama yoqiq bo'lsa kechirish avvalgidek o'tadi", async () => {
+      settingsMock.get.mockResolvedValue(true);
+
+      await service.writeOffDroppedEnrollmentDebt(1, 'enroll-1', 10001, 1001, {
+        reason: "Yo'qolgan o'quvchi",
+        confirmAmount: 100_000,
+      });
+
+      expect(debtWriteOffMock.executeWriteOff).toHaveBeenCalledWith(
+        expect.objectContaining({
+          enrollmentId: 'enroll-1',
+          companyId: 1001,
+          performedById: 10001,
+          reason: "Yo'qolgan o'quvchi",
+          confirmAmount: 100_000,
         }),
       );
     });

@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import {
@@ -35,6 +36,7 @@ import {
   MonthlyChargeService,
 } from '../billing/monthly-charge.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SettingsService } from '../settings/settings.service';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
 import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
@@ -55,7 +57,29 @@ export class StudentEnrollmentService {
     private debtWriteOffService: DebtWriteOffService,
     private monthlyChargeService: MonthlyChargeService,
     private eventEmitter: EventEmitter2,
+    private settingsService: SettingsService,
   ) {}
+
+  /**
+   * Qarz kechirish yoqilganmi — `payment.debtWriteOffEnabled`.
+   * CEO (21.09.2026, 9-javob): boshlang'ich holatda O'CHIQ, qarz butun
+   * tarixi bilan saqlanadi. Sozlama ATAYLAB kompaniya darajasida
+   * (`companyLevelOnly`): filial qiymati kompaniyanikidan ustun bo'lgani
+   * uchun, filial darajasida yozilsa Branch Director CEO taqiqlagan
+   * narsani aynan o'ziga qayta yoqib olardi — kechirish tugmalari esa
+   * aynan BD va Administrator qo'lida.
+   */
+  private async assertDebtWriteOffEnabled(companyId: number): Promise<void> {
+    const enabled = await this.settingsService.get(
+      companyId,
+      'payment.debtWriteOffEnabled',
+    );
+    if (!enabled) {
+      throw new ForbiddenException(
+        "Qarz kechirish o'chirilgan — qarz butun tarixi bilan saqlanadi (Sozlamalar → To'lov → «Qarz kechirishga ruxsat»)",
+      );
+    }
+  }
 
   async enrollToGroup(
     studentId: number,
@@ -594,6 +618,9 @@ export class StudentEnrollmentService {
     // Validate write-off inputs upfront (cheap check, before the tx).
     // Eligibility itself is re-verified inside the tx for race safety.
     if (input.writeOffCycleDebt) {
+      // Eng avval — hech narsa yozilmasidan oldin. Kechirish so'ralmasa
+      // sozlama umuman o'qilmaydi: oddiy guruhdan chiqarish o'zgarmaydi.
+      await this.assertDebtWriteOffEnabled(companyId);
       if (!input.writeOffReason || input.writeOffReason.trim().length < 5) {
         throw new BadRequestException(
           'Hisobdan chiqarish izohi majburiy (kamida 5 belgi)',
@@ -783,7 +810,22 @@ export class StudentEnrollmentService {
       enrollment.studentId,
       companyId,
     );
-    return this.debtWriteOffService.computeEligibility(enrollmentId, companyId);
+    const eligibility = await this.debtWriteOffService.computeEligibility(
+      enrollmentId,
+      companyId,
+    );
+
+    // Sozlama o'chiq bo'lsa hisob-kitob baribir qaytadi — admin summani va
+    // sikl ko'rsatkichlarini ko'radi, faqat AMAL yopiladi.
+    const enabled = await this.settingsService.get(
+      companyId,
+      'payment.debtWriteOffEnabled',
+    );
+    if (!enabled) {
+      return { ...eligibility, eligible: false, reason: 'DISABLED' as const };
+    }
+
+    return eligibility;
   }
 
   /**
@@ -830,6 +872,8 @@ export class StudentEnrollmentService {
       enrollment.studentId,
       companyId,
     );
+
+    await this.assertDebtWriteOffEnabled(companyId);
 
     const result = await this.debtWriteOffService.executeWriteOff({
       enrollmentId,
