@@ -23,7 +23,7 @@ render testlari yo'q (`client/vitest.config.mts` da ataylab).
 
 ## Global Constraints
 
-- **Til:** foydalanuvchi matni, kod izohlari va commit xabarlari lotin o'zbekchada. `client/CLAUDE.md` esa faqat inglizcha (uning «Language Policy» bo'limi); UI satrlaridan iqtibos bundan mustasno.
+- **Til:** foydalanuvchi matni, yangi kod izohlari va commit xabarlari lotin o'zbekchada; ko'chirilgan mavjud inglizcha izohlar (masalan, `visibleForRoles` ning JSDoc'i) o'z holicha qoladi. `client/CLAUDE.md` esa faqat inglizcha (uning «Language Policy» bo'limi); UI satrlaridan iqtibos bundan mustasno.
 - **Ish joyi:** `/Users/a1111/Desktop/daf-erp-system/.claude/worktrees/sozlamalar-sahifasi`, shox `worktree-sozlamalar-sahifasi` (`origin/main` 0534d57e dan). Asosiy papkaga (`/Users/a1111/Desktop/daf-erp-system`, shox `feat/sozlamalar-sabablar`, saqlanmagan o'zgarishlar bilan) **tegilmaydi**.
 - **Buyruqlar** `client/` ichidan: `cd /Users/a1111/Desktop/daf-erp-system/.claude/worktrees/sozlamalar-sahifasi/client`.
 - **Har commit** oxirida: `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Faqat aniq fayllar `git add` qilinadi — `git add -A` / `git add .` ishlatilmaydi.
@@ -143,7 +143,9 @@ describe("getVisibleSettingsSections — /settings da kim nimani ko'radi", () =>
   });
 
   it("bir nechta rol bo'lsa, ko'rinish rollar birlashmasi", () => {
-    expect(visibleTitles([ADMINISTRATOR, CASHIER])).toEqual(visibleTitles([ADMINISTRATOR]));
+    // Kassir ataylab birinchi: faqat birinchi rolga qaraydigan xato filtr
+    // shu yerda kassir ro'yxatini (3 ta punkt) qaytarib, yiqiladi.
+    expect(visibleTitles([CASHIER, ADMINISTRATOR])).toEqual(visibleTitles([ADMINISTRATOR]));
   });
 });
 
