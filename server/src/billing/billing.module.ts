@@ -9,7 +9,7 @@ import { BillingController } from './billing.controller';
 import { StudentDebtNotificationListener } from './student-debt-notification.listener';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { SalaryModule } from '../salary/salary.module';
-import { TelegramModule } from '../telegram/telegram.module';
+import { TelegramDigestModule } from '../telegram-digest/telegram-digest.module';
 import { SettingsModule } from '../settings/settings.module';
 
 /**
@@ -17,8 +17,8 @@ import { SettingsModule } from '../settings/settings.module';
  * delegate to, plus the enrollment-lifecycle prepaid refund helper used
  * when an enrollment is DROPPED or transferred. The debt-notification
  * listener lives here too — it reacts to attendance events from the
- * attendance module and pings the student over Telegram when the
- * billing layer just pushed their balance into the red.
+ * attendance module and queues a Telegram digest row (ADR-0025) when the
+ * billing layer just pushed the student's balance into the red.
  *
  * `DebtWriteOffService` is the "yo'qolgan o'quvchi" write-off flow —
  * admin-driven clearing of the current-cycle portion of a student's debt
@@ -30,7 +30,12 @@ import { SettingsModule } from '../settings/settings.module';
  * counterpart of the lesson-pack billing pipeline above.
  */
 @Module({
-  imports: [TransactionsModule, SalaryModule, TelegramModule, SettingsModule],
+  imports: [
+    TransactionsModule,
+    SalaryModule,
+    TelegramDigestModule,
+    SettingsModule,
+  ],
   controllers: [BillingController],
   providers: [
     LessonBillingService,
