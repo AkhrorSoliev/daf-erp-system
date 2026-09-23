@@ -5,6 +5,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { PushService } from '../notifications/push.service';
 import { TelegramService } from '../telegram/telegram.service';
+import { tashkentDateStr } from '../common/date/tashkent';
+import { formatTashkentDate } from './absence-pause.constants';
 
 /** Xabar yuborish uchun kerak bo'lgan hamma narsa, bitta joyda. */
 export interface PauseTarget {
@@ -64,10 +66,24 @@ export class AbsencePauseNotifyService {
    * yetmagan paytda. Faqat o'quvchiga: bitta dars qoldirish uchun admin va
    * ustozni xabardor qilish shovqin bo'lardi, ular 2 va 3-bosqichda
    * baribir xabar oladi.
+   *
+   * Says «Bugun» only when the message goes out on the lesson's own
+   * Tashkent day, which is what the 20:30 evening run does. Attendance
+   * entered after that run is picked up at 07:30, when the lesson is already
+   * an earlier day, so the message names its date instead. `now` is the
+   * moment of sending.
    */
-  async nudgeStudent(target: PauseTarget): Promise<boolean> {
+  async nudgeStudent(
+    target: PauseTarget,
+    absenceDate: Date,
+    now: Date = new Date(),
+  ): Promise<boolean> {
+    const lesson =
+      tashkentDateStr(absenceDate) === tashkentDateStr(now)
+        ? 'Bugun darsda'
+        : `${formatTashkentDate(absenceDate)} dagi darsda`;
     const text =
-      `👋 <b>Bugun darsda ko'rinmadingiz</b>\n\n` +
+      `👋 <b>${lesson} ko'rinmadingiz</b>\n\n` +
       `${target.group.name} guruhidagi darsingizga kelmadingiz. Hammasi joyidami?\n\n` +
       `Kelasi darsda kutamiz!` +
       phoneLine(target.group.branchPhone);

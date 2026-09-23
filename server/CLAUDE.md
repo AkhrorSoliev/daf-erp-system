@@ -462,7 +462,7 @@ The group "Davomat (nuqtalar)" tab (`attendance-dots-tab.tsx`) renders one dot p
 
 #### Per-Student Attendance Telegram Notifications
 
-- **Currently disabled (temporary).** The listener is gated behind the `STUDENT_ATTENDANCE_NOTIFICATIONS_ENABLED` env flag and short-circuits unless it equals `'true'`. Default (unset) = no messages sent. Set `STUDENT_ATTENDANCE_NOTIFICATIONS_ENABLED=true` to re-enable without any code change. The behaviour described below applies only when the flag is on.
+- **Currently disabled (temporary).** The listener is gated behind the `STUDENT_ATTENDANCE_NOTIFICATIONS_ENABLED` env flag and short-circuits unless it equals `'true'`. Default (unset) = no messages sent. Set `STUDENT_ATTENDANCE_NOTIFICATIONS_ENABLED=true` to re-enable without any code change. The behaviour described below applies only when the flag is on. **Do not turn it on while automatic pause is enabled** — its ABSENT message and the pause's stage-1 message (see "Automatic pause after consecutive absences") would both reach the student for the same lesson.
 - `StudentAttendanceNotificationListener` (`src/attendance/student-attendance-notification.listener.ts`) sends a personal Telegram message to the **student themselves** whenever their attendance status changes to `PRESENT`, `LATE`, or `ABSENT`
 - `EXCUSED` is intentionally skipped (no notification when an absence is officially excused)
 - **Trigger:** `attendance.student.recorded` event emitted per-entry from both manual `AttendanceSaveService.save()` (post-tx, only for entries where `oldStatus !== newStatus` so idempotent re-saves don't spam) and `QrAttendanceScanService.scanQr()` (per scan, after the early-return for already-PRESENT)
@@ -524,10 +524,20 @@ cost 43,3 mln so'm of teacher salary — 7,7 mln of it fronted by the centre,
   next lesson, so a per-day marker would re-send the same warning every
   morning. The table doubles as the record that answers "how many of the
   warned students came back?".
-- **The cron runs at 07:30 Tashkent, not at night.** The earliest lesson is
-  08:00 and the latest ends 20:00; 5,6% of attendance is corrected on a later
-  day, which an evening run would miss, and a student should not receive the
-  message at midnight.
+- **Two runs: the messages at 20:30, the pause at 07:30 (Tashkent).**
+  `remindForCompany` (20:30) sends stages 1 and 2 on the lesson's own day,
+  after the latest lesson ends at 20:00 — which is what lets stage 1 say
+  «Bugun». `runForCompany` (07:30) pauses before the earliest lesson at 08:00,
+  and also sends stages 1 and 2 for attendance entered after the evening run,
+  naming the lesson's date instead. Both read `AbsenceWarningLog`, so nothing
+  is sent twice. Measured on production (24.07–22.09.2026, 870 lessons): no
+  lesson's attendance was last changed between 20:00 and 07:30, so the evening
+  run misses no correction the morning run would see; 15 lessons were changed
+  after the next 07:30, which neither run sees. **Do not move the messages to
+  the moment attendance is saved:** 106 of those lessons were saved again
+  later, 17% are marked at the start of the lesson (a late student would be
+  told they missed the lesson they are sitting in), and a teacher cannot
+  correct their own save.
 - **`AbsencePauseSetting.enabled` defaults to `false`** — the migration pauses
   nobody by itself. Enabling is the CEO's separate, deliberate step, and
   disabling is a toggle rather than a deploy (in 2026-07 turning off automatic

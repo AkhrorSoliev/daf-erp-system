@@ -1,6 +1,6 @@
 import { AbsenceAutoPauseCronService } from './absence-auto-pause.cron.service';
 
-describe('AbsenceAutoPauseCronService.runForCompany', () => {
+describe('AbsenceAutoPauseCronService', () => {
   const companyId = 1001;
 
   function streak(studentId: number, count: number) {
@@ -41,14 +41,38 @@ describe('AbsenceAutoPauseCronService.runForCompany', () => {
       announcePause: jest.fn().mockResolvedValue(undefined),
       alertCeos: jest.fn().mockResolvedValue(undefined),
     };
+    // Behaves like the table's unique key (enrollmentId, absenceDate): a row
+    // written by one run is seen by the next, so the evening and morning runs
+    // can be checked together. `warnedAlready` seeds entries for any date.
+    type LogKey = { enrollmentId: string; absenceDate: Date };
+    const written: LogKey[] = [];
     const prisma = {
       absenceWarningLog: {
-        findMany: jest.fn().mockResolvedValue(
-          (overrides.warnedAlready ?? []).map((id) => ({
-            enrollmentId: id,
-          })),
-        ),
-        create: jest.fn().mockResolvedValue({}),
+        findMany: jest
+          .fn()
+          .mockImplementation(({ where }: { where: { OR: LogKey[] } }) =>
+            Promise.resolve([
+              ...(overrides.warnedAlready ?? []).map((id) => ({
+                enrollmentId: id,
+              })),
+              ...written
+                .filter((w) =>
+                  where.OR.some(
+                    (o) =>
+                      o.enrollmentId === w.enrollmentId &&
+                      o.absenceDate.getTime() === w.absenceDate.getTime(),
+                  ),
+                )
+                .map((w) => ({ enrollmentId: w.enrollmentId })),
+            ]),
+          ),
+        create: jest.fn().mockImplementation(({ data }: { data: LogKey }) => {
+          written.push({
+            enrollmentId: data.enrollmentId,
+            absenceDate: data.absenceDate,
+          });
+          return Promise.resolve({});
+        }),
       },
       enrollment: {
         findMany: jest.fn().mockImplementation(({ where }: any) =>
@@ -140,8 +164,11 @@ describe('AbsenceAutoPauseCronService.runForCompany', () => {
     const { service, notify, prisma } = makeService(on, [streak(10001, 1)]);
     const r = await service.runForCompany(companyId);
     expect(r.warned).toBe(1);
+    // The message names the lesson this row counted, so the row's own
+    // absence date must reach it — the run date is a different day.
     expect(notify.nudgeStudent).toHaveBeenCalledWith(
       expect.objectContaining({ streak: 1 }),
+      new Date('2026-09-18T00:00:00.000Z'),
     );
     expect(notify.warnStudent).not.toHaveBeenCalled();
     expect(prisma.absenceWarningLog.create).toHaveBeenCalledWith({
@@ -232,5 +259,56 @@ describe('AbsenceAutoPauseCronService.runForCompany', () => {
       expect.objectContaining({ streak: 3 }),
       2,
     );
+  });
+
+  describe('remindForCompany (evening run)', () => {
+    it('sends stages 1 and 2 and pauses nobody', async () => {
+      const { service, statusService, notify } = makeService(on, [
+        streak(10001, 3),
+        streak(10002, 2),
+        streak(10003, 1),
+      ]);
+      const sent = await service.remindForCompany(companyId);
+
+      expect(sent).toBe(2);
+      expect(notify.warnStudent).toHaveBeenCalledWith(
+        expect.objectContaining({ enrollmentId: 'e-10002', streak: 2 }),
+        1,
+      );
+      expect(notify.nudgeStudent).toHaveBeenCalledWith(
+        expect.objectContaining({ enrollmentId: 'e-10003', streak: 1 }),
+        new Date('2026-09-18T00:00:00.000Z'),
+      );
+      expect(statusService.pauseForAbsence).not.toHaveBeenCalled();
+      expect(notify.announcePause).not.toHaveBeenCalled();
+    });
+
+    it('leaves the daily cap and its CEO alert to the morning run', async () => {
+      const many = Array.from({ length: 11 }, (_, i) => streak(10001 + i, 3));
+      const { service, notify } = makeService({ ...on, dailyCap: 10 }, many);
+      await service.remindForCompany(companyId);
+      expect(notify.alertCeos).not.toHaveBeenCalled();
+    });
+
+    it('does not touch the database when the feature is off', async () => {
+      const { service, streakService } = makeService(
+        { ...on, enabled: false },
+        [streak(10001, 1)],
+      );
+      expect(await service.remindForCompany(companyId)).toBe(0);
+      expect(streakService.computeStreaks).not.toHaveBeenCalled();
+    });
+
+    it('an absence messaged in the evening is not messaged again next morning', async () => {
+      const { service, notify } = makeService(on, [
+        streak(10001, 1),
+        streak(10002, 2),
+      ]);
+      await service.remindForCompany(companyId);
+      await service.runForCompany(companyId);
+
+      expect(notify.nudgeStudent).toHaveBeenCalledTimes(1);
+      expect(notify.warnStudent).toHaveBeenCalledTimes(1);
+    });
   });
 });
