@@ -287,9 +287,9 @@ export class PaymentsWriteService {
         },
       );
 
-    // Fire-and-forget Telegram receipt to the student. The listener uses
-    // SmsService so the message also lands in the student profile "SMS"
-    // tab (the SMS module is already Telegram-backed).
+    // Queues the student's Telegram receipt for the 20:00 digest (ADR-0025).
+    // The digest writes the SmsMessage row, so the receipt still lands in the
+    // student profile "SMS" tab.
     this.eventEmitter.emit('payment.received', {
       paymentId: payment.id,
       studentId: dto.studentId,

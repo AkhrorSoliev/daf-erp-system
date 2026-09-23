@@ -9,11 +9,16 @@ import { PaymentsController } from './payments.controller';
 import { PaymentEventsListener } from './payment-events.listener';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { BillingModule } from '../billing/billing.module';
-import { SmsModule } from '../sms/sms.module';
+import { TelegramDigestModule } from '../telegram-digest/telegram-digest.module';
 import { MockExamsModule } from '../mock-exams/mock-exams.module';
 
 @Module({
-  imports: [TransactionsModule, BillingModule, SmsModule, MockExamsModule],
+  imports: [
+    TransactionsModule,
+    BillingModule,
+    TelegramDigestModule,
+    MockExamsModule,
+  ],
   controllers: [PaymentsController],
   providers: [
     PaymentsService,
