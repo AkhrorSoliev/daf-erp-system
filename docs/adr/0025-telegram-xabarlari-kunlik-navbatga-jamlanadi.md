@@ -2,6 +2,9 @@
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-09-23
+**Aniqlashtirildi:** 2026-09-23, asosiy kodga qo'shilishidan oldin — reja ko'rigi
+va CEO ning uchta qarori (o'quvchi filtri, avtomatik pauza, guruh xabarini qayta
+yuborish) asosida
 **Bog'liq:** `docs/superpowers/specs/2026-09-23-telegram-digest-batching-design.md`, `server/src/telegram-groups/`, `server/src/notifications/notification-events.listener.ts`
 
 ## Kontekst
@@ -44,16 +47,30 @@ o'tishi shart.
 - Mock imtihon xabarlari, ro'yxatdan o'tish, parol tiklash, OTP
 - Bot buyruqlari/menyu javoblari, davomat eslatmalari (07:00–22:00 cron)
 - 09:00 to'lov va'dasi xabari, 21:00 kunlik moliyaviy hisobot
+- Avtomatik pauza xabarlari (`absence-pause/`): 1–2-bosqich (eslatma va
+  ogohlantirish) dars kuni kechqurun 20:30 da, pauza (3-bosqich) ertalab
+  07:30 da — CEO qarori; cron yuborish natijasini shu zahoti
+  `AbsenceWarningLog.sentToStudent` ga yozadi
 
 **Yangi qoida:** kechqurungi navbatga yozuv **tayyor matn emas, strukturaviy
 ma'lumot** (`payload: Json`) sifatida yoziladi. Matn faqat 20:00 da
 render qilinganda tuziladi, balans esa shu paytda bazadan qayta o'qiladi
 — ertalab yozilgan raqam kechqurunga eskirib qolmasin.
 
-**Yuborish xatosi:** doimiy xato (bot bloklangan, chat topilmadi) — yozuv
-o'chiriladi, qayta urinilmaydi. Vaqtinchalik xato (tarmoq) — yozuv
-saqlanadi, ertaga qayta uriniladi. 7 kundan oshgan yozuv, muvaffaqiyatidan
-qat'iy nazar, tozalanadi.
+**Kim oladi:** o'quvchi — o'chirilmagan har qanday o'quvchi (muzlatilgan, ketgan,
+bitirgan ham; CEO qarori — bugun ham to'lov cheki ularga boradi); xodim — faqat
+faol (`deletedAt: null, isActive, status ACTIVE`). Chat ID yuborish paytida
+qidiriladi.
+
+**Yuborish xatosi:** doimiy xato (403; 400 chat topilmadi / foydalanuvchi o'chgan /
+bot bloklangan) — yozuv o'chiriladi, qayta urinilmaydi. Kontent xatosi (boshqa 400:
+xabar juda uzun, HTML xato) — bu bizning xatomiz: yozuv saqlanadi, `error` log.
+429 — `retry_after` kutib bir marta qayta. Vaqtinchalik xato (tarmoq) — yozuv
+saqlanadi, ertaga qayta uriniladi. **Guruh xabari ham shunday** (CEO qarori):
+har yozuv qaysi guruh chatiga yetganini `deliveredGroupIds` da saqlaydi, ertaga
+faqat yetmagan chatga qayta ketadi. 7 kundan oshgan yozuv (har qanday tur),
+muvaffaqiyatidan qat'iy nazar, har ishlash boshida tozalanadi. Telegram
+chegarasi (4096 belgi) tufayli uzun xabar qator chegaralarida qismlarga bo'linadi.
 
 ## Ko'rib chiqilgan muqobillar
 
@@ -79,17 +96,23 @@ xavf — ilova ichidagi bildirishnoma/push faqat xodimlarda mavjud.
 
 ## Oqibatlari
 
-**Yutuq:** bitta joy, bitta filtr qoidasi — o'chirilgan/chetlatilgan
-qabul qiluvchiga xabar ketishi mumkin bo'lgan mavjud xato
+**Yutuq:** bitta joy, bitta filtr qoidasi — o'chirilgan qabul qiluvchiga
+xabar ketishi mumkin bo'lgan mavjud xato
 (`student-debt-notification.listener.ts`) beixtiyor tuzatiladi, shu bilan
-birga bu xabar turi birinchi marta audit yozuvi (`SmsMessage`) oladi. Guruh
+birga bu xabar turi birinchi marta audit yozuvi (`SmsMessage` + o'quvchi
+tarixi) oladi. Erkin matn endi har doim HTML-ekranlanadi — bugun
+`<` yoki `&` belgili topshiriq matni yoki sabab xabarni Telegram rad etishiga
+olib kelardi. Guruh
 digestining Redis TTL xavfi yo'qoladi. Guruh cron'ining `receivesAllBranches`
 qamrovi ham tuzatiladi. Bildirishnoma shovqini keskin kamayadi.
 
 **Narx:** ≥5 mln so'mlik to'lov haqidagi guruh xabari, hozir darhol
 ketayotgani, endi 20:00 gacha kutadi — CEO buni real vaqtda ko'rmaydi.
-Yangi jadval (2 enum + 1 model), yangi migratsiya, ~3-4 ta yangi fayl,
-~6 ta mavjud faylni o'zgartirish, 1-2 ta faylni olib tashlash.
+Yangi jadval (2 enum + 1 model), yangi migratsiya, `telegram-digest/`
+modulida ~9 ta yangi fayl, ~8 ta mavjud faylni o'zgartirish, 3 ta faylni
+olib tashlash. Chiqarish paytida eski Redis buferida turgan guruh voqealari
+yangi navbatga o'tmaydi — shuning uchun ish kuni 21:00 dagi oxirgi eski
+bo'shatishdan keyin chiqariladi.
 
 **Qamrovdan tashqarida:** `SmsService.sendToStudent`da xuddi shunday
 faol/o'chirilgan tekshiruvi yo'qligi — bu mavjud, alohida xato, shu qaror
