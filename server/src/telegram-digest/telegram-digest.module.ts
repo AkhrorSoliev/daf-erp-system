@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TelegramModule } from '../telegram/telegram.module';
+import { TelegramDigestAuditService } from './telegram-digest-audit.service';
 import { TelegramDigestChatResolverService } from './telegram-digest-chat-resolver.service';
 import { TelegramDigestQueueService } from './telegram-digest-queue.service';
 import { TelegramDigestRenderService } from './telegram-digest-render.service';
@@ -17,6 +18,7 @@ import { TelegramDigestRenderService } from './telegram-digest-render.service';
     TelegramDigestQueueService,
     TelegramDigestChatResolverService,
     TelegramDigestRenderService,
+    TelegramDigestAuditService,
   ],
   exports: [TelegramDigestQueueService],
 })
