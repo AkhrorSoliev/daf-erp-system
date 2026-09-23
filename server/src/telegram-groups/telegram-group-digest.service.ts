@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { DigestEntry } from './telegram-group-digest-buffer.service';
 import { TG_GROUP_DIGEST_MAX_ITEMS } from './constants';
 import { TelegramDigestCategory } from '@prisma/client';
 import { TASHKENT_OFFSET_MS, tashkentDateStr } from '../common/date/tashkent';
@@ -21,22 +20,6 @@ import {
   spacer,
 } from '../telegram-digest/telegram-message-parts';
 import { escapeHtml, formatDate, formatSum } from './utils/format.util';
-
-const METHOD_LABELS: Record<string, string> = {
-  CASH: 'Naqd',
-  PAYME: 'Payme',
-  CLICK: 'Click',
-  UZUM: 'Uzum',
-  TRANSFER: "O'tkazma",
-};
-
-/** HH:MM in Asia/Tashkent (fixed UTC+5, no DST). */
-function tashkentHm(d: Date): string {
-  const t = new Date(d.getTime() + 5 * 60 * 60 * 1000);
-  const hh = String(t.getUTCHours()).padStart(2, '0');
-  const mm = String(t.getUTCMinutes()).padStart(2, '0');
-  return `${hh}:${mm}`;
-}
 
 const TRANSITION_TEXT: Record<
   GroupStatusTransition,
@@ -65,57 +48,11 @@ const sameTashkentDay = (a: Date, b: Date) =>
   tashkentDateStr(a) === tashkentDateStr(b);
 
 /**
- * Composes the consolidated digest message from a batch of buffered events.
- *
- * The cron passes already branch-filtered entries — this service only formats.
- * Returns `null` when there is nothing to report so the cron stays silent.
+ * Composes the 20:00 group digest (ADR-0025) from queued GROUP rows the cron
+ * has already filtered to one Telegram group. Formatting only — no I/O.
  */
 @Injectable()
 export class TelegramGroupDigestService {
-  build(
-    companyName: string,
-    entries: DigestEntry[],
-    now: Date = new Date(),
-  ): string | null {
-    if (entries.length === 0) return null;
-
-    const students = entries.filter(
-      (e): e is Extract<DigestEntry, { kind: 'student' }> =>
-        e.kind === 'student',
-    );
-    const payments = entries.filter(
-      (e): e is Extract<DigestEntry, { kind: 'payment' }> =>
-        e.kind === 'payment',
-    );
-    const groups = entries.filter(
-      (e): e is Extract<DigestEntry, { kind: 'group' }> => e.kind === 'group',
-    );
-
-    // Time window: earliest buffered event → flush time.
-    const earliest = entries.reduce(
-      (min, e) => (e.at < min ? e.at : min),
-      entries[0].at,
-    );
-    const windowLabel = `${tashkentHm(new Date(earliest))} – ${tashkentHm(now)}`;
-
-    const blocks: string[] = [
-      `📋 <b>So'nggi yangiliklar</b> — ${escapeHtml(companyName)}`,
-      `🕐 ${windowLabel}`,
-    ];
-
-    if (students.length > 0) {
-      blocks.push('', this.studentsBlock(students));
-    }
-    if (payments.length > 0) {
-      blocks.push('', this.paymentsBlock(payments));
-    }
-    if (groups.length > 0) {
-      blocks.push('', this.groupsBlock(groups));
-    }
-
-    return blocks.join('\n');
-  }
-
   /**
    * The 20:00 group digest (ADR-0025) from queued GROUP rows the cron has
    * already filtered to one Telegram group. Returns null when there is
@@ -272,7 +209,7 @@ export class TelegramGroupDigestService {
     branchOf: (entry: DedupedRow) => string | null,
     render: (entry: DedupedRow) => string,
   ): DigestBlock[] {
-    const NO_BRANCH = ' ';
+    const NO_BRANCH = '\u0000'; // sentinel: no branch name can match it
     const order: string[] = [];
     const buckets = new Map<string, DedupedRow[]>();
     for (const entry of entries) {
@@ -310,108 +247,5 @@ export class TelegramGroupDigestService {
       });
     }
     return blocks;
-  }
-
-  private studentsBlock(
-    items: Extract<DigestEntry, { kind: 'student' }>[],
-  ): string {
-    const lines = this.groupedByBranch(
-      items,
-      (s) => s.branchName,
-      (s) => escapeHtml(s.name),
-    );
-    return [`👨‍🎓 <b>Yangi o'quvchilar (${items.length})</b>`, ...lines].join(
-      '\n',
-    );
-  }
-
-  private paymentsBlock(
-    items: Extract<DigestEntry, { kind: 'payment' }>[],
-  ): string {
-    const total = items.reduce((sum, p) => sum + p.amount, 0);
-    const lines = this.capped(items, (p) => {
-      const method = METHOD_LABELS[p.method] ?? p.method;
-      return `• ${escapeHtml(p.studentName)} — <b>${formatSum(p.amount)}</b> (${method})`;
-    });
-    return [
-      `💳 <b>To'lovlar (${items.length})</b> — jami <b>${formatSum(total)}</b>`,
-      ...lines,
-    ].join('\n');
-  }
-
-  private groupsBlock(
-    items: Extract<DigestEntry, { kind: 'group' }>[],
-  ): string {
-    const lines = this.groupedByBranch(
-      items,
-      (g) => g.branchName,
-      (g) => {
-        const start = g.startDate ? ` (${formatDate(g.startDate)})` : '';
-        return `${escapeHtml(g.name)}${start}`;
-      },
-    );
-    return [`👥 <b>Yangi guruhlar (${items.length})</b>`, ...lines].join('\n');
-  }
-
-  /** Renders up to `TG_GROUP_DIGEST_MAX_ITEMS` lines, collapsing the rest. */
-  private capped<T>(items: T[], render: (item: T) => string): string[] {
-    const shown = items.slice(0, TG_GROUP_DIGEST_MAX_ITEMS).map(render);
-    const overflow = items.length - shown.length;
-    if (overflow > 0) {
-      shown.push(`• <i>... va yana ${overflow} ta</i>`);
-    }
-    return shown;
-  }
-
-  /**
-   * Groups items under one `🏢 <branch> (N)` sub-header per branch so a branch
-   * name appears once instead of being repeated on every bullet — e.g. 10 new
-   * students in one branch render the branch once, not ten times. Branchless
-   * items (no `branchName`) are listed last as plain bullets without a header.
-   *
-   * Branches keep first-appearance order. The per-section cap counts bullet
-   * lines only (sub-headers are free); anything beyond it collapses into a
-   * single "... va yana N ta" line, matching `capped()`.
-   */
-  private groupedByBranch<T>(
-    items: T[],
-    branchOf: (item: T) => string | null | undefined,
-    renderItem: (item: T) => string,
-  ): string[] {
-    const NO_BRANCH = ' '; // sentinel — branchless items, rendered last
-    const order: string[] = [];
-    const buckets = new Map<string, T[]>();
-    for (const item of items) {
-      const key = branchOf(item) ?? NO_BRANCH;
-      if (!buckets.has(key)) {
-        buckets.set(key, []);
-        if (key !== NO_BRANCH) order.push(key);
-      }
-      buckets.get(key)!.push(item);
-    }
-    if (buckets.has(NO_BRANCH)) order.push(NO_BRANCH);
-
-    const lines: string[] = [];
-    let rendered = 0;
-    let overflow = 0;
-    for (const key of order) {
-      const bucket = buckets.get(key)!;
-      const remaining = TG_GROUP_DIGEST_MAX_ITEMS - rendered;
-      if (remaining <= 0) {
-        overflow += bucket.length;
-        continue;
-      }
-      if (key !== NO_BRANCH) {
-        lines.push(`🏢 <b>${escapeHtml(key)}</b> (${bucket.length})`);
-      }
-      const shown = bucket.slice(0, remaining);
-      for (const item of shown) lines.push(`• ${renderItem(item)}`);
-      rendered += shown.length;
-      overflow += bucket.length - shown.length;
-    }
-    if (overflow > 0) {
-      lines.push(`• <i>... va yana ${overflow} ta</i>`);
-    }
-    return lines;
   }
 }

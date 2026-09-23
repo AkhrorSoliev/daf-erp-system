@@ -1,3 +1,4 @@
+import { isVisibleToGroup } from './telegram-group-digest-cron.service';
 /**
  * Which Telegram groups receive which events.
  *
@@ -19,11 +20,16 @@ describe('telegram branch routing', () => {
     receivesAllBranches?: boolean;
   }
 
-  /** Mirrors the `where` the broadcast service builds. */
+  /** The production rule: the 20:00 group digest's `isVisibleToGroup`. */
   function recipients(eventBranchId: number | null, groups: Group[]) {
-    if (eventBranchId == null) return groups; // company-level → everyone
-    return groups.filter(
-      (g) => g.branchId === eventBranchId || g.receivesAllBranches === true,
+    return groups.filter((g) =>
+      isVisibleToGroup(
+        { branchId: eventBranchId },
+        {
+          branchId: g.branchId,
+          receivesAllBranches: g.receivesAllBranches ?? false,
+        },
+      ),
     );
   }
 

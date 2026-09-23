@@ -12,8 +12,10 @@ import type { ReportBranchIds } from '../common/finance/report-branch-scope';
  * CEO-only. So an APPROVED group is always one of two things, and this maps
  * that fact onto the scope every report service already takes.
  *
- * It is the same rule `TelegramGroupBroadcastService` applies to events; the
- * reports were the half that never got it.
+ * It is the same branch rule the 20:00 group digest applies to queued events
+ * (`isVisibleToGroup` in telegram-group-digest-cron.service.ts), with one
+ * difference: a legacy branch-less group stays company-wide for reports (see
+ * below) but fail-closed for the digest.
  */
 export interface GroupReportScopeSource {
   branchId: number | null;
