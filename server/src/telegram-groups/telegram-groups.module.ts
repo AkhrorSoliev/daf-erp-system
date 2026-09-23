@@ -18,9 +18,10 @@ import { TelegramGroupReportMenuService } from './telegram-group-report-menu.ser
 import { HolidaysModule } from '../holidays/holidays.module';
 import { SalaryModule } from '../salary/salary.module';
 import { ReportsModule } from '../reports/reports.module';
+import { TelegramDigestModule } from '../telegram-digest/telegram-digest.module';
 
 @Module({
-  imports: [HolidaysModule, SalaryModule, ReportsModule],
+  imports: [HolidaysModule, SalaryModule, ReportsModule, TelegramDigestModule],
   controllers: [TelegramGroupsController],
   providers: [
     TelegramGroupsService,

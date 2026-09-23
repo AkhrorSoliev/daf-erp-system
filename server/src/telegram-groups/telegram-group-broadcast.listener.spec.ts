@@ -1,39 +1,45 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TelegramGroupBroadcastListener } from './telegram-group-broadcast.listener';
-import { TelegramGroupBroadcastService } from './telegram-group-broadcast.service';
-import { TelegramGroupDigestBufferService } from './telegram-group-digest-buffer.service';
-import { PrismaService } from '../prisma/prisma.service';
-import { PaymentMethod, PaymentSource } from '@prisma/client';
 import {
-  INSTANT_PAYMENT_THRESHOLD_SUM,
-  LARGE_PAYMENT_THRESHOLD_SUM,
-} from './constants';
+  PaymentMethod,
+  PaymentSource,
+  TelegramDigestCategory,
+  TelegramDigestRecipientKind,
+} from '@prisma/client';
+import { TelegramGroupBroadcastListener } from './telegram-group-broadcast.listener';
+import { PrismaService } from '../prisma/prisma.service';
+import { TelegramDigestQueueService } from '../telegram-digest/telegram-digest-queue.service';
+import { LARGE_PAYMENT_THRESHOLD_SUM } from './constants';
 
 describe('TelegramGroupBroadcastListener', () => {
   let listener: TelegramGroupBroadcastListener;
-  const broadcast = jest.fn().mockResolvedValue(undefined);
-  const push = jest.fn().mockResolvedValue(undefined);
-  const mockPrisma = {
-    student: { findUnique: jest.fn() },
-    group: { findUnique: jest.fn() },
-    user: { findUnique: jest.fn() },
+  let enqueue: jest.Mock;
+  let prisma: {
+    student: { findUnique: jest.Mock };
+    group: { findUnique: jest.Mock };
+    user: { findUnique: jest.Mock };
   };
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    enqueue = jest.fn().mockResolvedValue(undefined);
+    prisma = {
+      student: { findUnique: jest.fn() },
+      group: { findUnique: jest.fn() },
+      user: { findUnique: jest.fn().mockResolvedValue(null) },
+    };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TelegramGroupBroadcastListener,
-        { provide: PrismaService, useValue: mockPrisma },
-        { provide: TelegramGroupBroadcastService, useValue: { broadcast } },
-        { provide: TelegramGroupDigestBufferService, useValue: { push } },
+        { provide: PrismaService, useValue: prisma },
+        { provide: TelegramDigestQueueService, useValue: { enqueue } },
       ],
     }).compile();
     listener = module.get(TelegramGroupBroadcastListener);
   });
 
+  const queued = () => enqueue.mock.calls[0][0];
+
   describe('payment.received', () => {
-    const basePayload = {
+    const base = {
       paymentId: 'p1',
       studentId: 100,
       method: PaymentMethod.CASH,
@@ -42,107 +48,135 @@ describe('TelegramGroupBroadcastListener', () => {
       companyId: 1001,
     };
 
-    it('ignores small cash payments (below digest threshold)', async () => {
+    beforeEach(() => {
+      prisma.student.findUnique.mockResolvedValue({
+        firstName: 'A',
+        lastName: 'B',
+        branches: [{ branch: { id: 7 } }],
+      });
+    });
+
+    it('ignores small cash payments without looking anything up', async () => {
       await listener.onPaymentReceived({
-        ...basePayload,
+        ...base,
         amount: LARGE_PAYMENT_THRESHOLD_SUM - 1,
       });
-      expect(broadcast).not.toHaveBeenCalled();
-      expect(push).not.toHaveBeenCalled();
+      expect(prisma.student.findUnique).not.toHaveBeenCalled();
+      expect(enqueue).not.toHaveBeenCalled();
     });
 
-    it('buffers large cash payments into the digest (not instant)', async () => {
-      mockPrisma.student.findUnique.mockResolvedValue({
-        firstName: 'A',
-        lastName: 'B',
-        branches: [],
-      });
+    it('queues a large cash payment for the student branch', async () => {
       await listener.onPaymentReceived({
-        ...basePayload,
+        ...base,
         amount: LARGE_PAYMENT_THRESHOLD_SUM,
       });
-      expect(broadcast).not.toHaveBeenCalled();
-      expect(push).toHaveBeenCalledWith(
-        1001,
-        expect.objectContaining({
-          kind: 'payment',
+      expect(enqueue).toHaveBeenCalledWith({
+        recipientKind: TelegramDigestRecipientKind.GROUP,
+        recipientId: 1001,
+        companyId: 1001,
+        branchId: 7,
+        category: TelegramDigestCategory.GROUP_PAYMENT,
+        relatedEntityId: 'p1',
+        payload: {
+          paymentId: 'p1',
+          studentName: 'A B',
           amount: LARGE_PAYMENT_THRESHOLD_SUM,
-        }),
-      );
+          method: PaymentMethod.CASH,
+        },
+      });
     });
 
-    it('buffers external gateway payments regardless of size', async () => {
-      mockPrisma.student.findUnique.mockResolvedValue({
-        firstName: 'A',
-        lastName: 'B',
-        branches: [],
-      });
+    it('queues an online payment regardless of size', async () => {
       await listener.onPaymentReceived({
-        ...basePayload,
+        ...base,
         method: PaymentMethod.PAYME,
-        amount: 50_000, // small
+        amount: 50_000,
       });
-      expect(broadcast).not.toHaveBeenCalled();
-      expect(push).toHaveBeenCalledWith(
-        1001,
-        expect.objectContaining({
-          kind: 'payment',
-          method: PaymentMethod.PAYME,
-        }),
-      );
+      expect(queued().category).toBe(TelegramDigestCategory.GROUP_PAYMENT);
     });
 
-    it('broadcasts very large payments instantly (no digest buffering)', async () => {
-      mockPrisma.student.findUnique.mockResolvedValue({
-        firstName: 'A',
-        lastName: 'B',
-        branches: [{ branch: { id: 7, name: 'Filial' } }],
+    it('queues a very large payment too — there is no instant path any more', async () => {
+      await listener.onPaymentReceived({ ...base, amount: 5_000_000 });
+      expect(enqueue).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to the student id and company-wide when the student row is gone', async () => {
+      prisma.student.findUnique.mockResolvedValue(null);
+      await listener.onPaymentReceived({ ...base, amount: 600_000 });
+      expect(queued()).toMatchObject({
+        branchId: null,
+        payload: { studentName: "O'quvchi ID 100" },
       });
-      await listener.onPaymentReceived({
-        ...basePayload,
-        amount: INSTANT_PAYMENT_THRESHOLD_SUM,
+    });
+  });
+
+  describe('student.created / group.created', () => {
+    it('queues a new student with its branch', async () => {
+      await listener.onStudentCreated({
+        studentId: 10042,
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+        branchId: 1,
+        branchName: 'Asosiy filial',
+        companyId: 1001,
       });
-      expect(push).not.toHaveBeenCalled();
-      expect(broadcast).toHaveBeenCalledWith(
-        expect.objectContaining({ companyId: 1001, branchId: 7 }),
-      );
+      expect(enqueue).toHaveBeenCalledWith({
+        recipientKind: TelegramDigestRecipientKind.GROUP,
+        recipientId: 1001,
+        companyId: 1001,
+        branchId: 1,
+        category: TelegramDigestCategory.GROUP_NEW_STUDENT,
+        relatedEntityId: '10042',
+        payload: {
+          studentId: 10042,
+          name: 'Ali Valiyev',
+          branchName: 'Asosiy filial',
+        },
+      });
+    });
+
+    it('queues a new group with an ISO start date', async () => {
+      await listener.onGroupCreated({
+        groupId: 'g1',
+        name: 'B1-Intensiv',
+        branchId: 2,
+        branchName: 'Chilonzor',
+        startDate: new Date('2026-06-01T00:00:00.000Z'),
+        companyId: 1001,
+      });
+      expect(enqueue).toHaveBeenCalledWith({
+        recipientKind: TelegramDigestRecipientKind.GROUP,
+        recipientId: 1001,
+        companyId: 1001,
+        branchId: 2,
+        category: TelegramDigestCategory.GROUP_NEW_GROUP,
+        relatedEntityId: 'g1',
+        payload: {
+          groupId: 'g1',
+          name: 'B1-Intensiv',
+          branchName: 'Chilonzor',
+          startDate: '2026-06-01T00:00:00.000Z',
+        },
+      });
     });
   });
 
   describe('entity.status.changed', () => {
-    const richStudent = {
+    const student = {
       firstName: 'Aziz',
       lastName: 'Karimov',
       branches: [{ branch: { id: 7, name: 'Chilonzor' } }],
-      enrollments: [
-        {
-          group: {
-            name: 'A1-029',
-            course: { name: 'Umumiy nemis tili' },
-            teachers: [
-              { teacher: { firstName: 'Gulbahor', lastName: 'Tursunova' } },
-            ],
-          },
-        },
-        {
-          group: {
-            name: 'B2-014',
-            course: { name: 'Intensiv nemis' },
-            teachers: [
-              { teacher: { firstName: 'Sardor', lastName: 'Aliyev' } },
-            ],
-          },
-        },
-      ],
+    };
+    const actor = {
+      firstName: 'Dilnoza',
+      lastName: 'Karimova',
+      roles: [{ role: { name: 'Administrator' } }],
     };
 
-    it('broadcasts Student ACTIVE → FROZEN enriched + reason, routed to branch', async () => {
-      mockPrisma.student.findUnique.mockResolvedValue(richStudent);
-      mockPrisma.user.findUnique.mockResolvedValue({
-        firstName: 'Dilnoza',
-        lastName: 'Karimova',
-        roles: [{ role: { name: 'Administrator' } }],
-      });
+    it('queues a student freeze with reason, actor and branch', async () => {
+      prisma.student.findUnique.mockResolvedValue(student);
+      prisma.user.findUnique.mockResolvedValue(actor);
+
       await listener.onEntityStatusChanged({
         entityType: 'Student',
         entityId: '10042',
@@ -152,47 +186,45 @@ describe('TelegramGroupBroadcastListener', () => {
         changedById: 555,
         companyId: 1001,
       });
-      const { message, ...rest } = broadcast.mock.calls[0][0];
-      expect(rest).toMatchObject({
+
+      expect(enqueue).toHaveBeenCalledWith({
+        recipientKind: TelegramDigestRecipientKind.GROUP,
+        recipientId: 1001,
         companyId: 1001,
-        branchId: 7, // routed to the student's branch
-        // throttle bucket is per-entity so two students don't collide
-        eventClass: 'entity.status.changed:Student:10042',
+        branchId: 7,
+        category: TelegramDigestCategory.GROUP_STATUS_CHANGE,
+        relatedEntityId: 'Student:10042:STUDENT_FROZEN',
+        payload: {
+          entityType: 'Student',
+          entityId: '10042',
+          name: 'Aziz Karimov',
+          transition: 'STUDENT_FROZEN',
+          reason: "Ta'tilga chiqdi",
+          actorName: 'Dilnoza Karimova',
+          actorRole: 'Administrator',
+          branchName: 'Chilonzor',
+        },
       });
-      expect(message).toContain('muzlatildi');
-      expect(message).toContain('Aziz Karimov');
-      expect(message).toContain('ID: 10042');
-      expect(message).toContain('Chilonzor');
-      // every active group on its own line with its teacher(s)
-      expect(message).toContain(
-        'A1-029 (Umumiy nemis tili) — Gulbahor Tursunova',
-      );
-      expect(message).toContain('B2-014 (Intensiv nemis) — Sardor Aliyev');
-      expect(message).toContain("Sabab: Ta'tilga chiqdi");
-      expect(message).toContain('Dilnoza Karimova (Administrator)');
     });
 
-    it('broadcasts Student FROZEN → ACTIVE (qaytadan faol), no reason line', async () => {
-      mockPrisma.student.findUnique.mockResolvedValue(richStudent);
-      mockPrisma.user.findUnique.mockResolvedValue(null); // changedById absent
+    it('drops the reason for a reactivation', async () => {
+      prisma.student.findUnique.mockResolvedValue(student);
       await listener.onEntityStatusChanged({
         entityType: 'Student',
         entityId: '10042',
         oldStatus: 'FROZEN',
         newStatus: 'ACTIVE',
+        reason: 'ignored',
         companyId: 1001,
       });
-      const message = broadcast.mock.calls[0][0].message;
-      expect(message).toContain('qaytadan faol');
-      expect(message).toContain('Aziz Karimov');
-      expect(message).toContain(
-        'A1-029 (Umumiy nemis tili) — Gulbahor Tursunova',
-      );
-      expect(message).not.toContain('Sabab'); // reactivation carries no reason
+      expect(queued().payload).toMatchObject({
+        transition: 'STUDENT_REACTIVATED',
+        reason: null,
+      });
     });
 
-    it('falls back to a minimal Student message when the row is gone', async () => {
-      mockPrisma.student.findUnique.mockResolvedValue(null);
+    it('falls back to the id, company-wide, when the student row is gone', async () => {
+      prisma.student.findUnique.mockResolvedValue(null);
       await listener.onEntityStatusChanged({
         entityType: 'Student',
         entityId: '10042',
@@ -200,34 +232,22 @@ describe('TelegramGroupBroadcastListener', () => {
         newStatus: 'GRADUATED',
         companyId: 1001,
       });
-      expect(broadcast).toHaveBeenCalledWith(
-        expect.objectContaining({
-          companyId: 1001,
-          branchId: null,
-          message: expect.stringContaining('ID: 10042'),
-          eventClass: 'entity.status.changed:Student:10042',
-        }),
-      );
-      expect(broadcast.mock.calls[0][0].message).toContain('bitirdi');
+      expect(queued()).toMatchObject({
+        branchId: null,
+        payload: {
+          name: 'ID 10042',
+          transition: 'STUDENT_GRADUATED',
+          branchName: null,
+        },
+      });
     });
 
-    const richGroup = {
-      name: 'B1-Intensiv-043',
-      level: 'B1',
-      branchId: 7,
-      lessonStartTime: '18:00',
-      lessonEndTime: '19:30',
-      exactDays: ['monday', 'wednesday', 'friday'],
-      startDate: new Date('2026-06-08T00:00:00.000Z'),
-      endDate: new Date('2026-09-08T00:00:00.000Z'),
-      course: { name: 'General English' },
-      branch: { name: 'Chilonzor' },
-      room: { name: '204' },
-      teachers: [{ teacher: { firstName: 'Aziz', lastName: 'Karimov' } }],
-    };
-
-    it('broadcasts Group FORMING → ACTIVE with enriched details', async () => {
-      mockPrisma.group.findUnique.mockResolvedValue(richGroup);
+    it('queues a group start scoped to the group branch', async () => {
+      prisma.group.findUnique.mockResolvedValue({
+        name: 'B1-Intensiv-043',
+        branchId: 7,
+        branch: { name: 'Chilonzor' },
+      });
       await listener.onEntityStatusChanged({
         entityType: 'Group',
         entityId: 'g1',
@@ -235,42 +255,45 @@ describe('TelegramGroupBroadcastListener', () => {
         newStatus: 'ACTIVE',
         companyId: 1001,
       });
-      const { message, ...rest } = broadcast.mock.calls[0][0];
-      expect(rest).toMatchObject({
-        companyId: 1001,
-        branchId: 7, // scoped to the group's branch
-        eventClass: 'entity.status.changed:Group:g1',
+      expect(queued()).toMatchObject({
+        branchId: 7,
+        relatedEntityId: 'Group:g1:GROUP_STARTED',
+        payload: {
+          entityType: 'Group',
+          name: 'B1-Intensiv-043',
+          transition: 'GROUP_STARTED',
+          reason: null,
+          branchName: 'Chilonzor',
+        },
       });
-      expect(message).toContain('boshlandi');
-      expect(message).toContain('B1-Intensiv-043');
-      expect(message).toContain('Chilonzor');
-      expect(message).toContain('B1');
-      expect(message).toContain('General English');
-      expect(message).toContain('Aziz Karimov');
-      expect(message).toContain('Dushanba, Chorshanba, Juma'); // exactDays → Uzbek
-      expect(message).toContain('18:00–19:30');
-      expect(message).toContain('204');
-      expect(message).toContain('08.06.2026'); // startDate
-      expect(message).not.toContain('g1'); // no raw UUID
     });
 
-    it('broadcasts Group ACTIVE → COMPLETED with the end date', async () => {
-      mockPrisma.group.findUnique.mockResolvedValue(richGroup);
+    it('carries reason and actor for a group that finished', async () => {
+      prisma.group.findUnique.mockResolvedValue({
+        name: 'B1-Intensiv-043',
+        branchId: 7,
+        branch: { name: 'Chilonzor' },
+      });
+      prisma.user.findUnique.mockResolvedValue(actor);
       await listener.onEntityStatusChanged({
         entityType: 'Group',
         entityId: 'g1',
         oldStatus: 'ACTIVE',
         newStatus: 'COMPLETED',
+        reason: 'Kurs yakunlandi',
+        changedById: 555,
         companyId: 1001,
       });
-      const message = broadcast.mock.calls[0][0].message;
-      expect(message).toContain('tugadi');
-      expect(message).toContain('B1-Intensiv-043');
-      expect(message).toContain('08.09.2026'); // endDate, not startDate
+      expect(queued().payload).toMatchObject({
+        transition: 'GROUP_COMPLETED',
+        reason: 'Kurs yakunlandi',
+        actorName: 'Dilnoza Karimova',
+        actorRole: 'Administrator',
+      });
     });
 
-    it('falls back to a minimal message when the group row is gone', async () => {
-      mockPrisma.group.findUnique.mockResolvedValue(null);
+    it('falls back to the id when the group row is gone', async () => {
+      prisma.group.findUnique.mockResolvedValue(null);
       await listener.onEntityStatusChanged({
         entityType: 'Group',
         entityId: 'g1',
@@ -278,91 +301,51 @@ describe('TelegramGroupBroadcastListener', () => {
         newStatus: 'ACTIVE',
         companyId: 1001,
       });
-      expect(broadcast).toHaveBeenCalledWith(
-        expect.objectContaining({
-          companyId: 1001,
-          message: expect.stringContaining('ID: g1'),
-          eventClass: 'entity.status.changed:Group:g1',
-        }),
-      );
-    });
-
-    it('is silent for group transitions not in the whitelist', async () => {
-      await listener.onEntityStatusChanged({
-        entityType: 'Group',
-        entityId: 'g1',
-        oldStatus: 'FORMING',
-        newStatus: 'CANCELLED',
-        companyId: 1001,
+      expect(queued()).toMatchObject({
+        branchId: null,
+        payload: { name: 'ID g1' },
       });
-      expect(mockPrisma.group.findUnique).not.toHaveBeenCalled();
-      expect(broadcast).not.toHaveBeenCalled();
     });
 
-    it('is silent for transitions not in the whitelist', async () => {
+    it.each([
+      ['Group', 'FORMING', 'CANCELLED'],
+      ['Student', 'ACTIVE', 'INACTIVE'],
+      ['Enrollment', 'ACTIVE', 'FROZEN'],
+    ])('ignores %s %s→%s', async (entityType, oldStatus, newStatus) => {
       await listener.onEntityStatusChanged({
-        entityType: 'Student',
+        entityType,
         entityId: '1',
-        oldStatus: 'ACTIVE',
-        newStatus: 'INACTIVE',
+        oldStatus,
+        newStatus,
         companyId: 1001,
       });
-      expect(broadcast).not.toHaveBeenCalled();
+      expect(prisma.group.findUnique).not.toHaveBeenCalled();
+      expect(prisma.student.findUnique).not.toHaveBeenCalled();
+      expect(enqueue).not.toHaveBeenCalled();
     });
 
-    it('is silent when companyId is missing', async () => {
+    it('ignores events without a company', async () => {
       await listener.onEntityStatusChanged({
         entityType: 'Student',
         entityId: '1',
         oldStatus: 'ACTIVE',
         newStatus: 'FROZEN',
       });
-      expect(broadcast).not.toHaveBeenCalled();
+      expect(enqueue).not.toHaveBeenCalled();
     });
-  });
 
-  describe('student.created', () => {
-    it('buffers the new student into the digest (no instant broadcast)', async () => {
-      await listener.onStudentCreated({
-        studentId: 10042,
-        firstName: 'Ali',
-        lastName: 'Valiyev',
-        branchId: 1,
-        branchName: 'Asosiy filial',
-        companyId: 1001,
-      });
-      expect(broadcast).not.toHaveBeenCalled();
-      expect(push).toHaveBeenCalledWith(
-        1001,
-        expect.objectContaining({
-          kind: 'student',
-          branchId: 1,
-          studentId: 10042,
-          name: 'Ali Valiyev',
+    it('swallows queue errors without throwing', async () => {
+      prisma.student.findUnique.mockResolvedValue(student);
+      enqueue.mockRejectedValueOnce(new Error('db down'));
+      await expect(
+        listener.onEntityStatusChanged({
+          entityType: 'Student',
+          entityId: '10042',
+          oldStatus: 'ACTIVE',
+          newStatus: 'FROZEN',
+          companyId: 1001,
         }),
-      );
-    });
-  });
-
-  describe('group.created', () => {
-    it('buffers the new group into the digest', async () => {
-      await listener.onGroupCreated({
-        groupId: 'g1',
-        name: 'B1-Intensiv',
-        branchId: 2,
-        branchName: 'Chilonzor',
-        startDate: new Date('2026-06-01T00:00:00.000Z'),
-        companyId: 1001,
-      });
-      expect(broadcast).not.toHaveBeenCalled();
-      expect(push).toHaveBeenCalledWith(
-        1001,
-        expect.objectContaining({
-          kind: 'group',
-          branchId: 2,
-          name: 'B1-Intensiv',
-        }),
-      );
+      ).resolves.toBeUndefined();
     });
   });
 });
