@@ -21,6 +21,7 @@ import { CompanyModule } from './company/company.module';
 import { UploadModule } from './upload/upload.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { TelegramGroupsModule } from './telegram-groups/telegram-groups.module';
+import { TelegramDigestModule } from './telegram-digest/telegram-digest.module';
 import { ArchiveModule } from './archive/archive.module';
 import { StatusHistoryModule } from './common/status';
 import { EntityHistoryModule } from './common/entity-history';
@@ -96,6 +97,7 @@ import { validateEnv } from './config/env.validation';
     UploadModule,
     TelegramModule,
     TelegramGroupsModule,
+    TelegramDigestModule,
     ArchiveModule,
     StatusHistoryModule,
     EntityHistoryModule,
