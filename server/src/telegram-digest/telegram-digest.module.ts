@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TelegramModule } from '../telegram/telegram.module';
 import { TelegramDigestChatResolverService } from './telegram-digest-chat-resolver.service';
 import { TelegramDigestQueueService } from './telegram-digest-queue.service';
+import { TelegramDigestRenderService } from './telegram-digest-render.service';
 
 /**
  * The daily Telegram digest (ADR-0025): the queue every event writes to, and
@@ -12,7 +13,11 @@ import { TelegramDigestQueueService } from './telegram-digest-queue.service';
  */
 @Module({
   imports: [TelegramModule],
-  providers: [TelegramDigestQueueService, TelegramDigestChatResolverService],
+  providers: [
+    TelegramDigestQueueService,
+    TelegramDigestChatResolverService,
+    TelegramDigestRenderService,
+  ],
   exports: [TelegramDigestQueueService],
 })
 export class TelegramDigestModule {}
