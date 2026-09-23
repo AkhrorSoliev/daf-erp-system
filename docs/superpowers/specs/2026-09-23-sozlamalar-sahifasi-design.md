@@ -179,8 +179,9 @@ qolardi).
 - Rolsiz (`[]`) → faqat 3 ta ochiq punkt, «CEO» bo'limi natijada yo'q.
 - Bir nechta rol (`[3, 5]`) → rollar birlashmasi (Administrator bilan bir xil).
 - Har bir punktda bo'sh bo'lmagan izoh bor.
-- `navItems` dagi «Sozlamalar» bandida `children` yo'q — dropdown qaytib
-  qo'shilmasin.
+
+**Vitest** — `client/src/lib/nav-items.test.ts`: `navItems` dagi «Sozlamalar»
+bandida `children` yo'q — dropdown qaytib qo'shilmasin.
 
 **Buyruqlar** (`client/` ichida): `npm test`, `npx eslint src`,
 `npm run build`.
