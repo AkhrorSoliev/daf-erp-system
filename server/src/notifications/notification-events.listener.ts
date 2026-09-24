@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { NotificationType, UserStatus } from '@prisma/client';
+import {
+  NotificationType,
+  TelegramDigestCategory,
+  TelegramDigestRecipientKind,
+  UserStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from './notifications.service';
 import { NotificationsGateway } from './notifications.gateway';
@@ -12,6 +17,8 @@ import { tashkentDateStr } from '../attendance/shared/date-utils';
 import type { PaymentCorrectedPayload } from '../payments/payments-write.service';
 import type { SalaryCarriedOverPayload } from '../salary/salary-accrual.service';
 import type { PaymentPromiseOverduePayload } from '../payment-promises/payment-promise-cron.service';
+import { TelegramDigestQueueService } from '../telegram-digest/telegram-digest-queue.service';
+import { clipText } from '../telegram-digest/telegram-message-parts';
 
 @Injectable()
 export class NotificationEventsListener {
@@ -23,6 +30,7 @@ export class NotificationEventsListener {
     private gateway: NotificationsGateway,
     private pushService: PushService,
     private telegramService: TelegramService,
+    private digestQueue: TelegramDigestQueueService,
   ) {}
 
   /**
@@ -82,8 +90,15 @@ export class NotificationEventsListener {
           url: '/tasks',
         });
 
-        // 4. Telegram
-        await this.sendTelegram(assigneeId, title, message);
+        // 4. Telegram — waits for the 20:00 digest (ADR-0025)
+        await this.digestQueue.enqueue({
+          recipientKind: TelegramDigestRecipientKind.USER,
+          recipientId: assigneeId,
+          companyId: comment.companyId,
+          category: TelegramDigestCategory.TASK_ASSIGNED,
+          relatedEntityId: String(comment.id),
+          payload: { authorName, content: clipText(comment.content, 80) },
+        });
       } catch (error) {
         this.logger.error(
           `Failed to notify assignee ${assigneeId}: ${error.message}`,
@@ -125,7 +140,15 @@ export class NotificationEventsListener {
           url: '/tasks',
         });
 
-        await this.sendTelegram(assigneeId, title, message);
+        // Telegram — waits for the 20:00 digest (ADR-0025)
+        await this.digestQueue.enqueue({
+          recipientKind: TelegramDigestRecipientKind.USER,
+          recipientId: assigneeId,
+          companyId: comment.companyId,
+          category: TelegramDigestCategory.TASK_DELETED,
+          relatedEntityId: String(comment.id),
+          payload: { authorName, content: clipText(comment.content, 80) },
+        });
       } catch (error) {
         this.logger.error(
           `Failed to notify assignee ${assigneeId} about task deletion: ${error.message}`,
@@ -168,7 +191,15 @@ export class NotificationEventsListener {
           url: '/tasks',
         });
 
-        await this.sendTelegram(assigneeId, title, message);
+        // Telegram — waits for the 20:00 digest (ADR-0025)
+        await this.digestQueue.enqueue({
+          recipientKind: TelegramDigestRecipientKind.USER,
+          recipientId: assigneeId,
+          companyId: comment.companyId,
+          category: TelegramDigestCategory.TASK_UPDATED,
+          relatedEntityId: String(comment.id),
+          payload: { authorName, content: clipText(comment.content, 80) },
+        });
       } catch (error) {
         this.logger.error(
           `Failed to notify assignee ${assigneeId} about task update: ${error.message}`,
@@ -221,7 +252,21 @@ export class NotificationEventsListener {
         url: '/tasks',
       });
 
-      await this.sendTelegram(comment.authorId, title, message);
+      // Telegram — waits for the 20:00 digest (ADR-0025). Keyed per assignee:
+      // a task has several, and one's "bajardi" must not hide behind another's
+      // later "ko'rdi" in the digest dedup.
+      await this.digestQueue.enqueue({
+        recipientKind: TelegramDigestRecipientKind.USER,
+        recipientId: comment.authorId,
+        companyId: comment.companyId,
+        category: TelegramDigestCategory.TASK_STATUS_CHANGED,
+        relatedEntityId: `${comment.id}:${assignee.userId}`,
+        payload: {
+          assigneeName,
+          status: newStatus,
+          content: clipText(comment.content, 60),
+        },
+      });
     } catch (error) {
       this.logger.error(
         `Failed to notify author ${comment.authorId}: ${error.message}`,
@@ -310,7 +355,22 @@ export class NotificationEventsListener {
             url: `/students/${studentId}`,
           });
 
-          await this.sendTelegram(ceo.id, title, message);
+          await this.digestQueue.enqueue({
+            recipientKind: TelegramDigestRecipientKind.USER,
+            recipientId: ceo.id,
+            companyId: payload.companyId,
+            category: TelegramDigestCategory.PAYMENT_CORRECTED,
+            payload: {
+              performerName,
+              studentName,
+              studentId: payload.studentId,
+              oldAmount: payload.oldAmount,
+              newAmount: payload.newAmount,
+              oldMethod: payload.oldMethod,
+              newMethod: payload.newMethod,
+              reason: payload.reason,
+            },
+          });
         } catch (error) {
           this.logger.error(
             `Failed to notify CEO ${ceo.id} of payment correction: ${error.message}`,
@@ -470,7 +530,13 @@ export class NotificationEventsListener {
             url: '/profile/salary',
           });
 
-          await this.sendTelegram(teacherId, title, message);
+          await this.digestQueue.enqueue({
+            recipientKind: TelegramDigestRecipientKind.USER,
+            recipientId: teacherId,
+            companyId: payload.companyId,
+            category: TelegramDigestCategory.SALARY_CARRIED_OVER,
+            payload: { count, total },
+          });
         } catch (error) {
           this.logger.error(
             `Failed to notify teacher ${teacherId} of carried-over salary: ${error.message}`,

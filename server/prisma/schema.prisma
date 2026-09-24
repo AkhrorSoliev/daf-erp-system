@@ -1687,6 +1687,53 @@ model TelegramGroup {
   @@index([deletedAt])
 }
 
+enum TelegramDigestRecipientKind {
+  STUDENT
+  USER
+  GROUP // recipientId = companyId; the group digest itself
+}
+
+enum TelegramDigestCategory {
+  PAYMENT_RECEIVED
+  PAYMENT_REVERSED
+  STUDENT_ENROLLED
+  STUDENT_REMOVED
+  DEBT_CHARGE
+  TASK_ASSIGNED
+  TASK_UPDATED
+  TASK_DELETED
+  TASK_STATUS_CHANGED
+  PAYMENT_CORRECTED
+  SALARY_CARRIED_OVER
+  ATTENDANCE_COMPLETED
+  GROUP_NEW_STUDENT
+  GROUP_NEW_GROUP
+  GROUP_PAYMENT
+  GROUP_STATUS_CHANGE
+}
+
+/// One queued Telegram notification waiting for the 20:00 digest (ADR-0025).
+/// `payload` is structured data, never rendered text: the crons render it at
+/// send time, so figures such as the student's balance are fresh.
+model TelegramDigestItem {
+  id                String                      @id @default(uuid())
+  recipientKind     TelegramDigestRecipientKind
+  recipientId       Int
+  companyId         Int
+  branchId          Int?
+  category          TelegramDigestCategory
+  relatedEntityId   String?
+  payload           Json
+  /// GROUP rows only: ids of the TelegramGroup chats this row already reached.
+  /// A row is deleted once every active group that should see it is listed.
+  deliveredGroupIds String[]                    @default([])
+  createdAt         DateTime                    @default(now())
+
+  @@index([recipientKind, recipientId])
+  @@index([companyId])
+  @@index([createdAt])
+}
+
 model StudentExitReason {
   id              String     @id @default(uuid())
   name            String

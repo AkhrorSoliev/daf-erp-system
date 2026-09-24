@@ -1,11 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { NotificationType, UserStatus } from '@prisma/client';
+import {
+  NotificationType,
+  TelegramDigestCategory,
+  TelegramDigestRecipientKind,
+  UserStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { PushService } from '../notifications/push.service';
-import { TelegramService } from '../telegram/telegram.service';
+import { TelegramDigestQueueService } from '../telegram-digest/telegram-digest-queue.service';
+import { describeError } from '../telegram-digest/telegram-send';
 
 export interface AttendanceCompletedPayload {
   groupId: string;
@@ -23,7 +29,8 @@ export interface AttendanceCompletedPayload {
 
 /**
  * Listens for `attendance.completed` events emitted by AttendanceService.save()
- * and sends stats notifications to the group's teachers across 4 channels.
+ * and notifies the group's teachers: DB row, SSE and push instantly, Telegram
+ * through the 20:00 digest (ADR-0025).
  *
  * Idempotency relies on existing Notification rows for the same day — the
  * emitter only fires on the first save of the day (no prior attendance rows),
@@ -38,12 +45,12 @@ export class AttendanceEventsListener {
     private notificationsService: NotificationsService,
     private gateway: NotificationsGateway,
     private pushService: PushService,
-    private telegramService: TelegramService,
+    private digestQueue: TelegramDigestQueueService,
   ) {}
 
   @OnEvent('attendance.completed')
   async handleAttendanceCompleted(payload: AttendanceCompletedPayload) {
-    const { groupId, groupName, teacherIds, companyId, stats } = payload;
+    const { groupId, groupName, date, teacherIds, companyId, stats } = payload;
     if (teacherIds.length === 0) return;
 
     const teachers = await this.prisma.user.findMany({
@@ -90,21 +97,30 @@ export class AttendanceEventsListener {
           );
         }
 
-        if (teacher.telegramChatId) {
-          try {
-            const bot = this.telegramService.getBot();
-            if (bot) {
-              await bot.telegram.sendMessage(
-                teacher.telegramChatId,
-                `<b>${title}</b>\n${message}`,
-                { parse_mode: 'HTML' },
-              );
-            }
-          } catch (err) {
-            this.logger.warn(
-              `Telegram send failed for teacher ${teacher.id}: ${err instanceof Error ? err.message : err}`,
-            );
-          }
+        // Telegram waits for the 20:00 digest (ADR-0025); DB/SSE/push above
+        // stay instant. The chat is resolved at 20:00, so a teacher who links
+        // Telegram later today still gets the line.
+        try {
+          await this.digestQueue.enqueue({
+            recipientKind: TelegramDigestRecipientKind.USER,
+            recipientId: teacher.id,
+            companyId,
+            category: TelegramDigestCategory.ATTENDANCE_COMPLETED,
+            relatedEntityId: `${groupId}:${date}`,
+            payload: {
+              groupId,
+              groupName,
+              date,
+              present: stats.present,
+              absent: stats.absent,
+              late: stats.late,
+              excused: stats.excused,
+            },
+          });
+        } catch (err) {
+          this.logger.warn(
+            `Attendance digest enqueue failed for teacher ${teacher.id}: ${describeError(err)}`,
+          );
         }
       } catch (err) {
         this.logger.error(

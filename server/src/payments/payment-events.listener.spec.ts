@@ -1,13 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PaymentMethod, PaymentSource, SmsMessageType } from '@prisma/client';
+import {
+  PaymentMethod,
+  PaymentSource,
+  TelegramDigestCategory,
+  TelegramDigestRecipientKind,
+} from '@prisma/client';
 import { PaymentEventsListener } from './payment-events.listener';
-import { PrismaService } from '../prisma/prisma.service';
-import { SmsService } from '../sms/sms.service';
+import { TelegramDigestQueueService } from '../telegram-digest/telegram-digest-queue.service';
 
 describe('PaymentEventsListener', () => {
   let listener: PaymentEventsListener;
-  let prisma: any;
-  let smsService: any;
+  let enqueue: jest.Mock;
 
   const basePayload = {
     paymentId: 'pay-1',
@@ -20,139 +23,69 @@ describe('PaymentEventsListener', () => {
     performedById: 99,
   };
 
-  beforeEach(async () => {
-    // Listener reads receipt URL bases from process.env directly. Reset both
-    // before each test so they don't bleed across cases.
+  const clearEnv = () => {
     delete process.env.INVOICE_BASE_URL;
     delete process.env.PUBLIC_BASE_URL;
     delete process.env.APP_URL;
+  };
 
-    prisma = { student: { findFirst: jest.fn() } };
-    smsService = { sendToStudent: jest.fn().mockResolvedValue({}) };
-
+  beforeEach(async () => {
+    clearEnv();
+    enqueue = jest.fn().mockResolvedValue(undefined);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentEventsListener,
-        { provide: PrismaService, useValue: prisma },
-        { provide: SmsService, useValue: smsService },
+        { provide: TelegramDigestQueueService, useValue: { enqueue } },
       ],
     }).compile();
-
     listener = module.get(PaymentEventsListener);
   });
 
-  afterEach(() => {
-    delete process.env.INVOICE_BASE_URL;
-    delete process.env.PUBLIC_BASE_URL;
-    delete process.env.APP_URL;
-  });
+  afterEach(clearEnv);
 
-  it('sends a Telegram receipt with amount, method, and balance', async () => {
-    prisma.student.findFirst.mockResolvedValue({
-      id: 10001,
-      firstName: 'Aziz',
-      telegramChatId: 'chat-a',
-    });
-
+  it('queues the receipt for the 20:00 digest with a structured payload', async () => {
     await listener.handle(basePayload);
 
-    expect(smsService.sendToStudent).toHaveBeenCalledTimes(1);
-    const [studentId, body, type, performedById, companyId] =
-      smsService.sendToStudent.mock.calls[0];
-    expect(studentId).toBe(10001);
-    expect(type).toBe(SmsMessageType.AUTO);
-    expect(performedById).toBe(99);
-    expect(companyId).toBe(1);
-    expect(body).toContain('Aziz');
-    expect(body).toContain('1 500 000');
-    expect(body).toContain('Naqd');
-    expect(body).toContain('2 000 000');
+    expect(enqueue).toHaveBeenCalledWith({
+      recipientKind: TelegramDigestRecipientKind.STUDENT,
+      recipientId: 10001,
+      companyId: 1,
+      category: TelegramDigestCategory.PAYMENT_RECEIVED,
+      relatedEntityId: 'pay-1',
+      payload: {
+        paymentId: 'pay-1',
+        amount: 1500000,
+        method: PaymentMethod.CASH,
+        receiptUrl: 'https://admin.dafzentrum.uz/r/pay-1',
+        performedById: 99,
+      },
+    });
   });
 
   it('builds the receipt link from INVOICE_BASE_URL when configured', async () => {
     process.env.INVOICE_BASE_URL = 'https://invoice.dafzentrum.uz';
-    prisma.student.findFirst.mockResolvedValue({
-      id: 10001,
-      firstName: 'Aziz',
-      telegramChatId: 'chat-a',
-    });
-
     await listener.handle(basePayload);
-
-    const body = smsService.sendToStudent.mock.calls[0][1];
-    expect(body).toContain('https://invoice.dafzentrum.uz/pay-1');
-    expect(body).not.toContain('/r/');
+    expect(enqueue.mock.calls[0][0].payload.receiptUrl).toBe(
+      'https://invoice.dafzentrum.uz/pay-1',
+    );
   });
 
-  it('falls back to <admin>/r/<id> when INVOICE_BASE_URL is missing', async () => {
-    // No env vars set — should hit the hardcoded fallback host with /r/ prefix.
-    prisma.student.findFirst.mockResolvedValue({
-      id: 10001,
-      firstName: 'Aziz',
-      telegramChatId: 'chat-a',
-    });
-
+  it('falls back to PUBLIC_BASE_URL/r/<id> when INVOICE_BASE_URL is missing', async () => {
+    process.env.PUBLIC_BASE_URL = 'https://erp.example.uz';
     await listener.handle(basePayload);
-
-    const body = smsService.sendToStudent.mock.calls[0][1];
-    expect(body).toContain('https://admin.dafzentrum.uz/r/pay-1');
+    expect(enqueue.mock.calls[0][0].payload.receiptUrl).toBe(
+      'https://erp.example.uz/r/pay-1',
+    );
   });
 
-  it('uses Payme label for gateway-sourced payments', async () => {
-    prisma.student.findFirst.mockResolvedValue({
-      id: 10001,
-      firstName: 'Aziz',
-      telegramChatId: 'chat-a',
-    });
-
-    await listener.handle({ ...basePayload, method: PaymentMethod.PAYME });
-
-    const body = smsService.sendToStudent.mock.calls[0][1];
-    expect(body).toContain('Payme');
+  it('stores a missing performer as null', async () => {
+    await listener.handle({ ...basePayload, performedById: undefined });
+    expect(enqueue.mock.calls[0][0].payload.performedById).toBeNull();
   });
 
-  it('skips Telegram delivery for students without telegramChatId', async () => {
-    prisma.student.findFirst.mockResolvedValue({
-      id: 10001,
-      firstName: 'Aziz',
-      telegramChatId: null,
-    });
-
-    await listener.handle(basePayload);
-
-    expect(smsService.sendToStudent).not.toHaveBeenCalled();
-  });
-
-  it('handles a missing student row gracefully (silent skip)', async () => {
-    prisma.student.findFirst.mockResolvedValue(null);
-
-    await listener.handle(basePayload);
-
-    expect(smsService.sendToStudent).not.toHaveBeenCalled();
-  });
-
-  it('swallows SmsService errors without throwing', async () => {
-    prisma.student.findFirst.mockResolvedValue({
-      id: 10001,
-      firstName: 'Aziz',
-      telegramChatId: 'chat-a',
-    });
-    smsService.sendToStudent.mockRejectedValueOnce(new Error('boom'));
-
+  it('swallows queue errors without throwing', async () => {
+    enqueue.mockRejectedValueOnce(new Error('db down'));
     await expect(listener.handle(basePayload)).resolves.toBeUndefined();
-  });
-
-  it('omits balance line when studentBalance is null', async () => {
-    prisma.student.findFirst.mockResolvedValue({
-      id: 10001,
-      firstName: 'Aziz',
-      telegramChatId: 'chat-a',
-    });
-
-    await listener.handle({ ...basePayload, studentBalance: null });
-
-    const body = smsService.sendToStudent.mock.calls[0][1];
-    expect(body).not.toMatch(/balansingiz/i);
   });
 
   describe('handleReversed', () => {
@@ -166,57 +99,31 @@ describe('PaymentEventsListener', () => {
       performedById: 99,
     };
 
-    it('sends a Telegram notice with the reversed amount and reason', async () => {
-      prisma.student.findFirst.mockResolvedValue({
-        id: 10001,
-        firstName: 'Aziz',
-        telegramChatId: 'chat-a',
-      });
-
+    it('queues the reversal with its reason', async () => {
       await listener.handleReversed(reversedPayload);
 
-      expect(smsService.sendToStudent).toHaveBeenCalledTimes(1);
-      const body = smsService.sendToStudent.mock.calls[0][1];
-      expect(body).toContain('Aziz');
-      expect(body).toContain('5 000 000');
-      expect(body).toContain('bekor qilindi');
-      expect(body).toContain('Summa ortiqcha kiritilgan');
-      expect(body).toContain('100 000');
+      expect(enqueue).toHaveBeenCalledWith({
+        recipientKind: TelegramDigestRecipientKind.STUDENT,
+        recipientId: 10001,
+        companyId: 1,
+        category: TelegramDigestCategory.PAYMENT_REVERSED,
+        relatedEntityId: 'pay-1',
+        payload: {
+          paymentId: 'pay-1',
+          amount: 5000000,
+          reason: 'Summa ortiqcha kiritilgan',
+          performedById: 99,
+        },
+      });
     });
 
-    it('omits the reason line when reason is null', async () => {
-      prisma.student.findFirst.mockResolvedValue({
-        id: 10001,
-        firstName: 'Aziz',
-        telegramChatId: 'chat-a',
-      });
-
+    it('keeps a null reason as null', async () => {
       await listener.handleReversed({ ...reversedPayload, reason: null });
-
-      const body = smsService.sendToStudent.mock.calls[0][1];
-      expect(body).not.toMatch(/Sabab:/);
+      expect(enqueue.mock.calls[0][0].payload.reason).toBeNull();
     });
 
-    it('skips delivery for students without telegramChatId', async () => {
-      prisma.student.findFirst.mockResolvedValue({
-        id: 10001,
-        firstName: 'Aziz',
-        telegramChatId: null,
-      });
-
-      await listener.handleReversed(reversedPayload);
-
-      expect(smsService.sendToStudent).not.toHaveBeenCalled();
-    });
-
-    it('swallows SmsService errors without throwing', async () => {
-      prisma.student.findFirst.mockResolvedValue({
-        id: 10001,
-        firstName: 'Aziz',
-        telegramChatId: 'chat-a',
-      });
-      smsService.sendToStudent.mockRejectedValueOnce(new Error('boom'));
-
+    it('swallows queue errors without throwing', async () => {
+      enqueue.mockRejectedValueOnce(new Error('db down'));
       await expect(
         listener.handleReversed(reversedPayload),
       ).resolves.toBeUndefined();

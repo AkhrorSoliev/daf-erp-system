@@ -1,11 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotificationType, UserStatus } from '@prisma/client';
+import {
+  NotificationType,
+  TelegramDigestCategory,
+  TelegramDigestRecipientKind,
+  UserStatus,
+} from '@prisma/client';
 import { AttendanceEventsListener } from './attendance-events.listener';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { PushService } from '../notifications/push.service';
-import { TelegramService } from '../telegram/telegram.service';
+import { TelegramDigestQueueService } from '../telegram-digest/telegram-digest-queue.service';
 
 describe('AttendanceEventsListener', () => {
   let listener: AttendanceEventsListener;
@@ -13,10 +18,10 @@ describe('AttendanceEventsListener', () => {
   let notificationsService: any;
   let gateway: any;
   let pushService: any;
-  let bot: { telegram: { sendMessage: jest.Mock } };
+  let enqueue: jest.Mock;
 
   beforeEach(async () => {
-    bot = { telegram: { sendMessage: jest.fn().mockResolvedValue(undefined) } };
+    enqueue = jest.fn().mockResolvedValue(undefined);
     prisma = {
       user: { findMany: jest.fn().mockResolvedValue([]) },
       notification: { findFirst: jest.fn().mockResolvedValue(null) },
@@ -34,10 +39,7 @@ describe('AttendanceEventsListener', () => {
         { provide: NotificationsService, useValue: notificationsService },
         { provide: NotificationsGateway, useValue: gateway },
         { provide: PushService, useValue: pushService },
-        {
-          provide: TelegramService,
-          useValue: { getBot: jest.fn().mockReturnValue(bot) },
-        },
+        { provide: TelegramDigestQueueService, useValue: { enqueue } },
       ],
     }).compile();
 
@@ -75,13 +77,25 @@ describe('AttendanceEventsListener', () => {
       20001,
       expect.objectContaining({ url: '/groups/g-1' }),
     );
-    // Only teacher 20001 has a chat id
-    expect(bot.telegram.sendMessage).toHaveBeenCalledTimes(1);
-    expect(bot.telegram.sendMessage).toHaveBeenCalledWith(
-      '111',
-      expect.stringContaining('Keldi: 5'),
-      expect.objectContaining({ parse_mode: 'HTML' }),
-    );
+    // The chat is resolved at 20:00, so both teachers are queued — even the
+    // one who has not linked Telegram yet.
+    expect(enqueue).toHaveBeenCalledTimes(2);
+    expect(enqueue).toHaveBeenCalledWith({
+      recipientKind: TelegramDigestRecipientKind.USER,
+      recipientId: 20001,
+      companyId: 100,
+      category: TelegramDigestCategory.ATTENDANCE_COMPLETED,
+      relatedEntityId: 'g-1:2026-04-22',
+      payload: {
+        groupId: 'g-1',
+        groupName: 'Deutsch A1',
+        date: '2026-04-22',
+        present: 5,
+        absent: 1,
+        late: 2,
+        excused: 0,
+      },
+    });
   });
 
   it('skips a teacher when ATTENDANCE_COMPLETED already sent today', async () => {
@@ -160,5 +174,20 @@ describe('AttendanceEventsListener', () => {
     expect(notificationsService.create).not.toHaveBeenCalledWith(
       expect.objectContaining({ userId: 20002 }),
     );
+  });
+
+  it('keeps DB/SSE/push delivery when queueing the Telegram leg fails', async () => {
+    prisma.user.findMany.mockResolvedValue([
+      { id: 20001, telegramChatId: '111' },
+    ]);
+    enqueue.mockRejectedValueOnce(new Error('db down'));
+
+    await listener.handleAttendanceCompleted({
+      ...payload,
+      teacherIds: [20001],
+    });
+
+    expect(notificationsService.create).toHaveBeenCalledTimes(1);
+    expect(pushService.sendToUser).toHaveBeenCalledTimes(1);
   });
 });

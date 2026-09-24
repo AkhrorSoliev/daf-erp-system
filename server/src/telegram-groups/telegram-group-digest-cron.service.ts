@@ -1,27 +1,54 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { TelegramGroupStatus } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
-import { TelegramAdminBotService } from './telegram-admin-bot.service';
 import {
-  DigestEntry,
-  TelegramGroupDigestBufferService,
-} from './telegram-group-digest-buffer.service';
-import { TelegramGroupDigestService } from './telegram-group-digest.service';
+  TelegramDigestRecipientKind,
+  TelegramGroupStatus,
+} from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 import { HolidaysService } from '../holidays/holidays.service';
+import { DIGEST_ROW_MAX_AGE_MS } from '../telegram-digest/telegram-digest.constants';
+import { TelegramDigestItemRow } from '../telegram-digest/telegram-digest-payloads';
+import { packBlocks } from '../telegram-digest/telegram-message-parts';
+import {
+  describeError,
+  sendTelegramText,
+  TelegramTextSender,
+} from '../telegram-digest/telegram-send';
+import { TelegramAdminBotService } from './telegram-admin-bot.service';
+import { TelegramGroupDigestService } from './telegram-group-digest.service';
 import { isTashkentSunday } from './utils/format.util';
 
+type GroupRow = TelegramDigestItemRow & { deliveredGroupIds: string[] };
+
+interface TargetGroup {
+  id: string;
+  chatId: bigint;
+  branchId: number | null;
+  receivesAllBranches: boolean;
+}
+
 /**
- * Flushes each company's buffered group events into a single consolidated
- * digest message every 3 hours (09:00, 12:00, 15:00, 18:00, 21:00 Tashkent).
- *
- * This replaces the old per-event broadcasts for low-priority events
- * (new student, new payment, new group) — instead of dozens of tiny messages
- * the group gets one tidy summary. Status changes and very large payments
- * still go out instantly via `TelegramGroupBroadcastListener`.
- *
- * Buffers for companies without any approved group are never drained here;
- * they self-expire via `TG_GROUP_DIGEST_BUFFER_TTL_SECONDS`.
+ * Which queued rows a Telegram group may see — the rule the old instant
+ * broadcast applied: a `receivesAllBranches` group sees everything; any other
+ * group sees company-wide rows and its own branch's. A legacy group with no
+ * branch therefore sees company-wide rows only (fail-closed, see the
+ * `TelegramGroup.receivesAllBranches` schema comment).
+ */
+export function isVisibleToGroup(
+  row: { branchId: number | null },
+  group: { branchId: number | null; receivesAllBranches: boolean },
+): boolean {
+  if (group.receivesAllBranches) return true;
+  if (row.branchId == null) return true;
+  return row.branchId === group.branchId;
+}
+
+/**
+ * Sends each approved Telegram group one consolidated message a day, at
+ * 20:00 Asia/Tashkent, from the GROUP rows of the digest queue (ADR-0025).
+ * Sundays and holidays are skipped — rows wait for the next working day.
+ * Delivery is tracked per group (`deliveredGroupIds`): a chat that failed
+ * gets the rows again next run, a chat that got them never does twice.
  */
 @Injectable()
 export class TelegramGroupDigestCronService {
@@ -30,123 +57,207 @@ export class TelegramGroupDigestCronService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly adminBot: TelegramAdminBotService,
-    private readonly buffer: TelegramGroupDigestBufferService,
     private readonly digest: TelegramGroupDigestService,
     private readonly holidaysService: HolidaysService,
   ) {}
 
-  @Cron('0 9,12,15,18,21 * * *', { timeZone: 'Asia/Tashkent' })
+  @Cron('0 20 * * *', { timeZone: 'Asia/Tashkent' })
   async flushDigests(): Promise<void> {
+    await this.purgeStale();
+
     const bot = this.adminBot.getBot();
     if (!bot) {
-      this.logger.warn('Skipped digest flush — admin bot not initialized');
+      this.logger.warn('Skipped group digest — admin bot not initialized');
       return;
     }
-
-    // Skip Sundays — weekly day off. The buffer is preserved for Monday.
     if (isTashkentSunday()) {
-      this.logger.log('Skipped digest flush — today is Sunday');
+      this.logger.log('Skipped group digest — today is Sunday');
       return;
     }
-
-    // Skip on holidays — the digest is "system activity stats", and
-    // bayram days are non-working. Whatever's already in the buffer
-    // stays — the next post-holiday tick will pick it up.
     const holiday = await this.holidaysService.findActiveHolidayCovering(
       new Date(),
     );
     if (holiday) {
       this.logger.log(
-        `Skipped digest flush — today is a holiday (${holiday.name})`,
+        `Skipped group digest — today is a holiday (${holiday.name})`,
       );
       return;
     }
 
-    const groups = await this.prisma.telegramGroup.findMany({
-      where: {
-        status: TelegramGroupStatus.APPROVED,
-        isActive: true,
-        deletedAt: null,
-        companyId: { not: null },
-      },
-      select: { id: true, chatId: true, companyId: true, branchId: true },
+    const rows = await this.prisma.telegramDigestItem.findMany({
+      where: { recipientKind: TelegramDigestRecipientKind.GROUP },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
-    if (groups.length === 0) return;
+    if (rows.length === 0) return;
 
-    // Bucket the groups by company so each company's buffer is drained once.
-    const byCompany = new Map<number, typeof groups>();
-    for (const g of groups) {
-      if (g.companyId == null) continue;
-      const list = byCompany.get(g.companyId) ?? [];
-      list.push(g);
-      byCompany.set(g.companyId, list);
+    const byCompany = new Map<number, GroupRow[]>();
+    for (const row of rows) {
+      byCompany.set(row.companyId, [
+        ...(byCompany.get(row.companyId) ?? []),
+        row,
+      ]);
     }
-
     const companies = await this.prisma.company.findMany({
       where: { id: { in: [...byCompany.keys()] } },
       select: { id: true, name: true },
     });
     const companyName = new Map(companies.map((c) => [c.id, c.name]));
 
+    let sent = 0;
+    for (const [companyId, companyRows] of byCompany) {
+      try {
+        sent += await this.flushCompany(
+          bot,
+          companyId,
+          companyName.get(companyId) ?? 'Hisobot',
+          companyRows,
+        );
+      } catch (err) {
+        this.logger.error(
+          `Group digest failed for company ${companyId}: ${describeError(err)}`,
+        );
+      }
+    }
+    this.logger.log(`Group digest flush — sent ${sent} message(s)`);
+  }
+
+  /** Spec: any row older than 7 days goes — also on Sundays, holidays, without a bot. */
+  private async purgeStale(): Promise<void> {
+    try {
+      const { count } = await this.prisma.telegramDigestItem.deleteMany({
+        where: {
+          recipientKind: TelegramDigestRecipientKind.GROUP,
+          createdAt: { lt: new Date(Date.now() - DIGEST_ROW_MAX_AGE_MS) },
+        },
+      });
+      if (count > 1) {
+        this.logger.warn(
+          `Group digest: purged ${count} undelivered row(s) older than 7 days`,
+        );
+      }
+    } catch (err) {
+      this.logger.error(`Group digest purge failed: ${describeError(err)}`);
+    }
+  }
+
+  /** Returns the number of Telegram messages sent for this company. */
+  private async flushCompany(
+    bot: TelegramTextSender,
+    companyId: number,
+    companyName: string,
+    rows: GroupRow[],
+  ): Promise<number> {
+    const groups: TargetGroup[] = await this.prisma.telegramGroup.findMany({
+      where: {
+        companyId,
+        status: TelegramGroupStatus.APPROVED,
+        isActive: true,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        chatId: true,
+        branchId: true,
+        receivesAllBranches: true,
+      },
+    });
+
+    const delivered = new Map(
+      rows.map((r) => [r.id, new Set(r.deliveredGroupIds)]),
+    );
+    const unreachable = new Set<string>();
     const now = new Date();
     let sent = 0;
-    for (const [companyId, companyGroups] of byCompany) {
-      const entries = await this.buffer.drain(companyId);
-      if (entries.length === 0) continue;
 
-      for (const g of companyGroups) {
-        const visible = this.filterForGroup(entries, g.branchId);
-        const message = this.digest.build(
-          companyName.get(companyId) ?? 'Hisobot',
-          visible,
-          now,
-        );
-        if (!message) continue; // nothing visible for this group's branch
+    for (const group of groups) {
+      const pending = rows.filter(
+        (r) =>
+          isVisibleToGroup(r, group) && !delivered.get(r.id)?.has(group.id),
+      );
+      const blocks = this.digest.buildBlocks(companyName, pending, now);
+      if (!blocks) continue;
 
-        try {
-          await bot.telegram.sendMessage(g.chatId.toString(), message, {
+      for (const part of packBlocks(blocks)) {
+        const outcome = await sendTelegramText(
+          bot,
+          group.chatId.toString(),
+          part.text,
+          {
             parse_mode: 'HTML',
-          });
-          sent += 1;
-        } catch (err: any) {
-          await this.handleSendError(err, g.id, g.chatId);
+          },
+        );
+        if (!outcome.ok) {
+          if (outcome.kind === 'permanent') {
+            // The chat is gone for good. 403 (bot removed) deactivates the
+            // group as before; any other permanent error (chat not found,
+            // group migrated) just stops this run from waiting for it.
+            if (outcome.code === 403) await this.deactivate(group);
+            else {
+              this.logger.warn(
+                `Group digest: chat ${group.chatId} unreachable (${outcome.description}) — not waiting for it this run`,
+              );
+            }
+            unreachable.add(group.id);
+          } else {
+            const message = `Group digest to chat ${group.chatId} failed (${outcome.kind}: ${outcome.description}) — kept for the next run`;
+            if (outcome.kind === 'content') this.logger.error(message);
+            else this.logger.warn(message);
+          }
+          break;
         }
+        sent += 1;
+        for (const id of part.itemIds) delivered.get(id)?.add(group.id);
+        await this.markDelivered(part.itemIds, group.id);
       }
     }
 
-    this.logger.log(`Digest flush — sent ${sent} message(s)`);
+    // A row is done once every reachable group that may see it has it. A row
+    // no such group can see (e.g. no approved group at all) is done now.
+    const liveGroups = groups.filter((g) => !unreachable.has(g.id));
+    const done = rows
+      .filter((r) =>
+        liveGroups.every(
+          (g) => !isVisibleToGroup(r, g) || delivered.get(r.id)?.has(g.id),
+        ),
+      )
+      .map((r) => r.id);
+    if (done.length > 0) {
+      await this.prisma.telegramDigestItem.deleteMany({
+        where: { id: { in: done } },
+      });
+    }
+    return sent;
   }
 
   /**
-   * A company-wide group (`branchId = null`) sees every event. A branch-scoped
-   * group sees only its own branch's events plus company-wide ones (events
-   * with no branch) — mirrors the old `TelegramGroupBroadcastService` rule.
+   * Persists delivery so a crash between here and the final delete never
+   * resends to this chat. One retry; a write that still fails is logged, not
+   * thrown — the row is still deleted below if every group has it.
    */
-  private filterForGroup(
-    entries: DigestEntry[],
-    groupBranchId: number | null,
-  ): DigestEntry[] {
-    if (groupBranchId == null) return entries;
-    return entries.filter(
-      (e) => e.branchId == null || e.branchId === groupBranchId,
-    );
+  private async markDelivered(ids: string[], groupId: string): Promise<void> {
+    if (ids.length === 0) return;
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        await this.prisma.telegramDigestItem.updateMany({
+          where: { id: { in: ids } },
+          data: { deliveredGroupIds: { push: groupId } },
+        });
+        return;
+      } catch (err) {
+        if (attempt === 2) {
+          this.logger.warn(
+            `Could not record digest delivery to group ${groupId}: ${describeError(err)}`,
+          );
+        }
+      }
+    }
   }
 
-  private async handleSendError(
-    err: any,
-    groupId: string,
-    chatId: bigint,
-  ): Promise<void> {
-    const code = err?.response?.error_code ?? err?.code;
-    if (code === 403) {
-      this.logger.warn(`Bot kicked from chat ${chatId} — marking inactive`);
-      await this.prisma.telegramGroup
-        .update({ where: { id: groupId }, data: { isActive: false } })
-        .catch(() => undefined);
-    } else {
-      this.logger.error(
-        `Digest send failed for chat ${chatId}: ${err?.message ?? err}`,
-      );
-    }
+  /** 403: the bot was removed from the chat — same handling as before. */
+  private async deactivate(group: TargetGroup): Promise<void> {
+    this.logger.warn(`Bot kicked from chat ${group.chatId} — marking inactive`);
+    await this.prisma.telegramGroup
+      .update({ where: { id: group.id }, data: { isActive: false } })
+      .catch(() => undefined);
   }
 }
