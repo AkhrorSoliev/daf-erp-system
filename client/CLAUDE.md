@@ -962,6 +962,11 @@ every list renders; the roles are only access.
 - Editing an existing employee pre-fills Lavozim from their role label, which
   is how the field gets backfilled without a script.
 
+### Your own phone, login and password (ADR-0031)
+
+- The profile drawer (`components/profile/edit-profile-drawer.tsx`) sends a changed phone to `PATCH /users/phone` together with the current password — the "Joriy parol" field appears only while the phone differs — and name/photo to `PATCH /users/profile`, which refuses a phone. The split lives in `profile-save-plan.ts` (unit-tested), not in the JSX.
+- The employee form locks Telefon, Login and Parol when you open your OWN record and links to Profil (`lib/own-sign-in-keys.ts`); the backend refuses those changes there with 403 anyway.
+
 ### Employee & Teacher Status (Faollik holati)
 
 - Both employee (Settings → Xodimlar) and teacher forms expose a single `status` field with values `ACTIVE / INACTIVE / SUSPENDED / TERMINATED` (and `ARCHIVED` on soft delete). **Never** add a separate "Faol" toggle — the backend keeps `isActive` in sync with `status` automatically
