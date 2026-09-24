@@ -139,7 +139,7 @@ describe('PortalPasswordResetService', () => {
       );
     });
 
-    it('ends every session of the account (ADR-0029)', async () => {
+    it('ends every session of the account (ADR-0030)', async () => {
       const { service, prisma, redis } = build();
 
       await service.applyNewPassword(

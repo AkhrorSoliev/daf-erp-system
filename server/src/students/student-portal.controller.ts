@@ -98,7 +98,7 @@ export class StudentPortalController {
       dto,
     );
     // The change ended every session of the account, this one included
-    // (ADR-0029). A fresh pair keeps the student signed in here.
+    // (ADR-0030). A fresh pair keeps the student signed in here.
     return { ...result, ...(await this.authService.issueSession(userId)) };
   }
 

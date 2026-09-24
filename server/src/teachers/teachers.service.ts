@@ -368,7 +368,7 @@ export class TeachersService {
         ...(dto.gender !== undefined && { gender: dto.gender }),
         ...(dto.photo !== undefined && { photo: dto.photo }),
         ...(dto.login !== undefined && { login: dto.login }),
-        // A new password ends every session of the teacher (ADR-0029).
+        // A new password ends every session of the teacher (ADR-0030).
         ...(hashedPassword && passwordWrite(hashedPassword)),
       },
       // `sessionVersion` is split off before the response is built.

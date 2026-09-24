@@ -182,7 +182,7 @@ describe('JwtAuthGuard', () => {
     });
   });
 
-  describe('session version (ADR-0029)', () => {
+  describe('session version (ADR-0030)', () => {
     const sessionKey = 'user:session-version:10505';
 
     function cache(values: Record<string, string>) {

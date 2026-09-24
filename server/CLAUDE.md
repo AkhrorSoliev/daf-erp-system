@@ -113,6 +113,9 @@ before it existed).
 - JWT uses **access token (1h)** + **refresh token (24h)** pair
 - `POST /api/auth/login` returns both tokens + user data
 - `POST /api/auth/refresh` refreshes the token pair
+- **Every token carries the account's session version (`sv`, ADR-0030).** `User.sessionVersion` starts at 0. Any write of `User.password` bumps it in the same `update` through `passwordWrite()` (`src/common/auth/session-version.ts`), and `POST /users/logout-others` bumps it without a password. `refresh` refuses a token whose `sv` differs from the database; `JwtAuthGuard` stops an older access token on its next request through the Redis mirror `user:session-version:<id>` (fail-open, confirmed against the database before the 401). A token without `sv` counts as version 0. `password-write.single-source.spec.ts` fails on a raw `password` write anywhere but account creation.
+- **A refresh token is not an access token.** `JwtStrategy` refuses `type: 'refresh'`.
+- **The device that acts keeps its session.** `PATCH /users/password`, `PATCH /student-portal/password` and `POST /users/logout-others` return `{ accessToken, refreshToken, user }` (the first two also `message`); the client stores the pair.
 - Use `@CurrentUser()` decorator to get the authenticated user in controllers
 
 #### Phone-based login (all roles)

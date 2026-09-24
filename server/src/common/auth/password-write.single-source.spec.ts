@@ -4,7 +4,7 @@ import { join, relative } from 'path';
 
 /**
  * Every write of `User.password` on an existing account must end that
- * account's other sessions (ADR-0029). `passwordWrite()` in
+ * account's other sessions (ADR-0030). `passwordWrite()` in
  * `common/auth/session-version.ts` is the one way to write the column that
  * does, because it puts the hash and the session-version bump in ONE update.
  *
@@ -61,7 +61,7 @@ const NOT_A_USER_PASSWORD: { file: string; where: string; why: string }[] = [
 ];
 
 const FIX =
-  'write the column with passwordWrite() from common/auth/session-version.ts and call recordSessionsEnded() after the commit — see ADR-0029';
+  'write the column with passwordWrite() from common/auth/session-version.ts and call recordSessionsEnded() after the commit — see ADR-0030';
 
 interface PasswordWrite {
   file: string;

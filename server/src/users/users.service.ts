@@ -496,7 +496,7 @@ export class UsersService {
 
     const hashed = await bcrypt.hash(dto.newPassword, 10);
     // Ends every session of the account, this one included; the controller
-    // hands the caller a fresh pair (ADR-0029).
+    // hands the caller a fresh pair (ADR-0030).
     const { sessionVersion } = await this.prisma.user.update({
       where: { id },
       data: passwordWrite(hashed),

@@ -94,7 +94,7 @@ export class StudentPortalWriteService {
 
     const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
     // Ends every session of the account, this one included; the controller
-    // hands the student a fresh pair (ADR-0029).
+    // hands the student a fresh pair (ADR-0030).
     const { sessionVersion } = await this.prisma.user.update({
       where: { id: userId },
       data: passwordWrite(hashedPassword),

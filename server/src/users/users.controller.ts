@@ -86,7 +86,7 @@ export class UsersController {
   ) {
     const result = await this.usersService.changePassword(userId, dto);
     // The change ended every session of this account, the caller's included
-    // (ADR-0029). A fresh pair keeps THIS device signed in.
+    // (ADR-0030). A fresh pair keeps THIS device signed in.
     return { ...result, ...(await this.authService.issueSession(userId)) };
   }
 

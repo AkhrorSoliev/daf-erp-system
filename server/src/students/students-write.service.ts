@@ -282,7 +282,7 @@ export class StudentsWriteService {
     // rather than a side effect of editing a percentage.
 
     // Filled inside the transaction when the password changes; mirrored for
-    // JwtAuthGuard only once the transaction has committed (ADR-0029).
+    // JwtAuthGuard only once the transaction has committed (ADR-0030).
     const passwordChange: { sessionVersion?: number } = {};
 
     const updated = await this.prisma.$transaction(

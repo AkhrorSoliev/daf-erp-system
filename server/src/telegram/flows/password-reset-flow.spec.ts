@@ -202,7 +202,7 @@ describe('password-reset-flow', () => {
       expect(auditNewValues.parol).not.toContain(plainPassword);
     });
 
-    it('ends every session of the account (ADR-0029)', async () => {
+    it('ends every session of the account (ADR-0030)', async () => {
       prisma.user.findUnique.mockResolvedValue({
         id: 99001,
         status: UserStatus.ACTIVE,

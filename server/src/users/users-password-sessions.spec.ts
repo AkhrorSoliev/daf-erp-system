@@ -9,7 +9,7 @@ import { RedisService } from '../redis/redis.service';
 
 /**
  * A password write on an employee account ends that account's other sessions
- * (ADR-0029): the hash and the session-version bump land in ONE update, the
+ * (ADR-0030): the hash and the session-version bump land in ONE update, the
  * new version is mirrored for JwtAuthGuard, and the write is journaled.
  */
 describe('UsersService — a password write ends the other sessions', () => {

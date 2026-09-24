@@ -7,7 +7,7 @@ import { StatusHistoryService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
 import { RedisService } from '../redis/redis.service';
 
-/** The teacher page's password field ends the teacher's other sessions (ADR-0029). */
+/** The teacher page's password field ends the teacher's other sessions (ADR-0030). */
 describe('TeachersService.update — a new password ends the sessions', () => {
   const CEO_CALLER = {
     mainBranch: null,

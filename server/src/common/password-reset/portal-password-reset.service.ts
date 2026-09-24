@@ -116,7 +116,7 @@ export class PortalPasswordResetService {
     channelLabel: string,
   ): Promise<void> {
     const hashed = await bcrypt.hash(plainPassword, 10);
-    // A reset ends every session of the account (ADR-0029): whoever still
+    // A reset ends every session of the account (ADR-0030): whoever still
     // holds the old one is signed out on their next request.
     const { sessionVersion } = await this.prisma.user.update({
       where: { id: target.userId },

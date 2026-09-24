@@ -37,8 +37,8 @@ describe('JwtStrategy.validate', () => {
   });
 
   it('refuses a refresh token presented as an access token', () => {
-    // Same secret, 24-hour lifetime: accepted here it was a day-long access
-    // token on every route without @Roles, out of reach of `refresh`.
+    // It shares the secret, but only POST /auth/refresh may accept it
+    // (ADR-0030).
     expect(() =>
       strategy.validate({ sub: 7, type: 'refresh', sv: 0 } as never),
     ).toThrow(UnauthorizedException);

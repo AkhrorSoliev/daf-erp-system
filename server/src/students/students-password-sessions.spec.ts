@@ -12,7 +12,7 @@ import { EntityHistoryService } from '../common/entity-history';
 import { TransactionsService } from '../transactions/transactions.service';
 import { RedisService } from '../redis/redis.service';
 
-/** Both student password writes end the student's other sessions (ADR-0029). */
+/** Both student password writes end the student's other sessions (ADR-0030). */
 describe('student password writes end the other sessions', () => {
   describe('StudentPortalWriteService.changePassword (the student themself)', () => {
     let service: StudentPortalWriteService;

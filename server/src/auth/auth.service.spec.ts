@@ -307,7 +307,7 @@ describe('AuthService', () => {
     });
   });
 
-  describe('session version (ADR-0029)', () => {
+  describe('session version (ADR-0030)', () => {
     const liveTeacher = {
       ...teacher,
       status: 'ACTIVE',

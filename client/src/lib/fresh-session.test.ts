@@ -15,7 +15,7 @@ describe("freshSessionFrom", () => {
     ).toEqual({ accessToken: "a", refreshToken: "r", user });
   });
 
-  it("returns null for a message-only response (an API from before ADR-0029)", () => {
+  it("returns null for a message-only response (an API from before ADR-0030)", () => {
     expect(freshSessionFrom({ message: "ok" })).toBeNull();
   });
 

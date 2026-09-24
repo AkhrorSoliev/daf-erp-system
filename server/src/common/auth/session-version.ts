@@ -4,7 +4,7 @@ import type { RedisService } from '../../redis/redis.service';
 import { ACCESS_TOKEN_TTL_SEC } from '../../auth/token-lifetimes';
 
 /*
- * One number per account ends every session it has (ADR-0029).
+ * One number per account ends every session it has (ADR-0030).
  *
  * `User.sessionVersion` starts at 0 and every token carries the value it was
  * minted with as `sv`. Changing the password — through any of the seven paths

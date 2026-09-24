@@ -210,7 +210,7 @@ export class AuthService {
     const secret = this.configService.get<string>('JWT_SECRET')!;
     // `sv` ties both tokens to the account's session version: a password
     // change or "log out other devices" bumps it, and every token minted
-    // before that stops working (ADR-0029).
+    // before that stops working (ADR-0030).
     const payload: Record<string, any> = {
       sub: userId,
       roles,
@@ -375,7 +375,7 @@ export class AuthService {
 
   /**
    * "Log out other devices": end every session of the account, then hand the
-   * device that asked a fresh pair so it stays signed in (ADR-0029).
+   * device that asked a fresh pair so it stays signed in (ADR-0030).
    */
   async logoutOtherSessions(userId: number) {
     const { sessionVersion, companyId, student } =

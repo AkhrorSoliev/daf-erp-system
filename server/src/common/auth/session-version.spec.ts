@@ -9,7 +9,7 @@ import {
   tokenSessionVersion,
 } from './session-version';
 
-describe('session version (ADR-0029)', () => {
+describe('session version (ADR-0030)', () => {
   describe('tokenSessionVersion', () => {
     it('reads the version a token carries', () => {
       expect(tokenSessionVersion({ sv: 3 })).toBe(3);

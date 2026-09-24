@@ -124,7 +124,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
    * and mirrors the new value here (`common/auth/session-version.ts`).
    * `AuthService.refresh` refuses the stale tokens against the database; this
    * stops a stale ACCESS token on its next request instead of at the end of
-   * its hour (ADR-0029).
+   * its hour (ADR-0030).
    *
    * Same contract as the blocked check above: a Redis failure lets the request
    * through — `refresh` still holds the line within the hour — and a cache hit

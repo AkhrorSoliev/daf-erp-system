@@ -159,7 +159,7 @@ export async function resetPassword(
   const plainPassword = generatePassword();
   const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-  // A reset ends every session of the account (ADR-0029).
+  // A reset ends every session of the account (ADR-0030).
   const { sessionVersion } = await prisma.user.update({
     where: { id: user.id },
     data: passwordWrite(hashedPassword),

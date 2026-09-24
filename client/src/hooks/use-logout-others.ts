@@ -8,7 +8,7 @@ import { freshSessionFrom } from "@/lib/fresh-session";
 import { getErrorMessage } from "@/lib/get-error-message";
 
 /**
- * "Log out other devices" (ADR-0029). The server ends every session of the
+ * "Log out other devices" (ADR-0030). The server ends every session of the
  * account — this device's too — and hands back a fresh pair, stored here so
  * only the OTHER devices are signed out. Resolves `true` on success.
  */
