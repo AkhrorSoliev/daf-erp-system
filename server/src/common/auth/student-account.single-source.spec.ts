@@ -25,7 +25,7 @@ const ALLOWED: { file: string; why: string }[] = [
   },
   {
     file: 'src/telegram/scenes/student-registration-flow.ts',
-    why: 'Telegram registration — opens the account inline with the same rules',
+    why: 'Telegram registration — openStudentAccount, the bot shows the password',
   },
   {
     file: 'src/mock-exams/mock-exam-participants.service.ts',
@@ -34,10 +34,10 @@ const ALLOWED: { file: string; why: string }[] = [
 ];
 
 const CREATES_STUDENT = /\.student\.(create|createMany|upsert)\(/;
-// `openStudentAccount` is the one way to open a student account; the Telegram
-// flow still writes the same Student-role account by hand.
-const OPENS_ACCOUNT =
-  /openStudentAccount\(|createStudentUser\(|roleId: STUDENT_ROLE_ID/;
+// `openStudentAccount` is the one way to open a student account;
+// `createStudentUser` is admin create's thin wrapper around it. A file that
+// writes a Student-role account by hand does not count.
+const OPENS_ACCOUNT = /openStudentAccount\(|createStudentUser\(/;
 
 const FIX =
   'a new path that creates a student card must open its account with openStudentAccount (in the same transaction), have a behaviour test, and be added to ALLOWED';
