@@ -300,4 +300,69 @@ describe('AuthService', () => {
       expect(redis.del).toHaveBeenCalled();
     });
   });
+
+  describe('session payload — branch status', () => {
+    // The admin panel does not offer a student registration link for a branch
+    // the Telegram bot refuses (any status but ACTIVE). For everyone but a CEO
+    // the branch list it checks is this payload's `branches`, so every path
+    // that issues a session must ask for each branch's status.
+    const branchSelect = (queryArgs: any) =>
+      queryArgs.include.branches.include.branch.select;
+
+    it('the sign-in lookup (password, phone, Telegram) asks for it', async () => {
+      prisma.user.findFirst.mockResolvedValue(null);
+
+      await service.findAccountByIdentifier('901234567', null);
+
+      expect(
+        branchSelect(prisma.user.findFirst.mock.calls[0][0]),
+      ).toMatchObject({ id: true, name: true, status: true });
+    });
+
+    it('the student app session asks for it and hands it on', async () => {
+      redis.get.mockResolvedValue('555');
+      prisma.user.findFirst.mockResolvedValue({
+        id: 555,
+        companyId: 1,
+        status: 'ACTIVE',
+        roles: [{ role: { id: 6, name: 'Student' } }],
+        branches: [
+          { branch: { id: 7, name: "Farg'ona filiali", status: 'CLOSED' } },
+        ],
+        company: {},
+      });
+
+      const res = await service.pollLoginRequest('req-abc12345');
+
+      expect(
+        branchSelect(prisma.user.findFirst.mock.calls[0][0]),
+      ).toMatchObject({ id: true, name: true, status: true });
+      expect((res as { user?: { branches: unknown } }).user?.branches).toEqual([
+        { id: 7, name: "Farg'ona filiali", status: 'CLOSED' },
+      ]);
+    });
+
+    it('a token refresh asks for it and hands it on', async () => {
+      jwt.verify = jest.fn().mockReturnValue({ sub: 5, type: 'refresh' });
+      prisma.user.findFirst.mockResolvedValue({
+        id: 5,
+        companyId: 1,
+        status: 'ACTIVE',
+        roles: [{ role: { id: 3, name: 'Administrator' } }],
+        branches: [
+          { branch: { id: 7, name: "Farg'ona filiali", status: 'INACTIVE' } },
+        ],
+        company: {},
+      });
+
+      const res = await service.refresh('refresh-token');
+
+      expect(
+        branchSelect(prisma.user.findFirst.mock.calls[0][0]),
+      ).toMatchObject({ id: true, name: true, status: true });
+      expect(res.user.branches).toEqual([
+        { id: 7, name: "Farg'ona filiali", status: 'INACTIVE' },
+      ]);
+    });
+  });
 });

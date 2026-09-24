@@ -3,7 +3,7 @@ import {
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
-import { UserStatus } from '@prisma/client';
+import { Prisma, UserStatus } from '@prisma/client';
 import { resolveAllowedRoleIds } from './portal-roles.config';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -30,6 +30,17 @@ import { normalizeSharedPhone } from '../common/utils/phone.util';
  */
 const ACCESS_TOKEN_TTL = '1h';
 const REFRESH_TOKEN_TTL = '24h';
+
+/**
+ * The branches a session carries, on every path that issues one: sign-in,
+ * the student app login and token refresh. `status` is for the admin panel,
+ * which does not offer a student registration link for a branch the Telegram
+ * bot refuses (any status but ACTIVE). For everyone but a CEO, this list is
+ * where the panel reads that status.
+ */
+const SESSION_BRANCHES = {
+  include: { branch: { select: { id: true, name: true, status: true } } },
+} satisfies Prisma.User$branchesArgs;
 
 @Injectable()
 export class AuthService {
@@ -88,7 +99,7 @@ export class AuthService {
       orderBy: { updatedAt: 'desc' as const },
       include: {
         roles: { include: { role: true } },
-        branches: { include: { branch: { select: { id: true, name: true } } } },
+        branches: SESSION_BRANCHES,
         company: {
           select: {
             id: true,
@@ -274,7 +285,7 @@ export class AuthService {
       where: { id: userId, deletedAt: null },
       include: {
         roles: { include: { role: true } },
-        branches: { include: { branch: { select: { id: true, name: true } } } },
+        branches: SESSION_BRANCHES,
         company: {
           select: {
             id: true,
@@ -332,9 +343,7 @@ export class AuthService {
         where: { id: payload.sub, deletedAt: null },
         include: {
           roles: { include: { role: true } },
-          branches: {
-            include: { branch: { select: { id: true, name: true } } },
-          },
+          branches: SESSION_BRANCHES,
           company: {
             select: {
               id: true,
