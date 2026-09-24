@@ -38,10 +38,7 @@ describe('TelegramService — /start registration links always release their loc
     const inst = Object.create(TelegramService.prototype);
     inst.logger = { log: jest.fn(), warn: jest.fn(), error: jest.fn() };
     inst.prisma = {
-      branch: {
-        findFirst: jest.fn().mockResolvedValue({ id: FERGANA }),
-        findUnique: jest.fn().mockResolvedValue({ id: FERGANA }),
-      },
+      branch: { findFirst: jest.fn().mockResolvedValue({ id: FERGANA }) },
       group: { findFirst: jest.fn().mockResolvedValue(GROUP) },
       mockExam: { findFirst: jest.fn().mockResolvedValue(EXAM) },
     };
@@ -160,6 +157,46 @@ describe('TelegramService — /start registration links always release their loc
       expect(ctx.session.processing).toBe(false);
     });
 
+    // `Branch.id` is a Postgres int4: a larger number made the lookup throw
+    // (P2020, out of range), which left the person without an answer.
+    it.each(['2147483648', '99999999999'])(
+      'answers branch number %s, past int4, as a bad link without a lookup',
+      async (branchNumber) => {
+        const service = makeService();
+        const ctx = makeCtx();
+
+        const handled = await service.startStudentGroupRegistration(
+          ctx,
+          `student_${branchNumber}_group_${GROUP.id}`,
+        );
+
+        expect(handled).toBe(true);
+        expect(ctx.reply).toHaveBeenCalledWith(
+          "Noto'g'ri havola. Administrator bilan bog'laning.",
+        );
+        expect(service.prisma.branch.findFirst).not.toHaveBeenCalled();
+        expect(service.prisma.group.findFirst).not.toHaveBeenCalled();
+        expect(ctx.scene.enter).not.toHaveBeenCalled();
+        expect(ctx.session.processing).toBe(false);
+      },
+    );
+
+    it('still looks up branch number 2147483647, the largest int4', async () => {
+      const service = makeService();
+      const ctx = makeCtx();
+
+      await service.startStudentGroupRegistration(
+        ctx,
+        `student_2147483647_group_${GROUP.id}`,
+      );
+
+      expect(service.prisma.branch.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 2147483647, deletedAt: null, status: 'ACTIVE' },
+        }),
+      );
+    });
+
     it.each(['branch', 'group'] as const)(
       'releases the lock when the %s lookup fails, and lets the error through',
       async (model) => {
@@ -270,25 +307,28 @@ describe('TelegramService — /start registration links always release their loc
         const handled = await service.startStudentRegistration(ctx, payload);
 
         expect(handled).toBe(false);
-        expect(service.prisma.branch.findUnique).not.toHaveBeenCalled();
+        expect(service.prisma.branch.findFirst).not.toHaveBeenCalled();
         expect(ctx.reply).not.toHaveBeenCalled();
         expect(ctx.scene.enter).not.toHaveBeenCalled();
       },
     );
 
-    it('enters student registration with the branch, looked up under the lock', async () => {
+    it('enters student registration with an active branch, looked up under the lock', async () => {
       const service = makeService();
       const ctx = makeCtx();
-      service.prisma.branch.findUnique.mockImplementation(
+      service.prisma.branch.findFirst.mockImplementation(
         probe(ctx, { id: FERGANA }),
       );
 
       const handled = await service.startStudentRegistration(ctx, LINK);
 
       expect(handled).toBe(true);
-      expect(service.prisma.branch.findUnique).toHaveBeenCalledWith({
-        where: { id: FERGANA },
-      });
+      // Archived or closed branches must not accept new registrations.
+      expect(service.prisma.branch.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: FERGANA, deletedAt: null, status: 'ACTIVE' },
+        }),
+      );
       expect(ctx.lockHeldAtLookup).toBe(true);
       expect(ctx.session.data).toEqual({ branchId: FERGANA });
       expect(ctx.scene.enter).toHaveBeenCalledWith('student-registration');
@@ -296,27 +336,53 @@ describe('TelegramService — /start registration links always release their loc
       expect(ctx.session.processing).toBe(false);
     });
 
-    it.each(['student_', 'student_abc'])(
-      'answers %p as a bad link without a lookup',
-      async (payload) => {
-        const service = makeService();
-        const ctx = makeCtx();
-
-        const handled = await service.startStudentRegistration(ctx, payload);
-
-        expect(handled).toBe(true);
-        expect(ctx.reply).toHaveBeenCalledWith(
-          "Noto'g'ri havola. Administrator bilan bog'laning.",
-        );
-        expect(service.prisma.branch.findUnique).not.toHaveBeenCalled();
-        expect(ctx.session.processing).toBe(false);
-      },
-    );
-
-    it('answers an unknown branch', async () => {
+    // Only plain digits within int4 name a branch. `Number()` read `1.5` as a
+    // number Prisma truncates to branch 1, `1e3` and `0x10` as branches 1000
+    // and 16, and ignored the space; `Infinity` and numbers past int4 made
+    // the lookup throw, which left the person without an answer.
+    it.each([
+      'student_',
+      'student_abc',
+      'student_1.5',
+      'student_1e3',
+      'student_0x10',
+      'student_-7',
+      'student_ 7',
+      'student_Infinity',
+      'student_2147483648',
+      'student_99999999999',
+    ])('answers %p as a bad link without a lookup', async (payload) => {
       const service = makeService();
       const ctx = makeCtx();
-      service.prisma.branch.findUnique.mockResolvedValueOnce(null);
+
+      const handled = await service.startStudentRegistration(ctx, payload);
+
+      expect(handled).toBe(true);
+      expect(ctx.reply).toHaveBeenCalledWith(
+        "Noto'g'ri havola. Administrator bilan bog'laning.",
+      );
+      expect(service.prisma.branch.findFirst).not.toHaveBeenCalled();
+      expect(ctx.scene.enter).not.toHaveBeenCalled();
+      expect(ctx.session.processing).toBe(false);
+    });
+
+    it('still looks up branch number 2147483647, the largest int4', async () => {
+      const service = makeService();
+      const ctx = makeCtx();
+
+      await service.startStudentRegistration(ctx, 'student_2147483647');
+
+      expect(service.prisma.branch.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 2147483647, deletedAt: null, status: 'ACTIVE' },
+        }),
+      );
+    });
+
+    it('answers a branch that is missing, archived or closed', async () => {
+      const service = makeService();
+      const ctx = makeCtx();
+      service.prisma.branch.findFirst.mockResolvedValueOnce(null);
 
       const handled = await service.startStudentRegistration(ctx, LINK);
 
@@ -332,7 +398,7 @@ describe('TelegramService — /start registration links always release their loc
       const service = makeService();
       const ctx = makeCtx();
       const error = outage();
-      service.prisma.branch.findUnique.mockRejectedValueOnce(error);
+      service.prisma.branch.findFirst.mockRejectedValueOnce(error);
 
       await expect(service.startStudentRegistration(ctx, LINK)).rejects.toBe(
         error,
@@ -350,7 +416,7 @@ describe('TelegramService — /start registration links always release their loc
     const service = makeService();
     const ctx = makeCtx();
     ctx.session.pendingStartPayload = `student_${FERGANA}`;
-    service.prisma.branch.findUnique.mockRejectedValueOnce(outage());
+    service.prisma.branch.findFirst.mockRejectedValueOnce(outage());
     service.startFlow = (c: unknown, payload: string) =>
       service.startStudentRegistration(c, payload);
 

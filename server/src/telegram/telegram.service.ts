@@ -17,6 +17,7 @@ import {
   TEACHER_DEEP_LINK_PREFIX,
   STUDENT_DEEP_LINK_PREFIX,
   STUDENT_GROUP_DEEP_LINK_RE,
+  parseDeepLinkBranchId,
   EMPLOYEE_DEEP_LINK_PREFIX,
   EMPLOYEE_DEEP_LINK_RE,
   UNDATED_EMPLOYEE_DEEP_LINK_RE,
@@ -86,6 +87,13 @@ const EXPIRED_EMPLOYEE_LINK_REPLY =
  */
 const INVALID_EMPLOYEE_LINK_REPLY =
   "Noto'g'ri yoki buzilgan havola. Administrator bilan bog'laning.";
+
+/**
+ * The answer to a `student_` link whose branch number is not one a branch
+ * can have: see `parseDeepLinkBranchId`.
+ */
+const INVALID_STUDENT_LINK_REPLY =
+  "Noto'g'ri havola. Administrator bilan bog'laning.";
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnModuleDestroy {
@@ -1080,10 +1088,15 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     if (!groupMatch) return false;
 
     ctx.session.processing = true;
-    const branchId = Number(groupMatch[1]);
+    const branchId = parseDeepLinkBranchId(groupMatch[1]);
     const groupId = groupMatch[2];
     // Released on every way out, a throw included: see SessionData.processing.
     try {
+      if (branchId === null) {
+        await ctx.reply(INVALID_STUDENT_LINK_REPLY);
+        return true;
+      }
+
       const branch = await this.prisma.branch.findFirst({
         where: { id: branchId, deletedAt: null, status: 'ACTIVE' },
         select: { id: true },
@@ -1190,17 +1203,20 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     if (!payload.startsWith(STUDENT_DEEP_LINK_PREFIX)) return false;
 
     ctx.session.processing = true;
-    const branchIdStr = payload.slice(STUDENT_DEEP_LINK_PREFIX.length);
-    const branchId = Number(branchIdStr);
+    const branchId = parseDeepLinkBranchId(
+      payload.slice(STUDENT_DEEP_LINK_PREFIX.length),
+    );
     // Released on every way out, a throw included: see SessionData.processing.
     try {
-      if (!branchIdStr || isNaN(branchId)) {
-        await ctx.reply("Noto'g'ri havola. Administrator bilan bog'laning.");
+      if (branchId === null) {
+        await ctx.reply(INVALID_STUDENT_LINK_REPLY);
         return true;
       }
 
-      const branch = await this.prisma.branch.findUnique({
-        where: { id: branchId },
+      // Archived or closed branches must not accept new registrations.
+      const branch = await this.prisma.branch.findFirst({
+        where: { id: branchId, deletedAt: null, status: 'ACTIVE' },
+        select: { id: true },
       });
       if (!branch) {
         await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");

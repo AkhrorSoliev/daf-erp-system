@@ -13,6 +13,22 @@ export const MOCK_EXAM_DEEP_LINK_PREFIX = 'mock_';
 /** Native app login (link/poll): t.me/<bot>?start=req_<id> → bot approves, app polls. */
 export const APP_LOGIN_REQUEST_PREFIX = 'req_';
 export const STUDENT_GROUP_DEEP_LINK_RE = /^student_(\d+)_group_(.+)$/;
+
+/** `Branch.id` is a Postgres int4: a larger number makes the lookup throw. */
+const MAX_BRANCH_ID = 2_147_483_647;
+
+/**
+ * The branch number in a `student_` link, or null unless it is plain digits
+ * within int4. `Number()` alone let `1.5` through (Prisma truncates it to
+ * branch 1), read `1e3` and `0x10` as branches 1000 and 16, and passed
+ * `Infinity` and numbers past int4, which make the lookup throw.
+ */
+export function parseDeepLinkBranchId(raw: string): number | null {
+  if (!/^\d+$/.test(raw)) return null;
+  const branchId = Number(raw);
+  return branchId <= MAX_BRANCH_ID ? branchId : null;
+}
+
 /**
  * `employee_<branch>_roles_<ids>_t_<issued>_sig_<hmac>`, groups in that order.
  *
