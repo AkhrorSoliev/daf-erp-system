@@ -456,7 +456,7 @@ The group "Davomat (nuqtalar)" tab (`attendance-dots-tab.tsx`) renders one dot p
 - **Idempotency (no new DB table):** each trigger checks `Notification` for an existing row with the same `(userId, type, relatedEntityType='Group', relatedEntityId=groupId)` created today (Tashkent day). If found → skip. If not → send + insert (the inserted row becomes the idempotency marker for the rest of the day)
 - **Auto-stop:** once the teacher marks attendance, triggers 2–5 short-circuit because `attendance.findFirst` returns a row. No cancellation of already-queued notifications is needed
 - **Recipients:** `ATTENDANCE_ADMIN_ALERT` / `ATTENDANCE_MISSING_ADMIN` filter users by `roles.role.name = 'Administrator'` AND `branches.branchId = group.branchId`. Branch Directors are NOT included
-- **Delivery:** all 6 notifications fan out to the 4 channels (DB + SSE + Web Push + Telegram). Push payloads set `url = /groups/<groupId>`; Telegram messages include plain-text portal URLs (`https://lehrer.dafzentrum.uz` for teachers, `https://admin.dafzentrum.uz` for admins) which Telegram auto-linkifies
+- **Delivery:** all 6 notifications fan out to the 4 channels (DB + SSE + Web Push + Telegram); the reminders (#1–#5) are sent instantly, while #6's Telegram leg goes through the 20:00 digest (see "Telegram digest" below). Push payloads set `url = /groups/<groupId>`; Telegram messages include plain-text portal URLs (`https://lehrer.dafzentrum.uz` for teachers, `https://admin.dafzentrum.uz` for admins) which Telegram auto-linkifies
 - **Skip conditions (cron tick):** group must be `ACTIVE`, not soft-deleted, within `startDate`–`endDate`, today must be in `exactDays`, and the date must not be a `Holiday` (company-scoped or global)
 - **Recipient filter (status, isActive, deletedAt):** every notification query that loads `User` recipients (teachers via `Group.teachers`, branch admins via `prisma.user.findMany`, attendance-completed listener, etc.) **must** filter by `deletedAt: null` AND `isActive: true` AND `status: UserStatus.ACTIVE`. Missing any of these three conditions means deactivated, suspended, terminated, or archived users keep receiving notifications — a real bug we have already hit. Defense-in-depth requires all three, even though `UsersService.updateUser()` keeps `isActive` and `status` in sync
 
@@ -584,7 +584,7 @@ The financial system is built on an **append-only ledger** principle — financi
   - Reversed payments excluded from list by default (`status: { not: REVERSED }`); can be queried explicitly with `?status=REVERSED`
   - `source` field returned in all read endpoints for audit
   - Reverse writes Student entity history (`TO'LOV_BEKOR_QILINDI`)
-  - Reverse emits `payment.reversed` → `PaymentEventsListener` Telegrams the student that their payment was rolled back
+  - Reverse emits `payment.reversed` → `PaymentEventsListener` queues a Telegram line telling the student their payment was rolled back (sent in the 20:00 digest, ADR-0025)
   - `getPending()` uses `balance: { lt: 0 }` (strictly negative, not `lte`)
 
 #### Salary Module (`src/salary/`)
@@ -1006,7 +1006,7 @@ When a student pays late and retroactive billing settles a lesson whose own payr
 - **Schema**: `SalaryAccrual.creditPeriodDate DateTime?` (full timestamp, NOT `@db.Date` — avoids Tashkent-offset truncation breaking range comparisons). NULL = bucket by `lessonDate` (default, unchanged). Non-null = bucket into the period containing this date instead.
 - **Bucketing**: every payroll query that slices accruals by period uses an effective-date OR — `OR: [{ creditPeriodDate: { gte, lte } }, { creditPeriodDate: null, lessonDate: { gte, lte } }]`. Applied in `salary-calculation.service.ts` (the monthly sweep) and `salary-breakdown.service.ts` (`getCurrentCycleBreakdown`). Summary/reports queries have no period filter so they pick up carry-overs automatically.
 - **Rate is unaffected**: `findActiveVersion` still keys off the original `lessonDate`, so a past lesson keeps its past rate.
-- **Notification**: `createAccrual` pushes a `CarriedOverAccrual` into an optional `carriedOverSink` (threaded from `LessonBillingService.processRetroactiveBillingForStudent` → `bill()`/`settleDeferredAccruals`). `PaymentsWriteService.create()`/`createFromExternal()` collect the list and emit `salary.carried-over` **after the tx commits** (gated on `!outerTx`, like the receipt). `NotificationEventsListener` groups by teacher and fans out one message per teacher across all four channels.
+- **Notification**: `createAccrual` pushes a `CarriedOverAccrual` into an optional `carriedOverSink` (threaded from `LessonBillingService.processRetroactiveBillingForStudent` → `bill()`/`settleDeferredAccruals`). `PaymentsWriteService.create()`/`createFromExternal()` collect the list and emit `salary.carried-over` **after the tx commits** (gated on `!outerTx`, like the receipt). `NotificationEventsListener` groups by teacher and fans out one message per teacher across all four channels (the Telegram leg through the 20:00 digest).
 - **UI**: breakdown lines expose `isCarriedOver`; totals expose `carriedOverTotal`/`carriedOverCount`. A purple "Oldingi oydan" badge + a "shundan oldingi oydan" subtotal show on both the admin `salary-breakdown-drawer.tsx` and the teacher `teacher-salary-client.tsx`.
 - **Limitation**: accruals lost to the _old_ refuse-and-log behaviour (before this shipped) can't be auto-recovered — admin uses Balance Withdrawal `creditTeacher`.
 
@@ -1133,8 +1133,8 @@ When an enrollment closes (TRANSFERRED or DROPPED), unused prepaid lessons are c
 - **Method-only correction is an in-place update, NOT reverse + re-post.** When the amount is unchanged (only the method differs), the balance never moves, so `correctAmount()` early-returns after a single Serializable tx that just updates `Payment.method` (+ `recordUpdate` audit + CEO alert). The ledger (`Transaction`) stores balances, not the method, so no ledger row changes. **Consequence:** the "funds already spent on lessons" guard does NOT apply to a method-only fix — a mis-recorded method (e.g. CASH → TRANSFER) can be relabelled even after the money was consumed by lessons. The reverse+re-post path (and its consumption guard) is reached only when the **amount** changes.
 - **Guardrails** (all enforced in the service): only `ADMIN_MANUAL` source (gateway amounts are provider-owned); only `COMPLETED` status; amount and/or method must differ; non-CEO callers bound to a **72h window** after the payment landed (`ADMIN_CORRECTION_WINDOW_HOURS`, CEOs bypass); **on an amount change** blocked when funds were already spent on lessons (`LESSON_CONSUMPTION` exists) — that needs the CEO lesson-deduction unwind flow.
 - A `reason` is **mandatory only when the amount changes** (an amount fix must be explained in the audit trail). A **method-only** correction (money unchanged, e.g. CASH → TRANSFER) needs no reason — the service enforces this. When given, the reason lands in the audit trail and the re-posted payment's `note` records the previous amount + reason.
-- **Student notifications**: two Telegram messages — `payment.reversed` (old payment rolled back) then `payment.received` (new payment posted).
-- **CEO alert**: when a non-CEO performs the correction, `payment.corrected` is emitted → `NotificationEventsListener` notifies all company CEOs (DB + SSE + Push + Telegram, `NotificationType.SYSTEM`).
+- **Student notifications**: two lines in the student's 20:00 Telegram digest — `payment.reversed` (old payment rolled back) then `payment.received` (new payment posted).
+- **CEO alert**: when a non-CEO performs the correction, `payment.corrected` is emitted → `NotificationEventsListener` notifies all company CEOs (DB + SSE + Push instantly, Telegram through the 20:00 digest; `NotificationType.SYSTEM`).
 
 #### Status Transitions (centralized in `src/common/finance/status-transitions.ts`)
 
@@ -1183,9 +1183,9 @@ When an enrollment closes (TRANSFERRED or DROPPED), unused prepaid lessons are c
   1. **DB** — all notifications are persisted
   2. **SSE (Server-Sent Events)** — real-time, `GET /api/notifications/stream` (fetch-based, with JWT Authorization header)
   3. **Web Push** — works even when browser is closed, via `web-push` library and VAPID keys
-  4. **Telegram** — via `TelegramService.getBot().telegram.sendMessage()`, only if user has `telegramChatId`
+  4. **Telegram** — queued for the 20:00 digest (see "Telegram digest" below) and delivered only if the recipient has a `telegramChatId` at send time; `payment-promise.overdue` (09:00) is the one listener event still sent instantly
 - **SSE Gateway** (`notifications.gateway.ts`): userId → Response mapping, 30s heartbeat
-- **Event Listener** (`notification-events.listener.ts`): fans out events to all 4 channels
+- **Event Listener** (`notification-events.listener.ts`): fans out events to all 4 channels (DB/SSE/push instantly, Telegram through the digest queue)
 - **Endpoints:**
   - `GET /api/notifications?page=1&pageSize=20` — current user's notifications
   - `GET /api/notifications/unread-count` — unread count for badge
@@ -1195,6 +1195,17 @@ When an enrollment closes (TRANSFERRED or DROPPED), unused prepaid lessons are c
   - `POST /api/notifications/push/subscribe` — push subscription
   - `DELETE /api/notifications/push/unsubscribe` — push unsubscribe
   - `GET /api/notifications/vapid-public-key` — VAPID public key
+
+#### Telegram digest — one message a day at 20:00 (ADR-0025)
+
+Event-driven Telegram notifications no longer go out when the event happens. The listener enqueues a `TelegramDigestItem` row through `TelegramDigestQueueService.enqueue` (`src/telegram-digest/`), with a typed payload per `TelegramDigestCategory` (`telegram-digest-payloads.ts`), and two crons send the queue at **20:00 Asia/Tashkent**. The DB/SSE/push legs of the same events stay instant.
+
+- **Personal** (`recipientKind` `STUDENT` / `USER`): `TelegramDigestPersonalCronService`, main bot, **every day, Sundays and holidays included**. One message per recipient, split into parts of at most 4000 characters. It covers the payment receipt (the receipt link is kept) and its reversal, enrollment and removal, debt charges, tasks, payment corrections (the CEO alert), salary carry-over and the teacher's attendance-completed stats. Debt lines are re-checked against live data at 20:00: a student who has paid since, or whose charge was reversed, gets no debt line.
+- **Group** (`recipientKind` `GROUP`, `recipientId` = companyId): `TelegramGroupDigestCronService`, admin bot, **skips Sundays and holidays** (rows wait for the next working day). One message per approved group: new students, payments at or above `LARGE_PAYMENT_THRESHOLD_SUM` (500 000) or paid online, new groups, and status changes with their reason and actor. Visibility is `isVisibleToGroup`, fail-closed for a branch-less group. Delivery is tracked per chat in `deliveredGroupIds`, so a transient failure is retried next run for the chats that missed it and never resent to the ones that got it.
+- **Recipients are resolved at 20:00, not at enqueue**: students by `deletedAt: null` only (a frozen, departed or graduated student still receives, a CEO decision), staff by the full active filter.
+- **Failures** (`telegram-send.ts`): permanent (403, chat gone) → dropped; content (our own bug: too long, bad HTML) → kept and logged as an error; transient (network, 5xx, 429) → kept for the next run. A 429 waits `retry_after` (at most 30 s) and retries once. Every run first purges rows older than 7 days.
+- **Audit**: a student send writes `SmsMessage` plus an `SMS_YUBORILDI` / `SMS_YUBORILMADI` history row, exactly as `SmsService` does, so the profile's «SMS» tab keeps working.
+- **Instant by design** (ADR-0025's list): lesson cancel/reschedule, bot flows (OTP, registration), attendance reminders, `payment-promise.overdue` (09:00), the 21:00 report, product news and auto-pause messages. `src/telegram-digest/direct-send.guard.spec.ts` freezes who may call `.sendMessage(` directly; adding a new instant sender is a product decision, so put it on the spec's and ADR-0025's instant list first.
 
 ### Custom Form Submissions (`src/custom-forms/`)
 
