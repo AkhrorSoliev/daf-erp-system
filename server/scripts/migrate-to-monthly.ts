@@ -92,6 +92,18 @@ import {
   type ApplyStudentResult,
   type EnrollmentToMigrate,
 } from './lib/monthly-migration-apply';
+import {
+  carriedInPeriodFor,
+  emptyCarriedIn,
+  loadCarriedIn,
+} from './lib/carried-in-lessons';
+import {
+  buildTeacherPayReport,
+  loadTeacherLessons,
+  renderTeacherCsv,
+  type TeacherLessonInput,
+  type TeacherLessonPair,
+} from './lib/monthly-migration-teacher-report';
 import { Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { PrismaModule } from '../src/prisma/prisma.module';
@@ -198,6 +210,19 @@ function nextPreviewPath(): string {
 }
 
 /**
+ * `docs/migration-teachers-<date>-<HHmmss>.csv`. Deliberately NOT a
+ * `migration-preview-*` name: verify-monthly-migration.ts takes the newest
+ * `migration-preview-*.csv` as the student preview it checks balances
+ * against, and would pick this file instead.
+ */
+function nextTeacherCsvPath(): string {
+  return path.join(
+    docsDir(),
+    `migration-teachers-${tashkentDateStr(new Date())}-${tashkentClockStamp()}.csv`,
+  );
+}
+
+/**
  * Shu kunga tegishli barcha bashorat CSV'lari, ENG YANGISI OXIRIDA.
  *
  * Saralash `mtime` bo'yicha, nom bo'yicha EMAS: `migration-preview-<sana>-
@@ -225,6 +250,7 @@ function renderOutcomeCsv(rows: ApplyStudentResult[]): string {
     'studentId',
     'oldBalance',
     'prepaidRefund',
+    'carriedInCredit',
     'reversedSeptember',
     'monthlyCharge',
     'newBalance',
@@ -239,6 +265,7 @@ function renderOutcomeCsv(rows: ApplyStudentResult[]): string {
         r.studentId,
         r.oldBalance,
         r.prepaidRefund,
+        r.carriedInCredit,
         r.reversedSeptember,
         r.monthlyCharge,
         r.newBalance,
@@ -343,6 +370,11 @@ async function runApply(params: RunApplyParams): Promise<void> {
     reverseAccrualForAttendance: (p) =>
       accrualService.reverseAccrualForAttendance(p),
     createAccrual: (p) => accrualService.createAccrual(p),
+    computeCarriedIn: async (tx, enrollment) =>
+      (await loadCarriedIn(tx, [enrollment], carriedInPeriodFor(period))).get(
+        enrollment.id,
+      ) ?? emptyCarriedIn(),
+    createAdjustment: (p, tx) => transactionsWrite.createAdjustment(p, tx),
   };
 
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
@@ -405,6 +437,7 @@ async function runApply(params: RunApplyParams): Promise<void> {
 
   // ── natija ────────────────────────────────────────────────────────────
   const totalPrepaid = results.reduce((a, r) => a + r.prepaidRefund, 0);
+  const totalCarriedIn = results.reduce((a, r) => a + r.carriedInCredit, 0);
   const totalReversed = results.reduce((a, r) => a + r.reversedSeptember, 0);
   const totalCharged = results.reduce((a, r) => a + r.monthlyCharge, 0);
   const totalDelta = results.reduce(
@@ -488,6 +521,7 @@ async function runApply(params: RunApplyParams): Promise<void> {
       ["Muvaffaqiyatli o'quvchi", String(results.length)],
       ['Yiqilgan', String(failures.length)],
       ['Prepaid qaytarildi', som(totalPrepaid)],
+      ["Oldingi oyda to'langan darslar qaytarildi", som(totalCarriedIn)],
       ['Davr ichi bekor qilindi', som(totalReversed)],
       ['Oylik hisoblandi', som(totalCharged)],
       ['Yozilgan oylik hisob', String(chargesCreated)],
@@ -788,6 +822,7 @@ async function main(prisma: PrismaClient) {
   };
 
   const allRows: MigrationRow[] = [];
+  const teacherLessons: TeacherLessonInput[] = [];
   const reversedDeductions: Record<number, number> = {};
   const groupSummaries: GroupSummaryRow[] = [];
   // `--apply` uchun: o'quvchi -> uning barcha yozilishlari. Bir o'quvchi
@@ -938,6 +973,16 @@ async function main(prisma: PrismaClient) {
     const chargeableEnrollmentIds = enrollments
       .filter((e) => e.group.statusEnum === GroupStatus.ACTIVE)
       .map((e) => e.id);
+    // Lessons of the month an earlier pack already paid for — read before
+    // any write, for every enrollment that will be billed.
+    const carriedInByEnrollment = await loadCarriedIn(
+      tx,
+      enrollments.filter((e) => e.group.statusEnum === GroupStatus.ACTIVE),
+      carriedInPeriodFor(period),
+    );
+    // Pairs step 5 will re-price (a charge is written: ACTIVE group, at least
+    // one lesson from the start day) — for the per-teacher preview.
+    const teacherPairs: TeacherLessonPair[] = [];
     const periodDeductions = chargeableEnrollmentIds.length
       ? await prisma.transaction.findMany({
           where: {
@@ -1035,6 +1080,23 @@ async function main(prisma: PrismaClient) {
         addedDates: planByGroup.get(e.groupId)?.addedDates,
         fromDate: e.startDate ? tashkentDateStr(e.startDate) : null,
       }).length;
+      const carriedIn = carriedInByEnrollment.get(e.id) ?? emptyCarriedIn();
+      const oldSystemMonthCost = chargeable
+        ? applyDiscount(
+            baseLessonPrice(course.price, course.lessonPaymentCount) *
+              coveredLessons,
+            clampDiscount(e.student.discountPercent ?? 0),
+          )
+        : 0;
+      if (chargeable && coveredLessons > 0) {
+        teacherPairs.push({
+          groupId: e.groupId,
+          studentId: e.studentId,
+          price: course.price,
+          plannedLessons,
+          lessonPaymentCount: course.lessonPaymentCount,
+        });
+      }
 
       allRows.push({
         enrollmentId: e.id,
@@ -1054,6 +1116,9 @@ async function main(prisma: PrismaClient) {
         plannedLessons,
         coveredLessons,
         discountPercent: e.student.discountPercent,
+        carriedInCredit: carriedIn.value,
+        carriedInLessons: carriedIn.lessons,
+        oldSystemMonthCost,
       });
 
       const bucket = migrateByStudent.get(e.studentId) ?? {
@@ -1088,8 +1153,23 @@ async function main(prisma: PrismaClient) {
         chargeable,
         expectedPrepaidRefund: prepaidRefundTotal,
         prepaidCoveredByReversal,
+        expectedCarriedIn: {
+          lessons: carriedIn.lessons,
+          value: carriedIn.value,
+        },
       });
       migrateByStudent.set(e.studentId, bucket);
+    }
+
+    // Per-teacher preview of step 5 — dry-run only (the apply run writes it).
+    if (!apply) {
+      teacherLessons.push(
+        ...(await loadTeacherLessons(tx, {
+          companyId: company.id,
+          periodKey: period,
+          pairs: teacherPairs,
+        })),
+      );
     }
 
     // ── guruh kesimi (CEO qatlami 2) ─────────────────────────────────────
@@ -1257,6 +1337,52 @@ async function main(prisma: PrismaClient) {
     ]),
     ['r', 'l', 'r', 'r', 'r', 'r', 'r', 'r', 'l'],
   );
+
+  // ── per-teacher preview of step 5 (CEO layer 5) ─────────────────────────
+  const teacherReport = buildTeacherPayReport(teacherLessons);
+  section("USTOZLAR — SENTABR OYLIGI: HOZIR VA O'TISHDAN KEYIN");
+  printTable(
+    [
+      'ustoz',
+      'turi',
+      'darslar',
+      'yozilmagan',
+      'yozilgan',
+      'eski tizimda',
+      'yangi tizimda',
+      'farq',
+      'tekshirish',
+    ],
+    teacherReport.rows.map((r) => [
+      r.teacherName,
+      r.salaryTypes.join('+'),
+      r.lessons,
+      r.unwrittenLessons,
+      som(r.written),
+      som(r.before),
+      som(r.after),
+      som(r.delta),
+      r.needsReview ? 'HA' : '',
+    ]),
+    ['l', 'l', 'r', 'r', 'r', 'r', 'r', 'r', 'l'],
+  );
+  const t = teacherReport.totals;
+  console.log(
+    `Jami: ${t.lessons} dars (${t.unwrittenLessons} tasiga haq hali yozilmagan) — ` +
+      `yozilgan ${som(t.written)}, eski tizimda ${som(t.before)}, ` +
+      `yangi tizimda ${som(t.after)}, farq ${som(t.delta)} so'm.`,
+  );
+  console.log(
+    "eski tizimda = yozilgan + haq yozilmagan darslarning 12 talik narxidagi qiymati (oylik hisobida markaz qoplaydi; yangi o'quvchining birinchi darslari keyinroq to'lanadi).",
+  );
+  console.log(
+    "tekshirish = HA: NO_RATE — stavkasi yo'q, o'sha o'quvchilar --apply da yiqiladi, avval stavka kiritilsin; " +
+      'FIXED_MONTHLY — darsbay pul yoziladi, qaror CEO da.',
+  );
+  const teacherCsvPath = nextTeacherCsvPath();
+  fs.mkdirSync(path.dirname(teacherCsvPath), { recursive: true });
+  fs.writeFileSync(teacherCsvPath, renderTeacherCsv(teacherReport), 'utf-8');
+  console.log(`Ustozlar CSV: ${teacherCsvPath}`);
 
   // ── to'liq o'quvchi ro'yxati CSV'ga (CEO qatlami 3) ─────────────────────
   const csv = renderStudentCsv(plan);
