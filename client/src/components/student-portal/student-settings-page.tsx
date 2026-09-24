@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Key, User } from "@phosphor-icons/react";
+import { Key, SignOut, User } from "@phosphor-icons/react";
 import {
   Screen,
   StackHeader,
@@ -11,6 +11,7 @@ import {
   ThemeSegmented,
 } from "./lumio";
 import { StudentPasswordDialog } from "./student-password-dialog";
+import { StudentLogoutOthersDialog } from "./student-logout-others-dialog";
 import { useStudentProfile } from "./lib/queries";
 import { settingsHelpItems } from "@/lib/student-nav-items";
 
@@ -21,6 +22,7 @@ import { settingsHelpItems } from "@/lib/student-nav-items";
 export function StudentSettingsPage() {
   const { data: profile } = useStudentProfile();
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [logoutOthersOpen, setLogoutOthersOpen] = useState(false);
 
   return (
     <Screen narrow>
@@ -43,6 +45,13 @@ export function StudentSettingsPage() {
               : "Hisobingizni himoyalang"
           }
           onClick={() => setPasswordOpen(true)}
+        />
+        <ListRow
+          icon={<SignOut weight="bold" />}
+          iconTone="coral"
+          label="Boshqa qurilmalardan chiqish"
+          subtitle="Bu qurilmada qolasiz"
+          onClick={() => setLogoutOthersOpen(true)}
         />
       </Section>
 
@@ -79,6 +88,10 @@ export function StudentSettingsPage() {
       <StudentPasswordDialog
         open={passwordOpen}
         onOpenChange={setPasswordOpen}
+      />
+      <StudentLogoutOthersDialog
+        open={logoutOthersOpen}
+        onOpenChange={setLogoutOthersOpen}
       />
     </Screen>
   );
