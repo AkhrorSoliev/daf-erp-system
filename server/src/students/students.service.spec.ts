@@ -77,6 +77,7 @@ describe('StudentsService — status methods', () => {
       },
       user: {
         create: jest.fn().mockResolvedValue({ id: 10001 }),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         // Read by the caller-branch guard.
         findFirst: jest.fn().mockResolvedValue({
           mainBranch: null,
@@ -119,6 +120,9 @@ describe('StudentsService — status methods', () => {
         findFirst: jest.fn().mockResolvedValue(null),
         count: jest.fn().mockResolvedValue(0),
       },
+      // `delete` archives the card and its account in one transaction;
+      // the callback runs against this same mock.
+      $transaction: jest.fn((fn: (tx: any) => unknown) => fn(prisma)),
     };
 
     statusHistoryService = {

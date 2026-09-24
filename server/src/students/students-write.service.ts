@@ -18,7 +18,13 @@ import {
   StudentLeadOriginService,
   type StudentOrigin,
 } from '../common/student-origin';
-import { openStudentAccount } from '../common/auth/student-account';
+import {
+  STUDENT_ONLY_ACCOUNT,
+  openStudentAccount,
+  signInAccountChange,
+} from '../common/auth/student-account';
+// By path, not through the `common/status` barrel (import cycle, see the file).
+import { userArchiveData } from '../common/status/user-archive';
 import { studentSelect, formatStudent } from './shared/student-select';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 
@@ -384,17 +390,42 @@ export class StudentsWriteService {
       companyId: student.companyId ?? undefined,
     });
 
-    await this.prisma.student.update({
-      where: { id },
-      data: {
-        status: StudentStatus.ARCHIVED,
-        isActive: false,
-        deletedAt: new Date(),
-        deletedById,
-        statusChangedAt: new Date(),
-        statusChangedById: deletedById,
-        statusChangeReason: reason,
-      },
+    // The card and its sign-in account are archived together (ADR-0033).
+    // Every way in — password, Telegram, SMS reset — finds the account by its
+    // own login/phone and never looks at the card, so an account left behind
+    // kept signing in to a portal with no card behind it and, because live
+    // logins are unique, kept the number from the same person's next card.
+    // Only a student-only account is closed: one that also holds a staff role
+    // is a member of staff's way in.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.student.update({
+        where: { id },
+        data: {
+          status: StudentStatus.ARCHIVED,
+          isActive: false,
+          deletedAt: new Date(),
+          deletedById,
+          statusChangedAt: new Date(),
+          statusChangedById: deletedById,
+          statusChangeReason: reason,
+        },
+      });
+
+      if (student.userId == null) return;
+      const closed = await tx.user.updateMany({
+        where: { id: student.userId, deletedAt: null, ...STUDENT_ONLY_ACCOUNT },
+        data: userArchiveData(deletedById),
+      });
+      if (closed.count > 0) {
+        await this.entityHistoryService.recordUpdate({
+          entityType: 'Student',
+          entityId: id,
+          ...signInAccountChange('Ochiq', 'Yopildi'),
+          changedById: deletedById,
+          companyId: student.companyId ?? undefined,
+          tx,
+        });
+      }
     });
 
     // Cascade: ACTIVE + FROZEN enrollment → DROPPED
