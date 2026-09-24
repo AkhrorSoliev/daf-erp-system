@@ -32,6 +32,12 @@ import {
   findLiveStaffByPhone,
   STAFF_ROLE_IDS,
 } from '../common/auth/phone-account-rules';
+import {
+  isBlockedStatus,
+  recordUserBlocked,
+  whereUserMayAct,
+} from '../common/auth/blocked-user';
+import { RedisService } from '../redis/redis.service';
 import { grantableRoleIdsFor } from '../telegram/constants';
 
 const userSelect = {
@@ -113,6 +119,7 @@ export class UsersService {
     private uploadService: UploadService,
     private entityHistoryService: EntityHistoryService,
     private events: EventEmitter2,
+    private redis: RedisService,
   ) {}
 
   private async assertRoleAndBranchRules(
@@ -293,9 +300,11 @@ export class UsersService {
    *   An Administrator may not add a Teacher role to their Branch Director,
    *   take one away, or change their own role set: the roles of anyone at or
    *   above your level, yourself included, belong to someone above you.
-   * - **An unknown or archived caller grants nothing.** An access token
-   *   outlives an archive by up to an hour and nothing re-reads the account
-   *   on each request, so this lookup filters `deletedAt` itself.
+   * - **An unknown, archived or blocked caller grants nothing.** An access
+   *   token outlives an archive or a suspension by up to an hour, nothing
+   *   re-reads the account on each request, and the guard's cache that would
+   *   cut the token off lets it through while Redis is down. So this lookup
+   *   filters both itself (`whereUserMayAct`, ADR-0028).
    */
   private async assertCallerMayChangeRoles(
     callerId: number,
@@ -309,7 +318,7 @@ export class UsersService {
     if (added.length === 0 && removed.length === 0) return;
 
     const caller = await this.prisma.user.findFirst({
-      where: { id: callerId, deletedAt: null },
+      where: { id: callerId, ...whereUserMayAct() },
       select: { roles: { select: { role: { select: { name: true } } } } },
     });
     const grantable = grantableRoleIdsFor(
@@ -802,6 +811,13 @@ export class UsersService {
       });
     });
 
+    // The status is now in the database; cut off, or restore, the access
+    // token it leaves behind. Straight after the write, so nothing below can
+    // leave a suspended employee's token live for its remaining hour.
+    if (dto.status !== undefined) {
+      await recordUserBlocked(this.redis, id, isBlockedStatus(dto.status));
+    }
+
     await this.entityHistoryService.recordUpdate({
       entityType: 'User',
       entityId: id,
@@ -851,6 +867,7 @@ export class UsersService {
         deletedById,
       },
     });
+    await recordUserBlocked(this.redis, id, true);
 
     await this.entityHistoryService.recordDelete({
       entityType: 'User',

@@ -27,6 +27,10 @@ import {
 import { assertCallerMayTouchUser } from '../common/auth/user-branch-scope';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
 import {
+  isBlockedStatus,
+  recordUserBlocked,
+} from '../common/auth/blocked-user';
+import {
   findLiveStaffByPhone,
   loginForPhone,
 } from '../common/auth/phone-account-rules';
@@ -417,19 +421,8 @@ export class TeachersService {
       select: teacherSelect,
     });
 
-    // Redis: bloklangan user ni belgilash yoki tiklash
-    try {
-      if (
-        dto.status === UserStatus.SUSPENDED ||
-        dto.status === UserStatus.TERMINATED
-      ) {
-        await this.redis.set(`user:blocked:${id}`, '1');
-      } else if (dto.status === UserStatus.ACTIVE) {
-        await this.redis.del(`user:blocked:${id}`);
-      }
-    } catch {
-      // Redis ulanmagan bo'lsa ham status o'zgaradi
-    }
+    // Cut off, or restore, the access token the new status leaves behind.
+    await recordUserBlocked(this.redis, id, isBlockedStatus(dto.status));
 
     // Deactivated / terminated → stop any fixed-monthly payroll for this user.
     if (dto.status !== UserStatus.ACTIVE) {
@@ -515,12 +508,7 @@ export class TeachersService {
       },
     });
 
-    // Redis: bloklangan user belgilash (xatoni e'tiborsiz qoldirish)
-    try {
-      await this.redis.set(`user:blocked:${id}`, '1');
-    } catch {
-      // Redis ulanmagan bo'lsa ham delete ishlaydi
-    }
+    await recordUserBlocked(this.redis, id, true);
 
     // Archived → stop any fixed-monthly payroll for this user.
     this.events.emit(USER_DEACTIVATED_EVENT, {

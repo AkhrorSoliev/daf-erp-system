@@ -121,9 +121,10 @@ describe('JwtAuthGuard', () => {
     });
 
     it('does not lock out a user the database says is ACTIVE, and clears the stale key', async () => {
-      // Only TeachersService maintains these keys; re-activating the same
-      // person through UsersService leaves one behind. Before the database
-      // confirmation that key was a permanent lockout.
+      // A key can outlive its block: a Redis failure while the block was
+      // being lifted, or an account restored from the archive by a path that
+      // never lifts it. Before the database confirmation such a key was a
+      // permanent lockout.
       redis.get.mockResolvedValue('1');
       prisma.user.findUnique.mockResolvedValue({
         status: 'ACTIVE',

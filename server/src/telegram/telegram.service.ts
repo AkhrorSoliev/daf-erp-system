@@ -36,6 +36,7 @@ import {
   verifyEmployeePayload,
 } from './utils/signed-link.util';
 import { PrismaService } from '../prisma/prisma.service';
+import { whereUserMayAct } from '../common/auth/blocked-user';
 import { TelegramChannelGateStatsService } from './telegram-channel-gate-stats.service';
 import { UploadService } from '../upload/upload.service';
 import { UsersService } from '../users/users.service';
@@ -1116,10 +1117,17 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     return a.length === b.length && timingSafeEqual(a, b);
   }
 
+  /**
+   * Only the caller's id is taken from the access token. The token's role
+   * names can be up to an hour stale (it still says CEO after an archive, and
+   * Branch Director after a demotion), and a signed link never expires, so a
+   * link minted in that hour would carry the old authority for good. Who the
+   * caller is now, what they may grant and where, is read from the database.
+   */
   async generateEmployeeLinkPayload(
     branchId: number,
     roleIds: number[],
-    requestedBy: { id: number; roles: string[] },
+    requestedBy: { id: number },
   ): Promise<string> {
     const unique = Array.from(new Set(roleIds));
     if (unique.length === 0) {
@@ -1134,12 +1142,27 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
+    // An unknown, archived or blocked account signs nothing (ADR-0026 rule 4,
+    // ADR-0028).
+    const caller = await this.prisma.user.findFirst({
+      where: { id: requestedBy.id, ...whereUserMayAct() },
+      select: {
+        mainBranch: true,
+        branches: { select: { branchId: true } },
+        roles: { select: { role: { select: { name: true } } } },
+      },
+    });
+    if (!caller) {
+      throw new ForbiddenException('Foydalanuvchi topilmadi');
+    }
+    const callerRoles = caller.roles.map((r) => r.role.name);
+
     // Privilege escalation guard: the link IS the account. Without this an
     // Administrator could mint a CEO registration link for their own branch
     // and hand themselves full access — the branch check below would happily
     // pass. A caller may only grant roles below their own level (a CEO, any).
     // `UsersService` applies the same ceiling to the employee form.
-    const grantable = grantableRoleIdsFor(requestedBy.roles);
+    const grantable = grantableRoleIdsFor(callerRoles);
     const forbidden = unique.filter((id) => !grantable.includes(id));
     if (forbidden.length > 0) {
       throw new ForbiddenException(
@@ -1155,18 +1178,11 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       throw new NotFoundException('Filial topilmadi');
     }
 
-    const isCEO = requestedBy.roles.includes('CEO');
+    const isCEO = callerRoles.includes('CEO');
     if (!isCEO) {
-      const caller = await this.prisma.user.findFirst({
-        where: { id: requestedBy.id, deletedAt: null },
-        select: {
-          mainBranch: true,
-          branches: { select: { branchId: true } },
-        },
-      });
       const allowedBranchIds = new Set<number>([
-        ...(caller?.branches.map((b) => b.branchId) ?? []),
-        ...(caller?.mainBranch ? [caller.mainBranch] : []),
+        ...caller.branches.map((b) => b.branchId),
+        ...(caller.mainBranch ? [caller.mainBranch] : []),
       ]);
       if (!allowedBranchIds.has(branchId)) {
         throw new ForbiddenException(
