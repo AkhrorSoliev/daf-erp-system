@@ -25,8 +25,14 @@ describe('MockExamsService', () => {
       mockExamParticipant: {
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn().mockResolvedValue(0),
+        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
+      mockExamSubjectScore: { count: jest.fn().mockResolvedValue(0) },
     };
+    prisma.$transaction = jest.fn(async (arg: any) =>
+      typeof arg === 'function' ? arg(prisma) : Promise.all(arg),
+    );
     history = {
       recordCreate: jest.fn(),
       recordUpdate: jest.fn(),
@@ -283,6 +289,41 @@ describe('MockExamsService', () => {
     });
   });
 
+  // Admin paneli imtihon filialini bilmasdi: aylantirish oynasi ro'yxatdagi
+  // birinchi filialni tanlab qo'yardi, imtihon filialini ko'rsatib bo'lmasdi.
+  describe('findOne', () => {
+    it('imtihon filialini qaytaradi', async () => {
+      prisma.mockExam.findFirst.mockResolvedValue({
+        id: 'e1',
+        title: 'IELTS',
+        description: null,
+        status: MockExamStatus.REGISTRATION_OPEN,
+        sectionId: 'sec-1',
+        branchId: 7,
+        examDate: null,
+        registrationDeadline: null,
+        durationMinutes: null,
+        maxScore: 100,
+        passingScore: null,
+        price: 0,
+        studentPrice: null,
+        offeredLevels: [],
+        examTimes: [],
+        formFields: [],
+        botStartPayload: 'abc',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        section: { id: 'sec-1', name: 'IELTS', color: null },
+        subjects: [],
+        _count: { participants: 0 },
+      });
+
+      const res = await service.findOne('e1', 1001, null);
+
+      expect(res.branchId).toBe(7);
+    });
+  });
+
   describe('revenueSummary', () => {
     it('sums the locked-in feeAmount (falling back to exam price)', async () => {
       prisma.mockExamParticipant.findMany.mockResolvedValue([
@@ -298,9 +339,83 @@ describe('MockExamsService', () => {
       expect(result.totalRevenue).toBe(230000);
       expect(result.totalPaid).toBe(3);
     });
+
+    // O'chirilgan imtihon `totalExams` dan chiqib ketardi, uning ishtirokchilari
+    // va puli esa daromad hamda "Jami ishtirokchilar"da qolaverardi.
+    it("o'chirilgan imtihonning ishtirokchilarini hisoblamaydi", async () => {
+      await service.revenueSummary(1001, null);
+
+      const paidWhere =
+        prisma.mockExamParticipant.findMany.mock.calls[0][0].where;
+      const countWhere =
+        prisma.mockExamParticipant.count.mock.calls[0][0].where;
+      expect(paidWhere.exam).toEqual(
+        expect.objectContaining({ deletedAt: null }),
+      );
+      expect(countWhere.exam).toEqual(
+        expect.objectContaining({ deletedAt: null }),
+      );
+    });
   });
 
   describe('update', () => {
+    // Narx, DaF narxi, sanalar va vaqtlar o'zgarishi izsiz qolardi — masalan
+    // narx 60 000 dan 0 ga tushirilgani hech qayerda ko'rinmasdi.
+    it("narx, sana va vaqt o'zgarishini tarixga yozadi", async () => {
+      const before = {
+        id: 'e1',
+        status: MockExamStatus.REGISTRATION_OPEN,
+        sectionId: 'sec-1',
+        title: 'IELTS',
+        maxScore: 100,
+        passingScore: 60,
+        price: 60000,
+        studentPrice: 40000,
+        examDate: new Date('2026-10-01T05:00:00Z'),
+        registrationDeadline: null,
+        examTimes: ['10:00'],
+        offeredLevels: ['A1'],
+      };
+      prisma.mockExam.findFirst.mockResolvedValue(before);
+      prisma.mockExam.update.mockResolvedValue({
+        ...before,
+        price: 0,
+        examTimes: ['10:00', '14:00'],
+        description: null,
+        durationMinutes: null,
+        botStartPayload: 'abc',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        section: { id: 'sec-1', name: 'IELTS', color: null },
+        _count: { participants: 0 },
+      });
+
+      await service.update(
+        'e1',
+        { price: 0, examTimes: ['10:00', '14:00'] } as any,
+        1001,
+        1,
+        null,
+      );
+
+      const call = history.recordUpdate.mock.calls[0][0];
+      expect(call.oldValues).toEqual(
+        expect.objectContaining({ price: 60000, examTimes: '10:00' }),
+      );
+      expect(call.newValues).toEqual(
+        expect.objectContaining({ price: 0, examTimes: '10:00, 14:00' }),
+      );
+      expect(call.oldValues).toEqual(
+        expect.objectContaining({
+          studentPrice: 40000,
+          passingScore: 60,
+          examDate: before.examDate,
+          registrationDeadline: null,
+          offeredLevels: 'A1',
+        }),
+      );
+    });
+
     it('allows description / dates / title updates after registration has opened', async () => {
       prisma.mockExam.findFirst.mockResolvedValue({
         id: 'e1',
@@ -398,6 +513,124 @@ describe('MockExamsService', () => {
           newValues: { status: MockExamStatus.REGISTRATION_CLOSED },
         }),
       );
+    });
+  });
+
+  describe("changeStatus — e'lon va orqaga qaytish", () => {
+    const examRow = (status: MockExamStatus, extra = {}) => ({
+      id: 'e1',
+      title: 'IELTS',
+      description: null,
+      status,
+      sectionId: 'sec-1',
+      examDate: null,
+      registrationDeadline: null,
+      durationMinutes: null,
+      maxScore: 100,
+      passingScore: null,
+      botStartPayload: 'abc',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      section: { id: 'sec-1', name: 'IELTS', color: null },
+      _count: { participants: 1 },
+      ...extra,
+    });
+
+    beforeEach(() => {
+      prisma.mockExam.findFirst.mockResolvedValue(
+        examRow(MockExamStatus.GRADING),
+      );
+      prisma.mockExam.update.mockImplementation(async ({ data }: any) =>
+        examRow(data.status ?? MockExamStatus.ANNOUNCED),
+      );
+    });
+
+    // O'rin faqat qo'lda bosiladigan tugma bilan yozilardi — bosilmasa PDF'da
+    // "—" yoki eski o'rin chiqardi, e'lonni esa qaytarib bo'lmaydi.
+    it("e'londan oldin o'rinlarni qayta hisoblaydi", async () => {
+      prisma.mockExamParticipant.findMany.mockResolvedValue([
+        { id: 'p1', totalScore: 50 },
+      ]);
+      const pdf = (service as any).mockExamPdfService;
+
+      await service.changeStatus('e1', MockExamStatus.ANNOUNCED, 1001, 1, null);
+
+      const rankCall = prisma.mockExamParticipant.update.mock.calls.findIndex(
+        ([a]: any) => a.data.rank === 1,
+      );
+      expect(rankCall).toBeGreaterThanOrEqual(0);
+      const rankOrder =
+        prisma.mockExamParticipant.update.mock.invocationCallOrder[rankCall];
+      expect(rankOrder).toBeLessThan(pdf.generate.mock.invocationCallOrder[0]);
+    });
+
+    // PDF xatosi faqat log'ga yozilardi: holat ANNOUNCED, hech kimga xabar
+    // ketmasdi, admin esa "Holat o'zgartirildi" ko'rardi va qayta urina
+    // olmasdi (ANNOUNCED ga qayta kirib bo'lmaydi).
+    it("PDF yaratilmasa e'lon bekor qilinadi va xato qaytadi", async () => {
+      const pdf = (service as any).mockExamPdfService;
+      const events = (service as any).eventEmitter;
+      pdf.generate.mockRejectedValueOnce(new Error('R2 down'));
+
+      await expect(
+        service.changeStatus('e1', MockExamStatus.ANNOUNCED, 1001, 1, null),
+      ).rejects.toThrow();
+
+      const lastUpdate = prisma.mockExam.update.mock.calls.at(-1)[0];
+      expect(lastUpdate.data).toEqual(
+        expect.objectContaining({
+          status: MockExamStatus.GRADING,
+          announcedAt: null,
+        }),
+      );
+      expect(events.emit).not.toHaveBeenCalled();
+      expect(history.recordStatusChange).not.toHaveBeenCalled();
+    });
+
+    it('javob yangi yaratilgan PDF havolasini qaytaradi', async () => {
+      prisma.mockExam.findUnique.mockResolvedValue(
+        examRow(MockExamStatus.ANNOUNCED, {
+          resultsPdfFileKey: 'https://cdn/x.pdf',
+        }),
+      );
+
+      const res = await service.changeStatus(
+        'e1',
+        MockExamStatus.ANNOUNCED,
+        1001,
+        1,
+        null,
+      );
+
+      expect(res.resultsPdfUrl).toBe('https://cdn/x.pdf');
+    });
+
+    // Baholashdan "Ro'yxat yopilgan"ga qaytib, fanni o'chirish yoki maksimumni
+    // o'zgartirish mumkin edi — kiritilgan jami ballar eskirib qolardi.
+    it("ball kiritilgan bo'lsa baholashdan orqaga qaytarmaydi", async () => {
+      prisma.mockExamSubjectScore.count.mockResolvedValue(3);
+
+      await expect(
+        service.changeStatus(
+          'e1',
+          MockExamStatus.REGISTRATION_CLOSED,
+          1001,
+          1,
+          null,
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.mockExam.update).not.toHaveBeenCalled();
+    });
+
+    it("ball yo'q bo'lsa baholashdan orqaga qaytish mumkin", async () => {
+      await service.changeStatus(
+        'e1',
+        MockExamStatus.REGISTRATION_CLOSED,
+        1001,
+        1,
+        null,
+      );
+      expect(prisma.mockExam.update).toHaveBeenCalled();
     });
   });
 
@@ -533,6 +766,43 @@ describe('MockExamsService', () => {
         }),
       );
       expect(history.recordDelete).toHaveBeenCalled();
+    });
+
+    // Imtihon o'chirilganda ishtirokchilar "tirik" qolardi: chatdagi Payme/Click
+    // tugmasi hamon ishlar, pul esa hech bir ekranda ko'rinmasdi.
+    it("ishtirokchilarni ham o'sha partiya bilan o'chiradi", async () => {
+      prisma.mockExam.findFirst.mockResolvedValue({
+        id: 'e1',
+        title: 'IELTS',
+        status: MockExamStatus.REGISTRATION_OPEN,
+      });
+
+      await service.remove('e1', 1001, 1, null);
+
+      const examData = prisma.mockExam.update.mock.calls[0][0].data;
+      expect(prisma.mockExamParticipant.updateMany).toHaveBeenCalledWith({
+        where: { examId: 'e1', deletedAt: null },
+        data: expect.objectContaining({
+          deletedById: 1,
+          deletionBatchId: examData.deletionBatchId,
+        }),
+      });
+      expect(examData.deletionBatchId).toEqual(expect.any(String));
+    });
+
+    it("to'lagan ishtirokchisi bor imtihonni o'chirmaydi", async () => {
+      prisma.mockExam.findFirst.mockResolvedValue({
+        id: 'e1',
+        title: 'IELTS',
+        status: MockExamStatus.REGISTRATION_OPEN,
+      });
+      prisma.mockExamParticipant.count.mockResolvedValue(2);
+
+      await expect(service.remove('e1', 1001, 1, null)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(prisma.mockExam.update).not.toHaveBeenCalled();
+      expect(prisma.mockExamParticipant.updateMany).not.toHaveBeenCalled();
     });
   });
 });

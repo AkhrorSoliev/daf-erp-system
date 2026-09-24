@@ -44,6 +44,7 @@ import { useLeadsUi } from "@/hooks/use-leads-ui";
 import { useLeadActivity } from "@/hooks/use-lead-activity";
 import { useAuth } from "@/hooks/use-auth";
 import type { FormFieldShape } from "@/lib/schemas/custom-form-schema";
+import { mockPaymentState } from "@/components/mock-exams/mock-fee";
 
 interface LeadFormSubmission {
   id: string;
@@ -56,6 +57,8 @@ interface LeadMockParticipation {
   id: string;
   publicId: number;
   paid: boolean;
+  /** Ro'yxatda qotirilgan summa (DaF chegirmasi bilan); eski qatorlarda null. */
+  feeAmount: number | null;
   registeredAt: string;
   totalScore: number | null;
   exam: {
@@ -63,6 +66,7 @@ interface LeadMockParticipation {
     title: string;
     status: string;
     examDate: string | null;
+    price: number;
     section: { name: string; color: string | null };
   };
 }
@@ -172,11 +176,24 @@ function MockParticipationsBlock({
                   Yozildi:{" "}
                   {format(parseISO(p.registeredAt), "dd.MM.yyyy")}
                 </span>
-                {p.paid ? (
-                  <span className="text-emerald-600">✓ To&apos;langan</span>
-                ) : (
-                  <span className="text-amber-600">To&apos;lov kutilmoqda</span>
-                )}
+                {(() => {
+                  // Bepul (yoki DaF uchun bepul) mockda "To'lov kutilmoqda"
+                  // chiqmasin.
+                  const state = mockPaymentState(p, p.exam.price);
+                  if (state === "paid")
+                    return (
+                      <span className="text-emerald-600">
+                        ✓ To&apos;langan
+                      </span>
+                    );
+                  if (state === "pending")
+                    return (
+                      <span className="text-amber-600">
+                        To&apos;lov kutilmoqda
+                      </span>
+                    );
+                  return <span className="text-muted-foreground">Bepul</span>;
+                })()}
               </div>
             </div>
             <div className="shrink-0 text-right text-xs">

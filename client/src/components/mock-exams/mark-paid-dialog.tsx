@@ -25,6 +25,7 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPrice } from "@/lib/format-utils";
 import type { MockExamParticipant } from "./exam-detail-types";
+import { participantFee } from "./mock-fee";
 
 type Method = "CASH" | "PAYME" | "CLICK";
 
@@ -88,7 +89,14 @@ export function MarkPaidDialog({
           <DialogDescription>
             {participant?.firstName} {participant?.lastName} —{" "}
             <span className="font-medium">
-              {formatPrice(examPrice)} so&apos;m
+              {/* Ishtirokchi to'lashi kerak bo'lgan summa (DaF chegirmasi
+                  bilan), imtihonning to'liq narxi emas. */}
+              {formatPrice(
+                participant
+                  ? participantFee(participant, examPrice)
+                  : examPrice,
+              )}{" "}
+              so&apos;m
             </span>
           </DialogDescription>
         </DialogHeader>

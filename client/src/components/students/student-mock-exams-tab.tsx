@@ -21,6 +21,7 @@ import {
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import toast from "react-hot-toast";
+import { mockPaymentState } from "@/components/mock-exams/mock-fee";
 
 type MockExamStatus =
   | "REGISTRATION_OPEN"
@@ -35,6 +36,8 @@ interface MockExamRecord {
   registeredAt: string;
   paid: boolean;
   paidAt: string | null;
+  /** Ro'yxatda qotirilgan summa (DaF chegirmasi bilan); eski qatorlarda null. */
+  feeAmount: number | null;
   totalScore: number | null;
   percentage: number | null;
   rank: number | null;
@@ -176,7 +179,7 @@ export function StudentMockExamsTab({ studentId }: { studentId: number }) {
                     <span className="text-emerald-600">
                       ✓ To&apos;langan
                     </span>
-                  ) : r.exam.price > 0 ? (
+                  ) : mockPaymentState(r, r.exam.price) === "pending" ? (
                     <span className="text-amber-600">Kutilmoqda</span>
                   ) : (
                     <span className="text-muted-foreground">Bepul</span>

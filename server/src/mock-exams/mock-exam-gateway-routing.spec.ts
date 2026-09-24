@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { MockExamGatewayBillingService } from './mock-exam-gateway-billing.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
+import { EntityHistoryService } from '../common/entity-history';
 
 /**
  * Mock havolasi orqali kelgan pul FAQAT mock uchun ishlatilishi kerak —
@@ -44,6 +45,10 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
         MockExamGatewayBillingService,
         { provide: PrismaService, useValue: prisma },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: EntityHistoryService,
+          useValue: { recordUpdate: jest.fn() },
+        },
       ],
     }).compile();
     service = moduleRef.get(MockExamGatewayBillingService);
@@ -210,6 +215,10 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
           MockExamGatewayBillingService,
           { provide: PrismaService, useValue: p },
           { provide: EventEmitter2, useValue: { emit } },
+          {
+            provide: EntityHistoryService,
+            useValue: { recordUpdate: jest.fn() },
+          },
         ],
       }).compile();
 
@@ -254,6 +263,10 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
             useValue: { $transaction: async (fn: any) => fn(tx) },
           },
           { provide: EventEmitter2, useValue: { emit } },
+          {
+            provide: EntityHistoryService,
+            useValue: { recordUpdate: jest.fn() },
+          },
         ],
       }).compile();
 

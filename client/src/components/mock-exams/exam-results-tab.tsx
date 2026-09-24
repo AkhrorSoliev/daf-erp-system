@@ -23,6 +23,12 @@ import {
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import type { ExamDetail } from "./exam-detail-types";
+import {
+  buildScoresPayload,
+  scoreKey,
+  type ScoreMap,
+  type ScoresPayloadEntry,
+} from "./results-payload";
 
 interface ExamResultsTabProps {
   exam: ExamDetail;
@@ -65,9 +71,7 @@ interface MatrixResponse {
 // Map keyed by `${participantId}:${subjectId}` → input value as string.
 // Strings let users clear an input ("") without forcing 0, and let us track
 // "edited" state separately from "saved".
-type ScoreMap = Map<string, string>;
 
-const scoreKey = (pid: string, sid: string) => `${pid}:${sid}`;
 
 export function ExamResultsTab({ exam }: ExamResultsTabProps) {
   const [matrix, setMatrix] = useState<MatrixResponse | null>(null);
@@ -141,47 +145,20 @@ export function ExamResultsTab({ exam }: ExamResultsTabProps) {
   }, [edits]);
 
   function validateAndBuildPayload(): {
-    participants: Array<{
-      participantId: string;
-      scores: Array<{ subjectId: string; score: number }>;
-    }>;
+    participants: ScoresPayloadEntry[];
   } | null {
     if (!matrix) return null;
-
-    const subjectMaxById = new Map(
-      matrix.subjects.map((s) => [s.id, s.maxScore]),
+    const res = buildScoresPayload(
+      matrix.subjects,
+      dirtyParticipantIds,
+      edits,
+      initialRef.current,
     );
-
-    const out: Array<{
-      participantId: string;
-      scores: Array<{ subjectId: string; score: number }>;
-    }> = [];
-
-    for (const pid of dirtyParticipantIds) {
-      const scores: Array<{ subjectId: string; score: number }> = [];
-      for (const subject of matrix.subjects) {
-        const key = scoreKey(pid, subject.id);
-        const raw = edits.get(key);
-        if (raw === undefined) continue; // omit — don't overwrite existing with 0
-        const n = Number(raw);
-        if (!Number.isFinite(n)) {
-          toast.error(`Ball noto'g'ri kiritildi: ${subject.name}`);
-          return null;
-        }
-        if (n < 0 || n > (subjectMaxById.get(subject.id) ?? 0)) {
-          toast.error(
-            `Ball 0 dan ${subjectMaxById.get(subject.id)} gacha bo'lishi kerak (${subject.name})`,
-          );
-          return null;
-        }
-        scores.push({ subjectId: subject.id, score: n });
-      }
-      if (scores.length > 0) {
-        out.push({ participantId: pid, scores });
-      }
+    if (!res.ok) {
+      toast.error(res.error);
+      return null;
     }
-
-    return { participants: out };
+    return { participants: res.participants };
   }
 
   async function handleSave() {

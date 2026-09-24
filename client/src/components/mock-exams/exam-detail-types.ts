@@ -46,6 +46,11 @@ export interface MockExamParticipant {
   formData: { __payIntent?: string } & Record<string, unknown>;
   paid: boolean;
   paidAt: string | null;
+  /**
+   * 2026-08 gacha o'quvchi balansidan yechilgan to'lov. O'chirilganda uni
+   * server o'zi balansga qaytaradi — admin naqd bermasligi kerak.
+   */
+  paidFromBalance?: boolean;
   totalScore: number | null;
   percentage: number | null;
   passed: boolean | null;

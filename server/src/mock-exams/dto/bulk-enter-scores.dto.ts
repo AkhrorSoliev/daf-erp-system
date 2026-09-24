@@ -7,6 +7,7 @@ import {
   IsString,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 
@@ -14,9 +15,11 @@ export class SubjectScoreEntryDto {
   @IsString()
   subjectId: string;
 
+  /** `null` — shu fan bahosini o'chirish (xato kiritilgan bahoni bekor qilish). */
+  @ValidateIf((o: SubjectScoreEntryDto) => o.score !== null)
   @IsNumber()
   @Min(0)
-  score: number;
+  score: number | null;
 
   @IsOptional()
   @IsString()

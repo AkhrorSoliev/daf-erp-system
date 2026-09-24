@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { StudentPortalController } from './student-portal.controller';
@@ -308,6 +308,38 @@ describe('StudentPortalController — role guards', () => {
     it('should deny Teacher from accessing', () => {
       const ctx = mockExecutionContext(controller.scanQr, ['Teacher']);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+  });
+
+  // Havola ochiq (brauzer tarixi, referer). CLICK_SERVICE_ID yo'q bo'lsa
+  // uning o'rniga webhook imzosining MAXFIY kaliti qo'yilardi.
+  describe('initPayment() — Click', () => {
+    it("CLICK_SERVICE_ID yo'q bo'lsa maxfiy kalitni havolaga qo'ymaydi", async () => {
+      const gatewayConfig = {
+        getConfig: jest
+          .fn()
+          .mockResolvedValue({ merchantId: 'm-1', secretKey: 'click-secret' }),
+      };
+      const mod = await Test.createTestingModule({
+        controllers: [StudentPortalController],
+        providers: [
+          {
+            provide: StudentPortalService,
+            useValue: { createPaymentIntent: jest.fn() },
+          },
+          { provide: QrAttendanceService, useValue: mockQrService },
+          { provide: ConfigService, useValue: { get: jest.fn() } },
+          { provide: GatewayConfigService, useValue: gatewayConfig },
+        ],
+      }).compile();
+      const ctrl = mod.get(StudentPortalController);
+
+      await expect(
+        ctrl.initPayment(10050, 1001, {
+          method: 'CLICK',
+          amount: 50000,
+        } as any),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

@@ -3,7 +3,9 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { MockExamStatus, Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
@@ -24,6 +26,7 @@ import {
 } from '../custom-forms/dto/form-field.dto';
 import { shortId } from '../custom-forms/short-id.util';
 import { isValidMockExamStatusTransition } from './mock-exam-status.util';
+import { applyCompetitionRanks } from './mock-exam-ranking';
 import {
   sanitizeExamTimes,
   sanitizeOfferedLevels,
@@ -69,12 +72,15 @@ export class MockExamsService {
     const companyWhere = companyId != null ? { companyId } : {};
     const examBranchWhere = branchIdWhere(scope);
 
+    // O'chirilgan imtihon `totalExams` dan chiqadi — uning ishtirokchilari
+    // va puli ham chiqishi kerak, aks holda uchala raqam bir-biriga zid.
+    const liveExamWhere = { deletedAt: null, ...examBranchWhere };
     const paid = await this.prisma.mockExamParticipant.findMany({
       where: {
         paid: true,
         deletedAt: null,
         ...companyWhere,
-        ...(scope == null ? {} : { exam: examBranchWhere }),
+        exam: liveExamWhere,
       },
       select: { feeAmount: true, exam: { select: { price: true } } },
     });
@@ -91,7 +97,7 @@ export class MockExamsService {
         where: {
           deletedAt: null,
           ...companyWhere,
-          ...(scope == null ? {} : { exam: examBranchWhere }),
+          exam: liveExamWhere,
         },
       }),
       this.prisma.mockExam.count({
@@ -500,19 +506,37 @@ export class MockExamsService {
       },
     });
 
+    // Pul va jadvalga tegadigan maydonlar ham yoziladi — ilgari narx
+    // 60 000 dan 0 ga tushirilsa ham izi qolmasdi. Massivlar tarixda
+    // saqlanmaydi (faqat oddiy qiymatlar), shuning uchun satrga aylantiriladi.
+    const auditOf = (e: {
+      title: string;
+      sectionId: string;
+      maxScore: number;
+      passingScore: number | null;
+      price: number;
+      studentPrice: number | null;
+      examDate: Date | null;
+      registrationDeadline: Date | null;
+      examTimes: string[];
+      offeredLevels: string[];
+    }) => ({
+      title: e.title,
+      sectionId: e.sectionId,
+      maxScore: e.maxScore,
+      passingScore: e.passingScore,
+      price: e.price,
+      studentPrice: e.studentPrice,
+      examDate: e.examDate,
+      registrationDeadline: e.registrationDeadline,
+      examTimes: (e.examTimes ?? []).join(', '),
+      offeredLevels: (e.offeredLevels ?? []).join(', '),
+    });
     await this.entityHistoryService.recordUpdate({
       entityType: 'MockExam',
       entityId: id,
-      oldValues: {
-        title: existing.title,
-        sectionId: existing.sectionId,
-        maxScore: existing.maxScore,
-      },
-      newValues: {
-        title: updated.title,
-        sectionId: updated.sectionId,
-        maxScore: updated.maxScore,
-      },
+      oldValues: auditOf(existing),
+      newValues: auditOf(updated),
       changedById: userId,
       companyId,
     });
@@ -534,28 +558,86 @@ export class MockExamsService {
       );
     }
 
+    // Baholashdan orqaga qaytish faqat ball kiritilmagan bo'lsa. Aks holda
+    // "Ro'yxat yopilgan"da fanni o'chirish yoki maksimumni o'zgartirish
+    // mumkin bo'lib, kiritilgan jami ballar eskirib qolardi (fan qulfi faqat
+    // joriy holatga qaraydi).
+    if (
+      existing.status === MockExamStatus.GRADING &&
+      nextStatus === MockExamStatus.REGISTRATION_CLOSED
+    ) {
+      const scored = await this.prisma.mockExamSubjectScore.count({
+        where: { participant: { examId: id } },
+      });
+      if (scored > 0) {
+        throw new BadRequestException(
+          "Ballar kiritilgan — baholashni to'xtatib bo'lmaydi. Avval ballarni o'chiring.",
+        );
+      }
+    }
+
+    const announcing =
+      nextStatus === MockExamStatus.ANNOUNCED &&
+      existing.status !== MockExamStatus.ANNOUNCED;
+
+    // O'rinlar e'londan OLDIN yangilanadi — PDF ularni chop etadi, e'lonni
+    // esa qaytarib bo'lmaydi.
+    if (announcing) {
+      await applyCompetitionRanks(this.prisma, id);
+    }
+
     // Stamp `announcedAt` / `announcedById` when entering ANNOUNCED — used
     // by the PDF header and the bot delivery flow to find which mocks are
     // ready to view.
     const data: Prisma.MockExamUpdateInput = { status: nextStatus };
-    if (
-      nextStatus === MockExamStatus.ANNOUNCED &&
-      existing.status !== MockExamStatus.ANNOUNCED
-    ) {
+    if (announcing) {
       data.announcedAt = new Date();
       data.announcedBy = { connect: { id: userId } };
     }
 
-    const updated = await this.prisma.mockExam.update({
+    const detailInclude = {
+      section: { select: { id: true, name: true, color: true } },
+      _count: {
+        select: { participants: { where: { deletedAt: null } } },
+      },
+    } satisfies Prisma.MockExamInclude;
+
+    let updated = await this.prisma.mockExam.update({
       where: { id },
       data,
-      include: {
-        section: { select: { id: true, name: true, color: true } },
-        _count: {
-          select: { participants: { where: { deletedAt: null } } },
-        },
-      },
+      include: detailInclude,
     });
+
+    // E'londa PDF yaratiladi, keyin Telegram tarqatish hodisasi chiqadi.
+    // PDF yaratilmasa e'lon BEKOR qilinadi: ilgari xato faqat log'ga
+    // yozilardi — holat ANNOUNCED bo'lib qolar, hech kimga xabar ketmas,
+    // ANNOUNCED ga qayta kirib bo'lmagani uchun admin qayta urina olmasdi.
+    if (announcing) {
+      try {
+        await this.mockExamPdfService.generate(id);
+      } catch (err) {
+        this.logger.error(
+          `Failed to generate results PDF for ${id}: ${(err as Error).message}`,
+        );
+        await this.prisma.mockExam.update({
+          where: { id },
+          data: {
+            status: existing.status,
+            announcedAt: null,
+            announcedBy: { disconnect: true },
+          },
+        });
+        throw new ServiceUnavailableException(
+          "Natijalar PDF'ini yaratib bo'lmadi — e'lon qilinmadi. Birozdan keyin qayta urinib ko'ring.",
+        );
+      }
+      // Javob yangi PDF havolasi bilan qaytsin (u `generate` da yoziladi).
+      updated =
+        (await this.prisma.mockExam.findUnique({
+          where: { id },
+          include: detailInclude,
+        })) ?? updated;
+    }
 
     await this.entityHistoryService.recordStatusChange({
       entityType: 'MockExam',
@@ -566,25 +648,10 @@ export class MockExamsService {
       companyId,
     });
 
-    // Regenerate the results PDF on entry to ANNOUNCED, then fire a
-    // broadcast event so the Telegram module can push the PDF +
-    // per-participant publicId to every registered participant. PDF
-    // generation failure is logged but doesn't block the status change —
-    // admin can retry from the detail page via `regenerate-pdf`. Broadcast
-    // is best-effort: per-participant errors are recorded on the
+    // Broadcast is best-effort: per-participant errors are recorded on the
     // participant row by the listener.
-    if (
-      nextStatus === MockExamStatus.ANNOUNCED &&
-      existing.status !== MockExamStatus.ANNOUNCED
-    ) {
-      try {
-        await this.mockExamPdfService.generate(id);
-        this.eventEmitter.emit('mock-exam.announced', { examId: id });
-      } catch (err) {
-        this.logger.error(
-          `Failed to generate results PDF for ${id}: ${(err as Error).message}`,
-        );
-      }
+    if (announcing) {
+      this.eventEmitter.emit('mock-exam.announced', { examId: id });
     }
 
     return this.toDetail(updated);
@@ -653,17 +720,40 @@ export class MockExamsService {
   ) {
     const existing = await this.ensureExamInScope(id, companyId, scope);
 
+    // To'lagan odam bor imtihon jim o'chirilardi: ularning puli hech bir
+    // ekranda qolmas, "pul qaytarildi" tasdig'i ham so'ralmasdi. Avval
+    // ishtirokchilarni bittalab (tasdiq bilan) o'chirish kerak.
+    const paidCount = await this.prisma.mockExamParticipant.count({
+      where: { examId: id, deletedAt: null, paid: true },
+    });
+    if (paidCount > 0) {
+      throw new BadRequestException(
+        `Bu imtihonda ${paidCount} ta to'lagan ishtirokchi bor. ` +
+          "Avval ularni «Ishtirokchilar» bo'limidan pul qaytarilganini tasdiqlab o'chiring.",
+      );
+    }
+
+    // Ishtirokchilar imtihon bilan birga, bitta partiya bilan o'chadi — aks
+    // holda ular "tirik" qolib, chatdagi to'lov tugmasi ishlayverardi.
+    const now = new Date();
+    const deletionBatchId = randomUUID();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.mockExam.update({
+        where: { id },
+        data: { deletedAt: now, deletedById: userId, deletionBatchId },
+      });
+      await tx.mockExamParticipant.updateMany({
+        where: { examId: id, deletedAt: null },
+        data: { deletedAt: now, deletedById: userId, deletionBatchId },
+      });
+    });
+
     await this.entityHistoryService.recordDelete({
       entityType: 'MockExam',
       entityId: id,
       oldValues: { title: existing.title, status: existing.status },
       changedById: userId,
       companyId,
-    });
-
-    await this.prisma.mockExam.update({
-      where: { id },
-      data: { deletedAt: new Date(), deletedById: userId },
     });
 
     return { message: "Imtihon o'chirildi" };
@@ -815,6 +905,7 @@ export class MockExamsService {
     examTimes: string[];
     formFields: Prisma.JsonValue;
     botStartPayload: string;
+    branchId: number | null;
     createdAt: Date;
     updatedAt: Date;
     _count: { participants: number };
@@ -825,6 +916,9 @@ export class MockExamsService {
       description: exam.description,
       status: exam.status,
       sectionId: exam.sectionId,
+      // Imtihon qaysi filialniki — admin paneli aylantirishda shu filialni
+      // oldindan tanlaydi.
+      branchId: exam.branchId,
       examDate: exam.examDate,
       registrationDeadline: exam.registrationDeadline,
       durationMinutes: exam.durationMinutes,
@@ -859,6 +953,7 @@ export class MockExamsService {
     examTimes: string[];
     formFields: Prisma.JsonValue;
     botStartPayload: string;
+    branchId: number | null;
     createdAt: Date;
     updatedAt: Date;
     section: { id: string; name: string; color: string | null };

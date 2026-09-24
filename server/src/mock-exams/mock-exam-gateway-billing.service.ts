@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Prisma } from '@prisma/client';
+import { MockExamStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { EntityHistoryService } from '../common/entity-history';
 
 export type GatewayProvider = 'CLICK' | 'PAYME';
 
@@ -12,6 +13,19 @@ export const GATEWAY_STATE = {
   CANCELLED: -1,
   REFUNDED: -2,
 } as const;
+
+/**
+ * Onlayn to'lov faqat shu holatlardagi imtihonga qabul qilinadi. O'chirilgan
+ * yoki natijasi e'lon qilingan (arxivlangan) imtihonning to'lanmagan ro'yxati
+ * abadiy to'lov manzili bo'lib qolardi: chatdagi eski tugma ishlar, DaF
+ * o'quvchisining darsga qilgan aynan shu summadagi to'lovi esa o'sha eski
+ * mockka ketardi. E'londan keyin qarz bo'lsa — naqd, admin orqali.
+ */
+export const PAYABLE_EXAM_STATUSES: MockExamStatus[] = [
+  MockExamStatus.REGISTRATION_OPEN,
+  MockExamStatus.REGISTRATION_CLOSED,
+  MockExamStatus.GRADING,
+];
 
 interface ResolvedMockTarget {
   participantId: string;
@@ -38,6 +52,7 @@ export class MockExamGatewayBillingService {
   constructor(
     private prisma: PrismaService,
     private eventEmitter: EventEmitter2,
+    private entityHistoryService: EntityHistoryService,
   ) {}
 
   /**
@@ -57,7 +72,11 @@ export class MockExamGatewayBillingService {
     // uchun to'laganda summa eski imtihon narxi bilan solishtirilib,
     // "mos emas" deb rad etilardi.
     const rows = await this.prisma.mockExamParticipant.findMany({
-      where: { publicId, deletedAt: null },
+      where: {
+        publicId,
+        deletedAt: null,
+        exam: { deletedAt: null, status: { in: PAYABLE_EXAM_STATUSES } },
+      },
       orderBy: { registeredAt: 'desc' },
       select: {
         id: true,
@@ -234,7 +253,7 @@ export class MockExamGatewayBillingService {
         const now = new Date();
         const txn = await tx.mockExamGatewayTransaction.findUnique({
           where: { id: gatewayTxnId },
-          select: { mockParticipantId: true },
+          select: { mockParticipantId: true, provider: true },
         });
         if (!txn) return null;
 
@@ -258,15 +277,18 @@ export class MockExamGatewayBillingService {
           where: { id: gatewayTxnId },
           data: { state: GATEWAY_STATE.COMPLETED, completedAt: now },
         });
-        return tx.mockExamParticipant.findUnique({
+        const participant = await tx.mockExamParticipant.findUnique({
           where: { id: txn.mockParticipantId },
           select: {
+            id: true,
+            companyId: true,
             telegramChatId: true,
             publicId: true,
             feeAmount: true,
             exam: { select: { title: true, price: true } },
           },
         });
+        return participant && { ...participant, provider: txn.provider };
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -279,6 +301,27 @@ export class MockExamGatewayBillingService {
         `Mock to'lovi rad etildi (ikkinchi to'lov yoki o'chirilgan ro'yxat): txn=${gatewayTxnId}`,
       );
       return false;
+    }
+
+    // Naqd to'lov tarixga yozilardi, onlayn esa izsiz qolardi. Chaqiruvchisi
+    // yo'q yozuv (webhook) — `changedById` yo'q (ADR-0008).
+    // Tarix yozuvi pul oqimini buzmasin: xato bo'lsa faqat log.
+    try {
+      await this.entityHistoryService.recordUpdate({
+        entityType: 'MockExamParticipant',
+        entityId: notify.id,
+        oldValues: { paid: false },
+        newValues: {
+          paid: true,
+          paymentMethod: notify.provider,
+          gatewayTransactionId: gatewayTxnId,
+        },
+        companyId: notify.companyId,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `History write failed for mock payment ${gatewayTxnId}: ${(err as Error).message}`,
+      );
     }
 
     // Foydalanuvchiga Telegramda xabar berish. Ilgari bu hodisa FAQAT admin

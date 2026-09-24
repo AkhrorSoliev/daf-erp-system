@@ -185,9 +185,7 @@ export class PaymeMethodsService {
         return paymeError(rpcId, CANNOT_PERFORM);
       }
       return paymeSuccess(rpcId, {
-        create_time: Number(
-          existingMock.paymeTime ?? existingMock.createdAt.getTime(),
-        ),
+        create_time: existingMock.createdAt.getTime(),
         transaction: existingMock.id,
         state: existingMock.state,
       });
@@ -275,8 +273,11 @@ export class PaymeMethodsService {
       companyId,
     });
 
+    // Payme bir tranzaksiya uchun har javobda BIR XIL create_time kutadi.
+    // Mock yo'lida uning manbai — bazadagi `createdAt` (Check va Statement
+    // ham shuni qaytaradi).
     return paymeSuccess(rpcId, {
-      create_time: Number(now),
+      create_time: mockTxn.createdAt.getTime(),
       transaction: mockTxn.id,
       state: mockTxn.state,
     });
@@ -360,6 +361,19 @@ export class PaymeMethodsService {
               performTime: now,
               paymentId: erpPayment.id,
             },
+          });
+
+          // Portal intent'i endi ishlatildi. Aks holda u 1 soat "tirik"
+          // qolib, keyingi to'lovlarni noto'g'ri yo'naltirardi.
+          await tx.paymentIntent.updateMany({
+            where: {
+              studentId: txn.studentId,
+              companyId,
+              provider: 'PAYME',
+              used: false,
+              amount: txn.amountInSom,
+            },
+            data: { used: true },
           });
         },
         {
@@ -514,9 +528,7 @@ export class PaymeMethodsService {
       );
       if (mockTxn) {
         return paymeSuccess(rpcId, {
-          create_time: mockTxn.paymeTime
-            ? Number(mockTxn.paymeTime)
-            : mockTxn.createdAt.getTime(),
+          create_time: mockTxn.createdAt.getTime(),
           perform_time: mockTxn.completedAt ? mockTxn.completedAt.getTime() : 0,
           cancel_time: mockTxn.cancelledAt ? mockTxn.cancelledAt.getTime() : 0,
           transaction: mockTxn.id,
@@ -623,7 +635,6 @@ export class PaymeMethodsService {
       return paymeError(rpcId, CANNOT_PERFORM);
     }
 
-    const now = Date.now();
     // Ro'yxat allaqachon to'langan yoki o'chirilgan — ikkinchi pulni olmaymiz.
     // Xato javobdan keyin Payme tranzaksiyani bekor qiladi va pulni qaytaradi.
     const completed = await this.mockGateway.markCompleted(mockTxn.id);
@@ -631,9 +642,12 @@ export class PaymeMethodsService {
       return paymeError(rpcId, CANNOT_PERFORM);
     }
 
+    // perform_time bazadagi `completedAt` dan — CheckTransaction ham shuni
+    // qaytaradi, ikkalasi bir xil bo'lishi shart.
+    const done = await this.mockGateway.findById(mockTxn.id);
     return paymeSuccess(rpcId, {
       transaction: mockTxn.id,
-      perform_time: now,
+      perform_time: done?.completedAt?.getTime() ?? Date.now(),
       state: GATEWAY_STATE.COMPLETED,
     });
   }
@@ -659,7 +673,11 @@ export class PaymeMethodsService {
       });
     }
 
-    const now = Date.now();
+    // cancel_time bazadagi `cancelledAt` dan — CheckTransaction bilan bir xil.
+    const cancelTimeOf = async () => {
+      const row = await this.mockGateway.findById(mockTxn.id);
+      return row?.cancelledAt?.getTime() ?? Date.now();
+    };
     if (mockTxn.state === GATEWAY_STATE.PREPARED) {
       await this.mockGateway.markCancelled(mockTxn.id, {
         wasPerformed: false,
@@ -667,7 +685,7 @@ export class PaymeMethodsService {
       });
       return paymeSuccess(rpcId, {
         transaction: mockTxn.id,
-        cancel_time: now,
+        cancel_time: await cancelTimeOf(),
         state: GATEWAY_STATE.CANCELLED,
       });
     }
@@ -678,7 +696,7 @@ export class PaymeMethodsService {
       });
       return paymeSuccess(rpcId, {
         transaction: mockTxn.id,
-        cancel_time: now,
+        cancel_time: await cancelTimeOf(),
         state: GATEWAY_STATE.REFUNDED,
       });
     }

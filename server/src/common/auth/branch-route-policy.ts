@@ -631,7 +631,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /lead-sources/:id',
   'DELETE /lesson-teacher-overrides/:id',
   'DELETE /mock-exam-sections/:id',
-  'DELETE /mock-exam-subjects/:id',
   'DELETE /notifications/devices',
   'DELETE /notifications/push/unsubscribe',
   'DELETE /rooms/:id',
@@ -664,8 +663,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /lesson-reschedules/available-rooms',
   'GET /lesson-teacher-overrides',
   'GET /mock-exam-sections',
-  'GET /mock-exams/:examId/results-matrix',
-  'GET /mock-exams/:examId/subjects',
   'GET /notifications',
   'GET /notifications/stream',
   'GET /notifications/unread-count',
@@ -699,8 +696,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'PATCH /leads/reorder',
   'PATCH /mock-exam-sections/:id',
   'PATCH /mock-exam-sections/reorder',
-  'PATCH /mock-exam-subjects/:id',
-  'PATCH /mock-exams/:examId/subjects/reorder',
   'PATCH /notifications/:id/read',
   'PATCH /notifications/read-all',
   'PATCH /rooms/:id',
@@ -717,9 +712,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'POST /lead-sources',
   'POST /leads',
   'POST /mock-exam-sections',
-  'POST /mock-exams/:examId/recalculate-ranks',
-  'POST /mock-exams/:examId/scores/bulk',
-  'POST /mock-exams/:examId/subjects',
   'POST /notifications/devices',
   'POST /notifications/push/subscribe',
   'POST /rooms',
@@ -745,4 +737,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 114;
+export const UNREVIEWED_BUDGET = 101;
