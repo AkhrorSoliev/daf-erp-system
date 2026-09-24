@@ -29,7 +29,9 @@ import { assertCallerInBranch } from '../common/auth/branch-scope';
 import {
   findLiveStaffByPhone,
   loginForPhone,
+  planPhoneChange,
 } from '../common/auth/phone-account-rules';
+import { assertNotChangingOwnSignInKeys } from '../common/auth/own-sign-in-keys';
 
 const TEACHER_ROLE_ID = 4;
 
@@ -334,6 +336,18 @@ export class TeachersService {
     // `UpdateTeacherDto` carries `password` and `login`. Existence first so a
     // stale id answers 404, then the branch.
     await this.assertCallerMayTouchTeacher(id, callerId);
+    // ADR-0031: a CEO or director who also teaches cannot change their own
+    // phone, login or password here — only through the password-checked doors.
+    assertNotChangingOwnSignInKeys(user, callerId, dto);
+
+    // Every phone write goes through planPhoneChange (ADR-0031): the old
+    // number stops being a sign-in key, and no two live staff share one.
+    // Planned before the photo is deleted, so a refusal leaves nothing behind.
+    const phoneWrite =
+      dto.phone !== undefined
+        ? await planPhoneChange(this.prisma, user, dto.phone, { staff: true })
+        : undefined;
+    const loginChanged = dto.login !== undefined && dto.login !== user.login;
 
     // Eski rasmni o'chirish (yangi rasm kelsa yoki null bo'lsa)
     if (dto.photo !== undefined && user.photo && dto.photo !== user.photo) {
@@ -360,10 +374,13 @@ export class TeachersService {
       data: {
         ...(dto.firstName !== undefined && { firstName: dto.firstName }),
         ...(dto.lastName !== undefined && { lastName: dto.lastName }),
-        ...(dto.phone !== undefined && { phone: dto.phone }),
+        ...(phoneWrite && { phone: phoneWrite.phone }),
         ...(dto.gender !== undefined && { gender: dto.gender }),
         ...(dto.photo !== undefined && { photo: dto.photo }),
         ...(dto.login !== undefined && { login: dto.login }),
+        ...(phoneWrite &&
+          phoneWrite.login !== undefined &&
+          !loginChanged && { login: phoneWrite.login }),
         ...(hashedPassword && { password: hashedPassword }),
       },
       select: teacherSelect,

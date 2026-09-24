@@ -27,6 +27,7 @@ import { InitPaymentDto } from './dto/init-payment.dto';
 import { ScanQrDto } from '../attendance/dto/qr-session.dto';
 import { Roles, CurrentUser } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
+import { OwnPasswordAttemptGuard } from '../common/guards/own-password-attempt.guard';
 import { PaymentMethod } from '@prisma/client';
 
 @Controller('student-portal')
@@ -83,7 +84,7 @@ export class StudentPortalController {
   }
 
   @Patch('password')
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesGuard, OwnPasswordAttemptGuard)
   @Roles('Student')
   changePassword(
     @CurrentUser('id') userId: number,

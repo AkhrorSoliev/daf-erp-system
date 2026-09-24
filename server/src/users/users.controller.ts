@@ -17,10 +17,12 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ChangePhoneDto } from './dto/change-phone.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { Roles, BranchScope } from '../common/decorators';
+import { Roles, BranchScope, STAFF_ROLES } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
+import { OwnPasswordAttemptGuard } from '../common/guards/own-password-attempt.guard';
 
 @Controller('users')
 export class UsersController {
@@ -75,11 +77,21 @@ export class UsersController {
   }
 
   @Patch('password')
+  @UseGuards(OwnPasswordAttemptGuard)
   changePassword(
     @CurrentUser('id') userId: number,
     @Body() dto: ChangePasswordDto,
   ) {
     return this.usersService.changePassword(userId, dto);
+  }
+
+  // Declared before `@Patch(':id')`: routes match in declaration order, and
+  // `:id` would take "phone" and fail its ParseIntPipe.
+  @Patch('phone')
+  @UseGuards(RolesGuard, OwnPasswordAttemptGuard)
+  @Roles(...STAFF_ROLES)
+  changePhone(@CurrentUser('id') userId: number, @Body() dto: ChangePhoneDto) {
+    return this.usersService.changeOwnPhone(userId, dto);
   }
 
   @Patch(':id')

@@ -11,6 +11,7 @@ import { equalsOrIn } from '../common/dto/to-array';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ChangePhoneDto } from './dto/change-phone.dto';
 import { Prisma, UserStatus } from '@prisma/client';
 import { UploadService } from '../upload/upload.service';
 import {
@@ -28,8 +29,10 @@ import {
   assertCallerMayTouchUserRecord,
 } from '../common/auth/user-branch-scope';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
+import { assertNotChangingOwnSignInKeys } from '../common/auth/own-sign-in-keys';
 import {
   findLiveStaffByPhone,
+  planPhoneChange,
   STAFF_ROLE_IDS,
 } from '../common/auth/phone-account-rules';
 
@@ -438,7 +441,6 @@ export class UsersService {
       data: {
         ...(dto.firstName !== undefined && { firstName: dto.firstName }),
         ...(dto.lastName !== undefined && { lastName: dto.lastName }),
-        ...(dto.phone !== undefined && { phone: dto.phone }),
         ...(dto.photo !== undefined && { photo: dto.photo || null }),
       },
       select: userSelect,
@@ -478,6 +480,53 @@ export class UsersService {
     });
 
     return { message: "Parol muvaffaqiyatli o'zgartirildi" };
+  }
+
+  /**
+   * The only door through which a caller changes their OWN phone (ADR-0031).
+   * The phone is a sign-in key, so, like `changePassword`, this asks for the
+   * current password first: it is the owner who changes it, not merely
+   * whoever is signed in.
+   */
+  async changeOwnPhone(id: number, dto: ChangePhoneDto) {
+    const found = await this.prisma.user.findFirst({
+      where: { id, deletedAt: null },
+      select: { ...userSelect, password: true },
+    });
+    if (!found) {
+      throw new NotFoundException(`User #${id} topilmadi`);
+    }
+    const { password, ...user } = found;
+    if (!password) {
+      throw new BadRequestException("Parol o'rnatilmagan");
+    }
+    if (!(await bcrypt.compare(dto.currentPassword, password))) {
+      throw new BadRequestException("Joriy parol noto'g'ri");
+    }
+
+    if (dto.phone === user.phone) return formatUser(user);
+
+    const write = await planPhoneChange(this.prisma, user, dto.phone, {
+      staff: user.roles.some((ur) =>
+        (STAFF_ROLE_IDS as readonly number[]).includes(ur.role.id),
+      ),
+    });
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: write,
+      select: userSelect,
+    });
+
+    await this.entityHistoryService.recordUpdate({
+      entityType: 'User',
+      entityId: id,
+      oldValues: user,
+      newValues: updated,
+      changedById: id,
+      companyId: user.companyId,
+    });
+
+    return formatUser(updated);
   }
 
   async create(
@@ -647,6 +696,9 @@ export class UsersService {
 
     this.assertSameCompany(user.companyId, callerCompanyId);
     await this.assertCallerMayTouchUser(user as any, changedById);
+    // ADR-0031: your own phone, login and password change only through the
+    // doors that ask for your current password — never through this form.
+    assertNotChangingOwnSignInKeys(user, changedById, dto);
 
     // If roles, branches, the job title, or credentials are being modified,
     // re-validate the combined state. `password`/`login` are included even
@@ -691,8 +743,24 @@ export class UsersService {
     const updateData: any = {};
     if (dto.firstName !== undefined) updateData.firstName = dto.firstName;
     if (dto.lastName !== undefined) updateData.lastName = dto.lastName;
-    if (dto.phone !== undefined) updateData.phone = dto.phone;
     if (dto.login !== undefined) updateData.login = dto.login;
+    if (dto.phone !== undefined) {
+      const resultingRoleIds: number[] =
+        dto.roleIds ?? user.roles.map((ur: any) => ur.role.id);
+      const write = await planPhoneChange(this.prisma, user, dto.phone, {
+        staff: resultingRoleIds.some((roleId) =>
+          (STAFF_ROLE_IDS as readonly number[]).includes(roleId),
+        ),
+      });
+      updateData.phone = write.phone;
+      // The login follows the phone unless this request deliberately sets a
+      // different one. The form re-sends the stored login on every save, so
+      // an unchanged value is not a decision to keep the old number.
+      const loginChanged = dto.login !== undefined && dto.login !== user.login;
+      if (write.login !== undefined && !loginChanged) {
+        updateData.login = write.login;
+      }
+    }
     if (dto.position !== undefined) updateData.position = dto.position.trim();
     if (dto.gender !== undefined) updateData.gender = dto.gender;
     if (dto.mainBranch !== undefined) updateData.mainBranch = dto.mainBranch;
