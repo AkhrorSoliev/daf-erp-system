@@ -265,6 +265,7 @@ Use `@Roles()` decorator with **string role names** + `RolesGuard`:
 - **All queries must include `deletedAt: null`** in their `where` clause to exclude archived records
 - Unique constraints use **partial indexes** (`WHERE "deletedAt" IS NULL`) so archived records don't block new ones
 - **Cascade archiving:** When a parent is archived, children are archived too with the same `deletionBatchId` (UUID). Restore reverses the entire batch.
+- **A student's sign-in account lives and dies with the card (ADR-0033).** `StudentsWriteService.delete` archives the card and its student-only account (`STUDENT_ONLY_ACCOUNT`, `common/auth/student-account.ts`) in one transaction with `userArchiveData`; `ArchiveRestoreService.restore` reopens it with the login re-derived from the card phone and refuses a card whose phone is on another live card. EXPELLED / FROZEN / GRADUATED leave the account open on purpose (debt is paid through the portal). The archive users tab ("Ustozlar / Xodimlar") never lists a student-only account, and `AuthService` refuses one with no live card. Any new path that archives student cards must close their accounts the same way.
 - Archive endpoints (`/api/archive/*`) are **CEO-only**: list, detail, restore, permanent delete
 - **Permanent delete** (`DELETE /api/archive/:entityType/:id`) removes the record from DB and deletes associated files from Cloudflare R2
 - Files (photos, avatars) are **NOT deleted** during soft delete — only during permanent delete from archive
