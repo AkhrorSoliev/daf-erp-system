@@ -39,6 +39,7 @@ function makeEnrollment(over: EnrollmentOverride = {}): EnrollmentToMigrate {
     chargeable: true,
     expectedPrepaidRefund: DEFAULT_REFUND,
     prepaidCoveredByReversal: 0,
+    expectedCarriedIn: { lessons: 0, value: 0 },
     ...over,
     enrollment,
   };
@@ -95,6 +96,10 @@ function makeDeps(over: Partial<ApplyMigrationDeps> = {}): ApplyMigrationDeps {
     }),
     reverseAccrualForAttendance: jest.fn().mockResolvedValue(null),
     createAccrual: jest.fn().mockResolvedValue({ id: 'accrual-1' }),
+    computeCarriedIn: jest
+      .fn()
+      .mockResolvedValue({ lessons: 0, value: 0, batches: [] }),
+    createAdjustment: jest.fn().mockResolvedValue({ id: 'adj-1' }),
     ...over,
   };
 }
@@ -148,6 +153,7 @@ describe('applyMigrationForStudent', () => {
       studentId: 10453,
       oldBalance: -120_000,
       prepaidRefund: 187_500,
+      carriedInCredit: 0,
       reversedSeptember: 40_000,
       monthlyCharge: 450_000,
       newBalance: -342_500,
@@ -695,5 +701,174 @@ describe('applyMigrationForStudent', () => {
         ],
       }),
     ).rejects.toThrow(/farq o'quvchidan yo'qolardi/);
+  });
+});
+
+/** The standard single-student call; tests override single fields on it. */
+function studentParams(
+  tx: ReturnType<typeof makeTx>,
+  deps: ApplyMigrationDeps,
+  enrollments: EnrollmentToMigrate[],
+) {
+  return {
+    tx,
+    deps,
+    studentId: 10453,
+    companyId: 1,
+    performedById: 999,
+    periodYear: 2026,
+    periodMonth: 9,
+    periodGte: PERIOD_GTE,
+    periodLt: PERIOD_LT,
+    enrollments,
+  };
+}
+
+describe('carried-in lessons (paid by a pack bought before the month)', () => {
+  const CARRIED = {
+    lessons: 4,
+    value: 150_000,
+    batches: [{ deductionId: 'ded-aug', lessons: 4, value: 150_000 }],
+  };
+
+  it('credits them once, next to the fresh charge, and counts them in the balance check', async () => {
+    const tx = makeTx({
+      student: {
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValueOnce({ balance: -120_000 })
+          // -120 000 + 187 500 prepaid + 150 000 carried-in - 450 000 charge
+          .mockResolvedValueOnce({ balance: -232_500 }),
+      },
+    });
+    const deps = makeDeps({
+      computeCarriedIn: jest.fn().mockResolvedValue(CARRIED),
+    });
+
+    const result = await applyMigrationForStudent(
+      studentParams(tx, deps, [
+        makeEnrollment({ expectedCarriedIn: { lessons: 4, value: 150_000 } }),
+      ]),
+    );
+
+    expect(deps.createAdjustment).toHaveBeenCalledTimes(1);
+    expect(deps.createAdjustment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        studentId: 10453,
+        amount: 150_000,
+        branchId: 1,
+        companyId: 1,
+        performedById: 999,
+        metadata: expect.objectContaining({
+          marker: 'overcharge-monthly-carried-in',
+          migration: 'monthly-carried-in',
+          period: '2026-09',
+          enrollmentId: 'enr-1',
+          lessons: 4,
+        }),
+      }),
+      tx,
+    );
+    expect(result.carriedInCredit).toBe(150_000);
+    expect(result.newBalance).toBe(-232_500);
+  });
+
+  it('aborts before writing anything when the recount differs from the dry-run', async () => {
+    const tx = makeTx();
+    const deps = makeDeps({
+      computeCarriedIn: jest.fn().mockResolvedValue(CARRIED),
+    });
+
+    await expect(
+      applyMigrationForStudent(
+        studentParams(tx, deps, [
+          makeEnrollment({ expectedCarriedIn: { lessons: 4, value: 149_999 } }),
+        ]),
+      ),
+    ).rejects.toThrow(/avgust darslari/);
+    expect(deps.refundPrepaidToBalance).not.toHaveBeenCalled();
+    expect(deps.reverseTransaction).not.toHaveBeenCalled();
+    expect(deps.createChargeForEnrollment).not.toHaveBeenCalled();
+    expect(deps.createAdjustment).not.toHaveBeenCalled();
+  });
+
+  it('does not credit a PAUSED enrollment (it keeps its pack billing)', async () => {
+    const tx = makeTx({
+      student: {
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValueOnce({ balance: -120_000 })
+          .mockResolvedValueOnce({ balance: 67_500 }), // -120 000 + 187 500
+      },
+    });
+    const deps = makeDeps({
+      computeCarriedIn: jest.fn().mockResolvedValue(CARRIED),
+    });
+
+    await applyMigrationForStudent(
+      studentParams(tx, deps, [makeEnrollment({ chargeable: false })]),
+    );
+
+    expect(deps.computeCarriedIn).not.toHaveBeenCalled();
+    expect(deps.createAdjustment).not.toHaveBeenCalled();
+  });
+
+  it('does not credit when the charge already existed', async () => {
+    const tx = makeTx({
+      enrollmentMonthlyCharge: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'chg-existing' }),
+      },
+      student: {
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValueOnce({ balance: -120_000 })
+          .mockResolvedValueOnce({ balance: 67_500 }), // -120 000 + 187 500
+      },
+    });
+    const deps = makeDeps({
+      computeCarriedIn: jest.fn().mockResolvedValue(CARRIED),
+    });
+
+    await applyMigrationForStudent(
+      studentParams(tx, deps, [
+        makeEnrollment({ expectedCarriedIn: { lessons: 4, value: 150_000 } }),
+      ]),
+    );
+
+    expect(deps.createAdjustment).not.toHaveBeenCalled();
+  });
+});
+
+describe('re-pricing reads lessons by Tashkent calendar days', () => {
+  it('bounds Attendance.date by UTC-midnight dates, not the Tashkent-shifted instants', async () => {
+    const tx = makeTx({
+      student: {
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValueOnce({ balance: -120_000 })
+          .mockResolvedValueOnce({ balance: -382_500 }), // -120 000 + 187 500 - 450 000
+      },
+    });
+
+    await applyMigrationForStudent({
+      ...studentParams(tx, makeDeps(), [makeEnrollment()]),
+      // What migrate-to-monthly.ts really passes: 00:00 Tashkent on 01.09
+      // and on 01.10 — right for Transaction.createdAt, wrong for a date.
+      periodGte: new Date('2026-08-31T19:00:00.000Z'),
+      periodLt: new Date('2026-09-30T19:00:00.000Z'),
+    });
+
+    // Compared with a @db.Date column those instants mean ">= 31 August" and
+    // "< 30 September" (server/CLAUDE.md, "Day boundaries").
+    expect(tx.attendance.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          date: {
+            gte: new Date('2026-09-01T00:00:00.000Z'),
+            lt: new Date('2026-10-01T00:00:00.000Z'),
+          },
+        }),
+      }),
+    );
   });
 });
