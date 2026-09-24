@@ -46,8 +46,9 @@ export function signInAccountChange(
 /**
  * Opens a card's sign-in account and links it: the login is the phone unless
  * another live account already holds it (ADR-0022), the password is random,
- * the only role is Student. The plain password goes back to the one caller
- * that shows it (the admin create form); the repair script never prints it.
+ * the only role is Student. The plain password goes back to the caller; only
+ * Telegram registration shows it (the bot sends it to the student who just
+ * registered). The repair script never prints it.
  */
 export async function openStudentAccount(
   db: PrismaService | Prisma.TransactionClient,
