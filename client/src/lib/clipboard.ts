@@ -42,3 +42,41 @@ export async function copyPendingText(
   }
   return text;
 }
+
+/** What became of a copy started by `tryCopyPendingText`. */
+export type PendingCopyResult =
+  /** The text arrived and is on the clipboard. */
+  | { status: "copied"; text: string }
+  /** The text arrived, but the browser refused to write it. */
+  | { status: "refused"; text: string }
+  /** The text resolved to null, so nothing was written. */
+  | { status: "empty" }
+  /** The text never arrived: its promise rejected, e.g. the request failed. */
+  | { status: "failed"; error: unknown };
+
+/**
+ * `copyPendingText` for text whose request can fail. A failed request and a
+ * refused write need different messages — after a refusal the text exists
+ * and can still be shown — so instead of rejecting with either, this
+ * resolves to which one happened. Never rejects.
+ *
+ * Call it synchronously from the click handler, before any `await`.
+ */
+export async function tryCopyPendingText(
+  text: Promise<string | null>,
+  clipboard: Clipboard = navigator.clipboard,
+): Promise<PendingCopyResult> {
+  // Settling both also handles the copy's rejection when the text rejects.
+  const [arrived, written] = await Promise.allSettled([
+    text,
+    copyPendingText(text, clipboard),
+  ]);
+  if (arrived.status === "rejected") {
+    return { status: "failed", error: arrived.reason };
+  }
+  if (arrived.value === null) return { status: "empty" };
+  if (written.status === "rejected") {
+    return { status: "refused", text: arrived.value };
+  }
+  return { status: "copied", text: arrived.value };
+}
