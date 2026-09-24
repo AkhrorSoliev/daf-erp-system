@@ -26,7 +26,6 @@ import {
   VALID_ROLE_IDS,
   GRANTABLE_ROLE_IDS,
 } from './constants';
-import { createTeacherRegistrationScene } from './scenes/teacher-registration.scene';
 import { StudentLeadOriginService } from '../common/student-origin';
 import { createStudentRegistrationScene } from './scenes/student-registration.scene';
 import { createEmployeeRegistrationScene } from './scenes/employee-registration.scene';
@@ -228,13 +227,6 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     });
 
     // Scenes
-    const teacherScene = createTeacherRegistrationScene(
-      this.prisma,
-      this.uploadService,
-      this.usersService,
-      this.bot,
-    );
-
     const studentScene = createStudentRegistrationScene(
       this.prisma,
       this.uploadService,
@@ -264,7 +256,6 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     );
 
     const stage = new Scenes.Stage<BotContext>([
-      teacherScene,
       studentScene,
       employeeScene,
       mockExamScene,

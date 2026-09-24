@@ -1,5 +1,4 @@
 export const SCENES = {
-  TEACHER_REGISTRATION: 'teacher-registration',
   STUDENT_REGISTRATION: 'student-registration',
   EMPLOYEE_REGISTRATION: 'employee-registration',
   MOCK_EXAM_REGISTRATION: 'mock-exam-registration',
