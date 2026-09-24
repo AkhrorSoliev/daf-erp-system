@@ -12,6 +12,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { consumeLoginRequest } from '../telegram/flows/app-login-otp-flow';
 import { normalizeSharedPhone } from '../common/utils/phone.util';
+import { STUDENT_ROLE_ID } from '../students/shared/student-select';
+import { isStudentOnlyAccount } from '../common/auth/student-account';
+
+export const STUDENT_ACCOUNT_CLOSED_MESSAGE =
+  "Hisobingiz yopilgan. Administrator bilan bog'laning.";
 
 /**
  * Token lifetimes. CONSTANTS, not configuration, and deliberately so.
@@ -221,6 +226,32 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
+  /**
+   * The live card behind an account holding the Student role, or nothing.
+   *
+   * A student-only account whose card is archived or gone is refused
+   * (ADR-0033). Archiving closes the account, so this only fires when the two
+   * have drifted — and the token it would get carries no `studentId`: every
+   * portal page then fails with a misleading "check your internet", and any
+   * read that trusts `studentId` loses its filter. An account that also holds
+   * a staff role signs in as staff, as before.
+   */
+  private async resolveStudentId(
+    userId: number,
+    roleIds: number[],
+  ): Promise<number | undefined> {
+    if (!roleIds.includes(STUDENT_ROLE_ID)) return undefined;
+    const student = await this.prisma.student.findFirst({
+      where: { userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (student) return student.id;
+    if (isStudentOnlyAccount(roleIds)) {
+      throw new UnauthorizedException(STUDENT_ACCOUNT_CLOSED_MESSAGE);
+    }
+    return undefined;
+  }
+
   async login(user: any, origin?: string, portal?: string) {
     const allowedRoleIds = resolveAllowedRoleIds(origin, portal);
     if (allowedRoleIds !== null) {
@@ -236,15 +267,7 @@ export class AuthService {
     const roles = user.roles.map((ur: any) => ur.role.name);
     const roleIds: number[] = user.roles.map((ur: any) => ur.role.id);
 
-    // Student role bo'lsa, studentId ni topish
-    let studentId: number | undefined;
-    if (roleIds.includes(6)) {
-      const student = await this.prisma.student.findFirst({
-        where: { userId: user.id, deletedAt: null },
-        select: { id: true },
-      });
-      studentId = student?.id;
-    }
+    const studentId = await this.resolveStudentId(user.id, roleIds);
 
     const tokens = this.generateTokens(
       user.id,
@@ -295,16 +318,12 @@ export class AuthService {
     }
 
     const roleIds: number[] = user.roles.map((ur: any) => ur.role.id);
-    if (!roleIds.includes(6)) {
+    if (!roleIds.includes(STUDENT_ROLE_ID)) {
       throw new ForbiddenException("Bu faqat o'quvchilar uchun");
     }
 
     const roles = user.roles.map((ur: any) => ur.role.name);
-    const student = await this.prisma.student.findFirst({
-      where: { userId: user.id, deletedAt: null },
-      select: { id: true },
-    });
-    const studentId = student?.id;
+    const studentId = await this.resolveStudentId(user.id, roleIds);
 
     const tokens = this.generateTokens(
       user.id,
@@ -362,14 +381,7 @@ export class AuthService {
       const roles = user.roles.map((ur) => ur.role.name);
       const roleIds: number[] = user.roles.map((ur) => ur.role.id);
 
-      let studentId: number | undefined;
-      if (roleIds.includes(6)) {
-        const student = await this.prisma.student.findFirst({
-          where: { userId: user.id, deletedAt: null },
-          select: { id: true },
-        });
-        studentId = student?.id;
-      }
+      const studentId = await this.resolveStudentId(user.id, roleIds);
 
       const tokens = this.generateTokens(
         user.id,
