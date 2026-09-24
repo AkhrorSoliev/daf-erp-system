@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
+import { RedisService } from '../redis/redis.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
@@ -60,6 +61,9 @@ describe('UsersService.softDelete — the archived row', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        // Unused until UsersService takes RedisService for the blocked-user
+        // key (ADR-0028, not merged yet); an extra provider is harmless.
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {
