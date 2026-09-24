@@ -16,17 +16,29 @@ import { useLogoutOthers } from "@/hooks/use-logout-others";
 interface LogoutOthersDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * `"lumio"` on the student portal. Radix portals the content to
+   * `document.body`, outside the page's `.lumio` wrapper, so the skin has to
+   * be set on the content itself (same as `student-logout-button.tsx`).
+   */
+  contentClassName?: string;
 }
 
+/**
+ * Confirmation for "Boshqa qurilmalardan chiqish" (ADR-0030), shared by the
+ * staff profile and student portal Settings — one confirmation, two skins,
+ * like the portal's own sign-out.
+ */
 export function LogoutOthersDialog({
   open,
   onOpenChange,
+  contentClassName,
 }: LogoutOthersDialogProps) {
   const { logoutOthers, pending } = useLogoutOthers();
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent className={contentClassName}>
         <AlertDialogHeader>
           <AlertDialogTitle>Boshqa qurilmalardan chiqilsinmi?</AlertDialogTitle>
           <AlertDialogDescription>
@@ -38,6 +50,7 @@ export function LogoutOthersDialog({
           <AlertDialogCancel disabled={pending}>Bekor qilish</AlertDialogCancel>
           <AlertDialogAction
             disabled={pending}
+            className="bg-destructive text-white hover:bg-destructive/90"
             onClick={async (event) => {
               // Keep the dialog open until the request settles.
               event.preventDefault();

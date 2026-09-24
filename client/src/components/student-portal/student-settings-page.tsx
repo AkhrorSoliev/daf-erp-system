@@ -11,7 +11,7 @@ import {
   ThemeSegmented,
 } from "./lumio";
 import { StudentPasswordDialog } from "./student-password-dialog";
-import { StudentLogoutOthersDialog } from "./student-logout-others-dialog";
+import { LogoutOthersDialog } from "@/components/shared/logout-others-dialog";
 import { useStudentProfile } from "./lib/queries";
 import { settingsHelpItems } from "@/lib/student-nav-items";
 
@@ -89,9 +89,10 @@ export function StudentSettingsPage() {
         open={passwordOpen}
         onOpenChange={setPasswordOpen}
       />
-      <StudentLogoutOthersDialog
+      <LogoutOthersDialog
         open={logoutOthersOpen}
         onOpenChange={setLogoutOthersOpen}
+        contentClassName="lumio"
       />
     </Screen>
   );

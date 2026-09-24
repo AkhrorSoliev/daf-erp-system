@@ -10,7 +10,7 @@ import { ProfileCard } from "./profile-card";
 import { ProfileDetails } from "./profile-details";
 import { EditProfileDrawer } from "./edit-profile-drawer";
 import { ChangePasswordDrawer } from "./change-password-drawer";
-import { LogoutOthersDialog } from "./logout-others-dialog";
+import { LogoutOthersDialog } from "@/components/shared/logout-others-dialog";
 import { MobileProfileHeader } from "@/components/shared/mobile-profile-header";
 
 export function ProfileClient() {
