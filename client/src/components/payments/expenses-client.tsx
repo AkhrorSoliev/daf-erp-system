@@ -454,7 +454,7 @@ export function ExpensesClient() {
                 handleDelete();
               }}
               disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              variant="destructive"
             >
               {deleting && <Loader2 className="size-4 animate-spin mr-2" />}
               O&apos;chirish

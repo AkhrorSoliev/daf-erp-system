@@ -69,7 +69,7 @@ export function LogoutButton({
             <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmLogout}
-              className="bg-destructive text-white hover:bg-destructive/90"
+              variant="destructive"
             >
               Chiqish
             </AlertDialogAction>

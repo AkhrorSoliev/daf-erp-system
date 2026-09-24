@@ -541,7 +541,7 @@ function ReverseDialog({
           <AlertDialogAction
             onClick={onConfirm}
             disabled={!canConfirm}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            variant="destructive"
           >
             {reversing ? (
               <>

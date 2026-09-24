@@ -191,7 +191,7 @@ export function StudentRemoveFromGroupDialog({
           <AlertDialogAction
             onClick={onConfirm}
             disabled={!canSubmit || commentMissing || removing}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            variant="destructive"
           >
             {removing ? "Chiqarilmoqda..." : "Chiqarish"}
           </AlertDialogAction>

@@ -77,7 +77,7 @@ export function DeleteSectionDialog({
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={submitting || (section?.examCount ?? 0) > 0}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            variant="destructive"
           >
             {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
             O&apos;chirish
