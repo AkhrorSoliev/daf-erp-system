@@ -57,6 +57,12 @@ export interface TeacherLessonInput {
   oldValue: number;
   /** What step 5 will write instead. */
   newAccrual: number;
+  /**
+   * No rate, yet a live accrual exists (e.g. the config was deactivated after
+   * the lesson was paid): step 5 reverses it, createAccrual writes nothing,
+   * and --apply fails the student — which also blocks the course flip.
+   */
+  failsApply: boolean;
 }
 
 export interface TeacherPayRow {
@@ -66,6 +72,8 @@ export interface TeacherPayRow {
   lessons: number;
   /** Lessons with no live accrual yet (debtors' lessons). */
   unwrittenLessons: number;
+  /** Lessons that will make --apply fail the student (see failsApply). */
+  failingLessons: number;
   /** Σ live accruals — what is credited today. */
   written: number;
   /** Σ old-model pay, uncredited lessons included. */
@@ -80,6 +88,7 @@ export interface TeacherPayReport {
   totals: {
     lessons: number;
     unwrittenLessons: number;
+    failingLessons: number;
     written: number;
     before: number;
     after: number;
@@ -297,6 +306,7 @@ export async function loadTeacherLessons(
           perLessonCost,
           pair.plannedLessons,
         ),
+        failsApply: rate === null && live !== undefined,
       });
     }
   }
@@ -314,6 +324,7 @@ export function buildTeacherPayReport(
       salaryTypes: [],
       lessons: 0,
       unwrittenLessons: 0,
+      failingLessons: 0,
       written: 0,
       before: 0,
       after: 0,
@@ -322,6 +333,7 @@ export function buildTeacherPayReport(
     };
     row.lessons += 1;
     if (!l.hasLiveAccrual) row.unwrittenLessons += 1;
+    if (l.failsApply) row.failingLessons += 1;
     row.written += l.currentAccrual;
     row.before += l.oldValue;
     row.after += l.newAccrual;
@@ -339,6 +351,7 @@ export function buildTeacherPayReport(
     (t, r) => ({
       lessons: t.lessons + r.lessons,
       unwrittenLessons: t.unwrittenLessons + r.unwrittenLessons,
+      failingLessons: t.failingLessons + r.failingLessons,
       written: t.written + r.written,
       before: t.before + r.before,
       after: t.after + r.after,
@@ -347,6 +360,7 @@ export function buildTeacherPayReport(
     {
       lessons: 0,
       unwrittenLessons: 0,
+      failingLessons: 0,
       written: 0,
       before: 0,
       after: 0,
@@ -354,6 +368,12 @@ export function buildTeacherPayReport(
     },
   );
   return { rows, totals };
+}
+
+/** 'YIQILADI' before 'HA': a lesson that fails --apply needs fixing first. */
+export function reviewLabel(row: TeacherPayRow): string {
+  if (row.failingLessons > 0) return 'YIQILADI';
+  return row.needsReview ? 'HA' : '';
 }
 
 export function renderTeacherCsv(report: TeacherPayReport): string {
@@ -370,7 +390,7 @@ export function renderTeacherCsv(report: TeacherPayReport): string {
       r.before,
       r.after,
       r.delta,
-      r.needsReview ? 'HA' : '',
+      reviewLabel(r),
     ].join(','),
   );
   return [head, ...lines].join('\n');

@@ -29,6 +29,7 @@ const lesson = (
   hasLiveAccrual: true,
   oldValue: 15_000,
   newAccrual: 13_846,
+  failsApply: false,
   ...over,
 });
 
@@ -165,6 +166,7 @@ describe('loadTeacherLessons', () => {
         hasLiveAccrual: true,
         oldValue: 15_000,
         newAccrual: 13_846,
+        failsApply: false,
       },
       {
         teacherId: 888,
@@ -174,6 +176,7 @@ describe('loadTeacherLessons', () => {
         hasLiveAccrual: true,
         oldValue: 12_500,
         newAccrual: 11_538,
+        failsApply: false,
       },
       {
         teacherId: 777,
@@ -183,6 +186,7 @@ describe('loadTeacherLessons', () => {
         hasLiveAccrual: false,
         oldValue: 15_000,
         newAccrual: 13_846,
+        failsApply: false,
       },
     ]);
   });
@@ -215,6 +219,28 @@ describe('loadTeacherLessons', () => {
         },
       }),
     );
+  });
+
+  it('marks a lesson that has a live accrual but no rate as failing --apply', async () => {
+    // The config was deactivated after the lesson was paid: step 5 reverses
+    // the accrual, createAccrual finds no rate, and the student fails.
+    const db = makeDb();
+    db.employeeSalaryConfigVersion.findMany.mockResolvedValue([]);
+    const lessons = await loadTeacherLessons(db as never, {
+      companyId: 1001,
+      periodKey: '2026-09',
+      pairs: PAIRS,
+    });
+    const byLesson = lessons.map((l) => [
+      l.teacherId,
+      l.hasLiveAccrual,
+      l.failsApply,
+    ]);
+    expect(byLesson).toEqual([
+      [777, true, true],
+      [888, true, true],
+      [777, false, false],
+    ]);
   });
 
   it('does not query for an empty list', async () => {
@@ -263,6 +289,7 @@ describe('buildTeacherPayReport', () => {
     expect(report.totals).toEqual({
       lessons: 3,
       unwrittenLessons: 1,
+      failingLessons: 0,
       written: 30_000,
       before: 42_500,
       after: 39_230,
@@ -307,5 +334,22 @@ describe('buildTeacherPayReport', () => {
       'teacherId,ism,turi,darslar,yozilmagan_darslar,yozilgan,eski_tizimda,yangi_tizimda,farq,tekshirish',
       '1,"A",PERCENTAGE,1,0,15000,15000,13846,-1154,',
     ]);
+  });
+
+  it('says YIQILADI for a teacher with a lesson that will fail --apply', () => {
+    const report = buildTeacherPayReport([
+      lesson({
+        teacherId: 6,
+        teacherName: 'F',
+        salaryType: null,
+        newAccrual: 0,
+        failsApply: true,
+      }),
+    ]);
+    expect(report.rows[0].failingLessons).toBe(1);
+    expect(report.totals.failingLessons).toBe(1);
+    expect(renderTeacherCsv(report).split('\n')[1].endsWith(',YIQILADI')).toBe(
+      true,
+    );
   });
 });

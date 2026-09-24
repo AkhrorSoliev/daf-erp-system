@@ -101,6 +101,7 @@ import {
   buildTeacherPayReport,
   loadTeacherLessons,
   renderTeacherCsv,
+  reviewLabel,
   type TeacherLessonInput,
   type TeacherLessonPair,
 } from './lib/monthly-migration-teacher-report';
@@ -1408,7 +1409,7 @@ async function main(prisma: PrismaClient) {
       som(r.before),
       som(r.after),
       som(r.delta),
-      r.needsReview ? 'HA' : '',
+      reviewLabel(r),
     ]),
     ['l', 'l', 'r', 'r', 'r', 'r', 'r', 'r', 'l'],
   );
@@ -1424,6 +1425,10 @@ async function main(prisma: PrismaClient) {
   console.log(
     "tekshirish = HA: NO_RATE — o'sha kuni ustozning stavkasi yo'q: bu darslarga haq hozir ham, o'tishdan keyin ham yozilmaydi " +
       "(to'lash kerak bo'lsa, stavka o'sha kundan boshlanishi kerak); FIXED_MONTHLY — darsbay pul yoziladi, qaror CEO da.",
+  );
+  console.log(
+    "tekshirish = YIQILADI: stavka yo'q, lekin haq allaqachon yozilgan (sozlama o'chirilgan) — --apply o'sha o'quvchilarni " +
+      `yiqitadi va kurs MONTHLY'ga o'tmaydi. Avval stavkani tiklang. Hozir: ${t.failingLessons} dars.`,
   );
   const teacherCsvPath = nextTeacherCsvPath();
   fs.mkdirSync(path.dirname(teacherCsvPath), { recursive: true });
