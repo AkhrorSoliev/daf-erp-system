@@ -20,6 +20,11 @@ import {
 } from '../common/student-origin';
 import { generatePassword } from '../common/utils/password.util';
 import { loginForPhone } from '../common/auth/phone-account-rules';
+import { RedisService } from '../redis/redis.service';
+import {
+  passwordWrite,
+  recordSessionsEnded,
+} from '../common/auth/session-version';
 import {
   STUDENT_ROLE_ID,
   studentSelect,
@@ -38,6 +43,7 @@ export class StudentsWriteService {
     private eventEmitter: EventEmitter2,
     private transactionsService: TransactionsService,
     private leadOrigin: StudentLeadOriginService,
+    private redis: RedisService,
   ) {}
 
   /**
@@ -275,6 +281,10 @@ export class StudentsWriteService {
     // right shape for it: a correction someone deliberately makes and explains,
     // rather than a side effect of editing a percentage.
 
+    // Filled inside the transaction when the password changes; mirrored for
+    // JwtAuthGuard only once the transaction has committed (ADR-0029).
+    const passwordChange: { sessionVersion?: number } = {};
+
     const updated = await this.prisma.$transaction(
       async (tx) => {
         const result = await tx.student.update({
@@ -323,10 +333,12 @@ export class StudentsWriteService {
         }
 
         if (hashedPassword && student.userId) {
-          await tx.user.update({
+          const { sessionVersion } = await tx.user.update({
             where: { id: student.userId },
-            data: { password: hashedPassword },
+            data: passwordWrite(hashedPassword),
+            select: { sessionVersion: true },
           });
+          passwordChange.sessionVersion = sessionVersion;
         }
 
         if (dto.branchIds !== undefined) {
@@ -352,6 +364,22 @@ export class StudentsWriteService {
       changedById: userId,
       companyId: student.companyId ?? undefined,
     });
+
+    if (passwordChange.sessionVersion !== undefined && student.userId) {
+      await recordSessionsEnded(
+        this.redis,
+        student.userId,
+        passwordChange.sessionVersion,
+      );
+      await this.entityHistoryService.recordUpdate({
+        entityType: 'Student',
+        entityId: id,
+        oldValues: { parol: '***' },
+        newValues: { parol: "yangi parol o'rnatildi" },
+        changedById: userId,
+        companyId: student.companyId ?? undefined,
+      });
+    }
 
     return formatStudent(updated);
   }
