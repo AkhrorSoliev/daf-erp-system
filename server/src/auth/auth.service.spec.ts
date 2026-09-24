@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { AuthService } from './auth.service';
 
@@ -29,7 +29,7 @@ describe('AuthService', () => {
       student: { findFirst: jest.fn().mockResolvedValue({ id: 10001 }) },
       user: { findFirst: jest.fn(), findMany: jest.fn() },
     };
-    jwt = { sign: jest.fn().mockReturnValue('tok') };
+    jwt = { sign: jest.fn().mockReturnValue('tok'), verify: jest.fn() };
     config = { get: jest.fn().mockReturnValue('secret') };
     redis = { get: jest.fn(), del: jest.fn() };
     service = new AuthService(prisma, jwt, config, redis);
@@ -298,6 +298,108 @@ describe('AuthService', () => {
       expect(res.status).toBe('approved');
       expect((res as { accessToken?: string }).accessToken).toBe('tok');
       expect(redis.del).toHaveBeenCalled();
+    });
+  });
+
+  describe('session version (ADR-0029)', () => {
+    const liveTeacher = {
+      ...teacher,
+      status: 'ACTIVE',
+      deletedAt: null,
+      sessionVersion: 3,
+    };
+
+    it('stamps the account session version into both tokens', async () => {
+      await service.login(liveTeacher, undefined, undefined);
+
+      expect(jwt.sign.mock.calls[0][0]).toMatchObject({ sub: 2, sv: 3 });
+      expect(jwt.sign.mock.calls[1][0]).toEqual({
+        sub: 2,
+        type: 'refresh',
+        sv: 3,
+      });
+    });
+
+    it('refreshes a token that carries the current version', async () => {
+      jwt.verify.mockReturnValue({ sub: 2, type: 'refresh', sv: 3 });
+      prisma.user.findFirst.mockResolvedValue(liveTeacher);
+
+      const res = await service.refresh('refresh-token');
+
+      expect(res.accessToken).toBe('tok');
+      expect(jwt.sign.mock.calls[1][0]).toEqual({
+        sub: 2,
+        type: 'refresh',
+        sv: 3,
+      });
+    });
+
+    it('refuses a token minted before the last password change', async () => {
+      jwt.verify.mockReturnValue({ sub: 2, type: 'refresh', sv: 2 });
+      prisma.user.findFirst.mockResolvedValue(liveTeacher);
+
+      await expect(service.refresh('refresh-token')).rejects.toThrow(
+        'Sessiya tugagan. Iltimos, qaytadan kiring.',
+      );
+      expect(jwt.sign).not.toHaveBeenCalled();
+    });
+
+    it('keeps a pre-deploy token (no sv) alive only until the first bump', async () => {
+      jwt.verify.mockReturnValue({ sub: 2, type: 'refresh' });
+
+      prisma.user.findFirst.mockResolvedValue({
+        ...liveTeacher,
+        sessionVersion: 0,
+      });
+      await expect(service.refresh('old-token')).resolves.toHaveProperty(
+        'accessToken',
+      );
+
+      prisma.user.findFirst.mockResolvedValue({
+        ...liveTeacher,
+        sessionVersion: 1,
+      });
+      await expect(service.refresh('old-token')).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('refuses a malformed session version', async () => {
+      jwt.verify.mockReturnValue({ sub: 2, type: 'refresh', sv: '3' });
+      prisma.user.findFirst.mockResolvedValue(liveTeacher);
+
+      await expect(service.refresh('refresh-token')).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    describe('issueSession', () => {
+      it('issues a pair stamped with the version as it is NOW', async () => {
+        prisma.user.findFirst.mockResolvedValue({
+          ...liveTeacher,
+          sessionVersion: 7,
+        });
+
+        const res = await service.issueSession(2);
+
+        expect(res.accessToken).toBe('tok');
+        expect(jwt.sign.mock.calls[0][0]).toMatchObject({ sub: 2, sv: 7 });
+        expect(prisma.user.findFirst.mock.calls[0][0].where).toEqual({
+          id: 2,
+          deletedAt: null,
+        });
+      });
+
+      it('refuses a blocked account', async () => {
+        prisma.user.findFirst.mockResolvedValue({
+          ...liveTeacher,
+          status: 'SUSPENDED',
+        });
+
+        await expect(service.issueSession(2)).rejects.toThrow(
+          'Hisobingiz bloklangan',
+        );
+      });
     });
   });
 });

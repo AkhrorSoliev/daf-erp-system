@@ -3,7 +3,7 @@ import {
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
-import { UserStatus } from '@prisma/client';
+import { Prisma, UserStatus } from '@prisma/client';
 import { resolveAllowedRoleIds } from './portal-roles.config';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -12,24 +12,34 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { consumeLoginRequest } from '../telegram/flows/app-login-otp-flow';
 import { normalizeSharedPhone } from '../common/utils/phone.util';
+import { ACCESS_TOKEN_TTL_SEC, REFRESH_TOKEN_TTL_SEC } from './token-lifetimes';
+import {
+  SESSION_ENDED_MESSAGE,
+  tokenSessionVersion,
+} from '../common/auth/session-version';
 
 /**
- * Token lifetimes. CONSTANTS, not configuration, and deliberately so.
- *
- * A short access token plus a refresh endpoint is the whole design: the
- * account's real state lives in Postgres and `refresh` re-checks it, so the
- * longest anyone can act on a revoked account is one hour. `JwtAuthGuard`'s
- * blocked-user cache is written against exactly that window — it exists to
- * shorten an hour, not a week.
- *
- * `JWT_EXPIRATION` is set to "7d" in production and NOTHING READS IT. Someone
- * configured week-long sessions and got hour-long ones, with no error and no
- * way to notice. Wiring it up would not fix that — it would grant the week.
- * `env.validation.ts` now says so at startup; the variable should be removed
- * from Railway rather than honoured.
+ * Everything a session response needs from the account row. One shape for
+ * sign-in, the app's OTP poll, `refresh` and `issueSession`, so they cannot
+ * drift apart.
  */
-const ACCESS_TOKEN_TTL = '1h';
-const REFRESH_TOKEN_TTL = '24h';
+const SESSION_USER_INCLUDE = {
+  roles: { include: { role: true } },
+  branches: { include: { branch: { select: { id: true, name: true } } } },
+  company: {
+    select: {
+      id: true,
+      name: true,
+      subdomain: true,
+      logo: true,
+      phone: true,
+    },
+  },
+} satisfies Prisma.UserInclude;
+
+type SessionUser = Prisma.UserGetPayload<{
+  include: typeof SESSION_USER_INCLUDE;
+}>;
 
 @Injectable()
 export class AuthService {
@@ -86,19 +96,7 @@ export class AuthService {
           : {}),
       },
       orderBy: { updatedAt: 'desc' as const },
-      include: {
-        roles: { include: { role: true } },
-        branches: { include: { branch: { select: { id: true, name: true } } } },
-        company: {
-          select: {
-            id: true,
-            name: true,
-            subdomain: true,
-            logo: true,
-            phone: true,
-          },
-        },
-      },
+      include: SESSION_USER_INCLUDE,
     };
   }
 
@@ -202,23 +200,89 @@ export class AuthService {
     userId: number,
     roles: string[],
     companyId: number,
+    sessionVersion: number,
     studentId?: number,
   ) {
     const secret = this.configService.get<string>('JWT_SECRET')!;
-    const payload: Record<string, any> = { sub: userId, roles, companyId };
+    // `sv` ties both tokens to the account's session version: a password
+    // change or "log out other devices" bumps it, and every token minted
+    // before that stops working (ADR-0029).
+    const payload: Record<string, any> = {
+      sub: userId,
+      roles,
+      companyId,
+      sv: sessionVersion,
+    };
     if (studentId) payload.studentId = studentId;
 
     const accessToken = this.jwtService.sign(payload, {
       secret,
-      expiresIn: ACCESS_TOKEN_TTL,
+      expiresIn: ACCESS_TOKEN_TTL_SEC,
     });
 
     const refreshToken = this.jwtService.sign(
-      { sub: userId, type: 'refresh' },
-      { secret, expiresIn: REFRESH_TOKEN_TTL },
+      { sub: userId, type: 'refresh', sv: sessionVersion },
+      { secret, expiresIn: REFRESH_TOKEN_TTL_SEC },
     );
 
     return { accessToken, refreshToken };
+  }
+
+  /**
+   * The tail every session response shares: the student id (role 6), both
+   * tokens stamped with the account's CURRENT session version, and the user
+   * payload.
+   */
+  private async sessionFor(user: SessionUser) {
+    const roles = user.roles.map((ur) => ur.role.name);
+    const roleIds = user.roles.map((ur) => ur.role.id);
+
+    let studentId: number | undefined;
+    if (roleIds.includes(6)) {
+      const student = await this.prisma.student.findFirst({
+        where: { userId: user.id, deletedAt: null },
+        select: { id: true },
+      });
+      studentId = student?.id;
+    }
+
+    const tokens = this.generateTokens(
+      user.id,
+      roles,
+      user.companyId,
+      user.sessionVersion,
+      studentId,
+    );
+
+    return {
+      ...tokens,
+      user: this.formatUser(user, studentId),
+    };
+  }
+
+  /**
+   * The account behind a session that is being renewed or re-issued: live,
+   * and not in a blocked status. Sign-in has its own, stricter lookup.
+   */
+  private async loadSessionUser(userId: number): Promise<SessionUser> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      include: SESSION_USER_INCLUDE,
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Foydalanuvchi topilmadi');
+    }
+
+    if (
+      user.status === UserStatus.SUSPENDED ||
+      user.status === UserStatus.TERMINATED ||
+      user.status === UserStatus.ARCHIVED
+    ) {
+      throw new UnauthorizedException('Hisobingiz bloklangan');
+    }
+
+    return user;
   }
 
   async login(user: any, origin?: string, portal?: string) {
@@ -233,30 +297,7 @@ export class AuthService {
       }
     }
 
-    const roles = user.roles.map((ur: any) => ur.role.name);
-    const roleIds: number[] = user.roles.map((ur: any) => ur.role.id);
-
-    // Student role bo'lsa, studentId ni topish
-    let studentId: number | undefined;
-    if (roleIds.includes(6)) {
-      const student = await this.prisma.student.findFirst({
-        where: { userId: user.id, deletedAt: null },
-        select: { id: true },
-      });
-      studentId = student?.id;
-    }
-
-    const tokens = this.generateTokens(
-      user.id,
-      roles,
-      user.companyId,
-      studentId,
-    );
-
-    return {
-      ...tokens,
-      user: this.formatUser(user, studentId),
-    };
+    return this.sessionFor(user);
   }
 
   /** Poll a link-based app login request; pending until the bot approves it. */
@@ -272,19 +313,7 @@ export class AuthService {
   private async buildStudentSession(userId: number) {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
-      include: {
-        roles: { include: { role: true } },
-        branches: { include: { branch: { select: { id: true, name: true } } } },
-        company: {
-          select: {
-            id: true,
-            name: true,
-            subdomain: true,
-            logo: true,
-            phone: true,
-          },
-        },
-      },
+      include: SESSION_USER_INCLUDE,
     });
 
     if (!user) {
@@ -294,29 +323,12 @@ export class AuthService {
       throw new UnauthorizedException('Hisobingiz bloklangan');
     }
 
-    const roleIds: number[] = user.roles.map((ur: any) => ur.role.id);
+    const roleIds: number[] = user.roles.map((ur) => ur.role.id);
     if (!roleIds.includes(6)) {
       throw new ForbiddenException("Bu faqat o'quvchilar uchun");
     }
 
-    const roles = user.roles.map((ur: any) => ur.role.name);
-    const student = await this.prisma.student.findFirst({
-      where: { userId: user.id, deletedAt: null },
-      select: { id: true },
-    });
-    const studentId = student?.id;
-
-    const tokens = this.generateTokens(
-      user.id,
-      roles,
-      user.companyId,
-      studentId,
-    );
-
-    return {
-      ...tokens,
-      user: this.formatUser(user, studentId),
-    };
+    return this.sessionFor(user);
   }
 
   async refresh(refreshToken: string) {
@@ -328,65 +340,32 @@ export class AuthService {
         throw new UnauthorizedException("Noto'g'ri token turi");
       }
 
-      const user = await this.prisma.user.findFirst({
-        where: { id: payload.sub, deletedAt: null },
-        include: {
-          roles: { include: { role: true } },
-          branches: {
-            include: { branch: { select: { id: true, name: true } } },
-          },
-          company: {
-            select: {
-              id: true,
-              name: true,
-              subdomain: true,
-              logo: true,
-              phone: true,
-            },
-          },
-        },
-      });
+      const user = await this.loadSessionUser(payload.sub);
 
-      if (!user) {
-        throw new UnauthorizedException('Foydalanuvchi topilmadi');
+      // The database is the authority; `JwtAuthGuard`'s Redis check only gets
+      // there sooner. A token minted before the last password change or
+      // "log out other devices" carries an older version and is refused.
+      if (tokenSessionVersion(payload) !== user.sessionVersion) {
+        throw new UnauthorizedException(SESSION_ENDED_MESSAGE);
       }
 
-      if (
-        user.status === 'SUSPENDED' ||
-        user.status === 'TERMINATED' ||
-        user.status === 'ARCHIVED'
-      ) {
-        throw new UnauthorizedException('Hisobingiz bloklangan');
-      }
-
-      const roles = user.roles.map((ur) => ur.role.name);
-      const roleIds: number[] = user.roles.map((ur) => ur.role.id);
-
-      let studentId: number | undefined;
-      if (roleIds.includes(6)) {
-        const student = await this.prisma.student.findFirst({
-          where: { userId: user.id, deletedAt: null },
-          select: { id: true },
-        });
-        studentId = student?.id;
-      }
-
-      const tokens = this.generateTokens(
-        user.id,
-        roles,
-        user.companyId,
-        studentId,
-      );
-
-      return {
-        ...tokens,
-        user: this.formatUser(user, studentId),
-      };
+      return await this.sessionFor(user);
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
       throw new UnauthorizedException(
         'Refresh token yaroqsiz yoki muddati tugagan',
       );
     }
+  }
+
+  /**
+   * A fresh token pair for an account that is already authenticated — the
+   * device that just changed its own password or pressed "log out other
+   * devices". Both actions bumped the session version, retiring this device's
+   * tokens along with everyone else's; without a new pair it would be signed
+   * out on its very next request.
+   */
+  async issueSession(userId: number) {
+    return this.sessionFor(await this.loadSessionUser(userId));
   }
 }
