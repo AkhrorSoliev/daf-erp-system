@@ -27,7 +27,7 @@ import { loginForPhone } from '../common/auth/phone-account-rules';
 import {
   ENTITY_DEFAULT_STATUS,
   ENTITY_TYPE_MAP,
-  companyScope,
+  archiveScope,
   getDelegate,
   getStatusField,
   parseId,
@@ -54,7 +54,7 @@ export class ArchiveRestoreService {
       where: {
         id: parsedId,
         deletedAt: { not: null },
-        ...companyScope(entityType, companyId),
+        ...archiveScope(entityType, companyId),
       },
     });
 
