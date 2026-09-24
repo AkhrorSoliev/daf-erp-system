@@ -46,11 +46,14 @@ export function StudentSettingsPage() {
           }
           onClick={() => setPasswordOpen(true)}
         />
+        {/* No chevron: this row confirms an action, like the portal's own
+            sign-out row, and the full label only fits a phone without it. */}
         <ListRow
           icon={<SignOut weight="bold" />}
           iconTone="coral"
           label="Boshqa qurilmalardan chiqish"
           subtitle="Bu qurilmada qolasiz"
+          chevron={false}
           onClick={() => setLogoutOthersOpen(true)}
         />
       </Section>

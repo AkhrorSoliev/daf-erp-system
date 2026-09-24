@@ -50,7 +50,9 @@ export function LogoutOthersDialog({
           <AlertDialogCancel disabled={pending}>Bekor qilish</AlertDialogCancel>
           <AlertDialogAction
             disabled={pending}
-            className="bg-destructive text-white hover:bg-destructive/90"
+            // A variant, not bg-* classes: AlertDialogAction renders through
+            // Button asChild, whose own bg-primary would win over them.
+            variant="destructive"
             onClick={async (event) => {
               // Keep the dialog open until the request settles.
               event.preventDefault();
