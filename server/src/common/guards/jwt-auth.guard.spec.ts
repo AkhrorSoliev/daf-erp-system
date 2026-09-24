@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -124,7 +124,10 @@ describe('JwtAuthGuard', () => {
       // Only TeachersService maintains these keys; re-activating the same
       // person through UsersService leaves one behind. Before the database
       // confirmation that key was a permanent lockout.
-      redis.get.mockResolvedValue('1');
+      // Only the blocked key is stale here; there is no session-version bump.
+      redis.get.mockImplementation(async (key: string) =>
+        key === 'user:blocked:10505' ? '1' : null,
+      );
       prisma.user.findUnique.mockResolvedValue({
         status: 'ACTIVE',
         deletedAt: null,
@@ -176,6 +179,73 @@ describe('JwtAuthGuard', () => {
       await guard.canActivate(mockContext(false, jwtStrategyUser));
 
       expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('session version (ADR-0029)', () => {
+    const sessionKey = 'user:session-version:10505';
+
+    function cache(values: Record<string, string>) {
+      redis.get.mockImplementation(async (key: string) => values[key] ?? null);
+    }
+
+    it('lets a token at the current version through without a database query', async () => {
+      cache({ [sessionKey]: '3' });
+
+      await expect(
+        guard.canActivate(
+          mockContext(false, { ...jwtStrategyUser, sessionVersion: 3 }),
+        ),
+      ).resolves.toBe(true);
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('stops a token minted before the last password change with a 401', async () => {
+      cache({ [sessionKey]: '3' });
+      prisma.user.findUnique.mockResolvedValue({
+        status: 'ACTIVE',
+        deletedAt: null,
+        sessionVersion: 3,
+      });
+      const stale = { ...jwtStrategyUser, sessionVersion: 2 };
+
+      // 401, not 403: the client then tries `refresh`, which the database
+      // refuses, and lands on the sign-in page instead of a "no access" toast.
+      await expect(
+        guard.canActivate(mockContext(false, stale)),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        guard.canActivate(mockContext(false, stale)),
+      ).rejects.toThrow('Sessiya tugagan. Iltimos, qaytadan kiring.');
+    });
+
+    it('treats a token without a version as version 0', async () => {
+      cache({ [sessionKey]: '1' });
+      prisma.user.findUnique.mockResolvedValue({
+        status: 'ACTIVE',
+        deletedAt: null,
+        sessionVersion: 1,
+      });
+
+      await expect(
+        guard.canActivate(mockContext(false, jwtStrategyUser)),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('signs nobody out when the database contradicts the cache, and drops the key', async () => {
+      cache({ [sessionKey]: '3' });
+      prisma.user.findUnique.mockResolvedValue({
+        status: 'ACTIVE',
+        deletedAt: null,
+        sessionVersion: 2,
+      });
+
+      await expect(
+        guard.canActivate(
+          mockContext(false, { ...jwtStrategyUser, sessionVersion: 2 }),
+        ),
+      ).resolves.toBe(true);
+      expect(redis.del).toHaveBeenCalledWith(sessionKey);
     });
   });
 

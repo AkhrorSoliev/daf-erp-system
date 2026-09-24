@@ -2,6 +2,7 @@ import {
   Injectable,
   ExecutionContext,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -9,6 +10,10 @@ import { AuthGuard } from '@nestjs/passport';
 import { UserStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
+import {
+  SESSION_ENDED_MESSAGE,
+  sessionVersionKey,
+} from '../auth/session-version';
 import { IS_PUBLIC_KEY } from '../decorators';
 
 @Injectable()
@@ -49,6 +54,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
     if (userId) {
       await this.assertNotBlocked(userId);
+      await this.assertSessionCurrent(userId, request.user.sessionVersion);
     }
 
     return true;
@@ -111,5 +117,53 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     }
 
     throw new ForbiddenException('Hisobingiz bloklangan');
+  }
+
+  /**
+   * A password change or "log out other devices" bumps `User.sessionVersion`
+   * and mirrors the new value here (`common/auth/session-version.ts`).
+   * `AuthService.refresh` refuses the stale tokens against the database; this
+   * stops a stale ACCESS token on its next request instead of at the end of
+   * its hour (ADR-0029).
+   *
+   * Same contract as the blocked check above: a Redis failure lets the request
+   * through — `refresh` still holds the line within the hour — and a cache hit
+   * is confirmed against the database before anyone is turned away, so a key
+   * the database contradicts can never sign a legitimate session out.
+   */
+  private async assertSessionCurrent(
+    userId: number,
+    tokenVersion: number | undefined,
+  ): Promise<void> {
+    let cached: string | null = null;
+    try {
+      cached = await this.redis.get(sessionVersionKey(userId));
+    } catch (err) {
+      this.logger.warn(
+        `Session-version cache unavailable for user ${userId}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      return;
+    }
+    if (cached === null) return;
+
+    const current = Number(cached);
+    const version = tokenVersion ?? 0;
+    if (!Number.isInteger(current) || version >= current) return;
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { sessionVersion: true },
+    });
+    if (user && user.sessionVersion === version) {
+      this.logger.warn(
+        `Stale session-version key for user ${userId} (cache ${current}, database ${user.sessionVersion}) — dropping it`,
+      );
+      await this.redis.del(sessionVersionKey(userId)).catch(() => undefined);
+      return;
+    }
+
+    throw new UnauthorizedException(SESSION_ENDED_MESSAGE);
   }
 }
