@@ -133,7 +133,7 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 
 | Action | CEO | Branch Director | Administrator | Teacher | Cashier |
 |--------|-----|-----------------|---------------|---------|---------|
-| View/manage employees | Yes | Yes | No | No | No |
+| View/manage employees | Yes | Own branch, lower rank ([rank rule](#rank-rule-who-may-change-whose-account)) | No | No | No |
 | Create/update branches | Yes | Own branch | No | No | No |
 | Change branch status | Yes | Own branch | No | No | No |
 
@@ -154,10 +154,26 @@ Creating an employee IS granting access, so a caller may hand out only the roles
 - **An unchanged role set is not a grant.** The employee form sends `roleIds` on every save; the sets are compared (order ignored), so editing a name or a phone number is never refused by this rule.
 - **Self-registration through the bot is not re-checked.** The link it came from met this ceiling when it was signed (ADR-0008).
 
-**Known gaps, not closed by the ceiling:**
+#### Rank rule: who may change whose account
 
-- The table above says Administrators do not manage employees, and the UI hides the page from them, but `POST /users` and `PATCH /users/:id` still admit the Administrator role. The ceiling limits the roles they can hand out to Teacher and Cashier, the same roles their Telegram links may carry.
-- The ceiling guards roles only. The object-level check (`assertCallerMayTouchUser`) lets a caller edit anyone who shares a branch with them, whatever their rank, so an Administrator can still set the password, login or status of their own branch's Branch Director.
+A shared branch lets a caller READ an employee's record. WRITING to it also takes rank: a non-CEO may change an existing account (any field, its status, or archiving it) only when every role that account holds is inside the caller's grant ceiling, the same `GRANTABLE_ROLE_IDS` map as above. One implementation, `assertCallerMayManageUser` in `server/src/common/auth/user-branch-scope.ts`. The decision and its alternatives: [ADR-0027](adr/0027-xodim-hisobini-faqat-yuqoridagi-rahbar-ozgartiradi.md).
+
+| Caller | May change the accounts of |
+|--------|-----------------------------|
+| CEO | Everyone |
+| Branch Director | Administrators, Teachers, Cashiers and role-less staff of their own branch |
+| Administrator | Nobody: none of the routes below admits the role |
+
+- **Where it applies:** `PATCH /users/:id`, `DELETE /users/:id`, `PATCH /teachers/:id`, `PATCH /teachers/:id/status`, `DELETE /teachers/:id`. The teacher routes match any account holding the Teacher role, so a Branch Director who also teaches is reachable through them and is protected the same way.
+- **Where it does not:** reading an employee (the record, its history, comments, a teacher's groups, status trail and salary summary) still needs a shared branch only. Reading takes nothing from anyone.
+- **The whole account.** Name, phone, login, password, status, branches, archive: there is no list of "safe" fields, so a field added to the form later is covered too. The phone is a credential: Telegram sign-in finds the account by it and asks for no password.
+- **Peers belong to the CEO.** An Administrator cannot fix a peer Administrator's phone, and a Branch Director cannot edit another Branch Director.
+- **Your own account** skips the branch and rank checks, but nobody below CEO changes their own status or archives themselves. The form resends `status` on every save, so only a different value counts as a change. Your own roles fall under the ceiling above.
+- **A caller holding no managing role manages nobody**, role-less staff included.
+- **Administrators do not manage employees.** `POST /users` and `PATCH /users/:id` admit CEO and Branch Director only, matching the table above. Administrators onboard Teachers and Cashiers through the Telegram link and edit their own profile through `PATCH /users/profile` and `PATCH /users/password`.
+
+**Known gaps, not closed by the ceiling or the rank rule:**
+
 - The registration link takes the caller's roles from the access token, and a signed link does not expire. A token that is up to an hour stale (archived or demoted caller) can still mint an invitation at its old level.
 - The employee form offers every role to every caller. The Telegram link dialog already hides the roles a caller cannot grant; the form does not yet.
 

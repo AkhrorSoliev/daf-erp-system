@@ -24,7 +24,10 @@ import {
   ReportBranchIds,
   userBranchWhere,
 } from '../common/finance/report-branch-scope';
-import { assertCallerMayTouchUser } from '../common/auth/user-branch-scope';
+import {
+  assertCallerMayManageUser,
+  assertCallerMayTouchUser,
+} from '../common/auth/user-branch-scope';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
 import {
   findLiveStaffByPhone,
@@ -32,6 +35,12 @@ import {
 } from '../common/auth/phone-account-rules';
 
 const TEACHER_ROLE_ID = 4;
+
+// Reads check the branch; writes check rank too (ADR-0027).
+const OTHER_BRANCH_TEACHER = {
+  message:
+    "Bu o'qituvchi boshqa filialga tegishli — u bilan ishlash huquqingiz yo'q",
+};
 
 const teacherSelect = {
   id: true,
@@ -252,7 +261,7 @@ export class TeachersService {
       this.prisma,
       callerId,
       teacherId,
-      "Bu o'qituvchi boshqa filialga tegishli — u bilan ishlash huquqingiz yo'q",
+      OTHER_BRANCH_TEACHER.message,
     );
   }
 
@@ -332,8 +341,13 @@ export class TeachersService {
     }
 
     // `UpdateTeacherDto` carries `password` and `login`. Existence first so a
-    // stale id answers 404, then the branch.
-    await this.assertCallerMayTouchTeacher(id, callerId);
+    // stale id answers 404, then the branch and the rank.
+    await assertCallerMayManageUser(
+      this.prisma,
+      callerId,
+      id,
+      OTHER_BRANCH_TEACHER,
+    );
 
     // Eski rasmni o'chirish (yangi rasm kelsa yoki null bo'lsa)
     if (dto.photo !== undefined && user.photo && dto.photo !== user.photo) {
@@ -393,7 +407,10 @@ export class TeachersService {
 
     // Deactivating a teacher closes their salary config and stops their
     // accruals — someone else's payroll, from someone else's branch.
-    await this.assertCallerMayTouchTeacher(id, userId);
+    await assertCallerMayManageUser(this.prisma, userId, id, {
+      ...OTHER_BRANCH_TEACHER,
+      changesStatus: dto.status !== user.status,
+    });
 
     const auditData = await this.statusHistoryService.changeStatus({
       entityType: 'User',
@@ -475,7 +492,11 @@ export class TeachersService {
       throw new NotFoundException(`O'qituvchi #${id} topilmadi`);
     }
 
-    await this.assertCallerMayTouchTeacher(id, deletedById);
+    // Archiving sets `ARCHIVED` below, so it is a status change.
+    await assertCallerMayManageUser(this.prisma, deletedById, id, {
+      ...OTHER_BRANCH_TEACHER,
+      changesStatus: true,
+    });
 
     // Guruhlardan olib tashlash + tarixga yozish
     const teacherGroups = await this.prisma.groupTeacher.findMany({

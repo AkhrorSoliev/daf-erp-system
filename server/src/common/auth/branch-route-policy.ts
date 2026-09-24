@@ -370,8 +370,9 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'It accepts `password` and `login`, so a Branch Director of one branch ' +
       "could set the password of the other branch's teacher and sign in as " +
       'them. Production has 15 teachers, 10 in Fargona and 5 in Namangan: two ' +
-      'doors to one record, one of them locked. They share ' +
-      '`assertCallerMayTouchUser` rather than a second copy of the rule, and ' +
+      'doors to one record, one of them locked. Writes share ' +
+      '`assertCallerMayManageUser` (branch AND rank, ADR-0027), reads ' +
+      '`assertCallerMayTouchUser`, rather than a second copy of the rule, and ' +
       "each guard sits AFTER its method's own existence check so a stale id " +
       'still answers 404. `POST /call-logs` attributed the row to the ' +
       "student's branch but never asked whether the caller could act on that " +
@@ -403,7 +404,8 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'again — creating a user IS granting access, so a Fargona director ' +
       'could mint a Branch Director OF NAMANGAN with a password of their ' +
       'choosing. `DELETE /users/:id` archived across branches while ' +
-      '`PATCH /users/:id` beside it was locked. Branches were already ' +
+      '`PATCH /users/:id` beside it was locked; both now need rank too ' +
+      '(ADR-0027). Branches were already ' +
       'confined by `assertCallerMayTouchBranch`; they are listed so the next ' +
       'reader does not have to re-derive that.',
     routes: [
