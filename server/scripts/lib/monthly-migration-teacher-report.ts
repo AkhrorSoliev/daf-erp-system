@@ -8,8 +8,14 @@
  * Where the two disagree, or a lesson has no rate (createAccrual returns
  * null and the migration aborts that student), the row is flagged for review
  * instead of being "fixed" here.
+ *
+ * "Before" is what the old pack model pays for the same lessons, not only
+ * what has been credited so far. A lesson nobody has been credited for yet
+ * (a debtor's lesson) is still paid on the old model: payroll fronts it at
+ * the pack price (salary/shared/gap-sweep.ts). Leaving it at 0 would make
+ * the switch look like a pay rise it is not.
  */
-import { AttendanceStatus, Prisma } from '@prisma/client';
+import { AttendanceStatus, PaymentModel, Prisma } from '@prisma/client';
 import { perLessonCostForMonth } from '../../src/billing/monthly-price';
 import {
   addMonthsToMonthKey,
@@ -17,9 +23,11 @@ import {
   utcMidnightFromDateStr,
 } from '../../src/common/date/tashkent';
 import {
+  perLessonAccrual,
   pickActiveVersion,
   type RateVersion,
 } from '../../src/salary/shared/deserved-math';
+import { resolveLessonPricing } from '../../src/salary/shared/gap-sweep';
 
 /** One (group, student) pair the migration bills, with its month pricing. */
 export interface TeacherLessonPair {
@@ -29,6 +37,8 @@ export interface TeacherLessonPair {
   price: number;
   /** The month's frozen lesson count — the charge's plannedLessons. */
   plannedLessons: number;
+  /** The course's pack size on the old model (Course.lessonPaymentCount). */
+  lessonPaymentCount: number;
 }
 
 export interface TeacherLessonInput {
@@ -36,8 +46,15 @@ export interface TeacherLessonInput {
   teacherName: string;
   /** Salary type of the rate active on the lesson date; null = no rate. */
   salaryType: string | null;
-  /** The live SalaryAccrual.amount step 5 will reverse. */
+  /** The live SalaryAccrual.amount step 5 will reverse; 0 when none. */
   currentAccrual: number;
+  /** Whether a live lesson accrual exists for this teacher and lesson. */
+  hasLiveAccrual: boolean;
+  /**
+   * What the old pack model pays for this lesson: the live accrual, or the
+   * amount payroll would front for an uncredited lesson at the pack price.
+   */
+  oldValue: number;
   /** What step 5 will write instead. */
   newAccrual: number;
 }
@@ -47,6 +64,11 @@ export interface TeacherPayRow {
   teacherName: string;
   salaryTypes: string[];
   lessons: number;
+  /** Lessons with no live accrual yet (debtors' lessons). */
+  unwrittenLessons: number;
+  /** Σ live accruals — what is credited today. */
+  written: number;
+  /** Σ old-model pay, uncredited lessons included. */
   before: number;
   after: number;
   delta: number;
@@ -55,7 +77,14 @@ export interface TeacherPayRow {
 
 export interface TeacherPayReport {
   rows: TeacherPayRow[];
-  totals: { lessons: number; before: number; after: number; delta: number };
+  totals: {
+    lessons: number;
+    unwrittenLessons: number;
+    written: number;
+    before: number;
+    after: number;
+    delta: number;
+  };
 }
 
 export function createAccrualAmount(
@@ -90,8 +119,8 @@ const BILLABLE: AttendanceStatus[] = [
 
 /**
  * Every (lesson, teacher) step 5 will re-price, with what the teacher holds
- * for it today and what the migration will write. Bulk reads — one query per
- * table — resolved in memory.
+ * for it today, what the old model pays for it, and what the migration will
+ * write. Bulk reads — one query per table — resolved in memory.
  */
 export async function loadTeacherLessons(
   db: Prisma.TransactionClient,
@@ -225,6 +254,17 @@ export async function loadTeacherLessons(
       pair.price,
       pair.plannedLessons,
     );
+    // The old model's price for this lesson — payroll's own resolver.
+    const packPricing = resolveLessonPricing(
+      {
+        price: pair.price,
+        lessonPaymentCount: pair.lessonPaymentCount,
+        paymentModel: PaymentModel.LESSON_PACK,
+      },
+      lesson.studentId,
+      lesson.groupId,
+      lesson.date,
+    );
     for (const teacherId of teachersOf(lesson)) {
       const own = versions.filter((x) => x.config.userId === teacherId);
       const rate = pickRate({
@@ -232,19 +272,26 @@ export async function loadTeacherLessons(
         globalVersions: own.filter((x) => x.config.groupId === null),
         lessonDate: lesson.date,
       });
+      const live = currentBy.get(
+        accrualKey(teacherId, lesson.groupId, lesson.studentId, lesson.date),
+      );
+      const oldValue =
+        live !== undefined
+          ? live
+          : rate && packPricing
+            ? perLessonAccrual(
+                rate,
+                packPricing.perLessonCost,
+                packPricing.divisor,
+              )
+            : 0;
       out.push({
         teacherId,
         teacherName: nameOf.get(teacherId) ?? `#${teacherId}`,
         salaryType: rate?.salaryType ?? null,
-        currentAccrual:
-          currentBy.get(
-            accrualKey(
-              teacherId,
-              lesson.groupId,
-              lesson.studentId,
-              lesson.date,
-            ),
-          ) ?? 0,
+        currentAccrual: live ?? 0,
+        hasLiveAccrual: live !== undefined,
+        oldValue,
         newAccrual: createAccrualAmount(
           rate,
           perLessonCost,
@@ -266,13 +313,17 @@ export function buildTeacherPayReport(
       teacherName: l.teacherName,
       salaryTypes: [],
       lessons: 0,
+      unwrittenLessons: 0,
+      written: 0,
       before: 0,
       after: 0,
       delta: 0,
       needsReview: false,
     };
     row.lessons += 1;
-    row.before += l.currentAccrual;
+    if (!l.hasLiveAccrual) row.unwrittenLessons += 1;
+    row.written += l.currentAccrual;
+    row.before += l.oldValue;
     row.after += l.newAccrual;
     const type = l.salaryType ?? 'NO_RATE';
     if (!row.salaryTypes.includes(type)) row.salaryTypes.push(type);
@@ -287,23 +338,35 @@ export function buildTeacherPayReport(
   const totals = rows.reduce(
     (t, r) => ({
       lessons: t.lessons + r.lessons,
+      unwrittenLessons: t.unwrittenLessons + r.unwrittenLessons,
+      written: t.written + r.written,
       before: t.before + r.before,
       after: t.after + r.after,
       delta: t.delta + r.delta,
     }),
-    { lessons: 0, before: 0, after: 0, delta: 0 },
+    {
+      lessons: 0,
+      unwrittenLessons: 0,
+      written: 0,
+      before: 0,
+      after: 0,
+      delta: 0,
+    },
   );
   return { rows, totals };
 }
 
 export function renderTeacherCsv(report: TeacherPayReport): string {
-  const head = 'teacherId,ism,turi,darslar,hozir,keyin,farq,tekshirish';
+  const head =
+    'teacherId,ism,turi,darslar,yozilmagan_darslar,yozilgan,eski_tizimda,yangi_tizimda,farq,tekshirish';
   const lines = report.rows.map((r) =>
     [
       r.teacherId,
       `"${r.teacherName}"`,
       r.salaryTypes.join('+'),
       r.lessons,
+      r.unwrittenLessons,
+      r.written,
       r.before,
       r.after,
       r.delta,
