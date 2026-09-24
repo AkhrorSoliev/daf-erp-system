@@ -1,19 +1,13 @@
-"use client";
-
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { SettingsMenu } from "@/components/settings/settings-menu";
 
 export default function SettingsPage() {
-  const isMobile = useIsMobile();
-  const router = useRouter();
-
-  useEffect(() => {
-    // Desktopda courses ga redirect, mobileda menu ko'rinadi (LayoutShell ichida)
-    if (isMobile === false) {
-      router.replace("/settings/courses");
-    }
-  }, [isMobile, router]);
-
-  return null;
+  return (
+    <>
+      <div>
+        <h1 className="font-heading text-xl font-bold tracking-tight sm:text-2xl">Sozlamalar</h1>
+        <p className="text-sm text-muted-foreground">Tizim sozlamalari va boshqaruv</p>
+      </div>
+      <SettingsMenu />
+    </>
+  );
 }
