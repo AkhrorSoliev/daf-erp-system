@@ -420,10 +420,14 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'SELF',
     reason:
-      'The caller acting on their own account. Both take the id from ' +
+      'The caller acting on their own account. All three take the id from ' +
       "`@CurrentUser('id')` and never from the request, so there is no " +
       'other account they could reach and a branch check would gate nothing.',
-    routes: ['PATCH /users/password', 'PATCH /users/profile'],
+    routes: [
+      'PATCH /users/password',
+      'PATCH /users/profile',
+      'POST /users/logout-others',
+    ],
   },
   {
     policy: 'BRANCH_SCOPED_BY_PAYROLL',

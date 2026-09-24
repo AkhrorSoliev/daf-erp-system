@@ -8,6 +8,7 @@ describe('AuthService', () => {
   let jwt: any;
   let config: any;
   let redis: any;
+  let history: any;
 
   const student = {
     id: 1,
@@ -27,12 +28,17 @@ describe('AuthService', () => {
   beforeEach(() => {
     prisma = {
       student: { findFirst: jest.fn().mockResolvedValue({ id: 10001 }) },
-      user: { findFirst: jest.fn(), findMany: jest.fn() },
+      user: { findFirst: jest.fn(), findMany: jest.fn(), update: jest.fn() },
     };
     jwt = { sign: jest.fn().mockReturnValue('tok'), verify: jest.fn() };
     config = { get: jest.fn().mockReturnValue('secret') };
-    redis = { get: jest.fn(), del: jest.fn() };
-    service = new AuthService(prisma, jwt, config, redis);
+    redis = {
+      get: jest.fn(),
+      del: jest.fn(),
+      set: jest.fn().mockResolvedValue('OK'),
+    };
+    history = { recordUpdate: jest.fn() };
+    service = new AuthService(prisma, jwt, config, redis, history);
   });
 
   describe('login — portal role gate', () => {
@@ -398,6 +404,66 @@ describe('AuthService', () => {
 
         await expect(service.issueSession(2)).rejects.toThrow(
           'Hisobingiz bloklangan',
+        );
+      });
+    });
+
+    describe('logoutOtherSessions', () => {
+      it('ends every session, mirrors it, journals it on the student card and re-issues this device', async () => {
+        prisma.user.update.mockResolvedValue({
+          sessionVersion: 5,
+          companyId: 1,
+          student: { id: 10001 },
+        });
+        prisma.user.findFirst.mockResolvedValue({
+          ...student,
+          status: 'ACTIVE',
+          deletedAt: null,
+          sessionVersion: 5,
+        });
+
+        const res = await service.logoutOtherSessions(1);
+
+        expect(prisma.user.update.mock.calls[0][0]).toMatchObject({
+          where: { id: 1 },
+          data: { sessionVersion: { increment: 1 } },
+        });
+        expect(redis.set).toHaveBeenCalledWith(
+          'user:session-version:1',
+          '5',
+          'EX',
+          expect.any(Number),
+        );
+        expect(history.recordUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            entityType: 'Student',
+            entityId: 10001,
+            newValues: { kirishlar: 'boshqa qurilmalardan chiqildi' },
+            changedById: 1,
+            companyId: 1,
+          }),
+        );
+        expect(res.accessToken).toBe('tok');
+        expect(jwt.sign.mock.calls[0][0]).toMatchObject({ sub: 1, sv: 5 });
+      });
+
+      it('journals a staff account on the employee record', async () => {
+        prisma.user.update.mockResolvedValue({
+          sessionVersion: 2,
+          companyId: 1,
+          student: null,
+        });
+        prisma.user.findFirst.mockResolvedValue({
+          ...teacher,
+          status: 'ACTIVE',
+          deletedAt: null,
+          sessionVersion: 2,
+        });
+
+        await service.logoutOtherSessions(2);
+
+        expect(history.recordUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({ entityType: 'User', entityId: 2 }),
         );
       });
     });

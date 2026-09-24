@@ -6,6 +6,7 @@ import { StudentPortalController } from './student-portal.controller';
 import { StudentPortalService } from './student-portal.service';
 import { QrAttendanceService } from '../attendance/qr-attendance.service';
 import { GatewayConfigService } from '../payment-gateways/gateway-config.service';
+import { AuthService } from '../auth/auth.service';
 import { RolesGuard } from '../common/guards';
 import { ROLES_KEY } from '../common/decorators';
 
@@ -29,6 +30,14 @@ describe('StudentPortalController — role guards', () => {
     scanQr: jest.fn().mockResolvedValue({}),
   };
 
+  const mockAuth = {
+    issueSession: jest.fn().mockResolvedValue({
+      accessToken: 'a',
+      refreshToken: 'r',
+      user: { id: 99001 },
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [StudentPortalController],
@@ -40,6 +49,7 @@ describe('StudentPortalController — role guards', () => {
           provide: GatewayConfigService,
           useValue: { getConfig: jest.fn().mockResolvedValue(null) },
         },
+        { provide: AuthService, useValue: mockAuth },
       ],
     }).compile();
 
@@ -242,6 +252,25 @@ describe('StudentPortalController — role guards', () => {
     it('should deny Teacher from accessing', () => {
       const ctx = mockExecutionContext(controller.changePassword, ['Teacher']);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+
+    it('hands the student a fresh session AFTER the change', async () => {
+      mockService.changePassword.mockResolvedValue({
+        message: "Parol muvaffaqiyatli o'zgartirildi",
+      });
+
+      const res = await controller.changePassword(99001, 10001, {
+        oldPassword: 'eskiParol1',
+        newPassword: 'yangiParol1',
+      });
+
+      expect(mockAuth.issueSession).toHaveBeenCalledWith(99001);
+      const last = (fn: jest.Mock) =>
+        fn.mock.invocationCallOrder[fn.mock.invocationCallOrder.length - 1];
+      expect(last(mockService.changePassword)).toBeLessThan(
+        last(mockAuth.issueSession),
+      );
+      expect(res).toMatchObject({ accessToken: 'a', refreshToken: 'r' });
     });
   });
 

@@ -13,8 +13,11 @@ import { RedisService } from '../redis/redis.service';
 import { consumeLoginRequest } from '../telegram/flows/app-login-otp-flow';
 import { normalizeSharedPhone } from '../common/utils/phone.util';
 import { ACCESS_TOKEN_TTL_SEC, REFRESH_TOKEN_TTL_SEC } from './token-lifetimes';
+import { EntityHistoryService } from '../common/entity-history';
 import {
   SESSION_ENDED_MESSAGE,
+  endSessionsWrite,
+  recordSessionsEnded,
   tokenSessionVersion,
 } from '../common/auth/session-version';
 
@@ -48,6 +51,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private redis: RedisService,
+    private entityHistory: EntityHistoryService,
   ) {}
 
   /**
@@ -367,5 +371,36 @@ export class AuthService {
    */
   async issueSession(userId: number) {
     return this.sessionFor(await this.loadSessionUser(userId));
+  }
+
+  /**
+   * "Log out other devices": end every session of the account, then hand the
+   * device that asked a fresh pair so it stays signed in (ADR-0029).
+   */
+  async logoutOtherSessions(userId: number) {
+    const { sessionVersion, companyId, student } =
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: endSessionsWrite(),
+        select: {
+          sessionVersion: true,
+          companyId: true,
+          student: { select: { id: true } },
+        },
+      });
+    await recordSessionsEnded(this.redis, userId, sessionVersion);
+
+    // Journaled where staff look for it: the student card for a student, the
+    // employee record for everyone else.
+    await this.entityHistory.recordUpdate({
+      entityType: student ? 'Student' : 'User',
+      entityId: student?.id ?? userId,
+      oldValues: { kirishlar: 'faol' },
+      newValues: { kirishlar: 'boshqa qurilmalardan chiqildi' },
+      changedById: userId,
+      companyId,
+    });
+
+    return this.issueSession(userId);
   }
 }
