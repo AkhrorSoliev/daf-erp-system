@@ -26,14 +26,21 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { grantableRoleIdsFor, mayChangeRoles } from "@/lib/role-grant-ceiling";
+import { useAuth } from "@/hooks/use-auth";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 import { roleLabel } from "@/components/payments/salary-utils";
 import { EmployeeCredentialsSection } from "./employee-credentials-section";
+import {
+  EmployeeRolePicker,
+  EmployeeRolesReadOnly,
+  type RoleOption,
+} from "./employee-roles-field";
 
 const CEO_ROLE_ID = 1;
 const TEACHER_ROLE_ID = 4;
 
-const ROLES = [
+const ROLES: RoleOption[] = [
   { id: CEO_ROLE_ID, label: "CEO", icon: Crown },
   { id: 2, label: "Direktor", icon: Building2 },
   { id: 3, label: "Administrator", icon: Shield },
@@ -128,9 +135,22 @@ interface BranchOption {
 
 export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmployeeFormProps) {
   const isEdit = !!employee;
+  const currentUser = useAuth((s) => s.user);
   const { submitting, setSubmitting } = useEditEmployee();
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
+
+  // The role ceiling (ADR-0026): offer only the roles this caller may grant.
+  // An employee who holds any role outside it (a non-CEO's own record
+  // included) gets their roles shown read-only; `roleIds` then keeps the set
+  // it was loaded with, and the backend accepts an unchanged set on every save.
+  const grantableRoleIds = grantableRoleIdsFor(
+    currentUser?.roles.map((r) => r.name) ?? [],
+  );
+  const heldRoleIds = employee?.roles.map((r) => r.id) ?? [];
+  const rolesReadOnly = !mayChangeRoles(grantableRoleIds, heldRoleIds);
+  const offeredRoles = ROLES.filter((r) => grantableRoleIds.includes(r.id));
+  const heldRoles = ROLES.filter((r) => heldRoleIds.includes(r.id));
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -349,42 +369,17 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
           )}
         </div>
 
-        {/* Roles */}
-        <div className="space-y-2.5">
-          <Label>Tizim huquqi</Label>
-          <p className="text-xs text-muted-foreground">
-            Rol berilmasa, xodim tizimga kira olmaydi — faqat ro'yxatda turadi
-            va oylik oladi.
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {ROLES.map((role) => {
-              const checked = watchRoleIds.includes(role.id);
-              const Icon = role.icon;
-              return (
-                <button
-                  key={role.id}
-                  type="button"
-                  onClick={() => toggleRole(role.id)}
-                  className={`flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left text-sm transition-all ${
-                    checked
-                      ? "border-primary bg-primary/5 text-foreground ring-1 ring-primary/30"
-                      : "border-border text-muted-foreground hover:border-muted-foreground/30 hover:bg-muted/30"
-                  }`}
-                >
-                  <div className={`flex size-7 items-center justify-center rounded-md ${
-                    checked ? "bg-primary text-primary-foreground" : "bg-muted"
-                  }`}>
-                    {checked ? <Check className="size-3.5" /> : <Icon className="size-3.5" />}
-                  </div>
-                  <span className={checked ? "font-medium" : ""}>{role.label}</span>
-                </button>
-              );
-            })}
-          </div>
-          {form.formState.errors.roleIds && (
-            <p className="text-xs text-destructive">{form.formState.errors.roleIds.message}</p>
-          )}
-        </div>
+        {/* Roles — a caller who may grant nothing gets no picker at all */}
+        {rolesReadOnly ? (
+          <EmployeeRolesReadOnly roles={heldRoles} />
+        ) : offeredRoles.length > 0 ? (
+          <EmployeeRolePicker
+            roles={offeredRoles}
+            selectedRoleIds={watchRoleIds}
+            onToggle={toggleRole}
+            error={form.formState.errors.roleIds?.message}
+          />
+        ) : null}
 
         {/* Branches */}
         <div className="space-y-2.5">

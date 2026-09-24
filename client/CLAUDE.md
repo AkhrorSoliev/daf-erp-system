@@ -951,6 +951,16 @@ every list renders; the roles are only access.
   would silently re-break "demote an administrator to a role-less cleaner"
   the next time someone left stale form state around. The field-clearing is
   what keeps the visible form honest in the meantime. Keep both.
+- **Only grantable roles are offered (ADR-0026).** The "Tizim huquqi" field
+  lives in `employee-roles-field.tsx` as two variants: `EmployeeRolePicker`
+  (toggles for the roles `grantableRoleIdsFor` allows the signed-in user) and
+  `EmployeeRolesReadOnly`, used when the employee already holds a role outside
+  that ceiling, a non-CEO's own record included. The read-only variant still
+  sends the loaded `roleIds` unchanged: the backend accepts an unchanged set
+  and refuses any change to such an employee's roles. The ceiling itself is
+  `src/lib/role-grant-ceiling.ts`, shared with `telegram-link-dialog.tsx`. Do
+  not write another copy; `role-grant-ceiling.test.ts` fails if you do, and it
+  also compares the map with the server's `GRANTABLE_ROLE_IDS`.
 - Password is required on create **only when a role is given**.
 - Branch stays required for everyone except a CEO, role-less employees
   included: a branch-less employee appears in no branch list and on no payroll
