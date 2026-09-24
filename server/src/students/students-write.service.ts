@@ -18,13 +18,8 @@ import {
   StudentLeadOriginService,
   type StudentOrigin,
 } from '../common/student-origin';
-import { generatePassword } from '../common/utils/password.util';
-import { loginForPhone } from '../common/auth/phone-account-rules';
-import {
-  STUDENT_ROLE_ID,
-  studentSelect,
-  formatStudent,
-} from './shared/student-select';
+import { openStudentAccount } from '../common/auth/student-account';
+import { studentSelect, formatStudent } from './shared/student-select';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 
 @Injectable()
@@ -427,27 +422,14 @@ export class StudentsWriteService {
     // Kirish nomi — telefon, agar u boshqa tirik hisobning nomi bo'lmasa
     // (masalan, xodim yoki aka-uka hisobi). Aks holda bo'sh — ilgari bu
     // holatda `create` bazada yiqilib, o'quvchi kirish hisobisiz qolardi.
-    const login = await loginForPhone(this.prisma, phone);
-    const plainPassword = generatePassword();
-    const hashedPassword = await bcrypt.hash(plainPassword, 10);
-
-    const user = await this.prisma.user.create({
-      data: {
-        login,
-        password: hashedPassword,
-        firstName,
-        lastName,
-        phone,
-        companyId,
-        roles: { create: [{ roleId: STUDENT_ROLE_ID }] },
-      },
+    // The ADR-0033 repair opens missing accounts through the same function.
+    const { userId, plainPassword } = await openStudentAccount(this.prisma, {
+      id: studentId,
+      phone,
+      firstName,
+      lastName,
+      companyId,
     });
-
-    await this.prisma.student.update({
-      where: { id: studentId },
-      data: { userId: user.id },
-    });
-
-    return { userId: user.id, plainPassword };
+    return { userId, plainPassword };
   }
 }
