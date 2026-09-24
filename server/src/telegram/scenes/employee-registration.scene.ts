@@ -34,6 +34,7 @@ import { UploadService } from '../../upload/upload.service';
 import { UsersService } from '../../users/users.service';
 import { message } from 'telegraf/filters';
 import { ALLOWED_IMAGE_MIMES } from '../../upload/upload.constraints';
+import { withProcessingLock } from '../utils/processing-lock';
 
 const logger = new Logger('EmployeeRegistrationScene');
 
@@ -371,125 +372,124 @@ export function createEmployeeRegistrationScene(
   scene.action('confirm_registration', async (ctx) => {
     if (ctx.session.step !== 6) return;
     if (ctx.session.processing) return;
-    ctx.session.processing = true;
-    await ctx.answerCbQuery();
+    await withProcessingLock(ctx, async () => {
+      await ctx.answerCbQuery();
 
-    try {
-      await ctx.editMessageCaption(
-        (ctx.callbackQuery.message as any)?.caption ?? '',
-        Markup.inlineKeyboard([
-          [Markup.button.callback('\u23F3 Yuklanmoqda...', 'noop')],
-        ]),
-      );
-    } catch {
-      // ignore
-    }
-    await ctx.sendChatAction('typing');
+      try {
+        await ctx.editMessageCaption(
+          (ctx.callbackQuery.message as any)?.caption ?? '',
+          Markup.inlineKeyboard([
+            [Markup.button.callback('\u23F3 Yuklanmoqda...', 'noop')],
+          ]),
+        );
+      } catch {
+        // ignore
+      }
+      await ctx.sendChatAction('typing');
 
-    const data = ctx.session.data;
-    const chatId = String(ctx.chat!.id);
-    const roleIds: number[] =
-      Array.isArray(data.roleIds) && data.roleIds.length > 0
-        ? data.roleIds
-        : [];
+      const data = ctx.session.data;
+      const chatId = String(ctx.chat!.id);
+      const roleIds: number[] =
+        Array.isArray(data.roleIds) && data.roleIds.length > 0
+          ? data.roleIds
+          : [];
 
-    if (roleIds.length === 0) {
-      ctx.session.processing = false;
-      await ctx.reply("Lavozim belgilanmagan. Administrator bilan bog'laning.");
-      await ctx.scene.leave();
-      return;
-    }
+      if (roleIds.length === 0) {
+        await ctx.reply(
+          "Lavozim belgilanmagan. Administrator bilan bog'laning.",
+        );
+        await ctx.scene.leave();
+        return;
+      }
 
-    try {
-      // Kirish nomi — telefon, agar u boshqa tirik hisobning nomi bo'lmasa;
-      // aks holda bo'sh (kirish baribir telefon bilan). Parol tasodifiy.
-      const login = await loginForPhone(prisma, data.phone);
-      const password = generatePassword();
+      try {
+        // Kirish nomi — telefon, agar u boshqa tirik hisobning nomi bo'lmasa;
+        // aks holda bo'sh (kirish baribir telefon bilan). Parol tasodifiy.
+        const login = await loginForPhone(prisma, data.phone);
+        const password = generatePassword();
 
-      await usersService.create(
-        {
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          photo: data.photo,
-          gender: data.gender,
-          login: login ?? undefined,
-          password,
-          companyId: DEFAULT_COMPANY_ID,
-          mainBranch: data.branchId ?? undefined,
-          telegramChatId: chatId,
-          position: derivePositionForRoles(roleIds),
-          roleIds,
-          branchIds: data.branchId ? [data.branchId] : undefined,
-        },
-        // Nobody is signed in here — the branch came from the signed link the
-        // bot verified in `/start`. Saying so is what keeps the branch guard on
-        // `POST /users` from refusing a registration it was never aimed at.
-        { kind: 'self-registration' },
-      );
+        await usersService.create(
+          {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone: data.phone,
+            photo: data.photo,
+            gender: data.gender,
+            login: login ?? undefined,
+            password,
+            companyId: DEFAULT_COMPANY_ID,
+            mainBranch: data.branchId ?? undefined,
+            telegramChatId: chatId,
+            position: derivePositionForRoles(roleIds),
+            roleIds,
+            branchIds: data.branchId ? [data.branchId] : undefined,
+          },
+          // Nobody is signed in here — the branch came from the signed link the
+          // bot verified in `/start`. Saying so is what keeps the branch guard on
+          // `POST /users` from refusing a registration it was never aimed at.
+          { kind: 'self-registration' },
+        );
 
-      ctx.session.processing = false;
+        const isTeacherOnly = roleIds.length === 1 && roleIds[0] === 4;
+        const portalUrl = isTeacherOnly
+          ? 'https://lehrer.dafzentrum.uz'
+          : 'https://admin.dafzentrum.uz';
 
-      const isTeacherOnly = roleIds.length === 1 && roleIds[0] === 4;
-      const portalUrl = isTeacherOnly
-        ? 'https://lehrer.dafzentrum.uz'
-        : 'https://admin.dafzentrum.uz';
+        await ctx.editMessageCaption('\u2705 Tasdiqlandi!');
+        await ctx.replyWithPhoto(data.photo, {
+          caption: buildStaffCredentialsMessage({
+            phone: data.phone,
+            password,
+            portalUrl,
+          }),
+          parse_mode: 'Markdown',
+        });
 
-      await ctx.editMessageCaption('\u2705 Tasdiqlandi!');
-      await ctx.replyWithPhoto(data.photo, {
-        caption: buildStaffCredentialsMessage({
-          phone: data.phone,
-          password,
-          portalUrl,
-        }),
-        parse_mode: 'Markdown',
-      });
-
-      await ctx.scene.leave();
-    } catch (error) {
-      // Logged, not swallowed. A bare `catch` here is what hid a total
-      // registration outage: every attempt failed, the user saw a polite
-      // apology, and nothing reached the logs to say why.
-      ctx.session.processing = false;
-      logger.error(
-        `Xodim ro'yxatdan o'tishi muvaffaqiyatsiz (chat ${chatId}, filial ${data.branchId}, rollar ${roleIds.join(',')})`,
-        error as Error,
-      );
-      await ctx.reply(
-        "Ro'yxatdan o'tishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring yoki administrator bilan bog'laning.",
-      );
-      await ctx.scene.leave();
-    }
+        await ctx.scene.leave();
+      } catch (error) {
+        // Logged, not swallowed. A bare `catch` here is what hid a total
+        // registration outage: every attempt failed, the user saw a polite
+        // apology, and nothing reached the logs to say why.
+        logger.error(
+          `Xodim ro'yxatdan o'tishi muvaffaqiyatsiz (chat ${chatId}, filial ${data.branchId}, rollar ${roleIds.join(',')})`,
+          error as Error,
+        );
+        await ctx.reply(
+          "Ro'yxatdan o'tishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring yoki administrator bilan bog'laning.",
+        );
+        await ctx.scene.leave();
+      }
+    });
   });
 
   scene.action('restart_registration', async (ctx) => {
     if (ctx.session.step !== 6) return;
     if (ctx.session.processing) return;
-    ctx.session.processing = true;
-    await ctx.answerCbQuery();
+    await withProcessingLock(ctx, async () => {
+      await ctx.answerCbQuery();
 
-    try {
-      await ctx.editMessageCaption(
-        (ctx.callbackQuery.message as any)?.caption ?? '',
-        Markup.inlineKeyboard([
-          [Markup.button.callback('\u23F3 Yuklanmoqda...', 'noop')],
-        ]),
-      );
-    } catch {
-      // ignore
-    }
+      try {
+        await ctx.editMessageCaption(
+          (ctx.callbackQuery.message as any)?.caption ?? '',
+          Markup.inlineKeyboard([
+            [Markup.button.callback('\u23F3 Yuklanmoqda...', 'noop')],
+          ]),
+        );
+      } catch {
+        // ignore
+      }
 
-    if (ctx.session.data.photo) {
-      await uploadService.deleteFile(ctx.session.data.photo);
-    }
+      if (ctx.session.data.photo) {
+        await uploadService.deleteFile(ctx.session.data.photo);
+      }
 
-    ctx.session.step = 1;
-    const branchId = ctx.session.data?.branchId;
-    const roleIds = ctx.session.data?.roleIds ?? [];
-    ctx.session.data = { branchId, roleIds };
-    ctx.session.processing = false;
-    await ctx.editMessageCaption('\uD83D\uDD04 Qayta kiritish tanlandi');
-    await ctx.reply(ASK_FIRST_NAME);
+      ctx.session.step = 1;
+      const branchId = ctx.session.data?.branchId;
+      const roleIds = ctx.session.data?.roleIds ?? [];
+      ctx.session.data = { branchId, roleIds };
+      await ctx.editMessageCaption('\uD83D\uDD04 Qayta kiritish tanlandi');
+      await ctx.reply(ASK_FIRST_NAME);
+    });
   });
 
   return scene;

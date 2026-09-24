@@ -87,3 +87,115 @@ describe('teacher-registration.scene — confirm_registration', () => {
     });
   });
 });
+
+/** A step that throws `error`, noting whether the lock was held when it ran. */
+function failingStep(ctx: any, error: Error) {
+  return jest.fn(async () => {
+    ctx.lockHeldWhenFailed = ctx.session.processing;
+    throw error;
+  });
+}
+
+/** A tap on one of the preview's two buttons (`step 6`). */
+function buildButtonCtx(action: string, sessionData: Record<string, any>) {
+  const update = {
+    update_id: 2,
+    callback_query: {
+      id: 'cbq2',
+      data: action,
+      from: { id: 999, is_bot: false, first_name: 'T' },
+      message: {
+        message_id: 2,
+        date: 0,
+        chat: { id: 555111, type: 'private' },
+        caption: 'preview caption',
+      },
+      chat_instance: 'x',
+    },
+  };
+  const ctx = new Context(update as any, {} as any, BOT_INFO) as any;
+  ctx.session = { step: 6, data: sessionData, processing: false };
+  ctx.scene = { leave: jest.fn().mockResolvedValue(undefined) };
+  ctx.answerCbQuery = jest.fn().mockResolvedValue(undefined);
+  ctx.editMessageCaption = jest.fn().mockResolvedValue(undefined);
+  ctx.sendChatAction = jest.fn().mockResolvedValue(undefined);
+  ctx.replyWithPhoto = jest.fn().mockResolvedValue(undefined);
+  ctx.reply = jest.fn().mockResolvedValue(undefined);
+  return ctx;
+}
+
+/**
+ * The preview's buttons hold `processing` while they work, and every handler
+ * of this scene ignores a chat whose flag is set, as does `/start`. A step
+ * that threw with the flag set therefore left the person unable to go on or
+ * start over until their 24-hour session expired.
+ */
+describe('teacher-registration.scene — a failed step releases the lock', () => {
+  const DATA = {
+    firstName: 'Aziz',
+    lastName: 'Qodirov',
+    phone: '901234567',
+    gender: 'MALE',
+    photo: 'https://example.com/photo.jpg',
+    branchId: 7,
+  };
+
+  type Deps = {
+    uploadService: { deleteFile: jest.Mock };
+    usersService: { create: jest.Mock };
+  };
+
+  it.each<{
+    action: string;
+    what: string;
+    fail: (ctx: any, deps: Deps, error: Error) => void;
+  }>([
+    {
+      action: 'confirm_registration',
+      what: 'answering the button tap',
+      fail: (ctx, _deps, error) => {
+        ctx.answerCbQuery = failingStep(ctx, error);
+      },
+    },
+    {
+      action: 'confirm_registration',
+      what: 'the typing notice',
+      fail: (ctx, _deps, error) => {
+        ctx.sendChatAction = failingStep(ctx, error);
+      },
+    },
+    {
+      action: 'restart_registration',
+      what: 'answering the button tap',
+      fail: (ctx, _deps, error) => {
+        ctx.answerCbQuery = failingStep(ctx, error);
+      },
+    },
+    {
+      action: 'restart_registration',
+      what: 'deleting the uploaded photo',
+      fail: (ctx, deps, error) => {
+        deps.uploadService.deleteFile = failingStep(ctx, error);
+      },
+    },
+  ])('$action releases the lock when $what fails', async ({ action, fail }) => {
+    const deps: Deps = {
+      uploadService: { deleteFile: jest.fn().mockResolvedValue(undefined) },
+      usersService: { create: jest.fn().mockResolvedValue({ id: 1 }) },
+    };
+    const ctx = buildButtonCtx(action, { ...DATA });
+    const error = new Error('Request failed');
+    fail(ctx, deps, error);
+    const scene = createTeacherRegistrationScene(
+      {} as any, // prisma — unused on these paths
+      deps.uploadService as any,
+      deps.usersService as any,
+      {} as any,
+    );
+
+    await expect(scene.middleware()(ctx, async () => {})).rejects.toBe(error);
+
+    expect(ctx.lockHeldWhenFailed).toBe(true);
+    expect(ctx.session.processing).toBe(false);
+  });
+});

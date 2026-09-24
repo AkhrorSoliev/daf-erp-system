@@ -22,6 +22,7 @@ import { UploadService } from '../../upload/upload.service';
 import { UsersService } from '../../users/users.service';
 import { message } from 'telegraf/filters';
 import { ALLOWED_IMAGE_MIMES } from '../../upload/upload.constraints';
+import { withProcessingLock } from '../utils/processing-lock';
 
 const logger = new Logger('TeacherRegistrationScene');
 
@@ -340,105 +341,104 @@ export function createTeacherRegistrationScene(
   scene.action('confirm_registration', async (ctx) => {
     if (ctx.session.step !== 6) return;
     if (ctx.session.processing) return;
-    ctx.session.processing = true;
-    await ctx.answerCbQuery();
+    await withProcessingLock(ctx, async () => {
+      await ctx.answerCbQuery();
 
-    // Buttonlarni loading holatiga o'zgartirish
-    try {
-      await ctx.editMessageCaption(
-        (ctx.callbackQuery.message as any)?.caption ?? '',
-        Markup.inlineKeyboard([
-          [Markup.button.callback('\u23F3 Yuklanmoqda...', 'noop')],
-        ]),
-      );
-    } catch {
-      // editMessage xatosi bo'lsa davom etamiz
-    }
-    await ctx.sendChatAction('typing');
+      // Buttonlarni loading holatiga o'zgartirish
+      try {
+        await ctx.editMessageCaption(
+          (ctx.callbackQuery.message as any)?.caption ?? '',
+          Markup.inlineKeyboard([
+            [Markup.button.callback('\u23F3 Yuklanmoqda...', 'noop')],
+          ]),
+        );
+      } catch {
+        // editMessage xatosi bo'lsa davom etamiz
+      }
+      await ctx.sendChatAction('typing');
 
-    const data = ctx.session.data;
-    const chatId = String(ctx.chat!.id);
+      const data = ctx.session.data;
+      const chatId = String(ctx.chat!.id);
 
-    try {
-      // Login = telefon raqam (o'quvchilarda ham shunday). Parol tasodifiy.
-      const password = generatePassword();
+      try {
+        // Login = telefon raqam (o'quvchilarda ham shunday). Parol tasodifiy.
+        const password = generatePassword();
 
-      // User yaratish
-      await usersService.create(
-        {
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          photo: data.photo,
-          gender: data.gender,
-          login: data.phone,
-          password,
-          companyId: DEFAULT_COMPANY_ID,
-          mainBranch: data.branchId ?? undefined,
-          telegramChatId: chatId,
-          position: "O'qituvchi",
-          roleIds: [TEACHER_ROLE_ID],
-          branchIds: data.branchId ? [data.branchId] : undefined,
-        },
-        // Nobody is signed in here — see the employee scene for the full note.
-        { kind: 'self-registration' },
-      );
+        // User yaratish
+        await usersService.create(
+          {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone: data.phone,
+            photo: data.photo,
+            gender: data.gender,
+            login: data.phone,
+            password,
+            companyId: DEFAULT_COMPANY_ID,
+            mainBranch: data.branchId ?? undefined,
+            telegramChatId: chatId,
+            position: "O'qituvchi",
+            roleIds: [TEACHER_ROLE_ID],
+            branchIds: data.branchId ? [data.branchId] : undefined,
+          },
+          // Nobody is signed in here — see the employee scene for the full note.
+          { kind: 'self-registration' },
+        );
 
-      ctx.session.processing = false;
-      await ctx.editMessageCaption('\u2705 Tasdiqlandi!');
-      await ctx.replyWithPhoto(data.photo, {
-        caption: buildStaffCredentialsMessage({
-          phone: data.phone,
-          password,
-          portalUrl: 'https://lehrer.dafzentrum.uz',
-        }),
-        parse_mode: 'Markdown',
-      });
+        await ctx.editMessageCaption('\u2705 Tasdiqlandi!');
+        await ctx.replyWithPhoto(data.photo, {
+          caption: buildStaffCredentialsMessage({
+            phone: data.phone,
+            password,
+            portalUrl: 'https://lehrer.dafzentrum.uz',
+          }),
+          parse_mode: 'Markdown',
+        });
 
-      await ctx.scene.leave();
-    } catch (error) {
-      ctx.session.processing = false;
-      logger.error(
-        `O'qituvchi ro'yxatdan o'tishi muvaffaqiyatsiz (chat ${chatId}, filial ${data.branchId})`,
-        error as Error,
-      );
-      await ctx.reply(
-        "Ro'yxatdan o'tishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring yoki administrator bilan bog'laning.",
-      );
-      await ctx.scene.leave();
-    }
+        await ctx.scene.leave();
+      } catch (error) {
+        logger.error(
+          `O'qituvchi ro'yxatdan o'tishi muvaffaqiyatsiz (chat ${chatId}, filial ${data.branchId})`,
+          error as Error,
+        );
+        await ctx.reply(
+          "Ro'yxatdan o'tishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring yoki administrator bilan bog'laning.",
+        );
+        await ctx.scene.leave();
+      }
+    });
   });
 
   // Qayta kiritish
   scene.action('restart_registration', async (ctx) => {
     if (ctx.session.step !== 6) return;
     if (ctx.session.processing) return;
-    ctx.session.processing = true;
-    await ctx.answerCbQuery();
+    await withProcessingLock(ctx, async () => {
+      await ctx.answerCbQuery();
 
-    // Buttonlarni loading holatiga o'zgartirish
-    try {
-      await ctx.editMessageCaption(
-        (ctx.callbackQuery.message as any)?.caption ?? '',
-        Markup.inlineKeyboard([
-          [Markup.button.callback('\u23F3 Yuklanmoqda...', 'noop')],
-        ]),
-      );
-    } catch {
-      // editMessage xatosi bo'lsa davom etamiz
-    }
+      // Buttonlarni loading holatiga o'zgartirish
+      try {
+        await ctx.editMessageCaption(
+          (ctx.callbackQuery.message as any)?.caption ?? '',
+          Markup.inlineKeyboard([
+            [Markup.button.callback('\u23F3 Yuklanmoqda...', 'noop')],
+          ]),
+        );
+      } catch {
+        // editMessage xatosi bo'lsa davom etamiz
+      }
 
-    // Yuklangan rasmni o'chirish
-    if (ctx.session.data.photo) {
-      await uploadService.deleteFile(ctx.session.data.photo);
-    }
+      // Yuklangan rasmni o'chirish
+      if (ctx.session.data.photo) {
+        await uploadService.deleteFile(ctx.session.data.photo);
+      }
 
-    ctx.session.step = 1;
-    const branchId = ctx.session.data?.branchId;
-    ctx.session.data = { branchId };
-    ctx.session.processing = false;
-    await ctx.editMessageCaption('\uD83D\uDD04 Qayta kiritish tanlandi');
-    await ctx.reply(ASK_FIRST_NAME);
+      ctx.session.step = 1;
+      const branchId = ctx.session.data?.branchId;
+      ctx.session.data = { branchId };
+      await ctx.editMessageCaption('\uD83D\uDD04 Qayta kiritish tanlandi');
+      await ctx.reply(ASK_FIRST_NAME);
+    });
   });
 
   return scene;
