@@ -1,5 +1,6 @@
 import {
   buildMigrationPlan,
+  renderStudentCsv,
   scopeResidueVerdict,
 } from './monthly-migration-report';
 
@@ -212,5 +213,87 @@ describe('scopeResidueVerdict', () => {
 
   it('--limit bilan tekshiruv o`tkazib yuboriladi', () => {
     expect(v({ remainingInScope: 10_000, limited: true }).ok).toBe(true);
+  });
+});
+
+describe('carried-in lessons and the old-model comparison', () => {
+  it('adds the carried-in credit to the new balance', () => {
+    // Nothing prepaid left, the September pack (450 000) is reversed, 5
+    // August-paid lessons come back, September is billed 450 000
+    // -> 187 500 carries into October.
+    const plan = buildMigrationPlan({
+      rows: [
+        row({
+          balance: 0,
+          prepaidRefundTotal: 0,
+          carriedInCredit: 187_500,
+          carriedInLessons: 5,
+        }),
+      ],
+      reversedDeductions: { 10453: 450_000 },
+    });
+    const s = plan.students[0];
+    expect(s.carriedInCredit).toBe(187_500);
+    expect(s.newBalance).toBe(187_500);
+    expect(plan.summary.totalCarriedInCredit).toBe(187_500);
+    expect(plan.summary.carriedInStudentCount).toBe(1);
+    expect(plan.summary.carriedInLessons).toBe(5);
+  });
+
+  it('never credits an enrollment that gets no monthly charge', () => {
+    const plan = buildMigrationPlan({
+      rows: [
+        row({
+          chargeable: false,
+          prepaidRefundTotal: 0,
+          carriedInCredit: 187_500,
+          carriedInLessons: 5,
+        }),
+      ],
+      reversedDeductions: {},
+    });
+    expect(plan.students[0].carriedInCredit).toBe(0);
+    expect(plan.summary.totalCarriedInCredit).toBe(0);
+  });
+
+  it('flags a student the monthly model charges more than the old pack model', () => {
+    // 600 000 a month, 18 lessons; old 19-lesson pack -> 18 x 31 579 = 568 422.
+    const plan = buildMigrationPlan({
+      rows: [
+        row({
+          monthlyPrice: 600_000,
+          plannedLessons: 18,
+          coveredLessons: 18,
+          oldSystemMonthCost: 568_422,
+        }),
+      ],
+      reversedDeductions: {},
+    });
+    expect(plan.summary.monthlyCostsMoreCount).toBe(1);
+    expect(plan.summary.monthlyCostsMoreTotal).toBe(31_578);
+  });
+
+  it('does not flag a 13-lesson month, where the monthly price is cheaper', () => {
+    // 13 x 37 500 = 487 500 on the old model vs 450 000 now.
+    const plan = buildMigrationPlan({
+      rows: [row({ oldSystemMonthCost: 487_500 })],
+      reversedDeductions: {},
+    });
+    expect(plan.summary.monthlyCostsMoreCount).toBe(0);
+    expect(plan.summary.monthlyCostsMoreTotal).toBe(0);
+  });
+
+  it('keeps the columns verify-monthly-migration.ts reads by name', () => {
+    const csv = renderStudentCsv(
+      buildMigrationPlan({
+        rows: [row({ carriedInCredit: 187_500, carriedInLessons: 5 })],
+        reversedDeductions: {},
+      }),
+    );
+    const head = csv.split('\n')[0].split(',');
+    expect(head[0]).toBe('studentId');
+    expect(head).toContain('yangi_balans');
+    expect(head).toContain('avgust_darslari_qaytdi');
+    expect(head).toContain('12_talikda_sentabr');
   });
 });

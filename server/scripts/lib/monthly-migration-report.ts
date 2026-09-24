@@ -50,6 +50,20 @@ export interface MigrationRow {
    * xizmat yozadigan raqamdan farq qilib qoladi.
    */
   discountPercent?: number;
+  /**
+   * Value of this month's lessons that a pack bought BEFORE the month already
+   * paid for (carried-in-lessons.ts). Credited back once, next to the monthly
+   * charge that bills those lessons again.
+   */
+  carriedInCredit?: number;
+  carriedInLessons?: number;
+  /**
+   * What this enrollment's lessons of the month would cost on the old pack
+   * model (covered lessons x the pack's base lesson price, discounted).
+   * Report-only: flags the students the switch charges MORE for the month;
+   * the CEO decides what to do about them.
+   */
+  oldSystemMonthCost?: number;
 }
 
 export interface StudentPlan {
@@ -58,6 +72,9 @@ export interface StudentPlan {
   groups: string[];
   oldBalance: number;
   prepaidRefund: number;
+  carriedInCredit: number;
+  carriedInLessons: number;
+  oldSystemMonthCost: number;
   reversedSeptember: number;
   monthlyCharge: number;
   newBalance: number;
@@ -75,6 +92,11 @@ export interface MigrationPlan {
     totalPrepaidRefund: number;
     totalReversedSeptember: number;
     totalMonthlyCharge: number;
+    totalCarriedInCredit: number;
+    carriedInStudentCount: number;
+    carriedInLessons: number;
+    monthlyCostsMoreCount: number;
+    monthlyCostsMoreTotal: number;
     currentMonthDebt: number;
     oldDebt: number;
     positiveBalanceAfter: number;
@@ -101,7 +123,11 @@ export interface MigrationInput {
  */
 export function finalizeStudentPlan(s: StudentPlan): StudentPlan {
   s.newBalance =
-    s.oldBalance + s.prepaidRefund + s.reversedSeptember - s.monthlyCharge;
+    s.oldBalance +
+    s.prepaidRefund +
+    s.carriedInCredit +
+    s.reversedSeptember -
+    s.monthlyCharge;
   if (s.newBalance >= 0) {
     s.state = 'PAID';
   } else if (-s.newBalance <= s.monthlyCharge) {
@@ -133,6 +159,15 @@ export function buildPlanFromStudents(students: StudentPlan[]): MigrationPlan {
     totalPrepaidRefund: sum(students, (s) => s.prepaidRefund),
     totalReversedSeptember: sum(students, (s) => s.reversedSeptember),
     totalMonthlyCharge: sum(students, (s) => s.monthlyCharge),
+    totalCarriedInCredit: sum(students, (s) => s.carriedInCredit),
+    carriedInStudentCount: students.filter((s) => s.carriedInCredit > 0).length,
+    carriedInLessons: sum(students, (s) => s.carriedInLessons),
+    monthlyCostsMoreCount: students.filter(
+      (s) => s.monthlyCharge > s.oldSystemMonthCost,
+    ).length,
+    monthlyCostsMoreTotal: sum(students, (s) =>
+      Math.max(0, s.monthlyCharge - s.oldSystemMonthCost),
+    ),
     // Qarzning qancha qismi shu oyniki, qancha qismi eskidan qolgani.
     currentMonthDebt: sum(students, (s) =>
       s.newBalance < 0 ? Math.min(-s.newBalance, s.monthlyCharge) : 0,
@@ -183,12 +218,23 @@ export function buildMigrationPlan(input: MigrationInput): MigrationPlan {
       monthlyChargeFull,
       clampDiscount(r.discountPercent ?? 0),
     );
+    // The credit offsets the monthly charge that bills those lessons again;
+    // with no charge there is nothing to offset, and --apply writes none.
+    const carriedInCredit =
+      monthlyChargeFull > 0 ? (r.carriedInCredit ?? 0) : 0;
+    const carriedInLessons =
+      monthlyChargeFull > 0 ? (r.carriedInLessons ?? 0) : 0;
+    const oldSystemMonthCost =
+      r.chargeable === false ? 0 : (r.oldSystemMonthCost ?? 0);
 
     const existing = byStudent.get(r.studentId);
     if (existing) {
       existing.groups.push(r.groupName);
       existing.prepaidRefund += prepaidRefund;
       existing.monthlyCharge += monthlyCharge;
+      existing.carriedInCredit += carriedInCredit;
+      existing.carriedInLessons += carriedInLessons;
+      existing.oldSystemMonthCost += oldSystemMonthCost;
       continue;
     }
 
@@ -198,6 +244,9 @@ export function buildMigrationPlan(input: MigrationInput): MigrationPlan {
       groups: [r.groupName],
       oldBalance: r.balance,
       prepaidRefund,
+      carriedInCredit,
+      carriedInLessons,
+      oldSystemMonthCost,
       reversedSeptember: input.reversedDeductions[r.studentId] ?? 0,
       monthlyCharge,
       newBalance: 0,
@@ -235,6 +284,8 @@ export function renderSummary(
     `Qaytariladigan prepaid:        ${som(s.totalPrepaidRefund)} so'm`,
     `Bekor qilinadigan 02.09:       ${som(s.totalReversedSeptember)} so'm`,
     `Hisoblanadigan sentabr oyligi: ${som(s.totalMonthlyCharge)} so'm`,
+    `Avgustda to'langan sentabr darslari: ${s.carriedInStudentCount} o'quvchi, ${s.carriedInLessons} dars — ${som(s.totalCarriedInCredit)} so'm qaytadi`,
+    `Oylik 12 talikdan qimmat chiqadi:     ${s.monthlyCostsMoreCount} o'quvchi — jami ${som(s.monthlyCostsMoreTotal)} so'm (qaror CEO da)`,
     '',
     'MIGRATSIYADAN KEYINGI HOLAT',
     `  To'langan (musbat balans):   ${s.paidCount} ta — ${som(s.positiveBalanceAfter)} so'm`,
@@ -246,7 +297,7 @@ export function renderSummary(
 
 export function renderStudentCsv(plan: MigrationPlan): string {
   const head =
-    'studentId,ism,guruhlar,eski_balans,prepaid_qaytdi,02_09_bekor,sentabr_hisobi,yangi_balans,holat';
+    'studentId,ism,guruhlar,eski_balans,prepaid_qaytdi,avgust_darslari,avgust_darslari_qaytdi,02_09_bekor,sentabr_hisobi,12_talikda_sentabr,yangi_balans,holat';
   const lines = plan.students.map((s) =>
     [
       s.studentId,
@@ -254,8 +305,11 @@ export function renderStudentCsv(plan: MigrationPlan): string {
       `"${s.groups.join('; ')}"`,
       s.oldBalance,
       s.prepaidRefund,
+      s.carriedInLessons,
+      s.carriedInCredit,
       s.reversedSeptember,
       s.monthlyCharge,
+      s.oldSystemMonthCost,
       s.newBalance,
       s.state,
     ].join(','),
