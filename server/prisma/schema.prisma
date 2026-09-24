@@ -287,6 +287,9 @@ model User {
   login          String?
   position       String?
   password       String?
+  // Bumped by every password write and by "log out other devices"; every
+  // token carries it as `sv` and stops working once it falls behind (ADR-0029).
+  sessionVersion Int        @default(0)
   isActive       Boolean    @default(true)
   status         UserStatus @default(ACTIVE)
   telegramChatId String?

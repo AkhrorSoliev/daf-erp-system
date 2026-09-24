@@ -10,6 +10,9 @@ const EXCLUDED_KEYS = new Set([
   'statusChangedById',
   'statusChangeReason',
   'password',
+  // A security counter (ADR-0029), not business data: bumping it is journaled
+  // as the password change or logout that caused it, never as a raw number.
+  'sessionVersion',
 ]);
 
 function isPlainValue(value: unknown): boolean {
