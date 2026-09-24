@@ -283,6 +283,27 @@ describe('carried-in lessons and the old-model comparison', () => {
     expect(plan.summary.monthlyCostsMoreTotal).toBe(0);
   });
 
+  it('ignores a gap that is only rounding (400 000 / 12 billed as 12 x 33 333)', () => {
+    const plan = buildMigrationPlan({
+      rows: [
+        row({
+          monthlyPrice: 400_000,
+          plannedLessons: 12,
+          coveredLessons: 12,
+          oldSystemMonthCost: 399_996,
+        }),
+      ],
+      reversedDeductions: {},
+    });
+    expect(plan.summary.monthlyCostsMoreCount).toBe(0);
+    expect(plan.summary.monthlyCostsMoreTotal).toBe(0);
+  });
+
+  it('does not flag a row that carries no old-model figure', () => {
+    const plan = buildMigrationPlan({ rows: [row()], reversedDeductions: {} });
+    expect(plan.summary.monthlyCostsMoreCount).toBe(0);
+  });
+
   it('keeps the columns verify-monthly-migration.ts reads by name', () => {
     const csv = renderStudentCsv(
       buildMigrationPlan({
@@ -295,5 +316,6 @@ describe('carried-in lessons and the old-model comparison', () => {
     expect(head).toContain('yangi_balans');
     expect(head).toContain('avgust_darslari_qaytdi');
     expect(head).toContain('12_talikda_sentabr');
+    expect(head).toContain('oylik_qimmatroq');
   });
 });

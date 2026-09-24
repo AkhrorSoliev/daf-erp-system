@@ -75,6 +75,11 @@ export interface StudentPlan {
   carriedInCredit: number;
   carriedInLessons: number;
   oldSystemMonthCost: number;
+  /**
+   * How much more the monthly model charges this student for the month than
+   * the old pack model would — 0 unless the gap exceeds rounding.
+   */
+  monthlyCostsMore: number;
   reversedSeptember: number;
   monthlyCharge: number;
   newBalance: number;
@@ -162,12 +167,9 @@ export function buildPlanFromStudents(students: StudentPlan[]): MigrationPlan {
     totalCarriedInCredit: sum(students, (s) => s.carriedInCredit),
     carriedInStudentCount: students.filter((s) => s.carriedInCredit > 0).length,
     carriedInLessons: sum(students, (s) => s.carriedInLessons),
-    monthlyCostsMoreCount: students.filter(
-      (s) => s.monthlyCharge > s.oldSystemMonthCost,
-    ).length,
-    monthlyCostsMoreTotal: sum(students, (s) =>
-      Math.max(0, s.monthlyCharge - s.oldSystemMonthCost),
-    ),
+    monthlyCostsMoreCount: students.filter((s) => s.monthlyCostsMore > 0)
+      .length,
+    monthlyCostsMoreTotal: sum(students, (s) => s.monthlyCostsMore),
     // Qarzning qancha qismi shu oyniki, qancha qismi eskidan qolgani.
     currentMonthDebt: sum(students, (s) =>
       s.newBalance < 0 ? Math.min(-s.newBalance, s.monthlyCharge) : 0,
@@ -226,6 +228,14 @@ export function buildMigrationPlan(input: MigrationInput): MigrationPlan {
       monthlyChargeFull > 0 ? (r.carriedInLessons ?? 0) : 0;
     const oldSystemMonthCost =
       r.chargeable === false ? 0 : (r.oldSystemMonthCost ?? 0);
+    // Both models round per lesson, so on the same per-lesson price they can
+    // still differ by up to a so'm per lesson (400 000 / 12 billed as
+    // 12 x 33 333 = 399 996). Only a gap beyond that is a real price rise.
+    const extra = monthlyCharge - oldSystemMonthCost;
+    const monthlyCostsMore =
+      r.oldSystemMonthCost !== undefined && extra > r.coveredLessons + 1
+        ? extra
+        : 0;
 
     const existing = byStudent.get(r.studentId);
     if (existing) {
@@ -235,6 +245,7 @@ export function buildMigrationPlan(input: MigrationInput): MigrationPlan {
       existing.carriedInCredit += carriedInCredit;
       existing.carriedInLessons += carriedInLessons;
       existing.oldSystemMonthCost += oldSystemMonthCost;
+      existing.monthlyCostsMore += monthlyCostsMore;
       continue;
     }
 
@@ -247,6 +258,7 @@ export function buildMigrationPlan(input: MigrationInput): MigrationPlan {
       carriedInCredit,
       carriedInLessons,
       oldSystemMonthCost,
+      monthlyCostsMore,
       reversedSeptember: input.reversedDeductions[r.studentId] ?? 0,
       monthlyCharge,
       newBalance: 0,
@@ -297,7 +309,7 @@ export function renderSummary(
 
 export function renderStudentCsv(plan: MigrationPlan): string {
   const head =
-    'studentId,ism,guruhlar,eski_balans,prepaid_qaytdi,avgust_darslari,avgust_darslari_qaytdi,02_09_bekor,sentabr_hisobi,12_talikda_sentabr,yangi_balans,holat';
+    'studentId,ism,guruhlar,eski_balans,prepaid_qaytdi,avgust_darslari,avgust_darslari_qaytdi,02_09_bekor,sentabr_hisobi,12_talikda_sentabr,oylik_qimmatroq,yangi_balans,holat';
   const lines = plan.students.map((s) =>
     [
       s.studentId,
@@ -310,6 +322,7 @@ export function renderStudentCsv(plan: MigrationPlan): string {
       s.reversedSeptember,
       s.monthlyCharge,
       s.oldSystemMonthCost,
+      s.monthlyCostsMore,
       s.newBalance,
       s.state,
     ].join(','),
