@@ -18,6 +18,9 @@ import {
   userBranchWhere,
 } from '../common/finance/report-branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
+// Not via the `../common/status` barrel: it loads BillingModule → Telegram →
+// TelegramService, which imports this file (an import cycle).
+import { userArchiveData } from '../common/status/user-archive';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   USER_DEACTIVATED_EVENT,
@@ -788,10 +791,7 @@ export class UsersService {
 
     await this.prisma.user.update({
       where: { id },
-      data: {
-        deletedAt: new Date(),
-        deletedById,
-      },
+      data: userArchiveData(deletedById),
     });
 
     await this.entityHistoryService.recordDelete({

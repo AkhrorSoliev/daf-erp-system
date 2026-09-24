@@ -1272,9 +1272,9 @@ The `User` model has two related fields: `isActive: Boolean` and `status: UserSt
 
 - **All code that updates `User.status` must also set `isActive` accordingly.** `UsersService.updateUser()` and `TeachersService.changeStatus()` already do this — follow the same pattern (`isActive = dto.status === UserStatus.ACTIVE`) when adding new status mutation paths
 - **Never write a DTO that exposes `isActive` directly** — it is a derived field. Callers pass `status`; the service derives `isActive`
-- When archiving (soft delete), force both: `status: UserStatus.ARCHIVED, isActive: false, deletedAt: <now>`
+- When archiving (soft delete), force both: `status: UserStatus.ARCHIVED, isActive: false, deletedAt: <now>`. Write `data: userArchiveData(deletedById)` from `common/status/user-archive.ts`, which both archive doors (`UsersService.softDelete`, `TeachersService.delete`) use and which also records the archive as the latest status change. Import it by path, not through the `common/status` barrel (that barrel is in an import cycle with `UsersService`). The employee door once wrote only `deletedAt`, leaving archived employees `ACTIVE`
 - When restoring from archive, force both: `status: UserStatus.ACTIVE, isActive: true, deletedAt: null`
-- Backfill script: `server/scripts/backfill-user-isactive.ts` (supports `--dry-run`) — run after any schema migration that may introduce drift
+- Backfill script: `server/scripts/backfill-user-isactive.ts` (supports `--dry-run`) — run after any schema migration that may introduce drift. It only syncs `isActive` to `status`; it does not catch an archived row whose `status` was never set to `ARCHIVED`
 - **Downstream queries should still filter by both fields** (see "Recipient filter" rule above) — do not rely solely on the sync invariant, because a bug in a future mutation path could break it silently
 
 ### Future-Proof Design
