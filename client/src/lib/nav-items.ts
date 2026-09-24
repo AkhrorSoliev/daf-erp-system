@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { paymentsNavItems } from "./payments-nav";
 import { reportsNavSections } from "./reports-nav";
-import { settingsNavSections } from "./settings-nav";
 import { dafNavItems } from "./daf-nav";
 
 export interface NavItemChild {
@@ -42,7 +41,6 @@ export interface NavItem {
 }
 
 const reportsChildren: NavItemChild[] = reportsNavSections.flatMap((s) => s.items);
-const settingsChildren: NavItemChild[] = settingsNavSections.flatMap((s) => s.items);
 
 export const navItems: NavItem[] = [
   { title: "Bosh sahifa", url: "/", icon: LayoutDashboard },
@@ -90,11 +88,12 @@ export const navItems: NavItem[] = [
     visibleForRoles: [1, 2, 3],
     children: reportsChildren,
   },
+  // Not a dropdown: at 12 entries it pushed the rest of the sidebar down when
+  // opened. The list lives on the /settings page — its source is settings-nav.ts.
   {
     title: "Sozlamalar",
     url: "/settings",
     icon: Settings,
     visibleForRoles: [1, 2, 3],
-    children: settingsChildren,
   },
 ];

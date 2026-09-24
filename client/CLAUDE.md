@@ -418,8 +418,15 @@ so existing links keep working.
 ### Sidebar Active State
 
 - Sidebar navigation links must use `pathname.startsWith(item.url)` for active state detection — **not** exact match (`pathname === item.url`)
-- This ensures the link stays highlighted when navigating to nested/child routes (e.g. `/settings/courses` stays active on `/settings/courses/1`)
+- This ensures the link stays highlighted when navigating to nested/child routes (e.g. `/settings` stays active on `/settings/courses/1`)
 - Exception: the home route (`/`) must use exact match (`pathname === "/"`) to avoid matching every route
+
+### Settings Page (`/settings`)
+
+- **Settings is a page, not a sidebar dropdown.** The sidebar "Sozlamalar" item is a plain link to `/settings`, which lists every settings page grouped into sections; each row shows a title and a one-line description. The dropdown was removed when it reached 12 entries and pushed the rest of the sidebar down — do not add `children` back to that nav item (`src/lib/nav-items.test.ts` fails if you do).
+- **Adding a settings page:** add one entry to `settingsNavSections` in `src/lib/settings-nav.ts` with `title`, `url`, `icon`, a one-line Uzbek `description` (required — it is shown under the title) and `visibleForRoles` matching the backend `@Roles()` of the page's endpoints. The page then appears on `/settings` and the sidebar needs no change. Also add the new route segment's label to `src/lib/breadcrumb-routes.ts`, or the breadcrumb shows the raw URL segment (see Breadcrumbs below).
+- Role filtering for the list is `getVisibleSettingsSections(roleIds)` in the same file, covered by `src/lib/settings-nav.test.ts`. Update the expected per-role lists there when you add an entry — the friction is deliberate: who sees a settings page must be a conscious choice.
+- Hiding a row is not access control: a restricted settings route still needs a redirect in `SettingsLayoutShell` and a backend `@Roles()` guard (see the RBAC rules above).
 
 ### Toast Notifications
 
