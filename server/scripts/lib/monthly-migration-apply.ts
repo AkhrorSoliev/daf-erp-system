@@ -285,6 +285,12 @@ export interface ApplyStudentResult {
   newBalance: number;
   reversedDeductionCount: number;
   accrualsRecomputed: number;
+  /**
+   * Lessons left without an accrual: nothing was reversed for them and
+   * createAccrual wrote nothing (the teacher had no rate on that day). The
+   * old model paid nothing for them either; the teacher preview flags them.
+   */
+  accrualsSkipped: number;
   /** Shu o'quvchi uchun HAQIQATDA yozilgan yangi oylik hisob soni. */
   chargesCreated: number;
   /**
@@ -363,6 +369,7 @@ export async function applyMigrationForStudent(
   let monthlyCharge = 0;
   let reversedDeductionCount = 0;
   let accrualsRecomputed = 0;
+  let accrualsSkipped = 0;
   let chargesCreated = 0;
   let chargesSkipped = 0;
   const skippedEnrollmentIds: string[] = [];
@@ -609,7 +616,7 @@ export async function applyMigrationForStudent(
           lesson.date,
         );
         for (const teacherId of teacherIds) {
-          await deps.reverseAccrualForAttendance({
+          const reversed = await deps.reverseAccrualForAttendance({
             teacherId,
             studentId: params.studentId,
             groupId: lesson.groupId,
@@ -636,11 +643,19 @@ export async function applyMigrationForStudent(
             tx,
           });
           if (!accrual) {
-            throw new Error(
-              `O'qituvchi ${teacherId}, dars ${lesson.id}: eski hisob bekor qilindi, ` +
-                `yangisi YOZILMADI (createAccrual null qaytardi — oylik davri yopiq bo'lishi mumkin). ` +
-                `Migratsiya to'xtatildi, hech narsa yozilmadi.`,
-            );
+            if (reversed) {
+              throw new Error(
+                `O'qituvchi ${teacherId}, dars ${lesson.id}: eski hisob bekor qilindi, ` +
+                  `yangisi YOZILMADI (createAccrual null qaytardi — oylik davri yopiq bo'lishi mumkin). ` +
+                  `Migratsiya to'xtatildi, hech narsa yozilmadi.`,
+              );
+            }
+            // Nothing was reversed, so nothing is lost: the old model wrote
+            // no accrual for this lesson either (typically the teacher's rate
+            // starts after it). Failing the student here would also keep the
+            // whole course from switching to MONTHLY.
+            accrualsSkipped += 1;
+            continue;
           }
           accrualsRecomputed += 1;
         }
@@ -677,6 +692,7 @@ export async function applyMigrationForStudent(
     newBalance,
     reversedDeductionCount,
     accrualsRecomputed,
+    accrualsSkipped,
     chargesCreated,
     chargesSkipped,
     skippedEnrollmentIds,

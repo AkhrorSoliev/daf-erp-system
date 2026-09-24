@@ -6,8 +6,8 @@
  * branch EXACTLY — the figure the ledger will receive — not the payroll
  * report's `perLessonAccrual`, which pays FIXED_MONTHLY nothing per lesson.
  * Where the two disagree, or a lesson has no rate (createAccrual returns
- * null and the migration aborts that student), the row is flagged for review
- * instead of being "fixed" here.
+ * null, and the migration leaves the lesson unpaid as the old model does),
+ * the row is flagged for review instead of being "fixed" here.
  *
  * "Before" is what the old pack model pays for the same lessons, not only
  * what has been credited so far. A lesson nobody has been credited for yet

@@ -159,6 +159,7 @@ describe('applyMigrationForStudent', () => {
       newBalance: -342_500,
       reversedDeductionCount: 1,
       accrualsRecomputed: 1,
+      accrualsSkipped: 0,
       chargesCreated: 1,
       chargesSkipped: 0,
       skippedEnrollmentIds: [],
@@ -570,6 +571,10 @@ describe('applyMigrationForStudent', () => {
       },
     });
     const deps = makeDeps({
+      // The old accrual WAS reversed — a null create now loses the pay.
+      reverseAccrualForAttendance: jest
+        .fn()
+        .mockResolvedValue({ id: 'accrual-old' }),
       createAccrual: jest.fn().mockResolvedValue(null),
     });
 
@@ -586,6 +591,50 @@ describe('applyMigrationForStudent', () => {
         enrollments: [makeEnrollment()],
       }),
     ).rejects.toThrow(/createAccrual null qaytardi/);
+  });
+
+  it('leaves a lesson unpaid, as before, when there was nothing to reverse and no rate', async () => {
+    // A teacher whose rate starts after the lesson: the old model wrote no
+    // accrual for it, and createAccrual still finds no rate. Nothing is lost,
+    // so the student must not fail — a failed student also keeps the whole
+    // course from switching to MONTHLY.
+    const tx = makeTx({
+      attendance: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            { id: 'att-1', date: new Date('2026-09-02'), groupId: 'grp-1' },
+          ]),
+      },
+      groupTeacher: {
+        findMany: jest.fn().mockResolvedValue([{ teacherId: 777 }]),
+      },
+      student: {
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValueOnce({ balance: 0 })
+          .mockResolvedValueOnce({ balance: -262_500 }), // 0 + 187 500 - 450 000
+      },
+    });
+    const deps = makeDeps({
+      reverseAccrualForAttendance: jest.fn().mockResolvedValue(null),
+      createAccrual: jest.fn().mockResolvedValue(null),
+    });
+
+    const result = await applyMigrationForStudent({
+      tx,
+      deps,
+      studentId: 10453,
+      companyId: 1,
+      periodYear: 2026,
+      periodMonth: 9,
+      periodGte: PERIOD_GTE,
+      periodLt: PERIOD_LT,
+      enrollments: [makeEnrollment()],
+    });
+
+    expect(result.accrualsRecomputed).toBe(0);
+    expect(result.accrualsSkipped).toBe(1);
   });
 
   it("oylik hisobda ledger qatori (transactionId) bo'lmasa — accrual qadamiga umuman kirilmaydi", async () => {

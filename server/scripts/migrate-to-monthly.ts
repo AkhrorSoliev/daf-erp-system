@@ -256,6 +256,7 @@ function renderOutcomeCsv(rows: ApplyStudentResult[]): string {
     'newBalance',
     'reversedDeductionCount',
     'accrualsRecomputed',
+    'accrualsSkipped',
     'chargesCreated',
     'chargesSkipped',
   ].join(',');
@@ -271,6 +272,7 @@ function renderOutcomeCsv(rows: ApplyStudentResult[]): string {
         r.newBalance,
         r.reversedDeductionCount,
         r.accrualsRecomputed,
+        r.accrualsSkipped,
         r.chargesCreated,
         r.chargesSkipped,
       ].join(','),
@@ -438,6 +440,7 @@ async function runApply(params: RunApplyParams): Promise<void> {
   // ── natija ────────────────────────────────────────────────────────────
   const totalPrepaid = results.reduce((a, r) => a + r.prepaidRefund, 0);
   const totalCarriedIn = results.reduce((a, r) => a + r.carriedInCredit, 0);
+  const accrualsSkipped = results.reduce((a, r) => a + r.accrualsSkipped, 0);
   const totalReversed = results.reduce((a, r) => a + r.reversedSeptember, 0);
   const totalCharged = results.reduce((a, r) => a + r.monthlyCharge, 0);
   const totalDelta = results.reduce(
@@ -526,6 +529,7 @@ async function runApply(params: RunApplyParams): Promise<void> {
       ['Oylik hisoblandi', som(totalCharged)],
       ['Yozilgan oylik hisob', String(chargesCreated)],
       ['Hisobsiz qolgan yozilish', String(chargesSkipped)],
+      ['Stavkasiz qolgan dars (haq yozilmadi)', String(accrualsSkipped)],
       ['Balanslar jami o`zgarishi', som(totalDelta)],
       ['Ledger qatorlari yig`indisi', som(ledgerDelta)],
       ['Qamrovda qolgan yozilish', String(remainingInScope)],
@@ -1376,8 +1380,8 @@ async function main(prisma: PrismaClient) {
     "eski tizimda = yozilgan + haq yozilmagan darslarning 12 talik narxidagi qiymati (oylik hisobida markaz qoplaydi; yangi o'quvchining birinchi darslari keyinroq to'lanadi).",
   );
   console.log(
-    "tekshirish = HA: NO_RATE — stavkasi yo'q, o'sha o'quvchilar --apply da yiqiladi, avval stavka kiritilsin; " +
-      'FIXED_MONTHLY — darsbay pul yoziladi, qaror CEO da.',
+    "tekshirish = HA: NO_RATE — o'sha kuni ustozning stavkasi yo'q: bu darslarga haq hozir ham, o'tishdan keyin ham yozilmaydi " +
+      "(to'lash kerak bo'lsa, stavka o'sha kundan boshlanishi kerak); FIXED_MONTHLY — darsbay pul yoziladi, qaror CEO da.",
   );
   const teacherCsvPath = nextTeacherCsvPath();
   fs.mkdirSync(path.dirname(teacherCsvPath), { recursive: true });
