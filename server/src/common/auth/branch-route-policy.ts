@@ -257,15 +257,22 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
-      "Id-addressed student and group writes. Each resolves the record's own " +
-      'branch and checks the caller against it — `assertCallerMayTouchStudent` ' +
-      'and `assertCallerMayTouchGroup`. They were `companyId`-only, and two of ' +
-      'them carry a branch in the BODY: `PATCH /students/:id` accepts ' +
-      "`branchIds`, so a director could edit another branch's student and move " +
-      'them into their own, and `POST /groups` names the branch a group is ' +
-      'fixed to for life. The status changes cascade — a student going EXPELLED ' +
-      'closes their enrolments, a group going CANCELLED closes every enrolment ' +
-      "in it — so they reach another branch's roster and payroll.",
+      "Student and group writes. The id-addressed ones resolve the record's " +
+      'own branch and check the caller against it — ' +
+      '`assertCallerMayTouchStudent` and `assertCallerMayTouchGroup`. Three ' +
+      'carry a branch in the BODY, and that branch goes through ' +
+      '`assertCallerInBranch` as well: `POST /groups` names the branch a group ' +
+      'is fixed to for life, `POST /students` the branch a student is created ' +
+      'in, and `PATCH /students/:id` accepts `branchIds`, so it checks BOTH ' +
+      'the branch the student is in and the one they are moved to — the ' +
+      "first stops a director pulling another branch's student into their " +
+      'own, the second stops them pushing one of theirs into another branch, ' +
+      'which ends where creating it there would. `POST /students` used to ask ' +
+      'only whether the branch existed in the company, so a director could ' +
+      'create a student in another branch outright. The status changes ' +
+      'cascade — a student going EXPELLED closes their enrolments, a group ' +
+      'going CANCELLED closes every enrolment in it — so they reach another ' +
+      "branch's roster and payroll.",
     routes: [
       'POST /students',
       'PATCH /students/:id',
@@ -276,6 +283,21 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'PATCH /groups/:id/status',
       'DELETE /groups/:id',
     ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'Room and course CREATES only. There is no record to look up yet, so ' +
+      'the branch is the one named in the body: the service checks that it ' +
+      'exists in the company and then asks `assertCallerInBranch` whether the ' +
+      'caller holds it — the check `POST /groups` and `POST /cash-accounts` ' +
+      'already made. Both creates stopped at the first question, so an ' +
+      "Administrator of one branch could add a room to another branch's " +
+      'occupancy report, and a Branch Director a course, at a price of their ' +
+      "choosing, to another branch's catalogue. Their `PATCH`, `/status` and " +
+      '`DELETE` siblings still check `companyId` alone and stay UNREVIEWED ' +
+      'below — listing them here would claim a check they do not make.',
+    routes: ['POST /courses', 'POST /rooms'],
   },
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
@@ -710,7 +732,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'PATCH /student-portal/password',
   'POST /archive/:entityType/:id/restore',
   'POST /branches',
-  'POST /courses',
   'POST /enrollment-transfer-reasons',
   'POST /group-teacher-change-reasons',
   'POST /holidays',
@@ -722,7 +743,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'POST /mock-exams/:examId/subjects',
   'POST /notifications/devices',
   'POST /notifications/push/subscribe',
-  'POST /rooms',
   'POST /student-exit-reasons',
   'POST /student-portal/attendance/scan',
   'POST /student-portal/payments/init',
@@ -745,4 +765,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 114;
+export const UNREVIEWED_BUDGET = 107;

@@ -134,10 +134,14 @@ solishtiradi.
 
 | | Soni | Qanday aniqlanadi |
 |---|---|---|
-| `BRANCH_SCOPED_BY_HEADER` | **95** | Dalil: handler `@BranchScope()` oladi |
-| Qo'lda toifalangan | **157** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
-| `UNREVIEWED` | **114** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
-| **Jami** | **365** | |
+| `BRANCH_SCOPED_BY_HEADER` | **120** | Dalil: handler `@BranchScope()` oladi |
+| Qo'lda toifalangan | **179** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
+| `UNREVIEWED` | **107** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
+| **Jami** | **406** | |
+
+Sanoq 2026-09-24 da `discoverRoutes` bilan qayta olindi. Budjet ro'yxat
+uzunligiga tenglashtirildi (114 → 107): undagi 5 ta bo'sh o'rin yangi route'ni
+jimgina `UNREVIEWED` ga qo'yishga imkon berardi.
 
 ## Nega qolgani «UNREVIEWED» deb qoldirildi
 
@@ -224,6 +228,17 @@ Sakkizta id bo'yicha yozish yo'li **faqat `companyId`** ni tekshirardi:
 `assertSingleValidBranch` allaqachon bor edi va **filial tekshiruviga o'xshaydi**
 — bu nuqson omon qolganining bir sababi. Lekin u **maqsad filial haqiqiymi**
 deb so'raydi, **chaqiruvchi haqlimi** deb emas.
+
+**Tuzatish (2026-09-24).** Jadvaldagi `POST /students` aslida yopilmagan edi.
+Yaratishda hali yozuv yo'q, shuning uchun `assertCallerMayTouchStudent` unga
+qo'llanmaydi, `assertSingleValidBranch` esa faqat «filial haqiqiymi» deb
+so'rardi — Namangan direktori Farg'onada o'quvchi yarata olardi. `PATCH
+/students/:id` da ham shu yo'l ochiq edi: o'z o'quvchisini boshqa filialga
+ko'chirish, natijasi o'sha filialda yaratish bilan bir xil. Endi
+`assertSingleValidBranch` o'zi `assertCallerInBranch` ni chaqiradi, shuning
+uchun ikkala yo'l ham yopildi. `POST /rooms` va `POST /courses` da aynan shu
+tuzoq bor edi (ular `UNREVIEWED` da turardi) — ular ham yopildi va manifestda
+`BRANCH_SCOPED_BY_ENTITY` ga o'tdi.
 
 Yordamchi: `assertCallerMayTouchStudent` — `assertCallerMayWriteForStudent` bilan
 bitta amalga oshirish, ikkita nom. Xabar boshqacha ataylab: o'quvchini
