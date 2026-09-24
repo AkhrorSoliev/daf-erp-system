@@ -13,6 +13,7 @@ import { AddManualParticipantDto } from './dto/add-manual-participant.dto';
 import { ConvertMockParticipantDto } from './dto/convert-mock-participant.dto';
 import { ParticipantsQueryDto } from './dto/participants-query.dto';
 import { MarkMockPaidDto } from './dto/mark-mock-paid.dto';
+import { RemoveMockParticipantQueryDto } from './dto/remove-mock-participant-query.dto';
 import { CurrentUser, Roles, BranchScope } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
@@ -106,7 +107,10 @@ export class MockExamParticipantsController {
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
     @BranchScope() branchIds: ReportBranchIds,
+    @Query() query: RemoveMockParticipantQueryDto,
   ) {
-    return this.participantsService.remove(id, companyId, userId, branchIds);
+    return this.participantsService.remove(id, companyId, userId, branchIds, {
+      refundConfirmed: query.refundConfirmed,
+    });
   }
 }
