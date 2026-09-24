@@ -8,7 +8,7 @@ Next.js 16 frontend structure, pages, routing, and conventions.
 
 | Technology | Version | Purpose |
 |-----------|---------|---------|
-| Next.js | 16.2.0 | React framework with App Router |
+| Next.js | 16.3.6 | React framework with App Router |
 | React | 19.2.4 | UI library |
 | TypeScript | 5 | Type safety |
 | Tailwind CSS | 4 | Utility-first styling |
