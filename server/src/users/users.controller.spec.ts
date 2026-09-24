@@ -185,6 +185,7 @@ describe('UsersController — role guards', () => {
     it('hands the caller a fresh session AFTER the change', async () => {
       mockService.changePassword.mockResolvedValue({
         message: "Parol muvaffaqiyatli o'zgartirildi",
+        sessionVersion: 5,
       });
 
       const res = await controller.changePassword(7, {
@@ -192,7 +193,9 @@ describe('UsersController — role guards', () => {
         newPassword: 'yangiParol1',
       });
 
-      expect(mockAuth.issueSession).toHaveBeenCalledWith(7);
+      // Signed with exactly the version the change produced; the number
+      // itself never reaches the response.
+      expect(mockAuth.issueSession).toHaveBeenCalledWith(7, 5);
       // Issued before the change, the pair would carry the old version.
       expect(lastCall(mockService.changePassword)).toBeLessThan(
         lastCall(mockAuth.issueSession),
@@ -213,10 +216,10 @@ describe('UsersController — role guards', () => {
       ).toBeUndefined();
     });
 
-    it('acts on the caller only', async () => {
-      const res = await controller.logoutOthers(7);
+    it("acts on the caller only, from the caller's own session version", async () => {
+      const res = await controller.logoutOthers(7, 3);
 
-      expect(mockAuth.logoutOtherSessions).toHaveBeenCalledWith(7);
+      expect(mockAuth.logoutOtherSessions).toHaveBeenCalledWith(7, 3);
       expect(res).toEqual({
         accessToken: 'a2',
         refreshToken: 'r2',

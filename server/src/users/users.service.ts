@@ -505,7 +505,8 @@ export class UsersService {
     await recordSessionsEnded(this.redis, id, sessionVersion);
     await this.recordPasswordEvent(id, "o'zgartirildi", id, user.companyId);
 
-    return { message: "Parol muvaffaqiyatli o'zgartirildi" };
+    // The controller signs this device's fresh pair with exactly this version.
+    return { message: "Parol muvaffaqiyatli o'zgartirildi", sessionVersion };
   }
 
   async create(
@@ -779,6 +780,12 @@ export class UsersService {
       },
     );
 
+    // The password is committed now: mirror the bump before anything else can
+    // fail, or the old access tokens keep working for the rest of their hour.
+    if ('password' in updateData) {
+      await recordSessionsEnded(this.redis, id, sessionVersion);
+    }
+
     await this.entityHistoryService.recordUpdate({
       entityType: 'User',
       entityId: id,
@@ -789,7 +796,6 @@ export class UsersService {
     });
 
     if ('password' in updateData) {
-      await recordSessionsEnded(this.redis, id, sessionVersion);
       // Journal only a real change: stripping the roles of an account that
       // never had a password leaves nothing to report.
       if (updateData.password !== null || user.password) {

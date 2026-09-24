@@ -257,6 +257,7 @@ describe('StudentPortalController — role guards', () => {
     it('hands the student a fresh session AFTER the change', async () => {
       mockService.changePassword.mockResolvedValue({
         message: "Parol muvaffaqiyatli o'zgartirildi",
+        sessionVersion: 4,
       });
 
       const res = await controller.changePassword(99001, 10001, {
@@ -264,7 +265,8 @@ describe('StudentPortalController — role guards', () => {
         newPassword: 'yangiParol1',
       });
 
-      expect(mockAuth.issueSession).toHaveBeenCalledWith(99001);
+      expect(mockAuth.issueSession).toHaveBeenCalledWith(99001, 4);
+      expect(res).not.toHaveProperty('sessionVersion');
       const last = (fn: jest.Mock) =>
         fn.mock.invocationCallOrder[fn.mock.invocationCallOrder.length - 1];
       expect(last(mockService.changePassword)).toBeLessThan(

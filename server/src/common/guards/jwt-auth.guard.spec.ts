@@ -219,6 +219,30 @@ describe('JwtAuthGuard', () => {
       ).rejects.toThrow('Sessiya tugagan. Iltimos, qaytadan kiring.');
     });
 
+    it('lets a token ahead of the cache through without a database query', async () => {
+      // The mirror can lag the database (a lost write); a newer token is
+      // never refused on its account.
+      cache({ [sessionKey]: '2' });
+
+      await expect(
+        guard.canActivate(
+          mockContext(false, { ...jwtStrategyUser, sessionVersion: 3 }),
+        ),
+      ).resolves.toBe(true);
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('refuses a stale token whose account row is gone', async () => {
+      cache({ [sessionKey]: '3' });
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        guard.canActivate(
+          mockContext(false, { ...jwtStrategyUser, sessionVersion: 1 }),
+        ),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
     it('treats a token without a version as version 0', async () => {
       cache({ [sessionKey]: '1' });
       prisma.user.findUnique.mockResolvedValue({

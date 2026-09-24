@@ -356,6 +356,16 @@ export class StudentsWriteService {
       undefined,
     );
 
+    // The password is committed now: mirror the bump before anything else can
+    // fail, or the old access tokens keep working for the rest of their hour.
+    if (passwordChange.sessionVersion !== undefined && student.userId) {
+      await recordSessionsEnded(
+        this.redis,
+        student.userId,
+        passwordChange.sessionVersion,
+      );
+    }
+
     await this.entityHistoryService.recordUpdate({
       entityType: 'Student',
       entityId: id,
@@ -365,12 +375,7 @@ export class StudentsWriteService {
       companyId: student.companyId ?? undefined,
     });
 
-    if (passwordChange.sessionVersion !== undefined && student.userId) {
-      await recordSessionsEnded(
-        this.redis,
-        student.userId,
-        passwordChange.sessionVersion,
-      );
+    if (passwordChange.sessionVersion !== undefined) {
       await this.entityHistoryService.recordUpdate({
         entityType: 'Student',
         entityId: id,

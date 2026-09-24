@@ -39,7 +39,13 @@ yetti yo'ldan faqat uchtasi jurnalga yozardi.
    etadi.
 5. **Harakat qilgan qurilma tizimda qoladi:** o'z parolini o'zgartirgan yoki
    "boshqa qurilmalardan chiqish" ni bosgan qurilma javobda yangi chipta
-   oladi. Boshqa qurilmalar chiqadi.
+   oladi. Boshqa qurilmalar chiqadi. Yangi chipta aynan shu qurilmaning o'z
+   yozuvi bergan raqam bilan imzolanadi, bazadan qayta o'qilgan raqam bilan
+   emas: oradan boshqa o'zgarish o'tgan bo'lsa, o'shanisi ustun.
+6. **"Boshqa qurilmalardan chiqish" faqat hali amaldagi chipta bilan
+   ishlaydi:** raqam chaqiruvchining o'z raqamiga solishtirib oshiriladi.
+   Chiptasi allaqachon eskirgan chaqiruvchi 401 oladi va hech narsa
+   o'zgarmaydi.
 
 **Taqiqlanadi:** `User.password` ni `passwordWrite()` siz yozish (qorovul:
 `password-write.single-source.spec.ts`); chipta beradigan yangi yo'lni
@@ -78,4 +84,6 @@ parallel so'rov uni kirish sahifasiga tushirishi mumkin (millisekundlar).
 eng uzun muddati yo'q; yangilash chiptasi skript o'qiy oladigan cookie'da;
 allaqachon ochiq turgan bildirishnoma oqimi (SSE) uzilguncha xabar olaveradi,
 boshqa hech narsa qila olmaydi (ADR-0028 dagi bloklashda ham shunday);
-parolga bog'liq bo'lmagan kirish yo'llari (alohida vazifa).
+qurilmaga yozilgan push-obunalar (brauzer va ilova) o'chirilmaydi, ya'ni
+tugatilgan qurilma push xabarlarni olaveradi (alohida qaror); parolga bog'liq
+bo'lmagan kirish yo'llari (alohida vazifa).

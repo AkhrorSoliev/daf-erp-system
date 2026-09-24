@@ -117,7 +117,8 @@ export class StudentPortalWriteService {
       });
     }
 
-    return { message: "Parol muvaffaqiyatli o'zgartirildi" };
+    // The controller signs this device's fresh pair with exactly this version.
+    return { message: "Parol muvaffaqiyatli o'zgartirildi", sessionVersion };
   }
 
   async updatePhoto(

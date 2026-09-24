@@ -2327,6 +2327,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ### Task 8: The acting device keeps its session; "log out other devices" endpoint
 
+> **As built (after the whole-branch review):** `issueSession(userId, sessionVersion)` signs with the version the caller's own write produced (the two password services return it; the controllers pass it on and never echo it), and `logoutOtherSessions(userId, callerVersion)` bumps with a compare-and-set (`updateMany where { id, sessionVersion: callerVersion }`), answering 401 with no change when the caller is already behind. The code below shows the first version.
+
 **Files:**
 - Modify: `server/src/auth/auth.service.ts` (constructor, new `logoutOtherSessions`)
 - Modify: `server/src/auth/auth.service.spec.ts`

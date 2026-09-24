@@ -368,39 +368,52 @@ export class AuthService {
    * devices". Both actions bumped the session version, retiring this device's
    * tokens along with everyone else's; without a new pair it would be signed
    * out on its very next request.
+   *
+   * `sessionVersion` is the version the caller's OWN write produced, never
+   * one read back here: if another bump (the owner's password change, a
+   * reset) landed in between, it must win, and a pair signed with the older
+   * number stops on its next request.
    */
-  async issueSession(userId: number) {
-    return this.sessionFor(await this.loadSessionUser(userId));
+  async issueSession(userId: number, sessionVersion: number) {
+    const user = await this.loadSessionUser(userId);
+    return this.sessionFor({ ...user, sessionVersion });
   }
 
   /**
    * "Log out other devices": end every session of the account, then hand the
    * device that asked a fresh pair so it stays signed in (ADR-0030).
+   *
+   * The bump is a compare-and-set on the CALLER's version. A token that is
+   * already behind — one the guard let through while Redis was unavailable,
+   * or one whose session ended mid-request — is refused here and changes
+   * nothing, instead of minting itself a current session.
    */
-  async logoutOtherSessions(userId: number) {
-    const { sessionVersion, companyId, student } =
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: endSessionsWrite(),
-        select: {
-          sessionVersion: true,
-          companyId: true,
-          student: { select: { id: true } },
-        },
-      });
+  async logoutOtherSessions(userId: number, callerVersion: number) {
+    const { count } = await this.prisma.user.updateMany({
+      where: { id: userId, sessionVersion: callerVersion },
+      data: endSessionsWrite(),
+    });
+    if (count !== 1) {
+      throw new UnauthorizedException(SESSION_ENDED_MESSAGE);
+    }
+    const sessionVersion = callerVersion + 1;
     await recordSessionsEnded(this.redis, userId, sessionVersion);
 
     // Journaled where staff look for it: the student card for a student, the
     // employee record for everyone else.
+    const account = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { companyId: true, student: { select: { id: true } } },
+    });
     await this.entityHistory.recordUpdate({
-      entityType: student ? 'Student' : 'User',
-      entityId: student?.id ?? userId,
+      entityType: account?.student ? 'Student' : 'User',
+      entityId: account?.student?.id ?? userId,
       oldValues: { kirishlar: 'faol' },
       newValues: { kirishlar: 'boshqa qurilmalardan chiqildi' },
       changedById: userId,
-      companyId,
+      companyId: account?.companyId,
     });
 
-    return this.issueSession(userId);
+    return this.issueSession(userId, sessionVersion);
   }
 }

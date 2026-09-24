@@ -28,7 +28,12 @@ describe('AuthService', () => {
   beforeEach(() => {
     prisma = {
       student: { findFirst: jest.fn().mockResolvedValue({ id: 10001 }) },
-      user: { findFirst: jest.fn(), findMany: jest.fn(), update: jest.fn() },
+      user: {
+        findFirst: jest.fn(),
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+        updateMany: jest.fn(),
+      },
     };
     jwt = { sign: jest.fn().mockReturnValue('tok'), verify: jest.fn() };
     config = { get: jest.fn().mockReturnValue('secret') };
@@ -380,16 +385,24 @@ describe('AuthService', () => {
     });
 
     describe('issueSession', () => {
-      it('issues a pair stamped with the version as it is NOW', async () => {
+      it("signs with the version the caller's own write produced, never a re-read one", async () => {
+        // A bump that lands between the caller's write and this read (the
+        // owner's password change) must win: re-reading 9 here would hand the
+        // caller a session that survives it.
         prisma.user.findFirst.mockResolvedValue({
           ...liveTeacher,
-          sessionVersion: 7,
+          sessionVersion: 9,
         });
 
-        const res = await service.issueSession(2);
+        const res = await service.issueSession(2, 7);
 
         expect(res.accessToken).toBe('tok');
         expect(jwt.sign.mock.calls[0][0]).toMatchObject({ sub: 2, sv: 7 });
+        expect(jwt.sign.mock.calls[1][0]).toEqual({
+          sub: 2,
+          type: 'refresh',
+          sv: 7,
+        });
         expect(prisma.user.findFirst.mock.calls[0][0].where).toEqual({
           id: 2,
           deletedAt: null,
@@ -402,16 +415,16 @@ describe('AuthService', () => {
           status: 'SUSPENDED',
         });
 
-        await expect(service.issueSession(2)).rejects.toThrow(
+        await expect(service.issueSession(2, 3)).rejects.toThrow(
           'Hisobingiz bloklangan',
         );
       });
     });
 
     describe('logoutOtherSessions', () => {
-      it('ends every session, mirrors it, journals it on the student card and re-issues this device', async () => {
-        prisma.user.update.mockResolvedValue({
-          sessionVersion: 5,
+      it("bumps only from the caller's own version, mirrors it, journals it and re-issues this device", async () => {
+        prisma.user.updateMany.mockResolvedValue({ count: 1 });
+        prisma.user.findUnique.mockResolvedValue({
           companyId: 1,
           student: { id: 10001 },
         });
@@ -422,10 +435,10 @@ describe('AuthService', () => {
           sessionVersion: 5,
         });
 
-        const res = await service.logoutOtherSessions(1);
+        const res = await service.logoutOtherSessions(1, 4);
 
-        expect(prisma.user.update.mock.calls[0][0]).toMatchObject({
-          where: { id: 1 },
+        expect(prisma.user.updateMany.mock.calls[0][0]).toEqual({
+          where: { id: 1, sessionVersion: 4 },
           data: { sessionVersion: { increment: 1 } },
         });
         expect(redis.set).toHaveBeenCalledWith(
@@ -447,9 +460,23 @@ describe('AuthService', () => {
         expect(jwt.sign.mock.calls[0][0]).toMatchObject({ sub: 1, sv: 5 });
       });
 
-      it('journals a staff account on the employee record', async () => {
-        prisma.user.update.mockResolvedValue({
-          sessionVersion: 2,
+      it('refuses a caller whose session is already behind, and changes nothing', async () => {
+        // The guard lets a stale token through while Redis is down, or a
+        // bump lands mid-request. Either way this route must not turn that
+        // token into a current session.
+        prisma.user.updateMany.mockResolvedValue({ count: 0 });
+
+        await expect(service.logoutOtherSessions(1, 2)).rejects.toThrow(
+          'Sessiya tugagan. Iltimos, qaytadan kiring.',
+        );
+        expect(redis.set).not.toHaveBeenCalled();
+        expect(history.recordUpdate).not.toHaveBeenCalled();
+        expect(jwt.sign).not.toHaveBeenCalled();
+      });
+
+      it('signs with its own new version even when a later bump already landed', async () => {
+        prisma.user.updateMany.mockResolvedValue({ count: 1 });
+        prisma.user.findUnique.mockResolvedValue({
           companyId: 1,
           student: null,
         });
@@ -457,10 +484,28 @@ describe('AuthService', () => {
           ...teacher,
           status: 'ACTIVE',
           deletedAt: null,
-          sessionVersion: 2,
+          sessionVersion: 6, // the owner's password change came right after
         });
 
-        await service.logoutOtherSessions(2);
+        await service.logoutOtherSessions(2, 4);
+
+        expect(jwt.sign.mock.calls[0][0]).toMatchObject({ sub: 2, sv: 5 });
+      });
+
+      it('journals a staff account on the employee record', async () => {
+        prisma.user.updateMany.mockResolvedValue({ count: 1 });
+        prisma.user.findUnique.mockResolvedValue({
+          companyId: 1,
+          student: null,
+        });
+        prisma.user.findFirst.mockResolvedValue({
+          ...teacher,
+          status: 'ACTIVE',
+          deletedAt: null,
+          sessionVersion: 3,
+        });
+
+        await service.logoutOtherSessions(2, 2);
 
         expect(history.recordUpdate).toHaveBeenCalledWith(
           expect.objectContaining({ entityType: 'User', entityId: 2 }),

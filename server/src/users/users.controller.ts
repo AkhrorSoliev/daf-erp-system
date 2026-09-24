@@ -84,10 +84,15 @@ export class UsersController {
     @CurrentUser('id') userId: number,
     @Body() dto: ChangePasswordDto,
   ) {
-    const result = await this.usersService.changePassword(userId, dto);
+    const { sessionVersion, ...result } =
+      await this.usersService.changePassword(userId, dto);
     // The change ended every session of this account, the caller's included
-    // (ADR-0030). A fresh pair keeps THIS device signed in.
-    return { ...result, ...(await this.authService.issueSession(userId)) };
+    // (ADR-0030). A fresh pair, signed with the version this change produced,
+    // keeps THIS device signed in.
+    return {
+      ...result,
+      ...(await this.authService.issueSession(userId, sessionVersion)),
+    };
   }
 
   /**
@@ -96,8 +101,11 @@ export class UsersController {
    */
   @Post('logout-others')
   @HttpCode(200)
-  logoutOthers(@CurrentUser('id') userId: number) {
-    return this.authService.logoutOtherSessions(userId);
+  logoutOthers(
+    @CurrentUser('id') userId: number,
+    @CurrentUser('sessionVersion') sessionVersion: number,
+  ) {
+    return this.authService.logoutOtherSessions(userId, sessionVersion);
   }
 
   @Patch(':id')

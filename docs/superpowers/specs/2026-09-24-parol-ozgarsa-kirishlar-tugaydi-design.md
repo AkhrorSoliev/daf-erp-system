@@ -164,20 +164,28 @@ borligini tekshiradi.
 
 ### Joriy qurilma va tugma
 
-- `AuthService.issueSession(userId)`: bazadan o'qiydi, bloklangan holatni rad
-  etadi va `{ accessToken, refreshToken, user }` qaytaradi. `login`,
+- `AuthService.issueSession(userId, sessionVersion)`: bazadan o'qiydi,
+  bloklangan holatni rad etadi va `{ accessToken, refreshToken, user }`
+  qaytaradi. Chipta chaqiruvchining o'z yozuvi bergan raqam bilan
+  imzolanadi, bazadan qayta o'qilgani bilan emas: oradan boshqa o'zgarish
+  o'tsa (masalan egasi parolni o'zgartirsa), o'shanisi ustun bo'ladi. `login`,
   `buildStudentSession` va `refresh` ning bir xil dumi
   (`studentId` + `generateTokens` + `formatUser`) bitta xususiy metodga
   chiqariladi, to'rttasi shu metodni ishlatadi.
 - `PATCH /users/password` va `PATCH /student-portal/password` javobi:
   `{ message, accessToken, refreshToken, user }`. Controller parolni servisda
-  o'zgartiradi, keyin `issueSession` ni chaqiradi. `UsersModule` va
+  o'zgartiradi (servis o'z yozuvi bergan raqamni qaytaradi), keyin
+  `issueSession` ni aynan shu raqam bilan chaqiradi; raqam javobga
+  chiqmaydi. `UsersModule` va
   `StudentsModule` `AuthModule` ni import qiladi; `AuthModule` ularni import
   qilmaydi, shuning uchun aylana bog'lanish yo'q.
 - **`POST /users/logout-others`**: `@Roles` yo'q, har qanday kirgan
   foydalanuvchi uchun, id faqat `@CurrentUser('id')` dan olinadi. Route
   manifestida `SELF` guruhiga qo'shiladi (`PATCH /users/password` yonida).
-  `AuthService.logoutOtherSessions` raqamni oshiradi, Redis'ga yozadi,
+  `AuthService.logoutOtherSessions` raqamni chaqiruvchining o'z `sv` iga
+  solishtirib oshiradi (`updateMany where { id, sessionVersion }`): chiptasi
+  allaqachon eskirgan chaqiruvchi 401 oladi va hech narsa o'zgarmaydi.
+  Keyin Redis'ga yozadi,
   jurnalga `{ kirishlar: 'boshqa qurilmalardan chiqildi' }` yozadi va
   yangi sessiyani qaytaradi. Nega `/auth/` ostida emas: klient interceptori
   (`api.ts`) `/auth/` bilan boshlanadigan har bir URL'ni ochiq endpoint deb

@@ -91,11 +91,13 @@ describe('UsersService — a password write ends the other sessions', () => {
   it('changePassword: bumps the version in the same update as the hash, mirrors it and journals it', async () => {
     target = adminTarget({ password: await bcrypt.hash('eskiParol1', 4) });
 
-    await service.changePassword(24, {
+    const res = await service.changePassword(24, {
       oldPassword: 'eskiParol1',
       newPassword: 'yangiParol1',
     });
 
+    // The controller signs this device's fresh pair with exactly this.
+    expect(res.sessionVersion).toBe(5);
     const call = prisma.user.update.mock.calls[0][0];
     expect(call.data.sessionVersion).toEqual({ increment: 1 });
     expect(await bcrypt.compare('yangiParol1', call.data.password)).toBe(true);
@@ -184,6 +186,28 @@ describe('UsersService — a password write ends the other sessions', () => {
         newValues: { parol: "rollar olib tashlangani uchun o'chirildi" },
       }),
     );
+  });
+
+  it('updateUser: mirrors the bump after the commit, even if the journal then fails', async () => {
+    // The password is committed the moment the transaction resolves; a
+    // journal failure after that must not leave the old tokens working.
+    const order: string[] = [];
+    prisma.$transaction = jest.fn(async (cb: any) => {
+      const result = await cb(prisma);
+      order.push('commit');
+      return result;
+    });
+    redis.set.mockImplementation(async () => {
+      order.push('mirror');
+      return 'OK';
+    });
+    history.recordUpdate.mockRejectedValueOnce(new Error('journal down'));
+
+    await expect(
+      service.updateUser(24, { password: 'yangiParol1' } as any, 99, 1001),
+    ).rejects.toThrow('journal down');
+
+    expect(order).toEqual(['commit', 'mirror']);
   });
 
   it('updateUser: an ordinary edit leaves the sessions alone', async () => {

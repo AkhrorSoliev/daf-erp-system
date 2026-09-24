@@ -92,14 +92,15 @@ export class StudentPortalController {
     @CurrentUser('studentId') studentId: number,
     @Body() dto: ChangePortalPasswordDto,
   ) {
-    const result = await this.studentPortalService.changePassword(
-      userId,
-      studentId,
-      dto,
-    );
+    const { sessionVersion, ...result } =
+      await this.studentPortalService.changePassword(userId, studentId, dto);
     // The change ended every session of the account, this one included
-    // (ADR-0030). A fresh pair keeps the student signed in here.
-    return { ...result, ...(await this.authService.issueSession(userId)) };
+    // (ADR-0030). A fresh pair, signed with the version this change produced,
+    // keeps the student signed in here.
+    return {
+      ...result,
+      ...(await this.authService.issueSession(userId, sessionVersion)),
+    };
   }
 
   // Same multer limits as `POST /upload`. This route had `FileInterceptor`

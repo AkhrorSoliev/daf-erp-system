@@ -49,11 +49,12 @@ describe('student password writes end the other sessions', () => {
     });
 
     it('bumps the version with the hash, mirrors it and keeps the journal entry', async () => {
-      await service.changePassword(99001, 10001, {
+      const res = await service.changePassword(99001, 10001, {
         oldPassword: 'eskiParol1',
         newPassword: 'yangiParol1',
       });
 
+      expect(res.sessionVersion).toBe(3);
       const call = prisma.user.update.mock.calls[0][0];
       expect(call.data.sessionVersion).toEqual({ increment: 1 });
       expect(call.select).toEqual({ sessionVersion: true });
@@ -151,6 +152,26 @@ describe('student password writes end the other sessions', () => {
           companyId: 1001,
         }),
       );
+    });
+
+    it('mirrors the bump after the commit, even if the journal then fails', async () => {
+      const order: string[] = [];
+      prisma.$transaction = jest.fn(async (cb: any) => {
+        const result = await cb(prisma);
+        order.push('commit');
+        return result;
+      });
+      redis.set.mockImplementation(async () => {
+        order.push('mirror');
+        return 'OK';
+      });
+      history.recordUpdate.mockRejectedValueOnce(new Error('journal down'));
+
+      await expect(
+        service.update(10001, { password: 'yangiParol1' } as any, 7, 1001),
+      ).rejects.toThrow('journal down');
+
+      expect(order).toEqual(['commit', 'mirror']);
     });
 
     it('leaves the sessions alone when no password is sent', async () => {
