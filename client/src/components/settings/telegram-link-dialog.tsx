@@ -140,7 +140,7 @@ export function TelegramLinkDialog({ open, onOpenChange }: TelegramLinkDialogPro
           <DialogTitle>Telegram ro&apos;yxatdan o&apos;tish havolasi</DialogTitle>
           <DialogDescription>
             Yangi xodim tanlangan lavozim(lar) bilan Telegram bot orqali
-            ro&apos;yxatdan o&apos;tadi. Havola doimiy ishlaydi va imzolangan
+            ro&apos;yxatdan o&apos;tadi. Havola 3 kun amal qiladi va imzolangan
             bo&apos;ladi.
           </DialogDescription>
         </DialogHeader>
