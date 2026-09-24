@@ -51,7 +51,7 @@ client/src/
 │       ├── reports/page.tsx
 │       └── settings/
 │           ├── layout.tsx                 # Settings sidebar
-│           ├── page.tsx                   # Redirects to /settings/courses
+│           ├── page.tsx                   # Settings list (SettingsMenu)
 │           ├── general/page.tsx           # CEO only
 │           ├── courses/
 │           │   ├── page.tsx

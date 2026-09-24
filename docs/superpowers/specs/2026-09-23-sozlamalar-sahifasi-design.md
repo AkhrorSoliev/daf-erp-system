@@ -1,7 +1,7 @@
 # Sozlamalar — dropdown o'rniga alohida sahifa (1-bosqich)
 
 **Sana:** 2026-09-23
-**Holat:** dizayn tasdiqlangan, amalga oshirilmagan
+**Holat:** amalga oshirildi (2026-09-24)
 **Backend o'zgarishi:** yo'q
 **ADR:** kerak emas — ma'lumot modeli, pul, filial qoidasi o'zgarmaydi; bu
 navigatsiya tuzilishi, uning qoidasi `client/CLAUDE.md` ga yoziladi

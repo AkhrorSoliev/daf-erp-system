@@ -21,6 +21,10 @@ render testlari yo'q (`client/vitest.config.mts` da ataylab).
 
 **Spec:** [2026-09-23-sozlamalar-sahifasi-design.md](../specs/2026-09-23-sozlamalar-sahifasi-design.md)
 
+**Eslatma (2026-09-24):** PR ochishdan oldin yangi kod izohlari va commit
+xabarlari inglizchaga o'girildi (22.09 dagi qoida). Quyidagi kod bloklaridagi
+o'zbekcha izohlar va commit matnlari — rejadagi dastlabki holat.
+
 ## Global Constraints
 
 - **Til:** foydalanuvchi matni, yangi kod izohlari va commit xabarlari lotin o'zbekchada; ko'chirilgan mavjud inglizcha izohlar (masalan, `visibleForRoles` ning JSDoc'i) o'z holicha qoladi. `client/CLAUDE.md` esa faqat inglizcha (uning «Language Policy» bo'limi); UI satrlaridan iqtibos bundan mustasno.
