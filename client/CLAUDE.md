@@ -951,16 +951,21 @@ every list renders; the roles are only access.
   would silently re-break "demote an administrator to a role-less cleaner"
   the next time someone left stale form state around. The field-clearing is
   what keeps the visible form honest in the meantime. Keep both.
-- **Only grantable roles are offered (ADR-0026).** The "Tizim huquqi" field
-  lives in `employee-roles-field.tsx` as two variants: `EmployeeRolePicker`
-  (toggles for the roles `grantableRoleIdsFor` allows the signed-in user) and
-  `EmployeeRolesReadOnly`, used when the employee already holds a role outside
-  that ceiling, a non-CEO's own record included. The read-only variant still
-  sends the loaded `roleIds` unchanged: the backend accepts an unchanged set
-  and refuses any change to such an employee's roles. The ceiling itself is
-  `src/lib/role-grant-ceiling.ts`, shared with `telegram-link-dialog.tsx`. Do
-  not write another copy; `role-grant-ceiling.test.ts` fails if you do, and it
-  also compares the map with the server's `GRANTABLE_ROLE_IDS`.
+- **Only grantable roles are offered (ADR-0026).** `roleFieldFor`
+  (`src/lib/role-grant-ceiling.ts`) decides the "Tizim huquqi" field, and
+  both variants live in `employee-roles-field.tsx`. `pick` renders
+  `EmployeeRolePicker` with only the roles the signed-in user may grant.
+  `read-only` renders `EmployeeRolesReadOnly` when the employee already holds
+  a role outside that ceiling, a non-CEO's own record included; the save then
+  sends the loaded `roleIds` back unchanged, because the backend accepts an
+  unchanged set and refuses any change to such an employee's roles. `hidden`
+  is a caller who may grant nothing.
+- The ceiling map is shared with `telegram-link-dialog.tsx`; do not write
+  another copy. `role-grant-ceiling.test.ts` compares it with the server's
+  `GRANTABLE_ROLE_IDS` and fails on a second name-keyed copy under `src/`. It
+  is keyed by role NAME on purpose, the one exception to "check roles by ID"
+  above: the server reads role names too, so a renamed role fails closed on
+  both sides alike.
 - Password is required on create **only when a role is given**.
 - Branch stays required for everyone except a CEO, role-less employees
   included: a branch-less employee appears in no branch list and on no payroll

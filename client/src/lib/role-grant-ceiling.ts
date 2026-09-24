@@ -28,14 +28,28 @@ export function grantableRoleIdsFor(
 }
 
 /**
- * Whether the caller may change this employee's role set at all. The backend
- * refuses any change unless every role the employee holds is inside the
- * caller's ceiling, so a non-CEO can never reshape their own roles, a peer's
- * or a superior's. A new employee holds none and is always changeable.
+ * What the employee form's "Tizim huquqi" field shows, for a caller holding
+ * `callerRoleNames` and an employee holding `heldRoleIds` (none when new):
+ *
+ * - `pick`: toggles for exactly the roles the caller may grant.
+ * - `read-only`: the employee holds a role outside the ceiling (a non-CEO's
+ *   own record included). The backend refuses any change to such a role set,
+ *   so the roles are listed and the form sends `roleIds` back unchanged.
+ * - `hidden`: the caller may grant nothing and there is nothing to list.
  */
-export function mayChangeRoles(
-  grantableRoleIds: readonly number[],
+export type RoleField =
+  | { mode: "pick"; roleIds: readonly number[] }
+  | { mode: "read-only"; roleIds: readonly number[] }
+  | { mode: "hidden" };
+
+export function roleFieldFor(
+  callerRoleNames: readonly string[],
   heldRoleIds: readonly number[],
-): boolean {
-  return heldRoleIds.every((id) => grantableRoleIds.includes(id));
+): RoleField {
+  const grantable = grantableRoleIdsFor(callerRoleNames);
+  if (!heldRoleIds.every((id) => grantable.includes(id))) {
+    return { mode: "read-only", roleIds: heldRoleIds };
+  }
+  if (grantable.length === 0) return { mode: "hidden" };
+  return { mode: "pick", roleIds: grantable };
 }

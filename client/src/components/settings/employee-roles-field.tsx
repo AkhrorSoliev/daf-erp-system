@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { Check, Lock, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -26,14 +27,15 @@ export function EmployeeRolePicker({
   onToggle,
   error,
 }: EmployeeRolePickerProps) {
+  const labelId = useId();
   return (
     <div className="flex flex-col gap-2.5">
-      <Label>Tizim huquqi</Label>
+      <Label id={labelId}>Tizim huquqi</Label>
       <p className="text-xs text-muted-foreground">
         Rol berilmasa, xodim tizimga kira olmaydi — faqat ro'yxatda turadi
         va oylik oladi.
       </p>
-      <div className="grid grid-cols-2 gap-2">
+      <div role="group" aria-labelledby={labelId} className="grid grid-cols-2 gap-2">
         {roles.map((role) => {
           const checked = selectedRoleIds.includes(role.id);
           const Icon = role.icon;
@@ -75,14 +77,15 @@ export function EmployeeRolePicker({
  * sending the set exactly as it came.
  */
 export function EmployeeRolesReadOnly({ roles }: { roles: readonly RoleOption[] }) {
+  const labelId = useId();
   return (
     <div className="flex flex-col gap-2.5">
-      <Label>Tizim huquqi</Label>
+      <Label id={labelId}>Tizim huquqi</Label>
       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Lock className="size-3.5 shrink-0" />
         Bu rollarni faqat sizdan yuqori rahbar o'zgartira oladi.
       </p>
-      <ul className="flex flex-wrap gap-2">
+      <ul aria-labelledby={labelId} className="flex flex-wrap gap-2">
         {roles.map((role) => {
           const Icon = role.icon;
           return (

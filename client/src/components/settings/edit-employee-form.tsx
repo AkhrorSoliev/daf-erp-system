@@ -26,7 +26,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { grantableRoleIdsFor, mayChangeRoles } from "@/lib/role-grant-ceiling";
+import { roleFieldFor } from "@/lib/role-grant-ceiling";
 import { useAuth } from "@/hooks/use-auth";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 import { roleLabel } from "@/components/payments/salary-utils";
@@ -140,17 +140,17 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
 
-  // The role ceiling (ADR-0026): offer only the roles this caller may grant.
-  // An employee who holds any role outside it (a non-CEO's own record
-  // included) gets their roles shown read-only; `roleIds` then keeps the set
-  // it was loaded with, and the backend accepts an unchanged set on every save.
-  const grantableRoleIds = grantableRoleIdsFor(
+  // The role ceiling (ADR-0026): the field offers only the roles this caller
+  // may grant, or lists the employee's roles read-only when any of them is
+  // outside that ceiling (a non-CEO's own record included). See roleFieldFor.
+  const roleField = roleFieldFor(
     currentUser?.roles.map((r) => r.name) ?? [],
+    employee?.roles.map((r) => r.id) ?? [],
   );
-  const heldRoleIds = employee?.roles.map((r) => r.id) ?? [];
-  const rolesReadOnly = !mayChangeRoles(grantableRoleIds, heldRoleIds);
-  const offeredRoles = ROLES.filter((r) => grantableRoleIds.includes(r.id));
-  const heldRoles = ROLES.filter((r) => heldRoleIds.includes(r.id));
+  const roleOptions =
+    roleField.mode === "hidden"
+      ? []
+      : ROLES.filter((r) => roleField.roleIds.includes(r.id));
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -221,11 +221,15 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
   const onSubmit = async (values: FormValues) => {
     setSubmitting(true);
     try {
+      // Read-only roles go back exactly as they were loaded: the backend
+      // accepts an unchanged set and refuses any change to it.
+      const roleIds =
+        roleField.mode === "read-only" ? roleField.roleIds : values.roleIds;
       const payload: Record<string, any> = {
         firstName: values.firstName,
         lastName: values.lastName,
         position: values.position,
-        roleIds: values.roleIds,
+        roleIds,
         branchIds: values.branchIds,
       };
       if (values.phone) payload.phone = values.phone;
@@ -233,7 +237,7 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       // rejects both, and it already nulls them itself when the saved role
       // set is empty. Only forward what the (now-hidden) fields hold when a
       // role is actually present.
-      if (values.roleIds.length > 0) {
+      if (roleIds.length > 0) {
         if (values.login) payload.login = values.login;
         if (values.password) payload.password = values.password;
       }
@@ -369,12 +373,12 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
           )}
         </div>
 
-        {/* Roles — a caller who may grant nothing gets no picker at all */}
-        {rolesReadOnly ? (
-          <EmployeeRolesReadOnly roles={heldRoles} />
-        ) : offeredRoles.length > 0 ? (
+        {/* Roles — toggles, a read-only list, or nothing (roleFieldFor) */}
+        {roleField.mode === "read-only" ? (
+          <EmployeeRolesReadOnly roles={roleOptions} />
+        ) : roleField.mode === "pick" ? (
           <EmployeeRolePicker
-            roles={offeredRoles}
+            roles={roleOptions}
             selectedRoleIds={watchRoleIds}
             onToggle={toggleRole}
             error={form.formState.errors.roleIds?.message}
