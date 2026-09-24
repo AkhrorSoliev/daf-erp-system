@@ -13,6 +13,7 @@ import {
   ReportBranchIds,
   branchIdWhere,
 } from '../common/finance/report-branch-scope';
+import { assertCallerInBranch } from '../common/auth/branch-scope';
 
 @Injectable()
 export class RoomsService {
@@ -180,6 +181,16 @@ export class RoomsService {
     if (!branch) {
       throw new NotFoundException(`Filial #${dto.branchId} topilmadi`);
     }
+    // "The branch exists in this company" and "the caller may act in it" are
+    // different questions. The branch comes from the body, so without this an
+    // Administrator of one branch could put a room into another branch's room
+    // list and occupancy report.
+    await assertCallerInBranch(
+      this.prisma,
+      userId,
+      dto.branchId,
+      "Bu filialda xona yaratish huquqingiz yo'q",
+    );
 
     const room = await this.prisma.room.create({
       data: {

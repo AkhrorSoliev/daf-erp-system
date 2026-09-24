@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
@@ -32,6 +32,16 @@ describe('CoursesService — status methods', () => {
         create: jest.fn(),
       },
       branch: { findFirst: jest.fn() },
+      // `create` checks the caller against the course's branch. The create
+      // tests below are about other fields, so their caller is a CEO; the
+      // branch rule has its own block at the end of this file.
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+      },
     };
 
     statusHistoryService = {
@@ -262,6 +272,102 @@ describe('CoursesService — status methods', () => {
           data: expect.objectContaining({ paymentModel: 'LESSON_PACK' }),
         }),
       );
+    });
+  });
+
+  /**
+   * `POST /courses` names its branch in the body. "The branch exists in this
+   * company" is not the same question as "the caller may act in it": a
+   * Branch Director of one branch could send another branch's id and put a
+   * course, with a price of their choosing, into that branch's catalogue.
+   */
+  describe('create — the caller must hold the branch', () => {
+    const COMPANY = 1001;
+    const FARGONA = 1;
+    const NAMANGAN = 2;
+    const CEO_ID = 10001;
+    const FARGONA_DIRECTOR_ID = 10011;
+    const NAMANGAN_DIRECTOR_ID = 10022;
+
+    // The shape `resolveCallerBranchScope` selects. Keyed by id, so a service
+    // that looked up anyone other than the caller finds nobody.
+    const CALLERS: Record<number, unknown> = {
+      [CEO_ID]: {
+        mainBranch: null,
+        branches: [],
+        roles: [{ role: { name: 'CEO' } }],
+      },
+      [FARGONA_DIRECTOR_ID]: {
+        mainBranch: FARGONA,
+        branches: [{ branchId: FARGONA }],
+        roles: [{ role: { name: 'Branch Director' } }],
+      },
+      [NAMANGAN_DIRECTOR_ID]: {
+        mainBranch: NAMANGAN,
+        branches: [{ branchId: NAMANGAN }],
+        roles: [{ role: { name: 'Branch Director' } }],
+      },
+    };
+
+    const dto = { name: 'A1 intensiv', price: 600_000, branchId: FARGONA };
+
+    beforeEach(() => {
+      prisma.user.findFirst.mockImplementation(
+        ({ where }: { where: { id: number } }) =>
+          Promise.resolve(CALLERS[where.id] ?? null),
+      );
+      prisma.branch.findFirst.mockImplementation(
+        ({ where }: { where: { id: number } }) =>
+          Promise.resolve({
+            id: where.id,
+            companyId: COMPANY,
+            deletedAt: null,
+          }),
+      );
+      prisma.course.create.mockImplementation(({ data }: { data: object }) =>
+        Promise.resolve({ id: 'course-new', ...data, createdAt: new Date() }),
+      );
+      prisma.coursePriceSnapshot = { create: jest.fn().mockResolvedValue({}) };
+    });
+
+    it('refuses a caller who does not hold the branch, and writes nothing', async () => {
+      const err = await service
+        .create(dto, COMPANY, NAMANGAN_DIRECTOR_ID)
+        .catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(ForbiddenException);
+      expect((err as Error).message).toMatch(/kurs yaratish huquqingiz yo'q/);
+      expect(prisma.course.create).not.toHaveBeenCalled();
+    });
+
+    it('lets a caller who holds the branch create the course in it', async () => {
+      await service.create(dto, COMPANY, FARGONA_DIRECTOR_ID);
+
+      expect(prisma.course.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            branchId: FARGONA,
+            companyId: COMPANY,
+          }),
+        }),
+      );
+    });
+
+    it('lets a CEO, who holds no branch, create a course in any branch', async () => {
+      await service.create({ ...dto, branchId: NAMANGAN }, COMPANY, CEO_ID);
+
+      expect(prisma.course.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ branchId: NAMANGAN }),
+        }),
+      );
+    });
+
+    it('refuses a caller who cannot be identified (fail closed)', async () => {
+      await expect(
+        service.create(dto, COMPANY, undefined),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.course.create).not.toHaveBeenCalled();
     });
   });
 });
