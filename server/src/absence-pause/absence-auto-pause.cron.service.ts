@@ -22,11 +22,20 @@ export interface AutoPauseRunResult {
 /**
  * Ketma-ket dars qoldirgan o'quvchini avtomatik muzlatadi (pauza).
  *
- * NEGA ERTALAB, KECHQURUN EMAS: prodda eng erta dars 08:00, eng kech
- * tugash 20:00. Ertalabki yurishda kechagi davomat yakunlangan —
- * davomatning 5,6% i keyingi kunlarda tuzatiladi va kechqurungi yurish
- * ularni o'tkazib yuborardi. Pauza birinchi darsdan oldin ro'yxatga
- * tushadi, xabar esa yarim tunda emas, odam o'qiydigan vaqtda boradi.
+ * PAUZA NEGA ERTALAB: prodda eng erta dars 08:00, eng kech tugash 20:00.
+ * Pauza birinchi darsdan oldin ro'yxatga tushadi, xabar esa yarim tunda
+ * emas, odam o'qiydigan vaqtda boradi.
+ *
+ * THE MESSAGES ALSO RUN AT 20:30 (`eveningTick`): stages 1 and 2 reach the
+ * student on the lesson's own day, after the latest lesson ends at 20:00.
+ * On production (24.07–22.09.2026, 870 lessons) no lesson's attendance was
+ * last changed between 20:00 and 07:30, so the evening run sees every
+ * correction the morning run would; the 15 lessons changed after the next
+ * 07:30 reach neither in time. Only the pause waits for the morning.
+ * Sending the moment attendance is saved was rejected: 106 of those lessons
+ * were saved again later, 17% are marked at the start of the lesson (a late
+ * student would be told they missed the lesson they are sitting in), and a
+ * teacher cannot correct their own save.
  *
  * Yakshanba va bayramlarda ham yuradi: davomatsiz kun sanoqni
  * o'zgartirmaydi, lekin kechikkan tuzatishlar aynan shunday ushlanadi.
@@ -66,6 +75,51 @@ export class AbsenceAutoPauseCronService {
         );
       }
     }
+  }
+
+  @Cron('0 30 20 * * *', { timeZone: 'Asia/Tashkent' })
+  async eveningTick(): Promise<void> {
+    const companies = await this.prisma.company.findMany({
+      select: { id: true },
+    });
+    for (const c of companies) {
+      try {
+        const sent = await this.remindForCompany(c.id);
+        if (sent) {
+          this.logger.log(`Kompaniya ${c.id}: kechki ${sent} ta eslatma`);
+        }
+      } catch (err) {
+        this.logger.error(
+          `Kompaniya ${c.id} uchun kechki eslatma yiqildi: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+  }
+
+  /**
+   * The evening run: stages 1 and 2 only. No pause, no daily cap and no CEO
+   * alert — those belong to the morning run, and repeating the cap check
+   * here would alert the CEO twice a day about the same candidates.
+   */
+  async remindForCompany(companyId: number): Promise<number> {
+    const settings = await this.settings.get(companyId);
+    if (!settings.enabled) return 0;
+
+    const rows = await this.streaks.computeStreaks({
+      companyId,
+      threshold: 1,
+    });
+    const toRemind = rows.filter(
+      (r) => r.consecutiveAbsentCount < settings.pauseThreshold,
+    );
+    const targets = await this.loadTargets(toRemind, companyId);
+    return this.sendReminders(
+      companyId,
+      toRemind,
+      targets,
+      settings.warnThreshold,
+      settings.pauseThreshold,
+    );
   }
 
   async runForCompany(companyId: number): Promise<AutoPauseRunResult> {
@@ -174,6 +228,9 @@ export class AbsenceAutoPauseCronService {
    * ikkala bosqich (1 va 2) uchun bitta jadvalda — qaysi bosqich ekani
    * `streak` va `warnThreshold` solishtirilib qayta chiqariladi, alohida
    * ustun kerak emas.
+   *
+   * Both runs (20:30 and 07:30) go through here and read the same log, so
+   * an absence messaged in the evening is skipped the next morning.
    */
   private async sendReminders(
     companyId: number,
@@ -209,10 +266,10 @@ export class AbsenceAutoPauseCronService {
               { ...target, streak: row.consecutiveAbsentCount },
               pauseThreshold - row.consecutiveAbsentCount,
             )
-          : await this.notify.nudgeStudent({
-              ...target,
-              streak: row.consecutiveAbsentCount,
-            });
+          : await this.notify.nudgeStudent(
+              { ...target, streak: row.consecutiveAbsentCount },
+              row.lastAbsenceDate,
+            );
         await this.prisma.absenceWarningLog.create({
           data: {
             enrollmentId: row.enrollmentId,

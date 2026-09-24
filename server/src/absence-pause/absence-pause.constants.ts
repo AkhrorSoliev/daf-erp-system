@@ -1,3 +1,5 @@
+import { tashkentDateStr } from '../common/date/tashkent';
+
 /**
  * Avtomatik pauza sababining boshlanishi.
  *
@@ -9,15 +11,14 @@
  */
 export const AUTO_PAUSE_REASON_PREFIX = 'Avtomatik pauza:';
 
-/** `12.09.2026` — Toshkent kalendar kuni, admin o'qiydigan ko'rinishda. */
-function formatTashkentDate(d: Date): string {
-  const s = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Tashkent',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(d);
-  const [year, month, day] = s.split('-');
+/**
+ * `12.09.2026` — the Tashkent calendar day, in the one format this feature
+ * prints: the pause reason admins read and the stage-1 message students
+ * read. The day itself comes from `common/date/tashkent`, the single source
+ * for which Tashkent day an instant falls on.
+ */
+export function formatTashkentDate(d: Date): string {
+  const [year, month, day] = tashkentDateStr(d).split('-');
   return `${day}.${month}.${year}`;
 }
 

@@ -139,9 +139,11 @@ export function AbsencePauseSettingsClient() {
               Avtomatik pauza yoqilgan
             </Label>
             <p className="text-sm text-muted-foreground">
-              Har kuni ertalab soat 07:30 da tizim ketma-ket dars qoldirgan
-              o&apos;quvchilarni tekshiradi. Pauzadagi o&apos;quvchidan pul
-              yechilmaydi va ustozga oylik yozilmaydi.
+              Har kuni kechqurun soat 20:30 da o&apos;sha kuni sababsiz dars
+              qoldirgan o&apos;quvchiga Telegram xabar boradi. Ertalab soat
+              07:30 da ketma-ket dars qoldirganlar pauzaga o&apos;tkaziladi.
+              Pauzadagi o&apos;quvchidan pul yechilmaydi va ustozga oylik
+              yozilmaydi.
             </p>
           </div>
           <Switch
