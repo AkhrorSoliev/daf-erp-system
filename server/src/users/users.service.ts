@@ -32,6 +32,7 @@ import {
   findLiveStaffByPhone,
   STAFF_ROLE_IDS,
 } from '../common/auth/phone-account-rules';
+import { grantableRoleIdsFor } from '../telegram/constants';
 
 const userSelect = {
   id: true,
@@ -82,16 +83,17 @@ const TEACHER_ROLE_ID = 4;
  *
  * `user` — a signed-in caller. Every branch the write touches is checked
  * against the branches that caller actually holds, because creating a user IS
- * granting access to a branch.
+ * granting access to a branch, and every role it grants or takes away against
+ * the roles that caller may hand out (`GRANTABLE_ROLE_IDS`).
  *
  * `self-registration` — the Telegram bot, where the person being created is a
  * stranger holding a signed invitation link and there is simply no caller to
  * confine. The authorisation happened when the link was minted:
  * `generateEmployeeLinkPayload` refuses a branch the requester does not hold
  * and roles above their own level, then HMAC-signs the pair, and the bot
- * verifies that signature before the scene ever starts. That is the same
- * ceiling `assertCallerInBranch` applies to the signed-in path — reached one
- * step earlier.
+ * verifies that signature before the scene ever starts. Those are the same two
+ * checks the signed-in path runs (`assertCallerInBranch` and the role ceiling),
+ * reached one step earlier.
  *
  * It is a stated variant rather than an absent argument on purpose. The
  * absence of a caller used to mean "skip the check" by accident, which is how
@@ -128,6 +130,11 @@ export class UsersService {
        * "not asked" — the caller did not put credentials in play.
        */
       passwordAfter?: boolean;
+      /**
+       * The roles the account holds before this write; `undefined` for an
+       * account being created. The role ceiling compares it with `roleIds`.
+       */
+      currentRoleIds?: number[];
     },
   ) {
     // Fail closed before any rule reads the actor: a caller-shaped actor with
@@ -135,23 +142,6 @@ export class UsersService {
     // permissive branch the way a missing argument once did.
     if (actor.kind === 'user' && actor.id == null) {
       throw new ForbiddenException('Foydalanuvchi aniqlanmadi');
-    }
-
-    // Role escalation guard: only CEO can grant CEO role.
-    // A self-registration has no caller to escalate FROM — the equivalent
-    // ceiling (`GRANTABLE_ROLE_IDS`) was applied to whoever minted the link.
-    if (actor.kind === 'user' && roleIds?.includes(CEO_ROLE_ID)) {
-      const caller = await this.prisma.user.findUnique({
-        where: { id: actor.id },
-        select: {
-          roles: { select: { role: { select: { name: true } } } },
-        },
-      });
-      const callerIsCeo =
-        caller?.roles.some((r) => r.role.name === 'CEO') ?? false;
-      if (!callerIsCeo) {
-        throw new ForbiddenException('CEO rolini faqat CEO tayinlashi mumkin');
-      }
     }
 
     // A job title is what every list, badge and payroll row reads. It is the
@@ -235,10 +225,11 @@ export class UsersService {
     // view. A CEO spans everything and passes; a caller who holds neither
     // branch is refused for both.
     //
-    // A self-registration is skipped here and ONLY here: there is no caller to
-    // hold a branch, and the branch it is being written into came from a
-    // signature that already encoded exactly this permission (see
-    // `UserWriteActor`). Every other rule above still ran.
+    // A self-registration skips this check and the role ceiling below, and
+    // nothing else: there is no caller to hold a branch or a role, and both
+    // came from a signature that already encoded exactly these permissions
+    // (see `UserWriteActor`, ADR-0008, ADR-0026). Every rule above and the
+    // password rule below still run for it.
     if (actor.kind === 'user') {
       for (const branchId of [
         ...(branchIds ?? []),
@@ -251,6 +242,23 @@ export class UsersService {
           "Bu filialga xodim qo'shish huquqingiz yo'q",
         );
       }
+    }
+
+    // …and every role the write grants or takes away must be one the caller
+    // may hand out.
+    //
+    // Holding the branch is not enough. An Administrator holds their own, so
+    // without this they could create a Branch Director there with a password
+    // of their choosing, or promote THEMSELVES, since acting on yourself skips
+    // the object-level check. The ceiling is the one the registration links
+    // already apply (`GRANTABLE_ROLE_IDS`): a link and this form open the same
+    // kind of account. Its rules are ADR-0026's.
+    if (actor.kind === 'user') {
+      await this.assertCallerMayChangeRoles(
+        actor.id,
+        opts?.currentRoleIds ?? [],
+        roleIds ?? [],
+      );
     }
 
     // The converse of the refusal above, and just as load-bearing: a role IS
@@ -267,6 +275,55 @@ export class UsersService {
     if (hasRoles && opts?.passwordAfter === false) {
       throw new BadRequestException(
         'Tizim roli berilgan xodim uchun parol majburiy',
+      );
+    }
+  }
+
+  /**
+   * The role ceiling on the signed-in path (ADR-0026). Four rules, each chosen
+   * on purpose:
+   *
+   * - **An unchanged role set is not a grant.** The employee form sends
+   *   `roleIds` on every save, so SETS are compared (order and duplicates do
+   *   not count). Otherwise a Branch Director could not fix a typo in their
+   *   own name.
+   * - **Every added role must be inside the caller's ceiling.** A forbidden
+   *   role cannot ride in beside a permitted one.
+   * - **Only an account holding nothing above the ceiling can be reshaped.**
+   *   An Administrator may not add a Teacher role to their Branch Director,
+   *   take one away, or change their own role set: the roles of anyone at or
+   *   above your level, yourself included, belong to someone above you.
+   * - **An unknown or archived caller grants nothing.** An access token
+   *   outlives an archive by up to an hour and nothing re-reads the account
+   *   on each request, so this lookup filters `deletedAt` itself.
+   */
+  private async assertCallerMayChangeRoles(
+    callerId: number,
+    currentRoleIds: number[],
+    nextRoleIds: number[],
+  ): Promise<void> {
+    const current = new Set(currentRoleIds);
+    const next = new Set(nextRoleIds);
+    const added = [...next].filter((id) => !current.has(id));
+    const removed = [...current].filter((id) => !next.has(id));
+    if (added.length === 0 && removed.length === 0) return;
+
+    const caller = await this.prisma.user.findFirst({
+      where: { id: callerId, deletedAt: null },
+      select: { roles: { select: { role: { select: { name: true } } } } },
+    });
+    const grantable = grantableRoleIdsFor(
+      caller?.roles.map((r) => r.role.name) ?? [],
+    );
+
+    if (added.some((id) => !grantable.includes(id))) {
+      throw new ForbiddenException(
+        "O'z rolingizdan yuqori yoki unga teng rolni tayinlay olmaysiz",
+      );
+    }
+    if ([...current].some((id) => !grantable.includes(id))) {
+      throw new ForbiddenException(
+        "O'z rolingizdan yuqori yoki unga teng roldagi xodimning rollarini o'zgartira olmaysiz",
       );
     }
   }
@@ -684,6 +741,7 @@ export class UsersService {
           // alone. Only an account that would END this write with a role and
           // no password at all is refused.
           passwordAfter: !!dto.password || !!user.password,
+          currentRoleIds: user.roles.map((ur) => ur.role.id),
         },
       );
     }

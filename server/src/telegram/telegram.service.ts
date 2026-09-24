@@ -22,7 +22,7 @@ import {
   MOCK_EXAM_DEEP_LINK_PREFIX,
   APP_LOGIN_REQUEST_PREFIX,
   VALID_ROLE_IDS,
-  GRANTABLE_ROLE_IDS,
+  grantableRoleIdsFor,
 } from './constants';
 import { createTeacherRegistrationScene } from './scenes/teacher-registration.scene';
 import { StudentLeadOriginService } from '../common/student-origin';
@@ -1137,12 +1137,9 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     // Privilege escalation guard: the link IS the account. Without this an
     // Administrator could mint a CEO registration link for their own branch
     // and hand themselves full access — the branch check below would happily
-    // pass. A caller may only grant roles at or below their own level.
-    const grantable: readonly number[] = requestedBy.roles.includes('CEO')
-      ? GRANTABLE_ROLE_IDS.CEO
-      : requestedBy.roles.includes('Branch Director')
-        ? GRANTABLE_ROLE_IDS.BRANCH_DIRECTOR
-        : GRANTABLE_ROLE_IDS.ADMINISTRATOR;
+    // pass. A caller may only grant roles below their own level (a CEO, any).
+    // `UsersService` applies the same ceiling to the employee form.
+    const grantable = grantableRoleIdsFor(requestedBy.roles);
     const forbidden = unique.filter((id) => !grantable.includes(id));
     if (forbidden.length > 0) {
       throw new ForbiddenException(

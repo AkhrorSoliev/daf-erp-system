@@ -137,6 +137,30 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 | Create/update branches | Yes | Own branch | No | No | No |
 | Change branch status | Yes | Own branch | No | No | No |
 
+#### Role grant ceiling
+
+Creating an employee IS granting access, so a caller may hand out only the roles below their own level (a CEO, any role). One map, `GRANTABLE_ROLE_IDS` in `server/src/telegram/constants.ts`, read through `grantableRoleIdsFor`, serves both doors that let a caller choose roles: the employee form (`POST /users`, `PATCH /users/:id`) and the Telegram registration link (`POST /telegram/employee-link`). `POST /teachers` (CEO, Branch Director) always grants Teacher alone, which is inside both of their ceilings. The decision and its alternatives: [ADR-0026](adr/0026-rol-berish-shipi-ikkala-eshikda.md).
+
+| Caller | May grant |
+|--------|-----------|
+| CEO | CEO, Branch Director, Administrator, Teacher, Cashier |
+| Branch Director | Administrator, Teacher, Cashier |
+| Administrator | Teacher, Cashier |
+
+- **The most senior role decides.** A caller holding several roles gets the ceiling of the highest of CEO, Branch Director and Administrator. Holding none of them means nothing is grantable.
+- **The employee form reads the caller's roles from the database**, not from the token, so an unknown or archived caller grants nothing there. An access token outlives an archive (or a demotion) by up to an hour.
+- **Self-edits are included.** Acting on yourself skips the branch-overlap check, not this one: an Administrator cannot make themselves a Branch Director.
+- **Only accounts inside your ceiling can be reshaped.** When a write changes the role set, every role on both sides of the change (held now, held after) must be inside the caller's ceiling. An Administrator may add or remove Teacher and Cashier on a teacher, but may not change the role set of a Branch Director who shares their branch, of another Administrator, or of themselves, not even to add Teacher. Those changes belong to someone above them.
+- **An unchanged role set is not a grant.** The employee form sends `roleIds` on every save; the sets are compared (order ignored), so editing a name or a phone number is never refused by this rule.
+- **Self-registration through the bot is not re-checked.** The link it came from met this ceiling when it was signed (ADR-0008).
+
+**Known gaps, not closed by the ceiling:**
+
+- The table above says Administrators do not manage employees, and the UI hides the page from them, but `POST /users` and `PATCH /users/:id` still admit the Administrator role. The ceiling limits the roles they can hand out to Teacher and Cashier, the same roles their Telegram links may carry.
+- The ceiling guards roles only. The object-level check (`assertCallerMayTouchUser`) lets a caller edit anyone who shares a branch with them, whatever their rank, so an Administrator can still set the password, login or status of their own branch's Branch Director.
+- The registration link takes the caller's roles from the access token, and a signed link does not expire. A token that is up to an hour stale (archived or demoted caller) can still mint an invitation at its old level.
+- The employee form offers every role to every caller. The Telegram link dialog already hides the roles a caller cannot grant; the form does not yet.
+
 ### Branch Director Scope Filtering
 
 When a **Branch Director** accesses data, the backend must automatically filter results to only include data from their branch(es):
