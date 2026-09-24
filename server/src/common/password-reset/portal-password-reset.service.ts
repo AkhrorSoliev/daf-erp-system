@@ -2,7 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { UserStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RedisService } from '../../redis/redis.service';
 import { EntityHistoryService } from '../entity-history';
+import { passwordWrite, recordSessionsEnded } from '../auth/session-version';
 
 export interface ResettableTarget {
   userId: number;
@@ -48,6 +50,7 @@ export class PortalPasswordResetService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly entityHistory: EntityHistoryService,
+    private readonly redis: RedisService,
   ) {}
 
   async resolveByPhone(
@@ -113,10 +116,14 @@ export class PortalPasswordResetService {
     channelLabel: string,
   ): Promise<void> {
     const hashed = await bcrypt.hash(plainPassword, 10);
-    await this.prisma.user.update({
+    // A reset ends every session of the account (ADR-0029): whoever still
+    // holds the old one is signed out on their next request.
+    const { sessionVersion } = await this.prisma.user.update({
       where: { id: target.userId },
-      data: { password: hashed },
+      data: passwordWrite(hashed),
+      select: { sessionVersion: true },
     });
+    await recordSessionsEnded(this.redis, target.userId, sessionVersion);
 
     await this.entityHistory.recordUpdate({
       entityType: target.studentId ? 'Student' : 'User',

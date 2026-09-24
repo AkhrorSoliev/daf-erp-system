@@ -4,6 +4,10 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { EntityHistoryService } from '../../common/entity-history';
 import { generatePassword } from '../../common/utils/password.util';
+import {
+  passwordWrite,
+  recordSessionsEnded,
+} from '../../common/auth/session-version';
 
 const COOLDOWN_SEC = 5 * 60;
 const DAILY_LIMIT = 3;
@@ -155,10 +159,13 @@ export async function resetPassword(
   const plainPassword = generatePassword();
   const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-  await prisma.user.update({
+  // A reset ends every session of the account (ADR-0029).
+  const { sessionVersion } = await prisma.user.update({
     where: { id: user.id },
-    data: { password: hashedPassword },
+    data: passwordWrite(hashedPassword),
+    select: { sessionVersion: true },
   });
+  await recordSessionsEnded(redis, user.id, sessionVersion);
 
   await entityHistoryService.recordUpdate({
     entityType: 'Student',

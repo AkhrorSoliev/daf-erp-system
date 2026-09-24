@@ -5,18 +5,20 @@ function build() {
   const prisma = {
     user: {
       findMany: jest.fn(),
-      update: jest.fn().mockResolvedValue({}),
+      update: jest.fn().mockResolvedValue({ sessionVersion: 4 }),
     },
     student: { findFirst: jest.fn() },
   };
   const entityHistory = {
     recordUpdate: jest.fn().mockResolvedValue(undefined),
   };
+  const redis = { set: jest.fn().mockResolvedValue('OK') };
   const service = new PortalPasswordResetService(
     prisma as any,
     entityHistory as any,
+    redis as any,
   );
-  return { service, prisma, entityHistory };
+  return { service, prisma, entityHistory, redis };
 }
 
 describe('PortalPasswordResetService', () => {
@@ -134,6 +136,26 @@ describe('PortalPasswordResetService', () => {
           changedById: 10001,
           companyId: 2,
         }),
+      );
+    });
+
+    it('ends every session of the account (ADR-0029)', async () => {
+      const { service, prisma, redis } = build();
+
+      await service.applyNewPassword(
+        { userId: 10001, studentId: 10050, companyId: 2 },
+        'newpass123',
+        'SMS orqali tiklandi',
+      );
+
+      const update = prisma.user.update.mock.calls[0][0];
+      expect(update.data.sessionVersion).toEqual({ increment: 1 });
+      expect(update.select).toEqual({ sessionVersion: true });
+      expect(redis.set).toHaveBeenCalledWith(
+        'user:session-version:10001',
+        '4',
+        'EX',
+        expect.any(Number),
       );
     });
 
