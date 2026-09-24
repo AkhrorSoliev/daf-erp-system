@@ -251,6 +251,7 @@ function renderOutcomeCsv(rows: ApplyStudentResult[]): string {
     'oldBalance',
     'prepaidRefund',
     'carriedInCredit',
+    'carriedInHeld',
     'reversedSeptember',
     'monthlyCharge',
     'newBalance',
@@ -267,6 +268,7 @@ function renderOutcomeCsv(rows: ApplyStudentResult[]): string {
         r.oldBalance,
         r.prepaidRefund,
         r.carriedInCredit,
+        r.carriedInHeld,
         r.reversedSeptember,
         r.monthlyCharge,
         r.newBalance,
@@ -440,6 +442,7 @@ async function runApply(params: RunApplyParams): Promise<void> {
   // ── natija ────────────────────────────────────────────────────────────
   const totalPrepaid = results.reduce((a, r) => a + r.prepaidRefund, 0);
   const totalCarriedIn = results.reduce((a, r) => a + r.carriedInCredit, 0);
+  const totalCarriedInHeld = results.reduce((a, r) => a + r.carriedInHeld, 0);
   const accrualsSkipped = results.reduce((a, r) => a + r.accrualsSkipped, 0);
   const totalReversed = results.reduce((a, r) => a + r.reversedSeptember, 0);
   const totalCharged = results.reduce((a, r) => a + r.monthlyCharge, 0);
@@ -525,6 +528,7 @@ async function runApply(params: RunApplyParams): Promise<void> {
       ['Yiqilgan', String(failures.length)],
       ['Prepaid qaytarildi', som(totalPrepaid)],
       ["Oldingi oyda to'langan darslar qaytarildi", som(totalCarriedIn)],
+      ["Qo'lda ko'riladigan kredit (yozilmadi)", som(totalCarriedInHeld)],
       ['Davr ichi bekor qilindi', som(totalReversed)],
       ['Oylik hisoblandi', som(totalCharged)],
       ['Yozilgan oylik hisob', String(chargesCreated)],
@@ -555,6 +559,15 @@ async function runApply(params: RunApplyParams): Promise<void> {
     console.log('');
     console.log(
       `DIQQAT: bashorat ${som(predictedCharge)} edi, haqiqatda ${som(totalCharged)} hisoblandi.`,
+    );
+  }
+  // Each student's credit is recounted inside its transaction; this is the
+  // total seen by the whole run, against the plan printed above.
+  if (limit === null && plan.summary.totalCarriedInCredit !== totalCarriedIn) {
+    console.log('');
+    console.log(
+      `DIQQAT: avgust darslari krediti bashorati ${som(plan.summary.totalCarriedInCredit)} edi, ` +
+        `haqiqatda ${som(totalCarriedIn)} yozildi.`,
     );
   }
 
@@ -1092,7 +1105,7 @@ async function main(prisma: PrismaClient) {
       const carriedIn = carriedInByEnrollment.get(e.id) ?? emptyCarriedIn();
       const oldSystemMonthCost = chargeable
         ? applyDiscount(
-            baseLessonPrice(course.price, course.lessonPaymentCount) *
+            baseLessonPrice(course.price, course.lessonPaymentCount || 12) *
               coveredLessons,
             clampDiscount(e.student.discountPercent ?? 0),
           )
@@ -1103,7 +1116,7 @@ async function main(prisma: PrismaClient) {
           studentId: e.studentId,
           price: course.price,
           plannedLessons,
-          lessonPaymentCount: course.lessonPaymentCount,
+          lessonPaymentCount: course.lessonPaymentCount || 12,
         });
       }
 
@@ -1127,6 +1140,8 @@ async function main(prisma: PrismaClient) {
         discountPercent: e.student.discountPercent,
         carriedInCredit: carriedIn.value,
         carriedInLessons: carriedIn.lessons,
+        carriedInHeld: carriedIn.review?.value ?? 0,
+        earlyLessonsInMonthPacks: carriedIn.earlyLessonsInMonthPacks,
         oldSystemMonthCost,
       });
 
@@ -1327,6 +1342,7 @@ async function main(prisma: PrismaClient) {
       'ism',
       'eski balans',
       'prepaid qaytdi',
+      'avgust qaytdi',
       'davr ichi bekor',
       'oylik hisobi',
       'yangi balans',
@@ -1338,14 +1354,35 @@ async function main(prisma: PrismaClient) {
       s.studentName,
       som(s.oldBalance),
       som(s.prepaidRefund),
+      som(s.carriedInCredit),
       som(s.reversedSeptember),
       som(s.monthlyCharge),
       som(s.newBalance),
       som(s.newBalance - s.oldBalance),
       s.state,
     ]),
-    ['r', 'l', 'r', 'r', 'r', 'r', 'r', 'r', 'l'],
+    ['r', 'l', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'l'],
   );
+
+  // ── withheld credits: a manual decision each ────────────────────────────
+  const held = plan.students.filter((s) => s.carriedInHeld > 0);
+  if (held.length > 0) {
+    section("QO'LDA KO'RILADIGAN AVGUST KREDITLARI");
+    printTable(
+      ['studentId', 'ism', 'guruhlar', 'kredit (yozilmaydi)'],
+      held.map((s) => [
+        s.studentId,
+        s.studentName,
+        s.groups.join('; '),
+        som(s.carriedInHeld),
+      ]),
+      ['r', 'l', 'l', 'r'],
+    );
+    console.log(
+      'Paketning bir qismi muzlatish yoki pul qaytarishda qaytarilgan: ledger qaysi sentabr darsini ' +
+        "o'sha paket to'laganini aniq ayta olmaydi. Kredit avtomatik yozilmaydi — har biri qo'lda hal qilinadi.",
+    );
+  }
 
   // ── per-teacher preview of step 5 (CEO layer 5) ─────────────────────────
   const teacherReport = buildTeacherPayReport(teacherLessons);

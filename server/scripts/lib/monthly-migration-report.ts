@@ -58,6 +58,14 @@ export interface MigrationRow {
   carriedInCredit?: number;
   carriedInLessons?: number;
   /**
+   * A carried-in credit withheld for a manual decision: the pack's lessons
+   * were partly given back by a freeze or cash refund, so the ledger cannot
+   * say which September lessons it still paid for (carried-in-lessons.ts).
+   */
+  carriedInHeld?: number;
+  /** Lessons before the month that the month's own pack paid for. */
+  earlyLessonsInMonthPacks?: number;
+  /**
    * What this enrollment's lessons of the month would cost on the old pack
    * model (covered lessons x the pack's base lesson price, discounted).
    * Report-only: flags the students the switch charges MORE for the month;
@@ -74,6 +82,8 @@ export interface StudentPlan {
   prepaidRefund: number;
   carriedInCredit: number;
   carriedInLessons: number;
+  carriedInHeld: number;
+  earlyLessonsInMonthPacks: number;
   oldSystemMonthCost: number;
   /**
    * How much more the monthly model charges this student for the month than
@@ -100,6 +110,9 @@ export interface MigrationPlan {
     totalCarriedInCredit: number;
     carriedInStudentCount: number;
     carriedInLessons: number;
+    carriedInHeldCount: number;
+    carriedInHeldTotal: number;
+    earlyLessonsInMonthPacks: number;
     monthlyCostsMoreCount: number;
     monthlyCostsMoreTotal: number;
     currentMonthDebt: number;
@@ -167,6 +180,9 @@ export function buildPlanFromStudents(students: StudentPlan[]): MigrationPlan {
     totalCarriedInCredit: sum(students, (s) => s.carriedInCredit),
     carriedInStudentCount: students.filter((s) => s.carriedInCredit > 0).length,
     carriedInLessons: sum(students, (s) => s.carriedInLessons),
+    carriedInHeldCount: students.filter((s) => s.carriedInHeld > 0).length,
+    carriedInHeldTotal: sum(students, (s) => s.carriedInHeld),
+    earlyLessonsInMonthPacks: sum(students, (s) => s.earlyLessonsInMonthPacks),
     monthlyCostsMoreCount: students.filter((s) => s.monthlyCostsMore > 0)
       .length,
     monthlyCostsMoreTotal: sum(students, (s) => s.monthlyCostsMore),
@@ -226,6 +242,9 @@ export function buildMigrationPlan(input: MigrationInput): MigrationPlan {
       monthlyChargeFull > 0 ? (r.carriedInCredit ?? 0) : 0;
     const carriedInLessons =
       monthlyChargeFull > 0 ? (r.carriedInLessons ?? 0) : 0;
+    const carriedInHeld = monthlyChargeFull > 0 ? (r.carriedInHeld ?? 0) : 0;
+    const earlyLessonsInMonthPacks =
+      r.chargeable === false ? 0 : (r.earlyLessonsInMonthPacks ?? 0);
     const oldSystemMonthCost =
       r.chargeable === false ? 0 : (r.oldSystemMonthCost ?? 0);
     // Both models round per lesson, so on the same per-lesson price they can
@@ -244,6 +263,8 @@ export function buildMigrationPlan(input: MigrationInput): MigrationPlan {
       existing.monthlyCharge += monthlyCharge;
       existing.carriedInCredit += carriedInCredit;
       existing.carriedInLessons += carriedInLessons;
+      existing.carriedInHeld += carriedInHeld;
+      existing.earlyLessonsInMonthPacks += earlyLessonsInMonthPacks;
       existing.oldSystemMonthCost += oldSystemMonthCost;
       existing.monthlyCostsMore += monthlyCostsMore;
       continue;
@@ -257,6 +278,8 @@ export function buildMigrationPlan(input: MigrationInput): MigrationPlan {
       prepaidRefund,
       carriedInCredit,
       carriedInLessons,
+      carriedInHeld,
+      earlyLessonsInMonthPacks,
       oldSystemMonthCost,
       monthlyCostsMore,
       reversedSeptember: input.reversedDeductions[r.studentId] ?? 0,
@@ -297,6 +320,8 @@ export function renderSummary(
     `Bekor qilinadigan 02.09:       ${som(s.totalReversedSeptember)} so'm`,
     `Hisoblanadigan sentabr oyligi: ${som(s.totalMonthlyCharge)} so'm`,
     `Avgustda to'langan sentabr darslari: ${s.carriedInStudentCount} o'quvchi, ${s.carriedInLessons} dars — ${som(s.totalCarriedInCredit)} so'm qaytadi`,
+    `  qo'lda ko'rilsin (muzlatish yoki pul qaytarishdan keyin): ${s.carriedInHeldCount} o'quvchi — ${som(s.carriedInHeldTotal)} so'm yozilmaydi`,
+    `Sentabr paketi to'lagan avgust darslari: ${s.earlyLessonsInMonthPacks} dars (0 kutiladi; bo'lsa — bepul qoladi, qo'lda ko'rilsin)`,
     `Oylik 12 talikdan qimmat chiqadi:     ${s.monthlyCostsMoreCount} o'quvchi — jami ${som(s.monthlyCostsMoreTotal)} so'm (qaror CEO da)`,
     '',
     'MIGRATSIYADAN KEYINGI HOLAT',
@@ -309,7 +334,7 @@ export function renderSummary(
 
 export function renderStudentCsv(plan: MigrationPlan): string {
   const head =
-    'studentId,ism,guruhlar,eski_balans,prepaid_qaytdi,avgust_darslari,avgust_darslari_qaytdi,02_09_bekor,sentabr_hisobi,12_talikda_sentabr,oylik_qimmatroq,yangi_balans,holat';
+    'studentId,ism,guruhlar,eski_balans,prepaid_qaytdi,avgust_darslari,avgust_darslari_qaytdi,avgust_qolda_korilsin,02_09_bekor,sentabr_hisobi,12_talikda_sentabr,oylik_qimmatroq,yangi_balans,holat';
   const lines = plan.students.map((s) =>
     [
       s.studentId,
@@ -319,6 +344,7 @@ export function renderStudentCsv(plan: MigrationPlan): string {
       s.prepaidRefund,
       s.carriedInLessons,
       s.carriedInCredit,
+      s.carriedInHeld,
       s.reversedSeptember,
       s.monthlyCharge,
       s.oldSystemMonthCost,

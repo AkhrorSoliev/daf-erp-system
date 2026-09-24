@@ -304,6 +304,25 @@ describe('carried-in lessons and the old-model comparison', () => {
     expect(plan.summary.monthlyCostsMoreCount).toBe(0);
   });
 
+  it('lists a withheld credit apart and never adds it to the balance', () => {
+    const plan = buildMigrationPlan({
+      rows: [
+        row({
+          balance: 0,
+          prepaidRefundTotal: 0,
+          carriedInHeld: 150_000,
+          earlyLessonsInMonthPacks: 1,
+        }),
+      ],
+      reversedDeductions: {},
+    });
+    expect(plan.students[0].carriedInHeld).toBe(150_000);
+    expect(plan.students[0].newBalance).toBe(-450_000);
+    expect(plan.summary.carriedInHeldCount).toBe(1);
+    expect(plan.summary.carriedInHeldTotal).toBe(150_000);
+    expect(plan.summary.earlyLessonsInMonthPacks).toBe(1);
+  });
+
   it('keeps the columns verify-monthly-migration.ts reads by name', () => {
     const csv = renderStudentCsv(
       buildMigrationPlan({
@@ -317,5 +336,6 @@ describe('carried-in lessons and the old-model comparison', () => {
     expect(head).toContain('avgust_darslari_qaytdi');
     expect(head).toContain('12_talikda_sentabr');
     expect(head).toContain('oylik_qimmatroq');
+    expect(head).toContain('avgust_qolda_korilsin');
   });
 });

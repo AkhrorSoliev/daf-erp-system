@@ -160,6 +160,7 @@ describe('applyMigrationForStudent', () => {
       reversedDeductionCount: 1,
       accrualsRecomputed: 1,
       accrualsSkipped: 0,
+      carriedInHeld: 0,
       chargesCreated: 1,
       chargesSkipped: 0,
       skippedEnrollmentIds: [],
@@ -948,5 +949,42 @@ describe('reversal counter-rows are never packs', () => {
     });
     expect(tx.transaction.findFirst).toHaveBeenCalledWith(notACounterRow);
     expect(tx.transaction.findMany).toHaveBeenCalledWith(notACounterRow);
+  });
+});
+
+describe('a withheld carried-in credit', () => {
+  it('is counted for the report and never written', async () => {
+    // The ledger suggests 4 lessons / 150 000, but the room disagreed with
+    // the counter (a freeze refund), so carried-in-lessons.ts withheld it.
+    const tx = makeTx({
+      student: {
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValueOnce({ balance: -120_000 })
+          .mockResolvedValueOnce({ balance: -382_500 }), // -120 000 + 187 500 - 450 000
+      },
+    });
+    const deps = makeDeps({
+      computeCarriedIn: jest.fn().mockResolvedValue({
+        lessons: 0,
+        value: 0,
+        batches: [],
+        review: {
+          lessons: 4,
+          value: 150_000,
+          room: 10,
+          prepaidLessonsRemaining: 6,
+        },
+        earlyLessonsInMonthPacks: 0,
+      }),
+    });
+
+    const result = await applyMigrationForStudent(
+      studentParams(tx, deps, [makeEnrollment()]),
+    );
+
+    expect(deps.createAdjustment).not.toHaveBeenCalled();
+    expect(result.carriedInCredit).toBe(0);
+    expect(result.carriedInHeld).toBe(150_000);
   });
 });

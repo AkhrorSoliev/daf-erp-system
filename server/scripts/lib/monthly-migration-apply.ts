@@ -108,7 +108,7 @@ import {
   addMonthsToMonthKey,
   utcMidnightFromDateStr,
 } from '../../src/common/date/tashkent';
-import type { CarriedIn } from './carried-in-lessons';
+import { emptyCarriedIn, type CarriedIn } from './carried-in-lessons';
 
 // CLAUDE.md "Status transition matrix": ABSENT ham billable — dars o'tilgan
 // bo'lsa, to'langan hisoblanadi. Faqat EXCUSED hisoblanmaydi.
@@ -280,6 +280,12 @@ export interface ApplyStudentResult {
   prepaidRefund: number;
   /** Money credited back for lessons an earlier pack had already paid for. */
   carriedInCredit: number;
+  /**
+   * A carried-in credit the ledger suggested but that was withheld for a
+   * manual decision (freeze or cash refund released part of the pack).
+   * Reported, never written.
+   */
+  carriedInHeld: number;
   reversedSeptember: number;
   monthlyCharge: number;
   newBalance: number;
@@ -365,6 +371,7 @@ export async function applyMigrationForStudent(
 
   let prepaidRefund = 0;
   let carriedInCredit = 0;
+  let carriedInHeld = 0;
   let reversedSeptember = 0;
   let monthlyCharge = 0;
   let reversedDeductionCount = 0;
@@ -401,9 +408,10 @@ export async function applyMigrationForStudent(
     // ── 0b. Lessons of the month an earlier pack already paid for. Counted
     // BEFORE step 1 and step 2 write anything. Only a chargeable enrollment
     // is credited — a PAUSED one keeps its pack billing. ─────────────────
-    const carriedIn = item.chargeable
+    const carriedIn: CarriedIn = item.chargeable
       ? await deps.computeCarriedIn(tx, enr)
-      : { lessons: 0, value: 0, batches: [] };
+      : emptyCarriedIn();
+    carriedInHeld += carriedIn.review?.value ?? 0;
     if (
       carriedIn.value !== item.expectedCarriedIn.value ||
       carriedIn.lessons !== item.expectedCarriedIn.lessons
@@ -693,6 +701,7 @@ export async function applyMigrationForStudent(
     oldBalance,
     prepaidRefund,
     carriedInCredit,
+    carriedInHeld,
     reversedSeptember,
     monthlyCharge,
     newBalance,

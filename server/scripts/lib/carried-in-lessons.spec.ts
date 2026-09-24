@@ -1,7 +1,9 @@
 import { TransactionType } from '@prisma/client';
-import type {
-  CoverageResult,
-  CycleCoverage,
+import {
+  allocateCoverage,
+  type CoverageResult,
+  type CoverageTx,
+  type CycleCoverage,
 } from '../../src/billing/lesson-coverage.helper';
 import {
   carriedInForEnrollment,
@@ -108,6 +110,8 @@ describe('carriedInForEnrollment', () => {
       lessons: 5,
       value: 187_500,
       batches: [{ deductionId: 'ded-1', lessons: 5, value: 187_500 }],
+      review: null,
+      earlyLessonsInMonthPacks: 0,
     });
   });
 
@@ -174,6 +178,33 @@ describe('carriedInForEnrollment', () => {
     expect(res.value).toBe(150_000);
   });
 
+  it("treats a pack bought at exactly 00:00 Tashkent on the 1st as the month's own", () => {
+    expect(
+      run({
+        days: SEPTEMBER_5,
+        createdAt: new Date('2026-08-31T19:00:00.000Z'),
+      }).value,
+    ).toBe(0);
+  });
+
+  it('counts a lesson on the last day of the month and not the next day', () => {
+    // 10 August lessons, then 30.09 and 01.10: only 30.09 is September's.
+    const res = run({ days: [...AUGUST_10, '2026-09-30', '2026-10-01'] });
+    expect(res.lessons).toBe(1);
+    expect(res.value).toBe(37_500);
+  });
+
+  it("reports lessons before the month that the month's own pack paid for", () => {
+    // Bought 02.09 but used for the 31.08 lesson: step 2 reverses the pack
+    // and would leave that August lesson unbilled.
+    const res = run({
+      days: ['2026-08-31', ...SEPTEMBER_5.slice(0, 3)],
+      createdAt: new Date('2026-09-02T06:00:00.000Z'),
+    });
+    expect(res.value).toBe(0);
+    expect(res.earlyLessonsInMonthPacks).toBe(1);
+  });
+
   it('ignores a start day before the month', () => {
     expect(
       run({ days: [...AUGUST_7, ...SEPTEMBER_5], fromDay: '2026-05-10' }).value,
@@ -225,6 +256,12 @@ describe('loadCarriedIn', () => {
         ),
       },
       attendance: { findMany: jest.fn(() => Promise.resolve(attendance)) },
+      // The pack is used up, and so is the billing counter.
+      enrollment: {
+        findMany: jest.fn(() =>
+          Promise.resolve([{ id: 'enr-1', prepaidLessonsRemaining: 0 }]),
+        ),
+      },
     };
 
     const res = await loadCarriedIn(
@@ -237,6 +274,8 @@ describe('loadCarriedIn', () => {
       lessons: 5,
       value: 187_500,
       batches: [{ deductionId: 'ded-aug', lessons: 5, value: 187_500 }],
+      review: null,
+      earlyLessonsInMonthPacks: 0,
     });
   });
 
@@ -244,8 +283,110 @@ describe('loadCarriedIn', () => {
     const db = {
       transaction: { findMany: jest.fn() },
       attendance: { findMany: jest.fn() },
+      enrollment: { findMany: jest.fn() },
     };
     expect((await loadCarriedIn(db as never, [], SEPTEMBER)).size).toBe(0);
     expect(db.transaction.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('lessons released outside the ledger (freeze or cash refund)', () => {
+  // A July pack: 8 lessons taken, the other 4 refunded when the student froze
+  // (refundPrepaidWithOverride zeroes the counter; the pack keeps its
+  // capacity in the ledger). Back in September, the 02.09 lesson opened pack
+  // B — but the coverage engine fills the oldest pack with room, so it files
+  // 02.09-09.09 under the July pack, whose money already went back.
+  const txs: CoverageTx[] = [];
+  const attDates = new Map<string, Date>();
+  const pack = (id: string, at: string) =>
+    txs.push({
+      id,
+      type: TransactionType.LESSON_DEDUCTION,
+      amount: -450_000,
+      enrollmentId: 'enr-1',
+      attendanceId: null,
+      metadata: { lessonsCovered: 12, perLessonCost: 37_500 },
+      createdAt: new Date(at),
+    });
+  const lessonOn = (day: string) => {
+    const attendanceId = `att-${day}`;
+    attDates.set(attendanceId, new Date(`${day}T00:00:00.000Z`));
+    txs.push({
+      id: `con-${day}`,
+      type: TransactionType.LESSON_CONSUMPTION,
+      amount: 0,
+      enrollmentId: 'enr-1',
+      attendanceId,
+      metadata: null,
+      createdAt: new Date(`${day}T10:00:00.000Z`),
+    });
+  };
+  pack('A', '2026-07-01T09:00:00.000Z');
+  [
+    '2026-07-01',
+    '2026-07-03',
+    '2026-07-06',
+    '2026-07-08',
+    '2026-07-10',
+    '2026-07-13',
+    '2026-07-15',
+    '2026-07-17',
+  ].forEach(lessonOn);
+  pack('B', '2026-09-02T09:00:00.000Z');
+  [
+    '2026-09-02',
+    '2026-09-04',
+    '2026-09-07',
+    '2026-09-09',
+    '2026-09-11',
+    '2026-09-14',
+  ].forEach(lessonOn);
+  const coverage = allocateCoverage(txs, attDates);
+  const deductions = new Map([
+    [
+      'A',
+      { createdAt: new Date('2026-07-01T09:00:00.000Z'), amount: -450_000 },
+    ],
+    [
+      'B',
+      { createdAt: new Date('2026-09-02T09:00:00.000Z'), amount: -450_000 },
+    ],
+  ]);
+
+  it('withholds the credit when the ledger room differs from the billing counter', () => {
+    // Billing: pack B holds 12 - 6 = 6 lessons. Coverage: A full, B 10 free.
+    const res = carriedInForEnrollment({
+      enrollmentId: 'enr-1',
+      prepaidLessonsRemaining: 6,
+      coverage,
+      deductions,
+      period: SEPTEMBER,
+    });
+    expect(res).toEqual({
+      lessons: 0,
+      value: 0,
+      batches: [],
+      review: {
+        lessons: 4,
+        value: 150_000,
+        room: 10,
+        prepaidLessonsRemaining: 6,
+      },
+      earlyLessonsInMonthPacks: 0,
+    });
+  });
+
+  it('credits normally when the counter matches the room', () => {
+    // Without a release the two always agree; the same coverage then reads
+    // as 4 September lessons paid by the July pack.
+    const res = carriedInForEnrollment({
+      enrollmentId: 'enr-1',
+      prepaidLessonsRemaining: 10,
+      coverage,
+      deductions,
+      period: SEPTEMBER,
+    });
+    expect(res.value).toBe(150_000);
+    expect(res.review).toBeNull();
   });
 });
