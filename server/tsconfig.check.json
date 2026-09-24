@@ -30,6 +30,8 @@
     "scripts/lib/monthly-migration-apply.spec.ts",
     "scripts/lib/monthly-migration-report.ts",
     "scripts/lib/monthly-migration-report.spec.ts",
+    "scripts/lib/monthly-migration-teacher-report.ts",
+    "scripts/lib/monthly-migration-teacher-report.spec.ts",
     "scripts/lib/prepaid-refund-price.ts",
     "scripts/lib/prepaid-refund-price.spec.ts",
     "scripts/lib/carried-in-lessons.ts",
