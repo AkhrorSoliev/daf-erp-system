@@ -17,6 +17,7 @@ import {
   TEACHER_DEEP_LINK_PREFIX,
   STUDENT_DEEP_LINK_PREFIX,
   STUDENT_GROUP_DEEP_LINK_RE,
+  EMPLOYEE_DEEP_LINK_PREFIX,
   EMPLOYEE_DEEP_LINK_RE,
   UNDATED_EMPLOYEE_DEEP_LINK_RE,
   EMPLOYEE_ROLE_SEPARATOR,
@@ -78,6 +79,13 @@ const ALLOWED_UPDATES = [
  */
 const EXPIRED_EMPLOYEE_LINK_REPLY =
   "Bu havolaning muddati tugagan. Administratordan yangi havola so'rang.";
+
+/**
+ * The answer to an employee link that fails its signature, or one damaged on
+ * the way so that it parses as neither the dated nor the undated format.
+ */
+const INVALID_EMPLOYEE_LINK_REPLY =
+  "Noto'g'ri yoki buzilgan havola. Administrator bilan bog'laning.";
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnModuleDestroy {
@@ -1100,9 +1108,17 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     if (!employeeMatch) {
       // Minted before links carried an issue time: its age cannot be known,
       // so its holder is sent for a new link like any expired one.
-      if (!UNDATED_EMPLOYEE_DEEP_LINK_RE.test(payload)) return false;
-      this.logger.warn(`Undated employee deep-link payload: "${payload}"`);
-      await ctx.reply(EXPIRED_EMPLOYEE_LINK_REPLY);
+      if (UNDATED_EMPLOYEE_DEEP_LINK_RE.test(payload)) {
+        this.logger.warn(`Undated employee deep-link payload: "${payload}"`);
+        await ctx.reply(EXPIRED_EMPLOYEE_LINK_REPLY);
+        return true;
+      }
+      if (!payload.startsWith(EMPLOYEE_DEEP_LINK_PREFIX)) return false;
+      // Damaged on the way: an empty issue time, a missing or non-hex
+      // signature. Falling through would show the plain menu, as if the link
+      // did nothing.
+      this.logger.warn(`Malformed employee deep-link payload: "${payload}"`);
+      await ctx.reply(INVALID_EMPLOYEE_LINK_REPLY);
       return true;
     }
 
@@ -1116,45 +1132,48 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           Number.isInteger(id) &&
           (VALID_ROLE_IDS as readonly number[]).includes(id),
       );
-    const verdict =
-      rawRoleIds.length === 0
-        ? 'invalid'
-        : checkEmployeePayload(
-            branchId,
-            rawRoleIds,
-            employeeMatch[3],
-            employeeMatch[4],
-            new Date(),
-          );
+    // Released on every way out, a throw included. Telegraf saves the session
+    // even when the handler throws, and `/start` ignores a chat whose flag is
+    // set, re-saving it so its 24-hour TTL restarts on every try: a database
+    // error or a missing TELEGRAM_LINK_SECRET would otherwise mute the bot for
+    // this person. The error itself still propagates and is logged.
+    try {
+      const verdict =
+        rawRoleIds.length === 0
+          ? 'invalid'
+          : checkEmployeePayload(
+              branchId,
+              rawRoleIds,
+              employeeMatch[3],
+              employeeMatch[4],
+              new Date(),
+            );
 
-    if (verdict === 'invalid') {
-      ctx.session.processing = false;
-      this.logger.warn(`Invalid employee deep-link payload: "${payload}"`);
-      await ctx.reply(
-        "Noto'g'ri yoki buzilgan havola. Administrator bilan bog'laning.",
-      );
-      return true;
-    }
-    if (verdict === 'expired') {
-      ctx.session.processing = false;
-      this.logger.warn(`Expired employee deep-link payload: "${payload}"`);
-      await ctx.reply(EXPIRED_EMPLOYEE_LINK_REPLY);
-      return true;
-    }
+      if (verdict === 'invalid') {
+        this.logger.warn(`Invalid employee deep-link payload: "${payload}"`);
+        await ctx.reply(INVALID_EMPLOYEE_LINK_REPLY);
+        return true;
+      }
+      if (verdict === 'expired') {
+        this.logger.warn(`Expired employee deep-link payload: "${payload}"`);
+        await ctx.reply(EXPIRED_EMPLOYEE_LINK_REPLY);
+        return true;
+      }
 
-    // Archived or closed branches must not accept new registrations.
-    const branch = await this.prisma.branch.findFirst({
-      where: { id: branchId, deletedAt: null, status: 'ACTIVE' },
-      select: { id: true },
-    });
-    if (!branch) {
+      // Archived or closed branches must not accept new registrations.
+      const branch = await this.prisma.branch.findFirst({
+        where: { id: branchId, deletedAt: null, status: 'ACTIVE' },
+        select: { id: true },
+      });
+      if (!branch) {
+        await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
+        return true;
+      }
+    } finally {
       ctx.session.processing = false;
-      await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
-      return true;
     }
 
     ctx.session.data = { branchId, roleIds: rawRoleIds };
-    ctx.session.processing = false;
     await ctx.scene.enter(SCENES.EMPLOYEE_REGISTRATION);
     return true;
   }
