@@ -280,6 +280,36 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
+      'Id-addressed room and course operations. Each looks the record up by ' +
+      "`companyId` and then checks the caller against the record's OWN branch " +
+      'with `assertCallerInBranch` — after the existence check, so a stale id ' +
+      'still answers 404. They were `companyId`-only, so a director or admin ' +
+      "of one branch could rewrite another branch's course: `price` drives " +
+      'every per-lesson charge of its students, `paymentModel` their billing ' +
+      'rules, and archiving it cancels its groups and drops their enrolments. ' +
+      'Neither update DTO accepts `branchId` (the global ValidationPipe rejects ' +
+      "unknown fields), so the record's current branch is the only one to " +
+      'check. `Course.branchId` is nullable; a course in no branch is in no ' +
+      "branch's catalogue, so only a CEO may touch it. The status-history " +
+      'reads share the guard: they name who changed the status and why. ' +
+      'Production had 10 courses and 13 rooms, none branchless, and every ' +
+      "past edit was a CEO's, so no workflow crossed branches. `POST /rooms` " +
+      'and `POST /courses` name their branch in the body — a different check — ' +
+      'and are not listed here.',
+    routes: [
+      'PATCH /rooms/:id',
+      'PATCH /rooms/:id/status',
+      'DELETE /rooms/:id',
+      'GET /rooms/:id/status-history',
+      'PATCH /courses/:id',
+      'PATCH /courses/:id/status',
+      'DELETE /courses/:id',
+      'GET /courses/:id/status-history',
+    ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
       'The rest of the student and group surface: the profile READS, the ' +
       'enrollment operations, and the roster. The list endpoints were scoped ' +
       'and everything they linked to was not, so a director who typed another ' +
@@ -624,7 +654,6 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
  */
 export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /archive/:entityType/:id',
-  'DELETE /courses/:id',
   'DELETE /enrollment-transfer-reasons/:id',
   'DELETE /group-teacher-change-reasons/:id',
   'DELETE /holidays/:id',
@@ -634,7 +663,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /mock-exam-subjects/:id',
   'DELETE /notifications/devices',
   'DELETE /notifications/push/unsubscribe',
-  'DELETE /rooms/:id',
   'DELETE /student-exit-reasons/:id',
   'DELETE /student-portal/photo',
   'DELETE /telegram-groups/:id',
@@ -645,7 +673,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /branches/:id',
   'GET /company',
   'GET /company/:id',
-  'GET /courses/:id/status-history',
   'GET /enrollment-transfer-reasons',
   'GET /gateways/events',
   'GET /group-teacher-change-reasons',
@@ -676,7 +703,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /reports/financial-trend',
   'GET /reports/income-month-attribution',
   'GET /reports/lead-analytics',
-  'GET /rooms/:id/status-history',
   'GET /rooms/count-by-branch',
   'GET /student-exit-reasons',
   'GET /student-portal/attendance/history',
@@ -689,8 +715,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /telegram/channel-report/list',
   'GET /telegram/channel-report/summary',
   'PATCH /company/:id',
-  'PATCH /courses/:id',
-  'PATCH /courses/:id/status',
   'PATCH /enrollment-transfer-reasons/:id',
   'PATCH /group-teacher-change-reasons/:id',
   'PATCH /holidays/:id',
@@ -703,8 +727,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'PATCH /mock-exams/:examId/subjects/reorder',
   'PATCH /notifications/:id/read',
   'PATCH /notifications/read-all',
-  'PATCH /rooms/:id',
-  'PATCH /rooms/:id/status',
   'PATCH /student-exit-reasons/:id',
   'PATCH /student-portal/name',
   'PATCH /student-portal/password',
@@ -745,4 +767,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 114;
+export const UNREVIEWED_BUDGET = 101;
