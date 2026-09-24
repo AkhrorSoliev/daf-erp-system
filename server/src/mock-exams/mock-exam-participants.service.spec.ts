@@ -34,9 +34,11 @@ describe('MockExamParticipantsService', () => {
       mockExamParticipant: {
         findFirst: jest.fn(),
         findMany: jest.fn(),
+        findUniqueOrThrow: jest.fn(),
         count: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
       },
       student: {
         findFirst: jest.fn().mockResolvedValue(null),
@@ -519,7 +521,8 @@ describe('MockExamParticipantsService', () => {
         feeAmount: 50000,
         exam: { price: 100000, title: 'Goethe B1' },
       });
-      prisma.mockExamParticipant.update.mockResolvedValue({
+      prisma.mockExamParticipant.updateMany.mockResolvedValue({ count: 1 });
+      prisma.mockExamParticipant.findUniqueOrThrow.mockResolvedValue({
         id: 'p1',
         publicId: 10117,
         telegramChatId: '555',
@@ -529,8 +532,9 @@ describe('MockExamParticipantsService', () => {
 
       await service.markPaid('p1', { method: 'CASH' } as any, 1001, 1, null);
 
-      expect(prisma.mockExamParticipant.update).toHaveBeenCalledWith(
+      expect(prisma.mockExamParticipant.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
+          where: { id: 'p1', paid: false, deletedAt: null },
           data: expect.objectContaining({ paid: true }),
         }),
       );
@@ -543,6 +547,27 @@ describe('MockExamParticipantsService', () => {
           feeAmount: 50000,
         }),
       );
+    });
+
+    // Admin naqdni qabul qilayotgan paytda odamning Payme/Click to'lovi o'tib
+    // ketgan bo'lishi mumkin: o'qishda `paid: false`, yozishda esa endi true.
+    // Ilgari `update` shartsiz yozardi — ikkinchi pul (naqd) ham olinardi.
+    it("bir vaqtda onlayn to'lov o'tib ketgan bo'lsa naqdni qabul qilmaydi", async () => {
+      const emit = jest.fn();
+      (service as any).eventEmitter = { emit };
+      prisma.mockExamParticipant.findFirst.mockResolvedValue({
+        id: 'p1',
+        paid: false,
+        feeAmount: 50000,
+        exam: { price: 100000, title: 'Goethe B1' },
+      });
+      prisma.mockExamParticipant.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.markPaid('p1', { method: 'CASH' } as any, 1001, 1, null),
+      ).rejects.toThrow(BadRequestException);
+      expect(emit).not.toHaveBeenCalled();
+      expect(history.recordUpdate).not.toHaveBeenCalled();
     });
 
     it('rejects a free exam (fee resolves to 0)', async () => {
@@ -602,6 +627,53 @@ describe('MockExamParticipantsService', () => {
       const deleteOrder =
         prisma.mockExamParticipant.update.mock.invocationCallOrder[0];
       expect(refundOrder).toBeLessThan(deleteOrder);
+    });
+
+    // To'lagan odamning ro'yxati jim o'chirilardi: pul mock daromadidan
+    // tushib qolar, odam qayta yozilsa undan YANA to'lov so'ralardi. Oynada
+    // esa "ma'lumotlar yo'qotilmaydi" deyilardi.
+    describe("to'lagan ishtirokchi", () => {
+      const paidRow = {
+        id: 'p1',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+        paid: true,
+        feeAmount: 30000,
+        exam: { price: 40000 },
+      };
+
+      it("pul qaytarilgani tasdiqlanmasa o'chirmaydi", async () => {
+        prisma.mockExamParticipant.findFirst.mockResolvedValue(paidRow);
+
+        await expect(service.remove('p1', 1001, 1, null)).rejects.toThrow(
+          BadRequestException,
+        );
+        expect(prisma.mockExamParticipant.update).not.toHaveBeenCalled();
+        expect(billingMock.refundParticipantFee).not.toHaveBeenCalled();
+        expect(history.recordDelete).not.toHaveBeenCalled();
+      });
+
+      it("tasdiqlansa o'chiradi va tarixga to'lov summasini yozadi", async () => {
+        prisma.mockExamParticipant.findFirst.mockResolvedValue(paidRow);
+
+        await service.remove('p1', 1001, 1, null, { refundConfirmed: true });
+
+        expect(prisma.mockExamParticipant.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({ deletedById: 1 }),
+          }),
+        );
+        expect(history.recordDelete).toHaveBeenCalledWith(
+          expect.objectContaining({
+            oldValues: expect.objectContaining({
+              paid: true,
+              feeAmount: 30000,
+              refundConfirmed: true,
+            }),
+          }),
+        );
+      });
     });
 
     it('says nothing about money when the participant paid cash', async () => {
