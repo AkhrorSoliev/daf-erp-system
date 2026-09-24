@@ -161,7 +161,13 @@ describe('operational reads are branch-confined', () => {
       };
       // UsersService takes four collaborators; the fifth was left over from an
       // older signature and only ever compiled because jest does not typecheck.
-      const service = new UsersService(prisma, {} as any, {} as any, {} as any);
+      const service = new UsersService(
+        prisma,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+      );
       await service.findAll({ search: 'Ali' } as any, 1001, NAMANGAN);
       expect(mentionsBranches(captured, NAMANGAN)).toBe(true);
     });

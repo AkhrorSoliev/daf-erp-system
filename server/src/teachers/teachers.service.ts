@@ -21,6 +21,10 @@ import { TeacherQueryDto } from './dto/teacher-query.dto';
 import { ChangeTeacherStatusDto } from './dto/change-teacher-status.dto';
 import { generatePassword } from '../common/utils/password.util';
 import {
+  passwordWrite,
+  recordSessionsEnded,
+} from '../common/auth/session-version';
+import {
   ReportBranchIds,
   userBranchWhere,
 } from '../common/finance/report-branch-scope';
@@ -355,7 +359,7 @@ export class TeachersService {
       ? await bcrypt.hash(dto.password, 10)
       : undefined;
 
-    const updated = await this.prisma.user.update({
+    const { sessionVersion, ...updated } = await this.prisma.user.update({
       where: { id },
       data: {
         ...(dto.firstName !== undefined && { firstName: dto.firstName }),
@@ -364,10 +368,24 @@ export class TeachersService {
         ...(dto.gender !== undefined && { gender: dto.gender }),
         ...(dto.photo !== undefined && { photo: dto.photo }),
         ...(dto.login !== undefined && { login: dto.login }),
-        ...(hashedPassword && { password: hashedPassword }),
+        // A new password ends every session of the teacher (ADR-0029).
+        ...(hashedPassword && passwordWrite(hashedPassword)),
       },
-      select: teacherSelect,
+      // `sessionVersion` is split off before the response is built.
+      select: { ...teacherSelect, sessionVersion: true },
     });
+
+    if (hashedPassword) {
+      await recordSessionsEnded(this.redis, id, sessionVersion);
+      await this.entityHistoryService.recordUpdate({
+        entityType: 'User',
+        entityId: id,
+        oldValues: { parol: '***' },
+        newValues: { parol: "yangi parol o'rnatildi" },
+        changedById: callerId,
+        companyId: user.companyId,
+      });
+    }
 
     return formatTeacher(updated);
   }

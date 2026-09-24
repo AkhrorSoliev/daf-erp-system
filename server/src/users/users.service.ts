@@ -19,6 +19,11 @@ import {
 } from '../common/finance/report-branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { RedisService } from '../redis/redis.service';
+import {
+  passwordWrite,
+  recordSessionsEnded,
+} from '../common/auth/session-version';
 import {
   USER_DEACTIVATED_EVENT,
   UserDeactivatedEvent,
@@ -111,6 +116,7 @@ export class UsersService {
     private uploadService: UploadService,
     private entityHistoryService: EntityHistoryService,
     private events: EventEmitter2,
+    private redis: RedisService,
   ) {}
 
   private async assertRoleAndBranchRules(
@@ -456,6 +462,23 @@ export class UsersService {
     return formatUser(updated);
   }
 
+  /** Journal a password write on the employee record: who did it, and how. */
+  private recordPasswordEvent(
+    userId: number,
+    label: string,
+    changedById: number,
+    companyId: number,
+  ) {
+    return this.entityHistoryService.recordUpdate({
+      entityType: 'User',
+      entityId: userId,
+      oldValues: { parol: '***' },
+      newValues: { parol: label },
+      changedById,
+      companyId,
+    });
+  }
+
   async changePassword(id: number, dto: ChangePasswordDto) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
@@ -472,10 +495,15 @@ export class UsersService {
     }
 
     const hashed = await bcrypt.hash(dto.newPassword, 10);
-    await this.prisma.user.update({
+    // Ends every session of the account, this one included; the controller
+    // hands the caller a fresh pair (ADR-0029).
+    const { sessionVersion } = await this.prisma.user.update({
       where: { id },
-      data: { password: hashed },
+      data: passwordWrite(hashed),
+      select: { sessionVersion: true },
     });
+    await recordSessionsEnded(this.redis, id, sessionVersion);
+    await this.recordPasswordEvent(id, "o'zgartirildi", id, user.companyId);
 
     return { message: "Parol muvaffaqiyatli o'zgartirildi" };
   }
@@ -703,7 +731,10 @@ export class UsersService {
       updateData.isActive = dto.status === UserStatus.ACTIVE;
     }
     if (dto.password) {
-      updateData.password = await bcrypt.hash(dto.password, 10);
+      Object.assign(
+        updateData,
+        passwordWrite(await bcrypt.hash(dto.password, 10)),
+      );
     }
 
     // Stripping an employee's last role IS removing their system access.
@@ -716,33 +747,37 @@ export class UsersService {
     // instead: a bcrypt hash and a login that grant nothing are exactly what
     // "no role" is supposed to mean.
     if (nextRoleIds && nextRoleIds.length === 0) {
-      updateData.password = null;
+      Object.assign(updateData, passwordWrite(null));
       updateData.login = null;
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      // Update roles if provided
-      if (dto.roleIds) {
-        await tx.userRole.deleteMany({ where: { userId: id } });
-        await tx.userRole.createMany({
-          data: dto.roleIds.map((roleId) => ({ userId: id, roleId })),
-        });
-      }
+    const { sessionVersion, ...updated } = await this.prisma.$transaction(
+      async (tx) => {
+        // Update roles if provided
+        if (dto.roleIds) {
+          await tx.userRole.deleteMany({ where: { userId: id } });
+          await tx.userRole.createMany({
+            data: dto.roleIds.map((roleId) => ({ userId: id, roleId })),
+          });
+        }
 
-      // Update branches if provided
-      if (dto.branchIds) {
-        await tx.userBranch.deleteMany({ where: { userId: id } });
-        await tx.userBranch.createMany({
-          data: dto.branchIds.map((branchId) => ({ userId: id, branchId })),
-        });
-      }
+        // Update branches if provided
+        if (dto.branchIds) {
+          await tx.userBranch.deleteMany({ where: { userId: id } });
+          await tx.userBranch.createMany({
+            data: dto.branchIds.map((branchId) => ({ userId: id, branchId })),
+          });
+        }
 
-      return tx.user.update({
-        where: { id },
-        data: updateData,
-        select: userSelect,
-      });
-    });
+        return tx.user.update({
+          where: { id },
+          data: updateData,
+          // `sessionVersion` rides along only so a password write can be
+          // mirrored below; it is split off before anything is returned.
+          select: { ...userSelect, sessionVersion: true },
+        });
+      },
+    );
 
     await this.entityHistoryService.recordUpdate({
       entityType: 'User',
@@ -752,6 +787,22 @@ export class UsersService {
       changedById,
       companyId: user.companyId,
     });
+
+    if ('password' in updateData) {
+      await recordSessionsEnded(this.redis, id, sessionVersion);
+      // Journal only a real change: stripping the roles of an account that
+      // never had a password leaves nothing to report.
+      if (updateData.password !== null || user.password) {
+        await this.recordPasswordEvent(
+          id,
+          updateData.password === null
+            ? "rollar olib tashlangani uchun o'chirildi"
+            : "yangi parol o'rnatildi",
+          changedById,
+          user.companyId,
+        );
+      }
+    }
 
     // Deactivated / terminated → stop their fixed-monthly payroll (closes the
     // FIXED_MONTHLY config + version; the final partial month still prorates).
