@@ -22,11 +22,9 @@ export interface AutoPauseRunResult {
 /**
  * Ketma-ket dars qoldirgan o'quvchini avtomatik muzlatadi (pauza).
  *
- * NEGA ERTALAB, KECHQURUN EMAS: prodda eng erta dars 08:00, eng kech
- * tugash 20:00. Ertalabki yurishda kechagi davomat yakunlangan —
- * davomatning 5,6% i keyingi kunlarda tuzatiladi va kechqurungi yurish
- * ularni o'tkazib yuborardi. Pauza birinchi darsdan oldin ro'yxatga
- * tushadi, xabar esa yarim tunda emas, odam o'qiydigan vaqtda boradi.
+ * PAUZA NEGA ERTALAB: prodda eng erta dars 08:00, eng kech tugash 20:00.
+ * Pauza birinchi darsdan oldin ro'yxatga tushadi, xabar esa yarim tunda
+ * emas, odam o'qiydigan vaqtda boradi.
  *
  * THE MESSAGES ALSO RUN AT 20:30 (`eveningTick`): stages 1 and 2 reach the
  * student on the lesson's own day, after the latest lesson ends at 20:00.
