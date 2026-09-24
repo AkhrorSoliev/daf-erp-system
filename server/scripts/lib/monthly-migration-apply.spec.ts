@@ -921,3 +921,32 @@ describe('re-pricing reads lessons by Tashkent calendar days', () => {
     );
   });
 });
+
+describe('reversal counter-rows are never packs', () => {
+  it('neither funds the prepaid nor gets reversed by step 2', async () => {
+    // reverseTransaction writes its counter-row with the original's type,
+    // enrollment and reversedAt = null. Reversing it again throws ("already
+    // reversed"), which failed the student and blocked the course flip.
+    const tx = makeTx({
+      student: {
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValueOnce({ balance: -120_000 })
+          .mockResolvedValueOnce({ balance: -382_500 }), // -120 000 + 187 500 - 450 000
+      },
+    });
+
+    await applyMigrationForStudent(
+      studentParams(tx, makeDeps(), [makeEnrollment()]),
+    );
+
+    const notACounterRow = expect.objectContaining({
+      where: expect.objectContaining({
+        reversedAt: null,
+        reversedTransactionId: null,
+      }),
+    });
+    expect(tx.transaction.findFirst).toHaveBeenCalledWith(notACounterRow);
+    expect(tx.transaction.findMany).toHaveBeenCalledWith(notACounterRow);
+  });
+});

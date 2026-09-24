@@ -933,6 +933,9 @@ async function main(prisma: PrismaClient) {
           where: {
             type: TransactionType.LESSON_DEDUCTION,
             reversedAt: null,
+            // Never a counter-row — same rule as --apply's funding batch and
+            // EnrollmentBillingService.prepaidRefundValue.
+            reversedTransactionId: null,
             enrollmentId: { in: enrollmentsWithPrepaid.map((e) => e.id) },
           },
           orderBy: { createdAt: 'asc' },
@@ -992,6 +995,8 @@ async function main(prisma: PrismaClient) {
           where: {
             type: TransactionType.LESSON_DEDUCTION,
             reversedAt: null,
+            // Same set --apply reverses in step 2: no counter-rows.
+            reversedTransactionId: null,
             createdAt: { gte: periodGte, lt: periodLt },
             enrollmentId: { in: chargeableEnrollmentIds },
           },

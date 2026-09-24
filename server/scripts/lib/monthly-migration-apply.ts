@@ -385,6 +385,9 @@ export async function applyMigrationForStudent(
       where: {
         type: TransactionType.LESSON_DEDUCTION,
         reversedAt: null,
+        // A reversal's counter-row keeps the original's type and has
+        // reversedAt = null; it is never a batch.
+        reversedTransactionId: null,
         enrollmentId: enr.id,
       },
       orderBy: { createdAt: 'desc' },
@@ -448,6 +451,9 @@ export async function applyMigrationForStudent(
         where: {
           type: TransactionType.LESSON_DEDUCTION,
           reversedAt: null,
+          // Skip counter-rows: reversing one again throws ("already
+          // reversed"), and the original and its reversal already net to 0.
+          reversedTransactionId: null,
           enrollmentId: enr.id,
           createdAt: { gte: params.periodGte, lt: params.periodLt },
         },
