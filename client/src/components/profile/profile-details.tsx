@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Building2, KeyRound, MapPin, Phone } from "lucide-react";
+import { Building2, KeyRound, LogOut, MapPin, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -17,9 +17,14 @@ import { formatPhone } from "@/lib/format-utils";
 interface ProfileDetailsProps {
   user: AuthUser;
   onChangePassword: () => void;
+  onLogoutOthers: () => void;
 }
 
-export function ProfileDetails({ user, onChangePassword }: ProfileDetailsProps) {
+export function ProfileDetails({
+  user,
+  onChangePassword,
+  onLogoutOthers,
+}: ProfileDetailsProps) {
   const isCeo = user.roles.some((r) => r.name === "CEO");
   const { branches, fetchBranches } = useBranchSwitcher();
 
@@ -92,16 +97,29 @@ export function ProfileDetails({ user, onChangePassword }: ProfileDetailsProps) 
 
       <Separator />
 
-      {/* Parol o'zgartirish */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button variant="outline" size="sm" onClick={onChangePassword}>
-            <KeyRound className="mr-1.5 size-4" />
-            Parolni o&apos;zgartirish
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Joriy parolni yangilash</TooltipContent>
-      </Tooltip>
+      {/* Parol va kirishlar */}
+      <div className="flex flex-wrap gap-2">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="outline" size="sm" onClick={onChangePassword}>
+              <KeyRound className="mr-1.5 size-4" />
+              Parolni o&apos;zgartirish
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Joriy parolni yangilash</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="outline" size="sm" onClick={onLogoutOthers}>
+              <LogOut className="mr-1.5 size-4" />
+              Boshqa qurilmalardan chiqish
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            Boshqa qurilmalardagi kirishlarni tugatish
+          </TooltipContent>
+        </Tooltip>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { RequestMethod } from '@nestjs/common';
 import { DafPortalController } from './daf-portal.controller';
-import { RolesGuard } from '../common/guards';
+import { RolesGuard, StudentCardGuard } from '../common/guards';
 import { CheckAntwortDto } from './dto/uebung.dto';
 import { UebungService } from './uebung/uebung.service';
 
@@ -95,6 +95,17 @@ describe('DafPortalController — ruxsat', () => {
       | unknown[]
       | undefined;
     expect(guards).toContain(RolesGuard);
+  });
+
+  // A token without studentId is refused before any handler runs. It must
+  // come after RolesGuard so a staff token still gets 403, not 404. The
+  // HTTP-level proof is in daf-portal.student-card.e2e.spec.ts.
+  it('StudentCardGuard runs after RolesGuard', () => {
+    const guards = Reflect.getMetadata(
+      '__guards__',
+      DafPortalController,
+    ) as unknown[];
+    expect(guards).toEqual([RolesGuard, StudentCardGuard]);
   });
 
   // Xodim rollari bu yerga tushmaydi: o'quv bo'limi o'quvchiniki, va

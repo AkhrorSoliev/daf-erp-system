@@ -45,8 +45,16 @@ describe('MockExamParticipantsService.convertToStudent — lid kelib chiqishi', 
     };
 
     tx = {
+      // Sign-in account (convert-account.spec.ts covers it): phone free,
+      // login free.
+      user: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 30001 }),
+      },
       student: {
         findUnique: jest.fn().mockResolvedValue(null),
+        findFirst: jest.fn().mockResolvedValue(null),
+        update: jest.fn().mockResolvedValue({}),
         create: jest.fn(async () => {
           order.push('student');
           return {

@@ -4,8 +4,10 @@ import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { StudentPortalController } from './student-portal.controller';
 import { StudentPortalService } from './student-portal.service';
+import { RedisService } from '../redis/redis.service';
 import { QrAttendanceService } from '../attendance/qr-attendance.service';
 import { GatewayConfigService } from '../payment-gateways/gateway-config.service';
+import { AuthService } from '../auth/auth.service';
 import { RolesGuard } from '../common/guards';
 import { ROLES_KEY } from '../common/decorators';
 
@@ -29,17 +31,28 @@ describe('StudentPortalController — role guards', () => {
     scanQr: jest.fn().mockResolvedValue({}),
   };
 
+  const mockAuth = {
+    issueSession: jest.fn().mockResolvedValue({
+      accessToken: 'a',
+      refreshToken: 'r',
+      user: { id: 99001 },
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [StudentPortalController],
       providers: [
         { provide: StudentPortalService, useValue: mockService },
+        // OwnPasswordAttemptGuard (ADR-0031) is built with the controller.
+        { provide: RedisService, useValue: {} },
         { provide: QrAttendanceService, useValue: mockQrService },
         { provide: ConfigService, useValue: { get: jest.fn() } },
         {
           provide: GatewayConfigService,
           useValue: { getConfig: jest.fn().mockResolvedValue(null) },
         },
+        { provide: AuthService, useValue: mockAuth },
       ],
     }).compile();
 
@@ -243,6 +256,27 @@ describe('StudentPortalController — role guards', () => {
       const ctx = mockExecutionContext(controller.changePassword, ['Teacher']);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
+
+    it('hands the student a fresh session AFTER the change', async () => {
+      mockService.changePassword.mockResolvedValue({
+        message: "Parol muvaffaqiyatli o'zgartirildi",
+        sessionVersion: 4,
+      });
+
+      const res = await controller.changePassword(99001, 10001, {
+        oldPassword: 'eskiParol1',
+        newPassword: 'yangiParol1',
+      });
+
+      expect(mockAuth.issueSession).toHaveBeenCalledWith(99001, 4);
+      expect(res).not.toHaveProperty('sessionVersion');
+      const last = (fn: jest.Mock) =>
+        fn.mock.invocationCallOrder[fn.mock.invocationCallOrder.length - 1];
+      expect(last(mockService.changePassword)).toBeLessThan(
+        last(mockAuth.issueSession),
+      );
+      expect(res).toMatchObject({ accessToken: 'a', refreshToken: 'r' });
+    });
   });
 
   describe('updatePhoto()', () => {
@@ -330,6 +364,9 @@ describe('StudentPortalController — role guards', () => {
           { provide: QrAttendanceService, useValue: mockQrService },
           { provide: ConfigService, useValue: { get: jest.fn() } },
           { provide: GatewayConfigService, useValue: gatewayConfig },
+          // Built with the controller for the password routes; unused here.
+          { provide: RedisService, useValue: {} },
+          { provide: AuthService, useValue: {} },
         ],
       }).compile();
       const ctrl = mod.get(StudentPortalController);

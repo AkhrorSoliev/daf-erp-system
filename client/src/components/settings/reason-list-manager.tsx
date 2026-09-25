@@ -382,7 +382,7 @@ export function ReasonListManager({
                 if (confirmDeleteId) deleteMutation.mutate(confirmDeleteId);
               }}
               disabled={deleteMutation.isPending}
-              className="bg-red-600 hover:bg-red-700"
+              variant="destructive"
             >
               {deleteMutation.isPending ? (
                 <Loader2 className="size-4 animate-spin" />

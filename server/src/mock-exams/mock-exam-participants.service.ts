@@ -14,6 +14,10 @@ import {
 } from '../common/finance/report-branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
 import {
+  openStudentAccount,
+  signInAccountChange,
+} from '../common/auth/student-account';
+import {
   SELF_SIGNUP_SOURCE,
   StudentLeadOriginService,
 } from '../common/student-origin';
@@ -29,6 +33,10 @@ import { MarkMockPaidDto } from './dto/mark-mock-paid.dto';
 import { resolveParticipantFee } from './mock-exam-pricing.util';
 
 const DEFAULT_PAGE_SIZE = 10;
+
+// Conversion writes the card, its lead and its sign-in account (a bcrypt hash
+// plus three queries) in one transaction; the same limits as admin create.
+const CONVERT_TX_LIMITS = { maxWait: 10000, timeout: 15000 };
 
 /**
  * Participants of a mock exam. The primary registration path is the
@@ -383,7 +391,7 @@ export class MockExamParticipantsService {
       );
     }
 
-    const student = await this.prisma.$transaction(async (tx) => {
+    const { student, login } = await this.prisma.$transaction(async (tx) => {
       // 1. Defensive double-check: the publicId mustn't collide with any
       //    real Student row. Shouldn't happen by construction (the
       //    publicId came from Student_id_seq), but if it does, fail
@@ -395,6 +403,20 @@ export class MockExamParticipantsService {
       if (collision) {
         throw new BadRequestException(
           `O'quvchi #${participant.publicId} allaqachon mavjud — administrator bilan bog'laning`,
+        );
+      }
+
+      // The phone is the student's sign-in identifier, so it may sit on one
+      // live card only — the same rule as admin create. The participant was
+      // matched by phone when it registered, but a card with this phone can
+      // appear later (Telegram registration, admin create).
+      const phoneTaken = await tx.student.findFirst({
+        where: { phone: participant.phone, deletedAt: null },
+        select: { id: true },
+      });
+      if (phoneTaken) {
+        throw new BadRequestException(
+          `Bu telefon raqam allaqachon tizimda mavjud (o'quvchi #${phoneTaken.id})`,
         );
       }
 
@@ -433,7 +455,20 @@ export class MockExamParticipantsService {
         SELF_SIGNUP_SOURCE.MOCK_EXAM,
       );
 
-      // 4. Link the participant to the new student.
+      // 4. Open the student's sign-in account, as every other way a card is
+      //    born does. Same transaction: a card is never left without one.
+      //    The password is not returned (CEO decision, 2026-09-24): the
+      //    student gets their own through the bot's "Parolni tiklash" or
+      //    signs in with Telegram, exactly as after admin create.
+      const account = await openStudentAccount(tx, {
+        id: created.id,
+        phone: created.phone,
+        firstName: created.firstName,
+        lastName: created.lastName,
+        companyId,
+      });
+
+      // 5. Link the participant to the new student.
       await tx.mockExamParticipant.update({
         where: { id: participant.id },
         data: {
@@ -443,8 +478,8 @@ export class MockExamParticipantsService {
         },
       });
 
-      return created;
-    });
+      return { student: created, login: account.login };
+    }, CONVERT_TX_LIMITS);
 
     await this.entityHistoryService.recordCreate({
       entityType: 'Student',
@@ -455,6 +490,8 @@ export class MockExamParticipantsService {
         phone: student.phone,
         source: 'MOCK_PARTICIPANT_CONVERSION',
         mockParticipantId: participant.id,
+        ...signInAccountChange("Yo'q", 'Ochiq').newValues,
+        login,
       },
       changedById: userId,
       companyId,

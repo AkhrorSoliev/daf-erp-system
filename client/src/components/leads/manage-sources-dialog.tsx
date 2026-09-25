@@ -261,7 +261,7 @@ export function ManageSourcesDialog({ open, onClose }: ManageSourcesDialogProps)
               type="button"
               onClick={handleDelete}
               disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              variant="destructive"
             >
               {deleting && <Loader2 className="mr-2 size-4 animate-spin" />}
               O&apos;chirish

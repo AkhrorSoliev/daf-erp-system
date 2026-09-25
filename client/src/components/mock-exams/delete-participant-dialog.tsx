@@ -134,7 +134,7 @@ export function DeleteParticipantDialog({
           <AlertDialogAction
             onClick={handleDelete}
             disabled={busy || !canConfirm}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            variant="destructive"
           >
             {busy && <Loader2 className="mr-2 size-4 animate-spin" />}
             O&apos;chirish

@@ -6,6 +6,7 @@ import { StudentsWriteService } from './students-write.service';
 import { StudentLeadOriginService } from '../common/student-origin/student-lead-origin.service';
 import { StudentsStatusService } from './students-status.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
 import { UploadService } from '../upload/upload.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
@@ -77,6 +78,7 @@ describe('StudentsService — status methods', () => {
       },
       user: {
         create: jest.fn().mockResolvedValue({ id: 10001 }),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         // Read by the caller-branch guard.
         findFirst: jest.fn().mockResolvedValue({
           mainBranch: null,
@@ -119,6 +121,9 @@ describe('StudentsService — status methods', () => {
         findFirst: jest.fn().mockResolvedValue(null),
         count: jest.fn().mockResolvedValue(0),
       },
+      // `delete` archives the card and its account in one transaction;
+      // the callback runs against this same mock.
+      $transaction: jest.fn((fn: (tx: any) => unknown) => fn(prisma)),
     };
 
     statusHistoryService = {
@@ -135,6 +140,7 @@ describe('StudentsService — status methods', () => {
         StudentsService,
         StudentsReadService,
         StudentsWriteService,
+        { provide: RedisService, useValue: { set: jest.fn() } },
         StudentsStatusService,
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },

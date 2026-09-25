@@ -4,6 +4,13 @@ Manba: `docs/tolov-tizimi-savollari.pdf` (26 savol).
 Javoblar suhbatda og'zaki olindi, sana: **2026-09-21**.
 Holat: **26 / 26 — HAMMASI JAVOB BERILDI**.
 
+> **24.09.2026 — yangi shartnoma ustuvor.** Bu javoblar yangi shartnomaga
+> ([shartnoma-2026.docx](shartnoma-2026.docx)) moslashtirildi: 8 tasi
+> o'zgardi, 3 tasiga shart qo'shildi (13, 17, 25), 14 tasi qoldi, 12 talik
+> (23) keyin alohida ko'riladi. Zid kelgan
+> joyda [2026-09-24-shartnoma-tolov-qoidalari-design.md](../superpowers/specs/2026-09-24-shartnoma-tolov-qoidalari-design.md)
+> amal qiladi (uning ilovasida har bir javobning holati bor).
+
 ## Javob berilganlar
 
 | # | Savol | Javob |

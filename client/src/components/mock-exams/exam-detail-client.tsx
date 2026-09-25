@@ -389,7 +389,7 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleteBusy}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              variant="destructive"
             >
               {deleteBusy && <Loader2 className="mr-2 size-4 animate-spin" />}
               O&apos;chirish
@@ -424,11 +424,7 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
                 setPendingTransition(null);
               }}
               disabled={statusBusy}
-              className={
-                pendingTransition?.info.destructive
-                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  : undefined
-              }
+              variant={pendingTransition?.info.destructive ? "destructive" : "default"}
             >
               {statusBusy && <Loader2 className="mr-2 size-4 animate-spin" />}
               Tasdiqlash

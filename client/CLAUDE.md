@@ -125,6 +125,7 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - `src/middleware.ts` redirects unauthenticated users to `/login`
 - Auth state managed by Zustand store in `src/hooks/use-auth.ts`
 - `AuthProvider` in `src/components/providers/auth-provider.tsx` hydrates state from cookies on mount
+- **Session-ending actions (ADR-0030).** `PATCH /users/password`, `PATCH /student-portal/password` and `POST /users/logout-others` end EVERY session of the account, this device's included, and return a fresh pair. Store it with `freshSessionFrom(data)` + `setAuth(...)` (`src/lib/fresh-session.ts`), or the next request signs the user out. `useLogoutOthers()` (`src/hooks/use-logout-others.ts`) does this for the "Boshqa qurilmalardan chiqish" action on the staff profile and on student portal Settings. Both open the same confirmation, `src/components/shared/logout-others-dialog.tsx` — the student portal passes `contentClassName="lumio"`, like its own sign-out dialog. Do not fork a second, student-only copy.
 
 ## Architecture Rules
 
@@ -284,7 +285,8 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 
 - **Never use the native `confirm()` browser API** for delete/destructive confirmations. It's unstyled, blocks the JS thread, can't render formatted Uzbek warnings or HTML, and looks completely out of place against the shadcn UI.
 - Use the shadcn `<AlertDialog>` component (`src/components/ui/alert-dialog.tsx`) for every destructive confirmation: row delete from a table, archive, status reset, batch delete, etc.
-- Standard shape: `<AlertDialogTitle>` (the question), `<AlertDialogDescription>` (the consequence — what data is affected, what cascades, what cannot be undone), `<AlertDialogCancel>Bekor qilish</AlertDialogCancel>`, and `<AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">O'chirish</AlertDialogAction>`.
+- Standard shape: `<AlertDialogTitle>` (the question), `<AlertDialogDescription>` (the consequence — what data is affected, what cascades, what cannot be undone), `<AlertDialogCancel>Bekor qilish</AlertDialogCancel>`, and `<AlertDialogAction variant="destructive">O'chirish</AlertDialogAction>` (red text on a light red background). A confirm button rendered as a plain `<Button>` in the footer takes the same `variant="destructive"`.
+- **Colour the confirm button with the `variant` prop, never with `bg-*` / `text-*` classes.** From March to September 2026 this rule prescribed `className="bg-destructive text-destructive-foreground hover:bg-destructive/90"`, and every destructive confirm button rendered blue: `AlertDialogAction` renders through `Button asChild`, and it handed `className` to the child, where the Slot only concatenates strings, so `bg-primary` stayed next to `bg-destructive` and won by stylesheet order. The component now passes `className` to `Button` (tailwind-merge), but the variant is still the rule. `--destructive-foreground` does not exist in `globals.css`, so `text-destructive-foreground` generates no CSS at all; `src/components/ui/alert-dialog.test.ts` fails if any source file uses it.
 - For a list/table with multiple destructive actions sharing the same look-and-feel, hold a single `useState<{ title, description, onConfirm } | null>` and render one `<AlertDialog>` controlled by that state — each row's handler just calls `setConfirmDelete({ ... })`. Avoids one AlertDialog per row.
 - Reference implementations: `src/components/teachers/teacher-profile-client.tsx` (single-action archive), `src/components/groups/lesson-changes-tab.tsx` (shared confirmDelete state across three different delete flows).
 
@@ -640,6 +642,15 @@ Two things react to a branch switch: `BranchScopedMain` remounts the page conten
 - Once resolved, `hydrateFor` keeps the tab's own selection while it is still allowed (it re-runs on every token refresh), and `persist` compares against the tab's own selection rather than the shared `localStorage` key.
 - Known limit: all tabs still share one `branchId` key, so a switch in one tab changes the header of another tab's later requests.
 
+### Student Registration Links Follow the Bot's Branch Rule
+
+The bot's `/start` accepts a `student_<branch>` or `student_<branch>_group_<group>` link only for a branch whose `status` is ACTIVE (server/CLAUDE.md, "Registration deep links"). The students page "Havola olish" button and the group card's QR dialog and copy button therefore offer nothing for any other branch: the button is disabled, or the dialog shows the reason instead of a QR, with `BRANCH_CLOSED_TO_REGISTRATION` as the explanation.
+
+- The rule is `branchClosedToRegistration(status)` in `lib/telegram-link.ts`. It checks `status`, not `isActive`: the bot reads `status`, and the settings form's "Faol/Nofaol" switch writes only `isActive`.
+- Read the status with `useBranchStatus(branchId)` (`hooks/use-branch-switcher.ts`), which looks the branch up by id in the switcher's `branches`. Never read `selectedBranch.status`: a refetch or re-hydrate replaces the list but keeps the old selected object. The group card passes `group.branchId`, not the header selection.
+- For a CEO the list comes from `GET /branches`; for everyone else from the sign-in payload's `branches`, which carries `status` since the server's `SESSION_BRANCHES` select. A non-CEO therefore sees a status change at their next token refresh (at most an hour).
+- **Unknown is not closed.** A branch missing from the list, a list not loaded yet, or an older cookie without `status` all keep the link. Blocking on unknown would take every link away until the next refresh, and the bot still decides.
+
 ### Student Filters
 
 - **Single search field** for name, phone, and ID — placeholder: "Ism, telefon yoki ID bo'yicha..."
@@ -951,6 +962,21 @@ every list renders; the roles are only access.
   would silently re-break "demote an administrator to a role-less cleaner"
   the next time someone left stale form state around. The field-clearing is
   what keeps the visible form honest in the meantime. Keep both.
+- **Only grantable roles are offered (ADR-0026).** `roleFieldFor`
+  (`src/lib/role-grant-ceiling.ts`) decides the "Tizim huquqi" field, and
+  both variants live in `employee-roles-field.tsx`. `pick` renders
+  `EmployeeRolePicker` with only the roles the signed-in user may grant.
+  `read-only` renders `EmployeeRolesReadOnly` when the employee already holds
+  a role outside that ceiling, a non-CEO's own record included; the save then
+  sends the loaded `roleIds` back unchanged, because the backend accepts an
+  unchanged set and refuses any change to such an employee's roles. `hidden`
+  is a caller who may grant nothing.
+- The ceiling map is shared with `telegram-link-dialog.tsx`; do not write
+  another copy. `role-grant-ceiling.test.ts` compares it with the server's
+  `GRANTABLE_ROLE_IDS` and fails on a second name-keyed copy under `src/`. It
+  is keyed by role NAME on purpose, the one exception to "check roles by ID"
+  above: the server reads role names too, so a renamed role fails closed on
+  both sides alike.
 - Password is required on create **only when a role is given**.
 - Branch stays required for everyone except a CEO, role-less employees
   included: a branch-less employee appears in no branch list and on no payroll
@@ -961,6 +987,11 @@ every list renders; the roles are only access.
   `user.roles` directly for a "Lavozim" column; a cleaner has none.
 - Editing an existing employee pre-fills Lavozim from their role label, which
   is how the field gets backfilled without a script.
+
+### Your own phone, login and password (ADR-0031)
+
+- The profile drawer (`components/profile/edit-profile-drawer.tsx`) sends a changed phone to `PATCH /users/phone` together with the current password — the "Joriy parol" field appears only while the phone differs — and name/photo to `PATCH /users/profile`, which refuses a phone. The split lives in `profile-save-plan.ts` (unit-tested), not in the JSX.
+- The employee form locks Telefon, Login and Parol when you open your OWN record and links to Profil (`lib/own-sign-in-keys.ts`); the backend refuses those changes there with 403 anyway.
 
 ### Employee & Teacher Status (Faollik holati)
 

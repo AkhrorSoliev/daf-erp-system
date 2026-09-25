@@ -1,6 +1,7 @@
 import {
   IsString,
   IsOptional,
+  ValidateIf,
   IsEnum,
   Matches,
   MinLength,
@@ -19,7 +20,9 @@ export class UpdateTeacherDto {
   @MinLength(2)
   lastName?: string;
 
-  @IsOptional()
+  // Absent = unchanged. Not `@IsOptional()`: that lets `null` through, and
+  // a null phone would reach planPhoneChange (ADR-0031).
+  @ValidateIf((_, value) => value !== undefined)
   @IsString()
   @Matches(/^\d{9}$/, {
     message: "Telefon raqam 9 ta raqamdan iborat bo'lishi kerak",
