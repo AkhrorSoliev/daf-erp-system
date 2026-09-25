@@ -33,10 +33,14 @@ export interface DashboardPeople {
   newThisMonth: number;
   /** Departures confirmed this month (ADR-0035). */
   leftThisMonth: number;
-  /** Stopped this month, not back yet, grace period still running. */
-  leftPending: number;
+  /**
+   * Stopped this month, not back yet, grace period still running. This and
+   * `leftGraceDays` are optional here only: an API older than ADR-0035 does
+   * not send them.
+   */
+  leftPending?: number;
   /** Days each kind of stop waits for a return (ADR-0035). */
-  leftGraceDays: { LEFT_GROUP: number; FROZEN: number };
+  leftGraceDays?: { LEFT_GROUP: number; FROZEN: number };
   activeGroups: number;
   /** Shu oyning o'rtacha davomati, 0–100. */
   attendancePct: number;

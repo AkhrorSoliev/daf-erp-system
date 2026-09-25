@@ -24,8 +24,11 @@ export interface DepartedStudentsSummary {
   activeAtStart: number;
   /** Stopped in the range, not back yet, grace period still running. */
   pendingCount: number;
-  /** Days each kind of stop waits for a return (ADR-0035). */
-  graceDays: { LEFT_GROUP: number; FROZEN: number };
+  /**
+   * Days each kind of stop waits for a return (ADR-0035). An API older than
+   * ADR-0035 does not send it.
+   */
+  graceDays?: { LEFT_GROUP: number; FROZEN: number };
   lostRevenue: number;
   totalDebt: number;
   debtorCount: number;
@@ -98,7 +101,9 @@ function formatMonths(n: number): string {
 export function departedTooltip({
   graceDays,
   pendingCount,
-}: Pick<DepartedStudentsSummary, "graceDays" | "pendingCount">): string {
+}: Required<
+  Pick<DepartedStudentsSummary, "graceDays" | "pendingCount">
+>): string {
   return (
     "Tanlangan davrda ketgan o'quvchilar, har biri bir marta.\n" +
     "Chetlatilgan kuni sanaladi. Guruhdan chiqqan o'quvchi " +
@@ -125,6 +130,14 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
     );
   }
 
+  // Without the grace periods only the first sentence of the tooltip holds.
+  const departedHint = data.graceDays
+    ? departedTooltip({
+        graceDays: data.graceDays,
+        pendingCount: data.pendingCount,
+      })
+    : "Tanlangan davrda ketgan o'quvchilar, har biri bir marta.";
+
   const churnTooltip =
     "Ketish koeffitsienti = Davrda ketganlar ÷ Davr boshida guruhda bo'lganlar × 100.\n" +
     `Misol: ${data.departedCount} ÷ ${data.activeAtStart} → ${data.churnRate.toFixed(1)}%.`;
@@ -146,7 +159,7 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
         icon={UserMinus}
         label="Davrda ketganlar"
         value={data.departedCount.toLocaleString("uz-UZ")}
-        tooltip={departedTooltip(data)}
+        tooltip={departedHint}
       />
       <KpiCard
         icon={TrendingDown}

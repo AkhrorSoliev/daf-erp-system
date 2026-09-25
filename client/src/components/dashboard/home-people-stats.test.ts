@@ -46,4 +46,17 @@ describe("HomePeopleStats hint", () => {
       "Shu oy: +12 yangi, −5 ketgan.",
     );
   });
+
+  // The API deployed before ADR-0035 sends neither field.
+  it("leaves the pending sentence out instead of failing on an older summary", () => {
+    const older: DashboardPeople = { ...people };
+    delete older.leftPending;
+    delete older.leftGraceDays;
+
+    let title = "";
+    expect(() => {
+      title = hintTitle(older);
+    }).not.toThrow();
+    expect(title).toBe("Shu oy: +12 yangi, −5 ketgan.");
+  });
 });

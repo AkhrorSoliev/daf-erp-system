@@ -55,7 +55,7 @@ export function HomePeopleStats({ people }: { people: DashboardPeople }) {
         hint={`+${people.newThisMonth} / −${people.leftThisMonth}`}
         hintTitle={
           `Shu oy: +${people.newThisMonth} yangi, −${people.leftThisMonth} ketgan.` +
-          (people.leftPending > 0
+          ((people.leftPending ?? 0) > 0 && people.leftGraceDays
             ? ` Yana ${people.leftPending} nafari qaytmasa qo'shiladi (guruhdan chiqqan ${people.leftGraceDays.LEFT_GROUP} kun, muzlatilgan ${people.leftGraceDays.FROZEN} kun kutiladi).`
             : "")
         }
