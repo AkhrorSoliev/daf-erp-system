@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Prisma } from '@prisma/client';
+import { MockExamStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { EntityHistoryService } from '../common/entity-history';
 
 export type GatewayProvider = 'CLICK' | 'PAYME';
 
@@ -12,6 +13,19 @@ export const GATEWAY_STATE = {
   CANCELLED: -1,
   REFUNDED: -2,
 } as const;
+
+/**
+ * Onlayn to'lov faqat shu holatlardagi imtihonga qabul qilinadi. O'chirilgan
+ * yoki natijasi e'lon qilingan (arxivlangan) imtihonning to'lanmagan ro'yxati
+ * abadiy to'lov manzili bo'lib qolardi: chatdagi eski tugma ishlar, DaF
+ * o'quvchisining darsga qilgan aynan shu summadagi to'lovi esa o'sha eski
+ * mockka ketardi. E'londan keyin qarz bo'lsa — naqd, admin orqali.
+ */
+export const PAYABLE_EXAM_STATUSES: MockExamStatus[] = [
+  MockExamStatus.REGISTRATION_OPEN,
+  MockExamStatus.REGISTRATION_CLOSED,
+  MockExamStatus.GRADING,
+];
 
 interface ResolvedMockTarget {
   participantId: string;
@@ -38,6 +52,7 @@ export class MockExamGatewayBillingService {
   constructor(
     private prisma: PrismaService,
     private eventEmitter: EventEmitter2,
+    private entityHistoryService: EntityHistoryService,
   ) {}
 
   /**
@@ -57,7 +72,11 @@ export class MockExamGatewayBillingService {
     // uchun to'laganda summa eski imtihon narxi bilan solishtirilib,
     // "mos emas" deb rad etilardi.
     const rows = await this.prisma.mockExamParticipant.findMany({
-      where: { publicId, deletedAt: null },
+      where: {
+        publicId,
+        deletedAt: null,
+        exam: { deletedAt: null, status: { in: PAYABLE_EXAM_STATUSES } },
+      },
       orderBy: { registeredAt: 'desc' },
       select: {
         id: true,
@@ -217,28 +236,59 @@ export class MockExamGatewayBillingService {
    * Marks a gateway transaction as completed AND flips the linked mock
    * participant's `paid` flag. Both writes happen in a Serializable
    * transaction so they're atomic.
+   *
+   * BITTA RO'YXAT — BITTA TO'LOV. Ishtirokchi faqat hali to'lanmagan va
+   * o'chirilmagan bo'lsa "egallanadi". Ilgari `paid` bu yerda qayta
+   * tekshirilmasdi: bir odam to'lov sahifasini ikki marta ochsa, Payme'ni ham
+   * Click'ni ham boshlasa yoki to'lov o'rtasida admin naqd qabul qilsa —
+   * ikkinchi pul ham olinar, tizimda esa bitta `paid = true` qolardi.
+   *
+   * Egallab bo'lmasa, shlyuz tranzaksiyasi bekor qilinadi va `false`
+   * qaytadi — chaqiruvchi shlyuzga xato javob beradi, shlyuz esa pulni
+   * to'lovchiga qaytaradi.
    */
-  async markCompleted(gatewayTxnId: string): Promise<void> {
+  async markCompleted(gatewayTxnId: string): Promise<boolean> {
     const notify = await this.prisma.$transaction(
       async (tx) => {
-        const txn = await tx.mockExamGatewayTransaction.update({
+        const now = new Date();
+        const txn = await tx.mockExamGatewayTransaction.findUnique({
           where: { id: gatewayTxnId },
-          data: {
-            state: GATEWAY_STATE.COMPLETED,
-            completedAt: new Date(),
-          },
+          select: { mockParticipantId: true, provider: true },
         });
-        const participant = await tx.mockExamParticipant.update({
+        if (!txn) return null;
+
+        const claimed = await tx.mockExamParticipant.updateMany({
+          where: { id: txn.mockParticipantId, paid: false, deletedAt: null },
+          data: { paid: true, paidAt: now },
+        });
+        if (claimed.count === 0) {
+          await tx.mockExamGatewayTransaction.update({
+            where: { id: gatewayTxnId },
+            data: {
+              state: GATEWAY_STATE.CANCELLED,
+              cancelledAt: now,
+              errorNote: "Ishtirokchi allaqachon to'lagan yoki o'chirilgan",
+            },
+          });
+          return null;
+        }
+
+        await tx.mockExamGatewayTransaction.update({
+          where: { id: gatewayTxnId },
+          data: { state: GATEWAY_STATE.COMPLETED, completedAt: now },
+        });
+        const participant = await tx.mockExamParticipant.findUnique({
           where: { id: txn.mockParticipantId },
-          data: { paid: true, paidAt: new Date() },
           select: {
+            id: true,
+            companyId: true,
             telegramChatId: true,
             publicId: true,
             feeAmount: true,
             exam: { select: { title: true, price: true } },
           },
         });
-        return participant;
+        return participant && { ...participant, provider: txn.provider };
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -246,6 +296,33 @@ export class MockExamGatewayBillingService {
         timeout: 15000,
       },
     );
+    if (!notify) {
+      this.logger.warn(
+        `Mock to'lovi rad etildi (ikkinchi to'lov yoki o'chirilgan ro'yxat): txn=${gatewayTxnId}`,
+      );
+      return false;
+    }
+
+    // Naqd to'lov tarixga yozilardi, onlayn esa izsiz qolardi. Chaqiruvchisi
+    // yo'q yozuv (webhook) — `changedById` yo'q (ADR-0008).
+    // Tarix yozuvi pul oqimini buzmasin: xato bo'lsa faqat log.
+    try {
+      await this.entityHistoryService.recordUpdate({
+        entityType: 'MockExamParticipant',
+        entityId: notify.id,
+        oldValues: { paid: false },
+        newValues: {
+          paid: true,
+          paymentMethod: notify.provider,
+          gatewayTransactionId: gatewayTxnId,
+        },
+        companyId: notify.companyId,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `History write failed for mock payment ${gatewayTxnId}: ${(err as Error).message}`,
+      );
+    }
 
     // Foydalanuvchiga Telegramda xabar berish. Ilgari bu hodisa FAQAT admin
     // naqd to'lovni qabul qilganda chiqarilardi, shuning uchun Click/Payme
@@ -260,6 +337,7 @@ export class MockExamGatewayBillingService {
       examTitle: notify.exam.title,
       feeAmount: notify.feeAmount ?? notify.exam.price,
     });
+    return true;
   }
 
   /**

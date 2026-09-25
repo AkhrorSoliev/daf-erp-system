@@ -301,6 +301,26 @@ shunda summa keyin siljib ketmaydi.
 oldindan to'lov. 2026-08 imtihonida 21 o'quvchi ikki marta to'lagan edi.
 `telegram/scenes/mock-exam-registration.scene.ts`
 
+⚠️ **Bitta ro'yxat — bitta to'lov.** Naqd ham, Payme/Click ham ishtirokchini
+faqat `paid = false` va o'chirilmagan bo'lsa belgilaydi. Ikkinchi onlayn to'lov
+rad etiladi (Payme `-31008`, Click `-4`) va shlyuz pulni qaytaradi. To'lagan
+ishtirokchi faqat «pul qaytarildi» tasdig'i bilan o'chiriladi.
+`mock-exams/mock-exam-gateway-billing.service.ts` (`markCompleted`)
+
+**Onlayn to'lov faqat ochiq imtihonga** — `REGISTRATION_OPEN`,
+`REGISTRATION_CLOSED` yoki `GRADING` holatidagi, o'chirilmagan imtihon.
+E'lon qilingan yoki o'chirilgan imtihonning eski ro'yxati to'lov manzili emas;
+aks holda DaF o'quvchisining darsga qilgan aynan shu summadagi to'lovi o'sha
+eski mockka ketardi. To'lagan ishtirokchisi bor imtihon o'chirilmaydi;
+o'chirilganda ishtirokchilar ham birga o'chadi.
+`mock-exams/mock-exam-gateway-billing.service.ts` (`PAYABLE_EXAM_STATUSES`)
+
+**Mock botida qo'lda yozilgan telefon hech narsani isbotlamaydi.** DaF
+o'quvchisi telefon bo'yicha topiladi (chat bo'yicha emas), lekin o'quvchi
+profiliga Telegram faqat «📱 Telefon raqamni yuborish» tugmasi bilan (odamning
+O'Z kontakti) bog'lanadi — aks holda begona odam o'quvchining parolini tiklab
+olardi. `telegram/scenes/mock-exam-registration.scene.ts`
+
 ---
 
 ## Audit va integratsiya

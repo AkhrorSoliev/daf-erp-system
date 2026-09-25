@@ -194,7 +194,7 @@ export function parseTashkentDateStart(input: string): Date {
  * Date` compares `false` to every `<`/`>` comparison, so a rate that was
  * supposed to be refused (e.g. "before the open payroll period") would sail
  * through instead. `SalaryConfigService.parseEffectiveFrom` and the
- * ADR-0033 rate gate (`teacher-rate-permission.ts`) both call this so they
+ * ADR-0034 rate gate (`teacher-rate-permission.ts`) both call this so they
  * can never disagree on what counts as a valid date.
  */
 export function parseEffectiveFromOrThrow(

@@ -112,8 +112,9 @@ export class CoursesController {
   getStatusHistory(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
   ) {
-    return this.coursesService.getStatusHistory(id, companyId);
+    return this.coursesService.getStatusHistory(id, companyId, userId);
   }
 
   @Delete(':id')

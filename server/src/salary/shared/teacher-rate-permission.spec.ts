@@ -39,7 +39,7 @@ describe('teacherRateRefusal', () => {
   });
 
   it('allows a teacher who also holds Administrator (multi-role staff)', () => {
-    // "Ustoz roli bor hammaga" (ADR-0033) — a second staff role no longer
+    // "Ustoz roli bor hammaga" (ADR-0034) — a second staff role no longer
     // pushes the rate back to the CEO (ADR-0022: one account per person).
     const adminTeacher = teacher({
       roles: [

@@ -111,7 +111,7 @@ export class SalaryController {
 
   // =========================================================================
   // CONFIG — write = CEO; `POST /salary/config` also allows an own-branch
-  // Branch Director (ADR-0033, gated in SalaryService). `PATCH` stays
+  // Branch Director (ADR-0034, gated in SalaryService). `PATCH` stays
   // CEO-only. Read = CEO/BD/Administrator.
   // =========================================================================
 

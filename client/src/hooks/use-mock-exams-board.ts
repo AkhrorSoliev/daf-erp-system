@@ -31,6 +31,8 @@ export interface MockExamSummary {
   description: string | null;
   status: MockExamStatus;
   sectionId: string;
+  /** Imtihon qaysi filialniki (null — eski, filialsiz qator). */
+  branchId: number | null;
   examDate: string | null;
   registrationDeadline: string | null;
   durationMinutes: number | null;

@@ -2,14 +2,14 @@ import { ForbiddenException } from '@nestjs/common';
 import { SalaryService } from './salary.service';
 
 /**
- * ADR-0033: the caller is checked BEFORE a rate is created. The gate lives in
+ * ADR-0034: the caller is checked BEFORE a rate is created. The gate lives in
  * the facade because `SalaryConfigService.createConfig` has no other caller —
  * controller -> this facade is the only path.
  *
  * `updateConfig` (PATCH) has no gate any more — it is CEO-only at the
  * controller (`@Roles('CEO')`), so this facade is plain delegation.
  */
-describe('SalaryService — rate write gate (ADR-0033)', () => {
+describe('SalaryService — rate write gate (ADR-0034)', () => {
   const make = (config: any) =>
     new SalaryService(
       config,

@@ -77,9 +77,15 @@ export function MockExamsClient() {
     totalExams: number;
   } | null>(null);
 
+  // Har kirishda yangilanadi. Ilgari ro'yxat sessiyada BIR marta yuklanardi:
+  // botdagi yangi ro'yxatlar, 03:00 da avtomatik yopilgan ro'yxat va detal
+  // sahifasidagi o'zgarishlar sahifa qayta yuklanmaguncha ko'rinmasdi, qator
+  // sonlari esa har safar yangilanadigan "Jami ishtirokchilar" bilan
+  // kelishmasdi. Eski ma'lumot yangilanguncha ko'rinib turadi (skelet faqat
+  // birinchi yuklashda).
   useEffect(() => {
-    if (!loaded) fetch();
-  }, [loaded, fetch]);
+    void fetch();
+  }, [fetch]);
 
   useEffect(() => {
     let cancelled = false;

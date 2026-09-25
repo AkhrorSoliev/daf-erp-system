@@ -122,7 +122,7 @@ interface Props {
   isCeo: boolean;
   /** CEO/BD — may add advances (backed by the CEO/BD expense-create endpoint). */
   canPay: boolean;
-  /** ⚙ Sozlamalar: CEO sees everything, a director only teacher rates (ADR-0033). */
+  /** ⚙ Sozlamalar: CEO sees everything, a director only teacher rates (ADR-0034). */
   settingsAccess: SalarySettingsAccess;
   onOpenBreakdown: (paymentId: string) => void;
   refreshKey: number;
@@ -645,7 +645,7 @@ export function SalaryMonthlyView({
         />
       )}
 
-      {/* Settings — CEO sees everything; a director only their own branch's teacher rates (ADR-0033) */}
+      {/* Settings — CEO sees everything; a director only their own branch's teacher rates (ADR-0034) */}
       {settingsAccess.canOpen && (
         <SalarySettingsSheet
           open={settingsOpen}

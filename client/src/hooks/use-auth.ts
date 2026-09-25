@@ -9,6 +9,8 @@ interface UserRole {
 interface UserBranch {
   id: number;
   name: string;
+  /** `BranchStatus`; absent in a cookie written before the payload carried it. */
+  status?: string;
 }
 
 interface UserCompany {

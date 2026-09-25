@@ -17,14 +17,16 @@ import {
   TEACHER_DEEP_LINK_PREFIX,
   STUDENT_DEEP_LINK_PREFIX,
   STUDENT_GROUP_DEEP_LINK_RE,
+  parseDeepLinkBranchId,
+  EMPLOYEE_DEEP_LINK_PREFIX,
   EMPLOYEE_DEEP_LINK_RE,
+  UNDATED_EMPLOYEE_DEEP_LINK_RE,
   EMPLOYEE_ROLE_SEPARATOR,
   MOCK_EXAM_DEEP_LINK_PREFIX,
   APP_LOGIN_REQUEST_PREFIX,
   VALID_ROLE_IDS,
-  GRANTABLE_ROLE_IDS,
+  grantableRoleIdsFor,
 } from './constants';
-import { createTeacherRegistrationScene } from './scenes/teacher-registration.scene';
 import { StudentLeadOriginService } from '../common/student-origin';
 import { createStudentRegistrationScene } from './scenes/student-registration.scene';
 import { createEmployeeRegistrationScene } from './scenes/employee-registration.scene';
@@ -32,10 +34,11 @@ import { createMockExamRegistrationScene } from './scenes/mock-exam-registration
 import { createPasswordResetScene } from './scenes/password-reset.scene';
 import { approveLoginRequest } from './flows/app-login-otp-flow';
 import {
+  checkEmployeePayload,
   signEmployeePayload,
-  verifyEmployeePayload,
 } from './utils/signed-link.util';
 import { PrismaService } from '../prisma/prisma.service';
+import { whereUserMayAct } from '../common/auth/blocked-user';
 import { TelegramChannelGateStatsService } from './telegram-channel-gate-stats.service';
 import { UploadService } from '../upload/upload.service';
 import { UsersService } from '../users/users.service';
@@ -69,6 +72,28 @@ const ALLOWED_UPDATES = [
   'chat_member',
   'chat_join_request',
 ] as const;
+
+/**
+ * The answer to an employee link past its three days, or one minted before
+ * links carried an issue time (ADR-0029): the holder needs a new link, not a
+ * report that this one is broken.
+ */
+const EXPIRED_EMPLOYEE_LINK_REPLY =
+  "Bu havolaning muddati tugagan. Administratordan yangi havola so'rang.";
+
+/**
+ * The answer to an employee link that fails its signature, or one damaged on
+ * the way so that it parses as neither the dated nor the undated format.
+ */
+const INVALID_EMPLOYEE_LINK_REPLY =
+  "Noto'g'ri yoki buzilgan havola. Administrator bilan bog'laning.";
+
+/**
+ * The answer to a `student_` link whose branch number is not one a branch
+ * can have: see `parseDeepLinkBranchId`.
+ */
+const INVALID_STUDENT_LINK_REPLY =
+  "Noto'g'ri havola. Administrator bilan bog'laning.";
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnModuleDestroy {
@@ -211,13 +236,6 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     });
 
     // Scenes
-    const teacherScene = createTeacherRegistrationScene(
-      this.prisma,
-      this.uploadService,
-      this.usersService,
-      this.bot,
-    );
-
     const studentScene = createStudentRegistrationScene(
       this.prisma,
       this.uploadService,
@@ -236,6 +254,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     const mockExamScene = createMockExamRegistrationScene(
       this.prisma,
       this.paymentLinkService,
+      this.entityHistoryService,
       this.bot,
     );
 
@@ -247,7 +266,6 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     );
 
     const stage = new Scenes.Stage<BotContext>([
-      teacherScene,
       studentScene,
       employeeScene,
       mockExamScene,
@@ -303,169 +321,17 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      // employee_{branchId}_roles_{id1-id2-...}_sig_{hmac} — xodim sifatida ro'yxatdan o'tish
-      const employeeMatch = payload.match(EMPLOYEE_DEEP_LINK_RE);
-      if (employeeMatch) {
-        ctx.session.processing = true;
-        const branchId = Number(employeeMatch[1]);
-        const rawRoleIds = employeeMatch[2]
-          .split(EMPLOYEE_ROLE_SEPARATOR)
-          .map((id) => Number(id))
-          .filter(
-            (id) =>
-              Number.isInteger(id) &&
-              (VALID_ROLE_IDS as readonly number[]).includes(id),
-          );
-        const providedSig = employeeMatch[3];
-
-        if (
-          rawRoleIds.length === 0 ||
-          !verifyEmployeePayload(branchId, rawRoleIds, providedSig)
-        ) {
-          ctx.session.processing = false;
-          this.logger.warn(`Invalid employee deep-link payload: "${payload}"`);
-          await ctx.reply(
-            "Noto'g'ri yoki buzilgan havola. Administrator bilan bog'laning.",
-          );
-          return;
-        }
-
-        // Archived or closed branches must not accept new registrations.
-        const branch = await this.prisma.branch.findFirst({
-          where: { id: branchId, deletedAt: null, status: 'ACTIVE' },
-          select: { id: true },
-        });
-        if (!branch) {
-          ctx.session.processing = false;
-          await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
-          return;
-        }
-
-        ctx.session.data = { branchId, roleIds: rawRoleIds };
-        ctx.session.processing = false;
-        await ctx.scene.enter(SCENES.EMPLOYEE_REGISTRATION);
-        return;
-      }
+      // employee_{branchId}_roles_{ids}_t_{issued}_sig_{hmac}: staff registration
+      if (await this.startEmployeeRegistration(ctx, payload)) return;
 
       // student_{branchId}_group_{groupId} — guruhga to'g'ridan-to'g'ri ro'yxatdan o'tish
-      const groupMatch = payload.match(STUDENT_GROUP_DEEP_LINK_RE);
-      if (groupMatch) {
-        ctx.session.processing = true;
-        const branchId = Number(groupMatch[1]);
-        const groupId = groupMatch[2];
-
-        const branch = await this.prisma.branch.findFirst({
-          where: { id: branchId, deletedAt: null, status: 'ACTIVE' },
-          select: { id: true },
-        });
-        if (!branch) {
-          ctx.session.processing = false;
-          await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
-          return;
-        }
-
-        const group = await this.prisma.group.findFirst({
-          where: { id: groupId, branchId, deletedAt: null },
-          select: {
-            id: true,
-            name: true,
-            lessonStartTime: true,
-            lessonEndTime: true,
-            days: true,
-            exactDays: true,
-            room: { select: { name: true } },
-            teachers: {
-              select: {
-                teacher: {
-                  select: { id: true, firstName: true, lastName: true },
-                },
-              },
-              take: 1,
-            },
-          },
-        });
-        if (!group) {
-          ctx.session.processing = false;
-          await ctx.reply("Guruh topilmadi. Administrator bilan bog'laning.");
-          return;
-        }
-
-        const teacher = group.teachers[0]?.teacher;
-        ctx.session.data = {
-          branchId,
-          groupId: group.id,
-          groupName: group.name,
-          teacherId: teacher?.id ?? null,
-          teacherName: teacher
-            ? `${teacher.firstName} ${teacher.lastName}`
-            : '—',
-          lessonStartTime: group.lessonStartTime,
-          lessonEndTime: group.lessonEndTime,
-          days: group.days,
-          exactDays: group.exactDays,
-          roomName: group.room?.name ?? null,
-        };
-        ctx.session.processing = false;
-        await ctx.scene.enter(SCENES.STUDENT_REGISTRATION);
-        return;
-      }
+      if (await this.startStudentGroupRegistration(ctx, payload)) return;
 
       // mock_<botStartPayload> — mock exam registration
-      if (payload.startsWith(MOCK_EXAM_DEEP_LINK_PREFIX)) {
-        ctx.session.processing = true;
-        const botStartPayload = payload.slice(
-          MOCK_EXAM_DEEP_LINK_PREFIX.length,
-        );
+      if (await this.startMockExamRegistration(ctx, payload)) return;
 
-        if (!botStartPayload) {
-          ctx.session.processing = false;
-          await ctx.reply("Noto'g'ri havola.");
-          return;
-        }
-
-        const exam = await this.prisma.mockExam.findFirst({
-          where: { botStartPayload, deletedAt: null },
-          select: { id: true, title: true },
-        });
-        if (!exam) {
-          ctx.session.processing = false;
-          await ctx.reply(
-            "Imtihon topilmadi yoki havola eskirgan. Administrator bilan bog'laning.",
-          );
-          return;
-        }
-
-        ctx.session.data = { examId: exam.id };
-        ctx.session.processing = false;
-        await ctx.scene.enter(SCENES.MOCK_EXAM_REGISTRATION);
-        return;
-      }
-
-      if (payload.startsWith(STUDENT_DEEP_LINK_PREFIX)) {
-        ctx.session.processing = true;
-        const branchIdStr = payload.slice(STUDENT_DEEP_LINK_PREFIX.length);
-        const branchId = Number(branchIdStr);
-
-        if (!branchIdStr || isNaN(branchId)) {
-          ctx.session.processing = false;
-          await ctx.reply("Noto'g'ri havola. Administrator bilan bog'laning.");
-          return;
-        }
-
-        const branch = await this.prisma.branch.findUnique({
-          where: { id: branchId },
-        });
-        if (!branch) {
-          ctx.session.processing = false;
-          await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
-          return;
-        }
-
-        ctx.session.data = { branchId };
-        ctx.session.processing = false;
-        await ctx.scene.enter(SCENES.STUDENT_REGISTRATION);
-        return;
-      }
+      // student_{branchId}: student registration
+      if (await this.startStudentRegistration(ctx, payload)) return;
 
       // Salomlashish xabari reply-klaviaturani TOZALAYDI. Bu ataylab alohida
       // xabar: bitta xabarda ham inline tugmalar, ham `remove_keyboard`
@@ -1116,10 +982,261 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     return a.length === b.length && timingSafeEqual(a, b);
   }
 
+  /**
+   * `/start employee_…`: the signed staff-registration link. Returns false
+   * when the payload is not an employee link, so `/start` moves on to the
+   * other kinds.
+   *
+   * Checked in this order: signature, age (ADR-0029), branch. A link whose
+   * issue time was edited therefore fails as broken, never as expired.
+   */
+  private async startEmployeeRegistration(
+    ctx: BotContext,
+    payload: string,
+  ): Promise<boolean> {
+    const employeeMatch = payload.match(EMPLOYEE_DEEP_LINK_RE);
+    if (!employeeMatch) {
+      // Minted before links carried an issue time: its age cannot be known,
+      // so its holder is sent for a new link like any expired one.
+      if (UNDATED_EMPLOYEE_DEEP_LINK_RE.test(payload)) {
+        this.logger.warn(`Undated employee deep-link payload: "${payload}"`);
+        await ctx.reply(EXPIRED_EMPLOYEE_LINK_REPLY);
+        return true;
+      }
+      if (!payload.startsWith(EMPLOYEE_DEEP_LINK_PREFIX)) return false;
+      // Damaged on the way: an empty issue time, a missing or non-hex
+      // signature. Falling through would show the plain menu, as if the link
+      // did nothing.
+      this.logger.warn(`Malformed employee deep-link payload: "${payload}"`);
+      await ctx.reply(INVALID_EMPLOYEE_LINK_REPLY);
+      return true;
+    }
+
+    ctx.session.processing = true;
+    const branchId = Number(employeeMatch[1]);
+    const rawRoleIds = employeeMatch[2]
+      .split(EMPLOYEE_ROLE_SEPARATOR)
+      .map((id) => Number(id))
+      .filter(
+        (id) =>
+          Number.isInteger(id) &&
+          (VALID_ROLE_IDS as readonly number[]).includes(id),
+      );
+    // Released on every way out, a throw included. Telegraf saves the session
+    // even when the handler throws, and `/start` ignores a chat whose flag is
+    // set, re-saving it so its 24-hour TTL restarts on every try: a database
+    // error or a missing TELEGRAM_LINK_SECRET would otherwise mute the bot for
+    // this person. The error itself still propagates and is logged.
+    try {
+      const verdict =
+        rawRoleIds.length === 0
+          ? 'invalid'
+          : checkEmployeePayload(
+              branchId,
+              rawRoleIds,
+              employeeMatch[3],
+              employeeMatch[4],
+              new Date(),
+            );
+
+      if (verdict === 'invalid') {
+        this.logger.warn(`Invalid employee deep-link payload: "${payload}"`);
+        await ctx.reply(INVALID_EMPLOYEE_LINK_REPLY);
+        return true;
+      }
+      if (verdict === 'expired') {
+        this.logger.warn(`Expired employee deep-link payload: "${payload}"`);
+        await ctx.reply(EXPIRED_EMPLOYEE_LINK_REPLY);
+        return true;
+      }
+
+      // Archived or closed branches must not accept new registrations.
+      const branch = await this.prisma.branch.findFirst({
+        where: { id: branchId, deletedAt: null, status: 'ACTIVE' },
+        select: { id: true },
+      });
+      if (!branch) {
+        await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
+        return true;
+      }
+    } finally {
+      ctx.session.processing = false;
+    }
+
+    ctx.session.data = { branchId, roleIds: rawRoleIds };
+    await ctx.scene.enter(SCENES.EMPLOYEE_REGISTRATION);
+    return true;
+  }
+
+  /**
+   * `/start student_<branchId>_group_<groupId>`: a student registers straight
+   * into a group. Returns false when the payload is not such a link, so
+   * `/start` moves on to the other kinds.
+   */
+  private async startStudentGroupRegistration(
+    ctx: BotContext,
+    payload: string,
+  ): Promise<boolean> {
+    const groupMatch = payload.match(STUDENT_GROUP_DEEP_LINK_RE);
+    if (!groupMatch) return false;
+
+    ctx.session.processing = true;
+    const branchId = parseDeepLinkBranchId(groupMatch[1]);
+    const groupId = groupMatch[2];
+    // Released on every way out, a throw included: see SessionData.processing.
+    try {
+      if (branchId === null) {
+        await ctx.reply(INVALID_STUDENT_LINK_REPLY);
+        return true;
+      }
+
+      const branch = await this.prisma.branch.findFirst({
+        where: { id: branchId, deletedAt: null, status: 'ACTIVE' },
+        select: { id: true },
+      });
+      if (!branch) {
+        await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
+        return true;
+      }
+
+      const group = await this.prisma.group.findFirst({
+        where: { id: groupId, branchId, deletedAt: null },
+        select: {
+          id: true,
+          name: true,
+          lessonStartTime: true,
+          lessonEndTime: true,
+          days: true,
+          exactDays: true,
+          room: { select: { name: true } },
+          teachers: {
+            select: {
+              teacher: {
+                select: { id: true, firstName: true, lastName: true },
+              },
+            },
+            take: 1,
+          },
+        },
+      });
+      if (!group) {
+        await ctx.reply("Guruh topilmadi. Administrator bilan bog'laning.");
+        return true;
+      }
+
+      const teacher = group.teachers[0]?.teacher;
+      ctx.session.data = {
+        branchId,
+        groupId: group.id,
+        groupName: group.name,
+        teacherId: teacher?.id ?? null,
+        teacherName: teacher ? `${teacher.firstName} ${teacher.lastName}` : '—',
+        lessonStartTime: group.lessonStartTime,
+        lessonEndTime: group.lessonEndTime,
+        days: group.days,
+        exactDays: group.exactDays,
+        roomName: group.room?.name ?? null,
+      };
+    } finally {
+      ctx.session.processing = false;
+    }
+
+    await ctx.scene.enter(SCENES.STUDENT_REGISTRATION);
+    return true;
+  }
+
+  /**
+   * `/start mock_<botStartPayload>`: mock exam registration. Returns false
+   * when the payload is not such a link.
+   */
+  private async startMockExamRegistration(
+    ctx: BotContext,
+    payload: string,
+  ): Promise<boolean> {
+    if (!payload.startsWith(MOCK_EXAM_DEEP_LINK_PREFIX)) return false;
+
+    ctx.session.processing = true;
+    const botStartPayload = payload.slice(MOCK_EXAM_DEEP_LINK_PREFIX.length);
+    // Released on every way out, a throw included: see SessionData.processing.
+    try {
+      if (!botStartPayload) {
+        await ctx.reply("Noto'g'ri havola.");
+        return true;
+      }
+
+      const exam = await this.prisma.mockExam.findFirst({
+        where: { botStartPayload, deletedAt: null },
+        select: { id: true, title: true },
+      });
+      if (!exam) {
+        await ctx.reply(
+          "Imtihon topilmadi yoki havola eskirgan. Administrator bilan bog'laning.",
+        );
+        return true;
+      }
+
+      ctx.session.data = { examId: exam.id };
+    } finally {
+      ctx.session.processing = false;
+    }
+
+    await ctx.scene.enter(SCENES.MOCK_EXAM_REGISTRATION);
+    return true;
+  }
+
+  /**
+   * `/start student_<branchId>`: student registration, choosing a teacher and
+   * a group in the scene. Returns false when the payload is not such a link.
+   * `/start` tries the group link first, since it starts the same way.
+   */
+  private async startStudentRegistration(
+    ctx: BotContext,
+    payload: string,
+  ): Promise<boolean> {
+    if (!payload.startsWith(STUDENT_DEEP_LINK_PREFIX)) return false;
+
+    ctx.session.processing = true;
+    const branchId = parseDeepLinkBranchId(
+      payload.slice(STUDENT_DEEP_LINK_PREFIX.length),
+    );
+    // Released on every way out, a throw included: see SessionData.processing.
+    try {
+      if (branchId === null) {
+        await ctx.reply(INVALID_STUDENT_LINK_REPLY);
+        return true;
+      }
+
+      // Archived or closed branches must not accept new registrations.
+      const branch = await this.prisma.branch.findFirst({
+        where: { id: branchId, deletedAt: null, status: 'ACTIVE' },
+        select: { id: true },
+      });
+      if (!branch) {
+        await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
+        return true;
+      }
+
+      ctx.session.data = { branchId };
+    } finally {
+      ctx.session.processing = false;
+    }
+
+    await ctx.scene.enter(SCENES.STUDENT_REGISTRATION);
+    return true;
+  }
+
+  /**
+   * Only the caller's id is taken from the access token. The token's role
+   * names can be up to an hour stale (it still says CEO after an archive, and
+   * Branch Director after a demotion), and a signed link works for three days
+   * (ADR-0029), so a link minted in that hour would carry the old authority for
+   * that long. Who the
+   * caller is now, what they may grant and where, is read from the database.
+   */
   async generateEmployeeLinkPayload(
     branchId: number,
     roleIds: number[],
-    requestedBy: { id: number; roles: string[] },
+    requestedBy: { id: number },
   ): Promise<string> {
     const unique = Array.from(new Set(roleIds));
     if (unique.length === 0) {
@@ -1134,15 +1251,27 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
+    // An unknown, archived or blocked account signs nothing (ADR-0026 rule 4,
+    // ADR-0028).
+    const caller = await this.prisma.user.findFirst({
+      where: { id: requestedBy.id, ...whereUserMayAct() },
+      select: {
+        mainBranch: true,
+        branches: { select: { branchId: true } },
+        roles: { select: { role: { select: { name: true } } } },
+      },
+    });
+    if (!caller) {
+      throw new ForbiddenException('Foydalanuvchi topilmadi');
+    }
+    const callerRoles = caller.roles.map((r) => r.role.name);
+
     // Privilege escalation guard: the link IS the account. Without this an
     // Administrator could mint a CEO registration link for their own branch
     // and hand themselves full access — the branch check below would happily
-    // pass. A caller may only grant roles at or below their own level.
-    const grantable: readonly number[] = requestedBy.roles.includes('CEO')
-      ? GRANTABLE_ROLE_IDS.CEO
-      : requestedBy.roles.includes('Branch Director')
-        ? GRANTABLE_ROLE_IDS.BRANCH_DIRECTOR
-        : GRANTABLE_ROLE_IDS.ADMINISTRATOR;
+    // pass. A caller may only grant roles below their own level (a CEO, any).
+    // `UsersService` applies the same ceiling to the employee form.
+    const grantable = grantableRoleIdsFor(callerRoles);
     const forbidden = unique.filter((id) => !grantable.includes(id));
     if (forbidden.length > 0) {
       throw new ForbiddenException(
@@ -1158,18 +1287,11 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       throw new NotFoundException('Filial topilmadi');
     }
 
-    const isCEO = requestedBy.roles.includes('CEO');
+    const isCEO = callerRoles.includes('CEO');
     if (!isCEO) {
-      const caller = await this.prisma.user.findFirst({
-        where: { id: requestedBy.id, deletedAt: null },
-        select: {
-          mainBranch: true,
-          branches: { select: { branchId: true } },
-        },
-      });
       const allowedBranchIds = new Set<number>([
-        ...(caller?.branches.map((b) => b.branchId) ?? []),
-        ...(caller?.mainBranch ? [caller.mainBranch] : []),
+        ...caller.branches.map((b) => b.branchId),
+        ...(caller.mainBranch ? [caller.mainBranch] : []),
       ]);
       if (!allowedBranchIds.has(branchId)) {
         throw new ForbiddenException(
@@ -1178,6 +1300,6 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       }
     }
 
-    return signEmployeePayload(branchId, unique);
+    return signEmployeePayload(branchId, unique, new Date());
   }
 }

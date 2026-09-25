@@ -24,6 +24,27 @@ export const isTelegramBotConfigured = Boolean(BOT_USERNAME);
 export const TELEGRAM_BOT_NOT_CONFIGURED =
   "Telegram bot hozircha sozlanmagan — havola yaratib bo'lmaydi. Iltimos, administratorga murojaat qiling.";
 
+/** Shown in place of a registration link or QR for a branch the bot refuses. */
+export const BRANCH_CLOSED_TO_REGISTRATION =
+  "Filial faol emas — bu filialga Telegram orqali ro'yxatdan o'tib bo'lmaydi.";
+
+/**
+ * Whether the bot refuses student registration for a branch with this status.
+ *
+ * `/start` accepts a `student_<branch>` or `student_<branch>_group_<group>`
+ * link only for an ACTIVE branch (server/CLAUDE.md, "Registration deep
+ * links"). Pass the status from `useBranchStatus`, never from
+ * `selectedBranch`, which can be an older copy.
+ *
+ * An unknown status is not a refusal: the branch list may not have loaded
+ * yet, or the sign-in cookie predates the payload carrying it. Treating that
+ * as closed would take every link away until the next token refresh, and the
+ * bot still decides.
+ */
+export function branchClosedToRegistration(status: string | undefined): boolean {
+  return status !== undefined && status !== "ACTIVE";
+}
+
 let warned = false;
 
 /**

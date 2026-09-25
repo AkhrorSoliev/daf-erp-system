@@ -223,7 +223,7 @@ describe('computePeriodBounds — @db.Date bounds do not overlap', () => {
 /**
  * Every write path that turns a client-supplied `effectiveFrom` string into a
  * Tashkent-midnight `Date` must go through this — `SalaryConfigService` and
- * the ADR-0033 rate gate both call it so the two agree.
+ * the ADR-0034 rate gate both call it so the two agree.
  *
  * `class-validator`'s `@IsDateString()` (used on the DTOs) accepts ANY
  * ISO-8601 date-TIME, not just `YYYY-MM-DD` — a full instant such as

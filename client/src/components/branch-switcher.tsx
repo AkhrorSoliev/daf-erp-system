@@ -44,9 +44,14 @@ export function BranchSwitcher() {
     }
     // Non-CEO: seed from the signed-in user's own branches. No "Barcha
     // filiallar" — a confined caller has no consolidated view to show, and the
-    // server would refuse it anyway.
+    // server would refuse it anyway. `status` rides along: for everyone but a
+    // CEO this list is where the registration-link guard reads it.
     hydrateFor(
-      (user.branches ?? []).map((b) => ({ id: b.id, name: b.name })),
+      (user.branches ?? []).map((b) => ({
+        id: b.id,
+        name: b.name,
+        status: b.status,
+      })),
       false,
     );
   }, [isCeo, user, fetchBranches, hydrateFor]);

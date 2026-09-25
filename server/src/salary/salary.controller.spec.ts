@@ -34,7 +34,7 @@ describe('SalaryController @Roles metadata', () => {
     // A director's PATCH could mark a closed config active with no open
     // version, or edit a rate the director could never have created — so the
     // edit path stays CEO-only. Only `POST /salary/config` (a new version) is
-    // shared with the director (ADR-0033).
+    // shared with the director (ADR-0034).
     it('updateConfig requires CEO', () => {
       expect(rolesFor('updateConfig')).toEqual(['CEO']);
     });
@@ -59,7 +59,7 @@ describe('SalaryController @Roles metadata', () => {
     );
   });
 
-  describe('Teacher rate writes — CEO + own-branch Branch Director (ADR-0033)', () => {
+  describe('Teacher rate writes — CEO + own-branch Branch Director (ADR-0034)', () => {
     // The role gate only admits the director; WHICH teacher they may touch is
     // decided in `shared/teacher-rate-permission.ts` (own branch, holds
     // Teacher, not CEO/Branch Director, not self, active, not FIXED_MONTHLY).

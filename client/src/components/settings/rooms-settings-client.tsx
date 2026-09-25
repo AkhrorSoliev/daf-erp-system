@@ -32,6 +32,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { SettingsPageHeader } from "./settings-page-header";
 import { RoomRowActions } from "./room-row-actions";
 import { EditRoomDrawer } from "./edit-room-drawer";
@@ -52,7 +53,11 @@ interface BranchWithCount {
   id: number;
   name: string;
   address: string | null;
-  isActive: boolean;
+  /**
+   * `BranchStatus`. Absent from a server older than the one returning it; the
+   * badge is then left out rather than drawn empty.
+   */
+  status?: string;
   roomCount: number;
 }
 
@@ -151,11 +156,9 @@ function BranchListView({
                     <Badge variant="outline">{branch.roomCount} ta xona</Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant={branch.isActive ? "default" : "secondary"}
-                    >
-                      {branch.isActive ? "Faol" : "Nofaol"}
-                    </Badge>
+                    {branch.status && (
+                      <StatusBadge entityType="branches" status={branch.status} />
+                    )}
                   </TableCell>
                 </TableRow>
               ))
@@ -430,7 +433,7 @@ export function RoomsSettingsClient() {
           id: data.id,
           name: data.name,
           address: data.address ?? null,
-          isActive: data.isActive,
+          status: data.status,
           roomCount: data._count?.rooms ?? 0,
         });
       })

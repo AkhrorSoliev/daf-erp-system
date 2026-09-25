@@ -75,11 +75,11 @@ interface Props {
   employee: SimpleEmployee | null;
   onClose: () => void;
   onSaved: () => void;
-  /** Deactivating a rate — CEO only (ADR-0033). */
+  /** Deactivating a rate — CEO only (ADR-0034). */
   canDeactivate?: boolean;
-  /** FIXED_MONTHLY is CEO-only (ADR-0033); a director offering it would 403 on submit. */
+  /** FIXED_MONTHLY is CEO-only (ADR-0034); a director offering it would 403 on submit. */
   allowMonthly?: boolean;
-  /** A director's `effectiveFrom` cannot precede the current payroll period (ADR-0033); the CEO has no minimum. */
+  /** A director's `effectiveFrom` cannot precede the current payroll period (ADR-0034); the CEO has no minimum. */
   minEffectiveFrom?: Date;
 }
 

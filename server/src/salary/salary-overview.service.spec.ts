@@ -139,7 +139,7 @@ describe('SalaryOverviewService', () => {
     expect(row.advancesTotal).toBe(50_000);
     expect(row.latestPayment?.id).toBe('p1');
     // The client hides the edit pencil for a teacher a director cannot rate
-    // (ADR-0033), which needs the row's roles.
+    // (ADR-0034), which needs the row's roles.
     expect(row.user.roles).toEqual([{ id: 4, name: 'Teacher' }]);
     // Pending: one CALCULATED, no APPROVED.
     expect(res.pending.calculatedIds).toEqual(['p1']);

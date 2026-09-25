@@ -362,7 +362,7 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleting || !deleteReasonValid}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              variant="destructive"
             >
               {deleting ? "Arxivlanmoqda..." : "Arxivga o'tkazish"}
             </AlertDialogAction>

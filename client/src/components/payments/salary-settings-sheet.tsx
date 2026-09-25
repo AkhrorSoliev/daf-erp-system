@@ -104,7 +104,7 @@ interface Props {
 /**
  * ⚙ Sozlamalar — the salary *rules* surface: CEO sees rates, staff rates and
  * the cycle start day; a Branch Director sees only their branch's teacher
- * rates (ADR-0033), kept OUT of the monthly report which is display-only.
+ * rates (ADR-0034), kept OUT of the monthly report which is display-only.
  * Reuses the existing config row sheet / bulk dialog / period control
  * verbatim.
  */
@@ -231,7 +231,7 @@ export function SalarySettingsSheet({
                     // The CEO rates everyone; a director is limited to their
                     // own branch's teachers (already scoped server-side) who
                     // are not the CEO, another director, themself, or an
-                    // inactive account — see `canDirectorRate` (ADR-0033, R6).
+                    // inactive account — see `canDirectorRate` (ADR-0034, R6).
                     const rateable =
                       access.canManageCompanyPayroll ||
                       canDirectorRate(row.user, selfId);

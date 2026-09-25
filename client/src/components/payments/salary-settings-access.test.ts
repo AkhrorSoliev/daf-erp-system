@@ -13,7 +13,7 @@ describe("resolveSalarySettingsAccess", () => {
     });
   });
 
-  it("a branch director: only teacher rates (ADR-0033)", () => {
+  it("a branch director: only teacher rates (ADR-0034)", () => {
     expect(resolveSalarySettingsAccess([2])).toEqual({
       canOpen: true,
       canManageCompanyPayroll: false,
@@ -44,7 +44,7 @@ describe("canDirectorRate", () => {
     );
   });
 
-  it("an administrator who also teaches — ratable (ADR-0033's admin-teacher case)", () => {
+  it("an administrator who also teaches — ratable (ADR-0034's admin-teacher case)", () => {
     expect(
       canDirectorRate(
         { id: OTHER_ID, roles: [ADMINISTRATOR, TEACHER] },

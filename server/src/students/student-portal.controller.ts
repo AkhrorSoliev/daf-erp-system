@@ -27,6 +27,8 @@ import { InitPaymentDto } from './dto/init-payment.dto';
 import { ScanQrDto } from '../attendance/dto/qr-session.dto';
 import { Roles, CurrentUser } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
+import { OwnPasswordAttemptGuard } from '../common/guards/own-password-attempt.guard';
+import { AuthService } from '../auth/auth.service';
 import { PaymentMethod } from '@prisma/client';
 
 @Controller('student-portal')
@@ -36,6 +38,7 @@ export class StudentPortalController {
     private qrAttendanceService: QrAttendanceService,
     private config: ConfigService,
     private gatewayConfig: GatewayConfigService,
+    private authService: AuthService,
   ) {}
 
   @Get('profile')
@@ -83,14 +86,22 @@ export class StudentPortalController {
   }
 
   @Patch('password')
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesGuard, OwnPasswordAttemptGuard)
   @Roles('Student')
-  changePassword(
+  async changePassword(
     @CurrentUser('id') userId: number,
     @CurrentUser('studentId') studentId: number,
     @Body() dto: ChangePortalPasswordDto,
   ) {
-    return this.studentPortalService.changePassword(userId, studentId, dto);
+    const { sessionVersion, ...result } =
+      await this.studentPortalService.changePassword(userId, studentId, dto);
+    // The change ended every session of the account, this one included
+    // (ADR-0030). A fresh pair, signed with the version this change produced,
+    // keeps the student signed in here.
+    return {
+      ...result,
+      ...(await this.authService.issueSession(userId, sessionVersion)),
+    };
   }
 
   // Same multer limits as `POST /upload`. This route had `FileInterceptor`
@@ -207,9 +218,12 @@ export class StudentPortalController {
         throw new BadRequestException("Click to'lov tizimi sozlanmagan");
       }
 
-      // For Click, merchantId stores merchant_id and secretKey stores service_id in env fallback
-      const clickServiceId =
-        this.config.get<string>('CLICK_SERVICE_ID') ?? cfg.secretKey;
+      // `service_id` faqat CLICK_SERVICE_ID dan. Ilgari u yo'q bo'lsa MAXFIY
+      // kalit (webhook imzosi) shu ochiq havolaga qo'yilardi.
+      const clickServiceId = this.config.get<string>('CLICK_SERVICE_ID');
+      if (!clickServiceId) {
+        throw new BadRequestException("Click to'lov tizimi sozlanmagan");
+      }
       const clickMerchantId = cfg.merchantId;
       const clickMerchantUserId = this.config.get<string>(
         'CLICK_MERCHANT_USER_ID',

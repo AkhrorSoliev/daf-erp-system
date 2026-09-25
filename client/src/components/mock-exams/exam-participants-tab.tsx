@@ -16,16 +16,6 @@ import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -49,6 +39,9 @@ import type {
 import { ManualParticipantDialog } from "./manual-participant-dialog";
 import { ConvertParticipantDialog } from "./convert-participant-dialog";
 import { MarkPaidDialog } from "./mark-paid-dialog";
+import { DeleteParticipantDialog } from "./delete-participant-dialog";
+import { pageAfterRemoval } from "./participant-delete";
+import { participantFee } from "./mock-fee";
 import { listParam } from "@/hooks/use-url-filters";
 import {
   MultiSelectCombobox,
@@ -99,7 +92,6 @@ export function ExamParticipantsTab({
   const [manualOpen, setManualOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] =
     useState<MockExamParticipant | null>(null);
-  const [deleteBusy, setDeleteBusy] = useState(false);
   const [convertTarget, setConvertTarget] =
     useState<MockExamParticipant | null>(null);
   const [payTarget, setPayTarget] = useState<MockExamParticipant | null>(null);
@@ -161,21 +153,16 @@ export function ExamParticipantsTab({
     setPage(1);
   };
 
-  async function handleDelete() {
-    if (!deleteTarget) return;
-    setDeleteBusy(true);
-    try {
-      await api.delete(`/mock-exam-participants/${deleteTarget.id}`);
-      onParticipantCountChange(-1);
-      setData((prev) => prev.filter((p) => p.id !== deleteTarget.id));
-      setTotal((t) => Math.max(0, t - 1));
-      toast.success("Ishtirokchi o'chirildi");
-      setDeleteTarget(null);
-    } catch (error) {
-      toast.error(getErrorMessage(error, "O'chirishda xatolik"));
-    } finally {
-      setDeleteBusy(false);
+  function handleDeleted(id: string) {
+    onParticipantCountChange(-1);
+    const nextPage = pageAfterRemoval(page, data.length);
+    if (nextPage !== page) {
+      // Sahifadagi oxirgi qator o'chdi — oldingi sahifani yuklaymiz.
+      setPage(nextPage);
+      return;
     }
+    setData((prev) => prev.filter((p) => p.id !== id));
+    setTotal((t) => Math.max(0, t - 1));
   }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -327,7 +314,7 @@ export function ExamParticipantsTab({
                   </TableCell>
                   <TableCell className="text-xs">
                     {(() => {
-                      const fee = p.feeAmount ?? exam.price;
+                      const fee = participantFee(p, exam.price);
                       if (p.paid) {
                         return (
                           <div className="flex flex-col gap-0.5">
@@ -396,7 +383,7 @@ export function ExamParticipantsTab({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {!p.paid && (p.feeAmount ?? exam.price) > 0 && (
+                        {!p.paid && participantFee(p, exam.price) > 0 && (
                           <DropdownMenuItem onSelect={() => setPayTarget(p)}>
                             <CircleDollarSign className="mr-2 size-4" />
                             To&apos;lov qabul qilish
@@ -466,6 +453,7 @@ export function ExamParticipantsTab({
 
       <ConvertParticipantDialog
         participant={convertTarget}
+        examBranchId={exam.branchId}
         onClose={() => setConvertTarget(null)}
         onConverted={(participantId, student) => {
           setData((prev) =>
@@ -487,36 +475,12 @@ export function ExamParticipantsTab({
         }}
       />
 
-      <AlertDialog
-        open={!!deleteTarget}
-        onOpenChange={(o) => !o && !deleteBusy && setDeleteTarget(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Ishtirokchini o&apos;chirish
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              &quot;{deleteTarget?.firstName} {deleteTarget?.lastName}&quot;
-              imtihondan o&apos;chiriladi. Bu amal arxivlash —
-              ma&apos;lumotlar yo&apos;qotilmaydi.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteBusy}>
-              Bekor qilish
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleteBusy}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteBusy && <Loader2 className="mr-2 size-4 animate-spin" />}
-              O&apos;chirish
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteParticipantDialog
+        participant={deleteTarget}
+        examPrice={exam.price}
+        onClose={() => setDeleteTarget(null)}
+        onDeleted={handleDeleted}
+      />
     </div>
   );
 }

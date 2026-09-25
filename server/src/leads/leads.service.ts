@@ -294,12 +294,16 @@ export class LeadsService {
     // sales team see at a glance that a lead has converted interest into a
     // concrete mock signup.
     const mockParticipations = await this.prisma.mockExamParticipant.findMany({
-      where: { phone: lead.phone, deletedAt: null },
+      // Telefon noyob emas — faqat shu kompaniyaning ro'yxatlari.
+      where: { phone: lead.phone, deletedAt: null, companyId },
       orderBy: { registeredAt: 'desc' },
       select: {
         id: true,
         publicId: true,
         paid: true,
+        // Qancha to'lashi kerakligi (DaF chegirmasi bilan) — bepul imtihonda
+        // oyna "To'lov kutilmoqda" demasligi uchun.
+        feeAmount: true,
         registeredAt: true,
         totalScore: true,
         exam: {
@@ -308,6 +312,7 @@ export class LeadsService {
             title: true,
             status: true,
             examDate: true,
+            price: true,
             section: { select: { name: true, color: true } },
           },
         },
@@ -318,7 +323,7 @@ export class LeadsService {
     // already has this exact phone, surface them so the admin opens/links the
     // existing account instead of converting the lead into a second account.
     const matchedStudent = await this.prisma.student.findFirst({
-      where: { phone: lead.phone, deletedAt: null },
+      where: { phone: lead.phone, deletedAt: null, companyId },
       select: {
         id: true,
         firstName: true,

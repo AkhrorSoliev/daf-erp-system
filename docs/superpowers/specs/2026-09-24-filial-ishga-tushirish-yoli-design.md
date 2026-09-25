@@ -60,7 +60,7 @@ Mezon:
 | # | Qaror | Sabab |
 |---|---|---|
 | Q1 | Foydalanuvchi — filial direktori (rol 2). CEO ham ko'radi, aniq filial tanlaganda | Filial direktorga topshiriladi. Administrator kurs va ustoz qo'sha olmaydi |
-| Q2 | Direktor o'z filiali **Ustoz roli bor** har bir xodimiga stavka qo'yadi (ADR-0033) | Aks holda yo'l «Guruh» bekatida CEO'da to'xtaydi |
+| Q2 | Direktor o'z filiali **Ustoz roli bor** har bir xodimiga stavka qo'yadi (ADR-0034) | Aks holda yo'l «Guruh» bekatida CEO'da to'xtaydi |
 | Q3 | Ko'rinish: bosh sahifada yo'l xaritasi + sahifada yoritish (tur) | Xarita qayerda ekanini aytadi, tur nimani bosishni ko'rsatadi. Faqat tur bir marta o'tadi va bir necha kunlik sozlashda (ustoz topish vaqt oladi) foydasiz bo'lib qoladi |
 | Q4 | Karta `launched` bo'lganda yo'qoladi, «8 bekatning hammasi» bajarilganda emas | Farg'onada stavkasiz test ustoz bor — aks holda ishlab turgan filialda ham karta chiqardi |
 | Q5 | Yangi kutubxona qo'shilmaydi | `driver.js` ko'rib chiqildi va rad etildi: qo'shimcha bog'liqlik, shadcn uslubidan chetlanish. Bitta elementni yoritish mavjud Radix Popover bilan yetadi |
@@ -249,7 +249,7 @@ Izohlar (`hint`):
   `BRANCH_SCOPED_BY_ENTITY` ga ko'chadi — «filial ustozning o'zidan olinadi,
   chaqiruvchi unga nisbatan tekshiriladi». `PATCH /salary/config/:id`
   `COMPANY_WIDE` blokida qoladi.
-- **ADR-0033** — «Filial direktori o'z filiali ustozlariga stavka qo'yadi».
+- **ADR-0034** — «Filial direktori o'z filiali ustozlariga stavka qo'yadi».
   Kontekst, yuqoridagi qaror, rad etilgan muqobillar: faqat CEO (yangi filial
   yo'lini to'sadi); direktor filialning har bir xodimiga (o'z va boshqa
   direktorlar oyligiga yo'l ochardi).

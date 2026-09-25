@@ -8,10 +8,15 @@ import { MockExamStatus, Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  assertBranchInScope,
   ReportBranchIds,
   studentBranchWhere,
 } from '../common/finance/report-branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
+import {
+  openStudentAccount,
+  signInAccountChange,
+} from '../common/auth/student-account';
 import {
   SELF_SIGNUP_SOURCE,
   StudentLeadOriginService,
@@ -28,6 +33,10 @@ import { MarkMockPaidDto } from './dto/mark-mock-paid.dto';
 import { resolveParticipantFee } from './mock-exam-pricing.util';
 
 const DEFAULT_PAGE_SIZE = 10;
+
+// Conversion writes the card, its lead and its sign-in account (a bcrypt hash
+// plus three queries) in one transaction; the same limits as admin create.
+const CONVERT_TX_LIMITS = { maxWait: 10000, timeout: 15000 };
 
 /**
  * Participants of a mock exam. The primary registration path is the
@@ -138,7 +147,18 @@ export class MockExamParticipantsService {
       this.prisma.mockExamParticipant.count({ where }),
     ]);
 
-    return { data, total, page, pageSize };
+    // Eski (2026-08 gacha) balansdan to'langan ishtirokchilar: o'chirilganda
+    // pulni tizim o'zi balansga qaytaradi — oyna adminga naqd berishni aytmasin.
+    const fromBalance = await this.mockExamBilling.paidFromBalanceIds(
+      data.filter((p) => p.paid).map((p) => p.id),
+    );
+
+    return {
+      data: data.map((p) => ({ ...p, paidFromBalance: fromBalance.has(p.id) })),
+      total,
+      page,
+      pageSize,
+    };
   }
 
   async addManual(
@@ -197,7 +217,8 @@ export class MockExamParticipantsService {
         studentId = student.id;
       } else {
         const existingStudent = await this.prisma.student.findFirst({
-          where: { phone: dto.phone, deletedAt: null },
+          // Faqat shu kompaniyaning o'quvchisi DaF o'quvchisi hisoblanadi.
+          where: { phone: dto.phone, deletedAt: null, companyId },
           orderBy: { updatedAt: 'desc' },
           select: { id: true },
         });
@@ -337,6 +358,9 @@ export class MockExamParticipantsService {
       );
     }
 
+    // Tanlangan filial chaqiruvchining qamrovida bo'lishi shart — ilgari
+    // faqat kompaniya tekshirilardi.
+    assertBranchInScope(dto.branchId, branchIds);
     const branch = await this.prisma.branch.findFirst({
       where: { id: dto.branchId, deletedAt: null, companyId },
       select: { id: true },
@@ -345,7 +369,29 @@ export class MockExamParticipantsService {
       throw new NotFoundException('Filial topilmadi');
     }
 
-    const student = await this.prisma.$transaction(async (tx) => {
+    // Tashqi odam har imtihonda YANGI publicId oladi — birinchi qatori
+    // aylantirilgach, keyingisi ham "Aylantirish" ko'rsatib, ikkinchi o'quvchi
+    // (bir xil telefon va Telegram chat) yaratardi.
+    const samePerson = await this.prisma.student.findFirst({
+      where: {
+        companyId,
+        deletedAt: null,
+        OR: [
+          { phone: participant.phone },
+          ...(participant.telegramChatId
+            ? [{ telegramChatId: participant.telegramChatId }]
+            : []),
+        ],
+      },
+      select: { id: true, firstName: true, lastName: true },
+    });
+    if (samePerson) {
+      throw new BadRequestException(
+        `Bu odam allaqachon o'quvchi: #${samePerson.id} ${samePerson.firstName} ${samePerson.lastName}. Ikkinchi o'quvchi yaratilmaydi.`,
+      );
+    }
+
+    const { student, login } = await this.prisma.$transaction(async (tx) => {
       // 1. Defensive double-check: the publicId mustn't collide with any
       //    real Student row. Shouldn't happen by construction (the
       //    publicId came from Student_id_seq), but if it does, fail
@@ -357,6 +403,20 @@ export class MockExamParticipantsService {
       if (collision) {
         throw new BadRequestException(
           `O'quvchi #${participant.publicId} allaqachon mavjud — administrator bilan bog'laning`,
+        );
+      }
+
+      // The phone is the student's sign-in identifier, so it may sit on one
+      // live card only — the same rule as admin create. The participant was
+      // matched by phone when it registered, but a card with this phone can
+      // appear later (Telegram registration, admin create).
+      const phoneTaken = await tx.student.findFirst({
+        where: { phone: participant.phone, deletedAt: null },
+        select: { id: true },
+      });
+      if (phoneTaken) {
+        throw new BadRequestException(
+          `Bu telefon raqam allaqachon tizimda mavjud (o'quvchi #${phoneTaken.id})`,
         );
       }
 
@@ -395,7 +455,20 @@ export class MockExamParticipantsService {
         SELF_SIGNUP_SOURCE.MOCK_EXAM,
       );
 
-      // 4. Link the participant to the new student.
+      // 4. Open the student's sign-in account, as every other way a card is
+      //    born does. Same transaction: a card is never left without one.
+      //    The password is not returned (CEO decision, 2026-09-24): the
+      //    student gets their own through the bot's "Parolni tiklash" or
+      //    signs in with Telegram, exactly as after admin create.
+      const account = await openStudentAccount(tx, {
+        id: created.id,
+        phone: created.phone,
+        firstName: created.firstName,
+        lastName: created.lastName,
+        companyId,
+      });
+
+      // 5. Link the participant to the new student.
       await tx.mockExamParticipant.update({
         where: { id: participant.id },
         data: {
@@ -405,8 +478,8 @@ export class MockExamParticipantsService {
         },
       });
 
-      return created;
-    });
+      return { student: created, login: account.login };
+    }, CONVERT_TX_LIMITS);
 
     await this.entityHistoryService.recordCreate({
       entityType: 'Student',
@@ -417,7 +490,17 @@ export class MockExamParticipantsService {
         phone: student.phone,
         source: 'MOCK_PARTICIPANT_CONVERSION',
         mockParticipantId: participant.id,
+        ...signInAccountChange("Yo'q", 'Ochiq').newValues,
+        login,
       },
+      changedById: userId,
+      companyId,
+    });
+    await this.entityHistoryService.recordUpdate({
+      entityType: 'MockExamParticipant',
+      entityId: participant.id,
+      oldValues: { studentId: null },
+      newValues: { studentId: student.id },
       changedById: userId,
       companyId,
     });
@@ -524,9 +607,19 @@ export class MockExamParticipantsService {
       );
     }
 
-    const updated = await this.prisma.mockExamParticipant.update({
-      where: { id },
+    // Shartli yozuv: yuqoridagi `paid` tekshiruvi bilan shu qator orasida
+    // odamning Payme/Click to'lovi o'tib ketgan bo'lishi mumkin. Shartsiz
+    // `update` o'shanda naqdni ham qabul qilib, ikkinchi pulni olardi.
+    const claimed = await this.prisma.mockExamParticipant.updateMany({
+      where: { id, paid: false, deletedAt: null },
       data: { paid: true, paidAt: new Date() },
+    });
+    if (claimed.count === 0) {
+      throw new BadRequestException("Bu ishtirokchi allaqachon to'lagan");
+    }
+
+    const updated = await this.prisma.mockExamParticipant.findUniqueOrThrow({
+      where: { id },
       select: {
         id: true,
         publicId: true,
@@ -585,6 +678,7 @@ export class MockExamParticipantsService {
     companyId: number,
     userId: number,
     branchIds: ReportBranchIds,
+    options: { refundConfirmed?: boolean } = {},
   ) {
     // Branch isolation runs through the participant's EXAM — `companyId` alone
     // is not a boundary once there is more than one branch.
@@ -592,9 +686,27 @@ export class MockExamParticipantsService {
 
     const existing = await this.prisma.mockExamParticipant.findFirst({
       where: { id, deletedAt: null, companyId },
+      include: { exam: { select: { price: true } } },
     });
     if (!existing) {
       throw new NotFoundException('Ishtirokchi topilmadi');
+    }
+
+    // To'lagan odamning ro'yxati jim o'chirilardi: naqd yoki Payme/Click puli
+    // mock daromadidan tushib qolar, odam qayta yozilsa undan YANA to'lov
+    // so'ralardi. Endi admin pulni qaytarganini ochiq tasdiqlashi shart.
+    const paidFee = existing.paid
+      ? (existing.feeAmount ?? existing.exam.price)
+      : 0;
+    // Balansdan yechilgan eski to'lovni tizim o'zi qaytaradi (quyida) —
+    // bunda admin tasdig'i kerak emas, aks holda u naqd ham berib yuborardi.
+    const paidFromBalance =
+      existing.paid && (await this.mockExamBilling.hasBalanceFee(id));
+    if (existing.paid && !paidFromBalance && !options.refundConfirmed) {
+      throw new BadRequestException(
+        `Bu ishtirokchi ${paidFee.toLocaleString('ru-RU')} so'm to'lagan. ` +
+          "O'chirishdan oldin pulni qaytaring va buni tasdiqlang.",
+      );
     }
 
     // Give the money back BEFORE the row disappears. A removed registration
@@ -606,10 +718,17 @@ export class MockExamParticipantsService {
       userId,
     );
 
-    await this.prisma.mockExamParticipant.update({
-      where: { id },
+    // Shartli yozuv: o'qishda to'lanmagan bo'lgan ishtirokchi shu orada
+    // Payme/Click orqali to'lagan bo'lsa, u tasdiqsiz o'chib ketmasin.
+    const removed = await this.prisma.mockExamParticipant.updateMany({
+      where: { id, deletedAt: null, ...(existing.paid ? {} : { paid: false }) },
       data: { deletedAt: new Date(), deletedById: userId },
     });
+    if (removed.count === 0) {
+      throw new BadRequestException(
+        "Ishtirokchining to'lov holati hozirgina o'zgardi. Sahifani yangilab, qayta urinib ko'ring.",
+      );
+    }
 
     if (refunded > 0) {
       this.logger.log(
@@ -624,6 +743,15 @@ export class MockExamParticipantsService {
         firstName: existing.firstName,
         lastName: existing.lastName,
         phone: existing.phone,
+        ...(existing.paid
+          ? {
+              paid: true,
+              feeAmount: paidFee,
+              ...(paidFromBalance
+                ? { balansgaQaytarildi: true }
+                : { refundConfirmed: true }),
+            }
+          : {}),
       },
       changedById: userId,
       companyId,

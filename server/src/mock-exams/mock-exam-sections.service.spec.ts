@@ -54,7 +54,7 @@ describe('MockExamSectionsService', () => {
         },
       ]);
 
-      const result = await service.list();
+      const result = await service.list(1001);
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({ id: 's1', examCount: 4 });
       expect(prisma.mockExamSection.findMany).toHaveBeenCalledWith(
@@ -183,9 +183,9 @@ describe('MockExamSectionsService', () => {
   describe('reorder', () => {
     it('rejects an unknown section id', async () => {
       prisma.mockExamSection.findMany.mockResolvedValue([{ id: 's1' }]);
-      await expect(service.reorder({ sectionIds: ['other'] })).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.reorder({ sectionIds: ['other'] }, 1001),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('rejects when not all sections are provided', async () => {
@@ -193,9 +193,9 @@ describe('MockExamSectionsService', () => {
         { id: 's1' },
         { id: 's2' },
       ]);
-      await expect(service.reorder({ sectionIds: ['s1'] })).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.reorder({ sectionIds: ['s1'] }, 1001),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('renumbers the sections inside a transaction', async () => {
@@ -203,8 +203,49 @@ describe('MockExamSectionsService', () => {
         { id: 's1' },
         { id: 's2' },
       ]);
-      await service.reorder({ sectionIds: ['s2', 's1'] });
+      await service.reorder({ sectionIds: ['s2', 's1'] }, 1001);
       expect(prisma.$transaction).toHaveBeenCalled();
+    });
+  });
+
+  // Bo'limlar kompaniyaga tegishli (`companyId` ustuni bor), lekin servis uni
+  // hech qayerda ishlatmasdi — boshqa kompaniyaning bo'limini ko'rish,
+  // o'zgartirish va o'chirish mumkin edi.
+  describe('kompaniya qamrovi', () => {
+    it("ro'yxat faqat o'z kompaniyasini ko'rsatadi", async () => {
+      prisma.mockExamSection.findMany.mockResolvedValue([]);
+      await service.list(1001);
+      expect(prisma.mockExamSection.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ companyId: 1001 }),
+        }),
+      );
+    });
+
+    it("update/remove boshqa kompaniya bo'limini topmaydi", async () => {
+      prisma.mockExamSection.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.update('s1', { name: 'Y' }, 1001, 1),
+      ).rejects.toThrow(NotFoundException);
+      await expect(service.remove('s1', 1001, 1)).rejects.toThrow(
+        NotFoundException,
+      );
+      for (const [arg] of prisma.mockExamSection.findFirst.mock.calls) {
+        expect(arg.where).toEqual(
+          expect.objectContaining({ id: 's1', companyId: 1001 }),
+        );
+      }
+    });
+
+    it("reorder faqat o'z kompaniyasi bo'limlari bilan ishlaydi", async () => {
+      prisma.mockExamSection.findMany.mockResolvedValue([{ id: 's1' }]);
+      await service.reorder({ sectionIds: ['s1'] }, 1001);
+      expect(prisma.mockExamSection.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ companyId: 1001 }),
+        }),
+      );
     });
   });
 });

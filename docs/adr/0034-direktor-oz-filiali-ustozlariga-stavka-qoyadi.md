@@ -1,4 +1,4 @@
-# ADR-0033 — Filial direktori o'z filiali ustozlariga stavka qo'yadi
+# ADR-0034 — Filial direktori o'z filiali ustozlariga stavka qo'yadi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-09-24

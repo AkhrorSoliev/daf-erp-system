@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { MockExamGatewayBillingService } from './mock-exam-gateway-billing.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
+import { EntityHistoryService } from '../common/entity-history';
 
 /**
  * Mock havolasi orqali kelgan pul FAQAT mock uchun ishlatilishi kerak —
@@ -44,6 +45,10 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
         MockExamGatewayBillingService,
         { provide: PrismaService, useValue: prisma },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: EntityHistoryService,
+          useValue: { recordUpdate: jest.fn() },
+        },
       ],
     }).compile();
     service = moduleRef.get(MockExamGatewayBillingService);
@@ -189,10 +194,12 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
       const emit = jest.fn();
       const tx = {
         mockExamGatewayTransaction: {
-          update: jest.fn().mockResolvedValue({ mockParticipantId: 'p1' }),
+          findUnique: jest.fn().mockResolvedValue({ mockParticipantId: 'p1' }),
+          update: jest.fn(),
         },
         mockExamParticipant: {
-          update: jest.fn().mockResolvedValue({
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+          findUnique: jest.fn().mockResolvedValue({
             telegramChatId: '1647226871',
             publicId: 10003,
             feeAmount: 3000,
@@ -208,13 +215,18 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
           MockExamGatewayBillingService,
           { provide: PrismaService, useValue: p },
           { provide: EventEmitter2, useValue: { emit } },
+          {
+            provide: EntityHistoryService,
+            useValue: { recordUpdate: jest.fn() },
+          },
         ],
       }).compile();
 
       await mod.get(MockExamGatewayBillingService).markCompleted('txn-1');
 
-      expect(tx.mockExamParticipant.update).toHaveBeenCalledWith(
+      expect(tx.mockExamParticipant.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
+          where: { id: 'p1', paid: false, deletedAt: null },
           data: expect.objectContaining({ paid: true }),
         }),
       );
@@ -230,10 +242,12 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
       const emit = jest.fn();
       const tx = {
         mockExamGatewayTransaction: {
-          update: jest.fn().mockResolvedValue({ mockParticipantId: 'p1' }),
+          findUnique: jest.fn().mockResolvedValue({ mockParticipantId: 'p1' }),
+          update: jest.fn(),
         },
         mockExamParticipant: {
-          update: jest.fn().mockResolvedValue({
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+          findUnique: jest.fn().mockResolvedValue({
             telegramChatId: '1',
             publicId: 10,
             feeAmount: null,
@@ -249,6 +263,10 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
             useValue: { $transaction: async (fn: any) => fn(tx) },
           },
           { provide: EventEmitter2, useValue: { emit } },
+          {
+            provide: EntityHistoryService,
+            useValue: { recordUpdate: jest.fn() },
+          },
         ],
       }).compile();
 

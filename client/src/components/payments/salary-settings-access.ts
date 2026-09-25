@@ -1,5 +1,5 @@
 /**
- * ⚙ Salary settings — who sees what (ADR-0033).
+ * ⚙ Salary settings — who sees what (ADR-0034).
  *
  * The server enforces this rule itself (`teacher-rate-permission.ts`); this
  * file is UI only — a director is not shown something that would 403 anyway
@@ -45,7 +45,7 @@ export function isInactiveAccount(target: {
 /**
  * Whether a Branch Director may set THIS target's rate — mirrors the
  * server's `teacher-rate-permission.ts` gate for `POST /salary/config`
- * (ADR-0033): the target must hold Teacher, and must not also hold CEO or
+ * (ADR-0034): the target must hold Teacher, and must not also hold CEO or
  * Branch Director (an admin/cashier who also teaches is ratable; another
  * director or the CEO never is), must not be the caller themself, and the
  * account must be active — a director must not be offered the pencil for a

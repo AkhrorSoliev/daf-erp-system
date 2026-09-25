@@ -27,11 +27,13 @@ import { StudentsTable } from "./students-table";
 import { EditStudentDrawer } from "./edit-student-drawer";
 import { AddStudentDialog } from "./add-student-dialog";
 import { useAuth } from "@/hooks/use-auth";
-import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useBranchStatus, useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { listParam, useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
 import {
+  BRANCH_CLOSED_TO_REGISTRATION,
+  branchClosedToRegistration,
   buildBotLink,
   isTelegramBotConfigured,
   TELEGRAM_BOT_NOT_CONFIGURED,
@@ -64,13 +66,24 @@ export function StudentsClient() {
   const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
   const isTeacher = user?.roles.every((r) => r.id === 4) ?? false;
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
+  const branchClosed = branchClosedToRegistration(
+    useBranchStatus(selectedBranch?.id),
+  );
+  // Why "Havola olish" is disabled, or null when a link can be handed out.
+  const linkUnavailableReason = !selectedBranch
+    ? "Avval filial tanlang"
+    : branchClosed
+      ? BRANCH_CLOSED_TO_REGISTRATION
+      : !isTelegramBotConfigured
+        ? TELEGRAM_BOT_NOT_CONFIGURED
+        : null;
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setUrlFilters({ search: value, page: 1 });
   }, 300);
 
   const handleCopyLink = async () => {
-    if (!selectedBranch) return;
+    if (!selectedBranch || branchClosed) return;
     const link = buildBotLink(`student_${selectedBranch.id}`);
     if (!link) {
       toast.error(TELEGRAM_BOT_NOT_CONFIGURED);
@@ -193,7 +206,7 @@ export function StudentsClient() {
                 <TooltipContent>Avval filial tanlang</TooltipContent>
               </Tooltip>
             )}
-            {selectedBranch && isTelegramBotConfigured ? (
+            {linkUnavailableReason === null ? (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="outline" onClick={handleCopyLink} className="shrink-0">
@@ -219,9 +232,7 @@ export function StudentsClient() {
                     </Button>
                   </span>
                 </TooltipTrigger>
-                <TooltipContent>
-                  {selectedBranch ? TELEGRAM_BOT_NOT_CONFIGURED : "Avval filial tanlang"}
-                </TooltipContent>
+                <TooltipContent>{linkUnavailableReason}</TooltipContent>
               </Tooltip>
             )}
           </div>

@@ -43,7 +43,7 @@ export class GroupsWriteService {
 
   async create(dto: CreateGroupDto, companyId: number, userId?: number) {
     const branch = await this.prisma.branch.findFirst({
-      where: { id: dto.branchId, deletedAt: null },
+      where: { id: dto.branchId, companyId, deletedAt: null },
     });
     if (!branch) {
       throw new NotFoundException(`Filial #${dto.branchId} topilmadi`);
@@ -59,20 +59,14 @@ export class GroupsWriteService {
       "Bu filialda guruh yaratish huquqingiz yo'q",
     );
 
-    const course = await this.prisma.course.findFirst({
-      where: { id: dto.courseId, deletedAt: null },
-    });
-    if (!course) {
-      throw new NotFoundException(`Kurs #${dto.courseId} topilmadi`);
-    }
+    const course = await this.assertCourseInGroupBranch(
+      dto.courseId,
+      companyId,
+      dto.branchId,
+    );
 
     if (dto.roomId) {
-      const room = await this.prisma.room.findFirst({
-        where: { id: dto.roomId, branchId: dto.branchId, deletedAt: null },
-      });
-      if (!room) {
-        throw new NotFoundException(`Xona #${dto.roomId} topilmadi`);
-      }
+      await this.assertRoomInGroupBranch(dto.roomId, companyId, dto.branchId);
     }
 
     if (dto.teacherIds?.length) {
@@ -255,6 +249,66 @@ export class GroupsWriteService {
     );
   }
 
+  /**
+   * A group's course must belong to the group's own branch.
+   *
+   * The course carries the price every student in the group pays
+   * (`per-lesson-price.ts`), and it is repriced or archived by whoever holds
+   * the COURSE's branch — archiving cancels every group on it
+   * (`StatusCascadeService`). A Namangan group on a Farg'ona course would be
+   * priced, and could be closed, from Farg'ona. This holds for a CEO too: it
+   * is a rule about the group, not about the caller.
+   *
+   * A course with no branch fails closed. `Course.branchId` is nullable, but
+   * `POST /courses` always sets it and no route clears it, so a branchless
+   * course is stray data that belongs to no group's branch.
+   *
+   * Another company's course reads as not found (404) rather than as another
+   * branch's (400): confirming that the id exists is already a leak.
+   */
+  private async assertCourseInGroupBranch(
+    courseId: string,
+    companyId: number,
+    branchId: number,
+  ) {
+    const course = await this.prisma.course.findFirst({
+      where: { id: courseId, companyId, deletedAt: null },
+    });
+    if (!course) {
+      throw new NotFoundException(`Kurs #${courseId} topilmadi`);
+    }
+    if (course.branchId !== branchId) {
+      throw new BadRequestException(
+        'Tanlangan kurs guruh filialiga tegishli emas — guruh filialidagi kursni tanlang',
+      );
+    }
+    return course;
+  }
+
+  /**
+   * A group's room must belong to the group's own branch — otherwise the group
+   * shows up in the other branch's occupancy and utilisation reports. Same
+   * 404-for-another-company rule as the course.
+   */
+  private async assertRoomInGroupBranch(
+    roomId: string,
+    companyId: number,
+    branchId: number,
+  ): Promise<void> {
+    const room = await this.prisma.room.findFirst({
+      where: { id: roomId, companyId, deletedAt: null },
+      select: { branchId: true },
+    });
+    if (!room) {
+      throw new NotFoundException(`Xona #${roomId} topilmadi`);
+    }
+    if (room.branchId !== branchId) {
+      throw new BadRequestException(
+        'Tanlangan xona guruh filialiga tegishli emas — guruh filialidagi xonani tanlang',
+      );
+    }
+  }
+
   async update(
     id: string,
     dto: UpdateGroupDto,
@@ -317,17 +371,29 @@ export class GroupsWriteService {
       await this.assertTeachersHaveRate(dto.teacherIds);
     }
 
-    // Validate a changed course exists. endDate is intentionally NOT
-    // recomputed on edit: groups now run open-ended (endDate is stamped only
-    // when the group is manually set COMPLETED), so an edit must leave the
-    // existing endDate untouched instead of re-deriving startDate + duration.
+    // A changed course or room must belong to the group's own branch — the
+    // group's, never `dto.branchId`, which is discarded below. An unchanged
+    // one is not re-checked: the edit form sends both back on every save, and
+    // deleting a room does not detach its groups, so re-checking would lock a
+    // group whose room was deleted out of every edit.
+    //
+    // endDate is intentionally NOT recomputed on edit: groups now run
+    // open-ended (endDate is stamped only when the group is manually set
+    // COMPLETED), so an edit must leave the existing endDate untouched instead
+    // of re-deriving startDate + duration.
     if (dto.courseId && dto.courseId !== existing.courseId) {
-      const course = await this.prisma.course.findFirst({
-        where: { id: dto.courseId, deletedAt: null },
-      });
-      if (!course) {
-        throw new NotFoundException(`Kurs #${dto.courseId} topilmadi`);
-      }
+      await this.assertCourseInGroupBranch(
+        dto.courseId,
+        companyId,
+        existing.branchId,
+      );
+    }
+    if (dto.roomId && dto.roomId !== existing.roomId) {
+      await this.assertRoomInGroupBranch(
+        dto.roomId,
+        companyId,
+        existing.branchId,
+      );
     }
 
     // `branchId` is deliberately discarded: the group's branch is fixed at

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Copy, Plus, QrCode, Search } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, Loader2, Plus, QrCode, Search } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
   TooltipContent,
@@ -25,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { copyPendingText } from "@/lib/clipboard";
 import {
   isTelegramBotConfigured,
   TELEGRAM_BOT_NOT_CONFIGURED,
@@ -54,6 +56,7 @@ export function TeachersClient() {
   const [searchInput, setSearchInput] = useState(filters.search);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [copying, setCopying] = useState(false);
   const { openAddDrawer } = useEditTeacher();
   const user = useAuth((s) => s.user);
   const canManageTeachers = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
@@ -61,22 +64,43 @@ export function TeachersClient() {
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
   // Signed, server-minted link — the old client-built `teacher_<id>` payload
   // was unsigned and let anyone register into any branch.
-  const { link: teacherLink } = useTeacherRegistrationLink(selectedBranch?.id);
+  const {
+    link: teacherLink,
+    loading: linkLoading,
+    reload: reloadLink,
+  } = useTeacherRegistrationLink(selectedBranch?.id);
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setUrlFilters({ search: value, page: 1 });
   }, 300);
 
+  // A link dies three days after it is minted (ADR-0029) and this tab may
+  // have been open longer, so every copy mints a new one.
   const handleCopyLink = async () => {
     if (!selectedBranch) return;
-    if (!teacherLink) {
-      toast.error(TELEGRAM_BOT_NOT_CONFIGURED);
-      return;
+    setCopying(true);
+    try {
+      const url = await copyPendingText(reloadLink());
+      if (!url) {
+        toast.error(TELEGRAM_BOT_NOT_CONFIGURED);
+        return;
+      }
+      setCopied(true);
+      toast.success("Havola nusxalandi");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Havolani nusxalab bo'lmadi");
+    } finally {
+      setCopying(false);
     }
-    await navigator.clipboard.writeText(teacherLink);
-    setCopied(true);
-    toast.success("Havola nusxalandi");
-    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Same reason: the QR code shows a link minted when the dialog opens,
+  // never the one minted when the page did. Started from the trigger's own
+  // click, not from `onOpenChange`: an uncontrolled Radix dialog reports the
+  // change from an effect, after it has already rendered the old QR code once.
+  const handleQrOpen = () => {
+    void reloadLink();
   };
 
   const fetchTeachers = useCallback(async () => {
@@ -133,8 +157,16 @@ export function TeachersClient() {
               <>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" className="size-9 sm:size-auto sm:h-9 sm:px-4" data-tour="teacher-invite-link" onClick={handleCopyLink}>
-                      {copied ? (
+                    <Button
+                      variant="outline"
+                      className="size-9 sm:size-auto sm:h-9 sm:px-4"
+                      data-tour="teacher-invite-link"
+                      onClick={handleCopyLink}
+                      disabled={copying}
+                    >
+                      {copying ? (
+                        <Loader2 className="size-4 animate-spin sm:mr-2" />
+                      ) : copied ? (
                         <Check className="size-4 text-green-500 sm:mr-2" />
                       ) : (
                         <Copy className="size-4 sm:mr-2" />
@@ -150,7 +182,7 @@ export function TeachersClient() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="icon">
+                        <Button variant="outline" size="icon" onClick={handleQrOpen}>
                           <QrCode className="size-4" />
                         </Button>
                       </DialogTrigger>
@@ -162,16 +194,31 @@ export function TeachersClient() {
                       <DialogTitle>QR kod — O&apos;qituvchi ro&apos;yxatdan o&apos;tish</DialogTitle>
                     </DialogHeader>
                     <div className="flex flex-col items-center gap-4 py-4">
-                      <div className="w-full max-w-70 rounded-lg border bg-white p-4">
-                        <QRCodeSVG
-                          value={teacherLink ?? ""}
-                          className="h-auto w-full"
-                          level="M"
-                        />
-                      </div>
-                      <p className="text-muted-foreground text-center text-sm">
-                        Ushbu QR kodni skanerlang va Telegram bot orqali ro&apos;yxatdan o&apos;ting
-                      </p>
+                      {linkLoading ? (
+                        <Skeleton className="aspect-square w-full max-w-70 rounded-lg" />
+                      ) : teacherLink ? (
+                        <div className="w-full max-w-70 rounded-lg border bg-white p-4">
+                          <QRCodeSVG
+                            value={teacherLink}
+                            className="h-auto w-full"
+                            level="M"
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground text-center text-sm">
+                          {TELEGRAM_BOT_NOT_CONFIGURED}
+                        </p>
+                      )}
+                      {linkLoading || teacherLink ? (
+                        <div className="flex flex-col gap-1 text-center">
+                          <p className="text-muted-foreground text-sm">
+                            Ushbu QR kodni skanerlang va Telegram bot orqali ro&apos;yxatdan o&apos;ting
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            Havola 3 kun amal qiladi.
+                          </p>
+                        </div>
+                      ) : null}
                     </div>
                   </DialogContent>
                 </Dialog>

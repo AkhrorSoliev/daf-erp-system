@@ -125,6 +125,7 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - `src/middleware.ts` redirects unauthenticated users to `/login`
 - Auth state managed by Zustand store in `src/hooks/use-auth.ts`
 - `AuthProvider` in `src/components/providers/auth-provider.tsx` hydrates state from cookies on mount
+- **Session-ending actions (ADR-0030).** `PATCH /users/password`, `PATCH /student-portal/password` and `POST /users/logout-others` end EVERY session of the account, this device's included, and return a fresh pair. Store it with `freshSessionFrom(data)` + `setAuth(...)` (`src/lib/fresh-session.ts`), or the next request signs the user out. `useLogoutOthers()` (`src/hooks/use-logout-others.ts`) does this for the "Boshqa qurilmalardan chiqish" action on the staff profile and on student portal Settings. Both open the same confirmation, `src/components/shared/logout-others-dialog.tsx` — the student portal passes `contentClassName="lumio"`, like its own sign-out dialog. Do not fork a second, student-only copy.
 
 ## Architecture Rules
 
@@ -284,7 +285,8 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 
 - **Never use the native `confirm()` browser API** for delete/destructive confirmations. It's unstyled, blocks the JS thread, can't render formatted Uzbek warnings or HTML, and looks completely out of place against the shadcn UI.
 - Use the shadcn `<AlertDialog>` component (`src/components/ui/alert-dialog.tsx`) for every destructive confirmation: row delete from a table, archive, status reset, batch delete, etc.
-- Standard shape: `<AlertDialogTitle>` (the question), `<AlertDialogDescription>` (the consequence — what data is affected, what cascades, what cannot be undone), `<AlertDialogCancel>Bekor qilish</AlertDialogCancel>`, and `<AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">O'chirish</AlertDialogAction>`.
+- Standard shape: `<AlertDialogTitle>` (the question), `<AlertDialogDescription>` (the consequence — what data is affected, what cascades, what cannot be undone), `<AlertDialogCancel>Bekor qilish</AlertDialogCancel>`, and `<AlertDialogAction variant="destructive">O'chirish</AlertDialogAction>` (red text on a light red background). A confirm button rendered as a plain `<Button>` in the footer takes the same `variant="destructive"`.
+- **Colour the confirm button with the `variant` prop, never with `bg-*` / `text-*` classes.** From March to September 2026 this rule prescribed `className="bg-destructive text-destructive-foreground hover:bg-destructive/90"`, and every destructive confirm button rendered blue: `AlertDialogAction` renders through `Button asChild`, and it handed `className` to the child, where the Slot only concatenates strings, so `bg-primary` stayed next to `bg-destructive` and won by stylesheet order. The component now passes `className` to `Button` (tailwind-merge), but the variant is still the rule. `--destructive-foreground` does not exist in `globals.css`, so `text-destructive-foreground` generates no CSS at all; `src/components/ui/alert-dialog.test.ts` fails if any source file uses it.
 - For a list/table with multiple destructive actions sharing the same look-and-feel, hold a single `useState<{ title, description, onConfirm } | null>` and render one `<AlertDialog>` controlled by that state — each row's handler just calls `setConfirmDelete({ ... })`. Avoids one AlertDialog per row.
 - Reference implementations: `src/components/teachers/teacher-profile-client.tsx` (single-action archive), `src/components/groups/lesson-changes-tab.tsx` (shared confirmDelete state across three different delete flows).
 
@@ -640,6 +642,15 @@ Two things react to a branch switch: `BranchScopedMain` remounts the page conten
 - Once resolved, `hydrateFor` keeps the tab's own selection while it is still allowed (it re-runs on every token refresh), and `persist` compares against the tab's own selection rather than the shared `localStorage` key.
 - Known limit: all tabs still share one `branchId` key, so a switch in one tab changes the header of another tab's later requests.
 
+### Student Registration Links Follow the Bot's Branch Rule
+
+The bot's `/start` accepts a `student_<branch>` or `student_<branch>_group_<group>` link only for a branch whose `status` is ACTIVE (server/CLAUDE.md, "Registration deep links"). The students page "Havola olish" button and the group card's QR dialog and copy button therefore offer nothing for any other branch: the button is disabled, or the dialog shows the reason instead of a QR, with `BRANCH_CLOSED_TO_REGISTRATION` as the explanation.
+
+- The rule is `branchClosedToRegistration(status)` in `lib/telegram-link.ts`. It checks `status`, not `isActive`: the bot reads `status`, and the settings form's "Faol/Nofaol" switch writes only `isActive`.
+- Read the status with `useBranchStatus(branchId)` (`hooks/use-branch-switcher.ts`), which looks the branch up by id in the switcher's `branches`. Never read `selectedBranch.status`: a refetch or re-hydrate replaces the list but keeps the old selected object. The group card passes `group.branchId`, not the header selection.
+- For a CEO the list comes from `GET /branches`; for everyone else from the sign-in payload's `branches`, which carries `status` since the server's `SESSION_BRANCHES` select. A non-CEO therefore sees a status change at their next token refresh (at most an hour).
+- **Unknown is not closed.** A branch missing from the list, a list not loaded yet, or an older cookie without `status` all keep the link. Blocking on unknown would take every link away until the next refresh, and the bot still decides.
+
 ### Student Filters
 
 - **Single search field** for name, phone, and ID — placeholder: "Ism, telefon yoki ID bo'yicha..."
@@ -685,7 +696,7 @@ The financial section lives under `/payments/*` with these sub-pages:
 - **Markaz qo'shimchasi drill-down** — the salary page's card no longer opens a dialog: its two live figures («Qolgan (markaz)» and «O'quvchilardan olinishi kerak») are `<Link>`s to `/payments/debt?tab=markaz&month=…`, where the list lives as `debt/center-topup-content.tsx`. A dialog holding a second copy meant two places to keep in step and a list nobody could open in a new tab. The list shows exactly TWO money columns — **Markaz ustozga to'lagan** (the center's outlay) and **O'quvchining qarzi** (their debt today, the same figure as their profile). Two other versions of that second column were tried and removed: what the lessons cost (#10026 showed 345 000 against a real debt of 156 000) and `min(debt, lesson cost)` (#10058 showed 466 662 against a profile saying 624 989). An UNSETTLED month shows the forecast leg instead — lessons held that payroll has not paid for yet — labelled «Markaz to'laydi» over a banner, never merged into the paid figures.
 - **`salary-settle-month-dialog.tsx`** — «Oylik berilganini tasdiqlash» (CEO-only button in the `/payments/salary` filter row, shown only when the selected month still carries unpaid payroll). Confirms salaries that were **handed over outside the system** at the amounts the system had already calculated. Reads `GET /salary/payments/settle-month/preview` — a dedicated endpoint, NOT the table, because the table shows one payment per employee while a re-calculated month carries several per person (June 2026: two rows for six teachers), and the dialog must list exactly what it settles. It asks for three things: the real handover **date** (`DatePicker`, `maxDate` today, `minDate` period start), **how much left each kassa account** of every branch in the batch — an amount per account, not one chosen account, because a payroll routinely goes out part cash and part card; each branch's amounts must close to its own total exactly, and each row shows a live "Hozir X → keyin Y" projection that warns in amber when an account goes negative but never blocks (the money really did leave) — and the **total retyped in digits**. Typing the sum is the confirmation rather than a random code: the total is the one number the operator has to have read, and the server re-checks it against the live set. **This dialog's table is deliberately NOT paginated** — a confirmation dialog that hides part of what it is confirming works against its own purpose.
 - **`salary-settings-sheet.tsx`** — ⚙ Sozlamalar Sheet (CEO and Branch Director button in the filter row). Three sections: **Hisoblash davri** (embeds `salary-period-control.tsx`, CEO only), **Ustoz stavkalari** (fetches `GET /salary/overview?pageSize=100`, which now returns each row's `user.roles`; per teacher a rate-badge row + pencil → `salary-config-row-sheet`, checkbox multi-select → `salary-config-bulk-dialog`) and **Xodimlar stavkalari** (`salary-staff-config-list.tsx` → `GET /salary/staff-config`, CEO only). This is where rate rules + cycle-day are managed, kept OUT of the display report. `onChanged` bumps the report's refreshKey.
-  - **A Branch Director sees the full teacher list but can only act on some of its rows** (ADR-0033): `canDirectorRate` (`salary-settings-access.ts`) allows a row when its `roles` include Teacher and exclude both CEO and Branch Director, the row is not the director themself, and the account is active — `isActive !== false` and `status` absent or `'ACTIVE'` (`isInactiveAccount`, R6; `GET /salary/overview` now returns both fields alongside `user.roles`). That mirrors the server's `POST /salary/config` gate exactly (role check, then active/status check), so a row the director could rate never 403s. This is what lets an Administrator or Cashier who also teaches show up as ratable, same as a plain teacher. A row `canDirectorRate` refuses shows **no checkbox and no pencil** (hide, don't disable) and a small muted label in the pencil's place instead — **«Faol emas»** when the account itself is inactive/suspended/terminated/archived, **«Oyligini CEO belgilaydi»** otherwise. The CEO is not gated by this at all and sees every row exactly as before.
+  - **A Branch Director sees the full teacher list but can only act on some of its rows** (ADR-0034): `canDirectorRate` (`salary-settings-access.ts`) allows a row when its `roles` include Teacher and exclude both CEO and Branch Director, the row is not the director themself, and the account is active — `isActive !== false` and `status` absent or `'ACTIVE'` (`isInactiveAccount`, R6; `GET /salary/overview` now returns both fields alongside `user.roles`). That mirrors the server's `POST /salary/config` gate exactly (role check, then active/status check), so a row the director could rate never 403s. This is what lets an Administrator or Cashier who also teaches show up as ratable, same as a plain teacher. A row `canDirectorRate` refuses shows **no checkbox and no pencil** (hide, don't disable) and a small muted label in the pencil's place instead — **«Faol emas»** when the account itself is inactive/suspended/terminated/archived, **«Oyligini CEO belgilaydi»** otherwise. The CEO is not gated by this at all and sees every row exactly as before.
   - A director's `salary-config-row-sheet` offers **PERCENTAGE / FIXED_PER_STUDENT only** (`allowMonthly={access.canManageCompanyPayroll}` hides the FIXED_MONTHLY option and the sheet's "Oylik qo'yish" bulk button) and its `effectiveFrom` date picker's minimum is the current payroll period's start (`minEffectiveFrom`, from the `period` the sheet already holds) — the CEO has no minimum. Deactivating a rate (`canDeactivate`) stays CEO-only.
   - **One search box drives both lists** — "who is still missing a rate?" is a single question and must not depend on which list the person is in. Both rate editors are the SAME `SalaryConfigRowSheet`; the sheet holds the whole `EditTarget` (not a user id) because the two lists come from different endpoints. The staff rows pass their real `roles`, so `isTeacher` is false and the editor offers FIXED_MONTHLY alone — a staff member can never be given a per-lesson rate by accident.
   - **Why staff need their own list rather than a widened `/salary/overview`:** that endpoint computes groups, active students and `actualEarned` per teacher, all structurally 0 for a fixed-monthly administrator — rows that read "earned nothing" next to a full month's salary. It is also the reason the "Xodimlar oyligi" section of the report sat empty from July 2026 until this shipped: the report lists staff who HAVE a rate, and there was no screen on which to set one.
@@ -706,7 +717,7 @@ The financial section lives under `/payments/*` with these sub-pages:
 - **Payment status labels**: `{ CALCULATED: "Hisoblangan", APPROVED: "Tasdiqlangan", PAID: "To'langan", CANCELLED: "Bekor qilingan", REVERSED: "Bekor qilingan" }`
 - **Salary actions by role** (the `/payments/salary` report is display-only; actions are in the ⚙ Sozlamalar sheet or the breakdown drawer):
   - CEO: ⚙ Sozlamalar → edit a teacher's rate (pencil → row sheet), bulk-apply rates (checkbox → bulk dialog), change the cycle day (period control).
-  - Branch Director: ⚙ Sozlamalar → sets a **lesson-based** rate (PERCENTAGE / FIXED_PER_STUDENT) for an own-branch teacher, incl. an Administrator/Cashier who also holds Teacher, but never the CEO, another director, or themself (pencil / bulk «Foiz qo'yish»); rows they cannot rate show «Oyligini CEO belgilaydi» instead of a pencil; `effectiveFrom` cannot precede the current payroll period; no FIXED_MONTHLY, no cycle day, no staff rates, no deactivation (`salary-settings-access.ts`, ADR-0033).
+  - Branch Director: ⚙ Sozlamalar → sets a **lesson-based** rate (PERCENTAGE / FIXED_PER_STUDENT) for an own-branch teacher, incl. an Administrator/Cashier who also holds Teacher, but never the CEO, another director, or themself (pencil / bulk «Foiz qo'yish»); rows they cannot rate show «Oyligini CEO belgilaydi» instead of a pencil; `effectiveFrom` cannot precede the current payroll period; no FIXED_MONTHLY, no cycle day, no staff rates, no deactivation (`salary-settings-access.ts`, ADR-0034).
   - CEO + BD: approve/pay a single payment from the breakdown drawer footer.
   - Administrator: read-only (sees the report; no ⚙ button, no edit/pay).
 - **No manual salary calculation** — the daily cron settles each completed cycle automatically (`POST /salary/calculate` is cron-internal; there is intentionally no "Oylikni hisoblash" button in the UI). Do not re-introduce a manual calculate dialog.
@@ -954,6 +965,21 @@ every list renders; the roles are only access.
   would silently re-break "demote an administrator to a role-less cleaner"
   the next time someone left stale form state around. The field-clearing is
   what keeps the visible form honest in the meantime. Keep both.
+- **Only grantable roles are offered (ADR-0026).** `roleFieldFor`
+  (`src/lib/role-grant-ceiling.ts`) decides the "Tizim huquqi" field, and
+  both variants live in `employee-roles-field.tsx`. `pick` renders
+  `EmployeeRolePicker` with only the roles the signed-in user may grant.
+  `read-only` renders `EmployeeRolesReadOnly` when the employee already holds
+  a role outside that ceiling, a non-CEO's own record included; the save then
+  sends the loaded `roleIds` back unchanged, because the backend accepts an
+  unchanged set and refuses any change to such an employee's roles. `hidden`
+  is a caller who may grant nothing.
+- The ceiling map is shared with `telegram-link-dialog.tsx`; do not write
+  another copy. `role-grant-ceiling.test.ts` compares it with the server's
+  `GRANTABLE_ROLE_IDS` and fails on a second name-keyed copy under `src/`. It
+  is keyed by role NAME on purpose, the one exception to "check roles by ID"
+  above: the server reads role names too, so a renamed role fails closed on
+  both sides alike.
 - Password is required on create **only when a role is given**.
 - Branch stays required for everyone except a CEO, role-less employees
   included: a branch-less employee appears in no branch list and on no payroll
@@ -964,6 +990,11 @@ every list renders; the roles are only access.
   `user.roles` directly for a "Lavozim" column; a cleaner has none.
 - Editing an existing employee pre-fills Lavozim from their role label, which
   is how the field gets backfilled without a script.
+
+### Your own phone, login and password (ADR-0031)
+
+- The profile drawer (`components/profile/edit-profile-drawer.tsx`) sends a changed phone to `PATCH /users/phone` together with the current password — the "Joriy parol" field appears only while the phone differs — and name/photo to `PATCH /users/profile`, which refuses a phone. The split lives in `profile-save-plan.ts` (unit-tested), not in the JSX.
+- The employee form locks Telefon, Login and Parol when you open your OWN record and links to Profil (`lib/own-sign-in-keys.ts`); the backend refuses those changes there with 403 anyway.
 
 ### Employee & Teacher Status (Faollik holati)
 

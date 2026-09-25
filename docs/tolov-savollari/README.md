@@ -12,6 +12,13 @@ python3 docs/tolov-savollari/make_pdf.py docs/tolov-tizimi-savollari.pdf
 `questions.py` — savollar, misollar, variantlar.
 `make_pdf.py` — sahifa tuzilishi, shartnomani qo'shish, havolalar.
 `shartnoma.pdf` — ommaviy oferta, hujjatning oxiriga qo'shiladi.
+`shartnoma-2026.docx` — yangi, ikki tomonlama shartnoma. 24.09.2026 dan
+ustuvor: undan kelib chiqqan qoidalar —
+`docs/superpowers/specs/2026-09-24-shartnoma-tolov-qoidalari-design.md`.
+`javoblar.md` — 26 savolga CEO javoblari (21.09).
+`shartnoma-2026-taklif.docx` — yurist uchun: shartnomaga kiritiladigan o'zgarishlar
+Word'da belgilangan, har birining yonida sababi (izoh). `shartnoma-2026-taklif-toza.docx`
+— o'sha o'zgarishlar qabul qilingan toza nusxa.
 `ttf/` — Newsreader va DM Sans (CV manbasidan olingan, woff2 dan o'girilgan).
 
 ## Shartnoma havolalari

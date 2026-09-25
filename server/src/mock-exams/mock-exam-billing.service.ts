@@ -48,6 +48,54 @@ export class MockExamBillingService {
    * balance — cash and gateway payers write no Transaction) is a no-op.
    * Returns the so'm returned, 0 when there was nothing to give back.
    */
+  /**
+   * Shu ishtirokchining balansdan yechilgan (hali qaytarilmagan) to'lovi bormi?
+   * Bor bo'lsa, o'chirishda pulni tizimning o'zi balansga qaytaradi — admin
+   * alohida naqd bermasligi kerak.
+   */
+  async hasBalanceFee(
+    participantId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<boolean> {
+    const client = tx ?? this.prisma;
+    const rows = await client.transaction.findMany({
+      where: {
+        type: TransactionType.MOCK_EXAM_FEE,
+        reversedAt: null,
+        amount: { lt: 0 },
+        metadata: { path: ['mockParticipantId'], equals: participantId },
+      },
+      select: { id: true },
+      take: 1,
+    });
+    return rows.length > 0;
+  }
+
+  /**
+   * Ro'yxat sahifasi uchun: berilgan ishtirokchilardan qaysilari balansdan
+   * to'lagan. JSON yo'li bo'yicha `in` filtri yo'q, shuning uchun faol eski
+   * yozuvlar (2026-08 gacha, soni oz) bir so'rovda olinib, xotirada ajratiladi.
+   */
+  async paidFromBalanceIds(participantIds: string[]): Promise<Set<string>> {
+    if (participantIds.length === 0) return new Set();
+    const wanted = new Set(participantIds);
+    const rows = await this.prisma.transaction.findMany({
+      where: {
+        type: TransactionType.MOCK_EXAM_FEE,
+        reversedAt: null,
+        amount: { lt: 0 },
+      },
+      select: { metadata: true },
+    });
+    const found = new Set<string>();
+    for (const row of rows) {
+      const id = (row.metadata as { mockParticipantId?: unknown } | null)
+        ?.mockParticipantId;
+      if (typeof id === 'string' && wanted.has(id)) found.add(id);
+    }
+    return found;
+  }
+
   async refundParticipantFee(
     participantId: string,
     performedById?: number,

@@ -9,7 +9,7 @@ import {
 type PrismaLike = PrismaService | Prisma.TransactionClient;
 
 /**
- * Who may write a teacher's salary rate (ADR-0033: "Ustoz roli bor hammaga").
+ * Who may write a teacher's salary rate (ADR-0034: "Ustoz roli bor hammaga").
  *
  * The CEO may set any rate; this module only runs for a caller who is not.
  * A Branch Director may set a rate for an own-branch employee who holds the

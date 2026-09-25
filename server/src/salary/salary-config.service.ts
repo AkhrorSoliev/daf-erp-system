@@ -88,7 +88,7 @@ export class SalaryConfigService {
   }
 
   /**
-   * HTTP write gate for `POST /salary/config` (ADR-0033): the CEO passes
+   * HTTP write gate for `POST /salary/config` (ADR-0034): the CEO passes
    * through; a Branch Director only for an own-branch employee who holds the
    * Teacher role. Kept separate from the write itself because
    * `createConfig` knows the MONEY rules (versioning, closed periods), not
@@ -414,7 +414,7 @@ export class SalaryConfigService {
    * `@IsDateString()` but is not the shape this parser expects.
    *
    * Delegates to `shared/resolve-current-period`'s `parseEffectiveFromOrThrow`,
-   * which is also what the ADR-0033 rate gate uses — a rate version's start,
+   * which is also what the ADR-0034 rate gate uses — a rate version's start,
    * the period boundary it has to line up with, and what counts as a VALID
    * date must not be decided three different ways. The default branch used to
    * build the date via `toLocaleString` + `setHours`, which reads the PROCESS

@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ArchiveEntityType, ArchiveQueryDto } from './dto/archive-query.dto';
 import {
-  companyScope,
+  archiveScope,
   getDelegate,
   getInclude,
   getSearchFilter,
@@ -28,7 +28,13 @@ export class ArchiveReadService {
       enrollments,
       holidays,
     ] = await Promise.all([
-      this.prisma.user.count({ where: scoped }),
+      // The staff tab: no student-only accounts (ADR-0033, `archiveScope`).
+      this.prisma.user.count({
+        where: {
+          ...deletedFilter,
+          ...archiveScope(ArchiveEntityType.USERS, companyId),
+        },
+      }),
       this.prisma.branch.count({ where: scoped }),
       this.prisma.room.count({ where: scoped }),
       this.prisma.course.count({ where: scoped }),
@@ -66,7 +72,7 @@ export class ArchiveReadService {
     const delegate = getDelegate(this.prisma, entityType);
     const where: any = {
       deletedAt: { not: null },
-      ...companyScope(entityType, companyId),
+      ...archiveScope(entityType, companyId),
     };
 
     if (search) {
@@ -103,7 +109,7 @@ export class ArchiveReadService {
       where: {
         id: parsedId,
         deletedAt: { not: null },
-        ...companyScope(entityType, companyId),
+        ...archiveScope(entityType, companyId),
       },
       ...(include && { include }),
     });

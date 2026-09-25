@@ -327,6 +327,19 @@ export class ClickMethodsService {
               paymentId: erpPayment.id,
             },
           });
+
+          // Portal intent'i endi ishlatildi. Aks holda u 1 soat "tirik"
+          // qolib, keyingi to'lovlarni noto'g'ri yo'naltirardi.
+          await tx.paymentIntent.updateMany({
+            where: {
+              studentId: txn.studentId,
+              companyId,
+              provider: 'CLICK',
+              used: false,
+              amount: txn.amountInSom,
+            },
+            data: { used: true },
+          });
         },
         {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -529,7 +542,12 @@ export class ClickMethodsService {
       return clickError(clickTransId, merchantTransId, CLICK_INVALID_AMOUNT);
     }
 
-    await this.mockGateway.markCompleted(mockTxn.id);
+    // Ro'yxat allaqachon to'langan yoki o'chirilgan — ikkinchi pulni olmaymiz.
+    // Complete xato bilan qaytsa, Click to'lovni muvaffaqiyatsiz deb yopadi.
+    const completed = await this.mockGateway.markCompleted(mockTxn.id);
+    if (!completed) {
+      return clickError(clickTransId, merchantTransId, CLICK_ALREADY_PAID);
+    }
 
     return {
       click_trans_id: clickTransId,

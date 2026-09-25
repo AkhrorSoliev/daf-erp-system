@@ -125,7 +125,7 @@ export function TeacherRowActions({ teacher, onDeleted, onStatusChanged }: Teach
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              variant="destructive"
             >
               {deleting ? "O'chirilmoqda..." : "O'chirish"}
             </AlertDialogAction>

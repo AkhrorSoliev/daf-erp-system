@@ -183,7 +183,7 @@ export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
                   <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleDelete}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    variant="destructive"
                   >
                     O&apos;chirish
                   </AlertDialogAction>

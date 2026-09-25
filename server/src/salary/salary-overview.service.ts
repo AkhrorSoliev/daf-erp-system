@@ -135,7 +135,7 @@ export class SalaryOverviewService {
         branches: { select: { branch: { select: { id: true, name: true } } } },
         // So the client can hide the edit pencil for a teacher who also
         // holds CEO or Branch Director — a Branch Director cannot rate them
-        // (ADR-0033), even though this list's role filter matched them.
+        // (ADR-0034), even though this list's role filter matched them.
         roles: { select: { role: { select: { id: true, name: true } } } },
       },
     });

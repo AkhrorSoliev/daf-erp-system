@@ -31,7 +31,7 @@ export interface ReadinessCheck {
   required: boolean;
   /** Changes with the state — spells out exactly what is still missing. */
   hint: string;
-  /** `ceoOnly` set only when true — a Branch Director cannot rate this one (ADR-0033). */
+  /** `ceoOnly` set only when true — a Branch Director cannot rate this one (ADR-0034). */
   details?: { id: number; name: string; ceoOnly?: boolean }[];
 }
 
@@ -54,7 +54,7 @@ export interface ReadinessFacts {
   roomCount: number;
   courseCount: number;
   adminCount: number;
-  /** `ceoOnly` — also holds CEO or Branch Director, so only the CEO may rate them (ADR-0033). */
+  /** `ceoOnly` — also holds CEO or Branch Director, so only the CEO may rate them (ADR-0034). */
   teachers: { id: number; name: string; hasRate: boolean; ceoOnly: boolean }[];
   groupCount: number;
   /** A group with a teacher, scheduled days, a start time AND a start date. */

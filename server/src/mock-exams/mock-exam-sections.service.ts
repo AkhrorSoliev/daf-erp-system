@@ -20,9 +20,10 @@ export class MockExamSectionsService {
     private entityHistoryService: EntityHistoryService,
   ) {}
 
-  async list() {
+  // Bo'limlar kompaniyaga tegishli — har bir so'rov `companyId` bilan.
+  async list(companyId: number) {
     const sections = await this.prisma.mockExamSection.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, companyId },
       orderBy: { order: 'asc' },
       include: {
         _count: {
@@ -52,7 +53,7 @@ export class MockExamSectionsService {
     }
 
     const maxOrder = await this.prisma.mockExamSection.aggregate({
-      where: { deletedAt: null },
+      where: { deletedAt: null, companyId },
       _max: { order: true },
     });
 
@@ -92,7 +93,7 @@ export class MockExamSectionsService {
     userId: number,
   ) {
     const existing = await this.prisma.mockExamSection.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
     if (!existing) {
       throw new NotFoundException("Bo'lim topilmadi");
@@ -137,7 +138,7 @@ export class MockExamSectionsService {
 
   async remove(id: string, companyId: number, userId: number) {
     const existing = await this.prisma.mockExamSection.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, companyId },
     });
     if (!existing) {
       throw new NotFoundException("Bo'lim topilmadi");
@@ -168,9 +169,9 @@ export class MockExamSectionsService {
     return { message: "Bo'lim o'chirildi" };
   }
 
-  async reorder(dto: ReorderMockExamSectionsDto) {
+  async reorder(dto: ReorderMockExamSectionsDto, companyId: number) {
     const sections = await this.prisma.mockExamSection.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, companyId },
       select: { id: true },
     });
     const ids = new Set(sections.map((s) => s.id));

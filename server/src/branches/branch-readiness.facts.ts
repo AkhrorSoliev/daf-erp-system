@@ -75,7 +75,7 @@ export async function gatherReadinessFacts(
           select: { id: true },
           take: 1,
         },
-        // A Branch Director can only rate a pure(ish) Teacher (ADR-0033) — a
+        // A Branch Director can only rate a pure(ish) Teacher (ADR-0034) — a
         // teacher who also holds CEO or Branch Director stays CEO-only, so
         // the readiness hint can tell the director "this one isn't yours".
         roles: { select: { role: { select: { name: true } } } },

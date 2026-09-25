@@ -81,7 +81,7 @@ describe('buildBranchReadiness', () => {
   });
 
   it('flags a rate-less teacher who also holds CEO or Branch Director as ceoOnly', () => {
-    // A Branch Director cannot fix this one themselves (ADR-0033) — omitted
+    // A Branch Director cannot fix this one themselves (ADR-0034) — omitted
     // entirely when false, so an ordinary teacher's entry stays unchanged.
     const c = check(
       facts({

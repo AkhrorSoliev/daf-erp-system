@@ -37,6 +37,14 @@ import {
 } from "@/hooks/use-mock-exams-board";
 import { LevelMultiSelect } from "./level-multiselect";
 import { ExamTimesEditor } from "./exam-times-editor";
+import { ExamBranchField } from "./exam-branch-field";
+import { buildDateTime } from "./exam-datetime";
+import {
+  DEFAULT_SUBJECT_ROW,
+  emptyExamForm,
+  type FormValues,
+} from "./create-exam-form";
+import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
 // O'quv markaz ish soatlari (attendance-reminder cron'iga mos: 07:00–22:00).
 // TimePicker filterFix shu oraliqdagi 30-daqiqalik slotlarni qoldiradi.
@@ -53,64 +61,15 @@ interface CreateExamDrawerProps {
   onClose: () => void;
 }
 
-interface SubjectRow {
-  name: string;
-  /** Raw string from the input; converted to Number on submit. */
-  maxScore: string;
-  /** Per-subject pass threshold; bo'sh bo'lsa null jo'natiladi. */
-  passingScore: string;
-}
-
-interface FormValues {
-  title: string;
-  description: string;
-  examDate: Date | null;
-  /** Offered exam times ("HH:mm"); the first is the primary session. */
-  examTimes: string[];
-  registrationDate: Date | null;
-  registrationTime: string;
-  /** Raw digits — PriceInput strips separators internally. */
-  price: string;
-  /** Discounted price for DaF students; empty = they pay the full price. */
-  studentPrice: string;
-  /** CEFR levels offered (empty = no level step in the bot). */
-  offeredLevels: string[];
-  subjects: SubjectRow[];
-}
-
-const DEFAULT_SUBJECT_ROW: SubjectRow = {
-  name: "",
-  maxScore: "100",
-  passingScore: "60",
-};
-
-// DaF Sprachzentrum standart 4 nemis tili bo'limi (Goethe B1+ modular
-// formati: har bo'lim 100 dan, o'tish 60). Har imtihon yaratilganda
-// boshlang'ich holat sifatida ko'rsatiladi. Admin keraksizini o'chirib,
-// ballarni moslay oladi.
-const DEFAULT_GERMAN_SUBJECTS: SubjectRow[] = [
-  { name: "Lesen", maxScore: "100", passingScore: "60" },
-  { name: "Hören", maxScore: "100", passingScore: "60" },
-  { name: "Schreiben", maxScore: "100", passingScore: "60" },
-  { name: "Sprechen", maxScore: "100", passingScore: "60" },
-];
-
-function buildDateTime(date: Date | null, time: string): string | undefined {
-  if (!date) return undefined;
-  const [hStr, mStr] = (time || "00:00").split(":");
-  const h = Number(hStr) || 0;
-  const m = Number(mStr) || 0;
-  const out = new Date(date);
-  out.setHours(h, m, 0, 0);
-  return out.toISOString();
-}
-
 export function CreateExamDrawer({
   open,
   prefill,
   onClose,
 }: CreateExamDrawerProps) {
   const addExam = useMockExamsBoard((s) => s.addExam);
+  const branches = useBranchSwitcher((s) => s.branches);
+  const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
+  const [branchId, setBranchId] = useState("");
 
   const {
     register,
@@ -119,18 +78,7 @@ export function CreateExamDrawer({
     reset,
     formState: { errors },
   } = useForm<FormValues>({
-    defaultValues: {
-      title: "",
-      description: "",
-      examDate: null,
-      examTimes: ["10:00"],
-      registrationDate: null,
-      registrationTime: "09:00",
-      price: "",
-      studentPrice: "",
-      offeredLevels: [],
-      subjects: DEFAULT_GERMAN_SUBJECTS.map((s) => ({ ...s })),
-    },
+    defaultValues: emptyExamForm(),
   });
   const { fields, append, remove } = useFieldArray({
     control,
@@ -147,26 +95,23 @@ export function CreateExamDrawer({
 
   useEffect(() => {
     if (open) {
-      reset({
-        title: "",
-        description: "",
-        examDate: null,
-        examTimes: ["10:00"],
-        registrationDate: null,
-        registrationTime: "09:00",
-        price: "",
-        studentPrice: "",
-        offeredLevels: [],
-        subjects: DEFAULT_GERMAN_SUBJECTS.map((s) => ({ ...s })),
-      });
+      reset(emptyExamForm());
       setSubmitting(false);
+      // Tepadagi tanlangan filial — faqat oldindan to'ldirish; "Barcha
+      // filiallar"da bo'sh qoladi va admin o'zi tanlaydi.
+      const preset = branches.find((b) => b.id === selectedBranch?.id);
+      setBranchId(preset ? String(preset.id) : "");
       // Har safar yangi imtihon uchun tasdiq qaytadan so'ralsin.
       freeConfirmedRef.current = false;
       setFreeConfirmOpen(false);
     }
-  }, [open, reset]);
+  }, [open, reset, branches, selectedBranch]);
 
   async function onSubmit(values: FormValues) {
+    if (!branchId) {
+      toast.error("Filialni tanlang");
+      return;
+    }
     if (!values.examDate) {
       toast.error("Imtihon sanasini tanlang");
       return;
@@ -262,6 +207,7 @@ export function CreateExamDrawer({
       const { data } = await api.post<MockExamRow>("/mock-exams", {
         // sectionId omitted — backend auto-picks the default section.
         sectionId: prefill.sectionId ?? undefined,
+        branchId: Number(branchId),
         title: values.title.trim(),
         description: values.description.trim() || undefined,
         examDate: examDt,
@@ -321,6 +267,12 @@ export function CreateExamDrawer({
                 </p>
               )}
             </div>
+
+            <ExamBranchField
+              value={branchId}
+              onChange={setBranchId}
+              disabled={submitting}
+            />
 
             <div className="space-y-1.5">
               <Label htmlFor="description">Tavsif (ixtiyoriy)</Label>

@@ -381,6 +381,50 @@ describe('LeadsService', () => {
         NotFoundException,
       );
     });
+
+    // Telefon noyob emas: boshqa kompaniyaning o'quvchisi yoki mock
+    // ishtirokchisi shu lidga "tegishli" bo'lib ko'rinmasin.
+    it('matches mock sign-ups and the student by phone within the company', async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-1',
+        phone: '901234567',
+      });
+
+      await service.findOne('lead-1', 1001, null);
+
+      expect(prisma.mockExamParticipant.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            phone: '901234567',
+            companyId: 1001,
+          }),
+        }),
+      );
+      expect(prisma.student.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            phone: '901234567',
+            companyId: 1001,
+          }),
+        }),
+      );
+    });
+
+    // Lid oynasi to'lov holatini ko'rsatadi — bepul (yoki DaF uchun bepul)
+    // imtihonda "To'lov kutilmoqda" chiqmasligi uchun summa kerak.
+    it('returns the locked fee with each mock sign-up', async () => {
+      prisma.lead.findFirst.mockResolvedValue({
+        id: 'lead-1',
+        phone: '901234567',
+      });
+
+      await service.findOne('lead-1', 1001, null);
+
+      const select =
+        prisma.mockExamParticipant.findMany.mock.calls[0][0].select;
+      expect(select.feeAmount).toBe(true);
+      expect(select.exam.select.price).toBe(true);
+    });
   });
 
   describe('create', () => {

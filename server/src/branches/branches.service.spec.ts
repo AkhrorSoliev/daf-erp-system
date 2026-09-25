@@ -411,7 +411,7 @@ describe('BranchesService — branch onboarding', () => {
     });
 
     it('marks a rate-less teacher who also holds Branch Director as ceoOnly', async () => {
-      // A Branch Director cannot rate this one (ADR-0033) — the hint should
+      // A Branch Director cannot rate this one (ADR-0034) — the hint should
       // say so rather than implying the viewing director can just fix it.
       prisma.user.findMany.mockResolvedValue([
         {
