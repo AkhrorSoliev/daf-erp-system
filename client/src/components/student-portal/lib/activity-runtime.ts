@@ -61,7 +61,7 @@ export function faollikniBoshla(userId: number): () => void {
 
   const oldingi = joriyniOqi(storage, userId, Date.now());
   if (oldingi.yopilgan && yuborishgaArziydi(oldingi.yopilgan)) {
-    kutilmoqdaQosh(storage, userId, payloadFor(oldingi.yopilgan));
+    kutilmoqdaQosh(storage, oldingi.yopilgan);
   }
   let holat: TrackerHolati = boshlangichHolat(
     oldingi.davom ?? yangiSeans(userId, Date.now(), seansIdYarat()),
@@ -74,7 +74,7 @@ export function faollikniBoshla(userId: number): () => void {
     if (kutilganlarYuborilmoqda) return;
     kutilganlarYuborilmoqda = true;
     try {
-      for (const p of kutilmoqdaOqi(storage, userId)) {
+      for (const p of kutilmoqdaOqi(storage, userId, Date.now())) {
         if ((await yubor(p)).natija !== "xato")
           kutilmoqdaOchir(storage, p.sessionId);
       }
@@ -135,7 +135,7 @@ export function faollikniBoshla(userId: number): () => void {
     holat = natija.holat;
     if (natija.yopilgan) {
       if (yuborishgaArziydi(natija.yopilgan)) {
-        kutilmoqdaQosh(storage, userId, payloadFor(natija.yopilgan));
+        kutilmoqdaQosh(storage, natija.yopilgan);
         void kutilganlarniYubor();
       }
       joriyniSaqla(storage, holat.seans);
@@ -177,8 +177,7 @@ export function faollikniBoshla(userId: number): () => void {
     }
     document.removeEventListener("visibilitychange", yashirinish);
     window.removeEventListener("pagehide", ketish);
-    if (yuborishgaArziydi(holat.seans))
-      kutilmoqdaQosh(storage, userId, payloadFor(holat.seans));
+    if (yuborishgaArziydi(holat.seans)) kutilmoqdaQosh(storage, holat.seans);
     joriyniOchir(storage);
     void kutilganlarniYubor();
   };
