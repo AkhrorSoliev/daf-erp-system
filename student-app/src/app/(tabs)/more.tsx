@@ -35,11 +35,14 @@ export default function More() {
     ]);
   }
 
+  // Everything that is not a tab, and nothing that is: To'lovlar has its own
+  // tab now, and Davomat had no entry point but the home card. Same order as
+  // the web portal's Ko'proq hub.
   const menu = [
-    { icon: 'wallet' as const, tone: 'teal' as const, label: t.more.payments, onPress: () => router.push('/payments') },
+    { icon: 'stats-chart' as const, tone: 'amber' as const, label: t.tabs.attendance, onPress: () => router.push('/attendance') },
+    { icon: 'settings' as const, tone: 'ink' as const, label: t.more.settings, onPress: () => router.push('/settings') },
     { icon: 'help-circle' as const, tone: 'sky' as const, label: t.more.faq, onPress: () => router.push('/faq') },
     { icon: 'information-circle' as const, tone: 'grape' as const, label: t.more.about, onPress: () => router.push('/about') },
-    { icon: 'settings' as const, tone: 'ink' as const, label: t.more.settings, onPress: () => router.push('/settings') },
     { icon: 'log-out' as const, tone: 'coral' as const, label: t.more.logout, onPress: confirmLogout, chevron: false },
   ];
 

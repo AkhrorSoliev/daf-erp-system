@@ -15,6 +15,22 @@ API manzili `EXPO_PUBLIC_API_URL` orqali beriladi:
 - **EAS build:** `.env` build serveriga yuklanmaydi, shuning uchun URL `eas.json` ning
   `preview` va `production` profillaridagi `env` blokida belgilangan.
 
+## Testlar
+
+```bash
+npm test          # jest-expo
+npm run typecheck
+```
+
+`test/` dagi testlar haqiqiy router, layout va ekranlarni render qiladi. Faqat
+ilovadan tashqariga chiqadigan narsalar soxta: tarmoq (API), Keychain, push va
+kamera (`test/setup.ts`). CI har PR'da ikkalasini ham ishga tushiradi.
+
+**Paket qo'shganda lockfile'ni npm 10 bilan yangilang:** `npx npm@10 install`.
+CI va EAS build (Node 20) `npm ci`ni npm 10 bilan ishlatadi. npm 11 ixtiyoriy
+peer paketlarni lockfile'ga yozmaydi, keyin npm 10'ning `npm ci`si
+`Missing: … from lock file` deb yiqiladi.
+
 ## Play Store'ga chiqarish (release)
 
 ```bash

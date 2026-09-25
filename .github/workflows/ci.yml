@@ -71,7 +71,7 @@ jobs:
       - run: npm run build
 
   student-app:
-    name: Student app (typecheck + lint)
+    name: Student app (typecheck + lint + test)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -90,11 +90,15 @@ jobs:
       # step fails with "Missing: … from lock file", rewrite the lockfile with
       # `npx npm@10 install`.
       - run: npm ci
-      # The only check on the uz/de dictionaries: `de.ts` is typed `Dict`, the
-      # shape of `uz.ts`, so a missing or mistyped German key fails here — the
-      # app has no test suite. Route strings are NOT checked: the typed-routes
-      # file `.expo/types/router.d.ts` comes from `expo start` and is
-      # gitignored, so `Href` is a plain string in CI.
+      # Also the check on the uz/de dictionaries: `de.ts` is typed `Dict`, the
+      # shape of `uz.ts`, so a missing or mistyped German key fails here.
+      # Route strings are NOT checked: the typed-routes file
+      # `.expo/types/router.d.ts` comes from `expo start` and is gitignored, so
+      # `Href` is a plain string in CI.
       - run: npx tsc --noEmit
       # Lints `src/` and fails on errors only; warnings are printed and pass.
       - run: npx expo lint
+      # jest-expo: the tab bar, the home screen's loading and error states and
+      # the QR top-up path run against the real router and screens; only the
+      # network, Keychain, push and camera are faked (student-app/test/setup.ts).
+      - run: npm test -- --ci
