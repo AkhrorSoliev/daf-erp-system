@@ -6,6 +6,14 @@
  * would fail, and with what totals, while nothing is written. The migration
  * code has never run end to end on production data before, and a rehearsal
  * is the only way to exercise it there without touching a balance.
+ *
+ * A write conflict is retried. Postgres abandons a Serializable transaction
+ * when another one writes the same rows at the same moment — typically a
+ * teacher's balance, which every attendance save and every online payment
+ * that settles a lesson also moves. The first daytime rehearsal lost one
+ * student that way. Postgres has already discarded the failed attempt and
+ * every step of a student's migration is idempotent, so running the whole
+ * transaction again is safe. Any other error is reported, never retried.
  */
 import { Prisma } from '@prisma/client';
 
@@ -26,16 +34,28 @@ interface TransactionRunner {
   ): Promise<R>;
 }
 
-export async function runStudentTransaction<T>(
+/** Prisma's code for "write conflict or deadlock, please retry". */
+const WRITE_CONFLICT = 'P2034';
+const MAX_ATTEMPTS = 3;
+
+function isWriteConflict(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as { code?: unknown }).code === WRITE_CONFLICT
+  );
+}
+
+async function runOnce<T>(
   prisma: TransactionRunner,
   work: (tx: Prisma.TransactionClient) => Promise<T>,
-  opts: { rehearse: boolean },
+  rehearse: boolean,
 ): Promise<T> {
   try {
     return await prisma.$transaction(
       async (tx) => {
         const result = await work(tx);
-        if (opts.rehearse) throw new RehearsalRollback(result);
+        if (rehearse) throw new RehearsalRollback(result);
         return result;
       },
       {
@@ -45,9 +65,31 @@ export async function runStudentTransaction<T>(
       },
     );
   } catch (err) {
-    if (opts.rehearse && err instanceof RehearsalRollback) {
+    if (rehearse && err instanceof RehearsalRollback) {
       return err.result as T;
     }
     throw err;
+  }
+}
+
+export async function runStudentTransaction<T>(
+  prisma: TransactionRunner,
+  work: (tx: Prisma.TransactionClient) => Promise<T>,
+  opts: {
+    rehearse: boolean;
+    /** Wait before attempt n+1 is n × this. Tests pass 0. */
+    retryDelayMs?: number;
+  },
+): Promise<T> {
+  const retryDelayMs = opts.retryDelayMs ?? 500;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await runOnce(prisma, work, opts.rehearse);
+    } catch (err) {
+      if (!isWriteConflict(err) || attempt >= MAX_ATTEMPTS) throw err;
+      await new Promise((resolve) =>
+        setTimeout(resolve, retryDelayMs * attempt),
+      );
+    }
   }
 }
