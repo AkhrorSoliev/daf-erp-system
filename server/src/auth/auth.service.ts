@@ -22,13 +22,24 @@ import {
 } from '../common/auth/session-version';
 
 /**
+ * The branches a session carries, on every path that issues one: sign-in,
+ * the student app login and token refresh. `status` is for the admin panel,
+ * which does not offer a student registration link for a branch the Telegram
+ * bot refuses (any status but ACTIVE). For everyone but a CEO, this list is
+ * where the panel reads that status.
+ */
+const SESSION_BRANCHES = {
+  include: { branch: { select: { id: true, name: true, status: true } } },
+} satisfies Prisma.User$branchesArgs;
+
+/**
  * Everything a session response needs from the account row. One shape for
  * sign-in, the app's OTP poll, `refresh` and `issueSession`, so they cannot
  * drift apart.
  */
 const SESSION_USER_INCLUDE = {
   roles: { include: { role: true } },
-  branches: { include: { branch: { select: { id: true, name: true } } } },
+  branches: SESSION_BRANCHES,
   company: {
     select: {
       id: true,

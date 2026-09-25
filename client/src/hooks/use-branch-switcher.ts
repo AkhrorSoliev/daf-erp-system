@@ -12,6 +12,12 @@ interface BranchItem {
   name: string;
   startOfWorkingDay?: string | null;
   endOfWorkingDay?: string | null;
+  /**
+   * `BranchStatus` on the server: ACTIVE, INACTIVE, CLOSED or ARCHIVED.
+   * Absent when the list came from a sign-in cookie older than the payload
+   * carrying it. Read it through `branchStatusIn` / `useBranchStatus`.
+   */
+  status?: string;
 }
 
 /**
@@ -180,3 +186,27 @@ export const useBranchSwitcher = create<BranchSwitcherState>((set, get) => ({
     }
   },
 }));
+
+/**
+ * A branch's status as the switcher's list last reported it, or `undefined`
+ * when the list does not hold that branch or carries no status for it.
+ *
+ * Look it up by id in `branches`, never read it off `selectedBranch`:
+ * `refetchBranches` and `hydrateFor` replace the list but keep the selected
+ * object they already had, so that copy can carry a status the server has
+ * since changed.
+ */
+export function branchStatusIn(
+  state: { branches: BranchItem[] },
+  branchId: number | null | undefined,
+): string | undefined {
+  if (branchId == null) return undefined;
+  return state.branches.find((b) => b.id === branchId)?.status;
+}
+
+/** `branchStatusIn` for a component; re-renders when that status changes. */
+export function useBranchStatus(
+  branchId: number | null | undefined,
+): string | undefined {
+  return useBranchSwitcher((s) => branchStatusIn(s, branchId));
+}

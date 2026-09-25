@@ -641,6 +641,15 @@ Two things react to a branch switch: `BranchScopedMain` remounts the page conten
 - Once resolved, `hydrateFor` keeps the tab's own selection while it is still allowed (it re-runs on every token refresh), and `persist` compares against the tab's own selection rather than the shared `localStorage` key.
 - Known limit: all tabs still share one `branchId` key, so a switch in one tab changes the header of another tab's later requests.
 
+### Student Registration Links Follow the Bot's Branch Rule
+
+The bot's `/start` accepts a `student_<branch>` or `student_<branch>_group_<group>` link only for a branch whose `status` is ACTIVE (server/CLAUDE.md, "Registration deep links"). The students page "Havola olish" button and the group card's QR dialog and copy button therefore offer nothing for any other branch: the button is disabled, or the dialog shows the reason instead of a QR, with `BRANCH_CLOSED_TO_REGISTRATION` as the explanation.
+
+- The rule is `branchClosedToRegistration(status)` in `lib/telegram-link.ts`. It checks `status`, not `isActive`: the bot reads `status`, and the settings form's "Faol/Nofaol" switch writes only `isActive`.
+- Read the status with `useBranchStatus(branchId)` (`hooks/use-branch-switcher.ts`), which looks the branch up by id in the switcher's `branches`. Never read `selectedBranch.status`: a refetch or re-hydrate replaces the list but keeps the old selected object. The group card passes `group.branchId`, not the header selection.
+- For a CEO the list comes from `GET /branches`; for everyone else from the sign-in payload's `branches`, which carries `status` since the server's `SESSION_BRANCHES` select. A non-CEO therefore sees a status change at their next token refresh (at most an hour).
+- **Unknown is not closed.** A branch missing from the list, a list not loaded yet, or an older cookie without `status` all keep the link. Blocking on unknown would take every link away until the next refresh, and the bot still decides.
+
 ### Student Filters
 
 - **Single search field** for name, phone, and ID — placeholder: "Ism, telefon yoki ID bo'yicha..."
