@@ -141,16 +141,41 @@ export function departuresInRange(
   range: { gte: Date; lt: Date },
   floor: Date | null,
 ): DepartureEpisode[] {
-  const from = Math.max(range.gte.getTime(), floor?.getTime() ?? -Infinity);
   const first = new Map<number, DepartureEpisode>();
   for (const e of episodes) {
-    if (e.state !== 'confirmed') continue;
-    const t = e.startedAt.getTime();
-    if (t < from || t >= range.lt.getTime()) continue;
+    if (e.state !== 'confirmed' || !startedIn(e, range, floor)) continue;
     const seen = first.get(e.studentId);
-    if (!seen || t < seen.startedAt.getTime()) first.set(e.studentId, e);
+    if (!seen || e.startedAt.getTime() < seen.startedAt.getTime()) {
+      first.set(e.studentId, e);
+    }
   }
   return [...first.values()];
+}
+
+/**
+ * Pending episodes that started in `[gte, lt)` and not before the reporting
+ * floor: the stops of that period that still count if the student does not
+ * come back in time. A pending episode is always the student's open one, so
+ * there is at most one per student.
+ */
+export function pendingInRange(
+  episodes: readonly DepartureEpisode[],
+  range: { gte: Date; lt: Date },
+  floor: Date | null,
+): DepartureEpisode[] {
+  return episodes.filter(
+    (e) => e.state === 'pending' && startedIn(e, range, floor),
+  );
+}
+
+function startedIn(
+  episode: DepartureEpisode,
+  range: { gte: Date; lt: Date },
+  floor: Date | null,
+): boolean {
+  const t = episode.startedAt.getTime();
+  const from = Math.max(range.gte.getTime(), floor?.getTime() ?? -Infinity);
+  return t >= from && t < range.lt.getTime();
 }
 
 /** Episodes the student has not come back from; at most one per student. */

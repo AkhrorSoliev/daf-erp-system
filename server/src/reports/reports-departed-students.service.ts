@@ -11,6 +11,7 @@ import {
 import {
   departuresInRange,
   openEpisodes,
+  pendingInRange,
   type DepartureEpisode,
 } from '../students/shared/departure-episodes';
 import { loadDepartures } from './shared/departures.loader';
@@ -56,7 +57,7 @@ export class ReportsDepartedStudentsService {
 
     const departed = departuresInRange(episodes, range, floor);
     const departedCount = departed.length;
-    const pendingCount = episodes.filter((e) => e.state === 'pending').length;
+    const pendingCount = pendingInRange(episodes, range, floor).length;
     const churnRate =
       activeAtStart > 0 ? (departedCount / activeAtStart) * 100 : 0;
 

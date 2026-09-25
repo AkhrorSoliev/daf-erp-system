@@ -134,7 +134,7 @@ export function kpiSheet(wb: Workbook, kpis: any, period: string) {
     ws,
     'Qaytishi kutilmoqda',
     kpis.pendingDepartures ?? 0,
-    `Guruhsiz qolgan yoki muzlatilgan, ${grace} kun hali o'tmagan.`,
+    `Shu oy guruhsiz qolgan yoki muzlatilgan, ${grace} kun hali o'tmagan.`,
   );
   sheetNotes(
     ws,

@@ -152,7 +152,8 @@ describe('ReportsDepartedStudentsService', () => {
         departedCount: 2,
         churnRate: 40,
         activeAtStart: 5,
-        pendingCount: 1,
+        // 10003's stop (15.11) is still pending, but it started after September.
+        pendingCount: 0,
         graceDays: DEPARTURE_GRACE_DAYS,
         lostRevenue: 400_000,
         totalDebt: -80_000,
@@ -161,6 +162,36 @@ describe('ReportsDepartedStudentsService', () => {
         totalTeacherChanges: 0,
         departedAfterTeacherChange: 0,
       });
+    });
+
+    it('counts only the pending departures that started in the range', async () => {
+      const pendingIn = async (
+        startDate: string,
+        endDate: string,
+        systemStartDate: Date | null = null,
+      ) => {
+        const service = new ReportsDepartedStudentsService(
+          fakePrisma({
+            ...FIXTURE,
+            systemStartDate,
+          }) as unknown as PrismaService,
+        );
+        const summary = await service.getDepartedStudentsSummary(1001, {
+          scope: null,
+          startDate,
+          endDate,
+        });
+        return summary.pendingCount;
+      };
+
+      // 10003 stopped on 15.11 and the grace period still runs.
+      expect(await pendingIn('2026-11-01', '2026-11-30')).toBe(1);
+      expect(await pendingIn('2026-09-01', '2026-09-30')).toBe(0);
+      expect(await pendingIn('2026-11-16', '2026-11-30')).toBe(0);
+      // The reporting floor cuts it off like any other departure.
+      expect(
+        await pendingIn('2026-11-01', '2026-11-30', at('2026-11-16T00:00:00Z')),
+      ).toBe(0);
     });
 
     it('sums debt over the students who have not come back', async () => {
@@ -395,5 +426,36 @@ describe('one departure count on every surface', () => {
     expect(kpis.churnedThisMonth).toBe(2);
     expect(row?.getCell(2).value).toBe(2);
     expect(kpis.pendingDepartures).toBe(1);
+  });
+});
+
+describe('home card pending departures', () => {
+  // 3 December: the grace period of a stop on 25 November still runs.
+  beforeEach(() => jest.useFakeTimers({ now: at('2026-12-03T12:00:00Z') }));
+  afterEach(() => jest.useRealTimers());
+
+  it("does not count last month's pending stop in this month", async () => {
+    const prisma = fakePrisma({
+      students: [student(10021), student(10022)],
+      enrollments: [
+        enrollment('d1', 10021, 'DROPPED', '2026-11-25T09:00:00.000Z'),
+        enrollment('d2', 10022, 'DROPPED', '2026-12-02T09:00:00.000Z'),
+      ],
+      logs: [
+        log('d1', 'ACTIVE', MAY),
+        log('d1', 'DROPPED', '2026-11-25T09:00:00.000Z'),
+        log('d2', 'ACTIVE', MAY),
+        log('d2', 'DROPPED', '2026-12-02T09:00:00.000Z'),
+      ],
+      history: [],
+    }) as unknown as PrismaService;
+
+    const kpis = await new ReportsOverviewService(
+      prisma,
+      {} as RedisService,
+    ).getKpis(1001, {});
+
+    expect(kpis.pendingDepartures).toBe(1);
+    expect(kpis.churnedThisMonth).toBe(0);
   });
 });

@@ -8,7 +8,10 @@ import {
   tashkentMonthRangeUtc,
   tashkentRangeFilter,
 } from '../common/date/tashkent';
-import { departuresInRange } from '../students/shared/departure-episodes';
+import {
+  departuresInRange,
+  pendingInRange,
+} from '../students/shared/departure-episodes';
 import { loadDepartures } from './shared/departures.loader';
 
 @Injectable()
@@ -125,13 +128,17 @@ export class ReportsOverviewService {
       ),
     ]);
 
+    // Both count stops that started in this Tashkent month.
+    const thisMonth = tashkentMonthRangeUtc(tashkentMonthKey(now));
     const churnedThisMonth = departuresInRange(
       departures.episodes,
-      tashkentMonthRangeUtc(tashkentMonthKey(now)),
+      thisMonth,
       departures.floor,
     ).length;
-    const pendingDepartures = departures.episodes.filter(
-      (e) => e.state === 'pending',
+    const pendingDepartures = pendingInRange(
+      departures.episodes,
+      thisMonth,
+      departures.floor,
     ).length;
 
     const totalAttendance = attendanceCounts.reduce(

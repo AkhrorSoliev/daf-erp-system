@@ -2,6 +2,7 @@ import {
   buildDepartureEpisodes,
   departuresInRange,
   openEpisodes,
+  pendingInRange,
   type DepartureEpisode,
   type StopKind,
   type StudentEvent,
@@ -255,6 +256,50 @@ describe('departuresInRange', () => {
   it('drops departures before the reporting floor', () => {
     const result = departuresInRange(
       [episode(1, '2026-09-02T10:00:00Z'), episode(2, '2026-09-20T10:00:00Z')],
+      september,
+      at('2026-09-15T00:00:00Z'),
+    );
+    expect(result.map((e) => e.studentId)).toEqual([2]);
+  });
+});
+
+describe('pendingInRange', () => {
+  const pending = (studentId: number, startedAt: string): DepartureEpisode => ({
+    studentId,
+    startedAt: at(startedAt),
+    stopKind: 'LEFT_GROUP',
+    state: 'pending',
+    confirmedAt: null,
+    returnedAt: null,
+  });
+  // September 2026 in Tashkent.
+  const september = {
+    gte: at('2026-08-31T19:00:00Z'),
+    lt: at('2026-09-30T19:00:00Z'),
+  };
+
+  it('counts only pending episodes that started inside the range', () => {
+    const confirmed: DepartureEpisode = {
+      ...pending(4, '2026-09-10T10:00:00Z'),
+      state: 'confirmed',
+      confirmedAt: at('2026-09-24T10:00:00Z'),
+    };
+    const result = pendingInRange(
+      [
+        pending(1, '2026-08-31T18:59:59Z'),
+        pending(2, '2026-08-31T19:00:00Z'),
+        pending(3, '2026-09-30T19:00:00Z'),
+        confirmed,
+      ],
+      september,
+      null,
+    );
+    expect(result.map((e) => e.studentId)).toEqual([2]);
+  });
+
+  it('drops pending episodes before the reporting floor', () => {
+    const result = pendingInRange(
+      [pending(1, '2026-09-02T10:00:00Z'), pending(2, '2026-09-20T10:00:00Z')],
       september,
       at('2026-09-15T00:00:00Z'),
     );
