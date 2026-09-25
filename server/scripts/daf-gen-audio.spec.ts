@@ -7,14 +7,16 @@ import {
   InvalidSpeedArgError,
   MissingSpeedArgError,
   MissingStimmeArgError,
-  SpeedNotAllowedWithNoneArgError,
   SpeedOutOfRangeArgError,
   UnknownStimmeArgError,
   InvalidUnitArgError,
   MissingUnitArgError,
   gesamtZeichenzahl,
   manifestAktualisieren,
+  RUXSAT_ETILGAN_STIMMELAR,
+  parseErsetzenArg,
   parseGenAudioArgs,
+  sprichMitAblehnungsschutz,
   parseUnitArg,
   woerterPfad,
   pruefeBudget,
@@ -24,6 +26,7 @@ import {
   type SprachEintrag,
   type YuklashNatijasi,
 } from './daf-gen-audio';
+import { FalAblehnungError } from '../src/daf/media/fal-client';
 
 // Bu fayl `daf-gen-audio.ts`ni IMPORT qiladi, lekin uning `main()`i faqat
 // `require.main === module`da yuguradi (skriptning o'zidagi izohga
@@ -224,109 +227,202 @@ describe('parseGenAudioArgs', () => {
     );
   });
 
-  it('`--stimme none` — Chatterbox (stimme va speed ikkalasi ham null)', () => {
-    expect(parseGenAudioArgs(['--stimme', 'none'])).toEqual({
-      stimme: null,
-      speed: null,
-    });
-  });
-
-  it('`--stimme Rachel --speed 0.85` — ovoz nomi va tezlik ikkalasi ham saqlanadi', () => {
+  it('`--stimme Erinome --speed 0.85` keeps the voice and the tempo', () => {
     expect(
-      parseGenAudioArgs(['--stimme', 'Rachel', '--speed', '0.85']),
+      parseGenAudioArgs(['--stimme', 'Erinome', '--speed', '0.85']),
     ).toEqual({
-      stimme: 'Rachel',
+      stimme: 'Erinome',
       speed: 0.85,
     });
   });
 
-  it('`--stimme Matilda --speed 1.0` — ikkinchi ElevenLabs ovozi ham saqlanadi', () => {
-    expect(
-      parseGenAudioArgs(['--stimme', 'Matilda', '--speed', '1.0']),
-    ).toEqual({
-      stimme: 'Matilda',
-      speed: 1.0,
-    });
+  // CEO, 2026-09-25: every course word in ONE native-German voice, no mixing.
+  // The English-native voices and Chatterbox stay usable for the voice-sample
+  // script, but this script refuses them, so no unit can drift back to them.
+  it('refuses the voices the CEO ruled out for words (Rachel, Matilda, Chatterbox)', () => {
+    for (const eski of ['Rachel', 'Matilda', 'none']) {
+      expect(() =>
+        parseGenAudioArgs(['--stimme', eski, '--speed', '0.85']),
+      ).toThrow(UnknownStimmeArgError);
+    }
   });
 
-  // Bu brifning markaziy talabi: CEO Rachel + 0.85ni tanladi, va
-  // `--speed` yo'qligida standart qiymatga (masalan 1.0) tushib qolish
-  // shu tanlovni jimgina bekor qilardi. Agar `parseGenAudioArgs` `speed`
-  // uchun ANIQ standart qo'ysa (masalan `speedRaw ?? '1.0'`), bu test
-  // qizil bo'ladi.
-  it('ElevenLabs ovozi bilan `--speed` yo`q bo`lsa yiqiladi', () => {
-    expect(() => parseGenAudioArgs(['--stimme', 'Rachel'])).toThrow(
+  it('the only allowed word voice is the one the CEO chose', () => {
+    expect(RUXSAT_ETILGAN_STIMMELAR).toEqual(['Erinome']);
+  });
+
+  // A default tempo would silently undo the slow speed the CEO chose.
+  it('`--speed` yo`q bo`lsa yiqiladi', () => {
+    expect(() => parseGenAudioArgs(['--stimme', 'Erinome'])).toThrow(
       MissingSpeedArgError,
     );
   });
 
   it('`--speed` qiymatsiz bo`lsa ham yiqiladi', () => {
-    expect(() => parseGenAudioArgs(['--stimme', 'Rachel', '--speed'])).toThrow(
+    expect(() => parseGenAudioArgs(['--stimme', 'Erinome', '--speed'])).toThrow(
       MissingSpeedArgError,
     );
   });
 
   it('`--speed` son bo`lmasa yiqiladi', () => {
     expect(() =>
-      parseGenAudioArgs(['--stimme', 'Rachel', '--speed', 'sekin']),
+      parseGenAudioArgs(['--stimme', 'Erinome', '--speed', 'sekin']),
     ).toThrow(InvalidSpeedArgError);
   });
 
-  // Model 0.7–1.2 oralig'idan tashqarini rad etadi — bu tekshiruv
-  // `fal.ai`ga yuborishdan OLDIN shu yerda bo'lishi kerak (skript
-  // darajasida), FalClient darajasidagi tekshiruvga qo'shimcha
-  // himoya sifatida: birinchi so'zdayoq, hatto FalClient
-  // yaratilmasdan oldin to'xtash kerak.
   it('`--speed` 0.7–1.2 oralig`idan tashqari bo`lsa yiqiladi', () => {
     expect(() =>
-      parseGenAudioArgs(['--stimme', 'Rachel', '--speed', '0.5']),
+      parseGenAudioArgs(['--stimme', 'Erinome', '--speed', '0.5']),
     ).toThrow(SpeedOutOfRangeArgError);
     expect(() =>
-      parseGenAudioArgs(['--stimme', 'Rachel', '--speed', '1.5']),
+      parseGenAudioArgs(['--stimme', 'Erinome', '--speed', '1.5']),
     ).toThrow(SpeedOutOfRangeArgError);
   });
 
   it('`--speed` oralig`ning ikkala chetida ham o`tadi', () => {
-    expect(parseGenAudioArgs(['--stimme', 'Rachel', '--speed', '0.7'])).toEqual(
-      { stimme: 'Rachel', speed: 0.7 },
-    );
-    expect(parseGenAudioArgs(['--stimme', 'Rachel', '--speed', '1.2'])).toEqual(
-      { stimme: 'Rachel', speed: 1.2 },
-    );
+    expect(
+      parseGenAudioArgs(['--stimme', 'Erinome', '--speed', '0.7']),
+    ).toEqual({ stimme: 'Erinome', speed: 0.7 });
+    expect(
+      parseGenAudioArgs(['--stimme', 'Erinome', '--speed', '1.2']),
+    ).toEqual({ stimme: 'Erinome', speed: 1.2 });
   });
 
-  // Chatterbox (`--stimme none`) tezlik parametrini QABUL QILMAYDI —
-  // `--speed` shu bilan birga berilsa jimgina yutib yuborilmasligi
-  // kerak, aks holda operator "tezlik qo'llandi" deb noto'g'ri
-  // o'ylab qolardi.
-  it('`--stimme none` bilan `--speed` BIRGA berilsa yiqiladi', () => {
-    expect(() =>
-      parseGenAudioArgs(['--stimme', 'none', '--speed', '0.85']),
-    ).toThrow(SpeedNotAllowedWithNoneArgError);
-  });
-
-  // Ko'rikda topilgan bo'shliq: ro'yxatda YO'Q qiymat (yozuv xatosi,
-  // masalan `Rachel` o'rniga `Rachell`) tekshiruvsiz `fal.ai`ga borishi
-  // mumkin edi — u yerda YO qattiq rad etiladi, YO jimgina standart
-  // ovozga tushib "muvaffaqiyatli" qaytadi. Ikkalasi ham 53 so'zni
-  // NOTO'G'RI ovozda PULLIK yasab yuboradi. Endi bunday qiymat
-  // `fal.ai`ga yuborilishidan OLDIN shu yerda rad etiladi.
   it('noma`lum ovoz nomi (yozuv xatosi) `fal.ai`ga borishdan OLDIN rad etiladi', () => {
-    expect(() => parseGenAudioArgs(['--stimme', 'Rachell'])).toThrow(
-      UnknownStimmeArgError,
-    );
-    // Xabar NIMA yuborilgani va NIMA ruxsat etilganini aytishi kerak —
-    // operator "nega yiqildi" deb kodni ochmasdan tushunishi uchun.
-    expect(() => parseGenAudioArgs(['--stimme', 'Rachell'])).toThrow(/Rachell/);
-    expect(() => parseGenAudioArgs(['--stimme', 'Rachell'])).toThrow(
-      /none.*Rachel.*Matilda/,
-    );
+    expect(() =>
+      parseGenAudioArgs(['--stimme', 'Erinom', '--speed', '0.85']),
+    ).toThrow(UnknownStimmeArgError);
+    // The message names what was sent and what is allowed.
+    expect(() =>
+      parseGenAudioArgs(['--stimme', 'Erinom', '--speed', '0.85']),
+    ).toThrow(/Erinom.*Erinome/);
+  });
+});
+
+describe('parseErsetzenArg', () => {
+  it('is false without the flag: a rerun never replaces existing audio by accident', () => {
+    expect(parseErsetzenArg(['--unit', '3'])).toBe(false);
   });
 
-  it("bo`sh satr ham noma'lum ovoz sifatida rad etiladi (`none` bilan chalkashtirilmaydi)", () => {
-    expect(() => parseGenAudioArgs(['--stimme', 'chatterbox'])).toThrow(
-      UnknownStimmeArgError,
+  it('is true with `--ersetzen`', () => {
+    expect(parseErsetzenArg(['--unit', '3', '--ersetzen'])).toBe(true);
+  });
+});
+
+describe('zuGenerieren with ersetzen', () => {
+  it('takes every word, including those that already have audio', () => {
+    const woerter: SprachEintrag[] = [
+      { sourceId: 'a', de: 'hallo', tts: null },
+      { sourceId: 'b', de: 'danke', tts: null },
+    ];
+    expect(
+      zuGenerieren(woerter, { a: 'daf/audio/x.mp3' }, true).map(
+        (w) => w.sourceId,
+      ),
+    ).toEqual(['a', 'b']);
+  });
+});
+
+describe('manifestAktualisieren with ersetzen', () => {
+  // Keeping the old key of a word whose new audio failed would leave that
+  // one word in the rejected voice: exactly the mix the CEO ruled out.
+  it('drops the old key of a word whose replacement failed', () => {
+    const m = manifestAktualisieren(
+      {
+        a: 'daf/audio/eski-a.mp3',
+        b: 'daf/audio/eski-b.mp3',
+        c: 'daf/audio/eski-c.mp3',
+      },
+      [
+        { sourceId: 'a', key: 'daf/audio/yangi-a.mp3', ok: true },
+        { sourceId: 'b', key: 'daf/audio/yangi-b.mp3', ok: false },
+      ],
+      true,
     );
+    expect(m).toEqual({
+      a: 'daf/audio/yangi-a.mp3',
+      c: 'daf/audio/eski-c.mp3',
+    });
+  });
+
+  it('without ersetzen a failed word keeps whatever it had', () => {
+    const m = manifestAktualisieren({ b: 'daf/audio/eski-b.mp3' }, [
+      { sourceId: 'b', key: 'daf/audio/yangi-b.mp3', ok: false },
+    ]);
+    expect(m).toEqual({ b: 'daf/audio/eski-b.mp3' });
+  });
+});
+
+describe('sprichMitAblehnungsschutz', () => {
+  function sprecher(antworten: Array<'ablehnen' | 'fehler' | string>) {
+    const gesendet: string[] = [];
+    const fn = async (text: string): Promise<string> => {
+      gesendet.push(text);
+      const a = antworten.shift();
+      if (a === 'ablehnen')
+        throw new FalAblehnungError('content_policy_violation');
+      if (a === 'fehler') throw new Error('fal.ai javob bermadi (500)');
+      return a ?? 'https://x/none.mp3';
+    };
+    return { fn, gesendet };
+  }
+
+  it('returns the first answer when nothing is refused', async () => {
+    const { fn, gesendet } = sprecher(['https://x/1.mp3']);
+    await expect(sprichMitAblehnungsschutz(fn, 'dann')).resolves.toEqual({
+      url: 'https://x/1.mp3',
+      gesprochen: 'dann',
+      versuche: 1,
+    });
+    expect(gesendet).toEqual(['dann']);
+  });
+
+  // "zwischen" was refused once and accepted on the next identical request.
+  it('asks again with the same text after a refusal', async () => {
+    const { fn, gesendet } = sprecher([
+      'ablehnen',
+      'ablehnen',
+      'https://x/3.mp3',
+    ]);
+    const r = await sprichMitAblehnungsschutz(fn, 'zwischen');
+    expect(r).toEqual({
+      url: 'https://x/3.mp3',
+      gesprochen: 'zwischen',
+      versuche: 3,
+    });
+    expect(gesendet).toEqual(['zwischen', 'zwischen', 'zwischen']);
+  });
+
+  // "dann" was refused every time; a full stop is the smallest change that
+  // still makes the audio say only the word.
+  it('adds a full stop after three refusals of the bare word', async () => {
+    const { fn, gesendet } = sprecher([
+      'ablehnen',
+      'ablehnen',
+      'ablehnen',
+      'https://x/4.mp3',
+    ]);
+    const r = await sprichMitAblehnungsschutz(fn, 'dann');
+    expect(r).toEqual({
+      url: 'https://x/4.mp3',
+      gesprochen: 'dann.',
+      versuche: 4,
+    });
+    expect(gesendet).toEqual(['dann', 'dann', 'dann', 'dann.']);
+  });
+
+  it('gives up with FalAblehnungError after five refusals', async () => {
+    const { fn, gesendet } = sprecher(Array(5).fill('ablehnen'));
+    await expect(sprichMitAblehnungsschutz(fn, 'dann')).rejects.toBeInstanceOf(
+      FalAblehnungError,
+    );
+    expect(gesendet).toHaveLength(5);
+  });
+
+  it('does not retry any other error', async () => {
+    const { fn, gesendet } = sprecher(['fehler', 'https://x/never.mp3']);
+    await expect(sprichMitAblehnungsschutz(fn, 'dann')).rejects.toThrow(/500/);
+    expect(gesendet).toEqual(['dann']);
   });
 });
 

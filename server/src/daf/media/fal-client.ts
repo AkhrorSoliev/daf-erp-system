@@ -1,7 +1,17 @@
 const IMAGE_MODEL = 'fal-ai/flux/schnell';
 const TTS_MODEL = 'fal-ai/chatterbox/text-to-speech/multilingual';
 const TTS_ELEVEN_MODEL = 'fal-ai/elevenlabs/tts/turbo-v2.5';
+const TTS_GEMINI_MODEL = 'fal-ai/gemini-3.1-flash-tts';
 const DIALOG_MODEL = 'fal-ai/elevenlabs/text-to-dialogue/eleven-v3';
+
+/**
+ * The model's content checker refused the text (HTTP 422 with
+ * `content_policy_violation`). Gemini TTS does this at random to plain
+ * German words: in the 2026-09-25 voice test it refused "dann" twice and
+ * "zwischen" once, then accepted "zwischen" on the next identical request.
+ * Its own type lets the word script retry exactly this case and nothing else.
+ */
+export class FalAblehnungError extends Error {}
 
 /**
  * `fal-ai/elevenlabs/tts/turbo-v2.5` hujjatida qat'iy belgilangan `speed`
@@ -36,9 +46,13 @@ export class FalClient {
       body: JSON.stringify(input),
     });
     if (!res.ok) {
-      throw new Error(
-        `fal.ai javob bermadi (${res.status}): ${await res.text()}`,
-      );
+      const matn = await res.text();
+      if (res.status === 422 && matn.includes('content_policy_violation')) {
+        throw new FalAblehnungError(
+          `fal.ai matnni rad etdi (422, content_policy_violation): ${matn}`,
+        );
+      }
+      throw new Error(`fal.ai javob bermadi (${res.status}): ${matn}`);
     }
     return res.json();
   }
@@ -117,6 +131,29 @@ export class FalClient {
       voice: stimme,
       language_code: 'de',
       speed,
+    });
+    const url = out?.audio?.url;
+    if (typeof url !== 'string') throw new Error('fal.ai ovoz qaytarmadi');
+    return url;
+  }
+
+  /**
+   * German word audio with Gemini TTS: the course word voice since
+   * 2026-09-25. The CEO heard the English-native ElevenLabs voice read some
+   * German words with English sounds (z as [z], w as [w]) and chose
+   * Gemini's female voice after a four-voice test.
+   *
+   * Only the bare word is sent, so the billed characters are the word
+   * itself. The model has no speed setting; the caller slows the clip
+   * locally (`audio-tempo.ts`). A refusal by the content checker arrives
+   * as `FalAblehnungError` from `run()`.
+   */
+  async speechGemini(text: string, stimme: string): Promise<string> {
+    const out = await this.run(TTS_GEMINI_MODEL, {
+      prompt: text,
+      voice: stimme,
+      language_code: 'German (Germany)',
+      output_format: 'mp3',
     });
     const url = out?.audio?.url;
     if (typeof url !== 'string') throw new Error('fal.ai ovoz qaytarmadi');
