@@ -1,0 +1,70 @@
+{
+  "unit": "u03",
+  "regeln": [
+    {
+      "section": "u03-s1",
+      "titelDe": "Bestimmter Artikel: der, die, das",
+      "titelUz": "Aniq artikl: der, die, das",
+      "erklaerungUz": "Nemis tilida har bir otning o'z artikli bor: erkak jinsi — «der», ayol jinsi — «die», o'rta jins — «das». Artiklni so'zning ma'nosidan topib bo'lmaydi, shuning uchun so'zni doim artikli bilan birga yodlang: der Bahnhof, die Post, das Kino. Biror narsa birinchi marta tilga olinganda «ein/eine» ishlatiladi, keyin esa «der/die/das»: «Gibt es hier ein Kino? – Ja, das Kino ist neu.» Ko'plikda hamma so'z «die» oladi: die Hotels.",
+      "beispiele": [
+        { "de": "Das ist die Bank.", "uz": "Bu bank." },
+        { "de": "Der Bahnhof ist hier.", "uz": "Vokzal shu yerda." },
+        { "de": "Das Kino ist sehr neu.", "uz": "Kinoteatr juda yangi." },
+        { "de": "Der Park ist sehr groß.", "uz": "Park juda katta." },
+        { "de": "Gibt es hier ein Hotel?", "uz": "Bu yerda mehmonxona bormi?" }
+      ]
+    },
+    {
+      "section": "u03-s2",
+      "titelDe": "Wo? — in, an, neben",
+      "titelUz": "Qayerda? — in, an, neben",
+      "erklaerungUz": "«Wo?» (qayerda?) savoliga javob berganda «in», «an», «neben», «zwischen» dan keyin artikl o'zgaradi: der → dem, das → dem, die → der. «in» va «dem» qo'shilib «im», «an» va «dem» qo'shilib «am» bo'ladi: der Park → im Park, der Bahnhof → am Bahnhof, das Kino → neben dem Kino, die Bank → neben der Bank.",
+      "beispiele": [
+        { "de": "Die Post ist neben der Bank.", "uz": "Pochta bank yonida." },
+        { "de": "Das Hotel ist am Bahnhof.", "uz": "Mehmonxona vokzal oldida." },
+        { "de": "Die Polizei ist an der Ecke.", "uz": "Politsiya ko'cha burchagida." },
+        { "de": "Das Kino ist zwischen dem Park und der Post.", "uz": "Kinoteatr park bilan pochta orasida." },
+        { "de": "Die Toilette ist dort links.", "uz": "Hojatxona ana u yerda, chap tomonda." }
+      ]
+    },
+    {
+      "section": "u03-s3",
+      "titelDe": "zum/zur und Imperativ (Sie)",
+      "titelUz": "zum/zur va buyruq shakli",
+      "erklaerungUz": "Biror joyga yo'nalishni «zu» bilan aytamiz: zu + dem = «zum» (der va das so'zlari oldida), zu + der = «zur» (die so'zlari oldida): zum Bahnhof, zum Hotel, zur Post. Rasmiy («Sie») buyruq gapida fe'l gap boshiga chiqadi, undan keyin «Sie» keladi: «Gehen Sie geradeaus.» — «To'g'riga yuring.», «Nehmen Sie die erste Straße links.» — «Birinchi ko'chadan chapga kiring.»",
+      "beispiele": [
+        { "de": "Wie komme ich zum Bahnhof?", "uz": "Vokzalga qanday boraman?" },
+        { "de": "Wie komme ich zur Post?", "uz": "Pochtaga qanday boraman?" },
+        { "de": "Gehen Sie hier geradeaus.", "uz": "Shu yerdan to'g'riga yuring." },
+        { "de": "Nehmen Sie die zweite Straße rechts.", "uz": "Ikkinchi ko'chadan o'ngga kiring." },
+        { "de": "Gehen Sie bis zur Ampel.", "uz": "Svetoforgacha yuring." }
+      ]
+    },
+    {
+      "section": "u03-s4",
+      "titelDe": "mit + Dativ",
+      "titelUz": "mit — transport bilan",
+      "erklaerungUz": "Qanday transportda borishni «mit» bilan aytamiz. «mit» dan keyin ham artikl o'zgaradi: der → dem, das → dem, die → der: mit dem Bus, mit dem Auto, mit der U-Bahn. Piyoda borish esa boshqacha aytiladi: «zu Fuß» — bu yerda «mit» ishlatilmaydi. «fahren» fe'li «du» va «er/sie» da o'zgaradi: ich fahre, du fährst, er fährt.",
+      "beispiele": [
+        { "de": "Ich fahre mit dem Bus.", "uz": "Men avtobusda boraman." },
+        { "de": "Fährst du mit der U-Bahn?", "uz": "Sen metroda borasanmi?" },
+        { "de": "Anna fährt mit dem Fahrrad.", "uz": "Anna velosipedda boradi." },
+        { "de": "Wir fahren mit dem Zug.", "uz": "Biz poyezdda boramiz." },
+        { "de": "Lukas geht zu Fuß.", "uz": "Lukas piyoda boradi." }
+      ]
+    },
+    {
+      "section": "u03-s5",
+      "titelDe": "Das Verb auf Platz 2",
+      "titelUz": "Fe'l doim ikkinchi o'rinda",
+      "erklaerungUz": "Oddiy darak gapda fe'l doim IKKINCHI o'rinda turadi. Gap vaqt so'zi bilan boshlansa (heute, manchmal, dann), ega fe'ldan keyinga o'tadi: «Ich fahre heute mit dem Bus.» → «Heute fahre ich mit dem Bus.» Ikkala gap ham to'g'ri, faqat birinchi o'rinda nima turgani o'zgaradi.",
+      "beispiele": [
+        { "de": "Heute fahre ich mit dem Bus.", "uz": "Bugun men avtobusda boraman." },
+        { "de": "Manchmal gehe ich zu Fuß.", "uz": "Ba'zan men piyoda boraman." },
+        { "de": "Dann warte ich lange.", "uz": "Keyin men uzoq kutaman." },
+        { "de": "Der Weg dauert zwanzig Minuten.", "uz": "Yo'l yigirma daqiqa oladi." },
+        { "de": "Oft fährt Julia mit dem Fahrrad.", "uz": "Julia tez-tez velosipedda boradi." }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "unit": "u03",
+  "phrasen": [
+    {
+      "section": "u03-s1",
+      "funktion": "einen Ort zeigen",
+      "funktionUz": "binoni ko'rsatib, nomini aytish",
+      "de": "Das ist der Bahnhof.",
+      "uz": "Bu vokzal."
+    },
+    {
+      "section": "u03-s1",
+      "funktion": "fragen, ob es etwas gibt",
+      "funktionUz": "biror joy bor-yo'qligini so'rash",
+      "de": "Gibt es hier ein Kino?",
+      "uz": "Bu yerda kinoteatr bormi?"
+    },
+    {
+      "section": "u03-s1",
+      "funktion": "einen Ort beschreiben",
+      "funktionUz": "binoning qandayligini aytish",
+      "de": "Das Museum ist sehr alt.",
+      "uz": "Muzey juda eski."
+    },
+    {
+      "section": "u03-s2",
+      "funktion": "nach dem Ort fragen",
+      "funktionUz": "joy qayerdaligini so'rash",
+      "de": "Entschuldigung, wo ist die Post?",
+      "uz": "Kechirasiz, pochta qayerda?"
+    },
+    {
+      "section": "u03-s2",
+      "funktion": "sagen, wo etwas ist",
+      "funktionUz": "joy nimaning yonida ekanini aytish",
+      "de": "Die Post ist neben der Bank.",
+      "uz": "Pochta bank yonida."
+    },
+    {
+      "section": "u03-s2",
+      "funktion": "nach der Entfernung fragen",
+      "funktionUz": "uzoq-yaqinligini so'rash",
+      "de": "Ist das weit?",
+      "uz": "Bu uzoqmi?"
+    },
+    {
+      "section": "u03-s3",
+      "funktion": "nach dem Weg fragen",
+      "funktionUz": "biror joyga qanday borishni so'rash",
+      "de": "Wie komme ich zum Bahnhof?",
+      "uz": "Vokzalga qanday boraman?"
+    },
+    {
+      "section": "u03-s3",
+      "funktion": "geradeaus schicken",
+      "funktionUz": "to'g'riga yurishni aytish",
+      "de": "Gehen Sie hier geradeaus.",
+      "uz": "Shu yerdan to'g'riga yuring."
+    },
+    {
+      "section": "u03-s3",
+      "funktion": "sagen, in welche Straße man geht",
+      "funktionUz": "qaysi ko'chaga kirishni aytish",
+      "de": "Nehmen Sie die erste Straße links.",
+      "uz": "Birinchi ko'chadan chapga kiring."
+    },
+    {
+      "section": "u03-s4",
+      "funktion": "nach dem Verkehrsmittel fragen",
+      "funktionUz": "avtobusda borish-bormasligini so'rash",
+      "de": "Fährst du mit dem Bus?",
+      "uz": "Avtobusda borasanmi?"
+    },
+    {
+      "section": "u03-s4",
+      "funktion": "das Verkehrsmittel nennen",
+      "funktionUz": "metroda borishini aytish",
+      "de": "Ich fahre mit der U-Bahn.",
+      "uz": "Men metroda boraman."
+    },
+    {
+      "section": "u03-s4",
+      "funktion": "sagen, dass man zu Fuß geht",
+      "funktionUz": "piyoda borishini aytish",
+      "de": "Ich gehe zu Fuß.",
+      "uz": "Men piyoda boraman."
+    },
+    {
+      "section": "u03-s5",
+      "funktion": "nach der Dauer fragen",
+      "funktionUz": "yo'l qancha vaqt olishini so'rash",
+      "de": "Wie lange dauert das?",
+      "uz": "Bu qancha vaqt oladi?"
+    },
+    {
+      "section": "u03-s5",
+      "funktion": "die Dauer nennen",
+      "funktionUz": "yo'l qancha vaqt olishini aytish",
+      "de": "Das dauert zwanzig Minuten.",
+      "uz": "Bu yigirma daqiqa oladi."
+    },
+    {
+      "section": "u03-s5",
+      "funktion": "über Gewohnheiten sprechen",
+      "funktionUz": "har kungi odatini aytish",
+      "de": "Ich fahre immer mit dem Fahrrad.",
+      "uz": "Men doim velosipedda boraman."
+    }
+  ]
+}
