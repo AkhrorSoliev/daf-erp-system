@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { normalizeSharedPhone } from '../utils/phone.util';
 
 /**
  * Tizimga kira oladigan xodim rollari: CEO, Filial direktori, Administrator,
@@ -80,12 +81,11 @@ export interface PhoneChangeWrite {
  *
  * A phone is a sign-in key, not contact data: Telegram sign-in finds the
  * account by it and asks for no password, and `AuthService.buildAccountLookup`
- * matches the number against `login` as well as `phone`. A login still
- * holding the old number therefore kept that number opening the account after
- * the phone moved on (production, 2026-09-24: one teacher; 115 students —
- * ADR-0032). So the login
- * follows the phone, or becomes `null` when the new number is already some
- * live account's login (`loginForPhone`, ADR-0022).
+ * matches a number against `login` as well as `phone`. A login still holding
+ * the old number therefore kept that number opening the account after the
+ * phone moved on (production, 2026-09-24: one teacher; 115 students —
+ * ADR-0032). So the login follows the phone, or becomes `null` when the new
+ * number is already some live account's login (`loginForPhone`, ADR-0022).
  *
  * A staff account may not take a number another live staff account holds —
  * Telegram sign-in would refuse both and SMS reset could not tell them apart
@@ -109,8 +109,19 @@ export async function planPhoneChange(
     throw new BadRequestException(PHONE_HELD_BY_STAFF_MESSAGE);
   }
 
-  if (account.phone !== null && account.login === account.phone) {
+  if (loginHoldsPhone(account.login, account.phone)) {
     return { phone: nextPhone, login: await loginForPhone(prisma, nextPhone) };
   }
   return { phone: nextPhone };
+}
+
+/**
+ * Does this login open the account for this phone number? `buildAccountLookup`
+ * matches a number against `login` both as sent (`998…`) and normalised (nine
+ * digits), so a digits-only login that normalises to the phone is the same key.
+ * A username that merely contains the digits is not.
+ */
+function loginHoldsPhone(login: string | null, phone: string | null): boolean {
+  if (login === null || phone === null) return false;
+  return /^\d+$/.test(login) && normalizeSharedPhone(login) === phone;
 }

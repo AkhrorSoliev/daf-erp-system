@@ -118,6 +118,30 @@ describe('planPhoneChange (ADR-0031)', () => {
     ).toEqual({ phone: '909998877', login: null });
   });
 
+  it('moves a login that holds the old number with its 998 country code', async () => {
+    const { prisma } = prismaWith();
+    expect(
+      await planPhoneChange(
+        prisma,
+        { ...account, login: '998901112233' },
+        '909998877',
+        { staff: true },
+      ),
+    ).toEqual({ phone: '909998877', login: '909998877' });
+  });
+
+  it('does not read a username that merely contains the digits as the number', async () => {
+    const { prisma } = prismaWith();
+    expect(
+      await planPhoneChange(
+        prisma,
+        { ...account, login: 'akmal901112233' },
+        '909998877',
+        { staff: true },
+      ),
+    ).toEqual({ phone: '909998877' });
+  });
+
   it('leaves a login that is not the old number alone', async () => {
     const { prisma } = prismaWith();
     expect(

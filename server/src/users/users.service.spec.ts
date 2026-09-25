@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { RedisService } from '../redis/redis.service';
 
 describe('UsersService — updateUser status/isActive sync', () => {
   let service: UsersService;
@@ -68,6 +69,7 @@ describe('UsersService — updateUser status/isActive sync', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -194,6 +196,7 @@ describe('UsersService — role escalation and branch validation', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -210,9 +213,11 @@ describe('UsersService — role escalation and branch validation', () => {
     service = module.get(UsersService);
   });
 
+  // The caller is read with `findFirst` + `deletedAt: null`, so an archived
+  // caller's leftover token grants nothing (see "role grant ceiling" below).
   it('rejects non-CEO caller from granting CEO role', async () => {
     prisma.role.findMany.mockResolvedValue([{ id: 1 }]);
-    prisma.user.findUnique.mockResolvedValue(bdCaller);
+    prisma.user.findFirst.mockResolvedValue(bdCaller);
 
     await expect(
       service.create(
@@ -221,6 +226,7 @@ describe('UsersService — role escalation and branch validation', () => {
           lastName: 'B',
           companyId: 1001,
           password: 'pass1',
+          position: 'Administrator',
           roleIds: [1],
         },
         { kind: 'user', id: 99 },
@@ -230,7 +236,7 @@ describe('UsersService — role escalation and branch validation', () => {
 
   it('allows CEO caller to grant CEO role', async () => {
     prisma.role.findMany.mockResolvedValue([{ id: 1 }]);
-    prisma.user.findUnique.mockResolvedValue(ceoCaller);
+    prisma.user.findFirst.mockResolvedValue(ceoCaller);
 
     await expect(
       service.create(
@@ -327,7 +333,7 @@ describe('UsersService — role escalation and branch validation', () => {
 
   it('allows CEO-only user with empty branchIds', async () => {
     prisma.role.findMany.mockResolvedValue([{ id: 1 }]);
-    prisma.user.findUnique.mockResolvedValue(ceoCaller);
+    prisma.user.findFirst.mockResolvedValue(ceoCaller);
 
     await expect(
       service.create(
@@ -364,6 +370,8 @@ describe('UsersService — role escalation and branch validation', () => {
       ),
     ).resolves.toBeDefined();
 
+    // No caller exists, so none is looked up, by either method.
+    expect(prisma.user.findFirst).not.toHaveBeenCalled();
     expect(prisma.user.findUnique).not.toHaveBeenCalled();
   });
 });
@@ -418,6 +426,7 @@ describe('UsersService — cross-company guards', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -485,6 +494,7 @@ describe('UsersService — findAll companyId scoping', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -631,6 +641,7 @@ describe('UsersService — updateUser branch confinement', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -745,6 +756,7 @@ describe('UsersService — rolsiz xodim (lavozim bilan)', () => {
           },
         },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
       ],
     }).compile();
 
@@ -958,6 +970,7 @@ describe("UsersService — updateUser: rolsiz ⇒ login/parol yo'q invariantini 
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -1176,5 +1189,433 @@ describe("UsersService — updateUser: rolsiz ⇒ login/parol yo'q invariantini 
     const data = updateMock.mock.calls[0][0].data;
     expect(data.password).not.toBeNull();
     expect(typeof data.password).toBe('string');
+  });
+});
+
+/**
+ * `POST /users` and `PATCH /users/:id` refused only the CEO role. An
+ * Administrator holds their own branch, so the branch check passed and they
+ * could create a Branch Director there with a password of their choosing, or
+ * promote THEMSELVES, because acting on yourself skips the object-level check.
+ * The registration links have refused exactly this since they were signed
+ * (`GRANTABLE_ROLE_IDS`); the employee form is a second door to the same
+ * account, so it answers to the same ceiling (ADR-0026).
+ */
+describe('UsersService — role grant ceiling', () => {
+  let service: UsersService;
+  let prisma: any;
+
+  const FARGONA = 1;
+  const ROLE_NAMES: Record<number, string> = {
+    1: 'CEO',
+    2: 'Branch Director',
+    3: 'Administrator',
+    4: 'Teacher',
+    5: 'Cashier',
+  };
+
+  const CEO = 10001;
+  const DIRECTOR = 10002;
+  const ADMIN = 10003;
+  const TEACHER = 10004;
+  const CASHIER = 10005;
+  const CEO_AND_ADMIN = 10013;
+  const DIRECTOR_AND_ADMIN = 10023;
+  const ADMIN_AND_TEACHER = 10034;
+  const ARCHIVED_CEO = 10009;
+
+  // One row answers every read the service makes of a person: the target read
+  // (`userSelect`: roles carry id and name, branches carry `branch.id`) and
+  // the caller reads (`roles.role.name`, `branches.branchId`). A self-edit
+  // makes both reads with the same id, so the suites' usual trick of telling
+  // the two apart by id or by `select` does not work here.
+  const person = (id: number, roleIds: number[], deletedAt: Date | null) => {
+    const isCeo = roleIds.includes(1);
+    return {
+      id,
+      firstName: 'Xodim',
+      lastName: String(id),
+      companyId: 1001,
+      deletedAt,
+      status: 'ACTIVE',
+      isActive: true,
+      password: '$2b$10$saqlangan.hash',
+      // A CEO is branch-less by design; everyone else works in Fargona.
+      mainBranch: isCeo ? null : FARGONA,
+      branches: isCeo
+        ? []
+        : [{ branchId: FARGONA, branch: { id: FARGONA, name: "Farg'ona" } }],
+      roles: roleIds.map((roleId) => ({
+        role: { id: roleId, name: ROLE_NAMES[roleId] },
+      })),
+      company: { id: 1001, name: 'Test' },
+      groupTeachers: [],
+    };
+  };
+
+  const people = new Map(
+    [
+      person(CEO, [1], null),
+      person(DIRECTOR, [2], null),
+      person(ADMIN, [3], null),
+      person(TEACHER, [4], null),
+      person(CASHIER, [5], null),
+      person(CEO_AND_ADMIN, [1, 3], null),
+      person(DIRECTOR_AND_ADMIN, [2, 3], null),
+      person(ADMIN_AND_TEACHER, [3, 4], null),
+      person(ARCHIVED_CEO, [1], new Date('2026-09-20T10:00:00Z')),
+    ].map((p) => [p.id, p]),
+  );
+
+  // Honours `deletedAt: null` the way the database does, so a lookup that
+  // leaves it out finds an archived caller.
+  const lookup = ({ where }: any) => {
+    const found = people.get(where?.id);
+    if (!found) return Promise.resolve(null);
+    if (where.deletedAt === null && found.deletedAt !== null) {
+      return Promise.resolve(null);
+    }
+    return Promise.resolve(found);
+  };
+
+  // WHICH rule refused matters: a Forbidden from the branch or object-level
+  // check satisfies `toBeInstanceOf` just as well, and would hide a broken
+  // ceiling behind it.
+  const CANNOT_GRANT = /rolni tayinlay olmaysiz/;
+  const CANNOT_RESHAPE = /rollarini o'zgartira olmaysiz/;
+  // The rank rule (ADR-0027) answers before the ceiling for anyone other
+  // than the caller: an account that outranks you cannot be written to at
+  // all, roles included. The reshape rule remains the guard on your own.
+  const OUTRANKED = /sizdan yuqori yoki siz bilan bir darajada/;
+  const expectRefused = async (attempt: Promise<unknown>, rule: RegExp) => {
+    await expect(attempt).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(attempt).rejects.toThrow(rule);
+  };
+
+  beforeEach(async () => {
+    prisma = {
+      user: {
+        findFirst: jest.fn().mockImplementation(lookup),
+        findUnique: jest.fn().mockImplementation(lookup),
+        create: jest.fn().mockResolvedValue(person(10999, [], null)),
+        update: jest
+          .fn()
+          .mockImplementation(({ where }: any) => lookup({ where })),
+      },
+      // Every requested role exists and every named branch is real and in the
+      // company: existence is not what these tests are about.
+      role: {
+        findMany: jest
+          .fn()
+          .mockImplementation(({ where }: any) =>
+            Promise.resolve(where.id.in.map((id: number) => ({ id }))),
+          ),
+      },
+      branch: {
+        count: jest
+          .fn()
+          .mockImplementation(({ where }: any) =>
+            Promise.resolve(where.id.in.length),
+          ),
+      },
+      userRole: { deleteMany: jest.fn(), createMany: jest.fn() },
+      userBranch: { deleteMany: jest.fn(), createMany: jest.fn() },
+      $transaction: jest.fn((cb: any) => cb(prisma)),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UsersService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: UploadService, useValue: { deleteFile: jest.fn() } },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
+        {
+          provide: EntityHistoryService,
+          useValue: {
+            recordCreate: jest.fn(),
+            recordUpdate: jest.fn(),
+            recordDelete: jest.fn(),
+            recordStatusChange: jest.fn(),
+            recordRestore: jest.fn(),
+          },
+        },
+      ],
+    }).compile();
+
+    service = module.get(UsersService);
+  });
+
+  // Everything but the roles is valid and inside the caller's own branch, so
+  // the ceiling is the only rule left that can refuse.
+  const newEmployee = (roleIds: number[]) => ({
+    firstName: 'Yangi',
+    lastName: 'Xodim',
+    companyId: 1001,
+    position: 'Xodim',
+    password: 'parol123',
+    roleIds,
+    branchIds: [FARGONA],
+    mainBranch: FARGONA,
+  });
+
+  describe('creating an employee', () => {
+    it.each([
+      { who: 'an Administrator', caller: ADMIN, roleIds: [2] },
+      { who: 'an Administrator', caller: ADMIN, roleIds: [1] },
+      { who: 'an Administrator', caller: ADMIN, roleIds: [3] },
+      // A forbidden role cannot ride in beside one the caller may grant.
+      { who: 'an Administrator', caller: ADMIN, roleIds: [4, 2] },
+      { who: 'a Branch Director', caller: DIRECTOR, roleIds: [1] },
+      { who: 'a Branch Director', caller: DIRECTOR, roleIds: [2] },
+      { who: 'a Branch Director', caller: DIRECTOR, roleIds: [3, 1] },
+    ])('refuses $who granting roles $roleIds', async ({ caller, roleIds }) => {
+      await expectRefused(
+        service.create(newEmployee(roleIds), { kind: 'user', id: caller }),
+        CANNOT_GRANT,
+      );
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      { who: 'an Administrator', caller: ADMIN, roleIds: [4] },
+      { who: 'an Administrator', caller: ADMIN, roleIds: [5] },
+      { who: 'a Branch Director', caller: DIRECTOR, roleIds: [3] },
+      { who: 'a Branch Director', caller: DIRECTOR, roleIds: [4, 5] },
+      { who: 'a CEO', caller: CEO, roleIds: [1] },
+      { who: 'a CEO', caller: CEO, roleIds: [2] },
+      { who: 'a CEO', caller: CEO, roleIds: [3] },
+      { who: 'a CEO', caller: CEO, roleIds: [4] },
+      { who: 'a CEO', caller: CEO, roleIds: [5] },
+      // The most senior role a caller holds decides their ceiling.
+      {
+        who: 'a Branch Director who is also an Administrator',
+        caller: DIRECTOR_AND_ADMIN,
+        roleIds: [3],
+      },
+      {
+        who: 'a CEO who is also an Administrator',
+        caller: CEO_AND_ADMIN,
+        roleIds: [2],
+      },
+    ])('lets $who grant roles $roleIds', async ({ caller, roleIds }) => {
+      await service.create(newEmployee(roleIds), { kind: 'user', id: caller });
+      expect(prisma.user.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses a caller who holds none of CEO, Branch Director or Administrator', async () => {
+      // `@Roles()` keeps a Cashier off this route; the service must not lean
+      // on that. Holding no granting role means nothing is grantable, not a
+      // default ceiling borrowed from the lowest granting role.
+      await expectRefused(
+        service.create(newEmployee([4]), { kind: 'user', id: CASHIER }),
+        CANNOT_GRANT,
+      );
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    it('refuses an archived caller whose access token has not expired yet', async () => {
+      // Nothing re-reads the account on each request, so a token outlives its
+      // archive by up to an hour. A CEO account needs no branch, so the branch
+      // check (which does skip archived callers) never runs, and the ceiling's
+      // own lookup is all that stands between that token and a new CEO.
+      await expectRefused(
+        service.create(
+          { ...newEmployee([1]), branchIds: [], mainBranch: undefined },
+          { kind: 'user', id: ARCHIVED_CEO },
+        ),
+        CANNOT_GRANT,
+      );
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    it('leaves self-registration alone: its link was checked when it was signed', async () => {
+      // A CEO-signed link may carry Branch Director. There is no signed-in
+      // caller to hold a ceiling, and looking for one would refuse the bot
+      // (ADR-0008).
+      await service.create(newEmployee([2]), { kind: 'self-registration' });
+
+      expect(prisma.user.create).toHaveBeenCalledTimes(1);
+      const callerLookups = [
+        ...prisma.user.findFirst.mock.calls,
+        ...prisma.user.findUnique.mock.calls,
+      ].filter(([args]: any[]) => args?.where?.id !== undefined);
+      expect(callerLookups).toHaveLength(0);
+    });
+  });
+
+  describe('editing an employee', () => {
+    it('refuses an Administrator promoting THEMSELVES to Branch Director', async () => {
+      await expectRefused(
+        service.updateUser(ADMIN, { roleIds: [2, 3] } as any, ADMIN, 1001),
+        CANNOT_GRANT,
+      );
+      expect(prisma.userRole.createMany).not.toHaveBeenCalled();
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('refuses an Administrator promoting a Teacher of their branch to Branch Director', async () => {
+      await expectRefused(
+        service.updateUser(TEACHER, { roleIds: [2] } as any, ADMIN, 1001),
+        CANNOT_GRANT,
+      );
+      expect(prisma.userRole.createMany).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      { what: 'CEO to themselves', target: DIRECTOR, roleIds: [1, 2] },
+      { what: 'CEO to an Administrator', target: ADMIN, roleIds: [1] },
+      {
+        what: 'Branch Director to an Administrator',
+        target: ADMIN,
+        roleIds: [2],
+      },
+    ])(
+      'refuses a Branch Director granting $what',
+      async ({ target, roleIds }) => {
+        await expectRefused(
+          service.updateUser(target, { roleIds } as any, DIRECTOR, 1001),
+          CANNOT_GRANT,
+        );
+        expect(prisma.userRole.createMany).not.toHaveBeenCalled();
+      },
+    );
+
+    it('lets a Branch Director promote a Teacher to Administrator', async () => {
+      await service.updateUser(
+        TEACHER,
+        { roleIds: [3, 4] } as any,
+        DIRECTOR,
+        1001,
+      );
+
+      expect(prisma.userRole.createMany).toHaveBeenCalledWith({
+        data: [
+          { userId: TEACHER, roleId: 3 },
+          { userId: TEACHER, roleId: 4 },
+        ],
+      });
+    });
+
+    it('lets a CEO grant anything, CEO included', async () => {
+      await service.updateUser(DIRECTOR, { roleIds: [1, 2] } as any, CEO, 1001);
+
+      expect(prisma.userRole.createMany).toHaveBeenCalledWith({
+        data: [
+          { userId: DIRECTOR, roleId: 1 },
+          { userId: DIRECTOR, roleId: 2 },
+        ],
+      });
+    });
+
+    // The decision (ADR-0026): a caller may add or remove only roles inside
+    // their ceiling, and only on someone who holds nothing above it. The roles
+    // of anyone at or above your own level, yourself included, are not yours
+    // to reshape, not even with a role you could hand to a newcomer.
+    it('refuses an Administrator adding a Teacher role to their Branch Director', async () => {
+      await expectRefused(
+        service.updateUser(DIRECTOR, { roleIds: [2, 4] } as any, ADMIN, 1001),
+        OUTRANKED,
+      );
+      expect(prisma.userRole.createMany).not.toHaveBeenCalled();
+    });
+
+    it('refuses an Administrator stripping their Branch Director down to Teacher', async () => {
+      await expectRefused(
+        service.updateUser(DIRECTOR, { roleIds: [4] } as any, ADMIN, 1001),
+        OUTRANKED,
+      );
+      expect(prisma.userRole.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('refuses an Administrator taking every role off their Branch Director', async () => {
+      // An empty role set skips the role-holder half of the shape checks, and
+      // a demotion to role-less NULLS the stored login and password. Were the
+      // ceiling ever moved under "has roles", this would lock a director out.
+      await expectRefused(
+        service.updateUser(
+          DIRECTOR,
+          { roleIds: [], position: 'Farrosh' } as any,
+          ADMIN,
+          1001,
+        ),
+        OUTRANKED,
+      );
+      expect(prisma.userRole.deleteMany).not.toHaveBeenCalled();
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('refuses an Administrator adding a Teacher role to themselves', async () => {
+      await expectRefused(
+        service.updateUser(ADMIN, { roleIds: [3, 4] } as any, ADMIN, 1001),
+        CANNOT_RESHAPE,
+      );
+      expect(prisma.userRole.createMany).not.toHaveBeenCalled();
+    });
+
+    it('lets an Administrator reshape roles inside their ceiling', async () => {
+      await service.updateUser(
+        TEACHER,
+        { roleIds: [4, 5] } as any,
+        ADMIN,
+        1001,
+      );
+
+      expect(prisma.userRole.createMany).toHaveBeenCalledWith({
+        data: [
+          { userId: TEACHER, roleId: 4 },
+          { userId: TEACHER, roleId: 5 },
+        ],
+      });
+    });
+
+    it('lets an Administrator take a Teacher down to role-less', async () => {
+      await service.updateUser(
+        TEACHER,
+        { roleIds: [], position: 'Farrosh' } as any,
+        ADMIN,
+        1001,
+      );
+
+      expect(prisma.userRole.deleteMany).toHaveBeenCalledWith({
+        where: { userId: TEACHER },
+      });
+      expect(prisma.userRole.createMany).toHaveBeenCalledWith({ data: [] });
+    });
+
+    // The employee form sends `roleIds` on EVERY save. A save that leaves the
+    // set as it was grants nothing, or a Branch Director could not even fix a
+    // typo in their own name.
+    it('lets a Branch Director save their own record with the role set unchanged', async () => {
+      await service.updateUser(
+        DIRECTOR,
+        {
+          firstName: 'Yangi',
+          position: 'Filial direktori',
+          roleIds: [2],
+          branchIds: [FARGONA],
+        } as any,
+        DIRECTOR,
+        1001,
+      );
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: DIRECTOR },
+          data: expect.objectContaining({ firstName: 'Yangi' }),
+        }),
+      );
+    });
+
+    it('treats a reordered role list as unchanged', async () => {
+      await service.updateUser(
+        ADMIN_AND_TEACHER,
+        { firstName: 'Yangi', roleIds: [4, 3] } as any,
+        ADMIN_AND_TEACHER,
+        1001,
+      );
+
+      expect(prisma.user.update).toHaveBeenCalledTimes(1);
+    });
   });
 });

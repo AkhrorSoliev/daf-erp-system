@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { GroupsService } from './groups.service';
 import { GroupsReadService } from './groups-read.service';
@@ -312,6 +312,8 @@ describe('GroupsService — status methods', () => {
       prisma.course.findFirst.mockResolvedValue({
         id: 'course-1',
         name: 'Deutsch',
+        companyId: 1001,
+        branchId: 1,
         deletedAt: null,
       });
     });
@@ -656,6 +658,253 @@ describe('GroupsService — status methods', () => {
           1001,
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  /**
+   * The course sets the price every student in the group pays, and whoever
+   * holds the COURSE's branch may reprice it or archive it — archiving cancels
+   * every group on it. A Namangan group on a Farg'ona course would be priced,
+   * and could be closed, from Farg'ona. A room of another branch puts the group
+   * into that branch's occupancy reports.
+   *
+   * The caller is a CEO throughout, the widest scope there is: this is a rule
+   * about the group, not about who is asking.
+   */
+  describe("a group's course and room belong to the group's branch", () => {
+    const COMPANY = 1001;
+    const FARGONA = 1; // the group's branch
+    const NAMANGAN = 2;
+    const OTHER_TENANT_BRANCH = 9; // belongs to company 2002
+
+    const branches = [
+      { id: FARGONA, companyId: COMPANY, deletedAt: null, name: "Farg'ona" },
+      { id: NAMANGAN, companyId: COMPANY, deletedAt: null, name: 'Namangan' },
+      { id: OTHER_TENANT_BRANCH, companyId: 2002, deletedAt: null, name: 'X' },
+    ];
+    const courses = [
+      { id: 'course-fer', companyId: COMPANY, branchId: FARGONA },
+      { id: 'course-fer-2', companyId: COMPANY, branchId: FARGONA },
+      { id: 'course-nam', companyId: COMPANY, branchId: NAMANGAN },
+      { id: 'course-no-branch', companyId: COMPANY, branchId: null },
+      { id: 'course-x', companyId: 2002, branchId: OTHER_TENANT_BRANCH },
+    ].map((c) => ({ ...c, deletedAt: null, courseDuration: null }));
+    const rooms = [
+      {
+        id: 'room-fer',
+        companyId: COMPANY,
+        branchId: FARGONA,
+        deletedAt: null,
+      },
+      {
+        id: 'room-fer-gone',
+        companyId: COMPANY,
+        branchId: FARGONA,
+        deletedAt: new Date('2026-09-01T00:00:00Z'),
+      },
+      {
+        id: 'room-nam',
+        companyId: COMPANY,
+        branchId: NAMANGAN,
+        deletedAt: null,
+      },
+      {
+        id: 'room-x',
+        companyId: 2002,
+        branchId: OTHER_TENANT_BRANCH,
+        deletedAt: null,
+      },
+    ];
+
+    /** Answers `findFirst` as the database would: every `where` key must match. */
+    const findFirstIn =
+      (rows: Record<string, unknown>[]) =>
+      ({ where }: { where: Record<string, unknown> }) =>
+        Promise.resolve(
+          rows.find((row) =>
+            Object.entries(where).every(([key, value]) => row[key] === value),
+          ) ?? null,
+        );
+
+    // A Farg'ona group on a Farg'ona course, with no room yet.
+    const existing = {
+      ...mockGroup,
+      branchId: FARGONA,
+      companyId: COMPANY,
+      courseId: 'course-fer',
+      roomId: null as string | null,
+      exactDays: [],
+      course: { courseDuration: null },
+    };
+    const saved = {
+      ...existing,
+      course: { id: 'course-fer', name: 'Deutsch' },
+      room: null,
+      branch: { id: FARGONA, name: "Farg'ona" },
+      teachers: [],
+      _count: { enrollments: 0 },
+    };
+
+    beforeEach(() => {
+      prisma.branch.findFirst.mockImplementation(findFirstIn(branches));
+      prisma.course.findFirst.mockImplementation(findFirstIn(courses));
+      prisma.room.findFirst.mockImplementation(findFirstIn(rooms));
+      prisma.group.findFirst.mockResolvedValue(existing);
+      prisma.group.create.mockResolvedValue(saved);
+      prisma.group.update.mockResolvedValue(saved);
+    });
+
+    describe('creating a group', () => {
+      const dto = { branchId: FARGONA, courseId: 'course-fer', exactDays: [] };
+
+      it('accepts a course and a room of its own branch', async () => {
+        await service.create({ ...dto, roomId: 'room-fer' } as any, COMPANY, 1);
+
+        expect(prisma.group.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              branchId: FARGONA,
+              courseId: 'course-fer',
+              roomId: 'room-fer',
+            }),
+          }),
+        );
+      });
+
+      it.each([
+        {
+          what: 'a course of another branch',
+          change: { courseId: 'course-nam' },
+          error: BadRequestException,
+        },
+        {
+          // Fail closed: a course with no branch is in no group's branch.
+          what: 'a course with no branch',
+          change: { courseId: 'course-no-branch' },
+          error: BadRequestException,
+        },
+        {
+          what: 'a room of another branch',
+          change: { roomId: 'room-nam' },
+          error: BadRequestException,
+        },
+        {
+          // 404 rather than 400: another company's id is not confirmed to exist.
+          what: 'a course of another company',
+          change: { courseId: 'course-x' },
+          error: NotFoundException,
+        },
+      ])('refuses $what', async ({ change, error }) => {
+        await expect(
+          service.create({ ...dto, ...change } as any, COMPANY, 1),
+        ).rejects.toBeInstanceOf(error);
+        expect(prisma.group.create).not.toHaveBeenCalled();
+      });
+
+      it("refuses another company's branch, even with that branch's own course", async () => {
+        // A CEO's scope is "all", so the company is the only thing left to
+        // stop this — and it has to stop it at the branch.
+        await expect(
+          service.create(
+            {
+              ...dto,
+              branchId: OTHER_TENANT_BRANCH,
+              courseId: 'course-x',
+            } as any,
+            COMPANY,
+            1,
+          ),
+        ).rejects.toThrow(/Filial #9 topilmadi/);
+        expect(prisma.group.create).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('editing a group', () => {
+      it('accepts a new course of its own branch', async () => {
+        await service.update(
+          'group-1',
+          { courseId: 'course-fer-2' } as any,
+          1,
+          COMPANY,
+        );
+
+        expect(prisma.group.update.mock.calls[0][0].data).toEqual(
+          expect.objectContaining({ courseId: 'course-fer-2' }),
+        );
+      });
+
+      it('accepts a new room of its own branch', async () => {
+        await service.update(
+          'group-1',
+          { roomId: 'room-fer' } as any,
+          1,
+          COMPANY,
+        );
+
+        expect(prisma.group.update.mock.calls[0][0].data).toEqual(
+          expect.objectContaining({ roomId: 'room-fer' }),
+        );
+      });
+
+      it.each([
+        {
+          // The body's branchId is discarded, so it cannot vouch for the
+          // course either: the group's own branch is the yardstick.
+          what: 'a course of another branch',
+          change: { courseId: 'course-nam', branchId: NAMANGAN },
+          error: BadRequestException,
+        },
+        {
+          what: 'a room of another branch',
+          change: { roomId: 'room-nam', branchId: NAMANGAN },
+          error: BadRequestException,
+        },
+        {
+          what: 'a deleted room',
+          change: { roomId: 'room-fer-gone' },
+          error: NotFoundException,
+        },
+        {
+          what: 'a room of another company',
+          change: { roomId: 'room-x' },
+          error: NotFoundException,
+        },
+        {
+          what: 'a course of another company',
+          change: { courseId: 'course-x' },
+          error: NotFoundException,
+        },
+      ])('refuses $what', async ({ change, error }) => {
+        await expect(
+          service.update('group-1', change as any, 1, COMPANY),
+        ).rejects.toBeInstanceOf(error);
+        expect(prisma.group.update).not.toHaveBeenCalled();
+      });
+
+      it('does not re-check the course and room the group already has', async () => {
+        // The edit form sends both back on every save, and deleting a room
+        // does not detach its groups. Re-checking them would lock a group
+        // whose room was deleted out of every edit, renaming included.
+        prisma.group.findFirst.mockResolvedValue({
+          ...existing,
+          roomId: 'room-fer-gone',
+        });
+
+        await service.update(
+          'group-1',
+          {
+            name: 'Yangi nom',
+            courseId: 'course-fer',
+            roomId: 'room-fer-gone',
+          } as any,
+          1,
+          COMPANY,
+        );
+
+        expect(prisma.group.update.mock.calls[0][0].data).toEqual(
+          expect.objectContaining({ name: 'Yangi nom' }),
+        );
+      });
     });
   });
 

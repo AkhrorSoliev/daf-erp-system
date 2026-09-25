@@ -180,6 +180,19 @@ describe('CoursesController — role guards', () => {
     });
   });
 
+  describe('getStatusHistory()', () => {
+    // The service checks the course's branch against this caller and refuses
+    // one it cannot identify, so a dropped id would 403 every request.
+    it("passes the caller's id through for the branch check", async () => {
+      await controller.getStatusHistory('course-1', 1001, 10011);
+      expect(mockService.getStatusHistory).toHaveBeenCalledWith(
+        'course-1',
+        1001,
+        10011,
+      );
+    });
+  });
+
   describe('findAll() — no guard', () => {
     it('is staff-only — a student-portal token must not read it', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, controller.findAll);

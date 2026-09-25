@@ -29,6 +29,7 @@ import {
   formatStudent,
 } from './shared/student-select';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
+import { assertCallerInBranch } from '../common/auth/branch-scope';
 
 @Injectable()
 export class StudentsWriteService {
@@ -44,18 +45,24 @@ export class StudentsWriteService {
   ) {}
 
   /**
-   * A student belongs to exactly one branch, and that branch must be real and
-   * belong to the caller's company.
+   * A student belongs to exactly one branch, and that branch must be real,
+   * belong to the caller's company, and be one the caller holds.
    *
    * Why it is enforced here rather than in the DTO: `branchIds` used to be a
    * free-form array that nothing validated, so `[]`, a foreign company's
    * branch, or a non-existent id all sailed through. A branch-less student is
    * then absent from every branch-filtered list and their first payment cannot
    * be booked to any branch at all.
+   *
+   * The caller check lives here, not beside it, because both `create` and a
+   * branch change on `update` pass through: checking only one of them would
+   * let a director create a student in their own branch and then move it into
+   * another, which ends exactly where creating it there would.
    */
   private async assertSingleValidBranch(
     branchIds: number[] | undefined,
     companyId: number,
+    userId: number | undefined,
   ): Promise<void> {
     if (!branchIds?.length) {
       throw new BadRequestException("O'quvchi uchun filial tanlanishi shart");
@@ -72,6 +79,12 @@ export class StudentsWriteService {
     if (!branch) {
       throw new BadRequestException(`Filial #${branchIds[0]} topilmadi`);
     }
+    await assertCallerInBranch(
+      this.prisma,
+      userId,
+      branchIds[0],
+      "Bu filialga o'quvchi qo'shish huquqingiz yo'q",
+    );
   }
 
   async create(
@@ -92,7 +105,7 @@ export class StudentsWriteService {
       );
     }
 
-    await this.assertSingleValidBranch(dto.branchIds, companyId);
+    await this.assertSingleValidBranch(dto.branchIds, companyId, userId);
 
     // Manba tranzaksiyadan OLDIN tekshiriladi: `Lead.sourceId` tashqi kalit,
     // ya'ni yolg'on id tranzaksiya ichida Prisma P2003 beradi va admin
@@ -211,8 +224,9 @@ export class StudentsWriteService {
       throw new NotFoundException(`O'quvchi topilmadi`);
     }
 
-    // `assertSingleValidBranch` below asks whether the TARGET branch is real;
-    // this asks whether the CALLER may act on this student at all. Without it a
+    // `assertSingleValidBranch` below checks the TARGET branch (real, in this
+    // company, held by the caller); this asks whether the CALLER may act on
+    // this student at all, i.e. on the branch they are in now. Without it a
     // director could edit another branch's student — and, because `branchIds`
     // is editable here, move them into their own branch along with their
     // balance, their enrolments and their teacher's future accruals.
@@ -221,7 +235,7 @@ export class StudentsWriteService {
     // Editing branches is allowed, but only to another single valid branch —
     // clearing them would strand the student outside every branch view.
     if (dto.branchIds !== undefined) {
-      await this.assertSingleValidBranch(dto.branchIds, companyId);
+      await this.assertSingleValidBranch(dto.branchIds, companyId, userId);
     }
 
     if (
