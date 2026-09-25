@@ -69,3 +69,32 @@ jobs:
       # main unnoticed.
       - run: npm test
       - run: npm run build
+
+  student-app:
+    name: Student app (typecheck + lint)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: student-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: student-app/package-lock.json
+      # npm 10 here is what EAS installs SDK 54 builds with. `npm install`
+      # under npm 11 can write a lockfile that `npm ci` then rejects, npm 11's
+      # own included: it leaves out entries only optional packages need
+      # (`yaml`, `@emnapi/*`). That drift broke an EAS build in June. If this
+      # step fails with "Missing: … from lock file", rewrite the lockfile with
+      # `npx npm@10 install`.
+      - run: npm ci
+      # The only check on the uz/de dictionaries: `de.ts` is typed `Dict`, the
+      # shape of `uz.ts`, so a missing or mistyped German key fails here — the
+      # app has no test suite. Route strings are NOT checked: the typed-routes
+      # file `.expo/types/router.d.ts` comes from `expo start` and is
+      # gitignored, so `Href` is a plain string in CI.
+      - run: npx tsc --noEmit
+      # Lints `src/` and fails on errors only; warnings are printed and pass.
+      - run: npx expo lint
