@@ -118,6 +118,37 @@ describe('RoomsService — status methods', () => {
     });
   });
 
+  describe('countByBranch', () => {
+    it("reports each branch's status, not the isActive flag", async () => {
+      prisma.branch.findMany.mockResolvedValue([
+        {
+          id: 1,
+          name: 'Filial',
+          address: null,
+          status: 'INACTIVE',
+          _count: { rooms: 3 },
+        },
+      ]);
+
+      const rows = await service.countByBranch({} as any, 1001);
+
+      expect(prisma.branch.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.objectContaining({ status: true }),
+        }),
+      );
+      expect(rows).toEqual([
+        {
+          id: 1,
+          name: 'Filial',
+          address: null,
+          status: 'INACTIVE',
+          roomCount: 3,
+        },
+      ]);
+    });
+  });
+
   describe('delete', () => {
     it('archives room with ARCHIVED status and deletedAt', async () => {
       await service.delete('room-1', 1, 1001);

@@ -166,7 +166,7 @@ export class RoomsService {
         id: true,
         name: true,
         address: true,
-        isActive: true,
+        status: true,
         _count: { select: { rooms: { where: { deletedAt: null } } } },
       },
       orderBy: { createdAt: 'asc' },
@@ -176,7 +176,7 @@ export class RoomsService {
       id: b.id,
       name: b.name,
       address: b.address,
-      isActive: b.isActive,
+      status: b.status,
       roomCount: b._count.rooms,
     }));
   }

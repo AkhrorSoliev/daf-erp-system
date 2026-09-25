@@ -4,18 +4,16 @@ import { useForm, Controller } from "react-hook-form";
 import toast from "react-hot-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { TimePicker } from "@/components/ui/time-picker";
 import { useEditBranch, type Branch } from "@/hooks/use-edit-branch";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
+import {
+  branchUpdateBody,
+  toBranch,
+  type BranchFormValues,
+} from "@/lib/branch-record";
 
 interface EditBranchFormProps {
   branch: Branch | null;
@@ -35,25 +33,17 @@ export function EditBranchForm({
   const setSubmitting = useEditBranch((s) => s.setSubmitting);
   const refetchBranches = useBranchSwitcher((s) => s.refetchBranches);
 
-  const form = useForm({
+  const form = useForm<BranchFormValues>({
     defaultValues: {
       name: branch?.name ?? "",
       address: branch?.address ?? "",
       phone: branch?.phone ?? "",
-      status: branch?.status ?? ("active" as const),
       startOfWorkingDay: branch?.startOfWorkingDay ?? "",
       endOfWorkingDay: branch?.endOfWorkingDay ?? "",
     },
   });
 
-  const onSubmit = async (values: {
-    name: string;
-    address: string;
-    phone: string;
-    status: "active" | "inactive";
-    startOfWorkingDay: string;
-    endOfWorkingDay: string;
-  }) => {
+  const onSubmit = async (values: BranchFormValues) => {
     setSubmitting(true);
     try {
       if (isAdd) {
@@ -67,39 +57,19 @@ export function EditBranchForm({
           companyId: companyId ? Number(companyId) : undefined,
         });
 
-        const created: Branch = {
-          id: String(data.id),
-          name: data.name,
-          address: data.address ?? "",
-          phone: data.phone ?? "",
-          status: data.isActive ? "active" : "inactive",
-          startOfWorkingDay: data.startOfWorkingDay ?? "",
-          endOfWorkingDay: data.endOfWorkingDay ?? "",
-        };
+        const created = toBranch(data);
 
         toast.success("Yangi filial muvaffaqiyatli qo'shildi");
         onSaved?.(created);
         refetchBranches();
       } else {
         if (!branch) return;
-        const { data } = await api.patch(`/branches/${branch.id}`, {
-          name: values.name,
-          address: values.address || undefined,
-          phone: values.phone || undefined,
-          isActive: values.status === "active",
-          startOfWorkingDay: values.startOfWorkingDay || undefined,
-          endOfWorkingDay: values.endOfWorkingDay || undefined,
-        });
+        const { data } = await api.patch(
+          `/branches/${branch.id}`,
+          branchUpdateBody(values),
+        );
 
-        const updated: Branch = {
-          id: String(data.id),
-          name: data.name,
-          address: data.address ?? "",
-          phone: data.phone ?? "",
-          status: data.isActive ? "active" : "inactive",
-          startOfWorkingDay: data.startOfWorkingDay ?? "",
-          endOfWorkingDay: data.endOfWorkingDay ?? "",
-        };
+        const updated = toBranch(data);
 
         toast.success("Filial muvaffaqiyatli yangilandi");
         onSaved?.(updated);
@@ -185,26 +155,6 @@ export function EditBranchForm({
             />
           </div>
         </div>
-
-        {!isAdd && (
-          <div className="space-y-1.5">
-            <Label>Holati</Label>
-            <Select
-              value={form.watch("status")}
-              onValueChange={(value: "active" | "inactive") =>
-                form.setValue("status", value)
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Faol</SelectItem>
-                <SelectItem value="inactive">Nofaol</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
       </section>
     </form>
   );

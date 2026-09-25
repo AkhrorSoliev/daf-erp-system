@@ -803,6 +803,11 @@ Applied to:
 
 When adding a new id-addressed mutation, check the record's branch against the caller's — `companyId` alone is not a boundary once there is more than one branch.
 
+#### Branch state
+
+- **A branch's state is `Branch.status`, and it changes only through `PATCH /branches/:id/status`**, which validates the transition, writes `StatusHistory` and runs `StatusCascadeService` (INACTIVE pauses the branch's ACTIVE groups; CLOSED/ARCHIVED cancel them, drop enrollments with refunds and archive rooms). `PATCH /branches/:id` refuses both `status` and `isActive`.
+- **`Branch.isActive` is a derived copy with no reader.** `changeStatus` and archive restore keep it equal to `status === 'ACTIVE'`; nothing filters on it. The settings form used to write it on its own ("Faol/Nofaol"), which marked a branch inactive while the bot, going by `status`, kept registering people into it. Read `status`, never `isActive`.
+
 #### Registration deep links
 
 - **Teacher onboarding goes through the SIGNED `employee_<branch>_roles_<ids>_t_<issued>_sig_<hmac>` link only.** The legacy unsigned `teacher_<branchId>` payload is **retired** — it carried no signature, so anyone holding one could edit the number and register as a teacher of any branch. `/start` answers old links with "ask for a new link" rather than failing silently. The client mints links via `POST /telegram/employee-link` (see `useTeacherRegistrationLink`); never build a payload in the browser.

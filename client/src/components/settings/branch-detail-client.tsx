@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Building2, Check, CircleDot, Clock, Copy, DoorOpen, GraduationCap, Link2, Loader2, Pencil, Phone, Users, UsersRound } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Tooltip,
   TooltipContent,
@@ -18,6 +18,7 @@ import type { Branch } from "@/hooks/use-edit-branch";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import api from "@/lib/api";
 import { copyPendingText } from "@/lib/clipboard";
+import { toBranch } from "@/lib/branch-record";
 import {
   isTelegramBotConfigured,
   TELEGRAM_BOT_NOT_CONFIGURED,
@@ -80,15 +81,7 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
     async function fetchBranch() {
       try {
         const { data } = await api.get(`/branches/${branchId}`);
-        const branchData = {
-          id: String(data.id),
-          name: data.name,
-          address: data.address ?? "",
-          phone: data.phone ?? "",
-          status: data.isActive ? ("active" as const) : ("inactive" as const),
-          startOfWorkingDay: data.startOfWorkingDay ?? "",
-          endOfWorkingDay: data.endOfWorkingDay ?? "",
-        };
+        const branchData = toBranch(data);
         setBranch(branchData);
         if (data._count) {
           setStats(data._count);
@@ -146,11 +139,7 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
             <h2 className="text-lg font-semibold tracking-tight">
               {branch.name}
             </h2>
-            <Badge
-              variant={branch.status === "active" ? "default" : "secondary"}
-            >
-              {branch.status === "active" ? "Faol" : "Nofaol"}
-            </Badge>
+            <StatusBadge entityType="branches" status={branch.status} />
           </div>
           <p className="text-sm text-muted-foreground">ID: {branch.id}</p>
         </div>
@@ -255,12 +244,11 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
               <CircleDot className="size-3.5" />
               <p className="text-sm">Holat</p>
             </div>
-            <Badge
-              variant={branch.status === "active" ? "default" : "secondary"}
+            <StatusBadge
+              entityType="branches"
+              status={branch.status}
               className="mt-1"
-            >
-              {branch.status === "active" ? "Faol" : "Nofaol"}
-            </Badge>
+            />
           </div>
         </div>
       </div>
