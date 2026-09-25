@@ -150,8 +150,18 @@ export async function loadDepartures(
   let activeAtStart = 0;
   for (const s of students) {
     const own = enrollmentsByStudent.get(s.id) ?? [];
-    events.push(...membershipEvents(s.id, own, logsByEnrollment));
-    events.push(...statusEvents(s, historyByStudent.get(s.id) ?? []));
+    const membership = membershipEvents(s.id, own, logsByEnrollment);
+    // A student who never sat in a group cannot leave one (ADR-0035), so status
+    // changes count only from their first group join.
+    const firstJoin = membership.find((e) => e.type === 'RETURN');
+    if (firstJoin) {
+      events.push(...membership);
+      events.push(
+        ...statusEvents(s, historyByStudent.get(s.id) ?? []).filter(
+          (e) => e.at.getTime() >= firstJoin.at.getTime(),
+        ),
+      );
+    }
     if (
       activeAt &&
       own.some(

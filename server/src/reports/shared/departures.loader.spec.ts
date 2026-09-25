@@ -291,6 +291,9 @@ describe('loadDepartures', () => {
     expect(
       await episodesOf({
         students: [student(10001, 'EXPELLED', '2026-08-01T09:00:00Z')],
+        enrollments: [
+          enrollment('e1', 10001, 'DROPPED', '2026-08-01T09:00:00Z'),
+        ],
       }),
     ).toEqual([
       {
@@ -300,6 +303,27 @@ describe('loadDepartures', () => {
         state: 'confirmed',
       },
     ]);
+  });
+
+  it('ignores a status change of a student who never joined a group', async () => {
+    expect(
+      await episodesOf({
+        students: [student(10001, 'ARCHIVED')],
+        history: [history(10001, 'ACTIVE', 'ARCHIVED', '2026-08-01T09:00:00Z')],
+      }),
+    ).toEqual([]);
+  });
+
+  it('never turns a groupless freeze into a departure', async () => {
+    expect(
+      await episodesOf({
+        students: [student(10002)],
+        history: [
+          history(10002, 'ACTIVE', 'FROZEN', '2026-08-01T09:00:00Z'),
+          history(10002, 'FROZEN', 'ACTIVE', '2026-08-04T09:00:00Z'),
+        ],
+      }),
+    ).toEqual([]);
   });
 
   it('does not read a legacy ARCHIVED card as a departure', async () => {
@@ -316,12 +340,12 @@ describe('loadDepartures', () => {
       students: [student(10001), student(10002)],
       enrollments: [
         enrollment('e1', 10001, 'DROPPED', '2026-06-10T09:00:00Z'),
-        enrollment('e2', 10002, 'ACTIVE', null, '2026-06-05T09:00:00Z'),
+        enrollment('e2', 10002, 'ACTIVE', null, '2026-05-20T09:00:00Z'),
       ],
       logs: [
         log('e1', 'ACTIVE', MAY),
         log('e1', 'DROPPED', '2026-06-10T09:00:00Z'),
-        log('e2', 'ACTIVE', '2026-06-05T09:00:00Z'),
+        log('e2', 'ACTIVE', '2026-05-20T09:00:00Z'),
       ],
     });
     const result = await loadDepartures(
@@ -333,8 +357,9 @@ describe('loadDepartures', () => {
         activeAt: at('2026-05-15T00:00:00Z'),
       },
     );
-    // At the floor (01.06) only 10001 is in a group; 10002 joins on 05.06.
-    expect(result.activeAtStart).toBe(1);
+    // At the floor (01.06) both students are in a group; on 15.05 only 10001 was,
+    // so the clamp moves activeAt to the floor and captures the additional student.
+    expect(result.activeAtStart).toBe(2);
     expect(result.floor).toEqual(at('2026-06-01T00:00:00Z'));
   });
 });
