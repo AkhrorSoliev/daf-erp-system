@@ -51,3 +51,29 @@ export function enrollmentStatusOn(
   }
   return 'ACTIVE';
 }
+
+/**
+ * Gives an enrollment's log its missing opening row, in place (`log` is
+ * ascending by `transitionAt`).
+ *
+ * An enrollment opens ACTIVE, and every writer logs that row at its
+ * `createdAt`. An enrollment opened before the log existed (up to
+ * 2026-04-26) can have only its later rows, so a log that starts with
+ * another status later than the creation gets its opening row back. A first
+ * row at the creation itself was the opening, so none is added. An empty log
+ * is left alone: `enrollmentStatusOn` reads such an enrollment from its own
+ * columns.
+ */
+export function supplyOpeningRow(
+  log: EnrollmentStatusEvent[],
+  createdAt: Date,
+): void {
+  const first = log[0];
+  if (
+    first &&
+    first.status !== 'ACTIVE' &&
+    createdAt.getTime() < first.transitionAt.getTime()
+  ) {
+    log.unshift({ status: 'ACTIVE', transitionAt: createdAt });
+  }
+}

@@ -1,4 +1,8 @@
-import { enrollmentStatusOn } from './enrollment-status-on';
+import {
+  enrollmentStatusOn,
+  supplyOpeningRow,
+  type EnrollmentStatusEvent,
+} from './enrollment-status-on';
 
 const at = (s: string) => new Date(s);
 
@@ -68,5 +72,65 @@ describe('enrollmentStatusOn', () => {
         }),
       ).toBe('ACTIVE');
     });
+  });
+});
+
+describe('supplyOpeningRow', () => {
+  // Enrollments opened before the log existed (before 2026-04-26) kept only
+  // their later rows: the log starts with the closing.
+  const OPENED = at('2026-04-10T09:00:00Z');
+  const CLOSED = at('2026-06-15T09:00:00Z');
+
+  it.each(['DROPPED', 'FROZEN', 'TRANSFERRED'])(
+    'gives a log that starts with %s after the creation its opening ACTIVE row',
+    (status) => {
+      const log = [{ status, transitionAt: CLOSED }];
+
+      supplyOpeningRow(log, OPENED);
+
+      expect(log).toEqual([
+        { status: 'ACTIVE', transitionAt: OPENED },
+        { status, transitionAt: CLOSED },
+      ]);
+    },
+  );
+
+  it('adds nothing when the first row is not later than the creation', () => {
+    // A first row at the creation itself was the opening.
+    const atCreation = [{ status: 'DROPPED', transitionAt: OPENED }];
+    const beforeCreation = [
+      { status: 'DROPPED', transitionAt: at('2026-04-09T09:00:00Z') },
+    ];
+
+    supplyOpeningRow(atCreation, OPENED);
+    supplyOpeningRow(beforeCreation, OPENED);
+
+    expect(atCreation).toEqual([{ status: 'DROPPED', transitionAt: OPENED }]);
+    expect(beforeCreation).toEqual([
+      { status: 'DROPPED', transitionAt: at('2026-04-09T09:00:00Z') },
+    ]);
+  });
+
+  it('adds nothing to a log that already opens with ACTIVE', () => {
+    // A restore logs ACTIVE at the restore itself, later than the creation.
+    const log = [
+      { status: 'ACTIVE', transitionAt: at('2026-05-20T09:00:00Z') },
+      { status: 'DROPPED', transitionAt: CLOSED },
+    ];
+
+    supplyOpeningRow(log, OPENED);
+
+    expect(log).toEqual([
+      { status: 'ACTIVE', transitionAt: at('2026-05-20T09:00:00Z') },
+      { status: 'DROPPED', transitionAt: CLOSED },
+    ]);
+  });
+
+  it('leaves an empty log to the fallback from the enrollment row', () => {
+    const log: EnrollmentStatusEvent[] = [];
+
+    supplyOpeningRow(log, OPENED);
+
+    expect(log).toEqual([]);
   });
 });
