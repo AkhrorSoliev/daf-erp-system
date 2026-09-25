@@ -19,7 +19,10 @@ import {
   type StudentOrigin,
 } from '../common/student-origin';
 import { generatePassword } from '../common/utils/password.util';
-import { loginForPhone } from '../common/auth/phone-account-rules';
+import {
+  loginForPhone,
+  planPhoneChange,
+} from '../common/auth/phone-account-rules';
 import {
   STUDENT_ROLE_ID,
   studentSelect,
@@ -270,6 +273,8 @@ export class StudentsWriteService {
         ? await bcrypt.hash(dto.password, 10)
         : undefined;
 
+    const signIn = await this.planSignInNumber(student.userId, dto.phone);
+
     // NOTE: changing `discountPercent` writes NOTHING to the ledger.
     //
     // It used to. `applyRetroactiveDiscountAdjustment` recomputed every past
@@ -336,10 +341,16 @@ export class StudentsWriteService {
           }
         }
 
-        if (hashedPassword && student.userId) {
+        // Same transaction as the card: a card saved without its account is
+        // exactly the drift ADR-0032 closes.
+        const accountData = {
+          ...signIn?.write,
+          ...(hashedPassword && { password: hashedPassword }),
+        };
+        if (student.userId && Object.keys(accountData).length > 0) {
           await tx.user.update({
             where: { id: student.userId },
-            data: { password: hashedPassword },
+            data: accountData,
           });
         }
 
@@ -358,16 +369,58 @@ export class StudentsWriteService {
       undefined,
     );
 
+    // The account's login rides along so the card's history shows the sign-in
+    // number moving (the history tab labels the field "Login").
     await this.entityHistoryService.recordUpdate({
       entityType: 'Student',
       entityId: id,
-      oldValues: student,
-      newValues: updated,
+      oldValues: signIn ? { ...student, login: signIn.account.login } : student,
+      newValues: signIn
+        ? {
+            ...updated,
+            login:
+              'login' in signIn.write
+                ? signIn.write.login
+                : signIn.account.login,
+          }
+        : updated,
       changedById: userId,
       companyId: student.companyId ?? undefined,
     });
 
     return formatStudent(updated);
+  }
+
+  /**
+   * What the student's sign-in account must write to keep the number on the
+   * card (ADR-0032), or `null` when it already does.
+   *
+   * Every way in — password, Telegram, SMS reset — looks the number up on the
+   * account, never on the card. An account left behind kept the old number as
+   * its sign-in number while the card's number reached nothing (production,
+   * 2026-09-24: 115 students, each after a staff phone edit). The comparison
+   * is against the ACCOUNT, not the card's previous value, so the next save
+   * of a card edited before this rule brings its account back in line.
+   */
+  private async planSignInNumber(
+    userId: number | null,
+    nextPhone: string | undefined,
+  ) {
+    if (nextPhone === undefined || userId === null) return null;
+
+    const account = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { id: true, phone: true, login: true },
+    });
+    if (!account || account.phone === nextPhone) return null;
+
+    // `staff: false`: a student account and the same person's staff account
+    // may share a phone (ADR-0022), so the one-staff-account-per-phone refusal
+    // must not fire here.
+    const write = await planPhoneChange(this.prisma, account, nextPhone, {
+      staff: false,
+    });
+    return { account, write };
   }
 
   async delete(

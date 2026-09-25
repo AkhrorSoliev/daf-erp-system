@@ -79,12 +79,13 @@ export interface PhoneChangeWrite {
 /**
  * The one way an existing account's phone changes (ADR-0031).
  *
- * A phone is a sign-in key, not contact data, and
- * `AuthService.buildAccountLookup` matches a number against `login` as well as
- * `phone`. A login still holding the old number would keep that number working
- * as a key after the phone changes, so the login follows the phone, or becomes
- * `null` when the new number is already some live account's login
- * (`loginForPhone`, ADR-0022).
+ * A phone is a sign-in key, not contact data: Telegram sign-in finds the
+ * account by it and asks for no password, and `AuthService.buildAccountLookup`
+ * matches a number against `login` as well as `phone`. A login still holding
+ * the old number therefore kept that number opening the account after the
+ * phone moved on (production, 2026-09-24: one teacher; 115 students —
+ * ADR-0032). So the login follows the phone, or becomes `null` when the new
+ * number is already some live account's login (`loginForPhone`, ADR-0022).
  *
  * A staff account may not take a number another live staff account holds —
  * Telegram sign-in would refuse both and SMS reset could not tell them apart
