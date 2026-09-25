@@ -370,12 +370,12 @@ describe('one departure count on every surface', () => {
   beforeEach(() => jest.useFakeTimers({ now: NOW }));
   afterEach(() => jest.useRealTimers());
 
-  // November 2026 is the current month: 10011 expelled 05.11, 10012 archived
+  // November 2026 is the current month: 10011 expelled 05.11, 10012 expelled
   // 10.11, 10013 left its group 18.11 (pending), 10014 left in August.
   const NOVEMBER = {
     students: [
       student(10011, 'EXPELLED'),
-      student(10012, 'ARCHIVED'),
+      student(10012, 'EXPELLED'),
       student(10013),
       student(10014),
     ],
@@ -397,7 +397,7 @@ describe('one departure count on every surface', () => {
     ],
     history: [
       statusChange(10011, 'EXPELLED', '2026-11-05T09:00:00.100Z'),
-      statusChange(10012, 'ARCHIVED', '2026-11-10T09:00:00.100Z'),
+      statusChange(10012, 'EXPELLED', '2026-11-10T09:00:00.100Z'),
     ],
   };
 

@@ -112,7 +112,7 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
 
   const departedTooltip =
     "Tanlangan davrda ketgan o'quvchilar, har biri bir marta.\n" +
-    "Chetlatilgan yoki arxivlangan kuni sanaladi. Guruhdan chiqqan yoki muzlatilgan o'quvchi " +
+    "Chetlatilgan kuni sanaladi. Guruhdan chiqqan yoki muzlatilgan o'quvchi " +
     `${data.graceDays} kun ichida qaytmasa, to'xtagan kuni sanaladi.\n` +
     `Yana ${data.pendingCount} nafari ${data.graceDays} kun ichida qaytmasa qo'shiladi.`;
 

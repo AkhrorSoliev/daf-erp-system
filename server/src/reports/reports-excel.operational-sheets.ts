@@ -128,7 +128,7 @@ export function kpiSheet(wb: Workbook, kpis: any, period: string) {
     ws,
     'Shu oy ketganlar',
     kpis.churnedThisMonth ?? 0,
-    `Chetlatilgan, arxivlangan yoki ${grace} kun ichida qaytmagan (guruhdan chiqarilgan, muzlatilgan).`,
+    `Chetlatilgan yoki ${grace} kun ichida qaytmagan (guruhdan chiqarilgan, muzlatilgan).`,
   );
   kvNum(
     ws,

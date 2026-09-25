@@ -69,11 +69,13 @@ export async function loadDepartures(
   const graceDays = DEPARTURE_GRACE_DAYS;
   const floor = await getSystemStartDate(prisma, companyId);
 
+  // A PROSPECT has not studied yet. An archived card is an error or a
+  // duplicate record, not a departure: it is left out like a deleted one.
   const students: StudentRow[] = await prisma.student.findMany({
     where: {
       companyId,
       deletedAt: null,
-      status: { not: StudentStatus.PROSPECT },
+      status: { notIn: [StudentStatus.PROSPECT, StudentStatus.ARCHIVED] },
       ...studentBranchWhere(scope),
     },
     select: { id: true, status: true, statusChangedAt: true },
@@ -241,9 +243,8 @@ function statusEvents(
       out.push({ studentId: student.id, at: h.createdAt, type: 'STOP', kind });
     }
   }
-  // A status set before StatusHistory existed. Only EXPELLED and FROZEN are
-  // read back from the card: an old ARCHIVED card may be an archived
-  // graduate, and its enrollments tell that story anyway.
+  // A status set before StatusHistory existed: an EXPELLED or FROZEN card is
+  // read back from its own columns.
   const logged = history.some((h) => h.toStatus === student.status);
   const legacyKind: StopKind | null =
     student.status === 'EXPELLED'
@@ -262,12 +263,10 @@ function statusEvents(
   return out;
 }
 
+/** Archiving is never a stop; a group it closed still counts as leaving it. */
 function stopKindFor(from: string | null, to: string): StopKind | null {
   if (to === 'EXPELLED') return 'EXPELLED';
   if (to === 'FROZEN' && (from === null || from === 'ACTIVE')) return 'FROZEN';
-  if (to === 'ARCHIVED' && (from === 'ACTIVE' || from === 'FROZEN')) {
-    return 'ARCHIVED';
-  }
   return null;
 }
 

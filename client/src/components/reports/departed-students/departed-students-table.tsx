@@ -43,7 +43,7 @@ export interface DepartedStudentRow {
   departedAt: string;
   /** `pending`: still inside the grace period; coming back cancels it. */
   state: "pending" | "confirmed";
-  stopKind: "EXPELLED" | "ARCHIVED" | "FROZEN" | "LEFT_GROUP";
+  stopKind: "EXPELLED" | "FROZEN" | "LEFT_GROUP";
 }
 
 const LINK_CLS =

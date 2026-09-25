@@ -57,8 +57,8 @@ export function DepartedStudentsByStatusChart({ branchId }: Props) {
           : "Holat taqsimoti"
       }
       tooltip={
-        "Qaytmagan ketganlar holati bo'yicha: guruhsiz faollar, muzlatilganlar, " +
-        "chetlatilganlar va arxivlanganlar.\n" +
+        "Qaytmagan ketganlar holati bo'yicha: guruhsiz faollar, muzlatilganlar " +
+        "va chetlatilganlar.\n" +
         "Filial filtriga bo'ysunadi."
       }
       isLoading={isLoading}

@@ -1,10 +1,12 @@
 /**
  * What "a departed student" means — the one definition (ADR-0035).
  *
- * Expulsion and archiving count on the day. Leaving the last group and being
- * frozen count on the day they happened, unless the student is back within
- * the grace period; then there was no departure. Stops before a return belong
- * to one episode, dated by the first and named by the strongest.
+ * Expulsion counts on the day. Leaving the last group and being frozen count
+ * on the day they happened, unless the student is back within the grace
+ * period; then there was no departure. Stops before a return belong to one
+ * episode, dated by the first and named by the strongest. Archiving is not a
+ * stop: an archived card is an error or a duplicate record, and the loader
+ * leaves it out like a deleted one.
  *
  * This file only turns events into episodes and reads nothing:
  * `reports/shared/departures.loader.ts` collects the events from the logs.
@@ -16,7 +18,7 @@ export const DEPARTURE_GRACE_DAYS = 14;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export type StopKind = 'EXPELLED' | 'ARCHIVED' | 'FROZEN' | 'LEFT_GROUP';
+export type StopKind = 'EXPELLED' | 'FROZEN' | 'LEFT_GROUP';
 
 export type StudentEvent =
   | { studentId: number; at: Date; type: 'STOP'; kind: StopKind }
@@ -34,14 +36,13 @@ export interface DepartureEpisode {
 }
 
 /** These do not wait for the grace period. */
-const IMMEDIATE: ReadonlySet<StopKind> = new Set(['EXPELLED', 'ARCHIVED']);
+const IMMEDIATE: ReadonlySet<StopKind> = new Set(['EXPELLED']);
 
 /** When one episode holds several stops, the heaviest names it. */
 const WEIGHT: Record<StopKind, number> = {
   LEFT_GROUP: 1,
   FROZEN: 2,
   EXPELLED: 3,
-  ARCHIVED: 4,
 };
 
 interface OpenEpisode {

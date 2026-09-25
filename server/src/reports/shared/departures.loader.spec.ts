@@ -25,6 +25,10 @@ interface Fixture {
   systemStartDate?: Date | null;
 }
 
+interface StudentQuery {
+  where: { status?: { not?: string; notIn?: string[] } };
+}
+
 function fakePrisma(f: Fixture) {
   return {
     company: {
@@ -32,7 +36,18 @@ function fakePrisma(f: Fixture) {
         .fn()
         .mockResolvedValue({ systemStartDate: f.systemStartDate ?? null }),
     },
-    student: { findMany: jest.fn().mockResolvedValue(f.students ?? []) },
+    // Honours the status filter, so a test sees whom the query leaves out.
+    student: {
+      findMany: jest.fn(({ where }: StudentQuery) =>
+        Promise.resolve(
+          (f.students ?? []).filter(
+            (s) =>
+              s.status !== where.status?.not &&
+              !(where.status?.notIn ?? []).includes(s.status),
+          ),
+        ),
+      ),
+    },
     enrollment: { findMany: jest.fn().mockResolvedValue(f.enrollments ?? []) },
     enrollmentStateLog: { findMany: jest.fn().mockResolvedValue(f.logs ?? []) },
     statusHistory: { findMany: jest.fn().mockResolvedValue(f.history ?? []) },
@@ -95,7 +110,7 @@ async function episodesOf(f: Fixture) {
 }
 
 describe('loadDepartures', () => {
-  it('reads students through the branch scope, never PROSPECT or deleted cards', async () => {
+  it('reads students through the branch scope, never PROSPECT, archived or deleted cards', async () => {
     const prisma = fakePrisma({});
     await loadDepartures(prisma as unknown as PrismaService, 1001, [3, 7], {
       now: NOW,
@@ -104,7 +119,7 @@ describe('loadDepartures', () => {
       where: {
         companyId: 1001,
         deletedAt: null,
-        status: { not: 'PROSPECT' },
+        status: { notIn: ['PROSPECT', 'ARCHIVED'] },
         branches: { some: { branchId: { in: [3, 7] } } },
       },
       select: { id: true, status: true, statusChangedAt: true },
@@ -186,10 +201,10 @@ describe('loadDepartures', () => {
     ).toEqual([]);
   });
 
-  it('does not treat a finished group or archiving a graduate as leaving', async () => {
+  it('does not treat a finished group as leaving', async () => {
     expect(
       await episodesOf({
-        students: [student(10001, 'ARCHIVED')],
+        students: [student(10001, 'GRADUATED')],
         enrollments: [
           enrollment('e1', 10001, 'COMPLETED', '2026-07-01T09:00:00Z'),
         ],
@@ -199,7 +214,6 @@ describe('loadDepartures', () => {
         ],
         history: [
           history(10001, 'ACTIVE', 'GRADUATED', '2026-07-01T09:00:01Z'),
-          history(10001, 'GRADUATED', 'ARCHIVED', '2026-08-01T09:00:00Z'),
         ],
       }),
     ).toEqual([]);
@@ -308,8 +322,8 @@ describe('loadDepartures', () => {
   it('ignores a status change of a student who never joined a group', async () => {
     expect(
       await episodesOf({
-        students: [student(10001, 'ARCHIVED')],
-        history: [history(10001, 'ACTIVE', 'ARCHIVED', '2026-08-01T09:00:00Z')],
+        students: [student(10001, 'EXPELLED')],
+        history: [history(10001, 'ACTIVE', 'EXPELLED', '2026-08-01T09:00:00Z')],
       }),
     ).toEqual([]);
   });
@@ -326,12 +340,61 @@ describe('loadDepartures', () => {
     ).toEqual([]);
   });
 
-  it('does not read a legacy ARCHIVED card as a departure', async () => {
+  it('leaves a currently archived student out of every figure', async () => {
+    const prisma = fakePrisma({
+      students: [student(10001, 'ARCHIVED', '2026-08-01T09:00:00.100Z')],
+      enrollments: [enrollment('e1', 10001, 'DROPPED', '2026-08-01T09:00:00Z')],
+      logs: [
+        log('e1', 'ACTIVE', MAY),
+        log('e1', 'DROPPED', '2026-08-01T09:00:00Z'),
+      ],
+      history: [
+        history(10001, 'ACTIVE', 'ARCHIVED', '2026-08-01T09:00:00.100Z'),
+      ],
+    });
+    const result = await loadDepartures(
+      prisma as unknown as PrismaService,
+      1001,
+      null,
+      { now: NOW, activeAt: at('2026-07-01T00:00:00Z') },
+    );
+    expect(result.episodes).toEqual([]);
+    expect(result.activeAtStart).toBe(0);
+  });
+
+  it('opens no departure for an archive the student was restored from', async () => {
     expect(
       await episodesOf({
-        students: [student(10001, 'ARCHIVED', '2026-08-01T09:00:00Z')],
+        students: [student(10001), student(10002)],
+        // Archived from the status dialog, which closes the group enrollment.
+        enrollments: [
+          enrollment('e1', 10001, 'DROPPED', '2026-08-01T09:00:00Z'),
+          enrollment('e2', 10001, 'ACTIVE', null, '2026-08-05T09:00:00Z'),
+          enrollment('e3', 10002, 'DROPPED', '2026-11-15T09:00:00Z'),
+        ],
+        logs: [
+          log('e1', 'ACTIVE', MAY),
+          log('e1', 'DROPPED', '2026-08-01T09:00:00Z'),
+          log('e2', 'ACTIVE', '2026-08-05T09:00:00Z'),
+          log('e3', 'ACTIVE', MAY),
+          log('e3', 'DROPPED', '2026-11-15T09:00:00Z'),
+        ],
+        history: [
+          history(10001, 'ACTIVE', 'ARCHIVED', '2026-08-01T09:00:00.100Z'),
+          history(10001, 'ARCHIVED', 'ACTIVE', '2026-08-04T09:00:00Z'),
+          history(10002, 'ACTIVE', 'ARCHIVED', '2026-11-15T09:00:00.100Z'),
+          history(10002, 'ARCHIVED', 'ACTIVE', '2026-11-16T09:00:00Z'),
+        ],
       }),
-    ).toEqual([]);
+    ).toEqual([
+      // Restored, not back in a group yet: the grace period runs as usual.
+      {
+        studentId: 10002,
+        startedAt: '2026-11-15T09:00:00.000Z',
+        stopKind: 'LEFT_GROUP',
+        state: 'pending',
+      },
+    ]);
   });
 
   it('counts who was in a group at the start, moved up to the reporting floor', async () => {

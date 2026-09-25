@@ -44,12 +44,6 @@ describe('buildDepartureEpisodes', () => {
     ]);
   });
 
-  it('counts archiving an active student on its own day', () => {
-    const [episode] = build([stop(1, '2026-09-24T10:00:00Z', 'ARCHIVED')]);
-    expect(episode.state).toBe('confirmed');
-    expect(episode.confirmedAt).toEqual(at('2026-09-24T10:00:00Z'));
-  });
-
   it('keeps a group leaver pending while the grace period runs', () => {
     expect(build([stop(1, '2026-09-20T10:00:00Z', 'LEFT_GROUP')])).toEqual([
       {
@@ -132,13 +126,14 @@ describe('buildDepartureEpisodes', () => {
     ]);
   });
 
-  it('confirms an open freeze the moment the student is archived', () => {
+  it('confirms a pending episode the moment the student is expelled', () => {
     const [episode] = build([
-      stop(1, '2026-09-20T10:00:00Z', 'FROZEN'),
-      stop(1, '2026-09-22T10:00:00Z', 'ARCHIVED'),
+      stop(1, '2026-09-20T10:00:00Z', 'LEFT_GROUP'),
+      stop(1, '2026-09-22T10:00:00Z', 'EXPELLED'),
     ]);
     expect(episode.startedAt).toEqual(at('2026-09-20T10:00:00Z'));
-    expect(episode.stopKind).toBe('ARCHIVED');
+    expect(episode.stopKind).toBe('EXPELLED');
+    expect(episode.state).toBe('confirmed');
     expect(episode.confirmedAt).toEqual(at('2026-09-22T10:00:00Z'));
   });
 
