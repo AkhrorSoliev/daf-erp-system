@@ -127,13 +127,27 @@ export async function loadDepartures(
   for (const list of logsByEnrollment.values()) {
     list.sort((a, b) => a.transitionAt.getTime() - b.transitionAt.getTime());
   }
-  // Older writers could close an enrollment without logging it; the row still
-  // says how and when, so the log is completed from it.
+  // The log has a gap at either end; the enrollment row fills both.
   for (const e of enrollments) {
     const own = logsByEnrollment.get(e.id);
-    if (!own || own.length === 0 || !e.statusChangedAt) continue;
+    if (!own || own.length === 0) continue;
+    // An enrollment opens ACTIVE, and every writer logs that row at its
+    // `createdAt`. Enrollments opened before the log existed (before
+    // 2026-04-26) have only their later rows, so a log that starts with
+    // another status later than the creation gets its opening row back. A
+    // first row at the creation itself was the opening, so none is added.
+    const first = own[0];
+    if (
+      first.status !== 'ACTIVE' &&
+      e.createdAt.getTime() < first.transitionAt.getTime()
+    ) {
+      own.unshift({ status: 'ACTIVE', transitionAt: e.createdAt });
+    }
+    // Older writers could close an enrollment without logging it; the row
+    // still says how and when, so the log is completed from it.
     const last = own[own.length - 1];
     if (
+      e.statusChangedAt &&
       last.status !== e.status &&
       e.statusChangedAt.getTime() >= last.transitionAt.getTime()
     ) {

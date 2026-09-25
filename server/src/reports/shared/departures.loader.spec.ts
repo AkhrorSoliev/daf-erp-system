@@ -96,13 +96,13 @@ const history = (
   createdAt: at(when),
 });
 
-async function episodesOf(f: Fixture) {
+async function episodesOf(f: Fixture, now = NOW) {
   const prisma = fakePrisma(f);
   const result = await loadDepartures(
     prisma as unknown as PrismaService,
     1001,
     null,
-    { now: NOW },
+    { now },
   );
   return result.episodes.map((e) => ({
     studentId: e.studentId,
@@ -586,6 +586,112 @@ describe('loadDepartures', () => {
           state: 'confirmed',
         },
       ]);
+    });
+  });
+
+  describe('an enrollment opened before the state journal', () => {
+    // Its log starts with the closing: the opening ACTIVE row was never
+    // written. The loader supplies it at the enrollment's creation.
+    const OPENED = '2026-04-10T09:00:00.000Z';
+    const CLOSED = '2026-05-10T09:00:00.000Z';
+
+    const loadWith = (f: Fixture, activeAt: string) =>
+      loadDepartures(fakePrisma(f) as unknown as PrismaService, 1001, null, {
+        now: NOW,
+        activeAt: at(activeAt),
+      });
+
+    it('departs at the drop: pending while the grace period runs, confirmed after it', async () => {
+      const fixture: Fixture = {
+        students: [student(10001)],
+        enrollments: [enrollment('e1', 10001, 'DROPPED', CLOSED, OPENED)],
+        logs: [log('e1', 'DROPPED', CLOSED)],
+      };
+      const departure = (state: 'pending' | 'confirmed') => [
+        { studentId: 10001, startedAt: CLOSED, stopKind: 'LEFT_GROUP', state },
+      ];
+
+      // 7 and 30 days after the drop.
+      expect(await episodesOf(fixture, at('2026-05-17T09:00:00Z'))).toEqual(
+        departure('pending'),
+      );
+      expect(await episodesOf(fixture, at('2026-06-09T09:00:00Z'))).toEqual(
+        departure('confirmed'),
+      );
+    });
+
+    it('departs by a freeze when the first row is the freeze', async () => {
+      expect(
+        await episodesOf({
+          students: [student(10001, 'FROZEN')],
+          enrollments: [enrollment('e1', 10001, 'FROZEN', CLOSED, OPENED)],
+          logs: [log('e1', 'FROZEN', CLOSED)],
+          history: [
+            history(10001, 'ACTIVE', 'FROZEN', '2026-05-10T09:00:00.100Z'),
+          ],
+        }),
+      ).toEqual([
+        {
+          studentId: 10001,
+          startedAt: CLOSED,
+          stopKind: 'FROZEN',
+          state: 'confirmed',
+        },
+      ]);
+    });
+
+    it('reads a first transfer as membership that ended without a departure', async () => {
+      const result = await loadWith(
+        {
+          students: [student(10001)],
+          enrollments: [enrollment('e1', 10001, 'TRANSFERRED', CLOSED, OPENED)],
+          logs: [log('e1', 'TRANSFERRED', CLOSED)],
+        },
+        '2026-05-01T00:00:00Z',
+      );
+
+      // In the group on 01.05, so it was joined; closing by a transfer is
+      // not a stop.
+      expect(result.activeAtStart).toBe(1);
+      expect(result.episodes).toEqual([]);
+    });
+
+    it('supplies nothing when the first row is logged at the creation itself', async () => {
+      const result = await loadWith(
+        {
+          students: [student(10001, 'EXPELLED')],
+          enrollments: [enrollment('e1', 10001, 'DROPPED', OPENED, OPENED)],
+          logs: [log('e1', 'DROPPED', OPENED)],
+          history: [
+            history(10001, 'ACTIVE', 'EXPELLED', '2026-06-01T09:00:00Z'),
+          ],
+        },
+        OPENED,
+      );
+
+      // Never in the group, so the expulsion is not a departure either.
+      expect(result.activeAtStart).toBe(0);
+      expect(result.episodes).toEqual([]);
+    });
+
+    it('counts the student in a group at the start of a period before its first row', async () => {
+      const result = await loadWith(
+        {
+          students: [student(10001), student(10002)],
+          enrollments: [
+            enrollment('e1', 10001, 'DROPPED', '2026-06-10T09:00:00Z', OPENED),
+            // Closed before the period started.
+            enrollment('e2', 10002, 'DROPPED', CLOSED, OPENED),
+          ],
+          logs: [
+            log('e1', 'DROPPED', '2026-06-10T09:00:00Z'),
+            log('e2', 'DROPPED', CLOSED),
+          ],
+        },
+        '2026-06-01T00:00:00Z',
+      );
+
+      expect(result.activeAtStart).toBe(1);
     });
   });
 });
