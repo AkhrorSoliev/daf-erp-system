@@ -194,6 +194,9 @@ describe('TeachersService — status methods', () => {
             isActive: false,
             deletedAt: expect.any(Date),
             deletedById: 2,
+            statusChangedAt: expect.any(Date),
+            statusChangedById: 2,
+            statusChangeReason: "O'chirildi",
           }),
         }),
       );

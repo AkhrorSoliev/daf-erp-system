@@ -301,6 +301,12 @@ shunda summa keyin siljib ketmaydi.
 oldindan to'lov. 2026-08 imtihonida 21 o'quvchi ikki marta to'lagan edi.
 `telegram/scenes/mock-exam-registration.scene.ts`
 
+⚠️ **Bitta ro'yxat — bitta to'lov.** Naqd ham, Payme/Click ham ishtirokchini
+faqat `paid = false` va o'chirilmagan bo'lsa belgilaydi. Ikkinchi onlayn to'lov
+rad etiladi (Payme `-31008`, Click `-4`) va shlyuz pulni qaytaradi. To'lagan
+ishtirokchi faqat «pul qaytarildi» tasdig'i bilan o'chiriladi.
+`mock-exams/mock-exam-gateway-billing.service.ts` (`markCompleted`)
+
 ---
 
 ## Audit va integratsiya

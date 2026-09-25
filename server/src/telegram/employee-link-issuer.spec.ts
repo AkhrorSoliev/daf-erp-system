@@ -11,14 +11,15 @@ import { UsersService } from '../users/users.service';
 import { EMPLOYEE_DEEP_LINK_RE } from './constants';
 import { TelegramChannelGateStatsService } from './telegram-channel-gate-stats.service';
 import { TelegramService } from './telegram.service';
-import { verifyEmployeePayload } from './utils/signed-link.util';
+import { checkEmployeePayload } from './utils/signed-link.util';
 
 /**
- * A signed employee link never expires, so whatever authority the issuer has
- * at the moment of signing is baked in for good. That authority must be read
- * from the database. The access token is up to an hour stale: it still says
- * CEO after the CEO is archived, and still says Branch Director after a
- * demotion, and a link minted in that hour works forever.
+ * A signed employee link works for three days (ADR-0029), so whatever
+ * authority the issuer has at the moment of signing is baked in for that long.
+ * That authority must be read from the database. The access token is up to an
+ * hour stale: it still says CEO after the CEO is archived, and still says
+ * Branch Director after a demotion, and a link minted in that hour would carry
+ * the old authority.
  */
 describe('TelegramService.generateEmployeeLinkPayload — the issuer comes from the database', () => {
   const CEO = 1;
@@ -162,7 +163,7 @@ describe('TelegramService.generateEmployeeLinkPayload — the issuer comes from 
     companyId: 1001,
   });
 
-  /** The link the bot will accept: right branch, right roles, valid HMAC. */
+  /** The link the bot will accept: right branch, right roles, valid HMAC, fresh. */
   function expectSignedLink(
     payload: string,
     branchId: number,
@@ -172,7 +173,9 @@ describe('TelegramService.generateEmployeeLinkPayload — the issuer comes from 
     expect(match).not.toBeNull();
     expect(Number(match![1])).toBe(branchId);
     expect(match![2]).toBe(roleIds.join('-'));
-    expect(verifyEmployeePayload(branchId, roleIds, match![3])).toBe(true);
+    expect(
+      checkEmployeePayload(branchId, roleIds, match![3], match![4], new Date()),
+    ).toBe('valid');
   }
 
   describe('a token that outlived the account', () => {

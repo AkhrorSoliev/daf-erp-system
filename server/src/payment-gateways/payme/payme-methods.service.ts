@@ -624,7 +624,12 @@ export class PaymeMethodsService {
     }
 
     const now = Date.now();
-    await this.mockGateway.markCompleted(mockTxn.id);
+    // Ro'yxat allaqachon to'langan yoki o'chirilgan — ikkinchi pulni olmaymiz.
+    // Xato javobdan keyin Payme tranzaksiyani bekor qiladi va pulni qaytaradi.
+    const completed = await this.mockGateway.markCompleted(mockTxn.id);
+    if (!completed) {
+      return paymeError(rpcId, CANNOT_PERFORM);
+    }
 
     return paymeSuccess(rpcId, {
       transaction: mockTxn.id,

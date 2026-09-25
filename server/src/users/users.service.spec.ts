@@ -1283,6 +1283,10 @@ describe('UsersService — role grant ceiling', () => {
   // ceiling behind it.
   const CANNOT_GRANT = /rolni tayinlay olmaysiz/;
   const CANNOT_RESHAPE = /rollarini o'zgartira olmaysiz/;
+  // The rank rule (ADR-0027) answers before the ceiling for anyone other
+  // than the caller: an account that outranks you cannot be written to at
+  // all, roles included. The reshape rule remains the guard on your own.
+  const OUTRANKED = /sizdan yuqori yoki siz bilan bir darajada/;
   const expectRefused = async (attempt: Promise<unknown>, rule: RegExp) => {
     await expect(attempt).rejects.toBeInstanceOf(ForbiddenException);
     await expect(attempt).rejects.toThrow(rule);
@@ -1511,7 +1515,7 @@ describe('UsersService — role grant ceiling', () => {
     it('refuses an Administrator adding a Teacher role to their Branch Director', async () => {
       await expectRefused(
         service.updateUser(DIRECTOR, { roleIds: [2, 4] } as any, ADMIN, 1001),
-        CANNOT_RESHAPE,
+        OUTRANKED,
       );
       expect(prisma.userRole.createMany).not.toHaveBeenCalled();
     });
@@ -1519,7 +1523,7 @@ describe('UsersService — role grant ceiling', () => {
     it('refuses an Administrator stripping their Branch Director down to Teacher', async () => {
       await expectRefused(
         service.updateUser(DIRECTOR, { roleIds: [4] } as any, ADMIN, 1001),
-        CANNOT_RESHAPE,
+        OUTRANKED,
       );
       expect(prisma.userRole.deleteMany).not.toHaveBeenCalled();
     });
@@ -1535,7 +1539,7 @@ describe('UsersService — role grant ceiling', () => {
           ADMIN,
           1001,
         ),
-        CANNOT_RESHAPE,
+        OUTRANKED,
       );
       expect(prisma.userRole.deleteMany).not.toHaveBeenCalled();
       expect(prisma.user.update).not.toHaveBeenCalled();

@@ -217,20 +217,49 @@ export class MockExamGatewayBillingService {
    * Marks a gateway transaction as completed AND flips the linked mock
    * participant's `paid` flag. Both writes happen in a Serializable
    * transaction so they're atomic.
+   *
+   * BITTA RO'YXAT — BITTA TO'LOV. Ishtirokchi faqat hali to'lanmagan va
+   * o'chirilmagan bo'lsa "egallanadi". Ilgari `paid` bu yerda qayta
+   * tekshirilmasdi: bir odam to'lov sahifasini ikki marta ochsa, Payme'ni ham
+   * Click'ni ham boshlasa yoki to'lov o'rtasida admin naqd qabul qilsa —
+   * ikkinchi pul ham olinar, tizimda esa bitta `paid = true` qolardi.
+   *
+   * Egallab bo'lmasa, shlyuz tranzaksiyasi bekor qilinadi va `false`
+   * qaytadi — chaqiruvchi shlyuzga xato javob beradi, shlyuz esa pulni
+   * to'lovchiga qaytaradi.
    */
-  async markCompleted(gatewayTxnId: string): Promise<void> {
+  async markCompleted(gatewayTxnId: string): Promise<boolean> {
     const notify = await this.prisma.$transaction(
       async (tx) => {
-        const txn = await tx.mockExamGatewayTransaction.update({
+        const now = new Date();
+        const txn = await tx.mockExamGatewayTransaction.findUnique({
           where: { id: gatewayTxnId },
-          data: {
-            state: GATEWAY_STATE.COMPLETED,
-            completedAt: new Date(),
-          },
+          select: { mockParticipantId: true },
         });
-        const participant = await tx.mockExamParticipant.update({
+        if (!txn) return null;
+
+        const claimed = await tx.mockExamParticipant.updateMany({
+          where: { id: txn.mockParticipantId, paid: false, deletedAt: null },
+          data: { paid: true, paidAt: now },
+        });
+        if (claimed.count === 0) {
+          await tx.mockExamGatewayTransaction.update({
+            where: { id: gatewayTxnId },
+            data: {
+              state: GATEWAY_STATE.CANCELLED,
+              cancelledAt: now,
+              errorNote: "Ishtirokchi allaqachon to'lagan yoki o'chirilgan",
+            },
+          });
+          return null;
+        }
+
+        await tx.mockExamGatewayTransaction.update({
+          where: { id: gatewayTxnId },
+          data: { state: GATEWAY_STATE.COMPLETED, completedAt: now },
+        });
+        return tx.mockExamParticipant.findUnique({
           where: { id: txn.mockParticipantId },
-          data: { paid: true, paidAt: new Date() },
           select: {
             telegramChatId: true,
             publicId: true,
@@ -238,7 +267,6 @@ export class MockExamGatewayBillingService {
             exam: { select: { title: true, price: true } },
           },
         });
-        return participant;
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -246,6 +274,12 @@ export class MockExamGatewayBillingService {
         timeout: 15000,
       },
     );
+    if (!notify) {
+      this.logger.warn(
+        `Mock to'lovi rad etildi (ikkinchi to'lov yoki o'chirilgan ro'yxat): txn=${gatewayTxnId}`,
+      );
+      return false;
+    }
 
     // Foydalanuvchiga Telegramda xabar berish. Ilgari bu hodisa FAQAT admin
     // naqd to'lovni qabul qilganda chiqarilardi, shuning uchun Click/Payme
@@ -260,6 +294,7 @@ export class MockExamGatewayBillingService {
       examTitle: notify.exam.title,
       feeAmount: notify.feeAmount ?? notify.exam.price,
     });
+    return true;
   }
 
   /**

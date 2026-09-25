@@ -18,14 +18,18 @@ import {
   userBranchWhere,
 } from '../common/finance/report-branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
+// Not via the `../common/status` barrel: it loads BillingModule → Telegram →
+// TelegramService, which imports this file (an import cycle).
+import { userArchiveData } from '../common/status/user-archive';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   USER_DEACTIVATED_EVENT,
   UserDeactivatedEvent,
 } from '../common/events/user-lifecycle.events';
 import {
-  assertCallerMayTouchUser,
-  assertCallerMayTouchUserRecord,
+  assertCallerMayManageUser,
+  assertCallerMayManageUserRecord,
+  ManageUserOptions,
 } from '../common/auth/user-branch-scope';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
 import {
@@ -664,18 +668,21 @@ export class UsersService {
   }
 
   /**
-   * A non-CEO caller may only edit staff of their OWN branch.
+   * A non-CEO caller may only write to staff of their OWN branch who rank
+   * below them (ADR-0027).
    *
-   * The rule itself now lives in `common/auth/user-branch-scope.ts`. It moved
-   * out when comments on an employee profile became a second caller: a branch
-   * rule with two private copies is exactly how three lesson modules ended up
-   * unguarded while `attendance.controller` held the only copy.
+   * The rule itself lives in `common/auth/user-branch-scope.ts`, shared with
+   * `DELETE /users/:id` and the `/teachers/:id` writes: a rule with two private
+   * copies is exactly how three lesson modules ended up unguarded while
+   * `attendance.controller` held the only copy.
    */
-  private async assertCallerMayTouchUser(
-    target: { id: number; mainBranch: number | null; branches: any[] },
+  private async assertCallerMayManageLoadedUser(
+    target: Parameters<typeof assertCallerMayManageUserRecord>[0],
     changedById: number,
+    opts: ManageUserOptions,
   ): Promise<void> {
-    if (target.id === changedById) return; // editing yourself is always fine
+    // Yourself: no lookup unless the status changes (that rule reads roles).
+    if (target.id === changedById && !opts.changesStatus) return;
 
     const caller = await this.prisma.user.findFirst({
       where: { id: changedById, deletedAt: null },
@@ -689,7 +696,7 @@ export class UsersService {
 
     // The target is already loaded here (via `userSelect`), so the record
     // variant is used rather than the loading one — same rule, one less query.
-    assertCallerMayTouchUserRecord(target, caller, changedById);
+    assertCallerMayManageUserRecord(target, caller, changedById, opts);
   }
 
   async updateUser(
@@ -712,7 +719,10 @@ export class UsersService {
     }
 
     this.assertSameCompany(user.companyId, callerCompanyId);
-    await this.assertCallerMayTouchUser(user as any, changedById);
+    // The form resends `status` on every save; only a new value is a change.
+    await this.assertCallerMayManageLoadedUser(user, changedById, {
+      changesStatus: dto.status !== undefined && dto.status !== user.status,
+    });
 
     // If roles, branches, the job title, or credentials are being modified,
     // re-validate the combined state. `password`/`login` are included even
@@ -852,20 +862,15 @@ export class UsersService {
     // `updateUser` right beside this has been branch-confined since the
     // object-level sweep; archiving was not. Same record, same severity —
     // an archived employee loses their account — through the door nobody
-    // locked.
-    await assertCallerMayTouchUser(
-      this.prisma,
-      deletedById,
-      id,
-      "Siz faqat o'z filialingiz xodimlarini arxivlashingiz mumkin",
-    );
+    // locked. Rank applies too; archiving is a status change (ADR-0027).
+    await assertCallerMayManageUser(this.prisma, deletedById, id, {
+      message: "Siz faqat o'z filialingiz xodimlarini arxivlashingiz mumkin",
+      changesStatus: true,
+    });
 
     await this.prisma.user.update({
       where: { id },
-      data: {
-        deletedAt: new Date(),
-        deletedById,
-      },
+      data: userArchiveData(deletedById),
     });
     await recordUserBlocked(this.redis, id, true);
 
