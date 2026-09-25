@@ -56,7 +56,7 @@ export function HomePeopleStats({ people }: { people: DashboardPeople }) {
         hintTitle={
           `Shu oy: +${people.newThisMonth} yangi, −${people.leftThisMonth} ketgan.` +
           (people.leftPending > 0
-            ? ` Yana ${people.leftPending} nafari ${people.leftGraceDays} kun ichida qaytmasa qo'shiladi.`
+            ? ` Yana ${people.leftPending} nafari qaytmasa qo'shiladi (guruhdan chiqqan ${people.leftGraceDays.LEFT_GROUP} kun, muzlatilgan ${people.leftGraceDays.FROZEN} kun kutiladi).`
             : "")
         }
         href="/students"

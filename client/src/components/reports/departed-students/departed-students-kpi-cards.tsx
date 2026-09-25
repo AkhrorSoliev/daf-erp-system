@@ -24,7 +24,8 @@ export interface DepartedStudentsSummary {
   activeAtStart: number;
   /** Stopped in the range, not back yet, grace period still running. */
   pendingCount: number;
-  graceDays: number;
+  /** Days each kind of stop waits for a return (ADR-0035). */
+  graceDays: { LEFT_GROUP: number; FROZEN: number };
   lostRevenue: number;
   totalDebt: number;
   debtorCount: number;
@@ -100,10 +101,10 @@ export function departedTooltip({
 }: Pick<DepartedStudentsSummary, "graceDays" | "pendingCount">): string {
   return (
     "Tanlangan davrda ketgan o'quvchilar, har biri bir marta.\n" +
-    "Chetlatilgan kuni sanaladi. Guruhdan chiqqan yoki muzlatilgan o'quvchi " +
-    `${graceDays} kun ichida qaytmasa, to'xtagan kuni sanaladi.` +
+    "Chetlatilgan kuni sanaladi. Guruhdan chiqqan o'quvchi " +
+    `${graceDays.LEFT_GROUP} kun, muzlatilgan o'quvchi ${graceDays.FROZEN} kun ichida qaytmasa, to'xtagan kuni sanaladi.` +
     (pendingCount > 0
-      ? `\nYana ${pendingCount} nafari ${graceDays} kun ichida qaytmasa qo'shiladi.`
+      ? `\nYana ${pendingCount} nafari shu muddatda qaytmasa qo'shiladi.`
       : "")
   );
 }
