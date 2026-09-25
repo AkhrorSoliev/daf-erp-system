@@ -1,4 +1,8 @@
-import { dialogTextHash, validateDialogAudio } from './dialog-audio';
+import {
+  DIALOG_AUDIO_MODELL,
+  dialogTextHash,
+  validateDialogAudio,
+} from './dialog-audio';
 import type { Dialog } from './unit-inhalt.types';
 
 const dialog = (): Dialog => ({
@@ -49,6 +53,7 @@ describe('validateDialogAudio', () => {
       'u02-d2': {
         key: 'daf/audio/abc.mp3',
         textHash: dialogTextHash(d.zeilen),
+        modell: DIALOG_AUDIO_MODELL,
       },
     };
     expect(validateDialogAudio([d], manifest)).toEqual([]);
@@ -57,10 +62,34 @@ describe('validateDialogAudio', () => {
   it('matn o`zgargan — audio eski matnni aytyapti', () => {
     const d = dialog();
     const manifest = {
-      'u02-d2': { key: 'daf/audio/abc.mp3', textHash: '0000000000000000' },
+      'u02-d2': {
+        key: 'daf/audio/abc.mp3',
+        textHash: '0000000000000000',
+        modell: DIALOG_AUDIO_MODELL,
+      },
     };
     expect(validateDialogAudio([d], manifest)).toEqual([
       'u02-d2: dialog matni o`zgargan, audio eski matnni aytyapti — qayta yasang yoki manifestdan o`chiring',
+    ]);
+  });
+
+  // CEO 2026-09-25: one model for every course dialog, no mix. An entry
+  // without `modell` was made before the rule (ElevenLabs).
+  it('flags a dialog voiced by another model — the course must not mix models', () => {
+    const d = dialog();
+    const eski = {
+      key: 'daf/audio/abc.mp3',
+      textHash: dialogTextHash(d.zeilen),
+    };
+    expect(validateDialogAudio([d], { 'u02-d2': eski })).toEqual([
+      `u02-d2: audio boshqa modelda yasalgan (eski model) — kurs dialoglari faqat ${DIALOG_AUDIO_MODELL} da, qayta yasang`,
+    ]);
+    expect(
+      validateDialogAudio([d], {
+        'u02-d2': { ...eski, modell: 'boshqa/model' },
+      }),
+    ).toEqual([
+      `u02-d2: audio boshqa modelda yasalgan (boshqa/model) — kurs dialoglari faqat ${DIALOG_AUDIO_MODELL} da, qayta yasang`,
     ]);
   });
 });

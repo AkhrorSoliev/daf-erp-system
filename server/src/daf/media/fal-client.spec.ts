@@ -147,42 +147,52 @@ describe('FalClient.speechMitStimme', () => {
   });
 });
 
-describe('FalClient.dialog', () => {
-  it('butun suhbatni bitta so`rovda yuboradi, de tili va stability bilan', async () => {
+// Course dialogs: Gemini's dialogue mode since 2026-09-26. The CEO heard an
+// emotional sample and an A2 interview made this way and chose it for every
+// dialog; both speakers are voiced in one request, so they answer each other.
+describe('FalClient.dialogGemini', () => {
+  it('sends the whole dialog in one request: speakers, German, mp3, style apart from the text', async () => {
     const calls: Array<{ url: string; body: any }> = [];
     const fetchFn = (async (url: string, init: any) => {
       calls.push({ url, body: JSON.parse(init.body) });
       return {
         ok: true,
         status: 200,
-        json: async () => ({ audio: { url: 'https://x/d.mp3' }, seed: 1 }),
+        json: async () => ({ audio: { url: 'https://x/g.mp3' } }),
         text: async () => '',
       };
     }) as unknown as typeof fetch;
-    const c = new FalClient('k', fetchFn);
-    const url = await c.dialog([
-      { voice: 'Aria', text: 'Ist das deine Schwester?' },
-      { voice: 'Liam', text: 'Nein.' },
-    ]);
-    expect(url).toBe('https://x/d.mp3');
-    expect(calls[0].url).toBe(
-      'https://fal.run/fal-ai/elevenlabs/text-to-dialogue/eleven-v3',
-    );
-    expect(calls[0].body).toEqual({
-      inputs: [
-        { voice: 'Aria', text: 'Ist das deine Schwester?' },
-        { voice: 'Liam', text: 'Nein.' },
+    const url = await new FalClient('k', fetchFn).dialogGemini({
+      prompt: 'Anna: [curious] Ist das deine Schwester?\nJonas: Nein.',
+      speakers: [
+        { speakerId: 'Anna', voice: 'Erinome' },
+        { speakerId: 'Jonas', voice: 'Iapetus' },
       ],
-      language_code: 'de',
-      stability: 0.5,
+      styleInstructions: 'Zwei Freunde im Park.',
+    });
+    expect(url).toBe('https://x/g.mp3');
+    expect(calls[0].url).toBe('https://fal.run/fal-ai/gemini-3.1-flash-tts');
+    expect(calls[0].body).toEqual({
+      prompt: 'Anna: [curious] Ist das deine Schwester?\nJonas: Nein.',
+      speakers: [
+        { speaker_id: 'Anna', voice: 'Erinome' },
+        { speaker_id: 'Jonas', voice: 'Iapetus' },
+      ],
+      style_instructions: 'Zwei Freunde im Park.',
+      language_code: 'German (Germany)',
+      output_format: 'mp3',
     });
   });
 
-  it('audio qaytmasa yiqiladi', async () => {
-    const c = new FalClient('k', fetchStub({ seed: 1 }));
-    await expect(c.dialog([{ voice: 'Aria', text: 'x' }])).rejects.toThrow(
-      /suhbat/i,
-    );
+  it('fails when no audio comes back', async () => {
+    const c = new FalClient('k', fetchStub({}));
+    await expect(
+      c.dialogGemini({
+        prompt: 'A: x\nB: y',
+        speakers: [],
+        styleInstructions: '',
+      }),
+    ).rejects.toThrow(/suhbat/i);
   });
 });
 

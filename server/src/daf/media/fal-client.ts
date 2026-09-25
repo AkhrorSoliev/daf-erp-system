@@ -2,7 +2,22 @@ const IMAGE_MODEL = 'fal-ai/flux/schnell';
 const TTS_MODEL = 'fal-ai/chatterbox/text-to-speech/multilingual';
 const TTS_ELEVEN_MODEL = 'fal-ai/elevenlabs/tts/turbo-v2.5';
 const TTS_INWORLD_MODEL = 'fal-ai/inworld-tts';
-const DIALOG_MODEL = 'fal-ai/elevenlabs/text-to-dialogue/eleven-v3';
+/**
+ * The course dialog model since 2026-09-26 (`dialog-audio.ts` pins it). It
+ * replaced ElevenLabs text-to-dialogue, whose method was removed with it.
+ */
+export const TTS_GEMINI_MODEL = 'fal-ai/gemini-3.1-flash-tts';
+
+/**
+ * One whole dialog for Gemini's dialogue mode. `prompt` has one line per
+ * turn, each prefixed with a `speakerId` ("Anna: …"); `styleInstructions`
+ * directs the delivery and is not spoken.
+ */
+export interface GeminiDialog {
+  prompt: string;
+  speakers: Array<{ speakerId: string; voice: string }>;
+  styleInstructions: string;
+}
 
 /**
  * The model's content checker refused the text (HTTP 422 with
@@ -158,20 +173,22 @@ export class FalClient {
   }
 
   /**
-   * Butun suhbat BITTA so'rovda — gapiruvchilar bir-biriga javob
-   * beradi, ohang tabiiy chiqadi (ovoz tizimi qarori, 2026-09-02).
-   * `language_code: 'de'` qat'iy (ingliz fonetikasiga tushmasin),
-   * `stability: 0.5` sinovdan keyin O'ZGARMAYDI — aks holda 12 dialog
-   * bir-biridan farq qilib eshitiladi. Tezlik parametri modelda YO'Q —
-   * sekin variant mijoz pleyerida (0.8×).
+   * A course dialog in Gemini's dialogue mode, the model the CEO chose for
+   * every dialog on 2026-09-26: all speakers in one request, so each turn
+   * answers the one before it. The language is pinned to German; single
+   * words go to Inworld instead (`speechInworld`), because a lone word gives
+   * a multilingual model no language to go by, while a dialog does.
    */
-  async dialog(
-    inputs: Array<{ voice: string; text: string }>,
-  ): Promise<string> {
-    const out = await this.run(DIALOG_MODEL, {
-      inputs,
-      language_code: 'de',
-      stability: 0.5,
+  async dialogGemini(dialog: GeminiDialog): Promise<string> {
+    const out = await this.run(TTS_GEMINI_MODEL, {
+      prompt: dialog.prompt,
+      speakers: dialog.speakers.map((s) => ({
+        speaker_id: s.speakerId,
+        voice: s.voice,
+      })),
+      style_instructions: dialog.styleInstructions,
+      language_code: 'German (Germany)',
+      output_format: 'mp3',
     });
     const url = out?.audio?.url;
     if (typeof url !== 'string') throw new Error('fal.ai suhbat qaytarmadi');
