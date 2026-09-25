@@ -73,9 +73,9 @@ export const GRANTABLE_ROLE_IDS = {
  *
  * Both doors that let a caller choose the roles read the map through this
  * function: the registration link (`generateEmployeeLinkPayload`) and the
- * signed-in employee write (`UsersService`). What they pass in differs. The
- * link takes the role names from the access token; the employee write reads
- * them from the database, where an archived caller has none (ADR-0026).
+ * signed-in employee write (`UsersService`). Both pass the role names they
+ * read from the database, where an archived caller has none (ADR-0026) —
+ * never the ones in the access token, which can be an hour stale.
  */
 export function grantableRoleIdsFor(
   roleNames: readonly string[],

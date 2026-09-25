@@ -148,7 +148,7 @@ Creating an employee IS granting access, so a caller may hand out only the roles
 | Administrator | Teacher, Cashier |
 
 - **The most senior role decides.** A caller holding several roles gets the ceiling of the highest of CEO, Branch Director and Administrator. Holding none of them means nothing is grantable.
-- **The employee form reads the caller's roles from the database**, not from the token, so an unknown or archived caller grants nothing there. An access token outlives an archive (or a demotion) by up to an hour.
+- **Both doors read the caller from the database**, not from the token: roles, branches, and whether the account may still act (`whereUserMayAct()`). An unknown, archived or blocked (SUSPENDED, TERMINATED, ARCHIVED) caller grants nothing at either door. An access token outlives an archive, a block or a demotion by up to an hour, and a signed link works for three days, so a link minted from a stale token would keep its old authority that long ([ADR-0028](adr/0028-bloklangan-xodim-hech-narsa-bermaydi.md)).
 - **Self-edits are included.** Acting on yourself skips the branch-overlap check, not this one: an Administrator cannot make themselves a Branch Director.
 - **Only accounts inside your ceiling can be reshaped.** When a write changes the role set, every role on both sides of the change (held now, held after) must be inside the caller's ceiling. An Administrator may add or remove Teacher and Cashier on a teacher, but may not change the role set of a Branch Director who shares their branch, of another Administrator, or of themselves, not even to add Teacher. Those changes belong to someone above them.
 - **An unchanged role set is not a grant.** The employee form sends `roleIds` on every save; the sets are compared (order ignored), so editing a name or a phone number is never refused by this rule.
@@ -174,7 +174,6 @@ A shared branch lets a caller READ an employee's record. WRITING to it also take
 
 **Known gaps, not closed by the ceiling or the rank rule:**
 
-- The registration link takes the caller's roles from the access token. A token that is up to an hour stale (archived or demoted caller) can still mint an invitation at its old level, and that link works for three days.
 - The employee form offers every role to every caller. The Telegram link dialog already hides the roles a caller cannot grant; the form does not yet.
 
 #### Telegram registration links expire after three days
@@ -186,6 +185,14 @@ A registration link (`POST /telegram/employee-link`) creates a working staff acc
 - Within its three days a link can be used any number of times, and one link cannot be revoked on its own; rotating `TELEGRAM_LINK_SECRET` cancels every link at once. ADR-0022's stage 2 replaces these links with personal one-time ones.
 - The age is checked when the link is opened, so a registration started inside the three days can finish later.
 - The branch page also shows the link as text: minted when the page was opened, replaced on every copy. In a tab left open for more than three days, selecting that text by hand instead of pressing "Nusxalash" copies a dead link.
+
+#### A blocked employee's token stops at once; a demoted one's does not
+
+An access token lives an hour and nothing re-reads the account on each request, so `@Roles()` checks the roles the token was issued with. The decision and its alternatives: [ADR-0028](adr/0028-bloklangan-xodim-hech-narsa-bermaydi.md).
+
+- **Blocking cuts off the tokens already issued.** Setting an employee to SUSPENDED, TERMINATED or ARCHIVED, or archiving them, on either the employee page (`UsersService`) or the teacher page (`TeachersService`) writes `user:blocked:<id>`, and `JwtAuthGuard` refuses that token on its next request ("Hisobingiz bloklangan"). Setting the employee back to ACTIVE or INACTIVE lifts it. Sign-in and token refresh already refused blocked accounts; the key is what stops the token issued before the block.
+- **Redis is a cache, not the authority.** If Redis is unreachable the guard lets the request through rather than failing everyone, and a blocked token then works until it expires (at most an hour). The two doors that grant access (above) do not depend on it: they refuse a blocked caller from their own database read.
+- **A role change does not cut off a token.** A demoted employee keeps their old role's pages for up to an hour, until the token is refreshed. They cannot create accounts or links above their new level in that hour, because both doors read the database.
 
 ### Branch Director Scope Filtering
 
