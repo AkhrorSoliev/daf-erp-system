@@ -135,17 +135,18 @@ solishtiradi.
 | | Soni | Qanday aniqlanadi |
 |---|---|---|
 | `BRANCH_SCOPED_BY_HEADER` | **120** | Dalil: handler `@BranchScope()` oladi |
-| Qo'lda toifalangan | **185** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
-| `UNREVIEWED` | **101** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
+| Qo'lda toifalangan | **187** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
+| `UNREVIEWED` | **99** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
 | **Jami** | **406** | |
 
 Sanoq 2026-09-24 da `discoverRoutes` bilan qayta olindi — jadval 2026-08 dagi
 95 / 157 / 114 / 365 da qolib ketgan edi. Xona va kursning id bo'yicha sakkizta
 route'i (`PATCH`, `PATCH …/status`, `DELETE`, `GET …/status-history`) endi
-yozuvning o'z filialini tekshiradi va `BRANCH_SCOPED_BY_ENTITY` ga o'tdi.
-Budjet ro'yxat uzunligiga tenglashtirildi (114 → 101): ro'yxat 109 ta edi,
-ya'ni undagi 5 ta bo'sh o'rin yangi route'ni jimgina `UNREVIEWED` ga qo'yishga
-imkon berardi.
+yozuvning o'z filialini tekshiradi, `POST /rooms` va `POST /courses` esa
+chaqiruvchi tanadagi filialga ega ekanini tekshiradi — o'ntasi ham
+`BRANCH_SCOPED_BY_ENTITY` ga o'tdi. Budjet ro'yxat uzunligiga tenglashtirildi
+(114 → 99): ro'yxat 109 ta edi, ya'ni undagi 5 ta bo'sh o'rin yangi route'ni
+jimgina `UNREVIEWED` ga qo'yishga imkon berardi.
 
 ## Nega qolgani «UNREVIEWED» deb qoldirildi
 
@@ -232,6 +233,17 @@ Sakkizta id bo'yicha yozish yo'li **faqat `companyId`** ni tekshirardi:
 `assertSingleValidBranch` allaqachon bor edi va **filial tekshiruviga o'xshaydi**
 — bu nuqson omon qolganining bir sababi. Lekin u **maqsad filial haqiqiymi**
 deb so'raydi, **chaqiruvchi haqlimi** deb emas.
+
+**Tuzatish (2026-09-24).** Jadvaldagi `POST /students` aslida yopilmagan edi.
+Yaratishda hali yozuv yo'q, shuning uchun `assertCallerMayTouchStudent` unga
+qo'llanmaydi, `assertSingleValidBranch` esa faqat «filial haqiqiymi» deb
+so'rardi — Namangan direktori Farg'onada o'quvchi yarata olardi. `PATCH
+/students/:id` da ham shu yo'l ochiq edi: o'z o'quvchisini boshqa filialga
+ko'chirish, natijasi o'sha filialda yaratish bilan bir xil. Endi
+`assertSingleValidBranch` o'zi `assertCallerInBranch` ni chaqiradi, shuning
+uchun ikkala yo'l ham yopildi. `POST /rooms` va `POST /courses` da aynan shu
+tuzoq bor edi (ular `UNREVIEWED` da turardi) — ular ham yopildi va manifestda
+`BRANCH_SCOPED_BY_ENTITY` ga o'tdi.
 
 Yordamchi: `assertCallerMayTouchStudent` — `assertCallerMayWriteForStudent` bilan
 bitta amalga oshirish, ikkita nom. Xabar boshqacha ataylab: o'quvchini

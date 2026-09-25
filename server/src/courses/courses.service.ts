@@ -132,6 +132,16 @@ export class CoursesService {
     if (!branch) {
       throw new NotFoundException(`Filial #${dto.branchId} topilmadi`);
     }
+    // "The branch exists in this company" and "the caller may act in it" are
+    // different questions. The branch comes from the body, so without this a
+    // Branch Director of one branch could add a course, at a price of their
+    // choosing, to another branch's catalogue.
+    await assertCallerInBranch(
+      this.prisma,
+      userId,
+      dto.branchId,
+      "Bu filialda kurs yaratish huquqingiz yo'q",
+    );
 
     // Kurs `paymentModel`ni ANIQ ko'rsatmasa — `payment.defaultModel`
     // sozlamasi ishlatiladi (filial darajasi bo'lsa ustidan yozadi). Bu
