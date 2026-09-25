@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { Workbook } from 'exceljs';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
@@ -122,6 +123,14 @@ function fakePrisma(
   };
 }
 
+// Ranges the service must refuse even when a caller skips the DTO.
+const NOT_A_RANGE = [
+  { startDate: '', endDate: '2026-09-30' },
+  { startDate: '2026-09-01', endDate: '' },
+  { startDate: '2026-13-01', endDate: '2026-09-30' },
+  { startDate: '2026-09-01', endDate: '2026-13-01' },
+];
+
 describe('ReportsDepartedStudentsService', () => {
   beforeEach(() => jest.useFakeTimers({ now: NOW }));
   afterEach(() => jest.useRealTimers());
@@ -193,6 +202,21 @@ describe('ReportsDepartedStudentsService', () => {
         branchId: { in: [3, 7] },
       });
     });
+
+    it.each(NOT_A_RANGE)(
+      'refuses a range that is not two real days: %p',
+      async (dates) => {
+        const prisma = fakePrisma(FIXTURE);
+        const service = new ReportsDepartedStudentsService(
+          prisma as unknown as PrismaService,
+        );
+
+        await expect(
+          service.getDepartedStudentsSummary(1001, { scope: null, ...dates }),
+        ).rejects.toThrow(BadRequestException);
+        expect(prisma.student.findMany).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe('getDepartedStudentsDynamics', () => {
@@ -277,6 +301,37 @@ describe('ReportsDepartedStudentsService', () => {
         provisional: false,
       });
     });
+
+    it('returns an empty series when the range starts after it ends', async () => {
+      const service = new ReportsDepartedStudentsService(
+        fakePrisma(FIXTURE) as unknown as PrismaService,
+      );
+      const dynamics = (startDate: string, endDate: string) =>
+        service.getDepartedStudentsDynamics(1001, {
+          scope: null,
+          startDate,
+          endDate,
+        });
+
+      expect(await dynamics('2026-10-15', '2026-09-01')).toEqual({ data: [] });
+      // A range wholly after today ends, for the chart, before it starts.
+      expect(await dynamics('2027-01-01', '2027-01-31')).toEqual({ data: [] });
+    });
+
+    it.each(NOT_A_RANGE)(
+      'refuses a range that is not two real days: %p',
+      async (dates) => {
+        const prisma = fakePrisma(FIXTURE);
+        const service = new ReportsDepartedStudentsService(
+          prisma as unknown as PrismaService,
+        );
+
+        await expect(
+          service.getDepartedStudentsDynamics(1001, { scope: null, ...dates }),
+        ).rejects.toThrow(BadRequestException);
+        expect(prisma.student.findMany).not.toHaveBeenCalled();
+      },
+    );
   });
 });
 

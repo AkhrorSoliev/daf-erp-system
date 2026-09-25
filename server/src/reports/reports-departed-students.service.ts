@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportBranchIds } from '../common/finance/report-branch-scope';
@@ -21,6 +21,18 @@ const MS_PER_MONTH = DAY_MS * 30.44;
 // when no reporting floor is set.
 const MAX_DYNAMICS_MONTHS = 240;
 
+/** The picked Tashkent days as UTC instants; a 400 unless both are real days. */
+function reportRange(startDate: string, endDate: string) {
+  const range = tashkentRangeUtc(startDate, endDate);
+  if (
+    !Number.isFinite(range.gte.getTime()) ||
+    !Number.isFinite(range.lt.getTime())
+  ) {
+    throw new BadRequestException("Sana noto'g'ri formatda");
+  }
+  return range;
+}
+
 @Injectable()
 export class ReportsDepartedStudentsService {
   constructor(private prisma: PrismaService) {}
@@ -34,7 +46,7 @@ export class ReportsDepartedStudentsService {
     companyId: number,
     params: { scope: ReportBranchIds; startDate: string; endDate: string },
   ) {
-    const range = tashkentRangeUtc(params.startDate, params.endDate);
+    const range = reportRange(params.startDate, params.endDate);
     const { episodes, activeAtStart, floor, graceDays } = await loadDepartures(
       this.prisma,
       companyId,
@@ -87,7 +99,7 @@ export class ReportsDepartedStudentsService {
     params: { scope: ReportBranchIds; startDate: string; endDate: string },
   ) {
     const now = new Date();
-    const range = tashkentRangeUtc(params.startDate, params.endDate);
+    const range = reportRange(params.startDate, params.endDate);
     const { episodes, floor, graceDays } = await loadDepartures(
       this.prisma,
       companyId,
@@ -114,10 +126,12 @@ export class ReportsDepartedStudentsService {
     );
     const firstKey = fromKey > oldestAllowedKey ? fromKey : oldestAllowedKey;
     const data: { date: string; count: number; provisional: boolean }[] = [];
+    // Bounded by a step count as well as by the keys.
+    let key = firstKey;
     for (
-      let key = firstKey;
-      key <= lastKey;
-      key = addMonthsToMonthKey(key, 1)
+      let step = 0;
+      step < MAX_DYNAMICS_MONTHS && key <= lastKey;
+      step += 1, key = addMonthsToMonthKey(key, 1)
     ) {
       const month = tashkentMonthRangeUtc(key);
       const bucket = {
