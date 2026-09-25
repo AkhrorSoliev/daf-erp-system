@@ -18,7 +18,7 @@ matn bilan to'ladi va bazaga tushadi:
 | Grammatika qoidasi | 5 (har bo'limga bitta, har birida ≥ 4 misol) |
 | Ibora (Redemittel) | 15 (har bo'limga 3) |
 | Dialog | 6, har birida 2 ta eshitish savoli (jami 12) |
-| Mashq gapi | ~45 (har bo'limga ≥ 6, mo'ljal 9) |
+| Mashq gapi | 50 (har bo'limga 10; qoida — ≥ 6) |
 
 Xarita (`kurs.json`) O'ZGARMAYDI — bo'limlar 2026-09-03 da tasdiqlangan.
 Ovoz va rasm bu ishda YO'Q (bir unitlik ruxsat qoidasi): ular alohida
