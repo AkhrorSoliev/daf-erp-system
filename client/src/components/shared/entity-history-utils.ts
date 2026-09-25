@@ -38,6 +38,7 @@ export const FIELD_LABELS: Record<string, string | null> = {
   status: "Holat",
   name: "Ism",
   login: "Login",
+  kirishHisobi: "Kirish hisobi",
   gender: "Jinsi",
   balance: "Balans",
   mainBranch: "Asosiy filial",

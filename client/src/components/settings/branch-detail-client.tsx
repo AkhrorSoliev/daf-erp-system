@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Building2, Check, CircleDot, Clock, Copy, DoorOpen, GraduationCap, Link2, Loader2, Pencil, Phone, Users, UsersRound } from "lucide-react";
+import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Tooltip,
@@ -15,8 +17,12 @@ import { EditBranchDrawer } from "./edit-branch-drawer";
 import type { Branch } from "@/hooks/use-edit-branch";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import api from "@/lib/api";
+import { copyPendingText } from "@/lib/clipboard";
 import { toBranch } from "@/lib/branch-record";
-import { TELEGRAM_BOT_NOT_CONFIGURED } from "@/lib/telegram-link";
+import {
+  isTelegramBotConfigured,
+  TELEGRAM_BOT_NOT_CONFIGURED,
+} from "@/lib/telegram-link";
 import { useTeacherRegistrationLink } from "@/hooks/use-teacher-registration-link";
 
 function formatPhone(phone: string): string {
@@ -40,18 +46,35 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copying, setCopying] = useState(false);
 
   // Signed, server-minted link (roleIds [4]). The old unsigned
   // `teacher_<branchId>` payload let anyone register into any branch.
-  const { link: registrationLink } = useTeacherRegistrationLink(
-    Number(branchId),
-  );
+  const {
+    link: registrationLink,
+    loading: linkLoading,
+    reload: reloadLink,
+  } = useTeacherRegistrationLink(Number(branchId));
 
+  // The link shown was minted when the page opened and dies three days later
+  // (ADR-0029), so every copy mints a new one, which also replaces the one shown.
+  // The button depends on the bot being configured, not on a link being
+  // shown, so a failed mint leaves it enabled for a retry.
   const handleCopy = async () => {
-    if (!registrationLink) return;
-    await navigator.clipboard.writeText(registrationLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopying(true);
+    try {
+      const url = await copyPendingText(reloadLink());
+      if (!url) {
+        toast.error(TELEGRAM_BOT_NOT_CONFIGURED);
+        return;
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Havolani nusxalab bo'lmadi");
+    } finally {
+      setCopying(false);
+    }
   };
 
   useEffect(() => {
@@ -246,6 +269,8 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
               <Link2 className="size-4 shrink-0 text-muted-foreground" />
               {registrationLink ? (
                 <code className="text-sm break-all">{registrationLink}</code>
+              ) : linkLoading ? (
+                <Skeleton className="h-5 w-full" />
               ) : (
                 <span className="text-muted-foreground text-sm">
                   {TELEGRAM_BOT_NOT_CONFIGURED}
@@ -260,9 +285,11 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
                   size="sm"
                   variant="outline"
                   onClick={handleCopy}
-                  disabled={!registrationLink}
+                  disabled={!isTelegramBotConfigured || copying}
                 >
-                  {copied ? (
+                  {copying ? (
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  ) : copied ? (
                     <Check className="mr-1.5 h-4 w-4 text-green-500" />
                   ) : (
                     <Copy className="mr-1.5 h-4 w-4" />
@@ -272,12 +299,17 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
               </span>
             </TooltipTrigger>
             <TooltipContent>
-              {registrationLink
+              {isTelegramBotConfigured
                 ? "Havolani nusxalash"
                 : TELEGRAM_BOT_NOT_CONFIGURED}
             </TooltipContent>
           </Tooltip>
         </div>
+        {registrationLink ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Havola 3 kun amal qiladi.
+          </p>
+        ) : null}
       </div>
 
       <EditBranchDrawer onSaved={(updated) => setBranch(updated)} />

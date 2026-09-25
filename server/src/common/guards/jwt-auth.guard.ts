@@ -2,13 +2,18 @@ import {
   Injectable,
   ExecutionContext,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import { UserStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
+import { blockedUserKey, isBlockedStatus } from '../auth/blocked-user';
+import {
+  SESSION_ENDED_MESSAGE,
+  sessionVersionKey,
+} from '../auth/session-version';
 import { IS_PUBLIC_KEY } from '../decorators';
 
 @Injectable()
@@ -49,6 +54,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
     if (userId) {
       await this.assertNotBlocked(userId);
+      await this.assertSessionCurrent(userId, request.user.sessionVersion);
     }
 
     return true;
@@ -67,20 +73,21 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
    *    shorten. `TeachersService` already swallows Redis errors on the write
    *    side for the same reason.
    *
-   * 2. **A key must not outlive the block it represents.** Only
-   *    `TeachersService` maintains these keys; re-activating the same person
-   *    through `UsersService` leaves the key behind, and a stale key would
-   *    then lock out someone the database says is ACTIVE — a worse failure
-   *    than the one being fixed. So a cache hit is CONFIRMED against the
-   *    database before anyone is turned away, and a key the database
-   *    contradicts is dropped.
+   * 2. **A key must not outlive the block it represents.** `UsersService`
+   *    and `TeachersService` write and lift these keys through
+   *    `recordUserBlocked`, but one can still be left behind: a Redis failure
+   *    while a block is being lifted, or an account restored from the archive
+   *    by a path that never lifts it. A stale key would then lock out someone
+   *    the database says is ACTIVE — a worse failure than the one being
+   *    fixed. So a cache hit is CONFIRMED against the database before anyone
+   *    is turned away, and a key the database contradicts is dropped.
    *
    * The confirming query only runs on a hit, i.e. approximately never.
    */
   private async assertNotBlocked(userId: number): Promise<void> {
     let cached: string | null = null;
     try {
-      cached = await this.redis.get(`user:blocked:${userId}`);
+      cached = await this.redis.get(blockedUserKey(userId));
     } catch (err) {
       this.logger.warn(
         `Blocked-user cache unavailable for user ${userId}: ${
@@ -96,20 +103,64 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       select: { status: true, deletedAt: true },
     });
     const reallyBlocked =
-      !user ||
-      user.deletedAt !== null ||
-      user.status === UserStatus.SUSPENDED ||
-      user.status === UserStatus.TERMINATED ||
-      user.status === UserStatus.ARCHIVED;
+      !user || user.deletedAt !== null || isBlockedStatus(user.status);
 
     if (!reallyBlocked) {
       this.logger.warn(
         `Stale block key for user ${userId} (database says ${user.status}) — dropping it`,
       );
-      await this.redis.del(`user:blocked:${userId}`).catch(() => undefined);
+      await this.redis.del(blockedUserKey(userId)).catch(() => undefined);
       return;
     }
 
     throw new ForbiddenException('Hisobingiz bloklangan');
+  }
+
+  /**
+   * A password change or "log out other devices" bumps `User.sessionVersion`
+   * and mirrors the new value here (`common/auth/session-version.ts`).
+   * `AuthService.refresh` refuses the stale tokens against the database; this
+   * stops a stale ACCESS token on its next request instead of at the end of
+   * its hour (ADR-0030).
+   *
+   * Same contract as the blocked check above: a Redis failure lets the request
+   * through — `refresh` still holds the line within the hour — and a cache hit
+   * is confirmed against the database before anyone is turned away, so a key
+   * the database contradicts can never sign a legitimate session out.
+   */
+  private async assertSessionCurrent(
+    userId: number,
+    tokenVersion: number | undefined,
+  ): Promise<void> {
+    let cached: string | null = null;
+    try {
+      cached = await this.redis.get(sessionVersionKey(userId));
+    } catch (err) {
+      this.logger.warn(
+        `Session-version cache unavailable for user ${userId}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      return;
+    }
+    if (cached === null) return;
+
+    const current = Number(cached);
+    const version = tokenVersion ?? 0;
+    if (!Number.isInteger(current) || version >= current) return;
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { sessionVersion: true },
+    });
+    if (user && user.sessionVersion === version) {
+      this.logger.warn(
+        `Stale session-version key for user ${userId} (cache ${current}, database ${user.sessionVersion}) — dropping it`,
+      );
+      await this.redis.del(sessionVersionKey(userId)).catch(() => undefined);
+      return;
+    }
+
+    throw new UnauthorizedException(SESSION_ENDED_MESSAGE);
   }
 }

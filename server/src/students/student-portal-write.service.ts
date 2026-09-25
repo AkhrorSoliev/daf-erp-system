@@ -8,6 +8,11 @@ import { PaymentMethod } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { RedisService } from '../redis/redis.service';
+import {
+  passwordWrite,
+  recordSessionsEnded,
+} from '../common/auth/session-version';
 import { ChangePortalPasswordDto } from './dto/change-portal-password.dto';
 import { UpdatePortalNameDto } from './dto/update-portal-name.dto';
 
@@ -20,6 +25,7 @@ export class StudentPortalWriteService {
     private prisma: PrismaService,
     private uploadService: UploadService,
     private entityHistoryService: EntityHistoryService,
+    private redis: RedisService,
   ) {}
 
   async updateName(
@@ -87,10 +93,14 @@ export class StudentPortalWriteService {
     }
 
     const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
-    await this.prisma.user.update({
+    // Ends every session of the account, this one included; the controller
+    // hands the student a fresh pair (ADR-0030).
+    const { sessionVersion } = await this.prisma.user.update({
       where: { id: userId },
-      data: { password: hashedPassword },
+      data: passwordWrite(hashedPassword),
+      select: { sessionVersion: true },
     });
+    await recordSessionsEnded(this.redis, userId, sessionVersion);
 
     if (studentId) {
       const student = await this.prisma.student.findFirst({
@@ -107,7 +117,8 @@ export class StudentPortalWriteService {
       });
     }
 
-    return { message: "Parol muvaffaqiyatli o'zgartirildi" };
+    // The controller signs this device's fresh pair with exactly this version.
+    return { message: "Parol muvaffaqiyatli o'zgartirildi", sessionVersion };
   }
 
   async updatePhoto(

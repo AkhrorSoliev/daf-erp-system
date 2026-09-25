@@ -128,7 +128,7 @@ export function GroupRowActions({ group, onDeleted, onStatusChanged }: GroupRowA
                 handleDelete();
               }}
               disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              variant="destructive"
             >
               {deleting ? "O'chirilmoqda..." : "O'chirish"}
             </AlertDialogAction>
