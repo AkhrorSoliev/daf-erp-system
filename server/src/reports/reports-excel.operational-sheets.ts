@@ -29,6 +29,7 @@ import {
   dmy,
   tashkentTodayStr,
 } from './reports-excel.helpers';
+import { DEPARTURE_GRACE_DAYS } from '../students/shared/departure-episodes';
 
 const DEC1 = '#,##0.0';
 
@@ -121,11 +122,19 @@ export function kpiSheet(wb: Workbook, kpis: any, period: string) {
     { percent: true },
   );
   kvNum(ws, "Shu oy yangi o'quvchilar", kpis.newStudentsThisMonth ?? 0);
+  // Departures follow ADR-0035; the grace period comes with the figures.
+  const grace = kpis.departureGraceDays ?? DEPARTURE_GRACE_DAYS;
   kvNum(
     ws,
-    'Shu oy ketganlar (churn)',
+    'Shu oy ketganlar',
     kpis.churnedThisMonth ?? 0,
-    'Chetlatilgan + guruhdan chiqarilgan.',
+    `Chetlatilgan, arxivlangan yoki ${grace} kun ichida qaytmagan (guruhdan chiqarilgan, muzlatilgan).`,
+  );
+  kvNum(
+    ws,
+    'Qaytishi kutilmoqda',
+    kpis.pendingDepartures ?? 0,
+    `Guruhsiz qolgan yoki muzlatilgan, ${grace} kun hali o'tmagan.`,
   );
   sheetNotes(
     ws,

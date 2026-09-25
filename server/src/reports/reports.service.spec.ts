@@ -21,6 +21,7 @@ import { ExpensesService } from '../expenses/expenses.service';
 import { SalaryPaymentService } from '../salary/salary-payment.service';
 import { SalaryService } from '../salary/salary.service';
 import { PaymentsDebtorsService } from '../payments/payments-debtors.service';
+import { DEPARTURE_GRACE_DAYS } from '../students/shared/departure-episodes';
 
 describe('ReportsService', () => {
   let service: ReportsService;
@@ -173,11 +174,9 @@ describe('ReportsService', () => {
       prisma.student.count
         .mockResolvedValueOnce(50) // activeStudents
         .mockResolvedValueOnce(45) // lastMonthActive
-        .mockResolvedValueOnce(5) // new students
-        .mockResolvedValueOnce(2); // expelled
+        .mockResolvedValueOnce(5); // new students
 
       prisma.group.count.mockResolvedValue(10);
-      prisma.enrollment.count.mockResolvedValue(1);
 
       prisma.attendance.groupBy.mockResolvedValue([
         { status: 'PRESENT', _count: { id: 80 } },
@@ -197,7 +196,9 @@ describe('ReportsService', () => {
         averageAttendance: 85,
         leadConversionRate: 20,
         newStudentsThisMonth: 5,
-        churnedThisMonth: 3,
+        churnedThisMonth: 0,
+        pendingDepartures: 0,
+        departureGraceDays: DEPARTURE_GRACE_DAYS,
       });
     });
 

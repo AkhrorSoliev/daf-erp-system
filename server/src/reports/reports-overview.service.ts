@@ -3,7 +3,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { activeStudentWhere } from '../students/shared/active-student-where';
-import { tashkentRangeFilter } from '../common/date/tashkent';
+import {
+  tashkentMonthKey,
+  tashkentMonthRangeUtc,
+  tashkentRangeFilter,
+} from '../common/date/tashkent';
+import { departuresInRange } from '../students/shared/departure-episodes';
+import { loadDepartures } from './shared/departures.loader';
 
 @Injectable()
 export class ReportsOverviewService {
@@ -29,8 +35,6 @@ export class ReportsOverviewService {
       lastMonthActiveStudents,
       activeGroups,
       newStudentsThisMonth,
-      expelledThisMonth,
-      droppedThisMonth,
       attendanceCounts,
       totalLeads,
       convertedLeads,
@@ -78,25 +82,6 @@ export class ReportsOverviewService {
         },
       }),
 
-      this.prisma.student.count({
-        where: {
-          companyId,
-          deletedAt: null,
-          status: 'EXPELLED',
-          statusChangedAt: { gte: firstOfMonth },
-          ...branchStudentFilter,
-        },
-      }),
-
-      this.prisma.enrollment.count({
-        where: {
-          deletedAt: null,
-          status: 'DROPPED',
-          statusChangedAt: { gte: firstOfMonth },
-          group: { companyId, ...branchGroupFilter },
-        },
-      }),
-
       this.prisma.attendance.groupBy({
         by: ['status'],
         where: {
@@ -125,6 +110,24 @@ export class ReportsOverviewService {
         },
       }),
     ]);
+
+    // "Shu oy ketganlar" — the one definition of a departure (ADR-0035),
+    // counted over the Tashkent month. The other monthly KPIs keep their
+    // process-local month start; they are outside this change.
+    const departures = await loadDepartures(
+      this.prisma,
+      companyId,
+      query.branchId ? [query.branchId] : null,
+      { now },
+    );
+    const churnedThisMonth = departuresInRange(
+      departures.episodes,
+      tashkentMonthRangeUtc(tashkentMonthKey(now)),
+      departures.floor,
+    ).length;
+    const pendingDepartures = departures.episodes.filter(
+      (e) => e.state === 'pending',
+    ).length;
 
     const totalAttendance = attendanceCounts.reduce(
       (sum, a) => sum + a._count.id,
@@ -156,7 +159,9 @@ export class ReportsOverviewService {
       averageAttendance,
       leadConversionRate,
       newStudentsThisMonth,
-      churnedThisMonth: expelledThisMonth + droppedThisMonth,
+      churnedThisMonth,
+      pendingDepartures,
+      departureGraceDays: departures.graceDays,
     };
   }
 

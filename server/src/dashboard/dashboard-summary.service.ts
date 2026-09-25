@@ -202,6 +202,8 @@ export class DashboardSummaryService {
       activeStudents: kpis.activeStudents.current,
       newThisMonth: kpis.newStudentsThisMonth,
       leftThisMonth: kpis.churnedThisMonth,
+      leftPending: kpis.pendingDepartures,
+      leftGraceDays: kpis.departureGraceDays,
       activeGroups: kpis.activeGroups,
       attendancePct: kpis.averageAttendance,
       todayLessons,

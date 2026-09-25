@@ -1,6 +1,10 @@
+import { Workbook } from 'exceljs';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
 import { DEPARTURE_GRACE_DAYS } from '../students/shared/departure-episodes';
 import { ReportsDepartedStudentsService } from './reports-departed-students.service';
+import { ReportsOverviewService } from './reports-overview.service';
+import { kpiSheet } from './reports-excel.operational-sheets';
 
 const at = (s: string) => new Date(s);
 const NOW = at('2026-11-20T12:00:00Z');
@@ -273,5 +277,68 @@ describe('ReportsDepartedStudentsService', () => {
         provisional: false,
       });
     });
+  });
+});
+
+describe('one departure count on every surface', () => {
+  beforeEach(() => jest.useFakeTimers({ now: NOW }));
+  afterEach(() => jest.useRealTimers());
+
+  // November 2026 is the current month: 10011 expelled 05.11, 10012 archived
+  // 10.11, 10013 left its group 18.11 (pending), 10014 left in August.
+  const NOVEMBER = {
+    students: [
+      student(10011, 'EXPELLED'),
+      student(10012, 'ARCHIVED'),
+      student(10013),
+      student(10014),
+    ],
+    enrollments: [
+      enrollment('n1', 10011, 'DROPPED', '2026-11-05T09:00:00.000Z'),
+      enrollment('n2', 10012, 'DROPPED', '2026-11-10T09:00:00.000Z'),
+      enrollment('n3', 10013, 'DROPPED', '2026-11-18T09:00:00.000Z'),
+      enrollment('n4', 10014, 'DROPPED', '2026-08-10T09:00:00.000Z'),
+    ],
+    logs: [
+      log('n1', 'ACTIVE', MAY),
+      log('n1', 'DROPPED', '2026-11-05T09:00:00.000Z'),
+      log('n2', 'ACTIVE', MAY),
+      log('n2', 'DROPPED', '2026-11-10T09:00:00.000Z'),
+      log('n3', 'ACTIVE', MAY),
+      log('n3', 'DROPPED', '2026-11-18T09:00:00.000Z'),
+      log('n4', 'ACTIVE', MAY),
+      log('n4', 'DROPPED', '2026-08-10T09:00:00.000Z'),
+    ],
+    history: [
+      statusChange(10011, 'EXPELLED', '2026-11-05T09:00:00.100Z'),
+      statusChange(10012, 'ARCHIVED', '2026-11-10T09:00:00.100Z'),
+    ],
+  };
+
+  it('shows the same November figure on the report, the home card and the Excel sheet', async () => {
+    const prisma = fakePrisma(NOVEMBER) as unknown as PrismaService;
+
+    const summary = await new ReportsDepartedStudentsService(
+      prisma,
+    ).getDepartedStudentsSummary(1001, {
+      scope: null,
+      startDate: '2026-11-01',
+      endDate: '2026-11-30',
+    });
+    const kpis = await new ReportsOverviewService(
+      prisma,
+      {} as RedisService,
+    ).getKpis(1001, {});
+    const wb = new Workbook();
+    kpiSheet(wb, kpis, 'Noyabr 2026');
+    const row = wb
+      .getWorksheet('KPI paneli')!
+      .getRows(1, 100)!
+      .find((r) => r.getCell(1).value === 'Shu oy ketganlar');
+
+    expect(summary.departedCount).toBe(2);
+    expect(kpis.churnedThisMonth).toBe(2);
+    expect(row?.getCell(2).value).toBe(2);
+    expect(kpis.pendingDepartures).toBe(1);
   });
 });

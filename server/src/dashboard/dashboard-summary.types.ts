@@ -16,7 +16,11 @@ export interface DashboardMoney {
 export interface DashboardPeople {
   activeStudents: number;
   newThisMonth: number;
+  /** Departures confirmed this Tashkent month (ADR-0035). */
   leftThisMonth: number;
+  /** Stopped within the grace period and not back yet. */
+  leftPending: number;
+  leftGraceDays: number;
   activeGroups: number;
   attendancePct: number;
   /** Filial tanlanmagan bo'lsa `null` — jadval bitta filialga bog'liq. */
