@@ -177,7 +177,7 @@ darsni esa ko'rmaydi.
 | 4 | To'lovlar: qarzga moslashgan summalar, tarix filtri, a11y | P1–P6 | kutmoqda |
 | 5 | Davomat + Asosiy sahifa | A1–A4, H1–H4 | kutmoqda |
 | 6 | FAQ/About kontenti, Ko'proq dublikati, AI tili | F1–F4, M1, M2, AI1 | kutmoqda |
-| **Mobil nav** | Telefondagi tab va sahifa arxitekturasi (9-bo'lim) | N1–N4, M1, F2 | **BAJARILDI — 2026-09-25** (branch `fix/portal-mobile-nav`) |
+| **Mobil nav** | Telefondagi tab va sahifa arxitekturasi (9-bo'lim) | N1–N5, M1, F2 | **BAJARILDI — 2026-09-25** (branch `fix/portal-mobile-nav`) |
 
 ---
 
@@ -222,9 +222,10 @@ parol sozlamalari» deydi, lekin login u yerda na ko'rsatiladi, na o'zgartirilad
 
 ## 9. Mobil navigatsiya — 2026-09-25
 
-Telefonda (`< md`) tab va sahifalar arxitekturasi alohida tekshirildi. To'rtta
+Telefonda (`< md`) tab va sahifalar arxitekturasi alohida tekshirildi. Beshta
 topilma, hammasi tuzatildi; himoya — `student-portal-nav.test.ts` va
-`radio/radio-session-toggle.test.ts`.
+`radio/radio-session-toggle.test.ts` (N5 — hisoblangan kontrast, izohi
+`lumio/bottom-nav.tsx`da).
 
 | # | Topilma | Tuzatish |
 |---|---|---|
@@ -232,6 +233,7 @@ topilma, hammasi tuzatildi; himoya — `student-portal-nav.test.ts` va
 | N2 | **Tablar foydalanish chastotasiga teskari edi**: kundalik Ta'lim (seriya, haftalik o'rin) yashirin, oylik To'lovlar tab | Tablar: Asosiy · Ta'lim · Jadval · To'lovlar · Ko'proq |
 | N3 | **Radio sahifasida orqaga tugmasi yo'q edi** — `ScreenHeader` (desktopdagi ildiz sarlavhasi), telefonda esa u Ko'proq ichidagi sahifa | `StackHeader` + `backHref="/portal/more"`, qo'shni sahifalar kabi |
 | N4 | **Radio dock mashq panelini yopardi.** Dock tab bar ustida turish uchun 96px balandda; mashqda tab bar yashiriladi, dock esa qolib, `z-40` bilan «To'g'ri / Xato» izohi ustiga tushardi (F14 bilan bir sinf) | Mashq marshrutida (`isExerciseSessionRoute`) dock chizilmaydi; radio boshqaruvi mashq sarlavhasida (`RadioSessionToggle`), chunki darsdagi audio radioni to'xtatmaydi |
+| N5 | **Tab yozuvlari WCAG AA'dan o'tmasdi.** Nofaol `ink-400` pill ustida 2.5:1, faol `coral-600` 3.5:1 (11px yozuv uchun 4.5:1 kerak) | Nofaol `ink-600` (6.5:1 / qorong'ida 7.3:1), faol `coral-700` (5.0:1) / qorong'ida `coral-400` (6.1:1); pill 85% dan 95% ga — orqasida coral karta bo'lsa ham 4.5:1 dan o'tadi |
 
 Ochiq qolgani: **U3** (Davomat `backHref="/portal"`) — orqaga tugmasi odatda
 tarixga qaytadi, `backHref` faqat to'g'ridan-to'g'ri kirishda ishlatiladi.
