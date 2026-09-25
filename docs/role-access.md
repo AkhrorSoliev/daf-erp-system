@@ -139,13 +139,13 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 
 #### Telegram registration links expire after three days
 
-A registration link (`POST /telegram/employee-link`) creates a working staff account for whoever opens it, with the branch and roles it was signed with. The link dialog on the employees settings page mints a new one on every click; the branch page and the teachers page mint one each time they are opened. The link carries its issue time inside the signed part, and the bot refuses it three days later: "Bu havolaning muddati tugagan. Administratordan yangi havola so'rang." Links minted before this rule carry no issue time and get the same answer, so every link shared before it shipped stopped working. The decision and its alternatives: [ADR-0029](adr/0029-xodim-havolasi-uch-kun-ishlaydi.md).
+A registration link (`POST /telegram/employee-link`) creates a working staff account for whoever opens it, with the branch and roles it was signed with. The link dialog on the employees settings page mints a new one on every click; the branch and teachers pages mint a new one every time the link is copied, and the teachers page every time its QR code is opened, so neither page hands out the link it minted when it was opened. The link carries its issue time inside the signed part, and the bot refuses it three days later: "Bu havolaning muddati tugagan. Administratordan yangi havola so'rang." The link dialog, the QR dialog and the branch page all say "Havola 3 kun amal qiladi". Links minted before this rule carry no issue time and get the same answer, so every link shared before it shipped stopped working. The decision and its alternatives: [ADR-0029](adr/0029-xodim-havolasi-uch-kun-ishlaydi.md).
 
 **Still open:**
 
 - Within its three days a link can be used any number of times, and one link cannot be revoked on its own; rotating `TELEGRAM_LINK_SECRET` cancels every link at once. ADR-0022's stage 2 replaces these links with personal one-time ones.
 - The age is checked when the link is opened, so a registration started inside the three days can finish later.
-- The branch and teachers pages show the link minted when the page was opened, so a tab left open for more than three days hands out a dead one until the page is reloaded.
+- The branch page also shows the link as text: minted when the page was opened, replaced on every copy. In a tab left open for more than three days, selecting that text by hand instead of pressing "Nusxalash" copies a dead link.
 
 ### Branch Director Scope Filtering
 
