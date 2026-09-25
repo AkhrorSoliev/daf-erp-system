@@ -125,6 +125,7 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - `src/middleware.ts` redirects unauthenticated users to `/login`
 - Auth state managed by Zustand store in `src/hooks/use-auth.ts`
 - `AuthProvider` in `src/components/providers/auth-provider.tsx` hydrates state from cookies on mount
+- **Session-ending actions (ADR-0030).** `PATCH /users/password`, `PATCH /student-portal/password` and `POST /users/logout-others` end EVERY session of the account, this device's included, and return a fresh pair. Store it with `freshSessionFrom(data)` + `setAuth(...)` (`src/lib/fresh-session.ts`), or the next request signs the user out. `useLogoutOthers()` (`src/hooks/use-logout-others.ts`) does this for the "Boshqa qurilmalardan chiqish" action on the staff profile and on student portal Settings. Both open the same confirmation, `src/components/shared/logout-others-dialog.tsx` — the student portal passes `contentClassName="lumio"`, like its own sign-out dialog. Do not fork a second, student-only copy.
 
 ## Architecture Rules
 
@@ -960,6 +961,21 @@ every list renders; the roles are only access.
   would silently re-break "demote an administrator to a role-less cleaner"
   the next time someone left stale form state around. The field-clearing is
   what keeps the visible form honest in the meantime. Keep both.
+- **Only grantable roles are offered (ADR-0026).** `roleFieldFor`
+  (`src/lib/role-grant-ceiling.ts`) decides the "Tizim huquqi" field, and
+  both variants live in `employee-roles-field.tsx`. `pick` renders
+  `EmployeeRolePicker` with only the roles the signed-in user may grant.
+  `read-only` renders `EmployeeRolesReadOnly` when the employee already holds
+  a role outside that ceiling, a non-CEO's own record included; the save then
+  sends the loaded `roleIds` back unchanged, because the backend accepts an
+  unchanged set and refuses any change to such an employee's roles. `hidden`
+  is a caller who may grant nothing.
+- The ceiling map is shared with `telegram-link-dialog.tsx`; do not write
+  another copy. `role-grant-ceiling.test.ts` compares it with the server's
+  `GRANTABLE_ROLE_IDS` and fails on a second name-keyed copy under `src/`. It
+  is keyed by role NAME on purpose, the one exception to "check roles by ID"
+  above: the server reads role names too, so a renamed role fails closed on
+  both sides alike.
 - Password is required on create **only when a role is given**.
 - Branch stays required for everyone except a CEO, role-less employees
   included: a branch-less employee appears in no branch list and on no payroll
@@ -970,6 +986,11 @@ every list renders; the roles are only access.
   `user.roles` directly for a "Lavozim" column; a cleaner has none.
 - Editing an existing employee pre-fills Lavozim from their role label, which
   is how the field gets backfilled without a script.
+
+### Your own phone, login and password (ADR-0031)
+
+- The profile drawer (`components/profile/edit-profile-drawer.tsx`) sends a changed phone to `PATCH /users/phone` together with the current password — the "Joriy parol" field appears only while the phone differs — and name/photo to `PATCH /users/profile`, which refuses a phone. The split lives in `profile-save-plan.ts` (unit-tested), not in the JSX.
+- The employee form locks Telefon, Login and Parol when you open your OWN record and links to Profil (`lib/own-sign-in-keys.ts`); the backend refuses those changes there with 403 anyway.
 
 ### Employee & Teacher Status (Faollik holati)
 

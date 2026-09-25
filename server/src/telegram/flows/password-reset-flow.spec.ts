@@ -202,6 +202,26 @@ describe('password-reset-flow', () => {
       expect(auditNewValues.parol).not.toContain(plainPassword);
     });
 
+    it('ends every session of the account (ADR-0030)', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 99001,
+        status: UserStatus.ACTIVE,
+      });
+      prisma.user.update.mockResolvedValue({ sessionVersion: 2 });
+
+      await resetPassword(prisma, entityHistory, redis, baseStudent);
+
+      const update = prisma.user.update.mock.calls[0][0];
+      expect(update.data.sessionVersion).toEqual({ increment: 1 });
+      expect(update.select).toEqual({ sessionVersion: true });
+      expect(redis.set).toHaveBeenCalledWith(
+        'user:session-version:99001',
+        '2',
+        'EX',
+        expect.any(Number),
+      );
+    });
+
     it('also accepts INACTIVE users (auth.service allows them to log in)', async () => {
       prisma.user.findUnique.mockResolvedValue({
         id: 99001,

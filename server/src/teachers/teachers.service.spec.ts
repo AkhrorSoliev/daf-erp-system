@@ -143,10 +143,22 @@ describe('TeachersService — status methods', () => {
       expect(redis.set).not.toHaveBeenCalled();
     });
 
-    it('does NOT touch Redis for INACTIVE status', async () => {
+    // INACTIVE still signs in (`validateUser` admits it), so it lifts a block
+    // like ACTIVE does; a key left behind would only cost the guard a
+    // confirming query on every request.
+    it('removes Redis block key when status is INACTIVE', async () => {
       await service.changeStatus(1, { status: 'INACTIVE' as any }, 2, 1001);
 
+      expect(redis.del).toHaveBeenCalledWith('user:blocked:1');
       expect(redis.set).not.toHaveBeenCalled();
+    });
+
+    // The DTO admits every UserStatus, and ARCHIVED is refused a token refresh
+    // even without `deletedAt` — so the token already issued must stop too.
+    it('sets Redis block key when status is ARCHIVED', async () => {
+      await service.changeStatus(1, { status: 'ARCHIVED' as any }, 2, 1001);
+
+      expect(redis.set).toHaveBeenCalledWith('user:blocked:1', '1');
       expect(redis.del).not.toHaveBeenCalled();
     });
 
@@ -182,6 +194,9 @@ describe('TeachersService — status methods', () => {
             isActive: false,
             deletedAt: expect.any(Date),
             deletedById: 2,
+            statusChangedAt: expect.any(Date),
+            statusChangedById: 2,
+            statusChangeReason: "O'chirildi",
           }),
         }),
       );
