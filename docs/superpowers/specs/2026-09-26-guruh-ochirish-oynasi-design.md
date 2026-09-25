@@ -74,7 +74,10 @@ esa faqat "«X» guruhini arxivga o'tkazilsinmi?" deydi. Ikki kamchilik bor:
     - "Ular guruhdan chiqariladi, ishlatilmagan darslari puli balansiga qaytadi.";
     - "Guruhni arxivdan tiklasangiz ham o'quvchilar qaytmaydi.";
   - uning ostida maslahat: "O'quvchilar boshqa guruhda davom etishi kerak
-    bo'lsa, avval ularni o'tkazing: o'quvchi sahifasi → «Guruhni o'zgartirish».";
+    bo'lsa, avval ularni o'quvchi sahifasidan boshqa guruhga o'tkazing."
+    (Rasmda tugma nomi bor edi. U olib tashlandi, chunki profildagi tugma
+    "Guruhni o'zgartirish" yoki "Guruhga qo'shish" deb nomlanadi va muzlatilgan
+    o'quvchida qaysi biri chiqishi aniq emas.)
   - guruh bo'sh bo'lsa: "Guruhda o'quvchi yo'q. Guruh arxivga o'tkaziladi."
 - Son qatori alohida sof funksiyada (`group-delete-copy.ts`), to'rt holat bilan:
   - faqat faol: "Guruhda hali 5 ta o'quvchi bor.";
