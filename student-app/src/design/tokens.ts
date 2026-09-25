@@ -23,8 +23,10 @@ export const tokens = {
     coral: '#FF6B4A',
     amber: '#FFB02E',
     teal: '#14B8AC',
+    tealStrong: '#0E9A90', // teal-600
     grape: '#8B5CF6',
     sky: '#2E97FF',
+    skyStrong: '#1B7BE0', // sky-600
     white: '#FFFFFF',
   },
   radius: { xs: 8, sm: 12, md: 16, button: 22, card: 22, xl: 28, '2xl': 34, pill: 999 },

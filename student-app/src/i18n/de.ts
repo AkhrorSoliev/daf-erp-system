@@ -176,6 +176,12 @@ export const de: Dict = {
     aboutBody:
       'DAF Sprachzentrum — ein Zentrum, das Deutsch mit modernen Methoden vermittelt. Mit dieser App verfolgen Sie Ihren Stundenplan, Ihre Anwesenheit und Ihre Zahlungen an einem Ort.',
     contact: 'Kontakt',
+    contactA11y: {
+      phone: (v: string) => `Anrufen: ${v}`,
+      website: (v: string) => `Website öffnen: ${v}`,
+      telegram: (v: string) => `Auf Telegram schreiben: ${v}`,
+    },
+    openFailed: 'Konnte auf diesem Gerät nicht geöffnet werden',
     version: (v: string) => `App-Version ${v}`,
   },
   faq: {
