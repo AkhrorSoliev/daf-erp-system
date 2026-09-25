@@ -1,5 +1,7 @@
+import { existsSync, readdirSync, readFileSync } from 'fs';
+import { join } from 'path';
 import {
-  dialogInputs,
+  geminiDialog,
   gesamtZeichenDialoge,
   pruefeDialogBudget,
   zuGenerierenDialoge,
@@ -7,13 +9,20 @@ import {
   generiereDialogeNacheinander,
   erstelleGeneriere,
   BELGI_CHEGARASI_DIALOG,
+  DIALOG_STIL_ZUSATZ,
+  ABLEHNUNG_VERSUCHE,
+  type DialogRegie,
 } from './daf-gen-dialog-audio';
-import { dialogTextHash } from '../src/daf/inhalt/dialog-audio';
+import {
+  DIALOG_AUDIO_MODELL,
+  dialogTextHash,
+} from '../src/daf/inhalt/dialog-audio';
 import { POLSTER_KENNUNG } from '../src/daf/media/audio-polster';
-import type { Dialog } from '../src/daf/inhalt/unit-inhalt.types';
+import { FalAblehnungError } from '../src/daf/media/fal-client';
+import type { Dialog, DialogeFile } from '../src/daf/inhalt/unit-inhalt.types';
 import type { DialogAudioManifest } from '../src/daf/inhalt/dialog-audio';
 
-const stimmen = { Anna: 'Aria', Jonas: 'Liam' };
+const stimmen = { Anna: 'Erinome', Jonas: 'Iapetus', Julia: 'Callirrhoe' };
 
 const d = (id: string): Dialog => ({
   id,
@@ -26,46 +35,138 @@ const d = (id: string): Dialog => ({
   ],
 });
 
-describe('dialogInputs', () => {
-  it('har satrga obrazning ovozini biriktiradi, matn tts ?? de', () => {
-    expect(dialogInputs(d('u02-d2'), stimmen)).toEqual([
-      { voice: 'Aria', text: 'Ist das deine Schwester?' },
-      { voice: 'Liam', text: 'Nain.' },
-    ]);
+const regieFuer = (...ids: string[]): DialogRegie =>
+  Object.fromEntries(
+    ids.map((id) => [
+      id,
+      { szene: 'Zwei Freunde im Park.', toene: ['curious', null] },
+    ]),
+  );
+
+describe('geminiDialog', () => {
+  it('builds one request: speaker prefixes, tags, tts ?? de, each speaker once, scene plus the fixed pace note', () => {
+    expect(geminiDialog(d('u02-d2'), stimmen, regieFuer('u02-d2'))).toEqual({
+      prompt: 'Anna: [curious] Ist das deine Schwester?\nJonas: Nain.',
+      speakers: [
+        { speakerId: 'Anna', voice: 'Erinome' },
+        { speakerId: 'Jonas', voice: 'Iapetus' },
+      ],
+      styleInstructions: `Zwei Freunde im Park. ${DIALOG_STIL_ZUSATZ}`,
+    });
   });
 
-  it('ro`yxatda yo`q gapiruvchida TO`XTAYDI — jimgina standart ovoz yo`q', () => {
-    expect(() => dialogInputs(d('u02-d2'), { Anna: 'Aria' })).toThrow(
-      /Jonas.*stimmen\.json/,
+  it('stops on a speaker with no voice — there is no default voice', () => {
+    expect(() =>
+      geminiDialog(d('u02-d2'), { Anna: 'Erinome' }, regieFuer('u02-d2')),
+    ).toThrow(/Jonas.*stimmen\.json/);
+  });
+
+  it('stops when two speakers of one dialog share a voice — the listener could not tell them apart', () => {
+    expect(() =>
+      geminiDialog(
+        d('u02-d2'),
+        { Anna: 'Erinome', Jonas: 'Erinome' },
+        regieFuer('u02-d2'),
+      ),
+    ).toThrow(/Anna.*Jonas.*Erinome/);
+  });
+
+  it('stops when the dialog has no scene direction', () => {
+    expect(() => geminiDialog(d('u02-d2'), stimmen, {})).toThrow(
+      /u02-d2.*dialog-regie\.json/,
     );
+  });
+
+  it('stops when the tones do not match the lines one to one', () => {
+    const regie = { 'u02-d2': { szene: 'x', toene: ['curious'] } };
+    expect(() => geminiDialog(d('u02-d2'), stimmen, regie)).toThrow(
+      /u02-d2.*2 satr.*1 ta/,
+    );
+  });
+
+  // A tag is a delivery direction in English; a German word or a bracket
+  // inside it could be read out loud.
+  it('stops on a tone that is not plain lowercase English words', () => {
+    for (const ton of ['fröhlich', 'Curious', 'curious]', 'a  b', '']) {
+      const regie = { 'u02-d2': { szene: 'x', toene: [ton, null] } };
+      expect(() => geminiDialog(d('u02-d2'), stimmen, regie)).toThrow(/ton/);
+    }
+  });
+
+  it('stops on a one-speaker dialog — the dialogue mode needs two voices', () => {
+    const allein: Dialog = { ...d('u02-d9'), zeilen: [d('x').zeilen[0]] };
+    const regie = { 'u02-d9': { szene: 'x', toene: [null] } };
+    expect(() => geminiDialog(allein, stimmen, regie)).toThrow(
+      /2 ta gapiruvchi/,
+    );
+  });
+
+  it('stops on a speaker name the model cannot use as a prefix', () => {
+    const dialog: Dialog = {
+      ...d('u02-d2'),
+      zeilen: [
+        { sprecher: 'Frau Weber', de: 'Hallo!', uz: 'x' },
+        { sprecher: 'Jonas', de: 'Hallo!', uz: 'x' },
+      ],
+    };
+    expect(() =>
+      geminiDialog(
+        dialog,
+        { 'Frau Weber': 'Erinome', Jonas: 'Iapetus' },
+        regieFuer('u02-d2'),
+      ),
+    ).toThrow(/Frau Weber/);
   });
 });
 
 describe('zuGenerierenDialoge', () => {
-  it('manifestda xeshi mos dialogni o`tkazib yuboradi — idempotent', () => {
+  it('skips a dialog whose text and model already match — rerunning costs nothing', () => {
     const a = d('u02-d1');
     const manifest = {
-      'u02-d1': { key: 'daf/audio/a.mp3', textHash: dialogTextHash(a.zeilen) },
+      'u02-d1': {
+        key: 'daf/audio/a.mp3',
+        textHash: dialogTextHash(a.zeilen),
+        modell: DIALOG_AUDIO_MODELL,
+      },
     };
     expect(
       zuGenerierenDialoge([a, d('u02-d2')], manifest).map((x) => x.id),
     ).toEqual(['u02-d2']);
   });
 
-  it('xeshi eskirgan dialogni QAYTA yasaydi', () => {
+  it('remakes a dialog whose text changed', () => {
     const a = d('u02-d1');
-    const manifest = { 'u02-d1': { key: 'daf/audio/a.mp3', textHash: '0000' } };
+    const manifest = {
+      'u02-d1': {
+        key: 'daf/audio/a.mp3',
+        textHash: '0000',
+        modell: DIALOG_AUDIO_MODELL,
+      },
+    };
     expect(zuGenerierenDialoge([a], manifest).map((x) => x.id)).toEqual([
       'u02-d1',
     ]);
   });
 
+  // CEO 2026-09-25: no mixed models. An entry from before the switch has no
+  // `modell` (ElevenLabs), so it is remade even though its text is current.
+  it('remakes a dialog voiced by another model', () => {
+    const a = d('u02-d1');
+    const eski = { key: 'daf/audio/a.mp3', textHash: dialogTextHash(a.zeilen) };
+    expect(
+      zuGenerierenDialoge([a], { 'u02-d1': eski }).map((x) => x.id),
+    ).toEqual(['u02-d1']);
+    expect(
+      zuGenerierenDialoge([a], {
+        'u02-d1': { ...eski, modell: 'boshqa/model' },
+      }).map((x) => x.id),
+    ).toEqual(['u02-d1']);
+  });
+
   // F1 ikkinchi qatlami (2026-09-12 ko'rik): argument tahlili qatlamidan
   // qat'i nazar, RO'YXATNING O'ZIDA bir xil `id` ikki marta kelib qolsa
-  // ham (masalan boshqa bir tanlov yo'li orqali) generatsiyaga faqat
-  // BITTASI yuborilishi kerak — aks holda bitta dialog ikki marta PULLIK
-  // yasalardi va manifestda faqat oxirgi kalit qolib, birinchisi R2'da
-  // yetim bo'lib qolardi.
+  // ham generatsiyaga faqat BITTASI yuborilishi kerak — aks holda bitta
+  // dialog ikki marta PULLIK yasalardi.
   it('ro`yxatda bir xil `id` ikki marta kelsa — faqat BITTASI qoladi', () => {
     const ikkitaBirXil = [d('u02-d2'), d('u02-d2')];
     expect(zuGenerierenDialoge(ikkitaBirXil, {}).map((x) => x.id)).toEqual([
@@ -98,20 +199,15 @@ describe('parseAuswahl', () => {
 });
 
 describe('generiereDialogeNacheinander', () => {
-  // F2 (2026-09-12 ko'rik): ilgari BUTUN partiya tugagandan keyin bitta
-  // manifest yozuvi bo'lgan — o'rtadagi bitta dialog yiqilsa, undan
-  // OLDINGI muvaffaqiyatli (PULLIK) yasalgan dialoglarning kaliti
-  // hech qayerga yozilmay yo'qolardi, va keyingi yuritish ularni QAYTA
-  // to'lardi. Bu test buni dalillaydi: ikkinchi dialog yiqilganda ham
-  // birinchisining kaliti manifestda TURADI.
+  const anfragen = (...ds: Dialog[]) =>
+    new Map(ds.map((x) => [x.id, geminiDialog(x, stimmen, regieFuer(x.id))]));
+
+  // F2 (2026-09-12 ko'rik): o'rtadagi bitta dialog yiqilsa, undan OLDINGI
+  // PULLIK yasalgan dialoglarning kaliti manifestda QOLISHI shart.
   it('bitta dialog yiqilsa — undan OLDINGI dialogning kaliti manifestda QOLADI', async () => {
     const a = d('u02-d1');
     const b = d('u02-d2');
     const manifest: DialogAudioManifest = {};
-    const inputsById = new Map([
-      [a.id, dialogInputs(a, stimmen)],
-      [b.id, dialogInputs(b, stimmen)],
-    ]);
     const generiere = jest
       .fn()
       .mockResolvedValueOnce({ key: 'daf/audio/birinchi.mp3' })
@@ -121,7 +217,7 @@ describe('generiereDialogeNacheinander', () => {
     await expect(
       generiereDialogeNacheinander(
         [a, b],
-        inputsById,
+        anfragen(a, b),
         manifest,
         generiere,
         speichereManifest,
@@ -131,105 +227,80 @@ describe('generiereDialogeNacheinander', () => {
     expect(manifest[a.id]).toEqual({
       key: 'daf/audio/birinchi.mp3',
       textHash: dialogTextHash(a.zeilen),
+      modell: DIALOG_AUDIO_MODELL,
     });
     expect(manifest[b.id]).toBeUndefined();
-    // Diskka faqat MUVAFFAQIYATLI yozuvdan keyin saqlangan — bitta marta.
     expect(speichereManifest).toHaveBeenCalledTimes(1);
     expect(speichereManifest).toHaveBeenCalledWith(manifest);
   });
 
-  it('hammasi muvaffaqiyatli bo`lsa — har biridan keyin saqlaydi', async () => {
+  it('hands each dialog its own request and saves after every one', async () => {
     const a = d('u02-d1');
     const b = d('u02-d2');
     const manifest: DialogAudioManifest = {};
-    const inputsById = new Map([
-      [a.id, dialogInputs(a, stimmen)],
-      [b.id, dialogInputs(b, stimmen)],
-    ]);
-    const generiere = jest
-      .fn()
-      .mockResolvedValueOnce({ key: 'daf/audio/a.mp3' })
-      .mockResolvedValueOnce({ key: 'daf/audio/b.mp3' });
-    const speichereManifest = jest.fn();
-
-    await generiereDialogeNacheinander(
-      [a, b],
-      inputsById,
-      manifest,
-      generiere,
-      speichereManifest,
-    );
-
-    expect(manifest[a.id]?.key).toBe('daf/audio/a.mp3');
-    expect(manifest[b.id]?.key).toBe('daf/audio/b.mp3');
-    expect(speichereManifest).toHaveBeenCalledTimes(2);
-  });
-
-  // Task 11e: `generiere` `polster` maydonini qaytarsa, manifestga
-  // yoziladi. Bu ESKI testlarni buzmasligi kerak — ular `polster`siz
-  // `{key}` qaytaradi, va yuqoridagi ikkala testda ham manifest yozuvi
-  // shu maydonsiz TEKSHIRILADI (`toEqual({key, textHash})`, qo`shimcha
-  // maydonsiz). Demak `polster` chindan ixtiyoriy ekani ikki tomondan
-  // dalillanadi.
-  it('`generiere` `polster` bilan qaytarsa, manifestga shu ham yoziladi', async () => {
-    const a = d('u02-d1');
-    const manifest: DialogAudioManifest = {};
-    const inputsById = new Map([[a.id, dialogInputs(a, stimmen)]]);
+    const byId = anfragen(a, b);
     const generiere = jest
       .fn()
       .mockResolvedValueOnce({
         key: 'daf/audio/a.mp3',
         polster: POLSTER_KENNUNG,
+      })
+      .mockResolvedValueOnce({
+        key: 'daf/audio/b.mp3',
+        polster: POLSTER_KENNUNG,
       });
     const speichereManifest = jest.fn();
 
     await generiereDialogeNacheinander(
-      [a],
-      inputsById,
+      [a, b],
+      byId,
       manifest,
       generiere,
       speichereManifest,
     );
 
-    expect(manifest[a.id]).toEqual({
-      key: 'daf/audio/a.mp3',
-      textHash: dialogTextHash(a.zeilen),
+    expect(generiere).toHaveBeenNthCalledWith(1, a, byId.get(a.id));
+    expect(generiere).toHaveBeenNthCalledWith(2, b, byId.get(b.id));
+    expect(manifest[b.id]).toEqual({
+      key: 'daf/audio/b.mp3',
+      textHash: dialogTextHash(b.zeilen),
       polster: POLSTER_KENNUNG,
+      modell: DIALOG_AUDIO_MODELL,
     });
+    expect(speichereManifest).toHaveBeenCalledTimes(2);
   });
 });
 
-// Task 11e: bitta dialog uchun to'liq quvur — fal → yuklab oladi →
-// jimlik qo'shadi → YANGI kalit bilan yuklaydi. Bog'liqliklar
-// (fal/uploader/fetch/polster) INJEKTSIYA qilinadi, shuning uchun bu
-// yerda HECH QANDAY tarmoqqa chiqilmaydi — hammasi soxta.
+// Bitta dialog uchun to'liq quvur — fal → yuklab oladi → jimlik qo'shadi →
+// YANGI kalit bilan yuklaydi. Hammasi soxta, tarmoqqa chiqilmaydi.
 describe('erstelleGeneriere', () => {
-  it('fal → yuklab oladi → jimlik qo`shadi → YANGI kalit bilan yuklaydi, natijada polster bor', async () => {
-    const fal = { dialog: jest.fn().mockResolvedValue('https://fal.ai/x.mp3') };
-    const fetchFn = jest.fn().mockResolvedValue({
+  const okFetch = () =>
+    jest.fn().mockResolvedValue({
       ok: true,
       status: 200,
       arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
     });
+  const anfrage = geminiDialog(d('u02-d2'), stimmen, regieFuer('u02-d2'));
+
+  it('fal → yuklab oladi → jimlik qo`shadi → YANGI kalit bilan yuklaydi, natijada polster bor', async () => {
+    const fal = {
+      dialogGemini: jest.fn().mockResolvedValue('https://fal.ai/x.mp3'),
+    };
+    const fetchFn = okFetch();
     const polster = jest.fn().mockResolvedValue(Buffer.from([9, 9]));
     const uploadBytes = jest.fn().mockResolvedValue(undefined);
-    const uploader = { uploadBytes };
 
     const generiere = erstelleGeneriere(
       fal as never,
-      uploader as never,
+      { uploadBytes } as never,
       fetchFn as never,
       polster,
     );
-    const dialog = d('u02-d2');
-    const inputs = dialogInputs(dialog, stimmen);
-    const result = await generiere(dialog, inputs);
+    const result = await generiere(d('u02-d2'), anfrage);
 
-    expect(fal.dialog).toHaveBeenCalledWith(inputs);
+    expect(fal.dialogGemini).toHaveBeenCalledWith(anfrage);
     expect(fetchFn).toHaveBeenCalledWith('https://fal.ai/x.mp3');
-    // Jimlik qadami RAW (asl, ishlanmagan) baytlar bilan chaqirildi.
     expect(polster).toHaveBeenCalledWith(Buffer.from([1, 2, 3]));
-    // Natija (jimlik qo'shilgan baytlar) YUKLANDI.
     expect(uploadBytes).toHaveBeenCalledTimes(1);
     const [yangiKalit, yuklanganBaytlar] = uploadBytes.mock.calls[0];
     expect(yuklanganBaytlar).toEqual(Buffer.from([9, 9]));
@@ -237,8 +308,61 @@ describe('erstelleGeneriere', () => {
     expect(result).toEqual({ key: yangiKalit, polster: POLSTER_KENNUNG });
   });
 
+  // Gemini's content checker refuses plain German at random (2026-09-25:
+  // "dann" twice, then accepted). A refusal costs nothing, so the same
+  // request is simply sent again, a few times, and nothing else is retried.
+  it('asks again after a content-checker refusal', async () => {
+    const fal = {
+      dialogGemini: jest
+        .fn()
+        .mockRejectedValueOnce(new FalAblehnungError('rad'))
+        .mockRejectedValueOnce(new FalAblehnungError('rad'))
+        .mockResolvedValueOnce('https://fal.ai/x.mp3'),
+    };
+    const generiere = erstelleGeneriere(
+      fal as never,
+      { uploadBytes: jest.fn() } as never,
+      okFetch() as never,
+      jest.fn().mockResolvedValue(Buffer.from([9])),
+    );
+    await generiere(d('u02-d2'), anfrage);
+    expect(fal.dialogGemini).toHaveBeenCalledTimes(3);
+  });
+
+  it(`gives up after ${ABLEHNUNG_VERSUCHE} refusals, and never retries any other error`, async () => {
+    const rad = {
+      dialogGemini: jest.fn().mockRejectedValue(new FalAblehnungError('rad')),
+    };
+    await expect(
+      erstelleGeneriere(
+        rad as never,
+        { uploadBytes: jest.fn() } as never,
+        okFetch() as never,
+        jest.fn(),
+      )(d('u02-d2'), anfrage),
+    ).rejects.toBeInstanceOf(FalAblehnungError);
+    expect(rad.dialogGemini).toHaveBeenCalledTimes(ABLEHNUNG_VERSUCHE);
+
+    const xato = {
+      dialogGemini: jest
+        .fn()
+        .mockRejectedValue(new Error('fal.ai javob bermadi (500)')),
+    };
+    await expect(
+      erstelleGeneriere(
+        xato as never,
+        { uploadBytes: jest.fn() } as never,
+        okFetch() as never,
+        jest.fn(),
+      )(d('u02-d2'), anfrage),
+    ).rejects.toThrow(/500/);
+    expect(xato.dialogGemini).toHaveBeenCalledTimes(1);
+  });
+
   it('fal audiosi yuklab olinmasa (HTTP xato), TO`XTAYDI — jimlik va yuklash chaqirilmaydi', async () => {
-    const fal = { dialog: jest.fn().mockResolvedValue('https://fal.ai/x.mp3') };
+    const fal = {
+      dialogGemini: jest.fn().mockResolvedValue('https://fal.ai/x.mp3'),
+    };
     const fetchFn = jest.fn().mockResolvedValue({ ok: false, status: 500 });
     const polster = jest.fn();
     const uploadBytes = jest.fn();
@@ -250,16 +374,17 @@ describe('erstelleGeneriere', () => {
       polster,
     );
 
-    await expect(generiere(d('u02-d2'), [])).rejects.toThrow(/HTTP 500/);
+    await expect(generiere(d('u02-d2'), anfrage)).rejects.toThrow(/HTTP 500/);
     expect(polster).not.toHaveBeenCalled();
     expect(uploadBytes).not.toHaveBeenCalled();
   });
 });
 
 describe('budjet', () => {
-  it('belgi sonini tts ?? de bo`yicha sanaydi', () => {
-    expect(gesamtZeichenDialoge([d('x')])).toBe(
-      'Ist das deine Schwester?'.length + 'Nain.'.length,
+  it('counts every billed character: the prompt and the style instructions', () => {
+    const anfrage = geminiDialog(d('x'), stimmen, regieFuer('x'));
+    expect(gesamtZeichenDialoge([anfrage, anfrage])).toBe(
+      2 * (anfrage.prompt.length + anfrage.styleInstructions.length),
     );
   });
 
@@ -268,5 +393,28 @@ describe('budjet', () => {
       /TO'XTATILDI/,
     );
     expect(() => pruefeDialogBudget(BELGI_CHEGARASI_DIALOG)).not.toThrow();
+  });
+});
+
+// The real course files: every dialog must have voices and a scene
+// direction before a paid run starts, not fail halfway through it.
+describe('course content fits the Gemini request', () => {
+  const A1 = join(__dirname, '..', 'content', 'daf', 'a1');
+  const read = <T>(...p: string[]) =>
+    JSON.parse(readFileSync(join(A1, ...p), 'utf8')) as T;
+
+  it('builds a request for every dialog of every unit', () => {
+    const units = readdirSync(A1).filter(
+      (u) => /^u\d\d$/.test(u) && existsSync(join(A1, u, 'dialoge.json')),
+    );
+    const dialoge = units.flatMap(
+      (u) => read<DialogeFile>(u, 'dialoge.json').dialoge,
+    );
+    expect(dialoge.length).toBeGreaterThan(0);
+    const stimmenDatei = read<Record<string, string>>('stimmen.json');
+    const regie = read<DialogRegie>('dialog-regie.json');
+    for (const dialog of dialoge) {
+      expect(() => geminiDialog(dialog, stimmenDatei, regie)).not.toThrow();
+    }
   });
 });
