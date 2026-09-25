@@ -153,6 +153,7 @@ Creating an employee IS granting access, so a caller may hand out only the roles
 - **Only accounts inside your ceiling can be reshaped.** When a write changes the role set, every role on both sides of the change (held now, held after) must be inside the caller's ceiling. An Administrator may add or remove Teacher and Cashier on a teacher, but may not change the role set of a Branch Director who shares their branch, of another Administrator, or of themselves, not even to add Teacher. Those changes belong to someone above them.
 - **An unchanged role set is not a grant.** The employee form sends `roleIds` on every save; the sets are compared (order ignored), so editing a name or a phone number is never refused by this rule.
 - **Self-registration through the bot is not re-checked.** The link it came from met this ceiling when it was signed (ADR-0008).
+- **The UI hides what this rule refuses.** `client/src/lib/role-grant-ceiling.ts` holds the client copy of the map (a client test compares it with the server's). The employee form and the Telegram link dialog offer only the roles the caller may grant. When the employee already holds a role outside the caller's ceiling (a non-CEO's own record included), the form shows their roles read-only and saves the set unchanged.
 
 #### Rank rule: who may change whose account
 
@@ -171,10 +172,6 @@ A shared branch lets a caller READ an employee's record. WRITING to it also take
 - **Your own account** skips the branch and rank checks, but nobody below CEO changes their own status or archives themselves. The form resends `status` on every save, so only a different value counts as a change. Your own roles fall under the ceiling above.
 - **A caller holding no managing role manages nobody**, role-less staff included.
 - **Administrators do not manage employees.** `POST /users` and `PATCH /users/:id` admit CEO and Branch Director only, matching the table above. Administrators onboard Teachers and Cashiers through the Telegram link and edit their own profile through `PATCH /users/profile` and `PATCH /users/password`.
-
-**Known gaps, not closed by the ceiling or the rank rule:**
-
-- The employee form offers every role to every caller. The Telegram link dialog already hides the roles a caller cannot grant; the form does not yet.
 
 #### Telegram registration links expire after three days
 

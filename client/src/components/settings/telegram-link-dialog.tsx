@@ -28,6 +28,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
 import { tryCopyPendingText } from "@/lib/clipboard";
+import { grantableRoleIdsFor } from "@/lib/role-grant-ceiling";
 import { buildBotLink, TELEGRAM_BOT_NOT_CONFIGURED } from "@/lib/telegram-link";
 
 function extractError(err: unknown, fallback: string): string {
@@ -37,15 +38,6 @@ function extractError(err: unknown, fallback: string): string {
   if (typeof msg === "string") return msg;
   return fallback;
 }
-
-// Which roles the current user may hand out. A signed link IS an account, so
-// nobody may generate one for a role above their own — the backend enforces
-// the same ceiling; this only keeps the UI honest.
-const GRANTABLE_BY_ROLE: Record<string, number[]> = {
-  CEO: [1, 2, 3, 4, 5],
-  "Branch Director": [3, 4, 5],
-  Administrator: [4, 5],
-};
 
 const ROLES = [
   { id: 1, label: "CEO", icon: Crown },
@@ -63,13 +55,13 @@ interface TelegramLinkDialogProps {
 export function TelegramLinkDialog({ open, onOpenChange }: TelegramLinkDialogProps) {
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const currentUser = useAuth((s) => s.user);
-  const grantableRoleIds = useMemo(() => {
-    const names = currentUser?.roles?.map((r) => r.name) ?? [];
-    for (const key of ["CEO", "Branch Director", "Administrator"]) {
-      if (names.includes(key)) return GRANTABLE_BY_ROLE[key];
-    }
-    return [];
-  }, [currentUser]);
+  // A signed link IS an account, so nobody may generate one for a role above
+  // their own. The backend enforces the same ceiling; this only keeps the UI
+  // honest.
+  const grantableRoleIds = useMemo(
+    () => grantableRoleIdsFor(currentUser?.roles?.map((r) => r.name) ?? []),
+    [currentUser],
+  );
   const visibleRoles = useMemo(
     () => ROLES.filter((r) => grantableRoleIds.includes(r.id)),
     [grantableRoleIds],

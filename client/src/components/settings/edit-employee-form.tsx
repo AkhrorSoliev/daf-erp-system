@@ -26,14 +26,21 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { roleFieldFor } from "@/lib/role-grant-ceiling";
+import { useAuth } from "@/hooks/use-auth";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 import { roleLabel } from "@/components/payments/salary-utils";
 import { EmployeeCredentialsSection } from "./employee-credentials-section";
+import {
+  EmployeeRolePicker,
+  EmployeeRolesReadOnly,
+  type RoleOption,
+} from "./employee-roles-field";
 
 const CEO_ROLE_ID = 1;
 const TEACHER_ROLE_ID = 4;
 
-const ROLES = [
+const ROLES: RoleOption[] = [
   { id: CEO_ROLE_ID, label: "CEO", icon: Crown },
   { id: 2, label: "Direktor", icon: Building2 },
   { id: 3, label: "Administrator", icon: Shield },
@@ -128,9 +135,22 @@ interface BranchOption {
 
 export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmployeeFormProps) {
   const isEdit = !!employee;
+  const currentUser = useAuth((s) => s.user);
   const { submitting, setSubmitting } = useEditEmployee();
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
+
+  // The role ceiling (ADR-0026): the field offers only the roles this caller
+  // may grant, or lists the employee's roles read-only when any of them is
+  // outside that ceiling (a non-CEO's own record included). See roleFieldFor.
+  const roleField = roleFieldFor(
+    currentUser?.roles.map((r) => r.name) ?? [],
+    employee?.roles.map((r) => r.id) ?? [],
+  );
+  const roleOptions =
+    roleField.mode === "hidden"
+      ? []
+      : ROLES.filter((r) => roleField.roleIds.includes(r.id));
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -201,11 +221,15 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
   const onSubmit = async (values: FormValues) => {
     setSubmitting(true);
     try {
+      // Read-only roles go back exactly as they were loaded: the backend
+      // accepts an unchanged set and refuses any change to it.
+      const roleIds =
+        roleField.mode === "read-only" ? roleField.roleIds : values.roleIds;
       const payload: Record<string, any> = {
         firstName: values.firstName,
         lastName: values.lastName,
         position: values.position,
-        roleIds: values.roleIds,
+        roleIds,
         branchIds: values.branchIds,
       };
       if (values.phone) payload.phone = values.phone;
@@ -213,7 +237,7 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       // rejects both, and it already nulls them itself when the saved role
       // set is empty. Only forward what the (now-hidden) fields hold when a
       // role is actually present.
-      if (values.roleIds.length > 0) {
+      if (roleIds.length > 0) {
         if (values.login) payload.login = values.login;
         if (values.password) payload.password = values.password;
       }
@@ -349,42 +373,17 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
           )}
         </div>
 
-        {/* Roles */}
-        <div className="space-y-2.5">
-          <Label>Tizim huquqi</Label>
-          <p className="text-xs text-muted-foreground">
-            Rol berilmasa, xodim tizimga kira olmaydi — faqat ro'yxatda turadi
-            va oylik oladi.
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {ROLES.map((role) => {
-              const checked = watchRoleIds.includes(role.id);
-              const Icon = role.icon;
-              return (
-                <button
-                  key={role.id}
-                  type="button"
-                  onClick={() => toggleRole(role.id)}
-                  className={`flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left text-sm transition-all ${
-                    checked
-                      ? "border-primary bg-primary/5 text-foreground ring-1 ring-primary/30"
-                      : "border-border text-muted-foreground hover:border-muted-foreground/30 hover:bg-muted/30"
-                  }`}
-                >
-                  <div className={`flex size-7 items-center justify-center rounded-md ${
-                    checked ? "bg-primary text-primary-foreground" : "bg-muted"
-                  }`}>
-                    {checked ? <Check className="size-3.5" /> : <Icon className="size-3.5" />}
-                  </div>
-                  <span className={checked ? "font-medium" : ""}>{role.label}</span>
-                </button>
-              );
-            })}
-          </div>
-          {form.formState.errors.roleIds && (
-            <p className="text-xs text-destructive">{form.formState.errors.roleIds.message}</p>
-          )}
-        </div>
+        {/* Roles — toggles, a read-only list, or nothing (roleFieldFor) */}
+        {roleField.mode === "read-only" ? (
+          <EmployeeRolesReadOnly roles={roleOptions} />
+        ) : roleField.mode === "pick" ? (
+          <EmployeeRolePicker
+            roles={roleOptions}
+            selectedRoleIds={watchRoleIds}
+            onToggle={toggleRole}
+            error={form.formState.errors.roleIds?.message}
+          />
+        ) : null}
 
         {/* Branches */}
         <div className="space-y-2.5">
