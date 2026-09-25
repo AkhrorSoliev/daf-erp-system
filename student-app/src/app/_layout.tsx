@@ -24,7 +24,7 @@ import { useAuth } from '@/auth/auth-store';
 import { useLanguageStore } from '@/i18n';
 import { useThemeStore } from '@/design/theme';
 import { ThemeTransitionProvider } from '@/design/theme-transition';
-import { useColors, themeColors } from '@/design/colors';
+import { useColors } from '@/design/colors';
 import { tokens } from '@/design/tokens';
 
 // Lazily required so a dev build WITHOUT the native module doesn't hard-crash
