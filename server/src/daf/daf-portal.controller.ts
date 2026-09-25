@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser, Roles } from '../common/decorators';
-import { RolesGuard } from '../common/guards';
+import { RolesGuard, StudentCardGuard } from '../common/guards';
 import { DafPortalReadService } from './daf-portal-read.service';
 import { DafAttemptService } from './daf-attempt.service';
 import { CheckDrillDto, CreateAttemptDto } from './dto/create-attempt.dto';
@@ -31,9 +31,13 @@ import { ReytingQueryDto } from './dto/reyting-query.dto';
  * Guard shart, garchi kontent maxfiy bo'lmasa ham: global `JwtAuthGuard`
  * faqat kirganini isbotlaydi, va boshqa portal tokeni ham haqiqiy token.
  * Urinish yozish esa o'quvchining natijasiga tegadi.
+ *
+ * `StudentCardGuard` refuses a token with no `studentId` (404) before any
+ * handler runs, so every `@CurrentUser('studentId')` below is a real id —
+ * Prisma would otherwise read `{ studentId: undefined }` as "no filter".
  */
 @Controller('student-portal/lernen')
-@UseGuards(RolesGuard)
+@UseGuards(RolesGuard, StudentCardGuard)
 @Roles('Student')
 export class DafPortalController {
   constructor(

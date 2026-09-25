@@ -759,6 +759,14 @@ Business rules from `docs/branch-decisions.md`. They exist because a second bran
 - They now carry `@Roles(...STAFF_ROLES)` (`common/decorators/staff-roles.ts`) — every role **except Student**. A narrow whitelist would be wrong: the dashboard is visible to teachers, the payment dialog to cashiers, group screens to all staff. Students read their own data through `student-portal.controller.ts`.
 - The controller specs assert the guard **exists** and excludes `Student`. Four of them previously asserted the opposite ("should NOT have @Roles metadata"), which encoded the hole — do not reintroduce that shape.
 
+#### Student-portal routes refuse a token without `studentId`
+
+`@Roles('Student')` proves the role, not that a student card stands behind the account, so a Student-role token is not guaranteed to carry `studentId`. Prisma reads `{ studentId: undefined }` as "no filter": a per-student query then runs over every student.
+
+- Any handler that reads `@CurrentUser('studentId')` must refuse a missing id with `404 'Talaba topilmadi'` **before** any query.
+- New student-portal controllers: put `StudentCardGuard` (`common/guards/student-card.guard.ts`) at class level, **after** `RolesGuard` — `@UseGuards(RolesGuard, StudentCardGuard)` — so staff still get 403 and routes added later are covered without anyone remembering. `DafPortalController` does this; `daf-portal.student-card.e2e.spec.ts` sends every route a token without `studentId` and asserts 404 with zero Prisma calls.
+- `StudentPortalController` and `StudentActivityController` still use per-handler `if (!studentId)` checks. `PATCH /student-portal/password` has none on purpose: the password write is keyed on `userId`, and a missing `studentId` only skips the Student history row.
+
 #### One resolved branch scope per report request
 
 Money reports carried **two** branch parameters — `branchId` (the header switcher's pick) and `branchIds` (the caller's own scope) — and every query decided for itself which to honour. `branchWhere()` made it worse by letting `branchIds` OVERRIDE `branchId`, silently discarding the branch the user actually selected. The result: a Branch Director's workbook printed "Namangan filali" on the cover, Fargona's 162 127 987 so'm on the summary sheet and 0 on the P&L; on the web page the empty Namangan branch reported 27 748 684 so'm of debt across 177 debtors, because `receivables`, `debtors` and `activeStudents` ignored the branch entirely.
