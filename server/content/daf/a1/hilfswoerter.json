@@ -345,6 +345,126 @@
       "wort": "r",
       "grund": "harf — familiyani harflash uchun; lug'at so'zi emas (u01-s5 faqat 9 ta qiyin harfni o'rgatadi)",
       "abSection": "u01-s5"
+    },
+    {
+      "wort": "gibt",
+      "grund": "'es gibt' qolipi — 'Gibt es hier ein Kino?' (u03-s1)",
+      "abSection": "u03-s1"
+    },
+    {
+      "wort": "dem",
+      "grund": "der/das ning qaratqich (Dativ) shakli — in/an/neben/mit dan keyin (u03-s2 qoidasi)",
+      "abSection": "u03-s2"
+    },
+    {
+      "wort": "im",
+      "grund": "in + dem qisqarishi (u03-s2 qoidasi)",
+      "abSection": "u03-s2"
+    },
+    {
+      "wort": "am",
+      "grund": "an + dem qisqarishi (u03-s2 qoidasi)",
+      "abSection": "u03-s2"
+    },
+    {
+      "wort": "zum",
+      "grund": "zu + dem qisqarishi (u03-s3 qoidasi)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "zur",
+      "grund": "zu + der qisqarishi (u03-s3 qoidasi)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "gehe",
+      "grund": "gehen fe'lining ich shakli (u03-s3)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "gehst",
+      "grund": "gehen fe'lining du shakli (u03-s3)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "nehme",
+      "grund": "nehmen fe'lining ich shakli (u03-s3)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "nimmst",
+      "grund": "nehmen fe'lining du shakli (u03-s3)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "nimmt",
+      "grund": "nehmen fe'lining er/sie shakli (u03-s3)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "suche",
+      "grund": "suchen fe'lining ich shakli (u03-s3)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "suchst",
+      "grund": "suchen fe'lining du shakli (u03-s3)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "sucht",
+      "grund": "suchen fe'lining er/sie shakli (u03-s3)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "finde",
+      "grund": "finden fe'lining ich shakli (u03-s3)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "findest",
+      "grund": "finden fe'lining du shakli (u03-s3)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "findet",
+      "grund": "finden fe'lining er/sie shakli (u03-s3)",
+      "abSection": "u03-s3"
+    },
+    {
+      "wort": "fahre",
+      "grund": "fahren fe'lining ich shakli (u03-s4)",
+      "abSection": "u03-s4"
+    },
+    {
+      "wort": "fährst",
+      "grund": "fahren fe'lining du shakli (u03-s4)",
+      "abSection": "u03-s4"
+    },
+    {
+      "wort": "fährt",
+      "grund": "fahren fe'lining er/sie shakli (u03-s4)",
+      "abSection": "u03-s4"
+    },
+    {
+      "wort": "dauert",
+      "grund": "dauern fe'lining er/sie/es shakli (u03-s5)",
+      "abSection": "u03-s5"
+    },
+    {
+      "wort": "warte",
+      "grund": "warten fe'lining ich shakli (u03-s5)",
+      "abSection": "u03-s5"
+    },
+    {
+      "wort": "wartest",
+      "grund": "warten fe'lining du shakli (u03-s5)",
+      "abSection": "u03-s5"
+    },
+    {
+      "wort": "wartet",
+      "grund": "warten fe'lining er/sie shakli (u03-s5)",
+      "abSection": "u03-s5"
     }
   ]
 }

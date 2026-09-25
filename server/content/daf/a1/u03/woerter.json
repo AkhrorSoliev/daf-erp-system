@@ -1,0 +1,450 @@
+{
+ "unit": "u03",
+ "woerter": [
+  {
+   "sourceId": "u03-s1-bahnhof",
+   "section": "u03-s1",
+   "de": "Bahnhof",
+   "artikel": "der",
+   "plural": "Bahnhöfe",
+   "uz": "vokzal",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u03-s1-platz",
+   "section": "u03-s1",
+   "de": "Platz",
+   "artikel": "der",
+   "plural": "Plätze",
+   "uz": "maydon",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u03-s1-park",
+   "section": "u03-s1",
+   "de": "Park",
+   "artikel": "der",
+   "plural": "Parks",
+   "uz": "park",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u03-s1-post",
+   "section": "u03-s1",
+   "de": "Post",
+   "artikel": "die",
+   "uz": "pochta",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u03-s1-bank",
+   "section": "u03-s1",
+   "de": "Bank",
+   "artikel": "die",
+   "plural": "Banken",
+   "uz": "bank",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u03-s1-polizei",
+   "section": "u03-s1",
+   "de": "Polizei",
+   "artikel": "die",
+   "uz": "politsiya",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u03-s1-toilette",
+   "section": "u03-s1",
+   "de": "Toilette",
+   "artikel": "die",
+   "plural": "Toiletten",
+   "uz": "hojatxona",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u03-s1-hotel",
+   "section": "u03-s1",
+   "de": "Hotel",
+   "artikel": "das",
+   "plural": "Hotels",
+   "uz": "mehmonxona",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u03-s1-kino",
+   "section": "u03-s1",
+   "de": "Kino",
+   "artikel": "das",
+   "plural": "Kinos",
+   "uz": "kinoteatr",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u03-s1-museum",
+   "section": "u03-s1",
+   "de": "Museum",
+   "artikel": "das",
+   "plural": "Museen",
+   "uz": "muzey",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u03-s2-entschuldigung",
+   "section": "u03-s2",
+   "de": "Entschuldigung",
+   "uz": "kechirasiz",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u03-s2-neben",
+   "section": "u03-s2",
+   "de": "neben",
+   "uz": "yonida",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u03-s2-an",
+   "section": "u03-s2",
+   "de": "an",
+   "uz": "-da, oldida (joy predlogi)",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u03-s2-zwischen",
+   "section": "u03-s2",
+   "de": "zwischen",
+   "uz": "orasida",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u03-s2-links",
+   "section": "u03-s2",
+   "de": "links",
+   "uz": "chapda, chapga",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u03-s2-rechts",
+   "section": "u03-s2",
+   "de": "rechts",
+   "uz": "o'ngda, o'ngga",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u03-s2-dort",
+   "section": "u03-s2",
+   "de": "dort",
+   "uz": "u yerda",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u03-s2-weit",
+   "section": "u03-s2",
+   "de": "weit",
+   "uz": "uzoq (masofa)",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u03-s2-strasse",
+   "section": "u03-s2",
+   "de": "Straße",
+   "artikel": "die",
+   "plural": "Straßen",
+   "uz": "ko'cha",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u03-s2-ecke",
+   "section": "u03-s2",
+   "de": "Ecke",
+   "artikel": "die",
+   "plural": "Ecken",
+   "uz": "burchak",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u03-s3-gehen",
+   "section": "u03-s3",
+   "de": "gehen",
+   "uz": "yurmoq (piyoda bormoq)",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u03-s3-geradeaus",
+   "section": "u03-s3",
+   "de": "geradeaus",
+   "uz": "to'g'riga",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u03-s3-nehmen",
+   "section": "u03-s3",
+   "de": "nehmen",
+   "uz": "olmoq",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u03-s3-dann",
+   "section": "u03-s3",
+   "de": "dann",
+   "uz": "keyin",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u03-s3-erste",
+   "section": "u03-s3",
+   "de": "erste",
+   "uz": "birinchi",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u03-s3-zweite",
+   "section": "u03-s3",
+   "de": "zweite",
+   "uz": "ikkinchi",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u03-s3-ampel",
+   "section": "u03-s3",
+   "de": "Ampel",
+   "artikel": "die",
+   "plural": "Ampeln",
+   "uz": "svetofor",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u03-s3-suchen",
+   "section": "u03-s3",
+   "de": "suchen",
+   "uz": "qidirmoq",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u03-s3-finden",
+   "section": "u03-s3",
+   "de": "finden",
+   "uz": "topmoq",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u03-s4-fahren",
+   "section": "u03-s4",
+   "de": "fahren",
+   "uz": "bormoq (transportda)",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u03-s4-mit",
+   "section": "u03-s4",
+   "de": "mit",
+   "uz": "bilan",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u03-s4-bus",
+   "section": "u03-s4",
+   "de": "Bus",
+   "artikel": "der",
+   "plural": "Busse",
+   "uz": "avtobus",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u03-s4-u-bahn",
+   "section": "u03-s4",
+   "de": "U-Bahn",
+   "artikel": "die",
+   "plural": "U-Bahnen",
+   "uz": "metro",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u03-s4-strassenbahn",
+   "section": "u03-s4",
+   "de": "Straßenbahn",
+   "artikel": "die",
+   "plural": "Straßenbahnen",
+   "uz": "tramvay",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u03-s4-zug",
+   "section": "u03-s4",
+   "de": "Zug",
+   "artikel": "der",
+   "plural": "Züge",
+   "uz": "poyezd",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u03-s4-auto",
+   "section": "u03-s4",
+   "de": "Auto",
+   "artikel": "das",
+   "plural": "Autos",
+   "uz": "mashina",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u03-s4-fahrrad",
+   "section": "u03-s4",
+   "de": "Fahrrad",
+   "artikel": "das",
+   "plural": "Fahrräder",
+   "uz": "velosiped",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u03-s4-taxi",
+   "section": "u03-s4",
+   "de": "Taxi",
+   "artikel": "das",
+   "plural": "Taxis",
+   "uz": "taksi",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u03-s4-zu-fuss",
+   "section": "u03-s4",
+   "de": "zu Fuß",
+   "uz": "piyoda",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u03-s4-haltestelle",
+   "section": "u03-s4",
+   "de": "Haltestelle",
+   "artikel": "die",
+   "plural": "Haltestellen",
+   "uz": "bekat",
+   "core": true,
+   "order": 11
+  },
+  {
+   "sourceId": "u03-s5-arbeit",
+   "section": "u03-s5",
+   "de": "Arbeit",
+   "artikel": "die",
+   "uz": "ish",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u03-s5-weg",
+   "section": "u03-s5",
+   "de": "Weg",
+   "artikel": "der",
+   "plural": "Wege",
+   "uz": "yo'l",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u03-s5-heute",
+   "section": "u03-s5",
+   "de": "heute",
+   "uz": "bugun",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u03-s5-immer",
+   "section": "u03-s5",
+   "de": "immer",
+   "uz": "doim",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u03-s5-oft",
+   "section": "u03-s5",
+   "de": "oft",
+   "uz": "tez-tez",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u03-s5-manchmal",
+   "section": "u03-s5",
+   "de": "manchmal",
+   "uz": "ba'zan",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u03-s5-dauern",
+   "section": "u03-s5",
+   "de": "dauern",
+   "uz": "davom etmoq (vaqt olmoq)",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u03-s5-lange",
+   "section": "u03-s5",
+   "de": "lange",
+   "uz": "uzoq (vaqt)",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u03-s5-minute",
+   "section": "u03-s5",
+   "de": "Minute",
+   "artikel": "die",
+   "plural": "Minuten",
+   "uz": "daqiqa",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u03-s5-warten",
+   "section": "u03-s5",
+   "de": "warten",
+   "uz": "kutmoq",
+   "core": true,
+   "order": 10
+  }
+ ]
+}

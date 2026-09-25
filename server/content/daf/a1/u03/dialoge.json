@@ -1,0 +1,282 @@
+{
+ "unit": "u03",
+ "dialoge": [
+  {
+   "id": "u03-d1",
+   "section": "u03-s1",
+   "titelDe": "Was ist das?",
+   "titelUz": "Bu nima?",
+   "zeilen": [
+    {
+     "sprecher": "Jonas",
+     "de": "Mia, was ist das?",
+     "uz": "Mia, bu nima?"
+    },
+    {
+     "sprecher": "Mia",
+     "de": "Das ist das Museum.",
+     "uz": "Bu muzey."
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "Ist das Museum neu?",
+     "uz": "Muzey yangimi?"
+    },
+    {
+     "sprecher": "Mia",
+     "de": "Nein, das Museum ist sehr alt.",
+     "uz": "Yo'q, muzey juda eski."
+    },
+    {
+     "sprecher": "Jonas",
+     "de": "Und das? Ist das die Polizei?",
+     "uz": "Anavi-chi? Politsiyami?"
+    },
+    {
+     "sprecher": "Mia",
+     "de": "Ja, das ist die Polizei.",
+     "uz": "Ha, bu politsiya."
+    }
+   ],
+   "fragen": [
+    { "frageDe": "Wie ist das Museum?", "frageUz": "Muzey qanday?", "richtig": "sehr alt", "falsch": ["sehr neu", "sehr klein"] },
+    { "frageDe": "Was gibt es hier auch?", "frageUz": "Bu yerda muzeydan tashqari yana nima bor?", "richtig": "die Polizei", "falsch": ["die Post", "die Bank"] }
+   ]
+  },
+  {
+   "id": "u03-d2",
+   "section": "u03-s1",
+   "titelDe": "Gibt es hier ein Kino?",
+   "titelUz": "Bu yerda kinoteatr bormi?",
+   "zeilen": [
+    {
+     "sprecher": "Anna",
+     "de": "Markus, gibt es hier ein Kino?",
+     "uz": "Markus, bu yerda kinoteatr bormi?"
+    },
+    {
+     "sprecher": "Markus",
+     "de": "Ja, und das Kino ist neu.",
+     "uz": "Ha, bor, kinoteatr yangi."
+    },
+    {
+     "sprecher": "Anna",
+     "de": "Und ein Hotel? Meine Eltern kommen.",
+     "uz": "Mehmonxona-chi? Ota-onam kelishyapti."
+    },
+    {
+     "sprecher": "Markus",
+     "de": "Ein Hotel gibt es auch. Es ist klein.",
+     "uz": "Mehmonxona ham bor. U kichkina."
+    },
+    {
+     "sprecher": "Anna",
+     "de": "Danke!",
+     "uz": "Rahmat!"
+    },
+    {
+     "sprecher": "Markus",
+     "de": "Bitte!",
+     "uz": "Arzimaydi!"
+    }
+   ],
+   "fragen": [
+    { "frageDe": "Wie ist das Kino?", "frageUz": "Kinoteatr qanday?", "richtig": "neu", "falsch": ["alt", "klein"] },
+    { "frageDe": "Wer kommt?", "frageUz": "Kim kelyapti?", "richtig": "die Eltern", "falsch": ["die Kinder", "die Kollegen"] }
+   ]
+  },
+  {
+   "id": "u03-d3",
+   "section": "u03-s2",
+   "titelDe": "Wo ist die Post?",
+   "titelUz": "Pochta qayerda?",
+   "zeilen": [
+    {
+     "sprecher": "Claudia",
+     "de": "Entschuldigung, wo ist die Post?",
+     "uz": "Kechirasiz, pochta qayerda?"
+    },
+    {
+     "sprecher": "Peter",
+     "de": "Die Post ist neben der Bank.",
+     "uz": "Pochta bankning yonida."
+    },
+    {
+     "sprecher": "Claudia",
+     "de": "Neben der Bank? Und wo ist die Bank?",
+     "uz": "Bank yonidami? Bank qayerda?"
+    },
+    {
+     "sprecher": "Peter",
+     "de": "Die Bank ist dort, an der Ecke.",
+     "uz": "Bank ana u yerda, burchakda."
+    },
+    {
+     "sprecher": "Claudia",
+     "de": "An der Ecke? Ist das weit?",
+     "uz": "Burchakdami? Uzoqmi?"
+    },
+    {
+     "sprecher": "Peter",
+     "de": "Nein, die Bank ist nicht weit.",
+     "uz": "Yo'q, bank uzoq emas."
+    },
+    {
+     "sprecher": "Claudia",
+     "de": "Danke!",
+     "uz": "Rahmat!"
+    },
+    {
+     "sprecher": "Peter",
+     "de": "Bitte!",
+     "uz": "Arzimaydi!"
+    }
+   ],
+   "fragen": [
+    { "frageDe": "Wo ist die Post?", "frageUz": "Pochta qayerda?", "richtig": "neben der Bank", "falsch": ["neben dem Kino", "neben dem Hotel"] },
+    { "frageDe": "Wo ist die Bank?", "frageUz": "Bank qayerda?", "richtig": "an der Ecke", "falsch": ["im Park", "am Bahnhof"] }
+   ]
+  },
+  {
+   "id": "u03-d4",
+   "section": "u03-s3",
+   "titelDe": "Wie komme ich zum Bahnhof?",
+   "titelUz": "Vokzalga qanday boraman?",
+   "zeilen": [
+    {
+     "sprecher": "Helga",
+     "de": "Entschuldigung, wie komme ich zum Bahnhof?",
+     "uz": "Kechirasiz, vokzalga qanday boraman?"
+    },
+    {
+     "sprecher": "Thomas",
+     "de": "Gehen Sie hier geradeaus.",
+     "uz": "Shu yerdan to'g'riga yuring."
+    },
+    {
+     "sprecher": "Helga",
+     "de": "Geradeaus? Und dann?",
+     "uz": "To'g'rigami? Keyin-chi?"
+    },
+    {
+     "sprecher": "Thomas",
+     "de": "An der Ampel gehen Sie links.",
+     "uz": "Svetoforda chapga buriling."
+    },
+    {
+     "sprecher": "Helga",
+     "de": "An der Ampel links. Gut.",
+     "uz": "Svetoforda chapga. Yaxshi."
+    },
+    {
+     "sprecher": "Thomas",
+     "de": "Dann nehmen Sie die zweite Straße rechts.",
+     "uz": "Keyin o'ngdagi ikkinchi ko'chaga kiring."
+    },
+    {
+     "sprecher": "Helga",
+     "de": "Danke!",
+     "uz": "Rahmat!"
+    },
+    {
+     "sprecher": "Thomas",
+     "de": "Bitte!",
+     "uz": "Arzimaydi!"
+    }
+   ],
+   "fragen": [
+    { "frageDe": "Wo geht Helga links?", "frageUz": "Helga qayerda chapga buriladi?", "richtig": "an der Ampel", "falsch": ["an der Ecke", "am Bahnhof"] },
+    { "frageDe": "Was nimmt Helga dann?", "frageUz": "Keyin Helga qaysi ko'chaga kiradi?", "richtig": "die zweite Straße rechts", "falsch": ["die erste Straße rechts", "die zweite Straße links"] }
+   ]
+  },
+  {
+   "id": "u03-d5",
+   "section": "u03-s4",
+   "titelDe": "Mit dem Bus oder mit der U-Bahn?",
+   "titelUz": "Avtobusdami yoki metrodami?",
+   "zeilen": [
+    {
+     "sprecher": "Sabine",
+     "de": "Lukas, fährst du mit dem Bus?",
+     "uz": "Lukas, avtobusda borasanmi?"
+    },
+    {
+     "sprecher": "Lukas",
+     "de": "Nein, ich fahre mit der U-Bahn.",
+     "uz": "Yo'q, metroda boraman."
+    },
+    {
+     "sprecher": "Sabine",
+     "de": "Mit der U-Bahn? Wo ist die Haltestelle?",
+     "uz": "Metrodami? Bekat qayerda?"
+    },
+    {
+     "sprecher": "Lukas",
+     "de": "Die Haltestelle ist am Park.",
+     "uz": "Bekat park oldida."
+    },
+    {
+     "sprecher": "Sabine",
+     "de": "Fährt die U-Bahn zum Museum?",
+     "uz": "Metro muzeygacha boradimi?"
+    },
+    {
+     "sprecher": "Lukas",
+     "de": "Ja, die U-Bahn fährt zum Museum.",
+     "uz": "Ha, metro muzeygacha boradi."
+    }
+   ],
+   "fragen": [
+    { "frageDe": "Wie fährt Lukas?", "frageUz": "Lukas nimada boradi?", "richtig": "mit der U-Bahn", "falsch": ["mit dem Bus", "mit dem Taxi"] },
+    { "frageDe": "Wo ist die Haltestelle?", "frageUz": "Bekat qayerda?", "richtig": "am Park", "falsch": ["neben der Post", "an der Ecke"] }
+   ]
+  },
+  {
+   "id": "u03-d6",
+   "section": "u03-s5",
+   "titelDe": "Wie kommst du zur Arbeit?",
+   "titelUz": "Ishga qanday borasan?",
+   "zeilen": [
+    {
+     "sprecher": "Walter",
+     "de": "Julia, wie kommst du zur Arbeit?",
+     "uz": "Julia, ishga qanday borasan?"
+    },
+    {
+     "sprecher": "Julia",
+     "de": "Ich fahre immer mit dem Fahrrad.",
+     "uz": "Doim velosipedda boraman."
+    },
+    {
+     "sprecher": "Walter",
+     "de": "Mit dem Fahrrad? Wie lange dauert das?",
+     "uz": "Velosipeddami? Qancha vaqt oladi?"
+    },
+    {
+     "sprecher": "Julia",
+     "de": "Ich fahre zwanzig Minuten.",
+     "uz": "Yigirma daqiqa boraman."
+    },
+    {
+     "sprecher": "Walter",
+     "de": "Fährst du manchmal mit dem Zug?",
+     "uz": "Ba'zan poyezdda ham borasanmi?"
+    },
+    {
+     "sprecher": "Julia",
+     "de": "Ja, manchmal mit dem Zug. Dann warte ich oft lange.",
+     "uz": "Ha, ba'zan poyezdda. Unda ko'pincha uzoq kutaman."
+    },
+    {
+     "sprecher": "Walter",
+     "de": "Oft lange? Das ist nicht gut.",
+     "uz": "Ko'pincha uzoqmi? Bu yaxshi emas."
+    }
+   ],
+   "fragen": [
+    { "frageDe": "Wie fährt Julia zur Arbeit?", "frageUz": "Julia ishga nimada boradi?", "richtig": "mit dem Fahrrad", "falsch": ["mit dem Auto", "mit dem Bus"] },
+    { "frageDe": "Wie lange dauert der Weg mit dem Fahrrad?", "frageUz": "Velosipedda yo'l qancha vaqt oladi?", "richtig": "zwanzig Minuten", "falsch": ["zehn Minuten", "dreißig Minuten"] }
+   ]
+  }
+ ]
+}
