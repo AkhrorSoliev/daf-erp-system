@@ -633,13 +633,13 @@ export class ReportsService {
   // Departed students — core
   getDepartedStudentsSummary(
     companyId: number,
-    params: { branchId?: number; startDate: string; endDate: string },
+    params: { scope: ReportBranchIds; startDate: string; endDate: string },
   ) {
     return this.departedStudents.getDepartedStudentsSummary(companyId, params);
   }
   getDepartedStudentsDynamics(
     companyId: number,
-    params: { branchId?: number },
+    params: { scope: ReportBranchIds; startDate: string; endDate: string },
   ) {
     return this.departedStudents.getDepartedStudentsDynamics(companyId, params);
   }

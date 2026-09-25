@@ -28,6 +28,7 @@ import { DepartedStudentsGroupByQueryDto } from './dto/departed-students-group-b
 import { DepartedStudentsListQueryDto } from './dto/departed-students-list-query.dto';
 import { DepartedStudentsByReasonQueryDto } from './dto/departed-students-by-reason-query.dto';
 import { DepartedStudentsBranchQueryDto } from './dto/departed-students-branch-query.dto';
+import { DepartedStudentsRangeQueryDto } from './dto/departed-students-range-query.dto';
 import { DepartedStudentsTeacherChangesQueryDto } from './dto/departed-students-teacher-changes-query.dto';
 import { DepartedStudentsTransferredQueryDto } from './dto/departed-students-transferred-query.dto';
 import { CenterActivityQueryDto } from './dto/center-activity-query.dto';
@@ -594,6 +595,20 @@ export class ReportsController {
     };
   }
 
+  /**
+   * Departed-students reports take the resolved scope as a list (ADR-0035),
+   * so a caller with several branches gets all of them rather than a 400.
+   * An empty scope is refused, never served as zeros (ADR-0002).
+   */
+  private departedScope(scope: ReportBranchIds): ReportBranchIds {
+    if (isEmptyScope(scope)) {
+      throw new ForbiddenException(
+        "Bu filial ma'lumotlarini ko'rish huquqingiz yo'q",
+      );
+    }
+    return scope;
+  }
+
   @Get('payment-reports')
   @Roles('CEO', 'Branch Director')
   getPaymentReports(
@@ -665,7 +680,7 @@ export class ReportsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedStudentsSummary(companyId, {
-      branchId: this.scoped(query, scope).branchId,
+      scope: this.departedScope(scope),
       startDate: query.startDate,
       endDate: query.endDate,
     });
@@ -673,12 +688,14 @@ export class ReportsController {
 
   @Get('departed-students/dynamics')
   getDepartedStudentsDynamics(
-    @Query() query: DepartedStudentsBranchQueryDto,
+    @Query() query: DepartedStudentsRangeQueryDto,
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedStudentsDynamics(companyId, {
-      branchId: this.scoped(query, scope).branchId,
+      scope: this.departedScope(scope),
+      startDate: query.startDate,
+      endDate: query.endDate,
     });
   }
 
