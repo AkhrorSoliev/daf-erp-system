@@ -268,9 +268,30 @@ describe('ReportsDepartedStudentsService', () => {
         data: [
           { date: '2026-07-01', count: 0, provisional: false },
           { date: '2026-08-01', count: 1, provisional: false },
-          { date: '2026-09-01', count: 2, provisional: false },
+          { date: '2026-09-01', count: 2, provisional: true },
         ],
       });
+    });
+
+    it('keeps a month provisional until the longest grace period has passed after it', async () => {
+      const service = new ReportsDepartedStudentsService(
+        fakePrisma(FIXTURE) as unknown as PrismaService,
+      );
+
+      const result = await service.getDepartedStudentsDynamics(1001, {
+        scope: null,
+        startDate: '2026-08-01',
+        endDate: '2026-10-31',
+      });
+
+      // Today is 20.11. August ended 81 days ago: settled. September ended
+      // 51 days ago — past the grace for leaving a group, but a freeze
+      // started on its last day waits until 29.11.
+      expect(result.data.map((m) => [m.date, m.provisional])).toEqual([
+        ['2026-08-01', false],
+        ['2026-09-01', true],
+        ['2026-10-01', true],
+      ]);
     });
 
     it('marks the current month provisional and draws no future month', async () => {
@@ -308,7 +329,7 @@ describe('ReportsDepartedStudentsService', () => {
       expect(result).toEqual({
         data: [
           { date: '2026-08-01', count: 0, provisional: false },
-          { date: '2026-09-01', count: 2, provisional: false },
+          { date: '2026-09-01', count: 2, provisional: true },
         ],
       });
     });
@@ -330,7 +351,7 @@ describe('ReportsDepartedStudentsService', () => {
       expect(result.data[result.data.length - 1]).toEqual({
         date: '2026-09-01',
         count: 2,
-        provisional: false,
+        provisional: true,
       });
     });
 
@@ -372,19 +393,22 @@ describe('one departure count on the report page and the home card', () => {
   afterEach(() => jest.useRealTimers());
 
   // November 2026 is the current month: 10011 expelled 05.11, 10012 expelled
-  // 10.11, 10013 left its group 18.11 (pending), 10014 left in August.
+  // 10.11, 10013 left its group 18.11 (pending), 10014 left in August, 10015
+  // frozen 02.11 (18 days ago: pending, a freeze waits 60 days).
   const NOVEMBER = {
     students: [
       student(10011, 'EXPELLED'),
       student(10012, 'EXPELLED'),
       student(10013),
       student(10014),
+      student(10015, 'FROZEN'),
     ],
     enrollments: [
       enrollment('n1', 10011, 'DROPPED', '2026-11-05T09:00:00.000Z'),
       enrollment('n2', 10012, 'DROPPED', '2026-11-10T09:00:00.000Z'),
       enrollment('n3', 10013, 'DROPPED', '2026-11-18T09:00:00.000Z'),
       enrollment('n4', 10014, 'DROPPED', '2026-08-10T09:00:00.000Z'),
+      enrollment('n5', 10015, 'FROZEN', '2026-11-02T09:00:00.000Z'),
     ],
     logs: [
       log('n1', 'ACTIVE', MAY),
@@ -395,10 +419,13 @@ describe('one departure count on the report page and the home card', () => {
       log('n3', 'DROPPED', '2026-11-18T09:00:00.000Z'),
       log('n4', 'ACTIVE', MAY),
       log('n4', 'DROPPED', '2026-08-10T09:00:00.000Z'),
+      log('n5', 'ACTIVE', MAY),
+      log('n5', 'FROZEN', '2026-11-02T09:00:00.000Z'),
     ],
     history: [
       statusChange(10011, 'EXPELLED', '2026-11-05T09:00:00.100Z'),
       statusChange(10012, 'EXPELLED', '2026-11-10T09:00:00.100Z'),
+      statusChange(10015, 'FROZEN', '2026-11-02T09:00:00.100Z'),
     ],
   };
 
@@ -419,16 +446,25 @@ describe('one departure count on the report page and the home card', () => {
     // kpiSheet («KPI paneli») is not wired into the workbook today.
     const wb = new Workbook();
     kpiSheet(wb, kpis, 'Noyabr 2026');
-    const row = wb
-      .getWorksheet('KPI paneli')!
-      .getRows(1, 100)!
-      .find((r) => r.getCell(1).value === 'Shu oy ketganlar');
+    const rows = wb.getWorksheet('KPI paneli')!.getRows(1, 100)!;
+    const row = (label: string) =>
+      rows.find((r) => r.getCell(1).value === label);
 
     expect(summary.departedCount).toBe(2);
     expect(kpis.churnedThisMonth).toBe(2);
-    expect(row?.getCell(2).value).toBe(2);
-    expect(summary.pendingCount).toBe(1);
-    expect(kpis.pendingDepartures).toBe(1);
+    expect(row('Shu oy ketganlar')?.getCell(2).value).toBe(2);
+    expect(summary.pendingCount).toBe(2);
+    expect(kpis.pendingDepartures).toBe(2);
+    expect(row('Qaytishi kutilmoqda')?.getCell(2).value).toBe(2);
+    // One grace period per kind of stop, the same on every surface.
+    expect(summary.graceDays).toEqual({ LEFT_GROUP: 21, FROZEN: 60 });
+    expect(kpis.departureGraceDays).toEqual(summary.graceDays);
+    expect(row('Shu oy ketganlar')?.getCell(3).value).toBe(
+      'Chetlatilgan, yoki guruhdan chiqib 21 kun, muzlatilib 60 kun ichida qaytmagan.',
+    );
+    expect(row('Qaytishi kutilmoqda')?.getCell(3).value).toBe(
+      "Shu oy guruhsiz qolgan yoki muzlatilgan, qaytish muddati (21 / 60 kun) hali o'tmagan.",
+    );
   });
 });
 

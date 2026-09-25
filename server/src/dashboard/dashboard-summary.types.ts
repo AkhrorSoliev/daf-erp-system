@@ -20,7 +20,8 @@ export interface DashboardPeople {
   leftThisMonth: number;
   /** Stopped this month, not back yet, grace period still running. */
   leftPending: number;
-  leftGraceDays: number;
+  /** Days each kind of stop waits for a return (ADR-0035). */
+  leftGraceDays: { LEFT_GROUP: number; FROZEN: number };
   activeGroups: number;
   attendancePct: number;
   /** Filial tanlanmagan bo'lsa `null` — jadval bitta filialga bog'liq. */

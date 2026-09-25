@@ -92,8 +92,8 @@ export class ReportsDepartedStudentsService {
 
   /**
    * "Ketish dinamikasi" — confirmed departures per Tashkent month of the
-   * range. A month reaching into the last `graceDays` is provisional: stops
-   * started there may still be confirmed.
+   * range. A month reaching into the longest grace period (a freeze's) is
+   * provisional: stops started there may still be confirmed.
    */
   async getDepartedStudentsDynamics(
     companyId: number,
@@ -114,7 +114,8 @@ export class ReportsDepartedStudentsService {
     const until = new Date(Math.min(range.lt.getTime() - 1, now.getTime()));
     if (from.getTime() > until.getTime()) return { data: [] };
 
-    const provisionalAfter = now.getTime() - graceDays * DAY_MS;
+    const provisionalAfter =
+      now.getTime() - Math.max(...Object.values(graceDays)) * DAY_MS;
     const lastKey = tashkentMonthKey(until);
     // 'YYYY-MM' keys compare correctly as strings. Without a reporting floor,
     // `from` comes straight from the caller's `startDate` — an arbitrary old

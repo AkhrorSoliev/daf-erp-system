@@ -14,7 +14,7 @@ const kpis = {
   newStudentsThisMonth: 63,
   churnedThisMonth: 19,
   pendingDepartures: 4,
-  departureGraceDays: 14,
+  departureGraceDays: { LEFT_GROUP: 21, FROZEN: 60 },
 };
 
 const debtorSummary = {
@@ -162,7 +162,7 @@ describe('DashboardSummaryService.getSummary', () => {
     expect(res.people).not.toBeNull();
     expect(res.people!.activeStudents).toBe(842);
     expect(res.people!.leftPending).toBe(4);
-    expect(res.people!.leftGraceDays).toBe(14);
+    expect(res.people!.leftGraceDays).toEqual({ LEFT_GROUP: 21, FROZEN: 60 });
   });
 
   it('yiqilgan javob keshlanmaydi', async () => {

@@ -122,19 +122,19 @@ export function kpiSheet(wb: Workbook, kpis: any, period: string) {
     { percent: true },
   );
   kvNum(ws, "Shu oy yangi o'quvchilar", kpis.newStudentsThisMonth ?? 0);
-  // Departures follow ADR-0035; the grace period comes with the figures.
-  const grace = kpis.departureGraceDays ?? DEPARTURE_GRACE_DAYS;
+  // Departures follow ADR-0035; the grace periods come with the figures.
+  const g = kpis.departureGraceDays ?? DEPARTURE_GRACE_DAYS;
   kvNum(
     ws,
     'Shu oy ketganlar',
     kpis.churnedThisMonth ?? 0,
-    `Chetlatilgan yoki ${grace} kun ichida qaytmagan (guruhdan chiqarilgan, muzlatilgan).`,
+    `Chetlatilgan, yoki guruhdan chiqib ${g.LEFT_GROUP} kun, muzlatilib ${g.FROZEN} kun ichida qaytmagan.`,
   );
   kvNum(
     ws,
     'Qaytishi kutilmoqda',
     kpis.pendingDepartures ?? 0,
-    `Shu oy guruhsiz qolgan yoki muzlatilgan, ${grace} kun hali o'tmagan.`,
+    `Shu oy guruhsiz qolgan yoki muzlatilgan, qaytish muddati (${g.LEFT_GROUP} / ${g.FROZEN} kun) hali o'tmagan.`,
   );
   sheetNotes(
     ws,

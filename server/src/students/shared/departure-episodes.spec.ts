@@ -1,15 +1,18 @@
 import {
   buildDepartureEpisodes,
+  DEPARTURE_GRACE_DAYS,
   departuresInRange,
   openEpisodes,
   pendingInRange,
   type DepartureEpisode,
+  type GraceDays,
   type StopKind,
   type StudentEvent,
 } from './departure-episodes';
 
 const at = (s: string) => new Date(s);
-const GRACE = 14;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const GRACE: GraceDays = { LEFT_GROUP: 21, FROZEN: 60 };
 const NOW = at('2026-09-25T12:00:00Z');
 
 const stop = (
@@ -27,8 +30,14 @@ const back = (studentId: number, when: string): StudentEvent => ({
   at: at(when),
   type: 'RETURN',
 });
-const build = (events: StudentEvent[]) =>
-  buildDepartureEpisodes(events, { graceDays: GRACE, now: NOW });
+const build = (events: StudentEvent[], now = NOW) =>
+  buildDepartureEpisodes(events, { graceDays: GRACE, now });
+
+describe('DEPARTURE_GRACE_DAYS', () => {
+  it('waits 21 days after leaving a group and 60 after a freeze', () => {
+    expect(DEPARTURE_GRACE_DAYS).toEqual({ LEFT_GROUP: 21, FROZEN: 60 });
+  });
+});
 
 describe('buildDepartureEpisodes', () => {
   it('counts an expulsion on its own day', () => {
@@ -60,7 +69,7 @@ describe('buildDepartureEpisodes', () => {
   it('confirms a group leaver who did not come back within the grace period', () => {
     const [episode] = build([stop(1, '2026-09-01T10:00:00Z', 'LEFT_GROUP')]);
     expect(episode.state).toBe('confirmed');
-    expect(episode.confirmedAt).toEqual(at('2026-09-15T10:00:00Z'));
+    expect(episode.confirmedAt).toEqual(at('2026-09-22T10:00:00Z'));
   });
 
   it('forgets a stop the student came back from within the grace period', () => {
@@ -72,38 +81,21 @@ describe('buildDepartureEpisodes', () => {
     ).toEqual([]);
   });
 
-  it('keeps a late return as a departure and records when they came back', () => {
-    expect(
-      build([
-        stop(1, '2026-08-01T10:00:00Z', 'LEFT_GROUP'),
-        back(1, '2026-08-21T10:00:00Z'),
-      ]),
-    ).toEqual([
-      {
-        studentId: 1,
-        startedAt: at('2026-08-01T10:00:00Z'),
-        stopKind: 'LEFT_GROUP',
-        state: 'confirmed',
-        confirmedAt: at('2026-08-15T10:00:00Z'),
-        returnedAt: at('2026-08-21T10:00:00Z'),
-      },
-    ]);
-  });
-
   it('treats a return exactly at the end of the grace period as a departure', () => {
     const [episode] = build([
-      stop(1, '2026-08-01T10:00:00Z', 'FROZEN'),
-      back(1, '2026-08-15T10:00:00Z'),
+      stop(1, '2026-07-01T10:00:00Z', 'FROZEN'),
+      back(1, '2026-08-30T10:00:00Z'),
     ]);
     expect(episode.state).toBe('confirmed');
-    expect(episode.returnedAt).toEqual(at('2026-08-15T10:00:00Z'));
+    expect(episode.confirmedAt).toEqual(at('2026-08-30T10:00:00Z'));
+    expect(episode.returnedAt).toEqual(at('2026-08-30T10:00:00Z'));
   });
 
   it('forgets a freeze the student came back from one second before the end', () => {
     expect(
       build([
-        stop(1, '2026-08-01T10:00:00Z', 'FROZEN'),
-        back(1, '2026-08-15T09:59:59Z'),
+        stop(1, '2026-07-01T10:00:00Z', 'FROZEN'),
+        back(1, '2026-08-30T09:59:59Z'),
       ]),
     ).toEqual([]);
   });
@@ -190,6 +182,110 @@ describe('buildDepartureEpisodes', () => {
     ]);
     expect(episodes.map((e) => e.studentId)).toEqual([2]);
   });
+});
+
+describe('buildDepartureEpisodes: the grace period of each kind of stop', () => {
+  // Every episode starts at START; `day(d)` is d days after it.
+  const START = '2026-06-01T10:00:00.000Z';
+  const day = (d: number) =>
+    new Date(at(START).getTime() + d * DAY_MS).toISOString();
+  const confirmed = (
+    stopKind: StopKind,
+    confirmedAt: string,
+    returnedAt: string | null,
+  ): DepartureEpisode => ({
+    studentId: 1,
+    startedAt: at(START),
+    stopKind,
+    state: 'confirmed',
+    confirmedAt: at(confirmedAt),
+    returnedAt: returnedAt ? at(returnedAt) : null,
+  });
+
+  it('forgets leaving a group when the student is back on day 20', () => {
+    expect(build([stop(1, START, 'LEFT_GROUP'), back(1, day(20))])).toEqual([]);
+  });
+
+  it('confirms leaving a group on day 21 when the student is back on day 22', () => {
+    expect(build([stop(1, START, 'LEFT_GROUP'), back(1, day(22))])).toEqual([
+      confirmed('LEFT_GROUP', day(21), day(22)),
+    ]);
+  });
+
+  it('forgets a freeze when the student is back on day 45', () => {
+    expect(build([stop(1, START, 'FROZEN'), back(1, day(45))])).toEqual([]);
+  });
+
+  it('confirms a freeze on day 60 when the student is back on day 61', () => {
+    expect(build([stop(1, START, 'FROZEN'), back(1, day(61))])).toEqual([
+      confirmed('FROZEN', day(60), day(61)),
+    ]);
+  });
+
+  it('gives a freeze that joins before the confirmation its own grace period', () => {
+    expect(
+      build([
+        stop(1, START, 'LEFT_GROUP'),
+        stop(1, day(10), 'FROZEN'),
+        back(1, day(40)),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('keeps the grace period of a freeze when a lighter stop joins', () => {
+    expect(
+      build([
+        stop(1, START, 'FROZEN'),
+        stop(1, day(5), 'LEFT_GROUP'),
+        back(1, day(30)),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('keeps a confirmed episode confirmed when a freeze joins after it', () => {
+    expect(
+      build([stop(1, START, 'LEFT_GROUP'), stop(1, day(25), 'FROZEN')]),
+    ).toEqual([confirmed('FROZEN', day(21), null)]);
+  });
+
+  it('keeps it confirmed when the student then comes back within the freeze period', () => {
+    expect(
+      build([
+        stop(1, START, 'LEFT_GROUP'),
+        stop(1, day(25), 'FROZEN'),
+        back(1, day(40)),
+      ]),
+    ).toEqual([confirmed('FROZEN', day(21), day(40))]);
+  });
+
+  it('confirms at the grace end, not at an expulsion after it', () => {
+    expect(
+      build([stop(1, START, 'LEFT_GROUP'), stop(1, day(30), 'EXPELLED')]),
+    ).toEqual([confirmed('EXPELLED', day(21), null)]);
+  });
+
+  it('confirms at an expulsion before the grace end', () => {
+    expect(
+      build([stop(1, START, 'LEFT_GROUP'), stop(1, day(5), 'EXPELLED')]),
+    ).toEqual([confirmed('EXPELLED', day(5), null)]);
+  });
+
+  it.each([
+    ['LEFT_GROUP', 20, 'pending', null],
+    ['LEFT_GROUP', 21, 'confirmed', 21],
+    ['FROZEN', 59, 'pending', null],
+    ['FROZEN', 60, 'confirmed', 60],
+    ['EXPELLED', 0, 'confirmed', 0],
+  ] as const)(
+    'reads a %s stop on day %i as %s',
+    (kind, today, state, confirmedOn) => {
+      const [episode] = build([stop(1, START, kind)], at(day(today)));
+      expect(episode.state).toBe(state);
+      expect(episode.confirmedAt).toEqual(
+        confirmedOn === null ? null : at(day(confirmedOn)),
+      );
+    },
+  );
 });
 
 describe('departuresInRange', () => {

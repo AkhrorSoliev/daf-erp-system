@@ -3,10 +3,11 @@
  *
  * Expulsion counts on the day. Leaving the last group and being frozen count
  * on the day they happened, unless the student is back within the grace
- * period; then there was no departure. Stops before a return belong to one
- * episode, dated by the first and named by the strongest. Archiving is not a
- * stop: an archived card is an error or a duplicate record, and the loader
- * leaves it out like a deleted one.
+ * period of that kind of stop (`DEPARTURE_GRACE_DAYS`); then there was no
+ * departure. Stops before a return belong to one episode, dated by the first
+ * and named by the strongest. Archiving is not a stop: an archived card is
+ * an error or a duplicate record, and the loader leaves it out like a
+ * deleted one.
  *
  * This file only turns events into episodes and reads nothing:
  * `reports/shared/departures.loader.ts` decides which records are a stop or
@@ -15,15 +16,20 @@
  * anywhere else.
  */
 
-export const DEPARTURE_GRACE_DAYS = 14;
+export type StopKind = 'EXPELLED' | 'FROZEN' | 'LEFT_GROUP';
+
+export type GraceDays = Record<Exclude<StopKind, 'EXPELLED'>, number>;
+
+/** Days a stop waits for a return before it counts as a departure (ADR-0035). */
+export const DEPARTURE_GRACE_DAYS: GraceDays = { LEFT_GROUP: 21, FROZEN: 60 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-export type StopKind = 'EXPELLED' | 'FROZEN' | 'LEFT_GROUP';
 
 export type StudentEvent =
   | { studentId: number; at: Date; type: 'STOP'; kind: StopKind }
   | { studentId: number; at: Date; type: 'RETURN' };
+
+type StopEvent = Extract<StudentEvent, { type: 'STOP' }>;
 
 export interface DepartureEpisode {
   studentId: number;
@@ -36,8 +42,10 @@ export interface DepartureEpisode {
   returnedAt: Date | null;
 }
 
-/** These do not wait for the grace period. */
-const IMMEDIATE: ReadonlySet<StopKind> = new Set(['EXPELLED']);
+/** An expulsion does not wait for a return. */
+function isImmediate(kind: StopKind): kind is 'EXPELLED' {
+  return kind === 'EXPELLED';
+}
 
 /** When one episode holds several stops, the heaviest names it. */
 const WEIGHT: Record<StopKind, number> = {
@@ -50,14 +58,16 @@ interface OpenEpisode {
   studentId: number;
   startedAt: Date;
   stopKind: StopKind;
-  immediateAt: Date | null;
+  /** The heaviest stop that waits; its grace period runs from `startedAt`. */
+  waitingKind: keyof GraceDays | null;
+  /** Set once, at the grace end or the first expulsion, whichever is first. */
+  confirmedAt: Date | null;
 }
 
 export function buildDepartureEpisodes(
   events: readonly StudentEvent[],
-  opts: { graceDays: number; now: Date },
+  opts: { graceDays: GraceDays; now: Date },
 ): DepartureEpisode[] {
-  const graceMs = opts.graceDays * DAY_MS;
   const byStudent = new Map<number, StudentEvent[]>();
   for (const e of events) {
     const list = byStudent.get(e.studentId);
@@ -75,61 +85,79 @@ export function buildDepartureEpisodes(
     );
     let open: OpenEpisode | null = null;
     for (const ev of sorted) {
+      if (open) confirmAtGraceEnd(open, ev.at, opts.graceDays);
       if (ev.type === 'STOP') {
-        if (!open) {
-          open = {
-            studentId: ev.studentId,
-            startedAt: ev.at,
-            stopKind: ev.kind,
-            immediateAt: IMMEDIATE.has(ev.kind) ? ev.at : null,
-          };
-        } else {
-          if (WEIGHT[ev.kind] > WEIGHT[open.stopKind]) open.stopKind = ev.kind;
-          if (!open.immediateAt && IMMEDIATE.has(ev.kind)) {
-            open.immediateAt = ev.at;
-          }
-        }
+        if (open) join(open, ev);
+        else open = start(ev);
         continue;
       }
       if (!open) continue; // joining a first group opens nothing
-      const graceEnd = new Date(open.startedAt.getTime() + graceMs);
-      if (open.immediateAt) {
-        episodes.push(closed(open, open.immediateAt, ev.at));
-      } else if (ev.at.getTime() >= graceEnd.getTime()) {
-        episodes.push(closed(open, graceEnd, ev.at));
-      }
-      // Otherwise the student came back in time: no departure.
+      // Back before the confirmation: there was no departure.
+      if (open.confirmedAt) episodes.push(episodeOf(open, ev.at));
       open = null;
     }
     if (open) {
-      const graceEnd = new Date(open.startedAt.getTime() + graceMs);
-      const confirmedAt =
-        open.immediateAt ??
-        (opts.now.getTime() >= graceEnd.getTime() ? graceEnd : null);
-      episodes.push({
-        studentId: open.studentId,
-        startedAt: open.startedAt,
-        stopKind: open.stopKind,
-        state: confirmedAt ? 'confirmed' : 'pending',
-        confirmedAt,
-        returnedAt: null,
-      });
+      confirmAtGraceEnd(open, opts.now, opts.graceDays);
+      episodes.push(episodeOf(open, null));
     }
   }
   return episodes;
 }
 
-function closed(
+function start(stop: StopEvent): OpenEpisode {
+  return {
+    studentId: stop.studentId,
+    startedAt: stop.at,
+    stopKind: stop.kind,
+    waitingKind: isImmediate(stop.kind) ? null : stop.kind,
+    confirmedAt: isImmediate(stop.kind) ? stop.at : null,
+  };
+}
+
+/**
+ * A later stop before a return joins the open episode and can make its name
+ * heavier. Before the episode is confirmed, an expulsion confirms it and a
+ * heavier waiting stop gives it that stop's grace period; once confirmed, it
+ * keeps its `confirmedAt`.
+ */
+function join(open: OpenEpisode, stop: StopEvent): void {
+  if (WEIGHT[stop.kind] > WEIGHT[open.stopKind]) open.stopKind = stop.kind;
+  if (open.confirmedAt) return;
+  if (isImmediate(stop.kind)) {
+    open.confirmedAt = stop.at;
+  } else if (
+    !open.waitingKind ||
+    WEIGHT[stop.kind] > WEIGHT[open.waitingKind]
+  ) {
+    open.waitingKind = stop.kind;
+  }
+}
+
+/**
+ * Confirms the episode at its grace end once `t` has reached it: nothing
+ * before `t` brought the student back. A return exactly at the grace end
+ * comes after it.
+ */
+function confirmAtGraceEnd(
   open: OpenEpisode,
-  confirmedAt: Date,
-  returnedAt: Date,
+  t: Date,
+  graceDays: GraceDays,
+): void {
+  if (open.confirmedAt || !open.waitingKind) return;
+  const end = open.startedAt.getTime() + graceDays[open.waitingKind] * DAY_MS;
+  if (t.getTime() >= end) open.confirmedAt = new Date(end);
+}
+
+function episodeOf(
+  open: OpenEpisode,
+  returnedAt: Date | null,
 ): DepartureEpisode {
   return {
     studentId: open.studentId,
     startedAt: open.startedAt,
     stopKind: open.stopKind,
-    state: 'confirmed',
-    confirmedAt,
+    state: open.confirmedAt ? 'confirmed' : 'pending',
+    confirmedAt: open.confirmedAt,
     returnedAt,
   };
 }

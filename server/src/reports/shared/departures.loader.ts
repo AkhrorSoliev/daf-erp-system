@@ -13,6 +13,7 @@ import {
   buildDepartureEpisodes,
   DEPARTURE_GRACE_DAYS,
   type DepartureEpisode,
+  type GraceDays,
   type StopKind,
   type StudentEvent,
 } from '../../students/shared/departure-episodes';
@@ -25,7 +26,8 @@ export interface LoadedDepartures {
   activeAtStart: number;
   /** `Company.systemStartDate` (ADR-0005), or null. */
   floor: Date | null;
-  graceDays: number;
+  /** Days each kind of stop waits for a return (ADR-0035). */
+  graceDays: GraceDays;
 }
 
 interface StudentRow {
