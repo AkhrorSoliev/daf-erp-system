@@ -17,6 +17,7 @@ import {
   parseErsetzenArg,
   parseGenAudioArgs,
   sprichMitAblehnungsschutz,
+  WORT_ANWEISUNG,
   parseUnitArg,
   woerterPfad,
   pruefeBudget,
@@ -356,8 +357,8 @@ describe('manifestAktualisieren with ersetzen', () => {
 describe('sprichMitAblehnungsschutz', () => {
   function sprecher(antworten: Array<'ablehnen' | 'fehler' | string>) {
     const gesendet: string[] = [];
-    const fn = async (text: string): Promise<string> => {
-      gesendet.push(text);
+    const fn = async (text: string, anweisung?: string): Promise<string> => {
+      gesendet.push(anweisung ? `${anweisung} | ${text}` : text);
       const a = antworten.shift();
       if (a === 'ablehnen')
         throw new FalAblehnungError('content_policy_violation');
@@ -372,6 +373,7 @@ describe('sprichMitAblehnungsschutz', () => {
     await expect(sprichMitAblehnungsschutz(fn, 'dann')).resolves.toEqual({
       url: 'https://x/1.mp3',
       gesprochen: 'dann',
+      mitAnweisung: false,
       versuche: 1,
     });
     expect(gesendet).toEqual(['dann']);
@@ -388,12 +390,13 @@ describe('sprichMitAblehnungsschutz', () => {
     expect(r).toEqual({
       url: 'https://x/3.mp3',
       gesprochen: 'zwischen',
+      mitAnweisung: false,
       versuche: 3,
     });
     expect(gesendet).toEqual(['zwischen', 'zwischen', 'zwischen']);
   });
 
-  // "dann" was refused every time; a full stop is the smallest change that
+  // "dann" was refused three times; a full stop is the smallest change that
   // still makes the audio say only the word.
   it('adds a full stop after three refusals of the bare word', async () => {
     const { fn, gesendet } = sprecher([
@@ -406,17 +409,36 @@ describe('sprichMitAblehnungsschutz', () => {
     expect(r).toEqual({
       url: 'https://x/4.mp3',
       gesprochen: 'dann.',
+      mitAnweisung: false,
       versuche: 4,
     });
     expect(gesendet).toEqual(['dann', 'dann', 'dann', 'dann.']);
   });
 
-  it('gives up with FalAblehnungError after five refusals', async () => {
-    const { fn, gesendet } = sprecher(Array(5).fill('ablehnen'));
+  // "ich", "Sie", "aus" and five more were refused all five times in the
+  // 2026-09-25 run. The model seems not to take one short word as a speech
+  // request; an instruction it follows but does not speak settles that.
+  it('asks with the unspoken instruction after five refusals', async () => {
+    const { fn, gesendet } = sprecher([
+      ...Array<string>(5).fill('ablehnen'),
+      'https://x/6.mp3',
+    ]);
+    const r = await sprichMitAblehnungsschutz(fn, 'ich');
+    expect(r).toEqual({
+      url: 'https://x/6.mp3',
+      gesprochen: 'ich',
+      mitAnweisung: true,
+      versuche: 6,
+    });
+    expect(gesendet[5]).toBe(`${WORT_ANWEISUNG} | ich`);
+  });
+
+  it('gives up with FalAblehnungError after seven refusals', async () => {
+    const { fn, gesendet } = sprecher(Array(7).fill('ablehnen'));
     await expect(sprichMitAblehnungsschutz(fn, 'dann')).rejects.toBeInstanceOf(
       FalAblehnungError,
     );
-    expect(gesendet).toHaveLength(5);
+    expect(gesendet).toHaveLength(7);
   });
 
   it('does not retry any other error', async () => {

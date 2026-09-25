@@ -22,11 +22,12 @@
  * is seeded with the new manifest, so deleting them here would break the
  * live course.
  *
- * Gemini's content checker refuses some plain words at random
- * (`FalAblehnungError`); `sprichMitAblehnungsschutz` asks again and, if the
- * bare word keeps being refused, adds a full stop. A word that still has no
- * audio is reported and, with `--ersetzen`, loses its old key, so no word is
- * left in the rejected voice.
+ * Gemini's content checker refuses some plain words (`FalAblehnungError`);
+ * `sprichMitAblehnungsschutz` asks again, then adds a full stop, then sends
+ * an instruction the model follows but does not speak. A word that still
+ * has no audio is reported and, with `--ersetzen`, loses its old key, so no
+ * word is left in the rejected voice. A run without `--ersetzen` makes only
+ * the words that have no audio, which is how refused words are retried.
  *
  * PAID: fal.ai calls and R2 writes. `main()` only runs when the file is
  * executed directly (`require.main === module`), so the tests can import it
@@ -324,30 +325,57 @@ export function parseErsetzenArg(argv: string[]): boolean {
 export const GLEICHER_TEXT_VERSUCHE = 3;
 /** Requests with a full stop added, after the bare word kept being refused. */
 export const MIT_PUNKT_VERSUCHE = 2;
+/** Requests with the unspoken instruction, the last resort. */
+export const ANWEISUNG_VERSUCHE = 2;
+
+/**
+ * Guidance for Gemini that it follows but does not speak. Sent only after
+ * five refusals: "ich", "Sie", "aus", "sprechen", "null", "acht", "alt"
+ * and "Lehrerin" were refused all five times in the 2026-09-25 run, as if
+ * the model did not take one short word as a speech request.
+ */
+export const WORT_ANWEISUNG =
+  'Sprich das folgende einzelne deutsche Wort deutlich aus.';
 
 /**
  * Speaks `text`, asking again when the content checker refuses it.
  *
  * The refusals are random: "zwischen" was refused once and accepted on the
  * next identical request, so the bare word is tried three times first.
- * "dann" was refused every time; a full stop is the smallest change that
- * still makes the audio say only the word. Any other error is thrown at
- * once, because asking again cannot fix a wrong request.
+ * "dann" was refused three times; a full stop is the smallest change that
+ * still makes the audio say only the word. Words refused even then are
+ * asked for with `WORT_ANWEISUNG`. Any other error is thrown at once,
+ * because asking again cannot fix a wrong request.
  */
 export async function sprichMitAblehnungsschutz(
-  sprich: (text: string) => Promise<string>,
+  sprich: (text: string, anweisung?: string) => Promise<string>,
   text: string,
-): Promise<{ url: string; gesprochen: string; versuche: number }> {
+): Promise<{
+  url: string;
+  gesprochen: string;
+  mitAnweisung: boolean;
+  versuche: number;
+}> {
   const mitPunkt = text.endsWith('.') ? text : `${text}.`;
-  const plan = [
-    ...Array<string>(GLEICHER_TEXT_VERSUCHE).fill(text),
-    ...Array<string>(MIT_PUNKT_VERSUCHE).fill(mitPunkt),
+  const plan: Array<{ text: string; anweisung?: string }> = [
+    ...Array.from({ length: GLEICHER_TEXT_VERSUCHE }, () => ({ text })),
+    ...Array.from({ length: MIT_PUNKT_VERSUCHE }, () => ({ text: mitPunkt })),
+    ...Array.from({ length: ANWEISUNG_VERSUCHE }, () => ({
+      text,
+      anweisung: WORT_ANWEISUNG,
+    })),
   ];
   let letzte: FalAblehnungError | undefined;
   for (let i = 0; i < plan.length; i++) {
+    const schritt = plan[i];
     try {
-      const url = await sprich(plan[i]);
-      return { url, gesprochen: plan[i], versuche: i + 1 };
+      const url = await sprich(schritt.text, schritt.anweisung);
+      return {
+        url,
+        gesprochen: schritt.text,
+        mitAnweisung: schritt.anweisung !== undefined,
+        versuche: i + 1,
+      };
     } catch (err) {
       if (!(err instanceof FalAblehnungError)) throw err;
       letzte = err;
@@ -438,6 +466,7 @@ async function main() {
   // for still reach the manifest.
   const natijalar: YuklashNatijasi[] = [];
   const mitPunkt: string[] = [];
+  const mitAnweisung: string[] = [];
   let done = 0;
   for (const wort of qoldi) {
     done++;
@@ -448,7 +477,7 @@ async function main() {
     const key = schluesselFuerWort(wort);
     try {
       const gesagt = await sprichMitAblehnungsschutz(
-        (t) => fal.speechGemini(t, args.stimme),
+        (t, anweisung) => fal.speechGemini(t, args.stimme, anweisung),
         text,
       );
       const res = await fetch(gesagt.url);
@@ -462,8 +491,10 @@ async function main() {
       if (gesagt.gesprochen !== text) {
         mitPunkt.push(`${wort.de} → "${gesagt.gesprochen}"`);
       }
+      if (gesagt.mitAnweisung) mitAnweisung.push(wort.de);
       const qayta =
-        gesagt.versuche > 1 ? ` (${gesagt.versuche}-urinishda)` : '';
+        (gesagt.versuche > 1 ? ` (${gesagt.versuche}-urinishda)` : '') +
+        (gesagt.mitAnweisung ? ' (ko`rsatma bilan)' : '');
       console.log(
         `  ${done}/${qoldi.length}: ${wort.de} → "${gesagt.gesprochen}"${qayta}`,
       );
@@ -482,6 +513,11 @@ async function main() {
   if (mitPunkt.length > 0) {
     console.log(
       `\nNuqta qo'shib yasalgan so'zlar (quloq bilan tekshiring): ${mitPunkt.join(', ')}`,
+    );
+  }
+  if (mitAnweisung.length > 0) {
+    console.log(
+      `\nKo'rsatma bilan yasalgan so'zlar (quloq bilan tekshiring): ${mitAnweisung.join(', ')}`,
     );
   }
   const muvaffaqiyatsiz = natijalar.filter((n) => !n.ok);

@@ -147,13 +147,22 @@ export class FalClient {
    * itself. The model has no speed setting; the caller slows the clip
    * locally (`audio-tempo.ts`). A refusal by the content checker arrives
    * as `FalAblehnungError` from `run()`.
+   *
+   * `anweisung` goes out as `style_instructions`: guidance the model
+   * follows but does not speak. The script uses it only for a word the
+   * model keeps refusing as a bare prompt.
    */
-  async speechGemini(text: string, stimme: string): Promise<string> {
+  async speechGemini(
+    text: string,
+    stimme: string,
+    anweisung?: string,
+  ): Promise<string> {
     const out = await this.run(TTS_GEMINI_MODEL, {
       prompt: text,
       voice: stimme,
       language_code: 'German (Germany)',
       output_format: 'mp3',
+      ...(anweisung ? { style_instructions: anweisung } : {}),
     });
     const url = out?.audio?.url;
     if (typeof url !== 'string') throw new Error('fal.ai ovoz qaytarmadi');

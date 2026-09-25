@@ -249,3 +249,30 @@ describe('FalClient.speechGemini', () => {
     ).rejects.not.toBeInstanceOf(FalAblehnungError);
   });
 });
+
+describe('FalClient.speechGemini with an instruction', () => {
+  it('sends the unspoken instruction as style_instructions, the word stays the prompt', async () => {
+    const calls: Array<{ body: any }> = [];
+    const fetchFn = (async (_url: string, init: any) => {
+      calls.push({ body: JSON.parse(init.body) });
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ audio: { url: 'https://x/g.mp3' } }),
+        text: async () => '',
+      };
+    }) as unknown as typeof fetch;
+    await new FalClient('k', fetchFn).speechGemini(
+      'ich',
+      'Erinome',
+      'Sprich das Wort aus.',
+    );
+    expect(calls[0].body).toEqual({
+      prompt: 'ich',
+      voice: 'Erinome',
+      language_code: 'German (Germany)',
+      output_format: 'mp3',
+      style_instructions: 'Sprich das Wort aus.',
+    });
+  });
+});
