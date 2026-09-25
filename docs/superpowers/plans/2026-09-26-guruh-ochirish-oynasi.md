@@ -1115,6 +1115,13 @@ git commit -m "Tell the admin who leaves before a group is deleted" -m "The dele
 
 ---
 
+**As built (differs from the code above):** the shadcn rules and a contrast check changed the dialog's styling, not its behaviour.
+- The warning box uses the semantic tokens (`border-destructive/30 bg-destructive/5`) with a `TriangleAlert` icon in `text-destructive`, and its text in `text-foreground`. Red text on the light red tint measured about 4:1, under the 4.5:1 that small text needs; no hand-written `dark:` colours are needed this way.
+- Vertical stacks use `flex flex-col gap-*` instead of `space-y-*`; conditional branches are ternaries.
+- The textarea has `aria-label="O'chirish sababi"`; the spinner in the confirm button is `<Loader2 data-icon="inline-start" className="animate-spin" />`, sized by the Button.
+
+---
+
 ### Task 6: Full verification and a look at the real dialog
 
 **Files:** none changed unless a check fails.
