@@ -12,8 +12,29 @@ Funksiyalar: Telegram OTP / telefon-parol login, dars jadvali, davomat, to'lovla
 API manzili `EXPO_PUBLIC_API_URL` orqali beriladi:
 
 - **Lokal dev:** `.env` faylida (gitignore'da) — `EXPO_PUBLIC_API_URL=https://api.dafzentrum.uz/api`.
-- **EAS build:** `.env` build serveriga yuklanmaydi, shuning uchun URL `eas.json` ning
-  `preview` va `production` profillaridagi `env` blokida belgilangan.
+- **EAS build va EAS Update:** qiymatlar Expo serveridagi **EAS environment**'larda
+  (`production`, `preview`): `EXPO_PUBLIC_API_URL=https://api.dafzentrum.uz/api`,
+  `EXPO_PUBLIC_TELEGRAM_BOT=dafzentrum_bot`. `eas.json` profillari ularni
+  `"environment"` orqali oladi. `eas.json`dagi `env` bloki `eas update`ga
+  o'tmaydi, shuning uchun qiymatlar u yerda emas. Ko'rish: `eas env:list production`,
+  o'zgartirish: `eas env:set`.
+
+## OTA yangilanishlar (EAS Update)
+
+Faqat JS va rasm/audio o'zgarishlari Play'siz yetkaziladi. Ilova keyingi ochilishda
+yangilanishni yuklaydi, undan keyingi ochilishda qo'llaydi.
+
+```bash
+npm run update:preview -- --message "Nima o'zgardi"      # avval preview build'da sinang
+npm run update:production -- --message "Nima o'zgardi"
+```
+
+- Skriptlar `--environment`ni o'zi beradi. Usiz `EXPO_PUBLIC_API_URL` bo'sh
+  qoladi va `src/config/env.ts` release'da ilovani ishga tushirishda yiqitadi.
+- Native o'zgarish (yangi native paket, `app.json` plugin yoki ruxsati) OTA bilan
+  **chiqmaydi**: yangi build kerak. `runtimeVersion` siyosati `fingerprint`, ya'ni
+  native qism o'zgarsa runtime ham o'zgaradi va mos kelmaydigan yangilanish eski
+  build'ga umuman bormaydi (yiqitmaydi, shunchaki yetib bormaydi).
 
 ## Testlar
 
