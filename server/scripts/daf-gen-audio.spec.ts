@@ -10,9 +10,13 @@ import {
   SpeedNotAllowedWithNoneArgError,
   SpeedOutOfRangeArgError,
   UnknownStimmeArgError,
+  InvalidUnitArgError,
+  MissingUnitArgError,
   gesamtZeichenzahl,
   manifestAktualisieren,
   parseGenAudioArgs,
+  parseUnitArg,
+  woerterPfad,
   pruefeBudget,
   schluesselFuerWort,
   sprechtext,
@@ -322,6 +326,63 @@ describe('parseGenAudioArgs', () => {
   it("bo`sh satr ham noma'lum ovoz sifatida rad etiladi (`none` bilan chalkashtirilmaydi)", () => {
     expect(() => parseGenAudioArgs(['--stimme', 'chatterbox'])).toThrow(
       UnknownStimmeArgError,
+    );
+  });
+});
+
+// The script was written for unit 1 alone, with the word list path fixed
+// to u01. Units 2 and 3 need the same voice, so the unit is now a
+// required flag, read and validated before anything is sent to fal.ai.
+describe('parseUnitArg', () => {
+  it('reads `--unit 2` as u02', () => {
+    expect(parseUnitArg(['--unit', '2'])).toBe('u02');
+  });
+
+  it('reads the flag wherever it stands among the voice flags', () => {
+    expect(
+      parseUnitArg(['--stimme', 'Rachel', '--speed', '0.85', '--unit', '3']),
+    ).toBe('u03');
+  });
+
+  it('accepts the last unit of the course map', () => {
+    expect(parseUnitArg(['--unit', '12'])).toBe('u12');
+  });
+
+  it('refuses a run without `--unit` instead of defaulting to unit 1', () => {
+    expect(() =>
+      parseUnitArg(['--stimme', 'Rachel', '--speed', '0.85']),
+    ).toThrow(MissingUnitArgError);
+  });
+
+  it.each(['0', '13', 'x', '1.5', '-1', '02a'])(
+    'refuses `--unit %s` (not a unit of the A1 map)',
+    (value) => {
+      expect(() => parseUnitArg(['--unit', value])).toThrow(
+        InvalidUnitArgError,
+      );
+    },
+  );
+});
+
+describe('budget for the units that follow unit 1', () => {
+  // One run per unit must fit under the 400-character guard, or the
+  // script stops before the first paid call. Measured on the written
+  // files: u02 = 302, u03 = 281.
+  it.each(['u02', 'u03'])('%s words fit one run', (unit) => {
+    const dataset: WoerterFile = JSON.parse(
+      readFileSync(woerterPfad(unit), 'utf8'),
+    );
+    expect(dataset.woerter).toHaveLength(50);
+    expect(() =>
+      pruefeBudget(gesamtZeichenzahl(dataset.woerter)),
+    ).not.toThrow();
+  });
+});
+
+describe('woerterPfad', () => {
+  it('points at the chosen unit`s word file', () => {
+    expect(woerterPfad('u03')).toBe(
+      join(__dirname, '..', 'content', 'daf', 'a1', 'u03', 'woerter.json'),
     );
   });
 });

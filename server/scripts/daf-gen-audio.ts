@@ -1,10 +1,10 @@
 /**
- * 1-bo'limning 53 so'ziga TALAFFUZ audiosi yasaydi (tanlangan ovoz bilan)
- * va R2'ga yuklaydi.
+ * Tanlangan unit so'zlariga TALAFFUZ audiosi yasaydi (tanlangan ovoz bilan)
+ * va R2'ga yuklaydi. `--unit` MAJBURIY (standart yo'q — `parseUnitArg`).
  *
- *   npm run daf:gen-audio -- --stimme none                    — Chatterbox (stimme'siz, tezliksiz)
- *   npm run daf:gen-audio -- --stimme Rachel --speed 0.85     — ElevenLabs Rachel, sekin
- *   npm run daf:gen-audio -- --stimme Matilda --speed 1.0     — ElevenLabs Matilda, oddiy tezlik
+ *   npm run daf:gen-audio -- --unit 3 --stimme Rachel --speed 0.85   — kursdagi ovoz (CEO tanlagan)
+ *   npm run daf:gen-audio -- --unit 1 --stimme none                  — Chatterbox (stimme'siz, tezliksiz)
+ *   npm run daf:gen-audio -- --unit 1 --stimme Matilda --speed 1.0   — ElevenLabs Matilda, oddiy tezlik
  *
  * `--stimme` MAJBURIY, standart qiymati YO'Q, va qiymat qattiq
  * `RUXSAT_ETILGAN_STIMMELAR` ro'yxati bilan tekshiriladi (yozuv xatosi —
@@ -66,15 +66,6 @@ import {
 } from '../src/daf/media/audio-keys';
 import type { Wort, WoerterFile } from '../src/daf/inhalt/unit-inhalt.types';
 
-const WOERTER_PATH = join(
-  __dirname,
-  '..',
-  'content',
-  'daf',
-  'a1',
-  'u01',
-  'woerter.json',
-);
 const MANIFEST_PATH = join(
   __dirname,
   '..',
@@ -86,6 +77,47 @@ const MANIFEST_PATH = join(
 
 /** Har generatsiya qilingan audioga yoziladigan litsenziya. */
 const LICENSE = 'Generated';
+
+/** Units of the A1 course map (`kurs.json`): u01 … u12. */
+const UNIT_MIN = 1;
+const UNIT_MAX = 12;
+
+/** A `--unit` problem, reported before anything is sent to fal.ai. */
+export class UnitArgError extends Error {}
+
+/** `--unit` is missing or has no value. */
+export class MissingUnitArgError extends UnitArgError {}
+
+/** `--unit` is not a whole number from 1 to 12. */
+export class InvalidUnitArgError extends UnitArgError {}
+
+/**
+ * Reads `--unit N` as the unit code (`u02`).
+ *
+ * Required, with no default: the script was written for unit 1 alone, and
+ * falling back to it would quietly re-read a finished unit instead of the
+ * one the operator meant. Only digits are accepted, so `1.5` or `02a` can
+ * never be rounded into some other unit.
+ */
+export function parseUnitArg(argv: string[]): string {
+  const idx = argv.indexOf('--unit');
+  const raw = idx === -1 ? undefined : argv[idx + 1];
+  if (raw === undefined) {
+    throw new MissingUnitArgError('`--unit` MAJBURIY — masalan `--unit 3`.');
+  }
+  const n = Number(raw);
+  if (!/^\d+$/.test(raw) || n < UNIT_MIN || n > UNIT_MAX) {
+    throw new InvalidUnitArgError(
+      `\`--unit\` ${UNIT_MIN} dan ${UNIT_MAX} gacha butun son bo'lishi kerak, "${raw}" emas.`,
+    );
+  }
+  return `u${String(n).padStart(2, '0')}`;
+}
+
+/** The chosen unit's word file. */
+export function woerterPfad(unit: string): string {
+  return join(__dirname, '..', 'content', 'daf', 'a1', unit, 'woerter.json');
+}
 
 /**
  * Narx chegarasi (belgi soni). Brifda qat'iy belgilangan — 53 so'z = 278
@@ -341,10 +373,12 @@ function manifestOquv(): AudioManifest {
 
 async function main() {
   let args: GenAudioArgs;
+  let unit: string;
   try {
     args = parseGenAudioArgs(process.argv.slice(2));
+    unit = parseUnitArg(process.argv.slice(2));
   } catch (err) {
-    if (err instanceof StimmeArgError) {
+    if (err instanceof StimmeArgError || err instanceof UnitArgError) {
       console.error(err.message);
       process.exitCode = 1;
       return;
@@ -352,7 +386,13 @@ async function main() {
     throw err;
   }
 
-  const dataset: WoerterFile = JSON.parse(readFileSync(WOERTER_PATH, 'utf8'));
+  const woerterPath = woerterPfad(unit);
+  if (!existsSync(woerterPath)) {
+    console.error(`${unit}: woerter.json yo'q — avval unit matnini yozing.`);
+    process.exitCode = 1;
+    return;
+  }
+  const dataset: WoerterFile = JSON.parse(readFileSync(woerterPath, 'utf8'));
   const manifest = manifestOquv();
 
   const qoldi = zuGenerieren(dataset.woerter, manifest);
