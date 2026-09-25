@@ -230,6 +230,18 @@ export class GroupsController {
     return this.groupsService.getStatusHistory(id, companyId, userId, roles);
   }
 
+  @Get(':id/delete-preview')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getDeletePreview(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('roles') roles: string[],
+  ) {
+    return this.groupsService.getDeletePreview(id, companyId, userId, roles);
+  }
+
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')

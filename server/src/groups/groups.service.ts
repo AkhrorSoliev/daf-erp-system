@@ -79,6 +79,26 @@ export class GroupsService {
     );
     return this.read.getStatusHistory(id, companyId);
   }
+  /**
+   * How many students deleting the group would take out of it, asked by the
+   * delete dialog before the admin confirms. Behind the same branch check as
+   * the deletion itself.
+   */
+  async getDeletePreview(
+    groupId: string,
+    companyId: number,
+    userId?: number,
+    roles: string[] = [],
+  ) {
+    await assertCallerMayTouchGroup(
+      this.prisma,
+      userId as number,
+      roles,
+      groupId,
+      "Bu guruh boshqa filialga tegishli — uni o'chirish huquqingiz yo'q",
+    );
+    return this.read.getDeletePreview(groupId, companyId);
+  }
 
   // Writes
   create(dto: CreateGroupDto, companyId: number, userId?: number) {

@@ -352,7 +352,9 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'because it lives under `/students`. `GET /groups/:id/students` returns ' +
       'phone and balance for the whole roster and its @Roles includes Teacher, ' +
       'so it goes through `assertCallerMayTouchGroup` — assignment for a pure ' +
-      'teacher, branch for everyone else.',
+      'teacher, branch for everyone else. `GET /groups/:id/delete-preview` ' +
+      'counts the students deleting a group would take out of it, behind ' +
+      'the same check as `DELETE /groups/:id`.',
     routes: [
       'GET /students/:id/status-history',
       'GET /students/:id/balance-summary',
@@ -369,6 +371,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /students/:id/enrollments/:enrollmentId/write-off-cycle-debt',
       'GET /groups/:id/students',
       'GET /groups/:id/status-history',
+      'GET /groups/:id/delete-preview',
     ],
   },
   {

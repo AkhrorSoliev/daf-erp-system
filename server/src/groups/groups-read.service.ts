@@ -2,8 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService } from '../common/status';
 import { GroupQueryDto } from './dto/group-query.dto';
-import { Prisma } from '@prisma/client';
+import { EnrollmentStatus, Prisma } from '@prisma/client';
 import { groupInclude, formatGroup } from './shared/group-include';
+import { liveEnrollmentsOfGroup } from '../common/status/status-cascade.service';
 import { computeNextGroupNumber } from './shared/next-group-number';
 import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
@@ -310,6 +311,36 @@ export class GroupsReadService {
       enrolledAt: e.createdAt,
       ...e.student,
     }));
+  }
+
+  /**
+   * What deleting this group would do to its students: how many live
+   * enrolments the deletion closes, by status. Counted with the deletion's
+   * own filter, so the dialog's number is the deletion's. The list's
+   * `studentCount` counts ACTIVE only and cannot answer this — the students
+   * left behind by earlier deletions were all FROZEN.
+   */
+  async getDeletePreview(groupId: string, companyId: number) {
+    const group = await this.prisma.group.findFirst({
+      where: { id: groupId, deletedAt: null, companyId },
+      select: { id: true },
+    });
+    if (!group) {
+      throw new NotFoundException(`Guruh #${groupId} topilmadi`);
+    }
+
+    const byStatus = await this.prisma.enrollment.groupBy({
+      by: ['status'],
+      where: liveEnrollmentsOfGroup(groupId),
+      _count: { _all: true },
+    });
+    const count = (status: EnrollmentStatus) =>
+      byStatus.find((row) => row.status === status)?._count._all ?? 0;
+
+    return {
+      active: count(EnrollmentStatus.ACTIVE),
+      frozen: count(EnrollmentStatus.FROZEN),
+    };
   }
 
   async findOne(id: string, companyId: number, scope: ReportBranchIds) {
