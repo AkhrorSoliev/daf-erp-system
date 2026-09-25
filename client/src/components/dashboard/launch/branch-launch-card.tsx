@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, ChevronUp, PartyPopper } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,34 +10,9 @@ import { useBranchReadiness } from "@/hooks/use-branch-readiness";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useSpotlight } from "@/hooks/use-spotlight";
 import type { LaunchStation } from "./launch-stations";
-import { readLaunchFlag, writeLaunchFlag } from "./launch-storage";
+import { launchFlags, NO_LAUNCH_FLAGS } from "./launch-storage";
 import { resolveLaunchJourney, type JourneyStation } from "./resolve-launch-journey";
 import { canSeeLaunchJourney, resolveLaunchVisibility } from "./resolve-launch-visibility";
-
-interface LaunchFlags {
-  seen: boolean;
-  celebrated: boolean;
-  collapsed: boolean;
-  launched: boolean;
-}
-
-const DEFAULT_FLAGS: LaunchFlags = {
-  seen: false,
-  celebrated: false,
-  collapsed: false,
-  launched: false,
-};
-
-/** Reads all four flags for one user + branch; defaults when either is unknown yet. */
-function readFlags(userId: number | undefined, branchId: number | null): LaunchFlags {
-  if (userId === undefined || branchId === null) return DEFAULT_FLAGS;
-  return {
-    seen: readLaunchFlag(userId, branchId, "seen"),
-    celebrated: readLaunchFlag(userId, branchId, "celebrated"),
-    collapsed: readLaunchFlag(userId, branchId, "collapsed"),
-    launched: readLaunchFlag(userId, branchId, "launched"),
-  };
-}
 
 /**
  * "Launch the branch" — the journey map on the home page
@@ -54,16 +29,22 @@ export function BranchLaunchCard() {
   const router = useRouter();
 
   const roleIds = user?.roles.map((r) => r.id) ?? [];
+  const userId = user?.id;
   const branchId = selectedBranch?.id ?? null;
 
-  // Seeded from storage in the initializer itself (not an effect) so a
-  // previously-collapsed card never flashes open for a frame before
-  // snapping shut. Reads are safe when `window` is missing — they return
-  // false, matching the server-rendered default.
-  const [flags, setFlags] = useState<LaunchFlags>(() => readFlags(user?.id, branchId));
-  useEffect(() => {
-    setFlags(readFlags(user?.id, branchId));
-  }, [user, branchId]);
+  // The flags live in localStorage, per user and branch, and are read as an
+  // external store: switching the user or the branch reads the new pair in
+  // the same render, and every `launchFlags.write` re-renders the card.
+  // Nothing here copies them into state, so no effect has to keep a copy in
+  // step. The server render has no storage and sees nothing remembered.
+  const flags = useSyncExternalStore(
+    launchFlags.subscribe,
+    () =>
+      userId === undefined || branchId === null
+        ? NO_LAUNCH_FLAGS
+        : launchFlags.snapshot(userId, branchId),
+    () => NO_LAUNCH_FLAGS,
+  );
 
   // Once `launched` has latched, the map never needs the server's readiness
   // again — asking it would only invite a stale response to resurrect the
@@ -81,28 +62,26 @@ export function BranchLaunchCard() {
   });
 
   // The card was rendered in map state — "seen". Later, once `launched`, the
-  // celebration shows only to a user for whom this became true.
+  // celebration shows only to a user for whom this became true. Writing to
+  // storage is the effect's whole job; the store re-renders the card.
   useEffect(() => {
-    if (visibility !== "journey" || !user || branchId === null || flags.seen) return;
-    writeLaunchFlag(user.id, branchId, "seen", true);
-    setFlags((f) => ({ ...f, seen: true }));
-  }, [visibility, user, branchId, flags.seen]);
+    if (visibility !== "journey" || userId === undefined || branchId === null || flags.seen) {
+      return;
+    }
+    launchFlags.write(userId, branchId, "seen", true);
+  }, [visibility, userId, branchId, flags.seen]);
 
   // The server just reported the branch as launched — latch it once. From
   // then on the query above stays off and this effect is a no-op.
   useEffect(() => {
-    if (!user || branchId === null || !data?.launched || flags.launched) return;
-    writeLaunchFlag(user.id, branchId, "launched", true);
-    setFlags((f) => ({ ...f, launched: true }));
-  }, [data?.launched, user, branchId, flags.launched]);
+    if (userId === undefined || branchId === null || !data?.launched || flags.launched) return;
+    launchFlags.write(userId, branchId, "launched", true);
+  }, [data?.launched, userId, branchId, flags.launched]);
 
   if (visibility === "hidden" || !user || branchId === null) return null;
 
   if (visibility === "celebrate") {
-    const close = () => {
-      writeLaunchFlag(user.id, branchId, "celebrated", true);
-      setFlags((f) => ({ ...f, celebrated: true }));
-    };
+    const close = () => launchFlags.write(user.id, branchId, "celebrated", true);
     return (
       <section className="rounded-xl border bg-card">
         <div className="flex items-center gap-3 px-4 py-3">
@@ -141,11 +120,8 @@ export function BranchLaunchCard() {
     router.push(route);
   };
 
-  const toggleCollapsed = () => {
-    const next = !flags.collapsed;
-    writeLaunchFlag(user.id, branchId, "collapsed", next);
-    setFlags((f) => ({ ...f, collapsed: next }));
-  };
+  const toggleCollapsed = () =>
+    launchFlags.write(user.id, branchId, "collapsed", !flags.collapsed);
 
   return (
     <section className="rounded-xl border bg-card" aria-labelledby="launch-title">

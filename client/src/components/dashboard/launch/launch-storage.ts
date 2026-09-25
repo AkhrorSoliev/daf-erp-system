@@ -55,3 +55,74 @@ export function writeLaunchFlag(
     // No storage — we don't remember it, the card still works.
   }
 }
+
+export interface LaunchFlags {
+  seen: boolean;
+  celebrated: boolean;
+  collapsed: boolean;
+  launched: boolean;
+}
+
+/** Nothing remembered yet. Also the server render's answer: it has no storage. */
+export const NO_LAUNCH_FLAGS: LaunchFlags = Object.freeze({
+  seen: false,
+  celebrated: false,
+  collapsed: false,
+  launched: false,
+});
+
+const ALL_FLAGS: readonly LaunchFlag[] = ["seen", "celebrated", "collapsed", "launched"];
+
+/**
+ * The flags as an external store for `useSyncExternalStore`. The card reads
+ * them from here and writes through `write`, and every write re-renders the
+ * subscribed card, so the card keeps no copy of its own that an effect would
+ * have to keep in step with storage.
+ *
+ * `session` holds what this page wrote: where storage is blocked the card
+ * still collapses and closes for the rest of the visit, and only forgets on
+ * the next load. `snapshot` returns the SAME object while nothing changed,
+ * because `useSyncExternalStore` compares snapshots by identity and would
+ * re-render forever on a fresh object per call.
+ */
+export function createLaunchFlagStore(storage: () => StorageLike | null) {
+  const listeners = new Set<() => void>();
+  const session = new Map<string, boolean>();
+  const snapshots = new Map<string, LaunchFlags>();
+
+  const read = (userId: number, branchId: number, flag: LaunchFlag): boolean =>
+    session.get(launchStorageKey(userId, branchId, flag)) ??
+    readLaunchFlag(userId, branchId, flag, storage());
+
+  return {
+    subscribe(listener: () => void): () => void {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+
+    snapshot(userId: number, branchId: number): LaunchFlags {
+      const next: LaunchFlags = {
+        seen: read(userId, branchId, "seen"),
+        celebrated: read(userId, branchId, "celebrated"),
+        collapsed: read(userId, branchId, "collapsed"),
+        launched: read(userId, branchId, "launched"),
+      };
+      const id = `${userId}.${branchId}`;
+      const previous = snapshots.get(id);
+      if (previous && ALL_FLAGS.every((f) => previous[f] === next[f])) return previous;
+      snapshots.set(id, next);
+      return next;
+    },
+
+    write(userId: number, branchId: number, flag: LaunchFlag, value: boolean): void {
+      session.set(launchStorageKey(userId, branchId, flag), value);
+      writeLaunchFlag(userId, branchId, flag, value, storage());
+      for (const listener of listeners) listener();
+    },
+  };
+}
+
+/** The page's one store, shared by every mounted card. */
+export const launchFlags = createLaunchFlagStore(browserStorage);
