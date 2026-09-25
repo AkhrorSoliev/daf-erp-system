@@ -39,8 +39,11 @@ export interface DepartedStudentRow {
   branch: { id: number; name: string } | null;
   course: { id: string; name: string } | null;
   teachers: { id: number; fullName: string }[];
-  /** The day the student stopped (ADR-0035). */
-  departedAt: string;
+  /**
+   * The day the student stopped (ADR-0035). An API older than ADR-0035 sends
+   * no `departedAt` (nor `state`), so the cell shows "—" instead.
+   */
+  departedAt?: string;
   /** `pending`: still inside the grace period; coming back cancels it. */
   state: "pending" | "confirmed";
   stopKind: "EXPELLED" | "FROZEN" | "LEFT_GROUP";
@@ -250,7 +253,9 @@ export function DepartedStudentsTable({
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs tabular-nums">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        {format(new Date(row.departedAt), "dd.MM.yyyy")}
+                        {row.departedAt
+                          ? format(new Date(row.departedAt), "dd.MM.yyyy")
+                          : "—"}
                         {row.state === "pending" && (
                           <Badge
                             variant="outline"

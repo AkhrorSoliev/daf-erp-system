@@ -22,7 +22,7 @@ export interface DepartedStudentsSummary {
   departedCount: number;
   /** Students in a group at the start of the range — the churn denominator. */
   activeAtStart: number;
-  /** Stopped within the grace period and not back yet. */
+  /** Stopped in the range, not back yet, grace period still running. */
   pendingCount: number;
   graceDays: number;
   lostRevenue: number;
@@ -90,6 +90,24 @@ function formatMonths(n: number): string {
   return `${n.toFixed(1)} oy`;
 }
 
+/**
+ * Tooltip of the «Davrda ketganlar» card. The last sentence names the
+ * pending stops of the period, so it is left out when there are none.
+ */
+export function departedTooltip({
+  graceDays,
+  pendingCount,
+}: Pick<DepartedStudentsSummary, "graceDays" | "pendingCount">): string {
+  return (
+    "Tanlangan davrda ketgan o'quvchilar, har biri bir marta.\n" +
+    "Chetlatilgan kuni sanaladi. Guruhdan chiqqan yoki muzlatilgan o'quvchi " +
+    `${graceDays} kun ichida qaytmasa, to'xtagan kuni sanaladi.` +
+    (pendingCount > 0
+      ? `\nYana ${pendingCount} nafari ${graceDays} kun ichida qaytmasa qo'shiladi.`
+      : "")
+  );
+}
+
 interface Props {
   data: DepartedStudentsSummary | undefined;
   isLoading: boolean;
@@ -110,12 +128,6 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
     "Ketish koeffitsienti = Davrda ketganlar ÷ Davr boshida guruhda bo'lganlar × 100.\n" +
     `Misol: ${data.departedCount} ÷ ${data.activeAtStart} → ${data.churnRate.toFixed(1)}%.`;
 
-  const departedTooltip =
-    "Tanlangan davrda ketgan o'quvchilar, har biri bir marta.\n" +
-    "Chetlatilgan kuni sanaladi. Guruhdan chiqqan yoki muzlatilgan o'quvchi " +
-    `${data.graceDays} kun ichida qaytmasa, to'xtagan kuni sanaladi.\n` +
-    `Yana ${data.pendingCount} nafari ${data.graceDays} kun ichida qaytmasa qo'shiladi.`;
-
   const lostRevenueTooltip =
     "Agar ketgan o'quvchilar qolishganida, yana qancha so'm keltirishardi.\n" +
     "Har bir ketgan yozuv uchun: Shartnoma summasi − Allaqachon to'langan summa. Shartnomasi yo'q yozuvlar 0 deb hisoblanadi.";
@@ -133,7 +145,7 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
         icon={UserMinus}
         label="Davrda ketganlar"
         value={data.departedCount.toLocaleString("uz-UZ")}
-        tooltip={departedTooltip}
+        tooltip={departedTooltip(data)}
       />
       <KpiCard
         icon={TrendingDown}
