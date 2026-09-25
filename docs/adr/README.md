@@ -83,5 +83,6 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0023](0023-avtomatik-pauza-chiqarmaydi.md) | Avtomatik pauza o'quvchini guruhdan chiqarmaydi | Qabul qilindi | 2026-09-19 |
 | [0024](0024-daf-faollik-normasi-yigindi-sql-qaror-ts.md) | DaF faollik normasi sozlamada; yig'indi SQL da, qaror TypeScript da | Qabul qilindi | 2026-09-20 |
 | [0025](0025-telegram-xabarlari-kunlik-navbatga-jamlanadi.md) | Ko'pchilik Telegram xabari kunlik yagona navbatga jamlanadi, darhol yubormaydi | Qabul qilindi | 2026-09-23 |
+| [0033](0033-direktor-oz-filiali-ustozlariga-stavka-qoyadi.md) | Filial direktori o'z filiali ustozlariga stavka qo'yadi | Qabul qilindi | 2026-09-24 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.

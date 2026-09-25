@@ -45,11 +45,12 @@ export class SalaryService {
   getConfigHistory(userId: number, companyId: number) {
     return this.config.getHistory(userId, companyId);
   }
-  createConfig(
+  async createConfig(
     dto: CreateSalaryConfigDto,
     companyId: number,
     changedById?: number,
   ) {
+    await this.config.assertCallerMayCreateRate(changedById, companyId, dto);
     return this.config.createConfig(dto, companyId, changedById);
   }
   applyGlobalConfig(
@@ -59,6 +60,9 @@ export class SalaryService {
   ) {
     return this.config.applyGlobalConfig(dto, companyId, changedById);
   }
+  // PATCH /salary/config/:id is CEO-only (@Roles on the controller), so this
+  // is plain delegation — no caller gate here. A Branch Director's PATCH
+  // never reaches this method at all.
   updateConfig(
     id: string,
     dto: UpdateSalaryConfigDto,

@@ -45,7 +45,7 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 | View balance | All staff | Own branch staff | No | No | No |
 | Create payment | Yes | Yes | Yes | No | Yes |
 | Reverse payment | Yes | No | No | No | No |
-| Set salary config | Yes | Yes | No | No | No |
+| Set salary config | Yes | Own-branch Teacher-role holders, POST only (ADR-0033) | No | No | No |
 | Calculate salary | Yes | No | No | No | No |
 | Approve salary | Yes | No | No | No | No |
 | Pay salary | Yes | Own branch | No | No | No |
@@ -64,6 +64,7 @@ Each subdomain restricts which roles can log in. This is enforced **server-side*
 - **Frontend**: Check `user.roles.some(r => [1, 2].includes(r.id))` before rendering salary/balance UI
 - **Backend**: Use `@Roles('CEO', 'Branch Director')` on salary/reports endpoints; `@Roles('CEO', 'Branch Director', 'Administrator', 'Cashier')` on payment endpoints
 - **CEO-only actions**: reverse payment, reverse refund, calculate salary, approve salary — these use `@Roles('CEO')` specifically
+- **Salary config (ADR-0033)**: a Branch Director may create a rate (`POST /salary/config`) only for an ACTIVE, own-branch user who holds the Teacher role and does not also hold CEO or Branch Director — an administrator or cashier who also teaches IS included. Never their own rate, never `FIXED_MONTHLY`, never a date before the current payroll period. Editing or deactivating an existing rate (`PATCH /salary/config/:id`), `POST /salary/config/global` and the payroll period stay CEO-only. A `PERCENTAGE` rate above 100 is rejected for every caller, including the CEO.
 - Full details: see `docs/financial-system.md`
 
 ### Groups

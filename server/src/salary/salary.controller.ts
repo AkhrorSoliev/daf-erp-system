@@ -110,7 +110,9 @@ export class SalaryController {
   }
 
   // =========================================================================
-  // CONFIG — write = CEO-only; read = CEO/BD/Administrator.
+  // CONFIG — write = CEO; `POST /salary/config` also allows an own-branch
+  // Branch Director (ADR-0033, gated in SalaryService). `PATCH` stays
+  // CEO-only. Read = CEO/BD/Administrator.
   // =========================================================================
 
   @Get('config/:userId')
@@ -149,7 +151,7 @@ export class SalaryController {
   }
 
   @Post('config')
-  @Roles('CEO')
+  @Roles('CEO', 'Branch Director')
   createConfig(
     @Body() dto: CreateSalaryConfigDto,
     @CurrentUser('id') userId: number,

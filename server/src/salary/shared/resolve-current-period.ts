@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -167,10 +168,45 @@ export function computePeriodBounds(
  * returned as a UTC Date. Mirrors the salary config/period parsers so a
  * manually-picked calculate date aligns exactly with the period boundaries
  * `computePeriodBounds` produces.
+ *
+ * Only a bare `YYYY-MM-DD` is well-formed here — anything else (including a
+ * full ISO instant) produces `Invalid Date`, because the function appends its
+ * own `T00:00:00.000Z` unconditionally. Callers that accept a client-supplied
+ * string must go through `parseEffectiveFromOrThrow` below rather than this
+ * function directly, so an out-of-shape value is refused instead of silently
+ * becoming `NaN`.
  */
 export function parseTashkentDateStart(input: string): Date {
   const utc = new Date(`${input}T00:00:00.000Z`);
   return new Date(utc.getTime() - TASHKENT_OFFSET_MS);
+}
+
+/**
+ * `effectiveFrom` for every salary-config write path: `undefined` becomes
+ * "today" (Tashkent midnight); a value is parsed as `YYYY-MM-DD` and REFUSED
+ * with 400 if that does not produce a real date.
+ *
+ * Exists because `class-validator`'s `@IsDateString()` on the write DTOs
+ * accepts any ISO-8601 date-TIME, not only `YYYY-MM-DD` — a caller sending a
+ * full instant such as `2026-08-20T00:00:00Z` passes DTO validation, but
+ * `parseTashkentDateStart` appends its own `T00:00:00.000Z` and produces the
+ * unparseable `2026-08-20T00:00:00ZT00:00:00.000Z`. An unchecked `Invalid
+ * Date` compares `false` to every `<`/`>` comparison, so a rate that was
+ * supposed to be refused (e.g. "before the open payroll period") would sail
+ * through instead. `SalaryConfigService.parseEffectiveFrom` and the
+ * ADR-0033 rate gate (`teacher-rate-permission.ts`) both call this so they
+ * can never disagree on what counts as a valid date.
+ */
+export function parseEffectiveFromOrThrow(
+  input?: string,
+  now: Date = new Date(),
+): Date {
+  if (!input) return tashkentStartOfToday(now);
+  const parsed = parseTashkentDateStart(input);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new BadRequestException("Sana noto'g'ri formatda");
+  }
+  return parsed;
 }
 
 /**

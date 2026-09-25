@@ -15,12 +15,10 @@ describe('SalaryController @Roles metadata', () => {
   }
 
   describe('CEO-only writes (Faza 2 narrowing)', () => {
-    it.each(['createConfig', 'applyGlobalConfig', 'updateConfig'] as const)(
-      '%s requires CEO',
-      (method) => {
-        expect(rolesFor(method)).toEqual(['CEO']);
-      },
-    );
+    // A company-wide bulk rate moves every branch at once — CEO only.
+    it('applyGlobalConfig requires CEO', () => {
+      expect(rolesFor('applyGlobalConfig')).toEqual(['CEO']);
+    });
 
     it('createPeriodSetting requires CEO', () => {
       expect(rolesFor('createPeriodSetting')).toEqual(['CEO']);
@@ -32,6 +30,14 @@ describe('SalaryController @Roles metadata', () => {
         expect(rolesFor(method)).toEqual(['CEO']);
       },
     );
+
+    // A director's PATCH could mark a closed config active with no open
+    // version, or edit a rate the director could never have created — so the
+    // edit path stays CEO-only. Only `POST /salary/config` (a new version) is
+    // shared with the director (ADR-0033).
+    it('updateConfig requires CEO', () => {
+      expect(rolesFor('updateConfig')).toEqual(['CEO']);
+    });
 
     // A month-wide settle is irreversible and spans every branch's payroll, so
     // it sits with the CEO writes rather than with the per-payment payouts a
@@ -51,6 +57,15 @@ describe('SalaryController @Roles metadata', () => {
         expect(rolesFor(method)).toEqual(['CEO', 'Branch Director']);
       },
     );
+  });
+
+  describe('Teacher rate writes — CEO + own-branch Branch Director (ADR-0033)', () => {
+    // The role gate only admits the director; WHICH teacher they may touch is
+    // decided in `shared/teacher-rate-permission.ts` (own branch, holds
+    // Teacher, not CEO/Branch Director, not self, active, not FIXED_MONTHLY).
+    it('createConfig allows CEO and Branch Director', () => {
+      expect(rolesFor('createConfig')).toEqual(['CEO', 'Branch Director']);
+    });
   });
 
   describe('Read-only (CEO + BD + Administrator)', () => {
