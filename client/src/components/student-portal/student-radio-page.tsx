@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Screen, ScreenHeader, FadeIn, Badge } from "./lumio";
+import { Screen, StackHeader, FadeIn, Badge } from "./lumio";
 import { Play, Pause, CircleNotch, Heart, Broadcast } from "./lumio/icon";
 import { TILE_TONE } from "./lumio/tones";
 import {
@@ -51,9 +51,11 @@ export function StudentRadioPage() {
 
   return (
     <Screen>
-      <ScreenHeader
+      {/* On a phone Radio is a "Ko'proq" row, not a tab, so it needs the way
+          back its sibling screens have. */}
+      <StackHeader
         title="Radio"
-        subtitle="Jonli efir"
+        backHref="/portal/more"
         right={
           <span className="hidden items-center gap-1.5 rounded-pill bg-coral-500/12 px-3 py-1.5 text-xs font-extrabold text-coral-600 sm:inline-flex">
             <Broadcast size={14} weight="fill" />

@@ -8,7 +8,9 @@ import { bottomNavItems, moreRoutes } from "@/lib/student-nav-items";
 // Floating glass bottom-nav pill — mobile only (hidden at md, where the side
 // rail takes over; the shell passes that class in). Active
 // tabs turn coral. Geometry mirrors the student-app LumioTabBar (68px pill,
-// 34px radius).
+// 34px radius). The tabs share the pill equally (`flex-1`): five fixed 56px
+// minimums overflowed a 320px phone by 8px, while an equal share there is
+// 54px, room for the longest label ("To'lovlar", 45px).
 export function LumioBottomNav({ className }: { className?: string }) {
   const pathname = usePathname();
 
@@ -39,7 +41,7 @@ export function LumioBottomNav({ className }: { className?: string }) {
               href={item.url}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex min-h-12 min-w-14 flex-col items-center justify-center gap-1 rounded-2xl transition-colors",
+                "flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl transition-colors",
                 active ? "text-coral-600" : "text-ink-400 hover:text-ink-700",
               )}
             >
