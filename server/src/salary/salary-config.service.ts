@@ -20,6 +20,15 @@ import {
   UpdateSalaryConfigDto,
 } from './dto/salary-config.dto';
 
+/** A config with at most its latest version, as `upsertNewVersion` needs it. */
+type ConfigWithLatestVersion = EmployeeSalaryConfig & {
+  versions: Array<{
+    id: string;
+    effectiveFrom: Date;
+    effectiveTo: Date | null;
+  }>;
+};
+
 /**
  * Salary config writes always create a new EmployeeSalaryConfigVersion row
  * (SCD2). The parent EmployeeSalaryConfig keeps the *current* values as a
@@ -246,22 +255,34 @@ export class SalaryConfigService {
           );
         }
 
-        // Write a new version only when something rate-affecting changed
-        // (salaryType or value). isActive flips don't need a version row —
-        // they're a deactivation, not a rate change.
+        // Write a new version when something rate-affecting changed
+        // (salaryType or value), or when a deactivated config is switched
+        // back on. Deactivation closed its last version, and accruals resolve
+        // the version active on the lesson date — flipping isActive alone
+        // would leave the employee assignable and "rated" on every isActive
+        // check while earning nothing. Invariant: an active config has an
+        // open version from its reactivation date on.
         const rateChanged =
           (dto.salaryType !== undefined &&
             dto.salaryType !== existing.salaryType) ||
           (dto.value !== undefined && dto.value !== existing.value);
+        const reopening =
+          dto.isActive === true &&
+          !existing.isActive &&
+          existing.versions.length === 0;
 
-        if (rateChanged) {
-          await this.upsertNewVersion(tx, existing, {
-            salaryType: dto.salaryType ?? existing.salaryType,
-            value: dto.value ?? existing.value,
-            effectiveFrom,
-            changedById,
-            companyId,
-          });
+        if (rateChanged || reopening) {
+          await this.upsertNewVersion(
+            tx,
+            await this.withLatestVersion(tx, existing),
+            {
+              salaryType: dto.salaryType ?? existing.salaryType,
+              value: dto.value ?? existing.value,
+              effectiveFrom,
+              changedById,
+              companyId,
+            },
+          );
         }
 
         // Deactivating a config MUST close its open version so proration /
@@ -425,15 +446,28 @@ export class SalaryConfigService {
     return config;
   }
 
+  /**
+   * The version a new one has to follow: the open version when there is one.
+   * A deactivated config has none, so it is the last closed version — without
+   * it `upsertNewVersion` would skip the "not before the latest version" guard
+   * and could start a reactivated rate on top of dates the old one covered.
+   */
+  private async withLatestVersion(
+    tx: Prisma.TransactionClient,
+    existing: ConfigWithLatestVersion,
+  ): Promise<ConfigWithLatestVersion> {
+    if (existing.versions.length > 0) return existing;
+    const latest = await tx.employeeSalaryConfigVersion.findFirst({
+      where: { configId: existing.id },
+      orderBy: [{ effectiveFrom: 'desc' }, { createdAt: 'desc' }],
+      select: { id: true, effectiveFrom: true, effectiveTo: true },
+    });
+    return latest ? { ...existing, versions: [latest] } : existing;
+  }
+
   private async upsertNewVersion(
     tx: Prisma.TransactionClient,
-    existing: EmployeeSalaryConfig & {
-      versions: Array<{
-        id: string;
-        effectiveFrom: Date;
-        effectiveTo: Date | null;
-      }>;
-    },
+    existing: ConfigWithLatestVersion,
     params: {
       salaryType: SalaryType;
       value: number;
@@ -470,9 +504,18 @@ export class SalaryConfigService {
       );
     }
 
-    if (latest) {
-      // Close the current open version. effectiveFrom == effectiveTo means
-      // the old version covers up to (but not including) the new one.
+    // The new version takes over from effectiveFrom, so the latest one ends
+    // there: an open version is closed, and a closed one (a reactivated
+    // config) is cut back if it ran past that date — two overlapping
+    // FIXED_MONTHLY versions are both prorated, i.e. paid twice. A closed
+    // version that ended earlier stays as it is: stretching it to
+    // effectiveFrom would pay the days the config was switched off.
+    // effectiveFrom == effectiveTo means the old version covers up to (but
+    // not including) the new one.
+    if (
+      latest &&
+      (latest.effectiveTo === null || latest.effectiveTo > params.effectiveFrom)
+    ) {
       await tx.employeeSalaryConfigVersion.update({
         where: { id: latest.id },
         data: { effectiveTo: params.effectiveFrom },
