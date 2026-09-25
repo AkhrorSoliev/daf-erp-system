@@ -79,6 +79,14 @@ hamma o'quvchini qoplaydi. Ilgari uch xil ta'rif bor edi va 496 ta o'quvchi
 ikkala ro'yxatda ham turardi.
 `students/shared/active-student-where.ts`
 
+**Ketgan o'quvchi** — o'qishni to'xtatib qaytmagan o'quvchi. Chetlatilgan yoki
+arxivlangan kuni ketgan; oxirgi guruhidan chiqqan yoki muzlatilgan bo'lsa —
+N kun ichida qaytmasa, to'xtagan kuni ketgan, qaytsa ketish bo'lmagan.
+Bitiruvchi ketgan emas. Hisobot sahifasi, bosh sahifa kartasi va Excel «KPI
+paneli» shu bitta ta'rifdan o'qiydi; «O'quvchilar oqimi» va Telegram 21:00
+boshqa savolga javob beradi.
+`students/shared/departure-episodes.ts` · `docs/adr/0035-ketgan-oquvchi-tarifi.md`
+
 **Avtomatik pauza** — ketma-ket sababsiz dars qoldirgan o'quvchini tizim
 har kuni ertalab 07:30 da o'zi muzlatadi (`FROZEN`), guruhdan **chiqarmaydi**.
 Pauzadagi o'quvchi davomat ro'yxatidan chiqadi, ya'ni undan pul yechilmaydi
@@ -93,9 +101,8 @@ ustun = filial. O'chirish = `LOST` holatiga o'tkazish + majburiy sabab.
 `leads/leads.service.ts`
 
 **Ketish sababi (exit reason)** — o'quvchi guruhdan chiqqanda majburiy
-tanlanadigan sabab. Hisobotdagi «ketganlar» **enrollment** larni sanaydi
-(guruh bo'yicha), o'quvchilarni emas — bitta o'quvchi ikki guruhdan chiqsa,
-ikki marta sanaladi.
+tanlanadigan sabab. Sabab guruhdan chiqarish yozuvida saqlanadi; «ketgan» esa o'quvchi bo'yicha
+sanaladi — «Ketgan o'quvchi» ga qarang.
 `student-exit-reasons/`
 
 ---
