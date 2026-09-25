@@ -18,6 +18,7 @@ import {
   STUDENT_DEEP_LINK_PREFIX,
   STUDENT_GROUP_DEEP_LINK_RE,
   EMPLOYEE_DEEP_LINK_RE,
+  UNDATED_EMPLOYEE_DEEP_LINK_RE,
   EMPLOYEE_ROLE_SEPARATOR,
   MOCK_EXAM_DEEP_LINK_PREFIX,
   APP_LOGIN_REQUEST_PREFIX,
@@ -32,8 +33,8 @@ import { createMockExamRegistrationScene } from './scenes/mock-exam-registration
 import { createPasswordResetScene } from './scenes/password-reset.scene';
 import { approveLoginRequest } from './flows/app-login-otp-flow';
 import {
+  checkEmployeePayload,
   signEmployeePayload,
-  verifyEmployeePayload,
 } from './utils/signed-link.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramChannelGateStatsService } from './telegram-channel-gate-stats.service';
@@ -69,6 +70,14 @@ const ALLOWED_UPDATES = [
   'chat_member',
   'chat_join_request',
 ] as const;
+
+/**
+ * The answer to an employee link past its three days, or one minted before
+ * links carried an issue time (ADR-0029): the holder needs a new link, not a
+ * report that this one is broken.
+ */
+const EXPIRED_EMPLOYEE_LINK_REPLY =
+  "Bu havolaning muddati tugagan. Administratordan yangi havola so'rang.";
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnModuleDestroy {
@@ -303,49 +312,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      // employee_{branchId}_roles_{id1-id2-...}_sig_{hmac} — xodim sifatida ro'yxatdan o'tish
-      const employeeMatch = payload.match(EMPLOYEE_DEEP_LINK_RE);
-      if (employeeMatch) {
-        ctx.session.processing = true;
-        const branchId = Number(employeeMatch[1]);
-        const rawRoleIds = employeeMatch[2]
-          .split(EMPLOYEE_ROLE_SEPARATOR)
-          .map((id) => Number(id))
-          .filter(
-            (id) =>
-              Number.isInteger(id) &&
-              (VALID_ROLE_IDS as readonly number[]).includes(id),
-          );
-        const providedSig = employeeMatch[3];
-
-        if (
-          rawRoleIds.length === 0 ||
-          !verifyEmployeePayload(branchId, rawRoleIds, providedSig)
-        ) {
-          ctx.session.processing = false;
-          this.logger.warn(`Invalid employee deep-link payload: "${payload}"`);
-          await ctx.reply(
-            "Noto'g'ri yoki buzilgan havola. Administrator bilan bog'laning.",
-          );
-          return;
-        }
-
-        // Archived or closed branches must not accept new registrations.
-        const branch = await this.prisma.branch.findFirst({
-          where: { id: branchId, deletedAt: null, status: 'ACTIVE' },
-          select: { id: true },
-        });
-        if (!branch) {
-          ctx.session.processing = false;
-          await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
-          return;
-        }
-
-        ctx.session.data = { branchId, roleIds: rawRoleIds };
-        ctx.session.processing = false;
-        await ctx.scene.enter(SCENES.EMPLOYEE_REGISTRATION);
-        return;
-      }
+      // employee_{branchId}_roles_{ids}_t_{issued}_sig_{hmac}: staff registration
+      if (await this.startEmployeeRegistration(ctx, payload)) return;
 
       // student_{branchId}_group_{groupId} — guruhga to'g'ridan-to'g'ri ro'yxatdan o'tish
       const groupMatch = payload.match(STUDENT_GROUP_DEEP_LINK_RE);
@@ -1116,6 +1084,81 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     return a.length === b.length && timingSafeEqual(a, b);
   }
 
+  /**
+   * `/start employee_…`: the signed staff-registration link. Returns false
+   * when the payload is not an employee link, so `/start` moves on to the
+   * other kinds.
+   *
+   * Checked in this order: signature, age (ADR-0029), branch. A link whose
+   * issue time was edited therefore fails as broken, never as expired.
+   */
+  private async startEmployeeRegistration(
+    ctx: BotContext,
+    payload: string,
+  ): Promise<boolean> {
+    const employeeMatch = payload.match(EMPLOYEE_DEEP_LINK_RE);
+    if (!employeeMatch) {
+      // Minted before links carried an issue time: its age cannot be known,
+      // so its holder is sent for a new link like any expired one.
+      if (!UNDATED_EMPLOYEE_DEEP_LINK_RE.test(payload)) return false;
+      this.logger.warn(`Undated employee deep-link payload: "${payload}"`);
+      await ctx.reply(EXPIRED_EMPLOYEE_LINK_REPLY);
+      return true;
+    }
+
+    ctx.session.processing = true;
+    const branchId = Number(employeeMatch[1]);
+    const rawRoleIds = employeeMatch[2]
+      .split(EMPLOYEE_ROLE_SEPARATOR)
+      .map((id) => Number(id))
+      .filter(
+        (id) =>
+          Number.isInteger(id) &&
+          (VALID_ROLE_IDS as readonly number[]).includes(id),
+      );
+    const verdict =
+      rawRoleIds.length === 0
+        ? 'invalid'
+        : checkEmployeePayload(
+            branchId,
+            rawRoleIds,
+            employeeMatch[3],
+            employeeMatch[4],
+            new Date(),
+          );
+
+    if (verdict === 'invalid') {
+      ctx.session.processing = false;
+      this.logger.warn(`Invalid employee deep-link payload: "${payload}"`);
+      await ctx.reply(
+        "Noto'g'ri yoki buzilgan havola. Administrator bilan bog'laning.",
+      );
+      return true;
+    }
+    if (verdict === 'expired') {
+      ctx.session.processing = false;
+      this.logger.warn(`Expired employee deep-link payload: "${payload}"`);
+      await ctx.reply(EXPIRED_EMPLOYEE_LINK_REPLY);
+      return true;
+    }
+
+    // Archived or closed branches must not accept new registrations.
+    const branch = await this.prisma.branch.findFirst({
+      where: { id: branchId, deletedAt: null, status: 'ACTIVE' },
+      select: { id: true },
+    });
+    if (!branch) {
+      ctx.session.processing = false;
+      await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
+      return true;
+    }
+
+    ctx.session.data = { branchId, roleIds: rawRoleIds };
+    ctx.session.processing = false;
+    await ctx.scene.enter(SCENES.EMPLOYEE_REGISTRATION);
+    return true;
+  }
+
   async generateEmployeeLinkPayload(
     branchId: number,
     roleIds: number[],
@@ -1178,6 +1221,6 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       }
     }
 
-    return signEmployeePayload(branchId, unique);
+    return signEmployeePayload(branchId, unique, new Date());
   }
 }
