@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SalaryPaymentStatus, SalaryType } from '@prisma/client';
 import { SalaryConfigService } from './salary-config.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { prorateFixedMonthly } from './shared/prorate-fixed-monthly';
 
 /**
  * Focused on `deactivateConfigsForUser` — the 4b cascade that stops payroll for
@@ -323,5 +324,217 @@ describe('SalaryConfigService.updateConfig — reactivation', () => {
     expect(tx.employeeSalaryConfigVersion.create).not.toHaveBeenCalled();
     expect(tx.employeeSalaryConfigVersion.update).not.toHaveBeenCalled();
     expect(result.isActive).toBe(true);
+  });
+});
+
+/**
+ * POST /salary/config and POST /salary/config/global on a deactivated config.
+ * Both load only OPEN versions, so a config whose versions are all closed
+ * arrives with `versions: []`; without its last closed version as reference a
+ * new version could start on top of dates that version already covers.
+ */
+describe('SalaryConfigService — POST on a deactivated config', () => {
+  let service: SalaryConfigService;
+  let prisma: any;
+  let tx: any;
+
+  // The last version, closed when the config was switched off.
+  const CLOSED = {
+    id: 'ver-1',
+    effectiveFrom: new Date('2026-05-31T19:00:00.000Z'), // 01.06 Tashkent
+    effectiveTo: new Date('2026-08-15T19:00:00.000Z'), // 16.08 Tashkent
+  };
+  const config = (userId: number, overrides: Record<string, unknown> = {}) => ({
+    id: `cfg-${userId}`,
+    userId,
+    groupId: null,
+    salaryType: SalaryType.FIXED_MONTHLY,
+    value: 5_000_000,
+    isActive: false,
+    companyId: 1,
+    createdAt: CLOSED.effectiveFrom,
+    updatedAt: CLOSED.effectiveTo,
+    versions: [] as any[],
+    ...overrides,
+  });
+
+  beforeEach(async () => {
+    tx = {
+      employeeSalaryConfig: {
+        findFirst: jest.fn().mockResolvedValue(config(501)),
+        create: jest.fn(),
+        update: jest.fn(async ({ data }: any) => ({ ...config(501), ...data })),
+      },
+      employeeSalaryConfigVersion: {
+        findFirst: jest.fn().mockResolvedValue(CLOSED),
+        create: jest.fn().mockResolvedValue({}),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      salaryPayment: { findFirst: jest.fn().mockResolvedValue(null) },
+    };
+    // Reads outside a transaction hit the same mocks.
+    prisma = {
+      ...tx,
+      groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
+      $transaction: jest.fn(async (cb: any) => cb(tx)),
+    };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        SalaryConfigService,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+    service = module.get(SalaryConfigService);
+  });
+
+  const post = (effectiveFrom: string, value = 5_000_000) =>
+    service.createConfig(
+      {
+        userId: 501,
+        salaryType: SalaryType.FIXED_MONTHLY,
+        value,
+        effectiveFrom,
+      },
+      1,
+      7,
+    );
+
+  describe('createConfig', () => {
+    it('refuses a date before the last (closed) version started', async () => {
+      await expect(post('2026-05-15')).rejects.toThrow(BadRequestException);
+
+      expect(tx.employeeSalaryConfigVersion.create).not.toHaveBeenCalled();
+      expect(tx.employeeSalaryConfigVersion.update).not.toHaveBeenCalled();
+    });
+
+    it('cuts the closed version back to a start inside it, so no day is paid twice', async () => {
+      await post('2026-08-10', 6_000_000);
+
+      const E = new Date('2026-08-09T19:00:00.000Z'); // 10.08 Tashkent
+      expect(tx.employeeSalaryConfigVersion.update).toHaveBeenCalledTimes(1);
+      expect(tx.employeeSalaryConfigVersion.update).toHaveBeenCalledWith({
+        where: { id: 'ver-1' },
+        data: { effectiveTo: E },
+      });
+      expect(tx.employeeSalaryConfigVersion.create).toHaveBeenCalledTimes(1);
+      const created =
+        tx.employeeSalaryConfigVersion.create.mock.calls[0][0].data;
+      expect(created).toEqual(
+        expect.objectContaining({ effectiveFrom: E, effectiveTo: null }),
+      );
+
+      // August pays 9 days at the old rate and 22 at the new one — not 15 + 22.
+      const august = prorateFixedMonthly(
+        [
+          {
+            value: 5_000_000,
+            effectiveFrom: CLOSED.effectiveFrom,
+            effectiveTo: E,
+          },
+          { value: created.value, effectiveFrom: E, effectiveTo: null },
+        ],
+        new Date('2026-07-31T19:00:00.000Z'),
+        new Date('2026-08-31T18:59:59.999Z'),
+      );
+      expect(august).toBe(
+        Math.round((5_000_000 * 9) / 31) + Math.round((6_000_000 * 22) / 31),
+      );
+    });
+
+    it('leaves a closed version that ended before the new start untouched', async () => {
+      await post('2026-09-01');
+
+      // Stretching it to 01.09 would pay the days the config was off.
+      expect(tx.employeeSalaryConfigVersion.update).not.toHaveBeenCalled();
+      expect(tx.employeeSalaryConfigVersion.create).toHaveBeenCalledTimes(1);
+      expect(
+        tx.employeeSalaryConfigVersion.create.mock.calls[0][0].data,
+      ).toEqual(
+        expect.objectContaining({
+          effectiveFrom: new Date('2026-08-31T19:00:00.000Z'),
+          effectiveTo: null,
+        }),
+      );
+    });
+  });
+
+  describe('applyGlobalConfig', () => {
+    // 501 is active with an open version; 502 is deactivated.
+    const OPEN_501 = { ...CLOSED, id: 'ver-501', effectiveTo: null };
+    beforeEach(() => {
+      prisma.groupTeacher.findMany.mockResolvedValue([
+        { teacherId: 501 },
+        { teacherId: 502 },
+      ]);
+      tx.employeeSalaryConfig.findFirst.mockImplementation(
+        async ({ where }: any) =>
+          where.userId === 501
+            ? config(501, { isActive: true, versions: [OPEN_501] })
+            : config(502),
+      );
+    });
+
+    const apply = (effectiveFrom: string) =>
+      service.applyGlobalConfig(
+        { salaryType: SalaryType.PERCENTAGE, value: 35, effectiveFrom },
+        1,
+        7,
+      );
+
+    it.each([
+      [
+        "502's closed version starts after the date",
+        () =>
+          tx.employeeSalaryConfigVersion.findFirst.mockResolvedValue({
+            ...CLOSED,
+            effectiveFrom: new Date('2026-08-31T19:00:00.000Z'), // 01.09
+            effectiveTo: new Date('2026-09-14T19:00:00.000Z'), // 15.09
+          }),
+      ],
+      [
+        "502's salary for the date is already paid",
+        () =>
+          tx.salaryPayment.findFirst.mockImplementation(
+            async ({ where }: any) =>
+              where.userId === 502
+                ? {
+                    id: 'sp-1',
+                    periodStart: new Date('2026-07-31T19:00:00.000Z'),
+                    periodEnd: new Date('2026-08-31T18:59:59.999Z'),
+                    status: SalaryPaymentStatus.PAID,
+                  }
+                : null,
+          ),
+      ],
+    ])(
+      'writes nothing for anyone when one teacher is refused (%s)',
+      async (_label, arrange) => {
+        arrange();
+
+        await expect(apply('2026-08-20')).rejects.toThrow(/#502/);
+
+        // 501 comes first in the loop and would otherwise keep the new rate.
+        expect(tx.employeeSalaryConfigVersion.create).not.toHaveBeenCalled();
+        expect(tx.employeeSalaryConfigVersion.update).not.toHaveBeenCalled();
+        expect(tx.employeeSalaryConfig.update).not.toHaveBeenCalled();
+        expect(tx.employeeSalaryConfig.create).not.toHaveBeenCalled();
+      },
+    );
+
+    it("cuts a deactivated teacher's closed version back like POST does", async () => {
+      const result = await apply('2026-08-10');
+
+      const E = new Date('2026-08-09T19:00:00.000Z'); // 10.08 Tashkent
+      expect(result).toEqual({ updated: 2 });
+      expect(tx.employeeSalaryConfigVersion.update).toHaveBeenCalledWith({
+        where: { id: 'ver-1' },
+        data: { effectiveTo: E },
+      });
+      expect(tx.employeeSalaryConfigVersion.update).toHaveBeenCalledWith({
+        where: { id: 'ver-501' },
+        data: { effectiveTo: E },
+      });
+      expect(tx.employeeSalaryConfigVersion.create).toHaveBeenCalledTimes(2);
+    });
   });
 });
