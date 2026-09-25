@@ -13,6 +13,8 @@ import {
 } from '../common/date/tashkent';
 import {
   enrollmentStatusOn,
+  supplyOpeningRow,
+  type EnrollmentStatusEvent,
   type EnrollmentStatusFallback,
 } from '../students/shared/enrollment-status-on';
 
@@ -106,16 +108,11 @@ interface PricePoint {
   validTo: Date | null;
 }
 
-interface StateEvent {
-  status: string;
-  transitionAt: Date;
-}
-
 interface SnapshotMaps {
   roomCapacity: Map<string, CapacityPoint[]>;
   groupSchedule: Map<string, SchedulePoint[]>;
   coursePrice: Map<string, PricePoint[]>;
-  enrollmentEvents: Map<string, StateEvent[]>;
+  enrollmentEvents: Map<string, EnrollmentStatusEvent[]>;
 }
 
 @Injectable()
@@ -876,11 +873,20 @@ export class ReportsCenterActivityService {
       coursePrice.set(s.courseId, arr);
     }
 
-    const enrollmentEvents = new Map<string, StateEvent[]>();
+    const enrollmentEvents = new Map<string, EnrollmentStatusEvent[]>();
     for (const e of events) {
       const arr = enrollmentEvents.get(e.enrollmentId) ?? [];
       arr.push({ status: e.status, transitionAt: e.transitionAt });
       enrollmentEvents.set(e.enrollmentId, arr);
+    }
+    // Enrollments opened before the log existed have only their later rows.
+    // The query stops at the range end, which cuts only a log's tail: the
+    // first row it returns is the enrollment's first.
+    for (const g of groups) {
+      for (const e of g.enrollments) {
+        const own = enrollmentEvents.get(e.id);
+        if (own) supplyOpeningRow(own, e.createdAt);
+      }
     }
 
     return { roomCapacity, groupSchedule, coursePrice, enrollmentEvents };

@@ -569,6 +569,103 @@ describe('ReportsCenterActivityService', () => {
     expect(result.kpis.activeStudents).toBe(1);
     expect(result.rooms[0].totals.enrolled).toBe(1);
   });
+
+  describe('an enrollment opened before the state log', () => {
+    // An enrollment opened before the state log existed (up to 2026-04-26)
+    // can have a log that starts with its closing: the opening ACTIVE row
+    // was never written.
+    const OPENED = new Date('2026-04-10');
+    const FIRST_ROW = new Date('2026-06-15');
+
+    /** The days of an April–June daily trend that count the one enrollment. */
+    async function activeSpan(
+      enrollment: {
+        status: string;
+        createdAt: Date;
+        statusChangedAt: Date | null;
+      },
+      logs: Array<{ status: string; transitionAt: Date }>,
+    ) {
+      prisma.room.findMany.mockResolvedValue([
+        { id: 'r1', name: 'X', capacity: 20, branchId: 1, branch },
+      ]);
+      prisma.group.findMany.mockResolvedValue([
+        {
+          id: 'g1',
+          name: 'A',
+          roomId: 'r1',
+          branchId: 1,
+          courseId: 'c1',
+          exactDays: ['monday'],
+          lessonStartTime: '09:00',
+          lessonEndTime: '10:00',
+          startDate: null,
+          endDate: null,
+          createdAt: new Date('2026-01-01'),
+          course: { price: 0 },
+          enrollments: [{ id: 'e1', studentId: 100, ...enrollment }],
+        },
+      ]);
+      prisma.enrollmentStateLog.findMany.mockResolvedValue(
+        logs.map((l) => ({ enrollmentId: 'e1', ...l })),
+      );
+
+      const { trend } = (await service.getCenterActivity(
+        1,
+        makeQuery({ startDate: '2026-04-06', endDate: '2026-06-30' }),
+      )) as { trend: Array<{ bucketStart: string; activeStudents: number }> };
+      const days = trend
+        .filter((p) => p.activeStudents > 0)
+        .map((p) => p.bucketStart);
+      return {
+        first: days[0] ?? null,
+        last: days[days.length - 1] ?? null,
+        count: days.length,
+      };
+    }
+
+    // 10.04 through 14.06: from the creation to the day before the row.
+    const UNTIL_FIRST_ROW = {
+      first: '2026-04-10',
+      last: '2026-06-14',
+      count: 66,
+    };
+
+    it.each(['DROPPED', 'FROZEN', 'TRANSFERRED'])(
+      'counts it from its creation until a first %s row',
+      async (status) => {
+        expect(
+          await activeSpan(
+            { status, createdAt: OPENED, statusChangedAt: FIRST_ROW },
+            [{ status, transitionAt: FIRST_ROW }],
+          ),
+        ).toEqual(UNTIL_FIRST_ROW);
+      },
+    );
+
+    it('counts an enrollment whose log opens with ACTIVE the same way', async () => {
+      expect(
+        await activeSpan(
+          { status: 'DROPPED', createdAt: OPENED, statusChangedAt: FIRST_ROW },
+          [
+            { status: 'ACTIVE', transitionAt: OPENED },
+            { status: 'DROPPED', transitionAt: FIRST_ROW },
+          ],
+        ),
+      ).toEqual(UNTIL_FIRST_ROW);
+    });
+
+    it('adds no day when the first row is logged at the creation itself', async () => {
+      const opened = new Date('2026-05-20T09:00:00Z');
+
+      expect(
+        await activeSpan(
+          { status: 'DROPPED', createdAt: opened, statusChangedAt: opened },
+          [{ status: 'DROPPED', transitionAt: opened }],
+        ),
+      ).toEqual({ first: null, last: null, count: 0 });
+    });
+  });
 });
 
 function enrollment(studentId: number) {

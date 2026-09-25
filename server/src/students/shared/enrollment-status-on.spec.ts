@@ -76,8 +76,8 @@ describe('enrollmentStatusOn', () => {
 });
 
 describe('supplyOpeningRow', () => {
-  // Enrollments opened before the log existed (before 2026-04-26) kept only
-  // their later rows: the log starts with the closing.
+  // An enrollment opened before the log existed (up to 2026-04-26) can
+  // have only its later rows: the log starts with the closing.
   const OPENED = at('2026-04-10T09:00:00Z');
   const CLOSED = at('2026-06-15T09:00:00Z');
 
