@@ -324,124 +324,13 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       if (await this.startEmployeeRegistration(ctx, payload)) return;
 
       // student_{branchId}_group_{groupId} — guruhga to'g'ridan-to'g'ri ro'yxatdan o'tish
-      const groupMatch = payload.match(STUDENT_GROUP_DEEP_LINK_RE);
-      if (groupMatch) {
-        ctx.session.processing = true;
-        const branchId = Number(groupMatch[1]);
-        const groupId = groupMatch[2];
-
-        const branch = await this.prisma.branch.findFirst({
-          where: { id: branchId, deletedAt: null, status: 'ACTIVE' },
-          select: { id: true },
-        });
-        if (!branch) {
-          ctx.session.processing = false;
-          await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
-          return;
-        }
-
-        const group = await this.prisma.group.findFirst({
-          where: { id: groupId, branchId, deletedAt: null },
-          select: {
-            id: true,
-            name: true,
-            lessonStartTime: true,
-            lessonEndTime: true,
-            days: true,
-            exactDays: true,
-            room: { select: { name: true } },
-            teachers: {
-              select: {
-                teacher: {
-                  select: { id: true, firstName: true, lastName: true },
-                },
-              },
-              take: 1,
-            },
-          },
-        });
-        if (!group) {
-          ctx.session.processing = false;
-          await ctx.reply("Guruh topilmadi. Administrator bilan bog'laning.");
-          return;
-        }
-
-        const teacher = group.teachers[0]?.teacher;
-        ctx.session.data = {
-          branchId,
-          groupId: group.id,
-          groupName: group.name,
-          teacherId: teacher?.id ?? null,
-          teacherName: teacher
-            ? `${teacher.firstName} ${teacher.lastName}`
-            : '—',
-          lessonStartTime: group.lessonStartTime,
-          lessonEndTime: group.lessonEndTime,
-          days: group.days,
-          exactDays: group.exactDays,
-          roomName: group.room?.name ?? null,
-        };
-        ctx.session.processing = false;
-        await ctx.scene.enter(SCENES.STUDENT_REGISTRATION);
-        return;
-      }
+      if (await this.startStudentGroupRegistration(ctx, payload)) return;
 
       // mock_<botStartPayload> — mock exam registration
-      if (payload.startsWith(MOCK_EXAM_DEEP_LINK_PREFIX)) {
-        ctx.session.processing = true;
-        const botStartPayload = payload.slice(
-          MOCK_EXAM_DEEP_LINK_PREFIX.length,
-        );
+      if (await this.startMockExamRegistration(ctx, payload)) return;
 
-        if (!botStartPayload) {
-          ctx.session.processing = false;
-          await ctx.reply("Noto'g'ri havola.");
-          return;
-        }
-
-        const exam = await this.prisma.mockExam.findFirst({
-          where: { botStartPayload, deletedAt: null },
-          select: { id: true, title: true },
-        });
-        if (!exam) {
-          ctx.session.processing = false;
-          await ctx.reply(
-            "Imtihon topilmadi yoki havola eskirgan. Administrator bilan bog'laning.",
-          );
-          return;
-        }
-
-        ctx.session.data = { examId: exam.id };
-        ctx.session.processing = false;
-        await ctx.scene.enter(SCENES.MOCK_EXAM_REGISTRATION);
-        return;
-      }
-
-      if (payload.startsWith(STUDENT_DEEP_LINK_PREFIX)) {
-        ctx.session.processing = true;
-        const branchIdStr = payload.slice(STUDENT_DEEP_LINK_PREFIX.length);
-        const branchId = Number(branchIdStr);
-
-        if (!branchIdStr || isNaN(branchId)) {
-          ctx.session.processing = false;
-          await ctx.reply("Noto'g'ri havola. Administrator bilan bog'laning.");
-          return;
-        }
-
-        const branch = await this.prisma.branch.findUnique({
-          where: { id: branchId },
-        });
-        if (!branch) {
-          ctx.session.processing = false;
-          await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
-          return;
-        }
-
-        ctx.session.data = { branchId };
-        ctx.session.processing = false;
-        await ctx.scene.enter(SCENES.STUDENT_REGISTRATION);
-        return;
-      }
+      // student_{branchId}: student registration
+      if (await this.startStudentRegistration(ctx, payload)) return;
 
       // Salomlashish xabari reply-klaviaturani TOZALAYDI. Bu ataylab alohida
       // xabar: bitta xabarda ham inline tugmalar, ham `remove_keyboard`
@@ -1175,6 +1064,155 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
     ctx.session.data = { branchId, roleIds: rawRoleIds };
     await ctx.scene.enter(SCENES.EMPLOYEE_REGISTRATION);
+    return true;
+  }
+
+  /**
+   * `/start student_<branchId>_group_<groupId>`: a student registers straight
+   * into a group. Returns false when the payload is not such a link, so
+   * `/start` moves on to the other kinds.
+   */
+  private async startStudentGroupRegistration(
+    ctx: BotContext,
+    payload: string,
+  ): Promise<boolean> {
+    const groupMatch = payload.match(STUDENT_GROUP_DEEP_LINK_RE);
+    if (!groupMatch) return false;
+
+    ctx.session.processing = true;
+    const branchId = Number(groupMatch[1]);
+    const groupId = groupMatch[2];
+    // Released on every way out, a throw included: see SessionData.processing.
+    try {
+      const branch = await this.prisma.branch.findFirst({
+        where: { id: branchId, deletedAt: null, status: 'ACTIVE' },
+        select: { id: true },
+      });
+      if (!branch) {
+        await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
+        return true;
+      }
+
+      const group = await this.prisma.group.findFirst({
+        where: { id: groupId, branchId, deletedAt: null },
+        select: {
+          id: true,
+          name: true,
+          lessonStartTime: true,
+          lessonEndTime: true,
+          days: true,
+          exactDays: true,
+          room: { select: { name: true } },
+          teachers: {
+            select: {
+              teacher: {
+                select: { id: true, firstName: true, lastName: true },
+              },
+            },
+            take: 1,
+          },
+        },
+      });
+      if (!group) {
+        await ctx.reply("Guruh topilmadi. Administrator bilan bog'laning.");
+        return true;
+      }
+
+      const teacher = group.teachers[0]?.teacher;
+      ctx.session.data = {
+        branchId,
+        groupId: group.id,
+        groupName: group.name,
+        teacherId: teacher?.id ?? null,
+        teacherName: teacher ? `${teacher.firstName} ${teacher.lastName}` : '—',
+        lessonStartTime: group.lessonStartTime,
+        lessonEndTime: group.lessonEndTime,
+        days: group.days,
+        exactDays: group.exactDays,
+        roomName: group.room?.name ?? null,
+      };
+    } finally {
+      ctx.session.processing = false;
+    }
+
+    await ctx.scene.enter(SCENES.STUDENT_REGISTRATION);
+    return true;
+  }
+
+  /**
+   * `/start mock_<botStartPayload>`: mock exam registration. Returns false
+   * when the payload is not such a link.
+   */
+  private async startMockExamRegistration(
+    ctx: BotContext,
+    payload: string,
+  ): Promise<boolean> {
+    if (!payload.startsWith(MOCK_EXAM_DEEP_LINK_PREFIX)) return false;
+
+    ctx.session.processing = true;
+    const botStartPayload = payload.slice(MOCK_EXAM_DEEP_LINK_PREFIX.length);
+    // Released on every way out, a throw included: see SessionData.processing.
+    try {
+      if (!botStartPayload) {
+        await ctx.reply("Noto'g'ri havola.");
+        return true;
+      }
+
+      const exam = await this.prisma.mockExam.findFirst({
+        where: { botStartPayload, deletedAt: null },
+        select: { id: true, title: true },
+      });
+      if (!exam) {
+        await ctx.reply(
+          "Imtihon topilmadi yoki havola eskirgan. Administrator bilan bog'laning.",
+        );
+        return true;
+      }
+
+      ctx.session.data = { examId: exam.id };
+    } finally {
+      ctx.session.processing = false;
+    }
+
+    await ctx.scene.enter(SCENES.MOCK_EXAM_REGISTRATION);
+    return true;
+  }
+
+  /**
+   * `/start student_<branchId>`: student registration, choosing a teacher and
+   * a group in the scene. Returns false when the payload is not such a link.
+   * `/start` tries the group link first, since it starts the same way.
+   */
+  private async startStudentRegistration(
+    ctx: BotContext,
+    payload: string,
+  ): Promise<boolean> {
+    if (!payload.startsWith(STUDENT_DEEP_LINK_PREFIX)) return false;
+
+    ctx.session.processing = true;
+    const branchIdStr = payload.slice(STUDENT_DEEP_LINK_PREFIX.length);
+    const branchId = Number(branchIdStr);
+    // Released on every way out, a throw included: see SessionData.processing.
+    try {
+      if (!branchIdStr || isNaN(branchId)) {
+        await ctx.reply("Noto'g'ri havola. Administrator bilan bog'laning.");
+        return true;
+      }
+
+      const branch = await this.prisma.branch.findUnique({
+        where: { id: branchId },
+      });
+      if (!branch) {
+        await ctx.reply("Filial topilmadi. Administrator bilan bog'laning.");
+        return true;
+      }
+
+      ctx.session.data = { branchId };
+    } finally {
+      ctx.session.processing = false;
+    }
+
+    await ctx.scene.enter(SCENES.STUDENT_REGISTRATION);
     return true;
   }
 
