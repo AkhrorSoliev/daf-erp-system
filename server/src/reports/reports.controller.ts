@@ -28,6 +28,8 @@ import { DepartedStudentsGroupByQueryDto } from './dto/departed-students-group-b
 import { DepartedStudentsListQueryDto } from './dto/departed-students-list-query.dto';
 import { DepartedStudentsByReasonQueryDto } from './dto/departed-students-by-reason-query.dto';
 import { DepartedStudentsBranchQueryDto } from './dto/departed-students-branch-query.dto';
+import { DepartedStudentsTeacherChangesQueryDto } from './dto/departed-students-teacher-changes-query.dto';
+import { DepartedStudentsTransferredQueryDto } from './dto/departed-students-transferred-query.dto';
 import { CenterActivityQueryDto } from './dto/center-activity-query.dto';
 import {
   AttendanceAnalyticsQueryDto,
@@ -783,7 +785,7 @@ export class ReportsController {
 
   @Get('departed-students/teacher-changes-list')
   getTeacherChangesList(
-    @Query() query: DepartedStudentsSummaryQueryDto & { reasonId?: string },
+    @Query() query: DepartedStudentsTeacherChangesQueryDto,
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,
   ) {
@@ -799,12 +801,7 @@ export class ReportsController {
 
   @Get('departed-students/transferred-list')
   getTransferredList(
-    @Query()
-    query: DepartedStudentsSummaryQueryDto & {
-      page?: number;
-      pageSize?: number;
-      transferReasonId?: string;
-    },
+    @Query() query: DepartedStudentsTransferredQueryDto,
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,
   ) {
@@ -814,8 +811,8 @@ export class ReportsController {
       teacherIds: query.teacherIds,
       startDate: query.startDate,
       endDate: query.endDate,
-      page: query.page ? Number(query.page) : undefined,
-      pageSize: query.pageSize ? Number(query.pageSize) : undefined,
+      page: query.page,
+      pageSize: query.pageSize,
       transferReasonId: query.transferReasonId,
     });
   }
