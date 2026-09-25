@@ -3,6 +3,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
+import { RedisService } from '../redis/redis.service';
 import { RolesGuard } from '../common/guards';
 import { ROLES_KEY } from '../common/decorators';
 
@@ -24,7 +25,11 @@ describe('UsersController — role guards', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
-      providers: [{ provide: UsersService, useValue: mockService }],
+      providers: [
+        { provide: UsersService, useValue: mockService },
+        // OwnPasswordAttemptGuard (ADR-0031) is built with the controller.
+        { provide: RedisService, useValue: {} },
+      ],
     }).compile();
 
     controller = module.get(UsersController);

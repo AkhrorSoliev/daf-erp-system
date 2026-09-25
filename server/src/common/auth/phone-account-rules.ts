@@ -1,4 +1,6 @@
+import { BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { normalizeSharedPhone } from '../utils/phone.util';
 
 /**
  * Tizimga kira oladigan xodim rollari: CEO, Filial direktori, Administrator,
@@ -27,12 +29,15 @@ export interface LiveStaffMatch {
 export async function findLiveStaffByPhone(
   prisma: PrismaService,
   phone: string,
+  excludeId?: number,
 ): Promise<LiveStaffMatch | null> {
   return prisma.user.findFirst({
     where: {
       phone,
       deletedAt: null,
       roles: { some: { roleId: { in: [...STAFF_ROLE_IDS] } } },
+      // The account being edited must not count as its own duplicate.
+      ...(excludeId !== undefined && { id: { not: excludeId } }),
     },
     select: { id: true, firstName: true, lastName: true },
   });
@@ -59,4 +64,63 @@ export async function loginForPhone(
     select: { id: true },
   });
   return taken ? null : phone;
+}
+
+export const PHONE_HELD_BY_STAFF_MESSAGE =
+  'Bu telefon raqam boshqa xodim hisobiga tegishli';
+
+/** What to write when an existing account's phone changes. */
+export interface PhoneChangeWrite {
+  phone: string;
+  /** Present only when the login has to move with the phone. */
+  login?: string | null;
+}
+
+/**
+ * The one way an existing account's phone changes (ADR-0031).
+ *
+ * A phone is a sign-in key, not contact data, and
+ * `AuthService.buildAccountLookup` matches a number against `login` as well as
+ * `phone`. A login still holding the old number would keep that number working
+ * as a key after the phone changes, so the login follows the phone, or becomes
+ * `null` when the new number is already some live account's login
+ * (`loginForPhone`, ADR-0022).
+ *
+ * A staff account may not take a number another live staff account holds —
+ * Telegram sign-in would refuse both and SMS reset could not tell them apart
+ * (ADR-0022, until now enforced only on create). The message names nobody:
+ * this also runs when a teacher changes their own phone.
+ *
+ * Callers own the permission question; this only decides the data.
+ */
+export async function planPhoneChange(
+  prisma: PrismaService,
+  account: { id: number; phone: string | null; login: string | null },
+  nextPhone: string,
+  opts: { staff: boolean },
+): Promise<PhoneChangeWrite> {
+  if (nextPhone === account.phone) return { phone: nextPhone };
+
+  if (
+    opts.staff &&
+    (await findLiveStaffByPhone(prisma, nextPhone, account.id))
+  ) {
+    throw new BadRequestException(PHONE_HELD_BY_STAFF_MESSAGE);
+  }
+
+  if (loginHoldsPhone(account.login, account.phone)) {
+    return { phone: nextPhone, login: await loginForPhone(prisma, nextPhone) };
+  }
+  return { phone: nextPhone };
+}
+
+/**
+ * Does this login open the account for this phone number? `buildAccountLookup`
+ * matches a number against `login` both as sent (`998…`) and normalised (nine
+ * digits), so a digits-only login that normalises to the phone is the same key.
+ * A username that merely contains the digits is not.
+ */
+function loginHoldsPhone(login: string | null, phone: string | null): boolean {
+  if (login === null || phone === null) return false;
+  return /^\d+$/.test(login) && normalizeSharedPhone(login) === phone;
 }

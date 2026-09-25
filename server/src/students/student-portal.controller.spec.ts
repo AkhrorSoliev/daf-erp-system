@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { StudentPortalController } from './student-portal.controller';
 import { StudentPortalService } from './student-portal.service';
+import { RedisService } from '../redis/redis.service';
 import { QrAttendanceService } from '../attendance/qr-attendance.service';
 import { GatewayConfigService } from '../payment-gateways/gateway-config.service';
 import { RolesGuard } from '../common/guards';
@@ -34,6 +35,8 @@ describe('StudentPortalController — role guards', () => {
       controllers: [StudentPortalController],
       providers: [
         { provide: StudentPortalService, useValue: mockService },
+        // OwnPasswordAttemptGuard (ADR-0031) is built with the controller.
+        { provide: RedisService, useValue: {} },
         { provide: QrAttendanceService, useValue: mockQrService },
         { provide: ConfigService, useValue: { get: jest.fn() } },
         {

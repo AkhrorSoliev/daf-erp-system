@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -27,6 +28,7 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { roleFieldFor } from "@/lib/role-grant-ceiling";
+import { isOwnAccount, withoutOwnSignInKeys } from "@/lib/own-sign-in-keys";
 import { useAuth } from "@/hooks/use-auth";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 import { roleLabel } from "@/components/payments/salary-utils";
@@ -136,6 +138,10 @@ interface BranchOption {
 export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmployeeFormProps) {
   const isEdit = !!employee;
   const currentUser = useAuth((s) => s.user);
+  const currentUserId = currentUser?.id;
+  // Your own record: phone, login and password change only in Profil, where
+  // the current password is asked (ADR-0031).
+  const ownAccount = isOwnAccount(employee?.id, currentUserId);
   const { submitting, setSubmitting } = useEditEmployee();
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
@@ -247,7 +253,10 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
 
       let saved: EmployeeUser;
       if (isEdit) {
-        const { data } = await api.patch(`/users/${employee.id}`, payload);
+        const { data } = await api.patch(
+          `/users/${employee.id}`,
+          withoutOwnSignInKeys(payload, ownAccount),
+        );
         saved = data;
         toast.success("Xodim muvaffaqiyatli yangilandi");
       } else {
@@ -320,11 +329,24 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
               control={form.control}
               name="phone"
               render={({ field }) => (
-                <PhoneInput value={field.value} onChange={field.onChange} />
+                <PhoneInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  disabled={ownAccount}
+                />
               )}
             />
             {form.formState.errors.phone && (
               <p className="text-xs text-destructive">{form.formState.errors.phone.message}</p>
+            )}
+            {ownAccount && (
+              <p className="text-xs text-muted-foreground">
+                O&apos;z telefoningiz va parolingiz{" "}
+                <Link href="/profile" className="font-medium text-primary hover:underline">
+                  Profil
+                </Link>{" "}
+                sahifasida o&apos;zgartiriladi.
+              </p>
             )}
           </div>
           <div className="w-28 shrink-0 space-y-1.5">
@@ -351,7 +373,9 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       {/* Kirish ma'lumotlari — faqat tizim roli berilganda.
           Rolsiz xodim baribir kira olmaydi (backend parolni rad etadi), shuning
           uchun maydonlarni ko'rsatish faqat chalg'itadi. */}
-      {hasRoles && <EmployeeCredentialsSection form={form} isEdit={isEdit} />}
+      {hasRoles && (
+        <EmployeeCredentialsSection form={form} isEdit={isEdit} locked={ownAccount} />
+      )}
 
       {/* Lavozim va filial */}
       <section className="space-y-5 border-t px-6 py-5">

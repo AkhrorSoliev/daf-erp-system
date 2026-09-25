@@ -141,6 +141,16 @@ before it existed).
 - **`User.telegramChatId` is NOT written.** The `sub` claim is an opaque per-bot identifier, not the bot's `chat.id`; the Telegram user id is the separate `id` claim. Writing the wrong value would break bot messaging, and nothing here needs it. The verifier still asserts the `id` claim is **present and scalar** (a real strictness guard on the token shape) but deliberately does **not return the value** — no consumer wants it, and a large id parsed as a JSON `number` can exceed 2^53 and silently lose precision.
 - **Config gate:** missing any of the three env vars turns the feature fully off — `status` returns `{ enabled: false }` and the client renders no button; `start` answers **503** (`ServiceUnavailableException`). `status` also reports `false` when the calling `Origin` is not a known portal, so a CORS-allowed non-portal origin (e.g. a Vercel preview alias) shows **no** button instead of one that 400s on click. Config is applied by hand in BotFather + Railway, so a half-configured deploy must degrade to "off", never to a broken button.
 
+#### Your own sign-in keys change only with your current password (ADR-0031)
+
+A phone is a sign-in key, not contact data: Telegram sign-in finds the account by it with no password, SMS reset sends its code there, and `buildAccountLookup` also matches the number against `login`.
+
+- **Your own phone changes only through `PATCH /users/phone`** (`ChangePhoneDto`: `phone` + `currentPassword`, `@Roles(...STAFF_ROLES)`), the twin of `PATCH /users/password`. `UpdateProfileDto` carries no phone — do not add it, or any other key field, back: the profile door is name and photo.
+- **No other door writes your own key.** `PATCH /users/:id` and `PATCH /teachers/:id` refuse (403) a caller changing their OWN phone or login, or setting their own password (`assertNotChangingOwnSignInKeys`, `common/auth/own-sign-in-keys.ts`). A value the employee form re-sends unchanged is not a change. Nobody changes their own login: it moves with the phone. Editing someone else is the rank rule's business (ADR-0027), not this one.
+- **A phone change retires the old number.** Every write of an existing account's phone goes through `planPhoneChange` (`common/auth/phone-account-rules.ts`): it refuses a number another live staff account holds (ADR-0022), and moves a `login` holding the old phone (also as `998…`) to the new one — or to `null` when the new number is already some live account's login. Without it the old number would stay a sign-in key.
+- **Checking the current password is capped:** 5 attempts per account per 15 minutes, one counter shared by every door that asks for it (`OwnPasswordAttemptGuard`, `common/guards/own-password-attempt.guard.ts`; answers 429). A new door that checks the current password must carry it — `own-password-attempt.routes.spec.ts` lists them.
+- Students have no self-service phone door; staff change a student's phone.
+
 ### Portal-Based Role Restriction (Subdomain Routing)
 
 The system uses **subdomain-based portals** — each subdomain restricts login to specific roles:
