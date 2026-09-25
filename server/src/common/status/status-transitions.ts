@@ -10,7 +10,10 @@ export const STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
   Student: {
     ACTIVE: ['FROZEN', 'GRADUATED', 'EXPELLED', 'ARCHIVED'],
     INACTIVE: ['ACTIVE', 'FROZEN', 'ARCHIVED'], // legacy — faqat chiqish, kirish yo'q
-    FROZEN: ['ACTIVE', 'ARCHIVED'],
+    // A frozen student who quits for good is expelled directly. Reactivating
+    // them first logged a return that never happened, which the
+    // departed-students report then counted as a second departure.
+    FROZEN: ['ACTIVE', 'EXPELLED', 'ARCHIVED'],
     GRADUATED: ['ACTIVE', 'ARCHIVED'],
     EXPELLED: ['ACTIVE', 'ARCHIVED'],
     ARCHIVED: ['ACTIVE'],

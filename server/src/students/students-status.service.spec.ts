@@ -329,3 +329,298 @@ describe('StudentsStatusService.pauseForAbsence', () => {
     expect(statusHistoryService.changeStatus).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * A frozen student who quits for good is expelled in one step.
+ *
+ * The real StatusHistoryService and StatusCascadeService run here over an
+ * in-memory enrollment table, because the break this guards lived inside
+ * them: the transition table refused FROZEN → EXPELLED with a 400 while the
+ * dialog offered it, so admins reactivated the student first. That wrote a
+ * return nobody made, and the departed-students report counted a second
+ * departure. With either service mocked this test would stay green on that
+ * bug.
+ *
+ * Money is not asserted here. The cascade hands each dropped enrollment to
+ * the same refund helpers as every other expulsion, and their
+ * no-second-refund guarantee lives in their own specs
+ * (`monthly-charge.service.spec.ts`, `enrollment-billing.service.spec.ts`).
+ */
+describe('StudentsStatusService — expelling a frozen student', () => {
+  const companyId = 1001;
+  const userId = 10001;
+  const studentId = 10453;
+  const expelReason = {
+    id: 'reason-quit',
+    name: "O'qishni tashladi",
+    appliesTo: ['EXPEL'],
+  };
+
+  interface FakeEnrollment {
+    id: string;
+    studentId: number;
+    status: string;
+    deletedAt: Date | null;
+    groupId: string;
+    group: { companyId: number; course: { paymentModel: string } };
+    student: { firstName: string; lastName: string };
+  }
+
+  interface EnrollmentWhere {
+    studentId?: number;
+    deletedAt?: null;
+    status?: string | { in: string[] };
+  }
+
+  interface GroupHistoryRow {
+    entityType: string;
+    entityId: string;
+    oldValues: Record<string, unknown>;
+  }
+
+  const enrollment = (
+    id: string,
+    groupId: string,
+    status: string,
+    paymentModel: string,
+  ): FakeEnrollment => ({
+    id,
+    studentId,
+    status,
+    deletedAt: null,
+    groupId,
+    group: { companyId, course: { paymentModel } },
+    student: { firstName: 'Ali', lastName: 'Valiyev' },
+  });
+
+  // Understands only the filters the Student cascade sends. Anything else
+  // fails loudly instead of quietly matching every row.
+  const matches = (e: FakeEnrollment, where: EnrollmentWhere) => {
+    for (const key of Object.keys(where)) {
+      if (!['studentId', 'deletedAt', 'status'].includes(key)) {
+        throw new Error(`fake enrollment table: unsupported filter "${key}"`);
+      }
+    }
+    if (where.studentId !== undefined && e.studentId !== where.studentId) {
+      return false;
+    }
+    if (where.deletedAt === null && e.deletedAt !== null) return false;
+    if (typeof where.status === 'string') return e.status === where.status;
+    if (where.status) return where.status.in.includes(e.status);
+    return true;
+  };
+
+  let enrollments: FakeEnrollment[];
+  let statusHistoryRows: Array<Record<string, unknown>>;
+  let cardUpdates: Array<Record<string, unknown>>;
+  let stateLogRows: Array<Record<string, unknown>>;
+  let entityHistory: Record<string, jest.Mock>;
+
+  beforeEach(async () => {
+    enrollments = [
+      enrollment('enr-monthly', 'group-monthly', 'FROZEN', 'MONTHLY'),
+      enrollment('enr-pack', 'group-pack', 'FROZEN', 'LESSON_PACK'),
+      // A group the student finished long ago: the expulsion must not touch it.
+      enrollment('enr-finished', 'group-finished', 'COMPLETED', 'MONTHLY'),
+    ];
+    statusHistoryRows = [];
+    cardUpdates = [];
+    stateLogRows = [];
+
+    const prisma = {
+      student: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: studentId,
+          firstName: 'Ali',
+          lastName: 'Valiyev',
+          status: StudentStatus.FROZEN,
+          isActive: false,
+          companyId,
+          deletedAt: null,
+        }),
+        update: jest.fn(({ data }: { data: Record<string, unknown> }) => {
+          cardUpdates.push(data);
+          return Promise.resolve({
+            id: studentId,
+            ...data,
+            companyId,
+            branches: [],
+            enrollments: [],
+          });
+        }),
+      },
+      // The caller is a CEO, who spans every branch.
+      studentBranch: {
+        findFirst: jest.fn().mockResolvedValue({ branchId: 1 }),
+      },
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          mainBranch: null,
+          branches: [],
+          roles: [{ role: { name: 'CEO' } }],
+        }),
+      },
+      // Answers only for the exit type it is asked about, so a lookup made
+      // for the FREEZE list (the status the student is leaving) finds nothing.
+      studentExitReason: {
+        findFirst: jest.fn(
+          ({ where }: { where: { id: string; appliesTo: { has: string } } }) =>
+            Promise.resolve(
+              where.id === expelReason.id &&
+                expelReason.appliesTo.includes(where.appliesTo.has)
+                ? expelReason
+                : null,
+            ),
+        ),
+        count: jest.fn().mockResolvedValue(1),
+      },
+      statusHistory: {
+        create: jest.fn(({ data }: { data: Record<string, unknown> }) => {
+          statusHistoryRows.push(data);
+          return Promise.resolve(data);
+        }),
+      },
+      enrollment: {
+        findMany: jest.fn(({ where }: { where: EnrollmentWhere }) =>
+          Promise.resolve(enrollments.filter((e) => matches(e, where))),
+        ),
+        updateMany: jest.fn(
+          ({
+            where,
+            data,
+          }: {
+            where: EnrollmentWhere;
+            data: { status: string };
+          }) => {
+            const hit = enrollments.filter((e) => matches(e, where));
+            for (const e of hit) e.status = data.status;
+            return Promise.resolve({ count: hit.length });
+          },
+        ),
+      },
+      enrollmentStateLog: {
+        createMany: jest.fn(
+          ({ data }: { data: Array<Record<string, unknown>> }) => {
+            stateLogRows.push(...data);
+            return Promise.resolve({ count: data.length });
+          },
+        ),
+      },
+      $transaction: jest.fn(),
+    };
+    prisma.$transaction.mockImplementation(
+      (run: (tx: typeof prisma) => Promise<unknown>) => run(prisma),
+    );
+    entityHistory = {
+      recordCreate: jest.fn(),
+      recordUpdate: jest.fn(),
+      recordDelete: jest.fn(),
+      recordStatusChange: jest.fn(),
+      recordRestore: jest.fn(),
+    };
+    const enrollmentBilling = {
+      refundPrepaidWithOverride: jest.fn(),
+      refundPrepaidToBalance: jest.fn().mockResolvedValue(null),
+    };
+    const monthlyCharge = {
+      reverseChargeForDeparture: jest.fn().mockResolvedValue(null),
+      restoreChargeForReturn: jest.fn().mockResolvedValue(null),
+    };
+
+    const service = new StudentsStatusService(
+      prisma as never,
+      new StatusHistoryService(prisma as never),
+      new StatusCascadeService(
+        prisma as never,
+        entityHistory as never,
+        enrollmentBilling as never,
+        monthlyCharge as never,
+      ),
+      entityHistory as never,
+      enrollmentBilling as never,
+      monthlyCharge as never,
+    );
+
+    await service.changeStatus(
+      studentId,
+      { status: StudentStatus.EXPELLED, reasonId: expelReason.id } as never,
+      userId,
+      companyId,
+    );
+  });
+
+  it('writes FROZEN → EXPELLED to StatusHistory', () => {
+    expect(statusHistoryRows).toEqual([
+      {
+        entityType: 'Student',
+        entityId: '10453',
+        fromStatus: 'FROZEN',
+        toStatus: 'EXPELLED',
+        reason: "O'qishni tashladi",
+        changedById: 10001,
+        companyId: 1001,
+      },
+    ]);
+  });
+
+  it("writes FROZEN → EXPELLED to the student's EntityHistory", () => {
+    expect(entityHistory.recordStatusChange).toHaveBeenCalledTimes(1);
+    expect(entityHistory.recordStatusChange).toHaveBeenCalledWith({
+      entityType: 'Student',
+      entityId: 10453,
+      oldValues: { status: 'FROZEN' },
+      newValues: { status: 'EXPELLED', reason: "O'qishni tashladi" },
+      changedById: 10001,
+      companyId: 1001,
+    });
+  });
+
+  it('marks the card EXPELLED with the chosen expulsion reason', () => {
+    expect(cardUpdates).toHaveLength(1);
+    expect(cardUpdates[0]).toMatchObject({
+      status: 'EXPELLED',
+      isActive: false,
+      statusChangeReasonId: 'reason-quit',
+    });
+  });
+
+  it('drops every frozen enrollment and logs each drop, leaving a finished group alone', () => {
+    expect(enrollments.map((e) => [e.id, e.status])).toEqual([
+      ['enr-monthly', 'DROPPED'],
+      ['enr-pack', 'DROPPED'],
+      ['enr-finished', 'COMPLETED'],
+    ]);
+    expect(stateLogRows).toMatchObject([
+      { enrollmentId: 'enr-monthly', status: 'DROPPED', changedById: 10001 },
+      { enrollmentId: 'enr-pack', status: 'DROPPED', changedById: 10001 },
+    ]);
+  });
+
+  it("records the expulsion in each frozen group's history", () => {
+    const calls = entityHistory.recordDelete.mock.calls as Array<
+      [GroupHistoryRow]
+    >;
+    expect(
+      calls.map(([row]) => [row.entityType, row.entityId, row.oldValues]),
+    ).toEqual([
+      [
+        'Group',
+        'group-monthly',
+        {
+          action: 'OQUVCHI_CHETLATILDI',
+          oquvchi: 'Ali Valiyev',
+          oquvchiId: 10453,
+        },
+      ],
+      [
+        'Group',
+        'group-pack',
+        {
+          action: 'OQUVCHI_CHETLATILDI',
+          oquvchi: 'Ali Valiyev',
+          oquvchiId: 10453,
+        },
+      ],
+    ]);
+  });
+});
