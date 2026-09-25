@@ -252,5 +252,26 @@ describe('ReportsDepartedStudentsService', () => {
         ],
       });
     });
+
+    it('draws at most 240 months when no reporting floor bounds the range', async () => {
+      const prisma = fakePrisma(FIXTURE);
+      const service = new ReportsDepartedStudentsService(
+        prisma as unknown as PrismaService,
+      );
+
+      const result = await service.getDepartedStudentsDynamics(1001, {
+        scope: null,
+        startDate: '1990-01-01',
+        endDate: '2026-09-30',
+      });
+
+      expect(result.data).toHaveLength(240);
+      expect(result.data[0].date).toBe('2006-10-01');
+      expect(result.data[result.data.length - 1]).toEqual({
+        date: '2026-09-01',
+        count: 2,
+        provisional: false,
+      });
+    });
   });
 });

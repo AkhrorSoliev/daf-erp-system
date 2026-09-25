@@ -17,6 +17,9 @@ import { loadDepartures } from './shared/departures.loader';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MS_PER_MONTH = DAY_MS * 30.44;
+// At most 20 years of bars; bounds the walk against an arbitrary startDate
+// when no reporting floor is set.
+const MAX_DYNAMICS_MONTHS = 240;
 
 @Injectable()
 export class ReportsDepartedStudentsService {
@@ -100,9 +103,19 @@ export class ReportsDepartedStudentsService {
 
     const provisionalAfter = now.getTime() - graceDays * DAY_MS;
     const lastKey = tashkentMonthKey(until);
+    // 'YYYY-MM' keys compare correctly as strings. Without a reporting floor,
+    // `from` comes straight from the caller's `startDate` — an arbitrary old
+    // date would otherwise walk one month at a time, synchronously, with no
+    // cap.
+    const fromKey = tashkentMonthKey(from);
+    const oldestAllowedKey = addMonthsToMonthKey(
+      lastKey,
+      -(MAX_DYNAMICS_MONTHS - 1),
+    );
+    const firstKey = fromKey > oldestAllowedKey ? fromKey : oldestAllowedKey;
     const data: { date: string; count: number; provisional: boolean }[] = [];
     for (
-      let key = tashkentMonthKey(from);
+      let key = firstKey;
       key <= lastKey;
       key = addMonthsToMonthKey(key, 1)
     ) {
