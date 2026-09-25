@@ -20,6 +20,7 @@ import {
 import { format } from "date-fns";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -240,8 +241,10 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
       toast.success("Muvaffaqiyatli tiklandi");
       setItems((prev) => prev.filter((item) => item.id !== id));
       setTotal((prev) => Math.max(0, prev - 1));
-    } catch {
-      toast.error("Tiklashda xatolik yuz berdi");
+    } catch (err) {
+      // A refused restore says why — e.g. a student card whose number is on
+      // another live card (ADR-0033).
+      toast.error(getErrorMessage(err, "Tiklashda xatolik yuz berdi"));
     } finally {
       setActionId(null);
     }

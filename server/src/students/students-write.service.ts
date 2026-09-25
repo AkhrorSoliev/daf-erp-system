@@ -18,21 +18,20 @@ import {
   StudentLeadOriginService,
   type StudentOrigin,
 } from '../common/student-origin';
-import { generatePassword } from '../common/utils/password.util';
-import {
-  loginForPhone,
-  planPhoneChange,
-} from '../common/auth/phone-account-rules';
+import { planPhoneChange } from '../common/auth/phone-account-rules';
 import { RedisService } from '../redis/redis.service';
 import {
   passwordWrite,
   recordSessionsEnded,
 } from '../common/auth/session-version';
 import {
-  STUDENT_ROLE_ID,
-  studentSelect,
-  formatStudent,
-} from './shared/student-select';
+  STUDENT_ONLY_ACCOUNT,
+  openStudentAccount,
+  signInAccountChange,
+} from '../common/auth/student-account';
+// By path, not through the `common/status` barrel (import cycle, see the file).
+import { userArchiveData } from '../common/status/user-archive';
+import { studentSelect, formatStudent } from './shared/student-select';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
 
@@ -490,17 +489,42 @@ export class StudentsWriteService {
       companyId: student.companyId ?? undefined,
     });
 
-    await this.prisma.student.update({
-      where: { id },
-      data: {
-        status: StudentStatus.ARCHIVED,
-        isActive: false,
-        deletedAt: new Date(),
-        deletedById,
-        statusChangedAt: new Date(),
-        statusChangedById: deletedById,
-        statusChangeReason: reason,
-      },
+    // The card and its sign-in account are archived together (ADR-0033).
+    // Every way in — password, Telegram, SMS reset — finds the account by its
+    // own login/phone and never looks at the card, so an account left behind
+    // kept signing in to a portal with no card behind it and, because live
+    // logins are unique, kept the number from the same person's next card.
+    // Only a student-only account is closed: one that also holds a staff role
+    // is a member of staff's way in.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.student.update({
+        where: { id },
+        data: {
+          status: StudentStatus.ARCHIVED,
+          isActive: false,
+          deletedAt: new Date(),
+          deletedById,
+          statusChangedAt: new Date(),
+          statusChangedById: deletedById,
+          statusChangeReason: reason,
+        },
+      });
+
+      if (student.userId == null) return;
+      const closed = await tx.user.updateMany({
+        where: { id: student.userId, deletedAt: null, ...STUDENT_ONLY_ACCOUNT },
+        data: userArchiveData(deletedById),
+      });
+      if (closed.count > 0) {
+        await this.entityHistoryService.recordUpdate({
+          entityType: 'Student',
+          entityId: id,
+          ...signInAccountChange('Ochiq', 'Yopildi'),
+          changedById: deletedById,
+          companyId: student.companyId ?? undefined,
+          tx,
+        });
+      }
     });
 
     // Cascade: ACTIVE + FROZEN enrollment → DROPPED
@@ -528,27 +552,14 @@ export class StudentsWriteService {
     // Kirish nomi — telefon, agar u boshqa tirik hisobning nomi bo'lmasa
     // (masalan, xodim yoki aka-uka hisobi). Aks holda bo'sh — ilgari bu
     // holatda `create` bazada yiqilib, o'quvchi kirish hisobisiz qolardi.
-    const login = await loginForPhone(this.prisma, phone);
-    const plainPassword = generatePassword();
-    const hashedPassword = await bcrypt.hash(plainPassword, 10);
-
-    const user = await this.prisma.user.create({
-      data: {
-        login,
-        password: hashedPassword,
-        firstName,
-        lastName,
-        phone,
-        companyId,
-        roles: { create: [{ roleId: STUDENT_ROLE_ID }] },
-      },
+    // The ADR-0033 repair opens missing accounts through the same function.
+    const { userId, plainPassword } = await openStudentAccount(this.prisma, {
+      id: studentId,
+      phone,
+      firstName,
+      lastName,
+      companyId,
     });
-
-    await this.prisma.student.update({
-      where: { id: studentId },
-      data: { userId: user.id },
-    });
-
-    return { userId: user.id, plainPassword };
+    return { userId, plainPassword };
   }
 }

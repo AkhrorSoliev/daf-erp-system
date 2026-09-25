@@ -580,4 +580,59 @@ describe('AuthService', () => {
       ]);
     });
   });
+
+  describe('a student-only account without a live card (ADR-0033)', () => {
+    const closed = "Hisobingiz yopilgan. Administrator bilan bog'laning.";
+
+    beforeEach(() => {
+      prisma.student.findFirst.mockResolvedValue(null);
+    });
+
+    it('cannot sign in', async () => {
+      await expect(
+        service.login(student, undefined, 'student'),
+      ).rejects.toThrow(closed);
+      expect(jwt.sign).not.toHaveBeenCalled();
+    });
+
+    it('cannot refresh', async () => {
+      jwt.verify = jest.fn().mockReturnValue({ sub: 1, type: 'refresh' });
+      // A current session (no bump yet, ADR-0030): only the card can stop it.
+      prisma.user.findFirst.mockResolvedValue({
+        ...student,
+        status: 'ACTIVE',
+        sessionVersion: 0,
+      });
+
+      await expect(service.refresh('refresh-token')).rejects.toThrow(closed);
+      expect(jwt.sign).not.toHaveBeenCalled();
+    });
+
+    it('cannot open an app session', async () => {
+      redis.get.mockResolvedValue('1');
+      prisma.user.findFirst.mockResolvedValue({ ...student, status: 'ACTIVE' });
+
+      await expect(service.pollLoginRequest('req-abc12345')).rejects.toThrow(
+        closed,
+      );
+    });
+
+    it('still lets an account that also holds a staff role sign in, without a studentId', async () => {
+      const mixed = {
+        ...student,
+        roles: [
+          { role: { id: 3, name: 'Administrator' } },
+          { role: { id: 6, name: 'Student' } },
+        ],
+      };
+      const res = await service.login(mixed, 'https://admin.dafzentrum.uz');
+      expect(res.accessToken).toBe('tok');
+      expect(res.user.studentId).toBeUndefined();
+    });
+
+    it('never looks for a card behind a staff account', async () => {
+      await service.login(teacher, undefined, undefined);
+      expect(prisma.student.findFirst).not.toHaveBeenCalled();
+    });
+  });
 });

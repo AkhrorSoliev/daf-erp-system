@@ -56,7 +56,9 @@ export async function findLiveStaffByPhone(
  * eski qoldiq. Uydirma nom (`phone_2`) yozilmaydi: hech kim uni bilmaydi.
  */
 export async function loginForPhone(
-  prisma: PrismaService,
+  // `Pick`, not `PrismaService`: restore and the ADR-0033 repair decide the
+  // login inside a transaction, and a transaction client has the same `user`.
+  prisma: Pick<PrismaService, 'user'>,
   phone: string,
 ): Promise<string | null> {
   const taken = await prisma.user.findFirst({

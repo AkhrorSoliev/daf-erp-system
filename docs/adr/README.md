@@ -90,5 +90,6 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0030](0030-parol-ozgarsa-boshqa-kirishlar-toxtaydi.md) | Parol o'zgarsa, hisobning boshqa kirishlari keyingi so'rovda to'xtaydi | Qabul qilindi | 2026-09-24 |
 | [0031](0031-oz-kirish-kalitingiz-joriy-parol-bilan-ozgaradi.md) | O'z kirish kalitingiz faqat joriy parol bilan o'zgaradi | Qabul qilindi | 2026-09-24 |
 | [0032](0032-oquvchi-kirish-raqami-kartaga-ergashadi.md) | O'quvchining kirish raqami kartadagi raqamga ergashadi | Qabul qilindi | 2026-09-24 |
+| [0033](0033-oquvchi-hisobi-kartasi-bilan-yopiladi.md) | O'quvchining kirish hisobi kartasi bilan birga yopiladi va qaytadi | Qabul qilindi | 2026-09-24 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.

@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { ArchiveEntityType } from '../dto/archive-query.dto';
-import { getSearchFilter } from './archive-meta';
+import { archiveScope, getSearchFilter } from './archive-meta';
+import { STUDENT_ONLY_ACCOUNT } from '../../common/auth/student-account';
 
 describe('getSearchFilter', () => {
   /**
@@ -21,5 +22,27 @@ describe('getSearchFilter', () => {
     expect(getSearchFilter(ArchiveEntityType.GROUPS, 'a1')).toEqual({
       name: { contains: 'a1', mode: 'insensitive' },
     });
+  });
+});
+
+describe('archiveScope', () => {
+  // ADR-0033: a student's account is archived and restored with its card. In
+  // the "Ustozlar / Xodimlar" tab it would be mislabelled, and restoring it
+  // there alone would bring back an open account with no card.
+  it('keeps student-only accounts out of the users tab', () => {
+    expect(archiveScope(ArchiveEntityType.USERS, 1001)).toEqual({
+      companyId: 1001,
+      NOT: STUDENT_ONLY_ACCOUNT,
+    });
+  });
+
+  it('adds nothing but the company to other company-scoped types', () => {
+    expect(archiveScope(ArchiveEntityType.STUDENTS, 1001)).toEqual({
+      companyId: 1001,
+    });
+  });
+
+  it('stays empty for company-global types', () => {
+    expect(archiveScope(ArchiveEntityType.LEADS, 1001)).toEqual({});
   });
 });

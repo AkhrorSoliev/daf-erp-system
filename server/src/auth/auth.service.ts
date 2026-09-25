@@ -20,6 +20,11 @@ import {
   recordSessionsEnded,
   tokenSessionVersion,
 } from '../common/auth/session-version';
+import { STUDENT_ROLE_ID } from '../students/shared/student-select';
+import { isStudentOnlyAccount } from '../common/auth/student-account';
+
+export const STUDENT_ACCOUNT_CLOSED_MESSAGE =
+  "Hisobingiz yopilgan. Administrator bilan bog'laning.";
 
 /**
  * The branches a session carries, on every path that issues one: sign-in,
@@ -244,7 +249,8 @@ export class AuthService {
   }
 
   /**
-   * The tail every session response shares: the student id (role 6), both
+   * The tail every session response shares: the student id (role 6, refused
+   * for a student-only account with no live card — ADR-0033), both
    * tokens stamped with the account's CURRENT session version, and the user
    * payload.
    */
@@ -252,14 +258,7 @@ export class AuthService {
     const roles = user.roles.map((ur) => ur.role.name);
     const roleIds = user.roles.map((ur) => ur.role.id);
 
-    let studentId: number | undefined;
-    if (roleIds.includes(6)) {
-      const student = await this.prisma.student.findFirst({
-        where: { userId: user.id, deletedAt: null },
-        select: { id: true },
-      });
-      studentId = student?.id;
-    }
+    const studentId = await this.resolveStudentId(user.id, roleIds);
 
     const tokens = this.generateTokens(
       user.id,
@@ -298,6 +297,32 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  /**
+   * The live card behind an account holding the Student role, or nothing.
+   *
+   * A student-only account whose card is archived or gone is refused
+   * (ADR-0033). Archiving closes the account, so this only fires when the two
+   * have drifted — and the token it would get carries no `studentId`: every
+   * portal page then fails with a misleading "check your internet", and any
+   * read that trusts `studentId` loses its filter. An account that also holds
+   * a staff role signs in as staff, as before.
+   */
+  private async resolveStudentId(
+    userId: number,
+    roleIds: number[],
+  ): Promise<number | undefined> {
+    if (!roleIds.includes(STUDENT_ROLE_ID)) return undefined;
+    const student = await this.prisma.student.findFirst({
+      where: { userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (student) return student.id;
+    if (isStudentOnlyAccount(roleIds)) {
+      throw new UnauthorizedException(STUDENT_ACCOUNT_CLOSED_MESSAGE);
+    }
+    return undefined;
   }
 
   async login(user: any, origin?: string, portal?: string) {
@@ -339,7 +364,7 @@ export class AuthService {
     }
 
     const roleIds: number[] = user.roles.map((ur) => ur.role.id);
-    if (!roleIds.includes(6)) {
+    if (!roleIds.includes(STUDENT_ROLE_ID)) {
       throw new ForbiddenException("Bu faqat o'quvchilar uchun");
     }
 
