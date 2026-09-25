@@ -28,6 +28,7 @@ import { ScanQrDto } from '../attendance/dto/qr-session.dto';
 import { Roles, CurrentUser } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 import { OwnPasswordAttemptGuard } from '../common/guards/own-password-attempt.guard';
+import { AuthService } from '../auth/auth.service';
 import { PaymentMethod } from '@prisma/client';
 
 @Controller('student-portal')
@@ -37,6 +38,7 @@ export class StudentPortalController {
     private qrAttendanceService: QrAttendanceService,
     private config: ConfigService,
     private gatewayConfig: GatewayConfigService,
+    private authService: AuthService,
   ) {}
 
   @Get('profile')
@@ -86,12 +88,20 @@ export class StudentPortalController {
   @Patch('password')
   @UseGuards(RolesGuard, OwnPasswordAttemptGuard)
   @Roles('Student')
-  changePassword(
+  async changePassword(
     @CurrentUser('id') userId: number,
     @CurrentUser('studentId') studentId: number,
     @Body() dto: ChangePortalPasswordDto,
   ) {
-    return this.studentPortalService.changePassword(userId, studentId, dto);
+    const { sessionVersion, ...result } =
+      await this.studentPortalService.changePassword(userId, studentId, dto);
+    // The change ended every session of the account, this one included
+    // (ADR-0030). A fresh pair, signed with the version this change produced,
+    // keeps the student signed in here.
+    return {
+      ...result,
+      ...(await this.authService.issueSession(userId, sessionVersion)),
+    };
   }
 
   // Same multer limits as `POST /upload`. This route had `FileInterceptor`

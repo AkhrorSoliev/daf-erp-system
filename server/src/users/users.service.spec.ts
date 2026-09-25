@@ -71,6 +71,10 @@ describe('UsersService — updateUser status/isActive sync', () => {
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         {
+          provide: RedisService,
+          useValue: { set: jest.fn(), get: jest.fn(), del: jest.fn() },
+        },
+        {
           provide: EntityHistoryService,
           useValue: {
             recordCreate: jest.fn(),
@@ -197,6 +201,10 @@ describe('UsersService — role escalation and branch validation', () => {
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
+        {
+          provide: RedisService,
+          useValue: { set: jest.fn(), get: jest.fn(), del: jest.fn() },
+        },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -428,6 +436,10 @@ describe('UsersService — cross-company guards', () => {
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         {
+          provide: RedisService,
+          useValue: { set: jest.fn(), get: jest.fn(), del: jest.fn() },
+        },
+        {
           provide: EntityHistoryService,
           useValue: {
             recordCreate: jest.fn(),
@@ -495,6 +507,10 @@ describe('UsersService — findAll companyId scoping', () => {
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
+        {
+          provide: RedisService,
+          useValue: { set: jest.fn(), get: jest.fn(), del: jest.fn() },
+        },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -643,6 +659,10 @@ describe('UsersService — updateUser branch confinement', () => {
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         {
+          provide: RedisService,
+          useValue: { set: jest.fn(), get: jest.fn(), del: jest.fn() },
+        },
+        {
           provide: EntityHistoryService,
           useValue: {
             recordCreate: jest.fn(),
@@ -756,7 +776,10 @@ describe('UsersService — rolsiz xodim (lavozim bilan)', () => {
           },
         },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
-        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
+        {
+          provide: RedisService,
+          useValue: { set: jest.fn(), get: jest.fn(), del: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -971,6 +994,10 @@ describe("UsersService — updateUser: rolsiz ⇒ login/parol yo'q invariantini 
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
+        {
+          provide: RedisService,
+          useValue: { set: jest.fn(), get: jest.fn(), del: jest.fn() },
+        },
         {
           provide: EntityHistoryService,
           useValue: {

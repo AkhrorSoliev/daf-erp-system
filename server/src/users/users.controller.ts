@@ -10,8 +10,10 @@ import {
   ParseIntPipe,
   UseGuards,
   Logger,
+  HttpCode,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { AuthService } from '../auth/auth.service';
 import { UserQueryDto } from './dto/user-query.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -27,7 +29,10 @@ import { OwnPasswordAttemptGuard } from '../common/guards/own-password-attempt.g
 @Controller('users')
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);
-  constructor(private usersService: UsersService) {}
+  constructor(
+    private usersService: UsersService,
+    private authService: AuthService,
+  ) {}
 
   @Get()
   @UseGuards(RolesGuard)
@@ -80,11 +85,32 @@ export class UsersController {
 
   @Patch('password')
   @UseGuards(OwnPasswordAttemptGuard)
-  changePassword(
+  async changePassword(
     @CurrentUser('id') userId: number,
     @Body() dto: ChangePasswordDto,
   ) {
-    return this.usersService.changePassword(userId, dto);
+    const { sessionVersion, ...result } =
+      await this.usersService.changePassword(userId, dto);
+    // The change ended every session of this account, the caller's included
+    // (ADR-0030). A fresh pair, signed with the version this change produced,
+    // keeps THIS device signed in.
+    return {
+      ...result,
+      ...(await this.authService.issueSession(userId, sessionVersion)),
+    };
+  }
+
+  /**
+   * "Log out other devices" — any signed-in account, on itself only: the id
+   * comes from the token, never from the request.
+   */
+  @Post('logout-others')
+  @HttpCode(200)
+  logoutOthers(
+    @CurrentUser('id') userId: number,
+    @CurrentUser('sessionVersion') sessionVersion: number,
+  ) {
+    return this.authService.logoutOtherSessions(userId, sessionVersion);
   }
 
   // Declared before `@Patch(':id')`: routes match in declaration order, and

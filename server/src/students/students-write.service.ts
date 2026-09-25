@@ -23,6 +23,11 @@ import {
   loginForPhone,
   planPhoneChange,
 } from '../common/auth/phone-account-rules';
+import { RedisService } from '../redis/redis.service';
+import {
+  passwordWrite,
+  recordSessionsEnded,
+} from '../common/auth/session-version';
 import {
   STUDENT_ROLE_ID,
   studentSelect,
@@ -42,6 +47,7 @@ export class StudentsWriteService {
     private eventEmitter: EventEmitter2,
     private transactionsService: TransactionsService,
     private leadOrigin: StudentLeadOriginService,
+    private redis: RedisService,
   ) {}
 
   /**
@@ -294,6 +300,10 @@ export class StudentsWriteService {
     // right shape for it: a correction someone deliberately makes and explains,
     // rather than a side effect of editing a percentage.
 
+    // Filled inside the transaction when the password changes; mirrored for
+    // JwtAuthGuard only once the transaction has committed (ADR-0030).
+    const passwordChange: { sessionVersion?: number } = {};
+
     const updated = await this.prisma.$transaction(
       async (tx) => {
         const result = await tx.student.update({
@@ -342,16 +352,19 @@ export class StudentsWriteService {
         }
 
         // Same transaction as the card: a card saved without its account is
-        // exactly the drift ADR-0032 closes.
+        // exactly the drift ADR-0032 closes. A new password goes through
+        // `passwordWrite`, which ends the account's other sessions (ADR-0030).
         const accountData = {
           ...signIn?.write,
-          ...(hashedPassword && { password: hashedPassword }),
+          ...(hashedPassword && passwordWrite(hashedPassword)),
         };
         if (student.userId && Object.keys(accountData).length > 0) {
-          await tx.user.update({
+          const { sessionVersion } = await tx.user.update({
             where: { id: student.userId },
             data: accountData,
+            select: { sessionVersion: true },
           });
+          if (hashedPassword) passwordChange.sessionVersion = sessionVersion;
         }
 
         if (dto.branchIds !== undefined) {
@@ -368,6 +381,16 @@ export class StudentsWriteService {
       // update touches the balance any more.
       undefined,
     );
+
+    // The password is committed now: mirror the bump before anything else can
+    // fail, or the old access tokens keep working for the rest of their hour.
+    if (passwordChange.sessionVersion !== undefined && student.userId) {
+      await recordSessionsEnded(
+        this.redis,
+        student.userId,
+        passwordChange.sessionVersion,
+      );
+    }
 
     // The account's login rides along so the card's history shows the sign-in
     // number moving (the history tab labels the field "Login").
@@ -387,6 +410,17 @@ export class StudentsWriteService {
       changedById: userId,
       companyId: student.companyId ?? undefined,
     });
+
+    if (passwordChange.sessionVersion !== undefined) {
+      await this.entityHistoryService.recordUpdate({
+        entityType: 'Student',
+        entityId: id,
+        oldValues: { parol: '***' },
+        newValues: { parol: "yangi parol o'rnatildi" },
+        changedById: userId,
+        companyId: student.companyId ?? undefined,
+      });
+    }
 
     return formatStudent(updated);
   }

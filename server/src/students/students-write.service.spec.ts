@@ -4,6 +4,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { StudentsWriteService } from './students-write.service';
 import { StudentLeadOriginService } from '../common/student-origin/student-lead-origin.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
 import { UploadService } from '../upload/upload.service';
 import { StatusHistoryService } from '../common/status/status-history.service';
 import { StatusCascadeService } from '../common/status/status-cascade.service';
@@ -54,6 +55,7 @@ describe('StudentsWriteService — branch validation', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StudentsWriteService,
+        { provide: RedisService, useValue: { set: jest.fn() } },
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: StatusHistoryService, useValue: {} },
@@ -251,6 +253,7 @@ describe('StudentsWriteService — the caller must hold the branch', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StudentsWriteService,
+        { provide: RedisService, useValue: { set: jest.fn() } },
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: StatusHistoryService, useValue: {} },

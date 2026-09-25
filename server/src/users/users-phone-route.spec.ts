@@ -6,6 +6,7 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
+import { AuthService } from '../auth/auth.service';
 import { RedisService } from '../redis/redis.service';
 import { RolesGuard } from '../common/guards';
 import { ROLES_KEY, STAFF_ROLES } from '../common/decorators';
@@ -35,6 +36,8 @@ describe('PATCH /users/phone — your own phone behind your password (ADR-0031)'
       providers: [
         { provide: UsersService, useValue: {} },
         { provide: RedisService, useValue: {} },
+        // The controller issues fresh sessions (ADR-0030); unused here.
+        { provide: AuthService, useValue: {} },
       ],
     }).compile();
     controller = module.get(UsersController);

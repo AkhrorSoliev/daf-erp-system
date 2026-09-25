@@ -4,6 +4,7 @@ import { Reflector } from '@nestjs/core';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { RedisService } from '../redis/redis.service';
+import { AuthService } from '../auth/auth.service';
 import { RolesGuard } from '../common/guards';
 import { ROLES_KEY } from '../common/decorators';
 
@@ -22,6 +23,23 @@ describe('UsersController — role guards', () => {
     softDelete: jest.fn().mockResolvedValue({}),
   };
 
+  const mockAuth = {
+    issueSession: jest.fn().mockResolvedValue({
+      accessToken: 'a',
+      refreshToken: 'r',
+      user: { id: 7 },
+    }),
+    logoutOtherSessions: jest.fn().mockResolvedValue({
+      accessToken: 'a2',
+      refreshToken: 'r2',
+      user: { id: 7 },
+    }),
+  };
+
+  // The mocks live for the whole suite, so order checks compare LAST calls.
+  const lastCall = (fn: jest.Mock) =>
+    fn.mock.invocationCallOrder[fn.mock.invocationCallOrder.length - 1];
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
@@ -29,6 +47,7 @@ describe('UsersController — role guards', () => {
         { provide: UsersService, useValue: mockService },
         // OwnPasswordAttemptGuard (ADR-0031) is built with the controller.
         { provide: RedisService, useValue: {} },
+        { provide: AuthService, useValue: mockAuth },
       ],
     }).compile();
 
@@ -186,6 +205,53 @@ describe('UsersController — role guards', () => {
     it('passes id, userId, companyId to the service', async () => {
       await controller.remove(7, 42, 1001);
       expect(mockService.softDelete).toHaveBeenCalledWith(7, 42, 1001);
+    });
+  });
+
+  describe('changePassword()', () => {
+    it('hands the caller a fresh session AFTER the change', async () => {
+      mockService.changePassword.mockResolvedValue({
+        message: "Parol muvaffaqiyatli o'zgartirildi",
+        sessionVersion: 5,
+      });
+
+      const res = await controller.changePassword(7, {
+        oldPassword: 'eskiParol1',
+        newPassword: 'yangiParol1',
+      });
+
+      // Signed with exactly the version the change produced; the number
+      // itself never reaches the response.
+      expect(mockAuth.issueSession).toHaveBeenCalledWith(7, 5);
+      // Issued before the change, the pair would carry the old version.
+      expect(lastCall(mockService.changePassword)).toBeLessThan(
+        lastCall(mockAuth.issueSession),
+      );
+      expect(res).toEqual({
+        message: "Parol muvaffaqiyatli o'zgartirildi",
+        accessToken: 'a',
+        refreshToken: 'r',
+        user: { id: 7 },
+      });
+    });
+  });
+
+  describe('logoutOthers()', () => {
+    it('is open to every signed-in account (no @Roles)', () => {
+      expect(
+        reflector.get<string[]>(ROLES_KEY, controller.logoutOthers),
+      ).toBeUndefined();
+    });
+
+    it("acts on the caller only, from the caller's own session version", async () => {
+      const res = await controller.logoutOthers(7, 3);
+
+      expect(mockAuth.logoutOtherSessions).toHaveBeenCalledWith(7, 3);
+      expect(res).toEqual({
+        accessToken: 'a2',
+        refreshToken: 'r2',
+        user: { id: 7 },
+      });
     });
   });
 });

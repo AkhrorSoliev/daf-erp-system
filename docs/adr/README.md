@@ -87,6 +87,7 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0027](0027-xodim-hisobini-faqat-yuqoridagi-rahbar-ozgartiradi.md) | Xodim hisobini faqat undan yuqoridagi rahbar o'zgartiradi | Qabul qilindi | 2026-09-24 |
 | [0028](0028-bloklangan-xodim-hech-narsa-bermaydi.md) | Bloklangan xodim hech narsa bera olmaydi, uning tokeni keyingi so'rovda to'xtaydi | Qabul qilindi | 2026-09-24 |
 | [0029](0029-xodim-havolasi-uch-kun-ishlaydi.md) | Xodim havolasi uch kun ishlaydi, berilgan vaqti imzo ichida | Qabul qilindi | 2026-09-24 |
+| [0030](0030-parol-ozgarsa-boshqa-kirishlar-toxtaydi.md) | Parol o'zgarsa, hisobning boshqa kirishlari keyingi so'rovda to'xtaydi | Qabul qilindi | 2026-09-24 |
 | [0031](0031-oz-kirish-kalitingiz-joriy-parol-bilan-ozgaradi.md) | O'z kirish kalitingiz faqat joriy parol bilan o'zgaradi | Qabul qilindi | 2026-09-24 |
 | [0032](0032-oquvchi-kirish-raqami-kartaga-ergashadi.md) | O'quvchining kirish raqami kartadagi raqamga ergashadi | Qabul qilindi | 2026-09-24 |
 

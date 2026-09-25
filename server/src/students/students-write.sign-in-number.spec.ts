@@ -221,6 +221,7 @@ function buildService(db: ReturnType<typeof buildDb>) {
     { emit: jest.fn() } as any, // EventEmitter2
     {} as any, // TransactionsService
     {} as any, // StudentLeadOriginService
+    { set: jest.fn(), del: jest.fn() } as any, // RedisService
   );
 }
 
