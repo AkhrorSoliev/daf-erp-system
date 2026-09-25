@@ -65,6 +65,31 @@ export const GRANTABLE_ROLE_IDS = {
   BRANCH_DIRECTOR: [3, 4, 5],
   ADMINISTRATOR: [4, 5],
 } as const satisfies Record<string, readonly number[]>;
+
+/**
+ * The ceiling for a caller holding these role names: the most senior of CEO,
+ * Branch Director and Administrator decides. Holding none of them means
+ * nothing is grantable, never a default row.
+ *
+ * Both doors that let a caller choose the roles read the map through this
+ * function: the registration link (`generateEmployeeLinkPayload`) and the
+ * signed-in employee write (`UsersService`). What they pass in differs. The
+ * link takes the role names from the access token; the employee write reads
+ * them from the database, where an archived caller has none (ADR-0026).
+ */
+export function grantableRoleIdsFor(
+  roleNames: readonly string[],
+): readonly number[] {
+  if (roleNames.includes('CEO')) return GRANTABLE_ROLE_IDS.CEO;
+  if (roleNames.includes('Branch Director')) {
+    return GRANTABLE_ROLE_IDS.BRANCH_DIRECTOR;
+  }
+  if (roleNames.includes('Administrator')) {
+    return GRANTABLE_ROLE_IDS.ADMINISTRATOR;
+  }
+  return [];
+}
+
 export const DEFAULT_COMPANY_ID = 1001;
 
 /**
