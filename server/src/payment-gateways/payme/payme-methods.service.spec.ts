@@ -45,6 +45,7 @@ describe('PaymeMethodsService', () => {
       },
       paymentIntent: {
         findFirst: jest.fn().mockResolvedValue(null),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       payment: {
         findUnique: jest.fn().mockResolvedValue(null),
@@ -65,6 +66,7 @@ describe('PaymeMethodsService', () => {
         // Create a tx proxy that delegates to prisma mock models
         const tx = {
           paymeTransaction: prisma.paymeTransaction,
+          paymentIntent: prisma.paymentIntent,
           student: prisma.student,
           payment: { create: jest.fn() },
           contract: { update: jest.fn() },
@@ -343,6 +345,25 @@ describe('PaymeMethodsService', () => {
         }),
         expect.anything(), // tx client from $transaction
       );
+    });
+
+    // Portal to'lovi o'tgach uning PaymentIntent'i 1 soat "tirik" qolardi.
+    // Shu vaqtda mock narxiga teng to'lov mockka emas, balansga ketardi
+    // (shouldRouteToMock tirik intent'ni "ataylab balans to'ldirish" deb
+    // o'qiydi), boshqa summadagi to'lov esa INVALID_AMOUNT bilan rad etilardi.
+    it('marks the matching portal PaymentIntent as used', async () => {
+      prisma.paymeTransaction.findUnique.mockResolvedValue(mockTxn());
+      await service.performTransaction({ id: PAYME_ID } as any, COMPANY_ID, 1);
+      expect(prisma.paymentIntent.updateMany).toHaveBeenCalledWith({
+        where: {
+          studentId: STUDENT_ID,
+          companyId: COMPANY_ID,
+          provider: 'PAYME',
+          used: false,
+          amount: 500000,
+        },
+        data: { used: true },
+      });
     });
 
     it('should omit branchId when student has no active enrollment or StudentBranch', async () => {

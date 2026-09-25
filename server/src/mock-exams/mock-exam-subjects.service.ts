@@ -6,6 +6,10 @@ import {
 import { MockExamStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
+import {
+  branchIdWhere,
+  type ReportBranchIds,
+} from '../common/finance/report-branch-scope';
 import { CreateMockExamSubjectDto } from './dto/create-mock-exam-subject.dto';
 import { UpdateMockExamSubjectDto } from './dto/update-mock-exam-subject.dto';
 import { ReorderMockExamSubjectsDto } from './dto/reorder-mock-exam-subjects.dto';
@@ -27,8 +31,8 @@ export class MockExamSubjectsService {
     private entityHistoryService: EntityHistoryService,
   ) {}
 
-  async list(examId: string) {
-    await this.ensureExam(examId);
+  async list(examId: string, companyId: number, scope: ReportBranchIds) {
+    await this.ensureExam(examId, companyId, scope);
     return this.prisma.mockExamSubject.findMany({
       where: { examId },
       orderBy: { order: 'asc' },
@@ -40,8 +44,9 @@ export class MockExamSubjectsService {
     dto: CreateMockExamSubjectDto,
     companyId: number,
     userId: number,
+    scope: ReportBranchIds,
   ) {
-    const exam = await this.ensureExam(examId);
+    const exam = await this.ensureExam(examId, companyId, scope);
     this.ensureSubjectsEditable(exam.status);
 
     const name = dto.name.trim();
@@ -62,6 +67,7 @@ export class MockExamSubjectsService {
         order: (maxOrder._max.order ?? -1) + 1,
       },
     });
+    await this.syncExamMaxScore(examId);
 
     await this.entityHistoryService.recordCreate({
       entityType: 'MockExamSubject',
@@ -79,14 +85,9 @@ export class MockExamSubjectsService {
     dto: UpdateMockExamSubjectDto,
     companyId: number,
     userId: number,
+    scope: ReportBranchIds,
   ) {
-    const existing = await this.prisma.mockExamSubject.findUnique({
-      where: { id },
-      include: { exam: { select: { status: true } } },
-    });
-    if (!existing) {
-      throw new NotFoundException("Bo'lim topilmadi");
-    }
+    const existing = await this.findSubjectInScope(id, companyId, scope);
     this.ensureSubjectsEditable(existing.exam.status);
 
     const data: { name?: string; maxScore?: number } = {};
@@ -98,6 +99,16 @@ export class MockExamSubjectsService {
       data.name = trimmed;
     }
     if (dto.maxScore !== undefined) {
+      // O'tish balidan past maksimum — PDF'da hamma katak (to'liq ball ham)
+      // "o'tmadi" deb qizil chiqardi.
+      if (
+        existing.passingScore != null &&
+        dto.maxScore < existing.passingScore
+      ) {
+        throw new BadRequestException(
+          `Maksimal ball o'tish balidan (${existing.passingScore}) kam bo'lishi mumkin emas`,
+        );
+      }
       data.maxScore = dto.maxScore;
     }
     if (Object.keys(data).length === 0) {
@@ -108,6 +119,9 @@ export class MockExamSubjectsService {
       where: { id },
       data,
     });
+    if (data.maxScore !== undefined) {
+      await this.syncExamMaxScore(existing.examId);
+    }
 
     await this.entityHistoryService.recordUpdate({
       entityType: 'MockExamSubject',
@@ -121,19 +135,19 @@ export class MockExamSubjectsService {
     return updated;
   }
 
-  async remove(id: string, companyId: number, userId: number) {
-    const existing = await this.prisma.mockExamSubject.findUnique({
-      where: { id },
-      include: { exam: { select: { status: true } } },
-    });
-    if (!existing) {
-      throw new NotFoundException("Bo'lim topilmadi");
-    }
+  async remove(
+    id: string,
+    companyId: number,
+    userId: number,
+    scope: ReportBranchIds,
+  ) {
+    const existing = await this.findSubjectInScope(id, companyId, scope);
     this.ensureSubjectsEditable(existing.exam.status);
 
     // Hard delete — subjects have no soft-delete column; their scores cascade
     // via onDelete: Cascade on MockExamSubjectScore.subjectId.
     await this.prisma.mockExamSubject.delete({ where: { id } });
+    await this.syncExamMaxScore(existing.examId);
 
     await this.entityHistoryService.recordDelete({
       entityType: 'MockExamSubject',
@@ -146,8 +160,13 @@ export class MockExamSubjectsService {
     return { message: "Bo'lim o'chirildi" };
   }
 
-  async reorder(examId: string, dto: ReorderMockExamSubjectsDto) {
-    await this.ensureExam(examId);
+  async reorder(
+    examId: string,
+    dto: ReorderMockExamSubjectsDto,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
+    await this.ensureExam(examId, companyId, scope);
 
     const subjects = await this.prisma.mockExamSubject.findMany({
       where: { examId },
@@ -177,15 +196,65 @@ export class MockExamSubjectsService {
     return { message: "Bo'limlar tartibi yangilandi" };
   }
 
-  private async ensureExam(examId: string) {
+  /**
+   * Kompaniya va filial qamrovi bilan — `MockExamsService` dagi bilan bir xil.
+   * Ilgari faqat id bo'yicha qidirilardi.
+   */
+  private async ensureExam(
+    examId: string,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
     const exam = await this.prisma.mockExam.findFirst({
-      where: { id: examId, deletedAt: null },
+      where: {
+        id: examId,
+        deletedAt: null,
+        companyId,
+        ...branchIdWhere(scope),
+      },
       select: { id: true, status: true },
     });
     if (!exam) {
       throw new NotFoundException('Mock imtihon topilmadi');
     }
     return exam;
+  }
+
+  private async findSubjectInScope(
+    id: string,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
+    const subject = await this.prisma.mockExamSubject.findFirst({
+      where: {
+        id,
+        exam: { deletedAt: null, companyId, ...branchIdWhere(scope) },
+      },
+      include: { exam: { select: { status: true } } },
+    });
+    if (!subject) {
+      throw new NotFoundException("Bo'lim topilmadi");
+    }
+    return subject;
+  }
+
+  /**
+   * Imtihon `maxScore` — fanlar maksimumlari yig'indisi (yaratishda shunday
+   * olinadi). Fan qo'shilsa/o'zgarsa/o'chsa yangilanmasa, foiz 100% dan
+   * oshib ketardi va natijalar jadvali "90 / 75" ko'rsatardi.
+   */
+  private async syncExamMaxScore(examId: string) {
+    const agg = await this.prisma.mockExamSubject.aggregate({
+      where: { examId },
+      _sum: { maxScore: true },
+    });
+    const total = agg._sum.maxScore ?? 0;
+    if (total > 0) {
+      await this.prisma.mockExam.update({
+        where: { id: examId },
+        data: { maxScore: total },
+      });
+    }
   }
 
   private ensureSubjectsEditable(status: MockExamStatus) {

@@ -38,6 +38,7 @@ import {
   signEmployeePayload,
 } from './utils/signed-link.util';
 import { PrismaService } from '../prisma/prisma.service';
+import { RESULTS_AUDIENCE } from '../mock-exams/mock-results-audience';
 import { whereUserMayAct } from '../common/auth/blocked-user';
 import { TelegramChannelGateStatsService } from './telegram-channel-gate-stats.service';
 import { UploadService } from '../upload/upload.service';
@@ -254,6 +255,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     const mockExamScene = createMockExamRegistrationScene(
       this.prisma,
       this.paymentLinkService,
+      this.entityHistoryService,
       this.bot,
     );
 
@@ -701,7 +703,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Pushes the announced results PDF to every participant of `examId`
-   * that has a registered Telegram chat. Idempotent — participants with
+   * that has a registered Telegram chat and has paid (`RESULTS_AUDIENCE`:
+   * only those who paid get their results). Idempotent — participants with
    * `resultSentAt` already set are skipped. Per-participant errors are
    * logged on the row (`resultSendError`) and do not abort the loop.
    *
@@ -738,6 +741,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         deletedAt: null,
         telegramChatId: { not: null },
         resultSentAt: null,
+        AND: [RESULTS_AUDIENCE],
       },
       select: { id: true, publicId: true, telegramChatId: true },
     });
@@ -792,9 +796,9 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Lists ANNOUNCED mock exams the user has participated in, with their
-   * `publicId`. Pure read — no state changes. If the user hasn't
-   * registered for any announced exam, shows an empty-state message.
+   * Lists ANNOUNCED mock exams the user has participated in and paid for,
+   * with their `publicId`. Pure read — no state changes. If there is none,
+   * shows an empty-state message.
    */
   private async showMockResultsMenu(
     ctx: BotContext,
@@ -805,6 +809,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         telegramChatId: chatId,
         deletedAt: null,
         exam: { status: 'ANNOUNCED', deletedAt: null },
+        AND: [RESULTS_AUDIENCE],
       },
       orderBy: { exam: { examDate: 'desc' } },
       select: {
@@ -846,11 +851,16 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     chatId: string,
     examId: string,
   ): Promise<void> {
+    // Results are for those who paid (CEO, 2026-09-25). One chat can hold
+    // two registrations for the same exam — a parent registering two
+    // children — so the paid one is looked for first; the button's callback
+    // data names the exam, so this check cannot lean on the list above.
     const participant = await this.prisma.mockExamParticipant.findFirst({
       where: {
         examId,
         telegramChatId: chatId,
         deletedAt: null,
+        AND: [RESULTS_AUDIENCE],
       },
       select: {
         publicId: true,
@@ -865,7 +875,15 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     });
 
     if (!participant) {
-      await ctx.reply('Bu imtihonda sizning ishtirokingiz topilmadi.');
+      const registered = await this.prisma.mockExamParticipant.findFirst({
+        where: { examId, telegramChatId: chatId, deletedAt: null },
+        select: { id: true },
+      });
+      await ctx.reply(
+        registered
+          ? "Natijalar faqat imtihon uchun to'lov qilganlarga beriladi."
+          : 'Bu imtihonda sizning ishtirokingiz topilmadi.',
+      );
       return;
     }
 

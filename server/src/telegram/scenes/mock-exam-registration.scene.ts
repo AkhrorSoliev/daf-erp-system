@@ -18,8 +18,13 @@ import {
   contactBelongsToSender,
 } from '../utils/contact-ownership';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EntityHistoryService } from '../../common/entity-history';
 import { PaymentLinkService } from '../../payment-gateways/payment-link.service';
 import { resolveParticipantFee } from '../../mock-exams/mock-exam-pricing.util';
+import {
+  formatMockPaymentCutoff,
+  mockPaymentCutoff,
+} from '../../mock-exams/mock-payment-cutoff';
 
 /**
  * Mock exam registration scene.
@@ -84,11 +89,19 @@ const DATE_RE = /^(\d{2}\.\d{2}\.\d{4}|\d{4}-\d{2}-\d{2})$/;
  */
 const DEFAULT_COMPANY_ID = 1001;
 
+interface SceneDeps {
+  prisma: PrismaService;
+  paymentLinkService: PaymentLinkService;
+  entityHistoryService: EntityHistoryService;
+}
+
 export function createMockExamRegistrationScene(
   prisma: PrismaService,
   paymentLinkService: PaymentLinkService,
+  entityHistoryService: EntityHistoryService,
   _bot: Telegraf<BotContext>,
 ): Scenes.BaseScene<BotContext> {
+  const deps: SceneDeps = { prisma, paymentLinkService, entityHistoryService };
   const logger = new Logger('MockExamRegistrationScene');
   const scene = new Scenes.BaseScene<BotContext>(SCENES.MOCK_EXAM_REGISTRATION);
 
@@ -246,7 +259,15 @@ export function createMockExamRegistrationScene(
   scene.action(/^me_opt:(.+)$/, async (ctx) => {
     await ctx.answerCbQuery();
     const value = ctx.match[1];
-    await handleAnswer(ctx, prisma, paymentLinkService, value);
+    // Eski xabardagi tugma ham shu yerga keladi. Tekshiruvsiz uning qiymati
+    // JORIY savolga yozilardi — masalan telefon = "true", shunda DaF
+    // o'quvchisi topilmay, to'liq narx bilan tashqi odam bo'lib qolardi.
+    const field = currentField(ctx);
+    if (!field || !optionAllowed(field, value)) {
+      await ctx.reply('Iltimos, joriy savolga javob bering.');
+      return;
+    }
+    await handleAnswer(ctx, deps, value);
   });
 
   // Phone share via Telegram Contact
@@ -269,7 +290,10 @@ export function createMockExamRegistrationScene(
       await ctx.reply(SHARED_PHONE_INVALID);
       return;
     }
-    await handleAnswer(ctx, prisma, paymentLinkService, phone);
+    // Faqat shu yo'l raqam egasini isbotlaydi — o'quvchi profiliga chatni
+    // bog'lashga faqat shunda ruxsat bor (finalizeRegistration).
+    ctx.session.data.verifiedPhone = phone;
+    await handleAnswer(ctx, deps, phone);
   });
 
   // Free-text input
@@ -316,7 +340,7 @@ export function createMockExamRegistrationScene(
         );
         return;
       }
-      await handleAnswer(ctx, prisma, paymentLinkService, phone);
+      await handleAnswer(ctx, deps, phone);
       return;
     }
     if (field.type === 'email') {
@@ -324,7 +348,7 @@ export function createMockExamRegistrationScene(
         await ctx.reply("Email manzili noto'g'ri. Qayta kiriting:");
         return;
       }
-      await handleAnswer(ctx, prisma, paymentLinkService, text);
+      await handleAnswer(ctx, deps, text);
       return;
     }
     if (field.type === 'number') {
@@ -333,7 +357,7 @@ export function createMockExamRegistrationScene(
         await ctx.reply("Son noto'g'ri. Qayta kiriting:");
         return;
       }
-      await handleAnswer(ctx, prisma, paymentLinkService, n);
+      await handleAnswer(ctx, deps, n);
       return;
     }
     if (field.type === 'date') {
@@ -343,7 +367,7 @@ export function createMockExamRegistrationScene(
         );
         return;
       }
-      await handleAnswer(ctx, prisma, paymentLinkService, text);
+      await handleAnswer(ctx, deps, text);
       return;
     }
     // text / textarea
@@ -357,7 +381,7 @@ export function createMockExamRegistrationScene(
       await ctx.reply(MULTI_WORD_NAME_HINT);
       return;
     }
-    await handleAnswer(ctx, prisma, paymentLinkService, text);
+    await handleAnswer(ctx, deps, text);
   });
 
   return scene;
@@ -366,6 +390,14 @@ export function createMockExamRegistrationScene(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function optionAllowed(field: FormField, value: string): boolean {
+  if (field.type === 'checkbox') return value === 'true' || value === 'false';
+  if (field.type === 'select' || field.type === 'radio') {
+    return (field.options ?? []).some((o) => o.value === value);
+  }
+  return false;
+}
 
 function currentField(ctx: BotContext): FormField | null {
   const fields = ctx.session.data?.fields as FormField[] | undefined;
@@ -492,8 +524,7 @@ async function askField(ctx: BotContext, field: FormField) {
 
 async function handleAnswer(
   ctx: BotContext,
-  prisma: PrismaService,
-  paymentLinkService: PaymentLinkService,
+  deps: SceneDeps,
   rawValue: string | number | boolean,
 ) {
   const field = currentField(ctx);
@@ -517,14 +548,11 @@ async function handleAnswer(
   }
 
   // All fields answered — write participant
-  await finalizeRegistration(ctx, prisma, paymentLinkService);
+  await finalizeRegistration(ctx, deps);
 }
 
-async function finalizeRegistration(
-  ctx: BotContext,
-  prisma: PrismaService,
-  paymentLinkService: PaymentLinkService,
-) {
+async function finalizeRegistration(ctx: BotContext, deps: SceneDeps) {
+  const { prisma, paymentLinkService, entityHistoryService } = deps;
   const logger = new Logger('MockExamRegistrationScene.finalize');
 
   const examId = ctx.session.data.examId as string;
@@ -561,14 +589,41 @@ async function finalizeRegistration(
 
   // Pricing (for the DaF discount) + the level the user chose.
   const exam = await prisma.mockExam.findFirst({
-    where: { id: examId },
+    where: { id: examId, deletedAt: null },
     // `companyId` comes from the EXAM. A participant belongs to whoever owns
     // the exam they registered for; it is not a property of the bot. Both the
     // row below and the checkout links built from it used to take a hardcoded
     // 1001 instead — harmless with one company, and a payment routed to the
     // wrong merchant account the day there are two.
-    select: { price: true, studentPrice: true, companyId: true },
+    select: {
+      price: true,
+      studentPrice: true,
+      companyId: true,
+      status: true,
+      registrationDeadline: true,
+      examDate: true,
+      examTimes: true,
+    },
   });
+
+  // Holat faqat sahnaga KIRISHDA tekshirilardi. Sessiya 24 soat yashaydi,
+  // shuning uchun muddat o'tgach, ro'yxat yopilgach (baholash boshlangach)
+  // yoki imtihon o'chirilgach ham forma oxiriga yetgan odam ro'yxatga
+  // olinib, to'lov tugmalarini olardi.
+  const registrationOpen =
+    exam !== null &&
+    exam.status === MockExamStatus.REGISTRATION_OPEN &&
+    (!exam.registrationDeadline ||
+      exam.registrationDeadline.getTime() >= Date.now());
+  if (!registrationOpen) {
+    await ctx.reply(
+      "Kechirasiz, bu imtihonga ro'yxatga olish yopilgan.",
+      Markup.removeKeyboard(),
+    );
+    await ctx.scene.leave();
+    return;
+  }
+
   const examPrice = exam?.price ?? 0;
   const studentPrice = exam?.studentPrice ?? null;
   const examCompanyId = exam?.companyId ?? DEFAULT_COMPANY_ID;
@@ -581,39 +636,48 @@ async function finalizeRegistration(
   let participantId: string | null = null;
 
   try {
-    // 1. Is this person already a real DaF student? Match first by their
-    //    Telegram chat, then by the phone they just entered. A phone match
-    //    is a walk-in DaF student registering from a Telegram not yet tied
-    //    to their profile — so we link it below. When matched, we reuse
-    //    their Student.id as the publicId (balance-flow payments, results
+    // 1. Is this person already a real DaF student? The phone typed into the
+    //    form is the identity — the chat is NOT. A parent's Telegram tied to
+    //    child A registering child B used to be recorded as A (A's discount,
+    //    A's results profile, and A then blocked as "already registered").
+    //    When matched, we reuse their Student.id as the publicId (results
     //    show up on the student profile) and apply the DaF mock discount.
-    let existingStudent = await prisma.student.findFirst({
-      where: { telegramChatId: chatId, deletedAt: null },
+    const existingStudent = await prisma.student.findFirst({
+      // phone is NOT unique (see phone-login) — prefer the most recently
+      // touched student when several share a number. Only the exam's own
+      // company: a student elsewhere is not this centre's DaF student.
+      where: { phone, deletedAt: null, companyId: examCompanyId },
+      orderBy: { updatedAt: 'desc' },
       select: { id: true, telegramChatId: true },
     });
-    let matchedByPhone = false;
-    if (!existingStudent) {
-      existingStudent = await prisma.student.findFirst({
-        // phone is NOT unique (see phone-login) — prefer the most recently
-        // touched student when several share a number.
-        where: { phone, deletedAt: null },
-        orderBy: { updatedAt: 'desc' },
-        select: { id: true, telegramChatId: true },
-      });
-      matchedByPhone = existingStudent !== null;
-    }
 
     if (existingStudent) {
       publicId = existingStudent.id;
       studentId = existingStudent.id;
-      // Link this Telegram account to a phone-matched student that has no
-      // chat id yet. Never overwrite a different existing chat id — the
-      // student may use a separate Telegram account.
-      if (matchedByPhone && !existingStudent.telegramChatId) {
+      // Link this Telegram account to the student — but ONLY when the phone
+      // came from the contact button and belongs to the sender. A typed
+      // number proves nothing: linking on it let anyone attach their chat to
+      // a stranger's profile and then reset that student's portal password
+      // (password-reset scene) or approve an app login in their name.
+      // Never overwrite a different existing chat id either.
+      const phoneVerified = ctx.session.data.verifiedPhone === phone;
+      if (phoneVerified && !existingStudent.telegramChatId) {
         try {
           await prisma.student.update({
             where: { id: existingStudent.id },
             data: { telegramChatId: chatId },
+          });
+          // Chaqiruvchisi yo'q yozuv — bot odamning o'zi tasdiqlagan kontakti
+          // bilan bog'ladi (ADR-0008: aktor oshkora, `changedById` yo'q).
+          await entityHistoryService.recordUpdate({
+            entityType: 'Student',
+            entityId: existingStudent.id,
+            oldValues: { telegramChatId: null },
+            newValues: {
+              telegramChatId: chatId,
+              manba: 'MOCK_BOT_KONTAKT',
+            },
+            companyId: examCompanyId,
           });
         } catch (err) {
           logger.warn(
@@ -684,6 +748,29 @@ async function finalizeRegistration(
     return;
   }
 
+  // Tarix yozuvi ro'yxatning o'zini buzmasin: xato bo'lsa faqat log.
+  try {
+    await entityHistoryService.recordCreate({
+      entityType: 'MockExamParticipant',
+      entityId: participantId,
+      newValues: {
+        examId,
+        firstName,
+        lastName,
+        phone,
+        publicId,
+        studentId,
+        feeAmount,
+        action: 'TELEGRAM_ROYXATDAN_OTDI',
+      },
+      companyId: examCompanyId,
+    });
+  } catch (err) {
+    logger.warn(
+      `History write failed for participant ${participantId}: ${(err as Error).message}`,
+    );
+  }
+
   // `feeAmount` (computed above) is what this participant owes — the DaF
   // discount is already baked in.
   const price = feeAmount;
@@ -748,6 +835,19 @@ async function finalizeRegistration(
 
   if (price > 0) {
     lines.push('', `💳 To'lov: <b>${price.toLocaleString('uz-UZ')} so'm</b>`);
+    // Money is accepted until the exam starts (CEO, 2026-09-25); after that
+    // Payme and Click refuse it (`mockPaymentCutoff`). Say when.
+    const cutoff = mockPaymentCutoff({
+      examDate: exam?.examDate ?? null,
+      examTimes: exam?.examTimes ?? [],
+      participantExamTime: examTime,
+    });
+    if (cutoff) {
+      lines.push(
+        `⏰ To'lov muddati: <b>${formatMockPaymentCutoff(cutoff)}</b> gacha. ` +
+          "Imtihon boshlangach onlayn to'lov qabul qilinmaydi.",
+      );
+    }
     if (hasPayLinks) {
       lines.push(
         "Payme yoki Click tugmasi orqali to'lang (telefoningizda app ochiladi), " +
@@ -764,6 +864,9 @@ async function finalizeRegistration(
     '',
     "Natijalar e'lon qilingach, PDFda identifikatoringizni topishingiz mumkin. Eslab qoling!",
   );
+  if (price > 0) {
+    lines.push("Natijalar faqat to'lov qilganlarga yuboriladi.");
+  }
 
   // Telefon so'ralganda qo'yilgan «📱 Telefon raqamni yuborish» klaviaturasi
   // shu yerda albatta tozalanishi kerak. Bitta xabarda ham inline tugmalar,

@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { MockExamGatewayBillingService } from './mock-exam-gateway-billing.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
+import { EntityHistoryService } from '../common/entity-history';
 
 /**
  * Mock havolasi orqali kelgan pul FAQAT mock uchun ishlatilishi kerak —
@@ -44,6 +45,10 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
         MockExamGatewayBillingService,
         { provide: PrismaService, useValue: prisma },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: EntityHistoryService,
+          useValue: { recordUpdate: jest.fn() },
+        },
       ],
     }).compile();
     service = moduleRef.get(MockExamGatewayBillingService);
@@ -210,6 +215,10 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
           MockExamGatewayBillingService,
           { provide: PrismaService, useValue: p },
           { provide: EventEmitter2, useValue: { emit } },
+          {
+            provide: EntityHistoryService,
+            useValue: { recordUpdate: jest.fn() },
+          },
         ],
       }).compile();
 
@@ -254,6 +263,10 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
             useValue: { $transaction: async (fn: any) => fn(tx) },
           },
           { provide: EventEmitter2, useValue: { emit } },
+          {
+            provide: EntityHistoryService,
+            useValue: { recordUpdate: jest.fn() },
+          },
         ],
       }).compile();
 
@@ -263,6 +276,94 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
         'mock.participant.paid',
         expect.objectContaining({ feeAmount: 40000 }),
       );
+    });
+  });
+
+  /**
+   * CEO, 2026-09-25: money is accepted until the exam starts. A registration
+   * whose slot has begun is no longer a payment target, so Payme/Click refuse
+   * an outsider's payment and a DaF student's lands on their balance.
+   */
+  describe('payment closes when the exam slot starts', () => {
+    // 30.09.2026 in Tashkent; the 09:00 slot starts at 04:00 UTC.
+    const EXAM_DAY = new Date('2026-09-30T00:00:00.000Z');
+    const slotted = (over: Record<string, unknown> = {}) =>
+      participant({
+        examTime: '09:00',
+        exam: {
+          price: 2000,
+          examDate: EXAM_DAY,
+          examTimes: ['09:00', '13:00'],
+        },
+        ...over,
+      });
+
+    it('is still a target one minute before the slot starts', async () => {
+      prisma.mockExamParticipant.findMany.mockResolvedValue([slotted()]);
+      const t = await service.resolveTarget(
+        10003,
+        2000,
+        new Date('2026-09-30T03:59:00.000Z'),
+      );
+      expect(t).toEqual(
+        expect.objectContaining({ participantId: 'p1', alreadyPaid: false }),
+      );
+    });
+
+    it('is not a target once the slot has started', async () => {
+      prisma.mockExamParticipant.findMany.mockResolvedValue([slotted()]);
+      await expect(
+        service.resolveTarget(
+          10003,
+          2000,
+          new Date('2026-09-30T04:00:00.000Z'),
+        ),
+      ).resolves.toBeNull();
+    });
+
+    it('keeps the 13:00 slot open after the 09:00 slot started', async () => {
+      prisma.mockExamParticipant.findMany.mockResolvedValue([
+        slotted({ examTime: '13:00' }),
+      ]);
+      const t = await service.resolveTarget(
+        10003,
+        2000,
+        new Date('2026-09-30T05:00:00.000Z'),
+      );
+      expect(t?.participantId).toBe('p1');
+    });
+
+    it("still finds the person's next exam after an earlier one started", async () => {
+      prisma.mockExamParticipant.findMany.mockResolvedValue([
+        slotted({ id: 'p-old' }),
+        slotted({
+          id: 'p-next',
+          exam: {
+            price: 2000,
+            examDate: new Date('2026-10-30T00:00:00.000Z'),
+            examTimes: ['09:00'],
+          },
+        }),
+      ]);
+      const t = await service.resolveTarget(
+        10003,
+        2000,
+        new Date('2026-09-30T06:00:00.000Z'),
+      );
+      expect(t?.participantId).toBe('p-next');
+    });
+
+    it('does not route a payment to a mock whose slot has passed', async () => {
+      prisma.mockExamParticipant.findMany.mockResolvedValue([
+        slotted({
+          exam: {
+            price: 2000,
+            examDate: new Date('2020-01-01T00:00:00.000Z'),
+            examTimes: ['09:00'],
+          },
+        }),
+      ]);
+      await expect(service.shouldRouteToMock(ARGS)).resolves.toBe(false);
     });
   });
 

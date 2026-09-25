@@ -3,11 +3,16 @@ import type { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { renderPdf, getCompanyLogoDataUrl } from '../receipts/pdf/render';
+import { tashkentDateStr } from '../common/date/tashkent';
+import { RESULTS_AUDIENCE } from './mock-results-audience';
 
-function formatDate(d: Date): string {
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yyyy = d.getFullYear();
+/**
+ * dd.MM.yyyy — Toshkent kuni bo'yicha. `getDate()` jarayon vaqt mintaqasini
+ * (Railway'da UTC) o'qirdi: 00:00–05:00 orasida e'lon qilingan natijalar
+ * PDF'ga kechagi sana bilan tushardi.
+ */
+export function formatTashkentDate(d: Date): string {
+  const [yyyy, mm, dd] = tashkentDateStr(d).split('-');
   return `${dd}.${mm}.${yyyy}`;
 }
 
@@ -48,8 +53,10 @@ export class MockExamPdfService {
       throw new Error(`MockExam ${examId} not found`);
     }
 
+    // Only those who paid get their results (CEO, 2026-09-25), and this PDF
+    // is what the bot sends them.
     const participants = await this.prisma.mockExamParticipant.findMany({
-      where: { examId, deletedAt: null },
+      where: { examId, deletedAt: null, AND: [RESULTS_AUDIENCE] },
       orderBy: [
         // DESC by total score; nulls last so ungraded participants sink
         // to the bottom of the list.
@@ -202,13 +209,13 @@ export class MockExamPdfService {
           stack: [
             {
               text: exam.examDate
-                ? `Imtihon sanasi: ${formatDate(exam.examDate)}`
+                ? `Imtihon sanasi: ${formatTashkentDate(exam.examDate)}`
                 : '',
               fontSize: 9,
               color: '#64748b',
             },
             {
-              text: `E'lon qilingan: ${formatDate(announcedDate)}`,
+              text: `E'lon qilingan: ${formatTashkentDate(announcedDate)}`,
               fontSize: 9,
               color: '#64748b',
             },

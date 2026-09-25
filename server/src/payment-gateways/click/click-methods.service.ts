@@ -327,6 +327,19 @@ export class ClickMethodsService {
               paymentId: erpPayment.id,
             },
           });
+
+          // Portal intent'i endi ishlatildi. Aks holda u 1 soat "tirik"
+          // qolib, keyingi to'lovlarni noto'g'ri yo'naltirardi.
+          await tx.paymentIntent.updateMany({
+            where: {
+              studentId: txn.studentId,
+              companyId,
+              provider: 'CLICK',
+              used: false,
+              amount: txn.amountInSom,
+            },
+            data: { used: true },
+          });
         },
         {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,

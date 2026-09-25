@@ -23,7 +23,7 @@ describe('MockExamParticipantsService.convertToStudent — sign-in account', () 
   let service: MockExamParticipantsService;
   let prisma: any;
   let tx: any;
-  let history: { recordCreate: jest.Mock };
+  let history: { recordCreate: jest.Mock; recordUpdate: jest.Mock };
 
   beforeEach(async () => {
     tx = {
@@ -67,10 +67,13 @@ describe('MockExamParticipantsService.convertToStudent — sign-in account', () 
         }),
       },
       branch: { findFirst: jest.fn().mockResolvedValue({ id: 7 }) },
+      // The same-person check before the transaction: no card holds this
+      // phone or chat yet.
+      student: { findFirst: jest.fn().mockResolvedValue(null) },
       $transaction: jest.fn(async (cb: (t: unknown) => unknown) => cb(tx)),
     };
 
-    history = { recordCreate: jest.fn() };
+    history = { recordCreate: jest.fn(), recordUpdate: jest.fn() };
 
     const mod: TestingModule = await Test.createTestingModule({
       providers: [

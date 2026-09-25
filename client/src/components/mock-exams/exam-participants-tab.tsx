@@ -40,6 +40,8 @@ import { ManualParticipantDialog } from "./manual-participant-dialog";
 import { ConvertParticipantDialog } from "./convert-participant-dialog";
 import { MarkPaidDialog } from "./mark-paid-dialog";
 import { DeleteParticipantDialog } from "./delete-participant-dialog";
+import { pageAfterRemoval } from "./participant-delete";
+import { participantFee } from "./mock-fee";
 import { listParam } from "@/hooks/use-url-filters";
 import {
   MultiSelectCombobox,
@@ -153,6 +155,12 @@ export function ExamParticipantsTab({
 
   function handleDeleted(id: string) {
     onParticipantCountChange(-1);
+    const nextPage = pageAfterRemoval(page, data.length);
+    if (nextPage !== page) {
+      // Sahifadagi oxirgi qator o'chdi — oldingi sahifani yuklaymiz.
+      setPage(nextPage);
+      return;
+    }
     setData((prev) => prev.filter((p) => p.id !== id));
     setTotal((t) => Math.max(0, t - 1));
   }
@@ -306,7 +314,7 @@ export function ExamParticipantsTab({
                   </TableCell>
                   <TableCell className="text-xs">
                     {(() => {
-                      const fee = p.feeAmount ?? exam.price;
+                      const fee = participantFee(p, exam.price);
                       if (p.paid) {
                         return (
                           <div className="flex flex-col gap-0.5">
@@ -375,7 +383,7 @@ export function ExamParticipantsTab({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {!p.paid && (p.feeAmount ?? exam.price) > 0 && (
+                        {!p.paid && participantFee(p, exam.price) > 0 && (
                           <DropdownMenuItem onSelect={() => setPayTarget(p)}>
                             <CircleDollarSign className="mr-2 size-4" />
                             To&apos;lov qabul qilish
@@ -445,6 +453,7 @@ export function ExamParticipantsTab({
 
       <ConvertParticipantDialog
         participant={convertTarget}
+        examBranchId={exam.branchId}
         onClose={() => setConvertTarget(null)}
         onConverted={(participantId, student) => {
           setData((prev) =>

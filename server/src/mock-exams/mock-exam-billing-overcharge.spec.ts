@@ -163,4 +163,42 @@ describe('Mock exam fees never touch a lesson balance', () => {
       expect(transactions.reverseTransaction).toHaveBeenCalledTimes(2);
     });
   });
+
+  // 2026-08 gacha mock puli balansdan yechilgan. Bunday ishtirokchini o'chirish
+  // pulni balansga O'ZI qaytaradi — admin "pulni qaytaring" degan oynani ko'rib
+  // naqd ham bersa, pul ikki marta qaytib ketardi. Buni bilish uchun:
+  describe("eski balans to'lovlarini aniqlash", () => {
+    it("ishtirokchining balansdan yechilgan to'lovi borligini topadi", async () => {
+      prisma.transaction.findMany.mockResolvedValue([{ id: 't1' }]);
+
+      await expect(service.hasBalanceFee('p1')).resolves.toBe(true);
+      expect(prisma.transaction.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            type: 'MOCK_EXAM_FEE',
+            reversedAt: null,
+            metadata: { path: ['mockParticipantId'], equals: 'p1' },
+          }),
+        }),
+      );
+    });
+
+    it("ro'yxat uchun balansdan to'laganlarni bitta so'rovda ajratadi", async () => {
+      prisma.transaction.findMany.mockResolvedValue([
+        { metadata: { mockParticipantId: 'p1' } },
+        { metadata: { mockParticipantId: 'boshqa' } },
+      ]);
+
+      const ids = await service.paidFromBalanceIds(['p1', 'p2']);
+
+      expect([...ids]).toEqual(['p1']);
+      expect(prisma.transaction.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it("bo'sh ro'yxat uchun bazaga bormaydi", async () => {
+      const ids = await service.paidFromBalanceIds([]);
+      expect(ids.size).toBe(0);
+      expect(prisma.transaction.findMany).not.toHaveBeenCalled();
+    });
+  });
 });

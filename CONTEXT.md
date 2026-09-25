@@ -307,6 +307,36 @@ rad etiladi (Payme `-31008`, Click `-4`) va shlyuz pulni qaytaradi. To'lagan
 ishtirokchi faqat «pul qaytarildi» tasdig'i bilan o'chiriladi.
 `mock-exams/mock-exam-gateway-billing.service.ts` (`markCompleted`)
 
+**Onlayn to'lov imtihon boshlanguncha** (CEO, 2026-09-25). Muddat —
+ishtirokchi tanlagan vaqt (`examTime`), Toshkent vaqti bilan; vaqt tanlanmagan
+bo'lsa imtihonning eng erta vaqti, vaqt umuman bo'lmasa imtihon kunining oxiri.
+Muddat to'lov BOSHLANGANDA tekshiriladi (Payme check/create, Click prepare):
+undan oldin boshlangan to'lov yakunlanadi. Muddatdan keyin tashqi odamning
+to'lovi rad etiladi, DaF o'quvchisiniki balansiga tushadi. Bot ro'yxatdan
+o'tganda muddatni aytadi. Naqd to'lov admin qarori, cheklanmaydi.
+`mock-exams/mock-payment-cutoff.ts`
+
+**Onlayn to'lov faqat ochiq imtihonga** — `REGISTRATION_OPEN`,
+`REGISTRATION_CLOSED` yoki `GRADING` holatidagi, o'chirilmagan imtihon; bu
+tashqi chegara, uning ichida yuqoridagi vaqt muddati amal qiladi.
+E'lon qilingan yoki o'chirilgan imtihonning eski ro'yxati to'lov manzili emas;
+aks holda DaF o'quvchisining darsga qilgan aynan shu summadagi to'lovi o'sha
+eski mockka ketardi. To'lagan ishtirokchisi bor imtihon o'chirilmaydi;
+o'chirilganda ishtirokchilar ham birga o'chadi.
+`mock-exams/mock-exam-gateway-billing.service.ts` (`PAYABLE_EXAM_STATUSES`)
+
+**Natija faqat to'lov qilganlarga** (CEO, 2026-09-25). E'londan keyingi
+Telegram xabari, natijalar PDF'idagi qatorlar va botdagi «Mock natijalari»
+tugmasi faqat to'lagan (yoki hech narsa to'lamasligi kerak bo'lgan — `feeAmount`
+0) ishtirokchiga. Imtihonga kirishni markazda admin tekshiradi.
+`mock-exams/mock-results-audience.ts` (`RESULTS_AUDIENCE`)
+
+**Mock botida qo'lda yozilgan telefon hech narsani isbotlamaydi.** DaF
+o'quvchisi telefon bo'yicha topiladi (chat bo'yicha emas), lekin o'quvchi
+profiliga Telegram faqat «📱 Telefon raqamni yuborish» tugmasi bilan (odamning
+O'Z kontakti) bog'lanadi — aks holda begona odam o'quvchining parolini tiklab
+olardi. `telegram/scenes/mock-exam-registration.scene.ts`
+
 ---
 
 ## Audit va integratsiya
