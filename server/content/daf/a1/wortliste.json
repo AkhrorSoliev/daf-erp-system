@@ -621,6 +621,319 @@
    "artikel": null,
    "section": "u02-s5",
    "core": true
+  },
+  {
+   "wort": "Bahnhof",
+   "artikel": "der",
+   "section": "u03-s1",
+   "core": true
+  },
+  {
+   "wort": "Platz",
+   "artikel": "der",
+   "section": "u03-s1",
+   "core": true
+  },
+  {
+   "wort": "Park",
+   "artikel": "der",
+   "section": "u03-s1",
+   "core": true,
+   "grund": "Goethe A1 ro'yxatida bosh so'z sifatida yo'q (faqat misol gapda: 'Er sitzt im Park auf einer Bank'); shahardagi asosiy joy nomi"
+  },
+  {
+   "wort": "Post",
+   "artikel": "die",
+   "section": "u03-s1",
+   "core": true
+  },
+  {
+   "wort": "Bank",
+   "artikel": "die",
+   "section": "u03-s1",
+   "core": true
+  },
+  {
+   "wort": "Polizei",
+   "artikel": "die",
+   "section": "u03-s1",
+   "core": true
+  },
+  {
+   "wort": "Toilette",
+   "artikel": "die",
+   "section": "u03-s1",
+   "core": true
+  },
+  {
+   "wort": "Hotel",
+   "artikel": "das",
+   "section": "u03-s1",
+   "core": true
+  },
+  {
+   "wort": "Kino",
+   "artikel": "das",
+   "section": "u03-s1",
+   "core": true
+  },
+  {
+   "wort": "Museum",
+   "artikel": "das",
+   "section": "u03-s1",
+   "core": true,
+   "grund": "Goethe A1 ro'yxatida bosh so'z sifatida yo'q (faqat misol gapda: 'Ich gehe oft ins Museum'); xalqaro so'z, shahar joyi"
+  },
+  {
+   "wort": "Entschuldigung",
+   "artikel": null,
+   "section": "u03-s2",
+   "core": true,
+   "grund": "Goethe PDF'da bosh so'z ('die Entschuldigung — Entschuldigung! – Bitte.'); ajratilgan goethe-a1.json nusxasida tushib qolgan"
+  },
+  {
+   "wort": "neben",
+   "artikel": null,
+   "section": "u03-s2",
+   "core": true,
+   "grund": "Goethe ro'yxatida 'daneben' bor; bo'lim qoidasi (in/an/neben + Wo?) 'neben' ni talab qiladi"
+  },
+  {
+   "wort": "an",
+   "artikel": null,
+   "section": "u03-s2",
+   "core": true
+  },
+  {
+   "wort": "zwischen",
+   "artikel": null,
+   "section": "u03-s2",
+   "core": true
+  },
+  {
+   "wort": "links",
+   "artikel": null,
+   "section": "u03-s2",
+   "core": true
+  },
+  {
+   "wort": "rechts",
+   "artikel": null,
+   "section": "u03-s2",
+   "core": true
+  },
+  {
+   "wort": "dort",
+   "artikel": null,
+   "section": "u03-s2",
+   "core": true
+  },
+  {
+   "wort": "weit",
+   "artikel": null,
+   "section": "u03-s2",
+   "core": true
+  },
+  {
+   "wort": "Straße",
+   "artikel": "die",
+   "section": "u03-s2",
+   "core": true
+  },
+  {
+   "wort": "Ecke",
+   "artikel": "die",
+   "section": "u03-s2",
+   "core": true
+  },
+  {
+   "wort": "gehen",
+   "artikel": null,
+   "section": "u03-s3",
+   "core": true
+  },
+  {
+   "wort": "geradeaus",
+   "artikel": null,
+   "section": "u03-s3",
+   "core": true
+  },
+  {
+   "wort": "nehmen",
+   "artikel": null,
+   "section": "u03-s3",
+   "core": true
+  },
+  {
+   "wort": "dann",
+   "artikel": null,
+   "section": "u03-s3",
+   "core": true
+  },
+  {
+   "wort": "erste",
+   "artikel": null,
+   "section": "u03-s3",
+   "core": true,
+   "grund": "Goethe PDF'ning 'Zahlen' guruhida ('das/der/die erste'); ajratilgan nusxada tushib qolgan"
+  },
+  {
+   "wort": "zweite",
+   "artikel": null,
+   "section": "u03-s3",
+   "core": true,
+   "grund": "Goethe PDF'ning 'Zahlen' guruhida (tartib son); ajratilgan nusxada tushib qolgan"
+  },
+  {
+   "wort": "Ampel",
+   "artikel": "die",
+   "section": "u03-s3",
+   "core": true,
+   "grund": "Goethe A1 ro'yxatida yo'q; yo'l ko'rsatishning asosiy mo'ljali ('An der Ampel links'), A1 darsliklarida standart"
+  },
+  {
+   "wort": "suchen",
+   "artikel": null,
+   "section": "u03-s3",
+   "core": true
+  },
+  {
+   "wort": "finden",
+   "artikel": null,
+   "section": "u03-s3",
+   "core": true
+  },
+  {
+   "wort": "fahren",
+   "artikel": null,
+   "section": "u03-s4",
+   "core": true
+  },
+  {
+   "wort": "mit",
+   "artikel": null,
+   "section": "u03-s4",
+   "core": true
+  },
+  {
+   "wort": "Bus",
+   "artikel": "der",
+   "section": "u03-s4",
+   "core": true
+  },
+  {
+   "wort": "U-Bahn",
+   "artikel": "die",
+   "section": "u03-s4",
+   "core": true,
+   "grund": "Goethe A1 ro'yxatida yo'q (S-Bahn va Straßenbahn bor); nemis shahrining asosiy transporti"
+  },
+  {
+   "wort": "Straßenbahn",
+   "artikel": "die",
+   "section": "u03-s4",
+   "core": true
+  },
+  {
+   "wort": "Zug",
+   "artikel": "der",
+   "section": "u03-s4",
+   "core": true
+  },
+  {
+   "wort": "Auto",
+   "artikel": "das",
+   "section": "u03-s4",
+   "core": true
+  },
+  {
+   "wort": "Fahrrad",
+   "artikel": "das",
+   "section": "u03-s4",
+   "core": true
+  },
+  {
+   "wort": "Taxi",
+   "artikel": "das",
+   "section": "u03-s4",
+   "core": true
+  },
+  {
+   "wort": "zu Fuß",
+   "artikel": null,
+   "section": "u03-s4",
+   "core": true,
+   "grund": "ibora — 'zu' va 'Fuß' Goethe ro'yxatida bor; 'Ich gehe zu Fuß.' Goethe misolida ham shunday"
+  },
+  {
+   "wort": "Haltestelle",
+   "artikel": "die",
+   "section": "u03-s4",
+   "core": true
+  },
+  {
+   "wort": "Arbeit",
+   "artikel": "die",
+   "section": "u03-s5",
+   "core": true,
+   "grund": "Goethe PDF'da bosh so'z ('die Arbeit — Mein Bruder sucht Arbeit.'); ajratilgan nusxada tushib qolgan"
+  },
+  {
+   "wort": "Weg",
+   "artikel": "der",
+   "section": "u03-s5",
+   "core": true,
+   "grund": "Goethe A1 ro'yxatida yo'q; bo'lim nomining o'zi ('Mein Weg zur Arbeit')"
+  },
+  {
+   "wort": "heute",
+   "artikel": null,
+   "section": "u03-s5",
+   "core": true
+  },
+  {
+   "wort": "immer",
+   "artikel": null,
+   "section": "u03-s5",
+   "core": true
+  },
+  {
+   "wort": "oft",
+   "artikel": null,
+   "section": "u03-s5",
+   "core": true
+  },
+  {
+   "wort": "manchmal",
+   "artikel": null,
+   "section": "u03-s5",
+   "core": true,
+   "grund": "Goethe A1 ro'yxatida yo'q; 'immer – oft – manchmal' chastota qatorini to'ldiradi"
+  },
+  {
+   "wort": "dauern",
+   "artikel": null,
+   "section": "u03-s5",
+   "core": true
+  },
+  {
+   "wort": "lange",
+   "artikel": null,
+   "section": "u03-s5",
+   "core": true
+  },
+  {
+   "wort": "Minute",
+   "artikel": "die",
+   "section": "u03-s5",
+   "core": true,
+   "grund": "Goethe PDF'ning 'Uhrzeit' guruhida ('die Minute, -n'); ajratilgan nusxada tushib qolgan"
+  },
+  {
+   "wort": "warten",
+   "artikel": null,
+   "section": "u03-s5",
+   "core": true
   }
  ]
 }

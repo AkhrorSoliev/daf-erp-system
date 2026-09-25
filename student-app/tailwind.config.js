@@ -20,6 +20,7 @@ module.exports = {
         fg: {
           DEFAULT: 'rgb(var(--fg) / <alpha-value>)', // strong text
           body: 'rgb(var(--fg-body) / <alpha-value>)',
+          subtle: 'rgb(var(--fg-subtle) / <alpha-value>)', // AA-safe secondary labels (tab bar)
           muted: 'rgb(var(--fg-muted) / <alpha-value>)',
           faint: 'rgb(var(--fg-faint) / <alpha-value>)',
         },

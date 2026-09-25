@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { isBottomNavHiddenRoute } from "@/lib/student-nav-items";
+import { isExerciseSessionRoute } from "@/lib/student-nav-items";
 import { ActivityHost } from "./activity/activity-host";
 import { LumioBottomNav } from "./lumio/bottom-nav";
 import { LumioSideRail } from "./lumio/side-rail";
@@ -65,6 +65,11 @@ export function StudentPortalLayout({
     return null;
   }
 
+  // A lesson's own fixed action bar owns the bottom edge: no nav pill and no
+  // radio dock over it (see isExerciseSessionRoute's doc comment).
+  const inSession = isExerciseSessionRoute(pathname);
+  const dockShown = radioActive && !inSession;
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Tablet + desktop navigation rail */}
@@ -82,7 +87,7 @@ export function StudentPortalLayout({
             "mx-auto w-full max-w-[560px] px-4 pb-32 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-5 md:max-w-[720px] md:px-8 md:py-8 md:pb-12 lg:max-w-[980px]",
             // The dock overlays the page; without this the last row of a long
             // screen sits underneath it and can't be tapped.
-            radioActive && "pb-48 md:pb-28",
+            dockShown && "pb-48 md:pb-28",
           )}
         >
           {children}
@@ -94,20 +99,20 @@ export function StudentPortalLayout({
         Suppressed on an exercise session route: SeansEkrani's own fixed
         bottom action bar sits in the same spot, and on a phone the nav pill
         was intercepting taps meant for "Tekshirish"/"Keyingi" (production
-        finding). See isBottomNavHiddenRoute's own doc comment.
+        finding).
       */}
-      {!isBottomNavHiddenRoute(pathname) && (
-        <LumioBottomNav className="md:hidden" />
-      )}
+      {!inSession && <LumioBottomNav className="md:hidden" />}
 
       {/*
         Radio lives in the shell, not in a page. The audio element itself is a
         module singleton (see radio-store), so navigating between portal screens
         never interrupts the stream; these three only render its controls.
+        Inside a lesson the dock gives way to RadioSessionToggle in the
+        lesson header; the stream itself keeps playing.
       */}
       <RadioHost />
       <ActivityHost />
-      <RadioMiniPlayer />
+      {!inSession && <RadioMiniPlayer />}
       <RadioNowPlaying />
     </div>
   );

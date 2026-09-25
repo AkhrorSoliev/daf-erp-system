@@ -18,19 +18,15 @@ export const de: Dict = {
     comingSoon: 'Demnächst',
     showPassword: 'Passwort anzeigen',
     hidePassword: 'Passwort verbergen',
-    sectionInProgress: (section: string) => `Der Bereich ${section} wird vorbereitet.`,
   },
   nav: {
     index: 'Start',
-    darslar: 'Kurse',
-    resurslar: 'Materialien',
+    schedule: 'Stundenplan',
+    payments: 'Zahlungen',
     more: 'Mehr',
   },
   tabs: {
-    home: 'Start',
-    schedule: 'Stundenplan',
     attendance: 'Anwesenheit',
-    payments: 'Zahlungen',
     profile: 'Profil',
     more: 'Mehr',
     settings: 'Einstellungen',
@@ -86,11 +82,13 @@ export const de: Dict = {
   home: {
     greeting: 'Guten Tag',
     balance: 'Guthaben',
+    topUp: 'Aufladen',
     inDebt: 'Schulden',
     current: 'Aktuelles Guthaben',
     todayLessons: 'Heutige Kurse',
     fullSchedule: 'Zum Stundenplan',
     noLessonsToday: 'Heute kein Unterricht',
+    scheduleFailed: 'Stundenplan konnte nicht geladen werden',
     myGroups: 'Meine Gruppen',
     noActiveGroups: 'Keine aktiven Gruppen',
     qrCheckIn: 'Mit QR einchecken',
@@ -141,7 +139,6 @@ export const de: Dict = {
   more: {
     profileFallback: 'Profil',
     viewProfile: 'Profil ansehen',
-    payments: 'Zahlungen',
     faq: 'FAQ',
     about: 'Über uns',
     settings: 'Einstellungen',
@@ -187,7 +184,7 @@ export const de: Dict = {
   faq: {
     topUp: {
       q: 'Wie lade ich mein Guthaben auf?',
-      a: 'Gehen Sie zu Mehr → Zahlungen, wählen Sie den Betrag und zahlen Sie mit Payme oder Click. Das Guthaben wird in wenigen Sekunden aktualisiert.',
+      a: 'Öffnen Sie „Zahlungen“, wählen Sie den Betrag und zahlen Sie mit Payme oder Click. Das Guthaben wird in wenigen Sekunden aktualisiert.',
     },
     attendance: {
       q: 'Wie wird die Anwesenheit erfasst?',
@@ -199,7 +196,7 @@ export const de: Dict = {
     },
     scheduleAndAttendance: {
       q: 'Wo finde ich meinen Stundenplan und meine Anwesenheit?',
-      a: 'Auf der Startseite sind Guthaben, heutige Kurse und Anwesenheitsübersicht zusammengefasst.',
+      a: 'Die heutigen Kurse stehen auf der Startseite, die ganze Woche unter „Stundenplan“. Ihre Anwesenheitsquote sehen Sie auf der Startseite, die Einzelheiten unter Mehr → Anwesenheit.',
     },
     profilePhoto: {
       q: 'Wie ändere ich mein Profilfoto?',

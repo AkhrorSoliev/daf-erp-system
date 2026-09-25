@@ -58,6 +58,10 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
+      // The label is the name; without this an `iconBefore` glyph would be
+      // read out as part of it.
+      accessibilityLabel={text}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}

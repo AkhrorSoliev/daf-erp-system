@@ -3,7 +3,7 @@ import { Screen, StackHeader, FadeIn, Card } from "./lumio";
 const FAQ = [
   {
     q: "Balansni qanday to'ldiraman?",
-    a: "Ko'proq → To'lovlar bo'limiga kiring, summani tanlang va Payme yoki Click orqali to'lang. Balans bir necha soniyada yangilanadi.",
+    a: "«To'lovlar» bo'limiga kiring, summani tanlang va Payme yoki Click orqali to'lang. Balans bir necha soniyada yangilanadi.",
   },
   {
     q: "Davomat qanday belgilanadi?",
@@ -15,11 +15,11 @@ const FAQ = [
   },
   {
     q: "Jadvalim va davomatim qayerda?",
-    a: "Asosiy sahifada balans, bugungi darslar va davomat ko'rsatkichlari jamlangan.",
+    a: "Bugungi darslaringiz Asosiy sahifada, butun hafta «Jadval» bo'limida. Davomat foizi Asosiy sahifada, batafsil tarixi «Davomat» bo'limida.",
   },
   {
     q: "Profil rasmini qanday o'zgartiraman?",
-    a: "Ko'proq → Profil bo'limiga kiring, rasm ustiga bosing va galereya yoki kameradan rasm tanlang.",
+    a: "Profil sahifasini oching (telefonda «Ko'proq» ichida, kompyuterda yon menyuning tepasida), rasm ustiga bosing va yangi rasm tanlang.",
   },
 ];
 

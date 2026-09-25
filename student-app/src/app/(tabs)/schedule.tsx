@@ -1,6 +1,6 @@
 import { RefreshControl, ScrollView, View } from 'react-native';
 
-import { Badge, Card, EmptyState, LoadingCards, Screen, StackHeader, Text } from '@/design/components';
+import { Badge, Button, Card, EmptyState, LoadingCards, Screen, ScreenHeader, Text } from '@/design/components';
 import { useColors } from '@/design/colors';
 import { useSchedule } from '@/api/queries/use-schedule';
 import { useT } from '@/i18n';
@@ -17,6 +17,7 @@ const WEEKDAYS = [
 
 const DAY_BY_INDEX = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
+/** Jadval tab. A tab root: titled with the tab's own name, no back button. */
 export default function Schedule() {
   const t = useT();
   const q = useSchedule();
@@ -26,8 +27,14 @@ export default function Schedule() {
   if (q.isError) {
     return (
       <Screen>
-        <StackHeader title={t.tabs.schedule} />
-        <EmptyState icon="cloud-offline-outline" title={t.common.error} />
+        <View className="p-5">
+          <ScreenHeader title={t.nav.schedule} />
+        </View>
+        <EmptyState
+          icon="cloud-offline-outline"
+          title={t.common.error}
+          action={<Button label={t.common.retry} variant="secondary" size="sm" loading={q.isFetching} onPress={() => q.refetch()} />}
+        />
       </Screen>
     );
   }
@@ -37,15 +44,16 @@ export default function Schedule() {
 
   return (
     <Screen>
-      <StackHeader title={t.tabs.schedule} />
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => q.refetch()} tintColor={colors.fgMuted} />}
       >
-        <View className="gap-5 p-5 pt-2">
+        {/* pb-32 keeps the last lesson clear of the floating tab bar. */}
+        <View className="gap-5 p-5 pb-32">
+          <ScreenHeader title={t.nav.schedule} />
           {items.length === 0 ? (
-            <EmptyState icon="calendar-outline" title={t.schedule.empty} description={t.common.comingSoon} />
+            <EmptyState icon="calendar-outline" title={t.schedule.empty} />
           ) : (
             WEEKDAYS.map((day) => {
               const lessons = items

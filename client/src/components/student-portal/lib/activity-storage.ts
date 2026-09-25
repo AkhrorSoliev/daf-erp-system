@@ -1,5 +1,6 @@
 import {
   SEANS_TANAFFUSI_MS,
+  payloadFor,
   tashkentKuni,
   type FaollikPayload,
   type FaollikSeansi,
@@ -91,10 +92,19 @@ function payloadQur(v: unknown): FaollikPayload | null {
 
 interface KutilmoqdaYozuv {
   userId: number;
+  /**
+   * The session's Tashkent day. The server files a session it has never seen
+   * under the day the request ARRIVES, so only today's entries may be sent.
+   */
+  kun: string;
   payload: FaollikPayload;
 }
 
-/** Xom ro'yxatni o'qiydi: `userId`si va tanasi to'g'ri kelmagan yozuvlar tushib qoladi. */
+/**
+ * Xom ro'yxatni o'qiydi: `userId`si, kuni va tanasi to'g'ri kelmagan yozuvlar
+ * tushib qoladi. Entries without `kun` are the pre-fix format — the tracker
+ * could not send anything then, so what piled up spans unknown past days.
+ */
 function kutilmoqdaXomniOqi(s: Saqlagich): KutilmoqdaYozuv[] {
   const v = oqi(s, KUTILMOQDA_KALIT);
   if (!Array.isArray(v)) return [];
@@ -102,9 +112,9 @@ function kutilmoqdaXomniOqi(s: Saqlagich): KutilmoqdaYozuv[] {
   for (const x of v) {
     if (!x || typeof x !== "object") continue;
     const o = x as Record<string, unknown>;
-    if (!son(o.userId)) continue;
+    if (!son(o.userId) || typeof o.kun !== "string") continue;
     const p = payloadQur(o.payload);
-    if (p) natija.push({ userId: o.userId, payload: p });
+    if (p) natija.push({ userId: o.userId, kun: o.kun, payload: p });
   }
   return natija;
 }
@@ -147,23 +157,31 @@ export function joriyniOchir(s: Saqlagich): void {
  * boshqa o'quvchiga yozilib ketmasligi uchun. Bunday begona/buzilgan
  * yozuvlar shu o'qishda saqlagichdan ham butunlay olib tashlanadi: ular hech
  * qachon to'g'ri egasiga qayta biriktirilmaydi, faqat tashlab yuboriladi.
+ *
+ * Entries from any day but today (Tashkent) are dropped the same way: sent
+ * now, they would be counted as today's time.
  */
-export function kutilmoqdaOqi(s: Saqlagich, userId: number): FaollikPayload[] {
+export function kutilmoqdaOqi(
+  s: Saqlagich,
+  userId: number,
+  now: number,
+): FaollikPayload[] {
+  const bugun = tashkentKuni(now);
   const hammasi = kutilmoqdaXomniOqi(s);
-  const shu = hammasi.filter((y) => y.userId === userId);
+  const shu = hammasi.filter((y) => y.userId === userId && y.kun === bugun);
   if (shu.length !== hammasi.length) yoz(s, KUTILMOQDA_KALIT, shu);
   return shu.map((y) => y.payload);
 }
 
-export function kutilmoqdaQosh(
-  s: Saqlagich,
-  userId: number,
-  p: FaollikPayload,
-): void {
+export function kutilmoqdaQosh(s: Saqlagich, seans: FaollikSeansi): void {
   const royxat = kutilmoqdaXomniOqi(s).filter(
-    (y) => y.payload.sessionId !== p.sessionId,
+    (y) => y.payload.sessionId !== seans.sessionId,
   );
-  royxat.push({ userId, payload: p });
+  royxat.push({
+    userId: seans.userId,
+    kun: seans.kun,
+    payload: payloadFor(seans),
+  });
   yoz(s, KUTILMOQDA_KALIT, royxat.slice(-KUTILMOQDA_MAX));
 }
 

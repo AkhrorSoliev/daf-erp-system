@@ -9,6 +9,7 @@ import { Books, CheckCircle, X } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { Button, EmptyState, LoadingCards, ProgressBar } from "../../lumio";
+import { RadioSessionToggle } from "../../radio/radio-session-toggle";
 import { LernenLessonPage } from "../lernen-lesson-page";
 import {
   useAbschluss,
@@ -875,6 +876,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
         <span className="text-sm font-bold tabular-nums text-ink-500">
           {holat.tugatilgan}/{holat.jami}
         </span>
+        {/* Radio dock bu yo'lda chizilmaydi (pastki panel seansniki), shu
+            sabab radio boshqaruvi shu yerda — faqat stansiya yoqilgan bo'lsa. */}
+        <RadioSessionToggle />
       </header>
 
       {/* O'rta: ko'rsatma, savol, yordam, javob */}

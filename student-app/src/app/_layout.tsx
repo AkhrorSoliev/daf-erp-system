@@ -24,7 +24,7 @@ import { useAuth } from '@/auth/auth-store';
 import { useLanguageStore } from '@/i18n';
 import { useThemeStore } from '@/design/theme';
 import { ThemeTransitionProvider } from '@/design/theme-transition';
-import { useColors, themeColors } from '@/design/colors';
+import { useColors } from '@/design/colors';
 import { tokens } from '@/design/tokens';
 
 // Lazily required so a dev build WITHOUT the native module doesn't hard-crash
@@ -100,9 +100,7 @@ export default function RootLayout() {
               <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
                 <Stack.Protected guard={status === 'authenticated'}>
                   <Stack.Screen name="(tabs)" />
-                  <Stack.Screen name="schedule" />
                   <Stack.Screen name="attendance" />
-                  <Stack.Screen name="payments" />
                   <Stack.Screen name="profile" />
                   <Stack.Screen name="settings" />
                   <Stack.Screen name="faq" />

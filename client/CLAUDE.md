@@ -860,7 +860,11 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 - Three pieces of chrome depend on the rail's width — the rail, the content column's left padding, and the docked radio player's left offset. Their class fragments live in the store as `RAIL_WIDTH` / `CONTENT_INSET` / `PLAYER_INSET`; **do not retype the pixel values in a component**, or the player will drift over the rail the next time a width changes.
 - The rail renders the expanded markup under `auto`, so the `<aside>` keeps `overflow-hidden` — that is what stops a single frame of clipped labels at the narrow md width.
 
-**Navigation** — single source of truth in `src/lib/student-nav-items.ts` (`studentNavItems`, keyed by `slot: tab | more | both | help`). Bottom nav shows `tab`/`both`; the rail shows `both`/`more`; the "Ko'proq" hub (`student-more-hub.tsx`) covers the `more`/`help` ground.
+**Navigation** — single source of truth in `src/lib/student-nav-items.ts` (`studentNavItems`, keyed by `slot: tab | more | both | help`). Bottom nav shows `tab`/`both`; the rail shows `both`/`more`; the "Ko'proq" hub (`student-more-hub.tsx`) renders `moreNavItems` (`more`/`help`) and `moreRoutes` (the bottom nav's "Ko'proq" active state) is derived from the same list.
+
+- **No consumer keeps a list of its own.** Until September 2026 the hub had a hand-written menu: Ta'lim was added to the config, reached the desktop rail, and on a phone had no entry point at all, while To'lovlar was both a tab and a hub row. `student-portal-nav.test.ts` renders the bottom nav and the hub and fails if any config destination is reachable on a phone zero times or twice.
+- **Tabs go to what students open most, not to every screen:** Asosiy · Ta'lim · Jadval · To'lovlar · Ko'proq. Ta'lim is the daily habit (streak, weekly rank), so it is a tab; the same test pins this list, so changing the tab set is a deliberate edit, not a side effect of reordering the config.
+- **A `more` screen is a tab root on desktop but a hub row on a phone**, so it uses `StackHeader` (whose back chevron is mobile-only), never `ScreenHeader`. The same test checks that every hub destination renders a back button.
 
 `help` (FAQ, Biz haqimizda) is the one responsive split: reference reading, not a place students navigate to often. Mobile keeps it in the "Ko'proq" hub; from md up it is dropped from the rail and listed in an `md`-only "Yordam" section on Settings, with the rail's Settings row staying lit while one is open. Adding it to the rail *and* Settings would put the same destination in two places on one screen.
 
@@ -886,7 +890,9 @@ Time spent in the app is measured on the client and sent to `POST /student-porta
 - `ActivityHost` (`activity/activity-host.tsx`) is rendered once in `student-portal-layout.tsx`, next to `RadioHost`, so navigation never interrupts it.
 - The rule lives in the pure module `lib/activity-tracker.ts` (unit-tested): active = page visible AND window focused AND (input within 2 min OR lesson audio playing). Radio time is measured from the player's `currentTime` advance and is never counted as active time.
 - Browser wiring is `lib/activity-runtime.ts`: 1 s tick, `localStorage` every 15 s (`daf.faollik.joriy`, `daf.faollik.kutilmoqda`), send every 60 s and on `visibilitychange → hidden` / `pagehide`, via `fetch(..., { keepalive: true })`. If `localStorage` is unavailable it falls back to in-memory storage, so tracking still works.
+- **Never hand the bare `fetch` to the sender.** `brauzerMuhiti()` (`lib/activity-sender.ts`) wraps it, because `yubor` calls it as `muhit.fetchFn(...)` and every browser throws when `fetch` runs with any `this` but `window` — before a request exists ("Illegal invocation" in Chrome, "Can only call Window.fetch on instances of Window" in Safari). `yubor` reads a throw as a retryable failure, so the tracker shipped on 13.09.2026 and sent nothing at all until this was fixed: no request, not even a preflight, and no error anywhere. Node's `fetch` does not check `this`, and the other tests pass a fake `fetchFn`; the regression test stubs a `fetch` that enforces the browser rule.
 - The pending-queue entries (`daf.faollik.kutilmoqda`) are keyed by `userId`. On logout the current session can still land in the queue with no valid token to send it; on the next login `kutilmoqdaOqi` returns only the entries belonging to the now-current user and drops (never re-sends, never re-attributes) any entry — malformed, legacy (no `userId`), or another user's — permanently from storage.
+- **Each entry also carries its session's Tashkent day (`kun`), and only today's are sent.** The server files a session it has never seen under the day the request ARRIVES (its 409 covers only sessions it already holds), so a queue sent a day late would count old time as today's. Other-day entries are dropped like foreign ones, and so are entries with no `kun` — everything that piled up before the fix, when nothing could be sent.
 - **Any new lesson audio player MUST call `registerMedia(el)` from `lib/media-registry.ts`** (and unregister on unmount), otherwise a student listening without touching the screen is counted as idle. The radio element is deliberately NOT registered.
 - Values sent are running totals for the session, never deltas — the server takes `max` and clamps by wall-clock time.
 
@@ -921,6 +927,16 @@ work. `student-radio-page.tsx` is only a chooser — playback lives in the shell
   the connection. The shell renders `RadioHost` (Media Session metadata for
   lock-screen controls, and the stop-on-unmount that prevents audio outliving its
   UI), `RadioMiniPlayer` and `RadioNowPlaying`.
+- **Inside a lesson the dock is not drawn.** An exercise session
+  (`isExerciseSessionRoute` in `student-nav-items.ts`: `/portal/lernen/lessons/*`
+  and `/portal/lernen/wiederholung`) owns the bottom edge with its own fixed
+  "Tekshirish"/"Keyingi" panel, so the shell drops both the bottom nav and the
+  dock there — the dock floats 96px up to clear the nav, and with the nav gone it
+  sat over the panel's feedback. The stream keeps playing; `RadioSessionToggle`
+  in the lesson header is the control that is left, and it must stay, because
+  nothing pauses the radio for the lesson's own audio. It shows the radio glyph
+  or live bars, never a pause icon, which next to the lesson's progress bar would
+  read as pausing the lesson.
 - **Audio is never proxied through our backend** — the browser connects straight to
   the broadcaster. Re-streaming would be re-transmission, with the bandwidth bill
   and the licensing exposure that implies. We ship the list of URLs, nothing else.
