@@ -8,6 +8,12 @@
     "icon": "./assets/images/icon.png",
     "scheme": "dafstudent",
     "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/7820bfa5-a72c-4f44-913a-58b04a1cf2e8"
+    },
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "uz.dafzentrum.student"

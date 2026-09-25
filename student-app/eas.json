@@ -1,6 +1,6 @@
 {
   "cli": {
-    "version": ">= 12.0.0",
+    "version": ">= 16.0.0",
     "appVersionSource": "remote"
   },
   "build": {
@@ -10,17 +10,13 @@
     },
     "preview": {
       "distribution": "internal",
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.dafzentrum.uz/api",
-        "EXPO_PUBLIC_TELEGRAM_BOT": "dafzentrum_bot"
-      }
+      "environment": "preview",
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.dafzentrum.uz/api",
-        "EXPO_PUBLIC_TELEGRAM_BOT": "dafzentrum_bot"
-      }
+      "environment": "production",
+      "channel": "production"
     }
   },
   "submit": {
