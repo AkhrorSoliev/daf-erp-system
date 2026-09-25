@@ -265,7 +265,13 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'them into their own, and `POST /groups` names the branch a group is ' +
       'fixed to for life. The status changes cascade — a student going EXPELLED ' +
       'closes their enrolments, a group going CANCELLED closes every enrolment ' +
-      "in it — so they reach another branch's roster and payroll.",
+      "in it — so they reach another branch's roster and payroll. " +
+      '`POST /groups` and `PATCH /groups/:id` also name a course and a room, ' +
+      "and both must belong to the group's own branch, even for a CEO " +
+      '(`GroupsWriteService.assertCourseInGroupBranch` / ' +
+      "`assertRoomInGroupBranch`): the course's branch sets the price the " +
+      "group's students pay and can archive the course, which cancels the " +
+      'group.',
     routes: [
       'POST /students',
       'PATCH /students/:id',
