@@ -326,6 +326,44 @@ describe('MockExamParticipantsService', () => {
       expect(history.recordCreate).toHaveBeenCalled();
     });
 
+    /** CEO, 2026-09-25: expelled and archived students get no DaF discount. */
+    it.each([
+      ['ACTIVE', 30000],
+      ['EXPELLED', 40000],
+      ['ARCHIVED', 40000],
+    ])('a %s student matched by phone is charged %i', async (status, fee) => {
+      prisma.mockExam.findFirst.mockResolvedValue({
+        id: 'e1',
+        status: MockExamStatus.REGISTRATION_OPEN,
+      });
+      prisma.mockExam.findUnique.mockResolvedValue({
+        price: 40000,
+        studentPrice: 30000,
+      });
+      prisma.student.findFirst.mockResolvedValue({ id: 10117, status });
+      prisma.mockExamParticipant.create.mockResolvedValue({
+        id: 'p3',
+        publicId: 10117,
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+        registeredAt: new Date(),
+        studentId: 10117,
+      });
+
+      await service.addManual(
+        'e1',
+        { firstName: 'Aziz', lastName: 'Karimov', phone: '901234567' },
+        1001,
+        1,
+        null,
+      );
+
+      const callArg = prisma.mockExamParticipant.create.mock.calls[0][0];
+      expect(callArg.data.studentId).toBe(10117);
+      expect(callArg.data.feeAmount).toBe(fee);
+    });
+
     it('reuses Student.id as publicId when phone matches a DaF student', async () => {
       prisma.mockExam.findFirst.mockResolvedValue({
         id: 'e1',

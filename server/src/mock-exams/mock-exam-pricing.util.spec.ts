@@ -1,3 +1,4 @@
+import { StudentStatus } from '@prisma/client';
 import {
   CEFR_LEVELS,
   isCefrLevel,
@@ -9,25 +10,50 @@ import {
 describe('mock-exam-pricing.util', () => {
   describe('resolveParticipantFee', () => {
     const exam = { price: 100000, studentPrice: 50000 };
+    const student = (status: StudentStatus) => ({ status });
 
     it('charges the full price for a non-DaF (outsider) registrant', () => {
-      expect(resolveParticipantFee(exam, false)).toBe(100000);
+      expect(resolveParticipantFee(exam, null)).toBe(100000);
     });
 
     it('charges the discounted studentPrice for a DaF student', () => {
-      expect(resolveParticipantFee(exam, true)).toBe(50000);
+      expect(resolveParticipantFee(exam, student(StudentStatus.ACTIVE))).toBe(
+        50000,
+      );
     });
 
+    it.each([
+      StudentStatus.ACTIVE,
+      StudentStatus.INACTIVE,
+      StudentStatus.FROZEN,
+      StudentStatus.GRADUATED,
+      StudentStatus.PROSPECT,
+    ])('gives the discount to a %s student', (status) => {
+      expect(resolveParticipantFee(exam, student(status))).toBe(50000);
+    });
+
+    /** CEO, 2026-09-25: expelled and archived students get no discount. */
+    it.each([StudentStatus.EXPELLED, StudentStatus.ARCHIVED])(
+      'charges a %s student the full price',
+      (status) => {
+        expect(resolveParticipantFee(exam, student(status))).toBe(100000);
+      },
+    );
+
     it('falls back to full price for a DaF student when no discount is set', () => {
-      expect(resolveParticipantFee({ price: 100000 }, true)).toBe(100000);
+      const active = student(StudentStatus.ACTIVE);
+      expect(resolveParticipantFee({ price: 100000 }, active)).toBe(100000);
       expect(
-        resolveParticipantFee({ price: 100000, studentPrice: null }, true),
+        resolveParticipantFee({ price: 100000, studentPrice: null }, active),
       ).toBe(100000);
     });
 
     it('respects a studentPrice of 0 (free for DaF students)', () => {
       expect(
-        resolveParticipantFee({ price: 100000, studentPrice: 0 }, true),
+        resolveParticipantFee(
+          { price: 100000, studentPrice: 0 },
+          student(StudentStatus.ACTIVE),
+        ),
       ).toBe(0);
     });
   });

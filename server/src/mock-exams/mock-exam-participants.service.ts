@@ -4,7 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { MockExamStatus, Prisma } from '@prisma/client';
+import { MockExamStatus, Prisma, StudentStatus } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -204,27 +204,31 @@ export class MockExamParticipantsService {
       // DaF mock discount applies.
       let publicId: number;
       let studentId: number | null = null;
+      // The matched card's status decides the DaF discount.
+      let matched: { status: StudentStatus } | null = null;
 
       if (dto.studentId != null) {
         const student = await this.prisma.student.findFirst({
           where: { id: dto.studentId, deletedAt: null, companyId },
-          select: { id: true },
+          select: { id: true, status: true },
         });
         if (!student) {
           throw new BadRequestException("Tanlangan o'quvchi topilmadi");
         }
         publicId = student.id;
         studentId = student.id;
+        matched = student;
       } else {
         const existingStudent = await this.prisma.student.findFirst({
           // Faqat shu kompaniyaning o'quvchisi DaF o'quvchisi hisoblanadi.
           where: { phone: dto.phone, deletedAt: null, companyId },
           orderBy: { updatedAt: 'desc' },
-          select: { id: true },
+          select: { id: true, status: true },
         });
         if (existingStudent) {
           publicId = existingStudent.id;
           studentId = existingStudent.id;
+          matched = existingStudent;
         } else {
           // Outsider — allocate a fresh public id from the shared Student
           // sequence. NO Student row is created (mock participants aren't
@@ -239,7 +243,7 @@ export class MockExamParticipantsService {
 
       const feeAmount = resolveParticipantFee(
         { price: examPrice, studentPrice },
-        studentId !== null,
+        matched,
       );
 
       const created = await this.prisma.mockExamParticipant.create({

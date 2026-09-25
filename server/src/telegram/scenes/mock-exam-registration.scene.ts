@@ -648,7 +648,7 @@ async function finalizeRegistration(ctx: BotContext, deps: SceneDeps) {
       // company: a student elsewhere is not this centre's DaF student.
       where: { phone, deletedAt: null, companyId: examCompanyId },
       orderBy: { updatedAt: 'desc' },
-      select: { id: true, telegramChatId: true },
+      select: { id: true, telegramChatId: true, status: true },
     });
 
     if (existingStudent) {
@@ -697,11 +697,12 @@ async function finalizeRegistration(ctx: BotContext, deps: SceneDeps) {
     }
 
     // The fee locked in for THIS registration — DaF discount applied when
-    // the registrant matched a student. Billing / gateway / links all read
-    // this from the row so the amount never drifts.
+    // the registrant matched a student who still studies here (not expelled
+    // or archived). Billing / gateway / links all read this from the row so
+    // the amount never drifts.
     feeAmount = resolveParticipantFee(
       { price: examPrice, studentPrice },
-      studentId !== null,
+      existingStudent,
     );
 
     const created = await prisma.mockExamParticipant.create({
