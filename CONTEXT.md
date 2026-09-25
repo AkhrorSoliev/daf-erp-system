@@ -334,6 +334,12 @@ tugmasi faqat to'lagan (yoki hech narsa to'lamasligi kerak bo'lgan — `feeAmoun
 0) ishtirokchiga. Imtihonga kirishni markazda admin tekshiradi.
 `mock-exams/mock-results-audience.ts` (`RESULTS_AUDIENCE`)
 
+**Natija bir odamga bir marta yuboriladi.** Tarqatish har ishtirokchini
+yuborishdan OLDIN egallaydi (`resultSentAt`); bir vaqtda boshlangan ikkinchi
+tarqatish uni o'tkazib yuboradi. Yuborilmagan xabar egallovni bo'shatadi va
+keyingi tarqatishda qayta uriniladi. `telegram/telegram.service.ts`
+(`broadcastMockResults`)
+
 **Mock botida qo'lda yozilgan telefon hech narsani isbotlamaydi.** DaF
 o'quvchisi telefon bo'yicha topiladi (chat bo'yicha emas), lekin o'quvchi
 profiliga Telegram faqat «📱 Telefon raqamni yuborish» tugmasi bilan (odamning

@@ -111,6 +111,7 @@ describe('TelegramService — mock results go to those who paid', () => {
           ),
         ),
         update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
 
