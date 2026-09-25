@@ -39,7 +39,7 @@
     {
       "section": "u03-s2",
       "funktion": "nach der Entfernung fragen",
-      "funktionUz": "uzoq-yaqinligini so'rash",
+      "funktionUz": "masofa uzoq-yaqinligini so'rash",
       "de": "Ist das weit?",
       "uz": "Bu uzoqmi?"
     },
@@ -102,7 +102,7 @@
     {
       "section": "u03-s5",
       "funktion": "über Gewohnheiten sprechen",
-      "funktionUz": "har kungi odatini aytish",
+      "funktionUz": "doim velosipedda borishini aytish",
       "de": "Ich fahre immer mit dem Fahrrad.",
       "uz": "Men doim velosipedda boraman."
     }

@@ -7,7 +7,10 @@
    "de": "Der Bahnhof ist sehr alt.",
    "uz": "Vokzal juda eski.",
    "wordCount": 5,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr alt ist der Bahnhof."
+   ]
   },
   {
    "sourceId": "u03-s1-02",
@@ -26,7 +29,10 @@
    "de": "Gibt es hier eine Bank?",
    "uz": "Bu yerda bank bormi?",
    "wordCount": 5,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Gibt es eine Bank hier?"
+   ]
   },
   {
    "sourceId": "u03-s1-04",
@@ -50,7 +56,10 @@
    "de": "Das Hotel ist klein.",
    "uz": "Mehmonxona kichkina.",
    "wordCount": 4,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Klein ist das Hotel."
+   ]
   },
   {
    "sourceId": "u03-s1-07",
@@ -66,7 +75,10 @@
    "de": "Der Platz ist sehr groß.",
    "uz": "Maydon juda katta.",
    "wordCount": 5,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr groß ist der Platz."
+   ]
   },
   {
    "sourceId": "u03-s1-09",
@@ -74,7 +86,10 @@
    "de": "Das Museum ist nicht neu.",
    "uz": "Muzey yangi emas.",
    "wordCount": 5,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Neu ist das Museum nicht."
+   ]
   },
   {
    "sourceId": "u03-s1-10",
@@ -110,7 +125,7 @@
    "sourceId": "u03-s2-03",
    "section": "u03-s2",
    "de": "Die Bank ist an der Ecke.",
-   "uz": "Bank ko'cha burchagida.",
+   "uz": "Bank burchakda.",
    "wordCount": 6,
    "origin": "GENERATED",
    "akzeptiert": [
@@ -172,15 +187,21 @@
    "de": "Das Hotel ist nicht weit.",
    "uz": "Mehmonxona uzoq emas.",
    "wordCount": 5,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Weit ist das Hotel nicht."
+   ]
   },
   {
    "sourceId": "u03-s2-10",
    "section": "u03-s2",
-   "de": "Die Straße ist sehr klein.",
-   "uz": "Ko'cha juda kichkina.",
+   "de": "Die Straße ist sehr alt.",
+   "uz": "Ko'cha juda eski.",
    "wordCount": 5,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr alt ist die Straße."
+   ]
   },
   {
    "sourceId": "u03-s3-01",
@@ -196,15 +217,23 @@
    "de": "Gehen Sie geradeaus.",
    "uz": "To'g'riga yuring.",
    "wordCount": 3,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sie gehen geradeaus."
+   ]
   },
   {
    "sourceId": "u03-s3-03",
    "section": "u03-s3",
    "de": "Ich nehme die erste Straße rechts.",
-   "uz": "Men birinchi ko'chadan o'ngga buraman.",
+   "uz": "Men birinchi ko'chadan o'ngga burilaman.",
    "wordCount": 6,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ich nehme rechts die erste Straße.",
+    "Die erste Straße rechts nehme ich.",
+    "Rechts nehme ich die erste Straße."
+   ]
   },
   {
    "sourceId": "u03-s3-04",
@@ -247,7 +276,8 @@
    "wordCount": 4,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Gehen Sie dann rechts."
+    "Gehen Sie dann rechts.",
+    "Sie gehen dann rechts."
    ]
   },
   {
@@ -272,7 +302,11 @@
    "de": "Gehen Sie hier links.",
    "uz": "Shu yerdan chapga yuring.",
    "wordCount": 4,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Hier gehen Sie links.",
+    "Sie gehen hier links."
+   ]
   },
   {
    "sourceId": "u03-s4-01",
@@ -348,7 +382,11 @@
    "de": "Fahren Sie mit der U-Bahn.",
    "uz": "Metroda boring.",
    "wordCount": 5,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sie fahren mit der U-Bahn.",
+    "Mit der U-Bahn fahren Sie."
+   ]
   },
   {
    "sourceId": "u03-s4-09",
@@ -356,7 +394,10 @@
    "de": "Das Fahrrad ist klein.",
    "uz": "Velosiped kichkina.",
    "wordCount": 4,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Klein ist das Fahrrad."
+   ]
   },
   {
    "sourceId": "u03-s4-10",
@@ -364,7 +405,10 @@
    "de": "Der Bus ist nicht hier.",
    "uz": "Avtobus shu yerda emas.",
    "wordCount": 5,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Hier ist der Bus nicht."
+   ]
   },
   {
    "sourceId": "u03-s5-01",
@@ -386,7 +430,8 @@
    "wordCount": 6,
    "origin": "GENERATED",
    "akzeptiert": [
-    "Mit der U-Bahn fahre ich immer."
+    "Mit der U-Bahn fahre ich immer.",
+    "Immer fahre ich mit der U-Bahn."
    ]
   },
   {
@@ -407,7 +452,10 @@
    "de": "Der Weg zur Arbeit dauert lange.",
    "uz": "Ishga boradigan yo'l uzoq vaqt oladi.",
    "wordCount": 6,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Lange dauert der Weg zur Arbeit."
+   ]
   },
   {
    "sourceId": "u03-s5-05",
@@ -434,7 +482,10 @@
    "de": "Das dauert dreißig Minuten.",
    "uz": "Bu o'ttiz daqiqa oladi.",
    "wordCount": 4,
-   "origin": "GENERATED"
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Dreißig Minuten dauert das."
+   ]
   },
   {
    "sourceId": "u03-s5-08",
@@ -453,7 +504,8 @@
    "origin": "GENERATED",
    "akzeptiert": [
     "Ich gehe heute zu Fuß zur Arbeit.",
-    "Zur Arbeit gehe ich heute zu Fuß."
+    "Zur Arbeit gehe ich heute zu Fuß.",
+    "Zu Fuß gehe ich heute zur Arbeit."
    ]
   },
   {

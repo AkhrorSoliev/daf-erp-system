@@ -40,7 +40,7 @@
    ],
    "fragen": [
     { "frageDe": "Wie ist das Museum?", "frageUz": "Muzey qanday?", "richtig": "sehr alt", "falsch": ["sehr neu", "sehr klein"] },
-    { "frageDe": "Das ist das Museum. Und das?", "frageUz": "Bu muzey. Anavi-chi?", "richtig": "die Polizei", "falsch": ["die Post", "die Bank"] }
+    { "frageDe": "Was gibt es hier auch?", "frageUz": "Bu yerda muzeydan tashqari yana nima bor?", "richtig": "die Polizei", "falsch": ["die Post", "die Bank"] }
    ]
   },
   {
@@ -56,8 +56,8 @@
     },
     {
      "sprecher": "Markus",
-     "de": "Ja, das Kino ist neu.",
-     "uz": "Ha, kinoteatr yangi."
+     "de": "Ja, und das Kino ist neu.",
+     "uz": "Ha, bor, kinoteatr yangi."
     },
     {
      "sprecher": "Anna",
@@ -113,13 +113,13 @@
     },
     {
      "sprecher": "Claudia",
-     "de": "Ist das weit?",
-     "uz": "Uzoqmi?"
+     "de": "An der Ecke? Ist das weit?",
+     "uz": "Burchakdami? Uzoqmi?"
     },
     {
      "sprecher": "Peter",
-     "de": "Nein, das ist nicht weit.",
-     "uz": "Yo'q, uzoq emas."
+     "de": "Nein, die Bank ist nicht weit.",
+     "uz": "Yo'q, bank uzoq emas."
     },
     {
      "sprecher": "Claudia",
@@ -155,8 +155,8 @@
     },
     {
      "sprecher": "Helga",
-     "de": "Und dann?",
-     "uz": "Keyin-chi?"
+     "de": "Geradeaus? Und dann?",
+     "uz": "To'g'rigami? Keyin-chi?"
     },
     {
      "sprecher": "Thomas",
@@ -212,8 +212,8 @@
     },
     {
      "sprecher": "Lukas",
-     "de": "Die Haltestelle ist neben dem Kino.",
-     "uz": "Bekat kinoteatr yonida."
+     "de": "Die Haltestelle ist am Park.",
+     "uz": "Bekat park oldida."
     },
     {
      "sprecher": "Sabine",
@@ -228,7 +228,7 @@
    ],
    "fragen": [
     { "frageDe": "Wie fährt Lukas?", "frageUz": "Lukas nimada boradi?", "richtig": "mit der U-Bahn", "falsch": ["mit dem Bus", "mit dem Taxi"] },
-    { "frageDe": "Wo ist die Haltestelle?", "frageUz": "Bekat qayerda?", "richtig": "neben dem Kino", "falsch": ["neben der Post", "an der Ecke"] }
+    { "frageDe": "Wo ist die Haltestelle?", "frageUz": "Bekat qayerda?", "richtig": "am Park", "falsch": ["neben der Post", "an der Ecke"] }
    ]
   },
   {
@@ -254,8 +254,8 @@
     },
     {
      "sprecher": "Julia",
-     "de": "Zwanzig Minuten.",
-     "uz": "Yigirma daqiqa."
+     "de": "Ich fahre zwanzig Minuten.",
+     "uz": "Yigirma daqiqa boraman."
     },
     {
      "sprecher": "Walter",
@@ -264,8 +264,13 @@
     },
     {
      "sprecher": "Julia",
-     "de": "Ja, manchmal. Dann warte ich oft lange.",
-     "uz": "Ha, ba'zan. Unda ko'pincha uzoq kutaman."
+     "de": "Ja, manchmal mit dem Zug. Dann warte ich oft lange.",
+     "uz": "Ha, ba'zan poyezdda. Unda ko'pincha uzoq kutaman."
+    },
+    {
+     "sprecher": "Walter",
+     "de": "Oft lange? Das ist nicht gut.",
+     "uz": "Ko'pincha uzoqmi? Bu yaxshi emas."
     }
    ],
    "fragen": [
