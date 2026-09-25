@@ -160,6 +160,7 @@ export function TeachersClient() {
                     <Button
                       variant="outline"
                       className="size-9 sm:size-auto sm:h-9 sm:px-4"
+                      data-tour="teacher-invite-link"
                       onClick={handleCopyLink}
                       disabled={copying}
                     >
@@ -242,7 +243,7 @@ export function TeachersClient() {
             selectedBranch ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={openAddDrawer} className="size-9 sm:size-auto sm:h-9 sm:px-4">
+                  <Button onClick={openAddDrawer} data-tour="teacher-add" className="size-9 sm:size-auto sm:h-9 sm:px-4">
                     <Plus className="size-4 sm:mr-2" />
                     <span className="hidden sm:inline">Yangi o&apos;qituvchi</span>
                   </Button>

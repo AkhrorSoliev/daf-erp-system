@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { ChevronsUpDown, Search, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,14 @@ interface GroupTeacherSelectProps {
   value: number | undefined;
   onChange: (id: number | undefined) => void;
   teachers: AvailableTeacher[];
+  emptyState?: ReactNode;
 }
 
 export function GroupTeacherSelect({
   value,
   onChange,
   teachers,
+  emptyState,
 }: GroupTeacherSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -46,9 +48,11 @@ export function GroupTeacherSelect({
 
   if (teachers.length === 0) {
     return (
-      <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
-        Hozircha o&apos;qituvchi yo&apos;q
-      </p>
+      emptyState ?? (
+        <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
+          Hozircha o&apos;qituvchi yo&apos;q
+        </p>
+      )
     );
   }
 

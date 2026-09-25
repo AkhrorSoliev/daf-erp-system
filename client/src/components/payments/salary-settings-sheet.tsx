@@ -17,10 +17,16 @@ import {
 } from "@/components/ui/sheet";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
+import { useAuth } from "@/hooks/use-auth";
 import { SalaryPeriodControl } from "./salary-period-control";
 import { SalaryConfigRowSheet } from "./salary-config-row-sheet";
 import { SalaryConfigBulkDialog } from "./salary-config-bulk-dialog";
 import { SalaryStaffConfigList } from "./salary-staff-config-list";
+import {
+  canDirectorRate,
+  isInactiveAccount,
+  type SalarySettingsAccess,
+} from "./salary-settings-access";
 
 interface OverviewConfig {
   id: string;
@@ -35,6 +41,9 @@ interface OverviewRow {
     firstName: string;
     lastName: string;
     branch: { id: number; name: string } | null;
+    roles: { id: number; name: string }[];
+    isActive: boolean;
+    status: string;
   };
   configs: OverviewConfig[];
 }
@@ -47,7 +56,6 @@ const SALARY_TYPE_SHORT: Record<string, string> = {
   FIXED_PER_STUDENT: "O'quvchi boshiga",
   FIXED_MONTHLY: "Oylik",
 };
-const TEACHER_ROLE = { id: 4, name: "Teacher" };
 
 /**
  * What `SalaryConfigRowSheet` needs. Held whole rather than as an id because
@@ -90,20 +98,24 @@ interface Props {
     cycleStartDay: number;
   } | null;
   onChanged: () => void;
+  access: SalarySettingsAccess;
 }
 
 /**
- * ⚙ Sozlamalar — CEO-only surface for the salary *rules* (rate config per
- * teacher + the cycle start day), kept OUT of the monthly report which is
- * display-only. Reuses the existing config row sheet / bulk dialog / period
- * control verbatim.
+ * ⚙ Sozlamalar — the salary *rules* surface: CEO sees rates, staff rates and
+ * the cycle start day; a Branch Director sees only their branch's teacher
+ * rates (ADR-0034), kept OUT of the monthly report which is display-only.
+ * Reuses the existing config row sheet / bulk dialog / period control
+ * verbatim.
  */
 export function SalarySettingsSheet({
   open,
   onOpenChange,
   period,
   onChanged,
+  access,
 }: Props) {
+  const selfId = useAuth((s) => s.user?.id) ?? -1;
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [editing, setEditing] = useState<EditTarget | null>(null);
@@ -144,14 +156,15 @@ export function SalarySettingsSheet({
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle>Oylik sozlamalari</SheetTitle>
           <SheetDescription>
-            Ustoz va xodim stavkalari, hisoblash davri. Jadval shu sozlamalar
-            asosida hisoblanadi.
+            {access.canManageCompanyPayroll
+              ? "Ustoz va xodim stavkalari, hisoblash davri. Jadval shu sozlamalar asosida hisoblanadi."
+              : "Filialingiz ustozlarining stavkalari. Xodimlar oyligi va hisoblash davrini CEO belgilaydi."}
           </SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
           {/* Cycle day */}
-          {period && (
+          {access.canManageCompanyPayroll && period && (
             <section className="space-y-2">
               <h3 className="text-sm font-semibold">Hisoblash davri</h3>
               <SalaryPeriodControl
@@ -184,9 +197,11 @@ export function SalarySettingsSheet({
                     <Button size="sm" onClick={() => setBulkType("percent")}>
                       Foiz qo&apos;yish
                     </Button>
-                    <Button size="sm" onClick={() => setBulkType("monthly")}>
-                      Oylik qo&apos;yish
-                    </Button>
+                    {access.canManageCompanyPayroll && (
+                      <Button size="sm" onClick={() => setBulkType("monthly")}>
+                        Oylik qo&apos;yish
+                      </Button>
+                    )}
                     <Button
                       size="icon"
                       variant="ghost"
@@ -212,64 +227,92 @@ export function SalarySettingsSheet({
                     O&apos;qituvchi topilmadi.
                   </p>
                 ) : (
-                  rows.map((row) => (
-                    <div
-                      key={row.user.id}
-                      className="flex items-center gap-3 px-3 py-2.5"
-                    >
-                      <Checkbox
-                        checked={selected.has(row.user.id)}
-                        onCheckedChange={() => toggle(row.user.id)}
-                        aria-label={`${row.user.firstName} ${row.user.lastName}`}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium">
-                          {row.user.firstName} {row.user.lastName}
-                        </div>
-                        <div className="mt-0.5 flex flex-wrap gap-1">
-                          {row.configs.length === 0 ? (
-                            <Badge
-                              variant="outline"
-                              className="border-amber-300 text-xs font-normal text-amber-700 dark:text-amber-400"
-                            >
-                              Belgilanmagan
-                            </Badge>
-                          ) : (
-                            row.configs.slice(0, 3).map((c) => (
-                              <Badge
-                                key={c.id}
-                                variant={c.groupId ? "default" : "secondary"}
-                                className="text-xs font-normal"
-                              >
-                                {c.groupId
-                                  ? `${c.group?.name}: `
-                                  : `${SALARY_TYPE_SHORT[c.salaryType] ?? c.salaryType}: `}
-                                {c.salaryType === "PERCENTAGE"
-                                  ? `${c.value}%`
-                                  : `${formatPrice(c.value)} so'm`}
-                              </Badge>
-                            ))
-                          )}
-                          {row.configs.length > 3 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{row.configs.length - 3}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-8 shrink-0"
-                        onClick={() =>
-                          setEditing(toEditTarget(row.user, [TEACHER_ROLE]))
-                        }
-                        aria-label="Stavkani tahrirlash"
+                  rows.map((row) => {
+                    // The CEO rates everyone; a director is limited to their
+                    // own branch's teachers (already scoped server-side) who
+                    // are not the CEO, another director, themself, or an
+                    // inactive account — see `canDirectorRate` (ADR-0034, R6).
+                    const rateable =
+                      access.canManageCompanyPayroll ||
+                      canDirectorRate(row.user, selfId);
+                    // Only a director's lock has two distinct reasons worth
+                    // telling apart — the CEO is never gated at all, so
+                    // `rateable` is already true for them.
+                    const lockedForInactive =
+                      !access.canManageCompanyPayroll &&
+                      !rateable &&
+                      isInactiveAccount(row.user);
+                    return (
+                      <div
+                        key={row.user.id}
+                        className="flex items-center gap-3 px-3 py-2.5"
                       >
-                        <Pencil className="size-3.5" />
-                      </Button>
-                    </div>
-                  ))
+                        {rateable ? (
+                          <Checkbox
+                            checked={selected.has(row.user.id)}
+                            onCheckedChange={() => toggle(row.user.id)}
+                            aria-label={`${row.user.firstName} ${row.user.lastName}`}
+                          />
+                        ) : (
+                          <span className="size-4 shrink-0" aria-hidden />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium">
+                            {row.user.firstName} {row.user.lastName}
+                          </div>
+                          <div className="mt-0.5 flex flex-wrap gap-1">
+                            {row.configs.length === 0 ? (
+                              <Badge
+                                variant="outline"
+                                className="border-amber-300 text-xs font-normal text-amber-700 dark:text-amber-400"
+                              >
+                                Belgilanmagan
+                              </Badge>
+                            ) : (
+                              row.configs.slice(0, 3).map((c) => (
+                                <Badge
+                                  key={c.id}
+                                  variant={c.groupId ? "default" : "secondary"}
+                                  className="text-xs font-normal"
+                                >
+                                  {c.groupId
+                                    ? `${c.group?.name}: `
+                                    : `${SALARY_TYPE_SHORT[c.salaryType] ?? c.salaryType}: `}
+                                  {c.salaryType === "PERCENTAGE"
+                                    ? `${c.value}%`
+                                    : `${formatPrice(c.value)} so'm`}
+                                </Badge>
+                              ))
+                            )}
+                            {row.configs.length > 3 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{row.configs.length - 3}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        {rateable ? (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="size-8 shrink-0"
+                            onClick={() =>
+                              setEditing(toEditTarget(row.user, row.user.roles))
+                            }
+                            aria-label="Stavkani tahrirlash"
+                          >
+                            <Pencil className="size-3.5" />
+                          </Button>
+                        ) : (
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {lockedForInactive
+                              ? "Faol emas"
+                              : "Oyligini CEO belgilaydi"}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -278,25 +321,27 @@ export function SalarySettingsSheet({
                 fixed-monthly employee has no groups, no lessons and no
                 accruals — the two lists answer the same question about people
                 the system pays in entirely different ways. */}
-            <div className="space-y-3">
-              <div>
-                <h3 className="text-sm font-semibold">Xodimlar stavkalari</h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Administrator, kassir, filial direktori — oyligi darsga
-                  bog&apos;liq emas, qattiq summa. Stavka belgilangandan keyin
-                  xodim jadvaldagi &laquo;Xodimlar oyligi&raquo; bo&apos;limida
-                  chiqadi.
-                </p>
+            {access.canManageCompanyPayroll && (
+              <div className="space-y-3">
+                <div>
+                  <h3 className="text-sm font-semibold">Xodimlar stavkalari</h3>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Administrator, kassir, filial direktori — oyligi darsga
+                    bog&apos;liq emas, qattiq summa. Stavka belgilangandan keyin
+                    xodim jadvaldagi &laquo;Xodimlar oyligi&raquo;
+                    bo&apos;limida chiqadi.
+                  </p>
+                </div>
+                <SalaryStaffConfigList
+                  search={search}
+                  refreshKey={refreshKey}
+                  enabled={open}
+                  onEdit={(row) =>
+                    setEditing(toEditTarget(row.user, row.user.roles))
+                  }
+                />
               </div>
-              <SalaryStaffConfigList
-                search={search}
-                refreshKey={refreshKey}
-                enabled={open}
-                onEdit={(row) =>
-                  setEditing(toEditTarget(row.user, row.user.roles))
-                }
-              />
-            </div>
+            )}
           </section>
         </div>
 
@@ -308,6 +353,13 @@ export function SalarySettingsSheet({
           employee={editing}
           onClose={() => setEditing(null)}
           onSaved={afterRateChange}
+          canDeactivate={access.canDeactivateRate}
+          allowMonthly={access.canManageCompanyPayroll}
+          minEffectiveFrom={
+            access.canManageCompanyPayroll || !period
+              ? undefined
+              : new Date(period.periodStart)
+          }
         />
 
         {/* Bulk rate apply */}

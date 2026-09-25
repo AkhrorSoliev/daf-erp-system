@@ -4,10 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  parseTashkentDateStart,
-  tashkentStartOfToday,
-} from './shared/resolve-current-period';
+import { parseEffectiveFromOrThrow } from './shared/resolve-current-period';
 import {
   Prisma,
   SalaryType,
@@ -19,6 +16,8 @@ import {
   GlobalSalaryConfigDto,
   UpdateSalaryConfigDto,
 } from './dto/salary-config.dto';
+import { assertCallerMaySetTeacherRate } from './shared/teacher-rate-permission';
+import { assertPercentageWithinCap } from './shared/percentage-cap';
 
 /** A config with at most its latest version, as `upsertNewVersion` needs it. */
 type ConfigWithLatestVersion = EmployeeSalaryConfig & {
@@ -97,6 +96,26 @@ export class SalaryConfigService {
     return byUser;
   }
 
+  /**
+   * HTTP write gate for `POST /salary/config` (ADR-0034): the CEO passes
+   * through; a Branch Director only for an own-branch employee who holds the
+   * Teacher role. Kept separate from the write itself because
+   * `createConfig` knows the MONEY rules (versioning, closed periods), not
+   * who is calling it.
+   */
+  assertCallerMayCreateRate(
+    callerId: number | undefined,
+    companyId: number,
+    dto: CreateSalaryConfigDto,
+  ): Promise<void> {
+    return assertCallerMaySetTeacherRate(this.prisma, callerId, companyId, {
+      userId: dto.userId,
+      groupId: dto.groupId ?? null,
+      salaryType: dto.salaryType,
+      effectiveFrom: dto.effectiveFrom,
+    });
+  }
+
   async createConfig(
     dto: CreateSalaryConfigDto,
     companyId: number,
@@ -107,6 +126,7 @@ export class SalaryConfigService {
         "FIXED_MONTHLY oylik turi guruh bilan bog'lab bo'lmaydi",
       );
     }
+    assertPercentageWithinCap(dto.salaryType, dto.value);
 
     const effectiveFrom = this.parseEffectiveFrom(dto.effectiveFrom);
 
@@ -171,6 +191,7 @@ export class SalaryConfigService {
         "FIXED_MONTHLY oylik turini global qo'llab bo'lmaydi — har xodim uchun alohida belgilang",
       );
     }
+    assertPercentageWithinCap(dto.salaryType, dto.value);
 
     const effectiveFrom = this.parseEffectiveFrom(dto.effectiveFrom);
 
@@ -308,6 +329,11 @@ export class SalaryConfigService {
         // would leave the employee assignable and "rated" on every isActive
         // check while earning nothing. Invariant: an active config has an
         // open version from its reactivation date on.
+        //
+        // The ≤100% cap applies to exactly the versions written here: a new
+        // version is a rate that will be paid from now on. Deactivating
+        // writes none, so a legacy PERCENTAGE row saved above the cap can
+        // still be switched off; switching it back on needs a valid value.
         const rateChanged =
           (dto.salaryType !== undefined &&
             dto.salaryType !== existing.salaryType) ||
@@ -318,6 +344,13 @@ export class SalaryConfigService {
           existing.versions.length === 0;
 
         if (rateChanged || reopening) {
+          // The effective type/value — a PATCH may send only one of the two,
+          // so the cap must see what the config will actually become, not
+          // just the fields this request happened to include.
+          assertPercentageWithinCap(
+            dto.salaryType ?? existing.salaryType,
+            dto.value ?? existing.value,
+          );
           await this.upsertNewVersion(
             tx,
             await this.withLatestVersion(tx, existing),
@@ -444,17 +477,20 @@ export class SalaryConfigService {
   // ---------- internals ----------
 
   /**
-   * YYYY-MM-DD → 00:00 Tashkent. Default = today @ 00:00 Tashkent.
+   * YYYY-MM-DD → 00:00 Tashkent. Default = today @ 00:00 Tashkent. Refuses
+   * (400) anything else — e.g. a full ISO instant, which passes the DTO's
+   * `@IsDateString()` but is not the shape this parser expects.
    *
-   * Both branches delegate to `shared/resolve-current-period`, which is also
-   * what `computePeriodBounds` and `SalaryPeriodSettingsService` use — a rate
-   * version's start and the period boundary it has to line up with must not be
-   * computed two different ways. The default branch used to build the date via
-   * `toLocaleString` + `setHours`, which reads the PROCESS timezone and so gave
-   * a different answer on a UTC host than on a Tashkent one.
+   * Delegates to `shared/resolve-current-period`'s `parseEffectiveFromOrThrow`,
+   * which is also what the ADR-0034 rate gate uses — a rate version's start,
+   * the period boundary it has to line up with, and what counts as a VALID
+   * date must not be decided three different ways. The default branch used to
+   * build the date via `toLocaleString` + `setHours`, which reads the PROCESS
+   * timezone and so gave a different answer on a UTC host than on a Tashkent
+   * one.
    */
   private parseEffectiveFrom(input?: string): Date {
-    return input ? parseTashkentDateStart(input) : tashkentStartOfToday();
+    return parseEffectiveFromOrThrow(input);
   }
 
   private async createWithInitialVersion(

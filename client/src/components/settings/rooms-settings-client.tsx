@@ -256,7 +256,7 @@ function BranchRoomsView({
         action={
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button size="sm" onClick={() => openAddDrawer(branch.id)}>
+              <Button size="sm" data-tour="room-add" onClick={() => openAddDrawer(branch.id)}>
                 <Plus className="mr-1.5 h-4 w-4" />
                 Yangi xona
               </Button>
@@ -413,10 +413,44 @@ export function RoomsSettingsClient() {
     debouncedSetSearch(value);
   };
 
-  if (selectedBranch || filters.branch) {
+  // Direct load / refresh of /settings/rooms?branch=<id>: the row clicked in
+  // the list is not in local state yet, so the branch is fetched by id before
+  // BranchRoomsView is allowed to render (it used to render with `null` and
+  // crash on `branch.name`).
+  useEffect(() => {
+    if (selectedBranch || !filters.branch) return;
+    const branchId = Number(filters.branch);
+    if (!Number.isInteger(branchId)) {
+      resetFilters();
+      return;
+    }
+    let cancelled = false;
+    api
+      .get(`/branches/${branchId}`)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setSelectedBranch({
+          id: data.id,
+          name: data.name,
+          address: data.address ?? null,
+          status: data.status,
+          roomCount: data._count?.rooms ?? 0,
+        });
+      })
+      .catch(() => {
+        // Branch gone, not ours, or the request failed — fall back to the
+        // list rather than getting stuck on a permanent loading state.
+        if (!cancelled) resetFilters();
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filters.branch, selectedBranch, resetFilters]);
+
+  if (selectedBranch) {
     return (
       <BranchRoomsView
-        branch={selectedBranch!}
+        branch={selectedBranch}
         onBack={() => { setSelectedBranch(null); resetFilters(); setSearchInput(""); }}
         filters={filters}
         setFilter={setFilter}
@@ -424,6 +458,16 @@ export function RoomsSettingsClient() {
         searchInput={searchInput}
         onSearchChange={handleSearchChange}
       />
+    );
+  }
+
+  if (filters.branch) {
+    // Still resolving, or the fetch just failed and resetFilters()'s
+    // navigation has not landed yet — either way, the existing loading look.
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 

@@ -127,7 +127,16 @@ export class SalaryOverviewService {
         firstName: true,
         lastName: true,
         isActive: true,
+        // Additive, alongside `isActive` (R6): the client's `canDirectorRate`
+        // also locks a row whose account is INACTIVE/SUSPENDED/TERMINATED/
+        // ARCHIVED — a director must not be offered the pencil for a teacher
+        // who no longer works here.
+        status: true,
         branches: { select: { branch: { select: { id: true, name: true } } } },
+        // So the client can hide the edit pencil for a teacher who also
+        // holds CEO or Branch Director — a Branch Director cannot rate them
+        // (ADR-0034), even though this list's role filter matched them.
+        roles: { select: { role: { select: { id: true, name: true } } } },
       },
     });
 
@@ -259,7 +268,9 @@ export class SalaryOverviewService {
           firstName: t.firstName,
           lastName: t.lastName,
           isActive: t.isActive,
+          status: t.status,
           branch: t.branches[0]?.branch ?? null,
+          roles: t.roles.map((r) => ({ id: r.role.id, name: r.role.name })),
         },
         configs: userConfigs.map((c) => ({
           id: c.id,

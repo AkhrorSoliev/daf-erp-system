@@ -232,6 +232,7 @@ export function LeadColumn({
             <Button
               variant="outline"
               size="sm"
+              data-tour="lead-section-add"
               onClick={() => openCreateSection(column.id, column.name)}
             >
               <FolderPlus className="size-3.5" />

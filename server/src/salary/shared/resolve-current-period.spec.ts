@@ -1,5 +1,7 @@
+import { BadRequestException } from '@nestjs/common';
 import {
   computePeriodBounds,
+  parseEffectiveFromOrThrow,
   resolveCompletedPeriod,
 } from './resolve-current-period';
 
@@ -214,6 +216,48 @@ describe('computePeriodBounds — @db.Date bounds do not overlap', () => {
     expect(a.periodStartDate.toISOString()).toBe('2026-06-08T00:00:00.000Z');
     expect(a.periodEndDateExclusive.getTime()).toBe(
       b.periodStartDate.getTime(),
+    );
+  });
+});
+
+/**
+ * Every write path that turns a client-supplied `effectiveFrom` string into a
+ * Tashkent-midnight `Date` must go through this — `SalaryConfigService` and
+ * the ADR-0034 rate gate both call it so the two agree.
+ *
+ * `class-validator`'s `@IsDateString()` (used on the DTOs) accepts ANY
+ * ISO-8601 date-TIME, not just `YYYY-MM-DD` — a full instant such as
+ * `2026-08-20T00:00:00Z` passes DTO validation, but `parseTashkentDateStart`
+ * appends its own `T00:00:00.000Z`, producing the unparseable
+ * `2026-08-20T00:00:00ZT00:00:00.000Z` (`Invalid Date`). A `NaN` time compares
+ * false to everything (`NaN < x` is always false), so every date guard
+ * downstream — "not before the open period", "not before the last version" —
+ * would silently let it through.
+ */
+describe('parseEffectiveFromOrThrow', () => {
+  it('parses a plain YYYY-MM-DD the same way parseTashkentDateStart does', () => {
+    const result = parseEffectiveFromOrThrow('2026-08-20');
+    expect(result.toISOString()).toBe('2026-08-19T19:00:00.000Z');
+  });
+
+  it('defaults to Tashkent-midnight-today when omitted', () => {
+    const now = new Date('2026-08-20T10:00:00.000Z'); // 15:00 Tashkent
+    const result = parseEffectiveFromOrThrow(undefined, now);
+    expect(result.toISOString()).toBe('2026-08-19T19:00:00.000Z');
+  });
+
+  it('refuses a full ISO instant with a 400, not an Invalid Date', () => {
+    expect(() => parseEffectiveFromOrThrow('2026-08-20T00:00:00Z')).toThrow(
+      BadRequestException,
+    );
+    expect(() => parseEffectiveFromOrThrow('2026-08-20T00:00:00Z')).toThrow(
+      "Sana noto'g'ri formatda",
+    );
+  });
+
+  it('refuses garbage input the same way', () => {
+    expect(() => parseEffectiveFromOrThrow('not-a-date')).toThrow(
+      "Sana noto'g'ri formatda",
     );
   });
 });

@@ -132,6 +132,7 @@ export function CoursesSettingsClient() {
               <TooltipTrigger asChild>
                 <Button
                   size="sm"
+                  data-tour="course-add"
                   onClick={openAddDrawer}
                   disabled={!selectedBranch}
                 >

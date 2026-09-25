@@ -526,13 +526,31 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     routes: ['GET /absence-pause/settings', 'PATCH /absence-pause/settings'],
   },
   {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'A teacher RATE write (ADR-0034, "Ustoz roli bor hammaga"). The CEO ' +
+      'sets any rate; a Branch Director only for an own-branch, ACTIVE ' +
+      'employee who holds the Teacher role and does not also hold CEO or ' +
+      'Branch Director — never their own rate, never FIXED_MONTHLY, never a ' +
+      'date before the open payroll period. The branch comes from the ' +
+      'TARGET employee (and from the group for a per-group rate), not from ' +
+      'the header: `assertCallerMaySetTeacherRate`. `PATCH ' +
+      '/salary/config/:id` (edit an existing rate, including deactivation) ' +
+      'stays CEO-only — see the COMPANY_WIDE salary block below — because ' +
+      'the director UI never sends it and an open-ended PATCH could ' +
+      'silently reactivate a closed config with no open version.',
+    routes: ['POST /salary/config'],
+  },
+  {
     policy: 'COMPANY_WIDE',
     reason:
-      'Company-level configuration, not branch data. A salary RATE and the ' +
-      'payroll cycle apply to the whole company by design (a rate is per employee, ' +
-      'and the employee already carries a branch); `POST /salary/calculate` is ' +
-      'cron-internal and settles every branch in one run, which is why it is ' +
-      'CEO-only and has no UI trigger.',
+      'Company-level configuration, not branch data. Rate READS, editing an ' +
+      'existing rate (`PATCH`, CEO-only — see the BRANCH_SCOPED_BY_ENTITY ' +
+      'block above for the narrower `POST`), the company-wide bulk rate and ' +
+      'the payroll cycle apply to the whole company by design (a rate is ' +
+      'per employee, and the employee already carries a branch); `POST ' +
+      '/salary/calculate` is cron-internal and settles every branch in one ' +
+      'run, which is why it is CEO-only and has no UI trigger.',
     routes: [
       'GET /salary/config-history/:userId',
       'GET /salary/config/:userId',
@@ -541,7 +559,6 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /salary/period-settings',
       'PATCH /salary/config/:id',
       'POST /salary/calculate',
-      'POST /salary/config',
       'POST /salary/config/global',
       'POST /salary/period-settings',
     ],

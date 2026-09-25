@@ -184,7 +184,7 @@ export function StudentsClient() {
             {selectedBranch ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={() => setAddOpen(true)} className="shrink-0">
+                  <Button onClick={() => setAddOpen(true)} data-tour="student-add" className="shrink-0">
                     <Plus className="mr-2 size-4" />
                     Yangi o&apos;quvchi
                   </Button>

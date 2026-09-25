@@ -74,6 +74,7 @@ describe('SalaryOverviewService', () => {
         lastName: 'A',
         isActive: true,
         branches: [{ branch: { id: 1, name: 'Asosiy' } }],
+        roles: [{ role: { id: 4, name: 'Teacher' } }],
       },
     ]);
     prisma.employeeSalaryConfig.findMany.mockResolvedValue([
@@ -137,6 +138,9 @@ describe('SalaryOverviewService', () => {
     expect(row.paidTotal).toBe(700_000);
     expect(row.advancesTotal).toBe(50_000);
     expect(row.latestPayment?.id).toBe('p1');
+    // The client hides the edit pencil for a teacher a director cannot rate
+    // (ADR-0034), which needs the row's roles.
+    expect(row.user.roles).toEqual([{ id: 4, name: 'Teacher' }]);
     // Pending: one CALCULATED, no APPROVED.
     expect(res.pending.calculatedIds).toEqual(['p1']);
     expect(res.pending.approved).toBe(0);
@@ -150,6 +154,10 @@ describe('SalaryOverviewService', () => {
         lastName: 'B',
         isActive: true,
         branches: [],
+        roles: [
+          { role: { id: 4, name: 'Teacher' } },
+          { role: { id: 3, name: 'Administrator' } },
+        ],
       },
     ]);
     prisma.employeeSalaryConfig.findMany.mockResolvedValue([
@@ -170,6 +178,57 @@ describe('SalaryOverviewService', () => {
     expect(res.data[0].configs[0].value).toBe(4_000_000);
     expect(res.data[0]).not.toHaveProperty('expectedMonthly');
     expect(res.data[0].activeStudentCount).toBe(0);
+    // A multi-role row (Teacher + Administrator) still carries every role —
+    // the client, not this endpoint, decides what that means for the pencil.
+    expect(res.data[0].user.roles).toEqual([
+      { id: 4, name: 'Teacher' },
+      { id: 3, name: 'Administrator' },
+    ]);
+  });
+
+  it('selects roles on the teacher query so the client can hide the pencil', async () => {
+    await service.getOverview({}, 1, 999);
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          roles: { select: { role: { select: { id: true, name: true } } } },
+        }),
+      }),
+    );
+  });
+
+  /**
+   * R6: an inactive/terminated teacher must not stay editable in a director's
+   * rate list — `canDirectorRate` (client) needs both fields to lock the row.
+   */
+  it('selects status on the teacher query so the client can lock an inactive row', async () => {
+    await service.getOverview({}, 1, 999);
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({ status: true }),
+      }),
+    );
+  });
+
+  it('carries isActive and status through onto each row', async () => {
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: 90020,
+        firstName: 'Nafisa',
+        lastName: 'C',
+        isActive: false,
+        status: 'TERMINATED',
+        branches: [],
+        roles: [{ role: { id: 4, name: 'Teacher' } }],
+      },
+    ]);
+
+    const res = await service.getOverview({}, 1, 999);
+
+    expect(res.data[0].user.isActive).toBe(false);
+    expect(res.data[0].user.status).toBe('TERMINATED');
   });
 
   it('scopes the teacher query to the mainBranch for a Branch Director', async () => {

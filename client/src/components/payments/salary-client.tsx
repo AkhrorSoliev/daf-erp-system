@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { SalaryBreakdownDrawer } from "./salary-breakdown-drawer";
 import { SalaryMonthlyView } from "./salary-monthly-view";
 import { SalaryAdvancesTab } from "./salary-advances-tab";
+import { resolveSalarySettingsAccess } from "./salary-settings-access";
 
 /** URL'ga yozilmaydigan standart tab. */
 const DEFAULT_TAB = "oyliklar";
@@ -15,6 +16,9 @@ export function SalaryClient() {
   const user = useAuth((s) => s.user);
   const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
   const canPay = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;
+  const settingsAccess = resolveSalarySettingsAccess(
+    user?.roles.map((r) => r.id) ?? [],
+  );
 
   const router = useRouter();
   const pathname = usePathname();
@@ -67,6 +71,7 @@ export function SalaryClient() {
           <SalaryMonthlyView
             isCeo={isCeo}
             canPay={canPay}
+            settingsAccess={settingsAccess}
             onOpenBreakdown={setBreakdownPaymentId}
             refreshKey={refreshKey}
             bumpRefresh={bumpRefresh}
