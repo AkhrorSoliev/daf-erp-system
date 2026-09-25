@@ -20,6 +20,15 @@ import {
   UpdateSalaryConfigDto,
 } from './dto/salary-config.dto';
 
+/** A config with at most its latest version, as `upsertNewVersion` needs it. */
+type ConfigWithLatestVersion = EmployeeSalaryConfig & {
+  versions: Array<{
+    id: string;
+    effectiveFrom: Date;
+    effectiveTo: Date | null;
+  }>;
+};
+
 /**
  * Salary config writes always create a new EmployeeSalaryConfigVersion row
  * (SCD2). The parent EmployeeSalaryConfig keeps the *current* values as a
@@ -118,14 +127,20 @@ export class SalaryConfigService {
           },
         });
 
+        // A deactivated config has no open version; its last closed one is
+        // the reference, so saving a rate for it again cannot overlap it.
         const config = existing
-          ? await this.upsertNewVersion(tx, existing, {
-              salaryType: dto.salaryType,
-              value: dto.value,
-              effectiveFrom,
-              changedById,
-              companyId,
-            })
+          ? await this.upsertNewVersion(
+              tx,
+              await this.withLatestVersion(tx, existing),
+              {
+                salaryType: dto.salaryType,
+                value: dto.value,
+                effectiveFrom,
+                changedById,
+                companyId,
+              },
+            )
           : await this.createWithInitialVersion(tx, {
               userId: dto.userId,
               groupId: dto.groupId ?? null,
@@ -167,6 +182,55 @@ export class SalaryConfigService {
       distinct: ['teacherId'],
     });
 
+    // A deactivated config has no open version; its last closed one is the
+    // reference, exactly as for POST /salary/config.
+    const findExisting = async (
+      db: Prisma.TransactionClient,
+      userId: number,
+    ): Promise<ConfigWithLatestVersion | null> => {
+      const existing = await db.employeeSalaryConfig.findFirst({
+        where: { userId, groupId: null, companyId },
+        include: {
+          versions: {
+            where: { effectiveTo: null },
+            orderBy: { effectiveFrom: 'desc' },
+            take: 1,
+          },
+        },
+      });
+      return existing && this.withLatestVersion(db, existing);
+    };
+
+    // Check every teacher before writing for any. The batch is one rate
+    // change shared by all of them, and there is no wrapping transaction, so
+    // a refusal thrown mid-loop would leave the teachers before it on the new
+    // rate and the rest on the old one, with nothing saying who got which.
+    // Skipping the refused teachers instead was rejected: no screen calls this
+    // endpoint, so a list of skipped teachers in the response would be read by
+    // nobody, and each of them would silently stay on the old rate. The
+    // writes below re-check inside their own transactions, so a change landing
+    // between this pass and them is still refused — it can then stop the loop
+    // part-way, but never writes an overlapping or back-dated version.
+    const refused: string[] = [];
+    for (const t of teachers) {
+      const existing = await findExisting(this.prisma, t.teacherId);
+      const refusal =
+        existing &&
+        (await this.versionStartRefusal(this.prisma, existing, {
+          effectiveFrom,
+          companyId,
+        }));
+      if (refusal) refused.push(`#${t.teacherId}: ${refusal}`);
+    }
+    if (refused.length > 0) {
+      const shown = refused.slice(0, 5).join('; ');
+      const more =
+        refused.length > 5 ? `; va yana ${refused.length - 5} ta` : '';
+      throw new BadRequestException(
+        `Stavka hech kimga yozilmadi — ${refused.length} ta o'qituvchiga bu sanadan yangi stavka qo'yib bo'lmaydi: ${shown}${more}`,
+      );
+    }
+
     // Each teacher's config is updated atomically. We don't wrap the whole
     // batch in one transaction — that would lock the entire teachers table
     // for a potentially long time. Per-user atomicity is enough since each
@@ -175,16 +239,7 @@ export class SalaryConfigService {
     for (const t of teachers) {
       await this.prisma.$transaction(
         async (tx) => {
-          const existing = await tx.employeeSalaryConfig.findFirst({
-            where: { userId: t.teacherId, groupId: null, companyId },
-            include: {
-              versions: {
-                where: { effectiveTo: null },
-                orderBy: { effectiveFrom: 'desc' },
-                take: 1,
-              },
-            },
-          });
+          const existing = await findExisting(tx, t.teacherId);
 
           if (existing) {
             await this.upsertNewVersion(tx, existing, {
@@ -246,22 +301,34 @@ export class SalaryConfigService {
           );
         }
 
-        // Write a new version only when something rate-affecting changed
-        // (salaryType or value). isActive flips don't need a version row —
-        // they're a deactivation, not a rate change.
+        // Write a new version when something rate-affecting changed
+        // (salaryType or value), or when a deactivated config is switched
+        // back on. Deactivation closed its last version, and accruals resolve
+        // the version active on the lesson date — flipping isActive alone
+        // would leave the employee assignable and "rated" on every isActive
+        // check while earning nothing. Invariant: an active config has an
+        // open version from its reactivation date on.
         const rateChanged =
           (dto.salaryType !== undefined &&
             dto.salaryType !== existing.salaryType) ||
           (dto.value !== undefined && dto.value !== existing.value);
+        const reopening =
+          dto.isActive === true &&
+          !existing.isActive &&
+          existing.versions.length === 0;
 
-        if (rateChanged) {
-          await this.upsertNewVersion(tx, existing, {
-            salaryType: dto.salaryType ?? existing.salaryType,
-            value: dto.value ?? existing.value,
-            effectiveFrom,
-            changedById,
-            companyId,
-          });
+        if (rateChanged || reopening) {
+          await this.upsertNewVersion(
+            tx,
+            await this.withLatestVersion(tx, existing),
+            {
+              salaryType: dto.salaryType ?? existing.salaryType,
+              value: dto.value ?? existing.value,
+              effectiveFrom,
+              changedById,
+              companyId,
+            },
+          );
         }
 
         // Deactivating a config MUST close its open version so proration /
@@ -425,34 +492,44 @@ export class SalaryConfigService {
     return config;
   }
 
-  private async upsertNewVersion(
+  /**
+   * The version a new one has to follow: the open version when there is one.
+   * A deactivated config has none, so it is the last closed version — without
+   * it `upsertNewVersion` would skip the "not before the latest version" guard
+   * and could start a reactivated rate on top of dates the old one covered.
+   */
+  private async withLatestVersion(
     tx: Prisma.TransactionClient,
-    existing: EmployeeSalaryConfig & {
-      versions: Array<{
-        id: string;
-        effectiveFrom: Date;
-        effectiveTo: Date | null;
-      }>;
-    },
-    params: {
-      salaryType: SalaryType;
-      value: number;
-      effectiveFrom: Date;
-      changedById?: number;
-      companyId: number;
-    },
-  ): Promise<EmployeeSalaryConfig> {
+    existing: ConfigWithLatestVersion,
+  ): Promise<ConfigWithLatestVersion> {
+    if (existing.versions.length > 0) return existing;
+    const latest = await tx.employeeSalaryConfigVersion.findFirst({
+      where: { configId: existing.id },
+      orderBy: [{ effectiveFrom: 'desc' }, { createdAt: 'desc' }],
+      select: { id: true, effectiveFrom: true, effectiveTo: true },
+    });
+    return latest ? { ...existing, versions: [latest] } : existing;
+  }
+
+  /**
+   * Why a new version may not start at `effectiveFrom`, or null when it may.
+   * `upsertNewVersion` throws it; `applyGlobalConfig` collects it for every
+   * teacher before writing for any.
+   */
+  private async versionStartRefusal(
+    db: Prisma.TransactionClient,
+    existing: ConfigWithLatestVersion,
+    params: { effectiveFrom: Date; companyId: number },
+  ): Promise<string | null> {
     const latest = existing.versions[0];
 
     if (latest && params.effectiveFrom < latest.effectiveFrom) {
-      throw new BadRequestException(
-        `Yangi sana eski versiyaning sanasidan oldin bo'la olmaydi (${latest.effectiveFrom.toISOString().slice(0, 10)} dan keyin)`,
-      );
+      return `Yangi sana eski versiyaning sanasidan oldin bo'la olmaydi (${latest.effectiveFrom.toISOString().slice(0, 10)} dan keyin)`;
     }
 
     // Reject when effectiveFrom lands inside an already-paid period.
     // Otherwise the rate change would silently miss the cutoff.
-    const closedPeriod = await tx.salaryPayment.findFirst({
+    const closedPeriod = await db.salaryPayment.findFirst({
       where: {
         userId: existing.userId,
         companyId: params.companyId,
@@ -465,14 +542,40 @@ export class SalaryConfigService {
       select: { id: true, periodStart: true, periodEnd: true, status: true },
     });
     if (closedPeriod) {
-      throw new BadRequestException(
-        `Bu sana yopiq oylik davriga (${closedPeriod.status}, ${closedPeriod.periodStart.toISOString().slice(0, 10)}..${closedPeriod.periodEnd.toISOString().slice(0, 10)}) tushadi`,
-      );
+      return `Bu sana yopiq oylik davriga (${closedPeriod.status}, ${closedPeriod.periodStart.toISOString().slice(0, 10)}..${closedPeriod.periodEnd.toISOString().slice(0, 10)}) tushadi`;
     }
 
-    if (latest) {
-      // Close the current open version. effectiveFrom == effectiveTo means
-      // the old version covers up to (but not including) the new one.
+    return null;
+  }
+
+  private async upsertNewVersion(
+    tx: Prisma.TransactionClient,
+    existing: ConfigWithLatestVersion,
+    params: {
+      salaryType: SalaryType;
+      value: number;
+      effectiveFrom: Date;
+      changedById?: number;
+      companyId: number;
+    },
+  ): Promise<EmployeeSalaryConfig> {
+    const refusal = await this.versionStartRefusal(tx, existing, params);
+    if (refusal) throw new BadRequestException(refusal);
+
+    const latest = existing.versions[0];
+
+    // The new version takes over from effectiveFrom, so the latest one ends
+    // there: an open version is closed, and a closed one (a reactivated
+    // config) is cut back if it ran past that date — two overlapping
+    // FIXED_MONTHLY versions are both prorated, i.e. paid twice. A closed
+    // version that ended earlier stays as it is: stretching it to
+    // effectiveFrom would pay the days the config was switched off.
+    // effectiveFrom == effectiveTo means the old version covers up to (but
+    // not including) the new one.
+    if (
+      latest &&
+      (latest.effectiveTo === null || latest.effectiveTo > params.effectiveFrom)
+    ) {
       await tx.employeeSalaryConfigVersion.update({
         where: { id: latest.id },
         data: { effectiveTo: params.effectiveFrom },
