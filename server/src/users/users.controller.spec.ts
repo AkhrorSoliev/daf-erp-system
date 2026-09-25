@@ -3,6 +3,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
+import { RedisService } from '../redis/redis.service';
 import { AuthService } from '../auth/auth.service';
 import { RolesGuard } from '../common/guards';
 import { ROLES_KEY } from '../common/decorators';
@@ -44,6 +45,8 @@ describe('UsersController — role guards', () => {
       controllers: [UsersController],
       providers: [
         { provide: UsersService, useValue: mockService },
+        // OwnPasswordAttemptGuard (ADR-0031) is built with the controller.
+        { provide: RedisService, useValue: {} },
         { provide: AuthService, useValue: mockAuth },
       ],
     }).compile();
@@ -98,15 +101,29 @@ describe('UsersController — role guards', () => {
     });
   });
 
+  // Administrators do not manage employees (docs/role-access.md). The page is
+  // hidden from them; the two writes behind it refuse them too, because the
+  // backend is the boundary. They onboard teachers and cashiers through the
+  // Telegram link, and edit their own profile through PATCH /users/profile.
   describe('create()', () => {
-    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
+    it('should have @Roles(CEO, Branch Director) metadata', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, controller.create);
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+      expect(roles).toEqual(['CEO', 'Branch Director']);
     });
 
     it('should allow CEO to create', () => {
       const ctx = mockExecutionContext(controller.create, ['CEO']);
       expect(guard.canActivate(ctx)).toBe(true);
+    });
+
+    it('should allow Branch Director to create', () => {
+      const ctx = mockExecutionContext(controller.create, ['Branch Director']);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+
+    it('should deny Administrator from creating', () => {
+      const ctx = mockExecutionContext(controller.create, ['Administrator']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
 
     it('should deny Teacher from creating', () => {
@@ -138,9 +155,19 @@ describe('UsersController — role guards', () => {
   });
 
   describe('update()', () => {
-    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
+    it('should have @Roles(CEO, Branch Director) metadata', () => {
       const roles = reflector.get<string[]>(ROLES_KEY, controller.update);
-      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+      expect(roles).toEqual(['CEO', 'Branch Director']);
+    });
+
+    it('should allow Branch Director to update', () => {
+      const ctx = mockExecutionContext(controller.update, ['Branch Director']);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+
+    it('should deny Administrator from updating', () => {
+      const ctx = mockExecutionContext(controller.update, ['Administrator']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
 
     it('should deny Teacher from updating', () => {

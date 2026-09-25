@@ -7,9 +7,9 @@ import {
 import { Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import { UserStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
+import { blockedUserKey, isBlockedStatus } from '../auth/blocked-user';
 import {
   SESSION_ENDED_MESSAGE,
   sessionVersionKey,
@@ -73,20 +73,21 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
    *    shorten. `TeachersService` already swallows Redis errors on the write
    *    side for the same reason.
    *
-   * 2. **A key must not outlive the block it represents.** Only
-   *    `TeachersService` maintains these keys; re-activating the same person
-   *    through `UsersService` leaves the key behind, and a stale key would
-   *    then lock out someone the database says is ACTIVE — a worse failure
-   *    than the one being fixed. So a cache hit is CONFIRMED against the
-   *    database before anyone is turned away, and a key the database
-   *    contradicts is dropped.
+   * 2. **A key must not outlive the block it represents.** `UsersService`
+   *    and `TeachersService` write and lift these keys through
+   *    `recordUserBlocked`, but one can still be left behind: a Redis failure
+   *    while a block is being lifted, or an account restored from the archive
+   *    by a path that never lifts it. A stale key would then lock out someone
+   *    the database says is ACTIVE — a worse failure than the one being
+   *    fixed. So a cache hit is CONFIRMED against the database before anyone
+   *    is turned away, and a key the database contradicts is dropped.
    *
    * The confirming query only runs on a hit, i.e. approximately never.
    */
   private async assertNotBlocked(userId: number): Promise<void> {
     let cached: string | null = null;
     try {
-      cached = await this.redis.get(`user:blocked:${userId}`);
+      cached = await this.redis.get(blockedUserKey(userId));
     } catch (err) {
       this.logger.warn(
         `Blocked-user cache unavailable for user ${userId}: ${
@@ -102,17 +103,13 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       select: { status: true, deletedAt: true },
     });
     const reallyBlocked =
-      !user ||
-      user.deletedAt !== null ||
-      user.status === UserStatus.SUSPENDED ||
-      user.status === UserStatus.TERMINATED ||
-      user.status === UserStatus.ARCHIVED;
+      !user || user.deletedAt !== null || isBlockedStatus(user.status);
 
     if (!reallyBlocked) {
       this.logger.warn(
         `Stale block key for user ${userId} (database says ${user.status}) — dropping it`,
       );
-      await this.redis.del(`user:blocked:${userId}`).catch(() => undefined);
+      await this.redis.del(blockedUserKey(userId)).catch(() => undefined);
       return;
     }
 

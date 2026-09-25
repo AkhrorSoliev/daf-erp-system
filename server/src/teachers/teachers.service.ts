@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { RedisService } from '../redis/redis.service';
 import { StatusHistoryService } from '../common/status';
+import { userArchiveData } from '../common/status/user-archive';
 import { EntityHistoryService } from '../common/entity-history';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
@@ -28,14 +29,29 @@ import {
   ReportBranchIds,
   userBranchWhere,
 } from '../common/finance/report-branch-scope';
-import { assertCallerMayTouchUser } from '../common/auth/user-branch-scope';
+import {
+  assertCallerMayManageUser,
+  assertCallerMayTouchUser,
+} from '../common/auth/user-branch-scope';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
+import {
+  isBlockedStatus,
+  recordUserBlocked,
+} from '../common/auth/blocked-user';
 import {
   findLiveStaffByPhone,
   loginForPhone,
+  planPhoneChange,
 } from '../common/auth/phone-account-rules';
+import { assertNotChangingOwnSignInKeys } from '../common/auth/own-sign-in-keys';
 
 const TEACHER_ROLE_ID = 4;
+
+// Reads check the branch; writes check rank too (ADR-0027).
+const OTHER_BRANCH_TEACHER = {
+  message:
+    "Bu o'qituvchi boshqa filialga tegishli — u bilan ishlash huquqingiz yo'q",
+};
 
 const teacherSelect = {
   id: true,
@@ -256,7 +272,7 @@ export class TeachersService {
       this.prisma,
       callerId,
       teacherId,
-      "Bu o'qituvchi boshqa filialga tegishli — u bilan ishlash huquqingiz yo'q",
+      OTHER_BRANCH_TEACHER.message,
     );
   }
 
@@ -336,8 +352,25 @@ export class TeachersService {
     }
 
     // `UpdateTeacherDto` carries `password` and `login`. Existence first so a
-    // stale id answers 404, then the branch.
-    await this.assertCallerMayTouchTeacher(id, callerId);
+    // stale id answers 404, then the branch and the rank.
+    await assertCallerMayManageUser(
+      this.prisma,
+      callerId,
+      id,
+      OTHER_BRANCH_TEACHER,
+    );
+    // ADR-0031: a CEO or director who also teaches cannot change their own
+    // phone, login or password here — only through the password-checked doors.
+    assertNotChangingOwnSignInKeys(user, callerId, dto);
+
+    // Every phone write goes through planPhoneChange (ADR-0031): the old
+    // number stops being a sign-in key, and no two live staff share one.
+    // Planned before the photo is deleted, so a refusal leaves nothing behind.
+    const phoneWrite =
+      dto.phone !== undefined
+        ? await planPhoneChange(this.prisma, user, dto.phone, { staff: true })
+        : undefined;
+    const loginChanged = dto.login !== undefined && dto.login !== user.login;
 
     // Eski rasmni o'chirish (yangi rasm kelsa yoki null bo'lsa)
     if (dto.photo !== undefined && user.photo && dto.photo !== user.photo) {
@@ -364,10 +397,13 @@ export class TeachersService {
       data: {
         ...(dto.firstName !== undefined && { firstName: dto.firstName }),
         ...(dto.lastName !== undefined && { lastName: dto.lastName }),
-        ...(dto.phone !== undefined && { phone: dto.phone }),
+        ...(phoneWrite && { phone: phoneWrite.phone }),
         ...(dto.gender !== undefined && { gender: dto.gender }),
         ...(dto.photo !== undefined && { photo: dto.photo }),
         ...(dto.login !== undefined && { login: dto.login }),
+        ...(phoneWrite &&
+          phoneWrite.login !== undefined &&
+          !loginChanged && { login: phoneWrite.login }),
         // A new password ends every session of the teacher (ADR-0030).
         ...(hashedPassword && passwordWrite(hashedPassword)),
       },
@@ -411,7 +447,10 @@ export class TeachersService {
 
     // Deactivating a teacher closes their salary config and stops their
     // accruals — someone else's payroll, from someone else's branch.
-    await this.assertCallerMayTouchTeacher(id, userId);
+    await assertCallerMayManageUser(this.prisma, userId, id, {
+      ...OTHER_BRANCH_TEACHER,
+      changesStatus: dto.status !== user.status,
+    });
 
     const auditData = await this.statusHistoryService.changeStatus({
       entityType: 'User',
@@ -435,19 +474,8 @@ export class TeachersService {
       select: teacherSelect,
     });
 
-    // Redis: bloklangan user ni belgilash yoki tiklash
-    try {
-      if (
-        dto.status === UserStatus.SUSPENDED ||
-        dto.status === UserStatus.TERMINATED
-      ) {
-        await this.redis.set(`user:blocked:${id}`, '1');
-      } else if (dto.status === UserStatus.ACTIVE) {
-        await this.redis.del(`user:blocked:${id}`);
-      }
-    } catch {
-      // Redis ulanmagan bo'lsa ham status o'zgaradi
-    }
+    // Cut off, or restore, the access token the new status leaves behind.
+    await recordUserBlocked(this.redis, id, isBlockedStatus(dto.status));
 
     // Deactivated / terminated → stop any fixed-monthly payroll for this user.
     if (dto.status !== UserStatus.ACTIVE) {
@@ -493,7 +521,11 @@ export class TeachersService {
       throw new NotFoundException(`O'qituvchi #${id} topilmadi`);
     }
 
-    await this.assertCallerMayTouchTeacher(id, deletedById);
+    // Archiving sets `ARCHIVED` below, so it is a status change.
+    await assertCallerMayManageUser(this.prisma, deletedById, id, {
+      ...OTHER_BRANCH_TEACHER,
+      changesStatus: true,
+    });
 
     // Guruhlardan olib tashlash + tarixga yozish
     const teacherGroups = await this.prisma.groupTeacher.findMany({
@@ -522,23 +554,10 @@ export class TeachersService {
     // Soft delete — status transition emas, arxivlash
     await this.prisma.user.update({
       where: { id },
-      data: {
-        status: UserStatus.ARCHIVED,
-        isActive: false,
-        deletedAt: new Date(),
-        deletedById,
-        statusChangedAt: new Date(),
-        statusChangedById: deletedById,
-        statusChangeReason: "O'chirildi",
-      },
+      data: userArchiveData(deletedById),
     });
 
-    // Redis: bloklangan user belgilash (xatoni e'tiborsiz qoldirish)
-    try {
-      await this.redis.set(`user:blocked:${id}`, '1');
-    } catch {
-      // Redis ulanmagan bo'lsa ham delete ishlaydi
-    }
+    await recordUserBlocked(this.redis, id, true);
 
     // Archived → stop any fixed-monthly payroll for this user.
     this.events.emit(USER_DEACTIVATED_EVENT, {

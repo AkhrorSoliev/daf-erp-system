@@ -159,8 +159,8 @@ describe('operational reads are branch-confined', () => {
         groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
         enrollment: { groupBy: jest.fn().mockResolvedValue([]) },
       };
-      // UsersService takes four collaborators; the fifth was left over from an
-      // older signature and only ever compiled because jest does not typecheck.
+      // One stand-in per constructor parameter: `npm run typecheck` checks
+      // specs, so a stale arity here fails CI even though jest would run it.
       const service = new UsersService(
         prisma,
         {} as any,

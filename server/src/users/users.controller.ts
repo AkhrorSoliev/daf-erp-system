@@ -19,10 +19,12 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ChangePhoneDto } from './dto/change-phone.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { Roles, BranchScope } from '../common/decorators';
+import { Roles, BranchScope, STAFF_ROLES } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
+import { OwnPasswordAttemptGuard } from '../common/guards/own-password-attempt.guard';
 
 @Controller('users')
 export class UsersController {
@@ -54,9 +56,11 @@ export class UsersController {
     return this.usersService.findById(id, companyId, branchScope);
   }
 
+  // Administrators do not manage employees (docs/role-access.md, ADR-0027):
+  // they onboard teachers and cashiers through the Telegram link instead.
   @Post()
   @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   async create(
     @Body() dto: CreateUserDto,
     @CurrentUser('companyId') companyId: number,
@@ -80,6 +84,7 @@ export class UsersController {
   }
 
   @Patch('password')
+  @UseGuards(OwnPasswordAttemptGuard)
   async changePassword(
     @CurrentUser('id') userId: number,
     @Body() dto: ChangePasswordDto,
@@ -108,9 +113,20 @@ export class UsersController {
     return this.authService.logoutOtherSessions(userId, sessionVersion);
   }
 
+  // Declared before `@Patch(':id')`: routes match in declaration order, and
+  // `:id` would take "phone" and fail its ParseIntPipe.
+  @Patch('phone')
+  @UseGuards(RolesGuard, OwnPasswordAttemptGuard)
+  @Roles(...STAFF_ROLES)
+  changePhone(@CurrentUser('id') userId: number, @Body() dto: ChangePhoneDto) {
+    return this.usersService.changeOwnPhone(userId, dto);
+  }
+
+  // Own profile, password and phone go through `profile` / `password` /
+  // `phone` above.
   @Patch(':id')
   @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateUserDto,

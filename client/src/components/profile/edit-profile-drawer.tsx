@@ -17,8 +17,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth, type AuthUser } from "@/hooks/use-auth";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
+import { describeSaveFailure, isPhoneChanged, planProfileSave } from "./profile-save-plan";
 
 interface EditProfileDrawerProps {
   open: boolean;
@@ -29,6 +31,14 @@ interface FormValues {
   firstName: string;
   lastName: string;
   phone: string;
+  currentPassword: string;
+}
+
+function readCookie(name: string) {
+  return document.cookie
+    .split("; ")
+    .find((c) => c.startsWith(`${name}=`))
+    ?.split("=")[1];
 }
 
 function getInitials(name: string) {
@@ -53,11 +63,16 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
       firstName: user?.firstName ?? "",
       lastName: user?.lastName ?? "",
       phone: user?.phone ?? "",
+      currentPassword: "",
     },
+    // A saved phone updates the session, which feeds `values` again; keep
+    // what the person typed in the other fields instead of resetting them.
+    resetOptions: { keepDirtyValues: true },
   });
 
   if (!user) return null;
 
+  const phoneChanged = isPhoneChanged(user.phone, form.watch("phone"));
   const fullName = `${user.firstName} ${user.lastName}`;
   const displayPhoto = photoRemoved ? null : (previewPhoto ?? user.photo);
 
@@ -89,51 +104,47 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
+  function updateSession(changes: Partial<AuthUser>) {
+    const token = readCookie("token");
+    const refreshToken = readCookie("refreshToken");
+    if (token && refreshToken) {
+      setAuth({ ...user!, ...changes }, token, refreshToken);
+    }
+  }
+
   async function onSubmit(values: FormValues) {
+    const plan = planProfileSave({ user: user!, values, previewPhoto, photoRemoved });
+    if (!plan.phone && !plan.profile) {
+      onClose();
+      return;
+    }
+
     setSaving(true);
+    let saved: Partial<AuthUser> = {};
     try {
-      const payload: Record<string, string> = {};
-
-      if (values.firstName !== user!.firstName) payload.firstName = values.firstName;
-      if (values.lastName !== user!.lastName) payload.lastName = values.lastName;
-      if (values.phone !== (user!.phone ?? "")) payload.phone = values.phone;
-      if (photoRemoved) {
-        payload.photo = "";
-      } else if (previewPhoto && previewPhoto !== user!.photo) {
-        payload.photo = previewPhoto;
+      // The phone goes first: it is the step that can be refused (a wrong
+      // password), and a refusal then leaves nothing else half-saved.
+      if (plan.phone) {
+        const { data } = await api.patch("/users/phone", plan.phone);
+        saved = { ...saved, ...data };
       }
-
-      if (Object.keys(payload).length === 0) {
-        onClose();
-        return;
+      if (plan.profile) {
+        const { data } = await api.patch("/users/profile", plan.profile);
+        saved = { ...saved, ...data };
       }
-
-      const { data: updatedUser } = await api.patch("/users/profile", payload);
-
-      // Update auth state with new user data
-      const token = document.cookie
-        .split("; ")
-        .find((c) => c.startsWith("token="))
-        ?.split("=")[1];
-      const refreshToken = document.cookie
-        .split("; ")
-        .find((c) => c.startsWith("refreshToken="))
-        ?.split("=")[1];
-
-      if (token && refreshToken) {
-        setAuth(
-          { ...user!, ...updatedUser },
-          token,
-          refreshToken,
-        );
-      }
-
       toast.success("Profil muvaffaqiyatli yangilandi");
       setPreviewPhoto(null);
       onClose();
-    } catch {
-      toast.error("Profilni yangilashda xatolik yuz berdi");
+    } catch (error) {
+      toast.error(
+        describeSaveFailure({
+          phoneSaved: saved.phone !== undefined,
+          reason: getErrorMessage(error, "Profilni yangilashda xatolik yuz berdi"),
+        }),
+      );
     } finally {
+      // Whatever the server accepted is real, even if a later step failed.
+      if (Object.keys(saved).length > 0) updateSession(saved);
       setSaving(false);
     }
   }
@@ -258,6 +269,12 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
                 <Controller
                   name="phone"
                   control={form.control}
+                  rules={{
+                    validate: (value) =>
+                      !isPhoneChanged(user.phone, value) ||
+                      /^\d{9}$/.test(value) ||
+                      "Telefon raqam 9 ta raqamdan iborat bo'lishi kerak",
+                  }}
                   render={({ field }) => (
                     <PhoneInput
                       id="phone"
@@ -266,7 +283,39 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
                     />
                   )}
                 />
+                {form.formState.errors.phone && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.phone.message}
+                  </p>
+                )}
               </div>
+
+              {phoneChanged && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="currentPassword">Joriy parol</Label>
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="Joriy parolingiz"
+                    {...form.register("currentPassword", {
+                      validate: (value) =>
+                        !isPhoneChanged(user.phone, form.getValues("phone")) ||
+                        value.length > 0 ||
+                        "Joriy parolni kiriting",
+                    })}
+                  />
+                  {form.formState.errors.currentPassword ? (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.currentPassword.message}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Raqamni o&apos;zgartirish uchun joriy parolingizni kiriting.
+                    </p>
+                  )}
+                </div>
+              )}
             </section>
           </form>
         </div>

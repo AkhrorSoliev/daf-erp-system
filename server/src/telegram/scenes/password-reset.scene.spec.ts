@@ -104,3 +104,99 @@ describe("password-reset.scene — kontakt orqali bog'lanish", () => {
     expect(ctx.session.data.studentId).toBe(12345);
   });
 });
+
+/** A step that throws `error`, noting whether the lock was held when it ran. */
+function failingStep(ctx: any, error: Error) {
+  return jest.fn(async () => {
+    ctx.lockHeldWhenFailed = ctx.session.processing;
+    throw error;
+  });
+}
+
+/** A tap on "✅ Ha, parolni tiklash" by a linked student (`step 1`). */
+function buildConfirmCtx(studentId: number) {
+  const update = {
+    update_id: 4,
+    callback_query: {
+      id: 'cbq4',
+      data: 'pwd_reset_confirm',
+      from: { id: 999, is_bot: false, first_name: 'A' },
+      message: {
+        message_id: 4,
+        date: 0,
+        chat: { id: 555333, type: 'private' },
+        text: 'Yangi parol yaratamizmi?',
+      },
+      chat_instance: 'x',
+    },
+  };
+  const ctx = new Context(update as any, {} as any, BOT_INFO) as any;
+  ctx.session = { step: 1, data: { studentId }, processing: false };
+  ctx.scene = { leave: jest.fn().mockResolvedValue(undefined) };
+  ctx.answerCbQuery = jest.fn().mockResolvedValue(undefined);
+  ctx.editMessageText = jest.fn().mockResolvedValue(undefined);
+  ctx.reply = jest.fn().mockResolvedValue({ message_id: 5 });
+  return ctx;
+}
+
+/**
+ * `pwd_reset_confirm` holds `processing` while it works, and `/start` ignores
+ * a chat whose flag is set. A step that threw with the flag set therefore shut
+ * the person out of the bot until their 24-hour session expired.
+ */
+describe('password-reset.scene — a failed step releases the lock', () => {
+  type Deps = {
+    prisma: { student: { findFirst: jest.Mock } };
+    redis: { ttl: jest.Mock; get: jest.Mock };
+  };
+
+  it.each<{
+    what: string;
+    fail: (ctx: any, deps: Deps, error: Error) => void;
+  }>([
+    {
+      what: 'answering the button tap',
+      fail: (ctx, _deps, error) => {
+        ctx.answerCbQuery = failingStep(ctx, error);
+      },
+    },
+    {
+      what: 'the throttle check',
+      fail: (ctx, deps, error) => {
+        deps.redis.ttl = failingStep(ctx, error);
+      },
+    },
+    {
+      what: 'the student lookup',
+      fail: (ctx, deps, error) => {
+        deps.prisma.student.findFirst = failingStep(ctx, error);
+      },
+    },
+  ])(
+    'pwd_reset_confirm releases the lock when $what fails',
+    async ({ fail }) => {
+      const deps: Deps = {
+        prisma: { student: { findFirst: jest.fn().mockResolvedValue(null) } },
+        // No cooldown, nothing counted today: the throttle lets it through.
+        redis: {
+          ttl: jest.fn().mockResolvedValue(-2),
+          get: jest.fn().mockResolvedValue(null),
+        },
+      };
+      const ctx = buildConfirmCtx(12345);
+      const error = new Error('Request failed');
+      fail(ctx, deps, error);
+      const scene = createPasswordResetScene(
+        deps.prisma as any,
+        deps.redis as any,
+        {} as any,
+        {} as any,
+      );
+
+      await expect(scene.middleware()(ctx, async () => {})).rejects.toBe(error);
+
+      expect(ctx.lockHeldWhenFailed).toBe(true);
+      expect(ctx.session.processing).toBe(false);
+    },
+  );
+});

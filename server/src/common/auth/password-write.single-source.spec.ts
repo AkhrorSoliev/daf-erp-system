@@ -53,11 +53,6 @@ const NOT_A_USER_PASSWORD: { file: string; where: string; why: string }[] = [
     where: 'buildStaffCredentialsMessage',
     why: 'the welcome message for the account just created',
   },
-  {
-    file: 'src/telegram/scenes/teacher-registration.scene.ts',
-    where: 'buildStaffCredentialsMessage',
-    why: 'the welcome message for the account just created',
-  },
 ];
 
 const FIX =
