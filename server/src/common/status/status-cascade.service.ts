@@ -20,6 +20,12 @@ interface CascadeResult {
   toStatus: string;
 }
 
+/**
+ * Why an enrolment closed when its group was deleted — shown to users. The
+ * one-off repair of older deletions writes the same words.
+ */
+export const GROUP_DELETED_REASON = "Guruh o'chirildi";
+
 @Injectable()
 export class StatusCascadeService {
   private readonly logger = new Logger(StatusCascadeService.name);
@@ -32,10 +38,92 @@ export class StatusCascadeService {
   ) {}
 
   /**
+   * Closes every live enrolment of a group that is being deleted — ACTIVE and
+   * FROZEN alike — as DROPPED, on the CALLER's transaction, so the group and
+   * its enrolments are archived together or not at all.
+   *
+   * Everything else closing an enrolment does happens here too: the unused
+   * prepaid lessons and the rest of the month's charge go back to the balance,
+   * the state log gets a DROPPED row, and the removal is written to each
+   * student's history and to the group's. Enrolments already closed are not
+   * selected, so a second run changes nothing.
+   */
+  async cascadeGroupDeletion(
+    tx: Prisma.TransactionClient,
+    params: {
+      groupId: string;
+      groupName: string;
+      companyId?: number;
+      userId: number;
+      at: Date;
+    },
+  ): Promise<{ count: number }> {
+    const filter: Prisma.EnrollmentWhereInput = {
+      groupId: params.groupId,
+      deletedAt: null,
+      status: { in: [EnrollmentStatus.ACTIVE, EnrollmentStatus.FROZEN] },
+    };
+
+    const live = await tx.enrollment.findMany({
+      where: filter,
+      select: {
+        studentId: true,
+        student: { select: { firstName: true, lastName: true } },
+      },
+    });
+    for (const e of live) {
+      await this.entityHistoryService.recordDelete({
+        entityType: 'Student',
+        entityId: e.studentId,
+        oldValues: {
+          guruh: params.groupName,
+          guruhId: params.groupId,
+          action: 'GURUHDAN_CHIQARILDI',
+          sabab: GROUP_DELETED_REASON,
+        },
+        changedById: params.userId,
+        companyId: params.companyId,
+        tx,
+      });
+      await this.entityHistoryService.recordDelete({
+        entityType: 'Group',
+        entityId: params.groupId,
+        oldValues: {
+          action: 'OQUVCHI_CHIQARILDI',
+          oquvchi: `${e.student.firstName} ${e.student.lastName}`.trim(),
+          oquvchiId: e.studentId,
+          sabab: GROUP_DELETED_REASON,
+        },
+        changedById: params.userId,
+        companyId: params.companyId,
+        tx,
+      });
+    }
+
+    return this.cascadeEnrollmentStatus(
+      filter,
+      EnrollmentStatus.DROPPED,
+      GROUP_DELETED_REASON,
+      params.userId,
+      {
+        statusChangedAt: params.at,
+        statusChangedById: params.userId,
+        statusChangeReason: GROUP_DELETED_REASON,
+      },
+      tx,
+    );
+  }
+
+  /**
    * Cascade enrollment status update + activity-report state log entries.
    * Use this in place of `prisma.enrollment.updateMany` whenever the cascade
    * mutates enrollment status, so that historical reports can replay the
    * transition. Returns the same shape as updateMany.
+   *
+   * With `tx` everything runs on the caller's transaction and a failed money
+   * step propagates, rolling the caller back. Without it each enrolment's
+   * money step gets its own transaction and a failure is logged, so one bad
+   * enrolment cannot hold up a branch-wide batch.
    */
   private async cascadeEnrollmentStatus(
     filter: Prisma.EnrollmentWhereInput,
@@ -43,8 +131,10 @@ export class StatusCascadeService {
     reason: string | null,
     userId: number | undefined,
     auditFields: Prisma.EnrollmentUncheckedUpdateManyInput,
+    tx?: Prisma.TransactionClient,
   ): Promise<{ count: number }> {
-    const matches = await this.prisma.enrollment.findMany({
+    const db = tx ?? this.prisma;
+    const matches = await db.enrollment.findMany({
       where: filter,
       select: {
         id: true,
@@ -59,11 +149,12 @@ export class StatusCascadeService {
 
     // Closing an enrollment (DROPPED/COMPLETED) strands any unused prepaid
     // lessons — convert them back to balance first, the same rule as
-    // removeFromGroup()/transfer. Each refund runs in its own Serializable
-    // tx (createAdjustment locks the student row). Without this, cascade
-    // paths (student EXPELLED/ARCHIVED, group CANCELLED/COMPLETED, branch
-    // close, course archive) silently lose the student's money — the
-    // 2026-06 audit found 7 production victims (~630k so'm).
+    // removeFromGroup()/transfer. Each refund runs in a Serializable tx —
+    // its own, or the caller's when one is passed (createAdjustment locks
+    // the student row). Without this, cascade paths (student
+    // EXPELLED/ARCHIVED, group CANCELLED/COMPLETED/deleted, branch close,
+    // course archive) silently lose the student's money — the 2026-06 audit
+    // found 7 production victims (~630k so'm).
     //
     // The MONTHLY counterpart runs in the SAME per-enrollment tx, right
     // alongside the LESSON_PACK refund — mirrors removeFromGroup(). The two
@@ -92,46 +183,37 @@ export class StatusCascadeService {
       // the SAME departure event. One clock for the whole batch.
       const departureToday = tashkentDateStr(departureDate);
       for (const m of matches) {
-        // One enrollment's refund failing (DB hiccup, lock timeout) must
-        // not abort the cascade for the rest — same resilience pattern as
-        // `MonthlyChargeService.createChargesForPeriod`. Before this
-        // wrapping, an uncaught throw here (e.g. a genuinely backdated
-        // departureDate, or any other error) would bail out of the `for`
-        // loop entirely, so `enrollment.updateMany` below would NEVER run —
-        // leaving every earlier iteration's refund already committed
-        // against an enrollment still sitting ACTIVE.
-        try {
-          await this.prisma.$transaction(
-            async (tx) => {
-              await this.enrollmentBillingService.refundPrepaidToBalance(tx, {
-                enrollmentId: m.id,
-                reason: reason
-                  ? `Qoldiq oldindan to'langan darslar balansga qaytarildi (${reason})`
-                  : undefined,
-                performedById: userId,
-              });
-              await this.monthlyChargeService.reverseChargeForDeparture(tx, {
-                enrollmentId: m.id,
-                departureDate,
-                today: departureToday,
-                companyId: m.group.companyId,
-                reason: reason ?? 'Cascade orqali guruhdan chiqarildi',
-                performedById: userId,
-              });
-            },
-            {
-              isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-              maxWait: 10_000,
-              timeout: 15_000,
-            },
-          );
-        } catch (err) {
-          this.logger.error(
-            `Cascade: enrollment=${m.id} uchun pul qaytarish yiqildi ` +
-              `(newStatus=${newStatus}) — qolgan yozilishlar davom etadi`,
-            err,
-          );
-        }
+        // Without a caller's transaction (the status-change cascades), one
+        // enrollment's refund failing (DB hiccup, lock timeout) must not
+        // abort the cascade for the rest. Before `runMoneyStep` caught it, an
+        // uncaught throw here (e.g. a genuinely backdated departureDate, or
+        // any other error) would bail out of the `for` loop entirely, so
+        // `enrollment.updateMany` below would NEVER run — leaving every
+        // earlier iteration's refund already committed against an enrollment
+        // still sitting ACTIVE. On a caller's transaction the failure rolls
+        // everything back instead.
+        await this.runMoneyStep(
+          tx,
+          async (client) => {
+            await this.enrollmentBillingService.refundPrepaidToBalance(client, {
+              enrollmentId: m.id,
+              reason: reason
+                ? `Qoldiq oldindan to'langan darslar balansga qaytarildi (${reason})`
+                : undefined,
+              performedById: userId,
+            });
+            await this.monthlyChargeService.reverseChargeForDeparture(client, {
+              enrollmentId: m.id,
+              departureDate,
+              today: departureToday,
+              companyId: m.group.companyId,
+              reason: reason ?? 'Cascade orqali guruhdan chiqarildi',
+              performedById: userId,
+            });
+          },
+          `Cascade: enrollment=${m.id} uchun pul qaytarish yiqildi ` +
+            `(newStatus=${newStatus}) — qolgan yozilishlar davom etadi`,
+        );
       }
     }
 
@@ -166,47 +248,40 @@ export class StatusCascadeService {
           // Bitta yozilishning qayta hisob-kitobi yiqilishi qolgan
           // yozilishlarni to'xtatmasligi kerak — yuqoridagi DROPPED/COMPLETED
           // blokidagi bilan bir xil chidamlilik namunasi.
-          try {
-            await this.prisma.$transaction(
-              async (tx) => {
-                await this.monthlyChargeService.restoreChargeForReturn(tx, {
-                  enrollmentId: m.id,
-                  returnDate,
-                  today: returnToday,
-                  companyId: m.group.companyId,
-                  reason: reason ?? 'Cascade orqali muzlatishdan chiqarildi',
-                  performedById: userId,
-                });
-              },
-              {
-                isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-                maxWait: 10_000,
-                timeout: 15_000,
-              },
-            );
-          } catch (err) {
-            this.logger.error(
-              `Cascade: enrollment=${m.id} uchun qayta hisoblash yiqildi ` +
-                `(newStatus=${newStatus}) — qolgan yozilishlar davom etadi`,
-              err,
-            );
-          }
+          await this.runMoneyStep(
+            tx,
+            async (client) => {
+              await this.monthlyChargeService.restoreChargeForReturn(client, {
+                enrollmentId: m.id,
+                returnDate,
+                today: returnToday,
+                companyId: m.group.companyId,
+                reason: reason ?? 'Cascade orqali muzlatishdan chiqarildi',
+                performedById: userId,
+              });
+            },
+            `Cascade: enrollment=${m.id} uchun qayta hisoblash yiqildi ` +
+              `(newStatus=${newStatus}) — qolgan yozilishlar davom etadi`,
+          );
         }
       }
     }
 
-    const result = await this.prisma.enrollment.updateMany({
+    const result = await db.enrollment.updateMany({
       where: filter,
       data: { status: newStatus, ...auditFields },
     });
 
     if (matches.length > 0) {
-      const now = new Date();
-      await this.prisma.enrollmentStateLog.createMany({
+      // The log row and the enrolment's own `statusChangedAt` name the same
+      // moment, so a report replaying the log agrees with the row.
+      const transitionAt =
+        (auditFields.statusChangedAt as Date | undefined) ?? new Date();
+      await db.enrollmentStateLog.createMany({
         data: matches.map((m) => ({
           enrollmentId: m.id,
           status: newStatus,
-          transitionAt: now,
+          transitionAt,
           reason,
           changedById: userId,
         })),
@@ -214,6 +289,31 @@ export class StatusCascadeService {
     }
 
     return result;
+  }
+
+  /**
+   * Runs one enrolment's money step. On the caller's transaction it simply
+   * runs and a failure propagates: the caller rolls back, and Postgres cannot
+   * carry on inside a failed transaction anyway. Without one it gets its own
+   * Serializable transaction and a failure is logged, so the rest of a batch
+   * still closes — the resilience pattern of
+   * `MonthlyChargeService.createChargesForPeriod`.
+   */
+  private async runMoneyStep(
+    tx: Prisma.TransactionClient | undefined,
+    step: (client: Prisma.TransactionClient) => Promise<void>,
+    failureMessage: string,
+  ): Promise<void> {
+    if (tx) return step(tx);
+    try {
+      await this.prisma.$transaction(step, {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10_000,
+        timeout: 15_000,
+      });
+    } catch (err) {
+      this.logger.error(failureMessage, err);
+    }
   }
 
   /**
@@ -478,10 +578,10 @@ export class StatusCascadeService {
     }
 
     if (entityType === 'Group') {
-      if (
-        newStatus === GroupStatus.CANCELLED ||
-        newStatus === GroupStatus.ARCHIVED
-      ) {
+      // No status change leads to ARCHIVED: a group is archived only by
+      // deletion, which closes its enrolments inside its own transaction
+      // (`cascadeGroupDeletion`, called from `GroupsWriteService.delete`).
+      if (newStatus === GroupStatus.CANCELLED) {
         const enrollResult = await this.cascadeEnrollmentStatus(
           {
             groupId: entityId,
