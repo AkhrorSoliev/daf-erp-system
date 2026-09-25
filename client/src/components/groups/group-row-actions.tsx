@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { MoreHorizontal, Pencil, Trash2, RefreshCw, History } from "lucide-react";
-import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,17 +11,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Textarea } from "@/components/ui/textarea";
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -30,8 +18,7 @@ import {
 import { ChangeStatusDialog } from "@/components/shared/change-status-dialog";
 import { StatusHistoryDialog } from "@/components/shared/status-history-dialog";
 import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
-import api from "@/lib/api";
-import { getErrorMessage } from "@/lib/get-error-message";
+import { GroupDeleteDialog } from "./group-delete-dialog";
 
 interface GroupRowActionsProps {
   group: GroupData;
@@ -44,23 +31,6 @@ export function GroupRowActions({ group, onDeleted, onStatusChanged }: GroupRowA
   const [showDelete, setShowDelete] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteReason, setDeleteReason] = useState("");
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await api.delete(`/groups/${group.id}`);
-      toast.success("Guruh muvaffaqiyatli o'chirildi");
-      setShowDelete(false);
-      onDeleted?.(group.id);
-    } catch (error) {
-      toast.error(getErrorMessage(error, "O'chirishda xatolik yuz berdi"));
-    } finally {
-      setDeleting(false);
-      setDeleteReason("");
-    }
-  };
 
   return (
     <>
@@ -104,37 +74,12 @@ export function GroupRowActions({ group, onDeleted, onStatusChanged }: GroupRowA
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={showDelete} onOpenChange={setShowDelete}>
-        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>O&apos;chirishni tasdiqlang</AlertDialogTitle>
-            <AlertDialogDescription>
-              <strong>{group.name}</strong> guruhini arxivga o&apos;tkazilsinmi?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="px-6 pb-2">
-            <Textarea
-              placeholder="Sabab yozing (ixtiyoriy)..."
-              value={deleteReason}
-              onChange={(e) => setDeleteReason(e.target.value)}
-              rows={2}
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Bekor qilish</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                handleDelete();
-              }}
-              disabled={deleting}
-              variant="destructive"
-            >
-              {deleting ? "O'chirilmoqda..." : "O'chirish"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <GroupDeleteDialog
+        group={group}
+        open={showDelete}
+        onOpenChange={setShowDelete}
+        onDeleted={onDeleted}
+      />
 
       <ChangeStatusDialog
         open={showStatus}
