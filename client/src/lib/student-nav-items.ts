@@ -163,8 +163,14 @@ export const moreRoutes = [
  * The legacy lesson page (what `SeansEkrani` falls back to for a lesson
  * with no engine questions) lives on the same route and loses the nav
  * too — acceptable, since that page has its own back header.
+ *
+ * The docked radio player yields the same edge on the same routes (second
+ * finding, 2026-09): it floats 96px up to clear the nav pill, so with the
+ * pill gone it sat over the panel's "To'g'ri / Xato" feedback. The lesson
+ * header carries `RadioSessionToggle` instead, because nothing pauses the
+ * radio for the lesson's own audio.
  */
-export function isBottomNavHiddenRoute(pathname: string): boolean {
+export function isExerciseSessionRoute(pathname: string): boolean {
   return (
     /^\/portal\/lernen\/lessons\/[^/]+\/?$/.test(pathname) ||
     /^\/portal\/lernen\/wiederholung\/?$/.test(pathname)
