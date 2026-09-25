@@ -4,9 +4,26 @@ import { useState } from "react";
 import { Copy, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
+import { tryCopyPendingText } from "@/lib/clipboard";
 import { formatNumber, formatPhone } from "@/lib/format-utils";
 import type { OquvchilarFiltri } from "./oquvchilar-filtr";
+import type { MarkazTelefonlar } from "./types";
 import { markazTelefonlarniOl } from "./use-daf-center";
+
+function royxatMatni(t: MarkazTelefonlar): string {
+  return t.qatorlar
+    .map((q) =>
+      [
+        q.ism,
+        q.guruh ?? "guruhsiz",
+        formatPhone(q.telefon),
+        q.otaOnaTelefoni ? `ota-onasi: ${formatPhone(q.otaOnaTelefoni)}` : null,
+      ]
+        .filter(Boolean)
+        .join(" — "),
+    )
+    .join("\n");
+}
 
 /**
  * Joriy filtr bo'yicha HAMMA o'quvchi (joriy sahifa emas) — har o'quvchi bir
@@ -19,31 +36,25 @@ export function DafRoyxatNusxalash({ filtr, jami }: { filtr: OquvchilarFiltri; j
 
   async function nusxala() {
     setYuklanmoqda(true);
-    try {
-      const t = await markazTelefonlarniOl(filtr);
-      const matn = t.qatorlar
-        .map((q) =>
-          [
-            q.ism,
-            q.guruh ?? "guruhsiz",
-            formatPhone(q.telefon),
-            q.otaOnaTelefoni ? `ota-onasi: ${formatPhone(q.otaOnaTelefoni)}` : null,
-          ]
-            .filter(Boolean)
-            .join(" — "),
-        )
-        .join("\n");
-      await navigator.clipboard.writeText(matn);
-      toast.success(
-        t.qisqartirildi
-          ? `${formatNumber(t.qatorlar.length)} qator nusxalandi — ro'yxat qisqartirildi (jami ${formatNumber(t.jami)})`
-          : `${formatNumber(t.qatorlar.length)} qator nusxalandi`,
-      );
-    } catch {
+    const royxat = markazTelefonlarniOl(filtr);
+    // Safari refuses a clipboard write that starts after an await, so the
+    // write starts here, inside the click, and completes when the list arrives.
+    const nusxa = await tryCopyPendingText(royxat.then(royxatMatni));
+    setYuklanmoqda(false);
+    if (nusxa.status === "failed" || nusxa.status === "empty") {
       toast.error("Nusxalab bo'lmadi");
-    } finally {
-      setYuklanmoqda(false);
+      return;
     }
+    if (nusxa.status === "refused") {
+      toast.error("Brauzer ro'yxatni nusxalashga ruxsat bermadi — qaytadan urinib ko'ring");
+      return;
+    }
+    const t = await royxat;
+    toast.success(
+      t.qisqartirildi
+        ? `${formatNumber(t.qatorlar.length)} qator nusxalandi — ro'yxat qisqartirildi (jami ${formatNumber(t.jami)})`
+        : `${formatNumber(t.qatorlar.length)} qator nusxalandi`,
+    );
   }
 
   return (
