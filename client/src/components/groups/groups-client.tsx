@@ -292,6 +292,7 @@ export function GroupsClient() {
               <TooltipTrigger asChild>
                 <Button
                   onClick={openAddDrawer}
+                  data-tour="group-add"
                   className="size-9 sm:size-auto sm:h-9 sm:px-4 shrink-0"
                 >
                   <Plus className="size-4 sm:mr-2" />

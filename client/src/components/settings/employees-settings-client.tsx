@@ -210,7 +210,7 @@ export function EmployeesSettingsClient() {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="sm" onClick={openAddDrawer}>
+                <Button size="sm" data-tour="employee-add" onClick={openAddDrawer}>
                   <Plus className="mr-1.5 h-4 w-4" />
                   Yangi xodim
                 </Button>

@@ -136,6 +136,7 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
             <Button
               size="sm"
               variant="outline"
+              data-tour="branch-edit"
               onClick={() => openDrawer(branch)}
             >
               <Pencil className="mr-1.5 h-4 w-4" />

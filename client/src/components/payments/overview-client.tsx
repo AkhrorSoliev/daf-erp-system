@@ -75,7 +75,7 @@ export function OverviewClient() {
           {canExport && (
             <ExportOptionsPopover startStr={startStr} endStr={endStr} />
           )}
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button data-tour="payment-record" onClick={() => setDialogOpen(true)}>
             <Plus className="size-4 mr-2" />
             To&apos;lov qayd qilish
           </Button>

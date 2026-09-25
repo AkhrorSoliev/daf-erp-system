@@ -5,6 +5,7 @@ import { isTeacherOnly } from "@/components/dashboard/dashboard-home-visibility"
 import { HomeOverview } from "@/components/dashboard/home-overview";
 import { HomeSkeleton } from "@/components/dashboard/home-skeleton";
 import { ScheduleClient } from "@/components/dashboard/schedule-client";
+import { BranchLaunchCard } from "@/components/dashboard/launch/branch-launch-card";
 
 /**
  * `/` sahifasining yo'naltirgichi — o'zi hech narsa chizmaydi.
@@ -23,5 +24,13 @@ export function DashboardClient() {
 
   const roleIds = user.roles.map((r) => r.id);
   if (isTeacherOnly(roleIds)) return <ScheduleClient />;
-  return <HomeOverview />;
+  // The card fetches on its own — it neither waits for the panel
+  // (`/dashboard/summary`) to load nor fails along with it. Renders `null`
+  // when hidden, leaving no empty space.
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      <BranchLaunchCard />
+      <HomeOverview />
+    </div>
+  );
 }

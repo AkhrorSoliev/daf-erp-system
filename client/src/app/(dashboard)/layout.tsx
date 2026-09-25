@@ -2,6 +2,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { BranchScopedMain } from "@/components/providers/branch-scoped-main";
+import { SpotlightHost } from "@/components/spotlight/spotlight-host";
 
 export default function DashboardLayout({
   children,
@@ -18,6 +19,10 @@ export default function DashboardLayout({
             React Query reload. The header stays outside it, so the switcher is
             not unmounted by its own selection. */}
         <BranchScopedMain>{children}</BranchScopedMain>
+        {/* The tour starts only after a page change — so it lives outside
+            `<main>`: it does not remount on a branch switch, and its own
+            store clears itself via `registerBranchScopedStore`. */}
+        <SpotlightHost />
       </SidebarInset>
     </SidebarProvider>
   );

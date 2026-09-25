@@ -51,6 +51,7 @@ import {
 } from "./salary-utils";
 import { SalaryInactiveBadge } from "./salary-inactive-badge";
 import { SalarySettingsSheet } from "./salary-settings-sheet";
+import type { SalarySettingsAccess } from "./salary-settings-access";
 import { SettleMonthDialog } from "./salary-settle-month-dialog";
 import { SalaryAdvanceDialog } from "./salary-advance-dialog";
 import {
@@ -121,6 +122,8 @@ interface Props {
   isCeo: boolean;
   /** CEO/BD — may add advances (backed by the CEO/BD expense-create endpoint). */
   canPay: boolean;
+  /** ⚙ Sozlamalar: CEO sees everything, a director only teacher rates (ADR-0033). */
+  settingsAccess: SalarySettingsAccess;
   onOpenBreakdown: (paymentId: string) => void;
   refreshKey: number;
   bumpRefresh: () => void;
@@ -193,6 +196,7 @@ function DrillDownAmount({
 export function SalaryMonthlyView({
   isCeo,
   canPay,
+  settingsAccess,
   onOpenBreakdown,
   refreshKey,
   bumpRefresh,
@@ -304,10 +308,11 @@ export function SalaryMonthlyView({
             Oylik berilganini tasdiqlash ({unpaidCount} ta)
           </Button>
         )}
-        {isCeo && (
+        {settingsAccess.canOpen && (
           <Button
             variant="outline"
             className="shrink-0"
+            data-tour="salary-settings"
             onClick={() => setSettingsOpen(true)}
           >
             <Settings2 className="size-4" />
@@ -640,13 +645,14 @@ export function SalaryMonthlyView({
         />
       )}
 
-      {/* Settings (rate rules + cycle day) — CEO */}
-      {isCeo && (
+      {/* Settings — CEO sees everything; a director only their own branch's teacher rates (ADR-0033) */}
+      {settingsAccess.canOpen && (
         <SalarySettingsSheet
           open={settingsOpen}
           onOpenChange={setSettingsOpen}
           period={data?.period ?? null}
           onChanged={bumpRefresh}
+          access={settingsAccess}
         />
       )}
 

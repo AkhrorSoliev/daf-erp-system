@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { ChevronsUpDown, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,12 +16,14 @@ interface GroupRoomSelectProps {
   value: string;
   onChange: (id: string) => void;
   rooms: AvailableRoom[];
+  emptyState?: ReactNode;
 }
 
 export function GroupRoomSelect({
   value,
   onChange,
   rooms,
+  emptyState,
 }: GroupRoomSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -43,9 +45,11 @@ export function GroupRoomSelect({
 
   if (rooms.length === 0) {
     return (
-      <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
-        Hozircha xona yo&apos;q
-      </p>
+      emptyState ?? (
+        <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
+          Hozircha xona yo&apos;q
+        </p>
+      )
     );
   }
 

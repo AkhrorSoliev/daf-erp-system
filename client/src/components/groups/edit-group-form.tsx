@@ -37,6 +37,9 @@ import {
 import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useScheduleAvailability } from "@/hooks/use-schedule-availability";
+import { useAuth } from "@/hooks/use-auth";
+import { groupFormEmptyHints, type EmptyHint } from "./group-form-empty-hints";
+import { SelectEmptyState } from "./select-empty-state";
 import api from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 
@@ -57,6 +60,21 @@ export function EditGroupForm({
 }: EditGroupFormProps) {
   const { setSubmitting, setHasConflict } = useEditGroup();
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
+
+  // Pull `user` and build the array outside the selector: `.map()` inside a
+  // selector returns a new array every render, which zustand v5 turns into
+  // an infinite render loop (the `home-overview.tsx` pattern).
+  const user = useAuth((s) => s.user);
+  const roleIds = user?.roles.map((r) => r.id) ?? [];
+  const emptyHints = groupFormEmptyHints(roleIds, selectedBranch?.id ?? null);
+  // The drawer closes when the link is clicked — otherwise `useEditGroup.open`
+  // would stay true and the form would pop back open on returning to /groups.
+  const renderEmpty = (hint: EmptyHint) => (
+    <SelectEmptyState
+      text={hint.text}
+      action={hint.action && { ...hint.action, onNavigate: onClose }}
+    />
+  );
 
   const [courses, setCourses] = useState<CourseOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -309,6 +327,7 @@ export function EditGroupForm({
               onChange={field.onChange}
               courses={courses}
               error={form.formState.errors.courseId?.message}
+              emptyState={renderEmpty(emptyHints.course)}
             />
           )}
         />
@@ -391,6 +410,7 @@ export function EditGroupForm({
                 value={field.value ?? ""}
                 onChange={field.onChange}
                 rooms={smartRooms}
+                emptyState={renderEmpty(emptyHints.room)}
               />
             )}
           />
@@ -407,6 +427,7 @@ export function EditGroupForm({
                 value={field.value}
                 onChange={field.onChange}
                 teachers={smartTeachers}
+                emptyState={renderEmpty(emptyHints.teacher)}
               />
             )}
           />

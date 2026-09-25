@@ -75,6 +75,12 @@ interface Props {
   employee: SimpleEmployee | null;
   onClose: () => void;
   onSaved: () => void;
+  /** Deactivating a rate — CEO only (ADR-0033). */
+  canDeactivate?: boolean;
+  /** FIXED_MONTHLY is CEO-only (ADR-0033); a director offering it would 403 on submit. */
+  allowMonthly?: boolean;
+  /** A director's `effectiveFrom` cannot precede the current payroll period (ADR-0033); the CEO has no minimum. */
+  minEffectiveFrom?: Date;
 }
 
 /**
@@ -83,7 +89,15 @@ interface Props {
  * form to add a new rule. Mirrors the dropped Dialog but lives in a
  * dedicated panel so the parent page keeps its filter context.
  */
-export function SalaryConfigRowSheet({ userId, employee, onClose, onSaved }: Props) {
+export function SalaryConfigRowSheet({
+  userId,
+  employee,
+  onClose,
+  onSaved,
+  canDeactivate = true,
+  allowMonthly = true,
+  minEffectiveFrom,
+}: Props) {
   const open = !!userId && !!employee;
   const isTeacher =
     employee?.roles.some((r) => r?.id === TEACHER_ROLE_ID) ?? false;
@@ -309,19 +323,21 @@ export function SalaryConfigRowSheet({ userId, employee, onClose, onSaved }: Pro
                           </p>
                         )}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeactivate(c.id)}
-                        disabled={deletingId === c.id}
-                        className="text-destructive hover:text-destructive shrink-0"
-                      >
-                        {deletingId === c.id ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="size-4" />
-                        )}
-                      </Button>
+                      {canDeactivate && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeactivate(c.id)}
+                          disabled={deletingId === c.id}
+                          className="text-destructive hover:text-destructive shrink-0"
+                        >
+                          {deletingId === c.id ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="size-4" />
+                          )}
+                        </Button>
+                      )}
                     </li>
                   );
                 })}
@@ -433,9 +449,11 @@ export function SalaryConfigRowSheet({ userId, employee, onClose, onSaved }: Pro
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="FIXED_MONTHLY">
-                    Oylik (qattiq summa)
-                  </SelectItem>
+                  {allowMonthly && (
+                    <SelectItem value="FIXED_MONTHLY">
+                      Oylik (qattiq summa)
+                    </SelectItem>
+                  )}
                   {isTeacher && (
                     <>
                       <SelectItem value="PERCENTAGE">Foiz (%)</SelectItem>
@@ -493,6 +511,7 @@ export function SalaryConfigRowSheet({ userId, employee, onClose, onSaved }: Pro
                 onChange={setEffectiveFrom}
                 disabled={submitting}
                 placeholder="Bugundan boshlab"
+                minDate={minEffectiveFrom}
               />
             </div>
           </section>
