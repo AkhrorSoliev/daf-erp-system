@@ -86,10 +86,13 @@ Taqiqlanadi:
 **Narx:** muzlatish 60 kun kutilgani uchun oy natijasi 60 kundan keyingina
 yakunlanadi: dinamikada joriy oydan tashqari oxirgi ikki oy ham dastlabki
 ko'rinadi.
-Status o'tishlarida `FROZEN` dan faqat `ACTIVE` yoki `ARCHIVED` ga o'tiladi:
-muzlatilgan o'quvchi chetlatishdan oldin faollashtiriladi. Shuning uchun
+Muzlatilgan o'quvchini to'g'ridan-to'g'ri chetlatish (`FROZEN → EXPELLED`)
+2026-09-25 da CEO qarori bilan ruxsat etildi (PR #564). Muzlatish bilan
+chetlatish orasida qaytish bo'lmagani uchun bu bitta ketish — muzlatilgan
+oyda sanaladi. Bungacha o'quvchi avval faollashtirilardi, shuning uchun
 muzlatish muddatidan (60 kun) uzun muzlatishdan keyingi chetlatish ikki
-marta sanaladi — muzlatilgan oyda va chetlatilgan oyda.
+marta sanalardi. Prodda bunday holat bo'lmagan (2026-09-26: 10 ta
+«faollashtirib chetlatish» holatida eng uzun muzlatish 17,9 kun).
 «O'quvchilar oqimi» (Excel «Xulosa» va «O'quvchilar» varaqlari ham) va
 Telegram 21:00 **ataylab** o'zgartirilmadi: ular boshqa savolga javob beradi
 (status o'tishlari; bugungi xom hodisalar). Oqim diagrammasining «Batafsil»

@@ -86,8 +86,8 @@ qaytsa ketish bo'lmagan (ikki muddat — prod o'lchovidan, CEO qarori).
 Hech qachon guruhda bo'lmagan o'quvchi ketmaydi, bitiruvchi ham ketgan emas.
 Arxivlash ham ketish emas: arxiv — xato yoki takror yozuv, arxivdagi o'quvchi
 o'chirilgan karta kabi hech bir songa kirmaydi. Muzlatilgan o'quvchi
-chetlatishdan oldin faollashtiriladi, shuning uchun 60 kundan uzun
-muzlatishdan keyin chetlatilgan o'quvchi ikki oyda sanaladi. Ta'rif
+to'g'ridan-to'g'ri chetlatilsa (`FROZEN → EXPELLED`, PR #564), bu bitta
+ketish — muzlatilgan oyda sanaladi. Ta'rif
 `students/shared/departure-episodes.ts` da, qaysi yozuv to'xtash yoki qaytish
 ekani `reports/shared/departures.loader.ts` da; hisobot sahifasi va bosh
 sahifa kartasi ketishlarni shu yuklovchidan oladi.

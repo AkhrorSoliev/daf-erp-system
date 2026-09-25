@@ -267,6 +267,35 @@ describe('loadDepartures', () => {
     ).toEqual([]);
   });
 
+  it('counts a freeze followed by a direct expulsion as one departure, dated by the freeze', async () => {
+    // FROZEN → EXPELLED with no reactivation in between: there is no return,
+    // so the expulsion joins the freeze's episode instead of opening a second.
+    expect(
+      await episodesOf({
+        students: [student(10001, 'EXPELLED')],
+        enrollments: [
+          enrollment('e1', 10001, 'DROPPED', '2026-09-10T09:00:00Z'),
+        ],
+        logs: [
+          log('e1', 'ACTIVE', MAY),
+          log('e1', 'FROZEN', '2026-07-01T09:00:00Z'),
+          log('e1', 'DROPPED', '2026-09-10T09:00:00Z'),
+        ],
+        history: [
+          history(10001, 'ACTIVE', 'FROZEN', '2026-07-01T09:00:00Z'),
+          history(10001, 'FROZEN', 'EXPELLED', '2026-09-10T09:00:00.100Z'),
+        ],
+      }),
+    ).toEqual([
+      {
+        studentId: 10001,
+        startedAt: '2026-07-01T09:00:00.000Z',
+        stopKind: 'EXPELLED',
+        state: 'confirmed',
+      },
+    ]);
+  });
+
   it('completes a log that never recorded the closing from the row', async () => {
     expect(
       await episodesOf({
