@@ -21,6 +21,8 @@ import {
   FadeIn,
 } from "./lumio";
 import type { AttendanceGroup, AttendanceStats } from "./lib/types";
+import { loadState } from "./lib/load-state";
+import { LoadFailed } from "./load-failed";
 
 const STATUS = {
   PRESENT: {
@@ -90,11 +92,13 @@ function StatCell({
 }
 
 export function StudentAttendanceHistory() {
-  const { data, isLoading } = useQuery<AttendanceGroup[]>({
+  const history = useQuery<AttendanceGroup[]>({
     queryKey: ["student-portal", "attendance-history"],
     queryFn: () =>
       api.get("/student-portal/attendance/history").then((r) => r.data),
   });
+  const { data } = history;
+  const state = loadState(history);
   const { data: stats } = useQuery<AttendanceStats>({
     queryKey: ["student-portal", "attendance-stats"],
     queryFn: () =>
@@ -105,8 +109,12 @@ export function StudentAttendanceHistory() {
     <Screen>
       <StackHeader title="Davomat" backHref="/portal" />
 
-      {isLoading ? (
+      {state === "loading" ? (
         <LoadingCards count={2} />
+      ) : state !== "ready" ? (
+        // No answer is not "no attendance yet"; that page even wore the
+        // offline icon while telling the student nothing was recorded.
+        <LoadFailed query={history} />
       ) : !data || data.length === 0 ? (
         <EmptyState
           icon={<CloudSlash weight="bold" />}

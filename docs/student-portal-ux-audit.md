@@ -70,6 +70,34 @@ payments:   const { data, isLoading } = useQuery(...)
 Tarmoq uzilganda o'quvchi «Bu hafta darslar yo'q» yoki bo'sh davomat ko'radi —
 ya'ni **xatolik ma'lumot yo'qligi bo'lib ko'rinadi**.
 
+**TUZATILDI 2026-09-26** (branch `fix/portal-error-states`). Muammo ikki
+qatlamli edi:
+
+1. **Xato javob.** Sahifalar `isError` ni tekshirmasdi.
+2. **Internet yo'q.** React Query so'rovni umuman yubormaydi, so'rov *pauza*
+   holatida turadi. Bu na `isLoading`, na `isError`. Shuning uchun faqat
+   `isError` qo'shilgan birinchi tuzatish testlardan o'tdi, lekin brauzerda
+   internet uzilganda Davomat baribir «Davomat ma'lumotlari yo'q» dedi.
+
+Yechim: har sahifa `loadState` (`student-portal/lib/load-state.ts`) bilan
+qaror qiladi. Tartib: avval ma'lumot, keyin pauza, keyin xato, oxirida
+yuklanish. Ma'lumot oldin yuklangan bo'lsa-yu, orqa fondagi yangilash xato
+bersa, ekrandagi ma'lumot qoladi — xato ekrani uni yashirmaydi. Ko'rinishi —
+`LoadFailed` (`student-portal/load-failed.tsx`):
+
+- **internet yo'q:** «Internet aloqasi yo'q — internetga ulanganingizda
+  ma'lumot o'zi yuklanadi», tugmasiz (so'rov o'zi qayta ketadi);
+- **xato:** «Ma'lumotni yuklab bo'lmadi» va «Qayta urinish».
+
+Jadval, Davomat, To'lovlar (balans ham, «Balans tarixi» ham) va Asosiy shu
+qoidada. To'lovlarda faqat tarix yuklanmasa, balans va to'lov formasi
+ishlayveradi. Himoya — `student-portal-load-states.test.ts`: har sahifa
+uchun xato, internet yo'q, yangilash xatosi va bo'sh javob holatlari;
+`lib/load-state.test.ts` — tartibning o'zi. Brauzerda soxta API bilan
+tekshirildi: server xatosi → qayta urinish → darslar chiqdi; internet uzildi
+→ so'rov ketmadi, «Internet aloqasi yo'q»; internet qaytdi → ma'lumot o'zi
+yuklandi.
+
 ### U5. `staleTime` yo'q
 
 `lib/queries.ts` dagi `useStudentProfile` va sahifalardagi barcha `useQuery`
@@ -172,7 +200,7 @@ darsni esa ko'rmaydi.
 | Faza | Mazmun | Topilmalar | Holat |
 |---|---|---|---|
 | **1** | Sozlamalar + Profil chegarasi, mavzu boshqaruvini birlashtirish | Q1–Q4 (pastdagi «Faza 1» bo'limi) | **BAJARILDI — 2026-08-19** (branch `feat/portal-settings-profile-rework`, deploy qilinmagan) |
-| 2 | Umumiy qatlam: Lumio modal, xato holatlari, desktop kenglik, `backHref`, `staleTime` | U1, U2, U3, U4, U5 | kutmoqda |
+| 2 | Umumiy qatlam: Lumio modal, xato holatlari, desktop kenglik, `backHref`, `staleTime` | U1, U2, U3, U4, U5 | qisman — U4 bajarildi 2026-09-26 |
 | 3 | Jadval: bekor qilingan / ko'chirilgan darslar va bayramlar | S1, S2, S3, S4 | kutmoqda |
 | 4 | To'lovlar: qarzga moslashgan summalar, tarix filtri, a11y | P1–P6 | kutmoqda |
 | 5 | Davomat + Asosiy sahifa | A1–A4, H1–H4 | kutmoqda |

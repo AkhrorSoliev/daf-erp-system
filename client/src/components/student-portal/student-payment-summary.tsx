@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
-import { Wallet, Clock, CircleNotch } from "@phosphor-icons/react";
+import { Clock, CircleNotch } from "@phosphor-icons/react";
 import {
   Screen,
   ScreenHeader,
@@ -18,6 +18,8 @@ import {
   FadeIn,
 } from "./lumio";
 import { useStudentProfile } from "./lib/queries";
+import { loadState } from "./lib/load-state";
+import { LoadFailed } from "./load-failed";
 import type { PaymentHistory as PaymentHistoryData } from "./lib/types";
 
 const QUICK_AMOUNTS = [
@@ -42,7 +44,8 @@ const TYPE_LABELS: Record<string, string> = {
 
 export function StudentPaymentSummary() {
   const queryClient = useQueryClient();
-  const { data: profile, isLoading } = useStudentProfile();
+  const profileQuery = useStudentProfile();
+  const { data: profile } = profileQuery;
 
   const [amount, setAmount] = useState("");
   const [redirecting, setRedirecting] = useState(false);
@@ -95,7 +98,7 @@ export function StudentPaymentSummary() {
     }
   }
 
-  if (isLoading) {
+  if (loadState(profileQuery) === "loading") {
     return (
       <Screen>
         <ScreenHeader title="To'lovlar" />
@@ -104,13 +107,14 @@ export function StudentPaymentSummary() {
     );
   }
 
+  // Keep the page's title and give a way back: this used to be a bare
+  // message asking the student to reload the page themselves.
   if (!profile) {
     return (
-      <EmptyState
-        icon={<Wallet weight="bold" />}
-        title="Ma'lumotni yuklab bo'lmadi"
-        description="Sahifani qayta yuklab ko'ring."
-      />
+      <Screen>
+        <ScreenHeader title="To'lovlar" />
+        <LoadFailed query={profileQuery} />
+      </Screen>
     );
   }
 
@@ -247,15 +251,12 @@ export function StudentPaymentSummary() {
 }
 
 function PaymentHistory() {
-  const { data, isLoading } = useQuery<PaymentHistoryData>({
+  const history = useQuery<PaymentHistoryData>({
     queryKey: ["student-portal", "payments"],
     queryFn: () => api.get("/student-portal/payments").then((r) => r.data),
   });
-
-  if (isLoading) {
-    return <LoadingCards count={3} />;
-  }
-
+  const { data } = history;
+  const state = loadState(history);
   const transactions = data?.transactions ?? [];
 
   return (
@@ -263,7 +264,12 @@ function PaymentHistory() {
       <h2 className="px-1 font-display text-lg font-bold text-ink-900">
         Balans tarixi
       </h2>
-      {transactions.length === 0 ? (
+      {state === "loading" ? (
+        <LoadingCards count={3} />
+      ) : state !== "ready" ? (
+        // No answer is not "no transactions yet".
+        <LoadFailed query={history} />
+      ) : transactions.length === 0 ? (
         <EmptyState
           icon={<Clock weight="bold" />}
           title="Hali tranzaksiya yo'q"

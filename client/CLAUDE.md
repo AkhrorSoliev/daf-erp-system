@@ -883,6 +883,15 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 - Shared data helpers: `student-portal/lib/queries.ts` + `lib/types.ts`
 - Login uses a dedicated Lumio-skinned `app/(auth)/login/student-login-form.tsx`
 
+**A request with no answer never renders the empty state.** Until September 2026 a student who was offline read "Bu hafta darslar yo'q" on Jadval (a free week that did not exist), "Davomat ma'lumotlari yo'q" on Davomat and "Hali tranzaksiya yo'q" under their balance.
+
+- **Decide with `loadState(query)` (`student-portal/lib/load-state.ts`), not with `isLoading` / `isError`.** Offline, React Query does not send the request at all: the query is *paused*, which is neither `isLoading` nor `isError`, so a screen that checked those two fell through to its empty state. A first fix that added only an `isError` check passed its tests and still showed the empty state in the browser.
+- The order is data, then paused, then error, then loading. Data first means a screen keeps what it already showed when a background refetch fails, instead of trading it for an error screen.
+- For `offline` and `failed`, render `LoadFailed` (`student-portal/load-failed.tsx`). Paused, it says "Internet aloqasi yo'q" with no button, because React Query sends the request by itself when the connection returns. Failed, it says "Ma'lumotni yuklab bo'lmadi" with "Qayta urinish". Pressing it puts the query back to pending, so the screen shows its skeleton while the retry runs. There is no spinner on the button: it would never be drawn.
+- A section with its own request fails on its own, under its own heading: when only "Balans tarixi" fails, the balance and the payment form stay usable.
+- A secondary summary with no answer is left out rather than drawn as zero, as the attendance percentage cards on Asosiy and Davomat already do.
+- `student-portal-load-states.test.ts` renders each screen failed, offline (`onlineManager.setOnline(false)`), refreshed-then-failed and empty. Add those cases when a new screen fetches.
+
 #### Activity tracking (whole `/portal/*` shell)
 
 Time spent in the app is measured on the client and sent to `POST /student-portal/activity` (ADR-0020). Do not try to derive it from API traffic.
