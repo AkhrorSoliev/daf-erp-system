@@ -38,6 +38,8 @@
     "scripts/lib/prepaid-refund-price.spec.ts",
     "scripts/lib/carried-in-lessons.ts",
     "scripts/lib/carried-in-lessons.spec.ts",
+    "scripts/lib/student-transaction.ts",
+    "scripts/lib/student-transaction.spec.ts",
     "scripts/lib/check-cli.ts",
     "scripts/repair-student-sign-in-number.ts",
     "scripts/lib/student-sign-in-repair.ts",

@@ -92,6 +92,7 @@ import {
   type ApplyStudentResult,
   type EnrollmentToMigrate,
 } from './lib/monthly-migration-apply';
+import { runStudentTransaction } from './lib/student-transaction';
 import {
   carriedInPeriodFor,
   emptyCarriedIn,
@@ -115,6 +116,16 @@ import { TransactionsReadService } from '../src/transactions/transactions-read.s
 import { TransactionsService } from '../src/transactions/transactions.service';
 import { SalaryAccrualService } from '../src/salary/salary-accrual.service';
 import { EnrollmentBillingService } from '../src/billing/enrollment-billing.service';
+import { SettingsService } from '../src/settings/settings.service';
+import { RedisService } from '../src/redis/redis.service';
+import { EntityHistoryService } from '../src/common/entity-history/entity-history.service';
+
+/** SettingsService records history only when a setting is written. */
+const noSettingWrites = () => {
+  throw new Error(
+    'Migratsiya sozlamani SettingsService orqali yozmaydi — bu chaqiruv kutilmagan.',
+  );
+};
 
 /**
  * `--apply` uchun eng kichik DI grafigi. To'liq `AppModule` ko'tarilmaydi:
@@ -131,6 +142,21 @@ import { EnrollmentBillingService } from '../src/billing/enrollment-billing.serv
     SalaryAccrualService,
     EnrollmentBillingService,
     MonthlyChargeService,
+    // MonthlyChargeService reads the excused-credit settings through
+    // SettingsService. With no Redis client the settings cache reads the
+    // database directly (settings-cache.ts treats a missing client as a
+    // miss); a real RedisService would retry a local connection on every
+    // read. Found by the first --rehearse: without these three providers
+    // --apply could not even start.
+    SettingsService,
+    { provide: RedisService, useValue: null },
+    {
+      provide: EntityHistoryService,
+      useValue: {
+        recordUpdate: noSettingWrites,
+        recordCreate: noSettingWrites,
+      },
+    },
   ],
 })
 class MigrationModule {}
@@ -146,6 +172,17 @@ interface CliArgs {
   confirmed: boolean;
   /** Brief 2-qadam: `pg_dump` olinganini alohida tasdiqlash. */
   backedUp: boolean;
+  /**
+   * `--rehearse`: the full --apply path against the real database, every
+   * student's transaction rolled back (lib/student-transaction.ts). Writes
+   * nothing, so it needs neither the confirmation nor the backup flag.
+   */
+  rehearse: boolean;
+  /**
+   * `--students=10372,10024`: rehearse only these students. Rehearsal-only,
+   * because a partial real run leaves the course flag unflipped.
+   */
+  students: Set<number> | null;
   period: string;
 }
 
@@ -154,6 +191,24 @@ function parseCliArgs(): CliArgs {
   const apply = argv.includes('--apply');
   const confirmed = argv.includes('--ha-men-tasdiqlayman');
   const backedUp = argv.includes('--zaxira-olindi');
+  const rehearse = argv.includes('--rehearse');
+  const studentsTok = argv.find((a) => a.startsWith('--students='));
+  const students = studentsTok
+    ? new Set(
+        studentsTok
+          .split('=')[1]
+          .split(',')
+          .map((x) => Number(x.trim())),
+      )
+    : null;
+  if (students && [...students].some((x) => !Number.isInteger(x) || x <= 0)) {
+    throw new Error(
+      `--students vergul bilan ajratilgan ID'lar bo'lishi kerak: "${studentsTok}"`,
+    );
+  }
+  if (students && !rehearse) {
+    throw new Error('--students faqat --rehearse bilan ishlaydi.');
+  }
   const limitTok = argv.find((a) => a.startsWith('--limit='));
   const limit = limitTok ? Number(limitTok.split('=')[1]) : null;
   if (limit !== null && (!Number.isInteger(limit) || limit <= 0)) {
@@ -168,7 +223,7 @@ function parseCliArgs(): CliArgs {
       `--period noto'g'ri format: "${period}" (kutilgan YYYY-MM, masalan 2026-09)`,
     );
   }
-  return { apply, confirmed, backedUp, limit, period };
+  return { apply, confirmed, backedUp, rehearse, students, limit, period };
 }
 
 interface GroupSummaryRow {
@@ -298,6 +353,10 @@ interface RunApplyParams {
   month: number;
   period: string;
   limit: number | null;
+  /** Roll every student back (see CliArgs.rehearse). */
+  rehearse: boolean;
+  /** Rehearse only these students (see CliArgs.students). */
+  students: Set<number> | null;
 }
 
 /**
@@ -313,14 +372,29 @@ interface RunApplyParams {
  * ikki marta hisoblashning oxirgi to'sig'i.
  */
 async function runApply(params: RunApplyParams): Promise<void> {
-  const { prisma, plan, migrateByStudent, year, month, period, limit } = params;
+  const {
+    prisma,
+    plan,
+    migrateByStudent,
+    year,
+    month,
+    period,
+    limit,
+    rehearse,
+    students,
+  } = params;
 
-  const targets =
-    limit === null
+  const targets = students
+    ? [...migrateByStudent.entries()].filter(([id]) => students.has(id))
+    : limit === null
       ? [...migrateByStudent.entries()]
       : [...migrateByStudent.entries()].slice(0, limit);
 
-  section(`MIGRATSIYA QO'LLANMOQDA — davr ${period} — ${dbEnvLabel()}`);
+  section(
+    rehearse
+      ? `SINOV — har o'quvchi o'tkaziladi va BEKOR QILINADI, bazaga hech narsa yozilmaydi — davr ${period} — ${dbEnvLabel()}`
+      : `MIGRATSIYA QO'LLANMOQDA — davr ${period} — ${dbEnvLabel()}`,
+  );
 
   // ── C1: "0 ta o'quvchi" JIM MUVAFFAQIYAT bo'lmasligi kerak ──────────────
   // Avvalgi versiyada qamrov kurs darajasidagi `paymentModel` bayrog'idan
@@ -401,7 +475,8 @@ async function runApply(params: RunApplyParams): Promise<void> {
   let processed = 0;
   for (const [studentId, bucket] of targets) {
     try {
-      const res = await prismaService.$transaction(
+      const res = await runStudentTransaction(
+        prismaService,
         (tx) =>
           applyMigrationForStudent({
             tx,
@@ -414,7 +489,7 @@ async function runApply(params: RunApplyParams): Promise<void> {
             periodLt,
             enrollments: bucket.enrollments,
           }),
-        { isolationLevel: 'Serializable', timeout: 30_000, maxWait: 15_000 },
+        { rehearse },
       );
       results.push(res);
     } catch (err) {
@@ -453,6 +528,42 @@ async function runApply(params: RunApplyParams): Promise<void> {
   );
   const chargesCreated = results.reduce((a, r) => a + r.chargesCreated, 0);
   const chargesSkipped = results.reduce((a, r) => a + r.chargesSkipped, 0);
+
+  if (rehearse) {
+    // Every transaction above was rolled back: the ledger and balance
+    // checks, the outcome CSV and the course flip below all read committed
+    // data, so they have nothing to check. What the rehearsal proves is the
+    // per-student run — every step and every in-transaction check.
+    section('SINOV NATIJASI — BAZAGA HECH NARSA YOZILMADI');
+    printTable(
+      ["ko'rsatkich", 'qiymat'],
+      [
+        ["O'tgan o'quvchi", String(results.length)],
+        ['Yiqilgan', String(failures.length)],
+        ['Prepaid qaytarilardi', som(totalPrepaid)],
+        ["Oldingi oyda to'langan darslar qaytarilardi", som(totalCarriedIn)],
+        ["Qo'lda ko'riladigan kredit (yozilmaydi)", som(totalCarriedInHeld)],
+        ['Davr ichi bekor qilinardi', som(totalReversed)],
+        ['Oylik hisoblanardi', som(totalCharged)],
+        ['Yoziladigan oylik hisob', String(chargesCreated)],
+        ['Hisobsiz qoladigan yozilish', String(chargesSkipped)],
+        ['Stavkasiz qoladigan dars', String(accrualsSkipped)],
+        ['Balanslar jami o`zgarishi', som(totalDelta)],
+      ],
+      ['l', 'r'],
+    );
+    if (failures.length > 0) {
+      section("YIQILADIGAN O'QUVCHILAR");
+      for (const f of failures) console.log(`  #${f.studentId}: ${f.message}`);
+    }
+    console.log('');
+    console.log(
+      failures.length === 0
+        ? "Sinov toza: hamma o'quvchi xatosiz o'tdi. Bazaga hech narsa yozilmadi."
+        : `Sinovda ${failures.length} ta o'quvchi yiqildi — haqiqiy o'tishdan oldin tuzatish kerak. Bazaga hech narsa yozilmadi.`,
+    );
+    return;
+  }
 
   const outPath = path.join(
     docsDir(),
@@ -726,7 +837,14 @@ async function runApply(params: RunApplyParams): Promise<void> {
 }
 
 async function main(prisma: PrismaClient) {
-  const { apply, confirmed, backedUp, limit, period } = parseCliArgs();
+  const { apply, confirmed, backedUp, rehearse, students, limit, period } =
+    parseCliArgs();
+
+  if (apply && rehearse) {
+    throw new Error(
+      "--apply va --rehearse birga ishlamaydi: sinov hech narsa yozmaydi, qo'llash yozadi. Bittasini tanlang.",
+    );
+  }
 
   if (apply && !confirmed) {
     throw new Error(
@@ -768,7 +886,9 @@ async function main(prisma: PrismaClient) {
   printHeader(
     apply
       ? `MIGRATSIYA QO'LLANMOQDA — davr ${period} — BAZAGA YOZILADI`
-      : `MIGRATSIYA OLDINDAN HISOBOTI — davr ${period} — DRY RUN, HECH NARSA YOZILMAYDI`,
+      : rehearse
+        ? `MIGRATSIYA SINOVI — davr ${period} — HAMMASI BEKOR QILINADI, HECH NARSA YOZILMAYDI`
+        : `MIGRATSIYA OLDINDAN HISOBOTI — davr ${period} — DRY RUN, HECH NARSA YOZILMAYDI`,
   );
 
   // resolveMonthPlanDates() (va uning ichidagi resolveMonthPlan) INJEKSIYA
@@ -1187,7 +1307,7 @@ async function main(prisma: PrismaClient) {
     }
 
     // Per-teacher preview of step 5 — dry-run only (the apply run writes it).
-    if (!apply) {
+    if (!apply && !rehearse) {
       teacherLessons.push(
         ...(await loadTeacherLessons(tx, {
           companyId: company.id,
@@ -1295,7 +1415,7 @@ async function main(prisma: PrismaClient) {
     ),
   );
 
-  if (apply) {
+  if (apply || rehearse) {
     await runApply({
       prisma,
       plan,
@@ -1305,6 +1425,8 @@ async function main(prisma: PrismaClient) {
       month,
       period,
       limit,
+      rehearse,
+      students,
     });
     return;
   }
