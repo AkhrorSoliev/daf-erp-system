@@ -33,21 +33,13 @@
 - Test: `server/src/common/status/status-cascade.service.spec.ts`
 
 **Interfaces:**
-- Produces: `groupDeletedReason(note?: string): string` and `liveEnrollmentsOfGroup(groupId: string): Prisma.EnrollmentWhereInput`, both exported from `status-cascade.service.ts`. `cascadeGroupDeletion(tx, { groupId, groupName, companyId?, userId, at, note? })` — `note` is the admin's reason, already trimmed, `undefined` for none. Returns `{ count }` as before.
+- Produces: `liveEnrollmentsOfGroup(groupId: string): Prisma.EnrollmentWhereInput`, exported from `status-cascade.service.ts`, and a module-private `groupDeletedReason(note?: string): string`. `cascadeGroupDeletion(tx, { groupId, groupName, companyId?, userId, at, note? })` — `note` is the admin's reason, already trimmed, `undefined` for none. Returns `{ count }` as before.
 
-- [ ] **Step 1: Write the failing tests**
+The existing `cascadeGroupDeletion` tests keep covering the no-reason path (`"Guruh o'chirildi"` everywhere) and, with hand-built rows, which enrollments close. The new test covers the reason path. No test asserts `liveEnrollmentsOfGroup` against itself: Task 3 checks the preview's filter against a hand-written literal.
 
-In `status-cascade.service.spec.ts` change the import on line 3 to:
+- [ ] **Step 1: Write the failing test**
 
-```ts
-import {
-  StatusCascadeService,
-  groupDeletedReason,
-  liveEnrollmentsOfGroup,
-} from './status-cascade.service';
-```
-
-Inside `describe('cascadeGroupDeletion', ...)`, after the test `'changes nothing for enrollments it already closed when run again'`, add:
+Inside `describe('cascadeGroupDeletion', ...)` in `status-cascade.service.spec.ts`, after the test `'changes nothing for enrollments it already closed when run again'`, add:
 
 ```ts
     it("adds the admin's reason after the fixed words wherever the removal is recorded", async () => {
@@ -80,38 +72,14 @@ Inside `describe('cascadeGroupDeletion', ...)`, after the test `'changes nothing
         );
       expect(departureReasons).toEqual([why, why]);
     });
-
-    it('closes exactly what liveEnrollmentsOfGroup selects', async () => {
-      const { tx } = groupWithEveryKindOfEnrollment();
-
-      await service.cascadeGroupDeletion(tx as any, params);
-
-      expect(tx.enrollment.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: liveEnrollmentsOfGroup('group-1') }),
-      );
-    });
 ```
 
-After the closing `});` of `describe('cascadeGroupDeletion', ...)`, add:
+Break it catches: the note dropped on any one of the five places the removal is recorded.
 
-```ts
-  describe('groupDeletedReason', () => {
-    it('is the fixed words alone when the admin gave no reason', () => {
-      expect(groupDeletedReason()).toBe("Guruh o'chirildi");
-    });
-
-    it("puts the admin's reason after the fixed words", () => {
-      expect(groupDeletedReason("Guruh yig'ilmadi")).toBe(
-        "Guruh o'chirildi: Guruh yig'ilmadi",
-      );
-    });
-  });
-```
-
-- [ ] **Step 2: Run the tests to verify they fail**
+- [ ] **Step 2: Run the test to verify it fails**
 
 Run (from `server/`): `npx jest src/common/status/status-cascade.service.spec.ts`
-Expected: FAIL — `groupDeletedReason is not a function` / `liveEnrollmentsOfGroup is not a function`, and the reason test sees `"Guruh o'chirildi"` without the note.
+Expected: FAIL — the new test sees `"Guruh o'chirildi"` without the note (the `note` param is ignored).
 
 - [ ] **Step 3: Implement**
 
@@ -124,7 +92,7 @@ In `status-cascade.service.ts`, directly below `export const GROUP_DELETED_REASO
  * what the student's closed-groups list, their history, the departed-students
  * report and the refund's ledger row show.
  */
-export function groupDeletedReason(note?: string): string {
+function groupDeletedReason(note?: string): string {
   return note ? `${GROUP_DELETED_REASON}: ${note}` : GROUP_DELETED_REASON;
 }
 
@@ -493,7 +461,6 @@ git commit -m "Keep the reason typed into the group delete dialog" -m "DELETE /g
 - [ ] **Step 1: Write the failing tests**
 
 In `groups.service.spec.ts`:
-- add `import { liveEnrollmentsOfGroup } from '../common/status/status-cascade.service';` below the existing imports;
 - in the `beforeEach` prisma mock, replace `enrollment: { findMany: jest.fn().mockResolvedValue([]) },` with:
 
 ```ts
@@ -507,7 +474,7 @@ In `groups.service.spec.ts`:
 
 ```ts
   describe('getDeletePreview', () => {
-    it('counts the live enrollments by status, with the filter the deletion closes', async () => {
+    it('counts the live enrollments by status, active and frozen alike', async () => {
       prisma.enrollment.groupBy.mockResolvedValue([
         { status: 'ACTIVE', _count: { _all: 5 } },
         { status: 'FROZEN', _count: { _all: 2 } },
@@ -516,9 +483,16 @@ In `groups.service.spec.ts`:
       await expect(
         service.getDeletePreview('group-1', 1001, 1, ['CEO']),
       ).resolves.toEqual({ active: 5, frozen: 2 });
+      // What the deletion closes (see cascadeGroupDeletion): the group's
+      // unarchived ACTIVE and FROZEN enrollments. Counting ACTIVE alone is
+      // the list's studentCount, the number that hid the frozen students.
       expect(prisma.enrollment.groupBy).toHaveBeenCalledWith({
         by: ['status'],
-        where: liveEnrollmentsOfGroup('group-1'),
+        where: {
+          groupId: 'group-1',
+          deletedAt: null,
+          status: { in: ['ACTIVE', 'FROZEN'] },
+        },
         _count: { _all: true },
       });
     });

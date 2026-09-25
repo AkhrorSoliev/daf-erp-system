@@ -26,6 +26,32 @@ interface CascadeResult {
  */
 export const GROUP_DELETED_REASON = "Guruh o'chirildi";
 
+/**
+ * The reason an enrolment closed by a group deletion carries: the fixed
+ * words, then what the admin typed in the delete dialog, if anything. It is
+ * what the student's closed-groups list, their history, the departed-students
+ * report and the refund's ledger row show.
+ */
+function groupDeletedReason(note?: string): string {
+  return note ? `${GROUP_DELETED_REASON}: ${note}` : GROUP_DELETED_REASON;
+}
+
+/**
+ * The enrolments deleting a group closes: its live ones, ACTIVE and FROZEN.
+ * The delete dialog counts with this same filter
+ * (`GroupsReadService.getDeletePreview`), so the number the admin confirms
+ * is the number that closes.
+ */
+export function liveEnrollmentsOfGroup(
+  groupId: string,
+): Prisma.EnrollmentWhereInput {
+  return {
+    groupId,
+    deletedAt: null,
+    status: { in: [EnrollmentStatus.ACTIVE, EnrollmentStatus.FROZEN] },
+  };
+}
+
 @Injectable()
 export class StatusCascadeService {
   private readonly logger = new Logger(StatusCascadeService.name);
@@ -45,8 +71,9 @@ export class StatusCascadeService {
    * Everything else closing an enrolment does happens here too: the unused
    * prepaid lessons and the rest of the month's charge go back to the balance,
    * the state log gets a DROPPED row, and the removal is written to each
-   * student's history and to the group's. Enrolments already closed are not
-   * selected, so a second run changes nothing.
+   * student's history and to the group's. The admin's reason, if any,
+   * follows the fixed words (`groupDeletedReason`). Enrolments already closed
+   * are not selected, so a second run changes nothing.
    */
   async cascadeGroupDeletion(
     tx: Prisma.TransactionClient,
@@ -56,13 +83,12 @@ export class StatusCascadeService {
       companyId?: number;
       userId: number;
       at: Date;
+      /** What the admin typed in the delete dialog, trimmed; none if absent. */
+      note?: string;
     },
   ): Promise<{ count: number }> {
-    const filter: Prisma.EnrollmentWhereInput = {
-      groupId: params.groupId,
-      deletedAt: null,
-      status: { in: [EnrollmentStatus.ACTIVE, EnrollmentStatus.FROZEN] },
-    };
+    const filter = liveEnrollmentsOfGroup(params.groupId);
+    const reason = groupDeletedReason(params.note);
 
     const live = await tx.enrollment.findMany({
       where: filter,
@@ -79,7 +105,7 @@ export class StatusCascadeService {
           guruh: params.groupName,
           guruhId: params.groupId,
           action: 'GURUHDAN_CHIQARILDI',
-          sabab: GROUP_DELETED_REASON,
+          sabab: reason,
         },
         changedById: params.userId,
         companyId: params.companyId,
@@ -92,7 +118,7 @@ export class StatusCascadeService {
           action: 'OQUVCHI_CHIQARILDI',
           oquvchi: `${e.student.firstName} ${e.student.lastName}`.trim(),
           oquvchiId: e.studentId,
-          sabab: GROUP_DELETED_REASON,
+          sabab: reason,
         },
         changedById: params.userId,
         companyId: params.companyId,
@@ -103,12 +129,12 @@ export class StatusCascadeService {
     return this.cascadeEnrollmentStatus(
       filter,
       EnrollmentStatus.DROPPED,
-      GROUP_DELETED_REASON,
+      reason,
       params.userId,
       {
         statusChangedAt: params.at,
         statusChangedById: params.userId,
-        statusChangeReason: GROUP_DELETED_REASON,
+        statusChangeReason: reason,
       },
       tx,
     );
