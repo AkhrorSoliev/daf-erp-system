@@ -58,5 +58,35 @@
     "key": "daf/audio/cd43402297cd4a6e1258a86f737c58e8.mp3",
     "textHash": "5fba15e3b3473fd7",
     "polster": "700/1000"
+  },
+  "u03-d1": {
+    "key": "daf/audio/be7f46a29e10bfdabe0d6ff92fdb412b.mp3",
+    "textHash": "c8dabe18d4b8c106",
+    "polster": "700/1000"
+  },
+  "u03-d2": {
+    "key": "daf/audio/f402fa793e4495404c0cf6032fbc8c34.mp3",
+    "textHash": "d4acf3641f722315",
+    "polster": "700/1000"
+  },
+  "u03-d3": {
+    "key": "daf/audio/3d3147f178f101867f728f4c4220d31f.mp3",
+    "textHash": "2526f26546952810",
+    "polster": "700/1000"
+  },
+  "u03-d4": {
+    "key": "daf/audio/6dff7779806e5168c0ec8fed1d0774ed.mp3",
+    "textHash": "8ffa2ad3fa2e0f16",
+    "polster": "700/1000"
+  },
+  "u03-d5": {
+    "key": "daf/audio/749284911f9ae7bc6aadeda95ae74388.mp3",
+    "textHash": "e899e1d38f88ab00",
+    "polster": "700/1000"
+  },
+  "u03-d6": {
+    "key": "daf/audio/2fb4e4d7efebf85f96c1ff195a838301.mp3",
+    "textHash": "a149ad9ec9f482b1",
+    "polster": "700/1000"
   }
 }
