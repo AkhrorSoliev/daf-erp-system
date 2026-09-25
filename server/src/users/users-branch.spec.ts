@@ -109,7 +109,10 @@ describe('UsersService — branch confinement', () => {
           companyId: 1001,
           password: 'p',
           position: 'Administrator',
-          roleIds: [2], // Branch Director
+          // An Administrator, not a Branch Director: a director may not create
+          // a director anywhere (the role ceiling), so with role 2 this test
+          // would still pass with the branch check deleted.
+          roleIds: [3],
           branchIds: [NAMANGAN],
           mainBranch: NAMANGAN,
         },

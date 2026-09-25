@@ -12,6 +12,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ArchiveEntityType } from '../dto/archive-query.dto';
+import { STUDENT_ONLY_ACCOUNT } from '../../common/auth/student-account';
 
 export const ENTITY_DEFAULT_STATUS: Record<string, string> = {
   [ArchiveEntityType.USERS]: UserStatus.ACTIVE,
@@ -57,6 +58,25 @@ export function companyScope(
   companyId: number,
 ): Record<string, number> {
   return COMPANY_SCOPED_ENTITIES.has(entityType) ? { companyId } : {};
+}
+
+/**
+ * Everything an archive query must match besides `deletedAt`: the company,
+ * and in the users tab ("Ustozlar / Xodimlar") no student-only account.
+ * A student's account is archived and restored with its card (ADR-0033);
+ * listed here it is mislabelled, and restored here alone it would come back
+ * open with no card. Role-less staff and mixed accounts stay visible.
+ */
+export function archiveScope(
+  entityType: ArchiveEntityType,
+  companyId: number,
+): Record<string, unknown> {
+  return {
+    ...companyScope(entityType, companyId),
+    ...(entityType === ArchiveEntityType.USERS && {
+      NOT: STUDENT_ONLY_ACCOUNT,
+    }),
+  };
 }
 
 export function getDelegate(

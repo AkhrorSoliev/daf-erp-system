@@ -3,6 +3,8 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
+import { freshSessionFrom } from "@/lib/fresh-session";
 import { getErrorMessage } from "@/lib/get-error-message";
 import {
   Dialog,
@@ -26,6 +28,7 @@ export function StudentPasswordDialog({
   onOpenChange,
 }: StudentPasswordDialogProps) {
   const [loading, setLoading] = useState(false);
+  const setAuth = useAuth((s) => s.setAuth);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
@@ -42,8 +45,19 @@ export function StudentPasswordDialog({
     if (!oldPassword || !newPassword) return;
     setLoading(true);
     try {
-      await api.patch("/student-portal/password", { oldPassword, newPassword });
-      toast.success("Parol muvaffaqiyatli o'zgartirildi");
+      const { data } = await api.patch("/student-portal/password", {
+        oldPassword,
+        newPassword,
+      });
+      // The change ended every session of this account, this device's too;
+      // the API returns a fresh pair so only the other devices sign out.
+      const session = freshSessionFrom(data);
+      if (session) {
+        setAuth(session.user, session.accessToken, session.refreshToken);
+      }
+      toast.success(
+        "Parol o'zgartirildi. Boshqa qurilmalardagi kirishlar tugatildi",
+      );
       handleOpenChange(false);
     } catch (err) {
       toast.error(getErrorMessage(err, "Parolni o'zgartirishda xatolik"));

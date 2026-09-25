@@ -18,7 +18,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { SettingsPageHeader } from "./settings-page-header";
 import { BranchRowActions } from "./branch-row-actions";
 import { EditBranchDrawer } from "./edit-branch-drawer";
@@ -27,6 +27,7 @@ import type { Branch } from "@/hooks/use-edit-branch";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
+import { toBranch } from "@/lib/branch-record";
 
 const branchesSchema = {
   search: { type: "string" as const, defaultValue: "" },
@@ -57,17 +58,7 @@ export function BranchesSettingsClient() {
         const companyId = localStorage.getItem("companyId");
         const params = companyId ? { company_id: companyId } : {};
         const { data } = await api.get("/branches", { params });
-        setBranches(
-          data.map((b: any) => ({
-            id: String(b.id),
-            name: b.name,
-            address: b.address ?? "",
-            phone: b.phone ?? "",
-            status: b.isActive ? "active" : "inactive",
-            startOfWorkingDay: b.startOfWorkingDay ?? "",
-            endOfWorkingDay: b.endOfWorkingDay ?? "",
-          })),
-        );
+        setBranches(data.map(toBranch));
       } catch {
         // silently fail
       } finally {
@@ -157,13 +148,7 @@ export function BranchesSettingsClient() {
                     {branch.phone ? formatPhone(branch.phone) : "—"}
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant={
-                        branch.status === "active" ? "default" : "secondary"
-                      }
-                    >
-                      {branch.status === "active" ? "Faol" : "Nofaol"}
-                    </Badge>
+                    <StatusBadge entityType="branches" status={branch.status} />
                   </TableCell>
                   <TableCell>
                     <BranchRowActions branch={branch} />

@@ -5,7 +5,8 @@ export interface Branch {
   name: string;
   address: string;
   phone: string;
-  status: "active" | "inactive";
+  /** `BranchStatus` on the server: ACTIVE, INACTIVE, CLOSED or ARCHIVED. */
+  status: string;
   startOfWorkingDay: string;
   endOfWorkingDay: string;
 }

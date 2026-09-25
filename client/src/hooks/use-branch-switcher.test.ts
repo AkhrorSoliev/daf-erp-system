@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import api from "@/lib/api";
 import { BRANCH_STORAGE_KEY } from "@/lib/branch-header";
-import { useBranchSwitcher } from "./use-branch-switcher";
+import { branchStatusIn, useBranchSwitcher } from "./use-branch-switcher";
 
 const FARGONA = { id: 1, name: "Fargona" };
 const NAMANGAN = { id: 2, name: "Namangan" };
@@ -187,5 +187,69 @@ describe("scopeVersion — when the page content must remount", () => {
 
     expect(store().selectedBranch).toEqual(NAMANGAN);
     expect(store().scopeVersion).toBe(1);
+  });
+});
+
+/**
+ * The students page and the group card read a branch's status to decide
+ * whether a Telegram registration link may be offered. It must come from the
+ * CURRENT list: `refetchBranches` and `hydrateFor` replace `branches` but keep
+ * the `selectedBranch` object they already had, so that copy can still carry a
+ * status the server has since changed.
+ */
+describe("branchStatusIn — a branch's status as the list last reported it", () => {
+  it("reads the status GET /branches returned (CEO)", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: [
+        { ...FARGONA, status: "ACTIVE" },
+        { ...NAMANGAN, status: "CLOSED" },
+      ],
+    });
+    useBranchSwitcher.setState({ canSelectAll: true });
+
+    await store().fetchBranches();
+
+    expect(branchStatusIn(store(), 1)).toBe("ACTIVE");
+    expect(branchStatusIn(store(), 2)).toBe("CLOSED");
+  });
+
+  it("follows a refetch that changed the selected branch's status", async () => {
+    localStorage.setItem(BRANCH_STORAGE_KEY, "2");
+    useBranchSwitcher.setState({ canSelectAll: true });
+    vi.mocked(api.get).mockResolvedValueOnce({
+      data: [
+        { ...FARGONA, status: "ACTIVE" },
+        { ...NAMANGAN, status: "ACTIVE" },
+      ],
+    });
+    await store().fetchBranches();
+
+    vi.mocked(api.get).mockResolvedValueOnce({
+      data: [
+        { ...FARGONA, status: "ACTIVE" },
+        { ...NAMANGAN, status: "INACTIVE" },
+      ],
+    });
+    await store().refetchBranches();
+
+    expect(store().selectedBranch?.id).toBe(2);
+    expect(branchStatusIn(store(), 2)).toBe("INACTIVE");
+  });
+
+  it("follows a re-hydrate that changed a status (a non-CEO's token refresh)", () => {
+    store().hydrateFor([{ ...NAMANGAN, status: "ACTIVE" }], false);
+
+    store().hydrateFor([{ ...NAMANGAN, status: "ARCHIVED" }], false);
+
+    expect(store().selectedBranch?.id).toBe(2);
+    expect(branchStatusIn(store(), 2)).toBe("ARCHIVED");
+  });
+
+  it("is unknown for 'Barcha filiallar' and for a branch listed without a status", () => {
+    // A sign-in cookie from before the payload carried branch status.
+    store().hydrateFor([NAMANGAN], true);
+
+    expect(branchStatusIn(store(), null)).toBeUndefined();
+    expect(branchStatusIn(store(), 2)).toBeUndefined();
   });
 });

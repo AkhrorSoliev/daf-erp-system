@@ -13,6 +13,14 @@ import {
   ReportBranchIds,
   branchIdWhere,
 } from '../common/finance/report-branch-scope';
+import { assertCallerInBranch } from '../common/auth/branch-scope';
+
+// `@Roles()` proves the caller is staff, not that the room is theirs, and the
+// id-addressed lookups below check `companyId` alone. Each of those methods
+// therefore also asks `assertCallerInBranch` about the room's own branch —
+// after its existence check, so a stale id still answers 404. `UpdateRoomDto`
+// has no `branchId`, so the room's current branch is the only one to check.
+const FOREIGN_ROOM = "Bu xona boshqa filialga tegishli — sizda ruxsat yo'q";
 
 @Injectable()
 export class RoomsService {
@@ -158,7 +166,7 @@ export class RoomsService {
         id: true,
         name: true,
         address: true,
-        isActive: true,
+        status: true,
         _count: { select: { rooms: { where: { deletedAt: null } } } },
       },
       orderBy: { createdAt: 'asc' },
@@ -168,7 +176,7 @@ export class RoomsService {
       id: b.id,
       name: b.name,
       address: b.address,
-      isActive: b.isActive,
+      status: b.status,
       roomCount: b._count.rooms,
     }));
   }
@@ -180,6 +188,16 @@ export class RoomsService {
     if (!branch) {
       throw new NotFoundException(`Filial #${dto.branchId} topilmadi`);
     }
+    // "The branch exists in this company" and "the caller may act in it" are
+    // different questions. The branch comes from the body, so without this an
+    // Administrator of one branch could put a room into another branch's room
+    // list and occupancy report.
+    await assertCallerInBranch(
+      this.prisma,
+      userId,
+      dto.branchId,
+      "Bu filialda xona yaratish huquqingiz yo'q",
+    );
 
     const room = await this.prisma.room.create({
       data: {
@@ -228,6 +246,12 @@ export class RoomsService {
     if (!room) {
       throw new NotFoundException(`Xona #${id} topilmadi`);
     }
+    await assertCallerInBranch(
+      this.prisma,
+      userId,
+      room.branchId,
+      FOREIGN_ROOM,
+    );
 
     const updated = await this.prisma.room.update({
       where: { id },
@@ -287,6 +311,12 @@ export class RoomsService {
     if (!room) {
       throw new NotFoundException(`Xona #${id} topilmadi`);
     }
+    await assertCallerInBranch(
+      this.prisma,
+      userId,
+      room.branchId,
+      FOREIGN_ROOM,
+    );
 
     const auditData = await this.statusHistoryService.changeStatus({
       entityType: 'Room',
@@ -323,15 +353,21 @@ export class RoomsService {
     return updated;
   }
 
-  async getStatusHistory(id: string, companyId: number) {
+  async getStatusHistory(id: string, companyId: number, userId: number) {
     const room = await this.prisma.room.findFirst({
       where: { id, companyId },
-      select: { id: true },
+      select: { id: true, branchId: true },
     });
 
     if (!room) {
       throw new NotFoundException(`Xona #${id} topilmadi`);
     }
+    await assertCallerInBranch(
+      this.prisma,
+      userId,
+      room.branchId,
+      FOREIGN_ROOM,
+    );
 
     return this.statusHistoryService.getHistory('Room', id);
   }
@@ -343,6 +379,12 @@ export class RoomsService {
     if (!room) {
       throw new NotFoundException(`Xona #${id} topilmadi`);
     }
+    await assertCallerInBranch(
+      this.prisma,
+      userId,
+      room.branchId,
+      FOREIGN_ROOM,
+    );
 
     await this.statusHistoryService.changeStatus({
       entityType: 'Room',

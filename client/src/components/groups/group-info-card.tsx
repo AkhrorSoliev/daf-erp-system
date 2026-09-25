@@ -32,6 +32,7 @@ import {
 import { ChangeStatusDialog } from "@/components/shared/change-status-dialog";
 import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
 import { useAuth } from "@/hooks/use-auth";
+import { useBranchStatus } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
 
 // Read from `statusEnum` (GroupStatus) — the legacy `status: Int` mirror is
@@ -55,6 +56,8 @@ const STATUS_MAP: Record<
 import { formatWeekdays } from "@/lib/weekdays";
 import { formatPrice } from "@/lib/format-utils";
 import {
+  BRANCH_CLOSED_TO_REGISTRATION,
+  branchClosedToRegistration,
   buildBotLink,
   isTelegramBotConfigured,
   TELEGRAM_BOT_NOT_CONFIGURED,
@@ -85,6 +88,11 @@ export function GroupInfoCard({
   } | null>(null);
 
   const canManage = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  // The group's own branch, not the header selection: a CEO on "Barcha
+  // filiallar" opens groups of every branch.
+  const branchClosed = branchClosedToRegistration(
+    useBranchStatus(group.branchId),
+  );
 
   useEffect(() => {
     if (!canManage) return;
@@ -300,7 +308,11 @@ export function GroupInfoCard({
               <DialogTitle>QR kod — {group.name}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col items-center gap-4 py-4">
-              {isTelegramBotConfigured ? (
+              {branchClosed ? (
+                <p className="text-muted-foreground text-center text-sm">
+                  {BRANCH_CLOSED_TO_REGISTRATION}
+                </p>
+              ) : isTelegramBotConfigured ? (
                 <>
                   <div className="rounded-lg border bg-white p-4">
                     <QRCodeSVG
@@ -327,7 +339,7 @@ export function GroupInfoCard({
           </DialogContent>
         </Dialog>
 
-        <CopyLinkButton group={group} />
+        <CopyLinkButton group={group} branchClosed={branchClosed} />
       </div>
 
       {canManage && (
@@ -356,9 +368,17 @@ export function GroupInfoCard({
   );
 }
 
-function CopyLinkButton({ group }: { group: GroupData }) {
+function CopyLinkButton({
+  group,
+  branchClosed,
+}: {
+  group: GroupData;
+  branchClosed: boolean;
+}) {
   const [copied, setCopied] = useState(false);
-  const link = buildBotLink(`student_${group.branchId}_group_${group.id}`);
+  const link = branchClosed
+    ? null
+    : buildBotLink(`student_${group.branchId}_group_${group.id}`);
 
   const copyLink = async () => {
     if (!link) return;
@@ -367,7 +387,8 @@ function CopyLinkButton({ group }: { group: GroupData }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Bot sozlanmagan — nusxalashga yaroqli havola yo'q, tugma o'chiriladi.
+  // No working link to copy (the bot refuses this branch, or the bot is not
+  // configured): the button is disabled and the tooltip says why.
   if (!link) {
     return (
       <Tooltip>
@@ -378,7 +399,11 @@ function CopyLinkButton({ group }: { group: GroupData }) {
             </Button>
           </span>
         </TooltipTrigger>
-        <TooltipContent>{TELEGRAM_BOT_NOT_CONFIGURED}</TooltipContent>
+        <TooltipContent>
+          {branchClosed
+            ? BRANCH_CLOSED_TO_REGISTRATION
+            : TELEGRAM_BOT_NOT_CONFIGURED}
+        </TooltipContent>
       </Tooltip>
     );
   }

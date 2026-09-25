@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { ArchiveEntityType } from './dto/archive-query.dto';
-import { companyScope, getDelegate, parseId } from './shared/archive-meta';
+import { archiveScope, getDelegate, parseId } from './shared/archive-meta';
 
 @Injectable()
 export class ArchiveDeleteService {
@@ -23,7 +23,7 @@ export class ArchiveDeleteService {
       where: {
         id: parsedId,
         deletedAt: { not: null },
-        ...companyScope(entityType, companyId),
+        ...archiveScope(entityType, companyId),
       },
     });
 

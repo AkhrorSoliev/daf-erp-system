@@ -1,5 +1,4 @@
 import { Markup } from 'telegraf';
-import * as bcrypt from 'bcryptjs';
 import { BotContext } from '../types/context';
 import { DEFAULT_COMPANY_ID } from '../constants';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -9,11 +8,8 @@ import {
   SELF_SIGNUP_SOURCE,
   StudentLeadOriginService,
 } from '../../common/student-origin';
-import { generatePassword } from '../../common/utils/password.util';
-import { loginForPhone } from '../../common/auth/phone-account-rules';
+import { openStudentAccount } from '../../common/auth/student-account';
 import { downloadFile } from '../utils/download.util';
-
-const STUDENT_ROLE_ID = 6;
 
 // Session data is untyped in the bot — caller already validated all
 // required fields by the time confirm_student fires.
@@ -174,27 +170,14 @@ export async function registerStudentFromTelegram(
     companyId: DEFAULT_COMPANY_ID,
   });
 
-  // Kirish nomi — telefon, agar bo'sh bo'lsa; aks holda bo'sh (yuqoridagi
-  // `createStudentUser` bilan bir xil sabab).
-  const login = await loginForPhone(prisma, data.phone);
-  const plainPassword = generatePassword();
-  const hashedPassword = await bcrypt.hash(plainPassword, 10);
-
-  const user = await prisma.user.create({
-    data: {
-      login,
-      password: hashedPassword,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      phone: data.phone,
-      companyId: DEFAULT_COMPANY_ID,
-      roles: { create: [{ roleId: STUDENT_ROLE_ID }] },
-    },
-  });
-
-  await prisma.student.update({
-    where: { id: student.id },
-    data: { userId: user.id },
+  // The card's sign-in account (ADR-0033). The bot shows this password to
+  // the student who just registered.
+  const { plainPassword } = await openStudentAccount(prisma, {
+    id: student.id,
+    phone: data.phone,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    companyId: DEFAULT_COMPANY_ID,
   });
 
   return { plainPassword };

@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import api from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
+import { freshSessionFrom } from "@/lib/fresh-session";
 import { getErrorMessage } from "@/lib/get-error-message";
 
 interface ChangePasswordDrawerProps {
@@ -33,6 +35,7 @@ export function ChangePasswordDrawer({
   onClose,
 }: ChangePasswordDrawerProps) {
   const [saving, setSaving] = useState(false);
+  const setAuth = useAuth((s) => s.setAuth);
 
   const form = useForm<FormValues>({
     defaultValues: {
@@ -52,11 +55,19 @@ export function ChangePasswordDrawer({
 
     setSaving(true);
     try {
-      await api.patch("/users/password", {
+      const { data } = await api.patch("/users/password", {
         oldPassword: values.oldPassword,
         newPassword: values.newPassword,
       });
-      toast.success("Parol muvaffaqiyatli o'zgartirildi");
+      // The change ended every session of this account, this device's too;
+      // the API returns a fresh pair so only the other devices sign out.
+      const session = freshSessionFrom(data);
+      if (session) {
+        setAuth(session.user, session.accessToken, session.refreshToken);
+      }
+      toast.success(
+        "Parol o'zgartirildi. Boshqa qurilmalardagi kirishlar tugatildi",
+      );
       handleClose();
     } catch (error) {
       toast.error(getErrorMessage(error, "Parolni o'zgartirishda xatolik"));
@@ -154,11 +165,7 @@ export function ChangePasswordDrawer({
             <Button type="button" variant="outline" onClick={handleClose}>
               Bekor qilish
             </Button>
-            <Button
-              type="submit"
-              form="change-password-form"
-              disabled={saving}
-            >
+            <Button type="submit" form="change-password-form" disabled={saving}>
               {saving ? "Saqlanmoqda..." : "O'zgartirish"}
             </Button>
           </div>

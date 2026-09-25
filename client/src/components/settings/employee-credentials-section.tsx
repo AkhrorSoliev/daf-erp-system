@@ -8,6 +8,8 @@ import type { FormValues } from "./edit-employee-form";
 interface EmployeeCredentialsSectionProps {
   form: UseFormReturn<FormValues>;
   isEdit: boolean;
+  /** Your own record: login and password change only in Profil (ADR-0031). */
+  locked?: boolean;
 }
 
 /**
@@ -16,7 +18,11 @@ interface EmployeeCredentialsSectionProps {
  * form); a role-less employee cannot sign in, so the backend rejects a
  * login/password on them.
  */
-export function EmployeeCredentialsSection({ form, isEdit }: EmployeeCredentialsSectionProps) {
+export function EmployeeCredentialsSection({
+  form,
+  isEdit,
+  locked = false,
+}: EmployeeCredentialsSectionProps) {
   return (
     <section className="space-y-5 border-t px-6 py-5">
       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
@@ -30,6 +36,7 @@ export function EmployeeCredentialsSection({ form, isEdit }: EmployeeCredentials
             id="login"
             placeholder="Login"
             autoComplete="off"
+            disabled={locked}
             {...form.register("login")}
           />
         </div>
@@ -40,8 +47,15 @@ export function EmployeeCredentialsSection({ form, isEdit }: EmployeeCredentials
           <Input
             id="password"
             type="password"
-            placeholder={isEdit ? "O'zgartirmaslik uchun bo'sh qoldiring" : "Parol"}
+            placeholder={
+              locked
+                ? "Profil sahifasida o'zgartiriladi"
+                : isEdit
+                  ? "O'zgartirmaslik uchun bo'sh qoldiring"
+                  : "Parol"
+            }
             autoComplete="new-password"
+            disabled={locked}
             {...form.register("password")}
           />
           {form.formState.errors.password && (

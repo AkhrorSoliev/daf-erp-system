@@ -345,7 +345,7 @@ export function LessonChangesTab({ group }: Props) {
           <AlertDialogFooter>
             <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              variant="destructive"
               onClick={() => {
                 void confirmDelete?.onConfirm();
               }}

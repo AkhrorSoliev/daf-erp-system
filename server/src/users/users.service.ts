@@ -11,6 +11,7 @@ import { equalsOrIn } from '../common/dto/to-array';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ChangePhoneDto } from './dto/change-phone.dto';
 import { Prisma, UserStatus } from '@prisma/client';
 import { UploadService } from '../upload/upload.service';
 import {
@@ -18,20 +19,37 @@ import {
   userBranchWhere,
 } from '../common/finance/report-branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
+// Not via the `../common/status` barrel: it loads BillingModule → Telegram →
+// TelegramService, which imports this file (an import cycle).
+import { userArchiveData } from '../common/status/user-archive';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { RedisService } from '../redis/redis.service';
+import {
+  passwordWrite,
+  recordSessionsEnded,
+} from '../common/auth/session-version';
 import {
   USER_DEACTIVATED_EVENT,
   UserDeactivatedEvent,
 } from '../common/events/user-lifecycle.events';
 import {
-  assertCallerMayTouchUser,
-  assertCallerMayTouchUserRecord,
+  assertCallerMayManageUser,
+  assertCallerMayManageUserRecord,
+  ManageUserOptions,
 } from '../common/auth/user-branch-scope';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
+import { assertNotChangingOwnSignInKeys } from '../common/auth/own-sign-in-keys';
 import {
   findLiveStaffByPhone,
+  planPhoneChange,
   STAFF_ROLE_IDS,
 } from '../common/auth/phone-account-rules';
+import {
+  isBlockedStatus,
+  recordUserBlocked,
+  whereUserMayAct,
+} from '../common/auth/blocked-user';
+import { grantableRoleIdsFor } from '../telegram/constants';
 
 const userSelect = {
   id: true,
@@ -82,16 +100,17 @@ const TEACHER_ROLE_ID = 4;
  *
  * `user` — a signed-in caller. Every branch the write touches is checked
  * against the branches that caller actually holds, because creating a user IS
- * granting access to a branch.
+ * granting access to a branch, and every role it grants or takes away against
+ * the roles that caller may hand out (`GRANTABLE_ROLE_IDS`).
  *
  * `self-registration` — the Telegram bot, where the person being created is a
  * stranger holding a signed invitation link and there is simply no caller to
  * confine. The authorisation happened when the link was minted:
  * `generateEmployeeLinkPayload` refuses a branch the requester does not hold
  * and roles above their own level, then HMAC-signs the pair, and the bot
- * verifies that signature before the scene ever starts. That is the same
- * ceiling `assertCallerInBranch` applies to the signed-in path — reached one
- * step earlier.
+ * verifies that signature before the scene ever starts. Those are the same two
+ * checks the signed-in path runs (`assertCallerInBranch` and the role ceiling),
+ * reached one step earlier.
  *
  * It is a stated variant rather than an absent argument on purpose. The
  * absence of a caller used to mean "skip the check" by accident, which is how
@@ -111,6 +130,7 @@ export class UsersService {
     private uploadService: UploadService,
     private entityHistoryService: EntityHistoryService,
     private events: EventEmitter2,
+    private redis: RedisService,
   ) {}
 
   private async assertRoleAndBranchRules(
@@ -128,6 +148,11 @@ export class UsersService {
        * "not asked" — the caller did not put credentials in play.
        */
       passwordAfter?: boolean;
+      /**
+       * The roles the account holds before this write; `undefined` for an
+       * account being created. The role ceiling compares it with `roleIds`.
+       */
+      currentRoleIds?: number[];
     },
   ) {
     // Fail closed before any rule reads the actor: a caller-shaped actor with
@@ -135,23 +160,6 @@ export class UsersService {
     // permissive branch the way a missing argument once did.
     if (actor.kind === 'user' && actor.id == null) {
       throw new ForbiddenException('Foydalanuvchi aniqlanmadi');
-    }
-
-    // Role escalation guard: only CEO can grant CEO role.
-    // A self-registration has no caller to escalate FROM — the equivalent
-    // ceiling (`GRANTABLE_ROLE_IDS`) was applied to whoever minted the link.
-    if (actor.kind === 'user' && roleIds?.includes(CEO_ROLE_ID)) {
-      const caller = await this.prisma.user.findUnique({
-        where: { id: actor.id },
-        select: {
-          roles: { select: { role: { select: { name: true } } } },
-        },
-      });
-      const callerIsCeo =
-        caller?.roles.some((r) => r.role.name === 'CEO') ?? false;
-      if (!callerIsCeo) {
-        throw new ForbiddenException('CEO rolini faqat CEO tayinlashi mumkin');
-      }
     }
 
     // A job title is what every list, badge and payroll row reads. It is the
@@ -235,10 +243,11 @@ export class UsersService {
     // view. A CEO spans everything and passes; a caller who holds neither
     // branch is refused for both.
     //
-    // A self-registration is skipped here and ONLY here: there is no caller to
-    // hold a branch, and the branch it is being written into came from a
-    // signature that already encoded exactly this permission (see
-    // `UserWriteActor`). Every other rule above still ran.
+    // A self-registration skips this check and the role ceiling below, and
+    // nothing else: there is no caller to hold a branch or a role, and both
+    // came from a signature that already encoded exactly these permissions
+    // (see `UserWriteActor`, ADR-0008, ADR-0026). Every rule above and the
+    // password rule below still run for it.
     if (actor.kind === 'user') {
       for (const branchId of [
         ...(branchIds ?? []),
@@ -251,6 +260,23 @@ export class UsersService {
           "Bu filialga xodim qo'shish huquqingiz yo'q",
         );
       }
+    }
+
+    // …and every role the write grants or takes away must be one the caller
+    // may hand out.
+    //
+    // Holding the branch is not enough. An Administrator holds their own, so
+    // without this they could create a Branch Director there with a password
+    // of their choosing, or promote THEMSELVES, since acting on yourself skips
+    // the object-level check. The ceiling is the one the registration links
+    // already apply (`GRANTABLE_ROLE_IDS`): a link and this form open the same
+    // kind of account. Its rules are ADR-0026's.
+    if (actor.kind === 'user') {
+      await this.assertCallerMayChangeRoles(
+        actor.id,
+        opts?.currentRoleIds ?? [],
+        roleIds ?? [],
+      );
     }
 
     // The converse of the refusal above, and just as load-bearing: a role IS
@@ -267,6 +293,57 @@ export class UsersService {
     if (hasRoles && opts?.passwordAfter === false) {
       throw new BadRequestException(
         'Tizim roli berilgan xodim uchun parol majburiy',
+      );
+    }
+  }
+
+  /**
+   * The role ceiling on the signed-in path (ADR-0026). Four rules, each chosen
+   * on purpose:
+   *
+   * - **An unchanged role set is not a grant.** The employee form sends
+   *   `roleIds` on every save, so SETS are compared (order and duplicates do
+   *   not count). Otherwise a Branch Director could not fix a typo in their
+   *   own name.
+   * - **Every added role must be inside the caller's ceiling.** A forbidden
+   *   role cannot ride in beside a permitted one.
+   * - **Only an account holding nothing above the ceiling can be reshaped.**
+   *   An Administrator may not add a Teacher role to their Branch Director,
+   *   take one away, or change their own role set: the roles of anyone at or
+   *   above your level, yourself included, belong to someone above you.
+   * - **An unknown, archived or blocked caller grants nothing.** An access
+   *   token outlives an archive or a suspension by up to an hour, nothing
+   *   re-reads the account on each request, and the guard's cache that would
+   *   cut the token off lets it through while Redis is down. So this lookup
+   *   filters both itself (`whereUserMayAct`, ADR-0028).
+   */
+  private async assertCallerMayChangeRoles(
+    callerId: number,
+    currentRoleIds: number[],
+    nextRoleIds: number[],
+  ): Promise<void> {
+    const current = new Set(currentRoleIds);
+    const next = new Set(nextRoleIds);
+    const added = [...next].filter((id) => !current.has(id));
+    const removed = [...current].filter((id) => !next.has(id));
+    if (added.length === 0 && removed.length === 0) return;
+
+    const caller = await this.prisma.user.findFirst({
+      where: { id: callerId, ...whereUserMayAct() },
+      select: { roles: { select: { role: { select: { name: true } } } } },
+    });
+    const grantable = grantableRoleIdsFor(
+      caller?.roles.map((r) => r.role.name) ?? [],
+    );
+
+    if (added.some((id) => !grantable.includes(id))) {
+      throw new ForbiddenException(
+        "O'z rolingizdan yuqori yoki unga teng rolni tayinlay olmaysiz",
+      );
+    }
+    if ([...current].some((id) => !grantable.includes(id))) {
+      throw new ForbiddenException(
+        "O'z rolingizdan yuqori yoki unga teng roldagi xodimning rollarini o'zgartira olmaysiz",
       );
     }
   }
@@ -438,7 +515,6 @@ export class UsersService {
       data: {
         ...(dto.firstName !== undefined && { firstName: dto.firstName }),
         ...(dto.lastName !== undefined && { lastName: dto.lastName }),
-        ...(dto.phone !== undefined && { phone: dto.phone }),
         ...(dto.photo !== undefined && { photo: dto.photo || null }),
       },
       select: userSelect,
@@ -454,6 +530,23 @@ export class UsersService {
     });
 
     return formatUser(updated);
+  }
+
+  /** Journal a password write on the employee record: who did it, and how. */
+  private recordPasswordEvent(
+    userId: number,
+    label: string,
+    changedById: number,
+    companyId: number,
+  ) {
+    return this.entityHistoryService.recordUpdate({
+      entityType: 'User',
+      entityId: userId,
+      oldValues: { parol: '***' },
+      newValues: { parol: label },
+      changedById,
+      companyId,
+    });
   }
 
   async changePassword(id: number, dto: ChangePasswordDto) {
@@ -472,12 +565,65 @@ export class UsersService {
     }
 
     const hashed = await bcrypt.hash(dto.newPassword, 10);
-    await this.prisma.user.update({
+    // Ends every session of the account, this one included; the controller
+    // hands the caller a fresh pair (ADR-0030).
+    const { sessionVersion } = await this.prisma.user.update({
       where: { id },
-      data: { password: hashed },
+      data: passwordWrite(hashed),
+      select: { sessionVersion: true },
+    });
+    await recordSessionsEnded(this.redis, id, sessionVersion);
+    await this.recordPasswordEvent(id, "o'zgartirildi", id, user.companyId);
+
+    // The controller signs this device's fresh pair with exactly this version.
+    return { message: "Parol muvaffaqiyatli o'zgartirildi", sessionVersion };
+  }
+
+  /**
+   * The only door through which a caller changes their OWN phone (ADR-0031).
+   * The phone is a sign-in key, so, like `changePassword`, this asks for the
+   * current password first: it is the owner who changes it, not merely
+   * whoever is signed in.
+   */
+  async changeOwnPhone(id: number, dto: ChangePhoneDto) {
+    const found = await this.prisma.user.findFirst({
+      where: { id, deletedAt: null },
+      select: { ...userSelect, password: true },
+    });
+    if (!found) {
+      throw new NotFoundException(`User #${id} topilmadi`);
+    }
+    const { password, ...user } = found;
+    if (!password) {
+      throw new BadRequestException("Parol o'rnatilmagan");
+    }
+    if (!(await bcrypt.compare(dto.currentPassword, password))) {
+      throw new BadRequestException("Joriy parol noto'g'ri");
+    }
+
+    if (dto.phone === user.phone) return formatUser(user);
+
+    const write = await planPhoneChange(this.prisma, user, dto.phone, {
+      staff: user.roles.some((ur) =>
+        (STAFF_ROLE_IDS as readonly number[]).includes(ur.role.id),
+      ),
+    });
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: write,
+      select: userSelect,
     });
 
-    return { message: "Parol muvaffaqiyatli o'zgartirildi" };
+    await this.entityHistoryService.recordUpdate({
+      entityType: 'User',
+      entityId: id,
+      oldValues: user,
+      newValues: updated,
+      changedById: id,
+      companyId: user.companyId,
+    });
+
+    return formatUser(updated);
   }
 
   async create(
@@ -598,18 +744,21 @@ export class UsersService {
   }
 
   /**
-   * A non-CEO caller may only edit staff of their OWN branch.
+   * A non-CEO caller may only write to staff of their OWN branch who rank
+   * below them (ADR-0027).
    *
-   * The rule itself now lives in `common/auth/user-branch-scope.ts`. It moved
-   * out when comments on an employee profile became a second caller: a branch
-   * rule with two private copies is exactly how three lesson modules ended up
-   * unguarded while `attendance.controller` held the only copy.
+   * The rule itself lives in `common/auth/user-branch-scope.ts`, shared with
+   * `DELETE /users/:id` and the `/teachers/:id` writes: a rule with two private
+   * copies is exactly how three lesson modules ended up unguarded while
+   * `attendance.controller` held the only copy.
    */
-  private async assertCallerMayTouchUser(
-    target: { id: number; mainBranch: number | null; branches: any[] },
+  private async assertCallerMayManageLoadedUser(
+    target: Parameters<typeof assertCallerMayManageUserRecord>[0],
     changedById: number,
+    opts: ManageUserOptions,
   ): Promise<void> {
-    if (target.id === changedById) return; // editing yourself is always fine
+    // Yourself: no lookup unless the status changes (that rule reads roles).
+    if (target.id === changedById && !opts.changesStatus) return;
 
     const caller = await this.prisma.user.findFirst({
       where: { id: changedById, deletedAt: null },
@@ -623,7 +772,7 @@ export class UsersService {
 
     // The target is already loaded here (via `userSelect`), so the record
     // variant is used rather than the loading one — same rule, one less query.
-    assertCallerMayTouchUserRecord(target, caller, changedById);
+    assertCallerMayManageUserRecord(target, caller, changedById, opts);
   }
 
   async updateUser(
@@ -646,7 +795,13 @@ export class UsersService {
     }
 
     this.assertSameCompany(user.companyId, callerCompanyId);
-    await this.assertCallerMayTouchUser(user as any, changedById);
+    // The form resends `status` on every save; only a new value is a change.
+    await this.assertCallerMayManageLoadedUser(user, changedById, {
+      changesStatus: dto.status !== undefined && dto.status !== user.status,
+    });
+    // ADR-0031: your own phone, login and password change only through the
+    // doors that ask for your current password — never through this form.
+    assertNotChangingOwnSignInKeys(user, changedById, dto);
 
     // If roles, branches, the job title, or credentials are being modified,
     // re-validate the combined state. `password`/`login` are included even
@@ -684,6 +839,7 @@ export class UsersService {
           // alone. Only an account that would END this write with a role and
           // no password at all is refused.
           passwordAfter: !!dto.password || !!user.password,
+          currentRoleIds: user.roles.map((ur) => ur.role.id),
         },
       );
     }
@@ -691,8 +847,24 @@ export class UsersService {
     const updateData: any = {};
     if (dto.firstName !== undefined) updateData.firstName = dto.firstName;
     if (dto.lastName !== undefined) updateData.lastName = dto.lastName;
-    if (dto.phone !== undefined) updateData.phone = dto.phone;
     if (dto.login !== undefined) updateData.login = dto.login;
+    if (dto.phone !== undefined) {
+      const resultingRoleIds: number[] =
+        dto.roleIds ?? user.roles.map((ur: any) => ur.role.id);
+      const write = await planPhoneChange(this.prisma, user, dto.phone, {
+        staff: resultingRoleIds.some((roleId) =>
+          (STAFF_ROLE_IDS as readonly number[]).includes(roleId),
+        ),
+      });
+      updateData.phone = write.phone;
+      // The login follows the phone unless this request deliberately sets a
+      // different one. The form re-sends the stored login on every save, so
+      // an unchanged value is not a decision to keep the old number.
+      const loginChanged = dto.login !== undefined && dto.login !== user.login;
+      if (write.login !== undefined && !loginChanged) {
+        updateData.login = write.login;
+      }
+    }
     if (dto.position !== undefined) updateData.position = dto.position.trim();
     if (dto.gender !== undefined) updateData.gender = dto.gender;
     if (dto.mainBranch !== undefined) updateData.mainBranch = dto.mainBranch;
@@ -703,7 +875,10 @@ export class UsersService {
       updateData.isActive = dto.status === UserStatus.ACTIVE;
     }
     if (dto.password) {
-      updateData.password = await bcrypt.hash(dto.password, 10);
+      Object.assign(
+        updateData,
+        passwordWrite(await bcrypt.hash(dto.password, 10)),
+      );
     }
 
     // Stripping an employee's last role IS removing their system access.
@@ -716,33 +891,50 @@ export class UsersService {
     // instead: a bcrypt hash and a login that grant nothing are exactly what
     // "no role" is supposed to mean.
     if (nextRoleIds && nextRoleIds.length === 0) {
-      updateData.password = null;
+      Object.assign(updateData, passwordWrite(null));
       updateData.login = null;
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      // Update roles if provided
-      if (dto.roleIds) {
-        await tx.userRole.deleteMany({ where: { userId: id } });
-        await tx.userRole.createMany({
-          data: dto.roleIds.map((roleId) => ({ userId: id, roleId })),
-        });
-      }
+    const { sessionVersion, ...updated } = await this.prisma.$transaction(
+      async (tx) => {
+        // Update roles if provided
+        if (dto.roleIds) {
+          await tx.userRole.deleteMany({ where: { userId: id } });
+          await tx.userRole.createMany({
+            data: dto.roleIds.map((roleId) => ({ userId: id, roleId })),
+          });
+        }
 
-      // Update branches if provided
-      if (dto.branchIds) {
-        await tx.userBranch.deleteMany({ where: { userId: id } });
-        await tx.userBranch.createMany({
-          data: dto.branchIds.map((branchId) => ({ userId: id, branchId })),
-        });
-      }
+        // Update branches if provided
+        if (dto.branchIds) {
+          await tx.userBranch.deleteMany({ where: { userId: id } });
+          await tx.userBranch.createMany({
+            data: dto.branchIds.map((branchId) => ({ userId: id, branchId })),
+          });
+        }
 
-      return tx.user.update({
-        where: { id },
-        data: updateData,
-        select: userSelect,
-      });
-    });
+        return tx.user.update({
+          where: { id },
+          data: updateData,
+          // `sessionVersion` rides along only so a password write can be
+          // mirrored below; it is split off before anything is returned.
+          select: { ...userSelect, sessionVersion: true },
+        });
+      },
+    );
+
+    // The password is committed now: mirror the bump before anything else can
+    // fail, or the old access tokens keep working for the rest of their hour.
+    if ('password' in updateData) {
+      await recordSessionsEnded(this.redis, id, sessionVersion);
+    }
+
+    // The status is now in the database; cut off, or restore, the access
+    // token it leaves behind. Straight after the write, so nothing below can
+    // leave a suspended employee's token live for its remaining hour.
+    if (dto.status !== undefined) {
+      await recordUserBlocked(this.redis, id, isBlockedStatus(dto.status));
+    }
 
     await this.entityHistoryService.recordUpdate({
       entityType: 'User',
@@ -752,6 +944,21 @@ export class UsersService {
       changedById,
       companyId: user.companyId,
     });
+
+    if ('password' in updateData) {
+      // Journal only a real change: stripping the roles of an account that
+      // never had a password leaves nothing to report.
+      if (updateData.password !== null || user.password) {
+        await this.recordPasswordEvent(
+          id,
+          updateData.password === null
+            ? "rollar olib tashlangani uchun o'chirildi"
+            : "yangi parol o'rnatildi",
+          changedById,
+          user.companyId,
+        );
+      }
+    }
 
     // Deactivated / terminated → stop their fixed-monthly payroll (closes the
     // FIXED_MONTHLY config + version; the final partial month still prorates).
@@ -778,21 +985,17 @@ export class UsersService {
     // `updateUser` right beside this has been branch-confined since the
     // object-level sweep; archiving was not. Same record, same severity —
     // an archived employee loses their account — through the door nobody
-    // locked.
-    await assertCallerMayTouchUser(
-      this.prisma,
-      deletedById,
-      id,
-      "Siz faqat o'z filialingiz xodimlarini arxivlashingiz mumkin",
-    );
+    // locked. Rank applies too; archiving is a status change (ADR-0027).
+    await assertCallerMayManageUser(this.prisma, deletedById, id, {
+      message: "Siz faqat o'z filialingiz xodimlarini arxivlashingiz mumkin",
+      changesStatus: true,
+    });
 
     await this.prisma.user.update({
       where: { id },
-      data: {
-        deletedAt: new Date(),
-        deletedById,
-      },
+      data: userArchiveData(deletedById),
     });
+    await recordUserBlocked(this.redis, id, true);
 
     await this.entityHistoryService.recordDelete({
       entityType: 'User',
