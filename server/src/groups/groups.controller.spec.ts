@@ -137,6 +137,21 @@ describe('GroupsController — role guards', () => {
       const ctx = mockExecutionContext(controller.delete, ['Teacher']);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
+
+    it('hands the reason from the body to the service', async () => {
+      await controller.delete(
+        'group-1',
+        { reason: "Guruh yig'ilmadi" },
+        1,
+        1001,
+      );
+      expect(mockService.delete).toHaveBeenCalledWith(
+        'group-1',
+        1,
+        1001,
+        "Guruh yig'ilmadi",
+      );
+    });
   });
 
   describe('changeStatus()', () => {

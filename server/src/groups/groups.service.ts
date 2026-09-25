@@ -92,8 +92,8 @@ export class GroupsService {
   ) {
     return this.write.update(id, dto, userId, companyId);
   }
-  delete(id: string, userId: number, companyId: number) {
-    return this.write.delete(id, userId, companyId);
+  delete(id: string, userId: number, companyId: number, reason?: string) {
+    return this.write.delete(id, userId, companyId, reason);
   }
 
   // Status

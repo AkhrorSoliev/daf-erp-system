@@ -310,6 +310,60 @@ describe('GroupsService — status methods', () => {
       expect(statusCascadeService.cascadeGroupDeletion).not.toHaveBeenCalled();
       expect(tx.group.update).not.toHaveBeenCalled();
     });
+
+    it("writes the admin's reason on the group and hands it to the cascade", async () => {
+      await service.delete('group-1', 1, 1001, "  Guruh yig'ilmadi  ");
+
+      expect(statusCascadeService.cascadeGroupDeletion).toHaveBeenCalledWith(
+        tx,
+        expect.objectContaining({ note: "Guruh yig'ilmadi" }),
+      );
+      expect(tx.statusHistory.create.mock.calls[0][0].data.reason).toBe(
+        "Guruh yig'ilmadi",
+      );
+      expect(tx.group.update.mock.calls[0][0].data.statusChangeReason).toBe(
+        "Guruh yig'ilmadi",
+      );
+      expect(entityHistoryService.recordDelete).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'Group',
+          oldValues: expect.objectContaining({
+            deletionReason: "Guruh yig'ilmadi",
+          }),
+        }),
+      );
+    });
+
+    it('treats a blank reason as none', async () => {
+      await service.delete('group-1', 1, 1001, '   ');
+
+      expect(
+        statusCascadeService.cascadeGroupDeletion.mock.calls[0][1].note,
+      ).toBeUndefined();
+      expect(tx.statusHistory.create.mock.calls[0][0].data.reason).toBe(
+        "O'chirildi",
+      );
+      expect(tx.group.update.mock.calls[0][0].data.statusChangeReason).toBe(
+        "O'chirildi",
+      );
+      expect(
+        entityHistoryService.recordDelete.mock.calls[0][0].oldValues,
+      ).not.toHaveProperty('deletionReason');
+    });
+
+    it('says how many students the deletion took out of the group', async () => {
+      statusCascadeService.cascadeGroupDeletion.mockResolvedValue({ count: 3 });
+
+      await expect(service.delete('group-1', 1, 1001)).resolves.toEqual({
+        message: "Guruh o'chirildi, 3 ta o'quvchi guruhdan chiqarildi",
+      });
+    });
+
+    it('keeps the old message for a group with nobody in it', async () => {
+      await expect(service.delete('group-1', 1, 1001)).resolves.toEqual({
+        message: "Guruh muvaffaqiyatli o'chirildi",
+      });
+    });
   });
 
   describe('getNextName', () => {
