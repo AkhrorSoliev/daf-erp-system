@@ -187,16 +187,15 @@ exclude the new row would silently grant access.
 - `position` is **required on create** for every employee (`CreateUserDto`),
   nullable in the schema so pre-existing rows keep working. There is no
   backfill script — the employee form pre-fills the field from the role label,
-  so a title is written the first time anyone is edited. Both
-  `teacher-registration.scene.ts` and `employee-registration.scene.ts` also
-  call `UsersService.create`, so this requirement broke bot onboarding until
-  it was fixed: teacher registration always grants exactly the Teacher role
-  and sends `"O'qituvchi"` directly, while employee registration can grant
-  several roles and derives the position from them via
+  so a title is written the first time anyone is edited. The bot's
+  `employee-registration.scene.ts` also calls `UsersService.create`, so this
+  requirement broke bot onboarding until it was fixed: a link can grant
+  several roles, and the scene derives the position from them via
   `derivePositionForRoles(roleIds)` (`telegram/constants.ts`'s
-  `POSITION_LABELS`, lowest role id wins — one mapping, not a copy per scene).
-  Any future caller of `UsersService.create` must supply a position; reach for
-  that helper rather than writing a second role→position map.
+  `POSITION_LABELS`, lowest role id wins) — a teacher's link (role 4 alone)
+  gets `"O'qituvchi"`. Any future caller of `UsersService.create` must supply
+  a position; reach for that helper rather than writing a second role→position
+  map.
 - `roleIds` is **optional**. `assertRoleAndBranchRules` no longer returns early
   on an empty role list — that early return meant the one employee who most
   needs a branch (one who exists only to be paid) was the one never checked.

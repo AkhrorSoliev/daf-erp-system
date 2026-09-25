@@ -17,12 +17,18 @@ const BOT_INFO = {
 } as UserFromGetMe;
 
 /**
- * Same reasoning as `teacher-registration.scene.spec.ts`: `confirm_registration`
- * is where a Telegram-registered employee becomes a `UsersService.create` call,
- * and Task 3 made `position` required on that call. The employee scene grants
- * an arbitrary role SET (not a single fixed role like the teacher scene), so
- * `position` here must be derived from whichever roles were actually granted —
+ * `confirm_registration` is where a Telegram-registered employee becomes a
+ * `UsersService.create` call, and Task 3 made `position` required on that
+ * call: a create() without one throws "Lavozim ko'rsatilishi shart", which
+ * once failed every bot registration. The scene grants an arbitrary role SET,
+ * so `position` must be derived from whichever roles were actually granted —
  * this is what regressed C1 for employee registrations specifically.
+ *
+ * The tests run the scene's real middleware stack against a genuine Telegraf
+ * `Context` (Composer.compose asserts `instanceof Context`, so a plain object
+ * ctx is rejected) built from a hand-crafted `callback_query` update, rather
+ * than mocking the scene away — a future edit to the confirm handler is
+ * exercised for real, not just re-asserted against itself.
  */
 function buildConfirmCtx(sessionData: Record<string, any>) {
   const update = {
