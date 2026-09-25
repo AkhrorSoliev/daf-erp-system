@@ -101,7 +101,9 @@ export const ENTITY_API_PATH: Record<string, string> = {
 // ─── Status transitions (backend bilan sinxron) ──────
 // Student uchun ARCHIVED ham tanlanadi — bu DELETE endpointga yo'naladi
 // (arxivlash = xato/duplikat yozuvlarni ko'rinmas qilish, real chetlatish emas)
-const STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
+// status-config.test.ts checks every transition offered here against the
+// server's STATUS_TRANSITIONS.
+export const STATUS_TRANSITIONS: Record<string, Record<string, string[]>> = {
   students: {
     ACTIVE: ["FROZEN", "EXPELLED", "ARCHIVED"],  // GRADUATED avtomatik — guruh tugaganda
     INACTIVE: ["ACTIVE", "FROZEN", "ARCHIVED"],   // legacy
