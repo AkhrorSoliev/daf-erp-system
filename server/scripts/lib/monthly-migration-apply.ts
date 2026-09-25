@@ -104,6 +104,11 @@ import {
   TransactionType,
 } from '@prisma/client';
 import type { ChargeableEnrollment } from '../../src/billing/monthly-charge.service';
+import {
+  addMonthsToMonthKey,
+  utcMidnightFromDateStr,
+} from '../../src/common/date/tashkent';
+import { emptyCarriedIn, type CarriedIn } from './carried-in-lessons';
 
 // CLAUDE.md "Status transition matrix": ABSENT ham billable — dars o'tilgan
 // bo'lsa, to'langan hisoblanadi. Faqat EXCUSED hisoblanmaydi.
@@ -180,6 +185,29 @@ export interface ApplyMigrationDeps {
     lessonDivisor: number;
     tx: Prisma.TransactionClient;
   }) => Promise<{ id: string } | null>;
+  /**
+   * The month's lessons a pack bought BEFORE the month paid for
+   * (carried-in-lessons.ts). Read before anything is written: once step 2
+   * reverses the month's own packs, the coverage FIFO would push those
+   * lessons into the earlier pack and over-credit it.
+   */
+  computeCarriedIn: (
+    tx: Prisma.TransactionClient,
+    enrollment: { id: string; startDate: Date | null },
+  ) => Promise<CarriedIn>;
+  /** TransactionsWriteService.createAdjustment — books the carried-in credit. */
+  createAdjustment: (
+    params: {
+      studentId: number;
+      amount: number;
+      description: string;
+      branchId?: number;
+      companyId: number;
+      performedById?: number;
+      metadata?: Prisma.InputJsonValue;
+    },
+    tx: Prisma.TransactionClient,
+  ) => Promise<{ id: string }>;
 }
 
 /** Migratsiya qamrovidagi bitta yozilish — `courseId` alohida, chunki
@@ -223,6 +251,12 @@ export interface EnrollmentToMigrate {
    * kam emasmi.
    */
   prepaidCoveredByReversal: number;
+  /**
+   * The carried-in credit the dry-run promised for this enrollment. It is
+   * recounted inside the transaction; a mismatch aborts the student, the same
+   * guard `expectedPrepaidRefund` has.
+   */
+  expectedCarriedIn: { lessons: number; value: number };
 }
 
 export interface ApplyStudentParams {
@@ -244,11 +278,25 @@ export interface ApplyStudentResult {
   studentId: number;
   oldBalance: number;
   prepaidRefund: number;
+  /** Money credited back for lessons an earlier pack had already paid for. */
+  carriedInCredit: number;
+  /**
+   * A carried-in credit the ledger suggested but that was withheld for a
+   * manual decision (freeze or cash refund released part of the pack).
+   * Reported, never written.
+   */
+  carriedInHeld: number;
   reversedSeptember: number;
   monthlyCharge: number;
   newBalance: number;
   reversedDeductionCount: number;
   accrualsRecomputed: number;
+  /**
+   * Lessons left without an accrual: nothing was reversed for them and
+   * createAccrual wrote nothing (the teacher had no rate on that day). The
+   * old model paid nothing for them either; the teacher preview flags them.
+   */
+  accrualsSkipped: number;
   /** Shu o'quvchi uchun HAQIQATDA yozilgan yangi oylik hisob soni. */
   chargesCreated: number;
   /**
@@ -313,11 +361,22 @@ export async function applyMigrationForStudent(
     `Oylik to'lovga o'tish migratsiyasi — ` +
     `${params.periodYear}-${pad2(params.periodMonth)}`;
 
+  // Attendance.date is @db.Date: bound it by UTC-midnight dates. The
+  // Tashkent-shifted periodGte/periodLt are for timestamp columns only.
+  const periodKey = `${params.periodYear}-${pad2(params.periodMonth)}`;
+  const monthFirstDate = utcMidnightFromDateStr(`${periodKey}-01`);
+  const nextMonthFirstDate = utcMidnightFromDateStr(
+    `${addMonthsToMonthKey(periodKey, 1)}-01`,
+  );
+
   let prepaidRefund = 0;
+  let carriedInCredit = 0;
+  let carriedInHeld = 0;
   let reversedSeptember = 0;
   let monthlyCharge = 0;
   let reversedDeductionCount = 0;
   let accrualsRecomputed = 0;
+  let accrualsSkipped = 0;
   let chargesCreated = 0;
   let chargesSkipped = 0;
   const skippedEnrollmentIds: string[] = [];
@@ -333,6 +392,9 @@ export async function applyMigrationForStudent(
       where: {
         type: TransactionType.LESSON_DEDUCTION,
         reversedAt: null,
+        // A reversal's counter-row keeps the original's type and has
+        // reversedAt = null; it is never a batch.
+        reversedTransactionId: null,
         enrollmentId: enr.id,
       },
       orderBy: { createdAt: 'desc' },
@@ -342,6 +404,23 @@ export async function applyMigrationForStudent(
       !!fundingBatch &&
       fundingBatch.createdAt >= params.periodGte &&
       fundingBatch.createdAt < params.periodLt;
+
+    // ── 0b. Lessons of the month an earlier pack already paid for. Counted
+    // BEFORE step 1 and step 2 write anything. Only a chargeable enrollment
+    // is credited — a PAUSED one keeps its pack billing. ─────────────────
+    const carriedIn: CarriedIn = item.chargeable
+      ? await deps.computeCarriedIn(tx, enr)
+      : emptyCarriedIn();
+    carriedInHeld += carriedIn.review?.value ?? 0;
+    if (
+      carriedIn.value !== item.expectedCarriedIn.value ||
+      carriedIn.lessons !== item.expectedCarriedIn.lessons
+    ) {
+      throw new Error(
+        `Yozilish ${enr.id}: avgust darslari bashorati ${item.expectedCarriedIn.lessons} dars / ${item.expectedCarriedIn.value}, ` +
+          `haqiqatda ${carriedIn.lessons} dars / ${carriedIn.value}. Migratsiya to'xtatildi, hech narsa yozilmadi.`,
+      );
+    }
 
     // ── 1. Qulflangan prepaid'ni balansga qaytarish. Allaqachon 0 bo'lsa
     // (avvalgi urinishda bajarilgan yoki umuman bo'lmagan) — null, no-op.
@@ -380,6 +459,9 @@ export async function applyMigrationForStudent(
         where: {
           type: TransactionType.LESSON_DEDUCTION,
           reversedAt: null,
+          // Skip counter-rows: reversing one again throws ("already
+          // reversed"), and the original and its reversal already net to 0.
+          reversedTransactionId: null,
           enrollmentId: enr.id,
           createdAt: { gte: params.periodGte, lt: params.periodLt },
         },
@@ -481,6 +563,41 @@ export async function applyMigrationForStudent(
       skippedEnrollmentIds.push(enr.id);
     }
 
+    // ── 4b. Credit the carried-in lessons back, once. Only next to a FRESH
+    // charge: that charge is what bills those lessons again, and writing it
+    // takes the enrollment out of scope, so a rerun can never credit twice.
+    //
+    // `marker` starting with 'overcharge' is what makes
+    // reports-financial.service.ts net this row out of recognized revenue:
+    // the earlier pack already recognized these lessons, and the monthly
+    // charge recognizes them a second time. ─────────────────────────────
+    if (isFreshCharge && carriedIn.value > 0) {
+      await deps.createAdjustment(
+        {
+          studentId: params.studentId,
+          amount: carriedIn.value,
+          description: `${reason} — ${carriedIn.lessons} ta dars oldingi oyda to'langan edi, qaytarildi`,
+          branchId: enr.group.branchId,
+          companyId: params.companyId,
+          performedById: params.performedById,
+          metadata: {
+            marker: 'overcharge-monthly-carried-in',
+            migration: 'monthly-carried-in',
+            period: periodKey,
+            enrollmentId: enr.id,
+            lessons: carriedIn.lessons,
+            batches: carriedIn.batches.map((b) => ({
+              deductionId: b.deductionId,
+              lessons: b.lessons,
+              value: b.value,
+            })),
+          },
+        },
+        tx,
+      );
+      carriedInCredit += carriedIn.value;
+    }
+
     // ── 5. Sentabr davridagi o'tilgan darslar uchun o'qituvchi haqini
     // YANGI muzlatilgan narxda qayta hisoblash. Faqat YANGI hisob
     // yaratilganda (yuqoridagi bilan bir xil sabab — qayta ishga tushirish
@@ -501,7 +618,7 @@ export async function applyMigrationForStudent(
         where: {
           groupId: enr.groupId,
           studentId: params.studentId,
-          date: { gte: params.periodGte, lt: params.periodLt },
+          date: { gte: monthFirstDate, lt: nextMonthFirstDate },
           status: { in: [...BILLABLE_STATUSES] },
         },
         select: { id: true, date: true, groupId: true },
@@ -513,7 +630,7 @@ export async function applyMigrationForStudent(
           lesson.date,
         );
         for (const teacherId of teacherIds) {
-          await deps.reverseAccrualForAttendance({
+          const reversed = await deps.reverseAccrualForAttendance({
             teacherId,
             studentId: params.studentId,
             groupId: lesson.groupId,
@@ -540,11 +657,19 @@ export async function applyMigrationForStudent(
             tx,
           });
           if (!accrual) {
-            throw new Error(
-              `O'qituvchi ${teacherId}, dars ${lesson.id}: eski hisob bekor qilindi, ` +
-                `yangisi YOZILMADI (createAccrual null qaytardi — oylik davri yopiq bo'lishi mumkin). ` +
-                `Migratsiya to'xtatildi, hech narsa yozilmadi.`,
-            );
+            if (reversed) {
+              throw new Error(
+                `O'qituvchi ${teacherId}, dars ${lesson.id}: eski hisob bekor qilindi, ` +
+                  `yangisi YOZILMADI (createAccrual null qaytardi — oylik davri yopiq bo'lishi mumkin). ` +
+                  `Migratsiya to'xtatildi, hech narsa yozilmadi.`,
+              );
+            }
+            // Nothing was reversed, so nothing is lost: the old model wrote
+            // no accrual for this lesson either (typically the teacher's rate
+            // starts after it). Failing the student here would also keep the
+            // whole course from switching to MONTHLY.
+            accrualsSkipped += 1;
+            continue;
           }
           accrualsRecomputed += 1;
         }
@@ -553,7 +678,11 @@ export async function applyMigrationForStudent(
   }
 
   const expectedNewBalance =
-    oldBalance + prepaidRefund + reversedSeptember - monthlyCharge;
+    oldBalance +
+    prepaidRefund +
+    carriedInCredit +
+    reversedSeptember -
+    monthlyCharge;
   const studentAfter = await tx.student.findUniqueOrThrow({
     where: { id: params.studentId },
     select: { balance: true },
@@ -571,11 +700,14 @@ export async function applyMigrationForStudent(
     studentId: params.studentId,
     oldBalance,
     prepaidRefund,
+    carriedInCredit,
+    carriedInHeld,
     reversedSeptember,
     monthlyCharge,
     newBalance,
     reversedDeductionCount,
     accrualsRecomputed,
+    accrualsSkipped,
     chargesCreated,
     chargesSkipped,
     skippedEnrollmentIds,

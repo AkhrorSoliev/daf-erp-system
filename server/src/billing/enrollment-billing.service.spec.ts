@@ -279,6 +279,28 @@ describe('EnrollmentBillingService.releasePrepaidLessons', () => {
     );
   });
 
+  it('never prices a release off a reversal counter-row', async () => {
+    await service.releasePrepaidLessons(tx, {
+      enrollmentId: 'enroll-1',
+      lessons: 1,
+      performedById: 99,
+    });
+
+    // A counter-row keeps the original's type and reversedAt = null but has
+    // no metadata; taken as "the latest batch" it priced the release at the
+    // undiscounted fallback. Both lookups (batch, then per-lesson cost) must
+    // skip it.
+    expect(tx.transaction.findFirst).toHaveBeenCalledTimes(2);
+    for (const [args] of tx.transaction.findFirst.mock.calls) {
+      expect(args.where).toEqual(
+        expect.objectContaining({
+          reversedAt: null,
+          reversedTransactionId: null,
+        }),
+      );
+    }
+  });
+
   it('prices the release off the deduction batch, discount and all', async () => {
     // 7-lesson batch charged 233 331 — the shape #10393 actually had.
     tx.transaction.findFirst.mockResolvedValue({

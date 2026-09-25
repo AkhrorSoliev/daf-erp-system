@@ -60,6 +60,10 @@ export class EnrollmentBillingService {
         enrollmentId,
         type: TransactionType.LESSON_DEDUCTION,
         reversedAt: null,
+        // A reversal's counter-row keeps the original's type and has
+        // reversedAt = null, but no metadata. It never funds a batch; taken
+        // as the latest one it priced the refund at the undiscounted fallback.
+        reversedTransactionId: null,
       },
       orderBy: { createdAt: 'desc' },
       select: { amount: true, metadata: true },
@@ -97,6 +101,7 @@ export class EnrollmentBillingService {
         enrollmentId,
         type: TransactionType.LESSON_DEDUCTION,
         reversedAt: null,
+        reversedTransactionId: null, // never a counter-row (see above)
       },
       orderBy: { createdAt: 'desc' },
       select: { metadata: true },
