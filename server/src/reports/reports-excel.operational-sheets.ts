@@ -29,7 +29,10 @@ import {
   dmy,
   tashkentTodayStr,
 } from './reports-excel.helpers';
-import { DEPARTURE_GRACE_DAYS } from '../students/shared/departure-episodes';
+import {
+  DEPARTURE_GRACE_DAYS,
+  type GraceDays,
+} from '../students/shared/departure-episodes';
 
 const DEC1 = '#,##0.0';
 
@@ -123,7 +126,7 @@ export function kpiSheet(wb: Workbook, kpis: any, period: string) {
   );
   kvNum(ws, "Shu oy yangi o'quvchilar", kpis.newStudentsThisMonth ?? 0);
   // Departures follow ADR-0035; the grace periods come with the figures.
-  const g = kpis.departureGraceDays ?? DEPARTURE_GRACE_DAYS;
+  const g: GraceDays = kpis.departureGraceDays ?? DEPARTURE_GRACE_DAYS;
   kvNum(
     ws,
     'Shu oy ketganlar',

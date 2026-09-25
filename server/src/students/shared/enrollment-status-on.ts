@@ -10,10 +10,12 @@
  *
  * Shared by the activity report and the departures loader, so both read one
  * enrollment's status by the same rule. Their inputs differ, so they can
- * still disagree about the same student: the loader first completes a log
- * that never recorded the closing (from the row itself) and closes the
- * enrollments of a deleted group at the deletion, while the activity report
- * reads the raw log of live groups only.
+ * still disagree about the same student. The loader first completes a log
+ * that never recorded the closing (from the row itself), supplies the missing
+ * opening ACTIVE row of an enrollment opened before the log existed (at its
+ * `createdAt`), and closes the enrollments of a deleted group at the
+ * deletion. The activity report reads the raw log of live groups only, so
+ * before such an enrollment's first logged row it reads no status at all.
  */
 export interface EnrollmentStatusEvent {
   status: string;
