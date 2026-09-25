@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { natijaFor, yubor } from "./activity-sender";
 
 const payload = {
@@ -89,6 +89,35 @@ describe("yubor", () => {
       status: null,
     });
     expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  describe("brauzer muhiti (standart yo'l — runtime aynan shunday chaqiradi)", () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    });
+
+    it("so'rov haqiqatan jo'natiladi — brauzer fetch'i begona `this` bilan chaqirilmaydi", async () => {
+      vi.stubGlobal("document", { cookie: "token=tok" });
+      vi.stubEnv("NEXT_PUBLIC_API_URL", "https://api.test/api");
+      // Browsers reject `fetch` invoked with any `this` but the global object,
+      // before the request leaves the page: Chrome says "Illegal invocation",
+      // Safari "Can only call Window.fetch on instances of Window". Node's own
+      // fetch does not check, so this stand-in enforces the browser rule.
+      const jonatilgan: string[] = [];
+      vi.stubGlobal("fetch", function (this: unknown, url: string) {
+        if (this !== undefined && this !== globalThis) {
+          throw new TypeError("Illegal invocation");
+        }
+        jonatilgan.push(url);
+        return Promise.resolve(new Response(null, { status: 201 }));
+      });
+
+      expect(await yubor(payload)).toEqual({ natija: "ok", status: 201 });
+      expect(jonatilgan).toEqual([
+        "https://api.test/api/student-portal/activity",
+      ]);
+    });
   });
 
   it("tarmoq xatosi — xato, status yo'q", async () => {

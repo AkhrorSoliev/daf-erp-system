@@ -79,34 +79,45 @@ describe("joriy seans", () => {
     };
     expect(() => joriyniSaqla(buzuq, yangiSeans(7, T0, "s1"))).not.toThrow();
     expect(joriyniOqi(buzuq, 7, T0)).toEqual({ davom: null, yopilgan: null });
-    expect(kutilmoqdaOqi(buzuq, 7)).toEqual([]);
+    expect(kutilmoqdaOqi(buzuq, 7, T0)).toEqual([]);
   });
 });
 
 describe("yuborilmaganlar", () => {
   it("bir xil seans qayta qo'shilsa eskisi almashtiriladi; o'chirish ishlaydi", () => {
     const s = xotira();
-    const a = payloadFor({ ...yangiSeans(7, T0, "a"), activeMs: 10_000 });
-    kutilmoqdaQosh(s, 7, a);
-    kutilmoqdaQosh(s, 7, { ...a, activeSeconds: 20 });
-    expect(kutilmoqdaOqi(s, 7)).toEqual([{ ...a, activeSeconds: 20 }]);
+    const a = { ...yangiSeans(7, T0, "a"), activeMs: 10_000 };
+    kutilmoqdaQosh(s, a);
+    kutilmoqdaQosh(s, { ...a, activeMs: 20_000 });
+    expect(kutilmoqdaOqi(s, 7, T0)).toEqual([
+      {
+        sessionId: "a",
+        platform: "WEB",
+        activeSeconds: 20,
+        radioSeconds: 0,
+        sections: { LERNEN: 0, OTHER: 0 },
+      },
+    ]);
     kutilmoqdaOchir(s, "a");
-    expect(kutilmoqdaOqi(s, 7)).toEqual([]);
+    expect(kutilmoqdaOqi(s, 7, T0)).toEqual([]);
   });
 
   it("ko'pi bilan 20 ta, eng eskilari tushib qoladi; buzilgan elementlar e'tiborga olinmaydi", () => {
     const s = xotira();
     for (let i = 0; i < KUTILMOQDA_MAX + 3; i++) {
-      kutilmoqdaQosh(s, 7, payloadFor(yangiSeans(7, T0, `s${i}`)));
+      kutilmoqdaQosh(s, yangiSeans(7, T0, `s${i}`));
     }
-    const royxat = kutilmoqdaOqi(s, 7);
+    const royxat = kutilmoqdaOqi(s, 7, T0);
     expect(royxat).toHaveLength(KUTILMOQDA_MAX);
     expect(royxat[0].sessionId).toBe("s3");
     s.setItem(
       KUTILMOQDA_KALIT,
-      JSON.stringify([{ foo: 1 }, { userId: 7, payload: royxat[0] }]),
+      JSON.stringify([
+        { foo: 1 },
+        { userId: 7, kun: "2026-09-13", payload: royxat[0] },
+      ]),
     );
-    expect(kutilmoqdaOqi(s, 7)).toEqual([royxat[0]]);
+    expect(kutilmoqdaOqi(s, 7, T0)).toEqual([royxat[0]]);
   });
 
   it("boshqa foydalanuvchining yozuvi qaytarilmaydi va saqlagichdan o'chib ketadi; ID'siz (eski) yozuv ham", () => {
@@ -116,20 +127,20 @@ describe("yuborilmaganlar", () => {
     s.setItem(
       KUTILMOQDA_KALIT,
       JSON.stringify([
-        { userId: 9, payload: begona },
-        { userId: 7, payload: mening },
+        { userId: 9, kun: "2026-09-13", payload: begona },
+        { userId: 7, kun: "2026-09-13", payload: mening },
         begona, // eski format: userId'siz yozuv (begona bilan bir xil sessionId, lekin baribir yo'q qilinadi)
       ]),
     );
     // Faqat 7-foydalanuvchining yozuvi qaytadi — 9-foydalanuvchiniki hech qachon
     // yuborilmaydi (boshqa birovning tokeni bilan uni yuborib bo'lmaydi).
-    expect(kutilmoqdaOqi(s, 7)).toEqual([mening]);
+    expect(kutilmoqdaOqi(s, 7, T0)).toEqual([mening]);
     // Begona va ID'siz yozuvlar saqlagichdan butunlay olib tashlangan — keyinroq
     // qayta o'qishda ham qaytib kelmaydi, boshqa foydalanuvchiga ham yozilmaydi.
     expect(JSON.parse(s.data.get(KUTILMOQDA_KALIT)!)).toEqual([
-      { userId: 7, payload: mening },
+      { userId: 7, kun: "2026-09-13", payload: mening },
     ]);
-    expect(kutilmoqdaOqi(s, 9)).toEqual([]);
+    expect(kutilmoqdaOqi(s, 9, T0)).toEqual([]);
   });
 
   it("ortiqcha maydonli yozuv qabul qilinadi, lekin qayta qurilganda faqat shartnoma maydonlari qoladi", () => {
@@ -140,6 +151,7 @@ describe("yuborilmaganlar", () => {
       JSON.stringify([
         {
           userId: 7,
+          kun: "2026-09-13",
           payload: {
             ...p,
             studentId: 99999,
@@ -149,7 +161,61 @@ describe("yuborilmaganlar", () => {
         },
       ]),
     );
-    expect(kutilmoqdaOqi(s, 7)).toEqual([p]);
+    expect(kutilmoqdaOqi(s, 7, T0)).toEqual([p]);
+  });
+});
+
+describe("yuborilmaganlar — faqat bugungi kun", () => {
+  // The server files a session it has never seen under the day the request
+  // ARRIVES, so an unsent session from another day would show up as today's.
+  // Two sides of a Tashkent midnight (UTC+5): 23:59 on 13.09, 00:01 on 14.09.
+  const KECHA_2359 = Date.parse("2026-09-13T18:59:00.000Z");
+  const BUGUN_0001 = Date.parse("2026-09-13T19:01:00.000Z");
+
+  it("boshqa kunga tegishli seans qaytarilmaydi va saqlagichdan o'chadi — bugungisi qoladi", () => {
+    const s = xotira();
+    kutilmoqdaQosh(s, {
+      ...yangiSeans(7, KECHA_2359, "kecha"),
+      activeMs: 30_000,
+    });
+    kutilmoqdaQosh(s, {
+      ...yangiSeans(7, BUGUN_0001, "bugun"),
+      activeMs: 45_000,
+    });
+
+    expect(kutilmoqdaOqi(s, 7, BUGUN_0001 + 60_000)).toEqual([
+      {
+        sessionId: "bugun",
+        platform: "WEB",
+        activeSeconds: 45,
+        radioSeconds: 0,
+        sections: { LERNEN: 0, OTHER: 0 },
+      },
+    ]);
+    const saqlangan = JSON.parse(s.data.get(KUTILMOQDA_KALIT)!) as Array<{
+      payload: { sessionId: string };
+    }>;
+    expect(saqlangan.map((y) => y.payload.sessionId)).toEqual(["bugun"]);
+  });
+
+  it("kuni yozilmagan (eski formatdagi) yozuv yuborilmaydi — tuzatishgacha yig'ilib qolganlar", () => {
+    const s = xotira();
+    s.setItem(
+      KUTILMOQDA_KALIT,
+      JSON.stringify([
+        {
+          userId: 7,
+          payload: {
+            sessionId: "eski",
+            platform: "WEB",
+            activeSeconds: 90,
+            radioSeconds: 0,
+            sections: { LERNEN: 90, OTHER: 0 },
+          },
+        },
+      ]),
+    );
+    expect(kutilmoqdaOqi(s, 7, T0)).toEqual([]);
   });
 });
 

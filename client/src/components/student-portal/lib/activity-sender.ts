@@ -32,7 +32,11 @@ export interface YuborishMuhiti {
 
 export function brauzerMuhiti(): YuborishMuhiti {
   return {
-    fetchFn: fetch,
+    // Wrapped rather than the bare `fetch`: `yubor` calls it as
+    // `muhit.fetchFn(...)`, and browsers reject `fetch` invoked with any
+    // `this` but the global object before the request leaves the page — the
+    // catch in `yubor` would then report it as a retryable failure forever.
+    fetchFn: (input, init) => fetch(input, init),
     token: Cookies.get("token"),
     base: process.env.NEXT_PUBLIC_API_URL,
   };
