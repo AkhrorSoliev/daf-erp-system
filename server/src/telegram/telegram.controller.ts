@@ -22,12 +22,14 @@ export class TelegramController {
   @Post('employee-link')
   async generateEmployeeLink(
     @Body() dto: GenerateEmployeeLinkDto,
-    @CurrentUser() user: { id: number; roles: string[] },
+    // The id only: the service reads the caller's roles and branches from the
+    // database, because the token's copy can be an hour stale.
+    @CurrentUser('id') callerId: number,
   ): Promise<{ payload: string }> {
     const payload = await this.telegramService.generateEmployeeLinkPayload(
       dto.branchId,
       dto.roleIds,
-      user,
+      { id: callerId },
     );
     return { payload };
   }

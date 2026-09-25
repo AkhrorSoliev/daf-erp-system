@@ -18,6 +18,12 @@ import {
   StudentLeadOriginService,
   type StudentOrigin,
 } from '../common/student-origin';
+import { planPhoneChange } from '../common/auth/phone-account-rules';
+import { RedisService } from '../redis/redis.service';
+import {
+  passwordWrite,
+  recordSessionsEnded,
+} from '../common/auth/session-version';
 import {
   STUDENT_ONLY_ACCOUNT,
   openStudentAccount,
@@ -27,6 +33,7 @@ import {
 import { userArchiveData } from '../common/status/user-archive';
 import { studentSelect, formatStudent } from './shared/student-select';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
+import { assertCallerInBranch } from '../common/auth/branch-scope';
 
 @Injectable()
 export class StudentsWriteService {
@@ -39,21 +46,28 @@ export class StudentsWriteService {
     private eventEmitter: EventEmitter2,
     private transactionsService: TransactionsService,
     private leadOrigin: StudentLeadOriginService,
+    private redis: RedisService,
   ) {}
 
   /**
-   * A student belongs to exactly one branch, and that branch must be real and
-   * belong to the caller's company.
+   * A student belongs to exactly one branch, and that branch must be real,
+   * belong to the caller's company, and be one the caller holds.
    *
    * Why it is enforced here rather than in the DTO: `branchIds` used to be a
    * free-form array that nothing validated, so `[]`, a foreign company's
    * branch, or a non-existent id all sailed through. A branch-less student is
    * then absent from every branch-filtered list and their first payment cannot
    * be booked to any branch at all.
+   *
+   * The caller check lives here, not beside it, because both `create` and a
+   * branch change on `update` pass through: checking only one of them would
+   * let a director create a student in their own branch and then move it into
+   * another, which ends exactly where creating it there would.
    */
   private async assertSingleValidBranch(
     branchIds: number[] | undefined,
     companyId: number,
+    userId: number | undefined,
   ): Promise<void> {
     if (!branchIds?.length) {
       throw new BadRequestException("O'quvchi uchun filial tanlanishi shart");
@@ -70,6 +84,12 @@ export class StudentsWriteService {
     if (!branch) {
       throw new BadRequestException(`Filial #${branchIds[0]} topilmadi`);
     }
+    await assertCallerInBranch(
+      this.prisma,
+      userId,
+      branchIds[0],
+      "Bu filialga o'quvchi qo'shish huquqingiz yo'q",
+    );
   }
 
   async create(
@@ -90,7 +110,7 @@ export class StudentsWriteService {
       );
     }
 
-    await this.assertSingleValidBranch(dto.branchIds, companyId);
+    await this.assertSingleValidBranch(dto.branchIds, companyId, userId);
 
     // Manba tranzaksiyadan OLDIN tekshiriladi: `Lead.sourceId` tashqi kalit,
     // ya'ni yolg'on id tranzaksiya ichida Prisma P2003 beradi va admin
@@ -209,8 +229,9 @@ export class StudentsWriteService {
       throw new NotFoundException(`O'quvchi topilmadi`);
     }
 
-    // `assertSingleValidBranch` below asks whether the TARGET branch is real;
-    // this asks whether the CALLER may act on this student at all. Without it a
+    // `assertSingleValidBranch` below checks the TARGET branch (real, in this
+    // company, held by the caller); this asks whether the CALLER may act on
+    // this student at all, i.e. on the branch they are in now. Without it a
     // director could edit another branch's student — and, because `branchIds`
     // is editable here, move them into their own branch along with their
     // balance, their enrolments and their teacher's future accruals.
@@ -219,7 +240,7 @@ export class StudentsWriteService {
     // Editing branches is allowed, but only to another single valid branch —
     // clearing them would strand the student outside every branch view.
     if (dto.branchIds !== undefined) {
-      await this.assertSingleValidBranch(dto.branchIds, companyId);
+      await this.assertSingleValidBranch(dto.branchIds, companyId, userId);
     }
 
     if (
@@ -257,6 +278,8 @@ export class StudentsWriteService {
         ? await bcrypt.hash(dto.password, 10)
         : undefined;
 
+    const signIn = await this.planSignInNumber(student.userId, dto.phone);
+
     // NOTE: changing `discountPercent` writes NOTHING to the ledger.
     //
     // It used to. `applyRetroactiveDiscountAdjustment` recomputed every past
@@ -275,6 +298,10 @@ export class StudentsWriteService {
     // Director, requires a description, lands in the audit log). That is the
     // right shape for it: a correction someone deliberately makes and explains,
     // rather than a side effect of editing a percentage.
+
+    // Filled inside the transaction when the password changes; mirrored for
+    // JwtAuthGuard only once the transaction has committed (ADR-0030).
+    const passwordChange: { sessionVersion?: number } = {};
 
     const updated = await this.prisma.$transaction(
       async (tx) => {
@@ -323,11 +350,20 @@ export class StudentsWriteService {
           }
         }
 
-        if (hashedPassword && student.userId) {
-          await tx.user.update({
+        // Same transaction as the card: a card saved without its account is
+        // exactly the drift ADR-0032 closes. A new password goes through
+        // `passwordWrite`, which ends the account's other sessions (ADR-0030).
+        const accountData = {
+          ...signIn?.write,
+          ...(hashedPassword && passwordWrite(hashedPassword)),
+        };
+        if (student.userId && Object.keys(accountData).length > 0) {
+          const { sessionVersion } = await tx.user.update({
             where: { id: student.userId },
-            data: { password: hashedPassword },
+            data: accountData,
+            select: { sessionVersion: true },
           });
+          if (hashedPassword) passwordChange.sessionVersion = sessionVersion;
         }
 
         if (dto.branchIds !== undefined) {
@@ -345,16 +381,79 @@ export class StudentsWriteService {
       undefined,
     );
 
+    // The password is committed now: mirror the bump before anything else can
+    // fail, or the old access tokens keep working for the rest of their hour.
+    if (passwordChange.sessionVersion !== undefined && student.userId) {
+      await recordSessionsEnded(
+        this.redis,
+        student.userId,
+        passwordChange.sessionVersion,
+      );
+    }
+
+    // The account's login rides along so the card's history shows the sign-in
+    // number moving (the history tab labels the field "Login").
     await this.entityHistoryService.recordUpdate({
       entityType: 'Student',
       entityId: id,
-      oldValues: student,
-      newValues: updated,
+      oldValues: signIn ? { ...student, login: signIn.account.login } : student,
+      newValues: signIn
+        ? {
+            ...updated,
+            login:
+              'login' in signIn.write
+                ? signIn.write.login
+                : signIn.account.login,
+          }
+        : updated,
       changedById: userId,
       companyId: student.companyId ?? undefined,
     });
 
+    if (passwordChange.sessionVersion !== undefined) {
+      await this.entityHistoryService.recordUpdate({
+        entityType: 'Student',
+        entityId: id,
+        oldValues: { parol: '***' },
+        newValues: { parol: "yangi parol o'rnatildi" },
+        changedById: userId,
+        companyId: student.companyId ?? undefined,
+      });
+    }
+
     return formatStudent(updated);
+  }
+
+  /**
+   * What the student's sign-in account must write to keep the number on the
+   * card (ADR-0032), or `null` when it already does.
+   *
+   * Every way in — password, Telegram, SMS reset — looks the number up on the
+   * account, never on the card. An account left behind kept the old number as
+   * its sign-in number while the card's number reached nothing (production,
+   * 2026-09-24: 115 students, each after a staff phone edit). The comparison
+   * is against the ACCOUNT, not the card's previous value, so the next save
+   * of a card edited before this rule brings its account back in line.
+   */
+  private async planSignInNumber(
+    userId: number | null,
+    nextPhone: string | undefined,
+  ) {
+    if (nextPhone === undefined || userId === null) return null;
+
+    const account = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { id: true, phone: true, login: true },
+    });
+    if (!account || account.phone === nextPhone) return null;
+
+    // `staff: false`: a student account and the same person's staff account
+    // may share a phone (ADR-0022), so the one-staff-account-per-phone refusal
+    // must not fire here.
+    const write = await planPhoneChange(this.prisma, account, nextPhone, {
+      staff: false,
+    });
+    return { account, write };
   }
 
   async delete(

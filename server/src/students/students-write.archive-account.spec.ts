@@ -50,6 +50,7 @@ describe('StudentsWriteService.delete — the sign-in account (ADR-0033)', () =>
       {} as any,
       {} as any,
       {} as any,
+      {} as any, // RedisService
     );
   });
 
