@@ -367,7 +367,7 @@ describe('ReportsDepartedStudentsService', () => {
   });
 });
 
-describe('one departure count on every surface', () => {
+describe('one departure count on the report page and the home card', () => {
   beforeEach(() => jest.useFakeTimers({ now: NOW }));
   afterEach(() => jest.useRealTimers());
 
@@ -402,7 +402,7 @@ describe('one departure count on every surface', () => {
     ],
   };
 
-  it('shows the same November figure on the report, the home card and the Excel sheet', async () => {
+  it('shows the same November figure on the report page and the home card', async () => {
     const prisma = fakePrisma(NOVEMBER) as unknown as PrismaService;
 
     const summary = await new ReportsDepartedStudentsService(
@@ -416,6 +416,7 @@ describe('one departure count on every surface', () => {
       prisma,
       {} as RedisService,
     ).getKpis(1001, {});
+    // kpiSheet («KPI paneli») is not wired into the workbook today.
     const wb = new Workbook();
     kpiSheet(wb, kpis, 'Noyabr 2026');
     const row = wb
@@ -426,6 +427,7 @@ describe('one departure count on every surface', () => {
     expect(summary.departedCount).toBe(2);
     expect(kpis.churnedThisMonth).toBe(2);
     expect(row?.getCell(2).value).toBe(2);
+    expect(summary.pendingCount).toBe(1);
     expect(kpis.pendingDepartures).toBe(1);
   });
 });

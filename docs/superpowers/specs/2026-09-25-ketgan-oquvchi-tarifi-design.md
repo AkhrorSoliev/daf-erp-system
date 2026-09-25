@@ -56,6 +56,18 @@ prod'da ishga tushiriladi — «N ni yakunlash» bo'limiga qarang.
 | Oqim diagrammasi, Telegram 21:00 | **Ataylab o'zgartirilmaydi** | Tanlov. Ular boshqa savolga javob beradi (status o'tishlari; bugungi xom hodisalar). Nomuvofiqlik ADR-0035 da yoziladi |
 | Hisoblash usuli | **Mavjud jurnallardan**, bitta sof funksiya | Migratsiya ham, yangi yozish joyi ham kerak emas; tarix darhol bor |
 
+> **Tuzatish (2026-09-25, yakuniy ko'rik).** Excel «KPI paneli» (`kpiSheet`)
+> 2026-08-07 dan beri hisobot faylida yo'q — `reports-excel.service.ts` uni
+> chaqirmaydi. `loadDepartures` ni o'qiydigan sirt shuning uchun ikkita:
+> hisobot sahifasi va bosh sahifa kartasi. Fayldagi «ketgan» soni —
+> «Xulosa» va «O'quvchilar» varaqlaridagi «Yangi X ta − ketgan Y ta» —
+> «O'quvchilar oqimi» ma'nosida (bitiruvchilar ham) qoladi. `kpiSheet` dagi
+> o'zgarish kodda qoldi, lekin faylga chiqmaydi; ketganlar hisobotini
+> Excel'ga chiqarish — 3-bosqich ishi. Hujjatdagi boshqa «KPI paneli»
+> eslatmalari shu tuzatish bilan o'qilsin. Yakuniy ko'rikning ta'rifga oid
+> boshqa qarorlari (arxivlash ketish emas; o'chirilgan guruh yozuvlari
+> o'chirilgan paytda yopiladi) ADR-0035 da.
+
 **Rad etilgan muqobillar:**
 
 - **Faqat status o'zgarishi** (chetlatish va arxivlash). Guruhdan chiqarilib

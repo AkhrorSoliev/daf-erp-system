@@ -9,9 +9,10 @@
  * leaves it out like a deleted one.
  *
  * This file only turns events into episodes and reads nothing:
- * `reports/shared/departures.loader.ts` collects the events from the logs.
- * The report, the home card and the Excel KPI sheet all read this function;
- * do not restate the rule anywhere else.
+ * `reports/shared/departures.loader.ts` decides which records are a stop or
+ * a return and collects them from the logs. The report page and the home
+ * card both read the episodes through that loader; do not restate the rule
+ * anywhere else.
  */
 
 export const DEPARTURE_GRACE_DAYS = 14;
