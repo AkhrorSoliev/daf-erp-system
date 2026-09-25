@@ -40,6 +40,7 @@ interface EnrollmentRow {
   status: string;
   createdAt: Date;
   statusChangedAt: Date | null;
+  group: { deletedAt: Date | null };
 }
 
 interface HistoryRow {
@@ -51,6 +52,9 @@ interface HistoryRow {
 
 /** An enrollment closing into one of these did not leave the student groupless. */
 const NOT_A_STOP: ReadonlySet<string> = new Set(['COMPLETED', 'TRANSFERRED']);
+
+/** What an enrollment reads as from the moment its group was deleted. */
+const GROUP_DELETED = 'GROUP_DELETED';
 
 /**
  * Departure episodes of every student in scope, built from the logs the
@@ -94,6 +98,7 @@ export async function loadDepartures(
         status: true,
         createdAt: true,
         statusChangedAt: true,
+        group: { select: { deletedAt: true } },
       },
     }),
     prisma.enrollmentStateLog.findMany({
@@ -166,11 +171,7 @@ export async function loadDepartures(
     }
     if (
       activeAt &&
-      own.some(
-        (e) =>
-          enrollmentStatusOn(logsByEnrollment.get(e.id), activeAt, e) ===
-          'ACTIVE',
-      )
+      own.some((e) => statusOn(e, logsByEnrollment, activeAt) === 'ACTIVE')
     ) {
       activeAtStart += 1;
     }
@@ -185,10 +186,26 @@ export async function loadDepartures(
 }
 
 /**
+ * An enrollment's status at an instant. Deleting a group leaves its
+ * enrollments as they were, so an enrollment of a deleted group reads as
+ * closed from the deletion on: one still ACTIVE or FROZEN then ends there,
+ * and nothing logged after the deletion counts as membership.
+ */
+function statusOn(
+  e: EnrollmentRow,
+  logs: ReadonlyMap<string, EnrollmentStatusEvent[]>,
+  at: Date,
+): string | null {
+  const deletedAt = e.group.deletedAt;
+  if (deletedAt && at.getTime() >= deletedAt.getTime()) return GROUP_DELETED;
+  return enrollmentStatusOn(logs.get(e.id), at, e);
+}
+
+/**
  * Group membership as the union of the student's enrollments: a STOP when
  * the last ACTIVE enrollment closes, a RETURN when one is ACTIVE again.
  * Closing into COMPLETED (graduation) or TRANSFERRED (a new enrollment
- * opened with it) is not a stop.
+ * opened with it) is not a stop; the deletion of the group is.
  */
 function membershipEvents(
   studentId: number,
@@ -204,6 +221,7 @@ function membershipEvents(
       instants.add(e.createdAt.getTime());
       if (e.statusChangedAt) instants.add(e.statusChangedAt.getTime());
     }
+    if (e.group.deletedAt) instants.add(e.group.deletedAt.getTime());
   }
 
   const out: StudentEvent[] = [];
@@ -211,7 +229,7 @@ function membershipEvents(
   for (const t of [...instants].sort((a, b) => a - b)) {
     const at = new Date(t);
     const statusAt = new Map(
-      enrollments.map((e) => [e.id, enrollmentStatusOn(logs.get(e.id), at, e)]),
+      enrollments.map((e) => [e.id, statusOn(e, logs, at)]),
     );
     const activeNow = enrollments
       .filter((e) => statusAt.get(e.id) === 'ACTIVE')

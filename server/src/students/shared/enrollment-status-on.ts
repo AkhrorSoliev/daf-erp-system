@@ -8,8 +8,12 @@
  * forever; that is the activity report's long-standing behaviour and is kept
  * here, not changed.
  *
- * Shared by the activity report and the departures loader so the two cannot
- * disagree about who was in a group on a given day.
+ * Shared by the activity report and the departures loader, so both read one
+ * enrollment's status by the same rule. Their inputs differ, so they can
+ * still disagree about the same student: the loader first completes a log
+ * that never recorded the closing (from the row itself) and closes the
+ * enrollments of a deleted group at the deletion, while the activity report
+ * reads the raw log of live groups only.
  */
 export interface EnrollmentStatusEvent {
   status: string;

@@ -28,6 +28,7 @@ const enrollment = (
   status,
   createdAt: at(createdAt),
   statusChangedAt: statusChangedAt ? at(statusChangedAt) : null,
+  group: { deletedAt: null },
 });
 const log = (enrollmentId: string, status: string, when: string) => ({
   enrollmentId,

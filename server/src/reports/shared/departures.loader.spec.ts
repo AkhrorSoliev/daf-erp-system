@@ -14,6 +14,7 @@ interface Fixture {
     status: string;
     createdAt: Date;
     statusChangedAt: Date | null;
+    group: { deletedAt: Date | null };
   }[];
   logs?: { enrollmentId: string; status: string; transitionAt: Date }[];
   history?: {
@@ -69,12 +70,14 @@ const enrollment = (
   status: string,
   statusChangedAt: string | null,
   createdAt = MAY,
+  groupDeletedAt: string | null = null,
 ) => ({
   id,
   studentId,
   status,
   createdAt: at(createdAt),
   statusChangedAt: statusChangedAt ? at(statusChangedAt) : null,
+  group: { deletedAt: groupDeletedAt ? at(groupDeletedAt) : null },
 });
 const log = (enrollmentId: string, status: string, when: string) => ({
   enrollmentId,
@@ -424,5 +427,165 @@ describe('loadDepartures', () => {
     // so the clamp moves activeAt to the floor and captures the additional student.
     expect(result.activeAtStart).toBe(2);
     expect(result.floor).toEqual(at('2026-06-01T00:00:00Z'));
+  });
+  describe('an enrollment of a deleted group', () => {
+    // Deleting a group leaves its enrollments open; the loader closes them.
+    const DELETED = '2026-08-01T09:00:00.000Z';
+
+    it("asks when each enrollment's group was deleted", async () => {
+      const prisma = fakePrisma({ students: [student(10001)] });
+      await loadDepartures(prisma as unknown as PrismaService, 1001, null, {
+        now: NOW,
+      });
+      expect(prisma.enrollment.findMany).toHaveBeenCalledWith({
+        where: { studentId: { in: [10001] }, deletedAt: null },
+        select: {
+          id: true,
+          studentId: true,
+          status: true,
+          createdAt: true,
+          statusChangedAt: true,
+          group: { select: { deletedAt: true } },
+        },
+      });
+    });
+
+    it('ends at the deletion: the student departs then, after the grace period', async () => {
+      expect(
+        await episodesOf({
+          students: [student(10001), student(10002), student(10003)],
+          enrollments: [
+            enrollment('e1', 10001, 'ACTIVE', null, MAY, DELETED),
+            enrollment(
+              'e2',
+              10002,
+              'ACTIVE',
+              null,
+              MAY,
+              '2026-11-15T09:00:00Z',
+            ),
+            // No log rows: read from its own columns, closed all the same.
+            enrollment('e3', 10003, 'ACTIVE', null, MAY, DELETED),
+          ],
+          logs: [log('e1', 'ACTIVE', MAY), log('e2', 'ACTIVE', MAY)],
+        }),
+      ).toEqual([
+        {
+          studentId: 10001,
+          startedAt: DELETED,
+          stopKind: 'LEFT_GROUP',
+          state: 'confirmed',
+        },
+        {
+          studentId: 10002,
+          startedAt: '2026-11-15T09:00:00.000Z',
+          stopKind: 'LEFT_GROUP',
+          state: 'pending',
+        },
+        {
+          studentId: 10003,
+          startedAt: DELETED,
+          stopKind: 'LEFT_GROUP',
+          state: 'confirmed',
+        },
+      ]);
+    });
+
+    it('counts nothing logged in the group after the deletion as membership', async () => {
+      const FROZE = '2026-08-01T09:00:00.000Z';
+      expect(
+        await episodesOf({
+          students: [student(10001)],
+          enrollments: [
+            enrollment(
+              'e1',
+              10001,
+              'ACTIVE',
+              '2026-08-10T09:00:00Z',
+              MAY,
+              '2026-08-05T09:00:00Z',
+            ),
+          ],
+          logs: [
+            log('e1', 'ACTIVE', MAY),
+            log('e1', 'FROZEN', FROZE),
+            log('e1', 'ACTIVE', '2026-08-10T09:00:00Z'),
+          ],
+          history: [
+            history(10001, 'ACTIVE', 'FROZEN', FROZE),
+            history(10001, 'FROZEN', 'ACTIVE', '2026-08-10T09:00:00Z'),
+          ],
+        }),
+      ).toEqual([
+        {
+          studentId: 10001,
+          startedAt: FROZE,
+          stopKind: 'FROZEN',
+          state: 'confirmed',
+        },
+      ]);
+    });
+
+    it('does not count the student at the start of a period after the deletion', async () => {
+      const prisma = fakePrisma({
+        students: [student(10001)],
+        enrollments: [enrollment('e1', 10001, 'ACTIVE', null, MAY, DELETED)],
+        logs: [log('e1', 'ACTIVE', MAY)],
+      });
+      const activeAtStart = async (activeAt: string) =>
+        (
+          await loadDepartures(prisma as unknown as PrismaService, 1001, null, {
+            now: NOW,
+            activeAt: at(activeAt),
+          })
+        ).activeAtStart;
+
+      expect(await activeAtStart('2026-07-01T00:00:00Z')).toBe(1);
+      expect(await activeAtStart('2026-09-01T00:00:00Z')).toBe(0);
+    });
+
+    it('adds nothing when the group is deleted after the student left it', async () => {
+      const LEFT = '2026-08-01T09:00:00.000Z';
+      expect(
+        await episodesOf({
+          students: [student(10001), student(10002)],
+          enrollments: [
+            // Left for good on 01.08; the group was deleted on 10.09.
+            enrollment(
+              'e1',
+              10001,
+              'DROPPED',
+              LEFT,
+              MAY,
+              '2026-09-10T09:00:00Z',
+            ),
+            // Moved to another group within days; the old one deleted later.
+            enrollment(
+              'e2',
+              10002,
+              'DROPPED',
+              LEFT,
+              MAY,
+              '2026-09-10T09:00:00Z',
+            ),
+            enrollment('e3', 10002, 'ACTIVE', null, '2026-08-03T09:00:00Z'),
+          ],
+          logs: [
+            log('e1', 'ACTIVE', MAY),
+            log('e1', 'DROPPED', LEFT),
+            log('e2', 'ACTIVE', MAY),
+            log('e2', 'DROPPED', LEFT),
+            log('e3', 'ACTIVE', '2026-08-03T09:00:00Z'),
+          ],
+        }),
+      ).toEqual([
+        {
+          studentId: 10001,
+          startedAt: LEFT,
+          stopKind: 'LEFT_GROUP',
+          state: 'confirmed',
+        },
+      ]);
+    });
   });
 });

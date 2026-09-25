@@ -38,6 +38,7 @@ const LOADER = {
       status: 'DROPPED',
       createdAt: at(MAY),
       statusChangedAt: at('2026-09-03T09:00:00.000Z'),
+      group: { deletedAt: null },
     },
     {
       id: 'e2',
@@ -45,6 +46,7 @@ const LOADER = {
       status: 'DROPPED',
       createdAt: at(MAY),
       statusChangedAt: at('2026-11-01T09:00:00.000Z'),
+      group: { deletedAt: null },
     },
     {
       id: 'e3',
@@ -52,6 +54,7 @@ const LOADER = {
       status: 'DROPPED',
       createdAt: at(MAY),
       statusChangedAt: at('2026-11-15T09:00:00.000Z'),
+      group: { deletedAt: null },
     },
     {
       id: 'e5',
@@ -59,6 +62,7 @@ const LOADER = {
       status: 'DROPPED',
       createdAt: at(MAY),
       statusChangedAt: at('2026-09-05T09:00:00.000Z'),
+      group: { deletedAt: null },
     },
     {
       id: 'e6',
@@ -66,6 +70,7 @@ const LOADER = {
       status: 'ACTIVE',
       createdAt: at('2026-09-08T09:00:00.000Z'),
       statusChangedAt: null,
+      group: { deletedAt: null },
     },
     {
       id: 'e7',
@@ -73,6 +78,7 @@ const LOADER = {
       status: 'ACTIVE',
       createdAt: at(MAY),
       statusChangedAt: null,
+      group: { deletedAt: null },
     },
   ],
   history: [
