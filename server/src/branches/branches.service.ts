@@ -12,6 +12,8 @@ import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
 import { ChangeBranchStatusDto } from './dto/change-branch-status.dto';
 import { ReportBranchIds } from '../common/finance/report-branch-scope';
+import { buildBranchReadiness, BranchReadiness } from './branch-readiness';
+import { gatherReadinessFacts } from './branch-readiness.facts';
 
 @Injectable()
 export class BranchesService {
@@ -209,7 +211,8 @@ export class BranchesService {
   }
 
   /**
-   * What still stands between this branch and its first real student.
+   * What still stands between this branch and its first real student — and
+   * whether it is already running (`launched`).
    *
    * Everything listed here was discovered the hard way while opening branch #2:
    * a course is required to create a group, a group with no room is never drawn
@@ -218,9 +221,16 @@ export class BranchesService {
    * went missing this way in May 2026), and with no branch administrator the
    * attendance-escalation cron drops its alerts silently.
    *
-   * Read-only. It reports; it does not fix.
+   * Read-only. It reports; it does not fix. The rules live in
+   * `buildBranchReadiness` so they are tested without Prisma; the raw queries
+   * live in `gatherReadinessFacts` (`branch-readiness.facts.ts`) so this
+   * method stays down to the guard and the branch lookup.
    */
-  async getReadiness(id: number, companyId: number, userId: number) {
+  async getReadiness(
+    id: number,
+    companyId: number,
+    userId: number,
+  ): Promise<BranchReadiness> {
     // `@Roles('CEO','Branch Director')` proves the caller holds a role, not that
     // this branch is theirs. Without this a Fargona director could read
     // Namangan's readiness — including the names of teachers with no salary rate.
@@ -237,102 +247,9 @@ export class BranchesService {
     });
     if (!branch) throw new NotFoundException(`Branch #${id} topilmadi`);
 
-    const [cashTypes, roomCount, courseCount, adminCount, teachers] =
-      await Promise.all([
-        this.prisma.cashAccount.findMany({
-          where: { branchId: id, companyId, deletedAt: null },
-          select: { type: true },
-        }),
-        this.prisma.room.count({ where: { branchId: id, deletedAt: null } }),
-        this.prisma.course.count({ where: { branchId: id, deletedAt: null } }),
-        this.prisma.user.count({
-          where: {
-            companyId,
-            deletedAt: null,
-            isActive: true,
-            roles: { some: { role: { name: 'Administrator' } } },
-            branches: { some: { branchId: id } },
-          },
-        }),
-        this.prisma.user.findMany({
-          where: {
-            companyId,
-            deletedAt: null,
-            isActive: true,
-            roles: { some: { role: { name: 'Teacher' } } },
-            branches: { some: { branchId: id } },
-          },
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            salaryConfigs: {
-              where: { isActive: true },
-              select: { id: true },
-              take: 1,
-            },
-          },
-        }),
-      ]);
-
-    const types = new Set(cashTypes.map((c) => c.type));
-    // Named so the UI can list exactly who to fix, not just "some teacher".
-    const teachersWithoutRate = teachers
-      .filter((t) => t.salaryConfigs.length === 0)
-      .map((t) => ({ id: t.id, name: `${t.firstName} ${t.lastName}` }));
-
-    const checks = [
-      {
-        key: 'cashAccount',
-        label: 'Naqd kassa',
-        ok: types.has(CashAccountType.CASH),
-        hint: "Filialga CASH kassasi kerak — busiz to'lov qabul qilinmaydi",
-      },
-      {
-        key: 'bankAccount',
-        label: 'Bank hisobi',
-        ok: types.has(CashAccountType.BANK),
-        hint: 'Bank/karta tushumi uchun BANK hisobi kerak',
-      },
-      {
-        key: 'workingHours',
-        label: 'Ish vaqti',
-        ok: !!branch.startOfWorkingDay && !!branch.endOfWorkingDay,
-        hint: 'Ish vaqti belgilanmasa jadval 08:00–20:00 ga tushadi',
-      },
-      {
-        key: 'course',
-        label: 'Kurs',
-        ok: courseCount > 0,
-        hint: 'Kurssiz guruh ochib bolmaydi',
-      },
-      {
-        key: 'room',
-        label: 'Xona',
-        ok: roomCount > 0,
-        hint: 'Xonasiz guruh kunlik jadvalda chizilmaydi',
-      },
-      {
-        key: 'administrator',
-        label: 'Administrator',
-        ok: adminCount > 0,
-        hint: 'Administratorsiz davomat ogohlantirishlari hech kimga bormaydi',
-      },
-      {
-        key: 'teacherRates',
-        label: 'Ustoz stavkalari',
-        ok: teachersWithoutRate.length === 0,
-        hint: "Stavkasiz ustozning darslari uchun oylik YOZILMAYDI va keyin orqaga surib bo'lmaydi",
-        details: teachersWithoutRate,
-      },
-    ];
-
-    return {
-      branchId: branch.id,
-      branchName: branch.name,
-      ready: checks.every((c) => c.ok),
-      checks,
-    };
+    return buildBranchReadiness(
+      await gatherReadinessFacts(this.prisma, branch, companyId),
+    );
   }
 
   /**

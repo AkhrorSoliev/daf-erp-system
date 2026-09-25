@@ -249,6 +249,15 @@ describe('BranchesService — branch onboarding', () => {
           roles: [{ role: { name: 'CEO' } }],
         }),
       },
+      group: {
+        count: jest.fn().mockResolvedValue(0),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
+      studentBranch: { findFirst: jest.fn().mockResolvedValue(null) },
+      enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
+      payment: { findFirst: jest.fn().mockResolvedValue(null) },
+      leadSection: { findFirst: jest.fn().mockResolvedValue(null) },
+      telegramGroup: { findFirst: jest.fn().mockResolvedValue(null) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -355,6 +364,7 @@ describe('BranchesService — branch onboarding', () => {
       const res = await service.getReadiness(2, 1001, 1);
 
       expect(res.ready).toBe(false);
+      expect(res.launched).toBe(false);
       const failing = res.checks.filter((c) => !c.ok).map((c) => c.key);
       expect(failing).toEqual(
         expect.arrayContaining([
@@ -362,6 +372,11 @@ describe('BranchesService — branch onboarding', () => {
           'bankAccount',
           'course',
           'room',
+          'teachers',
+          'teacherRates',
+          'group',
+          'enrollment',
+          'payment',
           'administrator',
         ]),
       );
@@ -372,12 +387,19 @@ describe('BranchesService — branch onboarding', () => {
       // cannot be back-dated into a closed period — so this must be caught
       // BEFORE the first lesson, not after.
       prisma.user.findMany.mockResolvedValue([
-        { id: 10001, firstName: 'Ali', lastName: 'Valiyev', salaryConfigs: [] },
         {
-          id: 10002,
+          id: 90020,
+          firstName: 'Ali',
+          lastName: 'Valiyev',
+          salaryConfigs: [],
+          roles: [{ role: { name: 'Teacher' } }],
+        },
+        {
+          id: 90021,
           firstName: 'Zuhra',
           lastName: 'Karimova',
           salaryConfigs: [{ id: 'c1' }],
+          roles: [{ role: { name: 'Teacher' } }],
         },
       ]);
 
@@ -385,7 +407,86 @@ describe('BranchesService — branch onboarding', () => {
       const check = res.checks.find((c) => c.key === 'teacherRates')!;
 
       expect(check.ok).toBe(false);
-      expect(check.details).toEqual([{ id: 10001, name: 'Ali Valiyev' }]);
+      expect(check.details).toEqual([{ id: 90020, name: 'Ali Valiyev' }]);
+    });
+
+    it('marks a rate-less teacher who also holds Branch Director as ceoOnly', async () => {
+      // A Branch Director cannot rate this one (ADR-0033) — the hint should
+      // say so rather than implying the viewing director can just fix it.
+      prisma.user.findMany.mockResolvedValue([
+        {
+          id: 90030,
+          firstName: 'Otabek',
+          lastName: 'Rustamov',
+          salaryConfigs: [],
+          roles: [
+            { role: { name: 'Teacher' } },
+            { role: { name: 'Branch Director' } },
+          ],
+        },
+      ]);
+
+      const res = await service.getReadiness(2, 1001, 1);
+      const check = res.checks.find((c) => c.key === 'teacherRates')!;
+
+      expect(check.details).toEqual([
+        { id: 90030, name: 'Otabek Rustamov', ceoOnly: true },
+      ]);
+    });
+
+    it('counts only ACTIVE cash accounts', async () => {
+      // A payment is only ever written to an ACTIVE account (`resolveAccountId`)
+      // — counting an inactive one as "present" would read the branch ready
+      // and then fail the moment a real payment is taken.
+      await service.getReadiness(2, 1001, 1);
+      expect(prisma.cashAccount.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ branchId: 2, isActive: true }),
+        }),
+      );
+    });
+
+    it('looks for a RUNNABLE group: teacher, days, start time and date', async () => {
+      await service.getReadiness(2, 1001, 1);
+      expect(prisma.group.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            branchId: 2,
+            deletedAt: null,
+            teachers: { some: {} },
+            exactDays: { isEmpty: false },
+            lessonStartTime: { not: null },
+            startDate: { not: null },
+          }),
+        }),
+      );
+    });
+
+    it('scopes the payment and enrollment checks to THIS branch', async () => {
+      // Dropping either filter would make every new branch read as
+      // "launched" the moment ANY branch took a payment or enrolled a
+      // student.
+      await service.getReadiness(2, 1001, 1);
+
+      expect(prisma.payment.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ branchId: 2, companyId: 1001 }),
+        }),
+      );
+      expect(prisma.enrollment.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ group: { branchId: 2 } }),
+        }),
+      );
+    });
+
+    it('is not launched until the first payment', async () => {
+      prisma.group.findFirst.mockResolvedValue({ id: 'g1' });
+      prisma.enrollment.findFirst.mockResolvedValue({ id: 'e1' });
+      expect((await service.getReadiness(2, 1001, 1)).launched).toBe(false);
+
+      prisma.payment.findFirst.mockResolvedValue({ id: 'p1' });
+      expect((await service.getReadiness(2, 1001, 1)).launched).toBe(true);
     });
 
     it('reports ready when every check passes', async () => {
@@ -398,15 +499,22 @@ describe('BranchesService — branch onboarding', () => {
       prisma.user.count.mockResolvedValue(1);
       prisma.user.findMany.mockResolvedValue([
         {
-          id: 10001,
+          id: 90020,
           firstName: 'Ali',
           lastName: 'Valiyev',
           salaryConfigs: [{ id: 'c1' }],
+          roles: [{ role: { name: 'Teacher' } }],
         },
       ]);
+      prisma.group.count.mockResolvedValue(1);
+      prisma.group.findFirst.mockResolvedValue({ id: 'g1' });
+      prisma.studentBranch.findFirst.mockResolvedValue({ studentId: 20001 });
+      prisma.enrollment.findFirst.mockResolvedValue({ id: 'e1' });
+      prisma.payment.findFirst.mockResolvedValue({ id: 'p1' });
 
       const res = await service.getReadiness(2, 1001, 1);
       expect(res.ready).toBe(true);
+      expect(res.launched).toBe(true);
     });
 
     it('404s for a branch outside the company', async () => {
