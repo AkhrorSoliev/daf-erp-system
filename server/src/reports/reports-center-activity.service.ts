@@ -11,6 +11,10 @@ import {
   tashkentMonthKey,
   utcMidnightFromDateStr,
 } from '../common/date/tashkent';
+import {
+  enrollmentStatusOn,
+  type EnrollmentStatusFallback,
+} from '../students/shared/enrollment-status-on';
 
 const DEFAULT_WORK_START = '09:00';
 const DEFAULT_WORK_END = '21:00';
@@ -935,40 +939,18 @@ export class ReportsCenterActivityService {
     return fallback;
   }
 
-  /**
-   * Status active on `date` from event log. If no events recorded, falls back
-   * to deriving from `e.statusChangedAt` and current status.
-   */
+  /** Status active on `date`; see `enrollmentStatusOn` for the legacy fallback. */
   private statusOn(
     enrollmentId: string,
     date: Date,
     snaps: SnapshotMaps,
-    fallback: {
-      createdAt: Date;
-      statusChangedAt: Date | null;
-      status: string;
-    },
+    fallback: EnrollmentStatusFallback,
   ): string | null {
-    const events = snaps.enrollmentEvents.get(enrollmentId);
-    if (events && events.length > 0) {
-      // Events sorted ascending by transitionAt; find latest <= date
-      let last: string | null = null;
-      for (const e of events) {
-        if (e.transitionAt <= date) last = e.status;
-        else break;
-      }
-      return last;
-    }
-    // Fallback: legacy enrollment without state log entries
-    if (fallback.createdAt > date) return null;
-    if (
-      fallback.status !== 'ACTIVE' &&
-      fallback.statusChangedAt &&
-      fallback.statusChangedAt <= date
-    ) {
-      return fallback.status;
-    }
-    return 'ACTIVE';
+    return enrollmentStatusOn(
+      snaps.enrollmentEvents.get(enrollmentId),
+      date,
+      fallback,
+    );
   }
 
   private isEnrollmentActiveOn(
