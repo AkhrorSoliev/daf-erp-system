@@ -706,7 +706,7 @@ export class ReportsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedStudentsByStatus(companyId, {
-      branchId: this.scoped(query, scope).branchId,
+      scope: this.departedScope(scope),
     });
   }
 
@@ -762,7 +762,7 @@ export class ReportsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedStudentsList(companyId, {
-      branchId: this.scoped(query, scope).branchId,
+      scope: this.departedScope(scope),
       status: query.status,
       debtorsOnly: query.debtorsOnly,
       page: query.page,
@@ -795,7 +795,7 @@ export class ReportsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedStudentsGroupBy(companyId, {
-      branchId: this.scoped(query, scope).branchId,
+      scope: this.departedScope(scope),
       groupBy: query.groupBy,
     });
   }

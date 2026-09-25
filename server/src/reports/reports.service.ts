@@ -646,7 +646,7 @@ export class ReportsService {
   getDepartedStudentsList(
     companyId: number,
     params: {
-      branchId?: number;
+      scope: ReportBranchIds;
       status?: StudentStatus;
       debtorsOnly?: boolean;
       page?: number;
@@ -672,14 +672,14 @@ export class ReportsService {
   }
   getDepartedStudentsByStatus(
     companyId: number,
-    params: { branchId?: number },
+    params: { scope: ReportBranchIds },
   ) {
     return this.departedLists.getDepartedStudentsByStatus(companyId, params);
   }
   getDepartedStudentsGroupBy(
     companyId: number,
     params: {
-      branchId?: number;
+      scope: ReportBranchIds;
       groupBy: 'course' | 'teacher' | 'branch';
     },
   ) {
