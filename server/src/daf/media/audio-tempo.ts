@@ -43,9 +43,11 @@ export function tempoFfmpegArgs(
 }
 
 /**
- * Plays mp3 bytes at `faktor` of their speed, pitch unchanged. The course
- * word voice (Gemini TTS) has no speed setting and the course speaks slowly
- * (0.85), so the word script runs every clip through this.
+ * Plays audio bytes at `faktor` of their speed, pitch unchanged, and returns
+ * mp3. The input may be mp3 or wav (Inworld answers with wav): ffmpeg reads
+ * the format from the bytes, not from the temporary file's name. The course
+ * word voice has no speed setting and the course speaks slowly (0.85), so
+ * the word script runs every clip through this.
  *
  * Like `polstereMp3`, a missing or failing ffmpeg throws. Returning the
  * original bytes instead would store a clip at the wrong speed as if it

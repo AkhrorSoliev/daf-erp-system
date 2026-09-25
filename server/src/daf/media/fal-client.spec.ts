@@ -186,43 +186,44 @@ describe('FalClient.dialog', () => {
   });
 });
 
-// Word audio moved to Gemini on 2026-09-25: the CEO heard the English-native
-// ElevenLabs voice mispronounce German words and chose Gemini's female voice.
-describe('FalClient.speechGemini', () => {
-  it('calls the Gemini endpoint with the bare word, the voice, German and mp3', async () => {
+// Word audio: Inworld "Johanna (de)" since 2026-09-25. The CEO heard two
+// multilingual voices (ElevenLabs Rachel, then Gemini) read German words
+// that are also English words (Name, Land, wer) with English sounds, and
+// approved Inworld's German voice after hearing 33 such words.
+describe('FalClient.speechInworld', () => {
+  it('calls the Inworld endpoint with the bare word and the voice', async () => {
     const calls: Array<{ url: string; body: any }> = [];
     const fetchFn = (async (url: string, init: any) => {
       calls.push({ url, body: JSON.parse(init.body) });
       return {
         ok: true,
         status: 200,
-        json: async () => ({ audio: { url: 'https://x/g.mp3' } }),
+        json: async () => ({ audio: { url: 'https://x/i.wav' } }),
         text: async () => '',
       };
     }) as unknown as typeof fetch;
-    const url = await new FalClient('k', fetchFn).speechGemini(
-      'zwischen',
-      'Erinome',
+    const url = await new FalClient('k', fetchFn).speechInworld(
+      'Name',
+      'Johanna (de)',
     );
-    expect(url).toBe('https://x/g.mp3');
-    expect(calls[0].url).toBe('https://fal.run/fal-ai/gemini-3.1-flash-tts');
-    expect(calls[0].body).toEqual({
-      prompt: 'zwischen',
-      voice: 'Erinome',
-      language_code: 'German (Germany)',
-      output_format: 'mp3',
-    });
+    expect(url).toBe('https://x/i.wav');
+    expect(calls[0].url).toBe('https://fal.run/fal-ai/inworld-tts');
+    expect(calls[0].body).toEqual({ text: 'Name', voice: 'Johanna (de)' });
   });
 
   it('fails when no audio comes back', async () => {
     const c = new FalClient('k', fetchStub({}));
-    await expect(c.speechGemini('dann', 'Erinome')).rejects.toThrow(/ovoz/i);
+    await expect(c.speechInworld('Name', 'Johanna (de)')).rejects.toThrow(
+      /ovoz/i,
+    );
   });
+});
 
-  // Gemini's content checker refuses some plain words at random ("dann"
-  // twice, "zwischen" once in the voice test). The script retries exactly
-  // this case, so it needs its own error type, not a message to parse.
-  it('turns a content-checker refusal (422 content_policy_violation) into FalAblehnungError', async () => {
+// Gemini's content checker refused plain words at random ("dann" twice,
+// "zwischen" once). Any model call can meet it, so run() gives it its own
+// error type and the script retries exactly this case.
+describe('FalClient content-checker refusal', () => {
+  it('turns 422 content_policy_violation into FalAblehnungError', async () => {
     const fetchFn = (async () => ({
       ok: false,
       status: 422,
@@ -230,7 +231,7 @@ describe('FalClient.speechGemini', () => {
       text: async () =>
         '{"detail":[{"msg":"flagged by a content checker","type":"content_policy_violation"}]}',
     })) as unknown as typeof fetch;
-    const p = new FalClient('k', fetchFn).speechGemini('dann', 'Erinome');
+    const p = new FalClient('k', fetchFn).speechInworld('dann', 'Johanna (de)');
     await expect(p).rejects.toBeInstanceOf(FalAblehnungError);
   });
 
@@ -242,37 +243,11 @@ describe('FalClient.speechGemini', () => {
       text: async () =>
         '{"detail":[{"msg":"field required","type":"missing"}]}',
     })) as unknown as typeof fetch;
-    const p = new FalClient('k', fetchFn).speechGemini('dann', 'Erinome');
-    await expect(p).rejects.toThrow(/422/);
     await expect(
-      new FalClient('k', fetchFn).speechGemini('dann', 'Erinome'),
+      new FalClient('k', fetchFn).speechInworld('dann', 'Johanna (de)'),
+    ).rejects.toThrow(/422/);
+    await expect(
+      new FalClient('k', fetchFn).speechInworld('dann', 'Johanna (de)'),
     ).rejects.not.toBeInstanceOf(FalAblehnungError);
-  });
-});
-
-describe('FalClient.speechGemini with an instruction', () => {
-  it('sends the unspoken instruction as style_instructions, the word stays the prompt', async () => {
-    const calls: Array<{ body: any }> = [];
-    const fetchFn = (async (_url: string, init: any) => {
-      calls.push({ body: JSON.parse(init.body) });
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({ audio: { url: 'https://x/g.mp3' } }),
-        text: async () => '',
-      };
-    }) as unknown as typeof fetch;
-    await new FalClient('k', fetchFn).speechGemini(
-      'ich',
-      'Erinome',
-      'Sprich das Wort aus.',
-    );
-    expect(calls[0].body).toEqual({
-      prompt: 'ich',
-      voice: 'Erinome',
-      language_code: 'German (Germany)',
-      output_format: 'mp3',
-      style_instructions: 'Sprich das Wort aus.',
-    });
   });
 });

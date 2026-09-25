@@ -1,19 +1,20 @@
 /**
  * Makes the pronunciation audio of one unit's words and uploads it to R2.
  *
- *   npm run daf:gen-audio -- --unit 3 --stimme Erinome --speed 0.85
- *   npm run daf:gen-audio -- --unit 1 --stimme Erinome --speed 0.85 --ersetzen
+ *   npm run daf:gen-audio -- --unit 3 --stimme Johanna --speed 0.85
+ *   npm run daf:gen-audio -- --unit 1 --stimme Johanna --speed 0.85 --ersetzen
  *
  * THE VOICE IS A CEO DECISION (2026-09-25): every course word is spoken by
- * ONE native-German voice, Gemini TTS "Erinome", and voices are never mixed.
- * The English-native ElevenLabs voice (Rachel) read some German words with
- * English sounds, and the CEO picked Erinome after hearing ten words in four
- * native-German voices. `--stimme` therefore accepts that one voice only
- * (`RUXSAT_ETILGAN_STIMMELAR`); a typo or an old voice stops before anything
- * is sent to fal.ai.
+ * ONE German voice, Inworld TTS "Johanna (de)", and voices are never mixed.
+ * Two multilingual voices before it (ElevenLabs Rachel, then Gemini Erinome)
+ * read German words that are also English words (Name, Land, wer) with
+ * English sounds: one word alone tells a multilingual model nothing about
+ * its language. The CEO heard 33 such words in Johanna and approved her.
+ * `--stimme` therefore accepts that one voice only (`RUXSAT_ETILGAN_STIMMELAR`);
+ * a typo or an old voice stops before anything is sent to fal.ai.
  *
- * `--speed` is required with no default: Gemini has no speed setting, so the
- * clip is slowed locally with ffmpeg (`audio-tempo.ts`), and the course
+ * `--speed` is required with no default: Inworld has no speed setting, so
+ * the clip is slowed locally with ffmpeg (`audio-tempo.ts`), and the course
  * speaks at 0.85. A default would silently undo that choice.
  *
  * `--ersetzen` regenerates words that already have audio and replaces their
@@ -22,12 +23,11 @@
  * is seeded with the new manifest, so deleting them here would break the
  * live course.
  *
- * Gemini's content checker refuses some plain words (`FalAblehnungError`);
- * `sprichMitAblehnungsschutz` asks again, then adds a full stop, then sends
- * an instruction the model follows but does not speak. A word that still
- * has no audio is reported and, with `--ersetzen`, loses its old key, so no
- * word is left in the rejected voice. A run without `--ersetzen` makes only
- * the words that have no audio, which is how refused words are retried.
+ * A content-checker refusal (`FalAblehnungError`) is asked again, then with a
+ * full stop (`sprichMitAblehnungsschutz`). A word that still has no audio is
+ * reported and, with `--ersetzen`, loses its old key, so no word is left in
+ * a replaced voice. A run without `--ersetzen` makes only the words that
+ * have no audio, which is how such words are retried.
  *
  * PAID: fal.ai calls and R2 writes. `main()` only runs when the file is
  * executed directly (`require.main === module`), so the tests can import it
@@ -237,16 +237,21 @@ export function schluesselFuerWort(wort: SprachEintrag): string {
 
 /**
  * The voices this script may speak course words in: exactly one, the voice
- * the CEO chose on 2026-09-25 (Gemini TTS "Erinome"), so that no unit is
- * ever made in a second voice.
+ * the CEO chose on 2026-09-25 (Inworld TTS "Johanna (de)"), so that no unit
+ * is ever made in a second voice.
  *
  * WHY A HARD LIST: a value outside it (a typo, or an old voice such as
- * `Rachel`) would reach fal.ai, where it is either refused or, worse,
- * quietly replaced by a default voice and billed. It is compared here,
- * before anything is sent. Changing the course voice means changing this
- * list AND regenerating every unit with `--ersetzen`.
+ * `Rachel` or `Erinome`) would reach fal.ai, where it is either refused or,
+ * worse, quietly replaced by a default voice and billed. It is compared
+ * here, before anything is sent. Changing the course voice means changing
+ * this list AND regenerating every unit with `--ersetzen`.
  */
-export const RUXSAT_ETILGAN_STIMMELAR: readonly string[] = ['Erinome'];
+export const RUXSAT_ETILGAN_STIMMELAR: readonly string[] = ['Johanna'];
+
+/** The Inworld voice id behind each allowed `--stimme` value. */
+const INWORLD_STIMMEN: Readonly<Record<string, string>> = {
+  Johanna: 'Johanna (de)',
+};
 
 /** `--stimme`/`--speed` bayroqlari bilan bog'liq xatolarning umumiy ota klassi. */
 export class StimmeArgError extends Error {}
@@ -284,7 +289,7 @@ export function parseGenAudioArgs(argv: string[]): GenAudioArgs {
   const stimmeValue = stimmeIdx === -1 ? undefined : argv[stimmeIdx + 1];
   if (!stimmeValue) {
     throw new MissingStimmeArgError(
-      '`--stimme` MAJBURIY — CEO tanlagan ovoz: `--stimme Erinome`.',
+      '`--stimme` MAJBURIY — CEO tanlagan ovoz: `--stimme Johanna`.',
     );
   }
   if (!RUXSAT_ETILGAN_STIMMELAR.includes(stimmeValue)) {
@@ -325,57 +330,31 @@ export function parseErsetzenArg(argv: string[]): boolean {
 export const GLEICHER_TEXT_VERSUCHE = 3;
 /** Requests with a full stop added, after the bare word kept being refused. */
 export const MIT_PUNKT_VERSUCHE = 2;
-/** Requests with the unspoken instruction, the last resort. */
-export const ANWEISUNG_VERSUCHE = 2;
-
-/**
- * Guidance for Gemini that it follows but does not speak. Sent only after
- * five refusals: "ich", "Sie", "aus", "sprechen", "null", "acht", "alt"
- * and "Lehrerin" were refused all five times in the 2026-09-25 run, as if
- * the model did not take one short word as a speech request.
- */
-export const WORT_ANWEISUNG =
-  'Sprich das folgende einzelne deutsche Wort deutlich aus.';
 
 /**
  * Speaks `text`, asking again when the content checker refuses it.
  *
- * The refusals are random: "zwischen" was refused once and accepted on the
- * next identical request, so the bare word is tried three times first.
- * "dann" was refused three times; a full stop is the smallest change that
- * still makes the audio say only the word. Words refused even then are
- * asked for with `WORT_ANWEISUNG`. Any other error is thrown at once,
- * because asking again cannot fix a wrong request.
+ * Refusals were random with Gemini: "zwischen" was refused once and accepted
+ * on the next identical request, so the bare word is tried three times
+ * first. "dann" was refused three times; a full stop is the smallest change
+ * that still makes the audio say only the word. Inworld refused none of 33
+ * words in its test, so this is a safety net there. Any other error is
+ * thrown at once, because asking again cannot fix a wrong request.
  */
 export async function sprichMitAblehnungsschutz(
-  sprich: (text: string, anweisung?: string) => Promise<string>,
+  sprich: (text: string) => Promise<string>,
   text: string,
-): Promise<{
-  url: string;
-  gesprochen: string;
-  mitAnweisung: boolean;
-  versuche: number;
-}> {
+): Promise<{ url: string; gesprochen: string; versuche: number }> {
   const mitPunkt = text.endsWith('.') ? text : `${text}.`;
-  const plan: Array<{ text: string; anweisung?: string }> = [
-    ...Array.from({ length: GLEICHER_TEXT_VERSUCHE }, () => ({ text })),
-    ...Array.from({ length: MIT_PUNKT_VERSUCHE }, () => ({ text: mitPunkt })),
-    ...Array.from({ length: ANWEISUNG_VERSUCHE }, () => ({
-      text,
-      anweisung: WORT_ANWEISUNG,
-    })),
+  const plan = [
+    ...Array<string>(GLEICHER_TEXT_VERSUCHE).fill(text),
+    ...Array<string>(MIT_PUNKT_VERSUCHE).fill(mitPunkt),
   ];
   let letzte: FalAblehnungError | undefined;
   for (let i = 0; i < plan.length; i++) {
-    const schritt = plan[i];
     try {
-      const url = await sprich(schritt.text, schritt.anweisung);
-      return {
-        url,
-        gesprochen: schritt.text,
-        mitAnweisung: schritt.anweisung !== undefined,
-        versuche: i + 1,
-      };
+      const url = await sprich(plan[i]);
+      return { url, gesprochen: plan[i], versuche: i + 1 };
     } catch (err) {
       if (!(err instanceof FalAblehnungError)) throw err;
       letzte = err;
@@ -466,7 +445,7 @@ async function main() {
   // for still reach the manifest.
   const natijalar: YuklashNatijasi[] = [];
   const mitPunkt: string[] = [];
-  const mitAnweisung: string[] = [];
+  const stimmeId = INWORLD_STIMMEN[args.stimme];
   let done = 0;
   for (const wort of qoldi) {
     done++;
@@ -477,7 +456,7 @@ async function main() {
     const key = schluesselFuerWort(wort);
     try {
       const gesagt = await sprichMitAblehnungsschutz(
-        (t, anweisung) => fal.speechGemini(t, args.stimme, anweisung),
+        (t) => fal.speechInworld(t, stimmeId),
         text,
       );
       const res = await fetch(gesagt.url);
@@ -491,10 +470,8 @@ async function main() {
       if (gesagt.gesprochen !== text) {
         mitPunkt.push(`${wort.de} → "${gesagt.gesprochen}"`);
       }
-      if (gesagt.mitAnweisung) mitAnweisung.push(wort.de);
       const qayta =
-        (gesagt.versuche > 1 ? ` (${gesagt.versuche}-urinishda)` : '') +
-        (gesagt.mitAnweisung ? ' (ko`rsatma bilan)' : '');
+        gesagt.versuche > 1 ? ` (${gesagt.versuche}-urinishda)` : '';
       console.log(
         `  ${done}/${qoldi.length}: ${wort.de} → "${gesagt.gesprochen}"${qayta}`,
       );
@@ -513,11 +490,6 @@ async function main() {
   if (mitPunkt.length > 0) {
     console.log(
       `\nNuqta qo'shib yasalgan so'zlar (quloq bilan tekshiring): ${mitPunkt.join(', ')}`,
-    );
-  }
-  if (mitAnweisung.length > 0) {
-    console.log(
-      `\nKo'rsatma bilan yasalgan so'zlar (quloq bilan tekshiring): ${mitAnweisung.join(', ')}`,
     );
   }
   const muvaffaqiyatsiz = natijalar.filter((n) => !n.ok);

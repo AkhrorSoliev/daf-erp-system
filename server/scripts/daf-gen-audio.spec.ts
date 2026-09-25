@@ -17,7 +17,6 @@ import {
   parseErsetzenArg,
   parseGenAudioArgs,
   sprichMitAblehnungsschutz,
-  WORT_ANWEISUNG,
   parseUnitArg,
   woerterPfad,
   pruefeBudget,
@@ -228,20 +227,20 @@ describe('parseGenAudioArgs', () => {
     );
   });
 
-  it('`--stimme Erinome --speed 0.85` keeps the voice and the tempo', () => {
+  it('`--stimme Johanna --speed 0.85` keeps the voice and the tempo', () => {
     expect(
-      parseGenAudioArgs(['--stimme', 'Erinome', '--speed', '0.85']),
+      parseGenAudioArgs(['--stimme', 'Johanna', '--speed', '0.85']),
     ).toEqual({
-      stimme: 'Erinome',
+      stimme: 'Johanna',
       speed: 0.85,
     });
   });
 
-  // CEO, 2026-09-25: every course word in ONE native-German voice, no mixing.
-  // The English-native voices and Chatterbox stay usable for the voice-sample
-  // script, but this script refuses them, so no unit can drift back to them.
-  it('refuses the voices the CEO ruled out for words (Rachel, Matilda, Chatterbox)', () => {
-    for (const eski of ['Rachel', 'Matilda', 'none']) {
+  // CEO, 2026-09-25: every course word in ONE German voice, no mixing. The
+  // multilingual voices read German words that are also English words with
+  // English sounds, so this script refuses them and no unit can drift back.
+  it('refuses the voices the CEO ruled out for words (Rachel, Matilda, Chatterbox, Gemini Erinome)', () => {
+    for (const eski of ['Rachel', 'Matilda', 'none', 'Erinome']) {
       expect(() =>
         parseGenAudioArgs(['--stimme', eski, '--speed', '0.85']),
       ).toThrow(UnknownStimmeArgError);
@@ -249,54 +248,54 @@ describe('parseGenAudioArgs', () => {
   });
 
   it('the only allowed word voice is the one the CEO chose', () => {
-    expect(RUXSAT_ETILGAN_STIMMELAR).toEqual(['Erinome']);
+    expect(RUXSAT_ETILGAN_STIMMELAR).toEqual(['Johanna']);
   });
 
   // A default tempo would silently undo the slow speed the CEO chose.
   it('`--speed` yo`q bo`lsa yiqiladi', () => {
-    expect(() => parseGenAudioArgs(['--stimme', 'Erinome'])).toThrow(
+    expect(() => parseGenAudioArgs(['--stimme', 'Johanna'])).toThrow(
       MissingSpeedArgError,
     );
   });
 
   it('`--speed` qiymatsiz bo`lsa ham yiqiladi', () => {
-    expect(() => parseGenAudioArgs(['--stimme', 'Erinome', '--speed'])).toThrow(
+    expect(() => parseGenAudioArgs(['--stimme', 'Johanna', '--speed'])).toThrow(
       MissingSpeedArgError,
     );
   });
 
   it('`--speed` son bo`lmasa yiqiladi', () => {
     expect(() =>
-      parseGenAudioArgs(['--stimme', 'Erinome', '--speed', 'sekin']),
+      parseGenAudioArgs(['--stimme', 'Johanna', '--speed', 'sekin']),
     ).toThrow(InvalidSpeedArgError);
   });
 
   it('`--speed` 0.7–1.2 oralig`idan tashqari bo`lsa yiqiladi', () => {
     expect(() =>
-      parseGenAudioArgs(['--stimme', 'Erinome', '--speed', '0.5']),
+      parseGenAudioArgs(['--stimme', 'Johanna', '--speed', '0.5']),
     ).toThrow(SpeedOutOfRangeArgError);
     expect(() =>
-      parseGenAudioArgs(['--stimme', 'Erinome', '--speed', '1.5']),
+      parseGenAudioArgs(['--stimme', 'Johanna', '--speed', '1.5']),
     ).toThrow(SpeedOutOfRangeArgError);
   });
 
   it('`--speed` oralig`ning ikkala chetida ham o`tadi', () => {
     expect(
-      parseGenAudioArgs(['--stimme', 'Erinome', '--speed', '0.7']),
-    ).toEqual({ stimme: 'Erinome', speed: 0.7 });
+      parseGenAudioArgs(['--stimme', 'Johanna', '--speed', '0.7']),
+    ).toEqual({ stimme: 'Johanna', speed: 0.7 });
     expect(
-      parseGenAudioArgs(['--stimme', 'Erinome', '--speed', '1.2']),
-    ).toEqual({ stimme: 'Erinome', speed: 1.2 });
+      parseGenAudioArgs(['--stimme', 'Johanna', '--speed', '1.2']),
+    ).toEqual({ stimme: 'Johanna', speed: 1.2 });
   });
 
   it('noma`lum ovoz nomi (yozuv xatosi) `fal.ai`ga borishdan OLDIN rad etiladi', () => {
     expect(() =>
-      parseGenAudioArgs(['--stimme', 'Erinom', '--speed', '0.85']),
+      parseGenAudioArgs(['--stimme', 'Johana', '--speed', '0.85']),
     ).toThrow(UnknownStimmeArgError);
     // The message names what was sent and what is allowed.
     expect(() =>
-      parseGenAudioArgs(['--stimme', 'Erinom', '--speed', '0.85']),
-    ).toThrow(/Erinom.*Erinome/);
+      parseGenAudioArgs(['--stimme', 'Johana', '--speed', '0.85']),
+    ).toThrow(/Johana.*Johanna/);
   });
 });
 
@@ -357,8 +356,8 @@ describe('manifestAktualisieren with ersetzen', () => {
 describe('sprichMitAblehnungsschutz', () => {
   function sprecher(antworten: Array<'ablehnen' | 'fehler' | string>) {
     const gesendet: string[] = [];
-    const fn = async (text: string, anweisung?: string): Promise<string> => {
-      gesendet.push(anweisung ? `${anweisung} | ${text}` : text);
+    const fn = async (text: string): Promise<string> => {
+      gesendet.push(text);
       const a = antworten.shift();
       if (a === 'ablehnen')
         throw new FalAblehnungError('content_policy_violation');
@@ -373,13 +372,13 @@ describe('sprichMitAblehnungsschutz', () => {
     await expect(sprichMitAblehnungsschutz(fn, 'dann')).resolves.toEqual({
       url: 'https://x/1.mp3',
       gesprochen: 'dann',
-      mitAnweisung: false,
       versuche: 1,
     });
     expect(gesendet).toEqual(['dann']);
   });
 
-  // "zwischen" was refused once and accepted on the next identical request.
+  // Refusals were random with Gemini: "zwischen" was refused once and
+  // accepted on the next identical request.
   it('asks again with the same text after a refusal', async () => {
     const { fn, gesendet } = sprecher([
       'ablehnen',
@@ -390,14 +389,11 @@ describe('sprichMitAblehnungsschutz', () => {
     expect(r).toEqual({
       url: 'https://x/3.mp3',
       gesprochen: 'zwischen',
-      mitAnweisung: false,
       versuche: 3,
     });
     expect(gesendet).toEqual(['zwischen', 'zwischen', 'zwischen']);
   });
 
-  // "dann" was refused three times; a full stop is the smallest change that
-  // still makes the audio say only the word.
   it('adds a full stop after three refusals of the bare word', async () => {
     const { fn, gesendet } = sprecher([
       'ablehnen',
@@ -409,36 +405,17 @@ describe('sprichMitAblehnungsschutz', () => {
     expect(r).toEqual({
       url: 'https://x/4.mp3',
       gesprochen: 'dann.',
-      mitAnweisung: false,
       versuche: 4,
     });
     expect(gesendet).toEqual(['dann', 'dann', 'dann', 'dann.']);
   });
 
-  // "ich", "Sie", "aus" and five more were refused all five times in the
-  // 2026-09-25 run. The model seems not to take one short word as a speech
-  // request; an instruction it follows but does not speak settles that.
-  it('asks with the unspoken instruction after five refusals', async () => {
-    const { fn, gesendet } = sprecher([
-      ...Array<string>(5).fill('ablehnen'),
-      'https://x/6.mp3',
-    ]);
-    const r = await sprichMitAblehnungsschutz(fn, 'ich');
-    expect(r).toEqual({
-      url: 'https://x/6.mp3',
-      gesprochen: 'ich',
-      mitAnweisung: true,
-      versuche: 6,
-    });
-    expect(gesendet[5]).toBe(`${WORT_ANWEISUNG} | ich`);
-  });
-
-  it('gives up with FalAblehnungError after seven refusals', async () => {
-    const { fn, gesendet } = sprecher(Array(7).fill('ablehnen'));
+  it('gives up with FalAblehnungError after five refusals', async () => {
+    const { fn, gesendet } = sprecher(Array(5).fill('ablehnen'));
     await expect(sprichMitAblehnungsschutz(fn, 'dann')).rejects.toBeInstanceOf(
       FalAblehnungError,
     );
-    expect(gesendet).toHaveLength(7);
+    expect(gesendet).toHaveLength(5);
   });
 
   it('does not retry any other error', async () => {

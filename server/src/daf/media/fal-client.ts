@@ -1,15 +1,16 @@
 const IMAGE_MODEL = 'fal-ai/flux/schnell';
 const TTS_MODEL = 'fal-ai/chatterbox/text-to-speech/multilingual';
 const TTS_ELEVEN_MODEL = 'fal-ai/elevenlabs/tts/turbo-v2.5';
-const TTS_GEMINI_MODEL = 'fal-ai/gemini-3.1-flash-tts';
+const TTS_INWORLD_MODEL = 'fal-ai/inworld-tts';
 const DIALOG_MODEL = 'fal-ai/elevenlabs/text-to-dialogue/eleven-v3';
 
 /**
  * The model's content checker refused the text (HTTP 422 with
- * `content_policy_violation`). Gemini TTS does this at random to plain
- * German words: in the 2026-09-25 voice test it refused "dann" twice and
- * "zwischen" once, then accepted "zwischen" on the next identical request.
- * Its own type lets the word script retry exactly this case and nothing else.
+ * `content_policy_violation`). Gemini TTS did this at random to plain
+ * German words on 2026-09-25: it refused "dann" twice and "zwischen" once,
+ * then accepted "zwischen" on the next identical request. Any model behind
+ * fal can answer this way, so `run()` reports it as its own type and the
+ * word script retries exactly this case and nothing else.
  */
 export class FalAblehnungError extends Error {}
 
@@ -138,32 +139,19 @@ export class FalClient {
   }
 
   /**
-   * German word audio with Gemini TTS: the course word voice since
-   * 2026-09-25. The CEO heard the English-native ElevenLabs voice read some
-   * German words with English sounds (z as [z], w as [w]) and chose
-   * Gemini's female voice after a four-voice test.
+   * German word audio: Inworld TTS with its German voice "Johanna (de)",
+   * the course word voice since 2026-09-25. Two multilingual voices before
+   * it (ElevenLabs Rachel, then Gemini) read German words that are also
+   * English words (Name, Land, wer) with English sounds, because one word
+   * alone tells a multilingual model nothing about its language. The CEO
+   * heard 33 such words in this voice and approved it.
    *
    * Only the bare word is sent, so the billed characters are the word
    * itself. The model has no speed setting; the caller slows the clip
-   * locally (`audio-tempo.ts`). A refusal by the content checker arrives
-   * as `FalAblehnungError` from `run()`.
-   *
-   * `anweisung` goes out as `style_instructions`: guidance the model
-   * follows but does not speak. The script uses it only for a word the
-   * model keeps refusing as a bare prompt.
+   * locally (`audio-tempo.ts`). The answer is a WAV file.
    */
-  async speechGemini(
-    text: string,
-    stimme: string,
-    anweisung?: string,
-  ): Promise<string> {
-    const out = await this.run(TTS_GEMINI_MODEL, {
-      prompt: text,
-      voice: stimme,
-      language_code: 'German (Germany)',
-      output_format: 'mp3',
-      ...(anweisung ? { style_instructions: anweisung } : {}),
-    });
+  async speechInworld(text: string, stimme: string): Promise<string> {
+    const out = await this.run(TTS_INWORLD_MODEL, { text, voice: stimme });
     const url = out?.audio?.url;
     if (typeof url !== 'string') throw new Error('fal.ai ovoz qaytarmadi');
     return url;
