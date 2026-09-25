@@ -708,6 +708,13 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
    * `resultSentAt` already set are skipped. Per-participant errors are
    * logged on the row (`resultSendError`) and do not abort the loop.
    *
+   * Each participant is CLAIMED (`resultSentAt` set where it is still null)
+   * before the send, not stamped after it. The loop takes a while, and a
+   * second broadcast of the same exam started meanwhile — two admins, two
+   * tabs, a direct API call — used to send the PDF again to everyone the
+   * first had not reached yet. Only one broadcast can claim a participant; a
+   * failed send releases the claim so the next broadcast retries it.
+   *
    * Called from `MockExamsService.changeStatus` once the PDF generation
    * succeeds and the exam enters ANNOUNCED.
    */
@@ -756,7 +763,18 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     // friendly title from the exam name (Latin/word chars only, trimmed).
     const safeFilename = this.buildPdfFilename(exam.title);
 
+    let skipped = 0;
     for (const r of recipients) {
+      const claimed = await this.prisma.mockExamParticipant.updateMany({
+        where: { id: r.id, resultSentAt: null },
+        data: { resultSentAt: new Date(), resultSendError: null },
+      });
+      if (claimed.count === 0) {
+        skipped++;
+        continue;
+      }
+
+      let messageId: number;
       try {
         const msg = await this.bot.telegram.sendDocument(
           r.telegramChatId!,
@@ -766,15 +784,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
             parse_mode: 'HTML',
           },
         );
-        await this.prisma.mockExamParticipant.update({
-          where: { id: r.id },
-          data: {
-            resultSentAt: new Date(),
-            resultMessageId: String(msg.message_id),
-            resultSendError: null,
-          },
-        });
-        sent++;
+        messageId = msg.message_id;
       } catch (err) {
         const reason = (err as Error).message;
         this.logger.warn(
@@ -782,13 +792,27 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         );
         await this.prisma.mockExamParticipant.update({
           where: { id: r.id },
-          data: { resultSendError: reason.slice(0, 500) },
+          data: { resultSentAt: null, resultSendError: reason.slice(0, 500) },
         });
         failed++;
+        continue;
+      }
+      sent++;
+
+      // The message is out; failing to note its id must not release the
+      // claim, or the next broadcast would send it again.
+      try {
+        await this.prisma.mockExamParticipant.update({
+          where: { id: r.id },
+          data: { resultMessageId: String(messageId) },
+        });
+      } catch (err) {
+        this.logger.warn(
+          `broadcastMockResults: sent to participant=${r.id} but could not store the message id: ${(err as Error).message}`,
+        );
       }
     }
 
-    const skipped = 0;
     this.logger.log(
       `broadcastMockResults: exam=${examId} sent=${sent} failed=${failed} (total recipients=${recipients.length})`,
     );
