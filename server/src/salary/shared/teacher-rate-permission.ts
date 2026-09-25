@@ -1,5 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Prisma, SalaryType, UserStatus } from '@prisma/client';
+import { whereUserMayAct } from '../../common/auth/blocked-user';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   parseEffectiveFromOrThrow,
@@ -141,7 +142,10 @@ export function teacherRateRefusal(input: {
  * `POST /salary/config` gate. Loads the caller ONCE (never
  * `resolveCallerBranchScope`, which would load them a second time) and
  * derives their branch set from that same query, so a demoted director whose
- * JWT still claims the role is caught here rather than trusted.
+ * JWT still claims the role is caught here rather than trusted. The query goes
+ * through `whereUserMayAct()`, so a suspended, terminated or archived caller
+ * sets no rate even while Redis is down and their token still passes the
+ * guard (ADR-0028).
  */
 export async function assertCallerMaySetTeacherRate(
   prisma: PrismaLike,
@@ -160,7 +164,7 @@ export async function assertCallerMaySetTeacherRate(
   }
 
   const caller = await prisma.user.findFirst({
-    where: { id: callerId, deletedAt: null },
+    where: { id: callerId, ...whereUserMayAct() },
     select: {
       mainBranch: true,
       branches: { select: { branchId: true } },

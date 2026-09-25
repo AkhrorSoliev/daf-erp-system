@@ -280,6 +280,38 @@ describe('assertCallerMaySetTeacherRate', () => {
     ).resolves.toBeUndefined();
   });
 
+  it('reads the caller through whereUserMayAct (ADR-0028)', async () => {
+    prisma.user.findFirst
+      .mockResolvedValueOnce(director)
+      .mockResolvedValueOnce(activeTeacher);
+    await assertCallerMaySetTeacherRate(prisma, CALLER_ID, 1001, dto);
+
+    expect(prisma.user.findFirst).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: {
+          id: CALLER_ID,
+          deletedAt: null,
+          status: {
+            notIn: [
+              UserStatus.SUSPENDED,
+              UserStatus.TERMINATED,
+              UserStatus.ARCHIVED,
+            ],
+          },
+        },
+      }),
+    );
+  });
+
+  it('refuses a blocked caller, whose row that query does not return', async () => {
+    prisma.user.findFirst.mockResolvedValueOnce(null);
+    await expect(
+      assertCallerMaySetTeacherRate(prisma, CALLER_ID, 1001, dto),
+    ).rejects.toThrow('Foydalanuvchi aniqlanmadi');
+    expect(prisma.user.findFirst).toHaveBeenCalledTimes(1);
+  });
+
   it('looks the target up scoped to companyId (and excludes soft-deleted)', async () => {
     prisma.user.findFirst
       .mockResolvedValueOnce(director)
