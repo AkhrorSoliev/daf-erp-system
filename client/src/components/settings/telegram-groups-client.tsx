@@ -410,11 +410,7 @@ export function TelegramGroupsClient() {
             <AlertDialogAction
               onClick={handleConfirm}
               disabled={anyPending}
-              className={
-                confirmText?.destructive
-                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  : undefined
-              }
+              variant={confirmText?.destructive ? "destructive" : "default"}
             >
               {anyPending && <Loader2 className="size-4 mr-2 animate-spin" />}
               {confirmText?.actionLabel}
