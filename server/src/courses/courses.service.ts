@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CourseStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
@@ -12,6 +16,10 @@ import {
   ReportBranchIds,
   branchIdWhere,
 } from '../common/finance/report-branch-scope';
+import {
+  assertCallerInBranch,
+  resolveCallerBranchScope,
+} from '../common/auth/branch-scope';
 
 @Injectable()
 export class CoursesService {
@@ -22,6 +30,42 @@ export class CoursesService {
     private entityHistoryService: EntityHistoryService,
     private settingsService: SettingsService,
   ) {}
+
+  /**
+   * Throw unless the caller may act on a course in `branchId`.
+   *
+   * `@Roles()` proves the caller is staff, not that the course is theirs, and
+   * the id-addressed lookups check `companyId` alone. A course carries money:
+   * every per-lesson charge for its students is derived from `price`,
+   * `paymentModel` sets the billing rules of every group on it, and archiving
+   * it cancels those groups. Call it after the method's existence check, so a
+   * stale id still answers 404. `UpdateCourseDto` has no `branchId`, so the
+   * course's current branch is the only one to check.
+   *
+   * `branchId` is nullable on Course. A course in no branch is in no branch's
+   * catalogue — `branchIdWhere` hides it from every branch-confined read — so
+   * it is no one branch's to change: only a caller spanning every branch may.
+   */
+  private async assertCallerMayTouchCourse(
+    userId: number | undefined,
+    branchId: number | null,
+  ): Promise<void> {
+    if (branchId != null) {
+      await assertCallerInBranch(
+        this.prisma,
+        userId,
+        branchId,
+        "Bu kurs boshqa filialga tegishli — sizda ruxsat yo'q",
+      );
+      return;
+    }
+    const scope = await resolveCallerBranchScope(this.prisma, userId);
+    if (scope.kind !== 'all') {
+      throw new ForbiddenException(
+        'Bu kurs hech bir filialga biriktirilmagan — u bilan faqat CEO ishlay oladi',
+      );
+    }
+  }
 
   async findAll(
     query: CourseQueryDto,
@@ -150,6 +194,7 @@ export class CoursesService {
     if (!course) {
       throw new NotFoundException(`Kurs #${id} topilmadi`);
     }
+    await this.assertCallerMayTouchCourse(userId, course.branchId);
 
     const updated = await this.prisma.course.update({
       where: { id },
@@ -200,6 +245,7 @@ export class CoursesService {
     if (!course) {
       throw new NotFoundException(`Kurs #${id} topilmadi`);
     }
+    await this.assertCallerMayTouchCourse(userId, course.branchId);
 
     const auditData = await this.statusHistoryService.changeStatus({
       entityType: 'Course',
@@ -235,15 +281,16 @@ export class CoursesService {
     return updated;
   }
 
-  async getStatusHistory(id: string, companyId: number) {
+  async getStatusHistory(id: string, companyId: number, userId: number) {
     const course = await this.prisma.course.findFirst({
       where: { id, companyId },
-      select: { id: true },
+      select: { id: true, branchId: true },
     });
 
     if (!course) {
       throw new NotFoundException(`Kurs #${id} topilmadi`);
     }
+    await this.assertCallerMayTouchCourse(userId, course.branchId);
 
     return this.statusHistoryService.getHistory('Course', id);
   }
@@ -255,6 +302,7 @@ export class CoursesService {
     if (!course) {
       throw new NotFoundException(`Kurs #${id} topilmadi`);
     }
+    await this.assertCallerMayTouchCourse(userId, course.branchId);
 
     await this.statusHistoryService.changeStatus({
       entityType: 'Course',
