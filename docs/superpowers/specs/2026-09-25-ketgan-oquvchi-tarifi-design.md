@@ -198,9 +198,15 @@ uni chaqiradi; ikkinchi nusxa bo'lmaydi.
    ko'rsatkichlari chegaradan oldingi epizodlarni keyin, epizodlar ustida
    tashlaydi.
 3. Har o'quvchi uchun faol yozuvlar birlashmasi bo'yicha `LEFT_GROUP`/`RETURN`,
-   `StatusHistory` dan `EXPELLED`/`ARCHIVED`/`FROZEN`. `COMPLETED` sababli
-   uzilish `LEFT_GROUP` emas. Jurnali yo'q yozuv — `enrollment-status-on`
-   fallback'i; `StatusHistory` si yo'q status — `Student.statusChangedAt`.
+   `StatusHistory` dan `EXPELLED`/`ARCHIVED`/`FROZEN`. `COMPLETED` va
+   `TRANSFERRED` sababli uzilish `LEFT_GROUP` emas.
+   - Jurnali yo'q yozuv — `enrollment-status-on` fallback'i.
+   - Jurnal yozuvning yopilishini qayd etmagan bo'lsa (eski yozuvchilar) — u
+     qatorning o'zidan (`status` + `statusChangedAt`) to'ldiriladi.
+   - `StatusHistory` si yo'q eski status — faqat `EXPELLED` va `FROZEN`
+     `Student.statusChangedAt` dan olinadi. Eski `ARCHIVED` karta arxivlangan
+     bitiruvchi bo'lishi mumkin; uning yozuvlari baribir `LEFT_GROUP` yoki
+     bitiruvni ko'rsatadi.
 4. `buildDepartureEpisodes` → epizodlar. `activeAtStart` —
    `enrollment-status-on` bilan davr boshida `ACTIVE` yozuvli o'quvchilar.
 
@@ -220,9 +226,11 @@ Hammasi `loadDepartures` orqali. `loadDepartedStudents` o'chiriladi.
 | `GET /reports/departed-students/list`, `by-status`, `group-by` | **Ochiq epizodlar** (qaytmaganlar: `pending` + `confirmed`) |
 | `ReportsOverviewService.getKpis` → `churnedThisMonth`, yangi `pendingDepartures` | Joriy Toshkent oyidagi `confirmed` ketishlar → bosh sahifa kartasi, Excel «KPI paneli» |
 
-`getKpis` oy boshini hozir server soat mintaqasida oladi
-(`new Date(now.getFullYear(), now.getMonth(), 1)`) — Toshkent chegarasiga
-o'tkaziladi.
+`churnedThisMonth` Toshkent oyi bo'yicha sanaladi (`tashkentMonthRangeUtc`).
+`getKpis` dagi boshqa oylik ko'rsatkichlar (yangi o'quvchilar, davomat) oy
+boshini hozirgidek server soat mintaqasida oladi — ular bu bosqichga kirmaydi
+(davomat `@db.Date` ustuni; uni Toshkent timestamp chegarasi bilan solishtirish
+aynan `server/CLAUDE.md` ogohlantirgan xato).
 
 ## Raqamlar va ko'rinish
 
@@ -256,12 +264,16 @@ chiqarilgan, muzlatilgan).» Yangi qator: «Qaytishi kutilmoqda».
 **API:**
 
 - `summary`: `departedCount`, `churnRate`, `activeAtStart` (`totalStudents`
-  o'rniga), `pendingCount`, `avgDurationMonths`, `totalDebt`, `debtorCount`;
-  `lostRevenue` va ustoz metrikalari o'zgarmaydi.
+  o'rniga), `pendingCount`, `graceDays`, `avgDurationMonths`, `totalDebt`,
+  `debtorCount`; `lostRevenue` va ustoz metrikalari o'zgarmaydi.
 - `list` qatori: `departedAt`, `state` (`pending | confirmed`), `stopKind`
   (`leftAt` o'rniga).
 - `dynamics`: `{ data: { date, count, provisional }[] }`.
-- `getKpis`: `churnedThisMonth` (yangi ma'no) + `pendingDepartures`.
+- `getKpis`: `churnedThisMonth` (yangi ma'no) + `pendingDepartures` +
+  `departureGraceDays`; bosh sahifa `DashboardPeople`: `leftPending`,
+  `leftGraceDays`.
+- UI va Excel matnlarida N raqami yozilmaydi — `graceDays` dan olinadi, shunda
+  N o'zgarsa faqat konstanta o'zgaradi.
 
 ## Chekka holatlar
 
@@ -289,9 +301,10 @@ chiqarilgan, muzlatilgan).» Yangi qator: «Qaytishi kutilmoqda».
    mavjud `reports-center-activity` testlari yashil qoladi.
 3. **`departures.loader.spec.ts`** — yozib oluvchi Prisma
    (`reports.controller.query-validation.e2e.spec.ts` dagi kabi): filial
-   predikati ro'yxat bilan, `COMPLETED` `LEFT_GROUP` bermaydi,
-   `GRADUATED → ARCHIVED` to'xtash bermaydi, jurnalsiz yozuv fallback'i;
-   davr ko'rsatkichlari chegaradan oldingi epizodni tashlaydi.
+   predikati ro'yxat bilan, `COMPLETED` va `TRANSFERRED` `LEFT_GROUP`
+   bermaydi, `GRADUATED → ARCHIVED` to'xtash bermaydi, jurnalsiz yozuv
+   fallback'i, yopilishi yozilmagan jurnal qatordan to'ldiriladi; davr
+   ko'rsatkichlari chegaradan oldingi epizodni tashlaydi.
 4. **Moslik testi** — bitta jurnal fixture'i: sahifa `summary.departedCount`
    (joriy oy) = `getKpis().churnedThisMonth` = Excel «Shu oy ketganlar» qatori.
 5. Yangilanadigan testlar: `reports-departed-*`, `reports-overview` (KPI),
