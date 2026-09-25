@@ -387,8 +387,9 @@ export function CreateExamDrawer({
                 )}
               />
               <p className="text-xs text-muted-foreground">
-                Markazimiz o&apos;quvchilariga chegirmali narx. Bo&apos;sh
-                qoldirilsa, ular ham to&apos;liq narx to&apos;laydi.
+                Markazimiz o&apos;quvchilariga chegirmali narx. Chetlatilgan va
+                arxivdagi o&apos;quvchilar to&apos;liq narx to&apos;laydi.
+                Bo&apos;sh qoldirilsa, hamma to&apos;liq narx to&apos;laydi.
               </p>
             </div>
 

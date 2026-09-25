@@ -1,3 +1,5 @@
+import { StudentStatus } from '@prisma/client';
+
 /**
  * Shared mock-exam pricing + level helpers.
  *
@@ -48,19 +50,32 @@ export function sanitizeExamTimes(input: unknown): string[] {
 }
 
 /**
+ * Students who no longer study at the centre pay the full price (CEO,
+ * 2026-09-25): an expelled or archived card is still linked, so their result
+ * lands on their profile, but it earns no DaF discount.
+ */
+export const NO_DAF_DISCOUNT_STATUSES: readonly StudentStatus[] = [
+  StudentStatus.EXPELLED,
+  StudentStatus.ARCHIVED,
+];
+
+/**
  * The fee a single participant owes for one registration.
  *
- * - Non-DaF (outsider): always the full `price`.
- * - DaF student: the discounted `studentPrice` when set, else full `price`.
+ * - Non-DaF (outsider, `student` is null): always the full `price`.
+ * - DaF student: the discounted `studentPrice` when set, else full `price` —
+ *   unless the student is in `NO_DAF_DISCOUNT_STATUSES`.
  *
  * `studentPrice` of 0 is respected (a free mock for DaF students) — only
  * `null`/`undefined` falls back to `price`.
  */
 export function resolveParticipantFee(
   exam: { price: number; studentPrice?: number | null },
-  isDafStudent: boolean,
+  student: { status: StudentStatus } | null,
 ): number {
-  if (isDafStudent && exam.studentPrice != null) {
+  const discounted =
+    student !== null && !NO_DAF_DISCOUNT_STATUSES.includes(student.status);
+  if (discounted && exam.studentPrice != null) {
     return exam.studentPrice;
   }
   return exam.price;

@@ -294,8 +294,11 @@ deb noto'g'ri hujjatlashtirilgan edi).
 **MockExamParticipant** — ro'yxatdan o'tgan ishtirokchi. `publicId` — `Student`
 ketma-ketligidan olingan 5 xonali raqam; to'lov shlyuzlari **shu raqam** bo'yicha
 yo'naltiradi. `feeAmount` ro'yxatdan o'tishda qotiriladi (DaF chegirmasi bilan),
-shunda summa keyin siljib ketmaydi.
-`mock-exams/mock-exam-participants.service.ts`
+shunda summa keyin siljib ketmaydi. Chetlatilgan (`EXPELLED`) va arxivdagi
+(`ARCHIVED`) o'quvchi DaF chegirmasini olmaydi — to'liq narx (CEO, 2026-09-25);
+kartasi bog'lanadi, natijasi profilida ko'rinadi.
+`mock-exams/mock-exam-participants.service.ts`,
+`mock-exams/mock-exam-pricing.util.ts` (`NO_DAF_DISCOUNT_STATUSES`)
 
 ⚠️ **Mock imtihon to'lovi balansdan yechilmaydi.** Balans — **darslar** uchun
 oldindan to'lov. 2026-08 imtihonida 21 o'quvchi ikki marta to'lagan edi.

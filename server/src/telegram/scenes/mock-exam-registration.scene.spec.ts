@@ -126,7 +126,12 @@ const FORM_FIELDS = [
   },
 ];
 
-type StudentRow = { id: number; phone: string; telegramChatId: string | null };
+type StudentRow = {
+  id: number;
+  phone: string;
+  telegramChatId: string | null;
+  status?: string;
+};
 
 function buildFinalizeEnv(opts: {
   students?: StudentRow[];
@@ -315,6 +320,29 @@ describe("mock-exam-registration.scene — ro'yxat yakuni", () => {
 
     expect(confirmation(ctx)).toContain("faqat to'lov qilganlarga");
   });
+
+  /** CEO, 2026-09-25: expelled and archived students get no DaF discount. */
+  it.each([
+    ['ACTIVE', 30000],
+    ['EXPELLED', 40000],
+    ['ARCHIVED', 40000],
+  ])(
+    'a %s student registering in the bot is charged %i',
+    async (status, fee) => {
+      const { prisma, scene } = buildFinalizeEnv({
+        students: [
+          { id: 10050, phone: '901112233', telegramChatId: null, status },
+        ],
+      });
+      const ctx = typedPhoneCtx('901112233');
+
+      await scene.middleware()(ctx, async () => {});
+
+      const { data } = prisma.mockExamParticipant.create.mock.calls[0][0];
+      expect(data.studentId).toBe(10050);
+      expect(data.feeAmount).toBe(fee);
+    },
+  );
 
   it("forma to'ldirilguncha ro'yxat yopilgan bo'lsa, ishtirokchi yaratilmaydi", async () => {
     const { prisma, scene } = buildFinalizeEnv({
