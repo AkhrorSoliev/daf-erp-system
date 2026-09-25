@@ -38,6 +38,7 @@ export class ReportsOverviewService {
       attendanceCounts,
       totalLeads,
       convertedLeads,
+      departures,
     ] = await Promise.all([
       // «Faol o'quvchi» ta'rifi bitta joyda — `activeStudentWhere`. Bu yerda
       // ilgari faqat `status: 'ACTIVE'` turgan edi, ya'ni guruhga
@@ -109,17 +110,21 @@ export class ReportsOverviewService {
           sectionId: { not: null },
         },
       }),
+
+      // "Shu oy ketganlar" — the one definition of a departure (ADR-0035),
+      // counted over the Tashkent month. The other monthly KPIs keep their
+      // process-local month start; they are outside this change. Runs
+      // alongside the queries above rather than after them — it depends on
+      // none of their results, and awaiting it separately just stacked its
+      // latency on top on a cold cache.
+      loadDepartures(
+        this.prisma,
+        companyId,
+        query.branchId ? [query.branchId] : null,
+        { now },
+      ),
     ]);
 
-    // "Shu oy ketganlar" — the one definition of a departure (ADR-0035),
-    // counted over the Tashkent month. The other monthly KPIs keep their
-    // process-local month start; they are outside this change.
-    const departures = await loadDepartures(
-      this.prisma,
-      companyId,
-      query.branchId ? [query.branchId] : null,
-      { now },
-    );
     const churnedThisMonth = departuresInRange(
       departures.episodes,
       tashkentMonthRangeUtc(tashkentMonthKey(now)),
