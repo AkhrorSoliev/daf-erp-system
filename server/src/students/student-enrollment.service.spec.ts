@@ -390,6 +390,49 @@ describe('StudentEnrollmentService', () => {
           }),
         ).rejects.toThrow(NotFoundException);
       });
+
+      // CEO 21.09.2026, answer 13: after a course switch each course is billed
+      // at its own price over its own lesson count. That only holds if the OLD
+      // enrollment's current-month charge shrinks to the lessons after the
+      // transfer — otherwise the student pays the old course for the whole
+      // month plus the new one for the rest (853 636 instead of 611 331 in
+      // the October example).
+      it("cuts the old enrollment's current-month charge back from the transfer moment on a monthly course", async () => {
+        jest.useFakeTimers({ now: new Date('2026-10-15T07:00:00.000Z') });
+        try {
+          prisma.enrollment.findFirst
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce({
+              id: 'enroll-old',
+              studentId: 1,
+              groupId: 'old-group',
+              group: { teachers: [{ teacherId: 5001 }] },
+            });
+
+          // The new group starts later: the departure date must come from the
+          // transfer moment, not from the new enrollment's start date.
+          await service.enrollToGroup(1, 'group-1', 2, 1001, {
+            startDate: '2026-10-20',
+          });
+
+          expect(
+            monthlyChargeMock.reverseChargeForDeparture,
+          ).toHaveBeenCalledTimes(1);
+          expect(
+            monthlyChargeMock.reverseChargeForDeparture,
+          ).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+              enrollmentId: 'enroll-old',
+              departureDate: new Date('2026-10-15T07:00:00.000Z'),
+              companyId: 1001,
+              performedById: 2,
+            }),
+          );
+        } finally {
+          jest.useRealTimers();
+        }
+      });
     });
   });
 

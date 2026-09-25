@@ -1171,6 +1171,7 @@ When an enrollment closes (TRANSFERRED or DROPPED), unused prepaid lessons are c
 
 - `removeFromGroup()`: refund + flip to DROPPED in one tx.
 - Transfer (`enrollToGroup` with existing enrollment): refund old enrollment + close TRANSFERRED + create new enrollment + state log — all in a single Serializable transaction so we never end up with prepaid stranded on a closed enrollment.
+- **A MONTHLY transfer also cuts the old enrollment's current-month charge** back to the lessons held up to the transfer (`MonthlyChargeService.reverseChargeForDeparture`, the same call `removeFromGroup` makes). Without it the student paid the old course's FULL month on top of the new course's prorated share — a mid-October Standart → Intensive switch billed 853 636 instead of 611 331 (CEO 21.09, answer 13: each course at its own price over its own lesson count). `refundPrepaidToBalance` alone is a no-op on a MONTHLY enrollment.
 
 #### Payment Reverse Block
 

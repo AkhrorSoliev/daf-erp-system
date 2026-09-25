@@ -249,6 +249,10 @@ export class StudentEnrollmentService {
       // + create new enrollment + state log all in one transaction. If any
       // step fails, the student is left with their original enrollment
       // intact (instead of having no active enrollment at all).
+      // One instant for the status flip, the state log and the monthly-charge
+      // departure refund, so all three agree on when the student left the
+      // old group (same convention as `removeFromGroup`).
+      const transferAt = new Date();
       const transferred = await this.prisma.$transaction(
         async (tx) => {
           await this.enrollmentBillingService.refundPrepaidToBalance(tx, {
@@ -257,11 +261,26 @@ export class StudentEnrollmentService {
             reason:
               "Guruh o'zgartirilganda qoldiq darslar uchun balans tiklash",
           });
+          // On a MONTHLY course, cut the old enrollment's current-month
+          // charge back to the lessons held up to the transfer — the same
+          // call `removeFromGroup` makes. Without it the student paid the
+          // old course's full month on top of the new course's prorated
+          // share (CEO 21.09, answer 13: each course at its own price over
+          // its own lesson count). A LESSON_PACK enrollment has no monthly
+          // charge, so this is a no-op there; `refundPrepaidToBalance`
+          // above covers that model.
+          await this.monthlyChargeService.reverseChargeForDeparture(tx, {
+            enrollmentId: currentEnrollment.id,
+            departureDate: transferAt,
+            companyId,
+            reason: "Guruh o'zgartirilganda",
+            performedById: userId,
+          });
           await tx.enrollment.update({
             where: { id: currentEnrollment.id },
             data: {
               status: 'TRANSFERRED',
-              statusChangedAt: new Date(),
+              statusChangedAt: transferAt,
               statusChangedById: userId,
               statusChangeReason: `Guruh o'zgartirildi`,
               transferredToId: groupId,
@@ -272,7 +291,7 @@ export class StudentEnrollmentService {
             data: {
               enrollmentId: currentEnrollment.id,
               status: 'TRANSFERRED',
-              transitionAt: new Date(),
+              transitionAt: transferAt,
               reason: `Guruh o'zgartirildi`,
               changedById: userId,
             },
