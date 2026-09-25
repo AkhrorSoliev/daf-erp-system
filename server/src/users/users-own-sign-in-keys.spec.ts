@@ -4,6 +4,7 @@ import * as bcrypt from 'bcryptjs';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
 import { UploadService } from '../upload/upload.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { PHONE_HELD_BY_STAFF_MESSAGE } from '../common/auth/phone-account-rules';
@@ -88,6 +89,8 @@ describe('UsersService — own sign-in keys (ADR-0031)', () => {
       providers: [
         UsersService,
         { provide: PrismaService, useValue: prisma },
+        // Written when a status change blocks or unblocks the account (ADR-0028).
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: EntityHistoryService, useValue: history },

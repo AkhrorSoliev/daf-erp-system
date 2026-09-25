@@ -20,6 +20,7 @@ import {
   resetPassword,
   UserNotResettableError,
 } from '../flows/password-reset-flow';
+import { withProcessingLock } from '../utils/processing-lock';
 
 /**
  * Forgot-password flow over Telegram:
@@ -125,101 +126,98 @@ export function createPasswordResetScene(
   scene.action('pwd_reset_confirm', async (ctx) => {
     if (ctx.session.step !== 1) return;
     if (ctx.session.processing) return;
-    ctx.session.processing = true;
-    await ctx.answerCbQuery();
+    await withProcessingLock(ctx, async () => {
+      await ctx.answerCbQuery();
 
-    const studentId = ctx.session.data?.studentId as number | undefined;
-    if (!studentId) {
-      ctx.session.processing = false;
-      await ctx.reply('Sessiya muddati tugadi. Qayta /start bosing.');
-      await ctx.scene.leave();
-      return;
-    }
-
-    const throttle = await checkThrottle(redis, studentId);
-    if (!throttle.allowed) {
-      ctx.session.processing = false;
-      const wait = formatRetryAfter(throttle.retryAfterSec);
-      const msg =
-        throttle.reason === 'cooldown'
-          ? `Iltimos, ${wait} kutib turing.`
-          : `Bugungi parol tiklash limitiga yetdingiz. ${wait} dan keyin qayta urinib ko'ring.`;
-      await ctx.editMessageText(`⏳ ${msg}`);
-      await ctx.scene.leave();
-      return;
-    }
-
-    // Re-fetch to make sure the student still exists and is not deleted.
-    const student = await prisma.student.findFirst({
-      where: { id: studentId, deletedAt: null },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        userId: true,
-        companyId: true,
-      },
-    });
-    if (!student) {
-      ctx.session.processing = false;
-      await ctx.editMessageText(
-        "O'quvchi topilmadi. Administrator bilan bog'laning.",
-      );
-      await ctx.scene.leave();
-      return;
-    }
-
-    try {
-      const { plainPassword } = await resetPassword(
-        prisma,
-        entityHistoryService,
-        redis,
-        student,
-      );
-
-      await ctx.editMessageText('✅ Parolingiz yangilandi.');
-
-      const sent = await ctx.reply(
-        "🔐 Yangi kirish ma'lumotlari:\n\n" +
-          `📱 Telefon: +998 ${student.phone}\n` +
-          `🔑 Yangi parol: <code>${plainPassword}</code>\n\n` +
-          'student.dafzentrum.uz saytiga shu parol bilan kiring va ' +
-          "xohlasangiz Sozlamalar bo'limidan o'zgartiring.\n\n" +
-          "⚠️ Bu xabar 5 daqiqadan keyin avtomatik o'chiriladi.",
-        { parse_mode: 'HTML', protect_content: true },
-      );
-
-      // Best-effort auto-delete: the user has already received the password,
-      // so failure here is not fatal. Telegram rejects deleteMessage after
-      // 48h but we only wait 5 minutes.
-      const messageId = sent.message_id;
-      const chatId = ctx.chat!.id;
-      setTimeout(
-        () => {
-          ctx.telegram.deleteMessage(chatId, messageId).catch(() => {});
-        },
-        5 * 60 * 1000,
-      ).unref?.();
-    } catch (error) {
-      if (error instanceof PortalAccountMissingError) {
-        await ctx.editMessageText(
-          "Sizning portal hisobingiz hali yaratilmagan. Administrator bilan bog'laning.",
-        );
-      } else if (error instanceof UserNotResettableError) {
-        await ctx.editMessageText(
-          "Hisobingiz vaqtincha bloklangan. Administrator bilan bog'laning.",
-        );
-      } else {
-        logger.error('Password reset failed', error as Error);
-        await ctx.editMessageText(
-          "Parolni tiklashda xatolik yuz berdi. Keyinroq qayta urinib ko'ring.",
-        );
+      const studentId = ctx.session.data?.studentId as number | undefined;
+      if (!studentId) {
+        await ctx.reply('Sessiya muddati tugadi. Qayta /start bosing.');
+        await ctx.scene.leave();
+        return;
       }
-    } finally {
-      ctx.session.processing = false;
-      await ctx.scene.leave();
-    }
+
+      const throttle = await checkThrottle(redis, studentId);
+      if (!throttle.allowed) {
+        const wait = formatRetryAfter(throttle.retryAfterSec);
+        const msg =
+          throttle.reason === 'cooldown'
+            ? `Iltimos, ${wait} kutib turing.`
+            : `Bugungi parol tiklash limitiga yetdingiz. ${wait} dan keyin qayta urinib ko'ring.`;
+        await ctx.editMessageText(`⏳ ${msg}`);
+        await ctx.scene.leave();
+        return;
+      }
+
+      // Re-fetch to make sure the student still exists and is not deleted.
+      const student = await prisma.student.findFirst({
+        where: { id: studentId, deletedAt: null },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          userId: true,
+          companyId: true,
+        },
+      });
+      if (!student) {
+        await ctx.editMessageText(
+          "O'quvchi topilmadi. Administrator bilan bog'laning.",
+        );
+        await ctx.scene.leave();
+        return;
+      }
+
+      try {
+        const { plainPassword } = await resetPassword(
+          prisma,
+          entityHistoryService,
+          redis,
+          student,
+        );
+
+        await ctx.editMessageText('✅ Parolingiz yangilandi.');
+
+        const sent = await ctx.reply(
+          "🔐 Yangi kirish ma'lumotlari:\n\n" +
+            `📱 Telefon: +998 ${student.phone}\n` +
+            `🔑 Yangi parol: <code>${plainPassword}</code>\n\n` +
+            'student.dafzentrum.uz saytiga shu parol bilan kiring va ' +
+            "xohlasangiz Sozlamalar bo'limidan o'zgartiring.\n\n" +
+            "⚠️ Bu xabar 5 daqiqadan keyin avtomatik o'chiriladi.",
+          { parse_mode: 'HTML', protect_content: true },
+        );
+
+        // Best-effort auto-delete: the user has already received the password,
+        // so failure here is not fatal. Telegram rejects deleteMessage after
+        // 48h but we only wait 5 minutes.
+        const messageId = sent.message_id;
+        const chatId = ctx.chat!.id;
+        setTimeout(
+          () => {
+            ctx.telegram.deleteMessage(chatId, messageId).catch(() => {});
+          },
+          5 * 60 * 1000,
+        ).unref?.();
+      } catch (error) {
+        if (error instanceof PortalAccountMissingError) {
+          await ctx.editMessageText(
+            "Sizning portal hisobingiz hali yaratilmagan. Administrator bilan bog'laning.",
+          );
+        } else if (error instanceof UserNotResettableError) {
+          await ctx.editMessageText(
+            "Hisobingiz vaqtincha bloklangan. Administrator bilan bog'laning.",
+          );
+        } else {
+          logger.error('Password reset failed', error as Error);
+          await ctx.editMessageText(
+            "Parolni tiklashda xatolik yuz berdi. Keyinroq qayta urinib ko'ring.",
+          );
+        }
+      } finally {
+        await ctx.scene.leave();
+      }
+    });
   });
 
   scene.action('pwd_reset_cancel', async (ctx) => {

@@ -51,9 +51,11 @@ export class UsersController {
     return this.usersService.findById(id, companyId, branchScope);
   }
 
+  // Administrators do not manage employees (docs/role-access.md, ADR-0027):
+  // they onboard teachers and cashiers through the Telegram link instead.
   @Post()
   @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   async create(
     @Body() dto: CreateUserDto,
     @CurrentUser('companyId') companyId: number,
@@ -94,9 +96,11 @@ export class UsersController {
     return this.usersService.changeOwnPhone(userId, dto);
   }
 
+  // Own profile, password and phone go through `profile` / `password` /
+  // `phone` above.
   @Patch(':id')
   @UseGuards(RolesGuard)
-  @Roles('CEO', 'Branch Director', 'Administrator')
+  @Roles('CEO', 'Branch Director')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateUserDto,
