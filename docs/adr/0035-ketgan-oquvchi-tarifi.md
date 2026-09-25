@@ -31,9 +31,10 @@ bo'lardi va vaqt o'tgan sari faqat o'sardi.
   CEO tasdiqlagan.
 - Qaytishgacha bo'lgan to'xtashlar — bitta epizod; sanasi — birinchi to'xtash.
   Epizod tasdiqlanguncha undagi eng og'ir kutadigan to'xtashning muddati
-  kutiladi (guruhdan chiqqan o'quvchi shu orada muzlatilsa — 60 kun). Epizod
-  muddat tugaganda yoki chetlatilganda — qaysi biri oldin bo'lsa — tasdiqlanadi
-  va tasdiqlangan bo'lib qoladi.
+  kutiladi (guruhdan chiqqan o'quvchi shu orada muzlatilsa — 60 kun); muddat
+  birinchi to'xtashdan hisoblanadi. Epizod muddat tugaganda yoki
+  chetlatilganda — qaysi biri oldin bo'lsa — tasdiqlanadi va tasdiqlangan
+  bo'lib qoladi.
 - Hech qachon faol yozuvi bo'lmagan o'quvchi ketmaydi: uning status
   o'zgarishlari birinchi guruhga qo'shilgan paytdan keyingina sanaladi.
 - Bitiruv (`COMPLETED`, `GRADUATED`) va `TRANSFERRED` — ketish emas.

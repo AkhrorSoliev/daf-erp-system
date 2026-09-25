@@ -232,6 +232,16 @@ describe('buildDepartureEpisodes: the grace period of each kind of stop', () => 
     ).toEqual([]);
   });
 
+  it("counts a joining freeze's grace period from the first stop", () => {
+    expect(
+      build([
+        stop(1, START, 'LEFT_GROUP'),
+        stop(1, day(10), 'FROZEN'),
+        back(1, day(65)),
+      ]),
+    ).toEqual([confirmed('FROZEN', day(60), day(65))]);
+  });
+
   it('keeps the grace period of a freeze when a lighter stop joins', () => {
     expect(
       build([
