@@ -7,6 +7,12 @@ import 'react-native-gesture-handler/jestSetup';
 
 import { queryClient } from '@/api/query-client';
 
+// The first test in each file renders the whole app from a cold module
+// registry (expo-router, every route, NativeWind, Moti): ~3 s on a laptop
+// without a transform cache, and past Jest's 5 s default on CI, where three
+// files start at once. Every later test in a file takes 20-200 ms.
+jest.setTimeout(60_000);
+
 // The worklets Babel plugin guards inline styles that read `.value` (e.g. the
 // progress bar's `flex: s.value`) with getUseOfValueInStyleWarning, which the
 // official mock leaves out ("ADD ME IF NEEDED" in reanimated's mock.ts). The
