@@ -32,10 +32,23 @@ export interface StudentNavItem {
 }
 
 // Single source of truth for portal navigation. The floating bottom nav
-// (mobile/tablet) renders `slot: tab | both` in array order; the desktop side
-// rail renders `slot: both | more`; the More hub lists `slot: more`.
+// (mobile) renders `slot: tab | both` in array order; the desktop side rail
+// renders `slot: both | more`; the "Ko'proq" hub renders `slot: more | help`.
+// Nothing else keeps a list of its own: a hub that did (until 2026-09) never
+// got Ta'lim, and a phone had no way into it at all.
+//
+// Tabs are for what a student opens most, not for every screen: Ta'lim is a
+// daily habit (streak, weekly rank), Jadval and To'lovlar are weekly and
+// monthly, and the rest waits one tap deeper in the hub.
 export const studentNavItems: StudentNavItem[] = [
   { title: "Asosiy", url: "/portal", icon: House, slot: "both", tone: "coral" },
+  {
+    title: "Ta'lim",
+    url: "/portal/lernen",
+    icon: GraduationCap,
+    slot: "both",
+    tone: "grape",
+  },
   {
     title: "Jadval",
     url: "/portal/schedule",
@@ -63,13 +76,6 @@ export const studentNavItems: StudentNavItem[] = [
     icon: ChartLineUp,
     slot: "more",
     tone: "amber",
-  },
-  {
-    title: "Ta'lim",
-    url: "/portal/lernen",
-    icon: GraduationCap,
-    slot: "more",
-    tone: "grape",
   },
   {
     title: "Radio",
@@ -114,7 +120,7 @@ export const railNavItems = studentNavItems.filter(
   (i) => i.slot === "both" || i.slot === "more",
 );
 
-/** More hub rows on mobile (attendance / settings / faq / about). */
+/** "Ko'proq" hub rows on mobile: every destination that is not a tab. */
 export const moreNavItems = studentNavItems.filter(
   (i) => i.slot === "more" || i.slot === "help",
 );
@@ -127,16 +133,16 @@ export const settingsHelpItems = studentNavItems.filter(
   (i) => i.slot === "help",
 );
 
-/** Routes that live under the "Ko'proq" hub — used for bottom-nav active state. */
+/**
+ * Routes that live under the "Ko'proq" hub, used for the bottom nav's active
+ * state: the hub itself, Profile (its header card), and every hub row. Derived
+ * rather than listed, so a destination can never be a tab and "under Ko'proq"
+ * at the same time.
+ */
 export const moreRoutes = [
   "/portal/more",
   "/portal/profile",
-  "/portal/attendance",
-  "/portal/lernen",
-  "/portal/radio",
-  "/portal/settings",
-  "/portal/faq",
-  "/portal/about",
+  ...moreNavItems.map((i) => i.url),
 ];
 
 /**
@@ -157,8 +163,14 @@ export const moreRoutes = [
  * The legacy lesson page (what `SeansEkrani` falls back to for a lesson
  * with no engine questions) lives on the same route and loses the nav
  * too — acceptable, since that page has its own back header.
+ *
+ * The docked radio player yields the same edge on the same routes (second
+ * finding, 2026-09): it floats 96px up to clear the nav pill, so with the
+ * pill gone it sat over the panel's "To'g'ri / Xato" feedback. The lesson
+ * header carries `RadioSessionToggle` instead, because nothing pauses the
+ * radio for the lesson's own audio.
  */
-export function isBottomNavHiddenRoute(pathname: string): boolean {
+export function isExerciseSessionRoute(pathname: string): boolean {
   return (
     /^\/portal\/lernen\/lessons\/[^/]+\/?$/.test(pathname) ||
     /^\/portal\/lernen\/wiederholung\/?$/.test(pathname)
