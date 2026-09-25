@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useColors } from '@/design/colors';
+import { tokens } from '@/design/tokens';
 import { useKeyboardOpen } from '@/hooks/use-keyboard-open';
 import { useT } from '@/i18n';
 import { Text } from './text';
@@ -13,6 +14,7 @@ import { Text } from './text';
 const CIRCLE = 56;
 const PILL_H = 68;
 const EASE = Easing.bezier(0.22, 1, 0.36, 1); // Lumio --ease-out
+const ACTIVE = tokens.color.primaryPress; // coral-600
 
 type Meta = { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap };
 
@@ -23,7 +25,15 @@ const META: Record<string, Meta> = {
   more: { active: 'grid', inactive: 'grid-outline' },
 };
 
-/** Floating glass nav pill: a coral circle slides between tabs; labels fade in/out. */
+/**
+ * Floating glass nav pill: a coral circle slides between tabs; labels fade in/out.
+ *
+ * Colours meet WCAG AA on the pill (95% surface over the canvas) in both
+ * themes: inactive labels and icons use fg-subtle (6.5:1 light, 7.0:1 dark;
+ * 11px labels need 4.5:1), and the active circle is coral-600, so its white
+ * icon reaches 3.6:1 and the circle stands 3.6:1 / 3.9:1 off the pill (both
+ * need 3:1). Were: fg-faint 2.5:1, coral-500 circle 2.8:1.
+ */
 export function LumioTabBar({ state, navigation }: BottomTabBarProps) {
   const t = useT();
   const insets = useSafeAreaInsets();
@@ -69,8 +79,8 @@ export function LumioTabBar({ state, navigation }: BottomTabBarProps) {
                 width: CIRCLE,
                 height: CIRCLE,
                 borderRadius: CIRCLE / 2,
-                backgroundColor: '#FF6B4A',
-                boxShadow: [{ offsetX: 0, offsetY: 8, blurRadius: 18, color: 'rgba(255,107,74,0.4)' }],
+                backgroundColor: ACTIVE,
+                boxShadow: [{ offsetX: 0, offsetY: 8, blurRadius: 18, color: 'rgba(240,78,44,0.4)' }],
               }}
             />
           ) : null}
@@ -100,14 +110,14 @@ export function LumioTabBar({ state, navigation }: BottomTabBarProps) {
                 <Ionicons
                   name={focused ? meta.active : meta.inactive}
                   size={focused ? 24 : 22}
-                  color={focused ? '#FFFFFF' : colors.fgFaint}
+                  color={focused ? '#FFFFFF' : colors.fgSubtle}
                 />
                 <MotiView
                   animate={{ opacity: focused ? 0 : 1, height: focused ? 0 : 14 }}
                   transition={{ type: 'timing', duration: 200, easing: EASE }}
                   style={{ overflow: 'hidden' }}
                 >
-                  <Text className="font-bodymd text-[11px] text-fg-faint" style={{ marginTop: 2 }}>
+                  <Text className="font-bodymd text-[11px] text-fg-subtle" style={{ marginTop: 2 }}>
                     {label}
                   </Text>
                 </MotiView>

@@ -8,6 +8,7 @@ import { useColorScheme } from 'nativewind';
 const LIGHT = {
   fg: '#0E2A3D',
   fgBody: '#2B4A5C',
+  fgSubtle: '#45616F',
   fgMuted: '#6B8392',
   fgFaint: '#93A6B2',
   bg: '#EDF1F6',
@@ -20,6 +21,7 @@ const LIGHT = {
 const DARK: typeof LIGHT = {
   fg: '#F2F6F9',
   fgBody: '#C7D3DC',
+  fgSubtle: '#A9BAC5',
   fgMuted: '#8CA0AD',
   fgFaint: '#6E8492',
   bg: '#08161F',
