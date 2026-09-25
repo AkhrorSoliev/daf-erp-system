@@ -83,11 +83,12 @@ jobs:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: student-app/package-lock.json
-      # npm 10 here is what EAS installs SDK 54 builds with. npm 11 can write
-      # a lockfile npm 10 rejects — it drops optional peer entries (`yaml`,
-      # `@emnapi/*`) that npm 10 requires; that drift broke an EAS build in
-      # June. If this fails with "Missing: … from lock file", rewrite the
-      # lockfile with `npx npm@10 install`.
+      # npm 10 here is what EAS installs SDK 54 builds with. `npm install`
+      # under npm 11 can write a lockfile that `npm ci` then rejects, npm 11's
+      # own included: it leaves out entries only optional packages need
+      # (`yaml`, `@emnapi/*`). That drift broke an EAS build in June. If this
+      # step fails with "Missing: … from lock file", rewrite the lockfile with
+      # `npx npm@10 install`.
       - run: npm ci
       # The only check on the uz/de dictionaries: `de.ts` is typed `Dict`, the
       # shape of `uz.ts`, so a missing or mistyped German key fails here — the
