@@ -1483,11 +1483,13 @@ describe('LessonBillingService', () => {
         groupId: baseParams.groupId,
         status: 'ACTIVE' as any,
         startDate: null,
+        createdAt: new Date('2026-03-01T06:00:00Z'),
         group: {
           id: baseParams.groupId,
           branchId: baseParams.branchId,
           companyId: baseParams.companyId,
           statusEnum: 'ACTIVE' as any,
+          startDate: null,
           exactDays: groupExactDays,
           course: { price: coursePrice, paymentModel: PaymentModel.MONTHLY },
         },

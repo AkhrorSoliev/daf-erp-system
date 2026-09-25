@@ -21,11 +21,15 @@ const enrollment = (over: Partial<Record<string, unknown>> = {}) =>
     groupId: 'grp-1',
     status: 'ACTIVE',
     startDate: null,
+    // Before every month these tests bill, so a missing start still means
+    // "the whole month" unless a test says otherwise.
+    createdAt: new Date('2026-05-02T06:00:00Z'),
     group: {
       id: 'grp-1',
       branchId: 1,
       companyId: 1,
       statusEnum: 'ACTIVE',
+      startDate: null,
       exactDays: ['saturday', 'thursday', 'tuesday'],
       course: {
         price: 450_000,
@@ -190,6 +194,49 @@ describe('MonthlyChargeService', () => {
       // 17, 19, 22, 24, 26, 29 — olti dars qoldi.
       expect(charge?.coveredLessons).toBe(6);
       expect(charge?.chargedAmount).toBe(207_692); // 450 000 x 6/13
+    });
+
+    it('bills an enrollment with no start date from the day it was created, not the 1st', async () => {
+      // Telegram sign-up wrote no start date. Before the fix this read as
+      // "from 01.09" and billed a student who joined on 17.09 the whole month.
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment({
+          startDate: null,
+          createdAt: new Date('2026-09-17T09:30:00Z'),
+        }),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(charge?.plannedLessons).toBe(13);
+      expect(charge?.coveredLessons).toBe(6); // 17, 19, 22, 24, 26, 29
+      expect(charge?.chargedAmount).toBe(207_692);
+    });
+
+    it('never bills lessons before the group opened', async () => {
+      // Added on 15.09 to a group that opened on 17.09: 15.09 is a Tuesday
+      // on the group's calendar, but the group held no lesson that day.
+      const charge = await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment({
+          startDate: new Date('2026-09-15T00:00:00Z'),
+          group: {
+            id: 'grp-1',
+            branchId: 1,
+            companyId: 1,
+            statusEnum: 'ACTIVE',
+            startDate: new Date('2026-09-17T00:00:00Z'),
+            exactDays: ['saturday', 'thursday', 'tuesday'],
+            course: { price: 450_000, paymentModel: 'MONTHLY' },
+          },
+        }),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(charge?.coveredLessons).toBe(6); // from 17.09, not 15.09
+      expect(charge?.chargedAmount).toBe(207_692);
     });
 
     it('o`tgan oyning uzrli darslarini kredit sifatida chegiradi', async () => {

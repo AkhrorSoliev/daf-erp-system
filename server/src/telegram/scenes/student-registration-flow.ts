@@ -9,6 +9,10 @@ import {
   StudentLeadOriginService,
 } from '../../common/student-origin';
 import { openStudentAccount } from '../../common/auth/student-account';
+import {
+  tashkentDateStr,
+  utcMidnightFromDateStr,
+} from '../../common/date/tashkent';
 import { downloadFile } from '../utils/download.util';
 
 // Session data is untyped in the bot — caller already validated all
@@ -121,10 +125,14 @@ export async function registerStudentFromTelegram(
     companyId: DEFAULT_COMPANY_ID,
   });
 
+  // The join day, like the admin flow writes it (UTC midnight of the Tashkent
+  // day). Without it the first monthly charge reached back to the 1st and
+  // billed a student who joined mid-month for the whole month.
   const enrollment = await prisma.enrollment.create({
     data: {
       studentId: student.id,
       groupId: data.groupId,
+      startDate: utcMidnightFromDateStr(tashkentDateStr(new Date())),
     },
   });
 

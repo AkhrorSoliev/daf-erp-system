@@ -71,6 +71,25 @@ describe('registerStudentFromTelegram — lid kelib chiqishi', () => {
       '555000',
     );
 
+  it('writes the join day as the enrollment start date', async () => {
+    // Without it the first monthly charge reached back to the 1st of the
+    // month and billed a student who joined mid-month for the whole month.
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-24T20:30:00.000Z'));
+    try {
+      await run();
+    } finally {
+      jest.useRealTimers();
+    }
+
+    expect(prisma.enrollment.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        groupId: 'group-1',
+        // 20:30 UTC on 24.09 is already 25.09 in Tashkent.
+        startDate: new Date('2026-09-25T00:00:00.000Z'),
+      }),
+    });
+  });
+
   it("lidni o'quvchi bilan BITTA tranzaksiya ichida yozadi", async () => {
     await run();
 
