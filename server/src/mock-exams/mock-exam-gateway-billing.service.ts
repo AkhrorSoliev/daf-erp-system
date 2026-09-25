@@ -3,6 +3,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MockExamStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { isMockPaymentOpen, mockPaymentCutoff } from './mock-payment-cutoff';
 
 export type GatewayProvider = 'CLICK' | 'PAYME';
 
@@ -20,6 +21,10 @@ export const GATEWAY_STATE = {
  * abadiy to'lov manzili bo'lib qolardi: chatdagi eski tugma ishlar, DaF
  * o'quvchisining darsga qilgan aynan shu summadagi to'lovi esa o'sha eski
  * mockka ketardi. E'londan keyin qarz bo'lsa — naqd, admin orqali.
+ *
+ * The status is only the outer limit. Within it, a registration stops being a
+ * payment target when its exam slot starts (`mockPaymentCutoff`, CEO
+ * 2026-09-25: money is accepted until the exam's date and time).
  */
 export const PAYABLE_EXAM_STATUSES: MockExamStatus[] = [
   MockExamStatus.REGISTRATION_OPEN,
@@ -60,10 +65,15 @@ export class MockExamGatewayBillingService {
    *
    * Returns null when the publicId doesn't belong to any active mock
    * participant — caller should treat as "user not found".
+   *
+   * A registration whose exam slot has started is not a target: Payme and
+   * Click call this when a payment STARTS (check/create, prepare), not when it
+   * completes, so a payment begun before the slot still goes through.
    */
   async resolveTarget(
     publicId: number,
     expectedAmountSom?: number,
+    now: Date = new Date(),
   ): Promise<ResolvedMockTarget | null> {
     // BIR ODAMDA BIR NECHTA IShTIROKCHI BO'LADI. DaF o'quvchisi har bir mock
     // imtihonga o'sha publicId bilan yoziladi, shuning uchun bu yerda
@@ -71,7 +81,7 @@ export class MockExamGatewayBillingService {
     // qaytaradi va odatda ENG ESKISINI oladi. Natijada odam yangi imtihon
     // uchun to'laganda summa eski imtihon narxi bilan solishtirilib,
     // "mos emas" deb rad etilardi.
-    const rows = await this.prisma.mockExamParticipant.findMany({
+    const registrations = await this.prisma.mockExamParticipant.findMany({
       where: {
         publicId,
         deletedAt: null,
@@ -82,9 +92,20 @@ export class MockExamGatewayBillingService {
         id: true,
         paid: true,
         feeAmount: true,
-        exam: { select: { price: true } },
+        examTime: true,
+        exam: { select: { price: true, examDate: true, examTimes: true } },
       },
     });
+    const rows = registrations.filter((p) =>
+      isMockPaymentOpen(
+        mockPaymentCutoff({
+          examDate: p.exam.examDate ?? null,
+          examTimes: p.exam.examTimes ?? [],
+          participantExamTime: p.examTime ?? null,
+        }),
+        now,
+      ),
+    );
     if (rows.length === 0) return null;
 
     // To'lanishi kerak bo'lgan summa: ro'yxatdan o'tishda qotirilgan fee

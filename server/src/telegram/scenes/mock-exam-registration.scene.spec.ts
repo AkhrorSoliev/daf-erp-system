@@ -283,6 +283,39 @@ describe("mock-exam-registration.scene — ro'yxat yakuni", () => {
     );
   });
 
+  /**
+   * CEO, 2026-09-25: money is accepted until the exam starts, and only those
+   * who paid get their results. The person learns both when they register.
+   */
+  const confirmation = (ctx: any): string =>
+    (ctx.reply.mock.calls as [string][])
+      .map(([text]) => text)
+      .find((text) => text.includes("ro'yxatga olindingiz")) ?? '';
+
+  it('the confirmation names when online payment closes, by the chosen slot', async () => {
+    const { scene } = buildFinalizeEnv({
+      exam: {
+        examDate: new Date('2026-09-30T00:00:00.000Z'),
+        examTimes: ['09:00', '13:00'],
+      },
+    });
+    const ctx = typedPhoneCtx('901112233');
+    ctx.session.data.examTime = '13:00';
+
+    await scene.middleware()(ctx, async () => {});
+
+    expect(confirmation(ctx)).toContain('30.09.2026, 13:00');
+  });
+
+  it('the confirmation says results go only to those who paid', async () => {
+    const { scene } = buildFinalizeEnv({});
+    const ctx = typedPhoneCtx('901112233');
+
+    await scene.middleware()(ctx, async () => {});
+
+    expect(confirmation(ctx)).toContain("faqat to'lov qilganlarga");
+  });
+
   it("forma to'ldirilguncha ro'yxat yopilgan bo'lsa, ishtirokchi yaratilmaydi", async () => {
     const { prisma, scene } = buildFinalizeEnv({
       exam: { status: 'REGISTRATION_CLOSED' },
