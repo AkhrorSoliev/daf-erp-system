@@ -41,7 +41,12 @@ export default function Scan() {
       if (!parsed?.t) throw new Error('Invalid QR');
       const res = await scanQr(parsed.t);
       if (res?.balanceInsufficient) {
-        Alert.alert(t.scan.insufficientTitle, res.message ?? t.scan.insufficientMessage);
+        // The moment the balance falls short is when a student is ready to
+        // pay, so the alert leads there instead of stopping at "OK".
+        Alert.alert(t.scan.insufficientTitle, res.message ?? t.scan.insufficientMessage, [
+          { text: t.common.ok, style: 'cancel' },
+          { text: t.home.topUp, onPress: () => router.navigate('/payments') },
+        ]);
       } else {
         await queryClient.invalidateQueries({ queryKey: ['attendance'] });
         Alert.alert(t.scan.markedTitle, t.scan.markedMessage);

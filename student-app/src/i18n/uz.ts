@@ -90,11 +90,13 @@ export const uz = {
   home: {
     greeting: 'Assalomu alaykum',
     balance: 'Balans',
+    topUp: "To'ldirish",
     inDebt: 'Qarzdorlik mavjud',
     current: 'Joriy balans',
     todayLessons: 'Bugungi darslar',
     fullSchedule: 'Butun jadval',
     noLessonsToday: "Bugun dars yo'q",
+    scheduleFailed: "Jadvalni yuklab bo'lmadi",
     myGroups: 'Guruhlarim',
     noActiveGroups: "Faol guruh yo'q",
     qrCheckIn: 'QR bilan davomatga belgilash',

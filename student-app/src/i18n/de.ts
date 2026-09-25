@@ -82,11 +82,13 @@ export const de: Dict = {
   home: {
     greeting: 'Guten Tag',
     balance: 'Guthaben',
+    topUp: 'Aufladen',
     inDebt: 'Schulden',
     current: 'Aktuelles Guthaben',
     todayLessons: 'Heutige Kurse',
     fullSchedule: 'Zum Stundenplan',
     noLessonsToday: 'Heute kein Unterricht',
+    scheduleFailed: 'Stundenplan konnte nicht geladen werden',
     myGroups: 'Meine Gruppen',
     noActiveGroups: 'Keine aktiven Gruppen',
     qrCheckIn: 'Mit QR einchecken',

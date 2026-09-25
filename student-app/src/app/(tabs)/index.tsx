@@ -2,7 +2,19 @@ import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Button, Card, EmptyState, FadeIn, ListRow, LoadingCards, ProgressBar, Screen, ScreenHeader, Text } from '@/design/components';
+import {
+  Button,
+  Card,
+  EmptyState,
+  FadeIn,
+  ListRow,
+  LoadingCards,
+  ProgressBar,
+  Screen,
+  ScreenHeader,
+  Skeleton,
+  Text,
+} from '@/design/components';
 import { clay } from '@/design/shadows';
 import { tokens } from '@/design/tokens';
 import { useColors } from '@/design/colors';
@@ -33,7 +45,14 @@ export default function Home() {
   if (q.isError || !q.data) {
     return (
       <Screen className="justify-center">
-        <EmptyState icon="cloud-offline-outline" title={t.common.error} description={t.common.loadFailed} />
+        <EmptyState
+          icon="cloud-offline-outline"
+          title={t.common.error}
+          description={t.common.loadFailed}
+          action={
+            <Button label={t.common.retry} variant="secondary" size="sm" loading={q.isFetching} onPress={() => q.refetch()} />
+          }
+        />
       </Screen>
     );
   }
@@ -73,8 +92,20 @@ export default function Home() {
             <View className="overflow-hidden rounded-2xl bg-coral-500 p-5" style={{ boxShadow: clay.coral }}>
               <Text className="font-bodyx text-[11px] uppercase tracking-[1px] text-white/80">{t.home.balance}</Text>
               <Text variant="num" className="mt-1 text-[34px] leading-[40px] text-white">{formatSom(p.balance)}</Text>
-              <View className="mt-3 self-start rounded-pill bg-white/20 px-3 py-1">
-                <Text className="font-bodymd text-[12px] text-white">{inDebt ? t.home.inDebt : t.home.current}</Text>
+              <View className="mt-3 flex-row items-center justify-between gap-3">
+                <View className="rounded-pill bg-white/20 px-3 py-1">
+                  <Text className="font-bodymd text-[12px] text-white">{inDebt ? t.home.inDebt : t.home.current}</Text>
+                </View>
+                {/* The balance is where a student notices a debt, so the way to pay starts here. */}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t.home.topUp}
+                  hitSlop={6}
+                  onPress={() => router.navigate('/payments')}
+                  className="h-9 justify-center rounded-pill bg-white px-4 active:opacity-80"
+                >
+                  <Text className="font-display text-[14px] text-coral-600">{t.home.topUp}</Text>
+                </Pressable>
               </View>
             </View>
           </FadeIn>
@@ -115,12 +146,28 @@ export default function Home() {
             <View className="gap-2.5">
               <View className="flex-row items-center justify-between px-1">
                 <Text variant="title">{t.home.todayLessons}</Text>
-                <Pressable onPress={() => router.push('/schedule')} className="flex-row items-center gap-0.5 active:opacity-70">
+                <Pressable onPress={() => router.navigate('/schedule')} className="flex-row items-center gap-0.5 active:opacity-70">
                   <Text variant="muted" className="text-coral-600 dark:text-coral-400">{t.home.fullSchedule}</Text>
                   <Ionicons name="chevron-forward" size={16} color={tokens.color.primary} />
                 </Pressable>
               </View>
-              {todayLessons.length === 0 ? (
+              {/* "No lesson today" is a claim about the schedule, so it waits for
+                  the schedule: a request still in flight or one that failed must
+                  not read as a free day. */}
+              {sched.isLoading ? (
+                <Skeleton className="h-[72px] w-full rounded-card" />
+              ) : sched.isError ? (
+                <View className="flex-row items-center justify-between gap-3 px-1">
+                  <Text variant="muted" className="flex-1">{t.home.scheduleFailed}</Text>
+                  <Button
+                    label={t.common.retry}
+                    variant="secondary"
+                    size="sm"
+                    loading={sched.isFetching}
+                    onPress={() => sched.refetch()}
+                  />
+                </View>
+              ) : todayLessons.length === 0 ? (
                 <Text variant="muted" className="px-1">{t.home.noLessonsToday}</Text>
               ) : (
                 todayLessons.map((l) => (
