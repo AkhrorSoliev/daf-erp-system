@@ -102,8 +102,9 @@ export class RoomsController {
   getStatusHistory(
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
   ) {
-    return this.roomsService.getStatusHistory(id, companyId);
+    return this.roomsService.getStatusHistory(id, companyId, userId);
   }
 
   @Delete(':id')

@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { RedisService } from '../redis/redis.service';
 
 describe('UsersService — updateUser status/isActive sync', () => {
   let service: UsersService;
@@ -68,6 +69,7 @@ describe('UsersService — updateUser status/isActive sync', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -194,6 +196,7 @@ describe('UsersService — role escalation and branch validation', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -423,6 +426,7 @@ describe('UsersService — cross-company guards', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -490,6 +494,7 @@ describe('UsersService — findAll companyId scoping', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -636,6 +641,7 @@ describe('UsersService — updateUser branch confinement', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -750,6 +756,7 @@ describe('UsersService — rolsiz xodim (lavozim bilan)', () => {
           },
         },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
       ],
     }).compile();
 
@@ -963,6 +970,7 @@ describe("UsersService — updateUser: rolsiz ⇒ login/parol yo'q invariantini 
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -1321,6 +1329,7 @@ describe('UsersService — role grant ceiling', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },
         {
           provide: EntityHistoryService,
           useValue: {

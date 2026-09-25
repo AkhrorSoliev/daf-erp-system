@@ -529,7 +529,12 @@ export class ClickMethodsService {
       return clickError(clickTransId, merchantTransId, CLICK_INVALID_AMOUNT);
     }
 
-    await this.mockGateway.markCompleted(mockTxn.id);
+    // Ro'yxat allaqachon to'langan yoki o'chirilgan — ikkinchi pulni olmaymiz.
+    // Complete xato bilan qaytsa, Click to'lovni muvaffaqiyatsiz deb yopadi.
+    const completed = await this.mockGateway.markCompleted(mockTxn.id);
+    if (!completed) {
+      return clickError(clickTransId, merchantTransId, CLICK_ALREADY_PAID);
+    }
 
     return {
       click_trans_id: clickTransId,

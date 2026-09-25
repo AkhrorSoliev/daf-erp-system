@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { RedisService } from '../redis/redis.service';
 import { StatusHistoryService } from '../common/status';
+import { userArchiveData } from '../common/status/user-archive';
 import { EntityHistoryService } from '../common/entity-history';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
@@ -29,6 +30,10 @@ import {
   assertCallerMayTouchUser,
 } from '../common/auth/user-branch-scope';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
+import {
+  isBlockedStatus,
+  recordUserBlocked,
+} from '../common/auth/blocked-user';
 import {
   findLiveStaffByPhone,
   loginForPhone,
@@ -434,19 +439,8 @@ export class TeachersService {
       select: teacherSelect,
     });
 
-    // Redis: bloklangan user ni belgilash yoki tiklash
-    try {
-      if (
-        dto.status === UserStatus.SUSPENDED ||
-        dto.status === UserStatus.TERMINATED
-      ) {
-        await this.redis.set(`user:blocked:${id}`, '1');
-      } else if (dto.status === UserStatus.ACTIVE) {
-        await this.redis.del(`user:blocked:${id}`);
-      }
-    } catch {
-      // Redis ulanmagan bo'lsa ham status o'zgaradi
-    }
+    // Cut off, or restore, the access token the new status leaves behind.
+    await recordUserBlocked(this.redis, id, isBlockedStatus(dto.status));
 
     // Deactivated / terminated → stop any fixed-monthly payroll for this user.
     if (dto.status !== UserStatus.ACTIVE) {
@@ -525,23 +519,10 @@ export class TeachersService {
     // Soft delete — status transition emas, arxivlash
     await this.prisma.user.update({
       where: { id },
-      data: {
-        status: UserStatus.ARCHIVED,
-        isActive: false,
-        deletedAt: new Date(),
-        deletedById,
-        statusChangedAt: new Date(),
-        statusChangedById: deletedById,
-        statusChangeReason: "O'chirildi",
-      },
+      data: userArchiveData(deletedById),
     });
 
-    // Redis: bloklangan user belgilash (xatoni e'tiborsiz qoldirish)
-    try {
-      await this.redis.set(`user:blocked:${id}`, '1');
-    } catch {
-      // Redis ulanmagan bo'lsa ham delete ishlaydi
-    }
+    await recordUserBlocked(this.redis, id, true);
 
     // Archived → stop any fixed-monthly payroll for this user.
     this.events.emit(USER_DEACTIVATED_EVENT, {
