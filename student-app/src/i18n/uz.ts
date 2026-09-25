@@ -181,6 +181,14 @@ export const uz = {
     aboutBody:
       "DAF Sprachzentrum — nemis tilini zamonaviy uslublarda o'rgatuvchi markaz. Ushbu ilova orqali jadvalingizni, davomatingizni va to'lovlaringizni bir joyda kuzatib borasiz.",
     contact: 'Aloqa',
+    // Screen-reader labels for the contact rows; `v` is the number, domain or
+    // handle shown on screen, which is the same in every language.
+    contactA11y: {
+      phone: (v: string) => `Qo'ng'iroq qilish: ${v}`,
+      website: (v: string) => `Saytni ochish: ${v}`,
+      telegram: (v: string) => `Telegramda yozish: ${v}`,
+    },
+    openFailed: "Bu qurilmada ochib bo'lmadi",
     version: (v: string) => `Ilova versiyasi ${v}`,
   },
   faq: {
