@@ -181,7 +181,7 @@ describe('buildBranchReadiness', () => {
       facts({
         teachers: [
           { id: 90020, name: 'Ali Valiyev', hasRate: false },
-          { id: 10002, name: 'Zuhra Karimova', hasRate: true },
+          { id: 90021, name: 'Zuhra Karimova', hasRate: true },
         ],
       }),
       'teacherRates',
@@ -553,7 +553,7 @@ Shu describe ichidagi `describe('readiness', () => { … })` blokini to'liq quyi
       prisma.user.findMany.mockResolvedValue([
         { id: 90020, firstName: 'Ali', lastName: 'Valiyev', salaryConfigs: [] },
         {
-          id: 10002,
+          id: 90021,
           firstName: 'Zuhra',
           lastName: 'Karimova',
           salaryConfigs: [{ id: 'c1' }],
