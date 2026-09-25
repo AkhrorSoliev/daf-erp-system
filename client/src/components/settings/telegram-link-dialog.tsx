@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
+import { tryCopyPendingText } from "@/lib/clipboard";
 import { buildBotLink, TELEGRAM_BOT_NOT_CONFIGURED } from "@/lib/telegram-link";
 
 function extractError(err: unknown, fallback: string): string {
@@ -103,26 +104,36 @@ export function TelegramLinkDialog({ open, onOpenChange }: TelegramLinkDialogPro
   const handleGenerate = async () => {
     if (!selectedBranch || roleIds.length === 0) return;
     setLoading(true);
-    try {
-      const { data } = await api.post<{ payload: string }>(
-        "/telegram/employee-link",
-        { branchId: selectedBranch.id, roleIds },
-      );
-      const url = buildBotLink(data.payload);
-      if (!url) {
-        toast.error(TELEGRAM_BOT_NOT_CONFIGURED);
-        return;
-      }
-      setLink(url);
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      toast.success("Havola yaratildi va nusxalandi");
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      toast.error(extractError(err, "Havola yaratishda xatolik"));
-    } finally {
-      setLoading(false);
+    // Safari refuses a clipboard write that starts after an await, so the
+    // write starts here, inside the click, and completes when the link arrives.
+    const copy = await tryCopyPendingText(
+      api
+        .post<{ payload: string }>("/telegram/employee-link", {
+          branchId: selectedBranch.id,
+          roleIds,
+        })
+        .then(({ data }) => buildBotLink(data.payload)),
+    );
+    setLoading(false);
+    if (copy.status === "failed") {
+      toast.error(extractError(copy.error, "Havola yaratishda xatolik"));
+      return;
     }
+    if (copy.status === "empty") {
+      toast.error(TELEGRAM_BOT_NOT_CONFIGURED);
+      return;
+    }
+    // The link was created even when the write was refused, so show it either way.
+    setLink(copy.text);
+    if (copy.status === "refused") {
+      toast.error(
+        "Havola yaratildi, lekin brauzer uni nusxalashga ruxsat bermadi. Havola yonidagi tugmani bosing.",
+      );
+      return;
+    }
+    setCopied(true);
+    toast.success("Havola yaratildi va nusxalandi");
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleCopy = async () => {
@@ -140,7 +151,7 @@ export function TelegramLinkDialog({ open, onOpenChange }: TelegramLinkDialogPro
           <DialogTitle>Telegram ro&apos;yxatdan o&apos;tish havolasi</DialogTitle>
           <DialogDescription>
             Yangi xodim tanlangan lavozim(lar) bilan Telegram bot orqali
-            ro&apos;yxatdan o&apos;tadi. Havola doimiy ishlaydi va imzolangan
+            ro&apos;yxatdan o&apos;tadi. Havola 3 kun amal qiladi va imzolangan
             bo&apos;ladi.
           </DialogDescription>
         </DialogHeader>

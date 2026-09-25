@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { RedisService } from '../redis/redis.service';
 import { StatusHistoryService } from '../common/status';
+import { userArchiveData } from '../common/status/user-archive';
 import { EntityHistoryService } from '../common/entity-history';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
@@ -525,15 +526,7 @@ export class TeachersService {
     // Soft delete — status transition emas, arxivlash
     await this.prisma.user.update({
       where: { id },
-      data: {
-        status: UserStatus.ARCHIVED,
-        isActive: false,
-        deletedAt: new Date(),
-        deletedById,
-        statusChangedAt: new Date(),
-        statusChangedById: deletedById,
-        statusChangeReason: "O'chirildi",
-      },
+      data: userArchiveData(deletedById),
     });
 
     // Redis: bloklangan user belgilash (xatoni e'tiborsiz qoldirish)

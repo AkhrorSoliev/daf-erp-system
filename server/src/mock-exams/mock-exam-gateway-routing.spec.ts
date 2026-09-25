@@ -189,10 +189,12 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
       const emit = jest.fn();
       const tx = {
         mockExamGatewayTransaction: {
-          update: jest.fn().mockResolvedValue({ mockParticipantId: 'p1' }),
+          findUnique: jest.fn().mockResolvedValue({ mockParticipantId: 'p1' }),
+          update: jest.fn(),
         },
         mockExamParticipant: {
-          update: jest.fn().mockResolvedValue({
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+          findUnique: jest.fn().mockResolvedValue({
             telegramChatId: '1647226871',
             publicId: 10003,
             feeAmount: 3000,
@@ -213,8 +215,9 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
 
       await mod.get(MockExamGatewayBillingService).markCompleted('txn-1');
 
-      expect(tx.mockExamParticipant.update).toHaveBeenCalledWith(
+      expect(tx.mockExamParticipant.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
+          where: { id: 'p1', paid: false, deletedAt: null },
           data: expect.objectContaining({ paid: true }),
         }),
       );
@@ -230,10 +233,12 @@ describe('MockExamGatewayBillingService — shouldRouteToMock', () => {
       const emit = jest.fn();
       const tx = {
         mockExamGatewayTransaction: {
-          update: jest.fn().mockResolvedValue({ mockParticipantId: 'p1' }),
+          findUnique: jest.fn().mockResolvedValue({ mockParticipantId: 'p1' }),
+          update: jest.fn(),
         },
         mockExamParticipant: {
-          update: jest.fn().mockResolvedValue({
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+          findUnique: jest.fn().mockResolvedValue({
             telegramChatId: '1',
             publicId: 10,
             feeAmount: null,

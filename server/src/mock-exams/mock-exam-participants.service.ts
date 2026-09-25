@@ -524,9 +524,19 @@ export class MockExamParticipantsService {
       );
     }
 
-    const updated = await this.prisma.mockExamParticipant.update({
-      where: { id },
+    // Shartli yozuv: yuqoridagi `paid` tekshiruvi bilan shu qator orasida
+    // odamning Payme/Click to'lovi o'tib ketgan bo'lishi mumkin. Shartsiz
+    // `update` o'shanda naqdni ham qabul qilib, ikkinchi pulni olardi.
+    const claimed = await this.prisma.mockExamParticipant.updateMany({
+      where: { id, paid: false, deletedAt: null },
       data: { paid: true, paidAt: new Date() },
+    });
+    if (claimed.count === 0) {
+      throw new BadRequestException("Bu ishtirokchi allaqachon to'lagan");
+    }
+
+    const updated = await this.prisma.mockExamParticipant.findUniqueOrThrow({
+      where: { id },
       select: {
         id: true,
         publicId: true,
@@ -585,6 +595,7 @@ export class MockExamParticipantsService {
     companyId: number,
     userId: number,
     branchIds: ReportBranchIds,
+    options: { refundConfirmed?: boolean } = {},
   ) {
     // Branch isolation runs through the participant's EXAM — `companyId` alone
     // is not a boundary once there is more than one branch.
@@ -592,9 +603,23 @@ export class MockExamParticipantsService {
 
     const existing = await this.prisma.mockExamParticipant.findFirst({
       where: { id, deletedAt: null, companyId },
+      include: { exam: { select: { price: true } } },
     });
     if (!existing) {
       throw new NotFoundException('Ishtirokchi topilmadi');
+    }
+
+    // To'lagan odamning ro'yxati jim o'chirilardi: naqd yoki Payme/Click puli
+    // mock daromadidan tushib qolar, odam qayta yozilsa undan YANA to'lov
+    // so'ralardi. Endi admin pulni qaytarganini ochiq tasdiqlashi shart.
+    const paidFee = existing.paid
+      ? (existing.feeAmount ?? existing.exam.price)
+      : 0;
+    if (existing.paid && !options.refundConfirmed) {
+      throw new BadRequestException(
+        `Bu ishtirokchi ${paidFee.toLocaleString('ru-RU')} so'm to'lagan. ` +
+          "O'chirishdan oldin pulni qaytaring va buni tasdiqlang.",
+      );
     }
 
     // Give the money back BEFORE the row disappears. A removed registration
@@ -624,6 +649,9 @@ export class MockExamParticipantsService {
         firstName: existing.firstName,
         lastName: existing.lastName,
         phone: existing.phone,
+        ...(existing.paid
+          ? { paid: true, feeAmount: paidFee, refundConfirmed: true }
+          : {}),
       },
       changedById: userId,
       companyId,

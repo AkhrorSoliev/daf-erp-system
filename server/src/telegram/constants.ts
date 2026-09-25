@@ -1,5 +1,4 @@
 export const SCENES = {
-  TEACHER_REGISTRATION: 'teacher-registration',
   STUDENT_REGISTRATION: 'student-registration',
   EMPLOYEE_REGISTRATION: 'employee-registration',
   MOCK_EXAM_REGISTRATION: 'mock-exam-registration',
@@ -13,14 +12,40 @@ export const MOCK_EXAM_DEEP_LINK_PREFIX = 'mock_';
 /** Native app login (link/poll): t.me/<bot>?start=req_<id> → bot approves, app polls. */
 export const APP_LOGIN_REQUEST_PREFIX = 'req_';
 export const STUDENT_GROUP_DEEP_LINK_RE = /^student_(\d+)_group_(.+)$/;
+
+/** `Branch.id` is a Postgres int4: a larger number makes the lookup throw. */
+const MAX_BRANCH_ID = 2_147_483_647;
+
 /**
+ * The branch number in a `student_` link, or null unless it is plain digits
+ * within int4. `Number()` alone let `1.5` through (Prisma truncates it to
+ * branch 1), read `1e3` and `0x10` as branches 1000 and 16, and passed
+ * `Infinity` and numbers past int4, which make the lookup throw.
+ */
+export function parseDeepLinkBranchId(raw: string): number | null {
+  if (!/^\d+$/.test(raw)) return null;
+  const branchId = Number(raw);
+  return branchId <= MAX_BRANCH_ID ? branchId : null;
+}
+
+/**
+ * `employee_<branch>_roles_<ids>_t_<issued>_sig_<hmac>`, groups in that order.
+ *
  * Role ids are joined with `-`, not `,`: Telegram only delivers a `?start=`
  * parameter made of base64url characters (`A-Z a-z 0-9 _ -`). A comma made the
  * client drop the parameter outright, so every multi-role link silently opened
- * the plain menu instead of the registration flow. See `signed-link.util.ts`.
+ * the plain menu instead of the registration flow. `<issued>` is the base36
+ * issue time the link expires by (ADR-0029). See `signed-link.util.ts`.
  */
 export const EMPLOYEE_DEEP_LINK_RE =
-  /^employee_(\d+)_roles_(\d+(?:-\d+)*)_sig_([0-9a-f]+)$/i;
+  /^employee_(\d+)_roles_(\d+(?:-\d+)*)_t_([0-9a-z]+)_sig_([0-9a-f]+)$/i;
+/**
+ * The shape every employee link had before links carried an issue time
+ * (ADR-0029). The bot answers it as expired instead of letting it fall
+ * through to the plain menu.
+ */
+export const UNDATED_EMPLOYEE_DEEP_LINK_RE =
+  /^employee_\d+_roles_\d+(?:-\d+)*_sig_[0-9a-f]+$/i;
 /** Separator between role ids inside an employee deep-link payload. */
 export const EMPLOYEE_ROLE_SEPARATOR = '-';
 
