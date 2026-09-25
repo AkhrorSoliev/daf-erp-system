@@ -15,6 +15,17 @@ API manzili `EXPO_PUBLIC_API_URL` orqali beriladi:
 - **EAS build:** `.env` build serveriga yuklanmaydi, shuning uchun URL `eas.json` ning
   `preview` va `production` profillaridagi `env` blokida belgilangan.
 
+## Testlar
+
+```bash
+npm test          # jest-expo
+npm run typecheck
+```
+
+`test/` dagi testlar haqiqiy router, layout va ekranlarni render qiladi. Faqat
+ilovadan tashqariga chiqadigan narsalar soxta: tarmoq (API), Keychain, push va
+kamera (`test/setup.ts`). CI har PR'da ikkalasini ham ishga tushiradi.
+
 ## Play Store'ga chiqarish (release)
 
 ```bash

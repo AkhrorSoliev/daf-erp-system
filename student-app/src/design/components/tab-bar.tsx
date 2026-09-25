@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useColors } from '@/design/colors';
+import { useKeyboardOpen } from '@/hooks/use-keyboard-open';
 import { useT } from '@/i18n';
 import { Text } from './text';
 
@@ -17,8 +18,8 @@ type Meta = { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ion
 
 const META: Record<string, Meta> = {
   index: { active: 'home', inactive: 'home-outline' },
-  darslar: { active: 'school', inactive: 'school-outline' },
-  resurslar: { active: 'library', inactive: 'library-outline' },
+  schedule: { active: 'calendar', inactive: 'calendar-outline' },
+  payments: { active: 'wallet', inactive: 'wallet-outline' },
   more: { active: 'grid', inactive: 'grid-outline' },
 };
 
@@ -28,10 +29,16 @@ export function LumioTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const [rowW, setRowW] = useState(0);
+  const keyboardOpen = useKeyboardOpen();
 
   const n = state.routes.length;
   const cellW = rowW > 0 ? rowW / n : 0;
   const indicatorX = cellW > 0 ? state.index * cellW + (cellW - CIRCLE) / 2 : 0;
+
+  // To'lovlar has an amount field. On Android the window shrinks for the
+  // keyboard, and this bar (absolutely positioned) would ride up with it over
+  // the Payme / Click buttons, so it steps aside while the keyboard is up.
+  if (keyboardOpen) return null;
 
   return (
     <View
@@ -42,7 +49,10 @@ export function LumioTabBar({ state, navigation }: BottomTabBarProps) {
         className="h-[68px] flex-row items-center rounded-[34px] border border-border bg-surface/95 px-2"
         style={{ boxShadow: [{ offsetX: 0, offsetY: 8, blurRadius: 24, color: 'rgba(14,42,61,0.16)' }] }}
       >
+        {/* A container role only, like React Navigation's own tab bar: making it
+            `accessible` would merge the tabs into one element for VoiceOver. */}
         <View
+          role="tablist"
           className="flex-1 flex-row"
           style={{ height: '100%' }}
           onLayout={(e: LayoutChangeEvent) => setRowW(e.nativeEvent.layout.width)}
@@ -79,7 +89,10 @@ export function LumioTabBar({ state, navigation }: BottomTabBarProps) {
             return (
               <Pressable
                 key={route.key}
-                accessibilityRole="button"
+                // The active tab shows no label, only its icon, so the name
+                // screen readers announce has to be set here.
+                accessibilityRole="tab"
+                accessibilityLabel={label}
                 accessibilityState={{ selected: focused }}
                 onPress={onPress}
                 className="flex-1 items-center justify-center active:opacity-80"

@@ -24,10 +24,13 @@ export function ProgressBar({
         transition={{ type: 'timing', duration: 650, easing: EASE }}
         style={{ width: '100%', height: '100%', flexDirection: 'row', transformOrigin: '0% 50%' }}
       >
+        {/* Destructured on purpose: the worklets Babel plugin reads any
+            `x.value` in an inline style as a shared value and warns on every
+            render (a plain number here). */}
         {segments
           .filter((s) => s.value > 0)
-          .map((s, i) => (
-            <View key={i} style={{ flex: s.value, backgroundColor: s.color }} />
+          .map(({ value, color }, i) => (
+            <View key={i} style={{ flex: value, backgroundColor: color }} />
           ))}
       </MotiView>
     </View>

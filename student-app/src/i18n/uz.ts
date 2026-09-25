@@ -21,21 +21,17 @@ export const uz = {
     comingSoon: 'Tez orada',
     showPassword: "Parolni ko'rsatish",
     hidePassword: 'Parolni yashirish',
-    sectionInProgress: (section: string) => `${section} bo'limi tayyorlanmoqda.`,
   },
   // Bottom tab-bar labels.
   nav: {
     index: 'Asosiy',
-    darslar: 'Darslar',
-    resurslar: 'Resurslar',
+    schedule: 'Jadval',
+    payments: "To'lovlar",
     more: "Ko'proq",
   },
   // Stack / screen header titles.
   tabs: {
-    home: 'Asosiy',
-    schedule: 'Jadval',
     attendance: 'Davomat',
-    payments: "To'lovlar",
     profile: 'Profil',
     more: "Ko'proq",
     settings: 'Sozlamalar',
@@ -149,7 +145,6 @@ export const uz = {
   more: {
     profileFallback: 'Profil',
     viewProfile: "Profilni ko'rish",
-    payments: "To'lovlar",
     faq: 'FAQ',
     about: 'Biz haqimizda',
     settings: 'Sozlamalar',
@@ -189,7 +184,7 @@ export const uz = {
   faq: {
     topUp: {
       q: "Balansni qanday to'ldiraman?",
-      a: "Ko'proq → To'lovlar bo'limiga kiring, summani tanlang va Payme yoki Click orqali to'lang. Balans bir necha soniyada yangilanadi.",
+      a: "«To'lovlar» bo'limiga kiring, summani tanlang va Payme yoki Click orqali to'lang. Balans bir necha soniyada yangilanadi.",
     },
     attendance: {
       q: 'Davomat qanday belgilanadi?',
@@ -201,7 +196,7 @@ export const uz = {
     },
     scheduleAndAttendance: {
       q: 'Jadvalim va davomatim qayerda?',
-      a: "Asosiy sahifada balans, bugungi darslar va davomat ko'rsatkichlari jamlangan.",
+      a: "Bugungi darslaringiz Asosiy sahifada, butun hafta «Jadval» bo'limida. Davomat foizi Asosiy sahifada, batafsil tarixi «Ko'proq» ichidagi «Davomat» bo'limida.",
     },
     profilePhoto: {
       q: "Profil rasmini qanday o'zgartiraman?",
