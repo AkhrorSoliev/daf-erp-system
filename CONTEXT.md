@@ -294,8 +294,11 @@ deb noto'g'ri hujjatlashtirilgan edi).
 **MockExamParticipant** — ro'yxatdan o'tgan ishtirokchi. `publicId` — `Student`
 ketma-ketligidan olingan 5 xonali raqam; to'lov shlyuzlari **shu raqam** bo'yicha
 yo'naltiradi. `feeAmount` ro'yxatdan o'tishda qotiriladi (DaF chegirmasi bilan),
-shunda summa keyin siljib ketmaydi.
-`mock-exams/mock-exam-participants.service.ts`
+shunda summa keyin siljib ketmaydi. Chetlatilgan (`EXPELLED`) va arxivdagi
+(`ARCHIVED`) o'quvchi DaF chegirmasini olmaydi — to'liq narx (CEO, 2026-09-25);
+kartasi bog'lanadi, natijasi profilida ko'rinadi.
+`mock-exams/mock-exam-participants.service.ts`,
+`mock-exams/mock-exam-pricing.util.ts` (`NO_DAF_DISCOUNT_STATUSES`)
 
 ⚠️ **Mock imtihon to'lovi balansdan yechilmaydi.** Balans — **darslar** uchun
 oldindan to'lov. 2026-08 imtihonida 21 o'quvchi ikki marta to'lagan edi.
@@ -307,13 +310,29 @@ rad etiladi (Payme `-31008`, Click `-4`) va shlyuz pulni qaytaradi. To'lagan
 ishtirokchi faqat «pul qaytarildi» tasdig'i bilan o'chiriladi.
 `mock-exams/mock-exam-gateway-billing.service.ts` (`markCompleted`)
 
+**Onlayn to'lov imtihon boshlanguncha** (CEO, 2026-09-25). Muddat —
+ishtirokchi tanlagan vaqt (`examTime`), Toshkent vaqti bilan; vaqt tanlanmagan
+bo'lsa imtihonning eng erta vaqti, vaqt umuman bo'lmasa imtihon kunining oxiri.
+Muddat to'lov BOSHLANGANDA tekshiriladi (Payme check/create, Click prepare):
+undan oldin boshlangan to'lov yakunlanadi. Muddatdan keyin tashqi odamning
+to'lovi rad etiladi, DaF o'quvchisiniki balansiga tushadi. Bot ro'yxatdan
+o'tganda muddatni aytadi. Naqd to'lov admin qarori, cheklanmaydi.
+`mock-exams/mock-payment-cutoff.ts`
+
 **Onlayn to'lov faqat ochiq imtihonga** — `REGISTRATION_OPEN`,
-`REGISTRATION_CLOSED` yoki `GRADING` holatidagi, o'chirilmagan imtihon.
+`REGISTRATION_CLOSED` yoki `GRADING` holatidagi, o'chirilmagan imtihon; bu
+tashqi chegara, uning ichida yuqoridagi vaqt muddati amal qiladi.
 E'lon qilingan yoki o'chirilgan imtihonning eski ro'yxati to'lov manzili emas;
 aks holda DaF o'quvchisining darsga qilgan aynan shu summadagi to'lovi o'sha
 eski mockka ketardi. To'lagan ishtirokchisi bor imtihon o'chirilmaydi;
 o'chirilganda ishtirokchilar ham birga o'chadi.
 `mock-exams/mock-exam-gateway-billing.service.ts` (`PAYABLE_EXAM_STATUSES`)
+
+**Natija faqat to'lov qilganlarga** (CEO, 2026-09-25). E'londan keyingi
+Telegram xabari, natijalar PDF'idagi qatorlar va botdagi «Mock natijalari»
+tugmasi faqat to'lagan (yoki hech narsa to'lamasligi kerak bo'lgan — `feeAmount`
+0) ishtirokchiga. Imtihonga kirishni markazda admin tekshiradi.
+`mock-exams/mock-results-audience.ts` (`RESULTS_AUDIENCE`)
 
 **Mock botida qo'lda yozilgan telefon hech narsani isbotlamaydi.** DaF
 o'quvchisi telefon bo'yicha topiladi (chat bo'yicha emas), lekin o'quvchi

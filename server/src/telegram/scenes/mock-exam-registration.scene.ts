@@ -21,6 +21,10 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { EntityHistoryService } from '../../common/entity-history';
 import { PaymentLinkService } from '../../payment-gateways/payment-link.service';
 import { resolveParticipantFee } from '../../mock-exams/mock-exam-pricing.util';
+import {
+  formatMockPaymentCutoff,
+  mockPaymentCutoff,
+} from '../../mock-exams/mock-payment-cutoff';
 
 /**
  * Mock exam registration scene.
@@ -597,6 +601,8 @@ async function finalizeRegistration(ctx: BotContext, deps: SceneDeps) {
       companyId: true,
       status: true,
       registrationDeadline: true,
+      examDate: true,
+      examTimes: true,
     },
   });
 
@@ -642,7 +648,7 @@ async function finalizeRegistration(ctx: BotContext, deps: SceneDeps) {
       // company: a student elsewhere is not this centre's DaF student.
       where: { phone, deletedAt: null, companyId: examCompanyId },
       orderBy: { updatedAt: 'desc' },
-      select: { id: true, telegramChatId: true },
+      select: { id: true, telegramChatId: true, status: true },
     });
 
     if (existingStudent) {
@@ -691,11 +697,12 @@ async function finalizeRegistration(ctx: BotContext, deps: SceneDeps) {
     }
 
     // The fee locked in for THIS registration — DaF discount applied when
-    // the registrant matched a student. Billing / gateway / links all read
-    // this from the row so the amount never drifts.
+    // the registrant matched a student who still studies here (not expelled
+    // or archived). Billing / gateway / links all read this from the row so
+    // the amount never drifts.
     feeAmount = resolveParticipantFee(
       { price: examPrice, studentPrice },
-      studentId !== null,
+      existingStudent,
     );
 
     const created = await prisma.mockExamParticipant.create({
@@ -829,6 +836,19 @@ async function finalizeRegistration(ctx: BotContext, deps: SceneDeps) {
 
   if (price > 0) {
     lines.push('', `💳 To'lov: <b>${price.toLocaleString('uz-UZ')} so'm</b>`);
+    // Money is accepted until the exam starts (CEO, 2026-09-25); after that
+    // Payme and Click refuse it (`mockPaymentCutoff`). Say when.
+    const cutoff = mockPaymentCutoff({
+      examDate: exam?.examDate ?? null,
+      examTimes: exam?.examTimes ?? [],
+      participantExamTime: examTime,
+    });
+    if (cutoff) {
+      lines.push(
+        `⏰ To'lov muddati: <b>${formatMockPaymentCutoff(cutoff)}</b> gacha. ` +
+          "Imtihon boshlangach onlayn to'lov qabul qilinmaydi.",
+      );
+    }
     if (hasPayLinks) {
       lines.push(
         "Payme yoki Click tugmasi orqali to'lang (telefoningizda app ochiladi), " +
@@ -845,6 +865,9 @@ async function finalizeRegistration(ctx: BotContext, deps: SceneDeps) {
     '',
     "Natijalar e'lon qilingach, PDFda identifikatoringizni topishingiz mumkin. Eslab qoling!",
   );
+  if (price > 0) {
+    lines.push("Natijalar faqat to'lov qilganlarga yuboriladi.");
+  }
 
   // Telefon so'ralganda qo'yilgan «📱 Telefon raqamni yuborish» klaviaturasi
   // shu yerda albatta tozalanishi kerak. Bitta xabarda ham inline tugmalar,

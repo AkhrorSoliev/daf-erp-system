@@ -126,7 +126,12 @@ const FORM_FIELDS = [
   },
 ];
 
-type StudentRow = { id: number; phone: string; telegramChatId: string | null };
+type StudentRow = {
+  id: number;
+  phone: string;
+  telegramChatId: string | null;
+  status?: string;
+};
 
 function buildFinalizeEnv(opts: {
   students?: StudentRow[];
@@ -282,6 +287,62 @@ describe("mock-exam-registration.scene — ro'yxat yakuni", () => {
       }),
     );
   });
+
+  /**
+   * CEO, 2026-09-25: money is accepted until the exam starts, and only those
+   * who paid get their results. The person learns both when they register.
+   */
+  const confirmation = (ctx: any): string =>
+    (ctx.reply.mock.calls as [string][])
+      .map(([text]) => text)
+      .find((text) => text.includes("ro'yxatga olindingiz")) ?? '';
+
+  it('the confirmation names when online payment closes, by the chosen slot', async () => {
+    const { scene } = buildFinalizeEnv({
+      exam: {
+        examDate: new Date('2026-09-30T00:00:00.000Z'),
+        examTimes: ['09:00', '13:00'],
+      },
+    });
+    const ctx = typedPhoneCtx('901112233');
+    ctx.session.data.examTime = '13:00';
+
+    await scene.middleware()(ctx, async () => {});
+
+    expect(confirmation(ctx)).toContain('30.09.2026, 13:00');
+  });
+
+  it('the confirmation says results go only to those who paid', async () => {
+    const { scene } = buildFinalizeEnv({});
+    const ctx = typedPhoneCtx('901112233');
+
+    await scene.middleware()(ctx, async () => {});
+
+    expect(confirmation(ctx)).toContain("faqat to'lov qilganlarga");
+  });
+
+  /** CEO, 2026-09-25: expelled and archived students get no DaF discount. */
+  it.each([
+    ['ACTIVE', 30000],
+    ['EXPELLED', 40000],
+    ['ARCHIVED', 40000],
+  ])(
+    'a %s student registering in the bot is charged %i',
+    async (status, fee) => {
+      const { prisma, scene } = buildFinalizeEnv({
+        students: [
+          { id: 10050, phone: '901112233', telegramChatId: null, status },
+        ],
+      });
+      const ctx = typedPhoneCtx('901112233');
+
+      await scene.middleware()(ctx, async () => {});
+
+      const { data } = prisma.mockExamParticipant.create.mock.calls[0][0];
+      expect(data.studentId).toBe(10050);
+      expect(data.feeAmount).toBe(fee);
+    },
+  );
 
   it("forma to'ldirilguncha ro'yxat yopilgan bo'lsa, ishtirokchi yaratilmaydi", async () => {
     const { prisma, scene } = buildFinalizeEnv({
