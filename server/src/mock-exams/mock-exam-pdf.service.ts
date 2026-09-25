@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { renderPdf, getCompanyLogoDataUrl } from '../receipts/pdf/render';
 import { tashkentDateStr } from '../common/date/tashkent';
+import { RESULTS_AUDIENCE } from './mock-results-audience';
 
 /**
  * dd.MM.yyyy — Toshkent kuni bo'yicha. `getDate()` jarayon vaqt mintaqasini
@@ -52,8 +53,10 @@ export class MockExamPdfService {
       throw new Error(`MockExam ${examId} not found`);
     }
 
+    // Only those who paid get their results (CEO, 2026-09-25), and this PDF
+    // is what the bot sends them.
     const participants = await this.prisma.mockExamParticipant.findMany({
-      where: { examId, deletedAt: null },
+      where: { examId, deletedAt: null, AND: [RESULTS_AUDIENCE] },
       orderBy: [
         // DESC by total score; nulls last so ungraded participants sink
         // to the bottom of the list.
