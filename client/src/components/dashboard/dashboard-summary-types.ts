@@ -31,8 +31,11 @@ export interface DashboardMoney {
 export interface DashboardPeople {
   activeStudents: number;
   newThisMonth: number;
-  /** Shu oy chiqarilgan + guruhdan tushib qolgan. */
+  /** Departures confirmed this month (ADR-0035). */
   leftThisMonth: number;
+  /** Stopped within the grace period and not back yet. */
+  leftPending: number;
+  leftGraceDays: number;
   activeGroups: number;
   /** Shu oyning o'rtacha davomati, 0–100. */
   attendancePct: number;

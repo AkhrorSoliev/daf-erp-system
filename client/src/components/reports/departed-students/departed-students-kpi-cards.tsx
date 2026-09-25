@@ -20,7 +20,11 @@ import { cn } from "@/lib/utils";
 export interface DepartedStudentsSummary {
   churnRate: number;
   departedCount: number;
-  totalStudents: number;
+  /** Students in a group at the start of the range — the churn denominator. */
+  activeAtStart: number;
+  /** Stopped within the grace period and not back yet. */
+  pendingCount: number;
+  graceDays: number;
   lostRevenue: number;
   totalDebt: number;
   debtorCount: number;
@@ -37,7 +41,13 @@ interface KpiCardProps {
   valueColor?: string;
 }
 
-function KpiCard({ icon: Icon, label, value, tooltip, valueColor }: KpiCardProps) {
+function KpiCard({
+  icon: Icon,
+  label,
+  value,
+  tooltip,
+  valueColor,
+}: KpiCardProps) {
   return (
     <div className="rounded-xl border bg-card p-4 space-y-2">
       <div className="flex items-center justify-between gap-2">
@@ -97,32 +107,31 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
   }
 
   const churnTooltip =
-    "Ketgan o'quvchilar ulushi = Ketganlar ÷ Barcha o'quvchilar × 100.\n" +
-    `Misol: ${data.departedCount} ketgan ÷ ${data.totalStudents} jami → ${data.churnRate.toFixed(1)}%.\n` +
-    "Barcha o'quvchilar = ketganlar + hozir guruhda o'qiyotganlar.";
+    "Ketish koeffitsienti = Davrda ketganlar ÷ Davr boshida guruhda bo'lganlar × 100.\n" +
+    `Misol: ${data.departedCount} ÷ ${data.activeAtStart} → ${data.churnRate.toFixed(1)}%.`;
 
   const departedTooltip =
-    "Hozir hech qaysi faol guruhda o'qimayotgan o'quvchilar soni — " +
-    "chetlashtirilgan, muzlatilgan va guruhsiz qolgan faol o'quvchilar. " +
-    "Bitirgan o'quvchilar hisobga olinmaydi.";
+    "Tanlangan davrda ketgan o'quvchilar, har biri bir marta.\n" +
+    "Chetlatilgan yoki arxivlangan kuni sanaladi. Guruhdan chiqqan yoki muzlatilgan o'quvchi " +
+    `${data.graceDays} kun ichida qaytmasa, to'xtagan kuni sanaladi.\n` +
+    `Yana ${data.pendingCount} nafari ${data.graceDays} kun ichida qaytmasa qo'shiladi.`;
 
   const lostRevenueTooltip =
     "Agar ketgan o'quvchilar qolishganida, yana qancha so'm keltirishardi.\n" +
     "Har bir ketgan yozuv uchun: Shartnoma summasi − Allaqachon to'langan summa. Shartnomasi yo'q yozuvlar 0 deb hisoblanadi.";
 
   const avgDurationTooltip =
-    "Ketgan o'quvchilar markazda o'rtacha necha oy o'qiganini ko'rsatadi. " +
-    "Har bir yozuv uchun: Chiqarilgan sana − Qo'shilgan sana (oylarda). Keyin o'rtacha olinadi.";
+    "Davrda ketganlar markazda o'rtacha necha oy o'qigani: birinchi guruhga qo'shilgan kundan ketgan kungacha.";
 
   const debtTooltip =
-    "Ketgan o'quvchilarning markazga qarzi (balansi manfiy bo'lganlar).\n" +
-    `${data.debtorCount} ta ketgan o'quvchida qarz bor.`;
+    "Hozir qaytmagan ketganlarning markazga qarzi (balansi manfiy bo'lganlar).\n" +
+    `${data.debtorCount} ta o'quvchida qarz bor.`;
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
       <KpiCard
         icon={UserMinus}
-        label="Ketganlar soni"
+        label="Davrda ketganlar"
         value={data.departedCount.toLocaleString("uz-UZ")}
         tooltip={departedTooltip}
       />
@@ -130,13 +139,6 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
         icon={TrendingDown}
         label="Ketish koeffitsienti"
         value={`${data.churnRate.toFixed(1)}%`}
-        valueColor={
-          data.churnRate >= 10
-            ? "text-red-600 dark:text-red-400"
-            : data.churnRate >= 5
-              ? "text-amber-600 dark:text-amber-400"
-              : undefined
-        }
         tooltip={churnTooltip}
       />
       <KpiCard

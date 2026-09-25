@@ -9,10 +9,18 @@ interface PeopleStatProps {
   label: string;
   value: string;
   hint?: string;
+  hintTitle?: string;
   href: string;
 }
 
-function PeopleStat({ icon: Icon, label, value, hint, href }: PeopleStatProps) {
+function PeopleStat({
+  icon: Icon,
+  label,
+  value,
+  hint,
+  hintTitle,
+  href,
+}: PeopleStatProps) {
   return (
     <Link
       href={href}
@@ -24,7 +32,10 @@ function PeopleStat({ icon: Icon, label, value, hint, href }: PeopleStatProps) {
         <p className="text-base font-semibold tabular-nums sm:text-lg">
           {value}
           {hint && (
-            <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+            <span
+              className="ml-1.5 text-xs font-normal text-muted-foreground"
+              title={hintTitle}
+            >
               {hint}
             </span>
           )}
@@ -42,6 +53,12 @@ export function HomePeopleStats({ people }: { people: DashboardPeople }) {
         label="Aktiv o'quvchilar"
         value={formatNumber(people.activeStudents)}
         hint={`+${people.newThisMonth} / −${people.leftThisMonth}`}
+        hintTitle={
+          `Shu oy: +${people.newThisMonth} yangi, −${people.leftThisMonth} ketgan.` +
+          (people.leftPending > 0
+            ? ` Yana ${people.leftPending} nafari ${people.leftGraceDays} kun ichida qaytmasa qo'shiladi.`
+            : "")
+        }
         href="/students"
       />
       <PeopleStat

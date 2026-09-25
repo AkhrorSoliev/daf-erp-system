@@ -24,7 +24,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { formatPhone, formatBalance } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 
-export type DepartedStudentStatusFilter = "all" | "ACTIVE" | "FROZEN" | "EXPELLED";
+export type DepartedStudentStatusFilter =
+  "all" | "ACTIVE" | "FROZEN" | "EXPELLED";
 
 export interface DepartedStudentRow {
   /** Student id as a string — used as the React key. */
@@ -38,8 +39,11 @@ export interface DepartedStudentRow {
   branch: { id: number; name: string } | null;
   course: { id: string; name: string } | null;
   teachers: { id: number; fullName: string }[];
-  /** When the student lost their last group. */
-  leftAt: string | null;
+  /** The day the student stopped (ADR-0035). */
+  departedAt: string;
+  /** `pending`: still inside the grace period; coming back cancels it. */
+  state: "pending" | "confirmed";
+  stopKind: "EXPELLED" | "ARCHIVED" | "FROZEN" | "LEFT_GROUP";
 }
 
 const LINK_CLS =
@@ -47,13 +51,15 @@ const LINK_CLS =
 
 const COLSPAN = 11;
 
-const STATUS_FILTER_OPTIONS: { value: DepartedStudentStatusFilter; label: string }[] =
-  [
-    { value: "all", label: "Barcha holatlar" },
-    { value: "ACTIVE", label: "Faol (guruhsiz)" },
-    { value: "FROZEN", label: "Muzlatilgan" },
-    { value: "EXPELLED", label: "Chetlatilgan" },
-  ];
+const STATUS_FILTER_OPTIONS: {
+  value: DepartedStudentStatusFilter;
+  label: string;
+}[] = [
+  { value: "all", label: "Barcha holatlar" },
+  { value: "ACTIVE", label: "Faol (guruhsiz)" },
+  { value: "FROZEN", label: "Muzlatilgan" },
+  { value: "EXPELLED", label: "Chetlatilgan" },
+];
 
 interface Props {
   data: DepartedStudentRow[] | undefined;
@@ -79,9 +85,7 @@ export function DepartedStudentsTable({
   return (
     <div className="rounded-xl border bg-card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b">
-        <h3 className="font-semibold text-base">
-          Ketgan o&apos;quvchilar ro&apos;yxati
-        </h3>
+        <h3 className="font-semibold text-base">Qaytmagan ketganlar</h3>
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
             <Checkbox
@@ -123,7 +127,7 @@ export function DepartedStudentsTable({
               <TableHead>Kurs</TableHead>
               <TableHead>Filial</TableHead>
               <TableHead>O&apos;qituvchi</TableHead>
-              <TableHead>Guruhsiz qoldi</TableHead>
+              <TableHead>Ketgan sana</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -142,10 +146,10 @@ export function DepartedStudentsTable({
                   className="text-center py-8 text-sm text-muted-foreground"
                 >
                   {debtorsOnly
-                    ? "Qarzdor ketgan o'quvchi topilmadi"
+                    ? "Qarzdor qaytmagan ketgan topilmadi"
                     : statusFilter === "all"
-                      ? "Ketgan o'quvchilar yo'q — barcha o'quvchilar biror guruhda o'qimoqda"
-                      : "Bu holat bo'yicha ketgan o'quvchi topilmadi — boshqa holatni tanlang"}
+                      ? "Qaytmagan ketgan o'quvchilar yo'q"
+                      : "Bu holat bo'yicha qaytmagan ketgan topilmadi — boshqa holatni tanlang"}
                 </TableCell>
               </TableRow>
             ) : (
@@ -245,9 +249,18 @@ export function DepartedStudentsTable({
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs tabular-nums">
-                      {row.leftAt
-                        ? format(new Date(row.leftAt), "dd.MM.yyyy")
-                        : "—"}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {format(new Date(row.departedAt), "dd.MM.yyyy")}
+                        {row.state === "pending" && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px]"
+                            title="Qaytish muddati hali tugamagan — qaytsa, ketgan sanalmaydi"
+                          >
+                            kutilmoqda
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
