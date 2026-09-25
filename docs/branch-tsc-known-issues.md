@@ -134,10 +134,10 @@ solishtiradi.
 
 | | Soni | Qanday aniqlanadi |
 |---|---|---|
-| `BRANCH_SCOPED_BY_HEADER` | **120** | Dalil: handler `@BranchScope()` oladi |
-| Qo'lda toifalangan | **187** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
-| `UNREVIEWED` | **99** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
-| **Jami** | **406** | |
+| `BRANCH_SCOPED_BY_HEADER` | **128** | Dalil: handler `@BranchScope()` oladi |
+| Qo'lda toifalangan | **189** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
+| `UNREVIEWED` | **91** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
+| **Jami** | **408** | |
 
 Sanoq 2026-09-24 da `discoverRoutes` bilan qayta olindi — jadval 2026-08 dagi
 95 / 157 / 114 / 365 da qolib ketgan edi. Xona va kursning id bo'yicha sakkizta
@@ -147,6 +147,12 @@ chaqiruvchi tanadagi filialga ega ekanini tekshiradi — o'ntasi ham
 `BRANCH_SCOPED_BY_ENTITY` ga o'tdi. Budjet ro'yxat uzunligiga tenglashtirildi
 (114 → 99): ro'yxat 109 ta edi, ya'ni undagi 5 ta bo'sh o'rin yangi route'ni
 jimgina `UNREVIEWED` ga qo'yishga imkon berardi.
+
+2026-09-25: mock natijalari, fanlari va o'rinlarining sakkizta route'i
+(`results-matrix`, `scores/bulk`, `recalculate-ranks`, fanlar) `@BranchScope()`
+oldi va `BRANCH_SCOPED_BY_HEADER` ga o'tdi (budjet 99 → 91). Qo'lda
+toifalanganlar 189 ta: `PATCH /users/phone` va `POST /users/logout-others`
+`SELF` blokiga qo'shilgan edi.
 
 ## Nega qolgani «UNREVIEWED» deb qoldirildi
 

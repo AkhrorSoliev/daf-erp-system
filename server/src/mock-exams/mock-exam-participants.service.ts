@@ -8,6 +8,7 @@ import { MockExamStatus, Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  assertBranchInScope,
   ReportBranchIds,
   studentBranchWhere,
 } from '../common/finance/report-branch-scope';
@@ -146,7 +147,18 @@ export class MockExamParticipantsService {
       this.prisma.mockExamParticipant.count({ where }),
     ]);
 
-    return { data, total, page, pageSize };
+    // Eski (2026-08 gacha) balansdan to'langan ishtirokchilar: o'chirilganda
+    // pulni tizim o'zi balansga qaytaradi — oyna adminga naqd berishni aytmasin.
+    const fromBalance = await this.mockExamBilling.paidFromBalanceIds(
+      data.filter((p) => p.paid).map((p) => p.id),
+    );
+
+    return {
+      data: data.map((p) => ({ ...p, paidFromBalance: fromBalance.has(p.id) })),
+      total,
+      page,
+      pageSize,
+    };
   }
 
   async addManual(
@@ -205,7 +217,8 @@ export class MockExamParticipantsService {
         studentId = student.id;
       } else {
         const existingStudent = await this.prisma.student.findFirst({
-          where: { phone: dto.phone, deletedAt: null },
+          // Faqat shu kompaniyaning o'quvchisi DaF o'quvchisi hisoblanadi.
+          where: { phone: dto.phone, deletedAt: null, companyId },
           orderBy: { updatedAt: 'desc' },
           select: { id: true },
         });
@@ -345,12 +358,37 @@ export class MockExamParticipantsService {
       );
     }
 
+    // Tanlangan filial chaqiruvchining qamrovida bo'lishi shart — ilgari
+    // faqat kompaniya tekshirilardi.
+    assertBranchInScope(dto.branchId, branchIds);
     const branch = await this.prisma.branch.findFirst({
       where: { id: dto.branchId, deletedAt: null, companyId },
       select: { id: true },
     });
     if (!branch) {
       throw new NotFoundException('Filial topilmadi');
+    }
+
+    // Tashqi odam har imtihonda YANGI publicId oladi — birinchi qatori
+    // aylantirilgach, keyingisi ham "Aylantirish" ko'rsatib, ikkinchi o'quvchi
+    // (bir xil telefon va Telegram chat) yaratardi.
+    const samePerson = await this.prisma.student.findFirst({
+      where: {
+        companyId,
+        deletedAt: null,
+        OR: [
+          { phone: participant.phone },
+          ...(participant.telegramChatId
+            ? [{ telegramChatId: participant.telegramChatId }]
+            : []),
+        ],
+      },
+      select: { id: true, firstName: true, lastName: true },
+    });
+    if (samePerson) {
+      throw new BadRequestException(
+        `Bu odam allaqachon o'quvchi: #${samePerson.id} ${samePerson.firstName} ${samePerson.lastName}. Ikkinchi o'quvchi yaratilmaydi.`,
+      );
     }
 
     const { student, login } = await this.prisma.$transaction(async (tx) => {
@@ -455,6 +493,14 @@ export class MockExamParticipantsService {
         ...signInAccountChange("Yo'q", 'Ochiq').newValues,
         login,
       },
+      changedById: userId,
+      companyId,
+    });
+    await this.entityHistoryService.recordUpdate({
+      entityType: 'MockExamParticipant',
+      entityId: participant.id,
+      oldValues: { studentId: null },
+      newValues: { studentId: student.id },
       changedById: userId,
       companyId,
     });
@@ -652,7 +698,11 @@ export class MockExamParticipantsService {
     const paidFee = existing.paid
       ? (existing.feeAmount ?? existing.exam.price)
       : 0;
-    if (existing.paid && !options.refundConfirmed) {
+    // Balansdan yechilgan eski to'lovni tizim o'zi qaytaradi (quyida) —
+    // bunda admin tasdig'i kerak emas, aks holda u naqd ham berib yuborardi.
+    const paidFromBalance =
+      existing.paid && (await this.mockExamBilling.hasBalanceFee(id));
+    if (existing.paid && !paidFromBalance && !options.refundConfirmed) {
       throw new BadRequestException(
         `Bu ishtirokchi ${paidFee.toLocaleString('ru-RU')} so'm to'lagan. ` +
           "O'chirishdan oldin pulni qaytaring va buni tasdiqlang.",
@@ -668,10 +718,17 @@ export class MockExamParticipantsService {
       userId,
     );
 
-    await this.prisma.mockExamParticipant.update({
-      where: { id },
+    // Shartli yozuv: o'qishda to'lanmagan bo'lgan ishtirokchi shu orada
+    // Payme/Click orqali to'lagan bo'lsa, u tasdiqsiz o'chib ketmasin.
+    const removed = await this.prisma.mockExamParticipant.updateMany({
+      where: { id, deletedAt: null, ...(existing.paid ? {} : { paid: false }) },
       data: { deletedAt: new Date(), deletedById: userId },
     });
+    if (removed.count === 0) {
+      throw new BadRequestException(
+        "Ishtirokchining to'lov holati hozirgina o'zgardi. Sahifani yangilab, qayta urinib ko'ring.",
+      );
+    }
 
     if (refunded > 0) {
       this.logger.log(
@@ -687,7 +744,13 @@ export class MockExamParticipantsService {
         lastName: existing.lastName,
         phone: existing.phone,
         ...(existing.paid
-          ? { paid: true, feeAmount: paidFee, refundConfirmed: true }
+          ? {
+              paid: true,
+              feeAmount: paidFee,
+              ...(paidFromBalance
+                ? { balansgaQaytarildi: true }
+                : { refundConfirmed: true }),
+            }
           : {}),
       },
       changedById: userId,

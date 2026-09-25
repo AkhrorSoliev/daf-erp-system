@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MockExamParticipantsService } from './mock-exam-participants.service';
 import { MockExamBillingService } from './mock-exam-billing.service';
@@ -27,6 +28,7 @@ describe('MockExamParticipantsService.convertToStudent — lid kelib chiqishi', 
   let tx: any;
   let leadOrigin: { recordSelfSignupOrigin: jest.Mock };
   let order: string[];
+  let history: { recordCreate: jest.Mock; recordUpdate: jest.Mock };
 
   beforeEach(async () => {
     order = [];
@@ -83,6 +85,7 @@ describe('MockExamParticipantsService.convertToStudent — lid kelib chiqishi', 
         }),
       },
       branch: { findFirst: jest.fn().mockResolvedValue({ id: 7 }) },
+      student: { findFirst: jest.fn().mockResolvedValue(null) },
       $transaction: jest.fn(async (cb: (t: unknown) => unknown) => cb(tx)),
     };
 
@@ -99,7 +102,10 @@ describe('MockExamParticipantsService.convertToStudent — lid kelib chiqishi', 
         { provide: PrismaService, useValue: prisma },
         {
           provide: EntityHistoryService,
-          useValue: { recordCreate: jest.fn() },
+          useValue: (history = {
+            recordCreate: jest.fn(),
+            recordUpdate: jest.fn(),
+          }),
         },
         { provide: MockExamBillingService, useValue: {} },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
@@ -158,5 +164,51 @@ describe('MockExamParticipantsService.convertToStudent — lid kelib chiqishi', 
 
     await expect(run()).rejects.toThrow('lid yozilmadi');
     expect(tx.mockExamParticipant.update).not.toHaveBeenCalled();
+  });
+
+  // Tashqi odam har imtihonda YANGI publicId oladi. Iyun qatori aylantirilgach,
+  // iyul qatori ham "Aylantirish" ko'rsatardi va ikkinchi o'quvchi (bir xil
+  // telefon, bir xil Telegram chat, ikkinchi lid) yaratilardi.
+  it("shu telefonli o'quvchi bor bo'lsa ikkinchisini yaratmaydi", async () => {
+    prisma.student.findFirst.mockResolvedValue({
+      id: 11100,
+      firstName: 'Nodira',
+      lastName: 'Aliyeva',
+    });
+
+    await expect(run()).rejects.toThrow(BadRequestException);
+    expect(tx.student.create).not.toHaveBeenCalled();
+    expect(prisma.student.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ companyId: COMPANY, deletedAt: null }),
+      }),
+    );
+  });
+
+  // Filial faqat kompaniya bo'yicha tekshirilardi — A filial admini B filialda
+  // o'quvchi yarata olardi.
+  it('chaqiruvchi qamrovidan tashqaridagi filialga yozmaydi', async () => {
+    await expect(
+      service.convertToStudent(
+        'part-1',
+        { branchId: 7 } as never,
+        COMPANY,
+        USER,
+        [3],
+      ),
+    ).rejects.toThrow(ForbiddenException);
+    expect(tx.student.create).not.toHaveBeenCalled();
+  });
+
+  it("ishtirokchi bog'lanishini tarixga yozadi", async () => {
+    await run();
+
+    expect(history.recordUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityType: 'MockExamParticipant',
+        entityId: 'part-1',
+        newValues: expect.objectContaining({ studentId: 11200 }),
+      }),
+    );
   });
 });

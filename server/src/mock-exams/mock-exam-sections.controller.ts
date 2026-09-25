@@ -24,8 +24,8 @@ export class MockExamSectionsController {
   ) {}
 
   @Get()
-  list() {
-    return this.mockExamSectionsService.list();
+  list(@CurrentUser('companyId') companyId: number) {
+    return this.mockExamSectionsService.list(companyId);
   }
 
   @Post()
@@ -39,8 +39,11 @@ export class MockExamSectionsController {
 
   // Declared before ':id' so "/mock-exam-sections/reorder" is not captured as an id.
   @Patch('reorder')
-  reorder(@Body() dto: ReorderMockExamSectionsDto) {
-    return this.mockExamSectionsService.reorder(dto);
+  reorder(
+    @Body() dto: ReorderMockExamSectionsDto,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.mockExamSectionsService.reorder(dto, companyId);
   }
 
   @Patch(':id')

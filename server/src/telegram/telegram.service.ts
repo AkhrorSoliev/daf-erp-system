@@ -254,6 +254,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     const mockExamScene = createMockExamRegistrationScene(
       this.prisma,
       this.paymentLinkService,
+      this.entityHistoryService,
       this.bot,
     );
 

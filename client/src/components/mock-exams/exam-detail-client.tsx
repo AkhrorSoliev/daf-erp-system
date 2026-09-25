@@ -73,6 +73,7 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [retryBusy, setRetryBusy] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<{
     next: MockExamStatus;
     info: MockExamTransitionInfo;
@@ -143,6 +144,28 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
       );
     } finally {
       setStatusBusy(false);
+    }
+  }
+
+  /**
+   * Eski imtihon: e'lon qilingan, lekin PDF yaratilmay qolgan (ilgari PDF
+   * xatosi e'lonni to'xtatmasdi) — natijalar hech kimga yuborilmagan. PDF'ni
+   * yaratib, tarqatishni qayta ishga tushiradi.
+   */
+  async function handleRetryResults() {
+    if (!exam) return;
+    setRetryBusy(true);
+    try {
+      const { data } = await api.post<{ url: string }>(
+        `/mock-exams/${exam.id}/regenerate-pdf`,
+      );
+      setExam((prev) => (prev ? { ...prev, resultsPdfUrl: data.url } : prev));
+      await api.post(`/mock-exams/${exam.id}/rebroadcast-results`);
+      toast.success("PDF yaratildi, natijalar ishtirokchilarga yuborilmoqda");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "PDF yaratishda xatolik"));
+    } finally {
+      setRetryBusy(false);
     }
   }
 
@@ -231,6 +254,23 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
             <Share2 className="size-4" />
             Ulashish
           </Button>
+
+          {exam.status === "ANNOUNCED" && !exam.resultsPdfUrl && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleRetryResults}
+              disabled={retryBusy}
+              title="E'lon qilingan, lekin natijalar PDF'i yaratilmagan — yaratib, ishtirokchilarga yuborish"
+            >
+              {retryBusy ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <FileDown className="size-4" />
+              )}
+              PDF yaratib yuborish
+            </Button>
+          )}
 
           {exam.resultsPdfUrl && (
             <Button
@@ -336,7 +376,10 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
             <AlertDialogTitle>Imtihonni o&apos;chirish</AlertDialogTitle>
             <AlertDialogDescription>
               &quot;{exam.title}&quot; imtihoni o&apos;chiriladi. Ishtirokchilar
-              va natijalar ham arxivlanadi (yo&apos;qotilmaydi).
+              va natijalar ham arxivlanadi (yo&apos;qotilmaydi), ularning
+              to&apos;lov havolalari ishlamay qoladi. To&apos;lagan ishtirokchi
+              bo&apos;lsa, avval ularni «Ishtirokchilar» bo&apos;limidan pul
+              qaytarilganini tasdiqlab o&apos;chiring.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

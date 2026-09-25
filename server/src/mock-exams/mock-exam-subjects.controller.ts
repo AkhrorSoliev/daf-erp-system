@@ -12,7 +12,8 @@ import { MockExamSubjectsService } from './mock-exam-subjects.service';
 import { CreateMockExamSubjectDto } from './dto/create-mock-exam-subject.dto';
 import { UpdateMockExamSubjectDto } from './dto/update-mock-exam-subject.dto';
 import { ReorderMockExamSubjectsDto } from './dto/reorder-mock-exam-subjects.dto';
-import { CurrentUser, Roles } from '../common/decorators';
+import { BranchScope, CurrentUser, Roles } from '../common/decorators';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { RolesGuard } from '../common/guards';
 
 @Controller()
@@ -22,8 +23,12 @@ export class MockExamSubjectsController {
   constructor(private readonly subjectsService: MockExamSubjectsService) {}
 
   @Get('mock-exams/:examId/subjects')
-  list(@Param('examId') examId: string) {
-    return this.subjectsService.list(examId);
+  list(
+    @Param('examId') examId: string,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchIds: ReportBranchIds,
+  ) {
+    return this.subjectsService.list(examId, companyId, branchIds);
   }
 
   @Post('mock-exams/:examId/subjects')
@@ -32,16 +37,25 @@ export class MockExamSubjectsController {
     @Body() dto: CreateMockExamSubjectDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.subjectsService.create(examId, dto, companyId, userId);
+    return this.subjectsService.create(
+      examId,
+      dto,
+      companyId,
+      userId,
+      branchIds,
+    );
   }
 
   @Patch('mock-exams/:examId/subjects/reorder')
   reorder(
     @Param('examId') examId: string,
     @Body() dto: ReorderMockExamSubjectsDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.subjectsService.reorder(examId, dto);
+    return this.subjectsService.reorder(examId, dto, companyId, branchIds);
   }
 
   @Patch('mock-exam-subjects/:id')
@@ -50,8 +64,9 @@ export class MockExamSubjectsController {
     @Body() dto: UpdateMockExamSubjectDto,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.subjectsService.update(id, dto, companyId, userId);
+    return this.subjectsService.update(id, dto, companyId, userId, branchIds);
   }
 
   @Delete('mock-exam-subjects/:id')
@@ -59,7 +74,8 @@ export class MockExamSubjectsController {
     @Param('id') id: string,
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('id') userId: number,
+    @BranchScope() branchIds: ReportBranchIds,
   ) {
-    return this.subjectsService.remove(id, companyId, userId);
+    return this.subjectsService.remove(id, companyId, userId, branchIds);
   }
 }

@@ -61,6 +61,8 @@ describe('MockExamParticipantsService', () => {
         .fn()
         .mockResolvedValue({ paidCount: 0, deductedAmount: 0 }),
       refundParticipantFee: jest.fn().mockResolvedValue(0),
+      hasBalanceFee: jest.fn().mockResolvedValue(false),
+      paidFromBalanceIds: jest.fn().mockResolvedValue(new Set()),
     };
     billingMock = billing;
     const eventEmitter = { emit: jest.fn() };
@@ -362,6 +364,34 @@ describe('MockExamParticipantsService', () => {
       expect(callArg.data.studentId).toBe(10117);
     });
 
+    // Telefon noyob emas va boshqa kompaniyada ham bo'lishi mumkin — faqat
+    // shu imtihon kompaniyasining o'quvchisi DaF o'quvchisi hisoblanadi.
+    it('phone match is scoped to the exam company', async () => {
+      prisma.mockExam.findFirst.mockResolvedValue({
+        id: 'e1',
+        status: MockExamStatus.REGISTRATION_OPEN,
+      });
+      prisma.student.findFirst.mockResolvedValue(null);
+      prisma.mockExamParticipant.create.mockResolvedValue({ id: 'p3' });
+
+      await service.addManual(
+        'e1',
+        { firstName: 'Aziz', lastName: 'Karimov', phone: '901234567' },
+        1001,
+        1,
+        null,
+      );
+
+      expect(prisma.student.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            phone: '901234567',
+            companyId: 1001,
+          }),
+        }),
+      );
+    });
+
     it('applies the DaF discount + level when phone matches a student', async () => {
       prisma.mockExam.findFirst.mockResolvedValue({
         id: 'e1',
@@ -511,6 +541,24 @@ describe('MockExamParticipantsService', () => {
     });
   });
 
+  describe("list — balansdan to'lov belgisi", () => {
+    it("balansdan to'lagan ishtirokchini belgilaydi", async () => {
+      prisma.mockExamParticipant.findMany.mockResolvedValue([
+        { id: 'p1', paid: true },
+        { id: 'p2', paid: true },
+      ]);
+      prisma.mockExamParticipant.count.mockResolvedValue(2);
+      billingMock.paidFromBalanceIds.mockResolvedValue(new Set(['p1']));
+
+      const res = await service.list('exam-1', {} as any, 1001, null);
+
+      expect(res.data.map((p: any) => p.paidFromBalance)).toEqual([
+        true,
+        false,
+      ]);
+    });
+  });
+
   describe('markPaid', () => {
     it('flips paid + emits mock.participant.paid for the Telegram notice', async () => {
       const emit = jest.fn();
@@ -591,10 +639,11 @@ describe('MockExamParticipantsService', () => {
         lastName: 'Karimov',
         phone: '901234567',
       });
+      prisma.mockExamParticipant.updateMany.mockResolvedValue({ count: 1 });
       await service.remove('p1', 1001, 1, null);
-      expect(prisma.mockExamParticipant.update).toHaveBeenCalledWith(
+      expect(prisma.mockExamParticipant.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 'p1' },
+          where: expect.objectContaining({ id: 'p1', deletedAt: null }),
           data: expect.objectContaining({ deletedById: 1 }),
         }),
       );
@@ -613,6 +662,7 @@ describe('MockExamParticipantsService', () => {
         phone: '901234567',
       });
       billingMock.refundParticipantFee.mockResolvedValue(30_000);
+      prisma.mockExamParticipant.updateMany.mockResolvedValue({ count: 1 });
 
       const res = await service.remove('p1', 1001, 1, null);
 
@@ -625,7 +675,7 @@ describe('MockExamParticipantsService', () => {
       const refundOrder =
         billingMock.refundParticipantFee.mock.invocationCallOrder[0];
       const deleteOrder =
-        prisma.mockExamParticipant.update.mock.invocationCallOrder[0];
+        prisma.mockExamParticipant.updateMany.mock.invocationCallOrder[0];
       expect(refundOrder).toBeLessThan(deleteOrder);
     });
 
@@ -649,7 +699,7 @@ describe('MockExamParticipantsService', () => {
         await expect(service.remove('p1', 1001, 1, null)).rejects.toThrow(
           BadRequestException,
         );
-        expect(prisma.mockExamParticipant.update).not.toHaveBeenCalled();
+        expect(prisma.mockExamParticipant.updateMany).not.toHaveBeenCalled();
         expect(billingMock.refundParticipantFee).not.toHaveBeenCalled();
         expect(history.recordDelete).not.toHaveBeenCalled();
       });
@@ -657,9 +707,10 @@ describe('MockExamParticipantsService', () => {
       it("tasdiqlansa o'chiradi va tarixga to'lov summasini yozadi", async () => {
         prisma.mockExamParticipant.findFirst.mockResolvedValue(paidRow);
 
+        prisma.mockExamParticipant.updateMany.mockResolvedValue({ count: 1 });
         await service.remove('p1', 1001, 1, null, { refundConfirmed: true });
 
-        expect(prisma.mockExamParticipant.update).toHaveBeenCalledWith(
+        expect(prisma.mockExamParticipant.updateMany).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.objectContaining({ deletedById: 1 }),
           }),
@@ -676,6 +727,52 @@ describe('MockExamParticipantsService', () => {
       });
     });
 
+    // 2026-08 gacha balansdan yechilgan to'lov: o'chirish uni balansga O'ZI
+    // qaytaradi, shuning uchun admin tasdig'i (va qo'lda naqd berish) kerak emas.
+    it("balansdan to'langan eski ishtirokchini tasdiqsiz o'chiradi", async () => {
+      prisma.mockExamParticipant.findFirst.mockResolvedValue({
+        id: 'p1',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+        paid: true,
+        feeAmount: 30000,
+        exam: { price: 40000 },
+      });
+      billingMock.hasBalanceFee.mockResolvedValue(true);
+      billingMock.refundParticipantFee.mockResolvedValue(30_000);
+      prisma.mockExamParticipant.updateMany.mockResolvedValue({ count: 1 });
+
+      const res = await service.remove('p1', 1001, 1, null);
+
+      expect(res.refunded).toBe(30_000);
+    });
+
+    // O'qish bilan o'chirish orasida Payme/Click to'lovi o'tib ketsa, to'lagan
+    // ishtirokchi tasdiqsiz o'chib ketardi.
+    it("o'qishdan keyin to'lov o'tib ketgan bo'lsa o'chirmaydi", async () => {
+      prisma.mockExamParticipant.findFirst.mockResolvedValue({
+        id: 'p1',
+        firstName: 'Aziz',
+        lastName: 'Karimov',
+        phone: '901234567',
+        paid: false,
+        feeAmount: 30000,
+        exam: { price: 40000 },
+      });
+      prisma.mockExamParticipant.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.remove('p1', 1001, 1, null)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(prisma.mockExamParticipant.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: 'p1', paid: false }),
+        }),
+      );
+      expect(history.recordDelete).not.toHaveBeenCalled();
+    });
+
     it('says nothing about money when the participant paid cash', async () => {
       prisma.mockExamParticipant.findFirst.mockResolvedValue({
         id: 'p1',
@@ -684,6 +781,7 @@ describe('MockExamParticipantsService', () => {
         phone: '901234567',
       });
       billingMock.refundParticipantFee.mockResolvedValue(0);
+      prisma.mockExamParticipant.updateMany.mockResolvedValue({ count: 1 });
 
       const res = await service.remove('p1', 1001, 1, null);
 

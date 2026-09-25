@@ -24,6 +24,7 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import type { MockExamParticipant } from "./exam-detail-types";
+import { pickDefaultBranchId } from "./default-branch";
 
 interface ConvertedStudent {
   id: number;
@@ -34,6 +35,8 @@ interface ConvertedStudent {
 
 interface ConvertParticipantDialogProps {
   participant: MockExamParticipant | null;
+  /** Imtihon filiali — oynada oldindan shu tanlanadi. */
+  examBranchId: number | null;
   onClose: () => void;
   onConverted: (
     participantId: string,
@@ -43,10 +46,12 @@ interface ConvertParticipantDialogProps {
 
 export function ConvertParticipantDialog({
   participant,
+  examBranchId,
   onClose,
   onConverted,
 }: ConvertParticipantDialogProps) {
   const branches = useBranchSwitcher((s) => s.branches);
+  const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const [branchId, setBranchId] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -54,10 +59,16 @@ export function ConvertParticipantDialog({
 
   useEffect(() => {
     if (open) {
-      setBranchId(branches[0] ? String(branches[0].id) : "");
+      // Imtihon filiali, keyin tepadagi tanlov — ro'yxatdagi birinchisi emas:
+      // admin sezmay o'quvchini boshqa filialga yozib qo'ymasin.
+      const id = pickDefaultBranchId(branches, [
+        examBranchId,
+        selectedBranch?.id,
+      ]);
+      setBranchId(id != null ? String(id) : "");
       setSubmitting(false);
     }
-  }, [open, branches]);
+  }, [open, branches, examBranchId, selectedBranch]);
 
   async function handleConfirm() {
     if (!participant) return;

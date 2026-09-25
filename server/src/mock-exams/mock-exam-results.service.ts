@@ -7,6 +7,11 @@ import { MockExamStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import {
+  branchIdWhere,
+  type ReportBranchIds,
+} from '../common/finance/report-branch-scope';
+import { applyCompetitionRanks } from './mock-exam-ranking';
+import {
   BulkEnterScoresDto,
   ParticipantScoresDto,
 } from './dto/bulk-enter-scores.dto';
@@ -24,10 +29,12 @@ import {
  *     considered "ungraded" until every subject has a score).
  *   - percentage = totalScore / exam.maxScore × 100
  *   - passed = exam.passingScore != null && totalScore >= exam.passingScore
- *   - rank = recomputed via `recalculateRanks()` (DESC by totalScore, ties
- *     get the same rank, next rank skips by group size — i.e. dense rank
- *     when scores are equal, but standard competition ranking otherwise:
- *     two participants tied for 1st → both rank 1, next is rank 3).
+ *   - rank = recomputed after every save (and on announce) by
+ *     `applyCompetitionRanks` — DESC by totalScore, ties share a rank, the
+ *     next rank skips by the group size (1, 1, 3).
+ *   - a `score: null` entry deletes that subject's score (a mistyped score
+ *     for a no-show can be cleared); with no scores left the participant is
+ *     ungraded again (totals null).
  */
 @Injectable()
 export class MockExamResultsService {
@@ -40,8 +47,8 @@ export class MockExamResultsService {
    * Matrix view used by the frontend results table.
    * Shape: { subjects, participants: [{ id, name, scores: {subjectId: score}, ... }] }
    */
-  async matrix(examId: string) {
-    const exam = await this.ensureExam(examId);
+  async matrix(examId: string, companyId: number, scope: ReportBranchIds) {
+    const exam = await this.ensureExam(examId, companyId, scope);
     const subjects = await this.prisma.mockExamSubject.findMany({
       where: { examId },
       orderBy: { order: 'asc' },
@@ -92,8 +99,9 @@ export class MockExamResultsService {
     dto: BulkEnterScoresDto,
     companyId: number,
     userId: number,
+    scope: ReportBranchIds,
   ) {
-    const exam = await this.ensureExam(examId);
+    const exam = await this.ensureExam(examId, companyId, scope);
     if (exam.status !== MockExamStatus.GRADING) {
       throw new BadRequestException(
         'Ballarni faqat GRADING (baholanmoqda) holatida kiritish mumkin',
@@ -124,6 +132,7 @@ export class MockExamResultsService {
         if (max === undefined) {
           throw new BadRequestException(`Bo'lim topilmadi: ${s.subjectId}`);
         }
+        if (s.score === null) continue; // bahoni o'chirish
         if (s.score < 0 || s.score > max) {
           throw new BadRequestException(
             `Ball 0 dan ${max} gacha bo'lishi kerak (subject ${s.subjectId})`,
@@ -148,6 +157,10 @@ export class MockExamResultsService {
       }
     });
 
+    // O'rinlar har saqlashda yangilanadi — e'londan oldin tugmani bosish
+    // esdan chiqsa ham PDF'da to'g'ri o'rin chiqsin.
+    await applyCompetitionRanks(this.prisma, examId);
+
     await this.entityHistoryService.recordUpdate({
       entityType: 'MockExam',
       entityId: examId,
@@ -160,78 +173,29 @@ export class MockExamResultsService {
       companyId,
     });
 
-    return this.matrix(examId);
+    return this.matrix(examId, companyId, scope);
   }
 
-  async recalculateRanks(examId: string, companyId: number, userId: number) {
-    await this.ensureExam(examId);
+  async recalculateRanks(
+    examId: string,
+    companyId: number,
+    userId: number,
+    scope: ReportBranchIds,
+  ) {
+    await this.ensureExam(examId, companyId, scope);
 
-    const graded = await this.prisma.mockExamParticipant.findMany({
-      where: {
-        examId,
-        deletedAt: null,
-        totalScore: { not: null },
-      },
-      select: { id: true, totalScore: true },
-      orderBy: { totalScore: 'desc' },
-    });
-
-    // Standard competition ranking (1224 — ties share the same rank,
-    // next rank skips by the size of the tied group).
-    let currentRank = 0;
-    let lastScore: number | null = null;
-    let groupCount = 0;
-
-    const updates: Array<{ id: string; rank: number }> = [];
-    for (const p of graded) {
-      groupCount++;
-      if (p.totalScore !== lastScore) {
-        currentRank = groupCount;
-        lastScore = p.totalScore;
-      }
-      updates.push({ id: p.id, rank: currentRank });
-    }
-
-    if (updates.length === 0) {
-      // Clear any leftover ranks (e.g. after deletion of graded participants).
-      await this.prisma.mockExamParticipant.updateMany({
-        where: { examId, deletedAt: null, rank: { not: null } },
-        data: { rank: null },
-      });
-    } else {
-      await this.prisma.$transaction(
-        updates.map((u) =>
-          this.prisma.mockExamParticipant.update({
-            where: { id: u.id },
-            data: { rank: u.rank },
-          }),
-        ),
-      );
-      // Wipe rank on ungraded participants so stale values don't linger.
-      await this.prisma.mockExamParticipant.updateMany({
-        where: {
-          examId,
-          deletedAt: null,
-          totalScore: null,
-          rank: { not: null },
-        },
-        data: { rank: null },
-      });
-    }
+    const graded = await applyCompetitionRanks(this.prisma, examId);
 
     await this.entityHistoryService.recordUpdate({
       entityType: 'MockExam',
       entityId: examId,
       oldValues: { action: 'ranks_recalculated' },
-      newValues: {
-        action: 'ranks_recalculated',
-        graded: updates.length,
-      },
+      newValues: { action: 'ranks_recalculated', graded },
       changedById: userId,
       companyId,
     });
 
-    return { message: "O'rinlar qayta hisoblandi", graded: updates.length };
+    return { message: "O'rinlar qayta hisoblandi", graded };
   }
 
   // ---------------------------------------------------------------------------
@@ -247,8 +211,14 @@ export class MockExamResultsService {
     now: Date,
     userId: number,
   ) {
-    // Upsert each subject score.
+    // Upsert each subject score; `null` clears it.
     for (const s of entry.scores) {
+      if (s.score === null) {
+        await tx.mockExamSubjectScore.deleteMany({
+          where: { participantId: entry.participantId, subjectId: s.subjectId },
+        });
+        continue;
+      }
       await tx.mockExamSubjectScore.upsert({
         where: {
           participantId_subjectId: {
@@ -276,10 +246,23 @@ export class MockExamResultsService {
       select: { score: true },
     });
 
-    const totalScore = allScores.reduce((sum, s) => sum + s.score, 0);
-    const percentage = examMaxScore > 0 ? (totalScore / examMaxScore) * 100 : 0;
+    // Hech bir bahosi qolmagan ishtirokchi — baholanmagan (o'rin ham olmaydi).
+    const hasScores = allScores.length > 0;
+    const totalScore = hasScores
+      ? allScores.reduce((sum, s) => sum + s.score, 0)
+      : null;
+    const percentage =
+      totalScore === null
+        ? null
+        : Number(
+            (examMaxScore > 0 ? (totalScore / examMaxScore) * 100 : 0).toFixed(
+              2,
+            ),
+          );
     const passed =
-      examPassingScore !== null ? totalScore >= examPassingScore : null;
+      totalScore !== null && examPassingScore !== null
+        ? totalScore >= examPassingScore
+        : null;
 
     // A participant is "graded" once every subject has a score row.
     const isFullyGraded =
@@ -289,7 +272,7 @@ export class MockExamResultsService {
       where: { id: entry.participantId },
       data: {
         totalScore,
-        percentage: Number(percentage.toFixed(2)),
+        percentage,
         passed,
         feedback: entry.feedback ?? undefined,
         gradedAt: isFullyGraded ? now : null,
@@ -298,9 +281,23 @@ export class MockExamResultsService {
     });
   }
 
-  private async ensureExam(examId: string) {
+  /**
+   * Kompaniya va filial qamrovi bilan — `MockExamsService` dagi bilan bir xil.
+   * Ilgari faqat id bo'yicha qidirilardi: boshqa filial imtihonining ism,
+   * telefon va baholarini ko'rish hamda o'zgartirish mumkin edi.
+   */
+  private async ensureExam(
+    examId: string,
+    companyId: number,
+    scope: ReportBranchIds,
+  ) {
     const exam = await this.prisma.mockExam.findFirst({
-      where: { id: examId, deletedAt: null },
+      where: {
+        id: examId,
+        deletedAt: null,
+        companyId,
+        ...branchIdWhere(scope),
+      },
       select: {
         id: true,
         title: true,

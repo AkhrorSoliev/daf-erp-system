@@ -127,8 +127,9 @@ export class PaymentLinkService {
       );
       if (!cfg) return null;
 
-      const serviceId =
-        this.config.get<string>('CLICK_SERVICE_ID') ?? cfg.secretKey;
+      // `service_id` faqat CLICK_SERVICE_ID dan. Ilgari u yo'q bo'lsa MAXFIY
+      // kalit (webhook imzosi) ochiq havolaga qo'yilardi.
+      const serviceId = this.config.get<string>('CLICK_SERVICE_ID');
       const merchantUserId = this.config.get<string>('CLICK_MERCHANT_USER_ID');
       if (!serviceId) return null;
 
