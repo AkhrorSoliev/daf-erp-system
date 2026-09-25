@@ -135,12 +135,17 @@ solishtiradi.
 | | Soni | Qanday aniqlanadi |
 |---|---|---|
 | `BRANCH_SCOPED_BY_HEADER` | **120** | Dalil: handler `@BranchScope()` oladi |
-| Qo'lda toifalangan | **179** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
-| `UNREVIEWED` | **107** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
+| Qo'lda toifalangan | **187** | `TRUSTED_GATEWAY` · `PUBLIC` · `SELF` · `BY_ENTITY` · `BY_PAYROLL` · `COMPANY_WIDE` |
+| `UNREVIEWED` | **99** | Hali o'ylanmagan — cheklangan, faqat kamayadi |
 | **Jami** | **406** | |
 
-Sanoq 2026-09-24 da `discoverRoutes` bilan qayta olindi. Budjet ro'yxat
-uzunligiga tenglashtirildi (114 → 107): undagi 5 ta bo'sh o'rin yangi route'ni
+Sanoq 2026-09-24 da `discoverRoutes` bilan qayta olindi — jadval 2026-08 dagi
+95 / 157 / 114 / 365 da qolib ketgan edi. Xona va kursning id bo'yicha sakkizta
+route'i (`PATCH`, `PATCH …/status`, `DELETE`, `GET …/status-history`) endi
+yozuvning o'z filialini tekshiradi, `POST /rooms` va `POST /courses` esa
+chaqiruvchi tanadagi filialga ega ekanini tekshiradi — o'ntasi ham
+`BRANCH_SCOPED_BY_ENTITY` ga o'tdi. Budjet ro'yxat uzunligiga tenglashtirildi
+(114 → 99): ro'yxat 109 ta edi, ya'ni undagi 5 ta bo'sh o'rin yangi route'ni
 jimgina `UNREVIEWED` ga qo'yishga imkon berardi.
 
 ## Nega qolgani «UNREVIEWED» deb qoldirildi

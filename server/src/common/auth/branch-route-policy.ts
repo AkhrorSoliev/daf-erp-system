@@ -272,7 +272,13 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'create a student in another branch outright. The status changes ' +
       'cascade — a student going EXPELLED closes their enrolments, a group ' +
       'going CANCELLED closes every enrolment in it — so they reach another ' +
-      "branch's roster and payroll.",
+      "branch's roster and payroll. " +
+      '`POST /groups` and `PATCH /groups/:id` also name a course and a room, ' +
+      "and both must belong to the group's own branch, even for a CEO " +
+      '(`GroupsWriteService.assertCourseInGroupBranch` / ' +
+      "`assertRoomInGroupBranch`): the course's branch sets the price the " +
+      "group's students pay and can archive the course, which cancels the " +
+      'group.',
     routes: [
       'POST /students',
       'PATCH /students/:id',
@@ -287,6 +293,36 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
+      'Id-addressed room and course operations. Each looks the record up by ' +
+      "`companyId` and then checks the caller against the record's OWN branch " +
+      'with `assertCallerInBranch` — after the existence check, so a stale id ' +
+      'still answers 404. They were `companyId`-only, so a director or admin ' +
+      "of one branch could rewrite another branch's course: `price` drives " +
+      'every per-lesson charge of its students, `paymentModel` their billing ' +
+      'rules, and archiving it cancels its groups and drops their enrolments. ' +
+      'Neither update DTO accepts `branchId` (the global ValidationPipe rejects ' +
+      "unknown fields), so the record's current branch is the only one to " +
+      'check. `Course.branchId` is nullable; a course in no branch is in no ' +
+      "branch's catalogue, so only a CEO may touch it. The status-history " +
+      'reads share the guard: they name who changed the status and why. ' +
+      'Production had 10 courses and 13 rooms, none branchless, and every ' +
+      "past edit was a CEO's, so no workflow crossed branches. `POST /rooms` " +
+      'and `POST /courses` name their branch in the body — a different check — ' +
+      'and are not listed here.',
+    routes: [
+      'PATCH /rooms/:id',
+      'PATCH /rooms/:id/status',
+      'DELETE /rooms/:id',
+      'GET /rooms/:id/status-history',
+      'PATCH /courses/:id',
+      'PATCH /courses/:id/status',
+      'DELETE /courses/:id',
+      'GET /courses/:id/status-history',
+    ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
       'Room and course CREATES only. There is no record to look up yet, so ' +
       'the branch is the one named in the body: the service checks that it ' +
       'exists in the company and then asks `assertCallerInBranch` whether the ' +
@@ -295,8 +331,8 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       "Administrator of one branch could add a room to another branch's " +
       'occupancy report, and a Branch Director a course, at a price of their ' +
       "choosing, to another branch's catalogue. Their `PATCH`, `/status` and " +
-      '`DELETE` siblings still check `companyId` alone and stay UNREVIEWED ' +
-      'below — listing them here would claim a check they do not make.',
+      "`DELETE` siblings check the record's own branch instead and are listed " +
+      'in the block above.',
     routes: ['POST /courses', 'POST /rooms'],
   },
   {
@@ -646,7 +682,6 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
  */
 export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /archive/:entityType/:id',
-  'DELETE /courses/:id',
   'DELETE /enrollment-transfer-reasons/:id',
   'DELETE /group-teacher-change-reasons/:id',
   'DELETE /holidays/:id',
@@ -656,7 +691,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'DELETE /mock-exam-subjects/:id',
   'DELETE /notifications/devices',
   'DELETE /notifications/push/unsubscribe',
-  'DELETE /rooms/:id',
   'DELETE /student-exit-reasons/:id',
   'DELETE /student-portal/photo',
   'DELETE /telegram-groups/:id',
@@ -667,7 +701,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /branches/:id',
   'GET /company',
   'GET /company/:id',
-  'GET /courses/:id/status-history',
   'GET /enrollment-transfer-reasons',
   'GET /gateways/events',
   'GET /group-teacher-change-reasons',
@@ -698,7 +731,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /reports/financial-trend',
   'GET /reports/income-month-attribution',
   'GET /reports/lead-analytics',
-  'GET /rooms/:id/status-history',
   'GET /rooms/count-by-branch',
   'GET /student-exit-reasons',
   'GET /student-portal/attendance/history',
@@ -711,8 +743,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'GET /telegram/channel-report/list',
   'GET /telegram/channel-report/summary',
   'PATCH /company/:id',
-  'PATCH /courses/:id',
-  'PATCH /courses/:id/status',
   'PATCH /enrollment-transfer-reasons/:id',
   'PATCH /group-teacher-change-reasons/:id',
   'PATCH /holidays/:id',
@@ -725,8 +755,6 @@ export const UNREVIEWED_ROUTES: string[] = [
   'PATCH /mock-exams/:examId/subjects/reorder',
   'PATCH /notifications/:id/read',
   'PATCH /notifications/read-all',
-  'PATCH /rooms/:id',
-  'PATCH /rooms/:id/status',
   'PATCH /student-exit-reasons/:id',
   'PATCH /student-portal/name',
   'PATCH /student-portal/password',
@@ -765,4 +793,4 @@ export const UNREVIEWED_ROUTES: string[] = [
  * Lower it whenever routes are classified. Raising it requires editing this
  * line, which is visible in review — and that visibility IS the mechanism.
  */
-export const UNREVIEWED_BUDGET = 107;
+export const UNREVIEWED_BUDGET = 99;
