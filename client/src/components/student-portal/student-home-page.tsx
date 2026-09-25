@@ -11,7 +11,6 @@ import {
   GraduationCap,
   MapPin,
   BookOpen,
-  CloudSlash,
   Users,
 } from "@phosphor-icons/react";
 import {
@@ -19,13 +18,13 @@ import {
   ScreenHeader,
   FadeIn,
   Card,
-  Button,
   ProgressBar,
-  EmptyState,
   LoadingCards,
   Badge,
 } from "./lumio";
 import { useStudentProfile } from "./lib/queries";
+import { loadState } from "./lib/load-state";
+import { LoadFailed } from "./load-failed";
 import type { AttendanceStats, ProfileGroup } from "./lib/types";
 
 const DAY_BY_INDEX = [
@@ -86,14 +85,15 @@ function GroupCard({ group }: { group: ProfileGroup }) {
 }
 
 export function StudentHomePage() {
-  const { data: profile, isLoading, isError, refetch } = useStudentProfile();
+  const profileQuery = useStudentProfile();
+  const { data: profile } = profileQuery;
   const { data: stats } = useQuery<AttendanceStats>({
     queryKey: ["student-portal", "attendance-stats"],
     queryFn: () =>
       api.get("/student-portal/attendance/stats").then((r) => r.data),
   });
 
-  if (isLoading) {
+  if (loadState(profileQuery) === "loading") {
     return (
       <Screen>
         <LoadingCards />
@@ -101,19 +101,8 @@ export function StudentHomePage() {
     );
   }
 
-  if (isError || !profile) {
-    return (
-      <EmptyState
-        icon={<CloudSlash weight="bold" />}
-        title="Ma'lumotni yuklab bo'lmadi"
-        description="Internetni tekshirib, sahifani qayta yuklang."
-        action={
-          <Button variant="secondary" size="sm" onClick={() => refetch()}>
-            Qayta urinish
-          </Button>
-        }
-      />
-    );
+  if (!profile) {
+    return <LoadFailed query={profileQuery} />;
   }
 
   const name = `${profile.firstName} ${profile.lastName}`.trim();
