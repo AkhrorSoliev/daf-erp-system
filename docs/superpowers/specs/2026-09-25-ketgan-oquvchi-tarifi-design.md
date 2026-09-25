@@ -68,6 +68,12 @@ prod'da ishga tushiriladi — «N ni yakunlash» bo'limiga qarang.
 > boshqa qarorlari (arxivlash ketish emas; o'chirilgan guruh yozuvlari
 > o'chirilgan paytda yopiladi) ADR-0035 da.
 
+> **Yangilanish (2026-09-25, prod o'lchovi).** N bitta emas, ikkita bo'ldi:
+> guruhdan chiqish — 21 kun, muzlatish — 60 kun. Ikkalasi ham kamida 61 kun
+> oldingi to'xtashlar bo'yicha 90% qoidasidan chiqqan; «ikkalasining kattasi»
+> o'rniga CEO har turga o'z muddatini tasdiqladi. Hujjatdagi «N = 14» shu
+> bilan o'qilsin; batafsil — ADR-0035.
+
 **Rad etilgan muqobillar:**
 
 - **Faqat status o'zgarishi** (chetlatish va arxivlash). Guruhdan chiqarilib

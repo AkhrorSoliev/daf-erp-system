@@ -80,14 +80,14 @@ ikkala ro'yxatda ham turardi.
 `students/shared/active-student-where.ts`
 
 **Ketgan o'quvchi** — o'qishni to'xtatib qaytmagan o'quvchi. Chetlatilgan kuni
-ketgan. Oxirgi guruhidan chiqqan (guruhi o'chirilgan bo'lsa ham) yoki
-muzlatilgan bo'lsa — N kun ichida qaytmasa, to'xtagan kuni ketgan, qaytsa
-ketish bo'lmagan; N = 14, vaqtincha (prod o'lchovi bilan tasdiqlanadi).
+ketgan. Oxirgi guruhidan chiqqan (guruhi o'chirilgan bo'lsa ham) o'quvchi 21
+kun, muzlatilgan o'quvchi 60 kun ichida qaytmasa — to'xtagan kuni ketgan,
+qaytsa ketish bo'lmagan (ikki muddat — prod o'lchovidan, CEO qarori).
 Hech qachon guruhda bo'lmagan o'quvchi ketmaydi, bitiruvchi ham ketgan emas.
 Arxivlash ham ketish emas: arxiv — xato yoki takror yozuv, arxivdagi o'quvchi
 o'chirilgan karta kabi hech bir songa kirmaydi. Muzlatilgan o'quvchi
-chetlatishdan oldin faollashtiriladi, shuning uchun N dan uzun muzlatishdan
-keyin chetlatilgan o'quvchi ikki oyda sanaladi. Ta'rif
+chetlatishdan oldin faollashtiriladi, shuning uchun 60 kundan uzun
+muzlatishdan keyin chetlatilgan o'quvchi ikki oyda sanaladi. Ta'rif
 `students/shared/departure-episodes.ts` da, qaysi yozuv to'xtash yoki qaytish
 ekani `reports/shared/departures.loader.ts` da; hisobot sahifasi va bosh
 sahifa kartasi ketishlarni shu yuklovchidan oladi.
