@@ -72,6 +72,9 @@ describe('MonthlyChargeService', () => {
         }),
         // `reverseMonthlyCharge` ledger qatoridan hisobni topadi.
         findFirst: jest.fn().mockResolvedValue(null),
+        // Other charges of the same student in the same group this month
+        // (a re-join). Default: none.
+        findMany: jest.fn().mockResolvedValue([]),
       },
       // Markaz qoplagani bayrog'ini ikki yo'nalishda o'girish
       // (`setCenterTopUpForPeriod`). Odatiy — tegadigan qator yo'q.
@@ -237,6 +240,105 @@ describe('MonthlyChargeService', () => {
 
       expect(charge?.coveredLessons).toBe(6); // from 17.09, not 15.09
       expect(charge?.chargedAmount).toBe(207_692);
+    });
+
+    describe('a student put back into the same group in the same month', () => {
+      // The group's 13 September lessons (Tue/Thu/Sat, 1 September kept).
+      const SEPT = [
+        '2026-09-01',
+        '2026-09-03',
+        '2026-09-05',
+        '2026-09-08',
+        '2026-09-10',
+        '2026-09-12',
+        '2026-09-15',
+        '2026-09-17',
+        '2026-09-19',
+        '2026-09-22',
+        '2026-09-24',
+        '2026-09-26',
+        '2026-09-29',
+      ];
+
+      it('does not bill again the lessons the earlier enrollment already paid', async () => {
+        // Taken out on 05.09 and put back the same day. The first charge
+        // still covers 01, 03 and 05.09 (leaving returned only the later
+        // lessons), so the new charge starts from 08.09.
+        prismaMock.enrollmentMonthlyCharge.findMany.mockResolvedValueOnce([
+          { coveredDates: SEPT, frozenOutDates: SEPT.slice(3) },
+        ]);
+
+        const charge = await service.createChargeForEnrollment(tx, {
+          enrollment: enrollment({
+            id: 'enr-2',
+            startDate: new Date('2026-09-05T00:00:00Z'),
+          }),
+          periodYear: 2026,
+          periodMonth: 9,
+          companyId: 1,
+        });
+
+        expect(
+          prismaMock.enrollmentMonthlyCharge.findMany,
+        ).toHaveBeenCalledWith({
+          where: {
+            studentId: 10453,
+            groupId: 'grp-1',
+            periodYear: 2026,
+            periodMonth: 9,
+            status: 'CHARGED',
+            enrollmentId: { not: 'enr-2' },
+          },
+          select: { coveredDates: true, frozenOutDates: true },
+        });
+        expect(charge?.plannedLessons).toBe(13); // the price basis is unchanged
+        expect(charge?.coveredLessons).toBe(10); // 08.09 .. 29.09
+        expect((charge as { coveredDates: string[] }).coveredDates[0]).toBe(
+          '2026-09-08',
+        );
+        expect(charge?.chargedAmount).toBe(346_154); // 450 000 x 10/13
+      });
+
+      it('writes no charge when the earlier enrollment paid every lesson left', async () => {
+        prismaMock.enrollmentMonthlyCharge.findMany.mockResolvedValueOnce([
+          { coveredDates: SEPT, frozenOutDates: [] },
+        ]);
+
+        const charge = await service.createChargeForEnrollment(tx, {
+          enrollment: enrollment({
+            id: 'enr-2',
+            startDate: new Date('2026-09-26T00:00:00Z'),
+          }),
+          periodYear: 2026,
+          periodMonth: 9,
+          companyId: 1,
+        });
+
+        expect(charge).toBeNull();
+        expect(
+          prismaMock.enrollmentMonthlyCharge.create,
+        ).not.toHaveBeenCalled();
+        expect(txWriteMock.chargeMonthlyFee).not.toHaveBeenCalled();
+      });
+
+      it('an earlier charge that stored no dates takes nothing away', async () => {
+        // Rows written before `coveredDates` existed carry an empty list.
+        prismaMock.enrollmentMonthlyCharge.findMany.mockResolvedValueOnce([
+          { coveredDates: [], frozenOutDates: [] },
+        ]);
+
+        const charge = await service.createChargeForEnrollment(tx, {
+          enrollment: enrollment({
+            id: 'enr-2',
+            startDate: new Date('2026-09-17T00:00:00Z'),
+          }),
+          periodYear: 2026,
+          periodMonth: 9,
+          companyId: 1,
+        });
+
+        expect(charge?.coveredLessons).toBe(6); // 17, 19, 22, 24, 26, 29
+      });
     });
 
     it('o`tgan oyning uzrli darslarini kredit sifatida chegiradi', async () => {
