@@ -431,6 +431,12 @@ so existing links keep working.
 - Role filtering for the list is `getVisibleSettingsSections(roleIds)` in the same file, covered by `src/lib/settings-nav.test.ts`. Update the expected per-role lists there when you add an entry — the friction is deliberate: who sees a settings page must be a conscious choice.
 - Hiding a row is not access control: a restricted settings route still needs a redirect in `SettingsLayoutShell` and a backend `@Roles()` guard (see the RBAC rules above).
 
+### Course Page Follows the Payment Model (`/settings/courses/[id]`)
+
+- The course's money terms come from `courseTermRows` (`src/lib/course-terms.ts`, unit-tested). **Oylik**: "Oylik narx", "Haftasiga", "Oyiga", "1 dars" (a range); the cycle size is hidden because monthly billing never reads it. **Sikl**: "Sikl narxi", "Sikl darslari", "1 dars", "Haftasiga".
+- **Lessons a week and a month come from the groups, not from the course** (CEO, 26.09.2026). `GET /courses/:id` returns `schedule` (`server/src/courses/course-schedule-summary.ts`): the distinct lessons-a-week of the course's FORMING/ACTIVE/PAUSED groups, and the fewest/most lessons a month over the next 12 months, counted by the same `lessonDatesInMonth` the monthly bill uses (holidays left out, so it is "about"). Do not add a lessons-a-week field to `Course`: billing reads each group's `exactDays`, and a second number would drift from it.
+- `edit-course-form.tsx` labels the price by the model (`coursePriceLabel`) and hides "Sikl darslari" for a monthly course. With "Standart sozlama bo'yicha" it reads `payment.defaultModel` from `GET /settings/payment` (CEO/BD only); for an Administrator the model stays unknown and the form stays neutral.
+
 ### Toast Notifications
 
 - **Every API mutation** (create, update, delete) **must** show a toast notification for both success and error outcomes using `react-hot-toast`
