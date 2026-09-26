@@ -4,6 +4,10 @@ import {
   branchIdWhere,
   ReportBranchIds,
 } from '../../common/finance/report-branch-scope';
+import {
+  supplyClosingRow,
+  type EnrollmentStatusEvent,
+} from '../../students/shared/enrollment-status-on';
 
 /**
  * Who "left" within 5 lessons of a teacher change — the one reader behind the
@@ -31,13 +35,13 @@ export type StoppedStatus = 'DROPPED' | 'FROZEN';
 
 const LESSON_WINDOW = 5;
 
-const isStop = (status: EnrollmentStatus): status is StoppedStatus =>
+const isStop = (status: string): status is StoppedStatus =>
   status === 'DROPPED' || status === 'FROZEN';
 
 export interface StopEpisodeInput {
   status: EnrollmentStatus;
   statusChangedAt: Date | null;
-  stateLog: readonly { status: EnrollmentStatus; transitionAt: Date }[];
+  stateLog: readonly EnrollmentStatusEvent[];
 }
 
 /**
@@ -46,19 +50,24 @@ export interface StopEpisodeInput {
  * by the freeze; a stop after a return is dated by that stop, not by the one
  * before the return. `null` when the enrollment is not DROPPED or FROZEN now.
  *
- * Without such a row — the enrollment predates the log, or an older writer
- * closed it without logging — the row's own `statusChangedAt` and status
- * stand in, the way the log would have recorded them. If the log holds a row
- * later than that `statusChangedAt`, the stop cannot be dated and the result
- * is `null`.
+ * The log is read the way the departures loader reads it: a closing that was
+ * never logged is completed from the row (`supplyClosingRow`), and an
+ * enrollment with no log rows is read from its own columns, as
+ * `enrollmentStatusOn` reads it. A missing opening row changes nothing here:
+ * the absence starts after the last ACTIVE row either way.
  */
 export function currentStopStart(
   enrollment: StopEpisodeInput,
 ): { at: Date; status: StoppedStatus } | null {
   if (!isStop(enrollment.status)) return null;
+  if (enrollment.stateLog.length === 0) {
+    const since = enrollment.statusChangedAt;
+    return since ? { at: since, status: enrollment.status } : null;
+  }
   const log = [...enrollment.stateLog].sort(
     (a, b) => a.transitionAt.getTime() - b.transitionAt.getTime(),
   );
+  supplyClosingRow(log, enrollment);
   let lastActive = -1;
   log.forEach((row, i) => {
     if (row.status === 'ACTIVE') lastActive = i;
@@ -66,12 +75,7 @@ export function currentStopStart(
   for (const row of log.slice(lastActive + 1)) {
     if (isStop(row.status)) return { at: row.transitionAt, status: row.status };
   }
-  const since = enrollment.statusChangedAt;
-  const last = log[log.length - 1];
-  if (!since || (last && since.getTime() < last.transitionAt.getTime())) {
-    return null;
-  }
-  return { at: since, status: enrollment.status };
+  return null;
 }
 
 export interface TeacherChange {

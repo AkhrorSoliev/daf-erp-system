@@ -1,5 +1,6 @@
 import {
   enrollmentStatusOn,
+  supplyClosingRow,
   supplyOpeningRow,
   type EnrollmentStatusEvent,
 } from './enrollment-status-on';
@@ -130,6 +131,69 @@ describe('supplyOpeningRow', () => {
     const log: EnrollmentStatusEvent[] = [];
 
     supplyOpeningRow(log, OPENED);
+
+    expect(log).toEqual([]);
+  });
+});
+
+describe('supplyClosingRow', () => {
+  const OPENED = at('2026-05-01T09:00:00Z');
+  const CLOSED = at('2026-06-15T09:00:00Z');
+
+  it('completes a log that never recorded the closing from the enrollment row', () => {
+    const log = [{ status: 'ACTIVE', transitionAt: OPENED }];
+
+    supplyClosingRow(log, { status: 'DROPPED', statusChangedAt: CLOSED });
+
+    expect(log).toEqual([
+      { status: 'ACTIVE', transitionAt: OPENED },
+      { status: 'DROPPED', transitionAt: CLOSED },
+    ]);
+  });
+
+  it('adds nothing when the log already ends with the current status', () => {
+    const log = [
+      { status: 'ACTIVE', transitionAt: OPENED },
+      { status: 'DROPPED', transitionAt: CLOSED },
+    ];
+
+    supplyClosingRow(log, { status: 'DROPPED', statusChangedAt: CLOSED });
+
+    expect(log).toEqual([
+      { status: 'ACTIVE', transitionAt: OPENED },
+      { status: 'DROPPED', transitionAt: CLOSED },
+    ]);
+  });
+
+  it('adds nothing when the row dates its status before the last logged row', () => {
+    // The log saw the student come back after the moment the row names.
+    const log = [
+      { status: 'ACTIVE', transitionAt: OPENED },
+      { status: 'FROZEN', transitionAt: at('2026-06-10T09:00:00Z') },
+      { status: 'ACTIVE', transitionAt: at('2026-06-20T09:00:00Z') },
+    ];
+
+    supplyClosingRow(log, { status: 'DROPPED', statusChangedAt: CLOSED });
+
+    expect(log).toHaveLength(3);
+    expect(log[2]).toEqual({
+      status: 'ACTIVE',
+      transitionAt: at('2026-06-20T09:00:00Z'),
+    });
+  });
+
+  it('adds nothing when the row never recorded when its status changed', () => {
+    const log = [{ status: 'ACTIVE', transitionAt: OPENED }];
+
+    supplyClosingRow(log, { status: 'DROPPED', statusChangedAt: null });
+
+    expect(log).toEqual([{ status: 'ACTIVE', transitionAt: OPENED }]);
+  });
+
+  it('leaves an empty log to the fallback from the enrollment row', () => {
+    const log: EnrollmentStatusEvent[] = [];
+
+    supplyClosingRow(log, { status: 'DROPPED', statusChangedAt: CLOSED });
 
     expect(log).toEqual([]);
   });
