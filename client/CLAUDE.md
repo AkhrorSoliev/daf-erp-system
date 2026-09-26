@@ -798,13 +798,12 @@ The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth
 
 #### "To'lovlar" tab (`?tab=tolovlar`)
 
-- Component: `student-payments-table.tsx`. Visible to CEO / BD / Administrator (`canManage`).
-- Question it answers: **"Where did money flow in/out of the student's balance?"**
-- Reads `GET /transactions/student/:id?types=PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL,LESSON_DEDUCTION&pageSize=20`. The `types` query param is required to scope the tab to balance-moving rows; without it the endpoint would return everything.
-- Sort: DESC (newest first), limited to the latest 20 rows.
-- Header: balance card, then a "Balans operatsiyalari" table.
-- Type badges live in `student-profile-tabs-utils.ts` → `TRANSACTION_TYPE_INFO`. It maps every balance-moving type, including `LESSON_DEDUCTION` ("Darsga yechildi"). `LESSON_DEDUCTION` rows get a muted row background, render their `metadata` (`mode` → `LESSON_DEDUCTION_MODE_LABELS`, `lessonsCovered`, `perLessonCost`) in the "Tafsilot" column, and carry no receipt / no "Amal" action. **Never add `LESSON_CONSUMPTION` here** — it has no balance movement and belongs only on "Darslar".
-- **"Amal" column** — a 3-dot dropdown with "Summani to'g'rilash" (`correct-payment-dialog.tsx`). Shown only on the original, still-active PAYMENT row (positive amount, `COMPLETED` status) for CEO / BD / Administrator. Non-CEO callers only see it within 72h of the payment (`CORRECTION_WINDOW_MS`); the backend re-checks. The dialog posts `POST /payments/:id/correct` (reverse + re-post). On success the tab refreshes transactions and shows the returned `studentBalance` until the parent student refetch lands.
+- Component: `statement/payment-statement.tsx` (the payment statement, ADR-0037). Visible to CEO / BD / Administrator (`canManage`).
+- Question it answers: **"How much did the student pay, which lessons did it pay for, and why is the balance what it is?"**
+- Reads `GET /students/:id/statement` → `{ model, view }`. **Every sentence comes from `view`** (admin voice, built by `server/src/statements/present-statement.ts`); the client reads `model` only for numbers, ids and lesson days. `view.months[i]` is `model.months[i]` and `view.allocations[i]` is `model.allocations[i]`. Do not write statement wording in the client — change it on the server, where the PDF and the bot read it too.
+- Layout: header with "PDF yuklab olish" (`GET /students/:id/statement.pdf` as a blob, like the expenses PDF), `view.warning` as a red banner, the answer box, the equation, "Oylar bo'yicha" (`statement-months-table.tsx`; a row click opens that month's lesson days as chips; the sharp-change month is yellow with `view.sharpNote`), the payment-model sections, "To'lovlar qayerga ketdi" (`statement-allocations.tsx`) and the footnote. `statement-report.tsx` draws all of it without fetching, so `statement-report.test.ts` renders it statically. The months table is a whole-course summary and is deliberately not paginated.
+- **"Summani to'g'rilash"** — the ⋯ menu on a payment row of "To'lovlar qayerga ketdi", next to the "Chek" link. Rule in `canCorrectPayment` (`statement/statement-utils.ts`): CEO at any time, roles 1-3 within 72h of `model.allocations[i].at`; the backend re-checks. After a correction the statement and the ledger reload and the parent refetches the student.
+- **"Barcha yozuvlar"** (`statement-ledger.tsx`, collapsed, loaded on first open): the raw ledger from `GET /transactions/student/:id?types=...&page=&pageSize=20`, newest first, with "Yana ko'rsatish" — not capped at 20. `types` lists every balance-moving type (badges from `TRANSACTION_TYPE_INFO`). **Never add `LESSON_CONSUMPTION` here** — it has no balance movement and belongs only on "Darslar".
 
 #### "Darslar" tab (`?tab=darslar`)
 

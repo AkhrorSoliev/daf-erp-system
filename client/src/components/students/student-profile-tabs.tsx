@@ -19,12 +19,10 @@ import type { Student } from "@/data/student-model";
 import { useAuth } from "@/hooks/use-auth";
 import { StudentAppActivityTab } from "./student-app-activity-tab";
 import { StudentGroupCard } from "./student-group-card";
-import { StudentPaymentsTable } from "./student-payments-table";
+import { PaymentStatement } from "./statement/payment-statement";
 import { LessonTrailTab } from "./lesson-trail-tab";
 import { StudentRemoveFromGroupDialog } from "./student-remove-from-group-dialog";
 import { StudentClosedEnrollmentsSection } from "./student-closed-enrollments-section";
-import type { StudentTransaction } from "./student-profile-tabs-utils";
-import type { BalanceSummary } from "./balance-summary-card";
 import type { DebtWriteOffEligibility } from "./debt-write-off-types";
 
 function EmptyState({ message }: { message: string }) {
@@ -67,10 +65,6 @@ export function StudentProfileTabs({
   const darslarShown = useRef(false);
   const [ilovaVisible, setIlovaVisible] = useState(false);
   const ilovaShown = useRef(false);
-  const [transactions, setTransactions] = useState<StudentTransaction[]>([]);
-  const [balanceSummary, setBalanceSummary] =
-    useState<BalanceSummary | null>(null);
-  const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>(
     [],
   );
@@ -119,53 +113,11 @@ export function StudentProfileTabs({
     );
   }, []);
 
-  // Money-flow events. LESSON_DEDUCTION is included on purpose: it is a real
-  // balance outflow (a prepaid sikl batch), so the feed can explain a drop and
-  // show — by DATE — which lessons each sikl covered (coverage.first/lastCoveredDate).
-  // It is the one type intentionally shared with the "Darslar" tab.
-  // LESSON_CONSUMPTION (amount=0, no balance movement) stays Darslar-only.
-  //
-  // Parallel call to /balance-summary so the top "Qarz tushuntirishi" card
-  // populates at the same time. Failures on either request are tolerated —
-  // the card just hides on null summary.
-  const loadPayments = useCallback(() => {
-    setPaymentsLoading(true);
-    const txReq = api
-      .get(`/transactions/student/${student.id}`, {
-        params: {
-          pageSize: 20,
-          // Every type that MOVES THE BALANCE. The list is the tab's
-          // contract: if a row changed the balance and is missing here, the
-          // feed shows a jump with no cause. Only LESSON_CONSUMPTION
-          // (amount = 0) is intentionally absent — it belongs to "Darslar".
-          types:
-            "PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL,LESSON_DEDUCTION,DISCOUNT_ADJUSTMENT,DEBT_WRITE_OFF,MOCK_EXAM_FEE",
-        },
-      })
-      .then((res) => setTransactions(res.data.data))
-      .catch(() => {});
-    const summaryReq = api
-      .get(`/students/${student.id}/balance-summary`)
-      .then((res) => setBalanceSummary(res.data))
-      .catch(() => setBalanceSummary(null));
-    Promise.all([txReq, summaryReq]).finally(() => setPaymentsLoading(false));
-  }, [student.id]);
-
-  // After a correction the tab shows this fresh balance until the parent
-  // student refetch lands (which then clears the override — see effect).
-  const [balanceOverride, setBalanceOverride] = useState<number | null>(null);
-  useEffect(() => {
-    setBalanceOverride(null);
-  }, [student.balance]);
-
-  const handlePaymentCorrected = useCallback(
-    (newBalance: number | null) => {
-      if (newBalance !== null) setBalanceOverride(newBalance);
-      loadPayments();
-      onEnrollmentChange?.();
-    },
-    [loadPayments, onEnrollmentChange],
-  );
+  // A corrected payment changes the balance on the profile card: refetch
+  // the student. The statement reloads itself.
+  const handlePaymentCorrected = useCallback(() => {
+    onEnrollmentChange?.();
+  }, [onEnrollmentChange]);
 
   const handleTabChange = useCallback(
     (value: string) => {
@@ -188,7 +140,6 @@ export function StudentProfileTabs({
       if (value === "tolovlar" && !paymentsShown.current) {
         paymentsShown.current = true;
         setPaymentsVisible(true);
-        loadPayments();
       }
       if (value === "darslar" && !darslarShown.current) {
         darslarShown.current = true;
@@ -199,7 +150,7 @@ export function StudentProfileTabs({
         setIlovaVisible(true);
       }
     },
-    [loadPayments],
+    [],
   );
 
   // Trigger lazy-load on direct URL navigation (e.g. ?tab=tolovlar on first load).
@@ -389,11 +340,8 @@ export function StudentProfileTabs({
         {/* To'lovlar */}
         <TabsContent value="tolovlar">
           {paymentsVisible ? (
-            <StudentPaymentsTable
-              isLoading={paymentsLoading}
-              balance={balanceOverride ?? student.balance}
-              transactions={transactions}
-              summary={balanceSummary}
+            <PaymentStatement
+              studentId={student.id}
               onCorrected={handlePaymentCorrected}
             />
           ) : (
