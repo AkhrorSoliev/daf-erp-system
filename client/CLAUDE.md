@@ -966,6 +966,7 @@ work. `student-radio-page.tsx` is only a chooser — playback lives in the shell
 - **Callback**: After payment, both providers redirect to `/payment/result`
 - **Balance display**: Shows current balance (green if positive, red if negative/debt)
 - **Payment history**: Fetched from `GET /student-portal/payments` — shows transaction list with amounts and timestamps
+- **Payment statement card** (`statement-card.tsx`, under "Joriy balans"): "To'lovlar hisoboti" + a coral "PDF yuklab olish" that downloads `GET /student-portal/statement.pdf` (ADR-0037) as a blob through `downloadAuthedFile` (`src/lib/download-file.ts`, shared with the admin To'lovlar tab). The file name matches the server's: `tolovlar-hisoboti-DD-MM-YYYY.pdf`, Tashkent day.
 - **Payme reference docs (UZ)**: `docs/payme-uz/index.html` — 25-page Uzbek-language reference covering Merchant API, Subscribe API, checkout initialization (GET/POST), sandbox testing, error codes, and mobile integration; mirrors the official `developer.help.paycom.uz` structure
 
 ### Position vs role in the employee form
