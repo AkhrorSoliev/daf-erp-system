@@ -20,6 +20,12 @@ import type {
 export const MIGRATION_REVERSAL = "Oylik to'lovga o'tish migratsiyasi";
 /** Lessons paid before the system existed (the April cutover) all fell in April 2026. */
 export const PRE_SYSTEM_MONTH: MonthKey = '2026-04';
+/**
+ * The package size to name when no package says otherwise: the schema's own
+ * default for `Course.lessonPaymentCount`. Only ever shown in text; never a
+ * price divisor (see `per-lesson-price.single-source.spec.ts`).
+ */
+export const DEFAULT_PACK_SIZE = 12;
 
 /** A difference from the balance this small is rounding, not a gap. */
 const ROUNDING_TOLERANCE = 100;
@@ -227,7 +233,8 @@ export function buildMonths(input: StatementInput): MonthsResult {
         day: r.day,
         perLesson: Math.round(-r.amount / slices.length),
       });
-      if (r.enrollmentId) packSizes.push(packSizeOf.get(r.enrollmentId) ?? 12);
+      if (r.enrollmentId)
+        packSizes.push(packSizeOf.get(r.enrollmentId) ?? DEFAULT_PACK_SIZE);
     }
     slices.forEach((slice, i) => {
       if (!slice.date) {

@@ -1,5 +1,5 @@
 import { applyDiscount } from '../billing/monthly-price';
-import { monthOf, nextMonthKey } from './statement-months';
+import { DEFAULT_PACK_SIZE, monthOf, nextMonthKey } from './statement-months';
 import {
   METHOD_LABEL,
   capitalize,
@@ -246,7 +246,9 @@ function modelChangeView(
 ): { title: string; lines: string[] } {
   const w = WORDS[voice];
   const size =
-    model.packEra?.size ?? model.student.course?.lessonPaymentCount ?? 12;
+    model.packEra?.size ??
+    model.student.course?.lessonPaymentCount ??
+    DEFAULT_PACK_SIZE;
   if (c.to === 'LESSON_PACK') {
     return {
       title: `${monthTitle(c.month)}dan ${size} darslik paket`,
@@ -299,7 +301,7 @@ export function presentStatement(
   const w = WORDS[voice];
   const last = model.months[model.months.length - 1];
   const nextFee = monthName(nextMonthKey(monthOf(model.asOf)));
-  const size = model.packEra?.size ?? 12;
+  const size = model.packEra?.size ?? DEFAULT_PACK_SIZE;
 
   const course = model.student.course;
   const d = model.student.discountPercent;

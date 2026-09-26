@@ -11,7 +11,11 @@ import type {
   StatementMonth,
   StatementRow,
 } from './statement.types';
-import { monthOf, type MonthSwitchFacts } from './statement-months';
+import {
+  DEFAULT_PACK_SIZE,
+  monthOf,
+  type MonthSwitchFacts,
+} from './statement-months';
 
 /** A month is "sharply different" past both of these (CEO, 26.09.2026). */
 const SHARP_MIN_SOM = 50_000;
@@ -279,5 +283,5 @@ export function packEraOf(
   const lastPack = packMonths[packMonths.length - 1].key;
   const until =
     months.find((m) => m.key > lastPack && m.model === 'MONTHLY')?.key ?? null;
-  return { size: packSize ?? 12, until };
+  return { size: packSize ?? DEFAULT_PACK_SIZE, until };
 }
