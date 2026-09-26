@@ -15,6 +15,7 @@ import { GroupQueryDto } from './dto/group-query.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { ChangeGroupStatusDto } from './dto/change-group-status.dto';
+import { DeleteGroupDto } from './dto/delete-group.dto';
 import { CurrentUser, Roles, BranchScope } from '../common/decorators';
 import { RolesGuard } from '../common/guards/roles.guard';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
@@ -229,14 +230,29 @@ export class GroupsController {
     return this.groupsService.getStatusHistory(id, companyId, userId, roles);
   }
 
+  @Get(':id/delete-preview')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getDeletePreview(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('roles') roles: string[],
+  ) {
+    return this.groupsService.getDeletePreview(id, companyId, userId, roles);
+  }
+
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('CEO', 'Branch Director', 'Administrator')
   delete(
     @Param('id') id: string,
+    // Optional. A request with no body still validates: the global
+    // ValidationPipe turns a missing body into an empty DTO.
+    @Body() dto: DeleteGroupDto,
     @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.groupsService.delete(id, userId, companyId);
+    return this.groupsService.delete(id, userId, companyId, dto.reason);
   }
 }

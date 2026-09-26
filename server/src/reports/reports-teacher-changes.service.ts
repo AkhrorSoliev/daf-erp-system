@@ -231,7 +231,11 @@ export class ReportsTeacherChangesService {
     const { departures } = await loadTeacherChangeDepartures(
       this.prisma,
       companyId,
-      { branchId: params.branchId, start, end },
+      {
+        scope: params.branchId !== undefined ? [params.branchId] : null,
+        start,
+        end,
+      },
     );
     if (departures.length === 0) return [];
 

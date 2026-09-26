@@ -19,9 +19,10 @@ import { assertCallerMayTouchGroup } from '../common/auth/group-branch-scope';
  */
 const NO_TEACHER_PATH: string[] = [];
 import { EntityHistoryService } from '../common/entity-history';
+import { StatusCascadeService } from '../common/status';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
-import { GroupStatus } from '@prisma/client';
+import { GroupStatus, Prisma } from '@prisma/client';
 import {
   TEACHER_ROLE_ID,
   groupInclude,
@@ -39,6 +40,7 @@ export class GroupsWriteService {
     private entityHistoryService: EntityHistoryService,
     private eventEmitter: EventEmitter2,
     private groupHolidayCascadeService: GroupHolidayCascadeService,
+    private statusCascadeService: StatusCascadeService,
   ) {}
 
   async create(dto: CreateGroupDto, companyId: number, userId?: number) {
@@ -573,50 +575,91 @@ export class GroupsWriteService {
     return formatGroup(group);
   }
 
-  async delete(id: string, userId: number, companyId: number) {
+  /**
+   * Deleting a group archives it and closes every live enrolment in it
+   * (ACTIVE and FROZEN → DROPPED, unused money back to the balance) in ONE
+   * transaction. Archiving the group alone used to leave its students
+   * enrolled in a group that no longer existed.
+   *
+   * `reason` is what the admin typed in the delete dialog; blank means none.
+   * It becomes the group's status-history reason and follows
+   * "Guruh o'chirildi: " on every enrolment the deletion closes.
+   */
+  async delete(id: string, userId: number, companyId: number, reason?: string) {
     const group = await this.prisma.group.findFirst({
       where: { id, deletedAt: null, companyId },
     });
     if (!group) {
       throw new NotFoundException(`Guruh #${id} topilmadi`);
     }
-    // Archiving cascades to every enrolment in the group.
+    // Deleting a group closes every live enrolment in it and returns their
+    // unused money to the balance — done to another branch's group, that is
+    // their students and their ledger.
     await assertCallerMayTouchGroup(this.prisma, userId, NO_TEACHER_PATH, id);
 
-    // Archive bypasses normal status transition validation
-    await this.prisma.statusHistory.create({
-      data: {
-        entityType: 'Group',
-        entityId: id,
-        fromStatus: group.statusEnum,
-        toStatus: GroupStatus.ARCHIVED,
-        reason: "O'chirildi",
-        changedById: userId,
-        companyId: group.companyId ?? undefined,
+    const note = reason?.trim() || undefined;
+    // One instant for the group's deletion and its students' departure, so
+    // the enrolment state log closes exactly at `group.deletedAt`.
+    const deletedAt = new Date();
+    const removed = await this.prisma.$transaction(
+      async (tx) => {
+        const { count } = await this.statusCascadeService.cascadeGroupDeletion(
+          tx,
+          { groupId: id, userId, at: deletedAt, note },
+        );
+
+        // Archive bypasses normal status transition validation
+        await tx.statusHistory.create({
+          data: {
+            entityType: 'Group',
+            entityId: id,
+            fromStatus: group.statusEnum,
+            toStatus: GroupStatus.ARCHIVED,
+            reason: note ?? "O'chirildi",
+            changedById: userId,
+            companyId: group.companyId ?? undefined,
+          },
+        });
+
+        await this.entityHistoryService.recordDelete({
+          entityType: 'Group',
+          entityId: id,
+          // `deletionReason`, as a student deletion names it.
+          oldValues: note ? { ...group, deletionReason: note } : group,
+          changedById: userId,
+          companyId: group.companyId ?? undefined,
+          tx,
+        });
+
+        await tx.group.update({
+          where: { id },
+          data: {
+            statusEnum: GroupStatus.ARCHIVED,
+            isActive: false,
+            deletedAt,
+            deletedById: userId,
+            statusChangedAt: deletedAt,
+            statusChangedById: userId,
+            statusChangeReason: note ?? "O'chirildi",
+          },
+        });
+
+        return count;
       },
-    });
-
-    await this.entityHistoryService.recordDelete({
-      entityType: 'Group',
-      entityId: id,
-      oldValues: group,
-      changedById: userId,
-      companyId: group.companyId ?? undefined,
-    });
-
-    await this.prisma.group.update({
-      where: { id },
-      data: {
-        statusEnum: GroupStatus.ARCHIVED,
-        isActive: false,
-        deletedAt: new Date(),
-        deletedById: userId,
-        statusChangedAt: new Date(),
-        statusChangedById: userId,
-        statusChangeReason: "O'chirildi",
+      {
+        // Same budget as saving a full roster's attendance: per student a
+        // balance lock, a refund and history rows, serially, on Neon.
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 15_000,
+        timeout: 60_000,
       },
-    });
+    );
 
-    return { message: "Guruh muvaffaqiyatli o'chirildi" };
+    return {
+      message:
+        removed > 0
+          ? `Guruh o'chirildi, ${removed} ta o'quvchi guruhdan chiqarildi`
+          : "Guruh muvaffaqiyatli o'chirildi",
+    };
   }
 }

@@ -57,8 +57,8 @@ export function DepartedStudentsByStatusChart({ branchId }: Props) {
           : "Holat taqsimoti"
       }
       tooltip={
-        "Ketgan o'quvchilar holati bo'yicha taqsimot: guruhsiz qolgan faollar, " +
-        "muzlatilganlar va chetlashtirilganlar.\n" +
+        "Qaytmagan ketganlar holati bo'yicha: guruhsiz faollar, muzlatilganlar " +
+        "va chetlatilganlar.\n" +
         "Filial filtriga bo'ysunadi."
       }
       isLoading={isLoading}
@@ -135,7 +135,9 @@ function StatusTooltip({
   total,
 }: {
   active?: boolean;
-  payload?: ReadonlyArray<{ payload?: { label?: string; count?: number; color?: string } }>;
+  payload?: ReadonlyArray<{
+    payload?: { label?: string; count?: number; color?: string };
+  }>;
   total: number;
 }) {
   if (!active || !payload || payload.length === 0) return null;

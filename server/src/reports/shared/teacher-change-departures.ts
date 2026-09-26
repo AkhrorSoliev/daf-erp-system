@@ -1,5 +1,9 @@
-import { EnrollmentStatus, Prisma } from '@prisma/client';
+import { EnrollmentStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  branchIdWhere,
+  ReportBranchIds,
+} from '../../common/finance/report-branch-scope';
 
 /**
  * Who "left" within 5 lessons of a teacher change — the one reader behind the
@@ -96,22 +100,20 @@ export interface TeacherChangeDeparture {
 }
 
 /**
- * Teacher changes in `[start, end)` and the departures within 5 lessons of
- * them. `changes` includes changes with no lesson after them yet; they have
- * no window, so no departures.
+ * Teacher changes in `[start, end)` of the groups in `scope` (`null`: every
+ * branch) and the departures within 5 lessons of them. `changes` includes
+ * changes with no lesson after them yet; they have no window, so no
+ * departures.
  */
 export async function loadTeacherChangeDepartures(
   prisma: PrismaService,
   companyId: number,
-  params: { branchId?: number; start: Date; end: Date },
+  params: { scope: ReportBranchIds; start: Date; end: Date },
 ): Promise<{ changes: TeacherChange[]; departures: TeacherChangeDeparture[] }> {
-  const groupWhere: Prisma.GroupWhereInput = { companyId, deletedAt: null };
-  if (params.branchId !== undefined) groupWhere.branchId = params.branchId;
-
   const changes = await prisma.groupTeacherHistory.findMany({
     where: {
       createdAt: { gte: params.start, lt: params.end },
-      group: groupWhere,
+      group: { companyId, deletedAt: null, ...branchIdWhere(params.scope) },
     },
     select: {
       id: true,

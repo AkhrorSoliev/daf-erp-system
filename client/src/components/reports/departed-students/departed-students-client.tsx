@@ -101,8 +101,7 @@ export function DepartedStudentsClient() {
       rangeStart: parseDate(searchParams.get("startDate")),
       rangeEnd: parseDate(searchParams.get("endDate")),
       branchId: branchId && !Number.isNaN(branchId) ? branchId : null,
-      courseId:
-        searchParams.get("courseId")?.split(",").filter(Boolean) ?? [],
+      courseId: searchParams.get("courseId")?.split(",").filter(Boolean) ?? [],
       teacherIds:
         searchParams
           .get("teacherIds")
@@ -131,8 +130,7 @@ export function DepartedStudentsClient() {
       startDate: formatDate(next.rangeStart),
       endDate: formatDate(next.rangeEnd),
       branchId: next.branchId !== null ? String(next.branchId) : undefined,
-      courseId:
-        next.courseId.length > 0 ? next.courseId.join(",") : undefined,
+      courseId: next.courseId.length > 0 ? next.courseId.join(",") : undefined,
       teacherIds:
         next.teacherIds.length > 0 ? next.teacherIds.join(",") : undefined,
       page: undefined,
@@ -166,7 +164,7 @@ export function DepartedStudentsClient() {
     () => ({
       branchId: filter.branchId ?? undefined,
       courseId:
-      filter.courseId.length > 0 ? filter.courseId.join(",") : undefined,
+        filter.courseId.length > 0 ? filter.courseId.join(",") : undefined,
       teacherIds:
         filter.teacherIds.length > 0 ? filter.teacherIds.join(",") : undefined,
       startDate: startStr,
@@ -207,10 +205,9 @@ export function DepartedStudentsClient() {
     return [10, 20, 30, 40, 50].includes(raw) ? raw : 10;
   })();
 
-  // The "Ketgan o'quvchilar" list is a student-level snapshot — students with
-  // no group they currently study in. It is filtered only by branch + status
-  // + debtors, not by the date range / course / teacher (those drive the
-  // charts above).
+  // The list shows open departure episodes (ADR-0035): students who stopped
+  // and have not come back, pending ones included. It is filtered by branch,
+  // status and debtors, not by the date range / course / teacher.
   const statusRaw = searchParams.get("status");
   const statusFilter: DepartedStudentStatusFilter =
     statusRaw &&
@@ -278,7 +275,8 @@ export function DepartedStudentsClient() {
             Ketish va guruh o&apos;zgarishi tahlili
           </h2>
           <p className="text-sm text-muted-foreground">
-            Saqlab qolishni tahlil qilish, xavflarni aniqlash va LTVni oshirishga yordam beradi
+            Saqlab qolishni tahlil qilish, xavflarni aniqlash va LTVni
+            oshirishga yordam beradi
           </p>
         </div>
         {canManageReasons && (
@@ -304,7 +302,11 @@ export function DepartedStudentsClient() {
       <DepartedStudentsKpiCards data={summary} isLoading={summaryLoading} />
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <DepartedStudentsDynamicsChart branchId={filter.branchId} />
+        <DepartedStudentsDynamicsChart
+          branchId={filter.branchId}
+          startDate={summaryParams.startDate}
+          endDate={summaryParams.endDate}
+        />
         <DepartedStudentsByStatusChart branchId={filter.branchId} />
       </div>
 
@@ -318,9 +320,9 @@ export function DepartedStudentsClient() {
         data={
           summary
             ? {
-              totalTeacherChanges: summary.totalTeacherChanges,
-              departedAfterTeacherChange: summary.departedAfterTeacherChange,
-            }
+                totalTeacherChanges: summary.totalTeacherChanges,
+                departedAfterTeacherChange: summary.departedAfterTeacherChange,
+              }
             : undefined
         }
         isLoading={summaryLoading}
@@ -337,7 +339,6 @@ export function DepartedStudentsClient() {
         debtorsOnly={debtorsOnly}
         onDebtorsOnlyChange={handleDebtorsOnlyChange}
       />
-
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">

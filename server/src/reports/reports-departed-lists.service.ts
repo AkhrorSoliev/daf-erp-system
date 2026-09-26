@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, StudentStatus } from '@prisma/client';
+import { StudentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { buildDepartedEnrollmentWhere } from './shared/departed-filter';
-import {
-  loadDepartedStudents,
-  DEPARTED_STATUS_LABELS,
-} from './shared/departed-students-dataset';
+import { DEPARTED_STATUS_LABELS } from './shared/departed-status-labels';
+import { loadDepartures } from './shared/departures.loader';
+import { openEpisodes } from '../students/shared/departure-episodes';
 import { tashkentRangeUtc } from '../common/date/tashkent';
 
 @Injectable()
@@ -13,21 +13,14 @@ export class ReportsDepartedListsService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * "Ketgan o'quvchilar" list — a student-level snapshot.
-   *
-   * A student is "departed" when they currently study in NO group, i.e. they
-   * have zero ACTIVE enrollments. A FROZEN enrollment does not count as an
-   * active group (a frozen student is still "ketgan" until they resume).
-   * GRADUATED students finished successfully and are never treated as
-   * departed.
-   *
-   * This is intentionally NOT date-ranged: it answers "who has no group right
-   * now", so admins can follow up with them.
+   * "Qaytmagan ketganlar" — every open departure episode (ADR-0035): the
+   * students who stopped and have not come back, pending ones included.
+   * Filtered by branch, status and debt; not by the date range.
    */
   async getDepartedStudentsList(
     companyId: number,
     params: {
-      branchId?: number;
+      scope: ReportBranchIds;
       status?: StudentStatus;
       debtorsOnly?: boolean;
       page?: number;
@@ -36,102 +29,49 @@ export class ReportsDepartedListsService {
   ) {
     const page = Math.max(1, params.page ?? 1);
     const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 10));
-
-    // GRADUATED is never a valid filter value — graduated students are
-    // excluded by definition. Any other status narrows the list.
-    const statusFilter =
+    // GRADUATED is never a departure, so it is not a valid filter either.
+    const status =
       params.status && params.status !== StudentStatus.GRADUATED
         ? params.status
         : undefined;
 
-    const where: Prisma.StudentWhereInput = {
-      companyId,
-      deletedAt: null,
-      enrollments: { none: { status: 'ACTIVE', deletedAt: null } },
-      status: statusFilter ?? { not: StudentStatus.GRADUATED },
-    };
-    if (params.branchId !== undefined) {
-      where.branches = { some: { branchId: params.branchId } };
-    }
-    // "Faqat qarzdorlar" — only students who owe money (negative balance).
-    if (params.debtorsOnly) {
-      where.balance = { lt: 0 };
-    }
+    const rows = (await this.openRows(companyId, params.scope))
+      .filter((r) => !status || r.student.status === status)
+      .filter((r) => !params.debtorsOnly || r.student.balance < 0)
+      .sort(
+        (a, b) =>
+          b.episode.startedAt.getTime() - a.episode.startedAt.getTime() ||
+          b.student.id - a.student.id,
+      );
 
-    const [rows, total] = await this.prisma.$transaction([
-      this.prisma.student.findMany({
-        where,
-        orderBy: [{ statusChangedAt: 'desc' }, { id: 'desc' }],
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          phone: true,
-          status: true,
-          balance: true,
-          statusChangedAt: true,
-          // The most recent enrollment = the last group the student was
-          // attached to. Used to show "where they were" + when they left.
-          enrollments: {
-            where: { deletedAt: null },
-            orderBy: [{ statusChangedAt: 'desc' }, { createdAt: 'desc' }],
-            take: 1,
-            select: {
-              status: true,
-              statusChangedAt: true,
-              group: {
-                select: {
-                  id: true,
-                  name: true,
-                  branch: { select: { id: true, name: true } },
-                  course: { select: { id: true, name: true } },
-                  teachers: {
-                    select: {
-                      teacher: {
-                        select: { id: true, firstName: true, lastName: true },
-                      },
-                    },
-                  },
-                },
-              },
-            },
+    const data = rows
+      .slice((page - 1) * pageSize, page * pageSize)
+      .map(({ episode, student }) => {
+        const g = student.enrollments[0]?.group ?? null;
+        return {
+          id: String(student.id),
+          student: {
+            id: student.id,
+            fullName: `${student.firstName} ${student.lastName}`,
           },
-        },
-      }),
-      this.prisma.student.count({ where }),
-    ]);
+          phone: student.phone,
+          status: student.status,
+          balance: student.balance,
+          lastGroup: g ? { id: g.id, name: g.name } : null,
+          branch: g?.branch ?? null,
+          course: g?.course ?? null,
+          teachers:
+            g?.teachers.map((t) => ({
+              id: t.teacher.id,
+              fullName: `${t.teacher.firstName} ${t.teacher.lastName}`,
+            })) ?? [],
+          departedAt: episode.startedAt.toISOString(),
+          state: episode.state,
+          stopKind: episode.stopKind,
+        };
+      });
 
-    const data = rows.map((s) => {
-      const lastEnr = s.enrollments[0] ?? null;
-      const g = lastEnr?.group ?? null;
-      return {
-        id: String(s.id),
-        student: {
-          id: s.id,
-          fullName: `${s.firstName} ${s.lastName}`,
-        },
-        phone: s.phone,
-        status: s.status,
-        balance: s.balance,
-        lastGroup: g ? { id: g.id, name: g.name } : null,
-        branch: g?.branch ?? null,
-        course: g?.course ?? null,
-        teachers:
-          g?.teachers.map((t) => ({
-            id: t.teacher.id,
-            fullName: `${t.teacher.firstName} ${t.teacher.lastName}`,
-          })) ?? [],
-        // When the student lost their last group. Falls back to the student's
-        // own status-change date when no enrollment exists.
-        leftAt:
-          (lastEnr?.statusChangedAt ?? s.statusChangedAt)?.toISOString() ??
-          null,
-      };
-    });
-
-    return { data, total, page, pageSize };
+    return { data, total: rows.length, page, pageSize };
   }
 
   /**
@@ -234,25 +174,16 @@ export class ReportsDepartedListsService {
     return { data, total, page, pageSize };
   }
 
-  /**
-   * "Holat bo'yicha" — the departed-students snapshot broken down by student
-   * status (Faol-guruhsiz / Muzlatilgan / Chetlatilgan ...). Replaces the old
-   * "Ketish sabablari" chart: freeze reasons are unstructured free text, so a
-   * status breakdown is the reliable, always-complete view.
-   */
+  /** "Holat bo'yicha" — open departures by the student's current status. */
   async getDepartedStudentsByStatus(
     companyId: number,
-    params: { branchId?: number },
+    params: { scope: ReportBranchIds },
   ) {
-    const departed = await loadDepartedStudents(this.prisma, companyId, {
-      branchId: params.branchId,
-    });
-
+    const rows = await this.openRows(companyId, params.scope);
     const counts = new Map<StudentStatus, number>();
-    for (const r of departed) {
-      counts.set(r.status, (counts.get(r.status) ?? 0) + 1);
+    for (const { student } of rows) {
+      counts.set(student.status, (counts.get(student.status) ?? 0) + 1);
     }
-
     const data = [...counts.entries()]
       .map(([status, count]) => ({
         status,
@@ -260,31 +191,27 @@ export class ReportsDepartedListsService {
         count,
       }))
       .sort((a, b) => b.count - a.count);
-
-    return { data, total: departed.length };
+    return { data, total: rows.length };
   }
 
   /**
-   * "Guruh / o'qituvchi / filial bo'yicha" — the departed-students snapshot
-   * bucketed by the last group's course / teacher / branch, each bucket
-   * segmented by student status. Built from loadDepartedStudents so the
-   * figures reconcile with the "Ketgan o'quvchilar" list.
+   * "Kesim bo'yicha" — open departures bucketed by the last group's course /
+   * teacher / branch, each bucket split by student status. A student sits
+   * under every teacher of that group, so `uniqueTotal` is the real count.
    */
   async getDepartedStudentsGroupBy(
     companyId: number,
     params: {
-      branchId?: number;
+      scope: ReportBranchIds;
       groupBy: 'course' | 'teacher' | 'branch';
     },
   ) {
-    const departed = await loadDepartedStudents(this.prisma, companyId, {
-      branchId: params.branchId,
-    });
-
-    type SegMap = Map<StudentStatus, number>;
-    const buckets = new Map<string, { name: string; segments: SegMap }>();
-
-    const addSegment = (id: string, name: string, status: StudentStatus) => {
+    const rows = await this.openRows(companyId, params.scope);
+    const buckets = new Map<
+      string,
+      { name: string; segments: Map<StudentStatus, number> }
+    >();
+    const add = (id: string, name: string, status: StudentStatus) => {
       let bucket = buckets.get(id);
       if (!bucket) {
         bucket = { name, segments: new Map() };
@@ -293,35 +220,87 @@ export class ReportsDepartedListsService {
       bucket.segments.set(status, (bucket.segments.get(status) ?? 0) + 1);
     };
 
-    for (const r of departed) {
+    for (const { student } of rows) {
+      const g = student.enrollments[0]?.group;
+      if (!g) continue;
       if (params.groupBy === 'course') {
-        if (r.course) addSegment(r.course.id, r.course.name, r.status);
+        add(g.course.id, g.course.name, student.status);
       } else if (params.groupBy === 'branch') {
-        if (r.branch) addSegment(String(r.branch.id), r.branch.name, r.status);
+        add(String(g.branch.id), g.branch.name, student.status);
       } else {
-        for (const t of r.teachers) {
-          addSegment(String(t.id), t.fullName, r.status);
+        for (const t of g.teachers) {
+          add(
+            String(t.teacher.id),
+            `${t.teacher.firstName} ${t.teacher.lastName}`,
+            student.status,
+          );
         }
       }
     }
 
-    const result = Array.from(buckets.entries()).map(([id, bucket]) => {
-      const segments = Array.from(bucket.segments.entries())
-        .map(([status, count]) => ({
-          status,
-          label: DEPARTED_STATUS_LABELS[status] ?? status,
-          count,
-        }))
-        .sort((a, b) => b.count - a.count);
-      const total = segments.reduce((sum, s) => sum + s.count, 0);
-      return { id, name: bucket.name, total, segments };
+    const data = [...buckets.entries()]
+      .map(([id, bucket]) => {
+        const segments = [...bucket.segments.entries()]
+          .map(([status, count]) => ({
+            status,
+            label: DEPARTED_STATUS_LABELS[status] ?? status,
+            count,
+          }))
+          .sort((a, b) => b.count - a.count);
+        const total = segments.reduce((sum, s) => sum + s.count, 0);
+        return { id, name: bucket.name, total, segments };
+      })
+      .sort((a, b) => b.total - a.total);
+
+    return { data, uniqueTotal: rows.length };
+  }
+
+  /** Open departure episodes with the card and last group of each student. */
+  private async openRows(companyId: number, scope: ReportBranchIds) {
+    const { episodes } = await loadDepartures(this.prisma, companyId, scope);
+    const open = openEpisodes(episodes);
+    if (open.length === 0) return [];
+    const students = await this.prisma.student.findMany({
+      where: { id: { in: open.map((e) => e.studentId) } },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        status: true,
+        balance: true,
+        // The last group the student belonged to.
+        enrollments: {
+          where: { deletedAt: null },
+          orderBy: [
+            { statusChangedAt: { sort: 'desc', nulls: 'last' } },
+            { createdAt: 'desc' },
+          ],
+          take: 1,
+          select: {
+            group: {
+              select: {
+                id: true,
+                name: true,
+                branch: { select: { id: true, name: true } },
+                course: { select: { id: true, name: true } },
+                teachers: {
+                  select: {
+                    teacher: {
+                      select: { id: true, firstName: true, lastName: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
-    result.sort((a, b) => b.total - a.total);
-
-    // Authoritative total — for `teacher` groupBy a student appears under
-    // every teacher of their last group, so summing bucket totals overcounts.
-    const uniqueTotal = departed.length;
-
-    return { data: result, uniqueTotal };
+    const byId = new Map(students.map((s) => [s.id, s]));
+    return open.flatMap((episode) => {
+      const student = byId.get(episode.studentId);
+      return student ? [{ episode, student }] : [];
+    });
   }
 }

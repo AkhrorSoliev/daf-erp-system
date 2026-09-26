@@ -20,7 +20,15 @@ import { cn } from "@/lib/utils";
 export interface DepartedStudentsSummary {
   churnRate: number;
   departedCount: number;
-  totalStudents: number;
+  /** Students in a group at the start of the range — the churn denominator. */
+  activeAtStart: number;
+  /** Stopped in the range, not back yet, grace period still running. */
+  pendingCount: number;
+  /**
+   * Days each kind of stop waits for a return (ADR-0035). An API older than
+   * ADR-0035 does not send it.
+   */
+  graceDays?: { LEFT_GROUP: number; FROZEN: number };
   lostRevenue: number;
   totalDebt: number;
   debtorCount: number;
@@ -37,7 +45,13 @@ interface KpiCardProps {
   valueColor?: string;
 }
 
-function KpiCard({ icon: Icon, label, value, tooltip, valueColor }: KpiCardProps) {
+function KpiCard({
+  icon: Icon,
+  label,
+  value,
+  tooltip,
+  valueColor,
+}: KpiCardProps) {
   return (
     <div className="rounded-xl border bg-card p-4 space-y-2">
       <div className="flex items-center justify-between gap-2">
@@ -80,6 +94,26 @@ function formatMonths(n: number): string {
   return `${n.toFixed(1)} oy`;
 }
 
+/**
+ * Tooltip of the «Davrda ketganlar» card. The last sentence names the
+ * pending stops of the period, so it is left out when there are none.
+ */
+export function departedTooltip({
+  graceDays,
+  pendingCount,
+}: Required<
+  Pick<DepartedStudentsSummary, "graceDays" | "pendingCount">
+>): string {
+  return (
+    "Tanlangan davrda ketgan o'quvchilar, har biri bir marta.\n" +
+    "Chetlatilgan kuni sanaladi. Guruhdan chiqqan o'quvchi " +
+    `${graceDays.LEFT_GROUP} kun, muzlatilgan o'quvchi ${graceDays.FROZEN} kun ichida qaytmasa, to'xtagan kuni sanaladi.` +
+    (pendingCount > 0
+      ? `\nYana ${pendingCount} nafari shu muddatda qaytmasa qo'shiladi.`
+      : "")
+  );
+}
+
 interface Props {
   data: DepartedStudentsSummary | undefined;
   isLoading: boolean;
@@ -96,47 +130,41 @@ export function DepartedStudentsKpiCards({ data, isLoading }: Props) {
     );
   }
 
-  const churnTooltip =
-    "Ketgan o'quvchilar ulushi = Ketganlar ÷ Barcha o'quvchilar × 100.\n" +
-    `Misol: ${data.departedCount} ketgan ÷ ${data.totalStudents} jami → ${data.churnRate.toFixed(1)}%.\n` +
-    "Barcha o'quvchilar = ketganlar + hozir guruhda o'qiyotganlar.";
+  // Without the grace periods only the first sentence of the tooltip holds.
+  const departedHint = data.graceDays
+    ? departedTooltip({
+        graceDays: data.graceDays,
+        pendingCount: data.pendingCount,
+      })
+    : "Tanlangan davrda ketgan o'quvchilar, har biri bir marta.";
 
-  const departedTooltip =
-    "Hozir hech qaysi faol guruhda o'qimayotgan o'quvchilar soni — " +
-    "chetlashtirilgan, muzlatilgan va guruhsiz qolgan faol o'quvchilar. " +
-    "Bitirgan o'quvchilar hisobga olinmaydi.";
+  const churnTooltip =
+    "Ketish koeffitsienti = Davrda ketganlar ÷ Davr boshida guruhda bo'lganlar × 100.\n" +
+    `Misol: ${data.departedCount} ÷ ${data.activeAtStart} → ${data.churnRate.toFixed(1)}%.`;
 
   const lostRevenueTooltip =
     "Agar ketgan o'quvchilar qolishganida, yana qancha so'm keltirishardi.\n" +
     "Har bir ketgan yozuv uchun: Shartnoma summasi − Allaqachon to'langan summa. Shartnomasi yo'q yozuvlar 0 deb hisoblanadi.";
 
   const avgDurationTooltip =
-    "Ketgan o'quvchilar markazda o'rtacha necha oy o'qiganini ko'rsatadi. " +
-    "Har bir yozuv uchun: Chiqarilgan sana − Qo'shilgan sana (oylarda). Keyin o'rtacha olinadi.";
+    "Davrda ketganlar markazda o'rtacha necha oy o'qigani: birinchi guruhga qo'shilgan kundan ketgan kungacha.";
 
   const debtTooltip =
-    "Ketgan o'quvchilarning markazga qarzi (balansi manfiy bo'lganlar).\n" +
-    `${data.debtorCount} ta ketgan o'quvchida qarz bor.`;
+    "Hozir qaytmagan ketganlarning markazga qarzi (balansi manfiy bo'lganlar).\n" +
+    `${data.debtorCount} ta o'quvchida qarz bor.`;
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
       <KpiCard
         icon={UserMinus}
-        label="Ketganlar soni"
+        label="Davrda ketganlar"
         value={data.departedCount.toLocaleString("uz-UZ")}
-        tooltip={departedTooltip}
+        tooltip={departedHint}
       />
       <KpiCard
         icon={TrendingDown}
         label="Ketish koeffitsienti"
         value={`${data.churnRate.toFixed(1)}%`}
-        valueColor={
-          data.churnRate >= 10
-            ? "text-red-600 dark:text-red-400"
-            : data.churnRate >= 5
-              ? "text-amber-600 dark:text-amber-400"
-              : undefined
-        }
         tooltip={churnTooltip}
       />
       <KpiCard

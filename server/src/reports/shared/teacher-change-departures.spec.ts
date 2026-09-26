@@ -280,6 +280,7 @@ const COMPANY = 1001;
 const BRANCH = 1;
 // Picked range: Tashkent 2026-09-01 .. 2026-09-30 (end exclusive).
 const RANGE = {
+  scope: null,
   start: at('2026-08-31T19:00:00Z'),
   end: at('2026-09-30T19:00:00Z'),
 };
@@ -591,7 +592,7 @@ describe('loadTeacherChangeDepartures', () => {
     ]);
   });
 
-  it('reads only the teacher changes of the given branch', async () => {
+  it('reads only the teacher changes of the branches in scope', async () => {
     const stoppedIn = (id: string, groupId: string) =>
       enrollment(id, {
         groupId,
@@ -611,7 +612,7 @@ describe('loadTeacherChangeDepartures', () => {
         lessons: [...lessons('g1'), ...lessons('g2')],
         enrollments: [stoppedIn('e11', 'g1'), stoppedIn('e12', 'g2')],
       },
-      { ...RANGE, branchId: BRANCH },
+      { ...RANGE, scope: [BRANCH] },
     );
 
     expect(rows.map((r) => r.enrollmentId)).toEqual(['e11']);

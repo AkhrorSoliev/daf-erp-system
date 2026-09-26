@@ -92,5 +92,7 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0032](0032-oquvchi-kirish-raqami-kartaga-ergashadi.md) | O'quvchining kirish raqami kartadagi raqamga ergashadi | Qabul qilindi | 2026-09-24 |
 | [0033](0033-oquvchi-hisobi-kartasi-bilan-yopiladi.md) | O'quvchining kirish hisobi kartasi bilan birga yopiladi va qaytadi | Qabul qilindi | 2026-09-24 |
 | [0034](0034-direktor-oz-filiali-ustozlariga-stavka-qoyadi.md) | Filial direktori o'z filiali ustozlariga stavka qo'yadi | Qabul qilindi | 2026-09-24 |
+| [0035](0035-ketgan-oquvchi-tarifi.md) | O'quvchi to'xtagan kuni ketgan sanaladi; guruhsizlik va pauzada N kun kutiladi | Qabul qilindi | 2026-09-25 |
+| [0036](0036-guruh-yopilganda-muzlatilgan-yozilish-ham-yopiladi.md) | Guruh yopilganda muzlatilgan yozilish ham yopiladi; tugallangan guruhda u DROPPED bo'ladi | Qabul qilindi | 2026-09-26 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.

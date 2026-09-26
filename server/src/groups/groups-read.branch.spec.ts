@@ -51,6 +51,7 @@ describe('GroupsService — id-addressed reads are branch-gated', () => {
     read = {
       findStudentsByGroupId: jest.fn().mockResolvedValue([]),
       getStatusHistory: jest.fn().mockResolvedValue([]),
+      getDeletePreview: jest.fn().mockResolvedValue({ active: 0, frozen: 0 }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -129,6 +130,25 @@ describe('GroupsService — id-addressed reads are branch-gated', () => {
       });
       await service.getStatusHistory(GROUP, 1001, 1, ['CEO']);
       expect(read.getStatusHistory).toHaveBeenCalledWith(GROUP, 1001);
+    });
+  });
+
+  describe('the delete preview', () => {
+    it('refuses a director of another branch', async () => {
+      await expect(
+        service.getDeletePreview(GROUP, 1001, 7, ['Branch Director']),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(read.getDeletePreview).not.toHaveBeenCalled();
+    });
+
+    it('lets an admin of the group branch through', async () => {
+      prisma.user.findFirst.mockResolvedValue({
+        mainBranch: NAMANGAN,
+        branches: [{ branchId: NAMANGAN }],
+        roles: [{ role: { name: 'Administrator' } }],
+      });
+      await service.getDeletePreview(GROUP, 1001, 8, ['Administrator']);
+      expect(read.getDeletePreview).toHaveBeenCalledWith(GROUP, 1001);
     });
   });
 });

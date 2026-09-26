@@ -79,6 +79,22 @@ hamma o'quvchini qoplaydi. Ilgari uch xil ta'rif bor edi va 496 ta o'quvchi
 ikkala ro'yxatda ham turardi.
 `students/shared/active-student-where.ts`
 
+**Ketgan o'quvchi** — o'qishni to'xtatib qaytmagan o'quvchi. Chetlatilgan kuni
+ketgan. Oxirgi guruhidan chiqqan (guruhi o'chirilgan bo'lsa ham) o'quvchi 21
+kun, muzlatilgan o'quvchi 60 kun ichida qaytmasa — to'xtagan kuni ketgan,
+qaytsa ketish bo'lmagan (ikki muddat — prod o'lchovidan, CEO qarori).
+Hech qachon guruhda bo'lmagan o'quvchi ketmaydi, bitiruvchi ham ketgan emas.
+Arxivlash ham ketish emas: arxiv — xato yoki takror yozuv, arxivdagi o'quvchi
+o'chirilgan karta kabi hech bir songa kirmaydi. Muzlatilgan o'quvchi
+to'g'ridan-to'g'ri chetlatilsa (`FROZEN → EXPELLED`, PR #564), bu bitta
+ketish — muzlatilgan oyda sanaladi. Ta'rif
+`students/shared/departure-episodes.ts` da, qaysi yozuv to'xtash yoki qaytish
+ekani `reports/shared/departures.loader.ts` da; hisobot sahifasi va bosh
+sahifa kartasi ketishlarni shu yuklovchidan oladi.
+«O'quvchilar oqimi», Excel faylidagi «Xulosa» va «O'quvchilar» varaqlari va
+Telegram 21:00 boshqa savolga javob beradi.
+`students/shared/departure-episodes.ts` · `reports/shared/departures.loader.ts` · `docs/adr/0035-ketgan-oquvchi-tarifi.md`
+
 **Avtomatik pauza** — ketma-ket sababsiz dars qoldirgan o'quvchini tizim
 har kuni ertalab 07:30 da o'zi muzlatadi (`FROZEN`), guruhdan **chiqarmaydi**.
 Pauzadagi o'quvchi davomat ro'yxatidan chiqadi, ya'ni undan pul yechilmaydi
@@ -93,9 +109,8 @@ ustun = filial. O'chirish = `LOST` holatiga o'tkazish + majburiy sabab.
 `leads/leads.service.ts`
 
 **Ketish sababi (exit reason)** — o'quvchi guruhdan chiqqanda majburiy
-tanlanadigan sabab. Hisobotdagi «ketganlar» **enrollment** larni sanaydi
-(guruh bo'yicha), o'quvchilarni emas — bitta o'quvchi ikki guruhdan chiqsa,
-ikki marta sanaladi.
+tanlanadigan sabab. Sabab guruhdan chiqarish yozuvida saqlanadi; «ketgan» esa o'quvchi bo'yicha
+sanaladi — «Ketgan o'quvchi» ga qarang.
 `student-exit-reasons/`
 
 ---

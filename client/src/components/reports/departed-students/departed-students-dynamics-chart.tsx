@@ -15,28 +15,32 @@ import {
 import api from "@/lib/api";
 import { ChartCard } from "@/components/shared/chart-card";
 
+interface DynamicsPoint {
+  date: string;
+  count: number;
+  /** The month reaches into the grace period; its departures may still grow. */
+  provisional: boolean;
+}
+
 interface DynamicsResponse {
-  data: { date: string; count: number }[];
-  granularity: "day" | "week" | "month";
+  data: DynamicsPoint[];
 }
 
 interface Props {
   branchId: number | null;
+  startDate: string;
+  endDate: string;
 }
-
-const GRANULARITY_LABEL: Record<DynamicsResponse["granularity"], string> = {
-  day: "Kunlik",
-  week: "Haftalik",
-  month: "Oylik",
-};
 
 const BAR_COLOR = "#ef4444"; // red-500 — literal so SVG renders reliably
 const BAR_COLOR_HOVER = "#dc2626"; // red-600
 
-export function DepartedStudentsDynamicsChart({ branchId }: Props) {
-  const params = {
-    branchId: branchId ?? undefined,
-  };
+export function DepartedStudentsDynamicsChart({
+  branchId,
+  startDate,
+  endDate,
+}: Props) {
+  const params = { branchId: branchId ?? undefined, startDate, endDate };
 
   const { data, isLoading } = useQuery<DynamicsResponse>({
     queryKey: ["departed-students-dynamics", params],
@@ -49,46 +53,45 @@ export function DepartedStudentsDynamicsChart({ branchId }: Props) {
     staleTime: 0,
   });
 
-  const granularity = data?.granularity ?? "day";
-
   const { chartData, total, peakLabel, peakCount } = useMemo(() => {
     const rows = (data?.data ?? []).map((d) => {
       const parsed = new Date(d.date + "T00:00:00");
-      const label =
-        granularity === "month"
-          ? format(parsed, "MM.yyyy")
-          : format(parsed, "dd.MM");
-      const fullLabel =
-        granularity === "month"
-          ? format(parsed, "MMMM yyyy")
-          : granularity === "week"
-            ? `${format(parsed, "dd.MM")} haftasi`
-            : format(parsed, "dd.MM.yyyy");
-      return { ...d, label, fullLabel };
+      return {
+        ...d,
+        label: format(parsed, "MM.yyyy"),
+        fullLabel: format(parsed, "MMMM yyyy"),
+      };
     });
     const t = rows.reduce((s, r) => s + r.count, 0);
     let peak = { label: "", count: 0 };
     for (const r of rows) {
       if (r.count > peak.count) peak = { label: r.fullLabel, count: r.count };
     }
-    return { chartData: rows, total: t, peakLabel: peak.label, peakCount: peak.count };
-  }, [data, granularity]);
+    return {
+      chartData: rows,
+      total: t,
+      peakLabel: peak.label,
+      peakCount: peak.count,
+    };
+  }, [data]);
 
-  const isEmpty = chartData.length > 0 && chartData.every((d) => d.count === 0);
+  const isEmpty =
+    chartData.length === 0 || chartData.every((d) => d.count === 0);
 
   return (
     <ChartCard
       title="Ketish dinamikasi"
-      subtitle={`${GRANULARITY_LABEL[granularity]} kesim${
-        total > 0 ? ` — jami ${total} ta` : ""
-      }${peakCount > 0 ? `, eng yuqori: ${peakLabel} (${peakCount} ta)` : ""}`}
+      subtitle={`Oylik kesim${total > 0 ? ` — jami ${total} ta` : ""}${
+        peakCount > 0 ? `, eng yuqori: ${peakLabel} (${peakCount} ta)` : ""
+      }`}
       tooltip={
-        "Har oyda nechta o'quvchi guruhsiz qolgani — ketgan o'quvchilarning oxirgi guruhdan chiqqan oyi bo'yicha.\n" +
-        "Filial filtriga bo'ysunadi."
+        "Har oyda nechta o'quvchi ketgani — to'xtagan oyi bo'yicha.\n" +
+        "Oxirgi kunlarga tushgan oy dastlabki: u yerdagi to'xtashlar hali tasdiqlanmagan.\n" +
+        "Tanlangan davr va filialga bo'ysunadi."
       }
       isLoading={isLoading}
       isEmpty={isEmpty}
-      emptyMessage="Hozircha ketgan o'quvchilar yo'q"
+      emptyMessage="Tanlangan davrda ketganlar yo'q — davrni kengaytirib ko'ring"
       bodyHeightClass="h-[260px]"
     >
       <ResponsiveContainer width="100%" height="100%">
@@ -117,7 +120,7 @@ export function DepartedStudentsDynamicsChart({ branchId }: Props) {
           />
           <Tooltip
             cursor={{ fill: "rgba(239, 68, 68, 0.08)" }}
-            content={(props) => <DynamicsTooltip {...props} granularity={granularity} />}
+            content={(props) => <DynamicsTooltip {...props} />}
           />
           <Bar
             dataKey="count"
@@ -134,24 +137,19 @@ export function DepartedStudentsDynamicsChart({ branchId }: Props) {
 function DynamicsTooltip({
   active,
   payload,
-  granularity,
 }: {
   active?: boolean;
+  // Recharts injects its own loosely-typed payload here.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload?: ReadonlyArray<any>;
-  granularity: DynamicsResponse["granularity"];
 }) {
   if (!active || !payload || payload.length === 0) return null;
   const row = payload[0]?.payload as
-    | { count?: number; fullLabel?: string }
-    | undefined;
+    { count?: number; fullLabel?: string; provisional?: boolean } | undefined;
   if (!row) return null;
-  const prefix =
-    granularity === "month" ? "Oy" : granularity === "week" ? "Hafta" : "Sana";
   return (
     <div className="rounded-md border bg-popover text-popover-foreground px-3 py-2 text-xs shadow-md min-w-[180px]">
-      <div className="text-muted-foreground mb-1">
-        {prefix}: {row.fullLabel}
-      </div>
+      <div className="text-muted-foreground mb-1">Oy: {row.fullLabel}</div>
       <div className="flex items-center gap-2">
         <span
           className="size-2.5 rounded-full shrink-0"
@@ -160,6 +158,11 @@ function DynamicsTooltip({
         <span className="flex-1">Ketganlar</span>
         <span className="font-semibold tabular-nums">{row.count ?? 0} ta</span>
       </div>
+      {row.provisional && (
+        <div className="mt-1 text-muted-foreground">
+          Dastlabki — oxirgi kunlardagi to&apos;xtashlar hali tasdiqlanmagan
+        </div>
+      )}
     </div>
   );
 }
