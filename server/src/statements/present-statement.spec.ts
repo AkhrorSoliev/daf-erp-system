@@ -1,6 +1,6 @@
 import { buildStatement } from './build-statement';
 import { presentStatement } from './present-statement';
-import { som, signed } from './statement-text';
+import { dayName, som, signed } from './statement-text';
 import type {
   StatementEnrollment,
   StatementInput,
@@ -135,10 +135,14 @@ describe('statement text helpers', () => {
     expect(signed(33345)).toBe('+33\u00a0345');
     expect(signed(0)).toBe('0');
   });
+
+  it('keeps a day and its month on one line', () => {
+    expect(dayName('2026-09-19')).toBe('19\u2011sentabr');
+  });
 });
 
 describe('presentStatement', () => {
-  const nb = (s: string) => s.replace(/\u00a0/g, ' ');
+  const nb = (s: string) => s.replace(/\u00a0/g, ' ').replace(/\u2011/g, '-');
 
   it('answers a debtor in the student voice, month by month', () => {
     const v = presentStatement(buildStatement(debtor()), 'student');

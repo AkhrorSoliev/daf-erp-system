@@ -27,9 +27,12 @@ export const capitalize = (s: string): string =>
 export const monthTitle = (keyOrDay: string): string =>
   capitalize(monthName(keyOrDay));
 
-/** '19-sentabr'. */
+/**
+ * '19-sentabr', with a no-break hyphen so a line never breaks between the
+ * day and the month ("19-" / "sentabrdan").
+ */
 export const dayName = (day: Day): string =>
-  `${Number(day.slice(8, 10))}-${monthName(day)}`;
+  `${Number(day.slice(8, 10))}\u2011${monthName(day)}`;
 
 /** '19.09.2026'. */
 export const dmy = (day: Day): string =>
