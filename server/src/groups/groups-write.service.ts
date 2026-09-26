@@ -600,8 +600,6 @@ export class GroupsWriteService {
       async (tx) => {
         await this.statusCascadeService.cascadeGroupDeletion(tx, {
           groupId: id,
-          groupName: group.name,
-          companyId: group.companyId ?? undefined,
           userId,
           at: deletedAt,
         });
