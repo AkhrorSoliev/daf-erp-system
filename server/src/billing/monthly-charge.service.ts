@@ -30,6 +30,12 @@ export interface ChargeableEnrollment {
   startDate: Date | null;
   /** Where the charge starts when `startDate` is empty (`chargeStartDate`). */
   createdAt: Date;
+  /**
+   * When the enrollment last came back to ACTIVE (unfrozen, restored from the
+   * archive); null if it never left ACTIVE. The charge covers only the
+   * lessons after that day (`chargeStartDate`).
+   */
+  returnedAt: Date | null;
   group: {
     id: string;
     branchId: number;
@@ -737,9 +743,13 @@ export class MonthlyChargeService {
    * o'quvchi o'sha darsni BEPUL oladi (ataylab, muzlatish tomonining
    * ko'zgusi).
    *
-   * `null` qaytaradi: hisob topilmasa, `REVERSED` bo'lsa, hech narsa
-   * muzlatib chiqarilmagan bo'lsa, yoki qaytariladigan narsa bo'lmasa
-   * (idempotent — yuqoriga qarang).
+   * A return into a month with no charge in force (none yet, or `REVERSED`)
+   * charges that month here and now, from the day after the return
+   * (`chargeMonthOfReturn`): the student was frozen when its charge run went
+   * by. That gives `null` only when no lesson is left after the return day.
+   *
+   * `null` qaytaradi: hech narsa muzlatib chiqarilmagan bo'lsa, yoki
+   * qaytariladigan narsa bo'lmasa (idempotent — yuqoriga qarang).
    *
    * Chaqiruvchi Serializable tranzaksiya ichida bo'lishi SHART — `tx` shu
    * tranzaksiyaning mijozi.
@@ -791,7 +801,9 @@ export class MonthlyChargeService {
         },
       },
     });
-    if (!charge || charge.status !== MonthlyChargeStatus.CHARGED) return null;
+    if (!charge || charge.status !== MonthlyChargeStatus.CHARGED) {
+      return this.chargeMonthOfReturn(tx, params, periodYear, periodMonth);
+    }
 
     const enr = await tx.enrollment.findUnique({
       where: { id: params.enrollmentId },
@@ -918,6 +930,72 @@ export class MonthlyChargeService {
   }
 
   /**
+   * Charges the month of a return that has no charge in force: the student
+   * was frozen when that month's charge run went by, so there is no row for
+   * `restoreChargeForReturn` to re-cover. Charged like a mid-month join, from
+   * the day after the return (`chargeStartDate`) — the charge the next daily
+   * run would make, since it reads the same instant from `statusChangedAt`.
+   * Before this the return charged nothing, and that run billed the whole
+   * month from the join date, the frozen weeks included.
+   *
+   * The enrollment is still FROZEN here: the unfreeze flips it right after
+   * this money step, and the student's own status is already ACTIVE, which
+   * is the caller filter `createChargeForEnrollment` relies on.
+   */
+  private async chargeMonthOfReturn(
+    tx: Prisma.TransactionClient,
+    params: {
+      enrollmentId: string;
+      returnDate: Date;
+      companyId: number;
+      performedById?: number;
+    },
+    periodYear: number,
+    periodMonth: number,
+  ): Promise<{ charged: number; lessons: number } | null> {
+    const enr = await tx.enrollment.findUnique({
+      where: { id: params.enrollmentId },
+      select: {
+        id: true,
+        studentId: true,
+        groupId: true,
+        startDate: true,
+        createdAt: true,
+        student: { select: { discountPercent: true } },
+        group: {
+          select: {
+            id: true,
+            branchId: true,
+            companyId: true,
+            statusEnum: true,
+            startDate: true,
+            exactDays: true,
+            course: { select: { price: true, paymentModel: true } },
+          },
+        },
+      },
+    });
+    if (!enr) return null;
+
+    const { student, ...enrollment } = enr;
+    const charge = await this.createChargeForEnrollment(tx, {
+      enrollment: {
+        ...enrollment,
+        status: EnrollmentStatus.ACTIVE,
+        returnedAt: params.returnDate,
+      },
+      periodYear,
+      periodMonth,
+      companyId: params.companyId,
+      performedById: params.performedById,
+      discountPercent: student.discountPercent,
+    });
+    return charge
+      ? { charged: charge.chargedAmount, lessons: charge.coveredLessons }
+      : null;
+  }
+
+  /**
    * Bir kompaniyaning barcha oylik yozilishlariga bir davr uchun hisob yozadi.
    *
    * Ikki chaqiruvchi bor: oy boshi cron'i (`MonthlyBillingCronService`, har
@@ -975,6 +1053,7 @@ export class MonthlyChargeService {
         status: true,
         startDate: true,
         createdAt: true,
+        statusChangedAt: true,
         // Chegirma shu YERDA, bir so'rovda o'qiladi — enrollment boshiga
         // alohida so'rov (N+1) emas.
         student: { select: { discountPercent: true } },
@@ -1032,10 +1111,16 @@ export class MonthlyChargeService {
     for (const enr of enrollments) {
       try {
         const excusedCredit = await resolveExcusedCredit(enr.group.branchId);
+        // Only ACTIVE enrollments come back from the query, so
+        // `statusChangedAt` is the moment one last came back to ACTIVE —
+        // unfrozen, or restored from the archive — and null when its status
+        // never changed. The unfreeze stamps that same instant
+        // (`StatusCascadeService.cascadeEnrollmentStatus`).
+        const { statusChangedAt, ...chargeable } = enr;
         const charge = await this.prisma.$transaction(
           (tx) =>
             this.createChargeForEnrollment(tx, {
-              enrollment: enr as ChargeableEnrollment,
+              enrollment: { ...chargeable, returnedAt: statusChangedAt },
               periodYear: params.periodYear,
               periodMonth: params.periodMonth,
               companyId: params.companyId,
