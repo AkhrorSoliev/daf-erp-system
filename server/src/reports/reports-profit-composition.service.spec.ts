@@ -98,12 +98,12 @@ describe('ReportsProfitCompositionService', () => {
         salaries: {
           data: [
             {
-              user: { firstName: 'Jamsher', lastName: '' },
+              user: { firstName: 'Aziz', lastName: '' },
               fullDeserved: 60_000,
               covered: 55_000,
             },
             {
-              user: { firstName: 'Eldor', lastName: '' },
+              user: { firstName: 'Bobur', lastName: '' },
               fullDeserved: 30_000,
               covered: 30_000,
             },
@@ -130,7 +130,7 @@ describe('ReportsProfitCompositionService', () => {
     service.getProfitComposition(1001, {
       month: '2026-09',
       branchIds,
-      performedById: 10456,
+      performedById: 10001,
       now,
     });
 
@@ -151,8 +151,8 @@ describe('ReportsProfitCompositionService', () => {
     ]);
     // Top-up month: the full deserved figure, the one the total uses.
     expect(r.teachers.rows).toEqual([
-      { name: 'Jamsher', amount: 60_000 },
-      { name: 'Eldor', amount: 30_000 },
+      { name: 'Aziz', amount: 60_000 },
+      { name: 'Bobur', amount: 30_000 },
     ]);
     expect(r.teachers).toEqual(
       expect.objectContaining({ total: 90_000, count: 2, advances: 7_000 }),
@@ -215,7 +215,7 @@ describe('ReportsProfitCompositionService', () => {
     const r = await service.getProfitComposition(1001, {
       month: '2026-08',
       branchIds: null,
-      performedById: 10456,
+      performedById: 10001,
       now,
     });
 
@@ -263,7 +263,7 @@ describe('ReportsProfitCompositionService', () => {
     expect(reports.assembleMonthlyNetProfit).toHaveBeenCalledWith(1001, {
       month: '2026-09',
       branchIds: [1],
-      performedById: 10456,
+      performedById: 10001,
     });
   });
 

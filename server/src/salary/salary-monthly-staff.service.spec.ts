@@ -325,7 +325,7 @@ describe('SalaryStaffMonthlyService — home-branch basis', () => {
   it('drops a staff member whose main branch is elsewhere', async () => {
     // What the database returns for branch 2 under membership: both.
     prisma.employeeSalaryConfig.findMany.mockResolvedValue([
-      staffConfig('two', 10562, 1, [1, 2]),
+      staffConfig('two', 20002, 1, [1, 2]),
       staffConfig('solo', 20001, 2, [2]),
     ]);
     const res = await service.computeStaff(
@@ -351,7 +351,7 @@ describe('SalaryStaffMonthlyService — home-branch basis', () => {
 
   it('keeps membership for the payroll page (no basis given)', async () => {
     prisma.employeeSalaryConfig.findMany.mockResolvedValue([
-      staffConfig('two', 10562, 1, [1, 2]),
+      staffConfig('two', 20002, 1, [1, 2]),
     ]);
     const res = await service.computeStaff(juneScope({ branchId: 2 }));
     expect(res.staff).toHaveLength(1);

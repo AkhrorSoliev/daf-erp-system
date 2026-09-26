@@ -333,17 +333,17 @@ describe('ReportsController — role guards', () => {
       await controller.getProfitComposition(
         { startDate: '2026-09-01', endDate: '2026-09-30' } as any,
         1001,
-        10456,
+        10001,
       );
       expect(mockComposition.getProfitComposition).toHaveBeenCalledWith(1001, {
         month: '2026-09',
         branchIds: null,
-        performedById: 10456,
+        performedById: 10001,
       });
     });
 
     it('falls back to the current Tashkent month without a period', async () => {
-      await controller.getProfitComposition({} as any, 1001, 10456);
+      await controller.getProfitComposition({} as any, 1001, 10001);
       const arg = mockComposition.getProfitComposition.mock.calls[0][1];
       expect(arg.month).toMatch(/^\d{4}-\d{2}$/);
     });
