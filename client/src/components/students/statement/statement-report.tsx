@@ -1,34 +1,33 @@
 import { AlertTriangle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import type { ReactNode } from "react";
 import type { CorrectablePayment } from "../correct-payment-dialog";
 import { StatementAllocations } from "./statement-allocations";
 import { StatementMonthsTable } from "./statement-months-table";
+import { StatementSection } from "./statement-section";
 import { Segments } from "./statement-segments";
+import { StatementSummary } from "./statement-summary";
 import type { LessonDay, StatementResponse } from "./statement-types";
 import { canCorrectPayment } from "./statement-utils";
 
-const ANSWER_TONE = {
-  debt: "border-red-300 bg-red-50 text-red-900 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200",
-  credit:
-    "border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200",
-  zero: "border-border bg-muted/40",
-} as const;
-
 /**
- * The statement itself, drawn from `GET /students/:id/statement`. Every
- * sentence is the server's (`view`, admin voice); this component only lays it
- * out. No fetching here, so it renders the same in a test.
+ * The statement itself, drawn from `GET /students/:id/statement`, in three
+ * layers: the answer and its numbers, the months (one line each, details on
+ * click), then closed sections for everything that explains it further.
+ * Every sentence is the server's (`view`, admin voice). No fetching here, so
+ * it renders the same in a test; the raw ledger comes in as `ledger`.
  */
 export function StatementReport({
   data,
   who,
   now,
   onCorrect,
+  ledger,
 }: {
   data: StatementResponse;
   who: { isCeo: boolean; canCorrect: boolean };
   now: number;
   onCorrect: (p: CorrectablePayment) => void;
+  ledger?: ReactNode;
 }) {
   const { view, model } = data;
   const lessonDays: Record<string, LessonDay[]> = {};
@@ -46,18 +45,7 @@ export function StatementReport({
         </div>
       )}
 
-      <p className="text-sm text-muted-foreground">{view.studentLine}</p>
-
-      <section className={cn("rounded-lg border p-4", ANSWER_TONE[view.answer.tone])}>
-        <p className="text-lg font-semibold">{view.answer.title}</p>
-        {view.answer.subtitle && (
-          <p className="mt-1 text-sm opacity-90">{view.answer.subtitle}</p>
-        )}
-      </section>
-
-      <p className="rounded-md bg-muted/40 px-3 py-2 text-sm">
-        <Segments segments={view.equation} />
-      </p>
+      <StatementSummary answer={view.answer} equation={model.equation} />
 
       <section className="space-y-2">
         <h3 className="text-sm font-semibold">Oylar bo&apos;yicha</h3>
@@ -71,30 +59,47 @@ export function StatementReport({
         />
       </section>
 
-      {view.modelChanges.map((c) => (
-        <section key={c.title} className="space-y-1 rounded-lg border p-4">
-          <h3 className="text-sm font-semibold">{c.title}</h3>
-          {c.lines.map((line, i) => (
-            <p key={i} className="text-sm text-muted-foreground">
-              {line}
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold">Batafsil</h3>
+        {view.allocations.length > 0 && (
+          <StatementSection
+            title="To'lovlar qayerga ketdi"
+            count={view.allocations.length}
+          >
+            <StatementAllocations
+              rows={view.allocations}
+              models={model.allocations}
+              isCorrectable={(a) => canCorrectPayment(a, who, now)}
+              onCorrect={onCorrect}
+            />
+          </StatementSection>
+        )}
+        {view.modelChanges.length > 0 && (
+          <StatementSection title="To'lov turi o'zgarishi">
+            <div className="space-y-3">
+              {view.modelChanges.map((c) => (
+                <div key={c.title} className="space-y-1">
+                  <p className="text-sm font-medium">{c.title}</p>
+                  {c.lines.map((line, i) => (
+                    <p key={i} className="text-sm text-muted-foreground">
+                      {line}
+                    </p>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </StatementSection>
+        )}
+        <StatementSection title="Hisob qanday chiqdi">
+          <div className="space-y-2 text-sm">
+            <p>
+              <Segments segments={view.equation} />
             </p>
-          ))}
-        </section>
-      ))}
-
-      {view.allocations.length > 0 && (
-        <section className="space-y-2">
-          <h3 className="text-sm font-semibold">To&apos;lovlar qayerga ketdi</h3>
-          <StatementAllocations
-            rows={view.allocations}
-            models={model.allocations}
-            isCorrectable={(a) => canCorrectPayment(a, who, now)}
-            onCorrect={onCorrect}
-          />
-        </section>
-      )}
-
-      <p className="text-xs text-muted-foreground">{view.footnote}</p>
+            <p className="text-xs text-muted-foreground">{view.footnote}</p>
+          </div>
+        </StatementSection>
+        {ledger}
+      </section>
     </div>
   );
 }

@@ -72,6 +72,14 @@ export interface ModelAllocation {
 
 export interface StatementModel {
   asOf: string;
+  /** paid + Σ items − lessons − prepaidAhead = balance, so'm by so'm. */
+  equation: {
+    paid: number;
+    items: Array<{ kind: string; amount: number }>;
+    lessons: number;
+    prepaidAhead: number;
+    balance: number;
+  };
   months: Array<{ key: string; lessonDays: LessonDay[] }>;
   allocations: ModelAllocation[];
 }

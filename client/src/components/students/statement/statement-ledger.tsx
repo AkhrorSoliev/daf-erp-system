@@ -2,15 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
-import { ChevronRight, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -28,6 +23,7 @@ import {
   TRANSACTION_TYPE_INFO,
   type StudentTransaction,
 } from "../student-profile-tabs-utils";
+import { StatementSection } from "./statement-section";
 import { appendLedgerPage } from "./statement-utils";
 
 const PAGE_SIZE = 20;
@@ -90,19 +86,13 @@ export function StatementLedger({
   }, [open, refreshKey, load]);
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger asChild>
-        <Button variant="ghost" size="sm" className="-ml-2 gap-1.5">
-          <ChevronRight
-            className={cn("size-4 transition-transform", open && "rotate-90")}
-          />
-          Barcha yozuvlar
-          {total > 0 && (
-            <span className="text-muted-foreground">({total})</span>
-          )}
-        </Button>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="mt-2 space-y-3">
+    <StatementSection
+      title="Barcha yozuvlar"
+      count={total}
+      open={open}
+      onOpenChange={setOpen}
+    >
+      <div className="space-y-3">
         <div className="overflow-x-auto rounded-lg border">
           <Table>
             <TableHeader>
@@ -126,7 +116,9 @@ export function StatementLedger({
                   </TableCell>
                   <TableCell>
                     <Badge
-                      variant={TRANSACTION_TYPE_INFO[r.type]?.variant ?? "outline"}
+                      variant={
+                        TRANSACTION_TYPE_INFO[r.type]?.variant ?? "outline"
+                      }
                       className="text-[10px]"
                     >
                       {TRANSACTION_TYPE_INFO[r.type]?.label ?? r.type}
@@ -190,7 +182,7 @@ export function StatementLedger({
             )}
           </div>
         )}
-      </CollapsibleContent>
-    </Collapsible>
+      </div>
+    </StatementSection>
   );
 }

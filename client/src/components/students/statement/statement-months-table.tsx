@@ -48,7 +48,9 @@ export function StatementMonthsTable({
         <TableBody>
           {months.map((m) => {
             const days = lessonDays[m.key] ?? [];
-            const canOpen = days.length > 0;
+            const note = m.highlight && m.isLast ? sharpNote : null;
+            const canOpen =
+              days.length > 0 || m.details.length > 0 || note !== null;
             const isOpen = open === m.key;
             const groups = new Set(days.map((d) => d.group));
             const toggle = () => setOpen(isOpen ? null : m.key);
@@ -75,34 +77,19 @@ export function StatementMonthsTable({
                   tabIndex={canOpen ? 0 : undefined}
                   aria-expanded={canOpen ? isOpen : undefined}
                 >
-                  <TableCell className="align-top">
-                    <div className="flex items-start gap-1.5">
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
                       <ChevronRight
                         className={cn(
-                          "mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform",
+                          "size-4 shrink-0 text-muted-foreground transition-transform",
                           isOpen && "rotate-90",
                           !canOpen && "invisible",
                         )}
                       />
-                      <div className="min-w-0">
-                        <p className="font-medium">{m.label}</p>
-                        {m.details.map((d, i) => (
-                          <p
-                            key={i}
-                            className="text-xs whitespace-normal text-muted-foreground"
-                          >
-                            {d}
-                          </p>
-                        ))}
-                        {m.highlight && m.isLast && sharpNote && (
-                          <p className="mt-1 text-xs whitespace-normal text-yellow-900 dark:text-yellow-300">
-                            <Segments segments={sharpNote} />
-                          </p>
-                        )}
-                      </div>
+                      <span className="font-medium">{m.label}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="align-top whitespace-nowrap">
+                  <TableCell className="whitespace-nowrap">
                     {m.lessons}
                     {m.absent && (
                       <span className="text-red-600 dark:text-red-400">
@@ -111,20 +98,18 @@ export function StatementMonthsTable({
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className={cn(AMOUNT, "align-top")}>
+                  <TableCell className={AMOUNT}>
                     {m.cost ?? (
                       <span className="font-sans text-xs text-muted-foreground">
                         {m.costNote}
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className={cn(AMOUNT, "align-top")}>
-                    {m.money}
-                  </TableCell>
+                  <TableCell className={AMOUNT}>{m.money}</TableCell>
                   <TableCell
                     className={cn(
                       AMOUNT,
-                      "align-top font-semibold",
+                      "font-semibold",
                       TONE_TEXT[m.runningTone],
                     )}
                   >
@@ -134,7 +119,12 @@ export function StatementMonthsTable({
                 {isOpen && (
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={5} className="bg-muted/30">
-                      <LessonDayChips days={days} showGroup={groups.size > 1} />
+                      <MonthDetails
+                        details={m.details}
+                        note={note}
+                        days={days}
+                        showGroup={groups.size > 1}
+                      />
                     </TableCell>
                   </TableRow>
                 )}
@@ -173,5 +163,36 @@ export function LessonDayChips({
         );
       })}
     </ul>
+  );
+}
+
+/** What a month row opens: why it cost what it did, then its lesson days. */
+export function MonthDetails({
+  details,
+  note,
+  days,
+  showGroup,
+}: {
+  details: string[];
+  note: Segment[] | null;
+  days: LessonDay[];
+  showGroup: boolean;
+}) {
+  return (
+    <div className="sticky left-0 max-w-[calc(100vw-5rem)] space-y-2 whitespace-normal sm:max-w-none">
+      {note && (
+        <p className="text-sm text-yellow-900 dark:text-yellow-300">
+          <Segments segments={note} />
+        </p>
+      )}
+      {details.length > 0 && (
+        <ul className="space-y-0.5 text-xs text-muted-foreground">
+          {details.map((d, i) => (
+            <li key={i}>{d}</li>
+          ))}
+        </ul>
+      )}
+      {days.length > 0 && <LessonDayChips days={days} showGroup={showGroup} />}
+    </div>
   );
 }

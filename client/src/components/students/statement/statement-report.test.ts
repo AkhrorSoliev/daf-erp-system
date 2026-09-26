@@ -2,7 +2,9 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { StatementReport } from "./statement-report";
-import { LessonDayChips } from "./statement-months-table";
+import { LessonDayChips, MonthDetails } from "./statement-months-table";
+import { StatementAllocations } from "./statement-allocations";
+import { StatementSummary } from "./statement-summary";
 import type { StatementResponse, StatementView } from "./statement-types";
 
 const NOW = Date.parse("2026-09-26T12:00:00.000Z");
@@ -73,6 +75,13 @@ const data = (v: StatementView = view()): StatementResponse => ({
   view: v,
   model: {
     asOf: "2026-09-26",
+    equation: {
+      paid: 200_000,
+      items: [],
+      lessons: 350_000,
+      prepaidAhead: 0,
+      balance: -150_000,
+    },
     months: [
       { key: "2026-08", lessonDays: [] },
       {
@@ -92,77 +101,103 @@ const data = (v: StatementView = view()): StatementResponse => ({
   },
 });
 
-const render = (
-  d: StatementResponse,
-  who = { isCeo: false, canCorrect: true },
-) =>
+const render = (d: StatementResponse) =>
   renderToStaticMarkup(
-    createElement(StatementReport, { data: d, who, now: NOW, onCorrect: () => {} }),
+    createElement(StatementReport, {
+      data: d,
+      who: { isCeo: false, canCorrect: true },
+      now: NOW,
+      onCorrect: () => {},
+    }),
   );
 
 describe("StatementReport", () => {
-  it("renders the answer, the equation and every section from the view", () => {
+  it("leads with the answer and the numbers that make it", () => {
     const html = render(data());
-    for (const text of [
-      "Qarzi: 150 000 so&#x27;m",
-      "sentabr darslari uchun 150 000",
-      "200 000",
-      "Pul 12 darslik paket uchun to&#x27;lanadi.",
-      "Oylar bo&#x27;yicha",
-      "Sentabr",
-      "2 kelmagan",
-      "oylik to&#x27;lov: 9 dars × 16 667",
-      "Sentabrdan oylik to&#x27;lov",
-      "avgust darslari 200 000",
-      "Izoh matni.",
-    ]) {
-      expect(html).toContain(text);
+    expect(html).toContain("Qarzi: 150 000 so&#x27;m");
+    expect(html).toContain("sentabr darslari uchun 150 000");
+    for (const label of ["To&#x27;lagan", "Darslar narxi", "Qoldiq"]) {
+      expect(html).toContain(label);
     }
     expect(html).toMatch(/border-red-[^"]*"[^>]*>[\s\S]*Qarzi:/);
   });
 
-  it("paints a credit answer green", () => {
+  it("keeps each month to one line, its notes wait behind a click", () => {
+    const html = render(data());
+    expect(html).toContain("Sentabr");
+    expect(html).toContain("2 kelmagan");
+    expect(html).not.toContain("oylik to&#x27;lov: 9 dars");
+    expect(html).not.toContain("Sentabr avgustdan 50 000 so&#x27;m kam.");
+    expect(html).toMatch(/bg-yellow-[^"]*"[^>]*data-month="2026-09"/);
+    expect(html).not.toMatch(/bg-yellow-[^"]*"[^>]*data-month="2026-08"/);
+  });
+
+  it("puts the rest in closed sections under Batafsil", () => {
+    const html = render(data());
+    expect(html).toContain("Batafsil");
+    expect(html).toContain("To&#x27;lovlar qayerga ketdi");
+    expect(html).toContain("To&#x27;lov turi o&#x27;zgarishi");
+    expect(html).toContain("Hisob qanday chiqdi");
+    // Closed: their contents are not drawn yet.
+    expect(html).not.toContain("avgust darslari 200 000");
+    expect(html).not.toContain("Izoh matni.");
+  });
+
+  it("shows the admin warning only when the server sends one", () => {
+    expect(render(data())).not.toContain('role="alert"');
     const html = render(
-      data(
-        view({
-          answer: { tone: "credit", title: "Qarzi yo'q.", subtitle: "U oktabr to'loviga o'tadi." },
-        }),
-      ),
+      data(view({ warning: "Farq bor. Dasturchiga xabar bering." })),
+    );
+    expect(html).toContain('role="alert"');
+    expect(html).toContain("Farq bor. Dasturchiga xabar bering.");
+  });
+});
+
+describe("StatementSummary", () => {
+  const equation = data().model.equation;
+
+  it("paints a credit answer green", () => {
+    const html = renderToStaticMarkup(
+      createElement(StatementSummary, {
+        answer: {
+          tone: "credit",
+          title: "Qarzi yo'q.",
+          subtitle: "U oktabr to'loviga o'tadi.",
+        },
+        equation,
+      }),
     );
     expect(html).toContain("border-emerald-");
     expect(html).not.toContain("border-red-300");
   });
 
-  it("highlights the sharp-change month in yellow with its note", () => {
-    const html = render(data());
-    expect(html).toMatch(/bg-yellow-[^"]*"[^>]*data-month="2026-09"/);
-    expect(html).toContain("Sentabr avgustdan 50 000 so&#x27;m kam.");
-    expect(html).not.toMatch(/bg-yellow-[^"]*"[^>]*data-month="2026-08"/);
-  });
-
-  it("shows the admin warning only when the server sends one", () => {
-    expect(render(data())).not.toContain('role="alert"');
-    const html = render(data(view({ warning: "Farq bor. Dasturchiga xabar bering." })));
-    expect(html).toContain('role="alert"');
-    expect(html).toContain("Farq bor. Dasturchiga xabar bering.");
-  });
-
-  it("keeps the receipt link on a payment row", () => {
-    expect(render(data())).toContain("/receipts/payment/p1.pdf");
-  });
-
-  it("offers the correction menu only where the rule allows it", () => {
-    expect(render(data())).toContain("Amallar");
-    expect(render(data(), { isCeo: false, canCorrect: false })).not.toContain(
-      "Amallar",
+  it("adds an 'other' tile only when something besides payments and lessons moved the balance", () => {
+    const answer = view().answer;
+    const plain = renderToStaticMarkup(
+      createElement(StatementSummary, { answer, equation }),
     );
+    expect(plain).not.toContain("Boshqa");
+    const withRefund = renderToStaticMarkup(
+      createElement(StatementSummary, {
+        answer,
+        equation: {
+          ...equation,
+          items: [{ kind: "refund", amount: -50_000 }],
+          balance: -200_000,
+        },
+      }),
+    );
+    expect(withRefund).toContain("Boshqa");
+    expect(withRefund).toContain("-50");
   });
 });
 
-describe("LessonDayChips", () => {
-  it("lists a month's lesson days with their status", () => {
+describe("MonthDetails", () => {
+  it("explains the month, then lists its lesson days", () => {
     const html = renderToStaticMarkup(
-      createElement(LessonDayChips, {
+      createElement(MonthDetails, {
+        details: ["oylik to'lov: 9 dars × 16 667"],
+        note: [{ text: "Sentabr avgustdan 50 000 so'm kam.", bold: true }],
         days: [
           { day: "2026-09-07", group: "#001", status: "kelmagan" },
           { day: "2026-09-30", group: "#001", status: "kelgusi" },
@@ -170,8 +205,45 @@ describe("LessonDayChips", () => {
         showGroup: false,
       }),
     );
+    expect(html).toContain("oylik to&#x27;lov: 9 dars × 16 667");
+    expect(html).toContain("Sentabr avgustdan 50 000 so&#x27;m kam.");
+    expect(html).toContain("07.09");
+    expect(html).toContain("hali o&#x27;tilmagan");
+  });
+});
+
+describe("StatementAllocations", () => {
+  const d = data();
+  const renderRows = (canCorrect: boolean) =>
+    renderToStaticMarkup(
+      createElement(StatementAllocations, {
+        rows: d.view.allocations,
+        models: d.model.allocations,
+        isCorrectable: () => canCorrect,
+        onCorrect: () => {},
+      }),
+    );
+
+  it("keeps the receipt link on a payment row", () => {
+    expect(renderRows(true)).toContain("/receipts/payment/p1.pdf");
+    expect(renderRows(true)).toContain("avgust darslari 200 000");
+  });
+
+  it("offers the correction menu only where the rule allows it", () => {
+    expect(renderRows(true)).toContain("Amallar");
+    expect(renderRows(false)).not.toContain("Amallar");
+  });
+});
+
+describe("LessonDayChips", () => {
+  it("lists a month's lesson days with their status", () => {
+    const html = renderToStaticMarkup(
+      createElement(LessonDayChips, {
+        days: [{ day: "2026-09-07", group: "#001", status: "kelmagan" }],
+        showGroup: false,
+      }),
+    );
     expect(html).toContain("07.09");
     expect(html).toContain("kelmagan");
-    expect(html).toContain("hali o&#x27;tilmagan");
   });
 });
