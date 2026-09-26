@@ -9,13 +9,20 @@ import { UploadModule } from '../upload/upload.module';
 import { UsersModule } from '../users/users.module';
 import { MockExamsModule } from '../mock-exams/mock-exams.module';
 import { PaymentLinksModule } from '../payment-gateways/payment-links.module';
+import { StatementsModule } from '../statements/statements.module';
 
 @Module({
   // PaymentLinksModule is the small leaf module that owns
   // PaymentLinkService — pulling in the full PaymentGatewaysModule here
   // would create a cycle (PaymentGatewaysModule → PaymentsModule →
   // BillingModule → TelegramModule).
-  imports: [UploadModule, UsersModule, MockExamsModule, PaymentLinksModule],
+  imports: [
+    UploadModule,
+    UsersModule,
+    MockExamsModule,
+    PaymentLinksModule,
+    StatementsModule,
+  ],
   controllers: [TelegramController, TelegramChannelReportController],
   providers: [
     TelegramService,

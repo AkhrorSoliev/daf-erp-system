@@ -28,10 +28,12 @@ import {
   grantableRoleIdsFor,
 } from './constants';
 import { StudentLeadOriginService } from '../common/student-origin';
+import { StatementService } from '../statements/statement.service';
 import { createStudentRegistrationScene } from './scenes/student-registration.scene';
 import { createEmployeeRegistrationScene } from './scenes/employee-registration.scene';
 import { createMockExamRegistrationScene } from './scenes/mock-exam-registration.scene';
 import { createPasswordResetScene } from './scenes/password-reset.scene';
+import { createStatementScene } from './scenes/statement.scene';
 import { approveLoginRequest } from './flows/app-login-otp-flow';
 import {
   checkEmployeePayload,
@@ -126,6 +128,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     private paymentLinkService: PaymentLinkService,
     private gateStats: TelegramChannelGateStatsService,
     private leadOrigin: StudentLeadOriginService,
+    private statements: StatementService,
   ) {}
 
   async onModuleInit() {
@@ -266,11 +269,14 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.bot,
     );
 
+    const statementScene = createStatementScene(this.prisma, this.statements);
+
     const stage = new Scenes.Stage<BotContext>([
       studentScene,
       employeeScene,
       mockExamScene,
       passwordResetScene,
+      statementScene,
     ]);
     this.bot.use(stage.middleware());
 
@@ -484,6 +490,12 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       await ctx.scene.enter(SCENES.PASSWORD_RESET);
     });
 
+    // To'lovlar hisoboti — javob matni va PDF (ADR-0037)
+    this.bot.action('menu_payments', async (ctx) => {
+      await ctx.answerCbQuery();
+      await ctx.scene.enter(SCENES.STATEMENT);
+    });
+
     // Mock imtihon natijalari — foydalanuvchi qatnashgan ANNOUNCED imtihonlar
     // ro'yxati. Tanlanganida PDFni shaxsiy xabar bilan jo'natadi.
     this.bot.action('menu_mock_results', async (ctx) => {
@@ -502,7 +514,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
     // Menu action handlers — "Tez kunda" responses (boshqa tugmalar uchun)
     this.bot.action(
-      /^menu_(registration|level|platform|payments|groups)$/,
+      /^menu_(registration|level|platform|groups)$/,
       async (ctx) => {
         await ctx.answerCbQuery('Bu funksiya tez kunda ishga tushadi! ⏳', {
           show_alert: true,
