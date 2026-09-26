@@ -186,6 +186,33 @@ describe('CoursesService — status methods', () => {
     });
   });
 
+  describe('findOne — the schedule its running groups add up to', () => {
+    it("reads only running groups' days and summarises them", async () => {
+      prisma.group = {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            { exactDays: ['monday', 'wednesday', 'friday'] },
+          ]),
+      };
+      const out = await service.findOne('course-1', 1001, null);
+
+      expect(prisma.group.findMany).toHaveBeenCalledWith({
+        where: {
+          courseId: 'course-1',
+          deletedAt: null,
+          statusEnum: { in: ['FORMING', 'ACTIVE', 'PAUSED'] },
+        },
+        select: { exactDays: true },
+      });
+      expect(out.schedule.weeklyLessons).toEqual([3]);
+      expect(out.schedule.monthLessons).toEqual({
+        min: expect.any(Number),
+        max: expect.any(Number),
+      });
+    });
+  });
+
   describe('create — lessonPaymentCount passthrough', () => {
     beforeEach(() => {
       prisma.branch.findFirst.mockResolvedValue({ id: 1, companyId: 1001 });
