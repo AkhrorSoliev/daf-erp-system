@@ -741,6 +741,21 @@ export class MonthlyChargeService {
         branchId: enr.group.branchId,
         description: `${params.reason} — o'tmagan ${remaining} dars qaytarildi`,
         performedById: params.performedById,
+        // Lets the payment statement fold this refund into the month's
+        // lessons without parsing the description.
+        metadata: {
+          kind: 'monthly-release',
+          enrollmentId: params.enrollmentId,
+          period: `${periodYear}-${String(periodMonth).padStart(2, '0')}`,
+          lessons: remaining,
+          ...(frozenOutAfter
+            ? {
+                dates: frozenOutAfter.filter(
+                  (d) => !frozenOutBefore.includes(d),
+                ),
+              }
+            : {}),
+        },
       },
       tx,
     );
