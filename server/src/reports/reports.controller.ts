@@ -42,6 +42,8 @@ import { Roles, CurrentUser, BranchScope } from '../common/decorators';
 import { RolesGuard } from '../common/guards';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportsExcelService } from './reports-excel.service';
+import { ReportsProfitCompositionService } from './reports-profit-composition.service';
+import { tashkentDateStr } from '../common/date/tashkent';
 
 @Controller('reports')
 @UseGuards(RolesGuard)
@@ -53,6 +55,7 @@ export class ReportsController {
     private readonly reportsService: ReportsService,
     private readonly prisma: PrismaService,
     private readonly reportsExcelService: ReportsExcelService,
+    private readonly profitComposition: ReportsProfitCompositionService,
   ) {}
 
   @Get('kpis')
@@ -188,6 +191,27 @@ export class ReportsController {
       branchIds: await this.resolveScope(userId, query.branchId),
       startDate: query.startDate,
       endDate: query.endDate,
+    });
+  }
+
+  // «Foyda tarkibi» — what the Foyda card's figure is made of and what the
+  // month is on course to close at (the card's click-through panel). Month =
+  // the period's START month, the same rule the card uses. Money breakdown →
+  // CEO/BD only, like the card itself.
+  @Get('profit-composition')
+  @Roles('CEO', 'Branch Director')
+  async getProfitComposition(
+    @Query() query: ReportsQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    const month = query.startDate
+      ? query.startDate.slice(0, 7)
+      : tashkentDateStr(new Date()).slice(0, 7);
+    return this.profitComposition.getProfitComposition(companyId, {
+      month,
+      branchIds: await this.resolveScope(userId, query.branchId),
+      performedById: userId,
     });
   }
 

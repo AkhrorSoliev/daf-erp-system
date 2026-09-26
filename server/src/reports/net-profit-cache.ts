@@ -20,6 +20,13 @@ import type { RedisService } from '../redis/redis.service';
  * computes and returns the figure without storing it.
  */
 const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+/**
+ * Bump when the canonical figure's DEFINITION changes, so a deploy does not
+ * leave the trend chart on yesterday's formula until midnight while the card
+ * already shows the new one. v2: monthly-billed September lessons priced at
+ * the monthly charge; staff counted in their home branch only.
+ */
+const NET_PROFIT_CACHE_VERSION = 'v2';
 const logger = new Logger('NetProfitCache');
 
 /** Seconds remaining until the next Tashkent midnight (min 60). */
@@ -44,7 +51,7 @@ export function netProfitCacheKey(
   branchId: number | undefined,
   monthKey: string,
 ): string {
-  return `rpt:np:${companyId}:${branchId ?? 'all'}:${monthKey}`;
+  return `rpt:np:${NET_PROFIT_CACHE_VERSION}:${companyId}:${branchId ?? 'all'}:${monthKey}`;
 }
 
 export async function cachedNetProfit(
