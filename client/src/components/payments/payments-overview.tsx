@@ -665,6 +665,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
         startDate={startDate}
         endDate={endDate}
         expectedMonthEnd={d.forecast.expectedMonthEnd}
+        onSelectKpi={setChartKey}
       />
       )}
 

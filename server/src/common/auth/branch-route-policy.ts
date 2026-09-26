@@ -708,6 +708,18 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'controller does the resolution itself.',
     routes: ['GET /settings/payment', 'PATCH /settings/payment'],
   },
+  {
+    policy: 'BRANCH_SCOPED_BY_SERVICE',
+    reason:
+      "The Foyda card breakdown resolves its scope through the controller's " +
+      '`resolveScope` (`resolveCallerReportBranchIds`, ceiling ∩ requested, ' +
+      '403 on an empty scope) and hands it to `assembleMonthlyNetProfit` — ' +
+      'the same call behind the card, so the breakdown cannot be scoped ' +
+      'differently from the figure it explains. Every extra query it makes ' +
+      '(expenses, monthly charges) carries `branchIdWhere` itself or reads ' +
+      'ids from the already-scoped lessons.',
+    routes: ['GET /reports/profit-composition'],
+  },
 ];
 
 /**

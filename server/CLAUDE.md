@@ -724,6 +724,16 @@ It also returns per-day `events` — enrolment transitions (`EnrollmentStateLog`
   - A Redis outage degrades to computing, never to failing; a month whose canonical figure cannot be produced keeps its cash value and is flagged `profitBasis: 'kassa'`, so one bad point never takes the chart down.
   - `getFinancialTrend` (raw, cash) is left untouched for the Excel path; the chart endpoint calls `getFinancialTrendCanonical`.
 
+#### «Foyda tarkibi» — the Foyda card's breakdown (ADR-0038)
+
+`GET /reports/profit-composition` (CEO/BD, month = the period's START month, like the card) answers "what is this figure made of, and what will the month close at". `ReportsProfitCompositionService` builds it from `ReportsService.assembleMonthlyNetProfit` — the same call `getMonthlyNetProfit` returns `.netProfit` from — so the lines always add up to the card. Its extra queries only EXPLAIN (expense items, remaining charged lessons, departed debtors); none of them moves the figure.
+
+- **A held lesson is priced by what billed it** (`resolveHeldLessonPrice`, `common/finance/monthly-per-lesson.ts`): a monthly charge that covered that date wins over a `LESSON_CONSUMPTION` marker. The September 2026 switch to monthly billing left the 12-pack markers in place while re-billing the month; reading the marker first overstated September by 2.1 mln. `getRecognizedRevenue` (via `valueHeldLessons`) and the month-end expectation share the helper — never price a held lesson anywhere else.
+- **Staff are counted in ONE branch for any profit figure** (`staffBranchBasis: 'home'`: `mainBranch`, else the lowest attached branch). The payroll page keeps membership (an administrator attached to two branches appears in both). Without it, Σ(branches) fell 3 mln short of the company.
+- **The forecast is for a running month only:** remaining covered dates of the month's CHARGED monthly charges (today's only if not yet marked), the teacher share at the month's ratio so far, and last month's RENT / UTILITIES / tax that this month has not recorded yet. Tax is also recognised under `OTHER` by a "soliq" description, because that is where the centre records it.
+- **"Qarz bilan ketgan o'quvchilar"** counts students with NO active enrollment anywhere and a negative balance, capped per student at their current debt.
+- The trend chart's day cache key carries a version (`NET_PROFIT_CACHE_VERSION`). Bump it whenever the canonical figure's definition changes, or the chart shows the old formula until midnight.
+
 #### Multi-month Excel export: every profit leg must share one window
 
 `ReportsExcelService.generate` builds "Sof foyda" from several sources, and they must all cover the **same** months. They did not: revenue (`getRecognizedRevenue`) and teacher salary (`getSalaryMonthly`) came from `startDate`'s month alone, while operating expenses (`getProfitLoss`) and refunds (`getPeriodOutflows`) covered the whole selected period. A 3-month export therefore subtracted 3 months of cost from 1 month of income. The yearly preset was worse: `monthStr` became `2026-01`, which has no attendance, so revenue was 0 and the sheet printed the negative of the entire year's expenses as its headline "most accurate" figure.

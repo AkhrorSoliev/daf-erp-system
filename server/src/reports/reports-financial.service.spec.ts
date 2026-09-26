@@ -841,10 +841,18 @@ describe('ReportsFinancialService', () => {
       prisma.attendance.findMany.mockResolvedValueOnce([
         {
           id: 'a1',
+          // Every attendance row has these; the pricing reads the date.
+          studentId: 10001,
+          groupId: 'g1',
+          date: new Date('2026-06-10T00:00:00Z'),
           group: { course: { price: 1800000, lessonPaymentCount: 12 } },
         },
         {
           id: 'a2',
+          // Every attendance row has these; the pricing reads the date.
+          studentId: 10001,
+          groupId: 'g1',
+          date: new Date('2026-06-10T00:00:00Z'),
           group: { course: { price: 1800000, lessonPaymentCount: 12 } },
         },
       ]);
@@ -874,6 +882,9 @@ describe('ReportsFinancialService', () => {
       prisma.attendance.findMany.mockResolvedValueOnce([
         {
           id: 'a1',
+          studentId: 10001,
+          groupId: 'g1',
+          date: new Date('2026-06-10T00:00:00Z'),
           group: { course: { price: 1200000, lessonPaymentCount: 12 } },
         },
       ]);
@@ -997,6 +1008,77 @@ describe('ReportsFinancialService', () => {
       expect(result).toBe(34_615);
       // 12 talik formulasi (450 000/12 = 37 500) ISHLATILMAYDI.
       expect(result).not.toBe(37_500);
+    });
+
+    // Production 2026-09: the switch to monthly billing re-billed September on
+    // the monthly price but left that month's 12-pack LESSON_CONSUMPTION
+    // markers. Reading the marker first valued ~3 700 lessons at 37 500 while
+    // the teacher's pay for them had been re-accrued at the monthly price.
+    it('prices a lesson its monthly charge billed at the monthly price, not the old pack marker', async () => {
+      prisma.attendance.findMany.mockResolvedValueOnce([
+        {
+          id: 'att-billed',
+          studentId: 10001,
+          groupId: 'g1',
+          date: new Date('2026-06-10T00:00:00Z'),
+          group: {
+            branchId: 1,
+            course: {
+              name: 'Standart',
+              price: 450_000,
+              lessonPaymentCount: 12,
+            },
+          },
+        },
+        {
+          id: 'att-before',
+          studentId: 10001,
+          groupId: 'g1',
+          date: new Date('2026-06-03T00:00:00Z'),
+          group: {
+            branchId: 1,
+            course: {
+              name: 'Standart',
+              price: 450_000,
+              lessonPaymentCount: 12,
+            },
+          },
+        },
+      ]);
+      prisma.transaction.findMany.mockResolvedValueOnce([
+        { attendanceId: 'att-billed', metadata: { perLessonCost: 37_500 } },
+        { attendanceId: 'att-before', metadata: { perLessonCost: 37_500 } },
+      ]);
+      prisma.enrollmentMonthlyCharge.findMany.mockResolvedValueOnce([
+        {
+          studentId: 10001,
+          groupId: 'g1',
+          periodYear: 2026,
+          periodMonth: 6,
+          perLessonCost: 34_615,
+          plannedLessons: 13,
+          // The charge started after the 3rd: that lesson stays the pack's.
+          coveredDates: ['2026-06-10'],
+          frozenOutDates: [],
+        },
+      ]);
+
+      const lessons = await service.valueHeldLessons(1, {
+        ...window,
+        branchIds: null,
+      });
+
+      expect(lessons.map((l) => [l.attendanceId, l.value])).toEqual([
+        ['att-billed', 34_615],
+        ['att-before', 37_500],
+      ]);
+      expect(lessons[0]).toEqual(
+        expect.objectContaining({
+          branchId: 1,
+          courseName: 'Standart',
+          dateStr: '2026-06-10',
+        }),
+      );
     });
   });
 });

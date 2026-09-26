@@ -73,6 +73,66 @@ export interface FrozenMonthlyPerLessonParams {
 export interface FrozenMonthlyCharge {
   perLessonCost: number;
   plannedLessons: number;
+  /**
+   * Dates ('YYYY-MM-DD') the charge billed, frozen when it was written. Empty
+   * on rows written before the column existed. Optional so callers that only
+   * need the price can build this shape without it.
+   */
+  coveredDates?: string[];
+  /** Subset of `coveredDates` taken back out by a freeze or departure. */
+  frozenOutDates?: string[];
+}
+
+/**
+ * Did this monthly charge bill the lesson held on `dateStr` ('YYYY-MM-DD')?
+ *
+ * A row with no `coveredDates` predates the column and is treated as billing
+ * its whole month — the same reading `reverseChargeForDeparture` gives it.
+ */
+export function monthlyChargeBilledDate(
+  charge: Pick<FrozenMonthlyCharge, 'coveredDates' | 'frozenOutDates'>,
+  dateStr: string,
+): boolean {
+  const covered = charge.coveredDates ?? [];
+  if (covered.length === 0) return true;
+  return (
+    covered.includes(dateStr) &&
+    !(charge.frozenOutDates ?? []).includes(dateStr)
+  );
+}
+
+/**
+ * The value one HELD lesson recognises in the reports, or `undefined` when
+ * nothing billed it. Shared by `getRecognizedRevenue` and the month-end
+ * expectation so the two can never price the same lesson differently.
+ *
+ * Precedence:
+ *  1. A monthly charge that billed this very date — the student is paying the
+ *     monthly price for it.
+ *  2. A live `LESSON_CONSUMPTION` row — the 12-lesson pack that paid for it.
+ *     `null` means the row carries no `perLessonCost` (legacy), so the bare
+ *     course price stands in.
+ *  3. A monthly charge for the month that does not list this date.
+ *
+ * Why 1 beats 2: the September 2026 switch to monthly billing re-billed every
+ * migrated student's September on the monthly price but left that month's
+ * zero-amount `LESSON_CONSUMPTION` markers in place. Reading the marker first
+ * valued ~3 700 lessons at the old pack price while the teacher's pay for the
+ * same lessons had been re-accrued at the monthly price.
+ */
+export function resolveHeldLessonPrice(args: {
+  charge: FrozenMonthlyCharge | undefined;
+  dateStr: string;
+  /** undefined = no consumption row; null = row without a stored price. */
+  consumed: number | null | undefined;
+  legacyPrice: number;
+}): number | undefined {
+  const { charge, dateStr, consumed, legacyPrice } = args;
+  if (charge && monthlyChargeBilledDate(charge, dateStr)) {
+    return charge.perLessonCost;
+  }
+  if (consumed !== undefined) return consumed ?? legacyPrice;
+  return charge?.perLessonCost;
 }
 
 /**
@@ -115,6 +175,8 @@ export async function loadFrozenMonthlyCharges(
       periodMonth: true,
       perLessonCost: true,
       plannedLessons: true,
+      coveredDates: true,
+      frozenOutDates: true,
     },
   });
 
@@ -123,6 +185,8 @@ export async function loadFrozenMonthlyCharges(
     out.set(monthlyPerLessonKey(r.studentId, r.groupId, monthKey), {
       perLessonCost: r.perLessonCost,
       plannedLessons: r.plannedLessons,
+      coveredDates: r.coveredDates ?? [],
+      frozenOutDates: r.frozenOutDates ?? [],
     });
   }
   return out;

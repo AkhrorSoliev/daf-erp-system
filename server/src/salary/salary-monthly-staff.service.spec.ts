@@ -250,3 +250,113 @@ describe('SalaryStaffMonthlyService', () => {
     expect(res.staff).toEqual([]);
   });
 });
+
+// A profit figure must count each salary once. Production 2026-09: an
+// administrator (main branch Farg'ona) is attached to Namangan too, so the
+// Namangan Foyda card subtracted his 3 000 000 while the company card counted
+// it once — the two branches summed to 3 mln less than the whole.
+describe('SalaryStaffMonthlyService — home-branch basis', () => {
+  let service: SalaryStaffMonthlyService;
+  let prisma: any;
+
+  const version = (configId: string) => ({
+    configId,
+    value: 3_000_000,
+    effectiveFrom: tsh(2026, 5, 1),
+    effectiveTo: null,
+  });
+  const staffConfig = (
+    id: string,
+    userId: number,
+    mainBranch: number | null,
+    branchIds: number[],
+  ) => ({
+    id,
+    userId,
+    user: {
+      firstName: id,
+      lastName: '',
+      position: 'Administrator',
+      isActive: true,
+      mainBranch,
+      roles: [{ role: { name: 'Administrator' } }],
+      branches: branchIds.map((b) => ({ branch: { id: b, name: `B${b}` } })),
+    },
+  });
+
+  beforeEach(async () => {
+    prisma = {
+      employeeSalaryConfig: { findMany: jest.fn().mockResolvedValue([]) },
+      employeeSalaryConfigVersion: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([version('two'), version('solo'), version('x')]),
+      },
+      expense: { groupBy: jest.fn().mockResolvedValue([]) },
+      salaryPayment: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        SalaryStaffMonthlyService,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+    service = module.get(SalaryStaffMonthlyService);
+  });
+
+  it('asks for the home branch, under AND so a search OR cannot erase it', async () => {
+    await service.computeStaff(
+      juneScope({ branchId: 2, staffBranchBasis: 'home', search: 'a' }),
+    );
+    const where =
+      prisma.employeeSalaryConfig.findMany.mock.calls[0][0].where.user;
+    expect(where.branches).toBeUndefined();
+    expect(where.AND).toEqual([
+      {
+        OR: [
+          { mainBranch: 2 },
+          { mainBranch: null, branches: { some: { branchId: 2 } } },
+        ],
+      },
+    ]);
+    expect(where.OR).toBeDefined(); // the search's own OR survives
+  });
+
+  it('drops a staff member whose main branch is elsewhere', async () => {
+    // What the database returns for branch 2 under membership: both.
+    prisma.employeeSalaryConfig.findMany.mockResolvedValue([
+      staffConfig('two', 10562, 1, [1, 2]),
+      staffConfig('solo', 20001, 2, [2]),
+    ]);
+    const res = await service.computeStaff(
+      juneScope({ branchId: 2, staffBranchBasis: 'home' }),
+    );
+    expect(res.staff.map((s) => s.user.id)).toEqual([20001]);
+    expect(res.staffTotals.monthly).toBe(3_000_000);
+  });
+
+  it('places a person with no main branch in their lowest attached branch', async () => {
+    prisma.employeeSalaryConfig.findMany.mockResolvedValue([
+      staffConfig('x', 30001, null, [2, 1]),
+    ]);
+    const inOne = await service.computeStaff(
+      juneScope({ branchId: 1, staffBranchBasis: 'home' }),
+    );
+    const inTwo = await service.computeStaff(
+      juneScope({ branchId: 2, staffBranchBasis: 'home' }),
+    );
+    expect(inOne.staff).toHaveLength(1);
+    expect(inTwo.staff).toHaveLength(0);
+  });
+
+  it('keeps membership for the payroll page (no basis given)', async () => {
+    prisma.employeeSalaryConfig.findMany.mockResolvedValue([
+      staffConfig('two', 10562, 1, [1, 2]),
+    ]);
+    const res = await service.computeStaff(juneScope({ branchId: 2 }));
+    expect(res.staff).toHaveLength(1);
+    const where =
+      prisma.employeeSalaryConfig.findMany.mock.calls[0][0].where.user;
+    expect(where.branches).toEqual({ some: { branchId: 2 } });
+  });
+});

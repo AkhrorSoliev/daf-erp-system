@@ -690,6 +690,9 @@ describe('ReportsExcelService', () => {
       expect.any(String),
       expect.any(Number),
       2,
+      // Staff by home branch, the basis the Foyda card uses — so an
+      // administrator attached to two branches is subtracted from one.
+      'home',
     );
   });
 

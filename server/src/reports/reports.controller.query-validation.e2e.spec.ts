@@ -7,6 +7,7 @@ import request from 'supertest';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportsController } from './reports.controller';
 import { ReportsExcelService } from './reports-excel.service';
+import { ReportsProfitCompositionService } from './reports-profit-composition.service';
 import { ReportsService } from './reports.service';
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
 
@@ -109,6 +110,7 @@ describe('departed-students drill-downs — filters reach the database as lists'
         },
         { provide: PrismaService, useValue: {} },
         { provide: ReportsExcelService, useValue: {} },
+        { provide: ReportsProfitCompositionService, useValue: {} },
       ],
     }).compile();
 

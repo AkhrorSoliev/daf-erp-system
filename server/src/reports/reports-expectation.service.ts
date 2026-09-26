@@ -5,7 +5,8 @@ import { HolidaysService } from '../holidays/holidays.service';
 import { RedisService } from '../redis/redis.service';
 import { perLessonPrice } from '../common/finance/per-lesson-price';
 import {
-  loadFrozenMonthlyPerLesson,
+  loadFrozenMonthlyCharges,
+  resolveHeldLessonPrice,
   monthlyPerLessonKey,
 } from '../common/finance/monthly-per-lesson';
 import {
@@ -236,7 +237,7 @@ export class ReportsExpectationService {
     // (450 000/12 = 37 500, to'g'risi 34 615) hisoblanardi. Muzlatilgan narx
     // `getRecognizedRevenue` bilan AYNAN bitta funksiyadan o'qiladi — aks
     // holda «Sof foyda» va bu prognoz bir oyga ikki xil raqam berardi.
-    const frozenMonthly = await loadFrozenMonthlyPerLesson(this.prisma, {
+    const frozenMonthly = await loadFrozenMonthlyCharges(this.prisma, {
       companyId,
       studentIds: [
         ...attendances.map((a) => a.studentId),
@@ -317,33 +318,34 @@ export class ReportsExpectationService {
       );
 
       /** Oylik hisob yozilgan bo'lsa — muzlatilgan dars narxi, aks holda undefined. */
-      const monthlyPerLesson = (studentId: number) =>
+      const monthlyCharge = (studentId: number) =>
         frozenMonthly.get(monthlyPerLessonKey(studentId, g.id, month));
+      const monthlyPerLesson = (studentId: number) =>
+        monthlyCharge(studentId)?.perLessonCost;
 
       const covered: PricedAttendance[] = [];
       const uncovered: PricedAttendance[] = [];
       const datesWithAttendance = new Set<string>();
       for (const a of attByGroup.get(g.id) ?? []) {
         datesWithAttendance.add(tashkentDateStr(a.date));
-        if (consumed.has(a.id)) {
-          // Legacy rows carry no metadata: fall back to the bare course price,
-          // byte-for-byte what `getRecognizedRevenue` does, so the two agree.
-          // The student discount is deliberately NOT applied here — this is
-          // reconstructing what was billed, not what would be charged today.
-          const stored = consumed.get(a.id);
-          covered.push({
-            perLesson:
-              stored ??
-              Math.round(g.course.price / (g.course.lessonPaymentCount || 12)),
-          });
-          continue;
-        }
-        const frozen = monthlyPerLesson(a.studentId);
-        if (frozen !== undefined) {
-          // Oylik hisob yozilgan -> bu dars TO'LANGAN (pul oy boshida
-          // olingan), demak `covered` tarafda. Narx muzlatilgan, chegirmasiz —
-          // xuddi `LESSON_CONSUMPTION.metadata.perLessonCost` kabi.
-          covered.push({ perLesson: frozen });
+        // Same decision `getRecognizedRevenue` makes, from the same helper —
+        // a held lesson priced one way there and another way here would give
+        // «Sof foyda» and this projection two figures for one month. Legacy
+        // consumption rows with no stored price fall back to the bare course
+        // price; the student discount is deliberately NOT applied — this is
+        // reconstructing what was billed, not what would be charged today.
+        // A monthly charge means the lesson is PAID (the money was taken at
+        // the start of the month), so it lands on the `covered` side.
+        const billed = resolveHeldLessonPrice({
+          charge: monthlyCharge(a.studentId),
+          dateStr: tashkentDateStr(a.date),
+          consumed: consumed.has(a.id) ? consumed.get(a.id) : undefined,
+          legacyPrice: Math.round(
+            g.course.price / (g.course.lessonPaymentCount || 12),
+          ),
+        });
+        if (billed !== undefined) {
+          covered.push({ perLesson: billed });
         } else {
           uncovered.push({
             perLesson: priceFor(

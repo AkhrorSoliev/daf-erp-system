@@ -76,7 +76,12 @@ export class SalaryStaffMonthlyService {
       search,
       searchId,
       userId,
+      staffBranchBasis,
     } = scope;
+    // `home`: each staff member belongs to ONE branch, so a salary is never
+    // counted under two. Read by the profit figures; the payroll page keeps
+    // the default (everyone attached to the branch).
+    const byHomeBranch = branchId !== undefined && staffBranchBasis === 'home';
 
     // 1. Non-teacher global FIXED_MONTHLY configs in branch scope.
     // isActive is NOT filtered: a staff member deactivated mid-cycle must still
@@ -102,7 +107,20 @@ export class SalaryStaffMonthlyService {
           // Branch-confined caller with no branch → match nothing (fail closed).
           ...(blocked && { id: -1 }),
           ...(userId !== undefined && { id: userId }),
-          ...(branchId !== undefined && { branches: { some: { branchId } } }),
+          ...(branchId !== undefined &&
+            (byHomeBranch
+              ? {
+                  // Under AND: the search filter below owns `OR`.
+                  AND: [
+                    {
+                      OR: [
+                        { mainBranch: branchId },
+                        { mainBranch: null, branches: { some: { branchId } } },
+                      ],
+                    },
+                  ],
+                }
+              : { branches: { some: { branchId } } })),
           ...(search && {
             OR: [
               { firstName: { contains: search, mode: 'insensitive' } },
@@ -122,6 +140,7 @@ export class SalaryStaffMonthlyService {
             position: true,
             isActive: true,
             roles: { select: { role: { select: { name: true } } } },
+            mainBranch: true,
             branches: {
               select: { branch: { select: { id: true, name: true } } },
             },
@@ -129,10 +148,21 @@ export class SalaryStaffMonthlyService {
         },
       },
     });
-    if (configs.length === 0) return { staff: [], staffTotals: ZERO_TOTALS };
+    // Home branch = `mainBranch`, else the lowest branch the person is
+    // attached to. The query above cannot express "lowest", so a person with
+    // no main branch and several attachments is resolved here.
+    const inScope = byHomeBranch
+      ? configs.filter(
+          (c) =>
+            (c.user.mainBranch ??
+              Math.min(...c.user.branches.map((b) => b.branch.id))) ===
+            branchId,
+        )
+      : configs;
+    if (inScope.length === 0) return { staff: [], staffTotals: ZERO_TOTALS };
 
-    const configIds = configs.map((c) => c.id);
-    const userIds = configs.map((c) => c.userId);
+    const configIds = inScope.map((c) => c.id);
+    const userIds = inScope.map((c) => c.userId);
 
     // 2. FIXED_MONTHLY versions overlapping the period (bulk — no N queries).
     const versionRows = await this.prisma.employeeSalaryConfigVersion.findMany({
@@ -202,7 +232,7 @@ export class SalaryStaffMonthlyService {
 
     // 5. Build rows.
     const staff: StaffRow[] = [];
-    for (const c of configs) {
+    for (const c of inScope) {
       const monthly = prorateFixedMonthly(
         versByConfig.get(c.id) ?? [],
         periodStart,

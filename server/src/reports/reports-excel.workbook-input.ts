@@ -112,6 +112,7 @@ export async function periodNetProfit(
         m,
         args.performedById,
         args.salaryBranchId,
+        'home',
       ),
     })),
   );
