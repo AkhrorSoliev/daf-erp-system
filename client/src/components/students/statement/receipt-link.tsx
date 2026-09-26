@@ -2,8 +2,7 @@ import { FileText } from "lucide-react";
 
 /** The PDF receipt of one payment, opened in a new tab. */
 export function ReceiptLink({ paymentId }: { paymentId: string }) {
-  const apiUrl =
-    process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
   return (
     <a
       href={`${apiUrl}/receipts/payment/${paymentId}.pdf`}

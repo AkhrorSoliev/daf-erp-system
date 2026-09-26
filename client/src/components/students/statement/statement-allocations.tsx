@@ -29,14 +29,14 @@ export function StatementAllocations({
   onCorrect: (p: CorrectablePayment) => void;
 }) {
   return (
-    <ul className="divide-y rounded-lg border">
+    <ul className="-my-3 divide-y">
       {rows.map((r, i) => {
         const m = models[i];
         const correctable = m ? isCorrectable(m) : false;
         return (
           <li
             key={`${r.paymentId ?? "credit"}-${i}`}
-            className="flex items-start justify-between gap-3 px-4 py-3"
+            className="flex items-start justify-between gap-3 py-3"
           >
             <div className="min-w-0 space-y-0.5">
               <p className="text-sm">

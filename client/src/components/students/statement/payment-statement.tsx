@@ -32,8 +32,7 @@ export function PaymentStatement({
 }) {
   const user = useAuth((s) => s.user);
   const isCeo = user?.roles.some((r) => r.id === 1) ?? false;
-  const canCorrect =
-    user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
+  const canCorrect = user?.roles.some((r) => [1, 2, 3].includes(r.id)) ?? false;
 
   const [data, setData] = useState<StatementResponse | null>(null);
   const [failed, setFailed] = useState(false);
@@ -139,9 +138,10 @@ export function PaymentStatement({
         who={{ isCeo, canCorrect }}
         now={loadedAt}
         onCorrect={setCorrectTarget}
+        ledger={
+          <StatementLedger studentId={studentId} refreshKey={refreshKey} />
+        }
       />
-
-      <StatementLedger studentId={studentId} refreshKey={refreshKey} />
 
       <CorrectPaymentDialog
         open={correctTarget !== null}

@@ -40,7 +40,11 @@ describe("canCorrectPayment", () => {
       canCorrectPayment(payment(), { isCeo: false, canCorrect: false }, NOW),
     ).toBe(false);
     expect(
-      canCorrectPayment(payment({ kind: "credit", paymentId: null, at: null }), ceo, NOW),
+      canCorrectPayment(
+        payment({ kind: "credit", paymentId: null, at: null }),
+        ceo,
+        NOW,
+      ),
     ).toBe(false);
     expect(canCorrectPayment(payment({ amount: 0 }), ceo, NOW)).toBe(false);
     expect(canCorrectPayment(payment({ at: null }), admin, NOW)).toBe(false);
@@ -66,5 +70,4 @@ describe("text helpers", () => {
   it("formats a lesson day as dd.MM", () => {
     expect(dayMonth("2026-09-07")).toBe("07.09");
   });
-
 });
