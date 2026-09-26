@@ -81,6 +81,17 @@ export interface FrozenMonthlyCharge {
   coveredDates?: string[];
   /** Subset of `coveredDates` taken back out by a freeze or departure. */
   frozenOutDates?: string[];
+  /**
+   * Earlier charges for the SAME student, group and month. A student who
+   * leaves a group and rejoins it within the month carries two CHARGED
+   * charges, each billing its own dates. The price fields above keep the
+   * last row (what the loader always returned); these keep the others'
+   * dates so no billed lesson is missed.
+   */
+  earlierCharges?: Pick<
+    FrozenMonthlyCharge,
+    'coveredDates' | 'frozenOutDates'
+  >[];
 }
 
 /**
@@ -90,15 +101,22 @@ export interface FrozenMonthlyCharge {
  * its whole month — the same reading `reverseChargeForDeparture` gives it.
  */
 export function monthlyChargeBilledDate(
-  charge: Pick<FrozenMonthlyCharge, 'coveredDates' | 'frozenOutDates'>,
+  charge: Pick<
+    FrozenMonthlyCharge,
+    'coveredDates' | 'frozenOutDates' | 'earlierCharges'
+  >,
   dateStr: string,
 ): boolean {
-  const covered = charge.coveredDates ?? [];
-  if (covered.length === 0) return true;
-  return (
-    covered.includes(dateStr) &&
-    !(charge.frozenOutDates ?? []).includes(dateStr)
-  );
+  const bills = (
+    c: Pick<FrozenMonthlyCharge, 'coveredDates' | 'frozenOutDates'>,
+  ) => {
+    const covered = c.coveredDates ?? [];
+    if (covered.length === 0) return true;
+    return (
+      covered.includes(dateStr) && !(c.frozenOutDates ?? []).includes(dateStr)
+    );
+  };
+  return bills(charge) || (charge.earlierCharges ?? []).some(bills);
 }
 
 /**
@@ -182,11 +200,22 @@ export async function loadFrozenMonthlyCharges(
 
   for (const r of rows) {
     const monthKey = `${r.periodYear}-${String(r.periodMonth).padStart(2, '0')}`;
-    out.set(monthlyPerLessonKey(r.studentId, r.groupId, monthKey), {
+    const key = monthlyPerLessonKey(r.studentId, r.groupId, monthKey);
+    const prev = out.get(key);
+    out.set(key, {
       perLessonCost: r.perLessonCost,
       plannedLessons: r.plannedLessons,
       coveredDates: r.coveredDates ?? [],
       frozenOutDates: r.frozenOutDates ?? [],
+      ...(prev && {
+        earlierCharges: [
+          ...(prev.earlierCharges ?? []),
+          {
+            coveredDates: prev.coveredDates,
+            frozenOutDates: prev.frozenOutDates,
+          },
+        ],
+      }),
     });
   }
   return out;

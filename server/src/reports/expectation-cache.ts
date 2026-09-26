@@ -16,6 +16,13 @@ import { secondsUntilTashkentMidnight } from './net-profit-cache';
  */
 const logger = new Logger('ExpectationCache');
 
+/**
+ * Bump when the figure's definition changes, so a deploy does not serve the
+ * old formula from cache until midnight. v2: held lessons priced through
+ * `resolveHeldLessonPrice` (ADR-0038).
+ */
+const EXPECTATION_CACHE_VERSION = 'v2';
+
 export function expectationCacheKey(
   companyId: number,
   branchIds: number[] | null,
@@ -25,7 +32,7 @@ export function expectationCacheKey(
   const branch = branchIds === null ? 'all' : branchIds.join('.') || 'none';
   // `asOf` MUST be in the key: a replay and the live figure are different
   // answers for the same month and would otherwise poison each other.
-  return `rpt:exp:${companyId}:${branch}:${monthKey}${asOf ? `:${asOf}` : ''}`;
+  return `rpt:exp:${EXPECTATION_CACHE_VERSION}:${companyId}:${branch}:${monthKey}${asOf ? `:${asOf}` : ''}`;
 }
 
 export async function cachedExpectation<T>(

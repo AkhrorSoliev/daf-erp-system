@@ -2,7 +2,6 @@ import {
   missingRecurringExpenses,
   monthStatus,
   recurringKeyOf,
-  remainingChargedLessons,
   topWithRest,
   unpaidLeftLessons,
 } from './profit-composition';
@@ -137,33 +136,6 @@ describe('missingRecurringExpenses', () => {
 
   it('expects nothing from a category last month did not have', () => {
     expect(missingRecurringExpenses([], [])).toEqual([]);
-  });
-});
-
-describe('remainingChargedLessons', () => {
-  const charges = [
-    {
-      studentId: 1,
-      groupId: 'g',
-      perLessonCost: 34_615,
-      coveredDates: ['2026-09-25', '2026-09-26', '2026-09-28', '2026-09-30'],
-      frozenOutDates: [],
-    },
-    {
-      studentId: 2,
-      groupId: 'g',
-      perLessonCost: 34_615,
-      coveredDates: ['2026-09-26', '2026-09-28', '2026-09-30'],
-      // Froze on the 28th: the 30th is no longer theirs.
-      frozenOutDates: ['2026-09-30'],
-    },
-  ];
-
-  it('counts covered dates from today on, skipping frozen-out ones', () => {
-    // Student 1's lesson today is already marked; student 2's is not.
-    const r = remainingChargedLessons(charges, '2026-09-26', new Set(['1|g']));
-    // student 1: 28, 30 · student 2: 26, 28
-    expect(r).toEqual({ count: 4, value: 4 * 34_615 });
   });
 });
 

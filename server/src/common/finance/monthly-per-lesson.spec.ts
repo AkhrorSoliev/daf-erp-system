@@ -1,5 +1,7 @@
 import {
+  loadFrozenMonthlyCharges,
   monthlyChargeBilledDate,
+  monthlyPerLessonKey,
   resolveHeldLessonPrice,
 } from './monthly-per-lesson';
 
@@ -95,5 +97,60 @@ describe('resolveHeldLessonPrice', () => {
         legacyPrice: 37_500,
       }),
     ).toBeUndefined();
+  });
+});
+
+// A student who leaves a group and rejoins it within the month carries two
+// CHARGED charges, each billing its own dates (PR #571). Keeping one per key
+// dropped the other's dates, and those lessons fell back to the old pack
+// price — the overstatement ADR-0038 removes.
+describe('a student who rejoined the same group within the month', () => {
+  const rows = [
+    {
+      studentId: 1,
+      groupId: 'g',
+      periodYear: 2026,
+      periodMonth: 9,
+      perLessonCost: 34_615,
+      plannedLessons: 13,
+      coveredDates: ['2026-09-02', '2026-09-04', '2026-09-07'],
+      frozenOutDates: ['2026-09-07'],
+    },
+    {
+      studentId: 1,
+      groupId: 'g',
+      periodYear: 2026,
+      periodMonth: 9,
+      perLessonCost: 34_615,
+      plannedLessons: 13,
+      coveredDates: ['2026-09-21', '2026-09-23'],
+      frozenOutDates: [],
+    },
+  ];
+
+  it('keeps every charge’s dates', async () => {
+    const prisma = {
+      enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue(rows) },
+    };
+    const charges = await loadFrozenMonthlyCharges(prisma as any, {
+      companyId: 1,
+      studentIds: [1],
+      groupIds: ['g'],
+      periods: [{ year: 2026, month: 9 }],
+    });
+    const c = charges.get(monthlyPerLessonKey(1, 'g', '2026-09'))!;
+
+    expect(monthlyChargeBilledDate(c, '2026-09-02')).toBe(true); // first stay
+    expect(monthlyChargeBilledDate(c, '2026-09-21')).toBe(true); // after rejoin
+    expect(monthlyChargeBilledDate(c, '2026-09-07')).toBe(false); // left by then
+    expect(monthlyChargeBilledDate(c, '2026-09-14')).toBe(false); // away
+    expect(
+      resolveHeldLessonPrice({
+        charge: c,
+        dateStr: '2026-09-02',
+        consumed: 37_500,
+        legacyPrice: 37_500,
+      }),
+    ).toBe(34_615);
   });
 });

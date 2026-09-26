@@ -47,7 +47,11 @@ sentabr ma'lumotida (26.09.2026) tekshirganda uch muammo chiqdi.
 3. **Oy tugamagan bo'lsa, oyna oy oxirini taxmin qiladi.** Taxmin shunday
    yig'iladi:
    - joriy foyda;
-   - qolgan darslar: oylik hisoblar qoplagan kelgusi sanalar;
+   - qolgan darslar: «Oy oxiriga kutilyapti» (`getMonthlyExpectation`) minus
+     hozirgacha tan olingan darslar. U bekor qilingan va ko'chirilgan
+     darslarni, bayramlarni biladi, shuning uchun ikki prognoz bir-biriga
+     zid chiqmaydi. Qoldiq umumiy summadan olinadi, shuning uchun kun
+     davomida belgilangan dars kunlik keshda ikki marta sanalmaydi;
    - minus shu darslarga ustoz haqi, oyning hozirgi ulushida;
    - minus o'tgan oyda bo'lib, bu oy hali yozilmagan doimiy xarajatlar:
      ijara, kommunal, soliq. «Boshqa» turida yozilgan «Soliqlar» ham soliq
@@ -66,8 +70,11 @@ sentabr ma'lumotida (26.09.2026) tekshirganda uch muammo chiqdi.
   avgust o'zgarmadi (prod'da tekshirildi: 4 781 229 / 18 544 732 /
   13 611 708), chunki u oylarda oylik hisob yo'q.
 - Farg'ona + Namangan = kompaniya (48 298 686 + 18 711 603 = 67 010 289).
-- Trend grafigi keshining kaliti `v2` ga o'tdi, aks holda grafik yarim
-  tungacha eski formulani ko'rsatib turardi.
+- Trend grafigi va «Oy oxiriga kutilyapti» keshlarining kaliti `v2` ga
+  o'tdi, aks holda ular yarim tungacha eski formulani ko'rsatib turardi.
+- Bir oyda guruhdan chiqib qayta qo'shilgan o'quvchining ikkala oylik
+  hisobi ham hisobga olinadi (`earlierCharges`): ikkala davrdagi darslar
+  ham oylik narxda sanaladi.
 - Taxmin o'tgan oyning doimiy xarajatlariga tayanadi. O'tgan oy g'ayrioddiy
   bo'lsa (masalan, avgustda svet uch marta to'langan), taxmin ham shunga
   ergashadi. Oynada summaning qaysi oydan olingani yozib qo'yilgan.

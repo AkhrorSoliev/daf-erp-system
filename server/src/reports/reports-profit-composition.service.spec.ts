@@ -48,7 +48,6 @@ describe('ReportsProfitCompositionService', () => {
         ]),
       },
       expense: { findMany: jest.fn() },
-      enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
       enrollment: { findMany: jest.fn() },
       student: { findMany: jest.fn().mockResolvedValue([]) },
     };
@@ -78,6 +77,15 @@ describe('ReportsProfitCompositionService', () => {
       { studentId: 3 },
     ]);
     reports = {
+      // 4 lessons held so far (3 valued), 2 still to come; expected 220 000.
+      getMonthlyExpectation: jest.fn().mockResolvedValue({
+        month: '2026-09',
+        heldValue: 200_000,
+        heldLessons: 3,
+        remainingValue: 20_000,
+        remainingLessons: 2,
+        expectedValue: 220_000,
+      }),
       assembleMonthlyNetProfit: jest.fn().mockResolvedValue({
         month: '2026-09',
         netProfit,
@@ -161,23 +169,18 @@ describe('ReportsProfitCompositionService', () => {
     ]);
   });
 
-  it('forecasts a running month from its remaining lessons and missing recurring costs', async () => {
-    prisma.enrollmentMonthlyCharge.findMany.mockResolvedValueOnce([
-      {
-        studentId: 1,
-        groupId: 'a',
-        perLessonCost: 10_000,
-        coveredDates: ['2026-09-24', '2026-09-28', '2026-09-30'],
-        frozenOutDates: [],
-      },
-    ]);
-
+  it('forecasts a running month from the month-end expectation and missing recurring costs', async () => {
     const r = await run();
 
     expect(r.status).toEqual(
       expect.objectContaining({ isOpen: true, daysPassed: 26 }),
     );
+    expect(reports.getMonthlyExpectation).toHaveBeenCalledWith(1001, {
+      month: '2026-09',
+      branchIds: null,
+    });
     expect(r.forecast).toEqual({
+      // Expected 220 000 − recognised 200 000; 3 + 2 − 3 valued lessons.
       remainingLessons: { count: 2, value: 20_000 },
       // At this month's teacher share so far: 90 000 / 200 000.
       remainingTeacherPay: 9_000,
@@ -193,6 +196,21 @@ describe('ReportsProfitCompositionService', () => {
     });
   });
 
+  // The expectation is cached for the day; lessons marked since then are
+  // already in the live revenue. Reading the remainder off the total keeps
+  // them from being counted twice.
+  it('never counts a lesson held after the expectation was cached twice', async () => {
+    reports.getMonthlyExpectation.mockResolvedValueOnce({
+      heldValue: 150_000,
+      heldLessons: 2,
+      remainingValue: 70_000,
+      remainingLessons: 3,
+      expectedValue: 220_000,
+    });
+    const r = await run();
+    expect(r.forecast?.remainingLessons).toEqual({ count: 2, value: 20_000 });
+  });
+
   it('adds no forecast to a closed month and does not look at last month', async () => {
     const r = await service.getProfitComposition(1001, {
       month: '2026-08',
@@ -203,7 +221,7 @@ describe('ReportsProfitCompositionService', () => {
 
     expect(r.forecast).toBeNull();
     expect(prisma.expense.findMany).toHaveBeenCalledTimes(1);
-    expect(prisma.enrollmentMonthlyCharge.findMany).not.toHaveBeenCalled();
+    expect(reports.getMonthlyExpectation).not.toHaveBeenCalled();
   });
 
   it('names the revenue that left with students who owe it', async () => {
@@ -238,9 +256,10 @@ describe('ReportsProfitCompositionService', () => {
       expect(call[0].where.branchId).toEqual({ in: [1] });
       expect(call[0].where.category).toEqual({ not: 'TEACHER_ADVANCE' });
     }
-    expect(
-      prisma.enrollmentMonthlyCharge.findMany.mock.calls[0][0].where.branchId,
-    ).toEqual({ in: [1] });
+    expect(reports.getMonthlyExpectation).toHaveBeenCalledWith(1001, {
+      month: '2026-09',
+      branchIds: [1],
+    });
     expect(reports.assembleMonthlyNetProfit).toHaveBeenCalledWith(1001, {
       month: '2026-09',
       branchIds: [1],

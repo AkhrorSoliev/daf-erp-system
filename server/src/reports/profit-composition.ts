@@ -123,41 +123,6 @@ export function missingRecurringExpenses(
   return out;
 }
 
-export interface ChargeRow {
-  studentId: number;
-  groupId: string;
-  perLessonCost: number;
-  coveredDates: string[];
-  frozenOutDates: string[];
-}
-
-/**
- * Lessons the month's monthly charges still cover after today — the revenue
- * the month will add on its own. Today's lessons count only when their
- * attendance has not been entered yet (`heldToday`), so a lesson is never
- * counted both as held and as remaining.
- */
-export function remainingChargedLessons(
-  charges: ChargeRow[],
-  todayStr: string,
-  heldToday: Set<string>,
-): { count: number; value: number } {
-  let count = 0;
-  let value = 0;
-  for (const c of charges) {
-    const out = new Set(c.frozenOutDates);
-    for (const d of c.coveredDates) {
-      if (d < todayStr || out.has(d)) continue;
-      if (d === todayStr && heldToday.has(`${c.studentId}|${c.groupId}`)) {
-        continue;
-      }
-      count += 1;
-      value += c.perLessonCost;
-    }
-  }
-  return { count, value };
-}
-
 export interface LessonForDebt {
   studentId: number;
   groupId: string;

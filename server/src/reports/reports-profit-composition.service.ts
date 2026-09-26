@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { MonthlyChargeStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportsService } from './reports.service';
 import {
@@ -15,7 +14,6 @@ import { isTopUpMonth } from '../salary/shared/topup';
 import {
   missingRecurringExpenses,
   monthStatus,
-  remainingChargedLessons,
   topWithRest,
   unpaidLeftLessons,
   type ExpenseRow,
@@ -116,7 +114,7 @@ export class ReportsProfitCompositionService {
     const nextMonthStart = utcMidnightFromDateStr(`${addMonths(month, 1)}-01`);
     const prevMonthStart = utcMidnightFromDateStr(`${addMonths(month, -1)}-01`);
 
-    const [branches, expenses, prevExpenses, charges, studying] =
+    const [branches, expenses, prevExpenses, expectation, studying] =
       await Promise.all([
         this.prisma.branch.findMany({
           where: { companyId },
@@ -126,24 +124,11 @@ export class ReportsProfitCompositionService {
         status.isOpen
           ? this.loadExpenses(companyId, branchIds, prevMonthStart, monthStart)
           : Promise.resolve([]),
+        // «Oy oxiriga kutilyapti»: it already knows cancellations,
+        // reschedules and holidays, which a charge's frozen dates do not.
         status.isOpen
-          ? this.prisma.enrollmentMonthlyCharge.findMany({
-              where: {
-                companyId,
-                status: MonthlyChargeStatus.CHARGED,
-                periodYear: Number(month.slice(0, 4)),
-                periodMonth: Number(month.slice(5, 7)),
-                ...branchIdWhere(branchIds),
-              },
-              select: {
-                studentId: true,
-                groupId: true,
-                perLessonCost: true,
-                coveredDates: true,
-                frozenOutDates: true,
-              },
-            })
-          : Promise.resolve([]),
+          ? this.reports.getMonthlyExpectation(companyId, { month, branchIds })
+          : Promise.resolve(null),
         this.loadStudyingStudents(lessons),
       ]);
     const branchName = new Map(branches.map((b) => [b.id, b.name]));
@@ -198,16 +183,21 @@ export class ReportsProfitCompositionService {
     // ── Forecast (running month only) ─────────────────────────────────
     let forecast: ProfitComposition['forecast'] = null;
     if (status.isOpen) {
-      const heldToday = new Set(
-        lessons
-          .filter((l) => l.dateStr === status.todayStr)
-          .map((l) => `${l.studentId}|${l.groupId}`),
-      );
-      const remaining = remainingChargedLessons(
-        charges,
-        status.todayStr,
-        heldToday,
-      );
+      // What the month's lessons are expected to be worth, minus what has
+      // already been recognised. Read off the TOTAL, which stays put while
+      // lessons are marked through the day, so a day-cached expectation
+      // never counts a lesson held this afternoon a second time.
+      const remaining = expectation
+        ? {
+            value: Math.max(0, expectation.expectedValue - np.revenue),
+            count: Math.max(
+              0,
+              expectation.heldLessons +
+                expectation.remainingLessons -
+                valued.length,
+            ),
+          }
+        : { value: 0, count: 0 };
       // The teacher's share of what is still to come, at the share this
       // month's lessons have paid so far — an estimate, labelled as one.
       const teacherShare = np.revenue > 0 ? np.teacherSalary / np.revenue : 0;
