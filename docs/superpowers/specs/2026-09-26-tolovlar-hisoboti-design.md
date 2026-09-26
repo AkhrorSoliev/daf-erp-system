@@ -120,12 +120,23 @@ ko'rsatadi. Adminga qizil ogohlantirish chiqadi va serverga xato yoziladi.
 Maqsad — nol holat. Ishga tushirishdan oldin hisobot prodda hamma o'quvchi
 bo'yicha quriladi (faqat o'qish) va har bir mos kelmaslik ko'rib chiqiladi.
 
-**Ma'lum holat: ikki o'quvchi.** Paket darslari puli qo'lda yozilgan tuzatish
-bilan qaytarilgan, lekin tuzatish «qaytarish» deb belgilanmagan. Ledger replay u
-darslarni keyingi oyning darslariga bog'lab qo'yadi va sentabrda dars soni
-guruh rejasidan ko'p chiqadi. Pul to'g'ri, faqat ko'rinish noto'g'ri. Tuzatish:
-o'sha tuzatish yozuvlariga `metadata.kind = 'prepaid-release'` qo'yiladi
-(bir martalik skript, CEO ruxsati bilan).
+**Qaytarilgan paket darslarining «qayta sanalishi».** Paketning ishlatilmagan
+darslari puli qaytarilganda (muzlatish, pul qaytarish), ledger replay o'sha
+bo'sh joylarni keyingi darslar bilan to'ldirib qo'yishi mumkin. Bu keyingi
+darslarning o'z yechimini oylik to'lovga o'tish bekor qilgan. Natijada sentabr
+darsi ikki marta sanalardi va qaytgan pul hisobda «yo'qolardi»: pul to'g'ri,
+faqat ko'rinish noto'g'ri.
+
+Qoida: qaytgan pulga mos ishlatilmagan dars topilmasa, shu guruhning oylik
+hisobi ham qamragan kunlardagi paket darslari «ishlatilmagan» deb olinadi.
+Eng kechkisidan boshlab olinadi va qaytgan pul miqdoridan oshmaydi. Hech narsa
+tushuntirmaydigan ustma-ustlik esa sanalgan holicha qoladi, ko'rinib turadi.
+
+Qo'lda yozilgan bitta qaytarish ham izoh matnidan taniladi. Bazaga yozish
+kerak bo'lmadi. Prodda quruq yurish (26.09, 1004 o'quvchi): 1004 tasi
+balans bilan so'mma-so'm mos keldi, ikki marta sanalgan oy 0. Bitta o'quvchidagi
+1 so'm «yaxlitlash farqi» deb ko'rsatiladi (100 so'mgacha farq shunday
+ko'rsatiladi).
 
 **Yangi yozuvlar belgi bilan yoziladi.** Kelajakda matnni tahlil qilish kerak
 bo'lmasligi uchun:

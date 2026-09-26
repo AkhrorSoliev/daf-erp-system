@@ -65,6 +65,12 @@ emas». PDF'ning 8 ta haqiqiy misoli (v3) 26.09 da ma'qullandi.
 - Eski yozuvlarni tanish izoh matniga bog'liq. Matn o'zgarsa, tasnif buziladi
   (`statement-months.spec.ts` himoya qiladi). Yangi yozuvlar belgi bilan
   yoziladi, shuning uchun bu bog'liqlik vaqt o'tishi bilan yo'qoladi.
-- Qo'lda yozilgan, lekin aslida paketni qaytargan tuzatish belgisiz bo'lsa,
-  replay o'sha darslarni keyingi oyga bog'laydi. Bunday yozuvlar bir martalik
-  skript bilan belgilanadi.
+- Paketning qaytarilgan bo'sh joylarini replay keyingi darslar bilan
+  to'ldirishi mumkin. Bu darslarning o'z yechimini oylik to'lovga o'tish bekor
+  qilgan. Qaytgan pulga mos ishlatilmagan dars bo'lmasa, oylik hisob ham
+  qamragan kunlardagi shunday paket darslari «ishlatilmagan» deb olinadi.
+  Bundan ortiq ustma-ustlik sanalgan holicha qoladi, ko'rinib turadi.
+- 100 so'mgacha farq «yaxlitlash farqi» qatori bo'ladi, «tushuntirilmagan
+  farq» emas.
+- Prodda quruq yurish (26.09.2026, 1004 o'quvchi): hammasi balans bilan
+  so'mma-so'm mos keldi, ikki marta sanalgan oy yo'q.
