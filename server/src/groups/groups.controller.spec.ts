@@ -21,6 +21,7 @@ describe('GroupsController — role guards', () => {
     delete: jest.fn().mockResolvedValue({}),
     changeStatus: jest.fn().mockResolvedValue({}),
     getStatusHistory: jest.fn().mockResolvedValue([]),
+    getDeletePreview: jest.fn().mockResolvedValue({ active: 0, frozen: 0 }),
     getScheduleConflicts: jest.fn().mockResolvedValue([]),
     getAvailableRooms: jest.fn().mockResolvedValue([]),
     getAvailableTeachers: jest.fn().mockResolvedValue([]),
@@ -135,6 +136,52 @@ describe('GroupsController — role guards', () => {
 
     it('should deny Teacher from deleting', () => {
       const ctx = mockExecutionContext(controller.delete, ['Teacher']);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+
+    it('hands the reason from the body to the service', async () => {
+      await controller.delete(
+        'group-1',
+        { reason: "Guruh yig'ilmadi" },
+        1,
+        1001,
+      );
+      expect(mockService.delete).toHaveBeenCalledWith(
+        'group-1',
+        1,
+        1001,
+        "Guruh yig'ilmadi",
+      );
+    });
+  });
+
+  describe('getDeletePreview()', () => {
+    it('should have @Roles(CEO, Branch Director, Administrator) metadata', () => {
+      const roles = reflector.get<string[]>(
+        ROLES_KEY,
+        controller.getDeletePreview,
+      );
+      expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
+    });
+
+    it('should allow Administrator to preview a deletion', () => {
+      const ctx = mockExecutionContext(controller.getDeletePreview, [
+        'Administrator',
+      ]);
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+
+    it('should deny Teacher from previewing a deletion', () => {
+      const ctx = mockExecutionContext(controller.getDeletePreview, [
+        'Teacher',
+      ]);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+
+    it('should deny Cashier from previewing a deletion', () => {
+      const ctx = mockExecutionContext(controller.getDeletePreview, [
+        'Cashier',
+      ]);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     });
   });

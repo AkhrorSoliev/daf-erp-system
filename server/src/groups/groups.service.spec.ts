@@ -64,7 +64,10 @@ describe('GroupsService — status methods', () => {
       branch: { findFirst: jest.fn() },
       course: { findFirst: jest.fn() },
       room: { findFirst: jest.fn() },
-      enrollment: { findMany: jest.fn().mockResolvedValue([]) },
+      enrollment: {
+        findMany: jest.fn().mockResolvedValue([]),
+        groupBy: jest.fn().mockResolvedValue([]),
+      },
       // `findMany` backs the "teacher belongs to this group's branch" guard —
       // empty means no teacher from a foreign branch was requested.
       user: {
@@ -307,6 +310,100 @@ describe('GroupsService — status methods', () => {
       );
       expect(statusCascadeService.cascadeGroupDeletion).not.toHaveBeenCalled();
       expect(tx.group.update).not.toHaveBeenCalled();
+    });
+
+    it("writes the admin's reason on the group and hands it to the cascade", async () => {
+      await service.delete('group-1', 1, 1001, "  Guruh yig'ilmadi  ");
+
+      expect(statusCascadeService.cascadeGroupDeletion).toHaveBeenCalledWith(
+        tx,
+        expect.objectContaining({ note: "Guruh yig'ilmadi" }),
+      );
+      expect(tx.statusHistory.create.mock.calls[0][0].data.reason).toBe(
+        "Guruh yig'ilmadi",
+      );
+      expect(tx.group.update.mock.calls[0][0].data.statusChangeReason).toBe(
+        "Guruh yig'ilmadi",
+      );
+      expect(entityHistoryService.recordDelete).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'Group',
+          oldValues: expect.objectContaining({
+            deletionReason: "Guruh yig'ilmadi",
+          }),
+        }),
+      );
+    });
+
+    it('treats a blank reason as none', async () => {
+      await service.delete('group-1', 1, 1001, '   ');
+
+      expect(
+        statusCascadeService.cascadeGroupDeletion.mock.calls[0][1].note,
+      ).toBeUndefined();
+      expect(tx.statusHistory.create.mock.calls[0][0].data.reason).toBe(
+        "O'chirildi",
+      );
+      expect(tx.group.update.mock.calls[0][0].data.statusChangeReason).toBe(
+        "O'chirildi",
+      );
+      expect(
+        entityHistoryService.recordDelete.mock.calls[0][0].oldValues,
+      ).not.toHaveProperty('deletionReason');
+    });
+
+    it('says how many students the deletion took out of the group', async () => {
+      statusCascadeService.cascadeGroupDeletion.mockResolvedValue({ count: 3 });
+
+      await expect(service.delete('group-1', 1, 1001)).resolves.toEqual({
+        message: "Guruh o'chirildi, 3 ta o'quvchi guruhdan chiqarildi",
+      });
+    });
+
+    it('keeps the old message for a group with nobody in it', async () => {
+      await expect(service.delete('group-1', 1, 1001)).resolves.toEqual({
+        message: "Guruh muvaffaqiyatli o'chirildi",
+      });
+    });
+  });
+
+  describe('getDeletePreview', () => {
+    it('counts the live enrollments by status, active and frozen alike', async () => {
+      prisma.enrollment.groupBy.mockResolvedValue([
+        { status: 'ACTIVE', _count: { _all: 5 } },
+        { status: 'FROZEN', _count: { _all: 2 } },
+      ]);
+
+      await expect(
+        service.getDeletePreview('group-1', 1001, 1, ['CEO']),
+      ).resolves.toEqual({ active: 5, frozen: 2 });
+      // What the deletion closes (see cascadeGroupDeletion): the group's
+      // unarchived ACTIVE and FROZEN enrollments. Counting ACTIVE alone is
+      // the list's studentCount, the number that hid the frozen students.
+      expect(prisma.enrollment.groupBy).toHaveBeenCalledWith({
+        by: ['status'],
+        where: {
+          groupId: 'group-1',
+          deletedAt: null,
+          status: { in: ['ACTIVE', 'FROZEN'] },
+        },
+        _count: { _all: true },
+      });
+    });
+
+    it('reports zeros for a group with nobody in it', async () => {
+      await expect(
+        service.getDeletePreview('group-1', 1001, 1, ['CEO']),
+      ).resolves.toEqual({ active: 0, frozen: 0 });
+    });
+
+    it('404s a missing or already deleted group', async () => {
+      prisma.group.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.getDeletePreview('missing', 1001, 1, ['CEO']),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.enrollment.groupBy).not.toHaveBeenCalled();
     });
   });
 

@@ -1297,6 +1297,37 @@ describe('StatusCascadeService', () => {
       ).toHaveBeenCalledTimes(1);
       expect(entityHistoryService.recordDelete).toHaveBeenCalledTimes(2);
     });
+
+    it("adds the admin's reason after the fixed words wherever the removal is recorded", async () => {
+      const { tx, byId, stateLog } = groupWithEveryKindOfEnrollment();
+      const why = "Guruh o'chirildi: Guruh yig'ilmadi";
+
+      await service.cascadeGroupDeletion(tx as any, {
+        ...params,
+        note: "Guruh yig'ilmadi",
+      });
+
+      expect(byId('enr-active').statusChangeReason).toBe(why);
+      expect(byId('enr-frozen').statusChangeReason).toBe(why);
+      expect(stateLog.map((r) => r.reason)).toEqual([why, why]);
+      const sabab = entityHistoryService.recordDelete.mock.calls.map(
+        ([p]: [{ oldValues: { sabab: string } }]) => p.oldValues.sabab,
+      );
+      expect(sabab).toEqual([why, why, why, why]);
+      const refundReasons =
+        enrollmentBillingService.refundPrepaidToBalance.mock.calls.map(
+          ([, p]: [unknown, { reason?: string }]) => p.reason,
+        );
+      expect(refundReasons).toEqual([
+        `Qoldiq oldindan to'langan darslar balansga qaytarildi (${why})`,
+        `Qoldiq oldindan to'langan darslar balansga qaytarildi (${why})`,
+      ]);
+      const departureReasons =
+        monthlyChargeService.reverseChargeForDeparture.mock.calls.map(
+          ([, p]: [unknown, { reason: string }]) => p.reason,
+        );
+      expect(departureReasons).toEqual([why, why]);
+    });
   });
 
   // ─── Result filtering ──────────────────────────────

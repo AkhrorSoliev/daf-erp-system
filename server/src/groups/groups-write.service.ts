@@ -580,8 +580,12 @@ export class GroupsWriteService {
    * (ACTIVE and FROZEN → DROPPED, unused money back to the balance) in ONE
    * transaction. Archiving the group alone used to leave its students
    * enrolled in a group that no longer existed.
+   *
+   * `reason` is what the admin typed in the delete dialog; blank means none.
+   * It becomes the group's status-history reason and follows
+   * "Guruh o'chirildi: " on every enrolment the deletion closes.
    */
-  async delete(id: string, userId: number, companyId: number) {
+  async delete(id: string, userId: number, companyId: number, reason?: string) {
     const group = await this.prisma.group.findFirst({
       where: { id, deletedAt: null, companyId },
     });
@@ -593,16 +597,16 @@ export class GroupsWriteService {
     // their students and their ledger.
     await assertCallerMayTouchGroup(this.prisma, userId, NO_TEACHER_PATH, id);
 
+    const note = reason?.trim() || undefined;
     // One instant for the group's deletion and its students' departure, so
     // the enrolment state log closes exactly at `group.deletedAt`.
     const deletedAt = new Date();
-    await this.prisma.$transaction(
+    const removed = await this.prisma.$transaction(
       async (tx) => {
-        await this.statusCascadeService.cascadeGroupDeletion(tx, {
-          groupId: id,
-          userId,
-          at: deletedAt,
-        });
+        const { count } = await this.statusCascadeService.cascadeGroupDeletion(
+          tx,
+          { groupId: id, userId, at: deletedAt, note },
+        );
 
         // Archive bypasses normal status transition validation
         await tx.statusHistory.create({
@@ -611,7 +615,7 @@ export class GroupsWriteService {
             entityId: id,
             fromStatus: group.statusEnum,
             toStatus: GroupStatus.ARCHIVED,
-            reason: "O'chirildi",
+            reason: note ?? "O'chirildi",
             changedById: userId,
             companyId: group.companyId ?? undefined,
           },
@@ -620,7 +624,8 @@ export class GroupsWriteService {
         await this.entityHistoryService.recordDelete({
           entityType: 'Group',
           entityId: id,
-          oldValues: group,
+          // `deletionReason`, as a student deletion names it.
+          oldValues: note ? { ...group, deletionReason: note } : group,
           changedById: userId,
           companyId: group.companyId ?? undefined,
           tx,
@@ -635,9 +640,11 @@ export class GroupsWriteService {
             deletedById: userId,
             statusChangedAt: deletedAt,
             statusChangedById: userId,
-            statusChangeReason: "O'chirildi",
+            statusChangeReason: note ?? "O'chirildi",
           },
         });
+
+        return count;
       },
       {
         // Same budget as saving a full roster's attendance: per student a
@@ -648,6 +655,11 @@ export class GroupsWriteService {
       },
     );
 
-    return { message: "Guruh muvaffaqiyatli o'chirildi" };
+    return {
+      message:
+        removed > 0
+          ? `Guruh o'chirildi, ${removed} ta o'quvchi guruhdan chiqarildi`
+          : "Guruh muvaffaqiyatli o'chirildi",
+    };
   }
 }
