@@ -74,6 +74,7 @@ export function allocate(
   const sources = [
     ...payments.map((p) => ({
       day: p.day,
+      at: p.at,
       kind: 'payment' as const,
       method: p.paymentMethod,
       itemKind: null,
@@ -85,6 +86,7 @@ export function allocate(
         .filter((i) => i.amount > 0)
         .map((i) => ({
           day: i.day,
+          at: null,
           kind: 'credit' as const,
           method: null,
           itemKind: i.kind,

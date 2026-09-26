@@ -6,21 +6,26 @@ import type {
 } from './statement.types';
 
 let seq = 0;
-const row = (over: Partial<StatementRow>): StatementRow => ({
-  id: `t${++seq}`,
-  type: 'PAYMENT',
-  amount: 0,
-  day: '2026-05-01',
-  description: null,
-  metadata: null,
-  enrollmentId: 'e1',
-  paymentId: null,
-  paymentMethod: null,
-  reversed: false,
-  reversal: false,
-  consumedDays: null,
-  ...over,
-});
+/** A row's timestamp defaults to 10:00 Tashkent on its day. */
+const withAt = (
+  r: Omit<StatementRow, 'at'> & { at?: string },
+): StatementRow => ({ ...r, at: r.at ?? `${r.day}T05:00:00.000Z` });
+const row = (over: Partial<StatementRow>): StatementRow =>
+  withAt({
+    id: `t${++seq}`,
+    type: 'PAYMENT',
+    amount: 0,
+    day: '2026-05-01',
+    description: null,
+    metadata: null,
+    enrollmentId: 'e1',
+    paymentId: null,
+    paymentMethod: null,
+    reversed: false,
+    reversal: false,
+    consumedDays: null,
+    ...over,
+  });
 const pay = (day: string, amount: number, method = 'CASH'): StatementRow =>
   row({
     type: 'PAYMENT',
@@ -158,6 +163,18 @@ describe('buildStatement', () => {
       leftover: 187_500,
       to: [{ due: { kind: 'month', month: '2026-09' }, amount: 262_500 }],
     });
+  });
+
+  it('keeps the exact time of a payment, for the 72-hour correction rule', () => {
+    const s = buildStatement(
+      input({
+        student: { id: 1, name: 'S', balance: 100_000, discountPercent: 0 },
+        rows: [
+          { ...pay('2026-09-16', 100_000), at: '2026-09-16T09:30:00.000Z' },
+        ],
+      }),
+    );
+    expect(s.allocations[0].at).toBe('2026-09-16T09:30:00.000Z');
   });
 
   it('splits a debt into this month and what is left from before', () => {

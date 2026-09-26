@@ -154,6 +154,7 @@ export class StatementLoader {
         type: r.type,
         amount: r.amount,
         day: tashkentDateStr(r.createdAt),
+        at: r.createdAt.toISOString(),
         description: r.description,
         metadata:
           r.metadata &&
