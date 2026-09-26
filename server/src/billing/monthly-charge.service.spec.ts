@@ -1599,6 +1599,56 @@ describe('MonthlyChargeService', () => {
       });
     });
 
+    it('tags the refund so the statement can fold it without reading the text', async () => {
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        id: 'chg-1',
+        groupId: 'grp-1',
+        plannedLessons: 13,
+        coveredLessons: 13,
+        coveredDates: [
+          '2026-09-01',
+          '2026-09-03',
+          '2026-09-05',
+          '2026-09-08',
+          '2026-09-10',
+          '2026-09-12',
+          '2026-09-15',
+          '2026-09-17',
+          '2026-09-19',
+          '2026-09-22',
+          '2026-09-24',
+          '2026-09-26',
+          '2026-09-29',
+        ],
+        frozenOutDates: [],
+        perLessonCost: 34_615,
+        chargedAmount: 450_000,
+        transactionId: 'tx-1',
+        status: 'CHARGED',
+      });
+
+      await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-09-20T00:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqarilganda',
+        today: '2026-09-20',
+      });
+
+      expect(txWriteMock.createAdjustment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: {
+            kind: 'monthly-release',
+            enrollmentId: 'enr-1',
+            period: '2026-09',
+            lessons: 4,
+            dates: ['2026-09-22', '2026-09-24', '2026-09-26', '2026-09-29'],
+          },
+        }),
+        tx,
+      );
+    });
+
     it('oy o`rtasida dars bekor qilinsa ham qaytarilgan summa O`ZGARMAYDI (muzlatilgan sanalar)', async () => {
       // Spec 5.5. Ilgari `lessonsThroughDeparture` JONLI `resolveExcludedDates`
       // dan qayta hisoblanardi: 10-sentabrga bekor qilingan dars qo'shilsa,

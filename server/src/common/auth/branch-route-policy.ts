@@ -354,10 +354,13 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'so it goes through `assertCallerMayTouchGroup` — assignment for a pure ' +
       'teacher, branch for everyone else. `GET /groups/:id/delete-preview` ' +
       'counts the students deleting a group would take out of it, behind ' +
-      'the same check as `DELETE /groups/:id`.',
+      'the same check as `DELETE /groups/:id`. The payment statement (JSON ' +
+      'and PDF) is one more profile read and runs the same check.',
     routes: [
       'GET /students/:id/status-history',
       'GET /students/:id/balance-summary',
+      'GET /students/:id/statement',
+      'GET /students/:id/statement.pdf',
       'GET /students/:id/debt-origin',
       'GET /students/:id/active-enrollments-prepaid',
       'GET /students/:id/closed-enrollments',
@@ -646,6 +649,14 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'first write, never taken from a header, so a later transfer does not move ' +
       'past activity into the new branch.',
     routes: ['POST /student-portal/activity'],
+  },
+  {
+    policy: 'SELF',
+    reason:
+      "Keyed on `@CurrentUser('studentId')` behind `StudentCardGuard` — the " +
+      'caller downloads their own payment statement and no id comes from the ' +
+      'request.',
+    routes: ['GET /student-portal/statement.pdf'],
   },
   {
     policy: 'SELF',

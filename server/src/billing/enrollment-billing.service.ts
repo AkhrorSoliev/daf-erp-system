@@ -239,7 +239,15 @@ export class EnrollmentBillingService {
           branchId: enrollment.group.branchId,
           companyId: enrollment.group.companyId,
           performedById: params.performedById,
-          ...(params.metadata !== undefined && { metadata: params.metadata }),
+          // The payment statement folds a tagged release into the lessons
+          // instead of guessing from the description. Caller keys (a
+          // refund's `refundId`) stay alongside.
+          metadata: {
+            kind: 'prepaid-release',
+            enrollmentId: params.enrollmentId,
+            lessons: params.lessons,
+            ...((params.metadata as Prisma.InputJsonObject | undefined) ?? {}),
+          },
         },
         tx,
       );
@@ -421,6 +429,11 @@ export class EnrollmentBillingService {
           branchId: enrollment.group.branchId,
           companyId: enrollment.group.companyId,
           performedById: params.performedById,
+          metadata: {
+            kind: 'prepaid-release',
+            enrollmentId: params.enrollmentId,
+            lessons: targetLessons,
+          },
         },
         tx,
       );
