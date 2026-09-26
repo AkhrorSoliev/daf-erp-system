@@ -605,14 +605,7 @@ export class GroupsWriteService {
       async (tx) => {
         const { count } = await this.statusCascadeService.cascadeGroupDeletion(
           tx,
-          {
-            groupId: id,
-            groupName: group.name,
-            companyId: group.companyId ?? undefined,
-            userId,
-            at: deletedAt,
-            note,
-          },
+          { groupId: id, userId, at: deletedAt, note },
         );
 
         // Archive bypasses normal status transition validation

@@ -470,12 +470,14 @@ export class StudentEnrollmentService {
       groupId: string;
       status: string;
       startDate: Date | null;
+      createdAt: Date;
     },
     group: {
       id: string;
       branchId: number;
       companyId: number;
       statusEnum: string;
+      startDate: Date | null;
       exactDays: string[];
       course: { price: number; paymentModel: string };
     },
@@ -494,11 +496,13 @@ export class StudentEnrollmentService {
       groupId: created.groupId,
       status: created.status as EnrollmentStatus,
       startDate: created.startDate,
+      createdAt: created.createdAt,
       group: {
         id: group.id,
         branchId: group.branchId,
         companyId: group.companyId,
         statusEnum: group.statusEnum as GroupStatus,
+        startDate: group.startDate,
         exactDays: group.exactDays,
         course: {
           price: group.course.price,

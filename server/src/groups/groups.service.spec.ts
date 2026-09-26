@@ -250,8 +250,6 @@ describe('GroupsService — status methods', () => {
         tx,
         expect.objectContaining({
           groupId: 'group-1',
-          groupName: 'Test-001',
-          companyId: 1001,
           userId: 1,
         }),
       );
