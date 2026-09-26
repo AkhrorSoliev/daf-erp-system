@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { loadDepartedStudents } from './shared/departed-students-dataset';
+import { loadTeacherChangeDepartures } from './shared/teacher-change-departures';
 import { tashkentRangeUtc } from '../common/date/tashkent';
 
 @Injectable()
@@ -126,74 +127,23 @@ export class ReportsDepartedStudentsService {
 
   /**
    * Counts teacher changes within the period and how many students "left"
-   * within 5 lessons of one — where "left" means the enrollment went DROPPED
-   * (guruhsiz qoldi) or FROZEN (muzlatildi).
-   *
-   * The 5th-lesson date is read from the distinct `Attendance` dates after
-   * the change (the system has no separate Lesson model).
+   * within 5 lessons of one. Who left is decided in
+   * `loadTeacherChangeDepartures` — the same reader behind the drill-down list
+   * (`getDepartedAfterTeacherChangeList`), so the count and the list agree.
    */
   private async getTeacherChangeRetentionMetrics(
     companyId: number,
     // `end` is EXCLUSIVE: 00:00 Tashkent of the day after the range.
     params: { branchId?: number; start: Date; end: Date },
   ) {
-    const LESSON_WINDOW = 5;
-
-    const groupWhere: Prisma.GroupWhereInput = {
+    const { changes, departures } = await loadTeacherChangeDepartures(
+      this.prisma,
       companyId,
-      deletedAt: null,
-    };
-    if (params.branchId !== undefined) groupWhere.branchId = params.branchId;
-
-    const changes = await this.prisma.groupTeacherHistory.findMany({
-      where: {
-        createdAt: { gte: params.start, lt: params.end },
-        group: groupWhere,
-      },
-      select: { id: true, groupId: true, createdAt: true },
-      orderBy: { createdAt: 'asc' },
-    });
-
-    if (changes.length === 0) {
-      return { totalTeacherChanges: 0, departedAfterTeacherChange: 0 };
-    }
-
-    const affectedEnrollmentIds = new Set<string>();
-
-    for (const change of changes) {
-      const lessonDates = await this.prisma.attendance.findMany({
-        where: {
-          groupId: change.groupId,
-          date: { gte: change.createdAt },
-        },
-        distinct: ['date'],
-        select: { date: true },
-        orderBy: { date: 'asc' },
-        take: LESSON_WINDOW,
-      });
-
-      if (lessonDates.length === 0) continue;
-
-      const cutoffDate = lessonDates[lessonDates.length - 1].date;
-
-      const departed = await this.prisma.enrollment.findMany({
-        where: {
-          groupId: change.groupId,
-          status: { in: ['DROPPED', 'FROZEN'] },
-          deletedAt: null,
-          createdAt: { lt: change.createdAt },
-          statusChangedAt: { gte: change.createdAt, lte: cutoffDate },
-          student: { companyId, deletedAt: null },
-        },
-        select: { id: true },
-      });
-
-      for (const e of departed) affectedEnrollmentIds.add(e.id);
-    }
-
+      params,
+    );
     return {
       totalTeacherChanges: changes.length,
-      departedAfterTeacherChange: affectedEnrollmentIds.size,
+      departedAfterTeacherChange: departures.length,
     };
   }
 

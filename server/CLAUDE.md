@@ -382,9 +382,11 @@ Every entity update that touches a tracked field MUST also write a snapshot row.
 
 **When adding new code that mutates these fields:** wire the corresponding snapshot write or the activity report will silently use the new value retroactively.
 
-#### Reads (`reports-center-activity.service.ts`)
+#### Reads
 
-`loadSnapshots()` fetches all snapshots overlapping the period in one batched query and returns in-memory `Map`s keyed by entity ID. Per-date lookups (`capacityOn`, `scheduleOn`, `priceOn`, `statusOn`) walk the small per-entity arrays. Falls back to current entity values when no snapshot exists (degraded mode for un-backfilled data).
+`reports-center-activity.service.ts` — `loadSnapshots()` fetches all snapshots overlapping the period in one batched query and returns in-memory `Map`s keyed by entity ID. Per-date lookups (`capacityOn`, `scheduleOn`, `priceOn`, `statusOn`) walk the small per-entity arrays. Falls back to current entity values when no snapshot exists (degraded mode for un-backfilled data).
+
+`reports/shared/teacher-change-departures.ts` — the teacher-change retention card and its drill-down list ("left within 5 lessons of a teacher change") date a departure by the start of the enrollment's current stop: its earliest FROZEN/DROPPED log row after its last ACTIVE row. Never by `statusChangedAt` — that column moves again when a frozen enrollment is closed later (expelled, archived, its group closed), which used to pull a student out of the window they froze in. Both readers go through `loadTeacherChangeDepartures`, so the count and the list cannot disagree.
 
 #### Backfill
 
