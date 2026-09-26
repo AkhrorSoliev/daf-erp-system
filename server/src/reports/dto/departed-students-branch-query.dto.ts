@@ -2,9 +2,10 @@ import { IsInt, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 
 /**
- * Query for the snapshot-based departed-students blocks (dynamics, by-status).
- * Only an optional branch filter — these blocks are a current-state snapshot,
- * not date-ranged.
+ * Query for the "by-status" departed-students chart. Reads open departure
+ * episodes (ADR-0035): students who stopped and have not come back, pending
+ * ones included. Not date-ranged. `branchId` is read by the BranchScope
+ * guard.
  */
 export class DepartedStudentsBranchQueryDto {
   @IsOptional()

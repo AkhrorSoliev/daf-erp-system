@@ -21,6 +21,7 @@ import { ExpensesService } from '../expenses/expenses.service';
 import { SalaryPaymentService } from '../salary/salary-payment.service';
 import { SalaryService } from '../salary/salary.service';
 import { PaymentsDebtorsService } from '../payments/payments-debtors.service';
+import { DEPARTURE_GRACE_DAYS } from '../students/shared/departure-episodes';
 
 describe('ReportsService', () => {
   let service: ReportsService;
@@ -29,7 +30,13 @@ describe('ReportsService', () => {
 
   beforeEach(async () => {
     prisma = {
-      student: { count: jest.fn(), findMany: jest.fn() },
+      student: {
+        count: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+        aggregate: jest.fn(),
+      },
+      enrollmentStateLog: { findMany: jest.fn().mockResolvedValue([]) },
+      statusHistory: { findMany: jest.fn().mockResolvedValue([]) },
       // systemStartDate floor lookup — default null = no floor (legacy behaviour).
       company: {
         findUnique: jest.fn().mockResolvedValue({ systemStartDate: null }),
@@ -167,11 +174,9 @@ describe('ReportsService', () => {
       prisma.student.count
         .mockResolvedValueOnce(50) // activeStudents
         .mockResolvedValueOnce(45) // lastMonthActive
-        .mockResolvedValueOnce(5) // new students
-        .mockResolvedValueOnce(2); // expelled
+        .mockResolvedValueOnce(5); // new students
 
       prisma.group.count.mockResolvedValue(10);
-      prisma.enrollment.count.mockResolvedValue(1);
 
       prisma.attendance.groupBy.mockResolvedValue([
         { status: 'PRESENT', _count: { id: 80 } },
@@ -191,7 +196,9 @@ describe('ReportsService', () => {
         averageAttendance: 85,
         leadConversionRate: 20,
         newStudentsThisMonth: 5,
-        churnedThisMonth: 3,
+        churnedThisMonth: 0,
+        pendingDepartures: 0,
+        departureGraceDays: DEPARTURE_GRACE_DAYS,
       });
     });
 
@@ -881,91 +888,12 @@ describe('ReportsService', () => {
   });
 
   describe('getDepartedStudentsSummary', () => {
-    // Date range only feeds the teacher-change retention metrics; the KPI
-    // figures are a date-independent snapshot.
-    const baseParams = { startDate: '2026-03-01', endDate: '2026-03-31' };
-
-    // Raw departed-student row shaped like loadDepartedStudents' query result.
-    const makeDeparted = (id: number, leftAt: Date | null, balance = 0) => ({
-      id,
-      firstName: 'Test',
-      lastName: String(id),
-      phone: '900000000',
-      status: 'ACTIVE',
-      balance,
-      statusChangedAt: leftAt,
-      statusExitReason: null,
-      enrollments: leftAt
-        ? [{ statusChangedAt: leftAt, departureReason: null, group: null }]
-        : [],
-    });
-
-    it('computes departedCount, churnRate, lostRevenue and avgDuration from the snapshot', async () => {
-      prisma.student.findMany.mockResolvedValueOnce([
-        makeDeparted(10001, new Date('2026-03-10')),
-      ]);
-      prisma.student.count.mockResolvedValueOnce(9); // currently studying
-      prisma.contract.findMany.mockResolvedValueOnce([
-        { totalAmount: 1_000_000, paidAmount: 600_000 },
-      ]);
-      prisma.enrollment.groupBy.mockResolvedValueOnce([
-        { studentId: 10001, _min: { createdAt: new Date('2026-01-10') } },
-      ]);
-
-      const result = await service.getDepartedStudentsSummary(1, baseParams);
-
-      expect(result.departedCount).toBe(1);
-      expect(result.totalStudents).toBe(10);
-      expect(result.churnRate).toBe(10); // 1 / 10 * 100
-      expect(result.lostRevenue).toBe(400_000);
-      expect(result.avgDurationMonths).toBeGreaterThan(0);
-    });
-
-    it('sums debt from departed students with a negative balance', async () => {
-      prisma.student.findMany.mockResolvedValueOnce([
-        makeDeparted(10001, new Date('2026-03-10'), -50_000),
-        makeDeparted(10002, new Date('2026-03-11'), -30_000),
-        makeDeparted(10003, new Date('2026-03-12'), 0),
-        makeDeparted(10004, new Date('2026-03-13'), 120_000), // not a debtor
-      ]);
-      prisma.student.count.mockResolvedValueOnce(0);
-      prisma.contract.findMany.mockResolvedValueOnce([]);
-      prisma.enrollment.groupBy.mockResolvedValueOnce([]);
-
-      const result = await service.getDepartedStudentsSummary(1, baseParams);
-      expect(result.debtorCount).toBe(2);
-      expect(result.totalDebt).toBe(-80_000);
-    });
-
-    it('returns zeros when there are no departed students', async () => {
-      prisma.student.findMany.mockResolvedValueOnce([]);
-      prisma.student.count.mockResolvedValueOnce(0);
-
-      const result = await service.getDepartedStudentsSummary(1, baseParams);
-      expect(result.departedCount).toBe(0);
-      expect(result.churnRate).toBe(0);
-      expect(result.lostRevenue).toBe(0);
-      expect(result.avgDurationMonths).toBe(0);
-      expect(result.totalStudents).toBe(0);
-    });
-
-    it('scopes the snapshot and the studying count by branch', async () => {
-      prisma.student.findMany.mockResolvedValueOnce([]);
-      prisma.student.count.mockResolvedValueOnce(0);
-
-      await service.getDepartedStudentsSummary(1, {
-        ...baseParams,
-        branchId: 7,
-      });
-
-      const snapshotWhere = prisma.student.findMany.mock.calls[0][0].where;
-      expect(snapshotWhere.branches).toEqual({ some: { branchId: 7 } });
-      const studyingWhere = prisma.student.count.mock.calls[0][0].where;
-      expect(studyingWhere.branches).toEqual({ some: { branchId: 7 } });
-      expect(studyingWhere.enrollments).toEqual({
-        some: { status: 'ACTIVE', deletedAt: null },
-      });
-    });
+    // Only the teacher-change metrics are covered here; departures have their own spec.
+    const baseParams = {
+      scope: null,
+      startDate: '2026-03-01',
+      endDate: '2026-03-31',
+    };
 
     it('counts teacher changes and post-change departures (DROPPED or FROZEN)', async () => {
       prisma.student.findMany.mockResolvedValueOnce([]);
@@ -1033,78 +961,6 @@ describe('ReportsService', () => {
       expect(result.totalTeacherChanges).toBe(2);
       expect(result.departedAfterTeacherChange).toBe(1);
     });
-
-    it('caps lost revenue at 0 for overpaid contracts', async () => {
-      prisma.student.findMany.mockResolvedValueOnce([
-        makeDeparted(10001, new Date('2026-03-10')),
-      ]);
-      prisma.student.count.mockResolvedValueOnce(10);
-      prisma.contract.findMany.mockResolvedValueOnce([
-        { totalAmount: 1_000_000, paidAmount: 1_500_000 }, // overpaid
-      ]);
-      prisma.enrollment.groupBy.mockResolvedValueOnce([]);
-
-      const result = await service.getDepartedStudentsSummary(1, baseParams);
-      expect(result.lostRevenue).toBe(0);
-    });
-  });
-
-  describe('getDepartedStudentsDynamics', () => {
-    // Raw student row shaped like loadDepartedStudents' query result.
-    const makeRow = (id: number, status: string, leftAt: Date | null) => ({
-      id,
-      firstName: 'Test',
-      lastName: String(id),
-      phone: '900000000',
-      status,
-      statusChangedAt: leftAt,
-      statusExitReason: null,
-      enrollments: leftAt
-        ? [{ statusChangedAt: leftAt, departureReason: null, group: null }]
-        : [],
-    });
-
-    it('buckets departed students monthly by the month they lost their group', async () => {
-      prisma.student.findMany.mockResolvedValueOnce([
-        makeRow(10001, 'FROZEN', new Date('2026-03-10')),
-        makeRow(10002, 'ACTIVE', new Date('2026-03-20')),
-        makeRow(10003, 'EXPELLED', new Date('2026-05-05')),
-      ]);
-
-      const result = await service.getDepartedStudentsDynamics(1, {});
-
-      expect(result.granularity).toBe('month');
-      // First bucket = earliest departure month, with both March departures.
-      expect(result.data[0]).toEqual({ date: '2026-03-01', count: 2 });
-      // Gap month is filled with 0.
-      expect(result.data.find((d) => d.date === '2026-04-01')).toEqual({
-        date: '2026-04-01',
-        count: 0,
-      });
-      expect(result.data.find((d) => d.date === '2026-05-01')?.count).toBe(1);
-      // Every departed student is counted exactly once.
-      const total = result.data.reduce((sum, d) => sum + d.count, 0);
-      expect(total).toBe(3);
-    });
-
-    it('returns empty data when there are no departed students', async () => {
-      prisma.student.findMany.mockResolvedValueOnce([]);
-      const result = await service.getDepartedStudentsDynamics(1, {});
-      expect(result.data).toEqual([]);
-      expect(result.granularity).toBe('month');
-    });
-
-    it('scopes to company and branch via the student snapshot where', async () => {
-      prisma.student.findMany.mockResolvedValueOnce([]);
-      await service.getDepartedStudentsDynamics(42, { branchId: 7 });
-
-      const where = prisma.student.findMany.mock.calls[0][0].where;
-      expect(where.companyId).toBe(42);
-      expect(where.branches).toEqual({ some: { branchId: 7 } });
-      expect(where.enrollments).toEqual({
-        none: { status: 'ACTIVE', deletedAt: null },
-      });
-    });
   });
 
   describe('getDepartedStudentsReasons', () => {
@@ -1140,106 +996,6 @@ describe('ReportsService', () => {
       expect(result.data).toEqual([]);
       // no follow-up reason lookup needed
       expect(prisma.studentExitReason.findMany).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('getDepartedStudentsList', () => {
-    it('returns a student-level row with last group/branch/course/teachers', async () => {
-      const row = {
-        id: 10001,
-        firstName: 'Ali',
-        lastName: 'Valiyev',
-        phone: '901234567',
-        status: 'FROZEN',
-        balance: -75000,
-        statusChangedAt: new Date('2026-03-10'),
-        enrollments: [
-          {
-            status: 'FROZEN',
-            statusChangedAt: new Date('2026-03-10'),
-            group: {
-              id: 'g1',
-              name: 'B1-01',
-              branch: { id: 1, name: 'Bosh' },
-              course: { id: 'c1', name: 'A1' },
-              teachers: [
-                {
-                  teacher: { id: 30001, firstName: 'Feruz', lastName: 'Ustoz' },
-                },
-              ],
-            },
-          },
-        ],
-      };
-      prisma.$transaction.mockResolvedValueOnce([[row], 1]);
-
-      const result = await service.getDepartedStudentsList(1, {});
-      expect(result.total).toBe(1);
-      expect(result.page).toBe(1);
-      expect(result.pageSize).toBe(10);
-      expect(result.data[0]).toMatchObject({
-        student: { id: 10001, fullName: 'Ali Valiyev' },
-        phone: '901234567',
-        status: 'FROZEN',
-        balance: -75000,
-        lastGroup: { id: 'g1', name: 'B1-01' },
-        branch: { id: 1, name: 'Bosh' },
-        course: { id: 'c1', name: 'A1' },
-        teachers: [{ id: 30001, fullName: 'Feruz Ustoz' }],
-        leftAt: new Date('2026-03-10').toISOString(),
-      });
-    });
-
-    it('returns null group fields for a student with no enrollments', async () => {
-      const row = {
-        id: 10002,
-        firstName: 'Hasan',
-        lastName: 'Tursunov',
-        phone: '907654321',
-        status: 'ACTIVE',
-        balance: 0,
-        statusChangedAt: null,
-        enrollments: [],
-      };
-      prisma.$transaction.mockResolvedValueOnce([[row], 1]);
-
-      const result = await service.getDepartedStudentsList(1, {});
-      expect(result.data[0]).toMatchObject({
-        student: { id: 10002, fullName: 'Hasan Tursunov' },
-        status: 'ACTIVE',
-        balance: 0,
-        lastGroup: null,
-        branch: null,
-        course: null,
-        teachers: [],
-        leftAt: null,
-      });
-    });
-
-    it('filters to debtors only when debtorsOnly is set', async () => {
-      prisma.$transaction.mockResolvedValueOnce([[], 0]);
-      await service.getDepartedStudentsList(1, { debtorsOnly: true });
-
-      const where = prisma.student.findMany.mock.calls[0][0].where;
-      expect(where.balance).toEqual({ lt: 0 });
-    });
-
-    it('does not filter by balance when debtorsOnly is unset', async () => {
-      prisma.$transaction.mockResolvedValueOnce([[], 0]);
-      await service.getDepartedStudentsList(1, {});
-
-      const where = prisma.student.findMany.mock.calls[0][0].where;
-      expect(where.balance).toBeUndefined();
-    });
-
-    it('clamps pageSize to 100 and page to >= 1', async () => {
-      prisma.$transaction.mockResolvedValueOnce([[], 0]);
-      const result = await service.getDepartedStudentsList(1, {
-        page: 0,
-        pageSize: 9999,
-      });
-      expect(result.page).toBe(1);
-      expect(result.pageSize).toBe(100);
     });
   });
 
@@ -1293,137 +1049,6 @@ describe('ReportsService', () => {
       });
       expect(result.page).toBe(1);
       expect(result.pageSize).toBe(100);
-    });
-  });
-
-  describe('getDepartedStudentsByStatus', () => {
-    const makeStudent = (id: number, status: string) => ({
-      id,
-      firstName: 'Test',
-      lastName: String(id),
-      phone: '900000000',
-      status,
-      statusChangedAt: null,
-      statusExitReason: null,
-      enrollments: [],
-    });
-
-    it('groups departed students by status with Uzbek labels', async () => {
-      prisma.student.findMany.mockResolvedValueOnce([
-        makeStudent(1, 'ACTIVE'),
-        makeStudent(2, 'FROZEN'),
-        makeStudent(3, 'FROZEN'),
-        makeStudent(4, 'EXPELLED'),
-      ]);
-
-      const result = await service.getDepartedStudentsByStatus(1, {});
-
-      expect(result.total).toBe(4);
-      // Sorted by count desc — FROZEN (2) leads.
-      expect(result.data[0]).toEqual({
-        status: 'FROZEN',
-        label: 'Muzlatilgan',
-        count: 2,
-      });
-      expect(result.data.find((d) => d.status === 'ACTIVE')).toEqual({
-        status: 'ACTIVE',
-        label: 'Faol (guruhsiz)',
-        count: 1,
-      });
-      expect(result.data.find((d) => d.status === 'EXPELLED')).toEqual({
-        status: 'EXPELLED',
-        label: 'Chetlatilgan',
-        count: 1,
-      });
-    });
-
-    it('scopes by branch', async () => {
-      prisma.student.findMany.mockResolvedValueOnce([]);
-      await service.getDepartedStudentsByStatus(1, { branchId: 5 });
-
-      const where = prisma.student.findMany.mock.calls[0][0].where;
-      expect(where.branches).toEqual({ some: { branchId: 5 } });
-    });
-  });
-
-  describe('getDepartedStudentsGroupBy', () => {
-    // Raw student row shaped like loadDepartedStudents' query result.
-    const makeStudent = (id: number, status: string, group: unknown) => ({
-      id,
-      firstName: 'Test',
-      lastName: String(id),
-      phone: '900000000',
-      status,
-      statusChangedAt: new Date('2026-03-10'),
-      statusExitReason: null,
-      enrollments: [
-        {
-          statusChangedAt: new Date('2026-03-10'),
-          departureReason: null,
-          group,
-        },
-      ],
-    });
-
-    const groupOfCourse = (
-      courseId: string,
-      courseName: string,
-      teachers: unknown[] = [],
-    ) => ({
-      id: `g-${courseId}`,
-      name: `grp-${courseId}`,
-      branch: { id: 1, name: 'Bosh' },
-      course: { id: courseId, name: courseName },
-      teachers,
-    });
-
-    it('aggregates by course with status segments and totals', async () => {
-      const c1 = groupOfCourse('c1', 'A1');
-      const c2 = groupOfCourse('c2', 'B1');
-      prisma.student.findMany.mockResolvedValueOnce([
-        makeStudent(1, 'ACTIVE', c1),
-        makeStudent(2, 'FROZEN', c1),
-        makeStudent(3, 'FROZEN', c1),
-        makeStudent(4, 'ACTIVE', c2),
-      ]);
-
-      const result = await service.getDepartedStudentsGroupBy(1, {
-        groupBy: 'course',
-      });
-
-      expect(result.uniqueTotal).toBe(4);
-      expect(result.data).toHaveLength(2);
-      expect(result.data[0]).toMatchObject({ id: 'c1', name: 'A1', total: 3 });
-      expect(result.data[0].segments[0]).toMatchObject({
-        status: 'FROZEN',
-        label: 'Muzlatilgan',
-        count: 2,
-      });
-      expect(result.data[0].segments[1]).toMatchObject({
-        status: 'ACTIVE',
-        count: 1,
-      });
-      expect(result.data[1]).toMatchObject({ id: 'c2', name: 'B1', total: 1 });
-    });
-
-    it('counts a multi-teacher student against each teacher when groupBy=teacher', async () => {
-      const group = groupOfCourse('c1', 'A1', [
-        { teacher: { id: 30001, firstName: 'Ali', lastName: 'V' } },
-        { teacher: { id: 30002, firstName: 'Vali', lastName: 'A' } },
-      ]);
-      prisma.student.findMany.mockResolvedValueOnce([
-        makeStudent(1, 'FROZEN', group),
-      ]);
-
-      const result = await service.getDepartedStudentsGroupBy(1, {
-        groupBy: 'teacher',
-      });
-
-      expect(result.uniqueTotal).toBe(1);
-      expect(result.data).toHaveLength(2);
-      expect(result.data.every((d: { total: number }) => d.total === 1)).toBe(
-        true,
-      );
     });
   });
 

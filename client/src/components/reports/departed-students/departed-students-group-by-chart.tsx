@@ -194,7 +194,7 @@ export function DepartedStudentsGroupByChart({
         title="Kesim bo'yicha tahlil"
         subtitle="Yo'nalishlar bo'yicha ketgan o'quvchilar, holat kesimida"
         tooltip={
-          "Tanlangan kesim bo'yicha ketgan o'quvchilar, ichida holat (guruhsiz / muzlatilgan / chetlatilgan) bo'yicha segmentlarga bo'lingan.\n" +
+          "Tanlangan kesim bo'yicha qaytmagan ketganlar, ichida holat (guruhsiz / muzlatilgan / chetlatilgan) bo'yicha segmentlarga bo'lingan.\n" +
           `Eng ko'p ${TOP_N_BUCKETS} ta element alohida, qolganlari "Boshqalar"ga yig'ilgan.\n` +
           "Ustun ustiga bosing — shu kesimdagi holat taqsimotini batafsil ko'rasiz."
         }

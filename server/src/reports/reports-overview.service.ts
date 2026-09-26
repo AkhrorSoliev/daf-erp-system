@@ -3,7 +3,16 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { activeStudentWhere } from '../students/shared/active-student-where';
-import { tashkentRangeFilter } from '../common/date/tashkent';
+import {
+  tashkentMonthKey,
+  tashkentMonthRangeUtc,
+  tashkentRangeFilter,
+} from '../common/date/tashkent';
+import {
+  departuresInRange,
+  pendingInRange,
+} from '../students/shared/departure-episodes';
+import { loadDepartures } from './shared/departures.loader';
 
 @Injectable()
 export class ReportsOverviewService {
@@ -29,11 +38,10 @@ export class ReportsOverviewService {
       lastMonthActiveStudents,
       activeGroups,
       newStudentsThisMonth,
-      expelledThisMonth,
-      droppedThisMonth,
       attendanceCounts,
       totalLeads,
       convertedLeads,
+      departures,
     ] = await Promise.all([
       // «Faol o'quvchi» ta'rifi bitta joyda — `activeStudentWhere`. Bu yerda
       // ilgari faqat `status: 'ACTIVE'` turgan edi, ya'ni guruhga
@@ -78,25 +86,6 @@ export class ReportsOverviewService {
         },
       }),
 
-      this.prisma.student.count({
-        where: {
-          companyId,
-          deletedAt: null,
-          status: 'EXPELLED',
-          statusChangedAt: { gte: firstOfMonth },
-          ...branchStudentFilter,
-        },
-      }),
-
-      this.prisma.enrollment.count({
-        where: {
-          deletedAt: null,
-          status: 'DROPPED',
-          statusChangedAt: { gte: firstOfMonth },
-          group: { companyId, ...branchGroupFilter },
-        },
-      }),
-
       this.prisma.attendance.groupBy({
         by: ['status'],
         where: {
@@ -124,7 +113,33 @@ export class ReportsOverviewService {
           sectionId: { not: null },
         },
       }),
+
+      // "Shu oy ketganlar" — the one definition of a departure (ADR-0035),
+      // counted over the Tashkent month. The other monthly KPIs keep their
+      // process-local month start; they are outside this change. Runs
+      // alongside the queries above rather than after them — it depends on
+      // none of their results, and awaiting it separately just stacked its
+      // latency on top on a cold cache.
+      loadDepartures(
+        this.prisma,
+        companyId,
+        query.branchId ? [query.branchId] : null,
+        { now },
+      ),
     ]);
+
+    // Both count stops that started in this Tashkent month.
+    const thisMonth = tashkentMonthRangeUtc(tashkentMonthKey(now));
+    const churnedThisMonth = departuresInRange(
+      departures.episodes,
+      thisMonth,
+      departures.floor,
+    ).length;
+    const pendingDepartures = pendingInRange(
+      departures.episodes,
+      thisMonth,
+      departures.floor,
+    ).length;
 
     const totalAttendance = attendanceCounts.reduce(
       (sum, a) => sum + a._count.id,
@@ -156,7 +171,9 @@ export class ReportsOverviewService {
       averageAttendance,
       leadConversionRate,
       newStudentsThisMonth,
-      churnedThisMonth: expelledThisMonth + droppedThisMonth,
+      churnedThisMonth,
+      pendingDepartures,
+      departureGraceDays: departures.graceDays,
     };
   }
 

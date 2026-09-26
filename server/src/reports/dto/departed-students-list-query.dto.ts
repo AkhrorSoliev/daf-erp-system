@@ -10,9 +10,9 @@ import { Transform, Type } from 'class-transformer';
 import { StudentStatus } from '@prisma/client';
 
 /**
- * Query for the "Ketgan o'quvchilar" list. The list is a student-level
- * snapshot — a student is "departed" when they have no group they currently
- * study in (zero ACTIVE enrollments). It is not date-ranged.
+ * Query for the "Ketgan o'quvchilar" list. Reads open departure episodes
+ * (ADR-0035): students who stopped and have not come back, pending ones
+ * included. Not date-ranged. `branchId` is read by the BranchScope guard.
  */
 export class DepartedStudentsListQueryDto {
   @IsOptional()
@@ -22,8 +22,10 @@ export class DepartedStudentsListQueryDto {
 
   /**
    * Optional StudentStatus filter (Faol-guruhsiz / Muzlatilgan /
-   * Chetlashtirilgan ...). When omitted, every departed student is returned.
-   * GRADUATED is rejected — graduated students are never "departed".
+   * Chetlashtirilgan ...). When omitted, every open episode is returned.
+   * GRADUATED is not honoured as a filter value — the service treats it the
+   * same as "no filter", since a graduated student's episode is never shown
+   * as a departure in the first place.
    */
   @IsOptional()
   @IsEnum(StudentStatus)

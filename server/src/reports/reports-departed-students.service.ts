@@ -1,120 +1,86 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { loadDepartedStudents } from './shared/departed-students-dataset';
-import { tashkentRangeUtc } from '../common/date/tashkent';
+import { ReportBranchIds } from '../common/finance/report-branch-scope';
+import {
+  addMonthsToMonthKey,
+  tashkentMonthKey,
+  tashkentMonthRangeUtc,
+  tashkentRangeUtc,
+} from '../common/date/tashkent';
+import {
+  departuresInRange,
+  openEpisodes,
+  pendingInRange,
+  type DepartureEpisode,
+} from '../students/shared/departure-episodes';
+import { loadDepartures } from './shared/departures.loader';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MS_PER_MONTH = DAY_MS * 30.44;
+// At most 20 years of bars; bounds the walk against an arbitrary startDate
+// when no reporting floor is set.
+const MAX_DYNAMICS_MONTHS = 240;
+
+/** The picked Tashkent days as UTC instants; a 400 unless both are real days. */
+function reportRange(startDate: string, endDate: string) {
+  const range = tashkentRangeUtc(startDate, endDate);
+  if (
+    !Number.isFinite(range.gte.getTime()) ||
+    !Number.isFinite(range.lt.getTime())
+  ) {
+    throw new BadRequestException("Sana noto'g'ri formatda");
+  }
+  return range;
+}
 
 @Injectable()
 export class ReportsDepartedStudentsService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * KPI cards for the "Ketgan o'quvchilar" page.
-   *
-   * The departed-count / churn / lost-revenue / avg-duration figures are built
-   * from the student-level snapshot (loadDepartedStudents) — current-state,
-   * date-range-independent — so they reconcile with the list and the charts.
-   *
-   * The teacher-change retention figures are event analytics: they DO honour
-   * the `startDate`/`endDate` range, like the teacher-change / transfer charts.
+   * KPI cards of /reports/departed-students (ADR-0035). The range decides
+   * which departures count; debt and lost revenue describe the students who
+   * have not come back, as of today.
    */
   async getDepartedStudentsSummary(
     companyId: number,
-    params: { branchId?: number; startDate: string; endDate: string },
+    params: { scope: ReportBranchIds; startDate: string; endDate: string },
   ) {
-    const departed = await loadDepartedStudents(this.prisma, companyId, {
-      branchId: params.branchId,
-    });
-    const departedCount = departed.length;
-
-    // Qarzdorlik — departed students whose balance is negative (they owe
-    // money). totalDebt is a negative number (sum of those balances).
-    const debtors = departed.filter((d) => d.balance < 0);
-    const debtorCount = debtors.length;
-    const totalDebt = debtors.reduce((sum, d) => sum + d.balance, 0);
-
-    // Churn = departed share of all non-graduated students. The denominator
-    // is departed + currently-studying (students with an ACTIVE enrollment).
-    const studyingWhere: Prisma.StudentWhereInput = {
+    const range = reportRange(params.startDate, params.endDate);
+    const { episodes, activeAtStart, floor, graceDays } = await loadDepartures(
+      this.prisma,
       companyId,
-      deletedAt: null,
-      enrollments: { some: { status: 'ACTIVE', deletedAt: null } },
-    };
-    if (params.branchId !== undefined) {
-      studyingWhere.branches = { some: { branchId: params.branchId } };
-    }
-    const studyingCount = await this.prisma.student.count({
-      where: studyingWhere,
-    });
-    const totalStudents = departedCount + studyingCount;
-    const churnRate =
-      totalStudents > 0 ? (departedCount / totalStudents) * 100 : 0;
-
-    // Lost revenue + average study duration — both need per-student data, so
-    // they run only when there is at least one departed student.
-    let lostRevenue = 0;
-    let avgDurationMonths = 0;
-    if (departedCount > 0) {
-      const studentIds = departed.map((d) => d.studentId);
-
-      // Lost revenue: unpaid remainder of every still-open contract belonging
-      // to a departed student. Cancelled/refunded contracts are excluded.
-      const contracts = await this.prisma.contract.findMany({
-        where: {
-          companyId,
-          deletedAt: null,
-          studentId: { in: studentIds },
-          status: { notIn: ['CANCELLED', 'REFUNDED'] },
-        },
-        select: { totalAmount: true, paidAmount: true },
-      });
-      for (const c of contracts) {
-        const unpaid = c.totalAmount - c.paidAmount;
-        if (unpaid > 0) lostRevenue += unpaid;
-      }
-
-      // Average study duration: leftAt − earliest enrollment createdAt.
-      const firstEnrollments = await this.prisma.enrollment.groupBy({
-        by: ['studentId'],
-        where: { studentId: { in: studentIds }, deletedAt: null },
-        _min: { createdAt: true },
-      });
-      const firstByStudent = new Map(
-        firstEnrollments.map((e) => [e.studentId, e._min.createdAt]),
-      );
-      const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30.44;
-      let durationSum = 0;
-      let durationCount = 0;
-      for (const d of departed) {
-        const first = firstByStudent.get(d.studentId);
-        if (!first || !d.leftAt) continue;
-        const ms = d.leftAt.getTime() - first.getTime();
-        if (ms > 0) {
-          durationSum += ms;
-          durationCount += 1;
-        }
-      }
-      avgDurationMonths =
-        durationCount > 0 ? durationSum / durationCount / MS_PER_MONTH : 0;
-    }
-
-    // TIMESTAMP columns — the picked days are Tashkent days, and `end` is the
-    // EXCLUSIVE start of the day after (see common/date/tashkent).
-    const { gte: start, lt: end } = tashkentRangeUtc(
-      params.startDate,
-      params.endDate,
+      params.scope,
+      { activeAt: range.gte },
     );
+
+    const departed = departuresInRange(episodes, range, floor);
+    const departedCount = departed.length;
+    const pendingCount = pendingInRange(episodes, range, floor).length;
+    const churnRate =
+      activeAtStart > 0 ? (departedCount / activeAtStart) * 100 : 0;
+
+    const openIds = [
+      ...new Set(openEpisodes(episodes).map((e) => e.studentId)),
+    ];
+    const { totalDebt, debtorCount } = await this.debtOf(openIds);
+    const lostRevenue = await this.lostRevenueOf(companyId, openIds);
+    const avgDurationMonths = await this.averageStudyMonths(departed);
+
     const { totalTeacherChanges, departedAfterTeacherChange } =
       await this.getTeacherChangeRetentionMetrics(companyId, {
-        branchId: params.branchId,
-        start,
-        end,
+        scope: params.scope,
+        start: range.gte,
+        end: range.lt,
       });
 
     return {
-      churnRate: Math.round(churnRate * 10) / 10,
       departedCount,
-      totalStudents,
+      churnRate: Math.round(churnRate * 10) / 10,
+      activeAtStart,
+      pendingCount,
+      graceDays,
       lostRevenue,
       totalDebt,
       debtorCount,
@@ -125,9 +91,127 @@ export class ReportsDepartedStudentsService {
   }
 
   /**
+   * "Ketish dinamikasi" — confirmed departures per Tashkent month of the
+   * range. A month reaching into the longest grace period (a freeze's) is
+   * provisional: stops started there may still be confirmed.
+   */
+  async getDepartedStudentsDynamics(
+    companyId: number,
+    params: { scope: ReportBranchIds; startDate: string; endDate: string },
+  ) {
+    const now = new Date();
+    const range = reportRange(params.startDate, params.endDate);
+    const { episodes, floor, graceDays } = await loadDepartures(
+      this.prisma,
+      companyId,
+      params.scope,
+      { now },
+    );
+
+    const from = new Date(
+      Math.max(range.gte.getTime(), floor?.getTime() ?? -Infinity),
+    );
+    const until = new Date(Math.min(range.lt.getTime() - 1, now.getTime()));
+    if (from.getTime() > until.getTime()) return { data: [] };
+
+    const provisionalAfter =
+      now.getTime() - Math.max(...Object.values(graceDays)) * DAY_MS;
+    const lastKey = tashkentMonthKey(until);
+    // 'YYYY-MM' keys compare correctly as strings. Without a reporting floor,
+    // `from` comes straight from the caller's `startDate` — an arbitrary old
+    // date would otherwise walk one month at a time, synchronously, with no
+    // cap.
+    const fromKey = tashkentMonthKey(from);
+    const oldestAllowedKey = addMonthsToMonthKey(
+      lastKey,
+      -(MAX_DYNAMICS_MONTHS - 1),
+    );
+    const firstKey = fromKey > oldestAllowedKey ? fromKey : oldestAllowedKey;
+    const data: { date: string; count: number; provisional: boolean }[] = [];
+    // Bounded by a step count as well as by the keys.
+    let key = firstKey;
+    for (
+      let step = 0;
+      step < MAX_DYNAMICS_MONTHS && key <= lastKey;
+      step += 1, key = addMonthsToMonthKey(key, 1)
+    ) {
+      const month = tashkentMonthRangeUtc(key);
+      const bucket = {
+        gte: new Date(Math.max(month.gte.getTime(), range.gte.getTime())),
+        lt: new Date(Math.min(month.lt.getTime(), range.lt.getTime())),
+      };
+      data.push({
+        date: `${key}-01`,
+        count: departuresInRange(episodes, bucket, floor).length,
+        provisional: month.lt.getTime() > provisionalAfter,
+      });
+    }
+    return { data };
+  }
+
+  private async debtOf(studentIds: number[]) {
+    if (studentIds.length === 0) return { totalDebt: 0, debtorCount: 0 };
+    const agg = await this.prisma.student.aggregate({
+      where: { id: { in: studentIds }, balance: { lt: 0 } },
+      _sum: { balance: true },
+      _count: { _all: true },
+    });
+    return { totalDebt: agg._sum.balance ?? 0, debtorCount: agg._count._all };
+  }
+
+  /** Unpaid remainder of still-open contracts; stage 2 removes this card. */
+  private async lostRevenueOf(companyId: number, studentIds: number[]) {
+    if (studentIds.length === 0) return 0;
+    const contracts = await this.prisma.contract.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        studentId: { in: studentIds },
+        status: { notIn: ['CANCELLED', 'REFUNDED'] },
+      },
+      select: { totalAmount: true, paidAmount: true },
+    });
+    let total = 0;
+    for (const c of contracts) {
+      const unpaid = c.totalAmount - c.paidAmount;
+      if (unpaid > 0) total += unpaid;
+    }
+    return total;
+  }
+
+  /** From each student's very first enrollment to the day they left. */
+  private async averageStudyMonths(departed: readonly DepartureEpisode[]) {
+    if (departed.length === 0) return 0;
+    const firsts = await this.prisma.enrollment.groupBy({
+      by: ['studentId'],
+      where: {
+        studentId: { in: departed.map((d) => d.studentId) },
+        deletedAt: null,
+      },
+      _min: { startDate: true, createdAt: true },
+    });
+    const firstById = new Map(
+      firsts.map((f) => [f.studentId, f._min.startDate ?? f._min.createdAt]),
+    );
+    let sum = 0;
+    let count = 0;
+    for (const d of departed) {
+      const first = firstById.get(d.studentId);
+      if (!first) continue;
+      const ms = d.startedAt.getTime() - first.getTime();
+      if (ms > 0) {
+        sum += ms;
+        count += 1;
+      }
+    }
+    return count > 0 ? sum / count / MS_PER_MONTH : 0;
+  }
+
+  /**
    * Counts teacher changes within the period and how many students "left"
    * within 5 lessons of one — where "left" means the enrollment went DROPPED
-   * (guruhsiz qoldi) or FROZEN (muzlatildi).
+   * (guruhsiz qoldi) or FROZEN (muzlatildi). Unchanged in stage 1 apart from
+   * taking the branch scope as a list.
    *
    * The 5th-lesson date is read from the distinct `Attendance` dates after
    * the change (the system has no separate Lesson model).
@@ -135,7 +219,7 @@ export class ReportsDepartedStudentsService {
   private async getTeacherChangeRetentionMetrics(
     companyId: number,
     // `end` is EXCLUSIVE: 00:00 Tashkent of the day after the range.
-    params: { branchId?: number; start: Date; end: Date },
+    params: { scope: ReportBranchIds; start: Date; end: Date },
   ) {
     const LESSON_WINDOW = 5;
 
@@ -143,7 +227,7 @@ export class ReportsDepartedStudentsService {
       companyId,
       deletedAt: null,
     };
-    if (params.branchId !== undefined) groupWhere.branchId = params.branchId;
+    if (params.scope) groupWhere.branchId = { in: params.scope };
 
     const changes = await this.prisma.groupTeacherHistory.findMany({
       where: {
@@ -195,67 +279,5 @@ export class ReportsDepartedStudentsService {
       totalTeacherChanges: changes.length,
       departedAfterTeacherChange: affectedEnrollmentIds.size,
     };
-  }
-
-  /**
-   * "Ketish dinamikasi" — how many of the currently-departed students lost
-   * their group in each month. Buckets the student-level snapshot
-   * (loadDepartedStudents) by `leftAt`, so the chart total reconciles with the
-   * "Ketgan o'quvchilar" list instead of counting DROPPED enrollment events.
-   */
-  async getDepartedStudentsDynamics(
-    companyId: number,
-    params: { branchId?: number },
-  ) {
-    const TZ = 'Asia/Tashkent';
-    // yyyy-MM-01 key for the month a date falls in (Tashkent time).
-    const monthKey = (d: Date): string => {
-      const ym = new Intl.DateTimeFormat('en-CA', {
-        timeZone: TZ,
-        year: 'numeric',
-        month: '2-digit',
-      }).format(d);
-      return `${ym}-01`;
-    };
-
-    const departed = await loadDepartedStudents(this.prisma, companyId, {
-      branchId: params.branchId,
-    });
-
-    const countByMonth = new Map<string, number>();
-    for (const r of departed) {
-      if (!r.leftAt) continue;
-      const key = monthKey(r.leftAt);
-      countByMonth.set(key, (countByMonth.get(key) ?? 0) + 1);
-    }
-
-    if (countByMonth.size === 0) {
-      return { data: [], granularity: 'month' as const };
-    }
-
-    // Emit every month from the earliest departure through the current month
-    // so the line has no gaps.
-    const sortedKeys = [...countByMonth.keys()].sort();
-    const [firstYear, firstMonth] = sortedKeys[0].split('-').map(Number);
-    const [nowYear, nowMonth] = monthKey(new Date()).split('-').map(Number);
-
-    const data: { date: string; count: number }[] = [];
-    let year = firstYear;
-    let month = firstMonth;
-    let safety = 0;
-    while (
-      (year < nowYear || (year === nowYear && month <= nowMonth)) &&
-      safety++ < 240
-    ) {
-      const key = `${year}-${String(month).padStart(2, '0')}-01`;
-      data.push({ date: key, count: countByMonth.get(key) ?? 0 });
-      month += 1;
-      if (month > 12) {
-        month = 1;
-        year += 1;
-      }
-    }
-
-    return { data, granularity: 'month' as const };
   }
 }
