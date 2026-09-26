@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/api";
+import { downloadAuthedFile } from "@/lib/download-file";
 import {
   CorrectPaymentDialog,
   type CorrectablePayment,
@@ -69,21 +70,14 @@ export function PaymentStatement({
     setRefreshKey((k) => k + 1);
   }, []);
 
-  // The PDF is auth-gated, so an <a href> can't carry the JWT: fetch it as a
-  // blob through axios (which attaches the token) and save that.
   const downloadPdf = async () => {
     if (!data) return;
     setDownloading(true);
     try {
-      const res = await api.get(`/students/${studentId}/statement.pdf`, {
-        responseType: "blob",
-      });
-      const url = URL.createObjectURL(res.data as Blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = statementPdfName(studentId, data.model.asOf);
-      a.click();
-      URL.revokeObjectURL(url);
+      await downloadAuthedFile(
+        `/students/${studentId}/statement.pdf`,
+        statementPdfName(studentId, data.model.asOf),
+      );
     } catch {
       toast.error("PDF yuklab olishda xatolik");
     } finally {

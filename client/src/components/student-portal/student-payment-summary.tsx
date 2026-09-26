@@ -20,6 +20,7 @@ import {
 import { useStudentProfile } from "./lib/queries";
 import { loadState } from "./lib/load-state";
 import { LoadFailed } from "./load-failed";
+import { StatementCard } from "./statement-card";
 import type { PaymentHistory as PaymentHistoryData } from "./lib/types";
 
 const QUICK_AMOUNTS = [
@@ -145,8 +146,13 @@ export function StudentPaymentSummary() {
             </Card>
           </FadeIn>
 
-          {/* Top-up */}
+          {/* Payment statement (PDF) */}
           <FadeIn index={1}>
+            <StatementCard />
+          </FadeIn>
+
+          {/* Top-up */}
+          <FadeIn index={2}>
             <Card className="space-y-4">
               <h2 className="font-display text-lg font-bold text-ink-900">
                 Balansni to&apos;ldirish
@@ -242,7 +248,7 @@ export function StudentPaymentSummary() {
           </FadeIn>
         </div>
 
-        <FadeIn index={2}>
+        <FadeIn index={3}>
           <PaymentHistory />
         </FadeIn>
       </div>

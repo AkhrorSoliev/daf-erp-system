@@ -69,6 +69,9 @@ export {
   Waveform,
   PianoKeys,
   VinylRecord,
+  // Payment statement card.
+  FileText,
+  DownloadSimple,
 } from "@phosphor-icons/react";
 
 export type { Icon, IconWeight } from "@phosphor-icons/react";
