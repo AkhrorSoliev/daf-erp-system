@@ -23,11 +23,13 @@ function makeEnrollment(over: EnrollmentOverride = {}): EnrollmentToMigrate {
     groupId: 'grp-1',
     status: EnrollmentStatus.ACTIVE,
     startDate: null,
+    createdAt: new Date('2026-05-02T06:00:00Z'),
     group: {
       id: 'grp-1',
       branchId: 1,
       companyId: 1,
       statusEnum: GroupStatus.ACTIVE,
+      startDate: null,
       exactDays: ['MON', 'WED'],
       course: { price: 450_000, paymentModel: PaymentModel.LESSON_PACK },
     },
@@ -528,6 +530,7 @@ describe('applyMigrationForStudent', () => {
               branchId: 1,
               companyId: 1,
               statusEnum: GroupStatus.PAUSED,
+              startDate: null,
               exactDays: ['MON', 'WED'],
               course: {
                 price: 450_000,

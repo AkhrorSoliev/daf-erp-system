@@ -376,7 +376,18 @@ export class LessonBillingService {
       select: {
         id: true,
         groupId: true,
-        group: { select: { branchId: true } },
+        group: {
+          select: {
+            branchId: true,
+            course: { select: { paymentModel: true } },
+          },
+        },
+        // The enrollment's first monthly month: see `billableBefore` below.
+        monthlyCharges: {
+          select: { periodYear: true, periodMonth: true },
+          orderBy: [{ periodYear: 'asc' }, { periodMonth: 'asc' }],
+          take: 1,
+        },
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -392,6 +403,21 @@ export class LessonBillingService {
     let billedCount = 0;
 
     for (const enr of enrollments) {
+      // A monthly course is paid by its monthly charge, and its attendance
+      // never writes a LESSON_CONSUMPTION — so every monthly lesson looks
+      // "unpaid" to the query below. Billing them here charged a monthly
+      // student per lesson on top of the month, on their next payment.
+      // Only lessons from before the enrollment's first monthly month (the
+      // 12-lesson era, e.g. an August debt) are still settled here; an
+      // enrollment whose first monthly charge is not written yet (the 04:00
+      // watchdog writes it) has none.
+      let billableBefore: string | null = null;
+      if (enr.group.course.paymentModel === PaymentModel.MONTHLY) {
+        const first = enr.monthlyCharges[0];
+        if (!first) continue;
+        billableBefore = `${first.periodYear}-${String(first.periodMonth).padStart(2, '0')}-01`;
+      }
+
       // Unpaid = PRESENT/LATE/ABSENT attendance with no active
       // LESSON_CONSUMPTION row. Order by date so we settle the oldest first
       // (FIFO) — matches what an admin would do manually.
@@ -414,7 +440,15 @@ export class LessonBillingService {
         ORDER BY a.date ASC
       `;
 
-      for (const att of unpaidRows) {
+      // `Attendance.date` is a @db.Date: its UTC calendar date is the day.
+      const billable =
+        billableBefore === null
+          ? unpaidRows
+          : unpaidRows.filter(
+              (row) => row.date.toISOString().slice(0, 10) < billableBefore,
+            );
+
+      for (const att of billable) {
         // Every unpaid attendance gets billed — `bill()` picks the right
         // branch (full cycle / partial / SINGLE_UNCOVERED) based on the
         // live balance + prepaid snapshot it reads internally. If balance

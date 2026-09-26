@@ -18,8 +18,9 @@
   // saw precisely because `scripts/` was excluded ("typecheck toza" was true
   // and meaningless). A script that moves money is held to `src/` standards.
   // Adding another money-moving script? Add it to this list. The same holds
-  // for a script that rewrites sign-in keys (ADR-0032 repair) or closes and
-  // opens sign-in accounts (ADR-0033 repair).
+  // for a script that rewrites sign-in keys (ADR-0032 repair), closes and
+  // opens sign-in accounts (ADR-0033 repair) or closes enrollments left in
+  // deleted, cancelled or completed groups.
   "extends": "./tsconfig.json",
   "include": [
     "src/**/*",
@@ -46,7 +47,13 @@
     "scripts/lib/student-sign-in-repair.spec.ts",
     "scripts/repair-archived-student-accounts.ts",
     "scripts/lib/archived-student-account-repair.ts",
-    "scripts/lib/archived-student-account-repair.spec.ts"
+    "scripts/lib/archived-student-account-repair.spec.ts",
+    "scripts/repair-deleted-group-enrollments.ts",
+    "scripts/lib/deleted-group-enrollment-repair.ts",
+    "scripts/lib/deleted-group-enrollment-repair.spec.ts",
+    "scripts/repair-closed-group-enrollments.ts",
+    "scripts/lib/closed-group-enrollment-repair.ts",
+    "scripts/lib/closed-group-enrollment-repair.spec.ts"
   ],
   "exclude": ["node_modules", "dist", "src/generated"]
 }

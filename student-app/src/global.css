@@ -12,6 +12,7 @@
     --tint: 245 248 251; /* #F5F8FB */
     --fg: 14 42 61; /* ink-900 */
     --fg-body: 43 74 92; /* ink-700 */
+    --fg-subtle: 69 97 111; /* ink-600: quietest text that still passes AA (4.5:1) on surface */
     --fg-muted: 107 131 146; /* ink-500 */
     --fg-faint: 147 166 178; /* ink-400 */
     --border: 224 231 238; /* #E0E7EE */
@@ -25,6 +26,7 @@
     --tint: 22 56 74; /* #16384A */
     --fg: 242 246 249; /* near white */
     --fg-body: 199 211 220; /* #C7D3DC */
+    --fg-subtle: 169 186 197; /* #A9BAC5, the web portal's dark ink-600 */
     --fg-muted: 140 160 173; /* #8CA0AD */
     --fg-faint: 110 132 146; /* #6E8492 */
     --border: 36 70 90; /* #24465A */

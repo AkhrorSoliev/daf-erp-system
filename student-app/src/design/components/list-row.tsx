@@ -31,6 +31,9 @@ export function ListRow({
   const showChevron = chevron ?? !!onPress;
   return (
     <Pressable
+      // Named by its text, not by the icon glyphs around it.
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={subtitle ? `${label}, ${subtitle}` : label}
       onPress={onPress}
       disabled={!onPress}
       className={cn('flex-row items-center gap-3.5 rounded-card border border-border bg-surface px-4 py-3.5', className)}

@@ -3,7 +3,7 @@ import { Alert, Pressable, RefreshControl, ScrollView, View } from 'react-native
 import { useMutation } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
 
-import { Button, Card, EmptyState, IconTile, Input, LoadingCards, Screen, StackHeader, Text } from '@/design/components';
+import { Button, Card, EmptyState, IconTile, Input, LoadingCards, Screen, ScreenHeader, Text } from '@/design/components';
 import { tokens } from '@/design/tokens';
 import { useProfile } from '@/api/queries/use-profile';
 import { usePayments } from '@/api/queries/use-payments';
@@ -41,7 +41,6 @@ export default function Payments() {
 
   return (
     <Screen>
-      <StackHeader title={t.tabs.payments} />
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
@@ -56,7 +55,10 @@ export default function Payments() {
           />
         }
       >
-        <View className="gap-4 p-5 pt-2">
+        {/* A tab root: titled with the tab's name, and pb-32 keeps the history
+            clear of the floating tab bar. */}
+        <View className="gap-4 p-5 pb-32">
+          <ScreenHeader title={t.nav.payments} />
           <Card className="flex-row items-center justify-between">
             <View>
               <Text variant="caps">{t.home.balance}</Text>

@@ -10,11 +10,14 @@ export default function TabsLayout() {
     registerForPush();
   }, []);
 
+  // Tabs are the sections a student actually uses. Attendance, profile and
+  // settings live one tap deeper, under Ko'proq. Keep this list in step with
+  // the tab bar's icon map (LumioTabBar) and `nav` in the i18n dictionaries.
   return (
     <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <LumioTabBar {...props} />}>
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="darslar" />
-      <Tabs.Screen name="resurslar" />
+      <Tabs.Screen name="schedule" />
+      <Tabs.Screen name="payments" />
       <Tabs.Screen name="more" />
     </Tabs>
   );

@@ -1,4 +1,9 @@
-import { FalClient, OVOZ_TEZLIGI_MAX, OVOZ_TEZLIGI_MIN } from './fal-client';
+import {
+  FalAblehnungError,
+  FalClient,
+  OVOZ_TEZLIGI_MAX,
+  OVOZ_TEZLIGI_MIN,
+} from './fal-client';
 
 function fetchStub(body: unknown, ok = true): typeof fetch {
   return (async () => ({
@@ -142,41 +147,117 @@ describe('FalClient.speechMitStimme', () => {
   });
 });
 
-describe('FalClient.dialog', () => {
-  it('butun suhbatni bitta so`rovda yuboradi, de tili va stability bilan', async () => {
+// Course dialogs: Gemini's dialogue mode since 2026-09-26. The CEO heard an
+// emotional sample and an A2 interview made this way and chose it for every
+// dialog; both speakers are voiced in one request, so they answer each other.
+describe('FalClient.dialogGemini', () => {
+  it('sends the whole dialog in one request: speakers, German, mp3, style apart from the text', async () => {
     const calls: Array<{ url: string; body: any }> = [];
     const fetchFn = (async (url: string, init: any) => {
       calls.push({ url, body: JSON.parse(init.body) });
       return {
         ok: true,
         status: 200,
-        json: async () => ({ audio: { url: 'https://x/d.mp3' }, seed: 1 }),
+        json: async () => ({ audio: { url: 'https://x/g.mp3' } }),
         text: async () => '',
       };
     }) as unknown as typeof fetch;
-    const c = new FalClient('k', fetchFn);
-    const url = await c.dialog([
-      { voice: 'Aria', text: 'Ist das deine Schwester?' },
-      { voice: 'Liam', text: 'Nein.' },
-    ]);
-    expect(url).toBe('https://x/d.mp3');
-    expect(calls[0].url).toBe(
-      'https://fal.run/fal-ai/elevenlabs/text-to-dialogue/eleven-v3',
-    );
-    expect(calls[0].body).toEqual({
-      inputs: [
-        { voice: 'Aria', text: 'Ist das deine Schwester?' },
-        { voice: 'Liam', text: 'Nein.' },
+    const url = await new FalClient('k', fetchFn).dialogGemini({
+      prompt: 'Anna: [curious] Ist das deine Schwester?\nJonas: Nein.',
+      speakers: [
+        { speakerId: 'Anna', voice: 'Erinome' },
+        { speakerId: 'Jonas', voice: 'Iapetus' },
       ],
-      language_code: 'de',
-      stability: 0.5,
+      styleInstructions: 'Zwei Freunde im Park.',
+    });
+    expect(url).toBe('https://x/g.mp3');
+    expect(calls[0].url).toBe('https://fal.run/fal-ai/gemini-3.1-flash-tts');
+    expect(calls[0].body).toEqual({
+      prompt: 'Anna: [curious] Ist das deine Schwester?\nJonas: Nein.',
+      speakers: [
+        { speaker_id: 'Anna', voice: 'Erinome' },
+        { speaker_id: 'Jonas', voice: 'Iapetus' },
+      ],
+      style_instructions: 'Zwei Freunde im Park.',
+      language_code: 'German (Germany)',
+      output_format: 'mp3',
     });
   });
 
-  it('audio qaytmasa yiqiladi', async () => {
-    const c = new FalClient('k', fetchStub({ seed: 1 }));
-    await expect(c.dialog([{ voice: 'Aria', text: 'x' }])).rejects.toThrow(
-      /suhbat/i,
+  it('fails when no audio comes back', async () => {
+    const c = new FalClient('k', fetchStub({}));
+    await expect(
+      c.dialogGemini({
+        prompt: 'A: x\nB: y',
+        speakers: [],
+        styleInstructions: '',
+      }),
+    ).rejects.toThrow(/suhbat/i);
+  });
+});
+
+// Word audio: Inworld "Johanna (de)" since 2026-09-25. The CEO heard two
+// multilingual voices (ElevenLabs Rachel, then Gemini) read German words
+// that are also English words (Name, Land, wer) with English sounds, and
+// approved Inworld's German voice after hearing 33 such words.
+describe('FalClient.speechInworld', () => {
+  it('calls the Inworld endpoint with the bare word and the voice', async () => {
+    const calls: Array<{ url: string; body: any }> = [];
+    const fetchFn = (async (url: string, init: any) => {
+      calls.push({ url, body: JSON.parse(init.body) });
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ audio: { url: 'https://x/i.wav' } }),
+        text: async () => '',
+      };
+    }) as unknown as typeof fetch;
+    const url = await new FalClient('k', fetchFn).speechInworld(
+      'Name',
+      'Johanna (de)',
     );
+    expect(url).toBe('https://x/i.wav');
+    expect(calls[0].url).toBe('https://fal.run/fal-ai/inworld-tts');
+    expect(calls[0].body).toEqual({ text: 'Name', voice: 'Johanna (de)' });
+  });
+
+  it('fails when no audio comes back', async () => {
+    const c = new FalClient('k', fetchStub({}));
+    await expect(c.speechInworld('Name', 'Johanna (de)')).rejects.toThrow(
+      /ovoz/i,
+    );
+  });
+});
+
+// Gemini's content checker refused plain words at random ("dann" twice,
+// "zwischen" once). Any model call can meet it, so run() gives it its own
+// error type and the script retries exactly this case.
+describe('FalClient content-checker refusal', () => {
+  it('turns 422 content_policy_violation into FalAblehnungError', async () => {
+    const fetchFn = (async () => ({
+      ok: false,
+      status: 422,
+      json: async () => ({}),
+      text: async () =>
+        '{"detail":[{"msg":"flagged by a content checker","type":"content_policy_violation"}]}',
+    })) as unknown as typeof fetch;
+    const p = new FalClient('k', fetchFn).speechInworld('dann', 'Johanna (de)');
+    await expect(p).rejects.toBeInstanceOf(FalAblehnungError);
+  });
+
+  it('keeps any other 422 a plain error, so a wrong request is not retried', async () => {
+    const fetchFn = (async () => ({
+      ok: false,
+      status: 422,
+      json: async () => ({}),
+      text: async () =>
+        '{"detail":[{"msg":"field required","type":"missing"}]}',
+    })) as unknown as typeof fetch;
+    await expect(
+      new FalClient('k', fetchFn).speechInworld('dann', 'Johanna (de)'),
+    ).rejects.toThrow(/422/);
+    await expect(
+      new FalClient('k', fetchFn).speechInworld('dann', 'Johanna (de)'),
+    ).rejects.not.toBeInstanceOf(FalAblehnungError);
   });
 });

@@ -21,21 +21,17 @@ export const uz = {
     comingSoon: 'Tez orada',
     showPassword: "Parolni ko'rsatish",
     hidePassword: 'Parolni yashirish',
-    sectionInProgress: (section: string) => `${section} bo'limi tayyorlanmoqda.`,
   },
   // Bottom tab-bar labels.
   nav: {
     index: 'Asosiy',
-    darslar: 'Darslar',
-    resurslar: 'Resurslar',
+    schedule: 'Jadval',
+    payments: "To'lovlar",
     more: "Ko'proq",
   },
   // Stack / screen header titles.
   tabs: {
-    home: 'Asosiy',
-    schedule: 'Jadval',
     attendance: 'Davomat',
-    payments: "To'lovlar",
     profile: 'Profil',
     more: "Ko'proq",
     settings: 'Sozlamalar',
@@ -94,11 +90,13 @@ export const uz = {
   home: {
     greeting: 'Assalomu alaykum',
     balance: 'Balans',
+    topUp: "To'ldirish",
     inDebt: 'Qarzdorlik mavjud',
     current: 'Joriy balans',
     todayLessons: 'Bugungi darslar',
     fullSchedule: 'Butun jadval',
     noLessonsToday: "Bugun dars yo'q",
+    scheduleFailed: "Jadvalni yuklab bo'lmadi",
     myGroups: 'Guruhlarim',
     noActiveGroups: "Faol guruh yo'q",
     qrCheckIn: 'QR bilan davomatga belgilash',
@@ -149,7 +147,6 @@ export const uz = {
   more: {
     profileFallback: 'Profil',
     viewProfile: "Profilni ko'rish",
-    payments: "To'lovlar",
     faq: 'FAQ',
     about: 'Biz haqimizda',
     settings: 'Sozlamalar',
@@ -184,12 +181,20 @@ export const uz = {
     aboutBody:
       "DAF Sprachzentrum — nemis tilini zamonaviy uslublarda o'rgatuvchi markaz. Ushbu ilova orqali jadvalingizni, davomatingizni va to'lovlaringizni bir joyda kuzatib borasiz.",
     contact: 'Aloqa',
+    // Screen-reader labels for the contact rows; `v` is the number, domain or
+    // handle shown on screen, which is the same in every language.
+    contactA11y: {
+      phone: (v: string) => `Qo'ng'iroq qilish: ${v}`,
+      website: (v: string) => `Saytni ochish: ${v}`,
+      telegram: (v: string) => `Telegramda yozish: ${v}`,
+    },
+    openFailed: "Bu qurilmada ochib bo'lmadi",
     version: (v: string) => `Ilova versiyasi ${v}`,
   },
   faq: {
     topUp: {
       q: "Balansni qanday to'ldiraman?",
-      a: "Ko'proq → To'lovlar bo'limiga kiring, summani tanlang va Payme yoki Click orqali to'lang. Balans bir necha soniyada yangilanadi.",
+      a: "«To'lovlar» bo'limiga kiring, summani tanlang va Payme yoki Click orqali to'lang. Balans bir necha soniyada yangilanadi.",
     },
     attendance: {
       q: 'Davomat qanday belgilanadi?',
@@ -201,7 +206,7 @@ export const uz = {
     },
     scheduleAndAttendance: {
       q: 'Jadvalim va davomatim qayerda?',
-      a: "Asosiy sahifada balans, bugungi darslar va davomat ko'rsatkichlari jamlangan.",
+      a: "Bugungi darslaringiz Asosiy sahifada, butun hafta «Jadval» bo'limida. Davomat foizi Asosiy sahifada, batafsil tarixi «Ko'proq» ichidagi «Davomat» bo'limida.",
     },
     profilePhoto: {
       q: "Profil rasmini qanday o'zgartiraman?",

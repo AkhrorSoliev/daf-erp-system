@@ -1,0 +1,524 @@
+{
+ "unit": "u03",
+ "saetze": [
+  {
+   "sourceId": "u03-s1-01",
+   "section": "u03-s1",
+   "de": "Der Bahnhof ist sehr alt.",
+   "uz": "Vokzal juda eski.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr alt ist der Bahnhof."
+   ]
+  },
+  {
+   "sourceId": "u03-s1-02",
+   "section": "u03-s1",
+   "de": "Die Post ist hier.",
+   "uz": "Pochta shu yerda.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Hier ist die Post."
+   ]
+  },
+  {
+   "sourceId": "u03-s1-03",
+   "section": "u03-s1",
+   "de": "Gibt es hier eine Bank?",
+   "uz": "Bu yerda bank bormi?",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Gibt es eine Bank hier?"
+   ]
+  },
+  {
+   "sourceId": "u03-s1-04",
+   "section": "u03-s1",
+   "de": "Ist das Kino neu?",
+   "uz": "Kinoteatr yangimi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u03-s1-05",
+   "section": "u03-s1",
+   "de": "Ist das die Polizei?",
+   "uz": "Bu politsiyami?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u03-s1-06",
+   "section": "u03-s1",
+   "de": "Das Hotel ist klein.",
+   "uz": "Mehmonxona kichkina.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Klein ist das Hotel."
+   ]
+  },
+  {
+   "sourceId": "u03-s1-07",
+   "section": "u03-s1",
+   "de": "Wo ist die Toilette?",
+   "uz": "Hojatxona qayerda?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u03-s1-08",
+   "section": "u03-s1",
+   "de": "Der Platz ist sehr groß.",
+   "uz": "Maydon juda katta.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr groß ist der Platz."
+   ]
+  },
+  {
+   "sourceId": "u03-s1-09",
+   "section": "u03-s1",
+   "de": "Das Museum ist nicht neu.",
+   "uz": "Muzey yangi emas.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Neu ist das Museum nicht."
+   ]
+  },
+  {
+   "sourceId": "u03-s1-10",
+   "section": "u03-s1",
+   "de": "Ist der Park groß?",
+   "uz": "Park kattami?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u03-s2-01",
+   "section": "u03-s2",
+   "de": "Die Bank ist neben der Post.",
+   "uz": "Bank pochta yonida.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Neben der Post ist die Bank."
+   ]
+  },
+  {
+   "sourceId": "u03-s2-02",
+   "section": "u03-s2",
+   "de": "Das Kino ist am Park.",
+   "uz": "Kinoteatr park oldida.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Am Park ist das Kino."
+   ]
+  },
+  {
+   "sourceId": "u03-s2-03",
+   "section": "u03-s2",
+   "de": "Die Bank ist an der Ecke.",
+   "uz": "Bank burchakda.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "An der Ecke ist die Bank."
+   ]
+  },
+  {
+   "sourceId": "u03-s2-04",
+   "section": "u03-s2",
+   "de": "Der Park ist links.",
+   "uz": "Park chap tomonda.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Links ist der Park."
+   ]
+  },
+  {
+   "sourceId": "u03-s2-05",
+   "section": "u03-s2",
+   "de": "Die Toilette ist dort rechts.",
+   "uz": "Hojatxona ana u yerda, o'ng tomonda.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Dort rechts ist die Toilette."
+   ]
+  },
+  {
+   "sourceId": "u03-s2-06",
+   "section": "u03-s2",
+   "de": "Ist die Post weit?",
+   "uz": "Pochta uzoqmi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u03-s2-07",
+   "section": "u03-s2",
+   "de": "Die Post ist zwischen zwei Banken.",
+   "uz": "Pochta ikkita bank orasida.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Zwischen zwei Banken ist die Post."
+   ]
+  },
+  {
+   "sourceId": "u03-s2-08",
+   "section": "u03-s2",
+   "de": "Entschuldigung, wo ist hier eine Bank?",
+   "uz": "Kechirasiz, bu yerda bank qayerda?",
+   "wordCount": 6,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u03-s2-09",
+   "section": "u03-s2",
+   "de": "Das Hotel ist nicht weit.",
+   "uz": "Mehmonxona uzoq emas.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Weit ist das Hotel nicht."
+   ]
+  },
+  {
+   "sourceId": "u03-s2-10",
+   "section": "u03-s2",
+   "de": "Die Straße ist sehr alt.",
+   "uz": "Ko'cha juda eski.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sehr alt ist die Straße."
+   ]
+  },
+  {
+   "sourceId": "u03-s3-01",
+   "section": "u03-s3",
+   "de": "Wie komme ich zur Bank?",
+   "uz": "Bankka qanday boraman?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u03-s3-02",
+   "section": "u03-s3",
+   "de": "Gehen Sie geradeaus.",
+   "uz": "To'g'riga yuring.",
+   "wordCount": 3,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sie gehen geradeaus."
+   ]
+  },
+  {
+   "sourceId": "u03-s3-03",
+   "section": "u03-s3",
+   "de": "Ich nehme die erste Straße rechts.",
+   "uz": "Men birinchi ko'chadan o'ngga burilaman.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ich nehme rechts die erste Straße.",
+    "Die erste Straße rechts nehme ich.",
+    "Rechts nehme ich die erste Straße."
+   ]
+  },
+  {
+   "sourceId": "u03-s3-04",
+   "section": "u03-s3",
+   "de": "Ich suche das Hotel.",
+   "uz": "Men mehmonxonani qidiryapman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Das Hotel suche ich."
+   ]
+  },
+  {
+   "sourceId": "u03-s3-05",
+   "section": "u03-s3",
+   "de": "Ich finde die Post nicht.",
+   "uz": "Men pochtani topa olmayapman.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Die Post finde ich nicht."
+   ]
+  },
+  {
+   "sourceId": "u03-s3-06",
+   "section": "u03-s3",
+   "de": "Die Ampel ist dort.",
+   "uz": "Svetofor ana u yerda.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Dort ist die Ampel."
+   ]
+  },
+  {
+   "sourceId": "u03-s3-07",
+   "section": "u03-s3",
+   "de": "Dann gehen Sie rechts.",
+   "uz": "Keyin o'ngga yuring.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Gehen Sie dann rechts.",
+    "Sie gehen dann rechts."
+   ]
+  },
+  {
+   "sourceId": "u03-s3-08",
+   "section": "u03-s3",
+   "de": "Suchst du das Kino?",
+   "uz": "Sen kinoteatrni qidiryapsanmi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u03-s3-09",
+   "section": "u03-s3",
+   "de": "Nimmst du die zweite Straße?",
+   "uz": "Sen ikkinchi ko'chaga kirasanmi?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u03-s3-10",
+   "section": "u03-s3",
+   "de": "Gehen Sie hier links.",
+   "uz": "Shu yerdan chapga yuring.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Hier gehen Sie links.",
+    "Sie gehen hier links."
+   ]
+  },
+  {
+   "sourceId": "u03-s4-01",
+   "section": "u03-s4",
+   "de": "Wir fahren mit dem Auto.",
+   "uz": "Biz mashinada boramiz.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Mit dem Auto fahren wir."
+   ]
+  },
+  {
+   "sourceId": "u03-s4-02",
+   "section": "u03-s4",
+   "de": "Fährt die Straßenbahn zum Bahnhof?",
+   "uz": "Tramvay vokzalgacha boradimi?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u03-s4-03",
+   "section": "u03-s4",
+   "de": "Wo ist die Haltestelle?",
+   "uz": "Bekat qayerda?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u03-s4-04",
+   "section": "u03-s4",
+   "de": "Mein Bruder fährt mit dem Taxi.",
+   "uz": "Akam taksida boradi.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Mit dem Taxi fährt mein Bruder."
+   ]
+  },
+  {
+   "sourceId": "u03-s4-05",
+   "section": "u03-s4",
+   "de": "Gehst du zu Fuß?",
+   "uz": "Sen piyoda borasanmi?",
+   "wordCount": 4,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u03-s4-06",
+   "section": "u03-s4",
+   "de": "Mia fährt mit dem Zug.",
+   "uz": "Mia poyezdda boradi.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Mit dem Zug fährt Mia."
+   ]
+  },
+  {
+   "sourceId": "u03-s4-07",
+   "section": "u03-s4",
+   "de": "Die Haltestelle ist dort links.",
+   "uz": "Bekat ana u yerda, chap tomonda.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Dort links ist die Haltestelle."
+   ]
+  },
+  {
+   "sourceId": "u03-s4-08",
+   "section": "u03-s4",
+   "de": "Fahren Sie mit der U-Bahn.",
+   "uz": "Metroda boring.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Sie fahren mit der U-Bahn.",
+    "Mit der U-Bahn fahren Sie."
+   ]
+  },
+  {
+   "sourceId": "u03-s4-09",
+   "section": "u03-s4",
+   "de": "Das Fahrrad ist klein.",
+   "uz": "Velosiped kichkina.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Klein ist das Fahrrad."
+   ]
+  },
+  {
+   "sourceId": "u03-s4-10",
+   "section": "u03-s4",
+   "de": "Der Bus ist nicht hier.",
+   "uz": "Avtobus shu yerda emas.",
+   "wordCount": 5,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Hier ist der Bus nicht."
+   ]
+  },
+  {
+   "sourceId": "u03-s5-01",
+   "section": "u03-s5",
+   "de": "Heute fahre ich mit dem Taxi.",
+   "uz": "Bugun men taksida boraman.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ich fahre heute mit dem Taxi.",
+    "Mit dem Taxi fahre ich heute."
+   ]
+  },
+  {
+   "sourceId": "u03-s5-02",
+   "section": "u03-s5",
+   "de": "Ich fahre immer mit der U-Bahn.",
+   "uz": "Men doim metroda boraman.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Mit der U-Bahn fahre ich immer.",
+    "Immer fahre ich mit der U-Bahn."
+   ]
+  },
+  {
+   "sourceId": "u03-s5-03",
+   "section": "u03-s5",
+   "de": "Manchmal fahre ich mit dem Fahrrad.",
+   "uz": "Ba'zan men velosipedda boraman.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ich fahre manchmal mit dem Fahrrad.",
+    "Mit dem Fahrrad fahre ich manchmal."
+   ]
+  },
+  {
+   "sourceId": "u03-s5-04",
+   "section": "u03-s5",
+   "de": "Der Weg zur Arbeit dauert lange.",
+   "uz": "Ishga boradigan yo'l uzoq vaqt oladi.",
+   "wordCount": 6,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Lange dauert der Weg zur Arbeit."
+   ]
+  },
+  {
+   "sourceId": "u03-s5-05",
+   "section": "u03-s5",
+   "de": "Ich warte oft lange.",
+   "uz": "Men tez-tez uzoq kutaman.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Oft warte ich lange."
+   ]
+  },
+  {
+   "sourceId": "u03-s5-06",
+   "section": "u03-s5",
+   "de": "Wie lange dauert der Weg?",
+   "uz": "Yo'l qancha vaqt oladi?",
+   "wordCount": 5,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u03-s5-07",
+   "section": "u03-s5",
+   "de": "Das dauert dreißig Minuten.",
+   "uz": "Bu o'ttiz daqiqa oladi.",
+   "wordCount": 4,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Dreißig Minuten dauert das."
+   ]
+  },
+  {
+   "sourceId": "u03-s5-08",
+   "section": "u03-s5",
+   "de": "Wartest du hier?",
+   "uz": "Sen shu yerda kutyapsanmi?",
+   "wordCount": 3,
+   "origin": "GENERATED"
+  },
+  {
+   "sourceId": "u03-s5-09",
+   "section": "u03-s5",
+   "de": "Heute gehe ich zu Fuß zur Arbeit.",
+   "uz": "Bugun men ishga piyoda boraman.",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Ich gehe heute zu Fuß zur Arbeit.",
+    "Zur Arbeit gehe ich heute zu Fuß.",
+    "Zu Fuß gehe ich heute zur Arbeit."
+   ]
+  },
+  {
+   "sourceId": "u03-s5-10",
+   "section": "u03-s5",
+   "de": "Mein Vater fährt oft mit dem Zug.",
+   "uz": "Otam tez-tez poyezdda boradi.",
+   "wordCount": 7,
+   "origin": "GENERATED",
+   "akzeptiert": [
+    "Oft fährt mein Vater mit dem Zug.",
+    "Mit dem Zug fährt mein Vater oft."
+   ]
+  }
+ ]
+}

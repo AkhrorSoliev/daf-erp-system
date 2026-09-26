@@ -1,7 +1,33 @@
 const IMAGE_MODEL = 'fal-ai/flux/schnell';
 const TTS_MODEL = 'fal-ai/chatterbox/text-to-speech/multilingual';
 const TTS_ELEVEN_MODEL = 'fal-ai/elevenlabs/tts/turbo-v2.5';
-const DIALOG_MODEL = 'fal-ai/elevenlabs/text-to-dialogue/eleven-v3';
+const TTS_INWORLD_MODEL = 'fal-ai/inworld-tts';
+/**
+ * The course dialog model since 2026-09-26 (`dialog-audio.ts` pins it). It
+ * replaced ElevenLabs text-to-dialogue, whose method was removed with it.
+ */
+export const TTS_GEMINI_MODEL = 'fal-ai/gemini-3.1-flash-tts';
+
+/**
+ * One whole dialog for Gemini's dialogue mode. `prompt` has one line per
+ * turn, each prefixed with a `speakerId` ("Anna: …"); `styleInstructions`
+ * directs the delivery and is not spoken.
+ */
+export interface GeminiDialog {
+  prompt: string;
+  speakers: Array<{ speakerId: string; voice: string }>;
+  styleInstructions: string;
+}
+
+/**
+ * The model's content checker refused the text (HTTP 422 with
+ * `content_policy_violation`). Gemini TTS did this at random to plain
+ * German words on 2026-09-25: it refused "dann" twice and "zwischen" once,
+ * then accepted "zwischen" on the next identical request. Any model behind
+ * fal can answer this way, so `run()` reports it as its own type and the
+ * word script retries exactly this case and nothing else.
+ */
+export class FalAblehnungError extends Error {}
 
 /**
  * `fal-ai/elevenlabs/tts/turbo-v2.5` hujjatida qat'iy belgilangan `speed`
@@ -36,9 +62,13 @@ export class FalClient {
       body: JSON.stringify(input),
     });
     if (!res.ok) {
-      throw new Error(
-        `fal.ai javob bermadi (${res.status}): ${await res.text()}`,
-      );
+      const matn = await res.text();
+      if (res.status === 422 && matn.includes('content_policy_violation')) {
+        throw new FalAblehnungError(
+          `fal.ai matnni rad etdi (422, content_policy_violation): ${matn}`,
+        );
+      }
+      throw new Error(`fal.ai javob bermadi (${res.status}): ${matn}`);
     }
     return res.json();
   }
@@ -124,20 +154,41 @@ export class FalClient {
   }
 
   /**
-   * Butun suhbat BITTA so'rovda — gapiruvchilar bir-biriga javob
-   * beradi, ohang tabiiy chiqadi (ovoz tizimi qarori, 2026-09-02).
-   * `language_code: 'de'` qat'iy (ingliz fonetikasiga tushmasin),
-   * `stability: 0.5` sinovdan keyin O'ZGARMAYDI — aks holda 12 dialog
-   * bir-biridan farq qilib eshitiladi. Tezlik parametri modelda YO'Q —
-   * sekin variant mijoz pleyerida (0.8×).
+   * German word audio: Inworld TTS with its German voice "Johanna (de)",
+   * the course word voice since 2026-09-25. Two multilingual voices before
+   * it (ElevenLabs Rachel, then Gemini) read German words that are also
+   * English words (Name, Land, wer) with English sounds, because one word
+   * alone tells a multilingual model nothing about its language. The CEO
+   * heard 33 such words in this voice and approved it.
+   *
+   * Only the bare word is sent, so the billed characters are the word
+   * itself. The model has no speed setting; the caller slows the clip
+   * locally (`audio-tempo.ts`). The answer is a WAV file.
    */
-  async dialog(
-    inputs: Array<{ voice: string; text: string }>,
-  ): Promise<string> {
-    const out = await this.run(DIALOG_MODEL, {
-      inputs,
-      language_code: 'de',
-      stability: 0.5,
+  async speechInworld(text: string, stimme: string): Promise<string> {
+    const out = await this.run(TTS_INWORLD_MODEL, { text, voice: stimme });
+    const url = out?.audio?.url;
+    if (typeof url !== 'string') throw new Error('fal.ai ovoz qaytarmadi');
+    return url;
+  }
+
+  /**
+   * A course dialog in Gemini's dialogue mode, the model the CEO chose for
+   * every dialog on 2026-09-26: all speakers in one request, so each turn
+   * answers the one before it. The language is pinned to German; single
+   * words go to Inworld instead (`speechInworld`), because a lone word gives
+   * a multilingual model no language to go by, while a dialog does.
+   */
+  async dialogGemini(dialog: GeminiDialog): Promise<string> {
+    const out = await this.run(TTS_GEMINI_MODEL, {
+      prompt: dialog.prompt,
+      speakers: dialog.speakers.map((s) => ({
+        speaker_id: s.speakerId,
+        voice: s.voice,
+      })),
+      style_instructions: dialog.styleInstructions,
+      language_code: 'German (Germany)',
+      output_format: 'mp3',
     });
     const url = out?.audio?.url;
     if (typeof url !== 'string') throw new Error('fal.ai suhbat qaytarmadi');

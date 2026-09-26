@@ -23,6 +23,8 @@ import {
   FadeIn,
 } from "./lumio";
 import type { StudentScheduleItem } from "./lib/types";
+import { loadState } from "./lib/load-state";
+import { LoadFailed } from "./load-failed";
 
 const WEEKDAY_INDEX: Record<string, number> = {
   sunday: 0,
@@ -35,13 +37,15 @@ const WEEKDAY_INDEX: Record<string, number> = {
 };
 
 export function StudentScheduleView() {
-  const { data: schedule = [], isLoading } = useQuery({
+  const query = useQuery({
     queryKey: ["student-portal", "schedule"],
     queryFn: () =>
       api
         .get("/student-portal/schedule")
         .then((r) => r.data as StudentScheduleItem[]),
   });
+  const { data: schedule = [] } = query;
+  const state = loadState(query);
 
   const [weekOffset, setWeekOffset] = useState(0);
   const today = new Date();
@@ -75,11 +79,22 @@ export function StudentScheduleView() {
       .filter(({ classes }) => classes.length > 0);
   }, [weekDays, schedule]);
 
-  if (isLoading) {
+  if (state === "loading") {
     return (
       <Screen>
         <ScreenHeader title="Jadval" />
         <LoadingCards />
+      </Screen>
+    );
+  }
+
+  // No answer is not an empty week: without this the page said "Bu hafta
+  // darslar yo'q" to a student who was simply offline.
+  if (state !== "ready") {
+    return (
+      <Screen>
+        <ScreenHeader title="Jadval" />
+        <LoadFailed query={query} />
       </Screen>
     );
   }

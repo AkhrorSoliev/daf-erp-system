@@ -980,6 +980,7 @@ async function main(prisma: PrismaClient) {
         groupId: true,
         status: true,
         startDate: true,
+        createdAt: true,
         prepaidLessonsRemaining: true,
         student: {
           select: {
@@ -997,6 +998,7 @@ async function main(prisma: PrismaClient) {
             branchId: true,
             companyId: true,
             statusEnum: true,
+            startDate: true,
             exactDays: true,
             courseId: true,
             teachers: { select: { teacherId: true } },
@@ -1277,11 +1279,13 @@ async function main(prisma: PrismaClient) {
           groupId: e.groupId,
           status: e.status,
           startDate: e.startDate,
+          createdAt: e.createdAt,
           group: {
             id: e.group.id,
             branchId: e.group.branchId,
             companyId: e.group.companyId,
             statusEnum: e.group.statusEnum,
+            startDate: e.group.startDate,
             exactDays: e.group.exactDays,
             // Hisob yaratilayotganda kurs allaqachon MONTHLY bo'lgan
             // bo'ladi (5-qadam kursni oldin almashtiradi), shuning uchun

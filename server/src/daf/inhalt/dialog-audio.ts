@@ -1,5 +1,15 @@
 import { createHash } from 'crypto';
+import { TTS_GEMINI_MODEL } from '../media/fal-client';
 import type { Dialog, DialogZeile } from './unit-inhalt.types';
+
+/**
+ * The one model every course dialog is voiced with (CEO, 2026-09-25: no
+ * mixed models; 2026-09-26: Gemini's dialogue mode for dialogs). Each
+ * manifest entry records the model that made it, so a dialog left on an
+ * older model shows up in the content check instead of quietly sounding
+ * different from its neighbours.
+ */
+export const DIALOG_AUDIO_MODELL = TTS_GEMINI_MODEL;
 
 /**
  * Dialog audiosi manifesti — `content/daf/a1/dialog-audio.json`.
@@ -14,10 +24,13 @@ import type { Dialog, DialogZeile } from './unit-inhalt.types';
  * Yo'q — hali ishlanmagan (eski yozuv yoki hali generatsiya qilinmagan);
  * `daf-polster-dialog-audio.ts` shu maydon orqali qayta ishlashdan
  * o'zini himoya qiladi.
+ *
+ * `modell` is the fal endpoint that voiced the dialog. Entries from before
+ * 2026-09-26 have none: they were made with ElevenLabs.
  */
 export type DialogAudioManifest = Record<
   string,
-  { key: string; textHash: string; polster?: string }
+  { key: string; textHash: string; polster?: string; modell?: string }
 >;
 
 /**
@@ -42,6 +55,11 @@ export function validateDialogAudio(
     if (eintrag.textHash !== dialogTextHash(d.zeilen)) {
       problems.push(
         `${d.id}: dialog matni o\`zgargan, audio eski matnni aytyapti — qayta yasang yoki manifestdan o\`chiring`,
+      );
+    }
+    if (eintrag.modell !== DIALOG_AUDIO_MODELL) {
+      problems.push(
+        `${d.id}: audio boshqa modelda yasalgan (${eintrag.modell ?? 'eski model'}) — kurs dialoglari faqat ${DIALOG_AUDIO_MODELL} da, qayta yasang`,
       );
     }
   }
