@@ -89,7 +89,9 @@ export type ItemKind =
   | 'discount'
   | 'initial-balance'
   | 'correction'
-  | 'unexplained';
+  | 'unexplained'
+  /** A few som between a refund and the lessons it returned. */
+  | 'rounding';
 
 /** Money that is neither a payment nor a lesson. It moves the balance. */
 export interface StatementItem {
@@ -103,6 +105,9 @@ export type ReleaseWhy =
   | 'left-group'
   | 'group-change'
   | 'frozen'
+  | 'expelled'
+  | 'group-closed'
+  | 'switch'
   | 'refund'
   | 'other';
 

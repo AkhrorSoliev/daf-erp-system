@@ -485,6 +485,148 @@ describe('buildMonths', () => {
     expect(r.months[0].running).toBe(90_000);
   });
 
+  it('calls a difference of a few som rounding, not unexplained', () => {
+    const r = buildMonths(
+      input({
+        student: { id: 1, name: 'S', balance: 100_001, discountPercent: 0 },
+        rows: [pay('2026-09-05', 100_000)],
+      }),
+    );
+    expect(r.unexplained).toBe(0);
+    expect(r.months[0].items).toEqual([
+      { day: '2026-09-26', kind: 'rounding', amount: 1, description: null },
+    ]);
+  });
+
+  it('does not take a correction that only mentions freezing for a release', () => {
+    const r = buildMonths(
+      input({
+        student: { id: 1, name: 'S', balance: 0, discountPercent: 0 },
+        rows: [
+          row({
+            type: 'ADJUSTMENT',
+            day: '2026-06-10',
+            amount: 400_000,
+            enrollmentId: null,
+            description:
+              "Balans tuzatildi: 400 000 so'm to'lov (24.04) 01.05 dan hisoblanadi — aprel darslari muzlatilgan.",
+          }),
+          pack('2026-06-10', 400_000, SEPT.slice(0, 12), 12),
+        ],
+      }),
+    );
+    expect(r.months[0].items.map((i) => i.kind)).toEqual(['correction']);
+    expect(r.months.flatMap((m) => m.notes)).toEqual([]);
+  });
+
+  it('knows the old release texts, including the manual counter fix', () => {
+    const r = buildMonths(
+      input({
+        student: { id: 1, name: 'S', balance: 0, discountPercent: 0 },
+        rows: [
+          row({
+            type: 'ADJUSTMENT',
+            day: '2026-07-10',
+            amount: 30_000,
+            enrollmentId: null,
+            description: "O'quvchi muzlatildi",
+          }),
+          row({
+            type: 'ADJUSTMENT',
+            day: '2026-07-11',
+            amount: 30_000,
+            enrollmentId: null,
+            description:
+              "Qoldiq oldindan to'langan darslar balansga qaytarildi (Cascade: Student #1 → EXPELLED)",
+          }),
+          row({
+            type: 'ADJUSTMENT',
+            day: '2026-07-12',
+            amount: 30_000,
+            enrollmentId: null,
+            description:
+              "Oylik to'lovga o'tish migratsiyasi — 2026-09 — oldindan to'langan darslar balansga qaytarildi",
+          }),
+          row({
+            type: 'ADJUSTMENT',
+            day: '2026-07-13',
+            amount: 30_000,
+            enrollmentId: null,
+            description:
+              "18.08.2026 dagi pul qaytarish shu darslarni qoplagan edi — o'shanda hisoblagich kamaytirilmagan",
+          }),
+          pack('2026-07-01', 120_000, [], 4),
+        ],
+      }),
+    );
+    expect(r.months[0].notes.map((n) => [n.kind, n.why])).toEqual([
+      ['prepaid-release', 'frozen'],
+      ['prepaid-release', 'expelled'],
+      ['prepaid-release', 'switch'],
+      ['prepaid-release', 'refund'],
+    ]);
+    expect([r.prepaidAhead, r.unexplained]).toEqual([0, 0]);
+  });
+
+  it('frees package lessons the replay re-dated onto days a monthly charge covers', () => {
+    // A freeze returned 3 unused package lessons (90 000), but the replay
+    // filled their places with September lessons whose own charges the
+    // switch reversed. Those days are paid by the monthly charge.
+    const r = buildMonths(
+      input({
+        student: { id: 1, name: 'S', balance: 90_000, discountPercent: 0 },
+        rows: [
+          pay('2026-07-01', 360_000),
+          pack('2026-07-01', 360_000, [
+            '2026-07-02',
+            '2026-07-04',
+            '2026-07-07',
+            '2026-07-09',
+            '2026-07-11',
+            '2026-07-14',
+            '2026-07-16',
+            '2026-07-18',
+            '2026-07-21',
+            '2026-09-03',
+            '2026-09-05',
+            '2026-09-08',
+          ]),
+          row({
+            type: 'ADJUSTMENT',
+            day: '2026-07-25',
+            amount: 90_000,
+            enrollmentId: null,
+            description: "O'quvchi muzlatildi",
+          }),
+          pay('2026-09-10', 450_000),
+          monthly('2026-09', 450_000, 12, 12),
+        ],
+        charges: [sept()],
+      }),
+    );
+    const september = r.months.find((m) => m.key === '2026-09')!;
+    expect([september.lessons, september.cost]).toEqual([12, 450_000]);
+    expect(september.packParts).toEqual([]);
+    expect([r.prepaidAhead, r.unexplained]).toEqual([0, 0]);
+  });
+
+  it('leaves an overlap nothing explains in sight', () => {
+    // No returned money to match: the extra lesson stays counted, so the
+    // statement shows it instead of hiding a real double charge.
+    const r = buildMonths(
+      input({
+        student: { id: 1, name: 'S', balance: -480_000, discountPercent: 0 },
+        rows: [
+          pack('2026-09-01', 30_000, ['2026-09-03'], 1),
+          monthly('2026-09', 450_000, 12, 12),
+        ],
+        charges: [sept()],
+      }),
+    );
+    expect(r.months[0].lessons).toBe(13);
+    expect(r.unexplained).toBe(0);
+  });
+
   it('fills quiet months between active ones', () => {
     const r = buildMonths(
       input({

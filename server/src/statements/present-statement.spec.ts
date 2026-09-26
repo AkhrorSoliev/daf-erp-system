@@ -231,6 +231,36 @@ describe('presentStatement', () => {
     );
   });
 
+  it('shows April lessons paid before the system with nothing to add up', () => {
+    const input = debtor();
+    input.rows.unshift(
+      row({
+        type: 'LESSON_DEDUCTION',
+        day: '2026-04-25',
+        amount: -120_000,
+        enrollmentId: 'e0',
+        metadata: { lessonsCovered: 4 },
+        consumedDays: ['2026-04-23', '2026-04-25', '2026-04-28', '2026-04-30'],
+      }),
+      row({
+        type: 'ADJUSTMENT',
+        day: '2026-06-06',
+        amount: 120_000,
+        enrollmentId: null,
+        metadata: { marker: 'april-cutover-refund' },
+      }),
+    );
+    const april = presentStatement(buildStatement(input), 'student').months[0];
+    expect([
+      april.label,
+      april.lessons,
+      april.cost,
+      april.costNote,
+      april.money,
+      april.running,
+    ]).toEqual(['Aprel', '4 ta', null, "tizimga qadar to'langan", '', '']);
+  });
+
   it('warns the admin, not the student, when the statement is off the balance', () => {
     const input = debtor();
     input.student.balance = -250_000;

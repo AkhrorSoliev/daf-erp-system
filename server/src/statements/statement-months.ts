@@ -8,7 +8,6 @@ import type {
   LessonStatus,
   MonthKey,
   MonthlyPart,
-  PackPart,
   ReleaseWhy,
   StatementInput,
   StatementItem,
@@ -22,9 +21,25 @@ export const MIGRATION_REVERSAL = "Oylik to'lovga o'tish migratsiyasi";
 /** Lessons paid before the system existed (the April cutover) all fell in April 2026. */
 export const PRE_SYSTEM_MONTH: MonthKey = '2026-04';
 
-/** Untagged refunds written before `metadata.kind` existed, known by their text. */
+/** A difference from the balance this small is rounding, not a gap. */
+const ROUNDING_TOLERANCE = 100;
+
+/**
+ * Untagged refunds written before `metadata.kind` existed, known by their
+ * exact texts (every one found in production on 26.09.2026). Match whole
+ * phrases, never a single word: a correction that merely mentions a freeze
+ * is not a release.
+ */
 const MONTHLY_RELEASE_TEXT = /o'tmagan (\d+) dars qaytarildi/;
-const PREPAID_RELEASE_TEXT = /qoldiq darslar|qoldiq oldindan to'langan|muzlat/i;
+const PREPAID_RELEASE_TEXTS = [
+  /qoldiq darslar uchun balans tiklash/i,
+  /^O'quvchi muzlatildi$/i,
+  /^Muzlatish: \d+ ta dars/i,
+  /oldindan to'langan darslar (balansga|puli) qaytarildi/i,
+  /qaytarilmagan dars uchun balans tiklash/i,
+  /ta oldindan to'langan dars bekor qilindi/i,
+  /hisoblagich kamaytirilmagan/i,
+];
 
 const ITEM_BY_TYPE: Record<string, ItemKind> = {
   REFUND: 'refund',
@@ -70,8 +85,13 @@ export interface MonthsResult {
   packSize: number | null;
 }
 
-interface PackAcc extends PackPart {
+interface PackAcc {
   enrollmentId: string;
+  group: string;
+  lessons: number;
+  cost: number;
+  /** One per dated lesson, with that lesson's own share of the package. */
+  slices: Array<{ day: Day; cost: number }>;
 }
 
 interface MonthlyAcc extends MonthlyPart {
@@ -96,7 +116,13 @@ function releaseWhy(
   if (md.refundId !== undefined) return 'refund';
   if (/Guruh o'zgartirilganda/i.test(description)) return 'group-change';
   if (/Guruhdan chiqarilganda/i.test(description)) return 'left-group';
-  if (/muzlat/i.test(description)) return 'frozen';
+  if (/^O'quvchi muzlatildi|^Muzlatish:/i.test(description)) return 'frozen';
+  if (/Cascade: Student .*EXPELLED/i.test(description)) return 'expelled';
+  if (/Cascade: Group .*(COMPLETED|CANCELLED)/i.test(description)) {
+    return 'group-closed';
+  }
+  if (description.includes(MIGRATION_REVERSAL)) return 'switch';
+  if (/pul qaytarish/i.test(description)) return 'refund';
   return 'other';
 }
 
@@ -216,11 +242,11 @@ export function buildMonths(input: StatementInput): MonthsResult {
         group: groupOf.get(key) ?? '',
         lessons: 0,
         cost: 0,
-        days: [],
+        slices: [],
       };
       part.lessons += 1;
       part.cost += slice.cost;
-      part.days.push(day);
+      part.slices.push({ day, cost: slice.cost });
       month.pack.set(key, part);
     });
   }
@@ -273,12 +299,14 @@ export function buildMonths(input: StatementInput): MonthsResult {
       }
       part.lessons -= lessons;
       part.cost -= r.amount;
-      part.days =
+      // The credit names its day when it was written for one lesson (a
+      // re-join); the switch's own credits took the month's last lessons.
+      const byDay = [...part.slices].sort((x, y) => x.day.localeCompare(y.day));
+      const drop =
         typeof md.lessonDate === 'string'
-          ? part.days.filter((d) => d !== md.lessonDate)
-          : [...part.days]
-              .sort()
-              .slice(0, Math.max(0, part.days.length - lessons));
+          ? byDay.filter((x) => x.day === md.lessonDate).slice(0, 1)
+          : byDay.slice(Math.max(0, byDay.length - lessons));
+      part.slices = part.slices.filter((x) => !drop.includes(x));
       month.facts.carriedIn.lessons += lessons;
       month.facts.carriedIn.amount += r.amount;
     } else if (md.marker === 'april-cutover-refund') {
@@ -296,7 +324,7 @@ export function buildMonths(input: StatementInput): MonthsResult {
     } else if (
       md.kind === 'prepaid-release' ||
       md.refundId !== undefined ||
-      PREPAID_RELEASE_TEXT.test(description)
+      PREPAID_RELEASE_TEXTS.some((re) => re.test(description))
     ) {
       released += r.amount;
       const per = perLessonBefore(r.day);
@@ -313,6 +341,41 @@ export function buildMonths(input: StatementInput): MonthsResult {
       });
     } else {
       pushItem(r, 'correction');
+    }
+  }
+
+  // 2b. Returned money with no unused lesson to match means the replay
+  // re-dated those lessons: a later lesson whose own charge the switch
+  // reversed took the free place. On a day a monthly charge of the same
+  // group also covers, that lesson is paid there, so it is freed here,
+  // latest first, up to the returned money nothing else explains. An
+  // overlap no returned money explains stays counted, in sight.
+  let excess = released - unusedSlices;
+  if (excess > 0) {
+    const overlaps: Array<{ part: PackAcc; slice: PackAcc['slices'][number] }> =
+      [];
+    for (const a of accs.values()) {
+      const covered = new Set(
+        a.monthly.flatMap((m) => m.days.map((d) => `${d}|${m.group}`)),
+      );
+      if (covered.size === 0) continue;
+      for (const part of a.pack.values()) {
+        for (const slice of part.slices) {
+          if (covered.has(`${slice.day}|${part.group}`)) {
+            overlaps.push({ part, slice });
+          }
+        }
+      }
+    }
+    overlaps.sort((x, y) => y.slice.day.localeCompare(x.slice.day));
+    for (const { part, slice } of overlaps) {
+      if (slice.cost > excess + ROUNDING_TOLERANCE) continue;
+      part.slices = part.slices.filter((x) => x !== slice);
+      part.lessons -= 1;
+      part.cost -= slice.cost;
+      unusedSlices += slice.cost;
+      excess -= slice.cost;
+      if (excess <= 0) break;
     }
   }
 
@@ -358,13 +421,15 @@ export function buildMonths(input: StatementInput): MonthsResult {
     0,
   );
   const prepaidAhead = Math.max(0, unusedSlices - released);
-  const unexplained =
+  const residual =
     input.student.balance - (paid + itemsTotal - lessonsTotal - prepaidAhead);
-  if (unexplained !== 0) {
+  const rounding = Math.abs(residual) <= ROUNDING_TOLERANCE;
+  const unexplained = rounding ? 0 : residual;
+  if (residual !== 0) {
     acc(monthOf(input.asOf)).items.push({
       day: input.asOf,
-      kind: 'unexplained',
-      amount: unexplained,
+      kind: rounding ? 'rounding' : 'unexplained',
+      amount: residual,
       description: null,
     });
   }
@@ -416,7 +481,7 @@ export function buildMonths(input: StatementInput): MonthsResult {
       seen.add(k);
       lessonDays.push({ day, group, status: statusOf(day, group) });
     };
-    for (const p of s.pack) for (const d of p.days) addDay(d, p.group);
+    for (const p of s.pack) for (const x of p.slices) addDay(x.day, p.group);
     for (const m of a.monthly) for (const d of m.days) addDay(d, m.group);
     lessonDays.sort(
       (x, y) => x.day.localeCompare(y.day) || x.group.localeCompare(y.group),
@@ -444,7 +509,7 @@ export function buildMonths(input: StatementInput): MonthsResult {
         group: p.group,
         lessons: p.lessons,
         cost: p.cost,
-        days: [...p.days].sort(),
+        days: p.slices.map((x) => x.day).sort(),
       })),
       monthlyParts: a.monthly.map((m) => ({
         group: m.group,

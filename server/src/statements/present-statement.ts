@@ -125,12 +125,16 @@ const ITEM: Record<ItemKind, { student: string; admin: string }> = {
   },
   correction: { student: "to'g'rilash", admin: "to'g'rilash" },
   unexplained: { student: 'boshqa tuzatish', admin: 'tushuntirilmagan farq' },
+  rounding: { student: 'yaxlitlash farqi', admin: 'yaxlitlash farqi' },
 };
 
 const WHY: Record<StatementNote['why'], string> = {
   'left-group': 'guruhdan chiqqanda',
   'group-change': 'guruh almashganda',
   frozen: 'muzlatilganda',
+  expelled: "o'qishdan chetlatilganda",
+  'group-closed': 'guruh yopilganda',
+  switch: "oylik to'lovga o'tishda",
   refund: 'pul qaytarib olinganda',
   other: '',
 };
@@ -389,8 +393,9 @@ export function presentStatement(
         : quiet
           ? "hisoblangan dars yo'q"
           : null,
-      money:
-        m.items.length > 0 && m.money !== 0
+      money: preOnly
+        ? ''
+        : m.items.length > 0 && m.money !== 0
           ? signed(m.money)
           : m.money !== 0
             ? som(m.money)
