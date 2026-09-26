@@ -80,7 +80,10 @@ const pickCtx = (studentId: number, ids: number[]) =>
     { step: 1, data: { ids }, processing: false },
   );
 
-const MODEL = { asOf: '2026-09-26', student: { id: ALI.id } } as any;
+const MODEL = {
+  asOf: '2026-09-26',
+  student: { id: ALI.id, firstName: 'Ali', lastName: 'Test' },
+} as any;
 
 describe("statement scene (💳 To'lovlar)", () => {
   let prisma: any;
@@ -131,7 +134,7 @@ describe("statement scene (💳 To'lovlar)", () => {
       'sentabr darslari uchun 150 000',
     );
     const [doc] = ctx.replyWithDocument.mock.calls[0];
-    expect(doc.filename).toBe('tolovlar-hisoboti-26-09-2026.pdf');
+    expect(doc.filename).toBe('Test-A-10001-26-09-2026.pdf');
     expect(Buffer.isBuffer(doc.source)).toBe(true);
     expect(ctx.scene.leave).toHaveBeenCalled();
   });

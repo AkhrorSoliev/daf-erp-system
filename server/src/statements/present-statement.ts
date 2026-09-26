@@ -429,8 +429,14 @@ export function presentStatement(
       : null;
 
   const allocations = model.allocations.map((a) => {
+    // Spent whole on one due: its amount is already on the row, say it once.
+    const whole = a.to.length === 1 && a.leftover === 0;
     const to = a.to
-      .map((t) => `${dueLabel(t.due, voice)} ${som(t.amount)}`)
+      .map((t) =>
+        whole
+          ? dueLabel(t.due, voice)
+          : `${dueLabel(t.due, voice)} ${som(t.amount)}`,
+      )
       .join(', ');
     const leftover =
       a.leftover > 0

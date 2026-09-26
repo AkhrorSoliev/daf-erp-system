@@ -87,7 +87,14 @@ const enr = (over: Partial<StatementEnrollment> = {}): StatementEnrollment => ({
 });
 const input = (over: Partial<StatementInput>): StatementInput => ({
   asOf: '2026-09-26',
-  student: { id: 1, name: 'Test Student', balance: 0, discountPercent: 0 },
+  student: {
+    id: 1,
+    name: 'Test Student',
+    firstName: 'Test',
+    lastName: 'Student',
+    balance: 0,
+    discountPercent: 0,
+  },
   enrollments: [enr()],
   rows: [],
   charges: [],
@@ -149,7 +156,14 @@ describe('buildStatement', () => {
   it('pays the oldest lessons first and carries the rest', () => {
     const s = buildStatement(
       input({
-        student: { id: 1, name: 'S', balance: 187_500, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 187_500,
+          discountPercent: 0,
+        },
         enrollments: [enr({ start: '2026-09-15' })],
         rows: [pay('2026-09-16', 450_000), monthly('2026-09', 262_500, 7, 12)],
         charges: [sept({ coveredDates: SEPT.slice(5) })],
@@ -168,7 +182,14 @@ describe('buildStatement', () => {
   it('keeps the exact time of a payment, for the 72-hour correction rule', () => {
     const s = buildStatement(
       input({
-        student: { id: 1, name: 'S', balance: 100_000, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 100_000,
+          discountPercent: 0,
+        },
         rows: [
           { ...pay('2026-09-16', 100_000), at: '2026-09-16T09:30:00.000Z' },
         ],
@@ -190,7 +211,14 @@ describe('buildStatement', () => {
           }),
           enr({ id: 'e1', start: '2026-09-19' }),
         ],
-        student: { id: 1, name: 'S', balance: -257_500, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: -257_500,
+          discountPercent: 0,
+        },
         rows: [
           pack('2026-07-02', 270_000, JULY, 9, 'e0'),
           pay('2026-07-21', 200_000),
@@ -220,7 +248,14 @@ describe('buildStatement', () => {
           }),
           enr({ id: 'e1', start: '2026-09-19' }),
         ],
-        student: { id: 1, name: 'S', balance: -257_500, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: -257_500,
+          discountPercent: 0,
+        },
         rows: [
           pack('2026-07-02', 270_000, JULY, 9, 'e0'),
           pay('2026-07-21', 200_000),
@@ -267,7 +302,14 @@ describe('buildStatement', () => {
           }),
           enr({ id: 'e1', group: '#052', start: '2026-09-16' }),
         ],
-        student: { id: 1, name: 'S', balance: -279_808, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: -279_808,
+          discountPercent: 0,
+        },
         rows: [
           pay('2026-08-01', 360_000),
           pack('2026-08-01', 360_000, AUG, 12, 'e0'),
@@ -313,7 +355,14 @@ describe('buildStatement', () => {
   it('does not call a small change sharp', () => {
     const s = buildStatement(
       input({
-        student: { id: 1, name: 'S', balance: -18_750, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: -18_750,
+          discountPercent: 0,
+        },
         rows: [
           pay('2026-08-01', 432_000),
           pack('2026-08-01', 432_000, AUG, 12),
@@ -329,7 +378,14 @@ describe('buildStatement', () => {
   it('describes the switch to monthly billing, with what was reversed and credited', () => {
     const s = buildStatement(
       input({
-        student: { id: 1, name: 'S', balance: 30_000, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 30_000,
+          discountPercent: 0,
+        },
         rows: [
           pay('2026-08-01', 360_000),
           pack('2026-08-01', 360_000, [...AUG.slice(0, 11), '2026-09-03']),
@@ -409,7 +465,14 @@ describe('buildStatement', () => {
             },
           }),
         ],
-        student: { id: 1, name: 'S', balance: 0, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 0,
+          discountPercent: 0,
+        },
         rows: [
           pay('2026-09-02', 450_000),
           monthly('2026-09', 450_000, 12, 12),
@@ -428,7 +491,14 @@ describe('buildStatement', () => {
   it('lets a credit such as a forgiven debt pay old lessons', () => {
     const s = buildStatement(
       input({
-        student: { id: 1, name: 'S', balance: 138_462, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 138_462,
+          discountPercent: 0,
+        },
         rows: [
           pack('2026-05-10', 180_000, [
             '2026-05-12',
@@ -474,7 +544,14 @@ describe('buildStatement', () => {
   it('pays a cash refund like any other due', () => {
     const s = buildStatement(
       input({
-        student: { id: 1, name: 'S', balance: 0, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 0,
+          discountPercent: 0,
+        },
         rows: [
           pay('2026-09-05', 400_000),
           pay('2026-09-11', 400_000, 'PAYME'),
@@ -513,6 +590,8 @@ describe('buildStatement', () => {
         student: {
           id: 7,
           name: 'Test Student',
+          firstName: 'Test',
+          lastName: 'Student',
           balance: 0,
           discountPercent: 10,
         },
@@ -521,6 +600,8 @@ describe('buildStatement', () => {
     expect(s.student).toEqual({
       id: 7,
       name: 'Test Student',
+      firstName: 'Test',
+      lastName: 'Student',
       groups: ['#036'],
       course: {
         name: 'Standart',

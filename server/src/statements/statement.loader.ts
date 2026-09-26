@@ -128,6 +128,8 @@ export class StatementLoader {
       student: {
         id: student.id,
         name: `${student.firstName} ${student.lastName}`.trim(),
+        firstName: student.firstName,
+        lastName: student.lastName,
         balance: student.balance,
         discountPercent: student.discountPercent ?? 0,
       },

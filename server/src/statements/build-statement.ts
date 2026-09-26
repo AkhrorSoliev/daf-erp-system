@@ -39,6 +39,8 @@ export function buildStatement(input: StatementInput): StatementModel {
     student: {
       id: input.student.id,
       name: input.student.name,
+      firstName: input.student.firstName,
+      lastName: input.student.lastName,
       groups: [
         ...new Set(
           (current.length > 0 ? current : main ? [main] : []).map(

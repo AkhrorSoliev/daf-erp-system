@@ -88,7 +88,14 @@ const enr = (over: Partial<StatementEnrollment> = {}): StatementEnrollment => ({
 });
 const input = (over: Partial<StatementInput>): StatementInput => ({
   asOf: '2026-09-26',
-  student: { id: 1, name: 'Test Student', balance: 0, discountPercent: 0 },
+  student: {
+    id: 1,
+    name: 'Test Student',
+    firstName: 'Test',
+    lastName: 'Student',
+    balance: 0,
+    discountPercent: 0,
+  },
   enrollments: [enr()],
   rows: [],
   charges: [],
@@ -139,7 +146,14 @@ describe('buildMonths', () => {
   it('puts each package lesson in the month it was held', () => {
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: 0, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 0,
+          discountPercent: 0,
+        },
         rows: [
           pay('2026-08-01', 360_000),
           pack('2026-08-01', 360_000, [
@@ -160,7 +174,14 @@ describe('buildMonths', () => {
   it('bills a monthly charge to its period and lists its lesson days', () => {
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: -450_000, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: -450_000,
+          discountPercent: 0,
+        },
         rows: [monthly('2026-09', 450_000, 12, 12)],
         charges: [sept()],
       }),
@@ -185,7 +206,14 @@ describe('buildMonths', () => {
   it('records a mid-month start', () => {
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: -262_500, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: -262_500,
+          discountPercent: 0,
+        },
         rows: [monthly('2026-09', 262_500, 7, 12)],
         charges: [sept({ coveredDates: SEPT.slice(5) })],
       }),
@@ -201,7 +229,14 @@ describe('buildMonths', () => {
   it('skips reversed pairs and keeps the switch reversal as a fact of the month', () => {
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: 0, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 0,
+          discountPercent: 0,
+        },
         rows: [
           pay('2026-09-16', 450_000),
           row({
@@ -233,7 +268,14 @@ describe('buildMonths', () => {
   it('takes a lesson the monthly charge covers again off the old-way part', () => {
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: 30_000, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 30_000,
+          discountPercent: 0,
+        },
         rows: [
           pay('2026-08-01', 360_000),
           pack('2026-08-01', 360_000, [...AUG.slice(0, 11), '2026-09-03']),
@@ -272,7 +314,14 @@ describe('buildMonths', () => {
           enr({ id: 'old', end: '2026-09-03', status: 'DROPPED' }),
           enr({ id: 'e1', start: '2026-09-03' }),
         ],
-        student: { id: 1, name: 'S', balance: -225_000, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: -225_000,
+          discountPercent: 0,
+        },
         rows: [
           row({
             type: 'LESSON_DEDUCTION',
@@ -314,7 +363,14 @@ describe('buildMonths', () => {
   it('folds a tagged monthly release into the month and says so', () => {
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: 0, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 0,
+          discountPercent: 0,
+        },
         rows: [
           pay('2026-09-02', 300_000),
           monthly('2026-09', 450_000, 12, 12),
@@ -351,7 +407,14 @@ describe('buildMonths', () => {
   it('reads an untagged package release from its text and estimates the lessons', () => {
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: 90_000, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 90_000,
+          discountPercent: 0,
+        },
         rows: [
           pay('2026-07-01', 360_000),
           pack(
@@ -396,7 +459,14 @@ describe('buildMonths', () => {
   it('keeps unreturned package lessons as paid ahead', () => {
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: 0, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 0,
+          discountPercent: 0,
+        },
         rows: [
           pay('2026-07-01', 360_000),
           pack(
@@ -415,7 +485,14 @@ describe('buildMonths', () => {
   it('treats the April cutover refund as lessons paid before the system', () => {
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: 0, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 0,
+          discountPercent: 0,
+        },
         rows: [
           pack(
             '2026-04-25',
@@ -444,7 +521,14 @@ describe('buildMonths', () => {
   it('shows money that is not a payment as a dated item', () => {
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: 0, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 0,
+          discountPercent: 0,
+        },
         rows: [
           pay('2026-09-05', 400_000),
           pay('2026-09-11', 400_000),
@@ -474,7 +558,14 @@ describe('buildMonths', () => {
   it('adds any difference from the balance as an unexplained item', () => {
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: 90_000, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 90_000,
+          discountPercent: 0,
+        },
         rows: [pay('2026-09-05', 100_000)],
       }),
     );
@@ -493,7 +584,14 @@ describe('buildMonths', () => {
   it('calls a difference of a few som rounding, not unexplained', () => {
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: 100_001, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 100_001,
+          discountPercent: 0,
+        },
         rows: [pay('2026-09-05', 100_000)],
       }),
     );
@@ -506,7 +604,14 @@ describe('buildMonths', () => {
   it('does not take a correction that only mentions freezing for a release', () => {
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: 0, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 0,
+          discountPercent: 0,
+        },
         rows: [
           row({
             type: 'ADJUSTMENT',
@@ -527,7 +632,14 @@ describe('buildMonths', () => {
   it('knows the old release texts, including the manual counter fix', () => {
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: 0, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 0,
+          discountPercent: 0,
+        },
         rows: [
           row({
             type: 'ADJUSTMENT',
@@ -579,7 +691,14 @@ describe('buildMonths', () => {
     // switch reversed. Those days are paid by the monthly charge.
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: 90_000, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: 90_000,
+          discountPercent: 0,
+        },
         rows: [
           pay('2026-07-01', 360_000),
           pack('2026-07-01', 360_000, [
@@ -620,7 +739,14 @@ describe('buildMonths', () => {
     // statement shows it instead of hiding a real double charge.
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: -480_000, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: -480_000,
+          discountPercent: 0,
+        },
         rows: [
           pack('2026-09-01', 30_000, ['2026-09-03'], 1),
           monthly('2026-09', 450_000, 12, 12),
@@ -635,7 +761,14 @@ describe('buildMonths', () => {
   it('fills quiet months between active ones', () => {
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: -330_000, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: -330_000,
+          discountPercent: 0,
+        },
         rows: [
           pack('2026-07-01', 90_000, [
             '2026-07-02',
@@ -657,7 +790,14 @@ describe('buildMonths', () => {
   it('marks lesson days from attendance and counts unexcused absences', () => {
     const r = buildMonths(
       input({
-        student: { id: 1, name: 'S', balance: -450_000, discountPercent: 0 },
+        student: {
+          id: 1,
+          name: 'S',
+          firstName: 'Test',
+          lastName: 'Student',
+          balance: -450_000,
+          discountPercent: 0,
+        },
         rows: [monthly('2026-09', 450_000, 12, 12)],
         charges: [sept()],
         attendance: [

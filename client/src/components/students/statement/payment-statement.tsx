@@ -15,7 +15,7 @@ import {
 import { StatementLedger } from "./statement-ledger";
 import { StatementReport } from "./statement-report";
 import type { StatementResponse } from "./statement-types";
-import { asOfText, statementPdfName } from "./statement-utils";
+import { asOfText } from "./statement-utils";
 
 /**
  * The To'lovlar tab: the payment statement (ADR-0037) with its PDF, and the
@@ -76,7 +76,7 @@ export function PaymentStatement({
     try {
       await downloadAuthedFile(
         `/students/${studentId}/statement.pdf`,
-        statementPdfName(studentId, data.model.asOf),
+        "tolovlar-hisoboti.pdf",
       );
     } catch {
       toast.error("PDF yuklab olishda xatolik");

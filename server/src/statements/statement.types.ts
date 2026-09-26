@@ -71,6 +71,8 @@ export interface StatementInput {
   student: {
     id: number;
     name: string;
+    firstName: string;
+    lastName: string;
     balance: number;
     discountPercent: number;
   };
@@ -225,6 +227,8 @@ export interface StatementModel {
   student: {
     id: number;
     name: string;
+    firstName: string;
+    lastName: string;
     groups: string[];
     course: {
       name: string;
