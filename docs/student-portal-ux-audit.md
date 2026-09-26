@@ -154,12 +154,13 @@ darsni esa ko'rmaydi.
 
 | # | Topilma |
 |---|---|
-| P1 | Summa maydoni xom `<input>` — Lumio `Field`/`Input` ishlatilmagan, `<label>` ham, `aria-label` ham yo'q. Ekran o'quvchi uchun nomsiz maydon |
+| P1 | Summa maydoni xom `<input>` — Lumio `Field`/`Input` ishlatilmagan, `<label>` ham, `aria-label` ham yo'q. Ekran o'quvchi uchun nomsiz maydon. **Qisman 2026-09-26:** `aria-label="To'lov summasi"` qo'shildi; maydon hali xom `<input>` |
 | P2 | Tez summalar 100k–700k qat'iy. **Qarz miqdoriga moslashmaydi** — qarzi 1.2M bo'lsa foydalanuvchi qo'lda kiritishi kerak. «Qarzni yopish» tugmasi yo'q |
 | P3 | Tranzaksiya tarixi filtrsiz va sahifalanmaydi — server nechta qaytarsa, hammasi bir ro'yxatda |
 | P4 | Har qatorning pastidagi `balanceAfter` raqami izohsiz — foydalanuvchi u nima ekanini bilmaydi |
 | P5 | Uzum Bank «Tez kunda» bloki har doim ko'rinadi — o'lik piksel |
 | P6 | To'lov shlyuzidan qaytganda `toast.success("Balansingiz tekshirilmoqda...")` chiqadi. Natija hali noma'lum, lekin signal muvaffaqiyat rangida |
+| P7 | **Telefonda sahifa ekrandan keng edi**: 390px telefonda 627px. Tez summalar yonga suriladigan qator edi, uning tugmalari qisqarmasdi va sahifa ustunini o'zi bilan kengaytirardi. Click tugmasi, «so'm» va «Balans tarixi» summalari ekrandan chiqib qolardi; desktopda esa oxirgi summalar ko'rinmasdi. Payme/Click tugmalari 80px baland edi. **TUZATILDI 2026-09-26** — summalar to'rga terildi (4 ustun, karta keng bo'lsa 7), sahifa gridi `grid-cols-1`, Payme/Click 56px, hisobot tugmasi keng kartada matn yonida. Himoya — `student-payment-summary.test.ts` |
 
 ---
 
@@ -202,7 +203,7 @@ darsni esa ko'rmaydi.
 | **1** | Sozlamalar + Profil chegarasi, mavzu boshqaruvini birlashtirish | Q1–Q4 (pastdagi «Faza 1» bo'limi) | **BAJARILDI — 2026-08-19** (branch `feat/portal-settings-profile-rework`, deploy qilinmagan) |
 | 2 | Umumiy qatlam: Lumio modal, xato holatlari, desktop kenglik, `backHref`, `staleTime` | U1, U2, U3, U4, U5 | qisman — U4 bajarildi 2026-09-26 |
 | 3 | Jadval: bekor qilingan / ko'chirilgan darslar va bayramlar | S1, S2, S3, S4 | kutmoqda |
-| 4 | To'lovlar: qarzga moslashgan summalar, tarix filtri, a11y | P1–P6 | kutmoqda |
+| 4 | To'lovlar: qarzga moslashgan summalar, tarix filtri, a11y | P1–P7 | qisman — P7 bajarildi 2026-09-26 |
 | 5 | Davomat + Asosiy sahifa | A1–A4, H1–H4 | kutmoqda |
 | 6 | FAQ/About kontenti, Ko'proq dublikati, AI tili | F1–F4, M1, M2, AI1 | kutmoqda |
 | **Mobil nav** | Telefondagi tab va sahifa arxitekturasi (9-bo'lim) | N1–N5, M1, F2 | **BAJARILDI — 2026-09-25** (branch `fix/portal-mobile-nav`) |

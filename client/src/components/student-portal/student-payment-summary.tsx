@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
+import { cn } from "@/lib/utils";
 import { Clock, CircleNotch } from "@phosphor-icons/react";
 import {
   Screen,
@@ -127,7 +128,12 @@ export function StudentPaymentSummary() {
     <Screen>
       <ScreenHeader title="To'lovlar" />
 
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+      {/*
+        `grid-cols-1`, not a bare `grid`: an implicit column is sized to its
+        widest unbreakable child, while `grid-cols-1` is `minmax(0, 1fr)` and
+        stays the width of the screen.
+      */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
         <div className="flex flex-col gap-4">
           {/* Balance */}
           <FadeIn index={0}>
@@ -151,9 +157,10 @@ export function StudentPaymentSummary() {
             <StatementCard />
           </FadeIn>
 
-          {/* Top-up */}
+          {/* Top-up. A size container: the quick amounts go to one row of
+              seven only when the card itself is wide enough for them. */}
           <FadeIn index={2}>
-            <Card className="space-y-4">
+            <Card className="@container space-y-4">
               <h2 className="font-display text-lg font-bold text-ink-900">
                 Balansni to&apos;ldirish
               </h2>
@@ -162,6 +169,7 @@ export function StudentPaymentSummary() {
                 <input
                   type="text"
                   inputMode="numeric"
+                  aria-label="To'lov summasi"
                   value={amount ? formatNumber(Number(amount)) : ""}
                   onChange={(e) =>
                     setAmount(e.target.value.replace(/\D/g, "").slice(0, 9))
@@ -175,18 +183,34 @@ export function StudentPaymentSummary() {
                 </span>
               </div>
 
-              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-                {QUICK_AMOUNTS.map((val) => (
-                  <button
-                    key={val}
-                    type="button"
-                    disabled={redirecting}
-                    onClick={() => setAmount(String(val))}
-                    className="shrink-0 rounded-pill border border-line bg-surface px-3 py-1.5 font-display text-xs font-bold text-ink-700 transition-colors hover:bg-tint active:scale-95"
-                  >
-                    {formatNumber(val)}
-                  </button>
-                ))}
+              {/*
+                A grid, never a sideways-scrolling strip. The strip's chips
+                could not shrink, so it set the page's minimum width: on a
+                390px phone the page laid out 627px wide, with Click, "so'm"
+                and the amounts in Balans tarixi past the right edge. On a
+                desktop it hid the last amounts from anyone without a trackpad.
+              */}
+              <div className="grid grid-cols-4 gap-2 @lg:grid-cols-7">
+                {QUICK_AMOUNTS.map((val) => {
+                  const selected = Number(amount) === val;
+                  return (
+                    <button
+                      key={val}
+                      type="button"
+                      disabled={redirecting}
+                      aria-pressed={selected}
+                      onClick={() => setAmount(String(val))}
+                      className={cn(
+                        "h-9 rounded-pill border font-display text-xs font-bold tabular-nums transition-colors active:scale-95 disabled:opacity-50",
+                        selected
+                          ? "border-coral-500 bg-coral-500/12 text-coral-700 dark:text-coral-400"
+                          : "border-line bg-surface text-ink-700 hover:bg-tint",
+                      )}
+                    >
+                      {formatNumber(val)}
+                    </button>
+                  );
+                })}
               </div>
 
               {belowMin ? (
@@ -201,8 +225,11 @@ export function StudentPaymentSummary() {
                     key={p.id}
                     type="button"
                     disabled={redirecting}
+                    // While redirecting the logo becomes a spinner, which
+                    // would leave the button with no name at all.
+                    aria-label={`${p.name} orqali to'lash`}
                     onClick={() => pay(p.id as "PAYME" | "CLICK")}
-                    className="clay-white clay-btn flex h-20 items-center justify-center overflow-hidden rounded-card border border-line bg-white px-4 disabled:opacity-60"
+                    className="clay-white clay-btn flex h-14 items-center justify-center overflow-hidden rounded-card border border-line bg-white px-3 disabled:opacity-60"
                   >
                     {redirecting ? (
                       <CircleNotch
@@ -215,19 +242,21 @@ export function StudentPaymentSummary() {
                       <img
                         src={p.logo}
                         alt={p.name}
-                        className="max-h-11 w-auto max-w-full object-contain"
+                        className="max-h-8 w-auto max-w-full object-contain"
                       />
                     )}
                   </button>
                 ))}
               </div>
 
-              <div className="flex items-center justify-between rounded-card border border-dashed border-line px-4 py-2.5 opacity-70">
+              <div className="flex items-center justify-center gap-2 opacity-70">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/uzum-bank.svg"
                   alt="Uzum Bank"
-                  className="h-6 object-contain grayscale"
+                  // Grey, the purple wordmark is near-black: invisible on the
+                  // dark card without the invert.
+                  className="h-5 object-contain grayscale dark:invert"
                 />
                 <Badge tone="neutral" size="sm">
                   Tez kunda
@@ -290,7 +319,9 @@ function PaymentHistory() {
               className="flex items-center justify-between gap-3"
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate font-display text-sm font-bold text-ink-900">
+                {/* Two lines, not one: on a narrow phone a single line cut
+                    "A1-12 guruhi: 12 dars uchun" down to its first words. */}
+                <p className="line-clamp-2 break-words font-display text-sm font-bold text-ink-900">
                   {t.description || TYPE_LABELS[t.type] || t.type}
                 </p>
                 <p className="text-xs font-semibold text-ink-500">
