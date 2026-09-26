@@ -59,6 +59,6 @@ export class StatementsController {
   ) {
     await assertCallerMayTouchStudent(this.prisma, userId, id, companyId);
     const { buffer, model } = await this.statements.pdf(id, companyId);
-    sendPdfAttachment(res, buffer, statementFilename(model, true));
+    sendPdfAttachment(res, buffer, statementFilename(model));
   }
 }

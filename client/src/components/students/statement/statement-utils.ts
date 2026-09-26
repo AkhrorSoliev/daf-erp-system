@@ -40,12 +40,6 @@ export function dayMonth(day: string): string {
   return `${day.slice(8, 10)}.${day.slice(5, 7)}`;
 }
 
-/** Same name the server puts in Content-Disposition (`statementFilename`). */
-export function statementPdfName(studentId: number, asOf: string): string {
-  const date = `${asOf.slice(8, 10)}-${asOf.slice(5, 7)}-${asOf.slice(0, 4)}`;
-  return `tolovlar-hisoboti-${studentId}-${date}.pdf`;
-}
-
 export const LESSON_STATUS: Record<
   LessonStatus,
   { label: string; className: string }

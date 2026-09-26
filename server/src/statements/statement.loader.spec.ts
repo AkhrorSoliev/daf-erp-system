@@ -111,6 +111,8 @@ describe('StatementLoader', () => {
     expect(input.student).toEqual({
       id: 7,
       name: 'Test Student',
+      firstName: 'Test',
+      lastName: 'Student',
       balance: -187_500,
       discountPercent: 0,
     });

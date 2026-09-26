@@ -5,16 +5,35 @@ import { renderStatementPdf } from './statement-pdf';
 import { StatementLoader } from './statement.loader';
 import type { StatementModel } from './statement.types';
 
-/** 'tolovlar-hisoboti-7-26-09-2026.pdf', or without the id for the student's own copy. */
+/** Letters and digits only: apostrophes go, spaces become hyphens. */
+function fileSafe(text: string): string {
+  return text
+    .replace(/['`ʻʼ‘’]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^A-Za-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/**
+ * 'Valiyev-A-10001-26-09-2026.pdf': surname, first initial, id and the day,
+ * for every copy (admin, portal, bot). A part left empty by `fileSafe` is
+ * dropped, so the id and the day always remain.
+ */
 export function statementFilename(
-  model: StatementModel,
-  withId: boolean,
+  model: Pick<StatementModel, 'asOf'> & {
+    student: Pick<StatementModel['student'], 'id' | 'firstName' | 'lastName'>;
+  },
 ): string {
   const d = model.asOf;
   const date = `${d.slice(8, 10)}-${d.slice(5, 7)}-${d.slice(0, 4)}`;
-  return withId
-    ? `tolovlar-hisoboti-${model.student.id}-${date}.pdf`
-    : `tolovlar-hisoboti-${date}.pdf`;
+  const { id, firstName, lastName } = model.student;
+  const initial = fileSafe(firstName).charAt(0).toUpperCase();
+  return (
+    [fileSafe(lastName), initial, String(id), date].filter(Boolean).join('-') +
+    '.pdf'
+  );
 }
 
 @Injectable()

@@ -5,7 +5,6 @@ import {
   asOfText,
   canCorrectPayment,
   dayMonth,
-  statementPdfName,
 } from "./statement-utils";
 import type { ModelAllocation } from "./statement-types";
 
@@ -68,9 +67,4 @@ describe("text helpers", () => {
     expect(dayMonth("2026-09-07")).toBe("07.09");
   });
 
-  it("names the PDF like the server does", () => {
-    expect(statementPdfName(10042, "2026-09-26")).toBe(
-      "tolovlar-hisoboti-10042-26-09-2026.pdf",
-    );
-  });
 });

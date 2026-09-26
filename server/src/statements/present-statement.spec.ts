@@ -76,6 +76,8 @@ const debtor = (): StatementInput => ({
   student: {
     id: 7,
     name: 'Test Student',
+    firstName: 'Test',
+    lastName: 'Student',
     balance: -257_500,
     discountPercent: 0,
   },
@@ -201,9 +203,7 @@ describe('presentStatement', () => {
         nb(a.to),
         a.paymentId,
       ]),
-    ).toEqual([
-      ['21.07.2026', 'Naqd', '200 000', 'iyul darslari 200 000', 'p1'],
-    ]);
+    ).toEqual([['21.07.2026', 'Naqd', '200 000', 'iyul darslari', 'p1']]);
   });
 
   it('tells a student with money ahead where it goes', () => {

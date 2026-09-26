@@ -12,6 +12,8 @@ const model = {
   student: {
     id: 7,
     name: 'Test Student',
+    firstName: 'Test',
+    lastName: 'Student',
     groups: ['#036'],
     course: null,
     discountPercent: 0,
@@ -69,7 +71,7 @@ describe('StatementsController', () => {
     expect(r.setHeader).toHaveBeenCalledWith('Content-Type', 'application/pdf');
     expect(r.setHeader).toHaveBeenCalledWith(
       'Content-Disposition',
-      'attachment; filename="tolovlar-hisoboti-7-26-09-2026.pdf"',
+      'attachment; filename="Student-T-7-26-09-2026.pdf"',
     );
     expect(r.end).toHaveBeenCalled();
   });
@@ -88,7 +90,7 @@ describe('StatementPortalController', () => {
     expect(service.pdf).toHaveBeenCalledWith(7, 1);
     expect(r.setHeader).toHaveBeenCalledWith(
       'Content-Disposition',
-      'attachment; filename="tolovlar-hisoboti-26-09-2026.pdf"',
+      'attachment; filename="Student-T-7-26-09-2026.pdf"',
     );
   });
 });

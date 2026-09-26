@@ -3,14 +3,8 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { downloadAuthedFile } from "@/lib/download-file";
-import { tashkentNow } from "@/lib/tashkent-time";
 import { Button, Card, IconTile } from "./lumio";
 import { DownloadSimple, FileText } from "./lumio/icon";
-
-/** Same name the server gives the student's copy (`statementFilename`). */
-export function statementFileName(dateStr: string): string {
-  return `tolovlar-hisoboti-${dateStr.slice(8, 10)}-${dateStr.slice(5, 7)}-${dateStr.slice(0, 4)}.pdf`;
-}
 
 /**
  * The student's own payment statement (ADR-0037) as a PDF:
@@ -24,7 +18,7 @@ export function StatementCard() {
     try {
       await downloadAuthedFile(
         "/student-portal/statement.pdf",
-        statementFileName(tashkentNow().dateStr),
+        "tolovlar-hisoboti.pdf",
       );
     } catch {
       toast.error("PDF yuklab olishda xatolik");

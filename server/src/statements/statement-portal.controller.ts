@@ -22,6 +22,6 @@ export class StatementPortalController {
     @Res() res: Response,
   ) {
     const { buffer, model } = await this.statements.pdf(studentId, companyId);
-    sendPdfAttachment(res, buffer, statementFilename(model, false));
+    sendPdfAttachment(res, buffer, statementFilename(model));
   }
 }

@@ -60,7 +60,7 @@ export function createStatementScene(
       );
       await ctx.replyWithDocument({
         source: buffer,
-        filename: statementFilename(model, false),
+        filename: statementFilename(model),
       });
     } catch (error) {
       logger.error(

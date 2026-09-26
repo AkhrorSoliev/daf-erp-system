@@ -1,15 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { StatementCard, statementFileName } from "./statement-card";
-
-describe("statementFileName", () => {
-  it("names the student's copy like the server does", () => {
-    expect(statementFileName("2026-09-26")).toBe(
-      "tolovlar-hisoboti-26-09-2026.pdf",
-    );
-  });
-});
+import { StatementCard } from "./statement-card";
 
 describe("StatementCard", () => {
   it("offers the statement PDF under the balance", () => {
