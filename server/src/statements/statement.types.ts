@@ -32,6 +32,8 @@ export interface StatementRow {
   amount: number;
   /** `createdAt` as a Tashkent day. */
   day: Day;
+  /** `createdAt` as an ISO instant. */
+  at: string;
   description: string | null;
   metadata: Record<string, unknown> | null;
   enrollmentId: string | null;
@@ -207,6 +209,8 @@ export type DueRef =
 
 export interface Allocation {
   day: Day;
+  /** When the payment was taken (ISO). Null for a credit. */
+  at: string | null;
   kind: 'payment' | 'credit';
   method: string | null;
   itemKind: ItemKind | null;
