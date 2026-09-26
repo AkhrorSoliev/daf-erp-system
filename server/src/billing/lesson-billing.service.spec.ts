@@ -672,8 +672,16 @@ describe('LessonBillingService', () => {
       enrollmentRows: Array<{
         id: string;
         groupId: string;
-        group: { branchId: number };
-      }> = [{ id: enrollmentId, groupId, group: { branchId: 1 } }],
+        group: { branchId: number; course: { paymentModel: string } };
+        monthlyCharges: Array<{ periodYear: number; periodMonth: number }>;
+      }> = [
+        {
+          id: enrollmentId,
+          groupId,
+          group: { branchId: 1, course: { paymentModel: 'LESSON_PACK' } },
+          monthlyCharges: [],
+        },
+      ],
     ) {
       // First call returns enrollments via findMany (NOT $queryRaw — keep
       // it explicit). Mock the active-enrollment lookup.
@@ -853,6 +861,59 @@ describe('LessonBillingService', () => {
       };
     }
 
+    it('never bills a monthly enrollment per lesson for its monthly months', async () => {
+      // After the switch to monthly billing, monthly attendance writes no
+      // LESSON_CONSUMPTION, so every monthly lesson looks unpaid. Only the
+      // August lesson (the 12-lesson era) may be settled here; September is
+      // already paid by the September charge.
+      setupOneEnrollmentWith(
+        ['2026-08-28', '2026-09-02', '2026-09-26'],
+        [
+          {
+            id: enrollmentId,
+            groupId,
+            group: { branchId: 1, course: { paymentModel: 'MONTHLY' } },
+            monthlyCharges: [{ periodYear: 2026, periodMonth: 9 }],
+          },
+        ],
+      );
+      const state = wireLiveBillingMocks(400_000);
+
+      const result = await service.processRetroactiveBillingForStudent(tx, {
+        studentId,
+        companyId,
+      });
+
+      expect(result.billedAttendances).toBe(1);
+      expect([...state.getConsumed()]).toEqual(['att-1']);
+    });
+
+    it('bills nothing per lesson for a monthly enrollment whose first charge is not written yet', async () => {
+      setupOneEnrollmentWith(
+        ['2026-09-26'],
+        [
+          {
+            id: enrollmentId,
+            groupId,
+            group: { branchId: 1, course: { paymentModel: 'MONTHLY' } },
+            monthlyCharges: [],
+          },
+        ],
+      );
+      wireLiveBillingMocks(400_000);
+
+      const result = await service.processRetroactiveBillingForStudent(tx, {
+        studentId,
+        companyId,
+      });
+
+      expect(result.billedAttendances).toBe(0);
+      expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
+      expect(
+        transactionsService.recordLessonConsumption,
+      ).not.toHaveBeenCalled();
+    });
+
     it('settles 9 unpaid lessons after a full-cycle payment', async () => {
       setupOneEnrollmentWith([
         '2026-03-02',
@@ -945,11 +1006,14 @@ describe('LessonBillingService', () => {
       // No legacy unpaid attendances. Two SINGLE_UNCOVERED deductions
       // already exist (total uncovered = 60k). A payment brings the
       // balance back to 0 — both rows should accrue and clear.
-      tx.enrollment.findMany = jest
-        .fn()
-        .mockResolvedValue([
-          { id: enrollmentId, groupId, group: { branchId: 1 } },
-        ]);
+      tx.enrollment.findMany = jest.fn().mockResolvedValue([
+        {
+          id: enrollmentId,
+          groupId,
+          group: { branchId: 1, course: { paymentModel: 'LESSON_PACK' } },
+          monthlyCharges: [],
+        },
+      ]);
       tx.$queryRaw = jest.fn().mockResolvedValue([]);
 
       const deferredRows = [
@@ -1003,11 +1067,14 @@ describe('LessonBillingService', () => {
     });
 
     it('bubbles up carried-over accruals from deferred settlement (sink wiring)', async () => {
-      tx.enrollment.findMany = jest
-        .fn()
-        .mockResolvedValue([
-          { id: enrollmentId, groupId, group: { branchId: 1 } },
-        ]);
+      tx.enrollment.findMany = jest.fn().mockResolvedValue([
+        {
+          id: enrollmentId,
+          groupId,
+          group: { branchId: 1, course: { paymentModel: 'LESSON_PACK' } },
+          monthlyCharges: [],
+        },
+      ]);
       tx.$queryRaw = jest.fn().mockResolvedValue([]);
       tx.transaction.findMany = jest.fn().mockResolvedValue([
         {
@@ -1061,11 +1128,14 @@ describe('LessonBillingService', () => {
       // Balance is -30k → 50k of debt has been covered.
       // FIFO: oldest 30k clears fully (accrual fires), newest 50k shrinks
       // by the remaining 20k to 30k (no accrual yet).
-      tx.enrollment.findMany = jest
-        .fn()
-        .mockResolvedValue([
-          { id: enrollmentId, groupId, group: { branchId: 1 } },
-        ]);
+      tx.enrollment.findMany = jest.fn().mockResolvedValue([
+        {
+          id: enrollmentId,
+          groupId,
+          group: { branchId: 1, course: { paymentModel: 'LESSON_PACK' } },
+          monthlyCharges: [],
+        },
+      ]);
       tx.$queryRaw = jest.fn().mockResolvedValue([]);
 
       const oldRow = {
@@ -1483,11 +1553,13 @@ describe('LessonBillingService', () => {
         groupId: baseParams.groupId,
         status: 'ACTIVE' as any,
         startDate: null,
+        createdAt: new Date('2026-03-01T06:00:00Z'),
         group: {
           id: baseParams.groupId,
           branchId: baseParams.branchId,
           companyId: baseParams.companyId,
           statusEnum: 'ACTIVE' as any,
+          startDate: null,
           exactDays: groupExactDays,
           course: { price: coursePrice, paymentModel: PaymentModel.MONTHLY },
         },

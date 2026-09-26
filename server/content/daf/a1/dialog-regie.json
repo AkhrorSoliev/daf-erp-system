@@ -1,0 +1,167 @@
+{
+  "u01-d1": {
+    "szene": "Zwei junge Leute lernen sich im Deutschkurs kennen.",
+    "toene": [
+      "curious",
+      "cheerful",
+      "friendly",
+      "warm",
+      "friendly",
+      "cheerful",
+      "warm"
+    ]
+  },
+  "u01-d2": {
+    "szene": "Abends: Walter, ein älterer Nachbar, trifft die junge Mia.",
+    "toene": ["warm", "cheerful", "kind", "cheerful", "warm", "friendly"]
+  },
+  "u01-d3": {
+    "szene": "Zwei Erwachsene treffen sich zum ersten Mal. Höflich.",
+    "toene": [
+      "polite",
+      "polite",
+      "friendly",
+      "friendly",
+      "cheerful",
+      "polite",
+      "friendly"
+    ]
+  },
+  "u01-d4": {
+    "szene": "Zwei junge Leute plaudern neugierig in einem Café.",
+    "toene": ["curious", "friendly", "proud", "curious", "friendly", "cheerful"]
+  },
+  "u01-d5": {
+    "szene": "Sabine sagt Peter ihre Telefonnummer, Peter schreibt mit.",
+    "toene": [
+      "slowly",
+      "unsure",
+      "patient",
+      "careful",
+      "relieved",
+      "friendly",
+      "friendly"
+    ]
+  },
+  "u01-d6": {
+    "szene": "Bei einer Anmeldung buchstabiert Anna ihren Namen für Helga.",
+    "toene": [
+      "polite",
+      "friendly",
+      "polite",
+      "slowly",
+      "unsure",
+      "patient",
+      "satisfied"
+    ]
+  },
+  "u02-d1": {
+    "szene": "Mia und Thomas schauen ein Familienfoto an.",
+    "toene": ["curious", "proud", "curious", "warm", "curious", "happy"]
+  },
+  "u02-d2": {
+    "szene": "Anna rät falsch, Jonas lacht und erklärt es.",
+    "toene": [
+      "curious",
+      "laughing",
+      "interested",
+      "proud",
+      "curious",
+      "friendly"
+    ]
+  },
+  "u02-d3": {
+    "szene": "Claudia ist sehr stolz auf ihr Enkelkind.",
+    "toene": ["cheerful", "friendly", "warm", "curious", "proud", "happy"]
+  },
+  "u02-d4": {
+    "szene": "Markus und Julia sprechen auf einer Party über Berufe.",
+    "toene": [
+      "curious",
+      "friendly",
+      "cheerful",
+      "curious",
+      "friendly",
+      "surprised"
+    ]
+  },
+  "u02-d5": {
+    "szene": "Zwei Kollegen reden in der Pause über den neuen Chef.",
+    "toene": ["curious", "excited", "curious", "laughing", "playful", "amused"]
+  },
+  "u02-d6": {
+    "szene": "Julia erzählt Anna an der Uni fröhlich von Jonas.",
+    "toene": [
+      "curious",
+      "happy",
+      "curious",
+      "friendly",
+      "interested",
+      "cheerful"
+    ]
+  },
+  "u03-d1": {
+    "szene": "Mia zeigt Jonas bei einem Spaziergang die Stadt.",
+    "toene": ["curious", "friendly", "curious", "amused", "curious", "friendly"]
+  },
+  "u03-d2": {
+    "szene": "Annas Eltern kommen zu Besuch, sie fragt ihren Freund Markus.",
+    "toene": [
+      "curious",
+      "cheerfully",
+      "excited",
+      "warmly",
+      "relieved",
+      "laughs softly"
+    ]
+  },
+  "u03-d3": {
+    "szene": "Claudia sucht die Post und fragt einen Passanten.",
+    "toene": [
+      "polite",
+      "helpful",
+      "unsure",
+      "helpful",
+      "curious",
+      "reassuring",
+      "relieved",
+      "friendly"
+    ]
+  },
+  "u03-d4": {
+    "szene": "Helga, eine ältere Dame, fragt nach dem Weg zum Bahnhof.",
+    "toene": [
+      "polite",
+      "helpful",
+      "careful",
+      "helpful",
+      "thoughtful",
+      "patient",
+      "grateful",
+      "friendly"
+    ]
+  },
+  "u03-d5": {
+    "szene": "Sabine und Lukas sprechen nach dem Kurs über den Heimweg.",
+    "toene": [
+      "curious",
+      "friendly",
+      "curious",
+      "helpful",
+      "hopeful",
+      "cheerful"
+    ]
+  },
+  "u03-d6": {
+    "szene": "Walter, ein älterer Kollege, fragt Julia in der Kaffeepause.",
+    "toene": [
+      "curious",
+      "cheerful",
+      "surprised",
+      "friendly",
+      "curious",
+      "sighing",
+      "sympathetic"
+    ]
+  }
+}

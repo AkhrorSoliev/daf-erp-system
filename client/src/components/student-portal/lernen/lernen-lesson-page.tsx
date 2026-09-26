@@ -12,6 +12,7 @@ import {
   EmptyState,
   LoadingCards,
 } from "../lumio";
+import { RadioSessionToggle } from "../radio/radio-session-toggle";
 import { useLernenLesson } from "./queries";
 import { useClipPlayer } from "./use-clip-player";
 import { VocabDrill } from "./vocab-drill";
@@ -132,11 +133,13 @@ export function LernenLessonPage({ lessonId }: { lessonId: number }) {
 
   return (
     <Screen narrow>
+      {/* Seans marshrutida turadi — radio dock bu yerda chizilmaydi. */}
       <StackHeader
         title={title}
         backHref={
           data ? `/portal/lernen/units/${data.unit.id}` : "/portal/lernen"
         }
+        right={<RadioSessionToggle />}
       />
 
       {isLoading ? (

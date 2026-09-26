@@ -19,6 +19,7 @@ import {
   perLessonCostForMonth,
   proratedMonthlyAmount,
 } from './monthly-price';
+import { chargeStartDate } from './charge-start-date';
 
 /** Hisob yaratish uchun kerakli yozilish shakli. */
 export interface ChargeableEnrollment {
@@ -27,11 +28,15 @@ export interface ChargeableEnrollment {
   groupId: string;
   status: EnrollmentStatus;
   startDate: Date | null;
+  /** Where the charge starts when `startDate` is empty (`chargeStartDate`). */
+  createdAt: Date;
   group: {
     id: string;
     branchId: number;
     companyId: number;
     statusEnum: GroupStatus;
+    /** A charge never covers lessons before the group opened. */
+    startDate: Date | null;
     exactDays: string[];
     course: { price: number; paymentModel: PaymentModel };
   };
@@ -151,7 +156,7 @@ export class MonthlyChargeService {
     // O'ZI ham saqlanadi: `reverseChargeForDeparture` "ketgan kungacha
     // nechtasi qoplangan edi" degan savolga JONLI kalendardan emas, shu
     // muzlatilgan ro'yxatdan javob berishi kerak (schema izohi).
-    const fromDate = enr.startDate ? tashkentDateStr(enr.startDate) : null;
+    const fromDate = chargeStartDate(enr);
     // Ko'chirilgan dars `coveredDates` ga ASL kuni bilan emas, o'zi ROSTDAN
     // o'tiladigan kuni bilan tushadi — reja bilan bir xil kalendardan.
     // Aks holda oy o'rtasida ketgan o'quvchi hali o'tilmagan darsni
@@ -969,6 +974,7 @@ export class MonthlyChargeService {
         groupId: true,
         status: true,
         startDate: true,
+        createdAt: true,
         // Chegirma shu YERDA, bir so'rovda o'qiladi — enrollment boshiga
         // alohida so'rov (N+1) emas.
         student: { select: { discountPercent: true } },
@@ -978,6 +984,7 @@ export class MonthlyChargeService {
             branchId: true,
             companyId: true,
             statusEnum: true,
+            startDate: true,
             exactDays: true,
             course: { select: { price: true, paymentModel: true } },
           },

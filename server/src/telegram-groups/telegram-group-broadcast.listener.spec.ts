@@ -207,6 +207,29 @@ describe('TelegramGroupBroadcastListener', () => {
       });
     });
 
+    it('queues the expulsion of a frozen student with its reason', async () => {
+      // A frozen student is expelled directly now; without this row the
+      // 20:00 digest would say nothing about them leaving.
+      prisma.student.findUnique.mockResolvedValue(student);
+      await listener.onEntityStatusChanged({
+        entityType: 'Student',
+        entityId: '10042',
+        oldStatus: 'FROZEN',
+        newStatus: 'EXPELLED',
+        reason: "O'qishni tashladi",
+        changedById: 555,
+        companyId: 1001,
+      });
+      expect(enqueue).toHaveBeenCalledTimes(1);
+      expect(queued()).toMatchObject({
+        relatedEntityId: 'Student:10042:STUDENT_EXPELLED',
+        payload: {
+          transition: 'STUDENT_EXPELLED',
+          reason: "O'qishni tashladi",
+        },
+      });
+    });
+
     it('drops the reason for a reactivation', async () => {
       prisma.student.findUnique.mockResolvedValue(student);
       await listener.onEntityStatusChanged({

@@ -22,6 +22,10 @@ describe('isValidTransition', () => {
     expect(isValidTransition('Student', 'FROZEN', 'ACTIVE')).toBe(true);
   });
 
+  it('allows Student FROZEN → EXPELLED (a frozen student who quit for good)', () => {
+    expect(isValidTransition('Student', 'FROZEN', 'EXPELLED')).toBe(true);
+  });
+
   it('rejects Student FROZEN → INACTIVE (removed)', () => {
     expect(isValidTransition('Student', 'FROZEN', 'INACTIVE')).toBe(false);
   });

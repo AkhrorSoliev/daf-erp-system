@@ -860,7 +860,11 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 - Three pieces of chrome depend on the rail's width — the rail, the content column's left padding, and the docked radio player's left offset. Their class fragments live in the store as `RAIL_WIDTH` / `CONTENT_INSET` / `PLAYER_INSET`; **do not retype the pixel values in a component**, or the player will drift over the rail the next time a width changes.
 - The rail renders the expanded markup under `auto`, so the `<aside>` keeps `overflow-hidden` — that is what stops a single frame of clipped labels at the narrow md width.
 
-**Navigation** — single source of truth in `src/lib/student-nav-items.ts` (`studentNavItems`, keyed by `slot: tab | more | both | help`). Bottom nav shows `tab`/`both`; the rail shows `both`/`more`; the "Ko'proq" hub (`student-more-hub.tsx`) covers the `more`/`help` ground.
+**Navigation** — single source of truth in `src/lib/student-nav-items.ts` (`studentNavItems`, keyed by `slot: tab | more | both | help`). Bottom nav shows `tab`/`both`; the rail shows `both`/`more`; the "Ko'proq" hub (`student-more-hub.tsx`) renders `moreNavItems` (`more`/`help`) and `moreRoutes` (the bottom nav's "Ko'proq" active state) is derived from the same list.
+
+- **No consumer keeps a list of its own.** Until September 2026 the hub had a hand-written menu: Ta'lim was added to the config, reached the desktop rail, and on a phone had no entry point at all, while To'lovlar was both a tab and a hub row. `student-portal-nav.test.ts` renders the bottom nav and the hub and fails if any config destination is reachable on a phone zero times or twice.
+- **Tabs go to what students open most, not to every screen:** Asosiy · Ta'lim · Jadval · To'lovlar · Ko'proq. Ta'lim is the daily habit (streak, weekly rank), so it is a tab; the same test pins this list, so changing the tab set is a deliberate edit, not a side effect of reordering the config.
+- **A `more` screen is a tab root on desktop but a hub row on a phone**, so it uses `StackHeader` (whose back chevron is mobile-only), never `ScreenHeader`. The same test checks that every hub destination renders a back button.
 
 `help` (FAQ, Biz haqimizda) is the one responsive split: reference reading, not a place students navigate to often. Mobile keeps it in the "Ko'proq" hub; from md up it is dropped from the rail and listed in an `md`-only "Yordam" section on Settings, with the rail's Settings row staying lit while one is open. Adding it to the rail *and* Settings would put the same destination in two places on one screen.
 
@@ -878,6 +882,15 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 - `student-logout-button.tsx` — logout action
 - Shared data helpers: `student-portal/lib/queries.ts` + `lib/types.ts`
 - Login uses a dedicated Lumio-skinned `app/(auth)/login/student-login-form.tsx`
+
+**A request with no answer never renders the empty state.** Until September 2026 a student who was offline read "Bu hafta darslar yo'q" on Jadval (a free week that did not exist), "Davomat ma'lumotlari yo'q" on Davomat and "Hali tranzaksiya yo'q" under their balance.
+
+- **Decide with `loadState(query)` (`student-portal/lib/load-state.ts`), not with `isLoading` / `isError`.** Offline, React Query does not send the request at all: the query is *paused*, which is neither `isLoading` nor `isError`, so a screen that checked those two fell through to its empty state. A first fix that added only an `isError` check passed its tests and still showed the empty state in the browser.
+- The order is data, then paused, then error, then loading. Data first means a screen keeps what it already showed when a background refetch fails, instead of trading it for an error screen.
+- For `offline` and `failed`, render `LoadFailed` (`student-portal/load-failed.tsx`). Paused, it says "Internet aloqasi yo'q" with no button, because React Query sends the request by itself when the connection returns. Failed, it says "Ma'lumotni yuklab bo'lmadi" with "Qayta urinish". Pressing it puts the query back to pending, so the screen shows its skeleton while the retry runs. There is no spinner on the button: it would never be drawn.
+- A section with its own request fails on its own, under its own heading: when only "Balans tarixi" fails, the balance and the payment form stay usable.
+- A secondary summary with no answer is left out rather than drawn as zero, as the attendance percentage cards on Asosiy and Davomat already do.
+- `student-portal-load-states.test.ts` renders each screen failed, offline (`onlineManager.setOnline(false)`), refreshed-then-failed and empty. Add those cases when a new screen fetches.
 
 #### Activity tracking (whole `/portal/*` shell)
 
@@ -923,6 +936,16 @@ work. `student-radio-page.tsx` is only a chooser — playback lives in the shell
   the connection. The shell renders `RadioHost` (Media Session metadata for
   lock-screen controls, and the stop-on-unmount that prevents audio outliving its
   UI), `RadioMiniPlayer` and `RadioNowPlaying`.
+- **Inside a lesson the dock is not drawn.** An exercise session
+  (`isExerciseSessionRoute` in `student-nav-items.ts`: `/portal/lernen/lessons/*`
+  and `/portal/lernen/wiederholung`) owns the bottom edge with its own fixed
+  "Tekshirish"/"Keyingi" panel, so the shell drops both the bottom nav and the
+  dock there — the dock floats 96px up to clear the nav, and with the nav gone it
+  sat over the panel's feedback. The stream keeps playing; `RadioSessionToggle`
+  in the lesson header is the control that is left, and it must stay, because
+  nothing pauses the radio for the lesson's own audio. It shows the radio glyph
+  or live bars, never a pause icon, which next to the lesson's progress bar would
+  read as pausing the lesson.
 - **Audio is never proxied through our backend** — the browser connects straight to
   the broadcaster. Re-streaming would be re-transmission, with the bandwidth bill
   and the licensing exposure that implies. We ship the list of URLs, nothing else.

@@ -1,53 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Wallet,
-  ChartLineUp,
-  Radio,
-  Gear,
-  Question,
-  Info,
-  CaretRight,
-} from "@phosphor-icons/react";
+import { CaretRight } from "@phosphor-icons/react";
+import { moreNavItems } from "@/lib/student-nav-items";
 import { Screen, ScreenHeader, FadeIn, ListRow, Avatar } from "./lumio";
 import { LogoutButton } from "./student-logout-button";
 import { useStudentProfile } from "./lib/queries";
 
-const MENU = [
-  {
-    icon: Wallet,
-    tone: "teal" as const,
-    label: "To'lovlar",
-    href: "/portal/payments",
-  },
-  {
-    icon: ChartLineUp,
-    tone: "amber" as const,
-    label: "Davomat",
-    href: "/portal/attendance",
-  },
-  {
-    icon: Radio,
-    tone: "coral" as const,
-    label: "Radio",
-    href: "/portal/radio",
-  },
-  {
-    icon: Gear,
-    tone: "ink" as const,
-    label: "Sozlamalar",
-    href: "/portal/settings",
-  },
-  { icon: Question, tone: "sky" as const, label: "FAQ", href: "/portal/faq" },
-  {
-    icon: Info,
-    tone: "grape" as const,
-    label: "Biz haqimizda",
-    href: "/portal/about",
-  },
-];
-
+// The rows come from the nav config, never from a list kept here: a copy of
+// its own is how this hub once missed Ta'lim while listing To'lovlar twice.
 export function StudentMoreHub() {
   const { data: profile } = useStudentProfile();
   const name = profile
@@ -77,20 +38,20 @@ export function StudentMoreHub() {
       </FadeIn>
 
       <div className="flex flex-col gap-2.5">
-        {MENU.map((m, i) => {
-          const Icon = m.icon;
+        {moreNavItems.map((item, i) => {
+          const Icon = item.icon;
           return (
-            <FadeIn key={m.label} index={i + 1}>
+            <FadeIn key={item.url} index={i + 1}>
               <ListRow
                 icon={<Icon weight="bold" />}
-                iconTone={m.tone}
-                label={m.label}
-                href={m.href}
+                iconTone={item.tone}
+                label={item.title}
+                href={item.url}
               />
             </FadeIn>
           );
         })}
-        <FadeIn index={MENU.length + 1}>
+        <FadeIn index={moreNavItems.length + 1}>
           <LogoutButton variant="row" />
         </FadeIn>
       </div>

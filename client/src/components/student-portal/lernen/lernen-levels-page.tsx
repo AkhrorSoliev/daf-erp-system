@@ -72,7 +72,10 @@ export function LernenLevelsPage() {
 
   return (
     <Screen>
-      <ScreenHeader subtitle="Nemis tili" title="Darslar" />
+      {/* Sarlavha tab nomi bilan bir xil. «Darslar» Asosiy sahifada markazdagi
+          guruh darslarini anglatadi — bu yerda ishlatilsa, ikki joy bitta nom
+          bilan chalkashadi. */}
+      <ScreenHeader subtitle="Nemis tili" title="Ta'lim" />
 
       {/*
         Yo'l holatidan MUSTAQIL: `YolTepasi` o'z so'rovini o'zi boshqaradi

@@ -270,6 +270,10 @@ Har kompaniya uchun:
   profil sahifasidagi qarzni hisobdan chiqarish (FROZEN yozuv uchun bor),
   `ARCHIVED`. `FROZEN → EXPELLED` to'g'ridan-to'g'ri yo'q (status
   o'tishlari `FROZEN: [ACTIVE, ARCHIVED]`) — bu hozirgi qoida, o'zgarmaydi.
+  > **2026-09-25:** bu qoida o'zgardi — CEO qarori bilan muzlatilgan o'quvchi
+  > endi to'g'ridan-to'g'ri «Chetlatildi» bo'ladi (`FROZEN: [ACTIVE, EXPELLED,
+  > ARCHIVED]`, `server/src/common/status/status-transitions.ts`). Avtomatik
+  > pauza yo'li o'zgarmadi: u hamon faqat `ACTIVE → FROZEN` ni biladi.
 - **O'quvchi ilovasi:** muzlatilgan o'quvchi kira oladi; guruhi jadvaldan
   yo'qoladi (portal ACTIVE yozuvlarni o'qiydi). Nega — Telegram xabari
   tushuntiradi. Ilovada alohida «pauzada» ekrani **qilinmaydi** (YAGNI).

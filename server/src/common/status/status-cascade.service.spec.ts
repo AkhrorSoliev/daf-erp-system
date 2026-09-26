@@ -6,6 +6,120 @@ import { EntityHistoryService } from '../entity-history';
 import { EnrollmentBillingService } from '../../billing/enrollment-billing.service';
 import { MonthlyChargeService } from '../../billing/monthly-charge.service';
 
+const EARLIER = new Date('2026-08-01T09:00:00.000Z');
+
+/** An enrollment of group `group-1` with every field the cascade reads. */
+const row = (
+  id: string,
+  studentId: number,
+  status: string,
+  extra: Record<string, unknown> = {},
+) => ({
+  id,
+  studentId,
+  groupId: 'group-1',
+  status,
+  deletedAt: null as Date | null,
+  statusChangedAt: EARLIER,
+  statusChangedById: 3,
+  statusChangeReason: 'earlier change',
+  student: {
+    firstName: `Ism${studentId}`,
+    lastName: `Familiya${studentId}`,
+  },
+  group: {
+    name: '#014',
+    companyId: 1001,
+    branchId: 1,
+    courseId: 'course-1',
+    course: { paymentModel: 'LESSON_PACK' },
+  },
+  ...extra,
+});
+
+/** An enrollment of `group-2`, which is in another branch and course. */
+const otherGroupRow = (id: string, studentId: number, status: string) =>
+  row(id, studentId, status, {
+    groupId: 'group-2',
+    group: {
+      name: '#020',
+      companyId: 1001,
+      branchId: 2,
+      courseId: 'course-2',
+      course: { paymentModel: 'LESSON_PACK' },
+    },
+  });
+
+/** The `where` fields the fake below understands. */
+interface FakeWhere {
+  groupId?: string;
+  studentId?: number;
+  deletedAt?: Date | null;
+  status?: string | { in: string[] };
+  group?: { branchId?: number; courseId?: string };
+}
+
+// Stands in for the enrollment tables of a Prisma client or a transaction. It
+// applies the `where` fields the cascade filters on — and refuses any other —
+// so which enrollments were closed is read back from the rows, not from the
+// shape of the query.
+const makeTx = (rows: ReturnType<typeof row>[]) => {
+  const stateLog: Record<string, unknown>[] = [];
+  const matches = (e: ReturnType<typeof row>, where: FakeWhere) => {
+    for (const key of Object.keys(where)) {
+      if (
+        !['groupId', 'studentId', 'deletedAt', 'status', 'group'].includes(key)
+      ) {
+        throw new Error(`fake tx: unsupported where.${key}`);
+      }
+    }
+    const group = where.group ?? {};
+    for (const key of Object.keys(group)) {
+      if (key !== 'branchId' && key !== 'courseId') {
+        throw new Error(`fake tx: unsupported where.group.${key}`);
+      }
+      if (e.group[key] !== group[key]) return false;
+    }
+    const status = where.status;
+    const statusOk =
+      status === undefined ||
+      (typeof status === 'string'
+        ? e.status === status
+        : status.in.includes(e.status));
+    return (
+      (where.groupId === undefined || e.groupId === where.groupId) &&
+      (where.studentId === undefined || e.studentId === where.studentId) &&
+      (where.deletedAt === undefined || e.deletedAt === where.deletedAt) &&
+      statusOk
+    );
+  };
+  const tx = {
+    enrollment: {
+      findMany: jest.fn(({ where }: { where: FakeWhere }) =>
+        Promise.resolve(rows.filter((e) => matches(e, where))),
+      ),
+      updateMany: jest.fn(
+        ({ where, data }: { where: FakeWhere; data: object }) => {
+          const hit = rows.filter((e) => matches(e, where));
+          hit.forEach((e) => Object.assign(e, data));
+          return Promise.resolve({ count: hit.length });
+        },
+      ),
+      count: jest.fn(({ where }: { where: FakeWhere }) =>
+        Promise.resolve(rows.filter((e) => matches(e, where)).length),
+      ),
+    },
+    enrollmentStateLog: {
+      createMany: jest.fn(({ data }: { data: Record<string, unknown>[] }) => {
+        stateLog.push(...data);
+        return Promise.resolve({ count: data.length });
+      }),
+    },
+  };
+  const byId = (id: string) => rows.find((r) => r.id === id)!;
+  return { tx, byId, stateLog };
+};
+
 describe('StatusCascadeService', () => {
   let service: StatusCascadeService;
   let prisma: any;
@@ -18,6 +132,7 @@ describe('StatusCascadeService', () => {
       id: 'enr-1',
       groupId: 'group-1',
       group: {
+        name: '#001',
         companyId: 1001,
         course: { paymentModel: 'MONTHLY' },
       },
@@ -212,6 +327,20 @@ describe('StatusCascadeService', () => {
       });
     });
 
+    it('CANCELLED: logs each transition at the moment stamped on the enrollment', async () => {
+      prisma.enrollment.findMany.mockResolvedValue(mockEnrollmentWithStudent);
+
+      await service.cascade('Group', 'group-1', 'CANCELLED', 1);
+
+      const { statusChangedAt } =
+        prisma.enrollment.updateMany.mock.calls[0][0].data;
+      const [logged] =
+        prisma.enrollmentStateLog.createMany.mock.calls[0][0].data;
+      expect(statusChangedAt).toBeInstanceOf(Date);
+      // Same instant: a report replaying the log agrees with the row.
+      expect(logged.transitionAt).toBe(statusChangedAt);
+    });
+
     it('COMPLETED: completes enrollments', async () => {
       prisma.enrollment.findMany.mockResolvedValue([]);
 
@@ -235,8 +364,8 @@ describe('StatusCascadeService', () => {
 
     it('COMPLETED: auto-graduates students with no remaining active enrollments', async () => {
       prisma.enrollment.findMany.mockResolvedValue([
-        { id: 'enr-100', studentId: 100, group: { companyId: 1 } },
-        { id: 'enr-101', studentId: 101, group: { companyId: 1 } },
+        row('enr-100', 100, 'COMPLETED'),
+        row('enr-101', 101, 'COMPLETED'),
       ]);
       prisma.enrollment.count.mockResolvedValue(0);
       prisma.student.findFirst.mockResolvedValue({
@@ -275,7 +404,7 @@ describe('StatusCascadeService', () => {
 
     it('COMPLETED: does NOT graduate students who have other active enrollments', async () => {
       prisma.enrollment.findMany.mockResolvedValue([
-        { id: 'enr-100', studentId: 100, group: { companyId: 1 } },
+        row('enr-100', 100, 'COMPLETED'),
       ]);
       prisma.enrollment.count.mockResolvedValue(2);
 
@@ -283,13 +412,254 @@ describe('StatusCascadeService', () => {
 
       expect(prisma.student.update).not.toHaveBeenCalled();
       expect(prisma.statusHistory.create).not.toHaveBeenCalled();
-      expect(entityHistoryService.recordStatusChange).not.toHaveBeenCalled();
+      expect(entityHistoryService.recordStatusChange).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          newValues: expect.objectContaining({ status: 'GRADUATED' }),
+        }),
+      );
     });
 
     it('PAUSED: no cascade', async () => {
       const results = await service.cascade('Group', 'group-1', 'PAUSED', 1);
       expect(prisma.enrollment.updateMany).not.toHaveBeenCalled();
       expect(results).toHaveLength(0);
+    });
+  });
+
+  // ─── Closing a group, branch or course ────────────
+  describe('closing a group, branch or course', () => {
+    // Group 1 with every kind of enrollment, and group 2 (another branch and
+    // course) with open enrollments of its own.
+    const closingFixture = () =>
+      makeTx([
+        row('enr-active', 101, 'ACTIVE'),
+        row('enr-frozen', 102, 'FROZEN'),
+        row('enr-dropped', 103, 'DROPPED'),
+        row('enr-completed', 105, 'COMPLETED'),
+        row('enr-archived', 106, 'FROZEN', { deletedAt: EARLIER }),
+        otherGroupRow('enr-other-active', 107, 'ACTIVE'),
+        otherGroupRow('enr-other-frozen', 108, 'FROZEN'),
+      ]);
+
+    const expectUntouched = (store: ReturnType<typeof makeTx>) => {
+      expect(store.byId('enr-dropped')).toMatchObject({
+        status: 'DROPPED',
+        statusChangedAt: EARLIER,
+      });
+      expect(store.byId('enr-completed').status).toBe('COMPLETED');
+      expect(store.byId('enr-archived').status).toBe('FROZEN');
+      expect(store.byId('enr-other-active').status).toBe('ACTIVE');
+      expect(store.byId('enr-other-frozen').status).toBe('FROZEN');
+    };
+
+    it("Group CANCELLED drops the group's ACTIVE and FROZEN enrollments, and no one else's", async () => {
+      const store = closingFixture();
+      Object.assign(prisma, store.tx);
+
+      await service.cascade('Group', 'group-1', 'CANCELLED', 7);
+
+      for (const id of ['enr-active', 'enr-frozen']) {
+        expect(store.byId(id)).toMatchObject({
+          status: 'DROPPED',
+          statusChangedById: 7,
+        });
+      }
+      expectUntouched(store);
+      expect(
+        store.stateLog.map((l) => [l.enrollmentId, l.status]).sort(),
+      ).toEqual([
+        ['enr-active', 'DROPPED'],
+        ['enr-frozen', 'DROPPED'],
+      ]);
+    });
+
+    it('Group COMPLETED completes its ACTIVE enrollments and drops its FROZEN ones', async () => {
+      const store = closingFixture();
+      Object.assign(prisma, store.tx);
+
+      await service.cascade('Group', 'group-1', 'COMPLETED', 7);
+
+      expect(store.byId('enr-active')).toMatchObject({
+        status: 'COMPLETED',
+        statusChangedById: 7,
+      });
+      expect(store.byId('enr-frozen')).toMatchObject({
+        status: 'DROPPED',
+        statusChangedById: 7,
+      });
+      expectUntouched(store);
+      expect(
+        store.stateLog.map((l) => [l.enrollmentId, l.status]).sort(),
+      ).toEqual([
+        ['enr-active', 'COMPLETED'],
+        ['enr-frozen', 'DROPPED'],
+      ]);
+    });
+
+    it('Group COMPLETED never graduates a student whose enrollment was frozen', async () => {
+      const store = makeTx([
+        row('enr-active', 101, 'ACTIVE'),
+        row('enr-frozen', 102, 'FROZEN'),
+      ]);
+      Object.assign(prisma, store.tx);
+      // Both are ACTIVE students with no other group — the frozen one came
+      // back while the group was paused, which leaves the enrollment FROZEN.
+      prisma.student.findFirst.mockImplementation(({ where }: any) =>
+        Promise.resolve({ id: where.id, status: 'ACTIVE', companyId: 1001 }),
+      );
+
+      await service.cascade('Group', 'group-1', 'COMPLETED', 7);
+
+      expect(
+        prisma.student.update.mock.calls.map(([arg]: any) => arg.where.id),
+      ).toEqual([101]);
+    });
+
+    it.each([
+      ['Branch', '1', 'CLOSED'],
+      ['Branch', '1', 'ARCHIVED'],
+      ['Course', 'course-1', 'ARCHIVED'],
+    ])(
+      "%s %s → %s drops the ACTIVE and FROZEN enrollments of its groups, and no one else's",
+      async (entityType, entityId, newStatus) => {
+        const store = closingFixture();
+        Object.assign(prisma, store.tx);
+
+        await service.cascade(entityType, entityId, newStatus, 7);
+
+        for (const id of ['enr-active', 'enr-frozen']) {
+          expect(store.byId(id)).toMatchObject({
+            status: 'DROPPED',
+            statusChangedById: 7,
+          });
+        }
+        expectUntouched(store);
+      },
+    );
+
+    it.each([
+      ['Group', 'group-1', 'CANCELLED', "Guruh to'xtatildi"],
+      ['Branch', '1', 'CLOSED', 'Filial yopildi'],
+      ['Branch', '1', 'ARCHIVED', 'Filial arxivlandi'],
+      ['Course', 'course-1', 'ARCHIVED', 'Kurs arxivlandi'],
+    ])(
+      '%s %s → %s writes each removal to the student and to the group',
+      async (entityType, entityId, newStatus, sabab) => {
+        const store = makeTx([
+          row('enr-active', 101, 'ACTIVE'),
+          row('enr-frozen', 102, 'FROZEN'),
+        ]);
+        Object.assign(prisma, store.tx);
+
+        await service.cascade(entityType, entityId, newStatus, 7);
+
+        const written = entityHistoryService.recordDelete.mock.calls.map(
+          ([p]: [Record<string, unknown>]) => p,
+        );
+        expect(written).toHaveLength(4);
+        for (const studentId of [101, 102]) {
+          expect(written).toContainEqual({
+            entityType: 'Student',
+            entityId: studentId,
+            oldValues: {
+              guruh: '#014',
+              guruhId: 'group-1',
+              action: 'GURUHDAN_CHIQARILDI',
+              sabab,
+            },
+            changedById: 7,
+            companyId: 1001,
+          });
+          expect(written).toContainEqual({
+            entityType: 'Group',
+            entityId: 'group-1',
+            oldValues: {
+              action: 'OQUVCHI_CHIQARILDI',
+              oquvchi: `Ism${studentId} Familiya${studentId}`,
+              oquvchiId: studentId,
+              sabab,
+            },
+            changedById: 7,
+            companyId: 1001,
+          });
+        }
+      },
+    );
+
+    it.each([
+      ['Group', 'group-1', 'CANCELLED'],
+      ['Group', 'group-1', 'COMPLETED'],
+      ['Branch', '1', 'CLOSED'],
+      ['Course', 'course-1', 'ARCHIVED'],
+    ])(
+      "%s %s → %s gives a FROZEN enrollment's unused money back like any other closure",
+      async (entityType, entityId, newStatus) => {
+        const store = makeTx([row('enr-frozen', 102, 'FROZEN')]);
+        Object.assign(prisma, store.tx);
+
+        await service.cascade(entityType, entityId, newStatus, 7);
+
+        expect(
+          enrollmentBillingService.refundPrepaidToBalance,
+        ).toHaveBeenCalledWith(
+          prisma,
+          expect.objectContaining({
+            enrollmentId: 'enr-frozen',
+            performedById: 7,
+          }),
+        );
+        expect(
+          monthlyChargeService.reverseChargeForDeparture,
+        ).toHaveBeenCalledWith(
+          prisma,
+          expect.objectContaining({
+            enrollmentId: 'enr-frozen',
+            companyId: 1001,
+            performedById: 7,
+          }),
+        );
+      },
+    );
+
+    it('Group COMPLETED writes each completion to the student alone, and each frozen removal to the student and the group', async () => {
+      const store = makeTx([
+        row('enr-active', 101, 'ACTIVE'),
+        row('enr-frozen', 102, 'FROZEN'),
+      ]);
+      Object.assign(prisma, store.tx);
+
+      await service.cascade('Group', 'group-1', 'COMPLETED', 7);
+
+      // No `status` key: the 'entity.status.changed' listeners read it as the
+      // student's own status and would post a system comment and a Telegram
+      // digest line for a change the student never had.
+      expect(
+        entityHistoryService.recordStatusChange.mock.calls.map(([p]: any) => p),
+      ).toEqual([
+        {
+          entityType: 'Student',
+          entityId: 101,
+          oldValues: { statusEnum: 'ACTIVE' },
+          newValues: {
+            statusEnum: 'COMPLETED',
+            guruhId: 'group-1',
+            action: 'GURUH_TUGALLANDI',
+            sabab: '«#014» guruhi tugallandi',
+          },
+          changedById: 7,
+          companyId: 1001,
+        },
+      ]);
+      expect(
+        entityHistoryService.recordDelete.mock.calls.map(([p]: any) => [
+          p.entityType,
+          p.entityId,
+          p.oldValues.sabab,
+        ]),
+      ).toEqual([
+        ['Student', 102, "Guruh tugallandi, o'quvchi muzlatilgan edi"],
+        ['Group', 'group-1', "Guruh tugallandi, o'quvchi muzlatilgan edi"],
+      ]);
     });
   });
 
@@ -727,6 +1097,205 @@ describe('StatusCascadeService', () => {
       const todayValues = calls.map(([, params]: any) => params.today);
       expect(todayValues[0]).toBeDefined();
       expect(todayValues[0]).toBe(todayValues[1]);
+    });
+  });
+
+  // ─── Group deletion (on the caller's transaction) ──
+  describe('cascadeGroupDeletion', () => {
+    // 10:00 UTC is 15:00 in Tashkent — the same calendar day, 2026-09-25.
+    const DELETED_AT = new Date('2026-09-25T10:00:00.000Z');
+    const params = {
+      groupId: 'group-1',
+      userId: 7,
+      at: DELETED_AT,
+    };
+
+    const groupWithEveryKindOfEnrollment = () =>
+      makeTx([
+        row('enr-active', 101, 'ACTIVE'),
+        row('enr-frozen', 102, 'FROZEN'),
+        row('enr-dropped', 103, 'DROPPED'),
+        row('enr-transferred', 104, 'TRANSFERRED'),
+        row('enr-completed', 105, 'COMPLETED'),
+        row('enr-archived', 106, 'ACTIVE', { deletedAt: EARLIER }),
+        row('enr-other-group', 107, 'ACTIVE', { groupId: 'group-2' }),
+      ]);
+
+    it("closes the group's ACTIVE and FROZEN enrollments as DROPPED, and nothing else", async () => {
+      const { tx, byId } = groupWithEveryKindOfEnrollment();
+
+      const result = await service.cascadeGroupDeletion(tx as any, params);
+
+      expect(result).toEqual({ count: 2 });
+      for (const id of ['enr-active', 'enr-frozen']) {
+        expect(byId(id)).toMatchObject({
+          status: 'DROPPED',
+          statusChangedAt: DELETED_AT,
+          statusChangedById: 7,
+          statusChangeReason: "Guruh o'chirildi",
+        });
+      }
+      // Already closed, archived, or another group's: untouched.
+      expect(byId('enr-dropped')).toMatchObject({
+        status: 'DROPPED',
+        statusChangedAt: EARLIER,
+        statusChangeReason: 'earlier change',
+      });
+      expect(byId('enr-transferred').status).toBe('TRANSFERRED');
+      expect(byId('enr-completed').status).toBe('COMPLETED');
+      expect(byId('enr-archived')).toMatchObject({
+        status: 'ACTIVE',
+        statusChangedAt: EARLIER,
+      });
+      expect(byId('enr-other-group')).toMatchObject({
+        status: 'ACTIVE',
+        statusChangedAt: EARLIER,
+      });
+    });
+
+    it('writes one DROPPED state-log row per closed enrollment, at the deletion instant', async () => {
+      const { tx, stateLog } = groupWithEveryKindOfEnrollment();
+
+      await service.cascadeGroupDeletion(tx as any, params);
+
+      expect(stateLog).toHaveLength(2);
+      expect(stateLog).toEqual(
+        expect.arrayContaining(
+          ['enr-active', 'enr-frozen'].map((enrollmentId) => ({
+            enrollmentId,
+            status: 'DROPPED',
+            transitionAt: DELETED_AT,
+            reason: "Guruh o'chirildi",
+            changedById: 7,
+          })),
+        ),
+      );
+    });
+
+    it("returns each closed enrollment's unused money on the caller's transaction", async () => {
+      const { tx } = groupWithEveryKindOfEnrollment();
+
+      await service.cascadeGroupDeletion(tx as any, params);
+
+      // No transaction of its own: a refund that commits while the deletion
+      // rolls back is the half-done state this path exists to prevent.
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+
+      const refunds = enrollmentBillingService.refundPrepaidToBalance.mock
+        .calls as [unknown, { enrollmentId: string; performedById: number }][];
+      expect(refunds.map(([client]) => client === tx)).toEqual([true, true]);
+      expect(refunds.map(([, p]) => [p.enrollmentId, p.performedById])).toEqual(
+        expect.arrayContaining([
+          ['enr-active', 7],
+          ['enr-frozen', 7],
+        ]),
+      );
+      expect(refunds).toHaveLength(2);
+
+      const departures = monthlyChargeService.reverseChargeForDeparture.mock
+        .calls as [unknown, Record<string, unknown>][];
+      expect(departures.map(([client]) => client === tx)).toEqual([true, true]);
+      expect(departures.map(([, p]) => p)).toEqual(
+        expect.arrayContaining(
+          ['enr-active', 'enr-frozen'].map((enrollmentId) =>
+            expect.objectContaining({
+              enrollmentId,
+              departureDate: DELETED_AT,
+              today: '2026-09-25',
+              companyId: 1001,
+              performedById: 7,
+            }),
+          ),
+        ),
+      );
+      expect(departures).toHaveLength(2);
+    });
+
+    it('lets a failed refund abort the deletion instead of logging and moving on', async () => {
+      const { tx } = groupWithEveryKindOfEnrollment();
+      enrollmentBillingService.refundPrepaidToBalance
+        .mockResolvedValueOnce(null)
+        .mockRejectedValueOnce(new Error('lock timeout'));
+
+      await expect(
+        service.cascadeGroupDeletion(tx as any, params),
+      ).rejects.toThrow('lock timeout');
+    });
+
+    it('records the removal on each student and on the group, inside the transaction', async () => {
+      const { tx } = groupWithEveryKindOfEnrollment();
+
+      await service.cascadeGroupDeletion(tx as any, params);
+
+      const written = entityHistoryService.recordDelete.mock.calls.map(
+        ([p]: [Record<string, unknown>]) => p,
+      );
+      expect(written).toHaveLength(4);
+      expect(written.every((p: { tx: unknown }) => p.tx === tx)).toBe(true);
+      expect(written).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            entityType: 'Student',
+            entityId: 101,
+            oldValues: {
+              guruh: '#014',
+              guruhId: 'group-1',
+              action: 'GURUHDAN_CHIQARILDI',
+              sabab: "Guruh o'chirildi",
+            },
+            changedById: 7,
+            companyId: 1001,
+          }),
+          expect.objectContaining({
+            entityType: 'Student',
+            entityId: 102,
+            oldValues: expect.objectContaining({
+              action: 'GURUHDAN_CHIQARILDI',
+            }),
+          }),
+          expect.objectContaining({
+            entityType: 'Group',
+            entityId: 'group-1',
+            oldValues: {
+              action: 'OQUVCHI_CHIQARILDI',
+              oquvchi: 'Ism101 Familiya101',
+              oquvchiId: 101,
+              sabab: "Guruh o'chirildi",
+            },
+            changedById: 7,
+            companyId: 1001,
+          }),
+          expect.objectContaining({
+            entityType: 'Group',
+            entityId: 'group-1',
+            oldValues: expect.objectContaining({ oquvchiId: 102 }),
+          }),
+        ]),
+      );
+    });
+
+    it('changes nothing for enrollments it already closed when run again', async () => {
+      const { tx, byId, stateLog } = makeTx([
+        row('enr-active', 101, 'ACTIVE'),
+        row('enr-dropped', 103, 'DROPPED'),
+      ]);
+      await service.cascadeGroupDeletion(tx as any, params);
+
+      const again = await service.cascadeGroupDeletion(tx as any, {
+        ...params,
+        at: new Date('2026-09-25T11:00:00.000Z'),
+      });
+
+      expect(again).toEqual({ count: 0 });
+      expect(byId('enr-active').statusChangedAt).toEqual(DELETED_AT);
+      expect(stateLog).toHaveLength(1);
+      expect(
+        enrollmentBillingService.refundPrepaidToBalance,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        monthlyChargeService.reverseChargeForDeparture,
+      ).toHaveBeenCalledTimes(1);
+      expect(entityHistoryService.recordDelete).toHaveBeenCalledTimes(2);
     });
   });
 

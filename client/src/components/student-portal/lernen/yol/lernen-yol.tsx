@@ -121,7 +121,7 @@ function SeansTuguni({
 
 /**
  * O'quv yo'lining o'zi — Duolingo uslubidagi zigzag, tepa qismisiz
- * (sarlavha, holat va "Darslar" nomi chaqiruvchi sahifada).
+ * (sarlavha, holat va "Ta'lim" nomi chaqiruvchi sahifada).
  *
  * Holat qarorlarining HAMMASI `yolTugunlari`da — bu komponent faqat
  * o'sha yassi ro'yxatni o'qiydi va turi bo'yicha chizadi, qayta
