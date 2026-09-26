@@ -387,11 +387,13 @@ Every entity update that touches a tracked field MUST also write a snapshot row.
 
 **When adding new code that mutates these fields:** wire the corresponding snapshot write or the activity report will silently use the new value retroactively.
 
-#### Reads (`reports-center-activity.service.ts`)
+#### Reads
 
-`loadSnapshots()` fetches all snapshots overlapping the period in one batched query and returns in-memory `Map`s keyed by entity ID. Per-date lookups (`capacityOn`, `scheduleOn`, `priceOn`, `statusOn`) walk the small per-entity arrays. Falls back to current entity values when no snapshot exists (degraded mode for un-backfilled data).
+`reports-center-activity.service.ts` — `loadSnapshots()` fetches all snapshots overlapping the period in one batched query and returns in-memory `Map`s keyed by entity ID. Per-date lookups (`capacityOn`, `scheduleOn`, `priceOn`, `statusOn`) walk the small per-entity arrays. Falls back to current entity values when no snapshot exists (degraded mode for un-backfilled data).
 
 `statusOn` reads through `enrollmentStatusOn` (`students/shared/enrollment-status-on.ts`), the reader the departures loader uses too, and each enrollment's log first passes through `supplyOpeningRow`, which the loader shares. An enrollment opened before the state log existed (up to 2026-04-26) can have a log that starts with its closing, the opening ACTIVE row never written; without that row it reads as absent from its creation until its first logged transition.
+
+`reports/shared/teacher-change-departures.ts` — the teacher-change retention card and its drill-down list ("left within 5 lessons of a teacher change") date a departure by the start of the enrollment's current stop: its earliest FROZEN/DROPPED log row after its last ACTIVE row. Never by `statusChangedAt` — that column moves again when a frozen enrollment is closed later (expelled, archived, its group closed), which used to pull a student out of the window they froze in. A closing that was never logged is completed from the row by `supplyClosingRow`, which the departures loader shares. Both readers go through `loadTeacherChangeDepartures`, so the count and the list cannot disagree.
 
 #### Backfill
 
