@@ -27,29 +27,33 @@ export function StatementCard() {
     }
   }
 
+  // A size container: a phone keeps the full-width button under the text, a
+  // wider card puts it beside the text instead of spending a row on it.
   return (
-    <Card className="space-y-4">
-      <div className="flex items-start gap-3">
-        <IconTile icon={<FileText weight="bold" />} tone="coral" />
-        <div className="min-w-0 space-y-1">
-          <h2 className="font-display text-lg font-bold text-ink-900">
-            To&apos;lovlar hisoboti
-          </h2>
-          <p className="text-sm text-ink-500">
-            Har bir to&apos;lovingiz qaysi darslarga ketgani, oyma-oy
-          </p>
+    <Card className="@container">
+      <div className="flex flex-col gap-4 @sm:flex-row @sm:items-center">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <IconTile icon={<FileText weight="bold" />} tone="coral" />
+          <div className="min-w-0 space-y-1">
+            <h2 className="font-display text-lg font-bold text-ink-900">
+              To&apos;lovlar hisoboti
+            </h2>
+            <p className="text-sm text-ink-500">
+              Har bir to&apos;lovingiz qaysi darslarga ketgani, oyma-oy
+            </p>
+          </div>
         </div>
+        <Button
+          variant="primary"
+          size="sm"
+          loading={downloading}
+          iconBefore={<DownloadSimple weight="bold" />}
+          onClick={download}
+          className="w-full @sm:w-auto @sm:shrink-0"
+        >
+          PDF yuklab olish
+        </Button>
       </div>
-      <Button
-        variant="primary"
-        size="sm"
-        block
-        loading={downloading}
-        iconBefore={<DownloadSimple weight="bold" />}
-        onClick={download}
-      >
-        PDF yuklab olish
-      </Button>
     </Card>
   );
 }

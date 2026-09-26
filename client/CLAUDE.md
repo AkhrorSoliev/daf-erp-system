@@ -966,13 +966,14 @@ work. `student-radio-page.tsx` is only a chooser — playback lives in the shell
 - **Payme flow**: Backend generates base64-encoded checkout URL → redirects to `checkout.paycom.uz` → Paycom calls our JSON-RPC webhook
 - **Click flow**: Backend generates redirect URL → redirects to `my.click.uz/services/pay?...` → Click calls our SHOP-API webhook (Prepare + Complete)
 - **Key difference**: Payme sends amounts in tiyin (×100), Click sends amounts in so'm (as-is)
-- **Quick amounts**: 100K, 200K, 300K, 400K, 500K, 600K, 700K so'm
+- **Quick amounts**: 100K, 200K, 300K, 400K, 500K, 600K, 700K so'm — a 4-column grid that becomes one row of seven when the card is wide enough (`@container` on the card, `@lg:grid-cols-7`); the chosen chip is marked with `aria-pressed`
+- **The page is never wider than the screen.** The quick amounts used to be a sideways-scrolling strip. Its chips could not shrink, so the strip set the page's minimum width: on a 390px phone the page laid out 627px wide, with Click, the "so'm" and the Balans tarixi amounts past the right edge (on a desktop it hid the last amounts from anyone without a trackpad). Do not bring the strip back, and keep `grid-cols-1` on the page grid: a bare `grid` has an implicit column that grows to its widest unbreakable child, while `grid-cols-1` is `minmax(0, 1fr)`. `student-payment-summary.test.ts` fails on either. Payme/Click are 56px (`h-14`) logo tiles, not 80px.
 - **Minimum**: 1,000 so'm
 - **Loading state**: "To'lov sahifasiga o'tkazilmoqda..." spinner on button during redirect
 - **Callback**: After payment, both providers redirect to `/payment/result`
 - **Balance display**: Shows current balance (green if positive, red if negative/debt)
 - **Payment history**: Fetched from `GET /student-portal/payments` — shows transaction list with amounts and timestamps
-- **Payment statement card** (`statement-card.tsx`, under "Joriy balans"): "To'lovlar hisoboti" + a coral "PDF yuklab olish" that downloads `GET /student-portal/statement.pdf` (ADR-0037) as a blob through `downloadAuthedFile` (`src/lib/download-file.ts`, shared with the admin To'lovlar tab). The file is saved under the name the server sends in `Content-Disposition` (`Surname-I-ID-DD-MM-YYYY.pdf`, `statementFilename`), which the API's CORS config exposes; `downloadAuthedFile` falls back to its second argument only if the header is missing.
+- **Payment statement card** (`statement-card.tsx`, under "Joriy balans"): "To'lovlar hisoboti" + a coral "PDF yuklab olish" (full width under the text on a phone, beside it once the card is wide enough — `@sm:`) that downloads `GET /student-portal/statement.pdf` (ADR-0037) as a blob through `downloadAuthedFile` (`src/lib/download-file.ts`, shared with the admin To'lovlar tab). The file is saved under the name the server sends in `Content-Disposition` (`Surname-I-ID-DD-MM-YYYY.pdf`, `statementFilename`), which the API's CORS config exposes; `downloadAuthedFile` falls back to its second argument only if the header is missing.
 - **Payme reference docs (UZ)**: `docs/payme-uz/index.html` — 25-page Uzbek-language reference covering Merchant API, Subscribe API, checkout initialization (GET/POST), sandbox testing, error codes, and mobile integration; mirrors the official `developer.help.paycom.uz` structure
 
 ### Position vs role in the employee form
