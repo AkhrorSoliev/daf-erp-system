@@ -9,13 +9,13 @@
  * here, not changed.
  *
  * Shared by the activity report and the departures loader, so both read one
- * enrollment's status by the same rule. Their inputs differ, so they can
- * still disagree about the same student. The loader first completes a log
- * that never recorded the closing (from the row itself), supplies the missing
- * opening ACTIVE row of an enrollment opened before the log existed (at its
- * `createdAt`), and closes the enrollments of a deleted group at the
- * deletion. The activity report reads the raw log of live groups only, so
- * before such an enrollment's first logged row it reads no status at all.
+ * enrollment's status by the same rule. Both also give each log its missing
+ * opening row first (`supplyOpeningRow`), so an enrollment opened before the
+ * log existed reads ACTIVE from its creation in both. Their inputs still
+ * differ, so they can disagree about the same student: the loader also
+ * completes a log that never recorded the closing (from the row itself) and
+ * closes the enrollments of a deleted group at the deletion, while the
+ * activity report reads the log of live groups only.
  */
 export interface EnrollmentStatusEvent {
   status: string;
@@ -50,4 +50,30 @@ export function enrollmentStatusOn(
     return fallback.status;
   }
   return 'ACTIVE';
+}
+
+/**
+ * Gives an enrollment's log its missing opening row, in place (`log` is
+ * ascending by `transitionAt`).
+ *
+ * An enrollment opens ACTIVE, and every writer logs that row at its
+ * `createdAt`. An enrollment opened before the log existed (up to
+ * 2026-04-26) can have only its later rows, so a log that starts with
+ * another status later than the creation gets its opening row back. A first
+ * row at the creation itself was the opening, so none is added. An empty log
+ * is left alone: `enrollmentStatusOn` reads such an enrollment from its own
+ * columns.
+ */
+export function supplyOpeningRow(
+  log: EnrollmentStatusEvent[],
+  createdAt: Date,
+): void {
+  const first = log[0];
+  if (
+    first &&
+    first.status !== 'ACTIVE' &&
+    createdAt.getTime() < first.transitionAt.getTime()
+  ) {
+    log.unshift({ status: 'ACTIVE', transitionAt: createdAt });
+  }
 }

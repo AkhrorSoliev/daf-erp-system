@@ -391,6 +391,8 @@ Every entity update that touches a tracked field MUST also write a snapshot row.
 
 `loadSnapshots()` fetches all snapshots overlapping the period in one batched query and returns in-memory `Map`s keyed by entity ID. Per-date lookups (`capacityOn`, `scheduleOn`, `priceOn`, `statusOn`) walk the small per-entity arrays. Falls back to current entity values when no snapshot exists (degraded mode for un-backfilled data).
 
+`statusOn` reads through `enrollmentStatusOn` (`students/shared/enrollment-status-on.ts`), the reader the departures loader uses too, and each enrollment's log first passes through `supplyOpeningRow`, which the loader shares. An enrollment opened before the state log existed (up to 2026-04-26) can have a log that starts with its closing, the opening ACTIVE row never written; without that row it reads as absent from its creation until its first logged transition.
+
 #### Backfill
 
 For existing entities, run the idempotent backfill script after deploying the migration:
