@@ -210,7 +210,13 @@ export class SalaryMonthlyService {
           status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
           date: { gte: periodStartDate, lt: periodEndDateExclusive },
         },
-        select: { id: true, studentId: true, groupId: true, date: true },
+        select: {
+          id: true,
+          studentId: true,
+          groupId: true,
+          date: true,
+          status: true,
+        },
       }),
       // perLessonCost basis.
       this.prisma.group.findMany({

@@ -3,9 +3,11 @@ import { EnrollmentStatus, MonthlyChargeStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ADMISSION_START_DAY,
+  firstLessonCoverage,
   lessonAdmission,
   paymentReach,
   type AdmissionCharge,
+  type FirstLessonCoverage,
   type LessonAdmission,
   type PaymentReach,
 } from './lesson-admission';
@@ -53,25 +55,76 @@ export class LessonAdmissionService {
   }
 
   /**
-   * ADR-0046 (R4): the lesson is the student's first of the month in this
-   * group and their payments do not reach it. A debtor ABSENT there earns
-   * the teacher nothing until they pay.
+   * ADR-0046 (R4): a debtor ABSENT at the month's first lesson earns the
+   * teacher nothing until their payments reach it. True when the lesson on
+   * `lessonDay` is that first lesson and is not yet covered.
    */
   async isUnpaidFirstLesson(
     params: { studentId: number; groupId: string; lessonDay: string },
     client: Reader = this.prisma,
   ): Promise<boolean> {
-    const admission = (
-      await this.forLesson(
-        {
-          groupId: params.groupId,
-          lessonDay: params.lessonDay,
-          studentIds: [params.studentId],
+    if (params.lessonDay < ADMISSION_START_DAY) return false;
+    const coverage = await this.loadCoverage(
+      client,
+      params.studentId,
+      params.lessonDay,
+    );
+    if (!coverage) return false;
+    const c = coverage(params.groupId, params.lessonDay);
+    return c.firstLesson && !c.covered;
+  }
+
+  /**
+   * The student's balance and CHARGED charges from `fromDay`'s month on,
+   * whatever the enrollment's status (a departed group still billed its
+   * lessons), as an evaluator of `firstLessonCoverage` per lesson — one read
+   * for however many lessons a payment re-checks. Null: no such student.
+   */
+  async loadCoverage(
+    client: Reader,
+    studentId: number,
+    fromDay: string,
+  ): Promise<
+    ((groupId: string, lessonDay: string) => FirstLessonCoverage) | null
+  > {
+    const [year, month] = fromDay.split('-').map(Number);
+    const [student, charges] = await Promise.all([
+      client.student.findUnique({
+        where: { id: studentId },
+        select: { balance: true },
+      }),
+      client.enrollmentMonthlyCharge.findMany({
+        where: {
+          studentId,
+          status: MonthlyChargeStatus.CHARGED,
+          enrollment: { deletedAt: null },
+          OR: [
+            { periodYear: { gt: year } },
+            { periodYear: year, periodMonth: { gte: month } },
+          ],
         },
-        client,
-      )
-    ).get(params.studentId);
-    return admission?.reason === 'FIRST_LESSON' && !admission.covered;
+        select: {
+          enrollmentId: true,
+          groupId: true,
+          periodYear: true,
+          periodMonth: true,
+          coveredDates: true,
+          frozenOutDates: true,
+          coveredLessons: true,
+          perLessonCost: true,
+          discountPercent: true,
+          chargedAmount: true,
+        },
+      }),
+    ]);
+    if (!student) return null;
+    return (groupId, lessonDay) =>
+      firstLessonCoverage({
+        lessonDay,
+        groupId,
+        balance: student.balance,
+        charges,
+      });
   }
 
   /** How far a payment reaches this month (payment dialog). Null: the rule does not apply. */

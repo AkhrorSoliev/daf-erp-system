@@ -56,7 +56,7 @@ describe('LessonBillingService', () => {
     // ADR-0046: nobody's first lesson is deferred unless a test says so.
     admissionService = {
       isUnpaidFirstLesson: jest.fn().mockResolvedValue(false),
-      forLesson: jest.fn().mockResolvedValue(new Map()),
+      loadCoverage: jest.fn().mockResolvedValue(null),
     };
     monthlyChargeService = {
       createChargeForEnrollment: jest.fn(),
@@ -1412,37 +1412,37 @@ describe('LessonBillingService', () => {
       });
 
       it('a payment accrues the deferred ABSENT first lesson it now reaches', async () => {
-        tx.enrollment.findMany = jest.fn().mockResolvedValue([
-          {
-            id: 'enroll-1',
-            groupId: 'group-1',
-            group: { branchId: 1, course: { paymentModel: 'MONTHLY' } },
-            monthlyCharges: [{ periodYear: 2026, periodMonth: 10 }],
-          },
-        ]);
-        tx.$queryRaw.mockResolvedValue([]);
+        tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
         tx.enrollment.findUnique.mockResolvedValue(monthlyEnrollmentRow());
         tx.attendance.findMany.mockResolvedValue([
-          { id: 'att-first', date: october },
-          { id: 'att-later', date: new Date('2026-10-09T00:00:00Z') },
-          { id: 'att-accrued', date: new Date('2026-10-12T00:00:00Z') },
+          {
+            id: 'att-first',
+            groupId: 'group-1',
+            date: october,
+            group: { branchId: 1 },
+          },
+          {
+            id: 'att-later',
+            groupId: 'group-1',
+            date: new Date('2026-10-09T00:00:00Z'),
+            group: { branchId: 1 },
+          },
+          {
+            id: 'att-accrued',
+            groupId: 'group-1',
+            date: new Date('2026-10-12T00:00:00Z'),
+            group: { branchId: 1 },
+          },
         ]);
         tx.salaryAccrual.findMany.mockResolvedValue([
           { attendanceId: 'att-accrued' },
         ]);
-        admissionService.forLesson.mockImplementation(
-          ({ lessonDay }: { lessonDay: string }) =>
-            Promise.resolve(
-              new Map([
-                [
-                  10001,
-                  lessonDay === '2026-10-02'
-                    ? { reason: 'FIRST_LESSON', covered: true }
-                    : { reason: 'PAID', covered: true },
-                ],
-              ]),
-            ),
-        );
+        const coverage = jest.fn((groupId: string, lessonDay: string) => ({
+          firstLesson: lessonDay === '2026-10-02',
+          covered: true,
+          enrollmentId: 'enroll-oct',
+        }));
+        admissionService.loadCoverage.mockResolvedValue(coverage);
 
         await service.processRetroactiveBillingForStudent(tx, {
           studentId: 10001,
@@ -1451,15 +1451,28 @@ describe('LessonBillingService', () => {
 
         expect(tx.attendance.findMany).toHaveBeenCalledWith(
           expect.objectContaining({
-            where: expect.objectContaining({
+            where: {
               studentId: 10001,
-              groupId: 'group-1',
+              companyId: 1,
               status: AttendanceStatus.ABSENT,
               date: { gte: new Date('2026-10-01T00:00:00Z') },
-            }),
+              group: { course: { paymentModel: PaymentModel.MONTHLY } },
+            },
           }),
         );
-        expect(admissionService.forLesson).toHaveBeenCalledTimes(2);
+        // One read for every lesson re-checked, from the oldest pending one.
+        expect(admissionService.loadCoverage).toHaveBeenCalledTimes(1);
+        expect(admissionService.loadCoverage).toHaveBeenCalledWith(
+          tx,
+          10001,
+          '2026-10-02',
+        );
+        expect(coverage).toHaveBeenCalledTimes(2);
+        expect(monthlyChargeService.findChargeForLesson).toHaveBeenCalledWith(
+          tx,
+          'enroll-oct',
+          october,
+        );
         expect(salaryAccrualService.createAccrual).toHaveBeenCalledTimes(1);
         expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -1471,27 +1484,49 @@ describe('LessonBillingService', () => {
       });
 
       it('a payment that still does not reach the first lesson writes nothing', async () => {
-        tx.enrollment.findMany = jest.fn().mockResolvedValue([
+        tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
+        tx.attendance.findMany.mockResolvedValue([
           {
-            id: 'enroll-1',
+            id: 'att-first',
             groupId: 'group-1',
-            group: { branchId: 1, course: { paymentModel: 'MONTHLY' } },
-            monthlyCharges: [{ periodYear: 2026, periodMonth: 10 }],
+            date: october,
+            group: { branchId: 1 },
           },
         ]);
-        tx.$queryRaw.mockResolvedValue([]);
-        tx.attendance.findMany.mockResolvedValue([
-          { id: 'att-first', date: october },
-        ]);
-        admissionService.forLesson.mockResolvedValue(
-          new Map([[10001, { reason: 'FIRST_LESSON', covered: false }]]),
-        );
+        admissionService.loadCoverage.mockResolvedValue(() => ({
+          firstLesson: true,
+          covered: false,
+          enrollmentId: 'enroll-oct',
+        }));
 
         await service.processRetroactiveBillingForStudent(tx, {
           studentId: 10001,
           companyId: 1,
         });
 
+        expect(salaryAccrualService.createAccrual).not.toHaveBeenCalled();
+      });
+
+      it('reads nothing more when every ABSENT already has its accrual', async () => {
+        tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
+        tx.attendance.findMany.mockResolvedValue([
+          {
+            id: 'att-first',
+            groupId: 'group-1',
+            date: october,
+            group: { branchId: 1 },
+          },
+        ]);
+        tx.salaryAccrual.findMany.mockResolvedValue([
+          { attendanceId: 'att-first' },
+        ]);
+
+        await service.processRetroactiveBillingForStudent(tx, {
+          studentId: 10001,
+          companyId: 1,
+        });
+
+        expect(admissionService.loadCoverage).not.toHaveBeenCalled();
         expect(salaryAccrualService.createAccrual).not.toHaveBeenCalled();
       });
     });
@@ -1720,7 +1755,7 @@ describe('LessonBillingService', () => {
             provide: LessonAdmissionService,
             useValue: {
               isUnpaidFirstLesson: jest.fn().mockResolvedValue(false),
-              forLesson: jest.fn().mockResolvedValue(new Map()),
+              loadCoverage: jest.fn().mockResolvedValue(null),
             },
           },
           {

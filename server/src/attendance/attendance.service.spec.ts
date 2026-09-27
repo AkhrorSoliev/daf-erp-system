@@ -624,7 +624,6 @@ describe('AttendanceService', () => {
         reason: 'NOT_APPLIED',
         shortfall: 0,
         paidThrough: null,
-        covered: true,
       });
       expect(result.activeStudents[1].admission).toMatchObject({
         admitted: false,

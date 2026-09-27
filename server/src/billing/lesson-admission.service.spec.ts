@@ -15,7 +15,7 @@ const chargeRow = (studentId: number) => ({
 
 describe('LessonAdmissionService', () => {
   const prisma = {
-    student: { findMany: jest.fn() },
+    student: { findMany: jest.fn(), findUnique: jest.fn() },
     enrollmentMonthlyCharge: { findMany: jest.fn() },
   };
   const service = new LessonAdmissionService(prisma as never);
@@ -90,6 +90,99 @@ describe('LessonAdmissionService', () => {
       paidThrough: '2026-10-05',
       next: { date: '2026-10-07', groupName: '#005', needed: 100000 },
       clearsDebt: false,
+    });
+  });
+
+  describe('first-lesson coverage (ADR-0046, R4)', () => {
+    const coverageRow = (over: Record<string, unknown> = {}) => ({
+      enrollmentId: 'enr-1',
+      groupId: 'g005',
+      periodYear: 2026,
+      periodMonth: 10,
+      coveredDates: OCT,
+      frozenOutDates: [],
+      coveredLessons: 3,
+      perLessonCost: 100000,
+      discountPercent: 0,
+      chargedAmount: 300000,
+      ...over,
+    });
+
+    it('reads every charge from the lesson month on, whatever the enrollment status', async () => {
+      prisma.student.findUnique.mockResolvedValue({ balance: -300000 });
+      prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+        coverageRow(),
+      ]);
+
+      const coverage = await service.loadCoverage(
+        prisma as never,
+        7,
+        '2026-10-02',
+      );
+
+      expect(prisma.enrollmentMonthlyCharge.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            studentId: 7,
+            status: 'CHARGED',
+            enrollment: { deletedAt: null },
+            OR: [
+              { periodYear: { gt: 2026 } },
+              { periodYear: 2026, periodMonth: { gte: 10 } },
+            ],
+          },
+        }),
+      );
+      expect(coverage!('g005', '2026-10-02')).toEqual({
+        firstLesson: true,
+        covered: false,
+        enrollmentId: 'enr-1',
+      });
+    });
+
+    it('calls an ABSENT on an unpaid first lesson unpaid, and a paid one not', async () => {
+      prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+        coverageRow(),
+      ]);
+      prisma.student.findUnique.mockResolvedValue({ balance: -300000 });
+      await expect(
+        service.isUnpaidFirstLesson({
+          studentId: 7,
+          groupId: 'g005',
+          lessonDay: '2026-10-02',
+        }),
+      ).resolves.toBe(true);
+
+      // 100 000 paid: the first lesson is reached.
+      prisma.student.findUnique.mockResolvedValue({ balance: -200000 });
+      await expect(
+        service.isUnpaidFirstLesson({
+          studentId: 7,
+          groupId: 'g005',
+          lessonDay: '2026-10-02',
+        }),
+      ).resolves.toBe(false);
+
+      // The 2nd lesson is contract 3.2's business, not this rule's.
+      prisma.student.findUnique.mockResolvedValue({ balance: -300000 });
+      await expect(
+        service.isUnpaidFirstLesson({
+          studentId: 7,
+          groupId: 'g005',
+          lessonDay: '2026-10-05',
+        }),
+      ).resolves.toBe(false);
+    });
+
+    it('reads nothing before 01.10.2026', async () => {
+      await expect(
+        service.isUnpaidFirstLesson({
+          studentId: 7,
+          groupId: 'g005',
+          lessonDay: '2026-09-30',
+        }),
+      ).resolves.toBe(false);
+      expect(prisma.student.findUnique).not.toHaveBeenCalled();
     });
   });
 });

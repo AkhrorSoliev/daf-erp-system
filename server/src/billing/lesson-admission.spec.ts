@@ -1,9 +1,12 @@
 import {
   ADMITTED_WITHOUT_RULE,
+  firstLessonCoverage,
   heldAfter,
+  isFirstLessonOfMonth,
   lessonAdmission,
   paymentReach,
   type AdmissionCharge,
+  type CoverageCharge,
 } from './lesson-admission';
 
 // #005 in October 2026: Mon/Wed/Fri, 13 lessons, 450 000 a month.
@@ -60,19 +63,6 @@ describe('lessonAdmission', () => {
       reason: 'FIRST_LESSON',
       shortfall: 0,
       paidThrough: null,
-      covered: false,
-    });
-  });
-
-  it('marks a first lesson the payments reach as covered (ADR-0046)', () => {
-    // Lesson 1 costs 34 615: owing no more than the other 12 lessons is paid.
-    expect(admit(-(12 * 34615), '2026-10-02')).toMatchObject({
-      reason: 'FIRST_LESSON',
-      covered: true,
-    });
-    expect(admit(-(12 * 34615) - 1, '2026-10-02')).toMatchObject({
-      reason: 'FIRST_LESSON',
-      covered: false,
     });
   });
 
@@ -82,7 +72,6 @@ describe('lessonAdmission', () => {
       reason: 'NOT_PAID',
       shortfall: 450000 - 11 * 34615,
       paidThrough: null,
-      covered: false,
     });
   });
 
@@ -93,7 +82,6 @@ describe('lessonAdmission', () => {
       reason: 'PAID',
       shortfall: 0,
       paidThrough: '2026-10-05',
-      covered: true,
     });
   });
 
@@ -107,7 +95,6 @@ describe('lessonAdmission', () => {
       reason: 'PAID',
       shortfall: 0,
       paidThrough: '2026-10-09',
-      covered: true,
     });
   });
 
@@ -199,5 +186,113 @@ describe('paymentReach', () => {
     expect(
       paymentReach({ today: '2026-10-31', balanceAfter: -1000, charges }),
     ).toBeNull();
+  });
+});
+
+describe('isFirstLessonOfMonth (contract 3.2)', () => {
+  it('is every lesson before the 2nd one', () => {
+    expect(isFirstLessonOfMonth(OCT, '2026-10-02')).toBe(true);
+    expect(isFirstLessonOfMonth(OCT, '2026-10-05')).toBe(false);
+  });
+  it('is every lesson of a month with fewer than two', () => {
+    expect(isFirstLessonOfMonth(['2026-10-30'], '2026-10-30')).toBe(true);
+  });
+});
+
+describe('firstLessonCoverage (ADR-0046, R4)', () => {
+  const oct: CoverageCharge = {
+    ...g005,
+    enrollmentId: 'enr-oct',
+    periodYear: 2026,
+    periodMonth: 10,
+  };
+  // November: a Mon/Wed/Fri month of 12 lessons, 450 000.
+  const nov: CoverageCharge = {
+    ...g005,
+    enrollmentId: 'enr-oct',
+    periodYear: 2026,
+    periodMonth: 11,
+    coveredDates: Array.from(
+      { length: 12 },
+      (_, i) => `2026-11-${String(i + 2).padStart(2, '0')}`,
+    ),
+    coveredLessons: 12,
+    perLessonCost: 37500,
+  };
+  const cover = (
+    balance: number,
+    charges: CoverageCharge[],
+    day = '2026-10-02',
+  ) =>
+    firstLessonCoverage({ lessonDay: day, groupId: 'g005', balance, charges });
+
+  it('finds the first lesson and the enrollment that billed it', () => {
+    expect(cover(-450000, [oct])).toEqual({
+      firstLesson: true,
+      covered: false,
+      enrollmentId: 'enr-oct',
+    });
+    expect(cover(-450000, [oct], '2026-10-05').firstLesson).toBe(false);
+  });
+
+  it('is covered once the payments reach the lesson, as contract 3.2 counts it', () => {
+    expect(cover(-(12 * 34615), [oct]).covered).toBe(true);
+    expect(cover(-(12 * 34615) - 1, [oct]).covered).toBe(false);
+  });
+
+  it("counts a later month's charge as still held (October paid, November owed)", () => {
+    // October paid in full; November's 450 000 posted and unpaid.
+    expect(cover(-450000, [oct, nov]).covered).toBe(true);
+    // October still 1 so'm short of the first lesson, November unpaid.
+    expect(cover(-(12 * 34615) - 1 - 450000, [oct, nov]).covered).toBe(false);
+  });
+
+  it('ignores charges from before the lesson month', () => {
+    const sep: CoverageCharge = {
+      ...oct,
+      periodMonth: 9,
+      coveredDates: [],
+    };
+    // A dateless September row would otherwise release its whole charge.
+    expect(cover(-450000, [sep, oct]).covered).toBe(false);
+  });
+
+  it('is not a first lesson without a charge in that group-month', () => {
+    expect(cover(-450000, [nov])).toMatchObject({
+      firstLesson: false,
+      enrollmentId: null,
+    });
+    expect(
+      firstLessonCoverage({
+        lessonDay: '2026-10-02',
+        groupId: 'other',
+        balance: -450000,
+        charges: [oct],
+      }).firstLesson,
+    ).toBe(false);
+  });
+
+  it('starts a new first lesson for a student who rejoined the group this month', () => {
+    const left = {
+      ...oct,
+      enrollmentId: 'enr-left',
+      frozenOutDates: OCT.slice(3),
+    };
+    const back = {
+      ...oct,
+      enrollmentId: 'enr-back',
+      coveredDates: OCT.slice(8),
+      coveredLessons: 5,
+    };
+    const c = cover(0, [left, back], '2026-10-21');
+    expect(c).toMatchObject({ firstLesson: true, enrollmentId: 'enr-back' });
+    expect(cover(0, [left, back], '2026-10-23').firstLesson).toBe(false);
+  });
+
+  it('reads the first lesson past the dates a freeze took out', () => {
+    const frozen = { ...oct, frozenOutDates: ['2026-10-02'] };
+    const c = cover(0, [frozen], '2026-10-05');
+    expect(c.firstLesson).toBe(true);
+    expect(c.enrollmentId).toBe('enr-oct');
   });
 });

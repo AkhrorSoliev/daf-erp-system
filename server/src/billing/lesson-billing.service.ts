@@ -549,21 +549,17 @@ export class LessonBillingService {
 
     // Phase 1b (ADR-0046, R4): a debtor's ABSENT first lesson of a month
     // accrues nothing until their payments reach it. This payment may have.
-    for (const enr of enrollments) {
-      if (enr.group.course.paymentModel !== PaymentModel.MONTHLY) continue;
-      await this.accrueDeferredFirstLessons(
-        tx,
-        {
-          enrollmentId: enr.id,
-          studentId: params.studentId,
-          groupId: enr.groupId,
-          branchId: enr.group.branchId,
-          companyId: params.companyId,
-          performedById: params.performedById,
-        },
-        carriedOver,
-      );
-    }
+    // Every monthly group counts, not only the ACTIVE enrollments above: a
+    // student who has since left still paid for the lessons they were billed.
+    await this.accrueDeferredFirstLessons(
+      tx,
+      {
+        studentId: params.studentId,
+        companyId: params.companyId,
+        performedById: params.performedById,
+      },
+      carriedOver,
+    );
 
     // Phase 2: settle deferred teacher salary accruals for SINGLE_UNCOVERED
     // deductions whose debt has now been covered (FIFO).
@@ -710,32 +706,32 @@ export class LessonBillingService {
    */
   /**
    * ADR-0046 (R4): writes the teacher's accrual for every ABSENT first lesson
-   * of a month (from 01.10.2026) that has no live accrual and that the
-   * student's payments now reach. Nothing else is touched: an ABSENT lesson
-   * that was not a first lesson was accrued when it was marked. A payment
-   * that arrives after the month's payroll closed carries the accrual over
+   * of a month (from 01.10.2026, monthly courses) that has no live accrual and
+   * that the student's payments now reach. An ABSENT that was not a first
+   * lesson was accrued when it was marked, so `firstLessonCoverage` leaves it
+   * alone. The accrual goes on the enrollment whose charge billed the lesson;
+   * a payment after the month's payroll closed carries it over
    * (`createAccrual`), and a repeat run finds nothing left to write.
    */
   private async accrueDeferredFirstLessons(
     tx: Prisma.TransactionClient,
-    params: {
-      enrollmentId: string;
-      studentId: number;
-      groupId: string;
-      branchId: number;
-      companyId: number;
-      performedById?: number;
-    },
+    params: { studentId: number; companyId: number; performedById?: number },
     carriedOverSink: CarriedOverAccrual[],
   ): Promise<void> {
     const absences = await tx.attendance.findMany({
       where: {
         studentId: params.studentId,
-        groupId: params.groupId,
+        companyId: params.companyId,
         status: AttendanceStatus.ABSENT,
         date: { gte: new Date(`${ADMISSION_START_DAY}T00:00:00.000Z`) },
+        group: { course: { paymentModel: PaymentModel.MONTHLY } },
       },
-      select: { id: true, date: true },
+      select: {
+        id: true,
+        groupId: true,
+        date: true,
+        group: { select: { branchId: true } },
+      },
       orderBy: { date: 'asc' },
     });
     if (absences.length === 0) return;
@@ -748,31 +744,29 @@ export class LessonBillingService {
       select: { attendanceId: true },
     });
     const withAccrual = new Set(accrued.map((a) => a.attendanceId));
+    const pending = absences.filter((a) => !withAccrual.has(a.id));
+    if (pending.length === 0) return;
 
-    for (const att of absences) {
-      if (withAccrual.has(att.id)) continue;
-      // `Attendance.date` is a @db.Date: its UTC calendar date is the day.
-      const lessonDay = att.date.toISOString().slice(0, 10);
-      const admission = (
-        await this.admission.forLesson(
-          {
-            groupId: params.groupId,
-            lessonDay,
-            studentIds: [params.studentId],
-          },
-          tx,
-        )
-      ).get(params.studentId);
-      if (admission?.reason !== 'FIRST_LESSON' || !admission.covered) continue;
+    // `Attendance.date` is a @db.Date: its UTC calendar date is the day.
+    const dayOf = (d: Date) => d.toISOString().slice(0, 10);
+    const coverage = await this.admission.loadCoverage(
+      tx,
+      params.studentId,
+      dayOf(pending[0].date),
+    );
+    if (!coverage) return;
 
+    for (const att of pending) {
+      const c = coverage(att.groupId, dayOf(att.date));
+      if (!c.firstLesson || !c.covered || !c.enrollmentId) continue;
       await this.accrueMonthlySalary(
         tx,
         {
           attendanceId: att.id,
-          enrollmentId: params.enrollmentId,
+          enrollmentId: c.enrollmentId,
           studentId: params.studentId,
-          groupId: params.groupId,
-          branchId: params.branchId,
+          groupId: att.groupId,
+          branchId: att.group.branchId,
           lessonDate: att.date,
           oldStatus: null,
           newStatus: AttendanceStatus.ABSENT,

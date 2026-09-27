@@ -25,12 +25,6 @@ export interface LessonAdmission {
    * month in this group the current balance reaches. Null otherwise.
    */
   paidThrough: string | null;
-  /**
-   * The student's payments reach this lesson (`balance + heldAfter(day) ≥ 0`).
-   * Only a FIRST_LESSON can be admitted without it: a debtor ABSENT there
-   * earns the teacher nothing until they pay (ADR-0046).
-   */
-  covered: boolean;
 }
 
 export const ADMITTED_WITHOUT_RULE: LessonAdmission = {
@@ -38,7 +32,6 @@ export const ADMITTED_WITHOUT_RULE: LessonAdmission = {
   reason: 'NOT_APPLIED',
   shortfall: 0,
   paidThrough: null,
-  covered: true,
 };
 
 /** One CHARGED month charge of an ACTIVE enrollment. */
@@ -82,7 +75,7 @@ export function heldAfter(
 }
 
 /** The student's lessons in one group this month, frozen-out ones excluded, sorted. */
-function groupLessons(
+export function groupLessons(
   charges: readonly AdmissionCharge[],
   groupId: string,
 ): string[] {
@@ -93,6 +86,20 @@ function groupLessons(
     for (const d of c.coveredDates) if (!out.has(d)) days.add(d);
   }
   return [...days].sort();
+}
+
+/**
+ * The lesson comes before the student's 2nd lesson of the month in the group
+ * (`paymentDueDate`): contract 3.2's lesson that may be attended unpaid.
+ * `lessons` are that group-month's lessons (`groupLessons`); with fewer than
+ * two, every lesson of the month is the first.
+ */
+export function isFirstLessonOfMonth(
+  lessons: readonly string[],
+  lessonDay: string,
+): boolean {
+  const secondLesson = paymentDueDate(lessons);
+  return secondLesson === null || lessonDay < secondLesson;
 }
 
 export function lessonAdmission(input: {
@@ -108,25 +115,22 @@ export function lessonAdmission(input: {
   // the way instead of blocking on missing data.
   if (lessons.length === 0) return ADMITTED_WITHOUT_RULE;
 
-  const reach = input.balance + heldAfter(input.charges, input.lessonDay);
-  const secondLesson = paymentDueDate(lessons);
-  if (secondLesson === null || input.lessonDay < secondLesson) {
+  if (isFirstLessonOfMonth(lessons, input.lessonDay)) {
     return {
       admitted: true,
       reason: 'FIRST_LESSON',
       shortfall: 0,
       paidThrough: null,
-      covered: reach >= 0,
     };
   }
 
+  const reach = input.balance + heldAfter(input.charges, input.lessonDay);
   if (reach < 0) {
     return {
       admitted: false,
       reason: 'NOT_PAID',
       shortfall: -reach,
       paidThrough: null,
-      covered: false,
     };
   }
 
@@ -139,13 +143,7 @@ export function lessonAdmission(input: {
       paidThrough = day;
     }
   }
-  return {
-    admitted: true,
-    reason: 'PAID',
-    shortfall: 0,
-    paidThrough,
-    covered: true,
-  };
+  return { admitted: true, reason: 'PAID', shortfall: 0, paidThrough };
 }
 
 export interface PaymentReach {
@@ -172,12 +170,15 @@ export function paymentReach(input: {
   for (const groupId of new Set(input.charges.map((c) => c.groupId))) {
     const lessons = groupLessons(input.charges, groupId);
     if (lessons.length === 0) continue;
-    const second = paymentDueDate(lessons);
     const groupName =
       input.charges.find((c) => c.groupId === groupId)?.groupName ?? '';
     for (const day of lessons) {
       if (day < input.today) continue;
-      upcoming.push({ day, groupName, free: second === null || day < second });
+      upcoming.push({
+        day,
+        groupName,
+        free: isFirstLessonOfMonth(lessons, day),
+      });
     }
   }
   if (upcoming.length === 0) return null;
@@ -207,4 +208,72 @@ export function paymentReach(input: {
     paidThrough = lesson.day;
   }
   return { paidThrough, next: null, clearsDebt: false };
+}
+
+/** A CHARGED month charge of any enrollment, with its period and owner. */
+export interface CoverageCharge extends AdmissionCharge {
+  enrollmentId: string;
+  periodYear: number;
+  periodMonth: number;
+}
+
+export interface FirstLessonCoverage {
+  /**
+   * The lesson is the student's first of its month in the group, read from
+   * the charge that billed it. No such charge: false.
+   */
+  firstLesson: boolean;
+  /**
+   * The student's payments reach it: `balance + heldAfter(charges, day) ≥ 0`
+   * over every charge from the lesson's month on. Money settles the oldest
+   * charge first, so a later month's charge counts as still held — posted
+   * since the lesson, it must not hide a payment that already covered it.
+   * Within the lesson's month it is exactly contract 3.2's reach.
+   */
+  covered: boolean;
+  /** The enrollment whose charge bills the lesson; null when none does. */
+  enrollmentId: string | null;
+}
+
+/**
+ * ADR-0046 (R4): the centre covers a debtor's first lesson of the month for
+ * the teacher only when the student came. An ABSENT there accrues when this
+ * reads `firstLesson && covered` — at the lesson, or on the payment that
+ * reaches it. `charges`: the student's CHARGED charges from the lesson's
+ * month on, whatever the enrollment's status now — a group the student has
+ * since left still billed the lessons it held.
+ */
+export function firstLessonCoverage(input: {
+  lessonDay: string;
+  groupId: string;
+  balance: number;
+  charges: readonly CoverageCharge[];
+}): FirstLessonCoverage {
+  const [year, month] = input.lessonDay.split('-').map(Number);
+  const fromMonth = year * 12 + month;
+  const charges = input.charges.filter(
+    (c) => c.periodYear * 12 + c.periodMonth >= fromMonth,
+  );
+  // The charge that billed the lesson. Its own dates decide the first lesson,
+  // as contract 3.2 reads the enrollment on the roster: a student who left
+  // and rejoined the group this month starts a new first lesson.
+  const owner =
+    charges.find(
+      (c) =>
+        c.groupId === input.groupId &&
+        c.periodYear === year &&
+        c.periodMonth === month &&
+        c.coveredDates.includes(input.lessonDay) &&
+        !c.frozenOutDates.includes(input.lessonDay),
+    ) ?? null;
+  return {
+    firstLesson:
+      owner !== null &&
+      isFirstLessonOfMonth(
+        groupLessons([owner], input.groupId),
+        input.lessonDay,
+      ),
+    covered: input.balance + heldAfter(charges, input.lessonDay) >= 0,
+    enrollmentId: owner?.enrollmentId ?? null,
+  };
 }
