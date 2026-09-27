@@ -21,6 +21,7 @@ import { RemoveFromGroupDto } from './dto/remove-from-group.dto';
 import { WriteOffCycleDebtDto } from './dto/write-off-cycle-debt.dto';
 import { EnrollToGroupDto } from './dto/enroll-to-group.dto';
 import { DeleteStudentDto } from './dto/delete-student.dto';
+import { DeparturePreviewQueryDto } from './dto/departure-preview-query.dto';
 import { SendSmsDto } from '../sms/dto/send-sms.dto';
 import { InitialBalanceDto } from './dto/initial-balance.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
@@ -35,6 +36,7 @@ import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { TransactionsService } from '../transactions/transactions.service';
 import { DebtAgeService } from '../common/finance/debt-age.service';
 import { DiscountRoleGuard } from './discount-role.guard';
+import { StudentDeparturePreviewService } from './student-departure-preview.service';
 
 @Controller('students')
 export class StudentsController {
@@ -44,6 +46,7 @@ export class StudentsController {
     private smsService: SmsService,
     private transactionsService: TransactionsService,
     private debtAge: DebtAgeService,
+    private departurePreview: StudentDeparturePreviewService,
   ) {}
 
   // Staff only. Without this the global JwtAuthGuard let ANY valid token —
@@ -259,6 +262,27 @@ export class StudentsController {
     @CurrentUser('id') userId: number,
   ) {
     return this.debtAge.getForStudent(companyId, id, userId);
+  }
+
+  // What removing (`?enrollmentId=`), expelling or archiving the student now
+  // would do to the month's charge under each policy (contract 6.2,
+  // ADR-0043). Read-only; the same three roles as the operations it
+  // previews. The caller's own right to choose a policy comes back with it.
+  @Get(':id/departure-preview')
+  @UseGuards(RolesGuard)
+  @Roles('CEO', 'Branch Director', 'Administrator')
+  getDeparturePreview(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: DeparturePreviewQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.departurePreview.preview(
+      id,
+      companyId,
+      userId,
+      query.enrollmentId,
+    );
   }
 
   // Eligibility check for the "yo'qolgan o'quvchi" write-off flow. Returns

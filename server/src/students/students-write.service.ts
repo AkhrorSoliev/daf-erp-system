@@ -527,7 +527,10 @@ export class StudentsWriteService {
       }
     });
 
-    // Cascade: ACTIVE + FROZEN enrollment → DROPPED
+    // Cascade: ACTIVE + FROZEN enrollment → DROPPED. Archiving removes a
+    // record made by mistake, not a departure, so the month's unheld lessons
+    // come back as before contract 6.2 (ADR-0043); a student who really leaves
+    // is expelled or removed from the group.
     await this.statusCascadeService.cascade(
       'Student',
       String(id),

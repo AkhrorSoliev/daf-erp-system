@@ -27,7 +27,8 @@ export type SettingKey =
   | 'payment.excusedCreditMonthlyCap'
   | 'payment.chargeDayOfMonth'
   | 'payment.debtWriteOffEnabled'
-  | 'payment.monthlyNoticesEnabled';
+  | 'payment.monthlyNoticesEnabled'
+  | 'payment.noRefundAfterPercent';
 
 export interface SettingValueMap {
   'payment.defaultModel': PaymentModel;
@@ -36,6 +37,7 @@ export interface SettingValueMap {
   'payment.chargeDayOfMonth': number;
   'payment.debtWriteOffEnabled': boolean;
   'payment.monthlyNoticesEnabled': boolean;
+  'payment.noRefundAfterPercent': number;
 }
 
 interface SettingDefinition<K extends SettingKey> {
@@ -108,6 +110,20 @@ function parseChargeDayOfMonth(raw: unknown): number {
   );
 }
 
+function parsePercent(key: SettingKey, raw: unknown): number {
+  if (
+    typeof raw === 'number' &&
+    Number.isInteger(raw) &&
+    raw >= 0 &&
+    raw <= 100
+  ) {
+    return raw;
+  }
+  throw new BadRequestException(
+    `${key} 0 dan 100 gacha bo'lgan butun son bo'lishi kerak, kelgan qiymat: ${JSON.stringify(raw)}`,
+  );
+}
+
 export const SETTING_DEFINITIONS: {
   [K in SettingKey]: SettingDefinition<K>;
 } = {
@@ -171,6 +187,16 @@ export const SETTING_DEFINITIONS: {
     defaultValue: true,
     parse: (raw) => parseBoolean('payment.monthlyNoticesEnabled', raw),
     // `MonthlyPaymentNoticeCronService` reads it by company only.
+    companyLevelOnly: true,
+  },
+  'payment.noRefundAfterPercent': {
+    key: 'payment.noRefundAfterPercent',
+    // Contract 6.2 (ADR-0043): a student who leaves after more than this
+    // share of the month's lessons were held gets no money back.
+    defaultValue: 40,
+    parse: (raw) => parsePercent('payment.noRefundAfterPercent', raw),
+    // One contract for every branch: a branch director must not move the
+    // threshold for their own branch.
     companyLevelOnly: true,
   },
 };

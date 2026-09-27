@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsWriteService } from '../transactions/transactions-write.service';
 import { SettingsService } from '../settings/settings.service';
+import { DeparturePolicy } from './departure-policy';
 
 // Cast once here rather than `as any` at every call site below: the shape
 // matches `ChargeableEnrollment` at runtime (Prisma's string enums compare
@@ -128,6 +129,7 @@ describe('MonthlyChargeService', () => {
           return Promise.resolve(true);
         if (key === 'payment.excusedCreditMonthlyCap')
           return Promise.resolve(null);
+        if (key === 'payment.noRefundAfterPercent') return Promise.resolve(40);
         return Promise.resolve(undefined);
       }),
     };
@@ -1669,6 +1671,8 @@ describe('MonthlyChargeService', () => {
             enrollmentId: 'enr-1',
             period: '2026-09',
             lessons: 4,
+            policy: 'CENTER_INITIATIVE',
+            heldPercent: 69,
             dates: ['2026-09-22', '2026-09-24', '2026-09-26', '2026-09-29'],
           },
         }),
@@ -2001,6 +2005,172 @@ describe('MonthlyChargeService', () => {
       });
 
       expect(res).not.toBeNull();
+    });
+  });
+
+  describe('contract 6.2 departure policy (ADR-0043)', () => {
+    /** A Mon/Wed/Fri group's October 2026: 13 lessons. */
+    const OCTOBER = [
+      '2026-10-02',
+      '2026-10-05',
+      '2026-10-07',
+      '2026-10-09',
+      '2026-10-12',
+      '2026-10-14',
+      '2026-10-16',
+      '2026-10-19',
+      '2026-10-21',
+      '2026-10-23',
+      '2026-10-26',
+      '2026-10-28',
+      '2026-10-30',
+    ];
+    const octoberCharge = () =>
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        id: 'chg-10',
+        groupId: 'grp-1',
+        plannedLessons: 13,
+        coveredLessons: 13,
+        coveredDates: OCTOBER,
+        frozenOutDates: [],
+        perLessonCost: 80_000,
+        discountPercent: 0,
+        chargedAmount: 1_040_000,
+        transactionId: 'tx-10',
+        status: 'CHARGED',
+      });
+
+    it('keeps the money when the student leaves after more than 40% of the month (6 of 13)', async () => {
+      octoberCharge();
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-14T10:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqarilganda',
+        today: '2026-10-14',
+        policy: 'STUDENT_CANCELLED' as DeparturePolicy,
+      });
+      expect(res).toEqual({
+        refunded: 0,
+        lessons: 0,
+        policy: 'STUDENT_CANCELLED',
+        share: { held: 6, covered: 13, percent: 46 },
+        withheld: true,
+      });
+      expect(txWriteMock.createAdjustment).not.toHaveBeenCalled();
+      expect(prismaMock.enrollmentMonthlyCharge.update).not.toHaveBeenCalled();
+    });
+
+    it('returns the unheld lessons at 38% and tags the policy and the share', async () => {
+      octoberCharge();
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-12T10:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqarilganda',
+        today: '2026-10-12',
+        policy: 'STUDENT_CANCELLED' as DeparturePolicy,
+      });
+      expect(res).toMatchObject({ refunded: 640_000, lessons: 8 });
+      expect(txWriteMock.createAdjustment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 640_000,
+          metadata: expect.objectContaining({
+            policy: 'STUDENT_CANCELLED',
+            heldPercent: 38,
+            lessons: 8,
+          }),
+        }),
+        tx,
+      );
+    });
+
+    it('reads the threshold from the company setting', async () => {
+      octoberCharge();
+      settingsMock.get.mockImplementation((_c: number, key: string) =>
+        Promise.resolve(key === 'payment.noRefundAfterPercent' ? 50 : null),
+      );
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-14T10:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqarilganda',
+        today: '2026-10-14',
+        policy: 'STUDENT_CANCELLED' as DeparturePolicy,
+      });
+      expect(settingsMock.get).toHaveBeenCalledWith(
+        1,
+        'payment.noRefundAfterPercent',
+      );
+      expect(res).toMatchObject({ refunded: 560_000, withheld: false });
+    });
+
+    it('returns the whole month on a quality claim and says so in the ledger', async () => {
+      octoberCharge();
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-14T10:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqarilganda',
+        today: '2026-10-14',
+        policy: 'QUALITY_CLAIM' as DeparturePolicy,
+      });
+      expect(res).toMatchObject({ refunded: 1_040_000, lessons: 13 });
+      expect(txWriteMock.createAdjustment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 1_040_000,
+          description: expect.stringContaining('sifat'),
+        }),
+        tx,
+      );
+    });
+
+    it("keeps today's rule when no policy is given (freeze, transfer, centre closures)", async () => {
+      octoberCharge();
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-14T10:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqarilganda',
+        today: '2026-10-14',
+      });
+      expect(res).toMatchObject({
+        refunded: 560_000,
+        lessons: 7,
+        policy: 'CENTER_INITIATIVE',
+      });
+      expect(settingsMock.get).not.toHaveBeenCalledWith(
+        1,
+        'payment.noRefundAfterPercent',
+      );
+    });
+
+    it('previews all three outcomes with the lesson dates and the threshold', async () => {
+      octoberCharge();
+      // Read-only: no backdating guard, so no `today` to pin.
+      const departureDate = new Date('2026-10-14T10:00:00Z');
+      const preview = await service.previewDepartureOutcomes(tx, {
+        enrollmentId: 'enr-1',
+        departureDate,
+        companyId: 1,
+      });
+      expect(preview).toEqual({
+        period: '2026-10',
+        departureDay: '2026-10-14',
+        lessonDates: OCTOBER,
+        held: 6,
+        covered: 13,
+        heldPercent: 46,
+        threshold: 40,
+        contractApplies: true,
+        chargedAmount: 1_040_000,
+        outcomes: {
+          STUDENT_CANCELLED: { lessons: 0, amount: 0, withheld: true },
+          CENTER_INITIATIVE: { lessons: 7, amount: 560_000, withheld: false },
+          QUALITY_CLAIM: { lessons: 13, amount: 1_040_000, withheld: false },
+        },
+      });
+      expect(txWriteMock.createAdjustment).not.toHaveBeenCalled();
     });
   });
 

@@ -110,6 +110,7 @@ describe('SettingsService', () => {
         'payment.chargeDayOfMonth': 1,
         'payment.debtWriteOffEnabled': false,
         'payment.monthlyNoticesEnabled': true,
+        'payment.noRefundAfterPercent': 40,
       });
     });
   });
@@ -132,6 +133,7 @@ describe('SettingsService', () => {
         'payment.chargeDayOfMonth': [],
         'payment.debtWriteOffEnabled': [],
         'payment.monthlyNoticesEnabled': [],
+        'payment.noRefundAfterPercent': [],
       });
     });
 

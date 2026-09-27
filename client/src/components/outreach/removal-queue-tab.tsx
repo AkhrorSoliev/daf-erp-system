@@ -21,6 +21,7 @@ import {
   resolveWriteOffAmount,
   type WriteOffChoice,
 } from "@/components/students/student-remove-from-group-dialog";
+import type { DepartureChoice } from "@/components/students/departure-money";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -128,17 +129,17 @@ export function RemovalQueueTab({ isActive, onLogCall }: RemovalQueueTabProps) {
     setWriteOffReason("");
   }
 
-  async function handleRemove() {
+  async function handleRemove(money: DepartureChoice) {
     if (!target || !canSubmit) return;
     setRemoving(true);
     try {
-      const payload: {
+      const payload: DepartureChoice & {
         departureReasonId?: string;
         reason?: string;
         writeOffCycleDebt?: boolean;
         writeOffReason?: string;
         writeOffConfirmAmount?: number;
-      } = {};
+      } = { ...money };
       if (reasonId) payload.departureReasonId = reasonId;
       if (trimmedReason) payload.reason = trimmedReason;
       if (
@@ -274,6 +275,8 @@ export function RemovalQueueTab({ isActive, onLogCall }: RemovalQueueTabProps) {
         removing={removing}
         canSubmit={canSubmit}
         onConfirm={handleRemove}
+        studentId={target?.studentId ?? null}
+        enrollmentId={target?.enrollmentId ?? null}
         eligibility={eligibility}
         eligibilityLoading={eligibilityLoading}
         writeOff={writeOff}

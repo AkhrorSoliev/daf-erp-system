@@ -12,6 +12,7 @@ import { DebtWriteOffService } from '../billing/debt-write-off.service';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SettingsService } from '../settings/settings.service';
+import { DEPARTURE_POLICY_FORBIDDEN } from './shared/departure-policy-access';
 
 describe('StudentEnrollmentService', () => {
   let service: StudentEnrollmentService;
@@ -19,6 +20,7 @@ describe('StudentEnrollmentService', () => {
   let monthlyChargeMock: any;
   let settingsMock: any;
   let debtWriteOffMock: any;
+  let historyMock: any;
 
   const mockStudent = {
     id: 1,
@@ -108,13 +110,13 @@ describe('StudentEnrollmentService', () => {
         { provide: PrismaService, useValue: prisma },
         {
           provide: EntityHistoryService,
-          useValue: {
+          useValue: (historyMock = {
             recordCreate: jest.fn(),
             recordUpdate: jest.fn(),
             recordDelete: jest.fn(),
             recordStatusChange: jest.fn(),
             recordRestore: jest.fn(),
-          },
+          }),
         },
         {
           provide: EnrollmentBillingService,
@@ -677,6 +679,101 @@ describe('StudentEnrollmentService', () => {
           performedById: 10001,
         }),
       );
+    });
+
+    describe('contract 6.2 departure policy (ADR-0043)', () => {
+      const leave = (extra: Record<string, unknown> = {}) =>
+        service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+          reason: "O'z xohishi bilan",
+          ...extra,
+        });
+
+      it("treats a removal as the student's own decision by default", async () => {
+        await leave();
+
+        expect(
+          monthlyChargeMock.reverseChargeForDeparture,
+        ).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ policy: 'STUDENT_CANCELLED' }),
+        );
+      });
+
+      it('passes a chosen policy once the database confirms a CEO or branch director', async () => {
+        await leave({ departurePolicy: 'QUALITY_CLAIM' });
+
+        expect(prisma.user.findFirst).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              id: 10001,
+              roles: {
+                some: { role: { name: { in: ['CEO', 'Branch Director'] } } },
+              },
+            }),
+          }),
+        );
+        expect(
+          monthlyChargeMock.reverseChargeForDeparture,
+        ).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ policy: 'QUALITY_CLAIM' }),
+        );
+      });
+
+      it('refuses a chosen policy from anyone else before anything is written', async () => {
+        // The first read is the policy check: an administrator is not found.
+        prisma.user.findFirst.mockResolvedValueOnce(null);
+
+        await expect(
+          leave({ departurePolicy: 'CENTER_INITIATIVE' }),
+        ).rejects.toThrow(DEPARTURE_POLICY_FORBIDDEN);
+        expect(
+          monthlyChargeMock.reverseChargeForDeparture,
+        ).not.toHaveBeenCalled();
+        expect(prisma.enrollment.update).not.toHaveBeenCalled();
+      });
+
+      it("writes what happened to the month's money into the student's and the group's history", async () => {
+        monthlyChargeMock.reverseChargeForDeparture.mockResolvedValueOnce({
+          refunded: 0,
+          lessons: 0,
+          policy: 'STUDENT_CANCELLED',
+          share: { held: 6, covered: 13, percent: 46 },
+          withheld: true,
+        });
+
+        await leave();
+
+        const pul =
+          "Shartnoma 6.2: oy darslarining 46% o'tgan (6/13) — oy to'lovi qaytarilmadi";
+        expect(historyMock.recordDelete).toHaveBeenCalledWith(
+          expect.objectContaining({
+            entityType: 'Student',
+            oldValues: expect.objectContaining({
+              action: 'GURUHDAN_CHIQARILDI',
+              pul,
+            }),
+          }),
+        );
+        expect(historyMock.recordDelete).toHaveBeenCalledWith(
+          expect.objectContaining({
+            entityType: 'Group',
+            oldValues: expect.objectContaining({
+              action: 'OQUVCHI_CHIQARILDI',
+              pul,
+            }),
+          }),
+        );
+      });
+
+      it('adds no money line when the enrollment had no month to settle', async () => {
+        await leave();
+
+        const student = historyMock.recordDelete.mock.calls.find(
+          ([arg]: [{ entityType: string }]) => arg.entityType === 'Student',
+        );
+        expect(student[0].oldValues).not.toHaveProperty('pul');
+      });
     });
 
     it("qarz kechirish O'CHIQ (boshlang'ich): writeOffCycleDebt=true rad etiladi, yozilish tegilmaydi", async () => {

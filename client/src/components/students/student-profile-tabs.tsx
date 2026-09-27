@@ -22,6 +22,7 @@ import { StudentGroupCard } from "./student-group-card";
 import { PaymentStatement } from "./statement/payment-statement";
 import { LessonTrailTab } from "./lesson-trail-tab";
 import { StudentRemoveFromGroupDialog } from "./student-remove-from-group-dialog";
+import type { DepartureChoice } from "./departure-money";
 import { StudentClosedEnrollmentsSection } from "./student-closed-enrollments-section";
 import type { DebtWriteOffEligibility } from "./debt-write-off-types";
 
@@ -212,7 +213,7 @@ export function StudentProfileTabs({
     setRemoveDialogOpen(true);
   };
 
-  const confirmRemove = async () => {
+  const confirmRemove = async (money: DepartureChoice) => {
     if (!removeEnrollmentId || !canSubmitRemove) return;
     setRemoving(true);
     // Instant: remove from UI
@@ -221,13 +222,13 @@ export function StudentProfileTabs({
     );
     setRemoveDialogOpen(false);
     try {
-      const payload: {
+      const payload: DepartureChoice & {
         departureReasonId?: string;
         reason?: string;
         writeOffCycleDebt?: boolean;
         writeOffReason?: string;
         writeOffConfirmAmount?: number;
-      } = {};
+      } = { ...money };
       if (removeReasonId) payload.departureReasonId = removeReasonId;
       if (removeReason.trim()) payload.reason = removeReason.trim();
       if (writeOff && eligibility?.eligible) {
@@ -440,6 +441,8 @@ export function StudentProfileTabs({
         removing={removing}
         canSubmit={canSubmitRemove}
         onConfirm={confirmRemove}
+        studentId={student.id}
+        enrollmentId={removeEnrollmentId}
         eligibility={eligibility}
         eligibilityLoading={eligibilityLoading}
         writeOff={writeOff}

@@ -30,6 +30,7 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import toast from "react-hot-toast";
 import type { Student } from "@/data/student-model";
 import type { DebtWriteOffEligibility } from "@/components/students/debt-write-off-types";
+import type { DepartureChoice } from "@/components/students/departure-money";
 
 interface StudentRowActionsProps {
   student: Student;
@@ -99,19 +100,19 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
       ? removeReasonId !== null
       : trimmedReason.length > 0) && writeOffReady;
 
-  const handleRemoveFromGroup = async () => {
+  const handleRemoveFromGroup = async (money: DepartureChoice) => {
     if (!enrollmentId || !canRemove) return;
     setRemoving(true);
     setShowRemove(false);
     onDeleted?.(student.id);
     try {
-      const payload: {
+      const payload: DepartureChoice & {
         departureReasonId?: string;
         reason?: string;
         writeOffCycleDebt?: boolean;
         writeOffReason?: string;
         writeOffConfirmAmount?: number;
-      } = {};
+      } = { ...money };
       if (removeReasonId) payload.departureReasonId = removeReasonId;
       if (trimmedReason) payload.reason = trimmedReason;
       if (writeOff && eligibility?.eligible && resolvedWriteOffAmount !== null) {
@@ -223,6 +224,8 @@ export function StudentRowActions({ student, enrollmentId, onDeleted, onStatusCh
           removing={removing}
           canSubmit={canRemove}
           onConfirm={handleRemoveFromGroup}
+          studentId={student.id}
+          enrollmentId={enrollmentId}
           eligibility={eligibility}
           eligibilityLoading={eligibilityLoading}
           writeOff={writeOff}

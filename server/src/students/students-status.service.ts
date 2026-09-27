@@ -13,6 +13,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
+import type { DepartureMoneyNote } from '../common/status/status-cascade.service';
 import { EntityHistoryService } from '../common/entity-history';
 import {
   EnrollmentBillingService,
@@ -31,6 +32,14 @@ import {
   exitReasonRequiresComment,
 } from '../common/exit-reason-comment';
 import { buildAutoPauseReason } from '../absence-pause/absence-pause.constants';
+import { assertMayChooseDeparturePolicy } from './shared/departure-policy-access';
+
+/**
+ * Of the status changes only an expulsion is a departure that rule 6.2
+ * settles; an archive removes a record made by mistake (ADR-0043).
+ */
+export const DEPARTURE_POLICY_STATUS_ERROR =
+  'Pulni qaytarish tartibi faqat chetlatishda tanlanadi';
 
 /**
  * Status o'zgartirishni KIM so'rayotgani — oshkora, chunki ikki chaqiruvchi
@@ -71,6 +80,20 @@ export class StudentsStatusService {
     userId: number,
     companyId: number,
   ) {
+    // Before anything is read (contract 6.2, ADR-0043): a policy belongs to
+    // an expulsion, and one other than the student's own decision is a CEO's
+    // or branch director's call.
+    if (
+      dto.departurePolicy !== undefined &&
+      dto.status !== StudentStatus.EXPELLED
+    ) {
+      throw new BadRequestException(DEPARTURE_POLICY_STATUS_ERROR);
+    }
+    await assertMayChooseDeparturePolicy(
+      this.prisma,
+      userId,
+      dto.departurePolicy,
+    );
     return this.applyStatusChange(
       id,
       dto,
@@ -281,22 +304,37 @@ export class StudentsStatusService {
       select: studentSelect,
     });
 
-    await this.entityHistoryService.recordStatusChange({
-      entityType: 'Student',
-      entityId: id,
-      oldValues: { status: student.status },
-      newValues: { status: dto.status, reason: reasonText ?? undefined },
-      changedById: actorId,
-      companyId: student.companyId ?? undefined,
-    });
-
-    // Cascade: ARCHIVED/EXPELLED/FROZEN → enrollment larni yangilash
+    // Cascade: ARCHIVED/EXPELLED/FROZEN → enrollment larni yangilash.
+    // It runs before the student's history row, because an expulsion settles
+    // the month's charge there (contract 6.2, ADR-0043) and the row below
+    // says what came of it.
+    const moneyNotes: DepartureMoneyNote[] = [];
     await this.statusCascadeService.cascade(
       'Student',
       String(id),
       dto.status,
       actorId,
+      { departurePolicy: dto.departurePolicy, moneyNotes },
     );
+
+    await this.entityHistoryService.recordStatusChange({
+      entityType: 'Student',
+      entityId: id,
+      oldValues: { status: student.status },
+      newValues: {
+        status: dto.status,
+        reason: reasonText ?? undefined,
+        ...(moneyNotes.length > 0
+          ? {
+              pul: moneyNotes
+                .map((m) => `${m.groupName}: ${m.note}`)
+                .join('; '),
+            }
+          : {}),
+      },
+      changedById: actorId,
+      companyId: student.companyId ?? undefined,
+    });
 
     const formatted = formatStudent(updated);
     if (frozenRefundResults && frozenRefundResults.length > 0) {

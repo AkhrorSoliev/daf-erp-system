@@ -7,12 +7,15 @@ import { EntityHistoryService } from '../common/entity-history';
 import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { StudentStatus } from '@prisma/client';
+import { DEPARTURE_POLICY_FORBIDDEN } from './shared/departure-policy-access';
 
 describe('StudentsStatusService', () => {
   let service: StudentsStatusService;
   let prisma: any;
   let monthlyCharge: any;
   let billing: any;
+  let cascadeMock: any;
+  let historyMock: any;
 
   const companyId = 1001;
   const userId = 10001;
@@ -77,13 +80,15 @@ describe('StudentsStatusService', () => {
         },
         {
           provide: StatusCascadeService,
-          useValue: { cascade: jest.fn().mockResolvedValue(undefined) },
+          useValue: (cascadeMock = {
+            cascade: jest.fn().mockResolvedValue(undefined),
+          }),
         },
         {
           provide: EntityHistoryService,
-          useValue: {
+          useValue: (historyMock = {
             recordStatusChange: jest.fn(),
-          },
+          }),
         },
         {
           provide: EnrollmentBillingService,
@@ -280,6 +285,129 @@ describe('StudentsStatusService', () => {
       );
     });
   });
+
+  describe('changeStatus → EXPELLED, contract 6.2 (ADR-0043)', () => {
+    const expel = (extra: Record<string, unknown> = {}) =>
+      service.changeStatus(
+        studentId,
+        {
+          status: StudentStatus.EXPELLED,
+          reason: "O'qishni tashladi",
+          ...extra,
+        } as never,
+        userId,
+        companyId,
+      );
+    const cascadeOptions = () => cascadeMock.cascade.mock.calls[0][4];
+
+    it('leaves the policy to the cascade when nothing was chosen (the student’s own decision)', async () => {
+      await expel();
+
+      expect(cascadeMock.cascade).toHaveBeenCalledWith(
+        'Student',
+        String(studentId),
+        StudentStatus.EXPELLED,
+        userId,
+        expect.anything(),
+      );
+      expect(cascadeOptions().departurePolicy).toBeUndefined();
+    });
+
+    it('passes a chosen policy once the database confirms a CEO or branch director', async () => {
+      await expel({ departurePolicy: 'CENTER_INITIATIVE' });
+
+      expect(prisma.user.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: userId,
+            roles: {
+              some: { role: { name: { in: ['CEO', 'Branch Director'] } } },
+            },
+          }),
+        }),
+      );
+      expect(cascadeOptions()).toMatchObject({
+        departurePolicy: 'CENTER_INITIATIVE',
+      });
+    });
+
+    it('refuses a chosen policy from anyone else before anything is written', async () => {
+      // The first read is the policy check: an administrator is not found.
+      prisma.user.findFirst.mockResolvedValueOnce(null);
+
+      await expect(expel({ departurePolicy: 'QUALITY_CLAIM' })).rejects.toThrow(
+        DEPARTURE_POLICY_FORBIDDEN,
+      );
+      expect(prisma.student.update).not.toHaveBeenCalled();
+      expect(cascadeMock.cascade).not.toHaveBeenCalled();
+    });
+
+    it.each([StudentStatus.FROZEN, StudentStatus.ARCHIVED])(
+      'refuses a policy with %s — only an expulsion is settled by rule 6.2',
+      async (status) => {
+        await expect(
+          service.changeStatus(
+            studentId,
+            {
+              status,
+              reason: 'Xato',
+              departurePolicy: 'STUDENT_CANCELLED',
+            } as never,
+            userId,
+            companyId,
+          ),
+        ).rejects.toThrow(BadRequestException);
+        expect(prisma.student.update).not.toHaveBeenCalled();
+      },
+    );
+
+    it('refuses a policy with a freeze before any money moves', async () => {
+      await expect(
+        service.changeStatus(
+          studentId,
+          {
+            status: StudentStatus.FROZEN,
+            reason: 'Kasal',
+            departurePolicy: 'STUDENT_CANCELLED',
+          } as never,
+          userId,
+          companyId,
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.student.update).not.toHaveBeenCalled();
+      expect(monthlyCharge.reverseChargeForDeparture).not.toHaveBeenCalled();
+    });
+
+    it("writes what happened to the month's money into the student's history row", async () => {
+      cascadeMock.cascade.mockImplementationOnce(
+        (
+          _type: string,
+          _id: string,
+          _status: string,
+          _by: number,
+          options: { moneyNotes: Array<{ groupName: string; note: string }> },
+        ) => {
+          options.moneyNotes.push({
+            groupName: 'A1-12',
+            note: "Shartnoma 6.2: oy darslarining 46% o'tgan (6/13) — oy to'lovi qaytarilmadi",
+          });
+          return Promise.resolve([]);
+        },
+      );
+
+      await expel();
+
+      expect(historyMock.recordStatusChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          newValues: {
+            status: StudentStatus.EXPELLED,
+            reason: "O'qishni tashladi",
+            pul: "A1-12: Shartnoma 6.2: oy darslarining 46% o'tgan (6/13) — oy to'lovi qaytarilmadi",
+          },
+        }),
+      );
+    });
+  });
 });
 
 describe('StudentsStatusService.pauseForAbsence', () => {
@@ -388,6 +516,7 @@ describe('StudentsStatusService.pauseForAbsence', () => {
       '10001',
       StudentStatus.FROZEN,
       undefined,
+      expect.objectContaining({ departurePolicy: undefined }),
     );
   });
 
@@ -498,6 +627,7 @@ describe('StudentsStatusService — expelling a frozen student', () => {
   let cardUpdates: Array<Record<string, unknown>>;
   let stateLogRows: Array<Record<string, unknown>>;
   let entityHistory: Record<string, jest.Mock>;
+  let monthlyCharge: Record<string, jest.Mock>;
 
   beforeEach(async () => {
     enrollments = [
@@ -605,7 +735,7 @@ describe('StudentsStatusService — expelling a frozen student', () => {
       refundPrepaidWithOverride: jest.fn(),
       refundPrepaidToBalance: jest.fn().mockResolvedValue(null),
     };
-    const monthlyCharge = {
+    monthlyCharge = {
       reverseChargeForDeparture: jest.fn().mockResolvedValue(null),
       restoreChargeForReturn: jest.fn().mockResolvedValue(null),
     };
@@ -656,6 +786,19 @@ describe('StudentsStatusService — expelling a frozen student', () => {
       changedById: 10001,
       companyId: 1001,
     });
+  });
+
+  it("settles each month as the student's own departure (contract 6.2, ADR-0043)", () => {
+    const policies = monthlyCharge.reverseChargeForDeparture.mock.calls.map(
+      ([, params]: [unknown, { enrollmentId: string; policy?: string }]) => [
+        params.enrollmentId,
+        params.policy,
+      ],
+    );
+    expect(policies).toEqual([
+      ['enr-monthly', 'STUDENT_CANCELLED'],
+      ['enr-pack', 'STUDENT_CANCELLED'],
+    ]);
   });
 
   it('marks the card EXPELLED with the chosen expulsion reason', () => {

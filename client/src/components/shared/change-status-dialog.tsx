@@ -2,23 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Loader2,
-  PauseCircle,
-  Snowflake,
-  GraduationCap,
-  Ban,
-  CircleCheck,
-  CircleOff,
-  ShieldOff,
-  UserX,
-  Play,
-  Square,
-  XCircle,
-  Wrench,
-  Archive,
-  type LucideIcon,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +40,14 @@ import {
   type ExitReasonOption,
 } from "@/lib/exit-reason-utils";
 import toast from "react-hot-toast";
+import { COLOR_CLASSES, getCardConfig } from "./change-status-cards";
+import { DepartureMoneyBlock } from "@/components/students/departure-money-block";
+import {
+  DEFAULT_DEPARTURE_POLICY,
+  departurePolicyPayload,
+  type DeparturePolicy,
+} from "@/components/students/departure-money";
+import { useDeparturePreview } from "@/components/students/use-departure-preview";
 
 // Maps Student status enum -> StudentExitReason.appliesTo enum
 const STATUS_TO_EXIT_TYPE: Record<string, string> = {
@@ -64,78 +56,6 @@ const STATUS_TO_EXIT_TYPE: Record<string, string> = {
   INACTIVE: "INACTIVE",
   ARCHIVED: "ARCHIVE",
 };
-
-// ─── Status card configs ─────────────────────────────
-interface StatusCardConfig {
-  icon: LucideIcon;
-  label: string;
-  description: string;
-  color: string; // tailwind color name
-}
-
-const STATUS_CARD_CONFIG: Record<string, StatusCardConfig> = {
-  // Student
-  ACTIVE: { icon: CircleCheck, label: "Faol", description: "Qayta o'qishni davom ettiradi", color: "emerald" },
-  INACTIVE: { icon: PauseCircle, label: "Nofaol", description: "Aloqaga chiqmayapti", color: "amber" },
-  FROZEN: { icon: Snowflake, label: "Muzlatilgan", description: "Vaqtincha to'xtadi, keyin qaytadi", color: "blue" },
-  GRADUATED: { icon: GraduationCap, label: "Bitirgan", description: "Kursni muvaffaqiyatli tugatdi", color: "emerald" },
-  EXPELLED: { icon: Ban, label: "Chetlatilgan", description: "O'qishni butunlay tashlab ketdi", color: "red" },
-  ARCHIVED: { icon: Archive, label: "Arxivlash", description: "Faqat xato/duplikat yozuv uchun", color: "red" },
-  // User/Teacher
-  SUSPENDED: { icon: ShieldOff, label: "To'xtatilgan", description: "Vaqtincha to'xtatish", color: "amber" },
-  TERMINATED: { icon: UserX, label: "Ishdan bo'shatilgan", description: "Butunlay to'xtatish", color: "red" },
-  // Group
-  FORMING: { icon: Play, label: "Boshlanmagan", description: "Guruh shakllanmoqda", color: "blue" },
-  PAUSED: { icon: PauseCircle, label: "Pauza", description: "Vaqtincha to'xtatish", color: "amber" },
-  COMPLETED: { icon: CircleCheck, label: "Tugallangan", description: "Guruh tugadi", color: "emerald" },
-  CANCELLED: { icon: XCircle, label: "Bekor qilingan", description: "Guruh bekor qilindi", color: "red" },
-  // Course/Branch/Room
-  DEPRECATED: { icon: Archive, label: "Eskirgan", description: "Endi ishlatilmaydi", color: "gray" },
-  CLOSED: { icon: Square, label: "Yopilgan", description: "Filial yopildi", color: "red" },
-  UNDER_MAINTENANCE: { icon: Wrench, label: "Ta'mirda", description: "Xona ta'mirda", color: "amber" },
-};
-
-const COLOR_CLASSES: Record<string, { bg: string; border: string; text: string; iconBg: string }> = {
-  emerald: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/20",
-    border: "border-emerald-200 dark:border-emerald-800",
-    text: "text-emerald-700 dark:text-emerald-400",
-    iconBg: "bg-emerald-100 dark:bg-emerald-900/40",
-  },
-  amber: {
-    bg: "bg-amber-50 dark:bg-amber-950/20",
-    border: "border-amber-200 dark:border-amber-800",
-    text: "text-amber-700 dark:text-amber-400",
-    iconBg: "bg-amber-100 dark:bg-amber-900/40",
-  },
-  blue: {
-    bg: "bg-blue-50 dark:bg-blue-950/20",
-    border: "border-blue-200 dark:border-blue-800",
-    text: "text-blue-700 dark:text-blue-400",
-    iconBg: "bg-blue-100 dark:bg-blue-900/40",
-  },
-  red: {
-    bg: "bg-red-50 dark:bg-red-950/20",
-    border: "border-red-200 dark:border-red-800",
-    text: "text-red-700 dark:text-red-400",
-    iconBg: "bg-red-100 dark:bg-red-900/40",
-  },
-  gray: {
-    bg: "bg-muted/50",
-    border: "border-border",
-    text: "text-muted-foreground",
-    iconBg: "bg-muted",
-  },
-};
-
-function getCardConfig(status: string): StatusCardConfig {
-  return STATUS_CARD_CONFIG[status] ?? {
-    icon: CircleOff,
-    label: status,
-    description: "",
-    color: "gray",
-  };
-}
 
 // ─── Component ───────────────────────────────────────
 
@@ -167,6 +87,10 @@ export function ChangeStatusDialog({
   const [frozenRefundOverrides, setFrozenRefundOverrides] = useState<
     Record<string, number>
   >({});
+  // Expulsion only: who ended the student's groups (contract 6.2, ADR-0043).
+  const [departurePolicy, setDeparturePolicy] = useState<DeparturePolicy>(
+    DEFAULT_DEPARTURE_POLICY,
+  );
 
   const allowedStatuses = getAllowedTransitions(entityType, currentStatus);
   const apiPath = ENTITY_API_PATH[entityType];
@@ -221,6 +145,17 @@ export function ChangeStatusDialog({
   const { pack: prepaidEnrollments, monthly: monthlyReleases } =
     freezePreviewLists(freezePreview);
 
+  // Expelling a student settles the month's charge by contract 6.2; the
+  // block shows what each policy would do. An archive (a record made by
+  // mistake) keeps the old rule and shows nothing.
+  const isExpellingStudent =
+    entityType === "students" && selectedStatus === "EXPELLED";
+  const money = useDeparturePreview(
+    Number(entityId),
+    null,
+    open && isExpellingStudent,
+  );
+
   // Reset the override map whenever we leave the FROZEN flow so a previous
   // session's edits don't leak into the next status change.
   useEffect(() => {
@@ -270,6 +205,12 @@ export function ChangeStatusDialog({
           ...(isFreezingStudent && Object.keys(frozenRefundOverrides).length > 0
             ? { frozenRefundOverrides }
             : {}),
+          ...(isExpellingStudent
+            ? departurePolicyPayload(
+                departurePolicy,
+                money.data?.mayChoosePolicy ?? false,
+              )
+            : {}),
         });
         toast.success("Status muvaffaqiyatli o'zgartirildi");
       }
@@ -291,6 +232,7 @@ export function ChangeStatusDialog({
       setReason("");
       setReasonId(null);
       setFrozenRefundOverrides({});
+      setDeparturePolicy(DEFAULT_DEPARTURE_POLICY);
     }
     onOpenChange(isOpen);
   };
@@ -519,6 +461,18 @@ export function ChangeStatusDialog({
                   )}
                 </div>
               )}
+
+              {isExpellingStudent && (
+                <DepartureMoneyBlock
+                  preview={money.data}
+                  isLoading={money.isLoading}
+                  isError={money.isError}
+                  policy={departurePolicy}
+                  onPolicyChange={setDeparturePolicy}
+                  showGroupNames
+                  disabled={submitting}
+                />
+              )}
             </>
           )}
         </div>
@@ -530,7 +484,12 @@ export function ChangeStatusDialog({
           {!isTerminal && (
             <Button
               onClick={handleSubmit}
-              disabled={!canSubmit || submitting}
+              // An expulsion waits for the month's figures.
+              disabled={
+                !canSubmit ||
+                submitting ||
+                (isExpellingStudent && money.isLoading)
+              }
               variant={isArchiving ? "destructive" : "default"}
             >
               {submitting

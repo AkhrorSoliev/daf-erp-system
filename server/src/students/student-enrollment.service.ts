@@ -41,6 +41,12 @@ import { assertCallerInBranch } from '../common/auth/branch-scope';
 import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 import {
+  DEFAULT_DEPARTURE_POLICY,
+  DeparturePolicy,
+} from '../billing/departure-policy';
+import { assertMayChooseDeparturePolicy } from './shared/departure-policy-access';
+import { departureMoneyNote } from '../billing/departure-money-note';
+import {
   EXIT_REASON_COMMENT_ERROR,
   EXIT_REASON_COMMENT_MIN_LENGTH,
   exitReasonRequiresComment,
@@ -534,8 +540,18 @@ export class StudentEnrollmentService {
       writeOffCycleDebt?: boolean;
       writeOffReason?: string;
       writeOffConfirmAmount?: number;
+      departurePolicy?: DeparturePolicy;
     },
   ) {
+    // Before anything is read: a policy other than the student's own
+    // decision returns money contract 6.2 would keep (ADR-0043).
+    await assertMayChooseDeparturePolicy(
+      this.prisma,
+      userId,
+      input.departurePolicy,
+    );
+    const departurePolicy = input.departurePolicy ?? DEFAULT_DEPARTURE_POLICY;
+
     const enrollment = await this.prisma.enrollment.findFirst({
       where: {
         id: enrollmentId,
@@ -683,7 +699,7 @@ export class StudentEnrollmentService {
     //      against `writeOffConfirmAmount`. Mismatch → 400, full rollback.
     //   3. State log + status flip — close the enrollment with reason
     //      and audit metadata.
-    await this.prisma.$transaction(
+    const monthOutcome = await this.prisma.$transaction(
       async (tx) => {
         await this.enrollmentBillingService.refundPrepaidToBalance(tx, {
           enrollmentId,
@@ -691,13 +707,15 @@ export class StudentEnrollmentService {
           reason: 'Guruhdan chiqarilganda qoldiq darslar uchun balans tiklash',
         });
 
-        await this.monthlyChargeService.reverseChargeForDeparture(tx, {
-          enrollmentId,
-          departureDate: departureAt,
-          companyId,
-          reason: 'Guruhdan chiqarilganda',
-          performedById: userId,
-        });
+        const outcome =
+          await this.monthlyChargeService.reverseChargeForDeparture(tx, {
+            enrollmentId,
+            departureDate: departureAt,
+            companyId,
+            reason: 'Guruhdan chiqarilganda',
+            performedById: userId,
+            policy: departurePolicy,
+          });
 
         if (input.writeOffCycleDebt) {
           await this.debtWriteOffService.executeWriteOff(
@@ -731,6 +749,7 @@ export class StudentEnrollmentService {
             departureReasonId,
           },
         });
+        return outcome;
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -765,6 +784,10 @@ export class StudentEnrollmentService {
       where: { id: enrollment.groupId },
       select: { name: true },
     });
+    // What happened to the month's charge, on both history rows — the one
+    // place a later «why was nothing returned?» can be answered.
+    const pul = departureMoneyNote(monthOutcome);
+    const money = pul ? { pul } : {};
     await this.entityHistoryService.recordDelete({
       entityType: 'Student',
       entityId: enrollment.studentId,
@@ -773,6 +796,7 @@ export class StudentEnrollmentService {
         guruhId: enrollment.groupId,
         action: 'GURUHDAN_CHIQARILDI',
         sabab: reasonText,
+        ...money,
       },
       changedById: userId,
     });
@@ -786,6 +810,7 @@ export class StudentEnrollmentService {
           `${student?.firstName ?? ''} ${student?.lastName ?? ''}`.trim(),
         oquvchiId: enrollment.studentId,
         sabab: reasonText,
+        ...money,
       },
       changedById: userId,
       companyId: student?.companyId ?? undefined,
