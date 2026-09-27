@@ -24,3 +24,13 @@ export async function updateOnboardingProfile(body: {
   const { data } = await api.patch<OnboardingStatus>('/student-portal/onboarding/profile', body);
   return data;
 }
+
+/**
+ * POST /api/student-portal/onboarding/phone/change-code — «Yo'q, boshqa raqam».
+ * The code goes to `phone`; a correct code then replaces the card's number.
+ * Needs the current password (a sign-in key changes only with it).
+ */
+export async function sendChangeCode(phone: string, currentPassword: string): Promise<{ resendInSec: number }> {
+  const { data } = await api.post('/student-portal/onboarding/phone/change-code', { phone, currentPassword });
+  return { resendInSec: Number(data?.resendInSec) || 60 };
+}

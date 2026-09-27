@@ -1,3 +1,4 @@
+import { Alert } from 'react-native';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { api } from '@/api/client';
@@ -29,8 +30,11 @@ describe('first-run steps', () => {
     expect(await screen.findByText("Profilingizni to'ldiring")).toBeTruthy();
     expect(screen).toHavePathname('/onboarding');
     expect(screen.getByText('1-qadam / 2')).toBeTruthy();
-    // The code goes to the number on the card, shown so the student knows.
-    expect(screen.getByText('+998 90 123 45 67 raqamiga 4 xonali kod yuboramiz.')).toBeTruthy();
+    // Before any SMS: the number on the card, and whether it is theirs.
+    expect(screen.getByText('+998 90 123 45 67')).toBeTruthy();
+    expect(screen.getByText('Bu sizning raqamingizmi?')).toBeTruthy();
+    expect(screen.getByText('Ha, kod yuborish')).toBeTruthy();
+    expect(screen.getByText("Yo'q, boshqa raqam")).toBeTruthy();
     expect(screen.queryAllByRole('tab')).toHaveLength(0);
   });
 
@@ -48,7 +52,7 @@ describe('first-run steps', () => {
     (api.patch as jest.Mock).mockResolvedValue({ data: status([]) });
     await renderSignedIn('/');
 
-    fireEvent.press(await screen.findByText('Kod yuborish'));
+    fireEvent.press(await screen.findByText('Ha, kod yuborish'));
     fireEvent.changeText(await screen.findByPlaceholderText('••••'), '4821');
     await act(async () => {
       fireEvent.press(screen.getByText('Tasdiqlash'));
@@ -93,7 +97,7 @@ describe('first-run steps', () => {
     });
     await renderSignedIn('/');
 
-    fireEvent.press(await screen.findByText('Kod yuborish'));
+    fireEvent.press(await screen.findByText('Ha, kod yuborish'));
     fireEvent.changeText(await screen.findByPlaceholderText('••••'), '1111');
     await act(async () => {
       fireEvent.press(screen.getByText('Tasdiqlash'));
@@ -101,6 +105,67 @@ describe('first-run steps', () => {
 
     expect(await screen.findByText("Kod noto'g'ri. Qolgan urinishlar: 2")).toBeTruthy();
     expect(screen).toHavePathname('/onboarding');
+  });
+
+  // «Yo'q, boshqa raqam»: the card carries someone else's number. The code
+  // goes to the number the student types (behind their password) and, proved,
+  // that number replaces the card's (CEO, 2026-09-27).
+  it('replaces a number that is not theirs with the one they prove', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    serveApi({ '/student-portal/onboarding': status(['PHONE', 'BIRTH_DATE']) });
+    (api.post as jest.Mock).mockImplementation(async (url: string) => {
+      if (url === '/student-portal/onboarding/phone/change-code') {
+        return { data: { phone: '935554433', expiresInSec: 300, resendInSec: 60 } };
+      }
+      if (url === '/student-portal/onboarding/phone/verify') {
+        return { data: { missing: ['BIRTH_DATE'], phone: '935554433', phoneVerified: true } };
+      }
+      throw new Error(`unexpected POST ${url}`);
+    });
+    await renderSignedIn('/');
+
+    fireEvent.press(await screen.findByText("Yo'q, boshqa raqam"));
+    fireEvent.changeText(screen.getByPlaceholderText('90 123 45 67'), '93 555 44 33');
+    fireEvent.changeText(screen.getByPlaceholderText('••••••'), 'Qalam-2026');
+    await act(async () => {
+      fireEvent.press(screen.getByText('Kod yuborish'));
+    });
+    expect(api.post).toHaveBeenCalledWith('/student-portal/onboarding/phone/change-code', {
+      phone: '935554433',
+      currentPassword: 'Qalam-2026',
+    });
+    // The code went to the NEW number, and the screen says so.
+    expect(await screen.findByText('Kod +998 93 555 44 33 raqamiga yuborildi.')).toBeTruthy();
+
+    fireEvent.changeText(screen.getByPlaceholderText('••••'), '4821');
+    await act(async () => {
+      fireEvent.press(screen.getByText('Tasdiqlash'));
+    });
+
+    // From now on they sign in with the new number — told once, plainly.
+    expect(alert).toHaveBeenCalledWith('Raqamingiz yangilandi', 'Endi tizimga +998 93 555 44 33 bilan kirasiz.');
+    expect(await screen.findByText("Tug'ilgan sanangiz")).toBeTruthy();
+  });
+
+  it('asks for the new number and the password before sending anything', async () => {
+    // The API mocks keep their calls across tests in this file.
+    (api.post as jest.Mock).mockClear();
+    serveApi({ '/student-portal/onboarding': status(['PHONE']) });
+    await renderSignedIn('/');
+
+    fireEvent.press(await screen.findByText("Yo'q, boshqa raqam"));
+    fireEvent.changeText(screen.getByPlaceholderText('90 123 45 67'), '93 555');
+    fireEvent.press(screen.getByText('Kod yuborish'));
+    expect(await screen.findByText("Telefon raqamni to'liq kiriting")).toBeTruthy();
+
+    fireEvent.changeText(screen.getByPlaceholderText('90 123 45 67'), '935554433');
+    fireEvent.press(screen.getByText('Kod yuborish'));
+    expect(await screen.findByText('Joriy parolingizni kiriting')).toBeTruthy();
+    expect(api.post).not.toHaveBeenCalled();
+
+    // «Orqaga» returns to the question.
+    fireEvent.press(screen.getByText('Orqaga'));
+    expect(await screen.findByText('Bu sizning raqamingizmi?')).toBeTruthy();
   });
 
   // A data requirement, not a security boundary: one failed request must not

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -7,7 +7,7 @@ import { Button, Card, IconTile, Input, ProgressBar, Screen, Text } from '@/desi
 import { useColors } from '@/design/colors';
 import { tokens } from '@/design/tokens';
 import { cn } from '@/lib/cn';
-import { sendPhoneCode, updateOnboardingProfile, verifyPhoneCode } from '@/api/onboarding';
+import { sendChangeCode, sendPhoneCode, updateOnboardingProfile, verifyPhoneCode } from '@/api/onboarding';
 import { onboardingKey, useOnboarding } from '@/api/queries/use-onboarding';
 import type { OnboardingStatus } from '@/api/types';
 import { useAuth } from '@/auth/auth-store';
@@ -130,12 +130,18 @@ function StepError({ message }: { message: string }) {
   ) : null;
 }
 
-// Proves the number on the card. The number itself is not editable here: it
-// is a sign-in key, and only staff change a student's phone (ADR-0032).
+// Proves the student's phone by SMS (ADR-0039). First it asks whether the
+// number on the card is theirs: «Ha» sends the code there; «Yo'q» takes the
+// number they actually use, behind their current password (a sign-in key
+// changes only with it — ADR-0031). That code goes to the new number and,
+// proved, the new number replaces the card's: they sign in with it from then on.
 function PhoneStep({ phone, onDone }: { phone: string; onDone: (s: OnboardingStatus) => void }) {
   const t = useT();
   const c = t.onboarding;
-  const [sent, setSent] = useState(false);
+  const [stage, setStage] = useState<'ask' | 'other' | 'code'>('ask');
+  const [target, setTarget] = useState<'card' | 'other'>('card');
+  const [newPhone, setNewPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [cooldown, setCooldown] = useState(0);
   const [busy, setBusy] = useState<'send' | 'verify' | null>(null);
@@ -147,13 +153,18 @@ function PhoneStep({ phone, onDone }: { phone: string; onDone: (s: OnboardingSta
     return () => clearTimeout(id);
   }, [cooldown]);
 
-  async function onSend() {
+  async function onSend(to: 'card' | 'other') {
     if (busy || cooldown > 0) return;
+    if (to === 'other') {
+      if (newPhone.length !== 9) return setError(c.errPhone);
+      if (!password) return setError(c.errPassword);
+    }
     setError('');
     setBusy('send');
     try {
-      const { resendInSec } = await sendPhoneCode();
-      setSent(true);
+      const { resendInSec } = to === 'card' ? await sendPhoneCode() : await sendChangeCode(newPhone, password);
+      setTarget(to);
+      setStage('code');
       setCode('');
       setCooldown(resendInSec);
     } catch (e) {
@@ -168,7 +179,11 @@ function PhoneStep({ phone, onDone }: { phone: string; onDone: (s: OnboardingSta
     setError('');
     setBusy('verify');
     try {
-      onDone(await verifyPhoneCode(code));
+      const next = await verifyPhoneCode(code);
+      if (next.phone !== phone) {
+        Alert.alert(c.phoneChangedTitle, c.phoneChanged(formatPhone(next.phone)));
+      }
+      onDone(next);
     } catch (e) {
       setError(getErrorMessage(e, c.errCode));
       setCode('');
@@ -177,11 +192,70 @@ function PhoneStep({ phone, onDone }: { phone: string; onDone: (s: OnboardingSta
     }
   }
 
+  function backToQuestion() {
+    setStage('ask');
+    setCode('');
+    setPassword('');
+    setError('');
+  }
+
+  const hint =
+    stage === 'code'
+      ? c.sentTo(formatPhone(target === 'card' ? phone : newPhone))
+      : stage === 'other'
+        ? c.otherHint
+        : c.currentNumber;
+
   return (
     <View className="gap-5">
-      <StepHeader icon="chatbubble-ellipses" tone="sky" title={c.phoneTitle} hint={c.phoneHint(formatPhone(phone))} />
+      <StepHeader icon="chatbubble-ellipses" tone="sky" title={c.phoneTitle} hint={hint} />
 
-      {sent ? (
+      {stage === 'ask' ? (
+        <View className="gap-4">
+          <View className="items-center gap-1 rounded-md bg-sunk px-4 py-3">
+            <Text variant="title">{formatPhone(phone)}</Text>
+            <Text variant="muted">{c.isYours}</Text>
+          </View>
+          <StepError message={error} />
+          <Button label={c.yesSend} loading={busy === 'send'} onPress={() => onSend('card')} />
+          <Button
+            label={c.noOther}
+            variant="secondary"
+            disabled={busy !== null}
+            onPress={() => {
+              setError('');
+              setStage('other');
+            }}
+          />
+        </View>
+      ) : null}
+
+      {stage === 'other' ? (
+        <View className="gap-4">
+          <View className="gap-1.5">
+            <Text variant="label">{c.newPhoneLabel}</Text>
+            <Input
+              value={newPhone}
+              onChangeText={(v) => setNewPhone(v.replace(/\D/g, '').slice(0, 9))}
+              keyboardType="phone-pad"
+              placeholder={t.auth.phonePlaceholder}
+              autoCapitalize="none"
+            />
+          </View>
+          <View className="gap-1.5">
+            <Text variant="label">{c.currentPasswordLabel}</Text>
+            <Input value={password} onChangeText={setPassword} secureTextEntry placeholder={t.auth.passwordPlaceholder} />
+          </View>
+          <Text variant="muted" className="text-[13px]">
+            {c.changeNote}
+          </Text>
+          <StepError message={error} />
+          <Button label={c.sendCode} loading={busy === 'send'} onPress={() => onSend('other')} />
+          <Button label={c.back} variant="ghost" size="sm" disabled={busy !== null} onPress={backToQuestion} />
+        </View>
+      ) : null}
+
+      {stage === 'code' ? (
         <View className="gap-4">
           <View className="gap-1.5">
             <Text variant="label">{c.codeLabel}</Text>
@@ -202,18 +276,14 @@ function PhoneStep({ phone, onDone }: { phone: string; onDone: (s: OnboardingSta
             variant="ghost"
             size="sm"
             disabled={cooldown > 0 || busy !== null}
-            onPress={onSend}
+            onPress={() => onSend(target)}
           />
+          <Button label={c.back} variant="ghost" size="sm" disabled={busy !== null} onPress={backToQuestion} />
         </View>
-      ) : (
-        <View className="gap-4">
-          <StepError message={error} />
-          <Button label={c.sendCode} loading={busy === 'send'} onPress={onSend} />
-        </View>
-      )}
+      ) : null}
 
       <Text variant="muted" className="text-center text-[13px]">
-        {c.notYourNumber}
+        {c.noSms}
       </Text>
     </View>
   );

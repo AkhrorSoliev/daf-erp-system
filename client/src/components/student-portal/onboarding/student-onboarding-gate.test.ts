@@ -77,9 +77,11 @@ describe("the student portal's first-run gate", () => {
     expect(text).toContain("Profilingizni to'ldiring");
     expect(text).toContain("1-qadam / 2");
     expect(text).toContain("Telefon raqamingizni tasdiqlang");
-    // The code goes to the number on the card, shown so the student knows.
+    // Before any SMS: the number on the card, and whether it is theirs.
     expect(text).toContain("+998 90 123 45 67");
-    expect(text).toContain("Kod yuborish");
+    expect(text).toContain("Bu sizning raqamingizmi?");
+    expect(text).toContain("Ha, kod yuborish");
+    expect(text).toContain("Yo'q, boshqa raqam");
     // A student who cannot finish can still leave.
     expect(text).toContain("Chiqish");
   });

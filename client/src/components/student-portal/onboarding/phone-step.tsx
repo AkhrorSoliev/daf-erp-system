@@ -1,17 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { ChatCircleDots } from "@phosphor-icons/react";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhone } from "@/lib/format-utils";
-import { FpCodeInput } from "@/components/auth/forgot-password-fields";
-import { Button, Field, IconTile } from "../lumio";
+import {
+  FpCodeInput,
+  FpPhoneInput,
+} from "@/components/auth/forgot-password-fields";
+import { Button, Field, IconTile, Input } from "../lumio";
 import type { OnboardingStatus } from "../lib/types";
 
-// Proves the number on the card by a 4-digit SMS code. The number itself is
-// not editable here: it is a sign-in key, and only staff change a student's
-// phone (ADR-0031, ADR-0032).
+/**
+ * Proves the student's phone by a 4-digit SMS code (ADR-0039).
+ *
+ * First it asks whether the number on the card is theirs:
+ * - «Ha» sends the code to that number;
+ * - «Yo'q» takes the number they actually use, behind their current password
+ *   (a sign-in key changes only with it — ADR-0031). The code goes to that
+ *   number and, proved, it replaces the card's number: from then on they sign
+ *   in with it.
+ */
+type Stage = "ask" | "other" | "code";
+
 export function PhoneStep({
   phone,
   onDone,
@@ -19,7 +32,11 @@ export function PhoneStep({
   phone: string;
   onDone: (status: OnboardingStatus) => void;
 }) {
-  const [sent, setSent] = useState(false);
+  const [stage, setStage] = useState<Stage>("ask");
+  // Where the last code went: the card's number, or the one the student typed.
+  const [target, setTarget] = useState<"card" | "other">("card");
+  const [newPhone, setNewPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [cooldown, setCooldown] = useState(0);
   const [busy, setBusy] = useState<"send" | "verify" | null>(null);
@@ -31,15 +48,32 @@ export function PhoneStep({
     return () => clearTimeout(t);
   }, [cooldown]);
 
-  async function sendCode() {
+  async function send(to: "card" | "other") {
     if (busy || cooldown > 0) return;
+    if (to === "other") {
+      if (newPhone.length !== 9) {
+        setError("Telefon raqamni to'liq kiriting");
+        return;
+      }
+      if (!password) {
+        setError("Joriy parolingizni kiriting");
+        return;
+      }
+    }
     setError("");
     setBusy("send");
     try {
-      const res = await api.post<{ resendInSec: number }>(
-        "/student-portal/onboarding/phone/send-code",
-      );
-      setSent(true);
+      const res =
+        to === "card"
+          ? await api.post<{ resendInSec: number }>(
+              "/student-portal/onboarding/phone/send-code",
+            )
+          : await api.post<{ resendInSec: number }>(
+              "/student-portal/onboarding/phone/change-code",
+              { phone: newPhone, currentPassword: password },
+            );
+      setTarget(to);
+      setStage("code");
       setCode("");
       setCooldown(res.data.resendInSec);
     } catch (err) {
@@ -54,8 +88,7 @@ export function PhoneStep({
     }
   }
 
-  async function verify(e: React.FormEvent) {
-    e.preventDefault();
+  async function verify() {
     if (code.length !== 4) {
       setError("Kod 4 xonali bo'lishi kerak");
       return;
@@ -67,6 +100,12 @@ export function PhoneStep({
         "/student-portal/onboarding/phone/verify",
         { code },
       );
+      if (res.data.phone !== phone) {
+        toast.success(
+          `Raqamingiz yangilandi. Endi tizimga ${formatPhone(res.data.phone)} bilan kirasiz`,
+          { duration: 6000 },
+        );
+      }
       onDone(res.data);
     } catch (err) {
       setError(getErrorMessage(err, "Kod noto'g'ri yoki muddati tugagan"));
@@ -76,8 +115,25 @@ export function PhoneStep({
     }
   }
 
+  function backToQuestion() {
+    setStage("ask");
+    setCode("");
+    setPassword("");
+    setError("");
+  }
+
+  const sentTo = target === "card" ? phone : newPhone;
+
   return (
-    <form onSubmit={verify} className="space-y-5">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (stage === "code") void verify();
+        else if (stage === "other") void send("other");
+        else void send("card");
+      }}
+      className="space-y-5"
+    >
       <div className="flex items-start gap-3">
         <IconTile
           icon={<ChatCircleDots weight="bold" />}
@@ -89,15 +145,85 @@ export function PhoneStep({
             Telefon raqamingizni tasdiqlang
           </h2>
           <p className="mt-1 text-sm font-semibold text-ink-500">
-            <span className="whitespace-nowrap font-bold text-ink-700">
-              {formatPhone(phone)}
-            </span>{" "}
-            raqamiga 4 xonali kod yuboramiz.
+            {stage === "code" ? (
+              <>
+                Kod{" "}
+                <span className="whitespace-nowrap font-bold text-ink-700">
+                  {formatPhone(sentTo)}
+                </span>{" "}
+                raqamiga yuborildi.
+              </>
+            ) : stage === "other" ? (
+              "O'zingiz ishlatadigan raqamni kiriting — kod shu raqamga boradi."
+            ) : (
+              "Tizimdagi raqamingiz:"
+            )}
           </p>
         </div>
       </div>
 
-      {sent ? (
+      {stage === "ask" ? (
+        <>
+          <div className="rounded-card bg-sunk px-4 py-3 text-center">
+            <p className="font-display text-2xl font-extrabold tracking-wide text-ink-900">
+              {formatPhone(phone)}
+            </p>
+            <p className="mt-1 text-sm font-bold text-ink-500">
+              Bu sizning raqamingizmi?
+            </p>
+          </div>
+          {error ? <StepError message={error} /> : null}
+          <Button type="submit" block size="lg" loading={busy === "send"}>
+            Ha, kod yuborish
+          </Button>
+          <Button
+            variant="secondary"
+            block
+            disabled={busy !== null}
+            onClick={() => {
+              setError("");
+              setStage("other");
+            }}
+          >
+            Yo&apos;q, boshqa raqam
+          </Button>
+        </>
+      ) : null}
+
+      {stage === "other" ? (
+        <>
+          <Field label="Telefon raqamingiz">
+            <FpPhoneInput lumio value={newPhone} onChange={setNewPhone} />
+          </Field>
+          <Field label="Joriy parolingiz">
+            <Input
+              type="password"
+              value={password}
+              autoComplete="current-password"
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </Field>
+          <p className="px-1 text-xs font-semibold text-ink-500">
+            Tasdiqlangach eski raqam o&apos;rniga shu raqam yoziladi va tizimga
+            u bilan kirasiz. Parol — hisobingizni begona qo&apos;ldan himoya
+            qilish uchun.
+          </p>
+          {error ? <StepError message={error} /> : null}
+          <Button type="submit" block size="lg" loading={busy === "send"}>
+            Kod yuborish
+          </Button>
+          <Button
+            variant="ghost"
+            block
+            disabled={busy !== null}
+            onClick={backToQuestion}
+          >
+            Orqaga
+          </Button>
+        </>
+      ) : null}
+
+      {stage === "code" ? (
         <>
           <Field label="SMS kod">
             <FpCodeInput lumio value={code} onChange={setCode} />
@@ -115,26 +241,26 @@ export function PhoneStep({
           <Button
             variant="ghost"
             block
-            onClick={sendCode}
+            onClick={() => void send(target)}
             disabled={cooldown > 0 || busy !== null}
           >
             {cooldown > 0
               ? `Qayta yuborish (${cooldown}s)`
               : "Kodni qayta yuborish"}
           </Button>
-        </>
-      ) : (
-        <>
-          {error ? <StepError message={error} /> : null}
-          <Button block size="lg" onClick={sendCode} loading={busy === "send"}>
-            Kod yuborish
+          <Button
+            variant="ghost"
+            block
+            disabled={busy !== null}
+            onClick={backToQuestion}
+          >
+            Orqaga
           </Button>
         </>
-      )}
+      ) : null}
 
       <p className="text-center text-xs font-semibold text-ink-500">
-        Bu raqam sizniki emasmi yoki SMS kelmayaptimi? Administratorga murojaat
-        qiling.
+        SMS kelmayaptimi? Administratorga murojaat qiling.
       </p>
     </form>
   );
