@@ -16,21 +16,16 @@ export const DEPARTURE_POLICY_FORBIDDEN =
   'Pulni boshqa tartibda qaytarishni faqat CEO yoki filial direktori tanlay oladi';
 
 /**
- * The default — the student's own decision — is open to everyone who may
- * remove or expel a student. Any other policy gives back money the contract
- * would keep, so it is a CEO's or a branch director's call, read from the
- * database rather than the token (ADR-0028): an archived, blocked or demoted
- * account cannot make it.
+ * Whether the caller may choose a policy other than the student's own
+ * decision, read from the database rather than the token (ADR-0028): an
+ * archived, blocked or demoted account may not. The dialog shows the choice
+ * only when this says so; the write asks again.
  */
-export async function assertMayChooseDeparturePolicy(
+export async function mayChooseDeparturePolicy(
   prisma: PrismaLike,
   userId: number | undefined,
-  policy: DeparturePolicy | undefined,
-): Promise<void> {
-  if (!policy || policy === DEFAULT_DEPARTURE_POLICY) return;
-  if (userId === undefined) {
-    throw new ForbiddenException(DEPARTURE_POLICY_FORBIDDEN);
-  }
+): Promise<boolean> {
+  if (userId === undefined) return false;
   const caller = await prisma.user.findFirst({
     where: {
       id: userId,
@@ -41,5 +36,21 @@ export async function assertMayChooseDeparturePolicy(
     },
     select: { id: true },
   });
-  if (!caller) throw new ForbiddenException(DEPARTURE_POLICY_FORBIDDEN);
+  return caller !== null;
+}
+
+/**
+ * The default — the student's own decision — is open to everyone who may
+ * remove or expel a student. Any other policy gives back money the contract
+ * would keep, so it is a CEO's or a branch director's call.
+ */
+export async function assertMayChooseDeparturePolicy(
+  prisma: PrismaLike,
+  userId: number | undefined,
+  policy: DeparturePolicy | undefined,
+): Promise<void> {
+  if (!policy || policy === DEFAULT_DEPARTURE_POLICY) return;
+  if (!(await mayChooseDeparturePolicy(prisma, userId))) {
+    throw new ForbiddenException(DEPARTURE_POLICY_FORBIDDEN);
+  }
 }

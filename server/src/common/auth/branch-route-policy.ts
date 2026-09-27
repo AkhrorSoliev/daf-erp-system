@@ -356,7 +356,9 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'teacher, branch for everyone else. `GET /groups/:id/delete-preview` ' +
       'counts the students deleting a group would take out of it, behind ' +
       'the same check as `DELETE /groups/:id`. The payment statement (JSON ' +
-      'and PDF) is one more profile read and runs the same check.',
+      'and PDF) is one more profile read and runs the same check, and so ' +
+      'does the departure preview, which reads the month an enrollment of ' +
+      'that student would give back.',
     routes: [
       'GET /students/:id/status-history',
       'GET /students/:id/balance-summary',
@@ -373,6 +375,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'DELETE /students/:id/enroll/:enrollmentId',
       'GET /students/:id/enrollments/:enrollmentId/debt-write-off-eligibility',
       'POST /students/:id/enrollments/:enrollmentId/write-off-cycle-debt',
+      'GET /students/:id/departure-preview',
       'GET /groups/:id/students',
       'GET /groups/:id/status-history',
       'GET /groups/:id/delete-preview',

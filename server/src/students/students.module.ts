@@ -20,6 +20,7 @@ import { AuthModule } from '../auth/auth.module';
 import { EskizModule } from '../eskiz/eskiz.module';
 import { StudentOnboardingController } from './onboarding/student-onboarding.controller';
 import { StudentOnboardingService } from './onboarding/student-onboarding.service';
+import { StudentDeparturePreviewService } from './student-departure-preview.service';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { StudentOnboardingService } from './onboarding/student-onboarding.servic
     StudentPortalReadService,
     StudentPortalWriteService,
     StudentOnboardingService,
+    StudentDeparturePreviewService,
   ],
   // `StudentsStatusService` — avtomatik pauza cron'i uchun
   // (`pauseForAbsence`, tizim aktori bilan).

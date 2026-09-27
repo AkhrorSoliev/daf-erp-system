@@ -7,6 +7,7 @@ import { StudentEnrollmentService } from './student-enrollment.service';
 import { SmsService } from '../sms/sms.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { DebtAgeService } from '../common/finance/debt-age.service';
+import { StudentDeparturePreviewService } from './student-departure-preview.service';
 import { RolesGuard } from '../common/guards';
 import { ROLES_KEY } from '../common/decorators';
 
@@ -35,6 +36,10 @@ describe('StudentsController — debt write-off role guards', () => {
         {
           provide: DebtAgeService,
           useValue: { getForStudent: jest.fn().mockResolvedValue(null) },
+        },
+        {
+          provide: StudentDeparturePreviewService,
+          useValue: { preview: jest.fn().mockResolvedValue({}) },
         },
       ],
     }).compile();
@@ -177,6 +182,27 @@ describe('StudentsController — debt write-off role guards', () => {
         'Teacher',
       ]);
       expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+  });
+
+  describe('getDeparturePreview() guard (GET /:id/departure-preview)', () => {
+    it.each([['CEO'], ['Branch Director'], ['Administrator']])(
+      'allows %s',
+      (role) => {
+        const ctx = mockExecutionContext(controller.getDeparturePreview, [
+          role,
+        ]);
+        expect(guard.canActivate(ctx)).toBe(true);
+      },
+    );
+    it.each([['Cashier'], ['Teacher'], ['Student']])('denies %s', (role) => {
+      const ctx = mockExecutionContext(controller.getDeparturePreview, [role]);
+      expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    });
+    it('is annotated with the three admin roles', () => {
+      expect(
+        reflector.get<string[]>(ROLES_KEY, controller.getDeparturePreview),
+      ).toEqual(['CEO', 'Branch Director', 'Administrator']);
     });
   });
 
