@@ -21,6 +21,8 @@ import {
   currentMonthKey,
   monthLabel,
 } from "@/components/payments/salary-utils";
+import { SalaryMissedLessons } from "./salary-missed-lessons";
+import type { MissedLessons } from "./salary-missed-lessons-text";
 
 /**
  * One person's row from the monthly salary report.
@@ -48,6 +50,8 @@ interface MonthlyUserResponse {
   floorMonth: string;
   period: { periodStart: string; periodEnd: string; cycleStartDay: number };
   row: MonthlyUserRow | null;
+  /** «Berilmadi»: lessons that ended with no attendance, and the pay lost. */
+  missedLessons?: MissedLessons;
 }
 
 const FALLBACK_FLOOR = "2026-05";
@@ -224,6 +228,10 @@ export function SalaryMonthlyPanel({ userId, scope }: Props) {
                 tooltip="Shu oy ichida ustozga oldindan berilgan pul (Xarajatlar → Avans). U «To'lanishi kerak»dan allaqachon ayirilgan."
               />
             </div>
+          )}
+
+          {data?.missedLessons && (
+            <SalaryMissedLessons data={data.missedLessons} />
           )}
         </>
       )}

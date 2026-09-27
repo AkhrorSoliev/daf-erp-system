@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SalaryMonthlyService } from './salary-monthly.service';
 import { SalaryStaffMonthlyService } from './salary-monthly-staff.service';
+import { SalaryMissedLessonsService } from './salary-missed-lessons.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -16,6 +17,7 @@ describe('SalaryMonthlyService', () => {
   let service: SalaryMonthlyService;
   let prisma: any;
   let staff: { computeStaff: jest.Mock };
+  let missed: { forTeacher: jest.Mock };
 
   const ceoCaller = { mainBranch: 1, roles: [{ role: { name: 'CEO' } }] };
   const emptyStaff = {
@@ -66,12 +68,16 @@ describe('SalaryMonthlyService', () => {
     };
 
     staff = { computeStaff: jest.fn().mockResolvedValue(emptyStaff) };
+    missed = {
+      forTeacher: jest.fn().mockResolvedValue({ lessons: [], total: 0 }),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SalaryMonthlyService,
         { provide: PrismaService, useValue: prisma },
         { provide: SalaryStaffMonthlyService, useValue: staff },
+        { provide: SalaryMissedLessonsService, useValue: missed },
       ],
     }).compile();
 
@@ -975,6 +981,30 @@ describe('SalaryMonthlyService', () => {
       );
 
       expect(res.row).toEqual(staffRow);
+    });
+
+    it("carries the month's «Berilmadi» lessons for the same user and month", async () => {
+      const missedLessons = {
+        lessons: [
+          {
+            date: '2026-06-03',
+            groupId: 'g1',
+            groupName: 'A1-1',
+            students: 4,
+            amount: 40_000,
+          },
+        ],
+        total: 40_000,
+      };
+      missed.forTeacher.mockResolvedValue(missedLessons);
+      const res = await service.getMonthlyForUser(
+        10030,
+        { month: '2026-06' },
+        1,
+        999,
+      );
+      expect(missed.forTeacher).toHaveBeenCalledWith(10030, 1, res.month);
+      expect(res.missedLessons).toEqual(missedLessons);
     });
 
     it('returns a null row when the user has no salary presence that month', async () => {
