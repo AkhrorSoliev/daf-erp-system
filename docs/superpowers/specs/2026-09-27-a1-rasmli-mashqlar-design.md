@@ -154,8 +154,9 @@ o'qiladigan kontrast bilan, token orqali. Rang **qo'shimcha** belgi:
 artikl matni doim yoziladi (rangni ajrata olmaydigan o'quvchi ham tushunadi).
 
 Qayerda: so'z formatlarining ekrandagi so'zi (`WORT_UZ`, `BILD_WORT`
-prompti), `ARTIKEL` variant tugmalari, to'g'ri javob paneli, natija ekrani
-va unit so'zlar ro'yxati. Faqat ko'plikdagi otlarda (`die Eltern`)
+prompti), `ARTIKEL` variant tugmalari, to'g'ri javob paneli va natija
+ekrani (yangi tizimda alohida so'zlar ro'yxati sahifasi yo'q — eski DiB
+dars sahifasi artikl ko'rsatmaydi). Faqat ko'plikdagi otlarda (`die Eltern`)
 kontentda artikl yo'q — ular rangsiz qoladi (ko'plik uchun alohida rang
 bu rejada yo'q).
 
