@@ -2,7 +2,7 @@ import { Context } from 'telegraf';
 import type { UserFromGetMe } from 'telegraf/types';
 import { createStatementScene } from './statement.scene';
 import { CONTACT_NOT_OWN } from '../utils/contact-ownership';
-import { statementMessage } from '../flows/statement-flow';
+import { statementForChat, statementMessage } from '../flows/statement-flow';
 
 const BOT_INFO = {
   id: 1,
@@ -259,5 +259,32 @@ describe('statementMessage', () => {
         subtitle: "U oktabr to'loviga o'tadi.",
       }),
     ).toBe("💳 Qarzingiz yo'q.\nU oktabr to'loviga o'tadi.");
+  });
+});
+
+describe('statementForChat', () => {
+  it("is the student's answer box, then the PDF under the statement's name", async () => {
+    const statements = {
+      pdf: jest
+        .fn()
+        .mockResolvedValue({ buffer: Buffer.from('%PDF'), model: MODEL }),
+    };
+    const present = jest.fn().mockReturnValue({
+      answer: {
+        tone: 'zero',
+        title: "Qarzingiz yo'q.",
+        subtitle: 'Hammasi joyida.',
+      },
+    });
+
+    const out = await statementForChat(statements, 10001, 1001, present);
+
+    expect(statements.pdf).toHaveBeenCalledWith(10001, 1001);
+    expect(present).toHaveBeenCalledWith(MODEL, 'student');
+    expect(out.text).toBe("💳 Qarzingiz yo'q.\nHammasi joyida.");
+    expect(out.document).toEqual({
+      source: Buffer.from('%PDF'),
+      filename: 'Test-A-10001-26-09-2026.pdf',
+    });
   });
 });

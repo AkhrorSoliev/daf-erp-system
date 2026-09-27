@@ -3,6 +3,8 @@ import { TelegramService } from './telegram.service';
 import { TelegramChannelGateStatsService } from './telegram-channel-gate-stats.service';
 import { TelegramController } from './telegram.controller';
 import { TelegramChannelReportController } from './telegram-channel-report.controller';
+import { TelegramStatementController } from './telegram-statement.controller';
+import { TelegramStatementService } from './telegram-statement.service';
 import { MockExamAnnounceListener } from './mock-exam-announce.listener';
 import { MockExamPaidListener } from './mock-exam-paid.listener';
 import { UploadModule } from '../upload/upload.module';
@@ -23,9 +25,14 @@ import { StatementsModule } from '../statements/statements.module';
     PaymentLinksModule,
     StatementsModule,
   ],
-  controllers: [TelegramController, TelegramChannelReportController],
+  controllers: [
+    TelegramController,
+    TelegramChannelReportController,
+    TelegramStatementController,
+  ],
   providers: [
     TelegramService,
+    TelegramStatementService,
     TelegramChannelGateStatsService,
     MockExamAnnounceListener,
     MockExamPaidListener,

@@ -655,9 +655,13 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     policy: 'SELF',
     reason:
       "Keyed on `@CurrentUser('studentId')` behind `StudentCardGuard` — the " +
-      'caller downloads their own payment statement and no id comes from the ' +
+      'caller downloads their own payment statement, or has the bot send it to ' +
+      'the Telegram chat linked to their own card, and no id comes from the ' +
       'request.',
-    routes: ['GET /student-portal/statement.pdf'],
+    routes: [
+      'GET /student-portal/statement.pdf',
+      'POST /student-portal/statement/telegram',
+    ],
   },
   {
     policy: 'SELF',
