@@ -234,6 +234,23 @@ describe('SettingsController — branch scope', () => {
     );
   });
 
+  it('monthlyNoticesEnabled is written through its registry key, company-level (CEO)', async () => {
+    prisma.user.findFirst.mockResolvedValue(ceoUser);
+    await controller.updatePayment(
+      { monthlyNoticesEnabled: false } as any,
+      1,
+      1001,
+    );
+    expect(settingsService.set).toHaveBeenCalledTimes(1);
+    expect(settingsService.set).toHaveBeenCalledWith(
+      1001,
+      'payment.monthlyNoticesEnabled',
+      false,
+      1,
+      undefined,
+    );
+  });
+
   it('excusedCreditEnabled: false is written too (same !== undefined guard)', async () => {
     prisma.user.findFirst.mockResolvedValue(ceoUser);
     await controller.updatePayment(

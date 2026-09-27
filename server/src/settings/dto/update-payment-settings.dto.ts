@@ -48,6 +48,10 @@ export class UpdatePaymentSettingsDto {
   @IsBoolean()
   debtWriteOffEnabled?: boolean;
 
+  @IsOptional()
+  @IsBoolean()
+  monthlyNoticesEnabled?: boolean;
+
   // Faqat CEO uchun ma'noli — qaysi filialga yozish. Branch Director bu
   // maydondan qat'i nazar faqat o'z filialiga yoza oladi (kontrollerda
   // majburlanadi); CEO uchun berilmasa — kompaniya darajasida yoziladi.
