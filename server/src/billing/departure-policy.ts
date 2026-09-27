@@ -10,6 +10,9 @@ import {
  * - `STUDENT_CANCELLED` — the student's own decision (the default): the
  *   unheld lessons come back only while at most the threshold share of the
  *   month was held; above it nothing comes back.
+ * - `LEVEL_COMPLETED` — the student finished the level (A1, A2…), with a
+ *   certificate or to move up later: the contract is fulfilled (10.1), not
+ *   cancelled, so the unheld lessons come back (contract 3.4).
  * - `CENTER_INITIATIVE` — the centre ended it: the unheld lessons come back
  *   (the rule before the contract, and still the rule for freezes, transfers
  *   and centre-initiated closures).
@@ -17,6 +20,7 @@ import {
  */
 export const DEPARTURE_POLICIES = [
   'STUDENT_CANCELLED',
+  'LEVEL_COMPLETED',
   'CENTER_INITIATIVE',
   'QUALITY_CLAIM',
 ] as const;

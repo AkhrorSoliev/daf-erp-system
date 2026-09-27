@@ -41,6 +41,10 @@ import { assertMayChooseDeparturePolicy } from './shared/departure-policy-access
 export const DEPARTURE_POLICY_STATUS_ERROR =
   'Pulni qaytarish tartibi faqat chetlatishda tanlanadi';
 
+/** A completed level is not an expulsion: that student leaves the group. */
+export const LEVEL_COMPLETED_STATUS_ERROR =
+  '«Darajani tugatdi» guruhdan chiqarishda tanlanadi, chetlatishda emas';
+
 /**
  * Status o'zgartirishni KIM so'rayotgani — oshkora, chunki ikki chaqiruvchi
  * ikki xil tekshiruvdan o'tadi.
@@ -88,6 +92,9 @@ export class StudentsStatusService {
       dto.status !== StudentStatus.EXPELLED
     ) {
       throw new BadRequestException(DEPARTURE_POLICY_STATUS_ERROR);
+    }
+    if (dto.departurePolicy === 'LEVEL_COMPLETED') {
+      throw new BadRequestException(LEVEL_COMPLETED_STATUS_ERROR);
     }
     await assertMayChooseDeparturePolicy(
       this.prisma,
