@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +31,14 @@ import {
   isExitReasonCommentMissing,
   type ExitReasonOption,
 } from "@/lib/exit-reason-utils";
+import { DepartureMoneyBlock } from "./departure-money-block";
+import {
+  DEFAULT_DEPARTURE_POLICY,
+  departurePolicyPayload,
+  type DepartureChoice,
+  type DeparturePolicy,
+} from "./departure-money";
+import { useDeparturePreview } from "./use-departure-preview";
 
 interface StudentRemoveFromGroupDialogProps {
   open: boolean;
@@ -41,7 +50,14 @@ interface StudentRemoveFromGroupDialogProps {
   onReasonTextChange: (text: string) => void;
   removing: boolean;
   canSubmit: boolean;
-  onConfirm: () => void;
+  /**
+   * `money` is the policy part of the request (contract 6.2, ADR-0043):
+   * spread it into the DELETE body.
+   */
+  onConfirm: (money: DepartureChoice) => void;
+  /** The student and the enrollment being closed: what the month gives back. */
+  studentId: number | null;
+  enrollmentId: string | null;
 
   // "Yo'qolgan o'quvchi" write-off — joriy siklda yo'qotgan o'quvchining
   // qarzini chiqarish bilan birga hisobdan chiqarish. All seven write-off
@@ -61,9 +77,24 @@ interface StudentRemoveFromGroupDialogProps {
 
 export type WriteOffChoice = "real" | "jami" | "custom";
 
-export function StudentRemoveFromGroupDialog({
-  open,
-  onOpenChange,
+export function StudentRemoveFromGroupDialog(
+  props: StudentRemoveFromGroupDialogProps,
+) {
+  return (
+    <AlertDialog open={props.open} onOpenChange={props.onOpenChange}>
+      {/* max-h: cap dialog at viewport height so the middle scrolls instead of
+       * overflowing. The default grid layout is replaced with flex so the
+       * middle child can claim the remaining height (`flex-1 min-h-0`). */}
+      <AlertDialogContent className="flex max-h-[90vh] max-w-lg flex-col gap-4">
+        {/* Mounted only while open, so the policy starts from the default
+         * every time the dialog opens. */}
+        <RemoveDialogBody {...props} />
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function RemoveDialogBody({
   reasons,
   reasonId,
   onReasonIdChange,
@@ -72,6 +103,8 @@ export function StudentRemoveFromGroupDialog({
   removing,
   canSubmit,
   onConfirm,
+  studentId,
+  enrollmentId,
   eligibility,
   eligibilityLoading,
   writeOff = false,
@@ -96,108 +129,124 @@ export function StudentRemoveFromGroupDialog({
   // legacy callers that don't yet support the flow stay un-changed.
   const writeOffWired = !!onWriteOffChange && !!onWriteOffReasonChange;
   const showWriteOffBlock = writeOffWired && !!eligibility?.eligible;
+  const [departurePolicy, setDeparturePolicy] = useState<DeparturePolicy>(
+    DEFAULT_DEPARTURE_POLICY,
+  );
+  const money = useDeparturePreview(studentId, enrollmentId, true);
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      {/* max-h: cap dialog at viewport height so the middle scrolls instead of
-       * overflowing. The default grid layout is replaced with flex so the
-       * middle child can claim the remaining height (`flex-1 min-h-0`). */}
-      <AlertDialogContent className="flex max-h-[90vh] max-w-lg flex-col gap-4">
-        <AlertDialogHeader className="shrink-0">
-          <AlertDialogTitle>Guruhdan chiqarish</AlertDialogTitle>
-          <AlertDialogDescription>
-            {hasConfiguredReasons
-              ? "Ketish sababini tanlang"
-              : "O'quvchini guruhdan chiqarish sababini kiriting"}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+    <>
+      <AlertDialogHeader className="shrink-0">
+        <AlertDialogTitle>Guruhdan chiqarish</AlertDialogTitle>
+        <AlertDialogDescription>
+          {hasConfiguredReasons
+            ? "Ketish sababini tanlang"
+            : "O'quvchini guruhdan chiqarish sababini kiriting"}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
 
-        {/* Scrollable middle. `-mr-2 pr-2` leaves room for the scrollbar
-         * without shifting content. */}
-        <div className="-mr-2 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-2">
-          {hasConfiguredReasons ? (
-            <div className="space-y-2">
-              <Select
-                value={reasonId ?? undefined}
-                onValueChange={(v) => onReasonIdChange(v)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sababni tanlang" />
-                </SelectTrigger>
-                <SelectContent>
-                  {reasons?.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Textarea
-                placeholder={
-                  commentMissing
-                    ? "Nima sababdan? (majburiy)"
-                    : "Qo'shimcha izoh (ixtiyoriy)"
-                }
-                value={reasonText}
-                onChange={(e) => onReasonTextChange(e.target.value)}
-                rows={2}
-                className="resize-none"
-                aria-invalid={commentMissing}
-              />
-              {commentMissing && (
-                <p className="text-xs text-destructive">
-                  «Boshqa sabab» tanlandi — o&apos;quvchi nima sababdan
-                  ketayotganini yozing (kamida{" "}
-                  {EXIT_REASON_COMMENT_MIN_LENGTH} belgi).
-                </p>
-              )}
-            </div>
-          ) : (
+      {/* Scrollable middle. `-mr-2 pr-2` leaves room for the scrollbar
+       * without shifting content. */}
+      <div className="-mr-2 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-2">
+        {hasConfiguredReasons ? (
+          <div className="space-y-2">
+            <Select
+              value={reasonId ?? undefined}
+              onValueChange={(v) => onReasonIdChange(v)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Sababni tanlang" />
+              </SelectTrigger>
+              <SelectContent>
+                {reasons?.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Textarea
-              placeholder="Sabab yozing..."
+              placeholder={
+                commentMissing
+                  ? "Nima sababdan? (majburiy)"
+                  : "Qo'shimcha izoh (ixtiyoriy)"
+              }
               value={reasonText}
               onChange={(e) => onReasonTextChange(e.target.value)}
-              rows={3}
+              rows={2}
               className="resize-none"
+              aria-invalid={commentMissing}
             />
-          )}
+            {commentMissing && (
+              <p className="text-xs text-destructive">
+                «Boshqa sabab» tanlandi — o&apos;quvchi nima sababdan
+                ketayotganini yozing (kamida{" "}
+                {EXIT_REASON_COMMENT_MIN_LENGTH} belgi).
+              </p>
+            )}
+          </div>
+        ) : (
+          <Textarea
+            placeholder="Sabab yozing..."
+            value={reasonText}
+            onChange={(e) => onReasonTextChange(e.target.value)}
+            rows={3}
+            className="resize-none"
+          />
+        )}
 
-          {eligibilityLoading && (
-            <div className="space-y-2 rounded-md border border-dashed p-3">
-              <Skeleton className="h-4 w-2/3" />
-              <Skeleton className="h-4 w-1/2" />
-              <Skeleton className="h-4 w-3/4" />
-            </div>
-          )}
+        <DepartureMoneyBlock
+          preview={money.data}
+          isLoading={money.isLoading}
+          isError={money.isError}
+          policy={departurePolicy}
+          onPolicyChange={setDeparturePolicy}
+          disabled={removing}
+        />
 
-          {showWriteOffBlock && (
-            <WriteOffBlock
-              eligibility={eligibility!}
-              writeOff={writeOff}
-              onWriteOffChange={onWriteOffChange!}
-              writeOffChoice={writeOffChoice}
-              onWriteOffChoiceChange={onWriteOffChoiceChange!}
-              writeOffCustomAmount={writeOffCustomAmount}
-              onWriteOffCustomAmountChange={onWriteOffCustomAmountChange!}
-              writeOffReason={writeOffReason}
-              onWriteOffReasonChange={onWriteOffReasonChange!}
-              disabled={removing}
-            />
-          )}
-        </div>
+        {eligibilityLoading && (
+          <div className="space-y-2 rounded-md border border-dashed p-3">
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
+        )}
 
-        <AlertDialogFooter className="shrink-0">
-          <AlertDialogCancel disabled={removing}>Bekor qilish</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onConfirm}
-            disabled={!canSubmit || commentMissing || removing}
-            variant="destructive"
-          >
-            {removing ? "Chiqarilmoqda..." : "Chiqarish"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+        {showWriteOffBlock && (
+          <WriteOffBlock
+            eligibility={eligibility!}
+            writeOff={writeOff}
+            onWriteOffChange={onWriteOffChange!}
+            writeOffChoice={writeOffChoice}
+            onWriteOffChoiceChange={onWriteOffChoiceChange!}
+            writeOffCustomAmount={writeOffCustomAmount}
+            onWriteOffCustomAmountChange={onWriteOffCustomAmountChange!}
+            writeOffReason={writeOffReason}
+            onWriteOffReasonChange={onWriteOffReasonChange!}
+            disabled={removing}
+          />
+        )}
+      </div>
+
+      <AlertDialogFooter className="shrink-0">
+        <AlertDialogCancel disabled={removing}>Bekor qilish</AlertDialogCancel>
+        <AlertDialogAction
+          onClick={() =>
+            onConfirm(
+              departurePolicyPayload(
+                departurePolicy,
+                money.data?.mayChoosePolicy ?? false,
+              ),
+            )
+          }
+          // Waits for the month's figures so nobody confirms unseen money.
+          disabled={!canSubmit || commentMissing || removing || money.isLoading}
+          variant="destructive"
+        >
+          {removing ? "Chiqarilmoqda..." : "Chiqarish"}
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </>
   );
 }
 

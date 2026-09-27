@@ -44,6 +44,8 @@ export const FIELD_LABELS: Record<string, string | null> = {
   mainBranch: "Asosiy filial",
   guruh: "Guruh",
   sabab: "Sabab",
+  // Oy to'lovi bilan nima bo'lgani (shartnoma 6.2, ADR-0043).
+  pul: "Pul",
   reason: "Sabab",
   content: "Izoh",
   isActive: "Faolmi",

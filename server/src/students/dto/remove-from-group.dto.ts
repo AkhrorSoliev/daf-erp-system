@@ -1,5 +1,6 @@
 import {
   IsBoolean,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -9,6 +10,8 @@ import {
   MinLength,
   ValidateIf,
 } from 'class-validator';
+import { DEPARTURE_POLICIES } from '../../billing/departure-policy';
+import type { DeparturePolicy } from '../../billing/departure-policy';
 
 export class RemoveFromGroupDto {
   // ID of a configured StudentExitReason with appliesTo: GROUP_REMOVAL.
@@ -52,4 +55,12 @@ export class RemoveFromGroupDto {
   @IsInt()
   @Min(1)
   writeOffConfirmAmount?: number;
+
+  // Who ended the enrollment, which decides what the month's charge gives
+  // back (contract 6.2, ADR-0043). Omitted = the student's own decision.
+  // Any other value is a CEO's or branch director's call — the service
+  // checks the caller in the database and answers 403 otherwise.
+  @IsOptional()
+  @IsIn(DEPARTURE_POLICIES)
+  departurePolicy?: DeparturePolicy;
 }

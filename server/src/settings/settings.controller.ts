@@ -88,6 +88,9 @@ export class SettingsController {
     if (dto.monthlyNoticesEnabled !== undefined) {
       edits.push(['payment.monthlyNoticesEnabled', dto.monthlyNoticesEnabled]);
     }
+    if (dto.noRefundAfterPercent !== undefined) {
+      edits.push(['payment.noRefundAfterPercent', dto.noRefundAfterPercent]);
+    }
 
     if (edits.length === 0) {
       throw new BadRequestException('Kamida bitta sozlama yuborilishi kerak');

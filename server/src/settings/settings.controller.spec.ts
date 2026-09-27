@@ -251,6 +251,23 @@ describe('SettingsController — branch scope', () => {
     );
   });
 
+  it('noRefundAfterPercent is written through its registry key, company-level (CEO)', async () => {
+    prisma.user.findFirst.mockResolvedValue(ceoUser);
+    await controller.updatePayment(
+      { noRefundAfterPercent: 50 } as any,
+      1,
+      1001,
+    );
+    expect(settingsService.set).toHaveBeenCalledTimes(1);
+    expect(settingsService.set).toHaveBeenCalledWith(
+      1001,
+      'payment.noRefundAfterPercent',
+      50,
+      1,
+      undefined,
+    );
+  });
+
   it('excusedCreditEnabled: false is written too (same !== undefined guard)', async () => {
     prisma.user.findFirst.mockResolvedValue(ceoUser);
     await controller.updatePayment(
