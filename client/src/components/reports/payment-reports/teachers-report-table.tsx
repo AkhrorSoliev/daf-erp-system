@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
 import {
   Table,
   TableBody,
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { reportViewState, retryUnlessRefused } from "./report-view-state";
 
 export interface TeacherRow {
   id: number;
@@ -41,7 +43,7 @@ export function TeachersReportTable({
   endDate,
   onRowClick,
 }: TeachersReportTableProps) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["teacher-payment-reports", branchId, startDate, endDate],
     queryFn: () =>
       api
@@ -54,7 +56,9 @@ export function TeachersReportTable({
         })
         .then((r) => r.data),
     staleTime: 0,
+    retry: retryUnlessRefused,
   });
+  const view = reportViewState({ data, isError });
 
   return (
     <div className="rounded-xl border bg-card overflow-hidden">
@@ -78,7 +82,7 @@ export function TeachersReportTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && !data ? (
+            {view === "loading" ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <TableRow key={i}>
                   <TableCell colSpan={7}>
@@ -86,6 +90,18 @@ export function TeachersReportTable({
                   </TableCell>
                 </TableRow>
               ))
+            ) : view === "error" ? (
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  className="text-center py-8 text-sm text-muted-foreground"
+                >
+                  {getErrorMessage(
+                    error,
+                    "O'qituvchilar ro'yxatini yuklab bo'lmadi",
+                  )}
+                </TableCell>
+              </TableRow>
             ) : !data || data.teachers.length === 0 ? (
               <TableRow>
                 <TableCell

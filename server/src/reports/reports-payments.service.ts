@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolvePeriod } from '../common/finance/period-helpers';
 import {
@@ -16,6 +17,28 @@ import {
 // Above this many rows a single detail sheet stops being readable and starts
 // bloating the workbook — cap the query and let the caller flag truncation.
 const LINE_ITEM_CAP = 10_000;
+
+/**
+ * Refunds as the ledger records them — the same rows the net-profit refund
+ * figure subtracts (`getPeriodOutflows`). `Refund` carries no branch; its
+ * REFUND transaction is stamped with the branch whose kassa paid it out.
+ * Reversed originals and their compensating rows are both excluded, so an
+ * undone refund counts as nothing. `lt`: the end bound is exclusive.
+ */
+function refundLedgerWhere(
+  companyId: number,
+  range: { gte: Date; lt: Date },
+  branchIds: ReportBranchIds,
+) {
+  return {
+    companyId,
+    type: TransactionType.REFUND,
+    reversedAt: null,
+    reversedTransactionId: null,
+    createdAt: range,
+    ...branchIdWhere(branchIds),
+  };
+}
 
 @Injectable()
 export class ReportsPaymentsService {
@@ -164,15 +187,14 @@ export class ReportsPaymentsService {
   async getPaymentReports(
     companyId: number,
     options: {
-      branchId?: number;
+      branchIds: ReportBranchIds;
       startDate?: string;
       endDate?: string;
       months?: 3 | 6;
     },
   ) {
     const trendMonths = options.months ?? 6;
-    const branchId = options.branchId;
-    const branchFilter = branchId ? { branchId } : {};
+    const { branchIds } = options;
 
     // Payment.createdAt is a TIMESTAMP; the picked days are Tashkent days.
     // `end` is EXCLUSIVE throughout, so the previous window is simply the same
@@ -211,28 +233,20 @@ export class ReportsPaymentsService {
       branchBreakdown,
       currentRefundCount,
     ] = await Promise.all([
-      this.computePaymentMetricsForPeriod(
-        companyId,
-        currentPeriod,
-        branchFilter,
-      ),
-      this.computePaymentMetricsForPeriod(
-        companyId,
-        previousPeriod,
-        branchFilter,
-      ),
+      this.computePaymentMetricsForPeriod(companyId, currentPeriod, branchIds),
+      this.computePaymentMetricsForPeriod(companyId, previousPeriod, branchIds),
       Promise.all(
         trendPeriods.map((p) =>
-          this.computePaymentMetricsForPeriod(companyId, p, branchFilter),
+          this.computePaymentMetricsForPeriod(companyId, p, branchIds),
         ),
       ),
-      this.computeBranchBreakdown(companyId, currentPeriod),
-      this.prisma.refund.count({
-        where: {
+      this.computeBranchBreakdown(companyId, currentPeriod, branchIds),
+      this.prisma.transaction.count({
+        where: refundLedgerWhere(
           companyId,
-          status: 'COMPLETED',
-          processedAt: { gte: currentStart, lte: currentEnd },
-        },
+          { gte: currentStart, lt: currentEnd },
+          branchIds,
+        ),
       }),
     ]);
 
@@ -374,9 +388,10 @@ export class ReportsPaymentsService {
   private async computePaymentMetricsForPeriod(
     companyId: number,
     period: { label: string; start: Date; end: Date },
-    branchFilter: { branchId?: number },
+    branchIds: ReportBranchIds,
   ) {
     const dateFilter = { gte: period.start, lt: period.end };
+    const branchFilter = branchIdWhere(branchIds);
 
     const [paymentsAgg, payments, refundsAgg] = await Promise.all([
       this.prisma.payment.aggregate({
@@ -409,13 +424,9 @@ export class ReportsPaymentsService {
           },
         },
       }),
-      this.prisma.refund.aggregate({
-        where: {
-          companyId,
-          status: 'COMPLETED',
-          processedAt: dateFilter,
-        },
-        _sum: { approvedAmount: true },
+      this.prisma.transaction.aggregate({
+        where: refundLedgerWhere(companyId, dateFilter, branchIds),
+        _sum: { amount: true },
       }),
     ]);
 
@@ -432,13 +443,14 @@ export class ReportsPaymentsService {
       onTimeCount,
       onTimeRate:
         paymentCount > 0 ? Math.round((onTimeCount / paymentCount) * 100) : 0,
-      refunds: refundsAgg._sum.approvedAmount ?? 0,
+      refunds: Math.abs(refundsAgg._sum.amount ?? 0),
     };
   }
 
   private async computeBranchBreakdown(
     companyId: number,
     period: { start: Date; end: Date },
+    branchIds: ReportBranchIds,
   ) {
     const [grouped, branches] = await Promise.all([
       this.prisma.payment.groupBy({
@@ -447,11 +459,17 @@ export class ReportsPaymentsService {
           companyId,
           status: 'COMPLETED',
           createdAt: { gte: period.start, lt: period.end },
+          ...branchIdWhere(branchIds),
         },
         _sum: { amount: true },
       }),
+      // Only the caller's branches get a row — `[]` lists none (fail-closed).
       this.prisma.branch.findMany({
-        where: { companyId, deletedAt: null },
+        where: {
+          companyId,
+          deletedAt: null,
+          ...(branchIds == null ? {} : { id: { in: branchIds } }),
+        },
         select: { id: true, name: true },
       }),
     ]);

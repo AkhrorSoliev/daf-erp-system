@@ -615,7 +615,7 @@ export class ReportsService {
   getPaymentReports(
     companyId: number,
     options: {
-      branchId?: number;
+      branchIds: ReportBranchIds;
       startDate?: string;
       endDate?: string;
       months?: 3 | 6;
