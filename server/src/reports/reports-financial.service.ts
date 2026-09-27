@@ -84,7 +84,10 @@ export class ReportsFinancialService {
     const where: Prisma.TransactionWhereInput = {
       companyId,
       type: TransactionType.DEBT_WRITE_OFF,
+      // Undone originals carry `reversedAt`; the undo itself is a counter-row
+      // with `reversedTransactionId`. Neither is forgiveness still in effect.
       reversedAt: null,
+      reversedTransactionId: null,
       createdAt: tashkentRangeUtc(periodStart, periodEnd),
       // Both a `branchId` and a `branchIds` used to be spread here, the second
       // silently clobbering the first — the same class of bug the resolved

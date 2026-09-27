@@ -522,3 +522,79 @@ describe('DebtWriteOffService.executeWriteOff', () => {
     );
   });
 });
+
+describe('DebtWriteOffService.reverseWriteOff', () => {
+  let service: DebtWriteOffService;
+  let client: any;
+  let transactionsService: any;
+  const params = {
+    transactionId: 'tx-1',
+    companyId: COMPANY_ID,
+    performedById: PERFORMER_ID,
+    reason: 'Xato kechirilgan edi',
+  };
+  const row = (o: Record<string, unknown> = {}) => ({
+    id: 'tx-1',
+    type: 'DEBT_WRITE_OFF',
+    amount: 150_000,
+    companyId: COMPANY_ID,
+    studentId: STUDENT_ID,
+    reversedAt: null,
+    reversedTransactionId: null,
+    ...o,
+  });
+
+  beforeEach(async () => {
+    client = buildClient();
+    // reverseWriteOff reads the row through the tx client it opens itself.
+    client.$transaction.mockImplementation(async (cb: any) => cb(client));
+    transactionsService = {
+      recordDebtWriteOff: jest.fn(),
+      reverseTransaction: jest.fn().mockResolvedValue({ id: 'tx-undo' }),
+    };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        DebtWriteOffService,
+        { provide: PrismaService, useValue: client },
+        { provide: TransactionsService, useValue: transactionsService },
+        {
+          provide: EntityHistoryService,
+          useValue: { recordUpdate: jest.fn() },
+        },
+      ],
+    }).compile();
+    service = module.get(DebtWriteOffService);
+  });
+
+  it('undoes an original write-off exactly as before', async () => {
+    client.transaction.findFirst.mockResolvedValue(row());
+    await expect(service.reverseWriteOff(params)).resolves.toEqual({
+      id: 'tx-undo',
+    });
+    expect(transactionsService.reverseTransaction).toHaveBeenCalledWith(
+      'tx-1',
+      { performedById: PERFORMER_ID, reason: params.reason },
+      client,
+    );
+  });
+
+  it('refuses an undo row with 400 instead of forgiving the debt again', async () => {
+    client.transaction.findFirst.mockResolvedValue(
+      row({ amount: -150_000, reversedTransactionId: 'tx-orig' }),
+    );
+    const err = await service.reverseWriteOff(params).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(BadRequestException);
+    expect((err as Error).message).toMatch(/qaytarib olib bo'lmaydi/);
+    expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
+  });
+
+  it('still refuses an original that was already undone', async () => {
+    client.transaction.findFirst.mockResolvedValue(
+      row({ reversedAt: new Date('2026-09-20T10:00:00Z') }),
+    );
+    await expect(service.reverseWriteOff(params)).rejects.toThrow(
+      'Bu hisobdan chiqarish allaqachon bekor qilingan',
+    );
+    expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
+  });
+});
