@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { PaymentsPreviewService } from './payments-preview.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { applyDiscount } from '../billing/monthly-price';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
 
 const baseEnrollment = (
   overrides: Partial<{
@@ -35,6 +36,7 @@ describe('PaymentsPreviewService', () => {
     transaction: { count: jest.Mock; findMany: jest.Mock };
     attendance: { findMany: jest.Mock };
   };
+  let admission: { reachForPayment: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -46,10 +48,12 @@ describe('PaymentsPreviewService', () => {
       },
       attendance: { findMany: jest.fn().mockResolvedValue([]) },
     };
+    admission = { reachForPayment: jest.fn().mockResolvedValue(null) };
     const mod = await Test.createTestingModule({
       providers: [
         PaymentsPreviewService,
         { provide: PrismaService, useValue: prisma },
+        { provide: LessonAdmissionService, useValue: admission },
       ],
     }).compile();
     service = mod.get(PaymentsPreviewService);
@@ -230,6 +234,29 @@ describe('PaymentsPreviewService', () => {
   });
 
   describe('MONTHLY courses', () => {
+    it('attaches how far a monthly payment reaches (ADR-0045)', async () => {
+      const reach = {
+        paidThrough: '2026-10-05',
+        next: { date: '2026-10-07', groupName: '#029', needed: 3846 },
+        clearsDebt: false,
+      };
+      admission.reachForPayment.mockResolvedValue(reach);
+      prisma.student.findFirst.mockResolvedValue({
+        balance: -450000,
+        discountPercent: 0,
+      });
+      prisma.enrollment.findMany.mockResolvedValue([
+        baseEnrollment({ model: 'MONTHLY', price: 450000 }),
+      ]);
+
+      const res = await service.preview(10001, 100000, 1001, null);
+
+      expect(res.monthly?.admission).toEqual(reach);
+      expect(admission.reachForPayment).toHaveBeenCalledWith(
+        expect.objectContaining({ studentId: 10001, balanceAfter: -350000 }),
+      );
+    });
+
     it('shows the debt and the next month instead of cycles', async () => {
       prisma.student.findFirst.mockResolvedValue({
         balance: -450000,
@@ -257,6 +284,7 @@ describe('PaymentsPreviewService', () => {
             amount: 450000,
           },
         ],
+        admission: null,
       });
       expect(res.breakdown).toEqual([
         expect.objectContaining({ kind: 'DEBT_REPAY', amount: 450000 }),
@@ -321,6 +349,7 @@ describe('PaymentsPreviewService', () => {
         nextMonthAmount: 0,
         discountPercent: 0,
         enrollments: [],
+        admission: null,
       });
       expect(res.breakdown).toEqual([
         expect.objectContaining({ kind: 'DEBT_REPAY', amount: 120000 }),
