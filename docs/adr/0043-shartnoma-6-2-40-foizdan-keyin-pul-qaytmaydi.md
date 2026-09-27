@@ -1,6 +1,6 @@
 # ADR-0043 — Shartnoma 6.2: o'quvchi oyning 40% idan ko'pi o'tgach o'zi ketsa, oy to'lovi qaytarilmaydi
 
-**Holati:** Qabul qilindi
+**Holati:** Almashtirildi — ADR-0044
 **Sana:** 2026-09-27
 **Bog'liq:** yangi shartnomaning 6.2 bandi, ADR-0028, `server/src/billing/departure-policy.ts` (`policyRelease`), `server/src/billing/monthly-charge.service.ts` (`reverseChargeForDeparture`, `previewDepartureOutcomes`), `server/src/students/shared/departure-policy-access.ts`, `server/src/students/student-departure-preview.service.ts`, `server/src/common/status/status-cascade.service.ts`, sozlama `payment.noRefundAfterPercent`, `client/src/components/students/departure-money-block.tsx`
 
