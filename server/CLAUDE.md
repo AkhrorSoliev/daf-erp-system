@@ -446,7 +446,7 @@ Creates one initial snapshot per existing room/group/course (with `validFrom = e
 
 #### Date & Time Validation (`validateLessonDate`)
 
-Every attendance write (manual `save()` and QR `startSession()`) passes through `AttendanceService.validateLessonDate()` which enforces:
+Every attendance write (manual `save()`, QR `startSession()` and `scanQr()`, pre-marks) passes through `AttendanceValidationService.validateLessonDate()` which enforces:
 
 1. Date format (YYYY-MM-DD)
 2. Group existence + multi-tenant `companyId` filter
@@ -454,10 +454,19 @@ Every attendance write (manual `save()` and QR `startSession()`) passes through 
 4. Date within group `startDate`–`endDate` range
 5. Day-of-week matches group `exactDays` schedule
 6. Date is not a holiday (`Holiday` table)
-7. **Lesson time check** (server-side `new Date()`, not client time):
-   - **Teacher** — can only take attendance from 10 minutes before `lessonStartTime` until `lessonEndTime`
-   - **CEO, Branch Director, Administrator** — bypass time restriction (can take attendance anytime)
-   - Time check only applies to today's date — past dates are not time-restricted
+7. **The lesson window is NOT checked here.** `validateLessonDate(groupId, date, companyId?)` returns the effective `startTime`/`endTime` (a reschedule's override wins); the clock lives in `assertWindowOpen` / `assertLessonNotEnded` / `windowFor` (ADR-0045).
+
+#### Lesson window (ADR-0045)
+
+- `lessonWindowState` (`src/attendance/shared/lesson-window.ts`): `[start − 10 min, end]`, Tashkent time. **Every role** — Teacher, Administrator, Branch Director, CEO — is bound: `save`, QR `startSession` and `scanQr` call `assertWindowOpen`; a pre-mark calls `assertLessonNotEnded`. Past and future dates are therefore closed to everyone. The only bypass is `SaveAttendanceOptions.allowClosedLesson`, reserved for a correction script run on the CEO's order — no HTTP route passes it.
+- `GET /attendance/:groupId/date/:date` returns `window` (state + effective times) so the client (`client/src/lib/lesson-window.ts`, a mirror) locks the form at the end without a refetch.
+- The attendance reminders say what an untaken attendance costs and never ask anyone to "restore" it after the lesson.
+
+#### Admission (contract 3.2, ADR-0045)
+
+- `lessonAdmission` (`src/billing/lesson-admission.ts`), loaded by `LessonAdmissionService` (`BillingModule`): from 2026-10-01 a student's first lesson of the month in a group is free; from the 2nd they are admitted iff `balance + heldAfter(month charges, day) ≥ 0`. `heldAfter` is `departureRelease` summed over the student's CHARGED charges on ACTIVE enrollments, so the lesson day itself counts as held and older debt must be paid first. No charge for the group-month → the rule stays out of the way. A payment promise never admits.
+- The roster returns `admission` per student. `save` refuses a new PRESENT/LATE/ABSENT for a blocked student (EXCUSED stays allowed, an unchanged mark is not re-judged), inside its transaction; the full-roster check skips them; `scanQr` refuses them.
+- `GET /payments/preview` → `monthly.admission` (`paymentReach`: how far the balance after the payment reaches, what the next lesson still needs). `POST /payments` with `promiseDate` upserts the student's OPEN promise when the payment leaves a debt; a failing promise never undoes the payment.
 
 #### QR Session
 
@@ -475,6 +484,7 @@ Every attendance write (manual `save()` and QR `startSession()`) passes through 
 - **Manual attendance is all-or-nothing.** `AttendanceSaveService.save()` rejects the request unless `dto.entries` covers every active enrollment the role would render via `getByDate` — partial saves are not allowed. A previous bug let admins/teachers leave students "na bor — na yo'q": only the marked subset was persisted and the rest stayed `null` forever.
 - "Expected" set per role (must mirror `getByDate` exactly):
   - **Every role** (Teacher, Admin, BD, CEO) — every active enrollment in the group, debtors included. Debtors used to be hidden from the teacher view; that block was removed when retroactive billing on payment shipped, so the roster is the same shape for everyone now.
+- A student `lessonAdmission` keeps out of the lesson (contract 3.2) is not required — they cannot be marked; see «Admission» above.
 - On miss → `BadRequestException("Davomat saqlash uchun barcha o'quvchilarning holati belgilanishi shart. Belgilanmagan o'quvchilar: N ta")`. Validation runs **inside** the `Serializable` tx, so a concurrent enrollment add can't race past it.
 - The frontend (`attendance-form.tsx`) mirrors this: the `Saqlash` button is disabled while any visible student has `status === null`, an amber "Belgilanmagan: N ta" badge sits next to it, and `handleSave()` no longer auto-coerces `null → "PRESENT"`. Both layers must stay in sync — never weaken the backend check thinking the UI already prevents the case (API is callable directly).
 

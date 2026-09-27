@@ -116,7 +116,7 @@ Server:
 - `CreatePaymentDto.promiseDate?` → upsert the OPEN promise after a payment
   that leaves a debt (R5).
 - Reminder texts (R6).
-- CLI `scripts/attendance-closed-lesson.ts` (dry run by default).
+- `SaveAttendanceOptions.allowClosedLesson`; the script that uses it is written on the CEO's first correction order (a script booting the whole app would also start its crons).
 
 Client:
 - Attendance form: one window rule for all roles (banners from the mockup),
