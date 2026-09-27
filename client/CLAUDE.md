@@ -828,6 +828,16 @@ The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth
 - Used during transition from old finance systems to enter a student's outstanding balance. Backend partial unique index `(studentId) WHERE type='INITIAL_BALANCE' AND reversedAt IS NULL` enforces "exactly one per student" — second submit returns 400 with "Boshlang'ich balans bu o'quvchi uchun allaqachon kiritilgan".
 - Form: amount (`PriceInput`, min 0) + optional note (`Input`, maxLength 500).
 
+### Student Card: Phone Proof vs Telegram Bot (ADR-0039)
+
+`student-profile-card.tsx` shows two badges under the phone, from `student-contact-badges.tsx`. They answer different questions and must never be merged into one:
+
+- **"Telefon tasdiqlangan" / "Telefon tasdiqlanmagan"** — `student.phoneVerified` (+ `phoneVerifiedAt` in the tooltip). The server computes it (`formatStudent`); the client never compares numbers itself, and the API does not return the proved number. Only an SMS code proves a phone — a Telegram sign-in or a contact shared with the bot does not, because the Telegram account can carry a different number (CEO decision, 2026-09-27).
+- **"Telegram botda ro'yxatdan o'tgan"** — `student.telegramChatId` is set, i.e. the bot's messages reach this card (the bot itself calls this being registered; a parent's chat can be linked to several siblings). Drawn only when linked.
+- Badge colours use `green` / `blue`, not `sky`: outside the student portal the `sky-*` utilities resolve to Lumio variables that exist only under `.lumio`, so `bg-sky-100` renders transparent on staff pages.
+
+The card also shows "Jinsi" and the age next to "Tug'ilgan sana". The age comes from `ageFromStoredDate` (`src/lib/age.ts`), which reads the day the card displays — the staff date picker stores local midnight (19:00Z the day before in Tashkent), the student's first-run form stores UTC midnight, so the ISO string's first ten characters are not the birthday.
+
 ### Lead Forms and Their Responses (`/leads/forms`)
 
 Public sign-up forms (shared on Instagram/Telegram) turn every submission into a lead. Three routes:

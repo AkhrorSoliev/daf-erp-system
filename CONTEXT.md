@@ -74,8 +74,16 @@ tizimga kira olmaydi.** Ilgari bu ikkisi bir narsa deb qaralardi.
 **Tasdiqlangan telefon** — o'quvchi SMS kod bilan isbotlagan raqam
 (`Student.verifiedPhone`). Raqam faqat kartadagi `phone` ga teng bo'lganda
 tasdiqlangan: xodim raqamni almashtirsa, yangisi tasdiqlanmagan bo'ladi.
-SMS orqali parol tiklash ham tasdiq sanaladi.
+SMS orqali parol tiklash ham tasdiq sanaladi. Telegram (kirish yoki botga
+ulashilgan kontakt) tasdiq **emas** — Telegram hisobidagi raqam o'quvchi
+ishlatadigan raqamdan boshqa bo'lishi mumkin.
 `students/shared/student-onboarding.ts` · `docs/adr/0039-oquvchi-birinchi-kirishda-telefon-jins-yosh.md`
+
+**Telegram botda ro'yxatdan o'tgan** — kartaga Telegram chat bog'langan
+(`Student.telegramChatId`): bot xabarlari shu chatga boradi. Bot o'zi ham shunday
+ataydi («Siz allaqachon ro'yxatdan o'tgansiz»). Ota-onaning bitta chati bir
+nechta farzandga bog'lanishi mumkin. Telefon tasdig'i bilan aloqasi yo'q.
+`telegram/scenes/student-registration.scene.ts`
 
 **Birinchi kirish talablari (onboarding)** — o'quvchi web portal yoki mobil
 ilovadan foydalanishdan oldin beradigan narsalar: tasdiqlangan telefon, jins,
