@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { TelegramDigestCategory, TransactionType } from '@prisma/client';
+import {
+  EnrollmentStatus,
+  MonthlyChargeStatus,
+  TelegramDigestCategory,
+  TransactionType,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { tashkentDateStr } from '../common/date/tashkent';
+import { addDaysToDateStr, tashkentDateStr } from '../common/date/tashkent';
 import { formatSom } from '../payments/shared/format-som';
 import { PAYMENT_METHOD_LABEL } from '../payments/shared/method-label';
 import {
@@ -14,6 +19,11 @@ import {
   STUDENT_PORTAL_URL,
 } from './telegram-digest.constants';
 import { DedupedRow, dedupRows } from './telegram-digest-dedup';
+import {
+  monthlyBillSection,
+  monthlyPaymentClosing,
+  paymentReminderSection,
+} from './monthly-payment-text';
 import {
   payloadOf,
   TaskDigestPayload,
@@ -82,6 +92,7 @@ export class TelegramDigestRenderService {
   async renderStudent(
     studentId: number,
     rows: TelegramDigestItemRow[],
+    now: Date = new Date(),
   ): Promise<RenderedDigest> {
     if (rows.length === 0) return nothing();
     const allHidden = { ...nothing(), hiddenIds: rows.map((r) => r.id) };
@@ -93,30 +104,48 @@ export class TelegramDigestRenderService {
     if (!student) return allHidden;
 
     const entries = dedupRows(rows);
-    const payments = entries.filter(
-      (e) =>
-        e.row.category === TelegramDigestCategory.PAYMENT_RECEIVED ||
-        e.row.category === TelegramDigestCategory.PAYMENT_REVERSED,
+    const of = (...categories: TelegramDigestCategory[]) =>
+      entries.filter((e) => categories.includes(e.row.category));
+    const payments = of(
+      TelegramDigestCategory.PAYMENT_RECEIVED,
+      TelegramDigestCategory.PAYMENT_REVERSED,
     );
-    const notices = entries.filter(
-      (e) =>
-        e.row.category === TelegramDigestCategory.STUDENT_ENROLLED ||
-        e.row.category === TelegramDigestCategory.STUDENT_REMOVED,
+    const notices = of(
+      TelegramDigestCategory.STUDENT_ENROLLED,
+      TelegramDigestCategory.STUDENT_REMOVED,
     );
-    const debts = entries.filter(
-      (e) => e.row.category === TelegramDigestCategory.DEBT_CHARGE,
-    );
+    const debts = of(TelegramDigestCategory.DEBT_CHARGE);
     const liveDebts = await this.stillCharged(studentId, debts);
     const showDebt = liveDebts.length > 0 && student.balance < 0;
-    const hiddenIds = debts
-      .filter((e) => !showDebt || !liveDebts.includes(e))
+
+    // The monthly bill and the reminder (ADR-0042). A reminder is only for a
+    // student who still owes: one who paid during the day gets none.
+    const today = tashkentDateStr(now);
+    const owes = student.balance < 0;
+    const monthly = await this.liveMonthly(
+      of(TelegramDigestCategory.MONTHLY_CHARGE),
+      owes ? of(TelegramDigestCategory.PAYMENT_REMINDER) : [],
+      addDaysToDateStr(today, 1),
+    );
+
+    const shown = new Set<DedupedRow>([
+      ...(showDebt ? liveDebts : []),
+      ...monthly.bills,
+      ...monthly.reminders,
+    ]);
+    const hiddenIds = of(
+      TelegramDigestCategory.DEBT_CHARGE,
+      TelegramDigestCategory.MONTHLY_CHARGE,
+      TelegramDigestCategory.PAYMENT_REMINDER,
+    )
+      .filter((e) => !shown.has(e))
       .flatMap((e) => e.ids);
 
     const audit: AuditEntry[] = [];
     const eventBlock = (
       entry: DedupedRow,
       text: string,
-      senderUserId: number | null,
+      senderUserId: number | null = null,
     ): DigestBlock => {
       audit.push({
         itemId: entry.row.id,
@@ -146,6 +175,16 @@ export class TelegramDigestRenderService {
         }),
       ]);
     }
+    if (monthly.bills.length > 0) {
+      sections.push(
+        monthlyBillSection(monthly.bills, student.balance, today, eventBlock),
+      );
+    }
+    if (monthly.reminders.length > 0) {
+      sections.push(
+        paymentReminderSection(monthly.reminders, -student.balance, eventBlock),
+      );
+    }
     if (showDebt) {
       sections.push([
         header('⚠️ <b>Qarzga yozilgan darslar</b>'),
@@ -170,22 +209,32 @@ export class TelegramDigestRenderService {
       });
     }
     for (const section of sections) blocks.push(spacer(), ...section);
-    if (payments.length > 0 && !showDebt) {
+    // The bill and the reminder already state the balance.
+    const monthlyShown =
+      monthly.bills.length > 0 || monthly.reminders.length > 0;
+    if (payments.length > 0 && !showDebt && !monthlyShown) {
       blocks.push(spacer(), {
         text: `Joriy balansingiz: <b>${formatSum(student.balance)}</b>`,
         itemIds: [],
       });
     }
-    // The closing lines today's instant receipt and reversal notice end with.
-    const closing: string[] = [];
-    if (
-      payments.some(
-        (e) => e.row.category === TelegramDigestCategory.PAYMENT_REVERSED,
-      )
-    ) {
+    // The bill's and the reminder's closing lines, then the ones today's
+    // instant receipt and reversal notice end with.
+    const askToPay = monthly.bills.length > 0 && owes;
+    const reversed = payments.some(
+      (e) => e.row.category === TelegramDigestCategory.PAYMENT_REVERSED,
+    );
+    // A reversal's «questions» line joins the monthly closing, before the
+    // profile link; on its own it keeps the reversal notice's wording.
+    const closing = monthlyPaymentClosing(
+      askToPay,
+      monthly.reminders.length > 0 || (askToPay && reversed),
+    );
+    if (reversed && closing.length === 0) {
       closing.push("Savollar bo'lsa, markazga murojaat qiling.");
     }
     if (
+      (monthly.bills.length > 0 && !owes) ||
       payments.some(
         (e) => e.row.category === TelegramDigestCategory.PAYMENT_RECEIVED,
       )
@@ -290,6 +339,57 @@ export class TelegramDigestRenderService {
     });
     const liveIds = new Set(live.map((t) => t.attendanceId));
     return debts.filter((e) => liveIds.has(attendanceIdOf(e)));
+  }
+
+  /**
+   * A bill is sent only while its charge stands and the student is still in
+   * that group: a charge reversed, or a student removed or frozen, during the
+   * day gets no bill. A reminder only for tomorrow's lesson — a row kept
+   * after a failed send would otherwise say «Ertaga» about a past day — and
+   * only while the enrollment is open.
+   */
+  private async liveMonthly(
+    bills: DedupedRow[],
+    reminders: DedupedRow[],
+    tomorrow: string,
+  ): Promise<{ bills: DedupedRow[]; reminders: DedupedRow[] }> {
+    const chargeIdOf = (e: DedupedRow) =>
+      payloadOf(e.row, TelegramDigestCategory.MONTHLY_CHARGE).chargeId;
+    const reminderOf = (e: DedupedRow) =>
+      payloadOf(e.row, TelegramDigestCategory.PAYMENT_REMINDER);
+    const dueTomorrow = reminders.filter(
+      (e) => reminderOf(e).lessonDate === tomorrow,
+    );
+
+    const standing =
+      bills.length === 0
+        ? []
+        : await this.prisma.enrollmentMonthlyCharge.findMany({
+            where: {
+              id: { in: bills.map(chargeIdOf) },
+              status: MonthlyChargeStatus.CHARGED,
+              enrollment: { status: EnrollmentStatus.ACTIVE },
+            },
+            select: { id: true },
+          });
+    const open =
+      dueTomorrow.length === 0
+        ? []
+        : await this.prisma.enrollment.findMany({
+            where: {
+              id: { in: dueTomorrow.map((e) => reminderOf(e).enrollmentId) },
+              status: EnrollmentStatus.ACTIVE,
+            },
+            select: { id: true },
+          });
+    const standingIds = new Set(standing.map((c) => c.id));
+    const openIds = new Set(open.map((e) => e.id));
+    return {
+      bills: bills.filter((e) => standingIds.has(chargeIdOf(e))),
+      reminders: dueTomorrow.filter((e) =>
+        openIds.has(reminderOf(e).enrollmentId),
+      ),
+    };
   }
 
   private paymentText(row: TelegramDigestItemRow): string {

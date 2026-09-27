@@ -613,6 +613,33 @@ describe('MonthlyChargeService', () => {
       });
     });
 
+    it('re-announces a re-charged month: the bill marker is cleared (ADR-0042)', async () => {
+      // A reversed month charged again is a new bill for the student; keeping
+      // the old noticeQueuedAt would leave it unannounced for good.
+      lastChargeRow = { id: 'chg-1', status: 'REVERSED' };
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        id: 'chg-1',
+        status: 'REVERSED',
+      });
+
+      await service.createChargeForEnrollment(tx, {
+        enrollment: enrollment(),
+        periodYear: 2026,
+        periodMonth: 9,
+        companyId: 1,
+      });
+
+      expect(prismaMock.enrollmentMonthlyCharge.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'chg-1' },
+          data: expect.objectContaining({
+            status: 'CHARGED',
+            noticeQueuedAt: null,
+          }),
+        }),
+      );
+    });
+
     it("bayram kuni SHU OY ichida qayta o'tilmasa rejadan CHIQADI (CEO 21.09.2026, 10-javob)", async () => {
       // 1-sentabr 2026 — seshanba, rejadagi kun. Bayram e'lon qilinsa tizim
       // o'zi faqat guruhning `endDate` ini uzaytiradi, ya'ni qoplama dars

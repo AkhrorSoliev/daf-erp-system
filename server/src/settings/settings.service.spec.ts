@@ -109,6 +109,7 @@ describe('SettingsService', () => {
         'payment.excusedCreditMonthlyCap': null,
         'payment.chargeDayOfMonth': 1,
         'payment.debtWriteOffEnabled': false,
+        'payment.monthlyNoticesEnabled': true,
         'payment.noRefundAfterPercent': 40,
       });
     });
@@ -131,6 +132,7 @@ describe('SettingsService', () => {
         'payment.excusedCreditMonthlyCap': [3],
         'payment.chargeDayOfMonth': [],
         'payment.debtWriteOffEnabled': [],
+        'payment.monthlyNoticesEnabled': [],
         'payment.noRefundAfterPercent': [],
       });
     });

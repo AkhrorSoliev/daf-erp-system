@@ -99,6 +99,7 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0039](0039-oquvchi-birinchi-kirishda-telefon-jins-yosh.md) | O'quvchi ilovaga kirishdan oldin telefonini SMS bilan tasdiqlaydi, jinsi va tug'ilgan sanasini beradi | Qabul qilindi | 2026-09-27 |
 | [0040](0040-mini-app-ichida-faqat-telegram-orqali-kirish.md) | Mini App ichida o'quvchi faqat Telegram orqali kiradi; bog'lanmagan akkauntga xabar ko'rsatiladi | Qabul qilindi | 2026-09-27 |
 | [0041](0041-guruh-holati-bitta-tranzaksiyada-ozgaradi.md) | Guruh holati bitta tranzaksiyada o'zgaradi: yo hammasi, yo hech narsa | Qabul qilindi | 2026-09-27 |
+| [0042](0042-oylik-tolov-xabari.md) | Oylik to'lov xabari: hisob kuni va 2-dars eslatmasi (Telegram) | Qabul qilindi | 2026-09-27 |
 | [0043](0043-shartnoma-6-2-40-foizdan-keyin-pul-qaytmaydi.md) | Shartnoma 6.2: o'quvchi oyning 40% idan ko'pi o'tgach o'zi ketsa, oy to'lovi qaytarilmaydi; boshqa tartibni CEO yoki filial direktori tanlaydi | Qabul qilindi | 2026-09-27 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.

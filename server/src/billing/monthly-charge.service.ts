@@ -358,6 +358,8 @@ export class MonthlyChargeService {
             ...chargeData,
             status: MonthlyChargeStatus.CHARGED,
             transactionId: null,
+            // A re-charged month is a new bill for the student (ADR-0042).
+            noticeQueuedAt: null,
           },
         })
       : await tx.enrollmentMonthlyCharge.create({ data: chargeData });

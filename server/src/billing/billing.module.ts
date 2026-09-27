@@ -5,6 +5,8 @@ import { DebtWriteOffService } from './debt-write-off.service';
 import { MonthlyChargeService } from './monthly-charge.service';
 import { MonthlyBillingCronService } from './monthly-billing-cron.service';
 import { MonthlyBillingWatchdogService } from './monthly-billing-watchdog.service';
+import { MonthlyPaymentNoticeService } from './monthly-payment-notice.service';
+import { MonthlyPaymentNoticeCronService } from './monthly-payment-notice-cron.service';
 import { BillingController } from './billing.controller';
 import { StudentDebtNotificationListener } from './student-debt-notification.listener';
 import { TransactionsModule } from '../transactions/transactions.module';
@@ -28,6 +30,9 @@ import { SettingsModule } from '../settings/settings.module';
  * `MonthlyBillingWatchdogService` (har kuni, bo'shliqni tuzatuvchi) both
  * drive `MonthlyChargeService.createChargesForPeriod` — the monthly-model
  * counterpart of the lesson-pack billing pipeline above.
+ *
+ * `MonthlyPaymentNoticeCronService` (19:50) queues the month's bill and the
+ * 2nd-lesson reminder for the 20:00 Telegram digest (ADR-0042).
  */
 @Module({
   imports: [
@@ -44,6 +49,8 @@ import { SettingsModule } from '../settings/settings.module';
     MonthlyChargeService,
     MonthlyBillingCronService,
     MonthlyBillingWatchdogService,
+    MonthlyPaymentNoticeService,
+    MonthlyPaymentNoticeCronService,
     StudentDebtNotificationListener,
   ],
   exports: [

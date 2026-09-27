@@ -85,6 +85,9 @@ export class SettingsController {
     if (dto.debtWriteOffEnabled !== undefined) {
       edits.push(['payment.debtWriteOffEnabled', dto.debtWriteOffEnabled]);
     }
+    if (dto.monthlyNoticesEnabled !== undefined) {
+      edits.push(['payment.monthlyNoticesEnabled', dto.monthlyNoticesEnabled]);
+    }
     if (dto.noRefundAfterPercent !== undefined) {
       edits.push(['payment.noRefundAfterPercent', dto.noRefundAfterPercent]);
     }

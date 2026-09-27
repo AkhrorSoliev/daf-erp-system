@@ -27,6 +27,7 @@ interface PaymentSettingsValues {
   "payment.excusedCreditMonthlyCap": number | null;
   "payment.chargeDayOfMonth": number;
   "payment.debtWriteOffEnabled": boolean;
+  "payment.monthlyNoticesEnabled": boolean;
   "payment.noRefundAfterPercent": number;
 }
 
@@ -357,6 +358,41 @@ export function PaymentSettingsClient() {
               lekin hech qachon saqlanmaydigan tugma bo'lardi va xato
               xabarida unga sozlama kalitining o'zi ko'rinardi. Yuqoridagi
               `chargeDayOfMonth` bloki aynan shu naqshni ishlatadi. */}
+        </div>
+
+        <Separator />
+
+        {/* O'quvchiga oylik to'lov xabari (ADR-0042) — company-level like the
+            switch above, so it is locked to the CEO the same way. */}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between rounded-lg border px-4 py-3">
+            <div className="pr-4">
+              <p className="text-sm font-medium">
+                O&apos;quvchiga oylik to&apos;lov xabari
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Yoqilgan bo&apos;lsa (standart holat) — oy hisobi yozilgan kuni
+                o&apos;quvchiga Telegram orqali shu oy uchun qancha to&apos;lash
+                kerakligi, hali to&apos;lamaganlarga esa oyning 2-darsidan bir
+                kun oldin eslatma boradi. Ikkalasi ham soat 20:00 dagi kunlik
+                xabar bilan birga keladi. O&apos;chirilsa — bu ikki xabar
+                yuborilmaydi.
+              </p>
+            </div>
+            <Switch
+              checked={settings["payment.monthlyNoticesEnabled"]}
+              disabled={!isCeo || saving}
+              onCheckedChange={(checked) =>
+                saveField({ monthlyNoticesEnabled: checked })
+              }
+            />
+          </div>
+          {!isCeo && canEdit && (
+            <p className="text-xs text-muted-foreground">
+              Bu qiymat filial bo&apos;yicha emas — butun kompaniya uchun bitta,
+              shuning uchun faqat CEO o&apos;zgartira oladi.
+            </p>
+          )}
         </div>
 
         <Separator />

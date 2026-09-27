@@ -49,6 +49,10 @@ export class UpdatePaymentSettingsDto {
   debtWriteOffEnabled?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  monthlyNoticesEnabled?: boolean;
+
+  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(100)

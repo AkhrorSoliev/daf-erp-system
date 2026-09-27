@@ -15,6 +15,7 @@ describe('SETTING_DEFINITIONS registry', () => {
         'payment.defaultModel',
         'payment.excusedCreditEnabled',
         'payment.excusedCreditMonthlyCap',
+        'payment.monthlyNoticesEnabled',
         'payment.noRefundAfterPercent',
       ].sort(),
     );
@@ -134,6 +135,25 @@ describe('SETTING_DEFINITIONS registry', () => {
       // CEO (21.09.2026, 9-javob) butun kompaniya uchun qaror qildi; qarz
       // kechirish tugmalari esa Branch Director qo'lida. Filial darajasida
       // yozilsa, direktor taqiqni o'ziga qayta yoqib olardi.
+      expect(def.companyLevelOnly).toBe(true);
+    });
+  });
+
+  describe('payment.monthlyNoticesEnabled', () => {
+    const def = getSettingDefinition('payment.monthlyNoticesEnabled');
+
+    it('defaults to true — CEO (27.09.2026): students get the bill and the reminder', () => {
+      expect(def.defaultValue).toBe(true);
+    });
+
+    it('accepts booleans only, naming this key in the error', () => {
+      expect(def.parse(false)).toBe(false);
+      expect(() => def.parse('ha')).toThrow(
+        /payment\.monthlyNoticesEnabled faqat true\/false/,
+      );
+    });
+
+    it('is company-level only — the 19:50 cron reads it per company', () => {
       expect(def.companyLevelOnly).toBe(true);
     });
   });

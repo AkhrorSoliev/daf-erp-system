@@ -27,6 +27,7 @@ export type SettingKey =
   | 'payment.excusedCreditMonthlyCap'
   | 'payment.chargeDayOfMonth'
   | 'payment.debtWriteOffEnabled'
+  | 'payment.monthlyNoticesEnabled'
   | 'payment.noRefundAfterPercent';
 
 export interface SettingValueMap {
@@ -35,6 +36,7 @@ export interface SettingValueMap {
   'payment.excusedCreditMonthlyCap': number | null;
   'payment.chargeDayOfMonth': number;
   'payment.debtWriteOffEnabled': boolean;
+  'payment.monthlyNoticesEnabled': boolean;
   'payment.noRefundAfterPercent': number;
 }
 
@@ -175,6 +177,16 @@ export const SETTING_DEFINITIONS: {
     // Branch Director va Administrator qo'lida (`students.controller.ts`).
     // Shu bayroq bilan `SettingsService.set` har qanday filial yozuvini rad
     // etadi: yagona qiymatni faqat CEO o'zgartiradi.
+    companyLevelOnly: true,
+  },
+  'payment.monthlyNoticesEnabled': {
+    key: 'payment.monthlyNoticesEnabled',
+    // CEO (27.09.2026): every monthly-course student gets the month's bill
+    // and the 2nd-lesson reminder by Telegram (ADR-0042). Switching them off
+    // is a toggle, not a deploy.
+    defaultValue: true,
+    parse: (raw) => parseBoolean('payment.monthlyNoticesEnabled', raw),
+    // `MonthlyPaymentNoticeCronService` reads it by company only.
     companyLevelOnly: true,
   },
   'payment.noRefundAfterPercent': {
