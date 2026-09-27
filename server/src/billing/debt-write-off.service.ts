@@ -399,6 +399,14 @@ export class DebtWriteOffService {
             'Hisobdan chiqarish topilmadi yoki boshqa kompaniyaga tegishli',
           );
         }
+        // An undo row is itself a DEBT_WRITE_OFF. Undoing it would forgive the
+        // debt again, and write-off may be switched off entirely. Refuse here
+        // with a 400 rather than rely on reverseTransaction's plain Error (500).
+        if (original.reversedTransactionId !== null) {
+          throw new BadRequestException(
+            "Bu yozuv kechirishni qaytarib olgan yozuv — uni qaytarib olib bo'lmaydi",
+          );
+        }
         if (original.reversedAt !== null) {
           throw new BadRequestException(
             'Bu hisobdan chiqarish allaqachon bekor qilingan',

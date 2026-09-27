@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { AttendanceStatus, TransactionType } from '@prisma/client';
+import {
+  AttendanceStatus,
+  PaymentModel,
+  TransactionType,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ReportBranchIds,
   studentBranchWhere,
 } from '../common/finance/report-branch-scope';
+import { applyDiscount, clampDiscount } from '../billing/monthly-price';
 
 export interface PaymentBreakdownItem {
   kind: 'DEBT_REPAY' | 'CYCLE_FULL' | 'CYCLE_PARTIAL' | 'REMAINDER';
@@ -19,6 +24,25 @@ export interface PaymentBreakdownItem {
   // o'tilmagan (kelgusi sikl), shuning uchun sana yo'q, faqat dars soni.
   firstLessonDate?: string | null;
   lastLessonDate?: string | null;
+}
+
+export interface MonthlyPreviewEnrollment {
+  groupName: string;
+  courseName: string;
+  // Course.price — the published monthly price, before the student's discount.
+  monthlyPrice: number;
+  // What a full month bills this enrollment on the 1st.
+  amount: number;
+}
+
+export interface MonthlyPreview {
+  // Outstanding debt right now: -balance when negative, else 0.
+  debt: number;
+  // Σ amount over the ACTIVE monthly enrollments. Excused-lesson credit is
+  // not projected (it can only lower the charge), so this is the ceiling.
+  nextMonthAmount: number;
+  discountPercent: number;
+  enrollments: MonthlyPreviewEnrollment[];
 }
 
 export interface PaymentPreview {
@@ -42,6 +66,11 @@ export interface PaymentPreview {
     currentCycleSequence: number;
   } | null;
   breakdown: PaymentBreakdownItem[];
+  // MONTHLY when every ACTIVE enrollment's course bills by the month (also
+  // when there is none); LESSON_PACK as soon as one is a lesson pack.
+  model: 'MONTHLY' | 'LESSON_PACK';
+  // Set only for model === 'MONTHLY'.
+  monthly: MonthlyPreview | null;
 }
 
 /**
@@ -92,7 +121,12 @@ export class PaymentsPreviewService {
             id: true,
             name: true,
             course: {
-              select: { name: true, price: true, lessonPaymentCount: true },
+              select: {
+                name: true,
+                price: true,
+                lessonPaymentCount: true,
+                paymentModel: true,
+              },
             },
           },
         },
@@ -102,15 +136,21 @@ export class PaymentsPreviewService {
 
     const newBalance = student.balance + amount;
 
-    if (enrollments.length === 0) {
-      return {
+    // Since 01.09.2026 courses bill by the month (MonthlyChargeService): the
+    // charge lands on the 1st and attendance never touches the balance, so
+    // cycles, "12 dars" and price ÷ lessonPaymentCount do not apply. A
+    // student with any LESSON_PACK enrollment keeps the cycle projection below.
+    if (
+      enrollments.every(
+        (e) => e.group.course.paymentModel === PaymentModel.MONTHLY,
+      )
+    ) {
+      return this.buildMonthlyPreview(
         amount,
-        currentBalance: student.balance,
-        newBalance,
-        scenario: 'NO_ENROLLMENT',
-        primaryEnrollment: null,
-        breakdown: this.buildSimpleBreakdown(amount, student.balance),
-      };
+        student.balance,
+        student.discountPercent ?? 0,
+        enrollments,
+      );
     }
 
     if (enrollments.length > 1) {
@@ -124,6 +164,8 @@ export class PaymentsPreviewService {
         scenario: 'MULTI_ENROLLMENT',
         primaryEnrollment: null,
         breakdown: this.buildSimpleBreakdown(amount, student.balance),
+        model: 'LESSON_PACK',
+        monthly: null,
       };
     }
 
@@ -250,6 +292,8 @@ export class PaymentsPreviewService {
           currentCycleSequence,
         },
         breakdown,
+        model: 'LESSON_PACK',
+        monthly: null,
       };
     }
 
@@ -309,6 +353,69 @@ export class PaymentsPreviewService {
         currentCycleSequence,
       },
       breakdown,
+      model: 'LESSON_PACK',
+      monthly: null,
+    };
+  }
+
+  private buildMonthlyPreview(
+    amount: number,
+    currentBalance: number,
+    rawDiscountPercent: number,
+    enrollments: Array<{
+      group: { name: string; course: { name: string; price: number } };
+    }>,
+  ): PaymentPreview {
+    const discountPercent = clampDiscount(rawDiscountPercent);
+    const lines: MonthlyPreviewEnrollment[] = enrollments.map((e) => ({
+      groupName: e.group.name,
+      courseName: e.group.course.name,
+      monthlyPrice: e.group.course.price,
+      // A full month bills exactly the published price, and the charge
+      // discounts it per enrollment: round per enrollment, then sum.
+      amount: applyDiscount(e.group.course.price, discountPercent),
+    }));
+    const nextMonthAmount = lines.reduce((sum, l) => sum + l.amount, 0);
+    const debt = Math.max(0, -currentBalance);
+
+    const breakdown: PaymentBreakdownItem[] = [];
+    let remaining = amount;
+    if (debt > 0) {
+      const debtRepay = Math.min(remaining, debt);
+      breakdown.push({
+        kind: 'DEBT_REPAY',
+        amount: debtRepay,
+        label: 'Qarz yopiladi',
+      });
+      remaining -= debtRepay;
+    }
+    if (remaining > 0) {
+      breakdown.push({
+        kind: 'REMAINDER',
+        amount: remaining,
+        label:
+          nextMonthAmount > 0
+            ? "Balansda qoladi — keyingi oy to'lovi shundan yechiladi"
+            : 'Balansda qoladi',
+      });
+    }
+
+    return {
+      amount,
+      currentBalance,
+      newBalance: currentBalance + amount,
+      scenario:
+        enrollments.length === 0
+          ? 'NO_ENROLLMENT'
+          : enrollments.length === 1
+            ? 'SINGLE_ENROLLMENT'
+            : 'MULTI_ENROLLMENT',
+      // null on purpose: an older client builds cycle buttons from this block
+      // and falls back to plain amounts without it.
+      primaryEnrollment: null,
+      breakdown,
+      model: 'MONTHLY',
+      monthly: { debt, nextMonthAmount, discountPercent, enrollments: lines },
     };
   }
 

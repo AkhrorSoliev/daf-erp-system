@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException } from '@nestjs/common';
 import { StudentsStatusService } from './students-status.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
@@ -11,6 +12,7 @@ describe('StudentsStatusService', () => {
   let service: StudentsStatusService;
   let prisma: any;
   let monthlyCharge: any;
+  let billing: any;
 
   const companyId = 1001;
   const userId = 10001;
@@ -39,6 +41,7 @@ describe('StudentsStatusService', () => {
       // that only care about the MONTHLY leg.
       enrollment: {
         findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
       },
       studentExitReason: {
         findFirst: jest.fn(),
@@ -84,9 +87,7 @@ describe('StudentsStatusService', () => {
         },
         {
           provide: EnrollmentBillingService,
-          useValue: {
-            refundPrepaidWithOverride: jest.fn(),
-          },
+          useValue: (billing = { refundPrepaidWithOverride: jest.fn() }),
         },
         {
           provide: MonthlyChargeService,
@@ -195,6 +196,88 @@ describe('StudentsStatusService', () => {
         ),
       ).rejects.toThrow();
       expect(prisma.student.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects a hand-typed lesson count for a MONTHLY enrollment with 400 and moves no money', async () => {
+      prisma.enrollment.count.mockResolvedValue(1);
+      // Both refund legs must have something to refund, or the "not called"
+      // assertions below would pass even if the 400 guard ran too late (i.e.
+      // after either refund had already moved money). The LESSON_PACK leg's
+      // query returns an unrelated prepaid-bearing enrollment; the MONTHLY
+      // leg's query returns one shaped for `reverseChargeForDeparture`'s
+      // `group.companyId` read.
+      prisma.enrollment.findMany.mockImplementation(({ where }: any) =>
+        Promise.resolve(
+          where?.group?.course?.paymentModel === 'LESSON_PACK'
+            ? [{ id: 'enr-pack', prepaidLessonsRemaining: 2 }]
+            : [
+                {
+                  id: 'enr-month',
+                  prepaidLessonsRemaining: 0,
+                  group: { companyId },
+                },
+              ],
+        ),
+      );
+
+      await expect(
+        service.changeStatus(
+          studentId,
+          {
+            status: StudentStatus.FROZEN,
+            reason: 'Sinov sababi',
+            frozenRefundOverrides: { 'enr-month': 3 },
+          } as never,
+          userId,
+          companyId,
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(prisma.enrollment.count).toHaveBeenCalledWith({
+        where: {
+          id: { in: ['enr-month'] },
+          studentId,
+          deletedAt: null,
+          group: { course: { paymentModel: 'MONTHLY' } },
+        },
+      });
+      expect(billing.refundPrepaidWithOverride).not.toHaveBeenCalled();
+      expect(monthlyCharge.reverseChargeForDeparture).not.toHaveBeenCalled();
+      expect(prisma.student.update).not.toHaveBeenCalled();
+    });
+
+    it('the pack refund leg reads LESSON_PACK enrollments only; pack overrides still apply', async () => {
+      prisma.enrollment.findMany.mockImplementation(({ where }: any) =>
+        Promise.resolve(
+          where.group?.course?.paymentModel === 'LESSON_PACK'
+            ? [{ id: 'enr-pack', prepaidLessonsRemaining: 2 }]
+            : [],
+        ),
+      );
+      billing.refundPrepaidWithOverride.mockResolvedValue({
+        refunded: 66_666,
+        lessons: 2,
+        extraReversed: 0,
+      });
+
+      await service.changeStatus(
+        studentId,
+        {
+          status: StudentStatus.FROZEN,
+          reason: 'Sinov sababi',
+          frozenRefundOverrides: { 'enr-pack': 2 },
+        } as never,
+        userId,
+        companyId,
+      );
+
+      expect(billing.refundPrepaidWithOverride).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          enrollmentId: 'enr-pack',
+          overrideLessons: 2,
+        }),
+      );
     });
   });
 });

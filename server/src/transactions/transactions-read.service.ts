@@ -22,7 +22,7 @@ import { projectLessonDates } from '../common/finance/project-lesson-dates';
 import { buildScheduleDayResolver } from '../attendance/shared/schedule-resolver';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { buildHolidayDateSet } from '../holidays/holiday-date-set';
-import { tashkentRangeUtc } from '../common/date/tashkent';
+import { tashkentRangeFilter, tashkentRangeUtc } from '../common/date/tashkent';
 
 /**
  * What the "To'lovlar" tab renders under a payment. `reconciled: false` means
@@ -942,9 +942,11 @@ export class TransactionsReadService {
 
   /**
    * Audit log for the "yo'qolgan o'quvchi" write-off flow.
-   * Returns only active (non-reversed) DEBT_WRITE_OFF rows, enriched with
-   * the metadata each entry carries (cycleNumber, cycleAbsentCount,
-   * perLessonCost, actualWriteOff, previousBalance, newBalance, reason).
+   * An undo is written by `reverseTransaction()` as another DEBT_WRITE_OFF row
+   * (negative amount, `reversedTransactionId` -> original, `reversedAt` null).
+   * It is a correction, not a write-off: never listed or summed in any mode.
+   * `includeReversed` brings back the undone ORIGINALS. The totals count only
+   * write-offs still in effect, so undone forgiveness never inflates them.
    *
    * Branch Directors should be scoped to their own branches at the
    * controller layer (pass branchIds; we fan-in `branchId IN (...)`).
@@ -970,19 +972,23 @@ export class TransactionsReadService {
     const page = options.page ?? 1;
     const pageSize = options.pageSize ?? 20;
 
-    const where: Prisma.TransactionWhereInput = {
+    // Either bound works alone; tashkentRangeUtc required both.
+    const createdAt = tashkentRangeFilter(options.from, options.to);
+    const baseWhere: Prisma.TransactionWhereInput = {
       companyId,
       type: TransactionType.DEBT_WRITE_OFF,
-      ...(options.includeReversed ? {} : { reversedAt: null }),
+      reversedTransactionId: null,
       ...branchIdWhere(options.branchIds),
       ...(options.performedById && { performedById: options.performedById }),
-      ...(options.from &&
-        options.to && {
-          createdAt: tashkentRangeUtc(options.from, options.to),
-        }),
+      ...(createdAt && { createdAt }),
     };
+    const activeWhere: Prisma.TransactionWhereInput = {
+      ...baseWhere,
+      reversedAt: null,
+    };
+    const where = options.includeReversed ? baseWhere : activeWhere;
 
-    const [data, total, sumAggregate] = await Promise.all([
+    const [data, total, activeAggregate] = await Promise.all([
       this.prisma.transaction.findMany({
         where,
         select: {
@@ -996,6 +1002,7 @@ export class TransactionsReadService {
           branchId: true,
           createdAt: true,
           reversedAt: true,
+          reversedTransactionId: true,
           student: {
             select: { id: true, firstName: true, lastName: true },
           },
@@ -1009,15 +1016,17 @@ export class TransactionsReadService {
       }),
       this.prisma.transaction.count({ where }),
       this.prisma.transaction.aggregate({
-        where,
+        where: activeWhere,
         _sum: { amount: true },
+        _count: true,
       }),
     ]);
 
     return {
       data,
       total,
-      totalAmount: sumAggregate._sum.amount ?? 0,
+      totalAmount: activeAggregate._sum.amount ?? 0,
+      activeCount: activeAggregate._count,
       page,
       pageSize,
     };

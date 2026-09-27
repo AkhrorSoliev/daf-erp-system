@@ -37,6 +37,7 @@ export class ChangeStudentStatusDto {
    *
    * No per-key validation here — runtime enforces "<= prepaid + consumed"
    * because we need to query the DB to know the actual consumption count.
+   * LESSON_PACK enrollments only — a key for a MONTHLY enrollment is rejected (400).
    */
   @IsOptional()
   @IsObject()

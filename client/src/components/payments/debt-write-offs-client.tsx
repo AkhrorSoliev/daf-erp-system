@@ -59,6 +59,7 @@ import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { canUndoWriteOff } from "./debt-write-off-actions";
 
 interface DebtWriteOffMetadata {
   reason?: string;
@@ -83,6 +84,7 @@ interface DebtWriteOffRow {
   branchId: number | null;
   createdAt: string;
   reversedAt: string | null;
+  reversedTransactionId: string | null;
   student: { id: number; firstName: string; lastName: string } | null;
   performedBy: { id: number; firstName: string; lastName: string } | null;
 }
@@ -91,6 +93,7 @@ interface DebtWriteOffsResponse {
   data: DebtWriteOffRow[];
   total: number;
   totalAmount: number;
+  activeCount: number;
   page: number;
   pageSize: number;
 }
@@ -148,6 +151,7 @@ export function DebtWriteOffsClient() {
 
   const totalAmount = data?.totalAmount ?? 0;
   const totalRows = data?.total ?? 0;
+  const activeCount = data?.activeCount ?? 0;
 
   const handleReverseConfirm = async () => {
     if (!reverseTarget) return;
@@ -175,7 +179,7 @@ export function DebtWriteOffsClient() {
     // /payments/debt, and only the caller knows which title the reader is
     // already looking at. The page supplies one; the tab supplies its own line.
     <div className="space-y-6">
-      <SummaryCard totalAmount={totalAmount} totalRows={totalRows} />
+      <SummaryCard totalAmount={totalAmount} totalRows={activeCount} />
 
       <div className="flex flex-wrap items-center gap-2">
         <DatePicker
@@ -438,7 +442,7 @@ function DebtWriteOffsTable({
                   : "Tizim"}
               </TableCell>
               <TableCell>
-                {isCeo && !isReversed ? (
+                {canUndoWriteOff(isCeo, row) ? (
                   <DropdownMenu>
                     <Tooltip>
                       <TooltipTrigger asChild>

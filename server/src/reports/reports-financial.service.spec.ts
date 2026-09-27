@@ -1081,4 +1081,30 @@ describe('ReportsFinancialService', () => {
       );
     });
   });
+
+  describe('getDebtWriteOffsSummary', () => {
+    it('sums only write-offs still in effect — never the undo counter-rows', async () => {
+      prisma.transaction.aggregate.mockResolvedValue({
+        _sum: { amount: 250_000 },
+        _count: 2,
+      });
+
+      const res = await service.getDebtWriteOffsSummary(1001, {
+        branchIds: [1],
+        startDate: '2026-09-01',
+        endDate: '2026-09-30',
+      });
+
+      expect(prisma.transaction.aggregate.mock.calls[0][0].where).toMatchObject(
+        {
+          companyId: 1001,
+          type: 'DEBT_WRITE_OFF',
+          reversedAt: null,
+          reversedTransactionId: null,
+          branchId: { in: [1] },
+        },
+      );
+      expect(res).toMatchObject({ totalAmount: 250_000, count: 2 });
+    });
+  });
 });

@@ -14,7 +14,10 @@ import { PrismaService } from '../prisma/prisma.service';
 
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
-import { EnrollmentBillingService } from '../billing/enrollment-billing.service';
+import {
+  EnrollmentBillingService,
+  MONTHLY_FREEZE_OVERRIDE_ERROR,
+} from '../billing/enrollment-billing.service';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import {
   ChangeStudentStatusDto,
@@ -327,11 +330,31 @@ export class StudentsStatusService {
       extraReversed: number;
     }>
   > {
+    // MONTHLY money on freeze is the month release (`refundMonthlyForFreeze`).
+    // An override here used to reach the pack reversal: it reversed old
+    // LESSON_CONSUMPTION rows, flipped them to EXCUSED and paid N lessons extra.
+    const overrideIds = Object.keys(overrides ?? {});
+    if (overrideIds.length > 0) {
+      const monthlyOverridden = await this.prisma.enrollment.count({
+        where: {
+          id: { in: overrideIds },
+          studentId,
+          deletedAt: null,
+          group: { course: { paymentModel: PaymentModel.MONTHLY } },
+        },
+      });
+      if (monthlyOverridden > 0) {
+        throw new BadRequestException(MONTHLY_FREEZE_OVERRIDE_ERROR);
+      }
+    }
+
     const activeEnrollments = await this.prisma.enrollment.findMany({
       where: {
         studentId,
         status: EnrollmentStatus.ACTIVE,
         deletedAt: null,
+        // Pack leg only; `refundMonthlyForFreeze` owns MONTHLY enrollments.
+        group: { course: { paymentModel: PaymentModel.LESSON_PACK } },
       },
       select: { id: true, prepaidLessonsRemaining: true },
     });

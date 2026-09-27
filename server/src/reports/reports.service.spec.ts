@@ -147,6 +147,7 @@ describe('ReportsService', () => {
         count: jest.fn(),
       },
       refund: { aggregate: jest.fn(), count: jest.fn() },
+      transaction: { aggregate: jest.fn(), count: jest.fn() },
       branch: { findMany: jest.fn() },
       user: { findMany: jest.fn(), findFirst: jest.fn() },
       groupTeacherHistory: {
@@ -612,15 +613,16 @@ describe('ReportsService', () => {
       });
       prisma.payment.findMany.mockResolvedValue([]);
       prisma.payment.groupBy.mockResolvedValue([]);
-      prisma.refund.aggregate.mockResolvedValue({
-        _sum: { approvedAmount: 0 },
-      });
-      prisma.refund.count.mockResolvedValue(0);
+      prisma.transaction.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
+      prisma.transaction.count.mockResolvedValue(0);
       prisma.branch.findMany.mockResolvedValue([
         { id: 1, name: 'Asosiy filial' },
       ]);
 
-      const result = await service.getPaymentReports(1, { months: 6 });
+      const result = await service.getPaymentReports(1, {
+        months: 6,
+        branchIds: null,
+      });
 
       expect(result).toHaveProperty('totalPayments');
       expect(result).toHaveProperty('onTimePayments');
@@ -637,13 +639,14 @@ describe('ReportsService', () => {
       });
       prisma.payment.findMany.mockResolvedValue([]);
       prisma.payment.groupBy.mockResolvedValue([]);
-      prisma.refund.aggregate.mockResolvedValue({
-        _sum: { approvedAmount: 0 },
-      });
-      prisma.refund.count.mockResolvedValue(0);
+      prisma.transaction.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
+      prisma.transaction.count.mockResolvedValue(0);
       prisma.branch.findMany.mockResolvedValue([]);
 
-      const result = await service.getPaymentReports(1, { months: 3 });
+      const result = await service.getPaymentReports(1, {
+        months: 3,
+        branchIds: null,
+      });
       expect(result.totalPayments.trend).toHaveLength(3);
     });
 
@@ -657,16 +660,14 @@ describe('ReportsService', () => {
         { branchId: 1, _sum: { amount: 2_000_000 } },
         { branchId: 2, _sum: { amount: 5_000_000 } },
       ]);
-      prisma.refund.aggregate.mockResolvedValue({
-        _sum: { approvedAmount: 0 },
-      });
-      prisma.refund.count.mockResolvedValue(0);
+      prisma.transaction.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
+      prisma.transaction.count.mockResolvedValue(0);
       prisma.branch.findMany.mockResolvedValue([
         { id: 1, name: 'Filial A' },
         { id: 2, name: 'Filial B' },
       ]);
 
-      const result = await service.getPaymentReports(1, {});
+      const result = await service.getPaymentReports(1, { branchIds: null });
       expect(result.branchBreakdown.byBranch).toEqual([
         { branchId: 2, branchName: 'Filial B', amount: 5_000_000 },
         { branchId: 1, branchName: 'Filial A', amount: 2_000_000 },
@@ -1311,6 +1312,36 @@ describe('ReportsService', () => {
       });
 
       expect(res).toEqual({ netProfit: 78_000_000, netProfitBasis: 'cash' });
+    });
+  });
+
+  describe('getFinancialTrendCanonical — cache key', () => {
+    it('keys a multi-branch scope by its own branch set, never the company entry', async () => {
+      jest
+        .spyOn((service as any).financial, 'getFinancialTrend')
+        .mockResolvedValue([{ monthKey: '2026-08', profit: 0 }]);
+      jest
+        .spyOn(service, 'getMonthlyNetProfit')
+        .mockResolvedValue({ netProfit: 4_200_000 } as any);
+
+      const rows = await service.getFinancialTrendCanonical(
+        1001,
+        [7, 3],
+        10001,
+      );
+
+      expect(redis.get).toHaveBeenCalledWith(
+        'rpt:np:v3:1001:3,7:u10001:2026-08',
+      );
+      expect(redis.setex).toHaveBeenCalledWith(
+        'rpt:np:v3:1001:3,7:u10001:2026-08',
+        expect.any(Number),
+        '4200000',
+      );
+      expect(rows[0]).toMatchObject({
+        profit: 4_200_000,
+        profitBasis: 'kanonik',
+      });
     });
   });
 });

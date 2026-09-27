@@ -20,6 +20,7 @@ import {
   proratedMonthlyAmount,
 } from './monthly-price';
 import { chargeStartDate } from './charge-start-date';
+import { departureRelease } from './departure-release';
 
 /** Hisob yaratish uchun kerakli yozilish shakli. */
 export interface ChargeableEnrollment {
@@ -651,93 +652,16 @@ export class MonthlyChargeService {
       );
     }
 
-    const periodYear = Number(day.slice(0, 4));
-    const periodMonth = Number(day.slice(5, 7));
-
-    const charge = await tx.enrollmentMonthlyCharge.findUnique({
-      where: {
-        enrollmentId_periodYear_periodMonth: {
-          enrollmentId: params.enrollmentId,
-          periodYear,
-          periodMonth,
-        },
-      },
-    });
-    if (!charge || charge.status !== MonthlyChargeStatus.CHARGED) return null;
-
-    const enr = await tx.enrollment.findUnique({
-      where: { id: params.enrollmentId },
-      select: {
-        studentId: true,
-        startDate: true,
-        group: { select: { branchId: true, exactDays: true } },
-      },
-    });
-    if (!enr) return null;
-
+    const loaded = await this.loadDepartureRelease(
+      tx,
+      params.enrollmentId,
+      day,
+    );
+    if (!loaded) return null;
+    const { charge, enr, periodYear, periodMonth, release } = loaded;
+    const { lessons: remaining, amount: refunded, frozenOutAfter } = release;
     const coveredDates = charge.coveredDates ?? [];
     const frozenOutBefore = charge.frozenOutDates ?? [];
-
-    // `remaining`/`frozenOutAfter`: ikkita yo'l bor, `coveredDates`ning
-    // bo'sh yoki bo'sh emasligiga qarab.
-    let remaining: number;
-    let frozenOutAfter: string[] | null = null;
-
-    if (coveredDates.length > 0) {
-      // TO'PLAM yo'li (HIGH-1/2/3 tuzatishi): `coveredDates`dan hali
-      // chiqarilmagan va `departureDate`dan KEYINGI sanalar yangidan
-      // `frozenOutDates`ga qo'shiladi. Union — ikkinchi marta xuddi shu
-      // (yoki oldinroq) sana bilan chaqirilsa, bu sanalar allaqachon
-      // to'plamda bo'lgani uchun `newlyOut` bo'sh chiqadi va `null`
-      // qaytariladi (qurilishiga ko'ra idempotent — pastga qarang).
-      const frozenOutSet = new Set(frozenOutBefore);
-      const newlyOut = coveredDates.filter(
-        (d) => d > day && !frozenOutSet.has(d),
-      );
-      remaining = newlyOut.length;
-      if (remaining === 0) return null;
-      frozenOutAfter = [...frozenOutBefore, ...newlyOut].sort();
-    } else {
-      // `coveredDates` ustuni qo'shilishidan OLDIN yozilgan qator (hisob
-      // hech qachon `coveredLessons = 0` bilan yozilmaydi, shuning uchun
-      // bo'sh massiv aynan shuni bildiradi). Bunday qatorda sanalarning
-      // o'zi yo'q — `frozenOutDates` to'plam sifatida ishlay olmaydi, eski
-      // SON-asosli xatti-harakat saqlanadi (muqobili "hech narsa
-      // qaytarmaslik" bo'lardi).
-      const { excludedDates, addedDates } = await this.resolveMonthPlanDates(
-        tx,
-        charge.groupId,
-        enr.group.branchId,
-        periodYear,
-        periodMonth,
-      );
-      const lessonsThroughDeparture = lessonDatesInMonth({
-        year: periodYear,
-        month: periodMonth,
-        exactDays: enr.group.exactDays,
-        excludedDates,
-        addedDates,
-        fromDate: enr.startDate ? tashkentDateStr(enr.startDate) : null,
-        toDate: day,
-      }).length;
-      remaining = Math.max(0, charge.coveredLessons - lessonsThroughDeparture);
-      if (remaining === 0) return null;
-    }
-
-    // `charge.perLessonCost` ATAYLAB chegirmasiz (o'qituvchi haqi undan
-    // hisoblanadi) — qaytariladigan summa esa o'quvchi TO'LAGAN narxda
-    // bo'lishi kerak, aks holda chegirmali o'quvchi ortiqcha qaytarib
-    // olardi (`discountPercent` default 0 — chegirmasiz yozilishlar uchun
-    // bu qatorning natijasi o'zgarmaydi).
-    const discountedPerLessonCost = applyDiscount(
-      charge.perLessonCost,
-      clampDiscount(charge.discountPercent ?? 0),
-    );
-    const refunded = Math.min(
-      remaining * discountedPerLessonCost,
-      charge.chargedAmount,
-    );
-    if (refunded <= 0) return null;
 
     await this.transactionsWrite.createAdjustment(
       {
@@ -780,6 +704,94 @@ export class MonthlyChargeService {
     });
 
     return { refunded };
+  }
+
+  /**
+   * Read-only twin of `reverseChargeForDeparture`: what a freeze/departure on
+   * `departureDate` WOULD credit, by the same `departureRelease` rule. Writes
+   * nothing, so it has no backdating guard and needs no transaction.
+   */
+  async previewReleaseForDeparture(
+    client: Prisma.TransactionClient,
+    params: { enrollmentId: string; departureDate: Date },
+  ): Promise<{ lessons: number; amount: number; period: string } | null> {
+    const loaded = await this.loadDepartureRelease(
+      client,
+      params.enrollmentId,
+      tashkentDateStr(params.departureDate),
+    );
+    if (!loaded) return null;
+    return {
+      lessons: loaded.release.lessons,
+      amount: loaded.release.amount,
+      period: `${loaded.periodYear}-${String(loaded.periodMonth).padStart(2, '0')}`,
+    };
+  }
+
+  /** Reads (never writes) the month charge and applies `departureRelease`. */
+  private async loadDepartureRelease(
+    client: Prisma.TransactionClient,
+    enrollmentId: string,
+    day: string,
+  ) {
+    const periodYear = Number(day.slice(0, 4));
+    const periodMonth = Number(day.slice(5, 7));
+
+    const charge = await client.enrollmentMonthlyCharge.findUnique({
+      where: {
+        enrollmentId_periodYear_periodMonth: {
+          enrollmentId,
+          periodYear,
+          periodMonth,
+        },
+      },
+    });
+    if (!charge || charge.status !== MonthlyChargeStatus.CHARGED) return null;
+
+    const enr = await client.enrollment.findUnique({
+      where: { id: enrollmentId },
+      select: {
+        studentId: true,
+        startDate: true,
+        group: { select: { branchId: true, exactDays: true } },
+      },
+    });
+    if (!enr) return null;
+
+    const coveredDates = charge.coveredDates ?? [];
+    let lessonsThroughDeparture = 0;
+    if (coveredDates.length === 0) {
+      // Legacy row: count the month plan through the departure day.
+      const { excludedDates, addedDates } = await this.resolveMonthPlanDates(
+        client,
+        charge.groupId,
+        enr.group.branchId,
+        periodYear,
+        periodMonth,
+      );
+      lessonsThroughDeparture = lessonDatesInMonth({
+        year: periodYear,
+        month: periodMonth,
+        exactDays: enr.group.exactDays,
+        excludedDates,
+        addedDates,
+        fromDate: enr.startDate ? tashkentDateStr(enr.startDate) : null,
+        toDate: day,
+      }).length;
+    }
+
+    const release = departureRelease({
+      departureDay: day,
+      coveredDates,
+      frozenOutDates: charge.frozenOutDates ?? [],
+      coveredLessons: charge.coveredLessons,
+      perLessonCost: charge.perLessonCost,
+      discountPercent: charge.discountPercent ?? 0,
+      chargedAmount: charge.chargedAmount,
+      lessonsThroughDeparture,
+    });
+    if (!release) return null;
+    return { charge, enr, periodYear, periodMonth, release };
   }
 
   /**

@@ -620,11 +620,12 @@ export class ReportsController {
   }
 
   /**
-   * Departed-students reports take the resolved scope as a list (ADR-0035),
-   * so a caller with several branches gets all of them rather than a 400.
-   * An empty scope is refused, never served as zeros (ADR-0002).
+   * Hand a report the resolved scope as a LIST, so a caller with several
+   * branches gets all of them rather than a 400 from `scoped()`. Used by the
+   * departed-students reports (ADR-0035) and /payment-reports. An empty scope
+   * is refused, never served as zeros (ADR-0002).
    */
-  private departedScope(scope: ReportBranchIds): ReportBranchIds {
+  private listScope(scope: ReportBranchIds): ReportBranchIds {
     if (isEmptyScope(scope)) {
       throw new ForbiddenException(
         "Bu filial ma'lumotlarini ko'rish huquqingiz yo'q",
@@ -641,7 +642,8 @@ export class ReportsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getPaymentReports(companyId, {
-      branchId: this.scoped(query, scope).branchId,
+      // Every leg filters with `branchIdWhere`, so the list is exact.
+      branchIds: this.listScope(scope),
       startDate: query.startDate,
       endDate: query.endDate,
       months: query.months,
@@ -704,7 +706,7 @@ export class ReportsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedStudentsSummary(companyId, {
-      scope: this.departedScope(scope),
+      scope: this.listScope(scope),
       startDate: query.startDate,
       endDate: query.endDate,
     });
@@ -717,7 +719,7 @@ export class ReportsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedStudentsDynamics(companyId, {
-      scope: this.departedScope(scope),
+      scope: this.listScope(scope),
       startDate: query.startDate,
       endDate: query.endDate,
     });
@@ -730,7 +732,7 @@ export class ReportsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedStudentsByStatus(companyId, {
-      scope: this.departedScope(scope),
+      scope: this.listScope(scope),
     });
   }
 
@@ -786,7 +788,7 @@ export class ReportsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedStudentsList(companyId, {
-      scope: this.departedScope(scope),
+      scope: this.listScope(scope),
       status: query.status,
       debtorsOnly: query.debtorsOnly,
       page: query.page,
@@ -819,7 +821,7 @@ export class ReportsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.reportsService.getDepartedStudentsGroupBy(companyId, {
-      scope: this.departedScope(scope),
+      scope: this.listScope(scope),
       groupBy: query.groupBy,
     });
   }

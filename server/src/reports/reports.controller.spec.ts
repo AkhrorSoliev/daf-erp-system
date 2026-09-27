@@ -16,6 +16,7 @@ import { RolesGuard } from '../common/guards';
 import { ROLES_KEY } from '../common/decorators';
 import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary-query.dto';
 import { DepartedStudentsListQueryDto } from './dto/departed-students-list-query.dto';
+import { PaymentReportsQueryDto } from './dto/payment-reports-query.dto';
 
 describe('ReportsController — role guards', () => {
   let controller: ReportsController;
@@ -844,6 +845,31 @@ describe('ReportsController — role guards', () => {
           pageSize: 20,
         },
       );
+    });
+  });
+
+  describe('getPaymentReports() — branch scope', () => {
+    it('hands a multi-branch director their branch list instead of a 400', async () => {
+      await controller.getPaymentReports(
+        {
+          startDate: '2026-09-01',
+          endDate: '2026-09-30',
+        } as PaymentReportsQueryDto,
+        1001,
+        [3, 7],
+      );
+      expect(mockService.getPaymentReports).toHaveBeenLastCalledWith(1001, {
+        branchIds: [3, 7],
+        startDate: '2026-09-01',
+        endDate: '2026-09-30',
+        months: undefined,
+      });
+    });
+
+    it('refuses a scope that resolved to no branch', () => {
+      expect(() =>
+        controller.getPaymentReports({} as PaymentReportsQueryDto, 1001, []),
+      ).toThrow(ForbiddenException);
     });
   });
 

@@ -14,6 +14,8 @@ import {
   Loader2,
 } from "lucide-react";
 import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
+import { Button } from "@/components/ui/button";
 import { PaymentReportCard } from "./payment-report-card";
 import { ComingSoonCard } from "./coming-soon-card";
 import { PaymentReportDialog } from "./payment-report-dialog";
@@ -26,13 +28,12 @@ import {
 } from "./payment-reports-filter-bar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  TeachersReportTable,
-  type TeacherRow,
-} from "./teachers-report-table";
+import { TeachersReportTable, type TeacherRow } from "./teachers-report-table";
 import { TeacherGroupsDialog } from "./teacher-groups-dialog";
+import { reportViewState, retryUnlessRefused } from "./report-view-state";
 
-type CardKey = "totalPayments" | "onTimePayments" | "branchBreakdown" | "refunds";
+type CardKey =
+  "totalPayments" | "onTimePayments" | "branchBreakdown" | "refunds";
 
 interface PaymentReportsResponse {
   totalPayments: {
@@ -150,14 +151,8 @@ export function PaymentReportsClient() {
   const startStr = format(range.start, "yyyy-MM-dd");
   const endStr = format(range.end, "yyyy-MM-dd");
 
-  const { data, isLoading } = useQuery({
-    queryKey: [
-      "payment-reports",
-      filter.branchId,
-      startStr,
-      endStr,
-      months,
-    ],
+  const { data, isError, error, refetch } = useQuery({
+    queryKey: ["payment-reports", filter.branchId, startStr, endStr, months],
     queryFn: () =>
       api
         .get<PaymentReportsResponse>("/reports/payment-reports", {
@@ -173,7 +168,9 @@ export function PaymentReportsClient() {
     // months 3↔6 toggle dialog ichida bo'lsa, eski ma'lumotni saqlab turamiz
     // — aks holda Dialog komponentlari unmount bo'lib, dialog yopilib qayta ochiladi
     placeholderData: keepPreviousData,
+    retry: retryUnlessRefused,
   });
+  const view = reportViewState({ data, isError });
 
   return (
     <div className="space-y-4">
@@ -188,7 +185,16 @@ export function PaymentReportsClient() {
 
       <PaymentReportsFilterBar value={filter} onChange={handleFilterChange} />
 
-      {isLoading || !data ? (
+      {view === "error" ? (
+        <div className="flex flex-col items-center gap-3 rounded-xl border bg-card px-4 py-12 text-center">
+          <p className="text-sm text-muted-foreground">
+            {getErrorMessage(error, "To'lov hisobotlarini yuklab bo'lmadi.")}
+          </p>
+          <Button variant="outline" size="sm" onClick={() => void refetch()}>
+            Qayta urinish
+          </Button>
+        </div>
+      ) : view === "loading" || !data ? (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -227,7 +233,7 @@ export function PaymentReportsClient() {
               label="Filiallar bo'yicha"
               value={`${fmt(data.branchBreakdown.current)} so'm`}
               change={data.branchBreakdown.change}
-              tooltip="Barcha filiallar bo'yicha tanlangan davrdagi jami to'lovlar. Tafsilotlar uchun bosing."
+              tooltip="Tanlangan davrdagi jami to'lovlar, filiallar kesimida. Tafsilotlar uchun bosing."
               onClick={() => setActiveCard("branchBreakdown")}
             />
 

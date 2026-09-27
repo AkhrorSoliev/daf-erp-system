@@ -4,10 +4,12 @@ import { StudentsReadService } from './students-read.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService } from '../common/status';
 import { StudentQueryDto } from './dto/student-query.dto';
+import { MonthlyChargeService } from '../billing/monthly-charge.service';
 
 describe('StudentsReadService', () => {
   let service: StudentsReadService;
   let prisma: any;
+  let monthlyCharge: any;
 
   beforeEach(async () => {
     prisma = {
@@ -25,11 +27,16 @@ describe('StudentsReadService', () => {
       },
     };
 
+    monthlyCharge = {
+      previewReleaseForDeparture: jest.fn().mockResolvedValue(null),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StudentsReadService,
         { provide: PrismaService, useValue: prisma },
         { provide: StatusHistoryService, useValue: {} },
+        { provide: MonthlyChargeService, useValue: monthlyCharge },
       ],
     }).compile();
 
@@ -480,6 +487,101 @@ describe('StudentsReadService', () => {
 
       const where = prisma.attendance.findMany.mock.calls[0][0].where;
       expect(where.date).toBeUndefined();
+    });
+  });
+
+  describe('getActiveEnrollmentsWithPrepaid — freeze dialog preview', () => {
+    const packEnrollment = {
+      id: 'enr-pack',
+      prepaidLessonsRemaining: 3,
+      group: {
+        id: 'grp-pack',
+        name: 'A1 sikl',
+        course: {
+          price: 400_000,
+          lessonPaymentCount: 12,
+          paymentModel: 'LESSON_PACK',
+        },
+      },
+    };
+    const monthlyEnrollment = {
+      id: 'enr-month',
+      prepaidLessonsRemaining: 0,
+      group: {
+        id: 'grp-month',
+        name: 'B1 oylik',
+        course: {
+          price: 450_000,
+          lessonPaymentCount: 12,
+          paymentModel: 'MONTHLY',
+        },
+      },
+    };
+
+    beforeEach(() => {
+      prisma.student.findFirst.mockResolvedValue({ id: 10453 });
+      prisma.enrollment.findMany.mockResolvedValue([
+        packEnrollment,
+        monthlyEnrollment,
+      ]);
+      prisma.transaction.groupBy = jest.fn().mockResolvedValue([]);
+    });
+
+    it('lists only the LESSON_PACK enrollment as editable', async () => {
+      const res = await service.getActiveEnrollmentsWithPrepaid(10453, 1001);
+      expect(res.pack).toEqual([
+        {
+          enrollmentId: 'enr-pack',
+          groupId: 'grp-pack',
+          groupName: 'A1 sikl',
+          prepaidLessonsRemaining: 3,
+          perLessonCost: 33_333,
+          consumedLessons: 0,
+          maxRefundable: 3,
+          suggestedRefundAmount: 99_999,
+        },
+      ]);
+      expect(prisma.transaction.groupBy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            enrollmentId: { in: ['enr-pack'] },
+          }),
+        }),
+      );
+    });
+
+    it('shows a MONTHLY enrollment with what the month release would credit today', async () => {
+      monthlyCharge.previewReleaseForDeparture.mockResolvedValue({
+        lessons: 8,
+        amount: 276_920,
+        period: '2026-09',
+      });
+      const res = await service.getActiveEnrollmentsWithPrepaid(10453, 1001);
+      expect(res.monthly).toEqual([
+        {
+          enrollmentId: 'enr-month',
+          groupId: 'grp-month',
+          groupName: 'B1 oylik',
+          releaseLessons: 8,
+          releaseAmount: 276_920,
+        },
+      ]);
+      expect(monthlyCharge.previewReleaseForDeparture).toHaveBeenCalledTimes(1);
+      expect(monthlyCharge.previewReleaseForDeparture).toHaveBeenCalledWith(
+        prisma,
+        {
+          enrollmentId: 'enr-month',
+          departureDate: expect.any(Date),
+        },
+      );
+    });
+
+    it('nothing left this month reads as 0 lessons and 0 so`m', async () => {
+      const res = await service.getActiveEnrollmentsWithPrepaid(10453, 1001);
+      expect(res.monthly[0]).toMatchObject({
+        releaseLessons: 0,
+        releaseAmount: 0,
+      });
     });
   });
 });
