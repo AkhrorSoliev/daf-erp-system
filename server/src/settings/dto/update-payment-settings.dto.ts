@@ -48,6 +48,13 @@ export class UpdatePaymentSettingsDto {
   @IsBoolean()
   debtWriteOffEnabled?: boolean;
 
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  @Type(() => Number)
+  noRefundAfterPercent?: number;
+
   // Faqat CEO uchun ma'noli — qaysi filialga yozish. Branch Director bu
   // maydondan qat'i nazar faqat o'z filialiga yoza oladi (kontrollerda
   // majburlanadi); CEO uchun berilmasa — kompaniya darajasida yoziladi.

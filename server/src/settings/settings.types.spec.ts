@@ -15,6 +15,7 @@ describe('SETTING_DEFINITIONS registry', () => {
         'payment.defaultModel',
         'payment.excusedCreditEnabled',
         'payment.excusedCreditMonthlyCap',
+        'payment.noRefundAfterPercent',
       ].sort(),
     );
   });
@@ -133,6 +134,30 @@ describe('SETTING_DEFINITIONS registry', () => {
       // CEO (21.09.2026, 9-javob) butun kompaniya uchun qaror qildi; qarz
       // kechirish tugmalari esa Branch Director qo'lida. Filial darajasida
       // yozilsa, direktor taqiqni o'ziga qayta yoqib olardi.
+      expect(def.companyLevelOnly).toBe(true);
+    });
+  });
+
+  describe('payment.noRefundAfterPercent', () => {
+    const def = getSettingDefinition('payment.noRefundAfterPercent');
+
+    it('defaults to 40 — contract 6.2', () => {
+      expect(def.defaultValue).toBe(40);
+    });
+
+    it('accepts a whole percent from 0 to 100', () => {
+      expect(def.parse(0)).toBe(0);
+      expect(def.parse(40)).toBe(40);
+      expect(def.parse(100)).toBe(100);
+    });
+
+    it('rejects anything else, naming this key in the error', () => {
+      for (const bad of [-1, 101, 40.5, '40', null]) {
+        expect(() => def.parse(bad)).toThrow(/payment\.noRefundAfterPercent/);
+      }
+    });
+
+    it('is company-level only — one contract for every branch', () => {
       expect(def.companyLevelOnly).toBe(true);
     });
   });

@@ -85,6 +85,9 @@ export class SettingsController {
     if (dto.debtWriteOffEnabled !== undefined) {
       edits.push(['payment.debtWriteOffEnabled', dto.debtWriteOffEnabled]);
     }
+    if (dto.noRefundAfterPercent !== undefined) {
+      edits.push(['payment.noRefundAfterPercent', dto.noRefundAfterPercent]);
+    }
 
     if (edits.length === 0) {
       throw new BadRequestException('Kamida bitta sozlama yuborilishi kerak');
