@@ -12,15 +12,16 @@ import { cn } from "@/lib/utils";
 import {
   CONTRACT_NOTE,
   DEFAULT_DEPARTURE_POLICY,
-  DEPARTURE_POLICIES,
   LOCKED_POLICY_NOTE,
   POLICY_TITLES,
   departureConsequence,
   factsLine,
   lessonChips,
   monthlyRows,
+  offeredPolicies,
   policyHint,
   type Consequence,
+  type DepartureContext,
   type DeparturePolicy,
   type DeparturePreview,
   type MonthlyRow,
@@ -32,6 +33,8 @@ interface DepartureMoneyBlockProps {
   isError: boolean;
   policy: DeparturePolicy;
   onPolicyChange: (policy: DeparturePolicy) => void;
+  /** Which options the dialog offers (`offeredPolicies`). */
+  context: DepartureContext;
   /** An expulsion closes every group the student is in: name each one. */
   showGroupNames?: boolean;
   disabled?: boolean;
@@ -40,8 +43,8 @@ interface DepartureMoneyBlockProps {
 /**
  * «Pul (shartnoma bo'yicha)»: what leaving now does to the month's charge
  * (contract 6.2, ADR-0043). Drawn only when a monthly course has a charge
- * this month. A CEO or branch director picks the policy; everyone else sees
- * the student's own decision, locked.
+ * this month. A CEO or branch director picks any policy; everyone else may
+ * still record a completed level on a removal, and sees the rest locked.
  */
 export function DepartureMoneyBlock({
   preview,
@@ -49,6 +52,7 @@ export function DepartureMoneyBlock({
   isError,
   policy,
   onPolicyChange,
+  context,
   showGroupNames = false,
   disabled = false,
 }: DepartureMoneyBlockProps) {
@@ -68,7 +72,8 @@ export function DepartureMoneyBlock({
 
   const rows = monthlyRows(preview);
   if (!preview || rows.length === 0) return null;
-  const shown = preview.mayChoosePolicy ? policy : DEFAULT_DEPARTURE_POLICY;
+  const offered = offeredPolicies(context, preview.mayChoosePolicy);
+  const shown = offered.includes(policy) ? policy : DEFAULT_DEPARTURE_POLICY;
   const consequence = departureConsequence(preview, shown);
   const first = rows[0].month;
 
@@ -83,13 +88,13 @@ export function DepartureMoneyBlock({
         />
       ))}
 
-      {preview.mayChoosePolicy ? (
+      {offered.length > 1 ? (
         <div
           role="radiogroup"
           aria-label="Pulni qaytarish tartibi"
           className="flex flex-col gap-1.5"
         >
-          {DEPARTURE_POLICIES.map((p) => (
+          {offered.map((p) => (
             <label
               key={p}
               className={cn(
@@ -117,6 +122,12 @@ export function DepartureMoneyBlock({
               </span>
             </label>
           ))}
+          {!preview.mayChoosePolicy && (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Lock className="size-3.5 shrink-0" />
+              {LOCKED_POLICY_NOTE}
+            </p>
+          )}
         </div>
       ) : (
         <div className="flex items-start gap-2.5 rounded-md border border-primary/30 bg-primary/5 p-2.5">

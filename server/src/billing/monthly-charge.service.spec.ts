@@ -2085,6 +2085,38 @@ describe('MonthlyChargeService', () => {
       );
     });
 
+    it('returns the unheld lessons to a student who completed the level, past 40% too', async () => {
+      octoberCharge();
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-14T10:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqarilganda',
+        today: '2026-10-14',
+        policy: 'LEVEL_COMPLETED' as DeparturePolicy,
+      });
+      expect(res).toMatchObject({
+        refunded: 560_000,
+        lessons: 7,
+        policy: 'LEVEL_COMPLETED',
+        withheld: false,
+      });
+      // No threshold to read: rule 6.2 does not reach a completed level.
+      expect(settingsMock.get).not.toHaveBeenCalledWith(
+        1,
+        'payment.noRefundAfterPercent',
+      );
+      expect(txWriteMock.createAdjustment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 560_000,
+          description:
+            "Guruhdan chiqarilganda — darajani tugatdi: o'tmagan 7 dars qaytarildi",
+          metadata: expect.objectContaining({ policy: 'LEVEL_COMPLETED' }),
+        }),
+        tx,
+      );
+    });
+
     it('reads the threshold from the company setting', async () => {
       octoberCharge();
       settingsMock.get.mockImplementation((_c: number, key: string) =>
@@ -2145,7 +2177,7 @@ describe('MonthlyChargeService', () => {
       );
     });
 
-    it('previews all three outcomes with the lesson dates and the threshold', async () => {
+    it('previews every outcome with the lesson dates and the threshold', async () => {
       octoberCharge();
       // Read-only: no backdating guard, so no `today` to pin.
       const departureDate = new Date('2026-10-14T10:00:00Z');
@@ -2166,6 +2198,7 @@ describe('MonthlyChargeService', () => {
         chargedAmount: 1_040_000,
         outcomes: {
           STUDENT_CANCELLED: { lessons: 0, amount: 0, withheld: true },
+          LEVEL_COMPLETED: { lessons: 7, amount: 560_000, withheld: false },
           CENTER_INITIATIVE: { lessons: 7, amount: 560_000, withheld: false },
           QUALITY_CLAIM: { lessons: 13, amount: 1_040_000, withheld: false },
         },

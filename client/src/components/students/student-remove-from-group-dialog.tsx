@@ -35,6 +35,7 @@ import { DepartureMoneyBlock } from "./departure-money-block";
 import {
   DEFAULT_DEPARTURE_POLICY,
   departurePolicyPayload,
+  offeredPolicies,
   type DepartureChoice,
   type DeparturePolicy,
 } from "./departure-money";
@@ -201,6 +202,7 @@ function RemoveDialogBody({
           isError={money.isError}
           policy={departurePolicy}
           onPolicyChange={setDeparturePolicy}
+          context="removal"
           disabled={removing}
         />
 
@@ -235,7 +237,7 @@ function RemoveDialogBody({
             onConfirm(
               departurePolicyPayload(
                 departurePolicy,
-                money.data?.mayChoosePolicy ?? false,
+                offeredPolicies("removal", money.data?.mayChoosePolicy ?? false),
               ),
             )
           }

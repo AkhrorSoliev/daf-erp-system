@@ -54,6 +54,7 @@
 - **Archive keeps the old rule.** The status dialog archives a student through `DELETE /students/:id` and tells the admin it is «faqat xato/duplikat yozuv uchun»; a real departure is an expulsion. Withholding a mistaken record's money would be wrong, so only removal and expulsion take a policy (default `STUDENT_CANCELLED`); an archive, like every centre closing, returns the unheld lessons. A policy sent with any status but EXPELLED is a 400.
 - **«Withheld» only when money would come back.** A month whose lessons are all held, or a frozen student whose rest the freeze already returned, is not reported as withheld (`policyRelease` checks the release first), so no history row claims the rule kept money it never touched.
 - **The money note lives in billing** (`billing/departure-money-note.ts`), shared by the removal and the status cascade.
+- **A fourth policy, `LEVEL_COMPLETED` («Darajani tugatdi»)** — CEO 27.09.2026: a student who finishes a level, with a certificate or to wait for the next level's group, fulfils the contract (10.1) rather than cancelling it, so the unheld lessons come back. Open to administrators on a removal, refused on an expulsion. The contract gains a sentence in 3.4 (both `docs/tolov-savollari/shartnoma-2026-taklif*.docx`).
 
 ## Deploy Notes
 

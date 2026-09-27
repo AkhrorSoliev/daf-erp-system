@@ -12,6 +12,17 @@ type PrismaLike = PrismaService | Prisma.TransactionClient;
 /** Roles that may return money beyond contract 6.2 (ADR-0043). */
 export const DEPARTURE_POLICY_ROLES = ['CEO', 'Branch Director'] as const;
 
+/**
+ * Policies anyone who may remove a student may choose: the student's own
+ * decision, and a completed level — the everyday case of a student who
+ * finished A1 with a certificate or moves up once the next group opens. The
+ * choice is recorded in the history with the name of whoever made it.
+ */
+export const OPEN_DEPARTURE_POLICIES: readonly DeparturePolicy[] = [
+  DEFAULT_DEPARTURE_POLICY,
+  'LEVEL_COMPLETED',
+];
+
 export const DEPARTURE_POLICY_FORBIDDEN =
   'Pulni boshqa tartibda qaytarishni faqat CEO yoki filial direktori tanlay oladi';
 
@@ -40,16 +51,16 @@ export async function mayChooseDeparturePolicy(
 }
 
 /**
- * The default — the student's own decision — is open to everyone who may
- * remove or expel a student. Any other policy gives back money the contract
- * would keep, so it is a CEO's or a branch director's call.
+ * The open policies are for everyone who may remove or expel a student. The
+ * others give back money the contract would keep, so they are a CEO's or a
+ * branch director's call.
  */
 export async function assertMayChooseDeparturePolicy(
   prisma: PrismaLike,
   userId: number | undefined,
   policy: DeparturePolicy | undefined,
 ): Promise<void> {
-  if (!policy || policy === DEFAULT_DEPARTURE_POLICY) return;
+  if (!policy || OPEN_DEPARTURE_POLICIES.includes(policy)) return;
   if (!(await mayChooseDeparturePolicy(prisma, userId))) {
     throw new ForbiddenException(DEPARTURE_POLICY_FORBIDDEN);
   }

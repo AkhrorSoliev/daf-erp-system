@@ -136,6 +136,15 @@ describe('departure policy (contract 6.2)', () => {
     expect(r.release).toMatchObject({ lessons: 7, amount: 560000 });
   });
 
+  it('returns the unheld lessons to a student who completed the level, whatever was held', () => {
+    // Finishing A1 (certificate, or moving up later) is the contract fulfilled
+    // (10.1), not a cancellation: rule 6.2 does not reach it (contract 3.4).
+    const r = policyRelease(input(), 'LEVEL_COMPLETED', 40);
+    expect(r.share).toEqual({ held: 6, covered: 13, percent: 46 });
+    expect(r.withheld).toBe(false);
+    expect(r.release).toMatchObject({ lessons: 7, amount: 560000 });
+  });
+
   it('returns the whole month on a quality claim, held lessons included', () => {
     const r = policyRelease(input(), 'QUALITY_CLAIM', 40);
     expect(r.withheld).toBe(false);

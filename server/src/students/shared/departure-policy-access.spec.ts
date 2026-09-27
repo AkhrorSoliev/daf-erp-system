@@ -21,6 +21,13 @@ describe('assertMayChooseDeparturePolicy (ADR-0043)', () => {
     expect(findFirst).not.toHaveBeenCalled();
   });
 
+  it('lets anyone who may remove a student record a completed level', async () => {
+    await expect(
+      assertMayChooseDeparturePolicy(prisma, 10002, 'LEVEL_COMPLETED'),
+    ).resolves.toBeUndefined();
+    expect(findFirst).not.toHaveBeenCalled();
+  });
+
   it('asks the database — not the token — for an active CEO or branch director', async () => {
     findFirst.mockResolvedValue({ id: 10001 });
     await assertMayChooseDeparturePolicy(prisma, 10001, 'QUALITY_CLAIM');

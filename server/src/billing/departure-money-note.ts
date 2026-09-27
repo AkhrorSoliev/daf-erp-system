@@ -21,6 +21,8 @@ export function departureMoneyNote(
   switch (outcome.policy) {
     case 'QUALITY_CLAIM':
       return `Sifat bo'yicha shikoyat: oyning ${outcome.lessons} darsi puli to'liq qaytarildi — ${sum}`;
+    case 'LEVEL_COMPLETED':
+      return `Darajani tugatdi: o'tmagan ${outcome.lessons} dars puli qaytarildi — ${sum}`;
     case 'CENTER_INITIATIVE':
       return `Markaz tashabbusi: o'tmagan ${outcome.lessons} dars puli qaytarildi — ${sum}`;
     default:

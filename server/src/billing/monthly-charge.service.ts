@@ -741,7 +741,9 @@ export class MonthlyChargeService {
         description:
           policy === 'QUALITY_CLAIM'
             ? `${params.reason} — sifat bo'yicha shikoyat: oyning ${remaining} darsi puli to'liq qaytarildi`
-            : `${params.reason} — o'tmagan ${remaining} dars qaytarildi`,
+            : policy === 'LEVEL_COMPLETED'
+              ? `${params.reason} — darajani tugatdi: o'tmagan ${remaining} dars qaytarildi`
+              : `${params.reason} — o'tmagan ${remaining} dars qaytarildi`,
         performedById: params.performedById,
         // Lets the payment statement fold this refund into the month's
         // lessons without parsing the description.
