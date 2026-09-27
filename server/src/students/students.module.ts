@@ -17,6 +17,9 @@ import { PaymentGatewaysModule } from '../payment-gateways/payment-gateways.modu
 import { BillingModule } from '../billing/billing.module';
 import { SettingsModule } from '../settings/settings.module';
 import { AuthModule } from '../auth/auth.module';
+import { EskizModule } from '../eskiz/eskiz.module';
+import { StudentOnboardingController } from './onboarding/student-onboarding.controller';
+import { StudentOnboardingService } from './onboarding/student-onboarding.service';
 
 @Module({
   imports: [
@@ -28,8 +31,13 @@ import { AuthModule } from '../auth/auth.module';
     BillingModule,
     SettingsModule,
     AuthModule,
+    EskizModule,
   ],
-  controllers: [StudentsController, StudentPortalController],
+  controllers: [
+    StudentsController,
+    StudentPortalController,
+    StudentOnboardingController,
+  ],
   providers: [
     StudentsService,
     StudentsReadService,
@@ -39,6 +47,7 @@ import { AuthModule } from '../auth/auth.module';
     StudentPortalService,
     StudentPortalReadService,
     StudentPortalWriteService,
+    StudentOnboardingService,
   ],
   // `StudentsStatusService` — avtomatik pauza cron'i uchun
   // (`pauseForAbsence`, tizim aktori bilan).

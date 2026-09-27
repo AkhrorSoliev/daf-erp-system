@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { isExerciseSessionRoute } from "@/lib/student-nav-items";
 import { ActivityHost } from "./activity/activity-host";
+import { StudentOnboardingGate } from "./onboarding/student-onboarding-gate";
 import { LumioBottomNav } from "./lumio/bottom-nav";
 import { LumioSideRail } from "./lumio/side-rail";
 import { RadioHost } from "./radio/radio-host";
@@ -70,50 +71,54 @@ export function StudentPortalLayout({
   const inSession = isExerciseSessionRoute(pathname);
   const dockShown = radioActive && !inSession;
 
+  // Nothing of the portal is reachable until the student has given what
+  // ADR-0039 requires; the gate draws its own full-screen form until then.
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Tablet + desktop navigation rail */}
-      <LumioSideRail className="hidden md:flex" />
+    <StudentOnboardingGate>
+      <div className="min-h-screen bg-background text-foreground">
+        {/* Tablet + desktop navigation rail */}
+        <LumioSideRail className="hidden md:flex" />
 
-      {/* Content column — padded left by whatever the rail currently occupies */}
-      <div
-        className={cn(
-          "transition-[padding] duration-200 ease-out",
-          CONTENT_INSET[sidebarMode],
-        )}
-      >
-        <main
+        {/* Content column — padded left by whatever the rail currently occupies */}
+        <div
           className={cn(
-            "mx-auto w-full max-w-[560px] px-4 pb-32 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-5 md:max-w-[720px] md:px-8 md:py-8 md:pb-12 lg:max-w-[980px]",
-            // The dock overlays the page; without this the last row of a long
-            // screen sits underneath it and can't be tapped.
-            dockShown && "pb-48 md:pb-28",
+            "transition-[padding] duration-200 ease-out",
+            CONTENT_INSET[sidebarMode],
           )}
         >
-          {children}
-        </main>
-      </div>
+          <main
+            className={cn(
+              "mx-auto w-full max-w-[560px] px-4 pb-32 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-5 md:max-w-[720px] md:px-8 md:py-8 md:pb-12 lg:max-w-[980px]",
+              // The dock overlays the page; without this the last row of a long
+              // screen sits underneath it and can't be tapped.
+              dockShown && "pb-48 md:pb-28",
+            )}
+          >
+            {children}
+          </main>
+        </div>
 
-      {/*
+        {/*
         Floating bottom nav — mobile only; the rail takes over from md up.
         Suppressed on an exercise session route: SeansEkrani's own fixed
         bottom action bar sits in the same spot, and on a phone the nav pill
         was intercepting taps meant for "Tekshirish"/"Keyingi" (production
         finding).
       */}
-      {!inSession && <LumioBottomNav className="md:hidden" />}
+        {!inSession && <LumioBottomNav className="md:hidden" />}
 
-      {/*
+        {/*
         Radio lives in the shell, not in a page. The audio element itself is a
         module singleton (see radio-store), so navigating between portal screens
         never interrupts the stream; these three only render its controls.
         Inside a lesson the dock gives way to RadioSessionToggle in the
         lesson header; the stream itself keeps playing.
       */}
-      <RadioHost />
-      <ActivityHost />
-      {!inSession && <RadioMiniPlayer />}
-      <RadioNowPlaying />
-    </div>
+        <RadioHost />
+        <ActivityHost />
+        {!inSession && <RadioMiniPlayer />}
+        <RadioNowPlaying />
+      </div>
+    </StudentOnboardingGate>
   );
 }

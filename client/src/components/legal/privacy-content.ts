@@ -9,7 +9,7 @@ import { COMPANY } from "@/lib/company";
 // field on the student record — this file changes in the same PR, and
 // LAST_UPDATED moves with it.
 
-export const LAST_UPDATED = "19.08.2026";
+export const LAST_UPDATED = "27.09.2026";
 
 export type Block = { kind: "p"; text: string } | { kind: "ul"; items: string[] };
 
@@ -33,7 +33,8 @@ export const SECTIONS: Section[] = [
         kind: "ul",
         items: [
           "ism va familiya",
-          "telefon raqam — u ayni paytda tizimga kirish logini hamdir",
+          "telefon raqam — u ayni paytda tizimga kirish logini hamdir; o'quvchi uni ilovaga birinchi kirishda SMS kod bilan tasdiqlaydi",
+          "jins va tug'ilgan sana — o'quvchi ilovaga birinchi kirishda kiritadi, agar ular kartangizda bo'lmasa",
           "profil surati, agar uni o'zingiz yuklagan bo'lsangiz",
           "Telegram akkaunt identifikatori va foydalanuvchi nomi — agar Telegram orqali kirishni tanlasangiz",
         ],
@@ -61,7 +62,7 @@ export const SECTIONS: Section[] = [
         items: [
           "kirish sessiyasi — brauzer cookie'sida saqlanadigan token",
           "push-bildirishnoma uchun qurilma tokeni, agar bildirishnomalarga ruxsat bergan bo'lsangiz",
-          "parolni tiklash uchun yuborilgan bir martalik SMS kodlari",
+          "parolni tiklash va telefon raqamni tasdiqlash uchun yuborilgan bir martalik SMS kodlari (kodning o'zi saqlanmaydi)",
         ],
       },
       {

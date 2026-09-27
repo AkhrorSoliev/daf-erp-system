@@ -77,6 +77,9 @@ export class AuthController {
   }
 
   // ── Telegram OAuth (OIDC) — web portallar uchun ────────────────────────────
+  // (Telegram Mini App ichidan kirish — `POST /auth/telegram/webapp` — alohida:
+  // `telegram-webapp/telegram-webapp.controller.ts`.)
+  //
   // Klient tugmani ko'rsatishdan oldin funksiya yoniqligini so'raydi (login
   // sahifasi mount bo'lganda). Boshqa Telegram endpointlariga o'xshab
   // himoyalangan — 30/min/IP, chunki bu autentifikatsiyasiz GET, lekin

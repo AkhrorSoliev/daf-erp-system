@@ -77,6 +77,39 @@ describe('validateEnv', () => {
     });
   });
 
+  describe('TELEGRAM_MINI_APP_URL', () => {
+    it('is optional — unset means the Mini App buttons stay off', () => {
+      expect(() => validateEnv({ ...minimal })).not.toThrow();
+    });
+
+    it('accepts an https address', () => {
+      expect(() =>
+        validateEnv({
+          ...minimal,
+          TELEGRAM_MINI_APP_URL: 'https://student.dafzentrum.uz/tg',
+        }),
+      ).not.toThrow();
+    });
+
+    it('rejects http — Telegram refuses the button and the whole main menu with it', () => {
+      expect(() =>
+        validateEnv({
+          ...minimal,
+          TELEGRAM_MINI_APP_URL: 'http://student.dafzentrum.uz/tg',
+        }),
+      ).toThrow(/TELEGRAM_MINI_APP_URL.*https:\/\//);
+    });
+
+    it('rejects something that is not a URL at all', () => {
+      expect(() =>
+        validateEnv({
+          ...minimal,
+          TELEGRAM_MINI_APP_URL: 'student.dafzentrum.uz',
+        }),
+      ).toThrow('TELEGRAM_MINI_APP_URL');
+    });
+  });
+
   describe('all-or-nothing groups', () => {
     it('accepts a group that is entirely absent — the feature is simply off', () => {
       expect(() => validateEnv({ ...minimal })).not.toThrow();
