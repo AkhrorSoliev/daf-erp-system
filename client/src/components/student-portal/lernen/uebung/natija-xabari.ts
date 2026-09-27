@@ -41,11 +41,7 @@ export function orinXabari(
 export function xatoYorligi(format: FrageFormat, prompt: string): string {
   // `AUDIO_BILD` and `BILD_TIPPEN` also have an empty `prompt` on purpose:
   // showing the word would turn them into reading exercises.
-  if (
-    format === "AUDIO_WORT" ||
-    format === "WORT_TIPPEN" ||
-    format === "AUDIO_BILD"
-  ) {
+  if (format === "AUDIO_WORT" || format === "WORT_TIPPEN" || format === "AUDIO_BILD") {
     return "Eshitish savoli";
   }
   if (format === "BILD_TIPPEN") return "Rasm savoli";

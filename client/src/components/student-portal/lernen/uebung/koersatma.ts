@@ -30,18 +30,9 @@ export function koersatma(format: FrageFormat): string {
 }
 
 /** Format qaysi komponent bilan ko'rsatiladi (dizayn §4.1). */
-export function harakat(
-  format: FrageFormat,
-): "TANLASH" | "YOZISH" | "YIGISH" | "RASM" {
+export function harakat(format: FrageFormat): "TANLASH" | "YOZISH" | "YIGISH" | "RASM" {
   if (format === "BILD_WORT" || format === "AUDIO_BILD") return "RASM";
-  if (
-    format === "LUECKE" ||
-    format === "WORT_TIPPEN" ||
-    format === "BILD_TIPPEN"
-  ) {
-    return "YOZISH";
-  }
-  if (format === "SATZ_BAUEN" || format === "PAAR" || format === "ZUORDNEN")
-    return "YIGISH";
+  if (format === "LUECKE" || format === "WORT_TIPPEN" || format === "BILD_TIPPEN") return "YOZISH";
+  if (format === "SATZ_BAUEN" || format === "PAAR" || format === "ZUORDNEN") return "YIGISH";
   return "TANLASH";
 }

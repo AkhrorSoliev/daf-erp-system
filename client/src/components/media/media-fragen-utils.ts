@@ -7,8 +7,7 @@ import type { FrageFormat, VorschauFrage } from "./media-fragen-types";
  * o'zini (fetch, audio) render qilmasdan sinash mumkin
  * (`client/CLAUDE.md`: vitest, komponent render yo'q).
  */
-export type VorschauShakli =
-  "OVOZ" | "JUFT" | "DIALOG" | "MATN" | "HOEREN" | "RASM";
+export type VorschauShakli = "OVOZ" | "JUFT" | "DIALOG" | "MATN" | "HOEREN" | "RASM";
 
 /**
  * `Record<FrageFormat, ...>` ATAYLAB, `switch`+`default` EMAS — server

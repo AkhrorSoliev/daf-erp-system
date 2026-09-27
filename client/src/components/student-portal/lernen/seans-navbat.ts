@@ -1,9 +1,4 @@
-import type {
-  FrageFormat,
-  MaterialTyp,
-  PruefErgebnis,
-  PublicFrage,
-} from "./types";
+import type { FrageFormat, MaterialTyp, PruefErgebnis, PublicFrage } from "./types";
 
 /**
  * Natija ekranida ko'rsatiladigan xato.
