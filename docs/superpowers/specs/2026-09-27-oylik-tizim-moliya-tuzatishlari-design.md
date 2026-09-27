@@ -107,6 +107,19 @@ Har qism — alohida PR, alohida reja, CEO ruxsati bilan saytga.
    (`narrowPayrollScope`); boshqa filial tanlanganda oylik «blocked» bo'lib,
    foyda ortiq ko'rinadi. Oylik oyog'i tanlangan filialga (direktor shifti
    ichida) qamrovlanadi.
+9. **Bekor qilingan qarz kechirish boshqa hisobotlarda ham chiqarilmaydi.**
+   A1 ro'yxat va Moliya kartasini tuzatdi; qolgan o'quvchilar kohortasi,
+   oylik qarzdorlik tarixi va Telegram kunlik hisobotidagi `DEBT_WRITE_OFF`
+   o'qishlariga ham `reversedTransactionId: null` qo'shiladi.
+10. **A1 dan qolgan mayda ishlar:**
+    - to'lov oynasidagi «keyingi oy» summasi to'xtatilgan (PAUSED) guruhdagi
+      yozilishni ham qo'shadi, oylik hisob esa uni o'tkazib yuboradi;
+    - `reports-payments.service.ts` dagi «sof foyda bilan bir xil manba»
+      izohi 7-band tuzatilgach to'g'rilanadi, `Math.abs` o'rniga `0 - summa`;
+    - ko'p filialli direktor to'lov hisobotlarida ustozlar jadvali uchun
+      filial tanlashi kerak (kartalar ishlaydi);
+    - kurs to'lov turini LESSON_PACK → MONTHLY almashtirish qolgan paket
+      darslari hisoblagichini nolga tushirmaydi.
 
 ### A3. Matnlar va ish haqi
 
