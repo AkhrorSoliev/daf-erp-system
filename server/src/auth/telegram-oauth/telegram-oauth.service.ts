@@ -112,6 +112,10 @@ export class TelegramOauthService {
   ): Promise<string> {
     const idToken = await this.exchangeCode(code, stored.codeVerifier);
     const identity = await this.verifier.verify(idToken);
+    // `phone_number_verified` faqat KIRISH uchun yetarli. U o'quvchi kartasidagi
+    // raqamning tasdig'i EMAS (ADR-0039): Telegram hisobidagi raqam o'quvchi
+    // amalda ishlatadigan raqamdan boshqa bo'lishi mumkin. Bu yerdan
+    // `markPhoneVerified` chaqirilmaydi — `phone-proof.single-source.spec.ts`.
 
     // Portal rollari — parol bilan kirishdagi AYNAN shu mantiq.
     const allowedRoleIds = getAllowedRoleIds(stored.portalOrigin);

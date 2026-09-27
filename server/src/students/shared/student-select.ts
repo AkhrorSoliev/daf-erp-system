@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { isPhoneVerified } from './student-onboarding';
 
 export const STUDENT_ROLE_ID = 6;
 
@@ -12,6 +13,8 @@ export const studentSelect = {
   parentName: true,
   telegram: true,
   telegramChatId: true,
+  verifiedPhone: true,
+  phoneVerifiedAt: true,
   gender: true,
   dateOfBirth: true,
   photo: true,
@@ -75,11 +78,21 @@ export function formatStudent(student: any) {
     deletedAt,
     dateOfBirth,
     companyId,
+    verifiedPhone,
+    phoneVerifiedAt,
     ...rest
   } = student;
 
+  // The card says whether its number is proved, never which number was: the
+  // rule (ADR-0039) stays in `isPhoneVerified`, not re-derived by a client.
+  const phoneVerified = isPhoneVerified({ phone: rest.phone, verifiedPhone });
+
   return {
     ...rest,
+    phoneVerified,
+    phoneVerifiedAt: phoneVerified
+      ? ((phoneVerifiedAt as Date | null)?.toISOString() ?? null)
+      : null,
     date_of_birth: dateOfBirth?.toISOString() ?? null,
     company_id: companyId ?? null,
     deleted_at: deletedAt ?? null,
