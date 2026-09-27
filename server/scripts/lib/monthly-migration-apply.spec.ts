@@ -24,6 +24,7 @@ function makeEnrollment(over: EnrollmentOverride = {}): EnrollmentToMigrate {
     status: EnrollmentStatus.ACTIVE,
     startDate: null,
     createdAt: new Date('2026-05-02T06:00:00Z'),
+    returnedAt: null,
     group: {
       id: 'grp-1',
       branchId: 1,

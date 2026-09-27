@@ -1556,6 +1556,7 @@ describe('LessonBillingService', () => {
         status: 'ACTIVE' as any,
         startDate: null,
         createdAt: new Date('2026-03-01T06:00:00Z'),
+        returnedAt: null,
         group: {
           id: baseParams.groupId,
           branchId: baseParams.branchId,
