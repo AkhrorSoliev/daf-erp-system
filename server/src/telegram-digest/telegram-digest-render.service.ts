@@ -220,16 +220,17 @@ export class TelegramDigestRenderService {
     }
     // The bill's and the reminder's closing lines, then the ones today's
     // instant receipt and reversal notice end with.
-    const closing = monthlyPaymentClosing(
-      monthly.bills.length > 0 && owes,
-      monthly.reminders.length > 0,
+    const askToPay = monthly.bills.length > 0 && owes;
+    const reversed = payments.some(
+      (e) => e.row.category === TelegramDigestCategory.PAYMENT_REVERSED,
     );
-    if (
-      monthly.reminders.length === 0 &&
-      payments.some(
-        (e) => e.row.category === TelegramDigestCategory.PAYMENT_REVERSED,
-      )
-    ) {
+    // A reversal's «questions» line joins the monthly closing, before the
+    // profile link; on its own it keeps the reversal notice's wording.
+    const closing = monthlyPaymentClosing(
+      askToPay,
+      monthly.reminders.length > 0 || (askToPay && reversed),
+    );
+    if (reversed && closing.length === 0) {
       closing.push("Savollar bo'lsa, markazga murojaat qiling.");
     }
     if (

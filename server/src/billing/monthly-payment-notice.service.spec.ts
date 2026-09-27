@@ -35,9 +35,20 @@ const OCTOBER = [
   '2026-10-30',
 ];
 
-const charge = (over: Record<string, unknown> = {}) => ({
+type Row = Record<string, unknown> & {
+  id: string;
+  studentId: number;
+  periodYear: number;
+  periodMonth: number;
+  createdAt: Date;
+  coveredDates: string[];
+};
+
+const charge = (over: Record<string, unknown> = {}): Row => ({
   id: 'charge-1',
+  enrollmentId: 'enr-1',
   studentId: 10042,
+  groupId: 'g-1',
   branchId: 7,
   periodYear: 2026,
   periodMonth: 10,
@@ -46,6 +57,7 @@ const charge = (over: Record<string, unknown> = {}) => ({
   creditLessons: 0,
   creditAmount: 0,
   chargedAmount: 1040000,
+  createdAt: new Date('2026-09-30T22:10:00Z'),
   enrollment: { status: EnrollmentStatus.ACTIVE },
   student: { status: StudentStatus.ACTIVE, deletedAt: null },
   group: { name: 'A1-12', exactDays: ['monday', 'wednesday', 'friday'] },
@@ -54,6 +66,10 @@ const charge = (over: Record<string, unknown> = {}) => ({
 
 describe('MonthlyPaymentNoticeService', () => {
   let service: MonthlyPaymentNoticeService;
+  /** What the candidate query (bills or reminders) returns. */
+  let candidates: Row[];
+  /** Extra standing charges of the same students (another group, same month). */
+  let otherCharges: Row[];
   let findMany: jest.Mock;
   let updateMany: jest.Mock;
   let enqueue: jest.Mock;
@@ -61,7 +77,16 @@ describe('MonthlyPaymentNoticeService', () => {
   let prisma: Record<string, unknown>;
 
   beforeEach(async () => {
-    findMany = jest.fn().mockResolvedValue([]);
+    candidates = [];
+    otherCharges = [];
+    // The standing-charges query is the only one filtering on `studentId`.
+    findMany = jest.fn((args: { where: Record<string, unknown> }) =>
+      Promise.resolve(
+        'studentId' in args.where
+          ? [...candidates, ...otherCharges]
+          : candidates,
+      ),
+    );
     updateMany = jest.fn().mockResolvedValue({ count: 1 });
     enqueue = jest.fn().mockResolvedValue(undefined);
     resolvePlan = jest
@@ -87,7 +112,7 @@ describe('MonthlyPaymentNoticeService', () => {
 
   describe('queueChargeNotices', () => {
     it('queues the bill of a new charge and marks the charge in the same transaction', async () => {
-      findMany.mockResolvedValue([charge()]);
+      candidates = [charge()];
       await expect(
         service.queueChargeNotices(1001, CHARGE_DAY, true),
       ).resolves.toBe(1);
@@ -122,13 +147,13 @@ describe('MonthlyPaymentNoticeService', () => {
     });
 
     it('prices the month before the excused-lesson credit', async () => {
-      findMany.mockResolvedValue([
+      candidates = [
         charge({
           creditLessons: 2,
           creditAmount: 160000,
           chargedAmount: 880000,
         }),
-      ]);
+      ];
       await service.queueChargeNotices(1001, CHARGE_DAY, true);
       expect(enqueue.mock.calls[0][0].payload).toEqual(
         expect.objectContaining({
@@ -140,7 +165,7 @@ describe('MonthlyPaymentNoticeService', () => {
       );
     });
 
-    it('reads only unmarked, standing charges of this company from the last three days', async () => {
+    it('reads unmarked, standing charges of this company written or re-charged in the last three days', async () => {
       await service.queueChargeNotices(1001, CHARGE_DAY, true);
       expect(findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -148,7 +173,7 @@ describe('MonthlyPaymentNoticeService', () => {
             companyId: 1001,
             noticeQueuedAt: null,
             status: MonthlyChargeStatus.CHARGED,
-            createdAt: {
+            updatedAt: {
               gte: new Date(CHARGE_DAY.getTime() - NOTICE_MAX_AGE_MS),
             },
           },
@@ -156,8 +181,45 @@ describe('MonthlyPaymentNoticeService', () => {
       );
     });
 
+    it("takes the due date from the group's live calendar, not the dates frozen on the charge", async () => {
+      candidates = [charge()];
+      resolvePlan.mockResolvedValue({
+        excludedDates: ['2026-10-05'],
+        addedDates: [],
+      });
+      await service.queueChargeNotices(1001, CHARGE_DAY, true);
+      expect(resolvePlan).toHaveBeenCalledWith(prisma, 'g-1', 7, 2026, 10);
+      expect(enqueue.mock.calls[0][0].payload.dueDate).toBe('2026-10-07');
+    });
+
+    it("announces only the student's first bill of the month — a group transfer's second charge is marked, not announced", async () => {
+      const october = charge({ id: 'charge-a' });
+      const afterTransfer = charge({
+        id: 'charge-b',
+        enrollmentId: 'enr-2',
+        groupId: 'g-2',
+        coveredDates: ['2026-10-16', '2026-10-19'],
+        createdAt: new Date('2026-10-15T09:00:00Z'),
+      });
+      candidates = [afterTransfer];
+      otherCharges = [october];
+      await expect(
+        service.queueChargeNotices(
+          1001,
+          new Date('2026-10-15T14:50:00Z'),
+          true,
+        ),
+      ).resolves.toBe(0);
+      expect(updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'charge-b', noticeQueuedAt: null },
+        }),
+      );
+      expect(enqueue).not.toHaveBeenCalled();
+    });
+
     it('with notices switched off, marks the charge and queues nothing', async () => {
-      findMany.mockResolvedValue([charge()]);
+      candidates = [charge()];
       await expect(
         service.queueChargeNotices(1001, CHARGE_DAY, false),
       ).resolves.toBe(0);
@@ -166,7 +228,7 @@ describe('MonthlyPaymentNoticeService', () => {
     });
 
     it('skips a charge another run already claimed', async () => {
-      findMany.mockResolvedValue([charge()]);
+      candidates = [charge()];
       updateMany.mockResolvedValue({ count: 0 });
       await expect(
         service.queueChargeNotices(1001, CHARGE_DAY, true),
@@ -189,7 +251,7 @@ describe('MonthlyPaymentNoticeService', () => {
         { student: { status: StudentStatus.ACTIVE, deletedAt: new Date() } },
       ],
     ])('marks but sends no bill when %s', async (_label, over) => {
-      findMany.mockResolvedValue([charge(over)]);
+      candidates = [charge(over)];
       await expect(
         service.queueChargeNotices(1001, CHARGE_DAY, true),
       ).resolves.toBe(0);
@@ -198,10 +260,7 @@ describe('MonthlyPaymentNoticeService', () => {
     });
 
     it('one failing charge does not stop the rest', async () => {
-      findMany.mockResolvedValue([
-        charge(),
-        charge({ id: 'charge-2', studentId: 10043 }),
-      ]);
+      candidates = [charge(), charge({ id: 'charge-2', studentId: 10043 })];
       enqueue.mockRejectedValueOnce(new Error('db down'));
       await expect(
         service.queueChargeNotices(1001, CHARGE_DAY, true),
@@ -213,15 +272,6 @@ describe('MonthlyPaymentNoticeService', () => {
   describe('queueReminders', () => {
     /** 19:50 Tashkent, 04.10.2026 — tomorrow, 05.10, is the 2nd lesson. */
     const EVE = new Date('2026-10-04T14:50:00Z');
-    const debtor = (over: Record<string, unknown> = {}) => ({
-      enrollmentId: 'enr-1',
-      studentId: 10042,
-      groupId: 'g-1',
-      branchId: 7,
-      coveredDates: OCTOBER,
-      group: { name: 'A1-12', exactDays: ['monday', 'wednesday', 'friday'] },
-      ...over,
-    });
 
     it("asks only for debtors in open enrollments of active groups, charged for tomorrow's month", async () => {
       await service.queueReminders(1001, EVE);
@@ -245,7 +295,7 @@ describe('MonthlyPaymentNoticeService', () => {
     });
 
     it('reminds a debtor whose 2nd lesson of the month is tomorrow', async () => {
-      findMany.mockResolvedValue([debtor()]);
+      candidates = [charge()];
       await expect(service.queueReminders(1001, EVE)).resolves.toBe(1);
       expect(enqueue).toHaveBeenCalledWith({
         recipientKind: TelegramDigestRecipientKind.STUDENT,
@@ -265,7 +315,7 @@ describe('MonthlyPaymentNoticeService', () => {
     });
 
     it('stays quiet when tomorrow is not the 2nd lesson', async () => {
-      findMany.mockResolvedValue([debtor()]);
+      candidates = [charge()];
       await expect(
         service.queueReminders(1001, new Date('2026-10-06T14:50:00Z')),
       ).resolves.toBe(0);
@@ -273,17 +323,34 @@ describe('MonthlyPaymentNoticeService', () => {
     });
 
     it('counts a mid-month joiner from their own first lesson', async () => {
-      findMany.mockResolvedValue([
-        debtor({ coveredDates: ['2026-10-12', '2026-10-14', '2026-10-16'] }),
-      ]);
+      candidates = [
+        charge({ coveredDates: ['2026-10-12', '2026-10-14', '2026-10-16'] }),
+      ];
       await expect(
         service.queueReminders(1001, new Date('2026-10-13T14:50:00Z')),
       ).resolves.toBe(1);
       expect(enqueue.mock.calls[0][0].payload.lessonDate).toBe('2026-10-14');
     });
 
+    it('does not remind a student moved to another group mid-month about a «2nd lesson» long past', async () => {
+      // October began in group A; on 15.10 the student moved to group B.
+      otherCharges = [charge({ id: 'charge-a', enrollmentId: 'enr-a' })];
+      candidates = [
+        charge({
+          id: 'charge-b',
+          enrollmentId: 'enr-b',
+          groupId: 'g-2',
+          coveredDates: ['2026-10-16', '2026-10-19', '2026-10-21'],
+        }),
+      ];
+      await expect(
+        service.queueReminders(1001, new Date('2026-10-18T14:50:00Z')),
+      ).resolves.toBe(0);
+      expect(enqueue).not.toHaveBeenCalled();
+    });
+
     it('follows the live calendar — a lesson cancelled after the charge moves the 2nd lesson', async () => {
-      findMany.mockResolvedValue([debtor()]);
+      candidates = [charge()];
       resolvePlan.mockResolvedValue({
         excludedDates: ['2026-10-05'],
         addedDates: [],
@@ -296,10 +363,10 @@ describe('MonthlyPaymentNoticeService', () => {
     });
 
     it("resolves each group's calendar once", async () => {
-      findMany.mockResolvedValue([
-        debtor(),
-        debtor({ enrollmentId: 'enr-2', studentId: 10043 }),
-      ]);
+      candidates = [
+        charge(),
+        charge({ id: 'charge-2', enrollmentId: 'enr-2', studentId: 10043 }),
+      ];
       await service.queueReminders(1001, EVE);
       expect(resolvePlan).toHaveBeenCalledTimes(1);
       expect(resolvePlan).toHaveBeenCalledWith(prisma, 'g-1', 7, 2026, 10);

@@ -176,12 +176,14 @@ describe('monthlyBillSection', () => {
     expect(textOf(blocks)).toContain('Guruh: A1 &lt;Intensiv&gt;\n');
   });
 
-  it('makes each group one event block (one audit line per bill)', () => {
+  it('makes each group one event block, the totals in the last one (the SMS record shows what was asked)', () => {
     const one = bill();
     const blocks = monthlyBillSection([one], -1040000, '2026-10-01', event);
-    expect(blocks.filter((b) => b.itemIds.length > 0)).toEqual([
-      { text: expect.stringContaining('Guruh: A1-12'), itemIds: one.ids },
-    ]);
+    const events = blocks.filter((b) => b.itemIds.length > 0);
+    expect(events).toHaveLength(1);
+    expect(events[0].itemIds).toEqual(one.ids);
+    expect(events[0].text).toContain('Guruh: A1-12');
+    expect(events[0].text).toContain("Jami to'lash kerak");
   });
 });
 

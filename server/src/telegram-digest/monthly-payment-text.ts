@@ -91,7 +91,9 @@ function billTailText(
  * event block per group, the totals once at the end. `balance` is the
  * student's balance at send time — the debt and the total are read from it,
  * so a payment made during the day is already counted. One group keeps the
- * approved layout exactly; several are separated by blank lines.
+ * approved layout exactly; several are separated by blank lines. The totals
+ * ride in the last group's block, so the student's SMS record of the bill
+ * carries what they were asked to pay.
  */
 export function monthlyBillSection(
   entries: DedupedRow[],
@@ -108,7 +110,8 @@ export function monthlyBillSection(
   const spaced = sorted.length > 1;
   const blocks: DigestBlock[] = [];
   let lastPeriod: number | null = null;
-  for (const e of sorted) {
+  const tail = billTailText(sorted.map(billOf), balance, today);
+  sorted.forEach((e, i) => {
     const p = billOf(e);
     if (periodKey(p) !== lastPeriod) {
       if (lastPeriod !== null) blocks.push(spacer());
@@ -119,12 +122,9 @@ export function monthlyBillSection(
     } else if (spaced) {
       blocks.push(spacer());
     }
-    blocks.push(event(e, billGroupText(p, settled)));
-  }
-  if (spaced) blocks.push(spacer());
-  blocks.push({
-    text: billTailText(sorted.map(billOf), balance, today),
-    itemIds: [],
+    const last = i === sorted.length - 1;
+    const totals = last ? (spaced ? '\n\n' : '\n') + tail : '';
+    blocks.push(event(e, billGroupText(p, settled) + totals));
   });
   return blocks;
 }

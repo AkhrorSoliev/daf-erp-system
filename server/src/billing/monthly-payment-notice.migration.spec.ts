@@ -28,9 +28,15 @@ describe('monthly payment notices migration', () => {
     );
   });
 
-  it('stamps every existing charge, so no student is billed for a month already under way', () => {
+  it('stamps the charges written before the deploy day, so no student is billed for a month already under way', () => {
     expect(SQL).toMatch(
-      /UPDATE "EnrollmentMonthlyCharge"\s+SET "noticeQueuedAt" = CURRENT_TIMESTAMP\s+WHERE "noticeQueuedAt" IS NULL;/,
+      /UPDATE "EnrollmentMonthlyCharge"\s+SET "noticeQueuedAt" = CURRENT_TIMESTAMP\s+WHERE "noticeQueuedAt" IS NULL\s+AND "createdAt" < /,
+    );
+  });
+
+  it("spares the charges written today (Tashkent), so a deploy on the charge day still sends that month's bills", () => {
+    expect(SQL).toContain(
+      `"createdAt" < ((date_trunc('day', now() AT TIME ZONE 'Asia/Tashkent') AT TIME ZONE 'Asia/Tashkent') AT TIME ZONE 'UTC');`,
     );
   });
 });

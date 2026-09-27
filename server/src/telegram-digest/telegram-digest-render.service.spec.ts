@@ -663,6 +663,36 @@ describe('TelegramDigestRenderService', () => {
       );
     });
 
+    it('keeps the profile link last when a reversed payment meets an unpaid bill', async () => {
+      student(-1040000);
+      chargeStands();
+      const r = await service.renderStudent(
+        10042,
+        [
+          row(
+            TelegramDigestCategory.PAYMENT_REVERSED,
+            {
+              paymentId: 'pay-9',
+              amount: 500000,
+              reason: null,
+              performedById: null,
+            },
+            { relatedEntityId: 'pay-9' },
+          ),
+          bill(),
+        ],
+        OCT_1,
+      );
+      const text = textOf(r);
+      expect(
+        text.endsWith('🔗 Profilingiz: https://student.dafzentrum.uz'),
+      ).toBe(true);
+      expect(text).toContain(
+        "Savollar bo'lsa, markaz administratoriga murojaat qiling.",
+      );
+      expect(text).not.toContain("Savollar bo'lsa, markazga murojaat qiling.");
+    });
+
     it('drops the standalone balance line when a bill states it', async () => {
       student(160000);
       chargeStands();

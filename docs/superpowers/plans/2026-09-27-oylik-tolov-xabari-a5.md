@@ -2620,3 +2620,15 @@ Expected: both succeed against the database in `server/.env` (dev).
 2. **Timing:** to have the October bills go out on 01.10.2026 at 20:00, both server steps must be live before 19:50 on 01.10 (the October charges are written at 03:10 that day and stay eligible for three days).
 3. **Switch-off:** Sozlamalar → To'lov → «O'quvchiga oylik to'lov xabari» (CEO). No deploy needed; bills written while off are never sent later.
 4. **Watching the first run:** Railway logs at 19:50 — `Company <id>: N monthly bill(s), M payment reminder(s) queued`; at 20:00 — `Personal digest flush — …`.
+
+## Addendum — review fixes (27.09.2026)
+
+An independent review of the finished branch found one medium and three low issues and a deploy-timing risk; all fixed:
+
+1. **The month belongs to the student.** Only the student's first standing charge of a month is announced (a mid-month transfer's second charge is marked, not announced), and the 2nd lesson is counted from the student's first covered lesson of the month in any group. Without this a transferred student was told «Sentabrdan qolgan qarz» for October money and given a new «2nd lesson» deadline.
+2. **A re-charge is re-announced.** `createChargeForEnrollment` clears `noticeQueuedAt` when it re-charges a REVERSED row, and the producer's age filter reads `updatedAt` instead of `createdAt`.
+3. **One due-date rule.** The bill's «Muddat» is computed on the group's live calendar, like the reminder.
+4. **The SMS record carries the totals.** The totals ride in the last group's block, so the audited text includes «Jami to'lash kerak» / «Qolgan balans».
+5. **Deploy-day safety.** The migration stamps only charges written before the deploy day (Tashkent), so deploying on the charge day no longer silences that month's bills.
+6. **Closing order.** A reversed payment next to an unpaid bill puts its «questions» line before the profile link.
+
