@@ -125,6 +125,42 @@ export interface GroupStatusChangeDigestPayload {
   branchName: string | null;
 }
 
+/**
+ * The month's bill (ADR-0042). Figures are the charge's own, frozen when it
+ * was written; the debt and the total are NOT here — the renderer reads the
+ * live balance at 20:00.
+ */
+export interface MonthlyChargeDigestPayload {
+  /** EnrollmentMonthlyCharge.id — re-read at 20:00; a reversed charge is not sent. */
+  chargeId: string;
+  groupName: string;
+  /** `shortWeekdaysLabel(group.exactDays)`, e.g. 'Du, Cho, Ju'; '' when the group has no days. */
+  daysLabel: string;
+  periodYear: number;
+  /** 1–12. */
+  periodMonth: number;
+  /** What the charged lessons cost this student before the excused-lesson credit: chargedAmount + creditAmount. */
+  price: number;
+  coveredLessons: number;
+  creditLessons: number;
+  creditAmount: number;
+  chargedAmount: number;
+  /** 'YYYY-MM-DD' — the student's 2nd lesson of the month (`paymentDueDate`); null with fewer than two lessons. */
+  dueDate: string | null;
+}
+
+/** The evening-before reminder of the 2nd lesson (ADR-0042). */
+export interface PaymentReminderDigestPayload {
+  /** Re-read at 20:00: a closed enrollment gets no reminder. */
+  enrollmentId: string;
+  groupName: string;
+  periodYear: number;
+  /** 1–12. */
+  periodMonth: number;
+  /** 'YYYY-MM-DD' — tomorrow's lesson, the student's 2nd of the month. */
+  lessonDate: string;
+}
+
 /** Fails to compile when a category is added to the enum without a payload. */
 type EveryCategory<T extends Record<TelegramDigestCategory, unknown>> = T;
 
@@ -145,6 +181,8 @@ export type DigestPayloadByCategory = EveryCategory<{
   GROUP_NEW_GROUP: GroupNewGroupDigestPayload;
   GROUP_PAYMENT: GroupPaymentDigestPayload;
   GROUP_STATUS_CHANGE: GroupStatusChangeDigestPayload;
+  MONTHLY_CHARGE: MonthlyChargeDigestPayload;
+  PAYMENT_REMINDER: PaymentReminderDigestPayload;
 }>;
 
 /** Who each category is written for — a student row read as USER is never rendered. */
@@ -165,6 +203,8 @@ export type RecipientKindByCategory = EveryCategory<{
   GROUP_NEW_GROUP: 'GROUP';
   GROUP_PAYMENT: 'GROUP';
   GROUP_STATUS_CHANGE: 'GROUP';
+  MONTHLY_CHARGE: 'STUDENT';
+  PAYMENT_REMINDER: 'STUDENT';
 }>;
 
 /**
