@@ -85,6 +85,9 @@ export class SettingsController {
     if (dto.debtWriteOffEnabled !== undefined) {
       edits.push(['payment.debtWriteOffEnabled', dto.debtWriteOffEnabled]);
     }
+    if (dto.monthlyNoticesEnabled !== undefined) {
+      edits.push(['payment.monthlyNoticesEnabled', dto.monthlyNoticesEnabled]);
+    }
 
     if (edits.length === 0) {
       throw new BadRequestException('Kamida bitta sozlama yuborilishi kerak');

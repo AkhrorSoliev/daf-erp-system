@@ -12,6 +12,7 @@ import {
 } from './telegram-digest-render.service';
 import {
   DigestPayloadByCategory,
+  MonthlyChargeDigestPayload,
   TelegramDigestItemRow,
 } from './telegram-digest-payloads';
 
@@ -53,10 +54,14 @@ describe('TelegramDigestRenderService', () => {
   let service: TelegramDigestRenderService;
   let studentFindUnique: jest.Mock;
   let transactionFindMany: jest.Mock;
+  let chargeFindMany: jest.Mock;
+  let enrollmentFindMany: jest.Mock;
 
   beforeEach(async () => {
     studentFindUnique = jest.fn();
     transactionFindMany = jest.fn().mockResolvedValue([]);
+    chargeFindMany = jest.fn().mockResolvedValue([]);
+    enrollmentFindMany = jest.fn().mockResolvedValue([]);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TelegramDigestRenderService,
@@ -65,6 +70,8 @@ describe('TelegramDigestRenderService', () => {
           useValue: {
             student: { findUnique: studentFindUnique },
             transaction: { findMany: transactionFindMany },
+            enrollmentMonthlyCharge: { findMany: chargeFindMany },
+            enrollment: { findMany: enrollmentFindMany },
           },
         },
       ],
@@ -492,6 +499,212 @@ describe('TelegramDigestRenderService', () => {
       );
       expect(order).toEqual([...order].sort((a, b) => a - b));
       expect(order.every((i) => i >= 0)).toBe(true);
+    });
+  });
+  describe('monthly bill and reminder (ADR-0042)', () => {
+    /** 20:00 Tashkent, 01.10.2026. */
+    const OCT_1 = new Date('2026-10-01T15:00:00Z');
+    /** 20:00 Tashkent, 04.10.2026 — the eve of the 2nd lesson. */
+    const OCT_4 = new Date('2026-10-04T15:00:00Z');
+
+    const bill = (over: Partial<MonthlyChargeDigestPayload> = {}) =>
+      row(
+        TelegramDigestCategory.MONTHLY_CHARGE,
+        {
+          chargeId: 'charge-1',
+          groupName: 'A1-12',
+          daysLabel: 'Du, Cho, Ju',
+          periodYear: 2026,
+          periodMonth: 10,
+          price: 1040000,
+          coveredLessons: 13,
+          creditLessons: 0,
+          creditAmount: 0,
+          chargedAmount: 1040000,
+          dueDate: '2026-10-05',
+          ...over,
+        },
+        { relatedEntityId: over.chargeId ?? 'charge-1' },
+      );
+    const reminder = (lessonDate: string) =>
+      row(
+        TelegramDigestCategory.PAYMENT_REMINDER,
+        {
+          enrollmentId: 'enr-1',
+          groupName: 'A1-12',
+          periodYear: 2026,
+          periodMonth: 10,
+          lessonDate,
+        },
+        { relatedEntityId: `enr-1:${lessonDate}` },
+      );
+    const student = (balance: number) =>
+      studentFindUnique.mockResolvedValue({ firstName: 'Ali', balance });
+    const chargeStands = () =>
+      chargeFindMany.mockResolvedValue([{ id: 'charge-1' }]);
+    const enrollmentOpen = () =>
+      enrollmentFindMany.mockResolvedValue([{ id: 'enr-1' }]);
+
+    it('sends the approved bill to a student who owes', async () => {
+      student(-1040000);
+      chargeStands();
+      const r = await service.renderStudent(10042, [bill()], OCT_1);
+      expect(textOf(r)).toBe(
+        [
+          'Hurmatli Ali!',
+          '',
+          "📅 <b>Oktabr oyi uchun to'lov</b>",
+          'Guruh: A1-12 (Du, Cho, Ju)',
+          "Oylik narx: 1 040 000 so'm (13 dars)",
+          "Jami to'lash kerak: <b>1 040 000 so'm</b>",
+          'Muddat: <b>05.10.2026</b> — oyning 2-darsigacha',
+          '',
+          "To'lov: markazda, Payme yoki Click orqali.",
+          '🔗 Profilingiz: https://student.dafzentrum.uz',
+        ].join('\n'),
+      );
+      expect(r.audit).toHaveLength(1);
+      expect(chargeFindMany).toHaveBeenCalledWith({
+        where: {
+          id: { in: ['charge-1'] },
+          status: 'CHARGED',
+          enrollment: { status: 'ACTIVE' },
+        },
+        select: { id: true },
+      });
+    });
+
+    it('sends the settled variant when the balance covers the month', async () => {
+      student(160000);
+      chargeStands();
+      const r = await service.renderStudent(10042, [bill()], OCT_1);
+      expect(textOf(r)).toBe(
+        [
+          'Hurmatli Ali!',
+          '',
+          "📅 <b>Oktabr oyi uchun to'lov</b>",
+          'Guruh: A1-12 (Du, Cho, Ju)',
+          "Oylik narx 1 040 000 so'm balansingizdan yechildi.",
+          "Qolgan balans: <b>160 000 so'm</b>",
+          "Oktabr uchun to'lov qilish shart emas.",
+          '',
+          'Rahmat!',
+        ].join('\n'),
+      );
+    });
+
+    it('sends no bill for a charge reversed (or a student gone) since it was queued', async () => {
+      student(-1040000);
+      const queued = bill();
+      const r = await service.renderStudent(10042, [queued], OCT_1);
+      expect(r.blocks).toEqual([]);
+      expect(r.hiddenIds).toEqual([queued.id]);
+    });
+
+    it('sends the approved reminder on the eve of the 2nd lesson', async () => {
+      student(-1040000);
+      enrollmentOpen();
+      const r = await service.renderStudent(
+        10042,
+        [reminder('2026-10-05')],
+        OCT_4,
+      );
+      expect(textOf(r)).toBe(
+        [
+          'Hurmatli Ali!',
+          '',
+          "⏰ <b>To'lov eslatmasi</b>",
+          "Ertaga (05.10.2026) oktabrning 2-darsi bo'ladi.",
+          "To'lash kerak: <b>1 040 000 so'm</b>",
+          '',
+          "Shartnomaga ko'ra oylik to'lov 2-darsgacha qilinadi. Darslaringiz uzilib qolmasligi uchun to'lovni ertagi darsgacha amalga oshirishingizni so'raymiz.",
+          '',
+          "To'lov: markazda, Payme yoki Click orqali.",
+          "Savollar bo'lsa, markaz administratoriga murojaat qiling.",
+          '🔗 Profilingiz: https://student.dafzentrum.uz',
+        ].join('\n'),
+      );
+    });
+
+    it('sends no reminder to a student who paid during the day', async () => {
+      student(0);
+      const queued = reminder('2026-10-05');
+      const r = await service.renderStudent(10042, [queued], OCT_4);
+      expect(r.blocks).toEqual([]);
+      expect(r.hiddenIds).toEqual([queued.id]);
+      expect(enrollmentFindMany).not.toHaveBeenCalled();
+    });
+
+    it('drops a reminder kept from an earlier run — «Ertaga» would name a past day', async () => {
+      student(-1040000);
+      enrollmentOpen();
+      const stale = reminder('2026-10-04');
+      const r = await service.renderStudent(10042, [stale], OCT_4);
+      expect(r.blocks).toEqual([]);
+      expect(r.hiddenIds).toEqual([stale.id]);
+    });
+
+    it('puts bill and reminder in one message with one closing when lessons 1 and 2 are on consecutive days', async () => {
+      student(-1040000);
+      chargeStands();
+      enrollmentOpen();
+      const r = await service.renderStudent(
+        10042,
+        [bill({ dueDate: '2026-10-02' }), reminder('2026-10-02')],
+        OCT_1,
+      );
+      const text = textOf(r);
+      expect(text.indexOf('Oktabr oyi uchun')).toBeLessThan(
+        text.indexOf("To'lov eslatmasi"),
+      );
+      expect(text.match(/To'lov: markazda/g)).toHaveLength(1);
+      expect(text).toContain(
+        "Savollar bo'lsa, markaz administratoriga murojaat qiling.",
+      );
+    });
+
+    it('keeps the profile link last when a reversed payment meets an unpaid bill', async () => {
+      student(-1040000);
+      chargeStands();
+      const r = await service.renderStudent(
+        10042,
+        [
+          row(
+            TelegramDigestCategory.PAYMENT_REVERSED,
+            {
+              paymentId: 'pay-9',
+              amount: 500000,
+              reason: null,
+              performedById: null,
+            },
+            { relatedEntityId: 'pay-9' },
+          ),
+          bill(),
+        ],
+        OCT_1,
+      );
+      const text = textOf(r);
+      expect(
+        text.endsWith('🔗 Profilingiz: https://student.dafzentrum.uz'),
+      ).toBe(true);
+      expect(text).toContain(
+        "Savollar bo'lsa, markaz administratoriga murojaat qiling.",
+      );
+      expect(text).not.toContain("Savollar bo'lsa, markazga murojaat qiling.");
+    });
+
+    it('drops the standalone balance line when a bill states it', async () => {
+      student(160000);
+      chargeStands();
+      const r = await service.renderStudent(
+        10042,
+        [receipt('pay-1', 1200000, PaymentMethod.CASH), bill()],
+        OCT_1,
+      );
+      const text = textOf(r);
+      expect(text).not.toContain('Joriy balansingiz');
+      expect(text).toContain("Qolgan balans: <b>160 000 so'm</b>");
+      expect(text.match(/Rahmat!/g)).toHaveLength(1);
     });
   });
 });
