@@ -349,8 +349,14 @@ export class AuthService {
     return { status: 'approved' as const, ...session };
   }
 
-  /** Load a student user, enforce the role-6 gate, and issue a session. */
-  private async buildStudentSession(userId: number) {
+  /**
+   * Load a student user, enforce the role-6 gate, and issue a session.
+   *
+   * The two passwordless student doors share it — the native app's poll
+   * and the Telegram Mini App — so neither can issue a session the other
+   * would refuse.
+   */
+  async buildStudentSession(userId: number) {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
       include: SESSION_USER_INCLUDE,

@@ -8,6 +8,10 @@
  * bilan ro'yxatdan o'tish yoki begona o'quvchining hisobini o'ziga bog'lab
  * parolini olish yo'lini ochadi. Shuning uchun `user_id` YO'Q bo'lsa ham
  * rad etiladi — «yo'q» degani «isbotlanmagan» degani.
+ *
+ * O'z kontakti ham o'quvchi kartasidagi raqamni TASDIQLAMAYDI (ADR-0039):
+ * u Telegram hisobining raqamini isbotlaydi, o'quvchi esa boshqa raqamdan
+ * foydalanishi mumkin. Karta raqamini faqat SMS kod tasdiqlaydi.
  */
 export const CONTACT_NOT_OWN =
   "Iltimos, faqat o'zingizning raqamingizni «📱 Telefon raqamni yuborish» tugmasi orqali yuboring.";

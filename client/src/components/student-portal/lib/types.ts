@@ -104,3 +104,15 @@ export interface PaymentHistory {
   payments: PaymentItem[];
   transactions: TransactionItem[];
 }
+
+/** A first-run step the portal still owes (ADR-0039). */
+export type OnboardingStep = "PHONE" | "GENDER" | "BIRTH_DATE";
+
+/** `GET /student-portal/onboarding` — also returned by every onboarding write. */
+export interface OnboardingStatus {
+  /** Steps still owed, in display order. Empty = the portal opens. */
+  missing: OnboardingStep[];
+  /** The card's number — where the SMS code goes. */
+  phone: string;
+  phoneVerified: boolean;
+}

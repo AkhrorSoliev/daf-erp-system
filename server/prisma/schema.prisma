@@ -565,6 +565,11 @@ model Student {
   telegramChatId  String?
   gender          Gender?
   dateOfBirth     DateTime?
+  // The number the student proved by SMS, and when (ADR-0039). The phone is
+  // verified only while this equals `phone`: a number staff change later is
+  // unverified again without anyone having to remember to reset a flag.
+  verifiedPhone   String?
+  phoneVerifiedAt DateTime?
   photo           String?
   comment         String?
   balance         Int           @default(0)

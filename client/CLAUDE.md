@@ -123,7 +123,7 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - Tokens stored in cookies via `js-cookie`
 - Axios interceptor in `src/lib/api.ts` auto-attaches token and auto-refreshes on 401
 - `src/middleware.ts` redirects unauthenticated users to `/login`
-- Auth state managed by Zustand store in `src/hooks/use-auth.ts`
+- Auth state managed by Zustand store in `src/hooks/use-auth.ts` — `logout()` clears the session and goes to `/login`; `clearSession()` clears it without leaving the page (the Telegram Mini App uses it)
 - `AuthProvider` in `src/components/providers/auth-provider.tsx` hydrates state from cookies on mount
 - **Session-ending actions (ADR-0030).** `PATCH /users/password`, `PATCH /student-portal/password` and `POST /users/logout-others` end EVERY session of the account, this device's included, and return a fresh pair. Store it with `freshSessionFrom(data)` + `setAuth(...)` (`src/lib/fresh-session.ts`), or the next request signs the user out. `useLogoutOthers()` (`src/hooks/use-logout-others.ts`) does this for the "Boshqa qurilmalardan chiqish" action on the staff profile and on student portal Settings. Both open the same confirmation, `src/components/shared/logout-others-dialog.tsx` — the student portal passes `contentClassName="lumio"`, like its own sign-out dialog. Do not fork a second, student-only copy.
 
@@ -170,7 +170,7 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 #### Password-reset dialog: one flow, two skins
 
 - `forgot-password-dialog.tsx` takes `variant?: "default" | "lumio"`. The student login passes `"lumio"`; admin and teacher logins take the default. **Do not fork it into a second student-only component** — it is three stateful steps with an OTP resend timer and a single-use reset token, and a parallel copy would be two places to fix the next time the OTP contract moves. The login *forms* are forked; this dialog deliberately is not.
-- Only the leaves differ, and they live in `forgot-password-fields.tsx` (`FpField`, `FpPhoneInput`, `FpCodeInput`, `FpPasswordInput`, `FpSubmit`, `FpError`). Add a variant branch there, not as a ternary inside the dialog's JSX.
+- Only the leaves differ, and they live in `forgot-password-fields.tsx` (`FpField`, `FpPhoneInput`, `FpCodeInput`, `FpPasswordInput`, `FpSubmit`, `FpError`). Add a variant branch there, not as a ternary inside the dialog's JSX. `FpPhoneInput` live-formats `XX XXX XX XX` (`formatPhoneInput`) and still reports the raw nine digits; the student portal's first-run phone step uses it too.
 - **The `lumio` class goes on `DialogContent`, not on an ancestor** — Radix portals dialog content to `document.body`, outside the page's `.lumio` wrapper, so a class on the page never reaches it. Same pattern as `student-password-dialog.tsx`.
 - In the Lumio skin the password fields use Lumio's `Input`, which ships its own per-field reveal toggle; the shared `showPassword` state therefore only drives the shadcn skin.
 
@@ -192,6 +192,14 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - Telegram returns to the API, which 302s to `/auth/telegram/callback?handoff=…` on this app. That page exchanges the single-use handoff for tokens (`POST /auth/telegram/complete`), calls `setAuth`, and redirects (student → `/portal`, everyone else → `/`).
 - **The same page also handles `?error=<message>`** — a server-side failure after the OAuth `state` was consumed 302s here with a human-readable Uzbek message instead of stranding the user on raw JSON at the API domain. Both `error` and the missing-`handoff` fallback are computed in the `useState` **lazy initializer**; do not move them into the effect (`react-hooks/set-state-in-effect`).
 - **The callback page must stay wrapped in `<Suspense>`** — it reads `useSearchParams`, which bails out of static prerendering without a boundary and fails `npm run build`.
+
+#### Telegram Mini App (`/tg`, ADR-0040)
+
+- The bot opens `https://student.dafzentrum.uz/tg` as a Mini App (server env `TELEGRAM_MINI_APP_URL`). `app/(auth)/tg/page.tsx` renders `components/telegram-mini-app/mini-app-entry.tsx`, which loads `telegram-web-app.js` through `next/script` (`afterInteractive` + `onReady`, guarded by a ref so one opening sends one request), posts `Telegram.WebApp.initData` to `POST /auth/telegram/webapp`, and on `authenticated` calls `setAuth` and replaces to `/portal`. Other states: outside Telegram, signed out, `choose` (a parent's Telegram with several students), `not_registered` (a message pointing to the bot's «💳 To'lovlar» contact step — the admin panel cannot link a Telegram account) and error.
+- **Inside the Mini App there is no password form.** `lib/telegram-mini-app.ts` keeps a `sessionStorage` flag for the Mini App tab — `sessionStorage`, not a cookie, because Telegram's in-app browser shares the cookie jar with Mini Apps on Android. `MiniAppLoginGuard` on every `/login` variant sends a flagged tab back to `/tg`; `useIsMiniApp()` reads the flag (always `false` on the server and during hydration). `LogoutButton` in a Mini App marks the tab signed out, clears the session and replaces to `/tg`, which then waits for «Qayta kirish» instead of signing straight back in.
+- **Sign-in always starts from no session** (`useAuth.clearSession()` in `start()`), so a WebView two Telegram accounts share never hands one the other's session.
+- **A sign-in the portal does not keep must not loop.** Telegram Web (the browser version) runs the Mini App in a cross-site iframe, where the session cookies may not reach `/portal`: the middleware then sends the tab to `/login`, the guard back to `/tg`, and `/tg` would sign in again forever. `markMiniAppSignedIn()` stamps each successful sign-in; reaching `/tg` again within `SIGN_IN_BOUNCE_MS` (`bouncedAfterSignIn()`) shows a message pointing to the Telegram app instead, and retrying takes a tap.
+- `/tg` is public in `middleware.ts` (exact match) and excepted BEFORE the signed-in redirects: on the student host those send any visitor with a session to `/portal` before the Telegram account is checked. The Mini App must be served from the `student.` host; the portal-role routing depends on it.
 
 #### Login backdrops (liquid glass)
 
@@ -828,6 +836,16 @@ The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth
 - Used during transition from old finance systems to enter a student's outstanding balance. Backend partial unique index `(studentId) WHERE type='INITIAL_BALANCE' AND reversedAt IS NULL` enforces "exactly one per student" — second submit returns 400 with "Boshlang'ich balans bu o'quvchi uchun allaqachon kiritilgan".
 - Form: amount (`PriceInput`, min 0) + optional note (`Input`, maxLength 500).
 
+### Student Card: Phone Proof vs Telegram Bot (ADR-0039)
+
+`student-profile-card.tsx` shows two badges under the phone, from `student-contact-badges.tsx`. They answer different questions and must never be merged into one:
+
+- **"Telefon tasdiqlangan" / "Telefon tasdiqlanmagan"** — `student.phoneVerified` (+ `phoneVerifiedAt` in the tooltip). The server computes it (`formatStudent`); the client never compares numbers itself, and the API does not return the proved number. Only an SMS code proves a phone — a Telegram sign-in or a contact shared with the bot does not, because the Telegram account can carry a different number (CEO decision, 2026-09-27).
+- **"Telegram botda ro'yxatdan o'tgan"** — `student.telegramChatId` is set, i.e. the bot's messages reach this card (the bot itself calls this being registered; a parent's chat can be linked to several siblings). Drawn only when linked.
+- Badge colours use `green` / `blue`, not `sky`: outside the student portal the `sky-*` utilities resolve to Lumio variables that exist only under `.lumio`, so `bg-sky-100` renders transparent on staff pages.
+
+The card also shows "Jinsi" and the age next to "Tug'ilgan sana". The age comes from `ageFromStoredDate` (`src/lib/age.ts`), which reads the day the card displays — the staff date picker stores local midnight (19:00Z the day before in Tashkent), the student's first-run form stores UTC midnight, so the ISO string's first ten characters are not the birthday.
+
 ### Lead Forms and Their Responses (`/leads/forms`)
 
 Public sign-up forms (shared on Instagram/Telegram) turn every submission into a lead. Three routes:
@@ -859,6 +877,8 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 - Shell chrome: `lumio/bottom-nav.tsx` (floating pill, mobile) and `lumio/side-rail.tsx` (tablet + desktop left rail). Mobile has no top header — each screen renders its own `ScreenHeader`/`StackHeader` title. The `.lumio` scope + fonts are applied by the portal route layout (`app/(student-portal)/portal/layout.tsx`).
 
 **Responsive shell (`student-portal-layout.tsx`):** mobile (`< md`) gets the native-app feel (centered column, floating bottom nav); tablet and desktop (`>= md`) swap to a persistent left side rail + wider column. Role-gates to Student (role id 6). The two nav forms are mutually exclusive — never both on one viewport.
+
+**First-run gate (ADR-0039, `onboarding/`):** the shell is wrapped in `StudentOnboardingGate`, which reads `GET /student-portal/onboarding` (`useStudentOnboarding`) and, while `missing` is non-empty, draws `StudentOnboardingScreen` *instead of* the whole shell — no rail, no nav, no radio. Two stages: `PhoneStep` and `ProfileStep` (gender + birth date, only the ones missing). `PhoneStep` first shows the card's number and asks "Bu sizning raqamingizmi?": "Ha, kod yuborish" sends the code there (`/phone/send-code`); "Yo'q, boshqa raqam" takes the student's own number (`FpPhoneInput`) **and current password** (ADR-0031) and sends the code to the new number (`/phone/change-code`) — a correct code makes the server replace the card's number, and a toast tells the student they now sign in with it. It reuses `FpPhoneInput` / `FpCodeInput` from `forgot-password-fields.tsx`. Every write answers with the new status, which goes straight into the query cache; an empty `missing` opens the portal. The server decides what is missing — do not compute it on the client. The gate **fails open** on a failed or paused request (a data requirement, not a security boundary); `birth-date.ts` mirrors the server's 5–100 age check only to save a round trip. The native app does the same through a `Stack.Protected` guard and `src/app/onboarding.tsx`.
 
 **Collapsible rail (`student-portal/lib/sidebar-store.ts`):** the rail has two widths, 72px icons-only and 240px with labels, toggled from a control at the bottom of its nav column and remembered in `localStorage` (`daf.portal.sidebar`).
 

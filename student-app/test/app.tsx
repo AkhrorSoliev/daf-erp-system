@@ -14,6 +14,7 @@ const ROUTES: Record<string, unknown> = {
   '/student-portal/attendance/history': fixtures.attendanceHistory,
   '/student-portal/schedule': [fixtures.lessonToday],
   '/student-portal/payments': fixtures.payments,
+  '/student-portal/onboarding': fixtures.onboardingDone,
 };
 
 /**

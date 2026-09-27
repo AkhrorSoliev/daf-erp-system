@@ -39,7 +39,7 @@ jest.mock('expo-secure-store', () => {
 
 // The HTTP boundary. Tests answer it per URL through test/app.tsx `serveApi`.
 jest.mock('@/api/client', () => ({
-  api: { get: jest.fn(), post: jest.fn(), delete: jest.fn() },
+  api: { get: jest.fn(), post: jest.fn(), patch: jest.fn(), delete: jest.fn() },
 }));
 
 // Push registration asks the OS for permission and calls Expo's push service.
