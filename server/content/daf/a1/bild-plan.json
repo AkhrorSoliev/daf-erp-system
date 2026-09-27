@@ -1,0 +1,126 @@
+{
+  "u02-s1-familie": {
+    "szene": "a happy family of four standing together: a mother, a father, a boy and a girl",
+    "tippen": false
+  },
+  "u02-s1-mutter": {
+    "szene": "a young mother holding a baby in her arms",
+    "tippen": false
+  },
+  "u02-s1-vater": {
+    "szene": "a young father holding a baby in his arms",
+    "tippen": false
+  },
+  "u02-s1-oma": {
+    "szene": "a kind smiling grandmother with grey hair and round glasses",
+    "tippen": false
+  },
+  "u02-s3-lehrer": {
+    "szene": "a male teacher standing in front of an empty green chalkboard, holding a piece of chalk",
+    "tippen": false
+  },
+  "u02-s3-lehrerin": {
+    "szene": "a female teacher standing in front of an empty green chalkboard, holding a piece of chalk",
+    "tippen": false
+  },
+  "u02-s3-arzt": {
+    "szene": "a friendly male doctor in a white coat with a stethoscope around his neck",
+    "tippen": false
+  },
+  "u02-s3-aerztin": {
+    "szene": "a friendly female doctor in a white coat with a stethoscope around her neck",
+    "tippen": false
+  },
+  "u02-s3-schule": {
+    "szene": "a school building with a bell on the roof, and children with backpacks walking to the entrance",
+    "tippen": true
+  },
+  "u02-s4-muede": {
+    "szene": "a tired young man yawning, with sleepy half-closed eyes",
+    "tippen": false
+  },
+  "u02-s4-gluecklich": {
+    "szene": "a very happy young woman smiling broadly with both arms raised in joy",
+    "tippen": false
+  },
+  "u02-s5-junge": {
+    "szene": "a young boy of about eight years, standing and smiling",
+    "tippen": false
+  },
+  "u02-s5-maedchen": {
+    "szene": "a young girl of about eight years, standing and smiling",
+    "tippen": false
+  },
+  "u03-s1-bahnhof": {
+    "szene": "a railway station building with a big round clock above the entrance and empty railway tracks along the platform",
+    "tippen": true
+  },
+  "u03-s1-platz": {
+    "szene": "a town square paved with stones, with a round fountain in the middle and old houses around it",
+    "tippen": false
+  },
+  "u03-s1-park": {
+    "szene": "a green city park with tall trees, green grass and flower beds",
+    "tippen": true
+  },
+  "u03-s1-post": {
+    "szene": "a yellow mailbox with a pile of envelopes and a parcel next to it",
+    "tippen": true
+  },
+  "u03-s1-bank": {
+    "szene": "a bank vault with a heavy round steel door and stacks of gold coins in front of it",
+    "tippen": true
+  },
+  "u03-s1-polizei": {
+    "szene": "a friendly police officer in a dark blue uniform and a peaked cap",
+    "tippen": true
+  },
+  "u03-s1-toilette": {
+    "szene": "a clean white toilet bowl with a roll of toilet paper beside it",
+    "tippen": true
+  },
+  "u03-s1-hotel": {
+    "szene": "a hotel reception desk with a small silver service bell, a room key and a suitcase in front of it",
+    "tippen": true
+  },
+  "u03-s1-kino": {
+    "szene": "a cinema hall with rows of red seats facing a large glowing movie screen, and a striped box of popcorn in front",
+    "tippen": true
+  },
+  "u03-s1-museum": {
+    "szene": "a museum hall with a large dinosaur skeleton in the middle and framed paintings on the walls",
+    "tippen": true
+  },
+  "u03-s2-strasse": {
+    "szene": "a quiet straight city street with houses and a sidewalk on both sides",
+    "tippen": false
+  },
+  "u03-s3-ampel": {
+    "szene": "a traffic light showing a bright green light",
+    "tippen": true
+  },
+  "u03-s4-bus": {
+    "szene": "a big city bus seen from the side",
+    "tippen": true
+  },
+  "u03-s4-strassenbahn": {
+    "szene": "a modern city tram on rails in a street, with overhead electric wires above it",
+    "tippen": true
+  },
+  "u03-s4-zug": {
+    "szene": "a long red passenger train on railway tracks in green countryside",
+    "tippen": true
+  },
+  "u03-s4-auto": {
+    "szene": "a small red family car seen from the side",
+    "tippen": true
+  },
+  "u03-s4-fahrrad": {
+    "szene": "a single bicycle seen from the side",
+    "tippen": true
+  },
+  "u03-s4-haltestelle": {
+    "szene": "a glass bus stop shelter with a bench inside, at the edge of an empty road",
+    "tippen": true
+  }
+}
