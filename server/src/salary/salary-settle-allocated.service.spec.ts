@@ -37,7 +37,7 @@ describe('SalarySettleAllocatedService', () => {
 
   const payment = (over: Partial<any> = {}) => ({
     id: 'sp-1',
-    userId: 10010,
+    userId: 101,
     amount: 1_000_001,
     status: 'CALCULATED',
     note: null,
@@ -52,9 +52,14 @@ describe('SalarySettleAllocatedService', () => {
   const staff = () =>
     payment({
       id: 'sp-2',
-      userId: 10738,
+      userId: 102,
       amount: 3_000_000,
-      user: { firstName: 'Staff', lastName: 'Two', mainBranch: null, branches: [{ branchId: 1 }] },
+      user: {
+        firstName: 'Staff',
+        lastName: 'Two',
+        mainBranch: null,
+        branches: [{ branchId: 1 }],
+      },
     });
 
   const teacherPlan = {
@@ -201,7 +206,7 @@ describe('SalarySettleAllocatedService', () => {
       expectNothingWritten();
     });
 
-    it("refuses an account of another branch", async () => {
+    it('refuses an account of another branch', async () => {
       prisma.cashAccount.findMany.mockResolvedValue([
         { id: 'kassa', branchId: 1, name: "Farg'ona filiali kassa" },
         { id: 'bank', branchId: 2, name: 'Namangan bank' },
@@ -278,7 +283,7 @@ describe('SalarySettleAllocatedService', () => {
   });
 
   describe('the happy path', () => {
-    it("records each payment with its own slices, the chosen date and an audit note", async () => {
+    it('records each payment with its own slices, the chosen date and an audit note', async () => {
       const res = await service.settle(input(), 1, 42);
 
       expect(transactions.recordSalaryPayment).toHaveBeenCalledWith(
@@ -306,7 +311,9 @@ describe('SalarySettleAllocatedService', () => {
         // 10.08.2026 00:00 Tashkent
         paidAt: new Date('2026-08-09T19:00:00.000Z'),
       });
-      expect(data.note).toContain('Tashqarida berilgan oylik tasdiqlandi (2026-08-10)');
+      expect(data.note).toContain(
+        'Tashqarida berilgan oylik tasdiqlandi (2026-08-10)',
+      );
       expect(data.note).toContain('CEO qarori');
 
       expect(res).toMatchObject({ dryRun: false, count: 2, total: 4_000_001 });

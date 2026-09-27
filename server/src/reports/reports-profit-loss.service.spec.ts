@@ -102,7 +102,8 @@ describe('ReportsProfitLossService', () => {
   });
 
   describe('teacher vs staff pay is decided by the payee', () => {
-    const only = (row: any) => prisma.salaryPayment.findMany.mockResolvedValue([row]);
+    const only = (row: any) =>
+      prisma.salaryPayment.findMany.mockResolvedValue([row]);
 
     // May 2026 was entered from the CEO's spreadsheet: no accruals behind it.
     // Counted as staff pay, it fed June's net-profit fallback and wiped the
