@@ -104,6 +104,15 @@ qilingan dars esa umuman ko'rinmaydi. Chegara CEO sozlamasida (ADR-0023).
 `absence-pause/absence-auto-pause.cron.service.ts`,
 `outreach/absence-streak.service.ts`
 
+**Telegram'i bog'langan o'quvchi** — `Student.telegramChatId` Telegram
+akkauntining id'siga teng o'quvchi («Telegram akkaunti ro'yxatdan o'tgan»).
+Bot uni faqat odam o'z raqamini «📱 Telefon raqamni yuborish» bilan
+isbotlagandan keyin yozadi — ro'yxatdan o'tish, «Parolni tiklash», «💳
+To'lovlar», mock; admin panelda bog'lash yo'q. Bitta Telegram'ga bir nechta
+o'quvchi bog'lanishi mumkin (ota-onaning raqami). Botning parol tiklashi va Mini
+App kirishi shu bog'lanishga ishonadi.
+`telegram/flows/statement-flow.ts` · `auth/telegram-webapp/telegram-webapp.service.ts` · `docs/adr/0039-mini-app-ichida-faqat-telegram-orqali-kirish.md`
+
 **Lead** — hali o'quvchi bo'lmagan potensial mijoz. Kanban doskasida yuradi;
 ustun = filial. O'chirish = `LOST` holatiga o'tkazish + majburiy sabab.
 `leads/leads.service.ts`

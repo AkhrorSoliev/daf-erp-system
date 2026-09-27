@@ -4,6 +4,7 @@ import { LoginForm } from "./login-form";
 import { StudentLoginForm } from "./student-login-form";
 import { LoginFooter } from "./login-footer";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { MiniAppLoginGuard } from "@/components/telegram-mini-app/mini-app-login-guard";
 import { getPortalType } from "@/lib/portal";
 
 export default async function LoginPage() {
@@ -21,6 +22,7 @@ export default async function LoginPage() {
   if (portal === "student") {
     return (
       <div className="lumio relative flex min-h-screen flex-col bg-background text-foreground">
+        <MiniAppLoginGuard />
         <div className="absolute inset-0">
           <Image
             src="/login-student-background.jpg"
@@ -54,6 +56,7 @@ export default async function LoginPage() {
   if (portal === "admin") {
     return (
       <div className="relative flex min-h-screen flex-col">
+        <MiniAppLoginGuard />
         <div className="absolute inset-0">
           <Image
             src="/login-admin-background.jpg"
@@ -85,6 +88,7 @@ export default async function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
+      <MiniAppLoginGuard />
       <div className="flex justify-end p-4">
         <ThemeToggle />
       </div>

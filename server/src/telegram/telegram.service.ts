@@ -36,6 +36,11 @@ import { createPasswordResetScene } from './scenes/password-reset.scene';
 import { createStatementScene } from './scenes/statement.scene';
 import { approveLoginRequest } from './flows/app-login-otp-flow';
 import {
+  answerPlatformMenu,
+  installMiniAppMenuButton,
+  platformButton,
+} from './utils/mini-app';
+import {
   checkEmployeePayload,
   signEmployeePayload,
 } from './utils/signed-link.util';
@@ -106,6 +111,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   // `requiredChannel` is unset the gate is disabled entirely.
   private requiredChannel?: string;
   private botUsername?: string;
+  /** O'quvchi portalining Mini App manzili (ADR-0039); yo'q bo'lsa — o'chiq. */
+  private miniAppUrl?: string;
   /**
    * `/start` oqimi, `onModuleInit` ichida yaratiladi va shu yerda saqlanadi.
    *
@@ -151,6 +158,9 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       .get<string>('TELEGRAM_BOT_USERNAME')
       ?.trim()
       ?.replace(/^@/, '');
+    this.miniAppUrl =
+      this.configService.get<string>('TELEGRAM_MINI_APP_URL')?.trim() ||
+      undefined;
 
     // Redis session store
     this.bot.use(
@@ -357,7 +367,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
             Markup.button.callback('📊 Darajani aniqlash', 'menu_level'),
           ],
           [
-            Markup.button.callback('🎓 Platformaga kirish', 'menu_platform'),
+            platformButton(this.miniAppUrl, ctx.chat?.type),
             Markup.button.callback("💳 To'lovlar", 'menu_payments'),
           ],
           [
@@ -512,15 +522,17 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       await this.sendMockResultPdf(ctx, chatId, examId);
     });
 
-    // Menu action handlers — "Tez kunda" responses (boshqa tugmalar uchun)
-    this.bot.action(
-      /^menu_(registration|level|platform|groups)$/,
-      async (ctx) => {
-        await ctx.answerCbQuery('Bu funksiya tez kunda ishga tushadi! ⏳', {
-          show_alert: true,
-        });
-      },
+    // Eski menyulardagi callback «🎓 Platformaga kirish» — Mini App tugmasi.
+    this.bot.action('menu_platform', async (ctx) =>
+      answerPlatformMenu(ctx, this.miniAppUrl),
     );
+
+    // Menu action handlers — "Tez kunda" responses (boshqa tugmalar uchun)
+    this.bot.action(/^menu_(registration|level|groups)$/, async (ctx) => {
+      await ctx.answerCbQuery('Bu funksiya tez kunda ishga tushadi! ⏳', {
+        show_alert: true,
+      });
+    });
 
     // Kanal a'zoligi o'zgarishi — real vaqtda "kirdi / chiqdi" hodisasi.
     // Bu bizga odam botga QAYTMASA ham chiqib ketganini bilish imkonini beradi
@@ -549,6 +561,12 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         );
       }
     });
+
+    await installMiniAppMenuButton(
+      this.bot.telegram,
+      this.miniAppUrl,
+      this.logger,
+    );
 
     // Launch bot (polling mode for development)
     const webhookUrl = this.configService.get<string>('TELEGRAM_WEBHOOK_URL');

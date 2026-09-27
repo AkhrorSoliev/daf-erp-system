@@ -96,5 +96,6 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0036](0036-guruh-yopilganda-muzlatilgan-yozilish-ham-yopiladi.md) | Guruh yopilganda muzlatilgan yozilish ham yopiladi; tugallangan guruhda u DROPPED bo'ladi | Qabul qilindi | 2026-09-26 |
 | [0037](0037-tolovlar-hisoboti-pul-qoidalari.md) | To'lovlar hisoboti: pul dars o'tilgan oyga yoziladi, ichki tuzatishlar darsga qo'shiladi, taqsimot FIFO | Qabul qilindi | 2026-09-26 |
 | [0038](0038-foyda-tarkibi-dars-narxi-va-xodim-filiali.md) | Foyda tarkibi: dars o'zini yechgan hisob narxida, xodim bitta filialda sanaladi; ochiq oy oxiri taxmin qilinadi | Qabul qilindi | 2026-09-27 |
+| [0039](0039-mini-app-ichida-faqat-telegram-orqali-kirish.md) | Mini App ichida o'quvchi faqat Telegram orqali kiradi; bog'lanmagan akkauntga xabar ko'rsatiladi | Qabul qilindi | 2026-09-27 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.

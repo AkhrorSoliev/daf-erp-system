@@ -73,6 +73,17 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Telegram Mini App entry (ADR-0039) — the WebView arrives with no session
+  // and this page creates one from Telegram's signed `initData`, which exists
+  // only in JavaScript, so nothing here can see it. It must also pass BEFORE
+  // the signed-in redirects below: on the student host they would send a
+  // visitor with a session straight to /portal, before the Telegram account
+  // is checked — and a WebView two Telegram accounts share would open the
+  // previous account's session. Exact match only.
+  if (pathname === "/tg") {
+    return NextResponse.next();
+  }
+
   const isAuthenticated = token || refreshToken;
 
   // Login sahifasida token bor — tegishli portalga yo'naltirish

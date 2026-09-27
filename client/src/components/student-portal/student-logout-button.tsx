@@ -1,8 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { useIsMiniApp } from "@/hooks/use-is-mini-app";
+import {
+  MINI_APP_ENTRY_PATH,
+  markMiniAppSignedOut,
+} from "@/lib/telegram-mini-app";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,10 +32,21 @@ export function LogoutButton({
 }) {
   const [open, setOpen] = useState(false);
   const logout = useAuth((s) => s.logout);
+  const clearSession = useAuth((s) => s.clearSession);
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const inMiniApp = useIsMiniApp();
 
   function confirmLogout() {
     queryClient.clear();
+    if (inMiniApp) {
+      // The Mini App has no password form (ADR-0039): back to /tg, which
+      // waits for «Qayta kirish» instead of signing straight back in.
+      markMiniAppSignedOut(true);
+      clearSession();
+      router.replace(MINI_APP_ENTRY_PATH);
+      return;
+    }
     logout(); // clears cookies + redirects to /login
   }
 
@@ -61,8 +78,9 @@ export function LogoutButton({
           <AlertDialogHeader>
             <AlertDialogTitle>Hisobdan chiqasizmi?</AlertDialogTitle>
             <AlertDialogDescription>
-              Qayta kirish uchun telefon raqamingiz va parolingiz kerak
-              bo&apos;ladi.
+              {inMiniApp
+                ? "Qayta kirish uchun «Qayta kirish» tugmasini bosasiz — parol kerak emas."
+                : "Qayta kirish uchun telefon raqamingiz va parolingiz kerak bo'ladi."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

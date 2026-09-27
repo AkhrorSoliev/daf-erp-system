@@ -41,11 +41,17 @@ interface AuthState {
   user: AuthUser | null;
   token: string | null;
   setAuth: (user: AuthUser, accessToken: string, refreshToken: string) => void;
+  /**
+   * Drops the session without leaving the page. The Telegram Mini App needs
+   * it: a Telegram account with no student behind it must not inherit a
+   * session another account left in the same WebView.
+   */
+  clearSession: () => void;
   logout: () => void;
   hydrate: () => void;
 }
 
-export const useAuth = create<AuthState>((set) => ({
+export const useAuth = create<AuthState>((set, get) => ({
   user: null,
   token: null,
 
@@ -57,13 +63,17 @@ export const useAuth = create<AuthState>((set) => ({
     set({ user, token: accessToken });
   },
 
-  logout: () => {
+  clearSession: () => {
     Cookies.remove("token");
     Cookies.remove("refreshToken");
     Cookies.remove("user");
     localStorage.removeItem("companyId");
     localStorage.removeItem("branchId");
     set({ user: null, token: null });
+  },
+
+  logout: () => {
+    get().clearSession();
     window.location.href = "/login";
   },
 
