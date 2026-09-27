@@ -1,8 +1,13 @@
 import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { StatusCascadeService } from './status-cascade.service';
+import { GroupStatus } from '@prisma/client';
+import {
+  StatusCascadeService,
+  type CascadeEntityType,
+} from './status-cascade.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EntityHistoryService } from '../entity-history';
+import type { EntityStatusChangedEvent } from '../entity-history';
 import { EnrollmentBillingService } from '../../billing/enrollment-billing.service';
 import { MonthlyChargeService } from '../../billing/monthly-charge.service';
 
@@ -308,124 +313,6 @@ describe('StatusCascadeService', () => {
     });
   });
 
-  // ─── Group cascades ────────────────────────────────
-  describe('Group cascades', () => {
-    it('CANCELLED: drops active enrollments', async () => {
-      const results = await service.cascade('Group', 'group-1', 'CANCELLED', 1);
-
-      expect(prisma.enrollment.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ groupId: 'group-1' }),
-          data: expect.objectContaining({ status: 'DROPPED' }),
-        }),
-      );
-
-      expect(results).toHaveLength(1);
-      expect(results[0]).toMatchObject({
-        entity: 'Enrollment',
-        toStatus: 'DROPPED',
-      });
-    });
-
-    it('CANCELLED: logs each transition at the moment stamped on the enrollment', async () => {
-      prisma.enrollment.findMany.mockResolvedValue(mockEnrollmentWithStudent);
-
-      await service.cascade('Group', 'group-1', 'CANCELLED', 1);
-
-      const { statusChangedAt } =
-        prisma.enrollment.updateMany.mock.calls[0][0].data;
-      const [logged] =
-        prisma.enrollmentStateLog.createMany.mock.calls[0][0].data;
-      expect(statusChangedAt).toBeInstanceOf(Date);
-      // Same instant: a report replaying the log agrees with the row.
-      expect(logged.transitionAt).toBe(statusChangedAt);
-    });
-
-    it('COMPLETED: completes enrollments', async () => {
-      prisma.enrollment.findMany.mockResolvedValue([]);
-
-      const results = await service.cascade('Group', 'group-1', 'COMPLETED', 1);
-
-      expect(prisma.enrollment.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({ status: 'COMPLETED' }),
-        }),
-      );
-
-      expect(results).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            entity: 'Enrollment',
-            toStatus: 'COMPLETED',
-          }),
-        ]),
-      );
-    });
-
-    it('COMPLETED: auto-graduates students with no remaining active enrollments', async () => {
-      prisma.enrollment.findMany.mockResolvedValue([
-        row('enr-100', 100, 'COMPLETED'),
-        row('enr-101', 101, 'COMPLETED'),
-      ]);
-      prisma.enrollment.count.mockResolvedValue(0);
-      prisma.student.findFirst.mockResolvedValue({
-        id: 100,
-        status: 'ACTIVE',
-        companyId: 1,
-      });
-
-      const results = await service.cascade('Group', 'group-1', 'COMPLETED', 1);
-
-      expect(prisma.student.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            status: 'GRADUATED',
-            isActive: false,
-          }),
-        }),
-      );
-
-      expect(prisma.statusHistory.create).toHaveBeenCalled();
-
-      // Student entity history ham yozilishi kerak
-      expect(entityHistoryService.recordStatusChange).toHaveBeenCalledWith(
-        expect.objectContaining({
-          entityType: 'Student',
-          oldValues: { status: 'ACTIVE' },
-          newValues: expect.objectContaining({ status: 'GRADUATED' }),
-        }),
-      );
-
-      const graduatedResults = results.filter(
-        (r) => r.entity === 'Student' && r.toStatus === 'GRADUATED',
-      );
-      expect(graduatedResults.length).toBeGreaterThanOrEqual(1);
-    });
-
-    it('COMPLETED: does NOT graduate students who have other active enrollments', async () => {
-      prisma.enrollment.findMany.mockResolvedValue([
-        row('enr-100', 100, 'COMPLETED'),
-      ]);
-      prisma.enrollment.count.mockResolvedValue(2);
-
-      await service.cascade('Group', 'group-1', 'COMPLETED', 1);
-
-      expect(prisma.student.update).not.toHaveBeenCalled();
-      expect(prisma.statusHistory.create).not.toHaveBeenCalled();
-      expect(entityHistoryService.recordStatusChange).not.toHaveBeenCalledWith(
-        expect.objectContaining({
-          newValues: expect.objectContaining({ status: 'GRADUATED' }),
-        }),
-      );
-    });
-
-    it('PAUSED: no cascade', async () => {
-      const results = await service.cascade('Group', 'group-1', 'PAUSED', 1);
-      expect(prisma.enrollment.updateMany).not.toHaveBeenCalled();
-      expect(results).toHaveLength(0);
-    });
-  });
-
   // ─── Closing a group, branch or course ────────────
   describe('closing a group, branch or course', () => {
     // Group 1 with every kind of enrollment, and group 2 (another branch and
@@ -452,70 +339,7 @@ describe('StatusCascadeService', () => {
       expect(store.byId('enr-other-frozen').status).toBe('FROZEN');
     };
 
-    it("Group CANCELLED drops the group's ACTIVE and FROZEN enrollments, and no one else's", async () => {
-      const store = closingFixture();
-      Object.assign(prisma, store.tx);
-
-      await service.cascade('Group', 'group-1', 'CANCELLED', 7);
-
-      for (const id of ['enr-active', 'enr-frozen']) {
-        expect(store.byId(id)).toMatchObject({
-          status: 'DROPPED',
-          statusChangedById: 7,
-        });
-      }
-      expectUntouched(store);
-      expect(
-        store.stateLog.map((l) => [l.enrollmentId, l.status]).sort(),
-      ).toEqual([
-        ['enr-active', 'DROPPED'],
-        ['enr-frozen', 'DROPPED'],
-      ]);
-    });
-
-    it('Group COMPLETED completes its ACTIVE enrollments and drops its FROZEN ones', async () => {
-      const store = closingFixture();
-      Object.assign(prisma, store.tx);
-
-      await service.cascade('Group', 'group-1', 'COMPLETED', 7);
-
-      expect(store.byId('enr-active')).toMatchObject({
-        status: 'COMPLETED',
-        statusChangedById: 7,
-      });
-      expect(store.byId('enr-frozen')).toMatchObject({
-        status: 'DROPPED',
-        statusChangedById: 7,
-      });
-      expectUntouched(store);
-      expect(
-        store.stateLog.map((l) => [l.enrollmentId, l.status]).sort(),
-      ).toEqual([
-        ['enr-active', 'COMPLETED'],
-        ['enr-frozen', 'DROPPED'],
-      ]);
-    });
-
-    it('Group COMPLETED never graduates a student whose enrollment was frozen', async () => {
-      const store = makeTx([
-        row('enr-active', 101, 'ACTIVE'),
-        row('enr-frozen', 102, 'FROZEN'),
-      ]);
-      Object.assign(prisma, store.tx);
-      // Both are ACTIVE students with no other group — the frozen one came
-      // back while the group was paused, which leaves the enrollment FROZEN.
-      prisma.student.findFirst.mockImplementation(({ where }: any) =>
-        Promise.resolve({ id: where.id, status: 'ACTIVE', companyId: 1001 }),
-      );
-
-      await service.cascade('Group', 'group-1', 'COMPLETED', 7);
-
-      expect(
-        prisma.student.update.mock.calls.map(([arg]: any) => arg.where.id),
-      ).toEqual([101]);
-    });
-
-    it.each([
+    it.each<[CascadeEntityType, string, string]>([
       ['Branch', '1', 'CLOSED'],
       ['Branch', '1', 'ARCHIVED'],
       ['Course', 'course-1', 'ARCHIVED'],
@@ -537,8 +361,7 @@ describe('StatusCascadeService', () => {
       },
     );
 
-    it.each([
-      ['Group', 'group-1', 'CANCELLED', "Guruh to'xtatildi"],
+    it.each<[CascadeEntityType, string, string, string]>([
       ['Branch', '1', 'CLOSED', 'Filial yopildi'],
       ['Branch', '1', 'ARCHIVED', 'Filial arxivlandi'],
       ['Course', 'course-1', 'ARCHIVED', 'Kurs arxivlandi'],
@@ -586,9 +409,7 @@ describe('StatusCascadeService', () => {
       },
     );
 
-    it.each([
-      ['Group', 'group-1', 'CANCELLED'],
-      ['Group', 'group-1', 'COMPLETED'],
+    it.each<[CascadeEntityType, string, string]>([
       ['Branch', '1', 'CLOSED'],
       ['Course', 'course-1', 'ARCHIVED'],
     ])(
@@ -620,47 +441,6 @@ describe('StatusCascadeService', () => {
         );
       },
     );
-
-    it('Group COMPLETED writes each completion to the student alone, and each frozen removal to the student and the group', async () => {
-      const store = makeTx([
-        row('enr-active', 101, 'ACTIVE'),
-        row('enr-frozen', 102, 'FROZEN'),
-      ]);
-      Object.assign(prisma, store.tx);
-
-      await service.cascade('Group', 'group-1', 'COMPLETED', 7);
-
-      // No `status` key: the 'entity.status.changed' listeners read it as the
-      // student's own status and would post a system comment and a Telegram
-      // digest line for a change the student never had.
-      expect(
-        entityHistoryService.recordStatusChange.mock.calls.map(([p]: any) => p),
-      ).toEqual([
-        {
-          entityType: 'Student',
-          entityId: 101,
-          oldValues: { statusEnum: 'ACTIVE' },
-          newValues: {
-            statusEnum: 'COMPLETED',
-            guruhId: 'group-1',
-            action: 'GURUH_TUGALLANDI',
-            sabab: '«#014» guruhi tugallandi',
-          },
-          changedById: 7,
-          companyId: 1001,
-        },
-      ]);
-      expect(
-        entityHistoryService.recordDelete.mock.calls.map(([p]: any) => [
-          p.entityType,
-          p.entityId,
-          p.oldValues.sabab,
-        ]),
-      ).toEqual([
-        ['Student', 102, "Guruh tugallandi, o'quvchi muzlatilgan edi"],
-        ['Group', 'group-1', "Guruh tugallandi, o'quvchi muzlatilgan edi"],
-      ]);
-    });
   });
 
   // ─── Student cascades ──────────────────────────────
@@ -809,23 +589,6 @@ describe('StatusCascadeService', () => {
       ).toHaveBeenCalled();
     });
 
-    it('Group CANCELLED: refunds unused prepaid', async () => {
-      await service.cascade('Group', 'group-1', 'CANCELLED', 1);
-      expect(
-        enrollmentBillingService.refundPrepaidToBalance,
-      ).toHaveBeenCalledWith(
-        prisma,
-        expect.objectContaining({ enrollmentId: 'enr-1' }),
-      );
-    });
-
-    it('Group COMPLETED: refunds unused prepaid', async () => {
-      await service.cascade('Group', 'group-1', 'COMPLETED', 1);
-      expect(
-        enrollmentBillingService.refundPrepaidToBalance,
-      ).toHaveBeenCalled();
-    });
-
     it('EXPELLED: also reverses the MONTHLY-model departure charge (paymentModel-agnostic wiring)', async () => {
       await service.cascade('Student', '100', 'EXPELLED', 42);
 
@@ -838,16 +601,6 @@ describe('StatusCascadeService', () => {
           companyId: 1001, // mockEnrollmentWithStudent's group.companyId
           performedById: 42,
         }),
-      );
-    });
-
-    it('Group CANCELLED: also reverses the MONTHLY-model departure charge', async () => {
-      await service.cascade('Group', 'group-1', 'CANCELLED', 1);
-      expect(
-        monthlyChargeService.reverseChargeForDeparture,
-      ).toHaveBeenCalledWith(
-        prisma,
-        expect.objectContaining({ enrollmentId: 'enr-1' }),
       );
     });
 
@@ -1343,6 +1096,342 @@ describe('StatusCascadeService', () => {
         );
       expect(departureReasons).toEqual([why, why]);
     });
+  });
+
+  // ─── A group's own status change ───────────────────
+  describe('cascadeGroupStatusChange', () => {
+    // 10:00 UTC is 15:00 in Tashkent — the same calendar day, 2026-09-25.
+    const AT = new Date('2026-09-25T10:00:00.000Z');
+    const CANCEL_REASON = 'Cascade: Group #group-1 → CANCELLED';
+    const COMPLETE_REASON = 'Cascade: Group #group-1 → COMPLETED';
+
+    /** The fake tx plus the student and StatusHistory tables graduation touches. */
+    const groupTx = (
+      rows: ReturnType<typeof row>[],
+      students: { id: number; status: string; companyId: number }[] = [],
+    ) => {
+      const store = makeTx(rows);
+      const tx = {
+        ...store.tx,
+        student: {
+          findFirst: jest.fn(
+            ({ where }: { where: { id: number; status: string } }) =>
+              Promise.resolve(
+                students.find(
+                  (s) => s.id === where.id && s.status === where.status,
+                ) ?? null,
+              ),
+          ),
+          update: jest.fn().mockResolvedValue({}),
+        },
+        statusHistory: { create: jest.fn().mockResolvedValue({}) },
+      };
+      return { ...store, tx };
+    };
+
+    const params = (
+      status: GroupStatus,
+      deferredEvents: EntityStatusChangedEvent[] = [],
+    ) => ({ groupId: 'group-1', status, userId: 7, at: AT, deferredEvents });
+
+    it("CANCELLED drops the group's ACTIVE and FROZEN enrollments on the caller's transaction, and no one else's", async () => {
+      const { tx, byId, stateLog } = groupTx([
+        row('enr-active', 101, 'ACTIVE'),
+        row('enr-frozen', 102, 'FROZEN'),
+        row('enr-dropped', 103, 'DROPPED'),
+        row('enr-archived', 106, 'FROZEN', { deletedAt: EARLIER }),
+        otherGroupRow('enr-other-active', 107, 'ACTIVE'),
+      ]);
+
+      await service.cascadeGroupStatusChange(
+        tx as any,
+        params(GroupStatus.CANCELLED),
+      );
+
+      for (const id of ['enr-active', 'enr-frozen']) {
+        expect(byId(id)).toMatchObject({
+          status: 'DROPPED',
+          statusChangedAt: AT,
+          statusChangedById: 7,
+          statusChangeReason: CANCEL_REASON,
+        });
+      }
+      expect(byId('enr-dropped')).toMatchObject({
+        status: 'DROPPED',
+        statusChangedAt: EARLIER,
+      });
+      expect(byId('enr-archived').status).toBe('FROZEN');
+      expect(byId('enr-other-active').status).toBe('ACTIVE');
+      expect(stateLog).toHaveLength(2);
+      expect(stateLog).toEqual(
+        expect.arrayContaining(
+          ['enr-active', 'enr-frozen'].map((enrollmentId) => ({
+            enrollmentId,
+            status: 'DROPPED',
+            transitionAt: AT,
+            reason: CANCEL_REASON,
+            changedById: 7,
+          })),
+        ),
+      );
+      // Nothing reached the service's own client.
+      expect(prisma.enrollment.updateMany).not.toHaveBeenCalled();
+      expect(prisma.enrollmentStateLog.createMany).not.toHaveBeenCalled();
+    });
+
+    it('COMPLETED completes the ACTIVE enrollments and drops the FROZEN ones (ADR-0036)', async () => {
+      const { tx, byId, stateLog } = groupTx([
+        row('enr-active', 101, 'ACTIVE'),
+        row('enr-frozen', 102, 'FROZEN'),
+      ]);
+
+      await service.cascadeGroupStatusChange(
+        tx as any,
+        params(GroupStatus.COMPLETED),
+      );
+
+      expect(byId('enr-active')).toMatchObject({
+        status: 'COMPLETED',
+        statusChangedAt: AT,
+        statusChangeReason: COMPLETE_REASON,
+      });
+      expect(byId('enr-frozen')).toMatchObject({
+        status: 'DROPPED',
+        statusChangedAt: AT,
+        statusChangeReason: COMPLETE_REASON,
+      });
+      expect(stateLog.map((l) => [l.enrollmentId, l.status]).sort()).toEqual([
+        ['enr-active', 'COMPLETED'],
+        ['enr-frozen', 'DROPPED'],
+      ]);
+    });
+
+    it("gives each closed enrollment's unused money back on the caller's transaction", async () => {
+      const { tx } = groupTx([
+        row('enr-active', 101, 'ACTIVE'),
+        row('enr-frozen', 102, 'FROZEN'),
+      ]);
+
+      await service.cascadeGroupStatusChange(
+        tx as any,
+        params(GroupStatus.CANCELLED),
+      );
+
+      // No transaction of its own: a refund that commits while the status
+      // change rolls back is the half-done state this path exists to prevent.
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      const refunds = enrollmentBillingService.refundPrepaidToBalance.mock
+        .calls as [unknown, { enrollmentId: string }][];
+      expect(refunds.map(([client]) => client === tx)).toEqual([true, true]);
+      const departures = monthlyChargeService.reverseChargeForDeparture.mock
+        .calls as [unknown, { departureDate: Date; today: string }][];
+      expect(
+        departures.map(([client, p]) => [
+          client === tx,
+          p.departureDate,
+          p.today,
+        ]),
+      ).toEqual([
+        [true, AT, '2026-09-25'],
+        [true, AT, '2026-09-25'],
+      ]);
+    });
+
+    it('lets a failed refund abort the status change instead of logging and moving on', async () => {
+      const { tx } = groupTx([
+        row('enr-active', 101, 'ACTIVE'),
+        row('enr-frozen', 102, 'FROZEN'),
+      ]);
+      enrollmentBillingService.refundPrepaidToBalance
+        .mockResolvedValueOnce(null)
+        .mockRejectedValueOnce(new Error('lock timeout'));
+
+      await expect(
+        service.cascadeGroupStatusChange(
+          tx as any,
+          params(GroupStatus.COMPLETED),
+        ),
+      ).rejects.toThrow('lock timeout');
+    });
+
+    it('writes each removal to the student and the group, on the transaction', async () => {
+      const { tx } = groupTx([row('enr-active', 101, 'ACTIVE')]);
+
+      await service.cascadeGroupStatusChange(
+        tx as any,
+        params(GroupStatus.CANCELLED),
+      );
+
+      expect(
+        entityHistoryService.recordDelete.mock.calls.map(([p]: any) => p),
+      ).toEqual([
+        {
+          entityType: 'Student',
+          entityId: 101,
+          oldValues: {
+            guruh: '#014',
+            guruhId: 'group-1',
+            action: 'GURUHDAN_CHIQARILDI',
+            sabab: "Guruh to'xtatildi",
+          },
+          changedById: 7,
+          companyId: 1001,
+          tx,
+        },
+        {
+          entityType: 'Group',
+          entityId: 'group-1',
+          oldValues: {
+            action: 'OQUVCHI_CHIQARILDI',
+            oquvchi: 'Ism101 Familiya101',
+            oquvchiId: 101,
+            sabab: "Guruh to'xtatildi",
+          },
+          changedById: 7,
+          companyId: 1001,
+          tx,
+        },
+      ]);
+    });
+
+    it('writes each completion to the student alone, keyed statusEnum, on the transaction', async () => {
+      const deferredEvents: EntityStatusChangedEvent[] = [];
+      const { tx } = groupTx([
+        row('enr-active', 101, 'ACTIVE'),
+        row('enr-frozen', 102, 'FROZEN'),
+      ]);
+
+      await service.cascadeGroupStatusChange(
+        tx as any,
+        params(GroupStatus.COMPLETED, deferredEvents),
+      );
+
+      // No `status` key: the 'entity.status.changed' listeners read it as the
+      // student's own status and would post a system comment and a Telegram
+      // digest line for a change the student never had.
+      expect(entityHistoryService.recordStatusChange).toHaveBeenCalledWith({
+        entityType: 'Student',
+        entityId: 101,
+        oldValues: { statusEnum: 'ACTIVE' },
+        newValues: {
+          statusEnum: 'COMPLETED',
+          guruhId: 'group-1',
+          action: 'GURUH_TUGALLANDI',
+          sabab: '«#014» guruhi tugallandi',
+        },
+        changedById: 7,
+        companyId: 1001,
+        tx,
+        deferredEvents,
+      });
+      expect(
+        entityHistoryService.recordDelete.mock.calls.map(([p]: any) => [
+          p.entityType,
+          p.entityId,
+          p.oldValues.sabab,
+          p.tx === tx,
+        ]),
+      ).toEqual([
+        ['Student', 102, "Guruh tugallandi, o'quvchi muzlatilgan edi", true],
+        [
+          'Group',
+          'group-1',
+          "Guruh tugallandi, o'quvchi muzlatilgan edi",
+          true,
+        ],
+      ]);
+    });
+
+    it('graduates, on the transaction, the students the completion leaves without an ACTIVE enrollment', async () => {
+      const deferredEvents: EntityStatusChangedEvent[] = [];
+      const { tx } = groupTx(
+        [
+          row('enr-a', 101, 'ACTIVE'),
+          row('enr-b', 102, 'ACTIVE'),
+          // 102 still studies in group-2.
+          otherGroupRow('enr-b-other', 102, 'ACTIVE'),
+        ],
+        [
+          { id: 101, status: 'ACTIVE', companyId: 1001 },
+          { id: 102, status: 'ACTIVE', companyId: 1001 },
+        ],
+      );
+
+      const results = await service.cascadeGroupStatusChange(
+        tx as any,
+        params(GroupStatus.COMPLETED, deferredEvents),
+      );
+
+      const why = 'Avtomatik: guruh tugallanganligi sababli';
+      expect(tx.student.update).toHaveBeenCalledTimes(1);
+      expect(tx.student.update).toHaveBeenCalledWith({
+        where: { id: 101 },
+        data: {
+          status: 'GRADUATED',
+          isActive: false,
+          statusChangedAt: AT,
+          statusChangedById: 7,
+          statusChangeReason: why,
+        },
+      });
+      expect(tx.statusHistory.create).toHaveBeenCalledWith({
+        data: {
+          entityType: 'Student',
+          entityId: '101',
+          fromStatus: 'ACTIVE',
+          toStatus: 'GRADUATED',
+          reason: why,
+          changedById: 7,
+          companyId: 1001,
+        },
+      });
+      expect(entityHistoryService.recordStatusChange).toHaveBeenCalledWith({
+        entityType: 'Student',
+        entityId: 101,
+        oldValues: { status: 'ACTIVE' },
+        newValues: { status: 'GRADUATED', reason: why },
+        changedById: 7,
+        companyId: 1001,
+        tx,
+        deferredEvents,
+      });
+      expect(prisma.student.update).not.toHaveBeenCalled();
+      expect(prisma.statusHistory.create).not.toHaveBeenCalled();
+      expect(results).toContainEqual({
+        entity: 'Student',
+        count: 1,
+        toStatus: 'GRADUATED',
+      });
+    });
+
+    it('never graduates a student whose enrollment was frozen', async () => {
+      // An ACTIVE student with a FROZEN enrollment: they came back while the
+      // group was paused. The enrollment is DROPPED, not COMPLETED.
+      const { tx } = groupTx(
+        [row('enr-frozen', 102, 'FROZEN')],
+        [{ id: 102, status: 'ACTIVE', companyId: 1001 }],
+      );
+
+      await service.cascadeGroupStatusChange(
+        tx as any,
+        params(GroupStatus.COMPLETED),
+      );
+
+      expect(tx.student.update).not.toHaveBeenCalled();
+    });
+
+    it.each([GroupStatus.ACTIVE, GroupStatus.PAUSED, GroupStatus.FORMING])(
+      'closes nothing for %s',
+      async (status) => {
+        const { tx, byId } = groupTx([row('enr-active', 101, 'ACTIVE')]);
+
+        await expect(
+          service.cascadeGroupStatusChange(tx as any, params(status)),
+        ).resolves.toEqual([]);
+        expect(tx.enrollment.findMany).not.toHaveBeenCalled();
+        expect(byId('enr-active').status).toBe('ACTIVE');
+      },
+    );
   });
 
   // ─── Result filtering ──────────────────────────────

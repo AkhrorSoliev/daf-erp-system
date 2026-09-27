@@ -9,10 +9,14 @@ import {
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { EntityHistoryService } from '../entity-history';
+import {
+  EntityHistoryService,
+  type EntityStatusChangedEvent,
+} from '../entity-history';
 import { EnrollmentBillingService } from '../../billing/enrollment-billing.service';
 import { MonthlyChargeService } from '../../billing/monthly-charge.service';
 import { tashkentDateStr } from '../../attendance/shared/date-utils';
+import { graduateStudentsOfCompletedGroup } from './group-graduation';
 
 interface CascadeResult {
   entity: string;
@@ -67,6 +71,26 @@ export function liveEnrollmentsOfGroup(
   };
 }
 
+/**
+ * The reason every enrolment a group's own CANCELLED/COMPLETED closed
+ * carries, in its `statusChangeReason` and its state-log row. Written only
+ * here, so the words stay one thing: the one-off repair of closed groups
+ * writes the same ones.
+ */
+export function groupClosingReason(
+  groupId: string,
+  status: GroupStatus,
+): string {
+  return `Cascade: Group #${groupId} → ${status}`;
+}
+
+/**
+ * What `cascade()` handles. A group's own status change is not among them:
+ * it closes its enrolments on the caller's transaction
+ * (`cascadeGroupStatusChange`, ADR-0041).
+ */
+export type CascadeEntityType = 'Branch' | 'Course' | 'Student';
+
 @Injectable()
 export class StatusCascadeService {
   private readonly logger = new Logger(StatusCascadeService.name);
@@ -117,6 +141,106 @@ export class StatusCascadeService {
       },
       tx,
     );
+  }
+
+  /**
+   * Closes a group's enrolments when the group itself goes CANCELLED or
+   * COMPLETED, on the CALLER's transaction, so the status change and its
+   * students' closing commit together or not at all (ADR-0041).
+   *
+   * CANCELLED drops every ACTIVE and FROZEN enrolment. COMPLETED completes
+   * the ACTIVE ones, drops the FROZEN ones (ADR-0036) and graduates the
+   * students it leaves without an ACTIVE enrolment. Any other status closes
+   * nothing. Money steps run on `tx`, so one failed refund rolls the whole
+   * change back. Status-change events land in `deferredEvents`, for the
+   * caller to emit after the commit.
+   */
+  async cascadeGroupStatusChange(
+    tx: Prisma.TransactionClient,
+    params: {
+      groupId: string;
+      status: GroupStatus;
+      userId: number;
+      at: Date;
+      deferredEvents: EntityStatusChangedEvent[];
+    },
+  ): Promise<CascadeResult[]> {
+    const { groupId, status, userId, at, deferredEvents } = params;
+    if (status !== GroupStatus.CANCELLED && status !== GroupStatus.COMPLETED) {
+      return [];
+    }
+    const reason = groupClosingReason(groupId, status);
+    const auditFields = {
+      statusChangedAt: at,
+      statusChangedById: userId,
+      statusChangeReason: reason,
+    };
+    const ofGroup = (
+      enrollmentStatus: Prisma.EnrollmentWhereInput['status'],
+    ): Prisma.EnrollmentWhereInput => ({
+      groupId,
+      deletedAt: null,
+      status: enrollmentStatus,
+    });
+    const results: CascadeResult[] = [];
+    const tally = (entity: string, count: number, toStatus: string) =>
+      results.push({ entity, count, toStatus });
+
+    if (status === GroupStatus.CANCELLED) {
+      const open = ofGroup(OPEN_ENROLLMENT);
+      await this.recordRemovals(open, GROUP_CANCELLED_REASON, userId, tx);
+      const dropped = await this.cascadeEnrollmentStatus(
+        open,
+        EnrollmentStatus.DROPPED,
+        reason,
+        userId,
+        auditFields,
+        tx,
+      );
+      tally('Enrollment', dropped.count, 'DROPPED');
+      return results.filter((r) => r.count > 0);
+    }
+
+    const active = ofGroup(EnrollmentStatus.ACTIVE);
+    await this.recordCompletions(active, userId, tx, deferredEvents);
+    const completed = await this.cascadeEnrollmentStatus(
+      active,
+      EnrollmentStatus.COMPLETED,
+      reason,
+      userId,
+      auditFields,
+      tx,
+    );
+    tally('Enrollment', completed.count, 'COMPLETED');
+
+    // FROZEN → DROPPED, not COMPLETED: the student was frozen when the group
+    // ended, so they did not finish it (ADR-0036). Graduation reads
+    // COMPLETED rows only and never picks them.
+    const frozen = ofGroup(EnrollmentStatus.FROZEN);
+    await this.recordRemovals(
+      frozen,
+      GROUP_COMPLETED_WHILE_FROZEN_REASON,
+      userId,
+      tx,
+    );
+    const dropped = await this.cascadeEnrollmentStatus(
+      frozen,
+      EnrollmentStatus.DROPPED,
+      reason,
+      userId,
+      auditFields,
+      tx,
+    );
+    tally('Enrollment', dropped.count, 'DROPPED');
+
+    const graduated = await graduateStudentsOfCompletedGroup(
+      tx,
+      this.entityHistoryService,
+      { groupId, userId, at, deferredEvents },
+    );
+    tally('Student', graduated.length, 'GRADUATED');
+
+    return results.filter((r) => r.count > 0);
   }
 
   /**
@@ -377,14 +501,16 @@ export class StatusCascadeService {
 
   /**
    * Writes each enrolment matching `filter` into its student's history as
-   * completing the group. The group's own history already says it ended, so
-   * nothing is written there. Call it BEFORE the flip to COMPLETED.
+   * completing the group, on `tx`. The group's own history already says it
+   * ended, so nothing is written there. Call it BEFORE the flip to COMPLETED.
    */
   private async recordCompletions(
     filter: Prisma.EnrollmentWhereInput,
     userId: number | undefined,
+    tx: Prisma.TransactionClient,
+    deferredEvents: EntityStatusChangedEvent[],
   ): Promise<void> {
-    const completing = await this.prisma.enrollment.findMany({
+    const completing = await tx.enrollment.findMany({
       where: filter,
       select: {
         studentId: true,
@@ -409,6 +535,8 @@ export class StatusCascadeService {
         },
         changedById: userId,
         companyId: e.group.companyId,
+        tx,
+        deferredEvents,
       });
     }
   }
@@ -514,7 +642,7 @@ export class StatusCascadeService {
   }
 
   async cascade(
-    entityType: string,
+    entityType: CascadeEntityType,
     entityId: string,
     newStatus: string,
     userId: number | undefined,
@@ -681,142 +809,6 @@ export class StatusCascadeService {
           count: enrollResult.count,
           toStatus: 'DROPPED',
         });
-      }
-    }
-
-    if (entityType === 'Group') {
-      // No status change leads to ARCHIVED: a group is archived only by
-      // deletion, which closes its enrolments inside its own transaction
-      // (`cascadeGroupDeletion`, called from `GroupsWriteService.delete`).
-      if (newStatus === GroupStatus.CANCELLED) {
-        const filter: Prisma.EnrollmentWhereInput = {
-          groupId: entityId,
-          deletedAt: null,
-          status: OPEN_ENROLLMENT,
-        };
-        await this.recordRemovals(filter, GROUP_CANCELLED_REASON, userId);
-        const enrollResult = await this.cascadeEnrollmentStatus(
-          filter,
-          EnrollmentStatus.DROPPED,
-          reason ?? null,
-          userId,
-          auditFields,
-        );
-        results.push({
-          entity: 'Enrollment',
-          count: enrollResult.count,
-          toStatus: 'DROPPED',
-        });
-      } else if (newStatus === GroupStatus.COMPLETED) {
-        // 1) ACTIVE enrollment → COMPLETED
-        const activeFilter: Prisma.EnrollmentWhereInput = {
-          groupId: entityId,
-          deletedAt: null,
-          status: EnrollmentStatus.ACTIVE,
-        };
-        await this.recordCompletions(activeFilter, userId);
-        const enrollResult = await this.cascadeEnrollmentStatus(
-          activeFilter,
-          EnrollmentStatus.COMPLETED,
-          reason ?? null,
-          userId,
-          auditFields,
-        );
-        results.push({
-          entity: 'Enrollment',
-          count: enrollResult.count,
-          toStatus: 'COMPLETED',
-        });
-
-        // 2) FROZEN enrollment → DROPPED, not COMPLETED: the student was
-        // frozen when the group ended, so they did not finish it (ADR-0036).
-        // Graduation below reads COMPLETED rows only and never picks them.
-        const frozenFilter: Prisma.EnrollmentWhereInput = {
-          groupId: entityId,
-          deletedAt: null,
-          status: EnrollmentStatus.FROZEN,
-        };
-        await this.recordRemovals(
-          frozenFilter,
-          GROUP_COMPLETED_WHILE_FROZEN_REASON,
-          userId,
-        );
-        const frozenResult = await this.cascadeEnrollmentStatus(
-          frozenFilter,
-          EnrollmentStatus.DROPPED,
-          reason ?? null,
-          userId,
-          auditFields,
-        );
-        results.push({
-          entity: 'Enrollment',
-          count: frozenResult.count,
-          toStatus: 'DROPPED',
-        });
-
-        // 3) Avtomatik graduation: boshqa faol enrollment-i yo'q o'quvchilarni GRADUATED qilish
-        const completedEnrollments = await this.prisma.enrollment.findMany({
-          where: {
-            groupId: entityId,
-            deletedAt: null,
-            status: EnrollmentStatus.COMPLETED,
-          },
-          select: { studentId: true },
-        });
-        const studentIds = [
-          ...new Set(completedEnrollments.map((e) => e.studentId)),
-        ];
-
-        for (const studentId of studentIds) {
-          const activeEnrollmentCount = await this.prisma.enrollment.count({
-            where: {
-              studentId,
-              deletedAt: null,
-              status: EnrollmentStatus.ACTIVE,
-            },
-          });
-          if (activeEnrollmentCount > 0) continue;
-
-          const student = await this.prisma.student.findFirst({
-            where: { id: studentId, deletedAt: null, status: 'ACTIVE' },
-          });
-          if (!student) continue;
-
-          await this.prisma.statusHistory.create({
-            data: {
-              entityType: 'Student',
-              entityId: String(studentId),
-              fromStatus: 'ACTIVE',
-              toStatus: 'GRADUATED',
-              reason: 'Avtomatik: guruh tugallanganligi sababli',
-              changedById: userId,
-              companyId: student.companyId ?? undefined,
-            },
-          });
-
-          await this.entityHistoryService.recordStatusChange({
-            entityType: 'Student',
-            entityId: studentId,
-            oldValues: { status: 'ACTIVE' },
-            newValues: {
-              status: 'GRADUATED',
-              reason: 'Avtomatik: guruh tugallanganligi sababli',
-            },
-            changedById: userId,
-            companyId: student.companyId ?? undefined,
-          });
-
-          await this.prisma.student.update({
-            where: { id: studentId },
-            data: {
-              status: 'GRADUATED',
-              isActive: false,
-              ...auditFields,
-              statusChangeReason: 'Avtomatik: guruh tugallanganligi sababli',
-            },
-          });
-          results.push({ entity: 'Student', count: 1, toStatus: 'GRADUATED' });
-        }
       }
     }
 

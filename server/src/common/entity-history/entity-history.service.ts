@@ -16,6 +16,17 @@ interface BaseHistoryParams {
   tx?: Prisma.TransactionClient;
 }
 
+/** What 'entity.status.changed' carries to its listeners. */
+export interface EntityStatusChangedEvent {
+  entityType: string;
+  entityId: string;
+  oldStatus?: string;
+  newStatus?: string;
+  reason?: string;
+  changedById?: number;
+  companyId?: number;
+}
+
 @Injectable()
 export class EntityHistoryService {
   constructor(
@@ -85,6 +96,13 @@ export class EntityHistoryService {
     params: BaseHistoryParams & {
       oldValues: Record<string, any>;
       newValues: Record<string, any>;
+      /**
+       * Collects the event instead of emitting it. A caller inside a
+       * transaction passes this and calls `emitStatusChanged` after the
+       * commit, so a rolled-back change never posts a system comment or a
+       * Telegram digest line.
+       */
+      deferredEvents?: EntityStatusChangedEvent[];
     },
   ) {
     await this.client(params.tx).entityHistory.create({
@@ -99,9 +117,7 @@ export class EntityHistoryService {
       },
     });
 
-    // Emit outside the tx — listeners should not assume the write is committed
-    // yet. Notifications/side-effects must tolerate the rare rollback case.
-    this.eventEmitter.emit('entity.status.changed', {
+    const event: EntityStatusChangedEvent = {
       entityType: params.entityType,
       entityId: String(params.entityId),
       oldStatus: params.oldValues?.status,
@@ -109,7 +125,18 @@ export class EntityHistoryService {
       reason: params.newValues?.reason,
       changedById: params.changedById,
       companyId: params.companyId,
-    });
+    };
+    // Without `deferredEvents` the event goes out at once, even from inside
+    // a transaction, and its listeners must tolerate the rare rollback.
+    if (params.deferredEvents) params.deferredEvents.push(event);
+    else this.emitStatusChanged([event]);
+  }
+
+  /** Emits status-change events a caller held back until its commit. */
+  emitStatusChanged(events: EntityStatusChangedEvent[]): void {
+    for (const event of events) {
+      this.eventEmitter.emit('entity.status.changed', event);
+    }
   }
 
   async recordRestore(
