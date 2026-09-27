@@ -61,7 +61,11 @@ export interface PolicyRelease {
   /** What goes back to the balance; null when nothing does. */
   release: DepartureRelease | null;
   share: HeldShare;
-  /** True when rule 6.2 kept the money. */
+  /**
+   * True when rule 6.2 kept money that would otherwise have come back. A
+   * month with nothing left to return (its last lesson is past, or a freeze
+   * already returned the rest) is never «withheld»: the rule kept nothing.
+   */
   withheld: boolean;
 }
 
@@ -87,11 +91,16 @@ export function policyRelease(
       withheld: false,
     };
   }
+  const release = departureRelease(input);
   const ruleApplies =
     policy === 'STUDENT_CANCELLED' &&
     input.departureDay >= CONTRACT_62_START_DAY;
-  if (ruleApplies && share.held * 100 > thresholdPercent * share.covered) {
+  if (
+    release &&
+    ruleApplies &&
+    share.held * 100 > thresholdPercent * share.covered
+  ) {
     return { release: null, share, withheld: true };
   }
-  return { release: departureRelease(input), share, withheld: false };
+  return { release, share, withheld: false };
 }

@@ -99,6 +99,31 @@ describe('departure policy (contract 6.2)', () => {
     expect(r.release).toMatchObject({ lessons: 1 });
   });
 
+  it('does not call it withheld when the month has nothing left to return', () => {
+    // The month's last lesson is past: no policy would return anything, so
+    // rule 6.2 kept nothing and the history must not say it did.
+    const r = policyRelease(
+      input({ departureDay: '2026-10-30' }),
+      'STUDENT_CANCELLED',
+      40,
+    );
+    expect(r.share).toEqual({ held: 13, covered: 13, percent: 100 });
+    expect(r.withheld).toBe(false);
+    expect(r.release).toBeNull();
+  });
+
+  it('does not call it withheld for a frozen student whose rest was already returned', () => {
+    // Frozen after the 5th lesson: the freeze returned the other eight.
+    const r = policyRelease(
+      input({ departureDay: '2026-10-21', frozenOutDates: OCTOBER.slice(5) }),
+      'STUDENT_CANCELLED',
+      40,
+    );
+    expect(r.share).toEqual({ held: 5, covered: 5, percent: 100 });
+    expect(r.withheld).toBe(false);
+    expect(r.release).toBeNull();
+  });
+
   it('follows the threshold it is given', () => {
     expect(policyRelease(input(), 'STUDENT_CANCELLED', 50).withheld).toBe(
       false,

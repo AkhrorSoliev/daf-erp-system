@@ -1,5 +1,5 @@
-import { DepartureOutcome } from '../../billing/monthly-charge.service';
-import { formatSom } from '../../payments/shared/format-som';
+import type { DepartureOutcome } from './monthly-charge.service';
+import { formatSom } from '../payments/shared/format-som';
 
 /**
  * The «pul» line of a departure's history rows (contract 6.2, ADR-0043):

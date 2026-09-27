@@ -33,7 +33,6 @@ import { EnrollmentBillingService } from '../billing/enrollment-billing.service'
 import { DebtWriteOffService } from '../billing/debt-write-off.service';
 import {
   ChargeableEnrollment,
-  DepartureOutcome,
   MonthlyChargeService,
 } from '../billing/monthly-charge.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -46,7 +45,7 @@ import {
   DeparturePolicy,
 } from '../billing/departure-policy';
 import { assertMayChooseDeparturePolicy } from './shared/departure-policy-access';
-import { departureMoneyNote } from './shared/departure-money-note';
+import { departureMoneyNote } from '../billing/departure-money-note';
 import {
   EXIT_REASON_COMMENT_ERROR,
   EXIT_REASON_COMMENT_MIN_LENGTH,
@@ -700,8 +699,7 @@ export class StudentEnrollmentService {
     //      against `writeOffConfirmAmount`. Mismatch → 400, full rollback.
     //   3. State log + status flip — close the enrollment with reason
     //      and audit metadata.
-    let monthOutcome: DepartureOutcome | null = null;
-    await this.prisma.$transaction(
+    const monthOutcome = await this.prisma.$transaction(
       async (tx) => {
         await this.enrollmentBillingService.refundPrepaidToBalance(tx, {
           enrollmentId,
@@ -709,7 +707,7 @@ export class StudentEnrollmentService {
           reason: 'Guruhdan chiqarilganda qoldiq darslar uchun balans tiklash',
         });
 
-        monthOutcome =
+        const outcome =
           await this.monthlyChargeService.reverseChargeForDeparture(tx, {
             enrollmentId,
             departureDate: departureAt,
@@ -751,6 +749,7 @@ export class StudentEnrollmentService {
             departureReasonId,
           },
         });
+        return outcome;
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
