@@ -27,6 +27,7 @@ interface PaymentSettingsValues {
   "payment.excusedCreditMonthlyCap": number | null;
   "payment.chargeDayOfMonth": number;
   "payment.debtWriteOffEnabled": boolean;
+  "payment.noRefundAfterPercent": number;
 }
 
 /** Har bir sozlama kaliti uchun — o'ziga xos qiymatga ega filiallar ro'yxati. */
@@ -59,6 +60,7 @@ export function PaymentSettingsClient() {
   // qachon oraliq/noto'g'ri qiymat bilan "settings"ni buzmaydi.
   const [capInput, setCapInput] = useState("");
   const [dayInput, setDayInput] = useState("1");
+  const [percentInput, setPercentInput] = useState("40");
 
   useEffect(() => {
     async function fetchSettings() {
@@ -69,6 +71,7 @@ export function PaymentSettingsClient() {
         const cap = data.settings["payment.excusedCreditMonthlyCap"];
         setCapInput(cap === null || cap === undefined ? "" : String(cap));
         setDayInput(String(data.settings["payment.chargeDayOfMonth"]));
+        setPercentInput(String(data.settings["payment.noRefundAfterPercent"]));
       } catch (error) {
         toast.error(
           getErrorMessage(error, "Sozlamalarni yuklashda xatolik yuz berdi"),
@@ -89,6 +92,7 @@ export function PaymentSettingsClient() {
       const cap = data.settings["payment.excusedCreditMonthlyCap"];
       setCapInput(cap === null || cap === undefined ? "" : String(cap));
       setDayInput(String(data.settings["payment.chargeDayOfMonth"]));
+      setPercentInput(String(data.settings["payment.noRefundAfterPercent"]));
       toast.success("Sozlama saqlandi");
     } catch (error) {
       toast.error(getErrorMessage(error, "Saqlashda xatolik yuz berdi"));
@@ -126,6 +130,18 @@ export function PaymentSettingsClient() {
     }
     if (v === settings["payment.chargeDayOfMonth"]) return;
     saveField({ chargeDayOfMonth: v });
+  }
+
+  function handlePercentBlur() {
+    if (!settings) return;
+    const v = Number(percentInput);
+    if (percentInput.trim() === "" || !Number.isInteger(v) || v < 0 || v > 100) {
+      toast.error("Foiz 0 dan 100 gacha bo'lgan butun son bo'lishi kerak");
+      setPercentInput(String(settings["payment.noRefundAfterPercent"]));
+      return;
+    }
+    if (v === settings["payment.noRefundAfterPercent"]) return;
+    saveField({ noRefundAfterPercent: v });
   }
 
   /**
@@ -341,6 +357,47 @@ export function PaymentSettingsClient() {
               lekin hech qachon saqlanmaydigan tugma bo'lardi va xato
               xabarida unga sozlama kalitining o'zi ko'rinardi. Yuqoridagi
               `chargeDayOfMonth` bloki aynan shu naqshni ishlatadi. */}
+        </div>
+
+        <Separator />
+
+        {/* Shartnoma 6.2 — pul qaytarilmaydigan chegara (ADR-0043) */}
+        <div className="space-y-1.5">
+          <Label htmlFor="noRefundAfterPercent">
+            Oyning necha foizi o&apos;tgach pul qaytarilmaydi
+          </Label>
+          <p className="text-xs text-muted-foreground">
+            O&apos;quvchi o&apos;zi to&apos;xtatganda (guruhdan chiqarish yoki
+            chetlatish) oy darslarining shu foizidan ko&apos;pi o&apos;tgan
+            bo&apos;lsa, oy to&apos;lovi qaytarilmaydi — shartnomaning 6.2
+            bandi. Shu foiz yoki undan kam o&apos;tgan bo&apos;lsa,
+            o&apos;tilmagan darslar puli qaytadi. 01.10.2026 dan chiqqanlarga
+            qo&apos;llanadi.
+          </p>
+          <div className="flex items-center gap-2">
+            <Input
+              id="noRefundAfterPercent"
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              className="w-full sm:max-w-xs"
+              value={percentInput}
+              disabled={!isCeo || saving}
+              onChange={(e) => setPercentInput(e.target.value)}
+              onBlur={handlePercentBlur}
+            />
+            <span className="text-sm text-muted-foreground">%</span>
+          </div>
+          {!isCeo && canEdit && (
+            <p className="text-xs text-muted-foreground">
+              Bu qiymat filial bo&apos;yicha emas — butun kompaniya uchun bitta,
+              shuning uchun faqat CEO o&apos;zgartira oladi.
+            </p>
+          )}
+          {/* noRefundAfterPercent ham companyLevelOnly — backend filial
+              bo'yicha yozishni rad etadi, shuning uchun override eslatmasi
+              bu yerda ham yo'q. */}
         </div>
       </div>
 
