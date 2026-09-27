@@ -45,6 +45,7 @@ import { DepartureMoneyBlock } from "@/components/students/departure-money-block
 import {
   DEFAULT_DEPARTURE_POLICY,
   departurePolicyPayload,
+  offeredPolicies,
   type DeparturePolicy,
 } from "@/components/students/departure-money";
 import { useDeparturePreview } from "@/components/students/use-departure-preview";
@@ -208,7 +209,7 @@ export function ChangeStatusDialog({
           ...(isExpellingStudent
             ? departurePolicyPayload(
                 departurePolicy,
-                money.data?.mayChoosePolicy ?? false,
+                offeredPolicies("expel", money.data?.mayChoosePolicy ?? false),
               )
             : {}),
         });
@@ -469,6 +470,7 @@ export function ChangeStatusDialog({
                   isError={money.isError}
                   policy={departurePolicy}
                   onPolicyChange={setDeparturePolicy}
+                  context="expel"
                   showGroupNames
                   disabled={submitting}
                 />
