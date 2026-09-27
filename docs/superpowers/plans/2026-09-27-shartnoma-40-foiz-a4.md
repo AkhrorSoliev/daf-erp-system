@@ -49,6 +49,12 @@
 9. **Docs** — ADR-0043 (Uzbek), README row, `server/CLAUDE.md` paragraph under «Enrollment Lifecycle Prepaid Refund».
 10. **Verify** — server `npm run typecheck`, `npx eslint src` (0 errors), `npx jest --runInBand`; client `npx vitest run`, `npx eslint src`, `npm run build`. No push, no deploy.
 
+## Deviations Found While Building
+
+- **Archive keeps the old rule.** The status dialog archives a student through `DELETE /students/:id` and tells the admin it is «faqat xato/duplikat yozuv uchun»; a real departure is an expulsion. Withholding a mistaken record's money would be wrong, so only removal and expulsion take a policy (default `STUDENT_CANCELLED`); an archive, like every centre closing, returns the unheld lessons. A policy sent with any status but EXPELLED is a 400.
+- **«Withheld» only when money would come back.** A month whose lessons are all held, or a frozen student whose rest the freeze already returned, is not reported as withheld (`policyRelease` checks the release first), so no history row claims the rule kept money it never touched.
+- **The money note lives in billing** (`billing/departure-money-note.ts`), shared by the removal and the status cascade.
+
 ## Deploy Notes
 
 No migration. Server first, then client (the client sends a field the old server would reject: `forbidNonWhitelisted`). Must be live before the first departure on 01.10.2026 for the rule to apply from day one.
