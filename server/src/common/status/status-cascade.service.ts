@@ -87,7 +87,7 @@ export function groupClosingReason(
 /**
  * What `cascade()` handles. A group's own status change is not among them:
  * it closes its enrolments on the caller's transaction
- * (`cascadeGroupStatusChange`, ADR-0039).
+ * (`cascadeGroupStatusChange`, ADR-0041).
  */
 export type CascadeEntityType = 'Branch' | 'Course' | 'Student';
 
@@ -146,7 +146,7 @@ export class StatusCascadeService {
   /**
    * Closes a group's enrolments when the group itself goes CANCELLED or
    * COMPLETED, on the CALLER's transaction, so the status change and its
-   * students' closing commit together or not at all (ADR-0039).
+   * students' closing commit together or not at all (ADR-0041).
    *
    * CANCELLED drops every ACTIVE and FROZEN enrolment. COMPLETED completes
    * the ACTIVE ones, drops the FROZEN ones (ADR-0036) and graduates the

@@ -761,7 +761,7 @@ export function groupClosingReason(
 /**
  * What `cascade()` handles. A group's own status change is not among them:
  * it closes its enrolments on the caller's transaction
- * (`cascadeGroupStatusChange`, ADR-0039).
+ * (`cascadeGroupStatusChange`, ADR-0041).
  */
 export type CascadeEntityType = 'Branch' | 'Course' | 'Student';
 ```
@@ -772,7 +772,7 @@ export type CascadeEntityType = 'Branch' | 'Course' | 'Student';
   /**
    * Closes a group's enrolments when the group itself goes CANCELLED or
    * COMPLETED, on the CALLER's transaction, so the status change and its
-   * students' closing commit together or not at all (ADR-0039).
+   * students' closing commit together or not at all (ADR-0041).
    *
    * CANCELLED drops every ACTIVE and FROZEN enrolment. COMPLETED completes
    * the ACTIVE ones, drops the FROZEN ones (ADR-0036) and graduates the
@@ -1222,7 +1222,7 @@ export class GroupsStatusService {
 
   /**
    * A group's status change commits everything it touches or nothing
-   * (ADR-0039): the transition check and StatusHistory, the group's history,
+   * (ADR-0041): the transition check and StatusHistory, the group's history,
    * closing its enrolments with their refunds and auto-graduation, and the
    * group row, in one Serializable transaction with the budget of a group
    * deletion. The 'entity.status.changed' events (system comment, Telegram
@@ -1366,10 +1366,10 @@ git commit -m "Groups: change a group's status in one transaction" -m "Re-read, 
 
 ---
 
-### Task 5: ADR-0039, server/CLAUDE.md, full verification, PR 1
+### Task 5: ADR-0041, server/CLAUDE.md, full verification, PR 1
 
 **Files:**
-- Create: `docs/adr/0039-guruh-holati-bitta-tranzaksiyada-ozgaradi.md`
+- Create: `docs/adr/0041-guruh-holati-bitta-tranzaksiyada-ozgaradi.md`
 - Modify: `docs/adr/README.md`, `server/CLAUDE.md`
 
 - [ ] **Step 1: Confirm the ADR number is free**
@@ -1377,10 +1377,10 @@ git commit -m "Groups: change a group's status in one transaction" -m "Re-read, 
 Run: `git fetch origin && git ls-tree --name-only origin/main docs/adr/ | tail -3 && gh pr list --repo AkhrorSoliev/daf-erp-system --state open --json number,files --jq '.[] | select(.files[].path | startswith("docs/adr/0039")) | .number'`
 Expected: highest on main is 0038; no open PR adds 0039. If taken, use the next free number here and in every reference below.
 
-- [ ] **Step 2: Write the ADR** — `docs/adr/0039-guruh-holati-bitta-tranzaksiyada-ozgaradi.md`:
+- [ ] **Step 2: Write the ADR** — `docs/adr/0041-guruh-holati-bitta-tranzaksiyada-ozgaradi.md`:
 
 ```markdown
-# ADR-0039 — Guruh holati bitta tranzaksiyada o'zgaradi: yo hammasi, yo hech narsa
+# ADR-0041 — Guruh holati bitta tranzaksiyada o'zgaradi: yo hammasi, yo hech narsa
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-09-26
@@ -1460,7 +1460,7 @@ holatni ko'rsatadi.
 - [ ] **Step 3: Add the index row** — in `docs/adr/README.md`, after the 0038 row:
 
 ```markdown
-| [0039](0039-guruh-holati-bitta-tranzaksiyada-ozgaradi.md) | Guruh holati bitta tranzaksiyada o'zgaradi: yo hammasi, yo hech narsa | Qabul qilindi | 2026-09-26 |
+| [0041](0041-guruh-holati-bitta-tranzaksiyada-ozgaradi.md) | Guruh holati bitta tranzaksiyada o'zgaradi: yo hammasi, yo hech narsa | Qabul qilindi | 2026-09-26 |
 ```
 
 - [ ] **Step 4: Update `server/CLAUDE.md`**
@@ -1468,7 +1468,7 @@ holatni ko'rsatadi.
 1. In "Soft Delete & Archive", after the bullet starting `- **Closing a group closes its FROZEN enrollments too (ADR-0036).**`, add:
 
 ```markdown
-- **A group status change is all or nothing (ADR-0039).** `GroupsStatusService.changeStatus` re-reads the group inside ONE Serializable transaction (maxWait 15 s, timeout 60 s, the group-deletion budget) and runs the transition check and StatusHistory, the group's EntityHistory, the enrollment side (`StatusCascadeService.cascadeGroupStatusChange`: closing with refunds, state log, removal/completion history and auto-graduation, all on `tx`) and the group row there. A failure rolls everything back and the admin reads «Guruh holati o'zgarmadi, hech narsa saqlanmadi. Qayta urinib ko'ring.» (409 for Prisma `P2034`/`P2028`, 500 otherwise; an `HttpException` passes through). `cascade()` takes `'Branch' | 'Course' | 'Student'` only; those cascades keep per-enrollment transactions.
+- **A group status change is all or nothing (ADR-0041).** `GroupsStatusService.changeStatus` re-reads the group inside ONE Serializable transaction (maxWait 15 s, timeout 60 s, the group-deletion budget) and runs the transition check and StatusHistory, the group's EntityHistory, the enrollment side (`StatusCascadeService.cascadeGroupStatusChange`: closing with refunds, state log, removal/completion history and auto-graduation, all on `tx`) and the group row there. A failure rolls everything back and the admin reads «Guruh holati o'zgarmadi, hech narsa saqlanmadi. Qayta urinib ko'ring.» (409 for Prisma `P2034`/`P2028`, 500 otherwise; an `HttpException` passes through). `cascade()` takes `'Branch' | 'Course' | 'Student'` only; those cascades keep per-enrollment transactions.
 ```
 
 2. In "Entity History (Audit Log)", after the bullet `- Methods: \`recordCreate()\`, …`, add:
@@ -1486,7 +1486,7 @@ holatni ko'rsatadi.
 4. In "Enrollment Lifecycle Prepaid Refund", replace the `- Group deletion: …` bullet with:
 
 ```markdown
-- Group deletion and a group's own CANCELLED/COMPLETED: the same refund for every enrollment they close, inside that operation's transaction — one failed refund rolls the whole operation back (ADR-0039). The branch, course and student cascades instead refund each enrollment in its own transaction and log a failure, so one bad enrollment does not hold up a batch of hundreds.
+- Group deletion and a group's own CANCELLED/COMPLETED: the same refund for every enrollment they close, inside that operation's transaction — one failed refund rolls the whole operation back (ADR-0041). The branch, course and student cascades instead refund each enrollment in its own transaction and log a failure, so one bad enrollment does not hold up a batch of hundreds.
 ```
 
 - [ ] **Step 5: Full server verification**
@@ -1497,8 +1497,8 @@ Expected: typecheck clean; eslint `0 errors`; all suites pass (6384 before this 
 - [ ] **Step 6: Commit and open PR 1**
 
 ```bash
-git add docs/adr/0039-guruh-holati-bitta-tranzaksiyada-ozgaradi.md docs/adr/README.md server/CLAUDE.md docs/superpowers/plans/2026-09-26-guruh-holati-bitta-paket-va-qayta-ochish.md
-git commit -m "ADR-0039: a group status change is all or nothing" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git add docs/adr/0041-guruh-holati-bitta-tranzaksiyada-ozgaradi.md docs/adr/README.md server/CLAUDE.md docs/superpowers/plans/2026-09-26-guruh-holati-bitta-paket-va-qayta-ochish.md
+git commit -m "ADR-0041: a group status change is all or nothing" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 git push -u origin feat/group-status-one-transaction
 gh pr create --repo AkhrorSoliev/daf-erp-system --base main --head feat/group-status-one-transaction --title "Change a group's status in one transaction" --body-file <scratchpad>/pr1-body.md
 ```
@@ -2207,7 +2207,7 @@ export function classifyReopenCandidate(
  *
  * The group's closing marked every enrolment it closed: the reason
  * `groupClosingReason(group, status)`, stamped at or after the group's
- * `statusChangedAt`. That holds for closings before and after ADR-0039 and
+ * `statusChangedAt`. That holds for closings before and after ADR-0041 and
  * for the rows the closed-group repair closed, and the time bound leaves out
  * enrolments an EARLIER closing of the same group left behind. `null` for a
  * missing or deleted group; no candidates for a group that is not closed.
@@ -2591,7 +2591,7 @@ export const GROUP_REOPENED_REASON = 'Guruh qayta ochildi';
 /**
  * Reopens a CANCELLED or COMPLETED group's enrolments when the group goes
  * back to ACTIVE (ADR-0040), on the CALLER's transaction — the same one
- * `GroupsStatusService.changeStatus` checks the transition in (ADR-0039).
+ * `GroupsStatusService.changeStatus` checks the transition in (ADR-0041).
  */
 @Injectable()
 export class GroupReopenService {
@@ -3385,7 +3385,7 @@ git commit -m "Status dialog: reopen a closed group and say who comes back" -m "
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-09-26
-**Bog'liq:** ADR-0036, ADR-0039, `server/src/common/status/group-reopen-plan.ts`, `server/src/common/status/group-reopen.service.ts`, `server/src/billing/monthly-charge.service.ts` (`chargeForReturn`)
+**Bog'liq:** ADR-0036, ADR-0041, `server/src/common/status/group-reopen-plan.ts`, `server/src/common/status/group-reopen.service.ts`, `server/src/billing/monthly-charge.service.ts` (`chargeForReturn`)
 
 ## Kontekst
 
@@ -3402,7 +3402,7 @@ vaqt. Shu belgi bo'yicha kim yopilishda guruhda bo'lganini aniq topish mumkin.
 
 ## Qaror
 
-1. Guruh `COMPLETED → ACTIVE` va `CANCELLED → ACTIVE` o'tadi, ADR-0039
+1. Guruh `COMPLETED → ACTIVE` va `CANCELLED → ACTIVE` o'tadi, ADR-0041
    tranzaksiyasi ichida.
 2. Qaytadiganlar — guruhning joriy yopilishi yopgan yozilishlar: o'chirilmagan,
    holati `COMPLETED` yoki `DROPPED`, sababi `groupClosingReason(guruh, holat)`,
@@ -3465,7 +3465,7 @@ tiklanadi; kim qaytmasligi oldindan ko'rinadi.
 
 - [ ] **Step 4: `server/CLAUDE.md`**
 
-1. After the ADR-0039 bullet in "Soft Delete & Archive" add:
+1. After the ADR-0041 bullet in "Soft Delete & Archive" add:
 
 ```markdown
 - **A closed group reopens with its students (ADR-0040).** `COMPLETED → ACTIVE` and `CANCELLED → ACTIVE` run `GroupReopenService.reopen` inside the status change's transaction, BEFORE the group row is updated. `planGroupReopen` (`common/status/group-reopen-plan.ts`, also behind `GET /groups/:id/reopen-preview`) finds the enrollments the group's current closing closed by their mark — `statusChangeReason = groupClosingReason(group, status)` and `statusChangedAt >= group.statusChangedAt` — and brings each back as the student is now: FROZEN as FROZEN, ACTIVE as ACTIVE, a student this completion auto-graduated as ACTIVE (the graduation is undone). A deleted card, EXPELLED/ARCHIVED/INACTIVE, a hand-set GRADUATED or an open enrollment in another group keeps the student out. A MONTHLY return is charged by `MonthlyChargeService.chargeForReturn` (lessons after the reopening day). A group in a non-ACTIVE branch or under an ARCHIVED course cannot reopen. Never build the closing reason outside `groupClosingReason`.

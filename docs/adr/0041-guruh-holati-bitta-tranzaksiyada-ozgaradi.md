@@ -1,4 +1,4 @@
-# ADR-0039 — Guruh holati bitta tranzaksiyada o'zgaradi: yo hammasi, yo hech narsa
+# ADR-0041 — Guruh holati bitta tranzaksiyada o'zgaradi: yo hammasi, yo hech narsa
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-09-27

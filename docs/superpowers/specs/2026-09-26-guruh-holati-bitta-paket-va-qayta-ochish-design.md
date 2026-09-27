@@ -105,7 +105,7 @@ chiqarilmaydi, ro'yxatga qo'shiladi; chaqiruvchi tranzaksiyadan keyin
 
 ### Hujjatlar
 
-- ADR-0039: guruh holati bitta tranzaksiya (guruh uchun fail-closed, filial/kurs/
+- ADR-0041: guruh holati bitta tranzaksiya (guruh uchun fail-closed, filial/kurs/
   o'quvchi uchun partiya chidamliligi saqlanadi), hodisalar tranzaksiyadan keyin.
   Raqam birlashtirish paytida `origin/main` ga qarab qayta tekshiriladi.
 - `server/CLAUDE.md`: «Enrollment Lifecycle Prepaid Refund» (guruh bekor qilish
