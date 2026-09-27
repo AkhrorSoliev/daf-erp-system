@@ -1,4 +1,11 @@
-import type { AttendanceGroup, AttendanceStats, PaymentHistory, Profile, ScheduleItem } from '@/api/types';
+import type {
+  AttendanceGroup,
+  AttendanceStats,
+  OnboardingStatus,
+  PaymentHistory,
+  Profile,
+  ScheduleItem,
+} from '@/api/types';
 
 const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 /** The weekday key the app compares against, for whatever day the test runs. */
@@ -47,3 +54,10 @@ export const lessonToday: ScheduleItem = {
 export const attendanceHistory: AttendanceGroup[] = [];
 
 export const payments: PaymentHistory = { payments: [], transactions: [] };
+
+/** A student who has done every first-run step (ADR-0039): the app opens. */
+export const onboardingDone: OnboardingStatus = {
+  missing: [],
+  phone: '901234567',
+  phoneVerified: true,
+};
