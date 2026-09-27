@@ -50,6 +50,7 @@ export const FIELD_LABELS: Record<string, string | null> = {
   photo: "Rasm",
   comment: "Izoh",
   dateOfBirth: "Tug'ilgan sana",
+  telefonTasdigi: "Telefon tasdig'i",
   address: "Manzil",
   telegram: "Telegram",
   extraPhone: "Qo'shimcha telefon",
