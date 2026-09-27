@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { lateMinutesText } from "@/lib/late-minutes";
 import {
   Tooltip,
   TooltipContent,
@@ -59,6 +60,8 @@ interface AttendanceDotProps {
    * o'tgan). Default `true` — boshqa joylarda (lesson-trail) bu farq yo'q.
    */
   enrolled?: boolean;
+  /** Recorded minutes late on a LATE lesson (ADR-0046). */
+  lateMinutes?: number | null;
 }
 
 export function AttendanceDot({
@@ -67,7 +70,9 @@ export function AttendanceDot({
   hasOverride = false,
   cycleLabel,
   enrolled = true,
+  lateMinutes,
 }: AttendanceDotProps) {
+  const late = status === "LATE" ? lateMinutesText(lateMinutes) : null;
   // Bo'sh nuqta + a'zo emas → "Guruhda bo'lmagan" (Belgilanmagan'dan farqli).
   const notEnrolled = status === null && !enrolled;
   const statusLabel = status
@@ -88,7 +93,7 @@ export function AttendanceDot({
             hasOverride &&
               "ring-2 ring-blue-500/70 ring-offset-1 ring-offset-background",
           )}
-          aria-label={`${formatted} — ${statusLabel}${
+          aria-label={`${formatted} — ${late ?? statusLabel}${
             hasOverride ? " — O'rinbosar ustoz" : ""
           }${cycleLabel ? ` — ${cycleLabel}` : ""}`}
         />
@@ -96,7 +101,7 @@ export function AttendanceDot({
       <TooltipContent>
         <span className="font-medium">{formatted}</span>
         {" — "}
-        {statusLabel}
+        {late ?? statusLabel}
         {hasOverride && (
           <span className="text-blue-600 dark:text-blue-400">
             {" • O'rinbosar ustoz"}

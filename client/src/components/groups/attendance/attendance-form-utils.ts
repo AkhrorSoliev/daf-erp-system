@@ -21,6 +21,8 @@ export interface StudentAttendance {
   isDebtor?: boolean;
   debtAmount?: number;
   status: AttendanceStatus | null;
+  /** Recorded minutes late on a saved LATE row (ADR-0046). */
+  lateMinutes?: number | null;
   note: string | null;
   // Oldindan davomat belgilash (pre-mark) — dars boshlanmasidan oldin admin
   // belgilab qo'ygan kelmaslik. status === null bo'lganda formani urug'lantiradi.

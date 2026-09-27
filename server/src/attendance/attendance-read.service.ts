@@ -608,6 +608,7 @@ export class AttendanceReadService {
         studentId: true,
         status: true,
         note: true,
+        lateMinutes: true,
       },
     });
 
@@ -664,6 +665,9 @@ export class AttendanceReadService {
           group.course.lessonPaymentCount,
         ),
         status: att?.status ?? null,
+        // «N daqiqa kechikdi» (ADR-0046): set only on a LATE row an
+        // administrator marked after the lesson's first save.
+        lateMinutes: att?.lateMinutes ?? null,
         note: att?.note ?? null,
         // Pre-mark (oldindan belgilash) — null when the lesson has no pending
         // pre-mark for this student.
@@ -831,14 +835,25 @@ export class AttendanceReadService {
                 ),
               },
             },
-            select: { studentId: true, date: true, status: true },
+            select: {
+              studentId: true,
+              date: true,
+              status: true,
+              lateMinutes: true,
+            },
           })
         : [];
 
-    const attendanceMap = new Map<string, AttendanceStatus>();
+    const attendanceMap = new Map<
+      string,
+      { status: AttendanceStatus; lateMinutes: number | null }
+    >();
     for (const rec of attendanceRecords) {
       const key = `${rec.studentId}:${tashkentDateStr(rec.date)}`;
-      attendanceMap.set(key, rec.status);
+      attendanceMap.set(key, {
+        status: rec.status,
+        lateMinutes: rec.lateMinutes,
+      });
     }
 
     // Mark which lesson dates had a substitute teacher assigned (LessonTeacherOverride)
@@ -937,12 +952,18 @@ export class AttendanceReadService {
 
     const students = rosterEnrollments.map((e) => {
       const dots = lessonDates.map((date) => {
-        const status = attendanceMap.get(`${e.student.id}:${date}`) ?? null;
+        const rec = attendanceMap.get(`${e.student.id}:${date}`);
+        const status = rec?.status ?? null;
         // An attendance row is itself proof of membership; only fall back to
         // the coverage windows for blank dots.
         const enrolled =
           status !== null ? true : isEnrolledOn(e.student.id, date);
-        return { date, status, enrolled };
+        return {
+          date,
+          status,
+          lateMinutes: rec?.lateMinutes ?? null,
+          enrolled,
+        };
       });
       const attended = dots.filter(
         (d) =>

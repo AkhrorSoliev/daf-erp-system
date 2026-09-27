@@ -17,6 +17,7 @@ import {
 } from '@prisma/client';
 import { SaveAttendanceDto } from './dto/save-attendance.dto';
 import { AttendanceValidationService } from './attendance-validation.service';
+import { lateArrival, minutesLate } from './shared/lesson-window';
 
 export interface SaveAttendanceOptions {
   /**
@@ -187,10 +188,32 @@ export class AttendanceSaveService {
           oldStatus: AttendanceStatus | null;
           newStatus: AttendanceStatus;
         }[] = [];
+        // ADR-0046: a student an administrator marks present after the
+        // lesson's first save arrived late — LATE, with the minutes since the
+        // effective start. A correction script (`allowClosedLesson`) writes
+        // what it is given: its clock is not the lesson's.
+        const minutesNow = options.allowClosedLesson
+          ? null
+          : minutesLate({
+              lessonDay: date,
+              startTime: lesson.startTime,
+              now: new Date(),
+            });
+
         for (const entry of dto.entries) {
           // Teacher can't write notes
           const note = isTeacherOnly ? undefined : entry.note;
-          const oldStatus = existingMap.get(entry.studentId)?.status ?? null;
+          const existing = existingMap.get(entry.studentId);
+          const oldStatus = existing?.status ?? null;
+          const arrival = lateArrival({
+            lessonAlreadyTaken: existingRecords.length > 0,
+            savedByTeacherOnly: isTeacherOnly,
+            oldStatus,
+            oldLateMinutes: existing?.lateMinutes ?? null,
+            newStatus: entry.status,
+            minutesNow,
+          });
+          const newStatus = arrival.status as AttendanceStatus;
 
           const result = await tx.attendance.upsert({
             where: {
@@ -204,14 +227,16 @@ export class AttendanceSaveService {
               groupId,
               studentId: entry.studentId,
               date: parsedDate,
-              status: entry.status,
+              status: newStatus,
+              lateMinutes: arrival.lateMinutes,
               note: note ?? null,
               markedById: userId,
               markedMethod: AttendanceMethod.MANUAL,
               companyId: effectiveCompanyId,
             },
             update: {
-              status: entry.status,
+              status: newStatus,
+              lateMinutes: arrival.lateMinutes,
               ...(note !== undefined && { note: note ?? null }),
               markedById: userId,
               markedMethod: AttendanceMethod.MANUAL,
@@ -221,7 +246,7 @@ export class AttendanceSaveService {
           statusChanges.push({
             studentId: entry.studentId,
             oldStatus,
-            newStatus: entry.status,
+            newStatus,
           });
 
           // Single billing pipeline shared with QR. Handles all four
@@ -237,7 +262,7 @@ export class AttendanceSaveService {
               branchId: groupMeta.branchId,
               lessonDate: parsedDate,
               oldStatus,
-              newStatus: entry.status,
+              newStatus,
               companyId: effectiveCompanyId,
               performedById: userId,
             });
@@ -313,6 +338,10 @@ export class AttendanceSaveService {
     });
 
     const isUpdate = results.existingMap.size > 0;
+    // What was written, a late arrival included — not what was sent.
+    const savedEntries = results.statusChanges.map((c) => ({
+      status: c.newStatus,
+    }));
 
     if (isUpdate) {
       const oldEntries = Array.from(results.existingMap.values());
@@ -320,7 +349,7 @@ export class AttendanceSaveService {
         entityType: 'GroupAttendance',
         entityId: groupId,
         oldValues: buildSummary(oldEntries, 'DAVOMAT_YANGILANDI'),
-        newValues: buildSummary(dto.entries, 'DAVOMAT_YANGILANDI'),
+        newValues: buildSummary(savedEntries, 'DAVOMAT_YANGILANDI'),
         changedById: userId,
         companyId: effectiveCompanyId,
       });
@@ -328,7 +357,7 @@ export class AttendanceSaveService {
       await this.entityHistoryService.recordCreate({
         entityType: 'GroupAttendance',
         entityId: groupId,
-        newValues: buildSummary(dto.entries, 'DAVOMAT_OLINDI'),
+        newValues: buildSummary(savedEntries, 'DAVOMAT_OLINDI'),
         changedById: userId,
         companyId: effectiveCompanyId,
       });

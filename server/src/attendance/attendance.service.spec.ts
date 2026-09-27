@@ -1514,13 +1514,90 @@ describe('AttendanceService', () => {
         (c) => c[0] === 'attendance.student.recorded',
       );
       expect(studentRecorded).toHaveLength(1);
+      // ADR-0046: marked present after the lesson's first save, at 09:30 —
+      // a late arrival, 30 minutes after the 09:00 start.
       expect(studentRecorded[0][1]).toEqual(
         expect.objectContaining({
           studentId: 10002,
           oldStatus: 'ABSENT',
-          newStatus: 'PRESENT',
+          newStatus: 'LATE',
         }),
       );
+      expect(prisma.attendance.upsert).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ status: 'LATE', lateMinutes: 30 }),
+          update: expect.objectContaining({ status: 'LATE', lateMinutes: 30 }),
+        }),
+      );
+    });
+
+    it('writes a first save as sent, with no minutes (ADR-0046)', async () => {
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.attendance.upsert.mockImplementation(({ create }: any) =>
+        Promise.resolve({ id: `att-${create.studentId}`, ...create }),
+      );
+      prisma.group.findUnique.mockResolvedValue({
+        name: 'Deutsch A1',
+        branchId: 1,
+        teachers: [],
+        course: { price: 800000, lessonPaymentCount: 12 },
+      });
+      await service.save(
+        'group-uuid-1',
+        '2026-04-01',
+        {
+          entries: [
+            { studentId: 10001, status: 'PRESENT' },
+            { studentId: 10002, status: 'LATE' },
+          ],
+        },
+        1,
+        ['Administrator'],
+        1,
+      );
+      const creates = prisma.attendance.upsert.mock.calls.map(
+        (c: any) => c[0].create,
+      );
+      expect(creates).toEqual([
+        expect.objectContaining({ status: 'PRESENT', lateMinutes: null }),
+        expect.objectContaining({ status: 'LATE', lateMinutes: null }),
+      ]);
+    });
+
+    it('keeps the minutes of a LATE that stays LATE and clears them when it leaves (ADR-0046)', async () => {
+      prisma.attendance.findMany.mockResolvedValue([
+        { id: 'att-1', studentId: 10001, status: 'LATE', lateMinutes: 12 },
+        { id: 'att-2', studentId: 10002, status: 'LATE', lateMinutes: 7 },
+      ]);
+      prisma.attendance.upsert.mockImplementation(({ create }: any) =>
+        Promise.resolve({ id: `att-${create.studentId}`, ...create }),
+      );
+      prisma.group.findUnique.mockResolvedValue({
+        name: 'Deutsch A1',
+        branchId: 1,
+        teachers: [],
+        course: { price: 800000, lessonPaymentCount: 12 },
+      });
+      await service.save(
+        'group-uuid-1',
+        '2026-04-01',
+        {
+          entries: [
+            { studentId: 10001, status: 'LATE' },
+            { studentId: 10002, status: 'ABSENT' },
+          ],
+        },
+        1,
+        ['Administrator'],
+        1,
+      );
+      const updates = prisma.attendance.upsert.mock.calls.map(
+        (c: any) => c[0].update,
+      );
+      expect(updates).toEqual([
+        expect.objectContaining({ status: 'LATE', lateMinutes: 12 }),
+        expect.objectContaining({ status: 'ABSENT', lateMinutes: null }),
+      ]);
     });
   });
 
@@ -1646,17 +1723,20 @@ describe('AttendanceService', () => {
       expect(ahmad!.dots[0]).toEqual({
         date: '2024-01-01',
         status: 'PRESENT',
+        lateMinutes: null,
         enrolled: true,
       });
       expect(ahmad!.dots[1]).toEqual({
         date: '2024-01-03',
         status: 'ABSENT',
+        lateMinutes: null,
         enrolled: true,
       });
       // No attendance row + startDate null (no lower bound) → still enrolled.
       expect(ahmad!.dots[2]).toEqual({
         date: '2024-01-05',
         status: null,
+        lateMinutes: null,
         enrolled: true,
       });
     });

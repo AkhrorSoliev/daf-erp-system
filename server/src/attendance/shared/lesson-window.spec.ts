@@ -1,4 +1,9 @@
-import { lessonWindowState, windowRefusal } from './lesson-window';
+import {
+  lateArrival,
+  lessonWindowState,
+  minutesLate,
+  windowRefusal,
+} from './lesson-window';
 
 // Tashkent is UTC+5: 15:00 Tashkent = 10:00Z.
 const lesson = {
@@ -77,5 +82,92 @@ describe('windowRefusal', () => {
     expect(windowRefusal('before', lesson, at('2026-10-03T08:00:00Z'))).toBe(
       'Bu dars hali boshlanmagan (05.10.2026). Davomat dars kuni ochiladi',
     );
+  });
+});
+
+describe('minutesLate (ADR-0046)', () => {
+  const lesson = { lessonDay: '2026-10-05', startTime: '14:00' };
+  it('counts whole minutes from the Tashkent start', () => {
+    // 14:17:40 Tashkent = 09:17:40Z.
+    expect(
+      minutesLate({ ...lesson, now: new Date('2026-10-05T09:17:40Z') }),
+    ).toBe(17);
+  });
+  it('is null at or before the start and without a start time', () => {
+    expect(
+      minutesLate({ ...lesson, now: new Date('2026-10-05T08:55:00Z') }),
+    ).toBeNull();
+    expect(
+      minutesLate({ ...lesson, now: new Date('2026-10-05T09:00:30Z') }),
+    ).toBeNull();
+    expect(
+      minutesLate({
+        lessonDay: '2026-10-05',
+        startTime: null,
+        now: new Date('2026-10-05T10:00:00Z'),
+      }),
+    ).toBeNull();
+  });
+});
+
+describe('lateArrival (ADR-0046)', () => {
+  const base = {
+    lessonAlreadyTaken: true,
+    savedByTeacherOnly: false,
+    oldStatus: 'ABSENT',
+    oldLateMinutes: null,
+    newStatus: 'PRESENT',
+    minutesNow: 25,
+  };
+  it("turns an administrator's later PRESENT into LATE with the minutes", () => {
+    expect(lateArrival(base)).toEqual({ status: 'LATE', lateMinutes: 25 });
+    expect(lateArrival({ ...base, oldStatus: null })).toEqual({
+      status: 'LATE',
+      lateMinutes: 25,
+    });
+    expect(
+      lateArrival({ ...base, oldStatus: 'EXCUSED', newStatus: 'LATE' }),
+    ).toEqual({
+      status: 'LATE',
+      lateMinutes: 25,
+    });
+  });
+  it('writes as sent on the first save, from a teacher, or before the start', () => {
+    expect(lateArrival({ ...base, lessonAlreadyTaken: false })).toEqual({
+      status: 'PRESENT',
+      lateMinutes: null,
+    });
+    expect(lateArrival({ ...base, savedByTeacherOnly: true })).toEqual({
+      status: 'PRESENT',
+      lateMinutes: null,
+    });
+    expect(lateArrival({ ...base, minutesNow: null })).toEqual({
+      status: 'PRESENT',
+      lateMinutes: null,
+    });
+  });
+  it('leaves a student already in the lesson alone', () => {
+    expect(lateArrival({ ...base, oldStatus: 'PRESENT' })).toEqual({
+      status: 'PRESENT',
+      lateMinutes: null,
+    });
+  });
+  it('keeps the minutes while LATE stays LATE and clears them otherwise', () => {
+    expect(
+      lateArrival({
+        ...base,
+        oldStatus: 'LATE',
+        oldLateMinutes: 9,
+        newStatus: 'LATE',
+      }),
+    ).toEqual({ status: 'LATE', lateMinutes: 9 });
+    expect(
+      lateArrival({
+        ...base,
+        oldStatus: 'LATE',
+        oldLateMinutes: 9,
+        newStatus: 'ABSENT',
+      }),
+    ).toEqual({ status: 'ABSENT', lateMinutes: null });
   });
 });

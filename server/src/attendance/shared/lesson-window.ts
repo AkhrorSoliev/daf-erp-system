@@ -69,3 +69,58 @@ export function windowRefusal(
   }
   return `Bu dars hali boshlanmagan (${ddmmyyyy(lesson.lessonDay)}). Davomat dars kuni ochiladi`;
 }
+
+/**
+ * Whole minutes from the lesson's effective start to `now`, Tashkent time;
+ * null when the lesson has no start time or `now` is not past the start of
+ * that day's lesson. Used for «N daqiqa kechikdi» (ADR-0046).
+ */
+export function minutesLate(
+  input: Pick<LessonTimes, 'lessonDay' | 'startTime'> & { now: Date },
+): number | null {
+  if (!input.startTime) return null;
+  const [h, m] = input.startTime.split(':').map(Number);
+  const startUtcMs =
+    Date.parse(`${input.lessonDay}T00:00:00.000Z`) -
+    TASHKENT_OFFSET_MS +
+    (h * 60 + m) * 60_000;
+  const minutes = Math.floor((input.now.getTime() - startUtcMs) / 60_000);
+  return minutes > 0 ? minutes : null;
+}
+
+/** Statuses that say the student is in the lesson. */
+const IN_LESSON = new Set(['PRESENT', 'LATE']);
+
+/**
+ * The status and minutes a manual save writes for one student (ADR-0046).
+ * An administrator marking a student present after the lesson's first save
+ * is recording a late arrival: the student becomes LATE with the minutes
+ * since the start. A LATE that stays LATE keeps its minutes; any other
+ * status clears them. A teacher's save, the lesson's first save, and a
+ * student already in the lesson are written as sent.
+ */
+export function lateArrival(input: {
+  lessonAlreadyTaken: boolean;
+  savedByTeacherOnly: boolean;
+  oldStatus: string | null;
+  oldLateMinutes: number | null;
+  newStatus: string;
+  /** `minutesLate` at the moment of the save. */
+  minutesNow: number | null;
+}): { status: string; lateMinutes: number | null } {
+  const arriving =
+    input.lessonAlreadyTaken &&
+    !input.savedByTeacherOnly &&
+    !IN_LESSON.has(input.oldStatus ?? '') &&
+    IN_LESSON.has(input.newStatus);
+  if (arriving && input.minutesNow !== null) {
+    return { status: 'LATE', lateMinutes: input.minutesNow };
+  }
+  if (input.newStatus !== 'LATE') {
+    return { status: input.newStatus, lateMinutes: null };
+  }
+  return {
+    status: 'LATE',
+    lateMinutes: input.oldStatus === 'LATE' ? input.oldLateMinutes : null,
+  };
+}

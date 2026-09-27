@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/lib/format-utils";
+import { lateMinutesText } from "@/lib/late-minutes";
 import {
   STATUS_CONFIG,
   type AttendanceEntry,
@@ -75,6 +76,11 @@ export function AttendanceStudentRow({
   onCollectPayment,
 }: AttendanceStudentRowProps) {
   const statusCfg = STATUS_CONFIG.find((s) => s.value === entry?.status);
+  // The saved minutes, only while the row is still marked LATE on screen.
+  const lateText =
+    student.status === "LATE" && entry?.status === "LATE"
+      ? lateMinutesText(student.lateMinutes)
+      : null;
   // Contract 3.2 (ADR-0045): a blocked student keeps their row, but only an
   // announced absence («Sababli») can be recorded for them.
   const admission = admissionCopy(student.admission, isAdmin);
@@ -171,6 +177,11 @@ export function AttendanceStudentRow({
             >
               {admission.blocked && <Lock className="size-3" />}
               {admission.label}
+            </p>
+          )}
+          {lateText && (
+            <p className="text-[11px] font-medium text-amber-700 dark:text-amber-300">
+              {lateText}
             </p>
           )}
           {isAdmin && entry?.note && !isNoteOpen && (
