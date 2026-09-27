@@ -1,6 +1,6 @@
 # Oylik tizim: moliya va hisobotlardagi xatolarni tuzatish (A to'plami)
 
-Sana: 27.09.2026. Holat: CEO tasdiqladi («Ha, boshla»), 5-qism matni kutilmoqda.
+Sana: 27.09.2026. Holat: CEO tasdiqladi («Ha, boshla»); 5-qism matni ham tasdiqlandi.
 
 ## 1. Nega
 
@@ -135,9 +135,65 @@ Har qism — alohida PR, alohida reja, CEO ruxsati bilan saytga.
 
 ### A5. O'quvchiga oylik to'lov xabari
 
-CEO matnni tasdiqlagandan keyin. Kunlik 20:00 jamlanmaga (ADR-0025) yangi
-toifa: 1-sanada oy hisobi, 2-darsdan bir kun oldin hali to'lamaganlarga
-eslatma. Tafsilot tasdiqdan keyin shu yerga yoziladi.
+Matn CEO tomonidan 27.09 da tasdiqlandi. Kunlik 20:00 jamlanmaga
+(ADR-0025) yangi toifa sifatida qo'shiladi.
+
+**1-xabar — oy hisobi yozilgan kuni (odatda 1-sana), 20:00.** Har bir faol
+oylik yozilish uchun bitta blok (bir nechta guruhi bo'lsa — har biri alohida).
+Qatorlar faqat qiymati bo'lsa chiqadi (chegirma yo'q bo'lsa chegirma qatorlari
+chiqmaydi; eski qarz yo'q bo'lsa «Sentabrdan qolgan qarz» chiqmaydi):
+
+```
+Hurmatli {ism}!
+
+📅 <b>{Oy} oyi uchun to'lov</b>
+Guruh: {guruh} ({kunlar})
+Oylik narx: {oylik narx} ({dars soni} dars)
+{O'tgan oy}dagi {N} ta sababli dars uchun chegirma: −{summa}
+Chegirma bilan {oy} uchun: {summa}
+{O'tgan oy}dan qolgan qarz: {summa}
+Jami to'lash kerak: <b>{summa}</b>
+Muddat: <b>{sana}</b> — oyning 2-darsigacha
+
+To'lov: markazda, Payme yoki Click orqali.
+🔗 Profilingiz: https://student.dafzentrum.uz
+```
+
+Balans oyni to'liq qoplagan bo'lsa (to'lash kerak = 0):
+
+```
+Hurmatli {ism}!
+
+📅 <b>{Oy} oyi uchun to'lov</b>
+Guruh: {guruh} ({kunlar})
+Oylik narx {summa} balansingizdan yechildi.
+Qolgan balans: <b>{summa}</b>
+{Oy} uchun to'lov qilish shart emas.
+
+Rahmat!
+```
+
+**2-xabar — oyning 2-darsidan bir kun oldin, 20:00, faqat hali to'lamaganlarga**
+(balans < 0 bo'lsa). 1-va 2-dars ketma-ket kunlarda bo'lsa, 1-xabar bilan
+bitta jamlanmaga tushadi.
+
+```
+Hurmatli {ism}!
+
+⏰ <b>To'lov eslatmasi</b>
+Ertaga ({sana}) {oy}ning 2-darsi bo'ladi.
+To'lash kerak: <b>{summa}</b>
+
+Shartnomaga ko'ra oylik to'lov 2-darsgacha qilinadi. Darslaringiz uzilib
+qolmasligi uchun to'lovni ertagi darsgacha amalga oshirishingizni so'raymiz.
+
+To'lov: markazda, Payme yoki Click orqali.
+Savollar bo'lsa, markaz administratoriga murojaat qiling.
+🔗 Profilingiz: https://student.dafzentrum.uz
+```
+
+O'quvchiga ko'rinadigan matnda «uzrli» emas, «sababli» so'zi ishlatiladi
+(CEO, 27.09).
 
 ## 4. Tegilmaydi
 
