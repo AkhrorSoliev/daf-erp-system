@@ -342,7 +342,26 @@ describe('StudentsStatusService', () => {
       expect(cascadeMock.cascade).not.toHaveBeenCalled();
     });
 
-    it('refuses a policy with a freeze — only an expulsion or an archive ends the month', async () => {
+    it.each([StudentStatus.FROZEN, StudentStatus.ARCHIVED])(
+      'refuses a policy with %s — only an expulsion is settled by rule 6.2',
+      async (status) => {
+        await expect(
+          service.changeStatus(
+            studentId,
+            {
+              status,
+              reason: 'Xato',
+              departurePolicy: 'STUDENT_CANCELLED',
+            } as never,
+            userId,
+            companyId,
+          ),
+        ).rejects.toThrow(BadRequestException);
+        expect(prisma.student.update).not.toHaveBeenCalled();
+      },
+    );
+
+    it('refuses a policy with a freeze before any money moves', async () => {
       await expect(
         service.changeStatus(
           studentId,

@@ -762,13 +762,29 @@ describe('StatusCascadeService', () => {
       prisma.enrollment.findMany.mockResolvedValue(mockEnrollmentWithStudent);
     });
 
-    it.each(['EXPELLED', 'ARCHIVED'])(
-      "treats a student's %s as their own decision by default",
-      async (status) => {
-        await service.cascade('Student', '100', status, 42);
-        expect(policyOfFirstCall()).toBe('STUDENT_CANCELLED');
-      },
-    );
+    it("treats a student's expulsion as their own decision by default", async () => {
+      await service.cascade('Student', '100', 'EXPELLED', 42);
+      expect(policyOfFirstCall()).toBe('STUDENT_CANCELLED');
+    });
+
+    it('keeps the old rule for an archived card — a record made by mistake, not a departure', async () => {
+      monthlyChargeService.reverseChargeForDeparture.mockResolvedValueOnce({
+        ...withheld,
+        refunded: 560000,
+        lessons: 7,
+        policy: 'CENTER_INITIATIVE',
+        withheld: false,
+      });
+      const moneyNotes: Array<{ groupName: string; note: string }> = [];
+
+      await service.cascade('Student', '100', 'ARCHIVED', 42, {
+        departurePolicy: 'STUDENT_CANCELLED',
+        moneyNotes,
+      });
+
+      expect(policyOfFirstCall()).toBeUndefined();
+      expect(moneyNotes).toEqual([]);
+    });
 
     it('passes the policy a CEO or branch director chose', async () => {
       await service.cascade('Student', '100', 'EXPELLED', 42, {

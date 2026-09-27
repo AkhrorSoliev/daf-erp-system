@@ -47,10 +47,10 @@ export class ChangeStudentStatusDto {
   frozenRefundOverrides?: Record<string, number>;
 
   /**
-   * EXPELLED / ARCHIVED only: who ended the student's enrollments, which
-   * decides what the month's charge gives back (contract 6.2, ADR-0043).
-   * Omitted = the student's own decision. Any other value is a CEO's or
-   * branch director's call; with any other status it is refused (400).
+   * EXPELLED only: who ended the student's enrollments, which decides what
+   * the month's charge gives back (contract 6.2, ADR-0043). Omitted = the
+   * student's own decision. Any other value is a CEO's or branch director's
+   * call; with any other status it is refused (400).
    */
   @IsOptional()
   @IsIn(DEPARTURE_POLICIES)

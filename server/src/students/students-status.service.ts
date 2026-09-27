@@ -34,9 +34,12 @@ import {
 import { buildAutoPauseReason } from '../absence-pause/absence-pause.constants';
 import { assertMayChooseDeparturePolicy } from './shared/departure-policy-access';
 
-/** A departure policy ends a month: only an expulsion or an archive does. */
+/**
+ * Of the status changes only an expulsion is a departure that rule 6.2
+ * settles; an archive removes a record made by mistake (ADR-0043).
+ */
 export const DEPARTURE_POLICY_STATUS_ERROR =
-  'Pulni qaytarish tartibi faqat chetlatish yoki arxivlashda tanlanadi';
+  'Pulni qaytarish tartibi faqat chetlatishda tanlanadi';
 
 /**
  * Status o'zgartirishni KIM so'rayotgani — oshkora, chunki ikki chaqiruvchi
@@ -78,12 +81,11 @@ export class StudentsStatusService {
     companyId: number,
   ) {
     // Before anything is read (contract 6.2, ADR-0043): a policy belongs to
-    // an expulsion or an archive, and one other than the student's own
-    // decision is a CEO's or branch director's call.
+    // an expulsion, and one other than the student's own decision is a CEO's
+    // or branch director's call.
     if (
       dto.departurePolicy !== undefined &&
-      dto.status !== StudentStatus.EXPELLED &&
-      dto.status !== StudentStatus.ARCHIVED
+      dto.status !== StudentStatus.EXPELLED
     ) {
       throw new BadRequestException(DEPARTURE_POLICY_STATUS_ERROR);
     }
@@ -303,9 +305,9 @@ export class StudentsStatusService {
     });
 
     // Cascade: ARCHIVED/EXPELLED/FROZEN → enrollment larni yangilash.
-    // It runs before the student's history row, because an expulsion or an
-    // archive settles the month's charge there (contract 6.2, ADR-0043) and
-    // the row below says what came of it.
+    // It runs before the student's history row, because an expulsion settles
+    // the month's charge there (contract 6.2, ADR-0043) and the row below
+    // says what came of it.
     const moneyNotes: DepartureMoneyNote[] = [];
     await this.statusCascadeService.cascade(
       'Student',

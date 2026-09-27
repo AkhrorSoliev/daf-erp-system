@@ -109,12 +109,13 @@ export interface DepartureMoneyNote {
 export interface CascadeOptions {
   /**
    * Who ended a student's enrolments (contract 6.2, ADR-0043). Read only by
-   * a student's EXPELLED/ARCHIVED cascade, where it defaults to the
-   * student's own decision; every other cascade is the centre's closing and
-   * keeps the old rule (the unheld lessons come back).
+   * a student's EXPELLED cascade, where it defaults to the student's own
+   * decision. An ARCHIVED card is a record made by mistake, not a departure,
+   * and every other cascade is the centre's closing: both keep the old rule
+   * (the unheld lessons come back).
    */
   departurePolicy?: DeparturePolicy;
-  /** Receives one line per enrolment whose month the departure settled. */
+  /** Receives one line per enrolment whose month an expulsion settled. */
   moneyNotes?: DepartureMoneyNote[];
 }
 
@@ -960,6 +961,10 @@ export class StatusCascadeService {
         // Read before the flip, while `filter` still selects them; their
         // group rows are written after it, once each month's money is known.
         const leaving = await this.loadStudentCascadeEnrollments(filter);
+        // An expulsion is the student's own departure unless a CEO or branch
+        // director chose otherwise (contract 6.2, ADR-0043). An archive
+        // removes a record made by mistake and keeps the old rule.
+        const expelled = newStatus === 'EXPELLED';
         const enrollResult = await this.cascadeEnrollmentStatus(
           filter,
           EnrollmentStatus.DROPPED,
@@ -967,12 +972,12 @@ export class StatusCascadeService {
           userId,
           auditFields,
           undefined,
-          // The student's own departure unless a CEO or branch director
-          // chose otherwise (contract 6.2, ADR-0043).
-          options.departurePolicy ?? DEFAULT_DEPARTURE_POLICY,
+          expelled
+            ? (options.departurePolicy ?? DEFAULT_DEPARTURE_POLICY)
+            : undefined,
         );
         const money = new Map<string, string>();
-        for (const e of leaving) {
+        for (const e of expelled ? leaving : []) {
           const note = departureMoneyNote(
             enrollResult.departures.get(e.id) ?? null,
           );
