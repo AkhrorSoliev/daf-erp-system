@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EntityHistoryService } from './entity-history.service';
+import type { EntityStatusChangedEvent } from './entity-history.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
 describe('EntityHistoryService', () => {
@@ -87,6 +88,41 @@ describe('EntityHistoryService', () => {
           newStatus: 'FROZEN',
           reason: 'test',
         }),
+      );
+    });
+
+    it('holds the event back when the caller defers it, and emits it on request', async () => {
+      const deferredEvents: EntityStatusChangedEvent[] = [];
+
+      await service.recordStatusChange({
+        entityType: 'Group',
+        entityId: 'group-1',
+        oldValues: { status: 'ACTIVE' },
+        newValues: { status: 'COMPLETED', reason: 'tugadi' },
+        changedById: 1,
+        companyId: 1,
+        deferredEvents,
+      });
+
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+      expect(deferredEvents).toEqual([
+        {
+          entityType: 'Group',
+          entityId: 'group-1',
+          oldStatus: 'ACTIVE',
+          newStatus: 'COMPLETED',
+          reason: 'tugadi',
+          changedById: 1,
+          companyId: 1,
+        },
+      ]);
+
+      service.emitStatusChanged(deferredEvents);
+
+      expect(eventEmitter.emit).toHaveBeenCalledTimes(1);
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'entity.status.changed',
+        deferredEvents[0],
       );
     });
 
