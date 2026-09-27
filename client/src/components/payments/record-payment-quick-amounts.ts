@@ -81,9 +81,12 @@ function lessonPackQuickAmounts(
   ];
 }
 
+// An absent model means an older server, which only ever meant LESSON_PACK —
+// so undefined must keep the lesson-pack wording, same as "LESSON_PACK" itself.
+// Only an explicit "MONTHLY" drops the cycle-price suffix.
 export function suggestedAmountHint(amount: number, model: PaymentPreviewModel | undefined): string {
   const base = `Tavsiya: ${formatPrice(amount)} so'm`;
-  return model === "LESSON_PACK" ? `${base} — kurs to'liq tsikl narxi` : base;
+  return model !== "MONTHLY" ? `${base} — kurs to'liq tsikl narxi` : base;
 }
 
 export function monthlyEnrollmentLine(e: MonthlyPreviewEnrollment): string {

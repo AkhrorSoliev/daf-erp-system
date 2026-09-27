@@ -80,7 +80,9 @@ describe("buildQuickAmounts — lesson pack", () => {
 describe("texts", () => {
   it("drops the cycle wording from the hint unless the student is on a lesson pack", () => {
     expect(suggestedAmountHint(450_000, "MONTHLY")).toBe(`Tavsiya: ${formatPrice(450_000)} so'm`);
-    expect(suggestedAmountHint(450_000, undefined)).toBe(`Tavsiya: ${formatPrice(450_000)} so'm`);
+    expect(suggestedAmountHint(450_000, undefined)).toBe(
+      `Tavsiya: ${formatPrice(450_000)} so'm — kurs to'liq tsikl narxi`,
+    );
     expect(suggestedAmountHint(414_000, "LESSON_PACK")).toBe(
       `Tavsiya: ${formatPrice(414_000)} so'm — kurs to'liq tsikl narxi`,
     );
