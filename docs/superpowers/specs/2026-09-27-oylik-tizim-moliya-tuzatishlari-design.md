@@ -97,6 +97,16 @@ Har qism — alohida PR, alohida reja, CEO ruxsati bilan saytga.
    to'langan» demaydi: oy hisobi / shundan to'langan / to'lanmagan.
 6. **Bosh sahifa davomat foizi** — Davomat sahifasi bilan bir xil (uzrli
    dars maxrajdan chiqadi).
+7. **Bekor qilingan pul qaytarish sof foydada qaytarish bo'lib sanalmaydi.**
+   `getPeriodOutflows` REFUND qatorlarini faqat `reversedAt: null` bilan
+   filtrlaydi; bekor qilishning qarshi qatori (musbat REFUND) qoladi va
+   `Math.abs` uni qaytarish qiladi. `reversedTransactionId: null` qo'shiladi,
+   sof foyda keshi versiyasi oshiriladi.
+8. **Ko'p filialli direktor tanlagan filialda xodimlar oyligi 0 bo'lmaydi.**
+   Sof foydaning oylik oyog'i faqat asosiy filialni oladi
+   (`narrowPayrollScope`); boshqa filial tanlanganda oylik «blocked» bo'lib,
+   foyda ortiq ko'rinadi. Oylik oyog'i tanlangan filialga (direktor shifti
+   ichida) qamrovlanadi.
 
 ### A3. Matnlar va ish haqi
 
