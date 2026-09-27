@@ -234,7 +234,6 @@ export function AttendanceCycleDashboard({
         <AttendanceMissedLessons
           cycleLessons={visibleLiveCells}
           todayStr={todayStr}
-          onSelectDate={onSelectDate}
         />
       )}
     </div>

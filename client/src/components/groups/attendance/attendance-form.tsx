@@ -23,17 +23,20 @@ import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { tashkentNow } from "@/lib/tashkent-time";
+import { lessonWindowState, type LessonWindowState } from "@/lib/lesson-window";
 import { useAuth } from "@/hooks/use-auth";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { QrAttendanceDialog } from "./qr-attendance-dialog";
 import { AttendanceStudentRow } from "./attendance-student-row";
 import { AttendanceDebtorsSection } from "./attendance-debtors-section";
+import { windowBanner } from "./attendance-window";
 import {
   DAY_NAMES,
   STATUS_CONFIG,
   type AttendanceEntry,
   type AttendanceStatus,
   type DebtorStudent,
+  type LessonWindowInfo,
   type PlannedAbsenceKind,
   type StudentAttendance,
 } from "./attendance-form-utils";
@@ -60,6 +63,16 @@ export function AttendanceForm({
   const [students, setStudents] = useState<StudentAttendance[]>([]);
   const [debtorStudents, setDebtorStudents] = useState<DebtorStudent[]>([]);
   const [coursePrice, setCoursePrice] = useState<number>(0);
+  const [serverWindow, setServerWindow] = useState<LessonWindowInfo | null>(
+    null,
+  );
+  // Re-evaluate the window every 30 s so the screen locks at the lesson's end
+  // without a refetch (the server refuses a late save regardless).
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setClock(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
   const [entries, setEntries] = useState<Map<number, AttendanceEntry>>(
     new Map(),
   );
@@ -82,54 +95,46 @@ export function AttendanceForm({
   const tashkent = tashkentNow();
   const isToday = date === tashkent.dateStr;
 
-  const lessonTimeInfo = (() => {
-    if (!isToday || !group.lessonStartTime || !group.lessonEndTime) return null;
-    const nowMinutes = tashkent.minutes;
-    const [sh, sm] = group.lessonStartTime.split(":").map(Number);
-    const [eh, em] = group.lessonEndTime.split(":").map(Number);
-    const start = sh * 60 + sm;
-    const end = eh * 60 + em;
-
-    // Dars boshlanishidan 10 daqiqa oldin ochiladi
-    const windowStart = start - 10;
-
-    if (nowMinutes < windowStart)
-      return {
-        status: "before" as const,
-        message: `Dars ${group.lessonStartTime} da boshlanadi (Toshkent vaqti). Davomat dars boshlanishidan 10 daqiqa oldin ochiladi`,
-      };
-    if (nowMinutes > end)
-      return {
-        status: "after" as const,
-        message: `Dars vaqti tugagan (${group.lessonStartTime} – ${group.lessonEndTime}, Toshkent vaqti). Davomat olish yopilgan`,
-      };
-    return {
-      status: "during" as const,
-      message: `Dars davom etmoqda (${group.lessonStartTime} – ${group.lessonEndTime}, Toshkent vaqti)`,
-    };
-  })();
+  // ADR-0045: one window for every role — 10 minutes before the start until
+  // the end. The server sends the lesson's effective times (a move's override
+  // included); before the first fetch the group's own times stand in.
+  const windowTimes = serverWindow ?? {
+    startTime: group.lessonStartTime ?? null,
+    endTime: group.lessonEndTime ?? null,
+  };
+  const windowState: LessonWindowState = lessonWindowState({
+    lessonDay: date,
+    startTime: windowTimes.startTime,
+    endTime: windowTimes.endTime,
+    now: new Date(clock),
+  });
 
   // Teacher bir marta davomat olib saqlagan bo'lsa — qayta tahrirlab bo'lmaydi.
-  // Faqat admin/direktor tahrirlay oladi.
+  // Dars tugaguncha faqat administrator tuzata oladi.
   const alreadyTakenForTeacher =
     !isAdmin && students.some((s) => s.status !== null);
+  const hasAttendance = students.some((s) => s.status !== null);
 
-  const isLocked =
-    alreadyTakenForTeacher ||
-    (!isAdmin &&
-      lessonTimeInfo != null &&
-      lessonTimeInfo.status !== "during");
+  const isLocked = alreadyTakenForTeacher || windowState !== "open";
 
-  // Oldindan belgilash konteksti: admin, davomat hali umuman olinmagan
-  // (barcha real status null) va dars bugun yoki kelajakda. Bu holatda
-  // admin to'liq ro'yxatni saqlamasdan, bitta o'quvchini oldindan
-  // "kelmaydi" deb belgilab qo'yishi mumkin — ustoz qulflanmaydi.
+  // Oldindan belgilash: admin, davomat hali olinmagan va dars hali
+  // boshlanmagan (oyna ochilmagan). Dars tugagach oldindan belgilash yo'q.
   const isPlanningContext =
     isAdmin &&
     students.length > 0 &&
     students.every((s) => s.status === null) &&
-    date >= tashkent.dateStr;
+    windowState === "before";
   const planningMode = isPlanningContext && !forceFinalizeMode;
+
+  const banner = windowBanner({
+    state: windowState,
+    startTime: windowTimes.startTime,
+    endTime: windowTimes.endTime,
+    isAdmin,
+    isToday,
+    hasAttendance,
+    alreadyTakenForTeacher,
+  });
 
   const fetchAttendance = useCallback(async () => {
     setLoading(true);
@@ -145,6 +150,7 @@ export function AttendanceForm({
       setStudents(active);
       setDebtorStudents(debtors);
       setCoursePrice(data.coursePrice ?? 0);
+      setServerWindow(data.window ?? null);
 
       const map = new Map<number, AttendanceEntry>();
       for (const s of active) {
@@ -165,6 +171,7 @@ export function AttendanceForm({
       setStudents([]);
       setDebtorStudents([]);
       setCoursePrice(0);
+      setServerWindow(null);
       setEntries(new Map());
     } finally {
       setLoading(false);
@@ -366,30 +373,27 @@ export function AttendanceForm({
         )}
       </div>
 
-      {/* Davomat olib bo'lingan — teacher uchun bloklangan holat */}
-      {alreadyTakenForTeacher && (
-        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400">
-          <Check className="size-4 shrink-0" />
-          Davomat olib bo&apos;lingan. Tahrirlash uchun administratorga murojaat
-          qiling
-        </div>
-      )}
-
-      {/* Lesson time banner */}
-      {lessonTimeInfo && !alreadyTakenForTeacher && (
+      {/* Lesson window banner (ADR-0045) — one line for every role. */}
+      {banner && (
         <div
           className={cn(
             "flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm",
-            lessonTimeInfo.status === "during" &&
-              "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400",
-            lessonTimeInfo.status === "before" &&
+            banner.tone === "info" &&
               "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400",
-            lessonTimeInfo.status === "after" &&
-              "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400",
+            banner.tone === "success" &&
+              "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400",
+            banner.tone === "warning" &&
+              "border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-300",
+            banner.tone === "danger" &&
+              "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400",
           )}
         >
-          <Clock className="size-4 shrink-0" />
-          {lessonTimeInfo.message}
+          {banner.tone === "success" ? (
+            <Check className="size-4 shrink-0" />
+          ) : (
+            <Clock className="size-4 shrink-0" />
+          )}
+          {banner.text}
         </div>
       )}
 
@@ -528,7 +532,11 @@ export function AttendanceForm({
       )}
 
       {/* Save button */}
-      {!loading && students.length > 0 && !alreadyTakenForTeacher && !planningMode && (
+      {!loading &&
+        students.length > 0 &&
+        windowState === "open" &&
+        !alreadyTakenForTeacher &&
+        !planningMode && (
         <div className="sticky bottom-4 flex items-center justify-end gap-3 pt-2">
           {unmarkedStudents.length > 0 && !isLocked && (
             <span className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 shadow-sm dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">

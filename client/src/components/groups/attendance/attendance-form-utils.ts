@@ -5,6 +5,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import type { LessonWindowState } from "@/lib/lesson-window";
 
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 
@@ -27,6 +28,26 @@ export interface StudentAttendance {
   plannedKind?: PlannedAbsenceKind | null;
   plannedNote?: string | null;
   plannedBy?: { id: number; firstName: string; lastName: string } | null;
+  // Contract 3.2 (ADR-0045): may this student be marked for this lesson?
+  // Absent on an older server — read as admitted.
+  admission?: LessonAdmission;
+}
+
+/** The lesson's attendance window from GET /attendance/:groupId/date/:date (ADR-0045). */
+export interface LessonWindowInfo {
+  state: LessonWindowState;
+  startTime: string | null;
+  endTime: string | null;
+}
+
+/** Contract 3.2 admission of one student to this lesson (ADR-0045). */
+export interface LessonAdmission {
+  admitted: boolean;
+  reason: "NOT_APPLIED" | "FIRST_LESSON" | "PAID" | "NOT_PAID";
+  /** The least payment that admits the student today. */
+  shortfall: number;
+  /** Admitted while owing: the last lesson this month the balance reaches. */
+  paidThrough: string | null;
 }
 
 /** Qarzdorning joriy (eng so'nggi) sikli — sana oralig'i bilan. */
