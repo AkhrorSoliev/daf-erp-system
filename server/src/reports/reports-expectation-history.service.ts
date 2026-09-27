@@ -1,11 +1,54 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  branchIdWhere,
   isEmptyScope,
   singleBranchId,
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
+
+type SnapshotDay = {
+  date: Date;
+  expectedValue: number | null;
+  lessonsHeldValue: number | null;
+  collectedForMonth: number | null;
+};
+
+/**
+ * Per-branch rows → one row per day, summed (each lesson, group and payment
+ * has one branch, so the figures add). A day is kept only when every branch
+ * with rows this month has its row that day: the cron writes each branch
+ * separately and one can fail, and a sum missing a branch would plot a drop
+ * that never happened. Gaps stay gaps; a null in any branch nulls the sum.
+ */
+function sumBranchRowsPerDay(
+  rows: (SnapshotDay & { branchId: number | null })[],
+): SnapshotDay[] {
+  const branchesThisMonth = new Set(rows.map((r) => r.branchId)).size;
+  const byDay = new Map<string, SnapshotDay[]>();
+  for (const r of rows) {
+    const key = r.date.toISOString().slice(0, 10);
+    byDay.set(key, [...(byDay.get(key) ?? []), r]);
+  }
+  const total = (list: SnapshotDay[], f: Exclude<keyof SnapshotDay, 'date'>) =>
+    list.some((r) => r[f] == null)
+      ? null
+      : list.reduce((s, r) => s + (r[f] ?? 0), 0);
+  const out: SnapshotDay[] = [];
+  // Rows arrive date-ascending; a Map keeps insertion order. The unique
+  // (companyId, branchId, date) makes list.length the branches present.
+  for (const list of byDay.values()) {
+    if (list.length < branchesThisMonth) continue;
+    out.push({
+      date: list[0].date,
+      expectedValue: total(list, 'expectedValue'),
+      lessonsHeldValue: total(list, 'lessonsHeldValue'),
+      collectedForMonth: total(list, 'collectedForMonth'),
+    });
+  }
+  return out;
+}
 
 /**
  * What happened on a day, so a step in the line can be explained rather than
@@ -61,40 +104,38 @@ export class ReportsExpectationHistoryService {
     const [y, m] = month.split('-').map(Number);
     if (!y || !m) return { month, branchId: null, points: [] };
 
-    // `null` scope = the company-wide row; one picked branch = that branch's.
-    // A multi-branch scope has no single row to read, so it falls back to the
-    // company-wide series rather than silently summing rows that were written
-    // for different scopes.
-    const branchId = singleBranchId(branchIds) ?? null;
+    const start = new Date(Date.UTC(y, m - 1, 1));
+    const endExcl = new Date(Date.UTC(y, m, 1));
 
-    // `date` is `@db.Date` — unshifted UTC bounds, upper exclusive.
+    // `null` = the company-wide row. A branch list reads each branch's OWN
+    // rows and sums them — the company row would show every branch (ADR-0002).
     const rows = await this.prisma.dailyFinancialSnapshot.findMany({
       where: {
         companyId,
-        branchId,
-        date: {
-          gte: new Date(Date.UTC(y, m - 1, 1)),
-          lt: new Date(Date.UTC(y, m, 1)),
-        },
+        ...(branchIds === null ? { branchId: null } : branchIdWhere(branchIds)),
+        // `date` is `@db.Date` — unshifted UTC bounds, upper exclusive.
+        date: { gte: start, lt: endExcl },
       },
       orderBy: { date: 'asc' },
       select: {
+        branchId: true,
         date: true,
         expectedValue: true,
         lessonsHeldValue: true,
         collectedForMonth: true,
       },
     });
+    const days = branchIds === null ? rows : sumBranchRowsPerDay(rows);
 
     const eventsByDay = await this.loadEvents(
       companyId,
-      branchId,
-      new Date(Date.UTC(y, m - 1, 1)),
-      new Date(Date.UTC(y, m, 1)),
+      branchIds,
+      start,
+      endExcl,
     );
 
     let prev: number | null = null;
-    const points = rows.map((r) => {
+    const points = days.map((r) => {
       const held = r.lessonsHeldValue;
       const collected = r.collectedForMonth;
       const dateStr = r.date.toISOString().slice(0, 10);
@@ -116,7 +157,7 @@ export class ReportsExpectationHistoryService {
       };
     });
 
-    return { month, branchId, points };
+    return { month, branchId: singleBranchId(branchIds) ?? null, points };
   }
 
   /**
@@ -127,14 +168,27 @@ export class ReportsExpectationHistoryService {
    */
   private async loadEvents(
     companyId: number,
-    branchId: number | null,
+    branchIds: ReportBranchIds,
     start: Date,
     endExcl: Date,
   ): Promise<Map<string, ExpectationDayEvent[]>> {
-    const groupWhere = {
-      companyId,
-      ...(branchId !== null && { branchId }),
-    };
+    const groupWhere = { companyId, ...branchIdWhere(branchIds) };
+    // EntityHistory has no branch column: a group's status change is matched
+    // through the ids of the groups in scope. Deleted groups stay in — their
+    // status change still happened.
+    const groupIdFilter =
+      branchIds === null
+        ? {}
+        : {
+            entityId: {
+              in: (
+                await this.prisma.group.findMany({
+                  where: groupWhere,
+                  select: { id: true },
+                })
+              ).map((g) => g.id),
+            },
+          };
 
     const [transitions, groupChanges, holidays] = await Promise.all([
       // Enrollment in/out — the dominant cause. No companyId on the log itself,
@@ -154,6 +208,7 @@ export class ReportsExpectationHistoryService {
           entityType: 'Group',
           action: 'STATUS_CHANGE',
           createdAt: { gte: start, lt: endExcl },
+          ...groupIdFilter,
         },
         select: { createdAt: true, newValues: true },
       }),

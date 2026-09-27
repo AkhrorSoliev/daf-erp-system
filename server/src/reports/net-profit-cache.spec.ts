@@ -3,6 +3,14 @@ import {
   netProfitCacheKey,
   secondsUntilTashkentMidnight,
 } from './net-profit-cache';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
+
+const at = (branchIds: ReportBranchIds, monthKey = '2026-07') => ({
+  companyId: 1001,
+  branchIds,
+  performedById: 10001,
+  monthKey,
+});
 
 describe('secondsUntilTashkentMidnight', () => {
   it('expires at the next Tashkent midnight, not the next UTC one', () => {
@@ -24,15 +32,28 @@ describe('secondsUntilTashkentMidnight', () => {
 });
 
 describe('netProfitCacheKey', () => {
-  it('separates branches so a filtered view never reads the company figure', () => {
-    expect(netProfitCacheKey(1001, 2, '2026-07')).not.toBe(
-      netProfitCacheKey(1001, undefined, '2026-07'),
+  it('keeps a multi-branch scope off the company-wide entry', () => {
+    expect(netProfitCacheKey(at([3, 7]))).not.toBe(netProfitCacheKey(at(null)));
+  });
+  it('names the branch set sorted and de-duplicated', () => {
+    expect(netProfitCacheKey(at([7, 3, 7]))).toBe(
+      'rpt:np:v3:1001:3,7:u10001:2026-07',
     );
   });
-
-  it('is per month, so overlapping ranges reuse entries', () => {
-    expect(netProfitCacheKey(1001, undefined, '2026-07')).toBe(
-      'rpt:np:v2:1001:all:2026-07',
+  it('separates one branch from a set containing it', () => {
+    expect(netProfitCacheKey(at([3]))).not.toBe(netProfitCacheKey(at([3, 7])));
+  });
+  it('separates callers, whose payroll leg can differ for the same branches', () => {
+    expect(netProfitCacheKey({ ...at([3]), performedById: 10002 })).not.toBe(
+      netProfitCacheKey(at([3])),
+    );
+  });
+  it('writes company-wide as all and an empty scope as none', () => {
+    expect(netProfitCacheKey(at(null))).toBe(
+      'rpt:np:v3:1001:all:u10001:2026-07',
+    );
+    expect(netProfitCacheKey(at([]))).toBe(
+      'rpt:np:v3:1001:none:u10001:2026-07',
     );
   });
 });
@@ -45,12 +66,12 @@ describe('cachedNetProfit', () => {
     };
     const compute = jest.fn().mockResolvedValue(43_900_000);
 
-    const v = await cachedNetProfit(redis, 1001, undefined, '2026-07', compute);
+    const v = await cachedNetProfit(redis, at(null, '2026-07'), compute);
 
     expect(v).toBe(43_900_000);
     expect(compute).toHaveBeenCalledTimes(1);
     expect(redis.setex).toHaveBeenCalledWith(
-      'rpt:np:v2:1001:all:2026-07',
+      'rpt:np:v3:1001:all:u10001:2026-07',
       expect.any(Number),
       '43900000',
     );
@@ -63,7 +84,7 @@ describe('cachedNetProfit', () => {
     };
     const compute = jest.fn();
 
-    const v = await cachedNetProfit(redis, 1001, undefined, '2026-07', compute);
+    const v = await cachedNetProfit(redis, at(null, '2026-07'), compute);
 
     expect(v).toBe(43_900_000);
     expect(compute).not.toHaveBeenCalled();
@@ -77,7 +98,7 @@ describe('cachedNetProfit', () => {
     const compute = jest.fn().mockResolvedValue(7);
 
     await expect(
-      cachedNetProfit(redis, 1001, undefined, '2026-07', compute),
+      cachedNetProfit(redis, at(null, '2026-07'), compute),
     ).resolves.toBe(7);
     expect(compute).toHaveBeenCalled();
   });
@@ -89,16 +110,12 @@ describe('cachedNetProfit', () => {
     };
     const compute = jest.fn().mockResolvedValue(5);
 
-    await expect(
-      cachedNetProfit(redis, 1001, 2, '2026-07', compute),
-    ).resolves.toBe(5);
+    await expect(cachedNetProfit(redis, at([2]), compute)).resolves.toBe(5);
   });
 
   it('works with no Redis at all', async () => {
     const compute = jest.fn().mockResolvedValue(5);
-    await expect(
-      cachedNetProfit(undefined, 1001, 2, '2026-07', compute),
-    ).resolves.toBe(5);
+    await expect(cachedNetProfit(undefined, at([2]), compute)).resolves.toBe(5);
   });
 
   it('caches a negative profit rather than treating it as a miss', async () => {
@@ -111,7 +128,7 @@ describe('cachedNetProfit', () => {
     const compute = jest.fn();
 
     await expect(
-      cachedNetProfit(redis, 1001, undefined, '2026-06', compute),
+      cachedNetProfit(redis, at(null, '2026-06'), compute),
     ).resolves.toBe(-8_000_000);
     expect(compute).not.toHaveBeenCalled();
   });
