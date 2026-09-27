@@ -426,4 +426,35 @@ describe('EnrollmentBillingService.refundPrepaidWithOverride', () => {
       tx,
     );
   });
+
+  it('rejects a hand-typed count on a MONTHLY enrollment and reverses nothing', async () => {
+    tx.enrollment.findUnique.mockResolvedValue({
+      id: 'enroll-m',
+      studentId: 10001,
+      groupId: 'grp-m',
+      prepaidLessonsRemaining: 0,
+      group: {
+        branchId: 1,
+        companyId: 1,
+        course: {
+          price: 450_000,
+          lessonPaymentCount: 12,
+          paymentModel: 'MONTHLY',
+        },
+        teachers: [{ teacherId: 20001 }],
+      },
+    });
+
+    await expect(
+      service.refundPrepaidWithOverride(tx, {
+        enrollmentId: 'enroll-m',
+        performedById: 99,
+        overrideLessons: 2,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(tx.transaction.findMany).not.toHaveBeenCalled();
+    expect(transactionsService.reverseTransaction).not.toHaveBeenCalled();
+    expect(transactionsService.createAdjustment).not.toHaveBeenCalled();
+    expect(tx.enrollment.update).not.toHaveBeenCalled();
+  });
 });

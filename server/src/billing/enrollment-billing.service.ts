@@ -1,9 +1,18 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { AttendanceStatus, Prisma, TransactionType } from '@prisma/client';
+import {
+  AttendanceStatus,
+  PaymentModel,
+  Prisma,
+  TransactionType,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { cycleCostFor } from './lesson-price';
 import { TransactionsService } from '../transactions/transactions.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
+
+/** 400 text: a MONTHLY freeze refund is computed, never typed. */
+export const MONTHLY_FREEZE_OVERRIDE_ERROR =
+  "Oylik to'lovli guruhda qaytariladigan dars sonini qo'lda o'zgartirib bo'lmaydi — oyning o'tmagan darslari puli avtomatik qaytariladi";
 
 /**
  * When an enrollment's life ends (DROPPED) or the student moves to
@@ -314,13 +323,28 @@ export class EnrollmentBillingService {
           select: {
             branchId: true,
             companyId: true,
-            course: { select: { price: true, lessonPaymentCount: true } },
+            course: {
+              select: {
+                price: true,
+                lessonPaymentCount: true,
+                paymentModel: true,
+              },
+            },
             teachers: { select: { teacherId: true } },
           },
         },
       },
     });
     if (!enrollment) return null;
+
+    // Defence in depth: the reversal below walks LESSON_CONSUMPTION rows,
+    // which on a course switched to monthly belong to the old pack.
+    if (
+      enrollment.group.course.paymentModel === PaymentModel.MONTHLY &&
+      params.overrideLessons !== undefined
+    ) {
+      throw new BadRequestException(MONTHLY_FREEZE_OVERRIDE_ERROR);
+    }
 
     const currentPrepaid = enrollment.prepaidLessonsRemaining;
     const targetLessons = params.overrideLessons ?? currentPrepaid;

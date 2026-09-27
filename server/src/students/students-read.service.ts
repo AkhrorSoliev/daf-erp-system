@@ -2,10 +2,12 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   AttendanceStatus,
   EnrollmentStatus,
+  PaymentModel,
   Prisma,
   StudentStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { StatusHistoryService } from '../common/status';
 import {
   StudentQueryDto,
@@ -50,11 +52,33 @@ function studentStatusWhere(
   }
 }
 
+/** Freeze dialog, pack leg: an editable lessons-to-refund row. */
+export interface PackRefundPreviewRow {
+  enrollmentId: string;
+  groupId: string;
+  groupName: string;
+  prepaidLessonsRemaining: number;
+  perLessonCost: number;
+  consumedLessons: number;
+  maxRefundable: number;
+  suggestedRefundAmount: number;
+}
+
+/** Freeze dialog, MONTHLY leg: what the month release would credit now. Read-only. */
+export interface MonthlyReleasePreviewRow {
+  enrollmentId: string;
+  groupId: string;
+  groupName: string;
+  releaseLessons: number;
+  releaseAmount: number;
+}
+
 @Injectable()
 export class StudentsReadService {
   constructor(
     private prisma: PrismaService,
     private statusHistoryService: StatusHistoryService,
+    private monthlyChargeService: MonthlyChargeService,
   ) {}
 
   async findAll(
@@ -275,16 +299,17 @@ export class StudentsReadService {
   }
 
   /**
-   * Active enrollments enriched with prepaid + per-lesson cost + already-
-   * consumed lesson count. Used by the FROZEN status dialog so the admin
-   * can preview "X dars × Y so'm = Z so'm balansga qaytariladi" before
-   * confirming, and adjust the per-enrollment refund count if needed.
-   *
-   * Cap on the override input is `prepaidLessonsRemaining + consumedLessons` —
-   * the admin can roll back as far as the very first paid lesson but no
-   * further (we have no money to refund beyond what was actually deducted).
+   * FROZEN dialog preview. `pack`: LESSON_PACK enrollments, editable up to
+   * prepaid + consumed. `monthly`: per MONTHLY enrollment, what
+   * `reverseChargeForDeparture` would credit if frozen now (same rule, no write).
    */
-  async getActiveEnrollmentsWithPrepaid(id: number, companyId: number) {
+  async getActiveEnrollmentsWithPrepaid(
+    id: number,
+    companyId: number,
+  ): Promise<{
+    pack: PackRefundPreviewRow[];
+    monthly: MonthlyReleasePreviewRow[];
+  }> {
     const student = await this.prisma.student.findFirst({
       where: { id, companyId, deletedAt: null },
       select: { id: true },
@@ -292,11 +317,7 @@ export class StudentsReadService {
     if (!student) throw new NotFoundException(`O'quvchi topilmadi`);
 
     const enrollments = await this.prisma.enrollment.findMany({
-      where: {
-        studentId: id,
-        status: 'ACTIVE',
-        deletedAt: null,
-      },
+      where: { studentId: id, status: 'ACTIVE', deletedAt: null },
       select: {
         id: true,
         prepaidLessonsRemaining: true,
@@ -304,12 +325,58 @@ export class StudentsReadService {
           select: {
             id: true,
             name: true,
-            course: { select: { price: true, lessonPaymentCount: true } },
+            course: {
+              select: {
+                price: true,
+                lessonPaymentCount: true,
+                paymentModel: true,
+              },
+            },
           },
         },
       },
     });
 
+    // "Frozen now": the same instant refundMonthlyForFreeze passes.
+    const now = new Date();
+    const monthly = await Promise.all(
+      enrollments
+        .filter((e) => e.group.course.paymentModel === PaymentModel.MONTHLY)
+        .map(async (e) => {
+          const release =
+            await this.monthlyChargeService.previewReleaseForDeparture(
+              this.prisma,
+              { enrollmentId: e.id, departureDate: now },
+            );
+          return {
+            enrollmentId: e.id,
+            groupId: e.group.id,
+            groupName: e.group.name,
+            releaseLessons: release?.lessons ?? 0,
+            releaseAmount: release?.amount ?? 0,
+          };
+        }),
+    );
+
+    const pack = await this.packRefundRows(
+      enrollments.filter(
+        (e) => e.group.course.paymentModel === PaymentModel.LESSON_PACK,
+      ),
+    );
+    return { pack, monthly };
+  }
+
+  private async packRefundRows(
+    enrollments: Array<{
+      id: string;
+      prepaidLessonsRemaining: number;
+      group: {
+        id: string;
+        name: string;
+        course: { price: number; lessonPaymentCount: number };
+      };
+    }>,
+  ): Promise<PackRefundPreviewRow[]> {
     if (enrollments.length === 0) return [];
 
     // perLessonCost: prefer the most recent unreversed LESSON_DEDUCTION
