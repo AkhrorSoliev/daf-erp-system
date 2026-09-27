@@ -11,6 +11,7 @@ import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { AttendanceValidationService } from './attendance-validation.service';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
 
 const validatedGroup = {
   id: 'group-1',
@@ -28,6 +29,7 @@ describe('QrAttendanceService', () => {
   let gateway: any;
   let entityHistory: any;
   let attendanceService: any;
+  let admission: { forLesson: jest.Mock };
   let validation: {
     validateLessonDate: jest.Mock;
     assertWindowOpen: jest.Mock;
@@ -127,6 +129,9 @@ describe('QrAttendanceService', () => {
       assertWindowOpen: jest.fn(),
     };
 
+    // Contract 3.2 admission: nobody blocked unless a test says so.
+    admission = { forLesson: jest.fn().mockResolvedValue(new Map()) };
+
     const holidaysService = {
       findActiveHolidayCovering: jest.fn().mockResolvedValue(null),
       buildHolidayDateSet: jest.fn().mockResolvedValue(new Set()),
@@ -144,6 +149,7 @@ describe('QrAttendanceService', () => {
         { provide: EntityHistoryService, useValue: entityHistory },
         { provide: AttendanceService, useValue: attendanceService },
         { provide: AttendanceValidationService, useValue: validation },
+        { provide: LessonAdmissionService, useValue: admission },
         {
           provide: LessonBillingService,
           useValue: { processAttendanceBilling: jest.fn() },
@@ -446,6 +452,28 @@ describe('QrAttendanceService', () => {
       await expect(
         service.scanQr('valid-token', 10001, 20001, 1),
       ).rejects.toThrow('Davomat yopilgan');
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it('should refuse a scan for a student contract 3.2 keeps out', async () => {
+      redis.get.mockResolvedValueOnce(tokenData);
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10001,
+            {
+              admitted: false,
+              reason: 'NOT_PAID',
+              shortfall: 1,
+              paidThrough: null,
+            },
+          ],
+        ]),
+      );
+
+      await expect(
+        service.scanQr('valid-token', 10001, 20001, 1),
+      ).rejects.toThrow("To'lov qilinmagan");
       expect(prisma.attendance.upsert).not.toHaveBeenCalled();
     });
 

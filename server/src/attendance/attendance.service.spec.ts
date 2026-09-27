@@ -9,6 +9,7 @@ import { AttendanceSaveService } from './attendance-save.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
 import type { SaveAttendanceDto } from './dto/save-attendance.dto';
 
 const mockGroup = {
@@ -64,6 +65,7 @@ describe('AttendanceService', () => {
   let entityHistoryService: any;
   let eventEmitter: { emit: jest.Mock };
   let holidaysService: any;
+  let admission: { forLesson: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -132,6 +134,9 @@ describe('AttendanceService', () => {
       getActiveHolidaysInRange: jest.fn().mockResolvedValue([]),
     };
 
+    // Contract 3.2 admission (ADR-0045): nobody blocked unless a test says so.
+    admission = { forLesson: jest.fn().mockResolvedValue(new Map()) };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AttendanceService,
@@ -141,6 +146,7 @@ describe('AttendanceService', () => {
         AttendanceSaveService,
         { provide: PrismaService, useValue: prisma },
         { provide: EntityHistoryService, useValue: entityHistoryService },
+        { provide: LessonAdmissionService, useValue: admission },
         {
           provide: LessonBillingService,
           useValue: { processAttendanceBilling: jest.fn() },
@@ -594,6 +600,37 @@ describe('AttendanceService', () => {
   });
 
   describe('getByDate', () => {
+    it("returns the lesson window and each student's admission", async () => {
+      prisma.attendance.findMany.mockResolvedValue([]);
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10002,
+            {
+              admitted: false,
+              reason: 'NOT_PAID',
+              shortfall: 69231,
+              paidThrough: null,
+            },
+          ],
+        ]),
+      );
+      const result = await service.getByDate('group-uuid-1', '2026-04-01');
+      expect(result.window).toEqual(
+        expect.objectContaining({ startTime: '09:00', endTime: '11:00' }),
+      );
+      expect(result.activeStudents[0].admission).toEqual({
+        admitted: true,
+        reason: 'NOT_APPLIED',
+        shortfall: 0,
+        paidThrough: null,
+      });
+      expect(result.activeStudents[1].admission).toMatchObject({
+        admitted: false,
+        shortfall: 69231,
+      });
+    });
+
     it('should return students with attendance status', async () => {
       prisma.attendance.findMany.mockResolvedValue([
         {
@@ -779,6 +816,136 @@ describe('AttendanceService', () => {
         { allowClosedLesson: true },
       );
       expect(result.count).toBe(2);
+    });
+
+    it('refuses a new mark for a student the admission rule blocks', async () => {
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10002,
+            {
+              admitted: false,
+              reason: 'NOT_PAID',
+              shortfall: 69231,
+              paidThrough: null,
+            },
+          ],
+        ]),
+      );
+      prisma.attendance.findMany.mockResolvedValue([]);
+      await expect(
+        service.save(
+          'group-uuid-1',
+          '2026-04-01',
+          twoPresent,
+          1,
+          ['Teacher'],
+          1,
+        ),
+      ).rejects.toThrow("Dilnoza Rashidova to'lov qilmagan");
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it('lets a blocked student be left off the roster', async () => {
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10002,
+            {
+              admitted: false,
+              reason: 'NOT_PAID',
+              shortfall: 69231,
+              paidThrough: null,
+            },
+          ],
+        ]),
+      );
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.attendance.upsert.mockResolvedValue({
+        id: 'att-1',
+        studentId: 10001,
+        status: 'PRESENT',
+      });
+      const result = await service.save(
+        'group-uuid-1',
+        '2026-04-01',
+        { entries: [{ studentId: 10001, status: 'PRESENT' }] },
+        1,
+        ['Teacher'],
+        1,
+      );
+      expect(result.count).toBe(1);
+    });
+
+    it('lets a blocked student be marked EXCUSED', async () => {
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10002,
+            {
+              admitted: false,
+              reason: 'NOT_PAID',
+              shortfall: 69231,
+              paidThrough: null,
+            },
+          ],
+        ]),
+      );
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.attendance.upsert.mockResolvedValue({
+        id: 'att-2',
+        studentId: 10002,
+        status: 'EXCUSED',
+      });
+      await expect(
+        service.save(
+          'group-uuid-1',
+          '2026-04-01',
+          {
+            entries: [
+              { studentId: 10001, status: 'PRESENT' },
+              { studentId: 10002, status: 'EXCUSED' },
+            ],
+          },
+          1,
+          ['Administrator'],
+          1,
+        ),
+      ).resolves.toMatchObject({ count: 2 });
+    });
+
+    it('does not re-judge an unchanged mark', async () => {
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10002,
+            {
+              admitted: false,
+              reason: 'NOT_PAID',
+              shortfall: 69231,
+              paidThrough: null,
+            },
+          ],
+        ]),
+      );
+      prisma.attendance.findMany.mockResolvedValue([
+        { studentId: 10002, status: 'PRESENT', note: null },
+      ]);
+      prisma.attendance.upsert.mockResolvedValue({
+        id: 'att-1',
+        studentId: 10001,
+        status: 'PRESENT',
+      });
+      await expect(
+        service.save(
+          'group-uuid-1',
+          '2026-04-01',
+          twoPresent,
+          1,
+          ['Administrator'],
+          1,
+        ),
+      ).resolves.toMatchObject({ count: 2 });
     });
 
     it('should save attendance and return success', async () => {

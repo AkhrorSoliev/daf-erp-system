@@ -8,6 +8,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
 import {
   AttendanceMethod,
   AttendanceStatus,
@@ -36,6 +37,7 @@ export class AttendanceSaveService {
     private lessonBillingService: LessonBillingService,
     private eventEmitter: EventEmitter2,
     private validation: AttendanceValidationService,
+    private admission: LessonAdmissionService,
   ) {}
 
   /**
@@ -84,10 +86,9 @@ export class AttendanceSaveService {
 
     const results = await this.prisma.$transaction(
       async (tx) => {
-        // Validate all students are enrolled in this group. Debtors are now
-        // part of the main roster — anyone (teacher or admin) can mark them.
-        // When they later top up their balance, payments-write triggers
-        // retroactive billing to settle the unpaid lessons.
+        // Validate all students are enrolled in this group. Debtors are on
+        // the roster too; from the month's 2nd lesson contract 3.2 decides
+        // whether they may be marked (the admission block below, ADR-0045).
         const enrolledStudents = await tx.enrollment.findMany({
           where: {
             groupId,
@@ -98,6 +99,7 @@ export class AttendanceSaveService {
           select: {
             id: true,
             studentId: true,
+            student: { select: { firstName: true, lastName: true } },
           },
         });
         const enrollmentIdByStudent = new Map(
@@ -105,6 +107,24 @@ export class AttendanceSaveService {
         );
         const enrolledStudentIds = new Set(
           enrolledStudents.map((r) => r.studentId),
+        );
+        const nameByStudent = new Map(
+          enrolledStudents.map((e) => [
+            e.studentId,
+            `${e.student?.firstName ?? ''} ${e.student?.lastName ?? ''}`.trim(),
+          ]),
+        );
+
+        // ADR-0045 / contract 3.2: from the month's 2nd lesson a student
+        // attends only as far as their payments reach. A blocked student may
+        // be left off the roster or marked EXCUSED (an announced absence);
+        // any other new mark is refused below.
+        const admission = await this.admission.forLesson(
+          { groupId, lessonDay: date, studentIds: [...enrolledStudentIds] },
+          tx,
+        );
+        const blocked = new Set(
+          [...admission].filter(([, a]) => !a.admitted).map(([id]) => id),
         );
 
         for (const entry of dto.entries) {
@@ -115,16 +135,15 @@ export class AttendanceSaveService {
           }
         }
 
-        // Full-roster requirement: every active student (debtors included)
-        // must be marked. The frontend renders all of them in one list now,
-        // so the expected set matches the rendered set exactly.
+        // Full-roster requirement: every active student must be marked,
+        // except one contract 3.2 keeps out of this lesson (they cannot be).
         const expectedStudentIds = enrolledStudentIds;
 
         const submittedStudentIds = new Set(
           dto.entries.map((e) => e.studentId),
         );
         const missingStudentIds = [...expectedStudentIds].filter(
-          (id) => !submittedStudentIds.has(id),
+          (id) => !submittedStudentIds.has(id) && !blocked.has(id),
         );
         if (missingStudentIds.length > 0) {
           throw new BadRequestException(
@@ -144,6 +163,19 @@ export class AttendanceSaveService {
         if (isTeacherOnly && existingRecords.length > 0) {
           throw new BadRequestException(
             "Davomat olib bo'lingan. Tahrirlash uchun administratorga murojaat qiling",
+          );
+        }
+
+        for (const entry of dto.entries) {
+          if (!blocked.has(entry.studentId)) continue;
+          if (entry.status === AttendanceStatus.EXCUSED) continue;
+          if (existingMap.get(entry.studentId)?.status === entry.status) {
+            continue;
+          }
+          const name =
+            nameByStudent.get(entry.studentId) || `#${entry.studentId}`;
+          throw new BadRequestException(
+            `${name} to'lov qilmagan: shartnomaga ko'ra 2-darsdan boshlab to'lov qilinmaguncha darsga qo'yilmaydi`,
           );
         }
 

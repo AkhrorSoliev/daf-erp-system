@@ -8,6 +8,8 @@ import {
   type SaveAttendanceOptions,
 } from './attendance-save.service';
 import type { LessonTimes } from './shared/lesson-window';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
+import { ADMITTED_WITHOUT_RULE } from '../billing/lesson-admission';
 
 @Injectable()
 export class AttendanceService {
@@ -16,6 +18,7 @@ export class AttendanceService {
     private read: AttendanceReadService,
     private stats: AttendanceStatsService,
     private saveService: AttendanceSaveService,
+    private admission: LessonAdmissionService,
   ) {}
 
   validateLessonDate(groupId: string, date: string, companyId?: number) {
@@ -35,13 +38,33 @@ export class AttendanceService {
     return this.read.getLessonDates(groupId, month, year, companyId);
   }
 
-  getByDate(
+  /**
+   * The roster plus what the screen must obey (ADR-0045): the lesson window
+   * and, per student, whether contract 3.2 admits them to this lesson.
+   */
+  async getByDate(
     groupId: string,
     date: string,
     companyId?: number,
     roles?: string[],
   ) {
-    return this.read.getByDate(groupId, date, companyId, roles);
+    const roster = await this.read.getByDate(groupId, date, companyId, roles);
+    const [window, admission] = await Promise.all([
+      this.validation.windowFor(groupId, date, companyId),
+      this.admission.forLesson({
+        groupId,
+        lessonDay: date,
+        studentIds: roster.activeStudents.map((s) => s.studentId),
+      }),
+    ]);
+    return {
+      ...roster,
+      window,
+      activeStudents: roster.activeStudents.map((s) => ({
+        ...s,
+        admission: admission.get(s.studentId) ?? ADMITTED_WITHOUT_RULE,
+      })),
+    };
   }
 
   getLessonSequence(groupId: string, companyId?: number) {
