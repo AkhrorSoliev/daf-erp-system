@@ -90,11 +90,26 @@ railway up --detach
 | `ESKIZ_PASSWORD` | Eskiz.uz API secret key (from the SMS-shlyuz tab)    |
 | `ESKIZ_FROM`     | SMS sender — `4546` (Eskiz test sender; no brand nik required per Eskiz support) |
 | `OTP_SMS_GLOBAL_HOURLY_CAP` | Global hourly cap for forgot-password OTP SMS (`300`) |
+| `STUDENT_PHONE_VERIFICATION_ENABLED` | `true` makes the student's first-run SMS phone check compulsory (ADR-0039). Leave unset until Eskiz approves its template (below) |
+| `PHONE_VERIFY_SMS_GLOBAL_HOURLY_CAP` | Global hourly cap for phone-verification SMS (`300`) |
 
 `ESKIZ_*` + `OTP_SMS_GLOBAL_HOURLY_CAP` power the student "Parolni unutdim?" SMS
 OTP flow (`/auth/forgot-password/*` + `EskizService`). The message must byte-match
 the moderated Eskiz template (id 78093). Without these vars the flow degrades
 gracefully (no SMS sent).
+
+The student portal's first-run phone check (`/student-portal/onboarding/phone/*`,
+ADR-0039) sends a **different** text, which needs its own Eskiz moderation
+before `STUDENT_PHONE_VERIFICATION_ENABLED=true` is set — submit it verbatim:
+
+```
+DaF Sprachzentrum mobil ilovasida telefon raqamingizni tasdiqlash uchun kod: 0000
+```
+
+While the variable is unset (or `ESKIZ_*` is missing) the phone step is simply
+not asked; gender and birth date are compulsory either way. Switching it on with
+an unapproved template would lock every unverified student out of the app, since
+no code would ever arrive.
 
 `TELEGRAM_ADMIN_BOT_TOKEN` powers the admin group bot at `/settings/telegram-groups`. It must be a **separate** bot from `TELEGRAM_BOT_TOKEN` so a leaked token cannot reach student DMs. The bot needs Privacy Mode **disabled** (`/setprivacy` in BotFather) so it can read slash commands in groups; admin rights inside the group are optional.
 

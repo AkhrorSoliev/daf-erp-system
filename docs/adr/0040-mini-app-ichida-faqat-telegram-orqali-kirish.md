@@ -2,7 +2,7 @@
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-09-27
-**Bog'liq:** ADR-0022 (kimlik — bog'lanish), ADR-0030 (sessiya versiyasi), ADR-0033 (hisob kartasi bilan yopiladi), `server/src/auth/telegram-webapp/`, `server/src/telegram/utils/mini-app.ts`, `client/src/components/telegram-mini-app/`, `client/src/middleware.ts`
+**Bog'liq:** ADR-0022 (kimlik — bog'lanish), ADR-0039 (Telegram raqamni tasdiqlamaydi; birinchi kirish qadamlari), ADR-0030 (sessiya versiyasi), ADR-0033 (hisob kartasi bilan yopiladi), `server/src/auth/telegram-webapp/`, `server/src/telegram/utils/mini-app.ts`, `client/src/components/telegram-mini-app/`, `client/src/middleware.ts`
 
 ## Kontekst
 
@@ -13,9 +13,12 @@ unga `initData` beradi: foydalanuvchi, vaqt va bot tokeni bilan olingan
 HMAC-SHA256 imzo.
 
 O'quvchini Telegram akkauntiga `Student.telegramChatId` bog'laydi. Bot uni
-faqat odam O'Z raqamini «📱 Telefon raqamni yuborish» bilan isbotlagandan
-keyin yozadi (ro'yxatdan o'tish, «Parolni tiklash», «💳 To'lovlar», mock), va
-botning parol tiklashi shu bog'lanishga ishonib yangi parolni chatga yuboradi.
+faqat odam «📱 Telefon raqamni yuborish» bilan o'z Telegram raqamini yuborganda
+va u kartadagi raqamga mos kelganda yozadi (ro'yxatdan o'tish, «Parolni
+tiklash», «💳 To'lovlar», mock), va botning parol tiklashi shu bog'lanishga
+ishonib yangi parolni chatga yuboradi. Bu bog'lanish karta raqamini
+tasdiqlamaydi (ADR-0039) — faqat shu Telegram akkaunt shu kartaniki ekanini
+bildiradi.
 Bitta Telegram'ga bir nechta farzand bog'lanishi mumkin (ota-onaning raqami).
 Admin panelda bog'lash yo'q.
 
@@ -52,8 +55,9 @@ Admin panelda bog'lash yo'q.
    qo'llanmaydi.
 
 **Taqiqlanadi:** Mini App ichida parol yoki telefon bilan zaxira kirish;
-`telegramChatId` ni Mini App'dan yozish (bog'lash faqat botda, raqam isboti
-bilan); `initDataUnsafe` ga yoki imzosiz maydonga ishonish; bir nechta
+`telegramChatId` ni Mini App'dan yozish (bog'lash faqat botda, Telegram raqami
+karta raqamiga mos kelganda); Mini App kirishini karta raqamining tasdig'i
+deb hisoblash (ADR-0039); `initDataUnsafe` ga yoki imzosiz maydonga ishonish; bir nechta
 bog'langan o'quvchidan birini serverning o'zi tanlashi.
 
 ## Ko'rib chiqilgan muqobillar
@@ -82,7 +86,8 @@ xabar.
 
 ## Oqibatlari
 
-**Yutuq:** o'quvchi parolsiz, bir bosishda kiradi; kimlik modeli mavjud
+**Yutuq:** o'quvchi parolsiz, bir bosishda kiradi (birinchi kirish qadamlari —
+ADR-0039 — Mini App'da ham so'raladi); kimlik modeli mavjud
 eshiklardan kengaymaydi — botning parol tiklashi bilan bir xil ishonch.
 
 **Narx:** Telegram Web (brauzer) Mini App'ni iframe ichida ochadi — u yerda

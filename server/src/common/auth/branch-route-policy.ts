@@ -662,6 +662,24 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'SELF',
     reason:
+      "Keyed on `@CurrentUser('studentId')` behind `StudentCardGuard` — the " +
+      "student's own first-run data (ADR-0039): the onboarding status, gender " +
+      'and birth date on their own card, and the SMS code that proves the ' +
+      "card's number — or, behind the caller's current password, a number " +
+      'they type, which then replaces the number on their OWN card and ' +
+      'sign-in account. No student id comes from the request, and the row ' +
+      'written is always the caller card, whatever its branch.',
+    routes: [
+      'GET /student-portal/onboarding',
+      'PATCH /student-portal/onboarding/profile',
+      'POST /student-portal/onboarding/phone/change-code',
+      'POST /student-portal/onboarding/phone/send-code',
+      'POST /student-portal/onboarding/phone/verify',
+    ],
+  },
+  {
+    policy: 'SELF',
+    reason:
       'The catalogue itself is COMPANY_WIDE (see above) — these two routes moved ' +
       'out of that block because the RESPONSE is no longer just the catalogue. ' +
       "`getLevels`/`getUnit` now read `DafLessonProgress` for the caller's own " +

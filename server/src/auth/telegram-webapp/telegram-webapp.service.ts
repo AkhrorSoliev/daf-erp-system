@@ -49,11 +49,15 @@ export const NOT_LINKED_STUDENT_MESSAGE =
  * Telegram Mini App ichidan kirish (ADR-0040).
  *
  * Kim ekanini Telegram aytadi (`initData` imzosi), qaysi o'quvchi ekanini
- * `Student.telegramChatId` aytadi. Bu bog'lanish faqat bot orqali, odam O'Z
- * telefon raqamini «📱 Telefon raqamni yuborish» tugmasi bilan isbotlagandan
- * keyin yoziladi (ro'yxatdan o'tish, «Parolni tiklash», «To'lovlar», mock
- * imtihon) — botning parol tiklashi ham aynan shu bog'lanishga ishonadi, ya'ni
- * bu eshik mavjudlaridan kengroq emas.
+ * `Student.telegramChatId` aytadi. Bu bog'lanish faqat bot orqali, odam o'z
+ * Telegram raqamini «📱 Telefon raqamni yuborish» tugmasi bilan yuborganda va u
+ * kartadagi raqamga mos kelganda yoziladi (ro'yxatdan o'tish, «Parolni
+ * tiklash», «To'lovlar», mock imtihon) — botning parol tiklashi ham aynan shu
+ * bog'lanishga ishonadi, ya'ni bu eshik mavjudlaridan kengroq emas.
+ *
+ * Bu kirish karta raqamini TASDIQLAMAYDI (ADR-0039): `markPhoneVerified` ni
+ * faqat SMS yo'llari chaqiradi, birinchi kirish qadamlari Mini App'da ham
+ * so'raladi.
  *
  * Bog'lanish yo'q bo'lsa — hech qanday zaxira yo'l yo'q: telefon/parol
  * so'ralmaydi, «ro'yxatdan o'tmagan» javobi qaytadi.

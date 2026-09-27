@@ -8,7 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Baloo2_600SemiBold, Baloo2_700Bold, Baloo2_800ExtraBold } from '@expo-google-fonts/baloo-2';
 import {
@@ -20,6 +20,7 @@ import {
 } from '@expo-google-fonts/nunito';
 
 import { queryClient } from '@/api/query-client';
+import { onboardingGate, onboardingKey, useOnboarding } from '@/api/queries/use-onboarding';
 import { useAuth } from '@/auth/auth-store';
 import { useLanguageStore } from '@/i18n';
 import { useThemeStore } from '@/design/theme';
@@ -92,31 +93,63 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <ThemeProvider value={navTheme}>
             <ThemeTransitionProvider>
-            {!ready ? (
-              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
-                <ActivityIndicator color={tokens.color.primary} />
-              </View>
-            ) : (
-              <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
-                <Stack.Protected guard={status === 'authenticated'}>
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen name="attendance" />
-                  <Stack.Screen name="profile" />
-                  <Stack.Screen name="settings" />
-                  <Stack.Screen name="faq" />
-                  <Stack.Screen name="about" />
-                  <Stack.Screen name="scan" options={{ presentation: 'modal' }} />
-                </Stack.Protected>
-                <Stack.Protected guard={status !== 'authenticated'}>
-                  <Stack.Screen name="(auth)" />
-                </Stack.Protected>
-              </Stack>
-            )}
+            {!ready ? <Splash /> : <RootStack />}
             <StatusBar style={isDark ? 'light' : 'dark'} />
             </ThemeTransitionProvider>
           </ThemeProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  );
+}
+
+function Splash() {
+  const colors = useColors();
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
+      <ActivityIndicator color={tokens.color.primary} />
+    </View>
+  );
+}
+
+/**
+ * The navigator. A signed-in student reaches the app only once the first-run
+ * steps are done (ADR-0039) — until then `onboarding` is the one screen the
+ * guards leave open, so a deep link or a push lands there too.
+ */
+function RootStack() {
+  const colors = useColors();
+  const status = useAuth((s) => s.status);
+  const authed = status === 'authenticated';
+  const client = useQueryClient();
+  const onboarding = useOnboarding(authed);
+  const gate = authed ? onboardingGate(onboarding) : 'done';
+
+  // The answer belongs to the account that asked: a student signing in after
+  // someone else signed out must not inherit their status from the cache.
+  useEffect(() => {
+    if (!authed) client.removeQueries({ queryKey: onboardingKey });
+  }, [authed, client]);
+
+  if (gate === 'loading') return <Splash />;
+
+  return (
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+      <Stack.Protected guard={authed && gate === 'done'}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="attendance" />
+        <Stack.Screen name="profile" />
+        <Stack.Screen name="settings" />
+        <Stack.Screen name="faq" />
+        <Stack.Screen name="about" />
+        <Stack.Screen name="scan" options={{ presentation: 'modal' }} />
+      </Stack.Protected>
+      <Stack.Protected guard={authed && gate === 'required'}>
+        <Stack.Screen name="onboarding" />
+      </Stack.Protected>
+      <Stack.Protected guard={!authed}>
+        <Stack.Screen name="(auth)" />
+      </Stack.Protected>
+    </Stack>
   );
 }

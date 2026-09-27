@@ -88,7 +88,7 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0028](0028-bloklangan-xodim-hech-narsa-bermaydi.md) | Bloklangan xodim hech narsa bera olmaydi, uning tokeni keyingi so'rovda to'xtaydi | Qabul qilindi | 2026-09-24 |
 | [0029](0029-xodim-havolasi-uch-kun-ishlaydi.md) | Xodim havolasi uch kun ishlaydi, berilgan vaqti imzo ichida | Qabul qilindi | 2026-09-24 |
 | [0030](0030-parol-ozgarsa-boshqa-kirishlar-toxtaydi.md) | Parol o'zgarsa, hisobning boshqa kirishlari keyingi so'rovda to'xtaydi | Qabul qilindi | 2026-09-24 |
-| [0031](0031-oz-kirish-kalitingiz-joriy-parol-bilan-ozgaradi.md) | O'z kirish kalitingiz faqat joriy parol bilan o'zgaradi | Qabul qilindi | 2026-09-24 |
+| [0031](0031-oz-kirish-kalitingiz-joriy-parol-bilan-ozgaradi.md) | O'z kirish kalitingiz faqat joriy parol bilan o'zgaradi | Qabul qilindi; o'quvchi qismi — ADR-0039 | 2026-09-24 |
 | [0032](0032-oquvchi-kirish-raqami-kartaga-ergashadi.md) | O'quvchining kirish raqami kartadagi raqamga ergashadi | Qabul qilindi | 2026-09-24 |
 | [0033](0033-oquvchi-hisobi-kartasi-bilan-yopiladi.md) | O'quvchining kirish hisobi kartasi bilan birga yopiladi va qaytadi | Qabul qilindi | 2026-09-24 |
 | [0034](0034-direktor-oz-filiali-ustozlariga-stavka-qoyadi.md) | Filial direktori o'z filiali ustozlariga stavka qo'yadi | Qabul qilindi | 2026-09-24 |
@@ -96,6 +96,7 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0036](0036-guruh-yopilganda-muzlatilgan-yozilish-ham-yopiladi.md) | Guruh yopilganda muzlatilgan yozilish ham yopiladi; tugallangan guruhda u DROPPED bo'ladi | Qabul qilindi | 2026-09-26 |
 | [0037](0037-tolovlar-hisoboti-pul-qoidalari.md) | To'lovlar hisoboti: pul dars o'tilgan oyga yoziladi, ichki tuzatishlar darsga qo'shiladi, taqsimot FIFO | Qabul qilindi | 2026-09-26 |
 | [0038](0038-foyda-tarkibi-dars-narxi-va-xodim-filiali.md) | Foyda tarkibi: dars o'zini yechgan hisob narxida, xodim bitta filialda sanaladi; ochiq oy oxiri taxmin qilinadi | Qabul qilindi | 2026-09-27 |
+| [0039](0039-oquvchi-birinchi-kirishda-telefon-jins-yosh.md) | O'quvchi ilovaga kirishdan oldin telefonini SMS bilan tasdiqlaydi, jinsi va tug'ilgan sanasini beradi | Qabul qilindi | 2026-09-27 |
 | [0040](0040-mini-app-ichida-faqat-telegram-orqali-kirish.md) | Mini App ichida o'quvchi faqat Telegram orqali kiradi; bog'lanmagan akkauntga xabar ko'rsatiladi | Qabul qilindi | 2026-09-27 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.

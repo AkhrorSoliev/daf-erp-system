@@ -9,6 +9,7 @@ import {
   PortalPasswordResetService,
   ResettableTarget,
 } from '../../common/password-reset';
+import { markPhoneVerified } from '../../students/shared/mark-phone-verified';
 
 // ── OTP policy (see docs/sms-password-reset-plan.md) ────────────────────────
 const OTP_TTL_SEC = 5 * 60; // code lives 5 minutes
@@ -268,6 +269,21 @@ export class ForgotPasswordService {
       newPassword,
       'SMS orqali tiklandi',
     );
+    // The code reached this number and came back, so the student has proved
+    // it — the portal's first-run SMS step is not asked again (ADR-0039).
+    // Best-effort: the password is already changed, and a failure here costs
+    // one extra SMS later, not the reset.
+    if (target.studentId) {
+      await markPhoneVerified(
+        this.prisma,
+        target.studentId,
+        payload.phone,
+      ).catch((e) =>
+        this.logger.warn(
+          `Telefon tasdig'i yozilmadi (student ${target.studentId}): ${(e as Error).message}`,
+        ),
+      );
+    }
     return { message: "Parol muvaffaqiyatli o'zgartirildi" };
   }
 

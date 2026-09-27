@@ -1,6 +1,7 @@
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { UsersController } from '../../users/users.controller';
 import { StudentPortalController } from '../../students/student-portal.controller';
+import { StudentOnboardingController } from '../../students/onboarding/student-onboarding.controller';
 import { RolesGuard } from './roles.guard';
 import { OwnPasswordAttemptGuard } from './own-password-attempt.guard';
 
@@ -14,6 +15,10 @@ const doors: Array<[string, (...args: any[]) => unknown]> = [
   [
     'PATCH /student-portal/password',
     StudentPortalController.prototype.changePassword,
+  ],
+  [
+    'POST /student-portal/onboarding/phone/change-code',
+    StudentOnboardingController.prototype.sendChangeCode,
   ],
 ];
 
