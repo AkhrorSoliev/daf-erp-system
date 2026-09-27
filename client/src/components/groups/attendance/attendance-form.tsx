@@ -27,6 +27,7 @@ import { lessonWindowState, type LessonWindowState } from "@/lib/lesson-window";
 import { useAuth } from "@/hooks/use-auth";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { QrAttendanceDialog } from "./qr-attendance-dialog";
+import { RecordPaymentDialog } from "@/components/payments/record-payment-dialog";
 import { AttendanceStudentRow } from "./attendance-student-row";
 import { AttendanceDebtorsSection } from "./attendance-debtors-section";
 import { windowBanner } from "./attendance-window";
@@ -80,6 +81,10 @@ export function AttendanceForm({
   const [submitting, setSubmitting] = useState(false);
   const [expandedNote, setExpandedNote] = useState<number | null>(null);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  // Admin collecting the payment that admits a blocked student (ADR-0045).
+  const [paymentFor, setPaymentFor] = useState<StudentAttendance | null>(
+    null,
+  );
   // Oldindan belgilash rejimida admin "Hozir to'liq davomat olish" bossa,
   // bu bayroq finalize rejimiga o'tkazadi.
   const [forceFinalizeMode, setForceFinalizeMode] = useState(false);
@@ -204,6 +209,8 @@ export function AttendanceForm({
     setEntries((prev) => {
       const next = new Map(prev);
       for (const student of students) {
+        // Contract 3.2: a blocked student cannot be marked present.
+        if (student.admission && !student.admission.admitted) continue;
         const existing = next.get(student.studentId);
         next.set(student.studentId, {
           ...existing!,
@@ -297,9 +304,12 @@ export function AttendanceForm({
     }
   };
 
+  // A student contract 3.2 keeps out cannot be marked, so they never count
+  // as unmarked (a seeded «Sababli» still goes out with the save).
   const unmarkedStudents = students.filter((s) => {
     const entry = entries.get(s.studentId);
-    return !entry?.status;
+    if (entry?.status) return false;
+    return !(s.admission && !s.admission.admitted);
   });
 
   const handleSave = async () => {
@@ -526,6 +536,7 @@ export function AttendanceForm({
               }
               onPlanMark={planMark}
               onPlanRemove={planRemove}
+              onCollectPayment={isAdmin ? setPaymentFor : undefined}
             />
           ))}
         </div>
@@ -567,6 +578,36 @@ export function AttendanceForm({
           onPaymentSuccess={fetchAttendance}
         />
       )}
+
+      {/* To'lov: qo'yilmagan o'quvchini darsga kiritadigan to'lov (ADR-0045) */}
+      <RecordPaymentDialog
+        open={paymentFor !== null}
+        onOpenChange={(open) => {
+          if (!open) setPaymentFor(null);
+        }}
+        preSelectedStudent={
+          paymentFor
+            ? {
+                id: paymentFor.studentId,
+                firstName: paymentFor.firstName,
+                lastName: paymentFor.lastName,
+                balance: paymentFor.balance ?? 0,
+              }
+            : null
+        }
+        suggestedAmount={
+          paymentFor?.admission
+            ? Math.max(
+                1000,
+                Math.ceil(paymentFor.admission.shortfall / 1000) * 1000,
+              )
+            : undefined
+        }
+        onSuccess={() => {
+          setPaymentFor(null);
+          fetchAttendance();
+        }}
+      />
 
       {/* QR Davomat Dialog */}
       <QrAttendanceDialog
