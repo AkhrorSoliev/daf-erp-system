@@ -19,7 +19,10 @@ export type FrageFormat =
   | "DIALOG_LUECKE"
   | "AUDIO_WORT"
   | "WORT_TIPPEN"
-  | "HOEREN_WAHL";
+  | "HOEREN_WAHL"
+  | "BILD_WORT"
+  | "AUDIO_BILD"
+  | "BILD_TIPPEN";
 
 /**
  * Bu — mijozga (CEO ko'rigi) ketadigan savol, TO'G'RI JAVOB BILAN.
@@ -37,4 +40,9 @@ export interface VorschauFrage {
   richtig: string;
   titel?: string | null;
   audioUrl: string | null;
+  /**
+   * `BILD_TIPPEN`: the picture the student types from. In `BILD_WORT` and
+   * `AUDIO_BILD` the pictures are the `options` (URLs) instead.
+   */
+  bildUrl?: string | null;
 }

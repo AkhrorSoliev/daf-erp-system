@@ -3,13 +3,11 @@ import { randomBytes } from 'crypto';
 /**
  * Audio fayl kaliti — R2 dagi manzilning bir qismi.
  *
- * NEGA TASODIFIY, `media-keys.ts` dagi rasm kaliti kabi `sourceId` dan
- * EMAS. Rasm kaliti `u01-s1-hallo` → `daf/img/u01-s1-hallo.jpg` bo'lib
- * yasaladi va bu XAVFSIZ, chunki `BILD_WORT` da so'z SAVOL, rasm esa
- * javob — manzilda so'z turishi hech narsani ochmaydi.
- *
- * Audio buning TESKARISI: `AUDIO_WORT` va `WORT_TIPPEN` da so'z
- * javobning O'ZI. O'sha sxema to'g'ri javobni manzilda yozib berardi.
+ * WHY RANDOM. In `AUDIO_WORT` and `WORT_TIPPEN` the word IS the answer, so
+ * a key derived from the `sourceId` would print the answer in the URL.
+ * Picture keys are random for the same reason (`bild-keys.ts`). This comment
+ * used to call word-derived picture keys safe; they are not — in `BILD_WORT`
+ * the options are pictures, so a word in each URL names the right option.
  *
  * Xesh ham yordam bermaydi: `AUDIO_WORT` da 4 ta variant ekranda
  * ko'rinib turadi, ya'ni har birini xeshlab manzil bilan solishtirish

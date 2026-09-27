@@ -3237,6 +3237,9 @@ model DafLexeme {
   /// Rasm chizib bo'ladimi. `false` — abstrakt so'z (weil, Verantwortung).
   /// Rasmli savol turlari faqat `true` bo'lganlarga beriladi.
   picturable        Boolean               @default(false)
+  /// The picture names this word alone, so the student may type the word
+  /// from it (`BILD_TIPPEN`). Source: `content/daf/a1/bild-plan.json`.
+  bildTippen        Boolean               @default(false)
   /// Qaysi mavzuli bo'limga tegishli. Eski DiB so'zlarida `null`.
   sectionId         Int?
   /// Ovoz yasovchiga yuboriladigan matn. Yakka harf va raqamni TTS
