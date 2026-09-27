@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { darajaFoizi, qisqaRaqam, yolQatorMetasi, yolTugunlari } from "./yol-tuzilishi";
+import {
+  darajaFoizi,
+  qisqaRaqam,
+  yolMoljali,
+  yolQatorMetasi,
+  yolTugunlari,
+} from "./yol-tuzilishi";
 
 const seans = (id: number, done: boolean) => ({
   id, order: id, kind: "SECTION_A" as const, titleDe: "", titleUz: null,
@@ -111,6 +117,61 @@ describe("yolTugunlari", () => {
     // 100 — done, 999 (yakuniy sinov) — active, 200 — hali qulf: unit 1
     // yakuniy sinovi topshirilmaguncha unit 2 boshlanmaydi.
     expect(seanslar.map((s) => s.holat)).toEqual(["done", "active", "locked"]);
+  });
+});
+
+describe("yolMoljali", () => {
+  it("navbatdagi seans va O'Z unitini topadi, birinchi unitni emas", () => {
+    const t = yolTugunlari([
+      lvl("A1", [
+        unit(1, [bolim(1, [seans(100, true), seans(101, true)])]),
+        unit(2, [bolim(2, [seans(200, true), seans(201, false)])]),
+      ]),
+    ]);
+    const m = yolMoljali(t);
+    expect(m).not.toBeNull();
+    expect(t[m!.seansIndex].id).toBe(201);
+    expect(t[m!.unitIndex]).toMatchObject({ tur: "unit", id: 2 });
+  });
+
+  it("yakuniy sinov navbatda bo'lsa — o'sha unitda qoladi", () => {
+    const t = yolTugunlari([
+      lvl("A1", [
+        unit(1, [bolim(1, [seans(100, true)])], seans(999, false)),
+        unit(2, [bolim(2, [seans(200, false)])]),
+      ]),
+    ]);
+    const m = yolMoljali(t)!;
+    expect(t[m.seansIndex].id).toBe(999);
+    expect(t[m.unitIndex].id).toBe(1);
+  });
+
+  it("keyingi daraja unitiga o'tganda o'sha daraja unitini beradi", () => {
+    const t = yolTugunlari([
+      lvl("A1", [unit(1, [bolim(1, [seans(100, true)])])]),
+      lvl("A2", [unit(2, [bolim(2, [seans(200, false)])])]),
+    ]);
+    const m = yolMoljali(t)!;
+    expect(t[m.seansIndex].id).toBe(200);
+    expect(t[m.unitIndex]).toMatchObject({ tur: "unit", id: 2, daraja: "A2" });
+  });
+
+  it("hammasi tugagan — yo'l boshiga emas, OXIRGI seansga", () => {
+    const t = yolTugunlari([
+      lvl("A1", [
+        unit(1, [bolim(1, [seans(100, true)])]),
+        unit(2, [bolim(2, [seans(200, true), seans(201, true)])]),
+      ]),
+      lvl("A2", []),
+    ]);
+    const m = yolMoljali(t)!;
+    expect(t[m.seansIndex].id).toBe(201);
+    expect(t[m.unitIndex].id).toBe(2);
+  });
+
+  it("seans umuman yo'q — olib boradigan joy ham yo'q", () => {
+    expect(yolMoljali(yolTugunlari([lvl("A1", [unit(1, [])]), lvl("A2", [])]))).toBeNull();
+    expect(yolMoljali([])).toBeNull();
   });
 });
 

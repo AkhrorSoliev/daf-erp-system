@@ -7,7 +7,13 @@ import { cn } from "@/lib/utils";
 import { LessonNode, type LessonNodeTone } from "../../lumio";
 import { useFortschritt } from "../queries";
 import type { LernenLevel } from "../types";
-import { yolQatorMetasi, yolTugunlari, type YolTugun } from "./yol-tuzilishi";
+import { useYolSkroll } from "./yol-skroll";
+import {
+  yolMoljali,
+  yolQatorMetasi,
+  yolTugunlari,
+  type YolTugun,
+} from "./yol-tuzilishi";
 
 /** Daraja rangi — CEO tasdiqlagan uchlik: A1 koral, A2 teal, B1 uzum. */
 const DARAJA_TONE: Record<string, LessonNodeTone> = {
@@ -62,10 +68,19 @@ function DarajaYorligi({ matn }: { matn: string }) {
  * shunchaki "bu unitda nima bor" degan xulosa, o'quvchi uni istalgan
  * vaqt ko'ra oladi.
  */
-function UnitQatori({ tugun, onClick }: { tugun: YolTugun; onClick: () => void }) {
+function UnitQatori({
+  tugun,
+  onClick,
+  ref,
+}: {
+  tugun: YolTugun;
+  onClick: () => void;
+  ref?: React.Ref<HTMLButtonElement>;
+}) {
   const tone = UNIT_QATOR_TONE[tugun.daraja] ?? UNIT_QATOR_TONE.A1;
   return (
     <button
+      ref={ref}
       type="button"
       onClick={onClick}
       className={cn(
@@ -93,14 +108,16 @@ function SeansTuguni({
   align,
   ostyozuvKorinsinmi,
   onClick,
+  ref,
 }: {
   tugun: YolTugun;
   align: (typeof TEKISLASH)[number];
   ostyozuvKorinsinmi: boolean;
   onClick?: () => void;
+  ref?: React.Ref<HTMLDivElement>;
 }) {
   return (
-    <div className={cn("flex", align)}>
+    <div ref={ref} className={cn("flex", align)}>
       <div className="flex flex-col items-center gap-1.5">
         {ostyozuvKorinsinmi && tugun.ostyozuv ? (
           <p className="max-w-[132px] truncate text-center text-[11px] font-bold uppercase tracking-wide text-ink-400">
@@ -134,6 +151,13 @@ export function LernenYol({ levels }: LernenYolProps) {
   // hisoblanadi va sinaladi (`yol-tuzilishi.test.ts`) — bu komponent faqat
   // bosqich raqamini Tailwind tekislanish sinfiga aylantiradi.
   const zigzag = React.useMemo(() => yolQatorMetasi(tugunlar), [tugunlar]);
+  // O'quvchi yetgan unit va seans — sahifa ochilganda shu yerga silliq
+  // olib boriladi (`useYolSkroll`). Kalit seans ID'si: u o'zgarmaguncha
+  // qayta so'rovlar sahifani qimirlatmaydi.
+  const moljal = React.useMemo(() => yolMoljali(tugunlar), [tugunlar]);
+  const { unitRef, seansRef } = useYolSkroll(
+    moljal ? tugunlar[moljal.seansIndex].id : null,
+  );
 
   const fortschritt = useFortschritt();
   // Dizayn §4: hech qanday so'z muddati kelmagan bo'lsa tugma XIRA va
@@ -189,6 +213,7 @@ export function LernenYol({ levels }: LernenYolProps) {
             return (
               <UnitQatori
                 key={`unit-${tugun.id}`}
+                ref={i === moljal?.unitIndex ? unitRef : undefined}
                 tugun={tugun}
                 onClick={() => router.push(`/portal/lernen/units/${tugun.id}`)}
               />
@@ -203,6 +228,7 @@ export function LernenYol({ levels }: LernenYolProps) {
           return (
             <SeansTuguni
               key={tugun.tur === "seans" ? `seans-${tugun.id}` : `tez-orada-${i}-${tugun.daraja}`}
+              ref={i === moljal?.seansIndex ? seansRef : undefined}
               tugun={tugun}
               align={align}
               ostyozuvKorinsinmi={meta.ostyozuvKorinsinmi}

@@ -166,6 +166,43 @@ export function yolTugunlari(levels: YolDarajaKirish[]): YolTugun[] {
   return tugunlar;
 }
 
+/** O'quvchi yo'lda qayerga yetgani — `tugunlar` ichidagi ikki o'rin. */
+export interface YolMoljal {
+  /** O'quvchi turgan seans tuguni. */
+  seansIndex: number;
+  /** O'sha seans tegishli unitning sarlavha qatori. */
+  unitIndex: number;
+}
+
+/**
+ * Sahifa ochilganda qaysi unitga olib borilishini aniqlaydi.
+ *
+ * O'quvchi turgan joy — `active` seans (butun yo'lda bittadan ortiq
+ * bo'lmaydi, `yolTugunlari` shunday quradi). Hammasi tugagan bo'lsa
+ * `active` yo'q — u holda o'quvchi yetib kelgan joy OXIRGI seans, yo'l
+ * boshiga qaytarilmaydi. Seans umuman yo'q bo'lsa (hamma daraja
+ * "tez orada") olib boradigan joy ham yo'q.
+ */
+export function yolMoljali(tugunlar: YolTugun[]): YolMoljal | null {
+  let seansIndex = tugunlar.findIndex(
+    (t) => t.tur === "seans" && t.holat === "active",
+  );
+  if (seansIndex === -1) {
+    for (let i = tugunlar.length - 1; i >= 0; i -= 1) {
+      if (tugunlar[i].tur === "seans") {
+        seansIndex = i;
+        break;
+      }
+    }
+  }
+  if (seansIndex === -1) return null;
+
+  for (let i = seansIndex - 1; i >= 0; i -= 1) {
+    if (tugunlar[i].tur === "unit") return { seansIndex, unitIndex: i };
+  }
+  return null;
+}
+
 export interface YolQatorMeta {
   /**
    * Zigzag bosqichi — faqat `seans`/`tez-orada` tugunlari uchun oshib
