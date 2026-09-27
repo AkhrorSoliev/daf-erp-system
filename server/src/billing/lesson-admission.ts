@@ -25,6 +25,12 @@ export interface LessonAdmission {
    * month in this group the current balance reaches. Null otherwise.
    */
   paidThrough: string | null;
+  /**
+   * The student's payments reach this lesson (`balance + heldAfter(day) ≥ 0`).
+   * Only a FIRST_LESSON can be admitted without it: a debtor ABSENT there
+   * earns the teacher nothing until they pay (ADR-0046).
+   */
+  covered: boolean;
 }
 
 export const ADMITTED_WITHOUT_RULE: LessonAdmission = {
@@ -32,6 +38,7 @@ export const ADMITTED_WITHOUT_RULE: LessonAdmission = {
   reason: 'NOT_APPLIED',
   shortfall: 0,
   paidThrough: null,
+  covered: true,
 };
 
 /** One CHARGED month charge of an ACTIVE enrollment. */
@@ -101,6 +108,7 @@ export function lessonAdmission(input: {
   // the way instead of blocking on missing data.
   if (lessons.length === 0) return ADMITTED_WITHOUT_RULE;
 
+  const reach = input.balance + heldAfter(input.charges, input.lessonDay);
   const secondLesson = paymentDueDate(lessons);
   if (secondLesson === null || input.lessonDay < secondLesson) {
     return {
@@ -108,16 +116,17 @@ export function lessonAdmission(input: {
       reason: 'FIRST_LESSON',
       shortfall: 0,
       paidThrough: null,
+      covered: reach >= 0,
     };
   }
 
-  const reach = input.balance + heldAfter(input.charges, input.lessonDay);
   if (reach < 0) {
     return {
       admitted: false,
       reason: 'NOT_PAID',
       shortfall: -reach,
       paidThrough: null,
+      covered: false,
     };
   }
 
@@ -130,7 +139,13 @@ export function lessonAdmission(input: {
       paidThrough = day;
     }
   }
-  return { admitted: true, reason: 'PAID', shortfall: 0, paidThrough };
+  return {
+    admitted: true,
+    reason: 'PAID',
+    shortfall: 0,
+    paidThrough,
+    covered: true,
+  };
 }
 
 export interface PaymentReach {

@@ -60,6 +60,19 @@ describe('lessonAdmission', () => {
       reason: 'FIRST_LESSON',
       shortfall: 0,
       paidThrough: null,
+      covered: false,
+    });
+  });
+
+  it('marks a first lesson the payments reach as covered (ADR-0046)', () => {
+    // Lesson 1 costs 34 615: owing no more than the other 12 lessons is paid.
+    expect(admit(-(12 * 34615), '2026-10-02')).toMatchObject({
+      reason: 'FIRST_LESSON',
+      covered: true,
+    });
+    expect(admit(-(12 * 34615) - 1, '2026-10-02')).toMatchObject({
+      reason: 'FIRST_LESSON',
+      covered: false,
     });
   });
 
@@ -69,6 +82,7 @@ describe('lessonAdmission', () => {
       reason: 'NOT_PAID',
       shortfall: 450000 - 11 * 34615,
       paidThrough: null,
+      covered: false,
     });
   });
 
@@ -79,6 +93,7 @@ describe('lessonAdmission', () => {
       reason: 'PAID',
       shortfall: 0,
       paidThrough: '2026-10-05',
+      covered: true,
     });
   });
 
@@ -92,6 +107,7 @@ describe('lessonAdmission', () => {
       reason: 'PAID',
       shortfall: 0,
       paidThrough: '2026-10-09',
+      covered: true,
     });
   });
 

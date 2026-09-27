@@ -52,6 +52,28 @@ export class LessonAdmissionService {
     return result;
   }
 
+  /**
+   * ADR-0046 (R4): the lesson is the student's first of the month in this
+   * group and their payments do not reach it. A debtor ABSENT there earns
+   * the teacher nothing until they pay.
+   */
+  async isUnpaidFirstLesson(
+    params: { studentId: number; groupId: string; lessonDay: string },
+    client: Reader = this.prisma,
+  ): Promise<boolean> {
+    const admission = (
+      await this.forLesson(
+        {
+          groupId: params.groupId,
+          lessonDay: params.lessonDay,
+          studentIds: [params.studentId],
+        },
+        client,
+      )
+    ).get(params.studentId);
+    return admission?.reason === 'FIRST_LESSON' && !admission.covered;
+  }
+
   /** How far a payment reaches this month (payment dialog). Null: the rule does not apply. */
   async reachForPayment(params: {
     studentId: number;
