@@ -5,7 +5,10 @@ import {
   TelegramDigestRecipientKind,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { TelegramDigestQueueService } from './telegram-digest-queue.service';
+import {
+  DigestQueueDb,
+  TelegramDigestQueueService,
+} from './telegram-digest-queue.service';
 
 describe('TelegramDigestQueueService', () => {
   let service: TelegramDigestQueueService;
@@ -83,5 +86,22 @@ describe('TelegramDigestQueueService', () => {
         payload: { count: 1, total: 10000 },
       }),
     ).rejects.toThrow('db down');
+  });
+
+  it('writes through the transaction client it is given', async () => {
+    const txCreate = jest.fn().mockResolvedValue({});
+    await service.enqueue(
+      {
+        recipientKind: TelegramDigestRecipientKind.STUDENT,
+        recipientId: 10042,
+        companyId: 1001,
+        category: TelegramDigestCategory.PAYMENT_RECEIVED,
+        relatedEntityId: 'pay-1',
+        payload: receipt,
+      },
+      { telegramDigestItem: { create: txCreate } } as unknown as DigestQueueDb,
+    );
+    expect(txCreate).toHaveBeenCalledTimes(1);
+    expect(create).not.toHaveBeenCalled();
   });
 });
