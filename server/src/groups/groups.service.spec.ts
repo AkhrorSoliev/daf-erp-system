@@ -1,5 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { GroupsService } from './groups.service';
 import { GroupsReadService } from './groups-read.service';
@@ -117,6 +124,7 @@ describe('GroupsService — status methods', () => {
     statusCascadeService = {
       cascade: jest.fn().mockResolvedValue([]),
       cascadeGroupDeletion: jest.fn().mockResolvedValue({ count: 0 }),
+      cascadeGroupStatusChange: jest.fn().mockResolvedValue([]),
     };
 
     const cascadeService = {
@@ -144,6 +152,7 @@ describe('GroupsService — status methods', () => {
             recordDelete: jest.fn(),
             recordStatusChange: jest.fn(),
             recordRestore: jest.fn(),
+            emitStatusChanged: jest.fn(),
           },
         },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
@@ -160,65 +169,309 @@ describe('GroupsService — status methods', () => {
   });
 
   describe('changeStatus', () => {
-    it('updates statusEnum and sets isActive correctly for ACTIVE', async () => {
+    const NOT_CHANGED =
+      "Guruh holati o'zgarmadi, hech narsa saqlanmadi. Qayta urinib ko'ring.";
+    let tx: any;
+
+    beforeEach(() => {
+      // A client distinct from `prisma`: a write that escapes the
+      // transaction lands on the wrong object and shows up below.
+      tx = {
+        group: {
+          findFirst: jest
+            .fn()
+            .mockResolvedValue({ ...mockGroup, statusEnum: 'ACTIVE' }),
+          update: jest.fn().mockResolvedValue({
+            ...mockGroup,
+            course: { id: 'c1', name: 'Test' },
+            room: null,
+            branch: { id: 1, name: 'Branch' },
+            teachers: [],
+            _count: { enrollments: 0 },
+          }),
+        },
+      };
+      prisma.$transaction.mockImplementation((arg: any) =>
+        typeof arg === 'function' ? arg(tx) : Promise.all(arg),
+      );
+    });
+
+    it('runs the change in one Serializable transaction with the group-deletion budget', async () => {
+      await service.changeStatus(
+        'group-1',
+        { status: 'COMPLETED' as any },
+        1,
+        1001,
+      );
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+        isolationLevel: 'Serializable',
+        maxWait: 15_000,
+        timeout: 60_000,
+      });
+    });
+
+    it('writes the history, the enrollment side and the group on the transaction, and nothing outside it', async () => {
+      await service.changeStatus(
+        'group-1',
+        { status: 'CANCELLED' as any, reason: "yig'ilmadi" },
+        1,
+        1001,
+      );
+
+      expect(statusHistoryService.changeStatus).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'Group',
+          entityId: 'group-1',
+          fromStatus: 'ACTIVE',
+          toStatus: 'CANCELLED',
+          tx,
+        }),
+      );
+      expect(entityHistoryService.recordStatusChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'Group',
+          entityId: 'group-1',
+          oldValues: { status: 'ACTIVE' },
+          newValues: { status: 'CANCELLED', reason: "yig'ilmadi" },
+          tx,
+          deferredEvents: expect.any(Array),
+        }),
+      );
+      expect(
+        statusCascadeService.cascadeGroupStatusChange,
+      ).toHaveBeenCalledWith(
+        tx,
+        expect.objectContaining({
+          groupId: 'group-1',
+          status: 'CANCELLED',
+          userId: 1,
+        }),
+      );
+      expect(tx.group.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'group-1' },
+          data: expect.objectContaining({
+            statusEnum: 'CANCELLED',
+            isActive: false,
+          }),
+        }),
+      );
+      expect(prisma.group.update).not.toHaveBeenCalled();
+      expect(statusCascadeService.cascade).not.toHaveBeenCalled();
+    });
+
+    it('checks the transition against the status read inside the transaction', async () => {
+      // Outside the transaction the group still looked ACTIVE; inside it,
+      // another admin had already cancelled it.
+      prisma.group.findFirst.mockResolvedValue({
+        ...mockGroup,
+        statusEnum: 'ACTIVE',
+      });
+      tx.group.findFirst.mockResolvedValue({
+        ...mockGroup,
+        statusEnum: 'CANCELLED',
+      });
+
+      await service.changeStatus(
+        'group-1',
+        { status: 'COMPLETED' as any },
+        1,
+        1001,
+      );
+
+      expect(tx.group.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'group-1', deletedAt: null, companyId: 1001 },
+        }),
+      );
+      expect(statusHistoryService.changeStatus).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fromStatus: 'CANCELLED',
+          toStatus: 'COMPLETED',
+        }),
+      );
+    });
+
+    it('updates the group row after its students, so the response counts them as they end up', async () => {
+      await service.changeStatus(
+        'group-1',
+        { status: 'COMPLETED' as any },
+        1,
+        1001,
+      );
+
+      const cascadeOrder =
+        statusCascadeService.cascadeGroupStatusChange.mock
+          .invocationCallOrder[0];
+      const updateOrder = tx.group.update.mock.invocationCallOrder[0];
+      expect(cascadeOrder).toBeLessThan(updateOrder);
+    });
+
+    it("dates the group's change and its students' at one instant", async () => {
+      await service.changeStatus(
+        'group-1',
+        { status: 'COMPLETED' as any },
+        1,
+        1001,
+      );
+
+      const { at } =
+        statusCascadeService.cascadeGroupStatusChange.mock.calls[0][1];
+      expect(at).toBeInstanceOf(Date);
+      expect(tx.group.update.mock.calls[0][0].data.statusChangedAt).toBe(at);
+    });
+
+    it('sets isActive for ACTIVE and clears it for PAUSED', async () => {
+      tx.group.findFirst.mockResolvedValue({
+        ...mockGroup,
+        statusEnum: 'FORMING',
+      });
       await service.changeStatus(
         'group-1',
         { status: 'ACTIVE' as any },
         1,
         1001,
       );
+      expect(tx.group.update.mock.calls[0][0].data).toMatchObject({
+        statusEnum: 'ACTIVE',
+        isActive: true,
+      });
 
-      expect(prisma.group.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            statusEnum: 'ACTIVE',
-            isActive: true,
-          }),
-        }),
-      );
-    });
-
-    it('sets isActive=false for PAUSED', async () => {
-      prisma.group.findFirst.mockResolvedValue({
+      tx.group.findFirst.mockResolvedValue({
         ...mockGroup,
         statusEnum: 'ACTIVE',
       });
-
       await service.changeStatus(
         'group-1',
         { status: 'PAUSED' as any },
         1,
         1001,
       );
-
-      expect(prisma.group.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({ isActive: false }),
-        }),
-      );
+      expect(tx.group.update.mock.calls[1][0].data).toMatchObject({
+        statusEnum: 'PAUSED',
+        isActive: false,
+      });
     });
 
-    it('calls cascade after update', async () => {
+    it('emits the status events only after the transaction commits', async () => {
+      const event = {
+        entityType: 'Group',
+        entityId: 'group-1',
+        oldStatus: 'ACTIVE',
+        newStatus: 'COMPLETED',
+      };
+      entityHistoryService.recordStatusChange.mockImplementation(
+        ({ deferredEvents }: any) => {
+          deferredEvents.push(event);
+          return Promise.resolve();
+        },
+      );
+      prisma.$transaction.mockImplementation(async (fn: any) => {
+        const result = await fn(tx);
+        expect(entityHistoryService.emitStatusChanged).not.toHaveBeenCalled();
+        return result;
+      });
+
       await service.changeStatus(
         'group-1',
-        { status: 'ACTIVE' as any },
+        { status: 'COMPLETED' as any },
         1,
         1001,
       );
 
-      expect(statusCascadeService.cascade).toHaveBeenCalledWith(
-        'Group',
-        'group-1',
-        'ACTIVE',
-        1,
-      );
+      expect(entityHistoryService.emitStatusChanged).toHaveBeenCalledWith([
+        event,
+      ]);
     });
 
-    it('throws NotFoundException for missing group', async () => {
+    it('emits nothing and says nothing was saved when the enrollment side fails', async () => {
+      const errorLog = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
+      statusCascadeService.cascadeGroupStatusChange.mockRejectedValue(
+        new Error('lock timeout'),
+      );
+
+      const attempt = service.changeStatus(
+        'group-1',
+        { status: 'COMPLETED' as any },
+        1,
+        1001,
+      );
+
+      await expect(attempt).rejects.toBeInstanceOf(
+        InternalServerErrorException,
+      );
+      await expect(attempt).rejects.toThrow(NOT_CHANGED);
+      expect(entityHistoryService.emitStatusChanged).not.toHaveBeenCalled();
+      expect(errorLog).toHaveBeenCalled();
+      errorLog.mockRestore();
+    });
+
+    it.each(['P2034', 'P2028'])(
+      'answers %s (write conflict, expired transaction) with 409 and the same sentence',
+      async (code) => {
+        const errorLog = jest
+          .spyOn(Logger.prototype, 'error')
+          .mockImplementation();
+        prisma.$transaction.mockRejectedValue(
+          new Prisma.PrismaClientKnownRequestError('transaction failed', {
+            code,
+            clientVersion: '7.5.0',
+          }),
+        );
+
+        const attempt = service.changeStatus(
+          'group-1',
+          { status: 'CANCELLED' as any },
+          1,
+          1001,
+        );
+
+        await expect(attempt).rejects.toBeInstanceOf(ConflictException);
+        await expect(attempt).rejects.toThrow(NOT_CHANGED);
+        errorLog.mockRestore();
+      },
+    );
+
+    it('passes a refused transition through unchanged', async () => {
+      statusHistoryService.changeStatus.mockRejectedValue(
+        new BadRequestException(
+          `"CANCELLED" dan "COMPLETED" ga o'tish mumkin emas`,
+        ),
+      );
+
+      await expect(
+        service.changeStatus(
+          'group-1',
+          { status: 'COMPLETED' as any },
+          1,
+          1001,
+        ),
+      ).rejects.toThrow(`"CANCELLED" dan "COMPLETED" ga o'tish mumkin emas`);
+    });
+
+    it('throws NotFoundException for a missing group and opens no transaction', async () => {
       prisma.group.findFirst.mockResolvedValue(null);
 
       await expect(
         service.changeStatus('missing', { status: 'ACTIVE' as any }, 1, 1001),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('404s a group deleted between the check and the transaction', async () => {
+      tx.group.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.changeStatus(
+          'group-1',
+          { status: 'CANCELLED' as any },
+          1,
+          1001,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });
