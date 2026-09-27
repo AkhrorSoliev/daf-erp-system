@@ -9,6 +9,8 @@ import {
   markMiniAppSession,
   markMiniAppSignedIn,
   markMiniAppSignedOut,
+  onMiniAppActivated,
+  openOutsideMiniApp,
   wasSignedOutInMiniApp,
 } from "./telegram-mini-app";
 
@@ -131,5 +133,74 @@ describe("closeMiniApp", () => {
   it("does nothing outside Telegram", () => {
     vi.stubGlobal("window", {});
     expect(() => closeMiniApp()).not.toThrow();
+  });
+});
+
+// The Mini App used to send its own page to the gateway, where it stayed
+// inside Telegram's WebView and could not hand over to the Payme or Click app.
+describe("openOutsideMiniApp — a payment link from the Mini App", () => {
+  const CHECKOUT = "https://checkout.paycom.uz/bT0xMjM7YT0xMDAwMDA=";
+
+  it("hands the link to Telegram, which opens it outside the Mini App", () => {
+    const openLink = vi.fn();
+    vi.stubGlobal("window", {
+      Telegram: { WebApp: { initData: "auth_date=1&hash=x", openLink } },
+    });
+
+    expect(openOutsideMiniApp(CHECKOUT)).toBe(true);
+    expect(openLink).toHaveBeenCalledExactlyOnceWith(CHECKOUT);
+  });
+
+  it("leaves the link to the caller outside a browser and outside Telegram", () => {
+    expect(openOutsideMiniApp(CHECKOUT)).toBe(false);
+    vi.stubGlobal("window", {});
+    expect(openOutsideMiniApp(CHECKOUT)).toBe(false);
+  });
+
+  it("leaves the link to the caller when the script runs outside Telegram", () => {
+    // `/tg` opened in an ordinary browser loads the script too, with no
+    // `initData`; its `openLink` would try a popup there.
+    const openLink = vi.fn();
+    vi.stubGlobal("window", { Telegram: { WebApp: { initData: "", openLink } } });
+
+    expect(openOutsideMiniApp(CHECKOUT)).toBe(false);
+    expect(openLink).not.toHaveBeenCalled();
+  });
+
+  it("leaves the link to the caller when Telegram rejects it", () => {
+    const openLink = vi.fn(() => {
+      throw new Error("WebAppTgUrlInvalid");
+    });
+    vi.stubGlobal("window", {
+      Telegram: { WebApp: { initData: "auth_date=1&hash=x", openLink } },
+    });
+
+    expect(openOutsideMiniApp("tel:+998901234567")).toBe(false);
+  });
+});
+
+describe("onMiniAppActivated", () => {
+  it("follows Telegram's `activated` until the returned function stops it", () => {
+    const onEvent = vi.fn();
+    const offEvent = vi.fn();
+    vi.stubGlobal("window", {
+      Telegram: {
+        WebApp: { initData: "auth_date=1&hash=x", onEvent, offEvent },
+      },
+    });
+    const callback = () => {};
+
+    const stop = onMiniAppActivated(callback);
+    expect(onEvent).toHaveBeenCalledExactlyOnceWith("activated", callback);
+    expect(offEvent).not.toHaveBeenCalled();
+
+    stop();
+    expect(offEvent).toHaveBeenCalledExactlyOnceWith("activated", callback);
+  });
+
+  it("does nothing outside Telegram", () => {
+    expect(() => onMiniAppActivated(() => {})()).not.toThrow();
+    vi.stubGlobal("window", {});
+    expect(() => onMiniAppActivated(() => {})()).not.toThrow();
   });
 });
