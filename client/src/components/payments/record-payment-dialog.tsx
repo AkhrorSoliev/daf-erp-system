@@ -38,7 +38,7 @@ import {
   buildQuickAmounts,
   monthlyEnrollmentLine,
   monthlySummaryLine,
-  suggestedAmountHint,
+  suggestedAmountHintForPreview,
   type MonthlyPreviewBlock,
   type PaymentPreviewModel,
 } from "./record-payment-quick-amounts";
@@ -369,7 +369,7 @@ export function RecordPaymentDialog({
             </div>
             {suggestedAmount && suggestedAmount > 0 && (
               <p className="text-xs text-muted-foreground">
-                {suggestedAmountHint(suggestedAmount, preview?.model)}
+                {suggestedAmountHintForPreview(suggestedAmount, preview)}
               </p>
             )}
 

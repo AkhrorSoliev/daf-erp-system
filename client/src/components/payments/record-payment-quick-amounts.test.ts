@@ -5,6 +5,7 @@ import {
   monthlyEnrollmentLine,
   monthlySummaryLine,
   suggestedAmountHint,
+  suggestedAmountHintForPreview,
   type QuickAmountSource,
 } from "./record-payment-quick-amounts";
 
@@ -101,5 +102,29 @@ describe("texts", () => {
       `Qarz: ${formatPrice(120_000)} so'm · Keyingi oy: ${formatPrice(450_000)} so'm`,
     );
     expect(monthlySummaryLine({ debt: 0, nextMonthAmount: 0, discountPercent: 0, enrollments: [] })).toBeNull();
+  });
+});
+
+describe("suggestedAmountHintForPreview", () => {
+  // No preview object at all (the /payments/preview request is still loading,
+  // or it failed) must show only the base text — never the pack suffix, even
+  // though `preview?.model` at the call site would also read as `undefined`
+  // in this case. Showing the pack wording here is the bug this guards.
+  it("shows only the base text while there is no preview response yet", () => {
+    expect(suggestedAmountHintForPreview(450_000, undefined)).toBe(`Tavsiya: ${formatPrice(450_000)} so'm`);
+    expect(suggestedAmountHintForPreview(450_000, null)).toBe(`Tavsiya: ${formatPrice(450_000)} so'm`);
+  });
+
+  it("shows only the base text for a real MONTHLY preview", () => {
+    expect(suggestedAmountHintForPreview(450_000, { model: "MONTHLY" })).toBe(`Tavsiya: ${formatPrice(450_000)} so'm`);
+  });
+
+  it("keeps the pack suffix for a real preview with no model (older server) or an explicit LESSON_PACK", () => {
+    expect(suggestedAmountHintForPreview(414_000, {})).toBe(
+      `Tavsiya: ${formatPrice(414_000)} so'm — kurs to'liq tsikl narxi`,
+    );
+    expect(suggestedAmountHintForPreview(414_000, { model: "LESSON_PACK" })).toBe(
+      `Tavsiya: ${formatPrice(414_000)} so'm — kurs to'liq tsikl narxi`,
+    );
   });
 });

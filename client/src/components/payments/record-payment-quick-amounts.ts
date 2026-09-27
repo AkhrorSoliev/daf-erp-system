@@ -89,6 +89,26 @@ export function suggestedAmountHint(amount: number, model: PaymentPreviewModel |
   return model !== "MONTHLY" ? `${base} — kurs to'liq tsikl narxi` : base;
 }
 
+/**
+ * Same wording rule as `suggestedAmountHint`, but for the dialog's raw
+ * `/payments/preview` response instead of an already-unwrapped `model`.
+ *
+ * The two "no model" cases look identical at the call site (`preview?.model`
+ * is `undefined` either way) but mean opposite things: no preview object at
+ * all means the request is still loading or failed, so nothing is known yet
+ * and the pack suffix must NOT show even for a monthly student — while a real
+ * response that simply has no `model` field is the older-server case, which
+ * keeps meaning LESSON_PACK. Distinguishing them needs the preview object
+ * itself, not just its `model`.
+ */
+export function suggestedAmountHintForPreview(
+  amount: number,
+  preview: { model?: PaymentPreviewModel } | null | undefined,
+): string {
+  if (!preview) return `Tavsiya: ${formatPrice(amount)} so'm`;
+  return suggestedAmountHint(amount, preview.model);
+}
+
 export function monthlyEnrollmentLine(e: MonthlyPreviewEnrollment): string {
   const head = `${e.groupName} · ${e.courseName} · oyiga ${formatPrice(e.amount)} so'm`;
   return e.amount === e.monthlyPrice ? head : `${head} (chegirmasiz ${formatPrice(e.monthlyPrice)})`;

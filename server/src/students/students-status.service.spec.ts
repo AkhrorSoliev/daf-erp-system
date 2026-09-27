@@ -200,6 +200,25 @@ describe('StudentsStatusService', () => {
 
     it('rejects a hand-typed lesson count for a MONTHLY enrollment with 400 and moves no money', async () => {
       prisma.enrollment.count.mockResolvedValue(1);
+      // Both refund legs must have something to refund, or the "not called"
+      // assertions below would pass even if the 400 guard ran too late (i.e.
+      // after either refund had already moved money). The LESSON_PACK leg's
+      // query returns an unrelated prepaid-bearing enrollment; the MONTHLY
+      // leg's query returns one shaped for `reverseChargeForDeparture`'s
+      // `group.companyId` read.
+      prisma.enrollment.findMany.mockImplementation(({ where }: any) =>
+        Promise.resolve(
+          where?.group?.course?.paymentModel === 'LESSON_PACK'
+            ? [{ id: 'enr-pack', prepaidLessonsRemaining: 2 }]
+            : [
+                {
+                  id: 'enr-month',
+                  prepaidLessonsRemaining: 0,
+                  group: { companyId },
+                },
+              ],
+        ),
+      );
 
       await expect(
         service.changeStatus(
