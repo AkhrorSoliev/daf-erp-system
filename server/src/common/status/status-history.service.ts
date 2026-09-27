@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { isValidTransition, getAllowedTransitions } from './status-transitions';
 
@@ -10,6 +11,11 @@ interface ChangeStatusParams {
   reason?: string;
   changedById?: number;
   companyId?: number;
+  /**
+   * The caller's transaction, when the status change is one step of it: the
+   * record then commits or rolls back with the change it describes.
+   */
+  tx?: Prisma.TransactionClient;
 }
 
 @Injectable()
@@ -25,6 +31,7 @@ export class StatusHistoryService {
       reason,
       changedById,
       companyId,
+      tx,
     } = params;
 
     if (fromStatus === toStatus) {
@@ -38,7 +45,7 @@ export class StatusHistoryService {
       );
     }
 
-    await this.prisma.statusHistory.create({
+    await (tx ?? this.prisma).statusHistory.create({
       data: {
         entityType,
         entityId: String(entityId),

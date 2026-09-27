@@ -94,6 +94,25 @@ describe('StatusHistoryService', () => {
       expect(createCall.data.reason).toBeUndefined();
       expect(createCall.data.changedById).toBeUndefined();
     });
+
+    it("writes the record on the caller's transaction when given one", async () => {
+      const tx = {
+        statusHistory: {
+          create: jest.fn().mockResolvedValue({ id: 'tx-row' }),
+        },
+      };
+
+      await service.changeStatus({ ...validParams, tx: tx as any });
+
+      expect(tx.statusHistory.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          entityType: 'Student',
+          fromStatus: 'ACTIVE',
+          toStatus: 'FROZEN',
+        }),
+      });
+      expect(prisma.statusHistory.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('getHistory', () => {
