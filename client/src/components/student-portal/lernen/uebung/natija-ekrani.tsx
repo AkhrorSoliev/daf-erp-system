@@ -8,6 +8,7 @@ import { Button, Card, FadeIn, StatChip } from "../../lumio";
 import type { SeansXato } from "../seans-navbat";
 import { useFortschritt } from "../queries";
 import { orinXabari, xatoYorligi } from "./natija-xabari";
+import { DeWort } from "./de-wort";
 import { sinovKorinishi, type SinovHolati } from "./sinov-natijasi";
 
 export interface NatijaEkraniProps {
@@ -150,10 +151,19 @@ function XatoQatori({ xato }: { xato: SeansXato }) {
 
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="font-semibold text-ink-800">
-        {xatoYorligi(xato.format, xato.prompt)}
+      <span className="flex min-w-0 items-center gap-2.5 font-semibold text-ink-800">
+        {/* Picture questions: the picture, never its URL, beside the word. */}
+        {xato.bildUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={xato.bildUrl}
+            alt=""
+            className="size-10 shrink-0 rounded-lg bg-white object-cover"
+          />
+        ) : null}
+        <DeWort text={xatoYorligi(xato.format, xato.prompt)} />
       </span>
-      <span className="text-sm font-bold text-danger">{xato.richtig}</span>
+      <DeWort text={xato.richtig} className="text-sm font-bold text-danger" />
     </div>
   );
 }

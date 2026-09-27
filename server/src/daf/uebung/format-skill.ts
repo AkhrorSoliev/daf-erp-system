@@ -44,6 +44,11 @@ export const FORMAT_SKILL: Record<FrageFormat, DafSkill> = {
   // Suhbatni eshitib savolga javob — tinglash.
   HOEREN_WAHL: 'HOEREN',
   WORT_TIPPEN: 'SCHREIBEN',
+  // Picture formats: reading the word to its picture is vocabulary, hearing
+  // it is listening, typing it from the picture is writing.
+  BILD_WORT: 'WORTSCHATZ',
+  AUDIO_BILD: 'HOEREN',
+  BILD_TIPPEN: 'SCHREIBEN',
 };
 
 /**

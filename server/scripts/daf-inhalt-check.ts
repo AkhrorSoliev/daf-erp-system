@@ -15,6 +15,12 @@ import {
   type DialogAudioManifest,
 } from '../src/daf/inhalt/dialog-audio';
 import {
+  bildPlanFuerUnit,
+  validateBildPlan,
+  type BildPlan,
+} from '../src/daf/inhalt/bild-plan';
+import type { BildManifest } from '../src/daf/media/bild-keys';
+import {
   sectionsInCourseOrder,
   knownWordsBySection,
   hilfsSetFor,
@@ -72,6 +78,17 @@ function main(): void {
           ? read<RedemittelFile>(code, 'redemittel.json')
           : null,
       ),
+    );
+
+    // Pictures: both files are optional until pictures are made.
+    const plan: BildPlan = existsSync(join(A1, 'bild-plan.json'))
+      ? read<BildPlan>('bild-plan.json')
+      : {};
+    const bilder: BildManifest = existsSync(join(A1, 'bilder.json'))
+      ? read<BildManifest>('bilder.json')
+      : {};
+    problems.push(
+      ...validateBildPlan(bildPlanFuerUnit(plan, code), w.woerter, bilder),
     );
   }
 

@@ -19,6 +19,29 @@ import {
 import { boshlangichFormat } from "./section-detail-utils";
 import type { FrageFormat, VorschauFrage } from "./media-fragen-types";
 
+/**
+ * Picture options as thumbnails, the right one framed green — a URL list
+ * would tell the CEO nothing about whether the distractors are fair.
+ */
+function RasmVariantlar({ options, richtig }: { options: string[]; richtig: string }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((url) => (
+        // eslint-disable-next-line @next/next/no-img-element -- R2 URL, fixed small size
+        <img
+          key={url}
+          src={url}
+          alt=""
+          className={cn(
+            "size-16 rounded-md border-2 object-cover",
+            url === richtig ? "border-emerald-500" : "border-transparent opacity-80",
+          )}
+        />
+      ))}
+    </div>
+  );
+}
+
 /** To'g'ri javobni ajratib ko'rsatadi — bu panelning butun maqsadi. */
 function ToGriJavob({ children }: { children: string }) {
   return (
@@ -153,7 +176,20 @@ function SavolQatori({ f }: { f: VorschauFrage }) {
 
       {shakl === "MATN" && <div className="text-sm">{f.prompt}</div>}
 
-      {shakl === "JUFT" ? (
+      {shakl === "RASM" && (
+        <div className="space-y-1.5">
+          {f.audioUrl && <OvozTugmasi url={f.audioUrl} autoPlay={false} compact />}
+          {f.prompt && <div className="text-sm">{f.prompt}</div>}
+          {f.bildUrl && (
+            // eslint-disable-next-line @next/next/no-img-element -- R2 URL, fixed small size
+            <img src={f.bildUrl} alt="" className="size-20 rounded-md border object-cover" />
+          )}
+        </div>
+      )}
+
+      {shakl === "RASM" && f.options.length > 0 ? (
+        <RasmVariantlar options={f.options} richtig={f.richtig} />
+      ) : shakl === "JUFT" ? (
         // Juftlar `richtig`dan TO'G'RIDAN-TO'G'RI o'qiladi
         // (`juftlarniAjrat`) — bu ham `VariantlarRoyxati`dagi kabi
         // "options bilan solishtirib topish" emas, o'zi to'liq javob.
@@ -177,7 +213,7 @@ function SavolQatori({ f }: { f: VorschauFrage }) {
       {/* `JUFT`da variantlar ro'yxati qo'shimcha hech narsa aytmaydi —
           yuqoridagi juftlar allaqachon TO'LIQ javob; qolgan uch shaklda
           esa chalg'ituvchilarni ko'rish uchun qoladi. */}
-      {shakl !== "JUFT" && (
+      {shakl !== "JUFT" && shakl !== "RASM" && (
         <VariantlarRoyxati options={f.options} richtig={f.richtig} />
       )}
 

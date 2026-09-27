@@ -7,7 +7,7 @@ import type { FrageFormat, VorschauFrage } from "./media-fragen-types";
  * o'zini (fetch, audio) render qilmasdan sinash mumkin
  * (`client/CLAUDE.md`: vitest, komponent render yo'q).
  */
-export type VorschauShakli = "OVOZ" | "JUFT" | "DIALOG" | "MATN" | "HOEREN";
+export type VorschauShakli = "OVOZ" | "JUFT" | "DIALOG" | "MATN" | "HOEREN" | "RASM";
 
 /**
  * `Record<FrageFormat, ...>` ATAYLAB, `switch`+`default` EMAS — server
@@ -38,6 +38,11 @@ const VORSCHAU_SHAKLI: Record<FrageFormat, VorschauShakli> = {
   WORT_TIPPEN: "OVOZ",
   // Audio + savol matni birga: suhbat karnagi, ostida savolning o'zi.
   HOEREN_WAHL: "HOEREN",
+  // Picture formats: the options (or the question) are pictures, so they are
+  // drawn as thumbnails instead of URLs.
+  BILD_WORT: "RASM",
+  AUDIO_BILD: "RASM",
+  BILD_TIPPEN: "RASM",
 };
 
 export function vorschauShakli(format: FrageFormat): VorschauShakli {

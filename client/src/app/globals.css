@@ -93,6 +93,9 @@
   --color-warning: var(--warning);
   --color-info: var(--info);
   --color-danger: var(--danger);
+  --color-artikel-der: var(--artikel-der);
+  --color-artikel-die: var(--artikel-die);
+  --color-artikel-das: var(--artikel-das);
   --radius-card: var(--r-lg);
   --radius-feature: var(--r-xl);
   --radius-pill: var(--r-pill);
@@ -320,6 +323,13 @@
   --info: #2e97ff;
   --danger: #f0513a;
 
+  /* Article colours: der blue, die red, das green. Darker than the brand
+     hues so a small bold article keeps 4.5:1 on white and on the tinted
+     answer panels. */
+  --artikel-der: #1560bd;
+  --artikel-die: #c62828;
+  --artikel-das: #137a45;
+
   /* --- Radii --- */
   --r-xs: 8px;
   --r-sm: 12px;
@@ -418,6 +428,10 @@
   --bg-tint: #16384a;
   --line: #24465a;
   --line-strong: #30566e;
+
+  --artikel-der: #6fb3ff;
+  --artikel-die: #ff8a80;
+  --artikel-das: #5fd394;
 
   /* Neutral clay lips must read DARKER than the surface in dark mode. */
   --clay-neutral: 0 5px 0 #071820, 0 12px 22px rgba(0, 0, 0, 0.35);
