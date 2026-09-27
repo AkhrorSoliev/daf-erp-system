@@ -704,9 +704,21 @@ export class TransactionsWriteService {
       cashSlices?: { cashAccountId: string; amount: number }[];
       /** Ledger + cash-journal text. Defaults to the plain payout wording. */
       description?: string;
+      /**
+       * The payout happened before the payee's branch opened its cash journal
+       * (accounts start at 0 with no opening balance), so there is no drawer
+       * row the money could have left. The ledger row and the balance change
+       * are still written; no `CashMovement` is. Contradicts `cashSlices`.
+       */
+      predatesCashJournal?: boolean;
     },
     tx?: Prisma.TransactionClient,
   ) {
+    if (params.predatesCashJournal && params.cashSlices?.length) {
+      throw new Error(
+        "Kassa jurnalidan oldingi to'lovga kassa hisobi berib bo'lmaydi",
+      );
+    }
     const description = params.description ?? "Oylik to'landi";
     const slices = params.cashSlices?.filter((s) => s.amount > 0) ?? [];
     if (slices.length) {
@@ -758,25 +770,27 @@ export class TransactionsWriteService {
       // Salary leaves the PAYEE'S BRANCH kassa — under D4 each branch carries
       // its own payroll cost, so one branch's cash must never settle another's.
       // One movement per named account, else a single resolved one as before.
-      const outflows = slices.length
-        ? slices.map((s) => ({
-            cashAccountId: s.cashAccountId,
-            amount: s.amount,
-          }))
-        : [{ cashAccountId: undefined, amount: params.amount }];
-      for (const out of outflows) {
-        await this.cashMovements.recordOutflow(
-          {
-            companyId: params.companyId,
-            branchId,
-            amount: out.amount,
-            cashAccountId: out.cashAccountId,
-            transactionId: transaction.id,
-            description,
-            performedById: params.performedById,
-          },
-          client,
-        );
+      if (!params.predatesCashJournal) {
+        const outflows = slices.length
+          ? slices.map((s) => ({
+              cashAccountId: s.cashAccountId,
+              amount: s.amount,
+            }))
+          : [{ cashAccountId: undefined, amount: params.amount }];
+        for (const out of outflows) {
+          await this.cashMovements.recordOutflow(
+            {
+              companyId: params.companyId,
+              branchId,
+              amount: out.amount,
+              cashAccountId: out.cashAccountId,
+              transactionId: transaction.id,
+              description,
+              performedById: params.performedById,
+            },
+            client,
+          );
+        }
       }
 
       return transaction;

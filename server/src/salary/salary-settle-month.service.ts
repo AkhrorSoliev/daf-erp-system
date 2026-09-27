@@ -1,33 +1,19 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Prisma, SalaryPaymentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
-import {
-  assertValidTransition,
-  SALARY_PAYMENT_TRANSITIONS,
-} from '../common/finance/status-transitions';
-import { resolveMonthlyScope } from './shared/resolve-monthly-scope';
-import { parseTashkentDateStart } from './shared/resolve-current-period';
 import { SettleMonthDto } from './dto/settle-month.dto';
+import {
+  assertSettleTransitions,
+  loadSettleCandidates,
+  parseSettlePaidAt,
+  SettleCashPlan,
+  SettleRow,
+  writeSettledRows,
+} from './salary-settle-core';
 
-const TX = {
-  isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-  maxWait: 10000,
-  timeout: 15000,
-} as const;
-
-/** Ledger + cash-journal wording, so the row explains itself years later. */
-const SETTLE_DESCRIPTION = "Oylik to'landi (tashqarida berilgani tasdiqlandi)";
-
-export interface SettleRow {
-  paymentId: string;
-  userId: number;
-  fullName: string;
-  branchId: number | null;
-  branchName: string | null;
-  amount: number;
-  status: SalaryPaymentStatus;
-}
+// Kept importable from here: callers and specs predate the core split.
+export { buildSettleNote } from './salary-settle-core';
+export type { SettleRow } from './salary-settle-core';
 
 export interface SettleMonthPreview {
   month: string;
@@ -61,6 +47,9 @@ export interface SettleMonthResult {
  *    own try/catch and reports failures; that is right for a routine run. Here
  *    the money is irreversible and the operator has just retyped the total, so
  *    a half-settled month is the one outcome nobody can act on.
+ *
+ * Candidate loading, the date rules and the writer live in
+ * `salary-settle-core.ts`, shared with `SalarySettleAllocatedService`.
  */
 @Injectable()
 export class SalarySettleMonthService {
@@ -74,7 +63,8 @@ export class SalarySettleMonthService {
     companyId: number,
     performedById: number,
   ): Promise<SettleMonthPreview> {
-    const { scope, rows, total } = await this.loadCandidates(
+    const { scope, rows, total } = await loadSettleCandidates(
+      this.prisma,
       month,
       companyId,
       performedById,
@@ -118,7 +108,8 @@ export class SalarySettleMonthService {
     companyId: number,
     performedById: number,
   ): Promise<SettleMonthResult> {
-    const { scope, rows, total } = await this.loadCandidates(
+    const { scope, rows, total } = await loadSettleCandidates(
+      this.prisma,
       dto.month,
       companyId,
       performedById,
@@ -140,17 +131,7 @@ export class SalarySettleMonthService {
       );
     }
 
-    const paidAt = parseTashkentDateStart(dto.paidAt);
-    if (paidAt.getTime() > Date.now()) {
-      throw new BadRequestException(
-        "To'lov sanasi kelajakda bo'lishi mumkin emas",
-      );
-    }
-    if (paidAt.getTime() < scope.period.periodStart.getTime()) {
-      throw new BadRequestException(
-        "To'lov sanasi hisoblash davri boshlanishidan oldin bo'lishi mumkin emas",
-      );
-    }
+    const paidAt = parseSettlePaidAt(dto.paidAt, scope.period.periodStart);
 
     // ─── Kassa accounts: exist, active, and belong to the branch claimed ───
     const requestedIds = dto.accounts.map((a) => a.cashAccountId);
@@ -225,67 +206,24 @@ export class SalarySettleMonthService {
     }
 
     const sliceByPayment = allocateCashSlices(rows, slicesByBranch);
-    for (const r of rows) {
-      if (r.status === SalaryPaymentStatus.CALCULATED) {
-        assertValidTransition(
-          'SalaryPayment',
-          SALARY_PAYMENT_TRANSITIONS,
-          r.status,
-          SalaryPaymentStatus.APPROVED,
-        );
-      }
-      assertValidTransition(
-        'SalaryPayment',
-        SALARY_PAYMENT_TRANSITIONS,
-        SalaryPaymentStatus.APPROVED,
-        SalaryPaymentStatus.PAID,
-      );
-    }
+    assertSettleTransitions(rows);
 
-    // ─── Write. One Serializable tx per payment. ────────────────────────────
-    const paymentIds: string[] = [];
-    let settledTotal = 0;
-
-    for (const r of rows) {
-      const written = await this.prisma.$transaction(async (tx) => {
-        // Re-read under the tx: another request may have paid this row between
-        // the pre-flight and here. Skipping keeps the action idempotent.
-        const fresh = await tx.salaryPayment.findUnique({
-          where: { id: r.paymentId },
-          select: { status: true, note: true },
-        });
-        if (!fresh || fresh.status === SalaryPaymentStatus.PAID) return false;
-
-        await this.transactions.recordSalaryPayment(
-          {
-            userId: r.userId,
-            amount: r.amount,
-            salaryPaymentId: r.paymentId,
-            companyId,
-            performedById,
-            cashSlices: sliceByPayment.get(r.paymentId),
-            description: SETTLE_DESCRIPTION,
-          },
-          tx,
-        );
-
-        await tx.salaryPayment.update({
-          where: { id: r.paymentId },
-          data: {
-            status: SalaryPaymentStatus.PAID,
-            paidAt,
-            paidById: performedById,
-            note: buildSettleNote(fresh.note, dto.paidAt, dto.note),
-          },
-        });
-        return true;
-      }, TX);
-
-      if (written) {
-        paymentIds.push(r.paymentId);
-        settledTotal += r.amount;
-      }
-    }
+    const planByPayment = new Map<string, SettleCashPlan>(
+      [...sliceByPayment].map(([id, cashSlices]) => [id, { cashSlices }]),
+    );
+    const { paymentIds, total: settledTotal } = await writeSettledRows(
+      this.prisma,
+      this.transactions,
+      rows,
+      planByPayment,
+      {
+        paidAt,
+        paidAtStr: dto.paidAt,
+        note: dto.note,
+        performedById,
+        companyId,
+      },
+    );
 
     return {
       month: scope.month,
@@ -293,88 +231,6 @@ export class SalarySettleMonthService {
       count: paymentIds.length,
       total: settledTotal,
       paymentIds,
-    };
-  }
-
-  /**
-   * The month's still-unpaid payroll rows.
-   *
-   * The month → period translation is `resolveMonthlyScope` — the SAME helper
-   * the `/salary/monthly` table uses — so the button can never settle a set the
-   * table did not show. CANCELLED and PAID rows are excluded, which is what
-   * makes a repeat call a no-op.
-   */
-  private async loadCandidates(
-    month: string | undefined,
-    companyId: number,
-    performedById: number,
-  ) {
-    const scope = await resolveMonthlyScope(
-      this.prisma,
-      { month },
-      companyId,
-      performedById,
-    );
-
-    const raw = scope.blocked
-      ? []
-      : await this.prisma.salaryPayment.findMany({
-          where: {
-            companyId,
-            status: {
-              in: [
-                SalaryPaymentStatus.CALCULATED,
-                SalaryPaymentStatus.APPROVED,
-              ],
-            },
-            periodStart: {
-              gte: scope.periodStartLow,
-              lt: scope.periodStartHigh,
-            },
-            ...(scope.branchId !== undefined && {
-              user: { mainBranch: scope.branchId },
-            }),
-          },
-          select: {
-            id: true,
-            userId: true,
-            amount: true,
-            status: true,
-            note: true,
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-                mainBranch: true,
-                branches: {
-                  select: { branchId: true },
-                  orderBy: { branchId: 'asc' },
-                },
-              },
-            },
-          },
-          orderBy: [{ amount: 'desc' }],
-        });
-
-    const rows: SettleRow[] = raw.map((p) => ({
-      paymentId: p.id,
-      userId: p.userId,
-      fullName: `${p.user.firstName} ${p.user.lastName}`.trim(),
-      // Same rule as `tryResolveUserBranchId`: mainBranch, else the single
-      // attached branch. Inlined because the payee list is already loaded and a
-      // per-row DB round trip would be pure waste.
-      branchId:
-        p.user.mainBranch ??
-        (p.user.branches.length === 1 ? p.user.branches[0].branchId : null),
-      branchName: null,
-      amount: p.amount,
-      status: p.status,
-    }));
-
-    return {
-      scope,
-      rows,
-      total: rows.reduce((s, r) => s + r.amount, 0),
     };
   }
 }
@@ -434,18 +290,4 @@ export function allocateCashSlices(
     out.set(row.paymentId, slices);
   }
   return out;
-}
-
-/** Audit marker on the payment itself, alongside `paidById` / `paidAt`. */
-export function buildSettleNote(
-  existing: string | null,
-  paidAtStr: string,
-  userNote?: string,
-): string {
-  const parts = [
-    existing?.trim(),
-    `Tashqarida berilgan oylik tasdiqlandi (${paidAtStr})`,
-    userNote?.trim(),
-  ].filter((p): p is string => !!p);
-  return parts.join(' · ');
 }
