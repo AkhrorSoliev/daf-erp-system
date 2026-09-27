@@ -1,25 +1,39 @@
 import type { FrageFormat } from './frage.types';
 
 /**
- * Seans turining «ta'mi» — QAT'IY BO'LINISH EMAS, MOYILLIK.
+ * The session kind's "flavour" — a PREFERENCE, not a strict split.
  *
- * NEGA QAT'IY EMAS (arifmetika). Kurs dizayni 16 format uchun yozilgan.
- * Bugun 10 tasi bor, va «Tanishuv» ga tegishlisi uchtasi. Qat'iy
- * bo'linsa, seansda 3 xil format qolardi — `seans.ts` ning o'z qoidasi
- * esa kamida `MIN_FORMATE` (5) talab qiladi. Ikki qoida bir-birini
- * inkor qilardi.
+ * Preferred formats are moved to the front of the pool and the rest fill
+ * in when they run out (`seans.ts` keeps its own variety rules: cap per
+ * format, no two in a row, at least `MIN_FORMATE` formats). When this was
+ * written only 10 formats existed and a strict split would have left a
+ * session with three, contradicting `MIN_FORMATE`. With the picture formats
+ * the engine has 16 (not quite the course design's list: `WAHL` and
+ * `HOEREN_TABELLE` are still missing) and SECTION_A / SECTION_B prefer six
+ * each, so with enough material the ordering already behaves like a split —
+ * and it still falls back when material is missing (a unit whose pictures
+ * are not made yet simply asks other formats).
  *
- * Shuning uchun bu ro'yxat faqat TARTIBGA ta'sir qiladi: mos formatlar
- * oldinga suriladi, yetmasa qolganidan olinadi. Formatlar 16 taga
- * yetganda moyillik o'z-o'zidan qat'iy bo'linishga aylanadi va bu kodni
- * o'zgartirish shart bo'lmaydi.
- *
- * `BRIDGE` da moyillik ATAYLAB yo'q: o'tish sinovi aralash bo'lishi
- * kerak (kurs dizayni 3-bo'lim).
+ * `BRIDGE` has no preference on purpose: the bridge test must be mixed
+ * (course design, section 3).
  */
 const XARITA: Record<string, FrageFormat[]> = {
-  SECTION_A: ['WORT_UZ', 'PAAR', 'ZUORDNEN', 'AUDIO_WORT'],
-  SECTION_B: ['UZ_WORT', 'ARTIKEL', 'LUECKE', 'SATZ_BAUEN', 'WORT_TIPPEN'],
+  SECTION_A: [
+    'WORT_UZ',
+    'PAAR',
+    'ZUORDNEN',
+    'AUDIO_WORT',
+    'BILD_WORT',
+    'AUDIO_BILD',
+  ],
+  SECTION_B: [
+    'UZ_WORT',
+    'ARTIKEL',
+    'LUECKE',
+    'SATZ_BAUEN',
+    'WORT_TIPPEN',
+    'BILD_TIPPEN',
+  ],
   BRIDGE: [],
   // Yakuniy sinov (2026-09-14 dan dvigatelda): vaziyatga suyangan formatlar
   // oldinga suriladi — kurs dizaynidagi «Kurz und klar». Material unitning
