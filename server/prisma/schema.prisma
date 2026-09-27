@@ -2921,9 +2921,11 @@ enum AlertSeverity {
 model DailyFinancialSnapshot {
   id        Int      @id @default(autoincrement())
   companyId Int
-  /// NULL = the company-wide row. A branch row carries its branch id. Nothing
-  /// reads the branch rows yet; they are written from the start because the
-  /// history they build cannot be reconstructed once the day has passed.
+  /// NULL = the company-wide row. A branch row carries its branch id. The
+  /// per-branch rows are read by the expectation history for branch-scoped
+  /// callers (`ReportsExpectationHistoryService`); they are written from the
+  /// start because the history they build cannot be reconstructed once the
+  /// day has passed.
   branchId  Int?
   date      DateTime @db.Date
 

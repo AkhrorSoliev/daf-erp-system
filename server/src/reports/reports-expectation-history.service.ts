@@ -15,31 +15,68 @@ type SnapshotDay = {
   collectedForMonth: number | null;
 };
 
+/** A branch's lifetime, in the terms the cron itself uses to decide whether
+ * to write that branch's row on a given day. */
+export interface BranchLifetime {
+  branchId: number;
+  createdAt: Date;
+  deletedAt: Date | null;
+}
+
+/**
+ * Whether the cron would have written `branchId`'s row on Tashkent day `day`
+ * ('YYYY-MM-DD', the same key the snapshot rows use): the cron's 23:40 run
+ * writes a branch's row only when that branch existed and was not yet
+ * deleted at that moment. A branch created mid-month is not expected before
+ * its creation day; one soft-deleted mid-month is not expected from its
+ * deletion day on.
+ */
+function isBranchExpectedOnDay(
+  lifetimes: BranchLifetime[],
+  branchId: number,
+  day: string,
+): boolean {
+  const lt = lifetimes.find((l) => l.branchId === branchId);
+  if (!lt) return false;
+  if (tashkentDateStr(lt.createdAt) > day) return false;
+  if (lt.deletedAt && tashkentDateStr(lt.deletedAt) <= day) return false;
+  return true;
+}
+
 /**
  * Per-branch rows → one row per day, summed (each lesson, group and payment
  * has one branch, so the figures add). A day is kept only when every branch
- * with rows this month has its row that day: the cron writes each branch
- * separately and one can fail, and a sum missing a branch would plot a drop
- * that never happened. Gaps stay gaps; a null in any branch nulls the sum.
+ * EXPECTED that day — per its own lifetime, not merely "seen somewhere this
+ * month" — has its row: the cron writes each branch separately and one can
+ * fail, and a sum missing an expected branch would plot a drop that never
+ * happened. "Seen this month" was the wrong test — a branch created or
+ * deleted mid-month would blank out every day outside its own lifetime, where
+ * it was never expected to have a row in the first place. Gaps stay gaps; a
+ * null in any present branch nulls the sum.
  */
 function sumBranchRowsPerDay(
   rows: (SnapshotDay & { branchId: number | null })[],
+  lifetimes: BranchLifetime[],
 ): SnapshotDay[] {
-  const branchesThisMonth = new Set(rows.map((r) => r.branchId)).size;
-  const byDay = new Map<string, SnapshotDay[]>();
+  type Row = SnapshotDay & { branchId: number | null };
+  const byDay = new Map<string, Row[]>();
   for (const r of rows) {
     const key = r.date.toISOString().slice(0, 10);
     byDay.set(key, [...(byDay.get(key) ?? []), r]);
   }
-  const total = (list: SnapshotDay[], f: Exclude<keyof SnapshotDay, 'date'>) =>
+  const total = (list: Row[], f: Exclude<keyof SnapshotDay, 'date'>) =>
     list.some((r) => r[f] == null)
       ? null
       : list.reduce((s, r) => s + (r[f] ?? 0), 0);
   const out: SnapshotDay[] = [];
-  // Rows arrive date-ascending; a Map keeps insertion order. The unique
-  // (companyId, branchId, date) makes list.length the branches present.
-  for (const list of byDay.values()) {
-    if (list.length < branchesThisMonth) continue;
+  // Rows arrive date-ascending; a Map keeps insertion order.
+  for (const [day, list] of byDay.entries()) {
+    const expected = lifetimes
+      .filter((l) => isBranchExpectedOnDay(lifetimes, l.branchId, day))
+      .map((l) => l.branchId);
+    if (expected.length === 0) continue;
+    const present = new Set(list.map((r) => r.branchId));
+    if (!expected.every((id) => present.has(id))) continue;
     out.push({
       date: list[0].date,
       expectedValue: total(list, 'expectedValue'),
@@ -125,7 +162,21 @@ export class ReportsExpectationHistoryService {
         collectedForMonth: true,
       },
     });
-    const days = branchIds === null ? rows : sumBranchRowsPerDay(rows);
+    let days: SnapshotDay[] = rows;
+    if (branchIds !== null) {
+      // Do NOT filter `deletedAt` — a deleted branch still bounds its own
+      // lifetime, and excluding it would make it look expected forever.
+      const branches = await this.prisma.branch.findMany({
+        where: { companyId, id: { in: branchIds } },
+        select: { id: true, createdAt: true, deletedAt: true },
+      });
+      const lifetimes: BranchLifetime[] = branches.map((b) => ({
+        branchId: b.id,
+        createdAt: b.createdAt,
+        deletedAt: b.deletedAt,
+      }));
+      days = sumBranchRowsPerDay(rows, lifetimes);
+    }
 
     const eventsByDay = await this.loadEvents(
       companyId,
