@@ -33,6 +33,15 @@ import {
 } from "@/components/ui/select";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
+import {
+  MONTHLY_PAYMENT_EXPLANATION,
+  buildQuickAmounts,
+  monthlyEnrollmentLine,
+  monthlySummaryLine,
+  suggestedAmountHint,
+  type MonthlyPreviewBlock,
+  type PaymentPreviewModel,
+} from "./record-payment-quick-amounts";
 
 interface Props {
   open: boolean;
@@ -84,42 +93,9 @@ interface PaymentPreview {
   scenario: "SINGLE_ENROLLMENT" | "MULTI_ENROLLMENT" | "NO_ENROLLMENT";
   primaryEnrollment: PrimaryEnrollment | null;
   breakdown: PaymentBreakdownItem[];
-}
-
-interface AmountSuggestions {
-  // Recommended amount: covers the debt + tops up the next cycle just enough
-  // so the student isn't immediately in debt again.
-  recommended: { amount: number; label: string } | null;
-  oneFullCycle: { amount: number; label: string };
-  twoFullCycles: { amount: number; label: string };
-}
-
-function buildAmountSuggestions(
-  enr: PrimaryEnrollment,
-  currentBalance: number,
-): AmountSuggestions {
-  const debt = Math.max(0, -currentBalance);
-  const recommendedRaw = debt + enr.fullCycleCost;
-  return {
-    recommended:
-      debt > 0
-        ? {
-            amount: recommendedRaw,
-            label: `Qarz + 1 sikl (${enr.lessonPaymentCount} dars)`,
-          }
-        : {
-            amount: enr.fullCycleCost,
-            label: `1 to'liq sikl (${enr.lessonPaymentCount} dars)`,
-          },
-    oneFullCycle: {
-      amount: enr.fullCycleCost,
-      label: `+1 sikl (${enr.lessonPaymentCount} dars)`,
-    },
-    twoFullCycles: {
-      amount: enr.fullCycleCost * 2,
-      label: `+2 sikl (${enr.lessonPaymentCount * 2} dars)`,
-    },
-  };
+  // Optional: an older server sends neither; read as LESSON_PACK.
+  model?: PaymentPreviewModel;
+  monthly?: MonthlyPreviewBlock | null;
 }
 
 const methodOptions = [
@@ -229,13 +205,8 @@ export function RecordPaymentDialog({
   });
   const preview = previewQuery.data;
 
-  // Smart suggestion: "qolgan darslar uchun" — when the primary enrollment has
-  // prepaid drained and the next attendance would refill, suggest the partial
-  // amount that fits the cycle's remaining lessons exactly. Falls back to
-  // perLessonCost × N for cycle-aware refill.
-  const suggestion = preview?.primaryEnrollment
-    ? buildAmountSuggestions(preview.primaryEnrollment, preview.currentBalance)
-    : null;
+  // Months for a monthly student, cycles for a lesson pack; null → fixed grid.
+  const quickAmounts = preview ? buildQuickAmounts(preview) : null;
 
   const handleSubmit = async () => {
     if (!selectedStudent || rawAmount < 1000) return;
@@ -398,63 +369,27 @@ export function RecordPaymentDialog({
             </div>
             {suggestedAmount && suggestedAmount > 0 && (
               <p className="text-xs text-muted-foreground">
-                Tavsiya: {formatPrice(suggestedAmount)} so&apos;m — kurs to&apos;liq tsikl narxi
+                {suggestedAmountHint(suggestedAmount, preview?.model)}
               </p>
             )}
 
             {/* Smart per-student suggestions powered by /payments/preview.
                 Falls back to the static QUICK_AMOUNTS grid when there's no
                 primary enrollment (multi-enrollment / no-enrollment cases). */}
-            {suggestion ? (
+            {quickAmounts ? (
               <div className="flex flex-wrap gap-1.5">
-                {suggestion.recommended && (
+                {quickAmounts.map((qa) => (
                   <Button
-                    variant={
-                      rawAmount === suggestion.recommended.amount
-                        ? "default"
-                        : "outline"
-                    }
+                    key={qa.key}
+                    variant={rawAmount === qa.amount ? "default" : "outline"}
                     size="sm"
                     className="text-xs h-7"
-                    onClick={() =>
-                      handleAmountChange(String(suggestion.recommended!.amount))
-                    }
+                    onClick={() => handleAmountChange(String(qa.amount))}
                   >
-                    <Sparkles className="mr-1 size-3" />
-                    {suggestion.recommended.label} ·{" "}
-                    {formatPrice(suggestion.recommended.amount)}
+                    {qa.recommended && <Sparkles className="mr-1 size-3" />}
+                    {qa.label} · {formatPrice(qa.amount)}
                   </Button>
-                )}
-                <Button
-                  variant={
-                    rawAmount === suggestion.oneFullCycle.amount
-                      ? "default"
-                      : "outline"
-                  }
-                  size="sm"
-                  className="text-xs h-7"
-                  onClick={() =>
-                    handleAmountChange(String(suggestion.oneFullCycle.amount))
-                  }
-                >
-                  {suggestion.oneFullCycle.label} ·{" "}
-                  {formatPrice(suggestion.oneFullCycle.amount)}
-                </Button>
-                <Button
-                  variant={
-                    rawAmount === suggestion.twoFullCycles.amount
-                      ? "default"
-                      : "outline"
-                  }
-                  size="sm"
-                  className="text-xs h-7"
-                  onClick={() =>
-                    handleAmountChange(String(suggestion.twoFullCycles.amount))
-                  }
-                >
-                  {suggestion.twoFullCycles.label} ·{" "}
-                  {formatPrice(suggestion.twoFullCycles.amount)}
-                </Button>
+                ))}
               </div>
             ) : (
               <div className="flex flex-wrap gap-1.5">
@@ -633,20 +568,24 @@ function PaymentPreviewCard({
       </div>
 
       {/* Primary enrollment context */}
-      {preview.primaryEnrollment && (
-        <div className="rounded-md bg-muted/40 px-2.5 py-2 text-[11px] leading-relaxed text-muted-foreground">
-          <span className="font-medium text-foreground">
-            {preview.primaryEnrollment.groupName}
-          </span>{" "}
-          · {preview.primaryEnrollment.courseName} ·{" "}
-          {formatPrice(preview.primaryEnrollment.perLessonCost)} so&apos;m/dars
-          {preview.primaryEnrollment.currentPrepaid > 0 && (
-            <>
-              {" "}
-              · oldindan {preview.primaryEnrollment.currentPrepaid} dars
-            </>
-          )}
-        </div>
+      {preview.model === "MONTHLY" && preview.monthly ? (
+        <MonthlyContext monthly={preview.monthly} />
+      ) : (
+        preview.primaryEnrollment && (
+          <div className="rounded-md bg-muted/40 px-2.5 py-2 text-[11px] leading-relaxed text-muted-foreground">
+            <span className="font-medium text-foreground">
+              {preview.primaryEnrollment.groupName}
+            </span>{" "}
+            · {preview.primaryEnrollment.courseName} ·{" "}
+            {formatPrice(preview.primaryEnrollment.perLessonCost)} so&apos;m/dars
+            {preview.primaryEnrollment.currentPrepaid > 0 && (
+              <>
+                {" "}
+                · oldindan {preview.primaryEnrollment.currentPrepaid} dars
+              </>
+            )}
+          </div>
+        )
       )}
 
       {/* Breakdown */}
@@ -689,7 +628,7 @@ function PaymentPreviewCard({
         </div>
       )}
 
-      {preview.scenario === "MULTI_ENROLLMENT" && (
+      {preview.scenario === "MULTI_ENROLLMENT" && preview.model !== "MONTHLY" && (
         <p className="text-[11px] text-muted-foreground italic">
           O&apos;quvchi 2+ guruhda — qaysi sikl uchun yechilishini sistema
           avtomatik tanlaydi.
@@ -701,6 +640,19 @@ function PaymentPreviewCard({
           ⚠ To&apos;lovdan keyin ham qarz qoladi
         </p>
       )}
+    </div>
+  );
+}
+
+function MonthlyContext({ monthly }: { monthly: MonthlyPreviewBlock }) {
+  const summary = monthlySummaryLine(monthly);
+  return (
+    <div className="space-y-1 rounded-md bg-muted/40 px-2.5 py-2 text-[11px] leading-relaxed text-muted-foreground">
+      {monthly.enrollments.map((e, idx) => (
+        <p key={`${idx}-${e.groupName}`}>{monthlyEnrollmentLine(e)}</p>
+      ))}
+      {summary && <p className="font-medium text-foreground">{summary}</p>}
+      <p>{MONTHLY_PAYMENT_EXPLANATION}</p>
     </div>
   );
 }
