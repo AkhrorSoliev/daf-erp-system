@@ -156,6 +156,23 @@ describe('AttendanceReminderService', () => {
           type: NotificationType.ATTENDANCE_ADMIN_ALERT,
         }),
       );
+      // ADR-0045: each side is told what an untaken attendance costs.
+      expect(notificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 20001,
+          message: expect.stringContaining(
+            'Dars tugaguncha olinmasa, bu dars uchun sizga ish haqi yozilmaydi.',
+          ),
+        }),
+      );
+      expect(notificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 30001,
+          message: expect.stringContaining(
+            'Dars tugaguncha siz olsangiz, ustoz haqi saqlanib qoladi.',
+          ),
+        }),
+      );
     });
 
     it('notifies teacher + admins at lessonEndTime when attendance missing', async () => {
@@ -178,6 +195,27 @@ describe('AttendanceReminderService', () => {
           type: NotificationType.ATTENDANCE_MISSING_ADMIN,
         }),
       );
+      // ADR-0045: nobody is asked to restore it — it cannot be entered now.
+      expect(notificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 20001,
+          title: 'Davomat olinmadi',
+          message: expect.stringContaining(
+            "Bu dars uchun ish haqi yozilmadi. Davomatni endi saytda kiritib bo'lmaydi.",
+          ),
+        }),
+      );
+      expect(notificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 30001,
+          message: expect.stringContaining(
+            "Ustozga bu dars uchun ish haqi yozilmadi. Davomatni endi saytda kiritib bo'lmaydi.",
+          ),
+        }),
+      );
+      for (const [arg] of notificationsService.create.mock.calls) {
+        expect(arg.message).not.toMatch(/tiklash/);
+      }
     });
 
     it('short-circuits when attendance is already taken', async () => {

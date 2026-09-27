@@ -337,7 +337,7 @@ export class AttendanceReminderService {
       group,
       type,
       'Davomat eslatmasi',
-      `⏰ Dars tugashiga 30 daqiqa qoldi\n\n${details}\n\nIltimos, davomatni belgilashni unutmang.\n🔗 ${TEACHER_PORTAL_URL}`,
+      `⏰ Dars tugashiga 30 daqiqa qoldi\n\n${details}\n\nDavomat hali olinmagan. Dars tugaguncha olinmasa, bu dars uchun sizga ish haqi yozilmaydi.\n🔗 ${TEACHER_PORTAL_URL}`,
     );
   }
 
@@ -352,8 +352,8 @@ export class AttendanceReminderService {
       teacher,
       group,
       type,
-      'Davomat belgilanmadi',
-      `📝 Darsingiz tugadi, ammo davomat belgilanmadi\n\n${details}\n\nIltimos, administrator bilan bog'lanib, davomatni tiklashingizni so'raymiz.\n🔗 ${TEACHER_PORTAL_URL}`,
+      'Davomat olinmadi',
+      `📝 Darsingiz tugadi, davomat olinmadi\n\n${details}\n\nBu dars uchun ish haqi yozilmadi. Davomatni endi saytda kiritib bo'lmaydi.\n🔗 ${TEACHER_PORTAL_URL}`,
     );
   }
 
@@ -385,14 +385,15 @@ export class AttendanceReminderService {
       kind === 'ADMIN_ALERT'
         ? NotificationType.ATTENDANCE_ADMIN_ALERT
         : NotificationType.ATTENDANCE_MISSING_ADMIN;
+    // ADR-0045: after the lesson its attendance is closed to everyone, so
+    // nobody is asked to restore it; before the end an admin who takes it
+    // keeps the teacher's pay.
     const title =
-      kind === 'ADMIN_ALERT'
-        ? "O'qituvchiga eslatib qo'ying"
-        : 'Davomat belgilanmadi';
+      kind === 'ADMIN_ALERT' ? 'Davomat hali olinmagan' : 'Davomat olinmadi';
     const message =
       kind === 'ADMIN_ALERT'
-        ? `👀 Dars tugashiga 30 daqiqa qoldi, o'qituvchi hali davomatni belgilamadi\n\n${details}\n\nIltimos, o'qituvchiga eslatib qo'yishingizni so'raymiz.\n🔗 ${ADMIN_PORTAL_URL}`
-        : `📋 O'qituvchi davomatni belgilamadi\n\n${details}\n\nIltimos, davomatni qo'lda tiklashingizni so'raymiz.\n🔗 ${ADMIN_PORTAL_URL}`;
+        ? `👀 Dars tugashiga 30 daqiqa qoldi, o'qituvchi hali davomat olmadi\n\n${details}\n\nDars tugaguncha siz olsangiz, ustoz haqi saqlanib qoladi.\n🔗 ${ADMIN_PORTAL_URL}`
+        : `📋 Davomat olinmadi\n\n${details}\n\nUstozga bu dars uchun ish haqi yozilmadi. Davomatni endi saytda kiritib bo'lmaydi.\n🔗 ${ADMIN_PORTAL_URL}`;
 
     for (const admin of admins) {
       if (await this.alreadySent(admin.id, type, group.id)) continue;
