@@ -22,6 +22,8 @@ import type {
   WoerterFile,
 } from '../src/daf/inhalt/unit-inhalt.types';
 import type { DialogAudioManifest } from '../src/daf/inhalt/dialog-audio';
+import type { BildManifest } from '../src/daf/media/bild-keys';
+import type { BildPlan } from '../src/daf/inhalt/bild-plan';
 
 function readUnitCode(): string {
   const i = process.argv.indexOf('--unit');
@@ -58,6 +60,16 @@ async function main(): Promise<void> {
     ? (JSON.parse(readFileSync(dialogAudioPath, 'utf8')) as DialogAudioManifest)
     : {};
 
+  // Pictures are made unit by unit, like audio: a missing file is an empty
+  // manifest/plan, and the seed then clears `imageKey`/`bildTippen`.
+  const a1 = join(__dirname, '..', 'content', 'daf', 'a1');
+  const readOptional = <T>(name: string): T | Record<string, never> =>
+    existsSync(join(a1, name))
+      ? (JSON.parse(readFileSync(join(a1, name), 'utf8')) as T)
+      : {};
+  const bilder = readOptional<BildManifest>('bilder.json');
+  const bildPlan = readOptional<BildPlan>('bild-plan.json');
+
   const files = {
     woerter: read<WoerterFile>('woerter.json'),
     saetze: read<SaetzeFile>('saetze.json'),
@@ -66,6 +78,8 @@ async function main(): Promise<void> {
     redemittel: read<RedemittelFile>('redemittel.json'),
     audio,
     dialogAudio,
+    bilder,
+    bildPlan,
   };
 
   const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });

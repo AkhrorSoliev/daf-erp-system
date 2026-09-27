@@ -26,6 +26,8 @@ import type { KursFile } from '../kurs/kurs.types';
 import type { GoetheFile } from './goethe-parse';
 import { validateHoerFragen } from './hoer-fragen.validate';
 import { validateDialogAudio, type DialogAudioManifest } from './dialog-audio';
+import { bildPlanFuerUnit, validateBildPlan, type BildPlan } from './bild-plan';
+import type { BildManifest } from '../media/bild-keys';
 
 const A1 = join(__dirname, '..', '..', '..', 'content', 'daf', 'a1');
 const read = <T>(...p: string[]): T =>
@@ -213,6 +215,16 @@ describe.each(UNITS)('%s — so`zlar', (unit) => {
           ? read<RedemittelFile>(unit, 'redemittel.json')
           : null,
       ),
+    ).toEqual([]);
+  });
+
+  it('rasm rejasi va rasm kalitlari toza', () => {
+    // A typo in a plan key, `tippen` on a word without an article or a
+    // key that names its word would ship a wrong or leaking picture.
+    const plan = readOrEmpty<BildPlan>({}, 'bild-plan.json');
+    const bilder = readOrEmpty<BildManifest>({}, 'bilder.json');
+    expect(
+      validateBildPlan(bildPlanFuerUnit(plan, unit), woerter.woerter, bilder),
     ).toEqual([]);
   });
 });
