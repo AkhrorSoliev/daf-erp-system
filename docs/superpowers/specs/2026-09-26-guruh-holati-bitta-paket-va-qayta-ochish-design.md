@@ -105,7 +105,7 @@ chiqarilmaydi, ro'yxatga qo'shiladi; chaqiruvchi tranzaksiyadan keyin
 
 ### Hujjatlar
 
-- ADR-0037: guruh holati bitta tranzaksiya (guruh uchun fail-closed, filial/kurs/
+- ADR-0039: guruh holati bitta tranzaksiya (guruh uchun fail-closed, filial/kurs/
   o'quvchi uchun partiya chidamliligi saqlanadi), hodisalar tranzaksiyadan keyin.
   Raqam birlashtirish paytida `origin/main` ga qarab qayta tekshiriladi.
 - `server/CLAUDE.md`: «Enrollment Lifecycle Prepaid Refund» (guruh bekor qilish
@@ -153,10 +153,12 @@ chiqarilmaydi, ro'yxatga qo'shiladi; chaqiruvchi tranzaksiyadan keyin
     → qaytadi va o'quvchi `ACTIVE` bo'ladi; aks holda qaytmaydi;
   - `FROZEN` → yozilish `FROZEN` bo'lib qaytadi;
   - `ACTIVE` → yozilish `ACTIVE` bo'lib qaytadi.
-- Bitta o'quvchining bitta guruhda bitta tirik yozilish qatori bor
-  (`Enrollment_studentId_groupId_key`), shuning uchun qaytish o'sha qatorning o'zini
-  qayta ochadi. `unique_active_enrollment_per_student` ni «boshqa guruhda» qoidasi
-  oldindan himoya qiladi.
+- Prodda `Enrollment_studentId_groupId_key` yo'q (2026-09-27, faqat o'qildi): 103 ta
+  o'quvchi–guruh juftligida bir nechta tirik qator bor, eng ko'pi 5 ta. Qaytish
+  yopilishning o'zi yopgan qatorni qayta ochadi. Bitta o'quvchining shu yopilishda
+  bir nechta qatori yopilgan bo'lsa, faqat eng yangisi qaytadi, qolganlari yopiq
+  qoladi: aks holda `unique_active_enrollment_per_student` buzilardi. Boshqa
+  guruhdagi faol qatorni «boshqa guruhda» qoidasi oldindan chetlaydi.
 
 ### Yoziladigan narsalar (1-qismdagi o'sha tranzaksiyada)
 
@@ -192,7 +194,7 @@ chiqarilmaydi, ro'yxatga qo'shiladi; chaqiruvchi tranzaksiyadan keyin
 
 ### Hujjatlar
 
-- ADR-0038: yopilgan guruh qayta ochiladi; qaytadiganlar yopilishning o'z belgisi
+- ADR-0040: yopilgan guruh qayta ochiladi; qaytadiganlar yopilishning o'z belgisi
   (sabab + vaqt) bo'yicha topiladi, sxema o'zgarmaydi; pul qoidasi.
 - `server/CLAUDE.md`: «Closing a group…» bandi yonida qayta ochish; «Write Hooks».
 

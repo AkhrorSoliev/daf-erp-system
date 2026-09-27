@@ -74,8 +74,8 @@ export function liveEnrollmentsOfGroup(
 /**
  * The reason every enrolment a group's own CANCELLED/COMPLETED closed
  * carries, in its `statusChangeReason` and its state-log row. Written only
- * here: the one-off repair of closed groups writes the same words, and the
- * closing's enrolments are found again by them.
+ * here, so the words stay one thing: the one-off repair of closed groups
+ * writes the same ones.
  */
 export function groupClosingReason(
   groupId: string,
@@ -87,7 +87,7 @@ export function groupClosingReason(
 /**
  * What `cascade()` handles. A group's own status change is not among them:
  * it closes its enrolments on the caller's transaction
- * (`cascadeGroupStatusChange`, ADR-0037).
+ * (`cascadeGroupStatusChange`, ADR-0039).
  */
 export type CascadeEntityType = 'Branch' | 'Course' | 'Student';
 
@@ -146,7 +146,7 @@ export class StatusCascadeService {
   /**
    * Closes a group's enrolments when the group itself goes CANCELLED or
    * COMPLETED, on the CALLER's transaction, so the status change and its
-   * students' closing commit together or not at all (ADR-0037).
+   * students' closing commit together or not at all (ADR-0039).
    *
    * CANCELLED drops every ACTIVE and FROZEN enrolment. COMPLETED completes
    * the ACTIVE ones, drops the FROZEN ones (ADR-0036) and graduates the

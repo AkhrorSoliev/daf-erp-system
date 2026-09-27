@@ -55,7 +55,7 @@ export class GroupsStatusService {
 
   /**
    * A group's status change commits everything it touches or nothing
-   * (ADR-0037): the transition check and StatusHistory, the group's history,
+   * (ADR-0039): the transition check and StatusHistory, the group's history,
    * closing its enrolments with their refunds and auto-graduation, and the
    * group row, in one Serializable transaction with the budget of a group
    * deletion. The 'entity.status.changed' events (system comment, Telegram
