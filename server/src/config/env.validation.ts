@@ -120,6 +120,27 @@ function isSet(config: Record<string, unknown>, key: string): boolean {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+/**
+ * What is wrong with the Mini App address, or null (ADR-0040).
+ *
+ * Checked at boot because the failure is not local to one button: the bot puts
+ * this URL on a `web_app` button in its main menu, Telegram refuses a web_app
+ * URL that is not https, and the refusal fails the WHOLE message — every
+ * `/start` would answer with a greeting and no menu at all.
+ */
+function miniAppUrlProblem(raw: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(raw.trim());
+  } catch {
+    return "to'liq manzil emas (masalan https://student.dafzentrum.uz/tg)";
+  }
+  if (url.protocol !== 'https:') {
+    return 'https:// bilan boshlanishi kerak — Telegram boshqa manzilni Mini App sifatida ochmaydi';
+  }
+  return null;
+}
+
 export function validateEnv(
   config: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -140,6 +161,11 @@ export function validateEnv(
         `JWT_SECRET — juda qisqa (${length} belgi, kamida ${MIN_JWT_SECRET_LENGTH} kerak)`,
       );
     }
+  }
+
+  if (isSet(config, 'TELEGRAM_MINI_APP_URL')) {
+    const problem = miniAppUrlProblem(String(config.TELEGRAM_MINI_APP_URL));
+    if (problem) errors.push(`TELEGRAM_MINI_APP_URL — ${problem}`);
   }
 
   for (const { feature, keys } of GROUPS) {

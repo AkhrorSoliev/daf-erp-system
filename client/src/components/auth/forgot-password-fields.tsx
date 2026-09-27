@@ -2,6 +2,7 @@
 
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatPhoneInput } from "@/lib/format-utils";
 import { Button } from "@/components/ui/button";
 import {
   Button as LumioButton,
@@ -45,7 +46,8 @@ export function FpField({ lumio, label, htmlFor, children }: FieldProps) {
 /**
  * Phone entry. Both skins keep the non-editable `+998` prefix and the 9-digit
  * cap — unlike the sign-in forms, this field must stay Uzbek-only because Eskiz
- * only delivers OTP codes to Uzbek numbers.
+ * only delivers OTP codes to Uzbek numbers. The field shows `XX XXX XX XX` as
+ * the digits are typed; `onChange` still hands back the raw nine digits.
  */
 export function FpPhoneInput({
   lumio,
@@ -62,7 +64,7 @@ export function FpPhoneInput({
     inputMode: "numeric" as const,
     autoFocus: true,
     required: true,
-    value,
+    value: formatPhoneInput(value),
     placeholder: "XX XXX XX XX",
     maxLength: 12,
     onChange: (e: React.ChangeEvent<HTMLInputElement>) =>

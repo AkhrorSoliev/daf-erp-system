@@ -91,3 +91,15 @@ export type TransactionItem = {
 };
 
 export type PaymentHistory = { payments: PaymentItem[]; transactions: TransactionItem[] };
+
+/** A first-run step the app still owes (ADR-0039). */
+export type OnboardingStep = 'PHONE' | 'GENDER' | 'BIRTH_DATE';
+
+/** GET /api/student-portal/onboarding — also returned by every onboarding write. */
+export type OnboardingStatus = {
+  /** Steps still owed, in display order. Empty = the app opens. */
+  missing: OnboardingStep[];
+  /** The number on the student's card — where the SMS code goes. */
+  phone: string;
+  phoneVerified: boolean;
+};

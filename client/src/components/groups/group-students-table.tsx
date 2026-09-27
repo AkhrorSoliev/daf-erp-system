@@ -37,6 +37,8 @@ function toStudent(gs: GroupStudent): Student {
     firstName: gs.firstName,
     lastName: gs.lastName,
     phone: gs.phone,
+    phoneVerified: false,
+    phoneVerifiedAt: null,
     photo: gs.photo,
     balance: gs.balance,
     isActive: gs.isActive,
