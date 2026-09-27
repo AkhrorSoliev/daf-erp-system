@@ -24,10 +24,32 @@ export interface ProfitLossQuery {
  * = Net Profit
  *
  * Revenue is on a CASH basis (payments received) so it reconciles with the
- * Cash Flow statement. Teacher vs admin salary is split per decision #4:
- * a paid SalaryPayment with linked accruals = teacher (lesson-based), one with
- * none = admin/fixed-monthly.
+ * Cash Flow statement. Teacher vs admin salary is split by the PAYEE — see
+ * `isStaffPayout`.
  */
+/**
+ * A paid salary is staff (admin / cashier / director) pay only when nothing
+ * about it is lesson-based: no linked accruals, a global FIXED_MONTHLY rate on
+ * the payee, and no Teacher role — the definition the staff section of
+ * `/salary/monthly` uses (`SalaryStaffMonthlyService`).
+ *
+ * The accrual count alone used to decide it. May 2026 was entered from the
+ * CEO's spreadsheet with no accruals behind it, so once that month was marked
+ * paid the teachers' pay read as staff pay — and June's net profit, which falls
+ * back to the paid staff figure while no staff rate existed yet, lost the whole
+ * May payroll.
+ */
+export function isStaffPayout(sp: {
+  _count: { accruals: number };
+  user: { salaryConfigs: unknown[]; roles: unknown[] };
+}): boolean {
+  return (
+    sp._count.accruals === 0 &&
+    sp.user.salaryConfigs.length > 0 &&
+    sp.user.roles.length === 0
+  );
+}
+
 @Injectable()
 export class ReportsProfitLossService {
   constructor(private prisma: PrismaService) {}
@@ -68,11 +90,12 @@ export class ReportsProfitLossService {
         },
         _sum: { amount: true },
       }),
-      // Paid salaries in the period, with accrual count to classify teacher
-      // vs admin. `SalaryPayment` carries no branch of its own, so scope via
-      // the payee's branch — one employee belongs to exactly one branch, so
-      // their whole payroll is that branch's cost. Leaving this company-wide
-      // charged every branch's payroll against each branch's revenue.
+      // Paid salaries in the period, with what `isStaffPayout` needs to tell
+      // teacher from admin pay. `SalaryPayment` carries no branch of its own,
+      // so scope via the payee's branch — one employee belongs to exactly one
+      // branch, so their whole payroll is that branch's cost. Leaving this
+      // company-wide charged every branch's payroll against each branch's
+      // revenue.
       this.prisma.salaryPayment.findMany({
         where: {
           companyId,
@@ -82,7 +105,24 @@ export class ReportsProfitLossService {
             user: { mainBranch: { in: branchScopeIds } },
           }),
         },
-        select: { amount: true, _count: { select: { accruals: true } } },
+        select: {
+          amount: true,
+          _count: { select: { accruals: true } },
+          user: {
+            select: {
+              salaryConfigs: {
+                where: { salaryType: 'FIXED_MONTHLY', groupId: null },
+                select: { id: true },
+                take: 1,
+              },
+              roles: {
+                where: { role: { name: 'Teacher' } },
+                select: { roleId: true },
+                take: 1,
+              },
+            },
+          },
+        },
       }),
     ]);
 
@@ -100,8 +140,8 @@ export class ReportsProfitLossService {
     let teacherSalaries = 0;
     let adminSalaries = 0;
     for (const sp of paidSalaries) {
-      if (sp._count.accruals > 0) teacherSalaries += sp.amount;
-      else adminSalaries += sp.amount;
+      if (isStaffPayout(sp)) adminSalaries += sp.amount;
+      else teacherSalaries += sp.amount;
     }
 
     // ---- Expenses ----

@@ -293,6 +293,40 @@ describe('TransactionsWriteService.recordSalaryPayment — cash account + descri
       expect.anything(),
     );
   });
+
+  // May 2026 was paid out before Farg'ona's cash journal opened (15.06). That
+  // money never passed through a drawer the system knows about.
+  it('writes no cash movement for a payout that predates the cash journal', async () => {
+    await service.recordSalaryPayment({ ...base, predatesCashJournal: true });
+
+    expect(cashMovements.recordOutflow).not.toHaveBeenCalled();
+    // The ledger row and the balance change are still written.
+    expect(prisma.transaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: 'SALARY_PAYMENT',
+          amount: -1_000_000,
+        }),
+      }),
+    );
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 7 },
+      data: { balance: 4_000_000 },
+    });
+  });
+
+  it('refuses a pre-journal payout that also names cash accounts', async () => {
+    await expect(
+      service.recordSalaryPayment({
+        ...base,
+        predatesCashJournal: true,
+        cashSlices: [{ cashAccountId: 'kassa', amount: 1_000_000 }],
+      }),
+    ).rejects.toThrow(/kassa jurnali/i);
+
+    expect(prisma.transaction.create).not.toHaveBeenCalled();
+    expect(cashMovements.recordOutflow).not.toHaveBeenCalled();
+  });
 });
 
 /**
