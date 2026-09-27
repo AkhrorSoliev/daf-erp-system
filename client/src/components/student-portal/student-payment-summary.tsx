@@ -1,12 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
+import {
+  onMiniAppActivated,
+  openOutsideMiniApp,
+} from "@/lib/telegram-mini-app";
 import { cn } from "@/lib/utils";
 import { Clock, CircleNotch } from "@phosphor-icons/react";
 import {
@@ -21,6 +29,7 @@ import {
 import { useStudentProfile } from "./lib/queries";
 import { loadState } from "./lib/load-state";
 import { LoadFailed } from "./load-failed";
+import { GatewayHandoff } from "./gateway-handoff";
 import { StatementCard } from "./statement-card";
 import type { PaymentHistory as PaymentHistoryData } from "./lib/types";
 
@@ -34,6 +43,21 @@ const PROVIDERS = [
   { id: "CLICK", name: "Click", logo: "/click-logo-v2.png", available: true },
   { id: "UZUM", name: "Uzum Bank", logo: "/uzum-bank.svg", available: false },
 ] as const;
+
+type Provider = (typeof PROVIDERS)[number];
+
+/** A payment the Mini App handed to Telegram to open outside it (see `pay`). */
+interface Handoff {
+  name: string;
+  amount: number;
+  url: string;
+}
+
+/** The balance and its history, after a payment the student may have made. */
+function refreshBalance(queryClient: QueryClient) {
+  queryClient.invalidateQueries({ queryKey: ["student-portal", "profile"] });
+  queryClient.invalidateQueries({ queryKey: ["student-portal", "payments"] });
+}
 
 const TYPE_LABELS: Record<string, string> = {
   PAYMENT: "To'lov",
@@ -51,32 +75,45 @@ export function StudentPaymentSummary() {
 
   const [amount, setAmount] = useState("");
   const [redirecting, setRedirecting] = useState(false);
+  const [handoff, setHandoff] = useState<Handoff | null>(null);
+  // While a payment is under way its amount stays as it was sent.
+  const paying = redirecting || handoff !== null;
 
-  // On return from the gateway (tab regains focus) reset + refetch the balance.
+  // On return from the gateway reset + refetch the balance. The web portal
+  // comes back to this tab when it is shown again. The Mini App never left
+  // it, and Telegram's own browser can cover it without hiding the page, so
+  // Telegram saying the Mini App is shown again counts as well.
   useEffect(() => {
-    if (!redirecting) return;
+    if (!paying) return;
+    let returned = false;
+    const onReturn = () => {
+      // Both signals can arrive for one return.
+      if (returned) return;
+      returned = true;
+      setAmount("");
+      setRedirecting(false);
+      setHandoff(null);
+      refreshBalance(queryClient);
+      toast.success("Balansingiz tekshirilmoqda...");
+    };
     const onVisible = () => {
-      if (document.visibilityState === "visible") {
-        setAmount("");
-        setRedirecting(false);
-        queryClient.invalidateQueries({
-          queryKey: ["student-portal", "profile"],
-        });
-        queryClient.invalidateQueries({
-          queryKey: ["student-portal", "payments"],
-        });
-        toast.success("Balansingiz tekshirilmoqda...");
-      }
+      if (document.visibilityState === "visible") onReturn();
     };
     document.addEventListener("visibilitychange", onVisible);
-    const timeout = setTimeout(() => setRedirecting(false), 20000);
+    const stopActivated = onMiniAppActivated(onReturn);
+    // A redirect that never happened must not keep the form locked. The Mini
+    // App's handoff card has no timer: the student may still be paying.
+    const timeout = redirecting
+      ? setTimeout(() => setRedirecting(false), 20000)
+      : undefined;
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
+      stopActivated();
       clearTimeout(timeout);
     };
-  }, [redirecting, queryClient]);
+  }, [paying, redirecting, queryClient]);
 
-  async function pay(method: "PAYME" | "CLICK") {
+  async function pay(provider: Provider) {
     const val = Number(amount);
     if (!val || val < MIN_PAYMENT) {
       toast.error(`Minimal summa: ${formatNumber(MIN_PAYMENT)} so'm`);
@@ -86,9 +123,19 @@ export function StudentPaymentSummary() {
     try {
       const { data } = await api.post("/student-portal/payments/init", {
         amount: val,
-        method,
+        method: provider.id,
         returnUrl: `${window.location.origin}/portal/payments/result`,
       });
+      // Inside the Telegram Mini App this page must not go to the gateway
+      // itself: it would stay in Telegram's WebView, which cannot hand over
+      // to the Payme or Click app. Telegram opens the link outside instead —
+      // in the gateway's app or a browser — and the Mini App stays open
+      // behind it, showing a card that opens the link again.
+      if (openOutsideMiniApp(data.checkoutUrl)) {
+        setHandoff({ name: provider.name, amount: val, url: data.checkoutUrl });
+        setRedirecting(false);
+        return;
+      }
       // `assign`, not `location.href = …`: the React Compiler's immutability
       // rule reads the assignment as mutating a value defined outside the
       // component. It is the same navigation either way, and this form says
@@ -98,6 +145,18 @@ export function StudentPaymentSummary() {
       toast.error(getErrorMessage(err, "To'lov tizimida xatolik yuz berdi"));
       setRedirecting(false);
     }
+  }
+
+  // A fresh tap: the call Telegram answers even when it dropped the one
+  // `pay` made after waiting for the server.
+  function reopenHandoff(url: string) {
+    if (!openOutsideMiniApp(url)) window.location.assign(url);
+  }
+
+  function closeHandoff() {
+    setHandoff(null);
+    // The student may be back from paying without Telegram having said so.
+    refreshBalance(queryClient);
   }
 
   if (loadState(profileQuery) === "loading") {
@@ -175,7 +234,7 @@ export function StudentPaymentSummary() {
                     setAmount(e.target.value.replace(/\D/g, "").slice(0, 9))
                   }
                   placeholder="0"
-                  disabled={redirecting}
+                  disabled={paying}
                   className="w-full bg-transparent text-center font-display text-2xl font-extrabold text-ink-900 outline-none placeholder:text-ink-400"
                 />
                 <span className="shrink-0 font-display font-bold text-ink-500">
@@ -197,7 +256,7 @@ export function StudentPaymentSummary() {
                     <button
                       key={val}
                       type="button"
-                      disabled={redirecting}
+                      disabled={paying}
                       aria-pressed={selected}
                       onClick={() => setAmount(String(val))}
                       className={cn(
@@ -219,35 +278,44 @@ export function StudentPaymentSummary() {
                 </p>
               ) : null}
 
-              <div className="grid grid-cols-2 gap-3">
-                {PROVIDERS.filter((p) => p.available).map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    disabled={redirecting}
-                    // While redirecting the logo becomes a spinner, which
-                    // would leave the button with no name at all.
-                    aria-label={`${p.name} orqali to'lash`}
-                    onClick={() => pay(p.id as "PAYME" | "CLICK")}
-                    className="clay-white clay-btn flex h-14 items-center justify-center overflow-hidden rounded-card border border-line bg-white px-3 disabled:opacity-60"
-                  >
-                    {redirecting ? (
-                      <CircleNotch
-                        size={24}
-                        weight="bold"
-                        className="animate-spin text-ink-500"
-                      />
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={p.logo}
-                        alt={p.name}
-                        className="max-h-8 w-auto max-w-full object-contain"
-                      />
-                    )}
-                  </button>
-                ))}
-              </div>
+              {handoff ? (
+                <GatewayHandoff
+                  name={handoff.name}
+                  amount={handoff.amount}
+                  onOpen={() => reopenHandoff(handoff.url)}
+                  onClose={closeHandoff}
+                />
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {PROVIDERS.filter((p) => p.available).map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      disabled={redirecting}
+                      // While redirecting the logo becomes a spinner, which
+                      // would leave the button with no name at all.
+                      aria-label={`${p.name} orqali to'lash`}
+                      onClick={() => pay(p)}
+                      className="clay-white clay-btn flex h-14 items-center justify-center overflow-hidden rounded-card border border-line bg-white px-3 disabled:opacity-60"
+                    >
+                      {redirecting ? (
+                        <CircleNotch
+                          size={24}
+                          weight="bold"
+                          className="animate-spin text-ink-500"
+                        />
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={p.logo}
+                          alt={p.name}
+                          className="max-h-8 w-auto max-w-full object-contain"
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <div className="flex items-center justify-center gap-2 opacity-70">
                 {/* eslint-disable-next-line @next/next/no-img-element */}

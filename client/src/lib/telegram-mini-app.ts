@@ -23,6 +23,14 @@ export interface TelegramWebApp {
   close(): void;
   /** Bot API 7.7+; eski klientlarda yo'q. */
   disableVerticalSwipes?: () => void;
+  /**
+   * Havolani Mini App'dan tashqarida ochadi, Mini App ochiq qoladi.
+   * `http(s)` dan boshqa havolaga xato otadi.
+   */
+  openLink(url: string): void;
+  /** `activated` — Bot API 8.0+; eski klientlarda hech qachon kelmaydi. */
+  onEvent(eventType: "activated", callback: () => void): void;
+  offEvent(eventType: "activated", callback: () => void): void;
 }
 
 export function getTelegramWebApp(): TelegramWebApp | null {
@@ -35,6 +43,50 @@ export function getTelegramWebApp(): TelegramWebApp | null {
 /** Mini App'ni yopadi; Telegram tashqarisida hech narsa qilmaydi. */
 export function closeMiniApp(): void {
   getTelegramWebApp()?.close();
+}
+
+// ── Tashqi havola (Payme, Click) ──────────────────────────────────────────
+//
+// Mini App oynasining o'zi to'lov sahifasiga o'tsa (`location.assign`), sahifa
+// Telegram'ning WebView'i ichida qoladi va u yerdan Payme yoki Click ilovasiga
+// o'tib bo'lmaydi. `openLink` havolani Telegram'ga beradi: Telegram uni
+// brauzerda yoki havolani o'zi ochadigan ilovada ochadi, Mini App esa orqada
+// ochiq qoladi.
+
+/**
+ * Havolani Mini App'dan tashqarida ochadi. `false` — bu oyna Mini App emas
+ * (Telegram skripti yo'q yoki `initData` bo'sh) yoki Telegram havolani qabul
+ * qilmadi: chaqiruvchi uni o'zi ochadi.
+ *
+ * Telegram havolani faqat bosishga javoban ochadi: bosishdan keyin sekin
+ * so'rov kutilgan bo'lsa, chaqiruvni jimgina tashlab yuborishi mumkin. Shuning
+ * uchun bunday joyda havolani yangi bosish bilan qayta ochadigan tugma ham
+ * bo'lishi kerak.
+ */
+export function openOutsideMiniApp(url: string): boolean {
+  const webApp = getTelegramWebApp();
+  if (!webApp?.initData) return false;
+  try {
+    webApp.openLink(url);
+    return true;
+  } catch {
+    // `WebAppTgUrlInvalid` — havola http(s) emas.
+    return false;
+  }
+}
+
+/**
+ * Telegram Mini App'ni yana ko'rsatganda chaqiriladi (`activated`). Telegram
+ * ichidagi brauzer Mini App'ni sahifa yashirinmasdan yopishi mumkin — unda
+ * `visibilitychange` kelmaydi, qaytishni esa Telegram shu hodisa bilan aytadi.
+ * Qaytgan funksiya obunani bekor qiladi; Telegram tashqarisida hech narsa
+ * qilmaydi.
+ */
+export function onMiniAppActivated(callback: () => void): () => void {
+  const webApp = getTelegramWebApp();
+  if (!webApp?.initData) return () => {};
+  webApp.onEvent("activated", callback);
+  return () => webApp.offEvent("activated", callback);
 }
 
 // ── «Bu oyna — Mini App» belgisi ──────────────────────────────────────────
