@@ -114,6 +114,7 @@ export class TransactionsService {
       performedById?: number;
       cashSlices?: { cashAccountId: string; amount: number }[];
       description?: string;
+      predatesCashJournal?: boolean;
     },
     tx?: Prisma.TransactionClient,
   ) {
