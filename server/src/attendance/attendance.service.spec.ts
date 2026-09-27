@@ -251,147 +251,99 @@ describe('AttendanceService', () => {
       expect(result.parsedDate).toEqual(new Date('2026-04-01T00:00:00.000Z'));
     });
 
-    describe('lesson time check', () => {
-      // validateLessonDate resolves "today" + the weekday in Asia/Tashkent
-      // (UTC+5). Compute these helpers in the same zone so the lesson date /
-      // weekday don't drift to the previous day when CI runs in the
-      // 19:00–23:59 UTC window — that drift made the time-check tests below
-      // flaky (the date stopped matching "today", so the check was skipped).
-      const tashkentNow = () => new Date(Date.now() + 5 * 60 * 60 * 1000);
-
-      // Today's date string for time tests
-      const getTodayStr = () => {
-        const now = tashkentNow();
-        return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
+    describe('lesson window (ADR-0045)', () => {
+      const validation = () =>
+        (service as unknown as { validation: AttendanceValidationService })
+          .validation;
+      // mockGroup: Wednesday 2026-04-01, 09:00–11:00 Tashkent (04:00–06:00Z).
+      const lesson = {
+        lessonDay: '2026-04-01',
+        startTime: '09:00',
+        endTime: '11:00',
       };
 
-      // Mock group that matches today's day-of-week
-      const getTodayMockGroup = () => {
-        const now = tashkentNow();
-        const dayNames = [
-          'sunday',
-          'monday',
-          'tuesday',
-          'wednesday',
-          'thursday',
-          'friday',
-          'saturday',
-        ];
-        return {
-          ...mockGroup,
-          exactDays: [dayNames[now.getUTCDay()]],
-          startDate: new Date(Date.UTC(now.getUTCFullYear(), 0, 1)),
-          endDate: new Date(Date.UTC(now.getUTCFullYear(), 11, 31)),
-        };
-      };
-
-      it('should throw when current time is before lesson start (Teacher)', async () => {
-        const todayGroup = {
-          ...getTodayMockGroup(),
-          lessonStartTime: '23:50',
-          lessonEndTime: '23:59',
-        };
-        prisma.group.findFirst.mockResolvedValue(todayGroup);
-
-        await expect(
-          service.validateLessonDate('group-uuid-1', getTodayStr(), undefined, [
-            'Teacher',
-          ]),
-        ).rejects.toThrow(BadRequestException);
-      });
-
-      it('should throw when current time is after lesson end (Teacher)', async () => {
-        const todayGroup = {
-          ...getTodayMockGroup(),
-          lessonStartTime: '00:00',
-          lessonEndTime: '00:01',
-        };
-        prisma.group.findFirst.mockResolvedValue(todayGroup);
-
-        await expect(
-          service.validateLessonDate('group-uuid-1', getTodayStr(), undefined, [
-            'Teacher',
-          ]),
-        ).rejects.toThrow(BadRequestException);
-      });
-
-      it('should bypass time check for CEO', async () => {
-        const todayGroup = {
-          ...getTodayMockGroup(),
-          lessonStartTime: '23:50',
-          lessonEndTime: '23:59',
-        };
-        prisma.group.findFirst.mockResolvedValue(todayGroup);
-
-        const result = await service.validateLessonDate(
-          'group-uuid-1',
-          getTodayStr(),
-          undefined,
-          ['CEO'],
-        );
-        expect(result.group.id).toBe('group-uuid-1');
-      });
-
-      it('should bypass time check for Administrator', async () => {
-        const todayGroup = {
-          ...getTodayMockGroup(),
-          lessonStartTime: '23:50',
-          lessonEndTime: '23:59',
-        };
-        prisma.group.findFirst.mockResolvedValue(todayGroup);
-
-        const result = await service.validateLessonDate(
-          'group-uuid-1',
-          getTodayStr(),
-          undefined,
-          ['Administrator'],
-        );
-        expect(result.group.id).toBe('group-uuid-1');
-      });
-
-      it('should bypass time check for Branch Director', async () => {
-        const todayGroup = {
-          ...getTodayMockGroup(),
-          lessonStartTime: '23:50',
-          lessonEndTime: '23:59',
-        };
-        prisma.group.findFirst.mockResolvedValue(todayGroup);
-
-        const result = await service.validateLessonDate(
-          'group-uuid-1',
-          getTodayStr(),
-          undefined,
-          ['Branch Director'],
-        );
-        expect(result.group.id).toBe('group-uuid-1');
-      });
-
-      it('should skip time check for past dates (not today)', async () => {
-        // Non-today date: time check doesn't apply
+      it('validateLessonDate no longer looks at the clock and returns the times', async () => {
         const result = await service.validateLessonDate(
           'group-uuid-1',
           '2026-04-01',
-          undefined,
-          ['Teacher'],
         );
-        expect(result.group.id).toBe('group-uuid-1');
+        expect(result.startTime).toBe('09:00');
+        expect(result.endTime).toBe('11:00');
       });
 
-      it('should skip time check when group has no lesson times set', async () => {
-        const todayGroup = {
-          ...getTodayMockGroup(),
-          lessonStartTime: null,
-          lessonEndTime: null,
-        };
-        prisma.group.findFirst.mockResolvedValue(todayGroup);
-
+      it('a moved lesson carries its own times', async () => {
+        prisma.lessonReschedule.findFirst.mockResolvedValue({
+          originalDate: new Date('2026-03-30T00:00:00.000Z'),
+          newDate: new Date('2026-04-02T00:00:00.000Z'),
+          newLessonStartTime: '14:00',
+          newLessonEndTime: '15:30',
+        });
         const result = await service.validateLessonDate(
           'group-uuid-1',
-          getTodayStr(),
-          undefined,
-          ['Teacher'],
+          '2026-04-02',
         );
-        expect(result.group.id).toBe('group-uuid-1');
+        expect(result.startTime).toBe('14:00');
+        expect(result.endTime).toBe('15:30');
+      });
+
+      it('assertWindowOpen passes inside the window', () => {
+        expect(() =>
+          validation().assertWindowOpen(
+            lesson,
+            new Date('2026-04-01T04:30:00Z'),
+          ),
+        ).not.toThrow();
+      });
+
+      it('assertWindowOpen refuses before the window with the start time', () => {
+        expect(() =>
+          validation().assertWindowOpen(
+            lesson,
+            new Date('2026-04-01T03:49:00Z'),
+          ),
+        ).toThrow(
+          'Davomat dars boshlanishidan 10 daqiqa oldin ochiladi (09:00)',
+        );
+      });
+
+      it('assertWindowOpen refuses after the end, whatever the role', () => {
+        expect(() =>
+          validation().assertWindowOpen(
+            lesson,
+            new Date('2026-04-01T06:01:00Z'),
+          ),
+        ).toThrow(
+          "Dars tugagan (01.04.2026, 11:00). Davomat yopilgan — endi uni saytda kiritib bo'lmaydi",
+        );
+      });
+
+      it('assertLessonNotEnded allows a future lesson and refuses an ended one', () => {
+        expect(() =>
+          validation().assertLessonNotEnded(
+            lesson,
+            new Date('2026-03-31T10:00:00Z'),
+          ),
+        ).not.toThrow();
+        expect(() =>
+          validation().assertLessonNotEnded(
+            lesson,
+            new Date('2026-04-01T07:00:00Z'),
+          ),
+        ).toThrow("Dars tugagan — kelmaslikni oldindan belgilab bo'lmaydi");
+      });
+
+      it('windowFor reports the state and the effective times', async () => {
+        const window = await validation().windowFor(
+          'group-uuid-1',
+          '2026-04-01',
+          undefined,
+          new Date('2026-04-01T04:30:00Z'),
+        );
+        expect(window).toEqual({
+          state: 'open',
+          startTime: '09:00',
+          endTime: '11:00',
+        });
       });
     });
   });
@@ -744,6 +696,91 @@ describe('AttendanceService', () => {
   });
 
   describe('save', () => {
+    // mockGroup's lesson: Wednesday 2026-04-01, 09:00–11:00 Tashkent. Every
+    // save now needs its window open (ADR-0045), so the clock sits at 09:30.
+    beforeEach(() => {
+      jest.useFakeTimers({
+        doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+      });
+      jest.setSystemTime(new Date('2026-04-01T04:30:00.000Z'));
+      prisma.enrollment.findMany.mockResolvedValue(
+        mockEnrollments.map((e) => ({
+          id: `enr-${e.studentId}`,
+          studentId: e.studentId,
+          student: {
+            firstName: e.student.firstName,
+            lastName: e.student.lastName,
+          },
+        })),
+      );
+    });
+    afterEach(() => jest.useRealTimers());
+
+    const twoPresent: SaveAttendanceDto = {
+      entries: [
+        { studentId: 10001, status: 'PRESENT' },
+        { studentId: 10002, status: 'PRESENT' },
+      ],
+    };
+
+    it('refuses a CEO after the lesson ends', async () => {
+      jest.setSystemTime(new Date('2026-04-01T06:01:00.000Z'));
+      await expect(
+        service.save('group-uuid-1', '2026-04-01', twoPresent, 1, ['CEO'], 1),
+      ).rejects.toThrow('Davomat yopilgan');
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it('refuses an administrator on a past lesson day', async () => {
+      await expect(
+        service.save(
+          'group-uuid-1',
+          '2026-03-30',
+          twoPresent,
+          1,
+          ['Administrator'],
+          1,
+        ),
+      ).rejects.toThrow('Dars tugagan (30.03.2026, 11:00)');
+    });
+
+    it('refuses a teacher before the window opens', async () => {
+      jest.setSystemTime(new Date('2026-04-01T03:49:00.000Z'));
+      await expect(
+        service.save(
+          'group-uuid-1',
+          '2026-04-01',
+          twoPresent,
+          1,
+          ['Teacher'],
+          1,
+        ),
+      ).rejects.toThrow('10 daqiqa oldin ochiladi');
+    });
+
+    it('writes a closed lesson only with allowClosedLesson (CEO-ordered script)', async () => {
+      jest.setSystemTime(new Date('2026-04-02T06:00:00.000Z'));
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.attendance.upsert.mockResolvedValue({
+        id: 'att-x',
+        studentId: 10001,
+        status: 'PRESENT',
+      });
+      const saveService = (
+        service as unknown as { saveService: AttendanceSaveService }
+      ).saveService;
+      const result = await saveService.save(
+        'group-uuid-1',
+        '2026-04-01',
+        twoPresent,
+        1,
+        ['CEO'],
+        1,
+        { allowClosedLesson: true },
+      );
+      expect(result.count).toBe(2);
+    });
+
     it('should save attendance and return success', async () => {
       const mockResults = [
         {

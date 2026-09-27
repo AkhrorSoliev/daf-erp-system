@@ -182,7 +182,6 @@ export class AttendanceController {
       dto.date,
       userId,
       companyId,
-      roles,
     );
   }
 

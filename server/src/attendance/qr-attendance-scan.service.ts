@@ -12,6 +12,7 @@ import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { QrSession, QrToken } from './shared/qr-types';
+import { AttendanceValidationService } from './attendance-validation.service';
 
 @Injectable()
 export class QrAttendanceScanService {
@@ -24,6 +25,7 @@ export class QrAttendanceScanService {
     private entityHistoryService: EntityHistoryService,
     private lessonBillingService: LessonBillingService,
     private eventEmitter: EventEmitter2,
+    private validation: AttendanceValidationService,
   ) {}
 
   async scanQr(
@@ -68,6 +70,19 @@ export class QrAttendanceScanService {
     if (!group) {
       throw new BadRequestException('Guruh topilmadi');
     }
+
+    // ADR-0045: a scan writes attendance, so the lesson window applies — a
+    // token that outlives the lesson must not mark anyone.
+    const lesson = await this.validation.validateLessonDate(
+      groupId,
+      date,
+      companyId,
+    );
+    this.validation.assertWindowOpen({
+      lessonDay: date,
+      startTime: lesson.startTime,
+      endTime: lesson.endTime,
+    });
 
     // No balance gate: a student with insufficient balance is allowed to
     // scan and be marked PRESENT. The lesson is recorded but no consumption

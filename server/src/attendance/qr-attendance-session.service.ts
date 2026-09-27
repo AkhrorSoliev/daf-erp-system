@@ -32,16 +32,20 @@ export class QrAttendanceSessionService {
     date: string,
     teacherId: number,
     companyId: number,
-    roles?: string[],
   ) {
-    // Validate date is a valid lesson date (includes time check for teachers)
-    const { group: validatedGroup, parsedDate } =
-      await this.attendanceService.validateLessonDate(
-        groupId,
-        date,
-        companyId,
-        roles,
-      );
+    const lesson = await this.attendanceService.validateLessonDate(
+      groupId,
+      date,
+      companyId,
+    );
+    // ADR-0045: a QR session is attendance too — inside the window only, for
+    // every role.
+    this.attendanceService.assertWindowOpen({
+      lessonDay: date,
+      startTime: lesson.startTime,
+      endTime: lesson.endTime,
+    });
+    const { group: validatedGroup, parsedDate } = lesson;
 
     const group = await this.prisma.group.findFirst({
       where: { id: groupId, deletedAt: null },

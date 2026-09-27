@@ -17,6 +17,15 @@ import {
 import { SaveAttendanceDto } from './dto/save-attendance.dto';
 import { AttendanceValidationService } from './attendance-validation.service';
 
+export interface SaveAttendanceOptions {
+  /**
+   * Write outside the lesson window. ADR-0045: after a lesson ends nobody on
+   * the site may enter or change its attendance; a correction is made only on
+   * the CEO's order, from a script. No HTTP route passes this.
+   */
+  allowClosedLesson?: boolean;
+}
+
 @Injectable()
 export class AttendanceSaveService {
   private readonly logger = new Logger(AttendanceSaveService.name);
@@ -43,13 +52,21 @@ export class AttendanceSaveService {
     userId: number,
     roles: string[],
     companyId: number,
+    options: SaveAttendanceOptions = {},
   ) {
-    const { parsedDate } = await this.validation.validateLessonDate(
+    const lesson = await this.validation.validateLessonDate(
       groupId,
       date,
       companyId,
-      roles,
     );
+    if (!options.allowClosedLesson) {
+      this.validation.assertWindowOpen({
+        lessonDay: date,
+        startTime: lesson.startTime,
+        endTime: lesson.endTime,
+      });
+    }
+    const { parsedDate } = lesson;
     const effectiveCompanyId = companyId;
 
     const isTeacherOnly =

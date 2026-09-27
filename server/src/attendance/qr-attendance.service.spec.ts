@@ -10,6 +10,7 @@ import { RedisService } from '../redis/redis.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
+import { AttendanceValidationService } from './attendance-validation.service';
 
 const validatedGroup = {
   id: 'group-1',
@@ -27,6 +28,10 @@ describe('QrAttendanceService', () => {
   let gateway: any;
   let entityHistory: any;
   let attendanceService: any;
+  let validation: {
+    validateLessonDate: jest.Mock;
+    assertWindowOpen: jest.Mock;
+  };
 
   beforeEach(async () => {
     prisma = {
@@ -107,7 +112,19 @@ describe('QrAttendanceService', () => {
       validateLessonDate: jest.fn().mockResolvedValue({
         group: validatedGroup,
         parsedDate: new Date('2026-04-03T00:00:00.000Z'),
+        startTime: '09:00',
+        endTime: '11:00',
       }),
+      assertWindowOpen: jest.fn(),
+    };
+
+    // The scan path checks the lesson window itself (ADR-0045).
+    validation = {
+      validateLessonDate: jest.fn().mockResolvedValue({
+        startTime: '09:00',
+        endTime: '11:00',
+      }),
+      assertWindowOpen: jest.fn(),
     };
 
     const holidaysService = {
@@ -126,6 +143,7 @@ describe('QrAttendanceService', () => {
         { provide: NotificationsGateway, useValue: gateway },
         { provide: EntityHistoryService, useValue: entityHistory },
         { provide: AttendanceService, useValue: attendanceService },
+        { provide: AttendanceValidationService, useValue: validation },
         {
           provide: LessonBillingService,
           useValue: { processAttendanceBilling: jest.fn() },
@@ -142,15 +160,30 @@ describe('QrAttendanceService', () => {
   });
 
   describe('startSession', () => {
-    it('should call validateLessonDate before creating session', async () => {
-      await service.startSession('group-1', '2026-04-03', 1, 1, ['Teacher']);
+    it('should validate the lesson and its window before creating session', async () => {
+      await service.startSession('group-1', '2026-04-03', 1, 1);
 
       expect(attendanceService.validateLessonDate).toHaveBeenCalledWith(
         'group-1',
         '2026-04-03',
         1,
-        ['Teacher'],
       );
+      expect(attendanceService.assertWindowOpen).toHaveBeenCalledWith({
+        lessonDay: '2026-04-03',
+        startTime: '09:00',
+        endTime: '11:00',
+      });
+    });
+
+    it('should refuse a session outside the lesson window, for every role', async () => {
+      attendanceService.assertWindowOpen.mockImplementation(() => {
+        throw new BadRequestException('Davomat yopilgan');
+      });
+
+      await expect(
+        service.startSession('group-1', '2026-04-03', 1, 1),
+      ).rejects.toThrow('Davomat yopilgan');
+      expect(redis.set).not.toHaveBeenCalled();
     });
 
     it('should throw when validateLessonDate rejects (holiday/non-lesson/inactive)', async () => {
@@ -402,6 +435,18 @@ describe('QrAttendanceService', () => {
       currentToken: 'valid-token',
       createdAt: new Date().toISOString(),
       lessonNumber: 15,
+    });
+
+    it('should refuse a scan once the lesson window is closed', async () => {
+      redis.get.mockResolvedValueOnce(tokenData);
+      validation.assertWindowOpen.mockImplementation(() => {
+        throw new BadRequestException('Davomat yopilgan');
+      });
+
+      await expect(
+        service.scanQr('valid-token', 10001, 20001, 1),
+      ).rejects.toThrow('Davomat yopilgan');
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
     });
 
     it('should mark attendance as PRESENT and notify teacher', async () => {

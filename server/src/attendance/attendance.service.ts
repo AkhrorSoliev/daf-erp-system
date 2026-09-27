@@ -3,7 +3,11 @@ import { SaveAttendanceDto } from './dto/save-attendance.dto';
 import { AttendanceValidationService } from './attendance-validation.service';
 import { AttendanceReadService } from './attendance-read.service';
 import { AttendanceStatsService } from './attendance-stats.service';
-import { AttendanceSaveService } from './attendance-save.service';
+import {
+  AttendanceSaveService,
+  type SaveAttendanceOptions,
+} from './attendance-save.service';
+import type { LessonTimes } from './shared/lesson-window';
 
 @Injectable()
 export class AttendanceService {
@@ -14,13 +18,12 @@ export class AttendanceService {
     private saveService: AttendanceSaveService,
   ) {}
 
-  validateLessonDate(
-    groupId: string,
-    date: string,
-    companyId?: number,
-    roles?: string[],
-  ) {
-    return this.validation.validateLessonDate(groupId, date, companyId, roles);
+  validateLessonDate(groupId: string, date: string, companyId?: number) {
+    return this.validation.validateLessonDate(groupId, date, companyId);
+  }
+
+  assertWindowOpen(lesson: LessonTimes) {
+    this.validation.assertWindowOpen(lesson);
   }
 
   getLessonDates(
@@ -70,7 +73,16 @@ export class AttendanceService {
     userId: number,
     roles: string[],
     companyId: number,
+    options?: SaveAttendanceOptions,
   ) {
-    return this.saveService.save(groupId, date, dto, userId, roles, companyId);
+    return this.saveService.save(
+      groupId,
+      date,
+      dto,
+      userId,
+      roles,
+      companyId,
+      options,
+    );
   }
 }

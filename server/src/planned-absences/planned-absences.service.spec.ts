@@ -21,7 +21,10 @@ describe('PlannedAbsencesService', () => {
       delete: jest.Mock;
     };
   };
-  let validation: { validateLessonDate: jest.Mock };
+  let validation: {
+    validateLessonDate: jest.Mock;
+    assertLessonNotEnded: jest.Mock;
+  };
   let entityHistory: { recordCreate: jest.Mock; recordDelete: jest.Mock };
 
   const parsedDate = new Date('2026-06-10T00:00:00.000Z');
@@ -50,9 +53,13 @@ describe('PlannedAbsencesService', () => {
       },
     };
     validation = {
-      validateLessonDate: jest
-        .fn()
-        .mockResolvedValue({ parsedDate, group: {} }),
+      validateLessonDate: jest.fn().mockResolvedValue({
+        parsedDate,
+        group: {},
+        startTime: '09:00',
+        endTime: '11:00',
+      }),
+      assertLessonNotEnded: jest.fn(),
     };
     entityHistory = {
       recordCreate: jest.fn().mockResolvedValue(undefined),
@@ -89,14 +96,18 @@ describe('PlannedAbsencesService', () => {
         1,
       );
 
-      // Reuses attendance lesson-date validation, forwarding the roles so the
-      // admin time-window bypass applies.
+      // Reuses attendance lesson-date validation; the lesson must not have
+      // ended (ADR-0045) — there is no admin time-window bypass any more.
       expect(validation.validateLessonDate).toHaveBeenCalledWith(
         'g1',
         '2026-06-10',
         1,
-        ['Administrator'],
       );
+      expect(validation.assertLessonNotEnded).toHaveBeenCalledWith({
+        lessonDay: '2026-06-10',
+        startTime: '09:00',
+        endTime: '11:00',
+      });
       expect(prisma.plannedAbsence.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
@@ -116,6 +127,19 @@ describe('PlannedAbsencesService', () => {
       // Cross-entity audit: Group + Student.
       expect(entityHistory.recordCreate).toHaveBeenCalledTimes(2);
       expect(result).toEqual({ id: 'pa1', kind: dto.kind });
+    });
+
+    it('refuses a pre-mark once the lesson has ended', async () => {
+      validation.assertLessonNotEnded.mockImplementation(() => {
+        throw new BadRequestException(
+          "Dars tugagan — kelmaslikni oldindan belgilab bo'lmaydi",
+        );
+      });
+
+      await expect(
+        service.upsert('g1', '2026-06-10', dto, 99, ['Administrator'], 1),
+      ).rejects.toThrow('Dars tugagan');
+      expect(prisma.plannedAbsence.upsert).not.toHaveBeenCalled();
     });
 
     it('rejects when the student is not enrolled / before their startDate', async () => {

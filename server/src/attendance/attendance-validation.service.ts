@@ -7,6 +7,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GroupStatus } from '@prisma/client';
 import { DAY_NAME_TO_JS, tashkentDateStr } from './shared/date-utils';
 import { HolidaysService } from '../holidays/holidays.service';
+import {
+  lessonWindowState,
+  windowRefusal,
+  type LessonTimes,
+  type LessonWindow,
+} from './shared/lesson-window';
 
 @Injectable()
 export class AttendanceValidationService {
@@ -15,23 +21,14 @@ export class AttendanceValidationService {
     private holidaysService: HolidaysService,
   ) {}
 
-  /** Roles that bypass lesson time restriction */
-  private static readonly TIME_BYPASS_ROLES = new Set([
-    'CEO',
-    'Branch Director',
-    'Administrator',
-  ]);
-
   /**
-   * Validate that a date is a valid lesson date for the given group.
-   * Checks: date format, group existence, group status, date range, schedule, holidays, lesson time.
+   * Validate that a date is a lesson of the group: date format, group
+   * existence + company, ACTIVE status, date range, schedule or a moved
+   * lesson, holiday. It says nothing about the clock — `assertWindowOpen`
+   * does (ADR-0045). Returns the lesson's effective times: a reschedule's
+   * override wins over the group's.
    */
-  async validateLessonDate(
-    groupId: string,
-    date: string,
-    companyId?: number,
-    roles?: string[],
-  ) {
+  async validateLessonDate(groupId: string, date: string, companyId?: number) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       throw new BadRequestException(
         "Noto'g'ri sana formati. YYYY-MM-DD formatda kiriting",
@@ -126,60 +123,71 @@ export class AttendanceValidationService {
       throw new BadRequestException(`Bu sana bayram kuni: ${holiday.name}`);
     }
 
-    // Lesson time check (server time, only for Teacher/Cashier).
-    // On a moved-lesson day with a per-reschedule time override, use those
-    // times instead of the group's defaults.
-    const canBypassTime = roles?.some((r) =>
-      AttendanceValidationService.TIME_BYPASS_ROLES.has(r),
-    );
-    const effectiveStartTime =
+    const startTime =
       isMovedLessonDay && reschedule?.newLessonStartTime
         ? reschedule.newLessonStartTime
         : group.lessonStartTime;
-    const effectiveEndTime =
+    const endTime =
       isMovedLessonDay && reschedule?.newLessonEndTime
         ? reschedule.newLessonEndTime
         : group.lessonEndTime;
-    if (!canBypassTime && effectiveStartTime && effectiveEndTime) {
-      // Production server runs in UTC; lesson times are Asia/Tashkent (UTC+5)
-      const tashkentParts = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Asia/Tashkent',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }).formatToParts(new Date());
-      const part = (type: string) =>
-        tashkentParts.find((p) => p.type === type)!.value;
-      const todayStr = `${part('year')}-${part('month')}-${part('day')}`;
 
-      // Vaqt tekshiruvi faqat bugungi sana uchun amal qiladi
-      if (date === todayStr) {
-        const currentMinutes =
-          Number(part('hour')) * 60 + Number(part('minute'));
-        const [startH, startM] = effectiveStartTime.split(':').map(Number);
-        const [endH, endM] = effectiveEndTime.split(':').map(Number);
-        const lessonStart = startH * 60 + startM;
-        const lessonEnd = endH * 60 + endM;
+    return { group, parsedDate, startTime, endTime };
+  }
 
-        // 10 daqiqa oldin ochiladi
-        const windowStart = lessonStart - 10;
-
-        if (currentMinutes < windowStart) {
-          throw new BadRequestException(
-            `Davomat dars boshlanishidan 10 daqiqa oldin ochiladi (${effectiveStartTime})`,
-          );
-        }
-        if (currentMinutes > lessonEnd) {
-          throw new BadRequestException(
-            `Dars vaqti tugagan (${effectiveEndTime}). Davomat olish yopilgan`,
-          );
-        }
-      }
+  /**
+   * ADR-0045: attendance is written only inside the lesson window, by every
+   * role. Throws the Uzbek reason otherwise.
+   */
+  assertWindowOpen(lesson: LessonTimes, now: Date = new Date()): void {
+    const state = lessonWindowState({ ...lesson, now });
+    if (state !== 'open') {
+      throw new BadRequestException(windowRefusal(state, lesson, now));
     }
+  }
 
-    return { group, parsedDate };
+  /** A pre-marked absence makes sense only until the lesson ends. */
+  assertLessonNotEnded(lesson: LessonTimes, now: Date = new Date()): void {
+    if (lessonWindowState({ ...lesson, now }) === 'closed') {
+      throw new BadRequestException(
+        "Dars tugagan — kelmaslikni oldindan belgilab bo'lmaydi",
+      );
+    }
+  }
+
+  /**
+   * The window the attendance screen shows. Times include a move's override,
+   * so a moved lesson opens and closes at its own hours.
+   */
+  async windowFor(
+    groupId: string,
+    date: string,
+    companyId?: number,
+    now: Date = new Date(),
+  ): Promise<LessonWindow> {
+    const group = await this.prisma.group.findFirst({
+      where: {
+        id: groupId,
+        deletedAt: null,
+        ...(companyId && { companyId }),
+      },
+      select: { lessonStartTime: true, lessonEndTime: true },
+    });
+    if (!group) throw new NotFoundException('Guruh topilmadi');
+    const moved = await this.prisma.lessonReschedule.findFirst({
+      where: {
+        groupId,
+        deletedAt: null,
+        newDate: new Date(date + 'T00:00:00.000Z'),
+      },
+      select: { newLessonStartTime: true, newLessonEndTime: true },
+    });
+    const startTime = moved?.newLessonStartTime ?? group.lessonStartTime;
+    const endTime = moved?.newLessonEndTime ?? group.lessonEndTime;
+    return {
+      state: lessonWindowState({ lessonDay: date, startTime, endTime, now }),
+      startTime,
+      endTime,
+    };
   }
 }
