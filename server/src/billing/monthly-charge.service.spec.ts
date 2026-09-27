@@ -81,6 +81,9 @@ describe('MonthlyChargeService', () => {
       // (`setCenterTopUpForPeriod`). Odatiy — tegadigan qator yo'q.
       salaryAccrual: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
+      // Contract 3.5: billable lessons the student held in all groups.
+      // Default: an established student, never a trial.
+      attendance: { count: jest.fn().mockResolvedValue(20) },
       lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
       // Bayram darsini shu oy ichida qayta o'tish — `LessonReschedule`.
       // Odatiy: ko'chirish yo'q.
@@ -2056,6 +2059,7 @@ describe('MonthlyChargeService', () => {
         policy: 'STUDENT_CANCELLED',
         share: { held: 6, covered: 13, percent: 46 },
         withheld: true,
+        trial: false,
       });
       expect(txWriteMock.createAdjustment).not.toHaveBeenCalled();
       expect(prismaMock.enrollmentMonthlyCharge.update).not.toHaveBeenCalled();
@@ -2195,6 +2199,7 @@ describe('MonthlyChargeService', () => {
         heldPercent: 46,
         threshold: 40,
         contractApplies: true,
+        trialLesson: false,
         chargedAmount: 1_040_000,
         outcomes: {
           STUDENT_CANCELLED: { lessons: 0, amount: 0, withheld: true },
@@ -2204,6 +2209,85 @@ describe('MonthlyChargeService', () => {
         },
       });
       expect(txWriteMock.createAdjustment).not.toHaveBeenCalled();
+    });
+
+    it('returns the whole month to a first-timer leaving after one lesson (contract 3.5)', async () => {
+      octoberCharge();
+      prismaMock.attendance.count.mockResolvedValue(1);
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-02T10:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqarilganda',
+        today: '2026-10-02',
+        policy: 'STUDENT_CANCELLED' as DeparturePolicy,
+      });
+      expect(res).toMatchObject({
+        refunded: 1_040_000,
+        lessons: 13,
+        trial: true,
+        withheld: false,
+      });
+      expect(prismaMock.attendance.count).toHaveBeenCalledWith({
+        where: {
+          studentId: 10453,
+          status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
+        },
+      });
+      expect(txWriteMock.createAdjustment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 1_040_000,
+          description: expect.stringContaining('sinov darsi (3.5)'),
+          metadata: expect.objectContaining({ trialLesson: true }),
+        }),
+        tx,
+      );
+    });
+
+    it('keeps the ordinary rule for a freeze or a transfer (no policy passed)', async () => {
+      octoberCharge();
+      prismaMock.attendance.count.mockResolvedValue(1);
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-02T10:00:00Z'),
+        companyId: 1,
+        reason: 'Muzlatish',
+        today: '2026-10-02',
+      });
+      expect(res).toMatchObject({ lessons: 12, trial: false });
+      expect(prismaMock.attendance.count).not.toHaveBeenCalled();
+    });
+
+    it('is not a trial once the student held two lessons', async () => {
+      octoberCharge();
+      prismaMock.attendance.count.mockResolvedValue(2);
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-05T10:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqarilganda',
+        today: '2026-10-05',
+        policy: 'STUDENT_CANCELLED' as DeparturePolicy,
+      });
+      expect(res).toMatchObject({ lessons: 11, trial: false });
+    });
+
+    it('previews the trial lesson under every policy', async () => {
+      octoberCharge();
+      prismaMock.attendance.count.mockResolvedValue(1);
+      // Read-only: no backdating guard, so no `today` to pin.
+      const departureDate = new Date('2026-10-02T10:00:00Z');
+      const preview = await service.previewDepartureOutcomes(tx, {
+        enrollmentId: 'enr-1',
+        departureDate,
+        companyId: 1,
+      });
+      expect(preview?.trialLesson).toBe(true);
+      expect(preview?.outcomes.STUDENT_CANCELLED).toEqual({
+        lessons: 13,
+        amount: 1_040_000,
+        withheld: false,
+      });
     });
   });
 

@@ -31,6 +31,18 @@ export const DEFAULT_DEPARTURE_POLICY: DeparturePolicy = 'STUDENT_CANCELLED';
 /** The contract carrying rule 6.2 is in force for departures from this Tashkent day. */
 export const CONTRACT_62_START_DAY = '2026-10-01';
 
+/**
+ * Contract 3.5 (trial lesson) is in force for departures from this Tashkent
+ * day: a first-time student who leaves after at most one lesson pays nothing.
+ */
+export const TRIAL_LESSON_START_DAY = '2026-10-01';
+
+/**
+ * The most billable lessons (PRESENT/LATE/ABSENT, every group) a student may
+ * have held and still leave on the trial-lesson rule.
+ */
+export const TRIAL_LESSON_MAX_HELD = 1;
+
 /** A departure day before every lesson date: releases the whole month. */
 const BEFORE_ANY_LESSON = '0000-00-00';
 
@@ -71,28 +83,71 @@ export interface PolicyRelease {
    * already returned the rest) is never «withheld»: the rule kept nothing.
    */
   withheld: boolean;
+  /** True when contract 3.5 (trial lesson) released the whole month. */
+  trial: boolean;
+}
+
+export interface PolicyReleaseOptions {
+  /**
+   * The student has held at most `TRIAL_LESSON_MAX_HELD` billable lessons in
+   * all groups, and the caller is an actual departure (a removal or an
+   * expulsion — not a freeze, a transfer or a centre closing).
+   */
+  trialLesson?: boolean;
+}
+
+/** Whether contract 3.5 applies to this departure. */
+export function trialLessonApplies(
+  input: DepartureReleaseInput,
+  options?: PolicyReleaseOptions,
+): boolean {
+  return (
+    options?.trialLesson === true &&
+    input.departureDay >= TRIAL_LESSON_START_DAY
+  );
+}
+
+/** Releases every covered lesson of the month, the ones already frozen out excluded. */
+function wholeMonthRelease(
+  input: DepartureReleaseInput,
+): DepartureRelease | null {
+  return departureRelease({
+    ...input,
+    departureDay: BEFORE_ANY_LESSON,
+    lessonsThroughDeparture: 0,
+  });
 }
 
 /**
  * The one rule for what a departure returns, shared by the write
  * (`reverseChargeForDeparture`) and the dialog's preview. «More than» the
  * threshold is strict: exactly 40% held still returns the unheld lessons.
+ * A trial lesson (contract 3.5, `options.trialLesson`) wins over every policy.
  */
 export function policyRelease(
   input: DepartureReleaseInput,
   policy: DeparturePolicy,
   thresholdPercent: number,
+  options?: PolicyReleaseOptions,
 ): PolicyRelease {
   const share = heldShare(input);
-  if (policy === 'QUALITY_CLAIM') {
+  // Contract 3.5: a trial lesson is free whatever the policy says — the
+  // month comes back whole and the centre pays the teacher (accruals are
+  // never touched by a departure).
+  if (trialLessonApplies(input, options)) {
     return {
-      release: departureRelease({
-        ...input,
-        departureDay: BEFORE_ANY_LESSON,
-        lessonsThroughDeparture: 0,
-      }),
+      release: wholeMonthRelease(input),
       share,
       withheld: false,
+      trial: true,
+    };
+  }
+  if (policy === 'QUALITY_CLAIM') {
+    return {
+      release: wholeMonthRelease(input),
+      share,
+      withheld: false,
+      trial: false,
     };
   }
   const release = departureRelease(input);
@@ -104,7 +159,7 @@ export function policyRelease(
     ruleApplies &&
     share.held * 100 > thresholdPercent * share.covered
   ) {
-    return { release: null, share, withheld: true };
+    return { release: null, share, withheld: true, trial: false };
   }
-  return { release, share, withheld: false };
+  return { release, share, withheld: false, trial: false };
 }

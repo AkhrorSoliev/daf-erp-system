@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import {
+  AttendanceStatus,
   EnrollmentStatus,
   GroupStatus,
   MonthlyChargeStatus,
@@ -27,6 +28,8 @@ import {
   DeparturePolicy,
   HeldShare,
   policyRelease,
+  TRIAL_LESSON_MAX_HELD,
+  TRIAL_LESSON_START_DAY,
 } from './departure-policy';
 
 /** Hisob yaratish uchun kerakli yozilish shakli. */
@@ -64,6 +67,8 @@ export interface DepartureOutcome {
   share: HeldShare;
   /** True when rule 6.2 kept the money and nothing was written. */
   withheld: boolean;
+  /** True when contract 3.5 (trial lesson) returned the whole month. */
+  trial: boolean;
 }
 
 /** `previewDepartureOutcomes`: the month's facts and each policy's result. */
@@ -80,6 +85,11 @@ export interface DepartureOutcomesPreview {
   threshold: number;
   /** Whether rule 6.2 applies to this departure day at all. */
   contractApplies: boolean;
+  /**
+   * Contract 3.5: the student has held at most one lesson in all groups, so
+   * leaving now returns the whole month under every policy.
+   */
+  trialLesson: boolean;
   chargedAmount: number;
   outcomes: Record<
     DeparturePolicy,
@@ -710,7 +720,15 @@ export class MonthlyChargeService {
             'payment.noRefundAfterPercent',
           )
         : 0;
-    const outcome = policyRelease(loaded.input, policy, threshold);
+    // Contract 3.5 is about a student LEAVING: only a removal or an expulsion
+    // names a policy. A freeze, a transfer or a centre closing passes none
+    // and keeps the ordinary rule.
+    const trialLesson =
+      params.policy !== undefined &&
+      (await this.isTrialLessonDeparture(tx, loaded.enr.studentId, day));
+    const outcome = policyRelease(loaded.input, policy, threshold, {
+      trialLesson,
+    });
     if (outcome.withheld) {
       // Contract 6.2 keeps the money: nothing is written. The caller puts the
       // share into the history so the decision can be explained later.
@@ -720,6 +738,7 @@ export class MonthlyChargeService {
         policy,
         share: outcome.share,
         withheld: true,
+        trial: false,
       };
     }
     if (!outcome.release) return null;
@@ -738,8 +757,9 @@ export class MonthlyChargeService {
         amount: refunded,
         companyId: params.companyId,
         branchId: enr.group.branchId,
-        description:
-          policy === 'QUALITY_CLAIM'
+        description: outcome.trial
+          ? `${params.reason} — sinov darsi (3.5): oyning ${remaining} darsi puli to'liq qaytarildi`
+          : policy === 'QUALITY_CLAIM'
             ? `${params.reason} — sifat bo'yicha shikoyat: oyning ${remaining} darsi puli to'liq qaytarildi`
             : policy === 'LEVEL_COMPLETED'
               ? `${params.reason} — darajani tugatdi: o'tmagan ${remaining} dars qaytarildi`
@@ -753,6 +773,7 @@ export class MonthlyChargeService {
           period: `${periodYear}-${String(periodMonth).padStart(2, '0')}`,
           lessons: remaining,
           policy,
+          ...(outcome.trial ? { trialLesson: true } : {}),
           heldPercent: outcome.share.percent,
           ...(frozenOutAfter
             ? {
@@ -785,6 +806,7 @@ export class MonthlyChargeService {
       policy,
       share: outcome.share,
       withheld: false,
+      trial: outcome.trial,
     };
   }
 
@@ -833,10 +855,17 @@ export class MonthlyChargeService {
       params.companyId,
       'payment.noRefundAfterPercent',
     );
+    const trialLesson = await this.isTrialLessonDeparture(
+      client,
+      loaded.enr.studentId,
+      day,
+    );
     const outcomes = {} as DepartureOutcomesPreview['outcomes'];
     let share: HeldShare | null = null;
     for (const policy of DEPARTURE_POLICIES) {
-      const r = policyRelease(loaded.input, policy, threshold);
+      const r = policyRelease(loaded.input, policy, threshold, {
+        trialLesson,
+      });
       share = r.share;
       outcomes[policy] = {
         lessons: r.release?.lessons ?? 0,
@@ -854,9 +883,38 @@ export class MonthlyChargeService {
       heldPercent: share!.percent,
       threshold,
       contractApplies: day >= CONTRACT_62_START_DAY,
+      trialLesson: trialLesson && day >= TRIAL_LESSON_START_DAY,
       chargedAmount: loaded.charge.chargedAmount,
       outcomes,
     };
+  }
+
+  /**
+   * Contract 3.5 (trial lesson): the student has held at most one billable
+   * lesson (PRESENT/LATE/ABSENT) in ALL groups — a first-timer leaving after
+   * the first lesson. Counted across groups so a student moving on after
+   * months elsewhere is never taken for a trial. Before the contract's day
+   * nothing is read.
+   */
+  private async isTrialLessonDeparture(
+    client: Prisma.TransactionClient,
+    studentId: number,
+    day: string,
+  ): Promise<boolean> {
+    if (day < TRIAL_LESSON_START_DAY) return false;
+    const held = await client.attendance.count({
+      where: {
+        studentId,
+        status: {
+          in: [
+            AttendanceStatus.PRESENT,
+            AttendanceStatus.LATE,
+            AttendanceStatus.ABSENT,
+          ],
+        },
+      },
+    });
+    return held <= TRIAL_LESSON_MAX_HELD;
   }
 
   /** Reads (never writes) the month charge a departure on `day` would cut. */
