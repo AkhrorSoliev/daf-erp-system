@@ -20,7 +20,14 @@ import {
   proratedMonthlyAmount,
 } from './monthly-price';
 import { chargeStartDate } from './charge-start-date';
-import { departureRelease } from './departure-release';
+import { DepartureReleaseInput } from './departure-release';
+import {
+  CONTRACT_62_START_DAY,
+  DEPARTURE_POLICIES,
+  DeparturePolicy,
+  HeldShare,
+  policyRelease,
+} from './departure-policy';
 
 /** Hisob yaratish uchun kerakli yozilish shakli. */
 export interface ChargeableEnrollment {
@@ -47,6 +54,37 @@ export interface ChargeableEnrollment {
     exactDays: string[];
     course: { price: number; paymentModel: PaymentModel };
   };
+}
+
+/** What `reverseChargeForDeparture` did (contract 6.2, ADR-0043). */
+export interface DepartureOutcome {
+  refunded: number;
+  lessons: number;
+  policy: DeparturePolicy;
+  share: HeldShare;
+  /** True when rule 6.2 kept the money and nothing was written. */
+  withheld: boolean;
+}
+
+/** `previewDepartureOutcomes`: the month's facts and each policy's result. */
+export interface DepartureOutcomesPreview {
+  /** 'YYYY-MM'. */
+  period: string;
+  /** Tashkent 'YYYY-MM-DD' the preview was computed for. */
+  departureDay: string;
+  /** The month's covered lesson dates still charged, ascending. */
+  lessonDates: string[];
+  held: number;
+  covered: number;
+  heldPercent: number;
+  threshold: number;
+  /** Whether rule 6.2 applies to this departure day at all. */
+  contractApplies: boolean;
+  chargedAmount: number;
+  outcomes: Record<
+    DeparturePolicy,
+    { lessons: number; amount: number; withheld: boolean }
+  >;
 }
 
 /**
@@ -642,8 +680,16 @@ export class MonthlyChargeService {
        * bu yerda hech qanday xavf yo'q.
        */
       today?: string;
+      /**
+       * Who ended the enrollment (contract 6.2, ADR-0043). Omitted —
+       * `CENTER_INITIATIVE`, the rule every caller had before the contract:
+       * the unheld lessons come back. Removal, expulsion and a card archive
+       * pass the student's own `STUDENT_CANCELLED` (or what the CEO/director
+       * chose); freezes, transfers and centre closures pass nothing.
+       */
+      policy?: DeparturePolicy;
     },
-  ): Promise<{ refunded: number } | null> {
+  ): Promise<DepartureOutcome | null> {
     const day = tashkentDateStr(params.departureDate);
     const today = params.today ?? tashkentDateStr(new Date());
     if (day < today) {
@@ -652,14 +698,35 @@ export class MonthlyChargeService {
       );
     }
 
-    const loaded = await this.loadDepartureRelease(
-      tx,
-      params.enrollmentId,
-      day,
-    );
+    const policy = params.policy ?? 'CENTER_INITIATIVE';
+    const loaded = await this.loadDepartureInput(tx, params.enrollmentId, day);
     if (!loaded) return null;
-    const { charge, enr, periodYear, periodMonth, release } = loaded;
-    const { lessons: remaining, amount: refunded, frozenOutAfter } = release;
+    const threshold =
+      policy === 'STUDENT_CANCELLED'
+        ? await this.settingsService.get(
+            params.companyId,
+            'payment.noRefundAfterPercent',
+          )
+        : 0;
+    const outcome = policyRelease(loaded.input, policy, threshold);
+    if (outcome.withheld) {
+      // Contract 6.2 keeps the money: nothing is written. The caller puts the
+      // share into the history so the decision can be explained later.
+      return {
+        refunded: 0,
+        lessons: 0,
+        policy,
+        share: outcome.share,
+        withheld: true,
+      };
+    }
+    if (!outcome.release) return null;
+    const { charge, enr, periodYear, periodMonth } = loaded;
+    const {
+      lessons: remaining,
+      amount: refunded,
+      frozenOutAfter,
+    } = outcome.release;
     const coveredDates = charge.coveredDates ?? [];
     const frozenOutBefore = charge.frozenOutDates ?? [];
 
@@ -669,7 +736,10 @@ export class MonthlyChargeService {
         amount: refunded,
         companyId: params.companyId,
         branchId: enr.group.branchId,
-        description: `${params.reason} — o'tmagan ${remaining} dars qaytarildi`,
+        description:
+          policy === 'QUALITY_CLAIM'
+            ? `${params.reason} — sifat bo'yicha shikoyat: oyning ${remaining} darsi puli to'liq qaytarildi`
+            : `${params.reason} — o'tmagan ${remaining} dars qaytarildi`,
         performedById: params.performedById,
         // Lets the payment statement fold this refund into the month's
         // lessons without parsing the description.
@@ -678,6 +748,8 @@ export class MonthlyChargeService {
           enrollmentId: params.enrollmentId,
           period: `${periodYear}-${String(periodMonth).padStart(2, '0')}`,
           lessons: remaining,
+          policy,
+          heldPercent: outcome.share.percent,
           ...(frozenOutAfter
             ? {
                 dates: frozenOutAfter.filter(
@@ -703,7 +775,13 @@ export class MonthlyChargeService {
       },
     });
 
-    return { refunded };
+    return {
+      refunded,
+      lessons: remaining,
+      policy,
+      share: outcome.share,
+      withheld: false,
+    };
   }
 
   /**
@@ -715,21 +793,70 @@ export class MonthlyChargeService {
     client: Prisma.TransactionClient,
     params: { enrollmentId: string; departureDate: Date },
   ): Promise<{ lessons: number; amount: number; period: string } | null> {
-    const loaded = await this.loadDepartureRelease(
+    const loaded = await this.loadDepartureInput(
       client,
       params.enrollmentId,
       tashkentDateStr(params.departureDate),
     );
     if (!loaded) return null;
+    const { release } = policyRelease(loaded.input, 'CENTER_INITIATIVE', 0);
+    if (!release) return null;
     return {
-      lessons: loaded.release.lessons,
-      amount: loaded.release.amount,
+      lessons: release.lessons,
+      amount: release.amount,
       period: `${loaded.periodYear}-${String(loaded.periodMonth).padStart(2, '0')}`,
     };
   }
 
-  /** Reads (never writes) the month charge and applies `departureRelease`. */
-  private async loadDepartureRelease(
+  /**
+   * What a departure on `departureDate` would return under each policy
+   * (contract 6.2, ADR-0043), by the same `policyRelease` rule the write
+   * uses — the removal and expulsion dialogs show these before anything is
+   * confirmed. Writes nothing. Null: no standing charge for that month.
+   */
+  async previewDepartureOutcomes(
+    client: Prisma.TransactionClient,
+    params: { enrollmentId: string; departureDate: Date; companyId: number },
+  ): Promise<DepartureOutcomesPreview | null> {
+    const day = tashkentDateStr(params.departureDate);
+    const loaded = await this.loadDepartureInput(
+      client,
+      params.enrollmentId,
+      day,
+    );
+    if (!loaded) return null;
+    const threshold = await this.settingsService.get(
+      params.companyId,
+      'payment.noRefundAfterPercent',
+    );
+    const outcomes = {} as DepartureOutcomesPreview['outcomes'];
+    let share: HeldShare | null = null;
+    for (const policy of DEPARTURE_POLICIES) {
+      const r = policyRelease(loaded.input, policy, threshold);
+      share = r.share;
+      outcomes[policy] = {
+        lessons: r.release?.lessons ?? 0,
+        amount: r.release?.amount ?? 0,
+        withheld: r.withheld,
+      };
+    }
+    const out = new Set(loaded.input.frozenOutDates);
+    return {
+      period: `${loaded.periodYear}-${String(loaded.periodMonth).padStart(2, '0')}`,
+      departureDay: day,
+      lessonDates: loaded.input.coveredDates.filter((d) => !out.has(d)),
+      held: share!.held,
+      covered: share!.covered,
+      heldPercent: share!.percent,
+      threshold,
+      contractApplies: day >= CONTRACT_62_START_DAY,
+      chargedAmount: loaded.charge.chargedAmount,
+      outcomes,
+    };
+  }
+
+  /** Reads (never writes) the month charge a departure on `day` would cut. */
+  private async loadDepartureInput(
     client: Prisma.TransactionClient,
     enrollmentId: string,
     day: string,
@@ -780,7 +907,7 @@ export class MonthlyChargeService {
       }).length;
     }
 
-    const release = departureRelease({
+    const input: DepartureReleaseInput = {
       departureDay: day,
       coveredDates,
       frozenOutDates: charge.frozenOutDates ?? [],
@@ -789,9 +916,8 @@ export class MonthlyChargeService {
       discountPercent: charge.discountPercent ?? 0,
       chargedAmount: charge.chargedAmount,
       lessonsThroughDeparture,
-    });
-    if (!release) return null;
-    return { charge, enr, periodYear, periodMonth, release };
+    };
+    return { charge, enr, periodYear, periodMonth, input };
   }
 
   /**
