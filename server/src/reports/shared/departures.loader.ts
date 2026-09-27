@@ -7,6 +7,7 @@ import {
 import { getSystemStartDate } from '../../common/finance/system-start-date';
 import {
   enrollmentStatusOn,
+  supplyClosingRow,
   supplyOpeningRow,
   type EnrollmentStatusEvent,
 } from '../../students/shared/enrollment-status-on';
@@ -135,16 +136,7 @@ export async function loadDepartures(
     const own = logsByEnrollment.get(e.id);
     if (!own || own.length === 0) continue;
     supplyOpeningRow(own, e.createdAt);
-    // Older writers could close an enrollment without logging it; the row
-    // still says how and when, so the log is completed from it.
-    const last = own[own.length - 1];
-    if (
-      e.statusChangedAt &&
-      last.status !== e.status &&
-      e.statusChangedAt.getTime() >= last.transitionAt.getTime()
-    ) {
-      own.push({ status: e.status, transitionAt: e.statusChangedAt });
-    }
+    supplyClosingRow(own, e);
   }
 
   const enrollmentsByStudent = groupByKey<EnrollmentRow, number>(

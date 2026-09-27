@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { StudentLeadOriginService } from '../common/student-origin';
+import { StatementService } from '../statements/statement.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { PaymentLinkService } from '../payment-gateways/payment-link.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -120,6 +121,7 @@ describe('TelegramService.broadcastMockResults — one message per participant',
         { provide: PaymentLinkService, useValue: {} },
         { provide: TelegramChannelGateStatsService, useValue: {} },
         { provide: StudentLeadOriginService, useValue: {} },
+        { provide: StatementService, useValue: {} },
       ],
     }).compile();
     service = module.get(TelegramService);

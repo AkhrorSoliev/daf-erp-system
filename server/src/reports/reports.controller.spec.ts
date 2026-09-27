@@ -10,6 +10,7 @@ import { ReportsController } from './reports.controller';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { ReportsService } from './reports.service';
 import { ReportsExcelService } from './reports-excel.service';
+import { ReportsProfitCompositionService } from './reports-profit-composition.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RolesGuard } from '../common/guards';
 import { ROLES_KEY } from '../common/decorators';
@@ -113,6 +114,10 @@ describe('ReportsController — role guards', () => {
     generateDebtHistory: jest.fn().mockResolvedValue(Buffer.from('')),
   };
 
+  const mockComposition = {
+    getProfitComposition: jest.fn().mockResolvedValue({ netProfit: 1 }),
+  };
+
   beforeEach(async () => {
     mockExcel.generate.mockClear();
     const module: TestingModule = await Test.createTestingModule({
@@ -121,6 +126,10 @@ describe('ReportsController — role guards', () => {
         { provide: ReportsService, useValue: mockService },
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ReportsExcelService, useValue: mockExcel },
+        {
+          provide: ReportsProfitCompositionService,
+          useValue: mockComposition,
+        },
       ],
     }).compile();
 
@@ -204,6 +213,7 @@ describe('ReportsController — role guards', () => {
     'getMonthlyDebtRecovery',
     'getFinancialTrend',
     'getIncomeMonthAttribution',
+    'getProfitComposition',
   ] as const;
 
   // Widened 2026-08-12 for the single debt page (/payments/debt): the debt
@@ -316,6 +326,29 @@ describe('ReportsController — role guards', () => {
   }
 
   // Method-level @Roles('CEO', 'Branch Director') on getPaymentReports
+  describe('getProfitComposition() — month and scope', () => {
+    beforeEach(() => mockComposition.getProfitComposition.mockClear());
+
+    it("explains the card's month: the period's START month", async () => {
+      await controller.getProfitComposition(
+        { startDate: '2026-09-01', endDate: '2026-09-30' } as any,
+        1001,
+        10001,
+      );
+      expect(mockComposition.getProfitComposition).toHaveBeenCalledWith(1001, {
+        month: '2026-09',
+        branchIds: null,
+        performedById: 10001,
+      });
+    });
+
+    it('falls back to the current Tashkent month without a period', async () => {
+      await controller.getProfitComposition({} as any, 1001, 10001);
+      const arg = mockComposition.getProfitComposition.mock.calls[0][1];
+      expect(arg.month).toMatch(/^\d{4}-\d{2}$/);
+    });
+  });
+
   describe('getPaymentReports() — method-level @Roles', () => {
     it('should have @Roles(CEO, Branch Director) on the handler', () => {
       const roles = reflector.get<string[]>(

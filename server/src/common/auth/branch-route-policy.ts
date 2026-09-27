@@ -354,10 +354,13 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'so it goes through `assertCallerMayTouchGroup` — assignment for a pure ' +
       'teacher, branch for everyone else. `GET /groups/:id/delete-preview` ' +
       'counts the students deleting a group would take out of it, behind ' +
-      'the same check as `DELETE /groups/:id`.',
+      'the same check as `DELETE /groups/:id`. The payment statement (JSON ' +
+      'and PDF) is one more profile read and runs the same check.',
     routes: [
       'GET /students/:id/status-history',
       'GET /students/:id/balance-summary',
+      'GET /students/:id/statement',
+      'GET /students/:id/statement.pdf',
       'GET /students/:id/debt-origin',
       'GET /students/:id/active-enrollments-prepaid',
       'GET /students/:id/closed-enrollments',
@@ -650,6 +653,14 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'SELF',
     reason:
+      "Keyed on `@CurrentUser('studentId')` behind `StudentCardGuard` — the " +
+      'caller downloads their own payment statement and no id comes from the ' +
+      'request.',
+    routes: ['GET /student-portal/statement.pdf'],
+  },
+  {
+    policy: 'SELF',
+    reason:
       'The catalogue itself is COMPANY_WIDE (see above) — these two routes moved ' +
       'out of that block because the RESPONSE is no longer just the catalogue. ' +
       "`getLevels`/`getUnit` now read `DafLessonProgress` for the caller's own " +
@@ -696,6 +707,18 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'to express "this ceiling can never resolve to company-wide", so the ' +
       'controller does the resolution itself.',
     routes: ['GET /settings/payment', 'PATCH /settings/payment'],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_SERVICE',
+    reason:
+      "The Foyda card breakdown resolves its scope through the controller's " +
+      '`resolveScope` (`resolveCallerReportBranchIds`, ceiling ∩ requested, ' +
+      '403 on an empty scope) and hands it to `assembleMonthlyNetProfit` — ' +
+      'the same call behind the card, so the breakdown cannot be scoped ' +
+      'differently from the figure it explains. Every extra query it makes ' +
+      '(expenses, monthly charges) carries `branchIdWhere` itself or reads ' +
+      'ids from the already-scoped lessons.',
+    routes: ['GET /reports/profit-composition'],
   },
 ];
 

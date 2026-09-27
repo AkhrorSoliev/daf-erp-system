@@ -263,7 +263,7 @@ describe('EnrollmentBillingService.releasePrepaidLessons', () => {
     expect(tx.enrollment.update).not.toHaveBeenCalled();
   });
 
-  it('passes metadata through to the adjustment', async () => {
+  it('keeps the caller metadata next to the release tag', async () => {
     await service.releasePrepaidLessons(tx, {
       enrollmentId: 'enroll-1',
       lessons: 1,
@@ -273,7 +273,32 @@ describe('EnrollmentBillingService.releasePrepaidLessons', () => {
 
     expect(transactionsService.createAdjustment).toHaveBeenCalledWith(
       expect.objectContaining({
-        metadata: { refundId: 'ref-1', lessonsReleased: 1 },
+        metadata: {
+          kind: 'prepaid-release',
+          enrollmentId: 'enroll-1',
+          lessons: 1,
+          refundId: 'ref-1',
+          lessonsReleased: 1,
+        },
+      }),
+      tx,
+    );
+  });
+
+  it('tags a release with its kind, enrollment and lesson count', async () => {
+    await service.releasePrepaidLessons(tx, {
+      enrollmentId: 'enroll-1',
+      lessons: 3,
+      performedById: 99,
+    });
+
+    expect(transactionsService.createAdjustment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: {
+          kind: 'prepaid-release',
+          enrollmentId: 'enroll-1',
+          lessons: 3,
+        },
       }),
       tx,
     );
@@ -333,5 +358,72 @@ describe('EnrollmentBillingService.releasePrepaidLessons', () => {
       where: { id: 'enroll-1' },
       data: { prepaidLessonsRemaining: { decrement: 5 } },
     });
+  });
+});
+
+describe('EnrollmentBillingService.refundPrepaidWithOverride', () => {
+  let service: EnrollmentBillingService;
+  let tx: any;
+  let transactionsService: any;
+
+  beforeEach(async () => {
+    tx = {
+      enrollment: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'enroll-1',
+          studentId: 10001,
+          groupId: 'grp-1',
+          prepaidLessonsRemaining: 3,
+          group: {
+            branchId: 1,
+            companyId: 1,
+            course: { price: 400_000, lessonPaymentCount: 12 },
+            teachers: [],
+          },
+        }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      transaction: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      attendance: { findUnique: jest.fn(), update: jest.fn() },
+    };
+    transactionsService = {
+      createAdjustment: jest.fn().mockResolvedValue({ id: 'adj-1' }),
+      reverseTransaction: jest.fn(),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        EnrollmentBillingService,
+        { provide: PrismaService, useValue: tx },
+        { provide: TransactionsService, useValue: transactionsService },
+        {
+          provide: SalaryAccrualService,
+          useValue: { reverseAccrualForAttendance: jest.fn() },
+        },
+      ],
+    }).compile();
+
+    service = module.get(EnrollmentBillingService);
+  });
+
+  it('tags the freeze refund as a prepaid release', async () => {
+    await service.refundPrepaidWithOverride(tx, {
+      enrollmentId: 'enroll-1',
+      performedById: 99,
+    });
+
+    expect(transactionsService.createAdjustment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: {
+          kind: 'prepaid-release',
+          enrollmentId: 'enroll-1',
+          lessons: 3,
+        },
+      }),
+      tx,
+    );
   });
 });

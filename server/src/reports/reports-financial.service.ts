@@ -3,9 +3,10 @@ import { Prisma, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolvePeriod } from '../common/finance/period-helpers';
 import {
-  loadFrozenMonthlyPerLesson,
+  loadFrozenMonthlyCharges,
   monthlyPerLessonKeyForLesson,
   periodsInRange,
+  resolveHeldLessonPrice,
 } from '../common/finance/monthly-per-lesson';
 import {
   branchIdWhere,
@@ -26,6 +27,20 @@ import {
   tashkentMonthRangeUtc,
   tashkentRangeUtc,
 } from '../common/date/tashkent';
+
+/** One billable lesson held in a window and the revenue it recognises. */
+export interface HeldLessonValue {
+  attendanceId: string;
+  studentId: number;
+  groupId: string;
+  /** The group's branch — attendance carries none of its own. */
+  branchId: number | null;
+  courseName: string | null;
+  /** Tashkent calendar date, 'YYYY-MM-DD'. */
+  dateStr: string;
+  /** 0 when nothing has billed the lesson yet. */
+  value: number;
+}
 
 @Injectable()
 export class ReportsFinancialService {
@@ -434,18 +449,35 @@ export class ReportsFinancialService {
    */
   async getRecognizedRevenue(
     companyId: number,
+    opts: { start: Date; end: Date; branchIds: ReportBranchIds },
+  ): Promise<number> {
+    const lessons = await this.valueHeldLessons(companyId, opts);
+    return lessons.reduce((sum, l) => sum + l.value, 0);
+  }
+
+  /**
+   * Every billable lesson held in [start, end) with the value it recognises —
+   * the rows `getRecognizedRevenue` sums. Exposed so a breakdown of the Foyda
+   * card (by course, by branch, by student) is built from the SAME rows the
+   * card's total is, and can never add up to a different figure.
+   *
+   * A lesson nothing billed yet (a 12-lesson debtor's) is returned with value
+   * 0 rather than dropped, so callers can still count it.
+   */
+  async valueHeldLessons(
+    companyId: number,
     {
       start,
       end,
       branchIds,
     }: { start: Date; end: Date; branchIds: ReportBranchIds },
-  ): Promise<number> {
+  ): Promise<HeldLessonValue[]> {
     // Attendance carries no branch of its own — it inherits the GROUP's, the
     // same stamp `SALARY_ACCRUAL` freezes. Both callers already passed
     // `branchIds`, but this signature read `branchId`, so the field was always
     // `undefined` and the filter silently vanished: a branch-filtered Foyda card
     // subtracted ONE branch's payroll from the WHOLE company's revenue.
-    if (isEmptyScope(branchIds)) return 0;
+    if (isEmptyScope(branchIds)) return [];
     const atts = await this.prisma.attendance.findMany({
       where: {
         companyId,
@@ -460,17 +492,21 @@ export class ReportsFinancialService {
         date: true,
         group: {
           select: {
-            course: { select: { price: true, lessonPaymentCount: true } },
+            branchId: true,
+            course: {
+              select: { name: true, price: true, lessonPaymentCount: true },
+            },
           },
         },
       },
     });
-    if (!atts.length) return 0;
+    if (!atts.length) return [];
 
-    const attById = new Map(atts.map((a) => [a.id, a]));
+    // One live consumption per attendance at most — the partial unique index
+    // `tx_consumption_per_attendance_unique` guarantees it. `null` marks a
+    // legacy row that stored no price.
+    const consumed = new Map<string, number | null>();
     const attIds = atts.map((a) => a.id);
-    const consumedAttIds = new Set<string>();
-    let revenue = 0;
     // Chunk the `in` list — a month can hold several thousand attendances.
     for (let i = 0; i < attIds.length; i += 1000) {
       const cons = await this.prisma.transaction.findMany({
@@ -483,42 +519,47 @@ export class ReportsFinancialService {
         select: { attendanceId: true, metadata: true },
       });
       for (const c of cons) {
-        if (c.attendanceId) consumedAttIds.add(c.attendanceId);
+        if (!c.attendanceId) continue;
         const meta = c.metadata as { perLessonCost?: number } | null;
-        let per = meta?.perLessonCost;
-        if (per == null) {
-          // Legacy rows without metadata: fall back to the group's course price.
-          const a = c.attendanceId ? attById.get(c.attendanceId) : undefined;
-          const lpc = a?.group?.course?.lessonPaymentCount || 12;
-          per = a?.group?.course ? Math.round(a.group.course.price / lpc) : 0;
-        }
-        revenue += per;
+        consumed.set(c.attendanceId, meta?.perLessonCost ?? null);
       }
     }
 
-    // Oylik yo'l: `LESSON_CONSUMPTION` qatori yo'q darslar. Ularning qiymati
-    // hisob yozilgan paytdagi MUZLATILGAN `perLessonCost` — 12 talik yo'ldagi
-    // `metadata.perLessonCost` bilan bir xil ma'noda (ikkalasi ham
-    // chegirmasiz: "nima hisoblangan", "bugun qancha olinardi" emas).
-    // LESSON_PACK darsida hisob qatori bo'lmaydi, ya'ni u avvalgidek 0
-    // qo'shadi (balansi yetmagan, hali hisoblanmagan dars).
-    const unconsumed = atts.filter((a) => !consumedAttIds.has(a.id));
-    if (unconsumed.length > 0) {
-      const frozen = await loadFrozenMonthlyPerLesson(this.prisma, {
-        companyId,
-        studentIds: unconsumed.map((a) => a.studentId),
-        groupIds: unconsumed.map((a) => a.groupId),
-        periods: periodsInRange(start, end),
-      });
-      for (const a of unconsumed) {
-        revenue +=
-          frozen.get(
+    // Monthly-billed lessons write no consumption row; their value is the
+    // charge's FROZEN `perLessonCost` — undiscounted, like the 12-lesson
+    // `metadata.perLessonCost` ("what was billed", not "what would be charged
+    // today"). `resolveHeldLessonPrice` decides which of the two applies.
+    const charges = await loadFrozenMonthlyCharges(this.prisma, {
+      companyId,
+      studentIds: atts.map((a) => a.studentId),
+      groupIds: atts.map((a) => a.groupId),
+      periods: periodsInRange(start, end),
+    });
+
+    return atts.map((a) => {
+      const course = a.group?.course;
+      const legacyPrice = course
+        ? Math.round(course.price / (course.lessonPaymentCount || 12))
+        : 0;
+      const value =
+        resolveHeldLessonPrice({
+          charge: charges.get(
             monthlyPerLessonKeyForLesson(a.studentId, a.groupId, a.date),
-          ) ?? 0;
-      }
-    }
-
-    return revenue;
+          ),
+          dateStr: tashkentDateStr(a.date),
+          consumed: consumed.has(a.id) ? consumed.get(a.id) : undefined,
+          legacyPrice,
+        }) ?? 0;
+      return {
+        attendanceId: a.id,
+        studentId: a.studentId,
+        groupId: a.groupId,
+        branchId: a.group?.branchId ?? null,
+        courseName: course?.name ?? null,
+        dateStr: tashkentDateStr(a.date),
+        value,
+      };
+    });
   }
 
   /**

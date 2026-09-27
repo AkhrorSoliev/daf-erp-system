@@ -10,17 +10,11 @@ import {
   FileText,
   ClipboardList,
   Loader2,
-  RefreshCw,
   Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -28,11 +22,11 @@ import {
 } from "@/components/ui/tooltip";
 import { useEditCourse } from "@/hooks/use-edit-course";
 import type { Course } from "@/hooks/use-edit-course";
+import { courseTermRows, type CourseSchedule } from "@/lib/course-terms";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import { EditCourseDrawer } from "./edit-course-drawer";
 import api from "@/lib/api";
 import { PAYMENT_MODEL_LABELS } from "@/lib/payment-model";
-import { formatPrice } from "@/lib/format-utils";
 
 interface CourseDetailClientProps {
   courseId: string;
@@ -61,6 +55,7 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
   );
   const [course, setCourse] = useState<Course | null>(null);
   const [groupCount, setGroupCount] = useState(0);
+  const [schedule, setSchedule] = useState<CourseSchedule | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -83,6 +78,7 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
         };
         setCourse(c);
         setGroupCount(data._count?.groups ?? 0);
+        setSchedule(data.schedule ?? null);
         setName(courseId, data.name);
       } catch {
         setError(true);
@@ -168,11 +164,6 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
               value={course.description ?? "—"}
             />
             <InfoRow
-              icon={<Banknote className="h-4 w-4 text-muted-foreground" />}
-              label="Narx"
-              value={`${formatPrice(course.price)} so'm`}
-            />
-            <InfoRow
               icon={<Wallet className="h-4 w-4 text-muted-foreground" />}
               label="To'lov modeli"
               value={PAYMENT_MODEL_LABELS[course.paymentModel]}
@@ -182,15 +173,14 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
               label="Guruhlar"
               value={`${groupCount} ta`}
             />
-            <InfoRow
-              icon={<RefreshCw className="h-4 w-4 text-muted-foreground" />}
-              label="Sikl darslari"
-              value={
-                course.lessonPaymentCount
-                  ? `${course.lessonPaymentCount} ta`
-                  : "—"
-              }
-            />
+            {courseTermRows(course, schedule).map((row) => (
+              <InfoRow
+                key={row.label}
+                icon={<Banknote className="h-4 w-4 text-muted-foreground" />}
+                label={row.label}
+                value={row.value}
+              />
+            ))}
           </div>
         </div>
 
@@ -211,9 +201,7 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
 
           <TabsContent value="materials">
             <EmptyTabContent
-              icon={
-                <FileText className="h-8 w-8 text-muted-foreground/50" />
-              }
+              icon={<FileText className="h-8 w-8 text-muted-foreground/50" />}
               message="Materiallar hali qo'shilmagan"
             />
           </TabsContent>
@@ -229,9 +217,7 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
         </Tabs>
       </div>
 
-      <EditCourseDrawer
-        onSaved={(updated) => setCourse(updated)}
-      />
+      <EditCourseDrawer onSaved={(updated) => setCourse(updated)} />
     </div>
   );
 }
