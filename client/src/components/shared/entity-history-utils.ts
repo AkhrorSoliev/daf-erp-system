@@ -66,6 +66,10 @@ export const FIELD_LABELS: Record<string, string | null> = {
   companyId: null,
   userId: null,
   telegramChatId: null,
+  // The proved number and its time (ADR-0039) — the card's badge shows the
+  // verdict; an archive row carrying the raw columns should not.
+  verifiedPhone: null,
+  phoneVerifiedAt: null,
   nomi: "Nomi",
   kunlar: "Kunlar",
   vaqt: "Vaqt",

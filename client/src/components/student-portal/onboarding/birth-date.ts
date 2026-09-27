@@ -2,24 +2,12 @@
 // (`server/src/students/shared/student-onboarding.ts`) checks the same thing
 // and is the authority; this copy only saves a round trip on a typo.
 
+import { ageOn, localDateStr } from "@/lib/age";
+
+export { ageOn, localDateStr };
+
 export const MIN_STUDENT_AGE = 5;
 export const MAX_STUDENT_AGE = 100;
-
-/** 'YYYY-MM-DD' of a Date in the browser's own calendar. */
-export function localDateStr(d: Date = new Date()): string {
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${m}-${day}`;
-}
-
-/** Full years between two 'YYYY-MM-DD' dates — string arithmetic, no timezone. */
-export function ageOn(birthDate: string, today: string): number {
-  const [by, bm, bd] = birthDate.split("-").map(Number);
-  const [ty, tm, td] = today.split("-").map(Number);
-  let age = ty - by;
-  if (tm < bm || (tm === bm && td < bd)) age -= 1;
-  return age;
-}
 
 /** Why a birth date is refused, or null when it is fine. */
 export function birthDateProblem(

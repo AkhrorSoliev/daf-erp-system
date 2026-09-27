@@ -27,6 +27,10 @@ export interface Student {
   gender: "MALE" | "FEMALE" | null;
   date_of_birth: string | null;
   phone: string;
+  /** The card's number is proved by an SMS code (ADR-0039) — never by Telegram. */
+  phoneVerified: boolean;
+  /** When it was proved; null while unproved. */
+  phoneVerifiedAt: string | null;
   photo: string | null;
   balance: number;
   company_id: number | null;
