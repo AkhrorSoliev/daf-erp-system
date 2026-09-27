@@ -30,10 +30,17 @@ undan yana SMS so'ralmaydi.
 3. **Faqat bo'sh maydon so'raladi va yoziladi.** Xodim kiritgan jins yoki
    sana ustidan yozilmaydi; bu eshik — birinchi kirish uchun, kartaning
    ikkinchi muharriri emas.
-4. **Kod faqat kartadagi raqamga ketadi.** O'quvchi bu ekranda raqamni
-   o'zgartira olmaydi — raqam kirish kaliti, uni faqat xodim o'zgartiradi
-   (ADR-0031). Raqam o'quvchiniki bo'lmasa, u administratorga murojaat
-   qiladi.
+4. **SMS'dan oldin «Bu sizning raqamingizmi?» deb so'raladi** (CEO,
+   2026-09-27). «Ha» — kod kartadagi raqamga. «Yo'q» — o'quvchi o'zi
+   ishlatadigan raqamni va **joriy parolini** kiritadi, kod yangi raqamga
+   boradi; kod to'g'ri bo'lsa, yangi raqam eski raqam o'rniga kartaga va
+   kirish hisobiga tasdiqlangan holda yoziladi (ADR-0032, `planPhoneChange`),
+   eski raqam kalit bo'lmay qoladi. Parol ADR-0031 talabi: yangi raqamga SMS
+   raqam egasini isbotlaydi, hisob egasini emas — parolsiz, ochiq qolgan
+   qurilmani qo'lga kiritgan odam kirish raqamini o'ziga ko'chirib, keyin
+   parolni SMS bilan tiklab olardi. Boshqa o'quvchining kirish raqami bo'lgan
+   raqam qabul qilinmaydi. Bu eshik faqat telefon qadami ochiq paytda
+   (raqam hali tasdiqlanmagan) ishlaydi; keyin raqamni xodim almashtiradi.
 5. **SMS orqali parol tiklash raqamni tasdiqlaydi.** Kod shu raqamga borib
    qaytgan — isbot bir xil. Mavjud tiklashlar migratsiyada belgilanadi, lekin
    faqat kod qaysi raqamga ketgani aniq bo'lganda: hisobning 9 xonali kirish
@@ -67,7 +74,9 @@ undan yana SMS so'ralmaydi.
 - klientda «nima yetishmaydi» ni o'zicha hisoblash;
 - karta raqamini Telegram asosida (kirish yoki bot kontakti) tasdiqlangan deb
   belgilash; `markPhoneVerified` ni SMS yo'llaridan boshqa joydan chaqirish.
-  Buni `phone-proof.single-source.spec.ts` qorovuli ushlaydi.
+  Buni `phone-proof.single-source.spec.ts` qorovuli ushlaydi;
+- o'quvchining raqamini joriy parolsiz yoki `planPhoneChange` siz almashtirish
+  (`own-password-attempt.routes.spec.ts`, `student-phone.single-source.spec.ts`).
 
 ## Ko'rib chiqilgan muqobillar
 
@@ -93,6 +102,17 @@ lekin Telegram hisobidagi raqam o'quvchi ishlatadigan raqam bo'lmasligi
 mumkin — ota-onaning, akasining yoki eski raqam. Tasdiq faqat kartadagi
 raqamga borib qaytgan SMS kod bilan tan olinadi.
 
+**Raqamni faqat xodim almashtirsin, o'quvchi administratorga murojaat
+qilsin.** Birinchi variant shu edi; rad etildi (CEO, 2026-09-27): yoqilgan
+kuni raqami noto'g'ri yozilgan har bir o'quvchi ilovadan tashqarida qolib,
+administratorga navbatga turardi.
+
+**«Yo'q» tarmog'ida parol so'ramaslik, faqat yangi raqamga SMS.** Tanlanmadi:
+ADR-0031 aynan shu variantni ko'rib chiqqan — SMS raqam to'g'ri yozilganini
+tasdiqlaydi, hisob egasi ekanini emas, va u parolning o'rniga emas, ustiga
+qo'shiladi. Parol bilan kirgan o'quvchi uni hozirgina yozgan; Telegram bilan
+kirgan o'quvchining kartadagi raqami esa Telegram raqamining o'zi.
+
 **Darvoza so'rovi xato bersa ilovani yopish.** Rad etildi: bitta
 muvaffaqiyatsiz so'rov butun ilovani olib qo'ymasligi kerak. Klientlar
 javobsiz holatda ochiq qoladi (fail-open); javob kelishi bilan darvoza
@@ -107,7 +127,10 @@ keyingi kirishda yangi raqamini tasdiqlaydi.
 **Narx:** har bir o'quvchi uchun bitta SMS (pul). Yoqilgan kuni hamma bir
 vaqtda so'raydi: soatlik umumiy limit (`PHONE_VERIFY_SMS_GLOBAL_HOURLY_CAP`,
 standart 300) balansni himoya qiladi, lekin shu soatda kutib qolganlar
-bo'ladi. O'quvchiga kuniga 5 ta SMS. Raqami o'ziniki bo'lmagan o'quvchi
-administrator raqamni tuzatmaguncha ilovaga kira olmaydi.
+bo'ladi. O'quvchiga kuniga 5 ta SMS, bitta yangi raqamga kuniga 3 ta.
+Raqamini o'zi almashtirgan o'quvchi bundan keyin tizimga yangi raqam bilan
+kiradi; eski raqam kartaning tarixida qoladi. Parolini bilmaydigan o'quvchi
+«Yo'q» tarmog'idan o'ta olmaydi — avval parolni tiklaydi yoki xodim raqamni
+almashtiradi.
 
 **Endi taqiqlangan:** yuqoridagi taqiqlar.

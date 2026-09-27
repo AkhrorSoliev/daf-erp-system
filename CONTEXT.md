@@ -77,6 +77,9 @@ tasdiqlangan: xodim raqamni almashtirsa, yangisi tasdiqlanmagan bo'ladi.
 SMS orqali parol tiklash ham tasdiq sanaladi. Telegram (kirish yoki botga
 ulashilgan kontakt) tasdiq **emas** — Telegram hisobidagi raqam o'quvchi
 ishlatadigan raqamdan boshqa bo'lishi mumkin.
+Kartadagi raqam o'quvchiniki bo'lmasa, u birinchi kirishda o'z raqamini va
+joriy parolini kiritadi; SMS kod shu raqamga boradi va tasdiqlansa, yangi raqam
+eski raqam o'rniga kartaga va kirish hisobiga yoziladi.
 `students/shared/student-onboarding.ts` · `docs/adr/0039-oquvchi-birinchi-kirishda-telefon-jins-yosh.md`
 
 **Telegram botda ro'yxatdan o'tgan** — kartaga Telegram chat bog'langan

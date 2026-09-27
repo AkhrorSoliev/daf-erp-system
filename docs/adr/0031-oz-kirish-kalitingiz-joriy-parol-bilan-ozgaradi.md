@@ -1,6 +1,6 @@
 # ADR-0031 — O'z kirish kalitingiz faqat joriy parol bilan o'zgaradi
 
-**Holati:** Qabul qilindi
+**Holati:** Qabul qilindi; 1-banddagi «O'quvchi o'z raqamini o'zi almashtirmaydi» — ADR-0039 bilan o'zgardi
 **Sana:** 2026-09-24
 **Bog'liq:** ADR-0008 (chaqiruvchisi yo'q yozuv), ADR-0022 (bir odam — har rolga alohida hisob), ADR-0027 (daraja qoidasi), `server/src/common/auth/phone-account-rules.ts`, `server/src/common/auth/own-sign-in-keys.ts`, `server/src/common/guards/own-password-attempt.guard.ts`
 
