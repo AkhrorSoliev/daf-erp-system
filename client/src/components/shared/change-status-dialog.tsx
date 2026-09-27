@@ -40,6 +40,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatPrice } from "@/lib/format-utils";
 import {
+  freezePreviewLists,
+  monthlyReleaseLabel,
+  type FreezeRefundPreview,
+} from "@/lib/freeze-refund-preview";
+import {
   getAllowedTransitions,
   ENTITY_API_PATH,
 } from "@/lib/status-config";
@@ -197,34 +202,24 @@ export function ChangeStatusDialog({
     setReasonId(null);
   }, [exitType]);
 
-  // FROZEN-only: prefetch the student's active enrollments + their prepaid
-  // counts so the dialog can show "X dars × Y so'm = Z so'm" preview and let
-  // the admin tweak the per-enrollment refund count.
+  // FROZEN-only: prefetch pack enrollments (editable) and monthly enrollments
+  // (read-only release) so the dialog can show "X dars × Y so'm = Z so'm"
+  // preview and let the admin tweak the per-pack-enrollment refund count.
   const isFreezingStudent =
     entityType === "students" && selectedStatus === "FROZEN";
 
-  type PrepaidEnrollment = {
-    enrollmentId: string;
-    groupId: string;
-    groupName: string;
-    prepaidLessonsRemaining: number;
-    perLessonCost: number;
-    consumedLessons: number;
-    maxRefundable: number;
-    suggestedRefundAmount: number;
-  };
-
-  const { data: prepaidEnrollments } = useQuery<PrepaidEnrollment[]>({
+  const { data: freezePreview } = useQuery<FreezeRefundPreview>({
     queryKey: ["student-active-enrollments-prepaid", entityId],
     queryFn: () =>
       api
-        .get<PrepaidEnrollment[]>(
-          `/students/${entityId}/active-enrollments-prepaid`,
-        )
+        .get<FreezeRefundPreview>(`/students/${entityId}/active-enrollments-prepaid`)
         .then((r) => r.data),
     enabled: open && isFreezingStudent,
     staleTime: 30_000,
   });
+  // Pack rows are editable; monthly rows only say what the system releases.
+  const { pack: prepaidEnrollments, monthly: monthlyReleases } =
+    freezePreviewLists(freezePreview);
 
   // Reset the override map whenever we leave the FROZEN flow so a previous
   // session's edits don't leak into the next status change.
@@ -382,68 +377,87 @@ export function ChangeStatusDialog({
                   each one. Going above the prepaid count reverses
                   already-attended lessons (and the matching salary accruals)
                   — explained in the warning text below. */}
-              {isFreezingStudent &&
-                prepaidEnrollments &&
-                prepaidEnrollments.length > 0 && (
-                  <div className="space-y-3 rounded-md border border-blue-200 bg-blue-50/60 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
-                    <div className="text-xs font-medium text-blue-900 dark:text-blue-300">
-                      Pul qaytarish — qolgan darslar avtomatik balansga qaytariladi
-                    </div>
-                    <div className="space-y-2">
-                      {prepaidEnrollments.map((enr) => {
-                        const override = frozenRefundOverrides[enr.enrollmentId];
-                        const value =
-                          override !== undefined
-                            ? override
-                            : enr.prepaidLessonsRemaining;
-                        return (
-                          <div
-                            key={enr.enrollmentId}
-                            className="flex items-center gap-2 text-xs"
-                          >
-                            <span
-                              className="flex-1 truncate"
-                              title={enr.groupName}
-                            >
-                              {enr.groupName}
-                              <span className="ml-1 text-muted-foreground">
-                                · {formatPrice(enr.perLessonCost)} so&apos;m/dars
-                              </span>
-                            </span>
-                            <Input
-                              type="number"
-                              min={0}
-                              max={enr.maxRefundable}
-                              value={value}
-                              onChange={(e) =>
-                                setFrozenRefundOverrides((prev) => ({
-                                  ...prev,
-                                  [enr.enrollmentId]: Math.max(
-                                    0,
-                                    Math.min(
-                                      enr.maxRefundable,
-                                      Number(e.target.value) || 0,
-                                    ),
-                                  ),
-                                }))
-                              }
-                              className="h-7 w-16 text-xs tabular-nums"
-                            />
-                            <span className="text-muted-foreground">dars</span>
-                            <span className="w-24 text-right font-mono tabular-nums font-medium">
-                              {formatPrice(value * enr.perLessonCost)} so&apos;m
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <p className="text-[11px] leading-relaxed text-blue-800/80 dark:text-blue-300/70">
-                      Hozirgi prepaid&apos;dan ko&apos;proq tanlasangiz, qo&apos;shimcha
-                      o&apos;tib bo&apos;lgan darslar bekor qilinadi va ustozdan
-                      mos oylik chiqariladi.
-                    </p>
+              {isFreezingStudent && prepaidEnrollments.length > 0 && (
+                <div className="space-y-3 rounded-md border border-blue-200 bg-blue-50/60 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
+                  <div className="text-xs font-medium text-blue-900 dark:text-blue-300">
+                    Pul qaytarish — qolgan darslar avtomatik balansga qaytariladi
                   </div>
-                )}
+                  <div className="space-y-2">
+                    {prepaidEnrollments.map((enr) => {
+                      const override = frozenRefundOverrides[enr.enrollmentId];
+                      const value =
+                        override !== undefined
+                          ? override
+                          : enr.prepaidLessonsRemaining;
+                      return (
+                        <div
+                          key={enr.enrollmentId}
+                          className="flex items-center gap-2 text-xs"
+                        >
+                          <span
+                            className="flex-1 truncate"
+                            title={enr.groupName}
+                          >
+                            {enr.groupName}
+                            <span className="ml-1 text-muted-foreground">
+                              · {formatPrice(enr.perLessonCost)} so&apos;m/dars
+                            </span>
+                          </span>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={enr.maxRefundable}
+                            value={value}
+                            onChange={(e) =>
+                              setFrozenRefundOverrides((prev) => ({
+                                ...prev,
+                                [enr.enrollmentId]: Math.max(
+                                  0,
+                                  Math.min(
+                                    enr.maxRefundable,
+                                    Number(e.target.value) || 0,
+                                  ),
+                                ),
+                              }))
+                            }
+                            className="h-7 w-16 text-xs tabular-nums"
+                          />
+                          <span className="text-muted-foreground">dars</span>
+                          <span className="w-24 text-right font-mono tabular-nums font-medium">
+                            {formatPrice(value * enr.perLessonCost)} so&apos;m
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-blue-800/80 dark:text-blue-300/70">
+                    Hozirgi prepaid&apos;dan ko&apos;proq tanlasangiz, qo&apos;shimcha
+                    o&apos;tib bo&apos;lgan darslar bekor qilinadi va ustozdan
+                    mos oylik chiqariladi.
+                  </p>
+                </div>
+              )}
+
+              {/* MONTHLY enrollments: the server releases the month's
+                  not-yet-held lessons itself (same rule as the freeze).
+                  Nothing to edit — an override is rejected server-side. */}
+              {isFreezingStudent && monthlyReleases.length > 0 && (
+                <div className="space-y-2 rounded-md border border-blue-200 bg-blue-50/60 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
+                  <div className="text-xs font-medium text-blue-900 dark:text-blue-300">
+                    Oylik to&apos;lov — o&apos;tmagan darslar puli avtomatik qaytadi
+                  </div>
+                  {monthlyReleases.map((row) => (
+                    <div key={row.enrollmentId} className="text-xs">
+                      <div className="truncate font-medium" title={row.groupName}>
+                        {row.groupName}
+                      </div>
+                      <div className="tabular-nums text-muted-foreground">
+                        {monthlyReleaseLabel(row)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Sabab */}
               {selectedStatus && isReasonRequired && (
