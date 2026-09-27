@@ -94,6 +94,10 @@ describe("DepartureMoneyBlock", () => {
     expect(html).toBe("");
   });
 
+  it("keeps the figures it already has when a refetch fails", () => {
+    expect(render({ isError: true })).toContain("Pul qaytmaydi");
+  });
+
   it("says the figures could not be loaded instead of guessing", () => {
     expect(render({ preview: undefined, isError: true })).toContain(
       "Pul hisobini yuklab bo&#x27;lmadi",

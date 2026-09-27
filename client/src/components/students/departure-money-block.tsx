@@ -53,7 +53,8 @@ export function DepartureMoneyBlock({
   disabled = false,
 }: DepartureMoneyBlockProps) {
   if (isLoading) return <BlockSkeleton />;
-  if (isError) {
+  // Figures already shown stay shown when a later refetch fails.
+  if (!preview && isError) {
     return (
       <section className="flex flex-col gap-1 border-t pt-3">
         <p className="text-sm font-medium">Pul (shartnoma bo&apos;yicha)</p>
