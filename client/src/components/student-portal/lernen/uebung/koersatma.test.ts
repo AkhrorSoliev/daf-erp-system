@@ -7,6 +7,7 @@ const HAMMASI: FrageFormat[] = [
   "LUECKE", "SATZ_BAUEN", "SATZ_UEBERSETZEN", "REAKTION",
   "ZUORDNEN", "DIALOG_LUECKE",
   "AUDIO_WORT", "WORT_TIPPEN", "HOEREN_WAHL",
+  "BILD_WORT", "AUDIO_BILD", "BILD_TIPPEN",
 ];
 
 describe("koersatma", () => {
@@ -23,9 +24,9 @@ describe("koersatma", () => {
 });
 
 describe("harakat", () => {
-  it("har bir format uchtadan biriga tushadi", () => {
+  it("har bir format to'rttadan biriga tushadi", () => {
     for (const f of HAMMASI) {
-      expect(["TANLASH", "YOZISH", "YIGISH"]).toContain(harakat(f));
+      expect(["TANLASH", "YOZISH", "YIGISH", "RASM"]).toContain(harakat(f));
     }
   });
 
@@ -84,5 +85,19 @@ describe("audio formatlar", () => {
 
   it("HOEREN_WAHL — TANLASH", () => {
     expect(harakat("HOEREN_WAHL")).toBe("TANLASH");
+  });
+});
+
+describe("rasmli formatlar", () => {
+  it("har birining o'z ko'rsatmasi bor", () => {
+    expect(koersatma("BILD_WORT")).toBe("Mos rasmni tanlang");
+    expect(koersatma("AUDIO_BILD")).toBe("Eshiting va mos rasmni tanlang");
+    expect(koersatma("BILD_TIPPEN")).toBe("Rasmda nima? Artikli bilan yozing");
+  });
+
+  it("rasm tanlash — RASM, rasmga qarab yozish — YOZISH", () => {
+    expect(harakat("BILD_WORT")).toBe("RASM");
+    expect(harakat("AUDIO_BILD")).toBe("RASM");
+    expect(harakat("BILD_TIPPEN")).toBe("YOZISH");
   });
 });

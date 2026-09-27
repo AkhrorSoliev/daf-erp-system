@@ -20,6 +20,9 @@ const MATN: Record<FrageFormat, string> = {
   AUDIO_WORT: "Eshiting va to'g'ri so'zni tanlang",
   WORT_TIPPEN: "Eshiting va so'zni yozing",
   HOEREN_WAHL: "Suhbatni tinglang va savolga javob bering",
+  BILD_WORT: "Mos rasmni tanlang",
+  AUDIO_BILD: "Eshiting va mos rasmni tanlang",
+  BILD_TIPPEN: "Rasmda nima? Artikli bilan yozing",
 };
 
 export function koersatma(format: FrageFormat): string {
@@ -27,8 +30,18 @@ export function koersatma(format: FrageFormat): string {
 }
 
 /** Format qaysi komponent bilan ko'rsatiladi (dizayn §4.1). */
-export function harakat(format: FrageFormat): "TANLASH" | "YOZISH" | "YIGISH" {
-  if (format === "LUECKE" || format === "WORT_TIPPEN") return "YOZISH";
-  if (format === "SATZ_BAUEN" || format === "PAAR" || format === "ZUORDNEN") return "YIGISH";
+export function harakat(
+  format: FrageFormat,
+): "TANLASH" | "YOZISH" | "YIGISH" | "RASM" {
+  if (format === "BILD_WORT" || format === "AUDIO_BILD") return "RASM";
+  if (
+    format === "LUECKE" ||
+    format === "WORT_TIPPEN" ||
+    format === "BILD_TIPPEN"
+  ) {
+    return "YOZISH";
+  }
+  if (format === "SATZ_BAUEN" || format === "PAAR" || format === "ZUORDNEN")
+    return "YIGISH";
   return "TANLASH";
 }

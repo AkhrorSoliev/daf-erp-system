@@ -6,7 +6,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { Books, CheckCircle, X } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { Button, EmptyState, LoadingCards, ProgressBar } from "../../lumio";
 import { RadioSessionToggle } from "../../radio/radio-session-toggle";
@@ -43,6 +42,8 @@ import {
 import { harakat, koersatma } from "./koersatma";
 import { OvozTugmasi } from "./ovoz-tugmasi";
 import { Tanlash } from "./tanlash";
+import { RasmTanlash, SavolRasmi } from "./rasm-tanlash";
+import { JavobPaneli } from "./javob-paneli";
 import { Yozish } from "./yozish";
 import { Yigish, juftSoni, juftUstunlar } from "./yigish";
 import { DialogBlok } from "./dialog-blok";
@@ -207,21 +208,21 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // alohida tekshiriladi, pastda). Shu ikkisi uchun `tayyor` doim
   // `false`: bu "ikki bosqichli Tekshirish"ga tayyorlik degani, va
   // ular uchun bunday bosqich yo'q.
-  const given =
-    rejim === "TANLASH"
-      ? (tanlangan ?? "")
-      : rejim === "YOZISH"
-        ? yozilgan.trim()
-        : yigilgan.join(" "); // SATZ_BAUEN
+  // A picture choice sends the picked picture URL, like a text choice.
+  const tanlashRejimi = rejim === "TANLASH" || rejim === "RASM";
+  const given = tanlashRejimi
+    ? (tanlangan ?? "")
+    : rejim === "YOZISH"
+      ? yozilgan.trim()
+      : yigilgan.join(" "); // SATZ_BAUEN
 
-  const tayyor =
-    rejim === "TANLASH"
-      ? tanlangan != null
-      : rejim === "YOZISH"
-        ? yozilgan.trim().length > 0
-        : frage && (frage.format === "PAAR" || frage.format === "ZUORDNEN")
-          ? false
-          : yigilgan.length > 0;
+  const tayyor = tanlashRejimi
+    ? tanlangan != null
+    : rejim === "YOZISH"
+      ? yozilgan.trim().length > 0
+      : frage && (frage.format === "PAAR" || frage.format === "ZUORDNEN")
+        ? false
+        : yigilgan.length > 0;
 
   const tekshir = () => {
     if (!frage || !tayyor || natija || pruefen.isPending) return;
@@ -650,7 +651,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
       // tugmalari o'chirilgan bo'lsa ham, klaviatura orqali "1"-"4"
       // bosib `tanlangan`ni javob kutayotgan paytda almashtirish mumkin
       // bo'lib qolardi.
-      if (rejim !== "TANLASH" || natija || pruefen.isPending) return;
+      if (!tanlashRejimi || natija || pruefen.isPending) return;
       const n = Number(e.key);
       if (n >= 1 && n <= (frage?.options.length ?? 0)) {
         setTanlangan(frage!.options[n - 1]);
@@ -688,6 +689,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     rejim,
+    tanlashRejimi,
     natija,
     frage,
     tanlangan,
@@ -898,6 +900,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
         ) : frage.audioUrl ? (
           <OvozTugmasi url={frage.audioUrl} autoPlay />
         ) : null}
+        {/* `BILD_TIPPEN`: the picture is the question (`prompt` is empty). */}
+        {frage.bildUrl ? <SavolRasmi url={frage.bildUrl} /> : null}
         {frage.format === "DIALOG_LUECKE" ? (
           // Butun suhbat ekranda — savol matni o'rniga (dizayn D7 / brief §5):
           // server `prompt`ni tayyor satr qilib yuboradi, mijoz uni faqat
@@ -916,7 +920,15 @@ export function SeansEkrani(props: SeansEkraniProps) {
           <p className="text-sm text-ink-500">{frage.hilfe}</p>
         ) : null}
 
-        {rejim === "TANLASH" ? (
+        {rejim === "RASM" ? (
+          <RasmTanlash
+            options={frage.options}
+            tanlangan={tanlangan}
+            onTanla={setTanlangan}
+            natija={natija}
+            kutilmoqda={pruefen.isPending}
+          />
+        ) : rejim === "TANLASH" ? (
           <Tanlash
             options={frage.options}
             tanlangan={tanlangan}
@@ -999,26 +1011,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
                 </div>
               )
             ) : (
-              <div
-                className={cn(
-                  "rounded-2xl px-4 py-3",
-                  natija.isCorrect ? "bg-success/10" : "bg-danger/10",
-                )}
-              >
-                <p
-                  className={cn(
-                    "font-bold",
-                    natija.isCorrect ? "text-success" : "text-danger",
-                  )}
-                >
-                  {natija.isCorrect ? "To'g'ri!" : "Xato"}
-                </p>
-                {!natija.isCorrect ? (
-                  <p className="mt-0.5 text-sm font-semibold text-ink-800">
-                    {natija.richtig}
-                  </p>
-                ) : null}
-              </div>
+              <JavobPaneli natija={natija} />
             )
           ) : yuborishXato ? (
             <p className="text-sm font-semibold text-danger">

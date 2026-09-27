@@ -59,3 +59,17 @@ describe("xatoYorligi", () => {
     );
   });
 });
+
+describe("xatoYorligi — rasmli formatlar", () => {
+  it("eshitib rasm tanlash — eshitish savoli", () => {
+    expect(xatoYorligi("AUDIO_BILD", "")).toBe("Eshitish savoli");
+  });
+
+  it("rasmga qarab yozish — rasm savoli", () => {
+    expect(xatoYorligi("BILD_TIPPEN", "")).toBe("Rasm savoli");
+  });
+
+  it("so'zga rasm tanlashda savol so'zning o'zi", () => {
+    expect(xatoYorligi("BILD_WORT", "der Bahnhof")).toBe("der Bahnhof");
+  });
+});

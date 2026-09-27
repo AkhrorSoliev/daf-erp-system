@@ -1,4 +1,9 @@
-import type { FrageFormat, MaterialTyp, PruefErgebnis, PublicFrage } from "./types";
+import type {
+  FrageFormat,
+  MaterialTyp,
+  PruefErgebnis,
+  PublicFrage,
+} from "./types";
 
 /**
  * Natija ekranida ko'rsatiladigan xato.
@@ -18,6 +23,21 @@ export interface SeansXato {
   prompt: string;
   richtig: string;
   titel?: string | null;
+  /**
+   * Picture formats only: the picture shown as a thumbnail next to the
+   * answer — the correct option of a picture choice, or the picture of a
+   * `BILD_TIPPEN` question. Absent for every other format.
+   */
+  bildUrl?: string | null;
+}
+
+/** The picture a wrong answer is remembered with (see `SeansXato.bildUrl`). */
+function xatoRasmi(frage: PublicFrage, natija: PruefErgebnis): string | null {
+  if (frage.format === "BILD_TIPPEN") return frage.bildUrl ?? null;
+  if (frage.format === "BILD_WORT" || frage.format === "AUDIO_BILD") {
+    return natija.richtig;
+  }
+  return null;
 }
 
 /**
@@ -148,6 +168,7 @@ export function javobBerildi(
 
   // Xato faqat BIRINCHI marta yoziladi — natija ekranida bir so'z ikki
   // marta chiqmasligi uchun.
+  const bildUrl = xatoRasmi(frage, natija);
   const xatolar = qaytganEdi
     ? h.xatolar
     : [
@@ -157,8 +178,10 @@ export function javobBerildi(
           itemId: frage.itemId,
           format: frage.format,
           prompt: frage.prompt,
-          richtig: natija.richtig,
+          // A picture choice's `richtig` is a URL; the word is what to show.
+          richtig: natija.loesungWort ?? natija.richtig,
           titel: frage.titel ?? null,
+          ...(bildUrl ? { bildUrl } : {}),
         },
       ];
 
