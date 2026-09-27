@@ -73,7 +73,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Telegram Mini App entry (ADR-0039) — the WebView arrives with no session
+  // Telegram Mini App entry (ADR-0040) — the WebView arrives with no session
   // and this page creates one from Telegram's signed `initData`, which exists
   // only in JavaScript, so nothing here can see it. It must also pass BEFORE
   // the signed-in redirects below: on the student host they would send a

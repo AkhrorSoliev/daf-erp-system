@@ -6,7 +6,7 @@ import { isMiniAppSession } from "@/lib/telegram-mini-app";
 const noSubscription = () => () => {};
 
 /**
- * Whether this tab is the Telegram Mini App (ADR-0039). `false` on the server
+ * Whether this tab is the Telegram Mini App (ADR-0040). `false` on the server
  * and during hydration, so server and client markup agree; the real value
  * arrives on the render after it.
  */

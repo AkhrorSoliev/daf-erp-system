@@ -6,7 +6,7 @@ import { useIsMiniApp } from "@/hooks/use-is-mini-app";
 import { MINI_APP_ENTRY_PATH } from "@/lib/telegram-mini-app";
 
 /**
- * Inside the Telegram Mini App the password form is never shown (ADR-0039):
+ * Inside the Telegram Mini App the password form is never shown (ADR-0040):
  * sign-in there is Telegram's alone.
  *
  * A session that ends inside the Mini App — the refresh token expired, the

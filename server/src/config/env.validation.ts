@@ -121,7 +121,7 @@ function isSet(config: Record<string, unknown>, key: string): boolean {
 }
 
 /**
- * What is wrong with the Mini App address, or null (ADR-0039).
+ * What is wrong with the Mini App address, or null (ADR-0040).
  *
  * Checked at boot because the failure is not local to one button: the bot puts
  * this URL on a `web_app` button in its main menu, Telegram refuses a web_app

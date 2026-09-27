@@ -111,7 +111,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   // `requiredChannel` is unset the gate is disabled entirely.
   private requiredChannel?: string;
   private botUsername?: string;
-  /** O'quvchi portalining Mini App manzili (ADR-0039); yo'q bo'lsa — o'chiq. */
+  /** O'quvchi portalining Mini App manzili (ADR-0040); yo'q bo'lsa — o'chiq. */
   private miniAppUrl?: string;
   /**
    * `/start` oqimi, `onModuleInit` ichida yaratiladi va shu yerda saqlanadi.

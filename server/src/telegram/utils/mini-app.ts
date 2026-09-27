@@ -3,7 +3,7 @@ import { Markup, type Telegram } from 'telegraf';
 import type { BotContext } from '../types/context';
 
 /**
- * Botning o'quvchi portali Mini App'iga eshiklari (ADR-0039).
+ * Botning o'quvchi portali Mini App'iga eshiklari (ADR-0040).
  *
  * Manzil `TELEGRAM_MINI_APP_URL` dan keladi. U yo'q bo'lsa hammasi avvalgidek:
  * «🎓 Platformaga kirish» «tez kunda» deydi, menyu tugmasiga tegilmaydi.

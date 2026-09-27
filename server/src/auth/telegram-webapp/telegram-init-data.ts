@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 
 /**
- * Telegram Mini App'ning `initData` satrini tekshiradi (ADR-0039).
+ * Telegram Mini App'ning `initData` satrini tekshiradi (ADR-0040).
  *
  * `initData` — Telegram Mini App'ni ochganda WebView'ga beradigan query-string:
  * `user` (JSON), `auth_date`, `hash` va boshqa maydonlar. `hash` — qolgan

@@ -46,7 +46,7 @@ export const NOT_LINKED_STUDENT_MESSAGE =
   "Bu o'quvchi Telegram akkauntingizga bog'lanmagan.";
 
 /**
- * Telegram Mini App ichidan kirish (ADR-0039).
+ * Telegram Mini App ichidan kirish (ADR-0040).
  *
  * Kim ekanini Telegram aytadi (`initData` imzosi), qaysi o'quvchi ekanini
  * `Student.telegramChatId` aytadi. Bu bog'lanish faqat bot orqali, odam O'Z

@@ -6,7 +6,7 @@ import { TelegramWebAppLoginDto } from '../dto/telegram-webapp-login.dto';
 import { TelegramWebAppService } from './telegram-webapp.service';
 
 /**
- * Telegram Mini App ichidan kirish (ADR-0039). Web portallarning Telegram
+ * Telegram Mini App ichidan kirish (ADR-0040). Web portallarning Telegram
  * OAuth eshiklari `auth.controller.ts` da; bu — faqat Mini App uchun.
  */
 @Controller('auth/telegram')

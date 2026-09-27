@@ -111,7 +111,7 @@ isbotlagandan keyin yozadi — ro'yxatdan o'tish, «Parolni tiklash», «💳
 To'lovlar», mock; admin panelda bog'lash yo'q. Bitta Telegram'ga bir nechta
 o'quvchi bog'lanishi mumkin (ota-onaning raqami). Botning parol tiklashi va Mini
 App kirishi shu bog'lanishga ishonadi.
-`telegram/flows/statement-flow.ts` · `auth/telegram-webapp/telegram-webapp.service.ts` · `docs/adr/0039-mini-app-ichida-faqat-telegram-orqali-kirish.md`
+`telegram/flows/statement-flow.ts` · `auth/telegram-webapp/telegram-webapp.service.ts` · `docs/adr/0040-mini-app-ichida-faqat-telegram-orqali-kirish.md`
 
 **Lead** — hali o'quvchi bo'lmagan potensial mijoz. Kanban doskasida yuradi;
 ustun = filial. O'chirish = `LOST` holatiga o'tkazish + majburiy sabab.

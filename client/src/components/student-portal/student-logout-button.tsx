@@ -40,7 +40,7 @@ export function LogoutButton({
   function confirmLogout() {
     queryClient.clear();
     if (inMiniApp) {
-      // The Mini App has no password form (ADR-0039): back to /tg, which
+      // The Mini App has no password form (ADR-0040): back to /tg, which
       // waits for «Qayta kirish» instead of signing straight back in.
       markMiniAppSignedOut(true);
       clearSession();

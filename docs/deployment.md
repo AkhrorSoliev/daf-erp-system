@@ -85,7 +85,7 @@ railway up --detach
 | `INVOICE_BASE_URL` | `https://invoice.dafzentrum.uz`    |
 | `TELEGRAM_BOT_TOKEN` | Student/teacher/employee registration bot token (BotFather) |
 | `TELEGRAM_ADMIN_BOT_TOKEN` | Admin/management bot token (separate BotFather bot — used for company group stats, broadcasts, daily reports) |
-| `TELEGRAM_MINI_APP_URL` | `https://student.dafzentrum.uz/tg` — the student portal as a Telegram Mini App (ADR-0039). Optional |
+| `TELEGRAM_MINI_APP_URL` | `https://student.dafzentrum.uz/tg` — the student portal as a Telegram Mini App (ADR-0040). Optional |
 | `ESKIZ_EMAIL`    | Eskiz.uz SMS gateway login (SMS-shlyuz cabinet)      |
 | `ESKIZ_PASSWORD` | Eskiz.uz API secret key (from the SMS-shlyuz tab)    |
 | `ESKIZ_FROM`     | SMS sender — `4546` (Eskiz test sender; no brand nik required per Eskiz support) |

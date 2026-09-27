@@ -1,7 +1,7 @@
 import type { AuthUser } from "@/hooks/use-auth";
 
 /**
- * Telegram Mini App ichidagi o'quvchi kabineti (ADR-0039).
+ * Telegram Mini App ichidagi o'quvchi kabineti (ADR-0040).
  *
  * Kirish nuqtasi — `/tg` sahifasi: Telegram bergan `initData` serverga
  * yuboriladi, server Telegram akkaunti bog'langan o'quvchini topib sessiya

@@ -48,7 +48,7 @@ const SESSION_NOT_KEPT =
   "Kirish bu oynada saqlanmadi. Telegram'ning brauzer versiyasida shunday bo'lishi mumkin — kabinetni telefon yoki kompyuterdagi Telegram ilovasidan oching.";
 
 /**
- * Telegram Mini App'ning kirish nuqtasi (ADR-0039).
+ * Telegram Mini App'ning kirish nuqtasi (ADR-0040).
  *
  * Telegram akkaunti o'quvchiga bog'langan bo'lsa — avtomatik kiradi (parolsiz),
  * bog'lanmagan bo'lsa — xabar. Telefon/parol formasi bu yerda yo'q: Mini App

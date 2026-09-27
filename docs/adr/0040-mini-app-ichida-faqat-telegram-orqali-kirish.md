@@ -1,4 +1,4 @@
-# ADR-0039 — Mini App ichida o'quvchi faqat Telegram orqali kiradi; bog'lanmagan akkauntga xabar ko'rsatiladi
+# ADR-0040 — Mini App ichida o'quvchi faqat Telegram orqali kiradi; bog'lanmagan akkauntga xabar ko'rsatiladi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-09-27
