@@ -431,9 +431,9 @@ export function ChangeStatusDialog({
                     })}
                   </div>
                   <p className="text-[11px] leading-relaxed text-blue-800/80 dark:text-blue-300/70">
-                    Hozirgi prepaid&apos;dan ko&apos;proq tanlasangiz, qo&apos;shimcha
-                    o&apos;tib bo&apos;lgan darslar bekor qilinadi va ustozdan
-                    mos oylik chiqariladi.
+                    Oldindan to&apos;langan darslardan ko&apos;proq tanlasangiz,
+                    qo&apos;shimcha o&apos;tib bo&apos;lgan darslar bekor qilinadi va
+                    ustozdan mos oylik chiqariladi.
                   </p>
                 </div>
               )}

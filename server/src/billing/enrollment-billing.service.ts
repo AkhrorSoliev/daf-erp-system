@@ -380,7 +380,7 @@ export class EnrollmentBillingService {
 
       if (consumptions.length < extraReversed) {
         throw new BadRequestException(
-          `Faqat ${currentPrepaid + consumptions.length} ta darsni qaytarib bo'ladi (jami ${currentPrepaid} ta prepaid + ${consumptions.length} ta o'tilgan dars)`,
+          `Faqat ${currentPrepaid + consumptions.length} ta darsni qaytarib bo'ladi (jami ${currentPrepaid} ta oldindan to'langan + ${consumptions.length} ta o'tilgan dars)`,
         );
       }
 
