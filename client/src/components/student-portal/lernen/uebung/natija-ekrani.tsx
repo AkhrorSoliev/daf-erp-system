@@ -8,6 +8,7 @@ import { Button, Card, FadeIn, StatChip } from "../../lumio";
 import type { SeansXato } from "../seans-navbat";
 import { useFortschritt } from "../queries";
 import { orinXabari, xatoYorligi } from "./natija-xabari";
+import { DeWort } from "./de-wort";
 import { sinovKorinishi, type SinovHolati } from "./sinov-natijasi";
 
 export interface NatijaEkraniProps {
@@ -160,9 +161,9 @@ function XatoQatori({ xato }: { xato: SeansXato }) {
             className="size-10 shrink-0 rounded-lg bg-white object-cover"
           />
         ) : null}
-        {xatoYorligi(xato.format, xato.prompt)}
+        <DeWort text={xatoYorligi(xato.format, xato.prompt)} />
       </span>
-      <span className="text-sm font-bold text-danger">{xato.richtig}</span>
+      <DeWort text={xato.richtig} className="text-sm font-bold text-danger" />
     </div>
   );
 }

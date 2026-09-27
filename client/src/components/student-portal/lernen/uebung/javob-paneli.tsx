@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import type { PruefErgebnis } from "../types";
+import { DeWort } from "./de-wort";
 
 /**
  * The panel under a checked question, for every format but the pairing
@@ -27,7 +28,9 @@ export function JavobPaneli({ natija }: { natija: PruefErgebnis }) {
         {natija.isCorrect ? "To'g'ri!" : "Xato"}
       </p>
       {soz ? (
-        <p className="mt-0.5 text-sm font-semibold text-ink-800">{soz}</p>
+        <p className="mt-0.5 text-sm font-semibold text-ink-800">
+          <DeWort text={soz} />
+        </p>
       ) : null}
     </div>
   );

@@ -43,7 +43,9 @@ import { harakat, koersatma } from "./koersatma";
 import { OvozTugmasi } from "./ovoz-tugmasi";
 import { Tanlash } from "./tanlash";
 import { RasmTanlash, SavolRasmi } from "./rasm-tanlash";
+import { rasmlarniOldindanYukla } from "./rasm-oldindan";
 import { JavobPaneli } from "./javob-paneli";
+import { DeWort } from "./de-wort";
 import { Yozish } from "./yozish";
 import { Yigish, juftSoni, juftUstunlar } from "./yigish";
 import { DialogBlok } from "./dialog-blok";
@@ -201,6 +203,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
   }, [seans.data, fortschritt.data, fortschritt.isError]);
 
   const frage = holat ? joriy(holat) : null;
+  // The next question's pictures load while this one is answered.
+  rasmlarniOldindanYukla(holat?.navbat[1]);
   const rejim = frage ? harakat(frage.format) : null;
 
   // `PAAR`/`ZUORDNEN` `given`/`tayyor`ga UMUMAN muhtoj emas — ular
@@ -210,19 +214,21 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // ular uchun bunday bosqich yo'q.
   // A picture choice sends the picked picture URL, like a text choice.
   const tanlashRejimi = rejim === "TANLASH" || rejim === "RASM";
-  const given = tanlashRejimi
-    ? (tanlangan ?? "")
-    : rejim === "YOZISH"
-      ? yozilgan.trim()
-      : yigilgan.join(" "); // SATZ_BAUEN
+  const given =
+    tanlashRejimi
+      ? (tanlangan ?? "")
+      : rejim === "YOZISH"
+        ? yozilgan.trim()
+        : yigilgan.join(" "); // SATZ_BAUEN
 
-  const tayyor = tanlashRejimi
-    ? tanlangan != null
-    : rejim === "YOZISH"
-      ? yozilgan.trim().length > 0
-      : frage && (frage.format === "PAAR" || frage.format === "ZUORDNEN")
-        ? false
-        : yigilgan.length > 0;
+  const tayyor =
+    tanlashRejimi
+      ? tanlangan != null
+      : rejim === "YOZISH"
+        ? yozilgan.trim().length > 0
+        : frage && (frage.format === "PAAR" || frage.format === "ZUORDNEN")
+          ? false
+          : yigilgan.length > 0;
 
   const tekshir = () => {
     if (!frage || !tayyor || natija || pruefen.isPending) return;
@@ -909,7 +915,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
           <DialogBlok matn={frage.prompt} />
         ) : frage.prompt ? (
           <p className="text-2xl font-bold text-ink-900 sm:text-3xl">
-            {frage.prompt}
+            <DeWort text={frage.prompt} />
           </p>
         ) : null}
         {/* `ZUORDNEN` uchun server `prompt`ni BO'SH yuboradi (ko'rik
