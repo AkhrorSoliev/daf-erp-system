@@ -181,6 +181,7 @@ export class ReportsExcelService {
         monthStr,
         performedById,
         salaryBranchId,
+        'home',
       ),
       this.reports.getDebtorLineItems(companyId, debtorBranchIds),
       this.reports.getReconciliation(companyId, scope),
@@ -284,6 +285,7 @@ export class ReportsExcelService {
         prevMonthStr,
         performedById,
         salaryBranchId,
+        'home',
       ),
     ]);
 

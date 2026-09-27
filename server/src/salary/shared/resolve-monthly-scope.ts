@@ -24,6 +24,16 @@ export interface SalaryMonthlyQuery {
    * it used to subtract the whole company's.
    */
   branchId?: number;
+  /**
+   * How a branch-scoped report places a non-teaching staff member. By default
+   * (`undefined`) the staff list shows everyone attached to the branch, which
+   * is right for the payroll page: an administrator working in two branches
+   * appears in both. A PROFIT figure needs each salary exactly once, or
+   * summing the branches exceeds the company — `'home'` counts a staff member
+   * only in their home branch (`mainBranch`, else the lowest branch they are
+   * attached to).
+   */
+  staffBranchBasis?: 'home';
 }
 
 const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
@@ -73,6 +83,8 @@ export interface MonthlyScope {
   searchId: number | null;
   /** Single-user scope; undefined = the full roster. */
   userId: number | undefined;
+  /** See `SalaryMonthlyQuery.staffBranchBasis`. */
+  staffBranchBasis?: 'home';
 }
 
 export async function resolveMonthlyScope(
@@ -149,5 +161,6 @@ export async function resolveMonthlyScope(
     search: search || undefined,
     searchId,
     userId: query.userId,
+    staffBranchBasis: query.staffBranchBasis,
   };
 }

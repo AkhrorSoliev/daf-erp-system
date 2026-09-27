@@ -32,7 +32,7 @@ describe('netProfitCacheKey', () => {
 
   it('is per month, so overlapping ranges reuse entries', () => {
     expect(netProfitCacheKey(1001, undefined, '2026-07')).toBe(
-      'rpt:np:1001:all:2026-07',
+      'rpt:np:v2:1001:all:2026-07',
     );
   });
 });
@@ -50,7 +50,7 @@ describe('cachedNetProfit', () => {
     expect(v).toBe(43_900_000);
     expect(compute).toHaveBeenCalledTimes(1);
     expect(redis.setex).toHaveBeenCalledWith(
-      'rpt:np:1001:all:2026-07',
+      'rpt:np:v2:1001:all:2026-07',
       expect.any(Number),
       '43900000',
     );

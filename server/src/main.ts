@@ -43,6 +43,9 @@ async function bootstrap() {
       ...devOrigins,
     ],
     credentials: true,
+    // Lets the browser read a download's file name (the statement PDF's
+    // `Surname-I-ID-date.pdf` is decided by the server).
+    exposedHeaders: ['Content-Disposition'],
   });
 
   await app.listen(process.env.PORT ?? 4000);

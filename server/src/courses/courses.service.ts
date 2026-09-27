@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { CourseStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { tashkentDateStr } from '../common/date/tashkent';
+import { courseScheduleSummary } from './course-schedule-summary';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
 import { SettingsService } from '../settings/settings.service';
@@ -122,7 +124,25 @@ export class CoursesService {
       throw new NotFoundException(`Kurs #${id} topilmadi`);
     }
 
-    return course;
+    // The page shows lessons a week and a month the way billing counts them:
+    // from the running groups' schedules.
+    const groups = await this.prisma.group.findMany({
+      where: {
+        courseId: id,
+        deletedAt: null,
+        statusEnum: { in: ['FORMING', 'ACTIVE', 'PAUSED'] },
+      },
+      select: { exactDays: true },
+    });
+    const [year, month] = tashkentDateStr(new Date()).split('-').map(Number);
+    return {
+      ...course,
+      schedule: courseScheduleSummary(
+        groups.map((g) => g.exactDays),
+        year,
+        month,
+      ),
+    };
   }
 
   async create(dto: CreateCourseDto, companyId: number, userId?: number) {

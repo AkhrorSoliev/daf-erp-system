@@ -1456,6 +1456,8 @@ describe('LessonBillingService', () => {
         enrollmentMonthlyCharge: {
           // Fallback yo'li: bu oy uchun hisob hali yo'q (cron ulgurmagan).
           findUnique: jest.fn().mockResolvedValue(null),
+          // No other charge of this student in this group this month.
+          findMany: jest.fn().mockResolvedValue([]),
           // `createChargeForEnrollment` create() dan keyin update()ni HAM
           // chaqiradi (transactionId qo'yish uchun) — ikkalasi bitta
           // yopiq o'zgaruvchida qo'shilishi kerak, aks holda update()

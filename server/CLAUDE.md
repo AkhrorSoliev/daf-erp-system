@@ -387,11 +387,13 @@ Every entity update that touches a tracked field MUST also write a snapshot row.
 
 **When adding new code that mutates these fields:** wire the corresponding snapshot write or the activity report will silently use the new value retroactively.
 
-#### Reads (`reports-center-activity.service.ts`)
+#### Reads
 
-`loadSnapshots()` fetches all snapshots overlapping the period in one batched query and returns in-memory `Map`s keyed by entity ID. Per-date lookups (`capacityOn`, `scheduleOn`, `priceOn`, `statusOn`) walk the small per-entity arrays. Falls back to current entity values when no snapshot exists (degraded mode for un-backfilled data).
+`reports-center-activity.service.ts` — `loadSnapshots()` fetches all snapshots overlapping the period in one batched query and returns in-memory `Map`s keyed by entity ID. Per-date lookups (`capacityOn`, `scheduleOn`, `priceOn`, `statusOn`) walk the small per-entity arrays. Falls back to current entity values when no snapshot exists (degraded mode for un-backfilled data).
 
 `statusOn` reads through `enrollmentStatusOn` (`students/shared/enrollment-status-on.ts`), the reader the departures loader uses too, and each enrollment's log first passes through `supplyOpeningRow`, which the loader shares. An enrollment opened before the state log existed (up to 2026-04-26) can have a log that starts with its closing, the opening ACTIVE row never written; without that row it reads as absent from its creation until its first logged transition.
+
+`reports/shared/teacher-change-departures.ts` — the teacher-change retention card and its drill-down list ("left within 5 lessons of a teacher change") date a departure by the start of the enrollment's current stop: its earliest FROZEN/DROPPED log row after its last ACTIVE row. Never by `statusChangedAt` — that column moves again when a frozen enrollment is closed later (expelled, archived, its group closed), which used to pull a student out of the window they froze in. A closing that was never logged is completed from the row by `supplyClosingRow`, which the departures loader shares. Both readers go through `loadTeacherChangeDepartures`, so the count and the list cannot disagree.
 
 #### Backfill
 
@@ -721,6 +723,17 @@ It also returns per-day `events` — enrolment transitions (`EnrollmentStateLog`
   - Key is per `(company, branch, month)` so overlapping ranges reuse entries and a branch-filtered view never reads the company-wide figure. TTL runs to the next **Tashkent** midnight.
   - A Redis outage degrades to computing, never to failing; a month whose canonical figure cannot be produced keeps its cash value and is flagged `profitBasis: 'kassa'`, so one bad point never takes the chart down.
   - `getFinancialTrend` (raw, cash) is left untouched for the Excel path; the chart endpoint calls `getFinancialTrendCanonical`.
+
+#### «Foyda tarkibi» — the Foyda card's breakdown (ADR-0038)
+
+`GET /reports/profit-composition` (CEO/BD, month = the period's START month, like the card) answers "what is this figure made of, and what will the month close at". `ReportsProfitCompositionService` builds it from `ReportsService.assembleMonthlyNetProfit` — the same call `getMonthlyNetProfit` returns `.netProfit` from — so the lines always add up to the card. Its extra queries only EXPLAIN (expense items, remaining charged lessons, departed debtors); none of them moves the figure.
+
+- **A held lesson is priced by what billed it** (`resolveHeldLessonPrice`, `common/finance/monthly-per-lesson.ts`): a monthly charge that covered that date wins over a `LESSON_CONSUMPTION` marker. The September 2026 switch to monthly billing left the 12-pack markers in place while re-billing the month; reading the marker first overstated September by 2.1 mln. `getRecognizedRevenue` (via `valueHeldLessons`) and the month-end expectation share the helper — never price a held lesson anywhere else.
+- **Staff are counted in ONE branch for any profit figure** (`staffBranchBasis: 'home'`: `mainBranch`, else the lowest attached branch). The payroll page keeps membership (an administrator attached to two branches appears in both). Without it, Σ(branches) fell 3 mln short of the company.
+- **The forecast is for a running month only:** remaining revenue = `getMonthlyExpectation().expectedValue` − the revenue recognised so far (the expectation already knows cancellations, reschedules and holidays; reading the remainder off its TOTAL keeps a lesson marked after the day's cache from counting twice), the teacher share at the month's ratio so far, and last month's RENT / UTILITIES / tax that this month has not recorded yet. Tax is also recognised under `OTHER` by a "soliq" description, because that is where the centre records it.
+- A student who left a group and rejoined it within the month has two CHARGED charges under one key; `loadFrozenMonthlyCharges` keeps the last one's price and the others' dates in `earlierCharges`, and `monthlyChargeBilledDate` checks them all.
+- **"Qarz bilan ketgan o'quvchilar"** counts students with NO active enrollment anywhere and a negative balance, capped per student at their current debt.
+- Both day caches carry a version (`NET_PROFIT_CACHE_VERSION`, `EXPECTATION_CACHE_VERSION`). Bump it whenever the figure's definition changes, or the cached surface shows the old formula until midnight.
 
 #### Multi-month Excel export: every profit leg must share one window
 

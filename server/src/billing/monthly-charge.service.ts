@@ -172,7 +172,7 @@ export class MonthlyChargeService {
     // o'quvchi 10-sentabrda ketgan — bitta dars puli markazda qolib
     // ketardi). `fromDate` ham shu yerda qo'llanadi: o'quvchi qo'shilishidan
     // OLDIN o'tilgan qoplama darsini u olmagan, demak to'lamaydi ham.
-    const coveredDates = lessonDatesInMonth({
+    const scheduledDates = lessonDatesInMonth({
       year: periodYear,
       month: periodMonth,
       exactDays: enr.group.exactDays,
@@ -180,6 +180,19 @@ export class MonthlyChargeService {
       addedDates,
       fromDate,
     });
+    // A student taken out of a group and put back into the SAME group in the
+    // same month has two enrollments there. The earlier one's charge keeps
+    // every date up to the day they left (`reverseChargeForDeparture` returns
+    // only the later ones), so those lessons are paid already: covering them
+    // again here would bill one lesson twice.
+    const paidElsewhere = await this.datesPaidByOtherCharges(tx, {
+      enrollmentId: enr.id,
+      studentId: enr.studentId,
+      groupId: enr.groupId,
+      periodYear,
+      periodMonth,
+    });
+    const coveredDates = scheduledDates.filter((d) => !paidElsewhere.has(d));
     const coveredLessons = coveredDates.length;
     if (coveredLessons === 0) return null;
 
@@ -346,6 +359,43 @@ export class MonthlyChargeService {
       where: { id: charge.id },
       data: { transactionId: transaction.id },
     });
+  }
+
+  /**
+   * Lesson dates of this month that another CHARGED charge of the same
+   * student in the same group still covers: its `coveredDates` minus the ones
+   * it has returned (`frozenOutDates`). A charge written before
+   * `coveredDates` existed stores no dates and so takes nothing away.
+   */
+  private async datesPaidByOtherCharges(
+    tx: Prisma.TransactionClient,
+    params: {
+      enrollmentId: string;
+      studentId: number;
+      groupId: string;
+      periodYear: number;
+      periodMonth: number;
+    },
+  ): Promise<Set<string>> {
+    const others = await tx.enrollmentMonthlyCharge.findMany({
+      where: {
+        studentId: params.studentId,
+        groupId: params.groupId,
+        periodYear: params.periodYear,
+        periodMonth: params.periodMonth,
+        status: MonthlyChargeStatus.CHARGED,
+        enrollmentId: { not: params.enrollmentId },
+      },
+      select: { coveredDates: true, frozenOutDates: true },
+    });
+    const paid = new Set<string>();
+    for (const other of others) {
+      const returned = new Set(other.frozenOutDates ?? []);
+      for (const d of other.coveredDates ?? []) {
+        if (!returned.has(d)) paid.add(d);
+      }
+    }
+    return paid;
   }
 
   /**
@@ -697,6 +747,21 @@ export class MonthlyChargeService {
         branchId: enr.group.branchId,
         description: `${params.reason} — o'tmagan ${remaining} dars qaytarildi`,
         performedById: params.performedById,
+        // Lets the payment statement fold this refund into the month's
+        // lessons without parsing the description.
+        metadata: {
+          kind: 'monthly-release',
+          enrollmentId: params.enrollmentId,
+          period: `${periodYear}-${String(periodMonth).padStart(2, '0')}`,
+          lessons: remaining,
+          ...(frozenOutAfter
+            ? {
+                dates: frozenOutAfter.filter(
+                  (d) => !frozenOutBefore.includes(d),
+                ),
+              }
+            : {}),
+        },
       },
       tx,
     );

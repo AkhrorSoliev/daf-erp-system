@@ -38,6 +38,7 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { PAYMENT_MODEL_LABELS, type PaymentModel } from "@/lib/payment-model";
+import { coursePriceLabel } from "@/lib/course-terms";
 
 interface EditCourseFormProps {
   course: Course | null;
@@ -148,6 +149,29 @@ export function EditCourseForm({
     },
   });
 
+  // «Standart sozlama bo'yicha» tanlanganda forma tizimdagi standart
+  // modelga moslashadi. Sozlamani faqat CEO/Filial direktori o'qiy oladi
+  // (`GET /settings/payment`); Administrator uchun model noma'lum bo'lib
+  // qoladi va forma betaraf ko'rinadi.
+  const [defaultModel, setDefaultModel] = useState<PaymentModel | null>(null);
+  useEffect(() => {
+    if (!isAdd || !canEditPaymentModel) return;
+    let cancelled = false;
+    api
+      .get("/settings/payment")
+      .then(({ data }) => {
+        if (!cancelled) setDefaultModel(data["payment.defaultModel"] ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdd, canEditPaymentModel]);
+  const chosenModel = form.watch("paymentModel");
+  const effectiveModel: PaymentModel | null =
+    chosenModel === AUTO_MODEL ? defaultModel : chosenModel;
+  const isMonthly = effectiveModel === "MONTHLY";
+
   // To'lov modelini almashtirish pul bilan bog'liq qaror — jim ichki
   // o'zgarish emas. Model haqiqatan ham o'zgargan bo'lsa, submit to'g'ridan
   // to'g'ri saqlamaydi: tasdiq oynasini ochadi va aniq shu qiymatlarni
@@ -193,9 +217,7 @@ export function EditCourseForm({
           // qo'shilmaydi. Aks holda o'zgarmagan qiymat ham yuborilib,
           // backend `paymentModel !== undefined` tekshiruviga ilinib
           // qolardi va oddiy nom/narx tahrirlashini ham 403 qilardi.
-          paymentModel: canEditPaymentModel
-            ? values.paymentModel
-            : undefined,
+          paymentModel: canEditPaymentModel ? values.paymentModel : undefined,
         });
 
         toast.success("Kurs muvaffaqiyatli yangilandi");
@@ -276,41 +298,49 @@ export function EditCourseForm({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="lessonPaymentCount"
-                className="flex items-center gap-1.5"
-              >
-                Sikl darslari
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="size-3.5 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    Bitta to&apos;lov sikli necha darsni qoplaydi (odatda 12,
-                    intensiv kurslar uchun 20)
-                  </TooltipContent>
-                </Tooltip>
-              </Label>
-              <Input
-                id="lessonPaymentCount"
-                type="number"
-                min={1}
-                max={50}
-                placeholder="12"
-                {...form.register("lessonPaymentCount", { valueAsNumber: true })}
-              />
-              {/* Yumshoq ogohlantirish — bloklamaydi, faqat odatiy bo'lmagan
+            {/* Oylik to'lovda sikl hajmi o'qilmaydi — ko'rsatilmaydi. */}
+            {!isMonthly && (
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="lessonPaymentCount"
+                  className="flex items-center gap-1.5"
+                >
+                  Sikl darslari
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="size-3.5 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Bitta to&apos;lov sikli necha darsni qoplaydi (odatda 12,
+                      intensiv kurslar uchun 20)
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
+                <Input
+                  id="lessonPaymentCount"
+                  type="number"
+                  min={1}
+                  max={50}
+                  placeholder="12"
+                  {...form.register("lessonPaymentCount", {
+                    valueAsNumber: true,
+                  })}
+                />
+                {/* Yumshoq ogohlantirish — bloklamaydi, faqat odatiy bo'lmagan
                   qiymat (12/20 emas) kiritilganda diqqatni tortadi. */}
-              {(() => {
-                const v = form.watch("lessonPaymentCount");
-                return typeof v === "number" && v > 0 && v !== 12 && v !== 20 ? (
-                  <p className="text-xs text-amber-600 dark:text-amber-400">
-                    Odatiy emas — odatda 12 yoki 20. Tekshiring.
-                  </p>
-                ) : null;
-              })()}
-            </div>
+                {(() => {
+                  const v = form.watch("lessonPaymentCount");
+                  return typeof v === "number" &&
+                    v > 0 &&
+                    v !== 12 &&
+                    v !== 20 ? (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      Odatiy emas — odatda 12 yoki 20. Tekshiring.
+                    </p>
+                  ) : null;
+                })()}
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="lessonMinutes">Dars davomiyligi (daq)</Label>
               <Input
@@ -324,7 +354,7 @@ export function EditCourseForm({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Narxi</Label>
+            <Label>{coursePriceLabel(effectiveModel)}</Label>
             <Controller
               control={form.control}
               name="price"
@@ -336,6 +366,12 @@ export function EditCourseForm({
                 />
               )}
             />
+            {isMonthly && (
+              <p className="text-xs text-muted-foreground">
+                Bitta dars narxi har oy guruh jadvalidan chiqadi: oylik narx ÷
+                o&apos;sha oydagi darslar soni.
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -409,13 +445,22 @@ export function EditCourseForm({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>To&apos;lov modelini almashtirish</AlertDialogTitle>
+            <AlertDialogTitle>
+              To&apos;lov modelini almashtirish
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {course && pendingValues && (
                 <>
                   &laquo;{course.name}&raquo; kursini{" "}
                   <strong>{PAYMENT_MODEL_LABELS[course.paymentModel]}</strong>
-                  dan <strong>{PAYMENT_MODEL_LABELS[pendingValues.paymentModel as PaymentModel]}</strong>
+                  dan{" "}
+                  <strong>
+                    {
+                      PAYMENT_MODEL_LABELS[
+                        pendingValues.paymentModel as PaymentModel
+                      ]
+                    }
+                  </strong>
                   ga o&apos;tkazasiz.{" "}
                   {groupCount === 0 ? (
                     <>
@@ -424,9 +469,10 @@ export function EditCourseForm({
                     </>
                   ) : groupCount !== null ? (
                     <>
-                      Bu kursdagi <strong>{groupCount} ta guruhning barchasi</strong>{" "}
-                      darhol yangi to&apos;lov qoidasiga o&apos;tadi — bu pul
-                      bilan bog&apos;liq qaror, ehtiyot bo&apos;ling.
+                      Bu kursdagi{" "}
+                      <strong>{groupCount} ta guruhning barchasi</strong> darhol
+                      yangi to&apos;lov qoidasiga o&apos;tadi — bu pul bilan
+                      bog&apos;liq qaror, ehtiyot bo&apos;ling.
                     </>
                   ) : (
                     <>

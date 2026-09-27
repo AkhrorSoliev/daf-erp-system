@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { buildDepartedEnrollmentWhere } from './shared/departed-filter';
+import { loadTeacherChangeDepartures } from './shared/teacher-change-departures';
 import { equalsOrIn } from '../common/dto/to-array';
 import { tashkentRangeUtc } from '../common/date/tashkent';
 
@@ -210,17 +211,16 @@ export class ReportsTeacherChangesService {
   }
 
   /**
-   * Drill-down for the teacher-change retention card: students who "left"
-   * within 5 lessons of a teacher change — where "left" means the enrollment
-   * went DROPPED (guruhsiz qoldi) or FROZEN (muzlatildi). Date-ranged; mirrors
-   * getTeacherChangeRetentionMetrics.
+   * Drill-down for the teacher-change retention card: the students who "left"
+   * within 5 lessons of a teacher change, newest departure first. Who left,
+   * and when, is decided in `loadTeacherChangeDepartures` — the same reader
+   * behind the card's count (`getTeacherChangeRetentionMetrics`), so the list
+   * and the count agree.
    */
   async getDepartedAfterTeacherChangeList(
     companyId: number,
     params: { branchId?: number; startDate: string; endDate: string },
   ) {
-    const LESSON_WINDOW = 5;
-
     // TIMESTAMP columns — the picked days are Tashkent days, and `end` is the
     // EXCLUSIVE start of the day after (see common/date/tashkent).
     const { gte: start, lt: end } = tashkentRangeUtc(
@@ -228,133 +228,53 @@ export class ReportsTeacherChangesService {
       params.endDate,
     );
 
-    const groupFilter: any = { companyId, deletedAt: null };
-    if (params.branchId !== undefined) groupFilter.branchId = params.branchId;
-
-    const changes = await this.prisma.groupTeacherHistory.findMany({
-      where: {
-        createdAt: { gte: start, lt: end },
-        group: groupFilter,
+    const { departures } = await loadTeacherChangeDepartures(
+      this.prisma,
+      companyId,
+      {
+        scope: params.branchId !== undefined ? [params.branchId] : null,
+        start,
+        end,
       },
-      select: {
-        id: true,
-        groupId: true,
-        previousTeacherIds: true,
-        newTeacherIds: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    );
+    if (departures.length === 0) return [];
 
-    if (changes.length === 0) return [];
-
-    type Row = {
-      enrollmentId: string;
-      studentId: number;
-      studentName: string;
-      groupId: string;
-      groupName: string;
-      branchName: string;
-      teacherChangeAt: Date;
-      departedAt: Date;
-      departureStatus: 'DROPPED' | 'FROZEN';
-      lessonNumber: number;
-      previousTeachers: string[];
-      newTeachers: string[];
-      departureReason: string | null;
-    };
-
-    const seen = new Set<string>();
-    const rows: Row[] = [];
-
-    const teacherIdsAll = Array.from(
+    const teacherIds = Array.from(
       new Set(
-        changes.flatMap((c) => [...c.previousTeacherIds, ...c.newTeacherIds]),
+        departures.flatMap((d) => [
+          ...d.change.previousTeacherIds,
+          ...d.change.newTeacherIds,
+        ]),
       ),
     );
-    const teachers = teacherIdsAll.length
+    const teachers = teacherIds.length
       ? await this.prisma.user.findMany({
-          where: { id: { in: teacherIdsAll } },
+          where: { id: { in: teacherIds } },
           select: { id: true, firstName: true, lastName: true },
         })
       : [];
     const teacherMap = new Map(
       teachers.map((t) => [t.id, `${t.firstName} ${t.lastName}`]),
     );
+    const names = (ids: number[]) =>
+      ids.map((id) => teacherMap.get(id) ?? `#${id}`);
 
-    for (const change of changes) {
-      const lessonDates = await this.prisma.attendance.findMany({
-        where: {
-          groupId: change.groupId,
-          date: { gte: change.createdAt },
-        },
-        distinct: ['date'],
-        select: { date: true },
-        orderBy: { date: 'asc' },
-        take: LESSON_WINDOW,
-      });
-
-      if (lessonDates.length === 0) continue;
-      const cutoffDate = lessonDates[lessonDates.length - 1].date;
-
-      const departed = await this.prisma.enrollment.findMany({
-        where: {
-          groupId: change.groupId,
-          status: { in: ['DROPPED', 'FROZEN'] },
-          deletedAt: null,
-          createdAt: { lt: change.createdAt },
-          statusChangedAt: { gte: change.createdAt, lte: cutoffDate },
-          student: { companyId, deletedAt: null },
-        },
-        select: {
-          id: true,
-          studentId: true,
-          status: true,
-          statusChangedAt: true,
-          student: { select: { firstName: true, lastName: true } },
-          group: {
-            select: {
-              name: true,
-              branch: { select: { name: true } },
-            },
-          },
-          departureReason: { select: { name: true } },
-        },
-      });
-
-      for (const e of departed) {
-        if (seen.has(e.id)) continue;
-        seen.add(e.id);
-
-        const departedAt = e.statusChangedAt!;
-        const lessonNumber =
-          lessonDates.findIndex(
-            (l) => l.date.getTime() >= departedAt.getTime(),
-          ) + 1 || lessonDates.length;
-
-        rows.push({
-          enrollmentId: e.id,
-          studentId: e.studentId,
-          studentName: `${e.student.firstName} ${e.student.lastName}`,
-          groupId: change.groupId,
-          groupName: e.group.name,
-          branchName: e.group.branch.name,
-          teacherChangeAt: change.createdAt,
-          departedAt,
-          departureStatus: e.status as 'DROPPED' | 'FROZEN',
-          lessonNumber,
-          previousTeachers: change.previousTeacherIds.map(
-            (id) => teacherMap.get(id) ?? `#${id}`,
-          ),
-          newTeachers: change.newTeacherIds.map(
-            (id) => teacherMap.get(id) ?? `#${id}`,
-          ),
-          departureReason: e.departureReason?.name ?? null,
-        });
-      }
-    }
-
-    rows.sort((a, b) => b.departedAt.getTime() - a.departedAt.getTime());
-    return rows;
+    return departures
+      .map(({ change, enrollment: e, ...d }) => ({
+        enrollmentId: e.id,
+        studentId: e.studentId,
+        studentName: `${e.student.firstName} ${e.student.lastName}`,
+        groupId: change.groupId,
+        groupName: e.group.name,
+        branchName: e.group.branch.name,
+        teacherChangeAt: change.createdAt,
+        departedAt: d.departedAt,
+        departureStatus: d.departureStatus,
+        lessonNumber: d.lessonNumber,
+        previousTeachers: names(change.previousTeacherIds),
+        newTeachers: names(change.newTeacherIds),
+        departureReason: e.departureReason?.name ?? null,
+      }))
+      .sort((a, b) => b.departedAt.getTime() - a.departedAt.getTime());
   }
 }

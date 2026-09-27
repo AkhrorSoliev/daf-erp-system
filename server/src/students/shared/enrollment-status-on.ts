@@ -13,9 +13,10 @@
  * opening row first (`supplyOpeningRow`), so an enrollment opened before the
  * log existed reads ACTIVE from its creation in both. Their inputs still
  * differ, so they can disagree about the same student: the loader also
- * completes a log that never recorded the closing (from the row itself) and
- * closes the enrollments of a deleted group at the deletion, while the
- * activity report reads the log of live groups only.
+ * completes a log that never recorded the closing (`supplyClosingRow`, from
+ * the row itself) and closes the enrollments of a deleted group at the
+ * deletion, while the activity report reads the log of live groups only.
+ * The teacher-change departures reader completes its logs the same way.
  */
 export interface EnrollmentStatusEvent {
   status: string;
@@ -75,5 +76,30 @@ export function supplyOpeningRow(
     createdAt.getTime() < first.transitionAt.getTime()
   ) {
     log.unshift({ status: 'ACTIVE', transitionAt: createdAt });
+  }
+}
+
+/**
+ * Gives an enrollment's log its missing closing row, in place (`log` is
+ * ascending by `transitionAt`).
+ *
+ * Older writers could change an enrollment's status without logging it; the
+ * row still says how (`status`) and when (`statusChangedAt`), so the log is
+ * completed from it — unless the log already ends with that status, or has a
+ * row later than that moment (then the row's moment cannot be placed). An
+ * empty log is left alone, as in `supplyOpeningRow`.
+ */
+export function supplyClosingRow(
+  log: EnrollmentStatusEvent[],
+  row: { status: string; statusChangedAt: Date | null },
+): void {
+  const last = log[log.length - 1];
+  if (
+    last &&
+    row.statusChangedAt &&
+    last.status !== row.status &&
+    row.statusChangedAt.getTime() >= last.transitionAt.getTime()
+  ) {
+    log.push({ status: row.status, transitionAt: row.statusChangedAt });
   }
 }

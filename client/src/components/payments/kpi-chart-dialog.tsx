@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { IncomeAttributionPanel } from "./income-attribution-panel";
+import { ProfitCompositionPanel } from "./profit-composition-panel";
 import api from "@/lib/api";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
@@ -124,6 +125,8 @@ interface Props {
    * rather than fetched again — same request, same figure, no second answer.
    */
   expectedMonthEnd?: number;
+  /** Switches the dialog to another KPI — the profit breakdown links to «Tushumlar». */
+  onSelectKpi?: (key: KpiKey) => void;
 }
 
 export function KpiChartDialog({
@@ -133,6 +136,7 @@ export function KpiChartDialog({
   startDate,
   endDate,
   expectedMonthEnd,
+  onSelectKpi,
 }: Props) {
   const { selectedBranch } = useBranchSwitcher();
 
@@ -242,7 +246,7 @@ export function KpiChartDialog({
             </div>
 
             {/* Monthly values table */}
-            <div className="grid grid-cols-6 gap-2">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
               {trend.map((point, i) => {
                 const val = point[kpiKey];
                 const prev = i > 0 ? trend[i - 1][kpiKey] : val;
@@ -289,6 +293,15 @@ export function KpiChartDialog({
             startDate={startDate}
             endDate={endDate}
             expectedMonthEnd={expectedMonthEnd}
+          />
+        )}
+
+        {/* Profit-only drill-down: what the card's figure is made of. */}
+        {kpiKey === "profit" && startDate && endDate && (
+          <ProfitCompositionPanel
+            startDate={startDate}
+            endDate={endDate}
+            onShowIncome={onSelectKpi ? () => onSelectKpi("income") : undefined}
           />
         )}
       </DialogContent>
