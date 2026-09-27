@@ -58,8 +58,9 @@ export class RemoveFromGroupDto {
 
   // Who ended the enrollment, which decides what the month's charge gives
   // back (contract 6.2, ADR-0043). Omitted = the student's own decision.
-  // Any other value is a CEO's or branch director's call — the service
-  // checks the caller in the database and answers 403 otherwise.
+  // `LEVEL_COMPLETED` is open to everyone who may remove a student; the
+  // other two are a CEO's or branch director's call — the service checks
+  // the caller in the database and answers 403 otherwise.
   @IsOptional()
   @IsIn(DEPARTURE_POLICIES)
   departurePolicy?: DeparturePolicy;

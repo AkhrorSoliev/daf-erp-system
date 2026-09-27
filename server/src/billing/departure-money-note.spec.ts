@@ -33,6 +33,18 @@ describe('departureMoneyNote (ADR-0043)', () => {
     ).toBe("O'tmagan 8 dars puli qaytarildi — 640 000 so'm");
   });
 
+  it('names a completed level', () => {
+    expect(
+      departureMoneyNote({
+        refunded: 560000,
+        lessons: 7,
+        policy: 'LEVEL_COMPLETED',
+        share,
+        withheld: false,
+      }),
+    ).toBe("Darajani tugatdi: o'tmagan 7 dars puli qaytarildi — 560 000 so'm");
+  });
+
   it('names the centre’s initiative', () => {
     expect(
       departureMoneyNote({

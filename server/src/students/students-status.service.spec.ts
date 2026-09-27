@@ -8,6 +8,7 @@ import { EnrollmentBillingService } from '../billing/enrollment-billing.service'
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { StudentStatus } from '@prisma/client';
 import { DEPARTURE_POLICY_FORBIDDEN } from './shared/departure-policy-access';
+import { LEVEL_COMPLETED_STATUS_ERROR } from './students-status.service';
 
 describe('StudentsStatusService', () => {
   let service: StudentsStatusService;
@@ -360,6 +361,14 @@ describe('StudentsStatusService', () => {
         expect(prisma.student.update).not.toHaveBeenCalled();
       },
     );
+
+    it('refuses a completed level with an expulsion — that student is removed from the group', async () => {
+      await expect(
+        expel({ departurePolicy: 'LEVEL_COMPLETED' }),
+      ).rejects.toThrow(LEVEL_COMPLETED_STATUS_ERROR);
+      expect(prisma.student.update).not.toHaveBeenCalled();
+      expect(cascadeMock.cascade).not.toHaveBeenCalled();
+    });
 
     it('refuses a policy with a freeze before any money moves', async () => {
       await expect(

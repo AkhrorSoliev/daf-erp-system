@@ -720,6 +720,22 @@ describe('StudentEnrollmentService', () => {
         );
       });
 
+      it('lets an administrator record a completed level — no director needed', async () => {
+        await leave({ departurePolicy: 'LEVEL_COMPLETED' });
+
+        // The CEO-or-director read (the one with a role filter) is never made.
+        const policyReads = prisma.user.findFirst.mock.calls.filter(
+          ([arg]: [{ where?: { roles?: unknown } }]) => arg?.where?.roles,
+        );
+        expect(policyReads).toHaveLength(0);
+        expect(
+          monthlyChargeMock.reverseChargeForDeparture,
+        ).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ policy: 'LEVEL_COMPLETED' }),
+        );
+      });
+
       it('refuses a chosen policy from anyone else before anything is written', async () => {
         // The first read is the policy check: an administrator is not found.
         prisma.user.findFirst.mockResolvedValueOnce(null);
