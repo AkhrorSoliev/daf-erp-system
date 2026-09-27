@@ -5,7 +5,6 @@ import { BotContext } from '../types/context';
 import { SCENES } from '../constants';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { StatementService } from '../../statements/statement.service';
-import { statementFilename } from '../../statements/statement.service';
 import { presentStatement } from '../../statements/present-statement';
 import {
   CONTACT_NOT_OWN,
@@ -14,7 +13,7 @@ import {
 import { withProcessingLock } from '../utils/processing-lock';
 import {
   linkChat,
-  statementMessage,
+  statementForChat,
   studentOfChat,
   studentsForChat,
   studentsForPhone,
@@ -50,18 +49,14 @@ export function createStatementScene(
       return;
     }
     try {
-      const { buffer, model } = await statements.pdf(
+      const { text, document } = await statementForChat(
+        statements,
         student.id,
         student.companyId,
+        present,
       );
-      await ctx.reply(
-        statementMessage(present(model, 'student').answer),
-        Markup.removeKeyboard(),
-      );
-      await ctx.replyWithDocument({
-        source: buffer,
-        filename: statementFilename(model),
-      });
+      await ctx.reply(text, Markup.removeKeyboard());
+      await ctx.replyWithDocument(document);
     } catch (error) {
       logger.error(
         `Statement for student ${student.id} failed`,

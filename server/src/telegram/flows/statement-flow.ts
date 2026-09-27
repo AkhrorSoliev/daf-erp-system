@@ -1,5 +1,12 @@
 import type { PrismaService } from '../../prisma/prisma.service';
-import type { StatementView } from '../../statements/present-statement';
+import {
+  presentStatement,
+  type StatementView,
+} from '../../statements/present-statement';
+import {
+  statementFilename,
+  type StatementService,
+} from '../../statements/statement.service';
 
 export type StatementStudent = {
   id: number;
@@ -66,4 +73,22 @@ export async function linkChat(
 /** The statement's answer box as a chat message. */
 export function statementMessage(answer: StatementView['answer']): string {
   return `💳 ${answer.title}\n${answer.subtitle}`;
+}
+
+/**
+ * What the bot sends for a statement: the answer box as a message, then the
+ * whole statement as a PDF. «💳 To'lovlar» and the Mini App's button both send
+ * exactly this.
+ */
+export async function statementForChat(
+  statements: Pick<StatementService, 'pdf'>,
+  studentId: number,
+  companyId: number,
+  present: typeof presentStatement = presentStatement,
+): Promise<{ text: string; document: { source: Buffer; filename: string } }> {
+  const { buffer, model } = await statements.pdf(studentId, companyId);
+  return {
+    text: statementMessage(present(model, 'student').answer),
+    document: { source: buffer, filename: statementFilename(model) },
+  };
 }
