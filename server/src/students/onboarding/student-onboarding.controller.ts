@@ -9,9 +9,11 @@ import {
 } from '@nestjs/common';
 import { CurrentUser, Roles } from '../../common/decorators';
 import { RolesGuard, StudentCardGuard } from '../../common/guards';
+import { OwnPasswordAttemptGuard } from '../../common/guards/own-password-attempt.guard';
 import { StudentOnboardingService } from './student-onboarding.service';
 import { UpdateOnboardingProfileDto } from './dto/update-onboarding-profile.dto';
 import { VerifyPhoneCodeDto } from './dto/verify-phone-code.dto';
+import { ChangePhoneCodeDto } from './dto/change-phone-code.dto';
 
 /**
  * What the student must give before the portal opens (ADR-0039). Both the web
@@ -45,6 +47,27 @@ export class StudentOnboardingController {
   @HttpCode(200)
   sendPhoneCode(@CurrentUser('studentId') studentId: number) {
     return this.onboarding.sendPhoneCode(studentId);
+  }
+
+  /**
+   * The card's number is not the student's: the code goes to the number they
+   * type, and a correct code replaces the card's number with it. Asks for the
+   * current password (ADR-0031), so it carries the shared attempt cap.
+   */
+  @Post('phone/change-code')
+  @HttpCode(200)
+  @UseGuards(OwnPasswordAttemptGuard)
+  sendChangeCode(
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('id') userId: number,
+    @Body() dto: ChangePhoneCodeDto,
+  ) {
+    return this.onboarding.sendChangeCode(
+      studentId,
+      userId,
+      dto.phone,
+      dto.currentPassword,
+    );
   }
 
   @Post('phone/verify')

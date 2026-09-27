@@ -27,6 +27,10 @@ const ALLOWED: { file: string; why: string }[] = [
     file: 'src/students/students-write.service.ts',
     why: 'PATCH /students/:id — moves the account through planPhoneChange',
   },
+  {
+    file: 'src/students/onboarding/student-onboarding.service.ts',
+    why: "the student's own number, proved by SMS behind the current password (ADR-0039) — moves the account through planPhoneChange",
+  },
 ];
 
 const FIX =
