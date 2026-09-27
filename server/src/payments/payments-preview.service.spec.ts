@@ -1,23 +1,28 @@
 import { Test } from '@nestjs/testing';
 import { PaymentsPreviewService } from './payments-preview.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { applyDiscount } from '../billing/monthly-price';
 
 const baseEnrollment = (
   overrides: Partial<{
     prepaid: number;
     price: number;
     lpc: number;
+    model: 'LESSON_PACK' | 'MONTHLY';
+    groupName: string;
+    courseName: string;
   }> = {},
 ) => ({
   id: 'enr-1',
   prepaidLessonsRemaining: overrides.prepaid ?? 0,
   group: {
     id: 'grp-1',
-    name: '#029',
+    name: overrides.groupName ?? '#029',
     course: {
-      name: 'Intensive',
+      name: overrides.courseName ?? 'Intensive',
       price: overrides.price ?? 414000,
       lessonPaymentCount: overrides.lpc ?? 12,
+      paymentModel: overrides.model ?? 'LESSON_PACK',
     },
   },
 });
@@ -222,5 +227,158 @@ describe('PaymentsPreviewService', () => {
         cycleSequenceNumber: 1,
       }),
     ]);
+  });
+
+  describe('MONTHLY courses', () => {
+    it('shows the debt and the next month instead of cycles', async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        balance: -450000,
+        discountPercent: 0,
+      });
+      prisma.enrollment.findMany.mockResolvedValue([
+        baseEnrollment({ model: 'MONTHLY', price: 450000 }),
+      ]);
+
+      const res = await service.preview(10001, 900000, 1001, null);
+
+      expect(res.model).toBe('MONTHLY');
+      expect(res.scenario).toBe('SINGLE_ENROLLMENT');
+      expect(res.primaryEnrollment).toBeNull();
+      expect(res.newBalance).toBe(450000);
+      expect(res.monthly).toEqual({
+        debt: 450000,
+        nextMonthAmount: 450000,
+        discountPercent: 0,
+        enrollments: [
+          {
+            groupName: '#029',
+            courseName: 'Intensive',
+            monthlyPrice: 450000,
+            amount: 450000,
+          },
+        ],
+      });
+      expect(res.breakdown).toEqual([
+        expect.objectContaining({ kind: 'DEBT_REPAY', amount: 450000 }),
+        expect.objectContaining({ kind: 'REMAINDER', amount: 450000 }),
+      ]);
+      for (const item of res.breakdown) {
+        expect(item.label).not.toMatch(/sikl|dars/i);
+        expect(item.lessons).toBeUndefined();
+      }
+      // Monthly charges are LESSON_DEDUCTION rows too; counting them as
+      // "cycles" was the bug. The monthly path must not read them.
+      expect(prisma.transaction.count).not.toHaveBeenCalled();
+      expect(prisma.attendance.findMany).not.toHaveBeenCalled();
+    });
+
+    it("applies the student's discount per enrollment, like the monthly charge", async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        balance: 0,
+        discountPercent: 10,
+      });
+      prisma.enrollment.findMany.mockResolvedValue([
+        baseEnrollment({ model: 'MONTHLY', price: 450000 }),
+        {
+          ...baseEnrollment({
+            model: 'MONTHLY',
+            price: 333333,
+            groupName: '#031',
+            courseName: 'Standart',
+          }),
+          id: 'enr-2',
+        },
+      ]);
+
+      const res = await service.preview(10001, 100000, 1001, null);
+
+      expect(res.scenario).toBe('MULTI_ENROLLMENT');
+      // 450 000 × 0.9 = 405 000; 333 333 × 0.9 = 299 999.7 → 300 000
+      expect(res.monthly?.enrollments.map((e) => e.amount)).toEqual([
+        405000, 300000,
+      ]);
+      expect(res.monthly?.nextMonthAmount).toBe(
+        applyDiscount(450000, 10) + applyDiscount(333333, 10),
+      );
+      expect(res.monthly?.discountPercent).toBe(10);
+      expect(res.breakdown).toEqual([
+        expect.objectContaining({ kind: 'REMAINDER', amount: 100000 }),
+      ]);
+    });
+
+    it('treats a student with no active enrollment as monthly with nothing due next month', async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        balance: -120000,
+        discountPercent: 0,
+      });
+
+      const res = await service.preview(10001, 120000, 1001, null);
+
+      expect(res.model).toBe('MONTHLY');
+      expect(res.scenario).toBe('NO_ENROLLMENT');
+      expect(res.monthly).toEqual({
+        debt: 120000,
+        nextMonthAmount: 0,
+        discountPercent: 0,
+        enrollments: [],
+      });
+      expect(res.breakdown).toEqual([
+        expect.objectContaining({ kind: 'DEBT_REPAY', amount: 120000 }),
+      ]);
+    });
+
+    it('keeps the cycle projection when any enrollment is a lesson pack', async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        balance: 0,
+        discountPercent: 0,
+      });
+      prisma.enrollment.findMany.mockResolvedValue([
+        baseEnrollment({ model: 'MONTHLY', price: 450000 }),
+        { ...baseEnrollment({ model: 'LESSON_PACK' }), id: 'enr-2' },
+      ]);
+
+      const res = await service.preview(10001, 500000, 1001, null);
+
+      expect(res.model).toBe('LESSON_PACK');
+      expect(res.monthly).toBeNull();
+      expect(res.scenario).toBe('MULTI_ENROLLMENT');
+    });
+
+    it('tags a single lesson-pack enrollment LESSON_PACK and keeps its cycles', async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        balance: 0,
+        discountPercent: 0,
+      });
+      prisma.enrollment.findMany.mockResolvedValue([baseEnrollment()]);
+
+      const res = await service.preview(10001, 414000, 1001, null);
+
+      expect(res.model).toBe('LESSON_PACK');
+      expect(res.monthly).toBeNull();
+      expect(res.primaryEnrollment?.lessonPaymentCount).toBe(12);
+      expect(res.breakdown[0]).toMatchObject({
+        kind: 'CYCLE_FULL',
+        lessons: 12,
+      });
+    });
+
+    it("selects each course's payment model", async () => {
+      prisma.student.findFirst.mockResolvedValue({
+        balance: 0,
+        discountPercent: 0,
+      });
+
+      await service.preview(10001, 1000, 1001, null);
+
+      const args = prisma.enrollment.findMany.mock.calls[0][0] as {
+        select: {
+          group: { select: { course: { select: Record<string, boolean> } } };
+        };
+      };
+      expect(args.select.group.select.course.select).toMatchObject({
+        price: true,
+        paymentModel: true,
+      });
+    });
   });
 });
