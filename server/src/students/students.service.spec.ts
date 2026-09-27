@@ -229,6 +229,7 @@ describe('StudentsService — status methods', () => {
         '1',
         'FROZEN',
         2,
+        expect.objectContaining({ departurePolicy: undefined }),
       );
     });
 

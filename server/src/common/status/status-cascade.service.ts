@@ -14,7 +14,15 @@ import {
   type EntityStatusChangedEvent,
 } from '../entity-history';
 import { EnrollmentBillingService } from '../../billing/enrollment-billing.service';
-import { MonthlyChargeService } from '../../billing/monthly-charge.service';
+import {
+  type DepartureOutcome,
+  MonthlyChargeService,
+} from '../../billing/monthly-charge.service';
+import {
+  DEFAULT_DEPARTURE_POLICY,
+  type DeparturePolicy,
+} from '../../billing/departure-policy';
+import { departureMoneyNote } from '../../billing/departure-money-note';
 import { tashkentDateStr } from '../../attendance/shared/date-utils';
 import { graduateStudentsOfCompletedGroup } from './group-graduation';
 
@@ -91,6 +99,33 @@ export function groupClosingReason(
  */
 export type CascadeEntityType = 'Branch' | 'Course' | 'Student';
 
+/** One enrolment's month settled by a student's departure (ADR-0043). */
+export interface DepartureMoneyNote {
+  groupName: string;
+  /** The «pul» line, as `departureMoneyNote` words it. */
+  note: string;
+}
+
+export interface CascadeOptions {
+  /**
+   * Who ended a student's enrolments (contract 6.2, ADR-0043). Read only by
+   * a student's EXPELLED/ARCHIVED cascade, where it defaults to the
+   * student's own decision; every other cascade is the centre's closing and
+   * keeps the old rule (the unheld lessons come back).
+   */
+  departurePolicy?: DeparturePolicy;
+  /** Receives one line per enrolment whose month the departure settled. */
+  moneyNotes?: DepartureMoneyNote[];
+}
+
+/** An enrolment a student cascade is about to change, for its group's history. */
+interface StudentCascadeEnrollment {
+  id: string;
+  groupId: string;
+  group: { companyId: number; name: string };
+  student: { firstName: string; lastName: string };
+}
+
 @Injectable()
 export class StatusCascadeService {
   private readonly logger = new Logger(StatusCascadeService.name);
@@ -129,7 +164,7 @@ export class StatusCascadeService {
 
     await this.recordRemovals(filter, reason, params.userId, tx);
 
-    return this.cascadeEnrollmentStatus(
+    const { count } = await this.cascadeEnrollmentStatus(
       filter,
       EnrollmentStatus.DROPPED,
       reason,
@@ -141,6 +176,7 @@ export class StatusCascadeService {
       },
       tx,
     );
+    return { count };
   }
 
   /**
@@ -261,8 +297,12 @@ export class StatusCascadeService {
     userId: number | undefined,
     auditFields: Prisma.EnrollmentUncheckedUpdateManyInput,
     tx?: Prisma.TransactionClient,
-  ): Promise<{ count: number }> {
+    departurePolicy?: DeparturePolicy,
+  ): Promise<{ count: number; departures: Map<string, DepartureOutcome> }> {
     const db = tx ?? this.prisma;
+    // What each enrolment's month came to, for the callers that put it into
+    // history. Only a money step that went through is recorded here.
+    const departures = new Map<string, DepartureOutcome>();
     const matches = await db.enrollment.findMany({
       where: filter,
       select: {
@@ -321,7 +361,7 @@ export class StatusCascadeService {
         // earlier iteration's refund already committed against an enrollment
         // still sitting ACTIVE. On a caller's transaction the failure rolls
         // everything back instead.
-        await this.runMoneyStep(
+        const settled = await this.runMoneyStep(
           tx,
           async (client) => {
             await this.enrollmentBillingService.refundPrepaidToBalance(client, {
@@ -331,18 +371,20 @@ export class StatusCascadeService {
                 : undefined,
               performedById: userId,
             });
-            await this.monthlyChargeService.reverseChargeForDeparture(client, {
+            return this.monthlyChargeService.reverseChargeForDeparture(client, {
               enrollmentId: m.id,
               departureDate,
               today: departureToday,
               companyId: m.group.companyId,
               reason: reason ?? 'Cascade orqali guruhdan chiqarildi',
               performedById: userId,
+              policy: departurePolicy,
             });
           },
           `Cascade: enrollment=${m.id} uchun pul qaytarish yiqildi ` +
             `(newStatus=${newStatus}) — qolgan yozilishlar davom etadi`,
         );
+        if (settled?.value) departures.set(m.id, settled.value);
       }
     }
 
@@ -423,7 +465,7 @@ export class StatusCascadeService {
       });
     }
 
-    return result;
+    return { count: result.count, departures };
   }
 
   /**
@@ -432,22 +474,25 @@ export class StatusCascadeService {
    * carry on inside a failed transaction anyway. Without one it gets its own
    * Serializable transaction and a failure is logged, so the rest of a batch
    * still closes — the resilience pattern of
-   * `MonthlyChargeService.createChargesForPeriod`.
+   * `MonthlyChargeService.createChargesForPeriod`. Returns the step's value,
+   * or null when it failed and was logged.
    */
-  private async runMoneyStep(
+  private async runMoneyStep<T>(
     tx: Prisma.TransactionClient | undefined,
-    step: (client: Prisma.TransactionClient) => Promise<void>,
+    step: (client: Prisma.TransactionClient) => Promise<T>,
     failureMessage: string,
-  ): Promise<void> {
-    if (tx) return step(tx);
+  ): Promise<{ value: T } | null> {
+    if (tx) return { value: await step(tx) };
     try {
-      await this.prisma.$transaction(step, {
+      const value = await this.prisma.$transaction(step, {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         maxWait: 10_000,
         timeout: 15_000,
       });
+      return { value };
     } catch (err) {
       this.logger.error(failureMessage, err);
+      return null;
     }
   }
 
@@ -552,27 +597,57 @@ export class StatusCascadeService {
     userId: number | undefined,
     type: 'add' | 'remove' = 'remove',
   ): Promise<void> {
-    const enrollments = await this.prisma.enrollment.findMany({
+    await this.writeGroupHistoryForStudentCascade(
+      studentId,
+      await this.loadStudentCascadeEnrollments(enrollmentFilter),
+      action,
+      userId,
+      type,
+    );
+  }
+
+  private loadStudentCascadeEnrollments(
+    enrollmentFilter: Prisma.EnrollmentWhereInput,
+  ): Promise<StudentCascadeEnrollment[]> {
+    return this.prisma.enrollment.findMany({
       where: enrollmentFilter,
       select: {
+        id: true,
         groupId: true,
-        group: { select: { companyId: true } },
+        group: { select: { companyId: true, name: true } },
         student: { select: { firstName: true, lastName: true } },
       },
     });
+  }
 
-    const values = (e: (typeof enrollments)[0]) => ({
-      action,
-      oquvchi: `${e.student.firstName} ${e.student.lastName}`,
-      oquvchiId: studentId,
-    });
+  /**
+   * One row per enrolment in its group's history. `money` carries the «pul»
+   * line of the enrolments whose month a departure settled (ADR-0043).
+   */
+  private async writeGroupHistoryForStudentCascade(
+    studentId: number,
+    enrollments: StudentCascadeEnrollment[],
+    action: string,
+    userId: number | undefined,
+    type: 'add' | 'remove',
+    money?: Map<string, string>,
+  ): Promise<void> {
+    const values = (e: StudentCascadeEnrollment) => {
+      const pul = money?.get(e.id);
+      return {
+        action,
+        oquvchi: `${e.student.firstName} ${e.student.lastName}`,
+        oquvchiId: studentId,
+        ...(pul ? { pul } : {}),
+      };
+    };
 
     for (const enrollment of enrollments) {
       const common = {
         entityType: 'Group' as const,
         entityId: enrollment.groupId,
         changedById: userId,
-        companyId: (enrollment.group as any)?.companyId ?? undefined,
+        companyId: enrollment.group?.companyId ?? undefined,
       };
 
       if (type === 'add') {
@@ -646,6 +721,7 @@ export class StatusCascadeService {
     entityId: string,
     newStatus: string,
     userId: number | undefined,
+    options: CascadeOptions = {},
   ): Promise<CascadeResult[]> {
     const results: CascadeResult[] = [];
     const now = new Date();
@@ -881,18 +957,36 @@ export class StatusCascadeService {
             in: [EnrollmentStatus.ACTIVE, EnrollmentStatus.FROZEN],
           } as any,
         };
-        await this.recordGroupHistoryForStudentCascade(
-          studentId,
-          filter,
-          action,
-          userId,
-        );
+        // Read before the flip, while `filter` still selects them; their
+        // group rows are written after it, once each month's money is known.
+        const leaving = await this.loadStudentCascadeEnrollments(filter);
         const enrollResult = await this.cascadeEnrollmentStatus(
           filter,
           EnrollmentStatus.DROPPED,
           reason ?? null,
           userId,
           auditFields,
+          undefined,
+          // The student's own departure unless a CEO or branch director
+          // chose otherwise (contract 6.2, ADR-0043).
+          options.departurePolicy ?? DEFAULT_DEPARTURE_POLICY,
+        );
+        const money = new Map<string, string>();
+        for (const e of leaving) {
+          const note = departureMoneyNote(
+            enrollResult.departures.get(e.id) ?? null,
+          );
+          if (!note) continue;
+          money.set(e.id, note);
+          options.moneyNotes?.push({ groupName: e.group.name, note });
+        }
+        await this.writeGroupHistoryForStudentCascade(
+          studentId,
+          leaving,
+          action,
+          userId,
+          'remove',
+          money,
         );
         results.push({
           entity: 'Enrollment',

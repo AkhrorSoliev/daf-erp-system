@@ -744,6 +744,87 @@ describe('StatusCascadeService', () => {
   });
 
   // ─── Task 1B: recharge on unfreeze return ──────────
+  describe('contract 6.2 departure policy (ADR-0043)', () => {
+    const withheld = {
+      refunded: 0,
+      lessons: 0,
+      policy: 'STUDENT_CANCELLED',
+      share: { held: 6, covered: 13, percent: 46 },
+      withheld: true,
+    };
+    const pul =
+      "Shartnoma 6.2: oy darslarining 46% o'tgan (6/13) — oy to'lovi qaytarilmadi";
+    const policyOfFirstCall = () =>
+      (monthlyChargeService.reverseChargeForDeparture as jest.Mock).mock
+        .calls[0][1].policy;
+
+    beforeEach(() => {
+      prisma.enrollment.findMany.mockResolvedValue(mockEnrollmentWithStudent);
+    });
+
+    it.each(['EXPELLED', 'ARCHIVED'])(
+      "treats a student's %s as their own decision by default",
+      async (status) => {
+        await service.cascade('Student', '100', status, 42);
+        expect(policyOfFirstCall()).toBe('STUDENT_CANCELLED');
+      },
+    );
+
+    it('passes the policy a CEO or branch director chose', async () => {
+      await service.cascade('Student', '100', 'EXPELLED', 42, {
+        departurePolicy: 'QUALITY_CLAIM',
+      });
+      expect(policyOfFirstCall()).toBe('QUALITY_CLAIM');
+    });
+
+    it('keeps the old rule for a closing the centre made (branch closed)', async () => {
+      await service.cascade('Branch', '1', 'CLOSED', 42, {
+        departurePolicy: 'STUDENT_CANCELLED',
+      });
+      expect(monthlyChargeService.reverseChargeForDeparture).toHaveBeenCalled();
+      expect(policyOfFirstCall()).toBeUndefined();
+    });
+
+    it("writes what happened to the month's money on the group's row and hands it to the caller", async () => {
+      monthlyChargeService.reverseChargeForDeparture.mockResolvedValueOnce(
+        withheld,
+      );
+      const moneyNotes: Array<{ groupName: string; note: string }> = [];
+
+      await service.cascade('Student', '100', 'EXPELLED', 42, { moneyNotes });
+
+      expect(entityHistoryService.recordDelete).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'Group',
+          entityId: 'group-1',
+          oldValues: {
+            action: 'OQUVCHI_CHETLATILDI',
+            oquvchi: 'Ali Valiyev',
+            oquvchiId: 100,
+            pul,
+          },
+        }),
+      );
+      expect(moneyNotes).toEqual([{ groupName: '#001', note: pul }]);
+    });
+
+    it('writes no money line when the money step failed', async () => {
+      jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+      monthlyChargeService.reverseChargeForDeparture.mockRejectedValueOnce(
+        new Error('lock timeout'),
+      );
+      const moneyNotes: Array<{ groupName: string; note: string }> = [];
+
+      await service.cascade('Student', '100', 'EXPELLED', 42, { moneyNotes });
+
+      const groupRow = (
+        entityHistoryService.recordDelete as jest.Mock
+      ).mock.calls.find(([arg]) => arg.entityType === 'Group');
+      expect(groupRow[0].oldValues).not.toHaveProperty('pul');
+      expect(moneyNotes).toEqual([]);
+    });
+  });
+
   describe('FROZEN -> ACTIVE: restoreChargeForReturn wiring', () => {
     beforeEach(() => {
       prisma.enrollment.findMany.mockResolvedValue(mockEnrollmentWithStudent);

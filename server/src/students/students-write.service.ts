@@ -527,7 +527,10 @@ export class StudentsWriteService {
       }
     });
 
-    // Cascade: ACTIVE + FROZEN enrollment → DROPPED
+    // Cascade: ACTIVE + FROZEN enrollment → DROPPED. An archived card is the
+    // student's own departure (contract 6.2, ADR-0043): the cascade's default
+    // for a student ARCHIVED. A card made by mistake is removed from its
+    // group first, where a CEO or branch director can choose otherwise.
     await this.statusCascadeService.cascade(
       'Student',
       String(id),
