@@ -1280,6 +1280,9 @@ async function main(prisma: PrismaClient) {
           status: e.status,
           startDate: e.startDate,
           createdAt: e.createdAt,
+          // As the switch ran on 26.09.2026: charges started at the join date
+          // even for a student back from a freeze earlier in September.
+          returnedAt: null,
           group: {
             id: e.group.id,
             branchId: e.group.branchId,

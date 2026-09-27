@@ -762,6 +762,21 @@ describe('StatusCascadeService', () => {
       );
     });
 
+    it('hands the charge the same return instant it stamps on the enrollment', async () => {
+      // The daily charge run reads an ACTIVE enrollment's `statusChangedAt`
+      // as the moment it came back, so the charge made at the unfreeze and
+      // one made by a later run must start from the same day.
+      await service.cascade('Student', '100', 'ACTIVE', 42);
+
+      const [, params] = (
+        monthlyChargeService.restoreChargeForReturn as jest.Mock
+      ).mock.calls[0];
+      const { data } = prisma.enrollment.updateMany.mock.calls[0][0];
+      expect(data.status).toBe('ACTIVE');
+      expect(params.returnDate).toBeInstanceOf(Date);
+      expect(params.returnDate).toBe(data.statusChangedAt);
+    });
+
     it('LESSON_PACK yozilish uchun restoreChargeForReturn UMUMAN chaqirilmaydi', async () => {
       prisma.enrollment.findMany.mockResolvedValue([
         {

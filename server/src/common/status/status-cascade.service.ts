@@ -354,6 +354,12 @@ export class StatusCascadeService {
     // o'quvchi oyning qolgan qismini TEKIN o'qir edi (pul balansda yotadi,
     // dars berilgan, hech qanday hisob yo'q).
     //
+    // A return into a month with no charge yet (the student was frozen when
+    // its charge run went by) gets that month charged from the day after the
+    // return by the same call. `returnDate` must stay the instant stamped on
+    // the enrollment below: the daily charge run reads it back from
+    // `statusChangedAt`.
+    //
     // `LESSON_PACK` yozilishlar bu yo'lga UMUMAN yetib bormasligi kerak —
     // `restoreChargeForReturn`ning o'zi topilmagan hisobda `null` qaytaradi,
     // lekin shunga tayanib qolish o'rniga bu YERDA `paymentModel` bo'yicha

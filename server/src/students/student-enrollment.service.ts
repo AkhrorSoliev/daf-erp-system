@@ -497,6 +497,8 @@ export class StudentEnrollmentService {
       status: created.status as EnrollmentStatus,
       startDate: created.startDate,
       createdAt: created.createdAt,
+      // Created a moment ago: it has never been frozen.
+      returnedAt: null,
       group: {
         id: group.id,
         branchId: group.branchId,

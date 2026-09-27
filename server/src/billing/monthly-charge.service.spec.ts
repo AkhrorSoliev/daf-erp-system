@@ -2246,6 +2246,167 @@ describe('MonthlyChargeService', () => {
     });
   });
 
+  describe('a return from a freeze into a month that has no charge yet', () => {
+    // The student was frozen when the month's charge run went by, so the
+    // month has no charge row when they come back. Tuesday/Thursday/Saturday:
+    // October 2026 has 14 lessons, 7 of them after 15.10.
+    const afterOctober15 = [
+      '2026-10-17',
+      '2026-10-20',
+      '2026-10-22',
+      '2026-10-24',
+      '2026-10-27',
+      '2026-10-29',
+      '2026-10-31',
+    ];
+    // 09:00 UTC is 14:00 in Tashkent, the same calendar day.
+    const RETURNED_OCTOBER_15 = new Date('2026-10-15T09:00:00.000Z');
+
+    /** The enrollment as `restoreChargeForReturn` reads it before the flip. */
+    const frozenEnrollmentRow = (discountPercent = 0) => ({
+      id: 'enr-1',
+      studentId: 10453,
+      groupId: 'grp-1',
+      status: 'FROZEN',
+      startDate: new Date('2026-08-15T00:00:00.000Z'),
+      createdAt: new Date('2026-08-15T06:00:00.000Z'),
+      student: { discountPercent },
+      group: {
+        id: 'grp-1',
+        branchId: 1,
+        companyId: 1,
+        statusEnum: 'ACTIVE',
+        startDate: null,
+        exactDays: ['saturday', 'thursday', 'tuesday'],
+        course: { price: 450_000, paymentModel: 'MONTHLY' },
+      },
+    });
+
+    it('the daily run charges a student who came back on 15.10 only for the lessons after that day', async () => {
+      // The unfreeze stamped `statusChangedAt` with the moment of the return
+      // (`StatusCascadeService.cascadeEnrollmentStatus`). Before the fix the
+      // 04:00 run started the charge at the join date and billed all 14
+      // October lessons, the seven frozen ones included.
+      prismaMock.enrollment.findMany.mockResolvedValueOnce([
+        enrollment({
+          startDate: new Date('2026-08-15T00:00:00.000Z'),
+          statusChangedAt: RETURNED_OCTOBER_15,
+        }),
+      ]);
+
+      const res = await service.createChargesForPeriod({
+        companyId: 1,
+        periodYear: 2026,
+        periodMonth: 10,
+      });
+
+      expect(lastChargeRow).toMatchObject({
+        periodMonth: 10,
+        plannedLessons: 14,
+        coveredLessons: 7,
+        chargedAmount: 225_000, // 450 000 x 7/14
+      });
+      expect(lastChargeRow.coveredDates).toEqual(afterOctober15);
+      expect(res).toEqual({ created: 1, skipped: 0, totalCharged: 225_000 });
+      // The run must read the return moment from the database.
+      expect(
+        prismaMock.enrollment.findMany.mock.calls[0][0].select,
+      ).toMatchObject({ statusChangedAt: true });
+    });
+
+    it('the daily run does not charge a student who came back on the last lesson day of the month', async () => {
+      // September 2026's last lesson is Tuesday 29.09. Nothing is left after
+      // the return day, which stays free (as in `restoreChargeForReturn`).
+      prismaMock.enrollment.findMany.mockResolvedValueOnce([
+        enrollment({
+          startDate: new Date('2026-05-10T00:00:00.000Z'),
+          statusChangedAt: new Date('2026-09-29T08:00:00.000Z'),
+        }),
+      ]);
+
+      const res = await service.createChargesForPeriod({
+        companyId: 1,
+        periodYear: 2026,
+        periodMonth: 9,
+      });
+
+      expect(res).toEqual({ created: 0, skipped: 1, totalCharged: 0 });
+      expect(prismaMock.enrollmentMonthlyCharge.create).not.toHaveBeenCalled();
+      expect(txWriteMock.chargeMonthlyFee).not.toHaveBeenCalled();
+    });
+
+    it('the unfreeze itself charges the lessons after the return day, straight away', async () => {
+      prismaMock.enrollment.findUnique.mockResolvedValue(frozenEnrollmentRow());
+
+      const res = await service.restoreChargeForReturn(tx, {
+        enrollmentId: 'enr-1',
+        returnDate: RETURNED_OCTOBER_15,
+        companyId: 1,
+        reason: 'Muzlatishdan chiqarildi',
+        performedById: 42,
+        today: '2026-10-15',
+      });
+
+      expect(res).toEqual({ charged: 225_000, lessons: 7 });
+      expect(lastChargeRow).toMatchObject({
+        periodYear: 2026,
+        periodMonth: 10,
+        plannedLessons: 14,
+        coveredLessons: 7,
+        chargedAmount: 225_000,
+        frozenOutDates: [],
+      });
+      expect(lastChargeRow.coveredDates).toEqual(afterOctober15);
+      expect(txWriteMock.chargeMonthlyFee).toHaveBeenCalledWith(
+        expect.objectContaining({
+          enrollmentId: 'enr-1',
+          amount: 225_000,
+          periodMonth: 10,
+          coveredLessons: 7,
+        }),
+        tx,
+      );
+      // Nothing was frozen out of a row, so there is nothing to re-cover.
+      expect(txWriteMock.createAdjustment).not.toHaveBeenCalled();
+    });
+
+    it("the unfreeze charges at the student's discounted price", async () => {
+      prismaMock.enrollment.findUnique.mockResolvedValue(
+        frozenEnrollmentRow(50),
+      );
+
+      const res = await service.restoreChargeForReturn(tx, {
+        enrollmentId: 'enr-1',
+        returnDate: RETURNED_OCTOBER_15,
+        companyId: 1,
+        reason: 'Muzlatishdan chiqarildi',
+        today: '2026-10-15',
+      });
+
+      expect(res).toEqual({ charged: 112_500, lessons: 7 });
+      expect(lastChargeRow).toMatchObject({
+        discountPercent: 50,
+        perLessonCost: 32_143, // undiscounted: the teacher's pay reads it
+      });
+    });
+
+    it('the unfreeze charges nothing when no lesson is left in the month', async () => {
+      prismaMock.enrollment.findUnique.mockResolvedValue(frozenEnrollmentRow());
+
+      const res = await service.restoreChargeForReturn(tx, {
+        enrollmentId: 'enr-1',
+        returnDate: new Date('2026-09-29T08:00:00.000Z'),
+        companyId: 1,
+        reason: 'Muzlatishdan chiqarildi',
+        today: '2026-09-29',
+      });
+
+      expect(res).toBeNull();
+      expect(prismaMock.enrollmentMonthlyCharge.create).not.toHaveBeenCalled();
+      expect(txWriteMock.chargeMonthlyFee).not.toHaveBeenCalled();
+    });
+  });
+
   describe('frozenOutDates: muzlatish + qaytish invariantlari (2026-09 review, HIGH-1/2/3)', () => {
     // 14 ta oktabr sanasi, to'liq oy: monthlyPrice 450 000, plannedLessons
     // 14 -> perLessonCost 32 143 (round(450000/14)).
