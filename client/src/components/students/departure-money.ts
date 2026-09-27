@@ -11,11 +11,35 @@ import { monthShort } from "@/components/payments/salary-utils";
 
 export const DEPARTURE_POLICIES = [
   "STUDENT_CANCELLED",
+  "LEVEL_COMPLETED",
   "CENTER_INITIATIVE",
   "QUALITY_CLAIM",
 ] as const;
 export type DeparturePolicy = (typeof DEPARTURE_POLICIES)[number];
 export const DEFAULT_DEPARTURE_POLICY: DeparturePolicy = "STUDENT_CANCELLED";
+
+/** Which dialog asks: a removal from one group, or an expulsion. */
+export type DepartureContext = "removal" | "expel";
+
+/**
+ * The options a dialog offers. A completed level (A1 finished, with a
+ * certificate or to move up later) ends a group, not the studies, so an
+ * expulsion never offers it; on a removal it is open to everyone. The
+ * centre's initiative and a quality claim are a CEO's or branch director's
+ * call — the server checks it again.
+ */
+export function offeredPolicies(
+  context: DepartureContext,
+  mayChoosePolicy: boolean,
+): DeparturePolicy[] {
+  const open: DeparturePolicy[] =
+    context === "removal"
+      ? ["STUDENT_CANCELLED", "LEVEL_COMPLETED"]
+      : ["STUDENT_CANCELLED"];
+  return mayChoosePolicy
+    ? [...open, "CENTER_INITIATIVE", "QUALITY_CLAIM"]
+    : open;
+}
 
 export interface PolicyOutcome {
   lessons: number;
@@ -64,6 +88,7 @@ export type MonthlyRow = DeparturePreviewEnrollment & { month: DepartureMonth };
 
 export const POLICY_TITLES: Record<DeparturePolicy, string> = {
   STUDENT_CANCELLED: "O'quvchi o'zi to'xtatdi",
+  LEVEL_COMPLETED: "Darajani tugatdi",
   CENTER_INITIATIVE: "Markaz tashabbusi",
   QUALITY_CLAIM: "Sifat bo'yicha shikoyat",
 };
@@ -113,6 +138,9 @@ export function policyHint(
   policy: DeparturePolicy,
   month: DepartureMonth,
 ): string {
+  if (policy === "LEVEL_COMPLETED") {
+    return "Sertifikat oldi yoki keyingi darajaga o'tadi — o'tilmagan darslar puli qaytadi";
+  }
   if (policy === "CENTER_INITIATIVE") return "O'tilmagan darslar puli qaytadi";
   if (policy === "QUALITY_CLAIM") return "Oyning to'liq puli qaytadi";
   if (!month.contractApplies) {
@@ -195,14 +223,14 @@ export type DepartureChoice = { departurePolicy?: DeparturePolicy };
 
 /**
  * What the request carries. The default is never sent (it is what the
- * server assumes), and nothing is sent by someone the server did not let
- * choose — it would answer 403.
+ * server assumes), and nothing the dialog did not offer is sent either —
+ * the server would answer 403.
  */
 export function departurePolicyPayload(
   policy: DeparturePolicy,
-  mayChoose: boolean,
+  offered: readonly DeparturePolicy[],
 ): DepartureChoice {
-  return mayChoose && policy !== DEFAULT_DEPARTURE_POLICY
+  return policy !== DEFAULT_DEPARTURE_POLICY && offered.includes(policy)
     ? { departurePolicy: policy }
     : {};
 }

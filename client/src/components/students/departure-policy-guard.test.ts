@@ -33,6 +33,8 @@ describe("contract 6.2 in the dialogs", () => {
   it("the removal dialog shows the money block and waits for it", () => {
     const source = read("students", "student-remove-from-group-dialog.tsx");
     expect(source).toContain("<DepartureMoneyBlock");
+    expect(source).toContain('context="removal"');
+    expect(source).toContain('offeredPolicies("removal"');
     expect(source).toContain("departurePolicyPayload(");
     expect(source).toContain("money.isLoading");
   });
@@ -44,6 +46,8 @@ describe("contract 6.2 in the dialogs", () => {
     );
     expect(source).toContain("{isExpellingStudent && (");
     expect(source).toContain("...(isExpellingStudent");
+    expect(source).toContain('context="expel"');
+    expect(source).toContain('offeredPolicies("expel"');
   });
 
   it("the history names the money line", () => {

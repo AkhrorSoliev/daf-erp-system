@@ -6,6 +6,7 @@ import {
   factsLine,
   lessonChips,
   monthlyRows,
+  offeredPolicies,
   policyHint,
   type DepartureMonth,
   type DeparturePreview,
@@ -43,6 +44,7 @@ const month = (over: Partial<DepartureMonth> = {}): DepartureMonth => ({
   chargedAmount: 1040000,
   outcomes: {
     STUDENT_CANCELLED: { lessons: 0, amount: 0, withheld: true },
+    LEVEL_COMPLETED: { lessons: 7, amount: 560000, withheld: false },
     CENTER_INITIATIVE: { lessons: 7, amount: 560000, withheld: false },
     QUALITY_CLAIM: { lessons: 13, amount: 1040000, withheld: false },
   },
@@ -113,6 +115,9 @@ describe("departure money block (contract 6.2, ADR-0043)", () => {
       policyHint("STUDENT_CANCELLED", month({ contractApplies: false })),
     ).toBe(
       "Shartnoma 6.2 hali kuchga kirmagan — o'tilmagan darslar puli qaytadi",
+    );
+    expect(policyHint("LEVEL_COMPLETED", month())).toBe(
+      "Sertifikat oldi yoki keyingi darajaga o'tadi — o'tilmagan darslar puli qaytadi",
     );
     expect(policyHint("CENTER_INITIATIVE", month())).toBe(
       "O'tilmagan darslar puli qaytadi",
@@ -189,6 +194,11 @@ describe("departure money block (contract 6.2, ADR-0043)", () => {
               amount: 1040000,
               withheld: false,
             },
+            LEVEL_COMPLETED: {
+              lessons: 13,
+              amount: 1040000,
+              withheld: false,
+            },
             CENTER_INITIATIVE: {
               lessons: 13,
               amount: 1040000,
@@ -214,6 +224,7 @@ describe("departure money block (contract 6.2, ADR-0043)", () => {
           heldPercent: 100,
           outcomes: {
             STUDENT_CANCELLED: { lessons: 0, amount: 0, withheld: false },
+            LEVEL_COMPLETED: { lessons: 0, amount: 0, withheld: false },
             CENTER_INITIATIVE: { lessons: 0, amount: 0, withheld: false },
             QUALITY_CLAIM: { lessons: 13, amount: 1040000, withheld: false },
           },
@@ -228,12 +239,46 @@ describe("departure money block (contract 6.2, ADR-0043)", () => {
     });
   });
 
-  it("sends a policy only when it was chosen by someone who may choose it", () => {
+  it("returns the unheld lessons to a student who completed the level, past 40% too", () => {
+    const c = departureConsequence(preview(), "LEVEL_COMPLETED")!;
+    expect(c.tone).toBe("success");
+    expect(plain(c.head)).toBe(
+      "7 ta o'tilmagan dars puli qaytadi: 560 000 so'm",
+    );
+  });
+
+  it("offers a CEO or branch director four ways out of a group, three for an expulsion", () => {
+    expect(offeredPolicies("removal", true)).toEqual([
+      "STUDENT_CANCELLED",
+      "LEVEL_COMPLETED",
+      "CENTER_INITIATIVE",
+      "QUALITY_CLAIM",
+    ]);
+    expect(offeredPolicies("expel", true)).toEqual([
+      "STUDENT_CANCELLED",
+      "CENTER_INITIATIVE",
+      "QUALITY_CLAIM",
+    ]);
+  });
+
+  it("offers everyone else a completed level on a removal, and nothing to choose on an expulsion", () => {
+    expect(offeredPolicies("removal", false)).toEqual([
+      "STUDENT_CANCELLED",
+      "LEVEL_COMPLETED",
+    ]);
+    expect(offeredPolicies("expel", false)).toEqual(["STUDENT_CANCELLED"]);
+  });
+
+  it("sends a policy only when it is offered and not the default", () => {
     expect(DEFAULT_DEPARTURE_POLICY).toBe("STUDENT_CANCELLED");
-    expect(departurePolicyPayload("QUALITY_CLAIM", true)).toEqual({
-      departurePolicy: "QUALITY_CLAIM",
+    const admin = offeredPolicies("removal", false);
+    expect(departurePolicyPayload("LEVEL_COMPLETED", admin)).toEqual({
+      departurePolicy: "LEVEL_COMPLETED",
     });
-    expect(departurePolicyPayload("STUDENT_CANCELLED", true)).toEqual({});
-    expect(departurePolicyPayload("QUALITY_CLAIM", false)).toEqual({});
+    expect(departurePolicyPayload("QUALITY_CLAIM", admin)).toEqual({});
+    expect(departurePolicyPayload("STUDENT_CANCELLED", admin)).toEqual({});
+    expect(
+      departurePolicyPayload("QUALITY_CLAIM", offeredPolicies("removal", true)),
+    ).toEqual({ departurePolicy: "QUALITY_CLAIM" });
   });
 });
