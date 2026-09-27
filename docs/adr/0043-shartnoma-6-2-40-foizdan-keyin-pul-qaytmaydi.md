@@ -22,11 +22,15 @@ direktori tanlaydi.
 
 ## Qaror
 
-1. **Uchta tartib.** `STUDENT_CANCELLED` — «O'quvchi o'zi to'xtatdi» (sukut
+1. **To'rtta tartib.** `STUDENT_CANCELLED` — «O'quvchi o'zi to'xtatdi» (sukut
    bo'yicha): o'tilmagan darslar puli faqat oy darslarining chegaradan
-   ko'pi o'tmagan bo'lsa qaytadi. `CENTER_INITIATIVE` — «Markaz tashabbusi»:
-   o'tilmagan darslar puli qaytadi (6.2 gacha bo'lgan qoida). `QUALITY_CLAIM` —
-   «Sifat bo'yicha shikoyat»: oyning butun puli qaytadi, o'tgan darslar ham.
+   ko'pi o'tmagan bo'lsa qaytadi. `LEVEL_COMPLETED` — «Darajani tugatdi»:
+   o'quvchi darajani (A1, A2…) tugatdi — sertifikat olib to'xtaydi yoki
+   keyingi daraja guruhini kutadi; shartnoma bajarilgan (10.1), bekor
+   qilinmagan, shuning uchun o'tilmagan darslar puli qaytadi.
+   `CENTER_INITIATIVE` — «Markaz tashabbusi»: o'tilmagan darslar puli qaytadi
+   (6.2 gacha bo'lgan qoida). `QUALITY_CLAIM` — «Sifat bo'yicha shikoyat»:
+   oyning butun puli qaytadi, o'tgan darslar ham.
 2. **Bitta qoida.** `policyRelease` (`billing/departure-policy.ts`) — sof
    funksiya. Yozuv (`reverseChargeForDeparture`) va oynadagi hisob
    (`previewDepartureOutcomes`) aynan shu funksiyani chaqiradi, shuning uchun
@@ -46,9 +50,14 @@ direktori tanlaydi.
    bo'lsa, qoida hech narsani ushlab qolmagan — tarixda ham, oynada ham shunday
    deyilmaydi.
 7. **Qayerda ishlaydi.** Guruhdan chiqarish (`removeFromGroup`) va chetlatish
-   (`EXPELLED`): sukut bo'yicha «O'quvchi o'zi to'xtatdi». Boshqa tartibni CEO
-   yoki filial direktori tanlaydi; bu huquq tokendan emas, bazadan o'qiladi
-   (ADR-0028), aks holda 403. Tartib boshqa holat bilan yuborilsa — 400.
+   (`EXPELLED`): sukut bo'yicha «O'quvchi o'zi to'xtatdi». «Darajani tugatdi» ni
+   guruhdan chiqarishda o'quvchini chiqara oladigan har kim (administrator
+   ham) tanlaydi — kim tanlagani tarixga yoziladi; chetlatishda u rad etiladi
+   (400): darajani tugatgan o'quvchi chetlatilmaydi. «Markaz tashabbusi» va
+   «Sifat bo'yicha shikoyat» ni CEO yoki filial direktori tanlaydi; bu huquq
+   tokendan emas, bazadan o'qiladi (ADR-0028), aks holda 403. Tartib boshqa
+   holat bilan yuborilsa — 400. Butun guruh darajani tugatib «Tugallangan»
+   bo'lsa — markaz yopishi, eski qoida, o'quvchilar avtomatik «Bitirgan».
    **Qo'llanmaydi:** muzlatish, boshqa guruhga o'tkazish, guruh, filial yoki
    kurs yopilishi va guruhni o'chirish (markaz qarori — eski qoida), o'quvchi
    kartasini arxivlash (xato yoki dublikat yozuvni o'chirish, ketish emas —
@@ -62,6 +71,12 @@ direktori tanlaydi.
    `heldPercent`; oynalar `GET /students/:id/departure-preview` ni ko'rsatadi.
 10. Sxemaga o'zgarish yo'q: tartib alohida ustunda saqlanmaydi, ledger va
     tarix yetarli.
+11. **Shartnomaga qo'shimcha (3.4-band, CEO 27.09.2026):** «Daraja oy
+    o'rtasida yakunlansa, shu oy uchun faqat daraja yakunlanguniga qadar
+    o'tilgan darslar haqi 1 dars qiymati bo'yicha to'lanadi; bu 6.2-band
+    bo'yicha bekor qilish hisoblanmaydi.» Yurist nusxasida
+    (`docs/tolov-savollari/shartnoma-2026-taklif.docx`) belgilangan qo'shimcha
+    va izoh bilan, toza nusxada matn sifatida.
 
 **Taqiqlanadi:**
 - ketishda qaytadigan pulni `policyRelease` dan boshqa joyda hisoblash;
@@ -78,6 +93,13 @@ direktori tanlaydi.
 - **Arxivlashda ham 6.2.** Holat oynasi arxivlashni «faqat xato/duplikat
   yozuv uchun» deb yozadi; xato kiritilgan yozuvning pulini ushlab qolish
   noto'g'ri. Haqiqiy ketish — chetlatish yoki guruhdan chiqarish.
+- **«Keyingi darajaga o'tadi» varianti.** Darajani tugatib o'qishni to'xtatgan
+  o'quvchini qamramasdi; «Darajani tugatdi» ikkalasini qamraydi. Guruh
+  ochiq bo'lsa, keyingi darajaga «Boshqa guruhga o'tkazish» bilan o'tiladi —
+  u 2.2-band bo'yicha qayta hisoblaydi va 40% qoidasi unga tegmaydi.
+- **Darajani tugatgan o'quvchini avtomatik «Bitirgan» qilish.** Keyingi
+  darajani kutayotgan o'quvchini guruhga qo'shishga to'sqinlik qilardi
+  («Bitirgan» o'quvchi guruhga yozilmaydi); holat o'zgarmaydi.
 - **Tartibni alohida ustunda saqlash.** Migratsiya talab qiladi va hech kim
   o'qimaydi; tarix va ledger metadata'si savolga javob beradi.
 
