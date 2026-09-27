@@ -133,6 +133,11 @@ Har qism — alohida PR, alohida reja, CEO ruxsati bilan saytga.
    summa oy o'rtasida proratsiya bilan.
 5. Pul qaytarish oynasi: oylik o'quvchiga «oldindan to'langan darsi yo'q»
    degan yolg'on ogohlantirish o'rniga 2-qaror.
+6. **Ekranda inglizcha so'z yo'q** (CEO, 27.09): foydalanuvchi ko'radigan
+   matnda «prepaid», «cycle», «LTV», «CAC», «ROI», «Retention», «(present)»,
+   «Ties», «Cash tie-out», «GL recon» kabi so'zlar o'zbekchaga almashtiriladi
+   (sayt, Excel, Telegram, PDF). Muzlatish oynasi va qaytarish xatosidagi
+   «prepaid» A1 da tuzatildi.
 
 ### A4. 40% qoidasi (shartnoma 6.2)
 
