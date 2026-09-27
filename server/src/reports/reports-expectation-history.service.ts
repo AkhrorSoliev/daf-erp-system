@@ -1,11 +1,91 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  branchIdWhere,
   isEmptyScope,
   singleBranchId,
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
+
+type SnapshotDay = {
+  date: Date;
+  expectedValue: number | null;
+  lessonsHeldValue: number | null;
+  collectedForMonth: number | null;
+};
+
+/** A branch's lifetime, in the terms the cron itself uses to decide whether
+ * to write that branch's row on a given day. */
+export interface BranchLifetime {
+  branchId: number;
+  createdAt: Date;
+  deletedAt: Date | null;
+}
+
+/**
+ * Whether the cron would have written `branchId`'s row on Tashkent day `day`
+ * ('YYYY-MM-DD', the same key the snapshot rows use): the cron's 23:40 run
+ * writes a branch's row only when that branch existed and was not yet
+ * deleted at that moment. A branch created mid-month is not expected before
+ * its creation day; one soft-deleted mid-month is not expected from its
+ * deletion day on.
+ */
+function isBranchExpectedOnDay(
+  lifetimes: BranchLifetime[],
+  branchId: number,
+  day: string,
+): boolean {
+  const lt = lifetimes.find((l) => l.branchId === branchId);
+  if (!lt) return false;
+  if (tashkentDateStr(lt.createdAt) > day) return false;
+  if (lt.deletedAt && tashkentDateStr(lt.deletedAt) <= day) return false;
+  return true;
+}
+
+/**
+ * Per-branch rows → one row per day, summed (each lesson, group and payment
+ * has one branch, so the figures add). A day is kept only when every branch
+ * EXPECTED that day — per its own lifetime, not merely "seen somewhere this
+ * month" — has its row: the cron writes each branch separately and one can
+ * fail, and a sum missing an expected branch would plot a drop that never
+ * happened. "Seen this month" was the wrong test — a branch created or
+ * deleted mid-month would blank out every day outside its own lifetime, where
+ * it was never expected to have a row in the first place. Gaps stay gaps; a
+ * null in any present branch nulls the sum.
+ */
+function sumBranchRowsPerDay(
+  rows: (SnapshotDay & { branchId: number | null })[],
+  lifetimes: BranchLifetime[],
+): SnapshotDay[] {
+  type Row = SnapshotDay & { branchId: number | null };
+  const byDay = new Map<string, Row[]>();
+  for (const r of rows) {
+    const key = r.date.toISOString().slice(0, 10);
+    byDay.set(key, [...(byDay.get(key) ?? []), r]);
+  }
+  const total = (list: Row[], f: Exclude<keyof SnapshotDay, 'date'>) =>
+    list.some((r) => r[f] == null)
+      ? null
+      : list.reduce((s, r) => s + (r[f] ?? 0), 0);
+  const out: SnapshotDay[] = [];
+  // Rows arrive date-ascending; a Map keeps insertion order.
+  for (const [day, list] of byDay.entries()) {
+    const expected = lifetimes
+      .filter((l) => isBranchExpectedOnDay(lifetimes, l.branchId, day))
+      .map((l) => l.branchId);
+    if (expected.length === 0) continue;
+    const present = new Set(list.map((r) => r.branchId));
+    if (!expected.every((id) => present.has(id))) continue;
+    out.push({
+      date: list[0].date,
+      expectedValue: total(list, 'expectedValue'),
+      lessonsHeldValue: total(list, 'lessonsHeldValue'),
+      collectedForMonth: total(list, 'collectedForMonth'),
+    });
+  }
+  return out;
+}
 
 /**
  * What happened on a day, so a step in the line can be explained rather than
@@ -61,40 +141,52 @@ export class ReportsExpectationHistoryService {
     const [y, m] = month.split('-').map(Number);
     if (!y || !m) return { month, branchId: null, points: [] };
 
-    // `null` scope = the company-wide row; one picked branch = that branch's.
-    // A multi-branch scope has no single row to read, so it falls back to the
-    // company-wide series rather than silently summing rows that were written
-    // for different scopes.
-    const branchId = singleBranchId(branchIds) ?? null;
+    const start = new Date(Date.UTC(y, m - 1, 1));
+    const endExcl = new Date(Date.UTC(y, m, 1));
 
-    // `date` is `@db.Date` — unshifted UTC bounds, upper exclusive.
+    // `null` = the company-wide row. A branch list reads each branch's OWN
+    // rows and sums them — the company row would show every branch (ADR-0002).
     const rows = await this.prisma.dailyFinancialSnapshot.findMany({
       where: {
         companyId,
-        branchId,
-        date: {
-          gte: new Date(Date.UTC(y, m - 1, 1)),
-          lt: new Date(Date.UTC(y, m, 1)),
-        },
+        ...(branchIds === null ? { branchId: null } : branchIdWhere(branchIds)),
+        // `date` is `@db.Date` — unshifted UTC bounds, upper exclusive.
+        date: { gte: start, lt: endExcl },
       },
       orderBy: { date: 'asc' },
       select: {
+        branchId: true,
         date: true,
         expectedValue: true,
         lessonsHeldValue: true,
         collectedForMonth: true,
       },
     });
+    let days: SnapshotDay[] = rows;
+    if (branchIds !== null) {
+      // Do NOT filter `deletedAt` — a deleted branch still bounds its own
+      // lifetime, and excluding it would make it look expected forever.
+      const branches = await this.prisma.branch.findMany({
+        where: { companyId, id: { in: branchIds } },
+        select: { id: true, createdAt: true, deletedAt: true },
+      });
+      const lifetimes: BranchLifetime[] = branches.map((b) => ({
+        branchId: b.id,
+        createdAt: b.createdAt,
+        deletedAt: b.deletedAt,
+      }));
+      days = sumBranchRowsPerDay(rows, lifetimes);
+    }
 
     const eventsByDay = await this.loadEvents(
       companyId,
-      branchId,
-      new Date(Date.UTC(y, m - 1, 1)),
-      new Date(Date.UTC(y, m, 1)),
+      branchIds,
+      start,
+      endExcl,
     );
 
     let prev: number | null = null;
-    const points = rows.map((r) => {
+    const points = days.map((r) => {
       const held = r.lessonsHeldValue;
       const collected = r.collectedForMonth;
       const dateStr = r.date.toISOString().slice(0, 10);
@@ -116,7 +208,7 @@ export class ReportsExpectationHistoryService {
       };
     });
 
-    return { month, branchId, points };
+    return { month, branchId: singleBranchId(branchIds) ?? null, points };
   }
 
   /**
@@ -127,14 +219,27 @@ export class ReportsExpectationHistoryService {
    */
   private async loadEvents(
     companyId: number,
-    branchId: number | null,
+    branchIds: ReportBranchIds,
     start: Date,
     endExcl: Date,
   ): Promise<Map<string, ExpectationDayEvent[]>> {
-    const groupWhere = {
-      companyId,
-      ...(branchId !== null && { branchId }),
-    };
+    const groupWhere = { companyId, ...branchIdWhere(branchIds) };
+    // EntityHistory has no branch column: a group's status change is matched
+    // through the ids of the groups in scope. Deleted groups stay in — their
+    // status change still happened.
+    const groupIdFilter =
+      branchIds === null
+        ? {}
+        : {
+            entityId: {
+              in: (
+                await this.prisma.group.findMany({
+                  where: groupWhere,
+                  select: { id: true },
+                })
+              ).map((g) => g.id),
+            },
+          };
 
     const [transitions, groupChanges, holidays] = await Promise.all([
       // Enrollment in/out — the dominant cause. No companyId on the log itself,
@@ -154,6 +259,7 @@ export class ReportsExpectationHistoryService {
           entityType: 'Group',
           action: 'STATUS_CHANGE',
           createdAt: { gte: start, lt: endExcl },
+          ...groupIdFilter,
         },
         select: { createdAt: true, newValues: true },
       }),

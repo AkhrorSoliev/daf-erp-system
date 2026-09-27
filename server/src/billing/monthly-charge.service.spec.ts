@@ -1977,6 +1977,93 @@ describe('MonthlyChargeService', () => {
     });
   });
 
+  describe('previewReleaseForDeparture', () => {
+    const septCharge = (over: Record<string, unknown> = {}) => ({
+      id: 'chg-1',
+      groupId: 'grp-1',
+      plannedLessons: 13,
+      coveredLessons: 13,
+      coveredDates: [
+        '2026-09-01',
+        '2026-09-03',
+        '2026-09-05',
+        '2026-09-08',
+        '2026-09-10',
+        '2026-09-12',
+        '2026-09-15',
+        '2026-09-17',
+        '2026-09-19',
+        '2026-09-22',
+        '2026-09-24',
+        '2026-09-26',
+        '2026-09-29',
+      ],
+      frozenOutDates: [],
+      perLessonCost: 34_615,
+      chargedAmount: 450_000,
+      transactionId: 'tx-1',
+      status: 'CHARGED',
+      ...over,
+    });
+    const departureDate = new Date('2026-09-20T00:00:00Z');
+
+    it('quotes exactly what reverseChargeForDeparture then credits, writing nothing', async () => {
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue(
+        septCharge(),
+      );
+
+      const preview = await service.previewReleaseForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate,
+      });
+      expect(preview).toEqual({
+        lessons: 4,
+        amount: 138_460,
+        period: '2026-09',
+      });
+      expect(txWriteMock.createAdjustment).not.toHaveBeenCalled();
+      expect(prismaMock.enrollmentMonthlyCharge.update).not.toHaveBeenCalled();
+
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate,
+        companyId: 1,
+        reason: 'Muzlatish',
+        today: '2026-09-20',
+      });
+      expect(res?.refunded).toBe(preview?.amount);
+      expect(txWriteMock.createAdjustment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({ lessons: preview?.lessons }),
+        }),
+        tx,
+      );
+    });
+
+    it('a legacy row without dates is counted against the month plan', async () => {
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue(
+        septCharge({ coveredDates: [], frozenOutDates: [] }),
+      );
+      const preview = await service.previewReleaseForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate,
+      });
+      expect(preview).toEqual({
+        lessons: 4,
+        amount: 138_460,
+        period: '2026-09',
+      });
+    });
+
+    it('returns null when the month has no CHARGED row', async () => {
+      const preview = await service.previewReleaseForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate,
+      });
+      expect(preview).toBeNull();
+    });
+  });
+
   describe("kurs almashish — har kurs o'z narxi va o'sha oydagi o'z dars soni bilan (CEO 21.09.2026, 13-javob)", () => {
     // Prod, 21.09.2026: Standart 450 000 (haftada 3 kun), Intensive 740 000
     // (haftada 5 kun). O'quvchi 15-oktabrda Standart → Intensive o'tadi.

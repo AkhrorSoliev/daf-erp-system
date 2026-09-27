@@ -22,9 +22,11 @@ import {
  * the debt ▲/▼ delta silently compared against a three-day-old row while the
  * message said "kechagi kundan" (audit H26). It now runs on its own, every day.
  *
- * Rows are written per branch as well as company-wide from the start. Nothing
- * reads the branch rows yet — but adding the dimension later would leave the
- * past permanently blank, and that is exactly the data that cannot be rebuilt.
+ * Rows are written per branch as well as company-wide from the start. The
+ * per-branch rows are read by the expectation history for branch-scoped
+ * callers (`ReportsExpectationHistoryService`) — written from the start
+ * because adding the dimension later would leave the past permanently blank,
+ * and that is exactly the data that cannot be rebuilt.
  */
 @Injectable()
 export class DailySnapshotService {

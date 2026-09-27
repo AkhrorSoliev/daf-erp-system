@@ -54,7 +54,7 @@ describe('operational reads are branch-confined', () => {
         transaction: { findFirst: jest.fn().mockResolvedValue(null) },
       };
       return {
-        service: new StudentsReadService(prisma, {} as any),
+        service: new StudentsReadService(prisma, {} as any, {} as any),
         calls,
       };
     }

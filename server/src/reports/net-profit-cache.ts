@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import type { RedisService } from '../redis/redis.service';
+import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 
 /**
  * Daily cache for the canonical monthly net profit.
@@ -24,9 +25,11 @@ const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
  * Bump when the canonical figure's DEFINITION changes, so a deploy does not
  * leave the trend chart on yesterday's formula until midnight while the card
  * already shows the new one. v2: monthly-billed September lessons priced at
- * the monthly charge; staff counted in their home branch only.
+ * the monthly charge; staff counted in their home branch only. v3: key names
+ * the exact branch set and the caller; v2 wrote multi-branch scopes to the
+ * company-wide entry.
  */
-const NET_PROFIT_CACHE_VERSION = 'v2';
+const NET_PROFIT_CACHE_VERSION = 'v3';
 const logger = new Logger('NetProfitCache');
 
 /** Seconds remaining until the next Tashkent midnight (min 60). */
@@ -41,27 +44,36 @@ export function secondsUntilTashkentMidnight(now = new Date()): number {
   return Math.max(60, seconds);
 }
 
+export interface NetProfitCacheScope {
+  companyId: number;
+  branchIds: ReportBranchIds;
+  performedById: number;
+  monthKey: string;
+}
+
+/** `null` → all, `[]` → none, else the ids sorted and de-duplicated. */
+export function netProfitScopeSegment(branchIds: ReportBranchIds): string {
+  if (branchIds === null) return 'all';
+  if (branchIds.length === 0) return 'none';
+  return [...new Set(branchIds)].sort((a, b) => a - b).join(',');
+}
+
 /**
- * Key is per (company, branch, month) rather than per requested range, so
- * overlapping ranges reuse the same entries and a branch-filtered view never
- * reads the company-wide figure.
+ * Per (company, branch set, caller, month). The exact set, so a multi-branch
+ * scope never shares the company-wide entry. The caller, because the payroll
+ * leg is resolved from the caller's own payroll scope (`resolveMonthlyScope`),
+ * so two callers asking for the same branches can be owed different figures.
  */
-export function netProfitCacheKey(
-  companyId: number,
-  branchId: number | undefined,
-  monthKey: string,
-): string {
-  return `rpt:np:${NET_PROFIT_CACHE_VERSION}:${companyId}:${branchId ?? 'all'}:${monthKey}`;
+export function netProfitCacheKey(s: NetProfitCacheScope): string {
+  return `rpt:np:${NET_PROFIT_CACHE_VERSION}:${s.companyId}:${netProfitScopeSegment(s.branchIds)}:u${s.performedById}:${s.monthKey}`;
 }
 
 export async function cachedNetProfit(
   redis: RedisService | undefined,
-  companyId: number,
-  branchId: number | undefined,
-  monthKey: string,
+  scope: NetProfitCacheScope,
   compute: () => Promise<number>,
 ): Promise<number> {
-  const key = netProfitCacheKey(companyId, branchId, monthKey);
+  const key = netProfitCacheKey(scope);
 
   if (redis) {
     try {

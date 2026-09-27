@@ -525,18 +525,12 @@ export class ReportsService {
     performedById: number,
   ) {
     const rows = await this.financial.getFinancialTrend(companyId, branchIds);
-    // Cache key needs ONE id; a multi-branch scope has none, so those callers
-    // recompute rather than share a key that would collide with a single
-    // branch's entry.
-    const cacheBranch = singleBranchId(branchIds);
     return Promise.all(
       rows.map(async (row: any) => {
         try {
           const profit = await cachedNetProfit(
             this.redis,
-            companyId,
-            cacheBranch,
-            row.monthKey,
+            { companyId, branchIds, performedById, monthKey: row.monthKey },
             async () => {
               const np = await this.getMonthlyNetProfit(companyId, {
                 month: row.monthKey,
@@ -615,7 +609,7 @@ export class ReportsService {
   getPaymentReports(
     companyId: number,
     options: {
-      branchId?: number;
+      branchIds: ReportBranchIds;
       startDate?: string;
       endDate?: string;
       months?: 3 | 6;

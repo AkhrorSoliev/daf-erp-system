@@ -6,7 +6,11 @@ import { TransactionQueryDto } from './dto/transaction-query.dto';
 describe('TransactionsReadService', () => {
   let service: TransactionsReadService;
   let prisma: {
-    transaction: { findMany: jest.Mock; count: jest.Mock };
+    transaction: {
+      findMany: jest.Mock;
+      count: jest.Mock;
+      aggregate: jest.Mock;
+    };
     attendance: { findMany: jest.Mock; findFirst: jest.Mock };
     student: { findFirst: jest.Mock };
     enrollment: { findFirst: jest.Mock; findMany: jest.Mock };
@@ -19,6 +23,9 @@ describe('TransactionsReadService', () => {
       transaction: {
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn().mockResolvedValue(0),
+        aggregate: jest
+          .fn()
+          .mockResolvedValue({ _sum: { amount: null }, _count: 0 }),
       },
       attendance: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -858,6 +865,75 @@ describe('TransactionsReadService', () => {
 
       expect(res.data[0].coverage?.cycleSequenceNumber).toBe(1);
       expect(res.data[1].coverage?.cycleSequenceNumber).toBe(2);
+    });
+  });
+
+  describe('findDebtWriteOffs', () => {
+    const whereOf = (m: jest.Mock) =>
+      (m.mock.calls[0][0] as { where: Record<string, unknown> }).where;
+
+    it('never lists the undo rows and returns reversedTransactionId', async () => {
+      await service.findDebtWriteOffs(1001, { branchIds: null });
+      expect(whereOf(prisma.transaction.findMany)).toEqual(
+        expect.objectContaining({
+          reversedTransactionId: null,
+          reversedAt: null,
+        }),
+      );
+      expect(
+        prisma.transaction.findMany.mock.calls[0][0].select
+          .reversedTransactionId,
+      ).toBe(true);
+    });
+
+    it('the include-undone toggle shows undone originals, never their counter-rows', async () => {
+      await service.findDebtWriteOffs(1001, {
+        branchIds: null,
+        includeReversed: true,
+      });
+      const where = whereOf(prisma.transaction.findMany);
+      expect(where.reversedTransactionId).toBeNull();
+      expect(where).not.toHaveProperty('reversedAt');
+      expect(whereOf(prisma.transaction.count)).toEqual(where);
+    });
+
+    it('totals only what is still forgiven, even when undone originals are listed', async () => {
+      prisma.transaction.aggregate.mockResolvedValue({
+        _sum: { amount: 300_000 },
+        _count: 2,
+      });
+      const res = await service.findDebtWriteOffs(1001, {
+        branchIds: null,
+        includeReversed: true,
+      });
+      expect(whereOf(prisma.transaction.aggregate)).toEqual(
+        expect.objectContaining({
+          reversedTransactionId: null,
+          reversedAt: null,
+        }),
+      );
+      expect(res.totalAmount).toBe(300_000);
+      expect(res.activeCount).toBe(2);
+    });
+
+    it('filters by a start date alone', async () => {
+      await service.findDebtWriteOffs(1001, {
+        branchIds: null,
+        from: '2026-09-01',
+      });
+      expect(whereOf(prisma.transaction.findMany).createdAt).toEqual({
+        gte: new Date('2026-08-31T19:00:00.000Z'),
+      });
+    });
+
+    it('filters by an end date alone', async () => {
+      await service.findDebtWriteOffs(1001, {
+        branchIds: null,
+        to: '2026-09-30',
+      });
+      expect(whereOf(prisma.transaction.findMany).createdAt).toEqual({
+        lt: new Date('2026-09-30T19:00:00.000Z'),
+      });
     });
   });
 });
