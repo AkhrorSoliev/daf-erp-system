@@ -37,6 +37,8 @@ import { useAuth } from "@/hooks/use-auth";
 import type { Student } from "@/data/student-model";
 import { cn } from "@/lib/utils";
 import { formatPhone } from "@/lib/format-utils";
+import { ageFromStoredDate } from "@/lib/age";
+import { PhoneProofBadge, TelegramBotBadge } from "./student-contact-badges";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
@@ -190,10 +192,28 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
             {formatPhone(student.phone)}
           </a>
         </div>
+        <div className="flex flex-wrap gap-1.5">
+          <PhoneProofBadge
+            verified={student.phoneVerified}
+            verifiedAt={student.phoneVerifiedAt}
+          />
+          <TelegramBotBadge chatId={student.telegramChatId} />
+        </div>
+        {student.gender && (
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">Jinsi:</span>
+            <span>{student.gender === "MALE" ? "Erkak" : "Ayol"}</span>
+          </div>
+        )}
         {student.date_of_birth && (
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground">Tug&apos;ilgan sana:</span>
-            <span>{formatDate(student.date_of_birth)}</span>
+            <span>
+              {formatDate(student.date_of_birth)}{" "}
+              <span className="text-muted-foreground">
+                ({ageFromStoredDate(student.date_of_birth)} yosh)
+              </span>
+            </span>
           </div>
         )}
         <div className="flex items-start gap-2">

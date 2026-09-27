@@ -53,7 +53,10 @@ const ADMIN_ROLE_IDS = [1, 2, 3, 5];
 
 function build() {
   const redis = makeRedis();
-  const prisma = { smsMessage: { create: jest.fn().mockResolvedValue({}) } };
+  const prisma = {
+    smsMessage: { create: jest.fn().mockResolvedValue({}) },
+    student: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+  };
   const eskiz = { sendSms: jest.fn().mockResolvedValue({ status: 'waiting' }) };
   const reset = {
     resolveByPhone: jest.fn(),
@@ -330,6 +333,56 @@ describe('ForgotPasswordService', () => {
         expect.anything(),
         expect.anything(),
       );
+    });
+
+    // ADR-0039: the portal asks a student to prove their number by SMS once.
+    // Resetting by SMS already proved it, so the reset records the proof.
+    describe('phone proof (ADR-0039)', () => {
+      async function resetWith(target: object) {
+        const built = build();
+        built.reset.resolveByPhone.mockResolvedValue(target);
+        await built.redis.set(
+          'otp_reset:rtoken:tok789',
+          JSON.stringify({ ...target, phone: PHONE }),
+          'EX',
+          600,
+        );
+        const res = await built.service.resetPassword('tok789', 'newpass123');
+        return { ...built, res };
+      }
+
+      it("marks the student's card with the number the code went to", async () => {
+        const { prisma } = await resetWith(TARGET);
+
+        expect(prisma.student.updateMany).toHaveBeenCalledWith({
+          // Conditional on the card still carrying that number.
+          where: { id: TARGET.studentId, phone: PHONE, deletedAt: null },
+          data: { verifiedPhone: PHONE, phoneVerifiedAt: expect.any(Date) },
+        });
+      });
+
+      it('marks nothing for a staff account (no student card)', async () => {
+        const { prisma } = await resetWith({ userId: 10001, companyId: 1 });
+
+        expect(prisma.student.updateMany).not.toHaveBeenCalled();
+      });
+
+      it('a failed mark does not fail the reset — the password is already changed', async () => {
+        const built = build();
+        built.prisma.student.updateMany.mockRejectedValue(new Error('db down'));
+        built.reset.resolveByPhone.mockResolvedValue(TARGET);
+        await built.redis.set(
+          'otp_reset:rtoken:tok000',
+          JSON.stringify({ ...TARGET, phone: PHONE }),
+          'EX',
+          600,
+        );
+
+        const res = await built.service.resetPassword('tok000', 'newpass123');
+
+        expect(res.message).toMatch(/o'zgartirildi/);
+        expect(built.reset.applyNewPassword).toHaveBeenCalled();
+      });
     });
   });
 });

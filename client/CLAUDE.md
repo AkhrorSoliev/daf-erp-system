@@ -170,7 +170,7 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 #### Password-reset dialog: one flow, two skins
 
 - `forgot-password-dialog.tsx` takes `variant?: "default" | "lumio"`. The student login passes `"lumio"`; admin and teacher logins take the default. **Do not fork it into a second student-only component** — it is three stateful steps with an OTP resend timer and a single-use reset token, and a parallel copy would be two places to fix the next time the OTP contract moves. The login *forms* are forked; this dialog deliberately is not.
-- Only the leaves differ, and they live in `forgot-password-fields.tsx` (`FpField`, `FpPhoneInput`, `FpCodeInput`, `FpPasswordInput`, `FpSubmit`, `FpError`). Add a variant branch there, not as a ternary inside the dialog's JSX.
+- Only the leaves differ, and they live in `forgot-password-fields.tsx` (`FpField`, `FpPhoneInput`, `FpCodeInput`, `FpPasswordInput`, `FpSubmit`, `FpError`). Add a variant branch there, not as a ternary inside the dialog's JSX. `FpPhoneInput` live-formats `XX XXX XX XX` (`formatPhoneInput`) and still reports the raw nine digits; the student portal's first-run phone step uses it too.
 - **The `lumio` class goes on `DialogContent`, not on an ancestor** — Radix portals dialog content to `document.body`, outside the page's `.lumio` wrapper, so a class on the page never reaches it. Same pattern as `student-password-dialog.tsx`.
 - In the Lumio skin the password fields use Lumio's `Input`, which ships its own per-field reveal toggle; the shared `showPassword` state therefore only drives the shadcn skin.
 
@@ -828,6 +828,16 @@ The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth
 - Used during transition from old finance systems to enter a student's outstanding balance. Backend partial unique index `(studentId) WHERE type='INITIAL_BALANCE' AND reversedAt IS NULL` enforces "exactly one per student" — second submit returns 400 with "Boshlang'ich balans bu o'quvchi uchun allaqachon kiritilgan".
 - Form: amount (`PriceInput`, min 0) + optional note (`Input`, maxLength 500).
 
+### Student Card: Phone Proof vs Telegram Bot (ADR-0039)
+
+`student-profile-card.tsx` shows two badges under the phone, from `student-contact-badges.tsx`. They answer different questions and must never be merged into one:
+
+- **"Telefon tasdiqlangan" / "Telefon tasdiqlanmagan"** — `student.phoneVerified` (+ `phoneVerifiedAt` in the tooltip). The server computes it (`formatStudent`); the client never compares numbers itself, and the API does not return the proved number. Only an SMS code proves a phone — a Telegram sign-in or a contact shared with the bot does not, because the Telegram account can carry a different number (CEO decision, 2026-09-27).
+- **"Telegram botda ro'yxatdan o'tgan"** — `student.telegramChatId` is set, i.e. the bot's messages reach this card (the bot itself calls this being registered; a parent's chat can be linked to several siblings). Drawn only when linked.
+- Badge colours use `green` / `blue`, not `sky`: outside the student portal the `sky-*` utilities resolve to Lumio variables that exist only under `.lumio`, so `bg-sky-100` renders transparent on staff pages.
+
+The card also shows "Jinsi" and the age next to "Tug'ilgan sana". The age comes from `ageFromStoredDate` (`src/lib/age.ts`), which reads the day the card displays — the staff date picker stores local midnight (19:00Z the day before in Tashkent), the student's first-run form stores UTC midnight, so the ISO string's first ten characters are not the birthday.
+
 ### Lead Forms and Their Responses (`/leads/forms`)
 
 Public sign-up forms (shared on Instagram/Telegram) turn every submission into a lead. Three routes:
@@ -859,6 +869,8 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 - Shell chrome: `lumio/bottom-nav.tsx` (floating pill, mobile) and `lumio/side-rail.tsx` (tablet + desktop left rail). Mobile has no top header — each screen renders its own `ScreenHeader`/`StackHeader` title. The `.lumio` scope + fonts are applied by the portal route layout (`app/(student-portal)/portal/layout.tsx`).
 
 **Responsive shell (`student-portal-layout.tsx`):** mobile (`< md`) gets the native-app feel (centered column, floating bottom nav); tablet and desktop (`>= md`) swap to a persistent left side rail + wider column. Role-gates to Student (role id 6). The two nav forms are mutually exclusive — never both on one viewport.
+
+**First-run gate (ADR-0039, `onboarding/`):** the shell is wrapped in `StudentOnboardingGate`, which reads `GET /student-portal/onboarding` (`useStudentOnboarding`) and, while `missing` is non-empty, draws `StudentOnboardingScreen` *instead of* the whole shell — no rail, no nav, no radio. Two stages: `PhoneStep` and `ProfileStep` (gender + birth date, only the ones missing). `PhoneStep` first shows the card's number and asks "Bu sizning raqamingizmi?": "Ha, kod yuborish" sends the code there (`/phone/send-code`); "Yo'q, boshqa raqam" takes the student's own number (`FpPhoneInput`) **and current password** (ADR-0031) and sends the code to the new number (`/phone/change-code`) — a correct code makes the server replace the card's number, and a toast tells the student they now sign in with it. It reuses `FpPhoneInput` / `FpCodeInput` from `forgot-password-fields.tsx`. Every write answers with the new status, which goes straight into the query cache; an empty `missing` opens the portal. The server decides what is missing — do not compute it on the client. The gate **fails open** on a failed or paused request (a data requirement, not a security boundary); `birth-date.ts` mirrors the server's 5–100 age check only to save a round trip. The native app does the same through a `Stack.Protected` guard and `src/app/onboarding.tsx`.
 
 **Collapsible rail (`student-portal/lib/sidebar-store.ts`):** the rail has two widths, 72px icons-only and 240px with labels, toggled from a control at the bottom of its nav column and remembered in `localStorage` (`daf.portal.sidebar`).
 
