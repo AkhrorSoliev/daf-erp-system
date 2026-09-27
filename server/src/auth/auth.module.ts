@@ -12,6 +12,8 @@ import { TelegramOauthConfig } from './telegram-oauth/telegram-oauth.config';
 import { TelegramOauthStateStore } from './telegram-oauth/telegram-oauth-state.store';
 import { TelegramIdTokenVerifier } from './telegram-oauth/telegram-id-token.verifier';
 import { TelegramOauthService } from './telegram-oauth/telegram-oauth.service';
+import { TelegramWebAppController } from './telegram-webapp/telegram-webapp.controller';
+import { TelegramWebAppService } from './telegram-webapp/telegram-webapp.service';
 import { EskizModule } from '../eskiz/eskiz.module';
 import { PasswordResetModule } from '../common/password-reset';
 
@@ -32,7 +34,7 @@ import { PasswordResetModule } from '../common/password-reset';
     // proxy. Applied per-endpoint in AuthController, not globally.
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 10 }]),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, TelegramWebAppController],
   providers: [
     AuthService,
     LocalStrategy,
@@ -42,6 +44,7 @@ import { PasswordResetModule } from '../common/password-reset';
     TelegramOauthStateStore,
     TelegramIdTokenVerifier,
     TelegramOauthService,
+    TelegramWebAppService,
   ],
   exports: [AuthService],
 })

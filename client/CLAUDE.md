@@ -123,7 +123,7 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - Tokens stored in cookies via `js-cookie`
 - Axios interceptor in `src/lib/api.ts` auto-attaches token and auto-refreshes on 401
 - `src/middleware.ts` redirects unauthenticated users to `/login`
-- Auth state managed by Zustand store in `src/hooks/use-auth.ts`
+- Auth state managed by Zustand store in `src/hooks/use-auth.ts` — `logout()` clears the session and goes to `/login`; `clearSession()` clears it without leaving the page (the Telegram Mini App uses it)
 - `AuthProvider` in `src/components/providers/auth-provider.tsx` hydrates state from cookies on mount
 - **Session-ending actions (ADR-0030).** `PATCH /users/password`, `PATCH /student-portal/password` and `POST /users/logout-others` end EVERY session of the account, this device's included, and return a fresh pair. Store it with `freshSessionFrom(data)` + `setAuth(...)` (`src/lib/fresh-session.ts`), or the next request signs the user out. `useLogoutOthers()` (`src/hooks/use-logout-others.ts`) does this for the "Boshqa qurilmalardan chiqish" action on the staff profile and on student portal Settings. Both open the same confirmation, `src/components/shared/logout-others-dialog.tsx` — the student portal passes `contentClassName="lumio"`, like its own sign-out dialog. Do not fork a second, student-only copy.
 
@@ -192,6 +192,14 @@ const canSeeSalary = user?.roles.some((r) => [1, 2].includes(r.id)) ?? false;   
 - Telegram returns to the API, which 302s to `/auth/telegram/callback?handoff=…` on this app. That page exchanges the single-use handoff for tokens (`POST /auth/telegram/complete`), calls `setAuth`, and redirects (student → `/portal`, everyone else → `/`).
 - **The same page also handles `?error=<message>`** — a server-side failure after the OAuth `state` was consumed 302s here with a human-readable Uzbek message instead of stranding the user on raw JSON at the API domain. Both `error` and the missing-`handoff` fallback are computed in the `useState` **lazy initializer**; do not move them into the effect (`react-hooks/set-state-in-effect`).
 - **The callback page must stay wrapped in `<Suspense>`** — it reads `useSearchParams`, which bails out of static prerendering without a boundary and fails `npm run build`.
+
+#### Telegram Mini App (`/tg`, ADR-0040)
+
+- The bot opens `https://student.dafzentrum.uz/tg` as a Mini App (server env `TELEGRAM_MINI_APP_URL`). `app/(auth)/tg/page.tsx` renders `components/telegram-mini-app/mini-app-entry.tsx`, which loads `telegram-web-app.js` through `next/script` (`afterInteractive` + `onReady`, guarded by a ref so one opening sends one request), posts `Telegram.WebApp.initData` to `POST /auth/telegram/webapp`, and on `authenticated` calls `setAuth` and replaces to `/portal`. Other states: outside Telegram, signed out, `choose` (a parent's Telegram with several students), `not_registered` (a message pointing to the bot's «💳 To'lovlar» contact step — the admin panel cannot link a Telegram account) and error.
+- **Inside the Mini App there is no password form.** `lib/telegram-mini-app.ts` keeps a `sessionStorage` flag for the Mini App tab — `sessionStorage`, not a cookie, because Telegram's in-app browser shares the cookie jar with Mini Apps on Android. `MiniAppLoginGuard` on every `/login` variant sends a flagged tab back to `/tg`; `useIsMiniApp()` reads the flag (always `false` on the server and during hydration). `LogoutButton` in a Mini App marks the tab signed out, clears the session and replaces to `/tg`, which then waits for «Qayta kirish» instead of signing straight back in.
+- **Sign-in always starts from no session** (`useAuth.clearSession()` in `start()`), so a WebView two Telegram accounts share never hands one the other's session.
+- **A sign-in the portal does not keep must not loop.** Telegram Web (the browser version) runs the Mini App in a cross-site iframe, where the session cookies may not reach `/portal`: the middleware then sends the tab to `/login`, the guard back to `/tg`, and `/tg` would sign in again forever. `markMiniAppSignedIn()` stamps each successful sign-in; reaching `/tg` again within `SIGN_IN_BOUNCE_MS` (`bouncedAfterSignIn()`) shows a message pointing to the Telegram app instead, and retrying takes a tap.
+- `/tg` is public in `middleware.ts` (exact match) and excepted BEFORE the signed-in redirects: on the student host those send any visitor with a session to `/portal` before the Telegram account is checked. The Mini App must be served from the `student.` host; the portal-role routing depends on it.
 
 #### Login backdrops (liquid glass)
 

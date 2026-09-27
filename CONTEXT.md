@@ -86,7 +86,11 @@ eski raqam o'rniga kartaga va kirish hisobiga yoziladi.
 (`Student.telegramChatId`): bot xabarlari shu chatga boradi. Bot o'zi ham shunday
 ataydi («Siz allaqachon ro'yxatdan o'tgansiz»). Ota-onaning bitta chati bir
 nechta farzandga bog'lanishi mumkin. Telefon tasdig'i bilan aloqasi yo'q.
-`telegram/scenes/student-registration.scene.ts`
+Bog'lashni faqat bot yozadi: odam «📱 Telefon raqamni yuborish» bilan o'z
+Telegram raqamini yuborganda va u kartadagi raqamga mos kelganda; admin panelda
+bog'lash yo'q. Botning parol tiklashi va Telegram Mini App kirishi shu
+bog'lanishga ishonadi.
+`telegram/scenes/student-registration.scene.ts` · `auth/telegram-webapp/telegram-webapp.service.ts` · `docs/adr/0040-mini-app-ichida-faqat-telegram-orqali-kirish.md`
 
 **Birinchi kirish talablari (onboarding)** — o'quvchi web portal yoki mobil
 ilovadan foydalanishdan oldin beradigan narsalar: tasdiqlangan telefon, jins,

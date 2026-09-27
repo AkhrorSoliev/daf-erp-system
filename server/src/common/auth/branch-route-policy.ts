@@ -122,6 +122,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /auth/login',
       'POST /auth/refresh',
       'POST /auth/telegram/complete',
+      'POST /auth/telegram/webapp',
       'POST /public/forms/:slug/submit',
     ],
   },
