@@ -549,7 +549,7 @@ export class MonthlyChargeService {
   }
 
   /**
-   * ADR-0048 (R4): a charge written does not pay the month's first lesson by
+   * ADR-0049 (R4): a charge written does not pay the month's first lesson by
    * itself — a debtor's charge only drives the balance further down. After
    * `setCenterTopUpForPeriod` has called every fronted row of the period
    * recovered, a PRESENT/LATE first lesson (from 01.10.2026) that the

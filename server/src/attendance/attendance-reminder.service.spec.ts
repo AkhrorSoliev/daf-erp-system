@@ -156,7 +156,7 @@ describe('AttendanceReminderService', () => {
           type: NotificationType.ATTENDANCE_ADMIN_ALERT,
         }),
       );
-      // ADR-0046: each side is told what an untaken attendance costs.
+      // ADR-0047: each side is told what an untaken attendance costs.
       expect(notificationsService.create).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 20001,
@@ -195,7 +195,7 @@ describe('AttendanceReminderService', () => {
           type: NotificationType.ATTENDANCE_MISSING_ADMIN,
         }),
       );
-      // ADR-0046: nobody is asked to restore it — it cannot be entered now.
+      // ADR-0047: nobody is asked to restore it — it cannot be entered now.
       expect(notificationsService.create).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 20001,

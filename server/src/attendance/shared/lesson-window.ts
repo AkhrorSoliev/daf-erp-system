@@ -4,7 +4,7 @@ import {
 } from '../../common/date/tashkent';
 
 /**
- * The attendance window of one lesson (ADR-0046). It opens 10 minutes before
+ * The attendance window of one lesson (ADR-0047). It opens 10 minutes before
  * the lesson starts and closes when the lesson ends, Tashkent time. Every
  * role is bound by it — teacher, administrator, branch director and CEO
  * alike; after the end nobody on the site may enter or change attendance.
@@ -80,7 +80,7 @@ export function windowRefusal(
 /**
  * Whole minutes from the lesson's effective start to `now`, Tashkent time;
  * null when the lesson has no start time or `now` is not past the start of
- * that day's lesson. Used for «N daqiqa kechikdi» (ADR-0047).
+ * that day's lesson. Used for «N daqiqa kechikdi» (ADR-0048).
  */
 export function minutesLate(
   input: Pick<LessonTimes, 'lessonDay' | 'startTime'> & { now: Date },
@@ -99,7 +99,7 @@ export function minutesLate(
 const IN_LESSON = new Set(['PRESENT', 'LATE']);
 
 /**
- * The status and minutes a manual save writes for one student (ADR-0047).
+ * The status and minutes a manual save writes for one student (ADR-0048).
  * An administrator marking a student present after the lesson's first save
  * is recording a late arrival: the student becomes LATE with the minutes
  * since the start. A LATE that stays LATE keeps its minutes; any other

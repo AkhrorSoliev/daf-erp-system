@@ -1,7 +1,7 @@
 # «Markaz qoplagan 1-dars» — the centre's first lesson shows as the centre's money
 
-**Date:** 2026-09-28 · **Status:** accepted, implemented (ADR-0048)
-**Depends on:** PR #595 (ADR-0046) and PR #596 (ADR-0047).
+**Date:** 2026-09-28 · **Status:** accepted, implemented (ADR-0049)
+**Depends on:** PR #595 (ADR-0047) and PR #596 (ADR-0048).
 **From:** the «Zarur» list of 28.09 (items 7 and 11). Items 14 and 21 of that
 list (a Branch Director seeing other branches on `/reports/payment-reports`, and
 the endless loader for a director of two branches) were already fixed on main
@@ -88,5 +88,5 @@ after that. No figures are stored in the repository.
 
 ## Docs
 
-ADR-0048 (Uzbek): the funder of the centre's first lesson. `server/CLAUDE.md`:
+ADR-0049 (Uzbek): the funder of the centre's first lesson. `server/CLAUDE.md`:
 the attendance part-2 paragraph and the known-defect note.

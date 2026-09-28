@@ -137,7 +137,7 @@ describe('MonthlyChargeService', () => {
     salaryAccrualMock = {
       reverseAccrualForAttendance: jest.fn().mockResolvedValue(null),
     };
-    // ADR-0048: re-judging the centre's first lesson after a charge write.
+    // ADR-0049: re-judging the centre's first lesson after a charge write.
     admissionMock = { loadCoverage: jest.fn().mockResolvedValue(null) };
     settingsMock = {
       get: jest.fn((_companyId: number, key: string) => {
@@ -3353,7 +3353,7 @@ describe('MonthlyChargeService', () => {
       expect(prismaMock.salaryAccrual.updateMany).not.toHaveBeenCalled();
     });
 
-    describe('markaz qoplagan birinchi dars qayta baholanadi (ADR-0048, R4)', () => {
+    describe('markaz qoplagan birinchi dars qayta baholanadi (ADR-0049, R4)', () => {
       const firstDay = new Date('2026-10-01T00:00:00.000Z');
       const refrontCall = {
         where: {

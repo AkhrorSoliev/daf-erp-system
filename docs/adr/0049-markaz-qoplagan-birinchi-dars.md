@@ -1,13 +1,13 @@
-# ADR-0048 — Markaz qoplagan 1-dars markazning puli bo'lib ko'rinadi
+# ADR-0049 — Markaz qoplagan 1-dars markazning puli bo'lib ko'rinadi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-09-28
-**Bog'liq:** ADR-0046 (darsga qo'yish, shartnoma 3.2), ADR-0047 (qarzdorning 1-darsga kelmagani); spec `docs/superpowers/specs/2026-09-28-markaz-birinchi-dars-design.md`; `server/src/billing/first-lesson-funder.ts`, `server/src/billing/lesson-billing.service.ts`, `server/src/billing/monthly-charge.service.ts`, `server/src/billing/lesson-admission.ts` (`firstLessonCoverage`), `server/scripts/audit-center-topup-flags.ts`
+**Bog'liq:** ADR-0047 (darsga qo'yish, shartnoma 3.2), ADR-0048 (qarzdorning 1-darsga kelmagani); spec `docs/superpowers/specs/2026-09-28-markaz-birinchi-dars-design.md`; `server/src/billing/first-lesson-funder.ts`, `server/src/billing/lesson-billing.service.ts`, `server/src/billing/monthly-charge.service.ts`, `server/src/billing/lesson-admission.ts` (`firstLessonCoverage`), `server/scripts/audit-center-topup-flags.ts`
 
 ## Kontekst
 
 CEO qarori (27.09): markaz oyiga bitta darsni ustozga qoplaydi — birinchisini,
-va faqat o'quvchi kelgan bo'lsa. ADR-0046 dan keyin to'lamagan o'quvchi
+va faqat o'quvchi kelgan bo'lsa. ADR-0047 dan keyin to'lamagan o'quvchi
 2-darsdan darsga qo'yilmaydi, ya'ni 2-darsdan boshlab har bir ustoz haqi
 o'quvchining o'z pulidan. Bitta haq bundan mustasno: oyning **1-darsiga
 kelgan**, lekin puli u darsga yetmagan o'quvchining darsi.
@@ -23,18 +23,18 @@ faqat kim to'lagani noto'g'ri.
 
 1. **Dars paytida (R1).** 01.10.2026 dan, oylik kursda, o'quvchi
    guruhdagi oyning 1-darsiga «Keldi» yoki «Kechikdi» bo'lsa va to'lovlari
-   u darsga yetmasa (`firstLessonCoverage → firstLesson && !covered` — ADR-0047
+   u darsga yetmasa (`firstLessonCoverage → firstLesson && !covered` — ADR-0048
    «Kelmadi» uchun ishlatgan qoidaning o'zi), haq odatdagidek yoziladi
    (summa va ustoz o'sha), keyin `setFirstLessonFunder(..., true)`
    `isCenterTopUp` va `wasCenterTopUp` ni yoqadi.
 2. **To'lov kelganda (R2).** `processRetroactiveBillingForStudent` ning
-   ADR-0047 qo'shgan bosqichi (`accrueDeferredFirstLessons`) o'quvchining
+   ADR-0048 qo'shgan bosqichi (`accrueDeferredFirstLessons`) o'quvchining
    markaz qoplab turgan 1-darslarini ham o'qiydi va to'lov yetganlarida
    `isCenterTopUp` ni o'chiradi. `wasCenterTopUp` qoladi (yopishqoq): o'sha
    oy markaz oldindan bergan, qaytgani X/Y/Z hayot yo'lida ko'rinadi.
 3. **Tuzatishlar (R3).** «Kelmadi» yoki «Uzrli» → «Keldi»/«Kechikdi»
    to'lanmagan 1-darsda markaz qoplagan haqni yozadi. «Keldi» → «Kelmadi»
-   ADR-0047 dagidek: haq to'lovgacha bekor qilinadi.
+   ADR-0048 dagidek: haq to'lovgacha bekor qilinadi.
 4. **Keyin yozilgan hisob uni undirmaydi (R4).** `setCenterTopUpForPeriod`
    oyning hisobi yozilganda (muzlatishdan qaytish, qayta hisob) davrning
    hamma markaz qoplagan haqlarini «undirildi» deydi. Qarzdorning hisobi esa

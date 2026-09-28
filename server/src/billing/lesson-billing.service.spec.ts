@@ -53,7 +53,7 @@ describe('LessonBillingService', () => {
       createAccrual: jest.fn().mockResolvedValue(null),
       reverseAccrualForAttendance: jest.fn().mockResolvedValue(null),
     };
-    // ADR-0047: nobody's first lesson is deferred unless a test says so.
+    // ADR-0048: nobody's first lesson is deferred unless a test says so.
     admissionService = {
       isUnpaidFirstLesson: jest.fn().mockResolvedValue(false),
       loadCoverage: jest.fn().mockResolvedValue(null),
@@ -101,12 +101,12 @@ describe('LessonBillingService', () => {
       // because most tests don't trigger that branch.
       attendance: {
         findUnique: jest.fn().mockResolvedValue(null),
-        // ADR-0047: a monthly enrollment's deferred first lessons. None by default.
+        // ADR-0048: a monthly enrollment's deferred first lessons. None by default.
         findMany: jest.fn().mockResolvedValue([]),
       },
       salaryAccrual: {
         findMany: jest.fn().mockResolvedValue([]),
-        // ADR-0048: who funded the month's first lesson.
+        // ADR-0049: who funded the month's first lesson.
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
       groupTeacher: {
@@ -1316,9 +1316,9 @@ describe('LessonBillingService', () => {
       expect(salaryAccrualService.createAccrual).toHaveBeenCalled();
     });
 
-    describe('qarzdorning oydagi birinchi darsi (ADR-0047, R4)', () => {
+    describe('qarzdorning oydagi birinchi darsi (ADR-0048, R4)', () => {
       const october = new Date('2026-10-02T00:00:00Z');
-      /** Live accruals of the ABSENT rows; the centre's fronted ones (ADR-0048). */
+      /** Live accruals of the ABSENT rows; the centre's fronted ones (ADR-0049). */
       const accrualRows =
         (accrued: { attendanceId: string }[], fronted: typeof accrued = []) =>
         ({ where }: { where: { isCenterTopUp?: boolean } }) =>
@@ -1540,7 +1540,7 @@ describe('LessonBillingService', () => {
       });
     });
 
-    describe('markaz qoplagan birinchi dars (ADR-0048)', () => {
+    describe('markaz qoplagan birinchi dars (ADR-0049)', () => {
       const october = new Date('2026-10-02T00:00:00Z');
       const frontedWrite = {
         where: {

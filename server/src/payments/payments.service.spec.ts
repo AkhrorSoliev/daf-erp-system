@@ -244,7 +244,7 @@ describe('PaymentsService', () => {
       );
     });
 
-    it('records the promise for the rest of a part payment (ADR-0046)', async () => {
+    it('records the promise for the rest of a part payment (ADR-0047)', async () => {
       prisma.student.findUnique.mockResolvedValue({ balance: -350000 });
 
       await service.create(

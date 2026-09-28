@@ -137,7 +137,7 @@ import {
 } from '../../common/date/tashkent';
 
 /**
- * The attendance window of one lesson (ADR-0046). It opens 10 minutes before
+ * The attendance window of one lesson (ADR-0047). It opens 10 minutes before
  * the lesson starts and closes when the lesson ends, Tashkent time. Every
  * role is bound by it — teacher, administrator, branch director and CEO
  * alike; after the end nobody on the site may enter or change attendance.
@@ -241,7 +241,7 @@ export class AttendanceValidationService {
    * Validate that a date is a lesson of the group: date format, group
    * existence + company, ACTIVE status, date range, schedule or a moved
    * lesson, holiday. It says nothing about the clock — `assertWindowOpen`
-   * does (ADR-0046). Returns the lesson's effective times: a reschedule's
+   * does (ADR-0047). Returns the lesson's effective times: a reschedule's
    * override wins over the group's.
    */
   async validateLessonDate(groupId: string, date: string, companyId?: number) {
@@ -352,7 +352,7 @@ export class AttendanceValidationService {
   }
 
   /**
-   * ADR-0046: attendance is written only inside the lesson window, by every
+   * ADR-0047: attendance is written only inside the lesson window, by every
    * role. Throws the Uzbek reason otherwise.
    */
   assertWindowOpen(lesson: LessonTimes, now: Date = new Date()): void {
@@ -432,7 +432,7 @@ import type { LessonTimes } from './shared/lesson-window';
 In `server/src/attendance/attendance.service.spec.ts`, replace the whole `describe('lesson time check', () => { ... });` block (it starts after `it('should pass validation for a valid lesson date'` and ends before the closing `});` of `describe('validateLessonDate')`) with:
 
 ```ts
-    describe('lesson window (ADR-0046)', () => {
+    describe('lesson window (ADR-0047)', () => {
       const validation = () =>
         (service as unknown as { validation: AttendanceValidationService })
           .validation;
@@ -521,7 +521,7 @@ git commit -m "feat(attendance): one lesson window for every role
 
 validateLessonDate checks only that the date is a lesson and returns its
 effective times; assertWindowOpen, assertLessonNotEnded and windowFor carry
-the clock (ADR-0046). No role bypasses the window any more.
+the clock (ADR-0047). No role bypasses the window any more.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -548,7 +548,7 @@ In `server/src/attendance/attendance.service.spec.ts`, at the top of `describe('
 
 ```ts
     // mockGroup's lesson: Wednesday 2026-04-01, 09:00–11:00 Tashkent. Every
-    // save now needs its window open (ADR-0046), so the clock sits at 09:30.
+    // save now needs its window open (ADR-0047), so the clock sits at 09:30.
     beforeEach(() => {
       jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] });
       jest.setSystemTime(new Date('2026-04-01T04:30:00.000Z'));
@@ -616,7 +616,7 @@ In `server/src/attendance/attendance-save.service.ts`, above `@Injectable()` add
 ```ts
 export interface SaveAttendanceOptions {
   /**
-   * Write outside the lesson window. ADR-0046: after a lesson ends nobody on
+   * Write outside the lesson window. ADR-0047: after a lesson ends nobody on
    * the site may enter or change its attendance; a correction is made only on
    * the CEO's order, from a script. No HTTP route passes this.
    */
@@ -693,7 +693,7 @@ with
       date,
       companyId,
     );
-    // ADR-0046: a QR session is attendance too — inside the window only.
+    // ADR-0047: a QR session is attendance too — inside the window only.
     this.attendanceService.assertWindowOpen({
       lessonDay: date,
       startTime: lesson.startTime,
@@ -721,7 +721,7 @@ import { AttendanceValidationService } from './attendance-validation.service';
 After the `if (!group) { throw ... }` block in `scanQr`, insert:
 
 ```ts
-    // ADR-0046: a scan writes attendance, so the lesson window applies — a
+    // ADR-0047: a scan writes attendance, so the lesson window applies — a
     // token that outlives the lesson must not mark anyone.
     const lesson = await this.validation.validateLessonDate(
       groupId,
@@ -756,7 +756,7 @@ with
       date,
       companyId,
     );
-    // ADR-0046: after the lesson ends its attendance is closed, and a
+    // ADR-0047: after the lesson ends its attendance is closed, and a
     // pre-mark only ever seeds that attendance.
     this.validation.assertLessonNotEnded({
       lessonDay: date,
@@ -1011,7 +1011,7 @@ import { departureRelease } from './departure-release';
 import { paymentDueDate } from './payment-due-date';
 
 /**
- * Contract 3.2 (ADR-0046): the first lesson of a month may be attended
+ * Contract 3.2 (ADR-0047): the first lesson of a month may be attended
  * unpaid; from the 2nd a student attends only as far as their payments
  * reach, older debt included. It applies to lessons from the new contract's
  * first day.
@@ -1142,7 +1142,7 @@ export interface PaymentReach {
 }
 
 /**
- * How far a payment reaches this month (the payment dialog, ADR-0046).
+ * How far a payment reaches this month (the payment dialog, ADR-0047).
  * Null when the rule does not apply or no lesson is left this month.
  */
 export function paymentReach(input: {
@@ -1287,7 +1287,7 @@ import {
 type Reader = Prisma.TransactionClient | PrismaService;
 
 /**
- * Loads what `lessonAdmission` / `paymentReach` judge (ADR-0046): the
+ * Loads what `lessonAdmission` / `paymentReach` judge (ADR-0047): the
  * student's balance and their CHARGED month charges on ACTIVE enrollments —
  * a departed or frozen enrollment's lessons are not "still held".
  */
@@ -1506,7 +1506,7 @@ Constructor gains `private admission: LessonAdmissionService,`. Replace `getByDa
 
 ```ts
   /**
-   * The roster plus what the screen must obey (ADR-0046): the lesson window
+   * The roster plus what the screen must obey (ADR-0047): the lesson window
    * and, per student, whether contract 3.2 admits them to this lesson.
    */
   async getByDate(
@@ -1549,7 +1549,7 @@ In `server/src/attendance/attendance-save.service.ts`:
           ]),
         );
 
-        // ADR-0046 / contract 3.2: from the month's 2nd lesson a student
+        // ADR-0047 / contract 3.2: from the month's 2nd lesson a student
         // attends only as far as their payments reach. A blocked student may
         // be left off the roster or marked EXCUSED (an announced absence);
         // any other new mark is refused below.
@@ -1590,7 +1590,7 @@ In `server/src/attendance/attendance-save.service.ts`:
 In `server/src/attendance/qr-attendance-scan.service.ts` import `LessonAdmissionService` and add `private admission: LessonAdmissionService,` as the last constructor parameter. Replace the comment block that starts `// No balance gate: a student with insufficient balance is allowed to` (5 lines) with:
 
 ```ts
-    // Contract 3.2 (ADR-0046): from the month's 2nd lesson a scan admits only
+    // Contract 3.2 (ADR-0047): from the month's 2nd lesson a scan admits only
     // a student whose payments reach this lesson.
     const admission = await this.admission.forLesson({
       groupId,
@@ -1676,7 +1676,7 @@ import { tashkentDateStr } from '../common/date/tashkent';
 `MonthlyPreview` gains:
 
 ```ts
-  // Contract 3.2 (ADR-0046): how far the balance after this payment reaches
+  // Contract 3.2 (ADR-0047): how far the balance after this payment reaches
   // this month's lessons, and what the next one still needs. Null before the
   // rule starts or with no lesson left this month.
   admission: PaymentReach | null;
@@ -1741,7 +1741,7 @@ In `server/src/payments/payments.service.spec.ts` add `import { PaymentPromisesS
 `server/src/payments/dto/create-payment.dto.ts`: add `IsDateString` to the `class-validator` import and the field
 
 ```ts
-  // ADR-0046: a part payment carries the date the rest will be paid by.
+  // ADR-0047: a part payment carries the date the rest will be paid by.
   @IsOptional()
   @IsDateString()
   promiseDate?: string;
@@ -1750,7 +1750,7 @@ In `server/src/payments/payments.service.spec.ts` add `import { PaymentPromisesS
 `server/src/payments/payments-write.service.ts`: import `PaymentPromisesService` from `'../payment-promises/payment-promises.service'`, add `private paymentPromises: PaymentPromisesService,` as the last constructor parameter, and just before `return { ...payment, studentBalance };` at the end of `create` insert:
 
 ```ts
-    // ADR-0046 / contract 3.2: a part payment carries a promise for the rest.
+    // ADR-0047 / contract 3.2: a part payment carries a promise for the rest.
     // The payment stands whatever happens to the promise.
     if (dto.promiseDate && (studentBalance ?? 0) < 0) {
       try {
@@ -1978,7 +1978,7 @@ Expected: FAIL — modules not found.
 import { tashkentNow } from "@/lib/tashkent-time";
 
 /**
- * Mirror of the server's attendance window (ADR-0046,
+ * Mirror of the server's attendance window (ADR-0047,
  * `server/src/attendance/shared/lesson-window.ts`): it opens 10 minutes
  * before the lesson and closes when it ends, Tashkent time, for every role.
  * The server enforces it; this copy only drives the screen between fetches.
@@ -2025,7 +2025,7 @@ import { windowOpensAt, type LessonWindowState } from "@/lib/lesson-window";
 
 export type WindowBannerTone = "info" | "success" | "warning" | "danger";
 
-/** The one line the attendance screen shows about its window (ADR-0046). */
+/** The one line the attendance screen shows about its window (ADR-0047). */
 export function windowBanner(p: {
   state: LessonWindowState;
   startTime: string | null;
@@ -2087,14 +2087,14 @@ export function windowBanner(p: {
 In `client/src/components/groups/attendance/attendance-form-utils.ts` add (import `LessonWindowState` from `@/lib/lesson-window`):
 
 ```ts
-/** The lesson's attendance window from GET /attendance/:groupId/date/:date (ADR-0046). */
+/** The lesson's attendance window from GET /attendance/:groupId/date/:date (ADR-0047). */
 export interface LessonWindowInfo {
   state: LessonWindowState;
   startTime: string | null;
   endTime: string | null;
 }
 
-/** Contract 3.2 admission of one student to this lesson (ADR-0046). */
+/** Contract 3.2 admission of one student to this lesson (ADR-0047). */
 export interface LessonAdmission {
   admitted: boolean;
   reason: "NOT_APPLIED" | "FIRST_LESSON" | "PAID" | "NOT_PAID";
@@ -2128,7 +2128,7 @@ In `client/src/components/groups/attendance/attendance-form.tsx`:
 3. Replace the whole `const lessonTimeInfo = (() => { ... })();` block and the `isLocked` / `isPlanningContext` definitions with:
 
 ```tsx
-  // ADR-0046: one window for every role — 10 minutes before the start until
+  // ADR-0047: one window for every role — 10 minutes before the start until
   // the end. The server sends the lesson's effective times (a move's override
   // included); before the first fetch the group's own times stand in.
   const windowTimes = serverWindow ?? {
@@ -2308,7 +2308,7 @@ import type { LessonAdmission } from "./attendance-form-utils";
 
 const ddmm = (day: string) => `${day.slice(8, 10)}.${day.slice(5, 7)}`;
 
-/** What a roster row says about contract 3.2 admission (ADR-0046). */
+/** What a roster row says about contract 3.2 admission (ADR-0047). */
 export function admissionCopy(
   admission: LessonAdmission | undefined,
   isAdmin: boolean,
@@ -2512,7 +2512,7 @@ Expected: FAIL — module not found.
 ```ts
 import { formatPrice } from "@/lib/format-utils";
 
-/** GET /payments/preview → monthly.admission (ADR-0046, contract 3.2). */
+/** GET /payments/preview → monthly.admission (ADR-0047, contract 3.2). */
 export interface PaymentReach {
   paidThrough: string | null;
   next: { date: string; groupName: string; needed: number } | null;
@@ -2630,15 +2630,15 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 10: ADR, docs, full verification
 
 **Files:**
-- Create: `docs/adr/0046-davomat-oynasi-va-tolovsiz-oquvchi.md`
+- Create: `docs/adr/0047-davomat-oynasi-va-tolovsiz-oquvchi.md`
 - Modify: `docs/adr/README.md` (row 0045)
 - Modify: `server/CLAUDE.md` (Attendance section)
 - Modify: `docs/superpowers/specs/2026-09-27-davomat-va-tolov-tartibi-design.md` (script line)
 
-- [ ] **Step 1: Write ADR-0046 (Uzbek)**
+- [ ] **Step 1: Write ADR-0047 (Uzbek)**
 
 ```markdown
-# ADR-0046 — Davomat dars tugashi bilan yopiladi; to'lov qilmagan o'quvchi 2-darsdan puli yetgan darslargacha qatnashadi
+# ADR-0047 — Davomat dars tugashi bilan yopiladi; to'lov qilmagan o'quvchi 2-darsdan puli yetgan darslargacha qatnashadi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-09-27
@@ -2726,14 +2726,14 @@ oldin boradi).
 `server/CLAUDE.md`: in «Date & Time Validation», replace item 7 (the three «Lesson time check» bullets) with:
 
 ```markdown
-7. **The lesson window is NOT here.** `validateLessonDate` returns the effective `startTime`/`endTime` (a reschedule's override wins); the clock lives in `assertWindowOpen` / `assertLessonNotEnded` / `windowFor` (ADR-0046).
+7. **The lesson window is NOT here.** `validateLessonDate` returns the effective `startTime`/`endTime` (a reschedule's override wins); the clock lives in `assertWindowOpen` / `assertLessonNotEnded` / `windowFor` (ADR-0047).
 
-#### Lesson window (ADR-0046)
+#### Lesson window (ADR-0047)
 
 - `lessonWindowState` (`src/attendance/shared/lesson-window.ts`): `[start − 10 min, end]` Tashkent time. **Every role** — Teacher, Administrator, Branch Director, CEO — is bound: `save`, QR `startSession` and `scanQr` call `assertWindowOpen`; pre-marks call `assertLessonNotEnded`. Past and future dates are therefore closed to everyone. The only bypass is `SaveAttendanceOptions.allowClosedLesson`, reserved for a script run on the CEO's order — no HTTP route passes it.
 - `GET /attendance/:groupId/date/:date` returns `window` (state + effective times) so the client (`client/src/lib/lesson-window.ts`, a mirror) locks the form at the end.
 
-#### Admission (contract 3.2, ADR-0046)
+#### Admission (contract 3.2, ADR-0047)
 
 - `lessonAdmission` (`src/billing/lesson-admission.ts`), loaded by `LessonAdmissionService`: from 2026-10-01, a student's first lesson of the month in a group is free; from the 2nd they are admitted iff `balance + heldAfter(month charges, day) ≥ 0` (`heldAfter` = `departureRelease` summed over the student's CHARGED charges on ACTIVE enrollments). A payment promise never admits.
 - The roster returns `admission` per student. `save` refuses PRESENT/LATE/ABSENT for a blocked student (EXCUSED allowed, unchanged mark not re-judged) and the full-roster check skips them; `scanQr` refuses them.
@@ -2756,8 +2756,8 @@ Expected: typecheck clean, lint 0 errors, every server suite and client test pas
 - [ ] **Step 4: Commit**
 
 ```bash
-git add docs/adr/0046-davomat-oynasi-va-tolovsiz-oquvchi.md docs/adr/README.md server/CLAUDE.md docs/superpowers/specs/2026-09-27-davomat-va-tolov-tartibi-design.md
-git commit -m "docs: ADR-0046 — the lesson window and contract 3.2 admission
+git add docs/adr/0047-davomat-oynasi-va-tolovsiz-oquvchi.md docs/adr/README.md server/CLAUDE.md docs/superpowers/specs/2026-09-27-davomat-va-tolov-tartibi-design.md
+git commit -m "docs: ADR-0047 — the lesson window and contract 3.2 admission
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```

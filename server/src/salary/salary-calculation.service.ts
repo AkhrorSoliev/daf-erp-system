@@ -823,7 +823,7 @@ export class SalaryCalculationService {
         const g = groupMap.get(att.groupId);
         if (!g) continue;
         const dStr = dateStr(att.date);
-        // ADR-0047 (R4): waits for the student's payment, never fronted.
+        // ADR-0048 (R4): waits for the student's payment, never fronted.
         if (awaitsStudentPayment(att, g.course, dStr, backlogFrozen)) {
           continue;
         }

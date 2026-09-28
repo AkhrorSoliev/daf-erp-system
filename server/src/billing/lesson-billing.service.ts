@@ -41,7 +41,7 @@ const BILLABLE: ReadonlySet<AttendanceStatus> = new Set([
   AttendanceStatus.ABSENT,
 ]);
 
-/** The student came: the marks the centre's first lesson is for (ADR-0048). */
+/** The student came: the marks the centre's first lesson is for (ADR-0049). */
 const ATTENDED: ReadonlySet<AttendanceStatus> = new Set([
   AttendanceStatus.PRESENT,
   AttendanceStatus.LATE,
@@ -158,7 +158,7 @@ export class LessonBillingService {
     if (params.oldStatus !== null && wasBillable === isBillable) {
       // Billable → billable changes nothing, except across ABSENT: a debtor's
       // unpaid first lesson pays the teacher only if the student came
-      // (ADR-0047, R4). createAccrual is idempotent, so re-accruing a lesson
+      // (ADR-0048, R4). createAccrual is idempotent, so re-accruing a lesson
       // that already has its accrual is a no-op.
       const wasAbsent = params.oldStatus === AttendanceStatus.ABSENT;
       const isAbsent = params.newStatus === AttendanceStatus.ABSENT;
@@ -186,7 +186,7 @@ export class LessonBillingService {
           delta: -1,
         });
       }
-      // ADR-0047 (R4): a debtor ABSENT at the month's first lesson earns the
+      // ADR-0048 (R4): a debtor ABSENT at the month's first lesson earns the
       // teacher nothing yet; the payment that covers it writes the accrual
       // (`accrueDeferredFirstLessons`).
       if (await this.isDeferredFirstLesson(tx, params)) return;
@@ -232,7 +232,7 @@ export class LessonBillingService {
   }
 
   /**
-   * ADR-0047 (R4): an ABSENT mark on the student's first lesson of the month
+   * ADR-0048 (R4): an ABSENT mark on the student's first lesson of the month
    * in this group, from 01.10.2026, that their payments do not reach. The
    * centre covers the first lesson for the teacher only when the student
    * came; otherwise the teacher is paid when the student pays.
@@ -251,7 +251,7 @@ export class LessonBillingService {
   }
 
   /**
-   * ADR-0048 (R1): a student who came (PRESENT/LATE) to their first lesson of
+   * ADR-0049 (R1): a student who came (PRESENT/LATE) to their first lesson of
    * the month in this group, from 01.10.2026, without their payments reaching
    * it: the accrual just written is the centre's money, not the student's.
    * The payment that covers the lesson clears it (`accrueDeferredFirstLessons`).
@@ -576,7 +576,7 @@ export class LessonBillingService {
       }
     }
 
-    // Phase 1b (ADR-0047, R4): a debtor's ABSENT first lesson of a month
+    // Phase 1b (ADR-0048, R4): a debtor's ABSENT first lesson of a month
     // accrues nothing until their payments reach it. This payment may have.
     // Every monthly group counts, not only the ACTIVE enrollments above: a
     // student who has since left still paid for the lessons they were billed.
@@ -734,7 +734,7 @@ export class LessonBillingService {
    * financial layer) and delegates to `processRetroactiveBillingForStudent`.
    */
   /**
-   * ADR-0047 (R4): writes the teacher's accrual for every ABSENT first lesson
+   * ADR-0048 (R4): writes the teacher's accrual for every ABSENT first lesson
    * of a month (from 01.10.2026, monthly courses) that has no live accrual and
    * that the student's payments now reach. An ABSENT that was not a first
    * lesson was accrued when it was marked, so `firstLessonCoverage` leaves it
@@ -742,7 +742,7 @@ export class LessonBillingService {
    * a payment after the month's payroll closed carries it over
    * (`createAccrual`), and a repeat run finds nothing left to write.
    *
-   * ADR-0048 (R2): the same pass clears `isCenterTopUp` on a PRESENT/LATE
+   * ADR-0049 (R2): the same pass clears `isCenterTopUp` on a PRESENT/LATE
    * first lesson the centre fronted (R1) once the payments reach it;
    * `wasCenterTopUp` stays, so the month keeps showing what the centre
    * advanced.
@@ -770,7 +770,7 @@ export class LessonBillingService {
         },
         orderBy: { date: 'asc' },
       }),
-      // ADR-0048 (R2): the centre's first lessons still waiting for the
+      // ADR-0049 (R2): the centre's first lessons still waiting for the
       // student's money.
       tx.salaryAccrual.findMany({
         where: {

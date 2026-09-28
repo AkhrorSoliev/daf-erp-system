@@ -1,12 +1,12 @@
-# ADR-0047 — «Berilmadi», kechikish daqiqasi, sinov darsi (3.5) va qarzdorning 1-darsga kelmagani
+# ADR-0048 — «Berilmadi», kechikish daqiqasi, sinov darsi (3.5) va qarzdorning 1-darsga kelmagani
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-09-27
-**Bog'liq:** ADR-0046 (davomat oynasi va darsga qo'yish — uning 2-bosqichi); shartnomaning 3.2 va 3.5-bandlari; ADR-0044 (ketish tartiblari); `server/src/salary/shared/missed-lessons.ts`, `server/src/salary/salary-missed-lessons.service.ts`, `server/src/billing/month-plan.ts`, `server/src/attendance/shared/lesson-window.ts` (`minutesLate`, `lateArrival`), `server/src/billing/departure-policy.ts`, `server/src/billing/lesson-billing.service.ts`, `server/src/billing/lesson-admission.ts`, `server/src/billing/lesson-admission.service.ts`, `server/src/salary/shared/gap-sweep.ts`
+**Bog'liq:** ADR-0047 (davomat oynasi va darsga qo'yish — uning 2-bosqichi); shartnomaning 3.2 va 3.5-bandlari; ADR-0044 (ketish tartiblari); `server/src/salary/shared/missed-lessons.ts`, `server/src/salary/salary-missed-lessons.service.ts`, `server/src/billing/month-plan.ts`, `server/src/attendance/shared/lesson-window.ts` (`minutesLate`, `lateArrival`), `server/src/billing/departure-policy.ts`, `server/src/billing/lesson-billing.service.ts`, `server/src/billing/lesson-admission.ts`, `server/src/billing/lesson-admission.service.ts`, `server/src/salary/shared/gap-sweep.ts`
 
 ## Kontekst
 
-ADR-0046 davomatni dars tugashi bilan yopdi va to'lovsiz o'quvchini 2-darsdan
+ADR-0047 davomatni dars tugashi bilan yopdi va to'lovsiz o'quvchini 2-darsdan
 to'xtatdi. To'rtta narsa keyingi bosqichga qoldirilgan edi:
 
 1. Davomat olinmagan dars uchun ustoz haq olmaydi, lekin buni hech qayerda
@@ -16,7 +16,7 @@ to'xtatdi. To'rtta narsa keyingi bosqichga qoldirilgan edi:
 3. Shartnoma 3.5: birinchi marta kelgan o'quvchi birinchi darsdan keyin
    ketsa, hech narsa to'lamaydi. Hozir oyning to'liq puli yechiladi va
    ketishda faqat o'tilmagan darslar qaytadi.
-4. Oyning 1-darsini markaz ustozga qoplaydi — ADR-0046 buni «faqat o'quvchi
+4. Oyning 1-darsini markaz ustozga qoplaydi — ADR-0047 buni «faqat o'quvchi
    kelgan bo'lsa» deb qo'ygan edi, kod esa kelmagan (ABSENT) qarzdor uchun ham
    haq yozardi.
 
@@ -74,12 +74,12 @@ to'xtatdi. To'rtta narsa keyingi bosqichga qoldirilgan edi:
 5. **Sozlamalar (CEO, 28.09.2026).** `/settings/payment` da, faqat
    kompaniya darajasida, faqat CEO o'zgartiradi:
    - `payment.admissionRuleEnabled` (standart yoqilgan) — 3.2 qoidasi
-     (ADR-0046 2-bandi). O'chirilsa hamma darsga qo'yiladi va to'lov
+     (ADR-0047 2-bandi). O'chirilsa hamma darsga qo'yiladi va to'lov
      oynasi «qaysi darsgacha yetadi» ni ko'rsatmaydi. Qarzdorning 1-darsi
      (4-band) bu tugmaga bog'liq emas.
    - `payment.trialLessonEnabled` (standart yoqilgan) — 3-band.
    - `payment.attendanceOpensMinutesBefore` (0–60, standart 10) — davomat
-     oynasi dars boshlanishidan necha daqiqa oldin ochiladi (ADR-0046
+     oynasi dars boshlanishidan necha daqiqa oldin ochiladi (ADR-0047
      1-bandidagi «10 daqiqa» endi sozlamadan o'qiladi). Server rad etish
      xabarida ham, `window` javobida ham shu qiymat ishlatiladi; mijoz
      undan o'qiydi.

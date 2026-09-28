@@ -312,7 +312,7 @@ export class PaymentsWriteService {
       } satisfies SalaryCarriedOverPayload);
     }
 
-    // ADR-0046 / contract 3.2: a part payment carries a promise for the rest.
+    // ADR-0047 / contract 3.2: a part payment carries a promise for the rest.
     // The payment stands whatever happens to the promise.
     if (dto.promiseDate && (studentBalance ?? 0) < 0) {
       try {

@@ -85,7 +85,7 @@ describe('windowRefusal', () => {
   });
 });
 
-describe('minutesLate (ADR-0047)', () => {
+describe('minutesLate (ADR-0048)', () => {
   const lesson = { lessonDay: '2026-10-05', startTime: '14:00' };
   it('counts whole minutes from the Tashkent start', () => {
     // 14:17:40 Tashkent = 09:17:40Z.
@@ -110,7 +110,7 @@ describe('minutesLate (ADR-0047)', () => {
   });
 });
 
-describe('lateArrival (ADR-0047)', () => {
+describe('lateArrival (ADR-0048)', () => {
   const base = {
     lessonAlreadyTaken: true,
     savedByTeacherOnly: false,

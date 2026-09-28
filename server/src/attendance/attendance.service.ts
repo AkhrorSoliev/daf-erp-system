@@ -39,7 +39,7 @@ export class AttendanceService {
   }
 
   /**
-   * The roster plus what the screen must obey (ADR-0046): the lesson window
+   * The roster plus what the screen must obey (ADR-0047): the lesson window
    * and, per student, whether contract 3.2 admits them to this lesson.
    */
   async getByDate(

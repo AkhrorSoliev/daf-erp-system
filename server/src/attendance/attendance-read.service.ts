@@ -665,7 +665,7 @@ export class AttendanceReadService {
           group.course.lessonPaymentCount,
         ),
         status: att?.status ?? null,
-        // «N daqiqa kechikdi» (ADR-0047): set only on a LATE row an
+        // «N daqiqa kechikdi» (ADR-0048): set only on a LATE row an
         // administrator marked after the lesson's first save.
         lateMinutes: att?.lateMinutes ?? null,
         note: att?.note ?? null,

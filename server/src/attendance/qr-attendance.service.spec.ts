@@ -120,7 +120,7 @@ describe('QrAttendanceService', () => {
       assertWindowOpen: jest.fn(),
     };
 
-    // The scan path checks the lesson window itself (ADR-0046).
+    // The scan path checks the lesson window itself (ADR-0047).
     validation = {
       validateLessonDate: jest.fn().mockResolvedValue({
         startTime: '09:00',

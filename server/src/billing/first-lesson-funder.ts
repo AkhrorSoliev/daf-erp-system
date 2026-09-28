@@ -1,7 +1,7 @@
 import type { Prisma } from '@prisma/client';
 
 /**
- * ADR-0048: the centre covers a student's first lesson of the month for the
+ * ADR-0049: the centre covers a student's first lesson of the month for the
  * teacher when the student came and has not paid for it. The accrual itself
  * is written as usual (same amount, same teacher); this only records who
  * funded it, with the flags the salary report and the X/Y/Z recovery card
