@@ -11,7 +11,10 @@ export type FrageFormat =
   | 'DIALOG_LUECKE'
   | 'AUDIO_WORT'
   | 'WORT_TIPPEN'
-  | 'HOEREN_WAHL';
+  | 'HOEREN_WAHL'
+  | 'BILD_WORT'
+  | 'AUDIO_BILD'
+  | 'BILD_TIPPEN';
 
 export interface MaterialWort {
   id: number;
@@ -23,6 +26,17 @@ export interface MaterialWort {
   sectionCode: string;
   /** R2 kaliti; `null` — audio hali yasalmagan, audio savol qurilmaydi. */
   audioKey: string | null;
+  /**
+   * Random R2 key of the word's picture (`daf/bild/<hex>.jpg`); absent or
+   * `null` — no picture yet, and no picture question is built.
+   */
+  imageKey?: string | null;
+  /**
+   * The picture names this word alone (a bicycle, a bus), so a student may
+   * be asked to type the word from it. People and states stay `false`:
+   * "die Frau" is a correct name for the grandmother's picture too.
+   */
+  bildTippen?: boolean;
 }
 
 export interface MaterialSatz {
@@ -128,6 +142,11 @@ export interface Frage {
    * eshitishni emas, o'qishni tekshirardi.
    */
   audioUrl: string | null;
+  /**
+   * `BILD_TIPPEN` only: the picture shown as the question. Choice formats
+   * (`BILD_WORT`, `AUDIO_BILD`) carry their pictures in `options` instead.
+   */
+  bildUrl?: string | null;
 }
 
 /** `belegteItems`/seans ichidagi band material kalitini quradi. */
@@ -148,6 +167,8 @@ export interface PublicFrage {
   titel?: string | null;
   /** `Frage.audioUrl` bilan bir xil — qarang yuqorida. */
   audioUrl: string | null;
+  /** `Frage.bildUrl` — the picture of a `BILD_TIPPEN` question. */
+  bildUrl?: string | null;
 }
 
 export function toPublic(f: Frage, index: number): PublicFrage {
@@ -161,5 +182,6 @@ export function toPublic(f: Frage, index: number): PublicFrage {
     options: f.options,
     titel: f.titel,
     audioUrl: f.audioUrl,
+    bildUrl: f.bildUrl ?? null,
   };
 }

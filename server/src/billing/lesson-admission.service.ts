@@ -13,7 +13,7 @@ import {
 type Reader = Prisma.TransactionClient | PrismaService;
 
 /**
- * Loads what `lessonAdmission` / `paymentReach` judge (ADR-0045): the
+ * Loads what `lessonAdmission` / `paymentReach` judge (ADR-0046): the
  * student's balance and their CHARGED month charges on ACTIVE enrollments —
  * a departed or frozen enrollment's lessons are not "still held".
  */

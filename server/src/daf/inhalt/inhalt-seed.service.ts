@@ -10,6 +10,9 @@ import type {
 import type { AudioManifest } from '../media/audio-keys';
 import { audioSchluesselFuer } from '../media/audio-keys';
 import type { DialogAudioManifest } from './dialog-audio';
+import type { BildManifest } from '../media/bild-keys';
+import { bildSchluesselFuer } from '../media/bild-keys';
+import type { BildPlan } from './bild-plan';
 
 export interface InhaltFiles {
   woerter: WoerterFile;
@@ -31,6 +34,10 @@ export interface InhaltFiles {
    * yozuv yo'q bo'lsa `null` (eski kalit qolib ketmaydi).
    */
   dialogAudio?: DialogAudioManifest;
+  /** `content/daf/a1/bilder.json` — picture keys; optional like `audio`. */
+  bilder?: BildManifest;
+  /** `content/daf/a1/bild-plan.json` — the `tippen` flag per word. */
+  bildPlan?: BildPlan;
 }
 
 export interface InhaltSeedReport {
@@ -163,6 +170,10 @@ export class InhaltSeedService {
         // endi yo'q faylga ishora qiladigan so'z qolib, o'quvchi
         // yangramaydigan tugmani ko'rardi.
         audioKey: audioSchluesselFuer(files.audio ?? {}, w.sourceId),
+        // Same rule for pictures: the manifest is the source, so a key
+        // removed from it clears the stale one.
+        imageKey: bildSchluesselFuer(files.bilder ?? {}, w.sourceId),
+        bildTippen: files.bildPlan?.[w.sourceId]?.tippen ?? false,
       };
       await this.prisma.dafLexeme.upsert({
         where: { sourceId: w.sourceId },

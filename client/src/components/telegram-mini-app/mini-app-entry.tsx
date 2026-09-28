@@ -1,12 +1,12 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState } from "react";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
-import { Button, Card } from "@/components/student-portal/lumio";
+import { Button } from "@/components/student-portal/lumio";
 import {
   ArrowClockwise,
   CaretRight,
@@ -16,29 +16,41 @@ import {
   TelegramLogo,
   User,
   WarningCircle,
-  X,
 } from "@/components/student-portal/lumio/icon";
 import {
   TELEGRAM_WEB_APP_SCRIPT,
   bouncedAfterSignIn,
   clearMiniAppSignedIn,
-  closeMiniApp,
   getTelegramWebApp,
   markMiniAppSession,
   markMiniAppSignedIn,
   markMiniAppSignedOut,
+  miniAppAudienceForHost,
+  staffCabinetPath,
   wasSignedOutInMiniApp,
+  type MiniAppAudience,
   type MiniAppSignInResult,
+  type MiniAppStaffSignInResult,
   type MiniAppStudent,
 } from "@/lib/telegram-mini-app";
+import {
+  CloseButton,
+  Notice,
+  NotRegisteredNotice,
+  StaffAccountNotice,
+} from "./mini-app-notices";
 
 type View =
   | { kind: "loading" }
   | { kind: "outside" }
   | { kind: "signed_out" }
   | { kind: "choose"; students: MiniAppStudent[] }
-  | { kind: "not_registered" }
+  | { kind: "not_registered"; audience: MiniAppAudience }
+  /** O'quvchi kabinetini xodim ochdi (ADR-0045). */
+  | { kind: "staff_account" }
   | { kind: "error"; message: string; retry: () => void };
+
+type Session = Extract<MiniAppSignInResult, { status: "authenticated" }>;
 
 const SIGN_IN_FAILED =
   "Kirib bo'lmadi. Internetni tekshirib, qayta urinib ko'ring.";
@@ -48,11 +60,12 @@ const SESSION_NOT_KEPT =
   "Kirish bu oynada saqlanmadi. Telegram'ning brauzer versiyasida shunday bo'lishi mumkin — kabinetni telefon yoki kompyuterdagi Telegram ilovasidan oching.";
 
 /**
- * Telegram Mini App'ning kirish nuqtasi (ADR-0040).
+ * Telegram Mini App'ning kirish nuqtasi: `student.` xostida o'quvchi kabineti
+ * (ADR-0040), `lehrer.` va `admin.` xostlarida xodim kabineti (ADR-0045).
  *
- * Telegram akkaunti o'quvchiga bog'langan bo'lsa — avtomatik kiradi (parolsiz),
- * bog'lanmagan bo'lsa — xabar. Telefon/parol formasi bu yerda yo'q: Mini App
- * ichida kirish faqat Telegram orqali.
+ * Telegram akkaunti kabinet egasiga bog'langan bo'lsa — avtomatik kiradi
+ * (parolsiz), bog'lanmagan bo'lsa — xabar. Telefon/parol formasi bu yerda yo'q:
+ * Mini App ichida kirish faqat Telegram orqali.
  */
 export function MiniAppEntry() {
   const router = useRouter();
@@ -60,29 +73,51 @@ export function MiniAppEntry() {
   const clearSession = useAuth((s) => s.clearSession);
   const [view, setView] = useState<View>({ kind: "loading" });
   const initData = useRef("");
+  // Xost va `?next=` `start()` da o'qiladi — server render'da `window` yo'q.
+  const audience = useRef<MiniAppAudience>("student");
+  const nextPage = useRef<string | null>(null);
   // `onReady` har mount'da chaqiriladi (Strict Mode'da ikki marta) — bitta
   // ochilish bitta so'rov bo'lsin.
   const started = useRef(false);
 
+  function enter(session: Session, path: string) {
+    markMiniAppSignedOut(false);
+    markMiniAppSignedIn();
+    setAuth(session.user, session.accessToken, session.refreshToken);
+    router.replace(path);
+  }
+
+  async function signInStudent(studentId?: number) {
+    const { data } = await api.post<MiniAppSignInResult>(
+      "/auth/telegram/webapp",
+      studentId === undefined
+        ? { initData: initData.current }
+        : { initData: initData.current, studentId },
+    );
+    if (data.status === "authenticated") enter(data, "/portal");
+    else if (data.status === "choose") {
+      setView({ kind: "choose", students: data.students });
+    } else if (data.status === "staff") setView({ kind: "staff_account" });
+    else setView({ kind: "not_registered", audience: "student" });
+  }
+
+  async function signInStaff() {
+    const { data } = await api.post<MiniAppStaffSignInResult>(
+      "/auth/telegram/webapp/staff",
+      { initData: initData.current },
+    );
+    if (data.status === "authenticated") {
+      enter(data, staffCabinetPath(nextPage.current));
+    } else {
+      setView({ kind: "not_registered", audience: "staff" });
+    }
+  }
+
   async function signIn(studentId?: number) {
     setView({ kind: "loading" });
     try {
-      const { data } = await api.post<MiniAppSignInResult>(
-        "/auth/telegram/webapp",
-        studentId === undefined
-          ? { initData: initData.current }
-          : { initData: initData.current, studentId },
-      );
-      if (data.status === "authenticated") {
-        markMiniAppSignedOut(false);
-        markMiniAppSignedIn();
-        setAuth(data.user, data.accessToken, data.refreshToken);
-        router.replace("/portal");
-      } else if (data.status === "choose") {
-        setView({ kind: "choose", students: data.students });
-      } else {
-        setView({ kind: "not_registered" });
-      }
+      if (audience.current === "staff") await signInStaff();
+      else await signInStudent(studentId);
     } catch (err) {
       setView({
         kind: "error",
@@ -111,6 +146,8 @@ export function MiniAppEntry() {
     }
 
     initData.current = webApp.initData;
+    audience.current = miniAppAudienceForHost(window.location.host);
+    nextPage.current = new URLSearchParams(window.location.search).get("next");
     markMiniAppSession();
     // Kirish har doim sessiyasiz boshlanadi: shu WebView'da boshqa Telegram
     // akkaunt qoldirgan sessiya bu akkauntga o'tib ketmasin.
@@ -241,38 +278,10 @@ function MiniAppView({
       );
 
     case "not_registered":
-      return (
-        <Notice
-          icon={<WarningCircle weight="bold" />}
-          title="Telegram akkauntingiz ro'yxatdan o'tmagan"
-          description="Bu Telegram akkaunt hech bir DaF o'quvchisiga bog'lanmagan."
-        >
-          {/* Admin panelida Telegram'ni bog'lash yo'q — bog'lash faqat botda,
-              odam o'z raqamini tasdiqlagandan keyin. «To'lovlar» buni boshqa
-              hech narsaga tegmasdan qiladi (parol tiklash esa parolni ham
-              almashtiradi). */}
-          <Card
-            pad="md"
-            className="space-y-2 text-left text-sm font-semibold text-ink-700"
-          >
-            <p>
-              DaF o'quvchisi bo'lsangiz: botga qayting, «💳 To'lovlar» tugmasini
-              bosing va «📱 Telefon raqamni yuborish» orqali raqamingizni
-              yuboring. Akkauntingiz bog'lanadi — so'ng kabinetni qayta oching.
-            </p>
-            <p className="text-ink-500">
-              Raqamingiz tizimda topilmasa, administrator bilan bog'laning.
-            </p>
-          </Card>
-          <Button
-            block
-            iconBefore={<TelegramLogo weight="fill" />}
-            onClick={closeMiniApp}
-          >
-            Botga qaytish
-          </Button>
-        </Notice>
-      );
+      return <NotRegisteredNotice audience={view.audience} />;
+
+    case "staff_account":
+      return <StaffAccountNotice />;
 
     case "error":
       return (
@@ -292,42 +301,4 @@ function MiniAppView({
         </Notice>
       );
   }
-}
-
-function Notice({
-  icon,
-  title,
-  description,
-  children,
-}: {
-  icon: ReactNode;
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-3 text-center">
-      <span className="mb-1 inline-flex size-16 items-center justify-center rounded-full bg-sunk text-3xl text-ink-400">
-        {icon}
-      </span>
-      <h1 className="font-display text-xl font-extrabold text-ink-900">
-        {title}
-      </h1>
-      <p className="text-sm font-semibold text-ink-500">{description}</p>
-      <div className="mt-2 w-full space-y-3">{children}</div>
-    </div>
-  );
-}
-
-function CloseButton() {
-  return (
-    <Button
-      block
-      variant="ghost"
-      iconBefore={<X weight="bold" />}
-      onClick={closeMiniApp}
-    >
-      Yopish
-    </Button>
-  );
 }

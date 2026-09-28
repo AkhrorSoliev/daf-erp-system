@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Context } from 'telegraf';
 import type { UserFromGetMe } from 'telegraf/types';
 import { createEmployeeRegistrationScene } from './employee-registration.scene';
@@ -389,5 +390,136 @@ describe('employee-registration.scene — a failed step releases the lock', () =
 
     expect(ctx.lockHeldWhenFailed).toBe(true);
     expect(ctx.session.processing).toBe(false);
+  });
+});
+
+/**
+ * Xodim kabineti (ADR-0045): ro'yxatdan o'tgan xodim darhol o'z menyusini
+ * ko'radi; qayta kelgan xodimga «allaqachon ro'yxatdan o'tgansiz» o'rniga
+ * menyu, kabinet o'chiq bo'lsa — o'z portalining manzili.
+ */
+describe('employee-registration.scene — xodim kabineti', () => {
+  function enterCtx() {
+    const update = {
+      update_id: 5,
+      message: {
+        message_id: 5,
+        date: 0,
+        chat: { id: 555222, type: 'private' },
+        from: { id: 555222, is_bot: false, first_name: 'T' },
+        text: '/start employee_x',
+      },
+    };
+    const ctx = new Context(update as any, {} as any, BOT_INFO) as any;
+    ctx.session = { step: 0, data: { branchId: 7, roleIds: [4] } };
+    ctx.scene = { leave: jest.fn().mockResolvedValue(undefined) };
+    ctx.reply = jest.fn().mockResolvedValue(undefined);
+    return ctx;
+  }
+
+  function sceneWith(
+    findFirst: jest.Mock,
+    cabinet?: { showMenuForChat: jest.Mock },
+    usersService = { create: jest.fn().mockResolvedValue({ id: 1 }) },
+  ) {
+    return createEmployeeRegistrationScene(
+      buildPrisma(findFirst),
+      { deleteFile: jest.fn() } as any,
+      usersService as any,
+      {} as any,
+      cabinet,
+    );
+  }
+
+  const enter = (scene: any, ctx: any) =>
+    scene.enterMiddleware()(ctx, async () => {});
+
+  it("qayta kelgan xodimga xodim menyusi — boshqa xabar yo'q", async () => {
+    const cabinet = { showMenuForChat: jest.fn().mockResolvedValue(true) };
+    const findFirst = jest.fn().mockResolvedValue({ roles: [{ roleId: 4 }] });
+    const ctx = enterCtx();
+
+    await enter(sceneWith(findFirst, cabinet), ctx);
+
+    expect(cabinet.showMenuForChat).toHaveBeenCalledWith(ctx);
+    expect(ctx.reply).not.toHaveBeenCalled();
+    expect(ctx.scene.leave).toHaveBeenCalled();
+  });
+
+  it.each([
+    ['faqat ustoz', [{ roleId: 4 }], 'https://lehrer.dafzentrum.uz'],
+    ['administrator', [{ roleId: 3 }], 'https://admin.dafzentrum.uz'],
+    [
+      'ustoz ham, kassir ham',
+      [{ roleId: 4 }, { roleId: 5 }],
+      'https://admin.dafzentrum.uz',
+    ],
+  ])(
+    "kabinet o'chiq bo'lsa — %s o'z portaliga yo'naltiriladi",
+    async (_label, roles, portalUrl) => {
+      const cabinet = { showMenuForChat: jest.fn().mockResolvedValue(false) };
+      const ctx = enterCtx();
+
+      await enter(
+        sceneWith(jest.fn().mockResolvedValue({ roles }), cabinet),
+        ctx,
+      );
+
+      expect(ctx.reply.mock.calls[0][0]).toContain(`(${portalUrl})`);
+      expect(ctx.scene.leave).toHaveBeenCalled();
+    },
+  );
+
+  it("ro'yxatdan o'tish tugagach — kirish ma'lumotlaridan keyin xodim menyusi", async () => {
+    const cabinet = { showMenuForChat: jest.fn().mockResolvedValue(true) };
+    const scene = sceneWith(jest.fn().mockResolvedValue(null), cabinet);
+    const ctx = buildConfirmCtx({
+      firstName: 'Doston',
+      lastName: 'Karimov',
+      phone: '901112233',
+      gender: 'MALE',
+      photo: 'https://example.com/photo.jpg',
+      branchId: 7,
+      roleIds: [4],
+    });
+
+    await scene.middleware()(ctx, async () => {});
+
+    expect(ctx.replyWithPhoto).toHaveBeenCalled();
+    expect(cabinet.showMenuForChat).toHaveBeenCalledWith(ctx);
+    expect(ctx.replyWithPhoto.mock.invocationCallOrder[0]).toBeLessThan(
+      cabinet.showMenuForChat.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("menyu yuborilmasa ham ro'yxatdan o'tish xato deb aytilmaydi — hisob ochilgan", async () => {
+    const cabinet = {
+      showMenuForChat: jest.fn().mockRejectedValue(new Error('chat not found')),
+    };
+    const usersService = { create: jest.fn().mockResolvedValue({ id: 1 }) };
+    const scene = sceneWith(
+      jest.fn().mockResolvedValue(null),
+      cabinet,
+      usersService,
+    );
+    const ctx = buildConfirmCtx({
+      firstName: 'Doston',
+      lastName: 'Karimov',
+      phone: '901112233',
+      gender: 'MALE',
+      photo: 'https://example.com/photo.jpg',
+      branchId: 7,
+      roleIds: [4],
+    });
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+
+    await scene.middleware()(ctx, async () => {});
+    warn.mockRestore();
+
+    expect(usersService.create).toHaveBeenCalledTimes(1);
+    expect(ctx.replyWithPhoto).toHaveBeenCalled();
+    expect(JSON.stringify(ctx.reply.mock.calls)).not.toContain('xatolik');
   });
 });

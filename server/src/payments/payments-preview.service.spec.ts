@@ -234,7 +234,7 @@ describe('PaymentsPreviewService', () => {
   });
 
   describe('MONTHLY courses', () => {
-    it('attaches how far a monthly payment reaches (ADR-0045)', async () => {
+    it('attaches how far a monthly payment reaches (ADR-0046)', async () => {
       const reach = {
         paidThrough: '2026-10-05',
         next: { date: '2026-10-07', groupName: '#029', needed: 3846 },

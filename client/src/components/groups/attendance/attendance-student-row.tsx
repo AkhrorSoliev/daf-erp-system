@@ -53,7 +53,7 @@ interface AttendanceStudentRowProps {
     note?: string,
   ) => void;
   onPlanRemove?: (studentId: number) => void;
-  // Admin only: collect the payment that admits a blocked student (ADR-0045).
+  // Admin only: collect the payment that admits a blocked student (ADR-0046).
   onCollectPayment?: (student: StudentAttendance) => void;
 }
 
@@ -75,7 +75,7 @@ export function AttendanceStudentRow({
   onCollectPayment,
 }: AttendanceStudentRowProps) {
   const statusCfg = STATUS_CONFIG.find((s) => s.value === entry?.status);
-  // Contract 3.2 (ADR-0045): a blocked student keeps their row, but only an
+  // Contract 3.2 (ADR-0046): a blocked student keeps their row, but only an
   // announced absence («Sababli») can be recorded for them.
   const admission = admissionCopy(student.admission, isAdmin);
   const rowBg = statusCfg?.activeBg ?? "";

@@ -34,6 +34,11 @@ import { createEmployeeRegistrationScene } from './scenes/employee-registration.
 import { createMockExamRegistrationScene } from './scenes/mock-exam-registration.scene';
 import { createPasswordResetScene } from './scenes/password-reset.scene';
 import { createStatementScene } from './scenes/statement.scene';
+import { StaffCabinet } from './staff/staff-cabinet';
+import {
+  STAFF_LINK_PAYLOAD,
+  createStaffLinkScene,
+} from './staff/staff-link.scene';
 import { approveLoginRequest } from './flows/app-login-otp-flow';
 import {
   answerPlatformMenu,
@@ -113,6 +118,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private botUsername?: string;
   /** O'quvchi portalining Mini App manzili (ADR-0040); yo'q bo'lsa — o'chiq. */
   private miniAppUrl?: string;
+  /** Xodim chatlari: menyu va «Kabinet» tugmasi (ADR-0045). */
+  private staffCabinet: StaffCabinet;
   /**
    * `/start` oqimi, `onModuleInit` ichida yaratiladi va shu yerda saqlanadi.
    *
@@ -161,6 +168,12 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     this.miniAppUrl =
       this.configService.get<string>('TELEGRAM_MINI_APP_URL')?.trim() ||
       undefined;
+    this.staffCabinet = new StaffCabinet(
+      this.prisma,
+      this.bot.telegram,
+      this.miniAppUrl,
+      this.logger,
+    );
 
     // Redis session store
     this.bot.use(
@@ -263,6 +276,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.uploadService,
       this.usersService,
       this.bot,
+      this.staffCabinet,
     );
 
     const mockExamScene = createMockExamRegistrationScene(
@@ -281,12 +295,19 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
     const statementScene = createStatementScene(this.prisma, this.statements);
 
+    const staffLinkScene = createStaffLinkScene(
+      this.prisma,
+      this.entityHistoryService,
+      this.staffCabinet,
+    );
+
     const stage = new Scenes.Stage<BotContext>([
       studentScene,
       employeeScene,
       mockExamScene,
       passwordResetScene,
       statementScene,
+      staffLinkScene,
     ]);
     this.bot.use(stage.middleware());
 
@@ -349,6 +370,15 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
       // student_{branchId}: student registration
       if (await this.startStudentRegistration(ctx, payload)) return;
+
+      // xodim: Telegram'ni xodim hisobiga bog'lash (ADR-0045)
+      if (payload === STAFF_LINK_PAYLOAD) {
+        await ctx.scene.enter(SCENES.STAFF_LINK);
+        return;
+      }
+
+      // Xodim chati — o'quvchi menyusi o'rniga xodim menyusi (ADR-0045).
+      if (await this.staffCabinet.greet(ctx)) return;
 
       // Salomlashish xabari reply-klaviaturani TOZALAYDI. Bu ataylab alohida
       // xabar: bitta xabarda ham inline tugmalar, ham `remove_keyboard`
@@ -494,6 +524,11 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       await ctx.reply('Bekor qilindi. Qayta boshlash uchun /start bosing.');
     });
 
+    // /xodim — `?start=xodim` havolasining buyruq ko'rinishi (ADR-0045)
+    this.bot.command(STAFF_LINK_PAYLOAD, async (ctx) => {
+      await ctx.scene.enter(SCENES.STAFF_LINK);
+    });
+
     // Parolni tiklash — sahnaga kirish
     this.bot.action('menu_password', async (ctx) => {
       await ctx.answerCbQuery();
@@ -522,10 +557,12 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       await this.sendMockResultPdf(ctx, chatId, examId);
     });
 
-    // Eski menyulardagi callback «🎓 Platformaga kirish» — Mini App tugmasi.
-    this.bot.action('menu_platform', async (ctx) =>
-      answerPlatformMenu(ctx, this.miniAppUrl),
-    );
+    // Eski menyulardagi callback «🎓 Platformaga kirish» — Mini App tugmasi
+    // (xodimga — xodim kabinetiniki).
+    this.bot.action('menu_platform', async (ctx) => {
+      if (await this.staffCabinet.answerPlatform(ctx)) return;
+      await answerPlatformMenu(ctx, this.miniAppUrl);
+    });
 
     // Menu action handlers — "Tez kunda" responses (boshqa tugmalar uchun)
     this.bot.action(/^menu_(registration|level|groups)$/, async (ctx) => {

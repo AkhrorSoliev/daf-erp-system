@@ -14,6 +14,15 @@ describe('bevorzugteFormate', () => {
     );
   });
 
+  it('Tanishuv prefers the picture choices, Ishlatish typing from a picture', () => {
+    expect(bevorzugteFormate('SECTION_A')).toEqual(
+      expect.arrayContaining(['BILD_WORT', 'AUDIO_BILD']),
+    );
+    expect(bevorzugteFormate('SECTION_B')).toEqual(
+      expect.arrayContaining(['BILD_TIPPEN']),
+    );
+  });
+
   it("O'tish sinovida moyillik YO'Q — ataylab aralash", () => {
     expect(bevorzugteFormate('BRIDGE')).toEqual([]);
   });
@@ -47,6 +56,9 @@ describe('bevorzugteFormate', () => {
       'AUDIO_WORT',
       'WORT_TIPPEN',
       'HOEREN_WAHL',
+      'BILD_WORT',
+      'AUDIO_BILD',
+      'BILD_TIPPEN',
     ];
     for (const kind of ['SECTION_A', 'SECTION_B', 'BRIDGE', 'UNIT_TEST']) {
       for (const f of bevorzugteFormate(kind)) {

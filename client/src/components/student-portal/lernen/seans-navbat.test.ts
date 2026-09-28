@@ -256,3 +256,37 @@ describe("seansIdYarat — zaxira (I2)", () => {
     );
   });
 });
+
+describe("rasmli savolda xato", () => {
+  it("rasm tanlashda so'z javob, to'g'ri rasm esa kichik nusxa bo'lib yoziladi", () => {
+    const savol = { ...f(1, "AUDIO_BILD"), prompt: "" };
+    const { holat } = javobBerildi(boshla([savol]), {
+      isCorrect: false,
+      richtig: "https://m/b1.jpg",
+      loesungWort: "der Bahnhof",
+    });
+    expect(holat.xatolar[0].richtig).toBe("der Bahnhof");
+    expect(holat.xatolar[0].bildUrl).toBe("https://m/b1.jpg");
+  });
+
+  it("rasmga qarab yozishda savol rasmi saqlanadi", () => {
+    const savol = {
+      ...f(1, "BILD_TIPPEN"),
+      prompt: "",
+      options: [],
+      bildUrl: "https://m/b1.jpg",
+    };
+    const { holat } = javobBerildi(boshla([savol]), {
+      isCorrect: false,
+      richtig: "der Bahnhof",
+      loesungWort: "der Bahnhof",
+    });
+    expect(holat.xatolar[0].richtig).toBe("der Bahnhof");
+    expect(holat.xatolar[0].bildUrl).toBe("https://m/b1.jpg");
+  });
+
+  it("boshqa formatlarda xato yozuvi o'zgarmaydi — rasm maydoni yo'q", () => {
+    const { holat } = javobBerildi(boshla([f(1)]), XATO);
+    expect(holat.xatolar[0]).not.toHaveProperty("bildUrl");
+  });
+});

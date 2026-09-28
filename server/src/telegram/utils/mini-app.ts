@@ -60,6 +60,39 @@ export async function answerPlatformMenu(
 }
 
 /**
+ * Bitta chatning «Kabinet» tugmasi (ADR-0045): manzil berilsa — shu chat uchun
+ * o'sha Mini App (xodim kabineti), berilmasa — botning standart tugmasiga
+ * qaytadi (o'quvchi kabineti).
+ *
+ * Telegram chatga qo'yilgan tugmani standartdan ustun qo'yadi, shuning uchun
+ * xodimda «Kabinet» xodim kabinetini, qolganlarda o'quvchi kabinetini ochadi.
+ * Xato bo'lsa faqat log: tugma — qulaylik, javob xabari baribir yuboriladi.
+ */
+export async function setChatCabinetButton(
+  telegram: Pick<Telegram, 'setChatMenuButton'>,
+  chatId: string,
+  url: string | undefined,
+  logger: Pick<LoggerService, 'warn'>,
+): Promise<void> {
+  try {
+    await telegram.setChatMenuButton({
+      chatId: Number(chatId),
+      menuButton: url
+        ? {
+            type: 'web_app',
+            text: MINI_APP_MENU_BUTTON_TEXT,
+            web_app: { url },
+          }
+        : { type: 'default' },
+    });
+  } catch (err) {
+    logger.warn(
+      `Chat ${chatId} uchun «Kabinet» tugmasini o'rnatib bo'lmadi: ${(err as Error).message}`,
+    );
+  }
+}
+
+/**
  * Xabar maydoni yonidagi doimiy «Kabinet» tugmasi — botning barcha shaxsiy
  * chatlari uchun standart menyu tugmasi (`chat_id`siz).
  *

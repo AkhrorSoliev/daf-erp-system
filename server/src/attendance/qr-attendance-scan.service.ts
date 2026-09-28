@@ -73,7 +73,7 @@ export class QrAttendanceScanService {
       throw new BadRequestException('Guruh topilmadi');
     }
 
-    // ADR-0045: a scan writes attendance, so the lesson window applies — a
+    // ADR-0046: a scan writes attendance, so the lesson window applies — a
     // token that outlives the lesson must not mark anyone.
     const lesson = await this.validation.validateLessonDate(
       groupId,
@@ -86,7 +86,7 @@ export class QrAttendanceScanService {
       endTime: lesson.endTime,
     });
 
-    // Contract 3.2 (ADR-0045): from the month's 2nd lesson a scan admits
+    // Contract 3.2 (ADR-0046): from the month's 2nd lesson a scan admits
     // only a student whose payments reach this lesson.
     const admission = await this.admission.forLesson({
       groupId,

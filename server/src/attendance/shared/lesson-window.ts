@@ -4,7 +4,7 @@ import {
 } from '../../common/date/tashkent';
 
 /**
- * The attendance window of one lesson (ADR-0045). It opens 10 minutes before
+ * The attendance window of one lesson (ADR-0046). It opens 10 minutes before
  * the lesson starts and closes when the lesson ends, Tashkent time. Every
  * role is bound by it — teacher, administrator, branch director and CEO
  * alike; after the end nobody on the site may enter or change attendance.

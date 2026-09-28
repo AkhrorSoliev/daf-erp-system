@@ -134,7 +134,7 @@ describe('AttendanceService', () => {
       getActiveHolidaysInRange: jest.fn().mockResolvedValue([]),
     };
 
-    // Contract 3.2 admission (ADR-0045): nobody blocked unless a test says so.
+    // Contract 3.2 admission (ADR-0046): nobody blocked unless a test says so.
     admission = { forLesson: jest.fn().mockResolvedValue(new Map()) };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -257,7 +257,7 @@ describe('AttendanceService', () => {
       expect(result.parsedDate).toEqual(new Date('2026-04-01T00:00:00.000Z'));
     });
 
-    describe('lesson window (ADR-0045)', () => {
+    describe('lesson window (ADR-0046)', () => {
       const validation = () =>
         (service as unknown as { validation: AttendanceValidationService })
           .validation;
@@ -734,7 +734,7 @@ describe('AttendanceService', () => {
 
   describe('save', () => {
     // mockGroup's lesson: Wednesday 2026-04-01, 09:00–11:00 Tashkent. Every
-    // save now needs its window open (ADR-0045), so the clock sits at 09:30.
+    // save now needs its window open (ADR-0046), so the clock sits at 09:30.
     beforeEach(() => {
       jest.useFakeTimers({
         doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],

@@ -4,6 +4,7 @@ import * as React from "react";
 import { CheckCircle, XCircle } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import type { PruefErgebnis } from "../types";
+import { DeWort } from "./de-wort";
 
 export interface TanlashProps {
   options: string[];
@@ -72,7 +73,12 @@ export function Tanlash({ options, tanlangan, onTanla, natija, kutilmoqda = fals
             ) : xatoTanlov ? (
               <XCircle size={20} weight="fill" />
             ) : null}
-            <span className="min-w-0 flex-1">{opt}</span>
+            {/* Article colours only before the check: after it, green and
+                red mean right and wrong, and a green «das» must not look
+                like a right answer. */}
+            <span className="min-w-0 flex-1">
+              {natija ? opt : <DeWort text={opt} />}
+            </span>
           </button>
         );
       })}

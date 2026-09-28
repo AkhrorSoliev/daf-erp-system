@@ -12,6 +12,7 @@ import { tryResolveStudentBranchId } from '../../common/finance/resolve-branch';
 import { currentGroupId } from '../shared/student-scope';
 import { istRichtig } from './antwort';
 import { punkteFuer } from './punkte';
+import { bildAntwort, richtigeAntwort } from './richtige-antwort';
 import type {
   Frage,
   FrageFormat,
@@ -45,7 +46,10 @@ import {
 } from './yakuniy-sinov';
 import {
   artikel,
+  audioBild,
   audioWort,
+  bildTippen,
+  bildWort,
   paar,
   uzWort,
   wortTippen,
@@ -62,6 +66,9 @@ import {
  * so'zga `null` qaytaradi (`baueWortFrage` buni allaqachon `artikel`
  * kabi kutadi — pastdagi `if (frage) break` sikli), shuning uchun audio
  * hali yasalmagan bugun bu ikkisi shunchaki hech qachon tanlanmaydi.
+ *
+ * The picture formats join the same way: a due word may come back as a
+ * picture, and each builder returns `null` for a word without one.
  */
 const WORT_FORMATE: FrageFormat[] = [
   'WORT_UZ',
@@ -69,6 +76,9 @@ const WORT_FORMATE: FrageFormat[] = [
   'ARTIKEL',
   'AUDIO_WORT',
   'WORT_TIPPEN',
+  'BILD_WORT',
+  'AUDIO_BILD',
+  'BILD_TIPPEN',
 ];
 
 /** Har seansda qaytariladigan (pflicht) o'rinlar ulushi — 6dan biri: 12 savolda 2 ta. */
@@ -124,6 +134,8 @@ function toWort(l: {
   anzeige: string | null;
   sectionCode: string;
   audioKey: string | null;
+  imageKey?: string | null;
+  bildTippen?: boolean;
 }): MaterialWort | null {
   if (!l.uz) return null;
   return {
@@ -134,100 +146,9 @@ function toWort(l: {
     anzeige: l.anzeige,
     sectionCode: l.sectionCode,
     audioKey: l.audioKey,
+    imageKey: l.imageKey ?? null,
+    bildTippen: l.bildTippen ?? false,
   };
-}
-
-/**
- * To'g'ri javob MATERIALDAN qaytadan hisoblanadi, savoldan emas.
- *
- * `LUECKE` ENDI ODATDAGI SO'Z SAVOLI: `luecke` bo'shatilgan so'zning
- * `id`sini `itemId` sifatida qaytaradi (`itemType: 'WORT'`), shuning
- * uchun to'g'ri javob boshqa har qanday so'z savoli kabi — o'sha so'zning
- * `de`si — qaytadan hisoblanadi. Gap qaysi so'z olib tashlangani savol
- * qurilganda tasodifiy tanlangan bo'lsa ham, MUAMMO EMAS: natija allaqachon
- * savolning o'zligiga yozib qo'yilgan, qayta tanlash kerak emas.
- *
- * `PAAR` bundan boshqacha: to'rt juftning qaysilari tushgani ham
- * tasodifiy, lekin ularni bitta "to'g'ri javob" satriga sig'dirib
- * bo'lmaydi (to'rtta so'z, to'rtta natija). Shuning uchun `PAAR` bu
- * funksiyaga UMUMAN yetib kelmaydi — `pruefen` uni bundan OLDIN o'z yo'li
- * bilan (juft-juft) tekshiradi.
- */
-function richtigeAntwort(
-  format: FrageFormat,
-  material: {
-    de: string;
-    uz: string;
-    artikel?: string | null;
-    akzeptiert?: string[];
-  },
-): { richtig: string; akzeptiert: string[] } {
-  switch (format) {
-    case 'WORT_UZ':
-    case 'SATZ_UEBERSETZEN':
-      return { richtig: material.uz, akzeptiert: [] };
-    case 'UZ_WORT':
-      return {
-        richtig: material.artikel
-          ? `${material.artikel} ${material.de}`
-          : material.de,
-        akzeptiert: [material.de],
-      };
-    case 'ARTIKEL':
-      if (!material.artikel) {
-        throw new BadRequestException("Bu so'zda artikl yo'q");
-      }
-      return { richtig: material.artikel, akzeptiert: [] };
-    case 'SATZ_BAUEN':
-      // Gapning boshqa to'g'ri so'z tartiblari ham qabul qilinadi
-      // («In Deutschland wohne ich.» ↔ «Ich wohne in Deutschland.») —
-      // o'quvchi aynan shu so'zlardan to'g'ri nemischa gap tuzgan bo'lsa,
-      // uni «xato» deyish to'g'ri javobni jazolash bo'lardi. Ro'yxat
-      // kontentda qo'lda yoziladi (`saetze.json` → `akzeptiert`), qo'riqchi
-      // har biri aynan o'sha so'zlardan tuzilganini tekshiradi.
-      return { richtig: material.de, akzeptiert: material.akzeptiert ?? [] };
-    case 'LUECKE':
-    case 'REAKTION':
-    case 'DIALOG_LUECKE':
-      // `DIALOG_LUECKE` — `LUECKE` bilan bir xil oddiy hol: to'g'ri javob
-      // olib tashlangan satrning nemischasi, boshqa hech narsa hisobga
-      // olinmaydi (dialog satri Leitner narvoniga kirmaydi — pastdagi
-      // `itemType === 'WORT'` sharti buni allaqachon ta'minlaydi).
-      return { richtig: material.de, akzeptiert: [] };
-    case 'HOEREN_WAHL':
-      // `ladeMaterial` `de`ga `DafHoerFrage.richtig`ni qo'yadi.
-      // `akzeptiert` bo'sh: variantlar aynan, yozish yo'q.
-      return { richtig: material.de, akzeptiert: [] };
-    case 'AUDIO_WORT':
-      // To'g'ri javob — eshitilgan so'zning o'zi (`ziel.de`, artiklsiz —
-      // `wort-fragen.ts`dagi `audioWort` bilan bir xil). Bu holat yo'q
-      // qolib ketsa, `pruefen` yuqoridagi `default`ga tushib, savol
-      // ko'rsatilgandan keyin JAVOB BERISHNING O'ZI 400 bilan yiqilardi.
-      //
-      // `akzeptiert` BO'SH bo'lishi shart: bu TANLASH savoli va
-      // variantlar `ziel.de` dan quriladi, ya'ni artiklli shakl ekranda
-      // umuman yo'q. Uni qabul qilinadigan qilish hech kimga yordam
-      // bermaydi, lekin variantlardan tashqari javobga yo'l ochardi.
-      return { richtig: material.de, akzeptiert: [] };
-    case 'WORT_TIPPEN':
-      // YOZISH savoli, shuning uchun `AUDIO_WORT` dan farq qiladi: ot
-      // artikli bilan o'rganiladi (`UZ_WORT` ning to'g'ri javobi aynan
-      // `der Name`), va eshitib yozayotgan o'quvchi shuni yozishi tabiiy.
-      // Audio faqat so'zning o'zini aytadi, shuning uchun ASOSIY javob
-      // `material.de` bo'lib qoladi va artiklli shakl QO'SHIMCHA qabul
-      // qilinadi. Teskarisi — artiklni majburlash — o'quvchini eshitmagan
-      // so'zini yozishga majburlardi.
-      return {
-        richtig: material.de,
-        akzeptiert: material.artikel
-          ? [`${material.artikel} ${material.de}`]
-          : [],
-      };
-    default:
-      throw new BadRequestException(
-        `${format} javobi hozircha tekshirilmaydi — savol o'zligi kengayishi kerak`,
-      );
-  }
 }
 
 export interface PruefenInput {
@@ -273,6 +194,11 @@ export interface PruefenErgebnis {
    * savol bilan birga hech qachon yuborilmaydi (D6/D7).
    */
   transkript?: Array<{ sprecher: string; de: string; uz: string }>;
+  /**
+   * Picture formats only: the word itself ("der Bahnhof"), sent after the
+   * answer so the student learns what was heard or shown.
+   */
+  loesungWort?: string;
 }
 
 /**
@@ -800,6 +726,8 @@ export class UebungService {
       anzeige: string | null;
       sectionId: number | null;
       audioKey: string | null;
+      imageKey: string | null;
+      bildTippen: boolean;
     }>;
 
     // `sectionCode: ''` — takrorlash seansi hech qaysi bo'limga
@@ -923,6 +851,8 @@ export class UebungService {
       core: boolean;
       sectionId: number | null;
       audioKey: string | null;
+      imageKey: string | null;
+      bildTippen: boolean;
     }
     interface SentenceRow {
       id: number;
@@ -1056,6 +986,12 @@ export class UebungService {
       if (aw) rohKandidaten.push(aw);
       const wt = wortTippen(w, rnd, (key) => this.mediaUrl(key));
       if (wt) rohKandidaten.push(wt);
+      const bw = bildWort(w, coreWords, rnd, (key) => this.mediaUrl(key));
+      if (bw) rohKandidaten.push(bw);
+      const ab = audioBild(w, coreWords, rnd, (key) => this.mediaUrl(key));
+      if (ab) rohKandidaten.push(ab);
+      const bt = bildTippen(w, rnd, (key) => this.mediaUrl(key));
+      if (bt) rohKandidaten.push(bt);
     }
     // Bir necha PAAR nomzodi: har chaqiruv `rnd` holatini siljitib, boshqa
     // to'rtlikni tanlaydi. Material yetmasa `paar` `null` qaytaradi.
@@ -1163,6 +1099,8 @@ export class UebungService {
       anzeige: string | null;
       sectionId: number | null;
       audioKey: string | null;
+      imageKey: string | null;
+      bildTippen: boolean;
     }>;
     const byId = new Map(dueLexemeRows.map((l) => [l.id, l]));
 
@@ -1221,6 +1159,14 @@ export class UebungService {
         );
       case 'WORT_TIPPEN':
         return wortTippen(wort, Math.random, (key) => this.mediaUrl(key));
+      case 'BILD_WORT':
+        return bildWort(wort, andere, Math.random, (key) => this.mediaUrl(key));
+      case 'AUDIO_BILD':
+        return audioBild(wort, andere, Math.random, (key) =>
+          this.mediaUrl(key),
+        );
+      case 'BILD_TIPPEN':
+        return bildTippen(wort, Math.random, (key) => this.mediaUrl(key));
       default:
         return null;
     }
@@ -1252,6 +1198,7 @@ export class UebungService {
     // format `PAAR` emas, holat pastda ITEMTYPE bo'yicha yagona so'zga
     // yangilanadi.
     let paarNatijalari: Array<{ lexemeId: number; ok: boolean }> | null = null;
+    let loesungWort: string | undefined;
 
     if (format === 'PAAR') {
       // `PAAR` javobi bitta "to'g'ri javob" satriga sig'maydi: to'rt
@@ -1308,10 +1255,18 @@ export class UebungService {
       const natija = await this.pruefeZuordnen(given, material.unitId);
       isCorrect = natija.isCorrect;
       richtig = natija.richtig;
+    } else if (format === 'BILD_WORT' || format === 'AUDIO_BILD') {
+      ({ isCorrect, richtig, loesungWort } = bildAntwort(
+        itemType,
+        material,
+        given,
+        (key) => this.mediaUrl(key),
+      ));
     } else {
       const antwort = richtigeAntwort(format, material);
       isCorrect = istRichtig(given, antwort.richtig, antwort.akzeptiert);
       richtig = antwort.richtig;
+      if (format === 'BILD_TIPPEN') loesungWort = antwort.richtig;
     }
 
     // Bu javob qaysi so'z(lar)ga tegishli — PAAR uchun deduplikatsiya
@@ -1383,7 +1338,7 @@ export class UebungService {
       } as any)) as Array<{ sprecher: string; de: string; uz: string }>;
       return { isCorrect, richtig, transkript: zeilen };
     }
-    return { isCorrect, richtig };
+    return { isCorrect, richtig, ...(loesungWort ? { loesungWort } : {}) };
   }
 
   /**
@@ -1828,6 +1783,8 @@ export class UebungService {
     dialogId?: number;
     /** Faqat `SATZ` uchun — gapning boshqa to'g'ri so'z tartiblari. */
     akzeptiert?: string[];
+    /** `WORT` only — the picture a picture choice is checked against. */
+    imageKey?: string | null;
   } | null> {
     if (itemType === 'WORT') {
       const row = (await this.prisma.dafLexeme.findUnique({
@@ -1837,6 +1794,7 @@ export class UebungService {
         uz: string;
         artikel: string | null;
         unitId: number;
+        imageKey: string | null;
       } | null;
       return row;
     }
