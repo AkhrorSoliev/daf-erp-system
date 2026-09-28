@@ -142,6 +142,7 @@ describe('MonthlyChargeService', () => {
         if (key === 'payment.excusedCreditMonthlyCap')
           return Promise.resolve(null);
         if (key === 'payment.noRefundAfterPercent') return Promise.resolve(40);
+        if (key === 'payment.trialLessonEnabled') return Promise.resolve(true);
         return Promise.resolve(undefined);
       }),
     };
@@ -2306,6 +2307,33 @@ describe('MonthlyChargeService', () => {
         today: '2026-10-12',
         policy: 'STUDENT_CANCELLED' as DeparturePolicy,
       });
+      expect(
+        salaryAccrualMock.reverseAccrualForAttendance,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('keeps the ordinary rule when the trial lesson is switched off', async () => {
+      octoberCharge();
+      prismaMock.attendance.count.mockResolvedValue(1);
+      settingsMock.get.mockImplementation((_c: number, key: string) =>
+        Promise.resolve(
+          key === 'payment.trialLessonEnabled'
+            ? false
+            : key === 'payment.noRefundAfterPercent'
+              ? 40
+              : undefined,
+        ),
+      );
+      const res = await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-02T10:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqarilganda',
+        today: '2026-10-02',
+        policy: 'STUDENT_CANCELLED' as DeparturePolicy,
+      });
+      expect(res).toMatchObject({ lessons: 12, trial: false });
+      expect(prismaMock.attendance.count).not.toHaveBeenCalled();
       expect(
         salaryAccrualMock.reverseAccrualForAttendance,
       ).not.toHaveBeenCalled();

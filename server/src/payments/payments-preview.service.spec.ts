@@ -253,7 +253,11 @@ describe('PaymentsPreviewService', () => {
 
       expect(res.monthly?.admission).toEqual(reach);
       expect(admission.reachForPayment).toHaveBeenCalledWith(
-        expect.objectContaining({ studentId: 10001, balanceAfter: -350000 }),
+        expect.objectContaining({
+          studentId: 10001,
+          companyId: 1001,
+          balanceAfter: -350000,
+        }),
       );
     });
 

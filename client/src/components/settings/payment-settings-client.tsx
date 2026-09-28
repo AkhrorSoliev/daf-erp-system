@@ -20,8 +20,12 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { PAYMENT_MODEL_LABELS, type PaymentModel } from "@/lib/payment-model";
+import {
+  PaymentLessonRulesSettings,
+  type LessonRuleSettings,
+} from "./payment-lesson-rules-settings";
 
-interface PaymentSettingsValues {
+interface PaymentSettingsValues extends LessonRuleSettings {
   "payment.defaultModel": PaymentModel;
   "payment.excusedCreditEnabled": boolean;
   "payment.excusedCreditMonthlyCap": number | null;
@@ -435,6 +439,14 @@ export function PaymentSettingsClient() {
               bo'yicha yozishni rad etadi, shuning uchun override eslatmasi
               bu yerda ham yo'q. */}
         </div>
+
+        <PaymentLessonRulesSettings
+          settings={settings}
+          isCeo={isCeo}
+          canEdit={canEdit}
+          saving={saving}
+          saveField={saveField}
+        />
       </div>
 
       {saving && (

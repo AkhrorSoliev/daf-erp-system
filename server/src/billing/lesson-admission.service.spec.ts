@@ -18,9 +18,42 @@ describe('LessonAdmissionService', () => {
     student: { findMany: jest.fn(), findUnique: jest.fn() },
     enrollmentMonthlyCharge: { findMany: jest.fn() },
   };
-  const service = new LessonAdmissionService(prisma as never);
+  const settings = { get: jest.fn().mockResolvedValue(true) };
+  const service = new LessonAdmissionService(
+    prisma as never,
+    settings as never,
+  );
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    settings.get.mockResolvedValue(true);
+  });
+
+  it('admits everyone and reads no charge when contract 3.2 is switched off', async () => {
+    prisma.student.findMany.mockResolvedValue([
+      { id: 1, balance: -300000, companyId: 5 },
+    ]);
+    settings.get.mockResolvedValue(false);
+    const result = await service.forLesson({
+      groupId: 'g005',
+      lessonDay: '2026-10-05',
+      studentIds: [1],
+    });
+    expect(result.size).toBe(0);
+    expect(settings.get).toHaveBeenCalledWith(
+      5,
+      'payment.admissionRuleEnabled',
+    );
+    expect(prisma.enrollmentMonthlyCharge.findMany).not.toHaveBeenCalled();
+    await expect(
+      service.reachForPayment({
+        studentId: 1,
+        companyId: 5,
+        balanceAfter: -100,
+        today: '2026-10-05',
+      }),
+    ).resolves.toBeNull();
+  });
 
   it('judges every student of a lesson from their balance and month charges', async () => {
     prisma.student.findMany.mockResolvedValue([
@@ -83,6 +116,7 @@ describe('LessonAdmissionService', () => {
     // 200 000 of 300 000 paid: lessons 1–2 covered, 07.10 still needs 100 000.
     const reach = await service.reachForPayment({
       studentId: 1,
+      companyId: 5,
       balanceAfter: -100000,
       today: '2026-10-05',
     });

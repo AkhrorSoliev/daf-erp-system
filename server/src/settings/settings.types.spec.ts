@@ -7,7 +7,7 @@ import {
 } from './settings.types';
 
 describe('SETTING_DEFINITIONS registry', () => {
-  it('covers exactly the five shipped payment keys', () => {
+  it('covers exactly the shipped payment keys', () => {
     expect(SETTING_KEYS.sort()).toEqual(
       [
         'payment.chargeDayOfMonth',
@@ -17,6 +17,9 @@ describe('SETTING_DEFINITIONS registry', () => {
         'payment.excusedCreditMonthlyCap',
         'payment.monthlyNoticesEnabled',
         'payment.noRefundAfterPercent',
+        'payment.admissionRuleEnabled',
+        'payment.trialLessonEnabled',
+        'payment.attendanceOpensMinutesBefore',
       ].sort(),
     );
   });
@@ -24,6 +27,29 @@ describe('SETTING_DEFINITIONS registry', () => {
   it('does NOT ship prorationMethod or debtGraceDays (no consumer, deliberately cut)', () => {
     expect(isSettingKey('payment.prorationMethod')).toBe(false);
     expect(isSettingKey('payment.debtGraceDays')).toBe(false);
+  });
+
+  describe('ADR-0045/0046 switches (CEO, 28.09.2026)', () => {
+    it('default to the rules as shipped, company-level only', () => {
+      for (const [key, value] of [
+        ['payment.admissionRuleEnabled', true],
+        ['payment.trialLessonEnabled', true],
+        ['payment.attendanceOpensMinutesBefore', 10],
+      ] as const) {
+        const def = getSettingDefinition(key);
+        expect(def.defaultValue).toBe(value);
+        expect(def.companyLevelOnly).toBe(true);
+      }
+    });
+
+    it('takes 0 to 60 minutes for the window lead', () => {
+      const def = getSettingDefinition('payment.attendanceOpensMinutesBefore');
+      expect(def.parse(0)).toBe(0);
+      expect(def.parse(60)).toBe(60);
+      expect(() => def.parse(61)).toThrow();
+      expect(() => def.parse(-1)).toThrow();
+      expect(() => def.parse(5.5)).toThrow();
+    });
   });
 
   describe('payment.defaultModel', () => {

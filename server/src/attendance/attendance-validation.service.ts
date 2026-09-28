@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 import { GroupStatus } from '@prisma/client';
 import { DAY_NAME_TO_JS, tashkentDateStr } from './shared/date-utils';
 import { HolidaysService } from '../holidays/holidays.service';
@@ -19,7 +20,13 @@ export class AttendanceValidationService {
   constructor(
     private prisma: PrismaService,
     private holidaysService: HolidaysService,
+    private settings: SettingsService,
   ) {}
+
+  /** `payment.attendanceOpensMinutesBefore` — how early the window opens. */
+  private opensMinutesBefore(companyId: number): Promise<number> {
+    return this.settings.get(companyId, 'payment.attendanceOpensMinutesBefore');
+  }
 
   /**
    * Validate that a date is a lesson of the group: date format, group
@@ -132,7 +139,8 @@ export class AttendanceValidationService {
         ? reschedule.newLessonEndTime
         : group.lessonEndTime;
 
-    return { group, parsedDate, startTime, endTime };
+    const opensMinutesBefore = await this.opensMinutesBefore(group.companyId);
+    return { group, parsedDate, startTime, endTime, opensMinutesBefore };
   }
 
   /**
@@ -171,7 +179,7 @@ export class AttendanceValidationService {
         deletedAt: null,
         ...(companyId && { companyId }),
       },
-      select: { lessonStartTime: true, lessonEndTime: true },
+      select: { lessonStartTime: true, lessonEndTime: true, companyId: true },
     });
     if (!group) throw new NotFoundException('Guruh topilmadi');
     const moved = await this.prisma.lessonReschedule.findFirst({
@@ -184,10 +192,18 @@ export class AttendanceValidationService {
     });
     const startTime = moved?.newLessonStartTime ?? group.lessonStartTime;
     const endTime = moved?.newLessonEndTime ?? group.lessonEndTime;
+    const opensMinutesBefore = await this.opensMinutesBefore(group.companyId);
     return {
-      state: lessonWindowState({ lessonDay: date, startTime, endTime, now }),
+      state: lessonWindowState({
+        lessonDay: date,
+        startTime,
+        endTime,
+        opensMinutesBefore,
+        now,
+      }),
       startTime,
       endTime,
+      opensMinutesBefore,
     };
   }
 }

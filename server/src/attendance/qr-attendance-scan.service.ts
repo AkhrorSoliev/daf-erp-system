@@ -84,6 +84,7 @@ export class QrAttendanceScanService {
       lessonDay: date,
       startTime: lesson.startTime,
       endTime: lesson.endTime,
+      opensMinutesBefore: lesson.opensMinutesBefore,
     });
 
     // Contract 3.2 (ADR-0045): from the month's 2nd lesson a scan admits

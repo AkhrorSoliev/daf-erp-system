@@ -67,6 +67,7 @@ export class AttendanceSaveService {
         lessonDay: date,
         startTime: lesson.startTime,
         endTime: lesson.endTime,
+        opensMinutesBefore: lesson.opensMinutesBefore,
       });
     }
     const { parsedDate } = lesson;

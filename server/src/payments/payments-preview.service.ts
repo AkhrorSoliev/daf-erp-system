@@ -164,6 +164,7 @@ export class PaymentsPreviewService {
       if (monthly.monthly) {
         monthly.monthly.admission = await this.admission.reachForPayment({
           studentId,
+          companyId,
           balanceAfter: newBalance,
           today: tashkentDateStr(new Date()),
         });

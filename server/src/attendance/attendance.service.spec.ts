@@ -3,6 +3,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AttendanceService } from './attendance.service';
 import { AttendanceValidationService } from './attendance-validation.service';
+import { SettingsService } from '../settings/settings.service';
 import { AttendanceReadService } from './attendance-read.service';
 import { AttendanceStatsService } from './attendance-stats.service';
 import { AttendanceSaveService } from './attendance-save.service';
@@ -141,6 +142,11 @@ describe('AttendanceService', () => {
       providers: [
         AttendanceService,
         AttendanceValidationService,
+        {
+          provide: SettingsService,
+          // The default lead (ADR-0045); a test that moves it says so.
+          useValue: { get: jest.fn().mockResolvedValue(10) },
+        },
         AttendanceReadService,
         AttendanceStatsService,
         AttendanceSaveService,
@@ -349,7 +355,35 @@ describe('AttendanceService', () => {
           state: 'open',
           startTime: '09:00',
           endTime: '11:00',
+          opensMinutesBefore: 10,
         });
+      });
+
+      it("opens the window by the company's lead (payment.attendanceOpensMinutesBefore)", async () => {
+        // 08:45 Tashkent: closed with the default 10, open with 20.
+        const at = new Date('2026-04-01T03:45:00Z');
+        const lesson = {
+          lessonDay: '2026-04-01',
+          startTime: '09:00',
+          endTime: '11:00',
+        };
+        expect(() => validation().assertWindowOpen(lesson, at)).toThrow(
+          'Davomat dars boshlanishidan 10 daqiqa oldin ochiladi (09:00)',
+        );
+        expect(() =>
+          validation().assertWindowOpen(
+            { ...lesson, opensMinutesBefore: 20 },
+            at,
+          ),
+        ).not.toThrow();
+        expect(() =>
+          validation().assertWindowOpen(
+            { ...lesson, opensMinutesBefore: 5 },
+            new Date('2026-04-01T03:52:00Z'),
+          ),
+        ).toThrow(
+          'Davomat dars boshlanishidan 5 daqiqa oldin ochiladi (09:00)',
+        );
       });
     });
   });

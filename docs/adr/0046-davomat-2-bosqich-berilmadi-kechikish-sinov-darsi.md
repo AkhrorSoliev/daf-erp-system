@@ -71,6 +71,21 @@ to'xtatdi. To'rtta narsa keyingi bosqichga qoldirilgan edi:
    hisobotning prognozi ham, oylik cron'ining markaz qo'shimchasi va BR-09b
    qo'shimcha tsikli ham uni o'tkazib yuboradi (`awaitsStudentPayment`).
 
+5. **Sozlamalar (CEO, 28.09.2026).** `/settings/payment` da, faqat
+   kompaniya darajasida, faqat CEO o'zgartiradi:
+   - `payment.admissionRuleEnabled` (standart yoqilgan) — 3.2 qoidasi
+     (ADR-0045 2-bandi). O'chirilsa hamma darsga qo'yiladi va to'lov
+     oynasi «qaysi darsgacha yetadi» ni ko'rsatmaydi. Qarzdorning 1-darsi
+     (4-band) bu tugmaga bog'liq emas.
+   - `payment.trialLessonEnabled` (standart yoqilgan) — 3-band.
+   - `payment.attendanceOpensMinutesBefore` (0–60, standart 10) — davomat
+     oynasi dars boshlanishidan necha daqiqa oldin ochiladi (ADR-0045
+     1-bandidagi «10 daqiqa» endi sozlamadan o'qiladi). Server rad etish
+     xabarida ham, `window` javobida ham shu qiymat ishlatiladi; mijoz
+     undan o'qiydi.
+   Boshlanish sanasi (01.10.2026) va «ko'pi bilan 1 ta dars» chegarasi
+   shartnomadan, ular sozlama emas.
+
 **Taqiqlanadi:**
 - «Berilmadi» ni jadvalga saqlash yoki uni ekranda qayta hisoblash;
 - kechikish daqiqasini mijozda hisoblash;

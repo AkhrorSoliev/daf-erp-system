@@ -44,6 +44,7 @@ export class QrAttendanceSessionService {
       lessonDay: date,
       startTime: lesson.startTime,
       endTime: lesson.endTime,
+      opensMinutesBefore: lesson.opensMinutesBefore,
     });
     const { group: validatedGroup, parsedDate } = lesson;
 

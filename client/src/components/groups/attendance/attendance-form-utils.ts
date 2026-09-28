@@ -40,6 +40,8 @@ export interface LessonWindowInfo {
   state: LessonWindowState;
   startTime: string | null;
   endTime: string | null;
+  /** Minutes before the start the window opens (company setting); absent on an older server. */
+  opensMinutesBefore?: number;
 }
 
 /** Contract 3.2 admission of one student to this lesson (ADR-0045). */

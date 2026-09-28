@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { SettingsModule } from '../settings/settings.module';
 import { AttendanceService } from './attendance.service';
 import { AttendanceValidationService } from './attendance-validation.service';
 import { AttendanceReadService } from './attendance-read.service';
@@ -24,6 +25,7 @@ import { HolidaysModule } from '../holidays/holidays.module';
     BillingModule,
     HolidaysModule,
     TelegramDigestModule,
+    SettingsModule,
   ],
   controllers: [AttendanceController],
   providers: [

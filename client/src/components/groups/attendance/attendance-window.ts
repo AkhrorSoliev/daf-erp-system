@@ -7,6 +7,8 @@ export function windowBanner(p: {
   state: LessonWindowState;
   startTime: string | null;
   endTime: string | null;
+  /** The company's lead (minutes before the start the window opens). */
+  opensMinutesBefore?: number;
   isAdmin: boolean;
   isToday: boolean;
   hasAttendance: boolean;
@@ -16,7 +18,7 @@ export function windowBanner(p: {
     if (p.isToday && p.startTime) {
       return {
         tone: "info",
-        text: `Dars ${p.startTime} da boshlanadi. Davomat ${windowOpensAt(p.startTime)} da ochiladi.`,
+        text: `Dars ${p.startTime} da boshlanadi. Davomat ${windowOpensAt(p.startTime, p.opensMinutesBefore)} da ochiladi.`,
       };
     }
     return {

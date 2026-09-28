@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { EnrollmentStatus, MonthlyChargeStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 import {
   ADMISSION_START_DAY,
   firstLessonCoverage,
@@ -21,7 +22,15 @@ type Reader = Prisma.TransactionClient | PrismaService;
  */
 @Injectable()
 export class LessonAdmissionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private settings: SettingsService,
+  ) {}
+
+  /** `payment.admissionRuleEnabled`: contract 3.2 can be switched off (CEO). */
+  private ruleEnabled(companyId: number): Promise<boolean> {
+    return this.settings.get(companyId, 'payment.admissionRuleEnabled');
+  }
 
   /** Contract 3.2 for every student of one lesson. A student missing from the map is admitted. */
   async forLesson(
@@ -33,13 +42,19 @@ export class LessonAdmissionService {
     if (params.lessonDay < ADMISSION_START_DAY) return result;
 
     const [year, month] = params.lessonDay.split('-').map(Number);
-    const [students, charges] = await Promise.all([
-      client.student.findMany({
-        where: { id: { in: params.studentIds } },
-        select: { id: true, balance: true },
-      }),
-      this.loadCharges(client, params.studentIds, year, month),
-    ]);
+    const students = await client.student.findMany({
+      where: { id: { in: params.studentIds } },
+      select: { id: true, balance: true, companyId: true },
+    });
+    if (students.length === 0) return result;
+    // Switched off: nobody is kept out, the map stays empty (all admitted).
+    if (!(await this.ruleEnabled(students[0].companyId))) return result;
+    const charges = await this.loadCharges(
+      client,
+      params.studentIds,
+      year,
+      month,
+    );
     for (const student of students) {
       result.set(
         student.id,
@@ -130,10 +145,12 @@ export class LessonAdmissionService {
   /** How far a payment reaches this month (payment dialog). Null: the rule does not apply. */
   async reachForPayment(params: {
     studentId: number;
+    companyId: number;
     balanceAfter: number;
     today: string;
   }): Promise<PaymentReach | null> {
     if (params.today < ADMISSION_START_DAY) return null;
+    if (!(await this.ruleEnabled(params.companyId))) return null;
     const [year, month] = params.today.split('-').map(Number);
     const charges = await this.loadCharges(
       this.prisma,

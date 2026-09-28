@@ -727,7 +727,12 @@ export class MonthlyChargeService {
     // and keeps the ordinary rule.
     const trialLesson =
       params.policy !== undefined &&
-      (await this.isTrialLessonDeparture(tx, loaded.enr.studentId, day));
+      (await this.isTrialLessonDeparture(
+        tx,
+        loaded.enr.studentId,
+        day,
+        params.companyId,
+      ));
     const outcome = policyRelease(loaded.input, policy, threshold, {
       trialLesson,
     });
@@ -871,6 +876,7 @@ export class MonthlyChargeService {
       client,
       loaded.enr.studentId,
       day,
+      params.companyId,
     );
     const outcomes = {} as DepartureOutcomesPreview['outcomes'];
     let share: HeldShare | null = null;
@@ -912,8 +918,15 @@ export class MonthlyChargeService {
     client: Prisma.TransactionClient,
     studentId: number,
     day: string,
+    companyId: number,
   ): Promise<boolean> {
     if (day < TRIAL_LESSON_START_DAY) return false;
+    // `payment.trialLessonEnabled`: switched off, the ordinary rule applies.
+    if (
+      !(await this.settingsService.get(companyId, 'payment.trialLessonEnabled'))
+    ) {
+      return false;
+    }
     const held = await client.attendance.count({
       where: {
         studentId,
