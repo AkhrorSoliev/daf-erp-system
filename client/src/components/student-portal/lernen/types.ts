@@ -15,7 +15,10 @@ export type FrageFormat =
   | "DIALOG_LUECKE"
   | "AUDIO_WORT"
   | "WORT_TIPPEN"
-  | "HOEREN_WAHL";
+  | "HOEREN_WAHL"
+  | "BILD_WORT"
+  | "AUDIO_BILD"
+  | "BILD_TIPPEN";
 
 export type MaterialTyp =
   "WORT" | "SATZ" | "PHRASE" | "DIALOGZEILE" | "HOERFRAGE";
@@ -46,6 +49,11 @@ export interface PublicFrage {
    * yozsa tinglash mashqi o'qish mashqiga aylanardi.
    */
   audioUrl: string | null;
+  /**
+   * `BILD_TIPPEN` only: the picture asked about. The picture choices
+   * (`BILD_WORT`, `AUDIO_BILD`) carry their pictures in `options`.
+   */
+  bildUrl?: string | null;
 }
 
 /** Javob tekshirilgandan KEYIN keladi — faqat shunda to'g'ri javob ma'lum. */
@@ -58,6 +66,12 @@ export interface PruefErgebnis {
    * aylanardi.
    */
   transkript?: Array<{ sprecher: string; de: string; uz: string }>;
+  /**
+   * Picture formats only: the word itself ("der Bahnhof"), sent after the
+   * answer. For a picture choice `richtig` is a picture URL, so this is
+   * what the answer panel shows.
+   */
+  loesungWort?: string;
 }
 
 /**

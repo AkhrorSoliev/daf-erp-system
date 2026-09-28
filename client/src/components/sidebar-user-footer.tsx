@@ -17,6 +17,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
+import { useSignOut } from "@/hooks/use-sign-out";
 
 function getInitials(name: string) {
   const parts = name.split(" ");
@@ -24,7 +25,10 @@ function getInitials(name: string) {
 }
 
 export function SidebarUserFooter() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  // Inside the staff Mini App (ADR-0045) «Chiqish» waits at /tg for
+  // «Qayta kirish» — a plain logout would be signed straight back in.
+  const signOut = useSignOut();
   const { isMobile, setOpenLock, setOpenMobile } = useSidebar();
   const router = useRouter();
 
@@ -74,7 +78,7 @@ export function SidebarUserFooter() {
                 <User className="mr-2 size-4" />
                 Profil
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive" onClick={logout}>
+              <DropdownMenuItem className="text-destructive" onClick={signOut}>
                 <LogOut className="mr-2 size-4" />
                 Chiqish
               </DropdownMenuItem>

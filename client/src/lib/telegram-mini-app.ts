@@ -1,11 +1,13 @@
 import type { AuthUser } from "@/hooks/use-auth";
 
 /**
- * Telegram Mini App ichidagi o'quvchi kabineti (ADR-0040).
+ * Telegram Mini App ichidagi kabinet: o'quvchiniki (ADR-0040) va xodimniki
+ * (ADR-0045).
  *
  * Kirish nuqtasi — `/tg` sahifasi: Telegram bergan `initData` serverga
- * yuboriladi, server Telegram akkaunti bog'langan o'quvchini topib sessiya
- * beradi. Mini App ichida telefon/parol formasi hech qachon ko'rsatilmaydi.
+ * yuboriladi, server Telegram akkaunti bog'langan o'quvchini yoki xodimni
+ * topib sessiya beradi. Mini App ichida telefon/parol formasi hech qachon
+ * ko'rsatilmaydi.
  */
 
 export const TELEGRAM_WEB_APP_SCRIPT =
@@ -167,7 +169,42 @@ export function bouncedAfterSignIn(now: number = Date.now()): boolean {
   }
 }
 
-// ── `POST /auth/telegram/webapp` javobi ───────────────────────────────────
+// ── Kimning kabineti (ADR-0045) ───────────────────────────────────────────
+//
+// Bot xodimga `lehrer.` yoki `admin.` portalidagi `/tg` ni ochadi, qolganlarga
+// `student.` dagisini. Uchala portal bitta ilova: `/tg` qaysi kabinet ekanini
+// xostdan biladi. Boshqa har qanday xost (lokal, tunnel) — o'quvchi kabineti,
+// avvalgidek.
+
+export type MiniAppAudience = "student" | "staff";
+
+export function miniAppAudienceForHost(host: string): MiniAppAudience {
+  return host.startsWith("lehrer.") || host.startsWith("admin.")
+    ? "staff"
+    : "student";
+}
+
+/** Xodim kabineti ochiladigan sahifa — o'z profili. */
+export const STAFF_CABINET_HOME = "/profile";
+
+/**
+ * Botdagi tugmalar ochadigan sahifalar (`/tg?next=…`). Ro'yxatdan tashqari
+ * hech narsa qabul qilinmaydi: `next` — URL'dagi, ya'ni begona qo'l yozishi
+ * mumkin bo'lgan qiymat, u tashqi manzilga yo'naltirmasin.
+ */
+const STAFF_CABINET_PAGES = new Set([
+  "/",
+  "/profile",
+  "/profile/salary",
+  "/schedule",
+  "/groups",
+]);
+
+export function staffCabinetPath(next: string | null | undefined): string {
+  return next && STAFF_CABINET_PAGES.has(next) ? next : STAFF_CABINET_HOME;
+}
+
+// ── `POST /auth/telegram/webapp` va `…/webapp/staff` javoblari ─────────────
 
 export interface MiniAppStudent {
   id: number;
@@ -175,12 +212,24 @@ export interface MiniAppStudent {
   lastName: string;
 }
 
+interface MiniAppSession {
+  status: "authenticated";
+  accessToken: string;
+  refreshToken: string;
+  user: AuthUser;
+}
+
+/**
+ * O'quvchi kabineti. `staff` — Telegram o'quvchiga emas, xodim hisobiga
+ * bog'langan: unga xodim kabinetining yo'li ko'rsatiladi.
+ */
 export type MiniAppSignInResult =
-  | {
-      status: "authenticated";
-      accessToken: string;
-      refreshToken: string;
-      user: AuthUser;
-    }
+  | MiniAppSession
   | { status: "choose"; students: MiniAppStudent[] }
+  | { status: "staff" }
+  | { status: "not_registered" };
+
+/** Xodim kabineti: tanlash yo'q — bir nechta hisob bo'lsa server rad etadi. */
+export type MiniAppStaffSignInResult =
+  | MiniAppSession
   | { status: "not_registered" };

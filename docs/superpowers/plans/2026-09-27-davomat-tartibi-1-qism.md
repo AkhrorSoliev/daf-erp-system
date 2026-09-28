@@ -2630,7 +2630,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 10: ADR, docs, full verification
 
 **Files:**
-- Create: `docs/adr/0045-davomat-oynasi-va-tolovsiz-oquvchi.md`
+- Create: `docs/adr/0046-davomat-oynasi-va-tolovsiz-oquvchi.md`
 - Modify: `docs/adr/README.md` (row 0045)
 - Modify: `server/CLAUDE.md` (Attendance section)
 - Modify: `docs/superpowers/specs/2026-09-27-davomat-va-tolov-tartibi-design.md` (script line)
@@ -2756,7 +2756,7 @@ Expected: typecheck clean, lint 0 errors, every server suite and client test pas
 - [ ] **Step 4: Commit**
 
 ```bash
-git add docs/adr/0045-davomat-oynasi-va-tolovsiz-oquvchi.md docs/adr/README.md server/CLAUDE.md docs/superpowers/specs/2026-09-27-davomat-va-tolov-tartibi-design.md
+git add docs/adr/0046-davomat-oynasi-va-tolovsiz-oquvchi.md docs/adr/README.md server/CLAUDE.md docs/superpowers/specs/2026-09-27-davomat-va-tolov-tartibi-design.md
 git commit -m "docs: ADR-0046 — the lesson window and contract 3.2 admission
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"

@@ -6,6 +6,7 @@ import { IS_PUBLIC_KEY } from '../../common/decorators';
 import { IpThrottlerGuard } from '../../common/guards';
 import { AuthModule } from '../auth.module';
 import { TelegramWebAppLoginDto } from '../dto/telegram-webapp-login.dto';
+import { TelegramWebAppStaffLoginDto } from '../dto/telegram-webapp-staff-login.dto';
 import { TelegramWebAppController } from './telegram-webapp.controller';
 import { TelegramWebAppService } from './telegram-webapp.service';
 
@@ -26,6 +27,39 @@ describe('TelegramWebAppController', () => {
         TelegramWebAppController.prototype.signIn,
       ) as unknown[]) ?? [];
     expect(guards).toContain(IpThrottlerGuard);
+  });
+
+  it('xodim eshigi ham @Public() va IpThrottlerGuard bilan (ADR-0045)', () => {
+    expect(
+      new Reflector().get<boolean>(
+        IS_PUBLIC_KEY,
+        TelegramWebAppController.prototype.signInStaff,
+      ),
+    ).toBe(true);
+    const guards =
+      (Reflect.getMetadata(
+        '__guards__',
+        TelegramWebAppController.prototype.signInStaff,
+      ) as unknown[]) ?? [];
+    expect(guards).toContain(IpThrottlerGuard);
+  });
+
+  it("xodim eshigi initData va Origin'ni servisga uzatadi — portal Origin'dan olinadi", async () => {
+    const service = {
+      signInStaff: jest.fn().mockResolvedValue({ status: 'not_registered' }),
+    };
+    const controller = new TelegramWebAppController(service as any);
+
+    await expect(
+      controller.signInStaff(
+        { initData: 'auth_date=1&hash=x' },
+        'https://lehrer.dafzentrum.uz',
+      ),
+    ).resolves.toEqual({ status: 'not_registered' });
+    expect(service.signInStaff).toHaveBeenCalledWith(
+      'auth_date=1&hash=x',
+      'https://lehrer.dafzentrum.uz',
+    );
   });
 
   it('initData va tanlangan studentId ni servisga uzatadi', async () => {
@@ -97,6 +131,35 @@ describe('TelegramWebAppLoginDto', () => {
         telegramUserId: '700000001',
       },
     ],
+  ])('rad etadi: %s', async (_label, body) => {
+    await expect(pipe.transform(body, meta)).rejects.toThrow();
+  });
+});
+
+describe('TelegramWebAppStaffLoginDto', () => {
+  const pipe = new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  });
+  const meta = {
+    type: 'body' as const,
+    metatype: TelegramWebAppStaffLoginDto,
+  };
+
+  it("faqat initData'ni qabul qiladi", async () => {
+    await expect(
+      pipe.transform({ initData: 'auth_date=1' }, meta),
+    ).resolves.toEqual({ initData: 'auth_date=1' });
+  });
+
+  it.each([
+    ["initData yo'q", {}],
+    ["initData bo'sh", { initData: '' }],
+    ['initData juda uzun', { initData: 'a'.repeat(4097) }],
+    // Xodimni tanlash yo'q: bir nechta hisob mos kelsa server rad etadi.
+    ['studentId yuborilsa', { initData: 'x', studentId: 1 }],
+    ['userId yuborilsa', { initData: 'x', userId: 30401 }],
   ])('rad etadi: %s', async (_label, body) => {
     await expect(pipe.transform(body, meta)).rejects.toThrow();
   });

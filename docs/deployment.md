@@ -85,7 +85,7 @@ railway up --detach
 | `INVOICE_BASE_URL` | `https://invoice.dafzentrum.uz`    |
 | `TELEGRAM_BOT_TOKEN` | Student/teacher/employee registration bot token (BotFather) |
 | `TELEGRAM_ADMIN_BOT_TOKEN` | Admin/management bot token (separate BotFather bot — used for company group stats, broadcasts, daily reports) |
-| `TELEGRAM_MINI_APP_URL` | `https://student.dafzentrum.uz/tg` — the student portal as a Telegram Mini App (ADR-0040). Optional |
+| `TELEGRAM_MINI_APP_URL` | `https://student.dafzentrum.uz/tg` — the student portal as a Telegram Mini App (ADR-0040); the staff cabinet uses the same path on `lehrer.`/`admin.` (ADR-0045). Optional |
 | `ESKIZ_EMAIL`    | Eskiz.uz SMS gateway login (SMS-shlyuz cabinet)      |
 | `ESKIZ_PASSWORD` | Eskiz.uz API secret key (from the SMS-shlyuz tab)    |
 | `ESKIZ_FROM`     | SMS sender — `4546` (Eskiz test sender; no brand nik required per Eskiz support) |
@@ -114,6 +114,8 @@ no code would ever arrive.
 `TELEGRAM_ADMIN_BOT_TOKEN` powers the admin group bot at `/settings/telegram-groups`. It must be a **separate** bot from `TELEGRAM_BOT_TOKEN` so a leaked token cannot reach student DMs. The bot needs Privacy Mode **disabled** (`/setprivacy` in BotFather) so it can read slash commands in groups; admin rights inside the group are optional.
 
 `TELEGRAM_MINI_APP_URL` opens the student portal inside the main bot (`TELEGRAM_BOT_TOKEN`) as a Mini App: the main menu's «🎓 Platformaga kirish» becomes a Mini App button and every boot sets the bot's default menu button to «Kabinet». It must be `https://` (the server refuses to boot otherwise) and on the `student.` host. Unsetting it does NOT remove the menu button — reset it in BotFather (Bot Settings → Menu Button). Optional in BotFather: `/newapp` for a `t.me/<bot>/<name>` link and "Configure Mini App" for the bot profile's «Open» button, both with the same URL.
+
+The staff cabinet (ADR-0045) needs no variable of its own: the bot swaps the `student.` label of this URL for `lehrer.` (teacher-only accounts) or `admin.` (everyone else on staff) and sets that as the menu button of each staff chat at `/start`. Staff who are not linked yet send `/xodim` (or open `t.me/<bot>?start=xodim`) and share their own number; it must equal the phone on their account.
 
 `INVOICE_BASE_URL` controls the public link sent in Telegram payment receipts
 and the QR target embedded in PDF receipts. When omitted the code falls back

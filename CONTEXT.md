@@ -92,6 +92,20 @@ bog'lash yo'q. Botning parol tiklashi va Telegram Mini App kirishi shu
 bog'lanishga ishonadi.
 `telegram/scenes/student-registration.scene.ts` · `auth/telegram-webapp/telegram-webapp.service.ts` · `docs/adr/0040-mini-app-ichida-faqat-telegram-orqali-kirish.md`
 
+**Xodimning Telegram'i** — xodim hisobiga bog'langan chat (`User.telegramChatId`),
+o'quvchi kartasidagi bog'lanishdan alohida. Bot uni xodim havolasi bilan
+ro'yxatdan o'tishda yoki `/xodim` da odam o'z raqamini yuborganda va u aynan
+bitta xodim hisobining telefoniga teng bo'lganda yozadi. Bot shu bog'lanish
+bilan xodimni taniydi: o'quvchi menyusi o'rniga xodim menyusi, «Kabinet» esa
+xodim kabinetini ochadi. Bitta Telegram — bitta xodim hisobi.
+`common/auth/staff-telegram.ts` · `telegram/staff/` · `docs/adr/0045-bot-xodimni-taniydi-xodim-kabineti-mini-appda.md`
+
+**Xodim kabineti** — xodimning o'z portali (`admin.` yoki faqat ustozga
+`lehrer.`), Telegram Mini App bo'lib ochiladi va xodimni parolsiz kiritadi;
+birinchi ekran — o'z profili. O'quvchi kabineti (`student.`) bilan bitta ilova,
+lekin boshqa xost va boshqa kirish eshigi.
+`auth/telegram-webapp/telegram-webapp.service.ts` · `client/src/components/telegram-mini-app/` · `docs/adr/0045-bot-xodimni-taniydi-xodim-kabineti-mini-appda.md`
+
 **Birinchi kirish talablari (onboarding)** — o'quvchi web portal yoki mobil
 ilovadan foydalanishdan oldin beradigan narsalar: tasdiqlangan telefon, jins,
 tug'ilgan sana (yosh shundan). Faqat bo'shlari so'raladi; nima yetishmasligini

@@ -5,6 +5,7 @@ import {
   SCENES,
   DEFAULT_COMPANY_ID,
   derivePositionForRoles,
+  roleNamesText,
 } from '../constants';
 import {
   ASK_FIRST_NAME,
@@ -26,6 +27,8 @@ import {
   findLiveStaffByPhone,
   loginForPhone,
 } from '../../common/auth/phone-account-rules';
+import { staffPortalFor } from '../../common/auth/staff-telegram';
+import type { StaffCabinet } from '../staff/staff-cabinet';
 import { generatePassword } from '../../common/utils/password.util';
 import { buildStaffCredentialsMessage } from './staff-credentials-message';
 import { downloadFile } from '../utils/download.util';
@@ -38,23 +41,12 @@ import { withProcessingLock } from '../utils/processing-lock';
 
 const logger = new Logger('EmployeeRegistrationScene');
 
-const ROLE_LABELS: Record<number, string> = {
-  1: 'CEO',
-  2: 'Direktor',
-  3: 'Administrator',
-  4: "O'qituvchi",
-  5: 'Kassir',
-};
-
-function roleNamesText(roleIds: number[]): string {
-  return roleIds.map((id) => ROLE_LABELS[id] ?? `#${id}`).join(', ');
-}
-
 export function createEmployeeRegistrationScene(
   prisma: PrismaService,
   uploadService: UploadService,
   usersService: UsersService,
   _bot: Telegraf<BotContext>,
+  staffCabinet?: Pick<StaffCabinet, 'showMenuForChat'>,
 ): Scenes.BaseScene<BotContext> {
   const scene = new Scenes.BaseScene<BotContext>(SCENES.EMPLOYEE_REGISTRATION);
 
@@ -66,16 +58,21 @@ export function createEmployeeRegistrationScene(
     const chatId = String(ctx.chat!.id);
     const existing = await prisma.user.findFirst({
       where: { telegramChatId: chatId, deletedAt: null },
+      select: { roles: { select: { roleId: true } } },
     });
 
     if (existing) {
+      await ctx.scene.leave();
+      // Xodim kabineti (ADR-0045); o'chiq bo'lsa — o'z portalining manzili.
+      if (await staffCabinet?.showMenuForChat(ctx)) return;
+      const portal = staffPortalFor(existing.roles.map((r) => r.roleId));
+      const host = portal === 'lehrer' ? 'lehrer' : 'admin';
       await ctx.reply(
         "Siz allaqachon ro'yxatdan o'tgansiz\\!\n\n" +
           'Platformaga kirish uchun login va parolingizdan foydalaning:\n' +
-          '[admin\\.dafzentrum\\.uz](https://admin.dafzentrum.uz)',
+          `[${host}\\.dafzentrum\\.uz](https://${host}.dafzentrum.uz)`,
         { parse_mode: 'MarkdownV2' },
       );
-      await ctx.scene.leave();
       return;
     }
 
@@ -246,7 +243,7 @@ export function createEmployeeRegistrationScene(
     const liveStaff = await findLiveStaffByPhone(prisma, phone);
     if (liveStaff) {
       await ctx.reply(
-        "Bu raqam bilan xodim hisobi allaqachon bor. Yangi lavozim kerak bo'lsa, administrator uni mavjud hisobingizga qo'shib beradi.",
+        "Bu raqam bilan xodim hisobi allaqachon bor. Telegram'ingizni unga bog'lash uchun /xodim yuboring. Yangi lavozim kerak bo'lsa, administrator uni mavjud hisobingizga qo'shib beradi.",
         Markup.removeKeyboard(),
       );
       await ctx.scene.leave();
@@ -446,6 +443,13 @@ export function createEmployeeRegistrationScene(
         });
 
         await ctx.scene.leave();
+        // Yangi xodim darhol o'z kabinetini ko'radi (ADR-0045). Xato bo'lsa
+        // faqat log: hisob ochildi, kirish ma'lumotlari yuborildi.
+        await staffCabinet?.showMenuForChat(ctx).catch((err: Error) => {
+          logger.warn(
+            `Xodim menyusi yuborilmadi (chat ${chatId}): ${err.message}`,
+          );
+        });
       } catch (error) {
         // Logged, not swallowed. A bare `catch` here is what hid a total
         // registration outage: every attempt failed, the user saw a polite

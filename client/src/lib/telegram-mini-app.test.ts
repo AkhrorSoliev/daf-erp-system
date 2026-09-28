@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   SIGN_IN_BOUNCE_MS,
+  STAFF_CABINET_HOME,
   bouncedAfterSignIn,
   clearMiniAppSignedIn,
   closeMiniApp,
@@ -9,8 +10,10 @@ import {
   markMiniAppSession,
   markMiniAppSignedIn,
   markMiniAppSignedOut,
+  miniAppAudienceForHost,
   onMiniAppActivated,
   openOutsideMiniApp,
+  staffCabinetPath,
   wasSignedOutInMiniApp,
 } from "./telegram-mini-app";
 
@@ -202,5 +205,45 @@ describe("onMiniAppActivated", () => {
     expect(() => onMiniAppActivated(() => {})()).not.toThrow();
     vi.stubGlobal("window", {});
     expect(() => onMiniAppActivated(() => {})()).not.toThrow();
+  });
+});
+
+describe("miniAppAudienceForHost (ADR-0045)", () => {
+  it.each([
+    ["lehrer.dafzentrum.uz", "staff"],
+    ["admin.dafzentrum.uz", "staff"],
+    ["student.dafzentrum.uz", "student"],
+    // Lokal va tunnel — o'quvchi kabineti, avvalgidek.
+    ["localhost:3000", "student"],
+    ["abc.ngrok.app", "student"],
+  ] as const)("%s → %s", (host, audience) => {
+    expect(miniAppAudienceForHost(host)).toBe(audience);
+  });
+});
+
+describe("staffCabinetPath", () => {
+  it("opens the profile when the bot names no page", () => {
+    expect(staffCabinetPath(null)).toBe(STAFF_CABINET_HOME);
+    expect(staffCabinetPath(undefined)).toBe("/profile");
+    expect(staffCabinetPath("")).toBe("/profile");
+  });
+
+  it.each(["/", "/profile", "/profile/salary", "/schedule", "/groups"])(
+    "opens %s, a page the bot's menu names",
+    (page) => {
+      expect(staffCabinetPath(page)).toBe(page);
+    },
+  );
+
+  it.each([
+    "https://evil.example",
+    "//evil.example",
+    "/\\evil.example",
+    "/tg",
+    "/login",
+    "/payments",
+    "/profile/../payments",
+  ])("never follows %s — the profile instead", (next) => {
+    expect(staffCabinetPath(next)).toBe("/profile");
   });
 });

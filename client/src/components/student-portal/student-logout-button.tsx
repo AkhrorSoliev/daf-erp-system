@@ -1,14 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
 import { useIsMiniApp } from "@/hooks/use-is-mini-app";
-import {
-  MINI_APP_ENTRY_PATH,
-  markMiniAppSignedOut,
-} from "@/lib/telegram-mini-app";
+import { useSignOut } from "@/hooks/use-sign-out";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,24 +25,9 @@ export function LogoutButton({
   variant?: "row" | "rail";
 }) {
   const [open, setOpen] = useState(false);
-  const logout = useAuth((s) => s.logout);
-  const clearSession = useAuth((s) => s.clearSession);
-  const queryClient = useQueryClient();
-  const router = useRouter();
   const inMiniApp = useIsMiniApp();
-
-  function confirmLogout() {
-    queryClient.clear();
-    if (inMiniApp) {
-      // The Mini App has no password form (ADR-0040): back to /tg, which
-      // waits for «Qayta kirish» instead of signing straight back in.
-      markMiniAppSignedOut(true);
-      clearSession();
-      router.replace(MINI_APP_ENTRY_PATH);
-      return;
-    }
-    logout(); // clears cookies + redirects to /login
-  }
+  // Inside the Mini App: back to /tg «Qayta kirish» (ADR-0040).
+  const confirmLogout = useSignOut();
 
   return (
     <>

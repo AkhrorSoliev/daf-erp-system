@@ -271,3 +271,121 @@ export function wortTippen(
     belegteItems: [materialSchluessel('WORT', ziel.id)],
   };
 }
+
+/**
+ * Three picture distractors: other words WITH a picture, each picture and
+ * each word only once. `null` when the pool holds fewer than three — the
+ * session builder then fills the slot from another format.
+ */
+function bildAblenker(
+  ziel: MaterialWort,
+  andere: MaterialWort[],
+  rnd: () => number,
+): MaterialWort[] | null {
+  const bilder = new Set<string>([ziel.imageKey as string]);
+  const zielDe = normalisieren(ziel.de);
+  const gewaehlt: MaterialWort[] = [];
+  for (const w of mischen(andere, rnd)) {
+    if (w.id === ziel.id || !w.imageKey) continue;
+    if (bilder.has(w.imageKey) || normalisieren(w.de) === zielDe) continue;
+    bilder.add(w.imageKey);
+    gewaehlt.push(w);
+    if (gewaehlt.length === 3) return gewaehlt;
+  }
+  return null;
+}
+
+function bildOptionen(
+  woerter: MaterialWort[],
+  rnd: () => number,
+  mediaUrl: MediaUrlResolver,
+): string[] | null {
+  const urls = woerter.map((w) => mediaUrl(w.imageKey as string));
+  if (urls.some((u) => !u)) return null;
+  return mischen(urls as string[], rnd);
+}
+
+/** The word (with its article) and its sound; four pictures to pick from. */
+export function bildWort(
+  ziel: MaterialWort,
+  andere: MaterialWort[],
+  rnd: () => number,
+  mediaUrl: MediaUrlResolver,
+): Frage | null {
+  if (!ziel.imageKey) return null;
+  const richtig = mediaUrl(ziel.imageKey);
+  if (!richtig) return null;
+  const falsch = bildAblenker(ziel, andere, rnd);
+  if (!falsch) return null;
+  const options = bildOptionen([ziel, ...falsch], rnd, mediaUrl);
+  if (!options) return null;
+  return {
+    format: 'BILD_WORT',
+    itemType: 'WORT',
+    itemId: ziel.id,
+    prompt: anzeigen(ziel),
+    hilfe: null,
+    options,
+    richtig,
+    akzeptiert: [],
+    belegteItems: [materialSchluessel('WORT', ziel.id)],
+    // The word is on screen anyway; hearing it ties the sound to the picture.
+    audioUrl: ziel.audioKey ? mediaUrl(ziel.audioKey) : null,
+  };
+}
+
+/** Only the sound; four pictures to pick from — no text on the screen. */
+export function audioBild(
+  ziel: MaterialWort,
+  andere: MaterialWort[],
+  rnd: () => number,
+  mediaUrl: MediaUrlResolver,
+): Frage | null {
+  if (!ziel.imageKey || !ziel.audioKey) return null;
+  const audioUrl = mediaUrl(ziel.audioKey);
+  const richtig = mediaUrl(ziel.imageKey);
+  if (!audioUrl || !richtig) return null;
+  const falsch = bildAblenker(ziel, andere, rnd);
+  if (!falsch) return null;
+  const options = bildOptionen([ziel, ...falsch], rnd, mediaUrl);
+  if (!options) return null;
+  return {
+    format: 'AUDIO_BILD',
+    itemType: 'WORT',
+    itemId: ziel.id,
+    // EMPTY: showing the word would turn listening into reading.
+    prompt: '',
+    hilfe: null,
+    options,
+    richtig,
+    akzeptiert: [],
+    belegteItems: [materialSchluessel('WORT', ziel.id)],
+    audioUrl,
+  };
+}
+
+/** One picture; the student types the word with its article. */
+export function bildTippen(
+  ziel: MaterialWort,
+  _rnd: () => number,
+  mediaUrl: MediaUrlResolver,
+): Frage | null {
+  // The article is part of the answer, so a word without one is not asked;
+  // `bildTippen` keeps out pictures another correct word could name.
+  if (!ziel.imageKey || !ziel.bildTippen || !ziel.artikel) return null;
+  const bildUrl = mediaUrl(ziel.imageKey);
+  if (!bildUrl) return null;
+  return {
+    format: 'BILD_TIPPEN',
+    itemType: 'WORT',
+    itemId: ziel.id,
+    prompt: '',
+    hilfe: null,
+    options: [],
+    richtig: anzeigen(ziel),
+    akzeptiert: [],
+    belegteItems: [materialSchluessel('WORT', ziel.id)],
+    audioUrl: null,
+    bildUrl,
+  };
+}

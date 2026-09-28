@@ -101,7 +101,8 @@ export function AttendanceForm({
   const isToday = date === tashkent.dateStr;
 
   // ADR-0046: one window for every role — from the company's lead before the
-  // start (10 minutes unless the settings say otherwise) until the end. The server sends the lesson's effective times (a move's override
+  // start (10 minutes unless the settings say otherwise) until the end. The
+  // server sends the lesson's effective times (a move's override
   // included); before the first fetch the group's own times stand in.
   const windowTimes = serverWindow ?? {
     startTime: group.lessonStartTime ?? null,

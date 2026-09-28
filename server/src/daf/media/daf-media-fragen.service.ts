@@ -20,7 +20,10 @@ import {
 } from '../uebung/satz-fragen';
 import {
   artikel,
+  audioBild,
   audioWort,
+  bildTippen,
+  bildWort,
   paar,
   uzWort,
   wortTippen,
@@ -46,6 +49,8 @@ export interface VorschauFrage {
   richtig: string;
   titel?: string | null;
   audioUrl: string | null;
+  /** `BILD_TIPPEN`: the picture the student types from. */
+  bildUrl: string | null;
 }
 
 function toVorschau(f: Frage): VorschauFrage {
@@ -59,6 +64,7 @@ function toVorschau(f: Frage): VorschauFrage {
     richtig: f.richtig,
     titel: f.titel,
     audioUrl: f.audioUrl,
+    bildUrl: f.bildUrl ?? null,
   };
 }
 
@@ -169,6 +175,16 @@ export const VORSCHAU_BAUER: Record<
       .filter(nichtNull),
   HOEREN_WAHL: (m, r) =>
     m.dialoge.map((d) => hoerenWahl(d, r, m.mediaUrl)).filter(nichtNull),
+  BILD_WORT: (m, r) =>
+    m.woerter
+      .map((w) => bildWort(w, m.woerter, r, m.mediaUrl))
+      .filter(nichtNull),
+  AUDIO_BILD: (m, r) =>
+    m.woerter
+      .map((w) => audioBild(w, m.woerter, r, m.mediaUrl))
+      .filter(nichtNull),
+  BILD_TIPPEN: (m, r) =>
+    m.woerter.map((w) => bildTippen(w, r, m.mediaUrl)).filter(nichtNull),
 };
 
 /**
@@ -246,6 +262,8 @@ export class DafMediaFragenService {
             anzeige: true,
             core: true,
             audioKey: true,
+            imageKey: true,
+            bildTippen: true,
           },
         } as any),
         this.prisma.dafSentence.findMany({
@@ -279,6 +297,8 @@ export class DafMediaFragenService {
       anzeige: string | null;
       core: boolean;
       audioKey: string | null;
+      imageKey: string | null;
+      bildTippen: boolean;
     }
     interface SentenceRow {
       id: number;
@@ -324,6 +344,8 @@ export class DafMediaFragenService {
         // bo'sh qoldirish xavfsiz.
         sectionCode: '',
         audioKey: l.audioKey,
+        imageKey: l.imageKey,
+        bildTippen: l.bildTippen,
       }));
 
     const saetze: MaterialSatz[] = (saetzeRows as SentenceRow[]).map((s) => ({

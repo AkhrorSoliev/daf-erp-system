@@ -4,6 +4,7 @@ import {
   answerPlatformMenu,
   installMiniAppMenuButton,
   platformButton,
+  setChatCabinetButton,
 } from './mini-app';
 
 const MINI_APP_URL = 'https://student.dafzentrum.uz/tg';
@@ -117,6 +118,56 @@ describe('installMiniAppMenuButton', () => {
     ).resolves.toBeUndefined();
     expect(log.warn).toHaveBeenCalledWith(
       expect.stringContaining('invalid url'),
+    );
+  });
+});
+
+describe('setChatCabinetButton (ADR-0045)', () => {
+  const STAFF_URL = 'https://lehrer.dafzentrum.uz/tg';
+
+  it("manzil berilsa — shu chatning «Kabinet» tugmasi o'sha Mini App'ni ochadi", async () => {
+    const telegram = { setChatMenuButton: jest.fn().mockResolvedValue(true) };
+
+    await setChatCabinetButton(telegram, '700000001', STAFF_URL, {
+      warn: jest.fn(),
+    });
+
+    expect(telegram.setChatMenuButton).toHaveBeenCalledWith({
+      chatId: 700000001,
+      menuButton: {
+        type: 'web_app',
+        text: MINI_APP_MENU_BUTTON_TEXT,
+        web_app: { url: STAFF_URL },
+      },
+    });
+  });
+
+  it("manzil berilmasa — botning standart tugmasiga (o'quvchi kabineti) qaytaradi", async () => {
+    const telegram = { setChatMenuButton: jest.fn().mockResolvedValue(true) };
+
+    await setChatCabinetButton(telegram, '700000001', undefined, {
+      warn: jest.fn(),
+    });
+
+    expect(telegram.setChatMenuButton).toHaveBeenCalledWith({
+      chatId: 700000001,
+      menuButton: { type: 'default' },
+    });
+  });
+
+  it('Telegram rad etsa — faqat log, xato otilmaydi', async () => {
+    const telegram = {
+      setChatMenuButton: jest
+        .fn()
+        .mockRejectedValue(new Error('Bad Request: chat not found')),
+    };
+    const logger = { warn: jest.fn() };
+
+    await expect(
+      setChatCabinetButton(telegram, '700000001', STAFF_URL, logger),
+    ).resolves.toBeUndefined();
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('chat not found'),
     );
   });
 });
