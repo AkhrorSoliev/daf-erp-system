@@ -19,6 +19,8 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import type { MockExamParticipant } from "./exam-detail-types";
+import { StudentLinkPicker } from "./student-link-picker";
+import { identityAfterLink, type LinkableStudent } from "./student-link";
 
 interface ManualParticipantDialogProps {
   examId: string;
@@ -37,13 +39,19 @@ interface FormValues {
   firstName: string;
   lastName: string;
   phone: string;
-  /** Optional explicit DaF student link (5-digit id). */
-  studentId: string;
   /** Chosen level ("" = none). */
   level: string;
   /** Chosen exam time ("" = none). */
   examTime: string;
 }
+
+const EMPTY_FORM: FormValues = {
+  firstName: "",
+  lastName: "",
+  phone: "",
+  level: "",
+  examTime: "",
+};
 
 export function ManualParticipantDialog({
   examId,
@@ -59,44 +67,40 @@ export function ManualParticipantDialog({
     handleSubmit,
     control,
     reset,
+    getValues,
+    setValue,
     formState: { errors },
-  } = useForm<FormValues>({
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      phone: "",
-      studentId: "",
-      level: "",
-      examTime: "",
-    },
-  });
+  } = useForm<FormValues>({ defaultValues: EMPTY_FORM });
   const [submitting, setSubmitting] = useState(false);
+  // Markaz o'quvchisi tanlansa, ishtirokchi aynan shu kartaga bog'lanadi —
+  // telefon kartadagidan farq qilsa ham (masalan, ota-onaning raqami).
+  const [linkedStudent, setLinkedStudent] = useState<LinkableStudent | null>(
+    null,
+  );
 
   useEffect(() => {
     if (open) {
-      reset({
-        firstName: "",
-        lastName: "",
-        phone: "",
-        studentId: "",
-        level: "",
-        examTime: "",
-      });
+      reset(EMPTY_FORM);
+      setLinkedStudent(null);
       setSubmitting(false);
     }
   }, [open, reset]);
 
-  async function onSubmit(values: FormValues) {
-    let studentId: number | undefined;
-    if (values.studentId.trim()) {
-      const n = Number(values.studentId);
-      if (!Number.isInteger(n) || n < 10000) {
-        toast.error("O'quvchi ID noto'g'ri (5 xonali son)");
-        return;
-      }
-      studentId = n;
-    }
+  function handleLinkChange(next: LinkableStudent | null) {
+    const { firstName, lastName, phone } = getValues();
+    const identity = identityAfterLink(
+      { firstName, lastName, phone },
+      linkedStudent,
+      next,
+    );
+    const opts = { shouldValidate: next !== null, shouldDirty: true };
+    setValue("firstName", identity.firstName, opts);
+    setValue("lastName", identity.lastName, opts);
+    setValue("phone", identity.phone, opts);
+    setLinkedStudent(next);
+  }
 
+  async function onSubmit(values: FormValues) {
     setSubmitting(true);
     try {
       const { data } = await api.post<MockExamParticipant>(
@@ -105,7 +109,7 @@ export function ManualParticipantDialog({
           firstName: values.firstName.trim(),
           lastName: values.lastName.trim(),
           phone: values.phone,
-          studentId,
+          studentId: linkedStudent?.id,
           level: values.level || undefined,
           examTime: values.examTime || undefined,
         },
@@ -122,21 +126,34 @@ export function ManualParticipantDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !submitting && onClose()}>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
+        <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>Ishtirokchini qo&apos;lda qo&apos;shish</DialogTitle>
           <DialogDescription>
-            Telegram orqali ro&apos;yxatga olinmagan ishtirokchini qo&apos;lda
-            yozish. Botdan farqli ravishda Telegram chat ID bo&apos;lmaydi,
-            shuning uchun bunday ishtirokchiga natija avtomatik yuborilmaydi.
+            Telegram botidan o&apos;tmagan ishtirokchini qo&apos;lda yozish.
+            Bunday ishtirokchiga natija Telegramda avtomatik yuborilmaydi.
           </DialogDescription>
         </DialogHeader>
 
         <form
           id="manual-participant-form"
           onSubmit={handleSubmit(onSubmit)}
-          className="space-y-4"
+          className="flex-1 space-y-4 overflow-y-auto px-6 py-4"
         >
+          <div className="space-y-1.5">
+            <Label>Markaz o&apos;quvchisi (ixtiyoriy)</Label>
+            <StudentLinkPicker
+              value={linkedStudent}
+              onChange={handleLinkChange}
+              disabled={submitting}
+            />
+            <p className="text-xs text-muted-foreground">
+              {hasStudentDiscount
+                ? "Ishtirokchi markazimiz o'quvchisi bo'lsa, uni tanlang: ism va telefon kartadan olinadi, DaF chegirmasi qo'llanadi (chetlatilgan va arxivdagilardan tashqari)."
+                : "Ishtirokchi markazimiz o'quvchisi bo'lsa, uni tanlang: ism va telefon kartadan olinadi, natijasi o'quvchi profilida ko'rinadi."}
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="manual-firstName">Ism</Label>
@@ -196,10 +213,12 @@ export function ManualParticipantDialog({
                 {errors.phone.message}
               </p>
             )}
-            <p className="text-xs text-muted-foreground">
-              Raqam markaz o&apos;quvchisiniki bo&apos;lsa, chegirma avtomatik
-              qo&apos;llanadi.
-            </p>
+            {!linkedStudent && (
+              <p className="text-xs text-muted-foreground">
+                Raqam markaz o&apos;quvchisining kartasidagi raqam bo&apos;lsa,
+                o&apos;quvchi avtomatik bog&apos;lanadi.
+              </p>
+            )}
           </div>
 
           {offeredLevels.length > 0 && (
@@ -259,26 +278,9 @@ export function ManualParticipantDialog({
               />
             </div>
           )}
-
-          <div className="space-y-1.5">
-            <Label htmlFor="manual-studentId">
-              O&apos;quvchi ID (ixtiyoriy)
-            </Label>
-            <Input
-              id="manual-studentId"
-              inputMode="numeric"
-              placeholder="Masalan: 10234"
-              {...register("studentId")}
-            />
-            <p className="text-xs text-muted-foreground">
-              {hasStudentDiscount
-                ? "Telefon topilmasa, chegirma uchun o'quvchini shu yerda bog'lang."
-                : "Ishtirokchini mavjud o'quvchiga bog'lash uchun ID kiriting."}
-            </p>
-          </div>
         </form>
 
-        <DialogFooter>
+        <DialogFooter className="border-t px-6 py-4">
           <Button
             type="button"
             variant="outline"
