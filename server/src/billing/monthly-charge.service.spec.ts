@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsWriteService } from '../transactions/transactions-write.service';
 import { SettingsService } from '../settings/settings.service';
+import { SalaryAccrualService } from '../salary/salary-accrual.service';
 import { DeparturePolicy } from './departure-policy';
 
 // Cast once here rather than `as any` at every call site below: the shape
@@ -46,6 +47,7 @@ describe('MonthlyChargeService', () => {
   let prismaMock: any;
   let txWriteMock: any;
   let settingsMock: any;
+  let salaryAccrualMock: any;
   let tx: any;
   // The service does create() then update() on the same row (the second
   // write stamps transactionId once the ledger row exists). This mirrors
@@ -79,7 +81,11 @@ describe('MonthlyChargeService', () => {
       },
       // Markaz qoplagani bayrog'ini ikki yo'nalishda o'girish
       // (`setCenterTopUpForPeriod`). Odatiy — tegadigan qator yo'q.
-      salaryAccrual: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      salaryAccrual: {
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        // Contract 3.5: the trial lesson's accruals to reverse. None by default.
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
       // Contract 3.5: billable lessons the student held in all groups.
       // Default: an established student, never a trial.
@@ -126,6 +132,9 @@ describe('MonthlyChargeService', () => {
     // kredit yoqilgan, cheklovsiz — mavjud testlar shu yordamida
     // o'zgarishsiz o'tadi. Sozlama-xos testlar buni mockResolvedValueOnce
     // bilan qayta belgilaydi.
+    salaryAccrualMock = {
+      reverseAccrualForAttendance: jest.fn().mockResolvedValue(null),
+    };
     settingsMock = {
       get: jest.fn((_companyId: number, key: string) => {
         if (key === 'payment.excusedCreditEnabled')
@@ -143,6 +152,7 @@ describe('MonthlyChargeService', () => {
         { provide: PrismaService, useValue: prismaMock },
         { provide: TransactionsWriteService, useValue: txWriteMock },
         { provide: SettingsService, useValue: settingsMock },
+        { provide: SalaryAccrualService, useValue: salaryAccrualMock },
       ],
     }).compile();
 
@@ -2231,7 +2241,7 @@ describe('MonthlyChargeService', () => {
       expect(prismaMock.attendance.count).toHaveBeenCalledWith({
         where: {
           studentId: 10453,
-          status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
+          status: { in: ['PRESENT', 'LATE'] },
         },
       });
       expect(txWriteMock.createAdjustment).toHaveBeenCalledWith(
@@ -2242,6 +2252,63 @@ describe('MonthlyChargeService', () => {
         }),
         tx,
       );
+    });
+
+    it('pays the teacher nothing for a trial lesson, leaving what payroll already paid', async () => {
+      octoberCharge();
+      prismaMock.attendance.count.mockResolvedValue(1);
+      prismaMock.salaryAccrual.findMany.mockResolvedValue([
+        { userId: 20001, lessonDate: new Date('2026-10-02T00:00:00Z') },
+      ]);
+      await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-02T10:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqarilganda',
+        today: '2026-10-02',
+        policy: 'STUDENT_CANCELLED' as DeparturePolicy,
+        performedById: 7,
+      });
+      expect(prismaMock.salaryAccrual.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            studentId: 10453,
+            groupId: 'grp-1',
+            reversedAt: null,
+            salaryPaymentId: null,
+            lessonDate: {
+              gte: new Date('2026-10-01T00:00:00Z'),
+              lt: new Date('2026-11-01T00:00:00Z'),
+            },
+          }),
+        }),
+      );
+      expect(
+        salaryAccrualMock.reverseAccrualForAttendance,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teacherId: 20001,
+          studentId: 10453,
+          groupId: 'grp-1',
+          reversedById: 7,
+          tx,
+        }),
+      );
+    });
+
+    it('leaves the teacher alone outside a trial', async () => {
+      octoberCharge();
+      await service.reverseChargeForDeparture(tx, {
+        enrollmentId: 'enr-1',
+        departureDate: new Date('2026-10-12T10:00:00Z'),
+        companyId: 1,
+        reason: 'Guruhdan chiqarilganda',
+        today: '2026-10-12',
+        policy: 'STUDENT_CANCELLED' as DeparturePolicy,
+      });
+      expect(
+        salaryAccrualMock.reverseAccrualForAttendance,
+      ).not.toHaveBeenCalled();
     });
 
     it('keeps the ordinary rule for a freeze or a transfer (no policy passed)', async () => {

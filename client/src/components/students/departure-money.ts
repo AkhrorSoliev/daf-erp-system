@@ -197,8 +197,10 @@ export function departureConsequence(
         : rows.every((r) => r.month.held === 0)
           ? `Hali dars o'tmagan: ${lessons} dars puli to'liq qaytadi, ${som(amount)}`
           : `${lessons} ta o'tilmagan dars puli qaytadi: ${som(amount)}`;
-    const teacher =
-      trial || policy === "QUALITY_CLAIM"
+    // Contract 3.5 (CEO, 28.09.2026): a trial lesson is paid by nobody.
+    const teacher = trial
+      ? " Ustozga bu oyning darslari uchun haq yozilmaydi."
+      : policy === "QUALITY_CLAIM"
         ? " Ustoz oyligi kamaymaydi, farqni markaz qoplaydi."
         : "";
     return {

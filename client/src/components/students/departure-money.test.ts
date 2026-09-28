@@ -188,7 +188,9 @@ describe("departure money block (contract 6.2, ADR-0043)", () => {
     expect(plain(c.head)).toBe(
       "Sinov darsi (3.5): oyning puli to'liq qaytadi — 1 040 000 so'm",
     );
-    expect(c.line).toContain("Ustoz oyligi kamaymaydi");
+    expect(c.line).toContain(
+      "Ustozga bu oyning darslari uchun haq yozilmaydi.",
+    );
     expect(policyHint("STUDENT_CANCELLED", trial)).toBe(
       "Sinov darsi (3.5) — oyning to'liq puli qaytadi",
     );

@@ -38,8 +38,9 @@ export const CONTRACT_62_START_DAY = '2026-10-01';
 export const TRIAL_LESSON_START_DAY = '2026-10-01';
 
 /**
- * The most billable lessons (PRESENT/LATE/ABSENT, every group) a student may
- * have held and still leave on the trial-lesson rule.
+ * The most lessons (PRESENT/LATE, every group) a student may have attended
+ * and still leave on the trial-lesson rule. ABSENT does not count (CEO,
+ * 28.09.2026): a student who came once and then stayed away is a trial.
  */
 export const TRIAL_LESSON_MAX_HELD = 1;
 
@@ -89,7 +90,7 @@ export interface PolicyRelease {
 
 export interface PolicyReleaseOptions {
   /**
-   * The student has held at most `TRIAL_LESSON_MAX_HELD` billable lessons in
+   * The student has attended at most `TRIAL_LESSON_MAX_HELD` lessons in
    * all groups, and the caller is an actual departure (a removal or an
    * expulsion — not a freeze, a transfer or a centre closing).
    */
@@ -132,8 +133,8 @@ export function policyRelease(
 ): PolicyRelease {
   const share = heldShare(input);
   // Contract 3.5: a trial lesson is free whatever the policy says — the
-  // month comes back whole and the centre pays the teacher (accruals are
-  // never touched by a departure).
+  // month comes back whole, and nobody pays the teacher for it either
+  // (`MonthlyChargeService.reverseTrialAccruals`, CEO 28.09.2026).
   if (trialLessonApplies(input, options)) {
     return {
       release: wholeMonthRelease(input),

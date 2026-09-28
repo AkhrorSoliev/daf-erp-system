@@ -10,6 +10,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsWriteService } from '../transactions/transactions-write.service';
 import { SettingsService } from '../settings/settings.service';
+import { SalaryAccrualService } from '../salary/salary-accrual.service';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { lessonDatesInMonth } from './planned-lessons';
 import { resolveMonthPlan } from './month-plan';
@@ -119,6 +120,7 @@ export class MonthlyChargeService {
     private prisma: PrismaService,
     private transactionsWrite: TransactionsWriteService,
     private settingsService: SettingsService,
+    private salaryAccrual: SalaryAccrualService,
   ) {}
 
   /**
@@ -800,6 +802,16 @@ export class MonthlyChargeService {
       },
     });
 
+    if (outcome.trial) {
+      await this.reverseTrialAccruals(tx, {
+        studentId: enr.studentId,
+        groupId: charge.groupId,
+        periodYear,
+        periodMonth,
+        performedById: params.performedById,
+      });
+    }
+
     return {
       refunded,
       lessons: remaining,
@@ -890,8 +902,8 @@ export class MonthlyChargeService {
   }
 
   /**
-   * Contract 3.5 (trial lesson): the student has held at most one billable
-   * lesson (PRESENT/LATE/ABSENT) in ALL groups — a first-timer leaving after
+   * Contract 3.5 (trial lesson): the student has attended (PRESENT/LATE) at
+   * most one lesson in ALL groups — a first-timer leaving after
    * the first lesson. Counted across groups so a student moving on after
    * months elsewhere is never taken for a trial. Before the contract's day
    * nothing is read.
@@ -905,16 +917,56 @@ export class MonthlyChargeService {
     const held = await client.attendance.count({
       where: {
         studentId,
-        status: {
-          in: [
-            AttendanceStatus.PRESENT,
-            AttendanceStatus.LATE,
-            AttendanceStatus.ABSENT,
-          ],
-        },
+        status: { in: [AttendanceStatus.PRESENT, AttendanceStatus.LATE] },
       },
     });
     return held <= TRIAL_LESSON_MAX_HELD;
+  }
+
+  /**
+   * Contract 3.5 (CEO, 28.09.2026): a trial lesson is paid by nobody — the
+   * student gets the whole month back and the teacher gets nothing for the
+   * month's lessons in this group. Reverses the accruals the lessons wrote,
+   * except those a payroll run has already paid out: money handed over is
+   * not taken back here. The centre never fronts them again: the student's
+   * pair stays under the new-student gate (`NEW_STUDENT_TOPUP_MIN_LESSONS`).
+   */
+  private async reverseTrialAccruals(
+    tx: Prisma.TransactionClient,
+    params: {
+      studentId: number;
+      groupId: string;
+      periodYear: number;
+      periodMonth: number;
+      performedById?: number;
+    },
+  ): Promise<void> {
+    const accruals = await tx.salaryAccrual.findMany({
+      where: {
+        studentId: params.studentId,
+        groupId: params.groupId,
+        attendanceId: { not: null },
+        reversedAt: null,
+        salaryPaymentId: null,
+        lessonDate: {
+          gte: new Date(Date.UTC(params.periodYear, params.periodMonth - 1, 1)),
+          lt: new Date(Date.UTC(params.periodYear, params.periodMonth, 1)),
+        },
+      },
+      select: { userId: true, lessonDate: true },
+    });
+    for (const a of accruals) {
+      await this.salaryAccrual.reverseAccrualForAttendance({
+        teacherId: a.userId,
+        studentId: params.studentId,
+        groupId: params.groupId,
+        lessonDate: a.lessonDate,
+        reversedById: params.performedById,
+        reversalReason:
+          "Sinov darsi (3.5): o'quvchi to'lamaydi, ustozga haq yozilmaydi",
+        tx,
+      });
+    }
   }
 
   /** Reads (never writes) the month charge a departure on `day` would cut. */

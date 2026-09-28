@@ -43,12 +43,17 @@ to'xtatdi. To'rtta narsa keyingi bosqichga qoldirilgan edi:
    daqiqa yozmaydi. Ro'yxat va nuqtalar javobida bor; ekranda
    «N daqiqa kechikdi».
 3. **Sinov darsi (3.5).** 01.10.2026 dan boshlab o'quvchi guruhdan chiqarilsa
-   yoki chetlatilsa va uning barcha guruhlardagi hisoblanadigan davomati
-   (Keldi/Kechikdi/Kelmadi) 1 tadan oshmasa — qaysi tartib tanlanganidan
-   qat'i nazar oyning to'liq puli qaytadi (sifat shikoyati yo'li). Muzlatish,
-   guruh almashtirish va markaz yopishlari tartib bermaydi, ularga bu qoida
-   qo'llanmaydi. Ustoz haqi tegilmaydi — markaz to'laydi. Pul qatori:
-   «Sinov darsi (3.5): oyning puli to'liq qaytarildi — X so'm».
+   yoki chetlatilsa va u barcha guruhlarda ko'pi bilan 1 ta darsga kelgan
+   bo'lsa («Keldi»/«Kechikdi»; «Kelmadi» sanalmaydi — CEO, 28.09.2026),
+   qaysi tartib tanlanganidan qat'i nazar oyning to'liq puli qaytadi va
+   qarzi 0 bo'ladi. Ustozga ham o'sha oyning shu guruhdagi darslari uchun haq
+   yozilmaydi: yozilgan haq qaytarib olinadi, faqat oylik hisob-kitobida
+   allaqachon to'langani qoladi. Markaz ham qoplamaydi — o'quvchi yangi
+   o'quvchi chegarasidan (4 dars) o'tmagan, shuning uchun markaz qo'shimchasi
+   uni olmaydi. Admin chiqarmaguncha o'quvchi qarzdor bo'lib turadi.
+   Muzlatish, guruh almashtirish va markaz yopishlari tartib bermaydi, ularga
+   bu qoida qo'llanmaydi. Pul qatori: «Sinov darsi (3.5): oyning puli to'liq
+   qaytarildi — X so'm».
 4. **Qarzdorning 1-darsga kelmagani.** 01.10.2026 dan oylik kursda
    o'quvchining oydagi shu guruhdagi birinchi darsida (darsni hisoblagan
    oylik hisobning o'z sanalari bo'yicha, 3.2-band qoidasi) «Kelmadi» bo'lsa
