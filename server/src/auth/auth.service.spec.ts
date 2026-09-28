@@ -283,6 +283,52 @@ describe('AuthService', () => {
     });
   });
 
+  describe('findStaffAccountsByTelegram (ADR-0045)', () => {
+    it("parol bilan kirishdagi holat ro'yxatini ishlatadi — Telegram eshigi kengroq emas", async () => {
+      prisma.user.findFirst.mockResolvedValue(null);
+      prisma.user.findMany.mockResolvedValue([]);
+
+      await service.findAccountByIdentifier('901234567', [4]);
+      const passwordWhere = prisma.user.findFirst.mock.calls[0][0].where;
+
+      await service.findStaffAccountsByTelegram('700000001', [4]);
+      const telegramWhere = prisma.user.findMany.mock.calls[0][0].where;
+
+      expect(telegramWhere.status).toEqual(passwordWhere.status);
+      expect(telegramWhere.deletedAt).toBeNull();
+    });
+
+    it("chat va portal rollari bo'yicha qidiradi; sessiya shaklini yuklaydi", async () => {
+      prisma.user.findMany.mockResolvedValue([]);
+
+      await service.findStaffAccountsByTelegram('700000001', [1, 2, 3, 5]);
+
+      const args = prisma.user.findMany.mock.calls[0][0];
+      expect(args.where).toMatchObject({
+        telegramChatId: '700000001',
+        roles: { some: { roleId: { in: [1, 2, 3, 5] } } },
+      });
+      expect(args.take).toBe(2);
+      expect(args.include).toEqual(
+        expect.objectContaining({
+          roles: expect.anything(),
+          branches: expect.anything(),
+          company: expect.anything(),
+        }),
+      );
+    });
+
+    it("o'quvchi rolini hech qachon qidirmaydi — o'quvchi portalidan hech kim topilmaydi", async () => {
+      prisma.user.findMany.mockResolvedValue([]);
+
+      await service.findStaffAccountsByTelegram('700000001', [6]);
+
+      expect(prisma.user.findMany.mock.calls[0][0].where.roles).toEqual({
+        some: { roleId: { in: [] } },
+      });
+    });
+  });
+
   describe('pollLoginRequest', () => {
     it('returns pending for an empty requestId', async () => {
       const res = await service.pollLoginRequest('');

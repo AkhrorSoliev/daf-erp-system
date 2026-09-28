@@ -21,6 +21,17 @@ export function isBlockedStatus(status: string): boolean {
 }
 
 /**
+ * Account states that may sign in — the complement of the list above. One
+ * list for every door that issues a session: password, Telegram OAuth and the
+ * Telegram Mini App. A passwordless door that kept its own copy could drift
+ * and admit a status the password door refuses.
+ */
+export const SIGN_IN_USER_STATUSES: readonly UserStatus[] = [
+  UserStatus.ACTIVE,
+  UserStatus.INACTIVE,
+];
+
+/**
  * The `where` that finds an account only while it may still act: not
  * soft-deleted and not in a blocked status. The two doors that grant access —
  * the employee form's role ceiling and the Telegram registration link — read

@@ -4,6 +4,7 @@ export const SCENES = {
   MOCK_EXAM_REGISTRATION: 'mock-exam-registration',
   PASSWORD_RESET: 'password-reset',
   STATEMENT: 'statement',
+  STAFF_LINK: 'staff-link',
 } as const;
 
 export const TEACHER_DEEP_LINK_PREFIX = 'teacher_';
@@ -118,4 +119,21 @@ export function derivePositionForRoles(roleIds: number[]): string {
   if (!roleIds.length) return '';
   const lowestRoleId = [...roleIds].sort((a, b) => a - b)[0];
   return POSITION_LABELS[lowestRoleId] ?? '';
+}
+
+/**
+ * The role names an employee sees while registering through a bot link
+ * («Tanlangan lavozim(lar)»). Not `POSITION_LABELS`: those are job titles
+ * written to the account, these name the roles the link grants.
+ */
+const ROLE_LABELS: Record<number, string> = {
+  1: 'CEO',
+  2: 'Direktor',
+  3: 'Administrator',
+  4: "O'qituvchi",
+  5: 'Kassir',
+};
+
+export function roleNamesText(roleIds: number[]): string {
+  return roleIds.map((id) => ROLE_LABELS[id] ?? `#${id}`).join(', ');
 }

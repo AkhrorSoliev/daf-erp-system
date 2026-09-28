@@ -22,6 +22,8 @@ import {
 } from '../common/auth/session-version';
 import { STUDENT_ROLE_ID } from '../students/shared/student-select';
 import { isStudentOnlyAccount } from '../common/auth/student-account';
+import { SIGN_IN_USER_STATUSES } from '../common/auth/blocked-user';
+import { staffLinkedToChatWhere } from '../common/auth/staff-telegram';
 
 export const STUDENT_ACCOUNT_CLOSED_MESSAGE =
   "Hisobingiz yopilgan. Administrator bilan bog'laning.";
@@ -110,7 +112,7 @@ export class AuthService {
         OR: or,
         deletedAt: null,
         // SUSPENDED / TERMINATED / ARCHIVED users cannot log in.
-        status: { in: [UserStatus.ACTIVE, UserStatus.INACTIVE] },
+        status: { in: [...SIGN_IN_USER_STATUSES] },
         ...(allowedRoleIds && allowedRoleIds.length
           ? { roles: { some: { role: { id: { in: allowedRoleIds } } } } }
           : {}),
@@ -159,6 +161,25 @@ export class AuthService {
   ) {
     return this.prisma.user.findMany({
       ...this.buildAccountLookup(login, allowedRoleIds),
+      take,
+    });
+  }
+
+  /**
+   * Staff accounts linked to this Telegram account (`User.telegramChatId`),
+   * admitted like sign-in and limited to `roleIds` — the portal's roles
+   * (ADR-0045). `take: 2` answers "one or several": the Mini App signs in only
+   * when exactly one matches, like Telegram OAuth with a shared phone.
+   */
+  async findStaffAccountsByTelegram(
+    telegramUserId: string,
+    roleIds: readonly number[],
+    take = 2,
+  ) {
+    return this.prisma.user.findMany({
+      where: staffLinkedToChatWhere(telegramUserId, roleIds),
+      orderBy: { id: 'asc' },
+      include: SESSION_USER_INCLUDE,
       take,
     });
   }

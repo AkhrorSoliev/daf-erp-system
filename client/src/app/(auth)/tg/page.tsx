@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { MiniAppEntry } from "@/components/telegram-mini-app/mini-app-entry";
 
 export const metadata: Metadata = {
-  title: "DaF — o'quvchi kabineti",
+  title: "DaF — kabinet",
 };
 
 // Portal bilan bir xil: notch safe-area va Lumio ranglaridagi brauzer paneli.
@@ -17,9 +17,11 @@ export const viewport: Viewport = {
 };
 
 /**
- * Telegram Mini App'ning manzili (`TELEGRAM_MINI_APP_URL` =
- * `https://student.dafzentrum.uz/tg`, ADR-0040). Middleware'da ochiq: bu yerga
- * sessiyasiz kelinadi, sessiyani shu sahifa yaratadi.
+ * Telegram Mini App'ning manzili: o'quvchiga `https://student.dafzentrum.uz/tg`
+ * (`TELEGRAM_MINI_APP_URL`, ADR-0040), xodimga shu yo'l `lehrer.` yoki `admin.`
+ * xostida (ADR-0045) — qaysi kabinet ekanini `MiniAppEntry` xostdan biladi.
+ * Middleware'da ochiq: bu yerga sessiyasiz kelinadi, sessiyani shu sahifa
+ * yaratadi.
  */
 export default function TelegramMiniAppPage() {
   return (

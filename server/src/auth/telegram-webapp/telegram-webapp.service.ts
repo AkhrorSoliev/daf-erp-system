@@ -6,8 +6,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { STAFF_ROLE_IDS } from '../../common/auth/phone-account-rules';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthService } from '../auth.service';
+import { getAllowedRoleIds } from '../portal-roles.config';
 import { checkInitData } from './telegram-init-data';
 
 /**
@@ -23,14 +25,26 @@ export interface LinkedStudent {
   lastName: string;
 }
 
+/** Xodim sessiyasi — parol bilan kirish qaytaradigan shaklning o'zi. */
+type StaffSession = Awaited<ReturnType<AuthService['login']>>;
+
 /**
- * Mini App kirishining uch natijasi. Uchalasi ham HTTP 200: «ro'yxatdan
- * o'tmagan» va «farzandni tanlang» xato emas, klient ularni ekran sifatida
- * ko'rsatadi.
+ * O'quvchi Mini App kirishining natijalari. Hammasi HTTP 200: «ro'yxatdan
+ * o'tmagan», «farzandni tanlang» va «siz xodimsiz» xato emas, klient ularni
+ * ekran sifatida ko'rsatadi.
+ *
+ * `staff` — Telegram hech bir o'quvchiga emas, xodim hisobiga bog'langan: u
+ * o'quvchi kabinetini emas, xodim kabinetini ochishi kerak (ADR-0045).
  */
 export type TelegramWebAppResult =
   | ({ status: 'authenticated' } & StudentSession)
   | { status: 'choose'; students: LinkedStudent[] }
+  | { status: 'staff' }
+  | { status: 'not_registered' };
+
+/** Xodim Mini App kirishining natijalari (ADR-0045). */
+export type TelegramWebAppStaffResult =
+  | ({ status: 'authenticated' } & StaffSession)
   | { status: 'not_registered' };
 
 export const WEBAPP_DISABLED_MESSAGE =
@@ -44,6 +58,12 @@ export const NO_ACCOUNT_MESSAGE =
   "Sizda ilova hisobi yo'q. Administrator bilan bog'laning.";
 export const NOT_LINKED_STUDENT_MESSAGE =
   "Bu o'quvchi Telegram akkauntingizga bog'lanmagan.";
+/** Telegram OAuth'dagi umumiy telefon holati kabi — yopiq holat. */
+export const SEVERAL_STAFF_ACCOUNTS_MESSAGE =
+  "Bu Telegram bir nechta xodim hisobiga bog'langan. Administrator bilan bog'laning.";
+/** Parolsiz hisob parol bilan ham kira olmaydi — Telegram ham kiritmaydi. */
+export const STAFF_SIGN_IN_DISABLED_MESSAGE =
+  "Hisobingizga kirish yoqilmagan. Administrator bilan bog'laning.";
 
 /**
  * Telegram Mini App ichidan kirish (ADR-0040).
@@ -76,38 +96,25 @@ export class TelegramWebAppService {
     initData: string,
     studentId?: number,
   ): Promise<TelegramWebAppResult> {
-    // Mini App'ni ochgan bot — asosiy bot; `initData` uning tokeni bilan
-    // imzolanadi. Token yo'q bo'lsa bot ham yo'q, Mini App ham ochilmaydi.
-    const botToken = (
-      this.config.get<string>('TELEGRAM_BOT_TOKEN') ?? ''
-    ).trim();
-    if (!botToken) {
-      throw new ServiceUnavailableException(WEBAPP_DISABLED_MESSAGE);
-    }
-
-    const check = checkInitData(
-      initData,
-      botToken,
-      Math.floor(Date.now() / 1000),
-    );
-    if (!check.ok) {
-      if (check.reason === 'expired') {
-        // Normal holat: odam Mini App'ni uzoq ochiq qoldirgan.
-        throw new UnauthorizedException(INIT_DATA_EXPIRED_MESSAGE);
-      }
-      // Qiymatni emas, faqat sababni yozamiz — `initData` logga tushmasin.
-      this.logger.warn(`Mini App initData rad etildi: ${check.reason}`);
-      throw new UnauthorizedException(INIT_DATA_INVALID_MESSAGE);
-    }
+    const telegramUserId = this.verifiedTelegramUserId(initData);
 
     // Ota-onaning bitta Telegram'iga bir nechta farzand bog'langan bo'lishi
     // mumkin (botdagi «To'lovlar» ham shuni kutadi — `studentsForChat`).
     const linked = await this.prisma.student.findMany({
-      where: { telegramChatId: check.telegramUserId, deletedAt: null },
+      where: { telegramChatId: telegramUserId, deletedAt: null },
       select: { id: true, firstName: true, lastName: true, userId: true },
       orderBy: { id: 'asc' },
     });
-    if (linked.length === 0) return { status: 'not_registered' };
+    if (linked.length === 0) {
+      // Eski xabarlardagi o'quvchi tugmasini xodim ham bosishi mumkin: unga
+      // «ro'yxatdan o'tmagansiz» emas, o'z kabinetining yo'li aytiladi.
+      const staff = await this.authService.findStaffAccountsByTelegram(
+        telegramUserId,
+        STAFF_ROLE_IDS,
+        1,
+      );
+      return { status: staff.length > 0 ? 'staff' : 'not_registered' };
+    }
 
     const candidates = linked.filter(
       (s): s is typeof s & { userId: number } => s.userId !== null,
@@ -139,5 +146,82 @@ export class TelegramWebAppService {
     // native ilova kirishi bilan bitta funksiya.
     const session = await this.authService.buildStudentSession(chosen.userId);
     return { status: 'authenticated', ...session };
+  }
+
+  /**
+   * Xodim kabineti (ADR-0045): `lehrer.` yoki `admin.` portalidagi `/tg`.
+   *
+   * Kim ekanini Telegram aytadi, qaysi xodim ekanini `User.telegramChatId`.
+   * Uni bot xodim o'z Telegram raqamini yuborganda yozadi (ro'yxatdan o'tish
+   * yoki bog'lash) — Telegram OAuth kirishi ishonadigan isbotning o'zi.
+   *
+   * Qidiruv portal rollari bilan cheklanadi (`Origin`), sessiyani esa parol
+   * bilan kirishdagi `AuthService.login` beradi — portal darvozasi o'sha
+   * yerda yana tekshiriladi. Bir nechta hisob mos kelsa — yopiq holat: parol
+   * yo'q joyda «g'olib» tanlash odamni begona hisobga kiritib qo'yardi.
+   */
+  async signInStaff(
+    initData: string,
+    origin: string | undefined,
+  ): Promise<TelegramWebAppStaffResult> {
+    const telegramUserId = this.verifiedTelegramUserId(initData);
+
+    // Lokal dev'da (`null`) — barcha xodim rollari; o'quvchi portalida esa
+    // xodim roli yo'q, ya'ni hech kim topilmaydi.
+    const portalRoleIds = getAllowedRoleIds(origin) ?? STAFF_ROLE_IDS;
+    const matches = await this.authService.findStaffAccountsByTelegram(
+      telegramUserId,
+      portalRoleIds,
+    );
+    if (matches.length === 0) return { status: 'not_registered' };
+    if (matches.length > 1) {
+      this.logger.warn(
+        `Mini App: Telegram ${telegramUserId} bir nechta xodim hisobiga bog'langan (${matches
+          .map((m) => `#${m.id}`)
+          .join(', ')})`,
+      );
+      throw new UnauthorizedException(SEVERAL_STAFF_ACCOUNTS_MESSAGE);
+    }
+
+    // Telegram eshigi parol eshigidan kengroq emas: parolsiz hisobni parol
+    // yo'li ham kiritmaydi (`validateUser`), Telegram OAuth ham.
+    const [account] = matches;
+    if (!account.password) {
+      throw new UnauthorizedException(STAFF_SIGN_IN_DISABLED_MESSAGE);
+    }
+
+    const session = await this.authService.login(account, origin);
+    return { status: 'authenticated', ...session };
+  }
+
+  /**
+   * `initData` imzosi va muddati — ikkala kirish uchun bitta tekshiruv.
+   * Qaytgani — Telegram foydalanuvchi id'si (shaxsiy chatda `chat.id` ham shu).
+   */
+  private verifiedTelegramUserId(initData: string): string {
+    // Mini App'ni ochgan bot — asosiy bot; `initData` uning tokeni bilan
+    // imzolanadi. Token yo'q bo'lsa bot ham yo'q, Mini App ham ochilmaydi.
+    const botToken = (
+      this.config.get<string>('TELEGRAM_BOT_TOKEN') ?? ''
+    ).trim();
+    if (!botToken) {
+      throw new ServiceUnavailableException(WEBAPP_DISABLED_MESSAGE);
+    }
+
+    const check = checkInitData(
+      initData,
+      botToken,
+      Math.floor(Date.now() / 1000),
+    );
+    if (!check.ok) {
+      if (check.reason === 'expired') {
+        // Normal holat: odam Mini App'ni uzoq ochiq qoldirgan.
+        throw new UnauthorizedException(INIT_DATA_EXPIRED_MESSAGE);
+      }
+      // Qiymatni emas, faqat sababni yozamiz — `initData` logga tushmasin.
+      this.logger.warn(`Mini App initData rad etildi: ${check.reason}`);
+      throw new UnauthorizedException(INIT_DATA_INVALID_MESSAGE);
+    }
+    return check.telegramUserId;
   }
 }
