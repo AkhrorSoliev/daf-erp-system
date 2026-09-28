@@ -102,5 +102,6 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0042](0042-oylik-tolov-xabari.md) | Oylik to'lov xabari: hisob kuni va 2-dars eslatmasi (Telegram) | Qabul qilindi | 2026-09-27 |
 | [0043](0043-shartnoma-6-2-40-foizdan-keyin-pul-qaytmaydi.md) | Shartnoma 6.2: o'quvchi oyning 40% idan ko'pi o'tgach o'zi ketsa, oy to'lovi qaytarilmaydi; boshqa tartibni CEO yoki filial direktori tanlaydi | Almashtirildi — ADR-0044 | 2026-09-27 |
 | [0044](0044-darajani-tugatgan-oquvchi-shartnoma-bajarilgan.md) | Darajani tugatgan o'quvchi: shartnoma bajarilgan, oyning o'tilmagan darslari puli qaytadi; 40% qoidasining to'liq hozirgi holati | Qabul qilindi | 2026-09-27 |
+| [0045](0045-bot-xodimni-taniydi-xodim-kabineti-mini-appda.md) | Bot xodimni Telegram bog'lanishi bilan taniydi; xodim kabineti Mini App'da parolsiz ochiladi | Qabul qilindi | 2026-09-28 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
