@@ -11,6 +11,8 @@ import {
   INIT_DATA_INVALID_MESSAGE,
   NOT_LINKED_STUDENT_MESSAGE,
   NO_ACCOUNT_MESSAGE,
+  SEVERAL_STAFF_ACCOUNTS_MESSAGE,
+  STAFF_SIGN_IN_DISABLED_MESSAGE,
   TelegramWebAppService,
   WEBAPP_DISABLED_MESSAGE,
 } from './telegram-webapp.service';
@@ -53,7 +55,22 @@ const SARDOR = {
   userId: 20502,
 };
 
-function makeService(opts: { token?: string; linked?: unknown[] } = {}) {
+const DOSTON = {
+  id: 30401,
+  firstName: 'Doston',
+  password: '$2a$10$hash',
+  roles: [{ role: { id: 4, name: 'Teacher' } }],
+};
+const GULNOZA = {
+  id: 30402,
+  firstName: 'Gulnoza',
+  password: '$2a$10$hash',
+  roles: [{ role: { id: 3, name: 'Administrator' } }],
+};
+
+function makeService(
+  opts: { token?: string; linked?: unknown[]; staff?: unknown[] } = {},
+) {
   const config = {
     get: jest.fn((key: string) =>
       key === 'TELEGRAM_BOT_TOKEN' ? (opts.token ?? TOKEN) : undefined,
@@ -67,15 +84,22 @@ function makeService(opts: { token?: string; linked?: unknown[] } = {}) {
     refreshToken: 'refresh',
     user: { id: DILNOZA.userId, studentId: DILNOZA.id },
   };
+  const staffSession = {
+    accessToken: 'staff-access',
+    refreshToken: 'staff-refresh',
+    user: { id: DOSTON.id },
+  };
   const authService = {
     buildStudentSession: jest.fn().mockResolvedValue(session),
+    findStaffAccountsByTelegram: jest.fn().mockResolvedValue(opts.staff ?? []),
+    login: jest.fn().mockResolvedValue(staffSession),
   };
   const service = new TelegramWebAppService(
     config as any,
     prisma as any,
     authService as any,
   );
-  return { service, prisma, authService, session };
+  return { service, prisma, authService, session, staffSession };
 }
 
 describe('TelegramWebAppService.signIn', () => {
@@ -86,6 +110,36 @@ describe('TelegramWebAppService.signIn', () => {
       status: 'not_registered',
     });
     expect(authService.buildStudentSession).not.toHaveBeenCalled();
+  });
+
+  it("o'quvchi bog'lanmagan, lekin Telegram xodimniki bo'lsa — `staff`: xodim kabinetiga yo'l ko'rsatiladi (ADR-0045)", async () => {
+    const { service, authService } = makeService({
+      linked: [],
+      staff: [DOSTON],
+    });
+
+    await expect(service.signIn(initDataFor())).resolves.toEqual({
+      status: 'staff',
+    });
+    expect(authService.findStaffAccountsByTelegram).toHaveBeenCalledWith(
+      String(TG_USER_ID),
+      [1, 2, 3, 4, 5],
+      1,
+    );
+    expect(authService.buildStudentSession).not.toHaveBeenCalled();
+    expect(authService.login).not.toHaveBeenCalled();
+  });
+
+  it("o'quvchi bog'langan bo'lsa xodim qidirilmaydi — o'quvchi kabineti avvalgidek ochiladi", async () => {
+    const { service, authService } = makeService({
+      linked: [DILNOZA],
+      staff: [DOSTON],
+    });
+
+    const result = await service.signIn(initDataFor());
+
+    expect(result.status).toBe('authenticated');
+    expect(authService.findStaffAccountsByTelegram).not.toHaveBeenCalled();
   });
 
   it("o'quvchilarni Telegram id bo'yicha, arxivdagilarsiz qidiradi", async () => {
@@ -240,5 +294,138 @@ describe('TelegramWebAppService.signIn', () => {
     await expect(attempt).rejects.toBeInstanceOf(ServiceUnavailableException);
     await expect(attempt).rejects.toThrow(WEBAPP_DISABLED_MESSAGE);
     expect(prisma.student.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('TelegramWebAppService.signInStaff (ADR-0045)', () => {
+  const LEHRER = 'https://lehrer.dafzentrum.uz';
+  const ADMIN = 'https://admin.dafzentrum.uz';
+
+  it("ustoz portalida faqat ustoz rolini qidiradi va parol yo'lidagi `login` bilan sessiya beradi", async () => {
+    const { service, authService, staffSession } = makeService({
+      staff: [DOSTON],
+    });
+
+    await expect(service.signInStaff(initDataFor(), LEHRER)).resolves.toEqual({
+      status: 'authenticated',
+      ...staffSession,
+    });
+    expect(authService.findStaffAccountsByTelegram).toHaveBeenCalledWith(
+      String(TG_USER_ID),
+      [4],
+    );
+    // Portal darvozasi parol bilan kirishdagi funksiyada yana tekshiriladi.
+    expect(authService.login).toHaveBeenCalledWith(DOSTON, LEHRER);
+  });
+
+  it('admin portalida admin rollarini qidiradi', async () => {
+    const { service, authService } = makeService({ staff: [GULNOZA] });
+
+    await service.signInStaff(initDataFor(), ADMIN);
+
+    expect(authService.findStaffAccountsByTelegram).toHaveBeenCalledWith(
+      String(TG_USER_ID),
+      [1, 2, 3, 5],
+    );
+    expect(authService.login).toHaveBeenCalledWith(GULNOZA, ADMIN);
+  });
+
+  it("lokal dev'da (portal cheklovi yo'q) barcha xodim rollarini qidiradi", async () => {
+    const { service, authService } = makeService({ staff: [DOSTON] });
+
+    await service.signInStaff(initDataFor(), 'http://localhost:3000');
+
+    expect(authService.findStaffAccountsByTelegram).toHaveBeenCalledWith(
+      String(TG_USER_ID),
+      [1, 2, 3, 4, 5],
+    );
+  });
+
+  it("o'quvchi portalidan faqat o'quvchi roli uzatiladi — qidiruv uni tashlab yuboradi", async () => {
+    const { service, authService } = makeService({ staff: [] });
+
+    await expect(
+      service.signInStaff(initDataFor(), 'https://student.dafzentrum.uz'),
+    ).resolves.toEqual({ status: 'not_registered' });
+    expect(authService.findStaffAccountsByTelegram).toHaveBeenCalledWith(
+      String(TG_USER_ID),
+      [6],
+    );
+    expect(authService.login).not.toHaveBeenCalled();
+  });
+
+  it("bog'lanmagan Telegram uchun `not_registered` — xato emas, sessiya ham emas", async () => {
+    const { service, authService } = makeService({ staff: [] });
+
+    await expect(service.signInStaff(initDataFor(), LEHRER)).resolves.toEqual({
+      status: 'not_registered',
+    });
+    expect(authService.login).not.toHaveBeenCalled();
+  });
+
+  it("bir nechta xodim hisobi bog'langan bo'lsa — yopiq holat, «g'olib» tanlanmaydi", async () => {
+    const { service, authService } = makeService({
+      staff: [DOSTON, { ...DOSTON, id: 30403 }],
+    });
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+
+    const attempt = service.signInStaff(initDataFor(), LEHRER);
+
+    await expect(attempt).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(attempt).rejects.toThrow(SEVERAL_STAFF_ACCOUNTS_MESSAGE);
+    expect(authService.login).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("parolsiz hisobni kiritmaydi — parol yo'li ham, Telegram OAuth ham kiritmaydi", async () => {
+    const { service, authService } = makeService({
+      staff: [{ ...DOSTON, password: null }],
+    });
+
+    const attempt = service.signInStaff(initDataFor(), LEHRER);
+
+    await expect(attempt).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(attempt).rejects.toThrow(STAFF_SIGN_IN_DISABLED_MESSAGE);
+    expect(authService.login).not.toHaveBeenCalled();
+  });
+
+  it("`login` rad etsa (portal darvozasi) — xato o'zgarmay o'tadi", async () => {
+    const { service, authService } = makeService({ staff: [DOSTON] });
+    authService.login.mockRejectedValue(
+      new ForbiddenException(
+        'Sizning rolingiz bu portalga kirish huquqiga ega emas',
+      ),
+    );
+
+    await expect(
+      service.signInStaff(initDataFor(), LEHRER),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('imzosi buzilgan satrda bazaga bormaydi', async () => {
+    const { service, authService } = makeService({ staff: [DOSTON] });
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+
+    const attempt = service.signInStaff(
+      initDataFor(TG_USER_ID, undefined, '987654321:AAAnotherBotsToken'),
+      LEHRER,
+    );
+
+    await expect(attempt).rejects.toThrow(INIT_DATA_INVALID_MESSAGE);
+    expect(authService.findStaffAccountsByTelegram).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("bot tokeni sozlanmagan bo'lsa 503", async () => {
+    const { service, authService } = makeService({ token: '' });
+
+    await expect(
+      service.signInStaff(initDataFor(), LEHRER),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(authService.findStaffAccountsByTelegram).not.toHaveBeenCalled();
   });
 });
