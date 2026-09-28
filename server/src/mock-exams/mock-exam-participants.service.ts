@@ -22,6 +22,7 @@ import {
   StudentLeadOriginService,
 } from '../common/student-origin';
 import { MockExamBillingService } from './mock-exam-billing.service';
+import { GATEWAY_STATE } from './mock-exam-gateway-billing.service';
 import { AddManualParticipantDto } from './dto/add-manual-participant.dto';
 import { ConvertMockParticipantDto } from './dto/convert-mock-participant.dto';
 import {
@@ -30,9 +31,46 @@ import {
 } from './dto/participants-query.dto';
 import { equalsOrIn } from '../common/dto/to-array';
 import { MarkMockPaidDto } from './dto/mark-mock-paid.dto';
+import { UpdateMockPaymentDto } from './dto/update-mock-payment.dto';
+import { CancelMockPaymentDto } from './dto/cancel-mock-payment.dto';
 import { resolveParticipantFee } from './mock-exam-pricing.util';
+import { mockPaymentSource } from './mock-payment-source';
 
 const DEFAULT_PAGE_SIZE = 10;
+
+/**
+ * One row of the participants table. `list`, `addManual`, `markPaid` and the
+ * payment edits all answer with it: the client merges a mutation's answer
+ * into the row it already shows, so a field one of them leaves out goes
+ * stale on screen.
+ */
+const PARTICIPANT_ROW_SELECT = {
+  id: true,
+  publicId: true,
+  firstName: true,
+  lastName: true,
+  phone: true,
+  telegramChatId: true,
+  telegramUsername: true,
+  registeredAt: true,
+  studentId: true,
+  level: true,
+  examTime: true,
+  feeAmount: true,
+  formData: true,
+  paid: true,
+  paidAt: true,
+  paymentMethod: true,
+  paymentNote: true,
+  paidBy: { select: { id: true, firstName: true, lastName: true } },
+  totalScore: true,
+  percentage: true,
+  passed: true,
+  rank: true,
+} satisfies Prisma.MockExamParticipantSelect;
+
+const PAYMENT_STATE_CHANGED =
+  "Ishtirokchining to'lov holati hozirgina o'zgardi. Sahifani yangilab, qayta urinib ko'ring.";
 
 // Conversion writes the card, its lead and its sign-in account (a bcrypt hash
 // plus three queries) in one transaction; the same limits as admin create.
@@ -122,39 +160,13 @@ export class MockExamParticipantsService {
         orderBy: { registeredAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
-        select: {
-          id: true,
-          publicId: true,
-          firstName: true,
-          lastName: true,
-          phone: true,
-          telegramChatId: true,
-          telegramUsername: true,
-          registeredAt: true,
-          studentId: true,
-          level: true,
-          examTime: true,
-          feeAmount: true,
-          formData: true,
-          paid: true,
-          paidAt: true,
-          totalScore: true,
-          percentage: true,
-          passed: true,
-          rank: true,
-        },
+        select: PARTICIPANT_ROW_SELECT,
       }),
       this.prisma.mockExamParticipant.count({ where }),
     ]);
 
-    // Eski (2026-08 gacha) balansdan to'langan ishtirokchilar: o'chirilganda
-    // pulni tizim o'zi balansga qaytaradi — oyna adminga naqd berishni aytmasin.
-    const fromBalance = await this.mockExamBilling.paidFromBalanceIds(
-      data.filter((p) => p.paid).map((p) => p.id),
-    );
-
     return {
-      data: data.map((p) => ({ ...p, paidFromBalance: fromBalance.has(p.id) })),
+      data: await this.withPaymentSource(data),
       total,
       page,
       pageSize,
@@ -261,26 +273,7 @@ export class MockExamParticipantsService {
           phone: dto.phone,
           formData: {},
         },
-        select: {
-          id: true,
-          publicId: true,
-          firstName: true,
-          lastName: true,
-          phone: true,
-          telegramChatId: true,
-          telegramUsername: true,
-          registeredAt: true,
-          studentId: true,
-          level: true,
-          examTime: true,
-          feeAmount: true,
-          paid: true,
-          paidAt: true,
-          totalScore: true,
-          percentage: true,
-          passed: true,
-          rank: true,
-        },
+        select: PARTICIPANT_ROW_SELECT,
       });
 
       await this.entityHistoryService.recordCreate({
@@ -305,7 +298,8 @@ export class MockExamParticipantsService {
       // collected the same way it is for everyone else: cash at the desk
       // (`markPaid`) or Payme/Click against the participant's publicId.
 
-      return created;
+      const [row] = await this.withPaymentSource([created]);
+      return row;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -577,9 +571,10 @@ export class MockExamParticipantsService {
    * Admin manually marks a participant as paid when they receive cash, or
    * when a Payme/Click payment was made outside the gateway webhook (rare,
    * but happens during launch / when the bot link wasn't used). Flips
-   * `paid=true` on the participant row and records the method + note in
-   * EntityHistory for audit. No Transaction is written — this is a
-   * registration-fee marker, not a balance-affecting payment.
+   * `paid=true` and stores the method, the note and the admin on the row, so
+   * the payment can be corrected later (`updatePayment`, `cancelPayment`).
+   * No Transaction is written — this is a registration-fee marker, not a
+   * balance-affecting payment.
    */
   async markPaid(
     id: string,
@@ -611,50 +606,35 @@ export class MockExamParticipantsService {
       );
     }
 
+    const note = dto.note?.trim() || null;
+
     // Shartli yozuv: yuqoridagi `paid` tekshiruvi bilan shu qator orasida
     // odamning Payme/Click to'lovi o'tib ketgan bo'lishi mumkin. Shartsiz
     // `update` o'shanda naqdni ham qabul qilib, ikkinchi pulni olardi.
     const claimed = await this.prisma.mockExamParticipant.updateMany({
       where: { id, paid: false, deletedAt: null },
-      data: { paid: true, paidAt: new Date() },
+      data: {
+        paid: true,
+        paidAt: new Date(),
+        paymentMethod: dto.method,
+        paymentNote: note,
+        paidById: userId,
+      },
     });
     if (claimed.count === 0) {
       throw new BadRequestException("Bu ishtirokchi allaqachon to'lagan");
     }
 
-    const updated = await this.prisma.mockExamParticipant.findUniqueOrThrow({
-      where: { id },
-      select: {
-        id: true,
-        publicId: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        telegramChatId: true,
-        telegramUsername: true,
-        registeredAt: true,
-        studentId: true,
-        level: true,
-        examTime: true,
-        feeAmount: true,
-        paid: true,
-        paidAt: true,
-        totalScore: true,
-        percentage: true,
-        passed: true,
-        rank: true,
-      },
-    });
+    const updated = await this.loadRow(id);
 
     await this.entityHistoryService.recordUpdate({
       entityType: 'MockExamParticipant',
       entityId: id,
-      oldValues: { paid: false },
-      newValues: {
-        paid: true,
-        paymentMethod: dto.method,
-        ...(dto.note ? { paymentNote: dto.note } : {}),
-      },
+      // Every key of `newValues` must also be in `oldValues`:
+      // `computeChangedFields` drops the rest, and that is how the method and
+      // the note used to vanish from this row, leaving only `paid`.
+      oldValues: { paid: false, paymentMethod: null, paymentNote: null },
+      newValues: { paid: true, paymentMethod: dto.method, paymentNote: note },
       changedById: userId,
       companyId,
     });
@@ -675,6 +655,112 @@ export class MockExamParticipantsService {
     });
 
     return updated;
+  }
+
+  /**
+   * Fixes the details of a payment an admin accepted by hand: the method
+   * picked by mistake, or the note. The money does not move, so no reason is
+   * asked. `paidById` stays the admin who accepted it; who edited it is the
+   * history row's author.
+   */
+  async updatePayment(
+    id: string,
+    dto: UpdateMockPaymentDto,
+    companyId: number,
+    userId: number,
+    branchIds: ReportBranchIds,
+  ) {
+    const participant = await this.loadManualPayment(id, companyId, branchIds);
+    const note =
+      dto.note === undefined
+        ? participant.paymentNote
+        : dto.note.trim() || null;
+
+    // Shartli yozuv: o'qish bilan yozish orasida to'lov bekor qilingan yoki
+    // bekor qilinib qayta to'langan bo'lsa, `paidAt` boshqa bo'ladi — boshqa
+    // to'lovning ma'lumoti ustiga yozilmasin.
+    const changed = await this.prisma.mockExamParticipant.updateMany({
+      where: { id, deletedAt: null, paid: true, paidAt: participant.paidAt },
+      data: { paymentMethod: dto.method, paymentNote: note },
+    });
+    if (changed.count === 0) {
+      throw new BadRequestException(PAYMENT_STATE_CHANGED);
+    }
+
+    await this.entityHistoryService.recordUpdate({
+      entityType: 'MockExamParticipant',
+      entityId: id,
+      oldValues: {
+        paymentMethod: participant.paymentMethod,
+        paymentNote: participant.paymentNote,
+      },
+      newValues: { paymentMethod: dto.method, paymentNote: note },
+      changedById: userId,
+      companyId,
+    });
+
+    return this.loadRow(id);
+  }
+
+  /**
+   * Undoes a payment an admin accepted by hand — the wrong participant was
+   * marked, or the money was handed back. The registration returns to unpaid
+   * (a Payme/Click payment can then complete for it again) and leaves mock
+   * revenue. Deleting the participant was the only way out before, and it
+   * threw away the registration and its Telegram link along with the money.
+   */
+  async cancelPayment(
+    id: string,
+    dto: CancelMockPaymentDto,
+    companyId: number,
+    userId: number,
+    branchIds: ReportBranchIds,
+  ) {
+    const reason = dto.reason.trim();
+    if (reason.length < 3) {
+      throw new BadRequestException('Bekor qilish sababini yozing');
+    }
+    const participant = await this.loadManualPayment(id, companyId, branchIds);
+
+    const cancelled = await this.prisma.mockExamParticipant.updateMany({
+      where: { id, deletedAt: null, paid: true, paidAt: participant.paidAt },
+      data: {
+        paid: false,
+        paidAt: null,
+        paymentMethod: null,
+        paymentNote: null,
+        paidById: null,
+      },
+    });
+    if (cancelled.count === 0) {
+      throw new BadRequestException(PAYMENT_STATE_CHANGED);
+    }
+
+    await this.entityHistoryService.recordUpdate({
+      entityType: 'MockExamParticipant',
+      entityId: id,
+      oldValues: {
+        paid: true,
+        paymentMethod: participant.paymentMethod,
+        paymentNote: participant.paymentNote,
+        cancelReason: null,
+      },
+      newValues: {
+        paid: false,
+        paymentMethod: null,
+        paymentNote: null,
+        cancelReason: reason,
+      },
+      changedById: userId,
+      companyId,
+    });
+
+    this.logger.log(
+      `Mock participant ${id} payment cancelled by user ${userId} ` +
+        `(fee=${participant.feeAmount ?? participant.exam.price}, exam="${participant.exam.title}")`,
+    );
+
+    return this.loadRow(id);
   }
 
   async remove(
@@ -729,9 +815,7 @@ export class MockExamParticipantsService {
       data: { deletedAt: new Date(), deletedById: userId },
     });
     if (removed.count === 0) {
-      throw new BadRequestException(
-        "Ishtirokchining to'lov holati hozirgina o'zgardi. Sahifani yangilab, qayta urinib ko'ring.",
-      );
+      throw new BadRequestException(PAYMENT_STATE_CHANGED);
     }
 
     if (refunded > 0) {
@@ -751,6 +835,7 @@ export class MockExamParticipantsService {
           ? {
               paid: true,
               feeAmount: paidFee,
+              paymentMethod: existing.paymentMethod,
               ...(paidFromBalance
                 ? { balansgaQaytarildi: true }
                 : { refundConfirmed: true }),
@@ -808,10 +893,108 @@ export class MockExamParticipantsService {
     return exam;
   }
 
+  /** The participants-table row for `id`, with its payment source. */
+  private async loadRow(id: string) {
+    const row = await this.prisma.mockExamParticipant.findUniqueOrThrow({
+      where: { id },
+      select: PARTICIPANT_ROW_SELECT,
+    });
+    const [decorated] = await this.withPaymentSource([row]);
+    return decorated;
+  }
+
+  /**
+   * Adds `paymentSource` (`mock-payment-source.ts`) and `paidFromBalance`.
+   *
+   * `paidFromBalance` predates the source and stays for the delete dialog:
+   * a pre-2026-08 balance payment is returned to the balance by the system
+   * when the participant is removed, so the dialog must not tell the admin to
+   * hand over cash as well.
+   */
+  private async withPaymentSource<T extends { id: string; paid: boolean }>(
+    rows: T[],
+  ) {
+    const paidIds = rows.filter((p) => p.paid).map((p) => p.id);
+    const [fromBalance, viaGateway] = await Promise.all([
+      this.mockExamBilling.paidFromBalanceIds(paidIds),
+      this.paidViaGatewayIds(paidIds),
+    ]);
+    return rows.map((p) => ({
+      ...p,
+      paidFromBalance: fromBalance.has(p.id),
+      paymentSource: mockPaymentSource(
+        p.paid,
+        viaGateway.has(p.id),
+        fromBalance.has(p.id),
+      ),
+    }));
+  }
+
+  /** Participants whose fee a Payme/Click payment completed. */
+  private async paidViaGatewayIds(ids: string[]): Promise<Set<string>> {
+    if (ids.length === 0) return new Set();
+    const rows = await this.prisma.mockExamGatewayTransaction.findMany({
+      where: {
+        mockParticipantId: { in: ids },
+        state: GATEWAY_STATE.COMPLETED,
+      },
+      select: { mockParticipantId: true },
+    });
+    return new Set(rows.map((r) => r.mockParticipantId));
+  }
+
+  /**
+   * A paid participant whose payment an admin accepted by hand — the only
+   * kind the participants tab may change. A Payme/Click payment is the
+   * gateway's to give back (its cancel un-marks the participant itself); an
+   * old balance payment returns to the balance when the participant is
+   * removed. Changing either here would leave the money where it is.
+   */
+  private async loadManualPayment(
+    id: string,
+    companyId: number,
+    branchIds: ReportBranchIds,
+  ) {
+    await this.ensureParticipantInScope(id, companyId, branchIds);
+
+    const participant = await this.prisma.mockExamParticipant.findFirst({
+      where: { id, deletedAt: null, companyId },
+      select: {
+        id: true,
+        paid: true,
+        paidAt: true,
+        paymentMethod: true,
+        paymentNote: true,
+        feeAmount: true,
+        exam: { select: { price: true, title: true } },
+      },
+    });
+    if (!participant) {
+      throw new NotFoundException('Ishtirokchi topilmadi');
+    }
+    if (!participant.paid) {
+      throw new BadRequestException("Bu ishtirokchi hali to'lamagan");
+    }
+
+    const [{ paymentSource }] = await this.withPaymentSource([participant]);
+    if (paymentSource === 'GATEWAY') {
+      throw new BadRequestException(
+        "Bu to'lov Payme/Click orqali onlayn o'tgan — uni bu yerda o'zgartirib yoki bekor qilib bo'lmaydi.",
+      );
+    }
+    if (paymentSource === 'BALANCE') {
+      throw new BadRequestException(
+        "Bu to'lov o'quvchi balansidan yechilgan (eski tartib) — uni o'zgartirib bo'lmaydi. Ishtirokchi o'chirilsa, pul balansga o'zi qaytadi.",
+      );
+    }
+    return participant;
+  }
+
   /**
    * Participant gate — resolves through the participant's exam so the same
-   * company/branch rule applies to `markPaid`, `convertToStudent` and `remove`,
-   * all of which were `where: { id, deletedAt: null }`.
+   * company/branch rule applies to `markPaid`, the payment edits,
+   * `convertToStudent` and `remove`, all of which were
+   * `where: { id, deletedAt: null }`.
    */
   private async ensureParticipantInScope(
     id: string,

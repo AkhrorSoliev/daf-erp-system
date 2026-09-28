@@ -36,10 +36,12 @@ export class AddManualParticipantDto {
   telegramChatId?: string;
 
   /**
-   * Explicit DaF student link. When the admin picks a student here, the
-   * participant is tied to that Student.id (its publicId), the DaF mock
-   * discount applies, and the fee auto-deducts from balance. When omitted
-   * the service still auto-detects a student by phone.
+   * Explicit DaF student link, set when the admin picks the student in the
+   * dialog's search (the phone the participant gave may not be the one on
+   * the card). The participant is tied to that Student.id (its publicId), the
+   * DaF mock discount applies and the result shows on the student's profile.
+   * When omitted the service still auto-detects a student by phone. The fee
+   * is never taken from the balance.
    */
   @IsOptional()
   @IsInt()
