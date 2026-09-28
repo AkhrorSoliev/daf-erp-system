@@ -199,7 +199,7 @@ describe('isFirstLessonOfMonth (contract 3.2)', () => {
   });
 });
 
-describe('firstLessonCoverage (ADR-0047, R4)', () => {
+describe('firstLessonCoverage (ADR-0048, R4)', () => {
   const oct: CoverageCharge = {
     ...g005,
     enrollmentId: 'enr-oct',

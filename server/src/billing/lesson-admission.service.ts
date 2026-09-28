@@ -16,7 +16,7 @@ import {
 type Reader = Prisma.TransactionClient | PrismaService;
 
 /**
- * Loads what `lessonAdmission` / `paymentReach` judge (ADR-0046): the
+ * Loads what `lessonAdmission` / `paymentReach` judge (ADR-0047): the
  * student's balance and their CHARGED month charges on ACTIVE enrollments —
  * a departed or frozen enrollment's lessons are not "still held".
  */
@@ -70,7 +70,7 @@ export class LessonAdmissionService {
   }
 
   /**
-   * ADR-0047 (R4): a debtor ABSENT at the month's first lesson earns the
+   * ADR-0048 (R4): a debtor ABSENT at the month's first lesson earns the
    * teacher nothing until their payments reach it. True when the lesson on
    * `lessonDay` is that first lesson and is not yet covered.
    */

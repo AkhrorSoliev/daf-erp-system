@@ -1,4 +1,4 @@
-# ADR-0046 — Davomat dars tugashi bilan yopiladi; to'lov qilmagan o'quvchi 2-darsdan puli yetgan darslargacha qatnashadi
+# ADR-0047 — Davomat dars tugashi bilan yopiladi; to'lov qilmagan o'quvchi 2-darsdan puli yetgan darslargacha qatnashadi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-09-27

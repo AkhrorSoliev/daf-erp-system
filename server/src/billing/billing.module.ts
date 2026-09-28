@@ -36,7 +36,7 @@ import { SettingsModule } from '../settings/settings.module';
  * 2nd-lesson reminder for the 20:00 Telegram digest (ADR-0042).
  *
  * `LessonAdmissionService` answers contract 3.2 for the attendance roster,
- * its saves and the payment preview (ADR-0046).
+ * its saves and the payment preview (ADR-0047).
  */
 @Module({
   imports: [

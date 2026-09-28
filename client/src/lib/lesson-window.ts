@@ -1,7 +1,7 @@
 import { tashkentNow } from "@/lib/tashkent-time";
 
 /**
- * Mirror of the server's attendance window (ADR-0046,
+ * Mirror of the server's attendance window (ADR-0047,
  * `server/src/attendance/shared/lesson-window.ts`): it opens some minutes
  * before the lesson (the company's setting, sent with the roster's `window`;
  * 10 by default) and closes when it ends, Tashkent time, for every role.

@@ -221,7 +221,7 @@ export const SETTING_DEFINITIONS: {
   },
   'payment.admissionRuleEnabled': {
     key: 'payment.admissionRuleEnabled',
-    // Contract 3.2 (ADR-0046): from the month's 2nd lesson an unpaid student
+    // Contract 3.2 (ADR-0047): from the month's 2nd lesson an unpaid student
     // is not admitted. A switch so the rule can be turned off without a
     // deploy (CEO, 28.09.2026). Off: every student is admitted, the payment
     // dialog shows no reach. Read by `LessonAdmissionService` per company.
@@ -231,7 +231,7 @@ export const SETTING_DEFINITIONS: {
   },
   'payment.trialLessonEnabled': {
     key: 'payment.trialLessonEnabled',
-    // Contract 3.5 (ADR-0047): a first-timer leaving after one lesson gets
+    // Contract 3.5 (ADR-0048): a first-timer leaving after one lesson gets
     // the whole month back and the teacher is not paid for it. Off: the
     // ordinary departure rule. Read by `MonthlyChargeService` per company.
     defaultValue: true,
@@ -240,7 +240,7 @@ export const SETTING_DEFINITIONS: {
   },
   'payment.attendanceOpensMinutesBefore': {
     key: 'payment.attendanceOpensMinutesBefore',
-    // ADR-0046: the attendance window opens this many minutes before the
+    // ADR-0047: the attendance window opens this many minutes before the
     // lesson starts and closes when it ends. Read by
     // `AttendanceValidationService` per company; the client mirrors it from
     // the roster's `window`.

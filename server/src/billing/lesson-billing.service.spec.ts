@@ -53,7 +53,7 @@ describe('LessonBillingService', () => {
       createAccrual: jest.fn().mockResolvedValue(null),
       reverseAccrualForAttendance: jest.fn().mockResolvedValue(null),
     };
-    // ADR-0047: nobody's first lesson is deferred unless a test says so.
+    // ADR-0048: nobody's first lesson is deferred unless a test says so.
     admissionService = {
       isUnpaidFirstLesson: jest.fn().mockResolvedValue(false),
       loadCoverage: jest.fn().mockResolvedValue(null),
@@ -101,7 +101,7 @@ describe('LessonBillingService', () => {
       // because most tests don't trigger that branch.
       attendance: {
         findUnique: jest.fn().mockResolvedValue(null),
-        // ADR-0047: a monthly enrollment's deferred first lessons. None by default.
+        // ADR-0048: a monthly enrollment's deferred first lessons. None by default.
         findMany: jest.fn().mockResolvedValue([]),
       },
       salaryAccrual: { findMany: jest.fn().mockResolvedValue([]) },
@@ -1312,7 +1312,7 @@ describe('LessonBillingService', () => {
       expect(salaryAccrualService.createAccrual).toHaveBeenCalled();
     });
 
-    describe('qarzdorning oydagi birinchi darsi (ADR-0047, R4)', () => {
+    describe('qarzdorning oydagi birinchi darsi (ADR-0048, R4)', () => {
       const october = new Date('2026-10-02T00:00:00Z');
 
       it('does not accrue a debtor ABSENT at an unpaid first lesson', async () => {

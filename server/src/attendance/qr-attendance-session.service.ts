@@ -38,7 +38,7 @@ export class QrAttendanceSessionService {
       date,
       companyId,
     );
-    // ADR-0046: a QR session is attendance too — inside the window only, for
+    // ADR-0047: a QR session is attendance too — inside the window only, for
     // every role.
     this.attendanceService.assertWindowOpen({
       lessonDay: date,
