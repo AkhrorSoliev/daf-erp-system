@@ -15,7 +15,7 @@ export interface MonthlyPreviewBlock {
   nextMonthAmount: number;
   discountPercent: number;
   enrollments: MonthlyPreviewEnrollment[];
-  // Contract 3.2 (ADR-0045): how far the balance after this payment reaches.
+  // Contract 3.2 (ADR-0046): how far the balance after this payment reaches.
   // Absent on an older server, null before the rule starts.
   admission?: PaymentReach | null;
 }

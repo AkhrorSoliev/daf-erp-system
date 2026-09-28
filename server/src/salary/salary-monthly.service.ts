@@ -715,7 +715,7 @@ export class SalaryMonthlyService {
    * FIXED_MONTHLY staff row otherwise, and `null` when the user has no salary
    * presence in that month.
    *
-   * `missedLessons` («Berilmadi», ADR-0046): the month's lessons that ended
+   * `missedLessons` («Berilmadi», ADR-0047): the month's lessons that ended
    * without attendance and what each cost the teacher. Empty for anyone who
    * teaches no group.
    */

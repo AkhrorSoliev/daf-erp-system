@@ -21,7 +21,7 @@ import { lateArrival, minutesLate } from './shared/lesson-window';
 
 export interface SaveAttendanceOptions {
   /**
-   * Write outside the lesson window. ADR-0045: after a lesson ends nobody on
+   * Write outside the lesson window. ADR-0046: after a lesson ends nobody on
    * the site may enter or change its attendance; a correction is made only on
    * the CEO's order, from a script. No HTTP route passes this.
    */
@@ -90,7 +90,7 @@ export class AttendanceSaveService {
       async (tx) => {
         // Validate all students are enrolled in this group. Debtors are on
         // the roster too; from the month's 2nd lesson contract 3.2 decides
-        // whether they may be marked (the admission block below, ADR-0045).
+        // whether they may be marked (the admission block below, ADR-0046).
         const enrolledStudents = await tx.enrollment.findMany({
           where: {
             groupId,
@@ -117,7 +117,7 @@ export class AttendanceSaveService {
           ]),
         );
 
-        // ADR-0045 / contract 3.2: from the month's 2nd lesson a student
+        // ADR-0046 / contract 3.2: from the month's 2nd lesson a student
         // attends only as far as their payments reach. A blocked student may
         // be left off the roster or marked EXCUSED (an announced absence);
         // any other new mark is refused below.
@@ -189,7 +189,7 @@ export class AttendanceSaveService {
           oldStatus: AttendanceStatus | null;
           newStatus: AttendanceStatus;
         }[] = [];
-        // ADR-0046: a student an administrator marks present after the
+        // ADR-0047: a student an administrator marks present after the
         // lesson's first save arrived late — LATE, with the minutes since the
         // effective start. A correction script (`allowClosedLesson`) writes
         // what it is given: its clock is not the lesson's.

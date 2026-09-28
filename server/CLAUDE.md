@@ -454,21 +454,21 @@ Every attendance write (manual `save()`, QR `startSession()` and `scanQr()`, pre
 4. Date within group `startDate`–`endDate` range
 5. Day-of-week matches group `exactDays` schedule
 6. Date is not a holiday (`Holiday` table)
-7. **The lesson window is NOT checked here.** `validateLessonDate(groupId, date, companyId?)` returns the effective `startTime`/`endTime` (a reschedule's override wins); the clock lives in `assertWindowOpen` / `assertLessonNotEnded` / `windowFor` (ADR-0045).
+7. **The lesson window is NOT checked here.** `validateLessonDate(groupId, date, companyId?)` returns the effective `startTime`/`endTime` (a reschedule's override wins); the clock lives in `assertWindowOpen` / `assertLessonNotEnded` / `windowFor` (ADR-0046).
 
-#### Lesson window (ADR-0045)
+#### Lesson window (ADR-0046)
 
 - `lessonWindowState` (`src/attendance/shared/lesson-window.ts`): `[start − 10 min, end]`, Tashkent time. **Every role** — Teacher, Administrator, Branch Director, CEO — is bound: `save`, QR `startSession` and `scanQr` call `assertWindowOpen`; a pre-mark calls `assertLessonNotEnded`. Past and future dates are therefore closed to everyone. The only bypass is `SaveAttendanceOptions.allowClosedLesson`, reserved for a correction script run on the CEO's order — no HTTP route passes it.
 - `GET /attendance/:groupId/date/:date` returns `window` (state + effective times) so the client (`client/src/lib/lesson-window.ts`, a mirror) locks the form at the end without a refetch.
 - The attendance reminders say what an untaken attendance costs and never ask anyone to "restore" it after the lesson.
 
-#### Admission (contract 3.2, ADR-0045)
+#### Admission (contract 3.2, ADR-0046)
 
 - `lessonAdmission` (`src/billing/lesson-admission.ts`), loaded by `LessonAdmissionService` (`BillingModule`): from 2026-10-01 a student's first lesson of the month in a group is free; from the 2nd they are admitted iff `balance + heldAfter(month charges, day) ≥ 0`. `heldAfter` is `departureRelease` summed over the student's CHARGED charges on ACTIVE enrollments, so the lesson day itself counts as held and older debt must be paid first. No charge for the group-month → the rule stays out of the way. A payment promise never admits.
 - The roster returns `admission` per student. `save` refuses a new PRESENT/LATE/ABSENT for a blocked student (EXCUSED stays allowed, an unchanged mark is not re-judged), inside its transaction; the full-roster check skips them; `scanQr` refuses them.
 - `GET /payments/preview` → `monthly.admission` (`paymentReach`: how far the balance after the payment reaches, what the next lesson still needs). `POST /payments` with `promiseDate` upserts the student's OPEN promise when the payment leaves a debt; a failing promise never undoes the payment.
 
-#### Part 2 (ADR-0046): missed lessons, late minutes, trial lesson, a debtor's first lesson
+#### Part 2 (ADR-0047): missed lessons, late minutes, trial lesson, a debtor's first lesson
 
 - **«Berilmadi» is computed on read, never stored.** `SalaryMissedLessonsService.forTeacher` (+ the pure `salary/shared/missed-lessons.ts`) lists the teacher's planned lessons (`GroupTeacher` groups; `resolveMonthPlan` from `billing/month-plan.ts` + `lessonDatesInMonth`, inside the group's start/end) from 2026-10-01, dated before today, with no `Attendance` row for that group and day. A `LessonTeacherOverride` without this teacher skips the lesson. The amount is `perLessonAccrual` for each student whose CHARGED charge covers the day (not frozen out, no «Sababli» pre-mark), rate per-group first, then global. `getMonthlyForUser` returns it as `missedLessons`; `shared/salary-monthly-panel.tsx` renders it. `resolveMonthPlan` is a free function so the salary module reads the plan without importing `BillingModule` (which imports `SalaryModule`).
 - **`Attendance.lateMinutes`** (nullable). In `save`, when the lesson already has attendance, the saver is not teacher-only and a student moves from not-in-the-lesson to PRESENT/LATE, the row is written LATE with the minutes since the effective start (`lateArrival` + `minutesLate` in `attendance/shared/lesson-window.ts`, only when > 0). LATE → LATE keeps the minutes; leaving LATE clears them. `allowClosedLesson` writes none. The roster and the dots return `lateMinutes`.

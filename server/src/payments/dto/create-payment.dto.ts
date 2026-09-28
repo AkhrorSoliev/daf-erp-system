@@ -37,7 +37,7 @@ export class CreatePaymentDto {
   @IsInt()
   branchId?: number;
 
-  // ADR-0045: a part payment carries the date the rest will be paid by.
+  // ADR-0046: a part payment carries the date the rest will be paid by.
   @IsOptional()
   @IsDateString()
   promiseDate?: string;

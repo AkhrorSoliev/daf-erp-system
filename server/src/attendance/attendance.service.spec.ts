@@ -135,7 +135,7 @@ describe('AttendanceService', () => {
       getActiveHolidaysInRange: jest.fn().mockResolvedValue([]),
     };
 
-    // Contract 3.2 admission (ADR-0045): nobody blocked unless a test says so.
+    // Contract 3.2 admission (ADR-0046): nobody blocked unless a test says so.
     admission = { forLesson: jest.fn().mockResolvedValue(new Map()) };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -144,7 +144,7 @@ describe('AttendanceService', () => {
         AttendanceValidationService,
         {
           provide: SettingsService,
-          // The default lead (ADR-0045); a test that moves it says so.
+          // The default lead (ADR-0046); a test that moves it says so.
           useValue: { get: jest.fn().mockResolvedValue(10) },
         },
         AttendanceReadService,
@@ -263,7 +263,7 @@ describe('AttendanceService', () => {
       expect(result.parsedDate).toEqual(new Date('2026-04-01T00:00:00.000Z'));
     });
 
-    describe('lesson window (ADR-0045)', () => {
+    describe('lesson window (ADR-0046)', () => {
       const validation = () =>
         (service as unknown as { validation: AttendanceValidationService })
           .validation;
@@ -768,7 +768,7 @@ describe('AttendanceService', () => {
 
   describe('save', () => {
     // mockGroup's lesson: Wednesday 2026-04-01, 09:00–11:00 Tashkent. Every
-    // save now needs its window open (ADR-0045), so the clock sits at 09:30.
+    // save now needs its window open (ADR-0046), so the clock sits at 09:30.
     beforeEach(() => {
       jest.useFakeTimers({
         doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
@@ -1548,7 +1548,7 @@ describe('AttendanceService', () => {
         (c) => c[0] === 'attendance.student.recorded',
       );
       expect(studentRecorded).toHaveLength(1);
-      // ADR-0046: marked present after the lesson's first save, at 09:30 —
+      // ADR-0047: marked present after the lesson's first save, at 09:30 —
       // a late arrival, 30 minutes after the 09:00 start.
       expect(studentRecorded[0][1]).toEqual(
         expect.objectContaining({
@@ -1565,7 +1565,7 @@ describe('AttendanceService', () => {
       );
     });
 
-    it('writes a first save as sent, with no minutes (ADR-0046)', async () => {
+    it('writes a first save as sent, with no minutes (ADR-0047)', async () => {
       prisma.attendance.findMany.mockResolvedValue([]);
       prisma.attendance.upsert.mockImplementation(({ create }: any) =>
         Promise.resolve({ id: `att-${create.studentId}`, ...create }),
@@ -1598,7 +1598,7 @@ describe('AttendanceService', () => {
       ]);
     });
 
-    it('keeps the minutes of a LATE that stays LATE and clears them when it leaves (ADR-0046)', async () => {
+    it('keeps the minutes of a LATE that stays LATE and clears them when it leaves (ADR-0047)', async () => {
       prisma.attendance.findMany.mockResolvedValue([
         { id: 'att-1', studentId: 10001, status: 'LATE', lateMinutes: 12 },
         { id: 'att-2', studentId: 10002, status: 'LATE', lateMinutes: 7 },

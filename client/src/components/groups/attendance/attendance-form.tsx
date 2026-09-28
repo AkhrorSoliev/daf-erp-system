@@ -81,7 +81,7 @@ export function AttendanceForm({
   const [submitting, setSubmitting] = useState(false);
   const [expandedNote, setExpandedNote] = useState<number | null>(null);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
-  // Admin collecting the payment that admits a blocked student (ADR-0045).
+  // Admin collecting the payment that admits a blocked student (ADR-0046).
   const [paymentFor, setPaymentFor] = useState<StudentAttendance | null>(
     null,
   );
@@ -100,7 +100,7 @@ export function AttendanceForm({
   const tashkent = tashkentNow();
   const isToday = date === tashkent.dateStr;
 
-  // ADR-0045: one window for every role — from the company's lead before the
+  // ADR-0046: one window for every role — from the company's lead before the
   // start (10 minutes unless the settings say otherwise) until the end. The server sends the lesson's effective times (a move's override
   // included); before the first fetch the group's own times stand in.
   const windowTimes = serverWindow ?? {
@@ -385,7 +385,7 @@ export function AttendanceForm({
         )}
       </div>
 
-      {/* Lesson window banner (ADR-0045) — one line for every role. */}
+      {/* Lesson window banner (ADR-0046) — one line for every role. */}
       {banner && (
         <div
           className={cn(
@@ -581,7 +581,7 @@ export function AttendanceForm({
         />
       )}
 
-      {/* To'lov: qo'yilmagan o'quvchini darsga kiritadigan to'lov (ADR-0045) */}
+      {/* To'lov: qo'yilmagan o'quvchini darsga kiritadigan to'lov (ADR-0046) */}
       <RecordPaymentDialog
         open={paymentFor !== null}
         onOpenChange={(open) => {

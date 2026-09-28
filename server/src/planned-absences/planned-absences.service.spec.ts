@@ -97,7 +97,7 @@ describe('PlannedAbsencesService', () => {
       );
 
       // Reuses attendance lesson-date validation; the lesson must not have
-      // ended (ADR-0045) — there is no admin time-window bypass any more.
+      // ended (ADR-0046) — there is no admin time-window bypass any more.
       expect(validation.validateLessonDate).toHaveBeenCalledWith(
         'g1',
         '2026-06-10',

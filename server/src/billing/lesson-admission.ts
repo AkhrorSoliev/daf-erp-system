@@ -2,7 +2,7 @@ import { departureRelease } from './departure-release';
 import { paymentDueDate } from './payment-due-date';
 
 /**
- * Contract 3.2 (ADR-0045): the first lesson of a month may be attended
+ * Contract 3.2 (ADR-0046): the first lesson of a month may be attended
  * unpaid; from the 2nd a student attends only as far as their payments
  * reach, older debt included. It applies to lessons from the new contract's
  * first day.
@@ -156,7 +156,7 @@ export interface PaymentReach {
 }
 
 /**
- * How far a payment reaches this month (the payment dialog, ADR-0045).
+ * How far a payment reaches this month (the payment dialog, ADR-0046).
  * Null when the rule does not apply or no lesson is left this month.
  */
 export function paymentReach(input: {
@@ -236,7 +236,7 @@ export interface FirstLessonCoverage {
 }
 
 /**
- * ADR-0046 (R4): the centre covers a debtor's first lesson of the month for
+ * ADR-0047 (R4): the centre covers a debtor's first lesson of the month for
  * the teacher only when the student came. An ABSENT there accrues when this
  * reads `firstLesson && covered` — at the lesson, or on the payment that
  * reaches it. `charges`: the student's CHARGED charges from the lesson's

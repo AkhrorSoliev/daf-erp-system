@@ -127,7 +127,7 @@ describe('LessonAdmissionService', () => {
     });
   });
 
-  describe('first-lesson coverage (ADR-0046, R4)', () => {
+  describe('first-lesson coverage (ADR-0047, R4)', () => {
     const coverageRow = (over: Record<string, unknown> = {}) => ({
       enrollmentId: 'enr-1',
       groupId: 'g005',

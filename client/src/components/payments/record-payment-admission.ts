@@ -1,6 +1,6 @@
 import { formatPrice } from "@/lib/format-utils";
 
-/** GET /payments/preview → monthly.admission (ADR-0045, contract 3.2). */
+/** GET /payments/preview → monthly.admission (ADR-0046, contract 3.2). */
 export interface PaymentReach {
   /** The last lesson from today the new balance admits; null when not even the next one. */
   paidThrough: string | null;

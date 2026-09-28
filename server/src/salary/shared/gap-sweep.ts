@@ -54,7 +54,7 @@ export interface GapSweepInput {
     date: Date;
     /**
      * PRESENT, LATE or ABSENT. Required so no caller can drop it: an ABSENT
-     * first lesson of a monthly month is never fronted (ADR-0046, R4).
+     * first lesson of a monthly month is never fronted (ADR-0047, R4).
      */
     status: string;
   }>;
@@ -190,7 +190,7 @@ export function resolveLessonPricing(
 }
 
 /**
- * ADR-0046 (R4): the teacher is paid for a debtor's ABSENT first lesson of a
+ * ADR-0047 (R4): the teacher is paid for a debtor's ABSENT first lesson of a
  * monthly month only when the student pays — the payment writes the accrual
  * (`LessonBillingService.accrueDeferredFirstLessons`); the centre never
  * fronts it. A first lesson the student had already paid carries its accrual

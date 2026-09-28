@@ -29,7 +29,7 @@ describe('SETTING_DEFINITIONS registry', () => {
     expect(isSettingKey('payment.debtGraceDays')).toBe(false);
   });
 
-  describe('ADR-0045/0046 switches (CEO, 28.09.2026)', () => {
+  describe('ADR-0046/0046 switches (CEO, 28.09.2026)', () => {
     it('default to the rules as shipped, company-level only', () => {
       for (const [key, value] of [
         ['payment.admissionRuleEnabled', true],

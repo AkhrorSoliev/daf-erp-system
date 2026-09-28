@@ -66,7 +66,7 @@ export class PlannedAbsencesService {
 
     // 1. Reuse the attendance lesson-date validation: date format, group
     // exists + ACTIVE + company scope, date range, schedule day / reschedule,
-    // and holiday. Then the clock (ADR-0045): a pre-mark only ever seeds the
+    // and holiday. Then the clock (ADR-0046): a pre-mark only ever seeds the
     // lesson's attendance, which closes when the lesson ends — so today
     // before the end and any future lesson pass, an ended lesson does not.
     const lesson = await this.validation.validateLessonDate(

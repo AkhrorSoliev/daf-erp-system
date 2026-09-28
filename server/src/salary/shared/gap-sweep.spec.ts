@@ -189,7 +189,7 @@ describe('sweepGapLessons — MONTHLY kurs narxi', () => {
   });
 });
 
-describe('sweepGapLessons — qarzdorning oydagi birinchi darsi (ADR-0046)', () => {
+describe('sweepGapLessons — qarzdorning oydagi birinchi darsi (ADR-0047)', () => {
   const OCTOBER = ['2026-10-02', '2026-10-05', '2026-10-07', '2026-10-09'];
   const october = (day: string) => new Date(`${day}T00:00:00.000Z`);
   const octoberCharge = (over: Record<string, unknown> = {}) =>

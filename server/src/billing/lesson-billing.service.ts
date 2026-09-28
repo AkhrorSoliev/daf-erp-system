@@ -151,7 +151,7 @@ export class LessonBillingService {
     if (params.oldStatus !== null && wasBillable === isBillable) {
       // Billable → billable changes nothing, except across ABSENT: a debtor's
       // unpaid first lesson pays the teacher only if the student came
-      // (ADR-0046, R4). createAccrual is idempotent, so re-accruing a lesson
+      // (ADR-0047, R4). createAccrual is idempotent, so re-accruing a lesson
       // that already has its accrual is a no-op.
       const wasAbsent = params.oldStatus === AttendanceStatus.ABSENT;
       const isAbsent = params.newStatus === AttendanceStatus.ABSENT;
@@ -178,7 +178,7 @@ export class LessonBillingService {
           delta: -1,
         });
       }
-      // ADR-0046 (R4): a debtor ABSENT at the month's first lesson earns the
+      // ADR-0047 (R4): a debtor ABSENT at the month's first lesson earns the
       // teacher nothing yet; the payment that covers it writes the accrual
       // (`accrueDeferredFirstLessons`).
       if (await this.isDeferredFirstLesson(tx, params)) return;
@@ -223,7 +223,7 @@ export class LessonBillingService {
   }
 
   /**
-   * ADR-0046 (R4): an ABSENT mark on the student's first lesson of the month
+   * ADR-0047 (R4): an ABSENT mark on the student's first lesson of the month
    * in this group, from 01.10.2026, that their payments do not reach. The
    * centre covers the first lesson for the teacher only when the student
    * came; otherwise the teacher is paid when the student pays.
@@ -547,7 +547,7 @@ export class LessonBillingService {
       }
     }
 
-    // Phase 1b (ADR-0046, R4): a debtor's ABSENT first lesson of a month
+    // Phase 1b (ADR-0047, R4): a debtor's ABSENT first lesson of a month
     // accrues nothing until their payments reach it. This payment may have.
     // Every monthly group counts, not only the ACTIVE enrollments above: a
     // student who has since left still paid for the lessons they were billed.
@@ -705,7 +705,7 @@ export class LessonBillingService {
    * financial layer) and delegates to `processRetroactiveBillingForStudent`.
    */
   /**
-   * ADR-0046 (R4): writes the teacher's accrual for every ABSENT first lesson
+   * ADR-0047 (R4): writes the teacher's accrual for every ABSENT first lesson
    * of a month (from 01.10.2026, monthly courses) that has no live accrual and
    * that the student's payments now reach. An ABSENT that was not a first
    * lesson was accrued when it was marked, so `firstLessonCoverage` leaves it

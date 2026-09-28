@@ -2,7 +2,7 @@ import { windowOpensAt, type LessonWindowState } from "@/lib/lesson-window";
 
 export type WindowBannerTone = "info" | "success" | "warning" | "danger";
 
-/** The one line the attendance screen shows about its window (ADR-0045). */
+/** The one line the attendance screen shows about its window (ADR-0046). */
 export function windowBanner(p: {
   state: LessonWindowState;
   startTime: string | null;

@@ -126,7 +126,7 @@ Client:
   not paid.
 - Payment dialog: coverage hint + promise date (R5).
 
-Docs: ADR-0045 (Uzbek), `server/CLAUDE.md` attendance paragraph.
+Docs: ADR-0046 (Uzbek), `server/CLAUDE.md` attendance paragraph.
 
 ## Part 2 (after October starts)
 

@@ -6,7 +6,7 @@ import {
 
 /**
  * «Berilmadi» — lessons that ended with no attendance, and the pay the
- * teacher lost on each (ADR-0046, design «Davomat va to'lov tartibi» R1).
+ * teacher lost on each (ADR-0047, design «Davomat va to'lov tartibi» R1).
  *
  * Computed on read, never stored: a missed lesson is a fact of the calendar
  * and the attendance table, both of which are already stored. A nightly

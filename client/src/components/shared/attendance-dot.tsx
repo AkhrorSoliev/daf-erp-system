@@ -60,7 +60,7 @@ interface AttendanceDotProps {
    * o'tgan). Default `true` — boshqa joylarda (lesson-trail) bu farq yo'q.
    */
   enrolled?: boolean;
-  /** Recorded minutes late on a LATE lesson (ADR-0046). */
+  /** Recorded minutes late on a LATE lesson (ADR-0047). */
   lateMinutes?: number | null;
 }
 

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 
-/** The lesson rules of ADR-0045/0046 the CEO can switch without a deploy. */
+/** The lesson rules of ADR-0046/0046 the CEO can switch without a deploy. */
 export interface LessonRuleSettings {
   "payment.admissionRuleEnabled": boolean;
   "payment.trialLessonEnabled": boolean;
@@ -66,7 +66,7 @@ export function PaymentLessonRulesSettings({
     <>
       <Separator />
 
-      {/* Shartnoma 3.2 — to'lamagan o'quvchini 2-darsdan qo'ymaslik (ADR-0045) */}
+      {/* Shartnoma 3.2 — to'lamagan o'quvchini 2-darsdan qo'ymaslik (ADR-0046) */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between rounded-lg border px-4 py-3">
           <div className="pr-4">
@@ -96,7 +96,7 @@ export function PaymentLessonRulesSettings({
 
       <Separator />
 
-      {/* Shartnoma 3.5 — sinov darsi (ADR-0046) */}
+      {/* Shartnoma 3.5 — sinov darsi (ADR-0047) */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between rounded-lg border px-4 py-3">
           <div className="pr-4">
@@ -123,7 +123,7 @@ export function PaymentLessonRulesSettings({
 
       <Separator />
 
-      {/* Davomat oynasi (ADR-0045) */}
+      {/* Davomat oynasi (ADR-0046) */}
       <div className="space-y-1.5">
         <Label htmlFor="attendanceOpensMinutesBefore">
           Davomat dars boshlanishidan necha daqiqa oldin ochiladi

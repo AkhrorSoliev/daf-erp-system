@@ -32,7 +32,7 @@ import {
 interface Dot {
   date: string;
   status: DotStatus;
-  /** Recorded minutes late on a LATE lesson (ADR-0046). */
+  /** Recorded minutes late on a LATE lesson (ADR-0047). */
   lateMinutes?: number | null;
   /** O'quvchi shu sanada guruhga a'zo bo'lganmi (backend coverage oynasi). */
   enrolled: boolean;

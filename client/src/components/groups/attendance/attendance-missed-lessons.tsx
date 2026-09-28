@@ -12,7 +12,7 @@ interface AttendanceMissedLessonsProps {
 }
 
 /**
- * Lessons that ended without attendance. ADR-0045: once a lesson ends its
+ * Lessons that ended without attendance. ADR-0046: once a lesson ends its
  * attendance is closed to every role, so this list only reports — it used to
  * open the form and invite filling the lesson in after the fact.
  */
