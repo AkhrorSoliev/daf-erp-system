@@ -4,6 +4,7 @@ import { PaymeMethodsService } from '../payment-gateways/payme/payme-methods.ser
 import { ClickMethodsService } from '../payment-gateways/click/click-methods.service';
 import { CANNOT_PERFORM } from '../payment-gateways/payme/payme-errors';
 import { CLICK_ALREADY_PAID } from '../payment-gateways/click/click-errors';
+import { computeChangedFields } from '../common/entity-history/diff.util';
 
 /**
  * BITTA RO'YXAT — BITTA TO'LOV.
@@ -294,23 +295,62 @@ describe("Mock to'lovi: bitta ro'yxat uchun faqat bitta to'lov", () => {
     expect(t.events.emit).toHaveBeenCalledTimes(1);
   });
 
-  // Naqd to'lov tarixga yozilardi, onlayn to'lov esa izsiz qolardi.
-  it("onlayn to'lov ishtirokchi tarixiga yoziladi", async () => {
+  // Naqd to'lov tarixga yozilardi, onlayn to'lov esa izsiz qolardi. Keyin
+  // yozila boshladi-yu, faqat `paid` saqlanardi: tarix servisi eski
+  // qiymatlarda yo'q kalitni tashlab yuboradi, `oldValues` esa `{ paid: false }`
+  // edi. Shuning uchun tekshiruv servisning o'z diff'idan o'tadi.
+  it("onlayn to'lov usuli va tranzaksiyasi bilan ishtirokchi tarixiga yoziladi", async () => {
     const t = setup();
     await t.paymeCreate('pm-H');
     await t.paymePerform('pm-H');
 
-    expect(t.history.recordUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        entityType: 'MockExamParticipant',
-        entityId: 'part-1',
-        oldValues: { paid: false },
-        newValues: expect.objectContaining({
-          paid: true,
-          paymentMethod: 'PAYME',
-        }),
-      }),
-    );
+    expect(t.history.recordUpdate).toHaveBeenCalledTimes(1);
+    const call = t.history.recordUpdate.mock.calls[0][0];
+    expect(call).toMatchObject({
+      entityType: 'MockExamParticipant',
+      entityId: 'part-1',
+    });
+    expect(computeChangedFields(call.oldValues, call.newValues)).toEqual({
+      oldValues: {
+        paid: false,
+        paymentMethod: null,
+        gatewayTransactionId: null,
+      },
+      newValues: {
+        paid: true,
+        paymentMethod: 'PAYME',
+        gatewayTransactionId: t.txnOf('pm-H').id,
+      },
+    });
+  });
+
+  it("onlayn to'lov usuli qatorning o'zida saqlanadi, qabul qilgan xodimsiz", async () => {
+    const t = setup();
+    const p = await t.clickPrepare(7);
+    await t.clickComplete(7, p.merchant_prepare_id!);
+
+    expect(t.db.participants[0]).toMatchObject({
+      paid: true,
+      paymentMethod: 'CLICK',
+      paymentNote: null,
+      paidById: null,
+    });
+  });
+
+  it("Payme bajarilgan to'lovni qaytarsa, to'lov usuli ham tozalanadi", async () => {
+    const t = setup();
+    await t.paymeCreate('pm-R');
+    await t.paymePerform('pm-R');
+
+    await t.payme.cancelTransaction({ id: 'pm-R', reason: 5 }, CO, 9);
+
+    expect(t.txnOf('pm-R').state).toBe(-2);
+    expect(t.db.participants[0]).toMatchObject({
+      paid: false,
+      paidAt: null,
+      paymentMethod: null,
+      paidById: null,
+    });
   });
 
   it("mock to'lovi hech qachon o'quvchi balansiga yozilmaydi", async () => {

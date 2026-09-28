@@ -26,14 +26,11 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPrice } from "@/lib/format-utils";
 import type { MockExamParticipant } from "./exam-detail-types";
 import { participantFee } from "./mock-fee";
-
-type Method = "CASH" | "PAYME" | "CLICK";
-
-const METHOD_LABELS: Record<Method, string> = {
-  CASH: "Naxt",
-  PAYME: "Payme",
-  CLICK: "Click",
-};
+import {
+  MOCK_PAYMENT_METHODS,
+  MOCK_PAYMENT_METHOD_LABELS,
+  type MockPaymentMethod,
+} from "./mock-payment";
 
 interface MarkPaidDialogProps {
   participant: MockExamParticipant | null;
@@ -48,7 +45,7 @@ export function MarkPaidDialog({
   onClose,
   onMarked,
 }: MarkPaidDialogProps) {
-  const [method, setMethod] = useState<Method>("CASH");
+  const [method, setMethod] = useState<MockPaymentMethod>("CASH");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -69,7 +66,7 @@ export function MarkPaidDialog({
         { method, note: note.trim() || undefined },
       );
       onMarked(data);
-      toast.success("To'lov belgilandi");
+      toast.success("To'lov qabul qilindi");
       onClose();
     } catch (error) {
       toast.error(getErrorMessage(error, "To'lovni belgilashda xatolik"));
@@ -106,16 +103,16 @@ export function MarkPaidDialog({
             <Label htmlFor="method">To&apos;lov turi</Label>
             <Select
               value={method}
-              onValueChange={(v) => setMethod(v as Method)}
+              onValueChange={(v) => setMethod(v as MockPaymentMethod)}
               disabled={submitting}
             >
               <SelectTrigger id="method">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(Object.keys(METHOD_LABELS) as Method[]).map((m) => (
+                {MOCK_PAYMENT_METHODS.map((m) => (
                   <SelectItem key={m} value={m}>
-                    {METHOD_LABELS[m]}
+                    {MOCK_PAYMENT_METHOD_LABELS[m]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -147,7 +144,7 @@ export function MarkPaidDialog({
           </Button>
           <Button type="button" onClick={handleSubmit} disabled={submitting}>
             {submitting && <Loader2 className="size-4 animate-spin" />}
-            Belgilash
+            Qabul qilish
           </Button>
         </DialogFooter>
       </DialogContent>
