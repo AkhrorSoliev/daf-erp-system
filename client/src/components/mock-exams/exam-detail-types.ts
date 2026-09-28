@@ -1,4 +1,5 @@
 import type { MockExamSummary } from "@/hooks/use-mock-exams-board";
+import type { MockPaymentMethod, MockPaymentSource } from "./mock-payment";
 
 export interface MockExamSubject {
   id: string;
@@ -46,6 +47,19 @@ export interface MockExamParticipant {
   formData: { __payIntent?: string } & Record<string, unknown>;
   paid: boolean;
   paidAt: string | null;
+  /**
+   * How it was paid. Null while unpaid, for an old balance payment, and for
+   * a hand-accepted payment made before the method was stored.
+   */
+  paymentMethod: MockPaymentMethod | null;
+  paymentNote: string | null;
+  /** The staff member who accepted the payment by hand. */
+  paidBy: { id: number; firstName: string; lastName: string } | null;
+  /**
+   * Where the money sits (server-decided, `mock-payment-source.ts`): only a
+   * `MANUAL` payment may be edited or cancelled from the participants tab.
+   */
+  paymentSource?: MockPaymentSource | null;
   /**
    * 2026-08 gacha o'quvchi balansidan yechilgan to'lov. O'chirilganda uni
    * server o'zi balansga qaytaradi — admin naqd bermasligi kerak.

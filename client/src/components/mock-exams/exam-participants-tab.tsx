@@ -5,7 +5,9 @@ import { format } from "date-fns";
 import {
   CircleDollarSign,
   Loader2,
+  MessageSquareText,
   MoreHorizontal,
+  Pencil,
   Plus,
   Search,
   Trash2,
@@ -29,6 +31,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPrice } from "@/lib/format-utils";
@@ -39,9 +46,12 @@ import type {
 import { ManualParticipantDialog } from "./manual-participant-dialog";
 import { ConvertParticipantDialog } from "./convert-participant-dialog";
 import { MarkPaidDialog } from "./mark-paid-dialog";
+import { EditPaymentDialog } from "./edit-payment-dialog";
+import { CancelPaymentDialog } from "./cancel-payment-dialog";
 import { DeleteParticipantDialog } from "./delete-participant-dialog";
 import { pageAfterRemoval } from "./participant-delete";
 import { participantFee } from "./mock-fee";
+import { canEditPayment, paymentMethodSummary } from "./mock-payment";
 import { listParam } from "@/hooks/use-url-filters";
 import {
   MultiSelectCombobox,
@@ -95,6 +105,10 @@ export function ExamParticipantsTab({
   const [convertTarget, setConvertTarget] =
     useState<MockExamParticipant | null>(null);
   const [payTarget, setPayTarget] = useState<MockExamParticipant | null>(null);
+  const [editPayTarget, setEditPayTarget] =
+    useState<MockExamParticipant | null>(null);
+  const [cancelPayTarget, setCancelPayTarget] =
+    useState<MockExamParticipant | null>(null);
 
   // Debounce search input
   useEffect(() => {
@@ -152,6 +166,12 @@ export function ExamParticipantsTab({
     void fetchData(1, debouncedSearch);
     setPage(1);
   };
+
+  function mergeParticipant(updated: MockExamParticipant) {
+    setData((prev) =>
+      prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)),
+    );
+  }
 
   function handleDeleted(id: string) {
     onParticipantCountChange(-1);
@@ -316,6 +336,7 @@ export function ExamParticipantsTab({
                     {(() => {
                       const fee = participantFee(p, exam.price);
                       if (p.paid) {
+                        const method = paymentMethodSummary(p);
                         return (
                           <div className="flex flex-col gap-0.5">
                             <span className="inline-flex w-fit items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
@@ -324,6 +345,24 @@ export function ExamParticipantsTab({
                             {fee > 0 && (
                               <span className="tabular-nums text-muted-foreground">
                                 {formatPrice(fee)} so&apos;m
+                              </span>
+                            )}
+                            {method && (
+                              <span className="inline-flex items-center gap-1 text-muted-foreground">
+                                {method}
+                                {p.paymentNote && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <MessageSquareText
+                                        className="size-3.5 shrink-0"
+                                        aria-label="To'lov izohi"
+                                      />
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-64 whitespace-pre-wrap">
+                                      {p.paymentNote}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
                               </span>
                             )}
                           </div>
@@ -387,6 +426,14 @@ export function ExamParticipantsTab({
                           <DropdownMenuItem onSelect={() => setPayTarget(p)}>
                             <CircleDollarSign className="mr-2 size-4" />
                             To&apos;lov qabul qilish
+                          </DropdownMenuItem>
+                        )}
+                        {canEditPayment(p) && (
+                          <DropdownMenuItem
+                            onSelect={() => setEditPayTarget(p)}
+                          >
+                            <Pencil className="mr-2 size-4" />
+                            To&apos;lovni tahrirlash
                           </DropdownMenuItem>
                         )}
                         {p.studentId === null && (
@@ -468,10 +515,29 @@ export function ExamParticipantsTab({
         participant={payTarget}
         examPrice={exam.price}
         onClose={() => setPayTarget(null)}
-        onMarked={(updated) => {
-          setData((prev) =>
-            prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)),
-          );
+        onMarked={mergeParticipant}
+      />
+
+      <EditPaymentDialog
+        participant={editPayTarget}
+        examPrice={exam.price}
+        onClose={() => setEditPayTarget(null)}
+        onSaved={mergeParticipant}
+        onRequestCancel={(p) => {
+          setEditPayTarget(null);
+          setCancelPayTarget(p);
+        }}
+      />
+
+      <CancelPaymentDialog
+        participant={cancelPayTarget}
+        examPrice={exam.price}
+        onClose={() => setCancelPayTarget(null)}
+        onCancelled={(updated) => {
+          // Pul holati o'zgardi: to'lov filtri yoqilgan bo'lsa, qator
+          // endi unga tushmasligi mumkin — sahifani serverdan qayta olamiz.
+          mergeParticipant(updated);
+          void fetchData(page, debouncedSearch);
         }}
       />
 

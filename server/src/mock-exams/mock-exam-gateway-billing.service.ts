@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { MockExamStatus, Prisma } from '@prisma/client';
+import { MockExamStatus, PaymentMethod, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { isMockPaymentOpen, mockPaymentCutoff } from './mock-payment-cutoff';
@@ -36,6 +36,13 @@ interface ResolvedMockTarget {
   participantId: string;
   examPrice: number;
   alreadyPaid: boolean;
+}
+
+/** `MockExamGatewayTransaction.provider` is a plain string column. */
+function gatewayPaymentMethod(provider: string): PaymentMethod | null {
+  if (provider === 'CLICK') return PaymentMethod.CLICK;
+  if (provider === 'PAYME') return PaymentMethod.PAYME;
+  return null;
 }
 
 /**
@@ -280,7 +287,13 @@ export class MockExamGatewayBillingService {
 
         const claimed = await tx.mockExamParticipant.updateMany({
           where: { id: txn.mockParticipantId, paid: false, deletedAt: null },
-          data: { paid: true, paidAt: now },
+          data: {
+            paid: true,
+            paidAt: now,
+            paymentMethod: gatewayPaymentMethod(txn.provider),
+            paymentNote: null,
+            paidById: null,
+          },
         });
         if (claimed.count === 0) {
           await tx.mockExamGatewayTransaction.update({
@@ -331,7 +344,14 @@ export class MockExamGatewayBillingService {
       await this.entityHistoryService.recordUpdate({
         entityType: 'MockExamParticipant',
         entityId: notify.id,
-        oldValues: { paid: false },
+        // `computeChangedFields` keeps only keys the old values also carry —
+        // with `{ paid: false }` alone the provider and the transaction id
+        // were dropped from this row.
+        oldValues: {
+          paid: false,
+          paymentMethod: null,
+          gatewayTransactionId: null,
+        },
         newValues: {
           paid: true,
           paymentMethod: notify.provider,
@@ -385,7 +405,13 @@ export class MockExamGatewayBillingService {
         if (options.wasPerformed) {
           await tx.mockExamParticipant.update({
             where: { id: txn.mockParticipantId },
-            data: { paid: false, paidAt: null },
+            data: {
+              paid: false,
+              paidAt: null,
+              paymentMethod: null,
+              paymentNote: null,
+              paidById: null,
+            },
           });
         }
       },

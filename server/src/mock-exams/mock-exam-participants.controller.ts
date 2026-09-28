@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -13,6 +14,8 @@ import { AddManualParticipantDto } from './dto/add-manual-participant.dto';
 import { ConvertMockParticipantDto } from './dto/convert-mock-participant.dto';
 import { ParticipantsQueryDto } from './dto/participants-query.dto';
 import { MarkMockPaidDto } from './dto/mark-mock-paid.dto';
+import { UpdateMockPaymentDto } from './dto/update-mock-payment.dto';
+import { CancelMockPaymentDto } from './dto/cancel-mock-payment.dto';
 import { RemoveMockParticipantQueryDto } from './dto/remove-mock-participant-query.dto';
 import { CurrentUser, Roles, BranchScope } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
@@ -76,6 +79,42 @@ export class MockExamParticipantsController {
     @BranchScope() branchIds: ReportBranchIds,
   ) {
     return this.participantsService.markPaid(
+      id,
+      dto,
+      companyId,
+      userId,
+      branchIds,
+    );
+  }
+
+  /** Fix the method or note of a payment an admin accepted by hand. */
+  @Patch('mock-exam-participants/:id/payment')
+  updatePayment(
+    @Param('id') id: string,
+    @Body() dto: UpdateMockPaymentDto,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+    @BranchScope() branchIds: ReportBranchIds,
+  ) {
+    return this.participantsService.updatePayment(
+      id,
+      dto,
+      companyId,
+      userId,
+      branchIds,
+    );
+  }
+
+  /** Undo a payment an admin accepted by hand; `reason` is mandatory. */
+  @Post('mock-exam-participants/:id/cancel-payment')
+  cancelPayment(
+    @Param('id') id: string,
+    @Body() dto: CancelMockPaymentDto,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+    @BranchScope() branchIds: ReportBranchIds,
+  ) {
+    return this.participantsService.cancelPayment(
       id,
       dto,
       companyId,
