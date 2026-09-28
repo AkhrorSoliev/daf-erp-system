@@ -330,6 +330,7 @@ model User {
   createdMockExams                 MockExam[]                 @relation("MockExamCreatedBy")
   deletedMockExams                 MockExam[]                 @relation("MockExamDeletedBy")
   announcedMockExams               MockExam[]                 @relation("MockExamAnnouncedBy")
+  acceptedMockPayments             MockExamParticipant[]      @relation("MockExamParticipantPaidBy")
   deletedGroups                    Group[]                    @relation("GroupDeletedBy")
   deletedEnrollments               Enrollment[]               @relation("EnrollmentDeletedBy")
   deletedHolidays                  Holiday[]                  @relation("HolidayDeletedBy")
@@ -1081,12 +1082,25 @@ model MockExamParticipant {
 
   registeredAt DateTime @default(now())
 
-  // Payment for this specific mock exam. When a non-DaF participant pays
-  // via Click/Payme using their publicId, `paid` flips to true directly
-  // (no Transaction). DaF students pay through the normal balance flow;
-  // a billing hook then flips this flag.
+  // Payment for this specific mock exam. No Transaction is written: `paid`
+  // flips when an admin accepts the fee at the desk (`markPaid`) or when a
+  // Payme/Click payment against the publicId completes (`markCompleted`).
+  // Nothing takes a mock fee from a Student's balance any more.
   paid   Boolean   @default(false)
   paidAt DateTime?
+
+  // How it was paid — written by the same two paths that set `paid`, cleared
+  // with it. NULL on rows paid before the column existed whose method was
+  // never saved: the history row meant to hold it dropped it, because
+  // `computeChangedFields` keeps only keys the old values also carry.
+  paymentMethod PaymentMethod?
+  paymentNote   String?
+  // The staff member who accepted the payment by hand; NULL for a Payme/Click
+  // webhook and for the old balance deductions. Display only — whether a
+  // payment may be edited or cancelled is decided by the money records
+  // (`paymentSourceOf` in the participants service), not by this column.
+  paidById      Int?
+  paidBy        User?          @relation("MockExamParticipantPaidBy", fields: [paidById], references: [id])
 
   // Result
   totalScore Float?

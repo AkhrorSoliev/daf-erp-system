@@ -6,6 +6,7 @@ import { StudentLeadOriginService } from '../common/student-origin';
 import { MockExamParticipantsService } from './mock-exam-participants.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { computeChangedFields } from '../common/entity-history/diff.util';
 import { MockExamBillingService } from './mock-exam-billing.service';
 
 describe('MockExamParticipantsService', () => {
@@ -39,6 +40,10 @@ describe('MockExamParticipantsService', () => {
         create: jest.fn(),
         update: jest.fn(),
         updateMany: jest.fn(),
+      },
+      // Completed Payme/Click payments — decide a paid row's `paymentSource`.
+      mockExamGatewayTransaction: {
+        findMany: jest.fn().mockResolvedValue([]),
       },
       student: {
         findFirst: jest.fn().mockResolvedValue(null),
@@ -666,6 +671,256 @@ describe('MockExamParticipantsService', () => {
       await expect(
         service.markPaid('p1', { method: 'CASH' } as any, 1001, 1, null),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    // Oyna to'lov turi va izohni so'rardi, lekin ular hech qayerga
+    // yozilmasdi: faqat tarixga berilardi, tarix servisi esa eski
+    // qiymatlarda yo'q kalitni (`paymentMethod`, `paymentNote`) tashlab
+    // yuboradi. Endi ular qatorda, tarixda ham diff'dan o'tib qoladi.
+    it("to'lov turi, izoh va qabul qilgan admin qatorga va tarixga yoziladi", async () => {
+      prisma.mockExamParticipant.findFirst.mockResolvedValue({
+        id: 'p1',
+        paid: false,
+        feeAmount: 50000,
+        exam: { price: 100000, title: 'Goethe B1' },
+      });
+      prisma.mockExamParticipant.updateMany.mockResolvedValue({ count: 1 });
+      prisma.mockExamParticipant.findUniqueOrThrow.mockResolvedValue({
+        id: 'p1',
+        paid: true,
+        paymentMethod: 'CLICK',
+      });
+
+      const res = await service.markPaid(
+        'p1',
+        { method: 'CLICK', note: '  chek 12  ' } as any,
+        1001,
+        7,
+        null,
+      );
+
+      expect(prisma.mockExamParticipant.updateMany).toHaveBeenCalledWith({
+        where: { id: 'p1', paid: false, deletedAt: null },
+        data: expect.objectContaining({
+          paid: true,
+          paymentMethod: 'CLICK',
+          paymentNote: 'chek 12',
+          paidById: 7,
+        }),
+      });
+      const call = history.recordUpdate.mock.calls[0][0];
+      expect(computeChangedFields(call.oldValues, call.newValues)).toEqual({
+        oldValues: { paid: false, paymentMethod: null, paymentNote: null },
+        newValues: {
+          paid: true,
+          paymentMethod: 'CLICK',
+          paymentNote: 'chek 12',
+        },
+      });
+      expect(res.paymentSource).toBe('MANUAL');
+    });
+  });
+
+  describe("qabul qilingan to'lovni tahrirlash va bekor qilish", () => {
+    const PAID_AT = new Date('2026-09-20T09:00:00Z');
+    const manual = {
+      id: 'p1',
+      paid: true,
+      paidAt: PAID_AT,
+      paymentMethod: 'CASH',
+      paymentNote: 'kassa',
+      feeAmount: 50000,
+      exam: { price: 100000, title: 'Goethe B1' },
+    };
+
+    beforeEach(() => {
+      prisma.mockExamParticipant.findFirst.mockResolvedValue(manual);
+      prisma.mockExamParticipant.updateMany.mockResolvedValue({ count: 1 });
+      prisma.mockExamParticipant.findUniqueOrThrow.mockResolvedValue({
+        id: 'p1',
+        paid: true,
+      });
+    });
+
+    it("usul va izohni o'zgartiradi — faqat aynan o'sha to'lov ustiga", async () => {
+      await service.updatePayment(
+        'p1',
+        { method: 'CLICK', note: 'Click orqali, chek 881' } as any,
+        1001,
+        9,
+        null,
+      );
+
+      expect(prisma.mockExamParticipant.updateMany).toHaveBeenCalledWith({
+        where: { id: 'p1', deletedAt: null, paid: true, paidAt: PAID_AT },
+        data: { paymentMethod: 'CLICK', paymentNote: 'Click orqali, chek 881' },
+      });
+      expect(history.recordUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'MockExamParticipant',
+          entityId: 'p1',
+          oldValues: { paymentMethod: 'CASH', paymentNote: 'kassa' },
+          newValues: {
+            paymentMethod: 'CLICK',
+            paymentNote: 'Click orqali, chek 881',
+          },
+          changedById: 9,
+        }),
+      );
+    });
+
+    it("izoh berilmasa eskisi qoladi, bo'sh satr esa uni o'chiradi", async () => {
+      await service.updatePayment(
+        'p1',
+        { method: 'PAYME' } as any,
+        1001,
+        9,
+        null,
+      );
+      expect(
+        prisma.mockExamParticipant.updateMany.mock.calls[0][0].data,
+      ).toEqual({ paymentMethod: 'PAYME', paymentNote: 'kassa' });
+
+      await service.updatePayment(
+        'p1',
+        { method: 'PAYME', note: '   ' } as any,
+        1001,
+        9,
+        null,
+      );
+      expect(
+        prisma.mockExamParticipant.updateMany.mock.calls[1][0].data,
+      ).toEqual({ paymentMethod: 'PAYME', paymentNote: null });
+    });
+
+    it("bekor qilish ishtirokchini to'lanmagan holatga qaytaradi va sababni tarixga yozadi", async () => {
+      await service.cancelPayment(
+        'p1',
+        { reason: "  Boshqa odam o'rniga belgilangan  " },
+        1001,
+        9,
+        null,
+      );
+
+      expect(prisma.mockExamParticipant.updateMany).toHaveBeenCalledWith({
+        where: { id: 'p1', deletedAt: null, paid: true, paidAt: PAID_AT },
+        data: {
+          paid: false,
+          paidAt: null,
+          paymentMethod: null,
+          paymentNote: null,
+          paidById: null,
+        },
+      });
+      const call = history.recordUpdate.mock.calls[0][0];
+      expect(call.changedById).toBe(9);
+      expect(computeChangedFields(call.oldValues, call.newValues)).toEqual({
+        oldValues: {
+          paid: true,
+          paymentMethod: 'CASH',
+          paymentNote: 'kassa',
+          cancelReason: null,
+        },
+        newValues: {
+          paid: false,
+          paymentMethod: null,
+          paymentNote: null,
+          cancelReason: "Boshqa odam o'rniga belgilangan",
+        },
+      });
+    });
+
+    it('sababsiz bekor qilmaydi', async () => {
+      await expect(
+        service.cancelPayment('p1', { reason: '    ' }, 1001, 9, null),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.mockExamParticipant.updateMany).not.toHaveBeenCalled();
+    });
+
+    // Payme/Click puli shlyuzda: bu yerda belgini olib tashlash pulni
+    // qaytarmaydi, faqat ro'yxatni «to'lanmagan» qilib qo'yardi.
+    it("Payme/Click orqali o'tgan to'lovni o'zgartirmaydi va bekor qilmaydi", async () => {
+      prisma.mockExamGatewayTransaction.findMany.mockResolvedValue([
+        { mockParticipantId: 'p1' },
+      ]);
+
+      await expect(
+        service.updatePayment('p1', { method: 'CASH' } as any, 1001, 9, null),
+      ).rejects.toThrow(/onlayn/);
+      await expect(
+        service.cancelPayment('p1', { reason: 'xato' }, 1001, 9, null),
+      ).rejects.toThrow(/onlayn/);
+      expect(prisma.mockExamParticipant.updateMany).not.toHaveBeenCalled();
+      expect(prisma.mockExamGatewayTransaction.findMany).toHaveBeenCalledWith({
+        where: { mockParticipantId: { in: ['p1'] }, state: 2 },
+        select: { mockParticipantId: true },
+      });
+    });
+
+    // Eski balans to'lovi ishtirokchi o'chirilganda balansga o'zi qaytadi;
+    // belgini qo'lda olib tashlash pulni balansdan yechilgancha qoldirardi.
+    it("balansdan yechilgan eski to'lovni bekor qilmaydi", async () => {
+      billingMock.paidFromBalanceIds.mockResolvedValue(new Set(['p1']));
+
+      await expect(
+        service.cancelPayment('p1', { reason: 'xato' }, 1001, 9, null),
+      ).rejects.toThrow(/balans/);
+      expect(prisma.mockExamParticipant.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("to'lanmagan ishtirokchida tahrirlanadigan to'lov yo'q", async () => {
+      prisma.mockExamParticipant.findFirst.mockResolvedValue({
+        ...manual,
+        paid: false,
+        paidAt: null,
+      });
+
+      await expect(
+        service.updatePayment('p1', { method: 'CASH' } as any, 1001, 9, null),
+      ).rejects.toThrow("Bu ishtirokchi hali to'lamagan");
+    });
+
+    it("o'qish bilan yozish orasida to'lov o'zgargan bo'lsa hech narsa yozmaydi", async () => {
+      prisma.mockExamParticipant.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.cancelPayment('p1', { reason: 'xato' }, 1001, 9, null),
+      ).rejects.toThrow(/hozirgina o'zgardi/);
+      expect(history.recordUpdate).not.toHaveBeenCalled();
+    });
+
+    it('boshqa filial imtihonining ishtirokchisiga tegmaydi', async () => {
+      prisma.mockExam.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.cancelPayment('p1', { reason: 'xato' }, 1001, 9, [2]),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.mockExamParticipant.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("list — to'lov manbai", () => {
+    it("har bir to'langan qatorga manbasini qo'shadi", async () => {
+      prisma.mockExamParticipant.findMany.mockResolvedValue([
+        { id: 'cash', paid: true },
+        { id: 'click', paid: true },
+        { id: 'old', paid: true },
+        { id: 'unpaid', paid: false },
+      ]);
+      prisma.mockExamParticipant.count.mockResolvedValue(4);
+      prisma.mockExamGatewayTransaction.findMany.mockResolvedValue([
+        { mockParticipantId: 'click' },
+      ]);
+      billingMock.paidFromBalanceIds.mockResolvedValue(new Set(['old']));
+
+      const res = await service.list('exam-1', {} as any, 1001, null);
+
+      expect(res.data.map((p: any) => p.paymentSource)).toEqual([
+        'MANUAL',
+        'GATEWAY',
+        'BALANCE',
+        null,
+      ]);
     });
   });
 

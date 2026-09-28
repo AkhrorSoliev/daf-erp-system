@@ -367,6 +367,14 @@ rad etiladi (Payme `-31008`, Click `-4`) va shlyuz pulni qaytaradi. To'lagan
 ishtirokchi faqat «pul qaytarildi» tasdig'i bilan o'chiriladi.
 `mock-exams/mock-exam-gateway-billing.service.ts` (`markCompleted`)
 
+**To'lov manbai** — pul qayerda turgani: `MANUAL` (admin kassada qabul
+qilgan), `GATEWAY` (Payme/Click orqali onlayn), `BALANCE` (2026-08 gacha
+o'quvchi balansidan). To'lov turi, izoh va qabul qilgan xodim qatorda
+(`paymentMethod`, `paymentNote`, `paidById`). Faqat `MANUAL` to'lovni
+«To'lovni tahrirlash» oynasida tuzatish yoki sabab bilan bekor qilish mumkin;
+bekor qilingan ishtirokchi o'chmaydi, yana «to'lanmagan» bo'ladi (ADR-0046).
+`mock-exams/mock-payment-source.ts`
+
 **Onlayn to'lov imtihon boshlanguncha** (CEO, 2026-09-25). Muddat —
 ishtirokchi tanlagan vaqt (`examTime`), Toshkent vaqti bilan; vaqt tanlanmagan
 bo'lsa imtihonning eng erta vaqti, vaqt umuman bo'lmasa imtihon kunining oxiri.
