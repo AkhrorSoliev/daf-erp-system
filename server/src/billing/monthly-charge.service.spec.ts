@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsWriteService } from '../transactions/transactions-write.service';
 import { SettingsService } from '../settings/settings.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
+import { LessonAdmissionService } from './lesson-admission.service';
 import { DeparturePolicy } from './departure-policy';
 
 // Cast once here rather than `as any` at every call site below: the shape
@@ -48,6 +49,7 @@ describe('MonthlyChargeService', () => {
   let txWriteMock: any;
   let settingsMock: any;
   let salaryAccrualMock: any;
+  let admissionMock: any;
   let tx: any;
   // The service does create() then update() on the same row (the second
   // write stamps transactionId once the ledger row exists). This mirrors
@@ -135,6 +137,8 @@ describe('MonthlyChargeService', () => {
     salaryAccrualMock = {
       reverseAccrualForAttendance: jest.fn().mockResolvedValue(null),
     };
+    // ADR-0048: re-judging the centre's first lesson after a charge write.
+    admissionMock = { loadCoverage: jest.fn().mockResolvedValue(null) };
     settingsMock = {
       get: jest.fn((_companyId: number, key: string) => {
         if (key === 'payment.excusedCreditEnabled')
@@ -154,6 +158,7 @@ describe('MonthlyChargeService', () => {
         { provide: TransactionsWriteService, useValue: txWriteMock },
         { provide: SettingsService, useValue: settingsMock },
         { provide: SalaryAccrualService, useValue: salaryAccrualMock },
+        { provide: LessonAdmissionService, useValue: admissionMock },
       ],
     }).compile();
 
@@ -3346,6 +3351,115 @@ describe('MonthlyChargeService', () => {
       });
 
       expect(prismaMock.salaryAccrual.updateMany).not.toHaveBeenCalled();
+    });
+
+    describe('markaz qoplagan birinchi dars qayta baholanadi (ADR-0048, R4)', () => {
+      const firstDay = new Date('2026-10-01T00:00:00.000Z');
+      const refrontCall = {
+        where: {
+          attendanceId: 'att-first',
+          reversedAt: null,
+          isCenterTopUp: false,
+        },
+        data: { isCenterTopUp: true, wasCenterTopUp: true },
+      };
+
+      beforeEach(() => {
+        prismaMock.salaryAccrual.findMany.mockResolvedValue([
+          { attendanceId: 'att-first' },
+        ]);
+        prismaMock.attendance.findMany = jest
+          .fn()
+          .mockResolvedValue([{ id: 'att-first', date: firstDay }]);
+      });
+
+      const chargeOctober = () =>
+        service.createChargeForEnrollment(tx, {
+          enrollment: enrollment(),
+          periodYear: 2026,
+          periodMonth: 10,
+          companyId: 1,
+        });
+
+      it("to'lanmagan birinchi dars yana markazniki bo'ladi", async () => {
+        const coverage = jest.fn(() => ({
+          firstLesson: true,
+          covered: false,
+          enrollmentId: 'enr-1',
+        }));
+        admissionMock.loadCoverage.mockResolvedValue(coverage);
+
+        await chargeOctober();
+
+        expect(prismaMock.salaryAccrual.findMany).toHaveBeenCalledWith({
+          where: {
+            companyId: 1,
+            studentId: 10453,
+            groupId: 'grp-1',
+            reversedAt: null,
+            isCenterTopUp: false,
+            wasCenterTopUp: true,
+            attendanceId: { not: null },
+            lessonDate: {
+              gte: firstDay,
+              lt: new Date('2026-11-01T00:00:00.000Z'),
+            },
+          },
+          select: { attendanceId: true },
+        });
+        expect(admissionMock.loadCoverage).toHaveBeenCalledWith(
+          tx,
+          10453,
+          '2026-10-01',
+        );
+        expect(coverage).toHaveBeenCalledWith('grp-1', '2026-10-01');
+        // First the period flip, then the re-front.
+        expect(prismaMock.salaryAccrual.updateMany).toHaveBeenCalledTimes(2);
+        expect(prismaMock.salaryAccrual.updateMany).toHaveBeenLastCalledWith(
+          refrontCall,
+        );
+      });
+
+      it("to'lov yetgan birinchi dars undirilgan bo'lib qoladi", async () => {
+        admissionMock.loadCoverage.mockResolvedValue(() => ({
+          firstLesson: true,
+          covered: true,
+          enrollmentId: 'enr-1',
+        }));
+        await chargeOctober();
+        expect(prismaMock.salaryAccrual.updateMany).toHaveBeenCalledTimes(1);
+      });
+
+      it('birinchi bo`lmagan dars qayta baholanmaydi', async () => {
+        admissionMock.loadCoverage.mockResolvedValue(() => ({
+          firstLesson: false,
+          covered: false,
+          enrollmentId: 'enr-1',
+        }));
+        await chargeOctober();
+        expect(prismaMock.salaryAccrual.updateMany).toHaveBeenCalledTimes(1);
+      });
+
+      it('kelmagan (ABSENT) dars qayta baholanmaydi', async () => {
+        prismaMock.attendance.findMany.mockResolvedValue([]);
+        await chargeOctober();
+        expect(admissionMock.loadCoverage).not.toHaveBeenCalled();
+      });
+
+      it('01.10.2026 dan oldingi oyga tegmaydi', async () => {
+        await service.createChargeForEnrollment(tx, {
+          enrollment: enrollment(),
+          periodYear: 2026,
+          periodMonth: 9,
+          companyId: 1,
+        });
+        expect(admissionMock.loadCoverage).not.toHaveBeenCalled();
+        expect(prismaMock.salaryAccrual.findMany).not.toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({ wasCenterTopUp: true }),
+          }),
+        );
+      });
     });
   });
 });

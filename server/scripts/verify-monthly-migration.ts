@@ -245,6 +245,8 @@ async function main(prisma: PrismaClient) {
     undefined as unknown as never,
     // SalaryAccrualService — faqat sinov darsi (3.5) ketishida ishlatiladi.
     undefined as unknown as never,
+    // LessonAdmissionService — faqat hisob yozilganda (ADR-0048) ishlatiladi.
+    undefined as unknown as never,
   );
   const readTx = prisma as unknown as Prisma.TransactionClient;
   const planCache = new Map<

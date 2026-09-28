@@ -1,6 +1,6 @@
 # «Markaz qoplagan 1-dars» — the centre's first lesson shows as the centre's money
 
-**Date:** 2026-09-28 · **Status:** draft, waiting for the CEO
+**Date:** 2026-09-28 · **Status:** accepted, implemented (ADR-0048)
 **Depends on:** PR #595 (ADR-0046) and PR #596 (ADR-0047).
 **From:** the «Zarur» list of 28.09 (items 7 and 11). Items 14 and 21 of that
 list (a Branch Director seeing other branches on `/reports/payment-reports`, and

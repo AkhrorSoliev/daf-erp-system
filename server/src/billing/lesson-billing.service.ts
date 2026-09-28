@@ -21,6 +21,7 @@ import {
 import { MonthlyChargeService } from './monthly-charge.service';
 import { LessonAdmissionService } from './lesson-admission.service';
 import { ADMISSION_START_DAY } from './lesson-admission';
+import { setFirstLessonFunder } from './first-lesson-funder';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { lessonDatesInMonth } from './planned-lessons';
 import {
@@ -38,6 +39,12 @@ const BILLABLE: ReadonlySet<AttendanceStatus> = new Set([
   AttendanceStatus.PRESENT,
   AttendanceStatus.LATE,
   AttendanceStatus.ABSENT,
+]);
+
+/** The student came: the marks the centre's first lesson is for (ADR-0048). */
+const ATTENDED: ReadonlySet<AttendanceStatus> = new Set([
+  AttendanceStatus.PRESENT,
+  AttendanceStatus.LATE,
 ]);
 
 export interface ProcessAttendanceBillingParams {
@@ -164,6 +171,7 @@ export class LessonBillingService {
           );
         } else {
           await this.accrueMonthlySalary(tx, params);
+          await this.frontUnpaidFirstLesson(tx, params);
         }
       }
       return;
@@ -183,6 +191,7 @@ export class LessonBillingService {
       // (`accrueDeferredFirstLessons`).
       if (await this.isDeferredFirstLesson(tx, params)) return;
       await this.accrueMonthlySalary(tx, params);
+      await this.frontUnpaidFirstLesson(tx, params);
       return;
     }
 
@@ -239,6 +248,26 @@ export class LessonBillingService {
       { studentId: params.studentId, groupId: params.groupId, lessonDay },
       tx,
     );
+  }
+
+  /**
+   * ADR-0048 (R1): a student who came (PRESENT/LATE) to their first lesson of
+   * the month in this group, from 01.10.2026, without their payments reaching
+   * it: the accrual just written is the centre's money, not the student's.
+   * The payment that covers the lesson clears it (`accrueDeferredFirstLessons`).
+   */
+  private async frontUnpaidFirstLesson(
+    tx: Prisma.TransactionClient,
+    params: ProcessAttendanceBillingParams,
+  ): Promise<void> {
+    if (!ATTENDED.has(params.newStatus)) return;
+    const lessonDay = tashkentDateStr(params.lessonDate);
+    if (lessonDay < ADMISSION_START_DAY) return;
+    const unpaid = await this.admission.isUnpaidFirstLesson(
+      { studentId: params.studentId, groupId: params.groupId, lessonDay },
+      tx,
+    );
+    if (unpaid) await setFirstLessonFunder(tx, params.attendanceId, true);
   }
 
   /**
@@ -712,49 +741,102 @@ export class LessonBillingService {
    * alone. The accrual goes on the enrollment whose charge billed the lesson;
    * a payment after the month's payroll closed carries it over
    * (`createAccrual`), and a repeat run finds nothing left to write.
+   *
+   * ADR-0048 (R2): the same pass clears `isCenterTopUp` on a PRESENT/LATE
+   * first lesson the centre fronted (R1) once the payments reach it;
+   * `wasCenterTopUp` stays, so the month keeps showing what the centre
+   * advanced.
    */
   private async accrueDeferredFirstLessons(
     tx: Prisma.TransactionClient,
     params: { studentId: number; companyId: number; performedById?: number },
     carriedOverSink: CarriedOverAccrual[],
   ): Promise<void> {
-    const absences = await tx.attendance.findMany({
-      where: {
-        studentId: params.studentId,
-        companyId: params.companyId,
-        status: AttendanceStatus.ABSENT,
-        date: { gte: new Date(`${ADMISSION_START_DAY}T00:00:00.000Z`) },
-        group: { course: { paymentModel: PaymentModel.MONTHLY } },
-      },
-      select: {
-        id: true,
-        groupId: true,
-        date: true,
-        group: { select: { branchId: true } },
-      },
-      orderBy: { date: 'asc' },
-    });
-    if (absences.length === 0) return;
+    const since = new Date(`${ADMISSION_START_DAY}T00:00:00.000Z`);
+    const [absences, fronted] = await Promise.all([
+      tx.attendance.findMany({
+        where: {
+          studentId: params.studentId,
+          companyId: params.companyId,
+          status: AttendanceStatus.ABSENT,
+          date: { gte: since },
+          group: { course: { paymentModel: PaymentModel.MONTHLY } },
+        },
+        select: {
+          id: true,
+          groupId: true,
+          date: true,
+          group: { select: { branchId: true } },
+        },
+        orderBy: { date: 'asc' },
+      }),
+      // ADR-0048 (R2): the centre's first lessons still waiting for the
+      // student's money.
+      tx.salaryAccrual.findMany({
+        where: {
+          studentId: params.studentId,
+          companyId: params.companyId,
+          attendanceId: { not: null },
+          lessonDate: { gte: since },
+          reversedAt: null,
+          isCenterTopUp: true,
+          wasCenterTopUp: true,
+        },
+        select: { attendanceId: true },
+      }),
+    ]);
 
-    const accrued = await tx.salaryAccrual.findMany({
-      where: {
-        attendanceId: { in: absences.map((a) => a.id) },
-        reversedAt: null,
-      },
-      select: { attendanceId: true },
-    });
+    const accrued =
+      absences.length === 0
+        ? []
+        : await tx.salaryAccrual.findMany({
+            where: {
+              attendanceId: { in: absences.map((a) => a.id) },
+              reversedAt: null,
+            },
+            select: { attendanceId: true },
+          });
     const withAccrual = new Set(accrued.map((a) => a.attendanceId));
     const pending = absences.filter((a) => !withAccrual.has(a.id));
-    if (pending.length === 0) return;
+
+    const frontedIds = [
+      ...new Set(
+        fronted
+          .map((a) => a.attendanceId)
+          .filter((id): id is string => id !== null),
+      ),
+    ];
+    const attended =
+      frontedIds.length === 0
+        ? []
+        : await tx.attendance.findMany({
+            where: {
+              id: { in: frontedIds },
+              status: { in: [...ATTENDED] },
+              group: { course: { paymentModel: PaymentModel.MONTHLY } },
+            },
+            select: { id: true, groupId: true, date: true },
+          });
+    if (pending.length === 0 && attended.length === 0) return;
 
     // `Attendance.date` is a @db.Date: its UTC calendar date is the day.
     const dayOf = (d: Date) => d.toISOString().slice(0, 10);
+    const earliest = [...pending, ...attended]
+      .map((a) => dayOf(a.date))
+      .sort()[0];
     const coverage = await this.admission.loadCoverage(
       tx,
       params.studentId,
-      dayOf(pending[0].date),
+      earliest,
     );
     if (!coverage) return;
+
+    for (const att of attended) {
+      const c = coverage(att.groupId, dayOf(att.date));
+      if (c.firstLesson && c.covered) {
+        await setFirstLessonFunder(tx, att.id, false);
+      }
+    }
 
     for (const att of pending) {
       const c = coverage(att.groupId, dayOf(att.date));

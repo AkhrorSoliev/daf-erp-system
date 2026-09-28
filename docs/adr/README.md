@@ -105,5 +105,6 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0045](0045-bot-xodimni-taniydi-xodim-kabineti-mini-appda.md) | Bot xodimni Telegram bog'lanishi bilan taniydi; xodim kabineti Mini App'da parolsiz ochiladi | Qabul qilindi | 2026-09-28 |
 | [0046](0046-davomat-oynasi-va-tolovsiz-oquvchi.md) | Davomat dars tugashi bilan yopiladi; to'lov qilmagan o'quvchi 2-darsdan puli yetgan darslargacha qatnashadi | Qabul qilindi | 2026-09-27 |
 | [0047](0047-davomat-2-bosqich-berilmadi-kechikish-sinov-darsi.md) | «Berilmadi» o'qishda hisoblanadi; kechikish daqiqasi; sinov darsi (3.5) oyni to'liq qaytaradi; qarzdorning 1-darsga kelmagani to'lovgacha ustozga yozilmaydi; uchta sozlama | Qabul qilindi | 2026-09-27 |
+| [0048](0048-markaz-qoplagan-birinchi-dars.md) | To'lamagan o'quvchi kelgan oyning 1-darsi markazning puli bo'lib ko'rinadi; to'lov yetganda undirilgan bo'ladi | Qabul qilindi | 2026-09-28 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.

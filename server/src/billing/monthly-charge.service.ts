@@ -11,6 +11,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsWriteService } from '../transactions/transactions-write.service';
 import { SettingsService } from '../settings/settings.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
+import { LessonAdmissionService } from './lesson-admission.service';
+import { ADMISSION_START_DAY } from './lesson-admission';
+import { setFirstLessonFunder } from './first-lesson-funder';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { lessonDatesInMonth } from './planned-lessons';
 import { resolveMonthPlan } from './month-plan';
@@ -121,6 +124,7 @@ export class MonthlyChargeService {
     private transactionsWrite: TransactionsWriteService,
     private settingsService: SettingsService,
     private salaryAccrual: SalaryAccrualService,
+    private admission: LessonAdmissionService,
   ) {}
 
   /**
@@ -407,6 +411,13 @@ export class MonthlyChargeService {
       periodMonth,
       fronted: false,
     });
+    await this.refrontUnpaidFirstLessons(tx, {
+      studentId: enr.studentId,
+      groupId: enr.groupId,
+      companyId: params.companyId,
+      periodYear,
+      periodMonth,
+    });
 
     return tx.enrollmentMonthlyCharge.update({
       where: { id: charge.id },
@@ -535,6 +546,76 @@ export class MonthlyChargeService {
       },
       data: { isCenterTopUp: params.fronted },
     });
+  }
+
+  /**
+   * ADR-0048 (R4): a charge written does not pay the month's first lesson by
+   * itself — a debtor's charge only drives the balance further down. After
+   * `setCenterTopUpForPeriod` has called every fronted row of the period
+   * recovered, a PRESENT/LATE first lesson (from 01.10.2026) that the
+   * student's payments still do not reach goes back to the centre (R1).
+   */
+  private async refrontUnpaidFirstLessons(
+    tx: Prisma.TransactionClient,
+    params: {
+      studentId: number;
+      groupId: string;
+      companyId: number;
+      periodYear: number;
+      periodMonth: number;
+    },
+  ): Promise<void> {
+    const monthStart = `${params.periodYear}-${String(params.periodMonth).padStart(2, '0')}-01`;
+    const from =
+      monthStart > ADMISSION_START_DAY ? monthStart : ADMISSION_START_DAY;
+    const until = new Date(Date.UTC(params.periodYear, params.periodMonth, 1));
+    const fromDate = new Date(`${from}T00:00:00.000Z`);
+    if (fromDate >= until) return;
+
+    const recovered = await tx.salaryAccrual.findMany({
+      where: {
+        companyId: params.companyId,
+        studentId: params.studentId,
+        groupId: params.groupId,
+        reversedAt: null,
+        isCenterTopUp: false,
+        wasCenterTopUp: true,
+        attendanceId: { not: null },
+        lessonDate: { gte: fromDate, lt: until },
+      },
+      select: { attendanceId: true },
+    });
+    const ids = [
+      ...new Set(
+        recovered
+          .map((a) => a.attendanceId)
+          .filter((id): id is string => id !== null),
+      ),
+    ];
+    if (ids.length === 0) return;
+
+    const attended = await tx.attendance.findMany({
+      where: {
+        id: { in: ids },
+        status: { in: [AttendanceStatus.PRESENT, AttendanceStatus.LATE] },
+      },
+      select: { id: true, date: true },
+    });
+    if (attended.length === 0) return;
+
+    const coverage = await this.admission.loadCoverage(
+      tx,
+      params.studentId,
+      from,
+    );
+    if (!coverage) return;
+    for (const att of attended) {
+      // `Attendance.date` is a @db.Date: its UTC calendar date is the day.
+      const c = coverage(params.groupId, att.date.toISOString().slice(0, 10));
+      if (c.firstLesson && !c.covered) {
+        await setFirstLessonFunder(tx, att.id, true);
+      }
+    }
   }
 
   /**
