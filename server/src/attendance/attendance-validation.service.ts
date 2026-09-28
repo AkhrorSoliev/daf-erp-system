@@ -25,7 +25,7 @@ export class AttendanceValidationService {
    * Validate that a date is a lesson of the group: date format, group
    * existence + company, ACTIVE status, date range, schedule or a moved
    * lesson, holiday. It says nothing about the clock — `assertWindowOpen`
-   * does (ADR-0046). Returns the lesson's effective times: a reschedule's
+   * does (ADR-0047). Returns the lesson's effective times: a reschedule's
    * override wins over the group's.
    */
   async validateLessonDate(groupId: string, date: string, companyId?: number) {
@@ -136,7 +136,7 @@ export class AttendanceValidationService {
   }
 
   /**
-   * ADR-0046: attendance is written only inside the lesson window, by every
+   * ADR-0047: attendance is written only inside the lesson window, by every
    * role. Throws the Uzbek reason otherwise.
    */
   assertWindowOpen(lesson: LessonTimes, now: Date = new Date()): void {

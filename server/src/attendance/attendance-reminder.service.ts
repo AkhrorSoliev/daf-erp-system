@@ -385,7 +385,7 @@ export class AttendanceReminderService {
       kind === 'ADMIN_ALERT'
         ? NotificationType.ATTENDANCE_ADMIN_ALERT
         : NotificationType.ATTENDANCE_MISSING_ADMIN;
-    // ADR-0046: after the lesson its attendance is closed to everyone, so
+    // ADR-0047: after the lesson its attendance is closed to everyone, so
     // nobody is asked to restore it; before the end an admin who takes it
     // keeps the teacher's pay.
     const title =

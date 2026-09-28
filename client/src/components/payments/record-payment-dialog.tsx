@@ -138,7 +138,7 @@ export function RecordPaymentDialog({
   const [providerFee, setProviderFee] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [searching, setSearching] = useState(false);
-  // A part payment carries the date the rest will be paid by (ADR-0046).
+  // A part payment carries the date the rest will be paid by (ADR-0047).
   // Null until the cashier picks one; the default is derived below.
   const [pickedPromiseDate, setPickedPromiseDate] = useState<Date | null>(
     null,

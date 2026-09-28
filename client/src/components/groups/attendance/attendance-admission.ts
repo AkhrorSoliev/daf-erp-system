@@ -3,7 +3,7 @@ import type { LessonAdmission } from "./attendance-form-utils";
 
 const ddmm = (day: string) => `${day.slice(8, 10)}.${day.slice(5, 7)}`;
 
-/** What a roster row says about contract 3.2 admission (ADR-0046). */
+/** What a roster row says about contract 3.2 admission (ADR-0047). */
 export function admissionCopy(
   admission: LessonAdmission | undefined,
   isAdmin: boolean,
