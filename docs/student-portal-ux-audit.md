@@ -98,6 +98,12 @@ tekshirildi: server xatosi → qayta urinish → darslar chiqdi; internet uzildi
 → so'rov ketmadi, «Internet aloqasi yo'q»; internet qaytdi → ma'lumot o'zi
 yuklandi.
 
+**Ta'lim ham — 2026-09-30.** Yo'l, bo'lim, dars va reyting ekranlari
+`isError || !data` bilan qaror qilardi: internet yo'q paytda «…yuklab
+bo'lmadi» va ishlamaydigan «Qayta urinish» chiqardi, yo'lni yangilash xato
+bersa esa ekrandagi yo'l o'rniga xato ko'rinardi. Endi ular ham `loadState` +
+`LoadFailed` da.
+
 ### U5. `staleTime` yo'q
 
 `lib/queries.ts` dagi `useStudentProfile` va sahifalardagi barcha `useQuery`

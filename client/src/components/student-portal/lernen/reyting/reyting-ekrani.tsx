@@ -1,12 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Trophy, UsersThree, WarningCircle } from "@phosphor-icons/react";
+import { Trophy, UsersThree } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import {
   Avatar,
   Badge,
-  Button,
   Card,
   EmptyState,
   LoadingCards,
@@ -19,6 +18,8 @@ import {
 import { useFortschritt, useReyting } from "../queries";
 import { darajaFoizi, qisqaRaqam } from "../yol/yol-tuzilishi";
 import type { ReytingZeile } from "../types";
+import { loadState } from "../../lib/load-state";
+import { LoadFailed } from "../../load-failed";
 
 type ReytingTab = "guruhim" | "markaz" | "darajam";
 
@@ -27,22 +28,6 @@ const TABS: SegmentOption<ReytingTab>[] = [
   { value: "markaz", label: "Markaz" },
   { value: "darajam", label: "Darajam" },
 ];
-
-/** Umumiy "yuklab bo'lmadi" holati — ikkala jadval va Darajam bir xil ishlatadi. */
-function ReytingXatosi({ onRetry }: { onRetry: () => void }) {
-  return (
-    <EmptyState
-      icon={<WarningCircle size={28} weight="bold" />}
-      title="Reytingni ochib bo'lmadi"
-      description="Internet aloqasini tekshirib, qayta urinib ko'ring."
-      action={
-        <Button variant="secondary" onClick={onRetry}>
-          Qayta urinish
-        </Button>
-      }
-    />
-  );
-}
 
 function ReytingQatori({ qator }: { qator: ReytingZeile }) {
   return (
@@ -81,10 +66,11 @@ function ReytingQatori({ qator }: { qator: ReytingZeile }) {
  * beradi.
  */
 function ReytingJadvali({ scope }: { scope: "gruppe" | "zentrum" }) {
-  const { data, isLoading, isError, refetch } = useReyting(scope);
+  const query = useReyting(scope);
+  const { data } = query;
 
-  if (isLoading) return <LoadingCards count={4} />;
-  if (isError || !data) return <ReytingXatosi onRetry={() => void refetch()} />;
+  if (loadState(query) === "loading") return <LoadingCards count={4} />;
+  if (!data) return <LoadFailed query={query} />;
 
   if (data.length === 0) {
     return scope === "gruppe" ? (
@@ -125,10 +111,11 @@ function ReytingJadvali({ scope }: { scope: "gruppe" | "zentrum" }) {
  * u shu band boshida, hali hech narsa bosib o'tmagan.
  */
 function DarajamTab() {
-  const { data, isLoading, isError, refetch } = useFortschritt();
+  const query = useFortschritt();
+  const { data } = query;
 
-  if (isLoading) return <LoadingCards count={2} />;
-  if (isError || !data) return <ReytingXatosi onRetry={() => void refetch()} />;
+  if (loadState(query) === "loading") return <LoadingCards count={2} />;
+  if (!data) return <LoadFailed query={query} />;
 
   const { gesamt, stufe, naechsteStufe } = data;
   const foiz = darajaFoizi(gesamt, stufe.ab, naechsteStufe?.ab ?? null);

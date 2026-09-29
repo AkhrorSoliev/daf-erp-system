@@ -924,6 +924,7 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 - A section with its own request fails on its own, under its own heading: when only "Balans tarixi" fails, the balance and the payment form stay usable.
 - A secondary summary with no answer is left out rather than drawn as zero, as the attendance percentage cards on Asosiy and Davomat already do.
 - `student-portal-load-states.test.ts` renders each screen failed, offline (`onlineManager.setOnline(false)`), refreshed-then-failed and empty. Add those cases when a new screen fetches.
+- The Ta'lim screens follow the same rule: the path, a unit, a lesson and both ranking tabs. Until 30.09.2026 they decided with `isError || !data`, so offline they said «…yuklab bo'lmadi» and offered a retry that could not work, and a failed refresh of the path replaced the path it had already drawn with that error. The path's chips (`YolTepasi`) still hide themselves on any missing answer; they are a side request.
 
 #### Activity tracking (whole `/portal/*` shell)
 
