@@ -66,6 +66,12 @@ describe('SalaryController @Roles metadata', () => {
     it('createConfig allows CEO and Branch Director', () => {
       expect(rolesFor('createConfig')).toEqual(['CEO', 'Branch Director']);
     });
+
+    // A preview reveals what the save would do to a teacher's pay (ADR-0050),
+    // so it admits exactly who may save — never wider.
+    it('previewConfig admits exactly the roles createConfig does', () => {
+      expect(rolesFor('previewConfig')).toEqual(rolesFor('createConfig'));
+    });
   });
 
   describe('Read-only (CEO + BD + Administrator)', () => {

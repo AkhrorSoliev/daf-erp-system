@@ -18,6 +18,18 @@ import {
 } from './dto/salary-config.dto';
 import { assertCallerMaySetTeacherRate } from './shared/teacher-rate-permission';
 import { assertPercentageWithinCap } from './shared/percentage-cap';
+import {
+  reapplyRateToOpenAccruals,
+  addReapplySummaries,
+  EMPTY_REAPPLY,
+  type RateReapplySummary,
+} from './shared/rate-reapply';
+import { runRateWrite, rateWriteTxOptions } from './shared/rate-write-tx';
+
+/** A rate write, and what it did to the lessons already written (ADR-0050). */
+export type SalaryConfigWriteResult = EmployeeSalaryConfig & {
+  reapplied: RateReapplySummary;
+};
 
 /** A config with at most its latest version, as `upsertNewVersion` needs it. */
 type ConfigWithLatestVersion = EmployeeSalaryConfig & {
@@ -32,7 +44,9 @@ type ConfigWithLatestVersion = EmployeeSalaryConfig & {
  * Salary config writes always create a new EmployeeSalaryConfigVersion row
  * (SCD2). The parent EmployeeSalaryConfig keeps the *current* values as a
  * fast-read mirror. Accruals look up the version active on the lesson
- * date so a rate change applies forward, not retroactively.
+ * date so a rate change applies from its `effectiveFrom`, never before it —
+ * including to lessons already written from that date whose payroll is not
+ * calculated yet (`reapplyRateToOpenAccruals`, ADR-0050).
  */
 @Injectable()
 export class SalaryConfigService {
@@ -116,11 +130,28 @@ export class SalaryConfigService {
     });
   }
 
+  /**
+   * What `createConfig` would do, without doing it: the whole write runs and
+   * is rolled back. Powers the "N ta dars qayta hisoblanadi" line the rate
+   * sheet shows before the save is confirmed.
+   */
+  async previewConfig(
+    dto: CreateSalaryConfigDto,
+    companyId: number,
+    changedById?: number,
+  ): Promise<RateReapplySummary> {
+    const result = await this.createConfig(dto, companyId, changedById, {
+      dryRun: true,
+    });
+    return result.reapplied;
+  }
+
   async createConfig(
     dto: CreateSalaryConfigDto,
     companyId: number,
     changedById?: number,
-  ) {
+    options: { dryRun?: boolean } = {},
+  ): Promise<SalaryConfigWriteResult> {
     if (dto.salaryType === SalaryType.FIXED_MONTHLY && dto.groupId) {
       throw new BadRequestException(
         "FIXED_MONTHLY oylik turi guruh bilan bog'lab bo'lmaydi",
@@ -130,7 +161,8 @@ export class SalaryConfigService {
 
     const effectiveFrom = this.parseEffectiveFrom(dto.effectiveFrom);
 
-    return this.prisma.$transaction(
+    return runRateWrite(
+      this.prisma,
       async (tx) => {
         const existing = await tx.employeeSalaryConfig.findFirst({
           where: {
@@ -171,13 +203,16 @@ export class SalaryConfigService {
               companyId,
             });
 
-        return config;
+        const reapplied = await reapplyRateToOpenAccruals(tx, {
+          userId: dto.userId,
+          companyId,
+          groupId: dto.groupId ?? null,
+          effectiveFrom,
+          performedById: changedById,
+        });
+        return { ...config, reapplied };
       },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        maxWait: 10_000,
-        timeout: 15_000,
-      },
+      options.dryRun,
     );
   }
 
@@ -257,41 +292,43 @@ export class SalaryConfigService {
     // for a potentially long time. Per-user atomicity is enough since each
     // global apply is a single rate change shared across N users.
     let updated = 0;
+    let reapplied: RateReapplySummary = { ...EMPTY_REAPPLY };
     for (const t of teachers) {
-      await this.prisma.$transaction(
-        async (tx) => {
-          const existing = await findExisting(tx, t.teacherId);
+      await this.prisma.$transaction(async (tx) => {
+        const existing = await findExisting(tx, t.teacherId);
 
-          if (existing) {
-            await this.upsertNewVersion(tx, existing, {
-              salaryType: dto.salaryType,
-              value: dto.value,
-              effectiveFrom,
-              changedById,
-              companyId,
-            });
-          } else {
-            await this.createWithInitialVersion(tx, {
-              userId: t.teacherId,
-              groupId: null,
-              salaryType: dto.salaryType,
-              value: dto.value,
-              effectiveFrom,
-              changedById,
-              companyId,
-            });
-          }
-          updated++;
-        },
-        {
-          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-          maxWait: 10_000,
-          timeout: 15_000,
-        },
-      );
+        if (existing) {
+          await this.upsertNewVersion(tx, existing, {
+            salaryType: dto.salaryType,
+            value: dto.value,
+            effectiveFrom,
+            changedById,
+            companyId,
+          });
+        } else {
+          await this.createWithInitialVersion(tx, {
+            userId: t.teacherId,
+            groupId: null,
+            salaryType: dto.salaryType,
+            value: dto.value,
+            effectiveFrom,
+            changedById,
+            companyId,
+          });
+        }
+        const own = await reapplyRateToOpenAccruals(tx, {
+          userId: t.teacherId,
+          companyId,
+          groupId: null,
+          effectiveFrom,
+          performedById: changedById,
+        });
+        reapplied = addReapplySummaries(reapplied, own);
+        updated++;
+      }, rateWriteTxOptions);
     }
 
-    return { updated };
+    return { updated, reapplied };
   }
 
   async updateConfig(
@@ -302,95 +339,103 @@ export class SalaryConfigService {
   ) {
     const effectiveFrom = this.parseEffectiveFrom(dto.effectiveFrom);
 
-    return this.prisma.$transaction(
-      async (tx) => {
-        const existing = await tx.employeeSalaryConfig.findFirst({
-          where: { id, companyId },
-          include: {
-            versions: {
-              where: { effectiveTo: null },
-              orderBy: { effectiveFrom: 'desc' },
-              take: 1,
-            },
+    return runRateWrite(this.prisma, async (tx) => {
+      const existing = await tx.employeeSalaryConfig.findFirst({
+        where: { id, companyId },
+        include: {
+          versions: {
+            where: { effectiveTo: null },
+            orderBy: { effectiveFrom: 'desc' },
+            take: 1,
           },
+        },
+      });
+      if (!existing) throw new NotFoundException('Salary config topilmadi');
+
+      if (dto.salaryType === SalaryType.FIXED_MONTHLY && existing.groupId) {
+        throw new BadRequestException(
+          "FIXED_MONTHLY oylik turi guruh bilan bog'lab bo'lmaydi",
+        );
+      }
+
+      // Write a new version when something rate-affecting changed
+      // (salaryType or value), or when a deactivated config is switched
+      // back on. Deactivation closed its last version, and accruals resolve
+      // the version active on the lesson date — flipping isActive alone
+      // would leave the employee assignable and "rated" on every isActive
+      // check while earning nothing. Invariant: an active config has an
+      // open version from its reactivation date on.
+      //
+      // The ≤100% cap applies to exactly the versions written here: a new
+      // version is a rate that will be paid from now on. Deactivating
+      // writes none, so a legacy PERCENTAGE row saved above the cap can
+      // still be switched off; switching it back on needs a valid value.
+      const rateChanged =
+        (dto.salaryType !== undefined &&
+          dto.salaryType !== existing.salaryType) ||
+        (dto.value !== undefined && dto.value !== existing.value);
+      const reopening =
+        dto.isActive === true &&
+        !existing.isActive &&
+        existing.versions.length === 0;
+
+      if (rateChanged || reopening) {
+        // The effective type/value — a PATCH may send only one of the two,
+        // so the cap must see what the config will actually become, not
+        // just the fields this request happened to include.
+        assertPercentageWithinCap(
+          dto.salaryType ?? existing.salaryType,
+          dto.value ?? existing.value,
+        );
+        await this.upsertNewVersion(
+          tx,
+          await this.withLatestVersion(tx, existing),
+          {
+            salaryType: dto.salaryType ?? existing.salaryType,
+            value: dto.value ?? existing.value,
+            effectiveFrom,
+            changedById,
+            companyId,
+          },
+        );
+      }
+
+      // Deactivating a config MUST close its open version so proration /
+      // version-resolution sees a clean end. Otherwise a deactivated
+      // FIXED_MONTHLY config with an open version would keep paying forever
+      // (the report/cron queries include configs by version overlap, not by
+      // isActive). Invariant: a deactivated config never has an open version.
+      if (dto.isActive === false) {
+        await tx.employeeSalaryConfigVersion.updateMany({
+          where: { configId: id, effectiveTo: null },
+          data: { effectiveTo: effectiveFrom },
         });
-        if (!existing) throw new NotFoundException('Salary config topilmadi');
+      }
 
-        if (dto.salaryType === SalaryType.FIXED_MONTHLY && existing.groupId) {
-          throw new BadRequestException(
-            "FIXED_MONTHLY oylik turi guruh bilan bog'lab bo'lmaydi",
-          );
-        }
+      const updated = await tx.employeeSalaryConfig.update({
+        where: { id },
+        data: {
+          ...(dto.salaryType && { salaryType: dto.salaryType }),
+          ...(dto.value !== undefined && { value: dto.value }),
+          ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+        },
+      });
 
-        // Write a new version when something rate-affecting changed
-        // (salaryType or value), or when a deactivated config is switched
-        // back on. Deactivation closed its last version, and accruals resolve
-        // the version active on the lesson date — flipping isActive alone
-        // would leave the employee assignable and "rated" on every isActive
-        // check while earning nothing. Invariant: an active config has an
-        // open version from its reactivation date on.
-        //
-        // The ≤100% cap applies to exactly the versions written here: a new
-        // version is a rate that will be paid from now on. Deactivating
-        // writes none, so a legacy PERCENTAGE row saved above the cap can
-        // still be switched off; switching it back on needs a valid value.
-        const rateChanged =
-          (dto.salaryType !== undefined &&
-            dto.salaryType !== existing.salaryType) ||
-          (dto.value !== undefined && dto.value !== existing.value);
-        const reopening =
-          dto.isActive === true &&
-          !existing.isActive &&
-          existing.versions.length === 0;
-
-        if (rateChanged || reopening) {
-          // The effective type/value — a PATCH may send only one of the two,
-          // so the cap must see what the config will actually become, not
-          // just the fields this request happened to include.
-          assertPercentageWithinCap(
-            dto.salaryType ?? existing.salaryType,
-            dto.value ?? existing.value,
-          );
-          await this.upsertNewVersion(
-            tx,
-            await this.withLatestVersion(tx, existing),
-            {
-              salaryType: dto.salaryType ?? existing.salaryType,
-              value: dto.value ?? existing.value,
-              effectiveFrom,
-              changedById,
+      // Re-price after the config row is final: switching a group rate off
+      // sends its lessons back to the general rate, and that fallback is
+      // only visible once `isActive` is false.
+      const reapplied =
+        rateChanged || reopening || dto.isActive === false
+          ? await reapplyRateToOpenAccruals(tx, {
+              userId: existing.userId,
               companyId,
-            },
-          );
-        }
-
-        // Deactivating a config MUST close its open version so proration /
-        // version-resolution sees a clean end. Otherwise a deactivated
-        // FIXED_MONTHLY config with an open version would keep paying forever
-        // (the report/cron queries include configs by version overlap, not by
-        // isActive). Invariant: a deactivated config never has an open version.
-        if (dto.isActive === false) {
-          await tx.employeeSalaryConfigVersion.updateMany({
-            where: { configId: id, effectiveTo: null },
-            data: { effectiveTo: effectiveFrom },
-          });
-        }
-
-        return tx.employeeSalaryConfig.update({
-          where: { id },
-          data: {
-            ...(dto.salaryType && { salaryType: dto.salaryType }),
-            ...(dto.value !== undefined && { value: dto.value }),
-            ...(dto.isActive !== undefined && { isActive: dto.isActive }),
-          },
-        });
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        maxWait: 10_000,
-        timeout: 15_000,
-      },
-    );
+              groupId: existing.groupId,
+              effectiveFrom,
+              performedById: changedById,
+            })
+          : { ...EMPTY_REAPPLY };
+      return { ...updated, reapplied };
+    });
   }
 
   /**

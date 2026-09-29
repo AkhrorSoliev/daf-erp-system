@@ -50,10 +50,10 @@ export function perLessonAccrual(
  * version covers the date (the config-gap case, e.g. May lessons whose config
  * only became effective in June).
  */
-export function pickActiveVersion(
-  versions: RateVersion[] | undefined,
+export function pickActiveVersion<V extends RateVersion>(
+  versions: V[] | undefined,
   at: Date,
-): RateVersion | null {
+): V | null {
   if (!versions || versions.length === 0) return null;
   const eligible = versions.filter(
     (v) =>

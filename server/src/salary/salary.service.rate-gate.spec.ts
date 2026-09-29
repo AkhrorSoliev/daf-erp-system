@@ -58,6 +58,21 @@ describe('SalaryService — rate write gate (ADR-0034)', () => {
     expect(config.createConfig).not.toHaveBeenCalled();
   });
 
+  // ADR-0050: a preview shows what the save would do to a teacher's pay, so a
+  // caller the gate refuses gets no preview either.
+  it('never previews when the gate refuses', async () => {
+    const config = {
+      assertCallerMayCreateRate: jest
+        .fn()
+        .mockRejectedValue(new ForbiddenException('rad')),
+      previewConfig: jest.fn(),
+    };
+    await expect(
+      make(config).previewConfig({} as any, 1001, 90010),
+    ).rejects.toThrow(ForbiddenException);
+    expect(config.previewConfig).not.toHaveBeenCalled();
+  });
+
   it('delegates an update directly with no gate call (PATCH is CEO-only)', async () => {
     const config = {
       updateConfig: jest.fn().mockResolvedValue({ id: 'cfg' }),

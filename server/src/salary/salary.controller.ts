@@ -160,6 +160,21 @@ export class SalaryController {
     return this.salaryService.createConfig(dto, companyId, userId);
   }
 
+  /**
+   * What `POST /salary/config` would do to the lessons already written from
+   * the rate's start date (ADR-0050) — the save runs and is rolled back.
+   * Same body, same roles and same caller gate as the save.
+   */
+  @Post('config/preview')
+  @Roles('CEO', 'Branch Director')
+  previewConfig(
+    @Body() dto: CreateSalaryConfigDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.salaryService.previewConfig(dto, companyId, userId);
+  }
+
   @Post('config/global')
   @Roles('CEO')
   applyGlobalConfig(

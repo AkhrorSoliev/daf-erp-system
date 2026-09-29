@@ -53,6 +53,16 @@ export class SalaryService {
     await this.config.assertCallerMayCreateRate(changedById, companyId, dto);
     return this.config.createConfig(dto, companyId, changedById);
   }
+  // Same gate as the save: a preview reveals what the write would do to a
+  // teacher's pay, so a caller who may not save it may not preview it.
+  async previewConfig(
+    dto: CreateSalaryConfigDto,
+    companyId: number,
+    changedById?: number,
+  ) {
+    await this.config.assertCallerMayCreateRate(changedById, companyId, dto);
+    return this.config.previewConfig(dto, companyId, changedById);
+  }
   applyGlobalConfig(
     dto: GlobalSalaryConfigDto,
     companyId: number,
