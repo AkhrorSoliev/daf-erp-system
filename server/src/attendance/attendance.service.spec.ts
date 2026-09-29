@@ -109,7 +109,11 @@ describe('AttendanceService', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
       // «Dars bo'ldimi?» — a question asked for the lesson closes new registers.
-      unmarkedLesson: { findUnique: jest.fn().mockResolvedValue(null) },
+      unmarkedLesson: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        // The group calendar draws the question on each asked lesson.
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       enrollment: {
         findMany: jest.fn().mockResolvedValue(mockEnrollments),
       },
@@ -630,6 +634,38 @@ describe('AttendanceService', () => {
   });
 
   describe('getLessonCalendar', () => {
+    it("carries the «Dars bo'ldimi?» question on the asked lesson's cell", async () => {
+      prisma.unmarkedLesson.findMany.mockResolvedValue([
+        {
+          id: 'u1',
+          groupId: 'group-uuid-1',
+          date: new Date('2026-04-01T00:00:00.000Z'),
+          status: 'PENDING',
+          claimedById: 7,
+        },
+      ]);
+      prisma.user = {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            { id: 7, firstName: 'Ali', lastName: 'Valiyev' },
+          ]),
+      };
+
+      const result = await service.getLessonCalendar('group-uuid-1', 4, 2026);
+
+      expect(
+        result.cells.find((c) => c.date === '2026-04-01')?.unmarked,
+      ).toEqual({
+        id: 'u1',
+        status: 'PENDING',
+        claimedBy: { id: 7, firstName: 'Ali', lastName: 'Valiyev' },
+      });
+      expect(
+        result.cells.find((c) => c.date === '2026-04-03')?.unmarked,
+      ).toBeNull();
+    });
+
     it('marks regular lesson days with type=regular', async () => {
       const result = await service.getLessonCalendar('group-uuid-1', 4, 2026);
       // mockGroup has exactDays Mon/Wed/Fri; April 2026 contains the usual mix
@@ -802,6 +838,57 @@ describe('AttendanceService', () => {
       expect(prisma.plannedAbsence.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({ consumedAt: null }),
+        }),
+      );
+    });
+
+    it('late: lists who was in the group THAT day, not who is in it now', async () => {
+      prisma.attendance.findMany.mockResolvedValue([]);
+      // First read is the roster of that day (a student who left since is on
+      // it), the second is the register's own enrollment query.
+      prisma.enrollment.findMany.mockResolvedValueOnce([
+        {
+          id: 'e-left',
+          studentId: 10001,
+          status: 'DROPPED',
+          statusChangedAt: new Date('2026-04-05T10:00:00.000Z'),
+        },
+      ]);
+
+      await service.getByDate(
+        'group-uuid-1',
+        '2026-04-01',
+        1,
+        ['Administrator'],
+        true,
+      );
+
+      expect(prisma.enrollment.findMany).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          where: expect.objectContaining({ groupId: 'group-uuid-1' }),
+        }),
+      );
+      expect(prisma.enrollment.findMany).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ where: { id: { in: ['e-left'] } } }),
+      );
+    });
+
+    it("without late, only the group's ACTIVE enrollments are listed", async () => {
+      prisma.attendance.findMany.mockResolvedValue([]);
+
+      await service.getByDate('group-uuid-1', '2026-04-01', 1, [
+        'Administrator',
+      ]);
+
+      expect(prisma.enrollment.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.enrollment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            groupId: 'group-uuid-1',
+            status: 'ACTIVE',
+          }),
         }),
       );
     });

@@ -23,6 +23,8 @@ import {
   type CoveragePrismaLike,
 } from '../billing/lesson-coverage.helper';
 import { HolidaysService } from '../holidays/holidays.service';
+import { rosterOnDate } from './shared/roster-on-date';
+import { loadUnmarkedLessonInfos } from '../unmarked-lessons/unmarked-lesson-info';
 
 @Injectable()
 export class AttendanceReadService {
@@ -517,6 +519,11 @@ export class AttendanceReadService {
       }
     }
 
+    const unmarked = await loadUnmarkedLessonInfos(this.prisma, {
+      groupId,
+      date: { gte: monthStartDate, lte: monthEndDate },
+    });
+
     const totalStudents = group._count.enrollments;
     const cells = Array.from(cellMap.entries()).map(([dateStr, draft]) => {
       // Counts are only meaningful for cells that host a lesson
@@ -536,6 +543,7 @@ export class AttendanceReadService {
         movedFrom: draft.movedFrom,
         movedTo: draft.movedTo,
         cancellationReason: draft.cancellationReason,
+        unmarked: unmarked.get(`${groupId}:${dateStr}`) ?? null,
       };
     });
     cells.sort((a, b) => a.date.localeCompare(b.date));
@@ -551,6 +559,7 @@ export class AttendanceReadService {
     date: string,
     companyId?: number,
     roles?: string[],
+    late = false,
   ) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(new Date(date).getTime())) {
       throw new BadRequestException(
@@ -579,13 +588,20 @@ export class AttendanceReadService {
     //   2. startDate <= lessonDate — students who joined later don't appear
     //      on past lessons. NULL startDate (legacy/un-backfilled) is treated
     //      as "no restriction" so the page never silently empties.
+    // `late`: the register of a lesson nobody marked in time lists who was in
+    // the group THAT day (spec 2026-09-29 §3.4), not who is in it now.
+    const lateIds = late
+      ? (await rosterOnDate(this.prisma, groupId, parsedDate)).map((e) => e.id)
+      : null;
     const enrollments = await this.prisma.enrollment.findMany({
-      where: {
-        groupId,
-        deletedAt: null,
-        status: EnrollmentStatus.ACTIVE,
-        OR: [{ startDate: null }, { startDate: { lte: parsedDate } }],
-      },
+      where: lateIds
+        ? { id: { in: lateIds } }
+        : {
+            groupId,
+            deletedAt: null,
+            status: EnrollmentStatus.ACTIVE,
+            OR: [{ startDate: null }, { startDate: { lte: parsedDate } }],
+          },
       select: {
         id: true,
         studentId: true,
