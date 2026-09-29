@@ -81,7 +81,7 @@ export function StudentScheduleView() {
 
   if (state === "loading") {
     return (
-      <Screen>
+      <Screen narrow>
         <ScreenHeader title="Jadval" />
         <LoadingCards />
       </Screen>
@@ -92,7 +92,7 @@ export function StudentScheduleView() {
   // darslar yo'q" to a student who was simply offline.
   if (state !== "ready") {
     return (
-      <Screen>
+      <Screen narrow>
         <ScreenHeader title="Jadval" />
         <LoadFailed query={query} />
       </Screen>
@@ -100,7 +100,7 @@ export function StudentScheduleView() {
   }
 
   return (
-    <Screen>
+    <Screen narrow>
       <ScreenHeader title="Jadval" />
 
       {/* Week selector */}
@@ -170,7 +170,7 @@ export function StudentScheduleView() {
                     ) : null}
                   </div>
 
-                  <div className="grid gap-2.5 lg:grid-cols-2">
+                  <div className="grid gap-2.5">
                     {classes.map((cls) => (
                       <Card
                         key={`${cls.groupId}-${date.toISOString()}`}

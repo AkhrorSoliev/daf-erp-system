@@ -5,7 +5,7 @@ const APP_VERSION = "1.0.0";
 
 export function StudentAboutPage() {
   return (
-    <Screen>
+    <Screen narrow>
       <StackHeader title="Biz haqimizda" backHref="/portal/more" />
 
       <FadeIn index={0}>

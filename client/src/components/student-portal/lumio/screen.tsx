@@ -7,9 +7,10 @@ import { CaretLeft } from "@phosphor-icons/react";
 
 export interface ScreenProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
-   * Caps the column at a comfortable reading width on desktop. The shell gives
-   * every screen up to 980px; text-and-rows screens (Settings, Profile) look
-   * stretched at that width, so they opt into a narrower column.
+   * Caps the column at a comfortable reading width from md up and centres it.
+   * The shell gives every screen up to 720/980px; text-and-rows screens look
+   * stretched at that width, and a capped column left against the left edge
+   * leaves the rest of the row empty.
    */
   narrow?: boolean;
 }
@@ -25,7 +26,7 @@ export function Screen({
     <div
       className={cn(
         "flex flex-col gap-4",
-        narrow && "md:max-w-[600px]",
+        narrow && "md:mx-auto md:max-w-[600px]",
         className,
       )}
       {...rest}
