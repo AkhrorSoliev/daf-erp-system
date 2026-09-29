@@ -264,8 +264,8 @@ describe('reopening', () => {
 
   it('skips holidays when calculating task due date', async () => {
     const tx = makeTx();
-    // Oct 1 is a working day, but Oct 2-3 are a holiday
-    const holidays = new Set(['2026-10-02', '2026-10-03']);
+    // Oct 1 is a holiday, so next working day is Oct 2
+    const holidays = new Set(['2026-10-01']);
     await reopenAfterCancellationRemoved(tx, {
       cancellationId: 'x1',
       groupId: 'g1',
@@ -273,11 +273,30 @@ describe('reopening', () => {
       now,
       holidays,
     });
-    // Task due date should skip to Oct 4 (first working day after Oct 1)
-    const createCall = tx.unmarkedLesson.create.mock.calls[0][0];
-    expect(createCall.data.taskCommentId).toBe('c2');
-    // Verify createLessonTask was called with the holidays
-    expect(tx.comment.create).toHaveBeenCalled();
+    // Task due date should be Oct 2 at 05:00 UTC (10:00 Tashkent)
+    const createCall = tx.comment.create.mock.calls[0][0];
+    expect(createCall.data.dueDate).toEqual(
+      new Date('2026-10-02T05:00:00.000Z'),
+    );
+  });
+
+  it('skips multiple holidays when calculating task due date for reschedule', async () => {
+    const tx = makeTx();
+    tx.unmarkedLesson.findFirst.mockResolvedValue(
+      row({ status: 'RESCHEDULED', rescheduleId: 'r1' }),
+    );
+    // Oct 1-3 are holidays, so next working day skips to Oct 5 (Oct 4 is Sunday)
+    const holidays = new Set(['2026-10-01', '2026-10-02', '2026-10-03']);
+    await reopenAfterRescheduleRemoved(tx, {
+      rescheduleId: 'r1',
+      now,
+      holidays,
+    });
+    // Task due date should be Oct 5 at 05:00 UTC (10:00 Tashkent)
+    const createCall = tx.comment.create.mock.calls[0][0];
+    expect(createCall.data.dueDate).toEqual(
+      new Date('2026-10-05T05:00:00.000Z'),
+    );
   });
 
   it('puts a moved answer back to PENDING', async () => {
