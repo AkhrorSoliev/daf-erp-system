@@ -83,7 +83,7 @@ describe('gesamtZeichenzahl', () => {
     expect(gesamtZeichenzahl(woerter)).toBe(9);
   });
 
-  it('haqiqiy u01/woerter.json chegaradan past qoladi (53 so`z = 278 belgi)', () => {
+  it('haqiqiy u01/woerter.json chegaradan past qoladi (61 so`z = 339 belgi)', () => {
     // Bu test naqd o'zi himoya: agar kimdir so'z qo'shsa va narx
     // chegaradan oshib ketsa, budjet tekshiruvi HAQIQIY sonlar bilan shu
     // yerda ushlaydi — main() ichida (pullik chaqiruvdan keyin) emas.
@@ -93,9 +93,10 @@ describe('gesamtZeichenzahl', () => {
         'utf8',
       ),
     );
-    expect(dataset.woerter).toHaveLength(53);
+    // 53 words (278) until zwölf … neunzehn were added on 2026-09-30.
+    expect(dataset.woerter).toHaveLength(61);
     const gesamt = gesamtZeichenzahl(dataset.woerter);
-    expect(gesamt).toBe(278);
+    expect(gesamt).toBe(339);
     expect(() => pruefeBudget(gesamt)).not.toThrow();
   });
 });
@@ -462,12 +463,16 @@ describe('parseUnitArg', () => {
 describe('budget for the units that follow unit 1', () => {
   // One run per unit must fit under the 400-character guard, or the
   // script stops before the first paid call. Measured on the written
-  // files: u02 = 302, u03 = 281.
-  it.each(['u02', 'u03'])('%s words fit one run', (unit) => {
+  // files: u02 = 357 (54 words with the compound numbers of 2026-09-30),
+  // u03 = 281.
+  it.each([
+    ['u02', 54],
+    ['u03', 50],
+  ])('%s words fit one run', (unit, anzahl) => {
     const dataset: WoerterFile = JSON.parse(
       readFileSync(woerterPfad(unit), 'utf8'),
     );
-    expect(dataset.woerter).toHaveLength(50);
+    expect(dataset.woerter).toHaveLength(anzahl);
     expect(() =>
       pruefeBudget(gesamtZeichenzahl(dataset.woerter)),
     ).not.toThrow();
