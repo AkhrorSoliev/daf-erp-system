@@ -61,8 +61,14 @@ bekor qilish yozuvini "allaqachon kreditlangan" deb o'qib, qayta kreditni
 tashlab ketardi; keyingi bekor qilish esa bekor qilish yozuvining o'zini bekor
 qilishi mumkin edi. Endi ikkalasi `reversedTransactionId: null` ni ham talab
 qiladi. Prodda (29.09.2026) shu sabab ko'zgusi yo'q 3 054 ta jonli dars haqi
-bor (53 945 714 so'm, 15 ustoz). `User.balance` saytda ko'rsatilmaydi va oylik
-unga qaramaydi (ADR-0006: oylik `getMonthly` dan); o'tmishdagi farq bu ADR
+bor (53 945 714 so'm, 15 ustoz). Hammasi sentabr darslari va hammasini bitta
+yo'l yaratgan: oylik to'lovga o'tish migratsiyasi (26.09.2026, 03:31–04:03
+Toshkent, `scripts/lib/monthly-migration-apply.ts`) har bir darsni avval bekor
+qilib, keyin muzlatilgan narxda qayta yozgan. Dars haqi qatorlari to'g'ri
+(eski 53 514 147, yangi 53 945 714), faqat kredit qayta yozilmagan. Sentabr
+oyligi hali hisoblanmagan va u dars haqi qatorlaridan hisoblanadi, shuning
+uchun ustozlarning puliga ta'siri yo'q. `User.balance` saytda ko'rsatilmaydi
+va oylik unga qaramaydi (ADR-0006: oylik `getMonthly` dan); farq bu ADR
 doirasida tiklanmaydi, alohida bir martalik tuzatish talab qiladi.
 
 ## Oqibatlar
