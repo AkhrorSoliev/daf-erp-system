@@ -25,6 +25,38 @@ export interface DepartureRelease {
 }
 
 /**
+ * One cancelled lesson back (ADR-0053): the centre did not give the lesson on
+ * `day`, so a monthly charge that billed it returns its price — the same price
+ * rule as a departure (the discounted lesson price, capped at what the charge
+ * still holds). Null when the charge did not bill that day, or already gave it
+ * back; a repeat call is therefore a no-op.
+ */
+export function cancelledLessonRelease(
+  input: Pick<
+    DepartureReleaseInput,
+    | 'coveredDates'
+    | 'frozenOutDates'
+    | 'perLessonCost'
+    | 'discountPercent'
+    | 'chargedAmount'
+  >,
+  day: string,
+): DepartureRelease | null {
+  if (!input.coveredDates.includes(day)) return null;
+  if (input.frozenOutDates.includes(day)) return null;
+  const amount = Math.min(
+    applyDiscount(input.perLessonCost, clampDiscount(input.discountPercent)),
+    input.chargedAmount,
+  );
+  if (amount <= 0) return null;
+  return {
+    lessons: 1,
+    amount,
+    frozenOutAfter: [...input.frozenOutDates, day].sort(),
+  };
+}
+
+/**
  * The one rule for "the rest of this month's money back". Pure, and shared by
  * `reverseChargeForDeparture` (writes it) and `previewReleaseForDeparture`
  * (shows it), so the freeze dialog cannot quote a figure the freeze does not

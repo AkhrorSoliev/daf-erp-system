@@ -9,6 +9,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertCallerMayTouchGroup } from '../common/auth/group-branch-scope';
 import { LessonBillingService } from '../billing/lesson-billing.service';
+import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { CreateLessonCancellationDto } from './dto/create-lesson-cancellation.dto';
 import { resolveBilledEnrollmentId } from '../billing/resolve-billed-enrollment';
@@ -44,6 +45,7 @@ export class LessonCancellationsService {
   constructor(
     private prisma: PrismaService,
     private lessonBillingService: LessonBillingService,
+    private monthlyChargeService: MonthlyChargeService,
     private entityHistoryService: EntityHistoryService,
     private eventEmitter: EventEmitter2,
   ) {}
@@ -269,6 +271,21 @@ export class LessonCancellationsService {
           });
         }
 
+        // Monthly billing charged the day in advance for every student in the
+        // group, marked or not: give each of them the lesson's money back now
+        // (ADR-0053). The loop above only reached students with a mark.
+        const released = await this.monthlyChargeService.releaseCancelledLesson(
+          tx,
+          {
+            groupId: dto.groupId,
+            date,
+            companyId,
+            cancellationId: cancellation.id,
+            reason: dto.reason,
+            performedById: cancelledById,
+          },
+        );
+
         // Cascade (Stsenariy B / E): if a substitute-teacher override was
         // active on this date, soft-delete it. Salary accruals for those
         // teachers were already reversed by the billing cascade above
@@ -294,6 +311,8 @@ export class LessonCancellationsService {
             sana: dto.date,
             sabab: dto.reason,
             tegilganDavomatlar: billable.length,
+            pulQaytganOquvchilar: released.students,
+            qaytarilganSumma: released.refunded,
             orinbosarBekorQilindi: overrideOnDate ? 'ha' : null,
           },
           changedById: cancelledById,
