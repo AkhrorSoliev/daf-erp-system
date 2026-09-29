@@ -3254,6 +3254,9 @@ model DafLexeme {
   /// The picture names this word alone, so the student may type the word
   /// from it (`BILD_TIPPEN`). Source: `content/daf/a1/bild-plan.json`.
   bildTippen        Boolean               @default(false)
+  /// Other correct spellings of the word ("tschüs" beside "tschüss"). The
+  /// typing formats accept them. Source: `woerter.json` → `akzeptiert`.
+  akzeptiert        String[]              @default([])
   /// Qaysi mavzuli bo'limga tegishli. Eski DiB so'zlarida `null`.
   sectionId         Int?
   /// Ovoz yasovchiga yuboriladigan matn. Yakka harf va raqamni TTS

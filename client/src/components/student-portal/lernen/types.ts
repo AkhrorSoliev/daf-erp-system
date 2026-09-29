@@ -72,6 +72,11 @@ export interface PruefErgebnis {
    * what the answer panel shows.
    */
   loesungWort?: string;
+  /**
+   * The typed word was one slip away and counted as correct; the panel
+   * shows `richtig` as the spelling to learn.
+   */
+  tippfehler?: true;
 }
 
 /**

@@ -12,7 +12,7 @@ import { tryResolveStudentBranchId } from '../../common/finance/resolve-branch';
 import { currentGroupId } from '../shared/student-scope';
 import { istRichtig } from './antwort';
 import { punkteFuer } from './punkte';
-import { bildAntwort, richtigeAntwort } from './richtige-antwort';
+import { bildAntwort, textAntwort } from './richtige-antwort';
 import type {
   Frage,
   FrageFormat,
@@ -199,6 +199,11 @@ export interface PruefenErgebnis {
    * answer so the student learns what was heard or shown.
    */
   loesungWort?: string;
+  /**
+   * The typed word was one slip away and counted as correct; the answer
+   * panel shows `richtig` as the spelling to learn.
+   */
+  tippfehler?: true;
 }
 
 /**
@@ -1211,6 +1216,7 @@ export class UebungService {
     // yangilanadi.
     let paarNatijalari: Array<{ lexemeId: number; ok: boolean }> | null = null;
     let loesungWort: string | undefined;
+    let istTippfehler = false;
 
     if (format === 'PAAR') {
       // `PAAR` javobi bitta "to'g'ri javob" satriga sig'maydi: to'rt
@@ -1275,10 +1281,12 @@ export class UebungService {
         (key) => this.mediaUrl(key),
       ));
     } else {
-      const antwort = richtigeAntwort(format, material);
-      isCorrect = istRichtig(given, antwort.richtig, antwort.akzeptiert);
-      richtig = antwort.richtig;
-      if (format === 'BILD_TIPPEN') loesungWort = antwort.richtig;
+      ({
+        isCorrect,
+        richtig,
+        tippfehler: istTippfehler,
+      } = textAntwort(format, material, given));
+      if (format === 'BILD_TIPPEN') loesungWort = richtig;
     }
 
     // Bu javob qaysi so'z(lar)ga tegishli — PAAR uchun deduplikatsiya
@@ -1350,7 +1358,12 @@ export class UebungService {
       } as any)) as Array<{ sprecher: string; de: string; uz: string }>;
       return { isCorrect, richtig, transkript: zeilen };
     }
-    return { isCorrect, richtig, ...(loesungWort ? { loesungWort } : {}) };
+    return {
+      isCorrect,
+      richtig,
+      ...(loesungWort ? { loesungWort } : {}),
+      ...(istTippfehler ? { tippfehler: true as const } : {}),
+    };
   }
 
   /**
