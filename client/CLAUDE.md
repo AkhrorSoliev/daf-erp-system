@@ -903,7 +903,7 @@ Student-facing portal at `student.dafzentrum.uz` — students can view their pro
 `help` (FAQ, Biz haqimizda) is the one responsive split: reference reading, not a place students navigate to often. Mobile keeps it in the "Ko'proq" hub; from md up it is dropped from the rail and listed in an `md`-only "Yordam" section on Settings, with the rail's Settings row staying lit while one is open. Adding it to the rail *and* Settings would put the same destination in two places on one screen.
 
 **Key screen components:**
-- `student-home-page.tsx` — dashboard (greeting, stats, schedule)
+- `student-home-page.tsx` — dashboard (greeting, balance, attendance, today's lessons, groups). From lg a 2×2 grid with fixed cells (Balans | Davomat / Bugungi darslar | Guruhlarim), so a late or missing attendance answer leaves its cell empty instead of reflowing the page; below lg the phone's single column in the same order.
 - `student-payment-summary.tsx` — balance, payment methods, history
 - `student-schedule-view.tsx` — weekly schedule
 - `student-attendance-history.tsx` — attendance records

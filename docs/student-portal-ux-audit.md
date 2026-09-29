@@ -45,6 +45,15 @@ ishlatiladi.
 Matn qatorlari o'qish uchun qulay chegaradan (~65–75 belgi) ancha uzun bo'lib
 ketadi.
 
+**TUZATILDI 2026-09-30** (branch `fix/portal-planshet-desktop`). 2026-09-26
+ko'rigida ma'lum bo'ldi: odatiy o'quvchida 1 guruh va kuniga 1 dars bor,
+shuning uchun «2 ustun» ro'yxatlarda ham karta chap yarmida yolg'iz turardi.
+Asosiy 1024px dan 2×2: Balans | Davomat, Bugungi darslar | Guruhlarim — har
+blok qat'iy katakda. `Screen narrow` endi 600px ustunni o'rtaga qo'yadi;
+Jadval, Davomat, FAQ va Biz haqimizda unga o'tdi, Sozlamalar/Profil/Ta'lim
+ichki sahifalari chapdan o'rtaga ko'chdi. Himoya —
+`student-portal-wide-screens.test.ts`.
+
 ### U3. `backHref` nomuvofiq
 
 | Sahifa | `backHref` |
@@ -109,6 +118,14 @@ bersa esa ekrandagi yo'l o'rniga xato ko'rinardi. Endi ular ham `loadState` +
 `lib/queries.ts` dagi `useStudentProfile` va sahifalardagi barcha `useQuery`
 chaqiruvlari standart sozlama bilan ishlaydi. Sahifalar orasida yurganda har
 safar qayta so'rov ketadi.
+
+### U6. Planshetda yon menyu nomsiz edi
+
+72px menyu faqat belgilardan iborat edi, nomlar `title` tooltip'da —
+barmoq bilan ishlatiladigan planshetda tooltip chiqmaydi. **TUZATILDI
+2026-09-30:** har belgi ostida nomi, rasm ostida «Profil»; kenglik
+o'zgarmadi (eng uzun nom «Sozlamalar» 57px, joy 63px). Himoya —
+`student-portal-nav.test.ts` (`RailNavItem`).
 
 ---
 
@@ -207,7 +224,7 @@ darsni esa ko'rmaydi.
 | Faza | Mazmun | Topilmalar | Holat |
 |---|---|---|---|
 | **1** | Sozlamalar + Profil chegarasi, mavzu boshqaruvini birlashtirish | Q1–Q4 (pastdagi «Faza 1» bo'limi) | **BAJARILDI — 2026-08-19** (branch `feat/portal-settings-profile-rework`, deploy qilinmagan) |
-| 2 | Umumiy qatlam: Lumio modal, xato holatlari, desktop kenglik, `backHref`, `staleTime` | U1, U2, U3, U4, U5 | qisman — U4 bajarildi 2026-09-26 |
+| 2 | Umumiy qatlam: Lumio modal, xato holatlari, desktop kenglik, `backHref`, `staleTime` | U1, U2, U3, U4, U5, U6 | qisman — U4 (2026-09-26), U2 va U6 (2026-09-30) bajarildi |
 | 3 | Jadval: bekor qilingan / ko'chirilgan darslar va bayramlar | S1, S2, S3, S4 | kutmoqda |
 | 4 | To'lovlar: qarzga moslashgan summalar, tarix filtri, a11y | P1–P7 | qisman — P7 bajarildi 2026-09-26 |
 | 5 | Davomat + Asosiy sahifa | A1–A4, H1–H4 | kutmoqda |
