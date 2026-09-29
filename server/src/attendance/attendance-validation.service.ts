@@ -53,6 +53,7 @@ export class AttendanceValidationService {
       select: {
         id: true,
         companyId: true,
+        branchId: true,
         exactDays: true,
         startDate: true,
         endDate: true,
@@ -120,8 +121,10 @@ export class AttendanceValidationService {
       }
     }
 
-    const holiday =
-      await this.holidaysService.findActiveHolidayCovering(parsedDate);
+    const holiday = await this.holidaysService.findActiveHolidayCovering(
+      parsedDate,
+      group.branchId,
+    );
     if (holiday) {
       throw new BadRequestException(`Bu sana bayram kuni: ${holiday.name}`);
     }

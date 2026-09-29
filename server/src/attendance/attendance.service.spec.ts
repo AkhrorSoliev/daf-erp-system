@@ -228,6 +228,23 @@ describe('AttendanceService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it("looks for a holiday of the group's own branch only", async () => {
+      // A holiday closes its own branch's lessons, not every branch's.
+      prisma.group.findFirst.mockResolvedValue({ ...mockGroup, branchId: 2 });
+
+      await service.validateLessonDate(
+        'group-uuid-1',
+        '2026-04-01',
+        undefined,
+        ['Administrator'],
+      );
+
+      expect(holidaysService.findActiveHolidayCovering).toHaveBeenCalledWith(
+        new Date('2026-04-01T00:00:00.000Z'),
+        2,
+      );
+    });
+
     it('should throw NotFoundException when companyId does not match', async () => {
       prisma.group.findFirst.mockResolvedValue(null);
 
