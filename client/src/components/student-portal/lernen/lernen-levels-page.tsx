@@ -18,9 +18,10 @@ import {
   IconTile,
   EmptyState,
   LoadingCards,
-  Button,
 } from "../lumio";
 import { useLernenLevels } from "./queries";
+import { loadState } from "../lib/load-state";
+import { LoadFailed } from "../load-failed";
 import { LernenYol } from "./yol/lernen-yol";
 import { YolTepasi } from "./yol/yol-tepasi";
 
@@ -67,7 +68,8 @@ const SKILLS = [
 ];
 
 export function LernenLevelsPage() {
-  const { data, isLoading, isError, refetch } = useLernenLevels();
+  const query = useLernenLevels();
+  const { data } = query;
   const yolBosh = data != null && data.length === 0;
 
   return (
@@ -84,19 +86,12 @@ export function LernenLevelsPage() {
       */}
       <YolTepasi />
 
-      {isLoading ? (
+      {loadState(query) === "loading" ? (
         <LoadingCards count={3} />
-      ) : isError || !data ? (
-        <EmptyState
-          icon={<BookOpen size={28} weight="bold" />}
-          title="Ma'lumotni yuklab bo'lmadi"
-          description="Internet aloqasini tekshirib, qayta urinib ko'ring."
-          action={
-            <Button variant="secondary" onClick={() => void refetch()}>
-              Qayta urinish
-            </Button>
-          }
-        />
+      ) : !data ? (
+        // Past "loading", no data means offline or failed — LoadFailed says
+        // which; offline the request resumes by itself, so no button.
+        <LoadFailed query={query} />
       ) : yolBosh ? (
         <EmptyState
           icon={<BookOpen size={28} weight="bold" />}

@@ -25,7 +25,7 @@ const FAQ = [
 
 export function StudentFaqPage() {
   return (
-    <Screen>
+    <Screen narrow>
       <StackHeader title="FAQ" backHref="/portal/more" />
       <div className="flex flex-col gap-3">
         {FAQ.map((f, i) => (

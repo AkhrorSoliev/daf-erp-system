@@ -19,6 +19,10 @@ import { StudentScheduleView } from "./student-schedule-view";
 import { StudentAttendanceHistory } from "./student-attendance-history";
 import { StudentPaymentSummary } from "./student-payment-summary";
 import { StudentHomePage } from "./student-home-page";
+import { LernenLevelsPage } from "./lernen/lernen-levels-page";
+import { LernenUnitPage } from "./lernen/lernen-unit-page";
+import { LernenLessonPage } from "./lernen/lernen-lesson-page";
+import { ReytingEkrani } from "./lernen/reyting/reyting-ekrani";
 
 const SCHEDULE = ["student-portal", "schedule"];
 const HISTORY = ["student-portal", "attendance-history"];
@@ -266,6 +270,58 @@ describe("a portal screen whose refresh failed after it had loaded", () => {
       [PAYMENTS, new RefreshFailed({ payments: [], transactions: [] })],
     ]);
     expect(text).toContain("Hali tranzaksiya yo'q");
+    expect(text).not.toContain("Ma'lumotni yuklab bo'lmadi");
+  });
+});
+
+const LEVELS = ["lernen", "levels"];
+const UNIT = ["lernen", "unit", 7];
+const LESSON = ["lernen", "lesson", 9];
+const RANKING = ["lernen", "reyting", "gruppe"];
+
+function UnitPage() {
+  return createElement(LernenUnitPage, { unitId: 7 });
+}
+
+function LessonPage() {
+  return createElement(LernenLessonPage, { lessonId: 9 });
+}
+
+// Ta'lim decided with `isError || !data`, so offline — a paused query, neither
+// loading nor failed — fell into the error branch: "…yuklab bo'lmadi" and a
+// retry button that could do nothing until the connection came back.
+describe("a Ta'lim screen", () => {
+  it.each([
+    ["the path", LernenLevelsPage],
+    ["a unit", UnitPage],
+    ["a lesson", LessonPage],
+    ["the ranking", ReytingEkrani],
+  ] as const)("opened with no connection says so, with no button (%s)", async (_name, page) => {
+    const text = await render(page, [], { offline: true });
+    expect(text).toContain("Internet aloqasi yo'q");
+    expect(text).not.toContain("Qayta urinish");
+  });
+
+  it.each([
+    ["the path", LernenLevelsPage, LEVELS],
+    ["a unit", UnitPage, UNIT],
+    ["a lesson", LessonPage, LESSON],
+    ["the ranking", ReytingEkrani, RANKING],
+  ] as const)("whose request failed offers a retry (%s)", async (_name, page, key) => {
+    const text = await render(page, [[key, FAILED]]);
+    expect(text).toContain("Ma'lumotni yuklab bo'lmadi");
+    expect(text).toContain("Qayta urinish");
+  });
+
+  it("keeps the path it already had when a refresh fails", async () => {
+    const text = await render(LernenLevelsPage, [[LEVELS, new RefreshFailed([])]]);
+    expect(text).toContain("O'quv yo'li hali tayyor emas");
+    expect(text).not.toContain("Ma'lumotni yuklab bo'lmadi");
+  });
+
+  it("shows the ranking's own empty state for an empty answer", async () => {
+    const text = await render(ReytingEkrani, [[RANKING, []]]);
+    expect(text).toContain("Siz hali guruhga qo'shilmagansiz");
     expect(text).not.toContain("Ma'lumotni yuklab bo'lmadi");
   });
 });
