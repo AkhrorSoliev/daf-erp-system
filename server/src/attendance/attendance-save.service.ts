@@ -23,12 +23,7 @@ import {
 } from './dto/save-attendance.dto';
 import { LateAttendanceDto } from './dto/late-attendance.dto';
 import { AttendanceValidationService } from './attendance-validation.service';
-import {
-  ENDED_REFUSAL,
-  newAttendanceWindow,
-  tashkentClock,
-  windowRefusal,
-} from './shared/attendance-window';
+import { assertAttendanceWindowOpen } from './shared/attendance-window-guard';
 import { rosterOnDate } from './shared/roster-on-date';
 import { closeLessonTask } from '../unmarked-lessons/lesson-task';
 import {
@@ -158,13 +153,14 @@ export class AttendanceSaveService {
           "Davomat olib bo'lingan. Tahrirlash uchun administratorga murojaat qiling",
         );
       }
+      // A NEW register only (§3.1) — read inside this transaction so it
+      // cannot race the lesson-end sweep's question.
       if (existingRecords.length === 0) {
-        await this.assertNewRegisterAllowed(tx, {
+        await assertAttendanceWindowOpen(tx, {
           groupId,
           date,
           parsedDate,
-          startTime: effectiveStartTime,
-          endTime: effectiveEndTime,
+          times: { startTime: effectiveStartTime, endTime: effectiveEndTime },
         });
       }
 
@@ -373,44 +369,6 @@ export class AttendanceSaveService {
         `Davomat saqlash uchun barcha o'quvchilarning holati belgilanishi shart. Belgilanmagan o'quvchilar: ${missing.length} ta`,
       );
     }
-  }
-
-  /**
-   * The window for a new register (§3.1). The lesson-end sweep opens its
-   * question in a Serializable transaction that reads attendance; this reads
-   * the question in one that writes attendance — so the two cannot both
-   * succeed for the same lesson.
-   */
-  private async assertNewRegisterAllowed(
-    tx: Tx,
-    a: {
-      groupId: string;
-      date: string;
-      parsedDate: Date;
-      startTime: string | null;
-      endTime: string | null;
-    },
-  ): Promise<void> {
-    const { todayStr, nowMinutes } = tashkentClock();
-    const window = newAttendanceWindow({
-      date: a.date,
-      todayStr,
-      nowMinutes,
-      startTime: a.startTime,
-      endTime: a.endTime,
-    });
-    const refusal = windowRefusal(window, {
-      date: a.date,
-      todayStr,
-      startTime: a.startTime,
-    });
-    if (refusal) throw new BadRequestException(refusal);
-
-    const asked = await tx.unmarkedLesson.findUnique({
-      where: { groupId_date: { groupId: a.groupId, date: a.parsedDate } },
-      select: { id: true },
-    });
-    if (asked) throw new BadRequestException(ENDED_REFUSAL);
   }
 
   /** Q9: only the CEO, read from the database (ADR-0028), exempts a teacher. */

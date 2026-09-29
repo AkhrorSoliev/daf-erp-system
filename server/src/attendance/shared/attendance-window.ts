@@ -35,6 +35,16 @@ export function tashkentClock(now: Date = new Date()): {
   };
 }
 
+/** Seconds from `now` until `endTime` on today's Tashkent clock; ≤ 0 once it has passed. */
+export function secondsUntil(endTime: string, now: Date = new Date()): number {
+  const shifted = new Date(now.getTime() + TASHKENT_OFFSET_MS);
+  const nowSeconds =
+    shifted.getUTCHours() * 3600 +
+    shifted.getUTCMinutes() * 60 +
+    shifted.getUTCSeconds();
+  return toMinutes(endTime) * 60 - nowSeconds;
+}
+
 export function newAttendanceWindow(args: {
   date: string;
   todayStr: string;

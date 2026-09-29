@@ -251,6 +251,35 @@ describe('QrAttendanceService', () => {
         service.startSession('group-1', '2026-04-03', 1, 1, ['Administrator']),
       ).rejects.toThrow('Dars tugagan');
     });
+
+    it('lives until the lesson ends on the Tashkent clock and stores the lesson times', async () => {
+      jest.setSystemTime(new Date('2026-04-03T05:30:00.000Z')); // 10:30 Tashkent, lesson ends 11:00
+      await service.startSession('group-1', '2026-04-03', 1, 1);
+
+      const sessionSetCall = redis.set.mock.calls.find((call: any[]) =>
+        call[0].startsWith('qr-session:'),
+      );
+      expect(sessionSetCall[3]).toBe(1800);
+      expect(JSON.parse(sessionSetCall[1])).toMatchObject({
+        effectiveStartTime: '09:00',
+        effectiveEndTime: '11:00',
+      });
+    });
+
+    it('caps the session at two hours', async () => {
+      attendanceService.validateLessonDate.mockResolvedValue({
+        group: validatedGroup,
+        parsedDate: new Date('2026-04-03T00:00:00.000Z'),
+        effectiveStartTime: '09:00',
+        effectiveEndTime: '20:00',
+      });
+      await service.startSession('group-1', '2026-04-03', 1, 1);
+
+      const sessionSetCall = redis.set.mock.calls.find((call: any[]) =>
+        call[0].startsWith('qr-session:'),
+      );
+      expect(sessionSetCall[3]).toBe(7200);
+    });
   });
 
   describe('rotateToken', () => {
@@ -529,6 +558,80 @@ describe('QrAttendanceService', () => {
       await service.scanQr('valid-token', 10001, 20001, 1);
 
       expect(entityHistory.recordUpdate).toHaveBeenCalled();
+    });
+
+    describe('the lesson window', () => {
+      // A session started inside the window carries the lesson's times.
+      const timedSession = JSON.stringify({
+        ...JSON.parse(sessionData),
+        effectiveStartTime: '09:00',
+        effectiveEndTime: '11:00',
+      });
+
+      beforeEach(() => {
+        jest.useFakeTimers({
+          now: new Date('2026-04-03T05:00:00.000Z'), // 10:00 Tashkent
+          advanceTimers: true,
+        });
+      });
+      afterEach(() => jest.useRealTimers());
+
+      it('accepts a scan inside the lesson', async () => {
+        redis.get
+          .mockResolvedValueOnce(tokenData)
+          .mockResolvedValueOnce(timedSession);
+
+        const result = await service.scanQr('valid-token', 10001, 20001, 1);
+
+        expect(result.status).toBe('PRESENT');
+        expect(prisma.attendance.upsert).toHaveBeenCalled();
+      });
+
+      it('refuses a scan after the lesson ended', async () => {
+        jest.setSystemTime(new Date('2026-04-03T06:00:00.000Z')); // 11:00 Tashkent
+        redis.get
+          .mockResolvedValueOnce(tokenData)
+          .mockResolvedValueOnce(timedSession);
+
+        await expect(
+          service.scanQr('valid-token', 10001, 20001, 1),
+        ).rejects.toThrow('Dars tugagan');
+        expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+      });
+
+      it("refuses a scan once «Dars bo'ldimi?» was asked", async () => {
+        prisma.unmarkedLesson.findUnique.mockResolvedValue({ id: 'u1' });
+        redis.get
+          .mockResolvedValueOnce(tokenData)
+          .mockResolvedValueOnce(timedSession);
+
+        await expect(
+          service.scanQr('valid-token', 10001, 20001, 1),
+        ).rejects.toThrow('Dars tugagan');
+        expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+      });
+
+      it('still asks the question when the session has no lesson times', async () => {
+        prisma.unmarkedLesson.findUnique.mockResolvedValue({ id: 'u1' });
+        redis.get
+          .mockResolvedValueOnce(tokenData)
+          .mockResolvedValueOnce(sessionData); // an older session
+
+        await expect(
+          service.scanQr('valid-token', 10001, 20001, 1),
+        ).rejects.toThrow('Dars tugagan');
+        expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+      });
+
+      it('still asks the question when the session is gone', async () => {
+        prisma.unmarkedLesson.findUnique.mockResolvedValue({ id: 'u1' });
+        redis.get.mockResolvedValueOnce(tokenData).mockResolvedValueOnce(null);
+
+        await expect(
+          service.scanQr('valid-token', 10001, 20001, 1),
+        ).rejects.toThrow('Dars tugagan');
+        expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+      });
     });
   });
 });

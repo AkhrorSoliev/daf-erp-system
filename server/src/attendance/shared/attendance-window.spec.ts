@@ -2,6 +2,7 @@ import {
   ENDED_REFUSAL,
   lessonHasEnded,
   newAttendanceWindow,
+  secondsUntil,
   tashkentClock,
   windowRefusal,
 } from './attendance-window';
@@ -83,6 +84,15 @@ describe('tashkentClock', () => {
       todayStr: '2026-10-01',
       nowMinutes: 30,
     });
+  });
+});
+
+describe('secondsUntil', () => {
+  it('counts to the end time on the Tashkent clock, seconds included', () => {
+    // 05:30:15Z = 10:30:15 Tashkent
+    const now = new Date('2026-04-03T05:30:15.000Z');
+    expect(secondsUntil('11:00', now)).toBe(1785);
+    expect(secondsUntil('10:30', now)).toBe(-15);
   });
 });
 
