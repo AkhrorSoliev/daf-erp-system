@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { createHmac } from 'crypto';
+import { STAFF_CABINET_REQUESTED } from '../../common/auth/staff-telegram';
 import { INIT_DATA_MAX_AGE_SEC } from './telegram-init-data';
 import {
   INIT_DATA_EXPIRED_MESSAGE,
@@ -94,12 +95,14 @@ function makeService(
     findStaffAccountsByTelegram: jest.fn().mockResolvedValue(opts.staff ?? []),
     login: jest.fn().mockResolvedValue(staffSession),
   };
+  const events = { emit: jest.fn() };
   const service = new TelegramWebAppService(
     config as any,
     prisma as any,
     authService as any,
+    events as any,
   );
-  return { service, prisma, authService, session, staffSession };
+  return { service, prisma, authService, events, session, staffSession };
 }
 
 describe('TelegramWebAppService.signIn', () => {
@@ -128,6 +131,24 @@ describe('TelegramWebAppService.signIn', () => {
     );
     expect(authService.buildStudentSession).not.toHaveBeenCalled();
     expect(authService.login).not.toHaveBeenCalled();
+  });
+
+  it("xodim o'quvchi kabinetini ochsa (eski xabardagi tugma) — bot chatga xodim kabineti tugmasini yuborsin", async () => {
+    const { service, events } = makeService({ linked: [], staff: [DOSTON] });
+
+    await service.signIn(initDataFor());
+
+    expect(events.emit).toHaveBeenCalledWith(STAFF_CABINET_REQUESTED, {
+      chatId: String(TG_USER_ID),
+    });
+  });
+
+  it("hech kimga bog'lanmagan Telegram — botga so'rov yo'q", async () => {
+    const { service, events } = makeService({ linked: [], staff: [] });
+
+    await service.signIn(initDataFor());
+
+    expect(events.emit).not.toHaveBeenCalled();
   });
 
   it("o'quvchi bog'langan bo'lsa xodim qidirilmaydi — o'quvchi kabineti avvalgidek ochiladi", async () => {

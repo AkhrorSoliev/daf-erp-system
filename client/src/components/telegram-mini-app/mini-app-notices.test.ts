@@ -26,10 +26,14 @@ describe("Mini App notices", () => {
     expect(html).not.toContain("To&#x27;lovlar");
   });
 
-  it("sends staff who opened the student cabinet back to the bot's /start", () => {
+  // The server has just sent the chat a fresh «💼 Kabinet» button, and every
+  // linked staff chat's menu button already opens the staff cabinet — /start
+  // is no longer needed.
+  it("sends staff who opened the student cabinet to the button in the chat", () => {
     const html = renderToStaticMarkup(createElement(StaffAccountNotice));
 
     expect(html).toContain("xodim sifatida");
-    expect(html).toContain("/start");
+    expect(html).toContain("💼 Kabinet");
+    expect(html).not.toContain("/start");
   });
 });

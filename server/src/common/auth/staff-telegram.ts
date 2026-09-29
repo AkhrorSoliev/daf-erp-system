@@ -13,6 +13,16 @@ const TEACHER_ROLE_ID = 4;
  * Mini App kiritmaydigan hisobga bot xodim menyusini bermasin.
  */
 
+/**
+ * O'quvchi Mini App'ini xodim ochdi (eski xabardagi «🎓 Platformaga kirish»):
+ * bot o'sha chatga xodim kabinetining tugmasini yuborsin. Mini App uni o'zi
+ * ocholmaydi — boshqa domenga o'tsa Telegram ko'prigi uziladi (Bot API 10.2).
+ */
+export const STAFF_CABINET_REQUESTED = 'telegram.staff-cabinet.requested';
+export interface StaffCabinetRequestedEvent {
+  chatId: string;
+}
+
 export function isStaffRoleId(roleId: number): boolean {
   return (STAFF_ROLE_IDS as readonly number[]).includes(roleId);
 }

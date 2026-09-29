@@ -6,7 +6,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { STAFF_ROLE_IDS } from '../../common/auth/phone-account-rules';
+import {
+  STAFF_CABINET_REQUESTED,
+  type StaffCabinetRequestedEvent,
+} from '../../common/auth/staff-telegram';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthService } from '../auth.service';
 import { getAllowedRoleIds } from '../portal-roles.config';
@@ -90,6 +95,7 @@ export class TelegramWebAppService {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
+    private readonly events: EventEmitter2,
   ) {}
 
   async signIn(
@@ -113,7 +119,12 @@ export class TelegramWebAppService {
         STAFF_ROLE_IDS,
         1,
       );
-      return { status: staff.length > 0 ? 'staff' : 'not_registered' };
+      if (staff.length === 0) return { status: 'not_registered' };
+      // Xodim kabinetining tugmasi chatga keladi — Mini App uni o'zi ocholmaydi.
+      this.events.emit(STAFF_CABINET_REQUESTED, {
+        chatId: telegramUserId,
+      } satisfies StaffCabinetRequestedEvent);
+      return { status: 'staff' };
     }
 
     const candidates = linked.filter(

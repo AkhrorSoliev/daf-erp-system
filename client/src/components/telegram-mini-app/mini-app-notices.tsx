@@ -129,14 +129,15 @@ export function NotRegisteredNotice({
 
 /**
  * O'quvchi kabinetini xodim ochdi (eski xabardagi tugma). Uning kabineti
- * boshqa portalda — bot «Kabinet» tugmasini /start bilan yangilaydi.
+ * boshqa portalda va bu yerdan unga o'tib bo'lmaydi (boshqa domenda Telegram
+ * ko'prigi uziladi) — server shu paytda chatga «💼 Kabinet» tugmasini yubordi.
  */
 export function StaffAccountNotice() {
   return (
     <Notice
       icon={<User weight="bold" />}
       title="Siz xodim sifatida ro'yxatdan o'tgansiz"
-      description="Bu — o'quvchilar kabineti. Botga qayting va /start bosing: «Kabinet» tugmasi xodim kabinetingizni ochadi."
+      description="Bu — o'quvchilar kabineti. Xodim kabinetingiz tugmasini chatga yubordik: botga qayting va «💼 Kabinet» tugmasini bosing."
     >
       <BackToBotButton />
     </Notice>

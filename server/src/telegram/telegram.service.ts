@@ -8,7 +8,12 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { OnEvent } from '@nestjs/event-emitter';
 import { createHash, timingSafeEqual } from 'crypto';
+import {
+  STAFF_CABINET_REQUESTED,
+  type StaffCabinetRequestedEvent,
+} from '../common/auth/staff-telegram';
 import { Telegraf, Scenes, session, Markup } from 'telegraf';
 import { RedisService } from '../redis/redis.service';
 import { BotContext, SessionData } from './types/context';
@@ -647,6 +652,22 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
   getBot(): Telegraf<BotContext> {
     return this.bot;
+  }
+
+  /** Xodim o'quvchi Mini App'ini ochdi — chatga xodim kabinetining tugmasi. */
+  @OnEvent(STAFF_CABINET_REQUESTED)
+  async onStaffCabinetRequested(
+    event: StaffCabinetRequestedEvent,
+  ): Promise<void> {
+    // Bot o'chiq (token yo'q) — `staffCabinet` ham yo'q.
+    if (!this.staffCabinet) return;
+    try {
+      await this.staffCabinet.sendCabinetButton(event.chatId);
+    } catch (err) {
+      this.logger.warn(
+        `Xodim kabineti tugmasini yuborib bo'lmadi: ${(err as Error).message}`,
+      );
+    }
   }
 
   /** Gate yoqilganmi (kanal talab qilinadimi). */
