@@ -24,7 +24,7 @@ const row = (over = {}) => ({
   ...over,
 });
 
-function makeTx() {
+function makeTx(mocks: any = {}) {
   return {
     unmarkedLesson: {
       findUnique: jest.fn().mockResolvedValue(null),
@@ -32,6 +32,7 @@ function makeTx() {
       findMany: jest.fn().mockResolvedValue([]),
       update: jest.fn(),
       create: jest.fn(),
+      ...mocks.unmarkedLesson,
     },
     group: {
       findUnique: jest.fn().mockResolvedValue({
@@ -42,16 +43,24 @@ function makeTx() {
         lessonEndTime: '17:30',
         deletedAt: null,
       }),
+      ...mocks.group,
     },
-    attendance: { findFirst: jest.fn().mockResolvedValue(null) },
+    attendance: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      ...mocks.attendance,
+    },
     commentAssignee: {
       findUnique: jest.fn().mockResolvedValue(null),
       deleteMany: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
+      ...mocks.commentAssignee,
     },
-    user: { findMany: jest.fn().mockResolvedValue([{ id: 3 }]) },
-    comment: { create: jest.fn().mockResolvedValue({ id: 'c2' }) },
+    user: { findMany: jest.fn().mockResolvedValue([{ id: 3 }]), ...mocks.user },
+    comment: {
+      create: jest.fn().mockResolvedValue({ id: 'c2' }),
+      ...mocks.comment,
+    },
   } as any;
 }
 
@@ -195,6 +204,7 @@ describe('reopening', () => {
       groupId: 'g1',
       date,
       now,
+      holidays: new Set(),
     });
     expect(tx.comment.create).toHaveBeenCalled();
     expect(tx.unmarkedLesson.update).toHaveBeenCalledWith({
@@ -218,6 +228,7 @@ describe('reopening', () => {
       groupId: 'g1',
       date,
       now,
+      holidays: new Set(),
     });
     expect(tx.unmarkedLesson.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -237,6 +248,7 @@ describe('reopening', () => {
       groupId: 'g1',
       date,
       now,
+      holidays: new Set(),
     });
     const later = makeTx();
     await reopenAfterCancellationRemoved(later, {
@@ -244,9 +256,28 @@ describe('reopening', () => {
       groupId: 'g1',
       date: new Date('2026-10-05T00:00:00.000Z'),
       now,
+      holidays: new Set(),
     });
     expect(tx.unmarkedLesson.create).not.toHaveBeenCalled();
     expect(later.unmarkedLesson.create).not.toHaveBeenCalled();
+  });
+
+  it('skips holidays when calculating task due date', async () => {
+    const tx = makeTx();
+    // Oct 1 is a working day, but Oct 2-3 are a holiday
+    const holidays = new Set(['2026-10-02', '2026-10-03']);
+    await reopenAfterCancellationRemoved(tx, {
+      cancellationId: 'x1',
+      groupId: 'g1',
+      date,
+      now,
+      holidays,
+    });
+    // Task due date should skip to Oct 4 (first working day after Oct 1)
+    const createCall = tx.unmarkedLesson.create.mock.calls[0][0];
+    expect(createCall.data.taskCommentId).toBe('c2');
+    // Verify createLessonTask was called with the holidays
+    expect(tx.comment.create).toHaveBeenCalled();
   });
 
   it('puts a moved answer back to PENDING', async () => {
@@ -254,7 +285,11 @@ describe('reopening', () => {
     tx.unmarkedLesson.findFirst.mockResolvedValue(
       row({ status: 'RESCHEDULED', rescheduleId: 'r1' }),
     );
-    await reopenAfterRescheduleRemoved(tx, { rescheduleId: 'r1', now });
+    await reopenAfterRescheduleRemoved(tx, {
+      rescheduleId: 'r1',
+      now,
+      holidays: new Set(),
+    });
     expect(tx.unmarkedLesson.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: 'PENDING' }),

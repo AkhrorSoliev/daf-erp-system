@@ -158,23 +158,54 @@ export async function assertLinkedMakeUpAhead(
   if (linked) assertMakeUpAhead(args.newDate, args.newStartTime, args.now);
 }
 
-async function reopen(tx: Tx, row: UnmarkedLesson, now: Date): Promise<void> {
+async function createReopenTask(
+  tx: Tx,
+  companyId: number,
+  branchId: number,
+  groupId: string,
+  groupName: string,
+  dateStr: string,
+  startTime: string | null,
+  endTime: string | null,
+  now: Date,
+  holidays: ReadonlySet<string>,
+): Promise<string | null> {
+  const { todayStr } = tashkentClock(now);
+  return createLessonTask(tx, {
+    companyId,
+    branchId,
+    groupId,
+    groupName,
+    dateStr,
+    startTime: startTime ?? DAY_START_TIME,
+    endTime: endTime ?? DAY_END_TIME,
+    dueAt: taskDueAt(nextWorkingDay(todayStr, holidays)),
+  });
+}
+
+async function reopen(
+  tx: Tx,
+  row: UnmarkedLesson,
+  now: Date,
+  holidays: ReadonlySet<string>,
+): Promise<void> {
   const group = await tx.group.findUnique({
     where: { id: row.groupId },
     select: { name: true, deletedAt: true },
   });
   if (!group || group.deletedAt) return;
-  const { todayStr } = tashkentClock(now);
-  const taskCommentId = await createLessonTask(tx, {
-    companyId: row.companyId,
-    branchId: row.branchId,
-    groupId: row.groupId,
-    groupName: group.name,
-    dateStr: dayOf(row.date),
-    startTime: row.lessonStartTime,
-    endTime: row.lessonEndTime,
-    dueAt: taskDueAt(nextWorkingDay(todayStr, new Set())),
-  });
+  const taskCommentId = await createReopenTask(
+    tx,
+    row.companyId,
+    row.branchId,
+    row.groupId,
+    group.name,
+    dayOf(row.date),
+    row.lessonStartTime,
+    row.lessonEndTime,
+    now,
+    holidays,
+  );
   await tx.unmarkedLesson.update({
     where: { id: row.id },
     data: {
@@ -197,12 +228,18 @@ async function reopen(tx: Tx, row: UnmarkedLesson, now: Date): Promise<void> {
  */
 export async function reopenAfterCancellationRemoved(
   tx: Tx,
-  args: { cancellationId: string; groupId: string; date: Date; now: Date },
+  args: {
+    cancellationId: string;
+    groupId: string;
+    date: Date;
+    now: Date;
+    holidays: ReadonlySet<string>;
+  },
 ): Promise<void> {
   const answered = await tx.unmarkedLesson.findFirst({
     where: { cancellationId: args.cancellationId },
   });
-  if (answered) return reopen(tx, answered, args.now);
+  if (answered) return reopen(tx, answered, args.now, args.holidays);
 
   const group = await tx.group.findUnique({
     where: { id: args.groupId },
@@ -240,16 +277,18 @@ export async function reopenAfterCancellationRemoved(
 
   const startTime = group.lessonStartTime ?? DAY_START_TIME;
   const endTime = group.lessonEndTime ?? DAY_END_TIME;
-  const taskCommentId = await createLessonTask(tx, {
-    companyId: group.companyId,
-    branchId: group.branchId,
-    groupId: args.groupId,
-    groupName: group.name,
-    dateStr: dayOf(args.date),
+  const taskCommentId = await createReopenTask(
+    tx,
+    group.companyId,
+    group.branchId,
+    args.groupId,
+    group.name,
+    dayOf(args.date),
     startTime,
     endTime,
-    dueAt: taskDueAt(nextWorkingDay(todayStr, new Set())),
-  });
+    args.now,
+    args.holidays,
+  );
   await tx.unmarkedLesson.create({
     data: {
       companyId: group.companyId,
@@ -268,12 +307,12 @@ export async function reopenAfterCancellationRemoved(
 /** Deleting the move of an unanswered lesson re-asks the question. */
 export async function reopenAfterRescheduleRemoved(
   tx: Tx,
-  args: { rescheduleId: string; now: Date },
+  args: { rescheduleId: string; now: Date; holidays: ReadonlySet<string> },
 ): Promise<void> {
   const answered = await tx.unmarkedLesson.findFirst({
     where: { rescheduleId: args.rescheduleId },
   });
-  if (answered) await reopen(tx, answered, args.now);
+  if (answered) await reopen(tx, answered, args.now, args.holidays);
 }
 
 /** A deleted group's open questions stop asking; their rows stay (no pay). */
