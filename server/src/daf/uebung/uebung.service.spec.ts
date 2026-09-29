@@ -609,20 +609,12 @@ describe('UebungService.seans — qaytarish (wiederholung)', () => {
   // qayta ko'rikdan o'tkazish): 2000 marta ishga tushirilganda,
   // taqiqlangan format aslida 38% holatda namunaga tushar, so'z esa
   // 15%da seansda UMUMAN chiqmasdi — ikkalasida ham tekshiruv jimgina
-  // "o'tib" ketardi. Endi SEEDLANGAN generator beriladi: natija HAR
-  // DOIM bir xil (seed=1 bilan so'z 1 seansda haqiqatda chiqishi
-  // oldindan tekshirilgan), shuning uchun CI'da barqaror va ikkinchi
-  // shart (so'zning seansda haqiqatda BORLIGI) ham endi tasdiqlanadi —
-  // aks holda ichki `for` sikli bo'sh massivda bekorga "o'tib" ketardi.
-  //
-  // SEED `baueKandidaten`GA YANGI NOMZOD MANBAI (`DIALOG_LUECKE`)
-  // qo'shilganda 0dan 1ga ko'chirildi: barcha kandidat quruvchilar BITTA
-  // umumiy `rnd` oqimini baham ko'radi, ya'ni yangi manba ro'yxatning
-  // OXIRIDA turgan bo'lsa ham undan oldingi chaqiruvlar ketma-ketligini
-  // o'zgartirmaydi — lekin `baueSeans`ning O'ZI xuddi shu `rnd`ni davom
-  // ettirib ishlatadi, shuning uchun panelga bir nechta nomzod qo'shilishi
-  // seansning YAKUNIY tanlovini ham siljitadi. Bu — bitta ulashilgan
-  // generatorga tayangan seedli testlarning tabiiy narxi, xatolik emas.
+  // "o'tib" ketardi. Endi SEEDLANGAN generator beriladi va so'z 1
+  // seansda HAQIQATDA chiqqan birinchi seed olinadi, shuning uchun CI'da
+  // barqaror va ikkinchi shart (so'zning seansda BORLIGI) ham
+  // tasdiqlanadi — aks holda ichki `for` sikli bo'sh massivda bekorga
+  // "o'tib" ketardi. Qat'iy bitta seed har quruvchi bitta ortiq tasodifiy
+  // son olganda buzilardi (barchasi bitta `rnd` oqimini baham ko'radi).
   it('oddiy so`zning ham avvalgi formatidagi nomzodi qurilmaydi (dizayn qoidasi 5)', async () => {
     const prisma = fakePrisma();
     prisma.dafLexemeState.findMany = jest.fn(async (args: any) => {
@@ -635,14 +627,19 @@ describe('UebungService.seans — qaytarish (wiederholung)', () => {
       return [];
     }) as any;
 
-    const fragen = await new UebungService(prisma as any).seans(
-      100,
-      55,
-      mulberry32(1),
-    );
-    const soz1Savollari = fragen.filter(
-      (f) => f.itemType === 'WORT' && f.itemId === 1,
-    );
+    // The first seed whose session asks word 1: a fixed seed broke every
+    // time a builder drew one more random number (2026-09-30: distractors).
+    let soz1Savollari: Awaited<ReturnType<UebungService['seans']>> = [];
+    for (let seed = 0; seed < 50 && soz1Savollari.length === 0; seed += 1) {
+      const fragen = await new UebungService(prisma as any).seans(
+        100,
+        55,
+        mulberry32(seed),
+      );
+      soz1Savollari = fragen.filter(
+        (f) => f.itemType === 'WORT' && f.itemId === 1,
+      );
+    }
     // So'z 1 seansda HAQIQATDA chiqadi — aks holda pastdagi tekshiruv
     // bo'sh massivda vaqinchalik "o'tib" ketgan bo'lardi.
     expect(soz1Savollari.length).toBeGreaterThan(0);

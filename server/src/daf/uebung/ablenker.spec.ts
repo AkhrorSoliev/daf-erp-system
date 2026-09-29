@@ -1,0 +1,181 @@
+import {
+  bedeutungUeberlappt,
+  istBuchstabe,
+  waehleAblenker,
+  wortArt,
+} from './ablenker';
+import type { MaterialWort } from './frage.types';
+
+function w(
+  id: number,
+  de: string,
+  uz: string,
+  extra: Partial<MaterialWort> = {},
+): MaterialWort {
+  return {
+    id,
+    de,
+    uz,
+    artikel: null,
+    anzeige: null,
+    sectionCode: 'u01-s1',
+    audioKey: null,
+    ...extra,
+  };
+}
+
+const rnd = (): number => 0;
+
+describe('wortArt', () => {
+  it.each([
+    [w(1, 'C', "'C' harfi"), 'BUCHSTABE'],
+    [w(2, 'drei', 'uch', { anzeige: '3' }), 'ZAHL'],
+    [w(3, 'Bahnhof', 'vokzal', { artikel: 'der' }), 'NOMEN'],
+    [w(4, 'wohnen', 'yashamoq'), 'VERB'],
+    [w(5, 'gehen', 'yurmoq (piyoda bormoq)'), 'VERB'],
+    [w(6, 'Guten Morgen', 'xayrli tong'), 'PHRASE'],
+    [w(7, 'links', 'chapda, chapga'), 'SONST'],
+  ])('%o is %s', (wort, art) => {
+    expect(wortArt(wort)).toBe(art);
+  });
+
+  it('a letter is a single letter only', () => {
+    expect(istBuchstabe(w(1, 'Ä', "'Ä' harfi"))).toBe(true);
+    expect(istBuchstabe(w(2, 'du', 'sen'))).toBe(false);
+  });
+});
+
+describe('bedeutungUeberlappt — never a second right answer', () => {
+  it.each([
+    ["o'qituvchi", "o'qituvchi ayol"],
+    ["o'g'il", "o'g'il bola"],
+    ['qiz', 'qiz bola'],
+    ['-da (joy predlogi)', '-da, oldida (joy predlogi)'],
+    ['xayr (norasmiy)', 'xayr (rasmiy)'],
+    ['uzoq (masofa)', 'uzoq (vaqt)'],
+  ])('%s and %s overlap', (a, b) => {
+    expect(bedeutungUeberlappt(a, b)).toBe(true);
+    expect(bedeutungUeberlappt(b, a)).toBe(true);
+  });
+
+  it.each([
+    ['ota', 'ona'],
+    ['vokzal', 'pochta'],
+    ['chapda, chapga', "o'ngda, o'ngga"],
+  ])('%s and %s do not', (a, b) => {
+    expect(bedeutungUeberlappt(a, b)).toBe(false);
+  });
+});
+
+describe('waehleAblenker', () => {
+  const zahlen = [
+    w(10, 'drei', 'uch', { anzeige: '3' }),
+    w(11, 'dreißig', "o'ttiz", { anzeige: '30' }),
+    w(12, 'vier', "to'rt", { anzeige: '4' }),
+    w(13, 'vierzig', 'qirq', { anzeige: '40' }),
+    w(14, 'acht', 'sakkiz', { anzeige: '8' }),
+  ];
+  const anderes = [
+    w(20, 'hallo', 'salom'),
+    w(21, 'danke', 'rahmat'),
+    w(22, 'Bahnhof', 'vokzal', { artikel: 'der' }),
+  ];
+
+  it('prefers words of the same kind', () => {
+    const r = waehleAblenker(zahlen[0], [...anderes, ...zahlen], {
+      feld: (x) => x.uz,
+      aehnlich: false,
+      bedeutung: true,
+      rnd,
+    })!;
+    expect(r.every((x) => wortArt(x) === 'ZAHL')).toBe(true);
+    expect(r).toHaveLength(3);
+  });
+
+  it('with aehnlich, puts the look-alike first (drei → dreißig)', () => {
+    for (const seed of [0, 0.3, 0.7, 0.99]) {
+      const r = waehleAblenker(zahlen[0], [...zahlen, ...anderes], {
+        feld: (x) => x.de,
+        aehnlich: true,
+        bedeutung: false,
+        rnd: () => seed,
+        fenster: 1,
+      })!;
+      expect(r.map((x) => x.de)).toContain('dreißig');
+    }
+  });
+
+  it('fills from other kinds when the kind is too small', () => {
+    const r = waehleAblenker(anderes[2], [...anderes, zahlen[0], zahlen[2]], {
+      feld: (x) => x.uz,
+      aehnlich: false,
+      bedeutung: true,
+      rnd,
+    })!;
+    expect(r).toHaveLength(3);
+  });
+
+  it('never offers a word whose meaning overlaps the answer', () => {
+    const lehrer = w(30, 'Lehrer', "o'qituvchi", { artikel: 'der' });
+    const pool = [
+      w(31, 'Lehrerin', "o'qituvchi ayol", { artikel: 'die' }),
+      w(32, 'Arzt', 'shifokor', { artikel: 'der' }),
+      w(33, 'Chef', 'rahbar', { artikel: 'der' }),
+      w(34, 'Schule', 'maktab', { artikel: 'die' }),
+    ];
+    const r = waehleAblenker(lehrer, pool, {
+      feld: (x) => x.de,
+      aehnlich: true,
+      bedeutung: true,
+      rnd,
+    })!;
+    expect(r.map((x) => x.de)).not.toContain('Lehrerin');
+  });
+
+  it('a listening question may offer a word of overlapping meaning', () => {
+    const lehrer = w(30, 'Lehrer', "o'qituvchi", { artikel: 'der' });
+    const pool = [
+      w(31, 'Lehrerin', "o'qituvchi ayol", { artikel: 'die' }),
+      w(32, 'Arzt', 'shifokor', { artikel: 'der' }),
+      w(33, 'Chef', 'rahbar', { artikel: 'der' }),
+    ];
+    const r = waehleAblenker(lehrer, pool, {
+      feld: (x) => x.de,
+      aehnlich: true,
+      bedeutung: false,
+      rnd,
+    })!;
+    expect(r.map((x) => x.de)).toContain('Lehrerin');
+  });
+
+  it('returns null when fewer than three can be offered', () => {
+    expect(
+      waehleAblenker(anderes[0], anderes.slice(0, 2), {
+        feld: (x) => x.uz,
+        aehnlich: false,
+        bedeutung: true,
+        rnd,
+      }),
+    ).toBeNull();
+  });
+
+  it('never repeats the answer text or one text twice', () => {
+    const pool = [
+      w(40, 'hallo', 'salom'),
+      w(41, 'Hallo!', 'salom!'),
+      w(42, 'danke', 'rahmat'),
+      w(43, 'danke', 'rahmat'),
+      w(44, 'ich', 'men'),
+      w(45, 'du', 'sen'),
+    ];
+    const r = waehleAblenker(pool[0], pool, {
+      feld: (x) => x.uz,
+      aehnlich: false,
+      bedeutung: true,
+      rnd,
+    })!;
+    const texte = r.map((x) => x.uz);
+    expect(new Set(texte).size).toBe(3);
+    expect(texte).not.toContain('salom!');
+  });
+});

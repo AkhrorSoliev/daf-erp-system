@@ -1,4 +1,5 @@
 import { normalisieren } from './antwort';
+import { bedeutungUeberlappt, istBuchstabe, waehleAblenker } from './ablenker';
 import {
   materialSchluessel,
   type Frage,
@@ -33,30 +34,19 @@ function mischen<T>(items: T[], rnd: () => number): T[] {
  *
  * Butun lug'atdan olinsa savol bilimni emas, taxminni tekshiradi:
  * «Guten Morgen» yonida «der Kühlschrank» tursa to'g'ri javob mavzusiga
- * qarab ko'rinib qoladi.
+ * qarab ko'rinib qoladi. Which of them, and why: `ablenker.ts`.
+ * `normalisieren` compares the texts there — grading (`istRichtig`) uses the
+ * same function, so an option that differs from the answer only in
+ * punctuation can never slip in and be graded as correct.
  */
 function ablenker(
   ziel: MaterialWort,
   andere: MaterialWort[],
   feld: (w: MaterialWort) => string,
   rnd: () => number,
+  art: { aehnlich: boolean; bedeutung: boolean },
 ): string[] | null {
-  const richtig = feld(ziel);
-  // `normalisieren` bilan solishtiriladi (nemischa maydonlar uchun ham
-  // ishlaydi — imlo/tinish farqiga sezgir emas), chunki grading
-  // (`istRichtig`) xuddi shu funksiya bilan solishtiradi. Xom teng emas
-  // solishtirilsa, richtigdan faqat tinish belgisi bilan farq qiladigan
-  // chalg'ituvchi ham panelga kirib, aslida TO'G'RI javob sifatida
-  // baholanib qolardi.
-  const kandidaten = andere
-    .filter(
-      (w) =>
-        w.id !== ziel.id && normalisieren(feld(w)) !== normalisieren(richtig),
-    )
-    .map(feld);
-  const einmalig = [...new Set(kandidaten)];
-  if (einmalig.length < 3) return null;
-  return mischen(einmalig, rnd).slice(0, 3);
+  return waehleAblenker(ziel, andere, { feld, rnd, ...art })?.map(feld) ?? null;
 }
 
 export function wortUz(
@@ -64,7 +54,13 @@ export function wortUz(
   andere: MaterialWort[],
   rnd: () => number,
 ): Frage | null {
-  const falsch = ablenker(ziel, andere, (w) => w.uz, rnd);
+  // A letter's meaning is the letter itself ("C" → "'C' harfi"): the
+  // question would give its own answer. Letters are asked by ear only.
+  if (istBuchstabe(ziel)) return null;
+  const falsch = ablenker(ziel, andere, (w) => w.uz, rnd, {
+    aehnlich: false,
+    bedeutung: true,
+  });
   if (!falsch) return null;
   return {
     format: 'WORT_UZ',
@@ -97,7 +93,11 @@ export function uzWort(
   // o'rgatiladi, bu yerda emas; shuning uchun artikl shakli yo'qolmaydi,
   // faqat `akzeptiert`ga tushadi — artikl bilan yozgan o'quvchi ham
   // to'g'ri hisoblanadi.
-  const falsch = ablenker(ziel, andere, (w) => w.de, rnd);
+  if (istBuchstabe(ziel)) return null;
+  const falsch = ablenker(ziel, andere, (w) => w.de, rnd, {
+    aehnlich: true,
+    bedeutung: true,
+  });
   if (!falsch) return null;
   return {
     format: 'UZ_WORT',
@@ -131,21 +131,23 @@ export function uzWort(
  * kerak emas.
  */
 export function paar(woerter: MaterialWort[], rnd: () => number): Frage | null {
-  if (woerter.length < 4) return null;
+  // Letters are left out: "C" = "'C' harfi" pairs itself.
+  const pool = woerter.filter((w) => !istBuchstabe(w));
+  if (pool.length < 4) return null;
 
   // Aralashtirilgan ro'yxatdan to'rt so'z tanla: ikkala tomonda (de va uz)
-  // noyoblik tekshiriladi. Dublikat bo'lsa, keyingiga o'tadi.
-  const shuffled = mischen(woerter, rnd);
+  // noyoblik tekshiriladi. Dublikat bo'lsa, keyingiga o'tadi. On the Uzbek
+  // side "unique" means no overlapping meaning either: "o'qituvchi" and
+  // "o'qituvchi ayol" in one set could be paired either way.
+  const shuffled = mischen(pool, rnd);
   const selected: MaterialWort[] = [];
   const usedDe = new Set<string>();
-  const usedUz = new Set<string>();
 
   for (const word of shuffled) {
-    // Ushbu so'z tubidan noyobmi?
-    if (!usedDe.has(word.de) && !usedUz.has(word.uz)) {
+    const uzFrei = selected.every((s) => !bedeutungUeberlappt(s.uz, word.uz));
+    if (!usedDe.has(word.de) && uzFrei) {
       selected.push(word);
       usedDe.add(word.de);
-      usedUz.add(word.uz);
 
       if (selected.length === 4) {
         break;
@@ -229,7 +231,12 @@ export function audioWort(
   // o'rniga format shunchaki tanlanmaydi.
   const audioUrl = mediaUrl(ziel.audioKey);
   if (!audioUrl) return null;
-  const falsch = ablenker(ziel, andere, (w) => w.de, rnd);
+  // Listening: close spellings are the point (drei/dreißig), and words of
+  // overlapping meaning sound different, so they may stand side by side.
+  const falsch = ablenker(ziel, andere, (w) => w.de, rnd, {
+    aehnlich: true,
+    bedeutung: false,
+  });
   if (!falsch) return null;
   return {
     format: 'AUDIO_WORT',
@@ -274,25 +281,26 @@ export function wortTippen(
 
 /**
  * Three picture distractors: other words WITH a picture, each picture and
- * each word only once. `null` when the pool holds fewer than three — the
- * session builder then fills the slot from another format.
+ * each word only once, of the same kind first (a number's dots beside other
+ * numbers). `null` when the pool holds fewer than three — the session
+ * builder then fills the slot from another format. Meanings may overlap:
+ * a picture is not Uzbek text, and der Lehrer / die Lehrerin look apart.
  */
 function bildAblenker(
   ziel: MaterialWort,
   andere: MaterialWort[],
   rnd: () => number,
 ): MaterialWort[] | null {
-  const bilder = new Set<string>([ziel.imageKey as string]);
   const zielDe = normalisieren(ziel.de);
-  const gewaehlt: MaterialWort[] = [];
-  for (const w of mischen(andere, rnd)) {
-    if (w.id === ziel.id || !w.imageKey) continue;
-    if (bilder.has(w.imageKey) || normalisieren(w.de) === zielDe) continue;
-    bilder.add(w.imageKey);
-    gewaehlt.push(w);
-    if (gewaehlt.length === 3) return gewaehlt;
-  }
-  return null;
+  const mitBild = andere.filter(
+    (w) => w.imageKey && normalisieren(w.de) !== zielDe,
+  );
+  return waehleAblenker(ziel, mitBild, {
+    feld: (w) => w.imageKey as string,
+    aehnlich: false,
+    bedeutung: false,
+    rnd,
+  });
 }
 
 function bildOptionen(

@@ -50,7 +50,7 @@ const TIPPFEHLER_MIN_LAENGE = 5;
  * Optimal string alignment distance: insertions, deletions, substitutions
  * and one swap of neighbours ("deustch") each cost one.
  */
-function editAbstand(a: string, b: string): number {
+export function editAbstand(a: string, b: string): number {
   const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) =>
     Array.from({ length: b.length + 1 }, (_, j) =>
       i === 0 ? j : j === 0 ? i : 0,
