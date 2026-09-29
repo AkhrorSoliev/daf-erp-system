@@ -321,6 +321,136 @@ describe('AttendanceReminderService', () => {
         'Davomat dars tugaguncha olinmasa, bu dars uchun haq yozilmaydi',
       );
     });
+
+    it('holiday only in branch 1 does not silence branch 2 reminder', async () => {
+      jest.useFakeTimers();
+      // Set time to 09:00 Wednesday 2026-04-22 in Tashkent
+      jest.setSystemTime(new Date('2026-04-22T04:00:00.000Z'));
+
+      const holidaysService = {
+        findActiveHolidayCovering: jest
+          .fn()
+          .mockImplementation(async (date, branchId) => {
+            return branchId === 1 ? { id: 'holiday-1' } : null;
+          }),
+      };
+      const localPrisma = {
+        group: {
+          findMany: jest.fn(),
+          findUnique: jest.fn(),
+        },
+        holiday: { findFirst: jest.fn().mockResolvedValue(null) },
+        attendance: { findFirst: jest.fn().mockResolvedValue(null) },
+        notification: { findFirst: jest.fn().mockResolvedValue(null) },
+        user: { findMany: jest.fn().mockResolvedValue([]) },
+      };
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          AttendanceReminderService,
+          { provide: PrismaService, useValue: localPrisma },
+          { provide: NotificationsService, useValue: notificationsService },
+          { provide: NotificationsGateway, useValue: gateway },
+          { provide: PushService, useValue: pushService },
+          { provide: TelegramService, useValue: telegramService },
+          {
+            provide: require('../holidays/holidays.service').HolidaysService,
+            useValue: holidaysService,
+          },
+          {
+            provide: require('./unmarked-lessons.service')
+              .UnmarkedLessonsService,
+            useValue: { openForEndedLessons: jest.fn().mockResolvedValue([]) },
+          },
+        ],
+      }).compile();
+      const svc = module.get(AttendanceReminderService);
+
+      try {
+        const group1 = makeGroup({ id: 'group-1', branchId: 1 });
+        const group2 = makeGroup({ id: 'group-2', branchId: 2 });
+        localPrisma.group.findMany.mockResolvedValue([group1, group2]);
+        localPrisma.attendance.findFirst.mockResolvedValue(null);
+        (svc as any).scheduleWindow = { startMin: 0, endMin: 1440 };
+        (svc as any).windowCachedAt = Date.now();
+
+        await svc.tick();
+
+        // branch 2 should get LESSON_STARTED despite branch 1 having holiday
+        expect(notificationsService.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            userId: 20001,
+            type: NotificationType.LESSON_STARTED,
+            relatedEntityId: 'group-2',
+          }),
+        );
+        // holiday lookup called with both branches
+        expect(holidaysService.findActiveHolidayCovering).toHaveBeenCalledWith(
+          expect.any(Date),
+          1,
+        );
+        expect(holidaysService.findActiveHolidayCovering).toHaveBeenCalledWith(
+          expect.any(Date),
+          2,
+        );
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('sweep runs even when schedule window is closed', async () => {
+      jest.useFakeTimers();
+      // Set time to 00:30 to be outside any lesson window
+      jest.setSystemTime(new Date('2026-04-22T19:30:00.000Z'));
+
+      const unmarked = {
+        openForEndedLessons: jest.fn().mockResolvedValue([]),
+      };
+      const localPrisma = {
+        group: {
+          findMany: jest.fn(),
+          findUnique: jest.fn(),
+        },
+        holiday: { findFirst: jest.fn().mockResolvedValue(null) },
+        attendance: { findFirst: jest.fn().mockResolvedValue(null) },
+        notification: { findFirst: jest.fn().mockResolvedValue(null) },
+        user: { findMany: jest.fn().mockResolvedValue([]) },
+      };
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          AttendanceReminderService,
+          { provide: PrismaService, useValue: localPrisma },
+          { provide: NotificationsService, useValue: notificationsService },
+          { provide: NotificationsGateway, useValue: gateway },
+          { provide: PushService, useValue: pushService },
+          { provide: TelegramService, useValue: telegramService },
+          {
+            provide: require('../holidays/holidays.service').HolidaysService,
+            useValue: {
+              findActiveHolidayCovering: jest.fn().mockResolvedValue(null),
+            },
+          },
+          {
+            provide: require('./unmarked-lessons.service')
+              .UnmarkedLessonsService,
+            useValue: unmarked,
+          },
+        ],
+      }).compile();
+      const svc = module.get(AttendanceReminderService);
+
+      try {
+        // Close the window: end < start
+        (svc as any).scheduleWindow = { startMin: 1440, endMin: 0 };
+        (svc as any).windowCachedAt = Date.now();
+
+        await svc.tick();
+
+        // sweep should still run even though the window is closed
+        expect(unmarked.openForEndedLessons).toHaveBeenCalled();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
   });
 
   describe('recipient filters (status sync)', () => {
