@@ -44,7 +44,10 @@ describe('AttendanceReminderService', () => {
     bot = { telegram: { sendMessage: jest.fn().mockResolvedValue(undefined) } };
 
     prisma = {
-      group: { findMany: jest.fn().mockResolvedValue([]) },
+      group: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findUnique: jest.fn(),
+      },
       holiday: { findFirst: jest.fn().mockResolvedValue(null) },
       attendance: { findFirst: jest.fn().mockResolvedValue(null) },
       notification: { findFirst: jest.fn().mockResolvedValue(null) },
@@ -64,6 +67,8 @@ describe('AttendanceReminderService', () => {
       getActiveHolidaysInRange: jest.fn().mockResolvedValue([]),
     };
 
+    const unmarked = { openForEndedLessons: jest.fn().mockResolvedValue([]) };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AttendanceReminderService,
@@ -75,6 +80,10 @@ describe('AttendanceReminderService', () => {
         {
           provide: require('../holidays/holidays.service').HolidaysService,
           useValue: holidaysService,
+        },
+        {
+          provide: require('./unmarked-lessons.service').UnmarkedLessonsService,
+          useValue: unmarked,
         },
       ],
     }).compile();
@@ -158,36 +167,18 @@ describe('AttendanceReminderService', () => {
       );
     });
 
-    it('notifies teacher + admins at lessonEndTime when attendance missing', async () => {
-      prisma.user.findMany.mockResolvedValue([
-        { id: 30001, firstName: 'U', lastName: 'A', telegramChatId: null },
-      ]);
+    it('leaves the lesson end to the sweep', async () => {
       const group = makeGroup();
-      // lessonEndTime → 630
-      await (service as any).handleGroup(group, 630, '2026-04-22');
-
-      expect(notificationsService.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: 20001,
-          type: NotificationType.ATTENDANCE_MISSING_TEACHER,
-        }),
-      );
-      expect(notificationsService.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: 30001,
-          type: NotificationType.ATTENDANCE_MISSING_ADMIN,
-        }),
-      );
+      await (service as any).handleGroup(group, 10 * 60 + 30, '2026-09-30');
+      expect(notificationsService.create).not.toHaveBeenCalled();
     });
 
     it('short-circuits when attendance is already taken', async () => {
       prisma.attendance.findFirst.mockResolvedValue({ id: 'att-1' });
       const group = makeGroup();
 
-      // Try both attendance-gated trigger minutes (end-30, end)
-      for (const minute of [600, 630]) {
-        await (service as any).handleGroup(group, minute, '2026-04-22');
-      }
+      // Try the attendance-gated trigger minute (end-30)
+      await (service as any).handleGroup(group, 600, '2026-04-22');
 
       expect(notificationsService.create).not.toHaveBeenCalled();
       expect(bot.telegram.sendMessage).not.toHaveBeenCalled();
@@ -250,6 +241,84 @@ describe('AttendanceReminderService', () => {
       );
       expect(notificationsService.create).toHaveBeenCalledWith(
         expect.objectContaining({ userId: 20002 }),
+      );
+    });
+  });
+
+  describe('sweep', () => {
+    it('tells the teachers and administrators of every lesson it opened', async () => {
+      const unmarked = {
+        openForEndedLessons: jest.fn().mockResolvedValue([
+          {
+            groupId: 'group-1',
+            groupName: 'Deutsch A1',
+            companyId: 100,
+            branchId: 1,
+            startTime: '09:00',
+            endTime: '10:30',
+            date: '2026-09-30',
+          },
+        ]),
+      };
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          AttendanceReminderService,
+          { provide: PrismaService, useValue: prisma },
+          { provide: NotificationsService, useValue: notificationsService },
+          { provide: NotificationsGateway, useValue: gateway },
+          { provide: PushService, useValue: pushService },
+          { provide: TelegramService, useValue: telegramService },
+          {
+            provide: require('../holidays/holidays.service').HolidaysService,
+            useValue: {
+              findActiveHolidayCovering: jest.fn().mockResolvedValue(null),
+            },
+          },
+          {
+            provide: require('./unmarked-lessons.service')
+              .UnmarkedLessonsService,
+            useValue: unmarked,
+          },
+        ],
+      }).compile();
+      const svc = module.get(AttendanceReminderService);
+
+      prisma.group.findUnique.mockResolvedValue(makeGroup());
+      prisma.user.findMany.mockResolvedValue([
+        {
+          id: 30001,
+          firstName: 'Admin',
+          lastName: 'One',
+          telegramChatId: null,
+        },
+      ]);
+
+      await svc.closeDay();
+
+      const types = notificationsService.create.mock.calls.map(
+        (c: any[]) => c[0].type,
+      );
+      expect(types).toEqual([
+        NotificationType.ATTENDANCE_MISSING_TEACHER,
+        NotificationType.ATTENDANCE_MISSING_ADMIN,
+      ]);
+      const teacherText = notificationsService.create.mock.calls[0][0]
+        .message as string;
+      expect(teacherText).toContain('Bu dars uchun haq yozilmaydi');
+      const adminText = notificationsService.create.mock.calls[1][0]
+        .message as string;
+      expect(adminText).toContain("Tizimda topshiriq ochildi: dars bo'ldimi?");
+      expect(adminText).toContain('https://admin.dafzentrum.uz/tasks');
+    });
+
+    it('warns the teacher about pay half an hour before the end', async () => {
+      const group = makeGroup();
+      await (service as any).handleGroup(group, 10 * 60, '2026-09-30');
+      const warning = notificationsService.create.mock.calls.find(
+        (c: any[]) => c[0].type === NotificationType.ATTENDANCE_TEACHER_WARNING,
+      );
+      expect(warning[0].message).toContain(
+        'Davomat dars tugaguncha olinmasa, bu dars uchun haq yozilmaydi',
       );
     });
   });
