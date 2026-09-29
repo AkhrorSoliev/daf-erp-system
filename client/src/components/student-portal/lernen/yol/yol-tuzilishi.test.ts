@@ -5,6 +5,7 @@ import {
   yolMoljali,
   yolQatorMetasi,
   yolTugunlari,
+  type YolUnitKirish,
 } from "./yol-tuzilishi";
 
 const seans = (id: number, done: boolean) => ({
@@ -28,7 +29,7 @@ const unit = (
   sections, finalTest,
 });
 
-const lvl = (level: string, units: ReturnType<typeof unit>[]) => ({ level, label: level, units });
+const lvl = (level: string, units: YolUnitKirish[]) => ({ level, label: level, units });
 
 describe("yolTugunlari", () => {
   it("unit sarlavhasidan keyin uning seanslari keladi", () => {
