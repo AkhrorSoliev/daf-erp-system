@@ -432,6 +432,38 @@ describe('AttendanceService', () => {
         );
         expect(result.group.id).toBe('group-uuid-1');
       });
+
+      it('returns the times the lesson really runs at', async () => {
+        const result = await service.validateLessonDate(
+          'group-uuid-1',
+          '2026-04-01',
+          undefined,
+          ['Administrator'],
+        );
+        expect(result).toEqual(
+          expect.objectContaining({
+            effectiveStartTime: '09:00',
+            effectiveEndTime: '11:00',
+          }),
+        );
+      });
+
+      it('closes for a Teacher at the end minute itself', async () => {
+        const now = tashkentNow();
+        const endMinute = now.getUTCHours() * 60 + now.getUTCMinutes();
+        const hhmm = (m: number) =>
+          `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+        prisma.group.findFirst.mockResolvedValue({
+          ...getTodayMockGroup(),
+          lessonStartTime: hhmm(Math.max(0, endMinute - 60)),
+          lessonEndTime: hhmm(endMinute),
+        });
+        await expect(
+          service.validateLessonDate('group-uuid-1', getTodayStr(), undefined, [
+            'Teacher',
+          ]),
+        ).rejects.toThrow('Dars vaqti tugagan');
+      });
     });
   });
 

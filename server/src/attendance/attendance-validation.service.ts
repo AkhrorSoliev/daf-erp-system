@@ -182,7 +182,7 @@ export class AttendanceValidationService {
             `Davomat dars boshlanishidan 10 daqiqa oldin ochiladi (${effectiveStartTime})`,
           );
         }
-        if (currentMinutes > lessonEnd) {
+        if (currentMinutes >= lessonEnd) {
           throw new BadRequestException(
             `Dars vaqti tugagan (${effectiveEndTime}). Davomat olish yopilgan`,
           );
@@ -190,6 +190,11 @@ export class AttendanceValidationService {
       }
     }
 
-    return { group, parsedDate };
+    return {
+      group,
+      parsedDate,
+      effectiveStartTime: effectiveStartTime ?? null,
+      effectiveEndTime: effectiveEndTime ?? null,
+    };
   }
 }
