@@ -176,15 +176,18 @@ describe('StaffCabinet', () => {
         count: jest.fn().mockResolvedValue(opts.studentCards ?? 0),
       },
     };
-    const telegram = { setChatMenuButton: jest.fn().mockResolvedValue(true) };
+    const telegram = {
+      setChatMenuButton: jest.fn().mockResolvedValue(true),
+      sendMessage: jest.fn().mockResolvedValue({ message_id: 1 }),
+    };
     const logger = { warn: jest.fn() };
     const cabinet = new StaffCabinet(
       prisma as any,
-      telegram,
+      telegram as any,
       opts.studentUrl === null ? undefined : (opts.studentUrl ?? STUDENT_URL),
       logger,
     );
-    return { cabinet, prisma, telegram };
+    return { cabinet, prisma, telegram, logger };
   }
 
   const DOSTON_ROW = { id: 30401, firstName: 'Doston', roles: [{ roleId: 4 }] };
@@ -296,6 +299,44 @@ describe('StaffCabinet', () => {
 
       expect(ctx.answerCbQuery).not.toHaveBeenCalled();
       expect(ctx.reply).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("sendCabinetButton (xodim o'quvchi kabinetini ochdi)", () => {
+    it('chatga xodim kabinetining tugmasi yuboriladi, «Kabinet» ham shu kabinetga', async () => {
+      const { cabinet, telegram } = setup({ staff: [DOSTON_ROW] });
+
+      await expect(cabinet.sendCabinetButton(CHAT)).resolves.toBe(true);
+
+      expect(telegram.setChatMenuButton).toHaveBeenCalledWith({
+        chatId: Number(CHAT),
+        menuButton: expect.objectContaining({ web_app: { url: LEHRER_URL } }),
+      });
+      const [chatId, , markup] = telegram.sendMessage.mock.calls[0];
+      expect(chatId).toBe(Number(CHAT));
+      expect(buttons(markup)).toEqual([
+        [[STAFF_CABINET_BUTTON_TEXT, LEHRER_URL]],
+      ]);
+    });
+
+    it('xodim emas (yoki bir chatda ikki hisob) — hech narsa yuborilmaydi', async () => {
+      const { cabinet, telegram } = setup({ staff: [] });
+
+      await expect(cabinet.sendCabinetButton(CHAT)).resolves.toBe(false);
+
+      expect(telegram.sendMessage).not.toHaveBeenCalled();
+      expect(telegram.setChatMenuButton).not.toHaveBeenCalled();
+    });
+
+    it('Telegram xabarni rad etsa — faqat log, xato tashlanmaydi', async () => {
+      const { cabinet, telegram, logger } = setup({ staff: [DOSTON_ROW] });
+      telegram.sendMessage.mockRejectedValue(new Error('403: Forbidden'));
+
+      await expect(cabinet.sendCabinetButton(CHAT)).resolves.toBe(false);
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('403: Forbidden'),
+      );
     });
   });
 

@@ -150,10 +150,21 @@ export function staffMenuKeyboard(
   return Markup.inlineKeyboard(rows);
 }
 
+const OPEN_CABINET_TEXT = 'Xodim kabinetini ochish uchun tugmani bosing:';
+
+function cabinetKeyboard(cabinetUrl: string) {
+  return Markup.inlineKeyboard([
+    [Markup.button.webApp(STAFF_CABINET_BUTTON_TEXT, cabinetUrl)],
+  ]);
+}
+
 export class StaffCabinet {
   constructor(
     private readonly prisma: Pick<PrismaService, 'user' | 'student'>,
-    private readonly telegram: Pick<Telegram, 'setChatMenuButton'>,
+    private readonly telegram: Pick<
+      Telegram,
+      'setChatMenuButton' | 'sendMessage'
+    >,
     /** `TELEGRAM_MINI_APP_URL` — xodim manzillari undan olinadi. */
     private readonly studentMiniAppUrl: string | undefined,
     private readonly logger: Pick<LoggerService, 'warn'>,
@@ -240,13 +251,36 @@ export class StaffCabinet {
 
     await ctx.answerCbQuery();
     await setChatCabinetButton(this.telegram, chatId, cabinetUrl, this.logger);
-    await ctx.reply(
-      'Xodim kabinetini ochish uchun tugmani bosing:',
-      Markup.inlineKeyboard([
-        [Markup.button.webApp(STAFF_CABINET_BUTTON_TEXT, cabinetUrl)],
-      ]),
-    );
+    await ctx.reply(OPEN_CABINET_TEXT, cabinetKeyboard(cabinetUrl));
     return true;
+  }
+
+  /**
+   * Eski xabardagi `web_app` «🎓 Platformaga kirish»ni xodim bossa, o'quvchi
+   * Mini App'i ochiladi va uni taniydi (`STAFF_CABINET_REQUESTED`): bot shu
+   * chatga xodim kabinetining tugmasini yuboradi. Yuborilgan eski xabarni
+   * tahrirlab bo'lmaydi — Telegram xabarlarni bot uchun sanab bermaydi.
+   * Xato — faqat log: Mini App baribir «chatga qayting» deydi.
+   */
+  async sendCabinetButton(chatId: string): Promise<boolean> {
+    const account = await this.staffForChat(chatId);
+    const cabinetUrl = account ? this.cabinetUrl(account) : undefined;
+    if (!cabinetUrl) return false;
+
+    await setChatCabinetButton(this.telegram, chatId, cabinetUrl, this.logger);
+    try {
+      await this.telegram.sendMessage(
+        Number(chatId),
+        OPEN_CABINET_TEXT,
+        cabinetKeyboard(cabinetUrl),
+      );
+      return true;
+    } catch (err) {
+      this.logger.warn(
+        `Chat ${chatId} ga xodim kabineti tugmasini yuborib bo'lmadi: ${(err as Error).message}`,
+      );
+      return false;
+    }
   }
 
   /**
