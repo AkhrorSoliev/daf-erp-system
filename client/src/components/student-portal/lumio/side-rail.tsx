@@ -8,6 +8,7 @@ import {
   railNavItems,
   moreRoutes,
   settingsHelpItems,
+  type StudentNavItem,
 } from "@/lib/student-nav-items";
 import { useStudentProfile } from "../lib/queries";
 import { useSidebar, RAIL_WIDTH } from "../lib/sidebar-store";
@@ -19,10 +20,56 @@ import { LogoutButton } from "../student-logout-button";
 // nav list, and a footer with theme / logout. Replaces the mobile bottom nav on
 // wide screens.
 //
-// Two widths, driven by `useSidebar`: 240px with labels, or 72px icons-only.
-// Under the pre-hydration `auto` mode the expanded markup is rendered at the
-// narrow md width for a single frame — `overflow-hidden` on the <aside> is what
-// keeps that frame from showing clipped labels.
+// Two widths, driven by `useSidebar`: 240px with each name beside its icon, or
+// 72px with the name under it. The 72px rail used to be icons only with a
+// `title` tooltip, which a touch tablet never shows — the names must stay on
+// screen at every width. Under the pre-hydration `auto` mode the expanded
+// markup is rendered at the narrow md width for a single frame —
+// `overflow-hidden` on the <aside> is what keeps that frame from showing
+// clipped labels.
+
+/** One rail row. Exported so a test can draw the collapsed width directly:
+ *  a static render only ever sees the sidebar store's initial `auto`. */
+export function RailNavItem({
+  item,
+  active,
+  collapsed,
+}: {
+  item: StudentNavItem;
+  active: boolean;
+  collapsed: boolean;
+}) {
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.url}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "relative flex items-center rounded-md transition-colors",
+        // Collapsed: no side padding. «Sozlamalar» is 56-57px at 11px and
+        // the column leaves 63px (72 minus its border and px-1).
+        collapsed
+          ? "flex-col justify-center gap-1 py-2 text-[11px] leading-tight"
+          : "gap-3 px-3 py-2.5 text-sm",
+        active
+          ? "bg-coral-500/10 font-bold text-coral-600"
+          : "font-semibold text-ink-600 hover:bg-tint hover:text-ink-900",
+      )}
+    >
+      {active && (
+        <span
+          aria-hidden
+          className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-coral-500"
+        />
+      )}
+      <Icon size={20} weight={active ? "fill" : "bold"} />
+      <span className={cn("truncate", collapsed && "max-w-full")}>
+        {item.title}
+      </span>
+    </Link>
+  );
+}
+
 export function LumioSideRail({ className }: { className?: string }) {
   const pathname = usePathname();
   const { data: profile } = useStudentProfile();
@@ -61,7 +108,7 @@ export function LumioSideRail({ className }: { className?: string }) {
       <div
         className={cn(
           "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pt-4",
-          collapsed ? "px-2" : "p-3",
+          collapsed ? "px-1" : "p-3",
         )}
       >
         {/* Profile summary */}
@@ -70,7 +117,7 @@ export function LumioSideRail({ className }: { className?: string }) {
           title={collapsed ? fullName : undefined}
           className={cn(
             "flex items-center rounded-card border border-line bg-surface shadow-lumio-sm transition-colors hover:bg-tint",
-            collapsed ? "justify-center p-2" : "gap-3 px-3 py-2.5",
+            collapsed ? "flex-col justify-center gap-1 p-2" : "gap-3 px-3 py-2.5",
             pathname.startsWith("/portal/profile") && "border-coral-500/40",
           )}
         >
@@ -79,7 +126,11 @@ export function LumioSideRail({ className }: { className?: string }) {
             name={profile ? fullName : undefined}
             size={40}
           />
-          {!collapsed && (
+          {collapsed ? (
+            <span className="text-[11px] font-bold leading-tight text-ink-600">
+              Profil
+            </span>
+          ) : (
             <>
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-display text-sm font-bold text-ink-900">
@@ -96,34 +147,14 @@ export function LumioSideRail({ className }: { className?: string }) {
 
         {/* Nav */}
         <nav className="flex flex-col gap-1">
-          {railNavItems.map((item) => {
-            const active = isActive(item.url);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.url}
-                href={item.url}
-                aria-current={active ? "page" : undefined}
-                title={collapsed ? item.title : undefined}
-                className={cn(
-                  "relative flex items-center rounded-md text-sm transition-colors",
-                  collapsed ? "justify-center py-3" : "gap-3 px-3 py-2.5",
-                  active
-                    ? "bg-coral-500/10 font-bold text-coral-600"
-                    : "font-semibold text-ink-600 hover:bg-tint hover:text-ink-900",
-                )}
-              >
-                {active && (
-                  <span
-                    aria-hidden
-                    className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-coral-500"
-                  />
-                )}
-                <Icon size={20} weight={active ? "fill" : "bold"} />
-                {!collapsed && <span className="truncate">{item.title}</span>}
-              </Link>
-            );
-          })}
+          {railNavItems.map((item) => (
+            <RailNavItem
+              key={item.url}
+              item={item}
+              active={isActive(item.url)}
+              collapsed={collapsed}
+            />
+          ))}
         </nav>
 
         {/* Width toggle — sits at the bottom of the scroll column, above the

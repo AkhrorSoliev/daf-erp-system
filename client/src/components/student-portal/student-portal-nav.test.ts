@@ -11,8 +11,9 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push() {}, replace() {}, back() {}, prefetch() {} }),
 }));
 
-import { studentNavItems } from "@/lib/student-nav-items";
+import { railNavItems, studentNavItems } from "@/lib/student-nav-items";
 import { LumioBottomNav } from "./lumio/bottom-nav";
+import { RailNavItem } from "./lumio/side-rail";
 import { StudentMoreHub } from "./student-more-hub";
 import { StudentAttendanceHistory } from "./student-attendance-history";
 import { StudentRadioPage } from "./student-radio-page";
@@ -119,4 +120,18 @@ describe("portal navigation on a phone", () => {
   ] as const)("gives the %s screen a back button", (_title, page) => {
     expect(render(page)).toContain('aria-label="Orqaga"');
   });
+});
+
+describe("portal rail on a tablet", () => {
+  // A touch tablet has no hover, so the collapsed rail's `title` tooltips
+  // never showed: the student saw a column of unnamed icons (review 26.09).
+  it.each(railNavItems.map((item) => [item.title, item] as const))(
+    "names %s under its icon when collapsed",
+    (title, item) => {
+      const html = render(() =>
+        createElement(RailNavItem, { item, active: false, collapsed: true }),
+      );
+      expect(html.replace(/&#x27;/g, "'")).toContain(`>${title}</span>`);
+    },
+  );
 });
