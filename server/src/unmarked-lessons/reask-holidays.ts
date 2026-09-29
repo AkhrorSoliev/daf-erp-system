@@ -11,7 +11,7 @@ import { buildHolidayDateSet } from '../holidays/holiday-date-set';
  * holiday spans at most 60 days (HolidaysService), so 90 days always reaches a
  * working day past the longest one.
  */
-const HOLIDAY_LOOKAHEAD_DAYS = 90;
+export const HOLIDAY_LOOKAHEAD_DAYS = 90;
 
 /**
  * The holidays a re-asked «Dars bo'ldimi?» task must skip when it sets its due
