@@ -38,7 +38,9 @@ import { FalClient } from '../src/daf/media/fal-client';
 import { seedFor } from '../src/daf/media/media-keys';
 import { bildPrompt } from '../src/daf/media/bild-stil';
 import { verkleinereBild } from '../src/daf/media/bild-verkleinern';
-import { svgZuPng, zahlBildSvg } from '../src/daf/media/zahl-bild';
+import { svgZuPng } from '../src/daf/media/svg-zu-png';
+import { zahlBildSvg } from '../src/daf/media/zahl-bild';
+import { flaggeSvg, type Land } from '../src/daf/media/flagge-bild';
 import {
   neuerBildSchluessel,
   type BildManifest,
@@ -78,17 +80,26 @@ export interface ErsetzenAuftrag {
 
 export interface BildAuftrag {
   sourceId: string;
-  /** What fal.ai draws — absent for a number. */
+  /** What fal.ai draws — absent for a picture drawn in code. */
   szene?: string;
-  /** A number picture, drawn in code for free (`zahl-bild.ts`). */
+  /** A number: the numeral on a house-number plate (`zahl-bild.ts`), free. */
   zahl?: number;
+  /** A country: its flag (`flagge-bild.ts`), free. */
+  flagge?: Land;
   /** 0 for a first drawing; a redraw's attempt otherwise (`seedFor`). */
   versuch: number;
 }
 
-/** The jobs fal.ai is paid for — every one but a number drawn in code. */
+/** The SVG of a picture drawn in code, or `null` for a scene fal.ai draws. */
+export function codeSvg(a: BildAuftrag): string | null {
+  if (a.zahl !== undefined) return zahlBildSvg(a.zahl);
+  if (a.flagge !== undefined) return flaggeSvg(a.flagge);
+  return null;
+}
+
+/** The jobs fal.ai is paid for — every scene; code-drawn pictures are free. */
 export function bezahlteBilder(auftraege: BildAuftrag[]): number {
-  return auftraege.filter((a) => a.zahl === undefined).length;
+  return auftraege.filter((a) => a.szene !== undefined).length;
 }
 
 export interface BildArgs {
@@ -163,7 +174,9 @@ export function zuZeichnen(
     const was =
       eintrag.zahl !== undefined
         ? { zahl: eintrag.zahl }
-        : { szene: eintrag.szene };
+        : eintrag.flagge !== undefined
+          ? { flagge: eintrag.flagge }
+          : { szene: eintrag.szene };
     if (redraw) {
       auftraege.push({ sourceId, ...was, versuch: redraw.versuch });
     } else if (!manifest[sourceId]) {
@@ -194,11 +207,12 @@ export function erstelleBildGeneriere(
   uploader: Pick<R2Uploader, 'uploadBytes'>,
   fetchFn: typeof fetch,
   verkleinere: (bytes: Buffer) => Promise<Buffer>,
-  zeichneZahl: (n: number) => Promise<Buffer> = (n) => svgZuPng(zahlBildSvg(n)),
+  rendere: (svg: string) => Promise<Buffer> = (svg) => svgZuPng(svg),
 ): BildGenerierFn {
   return async (a) => {
-    if (a.zahl !== undefined) {
-      const klein = await verkleinere(await zeichneZahl(a.zahl));
+    const svg = codeSvg(a);
+    if (svg !== null) {
+      const klein = await verkleinere(await rendere(svg));
       const key = neuerBildSchluessel();
       await uploader.uploadBytes(key, klein);
       return key;
@@ -279,12 +293,16 @@ async function main(): Promise<void> {
   const bezahlt = bezahlteBilder(auftraege);
   console.log(
     `${unit}: ${auftraege.length} ta rasm, shundan fal.ai ${bezahlt} ta ` +
-      `(≈ $${(bezahlt * BILD_PREIS).toFixed(4)}); sonlar kodda, pulsiz.`,
+      `(≈ $${(bezahlt * BILD_PREIS).toFixed(4)}); son va bayroqlar kodda, pulsiz.`,
   );
   for (const a of auftraege) {
-    console.log(
-      `  ${a.sourceId}@${a.versuch}: ${a.zahl !== undefined ? `son ${a.zahl}` : a.szene}`,
-    );
+    const was =
+      a.zahl !== undefined
+        ? `son ${a.zahl}`
+        : a.flagge !== undefined
+          ? `bayroq ${a.flagge}`
+          : a.szene;
+    console.log(`  ${a.sourceId}@${a.versuch}: ${was}`);
   }
   pruefeBildBudget(auftraege.length);
   if (auftraege.length === 0) {

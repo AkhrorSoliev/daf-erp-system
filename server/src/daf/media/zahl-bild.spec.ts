@@ -1,27 +1,33 @@
 import { zahlBildSvg } from './zahl-bild';
 
-const punkte = (svg: string) => (svg.match(/class="punkt"/g) ?? []).length;
-const zellen = (svg: string) => (svg.match(/class="zelle"/g) ?? []).length;
+const texte = (svg: string) =>
+  [...svg.matchAll(/<text[^>]*font-size="(\d+)"[^>]*>([^<]*)<\/text>/g)].map(
+    (m) => ({ groesse: Number(m[1]), inhalt: m[2] }),
+  );
 
-describe('zahlBildSvg — dots in ten-frames, to count', () => {
-  it.each([0, 1, 7, 10, 11, 19, 20])('draws exactly %i dots', (n) => {
-    expect(punkte(zahlBildSvg(n))).toBe(n);
+describe('zahlBildSvg — one numeral on a house-number plate', () => {
+  it.each([0, 7, 13, 35, 53, 99])('shows exactly the numeral %i', (n) => {
+    expect(texte(zahlBildSvg(n))).toEqual([
+      { groesse: 440, inhalt: String(n) },
+    ]);
   });
 
-  it('one frame up to ten, two frames above', () => {
-    expect(zellen(zahlBildSvg(10))).toBe(10);
-    expect(zellen(zahlBildSvg(11))).toBe(20);
+  it('keeps one size for one and two digits, so size is no clue', () => {
+    expect(texte(zahlBildSvg(7))[0].groesse).toBe(
+      texte(zahlBildSvg(70))[0].groesse,
+    );
   });
 
-  it('zero is an empty frame, not a blank picture', () => {
-    expect(zellen(zahlBildSvg(0))).toBe(10);
+  it('fits 100 with a smaller size', () => {
+    expect(texte(zahlBildSvg(100))).toEqual([{ groesse: 300, inhalt: '100' }]);
   });
 
-  it('carries no text: the digit would give the answer', () => {
-    expect(zahlBildSvg(7)).not.toMatch(/<text/);
+  it('draws the same plate for every number: only the numeral differs', () => {
+    const ohneZahl = (svg: string) => svg.replace(/<text[\s\S]*<\/text>/, '');
+    expect(ohneZahl(zahlBildSvg(3))).toBe(ohneZahl(zahlBildSvg(48)));
   });
 
-  it.each([-1, 21, 2.5])('refuses %p', (n) => {
+  it.each([-1, 101, 3.5])('refuses %p', (n) => {
     expect(() => zahlBildSvg(n)).toThrow();
   });
 

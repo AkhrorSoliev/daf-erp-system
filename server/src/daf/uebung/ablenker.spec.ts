@@ -3,6 +3,7 @@ import {
   istBuchstabe,
   waehleAblenker,
   wortArt,
+  zahlenFalle,
 } from './ablenker';
 import type { MaterialWort } from './frage.types';
 
@@ -65,6 +66,48 @@ describe('bedeutungUeberlappt — never a second right answer', () => {
   ])('%s and %s do not', (a, b) => {
     expect(bedeutungUeberlappt(a, b)).toBe(false);
   });
+});
+
+describe('zahlenFalle — the German number traps', () => {
+  it.each([
+    [35, 53],
+    [13, 30],
+    [70, 17],
+    [7, 17],
+    [19, 9],
+  ])('%i and %i are a trap', (a, b) => {
+    expect(zahlenFalle(a, b)).toBe(true);
+  });
+
+  it.each([
+    [7, 8],
+    [33, 33],
+    [12, 20],
+    [4, 40],
+  ])('%i and %i are not', (a, b) => {
+    expect(zahlenFalle(a, b)).toBe(false);
+  });
+});
+
+describe('waehleAblenker — numbers', () => {
+  const zahlen = Array.from({ length: 20 }, (_, n) =>
+    w(100 + n, `z${n}`, `u${n}`, { anzeige: String(n) }),
+  );
+
+  it.each([0, 0.3, 0.7, 0.99])(
+    'seven always stands next to seventeen (rnd %p)',
+    (r) => {
+      const opts = zahlen.filter((x) => x.anzeige !== '7');
+      const got = waehleAblenker(zahlen[7], opts, {
+        feld: (x) => x.uz,
+        aehnlich: false,
+        bedeutung: true,
+        rnd: () => r,
+      })!;
+      expect(got.map((x) => x.anzeige)).toContain('17');
+      expect(got).toHaveLength(3);
+    },
+  );
 });
 
 describe('waehleAblenker', () => {

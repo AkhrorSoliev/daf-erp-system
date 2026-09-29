@@ -195,17 +195,32 @@ describe('erstelleBildGeneriere', () => {
     expect(uploader.uploadBytes).not.toHaveBeenCalled();
   });
 
+  it('a flag is drawn in code too', async () => {
+    const { fal, uploader, fetchFn, verkleinere } = deps();
+    const rendere = jest.fn(async (_svg: string) => Buffer.from([1]));
+    await erstelleBildGeneriere(
+      fal,
+      uploader,
+      fetchFn,
+      verkleinere,
+      rendere,
+    )({ sourceId: 'u01-s3-usbekistan', flagge: 'UZ', versuch: 0 });
+    expect(rendere.mock.calls[0][0]).toContain('class="stern"');
+    expect(fal.image).not.toHaveBeenCalled();
+    expect(uploader.uploadBytes).toHaveBeenCalled();
+  });
+
   it('a number is drawn in code: no fal.ai call, no download', async () => {
     const { fal, uploader, fetchFn, verkleinere } = deps();
-    const zeichneZahl = jest.fn(async () => Buffer.from([7]));
+    const rendere = jest.fn(async (_svg: string) => Buffer.from([7]));
     const key = await erstelleBildGeneriere(
       fal,
       uploader,
       fetchFn,
       verkleinere,
-      zeichneZahl,
+      rendere,
     )({ sourceId: 'u01-s4-sieben', zahl: 7, versuch: 0 });
-    expect(zeichneZahl).toHaveBeenCalledWith(7);
+    expect(rendere.mock.calls[0][0]).toMatch(/>7<\/text>/);
     expect(fal.image).not.toHaveBeenCalled();
     expect(fetchFn).not.toHaveBeenCalled();
     expect(verkleinere).toHaveBeenCalledWith(Buffer.from([7]));
@@ -235,6 +250,17 @@ describe('number pictures in the plan', () => {
 
   it('cost nothing: only scenes are paid for', () => {
     expect(bezahlteBilder(zuZeichnen(plan, {}, 'u01', []))).toBe(1);
+  });
+
+  it('a flag in the plan is drawn as a flag and costs nothing', () => {
+    const mitFlagge: BildPlan = {
+      'u01-s3-usbekistan': { flagge: 'UZ', tippen: false },
+    };
+    const auftraege = zuZeichnen(mitFlagge, {}, 'u01', []);
+    expect(auftraege).toEqual([
+      { sourceId: 'u01-s3-usbekistan', flagge: 'UZ', versuch: 0 },
+    ]);
+    expect(bezahlteBilder(auftraege)).toBe(0);
   });
 });
 

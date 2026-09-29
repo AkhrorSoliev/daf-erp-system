@@ -133,8 +133,41 @@ export function waehleAblenker<T extends MaterialWort>(
     return opt.aehnlich ? abstand(ziel.de, a.de) - abstand(ziel.de, b.de) : 0;
   });
 
-  const gleiche = sortiert.filter(gleicheArt).length;
+  // A number's German traps always stand beside it (up to two): 17 next to
+  // 7, 30 next to 13, 53 next to 35. The rest is drawn from the window.
+  const zielZahl = zahlVon(ziel);
+  const fallen =
+    zielZahl === null
+      ? []
+      : sortiert
+          .filter((w) => {
+            const z = zahlVon(w);
+            return z !== null && zahlenFalle(zielZahl, z);
+          })
+          .slice(0, Math.min(2, anzahl - 1));
+  const rest = sortiert.filter((w) => !fallen.includes(w));
+
+  const gleiche = rest.filter(gleicheArt).length;
+  const noch = anzahl - fallen.length;
   const breite =
-    gleiche >= anzahl ? Math.max(anzahl, Math.min(fenster, gleiche)) : anzahl;
-  return mischen(sortiert.slice(0, breite), opt.rnd).slice(0, anzahl);
+    gleiche >= noch ? Math.max(noch, Math.min(fenster, gleiche)) : noch;
+  return [...fallen, ...mischen(rest.slice(0, breite), opt.rnd).slice(0, noch)];
+}
+
+function zahlVon(w: Pick<MaterialWort, 'anzeige'>): number | null {
+  return w.anzeige && /^\d+$/.test(w.anzeige) ? Number(w.anzeige) : null;
+}
+
+/**
+ * Two numbers German makes easy to mix up: the digits swapped (35/53 — the
+ * unit is said first), -zehn against -zig (13/30, 17/70), and ten apart
+ * (7/17).
+ */
+export function zahlenFalle(a: number, b: number): boolean {
+  const s = String(a);
+  if (s.length === 2 && String(b) === s[1] + s[0] && a !== b) return true;
+  const teen = (x: number) => x >= 13 && x <= 19;
+  if (teen(a) && b === (a - 10) * 10) return true;
+  if (teen(b) && a === (b - 10) * 10) return true;
+  return Math.abs(a - b) === 10;
 }

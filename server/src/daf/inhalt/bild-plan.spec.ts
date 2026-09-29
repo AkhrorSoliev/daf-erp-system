@@ -56,6 +56,38 @@ describe('validateBildPlan — number pictures drawn in code', () => {
   });
 });
 
+describe('validateBildPlan — flags drawn in code', () => {
+  const usbekistan = {
+    sourceId: 'u01-s3-usbekistan',
+    section: 'u01-s3',
+    de: 'Usbekistan',
+    uz: "O'zbekiston",
+    core: true,
+    order: 10,
+  };
+
+  it('accepts a known flag', () => {
+    const plan = {
+      'u01-s3-usbekistan': { flagge: 'UZ' as const, tippen: false },
+    };
+    expect(validateBildPlan(plan, [usbekistan], {})).toEqual([]);
+  });
+
+  it('rejects a flag it cannot draw', () => {
+    const plan = {
+      'u01-s3-usbekistan': { flagge: 'FR' as never, tippen: false },
+    };
+    expect(validateBildPlan(plan, [usbekistan], {})).toHaveLength(1);
+  });
+
+  it('rejects a flag next to a scene', () => {
+    const plan = {
+      'u01-s3-usbekistan': { flagge: 'UZ' as const, szene: 'x', tippen: false },
+    };
+    expect(validateBildPlan(plan, [usbekistan], {})).toHaveLength(1);
+  });
+});
+
 describe('validateBildPlan', () => {
   it('accepts a planned noun with its generated key', () => {
     const plan = { 'u03-s4-fahrrad': { szene: 'a bicycle', tippen: true } };
