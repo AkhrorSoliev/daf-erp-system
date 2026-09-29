@@ -14,15 +14,10 @@ import { EntityHistoryService } from '../common/entity-history';
 import { CreateLessonCancellationDto } from './dto/create-lesson-cancellation.dto';
 import { resolveBilledEnrollmentId } from '../billing/resolve-billed-enrollment';
 import {
-  addDaysToDateStr,
-  tashkentDateStr,
-  tashkentDayStartUtc,
-} from '../common/date/tashkent';
-import { buildHolidayDateSet } from '../holidays/holiday-date-set';
-import {
   markUnmarkedLessonCancelled,
   reopenAfterCancellationRemoved,
 } from '../unmarked-lessons/unmarked-lesson-transitions';
+import { loadReaskHolidays } from '../unmarked-lessons/reask-holidays';
 import {
   UNMARKED_LESSON_NOT_HELD,
   type UnmarkedLessonNotHeldPayload,
@@ -51,13 +46,6 @@ const DAY_NAME_BY_JS_DAY: Record<number, string> = {
   5: 'friday',
   6: 'saturday',
 };
-
-/**
- * How far ahead `remove` reads holidays for the re-asked task's due date. A
- * holiday spans at most 60 days (HolidaysService), so 90 days always reaches a
- * working day past the longest one.
- */
-const HOLIDAY_LOOKAHEAD_DAYS = 90;
 
 /** Money moves inside these transactions; Serializable, like the billing writes. */
 const SERIALIZABLE_TX = {
@@ -416,21 +404,12 @@ export class LessonCancellationsService {
       cancellation.groupId,
     );
 
-    // Read before the transaction opens: a Serializable transaction should not
-    // wait on a holiday lookup. A group that is gone leaves the branch open
-    // (every branch's holidays) — `reopenAfterCancellationRemoved` then skips
-    // it anyway.
+    // The re-asked task skips holidays when it sets its due date.
     const now = new Date();
-    const today = tashkentDateStr(now);
-    const group = await this.prisma.group.findUnique({
-      where: { id: cancellation.groupId },
-      select: { branchId: true },
-    });
-    const holidays = await buildHolidayDateSet(
+    const holidays = await loadReaskHolidays(
       this.prisma,
-      tashkentDayStartUtc(today),
-      tashkentDayStartUtc(addDaysToDateStr(today, HOLIDAY_LOOKAHEAD_DAYS)),
-      group?.branchId,
+      cancellation.groupId,
+      now,
     );
 
     return this.prisma.$transaction(async (tx) => {

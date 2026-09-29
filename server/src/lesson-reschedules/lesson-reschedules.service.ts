@@ -13,6 +13,16 @@ import { EntityHistoryService } from '../common/entity-history';
 import { CreateLessonRescheduleDto } from './dto/create-lesson-reschedule.dto';
 import { UpdateLessonRescheduleDto } from './dto/update-lesson-reschedule.dto';
 import { resolveBilledEnrollmentId } from '../billing/resolve-billed-enrollment';
+import {
+  assertLinkedMakeUpAhead,
+  markUnmarkedLessonRescheduled,
+  reopenAfterRescheduleRemoved,
+} from '../unmarked-lessons/unmarked-lesson-transitions';
+import {
+  UNMARKED_LESSON_NOT_HELD,
+  type UnmarkedLessonNotHeldPayload,
+} from '../unmarked-lessons/unmarked-lesson-events';
+import { loadReaskHolidays } from '../unmarked-lessons/reask-holidays';
 
 /**
  * Payload emitted on lesson-reschedule create / update — consumed by
@@ -140,7 +150,7 @@ export class LessonReschedulesService {
     scheduledById: number,
     roles: string[] = [],
   ) {
-    const reschedule = await this.createInTransaction(
+    const { reschedule, decision } = await this.createInTransaction(
       dto,
       companyId,
       scheduledById,
@@ -161,6 +171,19 @@ export class LessonReschedulesService {
       scheduledById,
       companyId,
     } satisfies LessonReschedulePayload);
+
+    // «Dars bo'ldimi?»: the group is told the lesson moved, like a cancellation.
+    if (decision) {
+      this.eventEmitter.emit(UNMARKED_LESSON_NOT_HELD, {
+        ...decision,
+        reason: dto.reason ?? '',
+        decidedById: scheduledById,
+        outcome: 'RESCHEDULED',
+        newDate: dto.newDate,
+        newLessonStartTime: dto.newLessonStartTime ?? null,
+        newLessonEndTime: dto.newLessonEndTime ?? null,
+      } satisfies UnmarkedLessonNotHeldPayload);
+    }
     return reschedule;
   }
 
@@ -387,7 +410,20 @@ export class LessonReschedulesService {
           tx,
         });
 
-        return reschedule;
+        // «Dars bo'ldimi?» (spec §3.5 B): moving a lesson that waits for an
+        // answer answers it — the make-up lesson must still be ahead, and a
+        // lesson answered «Bo'ldi» cannot be moved.
+        const decision = await markUnmarkedLessonRescheduled(tx, {
+          groupId: dto.groupId,
+          originalDate,
+          rescheduleId: reschedule.id,
+          actorId: scheduledById,
+          newDate,
+          newStartTime: effectiveStart,
+          now: new Date(),
+        });
+
+        return { reschedule, decision };
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -547,6 +583,25 @@ export class LessonReschedulesService {
           );
         }
 
+        // Editing the make-up lesson of a «Dars bo'ldimi?» answer keeps it ahead
+        // of now — but only when the edit MOVES it. A reason or room fix on a
+        // make-up lesson that has already started must still go through.
+        const newDateChanged =
+          effectiveNewDate.getTime() !== existing.newDate.getTime();
+        const effectiveNewStart =
+          effectiveStartOverride ?? group.lessonStartTime ?? null;
+        const startChanged =
+          effectiveNewStart !==
+          (existing.newLessonStartTime ?? group.lessonStartTime ?? null);
+        if (newDateChanged || startChanged) {
+          await assertLinkedMakeUpAhead(tx, {
+            rescheduleId: existing.id,
+            newDate: effectiveNewDate,
+            newStartTime: effectiveNewStart,
+            now: new Date(),
+          });
+        }
+
         // Room override scoping — same as create.
         if (effectiveRoomOverride) {
           const room = await tx.room.findFirst({
@@ -566,8 +621,6 @@ export class LessonReschedulesService {
 
         // If newDate is changing, re-run destination checks against the
         // new date so we don't double-book this group there.
-        const newDateChanged =
-          effectiveNewDate.getTime() !== existing.newDate.getTime();
         if (newDateChanged) {
           const existingDestination = await tx.lessonReschedule.findFirst({
             where: {
@@ -694,7 +747,8 @@ export class LessonReschedulesService {
   /**
    * Soft delete: removes the reschedule but does NOT auto-restore
    * attendance on either date. Admins must re-take attendance manually
-   * on whichever date the lesson actually happened. UI explains this.
+   * on whichever date the lesson actually happened. UI explains this. A
+   * lesson whose «Dars bo'ldimi?» the move answered is asked again.
    */
   async remove(
     id: string,
@@ -712,25 +766,46 @@ export class LessonReschedulesService {
       roles,
       existing.groupId,
     );
-    return this.prisma.$transaction(async (tx) => {
-      const row = await tx.lessonReschedule.update({
-        where: { id },
-        data: { deletedAt: new Date(), deletedById: userId },
-      });
-      await this.entityHistoryService.recordDelete({
-        entityType: 'Group',
-        entityId: existing.groupId,
-        oldValues: {
-          action: 'KOCHIRILGAN_DARS_OCHIRILDI',
-          aslSana: existing.originalDate.toISOString().slice(0, 10),
-          yangiSana: existing.newDate.toISOString().slice(0, 10),
-        },
-        changedById: userId,
-        companyId,
-        tx,
-      });
-      return row;
-    });
+    // The re-asked task skips holidays when it sets its due date.
+    const now = new Date();
+    const holidays = await loadReaskHolidays(
+      this.prisma,
+      existing.groupId,
+      now,
+    );
+    // Serializable, like create and update: the reopen reads, then writes a
+    // row the lesson-end sweep also writes.
+    return this.prisma.$transaction(
+      async (tx) => {
+        const row = await tx.lessonReschedule.update({
+          where: { id },
+          data: { deletedAt: new Date(), deletedById: userId },
+        });
+        await this.entityHistoryService.recordDelete({
+          entityType: 'Group',
+          entityId: existing.groupId,
+          oldValues: {
+            action: 'KOCHIRILGAN_DARS_OCHIRILDI',
+            aslSana: existing.originalDate.toISOString().slice(0, 10),
+            yangiSana: existing.newDate.toISOString().slice(0, 10),
+          },
+          changedById: userId,
+          companyId,
+          tx,
+        });
+        await reopenAfterRescheduleRemoved(tx, {
+          rescheduleId: id,
+          now,
+          holidays,
+        });
+        return row;
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 10_000,
+        timeout: 30_000,
+      },
+    );
   }
 
   private parseDate(dateStr: string): Date {

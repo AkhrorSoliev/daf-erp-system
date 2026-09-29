@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Prisma } from '@prisma/client';
 import { LessonReschedulesService } from './lesson-reschedules.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LessonBillingService } from '../billing/lesson-billing.service';
@@ -10,10 +11,16 @@ describe('LessonReschedulesService', () => {
   let service: LessonReschedulesService;
   let prisma: any;
   let tx: any;
+  let emitter: { emit: jest.Mock };
 
   beforeEach(async () => {
+    emitter = { emit: jest.fn() };
     tx = {
-      group: { findFirst: jest.fn(), findMany: jest.fn() },
+      group: {
+        findFirst: jest.fn(),
+        findMany: jest.fn(),
+        findUnique: jest.fn().mockResolvedValue({ name: 'A1' }),
+      },
       room: { findFirst: jest.fn(), findMany: jest.fn() },
       lessonCancellation: {
         findFirst: jest.fn(),
@@ -30,6 +37,15 @@ describe('LessonReschedulesService', () => {
       },
       attendance: { findMany: jest.fn().mockResolvedValue([]) },
       enrollment: { findFirst: jest.fn() },
+      // «Dars bo'ldimi?» (spec 2026-09-29): moving a lesson answers the
+      // question, editing the make-up lesson reads its row, and deleting the
+      // move asks again (which writes the task).
+      unmarkedLesson: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        findFirst: jest.fn().mockResolvedValue(null),
+        update: jest.fn(),
+      },
+      comment: { create: jest.fn().mockResolvedValue({ id: 'c1' }) },
       // A reschedule rewrites a group's timetable, so the caller is now checked
       // against that group's branch (`assertCallerMayTouchGroup`). A CEO spans
       // every branch — the shape these cases assume.
@@ -40,10 +56,15 @@ describe('LessonReschedulesService', () => {
           branches: [],
           roles: [{ role: { name: 'CEO' } }],
         }),
+        findMany: jest.fn().mockResolvedValue([]),
       },
     };
     prisma = {
-      group: { findFirst: jest.fn(), findMany: jest.fn() },
+      group: {
+        findFirst: jest.fn(),
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+      },
       // A reschedule rewrites a group's timetable, so the caller is now checked
       // against that group's branch (`assertCallerMayTouchGroup`). A CEO spans
       // every branch — the shape these cases assume.
@@ -57,7 +78,13 @@ describe('LessonReschedulesService', () => {
       },
       room: { findMany: jest.fn() },
       lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
-      lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
+      lessonReschedule: {
+        findFirst: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      // `remove` reads the branch's holidays before its transaction opens, so
+      // the re-asked task skips them.
+      holiday: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn((cb) => cb(tx)),
     };
 
@@ -77,7 +104,7 @@ describe('LessonReschedulesService', () => {
             recordDelete: jest.fn(),
           },
         },
-        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: EventEmitter2, useValue: emitter },
       ],
     }).compile();
 
@@ -394,6 +421,67 @@ describe('LessonReschedulesService', () => {
       const updateArgs = tx.lessonReschedule.update.mock.calls[0][0];
       expect(updateArgs.data.newRoom).toEqual({ disconnect: true });
     });
+
+    // The make-up lesson (04-22, 10:00 by the group's default) is the answer
+    // to a «Dars bo'ldimi?» question: `unmarkedLesson.findFirst` finds it.
+    describe("the make-up lesson of a «Dars bo'ldimi?» answer", () => {
+      beforeEach(() => {
+        tx.lessonReschedule.findFirst
+          .mockResolvedValueOnce(existingReschedule) // initial load
+          .mockResolvedValue(null); // no duplicate destination
+        tx.group.findFirst.mockResolvedValue(groupRow);
+        tx.group.findMany.mockResolvedValue([]); // no schedule conflicts
+        tx.lessonReschedule.update.mockResolvedValue({ id: 'rs-1' });
+        tx.unmarkedLesson.findFirst.mockResolvedValue({ id: 'u1' });
+      });
+      afterEach(() => jest.useRealTimers());
+
+      it('refuses to move it into the past', async () => {
+        // 2026-04-23 14:00 Tashkent — 04-16 is behind us.
+        jest.useFakeTimers({
+          now: new Date('2026-04-23T09:00:00.000Z'),
+          advanceTimers: true,
+        });
+
+        await expect(
+          service.update('rs-1', { newDate: '2026-04-16' }, 1, 99),
+        ).rejects.toThrow("Qo'shimcha dars hali boshlanmagan bo'lishi kerak");
+        expect(tx.lessonReschedule.update).not.toHaveBeenCalled();
+      });
+
+      it('refuses to move its start time behind now', async () => {
+        // The lesson day itself, 14:00 Tashkent; 11:00 has already passed.
+        jest.useFakeTimers({
+          now: new Date('2026-04-22T09:00:00.000Z'),
+          advanceTimers: true,
+        });
+
+        await expect(
+          service.update(
+            'rs-1',
+            { newLessonStartTime: '11:00', newLessonEndTime: '12:00' },
+            1,
+            99,
+          ),
+        ).rejects.toThrow("Qo'shimcha dars hali boshlanmagan bo'lishi kerak");
+      });
+
+      it('lets the reason be edited after the make-up lesson has started', async () => {
+        // 14:00 Tashkent on the lesson day: the 10:00 lesson has started.
+        jest.useFakeTimers({
+          now: new Date('2026-04-22T09:00:00.000Z'),
+          advanceTimers: true,
+        });
+
+        await service.update('rs-1', { reason: 'Izoh tuzatildi' }, 1, 99);
+
+        expect(tx.lessonReschedule.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({ reason: 'Izoh tuzatildi' }),
+          }),
+        );
+      });
+    });
   });
 
   describe('create — override cascade on originalDate', () => {
@@ -458,6 +546,183 @@ describe('LessonReschedulesService', () => {
       await service.create(baseDto, 1, 99);
 
       expect(tx.lessonTeacherOverride.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("create — «Dars bo'ldimi?» (ADR-0054)", () => {
+    const dto = {
+      groupId: 'group-1',
+      originalDate: '2026-04-15',
+      newDate: '2026-04-22',
+      reason: 'Ustoz kasal',
+    };
+    const pending = {
+      id: 'u1',
+      companyId: 1,
+      branchId: 7,
+      groupId: 'group-1',
+      date: new Date('2026-04-15T00:00:00.000Z'),
+      lessonStartTime: '16:00',
+      lessonEndTime: '17:30',
+      status: 'PENDING',
+      taskCommentId: null,
+    };
+
+    beforeEach(() => {
+      tx.group.findFirst.mockResolvedValue({
+        id: 'group-1',
+        branchId: 7,
+        name: 'A1',
+        exactDays: ['wednesday'],
+        roomId: null,
+        lessonStartTime: null,
+        lessonEndTime: null,
+      });
+      tx.lessonReschedule.findFirst.mockResolvedValue(null);
+      tx.lessonCancellation.findFirst.mockResolvedValue(null);
+      tx.lessonReschedule.create = jest
+        .fn()
+        .mockResolvedValue({ id: 'rs-1', groupId: 'group-1' });
+      jest.useFakeTimers({
+        now: new Date('2026-04-16T09:00:00.000Z'),
+        advanceTimers: true,
+      });
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('answers a lesson waiting for an answer as moved and tells the group', async () => {
+      tx.unmarkedLesson.findUnique.mockResolvedValue(pending);
+      await service.create(dto, 1, 99);
+      expect(tx.unmarkedLesson.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: 'RESCHEDULED',
+            rescheduleId: 'rs-1',
+          }),
+        }),
+      );
+      expect(emitter.emit).toHaveBeenCalledWith(
+        'unmarked-lesson.not-held',
+        expect.objectContaining({
+          outcome: 'RESCHEDULED',
+          newDate: '2026-04-22',
+          reason: 'Ustoz kasal',
+          groupName: 'A1',
+        }),
+      );
+    });
+
+    it('refuses a make-up lesson that has already passed', async () => {
+      jest.setSystemTime(new Date('2026-04-23T09:00:00.000Z'));
+      tx.unmarkedLesson.findUnique.mockResolvedValue(pending);
+      await expect(service.create(dto, 1, 99)).rejects.toThrow(
+        "Qo'shimcha dars hali boshlanmagan bo'lishi kerak",
+      );
+    });
+
+    it('leaves an ordinary reschedule alone', async () => {
+      await service.create(dto, 1, 99);
+      expect(tx.unmarkedLesson.update).not.toHaveBeenCalled();
+      expect(emitter.emit).not.toHaveBeenCalledWith(
+        'unmarked-lesson.not-held',
+        expect.anything(),
+      );
+    });
+  });
+
+  describe("remove — re-asking «Dars bo'ldimi?»", () => {
+    // 2026-09-30 13:00 Tashkent (Wednesday). The re-asked task is due on the
+    // next working day, and a fixed clock keeps that date from drifting.
+    const NOW = new Date('2026-09-30T08:00:00.000Z');
+    const answered = {
+      id: 'u1',
+      companyId: 1,
+      branchId: 2,
+      groupId: 'group-1',
+      date: new Date('2026-04-15T00:00:00.000Z'),
+      lessonStartTime: '16:00',
+      lessonEndTime: '17:30',
+      status: 'RESCHEDULED',
+      rescheduleId: 'rs-1',
+    };
+
+    beforeEach(() => {
+      jest.useFakeTimers({ now: NOW, advanceTimers: true });
+      prisma.lessonReschedule.findFirst.mockResolvedValue({
+        id: 'rs-1',
+        groupId: 'group-1',
+        originalDate: new Date('2026-04-15T00:00:00.000Z'),
+        newDate: new Date('2026-10-07T00:00:00.000Z'),
+      });
+      // The caller-may-touch-group check, then the holiday lookup's branch.
+      prisma.group.findFirst.mockResolvedValue({ branchId: 2 });
+      prisma.group.findUnique.mockResolvedValue({ branchId: 2 });
+      tx.lessonReschedule.update.mockResolvedValue({ id: 'rs-1' });
+      tx.unmarkedLesson.findFirst.mockResolvedValue(answered);
+      tx.group.findUnique.mockResolvedValue({ name: '#014', deletedAt: null });
+      tx.user.findMany.mockResolvedValue([{ id: 3 }]);
+      tx.comment.create.mockResolvedValue({ id: 'c2' });
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('re-asks the question of a lesson whose move is deleted', async () => {
+      await service.remove('rs-1', 1, 99, ['CEO']);
+
+      expect(tx.unmarkedLesson.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: 'PENDING',
+            rescheduleId: null,
+            taskCommentId: 'c2',
+          }),
+        }),
+      );
+    });
+
+    // The set is read for the GROUP's branch, from today on, before the
+    // transaction opens — a holiday read is not something the Serializable
+    // transaction should wait on.
+    it('skips the branch holidays when it sets the new due date', async () => {
+      // Thursday 01.10 is a holiday, so the task moves to Friday 02.10 10:00.
+      prisma.holiday.findMany.mockResolvedValue([
+        {
+          date: new Date('2026-10-01T00:00:00.000Z'),
+          endDate: new Date('2026-10-01T00:00:00.000Z'),
+        },
+      ]);
+
+      await service.remove('rs-1', 1, 99, ['CEO']);
+
+      expect(prisma.holiday.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: [{ branchId: null }, { branchId: 2 }],
+          }),
+        }),
+      );
+      expect(prisma.holiday.findMany.mock.invocationCallOrder[0]).toBeLessThan(
+        prisma.$transaction.mock.invocationCallOrder[0],
+      );
+      expect(tx.comment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            dueDate: new Date('2026-10-02T05:00:00.000Z'),
+          }),
+        }),
+      );
+    });
+
+    // `reopenAfterRescheduleRemoved` reads, then creates an UnmarkedLesson row
+    // that the Serializable lesson-end sweep also writes.
+    it('runs the transaction Serializable, like create and update', async () => {
+      await service.remove('rs-1', 1, 99, ['CEO']);
+
+      expect(prisma.$transaction).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.objectContaining({
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        }),
+      );
     });
   });
 });
