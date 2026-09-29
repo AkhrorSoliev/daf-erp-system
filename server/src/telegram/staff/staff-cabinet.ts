@@ -1,6 +1,7 @@
 import type { LoggerService } from '@nestjs/common';
 import { Markup, type Telegram } from 'telegraf';
 import {
+  signInStaffWhere,
   staffLinkedToChatWhere,
   staffPortalFor,
   type StaffPortal,
@@ -246,6 +247,47 @@ export class StaffCabinet {
       ]),
     );
     return true;
+  }
+
+  /**
+   * Server ishga tushganda: Telegram'i bog'langan har bir xodimning «Kabinet»
+   * tugmasi — o'z kabineti (`/start` qiladigan ishning o'zi). Busiz tugma
+   * faqat xodim `/start` bosganda almashadi: ADR-0045 dan oldin bog'langan
+   * xodimlar bosmagan va «Kabinet» ularni o'quvchi kabinetiga olib borardi.
+   *
+   * Bir chatga bir nechta xodim hisobi — tegilmaydi (`findStaffForChat` kabi).
+   * Xodimligi tugagan chatlar bu yerda qaytarilmaydi — ularni `/start`
+   * qaytaradi (`resetLeftoverButton`). Qaytgani — tugmasi qo'yilgan chatlar.
+   */
+  async syncButtons(): Promise<number> {
+    if (!this.studentMiniAppUrl) return 0;
+    const rows = await this.prisma.user.findMany({
+      where: { ...signInStaffWhere(), telegramChatId: { not: null } },
+      select: {
+        telegramChatId: true,
+        roles: { select: { roleId: true } },
+      },
+    });
+
+    const byChat = new Map<string, number[][]>();
+    for (const row of rows) {
+      const chatId = row.telegramChatId!;
+      byChat.set(chatId, [
+        ...(byChat.get(chatId) ?? []),
+        row.roles.map((r) => r.roleId),
+      ]);
+    }
+
+    let set = 0;
+    for (const [chatId, accounts] of byChat) {
+      if (accounts.length !== 1) continue;
+      const portal = staffPortalFor(accounts[0]);
+      const url = portal && staffMiniAppUrl(this.studentMiniAppUrl, portal);
+      if (!url) continue;
+      await setChatCabinetButton(this.telegram, chatId, url, this.logger);
+      set++;
+    }
+    return set;
   }
 
   /** Chatning «Kabinet» tugmasini botning standartiga (o'quvchi) qaytaradi. */

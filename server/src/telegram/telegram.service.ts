@@ -604,6 +604,18 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.miniAppUrl,
       this.logger,
     );
+    // Xodimlarning «Kabinet» tugmasi — ishga tushishni kutdirmaydi: har chat
+    // uchun bitta Telegram so'rovi, xatosi faqat log.
+    void this.staffCabinet
+      .syncButtons()
+      .then((n) => {
+        if (n > 0) this.logger.log(`Xodim «Kabinet» tugmalari: ${n} ta chat`);
+      })
+      .catch((err: Error) =>
+        this.logger.warn(
+          `Xodim «Kabinet» tugmalarini o'rnatib bo'lmadi: ${err.message}`,
+        ),
+      );
 
     // Launch bot (polling mode for development)
     const webhookUrl = this.configService.get<string>('TELEGRAM_WEBHOOK_URL');
