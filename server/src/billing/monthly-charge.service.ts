@@ -22,6 +22,10 @@ import {
 import { chargeStartDate } from './charge-start-date';
 import { DepartureReleaseInput } from './departure-release';
 import {
+  releaseCancelledLesson,
+  type CancelledLessonReleaseResult,
+} from './cancelled-lesson-release';
+import {
   CONTRACT_62_START_DAY,
   DEPARTURE_POLICIES,
   DeparturePolicy,
@@ -1029,7 +1033,25 @@ export class MonthlyChargeService {
     // aynan shular qaytadan qoplanadi. `<= returnDate` bo'lganlari
     // (muzlatish davomida o'tib ketgan darslar) ABADIY chiqarilgan bo'lib
     // qoladi — sinf-darajasidagi izohdagi sabab bilan.
-    const toRestore = frozenOutBefore.filter((d) => d > day);
+    // A cancelled lesson was released for good (ADR-0053): the return must
+    // not bill a day the centre did not hold.
+    const cancelled = await tx.lessonCancellation.findMany({
+      where: {
+        groupId: charge.groupId,
+        deletedAt: null,
+        date: {
+          gte: new Date(Date.UTC(periodYear, periodMonth - 1, 1)),
+          lt: new Date(Date.UTC(periodYear, periodMonth, 1)),
+        },
+      },
+      select: { date: true },
+    });
+    const cancelledDays = new Set(
+      cancelled.map((c) => tashkentDateStr(c.date)),
+    );
+    const toRestore = frozenOutBefore.filter(
+      (d) => d > day && !cancelledDays.has(d),
+    );
     const missing = toRestore.length;
     if (missing === 0) return null;
 
@@ -1551,6 +1573,17 @@ export class MonthlyChargeService {
     month: number,
   ): Promise<{ excludedDates: string[]; addedDates: string[] }> {
     return this.resolveMonthPlan(tx, groupId, branchId, year, month);
+  }
+
+  /**
+   * A cancelled lesson back to every monthly charge that billed it, today
+   * (ADR-0053). The rule lives in `cancelled-lesson-release.ts`.
+   */
+  releaseCancelledLesson(
+    tx: Prisma.TransactionClient,
+    params: Parameters<typeof releaseCancelledLesson>[2],
+  ): Promise<CancelledLessonReleaseResult> {
+    return releaseCancelledLesson(tx, this.transactionsWrite, params);
   }
 
   /**

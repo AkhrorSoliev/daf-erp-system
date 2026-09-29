@@ -2431,6 +2431,31 @@ describe('MonthlyChargeService', () => {
       prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue(charge);
     });
 
+    // ADR-0053: a cancelled lesson was given back for good — coming back from
+    // a freeze must not bill it again.
+    it('does not bill again a day the centre cancelled', async () => {
+      prismaMock.lessonCancellation.findMany.mockResolvedValueOnce([
+        { date: new Date('2026-10-20T00:00:00.000Z') },
+      ]);
+
+      const res = await service.restoreChargeForReturn(tx, {
+        enrollmentId: 'enr-1',
+        returnDate: new Date('2026-10-15T00:00:00.000Z'),
+        companyId: 1001,
+        reason: 'Muzlatishdan chiqarildi',
+        today: '2026-10-15',
+      });
+
+      expect(res?.lessons).toBe(6);
+      expect(prismaMock.enrollmentMonthlyCharge.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            frozenOutDates: ['2026-10-13', '2026-10-15', '2026-10-20'],
+          }),
+        }),
+      );
+    });
+
     it('qaytganidan keyingi (frozenOutDates ichidan) sanalarni qayta hisoblaydi', async () => {
       // 15-oktabrda qaytdi. frozenOutDates ichidan >15.10 bo'lganlari:
       // 17,20,22,24,27,29,31 = 7. 13 va 15 <=15.10 bo'lgani uchun ABADIY

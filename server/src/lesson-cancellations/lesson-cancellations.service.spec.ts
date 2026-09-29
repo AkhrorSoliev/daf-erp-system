@@ -4,12 +4,14 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LessonCancellationsService } from './lesson-cancellations.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LessonBillingService } from '../billing/lesson-billing.service';
+import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { EntityHistoryService } from '../common/entity-history';
 
 describe('LessonCancellationsService', () => {
   let service: LessonCancellationsService;
   let prisma: any;
   let billing: any;
+  let monthly: any;
   let history: any;
   let tx: any;
 
@@ -59,6 +61,11 @@ describe('LessonCancellationsService', () => {
       $transaction: jest.fn((cb) => cb(tx)),
     };
     billing = { processAttendanceBilling: jest.fn() };
+    monthly = {
+      releaseCancelledLesson: jest
+        .fn()
+        .mockResolvedValue({ students: 0, refunded: 0 }),
+    };
     history = {
       recordCreate: jest.fn(),
       recordDelete: jest.fn(),
@@ -72,6 +79,7 @@ describe('LessonCancellationsService', () => {
         LessonCancellationsService,
         { provide: PrismaService, useValue: prisma },
         { provide: LessonBillingService, useValue: billing },
+        { provide: MonthlyChargeService, useValue: monthly },
         { provide: EntityHistoryService, useValue: history },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
@@ -131,6 +139,47 @@ describe('LessonCancellationsService', () => {
       expect(billing.processAttendanceBilling).not.toHaveBeenCalled();
       expect(history.recordCreate).toHaveBeenCalledWith(
         expect.objectContaining({ entityType: 'LessonCancellation' }),
+      );
+    });
+
+    // ADR-0053: nobody was marked, yet every monthly charge billed the day —
+    // the cancellation gives it back in the same transaction.
+    it('releases the day from the monthly charges even with no attendance', async () => {
+      tx.group.findFirst.mockResolvedValue({
+        id: 'group-1',
+        branchId: 2,
+        name: '#900',
+        exactDays: ['wednesday'],
+      });
+      tx.lessonCancellation.findFirst.mockResolvedValue(null);
+      tx.lessonCancellation.create.mockResolvedValue({
+        id: 'cancel-1',
+        groupId: 'group-1',
+        date: new Date(),
+        reason: dto.reason,
+      });
+      monthly.releaseCancelledLesson.mockResolvedValue({
+        students: 4,
+        refunded: 150_000,
+      });
+
+      await service.create(dto, 1, 99);
+
+      expect(monthly.releaseCancelledLesson).toHaveBeenCalledWith(
+        tx,
+        expect.objectContaining({
+          groupId: 'group-1',
+          cancellationId: 'cancel-1',
+          performedById: 99,
+        }),
+      );
+      expect(history.recordCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          newValues: expect.objectContaining({
+            pulQaytganOquvchilar: 4,
+            qaytarilganSumma: 150_000,
+          }),
+        }),
       );
     });
 

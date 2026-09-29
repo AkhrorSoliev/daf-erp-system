@@ -1187,6 +1187,7 @@ Per-group lesson cancellation distinct from `Holiday` (company-wide).
   1. Insert `LessonCancellation` row.
   2. Find PRESENT/LATE attendances for `(groupId, date)`.
   3. For each: flip status to EXCUSED, set `cancellationId`, run `lessonBillingService.processAttendanceBilling(tx, oldStatus=PRESENT, newStatus=EXCUSED)` — which reverses consumption + accrual + restores prepaid (only when consumption existed).
+  4. **Release the day from every monthly charge that billed it (ADR-0053)** — `MonthlyChargeService.releaseCancelledLesson` → `billing/cancelled-lesson-release.ts`, marked or not. One lesson's price (the departure rule: discounted, capped at `chargedAmount`) goes back to the balance as a `monthly-release` ADJUSTMENT carrying `cancellationId`; the day joins `frozenOutDates`; a student counted EXCUSED that day loses the matching `excusedLessons` credit (the money came back now, not next month). Before this, a student with no attendance mark got nothing — and a lesson the centre never held is the day nobody marks. A day already in `frozenOutDates` is skipped, so a repeat pays nothing. `restoreChargeForReturn` never re-covers a cancelled day.
 - `DELETE /lesson-cancellations/:id` is **soft** — it does NOT auto-restore attendance/billing. Admins must re-take attendance manually. UI explains this in the confirm dialog.
 - Teacher scope: `GET /lesson-cancellations` requires `groupId`; teacher role is additionally constrained to groups they teach (returns `[]` for unauthorised groups instead of leaking 403/404).
 
