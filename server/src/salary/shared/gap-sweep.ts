@@ -3,6 +3,7 @@ import {
   monthlyPerLessonKeyForLesson,
   type FrozenMonthlyCharge,
 } from '../../common/finance/monthly-per-lesson';
+import { lessonKey } from '../../unmarked-lessons/forfeited-lessons';
 import { perLessonAccrual, type RateVersion } from './deserved-math';
 import { NEW_STUDENT_TOPUP_MIN_LESSONS } from './topup';
 
@@ -102,6 +103,13 @@ export interface GapSweepInput {
    * without the other.
    */
   skipZeroAmount?: boolean;
+  /**
+   * `lessonKey(groupId, date)` of lessons whose teacher pay is forfeited
+   * (ADR-0054): nobody marked them before they ended. Required so no caller
+   * can forget it — without it the salary page would show the centre owing
+   * the teacher a lesson that `createAccrual` then refuses to pay.
+   */
+  forfeitedLessons: ReadonlySet<string>;
 }
 
 export interface GapSweepResult {
@@ -239,6 +247,7 @@ export function sweepGapLessons(input: GapSweepInput): GapSweepResult {
   for (const att of input.attendances) {
     const g = input.groupMap.get(att.groupId);
     if (!g) continue;
+    if (input.forfeitedLessons.has(lessonKey(att.groupId, att.date))) continue;
 
     // BR-09: withhold the new-student top-up until they have attended enough
     // lessons in this group — mirrors the cron, so the shown gap equals what
