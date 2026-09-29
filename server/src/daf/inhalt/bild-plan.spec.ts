@@ -22,6 +22,40 @@ const woerter = [
 
 const KEY = 'daf/bild/0123456789abcdef0123456789abcdef.jpg';
 
+describe('validateBildPlan — number pictures drawn in code', () => {
+  const sieben = {
+    sourceId: 'u01-s4-sieben',
+    section: 'u01-s4',
+    de: 'sieben',
+    anzeige: '7',
+    uz: 'yetti',
+    core: true,
+    order: 8,
+  };
+
+  it('accepts a number whose dots match its digit', () => {
+    const plan = { 'u01-s4-sieben': { zahl: 7, tippen: false } };
+    expect(validateBildPlan(plan, [sieben], {})).toEqual([]);
+  });
+
+  it('rejects dots that do not match the number', () => {
+    const plan = { 'u01-s4-sieben': { zahl: 8, tippen: false } };
+    expect(validateBildPlan(plan, [sieben], {})[0]).toMatch(/7/);
+  });
+
+  it('rejects a number picture for a word that is not a number', () => {
+    const plan = { 'u03-s5-oft': { zahl: 3, tippen: false } };
+    expect(validateBildPlan(plan, woerter, {})).toHaveLength(1);
+  });
+
+  it('wants a scene or a number, not both and not neither', () => {
+    const beide = { 'u01-s4-sieben': { zahl: 7, szene: 'x', tippen: false } };
+    const keins = { 'u01-s4-sieben': { tippen: false } };
+    expect(validateBildPlan(beide, [sieben], {})).toHaveLength(1);
+    expect(validateBildPlan(keins, [sieben], {})).toHaveLength(1);
+  });
+});
+
 describe('validateBildPlan', () => {
   it('accepts a planned noun with its generated key', () => {
     const plan = { 'u03-s4-fahrrad': { szene: 'a bicycle', tippen: true } };

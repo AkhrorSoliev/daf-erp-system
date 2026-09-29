@@ -1,4 +1,100 @@
 {
+  "u01-s1-guten-morgen": {
+    "szene": "a sun rising over green hills, a young woman in pajamas stretching happily at an open window, mouth closed, a cup of tea on the windowsill, soft early morning light",
+    "tippen": false
+  },
+  "u01-s2-danke": {
+    "szene": "one person hands a small wrapped gift box to a friend, the friend smiles with mouth closed and puts a hand on the heart",
+    "tippen": false
+  },
+  "u01-s3-deutschland": {
+    "szene": "the Brandenburg Gate in Berlin with its columns and the horse chariot statue on top, under a clear blue sky",
+    "tippen": false
+  },
+  "u01-s3-usbekistan": {
+    "szene": "the Registan square in Samarkand: three old madrasas with turquoise domes and tall tiled portals under a clear blue sky",
+    "tippen": false
+  },
+  "u01-s4-null": {
+    "zahl": 0,
+    "tippen": false
+  },
+  "u01-s4-eins": {
+    "zahl": 1,
+    "tippen": false
+  },
+  "u01-s4-zwei": {
+    "zahl": 2,
+    "tippen": false
+  },
+  "u01-s4-drei": {
+    "zahl": 3,
+    "tippen": false
+  },
+  "u01-s4-vier": {
+    "zahl": 4,
+    "tippen": false
+  },
+  "u01-s4-fuenf": {
+    "zahl": 5,
+    "tippen": false
+  },
+  "u01-s4-sechs": {
+    "zahl": 6,
+    "tippen": false
+  },
+  "u01-s4-sieben": {
+    "zahl": 7,
+    "tippen": false
+  },
+  "u01-s4-acht": {
+    "zahl": 8,
+    "tippen": false
+  },
+  "u01-s4-neun": {
+    "zahl": 9,
+    "tippen": false
+  },
+  "u01-s4-zehn": {
+    "zahl": 10,
+    "tippen": false
+  },
+  "u01-s4-elf": {
+    "zahl": 11,
+    "tippen": false
+  },
+  "u01-s4-zwoelf": {
+    "zahl": 12,
+    "tippen": false
+  },
+  "u01-s4-dreizehn": {
+    "zahl": 13,
+    "tippen": false
+  },
+  "u01-s4-vierzehn": {
+    "zahl": 14,
+    "tippen": false
+  },
+  "u01-s4-fuenfzehn": {
+    "zahl": 15,
+    "tippen": false
+  },
+  "u01-s4-sechzehn": {
+    "zahl": 16,
+    "tippen": false
+  },
+  "u01-s4-siebzehn": {
+    "zahl": 17,
+    "tippen": false
+  },
+  "u01-s4-achtzehn": {
+    "zahl": 18,
+    "tippen": false
+  },
+  "u01-s4-neunzehn": {
+    "zahl": 19,
+    "tippen": false
+  },
   "u02-s1-familie": {
     "szene": "a happy family of four standing together: a mother, a father, a boy and a girl",
     "tippen": false

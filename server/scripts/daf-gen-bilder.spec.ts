@@ -1,6 +1,7 @@
 import {
   BILD_CHEGARASI,
   BILD_PREIS,
+  bezahlteBilder,
   erstelleBildGeneriere,
   generiereBilderNacheinander,
   parseBildArgs,
@@ -192,6 +193,48 @@ describe('erstelleBildGeneriere', () => {
     ).rejects.toThrow(/404/);
     expect(verkleinere).not.toHaveBeenCalled();
     expect(uploader.uploadBytes).not.toHaveBeenCalled();
+  });
+
+  it('a number is drawn in code: no fal.ai call, no download', async () => {
+    const { fal, uploader, fetchFn, verkleinere } = deps();
+    const zeichneZahl = jest.fn(async () => Buffer.from([7]));
+    const key = await erstelleBildGeneriere(
+      fal,
+      uploader,
+      fetchFn,
+      verkleinere,
+      zeichneZahl,
+    )({ sourceId: 'u01-s4-sieben', zahl: 7, versuch: 0 });
+    expect(zeichneZahl).toHaveBeenCalledWith(7);
+    expect(fal.image).not.toHaveBeenCalled();
+    expect(fetchFn).not.toHaveBeenCalled();
+    expect(verkleinere).toHaveBeenCalledWith(Buffer.from([7]));
+    expect(uploader.uploadBytes).toHaveBeenCalledWith(
+      key,
+      Buffer.from([0xff, 0xd8, 9]),
+    );
+  });
+});
+
+describe('number pictures in the plan', () => {
+  const plan: BildPlan = {
+    'u01-s4-sieben': { zahl: 7, tippen: false },
+    'u01-s3-deutschland': { szene: 'the Brandenburg Gate', tippen: false },
+  };
+
+  it('are drawn with their number', () => {
+    expect(zuZeichnen(plan, {}, 'u01', [])).toEqual([
+      { sourceId: 'u01-s4-sieben', zahl: 7, versuch: 0 },
+      {
+        sourceId: 'u01-s3-deutschland',
+        szene: 'the Brandenburg Gate',
+        versuch: 0,
+      },
+    ]);
+  });
+
+  it('cost nothing: only scenes are paid for', () => {
+    expect(bezahlteBilder(zuZeichnen(plan, {}, 'u01', []))).toBe(1);
   });
 });
 

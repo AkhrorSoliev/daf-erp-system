@@ -6,14 +6,22 @@ import type { BildManifest } from '../media/bild-keys';
  * its picture names the word alone (`tippen`). The generated keys live
  * apart, in `bilder.json` (see `bild-keys.ts`), so a redraw never touches
  * the reviewed plan.
+ *
+ * A number is drawn in code instead (`zahl`: that many dots in ten-frames,
+ * `zahl-bild.ts`) — free and exact. An entry has `szene` or `zahl`, never
+ * both.
  */
-export type BildPlan = Record<string, { szene: string; tippen: boolean }>;
+export type BildPlan = Record<
+  string,
+  { szene?: string; zahl?: number; tippen: boolean }
+>;
 
 const BILD_KEY = /^daf\/bild\/[0-9a-f]{32}\.jpg$/;
 
 interface PlanWort {
   sourceId: string;
   artikel?: string | null;
+  anzeige?: string | null;
 }
 
 /**
@@ -39,7 +47,18 @@ export function validateBildPlan(
       );
       continue;
     }
-    if (!eintrag.szene.trim()) {
+    const mitZahl = eintrag.zahl !== undefined;
+    if (mitZahl && eintrag.szene !== undefined) {
+      problems.push(`${sourceId}: sahna ham, son ham yozilgan — bittasi kerak`);
+    } else if (mitZahl) {
+      // The dots must count the word's own number: a wrong picture would
+      // teach the wrong number and mark the right answer wrong.
+      if (String(eintrag.zahl) !== (wort.anzeige ?? '')) {
+        problems.push(
+          `${sourceId}: son rasmi ${eintrag.zahl} ta nuqta, so'z esa ${wort.anzeige ?? 'son emas'}`,
+        );
+      }
+    } else if (!(eintrag.szene ?? '').trim()) {
       problems.push(`${sourceId}: sahna (szene) bo'sh`);
     }
     if (eintrag.tippen && !wort.artikel) {
