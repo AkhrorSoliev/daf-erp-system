@@ -13,6 +13,20 @@ import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { CreateLessonCancellationDto } from './dto/create-lesson-cancellation.dto';
 import { resolveBilledEnrollmentId } from '../billing/resolve-billed-enrollment';
+import {
+  addDaysToDateStr,
+  tashkentDateStr,
+  tashkentDayStartUtc,
+} from '../common/date/tashkent';
+import { buildHolidayDateSet } from '../holidays/holiday-date-set';
+import {
+  markUnmarkedLessonCancelled,
+  reopenAfterCancellationRemoved,
+} from '../unmarked-lessons/unmarked-lesson-transitions';
+import {
+  UNMARKED_LESSON_NOT_HELD,
+  type UnmarkedLessonNotHeldPayload,
+} from '../unmarked-lessons/unmarked-lesson-events';
 
 /**
  * Payload emitted on cancellation create — consumed by
@@ -37,6 +51,20 @@ const DAY_NAME_BY_JS_DAY: Record<number, string> = {
   5: 'friday',
   6: 'saturday',
 };
+
+/**
+ * How far ahead `remove` reads holidays for the re-asked task's due date. A
+ * holiday spans at most 60 days (HolidaysService), so 90 days always reaches a
+ * working day past the longest one.
+ */
+const HOLIDAY_LOOKAHEAD_DAYS = 90;
+
+/** Money moves inside these transactions; Serializable, like the billing writes. */
+const SERIALIZABLE_TX = {
+  isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  maxWait: 10_000,
+  timeout: 15_000,
+} as const;
 
 @Injectable()
 export class LessonCancellationsService {
@@ -150,7 +178,7 @@ export class LessonCancellationsService {
 
     const date = this.parseDate(dto.date);
 
-    const cancellation = await this.prisma.$transaction(
+    const { cancellation, released, decision } = await this.prisma.$transaction(
       async (tx) => {
         const group = await tx.group.findFirst({
           where: { id: dto.groupId, companyId, deletedAt: null },
@@ -286,6 +314,16 @@ export class LessonCancellationsService {
           },
         );
 
+        // «Dars bo'ldimi?» (spec 2026-09-29 §3.5): a lesson waiting for an
+        // answer is now answered «Bo'lmadi», and its task closes — whichever
+        // screen cancelled it.
+        const decision = await markUnmarkedLessonCancelled(tx, {
+          groupId: dto.groupId,
+          date,
+          cancellationId: cancellation.id,
+          actorId: cancelledById,
+        });
+
         // Cascade (Stsenariy B / E): if a substitute-teacher override was
         // active on this date, soft-delete it. Salary accruals for those
         // teachers were already reversed by the billing cascade above
@@ -320,13 +358,9 @@ export class LessonCancellationsService {
           tx,
         });
 
-        return cancellation;
+        return { cancellation, released, decision };
       },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        maxWait: 10_000,
-        timeout: 15_000,
-      },
+      SERIALIZABLE_TX,
     );
 
     // Fire-and-forget event after the tx commits — listener handles
@@ -340,14 +374,26 @@ export class LessonCancellationsService {
       companyId,
     } satisfies LessonCancellationPayload);
 
+    if (decision) {
+      this.eventEmitter.emit(UNMARKED_LESSON_NOT_HELD, {
+        ...decision,
+        reason: dto.reason,
+        decidedById: cancelledById,
+        outcome: 'CANCELLED',
+        refundedStudents: released.students,
+        refundedAmount: released.refunded,
+      } satisfies UnmarkedLessonNotHeldPayload);
+    }
+
     return cancellation;
   }
 
   /**
    * Soft-delete a cancellation. Does NOT automatically restore the
    * attendance / consumption / accrual that the create() flow tore down —
-   * admins must re-take the attendance manually if the lesson actually
-   * happened. This avoids surprising auto-rebill on a typo correction.
+   * the lesson goes back to «Dars bo'ldimi?» (spec 2026-09-29 §3.5); nobody
+   * can enter a register for it any other way. This avoids surprising
+   * auto-rebill on a typo correction.
    */
   async remove(
     id: string,
@@ -370,6 +416,23 @@ export class LessonCancellationsService {
       cancellation.groupId,
     );
 
+    // Read before the transaction opens: a Serializable transaction should not
+    // wait on a holiday lookup. A group that is gone leaves the branch open
+    // (every branch's holidays) — `reopenAfterCancellationRemoved` then skips
+    // it anyway.
+    const now = new Date();
+    const today = tashkentDateStr(now);
+    const group = await this.prisma.group.findUnique({
+      where: { id: cancellation.groupId },
+      select: { branchId: true },
+    });
+    const holidays = await buildHolidayDateSet(
+      this.prisma,
+      tashkentDayStartUtc(today),
+      tashkentDayStartUtc(addDaysToDateStr(today, HOLIDAY_LOOKAHEAD_DAYS)),
+      group?.branchId,
+    );
+
     return this.prisma.$transaction(async (tx) => {
       await tx.lessonCancellation.update({
         where: { id },
@@ -386,8 +449,17 @@ export class LessonCancellationsService {
         companyId,
         tx,
       });
+      // The cancellation may have been the answer to «Dars bo'ldimi?» — or
+      // the only reason a finished lesson was never marked. Ask again.
+      await reopenAfterCancellationRemoved(tx, {
+        cancellationId: id,
+        groupId: cancellation.groupId,
+        date: cancellation.date,
+        now,
+        holidays,
+      });
       return { id };
-    });
+    }, SERIALIZABLE_TX);
   }
 
   // ---------- internals ----------
