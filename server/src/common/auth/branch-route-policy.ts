@@ -549,8 +549,10 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       '/salary/config/:id` (edit an existing rate, including deactivation) ' +
       'stays CEO-only — see the COMPANY_WIDE salary block below — because ' +
       'the director UI never sends it and an open-ended PATCH could ' +
-      'silently reactivate a closed config with no open version.',
-    routes: ['POST /salary/config'],
+      'silently reactivate a closed config with no open version. ' +
+      '`POST /salary/config/preview` runs the same write and rolls it back ' +
+      '(ADR-0050), so it passes the same gate.',
+    routes: ['POST /salary/config', 'POST /salary/config/preview'],
   },
   {
     policy: 'COMPANY_WIDE',

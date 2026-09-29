@@ -18,6 +18,8 @@ describe('SalaryConfigService.deactivateConfigsForUser', () => {
 
   beforeEach(async () => {
     tx = {
+      // No lesson written from the rate start yet: nothing to re-price.
+      salaryAccrual: { findMany: jest.fn().mockResolvedValue([]) },
       employeeSalaryConfigVersion: {
         updateMany: jest.fn().mockResolvedValue({}),
       },
@@ -121,6 +123,8 @@ describe('SalaryConfigService.updateConfig — reactivation', () => {
 
   beforeEach(async () => {
     tx = {
+      // No lesson written from the rate start yet: nothing to re-price.
+      salaryAccrual: { findMany: jest.fn().mockResolvedValue([]) },
       employeeSalaryConfig: {
         findFirst: jest.fn().mockResolvedValue(config()),
         update: jest.fn(async ({ data }: any) => ({ ...config(), ...data })),
@@ -360,6 +364,8 @@ describe('SalaryConfigService — POST on a deactivated config', () => {
 
   beforeEach(async () => {
     tx = {
+      // No lesson written from the rate start yet: nothing to re-price.
+      salaryAccrual: { findMany: jest.fn().mockResolvedValue([]) },
       employeeSalaryConfig: {
         findFirst: jest.fn().mockResolvedValue(config(501)),
         create: jest.fn(),
@@ -525,7 +531,7 @@ describe('SalaryConfigService — POST on a deactivated config', () => {
       const result = await apply('2026-08-10');
 
       const E = new Date('2026-08-09T19:00:00.000Z'); // 10.08 Tashkent
-      expect(result).toEqual({ updated: 2 });
+      expect(result).toEqual(expect.objectContaining({ updated: 2 }));
       expect(tx.employeeSalaryConfigVersion.update).toHaveBeenCalledWith({
         where: { id: 'ver-1' },
         data: { effectiveTo: E },
@@ -563,6 +569,8 @@ describe('SalaryConfigService.updateConfig — percentage cap only on rate chang
 
   beforeEach(async () => {
     tx = {
+      // No lesson written from the rate start yet: nothing to re-price.
+      salaryAccrual: { findMany: jest.fn().mockResolvedValue([]) },
       employeeSalaryConfig: {
         findFirst: jest.fn().mockResolvedValue(legacyOverCap),
         update: jest.fn().mockResolvedValue({ ...legacyOverCap }),
@@ -685,5 +693,127 @@ describe('SalaryConfigService.createConfig — invalid effectiveFrom (R5)', () =
     );
     // Refused before any transaction was even opened.
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * ADR-0050: a rate write re-prices the open lessons from its start date in
+ * the SAME transaction, and a preview is that write rolled back.
+ */
+describe('SalaryConfigService — re-pricing written lessons (ADR-0050)', () => {
+  let service: SalaryConfigService;
+  let prisma: any;
+  let tx: any;
+
+  const OPEN_LESSON = {
+    id: 'a1',
+    studentId: 20001,
+    groupId: 'g-072',
+    attendanceId: 'att-1',
+    lessonDate: new Date('2026-09-24T00:00:00.000Z'),
+    amount: 9_524,
+    perLessonCost: 35_238,
+    salaryConfigVersionId: 'v-general',
+    salaryPaymentId: null,
+  };
+  const version = (id: string, value: number, effectiveFrom: string) => ({
+    id,
+    salaryType: 'FIXED_PER_STUDENT',
+    value,
+    effectiveFrom: new Date(effectiveFrom),
+    effectiveTo: null,
+  });
+
+  beforeEach(async () => {
+    tx = {
+      salaryAccrual: {
+        findMany: jest.fn().mockResolvedValue([OPEN_LESSON]),
+        updateMany: jest.fn().mockResolvedValue({}),
+      },
+      employeeSalaryConfig: {
+        // No group rate for #072 yet, so the save creates one.
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn(async ({ data }: any) => ({ id: 'cfg-072', ...data })),
+        findMany: jest.fn().mockResolvedValue([
+          {
+            groupId: null,
+            versions: [version('v-general', 200_000, '2026-08-31T19:00:00Z')],
+          },
+          {
+            groupId: 'g-072',
+            versions: [version('v-072', 345_000, '2026-09-23T19:00:00Z')],
+          },
+        ]),
+      },
+      employeeSalaryConfigVersion: { create: jest.fn().mockResolvedValue({}) },
+      group: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'g-072',
+            course: {
+              price: 740_000,
+              lessonPaymentCount: 20,
+              paymentModel: 'MONTHLY',
+            },
+          },
+        ]),
+      },
+      enrollmentMonthlyCharge: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            studentId: 20001,
+            groupId: 'g-072',
+            periodYear: 2026,
+            periodMonth: 9,
+            perLessonCost: 35_238,
+            plannedLessons: 21,
+            coveredDates: [],
+            frozenOutDates: [],
+          },
+        ]),
+      },
+      transaction: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    prisma = { $transaction: jest.fn(async (cb: any) => cb(tx)) };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        SalaryConfigService,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+    service = module.get(SalaryConfigService);
+  });
+
+  const dto = {
+    userId: 90003,
+    groupId: 'g-072',
+    salaryType: SalaryType.FIXED_PER_STUDENT,
+    value: 345_000,
+    effectiveFrom: '2026-09-24',
+  };
+
+  it('re-prices the lessons written since the start date inside the save', async () => {
+    const result = await service.createConfig(dto, 1001, 90456);
+
+    expect(result.reapplied).toEqual(
+      expect.objectContaining({ lessons: 1, before: 9_524, after: 16_429 }),
+    );
+    expect(tx.salaryAccrual.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['a1'] } },
+      data: { amount: 16_429, salaryConfigVersionId: 'v-072' },
+    });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('a preview reports the same figures and rolls the transaction back', async () => {
+    const summary = await service.previewConfig(dto, 1001, 90456);
+
+    expect(summary).toEqual(
+      expect.objectContaining({ lessons: 1, delta: 6_905 }),
+    );
+    // The transaction's own callback threw, so nothing it wrote was committed.
+    await expect(prisma.$transaction.mock.results[0].value).rejects.toThrow(
+      'preview rollback',
+    );
   });
 });

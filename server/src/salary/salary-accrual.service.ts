@@ -348,12 +348,16 @@ export class SalaryAccrualService {
       groupId: string;
     },
   ) {
+    // Only a live CREDIT counts. A reversal row is written with `reversedAt`
+    // null too; matching it would read "already credited" after an undo and
+    // skip the re-credit for good.
     const existing = await db.transaction.findFirst({
       where: {
         attendanceId: params.attendanceId,
         teacherId: params.teacherId,
         type: TransactionType.SALARY_ACCRUAL,
         reversedAt: null,
+        reversedTransactionId: null,
       },
       select: { id: true },
     });
@@ -467,12 +471,15 @@ export class SalaryAccrualService {
       reversalReason?: string;
     },
   ) {
+    // The live credit, never an earlier reversal row (also `reversedAt` null):
+    // reversing a reversal would put the old amount back on the balance.
     const original = await db.transaction.findFirst({
       where: {
         attendanceId: params.attendanceId,
         teacherId: params.teacherId,
         type: TransactionType.SALARY_ACCRUAL,
         reversedAt: null,
+        reversedTransactionId: null,
       },
       select: { id: true, amount: true, companyId: true, branchId: true },
     });

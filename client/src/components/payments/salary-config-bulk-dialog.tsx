@@ -19,6 +19,34 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { PriceInput } from "@/components/ui/price-input";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import {
+  savedToastText,
+  type RateReapplySummary,
+} from "./salary-config-reapply";
+
+function sumReapplied(
+  results: PromiseSettledResult<{ data: { reapplied?: RateReapplySummary } }>[],
+): RateReapplySummary {
+  const total: RateReapplySummary = {
+    lessons: 0,
+    before: 0,
+    after: 0,
+    delta: 0,
+    settled: 0,
+    unpriced: 0,
+  };
+  for (const r of results) {
+    const s = r.status === "fulfilled" ? r.value.data.reapplied : undefined;
+    if (!s) continue;
+    total.lessons += s.lessons;
+    total.before += s.before;
+    total.after += s.after;
+    total.delta += s.delta;
+    total.settled += s.settled;
+    total.unpriced += s.unpriced;
+  }
+  return total;
+}
 
 interface Props {
   kind: "percent" | "monthly" | null;
@@ -34,8 +62,9 @@ interface Props {
  *
  * Submits one POST /salary/config per user in parallel. Partial failures
  * are surfaced via per-user toasts; the dialog closes only when the whole
- * batch settles. The salary cron and accrual reads pick up new versions
- * from `effectiveFrom` forward, so existing accruals are unaffected.
+ * batch settles. Each save applies from `effectiveFrom`, including to the
+ * lessons already written from that date whose payroll is not calculated
+ * yet (ADR-0050); the toast reports how many were re-priced.
  */
 export function SalaryConfigBulkDialog({ kind, userIds, onClose, onSaved }: Props) {
   const open = !!kind;
@@ -80,7 +109,7 @@ export function SalaryConfigBulkDialog({ kind, userIds, onClose, onSaved }: Prop
 
     const results = await Promise.allSettled(
       userIds.map((userId) =>
-        api.post("/salary/config", {
+        api.post<{ reapplied?: RateReapplySummary }>("/salary/config", {
           userId,
           salaryType,
           value: numericValue,
@@ -92,9 +121,14 @@ export function SalaryConfigBulkDialog({ kind, userIds, onClose, onSaved }: Prop
 
     const succeeded = results.filter((r) => r.status === "fulfilled").length;
     const failed = results.length - succeeded;
+    // Each save re-prices that teacher's lessons since the start date
+    // (ADR-0050); the toast says how many, in total.
+    const reapplied = sumReapplied(results);
 
     if (failed === 0) {
-      toast.success(`${succeeded} ta xodimga qoida belgilandi`);
+      toast.success(
+        savedToastText(`${succeeded} ta xodimga qoida belgilandi`, reapplied),
+      );
     } else if (succeeded > 0) {
       toast(
         `${succeeded} ta saqlandi · ${failed} ta xato. Xatosi bo'lganlarni alohida tekshiring.`,
