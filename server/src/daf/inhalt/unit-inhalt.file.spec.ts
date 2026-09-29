@@ -176,12 +176,20 @@ describe.each(UNITS)('%s — so`zlar', (unit) => {
     // o'rgatiladigan narsaning O'ZI (nemischa so'z) bo'lishi kerak —
     // raqam emas. Raqam faqat ko'rgazma sifatida `anzeige`da turadi.
     // `tts` esa faqat talaffuz yozma shakldan farq qilganda kerak —
-    // "eins" kabi so'zlarni TTS o'z-o'zidan to'g'ri o'qiydi.
+    // "eins" kabi so'zlarni TTS o'z-o'zidan to'g'ri o'qiydi. Qo'shma sonni
+    // TTS yutib yuborsa ("fünfunddreißig" → «fum», CEO 30.09 eshitdi),
+    // `tts` o'sha so'zning o'zi, faqat chiziqcha yoki bo'shliq bilan
+    // bo'lingan bo'lishi mumkin — raqam yoki boshqa so'z emas.
     const sonlar = woerter.woerter.filter((w) => w.anzeige !== undefined);
     for (const w of sonlar) {
       expect(/^\d+$/.test(w.de)).toBe(false);
       expect(/^\d+$/.test(w.anzeige ?? '')).toBe(true);
-      expect(w.tts).toBeUndefined();
+      if (w.tts === undefined) continue;
+      expect(w.tts).not.toBe(w.de);
+      expect(w.tts).not.toMatch(/\d/);
+      expect(w.tts.replace(/[\s-]/g, '').toLowerCase()).toBe(
+        w.de.toLowerCase(),
+      );
     }
   });
 
@@ -498,5 +506,19 @@ describe('u01 — o`ziga xos faktlar', () => {
       (w) => w.section === 'u01-s5' && /^[A-ZÄÖÜ]$/.test(w.de),
     );
     expect(harflar).toHaveLength(9);
+  });
+});
+
+describe('u02 — o`ziga xos faktlar', () => {
+  const woerter = read<WoerterFile>('u02', 'woerter.json');
+
+  it('fünfunddreißig chiziqcha bilan o`qiladi, bitta so`z bo`lib yoziladi', () => {
+    // Bitta so'z holida TTS "fünf"ni «fum» deb o'qidi (CEO 30.09 eshitdi).
+    // CEO uch variantdan chiziqchalisini tanladi; yozuv o'zgarmaydi.
+    const fuenf = woerter.woerter.find(
+      (w) => w.sourceId === 'u02-s2-fuenfunddreissig',
+    );
+    expect(fuenf?.de).toBe('fünfunddreißig');
+    expect(fuenf?.tts).toBe('fünf-und-dreißig');
   });
 });

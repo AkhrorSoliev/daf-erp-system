@@ -463,7 +463,8 @@ describe('parseUnitArg', () => {
 describe('budget for the units that follow unit 1', () => {
   // One run per unit must fit under the 400-character guard, or the
   // script stops before the first paid call. Measured on the written
-  // files: u02 = 357 (54 words with the compound numbers of 2026-09-30),
+  // files: u02 = 359 (54 words with the compound numbers of 2026-09-30;
+  // fünfunddreißig is spoken as "fünf-und-dreißig"),
   // u03 = 281.
   it.each([
     ['u02', 54],
