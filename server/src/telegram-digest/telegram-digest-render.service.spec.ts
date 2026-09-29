@@ -518,6 +518,37 @@ describe('TelegramDigestRenderService', () => {
       expect(text).toContain('• A1-01 (28.09.2026)');
       expect(text).toContain('Bu darslar uchun haq yozilmadi.');
     });
+
+    it('places forfeited section after attendance', () => {
+      const text = textOf(
+        service.renderUser(
+          [
+            row(TelegramDigestCategory.ATTENDANCE_COMPLETED, {
+              groupId: 'g1',
+              groupName: 'A1-01',
+              date: '2026-09-27',
+              studentNames: ['Ali'],
+              presenceCount: 1,
+              absenceCount: 0,
+              lateCount: 0,
+              excusedCount: 0,
+            }),
+            row(TelegramDigestCategory.LESSON_PAY_FORFEITED, {
+              groupId: 'g1',
+              groupName: 'A1-02',
+              date: '2026-09-28',
+            }),
+          ],
+          NOW,
+        ),
+      );
+      const attendanceIdx = text.indexOf('✅ <b>Davomat qabul qilindi</b>');
+      const forfeitedIdx = text.indexOf(
+        '⚠️ <b>Davomat vaqtida olinmagan darslar</b>',
+      );
+      expect(attendanceIdx).toBeGreaterThanOrEqual(0);
+      expect(forfeitedIdx).toBeGreaterThan(attendanceIdx);
+    });
   });
   describe('monthly bill and reminder (ADR-0042)', () => {
     /** 20:00 Tashkent, 01.10.2026. */

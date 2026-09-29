@@ -258,6 +258,7 @@ export class TelegramDigestRenderService {
       entries.filter((e) => categories.includes(e.row.category));
 
     const attendance = of(TelegramDigestCategory.ATTENDANCE_COMPLETED);
+    const forfeited = of(TelegramDigestCategory.LESSON_PAY_FORFEITED);
     const tasks = of(
       TelegramDigestCategory.TASK_ASSIGNED,
       TelegramDigestCategory.TASK_UPDATED,
@@ -266,7 +267,6 @@ export class TelegramDigestRenderService {
     );
     const salary = of(TelegramDigestCategory.SALARY_CARRIED_OVER);
     const corrections = of(TelegramDigestCategory.PAYMENT_CORRECTED);
-    const forfeited = of(TelegramDigestCategory.LESSON_PAY_FORFEITED);
 
     const sections: DigestBlock[][] = [];
     if (attendance.length > 0) {
@@ -276,6 +276,16 @@ export class TelegramDigestRenderService {
           text: this.attendanceText(e.row, today),
           itemIds: e.ids,
         })),
+      ]);
+    }
+    if (forfeited.length > 0) {
+      sections.push([
+        header('⚠️ <b>Davomat vaqtida olinmagan darslar</b>'),
+        ...forfeited.map((e) => ({
+          text: this.forfeitedText(e.row),
+          itemIds: e.ids,
+        })),
+        { text: 'Bu darslar uchun haq yozilmadi.', itemIds: [] },
       ]);
     }
     if (tasks.length > 0) {
@@ -307,16 +317,6 @@ export class TelegramDigestRenderService {
           text: this.correctionText(e.row),
           itemIds: e.ids,
         })),
-      ]);
-    }
-    if (forfeited.length > 0) {
-      sections.push([
-        header('⚠️ <b>Davomat vaqtida olinmagan darslar</b>'),
-        ...forfeited.map((e) => ({
-          text: this.forfeitedText(e.row),
-          itemIds: e.ids,
-        })),
-        { text: 'Bu darslar uchun haq yozilmadi.', itemIds: [] },
       ]);
     }
 
