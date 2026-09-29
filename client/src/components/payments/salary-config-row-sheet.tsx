@@ -37,6 +37,12 @@ import {
   groupVersionsByConfig,
   type SalaryConfigVersion,
 } from "./salary-config-history";
+import {
+  needsReapplyConfirmation,
+  savedToastText,
+  type RateReapplySummary,
+} from "./salary-config-reapply";
+import { SalaryConfigReapplyDialog } from "./salary-config-reapply-dialog";
 
 interface SimpleEmployee {
   id: number;
@@ -110,6 +116,9 @@ export function SalaryConfigRowSheet({
   const [effectiveFrom, setEffectiveFrom] = useState<Date | undefined>();
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // The server's preview of a save that reaches lessons already written.
+  const [pendingReapply, setPendingReapply] =
+    useState<RateReapplySummary | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -191,20 +200,48 @@ export function SalaryConfigRowSheet({
     numericValue > 0 &&
     (salaryType !== "PERCENTAGE" || numericValue <= 100);
 
+  const configBody = () => ({
+    userId,
+    salaryType,
+    value: numericValue,
+    groupId: groupId === "__global__" ? null : groupId,
+    effectiveFrom: effectiveFrom
+      ? format(effectiveFrom, "yyyy-MM-dd")
+      : undefined,
+  });
+
+  // A save re-prices the lessons already written from its start date
+  // (ADR-0050). Ask the server what that would do first, and confirm it.
   const handleSubmit = async () => {
     if (!canSubmit || !userId) return;
     setSubmitting(true);
     try {
-      await api.post("/salary/config", {
-        userId,
-        salaryType,
-        value: numericValue,
-        groupId: groupId === "__global__" ? null : groupId,
-        effectiveFrom: effectiveFrom
-          ? format(effectiveFrom, "yyyy-MM-dd")
-          : undefined,
-      });
-      toast.success("Oylik qoidasi saqlandi");
+      const { data } = await api.post<RateReapplySummary>(
+        "/salary/config/preview",
+        configBody(),
+      );
+      if (needsReapplyConfirmation(data)) {
+        setPendingReapply(data);
+        setSubmitting(false);
+        return;
+      }
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Saqlashda xatolik"));
+      setSubmitting(false);
+      return;
+    }
+    await save();
+  };
+
+  const save = async () => {
+    setPendingReapply(null);
+    setSubmitting(true);
+    try {
+      const { data } = await api.post<{ reapplied?: RateReapplySummary }>(
+        "/salary/config",
+        configBody(),
+      );
+      toast.success(savedToastText("Oylik qoidasi saqlandi", data.reapplied));
       setValue("");
       setPercentValue("");
       setEffectiveFrom(undefined);
@@ -228,8 +265,11 @@ export function SalaryConfigRowSheet({
     }
     setDeletingId(configId);
     try {
-      await api.patch(`/salary/config/${configId}`, { isActive: false });
-      toast.success("Oylik qoidasi o'chirildi");
+      const { data } = await api.patch<{ reapplied?: RateReapplySummary }>(
+        `/salary/config/${configId}`,
+        { isActive: false },
+      );
+      toast.success(savedToastText("Oylik qoidasi o'chirildi", data.reapplied));
       await Promise.all([configsQuery.refetch(), historyQuery.refetch()]);
       onSaved();
     } catch (err) {
@@ -534,6 +574,12 @@ export function SalaryConfigRowSheet({
           </div>
         </SheetFooter>
       </SheetContent>
+      <SalaryConfigReapplyDialog
+        summary={pendingReapply}
+        fromLabel={format(effectiveFrom ?? new Date(), "dd.MM.yyyy")}
+        onCancel={() => setPendingReapply(null)}
+        onConfirm={save}
+      />
     </Sheet>
   );
 }
