@@ -11,6 +11,7 @@ import { AttendanceController } from './attendance.controller';
 import { AttendanceReminderService } from './attendance-reminder.service';
 import { AttendanceEventsListener } from './attendance-events.listener';
 import { StudentAttendanceNotificationListener } from './student-attendance-notification.listener';
+import { UnmarkedLessonEventsListener } from './unmarked-lesson-events.listener';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { TelegramModule } from '../telegram/telegram.module';
 import { TelegramDigestModule } from '../telegram-digest/telegram-digest.module';
@@ -43,6 +44,7 @@ import { UnmarkedLessonsService } from './unmarked-lessons.service';
     AttendanceReminderService,
     AttendanceEventsListener,
     StudentAttendanceNotificationListener,
+    UnmarkedLessonEventsListener,
     UnmarkedLessonsService,
   ],
   exports: [

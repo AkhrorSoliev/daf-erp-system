@@ -500,6 +500,24 @@ describe('TelegramDigestRenderService', () => {
       expect(order).toEqual([...order].sort((a, b) => a - b));
       expect(order.every((i) => i >= 0)).toBe(true);
     });
+
+    it('lists lessons whose pay was lost', () => {
+      const text = textOf(
+        service.renderUser(
+          [
+            row(TelegramDigestCategory.LESSON_PAY_FORFEITED, {
+              groupId: 'g1',
+              groupName: 'A1-01',
+              date: '2026-09-28',
+            }),
+          ],
+          NOW,
+        ),
+      );
+      expect(text).toContain('⚠️ <b>Davomat vaqtida olinmagan darslar</b>');
+      expect(text).toContain('• A1-01 (28.09.2026)');
+      expect(text).toContain('Bu darslar uchun haq yozilmadi.');
+    });
   });
   describe('monthly bill and reminder (ADR-0042)', () => {
     /** 20:00 Tashkent, 01.10.2026. */
