@@ -25,6 +25,7 @@ import type {
 } from './frage.types';
 import { toPublic } from './frage.types';
 import { dialogLuecke } from './dialog-fragen';
+import { eigeneSchluessel } from './eigener-abschnitt';
 import { hoerenWahl } from './hoer-fragen';
 import { bevorzugteFormate } from './kind-formate';
 import { naechsterZustand } from './leitner';
@@ -302,7 +303,7 @@ export class UebungService {
     // qaytadi — shuning uchun bu yerda 404 EMAS, bo'sh massiv qaytariladi.
     // Darsning O'ZI topilmasa (`null`) `baueKandidaten` hamon 404 tashlaydi.
     if (!natija) return [];
-    const { pflicht, kandidaten, kind } = natija;
+    const { pflicht, kandidaten, kind, eigene } = natija;
 
     // Seans turining moyilligi (Vazifa 3) — QAT'IY BO'LINISH EMAS,
     // TARTIB. To'liq izoh `kind-formate.ts`da: kurs dizayni 16 format
@@ -313,12 +314,19 @@ export class UebungService {
     // kafolatlari (`baueSeans` ichida) buzilmaydi.
     // Yakuniy sinov 15 savol (kurs dizayni 3-bo'limi), qolgan darslar 12.
     const uzunlik = kind === 'UNIT_TEST' ? UNIT_TEST_SAVOLLAR : SEANS_UZUNLIGI;
+    // A section lesson asks its own section's material first; the bridge
+    // mixes on purpose and the unit test covers the whole unit.
+    const eigenerAbschnitt =
+      kind === 'SECTION_A' || kind === 'SECTION_B'
+        ? (f: Frage) => f.belegteItems.some((k) => eigene.has(k))
+        : undefined;
     const { fragen, nichtPlatziert } = baueSeans(
       kandidaten,
       uzunlik,
       rnd,
       pflicht,
       bevorzugteFormate(kind),
+      eigenerAbschnitt,
     );
 
     // Yakuniy sinovdan faqat to'liq 15 savolli seansda o'tiladi
@@ -781,6 +789,8 @@ export class UebungService {
     // hisoblaydi. `ersatz()` bu maydonni e'tiborsiz qoldiradi: u bitta
     // almashtiruvchi savol beradi, moyillikka ehtiyoj yo'q.
     kind: string | null;
+    /** Material keys of the lesson's own section (`materialSchluessel`). */
+    eigene: Set<string>;
   } | null> {
     const lesson = await this.prisma.dafLesson.findUnique({
       where: { id: lessonId },
@@ -1066,7 +1076,15 @@ export class UebungService {
       letzterFormatByWort,
     );
 
-    return { pflicht, kandidaten, kind };
+    return {
+      pflicht,
+      kandidaten,
+      kind,
+      eigene: eigeneSchluessel(
+        section ? sectionCodeById.get(section.id) : undefined,
+        { coreWords, sentences, phrases, dialoge },
+      ),
+    };
   }
 
   /**

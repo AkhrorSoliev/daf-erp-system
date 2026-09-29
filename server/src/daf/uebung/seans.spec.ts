@@ -402,3 +402,63 @@ describe('baueSeans — moyillik', () => {
     );
   });
 });
+
+describe('baueSeans — the lesson`s own section first (2026-09-30)', () => {
+  // Before: the «Das Alphabet» lesson (u01-s5) was built from every
+  // section so far and, on the dev database, asked no letter at all.
+  const formatlar: FrageFormat[] = [
+    'WORT_UZ',
+    'UZ_WORT',
+    'ARTIKEL',
+    'LUECKE',
+    'SATZ_BAUEN',
+    'AUDIO_WORT',
+  ];
+  // Old sections' questions come first in the array, as a shuffle may put them.
+  const alt = formatlar.flatMap((fmt, i) =>
+    Array.from({ length: 3 }, (_, j) => f(fmt, i * 10 + j)),
+  );
+  const eigen = formatlar.flatMap((fmt, i) =>
+    Array.from({ length: 3 }, (_, j) => f(fmt, 1000 + i * 10 + j)),
+  );
+  const istEigen = (q: Frage) => q.itemId >= 1000;
+
+  it('fills the session from its own section when it can', () => {
+    const plan = baueSeans(
+      [...alt, ...eigen],
+      12,
+      () => 0.9999,
+      [],
+      [],
+      istEigen,
+    );
+    expect(plan.fragen.filter(istEigen)).toHaveLength(12);
+  });
+
+  it('keeps the variety rules', () => {
+    const plan = baueSeans(
+      [...alt, ...eigen],
+      12,
+      () => 0.9999,
+      [],
+      [],
+      istEigen,
+    );
+    expect(
+      new Set(plan.fragen.map((q) => q.format)).size,
+    ).toBeGreaterThanOrEqual(MIN_FORMATE);
+  });
+
+  it('fills from older sections when its own runs out', () => {
+    const plan = baueSeans(
+      [...alt, ...eigen.slice(0, 4)],
+      12,
+      () => 0.9999,
+      [],
+      [],
+      istEigen,
+    );
+    expect(plan.fragen).toHaveLength(12);
+    expect(plan.fragen.filter(istEigen)).toHaveLength(4);
+  });
+});
