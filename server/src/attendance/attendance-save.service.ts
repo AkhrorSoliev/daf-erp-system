@@ -10,6 +10,7 @@ import {
   AttendanceMethod,
   AttendanceStatus,
   EnrollmentStatus,
+  PaymentModel,
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -240,10 +241,16 @@ export class AttendanceSaveService {
     const parsedDate = new Date(`${date}T00:00:00.000Z`);
     const group = await this.prisma.group.findFirst({
       where: { id: groupId, companyId, deletedAt: null },
-      select: { id: true, name: true, branchId: true },
+      select: {
+        id: true,
+        name: true,
+        branchId: true,
+        course: { select: { paymentModel: true } },
+      },
     });
     if (!group) throw new NotFoundException('Guruh topilmadi');
     if (dto.teacherPayExempt) await this.assertCallerIsCeo(userId);
+    const isMonthly = group.course.paymentModel === PaymentModel.MONTHLY;
 
     const result = await this.prisma.$transaction(async (tx) => {
       const row = await findPendingUnmarkedLesson(tx, {
@@ -268,6 +275,17 @@ export class AttendanceSaveService {
       );
       this.assertFullRoster(enrollmentIdByStudent, dto.entries);
 
+      // A student who has since left is on the register but is not billed in a
+      // lesson-pack course: closing their enrollment already refunded the
+      // prepaid lessons and zeroed the counter, so bill() would take a whole
+      // cycle from a departed student and strand the lessons on a closed
+      // enrollment. Monthly billing moves no balance, so it is unaffected.
+      const billedEnrollmentIdByStudent = new Map(
+        roster
+          .filter((e) => isMonthly || e.status === EnrollmentStatus.ACTIVE)
+          .map((e) => [e.studentId, e.id]),
+      );
+
       const exempt = row.teacherPayExempt || dto.teacherPayExempt === true;
       await tx.unmarkedLesson.update({
         where: { id: row.id },
@@ -289,7 +307,7 @@ export class AttendanceSaveService {
         companyId,
         userId,
         isTeacherOnly: false,
-        enrollmentIdByStudent,
+        enrollmentIdByStudent: billedEnrollmentIdByStudent,
         existingRecords: [],
         entries: dto.entries,
       });

@@ -4,6 +4,8 @@ import { tashkentDateStr } from '../../common/date/tashkent';
 export interface RosterEnrollment {
   id: string;
   studentId: number;
+  /** The enrollment's status today — a student on a past register may since have left. */
+  status: EnrollmentStatus;
 }
 
 /**
@@ -53,5 +55,6 @@ export async function rosterOnDate(
   return [...byStudent.values()].map((e) => ({
     id: e.id,
     studentId: e.studentId,
+    status: e.status,
   }));
 }

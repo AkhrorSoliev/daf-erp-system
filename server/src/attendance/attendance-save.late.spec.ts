@@ -91,9 +91,12 @@ describe('AttendanceSaveService.saveLate', () => {
     };
     prisma = {
       group: {
-        findFirst: jest
-          .fn()
-          .mockResolvedValue({ id: 'g1', name: '#014', branchId: 2 }),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'g1',
+          name: '#014',
+          branchId: 2,
+          course: { paymentModel: 'LESSON_PACK' },
+        }),
         // emitAfterSave reads the group's name and teachers.
         findUnique: jest.fn().mockResolvedValue({ name: '#014', teachers: [] }),
       },
@@ -146,11 +149,53 @@ describe('AttendanceSaveService.saveLate', () => {
     expect(tx.attendance.upsert).toHaveBeenCalledTimes(2);
     expect(billing.processAttendanceBilling).toHaveBeenCalledWith(
       tx,
-      expect.objectContaining({ enrollmentId: 'e2', studentId: 10002 }),
+      expect.objectContaining({ enrollmentId: 'e1', studentId: 10001 }),
     );
     expect(tx.commentAssignee.update).toHaveBeenCalled(); // task taken and closed
     expect(result.message).toBe(
       'Davomat saqlandi. Ustozga bu dars uchun haq yozilmaydi',
+    );
+  });
+
+  it('records a departed student but takes no money in a lesson-pack course', async () => {
+    await service.saveLate(
+      'g1',
+      '2026-09-28',
+      { entries },
+      3,
+      ['Administrator'],
+      1,
+    );
+    // Both students are on the register …
+    expect(tx.attendance.upsert).toHaveBeenCalledTimes(2);
+    // … but only the active one is billed: the departed one's prepaid lessons
+    // were already refunded when they left.
+    expect(billing.processAttendanceBilling).toHaveBeenCalledTimes(1);
+    expect(billing.processAttendanceBilling).not.toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({ studentId: 10002 }),
+    );
+  });
+
+  it('still bills a departed student in a monthly course', async () => {
+    prisma.group.findFirst.mockResolvedValue({
+      id: 'g1',
+      name: '#014',
+      branchId: 2,
+      course: { paymentModel: 'MONTHLY' },
+    });
+    await service.saveLate(
+      'g1',
+      '2026-09-28',
+      { entries },
+      3,
+      ['Administrator'],
+      1,
+    );
+    expect(billing.processAttendanceBilling).toHaveBeenCalledTimes(2);
+    expect(billing.processAttendanceBilling).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({ enrollmentId: 'e2', studentId: 10002 }),
     );
   });
 

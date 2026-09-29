@@ -37,9 +37,9 @@ describe('rosterOnDate', () => {
       },
     ];
     expect(await rosterOnDate(db(rows), 'g1', lesson)).toEqual([
-      { id: 'e1', studentId: 1 },
-      { id: 'e2', studentId: 2 },
-      { id: 'e4', studentId: 4 },
+      { id: 'e1', studentId: 1, status: EnrollmentStatus.ACTIVE },
+      { id: 'e2', studentId: 2, status: EnrollmentStatus.DROPPED },
+      { id: 'e4', studentId: 4, status: EnrollmentStatus.COMPLETED },
     ]);
   });
 
@@ -59,7 +59,7 @@ describe('rosterOnDate', () => {
       },
     ];
     expect(await rosterOnDate(db(rows), 'g1', lesson)).toEqual([
-      { id: 'new', studentId: 5 },
+      { id: 'new', studentId: 5, status: EnrollmentStatus.ACTIVE },
     ]);
   });
 
