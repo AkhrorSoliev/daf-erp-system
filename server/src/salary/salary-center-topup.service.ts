@@ -10,9 +10,10 @@ import {
   buildTeacherRosterWhere,
 } from './shared/teacher-roster-where';
 import { DebtAgeService } from '../common/finance/debt-age.service';
-import { sweepGapLessons } from './shared/gap-sweep';
+import { packPriceCandidates, sweepGapLessons } from './shared/gap-sweep';
 import {
   loadFrozenMonthlyCharges,
+  loadPackLessonPrices,
   periodsInRange,
 } from '../common/finance/monthly-per-lesson';
 import { pickActiveVersion, type RateVersion } from './shared/deserved-math';
@@ -224,11 +225,18 @@ export class SalaryCenterTopUpService {
       groupIds: attendances.map((a) => a.groupId),
       periods: periodsInRange(periodStartDate, periodEndDateExclusive),
     });
+    // A monthly-course lesson with no charge was billed by a pack (ADR-0051).
+    const packPrices = await loadPackLessonPrices(
+      this.prisma,
+      companyId,
+      packPriceCandidates(attendances, groupMap, monthlyFrozen),
+    );
 
     const { lessons } = sweepGapLessons({
       attendances,
       groupMap,
       monthlyFrozen,
+      packPrices,
       resolveTeachers: (groupId, d) =>
         overrideMap.get(`${groupId}::${d}`) ?? rosterMap.get(groupId) ?? [],
       resolveRate: (tid, groupId, at) =>

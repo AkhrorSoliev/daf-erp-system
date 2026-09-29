@@ -9,9 +9,10 @@ import {
 } from './shared/resolve-monthly-scope';
 import { SalaryStaffMonthlyService } from './salary-monthly-staff.service';
 import { buildTeacherRosterWhere } from './shared/teacher-roster-where';
-import { sweepGapLessons } from './shared/gap-sweep';
+import { packPriceCandidates, sweepGapLessons } from './shared/gap-sweep';
 import {
   loadFrozenMonthlyCharges,
+  loadPackLessonPrices,
   periodsInRange,
 } from '../common/finance/monthly-per-lesson';
 
@@ -489,10 +490,17 @@ export class SalaryMonthlyService {
       groupIds: attendances.map((a) => a.groupId),
       periods: periodsInRange(periodStartDate, periodEndDateExclusive),
     });
+    // A monthly-course lesson with no charge was billed by a pack (ADR-0051).
+    const packPrices = await loadPackLessonPrices(
+      this.prisma,
+      companyId,
+      packPriceCandidates(attendances, groupMap, monthlyFrozen),
+    );
     const sweep = sweepGapLessons({
       attendances,
       groupMap,
       monthlyFrozen,
+      packPrices,
       resolveTeachers,
       resolveRate,
       inScope: (tid) => agg.has(tid),

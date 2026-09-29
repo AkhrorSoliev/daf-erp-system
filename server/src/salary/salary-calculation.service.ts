@@ -16,9 +16,14 @@ import {
   RateVersion,
 } from './shared/deserved-math';
 import { prorateFixedMonthly } from './shared/prorate-fixed-monthly';
-import { resolveLessonPricing, sweepGapLessons } from './shared/gap-sweep';
+import {
+  packPriceCandidates,
+  resolveLessonPricing,
+  sweepGapLessons,
+} from './shared/gap-sweep';
 import {
   loadFrozenMonthlyCharges,
+  loadPackLessonPrices,
   periodsInRange,
 } from '../common/finance/monthly-per-lesson';
 import { SalaryAccrualService } from './salary-accrual.service';
@@ -726,12 +731,20 @@ export class SalaryCalculationService {
       groupIds: attendances.map((a) => a.groupId),
       periods: periodsInRange(periodStartDate, periodEndDateExclusive),
     });
+    // A monthly-course lesson with no charge was billed by a pack: price it
+    // from that marker (ADR-0051), exactly as the report does.
+    const packPrices = await loadPackLessonPrices(
+      this.prisma,
+      companyId,
+      packPriceCandidates(attendances, groupMap, monthlyFrozen),
+    );
 
     const gapByUser = new Map<number, GapSpec[]>();
     const sweep = sweepGapLessons({
       attendances,
       groupMap,
       monthlyFrozen,
+      packPrices,
       resolveTeachers,
       resolveRate,
       // Company-wide: the cron settles every teacher, so nothing is out of
@@ -798,6 +811,11 @@ export class SalaryCalculationService {
         groupIds: backlog.map((a) => a.groupId),
         periods: periodsInRange(eraStart, periodStart),
       });
+      const backlogPack = await loadPackLessonPrices(
+        this.prisma,
+        companyId,
+        packPriceCandidates(backlog, groupMap, backlogFrozen),
+      );
       for (const att of backlog) {
         // Only genuine new-student pairs that have NOW crossed the threshold.
         const held =
@@ -812,6 +830,7 @@ export class SalaryCalculationService {
           att.groupId,
           att.date,
           backlogFrozen,
+          backlogPack.get(att.id),
         );
         const dStr = dateStr(att.date);
         for (const tid of resolveTeachers(att.groupId, dStr)) {

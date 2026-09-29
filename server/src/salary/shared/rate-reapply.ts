@@ -6,6 +6,7 @@ import {
 } from '../../common/date/tashkent';
 import {
   loadFrozenMonthlyCharges,
+  loadPackLessonPrices,
   periodsInRange,
   type FrozenMonthlyCharge,
 } from '../../common/finance/monthly-per-lesson';
@@ -14,7 +15,11 @@ import {
   pickActiveVersion,
   type RateVersion,
 } from './deserved-math';
-import { resolveLessonPricing, type GapCourse } from './gap-sweep';
+import {
+  packPriceCandidates,
+  resolveLessonPricing,
+  type GapCourse,
+} from './gap-sweep';
 
 /**
  * A rate saved with a start date re-prices the lessons ALREADY written from
@@ -153,13 +158,36 @@ export async function reapplyRateToOpenAccruals(
   const resolveRate = await loadRateResolver(tx, scope);
   const courses = await loadCourses(tx, open);
   const frozen = await loadFrozen(tx, scope.companyId, open, courses, fromDate);
+  // A monthly-course lesson with no charge was billed by a pack (ADR-0051).
+  const pack = await loadPackLessonPrices(
+    tx,
+    scope.companyId,
+    packPriceCandidates(
+      open.map((r) => ({
+        id: r.attendanceId as string,
+        studentId: r.studentId,
+        groupId: r.groupId,
+        date: r.lessonDate,
+      })),
+      new Map([...courses].map(([id, course]) => [id, { course }])),
+      frozen,
+    ),
+  );
 
   const changes: Change[] = [];
   for (const row of open) {
     const version = resolveRate(row.groupId, row.lessonDate);
     const course = courses.get(row.groupId);
     const amount =
-      version && course ? priceAccrual(version, row, course, frozen) : null;
+      version && course
+        ? priceAccrual(
+            version,
+            row,
+            course,
+            frozen,
+            pack.get(row.attendanceId as string),
+          )
+        : null;
     if (version === null || amount === null) {
       summary.unpriced += 1;
       continue;
@@ -278,6 +306,7 @@ function priceAccrual(
   row: OpenAccrual,
   course: GapCourse,
   frozen: Map<string, FrozenMonthlyCharge>,
+  packPrice: number | null | undefined,
 ): number | null {
   if (version.salaryType === 'PERCENTAGE') {
     return row.perLessonCost > 0
@@ -291,6 +320,7 @@ function priceAccrual(
       row.groupId,
       row.lessonDate,
       frozen,
+      packPrice,
     );
     return pricing
       ? perLessonAccrual(version, row.perLessonCost, pricing.divisor)

@@ -55,6 +55,8 @@ describe('SalaryMonthlyService', () => {
       // Oylik kursning MUZLATILGAN dars narxi (`loadFrozenMonthlyCharges`).
       // Odatiy — bo'sh: bu testlarning kurslari 12 talik modelda.
       enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
+      // Pack markers of monthly-course lessons with no charge (ADR-0051).
+      transaction: { findMany: jest.fn().mockResolvedValue([]) },
       employeeSalaryConfigVersion: {
         findMany: jest.fn().mockResolvedValue([]),
       },
