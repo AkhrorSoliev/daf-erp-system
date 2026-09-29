@@ -1,8 +1,7 @@
 # Davomati olinmagan dars — «Dars bo'ldimi?» savoli
 
 **Sana:** 2026-09-29
-**Holati:** CEO bilan kelishildi (chatda), yozma ko'rik kutilmoqda; 12-bo'limdagi
-uch savol ochiq
+**Holati:** CEO bilan kelishildi (chatda), yozma ko'rik kutilmoqda
 **Bog'liq:** ADR-0053 (bekor qilingan dars puli darhol qaytadi), ADR-0025 (Telegram
 yig'ma xabar), PR #608 (ustoz faqat dars kuni davomat kiritadi)
 
@@ -43,6 +42,9 @@ filialda kamida bitta faol administrator bor (Farg'ona 5, Namangan 4, Qarshi 1).
 | Q6  | Kim javob beradi        | Administrator, filial direktori, CEO                                                                                                          |
 | Q7  | Topshiriq kimga         | Filialning barcha administratorlariga. Birinchi o'zgartirgan admin oladi, boshqalardan olib tashlanadi                                        |
 | Q8  | Davomat oynasi          | Hamma rol uchun bir xil: faqat bugun, darsdan 10 daqiqa oldin — dars tugaguncha                                                               |
+| Q9  | Ustoz aybdor bo'lmasa   | Faqat **CEO** «Bo'ldi» da «Ustoz aybdor emas, haq yozilsin» belgisini sabab bilan qo'ya oladi. Filial direktori — yo'q                          |
+| Q10 | Dars keyin o'tiladi     | «Bo'lmadi» da ikki tanlov: «Bekor qilish» (pul qaytadi) yoki «Boshqa kunga ko'chirish» (pul qaytmaydi)                                        |
+| Q11 | 17 ta eski izsiz kun    | Qoidadan oldingi kunlar: «Bo'ldi» bo'lsa ustoz haq oladi                                                                                      |
 
 ## 3. Jarayon
 
@@ -111,7 +113,12 @@ qolgan darslari uchun.
    faol bo'lganlar emas. Shunda keyin guruhdan chiqqan o'quvchi ham, oxirgi
    darsdan keyin yopilgan guruh ham to'g'ri belgilanadi. Guruh holati:
    o'chirilmagan bo'lsa bo'ldi (`ACTIVE` shart emas). Hamma belgilanishi shart.
-2. Saqlashda, bitta Serializable tranzaksiyada:
+2. Faqat CEO uchun formada belgi: «Ustoz aybdor emas, haq yozilsin» + majburiy
+   sabab (masalan, akkaunt hali ochilmagan, server ishlamagan). Server CEO
+   bo'lmagan chaqiruvchidan bu belgini 403 bilan rad etadi (rol bazadan
+   o'qiladi, tokendan emas — ADR-0028). Belgi bilan saqlansa
+   `teacherPayExempt = true` va ustoz odatdagidek haq oladi.
+3. Saqlashda, bitta Serializable tranzaksiyada:
    - `UnmarkedLesson` → `HELD`, `decidedById`, `decidedAt`;
    - davomat odatdagi billing yo'lidan yoziladi, **ustoz haqi yozilmaydi**
      (5-bo'lim);
@@ -119,28 +126,52 @@ qolgan darslari uchun.
    - oldindan belgilangan kelmasliklar odatdagidek iste'mol qilinadi;
    - guruh tarixi: «DAVOMAT_KECH_KIRITILDI» (kim, qachon);
    - topshiriq yopiladi (3.6).
-3. `attendance.completed` **yuborilmaydi** — u ustozga «Davomat qabul qilindi.
-   Rahmat!» deydi. O'rniga ustozga: «<Guruh>, <sana>: davomat dars vaqtida
-   olinmagani uchun bu dars haqi yozilmadi». Bildirishnoma + push darhol,
-   Telegram 20:00 yig'mada.
-4. Dars `valueHeldLessons` orqali markaz tushumiga kiradi (davomat yozuvlari bor).
+4. `attendance.completed` **yuborilmaydi** — u ustozga «Davomat qabul qilindi.
+   Rahmat!» deydi. O'rniga ustozga (istisno bo'lmasa): «<Guruh>, <sana>:
+   davomat dars vaqtida olinmagani uchun bu dars haqi yozilmadi».
+   Bildirishnoma + push darhol, Telegram 20:00 yig'mada.
+5. Dars `valueHeldLessons` orqali markaz tushumiga kiradi (davomat yozuvlari bor).
 
 ### 3.5 «Bo'lmadi»
 
-1. Sabab maydoni (majburiy).
-2. Mavjud `LessonCancellationsService.create` — o'sha kunni qamragan barcha
+Oynada sabab (majburiy) va ikki tanlov.
+
+**A. «Bekor qilish» — pul qaytadi.**
+
+1. Mavjud `LessonCancellationsService.create` — o'sha kunni qamragan barcha
    oylik hisoblar pulni darhol qaytaradi (ADR-0053).
-3. Bekor qilish tranzaksiyasi ichida: shu kun uchun `UnmarkedLesson` bo'lsa →
+2. Bekor qilish tranzaksiyasi ichida: shu kun uchun `UnmarkedLesson` bo'lsa →
    `NOT_HELD`, `cancellationId`; topshiriq yopiladi. Qaysi yo'ldan bekor
    qilinishidan qat'i nazar (guruh sahifasi, skript, shu oyna).
-4. Telegram guruhiga **darhol**, commit'dan keyin (admin bot, tasdiqlangan
-   guruhlar, `reportBranchIdsForGroup` bo'yicha o'sha filialni ko'radiganlar):
-   «❌ Dars bo'lmadi — <guruh>, <sana> <vaqt>. Sabab: … Belgilagan: <ism>.
-   Pul qaytarildi: N o'quvchi, <summa> so'm» (`released.students`,
-   `released.refunded`). Faqat `UnmarkedLesson` bor kunlar uchun — darsdan
-   oldin qilingan oddiy bekor qilishlar guruhga yuborilmaydi.
-5. Ustoz va o'quvchilar odatdagi bekor qilish xabarini oladi.
-6. Bekor qilish o'chirilsa (`DELETE /lesson-cancellations/:id`, CEO / direktor):
+3. Ustoz va o'quvchilar odatdagi bekor qilish xabarini oladi.
+
+**B. «Boshqa kunga ko'chirish» — qo'shimcha dars, pul qaytmaydi.**
+
+1. Yangi sana va vaqt (xona ixtiyoriy). Yangi dars boshlanishi hozirdan
+   **keyin** bo'lishi shart — aks holda uning davomatini ham hech kim
+   ololmaydi va u ham «olinmagan» bo'lib qoladi.
+2. Mavjud `LessonReschedulesService.create` (sabab bilan). Ko'chirishning
+   mavjud qoidalari va pul hisobi o'zgarmaydi.
+3. Tranzaksiya ichida: `UnmarkedLesson` → `RESCHEDULED`, `rescheduleId`;
+   topshiriq yopiladi. Mavjud «ko'chirish» sahifasidan javobi kutilayotgan kun
+   ko'chirilsa ham xuddi shunday.
+4. Yangi kunda ustoz davomatni odatdagidek oladi va haq oladi (bu boshqa dars).
+5. Ko'chirish o'chirilsa — yozuv `PENDING` ga qaytadi, yangi topshiriq.
+
+**Ikkala tanlovda ham** Telegram guruhiga **darhol**, commit'dan keyin (admin bot,
+tasdiqlangan guruhlar, `reportBranchIdsForGroup` bo'yicha o'sha filialni
+ko'radiganlar):
+
+- A: «❌ Dars bo'lmadi — <guruh>, <sana> <vaqt>. Sabab: … Belgilagan: <ism>.
+  Pul qaytarildi: N o'quvchi, <summa> so'm» (`released.students`,
+  `released.refunded`);
+- B: «❌ Dars bo'lmadi — <guruh>, <sana> <vaqt>. Sabab: … Ko'chirildi:
+  <yangi sana> <vaqt>. Belgilagan: <ism>».
+
+Faqat `UnmarkedLesson` bor kunlar uchun — darsdan oldin qilingan oddiy bekor
+qilish va ko'chirishlar guruhga yuborilmaydi.
+
+**Bekor qilish o'chirilsa** (`DELETE /lesson-cancellations/:id`, CEO / direktor):
    - shu kun uchun `UnmarkedLesson` bo'lsa → `PENDING`, yangi topshiriq;
    - yozuv yo'q, lekin dars allaqachon tugagan va davomat yo'q bo'lsa (dars
      oldindan bekor qilingan, keyin bekor qilish xato deb o'chirildi) →
@@ -191,6 +222,7 @@ enum UnmarkedLessonStatus {
   PENDING
   HELD
   NOT_HELD
+  RESCHEDULED
 }
 
 model UnmarkedLesson {
@@ -207,6 +239,7 @@ model UnmarkedLesson {
   decidedById      Int?
   decidedAt        DateTime?
   cancellationId   String?
+  rescheduleId     String?
   taskCommentId    String?              @unique
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
@@ -254,27 +287,29 @@ uni o'zi topadi.
 | `attendance-save.service.ts`                                | Yangi davomat → oyna; yozuv bor bo'lsa rad; kech rejim (ro'yxat, `attendance.completed` yo'q)                    |
 | `qr-attendance-session.service.ts`                          | Oyna                                                                                                             |
 | `attendance/unmarked-lessons.service.ts` (yangi)            | Yaratish, «Bo'ldi», «Bo'lmadi», olish, jadval / guruh uchun ma'lumot                                             |
-| `attendance.controller.ts`                                  | `POST :groupId/date/:date/late`, `POST :groupId/date/:date/not-held` (CEO / direktor / administrator, filial tekshiruvi) |
+| `attendance.controller.ts`                                  | `POST :groupId/date/:date/late` (`entries`, faqat CEO uchun `teacherPayExempt` + `exemptReason`); `POST :groupId/date/:date/not-held` (`reason`, `action: CANCEL \| RESCHEDULE`, ko'chirishda `newDate`, vaqt, xona). Ikkalasi CEO / direktor / administrator, filial tekshiruvi bilan |
 | `attendance-reminder.service.ts`                            | Yozuv + topshiriq; har tickda to'ldirish; ko'chirish / bekor qilishni bilish; yangi admin va ustoz matnlari      |
 | `attendance/unmarked-lessons.cron.ts` (yangi)               | Har kuni 23:00: kunning qolgan darslari                                                                          |
 | `salary/salary-accrual.service.ts`                          | Yozish qulfi (5.1)                                                                                               |
 | `salary/shared/gap-sweep.ts` + 3 chaqiruvchi                | Hisob qulfi (5.2)                                                                                                |
-| `lesson-cancellations.service.ts`                           | Yaratishda `NOT_HELD` + topshiriqni yopish + guruh xabari; o'chirishda 3.5.6                                     |
-| `lesson-reschedules.service.ts`                             | 12-bo'lim, Q-B                                                                                                   |
+| `lesson-cancellations.service.ts`                           | Yaratishda `NOT_HELD` + topshiriqni yopish + guruh xabari; o'chirishda 3.5 «Bekor qilish o'chirilsa» |
+| `lesson-reschedules.service.ts`                             | Yaratishda `RESCHEDULED` + topshiriqni yopish + guruh xabari; o'chirishda `PENDING` + yangi topshiriq |
 | `comments/*`, `notification-events.listener.ts`, `task-reminder.service.ts` | `author` null; tizim topshirig'i qoidalari; olish; `task.assigned` yo'q                          |
 | `groups-write.service.ts`                                   | Guruh o'chirilsa topshiriqlarni yopish                                                                           |
 | `dashboard.service.ts`                                      | Har darsga `unmarked: { id, status, claimedBy } \| null`                                                         |
 | `telegram-groups/*`                                         | «Bo'lmadi» darhol xabari; 21:00 «Diqqat» qatori                                                                  |
 | `telegram-digest`                                           | Ustozga «haq yozilmadi» kategoriyasi                                                                             |
 | `direct-send.guard.spec.ts` + ADR-0025 ro'yxati             | Yangi darhol yuboruvchi                                                                                          |
-| `scripts/open-unmarked-lessons.ts`                          | Eski izsiz kunlar (dry-run, `--apply`), 12-bo'lim Q-C                                                            |
+| `scripts/open-unmarked-lessons.ts`                          | Eski izsiz kunlar (dry-run, `--apply`); `teacherPayExempt: true`, sabab «Qoida kuchga kirishidan oldingi kun» (Q11) |
 | `docs/adr/0054-*.md`                                        | Yangi ADR (raqam band bo'lsa merge oldidan qayta raqamlanadi)                                                    |
 | `server/CLAUDE.md`                                          | Attendance bo'limi, eslatmalar jadvali                                                                           |
 
 ## 7. Sayt (client) o'zgarishlari
 
 - `components/dashboard/schedule-client.tsx` va dars kartasi — ochiq oyna,
-  «Bo'ldi» → davomat formasi (kech rejim), «Bo'lmadi» → sabab dialogi.
+  «Bo'ldi» → davomat formasi (kech rejim; CEO ga «Ustoz aybdor emas» belgisi
+  va sabab maydoni), «Bo'lmadi» → sabab + «Bekor qilish» / «Boshqa kunga
+  ko'chirish» (sana, vaqt, xona) dialogi.
 - `components/groups/attendance/*` — guruh sahifasidagi davomat tabida xuddi
   shu oyna; kech rejimda ogohlantirish: «Ustozga bu dars uchun haq
   yozilmaydi». Oddiy rejimda tugagan dars uchun yangi davomat qulflangan
@@ -289,7 +324,7 @@ uni o'zi topadi.
 - **Davomat tugashdan bir soniya oldin saqlandi** — 3.1 poyga qoidasi.
 - **Ko'chirilgan dars** — asl kunga yozuv ochilmaydi; yangi kunda ko'chirishning
   vaqti bilan.
-- **Oldindan bekor qilingan dars** — yozuv ochilmaydi (o'chirilsa — 3.5.6).
+- **Oldindan bekor qilingan dars** — yozuv ochilmaydi (o'chirilsa — 3.5, «Bekor qilish o'chirilsa»).
 - **Cron o'tkazib yuborilsa** — keyingi tick yoki 23:00 yurishi.
 - **«Bo'ldi» noto'g'ri bosilgan** — direktor / CEO darsni keyin bekor qila
   oladi → `NOT_HELD`, pul qaytadi.
@@ -326,10 +361,15 @@ uni o'zi topadi.
   `attendance.completed` yo'q; yopilgan guruhda ishlaydi.
 - Yozish qulfi: `createAccrual` yuklovchidagi darsga yozmaydi, `attendanceId`
   siz yozuvga tegmaydi. Hisob qulfi: `sweepGapLessons` o'tkazib yuboradi.
-- `teacherPayExempt` darsi odatdagidek haq oladi.
-- «Bo'lmadi»: bekor qilish + `NOT_HELD` + topshiriq yopildi + guruh xabari
-  (commit'dan keyin); oddiy oldindan bekor qilishda guruh xabari yo'q.
-- Bekor qilish o'chirilsa: ikkala holat (3.5.6).
+- `teacherPayExempt` darsi odatdagidek haq oladi; belgini CEO qo'ya oladi,
+  direktor va administrator — 403.
+- «Bo'lmadi → Bekor qilish»: bekor qilish + `NOT_HELD` + topshiriq yopildi +
+  guruh xabari (commit'dan keyin); oddiy oldindan bekor qilishda guruh xabari
+  yo'q.
+- «Bo'lmadi → Ko'chirish»: yangi dars boshlanishi o'tgan bo'lsa — 400;
+  aks holda ko'chirish + `RESCHEDULED` + topshiriq yopildi + guruh xabari; pul
+  qaytmaydi; ko'chirish o'chirilsa — `PENDING` + yangi topshiriq.
+- Bekor qilish o'chirilsa: ikkala holat (3.5, «Bekor qilish o'chirilsa»).
 - Olish: birinchisi oladi, ikkinchisi 409; qolgan qatorlar o'chadi; eslatma
   faqat egasiga.
 - Tizim topshirig'ini qo'lda `DONE` / tahrir / o'chirish — 400; `task.assigned`
@@ -344,22 +384,3 @@ uni o'zi topadi.
 - Telegramda javob berish tugmalari (davomat ro'yxatini Telegramda to'ldirib
   bo'lmaydi; guruh tugmasini kim bosgani ishonchli emas, tugma esa pul qaytaradi).
 
-## 12. Ochiq savollar (CEO)
-
-- **Q-A. Ustoz aybdor bo'lmagan holat.** Ustoz davomatni o'zi aybi bilan emas,
-  boshqa sabab bilan ololmasligi mumkin: yangi ustozning akkaunti hali
-  ochilmagan (sentabrda ikki ustozda aynan shunday bo'lgan, CEO ularga haq
-  berishni buyurgan), dars paytida server ishlamay qolgan yoki deploy bo'lgan.
-  Tavsiya: «Bo'ldi» da faqat direktor va CEO ko'radigan belgi — «Ustoz aybdor
-  emas, haq yozilsin» + majburiy sabab (`teacherPayExempt`, `exemptReason`).
-  Busiz bunday ustozga haq faqat qo'lda kreditlash bilan beriladi.
-- **Q-B. Dars bo'lmadi, lekin boshqa kunga ko'chiriladi (qo'shimcha dars).**
-  «Bo'lmadi» hozir faqat bekor qilish + pul qaytarish. Agar dars keyin
-  o'tiladigan bo'lsa, pulni qaytarish noto'g'ri. Tavsiya: «Bo'lmadi» oynasida
-  ikkinchi tanlov — «Boshqa kunga ko'chirish» (mavjud dars ko'chirish,
-  pul qaytmaydi, yangi kunda ustoz odatdagidek davomat oladi). Qanday bo'lmasin,
-  mavjud «ko'chirish» sahifasidan javobi kutilayotgan kun ko'chirilsa, yozuv
-  va topshiriq yopiladi.
-- **Q-C. 17 ta eski izsiz kun.** Ular yangi qoidadan oldin bo'lgan. Tavsiya:
-  skript ularni `teacherPayExempt: true` bilan ochadi — «Bo'ldi» bo'lsa ustoz
-  haq oladi, chunki o'sha kunlarda qoida yo'q edi.
