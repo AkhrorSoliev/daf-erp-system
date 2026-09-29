@@ -410,7 +410,8 @@ export class LeadsService {
         : null,
       latestComment: latest
         ? {
-            authorName: fullName(latest.author),
+            // A system task (ADR-0054) has no author.
+            authorName: latest.author ? fullName(latest.author) : 'Tizim',
             content: latest.content,
             createdAt: latest.createdAt,
             isTask: latest.isTask,
