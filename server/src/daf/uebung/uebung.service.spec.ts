@@ -512,6 +512,28 @@ describe('UebungService.seans', () => {
     const fragen = await new UebungService(prisma as any).seans(100, 55);
     expect(fragen).toEqual([]);
   });
+
+  it('a lesson of a unit with no content asks nothing, not only due words', async () => {
+    // Unit 4 had its sections and lessons seeded before its words were
+    // written; its lessons used to be one or two due review questions.
+    const prisma = fakePrisma();
+    prisma.dafLexeme.findMany = jest.fn(async (args: any = {}) =>
+      args?.where?.id?.in
+        ? [{ id: 5, de: 'Name', uz: 'ism', artikel: 'der', anzeige: null }]
+        : [],
+    ) as any;
+    prisma.dafSentence.findMany = jest.fn(async () => []) as any;
+    prisma.dafPhrase.findMany = jest.fn(async () => []) as any;
+    prisma.dafDialog.findMany = jest.fn(async () => []) as any;
+    prisma.dafLexemeState.findMany = jest.fn(async () => [
+      { lexemeId: 5, lastFormat: 'WORT_UZ', dueAt: new Date(0) },
+    ]) as any;
+    const service = new UebungService(prisma as any);
+    await expect(service.seans(100, 55)).resolves.toEqual([]);
+    await expect(
+      service.ersatz(100, 55, 'WORT', 5, 'WORT_UZ'),
+    ).resolves.toBeNull();
+  });
 });
 
 describe('UebungService.seans — DIALOG_LUECKE', () => {

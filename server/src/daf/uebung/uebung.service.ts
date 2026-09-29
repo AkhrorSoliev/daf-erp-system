@@ -945,6 +945,18 @@ export class UebungService {
       toDialog,
     );
 
+    // A unit whose content is not written yet (its sections were seeded with
+    // the course map) is not a lesson: it would ask only the student's due
+    // words, one or two questions. The path shows it as «Tez orada».
+    if (
+      coreWords.length === 0 &&
+      sentences.length === 0 &&
+      phrases.length === 0 &&
+      dialoge.length === 0
+    ) {
+      return null;
+    }
+
     // Qaytarish (pflicht) savollari — DUE so'rovi shu yerda, kandidaten
     // qurilishidan OLDIN chaqiriladi, chunki pastdagi `letzterFormatByWort`
     // so'rovi ham `dafLexemeState`ga boradi va ikkalasining tartibi

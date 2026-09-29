@@ -84,6 +84,40 @@ describe("yolTugunlari", () => {
     expect(t.map((x) => x.tur)).toEqual(["daraja", "unit"]);
   });
 
+  it("a unit whose content is not ready shows «Tez orada» instead of its lessons", () => {
+    const t = yolTugunlari([
+      lvl("A1", [
+        unit(3, [bolim(1, [seans(300, true)])], seans(399, true)),
+        { ...unit(4, [bolim(1, [seans(400, false), seans(401, false)])], seans(499, false)), bereit: false },
+      ]),
+    ]);
+    expect(t.map((x) => x.tur)).toEqual(["daraja", "unit", "seans", "seans", "unit", "tez-orada"]);
+    const tezOrada = t[t.length - 1];
+    expect(tezOrada).toMatchObject({ id: null, holat: "locked", matn: "Tez orada" });
+  });
+
+  it("a unit that is not ready takes no part in the lock chain", () => {
+    // Unit 5 has content again: finishing unit 3 must open it, not stall on
+    // the empty unit 4 in between.
+    const t = yolTugunlari([
+      lvl("A1", [
+        unit(3, [bolim(1, [seans(300, true)])]),
+        { ...unit(4, [bolim(1, [seans(400, false)])]), bereit: false },
+        unit(5, [bolim(1, [seans(500, false)])]),
+      ]),
+    ]);
+    const seanslar = t.filter((x) => x.tur === "seans");
+    expect(seanslar.map((s) => [s.id, s.holat])).toEqual([
+      [300, "done"],
+      [500, "active"],
+    ]);
+  });
+
+  it("a unit without the flag (older server) stays as before", () => {
+    const t = yolTugunlari([lvl("A1", [unit(1, [bolim(1, [seans(100, false)])])])]);
+    expect(t.map((x) => x.tur)).toEqual(["daraja", "unit", "seans"]);
+  });
+
   it("bo'sh ro'yxat bo'sh yo'l", () => {
     expect(yolTugunlari([])).toEqual([]);
   });
