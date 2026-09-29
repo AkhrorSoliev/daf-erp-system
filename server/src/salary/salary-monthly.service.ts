@@ -10,6 +10,7 @@ import {
 import { SalaryStaffMonthlyService } from './salary-monthly-staff.service';
 import { buildTeacherRosterWhere } from './shared/teacher-roster-where';
 import { packPriceCandidates, sweepGapLessons } from './shared/gap-sweep';
+import { loadUnpaidMonthlyShare } from './shared/unpaid-monthly-share';
 import {
   loadFrozenMonthlyCharges,
   loadPackLessonPrices,
@@ -39,9 +40,12 @@ function dateStr(d: Date): string {
  *
  * The month's earnings are split BY FUNDER, and that split is computed the same
  * way no matter whether the month has been settled yet:
- *  - `covered`       = accruals a student's payment backed (`wasCenterTopUp` false)
+ *  - `covered`       = accruals a student's payment backed (`wasCenterTopUp` false),
+ *                      less the share whose monthly charge is still unpaid
  *  - `centerFunded`  = written center top-up accruals (`wasCenterTopUp` true)
  *                      PLUS billable lessons that still carry no accrual × rate
+ *                      PLUS that unpaid monthly share (`centerUnpaidShare`,
+ *                      ADR-0052 — live, shrinks as the students pay)
  *  - `fullDeserved`  = `covered` + `centerFunded` (all lessons held × rate)
  *  - `advances`      = TEACHER_ADVANCE given during the calendar month
  *  - `netToPay`      = base (see NET_BASE) − advances, or the settled payment's net
@@ -136,6 +140,7 @@ export class SalaryMonthlyService {
       carriedIn: 0,
       carriedOut: 0,
       centerFunded: 0,
+      centerUnpaidShare: 0,
       advances: 0,
       netToPay: 0,
       // Center top-up lifecycle (company-level summary card):
@@ -198,6 +203,8 @@ export class SalaryMonthlyService {
           wasCenterTopUp: true,
           // Who the center fronted for — the input to `centerOwedByStudents`.
           studentId: true,
+          // The charge behind it — its unpaid share is the centre's (ADR-0052).
+          deductionTransactionId: true,
         },
       }),
       // Billable attendances in the period (for the GAP sweep). Every held
@@ -524,6 +531,14 @@ export class SalaryMonthlyService {
       const a = agg.get(tid);
       if (a) a.noChargeUnits = n;
     }
+    // Monthly billing writes the month's charge whether or not the student can
+    // pay, so a debtor's lessons are accrued as student-covered. Their unpaid
+    // share is the centre's until the student pays (ADR-0052).
+    const unpaidShare = await loadUnpaidMonthlyShare(
+      this.prisma,
+      companyId,
+      accruals,
+    );
 
     // ─── Step 5+6: build rows ────────────────────────────────────────────
     const allRows = teachers.map((t) => {
@@ -541,11 +556,15 @@ export class SalaryMonthlyService {
       // paid (written top-up accruals) plus what it still owes for lessons that
       // have not been settled yet. A settled month has no second term, an
       // in-progress one has no first — the formula does not branch on that.
-      const rawCenterFunded = a.centerAdvanced + rawGap;
+      // …plus, on monthly billing, the part of student-covered pay whose
+      // charge the student has not paid yet. It only moves between the two
+      // columns; `fullDeserved` and `netToPay` do not change.
+      const unpaid = Math.min(unpaidShare.get(t.id) ?? 0, a.studentFunded);
+      const rawCenterFunded = a.centerAdvanced + rawGap + unpaid;
       const fullDeserved = hasLessonData
-        ? a.studentFunded + rawCenterFunded
+        ? a.studentFunded + a.centerAdvanced + rawGap
         : null;
-      const covered = hasLessonData ? a.studentFunded : null;
+      const covered = hasLessonData ? a.studentFunded - unpaid : null;
       const centerFunded = hasLessonData ? rawCenterFunded : null;
       const advances = advancesByUser.get(t.id) ?? 0;
       const payment = paymentByUser.get(t.id) ?? null;
@@ -584,6 +603,9 @@ export class SalaryMonthlyService {
         carriedIn: a.carriedIn,
         carriedOut: carriedOutMap.get(t.id) ?? 0,
         centerFunded,
+        // The part of `centerFunded` that is monthly-billed lessons the
+        // students have not paid yet (ADR-0052) — live, shrinks as they pay.
+        centerUnpaidShare: hasLessonData ? unpaid : null,
         advances,
         netToPay,
         // `centerAdvanced` is the WRITTEN part of `centerFunded` (X) — what the
@@ -648,6 +670,7 @@ export class SalaryMonthlyService {
         carriedIn: s.carriedIn + r.carriedIn,
         carriedOut: s.carriedOut + r.carriedOut,
         centerFunded: s.centerFunded + (r.centerFunded ?? 0),
+        centerUnpaidShare: s.centerUnpaidShare + (r.centerUnpaidShare ?? 0),
         advances: s.advances + r.advances,
         netToPay: s.netToPay + r.netToPay,
         centerAdvanced: s.centerAdvanced + r.centerAdvanced,

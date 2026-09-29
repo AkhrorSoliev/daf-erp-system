@@ -19,6 +19,8 @@ export interface DebtOriginRow {
   type: TransactionType;
   amount: number;
   createdAt: Date;
+  /** Optional: when given, `leftById` reports what is still unpaid of it. */
+  id?: string;
 }
 
 export interface DebtOrigin {
@@ -42,6 +44,15 @@ export interface DebtOrigin {
    * because it depends on the same walk.
    */
   addedByMonth: Map<string, number>;
+  /**
+   * Charge row id → the part of it still unpaid today, for rows passed with an
+   * `id`. The same FIFO as `byMonth`, one level finer: summing it per origin
+   * month gives `byMonth`. A charge that is fully paid, or was absorbed by an
+   * advance, is absent (0). The salary report reads it to tell what share of
+   * a monthly charge — and so of the teacher's pay for it — the centre is
+   * still carrying (ADR-0052).
+   */
+  leftById: Map<string, number>;
 }
 
 /**
@@ -56,7 +67,7 @@ export function replayDebtOrigin(rows: DebtOriginRow[]): DebtOrigin {
 
   // FIFO aging queue: every uncovered charge is parked under the month it
   // landed in, and every credit eats the OLDEST fragment first.
-  const aging: Array<{ month: string; left: number }> = [];
+  const aging: Array<{ month: string; left: number; id?: string }> = [];
   const addedByMonth = new Map<string, number>();
   let head = 0;
   let prepaid = 0;
@@ -75,7 +86,7 @@ export function replayDebtOrigin(rows: DebtOriginRow[]): DebtOrigin {
       prepaid -= absorbed;
       debit -= absorbed;
       if (debit > 0) {
-        aging.push({ month: key, left: debit });
+        aging.push({ month: key, left: debit, id: r.id });
         addedByMonth.set(key, (addedByMonth.get(key) ?? 0) + debit);
       }
     } else {
@@ -95,14 +106,16 @@ export function replayDebtOrigin(rows: DebtOriginRow[]): DebtOrigin {
   }
 
   const byMonth = new Map<string, number>();
+  const leftById = new Map<string, number>();
   for (let i = head; i < aging.length; i++) {
     const frag = aging[i];
     if (frag.left > 0) {
       byMonth.set(frag.month, (byMonth.get(frag.month) ?? 0) + frag.left);
+      if (frag.id) leftById.set(frag.id, frag.left);
     }
   }
 
-  return { since: debt > 0 ? since : null, byMonth, addedByMonth };
+  return { since: debt > 0 ? since : null, byMonth, addedByMonth, leftById };
 }
 
 /** Whole months between two instants, floored at 0. */

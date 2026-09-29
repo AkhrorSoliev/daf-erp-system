@@ -106,5 +106,6 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0046](0046-qabul-qilingan-mock-tolovi-tuzatiladi.md) | Admin qabul qilgan mock to'lovi tuzatiladi va bekor qilinadi; onlayn va balans to'lovi — yo'q | Qabul qilindi | 2026-09-28 |
 | [0050](0050-stavka-sanasidan-yozilgan-darslar-qayta-hisoblanadi.md) | Stavka o'z sanasidan beri yozilgan, oyligi hisoblanmagan darslarga ham qo'llanadi; saqlashdan oldin ta'siri ko'rsatiladi | Qabul qilindi | 2026-09-29 |
 | [0051](0051-oylik-hisobsiz-dars-paket-narxida-baholanadi.md) | Oylik kursdagi hisobsiz dars paket narxida baholanadi; ustoz haqi tushib qolmaydi | Qabul qilindi | 2026-09-29 |
+| [0052](0052-oylik-hisobning-tolanmagan-ulushi-markaz-ustunida.md) | Oylik hisobning to'lanmagan ulushi «Markaz qo'shdi» ustunida ko'rinadi; oylik summasi o'zgarmaydi | Qabul qilindi | 2026-09-29 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.

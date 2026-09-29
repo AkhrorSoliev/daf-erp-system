@@ -95,6 +95,7 @@ describe('SalaryMonthlyService', () => {
     expect(res.totals).toEqual({
       fullDeserved: 0,
       covered: 0,
+      centerUnpaidShare: 0,
       carriedIn: 0,
       carriedOut: 0,
       centerFunded: 0,
@@ -273,6 +274,77 @@ describe('SalaryMonthlyService', () => {
         centerFunded: 6_000,
         fullDeserved: 12_000,
       }),
+    );
+  });
+
+  /**
+   * ADR-0052: on monthly billing the charge is written whether or not the
+   * student pays, so a debtor's lessons accrue as "students paid". The part
+   * of that charge still unpaid moves to the centre's column; the teacher's
+   * pay and net do not change.
+   */
+  it('MONTHLY charge still unpaid: its share of pay moves to the centre', async () => {
+    prisma.user.findMany.mockResolvedValue([teacher(10010, 'Jamsher')]);
+    prisma.group.findMany.mockResolvedValue([
+      { id: 'g1', course: { price: 400_000, lessonPaymentCount: 12 } },
+    ]);
+    prisma.groupTeacher.findMany.mockResolvedValue([
+      { groupId: 'g1', teacherId: 10010 },
+    ]);
+    prisma.salaryAccrual.findMany.mockResolvedValue([
+      {
+        userId: 10010,
+        studentId: 20001,
+        attendanceId: 'a1',
+        amount: 8_000,
+        creditPeriodDate: null,
+        isCenterTopUp: false,
+        wasCenterTopUp: false,
+        deductionTransactionId: 'charge-sep',
+      },
+      {
+        userId: 10010,
+        studentId: 20001,
+        attendanceId: 'a2',
+        amount: 8_000,
+        creditPeriodDate: null,
+        isCenterTopUp: false,
+        wasCenterTopUp: false,
+        deductionTransactionId: 'charge-sep',
+      },
+    ]);
+    prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+      { transactionId: 'charge-sep' },
+    ]);
+    prisma.student.findMany.mockResolvedValue([{ id: 20001 }]);
+    // 400 000 charged, 100 000 paid: three quarters still unpaid.
+    prisma.transaction.findMany.mockResolvedValue([
+      {
+        id: 'charge-sep',
+        studentId: 20001,
+        type: 'LESSON_DEDUCTION',
+        amount: -400_000,
+        createdAt: new Date('2026-09-01T00:00:00Z'),
+      },
+      {
+        id: 'pay',
+        studentId: 20001,
+        type: 'PAYMENT',
+        amount: 100_000,
+        createdAt: new Date('2026-09-05T00:00:00Z'),
+      },
+    ]);
+
+    const res = await service.getMonthly({ month: '2026-09' }, 1, 999);
+
+    const row = res.data[0];
+    expect(row.fullDeserved).toBe(16_000);
+    expect(row.covered).toBe(4_000);
+    expect(row.centerFunded).toBe(12_000);
+    expect(row.centerUnpaidShare).toBe(12_000);
+    expect(row.netToPay).toBe(16_000);
+    expect(res.totals).toEqual(
+      expect.objectContaining({ covered: 4_000, centerFunded: 12_000 }),
     );
   });
 
