@@ -79,6 +79,9 @@ describe('QrAttendanceService', () => {
       lessonCancellation: {
         findFirst: jest.fn().mockResolvedValue(null),
       },
+      unmarkedLesson: {
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
       // Interactive transaction: callback gets prisma itself as tx so all
       // model mocks are reachable inside the $transaction block.
       $transaction: jest.fn((cb) => cb(prisma)),
@@ -107,6 +110,8 @@ describe('QrAttendanceService', () => {
       validateLessonDate: jest.fn().mockResolvedValue({
         group: validatedGroup,
         parsedDate: new Date('2026-04-03T00:00:00.000Z'),
+        effectiveStartTime: '09:00',
+        effectiveEndTime: '11:00',
       }),
     };
 
@@ -142,6 +147,14 @@ describe('QrAttendanceService', () => {
   });
 
   describe('startSession', () => {
+    beforeEach(() => {
+      jest.useFakeTimers({
+        now: new Date('2026-04-03T05:00:00.000Z'),
+        advanceTimers: true,
+      });
+    });
+    afterEach(() => jest.useRealTimers());
+
     it('should call validateLessonDate before creating session', async () => {
       await service.startSession('group-1', '2026-04-03', 1, 1, ['Teacher']);
 
@@ -223,6 +236,20 @@ describe('QrAttendanceService', () => {
       expect(redis.del).toHaveBeenCalledWith('qr-token:old-token');
       expect(result.sessionId).toBeDefined();
       expect(result.token).toBeDefined();
+    });
+
+    it('refuses a session after the lesson ended', async () => {
+      jest.setSystemTime(new Date('2026-04-03T06:00:00.000Z')); // 11:00 Tashkent
+      await expect(
+        service.startSession('group-1', '2026-04-03', 1, 1, ['Administrator']),
+      ).rejects.toThrow('Dars tugagan');
+    });
+
+    it("refuses a session once «Dars bo'ldimi?» was asked", async () => {
+      prisma.unmarkedLesson.findUnique.mockResolvedValue({ id: 'u1' });
+      await expect(
+        service.startSession('group-1', '2026-04-03', 1, 1, ['Administrator']),
+      ).rejects.toThrow('Dars tugagan');
     });
   });
 

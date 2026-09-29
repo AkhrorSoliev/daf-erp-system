@@ -3,6 +3,12 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import {
+  ENDED_REFUSAL,
+  newAttendanceWindow,
+  tashkentClock,
+  windowRefusal,
+} from './shared/attendance-window';
 import { randomUUID } from 'crypto';
 import { EnrollmentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -35,13 +41,37 @@ export class QrAttendanceSessionService {
     roles?: string[],
   ) {
     // Validate date is a valid lesson date (includes time check for teachers)
-    const { group: validatedGroup, parsedDate } =
-      await this.attendanceService.validateLessonDate(
-        groupId,
+    const {
+      group: validatedGroup,
+      parsedDate,
+      effectiveStartTime,
+      effectiveEndTime,
+    } = await this.attendanceService.validateLessonDate(
+      groupId,
+      date,
+      companyId,
+      roles,
+    );
+
+    // A QR session writes a new register — the same window as a manual one
+    // (spec 2026-09-29 §3.1), for every role.
+    const { todayStr, nowMinutes } = tashkentClock();
+    const refusal = windowRefusal(
+      newAttendanceWindow({
         date,
-        companyId,
-        roles,
-      );
+        todayStr,
+        nowMinutes,
+        startTime: effectiveStartTime,
+        endTime: effectiveEndTime,
+      }),
+      { date, todayStr, startTime: effectiveStartTime },
+    );
+    if (refusal) throw new BadRequestException(refusal);
+    const asked = await this.prisma.unmarkedLesson.findUnique({
+      where: { groupId_date: { groupId, date: parsedDate } },
+      select: { id: true },
+    });
+    if (asked) throw new BadRequestException(ENDED_REFUSAL);
 
     const group = await this.prisma.group.findFirst({
       where: { id: groupId, deletedAt: null },
