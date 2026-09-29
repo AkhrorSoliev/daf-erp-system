@@ -140,7 +140,7 @@ export class AttendanceValidationService {
       isMovedLessonDay && reschedule?.newLessonEndTime
         ? reschedule.newLessonEndTime
         : group.lessonEndTime;
-    if (!canBypassTime && effectiveStartTime && effectiveEndTime) {
+    if (!canBypassTime) {
       // Production server runs in UTC; lesson times are Asia/Tashkent (UTC+5)
       const tashkentParts = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'Asia/Tashkent',
@@ -155,8 +155,18 @@ export class AttendanceValidationService {
         tashkentParts.find((p) => p.type === type)!.value;
       const todayStr = `${part('year')}-${part('month')}-${part('day')}`;
 
-      // Vaqt tekshiruvi faqat bugungi sana uchun amal qiladi
-      if (date === todayStr) {
+      // A teacher marks only the lesson being taught now. Any other day —
+      // a forgotten past lesson or a future one — is the administrator's
+      // (the reminder after the lesson tells the teacher exactly that).
+      // Checked before the time window, which alone let any non-today date
+      // through.
+      if (date !== todayStr) {
+        throw new BadRequestException(
+          "O'qituvchi davomatni faqat dars kuni belgilaydi. Boshqa kun uchun administratorga murojaat qiling",
+        );
+      }
+
+      if (effectiveStartTime && effectiveEndTime) {
         const currentMinutes =
           Number(part('hour')) * 60 + Number(part('minute'));
         const [startH, startM] = effectiveStartTime.split(':').map(Number);

@@ -465,9 +465,9 @@ Every attendance write (manual `save()` and QR `startSession()`) passes through 
 5. Day-of-week matches group `exactDays` schedule
 6. Date is not a holiday (`Holiday` table)
 7. **Lesson time check** (server-side `new Date()`, not client time):
-   - **Teacher** — can only take attendance from 10 minutes before `lessonStartTime` until `lessonEndTime`
-   - **CEO, Branch Director, Administrator** — bypass time restriction (can take attendance anytime)
-   - Time check only applies to today's date — past dates are not time-restricted
+   - **Teacher** — only TODAY's lesson (Tashkent date), and only from 10 minutes before `lessonStartTime` until `lessonEndTime`. Any other date, past or future, is refused ("O'qituvchi davomatni faqat dars kuni belgilaydi…") — a lesson nobody marked is restored by an administrator, which is what the end-of-lesson reminder tells the teacher. Before 2026-09-29 the time window was the only rule, so a teacher could backfill any past day through the API. The day check runs even for a group without lesson times.
+   - **CEO, Branch Director, Administrator** — bypass both (any date, any time). A user holding Teacher plus one of these roles bypasses too
+   - Callers that pass no roles are treated as restricted (fail-closed); every production caller passes them
 
 #### QR Session
 

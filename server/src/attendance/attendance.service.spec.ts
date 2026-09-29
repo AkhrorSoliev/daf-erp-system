@@ -245,6 +245,8 @@ describe('AttendanceService', () => {
       const result = await service.validateLessonDate(
         'group-uuid-1',
         '2026-04-01',
+        undefined,
+        ['Administrator'],
       );
 
       expect(result.group.id).toBe('group-uuid-1');
@@ -366,13 +368,50 @@ describe('AttendanceService', () => {
         expect(result.group.id).toBe('group-uuid-1');
       });
 
-      it('should skip time check for past dates (not today)', async () => {
-        // Non-today date: time check doesn't apply
+      it('should reject a Teacher on a past lesson date', async () => {
+        // 2026-04-01 is a scheduled, in-range lesson — only the day is wrong.
+        await expect(
+          service.validateLessonDate('group-uuid-1', '2026-04-01', undefined, [
+            'Teacher',
+          ]),
+        ).rejects.toThrow('faqat dars kuni');
+      });
+
+      it('should reject a Teacher on a future lesson date', async () => {
+        const now = tashkentNow();
+        const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const nextWeekStr = nextWeek.toISOString().slice(0, 10);
+        prisma.group.findFirst.mockResolvedValue({
+          ...getTodayMockGroup(),
+          startDate: new Date(Date.UTC(now.getUTCFullYear() - 1, 0, 1)),
+          endDate: new Date(Date.UTC(now.getUTCFullYear() + 1, 11, 31)),
+          lessonStartTime: null,
+          lessonEndTime: null,
+        });
+
+        await expect(
+          service.validateLessonDate('group-uuid-1', nextWeekStr, undefined, [
+            'Teacher',
+          ]),
+        ).rejects.toThrow('faqat dars kuni');
+      });
+
+      it('should let an Administrator take a past lesson date', async () => {
         const result = await service.validateLessonDate(
           'group-uuid-1',
           '2026-04-01',
           undefined,
-          ['Teacher'],
+          ['Administrator'],
+        );
+        expect(result.group.id).toBe('group-uuid-1');
+      });
+
+      it('should let a Teacher who is also an Administrator take a past date', async () => {
+        const result = await service.validateLessonDate(
+          'group-uuid-1',
+          '2026-04-01',
+          undefined,
+          ['Teacher', 'Administrator'],
         );
         expect(result.group.id).toBe('group-uuid-1');
       });
@@ -744,6 +783,20 @@ describe('AttendanceService', () => {
   });
 
   describe('save', () => {
+    // A teacher may only mark today's lesson, during its time. The Teacher
+    // cases below save 2026-04-01 (09:00–11:00), so the clock is pinned to
+    // 10:00 Tashkent that day. `advanceTimers` keeps timers running.
+    beforeEach(() => {
+      jest.useFakeTimers({
+        now: new Date('2026-04-01T05:00:00.000Z'),
+        advanceTimers: true,
+      });
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
     it('should save attendance and return success', async () => {
       const mockResults = [
         {
@@ -1152,6 +1205,26 @@ describe('AttendanceService', () => {
       ).rejects.toThrow(BadRequestException);
 
       // Upsert must not run for a locked teacher
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it('should refuse a Teacher saving a past lesson, before anything is written', async () => {
+      prisma.enrollment.findMany.mockResolvedValue([
+        { studentId: 10001, student: { balance: 500000 } },
+      ]);
+      prisma.attendance.findMany.mockResolvedValue([]);
+
+      const dto: SaveAttendanceDto = {
+        entries: [{ studentId: 10001, status: 'PRESENT' }],
+      };
+
+      // 2026-03-30 is the Monday before the pinned "today" — a real lesson
+      // nobody marked.
+      await expect(
+        service.save('group-uuid-1', '2026-03-30', dto, 1, ['Teacher'], 1),
+      ).rejects.toThrow('faqat dars kuni');
+
+      expect(prisma.$transaction).not.toHaveBeenCalled();
       expect(prisma.attendance.upsert).not.toHaveBeenCalled();
     });
 
