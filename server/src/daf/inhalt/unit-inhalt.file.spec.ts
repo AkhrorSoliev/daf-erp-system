@@ -1,6 +1,10 @@
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { validateWortliste, UNIT_WORDS_MAX } from './wortliste.validate';
+import {
+  kernwoerterImBudget,
+  validateWortliste,
+  UNIT_WORDS_MAX,
+} from './wortliste.validate';
 import {
   validateEindeutigkeit,
   validateHilfswoerter,
@@ -137,7 +141,11 @@ describe.each(UNITS)('%s — so`zlar', (unit) => {
   });
 
   it(`${UNIT_WORDS_MAX} ta asosiy so\`z bor`, () => {
-    expect(woerter.woerter.filter((w) => w.core)).toHaveLength(UNIT_WORDS_MAX);
+    // Words built from taught ones (dreizehn, einundzwanzig) are outside
+    // the budget (`ausserhalbBudget` in wortliste.json).
+    expect(kernwoerterImBudget(woerter.woerter, wortliste)).toBe(
+      UNIT_WORDS_MAX,
+    );
   });
 
   it('har asosiy so`z taqsimotda ham bor', () => {
@@ -476,9 +484,12 @@ describe.each(UNITS)('%s — gaplar', (unit) => {
 describe('u01 — o`ziga xos faktlar', () => {
   const woerter = read<WoerterFile>('u01', 'woerter.json');
 
-  it('sonlar bo`limida 12 ta son bor', () => {
-    expect(woerter.woerter.filter((w) => w.section === 'u01-s4')).toHaveLength(
-      12,
+  it('sonlar bo`limida 0 dan 19 gacha 20 ta son bor', () => {
+    // 0–11 first, 12–19 added on 2026-09-30 (CEO: numbers were never
+    // taught past eleven).
+    const sonlar = woerter.woerter.filter((w) => w.section === 'u01-s4');
+    expect(sonlar.map((w) => Number(w.anzeige))).toEqual(
+      Array.from({ length: 20 }, (_, i) => i),
     );
   });
 

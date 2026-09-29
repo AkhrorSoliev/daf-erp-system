@@ -44,15 +44,17 @@
     },
     {
       "section": "u01-s4",
-      "titelDe": "Zahlen, Telefonnummer",
-      "titelUz": "sonlar va telefon raqami",
-      "erklaerungUz": "0 dan 11 gacha har bir son alohida nemischa so'z: null, eins, zwei... Telefon raqamini aytganda nemislar sonlarni sanamaydi — har bir raqamni yozilgan tartibda, birma-bir yoki juft-juft qilib aytadi, chunki telefon raqami sanoq emas, raqamlar ketma-ketligi.",
+      "titelDe": "Zahlen 0–19, Telefonnummer",
+      "titelUz": "0–19 sonlari va telefon raqami",
+      "erklaerungUz": "0 dan 12 gacha har bir son alohida nemischa so'z: null, eins, zwei ... elf, zwölf. 13 dan 19 gacha son birlik va «zehn» bilan yasaladi: drei + zehn = dreizehn, vier + zehn = vierzehn. Ikkitasi qisqaradi: sechzehn (sechs emas) va siebzehn (sieben emas). Telefon raqamini aytganda nemislar sonlarni sanamaydi — har bir raqamni yozilgan tartibda, birma-bir yoki juft-juft qilib aytadi, chunki telefon raqami sanoq emas, raqamlar ketma-ketligi.",
       "beispiele": [
         { "de": "Null, drei, sieben, eins, fünf, neun.", "uz": "Telefon raqami: nol, uch, yetti, bir, besh, to'qqiz." },
         { "de": "Acht, zwei, zehn, sechs.", "uz": "Sakkiz, ikki, o'n, olti." },
         { "de": "Vier, elf, null, neun.", "uz": "To'rt, o'n bir, nol, to'qqiz." },
         { "de": "Sieben, eins, acht, drei, zwei.", "uz": "Yetti, bir, sakkiz, uch, ikki." },
-        { "de": "Zwei, neun, fünf, null, sieben, elf.", "uz": "Ikki, to'qqiz, besh, nol, yetti, o'n bir." }
+        { "de": "Zwei, neun, fünf, null, sieben, elf.", "uz": "Ikki, to'qqiz, besh, nol, yetti, o'n bir." },
+        { "de": "Drei und zehn ist dreizehn.", "uz": "Uch va o'n — o'n uch." },
+        { "de": "Sechzehn, siebzehn, achtzehn.", "uz": "O'n olti, o'n yetti, o'n sakkiz." }
       ]
     },
     {

@@ -7,7 +7,11 @@
  */
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { validateWortliste } from '../src/daf/inhalt/wortliste.validate';
+import {
+  kernwoerterImBudget,
+  UNIT_WORDS_MAX,
+  validateWortliste,
+} from '../src/daf/inhalt/wortliste.validate';
 import { validateEindeutigkeit } from '../src/daf/inhalt/unit-inhalt.validate';
 import { validateHoerFragen } from '../src/daf/inhalt/hoer-fragen.validate';
 import {
@@ -53,8 +57,9 @@ function main(): void {
   // `validateWortliste` butun GoetheFile'ni oladi — sonlarning raqam
   // ko'rinishi va yopiq guruhlar (`isWordInGoetheA1` orqali) shu yerda
   // markazlashgan holda tekshiriladi.
+  const wortliste = read<WortlisteFile>('wortliste.json');
   const problems = validateWortliste(
-    read<WortlisteFile>('wortliste.json'),
+    wortliste,
     read<KursFile>('kurs.json'),
     read<GoetheFile>('goethe-a1.json'),
   );
@@ -64,9 +69,12 @@ function main(): void {
     problems.push(`${code}: woerter.json yo'q`);
   } else {
     const w = read<WoerterFile>(code, 'woerter.json');
-    const core = w.woerter.filter((x) => x.core).length;
-    if (core !== 50)
-      problems.push(`${code}: ${core} ta asosiy so'z — 50 kerak`);
+    // Words built from taught ones (`ausserhalbBudget`) do not count.
+    const core = kernwoerterImBudget(w.woerter, wortliste);
+    if (core !== UNIT_WORDS_MAX)
+      problems.push(
+        `${code}: ${core} ta asosiy so'z — ${UNIT_WORDS_MAX} kerak`,
+      );
 
     // Iboralar fayli bo'lmasligi mumkin (unit hali yozilayotgan bo'lsa) —
     // u holda so'zlar baribir tekshiriladi.
