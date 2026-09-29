@@ -341,7 +341,22 @@ export function SalaryMonthlyView({
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>O&apos;qituvchi</TableHead>
               <TableHead className="text-right">To&apos;liq ishlangan</TableHead>
-              <TableHead className="text-right">O&apos;quvchilar to&apos;lagan</TableHead>
+              <TableHead className="text-right">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger className="inline-flex items-center gap-1">
+                      O&apos;quvchilar to&apos;lagan
+                      <Info className="size-3.5 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64">
+                      Faqat o&apos;quvchilar haqiqatan to&apos;lagan pul bilan
+                      qoplangan qism. Oylik hisobi yozilgan, lekin hali
+                      to&apos;lanmagan darslar bu yerga emas, «Markaz qo&apos;shdi»
+                      ga kiradi.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
               <TableHead className="text-right">
                 <TooltipProvider>
                   <Tooltip>
@@ -354,7 +369,10 @@ export function SalaryMonthlyView({
                       bu prognoz — o&apos;quvchi to&apos;lasa kamayadi; oy yopilgach
                       markaz haqiqatan bergan summa bo&apos;lib qoladi. Keyin
                       o&apos;quvchi to&apos;lasa, pul markazga qaytadi (pastdagi
-                      &laquo;undirildi&raquo;), ustozga qayta yozilmaydi.
+                      &laquo;undirildi&raquo;), ustozga qayta yozilmaydi. Oylik
+                      to&apos;lov kurslarida o&apos;quvchi hali to&apos;lamagan oylik
+                      hisobining ulushi ham shu yerda — u to&apos;lagan sari
+                      kamayadi.
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>

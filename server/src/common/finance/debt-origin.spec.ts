@@ -13,6 +13,25 @@ describe('replayDebtOrigin', () => {
     type: TransactionType = TransactionType.LESSON_DEDUCTION,
   ) => ({ amount, createdAt: new Date(iso), type });
 
+  it('leftById: what is still unpaid of each charge, oldest settled first', () => {
+    const r = replayDebtOrigin([
+      { ...row(-300_000, '2026-08-01T09:00:00Z'), id: 'aug' },
+      { ...row(-400_000, '2026-09-01T09:00:00Z'), id: 'sep' },
+      row(450_000, '2026-09-10T09:00:00Z', TransactionType.PAYMENT),
+    ]);
+    // 450 000 clears August (300 000) and 150 000 of September.
+    expect([...r.leftById]).toEqual([['sep', 250_000]]);
+    expect(r.byMonth.get('2026-09')).toBe(250_000);
+  });
+
+  it('leftById: a charge an advance absorbed is not unpaid', () => {
+    const r = replayDebtOrigin([
+      row(500_000, '2026-08-25T09:00:00Z', TransactionType.PAYMENT),
+      { ...row(-400_000, '2026-09-01T09:00:00Z'), id: 'sep' },
+    ]);
+    expect(r.leftById.size).toBe(0);
+  });
+
   it('reports nothing for a student who owes nothing', () => {
     const r = replayDebtOrigin([
       row(500_000, '2026-05-02T09:00:00Z', TransactionType.PAYMENT),

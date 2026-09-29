@@ -213,7 +213,7 @@ export function SalaryMonthlyPanel({ userId, scope }: Props) {
               <MoneyCard
                 label="Markaz qo'shimchasi"
                 value={row.centerFunded}
-                tooltip="Markazning o'z hisobidan qo'shgan (yoki oy yopilgunicha qo'shadigan) qismi. Oy yopilgach bu raqam qolaveradi — o'quvchi keyin to'lasa, pul markazga qaytadi, ustozga qayta yozilmaydi."
+                tooltip="Markazning o'z hisobidan qo'shgan (yoki oy yopilgunicha qo'shadigan) qismi. Oy yopilgach bu raqam qolaveradi — o'quvchi keyin to'lasa, pul markazga qaytadi, ustozga qayta yozilmaydi. Oylik to'lov kurslarida o'quvchi hali to'lamagan oylik hisobining ulushi ham shu yerda — u to'lagan sari kamayadi."
                 valueClassName={
                   (row.centerFunded ?? 0) > 0 ? "text-amber-600 dark:text-amber-400" : ""
                 }
