@@ -60,6 +60,13 @@ export interface GapSweepInput {
    * mumkin emas (pastdagi `resolveLessonPricing` izohiga qara).
    */
   monthlyFrozen?: Map<string, FrozenMonthlyCharge>;
+  /**
+   * attendanceId → the pack price the lesson was billed at (its live
+   * `LESSON_CONSUMPTION` marker; `loadPackLessonPrices`). Read only for a
+   * monthly-course lesson with no frozen charge — see `resolveLessonPricing`.
+   * Load it for `packPriceCandidates(...)`.
+   */
+  packPrices?: Map<string, number | null>;
   /** Teachers credited for a lesson, honouring substitute overrides. */
   resolveTeachers: (groupId: string, dateStr: string) => number[];
   /** Active rate for that teacher, group and date; null ⇒ no rate to apply. */
@@ -151,10 +158,20 @@ export interface LessonPricing {
  * 8 darslik oyda ~33% kam to'lardi. Yagona haqiqiy manba —
  * `EnrollmentMonthlyCharge` dagi muzlatilgan juftlik.
  *
- * Muzlatilgan qator topilmasa `null` qaytariladi: dars narxlanmaydi va
- * chaqiruvchi uni `noChargeUnits` da SANAB qo'yadi. Taxminiy narx yozish
- * (masalan jonli kalendardan qayta hisoblash) muzlatish invariantini buzardi
- * va bu — pul yozadigan yo'l.
+ * Muzlatilgan qator topilmasa, dars 12 talik paket bilan hisobdan chiqarilgan
+ * bo'lishi mumkin: kurs yoki o'quvchi oylik to'lovga o'tishidan OLDIN guruhdan
+ * ketgan o'quvchining darsi faqat paket belgisini (`LESSON_CONSUMPTION`)
+ * olib qolgan, oylik hisobi esa hech qachon yozilmagan. Bunday dars NIMA
+ * BILAN hisoblangan bo'lsa, o'sha bilan narxlanadi — paket narxi va paket
+ * bo'luvchisi (`lessonPaymentCount`); foyda hisobidagi
+ * `resolveHeldLessonPrice` ham xuddi shu qoidani qo'llaydi (ADR-0051).
+ * Sentabr 2026: 97 o'quvchi, 306 dars — usiz ustoz bu darslar uchun hech
+ * narsa olmasdi, tushumda esa ular hisoblangan edi.
+ *
+ * Ikkalasi ham yo'q bo'lsa `null`: dars narxlanmaydi va chaqiruvchi uni
+ * `noChargeUnits` da SANAB qo'yadi. Taxminiy narx yozish (masalan jonli
+ * kalendardan qayta hisoblash) muzlatish invariantini buzardi va bu — pul
+ * yozadigan yo'l.
  */
 export function resolveLessonPricing(
   course: GapCourse,
@@ -162,22 +179,56 @@ export function resolveLessonPricing(
   groupId: string,
   lessonDate: Date,
   monthlyFrozen?: Map<string, FrozenMonthlyCharge>,
+  /** The lesson's pack marker price (`packPrices.get(attendanceId)`). */
+  packPrice?: number | null,
 ): LessonPricing | null {
   if (course.paymentModel === PaymentModel.MONTHLY) {
     const frozen = monthlyFrozen?.get(
       monthlyPerLessonKeyForLesson(studentId, groupId, lessonDate),
     );
-    if (!frozen || frozen.perLessonCost <= 0 || frozen.plannedLessons <= 0) {
-      return null;
+    if (frozen && frozen.perLessonCost > 0 && frozen.plannedLessons > 0) {
+      return {
+        perLessonCost: frozen.perLessonCost,
+        divisor: frozen.plannedLessons,
+      };
     }
-    return {
-      perLessonCost: frozen.perLessonCost,
-      divisor: frozen.plannedLessons,
-    };
+    if (packPrice && packPrice > 0) {
+      return {
+        perLessonCost: packPrice,
+        divisor: course.lessonPaymentCount || 12,
+      };
+    }
+    return null;
   }
 
   const lpc = course.lessonPaymentCount || 12;
   return { perLessonCost: Math.round(course.price / lpc), divisor: lpc };
+}
+
+/**
+ * The attendances whose price may have to come from a pack marker: a
+ * monthly-course lesson with no frozen charge for its month. Only these need
+ * `loadPackLessonPrices`, so a month of monthly-billed lessons costs no query.
+ */
+export function packPriceCandidates(
+  attendances: Array<{
+    id: string;
+    studentId: number;
+    groupId: string;
+    date: Date;
+  }>,
+  groupMap: Map<string, { course: GapCourse }>,
+  monthlyFrozen: Map<string, FrozenMonthlyCharge>,
+): string[] {
+  return attendances
+    .filter(
+      (a) =>
+        groupMap.get(a.groupId)?.course.paymentModel === PaymentModel.MONTHLY &&
+        !monthlyFrozen.has(
+          monthlyPerLessonKeyForLesson(a.studentId, a.groupId, a.date),
+        ),
+    )
+    .map((a) => a.id);
 }
 
 export function sweepGapLessons(input: GapSweepInput): GapSweepResult {
@@ -207,6 +258,7 @@ export function sweepGapLessons(input: GapSweepInput): GapSweepResult {
       att.groupId,
       att.date,
       input.monthlyFrozen,
+      input.packPrices?.get(att.id),
     );
 
     for (const teacherId of input.resolveTeachers(att.groupId, dStr)) {

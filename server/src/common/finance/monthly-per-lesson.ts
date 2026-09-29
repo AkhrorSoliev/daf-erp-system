@@ -237,6 +237,46 @@ export async function loadFrozenMonthlyPerLesson(
 }
 
 /**
+ * The 12-lesson pack price each lesson was billed at — its live
+ * `LESSON_CONSUMPTION` row's `metadata.perLessonCost` — keyed by attendance.
+ *
+ * A lesson on a course that is monthly TODAY can still have been billed by a
+ * pack: a student who left the group before the September 2026 switch never
+ * got a monthly charge, and their earlier lessons carry only the pack marker.
+ * `resolveHeldLessonPrice` values such a lesson from that marker for revenue;
+ * the salary gap sweep does the same for the teacher's pay (ADR-0051).
+ *
+ * `null` = a legacy row that stored no price. At most one live consumption
+ * per attendance (`tx_consumption_per_attendance_unique`). No ids, no query.
+ */
+export async function loadPackLessonPrices(
+  prisma: Pick<Prisma.TransactionClient, 'transaction'>,
+  companyId: number,
+  attendanceIds: string[],
+): Promise<Map<string, number | null>> {
+  const out = new Map<string, number | null>();
+  const ids = [...new Set(attendanceIds)];
+  // Chunked: a month can hold several thousand attendances.
+  for (let i = 0; i < ids.length; i += 1000) {
+    const rows = await prisma.transaction.findMany({
+      where: {
+        companyId,
+        type: 'LESSON_CONSUMPTION',
+        reversedAt: null,
+        attendanceId: { in: ids.slice(i, i + 1000) },
+      },
+      select: { attendanceId: true, metadata: true },
+    });
+    for (const r of rows) {
+      if (!r.attendanceId) continue;
+      const meta = r.metadata as { perLessonCost?: number } | null;
+      out.set(r.attendanceId, meta?.perLessonCost ?? null);
+    }
+  }
+  return out;
+}
+
+/**
  * `[start, end)` oralig'ini qamrab oladigan davrlar ro'yxati (Toshkent).
  *
  * `end` YARIM OCHIQ: aynan oy chegarasiga tushgan `end` keyingi oyni

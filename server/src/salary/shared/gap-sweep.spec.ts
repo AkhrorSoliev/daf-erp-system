@@ -1,5 +1,6 @@
 import { PaymentModel } from '@prisma/client';
 import {
+  packPriceCandidates,
   resolveLessonPricing,
   sweepGapLessons,
   type GapCourse,
@@ -285,5 +286,102 @@ describe('resolveLessonPricing', () => {
         frozen(0, 13),
       ),
     ).toBeNull();
+  });
+});
+
+/**
+ * ADR-0051: a monthly-course lesson with no charge for its month was billed
+ * by a 12-lesson pack (the student left before the September 2026 switch).
+ * It is priced by that pack, as revenue values it — not dropped.
+ */
+describe('sweepGapLessons — monthly course, lesson billed by a pack', () => {
+  const pack = (price: number | null) => new Map([['a1', price]]);
+
+  it('prices the lesson from its pack marker, over the pack cycle', () => {
+    const res = sweepGapLessons(
+      buildInput(MONTHLY_COURSE, PERCENTAGE, {
+        monthlyFrozen: new Map(),
+        packPrices: pack(33_333),
+      }),
+    );
+
+    expect(res.lessons).toHaveLength(1);
+    expect(res.lessons[0].perLessonCost).toBe(33_333);
+    expect(res.lessons[0].amount).toBe(10_000); // 30% of 33 333
+    expect(res.lessons[0].divisor).toBe(12); // the course's pack cycle
+    expect(res.noChargeUnits.size).toBe(0);
+  });
+
+  it('splits a per-student rate over the pack cycle', () => {
+    const res = sweepGapLessons(
+      buildInput(MONTHLY_COURSE, FIXED_PER_STUDENT, {
+        monthlyFrozen: new Map(),
+        packPrices: pack(33_333),
+      }),
+    );
+    expect(res.lessons[0].amount).toBe(10_000); // 120 000 / 12
+  });
+
+  it('a monthly charge still wins over a pack marker for the same lesson', () => {
+    const res = sweepGapLessons(
+      buildInput(MONTHLY_COURSE, PERCENTAGE, {
+        monthlyFrozen: frozen(30_769, 13),
+        packPrices: pack(33_333),
+      }),
+    );
+    expect(res.lessons[0].perLessonCost).toBe(30_769);
+    expect(res.lessons[0].divisor).toBe(13);
+  });
+
+  it('a marker with no stored price is not guessed: counted, not priced', () => {
+    const res = sweepGapLessons(
+      buildInput(MONTHLY_COURSE, PERCENTAGE, {
+        monthlyFrozen: new Map(),
+        packPrices: pack(null),
+      }),
+    );
+    expect(res.lessons).toHaveLength(0);
+    expect(res.noChargeUnits.get(TEACHER)).toBe(1);
+  });
+
+  it('the new-student gate still applies to such a lesson', () => {
+    const res = sweepGapLessons(
+      buildInput(MONTHLY_COURSE, PERCENTAGE, {
+        monthlyFrozen: new Map(),
+        packPrices: pack(33_333),
+        heldByStudentGroup: new Map([
+          [`${STUDENT}::${GROUP}`, NEW_STUDENT_TOPUP_MIN_LESSONS - 1],
+        ]),
+      }),
+    );
+    expect(res.lessons).toHaveLength(0);
+  });
+});
+
+describe('packPriceCandidates', () => {
+  const att = (id: string, groupId: string) => ({
+    id,
+    studentId: STUDENT,
+    groupId,
+    date: lessonDate(10),
+  });
+  const groups = new Map([
+    ['gm', { course: MONTHLY_COURSE }],
+    ['gp', { course: PACK_COURSE }],
+  ]);
+
+  it('asks only for monthly-course lessons with no charge for their month', () => {
+    const charged = new Map([
+      [
+        monthlyPerLessonKey(STUDENT, 'gm', COMPANY_MONTH),
+        { perLessonCost: 1, plannedLessons: 1 },
+      ],
+    ]);
+    expect(
+      packPriceCandidates([att('a', 'gm'), att('b', 'gp')], groups, new Map()),
+    ).toEqual(['a']);
+    expect(
+      packPriceCandidates([att('a', 'gm'), att('b', 'gp')], groups, charged),
+    ).toEqual([]);
   });
 });
