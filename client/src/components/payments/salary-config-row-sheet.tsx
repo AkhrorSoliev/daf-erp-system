@@ -195,10 +195,23 @@ export function SalaryConfigRowSheet({
     return parseInt(value.replace(/\D/g, ""), 10) || 0;
   }, [salaryType, value, percentValue]);
 
+  const isGroupRule = groupId !== "__global__";
+
+  // A flat monthly salary cannot be tied to a group — the server refuses the
+  // pair ("FIXED_MONTHLY oylik turi guruh bilan bog'lab bo'lmaydi"). Picking a
+  // group drops the option, and moves an already-chosen one to per-student.
+  const handleGroupChange = (next: string) => {
+    setGroupId(next);
+    if (next !== "__global__" && salaryType === "FIXED_MONTHLY") {
+      setSalaryType("FIXED_PER_STUDENT");
+    }
+  };
+
   const canSubmit =
     !!userId &&
     numericValue > 0 &&
-    (salaryType !== "PERCENTAGE" || numericValue <= 100);
+    (salaryType !== "PERCENTAGE" || numericValue <= 100) &&
+    !(isGroupRule && salaryType === "FIXED_MONTHLY");
 
   const configBody = () => ({
     userId,
@@ -456,7 +469,7 @@ export function SalaryConfigRowSheet({
                 <Label className="text-xs text-muted-foreground">
                   Qo&apos;llaniladigan guruh
                 </Label>
-                <Select value={groupId} onValueChange={setGroupId}>
+                <Select value={groupId} onValueChange={handleGroupChange}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -489,7 +502,7 @@ export function SalaryConfigRowSheet({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {allowMonthly && (
+                  {allowMonthly && !isGroupRule && (
                     <SelectItem value="FIXED_MONTHLY">
                       Oylik (qattiq summa)
                     </SelectItem>
@@ -508,7 +521,7 @@ export function SalaryConfigRowSheet({
                 {salaryType === "PERCENTAGE"
                   ? "Har dars uchun dars narxidan foiz hisoblanadi."
                   : salaryType === "FIXED_PER_STUDENT"
-                    ? "Har o'quvchidan kurs bo'yicha qattiq summa (12/20 darsga taqsimlanadi)."
+                    ? "Bir o'quvchi uchun bir oylik (sikl) summa, shu davrdagi darslarga bo'lib hisoblanadi."
                     : "Oyiga qattiq summa, darslar soniga bog'liq emas."}
               </p>
             </div>
