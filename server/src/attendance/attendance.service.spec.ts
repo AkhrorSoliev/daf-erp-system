@@ -108,6 +108,8 @@ describe('AttendanceService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
+      // «Dars bo'ldimi?» — a question asked for the lesson closes new registers.
+      unmarkedLesson: { findUnique: jest.fn().mockResolvedValue(null) },
       enrollment: {
         findMany: jest.fn().mockResolvedValue(mockEnrollments),
       },
@@ -1422,6 +1424,85 @@ describe('AttendanceService', () => {
           newStatus: 'PRESENT',
         }),
       );
+    });
+
+    it('refuses an administrator a new register after the lesson ended', async () => {
+      jest.setSystemTime(new Date('2026-04-01T06:00:00.000Z')); // 11:00 Tashkent
+      prisma.enrollment.findMany.mockResolvedValue([
+        { studentId: 10001, student: { balance: 500000 } },
+      ]);
+      prisma.attendance.findMany.mockResolvedValue([]);
+      await expect(
+        service.save(
+          'group-uuid-1',
+          '2026-04-01',
+          { entries: [{ studentId: 10001, status: 'PRESENT' }] },
+          1,
+          ['Administrator'],
+          1,
+        ),
+      ).rejects.toThrow('Dars tugagan');
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it('refuses the CEO a new register for a past lesson', async () => {
+      prisma.enrollment.findMany.mockResolvedValue([
+        { studentId: 10001, student: { balance: 500000 } },
+      ]);
+      prisma.attendance.findMany.mockResolvedValue([]);
+      // 2026-03-30 is the Monday before the pinned day
+      await expect(
+        service.save(
+          'group-uuid-1',
+          '2026-03-30',
+          { entries: [{ studentId: 10001, status: 'PRESENT' }] },
+          1,
+          ['CEO'],
+          1,
+        ),
+      ).rejects.toThrow('Dars tugagan');
+    });
+
+    it("refuses a new register once «Dars bo'ldimi?» was asked", async () => {
+      prisma.enrollment.findMany.mockResolvedValue([
+        { studentId: 10001, student: { balance: 500000 } },
+      ]);
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.unmarkedLesson.findUnique.mockResolvedValue({ id: 'u1' });
+      await expect(
+        service.save(
+          'group-uuid-1',
+          '2026-04-01',
+          { entries: [{ studentId: 10001, status: 'PRESENT' }] },
+          1,
+          ['Administrator'],
+          1,
+        ),
+      ).rejects.toThrow('Dars tugagan');
+    });
+
+    it('still lets an administrator edit a past register', async () => {
+      prisma.enrollment.findMany.mockResolvedValue([
+        { studentId: 10001, student: { balance: 500000 } },
+      ]);
+      prisma.attendance.findMany.mockResolvedValue([
+        { id: 'att-1', studentId: 10001, status: 'ABSENT', note: null },
+      ]);
+      prisma.attendance.upsert.mockResolvedValue({
+        id: 'att-1',
+        studentId: 10001,
+        status: 'EXCUSED',
+        note: null,
+      });
+      const result = await service.save(
+        'group-uuid-1',
+        '2026-03-30',
+        { entries: [{ studentId: 10001, status: 'EXCUSED' }] },
+        1,
+        ['Administrator'],
+        1,
+      );
+      expect(result.message).toBe('Davomat muvaffaqiyatli saqlandi');
     });
   });
 
