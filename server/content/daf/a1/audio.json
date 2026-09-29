@@ -151,5 +151,17 @@
   "u01-s3-sprechen": "daf/audio/b652d09cdbc5098c69c8465c984aea81.mp3",
   "u01-s4-null": "daf/audio/d4855af05c86d70d25c8cd3a7a062d4b.mp3",
   "u01-s4-acht": "daf/audio/ac438ec1e0bca8e2a848bbf535e0702e.mp3",
-  "u02-s4-muede": "daf/audio/d8f348a00925c41a6aeed87bbbfde41d.mp3"
+  "u02-s4-muede": "daf/audio/d8f348a00925c41a6aeed87bbbfde41d.mp3",
+  "u01-s4-zwoelf": "daf/audio/74772f54e4e208bb85320fd7d699f799.mp3",
+  "u01-s4-dreizehn": "daf/audio/41f0156ca34863ef7b1d6ad5d93bcc08.mp3",
+  "u01-s4-vierzehn": "daf/audio/358fc00d9dbb6f60b92a580889ced9b7.mp3",
+  "u01-s4-fuenfzehn": "daf/audio/85706f20cf0d7a114d43997456b08ddf.mp3",
+  "u01-s4-sechzehn": "daf/audio/729dfaabbc68c7d752ecc00abca01c3f.mp3",
+  "u01-s4-siebzehn": "daf/audio/edb3617d1562defdb207cd77268d7805.mp3",
+  "u01-s4-achtzehn": "daf/audio/4bd2a4bfe182a1110c3a7c2208d81fd5.mp3",
+  "u01-s4-neunzehn": "daf/audio/4ee0c4b6d5c8032733e059b76d8b1468.mp3",
+  "u02-s2-einundzwanzig": "daf/audio/68a18edb31265aba8224cbf3b1fbefa0.mp3",
+  "u02-s2-fuenfunddreissig": "daf/audio/bcebc3b05af15c603584641aa5420b11.mp3",
+  "u02-s2-achtundvierzig": "daf/audio/34afa92512e521b3a9ee5818670b146c.mp3",
+  "u02-s2-neunundneunzig": "daf/audio/14d6d03000c3b197e335b4f0533a96e3.mp3"
 }
