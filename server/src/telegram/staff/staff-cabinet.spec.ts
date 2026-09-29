@@ -1,4 +1,7 @@
-import { staffLinkedToChatWhere } from '../../common/auth/staff-telegram';
+import {
+  signInStaffWhere,
+  staffLinkedToChatWhere,
+} from '../../common/auth/staff-telegram';
 import {
   STAFF_CABINET_BUTTON_TEXT,
   StaffCabinet,
@@ -293,6 +296,58 @@ describe('StaffCabinet', () => {
 
       expect(ctx.answerCbQuery).not.toHaveBeenCalled();
       expect(ctx.reply).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('syncButtons (server ishga tushganda)', () => {
+    it("bog'langan har bir xodim chatiga o'z portalining «Kabinet» tugmasi", async () => {
+      const { cabinet, prisma, telegram } = setup({
+        staff: [
+          { ...DOSTON_ROW, telegramChatId: CHAT },
+          { id: 30402, roles: [{ roleId: 3 }], telegramChatId: '700000002' },
+        ],
+      });
+
+      await expect(cabinet.syncButtons()).resolves.toBe(2);
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { ...signInStaffWhere(), telegramChatId: { not: null } },
+        }),
+      );
+      expect(telegram.setChatMenuButton).toHaveBeenCalledWith({
+        chatId: Number(CHAT),
+        menuButton: expect.objectContaining({ web_app: { url: LEHRER_URL } }),
+      });
+      expect(telegram.setChatMenuButton).toHaveBeenCalledWith({
+        chatId: 700000002,
+        menuButton: expect.objectContaining({ web_app: { url: ADMIN_URL } }),
+      });
+    });
+
+    it('bir chatga ikki xodim hisobi — tegilmaydi (bot ham, Mini App ham rad etadi)', async () => {
+      const { cabinet, telegram } = setup({
+        staff: [
+          { ...DOSTON_ROW, telegramChatId: CHAT },
+          { id: 30402, roles: [{ roleId: 4 }], telegramChatId: CHAT },
+        ],
+      });
+
+      await expect(cabinet.syncButtons()).resolves.toBe(0);
+
+      expect(telegram.setChatMenuButton).not.toHaveBeenCalled();
+    });
+
+    it('Mini App sozlanmagan — hech narsa: prod tokenli lokal server prod tugmalariga tegmaydi', async () => {
+      const { cabinet, prisma, telegram } = setup({
+        staff: [{ ...DOSTON_ROW, telegramChatId: CHAT }],
+        studentUrl: null,
+      });
+
+      await expect(cabinet.syncButtons()).resolves.toBe(0);
+
+      expect(prisma.user.findMany).not.toHaveBeenCalled();
+      expect(telegram.setChatMenuButton).not.toHaveBeenCalled();
     });
   });
 
