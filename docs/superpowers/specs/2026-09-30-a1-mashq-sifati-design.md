@@ -100,6 +100,22 @@ o'xshash variantlar, 12–99 sonlar.
   (keyingi unitlarda ona/buvi rasmi bilan to'qnashadi), hallo/tschüss
   (ikkalasi ham qo'l silkitish), Guten Tag (ertalabki rasm ham «Guten Tag»).
 
+### 2.6 Dars avval o'z bo'limini so'raydi
+
+Ish davomida topildi: dars materiali kumulyativ (shu bo'limgacha hammasi) va
+o'z bo'limiga ustunlik yo'q edi — sinov bazasida «Das Alphabet» darsi
+birorta ham harf so'ramadi. `SECTION_A`/`SECTION_B` darsida o'z bo'limining
+materiali (`eigeneSchluessel`) oldinga suriladi (`baueSeans` → `vorrang`);
+cap, takrorlanmaslik va `MIN_FORMATE` o'zgarmaydi, yetmasa oldingi
+bo'limlardan to'ldiriladi. `BRIDGE` ataylab aralash, `UNIT_TEST` butun unit.
+
+### 2.7 Hajm qoidasi
+
+Kurs rejasi: bo'limda 8–12 so'z, unitda 50 so'z. 13–19 va qo'shma sonlar
+tanish so'zlardan yasaladi, shuning uchun `wortliste.json`da
+`ausserhalbBudget: true` (sabab bilan) — hajmga kirmaydi. Sanoq bitta
+funksiyada: `kernwoerterImBudget`.
+
 ## 3. Chegaralar
 
 - Doimiy qahramonlar va voqea — alohida reja, bu ishga kirmaydi.
