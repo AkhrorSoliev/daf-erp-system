@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common';
-import { Context } from 'telegraf';
+import { Context, TelegramError } from 'telegraf';
 import type { UserFromGetMe } from 'telegraf/types';
 import { createEmployeeRegistrationScene } from './employee-registration.scene';
 import { CONTACT_NOT_OWN } from '../utils/contact-ownership';
@@ -173,6 +173,163 @@ describe('employee-registration.scene — confirm_registration', () => {
     await scene.middleware()(ctx, async () => {});
 
     expect(usersService.create).not.toHaveBeenCalled();
+  });
+});
+
+/** Telegram's refusal as Telegraf throws it: the failed request rides along. */
+function refusal(
+  code: number,
+  description: string,
+  method: string,
+  payload: object,
+) {
+  return new TelegramError(
+    { error_code: code, description },
+    { method, payload },
+  );
+}
+
+/**
+ * Once `UsersService.create` returns, the employee's account exists. The
+ * Telegram calls after it can still fail — a network error, a preview the
+ * person deleted, Telegram unable to fetch the photo from storage — and that
+ * must not read as a failed registration.
+ */
+describe('employee-registration.scene — Telegram fails after the account is created', () => {
+  const PHOTO = 'https://r2.example.com/employees/new.jpg';
+  let usersService: { create: jest.Mock };
+  let uploadService: { deleteFile: jest.Mock };
+  let warn: jest.SpyInstance;
+  let error: jest.SpyInstance;
+
+  beforeEach(() => {
+    usersService = { create: jest.fn().mockResolvedValue({ id: 10950 }) };
+    uploadService = { deleteFile: jest.fn().mockResolvedValue(undefined) };
+    warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    error = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  /** Taps «Tasdiqlash» with `fail` breaking some Telegram call. */
+  async function confirm(fail: (ctx: any) => void) {
+    const ctx = buildConfirmCtx({
+      firstName: 'Nodira',
+      lastName: 'Yusupova',
+      phone: '901112233',
+      gender: 'FEMALE',
+      photo: PHOTO,
+      branchId: 7,
+      roleIds: [3],
+    });
+    fail(ctx);
+    const scene = createEmployeeRegistrationScene(
+      buildPrisma(),
+      uploadService as any,
+      usersService as any,
+      {} as any,
+    );
+
+    await expect(
+      scene.middleware()(ctx, async () => {}),
+    ).resolves.toBeUndefined();
+    return ctx;
+  }
+
+  /** The password the account was created with. */
+  const password = (): string => usersService.create.mock.calls[0][0].password;
+
+  function expectRegistrationStands(ctx: any) {
+    expect(JSON.stringify(ctx.reply.mock.calls)).not.toContain('xatolik');
+    expect(usersService.create).toHaveBeenCalledTimes(1);
+    expect(ctx.scene.leave).toHaveBeenCalled();
+    // The account uses the photo now. A session still holding it would have
+    // the next /start delete it, as it deletes an unfinished registration's.
+    expect(uploadService.deleteFile).not.toHaveBeenCalled();
+    expect(ctx.session.data.photo).toBeUndefined();
+    // A Telegraf error carries the request that failed, caption included.
+    expect(JSON.stringify([warn.mock.calls, error.mock.calls])).not.toContain(
+      password(),
+    );
+  }
+
+  it('a failed «Tasdiqlandi» edit still sends the login and password', async () => {
+    const ctx = await confirm((c) => {
+      c.editMessageCaption = jest
+        .fn()
+        .mockResolvedValueOnce(true) // the loading state, before the account
+        .mockRejectedValue(
+          refusal(
+            400,
+            'Bad Request: message to edit not found',
+            'editMessageCaption',
+            { caption: '✅ Tasdiqlandi!' },
+          ),
+        );
+    });
+
+    expectRegistrationStands(ctx);
+    expect(ctx.replyWithPhoto).toHaveBeenCalledTimes(1);
+    const [photo, extra] = ctx.replyWithPhoto.mock.calls[0];
+    expect(photo).toBe(PHOTO);
+    expect(extra.caption).toContain('901112233');
+    expect(extra.caption).toContain(password());
+    expect(extra.parse_mode).toBe('Markdown');
+  });
+
+  it('a photo Telegram cannot send goes as a text message instead', async () => {
+    const ctx = await confirm((c) => {
+      c.replyWithPhoto = jest.fn((photo: string, extra: object) =>
+        Promise.reject(
+          refusal(
+            400,
+            'Bad Request: failed to get HTTP URL content',
+            'sendPhoto',
+            { chat_id: 555222, photo, ...extra },
+          ),
+        ),
+      );
+    });
+
+    expectRegistrationStands(ctx);
+    expect(ctx.reply).toHaveBeenCalledTimes(1);
+    const [text, extra] = ctx.reply.mock.calls[0];
+    expect(text).toContain('901112233');
+    expect(text).toContain(password());
+    // The same Markdown as the caption: sent without it, the password shows
+    // between backticks, and a person may type them in.
+    expect(extra).toEqual({ parse_mode: 'Markdown' });
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('failed to get HTTP URL content'),
+    );
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it('when nothing reaches the person, the log says so', async () => {
+    const ctx = await confirm((c) => {
+      const blocked = (method: string, field: string) =>
+        jest.fn((content: string, extra?: object) =>
+          Promise.reject(
+            refusal(403, 'Forbidden: bot was blocked by the user', method, {
+              chat_id: 555222,
+              [field]: content,
+              ...extra,
+            }),
+          ),
+        );
+      c.replyWithPhoto = blocked('sendPhoto', 'photo');
+      c.reply = blocked('sendMessage', 'text');
+    });
+
+    expectRegistrationStands(ctx);
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining('bot was blocked by the user'),
+    );
   });
 });
 

@@ -37,7 +37,7 @@ describe('netProfitCacheKey', () => {
   });
   it('names the branch set sorted and de-duplicated', () => {
     expect(netProfitCacheKey(at([7, 3, 7]))).toBe(
-      'rpt:np:v3:1001:3,7:u10001:2026-07',
+      'rpt:np:v4:1001:3,7:u10001:2026-07',
     );
   });
   it('separates one branch from a set containing it', () => {
@@ -50,10 +50,10 @@ describe('netProfitCacheKey', () => {
   });
   it('writes company-wide as all and an empty scope as none', () => {
     expect(netProfitCacheKey(at(null))).toBe(
-      'rpt:np:v3:1001:all:u10001:2026-07',
+      'rpt:np:v4:1001:all:u10001:2026-07',
     );
     expect(netProfitCacheKey(at([]))).toBe(
-      'rpt:np:v3:1001:none:u10001:2026-07',
+      'rpt:np:v4:1001:none:u10001:2026-07',
     );
   });
 });
@@ -71,7 +71,7 @@ describe('cachedNetProfit', () => {
     expect(v).toBe(43_900_000);
     expect(compute).toHaveBeenCalledTimes(1);
     expect(redis.setex).toHaveBeenCalledWith(
-      'rpt:np:v3:1001:all:u10001:2026-07',
+      'rpt:np:v4:1001:all:u10001:2026-07',
       expect.any(Number),
       '43900000',
     );

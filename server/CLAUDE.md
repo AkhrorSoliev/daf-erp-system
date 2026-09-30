@@ -771,6 +771,7 @@ It also returns per-day `events` — enrolment transitions (`EnrollmentStateLog`
   - Key is per `(company, branch, month)` so overlapping ranges reuse entries and a branch-filtered view never reads the company-wide figure. TTL runs to the next **Tashkent** midnight.
   - A Redis outage degrades to computing, never to failing; a month whose canonical figure cannot be produced keeps its cash value and is flagged `profitBasis: 'kassa'`, so one bad point never takes the chart down.
   - `getFinancialTrend` (raw, cash) is left untouched for the Excel path; the chart endpoint calls `getFinancialTrendCanonical`.
+- **Balance withdrawals are a leg of their own** (ADR-0055): `netProfit = revenue + balanceWithdrawals − teacherSalary − adminSalary − operatingExpenses − refunds`. Every surface that itemises the figure shows the line only when it is non-zero: «Foyda tarkibi», the dashboard «Pul qayerga ketdi», Excel «Xulosa» block 1 and the Tekshiruv footing; «Filiallar» names the branches in its footer (its approved columns do not change).
 
 #### «Foyda tarkibi» — the Foyda card's breakdown (ADR-0038)
 
@@ -782,6 +783,7 @@ It also returns per-day `events` — enrolment transitions (`EnrollmentStateLog`
 - A student who left a group and rejoined it within the month has two CHARGED charges under one key; `loadFrozenMonthlyCharges` keeps the last one's price and the others' dates in `earlierCharges`, and `monthlyChargeBilledDate` checks them all.
 - **"Qarz bilan ketgan o'quvchilar"** counts students with NO active enrollment anywhere and a negative balance, capped per student at their current debt.
 - Both day caches carry a version (`NET_PROFIT_CACHE_VERSION`, `EXPECTATION_CACHE_VERSION`). Bump it whenever the figure's definition changes, or the cached surface shows the old formula until midnight.
+- **«Balansdan yechib olingan»** (ADR-0055) is its own line, by student, only in a month that has one. The forecast's teacher share leaves out the part of it credited to a teacher — a withdrawal is not a lesson.
 
 #### Multi-month Excel export: every profit leg must share one window
 
@@ -1197,16 +1199,17 @@ CEO-only one-shot for centers transitioning to the new finance system. Writes a 
 
 #### Balance Withdrawal (`src/withdrawals/`)
 
-Admin-driven drain of a student's positive balance into the system as recognized revenue for a chosen accounting month — distinct from `Refunds`, which return money to the student. Used during onboarding/transition when a student paid in advance, the teacher took attendance for a few cycles, and the rest of the balance must still be recognised manually rather than left "muallaq" (floating).
+Admin-driven drain of a student's positive balance into the centre's account — distinct from `Refunds`, which return money to the student. The amount is **revenue of the month it is withdrawn in** (ADR-0055): the canonical net profit adds it as its own leg, `NetProfit.balanceWithdrawals`, read by `loadBalanceWithdrawals` (`src/reports/balance-withdrawals.ts`, by `createdAt`, branch-scoped). It is never folded into `revenue`, which stays the lesson value that the month-end expectation, the collection ratio and the «Foyda tarkibi» forecast read; on the cash basis it is not added at all (the money counted as «Tushum» when it was paid). Used during onboarding/transition, when a student paid in advance and the rest of the balance must be recognised rather than left "muallaq" (floating), and from the debt page's «Muzlatilgan puli» tab («Markaz hisobiga o'tkazish»).
 
+- **The month is not chosen.** The server books every withdrawal in the current Tashkent month: one `now` drives `Transaction.createdAt`, `metadata.targetMonth` and the teacher accrual's `lessonDate` (the withdrawal day, so it always lands in the open payroll period for any `cycleStartDay`). `CreateWithdrawalDto.targetMonth` is optional and deprecated; any other month is a 400 «Yechib olish faqat joriy oy uchun yoziladi». A past month would have changed that month's reported profit after the fact and parked the teacher's share in a closed payroll period, where the cron never pays it.
 - **Endpoints**: `GET /withdrawals/preview/:studentId`, `POST /withdrawals`
 - **Roles**: `CEO, Branch Director, Administrator` (class-level `@Roles`)
 - **Transaction type**: `BALANCE_WITHDRAWAL` — reduces student balance, metadata stores `{ targetMonth, creditTeacher, teacherUserId, groupId, reason }` for audit
-- **`creditTeacher` flag**: when true, also writes a `SalaryAccrual` linked via `deductionTransactionId` to the new BALANCE_WITHDRAWAL row. The accrual has `attendanceId IS NULL` (no underlying lesson) and `lessonDate = first of targetMonth`. The teacher must be on one of the student's active enrollments — service validates this via a `groupTeachers` join and throws `ForbiddenException` otherwise.
+- **`creditTeacher` flag**: when true, also writes a `SalaryAccrual` linked via `deductionTransactionId` to the new BALANCE_WITHDRAWAL row. The accrual has `attendanceId IS NULL` (no underlying lesson) and `lessonDate` = the withdrawal day (Tashkent). The teacher must be on one of the student's active enrollments — service validates this via a `groupTeachers` join and throws `ForbiddenException` otherwise.
 - **`SalaryAccrual` schema relax**: `attendanceId` is nullable; the previous unique constraint `(userId, studentId, groupId, lessonDate)` is replaced with `(userId, studentId, groupId, lessonDate, attendanceId)` so withdrawal accruals (NULL attendanceId) can stack within a month — Postgres treats NULLs as distinct in UNIQUE.
 - **Atomicity**: balance check + transaction write + student balance update + optional accrual + EntityHistory record run inside one `Serializable` `prisma.$transaction` (10s maxWait, 15s timeout).
 - **`To'lovlar` tab**: `BALANCE_WITHDRAWAL` is a money-flow type — included in the comma-separated `?types=` filter. That list is the tab's contract: **every type that moves the balance belongs in it** (`PAYMENT,REFUND,ADJUSTMENT,INITIAL_BALANCE,BALANCE_WITHDRAWAL,LESSON_DEDUCTION,DISCOUNT_ADJUSTMENT,DEBT_WRITE_OFF,MOCK_EXAM_FEE`) — a missing type shows the balance jumping with no visible cause, which is what hid 37 rows worth 4 296 450 so'm. Adding a new balance-moving `TransactionType` means adding it here AND to `TRANSACTION_TYPE_INFO` on the client. The `Lesson Trail` endpoint continues to scope strictly to `LESSON_DEDUCTION` + `LESSON_CONSUMPTION`.
-- **Salary calculation**: existing `salary-summary` and `salary-calculation` queries pick up withdrawal accruals automatically (filter is `salaryPaymentId: null, reversedAt: null` + `lessonDate` range), so no special-case logic. The `lessonDate = YYYY-MM-01` date determines which salary cycle the accrual lands in based on each company's `cycleStartDay`.
+- **Salary calculation**: existing `salary-summary` and `salary-calculation` queries pick up withdrawal accruals automatically (filter is `salaryPaymentId: null, reversedAt: null` + `lessonDate` range), so no special-case logic. The withdrawal day as `lessonDate` puts the accrual in the payroll period that is open when it is written.
 
 #### "Where did this payment go?" — replay the ledger, never re-derive it
 

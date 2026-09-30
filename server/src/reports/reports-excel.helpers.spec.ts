@@ -124,3 +124,54 @@ describe('buildNetProfit — staff salary basis', () => {
     expect(np.adminSalaryBasis).toBe('naqd');
   });
 });
+
+/**
+ * «Yechib olish» is revenue of the month it is made (ADR-0055): its own leg
+ * beside the lesson value, never folded into it.
+ */
+describe('buildNetProfit — balance withdrawals', () => {
+  const pl = {
+    revenue: { total: 100_000 },
+    costOfServices: { teacherSalaries: 0, teacherAdvances: 0 },
+    operatingExpenses: { adminSalaries: 0, byCategory: [{ amount: 10_000 }] },
+  };
+  const salaries = { totals: { covered: 40_000, fullDeserved: 40_000 } };
+  const outflows = { refunds: 0, writeOffs: 0, providerFees: 0 };
+
+  it("adds the month's withdrawals to the recognised figure as their own leg", () => {
+    const np = buildNetProfit(
+      pl,
+      salaries,
+      outflows,
+      '2026-10',
+      100_000,
+      30_000,
+    );
+    expect(np.revenue).toBe(100_000);
+    expect(np.balanceWithdrawals).toBe(30_000);
+    // 100 000 + 30 000 − 40 000 − 10 000
+    expect(np.netProfit).toBe(80_000);
+    // Margin over everything the month earned: 80 000 / 130 000.
+    expect(np.netMarginPercent).toBe(61.5);
+  });
+
+  it('ignores them on the cash basis, where the money counted when it was paid', () => {
+    const np = buildNetProfit(
+      pl,
+      salaries,
+      outflows,
+      '2026-10',
+      undefined,
+      30_000,
+    );
+    expect(np.revenueBasis).toBe('cash');
+    expect(np.balanceWithdrawals).toBe(0);
+    expect(np.netProfit).toBe(50_000);
+  });
+
+  it('defaults to none for callers that pass no withdrawals', () => {
+    const np = buildNetProfit(pl, salaries, outflows, '2026-10', 100_000);
+    expect(np.balanceWithdrawals).toBe(0);
+    expect(np.netProfit).toBe(50_000);
+  });
+});
