@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { MockExamsService } from './mock-exams.service';
+import { MockExamStatsService } from './mock-exam-stats.service';
 import { CreateMockExamDto } from './dto/create-mock-exam.dto';
 import { UpdateMockExamDto } from './dto/update-mock-exam.dto';
 import { ChangeMockExamStatusDto } from './dto/change-mock-exam-status.dto';
@@ -20,7 +21,10 @@ import { RolesGuard } from '../common/guards';
 @UseGuards(RolesGuard)
 @Roles('CEO', 'Branch Director', 'Administrator')
 export class MockExamsController {
-  constructor(private readonly mockExamsService: MockExamsService) {}
+  constructor(
+    private readonly mockExamsService: MockExamsService,
+    private readonly mockExamStatsService: MockExamStatsService,
+  ) {}
 
   @Get()
   list(
@@ -53,6 +57,15 @@ export class MockExamsController {
     @BranchScope() scope: ReportBranchIds,
   ) {
     return this.mockExamsService.findOne(id, companyId, scope);
+  }
+
+  @Get(':id/stats')
+  stats(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.mockExamStatsService.getStats(id, companyId, scope);
   }
 
   @Post()
