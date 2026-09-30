@@ -80,9 +80,13 @@ bo'lmagan bo'lsa, pul qo'lda bekor qilinmaguncha qaytmasdi (ADR-0053). Tizim
   o'zi qayta urinmaydi.
 - Yangi ustoz akkauntsiz dars o'tgan yoki server ishlamagan holatlar faqat CEO
   istisnosi bilan to'lanadi.
-- Javob kechiksa va oy yopilsa, o'sha dars uchun haq yozilmaydi; tushum esa
-  dars kuniga (o'tgan oyga) yoziladi, shuning uchun o'tgan oyning Foyda kartasi
-  keyin o'zgarishi mumkin.
+- Oddiy (istisno bo'lmagan) savolga javob qachon berilmasin, ustozga haq
+  yozilmaydi. Istisno savol (qoidadan oldingi kun, dars tugashidan oldin
+  qilingan bekor qilish yoki ko'chirish o'chirilgani uchun ochilgan savol, CEO
+  istisnosi) o'sha oyning oyligi hisoblangandan keyin «Bo'ldi» deb javob olsa,
+  haq ochiq oyga «Oldingi oydan» bo'lib yoziladi (`createAccrual`,
+  `creditPeriodDate`). Tushum har ikki holda dars kuniga (o'tgan oyga)
+  yoziladi, shuning uchun o'tgan oyning Foyda kartasi keyin o'zgarishi mumkin.
 
 ## Ko'rib chiqilgan va rad etilgan
 
