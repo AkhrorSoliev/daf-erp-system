@@ -1,7 +1,7 @@
 import type { QollanmaSahifa } from "./turlar";
 
-/** ʻ ʼ ' ' ` ´ — o'zbek lotinidagi apostrof variantlari. */
-const APOSTROFLAR = /[ʻʼ''`´]/g;
+/** U+02BB, U+02BC, U+2018, U+2019, ` va ´ — o'zbek lotinidagi apostrof variantlari. */
+const APOSTROFLAR = /[ʻʼ‘’`´]/g;
 
 export function normallashtir(matn: string): string {
   return matn.toLowerCase().replace(APOSTROFLAR, "'").replace(/\s+/g, " ").trim();

@@ -18,6 +18,10 @@ describe("yangiliklar holati", () => {
   it("birinchi kirishda oxirgi 14 kun sanaladi", () => {
     expect(oqilmaganSoni(royxat, null, "2026-09-30")).toBe(2);
   });
+  it("birinchi kirish oynasi aniq 14 kun", () => {
+    const chegarada = [y("2026-09-16"), y("2026-09-17")];
+    expect(oqilmaganSoni(chegarada, null, "2026-09-30")).toBe(1);
+  });
   it("eng yangi sana", () => {
     expect(engYangiSana(royxat)).toBe("2026-09-29");
     expect(engYangiSana([])).toBeNull();

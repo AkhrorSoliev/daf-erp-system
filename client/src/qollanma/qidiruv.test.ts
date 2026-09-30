@@ -9,8 +9,11 @@ function sahifa(nom: string, sarlavha: string, qisqacha = "", kalitSozlar: strin
 describe("qidiruv", () => {
   it("apostrof turlari bir xil", () => {
     expect(normallashtir("Oʻquvchi")).toBe("o'quvchi");
-    expect(normallashtir("O'quvchi  ")).toBe("o'quvchi");
-    expect(normallashtir("O'QUVCHI")).toBe("o'quvchi");
+    expect(normallashtir("O‘quvchi  ")).toBe("o'quvchi");
+    expect(normallashtir("O’QUVCHI")).toBe("o'quvchi");
+  });
+  it.each(["ʻ", "ʼ", "‘", "’", "`", "´"])("apostrof %s → '", (belgi) => {
+    expect(normallashtir(`O${belgi}quvchi`)).toBe("o'quvchi");
   });
   it("bo'sh so'rov — natija yo'q", () => {
     expect(qidir([sahifa("a", "To'lov")], "   ")).toEqual([]);
@@ -25,6 +28,6 @@ describe("qidiruv", () => {
     expect(qidir(royxat, "avans").map((s) => s.sahifa)).toEqual(["b", "a"]);
   });
   it("o' bilan yozilgan so'rov o' li sarlavhani topadi", () => {
-    expect(qidir([sahifa("a", "O'quvchi kartasi")], "o'quvchi").map((s) => s.sahifa)).toEqual(["a"]);
+    expect(qidir([sahifa("a", "O'quvchi kartasi")], "o’quvchi").map((s) => s.sahifa)).toEqual(["a"]);
   });
 });
