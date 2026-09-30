@@ -103,10 +103,12 @@ bo'lmagan bo'lsa, pul qo'lda bekor qilinmaguncha qaytmasdi (ADR-0053). Tizim
   kun ham qayta so'ralardi — bitta dars ikki marta hisoblanardi. Shu sababli
   o'tgan qo'shimcha darsning (davomat yoki «Bo'ldi» javobi bor) sanasini
   o'zgartirish 400 «Qo'shimcha dars kunida davomat olingan — ko'chirishning
-  sanasini o'zgartirib bo'lmaydi» bilan rad etiladi, «Bo'ldi» esa guruhning
-  dars kuni bo'lmagan kunni (odatdagi hafta kuni emas va unga amaldagi
-  ko'chirish tushmaydi) 400 «Bu kunda dars rejalashtirilmagan» bilan rad
-  etadi.
+  sanasini o'zgartirib bo'lmaydi» bilan rad etiladi. Javob kutilayotgan
+  qo'shimcha darsga yangi sana berilsa, u hozirdan keyin boshlanishi kerak.
+  «Bo'ldi» va «Bo'lmadi → Ko'chirish» guruhning dars kuni bo'lmagan kunni
+  (o'sha kuni amalda bo'lgan jadvalning hafta kuni emas va unga amaldagi
+  ko'chirish tushmaydi; jadval keyin o'zgargani ahamiyatsiz) 400 «Bu kunda
+  dars rejalashtirilmagan» bilan rad etadi.
 - «Bo'lmadi» sababi va CEO istisnosining sababi majburiy: faqat bo'sh joydan
   iborat sabab 400 «Sababini yozing» bilan rad etiladi.
 - Savol hech ochilmagan bo'lsa-yu, asl dars tugagach bekor qilish yoki

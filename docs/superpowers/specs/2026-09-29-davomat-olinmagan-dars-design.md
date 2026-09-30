@@ -249,10 +249,12 @@ joydan iborat sabab 400 «Sababini yozing») va ikki tanlov.
    ketmaydi (hech narsa bekor qilinmagan, dars o'z asl kunida so'raladi);
    `teacherPayExempt` o'zgarmaydi. Aks holda o'sha kunda «Bo'ldi» dars
    bo'lmagan kunga davomat yozar, asl kun esa yana so'ralardi — bitta dars
-   ikki marta hisoblanardi. Zaxira qorovul: «Bo'ldi» guruhning dars kuni
-   bo'lmagan kunni (guruhning hozirgi hafta kunlarida yo'q va unga amaldagi
-   ko'chirish tushmaydi — `noLessonScheduled`) 400 «Bu kunda dars
-   rejalashtirilmagan» bilan rad etadi.
+   ikki marta hisoblanardi. Zaxira qorovul: «Bo'ldi» va «Bo'lmadi →
+   Ko'chirish» guruhning dars kuni bo'lmagan kunni (o'sha kuni amalda bo'lgan
+   jadvalning hafta kunlarida yo'q va unga amaldagi ko'chirish tushmaydi;
+   jadval keyin o'zgargani ahamiyatsiz — `noLessonScheduled`) 400 «Bu kunda
+   dars rejalashtirilmagan» bilan rad etadi. Javob kutilayotgan qo'shimcha
+   darsga yangi sana berilsa, u hozirdan keyin boshlanishi kerak.
 
 **Ikkala tanlovda ham** Telegram guruhiga **darhol** xabar ketadi — tranzaksiya
 yakunlangandan keyin (admin bot,
