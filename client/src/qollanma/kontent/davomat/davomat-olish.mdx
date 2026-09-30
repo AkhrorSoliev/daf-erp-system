@@ -1,0 +1,151 @@
+## Belgilar va pul
+
+Har o'quvchiga dars uchun to'rt belgidan biri qo'yiladi. Belgilar ikonka bo'lib turadi, nomi ustiga olib borganda chiqadi: ✓ — «Keldi», ✕ — «Kelmadi», budilnik — «Kechikdi», qalqon — «Sababli».
+
+Dars o'tilgan bo'lsa, u hisoblanadi: o'quvchi kelgan-kelmaganidan qat'i nazar. Shuning uchun «Kelmadi» ham «Keldi» kabi hisoblanadi. Faqat «Sababli» va bekor qilingan dars pulsiz.
+
+| Belgi | Ustozga ulush | Oylik kursda o'quvchi puli | Dars paketida o'quvchi puli |
+|---|---|---|---|
+| «Keldi» | Yoziladi | O'zgarmaydi | Dars yechiladi |
+| «Kechikdi» | Yoziladi | O'zgarmaydi | Dars yechiladi |
+| «Kelmadi» | Yoziladi | O'zgarmaydi | Dars yechiladi |
+| «Sababli» | Yozilmaydi | Shu oy puli o'zgarmaydi; kredit yoqilgan bo'lsa, keyingi oy hisobidan bir dars puli ayiriladi | Dars yechilmaydi |
+
+- Oylik kursda davomat shu oyning pulini o'zgartirmaydi: oy puli oy boshida yechiladi.
+- Keyingi oyga kredit Sozlamalar → «To'lov» dagi «Sababli darsning krediti keyingi oyga o'tsin» yoqilgan bo'lsa yoziladi; boshlang'ich holati — yoqilgan.
+- «Keldi», «Kechikdi» va «Kelmadi» orasida almashtirish pulga ta'sir qilmaydi.
+- Boshqa belgidan «Sababli»ga o'tkazsangiz, dars hisobdan chiqadi: ustozga yozilgan ulush bekor bo'ladi. «Sababli»dan boshqa belgiga o'tkazsangiz, dars yana hisoblanadi.
+- Pulning tafsiloti — [Oylik to'lov](/qollanma/tolovlar/oylik-tolov) va [Dars paketi](/qollanma/tolovlar/dars-paketi).
+
+## Qadamlar
+
+1. Chap menyudan «Guruhlar» ni oching va guruhni tanlang. Guruh sahifasi «Davomat» tabi bilan ochiladi. O'qituvchi «Guruhlar»da faqat o'z guruhlarini ko'radi.
+2. Bugun guruhda dars bo'lsa, tepada «Bugungi dars — ...» kartasi turadi: «Davomat olish» tugmasini bosing. Boshqa kun kerak bo'lsa, pastdagi kalendardan shu dars kunining kartasini bosing.
+3. Ochilgan formada o'quvchilar ro'yxati turadi. Har qatorda belgilar bor: shu o'quvchi uchun bittasini bosing.
+4. Hamma kelgan bo'lsa, «Barchasiga — Keldi» ni bosing, keyin kelmaganlarni o'zgartiring.
+5. «Saqlash» ni bosing. «Davomat muvaffaqiyatli saqlandi» xabari chiqadi va forma yopiladi.
+
+Davomat to'liq saqlanadi. Ro'yxatdagi har bir o'quvchiga belgi qo'yilmaguncha «Saqlash» bosilmaydi; yonida «Belgilanmagan: N ta» turadi. Tizim ham qisman saqlashni rad etadi.
+
+Formaning yuqori o'ng burchagidagi hisoblagich kelganlar («Keldi» va «Kechikdi» birga), «Kelmadi» va jami o'quvchilar sonini ko'rsatadi.
+
+## Kim qachon oladi
+
+### O'qituvchi
+
+- Faqat o'z guruhida. O'rinbosar ustoz bo'lsangiz — o'zingizga tayinlangan kun uchun.
+- Faqat bugungi dars, Toshkent sanasi bo'yicha.
+- Dars boshlanishidan 10 daqiqa oldin ochiladi va dars tugash vaqtigacha ochiq turadi. Masalan, dars 18:00 – 19:30 bo'lsa, davomat 17:50 dan 19:30 gacha olinadi.
+- Vaqtni server o'z soati bilan, Toshkent vaqti bo'yicha tekshiradi. Ekrandagi yozuv oldindan xabar beradi (pastdagi jadvalga qarang).
+- Ekranda faqat «Keldi» va «Kelmadi» belgisi bor. Izoh yoza olmaydi.
+- Davomatni bir marta saqlaydi. Saqlagach uni o'zgartira olmaydi: forma «Davomat olib bo'lingan. Tahrirlash uchun administratorga murojaat qiling» deb turadi.
+- Kalendarda boshqa kunni ochish mumkin, lekin «Saqlash»da tizim rad etadi. Belgilanmay qolgan darsni administrator tiklaydi.
+- Guruhda dars vaqti kiritilmagan bo'lsa, faqat kun tekshiriladi: davomat bugun olinadi, soat tekshirilmaydi.
+
+### CEO, filial direktori, administrator
+
+- Istalgan dars kunini oladi: bugungi, o'tgan yoki kelgusi. Vaqt cheklovi yo'q.
+- Filial direktori va administrator faqat o'z filialidagi guruhda ishlaydi.
+- To'rtala belgini qo'yadi. Har qatorda qalam tugmasi («Izoh qo'shish») bor: izoh «Izoh yozing...» maydoniga yoziladi.
+- Saqlangan davomatni istalgan vaqt o'zgartiradi: bugungi dars kartasidagi «Tahrirlash» tugmasi orqali yoki kalendardan kunni bosib. Har saqlashda ro'yxatdagi hamma o'quvchi belgilangan bo'lishi kerak.
+- Bugungi yoki kelgusi darsda hali hech kim belgilanmagan bo'lsa, forma avval «Oldindan belgilash rejimi»da ochiladi. To'liq davomat olish uchun «Hozir to'liq davomat olish» ni bosing. Batafsil — [Oldindan belgilash](/qollanma/davomat/oldindan-belgilash).
+- Faqat CEO, direktor va administratorga: kalendar ustida «Olingan: X/Y», «Olinmagan: N», «Kelgusi: N» chizig'i, kalendar ostida esa «Davomat olinmagan darslar:» ro'yxati (eng ko'pi bilan uchta dars) turadi. Ro'yxatdagi dars bosilsa, forma ochiladi.
+
+Bu qoidalarning hammasi uchun: guruh «Faol» bo'lishi, sana guruh muddati ichida va guruh jadvalidagi dars kuni bo'lishi (yoki ko'chirib kelingan kun), bayram bo'lmasligi kerak.
+
+O'qituvchi bo'lib, administrator, direktor yoki CEO roli ham bor xodimga vaqt cheklovi qo'llanmaydi.
+
+## QR davomat
+
+QR davomatda o'quvchilar davomatni o'zlari belgilaydi.
+
+1. Formada «QR davomat» tugmasini bosing. «QR davomat — guruh nomi» oynasi ochiladi va QR kod chiqadi. Administratorda bu tugma «Oldindan belgilash rejimi»dan chiqqach ko'rinadi.
+2. O'quvchi o'z telefonidagi DAF Student ilovasida kodni skanerlaydi va «Keldi» bo'ladi.
+3. Skanerlagan o'quvchi oynadagi «Kelgan o'quvchilar» ro'yxatida paydo bo'ladi (kelganlar soni / guruh o'quvchilari soni) va ovoz chiqadi. Ovozni «Ovoz yoqilgan» tugmasi o'chiradi.
+4. Oynani yopsangiz, forma yangilanadi va skanerlaganlar «Keldi» bo'lib turadi.
+
+- Kod har 45 soniyada yangilanadi, eskirgan kod ishlamaydi. Oyna yopilganda sessiya tugaydi; yopmasangiz ham ko'pi bilan 2 soatdan keyin tugaydi.
+- Skanerlash uchun o'quvchi shu guruhga faol yozilgan bo'lishi kerak. Dars kunidan keyin qo'shilgan o'quvchi o'sha darsni skanerlay olmaydi. Balansi minus o'quvchi ham skanerlay oladi.
+- Skanerlagan o'quvchi «Keldi» bo'ladi. Avval boshqa belgi qo'yilgan bo'lsa, «Keldi» ga almashadi.
+- Pul va ustoz ulushi qo'lda belgilashdagi bilan bir xil hisoblanadi.
+- Bir guruh va sana uchun bitta sessiya ochiladi: boshqa xodim ochgan bo'lsa, «Bu sana uchun boshqa o'qituvchi allaqachon QR sessiya boshlagan» deb chiqadi.
+- QR oynasini o'qituvchi ham ochadi, yuqoridagi vaqt qoidasi bilan.
+
+<Eslatma tur="diqqat">
+
+QR orqali hech bo'lmasa bitta o'quvchi belgilangach, tizim davomatni «olib bo'lingan» deb hisoblaydi. O'qituvchi qolgan o'quvchilarni qo'lda belgilay olmaydi: ularni administrator belgilaydi. Shu paytdan boshlab davomat eslatmalari ham to'xtaydi ([Davomat eslatmalari](/qollanma/davomat/eslatmalar)).
+
+</Eslatma>
+
+## Qarzdor o'quvchi
+
+Balansi minus o'quvchi ham ro'yxatda turadi: ismi yonida «Qarz» belgisi chiqadi. Ro'yxat hamma rol uchun bir xil, qarzdor ham boshqalar kabi belgilanadi.
+
+- Oylik kursda davomat pulga tegmaydi.
+- Dars paketida dars baribir hisoblanadi va balans minusga tushadi; ustozga ulush o'quvchi to'laguncha kutadi: [Dars paketi](/qollanma/tolovlar/dars-paketi).
+- Qarzdor bo'lsa, CEO, direktor va administratorga forma ostida «Qarzdorlar — N ta» paneli chiqadi. Undagi «To'lov qabul qilish» tugmasi to'lov oynasini ochadi: [To'lov qayd qilish](/qollanma/tolovlar/tolov-qayd-qilish).
+
+## Ro'yxatda kim bor
+
+Ro'yxatda faqat guruhga faol yozilgan o'quvchilar turadi.
+
+- Muzlatilgan, guruhdan chiqarilgan yoki boshqa guruhga o'tkazilgan o'quvchi ro'yxatda yo'q. Qarang: [Muzlatish va qaytarish](/qollanma/oquvchilar/muzlatish), [Guruhga qo'shish va o'tkazish](/qollanma/oquvchilar/guruhga-qoshish).
+- Dars kunidan keyin qo'shilgan o'quvchi o'sha o'tgan darsda ko'rinmaydi.
+
+## Misol
+
+Oylik kurs: oyiga 1 200 000 so'm, oktabrda 12 ta dars, bir dars 100 000 so'm; hisob kuni — 1; sababli dars krediti yoqilgan. Guruh 18:00 – 19:30 da o'qiydi. Ismlar soxta.
+
+1. O'qituvchi Aziza 18:05 da guruhni ochadi. Davomat 17:50 dan ochiq. U «Davomat olish» ni bosadi, «Barchasiga — Keldi» ni bosadi va Malikani «Kelmadi» ga o'zgartiradi. Keyin «Saqlash» ni bosadi.
+2. To'rtala o'quvchi (Jasur, Nilufar, Dilshod, Malika) uchun ustozga ulush yoziladi: dars o'tdi. Hech kimning oy puli o'zgarmaydi.
+3. Kechqurun Malikaning kasal ekani ma'lum bo'ladi. Administrator Bobur guruhning «Davomat» tabida bugungi dars kartasidagi «Tahrirlash» ni bosadi, Malikaning qatorida «Sababli» ni tanlaydi va «Saqlash» ni bosadi.
+4. Malika uchun ustoz ulushi bekor bo'ladi. Noyabr hisobidan Malikaga 100 000 so'm ayiriladi.
+5. Aziza saqlangan davomatni o'zgartira olmaydi va «Sababli» belgisini ekranda ko'rmaydi: bunday o'zgarishni administrator qiladi.
+
+## Istisnolar
+
+- Guruh «Faol» bo'lmasa, «Davomat» tabida «Guruh faol emas (...). Davomat olish mumkin emas.» yoziladi.
+- Bekor qilingan dars kalendarda «Bekor qilingan», boshqa kunga ko'chirilgan dars «Ko'chirilgan» deb turadi va ular ochilmaydi. Ko'chirib kelingan kun («Ko'chirib kelingan») esa oddiy dars kabi ochiladi. Bekor qilingan dars pulsiz: [Oylik to'lov](/qollanma/tolovlar/oylik-tolov).
+- Bayram kunida, guruh jadvalida yo'q kunda va guruh muddatidan tashqarida davomat olinmaydi (pastdagi jadvalga qarang).
+- Avtomatik pauzaga tushgan o'quvchi ro'yxatda yo'q: [Avtomatik pauza](/qollanma/davomat/avtomatik-pauza).
+
+## Ko'p uchraydigan xatolar
+
+| Xabar yoki holat | Sabab |
+|---|---|
+| «Dars 18:00 da boshlanadi (Toshkent vaqti). Davomat dars boshlanishidan 10 daqiqa oldin ochiladi» | O'qituvchi uchun hali erta: belgilar bosilmaydi. |
+| «Dars vaqti tugagan (18:00 – 19:30, Toshkent vaqti). Davomat olish yopilgan» | O'qituvchi uchun dars tugagan. Davomatni administrator oladi. |
+| «Davomat olib bo'lingan. Tahrirlash uchun administratorga murojaat qiling» | O'qituvchi saqlangan davomatni (yoki QR bilan boshlangan davomatni) o'zgartirmoqchi. |
+| «O'qituvchi davomatni faqat dars kuni belgilaydi. Boshqa kun uchun administratorga murojaat qiling» | O'qituvchi bugundan boshqa kunni saqlamoqchi. |
+| «Belgilanmagan: N ta», «Saqlash» bosilmaydi | Ro'yxatda belgisiz o'quvchi bor. |
+| «Davomat saqlash uchun barcha o'quvchilarning holati belgilanishi shart. Belgilanmagan o'quvchilar: N ta» | Ro'yxatda belgilanmagan o'quvchi qolgan, masalan forma ochilgandan keyin guruhga yangi o'quvchi qo'shilgan. |
+| «Bu sana bayram kuni: ...» | Bayram kunida davomat olinmaydi. |
+| «Bu kunda dars rejalashtirilmagan» | Sana guruh jadvalidagi dars kuni emas. |
+| «Bu sana guruh faoliyat muddatiga kirmaydi» | Guruh hali boshlanmagan yoki tugagan sana. |
+| «Bu sana boshqa kunga ko'chirilgan — davomatni yangi sanada oling» | Dars boshqa kunga ko'chirilgan. |
+| «Bu guruh boshqa filialga tegishli — davomat bilan ishlash huquqingiz yo'q» | Direktor yoki administrator boshqa filial guruhida ishlamoqchi. |
+| «Siz bu guruhga biriktirilmagansiz» | O'qituvchi bu guruhga biriktirilmagan (o'rinbosar bo'lsa — shu kunga tayinlanmagan). |
+
+## Kim qila oladi
+
+«Ha» — ekranda tugma bor va tizim amalni qabul qiladi. «—» — ekranda yo'q yoki tizim rad etadi. Filial direktori va administrator faqat o'z filialida ishlaydi.
+
+| Amal | CEO | Filial direktori | Administrator | O'qituvchi |
+|---|---|---|---|---|
+| Davomat belgilash | Ha, istalgan dars kuni | Ha, istalgan dars kuni | Ha, istalgan dars kuni | Ha, faqat o'z guruhida, bugun: dars boshlanishidan 10 daqiqa oldin to dars tugaguncha |
+| «Kechikdi» va «Sababli» belgisini qo'yish | Ha | Ha | Ha | — |
+| Izoh qo'shish | Ha | Ha | Ha | — |
+| Saqlangan davomatni o'zgartirish | Ha | Ha | Ha | — |
+| QR davomat oynasini ochish | Ha | Ha | Ha | Ha, yuqoridagi vaqt qoidasi bilan |
+| Oldindan belgilash | Ha | Ha | Ha | — |
+| «Qarzdorlar» panelini ko'rish | Ha | Ha | Ha | — |
+
+Kassir davomat bilan ishlamaydi.
+
+## Tizimda qayerda
+
+- Chap menyu → «Guruhlar» → guruh sahifasi → «Davomat» tabi.
+- Guruh sahifasidagi «Darslar» tabi o'quvchilarning oxirgi darslardagi holatini nuqtalar bilan ko'rsatadi.
+- «Tarix» tabi → «Davomat tarixi»: davomatni kim va qachon saqlagani (CEO, direktor, administrator).
+- «Dars o'zgarishlari» tabi: darsni bekor qilish yoki boshqa kunga ko'chirish (CEO, direktor, administrator).
+- Davomat olinmasa, xodimga eslatma keladi: [Davomat eslatmalari](/qollanma/davomat/eslatmalar).

@@ -60,4 +60,11 @@ export const KADRLAR = [
     belgilar: [{ selector: "role=tablist", raqam: 1 }],
     kesish: null,
   },
+  {
+    nom: "davomat/davomat-olish",
+    url: (s) => `/groups/${s.oylikGuruhId}`,
+    kutish: "role=tab[name=\"Davomat\"]",
+    belgilar: [],
+    kesish: null,
+  },
 ];

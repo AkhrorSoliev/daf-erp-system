@@ -19,6 +19,13 @@ export const yangiliklar: Yangilik[] = [
     sahifa: { bolim: "tolovlar", sahifa: "oylik-tolov" },
   },
   {
+    sana: "2026-09-29",
+    sarlavha: "O'qituvchi davomatni faqat bugungi darsga oladi",
+    matn: "O'qituvchi davomatni faqat bugungi dars kuni, dars boshlanishidan 10 daqiqa oldin to dars tugaguncha oladi. Boshqa kunni saqlashda tizim rad etadi; belgilanmay qolgan darsni administrator tiklaydi. Ilgari o'tgan yoki kelgusi kunni ham saqlab bo'lardi.",
+    rollar: [1, 2, 3, 4],
+    sahifa: { bolim: "davomat", sahifa: "davomat-olish" },
+  },
+  {
     sana: "2026-09-27",
     sarlavha: "O'quvchiga oylik to'lov xabari",
     matn: "Oylik kursdagi o'quvchiga Telegramda ikki xabar boradi: oy hisobi yozilgan kuni oyning to'lovi va muddati, qarzdorga esa oyning 2-darsidan bir kun oldin eslatma. CEO xabarlarni Sozlamalar → «To'lov» da o'chirishi mumkin.",
@@ -122,6 +129,13 @@ export const yangiliklar: Yangilik[] = [
     sahifa: { bolim: "oquvchilar", sahifa: "chetlatish-va-arxiv" },
   },
   {
+    sana: "2026-09-24",
+    sarlavha: "Avtomatik pauza: xabarlar dars kuni kechqurun boradi",
+    matn: "Avtomatik pauza yoqilganda ketma-ket dars qoldirgan o'quvchiga Telegramda endi uch bosqichli xabar boradi: birinchi qoldirishda yengil so'rov, ogohlantirish chegarasida ogohlantirish, pauza chegarasida pauza haqida xabar. Birinchi ikki bosqich dars kuni soat 20:30 da boradi (ilgari ertasi ertalab), pauza ertasi ertalab soat 07:30 da.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "davomat", sahifa: "avtomatik-pauza" },
+  },
+  {
     sana: "2026-09-22",
     sarlavha: "Qarz kechirish o'chirildi",
     matn: "CEO 21.09.2026 da qarz kechirilmasligini belgiladi: Sozlamalar → «To'lov» dagi «Qarz kechirishga ruxsat» o'chiq turadi va qarz butun tarixi bilan saqlanadi. Ilgari kechirilgan qarzlar «Qarzdorlik» sahifasidagi «Kechirilganlar» tabida ko'rinib turadi. Sozlamani faqat CEO o'zgartiradi.",
@@ -148,6 +162,13 @@ export const yangiliklar: Yangilik[] = [
     matn: "O'quvchi hisobi xodim hisobi ochilishiga endi to'sqinlik qilmaydi: bir odam o'quvchi ham, xodim ham bo'lsa, unda ikkita alohida hisob va ikkita parol bo'ladi. Bitta telefonga bitta ishlab turgan xodim hisobi to'g'ri keladi.",
     rollar: [1, 2],
     sahifa: { bolim: "boshlash", sahifa: "tizimga-kirish" },
+  },
+  {
+    sana: "2026-09-19",
+    sarlavha: "Avtomatik pauza",
+    matn: "Tizim ketma-ket sababsiz dars qoldirgan o'quvchini o'zi «Muzlatilgan» holatiga o'tkazishi mumkin; guruhdan chiqarmaydi. Sozlama boshida o'chiq: uni faqat CEO Sozlamalar → «Avtomatik pauza» da yoqadi. «Aloqa markazi»da «Pauzadagilar» tabi paydo bo'ldi, undagi «Faollashtirish» o'quvchini qaytaradi. Ogohlantirish va pauza haqida guruhning ustozlari va filial administratorlariga ham bildirishnoma keladi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "davomat", sahifa: "avtomatik-pauza" },
   },
   {
     sana: "2026-09-13",
