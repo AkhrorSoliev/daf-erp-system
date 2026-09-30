@@ -177,9 +177,12 @@ function StatsCard({
       <h3 className="text-sm font-semibold">
         {title}
         {note && (
-          <span className="ml-1.5 text-xs font-normal text-muted-foreground">
-            {note}
-          </span>
+          <>
+            {" "}
+            <span className="text-xs font-normal text-muted-foreground">
+              {note}
+            </span>
+          </>
         )}
       </h3>
       <div className="mt-2 flex flex-col gap-1.5">{children}</div>
