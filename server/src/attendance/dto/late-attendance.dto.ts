@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsNotEmpty,
@@ -16,6 +17,10 @@ export class LateAttendanceDto extends SaveAttendanceDto {
   teacherPayExempt?: boolean;
 
   @ValidateIf((o: LateAttendanceDto) => o.teacherPayExempt === true)
+  // Trimmed before the checks, so a reason of spaces is refused.
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @IsNotEmpty({ message: 'Sababini yozing' })
   @MaxLength(500)

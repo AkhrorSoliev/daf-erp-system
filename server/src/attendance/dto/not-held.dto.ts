@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import {
   IsDateString,
   IsIn,
@@ -13,6 +14,10 @@ const TIME_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** «Bo'lmadi» (spec 2026-09-29 §3.5): cancel with a refund, or move. */
 export class NotHeldDto {
+  // Trimmed before the checks, so a reason of spaces is refused.
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @IsNotEmpty({ message: 'Sababini yozing' })
   @MaxLength(500)
