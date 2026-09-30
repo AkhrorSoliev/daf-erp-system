@@ -56,6 +56,7 @@ function toStudent(gs: GroupStudent): Student {
     parentName: null,
     telegram: null,
     telegramChatId: null,
+    telegramDisconnectedAt: null,
     placeOfStudy: null,
     address: null,
     passportSeries: null,

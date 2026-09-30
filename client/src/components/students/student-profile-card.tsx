@@ -197,7 +197,10 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
             verified={student.phoneVerified}
             verifiedAt={student.phoneVerifiedAt}
           />
-          <TelegramBotBadge chatId={student.telegramChatId} />
+          <TelegramBotBadge
+            chatId={student.telegramChatId}
+            disconnectedAt={student.telegramDisconnectedAt}
+          />
         </div>
         {student.gender && (
           <div className="flex items-center gap-2">

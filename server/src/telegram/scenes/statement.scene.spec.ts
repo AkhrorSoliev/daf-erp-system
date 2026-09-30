@@ -214,7 +214,7 @@ describe("statement scene (💳 To'lovlar)", () => {
     });
     expect(prisma.student.updateMany).toHaveBeenCalledWith({
       where: { id: { in: [ALI.id] } },
-      data: { telegramChatId: String(CHAT) },
+      data: { telegramChatId: String(CHAT), telegramDisconnectedAt: null },
     });
     expect(statements.pdf).toHaveBeenCalledWith(ALI.id, ALI.companyId);
   });

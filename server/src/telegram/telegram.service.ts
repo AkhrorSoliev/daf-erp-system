@@ -54,6 +54,7 @@ import {
   checkEmployeePayload,
   signEmployeePayload,
 } from './utils/signed-link.util';
+import { StudentChatReach } from './utils/student-chat-reach';
 import { PrismaService } from '../prisma/prisma.service';
 import { RESULTS_AUDIENCE } from '../mock-exams/mock-results-audience';
 import { whereUserMayAct } from '../common/auth/blocked-user';
@@ -158,6 +159,20 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     }
 
     this.bot = new Telegraf<BotContext>(token);
+
+    // Whether a student's chat still takes the bot's messages (ADR-0054):
+    // every send reports its outcome, and a block or unblock is recorded as
+    // Telegram announces it. Registered first, so no session is loaded for it.
+    const chatReach = new StudentChatReach(
+      this.prisma,
+      this.entityHistoryService,
+      this.logger,
+    );
+    chatReach.watch(this.bot.telegram);
+    this.bot.on('my_chat_member', async (ctx, next) => {
+      if (ctx.myChatMember.chat.type !== 'private') return next();
+      await chatReach.onMyChatMember(ctx.myChatMember);
+    });
 
     // Channel-membership gate (whole bot). Set TELEGRAM_REQUIRED_CHANNEL to
     // e.g. "@daffergana" to require membership before any flow runs; leave

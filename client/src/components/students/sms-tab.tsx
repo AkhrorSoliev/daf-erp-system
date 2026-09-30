@@ -10,6 +10,7 @@ import {
   ChevronUp,
   Loader2,
   Info,
+  Unplug,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/tooltip";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
+import { smsErrorText } from "./sms-error-text";
 
 // Escape EVERYTHING first, then re-allow only a tiny fixed set of
 // attribute-less formatting tags (<b>/<i>/<u>/<br>). Safe by construction:
@@ -55,9 +57,15 @@ interface SmsMessageData {
 interface SmsTabProps {
   studentId: number;
   telegramChatId: string | null;
+  /** The linked chat refuses the bot (ADR-0054); sending stays open. */
+  telegramDisconnectedAt: string | null;
 }
 
-export function SmsTab({ studentId, telegramChatId }: SmsTabProps) {
+export function SmsTab({
+  studentId,
+  telegramChatId,
+  telegramDisconnectedAt,
+}: SmsTabProps) {
   const [messages, setMessages] = useState<SmsMessageData[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -149,7 +157,7 @@ export function SmsTab({ studentId, telegramChatId }: SmsTabProps) {
       if (res.data.status === "SENT") {
         toast.success("Xabar yuborildi");
       } else {
-        toast.error(res.data.errorMessage || "Xabar yuborishda xatolik");
+        toast.error(smsErrorText(res.data.errorMessage));
       }
     } catch (err: unknown) {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
@@ -207,6 +215,18 @@ export function SmsTab({ studentId, telegramChatId }: SmsTabProps) {
 
   return (
     <div className="flex flex-col h-[500px] border rounded-lg bg-background">
+      {telegramDisconnectedAt && (
+        <div className="flex gap-2 rounded-t-lg border-b bg-red-50 px-4 py-2.5 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
+          <Unplug className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            {format(new Date(telegramDisconnectedAt), "dd.MM.yyyy")} dan beri
+            bot xabarlari yetib bormayapti: o&apos;quvchi botni bloklagan yoki
+            Telegram hisobini o&apos;chirgan. Botga qaytsa, aloqa o&apos;zi
+            tiklanadi.
+          </p>
+        </div>
+      )}
+
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
         {/* Load older button */}

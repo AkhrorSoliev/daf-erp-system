@@ -92,6 +92,14 @@ bog'lash yo'q. Botning parol tiklashi va Telegram Mini App kirishi shu
 bog'lanishga ishonadi.
 `telegram/scenes/student-registration.scene.ts` · `auth/telegram-webapp/telegram-webapp.service.ts` · `docs/adr/0040-mini-app-ichida-faqat-telegram-orqali-kirish.md`
 
+**Telegram uzilgan** — chat kartaga bog'langan, lekin bot xabari unga
+yetmaydi: o'quvchi botni bloklagan yoki Telegram hisobini o'chirgan
+(`Student.telegramDisconnectedAt`). Bog'lanish o'chirilmaydi. O'quvchi botni
+blokdan chiqarsa, botga yozsa yoki xabar yana yetib borsa, belgi o'zi
+olinadi. Bot orqali yetadigan o'quvchi — chati bog'langan va uzilmagan
+o'quvchi.
+`telegram/utils/student-chat-reach.ts` · `docs/adr/0054-telegram-uzilgan-oquvchi.md`
+
 **Xodimning Telegram'i** — xodim hisobiga bog'langan chat (`User.telegramChatId`),
 o'quvchi kartasidagi bog'lanishdan alohida. Bot uni xodim havolasi bilan
 ro'yxatdan o'tishda yoki `/xodim` da odam o'z raqamini yuborganda va u aynan

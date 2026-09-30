@@ -397,6 +397,7 @@ export function StudentProfileTabs({
             <SmsTab
               studentId={student.id}
               telegramChatId={student.telegramChatId}
+              telegramDisconnectedAt={student.telegramDisconnectedAt}
             />
           ) : (
             <EmptyState message="SMS tarixi mavjud emas" />

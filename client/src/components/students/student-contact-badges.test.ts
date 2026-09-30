@@ -35,12 +35,32 @@ describe("student card contact badges", () => {
   });
 
   it("marks a card whose Telegram chat is linked to the bot", () => {
-    expect(text(createElement(TelegramBotBadge, { chatId: "123456789" }))).toBe(
-      "Telegram botda ro'yxatdan o'tgan",
-    );
+    expect(
+      text(
+        createElement(TelegramBotBadge, {
+          chatId: "123456789",
+          disconnectedAt: null,
+        }),
+      ),
+    ).toBe("Telegram botda ro'yxatdan o'tgan");
+  });
+
+  // ADR-0054: the chat stays linked, so an unblock needs no new registration,
+  // but the card must stop claiming the bot's messages reach it.
+  it("says so when the linked chat refuses the bot", () => {
+    expect(
+      text(
+        createElement(TelegramBotBadge, {
+          chatId: "123456789",
+          disconnectedAt: "2026-09-30T10:00:00.000Z",
+        }),
+      ),
+    ).toBe("Telegram uzilgan");
   });
 
   it("draws nothing for a card with no linked chat", () => {
-    expect(text(createElement(TelegramBotBadge, { chatId: null }))).toBe("");
+    expect(
+      text(createElement(TelegramBotBadge, { chatId: null, disconnectedAt: null })),
+    ).toBe("");
   });
 });

@@ -555,37 +555,43 @@ model Course {
 }
 
 model Student {
-  id              Int           @id @default(autoincrement())
-  firstName       String
-  lastName        String
-  phone           String
-  extraPhone      String?
-  parentPhone     String?
-  parentName      String?
-  telegram        String?
-  telegramChatId  String?
-  gender          Gender?
-  dateOfBirth     DateTime?
+  id                     Int           @id @default(autoincrement())
+  firstName              String
+  lastName               String
+  phone                  String
+  extraPhone             String?
+  parentPhone            String?
+  parentName             String?
+  telegram               String?
+  telegramChatId         String?
+  // When the bot learned it can no longer reach the linked chat: the student
+  // blocked the bot or deleted the Telegram account (ADR-0054). Null while the
+  // chat is reachable. Cleared as soon as the chat is heard from again — an
+  // unblock, a delivered message, or the bot linking a chat anew. The link
+  // itself stays, so an unblock needs no new registration.
+  telegramDisconnectedAt DateTime?
+  gender                 Gender?
+  dateOfBirth            DateTime?
   // The number the student proved by SMS, and when (ADR-0039). The phone is
   // verified only while this equals `phone`: a number staff change later is
   // unverified again without anyone having to remember to reset a flag.
-  verifiedPhone   String?
-  phoneVerifiedAt DateTime?
-  photo           String?
-  comment         String?
-  balance         Int           @default(0)
+  verifiedPhone          String?
+  phoneVerifiedAt        DateTime?
+  photo                  String?
+  comment                String?
+  balance                Int           @default(0)
   // Per-student discount (0–100) applied at lesson-billing time. Discount
   // shrinks ONLY the center's share — the LESSON_DEDUCTION metadata still
   // stores the full perLessonCost so SalaryAccrual computes the teacher's
   // pay from the un-discounted price.
-  discountPercent Int           @default(0)
-  placeOfStudy    String?
-  address         String?
-  passportSeries  String?
-  isActive        Boolean       @default(true)
-  status          StudentStatus @default(ACTIVE)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  discountPercent        Int           @default(0)
+  placeOfStudy           String?
+  address                String?
+  passportSeries         String?
+  isActive               Boolean       @default(true)
+  status                 StudentStatus @default(ACTIVE)
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
 
   statusChangedAt    DateTime?
   statusChangedById  Int?
@@ -1624,10 +1630,10 @@ model Company {
   // DaF ilovasi faollik normasi (dizayn 2026-09-20, 3.4-bo'lim). Sozlamalarda
   // o'zgartiriladi; holat rangi FAQAT `app-activity/norma/norma.ts` da chiqadi —
   // bu ustunlar raqam, qoida emas.
-  dafKunlikDaqiqa Int @default(10)
-  dafKunlikSavol  Int @default(12)
-  dafHaftalikKun  Int @default(4)
-  dafSariqKun     Int @default(2)
+  dafKunlikDaqiqa Int       @default(10)
+  dafKunlikSavol  Int       @default(12)
+  dafHaftalikKun  Int       @default(4)
+  dafSariqKun     Int       @default(2)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
