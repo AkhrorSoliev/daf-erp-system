@@ -226,9 +226,11 @@ async function reopen(
 /**
  * A lesson of a removed cancellation or move that nobody answered for: it
  * ended, no register was taken, no question exists — asked about for the
- * first time, exempt, because its teacher could not mark it (it was cancelled
- * or moved away). A day that is itself the new date of another live move runs
- * on that move's times.
+ * first time. Exempt only when the cancellation or move was made before the
+ * lesson ended (`takenAwayAt`): its teacher could not mark it then. One made
+ * at or after the end took nothing from the teacher, and deleting it must not
+ * grant pay only the CEO may grant — that question is a normal one. A day
+ * that is itself the new date of another live move runs on that move's times.
  */
 async function openFirstTimeQuestion(
   tx: Tx,
@@ -236,6 +238,7 @@ async function openFirstTimeQuestion(
     groupId: string;
     date: Date;
     reason: string;
+    takenAwayAt: Date;
     now: Date;
     holidays: ReadonlySet<string>;
   },
@@ -279,6 +282,11 @@ async function openFirstTimeQuestion(
   });
   if (existing) return;
 
+  const exempt = !lessonHasEnded({
+    date: dayOf(args.date),
+    ...tashkentClock(args.takenAwayAt),
+    endTime: times.endTime,
+  });
   const startTime = times.startTime ?? DAY_START_TIME;
   const endTime = times.endTime ?? DAY_END_TIME;
   const taskCommentId = await createReopenTask(
@@ -301,8 +309,8 @@ async function openFirstTimeQuestion(
       date: args.date,
       lessonStartTime: startTime,
       lessonEndTime: endTime,
-      teacherPayExempt: true,
-      exemptReason: args.reason,
+      teacherPayExempt: exempt,
+      exemptReason: exempt ? args.reason : null,
       taskCommentId,
     },
   });
@@ -310,9 +318,10 @@ async function openFirstTimeQuestion(
 
 /**
  * Deleting a cancellation re-asks the question (§3.5): an answered lesson
- * goes back to PENDING; a lesson cancelled before it happened, whose
- * cancellation is removed after it ended, is asked about for the first time —
- * exempt, because its teacher could not mark a cancelled lesson.
+ * goes back to PENDING; a lesson with no question, whose cancellation is
+ * removed after it ended, is asked about for the first time — exempt when it
+ * was cancelled before it ended (`cancelledAt`), because its teacher could
+ * not mark a cancelled lesson.
  */
 export async function reopenAfterCancellationRemoved(
   tx: Tx,
@@ -320,6 +329,7 @@ export async function reopenAfterCancellationRemoved(
     cancellationId: string;
     groupId: string;
     date: Date;
+    cancelledAt: Date;
     now: Date;
     holidays: ReadonlySet<string>;
   },
@@ -332,6 +342,7 @@ export async function reopenAfterCancellationRemoved(
     groupId: args.groupId,
     date: args.date,
     reason: CANCELLED_BEFORE_REASON,
+    takenAwayAt: args.cancelledAt,
     now: args.now,
     holidays: args.holidays,
   });
@@ -380,7 +391,7 @@ export async function reopenAfterRescheduleRemoved(
 
   const removed = await tx.lessonReschedule.findUnique({
     where: { id: args.rescheduleId },
-    select: { groupId: true, originalDate: true },
+    select: { groupId: true, originalDate: true, createdAt: true },
   });
   if (!removed) return;
   if (await originalDayIsClosed(tx, removed.groupId, removed.originalDate)) {
@@ -390,6 +401,7 @@ export async function reopenAfterRescheduleRemoved(
     groupId: removed.groupId,
     date: removed.originalDate,
     reason: MOVED_BEFORE_REASON,
+    takenAwayAt: removed.createdAt,
     now: args.now,
     holidays: args.holidays,
   });

@@ -443,6 +443,7 @@ export class LessonCancellationsService {
           cancellationId: id,
           groupId: cancellation.groupId,
           date: cancellation.date,
+          cancelledAt: cancellation.createdAt,
           now,
           holidays,
         });

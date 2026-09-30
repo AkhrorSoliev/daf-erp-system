@@ -11,6 +11,8 @@ import {
 } from './unmarked-lesson-transitions';
 
 const date = new Date('2026-09-28T00:00:00.000Z');
+// A cancellation or move made the day before that lesson (28.09 16:00–17:30).
+const before = new Date('2026-09-27T10:00:00.000Z');
 const row = (over = {}) => ({
   id: 'u1',
   companyId: 1,
@@ -223,6 +225,7 @@ describe('reopening', () => {
       cancellationId: 'x1',
       groupId: 'g1',
       date,
+      cancelledAt: before,
       now,
       holidays: new Set(),
     });
@@ -247,6 +250,7 @@ describe('reopening', () => {
       cancellationId: 'x1',
       groupId: 'g1',
       date,
+      cancelledAt: before,
       now,
       holidays: new Set(),
     });
@@ -260,6 +264,45 @@ describe('reopening', () => {
     });
   });
 
+  // Human ruling 2026-09-30: only the CEO grants pay (Q9). A cancellation made
+  // once the lesson had ended (17:30 Tashkent on 28.09), then deleted, opens a
+  // normal question — else cancel-then-delete after the lesson pays the teacher.
+  it('opens a question that is not exempt when the cancellation came at or after the lesson end', async () => {
+    const tx = makeTx();
+    await reopenAfterCancellationRemoved(tx, {
+      cancellationId: 'x1',
+      groupId: 'g1',
+      date,
+      cancelledAt: new Date('2026-09-28T12:30:00.000Z'), // 17:30 Tashkent
+      now,
+      holidays: new Set(),
+    });
+    expect(tx.unmarkedLesson.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        teacherPayExempt: false,
+        exemptReason: null,
+      }),
+    });
+  });
+
+  it('keeps it exempt for a cancellation made a minute before the end', async () => {
+    const tx = makeTx();
+    await reopenAfterCancellationRemoved(tx, {
+      cancellationId: 'x1',
+      groupId: 'g1',
+      date,
+      cancelledAt: new Date('2026-09-28T12:29:00.000Z'), // 17:29 Tashkent
+      now,
+      holidays: new Set(),
+    });
+    expect(tx.unmarkedLesson.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        teacherPayExempt: true,
+        exemptReason: CANCELLED_BEFORE_REASON,
+      }),
+    });
+  });
+
   it('opens nothing when the lesson was marked or has not ended', async () => {
     const tx = makeTx();
     tx.attendance.findFirst.mockResolvedValue({ id: 'a1' });
@@ -267,6 +310,7 @@ describe('reopening', () => {
       cancellationId: 'x1',
       groupId: 'g1',
       date,
+      cancelledAt: before,
       now,
       holidays: new Set(),
     });
@@ -275,6 +319,7 @@ describe('reopening', () => {
       cancellationId: 'x1',
       groupId: 'g1',
       date: new Date('2026-10-05T00:00:00.000Z'),
+      cancelledAt: before,
       now,
       holidays: new Set(),
     });
@@ -290,6 +335,7 @@ describe('reopening', () => {
       cancellationId: 'x1',
       groupId: 'g1',
       date,
+      cancelledAt: before,
       now,
       holidays,
     });
@@ -345,14 +391,37 @@ describe('reopenAfterRescheduleRemoved — a move made in advance', () => {
   const args = { rescheduleId: 'r1', now, holidays: new Set<string>() };
 
   // No row carries this move; the removed move is read by id.
-  const txWithRemovedMove = (originalDate: Date = date) => {
+  const txWithRemovedMove = (
+    originalDate: Date = date,
+    createdAt: Date = before,
+  ) => {
     const tx = makeTx();
     tx.lessonReschedule.findUnique.mockResolvedValue({
       groupId: 'g1',
       originalDate,
+      newDate: new Date('2026-10-02T00:00:00.000Z'),
+      createdAt,
     });
     return tx;
   };
+
+  // Human ruling 2026-09-30, as for a cancellation.
+  it('opens a question that is not exempt when the move came after the lesson end', async () => {
+    const tx = txWithRemovedMove(date, new Date('2026-09-28T14:00:00.000Z'));
+    await reopenAfterRescheduleRemoved(tx, args);
+    expect(tx.lessonReschedule.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({ createdAt: true }),
+      }),
+    );
+    expect(tx.unmarkedLesson.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        date,
+        teacherPayExempt: false,
+        exemptReason: null,
+      }),
+    });
+  });
 
   it('opens an exempt question for the original date once it has ended', async () => {
     const tx = txWithRemovedMove();
@@ -515,9 +584,29 @@ describe('reopenAfterCancellationRemoved — a day moved here', () => {
     cancellationId: 'x1',
     groupId: 'g1',
     date: today,
+    cancelledAt: before,
     now,
     holidays: new Set<string>(),
   };
+
+  // The lesson's end is the move's 11:00, not the group's 17:30.
+  it("judges the cancellation's time against the move's end", async () => {
+    const tx = makeTx();
+    tx.lessonReschedule.findFirst.mockResolvedValue({
+      newLessonStartTime: '10:00',
+      newLessonEndTime: '11:00',
+    });
+    await reopenAfterCancellationRemoved(tx, {
+      ...args,
+      cancelledAt: new Date('2026-09-30T06:30:00.000Z'), // 11:30 Tashkent
+    });
+    expect(tx.unmarkedLesson.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        teacherPayExempt: false,
+        exemptReason: null,
+      }),
+    });
+  });
 
   it("carries the move's times and judges «ended» on them", async () => {
     const tx = makeTx();

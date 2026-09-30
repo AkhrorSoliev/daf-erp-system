@@ -576,6 +576,36 @@ describe('LessonCancellationsService', () => {
         );
       });
 
+      // Human ruling 2026-09-30: a cancellation made after the lesson ended
+      // (17:30 Tashkent on 15.04), then deleted, does not pay the teacher.
+      it('asks about a lesson cancelled after it ended without the exemption', async () => {
+        tx.lessonCancellation.findFirst.mockResolvedValue({
+          id: 'x1',
+          groupId: 'group-1',
+          date: new Date('2026-04-15T00:00:00.000Z'),
+          createdAt: new Date('2026-04-15T14:00:00.000Z'),
+        });
+        tx.unmarkedLesson.findFirst.mockResolvedValue(null);
+        tx.group.findUnique.mockResolvedValue({
+          name: '#014',
+          companyId: 1,
+          branchId: 2,
+          lessonStartTime: '16:00',
+          lessonEndTime: '17:30',
+          deletedAt: null,
+        });
+
+        await service.remove('x1', 1, 99, ['CEO']);
+
+        expect(tx.unmarkedLesson.create).toHaveBeenCalledWith({
+          data: expect.objectContaining({
+            groupId: 'group-1',
+            teacherPayExempt: false,
+            exemptReason: null,
+          }),
+        });
+      });
+
       // `reopenAfterCancellationRemoved` reads, then creates an UnmarkedLesson
       // row that the Serializable lesson-end sweep also writes.
       it('runs the transaction Serializable, like create', async () => {
