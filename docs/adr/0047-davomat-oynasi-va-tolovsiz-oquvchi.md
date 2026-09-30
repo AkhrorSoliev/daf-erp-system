@@ -1,6 +1,6 @@
 # ADR-0047 — Davomat dars tugashi bilan yopiladi; to'lov qilmagan o'quvchi 2-darsdan puli yetgan darslargacha qatnashadi
 
-**Holati:** Qabul qilindi; 1-banddagi «dars tugagach hech kim, CEO ham, kirita va o'zgartira olmaydi» va `allowClosedLesson`, 6-banddagi «endi saytda kiritib bo'lmaydi» xabarlari — ADR-0054 bilan o'zgardi (CEO, 2026-09-30); «10 daqiqa» — ADR-0048 5-band (sozlama)
+**Holati:** Qabul qilindi; 1-banddagi «dars tugagach hech kim, CEO ham, kirita va o'zgartira olmaydi» va `allowClosedLesson`, 6-banddagi «endi saytda kiritib bo'lmaydi» xabarlari — ADR-0054 bilan o'zgardi (CEO, 2026-09-30); 6-banddagi administrator xabari — markaz rahbari, 2026-10-01: «Dars tugaguncha davomat olinmasa, ustozga bu dars uchun haq yozilmaydi. Iltimos, o'qituvchini ogohlantiring.»; «10 daqiqa» — ADR-0048 5-band (sozlama)
 **Sana:** 2026-09-27
 **Bog'liq:** shartnomaning 3.2 va 5.1-bandlari; ADR-0042 (2-dars eslatmasi), ADR-0044 (40% qoidasi); `server/src/attendance/shared/attendance-window.ts`, `server/src/attendance/shared/attendance-window-guard.ts`, `server/src/billing/lesson-admission.ts`, `server/src/billing/lesson-admission.service.ts`, `client/src/lib/attendance-window.ts`
 

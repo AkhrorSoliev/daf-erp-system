@@ -1,6 +1,7 @@
 # «Davomat va to'lov tartibi» — attendance window, unpaid-student admission, teacher pay
 
 > **Qisman eskirgan (2026-10-01):** R1 dagi «dars tugagach hech kim, CEO ham, kirita va o'zgartira olmaydi», `allowClosedLesson` va R6 dagi «endi saytda kiritib bo'lmaydi» — ADR-0054 va 2026-09-29 dizaynining 3.1-bo'limi bilan almashtirildi: olingan davomat dars tugagach ham tuzatiladi, yangisi faqat «Bo'ldi» orqali; oyna ochiladigan daqiqa — sozlama.
+> R6 dagi administrator xabari («siz olsangiz ustoz haqi saqlanadi») — markaz rahbari, 2026-10-01: «Dars tugaguncha davomat olinmasa, ustozga bu dars uchun haq yozilmaydi. Iltimos, o'qituvchini ogohlantiring.»
 > «Davomat olinmagan darslar» ro'yxatini faqat hisobot qilish ham ADR-0054 bilan bekor: dars joyida «Dars bo'ldimi?» savoliga javob beriladi.
 > Amaldagi qoidalar: ADR-0047 va ADR-0048 (ularning «Holati» qatori), ADR-0054, `server/CLAUDE.md` davomat bo'limi.
 
