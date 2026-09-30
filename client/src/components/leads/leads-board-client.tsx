@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Archive, Columns3, FileEdit, Megaphone, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -27,12 +28,29 @@ export function LeadsBoardClient() {
   const fetchBoard = useLeadsBoard((s) => s.fetchBoard);
   const openAddLead = useLeadsUi((s) => s.openAddLead);
   const openCreateColumn = useLeadsUi((s) => s.openCreateColumn);
+  const openLeadDetail = useLeadsUi((s) => s.openLeadDetail);
   const { filters } = useUrlFilters(LEAD_FILTER_SCHEMA);
   const [manageSourcesOpen, setManageSourcesOpen] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const linkedLeadId = searchParams.get("lead");
 
   useEffect(() => {
     fetchBoard();
   }, [fetchBoard]);
+
+  // A lead has no page of its own, so other pages link to one as
+  // `/leads?lead=<id>` (a task card does). Open its drawer, then drop the
+  // param: the drawer's open state is not kept in the URL.
+  useEffect(() => {
+    if (!linkedLeadId) return;
+    openLeadDetail(linkedLeadId);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("lead");
+    const qs = params.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+  }, [linkedLeadId, openLeadDetail, pathname, router, searchParams]);
 
   // With an active filter the board is replaced by the flat filtered list.
   const filtering = leadFiltersActive(filters);

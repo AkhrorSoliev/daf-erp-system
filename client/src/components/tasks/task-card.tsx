@@ -17,10 +17,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAuth } from "@/hooks/use-auth";
 import type { TaskItem, TaskPriority } from "@/hooks/use-tasks-board";
 import { useTasksBoard } from "@/hooks/use-tasks-board";
 import { cn } from "@/lib/utils";
 import { UnmarkedLessonPrompt } from "@/components/attendance/unmarked/unmarked-lesson-prompt";
+import { taskEntityHref } from "./task-entity-href";
 
 const PRIORITY_CONFIG: Record<
   TaskPriority,
@@ -47,24 +49,11 @@ const PRIORITY_CONFIG: Record<
   },
 };
 
-const ENTITY_ROUTES: Record<string, (id: string) => string> = {
-  Student: (id) => `/students/profile/${id}`,
-  User: (id) => `/settings/employees/${id}`,
-  Group: (id) => `/groups/${id}`,
-  Lead: (id) => `/leads/${id}`,
-  Branch: (id) => `/settings/branches/${id}`,
-  Room: (id) => `/settings/rooms/${id}`,
-  Course: (id) => `/settings/courses/${id}`,
-};
-
 const ENTITY_LABEL_MAP: Record<string, string> = {
   Student: "Talaba",
   User: "Xodim",
   Group: "Guruh",
   Lead: "Lid",
-  Branch: "Filial",
-  Room: "Xona",
-  Course: "Kurs",
 };
 
 interface TaskCardProps {
@@ -76,6 +65,7 @@ interface TaskCardProps {
 export function TaskCard({ task, isOverlay, isDragDisabled }: TaskCardProps) {
   const router = useRouter();
   const tab = useTasksBoard((s) => s.tab);
+  const user = useAuth((s) => s.user);
 
   const {
     attributes,
@@ -101,8 +91,11 @@ export function TaskCard({ task, isOverlay, isDragDisabled }: TaskCardProps) {
     : "";
 
   const entityLabel = ENTITY_LABEL_MAP[task.entityType] ?? task.entityType;
-  const routeBuilder = ENTITY_ROUTES[task.entityType];
-  const entityUrl = routeBuilder ? routeBuilder(task.entityId) : null;
+  const entityUrl = taskEntityHref(
+    task.entityType,
+    task.entityId,
+    user?.roles.map((r) => r.id) ?? [],
+  );
 
   function handleClick() {
     if (entityUrl) {
@@ -151,7 +144,7 @@ export function TaskCard({ task, isOverlay, isDragDisabled }: TaskCardProps) {
       className={cn(
         "rounded-lg border bg-card p-3 shadow-sm",
         !isDragDisabled && "cursor-grab active:cursor-grabbing",
-        isDragDisabled && "cursor-pointer",
+        isDragDisabled && entityUrl && "cursor-pointer",
         isOverlay && "shadow-lg ring-2 ring-primary/20 rotate-2"
       )}
       onClick={isDragDisabled ? handleClick : undefined}
@@ -159,7 +152,10 @@ export function TaskCard({ task, isOverlay, isDragDisabled }: TaskCardProps) {
       <div className="space-y-2">
         {/* Content */}
         <p
-          className="text-sm leading-snug line-clamp-3 cursor-pointer hover:text-primary transition-colors"
+          className={cn(
+            "text-sm leading-snug line-clamp-3",
+            entityUrl && "cursor-pointer hover:text-primary transition-colors"
+          )}
           onClick={(e) => {
             e.stopPropagation();
             handleClick();
