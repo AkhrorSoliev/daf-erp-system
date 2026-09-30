@@ -16,6 +16,11 @@ import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { LessonAdmissionService } from '../billing/lesson-admission.service';
 import type { SaveAttendanceDto } from './dto/save-attendance.dto';
+import { ENDED_REFUSAL } from './shared/attendance-window';
+
+/** An ended lesson, as a teacher-only caller reads it (CEO, texts item 4). */
+const TEACHER_ENDED =
+  "Dars tugagan — davomat olish yopilgan. Dars bo'lgan-bo'lmaganini administrator belgilaydi.";
 
 const mockGroup = {
   id: 'group-uuid-1',
@@ -1595,12 +1600,33 @@ describe('AttendanceService', () => {
 
       // 2026-03-30 is the Monday before the pinned "today" — a real lesson
       // nobody marked. The new-register window refuses it (ADR-0054); the
-      // lesson goes through «Dars bo'ldimi?», which a teacher cannot answer.
+      // lesson goes through «Dars bo'ldimi?», which a teacher cannot answer,
+      // so the teacher is told who does (CEO, texts item 4).
       await expect(
         service.save('group-uuid-1', '2026-03-30', dto, 1, ['Teacher'], 1),
-      ).rejects.toThrow('Dars tugagan');
+      ).rejects.toMatchObject({ message: TEACHER_ENDED });
 
       expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it('gives a teacher the same text as everyone for a future lesson day', async () => {
+      prisma.enrollment.findMany.mockResolvedValue([
+        { studentId: 10001, student: { balance: 500000 } },
+      ]);
+      // 2026-04-03 is the Friday after the pinned day.
+      await expect(
+        service.save(
+          'group-uuid-1',
+          '2026-04-03',
+          { entries: [{ studentId: 10001, status: 'PRESENT' }] },
+          1,
+          ['Teacher'],
+          1,
+        ),
+      ).rejects.toMatchObject({
+        message:
+          'Davomat faqat dars kuni olinadi. Kelmaydiganlarni «Oldindan belgilash» bilan belgilang',
+      });
     });
 
     it('should allow Admin to edit attendance even after it was taken', async () => {
@@ -1909,7 +1935,18 @@ describe('AttendanceService', () => {
           ['Administrator'],
           1,
         ),
-      ).rejects.toThrow('Dars tugagan');
+      ).rejects.toMatchObject({ message: ENDED_REFUSAL });
+      // A teacher is told the administrator answers the question.
+      await expect(
+        service.save(
+          'group-uuid-1',
+          '2026-04-01',
+          { entries: [{ studentId: 10001, status: 'PRESENT' }] },
+          1,
+          ['Teacher'],
+          1,
+        ),
+      ).rejects.toMatchObject({ message: TEACHER_ENDED });
     });
 
     it('still lets an administrator edit a past register', async () => {

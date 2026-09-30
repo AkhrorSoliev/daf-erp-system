@@ -213,6 +213,7 @@ export class AttendanceSaveService {
               endTime: effectiveEndTime,
               opensMinutesBefore,
             },
+            teacherOnly: isTeacherOnly,
           });
         }
         await this.assertAdmitted(

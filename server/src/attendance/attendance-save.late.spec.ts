@@ -13,6 +13,7 @@ import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { LessonAdmissionService } from '../billing/lesson-admission.service';
 import type { SaveAttendanceDto } from './dto/save-attendance.dto';
+import { ENDED_REFUSAL } from './shared/attendance-window';
 
 const lessonDay = new Date('2026-09-28T00:00:00.000Z');
 const pending = {
@@ -42,6 +43,8 @@ describe('AttendanceSaveService.saveLate', () => {
   let emitter: { emit: jest.Mock };
   let history: { recordCreate: jest.Mock };
   let admission: { forLesson: jest.Mock };
+  // Read only by the form's register (`save`).
+  let validation: { validateLessonDate: jest.Mock };
 
   // The history row's teacher-pay line.
   const payNote = () =>
@@ -56,6 +59,8 @@ describe('AttendanceSaveService.saveLate', () => {
       },
       attendance: {
         count: jest.fn().mockResolvedValue(0),
+        // The form's register reads the rows already there (none).
+        findMany: jest.fn().mockResolvedValue([]),
         upsert: jest.fn(({ create }: any) =>
           Promise.resolve({
             id: `a-${create.studentId}`,
@@ -136,6 +141,14 @@ describe('AttendanceSaveService.saveLate', () => {
     emitter = { emit: jest.fn() };
     // Contract 3.2: everybody admitted unless a test says otherwise.
     admission = { forLesson: jest.fn().mockResolvedValue(new Map()) };
+    validation = {
+      validateLessonDate: jest.fn().mockResolvedValue({
+        parsedDate: lessonDay,
+        effectiveStartTime: '16:00',
+        effectiveEndTime: '17:30',
+        opensMinutesBefore: 10,
+      }),
+    };
 
     const module = await Test.createTestingModule({
       providers: [
@@ -144,7 +157,7 @@ describe('AttendanceSaveService.saveLate', () => {
         { provide: LessonBillingService, useValue: billing },
         { provide: LessonAdmissionService, useValue: admission },
         { provide: EventEmitter2, useValue: emitter },
-        { provide: AttendanceValidationService, useValue: {} },
+        { provide: AttendanceValidationService, useValue: validation },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -439,6 +452,52 @@ describe('AttendanceSaveService.saveLate', () => {
         { groupId: 'g1', lessonDay: '2026-09-28', studentIds: [10001, 10002] },
         tx,
       );
+    });
+  });
+
+  // After the end no role opens a new register in the form (ADR-0054, D1);
+  // the same lesson goes through «Bo'ldi».
+  describe('a new register after the lesson ended', () => {
+    beforeEach(() => {
+      // 18:00 Tashkent; the lesson ran 16:00–17:30.
+      jest.useFakeTimers({
+        now: new Date('2026-09-28T13:00:00.000Z'),
+        doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+      });
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it.each(['CEO', 'Branch Director', 'Administrator'])(
+      "is refused for %s with the «Dars bo'ldimi?» text",
+      async (role) => {
+        await expect(
+          service.save('g1', '2026-09-28', { entries }, 3, [role], 1),
+        ).rejects.toMatchObject({ message: ENDED_REFUSAL });
+        expect(tx.attendance.upsert).not.toHaveBeenCalled();
+      },
+    );
+
+    it("is refused for a teacher with the teacher's own text", async () => {
+      await expect(
+        service.save('g1', '2026-09-28', { entries }, 3, ['Teacher'], 1),
+      ).rejects.toMatchObject({
+        message:
+          "Dars tugagan — davomat olish yopilgan. Dars bo'lgan-bo'lmaganini administrator belgilaydi.",
+      });
+      expect(tx.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it("goes through «Bo'ldi» instead", async () => {
+      await expect(
+        service.saveLate(
+          'g1',
+          '2026-09-28',
+          { entries },
+          3,
+          ['Administrator'],
+          1,
+        ),
+      ).resolves.toMatchObject({ count: 2 });
     });
   });
 

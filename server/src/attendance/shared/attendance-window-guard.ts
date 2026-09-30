@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
   ENDED_REFUSAL,
+  TEACHER_ENDED_REFUSAL,
   newAttendanceWindow,
   tashkentClock,
   windowRefusal,
@@ -19,7 +20,9 @@ import {
  * client there, `PrismaService` elsewhere.
  *
  * `times` are the lesson's as `validateLessonDate` reads them from the
- * database — every caller, a QR scan included, passes them.
+ * database — every caller, a QR scan included, passes them. A caller who
+ * knows it is teacher-only passes `teacherOnly`: an ended lesson then reads
+ * `TEACHER_ENDED_REFUSAL`; the other texts are the same for everyone.
  */
 export async function assertAttendanceWindowOpen(
   db: Pick<Prisma.TransactionClient, 'unmarkedLesson'>,
@@ -33,8 +36,10 @@ export async function assertAttendanceWindowOpen(
       /** The company's lead (`validateLessonDate`). */
       opensMinutesBefore: number;
     };
+    teacherOnly?: boolean;
   },
 ): Promise<void> {
+  const ended = a.teacherOnly ? TEACHER_ENDED_REFUSAL : ENDED_REFUSAL;
   const { todayStr, nowMinutes } = tashkentClock();
   const refusal = windowRefusal(
     newAttendanceWindow({
@@ -52,11 +57,13 @@ export async function assertAttendanceWindowOpen(
       opensMinutesBefore: a.times.opensMinutesBefore,
     },
   );
-  if (refusal) throw new BadRequestException(refusal);
+  if (refusal) {
+    throw new BadRequestException(refusal === ENDED_REFUSAL ? ended : refusal);
+  }
 
   const asked = await db.unmarkedLesson.findUnique({
     where: { groupId_date: { groupId: a.groupId, date: a.parsedDate } },
     select: { id: true },
   });
-  if (asked) throw new BadRequestException(ENDED_REFUSAL);
+  if (asked) throw new BadRequestException(ended);
 }

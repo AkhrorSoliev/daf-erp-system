@@ -19,6 +19,13 @@ export const DAY_END_TIME = '23:00';
 
 export const ENDED_REFUSAL =
   "Dars tugagan — davomat olish yopilgan. Dars bo'lgan-bo'lmaganini «Jadval» yoki «Topshiriqlar»da belgilang";
+/**
+ * `ENDED_REFUSAL` for a teacher-only caller: the administrator answers «Dars
+ * bo'ldimi?», not the teacher (CEO, 01.10) — the same words as the teacher's
+ * lesson-end reminder.
+ */
+export const TEACHER_ENDED_REFUSAL =
+  "Dars tugagan — davomat olish yopilgan. Dars bo'lgan-bo'lmaganini administrator belgilaydi.";
 
 export function toMinutes(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number);
