@@ -22,9 +22,7 @@ Yakunlanmagan to'lov cheksiz turmaydi: Payme to'lovi 12 soatdan keyin, Click to'
 
 ## Tranzaksiyani qo'lda biriktirish
 
-To'lov tizimi hisobotidagi tranzaksiyani o'quvchiga qo'lda ham biriktirish mumkin. «To'lov qayd qilish» oynasida «Naqd» dan boshqa usulni tanlang: «Tranzaksiyani biriktirish» bloki chiqadi. «Tranzaksiya raqami (externalId)» ga to'lov tizimidagi raqamni yozing. Tranzaksiya o'quvchiga biriktiriladi va uni ikkinchi marta biriktirib bo'lmaydi. Raqam yozilganda «Provayder komissiyasi» maydoni ham chiqadi: u komissiyani alohida yozib qo'yadi.
-
-Bunday to'lovning summasi keyin to'g'rilanmaydi: u tashqi to'lov tizimining summasi bilan bog'langan.
+To'lov tizimi hisobotidagi tranzaksiyani o'quvchiga qo'lda ham biriktirish mumkin: «To'lov qayd qilish» oynasida «Naqd» dan boshqa usulni tanlab, «Tranzaksiya raqami (externalId)» ni yozasiz. Bunday to'lovning summasi keyin to'g'rilanmaydi. Batafsil — [To'lov qayd qilish](/qollanma/tolovlar/tolov-qayd-qilish).
 
 ## To'lov tizimlari jurnali
 
@@ -40,19 +38,26 @@ Moliya → «To'lov tizimlari jurnali» sahifasi to'lov tizimlaridan kelgan so'r
 | «Natija» | «Muvaffaqiyatli» — so'rov to'g'ri qayta ishlandi; «Kutilmoqda» — hali ishlab chiqilmagan; «Xato» — qayta ishlashda xato bo'ldi; «Xavfsizlik xatosi» — so'rovning xavfsizlik kaliti to'g'ri kelmadi |
 
 - Qatorni bossangiz, tafsilot oynasi ochiladi: «Vaqt», «Summa», «O'quvchi», «Qayta ishlangan vaqt», «Tranzaksiya raqami», xato bo'lsa «Xato xabari» va «Texnik ma'lumot» (to'lov tizimi yuborgan xom ma'lumot).
-- Sahifa tepasida ogohlantirish chiqishi mumkin: «... ta shubhali so'rov — xavfsizlik kaliti to'g'ri kelmagan» yoki «... ta so'rov hali ishlab chiqilmagan». Son faqat ochiq turgan sahifadagi qatorlar bo'yicha sanaladi.
-- To'lov tizimlari o'zi yuboradigan texnik tekshiruv so'rovlari («Tekshirish», «Payme holat so'radi», «Davriy ro'yxat») pul harakatiga aloqasiz. Ular standart holatda yashirin; «Texnik so'rovlarni ko'rsatish» yoqilsa chiqadi.
-- Filtrlar: o'quvchi bo'yicha qidiruv (ID, ism, familiya), «Barcha to'lov tizimlari», «Barcha natijalar» va sana oralig'i.
+- Tepada «... ta shubhali so'rov — xavfsizlik kaliti to'g'ri kelmagan» yoki «... ta so'rov hali ishlab chiqilmagan» ogohlantirishi chiqishi mumkin; son faqat ochiq turgan sahifadagi qatorlarni sanaydi. To'lov tizimlarining texnik tekshiruv so'rovlari pul harakatiga aloqasiz va yashirin turadi («Texnik so'rovlarni ko'rsatish» yoqilsa chiqadi). Filtrlar: o'quvchi qidiruvi, to'lov tizimi, natija va sana oralig'i.
 
 ## Payme to'lovni bekor qilsa
 
-Payme yakunlangan to'lovni bekor qilsa, tizimdagi to'lov ham bekor qilinadi: balans shuncha kamayadi va o'quvchiga shu kuni soat 20:00 da to'lov bekor qilingani haqida xabar boradi (Telegram bog'langan bo'lsa). Balansda shuncha pul bo'lmasa, balans minusga tushadi.
+Payme yakunlangan to'lovni bekor qilsa, tizimdagi to'lov ham bekor qilinadi: balans shuncha kamayadi va o'quvchiga shu kuni soat 20:00 da to'lov bekor qilingani haqida xabar boradi (Telegram bog'langan bo'lsa); xabarda sabab sifatida «Payme CancelTransaction» deb yoziladi. Balansda shuncha pul bo'lmasa, balans minusga tushadi.
 
 Dars paketida pul allaqachon darslarga sarflangan bo'lsa, tizim bekor qilishni rad etadi va to'lov joyida qoladi. Bunday holatni hal qiladigan tugma ekranda yo'q.
 
 ## Uzum
 
 Uzum orqali onlayn to'lov hozir ishlamaydi. Portalda «Uzum Bank» kulrang turadi va «Tez kunda» belgisi bor: uni bosib bo'lmaydi. Uzumga ulanish tizimda hali yozilmagan. Uzum orqali kelgan pulni xodim qo'lda qayd qiladi: «To'lov qayd qilish» oynasida usul «Uzum».
+
+## Misol
+
+Oylik kurs. Jasur qarzdor: balansi −700 000 so'm. Telegram bog'langan. Ism soxta.
+
+1. Jasur portalda «To'lovlar» sahifasini ochdi. «Balansni to'ldirish» kartasida 700 000 so'm tezkor tugmasini bosdi, keyin Payme tugmasini. Portal uni Payme sahifasiga o'tkazdi, u yerda Jasur to'lovni tasdiqladi.
+2. Payme tizimimizga xabar berdi va pul balansga tushdi: −700 000 dan 0 gacha. Qarz yopildi, xodim hech narsa qilmadi.
+3. Portalda «Joriy balans» yangilandi, «Balans tarixi» da «To'lov qabul qilindi» yozuvi paydo bo'ldi.
+4. Administrator «Umumiy ma'lumotlar» → «Oxirgi to'lovlar» da to'lovni ko'radi: «Usul» — «Payme», «Qabul qildi» — «—». Jasurga Telegramda chek ketmaydi.
 
 ## Istisnolar
 

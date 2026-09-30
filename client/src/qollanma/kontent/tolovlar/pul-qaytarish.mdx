@@ -9,7 +9,7 @@ O'quvchi kartasidagi «To'lov» menyusida pulni kamaytiradigan ikkita amal bor. 
 | Oynaning nomi | «Pulni qaytarish» | «Yechib olish» |
 | «Barcha yozuvlar» dagi belgi | «Qaytarish» | «Yechib olish» |
 
-Guruhdan chiqarish, muzlatish yoki ko'chirishda o'tilmagan darslar puli avtomatik BALANSGA qaytadi: bu naqd qaytarish emas. O'quvchiga pulni qo'lga berish uchun keyin alohida «Pulni qaytarish» qilinadi ([Guruhdan chiqarish](/qollanma/oquvchilar/guruhdan-chiqarish), [Muzlatish va qaytarish](/qollanma/oquvchilar/muzlatish)).
+Muzlatish, boshqa guruhga o'tkazish va guruhdan chiqarishda o'tilmagan darslar puli qoida bo'yicha o'zi balansga qaytadi: bu naqd qaytarish emas. Oylik kursda o'quvchi o'zi ketsa va oyning 40% idan ko'pi o'tgan bo'lsa (01.10.2026 dan), pul qaytmaydi ([Guruhdan chiqarish](/qollanma/oquvchilar/guruhdan-chiqarish)); dars paketida muzlatishda qaytadigan darslar sonini o'zgartirish mumkin ([Muzlatish va qaytarish](/qollanma/oquvchilar/muzlatish)). O'quvchiga pulni qo'lga berish uchun keyin alohida «Pulni qaytarish» qilinadi.
 
 ## Pulni qaytarish
 
@@ -45,21 +45,25 @@ Ostida to'ldiriladigan maydonlar:
 
 - Aynan bir xil qaytarish (o'quvchi, guruh, summa) 60 soniya ichida takrorlansa, tizim rad etadi: «Shu summadagi qaytarish hozirgina yozildi — takror yuborilmadi».
 - Qaytarilgan pul «Foyda tarkibi» da alohida «Qaytarilgan pul» qatori bo'lib, «Sof foyda» dan ayriladi.
-- Qaytarishni bekor qilish faqat CEO'ga ruxsat etiladi, lekin ekranda buning uchun tugma yo'q.
 
 ## Yechib olish
 
-«Yechib olish» o'quvchining musbat balansini o'quvchiga bermasdan kamaytiradi. Pul o'quvchiga qaytmaydi, uni berish kerak emas. Bu amal «Qarzdorlik» → «Muzlatilgan puli» tabida «Markaz hisobiga o'tkazish» nomi bilan ham bor: muzlatilganda oyning qolgan puli balansga qaytadi va tegilmay turib qoladi; shu pul yo o'quvchiga qaytariladi, yo markaz hisobiga o'tkaziladi.
+«Yechib olish» o'quvchining musbat balansini o'quvchiga bermasdan kamaytiradi: pul o'quvchiga qaytmaydi, uni berish kerak emas. Bu pul markaz daromadi sifatida «Qaysi oy uchun» maydonida tanlangan oyga yoziladi. Oyni noto'g'ri tanlasangiz, daromad noto'g'ri oyga tushadi.
+
+Amal ikki joyda bor:
+
+- O'quvchi kartasidagi «To'lov» menyusida. Odatda o'quvchi oldindan to'lagan, lekin qolgan pulni qaytarish o'rniga markaz daromadi qilib yozish kerak bo'lganda ishlatiladi (masalan, tizimga o'tish davrida qolib ketgan balans); avtomatik yozilmay qolgan ustoz haqini qo'lda yozish uchun ham («Ustoz balansiga yozilsinmi?»).
+- «Qarzdorlik» → «Muzlatilgan puli» tabida, «Markaz hisobiga o'tkazish» nomi bilan: muzlatilganda oyning qolgan puli balansga qaytadi va tegilmay turib qoladi; shu pul yo o'quvchiga qaytariladi, yo markaz hisobiga o'tkaziladi.
 
 Oyna:
 
 - «Hozirgi balans» va «Yechilishi mumkin» — yechilishi mumkin bo'lgan eng ko'p summa balansga teng. Balans nol yoki minus bo'lsa: «Bu o'quvchining yechib olishga pul mavjud emas».
 - «Yechib olish summasi» — oldindan eng ko'p summa turadi.
-- «Qaysi oy uchun» — oy tanlanadi; boshlang'ich — joriy oy. Tanlangan oy yozuvda saqlanadi.
-- «Ustoz balansiga yozilsinmi?» — yoqilsa, «Ustoz» ro'yxatidan ustoz tanlanadi va shu oy uchun uning oyligiga yechilgan summaga teng ulush yoziladi. Ro'yxatda faqat o'quvchining faol guruhlaridagi ustozlar turadi; bunday ustoz bo'lmasa: «O'quvchining faol guruhlarida ustoz topilmadi».
+- «Qaysi oy uchun» — oy tanlanadi; boshlang'ich — joriy oy. Tanlangan oy yozuvda saqlanadi va daromad shu oyga yoziladi.
+- «Ustoz balansiga yozilsinmi?» — yoqilsa, «Ustoz» ro'yxatidan ustoz tanlanadi va uning oyligiga yechilgan summaga teng ulush yoziladi. Ulush tanlangan oyning 1-sanasi bilan saqlanadi va shu sana tushgan oylik davriga kiradi. Ro'yxatda faqat o'quvchining faol guruhlaridagi ustozlar turadi; bunday ustoz bo'lmasa: «O'quvchining faol guruhlarida ustoz topilmadi».
 - «Sabab (ixtiyoriy)» va «Yechib olish» tugmasi. Bosgach «... so'm muvaffaqiyatli yechib olindi» xabari chiqadi.
 
-Yechib olingan pul o'quvchining hisobotida «balansdan olindi» deb yoziladi. Yozuv o'chirilmaydi.
+Yechib olingan pul o'quvchining hisobotida «balansdan olindi» deb yoziladi. Yozuv o'chirilmaydi va ekranda uni bekor qiladigan tugma yo'q, shuning uchun oy va summani tasdiqlashdan oldin tekshiring.
 
 ## Misol
 
@@ -88,12 +92,11 @@ Ismlar soxta.
 | Pulni qaytarish | Ha | Ha | Ha |
 | Yechib olish | Ha | Ha | Ha |
 | «Muzlatilgan puli» tabini ko'rish | Ha | Ha | Ha |
-| Qaytarilgan pulni bekor qilish | — | — | — |
 
 Kassir pulni qaytara olmaydi va yechib ola olmaydi: tizim rad etadi. «Qarzdorlik» → «Muzlatilgan puli» tabida kassirga ham amallar menyusi ko'rinadi, lekin ularni tizim rad etadi. Qaytarilgan pulni bekor qilishni tizim faqat CEO'ga ruxsat etadi; ekranda buning uchun tugma yo'q.
 
 ## Tizimda qayerda
 
 - [O'quvchi kartasi](/qollanma/oquvchilar/oquvchi-kartasi): chap ustundagi «To'lov» menyusi → «Pulni qaytarish» va «Yechib olish». Bu menyu CEO, filial direktori va administratorga ko'rinadi.
-- Moliya → [Qarzdorlik](/qollanma/tolovlar/qarzdorlik) → «Muzlatilgan puli» tabi → ⋯ («Amallar»): «Markaz hisobiga o'tkazish» («Yechib olish» oynasini ochadi) va «O'quvchiga qaytarish» («Pulni qaytarish» oynasini ochadi).
+- Moliya → [Qarzdorlik](/qollanma/tolovlar/qarzdorlik) → «Muzlatilgan puli» tabi → ⋯ (amallar menyusi): «Markaz hisobiga o'tkazish» («Yechib olish» oynasini ochadi) va «O'quvchiga qaytarish» («Pulni qaytarish» oynasini ochadi).
 - Qaytadigan pul qanday hisoblanishi — [Oylik to'lov](/qollanma/tolovlar/oylik-tolov), [Dars paketi](/qollanma/tolovlar/dars-paketi).

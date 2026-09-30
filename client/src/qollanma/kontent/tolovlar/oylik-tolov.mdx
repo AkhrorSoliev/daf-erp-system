@@ -3,7 +3,7 @@
 Oylik kursda o'quvchi kalendar oy uchun to'laydi. Oy boshida tizim butun oy hisobini yozadi va balansdan yechadi. Davomat pulga tegmaydi.
 
 1. **Hisob kuni.** Hisob yoziladigan kunni Sozlamalar → «To'lov» dagi «Oyning qaysi kunida oylik hisob-kitob yaratiladi» maydoni belgilaydi: 1 dan 28 gacha son, boshlang'ich qiymati — 1. Tizim hisobni shu kuni tunda, soat 03:10 da yozadi. Hisob kunidan boshlab har tunda, soat 04:00 da, hisobi yozilmay qolgan yozilishlarni tekshiradi va yetishmaganini yozadi. Kunni faqat CEO o'zgartiradi; u butun kompaniya uchun bitta.
-2. **Kimga yoziladi.** Kurs oylik bo'lsa, guruh «Faol» bo'lsa, o'quvchining holati «Faol» va yozilishi faol bo'lsa. Oyda guruhning kamida bitta dars kuni bo'lishi kerak. Muzlatilgan, chetlatilgan yoki bitirgan o'quvchiga hisob yozilmaydi; «Boshlanmagan» yoki «Pauza» holatidagi guruhga ham.
+2. **Kimga yoziladi.** Kurs oylik bo'lsa, guruh «Faol» bo'lsa, o'quvchining holati «Faol» va yozilishi faol bo'lsa. Oyda guruhning kamida bitta dars kuni bo'lishi kerak. Muzlatilgan, chetlatilgan yoki bitirgan o'quvchiga hisob yozilmaydi; «Boshlanmagan» yoki «Pauza» holatidagi guruhga ham. Guruh «Faol» bo'lgach tizim hisobni o'zi yozadi.
 3. **Balansdan yechiladi.** O'quvchi to'lay oladimi-yo'qmi, hisob baribir yoziladi: balans yetmasa u minusga tushadi va o'quvchi qarzdor bo'ladi. Kartadagi «To'lovlar» tabida, «Batafsil» → «Barcha yozuvlar» da hisob «Darsga yechildi» belgisi va «Oktabr 2026 oylik to'lovi» kabi izoh bilan turadi.
 4. **Muddat.** Shartnoma bo'yicha oylik to'lov oyning 2-darsigacha qilinadi. 2-dars — o'quvchining shu oydagi birinchi darsidan sanalgan ikkinchi dars, guruhning haqiqiy jadvali bo'yicha (bekor qilingan yoki ko'chirilgan dars hisobga olinadi).
 5. **Davomat pulga tegmaydi.** Dars puli oy boshida to'langan. Davomat ikki narsani hal qiladi: ustoz oyligi va sababli darsning keyingi oyga krediti. «Kelmadi» oy puliga ta'sir qilmaydi.
@@ -25,7 +25,7 @@ flowchart TD
   T["To'lov qayd qilindi"] -- "pul qo'shiladi" --> B(["O'quvchi balansi"])
   H["Hisob kuni: oy hisobi yoziladi"] -- "balansdan yechiladi" --> B
   D["Markaz darsni bekor qildi"] -- "1 dars puli qaytadi" --> B
-  M["Muzlatish, chiqarish, ko'chirish"] -- "o'tilmagan darslar puli qaytadi" --> B
+  M["Muzlatish, chiqarish, ko'chirish"] -- "qoida bo'yicha qaytadi" --> B
   S["Sababli dars"] -- "keyingi oy hisobidan 1 dars puli ayriladi" --> H
   B --> Q{"Balans noldan kichikmi?"}
   Q -- "Ha" --> Y["Qarz. Muddat: oyning 2-darsi"]
@@ -40,7 +40,7 @@ To'lov avval eng eski qarzni yopadi, qolgani balansda turadi. Shuning uchun oldi
 
 - O'quvchi «Sababli» deb belgilangan har dars uchun keyingi oy hisobidan bir dars puli ayiriladi (kredit).
 - Kredit bir dars narxida (chegirma bo'lsa, chegirmali narxda) va butun dars birligida ayiriladi. Hisob kreditni to'liq sig'dira olmasa, sig'magani keyingi oyga suriladi.
-- «Sababli» ni keyin boshqa holatga o'zgartirsangiz, kredit qaytarib olinadi.
+- «Sababli» ni keyin boshqa holatga o'zgartirsangiz, kredit faqat keyingi oy hisobi hali yozilmagan bo'lsa qaytarib olinadi. Kredit keyingi oy hisobi yozilayotganda bir marta o'qiladi; yozilgan hisob esa qayta hisoblanmaydi. Shuning uchun undan ayirilgan kredit o'zgarishsiz qoladi, hisob yozilgandan keyin belgilangan «Sababli» esa unga kirmaydi.
 - Sozlamalar → «To'lov» da: «Sababli darsning krediti keyingi oyga o'tsin» (boshlang'ich holati — yoqilgan). O'chirilsa, sababli dars ham oddiy dars kabi hisoblanadi. «Oyiga eng ko'p nechta kredit dars o'tkazilishi mumkin» maydoni bo'sh bo'lsa — cheklov yo'q; cheklovdan oshgan qism keyingi oyga suriladi.
 - Kartadagi «To'lovlar» tabida oy qatorini bossangiz, kredit «o'tgan oydagi uzrli ... dars uchun −... so'm» deb yoziladi.
 
@@ -68,18 +68,18 @@ Bu holatlarda pul naqd berilmaydi: u balansga tushadi. Naqd berish — [Pulni qa
 
 ### Telegram xabarlari
 
-Har kuni soat 19:50 da tizim ikki xabarni navbatga qo'yadi, soat 20:00 da esa o'quvchiga Telegram bot orqali yuboradi:
+Har kuni soat 19:50 da tizim oylik to'lovga oid yozuvlarni o'quvchining kunlik xabari navbatiga qo'yadi. Soat 20:00 da o'quvchiga bitta kunlik xabar bo'lib Telegram bot orqali ketadi; unda oylik to'lovga oid ikki bo'lim bo'ladi:
 
-- **Oy hisobi** — hisob yozilgan kuni. Unda guruh nomi va dars kunlari, oy narxi va darslar soni, sababli darslar uchun chegirma (bo'lsa), «Jami to'lash kerak» va «Muddat» turadi. Balans yetarli bo'lsa, xabar «Qolgan balans» ni ko'rsatib, to'lov qilish shart emasligini yozadi.
-- **To'lov eslatmasi** — qarzdor o'quvchiga, oydagi 2-darsidan bir kun oldin kechqurun.
+- **«... oyi uchun to'lov»** (oy hisobi) — hisob yozilgan kuni. Unda guruh nomi va dars kunlari, oy narxi va darslar soni, sababli darslar uchun chegirma (bo'lsa), «Jami to'lash kerak» va «Muddat» turadi. Balans yetarli bo'lsa, bo'lim «Qolgan balans» ni ko'rsatib, to'lov qilish shart emasligini yozadi.
+- **«To'lov eslatmasi»** — qarzdor o'quvchiga, oydagi 2-darsidan bir kun oldin kechqurun.
+
+Kunlik xabarda boshqa bo'limlar ham bo'lishi mumkin (masalan, qabul qilingan to'lov).
 
 Qoidalar:
 
-- Xabar 20:00 da jonli balansdan yoziladi. Shu kuni to'lagan o'quvchiga eslatma ketmaydi; hisobi bekor qilingan yoki guruhdan chiqqan, muzlatilgan o'quvchiga hisob xabari ketmaydi.
-- Oy hisobi haqida o'quvchining shu oydagi birinchi hisobi uchungina xabar ketadi. Oy o'rtasida guruhi almashtirilgan o'quvchining ikkinchi hisobi haqida xabar ketmaydi. 0 so'mlik hisob haqida ham ketmaydi.
-- 19:50 dan keyin yozilgan hisob (kechki qo'shilish) haqidagi xabar ertasi kuni ketadi.
-- Telegram bog'lanmagan o'quvchiga hech narsa ketmaydi. Yuborilgan xabar kartadagi «SMS» tabida ko'rinadi.
-- Matnlarni CEO 27.09.2026 da tasdiqlagan. Xabarlarni Sozlamalar → «To'lov» dagi «O'quvchiga oylik to'lov xabari» o'chiradi (faqat CEO; boshlang'ich holati — yoqilgan). O'chiq paytda yozilgan hisoblar xabarsiz qoladi: qayta yoqilganda eski hisoblar yuborilmaydi.
+- Xabar 20:00 da jonli balansdan yoziladi: shu kuni to'lagan o'quvchiga eslatma qo'shilmaydi; hisobi bekor qilingan yoki guruhdan chiqqan, muzlatilgan o'quvchiga hisob bo'limi qo'shilmaydi. 19:50 dan keyin yozilgan hisob (kechki qo'shilish) ertasi kunning xabariga tushadi.
+- Oy hisobi haqida faqat o'quvchining shu oydagi birinchi hisobi uchun xabar ketadi: oy o'rtasida guruhi almashtirilgan o'quvchining ikkinchi hisobi haqida ham, 0 so'mlik hisob haqida ham ketmaydi.
+- Telegram bog'lanmagan o'quvchiga hech narsa ketmaydi; yuborilgan xabar kartadagi «SMS» tabida ko'rinadi. Xabarlarni Sozlamalar → «To'lov» dagi «O'quvchiga oylik to'lov xabari» o'chiradi (faqat CEO; boshlang'ich holati — yoqilgan). O'chiq paytda yozilgan hisoblar xabarsiz qoladi: qayta yoqilganda eski hisoblar yuborilmaydi.
 
 ## Misol
 
@@ -96,7 +96,6 @@ Oylik kurs: oyiga 1 200 000 so'm, oktabrda ham, noyabrda ham 12 ta dars, bir d
 - Hisob yozilgandan keyin qo'shilgan bayram yoki darsning ko'chirilishi yozilgan hisob summasini o'zgartirmaydi. Bekor qilingan dars esa yuqoridagi qoida bo'yicha pul qaytaradi.
 - «Sababli» belgilanayotgan oyning hisobi hali yozilmagan bo'lsa, kredit yozilmaydi. Hisob kuni oyning 1-sanasidan keyin bo'lsa, shunday bo'lishi mumkin.
 - Hisob kuni 1 dan katta bo'lsa, hisobdan oldin tushgan 2-dars uchun eslatma ketmaydi va hisob xabarida «Muddat» qatori chiqmaydi.
-- Guruh «Boshlanmagan» yoki «Pauza» holatida bo'lsa, oylik hisob yozilmaydi; guruh «Faol» bo'lgach tizim uni o'zi yozadi.
 - Yozilgan oy hisobini ekrandan bekor qilib bo'lmaydi: bunday tugma yo'q.
 
 ## Kim qila oladi
@@ -113,7 +112,7 @@ Oylik kurs: oyiga 1 200 000 so'm, oktabrda ham, noyabrda ham 12 ta dars, bir d
 | Oylik to'lov xabarini yoqish yoki o'chirish | Ha | — | — | — |
 | Yozilgan oy hisobini bekor qilish | — | — | — | — |
 
-Filial direktori sozlamalarni ko'radi, lekin hisob kunini va xabarlarni o'zgartira olmaydi: ular butun kompaniya uchun bitta.
+Filial direktori sozlamalarni ko'radi, lekin hisob kunini va xabarlarni o'zgartira olmaydi: ular butun kompaniya uchun bitta. Sababli dars krediti esa filial bo'yicha ham saqlanadi: filial direktori o'z filialiga yozgan qiymat kompaniya qiymatidan ustun turadi, shuning uchun CEO kompaniya qiymatini o'zgartirsa ham, o'sha filialga yetib bormasligi mumkin. CEO bunday filiallarni sozlama ostidagi «Filiallarda boshqacha qiymat saqlangan: ...» izohidan ko'radi.
 
 ## Tizimda qayerda
 
