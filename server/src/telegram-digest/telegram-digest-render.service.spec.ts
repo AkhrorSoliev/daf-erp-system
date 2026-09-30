@@ -527,16 +527,19 @@ describe('TelegramDigestRenderService', () => {
               groupId: 'g1',
               groupName: 'A1-01',
               date: '2026-09-27',
-              studentNames: ['Ali'],
-              presenceCount: 1,
-              absenceCount: 0,
-              lateCount: 0,
-              excusedCount: 0,
+              present: 1,
+              absent: 0,
+              late: 0,
+              excused: 0,
             }),
             row(TelegramDigestCategory.LESSON_PAY_FORFEITED, {
               groupId: 'g1',
               groupName: 'A1-02',
               date: '2026-09-28',
+            }),
+            row(TelegramDigestCategory.SALARY_CARRIED_OVER, {
+              count: 2,
+              total: 500000,
             }),
           ],
           NOW,
@@ -546,8 +549,10 @@ describe('TelegramDigestRenderService', () => {
       const forfeitedIdx = text.indexOf(
         '⚠️ <b>Davomat vaqtida olinmagan darslar</b>',
       );
+      const salaryIdx = text.indexOf('💵 <b>Oylik</b>');
       expect(attendanceIdx).toBeGreaterThanOrEqual(0);
       expect(forfeitedIdx).toBeGreaterThan(attendanceIdx);
+      expect(salaryIdx).toBeGreaterThan(forfeitedIdx);
     });
   });
   describe('monthly bill and reminder (ADR-0042)', () => {
