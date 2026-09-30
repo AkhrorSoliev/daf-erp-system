@@ -7,7 +7,7 @@ flowchart TD
   A["Davomat olindi"] --> S{"Avtomatik pauza yoqilganmi?"}
   S -- "Yo'q (boshlang'ich holat)" --> S0["Xabar ham, pauza ham yo'q"]
   S -- "Ha" --> B{"O'quvchi «Kelmadi»mi?"}
-  B -- "Yo'q: Keldi, Kechikdi, Sababli (oldindan «Kelmaydi» bundan mustasno)" --> C["Sanoq nolga tushadi"]
+  B -- "Yo'q: Keldi, Kechikdi yoki Sababli (oldindan «Kelmaydi» deb aytilgan Sababli bundan mustasno)" --> C["Sanoq nolga tushadi"]
   B -- "Ha" --> D["Ketma-ket sanoq bittaga oshadi"]
   D --> E{"Sanoq nechta? (boshlang'ich chegaralar: 2 va 3)"}
   E -- "Ogohlantirish chegarasidan kam" --> F["20:30: o'quvchiga yengil so'rov"]
@@ -24,7 +24,7 @@ flowchart TD
 
 Tizim o'quvchining ketma-ket «Kelmadi» darslarini eng oxirgisidan boshlab sanaydi. Bu ketma-ketlikni zanjir deb ataymiz.
 
-- «Keldi», «Kechikdi» va «Sababli» zanjirni uzadi: sanoq noldan boshlanadi (oldindan «Kelmaydi» deb aytilgan dars bundan mustasno, keyingi band).
+- «Keldi», «Kechikdi» va «Sababli» zanjirni uzadi: sanoq noldan boshlanadi. Istisno faqat «Sababli» da: oldindan «Kelmaydi» deb aytilgan dars (keyingi band).
 - Oldindan «Kelmaydi» (sababsiz) deb aytilgan dars davomatda «Sababli» bo'lib tushsa ham, «Kelmadi» sifatida sanaladi. Oldindan «Sababli» (masalan, kasallik) aytilgan dars esa zanjirni uzadi. Batafsil — [Oldindan belgilash](/qollanma/davomat/oldindan-belgilash).
 - Markaz bekor qilgan dars sanoqda ko'rinmaydi: zanjirni na uzadi, na oshiradi.
 - Davomat olinmagan dars sanoqqa kirmaydi.
