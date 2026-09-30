@@ -94,7 +94,7 @@ export function summarySheetV2(wb: Workbook, input: SummaryInput): void {
     ws,
     [
       'Bu varaq — butun hisobotning xulosasi. Qolgan varaqlar shu raqamlarni yoyib beradi.',
-      'SOF FOYDA = Dars tushumi − Ustoz oyligi − Xodimlar oyligi − Xarajatlar − Qaytarilgan.',
+      'SOF FOYDA = Dars tushumi + Balansdan yechib olingan − Ustoz oyligi − Xodimlar oyligi − Xarajatlar − Qaytarilgan.',
       "«O'Z FOYDASI» — shu oyning o'z pulidan shu oyning xarajati ayirilgani. Manfiy bo'lsa: oy o'zini o'zi boqolmagan.",
       "«O'tilgan darslar qiymati» va «Jami tushgan pul» boshqa-boshqa: birinchisi shu oy o'tilgan darslar qiymati, ikkinchisi shu oy kassaga kirgan pul.",
       "«Farq» ustuni faqat 1 va 2-blokda — o'tgan oyga nisbatan (yashil = yaxshi, qizil = yomon tomonga).",
