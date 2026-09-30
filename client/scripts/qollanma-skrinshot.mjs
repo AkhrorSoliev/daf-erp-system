@@ -18,6 +18,8 @@ import { KADRLAR } from "./qollanma-kadrlar.mjs";
 
 const KLIENT = "http://localhost:3000";
 const API = "http://localhost:4100/api";
+// Brauzer faqat shu ikki manzilga chiqa oladi (kontekstOch).
+const RUXSAT = new Set([KLIENT, new URL(API).origin]);
 // server/prisma/seed.ts dagi dev parol (seed faqat lokal bazaga yoziladi).
 const PAROL = process.env.QOLLANMA_PAROL ?? "123456";
 const ILDIZ = path.dirname(fileURLToPath(import.meta.url));
@@ -45,28 +47,38 @@ async function stsenariyniOqi() {
     throw new Error(`${STSENARIY} topilmadi. Avval: cd server && npm run qollanma:baza`);
   }
   // Oylik hisob faqat stsenariy yig'ilgan oyda bor: oy almashgach kadr pul blokini indamay yo'qotadi.
+  // `oy` yo'q yoki buzuq bo'lsa ham qayta yig'ish kerak.
   const hozir = toshkentOyi();
-  if (stsenariy.oy !== hozir) {
+  const fayldagi = typeof stsenariy?.oy === "string" ? stsenariy.oy : "noma'lum";
+  if (fayldagi !== hozir) {
     throw new Error(
-      `Stsenariy boshqa oy uchun yig'ilgan (fayl: ${stsenariy.oy}, hozir: ${hozir}). Qayta yig'ing: cd server && npm run qollanma:baza`,
+      `Stsenariy hozirgi oyga mos emas (fayl: ${fayldagi}, hozir: ${hozir}). Qayta yig'ing: cd server && npm run qollanma:baza`,
     );
   }
   return stsenariy;
 }
 
+// Login IP bo'yicha daqiqasiga 10 ta bilan cheklangan (auth.controller.ts): har login yurishda bir marta kiradi.
+const sessiyalar = new Map();
+
 async function kirish(login) {
+  if (sessiyalar.has(login)) return sessiyalar.get(login);
   const javob = await fetch(`${API}/auth/login`, {
     method: "POST",
+    // Parol boshqa manzilga yo'naltirilsa ham ketmasin.
+    redirect: "error",
     headers: { "Content-Type": "application/json", Origin: KLIENT },
     body: JSON.stringify({ login, password: PAROL }),
   }).catch(() => {
     // Aks holda faqat "fetch failed" chiqadi.
-    throw new Error(`${API} ga ulanib bo'lmadi. Avval: cd server && npm run qollanma:api`);
+    throw new Error(`${API} ga ulanib bo'lmadi yoki u yo'naltirdi. Avval: cd server && npm run qollanma:api`);
   });
   if (!javob.ok) {
     throw new Error(`${login} kira olmadi (${javob.status}). API daf_docs bilan ishlayaptimi? (npm run qollanma:api)`);
   }
-  return javob.json();
+  const sessiya = await javob.json();
+  sessiyalar.set(login, sessiya);
+  return sessiya;
 }
 
 async function kontekstOch(brauzer, login) {
@@ -80,6 +92,14 @@ async function kontekstOch(brauzer, login) {
     locale: "uz-UZ",
     timezoneId: "Asia/Tashkent",
   });
+  // «Faqat localhost'ga ulanadi» brauzerda ham shart: boshqa manzilga har qanday http(s) so'rov to'xtatiladi va aytiladi.
+  await kontekst.route(
+    (url) => /^https?:$/.test(url.protocol) && !RUXSAT.has(url.origin),
+    (route) => {
+      console.warn(`⚠ Tashqi so'rov to'xtatildi: ${route.request().url()}`);
+      return route.abort();
+    },
+  );
   await kontekst.addCookies([
     { name: "token", value: accessToken, url: KLIENT },
     { name: "refreshToken", value: refreshToken, url: KLIENT },
@@ -155,9 +175,13 @@ async function main() {
       const sahifa = await kontekst.newPage();
       const url = typeof kadr.url === "function" ? kadr.url(stsenariy) : kadr.url;
       // "networkidle" ishlamaydi: bildirishnoma SSE oqimi doim ochiq. Tayyorlikni `kutish` belgilaydi.
-      await sahifa.goto(`${KLIENT}${url}`, { waitUntil: "load" });
+      // Timeout katta: sovuq `next dev` sahifani birinchi marta shu yerda kompilyatsiya qiladi.
+      await sahifa.goto(`${KLIENT}${url}`, { waitUntil: "load", timeout: 60_000 });
       if (kadr.tayyorla) await kadr.tayyorla(sahifa, stsenariy);
       await sahifa.locator(kadr.kutish).first().waitFor({ state: "visible", timeout: 20_000 });
+      // `kutish` birinchi so'rov tugagach chiqadi; diagramma va voronka o'z so'rovini shundan keyin boshlab,
+      // sovuq keshda soniyalar davomida skeleton chizadi. Rasm skeletonsiz olinadi.
+      await sahifa.locator('[data-slot="skeleton"]').first().waitFor({ state: "detached", timeout: 30_000 });
       await belgilarQoy(sahifa, kadr.belgilar ?? []);
       const fayl = path.join(RASMLAR, `${kadr.nom}.png`);
       await mkdir(path.dirname(fayl), { recursive: true });

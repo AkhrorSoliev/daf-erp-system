@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "radio:check": "node scripts/check-radio.mjs",
-    "qollanma:klient": "NEXT_PUBLIC_API_URL=http://localhost:4100/api next dev",
+    "qollanma:klient": "NEXT_PUBLIC_API_URL=http://localhost:4100/api next dev --port 3000",
     "qollanma:skrinshot": "node scripts/qollanma-skrinshot.mjs",
     "typecheck": "tsc --noEmit"
   },
