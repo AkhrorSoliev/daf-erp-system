@@ -7,6 +7,9 @@ cd "$(dirname "$0")/.."
 export DATABASE_URL='postgresql://daf_user:daf_password@localhost:5433/daf_docs'
 # daf_docs faqat soxta ma'lumot — lokal imzo kaliti yetarli, .env shart emas.
 export JWT_SECRET='qollanma-lokal-imzo-kaliti'
+# Oddiy dev API 4000 da (ba'zan production bazasi bilan) — hujjat API'si o'z portida,
+# skrinshot skripti seed parolini faqat shu yerga yuboradi.
+export PORT=4100
 export CRONS_ENABLED=false
 export TELEGRAM_BOT_TOKEN='' TELEGRAM_ADMIN_BOT_TOKEN='' TELEGRAM_MINI_APP_URL=''
 export ESKIZ_EMAIL='' ESKIZ_PASSWORD='' ESKIZ_FROM=''
