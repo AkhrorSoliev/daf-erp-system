@@ -18,13 +18,14 @@
       "section": "u02-s2",
       "titelDe": "Verb haben, Zahlen 20–100",
       "titelUz": "haben fe'li va 20–100 sonlari",
-      "erklaerungUz": "«haben» — ega bo'lmoq. Tuslanishi: ich habe, du hast, er/sie hat, wir haben. O'nliklar «-zig» bilan tugaydi: zwanzig, vierzig, fünfzig. Ikkitasi boshqacha: dreißig («-ßig») va sechzig, siebzig (sechs va sieben qisqaradi).",
+      "erklaerungUz": "«haben» — ega bo'lmoq. Tuslanishi: ich habe, du hast, er/sie hat, wir haben. O'nliklar «-zig» bilan tugaydi: zwanzig, vierzig, fünfzig. Ikkitasi boshqacha: dreißig («-ßig») va sechzig, siebzig (sechs va sieben qisqaradi). 21 dan 99 gacha son teskari aytiladi va bitta so'z bo'lib yoziladi: avval birlik, keyin «und», keyin o'nlik — einundzwanzig (bir va yigirma = 21), fünfunddreißig (besh va o'ttiz = 35). «eins» bu yerda «ein» bo'ladi.",
       "beispiele": [
         { "de": "Ich habe zwei Kinder.", "uz": "Mening ikkita bolam bor." },
         { "de": "Hast du eine Schwester?", "uz": "Sening opang bormi?" },
         { "de": "Meine Oma ist achtzig.", "uz": "Buvim sakson yoshda." },
         { "de": "Mein Bruder ist dreißig.", "uz": "Akam o'ttiz yoshda." },
-        { "de": "Sie hat drei Kinder.", "uz": "Uning uchta bolasi bor." }
+        { "de": "Sie hat drei Kinder.", "uz": "Uning uchta bolasi bor." },
+        { "de": "Meine Schwester ist achtundvierzig.", "uz": "Opam qirq sakkiz yoshda." }
       ]
     },
     {

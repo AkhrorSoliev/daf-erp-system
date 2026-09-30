@@ -1,4 +1,27 @@
-import type { FrageFormat } from "../types";
+import type { FrageFormat, PruefErgebnis } from "../types";
+
+/**
+ * What the panel under a checked question says. A picture choice's
+ * `richtig` is a picture URL, so the word comes from `loesungWort` — shown
+ * after a correct answer too, because the student may have found the
+ * picture without knowing the word yet. A typed word one slip away counts
+ * as correct (`tippfehler`) and shows the spelling to learn.
+ */
+export function javobPaneliMatni(
+  natija: Pick<PruefErgebnis, "isCorrect" | "richtig" | "loesungWort" | "tippfehler">,
+): { sarlavha: string; izoh: string | null; soz: string | null } {
+  if (!natija.isCorrect) {
+    return { sarlavha: "Xato", izoh: null, soz: natija.loesungWort ?? natija.richtig };
+  }
+  if (natija.tippfehler) {
+    return {
+      sarlavha: "To'g'ri!",
+      izoh: "Imlosiga e'tibor bering:",
+      soz: natija.loesungWort ?? natija.richtig,
+    };
+  }
+  return { sarlavha: "To'g'ri!", izoh: null, soz: natija.loesungWort ?? null };
+}
 
 /**
  * Seans oxirida o'rin haqidagi xabar — yoki jimlik.

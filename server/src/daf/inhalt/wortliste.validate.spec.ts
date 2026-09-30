@@ -111,6 +111,27 @@ describe('validateWortliste', () => {
     expect(p.some((x) => x.includes('8–12'))).toBe(true);
   });
 
+  it('a word built from taught words stays outside the budget', () => {
+    const abgeleitet = Array.from({ length: 8 }, (_, i) => ({
+      ...eintrag(`z${i}`),
+      ausserhalbBudget: true,
+      grund: 'son: birlik + zehn',
+    }));
+    const eintraege = [...fullSection('u01-s1', 'a'), ...abgeleitet];
+    const file: WortlisteFile = { level: 'A1', eintraege };
+    expect(validateWortliste(file, kurs(), goetheFor(eintraege))).toEqual([]);
+  });
+
+  it('outside the budget needs a reason', () => {
+    const eintraege = [
+      ...fullSection('u01-s1', 'a'),
+      { ...eintrag('z0'), ausserhalbBudget: true },
+    ];
+    const file: WortlisteFile = { level: 'A1', eintraege };
+    const p = validateWortliste(file, kurs(), goetheFor(eintraege));
+    expect(p.some((x) => x.includes('z0') && x.includes('sabab'))).toBe(true);
+  });
+
   it('unitning 50 so`z chegarasini aytadi', () => {
     const k = kurs();
     k.units[0].sections.push(

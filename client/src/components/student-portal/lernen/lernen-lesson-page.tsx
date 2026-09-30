@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, SpeakerHigh, Trophy } from "@phosphor-icons/react";
+import { SpeakerHigh, Trophy } from "@phosphor-icons/react";
 import {
   Screen,
   StackHeader,
@@ -9,11 +9,12 @@ import {
   Card,
   Badge,
   Button,
-  EmptyState,
   LoadingCards,
 } from "../lumio";
 import { RadioSessionToggle } from "../radio/radio-session-toggle";
 import { useLernenLesson } from "./queries";
+import { loadState } from "../lib/load-state";
+import { LoadFailed } from "../load-failed";
 import { useClipPlayer } from "./use-clip-player";
 import { VocabDrill } from "./vocab-drill";
 import { McExercise } from "./mc-exercise";
@@ -124,7 +125,8 @@ type Stage = "study" | "drill" | "done";
 const MASHQ_TUGMASI_YOQILGAN = false;
 
 export function LernenLessonPage({ lessonId }: { lessonId: number }) {
-  const { data, isLoading, isError } = useLernenLesson(lessonId);
+  const query = useLernenLesson(lessonId);
+  const { data } = query;
   const [stage, setStage] = React.useState<Stage>("study");
   const [score, setScore] = React.useState({ correct: 0, total: 0 });
 
@@ -142,14 +144,10 @@ export function LernenLessonPage({ lessonId }: { lessonId: number }) {
         right={<RadioSessionToggle />}
       />
 
-      {isLoading ? (
+      {loadState(query) === "loading" ? (
         <LoadingCards count={3} />
-      ) : isError || !data ? (
-        <EmptyState
-          icon={<BookOpen size={28} weight="bold" />}
-          title="Darsni yuklab bo'lmadi"
-          description="Internet aloqasini tekshirib, qayta urinib ko'ring."
-        />
+      ) : !data ? (
+        <LoadFailed query={query} />
       ) : stage === "drill" ? (
         <FadeIn>
           <VocabDrill

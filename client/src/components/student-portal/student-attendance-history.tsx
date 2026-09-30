@@ -106,7 +106,7 @@ export function StudentAttendanceHistory() {
   });
 
   return (
-    <Screen>
+    <Screen narrow>
       <StackHeader title="Davomat" backHref="/portal" />
 
       {state === "loading" ? (

@@ -6,13 +6,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma } from '@prisma/client';
+import { DafLevel, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { tryResolveStudentBranchId } from '../../common/finance/resolve-branch';
 import { currentGroupId } from '../shared/student-scope';
 import { istRichtig } from './antwort';
 import { punkteFuer } from './punkte';
-import { bildAntwort, richtigeAntwort } from './richtige-antwort';
+import { bildAntwort, textAntwort } from './richtige-antwort';
 import type {
   Frage,
   FrageFormat,
@@ -25,6 +25,7 @@ import type {
 } from './frage.types';
 import { toPublic } from './frage.types';
 import { dialogLuecke } from './dialog-fragen';
+import { eigeneSchluessel } from './eigener-abschnitt';
 import { hoerenWahl } from './hoer-fragen';
 import { bevorzugteFormate } from './kind-formate';
 import { naechsterZustand } from './leitner';
@@ -115,6 +116,27 @@ function mischen<T>(items: T[], rnd: () => number): T[] {
   return out;
 }
 
+/** Where a unit stands in the course: its level, then its order. */
+interface UnitStelle {
+  level: string;
+  order: number;
+}
+
+/** The levels in schema order (A1, A2, B1): a new level joins by itself. */
+const STUFEN: string[] = Object.values(DafLevel);
+
+/** `unit` comes before `lesson` in the course; `false` when either is unknown. */
+function istFruehereUnit(
+  unit: UnitStelle | null | undefined,
+  lesson: UnitStelle | undefined,
+): boolean {
+  if (!unit || !lesson) return false;
+  const a = STUFEN.indexOf(unit.level);
+  const b = STUFEN.indexOf(lesson.level);
+  if (a < 0 || b < 0) return false;
+  return a < b || (a === b && unit.order < lesson.order);
+}
+
 /**
  * DB qatoridan mashq materialiga o'tkazadi — SHU YERDA, BIR MARTA.
  *
@@ -199,6 +221,11 @@ export interface PruefenErgebnis {
    * answer so the student learns what was heard or shown.
    */
   loesungWort?: string;
+  /**
+   * The typed word was one slip away and counted as correct; the answer
+   * panel shows `richtig` as the spelling to learn.
+   */
+  tippfehler?: true;
 }
 
 /**
@@ -297,7 +324,7 @@ export class UebungService {
     // qaytadi — shuning uchun bu yerda 404 EMAS, bo'sh massiv qaytariladi.
     // Darsning O'ZI topilmasa (`null`) `baueKandidaten` hamon 404 tashlaydi.
     if (!natija) return [];
-    const { pflicht, kandidaten, kind } = natija;
+    const { pflicht, kandidaten, kind, eigene } = natija;
 
     // Seans turining moyilligi (Vazifa 3) — QAT'IY BO'LINISH EMAS,
     // TARTIB. To'liq izoh `kind-formate.ts`da: kurs dizayni 16 format
@@ -308,12 +335,19 @@ export class UebungService {
     // kafolatlari (`baueSeans` ichida) buzilmaydi.
     // Yakuniy sinov 15 savol (kurs dizayni 3-bo'limi), qolgan darslar 12.
     const uzunlik = kind === 'UNIT_TEST' ? UNIT_TEST_SAVOLLAR : SEANS_UZUNLIGI;
+    // A section lesson asks its own section's material first; the bridge
+    // mixes on purpose and the unit test covers the whole unit.
+    const eigenerAbschnitt =
+      kind === 'SECTION_A' || kind === 'SECTION_B'
+        ? (f: Frage) => f.belegteItems.some((k) => eigene.has(k))
+        : undefined;
     const { fragen, nichtPlatziert } = baueSeans(
       kandidaten,
       uzunlik,
       rnd,
       pflicht,
       bevorzugteFormate(kind),
+      eigenerAbschnitt,
     );
 
     // Yakuniy sinovdan faqat to'liq 15 savolli seansda o'tiladi
@@ -776,14 +810,19 @@ export class UebungService {
     // hisoblaydi. `ersatz()` bu maydonni e'tiborsiz qoldiradi: u bitta
     // almashtiruvchi savol beradi, moyillikka ehtiyoj yo'q.
     kind: string | null;
+    /** Material keys of the lesson's own section (`materialSchluessel`). */
+    eigene: Set<string>;
   } | null> {
     const lesson = await this.prisma.dafLesson.findUnique({
       where: { id: lessonId },
-      include: { section: true },
+      include: { section: true, unit: true },
     } as any);
     if (!lesson) {
       throw new NotFoundException(`Dars topilmadi: ${lessonId}`);
     }
+    const lessonUnit = ((lesson as any).unit ?? undefined) as
+      | UnitStelle
+      | undefined;
     const section = (lesson as any).section as {
       id: number;
       order: number;
@@ -945,11 +984,29 @@ export class UebungService {
       toDialog,
     );
 
+    // A unit whose content is not written yet (its sections were seeded with
+    // the course map) is not a lesson: it would ask only the student's due
+    // words, one or two questions. The path shows it as «Tez orada».
+    if (
+      coreWords.length === 0 &&
+      sentences.length === 0 &&
+      phrases.length === 0 &&
+      dialoge.length === 0
+    ) {
+      return null;
+    }
+
     // Qaytarish (pflicht) savollari — DUE so'rovi shu yerda, kandidaten
     // qurilishidan OLDIN chaqiriladi, chunki pastdagi `letzterFormatByWort`
     // so'rovi ham `dafLexemeState`ga boradi va ikkalasining tartibi
     // testlarda kuzatilgan (birinchi chaqiruv — DUE so'rovi).
-    const pflicht = await this.baueWiederholung(studentId, coreWords, rnd);
+    const pflicht = await this.baueWiederholung(
+      studentId,
+      coreWords,
+      rnd,
+      undefined,
+      lessonUnit,
+    );
 
     // Qoida 5 (dizayn 4.3): ketma-ket ikki SEANSDA bir xil (so'z+format)
     // juftligi takrorlanmaydi. `DafLexemeState.lastFormat` shu so'z oxirgi
@@ -1049,7 +1106,15 @@ export class UebungService {
       letzterFormatByWort,
     );
 
-    return { pflicht, kandidaten, kind };
+    return {
+      pflicht,
+      kandidaten,
+      kind,
+      eigene: eigeneSchluessel(
+        section ? sectionCodeById.get(section.id) : undefined,
+        { coreWords, sentences, phrases, dialoge },
+      ),
+    };
   }
 
   /**
@@ -1070,6 +1135,8 @@ export class UebungService {
     // beradi (`SEANS_UZUNLIGI`) — chunki takrorlash seansining o'zi
     // to'liq shu tanlovdan quriladi, boshqa hech qanday material yo'q.
     anzahl: number = Math.floor(SEANS_UZUNLIGI / WIEDERHOLUNG_ULUSH),
+    /** The lesson's unit, when known: decides how wide a due word's pool is. */
+    lessonUnit?: UnitStelle,
   ): Promise<Frage[]> {
     const soni = anzahl;
     if (soni <= 0) return [];
@@ -1104,9 +1171,16 @@ export class UebungService {
     }>;
     const byId = new Map(dueLexemeRows.map((l) => [l.id, l]));
 
-    // Chalg'ituvchi manbai: joriy darsning so'zlariga qaytariladigan
-    // so'zning o'zi ham qo'shiladi — u boshqa bo'limdan bo'lishi mumkin,
-    // shuning uchun panelda kamida o'zi bor bo'lishi kerak.
+    // A due word from another section is asked among the words it was
+    // taught with (`heimatPools`). Among today's words it was the odd one
+    // out: "sieben" in a lesson of greetings was the only number, and in a
+    // u02 lesson of 20–100 the only small one (review 2026-09-30). Only when
+    // its section cannot be found does it fall back to today's words.
+    const heimat = await this.heimatPools(
+      dueLexemeRows.filter((l) => !coreWords.some((w) => w.id === l.id)),
+      lessonUnit,
+    );
+
     const pflicht: Frage[] = [];
     for (const state of due) {
       const raw = byId.get(state.lexemeId);
@@ -1115,7 +1189,7 @@ export class UebungService {
       if (!wort) continue; // tarjimasiz so'z qaytarish savoliga aylana olmaydi.
       const andere = coreWords.some((w) => w.id === wort.id)
         ? coreWords
-        : [...coreWords, wort];
+        : (heimat.get(wort.id) ?? [...coreWords, wort]);
 
       const moeglich = mischen(
         WORT_FORMATE.filter((f) => f !== state.lastFormat),
@@ -1139,6 +1213,88 @@ export class UebungService {
       pflicht.push(frage);
     }
     return pflicht;
+  }
+
+  /**
+   * For each word, the core words it is asked among in review.
+   *
+   * A word from a unit BEFORE the lesson's: its whole unit, finished by now.
+   * Only the sections up to its own made it the newest word in every
+   * question, and "pick the latest topic" was right 41–50% of the time
+   * (review 2026-09-30). A word from the lesson's own unit or a later one
+   * (the student went back): the sections up to its own, never words not
+   * reached yet. A word whose section is gone gets no entry.
+   */
+  private async heimatPools(
+    rows: Array<{ id: number; sectionId: number | null }>,
+    lessonUnit?: UnitStelle,
+  ): Promise<Map<number, MaterialWort[]>> {
+    const pools = new Map<number, MaterialWort[]>();
+    const eigeneIds = [
+      ...new Set(
+        rows.map((r) => r.sectionId).filter((id): id is number => id != null),
+      ),
+    ];
+    if (eigeneIds.length === 0) return pools;
+
+    type SectionRow = {
+      id: number;
+      code: string;
+      order: number;
+      unitId: number;
+      unit?: UnitStelle | null;
+    };
+    const eigene = (await this.prisma.dafSection.findMany({
+      where: { id: { in: eigeneIds } },
+      include: { unit: true },
+    } as any)) as SectionRow[];
+    if (eigene.length === 0) return pools;
+    const alle = (await this.prisma.dafSection.findMany({
+      where: { unitId: { in: [...new Set(eigene.map((s) => s.unitId))] } },
+    } as any)) as SectionRow[];
+    const lexeme = (await this.prisma.dafLexeme.findMany({
+      where: { sectionId: { in: alle.map((s) => s.id) }, core: true },
+    } as any)) as Array<{
+      id: number;
+      de: string;
+      uz: string | null;
+      artikel: string | null;
+      anzeige: string | null;
+      sectionId: number | null;
+      audioKey: string | null;
+      imageKey: string | null;
+      bildTippen: boolean;
+      core?: boolean;
+    }>;
+    const codeById = new Map(alle.map((s) => [s.id, s.code]));
+
+    for (const row of rows) {
+      const sec = eigene.find((s) => s.id === row.sectionId);
+      if (!sec) continue;
+      const ganzeUnit = istFruehereUnit(sec.unit, lessonUnit);
+      const bis = new Set(
+        alle
+          .filter(
+            (s) =>
+              s.unitId === sec.unitId && (ganzeUnit || s.order <= sec.order),
+          )
+          .map((s) => s.id),
+      );
+      const pool = lexeme
+        .filter(
+          (l) =>
+            l.core !== false && l.sectionId != null && bis.has(l.sectionId),
+        )
+        .map((l) =>
+          toWort({
+            ...l,
+            sectionCode: codeById.get(l.sectionId as number) ?? '',
+          }),
+        )
+        .filter((w): w is MaterialWort => w !== null);
+      if (pool.some((w) => w.id === row.id)) pools.set(row.id, pool);
+    }
+    return pools;
   }
 
   private baueWortFrage(
@@ -1199,6 +1355,7 @@ export class UebungService {
     // yangilanadi.
     let paarNatijalari: Array<{ lexemeId: number; ok: boolean }> | null = null;
     let loesungWort: string | undefined;
+    let istTippfehler = false;
 
     if (format === 'PAAR') {
       // `PAAR` javobi bitta "to'g'ri javob" satriga sig'maydi: to'rt
@@ -1263,10 +1420,12 @@ export class UebungService {
         (key) => this.mediaUrl(key),
       ));
     } else {
-      const antwort = richtigeAntwort(format, material);
-      isCorrect = istRichtig(given, antwort.richtig, antwort.akzeptiert);
-      richtig = antwort.richtig;
-      if (format === 'BILD_TIPPEN') loesungWort = antwort.richtig;
+      ({
+        isCorrect,
+        richtig,
+        tippfehler: istTippfehler,
+      } = textAntwort(format, material, given));
+      if (format === 'BILD_TIPPEN') loesungWort = richtig;
     }
 
     // Bu javob qaysi so'z(lar)ga tegishli — PAAR uchun deduplikatsiya
@@ -1338,7 +1497,12 @@ export class UebungService {
       } as any)) as Array<{ sprecher: string; de: string; uz: string }>;
       return { isCorrect, richtig, transkript: zeilen };
     }
-    return { isCorrect, richtig, ...(loesungWort ? { loesungWort } : {}) };
+    return {
+      isCorrect,
+      richtig,
+      ...(loesungWort ? { loesungWort } : {}),
+      ...(istTippfehler ? { tippfehler: true as const } : {}),
+    };
   }
 
   /**

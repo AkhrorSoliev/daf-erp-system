@@ -13,6 +13,8 @@ import {
   LoadingCards,
 } from "../lumio";
 import { useLernenUnit } from "./queries";
+import { loadState } from "../lib/load-state";
+import { LoadFailed } from "../load-failed";
 import { seansHolatlari, type SeansHolatBelgisi } from "./fortschritt";
 import type { LernenSeans } from "./types";
 
@@ -102,7 +104,8 @@ function SeansRow({
  */
 export function LernenUnitPage({ unitId }: { unitId: number }) {
   const router = useRouter();
-  const { data, isLoading, isError } = useLernenUnit(unitId);
+  const query = useLernenUnit(unitId);
+  const { data } = query;
 
   const holatMap = React.useMemo(() => {
     if (!data) return new Map<number, SeansHolatBelgisi>();
@@ -126,20 +129,21 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
 
   const openLesson = (id: number) => router.push(`/portal/lernen/lessons/${id}`);
 
-  const boshMi = data && data.sections.length === 0 && data.lessons.length === 0;
+  // A unit whose content is not written yet still has its seeded lessons;
+  // the server says so with `bereit: false` (absent from an older server).
+  const boshMi =
+    data &&
+    (data.bereit === false ||
+      (data.sections.length === 0 && data.lessons.length === 0));
 
   return (
     <Screen narrow>
       <StackHeader title={data?.titleUz ?? "Bo'lim"} backHref="/portal/lernen" />
 
-      {isLoading ? (
+      {loadState(query) === "loading" ? (
         <LoadingCards count={3} />
-      ) : isError || !data ? (
-        <EmptyState
-          icon={<BookOpen size={28} weight="bold" />}
-          title="Bo'limni yuklab bo'lmadi"
-          description="Internet aloqasini tekshirib, qayta urinib ko'ring."
-        />
+      ) : !data ? (
+        <LoadFailed query={query} />
       ) : boshMi ? (
         <EmptyState
           icon={<BookOpen size={28} weight="bold" />}

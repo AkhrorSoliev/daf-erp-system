@@ -38,6 +38,9 @@ import { FalClient } from '../src/daf/media/fal-client';
 import { seedFor } from '../src/daf/media/media-keys';
 import { bildPrompt } from '../src/daf/media/bild-stil';
 import { verkleinereBild } from '../src/daf/media/bild-verkleinern';
+import { svgZuPng } from '../src/daf/media/svg-zu-png';
+import { zahlBildSvg } from '../src/daf/media/zahl-bild';
+import { flaggeSvg, type Land } from '../src/daf/media/flagge-bild';
 import {
   neuerBildSchluessel,
   type BildManifest,
@@ -77,9 +80,26 @@ export interface ErsetzenAuftrag {
 
 export interface BildAuftrag {
   sourceId: string;
-  szene: string;
+  /** What fal.ai draws — absent for a picture drawn in code. */
+  szene?: string;
+  /** A number: the numeral on a house-number plate (`zahl-bild.ts`), free. */
+  zahl?: number;
+  /** A country: its flag (`flagge-bild.ts`), free. */
+  flagge?: Land;
   /** 0 for a first drawing; a redraw's attempt otherwise (`seedFor`). */
   versuch: number;
+}
+
+/** The SVG of a picture drawn in code, or `null` for a scene fal.ai draws. */
+export function codeSvg(a: BildAuftrag): string | null {
+  if (a.zahl !== undefined) return zahlBildSvg(a.zahl);
+  if (a.flagge !== undefined) return flaggeSvg(a.flagge);
+  return null;
+}
+
+/** The jobs fal.ai is paid for — every scene; code-drawn pictures are free. */
+export function bezahlteBilder(auftraege: BildAuftrag[]): number {
+  return auftraege.filter((a) => a.szene !== undefined).length;
 }
 
 export interface BildArgs {
@@ -151,14 +171,16 @@ export function zuZeichnen(
   const auftraege: BildAuftrag[] = [];
   for (const [sourceId, eintrag] of Object.entries(unitPlan)) {
     const redraw = ersetzen.find((e) => e.sourceId === sourceId);
+    const was =
+      eintrag.zahl !== undefined
+        ? { zahl: eintrag.zahl }
+        : eintrag.flagge !== undefined
+          ? { flagge: eintrag.flagge }
+          : { szene: eintrag.szene };
     if (redraw) {
-      auftraege.push({
-        sourceId,
-        szene: eintrag.szene,
-        versuch: redraw.versuch,
-      });
+      auftraege.push({ sourceId, ...was, versuch: redraw.versuch });
     } else if (!manifest[sourceId]) {
-      auftraege.push({ sourceId, szene: eintrag.szene, versuch: 0 });
+      auftraege.push({ sourceId, ...was, versuch: 0 });
     }
   }
   return auftraege;
@@ -185,8 +207,17 @@ export function erstelleBildGeneriere(
   uploader: Pick<R2Uploader, 'uploadBytes'>,
   fetchFn: typeof fetch,
   verkleinere: (bytes: Buffer) => Promise<Buffer>,
+  rendere: (svg: string) => Promise<Buffer> = (svg) => svgZuPng(svg),
 ): BildGenerierFn {
   return async (a) => {
+    const svg = codeSvg(a);
+    if (svg !== null) {
+      const klein = await verkleinere(await rendere(svg));
+      const key = neuerBildSchluessel();
+      await uploader.uploadBytes(key, klein);
+      return key;
+    }
+    if (!a.szene) throw new Error(`${a.sourceId}: sahna yo'q`);
     const sourceUrl = await fal.image(
       bildPrompt(a.szene),
       seedFor(a.sourceId, a.versuch),
@@ -259,11 +290,19 @@ async function main(): Promise<void> {
   }
 
   const auftraege = zuZeichnen(plan, manifest, unit, ersetzen);
+  const bezahlt = bezahlteBilder(auftraege);
   console.log(
-    `${unit}: ${auftraege.length} ta rasm (≈ $${(auftraege.length * BILD_PREIS).toFixed(3)}).`,
+    `${unit}: ${auftraege.length} ta rasm, shundan fal.ai ${bezahlt} ta ` +
+      `(≈ $${(bezahlt * BILD_PREIS).toFixed(4)}); son va bayroqlar kodda, pulsiz.`,
   );
   for (const a of auftraege) {
-    console.log(`  ${a.sourceId}@${a.versuch}: ${a.szene}`);
+    const was =
+      a.zahl !== undefined
+        ? `son ${a.zahl}`
+        : a.flagge !== undefined
+          ? `bayroq ${a.flagge}`
+          : a.szene;
+    console.log(`  ${a.sourceId}@${a.versuch}: ${was}`);
   }
   pruefeBildBudget(auftraege.length);
   if (auftraege.length === 0) {
@@ -275,13 +314,17 @@ async function main(): Promise<void> {
     return;
   }
 
-  const missingEnv = REQUIRED_ENV.filter((k) => !process.env[k]);
+  // A run of numbers alone pays nothing and needs no fal.ai key.
+  const missingEnv = REQUIRED_ENV.filter(
+    (k) => !process.env[k] && !(k === 'FAL_KEY' && bezahlt === 0),
+  );
   if (missingEnv.length > 0) {
     throw new Error(
       `Sozlanmagan muhit o'zgaruvchisi: ${missingEnv.join(', ')}`,
     );
   }
-  const fal = new FalClient(process.env.FAL_KEY!);
+  // Without a key only numbers are drawn (checked above), so fal is unused.
+  const fal = new FalClient(process.env.FAL_KEY ?? '');
   const s3 = new S3Client({
     region: 'auto',
     endpoint: process.env.R2_ENDPOINT!,
