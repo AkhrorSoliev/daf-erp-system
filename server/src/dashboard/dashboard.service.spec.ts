@@ -256,6 +256,8 @@ describe('DashboardService', () => {
           date: new Date('2026-04-13T00:00:00.000Z'),
           status: 'PENDING',
           teacherPayExempt: false,
+          lessonStartTime: '09:00',
+          lessonEndTime: '10:30',
           claimedById: null,
         },
       ]);
@@ -264,6 +266,8 @@ describe('DashboardService', () => {
         id: 'u1',
         status: 'PENDING',
         teacherPayExempt: false,
+        lessonStartTime: '09:00',
+        lessonEndTime: '10:30',
         claimedBy: null,
       });
       expect(result.lessons[1].unmarked).toBeNull();

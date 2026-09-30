@@ -1,5 +1,6 @@
 import {
   ENDED_REFUSAL,
+  effectiveLessonTimes,
   lessonHasEnded,
   newAttendanceWindow,
   secondsUntil,
@@ -124,5 +125,43 @@ describe('windowRefusal', () => {
     expect(windowRefusal('NOT_TODAY', { ...args, date: '2026-10-02' })).toBe(
       'Davomat faqat dars kuni olinadi. Kelmaydiganlarni «Oldindan belgilash» bilan belgilang',
     );
+  });
+});
+
+describe('effectiveLessonTimes', () => {
+  const group = { lessonStartTime: '09:00', lessonEndTime: '10:30' };
+
+  it("uses the group's times for an ordinary day", () => {
+    expect(effectiveLessonTimes(group, null)).toEqual({
+      startTime: '09:00',
+      endTime: '10:30',
+    });
+  });
+
+  it("uses the move's own times on a day moved here", () => {
+    expect(
+      effectiveLessonTimes(group, {
+        newLessonStartTime: '18:00',
+        newLessonEndTime: '19:30',
+      }),
+    ).toEqual({ startTime: '18:00', endTime: '19:30' });
+  });
+
+  it("keeps the group's times for a move that carries none", () => {
+    expect(
+      effectiveLessonTimes(group, {
+        newLessonStartTime: null,
+        newLessonEndTime: null,
+      }),
+    ).toEqual({ startTime: '09:00', endTime: '10:30' });
+  });
+
+  it('passes a group without times through as null', () => {
+    expect(
+      effectiveLessonTimes(
+        { lessonStartTime: null, lessonEndTime: null },
+        null,
+      ),
+    ).toEqual({ startTime: null, endTime: null });
   });
 });

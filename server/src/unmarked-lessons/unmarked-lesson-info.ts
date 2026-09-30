@@ -7,6 +7,9 @@ export interface UnmarkedLessonInfo {
   status: UnmarkedLessonStatus;
   /** The teacher is paid for this lesson whatever is answered (backfill or re-asked). */
   teacherPayExempt: boolean;
+  /** The times the lesson really ran (a move can carry its own), as recorded when the question opened. */
+  lessonStartTime: string;
+  lessonEndTime: string;
   claimedBy: { id: number; firstName: string; lastName: string } | null;
 }
 
@@ -23,6 +26,8 @@ export async function loadUnmarkedLessonInfos(
       date: true,
       status: true,
       teacherPayExempt: true,
+      lessonStartTime: true,
+      lessonEndTime: true,
       claimedById: true,
     },
   });
@@ -45,6 +50,8 @@ export async function loadUnmarkedLessonInfos(
         id: r.id,
         status: r.status,
         teacherPayExempt: r.teacherPayExempt,
+        lessonStartTime: r.lessonStartTime,
+        lessonEndTime: r.lessonEndTime,
         claimedBy:
           r.claimedById !== null ? (byId.get(r.claimedById) ?? null) : null,
       },

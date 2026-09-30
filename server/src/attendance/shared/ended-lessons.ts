@@ -1,6 +1,11 @@
 import { tashkentDateStr } from '../../common/date/tashkent';
 import { DAY_NAME_TO_JS } from './date-utils';
-import { DAY_END_TIME, DAY_START_TIME, toMinutes } from './attendance-window';
+import {
+  DAY_END_TIME,
+  DAY_START_TIME,
+  effectiveLessonTimes,
+  toMinutes,
+} from './attendance-window';
 
 export interface SweepGroup {
   id: string;
@@ -70,9 +75,9 @@ export function endedLessonsOn(args: {
     );
     if (!moved && (!scheduled || movedAway.has(g.id))) continue;
 
-    const startTime =
-      moved?.newLessonStartTime ?? g.lessonStartTime ?? DAY_START_TIME;
-    const endTime = moved?.newLessonEndTime ?? g.lessonEndTime ?? DAY_END_TIME;
+    const times = effectiveLessonTimes(g, moved);
+    const startTime = times.startTime ?? DAY_START_TIME;
+    const endTime = times.endTime ?? DAY_END_TIME;
     if (args.nowMinutes < toMinutes(endTime)) continue;
 
     ended.push({

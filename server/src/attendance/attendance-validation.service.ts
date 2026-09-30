@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GroupStatus } from '@prisma/client';
 import { DAY_NAME_TO_JS, tashkentDateStr } from './shared/date-utils';
 import { HolidaysService } from '../holidays/holidays.service';
+import { effectiveLessonTimes } from './shared/attendance-window';
 
 @Injectable()
 export class AttendanceValidationService {
@@ -135,14 +136,8 @@ export class AttendanceValidationService {
     const canBypassTime = roles?.some((r) =>
       AttendanceValidationService.TIME_BYPASS_ROLES.has(r),
     );
-    const effectiveStartTime =
-      isMovedLessonDay && reschedule?.newLessonStartTime
-        ? reschedule.newLessonStartTime
-        : group.lessonStartTime;
-    const effectiveEndTime =
-      isMovedLessonDay && reschedule?.newLessonEndTime
-        ? reschedule.newLessonEndTime
-        : group.lessonEndTime;
+    const { startTime: effectiveStartTime, endTime: effectiveEndTime } =
+      effectiveLessonTimes(group, isMovedLessonDay ? reschedule : null);
     if (!canBypassTime) {
       // Production server runs in UTC; lesson times are Asia/Tashkent (UTC+5)
       const tashkentParts = new Intl.DateTimeFormat('en-CA', {

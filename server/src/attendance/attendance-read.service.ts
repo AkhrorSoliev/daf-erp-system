@@ -25,6 +25,7 @@ import {
 import { HolidaysService } from '../holidays/holidays.service';
 import { rosterOnDate } from './shared/roster-on-date';
 import { loadUnmarkedLessonInfos } from '../unmarked-lessons/unmarked-lesson-info';
+import { effectiveLessonTimes } from './shared/attendance-window';
 
 @Injectable()
 export class AttendanceReadService {
@@ -574,12 +575,24 @@ export class AttendanceReadService {
       where: { id: groupId, deletedAt: null, ...(companyId && { companyId }) },
       select: {
         id: true,
+        lessonStartTime: true,
+        lessonEndTime: true,
         course: { select: { price: true, lessonPaymentCount: true } },
       },
     });
     if (!group) throw new NotFoundException('Guruh topilmadi');
 
     const parsedDate = new Date(date + 'T00:00:00.000Z');
+
+    // The lesson's real times: a day moved here can carry its own. The form
+    // draws the new-register window from these, exactly as
+    // `validateLessonDate` will judge the save.
+    const movedHere = await this.prisma.lessonReschedule.findFirst({
+      where: { groupId, deletedAt: null, newDate: parsedDate },
+      select: { newLessonStartTime: true, newLessonEndTime: true },
+    });
+    const { startTime: effectiveStartTime, endTime: effectiveEndTime } =
+      effectiveLessonTimes(group, movedHere);
 
     const perLessonCost = calculatePerLessonCost(
       group.course.price,
@@ -748,6 +761,8 @@ export class AttendanceReadService {
       debtorStudents,
       perLessonCost,
       coursePrice: group.course.price,
+      effectiveStartTime,
+      effectiveEndTime,
     };
   }
 

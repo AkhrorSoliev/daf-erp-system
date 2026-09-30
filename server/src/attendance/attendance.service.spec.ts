@@ -642,6 +642,8 @@ describe('AttendanceService', () => {
           date: new Date('2026-04-01T00:00:00.000Z'),
           status: 'PENDING',
           teacherPayExempt: true,
+          lessonStartTime: '18:00',
+          lessonEndTime: '19:30',
           claimedById: 7,
         },
       ]);
@@ -661,6 +663,8 @@ describe('AttendanceService', () => {
         id: 'u1',
         status: 'PENDING',
         teacherPayExempt: true,
+        lessonStartTime: '18:00',
+        lessonEndTime: '19:30',
         claimedBy: { id: 7, firstName: 'Ali', lastName: 'Valiyev' },
       });
       expect(
@@ -930,6 +934,52 @@ describe('AttendanceService', () => {
           }),
         }),
       );
+    });
+
+    it("returns the group's lesson times on an ordinary day", async () => {
+      prisma.attendance.findMany.mockResolvedValue([]);
+
+      const result = await service.getByDate('group-uuid-1', '2026-04-01');
+
+      expect(result.effectiveStartTime).toBe('09:00');
+      expect(result.effectiveEndTime).toBe('11:00');
+    });
+
+    it("returns a moved day's own times, so the form judges the window like the save", async () => {
+      prisma.attendance.findMany.mockResolvedValue([]);
+      // Group 09:00–11:00, lesson moved to 2026-04-01 at 18:00–19:30.
+      prisma.lessonReschedule.findFirst.mockResolvedValue({
+        newLessonStartTime: '18:00',
+        newLessonEndTime: '19:30',
+      });
+
+      const result = await service.getByDate('group-uuid-1', '2026-04-01');
+
+      expect(result.effectiveStartTime).toBe('18:00');
+      expect(result.effectiveEndTime).toBe('19:30');
+      // Only a move whose NEW date is this day retimes it.
+      expect(prisma.lessonReschedule.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            groupId: 'group-uuid-1',
+            deletedAt: null,
+            newDate: new Date('2026-04-01T00:00:00.000Z'),
+          },
+        }),
+      );
+    });
+
+    it("a move without times of its own keeps the group's", async () => {
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.lessonReschedule.findFirst.mockResolvedValue({
+        newLessonStartTime: null,
+        newLessonEndTime: null,
+      });
+
+      const result = await service.getByDate('group-uuid-1', '2026-04-01');
+
+      expect(result.effectiveStartTime).toBe('09:00');
+      expect(result.effectiveEndTime).toBe('11:00');
     });
 
     it('should throw NotFoundException when group not found', async () => {

@@ -45,6 +45,25 @@ export function secondsUntil(endTime: string, now: Date = new Date()): number {
   return toMinutes(endTime) * 60 - nowSeconds;
 }
 
+/**
+ * The times a lesson really runs: a day moved here with its own times uses
+ * them, everything else the group's. The ONE place this is decided — the
+ * window check, the register's read and the lesson-end sweep all read it, so
+ * a moved lesson is opened, shown and closed by the same clock.
+ */
+export function effectiveLessonTimes(
+  group: { lessonStartTime: string | null; lessonEndTime: string | null },
+  movedHere:
+    | { newLessonStartTime: string | null; newLessonEndTime: string | null }
+    | null
+    | undefined,
+): { startTime: string | null; endTime: string | null } {
+  return {
+    startTime: movedHere?.newLessonStartTime ?? group.lessonStartTime,
+    endTime: movedHere?.newLessonEndTime ?? group.lessonEndTime,
+  };
+}
+
 export function newAttendanceWindow(args: {
   date: string;
   todayStr: string;
