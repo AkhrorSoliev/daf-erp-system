@@ -246,6 +246,20 @@ describe('AttendanceSaveService.saveLate', () => {
     );
   });
 
+  it('refuses a day the calendar does not have with 400', async () => {
+    await expect(
+      service.saveLate(
+        'g1',
+        '2026-13-45',
+        { entries },
+        3,
+        ['Administrator'],
+        1,
+      ),
+    ).rejects.toThrow("Noto'g'ri sana formati. YYYY-MM-DD formatda kiriting");
+    expect(prisma.group.findFirst).not.toHaveBeenCalled();
+  });
+
   it('needs every student of that day', async () => {
     await expect(
       service.saveLate(

@@ -1,5 +1,9 @@
 import { Test } from '@nestjs/testing';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { UnmarkedLessonsService } from './unmarked-lessons.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { HolidaysService } from '../holidays/holidays.service';
@@ -260,6 +264,28 @@ describe('UnmarkedLessonsService', () => {
         ['Administrator'],
       );
     });
+
+    it.each(['2026-13-45', '2026-02-30'])(
+      'refuses %s with 400 before reading anything',
+      async (date) => {
+        await expect(
+          service.answerNotHeld({
+            groupId: 'g1',
+            date,
+            userId: 3,
+            roles: ['Administrator'],
+            companyId: 1,
+            dto: { reason: 'x', action: 'CANCEL' },
+          }),
+        ).rejects.toThrow(
+          new BadRequestException(
+            "Noto'g'ri sana formati. YYYY-MM-DD formatda kiriting",
+          ),
+        );
+        expect(prisma.unmarkedLesson.findUnique).not.toHaveBeenCalled();
+        expect(cancellations.create).not.toHaveBeenCalled();
+      },
+    );
 
     it('404s for a lesson not waiting for an answer', async () => {
       prisma.unmarkedLesson.findUnique.mockResolvedValue({

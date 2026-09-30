@@ -18,6 +18,7 @@ import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { whereUserMayAct } from '../common/auth/blocked-user';
 import { rethrowAsConflict } from '../common/transaction-conflict';
+import { isCalendarDateStr } from '../common/date/tashkent';
 import {
   AttendanceEntryDto,
   SaveAttendanceDto,
@@ -233,7 +234,7 @@ export class AttendanceSaveService {
     roles: string[],
     companyId: number,
   ) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    if (!isCalendarDateStr(date)) {
       throw new BadRequestException(
         "Noto'g'ri sana formati. YYYY-MM-DD formatda kiriting",
       );

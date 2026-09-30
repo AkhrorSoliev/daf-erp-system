@@ -7,6 +7,7 @@ import { LessonCancellationsService } from '../lesson-cancellations/lesson-cance
 import { LessonReschedulesService } from '../lesson-reschedules/lesson-reschedules.service';
 import {
   addDaysToDateStr,
+  isCalendarDateStr,
   utcMidnightFromDateStr,
 } from '../common/date/tashkent';
 import { tashkentClock } from './shared/attendance-window';
@@ -220,7 +221,7 @@ export class UnmarkedLessonsService {
     roles: string[];
     companyId: number;
   }) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(args.date)) {
+    if (!isCalendarDateStr(args.date)) {
       throw new BadRequestException(
         "Noto'g'ri sana formati. YYYY-MM-DD formatda kiriting",
       );
