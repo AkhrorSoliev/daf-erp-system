@@ -10,6 +10,8 @@ import { RedisService } from '../redis/redis.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
+import { AttendanceValidationService } from './attendance-validation.service';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
 
 const validatedGroup = {
   id: 'group-1',
@@ -27,6 +29,11 @@ describe('QrAttendanceService', () => {
   let gateway: any;
   let entityHistory: any;
   let attendanceService: any;
+  let admission: { forLesson: jest.Mock };
+  let validation: {
+    validateLessonDate: jest.Mock;
+    assertWindowOpen: jest.Mock;
+  };
 
   beforeEach(async () => {
     prisma = {
@@ -112,8 +119,21 @@ describe('QrAttendanceService', () => {
         parsedDate: new Date('2026-04-03T00:00:00.000Z'),
         effectiveStartTime: '09:00',
         effectiveEndTime: '11:00',
+        opensMinutesBefore: 10,
       }),
     };
+
+    // The scan path checks the lesson window itself (ADR-0047).
+    validation = {
+      validateLessonDate: jest.fn().mockResolvedValue({
+        startTime: '09:00',
+        endTime: '11:00',
+      }),
+      assertWindowOpen: jest.fn(),
+    };
+
+    // Contract 3.2 admission: nobody blocked unless a test says so.
+    admission = { forLesson: jest.fn().mockResolvedValue(new Map()) };
 
     const holidaysService = {
       findActiveHolidayCovering: jest.fn().mockResolvedValue(null),
@@ -131,6 +151,8 @@ describe('QrAttendanceService', () => {
         { provide: NotificationsGateway, useValue: gateway },
         { provide: EntityHistoryService, useValue: entityHistory },
         { provide: AttendanceService, useValue: attendanceService },
+        { provide: AttendanceValidationService, useValue: validation },
+        { provide: LessonAdmissionService, useValue: admission },
         {
           provide: LessonBillingService,
           useValue: { processAttendanceBilling: jest.fn() },
@@ -155,15 +177,26 @@ describe('QrAttendanceService', () => {
     });
     afterEach(() => jest.useRealTimers());
 
-    it('should call validateLessonDate before creating session', async () => {
-      await service.startSession('group-1', '2026-04-03', 1, 1, ['Teacher']);
+    it('should validate the lesson and its window before creating session', async () => {
+      await service.startSession('group-1', '2026-04-03', 1, 1);
 
       expect(attendanceService.validateLessonDate).toHaveBeenCalledWith(
         'group-1',
         '2026-04-03',
         1,
-        ['Teacher'],
       );
+      // The shared window guard also asks whether «Dars bo'ldimi?» was opened.
+      expect(prisma.unmarkedLesson.findUnique).toHaveBeenCalled();
+    });
+
+    it('should refuse a session before the window opens, for every role', async () => {
+      jest.setSystemTime(new Date('2026-04-03T03:49:00.000Z')); // 08:49 Tashkent, lesson 09:00
+      await expect(
+        service.startSession('group-1', '2026-04-03', 1, 1),
+      ).rejects.toThrow(
+        'Davomat dars boshlanishidan 10 daqiqa oldin ochiladi (09:00)',
+      );
+      expect(redis.set).not.toHaveBeenCalled();
     });
 
     it('should throw when validateLessonDate rejects (holiday/non-lesson/inactive)', async () => {
@@ -241,14 +274,14 @@ describe('QrAttendanceService', () => {
     it('refuses a session after the lesson ended', async () => {
       jest.setSystemTime(new Date('2026-04-03T06:00:00.000Z')); // 11:00 Tashkent
       await expect(
-        service.startSession('group-1', '2026-04-03', 1, 1, ['Administrator']),
+        service.startSession('group-1', '2026-04-03', 1, 1),
       ).rejects.toThrow('Dars tugagan');
     });
 
     it("refuses a session once «Dars bo'ldimi?» was asked", async () => {
       prisma.unmarkedLesson.findUnique.mockResolvedValue({ id: 'u1' });
       await expect(
-        service.startSession('group-1', '2026-04-03', 1, 1, ['Administrator']),
+        service.startSession('group-1', '2026-04-03', 1, 1),
       ).rejects.toThrow('Dars tugagan');
     });
 
@@ -458,6 +491,40 @@ describe('QrAttendanceService', () => {
       currentToken: 'valid-token',
       createdAt: new Date().toISOString(),
       lessonNumber: 15,
+    });
+
+    it('should refuse a scan once the lesson window is closed', async () => {
+      redis.get.mockResolvedValueOnce(tokenData);
+      validation.assertWindowOpen.mockImplementation(() => {
+        throw new BadRequestException('Davomat yopilgan');
+      });
+
+      await expect(
+        service.scanQr('valid-token', 10001, 20001, 1),
+      ).rejects.toThrow('Davomat yopilgan');
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it('should refuse a scan for a student contract 3.2 keeps out', async () => {
+      redis.get.mockResolvedValueOnce(tokenData);
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10001,
+            {
+              admitted: false,
+              reason: 'NOT_PAID',
+              shortfall: 1,
+              paidThrough: null,
+            },
+          ],
+        ]),
+      );
+
+      await expect(
+        service.scanQr('valid-token', 10001, 20001, 1),
+      ).rejects.toThrow("To'lov qilinmagan");
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
     });
 
     it('should mark attendance as PRESENT and notify teacher', async () => {

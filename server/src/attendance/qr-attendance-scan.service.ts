@@ -13,6 +13,8 @@ import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { assertAttendanceWindowOpen } from './shared/attendance-window-guard';
 import { QrSession, QrToken } from './shared/qr-types';
+import { AttendanceValidationService } from './attendance-validation.service';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
 
 @Injectable()
 export class QrAttendanceScanService {
@@ -25,6 +27,8 @@ export class QrAttendanceScanService {
     private entityHistoryService: EntityHistoryService,
     private lessonBillingService: LessonBillingService,
     private eventEmitter: EventEmitter2,
+    private validation: AttendanceValidationService,
+    private admission: LessonAdmissionService,
   ) {}
 
   async scanQr(
@@ -70,11 +74,23 @@ export class QrAttendanceScanService {
       throw new BadRequestException('Guruh topilmadi');
     }
 
-    // No balance gate: a student with insufficient balance is allowed to
-    // scan and be marked PRESENT. The lesson is recorded but no consumption
-    // / deduction / accrual is written by LessonBillingService (B.1 rule).
-    // When the student later tops up, payments-write triggers retroactive
-    // billing to settle the unpaid lessons and accrue teacher salary.
+    // TODO(integration §4.5): re-read the lesson from the DB on every scan —
+    // `this.validation.validateLessonDate` → the window guard with its
+    // effective times and lead → this admission check → the session only for
+    // `lessonNumber`; then drop the times stored on `QrSession`.
+
+    // Contract 3.2 (ADR-0047): from the month's 2nd lesson a scan admits
+    // only a student whose payments reach this lesson.
+    const admission = await this.admission.forLesson({
+      groupId,
+      lessonDay: date,
+      studentIds: [studentId],
+    });
+    if (admission.get(studentId)?.admitted === false) {
+      throw new BadRequestException(
+        "To'lov qilinmagan: shartnomaga ko'ra 2-darsdan boshlab to'lov qilinmaguncha darsga qo'yilmaysiz",
+      );
+    }
 
     // Cache the lesson number from the session so the early-return path
     // (already-marked) and the success path both surface the same value.

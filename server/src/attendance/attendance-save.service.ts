@@ -126,8 +126,12 @@ export class AttendanceSaveService {
     roles: string[],
     companyId: number,
   ) {
-    const { parsedDate, effectiveStartTime, effectiveEndTime } =
-      await this.validation.validateLessonDate(groupId, date, companyId, roles);
+    const {
+      parsedDate,
+      effectiveStartTime,
+      effectiveEndTime,
+      opensMinutesBefore,
+    } = await this.validation.validateLessonDate(groupId, date, companyId);
 
     const isTeacherOnly =
       roles.length > 0 && roles.every((r) => r === 'Teacher');
@@ -156,6 +160,9 @@ export class AttendanceSaveService {
         const enrollmentIdByStudent = new Map(
           enrolled.map((e) => [e.studentId, e.id]),
         );
+        // TODO(integration §4.3): contract 3.2 — admission over this roster
+        // (names in the select), blocked students skipped here, refused by
+        // `assertAdmitted` after the window guard.
         this.assertFullRoster(enrollmentIdByStudent, dto.entries);
 
         const existingRecords = await tx.attendance.findMany({
@@ -175,7 +182,11 @@ export class AttendanceSaveService {
             groupId,
             date,
             parsedDate,
-            times: { startTime: effectiveStartTime, endTime: effectiveEndTime },
+            times: {
+              startTime: effectiveStartTime,
+              endTime: effectiveEndTime,
+              opensMinutesBefore,
+            },
           });
         }
 
@@ -306,6 +317,8 @@ export class AttendanceSaveService {
         const enrollmentIdByStudent = new Map(
           roster.map((e) => [e.studentId, e.id]),
         );
+        // TODO(integration §4.3): contract 3.2 in «Bo'ldi» too (D2) — admission
+        // over this roster, then `assertAdmitted` with no existing rows.
         this.assertFullRoster(enrollmentIdByStudent, dto.entries);
 
         // A student who has since left is on the register but is not billed in a
@@ -455,6 +468,9 @@ export class AttendanceSaveService {
       const note = ctx.isTeacherOnly ? undefined : entry.note;
       const oldStatus = existingMap.get(entry.studentId)?.status ?? null;
 
+      // TODO(integration §4.4): late minutes — write `lateArrival(...)`'s
+      // status + lateMinutes (shared/attendance-window.ts), only while the
+      // lesson runs; billing and statusChanges follow the written status.
       const result = await tx.attendance.upsert({
         where: {
           groupId_studentId_date: {

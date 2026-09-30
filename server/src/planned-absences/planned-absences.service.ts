@@ -64,18 +64,22 @@ export class PlannedAbsencesService {
     // malformed request was never going to be acted on.
     await assertCallerMayTouchGroup(this.prisma, userId, roles, groupId);
 
-    // 1. Reuse the attendance lesson-date validation. The caller is always
-    // CEO / Branch Director / Administrator (controller @Roles), so the lesson
-    // time window is bypassed — pre-marking today-before-the-lesson and any
-    // future scheduled date both pass. Covers: date format, group exists +
-    // ACTIVE + company scope, date range, schedule day / reschedule, lesson
-    // cancellation, and holiday.
-    const { parsedDate } = await this.validation.validateLessonDate(
+    // 1. Reuse the attendance lesson-date validation: date format, group
+    // exists + ACTIVE + company scope, date range, schedule day / reschedule,
+    // and the branch's holiday. Then the clock: a pre-mark only ever seeds
+    // the lesson's register, which a new save can open only until the lesson
+    // ends (ADR-0054) — so today before the end and any future lesson pass,
+    // an ended lesson does not.
+    const lesson = await this.validation.validateLessonDate(
       groupId,
       date,
       companyId,
-      roles,
     );
+    this.validation.assertLessonNotEnded({
+      lessonDay: date,
+      endTime: lesson.effectiveEndTime,
+    });
+    const { parsedDate } = lesson;
 
     // 2. Student must have an active, already-started enrollment in this group
     // on the lesson date — the exact predicate the attendance roster uses, so

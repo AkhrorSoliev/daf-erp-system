@@ -8,6 +8,7 @@ import {
   type SalaryMonthlyQuery,
 } from './shared/resolve-monthly-scope';
 import { SalaryStaffMonthlyService } from './salary-monthly-staff.service';
+import { SalaryMissedLessonsService } from './salary-missed-lessons.service';
 import { buildTeacherRosterWhere } from './shared/teacher-roster-where';
 import { packPriceCandidates, sweepGapLessons } from './shared/gap-sweep';
 import { loadUnpaidMonthlyShare } from './shared/unpaid-monthly-share';
@@ -72,6 +73,7 @@ export class SalaryMonthlyService {
   constructor(
     private prisma: PrismaService,
     private staff: SalaryStaffMonthlyService,
+    private missed: SalaryMissedLessonsService,
   ) {}
 
   async getMonthly(
@@ -217,7 +219,13 @@ export class SalaryMonthlyService {
           status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
           date: { gte: periodStartDate, lt: periodEndDateExclusive },
         },
-        select: { id: true, studentId: true, groupId: true, date: true },
+        select: {
+          id: true,
+          studentId: true,
+          groupId: true,
+          date: true,
+          status: true,
+        },
       }),
       // perLessonCost basis.
       this.prisma.group.findMany({
@@ -744,6 +752,10 @@ export class SalaryMonthlyService {
    * `row` is the teacher row when the user teaches, the non-teaching
    * FIXED_MONTHLY staff row otherwise, and `null` when the user has no salary
    * presence in that month.
+   *
+   * `missedLessons` («Berilmadi», ADR-0048): the month's lessons that ended
+   * without attendance and what each cost the teacher. Empty for anyone who
+   * teaches no group.
    */
   async getMonthlyForUser(
     userId: number,
@@ -757,11 +769,18 @@ export class SalaryMonthlyService {
       performedById,
     );
 
+    const missedLessons = await this.missed.forTeacher(
+      userId,
+      companyId,
+      res.month,
+    );
+
     return {
       month: res.month,
       floorMonth: res.floorMonth,
       period: res.period,
       row: res.data[0] ?? res.staff[0] ?? null,
+      missedLessons,
     };
   }
 

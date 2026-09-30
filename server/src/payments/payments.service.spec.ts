@@ -7,6 +7,8 @@ import { PaymentsReadService } from './payments-read.service';
 import { PaymentsDebtorsService } from './payments-debtors.service';
 import { DebtAgeService } from './../common/finance/debt-age.service';
 import { PaymentsPreviewService } from './payments-preview.service';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
+import { PaymentPromisesService } from '../payment-promises/payment-promises.service';
 import { PaymentsFrozenBalanceService } from './payments-frozen-balance.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
@@ -53,6 +55,7 @@ describe('PaymentsService', () => {
   let entityHistoryService: any;
   let lessonBillingService: any;
   let eventEmitter: any;
+  let paymentPromises: { upsertOpenPromise: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -138,6 +141,8 @@ describe('PaymentsService', () => {
         .mockResolvedValue({ paidCount: 0, deductedAmount: 0 }),
     };
 
+    paymentPromises = { upsertOpenPromise: jest.fn().mockResolvedValue({}) };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentsService,
@@ -156,6 +161,11 @@ describe('PaymentsService', () => {
         { provide: EntityHistoryService, useValue: entityHistoryService },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: MockExamBillingService, useValue: mockExamBilling },
+        { provide: PaymentPromisesService, useValue: paymentPromises },
+        {
+          provide: LessonAdmissionService,
+          useValue: { reachForPayment: jest.fn().mockResolvedValue(null) },
+        },
       ],
     }).compile();
 
@@ -232,6 +242,51 @@ describe('PaymentsService', () => {
           studentBalance: 500000,
         }),
       );
+    });
+
+    it('records the promise for the rest of a part payment (ADR-0047)', async () => {
+      prisma.student.findUnique.mockResolvedValue({ balance: -350000 });
+
+      await service.create(
+        { ...dto, promiseDate: '2026-10-07' },
+        userId,
+        companyId,
+      );
+
+      expect(paymentPromises.upsertOpenPromise).toHaveBeenCalledWith(
+        {
+          studentId: dto.studentId,
+          promiseDate: '2026-10-07',
+          comment: "Qisman to'lov 500 000 so'm; qolgan 350 000 so'm",
+        },
+        userId,
+        companyId,
+      );
+    });
+
+    it('keeps the payment when the promise fails', async () => {
+      prisma.student.findUnique.mockResolvedValue({ balance: -350000 });
+      paymentPromises.upsertOpenPromise.mockRejectedValueOnce(
+        new Error('boom'),
+      );
+
+      await expect(
+        service.create(
+          { ...dto, promiseDate: '2026-10-07' },
+          userId,
+          companyId,
+        ),
+      ).resolves.toEqual(expect.objectContaining({ id: mockPayment.id }));
+    });
+
+    it('writes no promise when the payment clears the debt', async () => {
+      await service.create(
+        { ...dto, promiseDate: '2026-10-07' },
+        userId,
+        companyId,
+      );
+
+      expect(paymentPromises.upsertOpenPromise).not.toHaveBeenCalled();
     });
 
     it('should skip contract validation and contract.update when contractId is not provided', async () => {

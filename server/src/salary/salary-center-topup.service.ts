@@ -94,7 +94,13 @@ export class SalaryCenterTopUpService {
           status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
           date: { gte: periodStartDate, lt: periodEndDateExclusive },
         },
-        select: { id: true, studentId: true, groupId: true, date: true },
+        select: {
+          id: true,
+          studentId: true,
+          groupId: true,
+          date: true,
+          status: true,
+        },
       }),
       this.prisma.group.findMany({
         where: { companyId },

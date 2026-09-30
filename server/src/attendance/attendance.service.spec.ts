@@ -7,12 +7,14 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AttendanceService } from './attendance.service';
 import { AttendanceValidationService } from './attendance-validation.service';
+import { SettingsService } from '../settings/settings.service';
 import { AttendanceReadService } from './attendance-read.service';
 import { AttendanceStatsService } from './attendance-stats.service';
 import { AttendanceSaveService } from './attendance-save.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
 import type { SaveAttendanceDto } from './dto/save-attendance.dto';
 
 const mockGroup = {
@@ -68,6 +70,7 @@ describe('AttendanceService', () => {
   let entityHistoryService: any;
   let eventEmitter: { emit: jest.Mock };
   let holidaysService: any;
+  let admission: { forLesson: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -142,15 +145,24 @@ describe('AttendanceService', () => {
       getActiveHolidaysInRange: jest.fn().mockResolvedValue([]),
     };
 
+    // Contract 3.2 admission (ADR-0047): nobody blocked unless a test says so.
+    admission = { forLesson: jest.fn().mockResolvedValue(new Map()) };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AttendanceService,
         AttendanceValidationService,
+        {
+          provide: SettingsService,
+          // The default lead (ADR-0047); a test that moves it says so.
+          useValue: { get: jest.fn().mockResolvedValue(10) },
+        },
         AttendanceReadService,
         AttendanceStatsService,
         AttendanceSaveService,
         { provide: PrismaService, useValue: prisma },
         { provide: EntityHistoryService, useValue: entityHistoryService },
+        { provide: LessonAdmissionService, useValue: admission },
         {
           provide: LessonBillingService,
           useValue: { processAttendanceBilling: jest.fn() },
@@ -240,12 +252,7 @@ describe('AttendanceService', () => {
       // A holiday closes its own branch's lessons, not every branch's.
       prisma.group.findFirst.mockResolvedValue({ ...mockGroup, branchId: 2 });
 
-      await service.validateLessonDate(
-        'group-uuid-1',
-        '2026-04-01',
-        undefined,
-        ['Administrator'],
-      );
+      await service.validateLessonDate('group-uuid-1', '2026-04-01');
 
       expect(holidaysService.findActiveHolidayCovering).toHaveBeenCalledWith(
         new Date('2026-04-01T00:00:00.000Z'),
@@ -272,224 +279,57 @@ describe('AttendanceService', () => {
       const result = await service.validateLessonDate(
         'group-uuid-1',
         '2026-04-01',
-        undefined,
-        ['Administrator'],
       );
 
       expect(result.group.id).toBe('group-uuid-1');
       expect(result.parsedDate).toEqual(new Date('2026-04-01T00:00:00.000Z'));
     });
 
-    describe('lesson time check', () => {
-      // validateLessonDate resolves "today" + the weekday in Asia/Tashkent
-      // (UTC+5). Compute these helpers in the same zone so the lesson date /
-      // weekday don't drift to the previous day when CI runs in the
-      // 19:00–23:59 UTC window — that drift made the time-check tests below
-      // flaky (the date stopped matching "today", so the check was skipped).
-      const tashkentNow = () => new Date(Date.now() + 5 * 60 * 60 * 1000);
+    describe('no clock here (ADR-0054)', () => {
+      const validation = () =>
+        (service as unknown as { validation: AttendanceValidationService })
+          .validation;
 
-      // Today's date string for time tests
-      const getTodayStr = () => {
-        const now = tashkentNow();
-        return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
-      };
-
-      // Mock group that matches today's day-of-week
-      const getTodayMockGroup = () => {
-        const now = tashkentNow();
-        const dayNames = [
-          'sunday',
-          'monday',
-          'tuesday',
-          'wednesday',
-          'thursday',
-          'friday',
-          'saturday',
-        ];
-        return {
-          ...mockGroup,
-          exactDays: [dayNames[now.getUTCDay()]],
-          startDate: new Date(Date.UTC(now.getUTCFullYear(), 0, 1)),
-          endDate: new Date(Date.UTC(now.getUTCFullYear(), 11, 31)),
-        };
-      };
-
-      it('should throw when current time is before lesson start (Teacher)', async () => {
-        const todayGroup = {
-          ...getTodayMockGroup(),
-          lessonStartTime: '23:50',
-          lessonEndTime: '23:59',
-        };
-        prisma.group.findFirst.mockResolvedValue(todayGroup);
-
-        await expect(
-          service.validateLessonDate('group-uuid-1', getTodayStr(), undefined, [
-            'Teacher',
-          ]),
-        ).rejects.toThrow(BadRequestException);
-      });
-
-      it('should throw when current time is after lesson end (Teacher)', async () => {
-        const todayGroup = {
-          ...getTodayMockGroup(),
-          lessonStartTime: '00:00',
-          lessonEndTime: '00:01',
-        };
-        prisma.group.findFirst.mockResolvedValue(todayGroup);
-
-        await expect(
-          service.validateLessonDate('group-uuid-1', getTodayStr(), undefined, [
-            'Teacher',
-          ]),
-        ).rejects.toThrow(BadRequestException);
-      });
-
-      it('should bypass time check for CEO', async () => {
-        const todayGroup = {
-          ...getTodayMockGroup(),
-          lessonStartTime: '23:50',
-          lessonEndTime: '23:59',
-        };
-        prisma.group.findFirst.mockResolvedValue(todayGroup);
-
+      it('validateLessonDate no longer looks at the clock and returns the times', async () => {
         const result = await service.validateLessonDate(
           'group-uuid-1',
-          getTodayStr(),
-          undefined,
-          ['CEO'],
+          '2026-04-01',
         );
-        expect(result.group.id).toBe('group-uuid-1');
+        expect(result.effectiveStartTime).toBe('09:00');
+        expect(result.effectiveEndTime).toBe('11:00');
+        expect(result.opensMinutesBefore).toBe(10);
       });
 
-      it('should bypass time check for Administrator', async () => {
-        const todayGroup = {
-          ...getTodayMockGroup(),
-          lessonStartTime: '23:50',
-          lessonEndTime: '23:59',
-        };
-        prisma.group.findFirst.mockResolvedValue(todayGroup);
-
-        const result = await service.validateLessonDate(
-          'group-uuid-1',
-          getTodayStr(),
-          undefined,
-          ['Administrator'],
-        );
-        expect(result.group.id).toBe('group-uuid-1');
-      });
-
-      it('should bypass time check for Branch Director', async () => {
-        const todayGroup = {
-          ...getTodayMockGroup(),
-          lessonStartTime: '23:50',
-          lessonEndTime: '23:59',
-        };
-        prisma.group.findFirst.mockResolvedValue(todayGroup);
-
-        const result = await service.validateLessonDate(
-          'group-uuid-1',
-          getTodayStr(),
-          undefined,
-          ['Branch Director'],
-        );
-        expect(result.group.id).toBe('group-uuid-1');
-      });
-
-      it('should reject a Teacher on a past lesson date', async () => {
-        // 2026-04-01 is a scheduled, in-range lesson — only the day is wrong.
-        await expect(
-          service.validateLessonDate('group-uuid-1', '2026-04-01', undefined, [
-            'Teacher',
-          ]),
-        ).rejects.toThrow('faqat dars kuni');
-      });
-
-      it('should reject a Teacher on a future lesson date', async () => {
-        const now = tashkentNow();
-        const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-        const nextWeekStr = nextWeek.toISOString().slice(0, 10);
-        prisma.group.findFirst.mockResolvedValue({
-          ...getTodayMockGroup(),
-          startDate: new Date(Date.UTC(now.getUTCFullYear() - 1, 0, 1)),
-          endDate: new Date(Date.UTC(now.getUTCFullYear() + 1, 11, 31)),
-          lessonStartTime: null,
-          lessonEndTime: null,
+      it('a moved lesson carries its own times', async () => {
+        prisma.lessonReschedule.findFirst.mockResolvedValue({
+          originalDate: new Date('2026-03-30T00:00:00.000Z'),
+          newDate: new Date('2026-04-02T00:00:00.000Z'),
+          newLessonStartTime: '14:00',
+          newLessonEndTime: '15:30',
         });
-
-        await expect(
-          service.validateLessonDate('group-uuid-1', nextWeekStr, undefined, [
-            'Teacher',
-          ]),
-        ).rejects.toThrow('faqat dars kuni');
-      });
-
-      it('should let an Administrator take a past lesson date', async () => {
         const result = await service.validateLessonDate(
           'group-uuid-1',
-          '2026-04-01',
-          undefined,
-          ['Administrator'],
+          '2026-04-02',
         );
-        expect(result.group.id).toBe('group-uuid-1');
+        expect(result.effectiveStartTime).toBe('14:00');
+        expect(result.effectiveEndTime).toBe('15:30');
       });
 
-      it('should let a Teacher who is also an Administrator take a past date', async () => {
-        const result = await service.validateLessonDate(
-          'group-uuid-1',
-          '2026-04-01',
-          undefined,
-          ['Teacher', 'Administrator'],
-        );
-        expect(result.group.id).toBe('group-uuid-1');
-      });
-
-      it('should skip time check when group has no lesson times set', async () => {
-        const todayGroup = {
-          ...getTodayMockGroup(),
-          lessonStartTime: null,
-          lessonEndTime: null,
-        };
-        prisma.group.findFirst.mockResolvedValue(todayGroup);
-
-        const result = await service.validateLessonDate(
-          'group-uuid-1',
-          getTodayStr(),
-          undefined,
-          ['Teacher'],
-        );
-        expect(result.group.id).toBe('group-uuid-1');
-      });
-
-      it('returns the times the lesson really runs at', async () => {
-        const result = await service.validateLessonDate(
-          'group-uuid-1',
-          '2026-04-01',
-          undefined,
-          ['Administrator'],
-        );
-        expect(result).toEqual(
-          expect.objectContaining({
-            effectiveStartTime: '09:00',
-            effectiveEndTime: '11:00',
-          }),
-        );
-      });
-
-      it('closes for a Teacher at the end minute itself', async () => {
-        const now = tashkentNow();
-        const endMinute = now.getUTCHours() * 60 + now.getUTCMinutes();
-        const hhmm = (m: number) =>
-          `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-        prisma.group.findFirst.mockResolvedValue({
-          ...getTodayMockGroup(),
-          lessonStartTime: hhmm(Math.max(0, endMinute - 60)),
-          lessonEndTime: hhmm(endMinute),
-        });
-        await expect(
-          service.validateLessonDate('group-uuid-1', getTodayStr(), undefined, [
-            'Teacher',
-          ]),
-        ).rejects.toThrow('Dars vaqti tugagan');
+      it('assertLessonNotEnded allows a future lesson and refuses an ended one', () => {
+        // mockGroup: Wednesday 2026-04-01, 09:00–11:00 Tashkent (04:00–06:00Z).
+        const lesson = { lessonDay: '2026-04-01', endTime: '11:00' };
+        expect(() =>
+          validation().assertLessonNotEnded(
+            lesson,
+            new Date('2026-03-31T10:00:00Z'),
+          ),
+        ).not.toThrow();
+        expect(() =>
+          validation().assertLessonNotEnded(
+            lesson,
+            new Date('2026-04-01T07:00:00Z'),
+          ),
+        ).toThrow("Dars tugagan — kelmaslikni oldindan belgilab bo'lmaydi");
       });
     });
   });
@@ -815,6 +655,35 @@ describe('AttendanceService', () => {
   });
 
   describe('getByDate', () => {
+    it("returns the company's lead and each student's admission", async () => {
+      prisma.attendance.findMany.mockResolvedValue([]);
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10002,
+            {
+              admitted: false,
+              reason: 'NOT_PAID',
+              shortfall: 69231,
+              paidThrough: null,
+            },
+          ],
+        ]),
+      );
+      const result = await service.getByDate('group-uuid-1', '2026-04-01', 1);
+      expect(result.opensMinutesBefore).toBe(10);
+      expect(result.activeStudents[0].admission).toEqual({
+        admitted: true,
+        reason: 'NOT_APPLIED',
+        shortfall: 0,
+        paidThrough: null,
+      });
+      expect(result.activeStudents[1].admission).toMatchObject({
+        admitted: false,
+        shortfall: 69231,
+      });
+    });
+
     it('should return students with attendance status', async () => {
       prisma.attendance.findMany.mockResolvedValue([
         {
@@ -824,7 +693,7 @@ describe('AttendanceService', () => {
         },
       ]);
 
-      const result = await service.getByDate('group-uuid-1', '2026-04-01');
+      const result = await service.getByDate('group-uuid-1', '2026-04-01', 1);
 
       // New shape: { activeStudents, debtorStudents, perLessonCost, coursePrice }
       expect(result.activeStudents).toHaveLength(2);
@@ -857,7 +726,7 @@ describe('AttendanceService', () => {
         },
       ]);
 
-      const result = await service.getByDate('group-uuid-1', '2026-04-01');
+      const result = await service.getByDate('group-uuid-1', '2026-04-01', 1);
 
       const s1 = result.activeStudents.find(
         (s: { studentId: number }) => s.studentId === 10001,
@@ -943,7 +812,7 @@ describe('AttendanceService', () => {
     it("returns the group's lesson times on an ordinary day", async () => {
       prisma.attendance.findMany.mockResolvedValue([]);
 
-      const result = await service.getByDate('group-uuid-1', '2026-04-01');
+      const result = await service.getByDate('group-uuid-1', '2026-04-01', 1);
 
       expect(result.effectiveStartTime).toBe('09:00');
       expect(result.effectiveEndTime).toBe('11:00');
@@ -957,7 +826,7 @@ describe('AttendanceService', () => {
         newLessonEndTime: '19:30',
       });
 
-      const result = await service.getByDate('group-uuid-1', '2026-04-01');
+      const result = await service.getByDate('group-uuid-1', '2026-04-01', 1);
 
       expect(result.effectiveStartTime).toBe('18:00');
       expect(result.effectiveEndTime).toBe('19:30');
@@ -980,7 +849,7 @@ describe('AttendanceService', () => {
         newLessonEndTime: null,
       });
 
-      const result = await service.getByDate('group-uuid-1', '2026-04-01');
+      const result = await service.getByDate('group-uuid-1', '2026-04-01', 1);
 
       expect(result.effectiveStartTime).toBe('09:00');
       expect(result.effectiveEndTime).toBe('11:00');
@@ -990,13 +859,13 @@ describe('AttendanceService', () => {
       prisma.group.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.getByDate('non-existent', '2026-04-01'),
+        service.getByDate('non-existent', '2026-04-01', 1),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException for invalid date format', async () => {
       await expect(
-        service.getByDate('group-uuid-1', 'invalid-date'),
+        service.getByDate('group-uuid-1', 'invalid-date', 1),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -1014,19 +883,32 @@ describe('AttendanceService', () => {
   });
 
   describe('save', () => {
-    // A teacher may only mark today's lesson, during its time. The Teacher
-    // cases below save 2026-04-01 (09:00–11:00), so the clock is pinned to
-    // 10:00 Tashkent that day. `advanceTimers` keeps timers running.
+    // mockGroup's lesson: Wednesday 2026-04-01, 09:00–11:00 Tashkent. A new
+    // register needs its window open (ADR-0054), so the clock sits at 09:30.
     beforeEach(() => {
       jest.useFakeTimers({
-        now: new Date('2026-04-01T05:00:00.000Z'),
-        advanceTimers: true,
+        doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
       });
+      jest.setSystemTime(new Date('2026-04-01T04:30:00.000Z'));
+      prisma.enrollment.findMany.mockResolvedValue(
+        mockEnrollments.map((e) => ({
+          id: `enr-${e.studentId}`,
+          studentId: e.studentId,
+          student: {
+            firstName: e.student.firstName,
+            lastName: e.student.lastName,
+          },
+        })),
+      );
     });
+    afterEach(() => jest.useRealTimers());
 
-    afterEach(() => {
-      jest.useRealTimers();
-    });
+    const twoPresent: SaveAttendanceDto = {
+      entries: [
+        { studentId: 10001, status: 'PRESENT' },
+        { studentId: 10002, status: 'PRESENT' },
+      ],
+    };
 
     // The lesson-end sweep is a Serializable writer too; losing to it is 409.
     it('answers a transaction conflict with 409, anything else unchanged', async () => {
@@ -1048,6 +930,171 @@ describe('AttendanceService', () => {
       await expect(
         service.save('group-uuid-1', '2026-04-01', dto, 1, ['CEO'], 1),
       ).rejects.toBe(boom);
+    });
+
+    it('refuses a CEO after the lesson ends', async () => {
+      jest.setSystemTime(new Date('2026-04-01T06:01:00.000Z'));
+      await expect(
+        service.save('group-uuid-1', '2026-04-01', twoPresent, 1, ['CEO'], 1),
+      ).rejects.toThrow('Dars tugagan');
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it('refuses an administrator on a past lesson day', async () => {
+      await expect(
+        service.save(
+          'group-uuid-1',
+          '2026-03-30',
+          twoPresent,
+          1,
+          ['Administrator'],
+          1,
+        ),
+      ).rejects.toThrow('Dars tugagan');
+    });
+
+    it('refuses a teacher before the window opens', async () => {
+      jest.setSystemTime(new Date('2026-04-01T03:49:00.000Z'));
+      await expect(
+        service.save(
+          'group-uuid-1',
+          '2026-04-01',
+          twoPresent,
+          1,
+          ['Teacher'],
+          1,
+        ),
+      ).rejects.toThrow('10 daqiqa oldin ochiladi');
+    });
+
+    it('refuses a new mark for a student the admission rule blocks', async () => {
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10002,
+            {
+              admitted: false,
+              reason: 'NOT_PAID',
+              shortfall: 69231,
+              paidThrough: null,
+            },
+          ],
+        ]),
+      );
+      prisma.attendance.findMany.mockResolvedValue([]);
+      await expect(
+        service.save(
+          'group-uuid-1',
+          '2026-04-01',
+          twoPresent,
+          1,
+          ['Teacher'],
+          1,
+        ),
+      ).rejects.toThrow("Dilnoza Rashidova to'lov qilmagan");
+      expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it('lets a blocked student be left off the roster', async () => {
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10002,
+            {
+              admitted: false,
+              reason: 'NOT_PAID',
+              shortfall: 69231,
+              paidThrough: null,
+            },
+          ],
+        ]),
+      );
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.attendance.upsert.mockResolvedValue({
+        id: 'att-1',
+        studentId: 10001,
+        status: 'PRESENT',
+      });
+      const result = await service.save(
+        'group-uuid-1',
+        '2026-04-01',
+        { entries: [{ studentId: 10001, status: 'PRESENT' }] },
+        1,
+        ['Teacher'],
+        1,
+      );
+      expect(result.count).toBe(1);
+    });
+
+    it('lets a blocked student be marked EXCUSED', async () => {
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10002,
+            {
+              admitted: false,
+              reason: 'NOT_PAID',
+              shortfall: 69231,
+              paidThrough: null,
+            },
+          ],
+        ]),
+      );
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.attendance.upsert.mockResolvedValue({
+        id: 'att-2',
+        studentId: 10002,
+        status: 'EXCUSED',
+      });
+      await expect(
+        service.save(
+          'group-uuid-1',
+          '2026-04-01',
+          {
+            entries: [
+              { studentId: 10001, status: 'PRESENT' },
+              { studentId: 10002, status: 'EXCUSED' },
+            ],
+          },
+          1,
+          ['Administrator'],
+          1,
+        ),
+      ).resolves.toMatchObject({ count: 2 });
+    });
+
+    it('does not re-judge an unchanged mark', async () => {
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10002,
+            {
+              admitted: false,
+              reason: 'NOT_PAID',
+              shortfall: 69231,
+              paidThrough: null,
+            },
+          ],
+        ]),
+      );
+      prisma.attendance.findMany.mockResolvedValue([
+        { studentId: 10002, status: 'PRESENT', note: null },
+      ]);
+      prisma.attendance.upsert.mockResolvedValue({
+        id: 'att-1',
+        studentId: 10001,
+        status: 'PRESENT',
+      });
+      await expect(
+        service.save(
+          'group-uuid-1',
+          '2026-04-01',
+          twoPresent,
+          1,
+          ['Administrator'],
+          1,
+        ),
+      ).resolves.toMatchObject({ count: 2 });
     });
 
     it('should save attendance and return success', async () => {
@@ -1472,12 +1519,12 @@ describe('AttendanceService', () => {
       };
 
       // 2026-03-30 is the Monday before the pinned "today" — a real lesson
-      // nobody marked.
+      // nobody marked. The new-register window refuses it (ADR-0054); the
+      // lesson goes through «Dars bo'ldimi?», which a teacher cannot answer.
       await expect(
         service.save('group-uuid-1', '2026-03-30', dto, 1, ['Teacher'], 1),
-      ).rejects.toThrow('faqat dars kuni');
+      ).rejects.toThrow('Dars tugagan');
 
-      expect(prisma.$transaction).not.toHaveBeenCalled();
       expect(prisma.attendance.upsert).not.toHaveBeenCalled();
     });
 
@@ -1636,13 +1683,90 @@ describe('AttendanceService', () => {
         (c) => c[0] === 'attendance.student.recorded',
       );
       expect(studentRecorded).toHaveLength(1);
+      // ADR-0048: marked present after the lesson's first save, at 09:30 —
+      // a late arrival, 30 minutes after the 09:00 start.
       expect(studentRecorded[0][1]).toEqual(
         expect.objectContaining({
           studentId: 10002,
           oldStatus: 'ABSENT',
-          newStatus: 'PRESENT',
+          newStatus: 'LATE',
         }),
       );
+      expect(prisma.attendance.upsert).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ status: 'LATE', lateMinutes: 30 }),
+          update: expect.objectContaining({ status: 'LATE', lateMinutes: 30 }),
+        }),
+      );
+    });
+
+    it('writes a first save as sent, with no minutes (ADR-0048)', async () => {
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.attendance.upsert.mockImplementation(({ create }: any) =>
+        Promise.resolve({ id: `att-${create.studentId}`, ...create }),
+      );
+      prisma.group.findUnique.mockResolvedValue({
+        name: 'Deutsch A1',
+        branchId: 1,
+        teachers: [],
+        course: { price: 800000, lessonPaymentCount: 12 },
+      });
+      await service.save(
+        'group-uuid-1',
+        '2026-04-01',
+        {
+          entries: [
+            { studentId: 10001, status: 'PRESENT' },
+            { studentId: 10002, status: 'LATE' },
+          ],
+        },
+        1,
+        ['Administrator'],
+        1,
+      );
+      const creates = prisma.attendance.upsert.mock.calls.map(
+        (c: any) => c[0].create,
+      );
+      expect(creates).toEqual([
+        expect.objectContaining({ status: 'PRESENT', lateMinutes: null }),
+        expect.objectContaining({ status: 'LATE', lateMinutes: null }),
+      ]);
+    });
+
+    it('keeps the minutes of a LATE that stays LATE and clears them when it leaves (ADR-0048)', async () => {
+      prisma.attendance.findMany.mockResolvedValue([
+        { id: 'att-1', studentId: 10001, status: 'LATE', lateMinutes: 12 },
+        { id: 'att-2', studentId: 10002, status: 'LATE', lateMinutes: 7 },
+      ]);
+      prisma.attendance.upsert.mockImplementation(({ create }: any) =>
+        Promise.resolve({ id: `att-${create.studentId}`, ...create }),
+      );
+      prisma.group.findUnique.mockResolvedValue({
+        name: 'Deutsch A1',
+        branchId: 1,
+        teachers: [],
+        course: { price: 800000, lessonPaymentCount: 12 },
+      });
+      await service.save(
+        'group-uuid-1',
+        '2026-04-01',
+        {
+          entries: [
+            { studentId: 10001, status: 'LATE' },
+            { studentId: 10002, status: 'ABSENT' },
+          ],
+        },
+        1,
+        ['Administrator'],
+        1,
+      );
+      const updates = prisma.attendance.upsert.mock.calls.map(
+        (c: any) => c[0].update,
+      );
+      expect(updates).toEqual([
+        expect.objectContaining({ status: 'LATE', lateMinutes: 12 }),
+        expect.objectContaining({ status: 'ABSENT', lateMinutes: null }),
+      ]);
     });
 
     it('refuses an administrator a new register after the lesson ended', async () => {
@@ -1847,17 +1971,20 @@ describe('AttendanceService', () => {
       expect(ahmad!.dots[0]).toEqual({
         date: '2024-01-01',
         status: 'PRESENT',
+        lateMinutes: null,
         enrolled: true,
       });
       expect(ahmad!.dots[1]).toEqual({
         date: '2024-01-03',
         status: 'ABSENT',
+        lateMinutes: null,
         enrolled: true,
       });
       // No attendance row + startDate null (no lower bound) → still enrolled.
       expect(ahmad!.dots[2]).toEqual({
         date: '2024-01-05',
         status: null,
+        lateMinutes: null,
         enrolled: true,
       });
     });

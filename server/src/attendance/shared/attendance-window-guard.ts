@@ -20,6 +20,8 @@ import {
  *
  * `times: null` — the lesson's times are unknown (a QR session started before
  * they were stored): skip the window, still ask the question.
+ * TODO(integration §4.1): delete the `null` branch once the scan passes the
+ * lesson's DB times (§4.5) — no caller will pass null then.
  */
 export async function assertAttendanceWindowOpen(
   db: Pick<Prisma.TransactionClient, 'unmarkedLesson'>,
@@ -27,7 +29,12 @@ export async function assertAttendanceWindowOpen(
     groupId: string;
     date: string;
     parsedDate: Date;
-    times: { startTime: string | null; endTime: string | null } | null;
+    times: {
+      startTime: string | null;
+      endTime: string | null;
+      /** The company's lead (`validateLessonDate`); default ten minutes. */
+      opensMinutesBefore?: number;
+    } | null;
   },
 ): Promise<void> {
   if (a.times) {
@@ -39,8 +46,14 @@ export async function assertAttendanceWindowOpen(
         nowMinutes,
         startTime: a.times.startTime,
         endTime: a.times.endTime,
+        opensMinutesBefore: a.times.opensMinutesBefore,
       }),
-      { date: a.date, todayStr, startTime: a.times.startTime },
+      {
+        date: a.date,
+        todayStr,
+        startTime: a.times.startTime,
+        opensMinutesBefore: a.times.opensMinutesBefore,
+      },
     );
     if (refusal) throw new BadRequestException(refusal);
   }

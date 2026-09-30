@@ -5,6 +5,8 @@ import { AttendanceValidationService } from './attendance-validation.service';
 import { AttendanceReadService } from './attendance-read.service';
 import { AttendanceStatsService } from './attendance-stats.service';
 import { AttendanceSaveService } from './attendance-save.service';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
+import { ADMITTED_WITHOUT_RULE } from '../billing/lesson-admission';
 
 @Injectable()
 export class AttendanceService {
@@ -13,15 +15,11 @@ export class AttendanceService {
     private read: AttendanceReadService,
     private stats: AttendanceStatsService,
     private saveService: AttendanceSaveService,
+    private admission: LessonAdmissionService,
   ) {}
 
-  validateLessonDate(
-    groupId: string,
-    date: string,
-    companyId?: number,
-    roles?: string[],
-  ) {
-    return this.validation.validateLessonDate(groupId, date, companyId, roles);
+  validateLessonDate(groupId: string, date: string, companyId?: number) {
+    return this.validation.validateLessonDate(groupId, date, companyId);
   }
 
   getLessonDates(
@@ -33,14 +31,43 @@ export class AttendanceService {
     return this.read.getLessonDates(groupId, month, year, companyId);
   }
 
-  getByDate(
+  /**
+   * The roster plus what the screen must obey: the company's lead
+   * (`opensMinutesBefore`, next to the roster's effective times, so the form
+   * opens the new-register window as the server judges it) and, per student,
+   * whether contract 3.2 admits them to this lesson (ADR-0047). `late` (the
+   * «Bo'ldi» register) is judged by the same rule.
+   */
+  async getByDate(
     groupId: string,
     date: string,
-    companyId?: number,
+    companyId: number,
     roles?: string[],
     late = false,
   ) {
-    return this.read.getByDate(groupId, date, companyId, roles, late);
+    const roster = await this.read.getByDate(
+      groupId,
+      date,
+      companyId,
+      roles,
+      late,
+    );
+    const [opensMinutesBefore, admission] = await Promise.all([
+      this.validation.opensMinutesBefore(companyId),
+      this.admission.forLesson({
+        groupId,
+        lessonDay: date,
+        studentIds: roster.activeStudents.map((s) => s.studentId),
+      }),
+    ]);
+    return {
+      ...roster,
+      opensMinutesBefore,
+      activeStudents: roster.activeStudents.map((s) => ({
+        ...s,
+        admission: admission.get(s.studentId) ?? ADMITTED_WITHOUT_RULE,
+      })),
+    };
   }
 
   getLessonSequence(groupId: string, companyId?: number) {

@@ -17,6 +17,7 @@ import {
 } from './shared/deserved-math';
 import { prorateFixedMonthly } from './shared/prorate-fixed-monthly';
 import {
+  awaitsStudentPayment,
   packPriceCandidates,
   resolveLessonPricing,
   sweepGapLessons,
@@ -581,7 +582,13 @@ export class SalaryCalculationService {
           status: { in: ['PRESENT', 'LATE', 'ABSENT'] },
           date: { gte: periodStartDate, lt: periodEndDateExclusive },
         },
-        select: { id: true, studentId: true, groupId: true, date: true },
+        select: {
+          id: true,
+          studentId: true,
+          groupId: true,
+          date: true,
+          status: true,
+        },
       }),
       this.prisma.group.findMany({
         where: { companyId },
@@ -800,9 +807,15 @@ export class SalaryCalculationService {
     const eraStart = topUpEraStartDate();
     if (periodStart > eraStart) {
       const backlog = await this.prisma.$queryRaw<
-        { id: string; studentId: number; groupId: string; date: Date }[]
+        {
+          id: string;
+          studentId: number;
+          groupId: string;
+          date: Date;
+          status: string;
+        }[]
       >`
-        SELECT a.id, a."studentId", a."groupId", a.date
+        SELECT a.id, a."studentId", a."groupId", a.date, a.status::text AS status
         FROM "Attendance" a
         WHERE a."companyId" = ${companyId}
           AND a.status::text IN ('PRESENT', 'LATE', 'ABSENT')
@@ -841,6 +854,11 @@ export class SalaryCalculationService {
         if (cappedByInactivity(att.studentId, att.date)) continue;
         const g = groupMap.get(att.groupId);
         if (!g) continue;
+        const dStr = dateStr(att.date);
+        // ADR-0048 (R4): waits for the student's payment, never fronted.
+        if (awaitsStudentPayment(att, g.course, dStr, backlogFrozen)) {
+          continue;
+        }
         const pricing = resolveLessonPricing(
           g.course,
           att.studentId,
@@ -849,7 +867,6 @@ export class SalaryCalculationService {
           backlogFrozen,
           backlogPack.get(att.id),
         );
-        const dStr = dateStr(att.date);
         for (const tid of resolveTeachers(att.groupId, dStr)) {
           if (fixedMonthlyTeachers.has(tid)) continue;
           const v = resolveRate(tid, att.groupId, att.date);

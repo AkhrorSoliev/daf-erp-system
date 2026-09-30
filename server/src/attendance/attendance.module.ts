@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { SettingsModule } from '../settings/settings.module';
 import { AttendanceService } from './attendance.service';
 import { AttendanceValidationService } from './attendance-validation.service';
 import { AttendanceReadService } from './attendance-read.service';
@@ -30,6 +31,7 @@ import { UnmarkedLessonsService } from './unmarked-lessons.service';
     TelegramDigestModule,
     LessonCancellationsModule,
     LessonReschedulesModule,
+    SettingsModule,
   ],
   controllers: [AttendanceController],
   providers: [

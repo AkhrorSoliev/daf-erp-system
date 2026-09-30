@@ -8,6 +8,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { LessonBillingService } from '../billing/lesson-billing.service';
+import { PaymentPromisesService } from '../payment-promises/payment-promises.service';
 import { EntityHistoryService } from '../common/entity-history';
 import {
   PaymentMethod,
@@ -90,6 +91,7 @@ export class PaymentsWriteService {
     private lessonBillingService: LessonBillingService,
     private entityHistoryService: EntityHistoryService,
     private eventEmitter: EventEmitter2,
+    private paymentPromises: PaymentPromisesService,
   ) {}
 
   async create(dto: CreatePaymentDto, userId: number, companyId: number) {
@@ -308,6 +310,26 @@ export class PaymentsWriteService {
         companyId,
         items: carriedOver,
       } satisfies SalaryCarriedOverPayload);
+    }
+
+    // ADR-0047 / contract 3.2: a part payment carries a promise for the rest.
+    // The payment stands whatever happens to the promise.
+    if (dto.promiseDate && (studentBalance ?? 0) < 0) {
+      try {
+        await this.paymentPromises.upsertOpenPromise(
+          {
+            studentId: dto.studentId,
+            promiseDate: dto.promiseDate,
+            comment: `Qisman to'lov ${formatSom(dto.amount)} so'm; qolgan ${formatSom(-(studentBalance ?? 0))} so'm`,
+          },
+          userId,
+          companyId,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Promise after payment ${payment.id} failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
     }
 
     return { ...payment, studentBalance };

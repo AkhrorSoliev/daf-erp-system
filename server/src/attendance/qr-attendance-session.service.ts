@@ -34,16 +34,17 @@ export class QrAttendanceSessionService {
     date: string,
     teacherId: number,
     companyId: number,
-    roles?: string[],
   ) {
-    // Validate date is a valid lesson date (includes time check for teachers)
-    const { parsedDate, effectiveStartTime, effectiveEndTime } =
-      await this.attendanceService.validateLessonDate(
-        groupId,
-        date,
-        companyId,
-        roles,
-      );
+    const {
+      parsedDate,
+      effectiveStartTime,
+      effectiveEndTime,
+      opensMinutesBefore,
+    } = await this.attendanceService.validateLessonDate(
+      groupId,
+      date,
+      companyId,
+    );
 
     // A QR session writes a new register — the same window as a manual one
     // (spec 2026-09-29 §3.1), for every role.
@@ -51,7 +52,11 @@ export class QrAttendanceSessionService {
       groupId,
       date,
       parsedDate,
-      times: { startTime: effectiveStartTime, endTime: effectiveEndTime },
+      times: {
+        startTime: effectiveStartTime,
+        endTime: effectiveEndTime,
+        opensMinutesBefore,
+      },
     });
 
     const group = await this.prisma.group.findFirst({

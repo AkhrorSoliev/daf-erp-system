@@ -2,14 +2,16 @@ import { TASHKENT_OFFSET_MS } from '../../common/date/tashkent';
 
 /**
  * When a NEW register (no attendance rows yet) may be saved — spec
- * 2026-09-29 §3.1, ADR-0054: only on the lesson's own Tashkent day, from ten
- * minutes before it starts until it ends, for every role, the CEO included.
+ * 2026-09-29 §3.1, ADR-0054: only on the lesson's own Tashkent day, from the
+ * company's lead (`payment.attendanceOpensMinutesBefore`, default ten
+ * minutes) before it starts until it ends, for every role, the CEO included.
  * After the end the only way in is the late register, which leaves the
  * teacher unpaid for the lesson. Editing a register that already exists is
  * not governed by this.
  */
 export type AttendanceWindow = 'OPEN' | 'BEFORE' | 'ENDED' | 'NOT_TODAY';
 
+/** The default lead; the company's `payment.attendanceOpensMinutesBefore` wins. */
 export const OPENS_MINUTES_BEFORE = 10;
 /** A group without lesson times is treated as meeting 08:00–23:00. */
 export const DAY_START_TIME = '08:00';
@@ -70,14 +72,13 @@ export function newAttendanceWindow(args: {
   nowMinutes: number;
   startTime: string | null;
   endTime: string | null;
+  opensMinutesBefore?: number;
 }): AttendanceWindow {
   if (args.date !== args.todayStr) return 'NOT_TODAY';
   if (args.nowMinutes >= toMinutes(args.endTime ?? DAY_END_TIME))
     return 'ENDED';
-  if (
-    args.startTime &&
-    args.nowMinutes < toMinutes(args.startTime) - OPENS_MINUTES_BEFORE
-  ) {
+  const lead = args.opensMinutesBefore ?? OPENS_MINUTES_BEFORE;
+  if (args.startTime && args.nowMinutes < toMinutes(args.startTime) - lead) {
     return 'BEFORE';
   }
   return 'OPEN';
@@ -96,13 +97,18 @@ export function lessonHasEnded(args: {
 /** The Uzbek refusal for a closed window; `null` while it is open. */
 export function windowRefusal(
   window: AttendanceWindow,
-  args: { date: string; todayStr: string; startTime: string | null },
+  args: {
+    date: string;
+    todayStr: string;
+    startTime: string | null;
+    opensMinutesBefore?: number;
+  },
 ): string | null {
   switch (window) {
     case 'OPEN':
       return null;
     case 'BEFORE':
-      return `Davomat dars boshlanishidan ${OPENS_MINUTES_BEFORE} daqiqa oldin ochiladi (${args.startTime})`;
+      return `Davomat dars boshlanishidan ${args.opensMinutesBefore ?? OPENS_MINUTES_BEFORE} daqiqa oldin ochiladi (${args.startTime})`;
     case 'NOT_TODAY':
       return args.date > args.todayStr
         ? 'Davomat faqat dars kuni olinadi. Kelmaydiganlarni «Oldindan belgilash» bilan belgilang'
@@ -110,4 +116,60 @@ export function windowRefusal(
     case 'ENDED':
       return ENDED_REFUSAL;
   }
+}
+
+/**
+ * Whole minutes from the lesson's effective start to `now`, Tashkent time;
+ * null when the lesson has no start time or `now` is not past the start of
+ * that day's lesson. Used for «N daqiqa kechikdi» (ADR-0048).
+ */
+export function minutesLate(input: {
+  lessonDay: string;
+  startTime: string | null;
+  now: Date;
+}): number | null {
+  if (!input.startTime) return null;
+  const startUtcMs =
+    Date.parse(`${input.lessonDay}T00:00:00.000Z`) -
+    TASHKENT_OFFSET_MS +
+    toMinutes(input.startTime) * 60_000;
+  const minutes = Math.floor((input.now.getTime() - startUtcMs) / 60_000);
+  return minutes > 0 ? minutes : null;
+}
+
+/** Statuses that say the student is in the lesson. */
+const IN_LESSON = new Set(['PRESENT', 'LATE']);
+
+/**
+ * The status and minutes a manual save writes for one student (ADR-0048).
+ * An administrator marking a student present after the lesson's first save
+ * is recording a late arrival: the student becomes LATE with the minutes
+ * since the start. A LATE that stays LATE keeps its minutes; any other
+ * status clears them. A teacher's save, the lesson's first save, and a
+ * student already in the lesson are written as sent.
+ */
+export function lateArrival(input: {
+  lessonAlreadyTaken: boolean;
+  savedByTeacherOnly: boolean;
+  oldStatus: string | null;
+  oldLateMinutes: number | null;
+  newStatus: string;
+  /** `minutesLate` at the moment of the save. */
+  minutesNow: number | null;
+}): { status: string; lateMinutes: number | null } {
+  const arriving =
+    input.lessonAlreadyTaken &&
+    !input.savedByTeacherOnly &&
+    !IN_LESSON.has(input.oldStatus ?? '') &&
+    IN_LESSON.has(input.newStatus);
+  if (arriving && input.minutesNow !== null) {
+    return { status: 'LATE', lateMinutes: input.minutesNow };
+  }
+  if (input.newStatus !== 'LATE') {
+    return { status: input.newStatus, lateMinutes: null };
+  }
+  return {
+    status: 'LATE',
+    lateMinutes: input.oldStatus === 'LATE' ? input.oldLateMinutes : null,
+  };
 }

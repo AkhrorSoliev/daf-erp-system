@@ -1,3 +1,4 @@
+import type { PaymentReach } from "./record-payment-admission";
 import { formatPrice } from "@/lib/format-utils";
 
 export type PaymentPreviewModel = "MONTHLY" | "LESSON_PACK";
@@ -14,6 +15,9 @@ export interface MonthlyPreviewBlock {
   nextMonthAmount: number;
   discountPercent: number;
   enrollments: MonthlyPreviewEnrollment[];
+  // Contract 3.2 (ADR-0047): how far the balance after this payment reaches.
+  // Absent on an older server, null before the rule starts.
+  admission?: PaymentReach | null;
 }
 
 /** The slice of GET /payments/preview the quick amounts are derived from. */

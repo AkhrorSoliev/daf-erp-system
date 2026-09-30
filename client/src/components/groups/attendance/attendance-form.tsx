@@ -177,6 +177,8 @@ export function AttendanceForm({
       setStudents(active);
       setDebtorStudents(debtors);
       setCoursePrice(data.coursePrice ?? 0);
+      // TODO(integration §4.1): keep `data.opensMinutesBefore ?? 10` beside
+      // these and use it in newAttendanceWindow and lessonTimeInfo.
       setEffectiveTimes({
         start: data.effectiveStartTime ?? null,
         end: data.effectiveEndTime ?? null,
@@ -230,6 +232,9 @@ export function AttendanceForm({
     });
   };
 
+  // TODO(integration §4.6): skip students with `admission?.admitted === false`
+  // here and in unmarkedStudents; the row gets onCollectPayment and the
+  // RecordPaymentDialog (admins only).
   const markAllPresent = () => {
     setEntries((prev) => {
       const next = new Map(prev);

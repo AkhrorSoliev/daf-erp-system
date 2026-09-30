@@ -903,6 +903,8 @@ async function main(prisma: PrismaClient) {
     // SettingsService — `resolveMonthPlanDates` unga tegmaydi, shuning uchun
     // bu skriptda hech qachon chaqirilmaydi.
     undefined as unknown as never,
+    // SalaryAccrualService — faqat sinov darsi (3.5) ketishida ishlatiladi.
+    undefined as unknown as never,
   );
   const tx = prisma as unknown as Prisma.TransactionClient;
 

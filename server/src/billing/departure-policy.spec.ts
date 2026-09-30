@@ -199,3 +199,67 @@ describe('departure policy (contract 6.2)', () => {
     ).toMatchObject({ lessons: 13 });
   });
 });
+
+describe('trial lesson (contract 3.5)', () => {
+  it('returns the whole month, the held lesson included, under every policy', () => {
+    for (const policy of [
+      'STUDENT_CANCELLED',
+      'LEVEL_COMPLETED',
+      'CENTER_INITIATIVE',
+      'QUALITY_CLAIM',
+    ] as const) {
+      const r = policyRelease(
+        input({ departureDay: '2026-10-02' }),
+        policy,
+        40,
+        { trialLesson: true },
+      );
+      expect(r.trial).toBe(true);
+      expect(r.withheld).toBe(false);
+      expect(r.release).toMatchObject({ lessons: 13, amount: 1040000 });
+    }
+  });
+
+  it('wins over rule 6.2 even when the share is above the threshold', () => {
+    const r = policyRelease(input(), 'STUDENT_CANCELLED', 40, {
+      trialLesson: true,
+    });
+    expect(r.withheld).toBe(false);
+    expect(r.release).toMatchObject({ lessons: 13 });
+  });
+
+  it('does not apply before 01.10.2026', () => {
+    const r = policyRelease(
+      input({ departureDay: '2026-09-30' }),
+      'STUDENT_CANCELLED',
+      40,
+      { trialLesson: true },
+    );
+    expect(r.trial).toBe(false);
+    expect(r.release).toMatchObject({ lessons: 13 });
+  });
+
+  it('keeps the ordinary rule without the flag', () => {
+    const r = policyRelease(
+      input({ departureDay: '2026-10-02' }),
+      'STUDENT_CANCELLED',
+      40,
+    );
+    expect(r.trial).toBe(false);
+    expect(r.release).toMatchObject({ lessons: 12 });
+  });
+
+  it('leaves the frozen-out lessons out of the release', () => {
+    const r = policyRelease(
+      input({
+        departureDay: '2026-10-02',
+        frozenOutDates: OCTOBER.slice(10),
+        chargedAmount: 800000,
+      }),
+      'STUDENT_CANCELLED',
+      40,
+      { trialLesson: true },
+    );
+    expect(r.release).toMatchObject({ lessons: 10, amount: 800000 });
+  });
+});
