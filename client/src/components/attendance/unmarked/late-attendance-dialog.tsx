@@ -25,6 +25,7 @@ import {
   type AttendanceEntry,
   type StudentAttendance,
 } from "@/components/groups/attendance/attendance-form-utils";
+import { markableStudents } from "@/components/groups/attendance/attendance-admission";
 
 interface LateAttendanceDialogProps {
   open: boolean;
@@ -68,6 +69,10 @@ export function LateAttendanceDialog({
     staleTime: 0,
   });
   const students = roster.data ?? [];
+  // Contract 3.2 applies in «Bo'ldi» too: a student it keeps out of the lesson
+  // can only be «Sababli» or left off, so «Barchasiga — Keldi» and the unmarked
+  // count skip them (else the register could never be saved).
+  const markable = markableStudents(students);
 
   const entryFor = (s: StudentAttendance): AttendanceEntry =>
     marks.get(s.studentId) ?? {
@@ -83,7 +88,11 @@ export function LateAttendanceDialog({
   };
 
   const markAllPresent = () =>
-    setMarks(new Map(students.map((s) => [s.studentId, { ...entryFor(s), status: "PRESENT" }])));
+    setMarks((prev) => {
+      const next = new Map(prev);
+      for (const s of markable) next.set(s.studentId, { ...entryFor(s), status: "PRESENT" });
+      return next;
+    });
 
   const reset = () => {
     setMarks(new Map());
@@ -98,16 +107,18 @@ export function LateAttendanceDialog({
     onOpenChange(next);
   };
 
-  const unmarkedCount = students.filter((s) => !entryFor(s).status).length;
+  const unmarkedCount = markable.filter((s) => !entryFor(s).status).length;
   const reasonMissing = exempt && !exemptReason.trim();
 
   const handleSave = async () => {
     setSubmitting(true);
     try {
       const { data } = await api.post<{ message?: string }>(`/attendance/${lesson.groupId}/date/${lesson.date}/late`, {
-        entries: students.map((s) => {
+        // Only entries that have a status: a blocked student left unmarked would
+        // otherwise go out as `status: null`, which the server's DTO refuses.
+        entries: students.flatMap((s) => {
           const e = entryFor(s);
-          return { studentId: s.studentId, status: e.status, note: e.note };
+          return e.status ? [{ studentId: s.studentId, status: e.status, note: e.note }] : [];
         }),
         ...(exempt ? { teacherPayExempt: true, exemptReason: exemptReason.trim() } : {}),
       });

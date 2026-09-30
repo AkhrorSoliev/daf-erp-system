@@ -348,7 +348,7 @@ export function PaymentSettingsClient() {
           {!isCeo && canEdit && (
             <p className="text-xs text-muted-foreground">
               Bu qiymat filial bo&apos;yicha emas — butun kompaniya uchun bitta,
-              shuning uchun faqat CEO o&apos;zgartira oladi.
+              shuning uchun faqat markaz rahbari o&apos;zgartira oladi.
             </p>
           )}
           {/* debtWriteOffEnabled ham companyLevelOnly — CEO buni butun
@@ -394,7 +394,7 @@ export function PaymentSettingsClient() {
           {!isCeo && canEdit && (
             <p className="text-xs text-muted-foreground">
               Bu qiymat filial bo&apos;yicha emas — butun kompaniya uchun bitta,
-              shuning uchun faqat CEO o&apos;zgartira oladi.
+              shuning uchun faqat markaz rahbari o&apos;zgartira oladi.
             </p>
           )}
         </div>
@@ -432,7 +432,7 @@ export function PaymentSettingsClient() {
           {!isCeo && canEdit && (
             <p className="text-xs text-muted-foreground">
               Bu qiymat filial bo&apos;yicha emas — butun kompaniya uchun bitta,
-              shuning uchun faqat CEO o&apos;zgartira oladi.
+              shuning uchun faqat markaz rahbari o&apos;zgartira oladi.
             </p>
           )}
           {/* noRefundAfterPercent ham companyLevelOnly — backend filial

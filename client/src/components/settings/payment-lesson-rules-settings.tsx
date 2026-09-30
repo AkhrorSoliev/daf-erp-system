@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 
-/** The lesson rules of ADR-0048/0048 the CEO can switch without a deploy. */
+/** The lesson rules of ADR-0047/0048 the CEO can switch without a deploy. */
 export interface LessonRuleSettings {
   "payment.admissionRuleEnabled": boolean;
   "payment.trialLessonEnabled": boolean;
@@ -23,7 +23,7 @@ interface Props {
 }
 
 const COMPANY_ONLY_NOTE =
-  "Bu qiymat filial bo'yicha emas — butun kompaniya uchun bitta, shuning uchun faqat CEO o'zgartira oladi.";
+  "Bu qiymat filial bo'yicha emas — butun kompaniya uchun bitta, shuning uchun faqat markaz rahbari o'zgartira oladi.";
 
 /**
  * «Darsga qo'yish», «Sinov darsi» and the attendance window lead. All three
@@ -129,8 +129,10 @@ export function PaymentLessonRulesSettings({
           Davomat dars boshlanishidan necha daqiqa oldin ochiladi
         </Label>
         <p className="text-xs text-muted-foreground">
-          Davomat shu daqiqa oldin ochiladi va dars tugashi bilan yopiladi —
-          barcha rollar uchun bir xil. 0 dan 60 gacha; standart 10.
+          Yangi davomat shu daqiqa oldin ochiladi va dars tugashi bilan
+          yopiladi — barcha rollar uchun bir xil. Olingan davomatni markaz
+          rahbari, filial direktori va administrator dars tugagach ham tuzata
+          oladi. 0 dan 60 gacha; standart 10.
         </p>
         <div className="flex items-center gap-2">
           <Input

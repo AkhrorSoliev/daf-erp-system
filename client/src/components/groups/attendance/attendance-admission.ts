@@ -3,6 +3,29 @@ import type { LessonAdmission } from "./attendance-form-utils";
 
 const ddmm = (day: string) => `${day.slice(8, 10)}.${day.slice(5, 7)}`;
 
+/**
+ * The students a register can ask a mark for. Contract 3.2 keeps a blocked
+ * student out of the lesson (only «Sababli» can be recorded), so «Barchasiga —
+ * Keldi» skips them and they never count as unmarked. Without an `admission`
+ * (an older server) a student is admitted.
+ */
+export function markableStudents<S extends { admission?: LessonAdmission }>(
+  students: S[],
+): S[] {
+  return students.filter((s) => s.admission?.admitted !== false);
+}
+
+/**
+ * What the payment dialog suggests for a blocked student: the least that
+ * admits them, rounded up to a whole 1 000 so'm (never below 1 000).
+ */
+export function suggestedPaymentAmount(
+  admission: LessonAdmission | undefined,
+): number | undefined {
+  if (!admission) return undefined;
+  return Math.max(1000, Math.ceil(admission.shortfall / 1000) * 1000);
+}
+
 /** What a roster row says about contract 3.2 admission (ADR-0047). */
 export function admissionCopy(
   admission: LessonAdmission | undefined,
@@ -14,7 +37,7 @@ export function admissionCopy(
       blocked: true,
       label: "To'lov qilinmagan · darsga qo'yilmaydi",
       warning: isAdmin
-        ? `Bugungi darsga kirishi uchun kamida ${formatPrice(admission.shortfall)} so'm kerak. Oyni to'liq qoplamasa, qolgan qismi uchun to'lov va'dasi yoziladi.`
+        ? `Bu darsga kirishi uchun kamida ${formatPrice(admission.shortfall)} so'm kerak. Oyni to'liq qoplamasa, qolgan qismi uchun to'lov va'dasi yoziladi.`
         : "Bu o'quvchi oylik to'lovni qilmagan. Shartnomaga ko'ra 2-darsdan boshlab to'lov qilinmaguncha darsga qo'yilmaydi. Agar u darsda o'tirsa va keyinroq to'lov qilsa ham, bu dars uchun sizga ish haqi yozilmaydi.",
     };
   }
