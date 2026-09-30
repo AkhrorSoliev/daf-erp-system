@@ -52,7 +52,13 @@ export const qollanmaMdxKomponentlari: MDXComponents = {
     const kod = mermaidKodi(children);
     if (kod) return <Diagramma kod={kod} />;
     return (
-      <pre className={cn("my-4 overflow-x-auto rounded-lg border bg-muted/40 p-4 text-sm", className)} {...p}>
+      <pre
+        className={cn(
+          "my-4 overflow-x-auto rounded-lg border bg-muted/40 p-4 text-sm [&>code]:bg-transparent [&>code]:p-0 [&>code]:text-[1em]",
+          className,
+        )}
+        {...p}
+      >
         {children}
       </pre>
     );

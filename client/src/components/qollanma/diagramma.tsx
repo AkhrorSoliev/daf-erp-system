@@ -20,16 +20,20 @@ export function Diagramma({ kod }: { kod: string }) {
     let bekor = false;
     import("mermaid")
       .then(async ({ default: mermaid }) => {
+        if (bekor) return;
         mermaid.initialize({
           startOnLoad: false,
           securityLevel: "strict",
+          // Buzuq diagramma o'zining "Syntax error" rasmini <body> oxirida qoldirmasin.
+          suppressErrorRendering: true,
           theme: resolvedTheme === "dark" ? "dark" : "default",
           fontFamily: "inherit",
         });
         const { svg } = await mermaid.render(id, kod);
         if (!bekor) setNatija({ kalit, svg });
       })
-      .catch(() => {
+      .catch((xato) => {
+        console.error("Qo'llanma diagrammasi chizilmadi", xato);
         if (!bekor) setNatija({ kalit, svg: null });
       });
     return () => {
@@ -38,7 +42,7 @@ export function Diagramma({ kod }: { kod: string }) {
   }, [id, kalit, kod, resolvedTheme]);
 
   const joriy = natija?.kalit === kalit ? natija : null;
-  if (!joriy) return <Skeleton className="my-6 h-48 w-full" />;
+  if (!joriy) return <Skeleton className="my-6 h-48 w-full" aria-busy="true" aria-label="Diagramma yuklanmoqda" />;
   if (joriy.svg === null) {
     return <pre className="my-6 overflow-x-auto rounded-lg border bg-muted/40 p-4 text-sm">{kod}</pre>;
   }
