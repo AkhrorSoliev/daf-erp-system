@@ -1,0 +1,80 @@
+## Qanday ishlaydi
+
+1. **O'quvchi to'laydi.** O'quvchi portalda «To'lovlar» sahifasini ochadi. «Balansni to'ldirish» kartasida summani yozadi (kamida 1 000 so'm; tezkor tugmalar 100 000 dan 700 000 so'mgacha) va Payme yoki Click tugmasini bosadi. Portal uni to'lov tizimi sahifasiga o'tkazadi.
+2. **Pul balansga tushadi.** To'lov tizimi to'lov haqida tizimimizga xabar beradi. Tizim o'quvchini ID raqami bo'yicha topadi va pulni balansga qo'shadi. Xodim hech narsa qilmaydi.
+3. **O'quvchi natijani ko'radi.** Portal balansni yangilaydi: «Joriy balans» o'zgaradi, «Balans tarixi» da «To'lov qabul qilindi» yozuvi paydo bo'ladi.
+
+Onlayn to'lov qo'lda qayd qilingan to'lov kabi ishlaydi: balans minusda bo'lsa, avval qarzni yopadi; qarz to'liq yopilsa, ochiq to'lov va'dasi bajarilgan hisoblanadi; dars paketida ustoz ulushi yoziladi. Batafsil — [To'lov qayd qilish](/qollanma/tolovlar/tolov-qayd-qilish).
+
+Chetlatilgan, muzlatilgan va bitirgan o'quvchining portal hisobi ochiq qoladi: u qarzini onlayn to'lashi mumkin. Arxivlangan o'quvchining hisobi yopiq: [Chetlatish, bitirish, arxiv](/qollanma/oquvchilar/chetlatish-va-arxiv).
+
+## Muddat
+
+Yakunlanmagan to'lov cheksiz turmaydi: Payme to'lovi 12 soatdan keyin, Click to'lovi 30 daqiqadan keyin o'zi bekor bo'ladi. Muddati o'tgan Click to'lovini keyin tasdiqlash rad etiladi: pul balansga tushmaydi.
+
+## Ekranda qanday ko'rinadi
+
+- «Umumiy ma'lumotlar» sahifasidagi «Oxirgi to'lovlar» jadvalida onlayn to'lovning «Usul» ustunida «Payme» yoki «Click» turadi, «Qabul qildi» ustunida esa «—»: uni xodim qayd qilmagan.
+- O'quvchi kartasining «To'lovlar» tabida to'lov boshqalar kabi turadi va uning «Chek» havolasi bor.
+- Onlayn to'lov uchun tizim o'quvchiga Telegramda chek yubormaydi. Chek faqat xodim qayd qilgan to'lov uchun ketadi.
+- Onlayn to'lovning summasini to'g'rilab bo'lmaydi: u to'lov tizimiga tegishli. Tizim rad etadi: «Faqat qo'lda kiritilgan to'lovni to'g'rilash mumkin» ([To'lovni to'g'rilash](/qollanma/tolovlar/tolovni-togrilash)).
+- To'lov tizimi komissiyasi balansga ta'sir qilmaydi: o'quvchi to'lagan summaning hammasi balansga tushadi.
+
+## Tranzaksiyani qo'lda biriktirish
+
+To'lov tizimi hisobotidagi tranzaksiyani o'quvchiga qo'lda ham biriktirish mumkin. «To'lov qayd qilish» oynasida «Naqd» dan boshqa usulni tanlang: «Tranzaksiyani biriktirish» bloki chiqadi. «Tranzaksiya raqami (externalId)» ga to'lov tizimidagi raqamni yozing. Tranzaksiya o'quvchiga biriktiriladi va uni ikkinchi marta biriktirib bo'lmaydi. Raqam yozilganda «Provayder komissiyasi» maydoni ham chiqadi: u komissiyani alohida yozib qo'yadi.
+
+Bunday to'lovning summasi keyin to'g'rilanmaydi: u tashqi to'lov tizimining summasi bilan bog'langan.
+
+## To'lov tizimlari jurnali
+
+Moliya → «To'lov tizimlari jurnali» sahifasi to'lov tizimlaridan kelgan so'rovlarni ko'rsatadi, har so'rov — bir qator. Uni faqat CEO ko'radi.
+
+| Ustun | Ma'nosi |
+|---|---|
+| «Vaqt» | So'rov kelgan vaqt |
+| «To'lov tizimi» | Payme, Click yoki Uzum |
+| «Bosqich» | To'lov qaysi bosqichda: Payme'da «Boshlandi», «To'landi», «Bekor qilindi»; Click'da «Tayyorlash» va «Yakunlash» |
+| «O'quvchi» | To'lov kimniki (havola o'quvchi kartasiga olib boradi) |
+| «Summa» | So'rovdagi summa |
+| «Natija» | «Muvaffaqiyatli» — so'rov to'g'ri qayta ishlandi; «Kutilmoqda» — hali ishlab chiqilmagan; «Xato» — qayta ishlashda xato bo'ldi; «Xavfsizlik xatosi» — so'rovning xavfsizlik kaliti to'g'ri kelmadi |
+
+- Qatorni bossangiz, tafsilot oynasi ochiladi: «Vaqt», «Summa», «O'quvchi», «Qayta ishlangan vaqt», «Tranzaksiya raqami», xato bo'lsa «Xato xabari» va «Texnik ma'lumot» (to'lov tizimi yuborgan xom ma'lumot).
+- Sahifa tepasida ogohlantirish chiqishi mumkin: «... ta shubhali so'rov — xavfsizlik kaliti to'g'ri kelmagan» yoki «... ta so'rov hali ishlab chiqilmagan». Son faqat ochiq turgan sahifadagi qatorlar bo'yicha sanaladi.
+- To'lov tizimlari o'zi yuboradigan texnik tekshiruv so'rovlari («Tekshirish», «Payme holat so'radi», «Davriy ro'yxat») pul harakatiga aloqasiz. Ular standart holatda yashirin; «Texnik so'rovlarni ko'rsatish» yoqilsa chiqadi.
+- Filtrlar: o'quvchi bo'yicha qidiruv (ID, ism, familiya), «Barcha to'lov tizimlari», «Barcha natijalar» va sana oralig'i.
+
+## Payme to'lovni bekor qilsa
+
+Payme yakunlangan to'lovni bekor qilsa, tizimdagi to'lov ham bekor qilinadi: balans shuncha kamayadi va o'quvchiga shu kuni soat 20:00 da to'lov bekor qilingani haqida xabar boradi (Telegram bog'langan bo'lsa). Balansda shuncha pul bo'lmasa, balans minusga tushadi.
+
+Dars paketida pul allaqachon darslarga sarflangan bo'lsa, tizim bekor qilishni rad etadi va to'lov joyida qoladi. Bunday holatni hal qiladigan tugma ekranda yo'q.
+
+## Uzum
+
+Uzum orqali onlayn to'lov hozir ishlamaydi. Portalda «Uzum Bank» kulrang turadi va «Tez kunda» belgisi bor: uni bosib bo'lmaydi. Uzumga ulanish tizimda hali yozilmagan. Uzum orqali kelgan pulni xodim qo'lda qayd qiladi: «To'lov qayd qilish» oynasida usul «Uzum».
+
+## Istisnolar
+
+- Hali yakunlanmagan to'lov (Payme'da «Boshlandi», Click'da «Tayyorlash») balansga hech narsa qo'shmaydi: pul «To'landi» yoki «Yakunlash» bosqichida tushadi.
+
+## Kim qila oladi
+
+«Ha» — ekranda tugma bor va tizim amalni qabul qiladi. «—» — ekranda yo'q yoki tizim rad etadi.
+
+| Amal | CEO | Filial direktori | Administrator | Kassir |
+|---|---|---|---|---|
+| Onlayn to'lovni «Oxirgi to'lovlar» da ko'rish | Ha | Ha | Ha | Ha |
+| Tranzaksiya raqami bilan biriktirish | Ha | Ha | Ha | Ha |
+| «To'lov tizimlari jurnali» ni ko'rish | Ha | — | — | — |
+| Onlayn to'lov summasini to'g'rilash | — | — | — | — |
+| Onlayn to'lovni bekor qilish | — | — | — | — |
+
+Onlayn to'lovni faqat to'lov tizimi (Payme) bekor qila oladi; xodimda buning uchun tugma yo'q.
+
+## Tizimda qayerda
+
+- O'quvchi portali → «To'lovlar»: «Balansni to'ldirish» kartasi.
+- Moliya → [To'lov tizimlari jurnali](/payments/gateway-events) — faqat CEO menyusida.
+- Moliya → [Umumiy ma'lumotlar](/payments/overview) → «Oxirgi to'lovlar».
+- [O'quvchi kartasi](/qollanma/oquvchilar/oquvchi-kartasi) → «To'lovlar» tabi.

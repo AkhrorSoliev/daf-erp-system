@@ -1,13 +1,14 @@
 import type { QollanmaSahifa } from "../turlar";
 import { boshlash } from "./boshlash";
 import { oquvchilar } from "./oquvchilar";
+import { tolovlar } from "./tolovlar";
 
 /**
  * Qo'llanmaning yagona reyestri. Menyu, qidiruv, rol filtri, «?» tugmasi va
  * ADR testi shu ro'yxatdan o'qiydi. Tartib = `bolimlar.ts` tartibi.
  * Yangi bo'lim fayli shu yerga, o'z o'rniga qo'shiladi.
  */
-export const sahifalar: QollanmaSahifa[] = [...boshlash, ...oquvchilar];
+export const sahifalar: QollanmaSahifa[] = [...boshlash, ...oquvchilar, ...tolovlar];
 
 export function sahifaTopish(bolim: string, sahifa: string): QollanmaSahifa | undefined {
   return sahifalar.find((s) => s.bolim === bolim && s.sahifa === sahifa);

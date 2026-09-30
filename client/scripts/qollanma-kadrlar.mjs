@@ -43,4 +43,21 @@ export const KADRLAR = [
     ],
     kesish: "role=alertdialog",
   },
+  {
+    nom: "tolovlar/tolov-qayd-qilish",
+    url: "/payments/pending",
+    tayyorla: async (page) => {
+      await page.getByRole("button", { name: "To'lov qayd qilish" }).first().click();
+    },
+    kutish: "role=dialog",
+    belgilar: [],
+    kesish: "role=dialog",
+  },
+  {
+    nom: "tolovlar/qarzdorlik",
+    url: "/payments/debt",
+    kutish: "role=tablist",
+    belgilar: [{ selector: "role=tablist", raqam: 1 }],
+    kesish: null,
+  },
 ];

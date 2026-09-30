@@ -1,0 +1,90 @@
+## Oyna
+
+To'lovni «To'lov qayd qilish» oynasida yozasiz. Uning asosiy qismlari:
+
+1. **O'quvchi.** «O'quvchi» maydoniga ism, telefon yoki ID yozing (kamida 2 belgi) va ro'yxatdan o'quvchini tanlang. Har qatorda «#ID Ism Familiya» va balansi turadi: yashil — pul bor, qizil — qarz. Ro'yxat eng ko'pi bilan 5 ta natijani ko'rsatadi va faqat faol o'quvchini topadi: holati «Faol» va faol guruhda o'qiydigan o'quvchini. Tanlagach, ism va «Balans» chiqadi; boshqa o'quvchi kerak bo'lsa «O'zgartirish» ni bosing. Oyna o'quvchi kartasidan yoki «Qarzdorlik» sahifasidan ochilgan bo'lsa, o'quvchi oldindan tanlangan turadi.
+2. **Summa.** So'mda yoziladi, kamida 1 000 so'm. Tezkor tugmalar summani bir bosishda kiritadi; tavsiya etilgani belgi bilan ajratilgan. Summa ostida «Balans» qatori («... → ... so'm») va «Bu pul nimaga yetadi:» bloki turadi (pastda).
+3. **To'lov usuli.** «Naqd», «Payme», «Click», «Uzum» yoki «Bank o'tkazmasi». Boshlang'ich — «Naqd». Tanlangan usul «Oxirgi to'lovlar» jadvalining «Usul» ustunida ko'rinadi.
+4. **«To'lovni qayd qilish» tugmasi.** O'quvchi tanlanmaguncha va summa 1 000 so'mdan kam bo'lguncha bosilmaydi. Bosgach «... so'm to'lov qayd qilindi» xabari chiqadi.
+
+Boshqa maydonlar:
+
+- **«Izoh (ixtiyoriy)»** — to'lov haqida qisqa yozuv.
+- **«Tranzaksiyani biriktirish»** (usul «Naqd» bo'lmasa chiqadi, ixtiyoriy) — «Tranzaksiya raqami (externalId)» maydoni. To'lov tizimi hisobotidagi tranzaksiya raqamini yozsangiz, o'sha to'lov o'quvchiga biriktiriladi va uni keyin ikkinchi marta biriktirib bo'lmaydi. Raqam yozilganda «Provayder komissiyasi» maydoni ham chiqadi.
+
+## Qadamlar
+
+1. Moliya → «Kutilyotgan to'lovlar» (yoki «Umumiy ma'lumotlar») sahifasida «To'lov qayd qilish» tugmasini bosing.
+2. O'quvchini toping va tanlang.
+3. Summani yozing yoki tezkor tugmani bosing.
+4. Summa ostidagi blokni o'qing.
+5. To'lov usulini tanlang.
+6. «To'lovni qayd qilish» ni bosing.
+
+## Summa ostidagi blok
+
+Blok pul qayerga ketishini oldindan ko'rsatadi. U faqat ko'rinish: hech narsa yozmaydi. Tepasida «Balans» qatori turadi: hozirgi balans → to'lovdan keyingi balans. To'lovdan keyin ham qarz qolsa, «⚠ To'lovdan keyin ham qarz qoladi» yoziladi.
+
+- **Oylik kurs.** Guruh qatorida «Guruh · Kurs · oyiga ... so'm» (chegirma bo'lsa, «chegirmasiz ...» ham) va «Qarz: ... · Keyingi oy: ...» turadi. Tezkor tugmalar: «Qarzni yopish», «Qarz + keyingi oy», «1 oy», «2 oy». «Bu pul nimaga yetadi:» ostida «Qarz yopiladi» va «Balansda qoladi — keyingi oy to'lovi shundan yechiladi» yoziladi. «Keyingi oy» — to'liq oy narxi (chegirma bilan); sababli dars krediti bu summaga kirmaydi, chunki u summani faqat kamaytiradi.
+- **Dars paketi.** Guruh qatorida «... so'm/dars» va oldindan to'langan darslar soni turadi. Tezkor tugmalar sikl bo'yicha: «Qarz + 1 sikl (12 dars)», «1 to'liq sikl (12 dars)», «+1 sikl (12 dars)», «+2 sikl (24 dars)». «Bu pul nimaga yetadi:» ostida «Mavjud qarz qoplanadi», «Kelgusi sikl — 12 dars (oldindan)», «Balansda qoladi» kabi qatorlar chiqadi (raqamlar misol uchun).
+
+Qaysi tur ekani haqida — [Kurs qanday to'lanadi](/qollanma/tolovlar/tolov-turlari).
+
+## Qayerdan ochiladi
+
+- **Moliya → «Umumiy ma'lumotlar» va «Kutilyotgan to'lovlar»**: sahifa tepasidagi «To'lov qayd qilish» tugmasi. O'quvchini oynada qidirasiz.
+- **Moliya → «Qarzdorlik» → «Qarzdorlar»**: sahifadagi «To'lov qayd qilish» tugmasi yoki qatordagi ⋯ («Amallar») → «To'lov qayd qilish». Qator menyusidan ochsangiz, o'quvchi tanlangan va «Summa» uning qarzi bilan to'ldirilgan bo'ladi; xohlasangiz o'zgartirasiz.
+- **O'quvchi kartasi → «To'lov» → «To'lov qo'shish»** (CEO, filial direktori, administrator): o'quvchi tanlangan.
+- **Guruhning davomat sahifasi**: qarzdor o'quvchilar bo'lsa, pastda «Qarzdorlar — N ta» paneli turadi; undagi «To'lov qabul qilish» tugmasi shu oynani ochadi va «Summa» ni kurs narxi bilan to'ldiradi (CEO, filial direktori, administrator).
+
+## Qayd qilingach nima bo'ladi
+
+- Balans darhol oshadi. Balans minusda bo'lsa, to'lov avval qarzni yopadi: pul eng eski to'lanmagan oydan boshlab yoziladi.
+- Qarz to'liq yopilsa (balans nolga yoki plyusga chiqsa), o'quvchining ochiq to'lov va'dasi bajarilgan hisoblanadi.
+- Dars paketida qarz sabab kutib turgan ustoz ulushi ham yoziladi: [Dars paketi](/qollanma/tolovlar/dars-paketi).
+- To'lov «Umumiy ma'lumotlar» sahifasidagi «Oxirgi to'lovlar» jadvalida ko'rinadi: «O'quvchi», «Summa», «Usul», «Qabul qildi», «Sana» ustunlari bilan.
+- O'quvchi kartasining «To'lovlar» tabida (CEO, filial direktori, administrator) to'lov «To'lovlar qayerga ketdi» bo'limida «Chek» havolasi bilan turadi. «Chek» — PDF kvitansiya, yangi tabda ochiladi.
+- O'quvchiga Telegramda shu kuni soat 20:00 da xabar boradi; unda chek havolasi bor. Telegram bog'lanmagan o'quvchiga hech narsa ketmaydi.
+
+### Hisobotda qayerda ko'rinadi
+
+Qayd qilingan to'lov Telegram guruhidagi kunlik hisobotning «Oy boshidan» blokidagi tushumga kiradi. Blokda tushum ikkiga bo'linadi: «Shu oy uchun» va «Eski qarzlar uchun» (qaysi oylarning qarzi ekani ostida yoziladi). Sarlavhadagi jami va bo'linish bitta manbadan olinadi, shuning uchun har doim qo'shiladi. Saytdagi «Tushum tarkibi» paneli ham shu bo'linishni ko'rsatadi; uni CEO va filial direktori ko'radi.
+
+## Kutilyotgan to'lovlar sahifasi
+
+«Kutilyotgan to'lovlar» faol guruhda o'qiyotgan va balansi noldan kichik o'quvchilarni ko'rsatadi: «O'quvchi», «Guruh», «Kurs narxi», «Balans» va «Holat» («Qarzdor») ustunlari bilan. Qatorda tugma yo'q: to'lovni tepadagi «To'lov qayd qilish» tugmasi bilan yozasiz. Muzlatilgan, chetlatilgan yoki bitirgan o'quvchining qarzi bu yerda emas, u «Qarzdorlik» sahifasida turadi: [Qarzdorlik](/qollanma/tolovlar/qarzdorlik).
+
+## Ko'p uchraydigan xatolar
+
+| Xabar yoki holat | Sabab |
+|---|---|
+| «Bu o'quvchi boshqa filialga tegishli — unga pul yozish huquqingiz yo'q» | O'quvchi sizning filialingizga tegishli emas, yoki sizga filial biriktirilmagan. |
+| «To'lov filiali o'quvchining filialiga mos kelmaydi (...)» | Yuqori paneldagi filial tanlagichi o'quvchining filialidan boshqa filialni ko'rsatib turibdi. |
+| «O'quvchining filiali o'zgardi — to'lovni qaytadan kiriting» | To'lovni yozayotganda o'quvchi boshqa filialga o'tkazilgan. |
+| «To'lovni qayd qilish» bosilmaydi | O'quvchi tanlanmagan yoki summa 1 000 so'mdan kam. |
+| O'quvchi ro'yxatda chiqmaydi | Qidiruv faqat faol o'quvchini topadi. Muzlatilgan, chetlatilgan, bitirgan yoki guruhsiz o'quvchi uchun oyna «Qarzdorlik» → «Qarzdorlar» dagi qator menyusidan (qarzi bo'lsa) yoki o'quvchi kartasidagi «To'lov» menyusidan ochiladi. |
+| Xabar «Payment with externalId=...» deb boshlanib, «allaqachon mavjud» deb tugaydi | Shu tranzaksiya raqami avval biriktirilgan. |
+| Summa yoki usul noto'g'ri kiritilgan | To'lov o'chirilmaydi. Tuzatish — [To'lovni to'g'rilash](/qollanma/tolovlar/tolovni-togrilash). |
+
+## Kim qila oladi
+
+«Ha» — ekranda tugma bor va tizim amalni qabul qiladi. «—» — ekranda yo'q yoki tizim rad etadi. Filial direktori, administrator va kassir faqat o'z filialidagi o'quvchi uchun to'lov yozadi.
+
+| Amal | CEO | Filial direktori | Administrator | Kassir |
+|---|---|---|---|---|
+| To'lov qayd qilish (Moliya sahifalaridagi tugma) | Ha | Ha | Ha | Ha |
+| Tranzaksiya raqami bilan biriktirish | Ha | Ha | Ha | Ha |
+| To'lov qo'shish (o'quvchi kartasidagi «To'lov» menyusi) | Ha | Ha | Ha | — |
+| «Chek»ni ko'rish (kartadagi «To'lovlar» tabi) | Ha | Ha | Ha | — |
+| To'lov summasi yoki usulini to'g'rilash | Ha, istalgan vaqt | Ha, 72 soat ichida | Ha, 72 soat ichida | — |
+| To'lovni butunlay bekor qilish | — | — | — | — |
+
+To'lovni butunlay bekor qilishni tizim faqat CEO'ga ruxsat etadi, lekin ekranda buning uchun tugma yo'q: CEO'ga murojaat qiling. Batafsil — [To'lovni to'g'rilash](/qollanma/tolovlar/tolovni-togrilash). Kassirda o'quvchi kartasining tugmalari yo'q: u to'lovni faqat Moliya sahifalaridan qayd qiladi.
+
+## Tizimda qayerda
+
+- Moliya → [Umumiy ma'lumotlar](/payments/overview) va [Kutilyotgan to'lovlar](/payments/pending) — CEO, filial direktori, administrator va kassirga ko'rinadi.
+- Moliya → [Qarzdorlik](/payments/debt) — qarzdorlarning qatori menyusidan to'lov yoziladi.
+- [O'quvchi kartasi](/qollanma/oquvchilar/oquvchi-kartasi) — «To'lov» menyusi va «To'lovlar» tabi.
+- To'lov nimaga yetishi — [Oylik to'lov](/qollanma/tolovlar/oylik-tolov) va [Dars paketi](/qollanma/tolovlar/dars-paketi).
+- Onlayn to'lovlar — [Payme va Click](/qollanma/tolovlar/onlayn-tolov).
