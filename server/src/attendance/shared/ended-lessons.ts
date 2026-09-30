@@ -39,13 +39,58 @@ export interface EndedLesson {
 /** A `@db.Date` value (UTC midnight) as its calendar day. */
 const dayOf = (d: Date): string => d.toISOString().slice(0, 10);
 
+/** Whether a group meeting on `exactDays` has its weekly lesson on `dayStr`. */
+export function meetsOn(exactDays: string[], dayStr: string): boolean {
+  const weekday = new Date(`${dayStr}T00:00:00.000Z`).getUTCDay();
+  return exactDays.some((d) => DAY_NAME_TO_JS[d.toLowerCase()] === weekday);
+}
+
 /**
- * Today's lessons that have ended by `nowMinutes`, by the notion of a lesson
- * day attendance validation uses: the weekly schedule, minus a day cancelled
- * or moved away, plus a day moved here (timed by the move), inside the
- * group's date range, never on a holiday. Pure, so the lesson-end sweep and
- * its tests share one rule.
+ * The lessons on `dayStr`, by the notion of a lesson day attendance
+ * validation uses: the weekly schedule, minus a day cancelled or moved away,
+ * plus a day moved here (timed by the move), inside the group's date range,
+ * never on a holiday. Pure, so the lesson-end sweep, a move change that
+ * closes its old make-up day's question, and their tests share one rule.
  */
+export function lessonsOn(args: {
+  dayStr: string;
+  groups: SweepGroup[];
+  reschedules: SweepReschedule[];
+  cancelledGroupIds: ReadonlySet<string>;
+  isHoliday: (branchId: number) => boolean;
+}): EndedLesson[] {
+  const movedAway = new Set<string>();
+  const movedHere = new Map<string, SweepReschedule>();
+  for (const r of args.reschedules) {
+    if (dayOf(r.originalDate) === args.dayStr) movedAway.add(r.groupId);
+    if (dayOf(r.newDate) === args.dayStr) movedHere.set(r.groupId, r);
+  }
+
+  const lessons: EndedLesson[] = [];
+  for (const g of args.groups) {
+    if (args.cancelledGroupIds.has(g.id) || args.isHoliday(g.branchId))
+      continue;
+    if (g.startDate && args.dayStr < tashkentDateStr(g.startDate)) continue;
+    if (g.endDate && args.dayStr > tashkentDateStr(g.endDate)) continue;
+
+    const moved = movedHere.get(g.id);
+    const scheduled = meetsOn(g.exactDays, args.dayStr);
+    if (!moved && (!scheduled || movedAway.has(g.id))) continue;
+
+    const times = effectiveLessonTimes(g, moved);
+    lessons.push({
+      groupId: g.id,
+      groupName: g.name,
+      companyId: g.companyId,
+      branchId: g.branchId,
+      startTime: times.startTime ?? DAY_START_TIME,
+      endTime: times.endTime ?? DAY_END_TIME,
+    });
+  }
+  return lessons;
+}
+
+/** Today's lessons (`lessonsOn`) that have ended by `nowMinutes`. */
 export function endedLessonsOn(args: {
   todayStr: string;
   nowMinutes: number;
@@ -54,40 +99,7 @@ export function endedLessonsOn(args: {
   cancelledGroupIds: ReadonlySet<string>;
   isHoliday: (branchId: number) => boolean;
 }): EndedLesson[] {
-  const weekday = new Date(`${args.todayStr}T00:00:00.000Z`).getUTCDay();
-  const movedAway = new Set<string>();
-  const movedHere = new Map<string, SweepReschedule>();
-  for (const r of args.reschedules) {
-    if (dayOf(r.originalDate) === args.todayStr) movedAway.add(r.groupId);
-    if (dayOf(r.newDate) === args.todayStr) movedHere.set(r.groupId, r);
-  }
-
-  const ended: EndedLesson[] = [];
-  for (const g of args.groups) {
-    if (args.cancelledGroupIds.has(g.id) || args.isHoliday(g.branchId))
-      continue;
-    if (g.startDate && args.todayStr < tashkentDateStr(g.startDate)) continue;
-    if (g.endDate && args.todayStr > tashkentDateStr(g.endDate)) continue;
-
-    const moved = movedHere.get(g.id);
-    const scheduled = g.exactDays.some(
-      (d) => DAY_NAME_TO_JS[d.toLowerCase()] === weekday,
-    );
-    if (!moved && (!scheduled || movedAway.has(g.id))) continue;
-
-    const times = effectiveLessonTimes(g, moved);
-    const startTime = times.startTime ?? DAY_START_TIME;
-    const endTime = times.endTime ?? DAY_END_TIME;
-    if (args.nowMinutes < toMinutes(endTime)) continue;
-
-    ended.push({
-      groupId: g.id,
-      groupName: g.name,
-      companyId: g.companyId,
-      branchId: g.branchId,
-      startTime,
-      endTime,
-    });
-  }
-  return ended;
+  return lessonsOn({ ...args, dayStr: args.todayStr }).filter(
+    (lesson) => args.nowMinutes >= toMinutes(lesson.endTime),
+  );
 }

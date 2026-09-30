@@ -388,13 +388,47 @@ async function originalDayIsClosed(
 }
 
 /**
+ * The make-up lesson took place on `day`: a register there, or a «Bo'ldi»
+ * answer — which writes no register when nobody was enrolled that day.
+ */
+async function makeUpLessonHeld(
+  tx: Tx,
+  groupId: string,
+  day: Date,
+): Promise<boolean> {
+  if (await dayHasAttendance(tx, groupId, day)) return true;
+  const answered = await tx.unmarkedLesson.findUnique({
+    where: { groupId_date: { groupId, date: day } },
+    select: { status: true },
+  });
+  return answered?.status === 'HELD';
+}
+
+/**
+ * A make-up lesson that already took place stays on its day: a new date
+ * would give the one lesson a second day to be asked about and marked on,
+ * and it would be counted twice.
+ */
+export async function assertMakeUpNotHeld(
+  tx: Tx,
+  groupId: string,
+  day: Date,
+): Promise<void> {
+  if (await makeUpLessonHeld(tx, groupId, day)) {
+    throw new BadRequestException(
+      "Qo'shimcha dars kunida davomat olingan — ko'chirishning sanasini o'zgartirib bo'lmaydi",
+    );
+  }
+}
+
+/**
  * Deleting a move re-asks the question the same way: a move that answered it
  * puts the row back to PENDING; a move made in advance (no row ever existed),
  * deleted after the original lesson ended, opens the first-time question for
- * the ORIGINAL date. Neither when the make-up lesson already has attendance:
- * «Bo'ldi» on the original day would bill the one lesson twice. The caller
- * has already soft-deleted the move in this transaction, so it is read by id,
- * whatever its `deletedAt`.
+ * the ORIGINAL date. Neither when the make-up lesson already took place (a
+ * register or a «Bo'ldi» answer on its day): «Bo'ldi» on the original day
+ * would bill the one lesson twice. The caller has already soft-deleted the
+ * move in this transaction, so it is read by id, whatever its `deletedAt`.
  */
 export async function reopenAfterRescheduleRemoved(
   tx: Tx,
@@ -410,7 +444,7 @@ export async function reopenAfterRescheduleRemoved(
     },
   });
   if (!removed) return;
-  if (await dayHasAttendance(tx, removed.groupId, removed.newDate)) return;
+  if (await makeUpLessonHeld(tx, removed.groupId, removed.newDate)) return;
 
   const answered = await tx.unmarkedLesson.findFirst({
     where: { rescheduleId: args.rescheduleId },

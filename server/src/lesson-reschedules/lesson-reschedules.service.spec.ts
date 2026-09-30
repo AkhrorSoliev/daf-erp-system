@@ -39,7 +39,12 @@ describe('LessonReschedulesService', () => {
         findFirst: jest.fn().mockResolvedValue(null),
         update: jest.fn(),
       },
-      attendance: { findMany: jest.fn().mockResolvedValue([]) },
+      // `findFirst`: a new date for a make-up lesson first checks it was not
+      // already held on its old one.
+      attendance: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
       enrollment: { findFirst: jest.fn() },
       // «Dars bo'ldimi?» (spec 2026-09-29): moving a lesson answers the
       // question, editing the make-up lesson reads its row, and deleting the
@@ -791,6 +796,197 @@ describe('LessonReschedulesService', () => {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         }),
       );
+    });
+  });
+
+  // Monday 28.09 (D) was moved to Tuesday 29.09 (D'), which ended unmarked:
+  // the sweep asked about D' because the move made it a lesson day. The group
+  // meets Mon/Wed/Fri, so once the move stops landing there D' has no lesson —
+  // and «Bo'ldi» on its question, with D asked again, would count one lesson
+  // twice.
+  describe("the make-up day's own question, when the move is removed or re-dated", () => {
+    const NOW = new Date('2026-09-30T08:00:00.000Z'); // Wed 13:00 Tashkent
+    const D = new Date('2026-09-28T00:00:00.000Z');
+    const D1 = new Date('2026-09-29T00:00:00.000Z');
+    const move = {
+      id: 'rs-1',
+      groupId: 'group-1',
+      originalDate: D,
+      newDate: D1,
+      newRoomId: null,
+      newLessonStartTime: null,
+      newLessonEndTime: null,
+      createdAt: new Date('2026-09-28T13:00:00.000Z'),
+    };
+    const group = {
+      id: 'group-1',
+      name: '#014',
+      companyId: 1,
+      branchId: 2,
+      roomId: null,
+      exactDays: ['monday', 'wednesday', 'friday'],
+      lessonStartTime: '16:00',
+      lessonEndTime: '17:30',
+      startDate: null,
+      endDate: null,
+      deletedAt: null,
+    };
+    const question = (day: Date, over = {}) => ({
+      id: day === D ? 'u-D' : 'u-D1',
+      companyId: 1,
+      branchId: 2,
+      groupId: 'group-1',
+      date: day,
+      lessonStartTime: '16:00',
+      lessonEndTime: '17:30',
+      status: 'PENDING',
+      teacherPayExempt: false,
+      claimedById: null,
+      taskCommentId: day === D ? 'c-D' : 'c-D1',
+      ...over,
+    });
+    const closesD1 = {
+      where: { id: 'u-D1' },
+      data: {
+        status: 'NOT_HELD',
+        decidedById: 99,
+        decidedAt: expect.any(Date),
+      },
+    };
+    let onD1: object | null;
+
+    beforeEach(() => {
+      jest.useFakeTimers({ now: NOW, advanceTimers: true });
+      onD1 = question(D1);
+      // remove(): the move, the caller check, the holiday lookup's branch.
+      prisma.lessonReschedule.findFirst.mockResolvedValue(move);
+      prisma.group.findFirst.mockResolvedValue({ branchId: 2 });
+      prisma.group.findUnique.mockResolvedValue({ branchId: 2 });
+      tx.lessonReschedule.update.mockResolvedValue({ id: 'rs-1' });
+      tx.lessonReschedule.findUnique = jest.fn().mockResolvedValue(move);
+      tx.group.findFirst.mockResolvedValue(group);
+      tx.group.findUnique.mockResolvedValue(group);
+      tx.lessonCancellation.findFirst.mockResolvedValue(null);
+      tx.attendance.findFirst = jest.fn().mockResolvedValue(null);
+      tx.unmarkedLesson.findUnique.mockImplementation(({ where }: any) =>
+        Promise.resolve(
+          where.groupId_date.date.getTime() === D1.getTime() ? onD1 : null,
+        ),
+      );
+      // D's own question was answered by this move.
+      tx.unmarkedLesson.findFirst.mockResolvedValue(
+        question(D, { status: 'RESCHEDULED', rescheduleId: 'rs-1' }),
+      );
+      tx.unmarkedLesson.updateMany = jest.fn();
+      tx.holiday = { findMany: jest.fn().mockResolvedValue([]) };
+      tx.commentAssignee = {
+        findUnique: jest.fn().mockResolvedValue(null),
+        deleteMany: jest.fn(),
+        update: jest.fn(),
+        updateMany: jest.fn(),
+      };
+      tx.user.findMany.mockResolvedValue([{ id: 3 }]);
+      tx.comment.create.mockResolvedValue({ id: 'c-new' });
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it("closes the make-up day's question when the move is removed, and asks about D again", async () => {
+      await service.remove('rs-1', 1, 99, ['CEO']);
+
+      expect(tx.unmarkedLesson.update).toHaveBeenCalledWith(closesD1);
+      // The CEO holds no copy of the task, so every copy goes DONE.
+      expect(tx.commentAssignee.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { commentId: 'c-D1', status: { not: 'DONE' } },
+        }),
+      );
+      // D is re-asked by the existing rule: back to PENDING, a new task.
+      expect(tx.unmarkedLesson.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'u-D' },
+          data: expect.objectContaining({
+            status: 'PENDING',
+            rescheduleId: null,
+            taskCommentId: 'c-new',
+          }),
+        }),
+      );
+    });
+
+    // «Bo'ldi» on D' counted the lesson, register or not (an empty roster
+    // writes none): asking about D again would count it twice.
+    it("asks nothing again when the make-up day was answered «Bo'ldi»", async () => {
+      onD1 = question(D1, { status: 'HELD' });
+
+      await service.remove('rs-1', 1, 99, ['CEO']);
+
+      expect(tx.unmarkedLesson.update).not.toHaveBeenCalled();
+      expect(tx.comment.create).not.toHaveBeenCalled();
+    });
+
+    it("closes the make-up day's question when the move gets a new date", async () => {
+      tx.lessonReschedule.findFirst
+        .mockResolvedValueOnce(move) // initial load
+        .mockResolvedValue(null); // no other move lands on the new date
+
+      await service.update('rs-1', { newDate: '2026-10-06' }, 1, 99, ['CEO']);
+
+      expect(tx.lessonReschedule.update).toHaveBeenCalled();
+      expect(tx.unmarkedLesson.update).toHaveBeenCalledWith(closesD1);
+      expect(tx.commentAssignee.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { commentId: 'c-D1', status: { not: 'DONE' } },
+        }),
+      );
+    });
+
+    // Held on D' already: a second lesson day for it would count it twice.
+    it.each([
+      [
+        "answered «Bo'ldi»",
+        () => {
+          onD1 = question(D1, { status: 'HELD' });
+        },
+      ],
+      [
+        'marked',
+        () => {
+          tx.attendance.findFirst.mockImplementation(({ where }: any) =>
+            Promise.resolve(
+              where.date.getTime() === D1.getTime() ? { id: 'a1' } : null,
+            ),
+          );
+        },
+      ],
+    ])(
+      'refuses a new date for a make-up lesson already %s',
+      async (_label, arrange) => {
+        arrange();
+        tx.lessonReschedule.findFirst
+          .mockResolvedValueOnce(move)
+          .mockResolvedValue(null);
+
+        await expect(
+          service.update('rs-1', { newDate: '2026-10-06' }, 1, 99, ['CEO']),
+        ).rejects.toThrow(BadRequestException);
+        expect(tx.lessonReschedule.update).not.toHaveBeenCalled();
+        expect(tx.unmarkedLesson.update).not.toHaveBeenCalled();
+      },
+    );
+
+    // A group that also meets on Tuesdays: D' keeps its own weekly lesson.
+    it("keeps the make-up day's question when that day is still a weekly lesson", async () => {
+      tx.group.findUnique.mockResolvedValue({
+        ...group,
+        exactDays: ['monday', 'tuesday'],
+      });
+
+      await service.remove('rs-1', 1, 99, ['CEO']);
+
+      expect(tx.unmarkedLesson.update).not.toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'u-D1' } }),
+      );
+      expect(tx.commentAssignee.updateMany).not.toHaveBeenCalled();
     });
   });
 });

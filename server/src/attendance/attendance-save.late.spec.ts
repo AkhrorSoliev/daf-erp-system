@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   NotFoundException,
@@ -84,7 +85,11 @@ describe('AttendanceSaveService.saveLate', () => {
         updateMany: jest.fn(),
       },
       lessonCancellation: { findFirst: jest.fn().mockResolvedValue(null) },
-      lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
+      lessonReschedule: {
+        findMany: jest.fn().mockResolvedValue([]),
+        // A live move landing on the day (none by default).
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
       commentAssignee: {
         findUnique: jest.fn().mockResolvedValue({ id: 'ca1', seenAt: null }),
         deleteMany: jest.fn(),
@@ -103,6 +108,8 @@ describe('AttendanceSaveService.saveLate', () => {
           id: 'g1',
           name: '#014',
           branchId: 2,
+          // 28.09 is a Monday: a weekly lesson day.
+          exactDays: ['monday', 'wednesday', 'friday'],
           course: { paymentModel: 'LESSON_PACK' },
         }),
         // emitAfterSave reads the group's name and teachers.
@@ -196,6 +203,7 @@ describe('AttendanceSaveService.saveLate', () => {
       id: 'g1',
       name: '#014',
       branchId: 2,
+      exactDays: ['monday', 'wednesday', 'friday'],
       course: { paymentModel: 'MONTHLY' },
     });
     await service.saveLate(
@@ -354,6 +362,54 @@ describe('AttendanceSaveService.saveLate', () => {
       "Bu sana boshqa kunga ko'chirilgan — davomatni yangi sanada oling",
     );
     expect(tx.attendance.upsert).not.toHaveBeenCalled();
+  });
+
+  // The move that made the day a lesson day was deleted or re-dated and its
+  // question outlived it: a register would bill a lesson the timetable never
+  // had, while the moved lesson is asked about on its own day.
+  describe('a day with no lesson on the timetable', () => {
+    beforeEach(() => {
+      prisma.group.findFirst.mockResolvedValue({
+        id: 'g1',
+        name: '#014',
+        branchId: 2,
+        exactDays: ['tuesday'],
+        course: { paymentModel: 'LESSON_PACK' },
+      });
+    });
+
+    it('is refused with 400', async () => {
+      const answer = service.saveLate(
+        'g1',
+        '2026-09-28',
+        { entries },
+        3,
+        ['Administrator'],
+        1,
+      );
+      await expect(answer).rejects.toBeInstanceOf(BadRequestException);
+      await expect(answer).rejects.toThrow('Bu kunda dars rejalashtirilmagan');
+      expect(tx.lessonReschedule.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { groupId: 'g1', newDate: lessonDay, deletedAt: null },
+        }),
+      );
+      expect(tx.attendance.upsert).not.toHaveBeenCalled();
+      expect(tx.unmarkedLesson.update).not.toHaveBeenCalled();
+    });
+
+    it('takes the register when a live move lands on it', async () => {
+      tx.lessonReschedule.findFirst.mockResolvedValue({ id: 'r1' });
+      await service.saveLate(
+        'g1',
+        '2026-09-28',
+        { entries },
+        3,
+        ['Administrator'],
+        1,
+      );
+      expect(tx.attendance.upsert).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('lets only the CEO exempt the teacher', async () => {

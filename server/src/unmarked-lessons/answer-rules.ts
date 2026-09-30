@@ -1,5 +1,6 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import type { Prisma, UnmarkedLesson } from '@prisma/client';
+import { meetsOn } from '../attendance/shared/ended-lessons';
 
 type Db = Pick<Prisma.TransactionClient, 'unmarkedLesson' | 'user'>;
 
@@ -45,6 +46,25 @@ export async function lessonDayTakenAway(
   const away = moves.some((m) => m.originalDate.getTime() === date.getTime());
   const here = moves.some((m) => m.newDate.getTime() === date.getTime());
   return away && !here ? 'MOVED' : null;
+}
+
+/**
+ * No lesson at all on `date`: not the group's weekly day and not the new date
+ * of a live move — the rule a cancellation checks too. A question can outlive
+ * the move that made its day a lesson day; a register there would bill a
+ * lesson the timetable never had.
+ */
+export async function noLessonScheduled(
+  db: Pick<Prisma.TransactionClient, 'lessonReschedule'>,
+  group: { id: string; exactDays: string[] },
+  date: Date,
+): Promise<boolean> {
+  if (meetsOn(group.exactDays, date.toISOString().slice(0, 10))) return false;
+  const movedHere = await db.lessonReschedule.findFirst({
+    where: { groupId: group.id, newDate: date, deletedAt: null },
+    select: { id: true },
+  });
+  return movedHere === null;
 }
 
 /**

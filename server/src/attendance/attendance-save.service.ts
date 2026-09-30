@@ -32,6 +32,7 @@ import {
   assertMayAnswer,
   findPendingUnmarkedLesson,
   lessonDayTakenAway,
+  noLessonScheduled,
 } from '../unmarked-lessons/answer-rules';
 import {
   UNMARKED_LESSON_HELD,
@@ -256,6 +257,7 @@ export class AttendanceSaveService {
         id: true,
         name: true,
         branchId: true,
+        exactDays: true,
         course: { select: { paymentModel: true } },
       },
     });
@@ -284,6 +286,11 @@ export class AttendanceSaveService {
           throw new BadRequestException(
             "Bu sana boshqa kunga ko'chirilgan — davomatni yangi sanada oling",
           );
+        }
+        // A question left behind on a day with no lesson (the move that made
+        // it one deleted or re-dated) must not take a register.
+        if (await noLessonScheduled(tx, group, parsedDate)) {
+          throw new BadRequestException('Bu kunda dars rejalashtirilmagan');
         }
 
         const already = await tx.attendance.count({

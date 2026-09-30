@@ -15,9 +15,11 @@ import { UpdateLessonRescheduleDto } from './dto/update-lesson-reschedule.dto';
 import { resolveBilledEnrollmentId } from '../billing/resolve-billed-enrollment';
 import {
   assertLinkedMakeUpAhead,
+  assertMakeUpNotHeld,
   markUnmarkedLessonRescheduled,
   reopenAfterRescheduleRemoved,
 } from '../unmarked-lessons/unmarked-lesson-transitions';
+import { closeQuestionOnFormerMakeUpDay } from '../unmarked-lessons/make-up-day';
 import {
   UNMARKED_LESSON_NOT_HELD,
   type UnmarkedLessonNotHeldPayload,
@@ -611,6 +613,11 @@ export class LessonReschedulesService {
             now: new Date(),
           });
         }
+        // A make-up lesson already held stays on its day: a new date would
+        // give the one lesson a second day to be counted on.
+        if (newDateChanged) {
+          await assertMakeUpNotHeld(tx, existing.groupId, existing.newDate);
+        }
 
         // Room override scoping — same as create.
         if (effectiveRoomOverride) {
@@ -696,6 +703,15 @@ export class LessonReschedulesService {
           where: { id: existing.id },
           data,
         });
+        // The old make-up day may have no lesson left: its question closes.
+        if (newDateChanged) {
+          await closeQuestionOnFormerMakeUpDay(tx, {
+            groupId: existing.groupId,
+            day: existing.newDate,
+            actorId: userId,
+            now: new Date(),
+          });
+        }
 
         await this.entityHistoryService.recordUpdate({
           entityType: 'Group',
@@ -756,7 +772,8 @@ export class LessonReschedulesService {
    * original lesson is asked about again («Dars bo'ldimi?») when the move
    * had answered that question, or when the move was made in advance and the
    * lesson has since ended unmarked on a day that is neither a holiday nor
-   * cancelled.
+   * cancelled — unless the make-up lesson already took place. A question the
+   * sweep opened for the make-up day closes once that day has no lesson.
    */
   async remove(
     id: string,
@@ -800,6 +817,13 @@ export class LessonReschedulesService {
           changedById: userId,
           companyId,
           tx,
+        });
+        // The make-up day may have no lesson left: its question closes.
+        await closeQuestionOnFormerMakeUpDay(tx, {
+          groupId: existing.groupId,
+          day: existing.newDate,
+          actorId: userId,
+          now,
         });
         await reopenAfterRescheduleRemoved(tx, {
           rescheduleId: id,
