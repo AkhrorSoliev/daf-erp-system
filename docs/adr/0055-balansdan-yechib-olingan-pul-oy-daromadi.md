@@ -43,8 +43,10 @@ puli» tabida 58 o'quvchida 6 183 884 so'm turibdi. Oylik davri har oyning
    oy uchun yoziladi».
 3. **Hisobot yechib olishni `createdAt` bo'yicha o'qiydi**
    (`loadBalanceWithdrawals`): butun Toshkent oylari oralig'ida, filial
-   qamrovi bilan, ishorali yig'indi (bekor qilish qatori bo'lsa, tuzatish
-   qilingan oyda o'zi nolga chiqaradi).
+   qamrovi bilan, ishorali yig'indi. Hozir yechib olishni bekor qiladigan
+   yo'l yo'q. Qo'shilsa, u ustoz ulushini (bog'langan `SalaryAccrual`) ham
+   qaytarishi va `creditTeacher` belgisini saqlashi kerak: `reverseTransaction`
+   metadata'ni ko'chirmaydi.
 
 ## Ko'rib chiqilgan muqobillar
 
@@ -67,6 +69,11 @@ puli» tabida 58 o'quvchida 6 183 884 so'm turibdi. Oylik davri har oyning
   chiqadi. Sof foyda keshi `v4`.
 - «Foyda tarkibi» prognozidagi ustoz ulushi yechib olishdan ustozga yozilgan
   pulni hisobga olmaydi — u dars emas.
+- «Ustozga yozilsa foyda o'zgarmaydi» va «o'tgan oylar o'zgarmaydi» degan
+  kafolatlar oylik davri kalendar oyga teng bo'lgani uchun (prodda
+  `cycleStartDay = 1`) to'liq bajariladi. Boshqa kun tanlansa, ustoz ulushi
+  yechib olingan kun tushgan oylik davriga — kanonik foydada boshqa oyga —
+  tushadi. O'tilgan darslar bilan ham xuddi shunday.
 - «Tushum» (kassa) va «Oyning o'z foydasi» formulasi o'zgarmaydi.
 - «Filiallar» varag'ining tasdiqlangan ustunlari o'zgarmaydi.
 - Ustoz ulushi hanuz `User.balance` ga `SALARY_ACCRUAL` krediti yozmaydi

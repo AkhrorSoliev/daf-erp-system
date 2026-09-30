@@ -17,9 +17,11 @@ import {
  * that revenue, never folded into it.
  *
  * Keyed by `createdAt`: since ADR-0055 a withdrawal is always booked in the
- * current Tashkent month, so the row's own timestamp IS its month. Signed:
- * a withdrawal is negative on the student ledger, and a counter-row, should
- * one ever be written, nets it out in the month the correction was made.
+ * current Tashkent month, so the row's own timestamp IS its month. Signed, so
+ * a counter-row would net `total` out in the month it is written. There is no
+ * reversal path today; one would also have to reverse the linked accrual and
+ * carry `creditTeacher` (`reverseTransaction` copies no metadata), or
+ * `teacherCredited` would not net.
  */
 export interface BalanceWithdrawals {
   /** Σ withdrawn over the window, so'm. */

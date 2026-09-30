@@ -642,6 +642,46 @@ describe('ReportsExcelService', () => {
     ).toBe('MOS');
   });
 
+  it('reads withdrawals once over every month of a multi-month export', async () => {
+    reports.getBalanceWithdrawals.mockResolvedValue({
+      total: 80_000,
+      teacherCredited: 0,
+      students: [],
+    });
+    const wb = await buildWorkbook(
+      {},
+      { startDate: '2026-06-01', endDate: '2026-07-31' },
+    );
+
+    expect(reports.getBalanceWithdrawals).toHaveBeenCalledTimes(1);
+    expect(reports.getBalanceWithdrawals).toHaveBeenCalledWith(1, {
+      months: ['2026-06', '2026-07'],
+      branchIds: null,
+    });
+    expect(
+      findRow(
+        wb.getWorksheet('Xulosa')!,
+        '+  Balansdan yechib olingan',
+      ).getCell(2).value,
+    ).toBe(80_000);
+  });
+
+  it('names a branch whose profit includes a withdrawal under «Filiallar»', async () => {
+    reports.getOwnMonthProfit.mockResolvedValue({
+      ...ownMonthProfit,
+      netProfit: { ...netProfit, balanceWithdrawals: 70_000 },
+    });
+    const wb = await buildWorkbook({}, { branchNames: { 1: 'Markaz' } });
+
+    const texts: string[] = [];
+    wb.getWorksheet('Filiallar')!.eachRow((r) =>
+      texts.push(cellText(r.getCell(1).value)),
+    );
+    expect(texts.join('\n')).toContain(
+      `«SOF FOYDA» ichida balansdan yechib olingan pul bor: Markaz — ${(70_000).toLocaleString('ru-RU')} so'm.`,
+    );
+  });
+
   it('totals «Xulosa» block 4 at the full lesson value, not the recognised revenue', async () => {
     // The mock month is IN PROGRESS: 1 000 000 held-and-paid + 120 000 still
     // unpaid = 1 120 000 of lesson value. Footing the block on the recognised
