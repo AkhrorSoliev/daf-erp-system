@@ -302,28 +302,37 @@ export function createEmployeeRegistrationScene(
     } as Express.Multer.File;
 
     const photoUrl = await uploadService.uploadFile(multerFile, 'employees');
-    ctx.session.data.photo = photoUrl;
-    ctx.session.step = 6;
 
     const data = ctx.session.data;
-    await ctx.replyWithPhoto(photoUrl, {
-      caption:
-        "\uD83D\uDCCB Ma'lumotlaringizni tekshiring:\n\n" +
-        `\uD83D\uDC64 Ism: ${data.firstName}\n` +
-        `\uD83D\uDC64 Familiya: ${data.lastName}\n` +
-        `\uD83D\uDCDE Telefon: +998 ${data.phone}\n` +
-        `\uD83D\uDC65 Jins: ${data.gender === 'MALE' ? 'Erkak' : 'Ayol'}\n` +
-        `\uD83D\uDCBC Lavozim(lar): ${roleNamesText(data.roleIds ?? [])}`,
-      ...Markup.inlineKeyboard([
-        [
-          Markup.button.callback('\u2705 Tasdiqlash', 'confirm_registration'),
-          Markup.button.callback(
-            '\uD83D\uDD04 Qayta kiritish',
-            'restart_registration',
-          ),
-        ],
-      ]),
-    });
+    try {
+      await ctx.replyWithPhoto(photoUrl, {
+        caption:
+          "\uD83D\uDCCB Ma'lumotlaringizni tekshiring:\n\n" +
+          `\uD83D\uDC64 Ism: ${data.firstName}\n` +
+          `\uD83D\uDC64 Familiya: ${data.lastName}\n` +
+          `\uD83D\uDCDE Telefon: +998 ${data.phone}\n` +
+          `\uD83D\uDC65 Jins: ${data.gender === 'MALE' ? 'Erkak' : 'Ayol'}\n` +
+          `\uD83D\uDCBC Lavozim(lar): ${roleNamesText(data.roleIds ?? [])}`,
+        ...Markup.inlineKeyboard([
+          [
+            Markup.button.callback('\u2705 Tasdiqlash', 'confirm_registration'),
+            Markup.button.callback(
+              '\uD83D\uDD04 Qayta kiritish',
+              'restart_registration',
+            ),
+          ],
+        ]),
+      });
+    } catch (err) {
+      // The person is asked to send the photo again, so nobody will confirm
+      // this one: delete it now rather than lose track of it.
+      await uploadService.deleteFile(photoUrl);
+      throw err;
+    }
+    // Only a preview that arrived moves the person on: step 6 waits for its
+    // buttons and ignores a photo sent again.
+    ctx.session.data.photo = photoUrl;
+    ctx.session.step = 6;
   }
 
   scene.on(message('photo'), async (ctx) => {
