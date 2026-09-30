@@ -38,4 +38,17 @@ describe("breakdownRows", () => {
     const rows = breakdownRows({ ...b, revenue: 0 });
     expect(rows.every((r) => Number.isFinite(r.pct))).toBe(true);
   });
+
+  it("balansdan yechilgan pul ham tushumga qo'shiladi — qatorlar yig'indisi shunga teng", () => {
+    const w = { ...b, balanceWithdrawals: 250, netProfit: 500 };
+    const rows = breakdownRows(w);
+    expect(rows.reduce((s, r) => s + r.amount, 0)).toBe(1250);
+    // 400 / 1250
+    expect(rows.find((r) => r.key === "teacherSalary")!.pct).toBe(32);
+  });
+
+  it("eski keshdagi javobda maydon bo'lmasa ham ishlaydi", () => {
+    const rows = breakdownRows(b);
+    expect(rows.find((r) => r.key === "netProfit")!.pct).toBe(25);
+  });
 });

@@ -210,6 +210,7 @@ export class DashboardChartsService {
     const breakdown: ChartProfitBreakdown | null = np
       ? {
           revenue: np.revenue,
+          balanceWithdrawals: np.balanceWithdrawals,
           teacherSalary: np.teacherSalary,
           adminSalary: np.adminSalary,
           operatingExpenses: np.operatingExpenses,
