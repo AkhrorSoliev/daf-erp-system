@@ -83,6 +83,16 @@ function summary(entries: { status: string }[], action: string, date: string) {
   };
 }
 
+/** The late register's history line on teacher pay: whose exemption, if any. */
+function teacherPayNote(
+  ceoExempts: boolean,
+  row: { teacherPayExempt: boolean; exemptReason: string | null },
+): string {
+  if (ceoExempts) return 'yoziladi (CEO istisnosi)';
+  if (!row.teacherPayExempt) return 'yozilmaydi';
+  return row.exemptReason ? `yoziladi (${row.exemptReason})` : 'yoziladi';
+}
+
 @Injectable()
 export class AttendanceSaveService {
   private readonly logger = new Logger(AttendanceSaveService.name);
@@ -328,7 +338,11 @@ export class AttendanceSaveService {
           entries: dto.entries,
         });
         await closeLessonTask(tx, row.taskCommentId, userId);
-        return { written, exempt };
+        return {
+          written,
+          exempt,
+          payNote: teacherPayNote(dto.teacherPayExempt === true, row),
+        };
       }, TX_OPTIONS)
       .catch(rethrowAsConflict);
 
@@ -337,7 +351,7 @@ export class AttendanceSaveService {
       entityId: groupId,
       newValues: {
         ...summary(dto.entries, 'DAVOMAT_KECH_KIRITILDI', date),
-        ustozHaqi: result.exempt ? 'yoziladi (CEO istisnosi)' : 'yozilmaydi',
+        ustozHaqi: result.payNote,
       },
       changedById: userId,
       companyId,

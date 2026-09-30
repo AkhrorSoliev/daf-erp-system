@@ -37,6 +37,11 @@ describe('AttendanceSaveService.saveLate', () => {
   let prisma: any;
   let billing: { processAttendanceBilling: jest.Mock };
   let emitter: { emit: jest.Mock };
+  let history: { recordCreate: jest.Mock };
+
+  // The history row's teacher-pay line.
+  const payNote = () =>
+    history.recordCreate.mock.calls[0][0].newValues.ustozHaqi;
 
   beforeEach(async () => {
     tx = {
@@ -129,6 +134,7 @@ describe('AttendanceSaveService.saveLate', () => {
       ],
     }).compile();
     service = module.get(AttendanceSaveService);
+    history = module.get(EntityHistoryService);
   });
 
   it('writes the register of who was there that day and answers HELD', async () => {
@@ -382,12 +388,14 @@ describe('AttendanceSaveService.saveLate', () => {
       },
     });
     expect(result.message).toBe('Davomat saqlandi');
+    expect(payNote()).toBe('yoziladi (CEO istisnosi)');
   });
 
   it('keeps a pre-rule lesson exempt', async () => {
     tx.unmarkedLesson.findUnique.mockResolvedValue({
       ...pending,
       teacherPayExempt: true,
+      exemptReason: 'Qoida kuchga kirishidan oldingi dars (ADR-0054)',
     });
     await service.saveLate(
       'g1',
@@ -402,6 +410,22 @@ describe('AttendanceSaveService.saveLate', () => {
         data: expect.objectContaining({ teacherPayExempt: true }),
       }),
     );
+    // The CEO never touched it: the history names the row's own reason.
+    expect(payNote()).toBe(
+      'yoziladi (Qoida kuchga kirishidan oldingi dars (ADR-0054))',
+    );
+  });
+
+  it('records that a forfeited lesson pays nothing', async () => {
+    await service.saveLate(
+      'g1',
+      '2026-09-28',
+      { entries },
+      3,
+      ['Administrator'],
+      1,
+    );
+    expect(payNote()).toBe('yozilmaydi');
   });
 
   it('refuses an administrator when another holds the task', async () => {
