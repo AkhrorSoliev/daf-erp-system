@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { StudentStatus } from '@prisma/client';
+import { ExitType, StudentStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -34,6 +34,7 @@ import { userArchiveData } from '../common/status/user-archive';
 import { studentSelect, formatStudent } from './shared/student-select';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
+import { resolvePickedExitReason } from './shared/picked-exit-reason';
 
 @Injectable()
 export class StudentsWriteService {
@@ -459,8 +460,9 @@ export class StudentsWriteService {
   async delete(
     id: number,
     deletedById: number,
-    reason: string,
+    reason: string | undefined,
     companyId: number,
+    reasonId?: string,
   ) {
     const student = await this.prisma.student.findFirst({
       where: { id, deletedAt: null, companyId },
@@ -471,12 +473,33 @@ export class StudentsWriteService {
     }
     await assertCallerMayTouchStudent(this.prisma, deletedById, id, companyId);
 
+    // A reason picked from the ARCHIVE list (the status dialog) is recorded as
+    // a status change records one. A typed reason (the card's dialog) clears
+    // the reason id, as a typed reason does on a status change.
+    const typed = reason?.trim() ?? '';
+    let reasonText = typed;
+    let statusChangeReasonId: string | null = null;
+    if (reasonId) {
+      const picked = await resolvePickedExitReason(this.prisma, {
+        reasonId,
+        comment: typed,
+        exitType: ExitType.ARCHIVE,
+        companyId,
+      });
+      statusChangeReasonId = picked.id;
+      reasonText = picked.text;
+    } else if (typed.length < 3) {
+      throw new BadRequestException(
+        "O'chirish sababi kamida 3 ta belgidan iborat bo'lishi kerak",
+      );
+    }
+
     await this.statusHistoryService.changeStatus({
       entityType: 'Student',
       entityId: String(id),
       fromStatus: student.status,
       toStatus: StudentStatus.ARCHIVED,
-      reason,
+      reason: reasonText,
       changedById: deletedById,
       companyId: student.companyId ?? undefined,
     });
@@ -484,7 +507,7 @@ export class StudentsWriteService {
     await this.entityHistoryService.recordDelete({
       entityType: 'Student',
       entityId: id,
-      oldValues: { ...student, deletionReason: reason },
+      oldValues: { ...student, deletionReason: reasonText },
       changedById: deletedById,
       companyId: student.companyId ?? undefined,
     });
@@ -506,7 +529,8 @@ export class StudentsWriteService {
           deletedById,
           statusChangedAt: new Date(),
           statusChangedById: deletedById,
-          statusChangeReason: reason,
+          statusChangeReason: reasonText,
+          statusChangeReasonId,
         },
       });
 
