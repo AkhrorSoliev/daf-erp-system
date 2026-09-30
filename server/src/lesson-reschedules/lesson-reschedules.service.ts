@@ -15,7 +15,7 @@ import { UpdateLessonRescheduleDto } from './dto/update-lesson-reschedule.dto';
 import { resolveBilledEnrollmentId } from '../billing/resolve-billed-enrollment';
 import {
   assertLinkedMakeUpAhead,
-  assertMakeUpNotHeld,
+  assertMakeUpMayMove,
   markUnmarkedLessonRescheduled,
   reopenAfterRescheduleRemoved,
 } from '../unmarked-lessons/unmarked-lesson-transitions';
@@ -605,18 +605,26 @@ export class LessonReschedulesService {
         const startChanged =
           effectiveNewStart !==
           (existing.newLessonStartTime ?? group.lessonStartTime ?? null);
+        const now = new Date();
         if (newDateChanged || startChanged) {
           await assertLinkedMakeUpAhead(tx, {
             rescheduleId: existing.id,
             newDate: effectiveNewDate,
             newStartTime: effectiveNewStart,
-            now: new Date(),
+            now,
           });
         }
-        // A make-up lesson already held stays on its day: a new date would
-        // give the one lesson a second day to be counted on.
+        // The old make-up day decides a new date: a lesson held there stays
+        // (a second lesson day would count it twice); one still asked about
+        // there may move only ahead of now.
         if (newDateChanged) {
-          await assertMakeUpNotHeld(tx, existing.groupId, existing.newDate);
+          await assertMakeUpMayMove(tx, {
+            groupId: existing.groupId,
+            oldDay: existing.newDate,
+            newDate: effectiveNewDate,
+            newStartTime: effectiveNewStart,
+            now,
+          });
         }
 
         // Room override scoping — same as create.
@@ -709,7 +717,7 @@ export class LessonReschedulesService {
             groupId: existing.groupId,
             day: existing.newDate,
             actorId: userId,
-            now: new Date(),
+            now,
           });
         }
 
@@ -818,10 +826,11 @@ export class LessonReschedulesService {
           companyId,
           tx,
         });
-        // The make-up day may have no lesson left: its question closes.
+        // The make-up day — as this transaction's soft-delete returned it —
+        // may have no lesson left: its question closes.
         await closeQuestionOnFormerMakeUpDay(tx, {
-          groupId: existing.groupId,
-          day: existing.newDate,
+          groupId: row.groupId,
+          day: row.newDate,
           actorId: userId,
           now,
         });

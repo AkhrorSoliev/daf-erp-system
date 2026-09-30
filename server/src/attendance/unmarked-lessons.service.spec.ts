@@ -50,8 +50,16 @@ describe('UnmarkedLessonsService', () => {
     prisma = {
       group: {
         findMany: jest.fn().mockResolvedValue([group('g1', '#014')]),
+        // «Ko'chirish» checks the question's day is a lesson day: Mondays.
+        findUnique: jest.fn().mockResolvedValue({
+          exactDays: ['monday', 'wednesday', 'friday'],
+          scheduleSnapshots: [],
+        }),
       },
-      lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
+      lessonReschedule: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
       lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
       unmarkedLesson: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -263,6 +271,37 @@ describe('UnmarkedLessonsService', () => {
         3,
         ['Administrator'],
       );
+    });
+
+    // A question outliving the move that made its day a lesson day: moving
+    // it would add a make-up lesson for a lesson the timetable never had.
+    it('refuses to move a lesson off a day with no lesson on the timetable', async () => {
+      prisma.unmarkedLesson.findUnique.mockResolvedValue(pending);
+      // 28.09 is a Monday; the group meets on Tuesdays.
+      prisma.group.findUnique.mockResolvedValue({
+        exactDays: ['tuesday'],
+        scheduleSnapshots: [],
+      });
+      const answer = service.answerNotHeld({
+        groupId: 'g1',
+        date: '2026-09-28',
+        userId: 3,
+        roles: ['Administrator'],
+        companyId: 1,
+        dto: { reason: 'x', action: 'RESCHEDULE', newDate: '2026-10-02' },
+      });
+      await expect(answer).rejects.toBeInstanceOf(BadRequestException);
+      await expect(answer).rejects.toThrow('Bu kunda dars rejalashtirilmagan');
+      expect(prisma.lessonReschedule.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            groupId: 'g1',
+            newDate: new Date('2026-09-28T00:00:00.000Z'),
+            deletedAt: null,
+          },
+        }),
+      );
+      expect(reschedules.create).not.toHaveBeenCalled();
     });
 
     it.each(['2026-13-45', '2026-02-30'])(

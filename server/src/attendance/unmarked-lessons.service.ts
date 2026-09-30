@@ -21,6 +21,7 @@ import {
   assertMayAnswer,
   findPendingUnmarkedLesson,
   lessonDayTakenAway,
+  noLessonScheduled,
 } from '../unmarked-lessons/answer-rules';
 import { HOLIDAY_LOOKAHEAD_DAYS } from '../unmarked-lessons/reask-holidays';
 import { rethrowAsConflict } from '../common/transaction-conflict';
@@ -226,9 +227,10 @@ export class UnmarkedLessonsService {
         "Noto'g'ri sana formati. YYYY-MM-DD formatda kiriting",
       );
     }
+    const date = utcMidnightFromDateStr(args.date);
     const row = await findPendingUnmarkedLesson(this.prisma, {
       groupId: args.groupId,
-      date: utcMidnightFromDateStr(args.date),
+      date,
       companyId: args.companyId,
     });
     await assertMayAnswer(this.prisma, row, args.userId, args.roles);
@@ -242,6 +244,11 @@ export class UnmarkedLessonsService {
           args.roles,
         )
         .catch(rethrowAsConflict);
+    }
+    // A question left on a day with no lesson must not become a make-up
+    // lesson: the move would add a lesson the timetable never had.
+    if (await noLessonScheduled(this.prisma, args.groupId, date)) {
+      throw new BadRequestException('Bu kunda dars rejalashtirilmagan');
     }
     if (!args.dto.newDate) {
       throw new BadRequestException("Qo'shimcha dars sanasini tanlang");

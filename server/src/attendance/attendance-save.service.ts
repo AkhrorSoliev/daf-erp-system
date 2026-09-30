@@ -257,7 +257,6 @@ export class AttendanceSaveService {
         id: true,
         name: true,
         branchId: true,
-        exactDays: true,
         course: { select: { paymentModel: true } },
       },
     });
@@ -288,8 +287,9 @@ export class AttendanceSaveService {
           );
         }
         // A question left behind on a day with no lesson (the move that made
-        // it one deleted or re-dated) must not take a register.
-        if (await noLessonScheduled(tx, group, parsedDate)) {
+        // it one deleted or re-dated) must not take a register. The weekdays
+        // and their history are read here, inside the transaction.
+        if (await noLessonScheduled(tx, groupId, parsedDate)) {
           throw new BadRequestException('Bu kunda dars rejalashtirilmagan');
         }
 

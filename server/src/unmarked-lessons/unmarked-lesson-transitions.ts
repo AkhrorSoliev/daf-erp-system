@@ -405,19 +405,60 @@ async function makeUpLessonHeld(
 }
 
 /**
- * A make-up lesson that already took place stays on its day: a new date
- * would give the one lesson a second day to be asked about and marked on,
- * and it would be counted twice.
+ * A register on `day` that no cancellation undid. A cancelled make-up lesson
+ * did not take place: while the day's cancellation stands none of its rows
+ * count, and the rows a cancellation turned EXCUSED (`cancellationId`) never
+ * do — the codebase's marker of a cancelled lesson's attendance.
  */
-export async function assertMakeUpNotHeld(
+async function registerStands(
   tx: Tx,
   groupId: string,
   day: Date,
+): Promise<boolean> {
+  const cancelled = await tx.lessonCancellation.findFirst({
+    where: { groupId, date: day, deletedAt: null },
+    select: { id: true },
+  });
+  if (cancelled) return false;
+  const marked = await tx.attendance.findFirst({
+    where: { groupId, date: day, cancellationId: null },
+    select: { id: true },
+  });
+  return marked !== null;
+}
+
+/**
+ * A new date for a move's make-up lesson, judged by what its old day holds.
+ * A lesson held there — a «Bo'ldi» answer, or a register no cancellation
+ * undid — stays: a second lesson day would count it twice. A lesson that
+ * still waits there for «Dars bo'ldimi?» is answered by the new date, so the
+ * make-up must still be ahead (§3.5 B): a past one could be neither marked
+ * nor asked about.
+ */
+export async function assertMakeUpMayMove(
+  tx: Tx,
+  args: {
+    groupId: string;
+    oldDay: Date;
+    newDate: Date;
+    newStartTime: string | null;
+    now: Date;
+  },
 ): Promise<void> {
-  if (await makeUpLessonHeld(tx, groupId, day)) {
+  const question = await tx.unmarkedLesson.findUnique({
+    where: { groupId_date: { groupId: args.groupId, date: args.oldDay } },
+    select: { status: true },
+  });
+  if (
+    question?.status === 'HELD' ||
+    (await registerStands(tx, args.groupId, args.oldDay))
+  ) {
     throw new BadRequestException(
       "Qo'shimcha dars kunida davomat olingan — ko'chirishning sanasini o'zgartirib bo'lmaydi",
     );
+  }
+  if (question?.status === 'PENDING') {
+    assertMakeUpAhead(args.newDate, args.newStartTime, args.now);
   }
 }
 

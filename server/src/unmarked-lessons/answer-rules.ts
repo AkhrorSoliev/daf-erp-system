@@ -1,6 +1,8 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import type { Prisma, UnmarkedLesson } from '@prisma/client';
 import { meetsOn } from '../attendance/shared/ended-lessons';
+import { buildScheduleDayResolver } from '../attendance/shared/schedule-resolver';
+import { dayOfWeekForDateStr } from '../common/date/tashkent';
 
 type Db = Pick<Prisma.TransactionClient, 'unmarkedLesson' | 'user'>;
 
@@ -49,19 +51,42 @@ export async function lessonDayTakenAway(
 }
 
 /**
- * No lesson at all on `date`: not the group's weekly day and not the new date
- * of a live move — the rule a cancellation checks too. A question can outlive
- * the move that made its day a lesson day; a register there would bill a
- * lesson the timetable never had.
+ * No lesson at all on `date`: not a weekday the group meets on — now, or by
+ * the schedule in force that day, as the group calendar and the backfill read
+ * it (`buildScheduleDayResolver`; a day before the recorded history is
+ * unknown, so it is not refused) — and not the new date of a live move. A
+ * question can outlive the move that made its day a lesson day; a register
+ * there would bill a lesson the timetable never had.
  */
 export async function noLessonScheduled(
-  db: Pick<Prisma.TransactionClient, 'lessonReschedule'>,
-  group: { id: string; exactDays: string[] },
+  db: Pick<Prisma.TransactionClient, 'group' | 'lessonReschedule'>,
+  groupId: string,
   date: Date,
 ): Promise<boolean> {
-  if (meetsOn(group.exactDays, date.toISOString().slice(0, 10))) return false;
+  const group = await db.group.findUnique({
+    where: { id: groupId },
+    select: {
+      exactDays: true,
+      scheduleSnapshots: {
+        select: { exactDays: true, validFrom: true, validTo: true },
+      },
+    },
+  });
+  if (!group) return true;
+  const dayStr = date.toISOString().slice(0, 10);
+  const then = buildScheduleDayResolver(
+    group.scheduleSnapshots,
+    group.exactDays,
+  )(dayStr);
+  if (
+    meetsOn(group.exactDays, dayStr) ||
+    then === null ||
+    then.includes(dayOfWeekForDateStr(dayStr))
+  ) {
+    return false;
+  }
   const movedHere = await db.lessonReschedule.findFirst({
-    where: { groupId: group.id, newDate: date, deletedAt: null },
+    where: { groupId, newDate: date, deletedAt: null },
     select: { id: true },
   });
   return movedHere === null;

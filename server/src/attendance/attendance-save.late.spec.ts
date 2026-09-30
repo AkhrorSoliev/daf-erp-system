@@ -90,6 +90,13 @@ describe('AttendanceSaveService.saveLate', () => {
         // A live move landing on the day (none by default).
         findFirst: jest.fn().mockResolvedValue(null),
       },
+      // The group's weekdays, read inside the transaction: 28.09 is a Monday.
+      group: {
+        findUnique: jest.fn().mockResolvedValue({
+          exactDays: ['monday', 'wednesday', 'friday'],
+          scheduleSnapshots: [],
+        }),
+      },
       commentAssignee: {
         findUnique: jest.fn().mockResolvedValue({ id: 'ca1', seenAt: null }),
         deleteMany: jest.fn(),
@@ -108,8 +115,6 @@ describe('AttendanceSaveService.saveLate', () => {
           id: 'g1',
           name: '#014',
           branchId: 2,
-          // 28.09 is a Monday: a weekly lesson day.
-          exactDays: ['monday', 'wednesday', 'friday'],
           course: { paymentModel: 'LESSON_PACK' },
         }),
         // emitAfterSave reads the group's name and teachers.
@@ -203,7 +208,6 @@ describe('AttendanceSaveService.saveLate', () => {
       id: 'g1',
       name: '#014',
       branchId: 2,
-      exactDays: ['monday', 'wednesday', 'friday'],
       course: { paymentModel: 'MONTHLY' },
     });
     await service.saveLate(
@@ -368,15 +372,14 @@ describe('AttendanceSaveService.saveLate', () => {
   // question outlived it: a register would bill a lesson the timetable never
   // had, while the moved lesson is asked about on its own day.
   describe('a day with no lesson on the timetable', () => {
-    beforeEach(() => {
-      prisma.group.findFirst.mockResolvedValue({
-        id: 'g1',
-        name: '#014',
-        branchId: 2,
+    // 28.09 is a Monday; the group meets on Tuesdays now.
+    const tuesdays = (scheduleSnapshots: object[] = []) =>
+      tx.group.findUnique.mockResolvedValue({
         exactDays: ['tuesday'],
-        course: { paymentModel: 'LESSON_PACK' },
+        scheduleSnapshots,
       });
-    });
+
+    beforeEach(() => tuesdays());
 
     it('is refused with 400', async () => {
       const answer = service.saveLate(
@@ -389,6 +392,16 @@ describe('AttendanceSaveService.saveLate', () => {
       );
       await expect(answer).rejects.toBeInstanceOf(BadRequestException);
       await expect(answer).rejects.toThrow('Bu kunda dars rejalashtirilmagan');
+      // The weekdays and their history are read inside the transaction.
+      expect(tx.group.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'g1' },
+          select: expect.objectContaining({
+            exactDays: true,
+            scheduleSnapshots: expect.anything(),
+          }),
+        }),
+      );
       expect(tx.lessonReschedule.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { groupId: 'g1', newDate: lessonDay, deletedAt: null },
@@ -396,6 +409,53 @@ describe('AttendanceSaveService.saveLate', () => {
       );
       expect(tx.attendance.upsert).not.toHaveBeenCalled();
       expect(tx.unmarkedLesson.update).not.toHaveBeenCalled();
+    });
+
+    // Mondays until 29.09, Tuesdays since: the group calendar still shows
+    // 28.09 as a lesson (the schedule in force that day), and so must «Bo'ldi».
+    it('takes the register on a weekday the group met on that day', async () => {
+      tuesdays([
+        {
+          exactDays: ['monday', 'wednesday', 'friday'],
+          validFrom: new Date('2026-09-01T00:00:00.000Z'),
+          validTo: new Date('2026-09-29T07:00:00.000Z'),
+        },
+        {
+          exactDays: ['tuesday'],
+          validFrom: new Date('2026-09-29T07:00:00.000Z'),
+          validTo: null,
+        },
+      ]);
+      await service.saveLate(
+        'g1',
+        '2026-09-28',
+        { entries },
+        3,
+        ['Administrator'],
+        1,
+      );
+      expect(tx.attendance.upsert).toHaveBeenCalledTimes(2);
+    });
+
+    // The recorded history starts after the lesson: that day's weekdays are
+    // unknown, and the guard refuses only a day it knows had no lesson.
+    it('takes the register on a day before the recorded schedule history', async () => {
+      tuesdays([
+        {
+          exactDays: ['tuesday'],
+          validFrom: new Date('2026-09-29T07:00:00.000Z'),
+          validTo: null,
+        },
+      ]);
+      await service.saveLate(
+        'g1',
+        '2026-09-28',
+        { entries },
+        3,
+        ['Administrator'],
+        1,
+      );
+      expect(tx.attendance.upsert).toHaveBeenCalledTimes(2);
     });
 
     it('takes the register when a live move lands on it', async () => {

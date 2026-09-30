@@ -722,7 +722,13 @@ describe('LessonReschedulesService', () => {
       // The caller-may-touch-group check, then the holiday lookup's branch.
       prisma.group.findFirst.mockResolvedValue({ branchId: 2 });
       prisma.group.findUnique.mockResolvedValue({ branchId: 2 });
-      tx.lessonReschedule.update.mockResolvedValue({ id: 'rs-1' });
+      // The soft-delete returns the move row.
+      tx.lessonReschedule.update.mockResolvedValue({
+        id: 'rs-1',
+        groupId: 'group-1',
+        originalDate: new Date('2026-04-15T00:00:00.000Z'),
+        newDate: new Date('2026-10-07T00:00:00.000Z'),
+      });
       // The removed move is read back by id; its make-up day has no register.
       tx.lessonReschedule.findUnique = jest.fn().mockResolvedValue({
         groupId: 'group-1',
@@ -854,6 +860,27 @@ describe('LessonReschedulesService', () => {
       },
     };
     let onD1: object | null;
+    // D''s register, answered the way the query asks: `cancellationId: null`
+    // leaves out rows a cancellation turned EXCUSED.
+    const registerOnD1 = (
+      rows: { id: string; cancellationId: string | null }[],
+    ) =>
+      tx.attendance.findFirst.mockImplementation(({ where }: any) =>
+        Promise.resolve(
+          where.date.getTime() !== D1.getTime()
+            ? null
+            : (rows.find(
+                (r) =>
+                  !('cancellationId' in where) ||
+                  r.cancellationId === where.cancellationId,
+              ) ?? null),
+        ),
+      );
+    // The move row is written before the closer re-reads D''s moves.
+    const closerReadAfterMoveWrite = () =>
+      expect(
+        tx.lessonReschedule.update.mock.invocationCallOrder[0],
+      ).toBeLessThan(tx.lessonReschedule.findMany.mock.invocationCallOrder[0]);
 
     beforeEach(() => {
       jest.useFakeTimers({ now: NOW, advanceTimers: true });
@@ -862,7 +889,8 @@ describe('LessonReschedulesService', () => {
       prisma.lessonReschedule.findFirst.mockResolvedValue(move);
       prisma.group.findFirst.mockResolvedValue({ branchId: 2 });
       prisma.group.findUnique.mockResolvedValue({ branchId: 2 });
-      tx.lessonReschedule.update.mockResolvedValue({ id: 'rs-1' });
+      // The soft-delete (remove) returns the move row.
+      tx.lessonReschedule.update.mockResolvedValue(move);
       tx.lessonReschedule.findUnique = jest.fn().mockResolvedValue(move);
       tx.group.findFirst.mockResolvedValue(group);
       tx.group.findUnique.mockResolvedValue(group);
@@ -894,6 +922,7 @@ describe('LessonReschedulesService', () => {
       await service.remove('rs-1', 1, 99, ['CEO']);
 
       expect(tx.unmarkedLesson.update).toHaveBeenCalledWith(closesD1);
+      closerReadAfterMoveWrite();
       // The CEO holds no copy of the task, so every copy goes DONE.
       expect(tx.commentAssignee.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -938,7 +967,101 @@ describe('LessonReschedulesService', () => {
           where: { commentId: 'c-D1', status: { not: 'DONE' } },
         }),
       );
+      // No room here, so the only read of D''s moves is the closer's.
+      closerReadAfterMoveWrite();
     });
+
+    // A concurrent re-date committed between remove()'s first read and its
+    // transaction: the make-up day is the one the soft-delete returns.
+    it('closes the question on the make-up day the soft-delete returns', async () => {
+      prisma.lessonReschedule.findFirst.mockResolvedValue({
+        ...move,
+        newDate: new Date('2026-09-25T00:00:00.000Z'),
+      });
+
+      await service.remove('rs-1', 1, 99, ['CEO']);
+
+      expect(tx.unmarkedLesson.update).toHaveBeenCalledWith(closesD1);
+    });
+
+    // D' still waits for «Dars bo'ldimi?»; a new date answers it with a move,
+    // so the lesson must still be ahead (§3.5 B) — here a move made in
+    // advance, no question linked to it.
+    it('refuses a past new date while the make-up day still waits for an answer', async () => {
+      tx.unmarkedLesson.findFirst.mockResolvedValue(null);
+      tx.lessonReschedule.findFirst
+        .mockResolvedValueOnce(move)
+        .mockResolvedValue(null);
+
+      await expect(
+        service.update(
+          'rs-1',
+          {
+            newDate: '2026-09-30',
+            newLessonStartTime: '12:00',
+            newLessonEndTime: '13:00',
+          },
+          1,
+          99,
+          ['CEO'],
+        ),
+      ).rejects.toThrow("Qo'shimcha dars hali boshlanmagan bo'lishi kerak");
+      expect(tx.lessonReschedule.update).not.toHaveBeenCalled();
+      expect(tx.unmarkedLesson.update).not.toHaveBeenCalled();
+    });
+
+    // The gate is the date: a reason fixed on a make-up lesson already held.
+    it('lets the reason of a make-up lesson already marked be edited', async () => {
+      registerOnD1([{ id: 'a1', cancellationId: null }]);
+      tx.lessonReschedule.findFirst.mockResolvedValueOnce(move);
+
+      await service.update('rs-1', { reason: 'Izoh tuzatildi' }, 1, 99, [
+        'CEO',
+      ]);
+
+      expect(tx.lessonReschedule.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ reason: 'Izoh tuzatildi' }),
+        }),
+      );
+    });
+
+    // A cancelled make-up lesson did not take place: its day's register —
+    // rows the cancellation excused, and any row while it stands — holds
+    // nothing that would be counted twice.
+    it.each([
+      [
+        'while its cancellation stands',
+        () => {
+          tx.lessonCancellation.findFirst.mockImplementation(({ where }: any) =>
+            Promise.resolve(
+              where.date.getTime() === D1.getTime() ? { id: 'x1' } : null,
+            ),
+          );
+          registerOnD1([
+            { id: 'a1', cancellationId: 'x1' },
+            { id: 'a2', cancellationId: null }, // excused before the cancel
+          ]);
+        },
+      ],
+      [
+        'after its cancellation was deleted',
+        () => registerOnD1([{ id: 'a1', cancellationId: 'x1' }]),
+      ],
+    ])(
+      'lets a cancelled make-up lesson take a new date %s',
+      async (_label, arrange) => {
+        onD1 = question(D1, { status: 'NOT_HELD', cancellationId: 'x1' });
+        arrange();
+        tx.lessonReschedule.findFirst
+          .mockResolvedValueOnce(move)
+          .mockResolvedValue(null);
+
+        await service.update('rs-1', { newDate: '2026-10-06' }, 1, 99, ['CEO']);
+
+        expect(tx.lessonReschedule.update).toHaveBeenCalled();
+      },
+    );
 
     // Held on D' already: a second lesson day for it would count it twice.
     it.each([
@@ -948,16 +1071,7 @@ describe('LessonReschedulesService', () => {
           onD1 = question(D1, { status: 'HELD' });
         },
       ],
-      [
-        'marked',
-        () => {
-          tx.attendance.findFirst.mockImplementation(({ where }: any) =>
-            Promise.resolve(
-              where.date.getTime() === D1.getTime() ? { id: 'a1' } : null,
-            ),
-          );
-        },
-      ],
+      ['marked', () => registerOnD1([{ id: 'a1', cancellationId: null }])],
     ])(
       'refuses a new date for a make-up lesson already %s',
       async (_label, arrange) => {
