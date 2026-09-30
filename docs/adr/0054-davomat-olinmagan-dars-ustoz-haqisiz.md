@@ -23,9 +23,9 @@ bo'lmagan bo'lsa, pul qo'lda bekor qilinmaguncha qaytmasdi (ADR-0053). Tizim
 2. Dars tugab davomat bo'lmasa (dars bekor qilinmagan, ko'chirilmagan, bayram
    emas), `UnmarkedLesson` yozuvi va filial administratorlariga tizim
    topshirig'i ochiladi: «Dars bo'ldimi?». Birinchi o'zgartirgan yoki javob
-   bergan administrator topshiriqni oladi. Bayram kunlari hamma joyda filial
-   bo'yicha hisoblanadi: tekshiruvda, eslatmada, tugash sanog'ida, guruh
-   kalendarida. Topshiriq muddati — keyingi ish kuni 10:00; yakshanba va
+   bergan administrator topshiriqni oladi. Bu ish tegadigan joylarda bayram
+   kunlari filial bo'yicha hisoblanadi: tekshiruvda, eslatmada, tugash sanog'ida,
+   guruh kalendarida. Topshiriq muddati — keyingi ish kuni 10:00; yakshanba va
    filialning bayramlari o'tkazib yuboriladi (qayta ochilganiniki ham).
 3. «Bo'ldi» — davomat kech kiritiladi, dars markaz tushumiga kiradi, ustozga
    **haq yozilmaydi**. Qulf ikki joyda: `createAccrual` (har bir yozuv) va

@@ -303,14 +303,14 @@ uni o'zi topadi.
 | `attendance/unmarked-lessons.service.ts` (yangi)            | Yaratish, «Bo'ldi», «Bo'lmadi», olish, jadval / guruh uchun ma'lumot                                             |
 | `attendance.controller.ts`                                  | `POST :groupId/date/:date/late` (`entries`, faqat CEO uchun `teacherPayExempt` + `exemptReason`); `POST :groupId/date/:date/not-held` (`reason`, `action: CANCEL \| RESCHEDULE`, ko'chirishda `newDate`, vaqt, xona). Ikkalasi CEO / direktor / administrator, filial tekshiruvi bilan |
 | `attendance-reminder.service.ts`                            | Yozuv + topshiriq; har tickda to'ldirish; ko'chirish / bekor qilishni bilish; yangi admin va ustoz matnlari      |
-| `attendance/unmarked-lessons.cron.ts` (yangi)               | Har kuni 23:00: kunning qolgan darslari                                                                          |
+| `attendance-reminder.service.ts` (`closeDay`)               | Har kuni 23:00: kunning qolgan darslari — alohida cron fayl yo'q, yozuvni `attendance/unmarked-lessons.service.ts` ochadi |
 | `salary/salary-accrual.service.ts`                          | Yozish qulfi (5.1)                                                                                               |
 | `salary/shared/gap-sweep.ts` + 3 chaqiruvchi                | Hisob qulfi (5.2)                                                                                                |
 | `lesson-cancellations.service.ts`                           | Yaratishda `NOT_HELD` + topshiriqni yopish + guruh xabari; o'chirishda 3.5 «Bekor qilish o'chirilsa» |
 | `lesson-reschedules.service.ts`                             | Yaratishda `RESCHEDULED` + topshiriqni yopish + guruh xabari; o'chirishda `PENDING` + yangi topshiriq |
 | `comments/*`, `notification-events.listener.ts`, `task-reminder.service.ts` | `author` null; tizim topshirig'i qoidalari; olish; `task.assigned` yo'q                          |
 | `groups-write.service.ts`                                   | Guruh o'chirilsa topshiriqlarni yopish                                                                           |
-| `dashboard.service.ts`                                      | Har darsga `unmarked: { id, status, claimedBy } \| null`                                                         |
+| `dashboard.service.ts`                                      | Har darsga `unmarked: { id, status, teacherPayExempt, lessonStartTime, lessonEndTime, claimedBy } \| null`         |
 | `telegram-groups/*`                                         | «Bo'lmadi» darhol xabari; 21:00 «Diqqat» qatori                                                                  |
 | `telegram-digest`                                           | Ustozga «haq yozilmadi» kategoriyasi                                                                             |
 | `direct-send.guard.spec.ts` + ADR-0025 ro'yxati             | Yangi darhol yuboruvchi                                                                                          |
