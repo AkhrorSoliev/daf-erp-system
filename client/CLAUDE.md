@@ -839,8 +839,11 @@ The two transaction tabs (**To'lovlar** and **Darslar**) are documented in depth
 ### Initial Balance Dialog (Student Profile)
 
 - **`initial-balance-dialog.tsx`** — accessed via student profile `To'lov ▼` dropdown → "Boshlang'ich balans". CEO-only menu item (`isCeo` gate); backend write is `@Roles('CEO')`.
-- Used during transition from old finance systems to enter a student's outstanding balance. Backend partial unique index `(studentId) WHERE type='INITIAL_BALANCE' AND reversedAt IS NULL` enforces "exactly one per student" — second submit returns 400 with "Boshlang'ich balans bu o'quvchi uchun allaqachon kiritilgan".
+- **The item shows only when the page passes `onInitialBalanceClick`** — `student-profile-client.tsx` does. From April to September 2026 nothing passed it (the wiring was lost in the PR #169 revert), so the CEO never saw the item. Keep the prop wired.
+- Used when a student arrives with money still prepaid in an old system. The amount is a credit (`>= 0`); an old debt cannot be entered here. Backend partial unique index `(studentId) WHERE type='INITIAL_BALANCE' AND reversedAt IS NULL` enforces "exactly one per student" — second submit returns 400 with "Boshlang'ich balans bu o'quvchi uchun allaqachon kiritilgan".
+- **Nothing reverses it** (no endpoint), so "Saqlash" stays disabled until an amount is typed — an empty field would post 0 and use up the slot. A typed `0` ("no carryover") is allowed, as the server intends.
 - Form: amount (`PriceInput`, min 0) + optional note (`Input`, maxLength 500).
+- The row shows on the "To'lovlar" tab as its own dated line ("boshlang'ich balans", ADR-0037 rule 3) and under "Barcha yozuvlar".
 
 ### Student Card: Phone Proof vs Telegram Bot (ADR-0039)
 
