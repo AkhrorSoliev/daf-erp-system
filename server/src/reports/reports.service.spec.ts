@@ -1386,4 +1386,31 @@ describe('ReportsService', () => {
       });
     });
   });
+
+  describe('getFinancialOverview — month-end expectation', () => {
+    // 01.10.2026 01:30 in Tashkent; the UTC date is still 30.09.
+    beforeEach(() => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-09-30T20:30:00.000Z'));
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('projects the month the overview covers: the current Tashkent month by default, else the period start month', async () => {
+      jest
+        .spyOn((service as any).financial, 'getFinancialOverview')
+        .mockResolvedValue({ income: {}, forecast: {} });
+      const expectation = jest.spyOn(service, 'getMonthlyExpectation');
+
+      await service.getFinancialOverview(1001, { branchIds: null });
+      await service.getFinancialOverview(1001, {
+        branchIds: [7],
+        startDate: '2026-07-01',
+        endDate: '2026-07-31',
+      });
+
+      expect(expectation.mock.calls).toEqual([
+        [1001, { month: '2026-10', branchIds: null }],
+        [1001, { month: '2026-07', branchIds: [7] }],
+      ]);
+    });
+  });
 });

@@ -362,10 +362,8 @@ describe('TelegramGroupReportMenuService', () => {
     );
     expect(text).toContain("      Iyun 2026 — <b>50 000 000 so'm</b>");
     expect(text).toContain("      May 2026 — <b>20 000 000 so'm</b>");
-    // The card's own month, stated explicitly. Left to default, the window
-    // would come from `resolvePeriod`, which reads the PROCESS timezone (UTC on
-    // Railway) while the card's title is resolved in Tashkent — so on the 1st
-    // between 00:00 and 05:00 the split would describe the previous month.
+    // The card's own month, stated explicitly: the split must describe the
+    // month the card's title names.
     expect(reportsFinancial.getIncomeMonthAttribution).toHaveBeenCalledWith(
       1001,
       { branchIds: null, startDate: '2026-07-01', endDate: '2026-07-31' },

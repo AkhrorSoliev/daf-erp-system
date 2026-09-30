@@ -63,3 +63,19 @@ describe('resolvePeriod — Tashkent day bounds', () => {
     expect(next.start.getTime() - day.endTs.getTime()).toBe(1);
   });
 });
+
+describe('resolvePeriod — default period', () => {
+  // 01.10.2026 01:30 in Tashkent. On a UTC host (production) the process
+  // calendar still says 30.09, so a default built from `getMonth()` described
+  // September for the first five hours of October.
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-30T20:30:00.000Z'));
+  });
+  afterEach(() => jest.useRealTimers());
+
+  it('is the whole current Tashkent month, whatever the process timezone', () => {
+    const p = resolvePeriod();
+    expect(p.startStr).toBe('2026-10-01');
+    expect(p.endStr).toBe('2026-10-31');
+  });
+});
