@@ -12,7 +12,10 @@ import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { AttendanceValidationService } from './attendance-validation.service';
 import { LessonAdmissionService } from '../billing/lesson-admission.service';
-import { ENDED_REFUSAL } from './shared/attendance-window';
+import {
+  ENDED_REFUSAL,
+  TEACHER_ENDED_REFUSAL,
+} from './shared/attendance-window';
 
 const validatedGroup = {
   id: 'group-1',
@@ -297,6 +300,20 @@ describe('QrAttendanceService', () => {
       await expect(
         service.startSession('group-1', '2026-04-03', 1, 1),
       ).rejects.toThrow('Dars tugagan');
+    });
+
+    it('tells a teacher-only caller that the administrator answers an ended lesson', async () => {
+      jest.setSystemTime(new Date('2026-04-03T06:00:00.000Z')); // 11:00 Tashkent
+      await expect(
+        service.startSession('group-1', '2026-04-03', 1, 1, ['Teacher']),
+      ).rejects.toThrow(TEACHER_ENDED_REFUSAL);
+      // Teacher + Administrator is not teacher-only.
+      await expect(
+        service.startSession('group-1', '2026-04-03', 1, 1, [
+          'Teacher',
+          'Administrator',
+        ]),
+      ).rejects.toThrow(ENDED_REFUSAL);
     });
 
     it("refuses a session once «Dars bo'ldimi?» was asked", async () => {
@@ -692,6 +709,30 @@ describe('QrAttendanceService', () => {
       await service.scanQr('valid-token', 10001, 20001, 1);
 
       expect(entityHistory.recordUpdate).toHaveBeenCalled();
+    });
+
+    it('clears the minutes when a scan turns LATE into PRESENT (ADR-0048)', async () => {
+      redis.get
+        .mockResolvedValueOnce(tokenData)
+        .mockResolvedValueOnce(sessionData);
+      prisma.attendance.findUnique.mockResolvedValue({
+        id: 'att-1',
+        status: 'LATE',
+        lateMinutes: 15,
+        groupId: 'group-1',
+        studentId: 10001,
+      });
+
+      await service.scanQr('valid-token', 10001, 20001, 1);
+
+      expect(prisma.attendance.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: expect.objectContaining({
+            status: 'PRESENT',
+            lateMinutes: null,
+          }),
+        }),
+      );
     });
 
     // Every scan judges the window by the lesson as the database has it now

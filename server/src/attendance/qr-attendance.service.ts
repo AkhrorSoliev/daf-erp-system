@@ -14,8 +14,15 @@ export class QrAttendanceService {
     date: string,
     teacherId: number,
     companyId: number,
+    roles?: string[],
   ) {
-    return this.session.startSession(groupId, date, teacherId, companyId);
+    return this.session.startSession(
+      groupId,
+      date,
+      teacherId,
+      companyId,
+      roles,
+    );
   }
 
   rotateToken(

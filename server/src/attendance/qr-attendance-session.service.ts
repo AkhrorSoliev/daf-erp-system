@@ -34,6 +34,8 @@ export class QrAttendanceSessionService {
     date: string,
     teacherId: number,
     companyId: number,
+    /** Only picks the ended-lesson text; the window is the same for everyone. */
+    roles: string[] = [],
   ) {
     const {
       parsedDate,
@@ -57,6 +59,7 @@ export class QrAttendanceSessionService {
         endTime: effectiveEndTime,
         opensMinutesBefore,
       },
+      teacherOnly: roles.length > 0 && roles.every((r) => r === 'Teacher'),
     });
 
     const group = await this.prisma.group.findFirst({

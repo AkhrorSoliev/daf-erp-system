@@ -170,6 +170,8 @@ export class QrAttendanceScanService {
           },
           update: {
             status: AttendanceStatus.PRESENT,
+            // A LATE row's minutes go with it (ADR-0048).
+            lateMinutes: null,
             markedById: userId,
             markedMethod: AttendanceMethod.QR,
           },
