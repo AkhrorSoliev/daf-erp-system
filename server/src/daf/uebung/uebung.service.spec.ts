@@ -652,46 +652,69 @@ describe('UebungService.seans — qaytarish (wiederholung)', () => {
 
   // Review 2026-09-30: a due word from another unit was asked among TODAY's
   // words — "sieben" in a lesson of greetings was the only number, and in a
-  // u02 lesson of 20–100 the only small one. It is asked among the words of
-  // its own lesson instead.
-  it('muddati kelgan boshqa bo`lim so`zi o`z darsining so`zlari orasida so`raladi', async () => {
+  // u02 lesson of 20–100 the only small one. Among only the sections up to
+  // its own it was always the newest word (41–50% blind). So a word from an
+  // EARLIER unit, finished by now, is asked among its whole unit; a word from
+  // the same or a later unit among the sections up to its own, never among
+  // words the student has not reached.
+  //
+  // Unit 3 (A1, order 3): section 49 (order 3), 50 (order 4, the due word
+  // "sieben"), 51 (order 5). "olti" in section 49 is not core.
+  function heimatFake(lessonUnitOrder: number) {
     const prisma = fakePrisma();
     const eski = new Date(Date.now() - 60_000);
-    const sonlar = [
-      [501, 'sieben', 'yetti', '7'],
-      [502, 'siebzehn', "o'n yetti", '17'],
-      [503, 'vier', "to'rt", '4'],
-      [504, 'vierzehn', "o'n to'rt", '14'],
-      [505, 'acht', 'sakkiz', '8'],
-    ].map(([id, de, uz, anzeige]) => ({
+    const unit3 = { level: 'A1', order: 3 };
+    const sektionen = [
+      { id: 49, code: 'u03-s3', order: 3, unitId: 3, unit: unit3 },
+      { id: 50, code: 'u03-s4', order: 4, unitId: 3, unit: unit3 },
+      { id: 51, code: 'u03-s5', order: 5, unitId: 3, unit: unit3 },
+    ];
+    const woerter = [
+      [490, 'acht', 'sakkiz', '8', 49, true],
+      [491, 'achtzehn', "o'n sakkiz", '18', 49, true],
+      [492, 'neun', "to'qqiz", '9', 49, true],
+      [493, 'neunzehn', "o'n to'qqiz", '19', 49, true],
+      [494, 'sechs', 'olti', '6', 49, false],
+      [501, 'sieben', 'yetti', '7', 50, true],
+      [510, 'siebzehn', "o'n yetti", '17', 51, true],
+      [511, 'vier', "to'rt", '4', 51, true],
+      [512, 'vierzehn', "o'n to'rt", '14', 51, true],
+    ].map(([id, de, uz, anzeige, sectionId, core]) => ({
       id: Number(id),
       de: String(de),
       uz: String(uz),
       artikel: null,
       anzeige: String(anzeige),
-      core: true,
-      sectionId: 50,
+      core: Boolean(core),
+      sectionId: Number(sectionId),
       unitId: 3,
       audioKey: null,
       imageKey: null,
       bildTippen: false,
     }));
+    const lesson = prisma.dafLesson.findUnique;
+    prisma.dafLesson.findUnique = jest.fn(async () => ({
+      ...(await lesson()),
+      unit: { level: 'A1', order: lessonUnitOrder },
+    })) as any;
     const altFindMany = prisma.dafLexeme.findMany;
     prisma.dafLexeme.findMany = jest.fn(async (args: any = {}) => {
       const where = args?.where ?? {};
       const eigene = (await altFindMany(args)) as unknown[];
-      const fremde = sonlar.filter(
+      const fremde = woerter.filter(
         (l) =>
           (!where.sectionId?.in || where.sectionId.in.includes(l.sectionId)) &&
-          (!where.id?.in || where.id.in.includes(l.id)),
+          (!where.id?.in || where.id.in.includes(l.id)) &&
+          (where.core !== true || l.core),
       );
       return [...eigene, ...fremde];
     }) as any;
     prisma.dafSection.findMany = jest.fn(async (args: any = {}) => {
       const where = args?.where ?? {};
-      const home = { id: 50, code: 'u03-s4', order: 4, unitId: 3 };
-      if (where.id?.in) return where.id.in.includes(50) ? [home] : [];
-      if (where.unitId?.in) return where.unitId.in.includes(3) ? [home] : [];
+      if (where.id?.in)
+        return sektionen.filter((s) => where.id.in.includes(s.id));
+      if (where.unitId?.in)
+        return sektionen.filter((s) => where.unitId.in.includes(s.unitId));
       return [{ id: 7, code: 'u01-s1', order: 1, unitId: 1 }];
     }) as any;
     prisma.dafLexemeState.findMany = jest.fn(async (args: any = {}) =>
@@ -699,17 +722,46 @@ describe('UebungService.seans — qaytarish (wiederholung)', () => {
         ? [{ lexemeId: 501, lastFormat: 'UZ_WORT', dueAt: eski }]
         : [],
     ) as any;
+    return prisma;
+  }
 
-    const fragen = await new UebungService(prisma as any).seans(100, 55);
-
-    const sieben = fragen.find(
-      (f) => f.itemType === 'WORT' && f.itemId === 501,
-    );
-    expect(sieben?.format).toBe('WORT_UZ');
-    expect([...(sieben?.options ?? [])].sort()).toEqual(
-      ["o'n to'rt", "o'n yetti", "to'rt", 'yetti'].sort(),
-    );
+  it('oldingi unit so`zi o`z unitining barcha so`zlari orasida so`raladi', async () => {
+    for (let i = 0; i < 10; i += 1) {
+      const fragen = await new UebungService(heimatFake(5) as any).seans(
+        100,
+        55,
+      );
+      const sieben = fragen.find(
+        (f) => f.itemType === 'WORT' && f.itemId === 501,
+      );
+      expect(sieben?.format).toBe('WORT_UZ');
+      // "o'n yetti" is only in section 51, after the word's own.
+      expect(sieben?.options).toContain("o'n yetti");
+      expect(sieben?.options).toHaveLength(4);
+      expect(sieben?.options).not.toContain('olti');
+    }
   });
+
+  it.each([
+    ['o`sha', 3],
+    ['keyingi', 2],
+  ])(
+    '%s unit so`zi faqat o`z bo`limigacha bo`lgan so`zlar orasida so`raladi',
+    async (_nomi, lessonUnitOrder) => {
+      for (let i = 0; i < 10; i += 1) {
+        const fragen = await new UebungService(
+          heimatFake(lessonUnitOrder) as any,
+        ).seans(100, 55);
+        const sieben = fragen.find(
+          (f) => f.itemType === 'WORT' && f.itemId === 501,
+        );
+        expect(sieben?.options).toContain('yetti');
+        for (const nie of ["o'n yetti", "to'rt", "o'n to'rt", 'olti']) {
+          expect(sieben?.options).not.toContain(nie);
+        }
+      }
+    },
+  );
 
   // Finding 5, qaytarish yo'lidagi hodisasi: muddati kelgan so'zning
   // o'zi tarjimasiz bo'lsa (id 7 — `uz: null`), `baueWiederholung` xato

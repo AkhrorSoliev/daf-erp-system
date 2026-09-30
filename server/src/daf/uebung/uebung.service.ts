@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma } from '@prisma/client';
+import { DafLevel, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { tryResolveStudentBranchId } from '../../common/finance/resolve-branch';
 import { currentGroupId } from '../shared/student-scope';
@@ -114,6 +114,27 @@ function mischen<T>(items: T[], rnd: () => number): T[] {
     [out[i], out[j]] = [out[j], out[i]];
   }
   return out;
+}
+
+/** Where a unit stands in the course: its level, then its order. */
+interface UnitStelle {
+  level: string;
+  order: number;
+}
+
+/** The levels in schema order (A1, A2, B1): a new level joins by itself. */
+const STUFEN: string[] = Object.values(DafLevel);
+
+/** `unit` comes before `lesson` in the course; `false` when either is unknown. */
+function istFruehereUnit(
+  unit: UnitStelle | null | undefined,
+  lesson: UnitStelle | undefined,
+): boolean {
+  if (!unit || !lesson) return false;
+  const a = STUFEN.indexOf(unit.level);
+  const b = STUFEN.indexOf(lesson.level);
+  if (a < 0 || b < 0) return false;
+  return a < b || (a === b && unit.order < lesson.order);
 }
 
 /**
@@ -794,11 +815,14 @@ export class UebungService {
   } | null> {
     const lesson = await this.prisma.dafLesson.findUnique({
       where: { id: lessonId },
-      include: { section: true },
+      include: { section: true, unit: true },
     } as any);
     if (!lesson) {
       throw new NotFoundException(`Dars topilmadi: ${lessonId}`);
     }
+    const lessonUnit = ((lesson as any).unit ?? undefined) as
+      | UnitStelle
+      | undefined;
     const section = (lesson as any).section as {
       id: number;
       order: number;
@@ -976,7 +1000,13 @@ export class UebungService {
     // qurilishidan OLDIN chaqiriladi, chunki pastdagi `letzterFormatByWort`
     // so'rovi ham `dafLexemeState`ga boradi va ikkalasining tartibi
     // testlarda kuzatilgan (birinchi chaqiruv — DUE so'rovi).
-    const pflicht = await this.baueWiederholung(studentId, coreWords, rnd);
+    const pflicht = await this.baueWiederholung(
+      studentId,
+      coreWords,
+      rnd,
+      undefined,
+      lessonUnit,
+    );
 
     // Qoida 5 (dizayn 4.3): ketma-ket ikki SEANSDA bir xil (so'z+format)
     // juftligi takrorlanmaydi. `DafLexemeState.lastFormat` shu so'z oxirgi
@@ -1105,6 +1135,8 @@ export class UebungService {
     // beradi (`SEANS_UZUNLIGI`) — chunki takrorlash seansining o'zi
     // to'liq shu tanlovdan quriladi, boshqa hech qanday material yo'q.
     anzahl: number = Math.floor(SEANS_UZUNLIGI / WIEDERHOLUNG_ULUSH),
+    /** The lesson's unit, when known: decides how wide a due word's pool is. */
+    lessonUnit?: UnitStelle,
   ): Promise<Frage[]> {
     const soni = anzahl;
     if (soni <= 0) return [];
@@ -1139,13 +1171,14 @@ export class UebungService {
     }>;
     const byId = new Map(dueLexemeRows.map((l) => [l.id, l]));
 
-    // A due word from another section is asked among the words of its own
-    // lesson. Among today's words it was the odd one out: "sieben" in a
-    // lesson of greetings was the only number, and in a u02 lesson of 20–100
-    // the only small one (review 2026-09-30). Only when its lesson cannot be
-    // found does it fall back to today's words plus itself.
+    // A due word from another section is asked among the words it was
+    // taught with (`heimatPools`). Among today's words it was the odd one
+    // out: "sieben" in a lesson of greetings was the only number, and in a
+    // u02 lesson of 20–100 the only small one (review 2026-09-30). Only when
+    // its section cannot be found does it fall back to today's words.
     const heimat = await this.heimatPools(
       dueLexemeRows.filter((l) => !coreWords.some((w) => w.id === l.id)),
+      lessonUnit,
     );
 
     const pflicht: Frage[] = [];
@@ -1183,12 +1216,18 @@ export class UebungService {
   }
 
   /**
-   * For each word, the core words of its own lesson: its unit's sections up
-   * to its own, the pool `baueKandidaten` gives that lesson. A word whose
-   * section is gone gets no entry.
+   * For each word, the core words it is asked among in review.
+   *
+   * A word from a unit BEFORE the lesson's: its whole unit, finished by now.
+   * Only the sections up to its own made it the newest word in every
+   * question, and "pick the latest topic" was right 41–50% of the time
+   * (review 2026-09-30). A word from the lesson's own unit or a later one
+   * (the student went back): the sections up to its own, never words not
+   * reached yet. A word whose section is gone gets no entry.
    */
   private async heimatPools(
     rows: Array<{ id: number; sectionId: number | null }>,
+    lessonUnit?: UnitStelle,
   ): Promise<Map<number, MaterialWort[]>> {
     const pools = new Map<number, MaterialWort[]>();
     const eigeneIds = [
@@ -1203,9 +1242,11 @@ export class UebungService {
       code: string;
       order: number;
       unitId: number;
+      unit?: UnitStelle | null;
     };
     const eigene = (await this.prisma.dafSection.findMany({
       where: { id: { in: eigeneIds } },
+      include: { unit: true },
     } as any)) as SectionRow[];
     if (eigene.length === 0) return pools;
     const alle = (await this.prisma.dafSection.findMany({
@@ -1230,9 +1271,13 @@ export class UebungService {
     for (const row of rows) {
       const sec = eigene.find((s) => s.id === row.sectionId);
       if (!sec) continue;
+      const ganzeUnit = istFruehereUnit(sec.unit, lessonUnit);
       const bis = new Set(
         alle
-          .filter((s) => s.unitId === sec.unitId && s.order <= sec.order)
+          .filter(
+            (s) =>
+              s.unitId === sec.unitId && (ganzeUnit || s.order <= sec.order),
+          )
           .map((s) => s.id),
       );
       const pool = lexeme
