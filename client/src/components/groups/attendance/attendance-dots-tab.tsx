@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { RoleLink } from "@/components/shared/role-link";
+import { STUDENT_PROFILE_ROLES } from "@/lib/role-access";
 import { useQuery } from "@tanstack/react-query";
 import {
   Table,
@@ -188,9 +189,11 @@ export function AttendanceDotsTab({ group }: AttendanceDotsTabProps) {
                     {index + 1}
                   </TableCell>
                   <TableCell>
-                    <Link
+                    <RoleLink
+                      roles={STUDENT_PROFILE_ROLES}
                       href={`/students/profile/${student.id}`}
-                      className="inline-block shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="inline-block shrink-0 rounded-full"
+                      linkClassName="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       aria-label={`${student.firstName} ${student.lastName} profilini ochish`}
                     >
                       <Avatar className="size-8">
@@ -203,15 +206,17 @@ export function AttendanceDotsTab({ group }: AttendanceDotsTabProps) {
                           {student.lastName[0]}
                         </AvatarFallback>
                       </Avatar>
-                    </Link>
+                    </RoleLink>
                   </TableCell>
                   <TableCell className="font-medium">
-                    <Link
+                    <RoleLink
+                      roles={STUDENT_PROFILE_ROLES}
                       href={`/students/profile/${student.id}`}
-                      className="rounded-sm hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="rounded-sm"
+                      linkClassName="hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {student.firstName} {student.lastName}
-                    </Link>
+                    </RoleLink>
                   </TableCell>
                   <TableCell>
                     <AttendanceDots

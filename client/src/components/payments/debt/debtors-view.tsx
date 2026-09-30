@@ -30,6 +30,8 @@ import {
 import api from "@/lib/api";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useAuth } from "@/hooks/use-auth";
+import { CALL_LOG_ROLES, hasAnyRole } from "@/lib/role-access";
 import { TablePagination } from "@/components/outreach/table-pagination";
 import {
   LogCallDialog,
@@ -105,6 +107,8 @@ export function DebtorsView() {
   const { selectedBranch } = useBranchSwitcher();
   const queryClient = useQueryClient();
   const { filters, setFilter, setFilters } = useDebtFilters();
+  // Kassir to'lov qayd qiladi, lekin qo'ng'iroq natijasini yozmaydi.
+  const canLogCalls = useAuth((s) => hasAnyRole(s.user?.roles, CALL_LOG_ROLES));
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [recordTarget, setRecordTarget] = useState<PaymentTarget | null>(null);
@@ -320,13 +324,16 @@ export function DebtorsView() {
                         balance: d.balance,
                       })
                     }
-                    onLogCall={() =>
-                      setCallTarget({
-                        studentId: d.id,
-                        studentLabel: `#${d.id} ${d.firstName} ${d.lastName}`,
-                        studentPhone: d.phone || null,
-                        reason: "DEBT",
-                      })
+                    onLogCall={
+                      canLogCalls
+                        ? () =>
+                            setCallTarget({
+                              studentId: d.id,
+                              studentLabel: `#${d.id} ${d.firstName} ${d.lastName}`,
+                              studentPhone: d.phone || null,
+                              reason: "DEBT",
+                            })
+                        : undefined
                     }
                   />
                 ))}

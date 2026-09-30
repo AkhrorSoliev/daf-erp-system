@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { RoleLink } from "@/components/shared/role-link";
+import { STUDENT_PROFILE_ROLES } from "@/lib/role-access";
 import { useState } from "react";
 import {
   AlertTriangle,
@@ -83,9 +84,11 @@ export function AttendanceStudentRow({
           {index + 1}
         </span>
 
-        <Link
+        <RoleLink
+          roles={STUDENT_PROFILE_ROLES}
           href={`/students/profile/${student.studentId}`}
-          className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="shrink-0 rounded-full"
+          linkClassName="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={`${student.firstName} ${student.lastName} profilini ochish`}
         >
           <Avatar className="size-9 sm:size-10">
@@ -98,16 +101,18 @@ export function AttendanceStudentRow({
               {student.lastName[0]}
             </AvatarFallback>
           </Avatar>
-        </Link>
+        </RoleLink>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <Link
+            <RoleLink
+              roles={STUDENT_PROFILE_ROLES}
               href={`/students/profile/${student.studentId}`}
-              className="truncate text-sm font-medium hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+              className="truncate text-sm font-medium rounded-sm"
+              linkClassName="hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {student.firstName} {student.lastName}
-            </Link>
+            </RoleLink>
             {student.isDebtor && (
               <Tooltip>
                 <TooltipTrigger asChild>
