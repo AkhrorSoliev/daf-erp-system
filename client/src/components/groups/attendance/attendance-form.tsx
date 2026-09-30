@@ -23,7 +23,10 @@ import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { tashkentNow } from "@/lib/tashkent-time";
-import { newAttendanceWindow } from "@/lib/attendance-window";
+import {
+  newAttendanceWindow,
+  OPENS_MINUTES_BEFORE,
+} from "@/lib/attendance-window";
 import { useAuth } from "@/hooks/use-auth";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { QrAttendanceDialog } from "./qr-attendance-dialog";
@@ -72,11 +75,13 @@ export function AttendanceForm({
   // bu bayroq finalize rejimiga o'tkazadi.
   const [forceFinalizeMode, setForceFinalizeMode] = useState(false);
   const [planSubmitting, setPlanSubmitting] = useState<number | null>(null);
-  // The lesson's real times for this date, from the register's own read: a day
-  // moved here can carry times of its own (the server judges the window on them).
+  // The lesson's real times for this date and the company's lead, from the
+  // register's own read: a day moved here can carry times of its own, and the
+  // server judges the window on them with the same lead.
   const [effectiveTimes, setEffectiveTimes] = useState<{
     start: string | null;
     end: string | null;
+    opensMinutesBefore: number;
   } | null>(null);
 
   const [y, m, d] = date.split("-");
@@ -91,6 +96,8 @@ export function AttendanceForm({
 
   const lessonStartTime = effectiveTimes?.start ?? group.lessonStartTime ?? null;
   const lessonEndTime = effectiveTimes?.end ?? group.lessonEndTime ?? null;
+  const opensMinutesBefore =
+    effectiveTimes?.opensMinutesBefore ?? OPENS_MINUTES_BEFORE;
 
   const lessonTimeInfo = (() => {
     if (!isToday || !lessonStartTime || !lessonEndTime) return null;
@@ -100,13 +107,13 @@ export function AttendanceForm({
     const start = sh * 60 + sm;
     const end = eh * 60 + em;
 
-    // Dars boshlanishidan 10 daqiqa oldin ochiladi
-    const windowStart = start - 10;
+    // Opens `opensMinutesBefore` minutes before the start (the company's setting).
+    const windowStart = start - opensMinutesBefore;
 
     if (nowMinutes < windowStart)
       return {
         status: "before" as const,
-        message: `Dars ${lessonStartTime} da boshlanadi (Toshkent vaqti). Davomat dars boshlanishidan 10 daqiqa oldin ochiladi`,
+        message: `Dars ${lessonStartTime} da boshlanadi (Toshkent vaqti). Davomat dars boshlanishidan ${opensMinutesBefore} daqiqa oldin ochiladi`,
       };
     if (nowMinutes >= end)
       return {
@@ -128,6 +135,7 @@ export function AttendanceForm({
     nowMinutes: tashkent.minutes,
     startTime: lessonStartTime,
     endTime: lessonEndTime,
+    opensMinutesBefore,
   });
   const isNewRegister =
     students.length > 0 && students.every((s) => s.status === null);
@@ -177,11 +185,10 @@ export function AttendanceForm({
       setStudents(active);
       setDebtorStudents(debtors);
       setCoursePrice(data.coursePrice ?? 0);
-      // TODO(integration §4.1): keep `data.opensMinutesBefore ?? 10` beside
-      // these and use it in newAttendanceWindow and lessonTimeInfo.
       setEffectiveTimes({
         start: data.effectiveStartTime ?? null,
         end: data.effectiveEndTime ?? null,
+        opensMinutesBefore: data.opensMinutesBefore ?? OPENS_MINUTES_BEFORE,
       });
 
       const map = new Map<number, AttendanceEntry>();

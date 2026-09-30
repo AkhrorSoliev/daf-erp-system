@@ -1,9 +1,10 @@
 /**
  * When a NEW register may be saved — the rule the server enforces in
  * `server/src/attendance/shared/attendance-window.ts` (spec 2026-09-29 §3.1):
- * only on the lesson's own Tashkent day, from ten minutes before it starts
- * until it ends, for every role. The server is the boundary; this only keeps
- * the form from offering a save the server will refuse.
+ * only on the lesson's own Tashkent day, from the company's lead (default ten
+ * minutes, `payment.attendanceOpensMinutesBefore`) before it starts until it
+ * ends, for every role. The server is the boundary; this only keeps the form
+ * from offering a save the server will refuse.
  */
 export type AttendanceWindow = "OPEN" | "BEFORE" | "ENDED" | "NOT_TODAY";
 
@@ -21,10 +22,13 @@ export function newAttendanceWindow(args: {
   nowMinutes: number;
   startTime: string | null;
   endTime: string | null;
+  /** The company's lead; `0` is a real value (opens at the start), not "unset". */
+  opensMinutesBefore?: number;
 }): AttendanceWindow {
   if (args.date !== args.todayStr) return "NOT_TODAY";
   if (args.nowMinutes >= toMinutes(args.endTime ?? DAY_END_TIME)) return "ENDED";
-  if (args.startTime && args.nowMinutes < toMinutes(args.startTime) - OPENS_MINUTES_BEFORE) {
+  const lead = args.opensMinutesBefore ?? OPENS_MINUTES_BEFORE;
+  if (args.startTime && args.nowMinutes < toMinutes(args.startTime) - lead) {
     return "BEFORE";
   }
   return "OPEN";
