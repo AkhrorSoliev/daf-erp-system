@@ -16,7 +16,11 @@ import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { LessonAdmissionService } from '../billing/lesson-admission.service';
 import type { SaveAttendanceDto } from './dto/save-attendance.dto';
-import { ENDED_REFUSAL } from './shared/attendance-window';
+import {
+  ENDED_REFUSAL,
+  lessonHasEnded,
+  tashkentClock,
+} from './shared/attendance-window';
 
 /** An ended lesson, as a teacher-only caller reads it (CEO, texts item 4). */
 const TEACHER_ENDED =
@@ -76,6 +80,7 @@ describe('AttendanceService', () => {
   let eventEmitter: { emit: jest.Mock };
   let holidaysService: any;
   let admission: { forLesson: jest.Mock };
+  let settings: { get: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -160,7 +165,7 @@ describe('AttendanceService', () => {
         {
           provide: SettingsService,
           // The default lead (ADR-0047); a test that moves it says so.
-          useValue: { get: jest.fn().mockResolvedValue(10) },
+          useValue: (settings = { get: jest.fn().mockResolvedValue(10) }),
         },
         AttendanceReadService,
         AttendanceStatsService,
@@ -335,6 +340,24 @@ describe('AttendanceService', () => {
             new Date('2026-04-01T07:00:00Z'),
           ),
         ).toThrow("Dars tugagan — kelmaslikni oldindan belgilab bo'lmaydi");
+      });
+
+      // Pre-marks stop on the new-register window's boundary.
+      it('lets a pre-mark in during the lesson, not from its end minute', () => {
+        const lesson = { lessonDay: '2026-04-01', endTime: '11:00' };
+        const at = (iso: string) => () =>
+          validation().assertLessonNotEnded(lesson, new Date(iso));
+        expect(at('2026-04-01T05:00:00Z')).not.toThrow(); // 10:00, running
+        expect(at('2026-04-01T05:59:59Z')).not.toThrow(); // 10:59:59
+        expect(at('2026-04-01T06:00:00Z')).toThrow('Dars tugagan'); // 11:00
+      });
+
+      it('ends a group without times at 23:00', () => {
+        const lesson = { lessonDay: '2026-04-01', endTime: null };
+        const at = (iso: string) => () =>
+          validation().assertLessonNotEnded(lesson, new Date(iso));
+        expect(at('2026-04-01T17:59:00Z')).not.toThrow(); // 22:59
+        expect(at('2026-04-01T18:00:00Z')).toThrow('Dars tugagan'); // 23:00
       });
     });
   });
@@ -2121,6 +2144,98 @@ describe('AttendanceService', () => {
         await adminSaves();
         expect(writes()[1]).toEqual(
           expect.objectContaining({ status: 'PRESENT', lateMinutes: null }),
+        );
+      });
+    });
+
+    // One clock (D4): the shared window, the company's lead, the effective
+    // times of the day.
+    describe("the new register's window", () => {
+      const at = (iso: string) => jest.setSystemTime(new Date(iso));
+      const saves = (date = '2026-04-01') =>
+        service.save('group-uuid-1', date, twoPresent, 1, ['Administrator'], 1);
+
+      beforeEach(() => {
+        prisma.attendance.upsert.mockImplementation(({ create }: any) =>
+          Promise.resolve({ id: `att-${create.studentId}`, ...create }),
+        );
+      });
+
+      it("opens by the company's lead: 20 minutes", async () => {
+        settings.get.mockResolvedValue(20);
+        at('2026-04-01T03:45:00.000Z'); // 08:45, start − 15
+        await expect(saves()).resolves.toMatchObject({ count: 2 });
+
+        at('2026-04-01T03:35:00.000Z'); // 08:35, start − 25
+        await expect(saves()).rejects.toMatchObject({
+          message:
+            'Davomat dars boshlanishidan 20 daqiqa oldin ochiladi (09:00)',
+        });
+      });
+
+      it('closes at the end minute itself: 17:30:00 for a lesson ending 17:30', async () => {
+        prisma.group.findFirst.mockResolvedValue({
+          ...mockGroup,
+          lessonStartTime: '16:00',
+          lessonEndTime: '17:30',
+        });
+        at('2026-04-01T12:29:59.000Z'); // 17:29:59
+        await expect(saves()).resolves.toMatchObject({ count: 2 });
+
+        const endMinute = new Date('2026-04-01T12:30:00.000Z'); // 17:30:00
+        jest.setSystemTime(endMinute);
+        await expect(saves()).rejects.toMatchObject({ message: ENDED_REFUSAL });
+        // The lesson-end sweep reads the same boundary.
+        expect(
+          lessonHasEnded({
+            date: '2026-04-01',
+            ...tashkentClock(endMinute),
+            endTime: '17:30',
+          }),
+        ).toBe(true);
+      });
+
+      it("counts the window, the lead and the minutes from a moved lesson's own start", async () => {
+        // Moved to Thursday 2026-04-02 at 14:00–15:30; the group meets 09:00–11:00.
+        prisma.lessonReschedule.findFirst.mockResolvedValue({
+          originalDate: new Date('2026-03-30T00:00:00.000Z'),
+          newDate: new Date('2026-04-02T00:00:00.000Z'),
+          newLessonStartTime: '14:00',
+          newLessonEndTime: '15:30',
+        });
+        at('2026-04-02T08:45:00.000Z'); // 13:45
+        await expect(saves('2026-04-02')).rejects.toMatchObject({
+          message:
+            'Davomat dars boshlanishidan 10 daqiqa oldin ochiladi (14:00)',
+        });
+
+        at('2026-04-02T08:55:00.000Z'); // 13:55
+        await expect(saves('2026-04-02')).resolves.toMatchObject({ count: 2 });
+
+        // 14:20: an administrator's ABSENT→PRESENT is 20 minutes late.
+        at('2026-04-02T09:20:00.000Z');
+        prisma.attendance.findMany.mockResolvedValue([
+          {
+            id: 'att-10001',
+            studentId: 10001,
+            status: 'PRESENT',
+            markedMethod: 'MANUAL',
+            lateMinutes: null,
+            note: null,
+          },
+          {
+            id: 'att-10002',
+            studentId: 10002,
+            status: 'ABSENT',
+            markedMethod: 'MANUAL',
+            lateMinutes: null,
+            note: null,
+          },
+        ]);
+        prisma.attendance.upsert.mockClear();
+        await saves('2026-04-02');
+        expect(prisma.attendance.upsert.mock.calls[1][0].update).toEqual(
+          expect.objectContaining({ status: 'LATE', lateMinutes: 20 }),
         );
       });
     });

@@ -1340,7 +1340,15 @@ describe('LessonBillingService', () => {
           }),
           lessonDate: october,
         });
-        expect(salaryAccrualService.createAccrual).toHaveBeenCalled();
+        // Student-covered, backed by the month's charge: wasCenterTopUp stays
+        // false and ADR-0052 moves its unpaid share to the centre live
+        // (`unpaid-monthly-share.spec`). ADR-0049's flag is not needed (D3).
+        expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
+          expect.objectContaining({
+            centerFunded: false,
+            deductionTransactionId: 'tx-monthly-1',
+          }),
+        );
       });
 
       it('accrues ABSENT when the payments reach the first lesson', async () => {

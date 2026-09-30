@@ -28,6 +28,24 @@ describe('newAttendanceWindow', () => {
     );
   });
 
+  it("opens by the company's lead when it is given", () => {
+    const lead = { ...lesson, opensMinutesBefore: 20 };
+    expect(newAttendanceWindow({ ...lead, nowMinutes: at(17, 5) })).toBe(
+      'BEFORE',
+    );
+    expect(newAttendanceWindow({ ...lead, nowMinutes: at(17, 15) })).toBe(
+      'OPEN',
+    );
+    expect(
+      windowRefusal('BEFORE', {
+        date: lesson.date,
+        todayStr: lesson.todayStr,
+        startTime: lesson.startTime,
+        opensMinutesBefore: 20,
+      }),
+    ).toBe('Davomat dars boshlanishidan 20 daqiqa oldin ochiladi (17:30)');
+  });
+
   it('closes at the end minute itself', () => {
     expect(newAttendanceWindow({ ...lesson, nowMinutes: at(18, 59) })).toBe(
       'OPEN',
