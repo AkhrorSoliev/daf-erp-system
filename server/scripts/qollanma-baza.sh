@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Qo'llanma skrinshotlari uchun lokal daf_docs bazasini noldan yig'adi.
-# Faqat docker'dagi daf-postgres ichidagi daf_docs bazasiga tegadi.
+# Postgres'da faqat docker'dagi daf-postgres ichidagi daf_docs bazasiga tegadi.
+# Redis'da esa butun lokal daf-redis konteynerini tozalaydi (FLUSHALL): kalitlar
+# prefiksiz, shuning uchun lokal daf_erp sessiyasining keshi ham o'chadi.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

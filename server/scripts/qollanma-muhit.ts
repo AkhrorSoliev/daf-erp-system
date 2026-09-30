@@ -105,13 +105,19 @@ async function main() {
       periodMonth: oy,
     });
 
+    // Skrinshot o'quvchisi: seed'dan dars paketi qoldig'i qolgan yozilishlar
+    // chiqarib tashlanadi, tartib esa har qayta yig'ishda bir xil bo'ladi.
     const hisob = await prisma.enrollmentMonthlyCharge.findFirst({
       where: {
         periodYear: yil,
         periodMonth: oy,
         status: MonthlyChargeStatus.CHARGED,
-        enrollment: { status: EnrollmentStatus.ACTIVE },
+        enrollment: {
+          status: EnrollmentStatus.ACTIVE,
+          prepaidLessonsRemaining: 0,
+        },
       },
+      orderBy: [{ enrollment: { studentId: 'asc' } }, { enrollmentId: 'asc' }],
       select: { enrollment: { select: { studentId: true, groupId: true } } },
     });
     if (!hisob) throw new Error('Oylik hisob yozilmadi — seed ishlaganmi?');
@@ -126,7 +132,7 @@ async function main() {
       `${JSON.stringify(stsenariy, null, 2)}\n`,
     );
     console.log(
-      `Oylik kurs: ${yozilishlar.count} yozilish, ${natija.created} ta hisob. Fayl: ${STSENARIY_FAYLI}`,
+      `Oylik kurs: ${yozilishlar.count} yozilish, ${natija.created} ta hisob, ${natija.skipped} ta o'tkazib yuborildi (xato bo'lsa, yuqoridagi logda). Fayl: ${STSENARIY_FAYLI}`,
     );
   } finally {
     await app.close();
