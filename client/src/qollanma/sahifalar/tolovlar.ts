@@ -95,7 +95,7 @@ export const tolovlar: QollanmaSahifa[] = [
     qisqacha:
       "To'lovni Moliya sahifalaridagi «To'lov qayd qilish» tugmasi bilan yozasiz: o'quvchini tanlaysiz, summa va usulni kiritasiz. To'lov darhol balansga tushadi va avval qarzni yopadi; chek o'quvchiga Telegramda soat 20:00 da boradi.",
     rollar: [1, 2, 3, 5],
-    adr: ["0021"],
+    adr: [],
     yollar: ["/payments/pending", "/payments/overview"],
     kalitSozlar: [
       "to'lov qayd qilish",
@@ -118,7 +118,6 @@ export const tolovlar: QollanmaSahifa[] = [
       "umumiy ma'lumotlar",
       "oxirgi to'lovlar",
       "qabul qildi",
-      "tushum tarkibi",
       "balans",
     ],
     yangilangan: "2026-09-30",
@@ -181,7 +180,7 @@ export const tolovlar: QollanmaSahifa[] = [
     sahifa: "pul-qaytarish",
     sarlavha: "Pulni qaytarish va yechib olish",
     qisqacha:
-      "Pulni qaytarish o'quvchiga pulini qaytarib berishni yozadi: pul faqat erkin balansdan va hali o'tilmagan oldindan to'langan darslardan olinadi. «Yechib olish» balansdagi pulni o'quvchiga bermay, tanlangan oyning markaz daromadi sifatida yozadi; ikkalasini CEO, direktor va administrator qiladi.",
+      "Pulni qaytarish o'quvchiga pulini qaytarib berishni yozadi: pul faqat erkin balansdan va hali o'tilmagan oldindan to'langan darslardan olinadi. «Yechib olish» balansdagi pulni o'quvchiga bermay balansdan olib qo'yadi (ixtiyoriy ravishda ustozga ulush yozadi); ikkalasini CEO, direktor va administrator qiladi.",
     rollar: [1, 2, 3],
     adr: [],
     yollar: [],
