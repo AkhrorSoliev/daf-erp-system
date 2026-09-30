@@ -38,6 +38,7 @@ import { UsersService } from '../../users/users.service';
 import { message } from 'telegraf/filters';
 import { ALLOWED_IMAGE_MIMES } from '../../upload/upload.constraints';
 import { withProcessingLock } from '../utils/processing-lock';
+import { describeError } from '../../telegram-digest/telegram-send';
 
 const logger = new Logger('EmployeeRegistrationScene');
 
@@ -333,7 +334,10 @@ export function createEmployeeRegistrationScene(
 
     try {
       await handlePhotoUpload(ctx, photo.file_id, 'image/jpeg');
-    } catch {
+    } catch (err) {
+      logger.warn(
+        `Xodim rasmi yuklanmadi (chat ${ctx.chat.id}): ${describeError(err)}`,
+      );
       await ctx.reply('Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:');
     }
   });
@@ -361,7 +365,10 @@ export function createEmployeeRegistrationScene(
 
     try {
       await handlePhotoUpload(ctx, doc.file_id, mime);
-    } catch {
+    } catch (err) {
+      logger.warn(
+        `Xodim rasmi yuklanmadi (chat ${ctx.chat.id}): ${describeError(err)}`,
+      );
       await ctx.reply('Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:');
     }
   });

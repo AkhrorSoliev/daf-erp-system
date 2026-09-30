@@ -3,6 +3,7 @@ import { Context } from 'telegraf';
 import type { UserFromGetMe } from 'telegraf/types';
 import { createEmployeeRegistrationScene } from './employee-registration.scene';
 import { CONTACT_NOT_OWN } from '../utils/contact-ownership';
+import * as download from '../utils/download.util';
 
 // Telegraf's Context requires the bot's own identity. These tests never read
 // it, but `undefined` is not what the constructor accepts and the cast that
@@ -521,5 +522,63 @@ describe('employee-registration.scene — xodim kabineti', () => {
     expect(usersService.create).toHaveBeenCalledTimes(1);
     expect(ctx.replyWithPhoto).toHaveBeenCalled();
     expect(JSON.stringify(ctx.reply.mock.calls)).not.toContain('xatolik');
+  });
+});
+
+/**
+ * The photo step (`step 5`). A download that fails (Telegram unreachable, an
+ * error page instead of the file) must leave the person at this step with a
+ * reply, so sending the photo again works, and must reach the log: a bare
+ * `catch` once hid a total registration outage.
+ */
+describe('employee-registration.scene — rasm yuklanmasa', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('replies, keeps the photo step and logs the reason', async () => {
+    jest
+      .spyOn(download, 'downloadFile')
+      .mockRejectedValue(new Error('File download failed: HTTP 404'));
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const uploadService = { uploadFile: jest.fn(), deleteFile: jest.fn() };
+    const telegram = {
+      getFileLink: jest
+        .fn()
+        .mockResolvedValue(new URL('https://example.com/photo.jpg')),
+    };
+    const update = {
+      update_id: 6,
+      message: {
+        message_id: 6,
+        date: 0,
+        chat: { id: 555222, type: 'private' },
+        from: { id: 999, is_bot: false, first_name: 'T' },
+        photo: [{ file_id: 'f1', file_unique_id: 'u1', width: 9, height: 9 }],
+      },
+    };
+    const ctx = new Context(update as any, telegram as any, BOT_INFO) as any;
+    ctx.session = {
+      step: 5,
+      data: { branchId: 7, roleIds: [4] },
+      processing: false,
+    };
+    ctx.sendChatAction = jest.fn().mockResolvedValue(undefined);
+    ctx.reply = jest.fn().mockResolvedValue(undefined);
+    const scene = createEmployeeRegistrationScene(
+      buildPrisma(),
+      uploadService as any,
+      { create: jest.fn() } as any,
+      {} as any,
+    );
+
+    await scene.middleware()(ctx, async () => {});
+
+    expect(ctx.reply).toHaveBeenCalledWith(
+      'Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:',
+    );
+    expect(ctx.session.step).toBe(5);
+    expect(uploadService.uploadFile).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('HTTP 404'));
   });
 });

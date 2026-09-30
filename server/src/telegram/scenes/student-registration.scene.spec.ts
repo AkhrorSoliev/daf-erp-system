@@ -1,7 +1,9 @@
+import { Logger } from '@nestjs/common';
 import { Context } from 'telegraf';
 import type { UserFromGetMe } from 'telegraf/types';
 import { createStudentRegistrationScene } from './student-registration.scene';
 import { CONTACT_NOT_OWN } from '../utils/contact-ownership';
+import * as download from '../utils/download.util';
 
 const BOT_INFO = {
   id: 1,
@@ -264,4 +266,62 @@ describe('student-registration.scene — a failed step releases the lock', () =>
       expect(ctx.session.processing).toBe(false);
     },
   );
+});
+
+/**
+ * The photo step (`step 6`). A download that fails (Telegram unreachable, an
+ * error page instead of the file) must leave the person at this step with a
+ * reply, so sending the photo again works, and must reach the log.
+ */
+describe('student-registration.scene — rasm yuklanmasa', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('replies, keeps the photo step and logs the reason', async () => {
+    jest
+      .spyOn(download, 'downloadFile')
+      .mockRejectedValue(new Error('File download failed: HTTP 404'));
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const uploadService = { uploadFile: jest.fn(), deleteFile: jest.fn() };
+    const telegram = {
+      getFileLink: jest
+        .fn()
+        .mockResolvedValue(new URL('https://example.com/photo.jpg')),
+    };
+    const update = {
+      update_id: 6,
+      message: {
+        message_id: 6,
+        date: 0,
+        chat: { id: 555444, type: 'private' },
+        from: { id: 999, is_bot: false, first_name: 'O' },
+        photo: [{ file_id: 'f1', file_unique_id: 'u1', width: 9, height: 9 }],
+      },
+    };
+    const ctx = new Context(update as any, telegram as any, BOT_INFO) as any;
+    ctx.session = {
+      step: 6,
+      data: { branchId: 7, teacherId: 10, groupId: 'g1', phone: '901112233' },
+      processing: false,
+    };
+    ctx.sendChatAction = jest.fn().mockResolvedValue(undefined);
+    ctx.reply = jest.fn().mockResolvedValue(undefined);
+    const scene = createStudentRegistrationScene(
+      {} as any,
+      uploadService as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    await scene.middleware()(ctx, async () => {});
+
+    expect(ctx.reply).toHaveBeenCalledWith(
+      'Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:',
+    );
+    expect(ctx.session.step).toBe(6);
+    expect(uploadService.uploadFile).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('HTTP 404'));
+  });
 });
