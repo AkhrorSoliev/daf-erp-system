@@ -754,8 +754,8 @@ export class SalaryMonthlyService {
    * presence in that month.
    *
    * `missedLessons` («Berilmadi», ADR-0048): the month's lessons that ended
-   * without attendance and what each cost the teacher. Empty for anyone who
-   * teaches no group.
+   * without attendance, or whose pay was forfeited (ADR-0054), and what each
+   * cost the teacher. Empty for anyone who teaches no group.
    */
   async getMonthlyForUser(
     userId: number,

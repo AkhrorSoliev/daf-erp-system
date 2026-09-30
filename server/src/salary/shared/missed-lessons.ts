@@ -5,8 +5,9 @@ import {
 } from './deserved-math';
 
 /**
- * «Berilmadi» — lessons that ended with no attendance, and the pay the
- * teacher lost on each (ADR-0048, design «Davomat va to'lov tartibi» R1).
+ * «Berilmadi» — lessons that ended with no attendance (or were answered
+ * «Bo'ldi» without an exemption, ADR-0054), and the pay the teacher lost on
+ * each (ADR-0048, design «Davomat va to'lov tartibi» R1).
  *
  * Computed on read, never stored: a missed lesson is a fact of the calendar
  * and the attendance table, both of which are already stored. A nightly
@@ -38,7 +39,10 @@ export interface MissedLessonCharge {
 export interface MissedLessonsInput {
   teacherId: number;
   groups: MissedLessonGroup[];
-  /** `${groupId}::${date}` of every lesson that has at least one attendance row. */
+  /**
+   * `${groupId}::${date}` of every lesson that counts as taken: a register
+   * with no forfeited «Dars bo'ldimi?» row, or an exempt row (ADR-0054).
+   */
   takenLessons: ReadonlySet<string>;
   /** `${groupId}::${date}` → the substitute override's teacher ids. */
   overrides: ReadonlyMap<string, readonly number[]>;
@@ -70,7 +74,7 @@ export interface MissedLessonsResult {
 }
 
 /**
- * Every planned lesson of the teacher's groups with no attendance row. A
+ * Every planned lesson of the teacher's groups not in `takenLessons`. A
  * lesson a substitute override gave to other teachers is not this teacher's
  * to miss. The pay is what the same lesson would have accrued: for each
  * student whose month charge covered the day (not frozen out, not pre-marked

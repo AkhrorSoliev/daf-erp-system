@@ -33,6 +33,7 @@ function makePrisma() {
           { groupId: 'g1', date: new Date('2026-10-02T00:00:00Z') },
         ]),
     },
+    unmarkedLesson: { findMany: jest.fn().mockResolvedValue([]) },
     lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
     enrollmentMonthlyCharge: {
       findMany: jest.fn().mockResolvedValue([
@@ -129,6 +130,46 @@ describe('SalaryMissedLessonsService', () => {
     );
     expect(r).toEqual({ lessons: [], total: 0 });
     expect(prisma.group.findMany).not.toHaveBeenCalled();
+  });
+
+  it('lists a lesson whose pay was forfeited, and not an exempt one (ADR-0054)', async () => {
+    // 02.10: «Bo'ldi», not exempt — the register exists, the pay does not.
+    // 05.10: exempt question (backfill / CEO), no register.
+    // 07.10: PENDING, not exempt, no register.
+    prisma.unmarkedLesson.findMany.mockResolvedValue([
+      {
+        groupId: 'g1',
+        date: new Date('2026-10-02T00:00:00Z'),
+        teacherPayExempt: false,
+      },
+      {
+        groupId: 'g1',
+        date: new Date('2026-10-05T00:00:00Z'),
+        teacherPayExempt: true,
+      },
+      {
+        groupId: 'g1',
+        date: new Date('2026-10-07T00:00:00Z'),
+        teacherPayExempt: false,
+      },
+    ]);
+    const r = await service.forTeacher(
+      7,
+      1,
+      '2026-10',
+      new Date('2026-10-08T05:00:00Z'),
+    );
+    expect(r.lessons.map((l) => l.date)).toEqual(['2026-10-02', '2026-10-07']);
+    expect(prisma.unmarkedLesson.findMany).toHaveBeenCalledWith({
+      where: {
+        groupId: { in: ['g1'] },
+        date: {
+          gte: new Date('2026-10-01T00:00:00Z'),
+          lt: new Date('2026-10-08T00:00:00Z'),
+        },
+      },
+      select: { groupId: true, date: true, teacherPayExempt: true },
+    });
   });
 
   it("stops at the group's end date", async () => {

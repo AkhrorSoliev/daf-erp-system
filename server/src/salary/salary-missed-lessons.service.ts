@@ -108,11 +108,15 @@ export class SalaryMissedLessonsService {
       gte: utcMidnightFromDateStr(from),
       lt: utcMidnightFromDateStr(addDaysToDateStr(to, 1)),
     };
-    const [taken, overrides, charges, excused, versionRows] = await Promise.all(
-      [
+    const [taken, questions, overrides, charges, excused, versionRows] =
+      await Promise.all([
         this.prisma.attendance.groupBy({
           by: ['groupId', 'date'],
           where: { groupId: { in: groupIds }, date: dateRange },
+        }),
+        this.prisma.unmarkedLesson.findMany({
+          where: { groupId: { in: groupIds }, date: dateRange },
+          select: { groupId: true, date: true, teacherPayExempt: true },
         }),
         this.prisma.lessonTeacherOverride.findMany({
           where: {
@@ -156,8 +160,7 @@ export class SalaryMissedLessonsService {
             config: { select: { groupId: true } },
           },
         }),
-      ],
-    );
+      ]);
 
     const byGroup = new Map<string, RateVersion[]>();
     const global: RateVersion[] = [];
@@ -179,12 +182,21 @@ export class SalaryMissedLessonsService {
 
     // `@db.Date` columns come back as UTC midnight: the ISO date is the day.
     const day = (d: Date) => d.toISOString().slice(0, 10);
+    // ADR-0054: a lesson whose pay was forfeited (a non-exempt «Dars
+    // bo'ldimi?» row, «Bo'ldi» included) is missed even with a register; an
+    // exempt one is not, even without one.
+    const takenLessons = new Set(
+      taken.map((t) => `${t.groupId}::${day(t.date)}`),
+    );
+    for (const q of questions) {
+      const key = `${q.groupId}::${day(q.date)}`;
+      if (q.teacherPayExempt) takenLessons.add(key);
+      else takenLessons.delete(key);
+    }
     return computeMissedLessons({
       teacherId,
       groups: planned,
-      // TODO(integration §4.7): a lesson whose pay was forfeited (a non-exempt
-      // «Dars bo'ldimi?» row) is not «taken»; an exempt one is (ADR-0054).
-      takenLessons: new Set(taken.map((t) => `${t.groupId}::${day(t.date)}`)),
+      takenLessons,
       overrides: new Map(
         overrides.map((o) => [`${o.groupId}::${day(o.date)}`, o.teacherIds]),
       ),
