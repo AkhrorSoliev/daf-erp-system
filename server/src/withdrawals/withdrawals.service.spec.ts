@@ -291,6 +291,26 @@ describe('WithdrawalsService', () => {
       expect(result.targetMonth).toBe('2026-10');
     });
 
+    it('stamps the instant it holds the student lock, so the ledger stays in balance-chain order', async () => {
+      // Another write on this student commits while this one waits for the
+      // lock; the ledger replay orders rows by (createdAt, id).
+      const locked = new Date('2026-09-30T20:00:05.000Z');
+      prisma.$queryRaw.mockImplementationOnce(async () => {
+        jest.setSystemTime(locked);
+        return [{ id: 10001, balance: 500_000 }];
+      });
+
+      await service.create(
+        { studentId: 10001, amount: 200_000, creditTeacher: false },
+        7,
+        1,
+      );
+
+      expect(prisma.transaction.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ createdAt: locked }),
+      });
+    });
+
     it('accepts the current month from a dialog opened before the deploy', async () => {
       const result = await service.create(
         {

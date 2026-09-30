@@ -121,17 +121,6 @@ export class WithdrawalsService {
       companyId,
     );
 
-    // One instant decides the month, the ledger timestamp and the teacher's
-    // accrual date, so the report and the payroll can never file this
-    // withdrawal under two different months.
-    const now = new Date();
-    const targetMonth = tashkentMonthKey(now);
-    if (dto.targetMonth !== undefined && dto.targetMonth !== targetMonth) {
-      throw new BadRequestException(
-        'Yechib olish faqat joriy oy uchun yoziladi',
-      );
-    }
-
     const student = await this.prisma.student.findFirst({
       where: { id: dto.studentId, companyId, deletedAt: null },
       select: { id: true, balance: true },
@@ -157,8 +146,6 @@ export class WithdrawalsService {
       });
     }
 
-    const accrualDate = utcMidnightFromDateStr(tashkentDateStr(now));
-
     const result = await this.prisma.$transaction(
       async (tx) => {
         const locked = await tx.$queryRaw<{ id: number; balance: number }[]>`
@@ -167,6 +154,22 @@ export class WithdrawalsService {
         if (!locked.length) {
           throw new NotFoundException("O'quvchi topilmadi");
         }
+
+        // One instant decides the month, the ledger timestamp and the
+        // teacher's accrual date, so the report and the payroll can never
+        // file this withdrawal under two different months. It is read while
+        // holding the student's row lock: the ledger replay orders a
+        // student's rows by (createdAt, id) and fails closed when that order
+        // disagrees with the balance chain, and a clock read before the lock
+        // could sort ahead of a write that committed while this one waited.
+        const now = new Date();
+        const targetMonth = tashkentMonthKey(now);
+        if (dto.targetMonth != null && dto.targetMonth !== targetMonth) {
+          throw new BadRequestException(
+            'Yechib olish faqat joriy oy uchun yoziladi',
+          );
+        }
+
         const balanceBefore = locked[0].balance;
         if (balanceBefore < dto.amount) {
           throw new BadRequestException(
@@ -219,7 +222,7 @@ export class WithdrawalsService {
               studentId: dto.studentId,
               groupId: teacherGroupId,
               attendanceId: null,
-              lessonDate: accrualDate,
+              lessonDate: utcMidnightFromDateStr(tashkentDateStr(now)),
               amount: dto.amount,
               perLessonCost: dto.amount,
               companyId,
@@ -246,7 +249,7 @@ export class WithdrawalsService {
           tx,
         });
 
-        return { transaction, accrualId, balanceAfter };
+        return { transaction, accrualId, balanceAfter, targetMonth };
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -259,7 +262,7 @@ export class WithdrawalsService {
       id: result.transaction.id,
       studentId: dto.studentId,
       amount: dto.amount,
-      targetMonth,
+      targetMonth: result.targetMonth,
       creditTeacher: dto.creditTeacher,
       teacherUserId: dto.teacherUserId ?? null,
       accrualId: result.accrualId,
