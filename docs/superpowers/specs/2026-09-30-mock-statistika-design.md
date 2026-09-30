@@ -73,7 +73,7 @@ qo'shiladi. Bu ustunlar oylarni solishtirish uchun. Ko'rinadigan barcha
 imtihonlar tushumining yig'indisi tepadagi «Mock daromad» kartasiga teng.
 Ikkalasi bir xil qoida va bir xil filial qamrovi bilan hisoblanadi.
 
-### 3. Ro'yxat manbasi qatorning o'zida yoziladi (ADR-0054)
+### 3. Ro'yxat manbasi qatorning o'zida yoziladi (ADR-0056)
 
 `MockExamParticipant.registeredVia` — yangi `MockRegistrationChannel` enum
 (`BOT`, `ADMIN`). Ustun NOT NULL va standart qiymatsiz. Uni ikkala yozuvchi

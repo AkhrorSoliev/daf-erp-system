@@ -4,7 +4,7 @@
 
 **Goal:** Show, per mock exam, how much money came in, who registered (bot vs admin, DaF vs not), how people paid, which levels and time slots they chose, and whether results reached them — plus paid count and revenue columns on the exams list.
 
-**Architecture:** A pure function `summarizeMockExam` (server) holds every definition; a thin `MockExamStatsService` loads one exam's live participants and feeds it; `GET /mock-exams/:id/stats` exposes it. Registration channel becomes an explicit NOT NULL column `registeredVia` written by both creators and backfilled in the migration (ADR-0054). The client renders the block on the exam's «Umumiy» tab and two new list columns.
+**Architecture:** A pure function `summarizeMockExam` (server) holds every definition; a thin `MockExamStatsService` loads one exam's live participants and feeds it; `GET /mock-exams/:id/stats` exposes it. Registration channel becomes an explicit NOT NULL column `registeredVia` written by both creators and backfilled in the migration (ADR-0056). The client renders the block on the exam's «Umumiy» tab and two new list columns.
 
 **Tech Stack:** NestJS + Prisma 7 (PostgreSQL) + Jest on the server; Next.js 16 + React 19 + Vitest on the client.
 
@@ -44,7 +44,7 @@ Client (`client/src/`):
 - `components/mock-exams/mock-exams-client.tsx` — two columns, imports `MockKpiCard`.
 - `hooks/use-mock-exams-board.ts` — `MockExamRow.paidCount?`, `revenue?`.
 
-Docs: `docs/adr/0054-mock-royxat-manbasi-qatorda.md`, `docs/adr/README.md`, `CONTEXT.md`.
+Docs: `docs/adr/0056-mock-royxat-manbasi-qatorda.md`, `docs/adr/README.md`, `CONTEXT.md`.
 
 ---
 
@@ -110,7 +110,7 @@ In `mock-exam-registration.scene.spec.ts`, next to the other `buildFinalizeEnv` 
 
 ```prisma
 // How a mock registration came in. The two creators write it themselves: the
-// Telegram bot scene (BOT) and the admin «Qo'lda qo'shish» (ADMIN). ADR-0054.
+// Telegram bot scene (BOT) and the admin «Qo'lda qo'shish» (ADMIN). ADR-0056.
 enum MockRegistrationChannel {
   BOT
   ADMIN
@@ -131,7 +131,7 @@ In `MockExamParticipant`, right after `registeredAt DateTime @default(now())`:
 
 ```sql
 -- Where a mock registration came from: the Telegram bot or an admin's
--- «Qo'lda qo'shish». Stored on the row so statistics never infer it (ADR-0054).
+-- «Qo'lda qo'shish». Stored on the row so statistics never infer it (ADR-0056).
 CREATE TYPE "MockRegistrationChannel" AS ENUM ('BOT', 'ADMIN');
 
 ALTER TABLE "MockExamParticipant" ADD COLUMN "registeredVia" "MockRegistrationChannel";
@@ -1559,14 +1559,14 @@ git add client/src && git commit -m "feat(mock): statistics block on the exam pa
 ### Task 6: Decision record and glossary
 
 **Files:**
-- Create: `docs/adr/0054-mock-royxat-manbasi-qatorda.md`
+- Create: `docs/adr/0056-mock-royxat-manbasi-qatorda.md`
 - Modify: `docs/adr/README.md` (one row), `CONTEXT.md` (Mock section)
 
-- [ ] **Step 1:** Re-check the number: `git fetch origin && git ls-tree --name-only origin/main docs/adr/ | tail -3` and open PR branches; take the next free number (0054 on 30.09).
+- [ ] **Step 1:** Re-check the number: `git fetch origin && git ls-tree --name-only origin/main docs/adr/ | tail -3` and open PR branches; take the next free number (0056 on 30.09: 0054 and 0055 are claimed by other open work).
 - [ ] **Step 2:** Write the ADR in Uzbek, Nygard format (Holati / Sana / Bog'liq / Kontekst / Qaror / Ko'rib chiqilgan muqobillar / Oqibatlari): the column, no default, both writers, the backfill rule with the prod evidence (213 rows, 102/111, 50 bot rows without history), rejected alternatives (infer from `telegramFirstName`; read `EntityHistory`; nullable or defaulted column), consequences (a third path must name itself; deploy window refusal).
-- [ ] **Step 3:** README row: `| [0054](0054-mock-royxat-manbasi-qatorda.md) | Mock ro'yxati qayerdan kelgani (bot yoki admin) qatorning o'zida yoziladi | Qabul qilindi | 2026-09-30 |`.
-- [ ] **Step 4:** CONTEXT.md, Mock section, two entries: **Ro'yxat manbasi** (`registeredVia`, ADR-0054) and **Imtihon statistikasi** (DaF definition, «To'lov turi yozilmagan», results split), each ending with its file path line.
-- [ ] **Step 5:** `git add docs CONTEXT.md && git commit -m "docs(mock): ADR-0054 and glossary entries for the mock statistics"`
+- [ ] **Step 3:** README row: `| [0056](0056-mock-royxat-manbasi-qatorda.md) | Mock ro'yxati qayerdan kelgani (bot yoki admin) qatorning o'zida yoziladi | Qabul qilindi | 2026-09-30 |`.
+- [ ] **Step 4:** CONTEXT.md, Mock section, two entries: **Ro'yxat manbasi** (`registeredVia`, ADR-0056) and **Imtihon statistikasi** (DaF definition, «To'lov turi yozilmagan», results split), each ending with its file path line.
+- [ ] **Step 5:** `git add docs CONTEXT.md && git commit -m "docs(mock): ADR-0056 and glossary entries for the mock statistics"`
 
 ### Task 7: Verification
 

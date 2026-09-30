@@ -411,6 +411,28 @@ profiliga Telegram faqat «📱 Telefon raqamni yuborish» tugmasi bilan (odamni
 O'Z kontakti) bog'lanadi — aks holda begona odam o'quvchining parolini tiklab
 olardi. `telegram/scenes/mock-exam-registration.scene.ts`
 
+**Ro'yxat manbasi** — `registeredVia`. `BOT` — odam Telegram bot orqali o'zi
+yozilgan. `ADMIN` — ishtirokchini xodim «Qo'lda qo'shish» orqali qo'shgan.
+Qiymatni ikkala yozuvchi o'zi qo'yadi, standart qiymat yo'q. Eski qatorlar
+migratsiyada tarix muallifi va `telegramFirstName` bo'yicha to'ldirilgan
+(ADR-0056).
+`mock-exams/mock-exam-participants.service.ts` (`addManual`),
+`telegram/scenes/mock-exam-registration.scene.ts`
+
+**Imtihon statistikasi** — imtihon sahifasidagi «Umumiy» bo'limining
+tepasidagi blok (`GET /mock-exams/:id/stats`). Summa `feeAmount ?? exam.price`
+bilan hisoblanadi (`effectiveMockFee`). «Mock daromad» kartasi va ro'yxatdagi
+«Tushum» ustuni ham shu qoidani ishlatadi.
+- **DaF o'quvchisi** — ro'yxatdan o'tgan paytda o'quvchi kartasiga mos kelgan
+  odam (`studentId` bor, `convertedAt` yo'q). Keyin o'quvchiga aylantirilgan
+  odam «DaF emas» deb sanaladi.
+- **To'lov turi.** Eski, qo'lda qabul qilingan to'lovning turi saqlanmagan
+  bo'lsa, u «To'lov turi yozilmagan» deb ko'rsatiladi. Tur taxmin qilinmaydi.
+- **Natija yetib borishi.** Natija olishi kerak bo'lganlar (`RESULTS_AUDIENCE`)
+  to'rtga bo'linadi: natija bordi, Telegram bog'lanmagan, yuborib bo'lmadi,
+  hali yuborilmagan.
+`mock-exams/mock-exam-stats.ts`
+
 ---
 
 ## Audit va integratsiya

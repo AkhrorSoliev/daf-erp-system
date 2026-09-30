@@ -892,7 +892,7 @@ enum MockExamStatus {
 }
 
 // How a mock registration came in. The two creators write it themselves: the
-// Telegram bot scene (BOT) and the admin «Qo'lda qo'shish» (ADMIN). ADR-0054.
+// Telegram bot scene (BOT) and the admin «Qo'lda qo'shish» (ADMIN). ADR-0056.
 enum MockRegistrationChannel {
   BOT
   ADMIN

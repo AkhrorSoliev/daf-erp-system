@@ -1,5 +1,5 @@
 -- Where a mock registration came from: the Telegram bot or an admin's
--- «Qo'lda qo'shish». Stored on the row so statistics never infer it (ADR-0054).
+-- «Qo'lda qo'shish». Stored on the row so statistics never infer it (ADR-0056).
 CREATE TYPE "MockRegistrationChannel" AS ENUM ('BOT', 'ADMIN');
 
 ALTER TABLE "MockExamParticipant" ADD COLUMN "registeredVia" "MockRegistrationChannel";
