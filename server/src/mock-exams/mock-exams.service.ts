@@ -17,6 +17,7 @@ import {
 } from '../common/finance/report-branch-scope';
 import { EntityHistoryService } from '../common/entity-history';
 import { MockExamPdfService } from './mock-exam-pdf.service';
+import { MockExamStatsService } from './mock-exam-stats.service';
 import { CreateMockExamDto } from './dto/create-mock-exam.dto';
 import { UpdateMockExamDto } from './dto/update-mock-exam.dto';
 import {
@@ -50,6 +51,7 @@ export class MockExamsService {
     private entityHistoryService: EntityHistoryService,
     private mockExamPdfService: MockExamPdfService,
     private eventEmitter: EventEmitter2,
+    private mockExamStats: MockExamStatsService,
   ) {}
 
   /**
@@ -157,9 +159,11 @@ export class MockExamsService {
         },
       },
     });
+    const totals = await this.mockExamStats.paidTotals(exams);
     return exams.map((exam) => ({
       ...this.toSummary(exam),
       section: exam.section,
+      ...(totals.get(exam.id) ?? { paidCount: 0, revenue: 0 }),
     }));
   }
 
