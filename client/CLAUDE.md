@@ -11,23 +11,21 @@ An ERP system for **DaF Sprachzentrum** language school. Manages branches, staff
 
 > **Language:** The entire UI of this project is in **Uzbek** (O'zbek tili). All labels, placeholders, messages, and user-facing text must be written in Uzbek.
 
-## Arxitektura qarorlari (ADR)
+## Architecture decisions (ADR)
 
-**`docs/adr/` — qaytarish qiyin bo'lgan qarorlar jurnali.** Kodni o'zgartirishdan
-oldin [docs/adr/README.md](../docs/adr/README.md) indeksini ko'ring: agar tegayotgan
-joyingiz ADR bilan qoplangan bo'lsa, o'sha ADR **majburiy qoida** — kod unga
-moslashadi, teskarisi emas.
+**`docs/adr/` is the log of decisions that are hard to reverse.** Before changing
+code, check the index in [docs/adr/README.md](../docs/adr/README.md): if the code
+you are touching is covered by an ADR, that ADR is a **binding rule** — the code
+adapts to it, not the other way round.
 
-Hozirgi ADR'lar quyidagilarni qamraydi: filial ajratilishi (0001), fail-closed
-filial qamrovi (0002), route siyosati manifesti (0003), ledger'ga langarlangan
-balans (0004), hisobot pastki chegarasi (0005), oylikning yagona manbasi (0006),
-lavozim va rol farqi (0007), ro'yxatdan o'tish aktori (0008).
+The index is the only list of ADRs. This file deliberately does not repeat it,
+because a copy here falls behind the log.
 
-**Yangi ADR qachon yoziladi:** ma'lumot modeli, pul semantikasi, filial qoidasi,
-fail-open/fail-closed tanlovi yoki tashqi xizmat tanlovi o'zgarsa — ADR **o'sha
-ishning o'zi bilan bitta PR ichida** yoziladi. Qabul qilingan ADR hech qachon
-tahrirlanmaydi; eskirsa yangi ADR yoziladi va eskisining holati
-`Almashtirildi` ga o'tadi. Batafsil: [docs/adr/README.md](../docs/adr/README.md).
+**When a new ADR is written:** when the data model, money semantics, a branch
+rule, a fail-open/fail-closed choice or an external-service choice changes — the
+ADR goes **in the same PR as the work itself**. An accepted ADR is never edited;
+when it goes stale, a new ADR is written and the old one's status becomes
+`Almashtirildi` (superseded). Details: [docs/adr/README.md](../docs/adr/README.md).
 
 ## Roles
 
