@@ -112,13 +112,21 @@ export function waehleAblenker<T extends MaterialWort>(
   const zielText = normalisieren(opt.feld(ziel));
   const art = wortArt(ziel);
 
+  const zielZahl = zahlVon(ziel);
   const gesehen = new Set<string>([zielText]);
   const kandidaten: T[] = [];
   for (const w of mischen(andere, opt.rnd)) {
     if (w.id === ziel.id) continue;
     const text = normalisieren(opt.feld(w));
     if (gesehen.has(text)) continue;
-    if (opt.bedeutung && bedeutungUeberlappt(ziel.uz, w.uz)) continue;
+    // Two numbers mean the same only when they are the same number:
+    // "o'n yetti" contains "yetti" but is no answer to "sieben".
+    const wZahl = zahlVon(w);
+    const gleicheBedeutung =
+      zielZahl !== null && wZahl !== null
+        ? zielZahl === wZahl
+        : bedeutungUeberlappt(ziel.uz, w.uz);
+    if (opt.bedeutung && gleicheBedeutung) continue;
     gesehen.add(text);
     kandidaten.push(w);
   }
@@ -133,29 +141,79 @@ export function waehleAblenker<T extends MaterialWort>(
     return opt.aehnlich ? abstand(ziel.de, a.de) - abstand(ziel.de, b.de) : 0;
   });
 
-  // A number's German traps always stand beside it (up to two): 17 next to
-  // 7, 30 next to 13, 53 next to 35. The rest is drawn from the window.
-  const zielZahl = zahlVon(ziel);
-  const fallen =
-    zielZahl === null
-      ? []
-      : sortiert
-          .filter((w) => {
-            const z = zahlVon(w);
-            return z !== null && zahlenFalle(zielZahl, z);
-          })
-          .slice(0, Math.min(2, anzahl - 1));
-  const rest = sortiert.filter((w) => !fallen.includes(w));
+  if (zielZahl !== null) {
+    const reihe = [
+      ...mischen(sortiert.slice(0, fenster), opt.rnd),
+      ...sortiert.slice(fenster),
+    ];
+    const zahlen = zahlenAuswahl(zielZahl, reihe, anzahl, opt.rnd);
+    if (zahlen) return zahlen;
+  }
 
-  const gleiche = rest.filter(gleicheArt).length;
-  const noch = anzahl - fallen.length;
+  const gleiche = sortiert.filter(gleicheArt).length;
   const breite =
-    gleiche >= noch ? Math.max(noch, Math.min(fenster, gleiche)) : noch;
-  return [...fallen, ...mischen(rest.slice(0, breite), opt.rnd).slice(0, noch)];
+    gleiche >= anzahl ? Math.max(anzahl, Math.min(fenster, gleiche)) : anzahl;
+  return mischen(sortiert.slice(0, breite), opt.rnd).slice(0, anzahl);
 }
 
 function zahlVon(w: Pick<MaterialWort, 'anzeige'>): number | null {
   return w.anzeige && /^\d+$/.test(w.anzeige) ? Number(w.anzeige) : null;
+}
+
+/**
+ * Distractors for a number, from `reihe` (best first), such that every
+ * option has as many traps among the options as the answer has.
+ *
+ * A trap beside the answer alone gives it away: 30 between 20 and 40, or 7
+ * in the only linked pair beside two unrelated numbers, is found with no
+ * German at all (review 2026-09-30: blind guessing rose from 25% to 48–60%).
+ * So the answer's trap comes with pairs of traps of their own — 7 · 17 ·
+ * 4 · 14 — and when that cannot be built, no option is a trap of another.
+ * `null` when neither can be built from the numbers in `reihe`.
+ */
+function zahlenAuswahl<T extends MaterialWort>(
+  zielZahl: number,
+  reihe: T[],
+  anzahl: number,
+  rnd: () => number,
+): T[] | null {
+  const zahlen = reihe.filter((w) => zahlVon(w) !== null);
+  const wert = (w: T) => zahlVon(w) as number;
+  const frei = (w: T, werte: number[]) =>
+    werte.every((z) => !zahlenFalle(z, wert(w)));
+
+  if (anzahl % 2 === 1) {
+    const fallen = zahlen.filter((w) => zahlenFalle(zielZahl, wert(w)));
+    for (const falle of mischen(fallen, rnd)) {
+      const gewaehlt = [falle];
+      const werte = [zielZahl, wert(falle)];
+      for (const x of zahlen) {
+        if (gewaehlt.length === anzahl) break;
+        if (gewaehlt.includes(x) || !frei(x, werte)) continue;
+        const partner = zahlen.find(
+          (y) =>
+            y !== x &&
+            !gewaehlt.includes(y) &&
+            zahlenFalle(wert(x), wert(y)) &&
+            frei(y, werte),
+        );
+        if (!partner) continue;
+        gewaehlt.push(x, partner);
+        werte.push(wert(x), wert(partner));
+      }
+      if (gewaehlt.length === anzahl) return gewaehlt;
+    }
+  }
+
+  const gewaehlt: T[] = [];
+  const werte = [zielZahl];
+  for (const x of zahlen) {
+    if (gewaehlt.length === anzahl) break;
+    if (!frei(x, werte)) continue;
+    gewaehlt.push(x);
+    werte.push(wert(x));
+  }
+  return gewaehlt.length === anzahl ? gewaehlt : null;
 }
 
 /**

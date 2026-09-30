@@ -1,5 +1,10 @@
 import { normalisieren } from './antwort';
-import { bedeutungUeberlappt, istBuchstabe, waehleAblenker } from './ablenker';
+import {
+  bedeutungUeberlappt,
+  istBuchstabe,
+  waehleAblenker,
+  wortArt,
+} from './ablenker';
 import {
   materialSchluessel,
   type Frage,
@@ -281,10 +286,14 @@ export function wortTippen(
 
 /**
  * Three picture distractors: other words WITH a picture, each picture and
- * each word only once, of the same kind first (a number's dots beside other
- * numbers). `null` when the pool holds fewer than three — the session
- * builder then fills the slot from another format. Meanings may overlap:
- * a picture is not Uzbek text, and der Lehrer / die Lehrerin look apart.
+ * each word only once, of the same kind first. `null` when the pool holds
+ * fewer than three — the session builder then fills the slot from another
+ * format. Meanings may overlap: a picture is not Uzbek text, and der Lehrer
+ * / die Lehrerin look apart.
+ *
+ * Number plates and scenes never share a question: every number is the same
+ * plate design, so a scene among three plates (or a plate among scenes) was
+ * the odd one out, found without the word (review 2026-09-30).
  */
 function bildAblenker(
   ziel: MaterialWort,
@@ -292,8 +301,12 @@ function bildAblenker(
   rnd: () => number,
 ): MaterialWort[] | null {
   const zielDe = normalisieren(ziel.de);
+  const istZahl = (w: MaterialWort) => wortArt(w) === 'ZAHL';
   const mitBild = andere.filter(
-    (w) => w.imageKey && normalisieren(w.de) !== zielDe,
+    (w) =>
+      w.imageKey &&
+      normalisieren(w.de) !== zielDe &&
+      istZahl(w) === istZahl(ziel),
   );
   return waehleAblenker(ziel, mitBild, {
     feld: (w) => w.imageKey as string,

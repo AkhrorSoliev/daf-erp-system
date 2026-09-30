@@ -90,22 +90,127 @@ describe('zahlenFalle — the German number traps', () => {
 });
 
 describe('waehleAblenker — numbers', () => {
-  const zahlen = Array.from({ length: 20 }, (_, n) =>
-    w(100 + n, `z${n}`, `u${n}`, { anzeige: String(n) }),
+  // The Uzbek meanings as the content writes them: "o'n yetti" contains
+  // "yetti", which must not count as a second right answer for "sieben".
+  const BIRLAR = [
+    'nol',
+    'bir',
+    'ikki',
+    'uch',
+    "to'rt",
+    'besh',
+    'olti',
+    'yetti',
+    'sakkiz',
+    "to'qqiz",
+  ];
+  const DE = [
+    'null',
+    'eins',
+    'zwei',
+    'drei',
+    'vier',
+    'fünf',
+    'sechs',
+    'sieben',
+    'acht',
+    'neun',
+    'zehn',
+    'elf',
+    'zwölf',
+    'dreizehn',
+    'vierzehn',
+    'fünfzehn',
+    'sechzehn',
+    'siebzehn',
+    'achtzehn',
+    'neunzehn',
+  ];
+  const u01 = DE.map((de, n) =>
+    w(
+      100 + n,
+      de,
+      n < 10 ? BIRLAR[n] : n === 10 ? "o'n" : `o'n ${BIRLAR[n - 10]}`,
+      {
+        anzeige: String(n),
+      },
+    ),
+  );
+  const u02 = [
+    ['zwanzig', 'yigirma', 20],
+    ['dreißig', "o'ttiz", 30],
+    ['vierzig', 'qirq', 40],
+    ['fünfzig', 'ellik', 50],
+    ['sechzig', 'oltmish', 60],
+    ['siebzig', 'yetmish', 70],
+    ['achtzig', 'sakson', 80],
+    ['neunzig', "to'qson", 90],
+    ['hundert', 'yuz', 100],
+    ['einundzwanzig', 'yigirma bir', 21],
+    ['fünfunddreißig', "o'ttiz besh", 35],
+    ['achtundvierzig', 'qirq sakkiz', 48],
+    ['neunundneunzig', "to'qson to'qqiz", 99],
+  ].map(([de, uz, n]) =>
+    w(200 + Number(n), String(de), String(uz), { anzeige: String(n) }),
   );
 
-  it.each([0, 0.3, 0.7, 0.99])(
-    'seven always stands next to seventeen (rnd %p)',
-    (r) => {
-      const opts = zahlen.filter((x) => x.anzeige !== '7');
-      const got = waehleAblenker(zahlen[7], opts, {
-        feld: (x) => x.uz,
-        aehnlich: false,
-        bedeutung: true,
-        rnd: () => r,
-      })!;
+  // Deterministic stand-in for Math.random, so every seed is reproducible.
+  function prng(seed: number): () => number {
+    let a = seed;
+    return () => {
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const FORMATE = [
+    {
+      name: 'WORT_UZ',
+      feld: (x: MaterialWort) => x.uz,
+      aehnlich: false,
+      bedeutung: true,
+    },
+    {
+      name: 'UZ_WORT',
+      feld: (x: MaterialWort) => x.de,
+      aehnlich: true,
+      bedeutung: true,
+    },
+    {
+      name: 'AUDIO_WORT',
+      feld: (x: MaterialWort) => x.de,
+      aehnlich: true,
+      bedeutung: false,
+    },
+  ];
+
+  it.each(FORMATE)('$name: seven always stands next to seventeen', (f) => {
+    for (let seed = 1; seed <= 50; seed += 1) {
+      const got = waehleAblenker(u01[7], u01, { ...f, rnd: prng(seed) })!;
       expect(got.map((x) => x.anzeige)).toContain('17');
       expect(got).toHaveLength(3);
+    }
+  });
+
+  it.each(FORMATE)(
+    '$name: the traps never point at the answer — every option has as many as the answer',
+    (f) => {
+      // Review 2026-09-30: "dreißig" always came with 20 and 40, and 7 with
+      // 17 beside two unrelated numbers — the answer was the one the traps
+      // gathered around, with no German at all (blind guessing 48–60%).
+      for (const pool of [u01, u02]) {
+        for (const ziel of pool) {
+          for (let seed = 1; seed <= 30; seed += 1) {
+            const got = waehleAblenker(ziel, pool, { ...f, rnd: prng(seed) })!;
+            const set = [ziel, ...got].map((x) => Number(x.anzeige));
+            const grad = set.map(
+              (a) => set.filter((b) => b !== a && zahlenFalle(a, b)).length,
+            );
+            expect(new Set(grad).size).toBe(1);
+          }
+        }
+      }
     },
   );
 });

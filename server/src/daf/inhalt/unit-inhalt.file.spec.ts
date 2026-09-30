@@ -185,11 +185,9 @@ describe.each(UNITS)('%s — so`zlar', (unit) => {
       expect(/^\d+$/.test(w.de)).toBe(false);
       expect(/^\d+$/.test(w.anzeige ?? '')).toBe(true);
       if (w.tts === undefined) continue;
-      expect(w.tts).not.toBe(w.de);
-      expect(w.tts).not.toMatch(/\d/);
-      expect(w.tts.replace(/[\s-]/g, '').toLowerCase()).toBe(
-        w.de.toLowerCase(),
-      );
+      // Split inside only: no digit, no edge space, same letters and case.
+      expect(w.tts).toMatch(/^[^\s\d-]+(?:[ -][^\s\d-]+)+$/);
+      expect(w.tts.replace(/[ -]/g, '')).toBe(w.de);
     }
   });
 
