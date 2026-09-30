@@ -17,6 +17,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { whereUserMayAct } from '../common/auth/blocked-user';
+import { rethrowAsConflict } from '../common/transaction-conflict';
 import {
   AttendanceEntryDto,
   SaveAttendanceDto,
@@ -127,56 +128,58 @@ export class AttendanceSaveService {
     });
     if (!groupMeta) throw new NotFoundException('Guruh topilmadi');
 
-    const results = await this.prisma.$transaction(async (tx) => {
-      // Debtors are part of the main roster — anyone may mark them; the
-      // payment pipeline settles their unpaid lessons retroactively.
-      const enrolled = await tx.enrollment.findMany({
-        where: {
-          groupId,
-          deletedAt: null,
-          status: EnrollmentStatus.ACTIVE,
-          OR: [{ startDate: null }, { startDate: { lte: parsedDate } }],
-        },
-        select: { id: true, studentId: true },
-      });
-      const enrollmentIdByStudent = new Map(
-        enrolled.map((e) => [e.studentId, e.id]),
-      );
-      this.assertFullRoster(enrollmentIdByStudent, dto.entries);
-
-      const existingRecords = await tx.attendance.findMany({
-        where: { groupId, date: parsedDate },
-      });
-
-      // Teacher can take attendance only once — editing is admin-only.
-      if (isTeacherOnly && existingRecords.length > 0) {
-        throw new BadRequestException(
-          "Davomat olib bo'lingan. Tahrirlash uchun administratorga murojaat qiling",
-        );
-      }
-      // A NEW register only (§3.1) — read inside this transaction so it
-      // cannot race the lesson-end sweep's question.
-      if (existingRecords.length === 0) {
-        await assertAttendanceWindowOpen(tx, {
-          groupId,
-          date,
-          parsedDate,
-          times: { startTime: effectiveStartTime, endTime: effectiveEndTime },
+    const results = await this.prisma
+      .$transaction(async (tx) => {
+        // Debtors are part of the main roster — anyone may mark them; the
+        // payment pipeline settles their unpaid lessons retroactively.
+        const enrolled = await tx.enrollment.findMany({
+          where: {
+            groupId,
+            deletedAt: null,
+            status: EnrollmentStatus.ACTIVE,
+            OR: [{ startDate: null }, { startDate: { lte: parsedDate } }],
+          },
+          select: { id: true, studentId: true },
         });
-      }
+        const enrollmentIdByStudent = new Map(
+          enrolled.map((e) => [e.studentId, e.id]),
+        );
+        this.assertFullRoster(enrollmentIdByStudent, dto.entries);
 
-      return this.writeEntries(tx, {
-        groupId,
-        parsedDate,
-        branchId: groupMeta.branchId,
-        companyId,
-        userId,
-        isTeacherOnly,
-        enrollmentIdByStudent,
-        existingRecords,
-        entries: dto.entries,
-      });
-    }, TX_OPTIONS);
+        const existingRecords = await tx.attendance.findMany({
+          where: { groupId, date: parsedDate },
+        });
+
+        // Teacher can take attendance only once — editing is admin-only.
+        if (isTeacherOnly && existingRecords.length > 0) {
+          throw new BadRequestException(
+            "Davomat olib bo'lingan. Tahrirlash uchun administratorga murojaat qiling",
+          );
+        }
+        // A NEW register only (§3.1) — read inside this transaction so it
+        // cannot race the lesson-end sweep's question.
+        if (existingRecords.length === 0) {
+          await assertAttendanceWindowOpen(tx, {
+            groupId,
+            date,
+            parsedDate,
+            times: { startTime: effectiveStartTime, endTime: effectiveEndTime },
+          });
+        }
+
+        return this.writeEntries(tx, {
+          groupId,
+          parsedDate,
+          branchId: groupMeta.branchId,
+          companyId,
+          userId,
+          isTeacherOnly,
+          enrollmentIdByStudent,
+          existingRecords,
+          entries: dto.entries,
+        });
+      }, TX_OPTIONS)
+      .catch(rethrowAsConflict);
 
     // One history entry per save action (outside the transaction).
     const isUpdate = results.existingMap.size > 0;
@@ -249,82 +252,84 @@ export class AttendanceSaveService {
     if (dto.teacherPayExempt) await this.assertCallerIsCeo(userId);
     const isMonthly = group.course.paymentModel === PaymentModel.MONTHLY;
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      const row = await findPendingUnmarkedLesson(tx, {
-        groupId,
-        date: parsedDate,
-        companyId,
-      });
-      await assertMayAnswer(tx, row, userId, roles);
+    const result = await this.prisma
+      .$transaction(async (tx) => {
+        const row = await findPendingUnmarkedLesson(tx, {
+          groupId,
+          date: parsedDate,
+          companyId,
+        });
+        await assertMayAnswer(tx, row, userId, roles);
 
-      // Cancelled or moved away after the question opened: a register now
-      // would refund an excused student twice or bill a cancelled lesson.
-      const takenAway = await lessonDayTakenAway(tx, groupId, parsedDate);
-      if (takenAway === 'CANCELLED') {
-        throw new BadRequestException(
-          "Bu dars bekor qilingan — davomat kiritib bo'lmaydi",
+        // Cancelled or moved away after the question opened: a register now
+        // would refund an excused student twice or bill a cancelled lesson.
+        const takenAway = await lessonDayTakenAway(tx, groupId, parsedDate);
+        if (takenAway === 'CANCELLED') {
+          throw new BadRequestException(
+            "Bu dars bekor qilingan — davomat kiritib bo'lmaydi",
+          );
+        }
+        if (takenAway === 'MOVED') {
+          throw new BadRequestException(
+            "Bu sana boshqa kunga ko'chirilgan — davomatni yangi sanada oling",
+          );
+        }
+
+        const already = await tx.attendance.count({
+          where: { groupId, date: parsedDate },
+        });
+        if (already > 0) {
+          throw new BadRequestException(
+            'Bu dars uchun davomat allaqachon olingan',
+          );
+        }
+
+        const roster = await rosterOnDate(tx, groupId, parsedDate);
+        const enrollmentIdByStudent = new Map(
+          roster.map((e) => [e.studentId, e.id]),
         );
-      }
-      if (takenAway === 'MOVED') {
-        throw new BadRequestException(
-          "Bu sana boshqa kunga ko'chirilgan — davomatni yangi sanada oling",
+        this.assertFullRoster(enrollmentIdByStudent, dto.entries);
+
+        // A student who has since left is on the register but is not billed in a
+        // lesson-pack course: closing their enrollment already refunded the
+        // prepaid lessons and zeroed the counter, so bill() would take a whole
+        // cycle from a departed student and strand the lessons on a closed
+        // enrollment. Monthly billing moves no balance, so it is unaffected.
+        const billedEnrollmentIdByStudent = new Map(
+          roster
+            .filter((e) => isMonthly || e.status === EnrollmentStatus.ACTIVE)
+            .map((e) => [e.studentId, e.id]),
         );
-      }
 
-      const already = await tx.attendance.count({
-        where: { groupId, date: parsedDate },
-      });
-      if (already > 0) {
-        throw new BadRequestException(
-          'Bu dars uchun davomat allaqachon olingan',
-        );
-      }
+        const exempt = row.teacherPayExempt || dto.teacherPayExempt === true;
+        await tx.unmarkedLesson.update({
+          where: { id: row.id },
+          data: {
+            status: 'HELD',
+            decidedById: userId,
+            decidedAt: new Date(),
+            teacherPayExempt: exempt,
+            ...(dto.teacherPayExempt
+              ? { exemptReason: dto.exemptReason?.trim() }
+              : {}),
+          },
+        });
 
-      const roster = await rosterOnDate(tx, groupId, parsedDate);
-      const enrollmentIdByStudent = new Map(
-        roster.map((e) => [e.studentId, e.id]),
-      );
-      this.assertFullRoster(enrollmentIdByStudent, dto.entries);
-
-      // A student who has since left is on the register but is not billed in a
-      // lesson-pack course: closing their enrollment already refunded the
-      // prepaid lessons and zeroed the counter, so bill() would take a whole
-      // cycle from a departed student and strand the lessons on a closed
-      // enrollment. Monthly billing moves no balance, so it is unaffected.
-      const billedEnrollmentIdByStudent = new Map(
-        roster
-          .filter((e) => isMonthly || e.status === EnrollmentStatus.ACTIVE)
-          .map((e) => [e.studentId, e.id]),
-      );
-
-      const exempt = row.teacherPayExempt || dto.teacherPayExempt === true;
-      await tx.unmarkedLesson.update({
-        where: { id: row.id },
-        data: {
-          status: 'HELD',
-          decidedById: userId,
-          decidedAt: new Date(),
-          teacherPayExempt: exempt,
-          ...(dto.teacherPayExempt
-            ? { exemptReason: dto.exemptReason?.trim() }
-            : {}),
-        },
-      });
-
-      const written = await this.writeEntries(tx, {
-        groupId,
-        parsedDate,
-        branchId: group.branchId,
-        companyId,
-        userId,
-        isTeacherOnly: false,
-        enrollmentIdByStudent: billedEnrollmentIdByStudent,
-        existingRecords: [],
-        entries: dto.entries,
-      });
-      await closeLessonTask(tx, row.taskCommentId, userId);
-      return { written, exempt };
-    }, TX_OPTIONS);
+        const written = await this.writeEntries(tx, {
+          groupId,
+          parsedDate,
+          branchId: group.branchId,
+          companyId,
+          userId,
+          isTeacherOnly: false,
+          enrollmentIdByStudent: billedEnrollmentIdByStudent,
+          existingRecords: [],
+          entries: dto.entries,
+        });
+        await closeLessonTask(tx, row.taskCommentId, userId);
+        return { written, exempt };
+      }, TX_OPTIONS)
+      .catch(rethrowAsConflict);
 
     await this.entityHistoryService.recordCreate({
       entityType: 'GroupAttendance',

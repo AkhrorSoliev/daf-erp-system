@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma } from '@prisma/client';
 import { LessonReschedulesService } from './lesson-reschedules.service';
@@ -627,6 +631,62 @@ describe('LessonReschedulesService', () => {
         'unmarked-lesson.not-held',
         expect.anything(),
       );
+    });
+  });
+
+  describe('a concurrent change', () => {
+    const conflict = new ConflictException(
+      "Bir vaqtda boshqa o'zgarish bo'ldi — qayta urinib ko'ring",
+    );
+    const boom = new Error('boom');
+
+    it('create answers a conflict or a concurrent duplicate with 409', async () => {
+      const dto = {
+        groupId: 'group-1',
+        originalDate: '2026-04-15',
+        newDate: '2026-04-22',
+      };
+      prisma.$transaction.mockRejectedValueOnce({ code: 'P2034' });
+      await expect(service.create(dto, 1, 99)).rejects.toThrow(conflict);
+      // The partial unique indexes on a live move's origin and destination.
+      prisma.$transaction.mockRejectedValueOnce({ code: 'P2002' });
+      await expect(service.create(dto, 1, 99)).rejects.toThrow(conflict);
+      prisma.$transaction.mockRejectedValueOnce(boom);
+      await expect(service.create(dto, 1, 99)).rejects.toBe(boom);
+    });
+
+    it('update answers a conflict or a concurrent duplicate with 409', async () => {
+      prisma.$transaction.mockRejectedValueOnce({ cause: { code: '40P01' } });
+      await expect(
+        service.update('rs-1', { reason: 'x' }, 1, 99),
+      ).rejects.toThrow(conflict);
+      // The partial unique index on a live move's destination.
+      prisma.$transaction.mockRejectedValueOnce({ code: 'P2002' });
+      await expect(
+        service.update('rs-1', { reason: 'x' }, 1, 99),
+      ).rejects.toThrow(conflict);
+      prisma.$transaction.mockRejectedValueOnce(boom);
+      await expect(service.update('rs-1', { reason: 'x' }, 1, 99)).rejects.toBe(
+        boom,
+      );
+    });
+
+    it('remove answers a conflict or a concurrent duplicate with 409', async () => {
+      prisma.lessonReschedule.findFirst.mockResolvedValue({
+        id: 'rs-1',
+        groupId: 'group-1',
+        originalDate: new Date('2026-04-15T00:00:00.000Z'),
+        newDate: new Date('2026-04-22T00:00:00.000Z'),
+      });
+      prisma.group.findFirst.mockResolvedValue({ branchId: 2 });
+      prisma.group.findUnique.mockResolvedValue({ branchId: 2 });
+      prisma.$transaction.mockRejectedValueOnce({ code: 'P2034' });
+      await expect(service.remove('rs-1', 1, 99)).rejects.toThrow(conflict);
+      // UnmarkedLesson(groupId, date): the sweep opened the same question.
+      prisma.$transaction.mockRejectedValueOnce({ code: 'P2002' });
+      await expect(service.remove('rs-1', 1, 99)).rejects.toThrow(conflict);
+      prisma.$transaction.mockRejectedValueOnce(boom);
+      await expect(service.remove('rs-1', 1, 99)).rejects.toBe(boom);
     });
   });
 

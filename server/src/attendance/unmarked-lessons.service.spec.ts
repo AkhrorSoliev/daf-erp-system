@@ -278,6 +278,28 @@ describe('UnmarkedLessonsService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
+    it('answers a transaction conflict with 409, anything else unchanged', async () => {
+      prisma.unmarkedLesson.findUnique.mockResolvedValue(pending);
+      const answer = () =>
+        service.answerNotHeld({
+          groupId: 'g1',
+          date: '2026-09-28',
+          userId: 3,
+          roles: ['Administrator'],
+          companyId: 1,
+          dto: { reason: 'x', action: 'CANCEL' },
+        });
+      cancellations.create.mockRejectedValueOnce({ code: 'P2034' });
+      await expect(answer()).rejects.toThrow(
+        new ConflictException(
+          "Bir vaqtda boshqa o'zgarish bo'ldi — qayta urinib ko'ring",
+        ),
+      );
+      const boom = new Error('boom');
+      cancellations.create.mockRejectedValueOnce(boom);
+      await expect(answer()).rejects.toBe(boom);
+    });
+
     it('stops an administrator when another holds the task', async () => {
       prisma.unmarkedLesson.findUnique.mockResolvedValue({
         ...pending,

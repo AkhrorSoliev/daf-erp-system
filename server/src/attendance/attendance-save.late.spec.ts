@@ -406,4 +406,36 @@ describe('AttendanceSaveService.saveLate', () => {
       ),
     ).rejects.toThrow(ConflictException);
   });
+
+  // The sweep adds a Serializable writer at :00/:30; losing to it is a 409.
+  it('answers a transaction conflict with 409, anything else unchanged', async () => {
+    prisma.$transaction.mockRejectedValueOnce({ code: 'P2034' });
+    await expect(
+      service.saveLate(
+        'g1',
+        '2026-09-28',
+        { entries },
+        3,
+        ['Administrator'],
+        1,
+      ),
+    ).rejects.toThrow(
+      new ConflictException(
+        "Bir vaqtda boshqa o'zgarish bo'ldi — qayta urinib ko'ring",
+      ),
+    );
+
+    const boom = new Error('boom');
+    prisma.$transaction.mockRejectedValueOnce(boom);
+    await expect(
+      service.saveLate(
+        'g1',
+        '2026-09-28',
+        { entries },
+        3,
+        ['Administrator'],
+        1,
+      ),
+    ).rejects.toBe(boom);
+  });
 });

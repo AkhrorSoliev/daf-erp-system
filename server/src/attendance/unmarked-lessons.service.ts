@@ -22,6 +22,7 @@ import {
   lessonDayTakenAway,
 } from '../unmarked-lessons/answer-rules';
 import { HOLIDAY_LOOKAHEAD_DAYS } from '../unmarked-lessons/reask-holidays';
+import { rethrowAsConflict } from '../common/transaction-conflict';
 import { NotHeldDto } from './dto/not-held.dto';
 
 export interface OpenedLesson extends EndedLesson {
@@ -232,29 +233,33 @@ export class UnmarkedLessonsService {
     await assertMayAnswer(this.prisma, row, args.userId, args.roles);
 
     if (args.dto.action === 'CANCEL') {
-      return this.cancellations.create(
-        { groupId: args.groupId, date: args.date, reason: args.dto.reason },
-        args.companyId,
-        args.userId,
-        args.roles,
-      );
+      return this.cancellations
+        .create(
+          { groupId: args.groupId, date: args.date, reason: args.dto.reason },
+          args.companyId,
+          args.userId,
+          args.roles,
+        )
+        .catch(rethrowAsConflict);
     }
     if (!args.dto.newDate) {
       throw new BadRequestException("Qo'shimcha dars sanasini tanlang");
     }
-    return this.reschedules.create(
-      {
-        groupId: args.groupId,
-        originalDate: args.date,
-        newDate: args.dto.newDate,
-        newLessonStartTime: args.dto.newLessonStartTime,
-        newLessonEndTime: args.dto.newLessonEndTime,
-        newRoomId: args.dto.newRoomId,
-        reason: args.dto.reason,
-      },
-      args.companyId,
-      args.userId,
-      args.roles,
-    );
+    return this.reschedules
+      .create(
+        {
+          groupId: args.groupId,
+          originalDate: args.date,
+          newDate: args.dto.newDate,
+          newLessonStartTime: args.dto.newLessonStartTime,
+          newLessonEndTime: args.dto.newLessonEndTime,
+          newRoomId: args.dto.newRoomId,
+          reason: args.dto.reason,
+        },
+        args.companyId,
+        args.userId,
+        args.roles,
+      )
+      .catch(rethrowAsConflict);
   }
 }

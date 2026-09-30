@@ -18,6 +18,7 @@ import {
   reopenAfterCancellationRemoved,
 } from '../unmarked-lessons/unmarked-lesson-transitions';
 import { loadReaskHolidays } from '../unmarked-lessons/reask-holidays';
+import { rethrowAsConflict } from '../common/transaction-conflict';
 import {
   UNMARKED_LESSON_NOT_HELD,
   type UnmarkedLessonNotHeldPayload,
@@ -53,6 +54,14 @@ const SERIALIZABLE_TX = {
   maxWait: 10_000,
   timeout: 15_000,
 } as const;
+
+/**
+ * Both transactions check their unique rows first — the day's live
+ * cancellation (create), the day's «Dars bo'ldimi?» row (remove's re-ask) —
+ * so a unique violation is a concurrent duplicate: 409, like a conflict.
+ */
+const asConflict = (err: unknown) =>
+  rethrowAsConflict(err, { duplicate: true });
 
 @Injectable()
 export class LessonCancellationsService {
@@ -166,8 +175,8 @@ export class LessonCancellationsService {
 
     const date = this.parseDate(dto.date);
 
-    const { cancellation, released, decision } = await this.prisma.$transaction(
-      async (tx) => {
+    const { cancellation, released, decision } = await this.prisma
+      .$transaction(async (tx) => {
         const group = await tx.group.findFirst({
           where: { id: dto.groupId, companyId, deletedAt: null },
           select: {
@@ -347,9 +356,8 @@ export class LessonCancellationsService {
         });
 
         return { cancellation, released, decision };
-      },
-      SERIALIZABLE_TX,
-    );
+      }, SERIALIZABLE_TX)
+      .catch(asConflict);
 
     // Fire-and-forget event after the tx commits — listener handles
     // Telegram + 4-channel teacher notifications.
@@ -412,33 +420,35 @@ export class LessonCancellationsService {
       now,
     );
 
-    return this.prisma.$transaction(async (tx) => {
-      await tx.lessonCancellation.update({
-        where: { id },
-        data: { deletedAt: new Date(), deletedById: userId },
-      });
-      await this.entityHistoryService.recordDelete({
-        entityType: 'LessonCancellation',
-        entityId: id,
-        oldValues: {
-          guruh: cancellation.groupId,
-          sana: cancellation.date.toISOString().slice(0, 10),
-        },
-        changedById: userId,
-        companyId,
-        tx,
-      });
-      // The cancellation may have been the answer to «Dars bo'ldimi?» — or
-      // the only reason a finished lesson was never marked. Ask again.
-      await reopenAfterCancellationRemoved(tx, {
-        cancellationId: id,
-        groupId: cancellation.groupId,
-        date: cancellation.date,
-        now,
-        holidays,
-      });
-      return { id };
-    }, SERIALIZABLE_TX);
+    return this.prisma
+      .$transaction(async (tx) => {
+        await tx.lessonCancellation.update({
+          where: { id },
+          data: { deletedAt: new Date(), deletedById: userId },
+        });
+        await this.entityHistoryService.recordDelete({
+          entityType: 'LessonCancellation',
+          entityId: id,
+          oldValues: {
+            guruh: cancellation.groupId,
+            sana: cancellation.date.toISOString().slice(0, 10),
+          },
+          changedById: userId,
+          companyId,
+          tx,
+        });
+        // The cancellation may have been the answer to «Dars bo'ldimi?» — or
+        // the only reason a finished lesson was never marked. Ask again.
+        await reopenAfterCancellationRemoved(tx, {
+          cancellationId: id,
+          groupId: cancellation.groupId,
+          date: cancellation.date,
+          now,
+          holidays,
+        });
+        return { id };
+      }, SERIALIZABLE_TX)
+      .catch(asConflict);
   }
 
   // ---------- internals ----------

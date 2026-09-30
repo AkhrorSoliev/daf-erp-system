@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LessonCancellationsService } from './lesson-cancellations.service';
@@ -417,6 +421,43 @@ describe('LessonCancellationsService', () => {
         /dars kuni emas/,
       );
       expect(tx.lessonCancellation.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a concurrent change', () => {
+    const conflict = new ConflictException(
+      "Bir vaqtda boshqa o'zgarish bo'ldi — qayta urinib ko'ring",
+    );
+    const dto = { groupId: 'group-1', date: '2026-04-15', reason: 'x' };
+    // The caller-may-touch-group check before the transaction.
+    beforeEach(() => tx.group.findFirst.mockResolvedValue({ branchId: 1 }));
+
+    it('create answers a conflict or a concurrent duplicate with 409', async () => {
+      prisma.$transaction.mockRejectedValueOnce({ code: 'P2034' });
+      await expect(service.create(dto, 1, 99)).rejects.toThrow(conflict);
+      // The partial unique index on the live cancellation of the day.
+      prisma.$transaction.mockRejectedValueOnce({ code: 'P2002' });
+      await expect(service.create(dto, 1, 99)).rejects.toThrow(conflict);
+      const boom = new Error('boom');
+      prisma.$transaction.mockRejectedValueOnce(boom);
+      await expect(service.create(dto, 1, 99)).rejects.toBe(boom);
+    });
+
+    it('remove answers a conflict or a concurrent duplicate with 409', async () => {
+      prisma.lessonCancellation.findFirst.mockResolvedValue({
+        id: 'x1',
+        groupId: 'group-1',
+        date: new Date('2026-04-15T00:00:00.000Z'),
+      });
+      tx.group.findUnique.mockResolvedValue({ branchId: 1 });
+      prisma.$transaction.mockRejectedValueOnce({ cause: { code: '40P01' } });
+      await expect(service.remove('x1', 1, 99)).rejects.toThrow(conflict);
+      // UnmarkedLesson(groupId, date): the sweep opened the same question.
+      prisma.$transaction.mockRejectedValueOnce({ code: 'P2002' });
+      await expect(service.remove('x1', 1, 99)).rejects.toThrow(conflict);
+      const boom = new Error('boom');
+      prisma.$transaction.mockRejectedValueOnce(boom);
+      await expect(service.remove('x1', 1, 99)).rejects.toBe(boom);
     });
   });
 

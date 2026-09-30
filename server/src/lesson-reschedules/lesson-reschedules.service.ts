@@ -23,6 +23,7 @@ import {
   type UnmarkedLessonNotHeldPayload,
 } from '../unmarked-lessons/unmarked-lesson-events';
 import { loadReaskHolidays } from '../unmarked-lessons/reask-holidays';
+import { rethrowAsConflict } from '../common/transaction-conflict';
 
 /**
  * Payload emitted on lesson-reschedule create / update — consumed by
@@ -41,6 +42,20 @@ export interface LessonReschedulePayload {
   scheduledById: number;
   companyId: number;
 }
+
+const SERIALIZABLE_TX = {
+  isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  maxWait: 10_000,
+  timeout: 30_000,
+} as const;
+
+/**
+ * Every write here checks its unique rows first — a live move's origin and
+ * destination, the day's «Dars bo'ldimi?» row (remove's re-ask) — so a
+ * unique violation is a concurrent duplicate: 409, like a conflict.
+ */
+const asConflict = (err: unknown) =>
+  rethrowAsConflict(err, { duplicate: true });
 
 const DAY_NAME_BY_JS_DAY: Record<number, string> = {
   0: 'sunday',
@@ -223,8 +238,8 @@ export class LessonReschedulesService {
       );
     }
 
-    return this.prisma.$transaction(
-      async (tx) => {
+    return this.prisma
+      .$transaction(async (tx) => {
         // A reschedule rewrites a group's timetable — its date, room and
         // teacher — and through attendance that reaches billing. Checked here
         // rather than before the transaction because the group is read anyway
@@ -424,13 +439,8 @@ export class LessonReschedulesService {
         });
 
         return { reschedule, decision };
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        maxWait: 10_000,
-        timeout: 30_000,
-      },
-    );
+      }, SERIALIZABLE_TX)
+      .catch(asConflict);
   }
 
   /**
@@ -511,8 +521,8 @@ export class LessonReschedulesService {
       dto.newLessonStartTime !== undefined ||
       dto.newLessonEndTime !== undefined;
 
-    const updated = await this.prisma.$transaction(
-      async (tx) => {
+    const updated = await this.prisma
+      .$transaction(async (tx) => {
         const existing = await tx.lessonReschedule.findFirst({
           where: { id, companyId, deletedAt: null },
           select: {
@@ -719,13 +729,8 @@ export class LessonReschedulesService {
           effectiveEndOverride,
           reason: dto.reason ?? null,
         };
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        maxWait: 10_000,
-        timeout: 30_000,
-      },
-    );
+      }, SERIALIZABLE_TX)
+      .catch(asConflict);
 
     if (visibleFieldChanged) {
       this.eventEmitter.emit('lesson-reschedule.updated', {
@@ -778,8 +783,8 @@ export class LessonReschedulesService {
     );
     // Serializable, like create and update: the reopen reads, then writes a
     // row the lesson-end sweep also writes.
-    return this.prisma.$transaction(
-      async (tx) => {
+    return this.prisma
+      .$transaction(async (tx) => {
         const row = await tx.lessonReschedule.update({
           where: { id },
           data: { deletedAt: new Date(), deletedById: userId },
@@ -802,13 +807,8 @@ export class LessonReschedulesService {
           holidays,
         });
         return row;
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        maxWait: 10_000,
-        timeout: 30_000,
-      },
-    );
+      }, SERIALIZABLE_TX)
+      .catch(asConflict);
   }
 
   private parseDate(dateStr: string): Date {

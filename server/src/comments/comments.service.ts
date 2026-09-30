@@ -18,6 +18,7 @@ import {
 import { TaskQueryDto } from './dto/task-query.dto';
 import { assertCallerMayTouchCommentEntity } from '../common/auth/comment-entity-scope';
 import { claimSystemTask } from '../unmarked-lessons/lesson-task';
+import { isTransactionConflict } from '../common/transaction-conflict';
 
 // Asia/Tashkent ish kuni va ish soati cheklovi (08:00 dan 18:00 gacha,
 // dushanba–shanba, yakshanba dam). DueDate ushbu deraza tashqarisida
@@ -50,17 +51,6 @@ function assertDueDateInWorkingWindow(dueDate: string) {
       'Vazifa muddati ish soati ichida belgilanishi kerak (08:00 dan 18:00 gacha, Toshkent vaqti)',
     );
   }
-}
-
-/**
- * Two people took one task at once. Prisma reports a Serializable write
- * conflict (SQLSTATE 40001) as P2034, but @prisma/adapter-pg maps nothing
- * else: a Postgres deadlock (40P01) reaches us as a raw DriverAdapterError —
- * no `code` of its own, the SQLSTATE on `cause.code`.
- */
-function isTransactionConflict(err: unknown): boolean {
-  const e = err as { code?: string; cause?: { code?: string } } | null;
-  return e?.code === 'P2034' || e?.cause?.code === '40P01';
 }
 
 const commentInclude = {

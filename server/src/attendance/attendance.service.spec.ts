@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AttendanceService } from './attendance.service';
 import { AttendanceValidationService } from './attendance-validation.service';
@@ -1022,6 +1026,28 @@ describe('AttendanceService', () => {
 
     afterEach(() => {
       jest.useRealTimers();
+    });
+
+    // The lesson-end sweep is a Serializable writer too; losing to it is 409.
+    it('answers a transaction conflict with 409, anything else unchanged', async () => {
+      const dto: SaveAttendanceDto = {
+        entries: [
+          { studentId: 10001, status: 'PRESENT' },
+          { studentId: 10002, status: 'ABSENT' },
+        ],
+      };
+      prisma.$transaction.mockRejectedValueOnce({
+        cause: { code: '40P01' },
+      });
+      await expect(
+        service.save('group-uuid-1', '2026-04-01', dto, 1, ['CEO'], 1),
+      ).rejects.toThrow(ConflictException);
+
+      const boom = new Error('boom');
+      prisma.$transaction.mockRejectedValueOnce(boom);
+      await expect(
+        service.save('group-uuid-1', '2026-04-01', dto, 1, ['CEO'], 1),
+      ).rejects.toBe(boom);
     });
 
     it('should save attendance and return success', async () => {
