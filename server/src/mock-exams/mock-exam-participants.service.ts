@@ -4,7 +4,12 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { MockExamStatus, Prisma, StudentStatus } from '@prisma/client';
+import {
+  MockExamStatus,
+  MockRegistrationChannel,
+  Prisma,
+  StudentStatus,
+} from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -267,6 +272,7 @@ export class MockExamParticipantsService {
           examTime: dto.examTime ?? null,
           feeAmount,
           companyId,
+          registeredVia: MockRegistrationChannel.ADMIN,
           telegramChatId: dto.telegramChatId?.trim() || null,
           firstName,
           lastName,

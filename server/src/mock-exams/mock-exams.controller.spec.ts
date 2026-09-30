@@ -9,4 +9,11 @@ describe('MockExamsController — guards', () => {
     const roles = reflector.get<string[]>(ROLES_KEY, MockExamsController);
     expect(roles).toEqual(['CEO', 'Branch Director', 'Administrator']);
   });
+
+  it('lets the statistics route inherit those roles', () => {
+    expect(typeof MockExamsController.prototype.stats).toBe('function');
+    expect(
+      reflector.get<string[]>(ROLES_KEY, MockExamsController.prototype.stats),
+    ).toBeUndefined();
+  });
 });

@@ -13,6 +13,7 @@ import { MockExamGatewayBillingService } from './mock-exam-gateway-billing.servi
 import { MockExamBillingService } from './mock-exam-billing.service';
 import { MockExamPdfService } from './mock-exam-pdf.service';
 import { MockExamDeadlineCronService } from './mock-exam-deadline-cron.service';
+import { MockExamStatsService } from './mock-exam-stats.service';
 import { UploadModule } from '../upload/upload.module';
 import { TransactionsModule } from '../transactions/transactions.module';
 
@@ -35,6 +36,7 @@ import { TransactionsModule } from '../transactions/transactions.module';
     MockExamBillingService,
     MockExamPdfService,
     MockExamDeadlineCronService,
+    MockExamStatsService,
   ],
   exports: [
     MockExamSectionsService,
