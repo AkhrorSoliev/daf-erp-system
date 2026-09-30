@@ -442,8 +442,11 @@ uni o'zi topadi.
 
 ## 9. Chiqarish
 
-1. Server: migratsiya (`railway up` da `prisma migrate deploy`), keyin server.
-2. Sayt: Vercel + beshta domenga ulash.
+1. Sayt: Vercel, keyin beshta domenni yangi deploy'ga ulash (`vercel alias set`),
+   ochiq admin sahifalari yangilanadi — eski sayt muallifsiz («Tizim»)
+   topshiriqda yiqiladi. Kechqurun, kunning oxirgi darsidan keyin.
+2. Server: 23:00 dan keyin (Toshkent) — `railway up` da `prisma migrate deploy`,
+   keyin server.
 3. Skript: sinov rejimi (yozmaydi, faqat o'qish ulanishi) → CEO ro'yxatni
    ko'radi → `--apply --expect=<N>` (N — sinov rejimi chiqargan son; yangi skan
    boshqa son bersa hech narsa yozilmaydi). Qamrov: `--from` (standart
@@ -564,3 +567,6 @@ qayd etadi. Kod va ADR-0054 shuni aytadi.
   kalendar kuni sifatida tekshiradi (`isCalendarDateStr`): `2026-02-30` kabi
   sana martga surilmaydi, 400 «Noto'g'ri sana formati. YYYY-MM-DD formatda
   kiriting» oladi.
+- **Chiqarish tartibi (9).** Asl dizayn serverni birinchi chiqarardi. Eski sayt
+  muallifsiz topshiriqda yiqilgani uchun avval sayt, keyin 23:00 dan keyin
+  server (yakuniy ko'rik, 2026-09-30).
