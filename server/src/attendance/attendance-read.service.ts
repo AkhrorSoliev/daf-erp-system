@@ -312,6 +312,7 @@ export class AttendanceReadService {
       where: { id: groupId, deletedAt: null, ...(companyId && { companyId }) },
       select: {
         id: true,
+        branchId: true,
         exactDays: true,
         startDate: true,
         endDate: true,
@@ -360,10 +361,12 @@ export class AttendanceReadService {
     );
 
     // Holidays — skip these from the base regular days. HolidaysService pads
-    // ±1 day internally for UTC vs Tashkent midnight skew.
+    // ±1 day internally for UTC vs Tashkent midnight skew. Only the group's OWN
+    // branch's holidays (and company-wide ones) close its lessons.
     const holidaySet = await this.holidaysService.buildHolidayDateSet(
       utcMidnightFromDateStr(monthStartStr),
       utcMidnightFromDateStr(monthEndStr),
+      group.branchId,
     );
 
     // Pull all modifications that touch this month — any reschedule whose

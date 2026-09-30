@@ -5,17 +5,31 @@
  *
  *   railway run --service caring-courage --environment production \
  *     npx ts-node --transpile-only scripts/open-unmarked-lessons.ts \
- *     [--from=2026-09-01] [--apply]
+ *     [--from=2026-09-01] [--expect=<N>] [--apply]
  *
- * Without --apply the connection is read-only (the script checks that it took
- * effect and stops otherwise) and it only lists the lessons it would open. A
- * lesson day is what the group calendar calls one (schedule history,
+ * Two steps. First the dry run (no --apply): the connection is read-only (the
+ * script checks that it took effect and stops otherwise) and it lists every
+ * lesson it would open, with the group and branch ids, and the count N. Then
+ * the same command with `--apply --expect=<N>`: it scans again and aborts
+ * BEFORE writing if the count differs, so what was reviewed is what is
+ * written. `--apply` without `--expect` is refused, as is any unknown flag.
+ *
+ * Only ACTIVE groups are asked, like the live sweep: a group's calendar keeps
+ * drawing lesson days after the group closed (nothing records the closing
+ * date), and those days were never lessons. A lesson day is what the group
+ * calendar calls one otherwise (schedule history, the group's own branch's
  * holidays, cancellations and moves included) — the same `getLessonCalendar`
  * the admin panel draws.
+ *
+ * A lesson that fails is logged and skipped; the run goes on, ends with a
+ * non-zero exit code, and can be repeated (lessons already opened are skipped).
  */
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { GroupStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { HolidaysService } from '../src/holidays/holidays.service';
 import { AttendanceReadService } from '../src/attendance/attendance-read.service';
+import { EntityHistoryService } from '../src/common/entity-history/entity-history.service';
 import {
   createLessonTask,
   nextWorkingDay,
@@ -31,18 +45,13 @@ import {
   addDaysToDateStr,
   utcMidnightFromDateStr,
 } from '../src/common/date/tashkent';
-import { Prisma } from '@prisma/client';
 import { printHeader } from './lib/check-cli';
+import { parseOpenUnmarkedArgs, UsageError } from './lib/open-unmarked-args';
 
-const args = process.argv.slice(2);
-const arg = (name: string): string | undefined =>
-  args.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
-
-const APPLY = args.includes('--apply');
-const FROM = arg('from') ?? '2026-09-01';
 const EXEMPT_REASON = 'Qoida kuchga kirishidan oldingi dars (ADR-0054)';
 /** Under the pool's default of 10 connections. */
 const GROUPS_AT_A_TIME = 8;
+const PROGRESS_EVERY = 100;
 
 function readOnlyUrl(url: string): string {
   const u = new URL(url);
@@ -71,9 +80,12 @@ function monthsBetween(
 }
 
 async function main() {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(FROM)) {
-    throw new Error('--from must be YYYY-MM-DD');
-  }
+  // Refuse a bad command line before anything connects.
+  const {
+    apply: APPLY,
+    from: FROM,
+    expect,
+  } = parseOpenUnmarkedArgs(process.argv.slice(2));
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error('DATABASE_URL is not set');
   if (!APPLY) process.env.DATABASE_URL = readOnlyUrl(url);
@@ -100,11 +112,14 @@ async function main() {
       null as never,
     );
     const read = new AttendanceReadService(prisma, holidays);
+    const history = new EntityHistoryService(prisma, new EventEmitter2());
     const { todayStr } = tashkentClock();
     const today = utcMidnightFromDateStr(todayStr);
 
+    // ACTIVE only, like the live sweep. A closed group's calendar still draws
+    // a lesson day for every scheduled weekday after it closed.
     const groups = await prisma.group.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, statusEnum: GroupStatus.ACTIVE },
       select: {
         id: true,
         name: true,
@@ -114,6 +129,9 @@ async function main() {
         lessonEndTime: true,
       },
       orderBy: { name: 'asc' },
+    });
+    const skippedGroups = await prisma.group.count({
+      where: { deletedAt: null, statusEnum: { not: GroupStatus.ACTIVE } },
     });
 
     // The calendar costs about seven queries a group, so groups are read a few
@@ -189,11 +207,24 @@ async function main() {
 
     for (const f of found) {
       const { startTime, endTime } = timesOf(f);
-      console.log(`${f.group.name}\t${f.date}\t${startTime}–${endTime}`);
+      console.log(
+        `${f.group.id}\tbranch ${f.group.branchId}\t${f.group.name}\t${f.date}\t${startTime}–${endTime}`,
+      );
     }
     console.log(
       `\n${found.length} lesson(s) ${APPLY ? 'to open' : 'would be opened'} (from ${FROM}).`,
     );
+    console.log(
+      `Skipped ${skippedGroups} group(s) that are not ACTIVE (closed groups are not asked).`,
+    );
+
+    // What was reviewed is what gets written: a scan that differs from the
+    // dry run's count stops here, before any write.
+    if (expect !== null && found.length !== expect) {
+      throw new UsageError(
+        `Scan found ${found.length} lesson(s) but --expect=${expect}. Nothing was written; review a fresh dry run and pass its count.`,
+      );
+    }
     if (found.length === 0) return;
 
     // Every task is due on the next working day of its lesson's OWN branch,
@@ -215,63 +246,99 @@ async function main() {
     if (!APPLY) return;
 
     let opened = 0;
-    for (const f of found) {
+    let alreadyHandled = 0;
+    let failed = 0;
+    for (const [i, f] of found.entries()) {
       const date = utcMidnightFromDateStr(f.date);
       const { startTime, endTime } = timesOf(f);
       const dueAt = dueAtByBranch.get(f.group.branchId)!;
-      // Serializable, like the live sweep: a register saved at the same
-      // moment reads the question in its own Serializable transaction, so a
-      // lesson is never both marked and asked.
-      await prisma.$transaction(
-        async (tx) => {
-          const marked = await tx.attendance.findFirst({
-            where: { groupId: f.group.id, date },
-            select: { id: true },
-          });
-          const asked = await tx.unmarkedLesson.findUnique({
-            where: { groupId_date: { groupId: f.group.id, date } },
-            select: { id: true },
-          });
-          if (marked || asked) return;
-          const taskCommentId = await createLessonTask(tx, {
-            companyId: f.group.companyId,
-            branchId: f.group.branchId,
-            groupId: f.group.id,
-            groupName: f.group.name,
-            dateStr: f.date,
-            startTime,
-            endTime,
-            dueAt,
-          });
-          await tx.unmarkedLesson.create({
-            data: {
+      try {
+        // Serializable, like the live sweep: a register saved at the same
+        // moment reads the question in its own Serializable transaction, so a
+        // lesson is never both marked and asked.
+        const wrote = await prisma.$transaction(
+          async (tx) => {
+            const marked = await tx.attendance.findFirst({
+              where: { groupId: f.group.id, date },
+              select: { id: true },
+            });
+            const asked = await tx.unmarkedLesson.findUnique({
+              where: { groupId_date: { groupId: f.group.id, date } },
+              select: { id: true },
+            });
+            if (marked || asked) return false;
+            const taskCommentId = await createLessonTask(tx, {
               companyId: f.group.companyId,
               branchId: f.group.branchId,
               groupId: f.group.id,
-              date,
-              lessonStartTime: startTime,
-              lessonEndTime: endTime,
-              teacherPayExempt: true,
-              exemptReason: EXEMPT_REASON,
-              taskCommentId,
-            },
-          });
-          opened += 1;
-        },
-        {
-          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-          maxWait: 10_000,
-          timeout: 15_000,
-        },
-      );
+              groupName: f.group.name,
+              dateStr: f.date,
+              startTime,
+              endTime,
+              dueAt,
+            });
+            await tx.unmarkedLesson.create({
+              data: {
+                companyId: f.group.companyId,
+                branchId: f.group.branchId,
+                groupId: f.group.id,
+                date,
+                lessonStartTime: startTime,
+                lessonEndTime: endTime,
+                teacherPayExempt: true,
+                exemptReason: EXEMPT_REASON,
+                taskCommentId,
+              },
+            });
+            // The group's history says the question was asked, as `openOne` does.
+            await history.recordCreate({
+              entityType: 'Group',
+              entityId: f.group.id,
+              newValues: {
+                action: 'DAVOMAT_OLINMADI',
+                sana: f.date,
+                vaqt: `${startTime}–${endTime}`,
+              },
+              companyId: f.group.companyId,
+              tx,
+            });
+            return true;
+          },
+          {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+            maxWait: 10_000,
+            timeout: 15_000,
+          },
+        );
+        if (wrote) opened += 1;
+        else alreadyHandled += 1;
+      } catch (err) {
+        failed += 1;
+        console.error(
+          `FAILED ${f.group.id} ${f.date}: ${err instanceof Error ? err.message : err}`,
+        );
+      }
+      if ((i + 1) % PROGRESS_EVERY === 0) {
+        console.log(
+          `… ${i + 1}/${found.length} (opened ${opened}, failed ${failed})`,
+        );
+      }
     }
-    console.log(`Opened ${opened}.`);
+    console.log(
+      `Opened ${opened}. Already marked or asked meanwhile: ${alreadyHandled}. Failed: ${failed}.`,
+    );
+    if (failed > 0) {
+      console.error(
+        `${failed} lesson(s) failed — repeat the same command to retry them (lessons already opened are skipped).`,
+      );
+      process.exitCode = 1;
+    }
   } finally {
     await prisma.$disconnect();
   }
 }
 
 main().catch((err) => {
-  console.error(err);
+  console.error(err instanceof UsageError ? err.message : err);
   process.exitCode = 1;
 });

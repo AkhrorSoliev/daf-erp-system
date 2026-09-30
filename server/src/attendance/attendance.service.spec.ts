@@ -666,6 +666,43 @@ describe('AttendanceService', () => {
       ).toBeNull();
     });
 
+    it("a holiday only another branch has does not close this group's lesson day", async () => {
+      prisma.group.findFirst.mockResolvedValue({ ...mockGroup, branchId: 2 });
+      // Like the real service: no branch asks for every branch's holidays;
+      // branch 2 has none, branch 1 is closed on 2026-04-01.
+      holidaysService.buildHolidayDateSet.mockImplementation(
+        (_start: Date, _end: Date, branchId?: number) =>
+          Promise.resolve(
+            branchId === 2 ? new Set<string>() : new Set(['2026-04-01']),
+          ),
+      );
+
+      const result = await service.getLessonCalendar('group-uuid-1', 4, 2026);
+
+      expect(result.cells.find((c) => c.date === '2026-04-01')?.type).toBe(
+        'regular',
+      );
+      expect(holidaysService.buildHolidayDateSet).toHaveBeenCalledWith(
+        expect.any(Date),
+        expect.any(Date),
+        2,
+      );
+    });
+
+    it("a holiday of the group's own branch still closes its lesson day", async () => {
+      prisma.group.findFirst.mockResolvedValue({ ...mockGroup, branchId: 2 });
+      holidaysService.buildHolidayDateSet.mockImplementation(
+        (_start: Date, _end: Date, branchId?: number) =>
+          Promise.resolve(
+            branchId === 2 ? new Set(['2026-04-01']) : new Set<string>(),
+          ),
+      );
+
+      const result = await service.getLessonCalendar('group-uuid-1', 4, 2026);
+
+      expect(result.cells.find((c) => c.date === '2026-04-01')).toBeUndefined();
+    });
+
     it('marks regular lesson days with type=regular', async () => {
       const result = await service.getLessonCalendar('group-uuid-1', 4, 2026);
       // mockGroup has exactDays Mon/Wed/Fri; April 2026 contains the usual mix
