@@ -242,8 +242,8 @@ export const SETTING_DEFINITIONS: {
     key: 'payment.attendanceOpensMinutesBefore',
     // ADR-0047: the attendance window opens this many minutes before the
     // lesson starts and closes when it ends. Read by
-    // `AttendanceValidationService` per company; the client mirrors it from
-    // the roster's `window`.
+    // `AttendanceValidationService` per company; the client reads it from
+    // the roster's `opensMinutesBefore`.
     defaultValue: 10,
     parse: parseOpensMinutesBefore,
     companyLevelOnly: true,

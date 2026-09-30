@@ -1,8 +1,8 @@
 # ADR-0048 — «Berilmadi», kechikish daqiqasi, sinov darsi (3.5) va qarzdorning 1-darsga kelmagani
 
-**Holati:** Qabul qilindi
+**Holati:** Qabul qilindi; 1-band: «Bo'ldi» bilan haqi yozilmagan darslar ham «Berilmadi»da — ADR-0054; 2-band: daqiqa faqat dars ketayotganda yoziladi, `allowClosedLesson` yo'q — ADR-0054
 **Sana:** 2026-09-27
-**Bog'liq:** ADR-0047 (davomat oynasi va darsga qo'yish — uning 2-bosqichi); shartnomaning 3.2 va 3.5-bandlari; ADR-0044 (ketish tartiblari); `server/src/salary/shared/missed-lessons.ts`, `server/src/salary/salary-missed-lessons.service.ts`, `server/src/billing/month-plan.ts`, `server/src/attendance/shared/lesson-window.ts` (`minutesLate`, `lateArrival`), `server/src/billing/departure-policy.ts`, `server/src/billing/lesson-billing.service.ts`, `server/src/billing/lesson-admission.ts`, `server/src/billing/lesson-admission.service.ts`, `server/src/salary/shared/gap-sweep.ts`
+**Bog'liq:** ADR-0047 (davomat oynasi va darsga qo'yish — uning 2-bosqichi); shartnomaning 3.2 va 3.5-bandlari; ADR-0044 (ketish tartiblari); `server/src/salary/shared/missed-lessons.ts`, `server/src/salary/salary-missed-lessons.service.ts`, `server/src/billing/month-plan.ts`, `server/src/attendance/shared/attendance-window.ts` (`minutesLate`, `lateArrival`), `server/src/billing/departure-policy.ts`, `server/src/billing/lesson-billing.service.ts`, `server/src/billing/lesson-admission.ts`, `server/src/billing/lesson-admission.service.ts`, `server/src/salary/shared/gap-sweep.ts`
 
 ## Kontekst
 

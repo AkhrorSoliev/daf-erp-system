@@ -1,5 +1,9 @@
 # «Davomat va to'lov tartibi» — attendance window, unpaid-student admission, teacher pay
 
+> **Qisman eskirgan (2026-10-01):** R1 dagi «dars tugagach hech kim, CEO ham, kirita va o'zgartira olmaydi», `allowClosedLesson` va R6 dagi «endi saytda kiritib bo'lmaydi» — ADR-0054 va 2026-09-29 dizaynining 3.1-bo'limi bilan almashtirildi: olingan davomat dars tugagach ham tuzatiladi, yangisi faqat «Bo'ldi» orqali; oyna ochiladigan daqiqa — sozlama.
+> «Davomat olinmagan darslar» ro'yxatini faqat hisobot qilish ham ADR-0054 bilan bekor: dars joyida «Dars bo'ldimi?» savoliga javob beriladi.
+> Amaldagi qoidalar: ADR-0047 va ADR-0048 (ularning «Holati» qatori), ADR-0054, `server/CLAUDE.md` davomat bo'limi.
+
 **Date:** 2026-09-27 · **Status:** approved by the CEO («Hammasi joyida davom etamiz», 27.09)
 **Mockup:** Design canvas «Davomat va to'lov tartibi» (6 screens; PDF sent to the CEO).
 **Contract:** new contract clauses 3.2, 3.4, 3.5, 5.1 (`docs/tolov-savollari/shartnoma-2026-taklif-toza.docx`).
