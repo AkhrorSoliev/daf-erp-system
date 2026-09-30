@@ -20,7 +20,14 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
+import { tashkentInstantOn } from "@/lib/tashkent-time";
 import type { CommentData } from "./comment-list";
+
+// The server takes a task deadline only Monday–Saturday, 08:00–18:00 Tashkent
+// (the reminder cron's hours). The form picks a day, so the deadline is the end
+// of that working day, and Sundays cannot be picked.
+const TASK_DUE_HOUR = 18;
+const SUNDAY = [0];
 
 interface AssignableUser {
   id: number;
@@ -148,7 +155,7 @@ export function CommentForm({
         isTask: taskMode,
       };
       if (selectedIds.length > 0) payload.assigneeIds = selectedIds;
-      if (taskMode && dueDate) payload.dueDate = dueDate.toISOString();
+      if (taskMode && dueDate) payload.dueDate = tashkentInstantOn(dueDate, TASK_DUE_HOUR);
       if (taskMode && priority) payload.priority = priority;
       const { data } = await api.post("/comments", payload);
       onConfirmed?.(tempId, data);
@@ -236,6 +243,7 @@ export function CommentForm({
                 <DatePicker
                   value={dueDate}
                   onChange={setDueDate}
+                  disabledDaysOfWeek={SUNDAY}
                   placeholder="Muddat"
                   className="h-7 text-xs w-36"
                 />
