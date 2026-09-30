@@ -139,6 +139,13 @@ export class ReportsService {
   ) {
     return this.financial.getRecognizedRevenue(companyId, opts);
   }
+  // «Yechib olish» — revenue of the month it is withdrawn in (ADR-0055).
+  getBalanceWithdrawals(
+    companyId: number,
+    opts: { months: string[]; branchIds: ReportBranchIds },
+  ) {
+    return this.financial.getBalanceWithdrawals(companyId, opts);
+  }
 
   /**
    * Canonical monthly "Sof foyda" — the ONE net-profit figure the Foyda card and
