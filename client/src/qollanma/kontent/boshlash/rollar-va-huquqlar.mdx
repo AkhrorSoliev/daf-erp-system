@@ -1,0 +1,156 @@
+## Beshta rol
+
+Tizimda beshta xodim roli bor. Rol xodim tizimda nima qila olishini belgilaydi.
+
+| Rol | Nima qiladi | Qayerda ishlaydi |
+|---|---|---|
+| CEO | Butun tizimni boshqaradi. Xodimlar va rollarni belgilaydi, oylikni tasdiqlaydi, arxivni yuritadi. | Barcha filiallar |
+| Filial direktori | O'z filialining rahbari: o'quvchi, guruh, xodim, moliya va hisobotlar bilan ishlaydi. Ba'zi amallar (masalan, oylikni tasdiqlash, arxiv) faqat CEO'da qoladi. | Faqat o'z filiali |
+| Administrator | Kundalik ishni yuritadi: o'quvchi qo'shadi, guruhga yozadi, davomat oladi, darsni bekor qiladi yoki ko'chiradi, to'lov qabul qiladi. Xodim qo'sha olmaydi; «Ish haqi» va «Xarajatlar» sahifalari unga ko'rinmaydi. | Faqat o'z filiali (bir nechta bo'lishi mumkin) |
+| O'qituvchi | O'z guruhlarini va jadvalini ko'radi, dars kuni davomat oladi, «Mening oyligim» sahifasida o'z oyligini ko'radi. | O'z guruhlari |
+| Kassir | To'lov qabul qiladi va Moliya bo'limida qarzdorlar ro'yxatini ko'radi. | O'z filiali |
+
+Bitta xodimda bir nechta rol bo'lishi mumkin. Unda menyu va huquqlar hamma rolning yig'indisi bo'ladi.
+
+<Eslatma tur="malumot">
+
+Rollaringiz Profil sahifasida, birinchi rolingiz esa menyu pastida inglizcha nom bilan chiqadi: «CEO», «Branch Director», «Administrator», «Teacher» yoki «Cashier». Xodim formasida filial direktori «Direktor» deb yoziladi.
+
+</Eslatma>
+
+## Filial chegarasi
+
+Har bir yozuv — o'quvchi, guruh, to'lov, xarajat, oylik — aniq bitta filialga tegishli. Bir filialda to'langan pul boshqa filialning qarzini yopmaydi.
+
+- CEO barcha filiallarni ko'radi va boshqaradi.
+- Filial direktori va administrator faqat o'ziga biriktirilgan filial(lar) ichida ishlaydi. Administratorni bir necha filialga biriktirish mumkin: u har birida mahalliy administrator kabi ishlaydi.
+- Boshqa filialning yozuvini o'zgartirmoqchi bo'lsangiz, tizim rad etadi. Masalan: «Siz faqat o'z filialingizni tahrirlashingiz mumkin».
+- Filial tanlagichi (yuqori panel) faqat ko'rinishni toraytiradi, huquqni kengaytirmaydi. Batafsil — [Ekran tuzilishi](/qollanma/boshlash/interfeys).
+
+Filiali belgilanmagan xodim tizimga kiradi, lekin oylik, kassa, qarzdorlar va Aloqa markazidagi ro'yxatlarni bo'sh ko'radi va hech narsa to'lay olmaydi. Bu ataylab shunday qilingan. Bo'sh ekran ko'rsangiz, avval xodimning filiali belgilanganini tekshiring.
+
+## Lavozim va rol
+
+Lavozim va rol — ikki xil narsa.
+
+- **Lavozim** — xodimning ish nomi, erkin yoziladi (masalan, «farrosh», «qorovul»). U hech qanday huquq bermaydi.
+- **Rol** — tizimdagi huquq. Uni xodim formasida «Tizim huquqi» maydonida tanlaysiz.
+
+Xodim formasida «Lavozim» majburiy, «Tizim huquqi» esa ixtiyoriy. Rol berilmasa, xodim tizimga kira olmaydi: u faqat ro'yxatda turadi va oylik oladi.
+
+- Rolsiz xodimga login yoki parol berib bo'lmaydi. Formadagi «Kirish ma'lumotlari» bo'limi faqat rol tanlanganda chiqadi.
+- Xodimning oxirgi rolini olib tashlasangiz, tizim uning login va parolini o'zi o'chiradi.
+
+## Kim kimga rol bera oladi
+
+Rolni xodim formasida (Sozlamalar → «Xodimlar») tanlaysiz. Telegram ro'yxatdan o'tish havolasini yaratganda ham shu chegara amal qiladi. Siz faqat o'zingizdan pastdagi rollarni bera olasiz.
+
+| Kim beradi | Qaysi rollarni bera oladi |
+|---|---|
+| CEO | CEO, filial direktori, administrator, o'qituvchi, kassir |
+| Filial direktori | Administrator, o'qituvchi, kassir |
+
+- Forma sizga faqat bera oladigan rollarni ko'rsatadi.
+- Bir nechta roli bor odamda eng yuqori roli hal qiladi.
+- Xodimning hozirgi rollari ham sizning chegarangiz ichida bo'lishi kerak. Masalan, direktor boshqa direktorning yoki CEO'ning rollarini o'zgartira olmaydi: unda rollar ro'yxati faqat o'qish uchun chiqadi.
+- O'z rollaringizni faqat CEO o'zgartira oladi.
+- Formani rollarni o'zgartirmasdan saqlash rol berish hisoblanmaydi.
+- Xodim hisobiga o'quvchi roli berilmaydi.
+- Administrator xodimlar formasini ochmaydi, shuning uchun rol bera olmaydi.
+
+## Kim kimning hisobini o'zgartiradi
+
+Boshqa xodimning hisobidagi hamma narsani — ism, telefon, parol, holat, filial, arxivlash — faqat undan yuqoridagi rahbar o'zgartiradi.
+
+| Kim | Kimning hisobini o'zgartira oladi |
+|---|---|
+| CEO | Hammaniki |
+| Filial direktori | O'z filialidagi administrator, o'qituvchi, kassir va rolsiz xodimniki |
+| Administrator, o'qituvchi, kassir | Hech kimniki (faqat o'z profilini) |
+
+Strelka «hisobini o'zgartira oladi» degani. Direktor buni faqat o'z filialida qiladi.
+
+```mermaid
+flowchart LR
+  A["CEO"] --> B["Filial direktori"]
+  A --> C["Administrator"]
+  A --> D["O'qituvchi, kassir yoki rolsiz xodim"]
+  B --> C
+  B --> D
+```
+
+- Tengdoshingiz yoki sizdan yuqoridagining hisobini faqat CEO o'zgartiradi. Masalan, boshqa direktorning hisobini direktor o'zgartira olmaydi.
+- Bir nechta roli bor xodimda har bir roli sizning chegarangiz ichida bo'lishi kerak. Shuning uchun dars ham beradigan direktorni faqat CEO tahrirlaydi.
+- Hisobning hamma maydoni himoyalangan, faqat «xavfli» maydonlar emas. Telefon ham: Telegram orqali kirish uni parolsiz qidiradi, shuning uchun telefonni almashtirgan odam hisobni egallab olishi mumkin edi.
+- CEO'dan boshqa hech kim o'z holatini o'zgartira olmaydi va o'zini arxivlay olmaydi.
+- Rad etilsa, «Bu xodim sizdan yuqori yoki siz bilan bir darajada — uning hisobini faqat sizdan yuqori rahbar o'zgartiradi» chiqadi.
+
+## Bloklangan xodim
+
+Xodim formasidagi «Holati» maydonida «Faol», «Nofaol», «To'xtatilgan» va «Ishdan bo'shatilgan» bor. Xodim arxivlanishi ham mumkin.
+
+- «To'xtatilgan», «Ishdan bo'shatilgan» yoki «Arxivlangan» xodim bloklanadi. «Nofaol» xodim bloklanmaydi.
+- Bloklangan xodim yangidan kira olmaydi.
+- Ochiq turgan oynasida u keyingi harakatidayoq to'xtaydi: «Hisobingiz bloklangan» xabari chiqadi va hech narsa ochilmaydi. Buni «Xodimlar» sahifasida qilasizmi yoki «O'qituvchilar» sahifasidami — farqi yo'q.
+- Bloklangan xodim hisob ochib bera olmaydi, rol bera olmaydi va Telegram ro'yxatdan o'tish havolasini yarata olmaydi.
+- Arxivdan tiklangan xodim yana kira oladi.
+- Xodimning rolini pasaytirsangiz, u 1 soatgacha eski rolining oddiy sahifalarini ko'rishda davom etishi mumkin. Lekin yangi darajasidan yuqori hisob yoki havola yarata olmaydi.
+
+Xodimni darhol to'xtatish kerak bo'lsa, uni «To'xtatilgan» yoki «Arxivlangan» qiling.
+
+## Misol
+
+A filialida direktor Aziza, administrator Bobur va o'qituvchi Dilnoza ishlaydi. B filialining direktori — Sardor. Malika farrosh bo'lib ishlaydi.
+
+- Aziza yangi xodim qo'shganda «Tizim huquqi» maydonida faqat «Administrator», «O'qituvchi» va «Kassir» ni ko'radi. «Direktor» va «CEO» ro'yxatda yo'q.
+- Aziza Boburning telefon raqamini yoki holatini o'zgartira oladi: administrator Azizadan pastda.
+- Bobur Dilnozaning hisobini o'zgartira olmaydi: administrator hech kimning hisobiga tegmaydi. Buni Aziza qiladi.
+- Aziza Sardorning hisobini o'zgartira olmaydi: Sardor boshqa filialda va Azizaga tengdosh. Buni faqat CEO qiladi.
+- Malikaning lavozimi «Farrosh», roli yo'q. U oylik oladi, lekin tizimga kira olmaydi; unga login va parol berib bo'lmaydi.
+- Aziza Dilnozani «To'xtatilgan» qilsa, Dilnoza ochiq turgan oynasida keyingi harakatidayoq «Hisobingiz bloklangan» xabarini ko'radi.
+
+## Istisnolar
+
+- Menyu va qidiruv rolga qarab ko'rsatadi, lekin bu xavfsizlik chegarasi emas. Menyuda yo'q sahifani havola bilan ochib qo'ysangiz ham, huquqingiz bo'lmagan amalni tizim rad etadi: «Sizga bu amalni bajarishga ruxsat yo'q».
+- O'quvchi — alohida rol. Uni xodim hisobiga berib bo'lmaydi. Bir odam ham xodim, ham o'quvchi bo'lsa, unda ikkita hisob bo'ladi ([Tizimga kirish va parol](/qollanma/boshlash/tizimga-kirish) sahifasiga qarang).
+- Rol o'zgarishi 1 soatgacha kechikib kuchga kirishi mumkin. Bloklash esa darhol ishlaydi.
+- CEO hamma filialni ko'radi, unga filial biriktirish shart emas. Boshqa rollarda esa filial belgilanmagan bo'lsa, ro'yxatlar bo'sh chiqadi.
+
+## Kim qila oladi
+
+«Ha» — ekranda tugma yoki sahifa bor va tizim amalni qabul qiladi. «—» — ekranda yo'q va tizim rad etadi. Filial direktori va administrator faqat o'z filiali ichida ishlaydi.
+
+| Amal | CEO | Filial direktori | Administrator | O'qituvchi | Kassir |
+|---|---|---|---|---|---|
+| To'lov qayd qilish (Moliya sahifalaridagi «To'lov qayd qilish» tugmasi yoki o'quvchi profilidagi «To'lov qo'shish») | Ha | Ha | Ha | — | Ha |
+| To'lov summasi yoki usulini tuzatish («Summani to'g'rilash») | Ha, istalgan vaqt | Ha, 72 soat ichida | Ha, 72 soat ichida | — | — |
+| Qarzdorlar ro'yxatini ko'rish (Moliya → Qarzdorlik → «Qarzdorlar») | Ha | Ha | Ha | — | Ha |
+| Xarajat kiritish, tahrirlash, o'chirish | Ha | Ha | — | — | — |
+| Oylikni tasdiqlash | Ha | — | — | — | — |
+| Oylikni to'lash | Ha | Ha | — | — | — |
+| O'quvchi qo'shish va tahrirlash | Ha | Ha | Ha | — | — |
+| O'quvchini guruhga qo'shish | Ha | Ha | Ha | — | — |
+| O'quvchi holatini o'zgartirish | Ha | Ha | Ha | — | — |
+| O'quvchini arxivga o'tkazish | Ha | Ha | Ha | — | — |
+| Guruh yaratish, tahrirlash, o'chirish | Ha | Ha | Ha | — | — |
+| Davomat belgilash | Ha | Ha | Ha | Ha, faqat o'z guruhida, dars kuni, bir marta | — |
+| Darsni bekor qilish yoki boshqa kunga ko'chirish | Ha | Ha | Ha | — | — |
+| Bekor qilingan yoki ko'chirilgan dars yozuvini o'chirish | Ha | Ha | — | — | — |
+| Bayram (dam olish kuni) qo'shish | Ha | Ha | Ha | — | — |
+| Izoh yozish | Ha | Ha | Ha | — | — |
+| Izoh yoki topshiriqni o'chirish | Ha | — | — | — | — |
+| O'zgarishlar tarixini («Tarix») ko'rish | Ha | Ha | Ha | — | — |
+| O'qituvchilar ro'yxatini ko'rish | Ha | Ha | Ha | — | — |
+| O'qituvchi qo'shish va tahrirlash | Ha | Ha | — | — | — |
+| Xodim qo'shish va tahrirlash (Sozlamalar → «Xodimlar») | Ha | Ha | — | — | — |
+| Filial ma'lumotini o'zgartirish va holatini almashtirish | Ha | Ha, faqat o'z filialida | — | — | — |
+| Arxivni ko'rish va tiklash | Ha | — | — | — | — |
+
+Jadvalga faqat ekran va tizim bir xil javob beradigan amallar kiritilgan: tugma bor bo'lsa, tizim ham qabul qiladi; tugma yo'q bo'lsa, tizim ham rad etadi. Boshqa amallar tegishli bo'lim sahifalarida yoziladi.
+
+## Tizimda qayerda
+
+- Sozlamalar → «Xodimlar» ([/settings/employees](/settings/employees)) — xodim qo'shish, lavozim, rol va holat. Menyuda faqat CEO va filial direktoriga ko'rinadi.
+- [O'qituvchilar](/teachers) — o'qituvchi hisobi, «Statusni o'zgartirish» va arxivlash.
+- [Profil](/profile) — o'z ma'lumotlaringiz va rolingiz.
+- Chap menyu rolingizga qarab ochiladi: [Ekran tuzilishi](/qollanma/boshlash/interfeys) sahifasiga qarang.
