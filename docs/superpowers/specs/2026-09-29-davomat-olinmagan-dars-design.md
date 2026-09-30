@@ -3,8 +3,8 @@
 **Sana:** 2026-09-29
 **Holati:** Qabul qilindi — ADR-0054 (2026-09-30); amalga oshirishdagi farqlar 12-bo'limda
 **Bog'liq:** ADR-0054 (shu dizayn qarori), ADR-0053 (bekor qilingan dars puli darhol qaytadi), ADR-0025 (Telegram
-yig'ma xabar), PR #608 (ustoz faqat dars kuni davomat kiritadi), ADR-0047–0049 (ochiq PR #595,
-#596, #598 — 12-bo'lim)
+yig'ma xabar), PR #608 (ustoz faqat dars kuni davomat kiritadi), ADR-0047, 0048 (PR #595,
+#596 — birlashtirildi), ADR-0049 (PR #598 — rad etildi) — 12-bo'lim
 
 ## 1. Muammo
 
@@ -52,28 +52,34 @@ kamida bitta faol administrator bor.
 ### 3.1 Davomat oynasi
 
 - **Yangi** davomat (shu dars uchun hali hech qanday davomat yozuvi yo'q) — har qanday rol
-  uchun faqat bugungi Toshkent sanasida, `lessonStartTime − 10 daqiqa` dan
-  `lessonEndTime` gacha. Tugash vaqti **kirmaydi**: 17:30 da tugaydigan darsga
-  17:29:59 gacha. Ko'chirilgan darsda ko'chirishning o'z vaqti.
+  uchun faqat bugungi Toshkent sanasida, `lessonStartTime` dan kompaniya
+  sozlamasidagi daqiqa oldin (`payment.attendanceOpensMinutesBefore`, 0–60,
+  standart 10; ADR-0048 5-band) `lessonEndTime` gacha. Tugash vaqti
+  **kirmaydi**: 17:30 da tugaydigan darsga 17:29:59 gacha. Ko'chirilgan darsda
+  ko'chirishning o'z vaqti.
 - **Tuzatish** (davomat yozuvlari bor) — CEO, filial direktori, administrator istalgan
   vaqt, lekin `validateLessonDate` orqali: guruh `ACTIVE` bo'lishi, kun bayram
   yoki boshqa kunga ko'chirilgan bo'lmasligi shart. Ustoz tuzata olmaydi
   (mavjud qoida).
 - QR sessiya boshlash va har bir QR skanerlash — yangi davomat bilan bir xil
   oyna (bitta qorovul, `assertAttendanceWindowOpen`); savol ochilgach
-  skanerlash rad etiladi. Ma'lum cheklov: sessiya dars tugashida tugaydi, lekin
-  oxirgi QR kodi yana 50 soniyagacha (`TOKEN_TTL`) amal qiladi. Sessiya
-  tugagan bo'lsa, skanerlash vaqtni tekshirmaydi, faqat savol bor-yo'qligini
-  tekshiradi. Savol esa keyingi :00 yoki :30 yurishida ochiladi (17:45 da
-  tugagan dars — 18:00 da). Shuning uchun dars tugagach, shu 50 soniya ichidagi
-  skanerlash darsning birinchi davomat yozuvini yozishi mumkin; keyin yurish
-  davomatni ko'rib savol ochmaydi va ustoz haq oladi. Bu ish buni tuzatmaydi.
-- Oldindan belgilash (`PlannedAbsence`) o'zgarmaydi: admin kelajakdagi kunga
-  ham belgilay oladi. Shuning uchun oyna umumiy `validateLessonDate` ga emas,
-  davomat saqlash, QR boshlash va QR skanerlash yo'llariga qo'yiladi. PR #608 dagi «ustoz
-  faqat bugun» tekshiruvi `validateLessonDate` da qoladi.
+  skanerlash rad etiladi. Har bir skanerlash dars vaqtlarini va sozlamani
+  bazadan qayta o'qiydi (`validateLessonDate`); sessiyada vaqt saqlanmaydi.
+  Sessiya dars tugashida tugaydi, oxirgi QR kodi esa yana 50 soniyagacha
+  (`TOKEN_TTL`) amal qiladi, lekin dars tugagach u bilan yozib bo'lmaydi.
+  Birinchi chiqishdagi ma'lum cheklov (shu 50 soniyada darsning birinchi
+  davomat yozuvi yozilishi, keyin yurish savol ochmasligi va ustoz haq
+  olishi) birlashtirish PR ida (`feat/davomat-tartibi-birlashtirish`)
+  yopildi.
+- Oldindan belgilash (`PlannedAbsence`) davomat emas: admin kelajakdagi kunga
+  ham, bugungi darsga esa dars tugaguncha belgilay oladi (`assertLessonNotEnded`;
+  vaqti yo'q guruhda 23:00 gacha). Shuning uchun oyna umumiy
+  `validateLessonDate` ga emas, davomat saqlash, QR boshlash va QR skanerlash
+  yo'llariga qo'yiladi. PR #608 dagi «ustoz faqat bugun» soati olib tashlandi:
+  yagona soat — qorovul, hamma rol uchun bir xil. `validateLessonDate` soatga
+  ham, rolga ham qaramaydi.
 - Dars tugagandan keyin yangi davomat kiritishning **yagona** yo'li — 3.4 dagi
-  «Bo'ldi» (yuqoridagi QR cheklovidan tashqari).
+  «Bo'ldi».
 - **Poyga:** davomat saqlash va `UnmarkedLesson` yaratish ikkalasi ham
   `Serializable` tranzaksiyada, har biri ikkinchisini tekshiradi (saqlash —
   `UnmarkedLesson` yozuvi bormi, yaratish — davomat bormi). Bir dars bir vaqtda ham davomatli,
@@ -610,9 +616,10 @@ qayd etadi. Kod va ADR-0054 shuni aytadi.
 - **QR skanerlash (3.1).** Asl dizayn faqat sessiya boshlashni oynaga bog'lagan edi;
   skanerlash ham shu qorovuldan o'tadi va savol ochilgach rad etiladi. Sessiya
   muddati dars tugashigacha, Toshkent soati bilan. Oxirgi QR kodi esa
-  sessiyadan keyin 50 soniyagacha amal qiladi va unda vaqt tekshirilmaydi —
-  3.1 dagi ma'lum cheklov (dars tugagach birinchi davomat yozuvi yozilishi va
-  ustoz haq olishi mumkin).
+  sessiyadan keyin 50 soniyagacha amal qiladi; birinchi chiqishda unda vaqt
+  tekshirilmasdi (dars tugagach birinchi davomat yozuvi yozilishi va ustoz haq
+  olishi mumkin edi). Birlashtirish PR ida har bir skanerlash vaqtni bazadan
+  o'qiydi — bu cheklov yopildi (3.1).
 - **21:00 hisobot (3.7).** «Javobsiz darslar» qatori «Diqqat» belgisi, shuning
   uchun u kun svetoforini 🟡 qiladi.
 - **Fayllar va shakllar (4, 6).** Oyna `attendance/shared/attendance-window.ts`
@@ -686,10 +693,11 @@ qayd etadi. Kod va ADR-0054 shuni aytadi.
   joydan iborat sabab 400 «Sababini yozing» oladi. Guruh sahifasidagi oddiy
   bekor qilishning sababi (`CreateLessonCancellationDto.reason`) esa hanuz
   bo'sh joyni qabul qiladi (ma'lum cheklov).
-- **Ochiq ADR-0047, 0048, 0049 (PR #595, #596, #598).** Asl dizayn ularni
-  tilga olmagan edi: ular alohida ishlab chiqilgan va hali birlashtirilmagan.
-  Shu ish birinchi chiqadi, ular keyin uning ustiga birlashtiriladi. CEO
-  qarorlari (2026-09-30):
+- **ADR-0047, 0048, 0049 (PR #595, #596, #598).** Asl dizayn ularni tilga
+  olmagan edi: ular alohida ishlab chiqilgan edi. Shu ish birinchi chiqdi
+  (2026-10-01); #595 va #596 uning ustiga birlashtirish PR ida
+  (`feat/davomat-tartibi-birlashtirish`) birlashtirildi, #598 (ADR-0049) rad
+  etildi. CEO qarorlari (2026-09-30), hammasi kodda:
   - yangi davomat oynasi — ADR-0047 dagi qoidaning o'zi;
   - ADR-0047 dagi «dars tugagach hech kim, CEO ham, davomatni kirita olmaydi
     va o'zgartira olmaydi» qoidasini ADR-0054 almashtiradi: olingan davomatni
@@ -698,7 +706,15 @@ qayd etadi. Kod va ADR-0054 shuni aytadi.
   - ADR-0047 dagi shartnoma 3.2 qoidasi kuchga kirganda «Bo'ldi» ichida ham
     amal qiladi: darsga qo'yilmagan o'quvchini «Keldi» deb belgilab bo'lmaydi;
   - ADR-0048 dagi «Berilmadi» ro'yxatiga «Bo'ldi» orqali haqi yozilmagan
-    darslar ham kiradi.
+    darslar ham kiradi; istisno qilingan dars kirmaydi;
+  - qarzdorning 1-darsi uchun markaz ulushi o'quvchi to'lagan sari kamayadi —
+    buni ADR-0052 allaqachon ko'rsatadi, shuning uchun ADR-0049 rad etildi.
+
+  Birlashtirishda yana: oyna ochiladigan daqiqa sozlamadan o'qiladi, PR #608
+  dagi ustoz soati olib tashlandi (3.1); kechikish daqiqasi faqat dars
+  ketayotganda yoziladi; faqat ustoz roli dars tugaganda «Dars tugagan —
+  davomat olish yopilgan. Dars bo'lgan-bo'lmaganini administrator
+  belgilaydi.» oladi (CEO, 2026-10-01).
 - **Chiqarish tartibi (9).** Asl dizayn serverni birinchi chiqarardi. Yakuniy
   ko'rik (2026-09-30) tartibni o'zgartirdi: sayt Vercel'da oldindan
   yig'iladi, server 23:00 dan keyin chiqadi va Railway `SUCCESS` deyishi

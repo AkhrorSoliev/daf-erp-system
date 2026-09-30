@@ -17,6 +17,7 @@ import {
 } from './monthly-charge.service';
 import { TransactionsWriteService } from '../transactions/transactions-write.service';
 import { SettingsService } from '../settings/settings.service';
+import { LessonAdmissionService } from './lesson-admission.service';
 
 /**
  * Tests cover the 6-row status transition matrix and the 3 financial
@@ -30,6 +31,7 @@ describe('LessonBillingService', () => {
   let transactionsService: any;
   let salaryAccrualService: any;
   let monthlyChargeService: any;
+  let admissionService: any;
   let tx: any;
 
   const baseGroup = {
@@ -50,6 +52,11 @@ describe('LessonBillingService', () => {
     salaryAccrualService = {
       createAccrual: jest.fn().mockResolvedValue(null),
       reverseAccrualForAttendance: jest.fn().mockResolvedValue(null),
+    };
+    // ADR-0048: nobody's first lesson is deferred unless a test says so.
+    admissionService = {
+      isUnpaidFirstLesson: jest.fn().mockResolvedValue(false),
+      loadCoverage: jest.fn().mockResolvedValue(null),
     };
     monthlyChargeService = {
       createChargeForEnrollment: jest.fn(),
@@ -92,7 +99,14 @@ describe('LessonBillingService', () => {
       // `settleDeferredAccruals` resolves the deduction's linked Attendance
       // to look up groupId + date for the teacher resolver. Default null
       // because most tests don't trigger that branch.
-      attendance: { findUnique: jest.fn().mockResolvedValue(null) },
+      attendance: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        // ADR-0048: a monthly enrollment's deferred first lessons. None by default.
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      salaryAccrual: { findMany: jest.fn().mockResolvedValue([]) },
+      // ADR-0054: no forfeited lesson unless a test says so.
+      unmarkedLesson: { findMany: jest.fn().mockResolvedValue([]) },
       groupTeacher: {
         findMany: jest.fn().mockResolvedValue(baseGroup.teachers),
       },
@@ -113,6 +127,7 @@ describe('LessonBillingService', () => {
         { provide: TransactionsService, useValue: transactionsService },
         { provide: SalaryAccrualService, useValue: salaryAccrualService },
         { provide: MonthlyChargeService, useValue: monthlyChargeService },
+        { provide: LessonAdmissionService, useValue: admissionService },
       ],
     }).compile();
 
@@ -1299,6 +1314,283 @@ describe('LessonBillingService', () => {
       expect(salaryAccrualService.createAccrual).toHaveBeenCalled();
     });
 
+    describe('qarzdorning oydagi birinchi darsi (ADR-0048, R4)', () => {
+      const october = new Date('2026-10-02T00:00:00Z');
+
+      it('does not accrue a debtor ABSENT at an unpaid first lesson', async () => {
+        admissionService.isUnpaidFirstLesson.mockResolvedValue(true);
+        await service.processAttendanceBilling(tx, {
+          ...monthlyParams({
+            oldStatus: null,
+            newStatus: AttendanceStatus.ABSENT,
+          }),
+          lessonDate: october,
+        });
+        expect(admissionService.isUnpaidFirstLesson).toHaveBeenCalledWith(
+          { studentId: 10001, groupId: 'group-1', lessonDay: '2026-10-02' },
+          tx,
+        );
+        expect(salaryAccrualService.createAccrual).not.toHaveBeenCalled();
+      });
+
+      it('still accrues the unpaid first lesson when the student came', async () => {
+        admissionService.isUnpaidFirstLesson.mockResolvedValue(true);
+        await service.processAttendanceBilling(tx, {
+          ...monthlyParams({
+            oldStatus: null,
+            newStatus: AttendanceStatus.PRESENT,
+          }),
+          lessonDate: october,
+        });
+        // Student-covered, backed by the month's charge: wasCenterTopUp stays
+        // false and ADR-0052 moves its unpaid share to the centre live
+        // (`unpaid-monthly-share.spec`). ADR-0049's flag is not needed (D3).
+        expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
+          expect.objectContaining({
+            centerFunded: false,
+            deductionTransactionId: 'tx-monthly-1',
+          }),
+        );
+      });
+
+      it('accrues ABSENT when the payments reach the first lesson', async () => {
+        admissionService.isUnpaidFirstLesson.mockResolvedValue(false);
+        await service.processAttendanceBilling(tx, {
+          ...monthlyParams({
+            oldStatus: null,
+            newStatus: AttendanceStatus.ABSENT,
+          }),
+          lessonDate: october,
+        });
+        expect(salaryAccrualService.createAccrual).toHaveBeenCalled();
+      });
+
+      it('reverses the accrual when PRESENT becomes ABSENT on an unpaid first lesson', async () => {
+        admissionService.isUnpaidFirstLesson.mockResolvedValue(true);
+        await service.processAttendanceBilling(tx, {
+          ...monthlyParams({
+            oldStatus: AttendanceStatus.PRESENT,
+            newStatus: AttendanceStatus.ABSENT,
+          }),
+          lessonDate: october,
+        });
+        expect(
+          salaryAccrualService.reverseAccrualForAttendance,
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({ teacherId: 20001, lessonDate: october }),
+        );
+        expect(salaryAccrualService.createAccrual).not.toHaveBeenCalled();
+      });
+
+      it('accrues when ABSENT becomes PRESENT on that lesson', async () => {
+        admissionService.isUnpaidFirstLesson.mockResolvedValue(true);
+        await service.processAttendanceBilling(tx, {
+          ...monthlyParams({
+            oldStatus: AttendanceStatus.ABSENT,
+            newStatus: AttendanceStatus.LATE,
+          }),
+          lessonDate: october,
+        });
+        expect(salaryAccrualService.createAccrual).toHaveBeenCalled();
+      });
+
+      it('leaves PRESENT → LATE alone', async () => {
+        await service.processAttendanceBilling(tx, {
+          ...monthlyParams({
+            oldStatus: AttendanceStatus.PRESENT,
+            newStatus: AttendanceStatus.LATE,
+          }),
+          lessonDate: october,
+        });
+        expect(salaryAccrualService.createAccrual).not.toHaveBeenCalled();
+        expect(
+          salaryAccrualService.reverseAccrualForAttendance,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('never defers a lesson before 01.10.2026', async () => {
+        admissionService.isUnpaidFirstLesson.mockResolvedValue(true);
+        await service.processAttendanceBilling(
+          tx,
+          monthlyParams({
+            oldStatus: null,
+            newStatus: AttendanceStatus.ABSENT,
+          }),
+        );
+        expect(admissionService.isUnpaidFirstLesson).not.toHaveBeenCalled();
+        expect(salaryAccrualService.createAccrual).toHaveBeenCalled();
+      });
+
+      it('a payment accrues the deferred ABSENT first lesson it now reaches', async () => {
+        tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
+        tx.enrollment.findUnique.mockResolvedValue(monthlyEnrollmentRow());
+        tx.attendance.findMany.mockResolvedValue([
+          {
+            id: 'att-first',
+            groupId: 'group-1',
+            date: october,
+            group: { branchId: 1 },
+          },
+          {
+            id: 'att-later',
+            groupId: 'group-1',
+            date: new Date('2026-10-09T00:00:00Z'),
+            group: { branchId: 1 },
+          },
+          {
+            id: 'att-accrued',
+            groupId: 'group-1',
+            date: new Date('2026-10-12T00:00:00Z'),
+            group: { branchId: 1 },
+          },
+        ]);
+        tx.salaryAccrual.findMany.mockResolvedValue([
+          { attendanceId: 'att-accrued' },
+        ]);
+        const coverage = jest.fn((groupId: string, lessonDay: string) => ({
+          firstLesson: lessonDay === '2026-10-02',
+          covered: true,
+          enrollmentId: 'enroll-oct',
+        }));
+        admissionService.loadCoverage.mockResolvedValue(coverage);
+
+        await service.processRetroactiveBillingForStudent(tx, {
+          studentId: 10001,
+          companyId: 1,
+        });
+
+        expect(tx.attendance.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {
+              studentId: 10001,
+              companyId: 1,
+              status: AttendanceStatus.ABSENT,
+              date: { gte: new Date('2026-10-01T00:00:00Z') },
+              group: { course: { paymentModel: PaymentModel.MONTHLY } },
+            },
+          }),
+        );
+        // One read for every lesson re-checked, from the oldest pending one.
+        expect(admissionService.loadCoverage).toHaveBeenCalledTimes(1);
+        expect(admissionService.loadCoverage).toHaveBeenCalledWith(
+          tx,
+          10001,
+          '2026-10-02',
+        );
+        expect(coverage).toHaveBeenCalledTimes(2);
+        expect(monthlyChargeService.findChargeForLesson).toHaveBeenCalledWith(
+          tx,
+          'enroll-oct',
+          october,
+        );
+        expect(salaryAccrualService.createAccrual).toHaveBeenCalledTimes(1);
+        expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
+          expect.objectContaining({
+            attendanceId: 'att-first',
+            lessonDate: october,
+            carriedOverSink: expect.any(Array),
+          }),
+        );
+      });
+
+      it('a payment never retries a forfeited first lesson (ADR-0054)', async () => {
+        tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
+        tx.attendance.findMany.mockResolvedValue([
+          {
+            id: 'att-forfeited',
+            groupId: 'group-1',
+            date: october,
+            group: { branchId: 1 },
+          },
+          {
+            id: 'att-other',
+            groupId: 'group-2',
+            date: new Date('2026-10-05T00:00:00Z'),
+            group: { branchId: 1 },
+          },
+        ]);
+        tx.unmarkedLesson.findMany.mockResolvedValue([
+          { groupId: 'group-1', date: october },
+        ]);
+        const coverage = jest.fn(() => ({
+          firstLesson: true,
+          covered: true,
+          enrollmentId: 'enroll-oct',
+        }));
+        admissionService.loadCoverage.mockResolvedValue(coverage);
+
+        await service.processRetroactiveBillingForStudent(tx, {
+          studentId: 10001,
+          companyId: 1,
+        });
+
+        expect(tx.unmarkedLesson.findMany).toHaveBeenCalledWith({
+          where: {
+            companyId: 1,
+            teacherPayExempt: false,
+            date: {
+              gte: october,
+              lt: new Date('2026-10-06T00:00:00Z'),
+            },
+          },
+          select: { groupId: true, date: true },
+        });
+        expect(coverage).toHaveBeenCalledTimes(1);
+        expect(coverage).toHaveBeenCalledWith('group-2', '2026-10-05');
+        expect(salaryAccrualService.createAccrual).toHaveBeenCalledTimes(1);
+        expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
+          expect.objectContaining({ attendanceId: 'att-other' }),
+        );
+      });
+
+      it('a payment that still does not reach the first lesson writes nothing', async () => {
+        tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
+        tx.attendance.findMany.mockResolvedValue([
+          {
+            id: 'att-first',
+            groupId: 'group-1',
+            date: october,
+            group: { branchId: 1 },
+          },
+        ]);
+        admissionService.loadCoverage.mockResolvedValue(() => ({
+          firstLesson: true,
+          covered: false,
+          enrollmentId: 'enroll-oct',
+        }));
+
+        await service.processRetroactiveBillingForStudent(tx, {
+          studentId: 10001,
+          companyId: 1,
+        });
+
+        expect(salaryAccrualService.createAccrual).not.toHaveBeenCalled();
+      });
+
+      it('reads nothing more when every ABSENT already has its accrual', async () => {
+        tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
+        tx.attendance.findMany.mockResolvedValue([
+          {
+            id: 'att-first',
+            groupId: 'group-1',
+            date: october,
+            group: { branchId: 1 },
+          },
+        ]);
+        tx.salaryAccrual.findMany.mockResolvedValue([
+          { attendanceId: 'att-first' },
+        ]);
+
+        await service.processRetroactiveBillingForStudent(tx, {
+          studentId: 10001,
+          companyId: 1,
+        });
+
+        expect(admissionService.loadCoverage).not.toHaveBeenCalled();
+        expect(salaryAccrualService.createAccrual).not.toHaveBeenCalled();
+      });
+    });
+
     it('birinchi marta EXCUSED belgilanganda o`qituvchiga haq yozmaydi va kredit qo`shadi', async () => {
       await service.processAttendanceBilling(
         tx,
@@ -1519,6 +1811,13 @@ describe('LessonBillingService', () => {
           { provide: TransactionsService, useValue: transactionsMock },
           { provide: SalaryAccrualService, useValue: salaryMock },
           { provide: TransactionsWriteService, useValue: txWriteMock },
+          {
+            provide: LessonAdmissionService,
+            useValue: {
+              isUnpaidFirstLesson: jest.fn().mockResolvedValue(false),
+              loadCoverage: jest.fn().mockResolvedValue(null),
+            },
+          },
           {
             provide: SettingsService,
             useValue: {

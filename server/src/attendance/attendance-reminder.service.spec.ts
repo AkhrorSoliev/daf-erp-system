@@ -165,6 +165,21 @@ describe('AttendanceReminderService', () => {
           type: NotificationType.ATTENDANCE_ADMIN_ALERT,
         }),
       );
+      // The administrator is asked to warn the teacher (CEO-approved text).
+      expect(notificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 30001,
+          title: "O'qituvchi hali davomat olmadi",
+          message:
+            "👀 Dars tugashiga 30 daqiqa qoldi, o'qituvchi hali davomat olmadi\n\n" +
+            '👥 Guruh: Deutsch A1\n' +
+            '🕐 Vaqt: 09:00–10:30\n' +
+            '🚪 Xona: 201-xona\n' +
+            "👨‍🏫 O'qituvchi: Ali Valiev\n\n" +
+            "Dars tugaguncha davomat olinmasa, ustozga bu dars uchun haq yozilmaydi. Iltimos, o'qituvchini ogohlantiring.\n" +
+            '🔗 https://admin.dafzentrum.uz',
+        }),
+      );
     });
 
     it('leaves the lesson end to the sweep', async () => {

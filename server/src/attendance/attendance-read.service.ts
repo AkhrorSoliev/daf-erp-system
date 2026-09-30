@@ -4,7 +4,11 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AttendanceStatus, EnrollmentStatus } from '@prisma/client';
+import {
+  AttendanceMethod,
+  AttendanceStatus,
+  EnrollmentStatus,
+} from '@prisma/client';
 import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
 import {
   JS_TO_DAY_NAME,
@@ -25,7 +29,12 @@ import {
 import { HolidaysService } from '../holidays/holidays.service';
 import { rosterOnDate } from './shared/roster-on-date';
 import { loadUnmarkedLessonInfos } from '../unmarked-lessons/unmarked-lesson-info';
-import { effectiveLessonTimes } from './shared/attendance-window';
+import {
+  effectiveLessonTimes,
+  leftOutAfterEnd,
+  lessonHasEnded,
+  tashkentClock,
+} from './shared/attendance-window';
 
 @Injectable()
 export class AttendanceReadService {
@@ -621,6 +630,7 @@ export class AttendanceReadService {
       select: {
         id: true,
         studentId: true,
+        createdAt: true,
         student: {
           select: {
             id: true,
@@ -640,6 +650,9 @@ export class AttendanceReadService {
         studentId: true,
         status: true,
         note: true,
+        lateMinutes: true,
+        markedMethod: true,
+        createdAt: true,
       },
     });
 
@@ -696,6 +709,9 @@ export class AttendanceReadService {
           group.course.lessonPaymentCount,
         ),
         status: att?.status ?? null,
+        // «N daqiqa kechikdi» (ADR-0048): set only on a LATE row an
+        // administrator marked after the lesson's first save.
+        lateMinutes: att?.lateMinutes ?? null,
         note: att?.note ?? null,
         // Pre-mark (oldindan belgilash) — null when the lesson has no pending
         // pre-mark for this student.
@@ -763,6 +779,23 @@ export class AttendanceReadService {
       coursePrice: group.course.price,
       effectiveStartTime,
       effectiveEndTime,
+      // After the lesson, the students the register left out.
+      leftOutStudentIds: [
+        ...leftOutAfterEnd({
+          date,
+          ended: lessonHasEnded({
+            date,
+            ...tashkentClock(),
+            endTime: effectiveEndTime,
+          }),
+          manualRows: existingAttendance.filter(
+            (a) => a.markedMethod === AttendanceMethod.MANUAL,
+          ),
+          unmarked: enrollments
+            .filter((e) => !attendanceMap.has(e.studentId))
+            .map((e) => ({ studentId: e.studentId, enrolledAt: e.createdAt })),
+        }),
+      ],
     };
   }
 
@@ -865,14 +898,25 @@ export class AttendanceReadService {
                 ),
               },
             },
-            select: { studentId: true, date: true, status: true },
+            select: {
+              studentId: true,
+              date: true,
+              status: true,
+              lateMinutes: true,
+            },
           })
         : [];
 
-    const attendanceMap = new Map<string, AttendanceStatus>();
+    const attendanceMap = new Map<
+      string,
+      { status: AttendanceStatus; lateMinutes: number | null }
+    >();
     for (const rec of attendanceRecords) {
       const key = `${rec.studentId}:${tashkentDateStr(rec.date)}`;
-      attendanceMap.set(key, rec.status);
+      attendanceMap.set(key, {
+        status: rec.status,
+        lateMinutes: rec.lateMinutes,
+      });
     }
 
     // Mark which lesson dates had a substitute teacher assigned (LessonTeacherOverride)
@@ -971,12 +1015,18 @@ export class AttendanceReadService {
 
     const students = rosterEnrollments.map((e) => {
       const dots = lessonDates.map((date) => {
-        const status = attendanceMap.get(`${e.student.id}:${date}`) ?? null;
+        const rec = attendanceMap.get(`${e.student.id}:${date}`);
+        const status = rec?.status ?? null;
         // An attendance row is itself proof of membership; only fall back to
         // the coverage windows for blank dots.
         const enrolled =
           status !== null ? true : isEnrolledOn(e.student.id, date);
-        return { date, status, enrolled };
+        return {
+          date,
+          status,
+          lateMinutes: rec?.lateMinutes ?? null,
+          enrolled,
+        };
       });
       const attended = dots.filter(
         (d) =>

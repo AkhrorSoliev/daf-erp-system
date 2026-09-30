@@ -23,12 +23,20 @@ import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { tashkentNow } from "@/lib/tashkent-time";
-import { newAttendanceWindow } from "@/lib/attendance-window";
+import {
+  newAttendanceWindow,
+  OPENS_MINUTES_BEFORE,
+} from "@/lib/attendance-window";
 import { useAuth } from "@/hooks/use-auth";
 import type { GroupData } from "@/hooks/use-edit-group";
+import { RecordPaymentDialog } from "@/components/payments/record-payment-dialog";
 import { QrAttendanceDialog } from "./qr-attendance-dialog";
 import { AttendanceStudentRow } from "./attendance-student-row";
 import { AttendanceDebtorsSection } from "./attendance-debtors-section";
+import {
+  markableStudents,
+  suggestedPaymentAmount,
+} from "./attendance-admission";
 import {
   DAY_NAMES,
   STATUS_CONFIG,
@@ -68,15 +76,19 @@ export function AttendanceForm({
   const [submitting, setSubmitting] = useState(false);
   const [expandedNote, setExpandedNote] = useState<number | null>(null);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  // Admin collecting the payment that admits a blocked student (ADR-0047).
+  const [paymentFor, setPaymentFor] = useState<StudentAttendance | null>(null);
   // Oldindan belgilash rejimida admin "Hozir to'liq davomat olish" bossa,
   // bu bayroq finalize rejimiga o'tkazadi.
   const [forceFinalizeMode, setForceFinalizeMode] = useState(false);
   const [planSubmitting, setPlanSubmitting] = useState<number | null>(null);
-  // The lesson's real times for this date, from the register's own read: a day
-  // moved here can carry times of its own (the server judges the window on them).
+  // The lesson's real times for this date and the company's lead, from the
+  // register's own read: a day moved here can carry times of its own, and the
+  // server judges the window on them with the same lead.
   const [effectiveTimes, setEffectiveTimes] = useState<{
     start: string | null;
     end: string | null;
+    opensMinutesBefore: number;
   } | null>(null);
 
   const [y, m, d] = date.split("-");
@@ -91,6 +103,8 @@ export function AttendanceForm({
 
   const lessonStartTime = effectiveTimes?.start ?? group.lessonStartTime ?? null;
   const lessonEndTime = effectiveTimes?.end ?? group.lessonEndTime ?? null;
+  const opensMinutesBefore =
+    effectiveTimes?.opensMinutesBefore ?? OPENS_MINUTES_BEFORE;
 
   const lessonTimeInfo = (() => {
     if (!isToday || !lessonStartTime || !lessonEndTime) return null;
@@ -100,13 +114,13 @@ export function AttendanceForm({
     const start = sh * 60 + sm;
     const end = eh * 60 + em;
 
-    // Dars boshlanishidan 10 daqiqa oldin ochiladi
-    const windowStart = start - 10;
+    // Opens `opensMinutesBefore` minutes before the start (the company's setting).
+    const windowStart = start - opensMinutesBefore;
 
     if (nowMinutes < windowStart)
       return {
         status: "before" as const,
-        message: `Dars ${lessonStartTime} da boshlanadi (Toshkent vaqti). Davomat dars boshlanishidan 10 daqiqa oldin ochiladi`,
+        message: `Dars ${lessonStartTime} da boshlanadi (Toshkent vaqti). Davomat dars boshlanishidan ${opensMinutesBefore} daqiqa oldin ochiladi`,
       };
     if (nowMinutes >= end)
       return {
@@ -128,6 +142,7 @@ export function AttendanceForm({
     nowMinutes: tashkent.minutes,
     startTime: lessonStartTime,
     endTime: lessonEndTime,
+    opensMinutesBefore,
   });
   const isNewRegister =
     students.length > 0 && students.every((s) => s.status === null);
@@ -180,6 +195,7 @@ export function AttendanceForm({
       setEffectiveTimes({
         start: data.effectiveStartTime ?? null,
         end: data.effectiveEndTime ?? null,
+        opensMinutesBefore: data.opensMinutesBefore ?? OPENS_MINUTES_BEFORE,
       });
 
       const map = new Map<number, AttendanceEntry>();
@@ -212,6 +228,21 @@ export function AttendanceForm({
     fetchAttendance();
   }, [fetchAttendance]);
 
+  // After a payment the student may be let in: re-read the rows (admission,
+  // balance) but keep the marks the administrator has not saved yet —
+  // fetchAttendance would rebuild them from the server and drop them.
+  const refreshRows = async () => {
+    try {
+      const { data } = await api.get(`/attendance/${group.id}/date/${date}`);
+      setStudents(data.activeStudents ?? []);
+      setDebtorStudents(data.debtorStudents ?? []);
+    } catch {
+      toast.error(
+        "To'lov qabul qilindi, lekin ro'yxatni yangilab bo'lmadi. Sahifani qayta yuklang",
+      );
+    }
+  };
+
   const setStatus = (studentId: number, status: AttendanceStatus) => {
     setEntries((prev) => {
       const next = new Map(prev);
@@ -230,10 +261,15 @@ export function AttendanceForm({
     });
   };
 
+  // Contract 3.2: a blocked student cannot be marked present (or anything but
+  // «Sababli»), so neither «Barchasiga — Keldi» nor the unmarked count touches
+  // them — otherwise a group with one unpaid student could not be saved.
+  const markable = markableStudents(students);
+
   const markAllPresent = () => {
     setEntries((prev) => {
       const next = new Map(prev);
-      for (const student of students) {
+      for (const student of markable) {
         const existing = next.get(student.studentId);
         next.set(student.studentId, {
           ...existing!,
@@ -327,7 +363,7 @@ export function AttendanceForm({
     }
   };
 
-  const unmarkedStudents = students.filter((s) => {
+  const unmarkedStudents = markable.filter((s) => {
     const entry = entries.get(s.studentId);
     return !entry?.status;
   });
@@ -365,6 +401,9 @@ export function AttendanceForm({
   const absentCount = Array.from(entries.values()).filter(
     (e) => e.status === "ABSENT",
   ).length;
+  // When every student is blocked there is nothing to send: the server would
+  // take the empty save and the toast would claim a register was saved.
+  const hasMarks = Array.from(entries.values()).some((e) => e.status !== null);
 
   return (
     <div className="space-y-4">
@@ -576,6 +615,7 @@ export function AttendanceForm({
               }
               onPlanMark={planMark}
               onPlanRemove={planRemove}
+              onCollectPayment={isAdmin ? setPaymentFor : undefined}
             />
           ))}
         </div>
@@ -591,7 +631,12 @@ export function AttendanceForm({
           )}
           <Button
             onClick={handleSave}
-            disabled={submitting || isLocked || unmarkedStudents.length > 0}
+            disabled={
+              submitting ||
+              isLocked ||
+              unmarkedStudents.length > 0 ||
+              !hasMarks
+            }
             size="lg"
             className="min-w-36 shadow-lg"
           >
@@ -610,9 +655,32 @@ export function AttendanceForm({
         <AttendanceDebtorsSection
           debtors={debtorStudents}
           suggestedAmount={coursePrice}
-          onPaymentSuccess={fetchAttendance}
+          onPaymentSuccess={refreshRows}
         />
       )}
+
+      {/* To'lov: qo'yilmagan o'quvchini darsga kiritadigan to'lov (ADR-0047) */}
+      <RecordPaymentDialog
+        open={paymentFor !== null}
+        onOpenChange={(open) => {
+          if (!open) setPaymentFor(null);
+        }}
+        preSelectedStudent={
+          paymentFor
+            ? {
+                id: paymentFor.studentId,
+                firstName: paymentFor.firstName,
+                lastName: paymentFor.lastName,
+                balance: paymentFor.balance ?? 0,
+              }
+            : null
+        }
+        suggestedAmount={suggestedPaymentAmount(paymentFor?.admission)}
+        onSuccess={() => {
+          setPaymentFor(null);
+          refreshRows();
+        }}
+      />
 
       {/* QR Davomat Dialog */}
       <QrAttendanceDialog

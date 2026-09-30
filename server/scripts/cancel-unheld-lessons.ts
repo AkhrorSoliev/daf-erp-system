@@ -25,6 +25,7 @@ import { TransactionsWriteService } from '../src/transactions/transactions-write
 import { MonthlyChargeService } from '../src/billing/monthly-charge.service';
 import { LessonBillingService } from '../src/billing/lesson-billing.service';
 import { SettingsService } from '../src/settings/settings.service';
+import { SalaryAccrualService } from '../src/salary/salary-accrual.service';
 import { EntityHistoryService } from '../src/common/entity-history/entity-history.service';
 import { LessonCancellationsService } from '../src/lesson-cancellations/lesson-cancellations.service';
 import { cancelledLessonRelease } from '../src/billing/departure-release';
@@ -154,6 +155,8 @@ async function main() {
         prisma,
         new TransactionsWriteService(prisma, new CashMovementsService(prisma)),
         {} as SettingsService,
+        // Only the trial-lesson release reads it (ADR-0048), never a cancellation.
+        {} as SalaryAccrualService,
       ),
       history,
       // The notification listener is not wired here: no Telegram message

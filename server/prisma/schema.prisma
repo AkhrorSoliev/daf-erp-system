@@ -1956,6 +1956,10 @@ model Attendance {
   markedById     Int?
   markedBy       User?               @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
   markedMethod   AttendanceMethod    @default(MANUAL)
+  /// Minutes after the lesson's effective start an administrator marked the
+  /// student present, when the lesson already had attendance (ADR-0048).
+  /// Only on a LATE row; null otherwise.
+  lateMinutes    Int?
   // Set when this attendance row exists for a lesson that was later
   // cancelled. The status is forced to EXCUSED so existing biller/stat
   // queries keep working — cancellation is metadata via this link, not a

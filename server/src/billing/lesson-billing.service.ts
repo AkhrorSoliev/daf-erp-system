@@ -19,7 +19,17 @@ import {
   CarriedOverAccrual,
 } from '../salary/salary-accrual.service';
 import { MonthlyChargeService } from './monthly-charge.service';
+import { LessonAdmissionService } from './lesson-admission.service';
+import { ADMISSION_START_DAY } from './lesson-admission';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
+import {
+  addDaysToDateStr,
+  utcMidnightFromDateStr,
+} from '../common/date/tashkent';
+import {
+  lessonKey,
+  loadForfeitedLessonKeys,
+} from '../unmarked-lessons/forfeited-lessons';
 import { lessonDatesInMonth } from './planned-lessons';
 import {
   applyDiscount,
@@ -86,6 +96,7 @@ export class LessonBillingService {
     private transactionsService: TransactionsService,
     private salaryAccrualService: SalaryAccrualService,
     private monthlyChargeService: MonthlyChargeService,
+    private admission: LessonAdmissionService,
   ) {}
 
   async processAttendanceBilling(
@@ -145,7 +156,26 @@ export class LessonBillingService {
     // (yangi davomat) BU QOIDAGA kirmaydi — birinchi marta EXCUSED deb
     // belgilash ham uzrli dars hisoblanadi va kredit yozilishi kerak, aks
     // holda kredit izsiz yo'qoladi.
-    if (params.oldStatus !== null && wasBillable === isBillable) return;
+    if (params.oldStatus !== null && wasBillable === isBillable) {
+      // Billable → billable changes nothing, except across ABSENT: a debtor's
+      // unpaid first lesson pays the teacher only if the student came
+      // (ADR-0048, R4). createAccrual is idempotent, so re-accruing a lesson
+      // that already has its accrual is a no-op.
+      const wasAbsent = params.oldStatus === AttendanceStatus.ABSENT;
+      const isAbsent = params.newStatus === AttendanceStatus.ABSENT;
+      if (isBillable && wasAbsent !== isAbsent) {
+        if (isAbsent && (await this.isDeferredFirstLesson(tx, params))) {
+          await this.reverseLessonAccruals(
+            tx,
+            params,
+            "Qarzdor oyning birinchi darsiga kelmadi — to'lagach yoziladi",
+          );
+        } else {
+          await this.accrueMonthlySalary(tx, params);
+        }
+      }
+      return;
+    }
 
     if (isBillable) {
       // Uzrli edi, endi dars hisoblanadi: kreditni qaytarib olamiz.
@@ -156,14 +186,32 @@ export class LessonBillingService {
           delta: -1,
         });
       }
+      // ADR-0048 (R4): a debtor ABSENT at the month's first lesson earns the
+      // teacher nothing yet; the payment that covers it writes the accrual
+      // (`accrueDeferredFirstLessons`).
+      if (await this.isDeferredFirstLesson(tx, params)) return;
       await this.accrueMonthlySalary(tx, params);
       return;
     }
 
     // Dars hisoblanardi, endi uzrli: haqni qaytarib, kredit yozamiz.
-    // `reverseAccrualForAttendance` O'QITUVCHI bo'yicha ishlaydi
-    // (`salary-accrual.service.ts:391`), shuning uchun darsning
-    // o'qituvchilari avval aniqlanadi.
+    await this.reverseLessonAccruals(tx, params, 'Dars uzrli deb belgilandi');
+    await this.monthlyChargeService.recordExcusedLesson(tx, {
+      enrollmentId: params.enrollmentId,
+      lessonDate: params.lessonDate,
+      delta: 1,
+    });
+  }
+
+  /**
+   * `reverseAccrualForAttendance` O'QITUVCHI bo'yicha ishlaydi, shuning
+   * uchun darsning o'qituvchilari avval aniqlanadi.
+   */
+  private async reverseLessonAccruals(
+    tx: Prisma.TransactionClient,
+    params: ProcessAttendanceBillingParams,
+    reason: string,
+  ): Promise<void> {
     const teacherIds = await this.resolveTeachersForLesson(
       tx,
       params.groupId,
@@ -176,15 +224,29 @@ export class LessonBillingService {
         groupId: params.groupId,
         lessonDate: params.lessonDate,
         reversedById: params.performedById,
-        reversalReason: 'Dars uzrli deb belgilandi',
+        reversalReason: reason,
         tx,
       });
     }
-    await this.monthlyChargeService.recordExcusedLesson(tx, {
-      enrollmentId: params.enrollmentId,
-      lessonDate: params.lessonDate,
-      delta: 1,
-    });
+  }
+
+  /**
+   * ADR-0048 (R4): an ABSENT mark on the student's first lesson of the month
+   * in this group, from 01.10.2026, that their payments do not reach. The
+   * centre covers the first lesson for the teacher only when the student
+   * came; otherwise the teacher is paid when the student pays.
+   */
+  private async isDeferredFirstLesson(
+    tx: Prisma.TransactionClient,
+    params: ProcessAttendanceBillingParams,
+  ): Promise<boolean> {
+    if (params.newStatus !== AttendanceStatus.ABSENT) return false;
+    const lessonDay = tashkentDateStr(params.lessonDate);
+    if (lessonDay < ADMISSION_START_DAY) return false;
+    return this.admission.isUnpaidFirstLesson(
+      { studentId: params.studentId, groupId: params.groupId, lessonDay },
+      tx,
+    );
   }
 
   /**
@@ -211,6 +273,7 @@ export class LessonBillingService {
   private async accrueMonthlySalary(
     tx: Prisma.TransactionClient,
     params: ProcessAttendanceBillingParams,
+    carriedOverSink?: CarriedOverAccrual[],
   ): Promise<void> {
     const charge = await this.monthlyChargeService.findChargeForLesson(
       tx,
@@ -266,6 +329,7 @@ export class LessonBillingService {
           // Hisob yo'q bo'lsa o'quvchi tomonidan qoplanmagan — markaz
           // qoplaydi, aks holda createAccrual null qaytarib chiqib ketardi.
           centerFunded: !charge,
+          carriedOverSink,
           tx,
         });
       } catch (err) {
@@ -491,6 +555,20 @@ export class LessonBillingService {
       }
     }
 
+    // Phase 1b (ADR-0048, R4): a debtor's ABSENT first lesson of a month
+    // accrues nothing until their payments reach it. This payment may have.
+    // Every monthly group counts, not only the ACTIVE enrollments above: a
+    // student who has since left still paid for the lessons they were billed.
+    await this.accrueDeferredFirstLessons(
+      tx,
+      {
+        studentId: params.studentId,
+        companyId: params.companyId,
+        performedById: params.performedById,
+      },
+      carriedOver,
+    );
+
     // Phase 2: settle deferred teacher salary accruals for SINGLE_UNCOVERED
     // deductions whose debt has now been covered (FIFO).
     //
@@ -626,6 +704,94 @@ export class LessonBillingService {
           metadata: { ...md, uncoveredAmount: 0, salaryDeferred: false },
         },
       });
+    }
+  }
+
+  /**
+   * ADR-0048 (R4): writes the teacher's accrual for every ABSENT first lesson
+   * of a month (from 01.10.2026, monthly courses) that has no live accrual and
+   * that the student's payments now reach. An ABSENT that was not a first
+   * lesson was accrued when it was marked, so `firstLessonCoverage` leaves it
+   * alone. The accrual goes on the enrollment whose charge billed the lesson;
+   * a payment after the month's payroll closed carries it over
+   * (`createAccrual`), and a repeat run finds nothing left to write. A
+   * forfeited lesson (ADR-0054) is skipped: it never earns an accrual, and
+   * `createAccrual` would refuse it again on every later payment.
+   */
+  private async accrueDeferredFirstLessons(
+    tx: Prisma.TransactionClient,
+    params: { studentId: number; companyId: number; performedById?: number },
+    carriedOverSink: CarriedOverAccrual[],
+  ): Promise<void> {
+    const absences = await tx.attendance.findMany({
+      where: {
+        studentId: params.studentId,
+        companyId: params.companyId,
+        status: AttendanceStatus.ABSENT,
+        date: { gte: new Date(`${ADMISSION_START_DAY}T00:00:00.000Z`) },
+        group: { course: { paymentModel: PaymentModel.MONTHLY } },
+      },
+      select: {
+        id: true,
+        groupId: true,
+        date: true,
+        group: { select: { branchId: true } },
+      },
+      orderBy: { date: 'asc' },
+    });
+    if (absences.length === 0) return;
+
+    const accrued = await tx.salaryAccrual.findMany({
+      where: {
+        attendanceId: { in: absences.map((a) => a.id) },
+        reversedAt: null,
+      },
+      select: { attendanceId: true },
+    });
+    const withAccrual = new Set(accrued.map((a) => a.attendanceId));
+    const unaccrued = absences.filter((a) => !withAccrual.has(a.id));
+    if (unaccrued.length === 0) return;
+
+    // `Attendance.date` is a @db.Date: its UTC calendar date is the day.
+    const dayOf = (d: Date) => d.toISOString().slice(0, 10);
+    const forfeited = await loadForfeitedLessonKeys(tx, {
+      companyId: params.companyId,
+      from: unaccrued[0].date,
+      toExclusive: utcMidnightFromDateStr(
+        addDaysToDateStr(dayOf(unaccrued[unaccrued.length - 1].date), 1),
+      ),
+    });
+    const pending = unaccrued.filter(
+      (a) => !forfeited.has(lessonKey(a.groupId, a.date)),
+    );
+    if (pending.length === 0) return;
+
+    const coverage = await this.admission.loadCoverage(
+      tx,
+      params.studentId,
+      dayOf(pending[0].date),
+    );
+    if (!coverage) return;
+
+    for (const att of pending) {
+      const c = coverage(att.groupId, dayOf(att.date));
+      if (!c.firstLesson || !c.covered || !c.enrollmentId) continue;
+      await this.accrueMonthlySalary(
+        tx,
+        {
+          attendanceId: att.id,
+          enrollmentId: c.enrollmentId,
+          studentId: params.studentId,
+          groupId: att.groupId,
+          branchId: att.group.branchId,
+          lessonDate: att.date,
+          oldStatus: null,
+          newStatus: AttendanceStatus.ABSENT,
+          companyId: params.companyId,
+          performedById: params.performedById,
+        },
+        carriedOverSink,
+      );
     }
   }
 

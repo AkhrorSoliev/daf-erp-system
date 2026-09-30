@@ -20,8 +20,12 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { PAYMENT_MODEL_LABELS, type PaymentModel } from "@/lib/payment-model";
+import {
+  PaymentLessonRulesSettings,
+  type LessonRuleSettings,
+} from "./payment-lesson-rules-settings";
 
-interface PaymentSettingsValues {
+interface PaymentSettingsValues extends LessonRuleSettings {
   "payment.defaultModel": PaymentModel;
   "payment.excusedCreditEnabled": boolean;
   "payment.excusedCreditMonthlyCap": number | null;
@@ -309,7 +313,7 @@ export function PaymentSettingsClient() {
             <p className="text-xs text-muted-foreground">
               Bu qiymat filial bo&apos;yicha emas — butun kompaniya uchun bitta
               (oylik hisob-kitob croni shunday ishlaydi), shuning uchun faqat
-              CEO o&apos;zgartira oladi.
+              markaz rahbari o&apos;zgartira oladi.
             </p>
           )}
           {/* chargeDayOfMonth companyLevelOnly — filial override HECH
@@ -344,7 +348,7 @@ export function PaymentSettingsClient() {
           {!isCeo && canEdit && (
             <p className="text-xs text-muted-foreground">
               Bu qiymat filial bo&apos;yicha emas — butun kompaniya uchun bitta,
-              shuning uchun faqat CEO o&apos;zgartira oladi.
+              shuning uchun faqat markaz rahbari o&apos;zgartira oladi.
             </p>
           )}
           {/* debtWriteOffEnabled ham companyLevelOnly — CEO buni butun
@@ -390,7 +394,7 @@ export function PaymentSettingsClient() {
           {!isCeo && canEdit && (
             <p className="text-xs text-muted-foreground">
               Bu qiymat filial bo&apos;yicha emas — butun kompaniya uchun bitta,
-              shuning uchun faqat CEO o&apos;zgartira oladi.
+              shuning uchun faqat markaz rahbari o&apos;zgartira oladi.
             </p>
           )}
         </div>
@@ -428,13 +432,21 @@ export function PaymentSettingsClient() {
           {!isCeo && canEdit && (
             <p className="text-xs text-muted-foreground">
               Bu qiymat filial bo&apos;yicha emas — butun kompaniya uchun bitta,
-              shuning uchun faqat CEO o&apos;zgartira oladi.
+              shuning uchun faqat markaz rahbari o&apos;zgartira oladi.
             </p>
           )}
           {/* noRefundAfterPercent ham companyLevelOnly — backend filial
               bo'yicha yozishni rad etadi, shuning uchun override eslatmasi
               bu yerda ham yo'q. */}
         </div>
+
+        <PaymentLessonRulesSettings
+          settings={settings}
+          isCeo={isCeo}
+          canEdit={canEdit}
+          saving={saving}
+          saveField={saveField}
+        />
       </div>
 
       {saving && (
@@ -446,7 +458,8 @@ export function PaymentSettingsClient() {
 
       {!canEdit && (
         <p className="text-xs text-muted-foreground">
-          Bu bo&apos;limni faqat CEO va Filial direktori tahrirlashi mumkin.
+          Bu bo&apos;limni faqat markaz rahbari va filial direktori tahrirlashi
+          mumkin.
         </p>
       )}
     </div>

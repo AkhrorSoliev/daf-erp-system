@@ -13,6 +13,8 @@ import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { assertAttendanceWindowOpen } from './shared/attendance-window-guard';
 import { QrSession, QrToken } from './shared/qr-types';
+import { AttendanceValidationService } from './attendance-validation.service';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
 
 @Injectable()
 export class QrAttendanceScanService {
@@ -25,6 +27,8 @@ export class QrAttendanceScanService {
     private entityHistoryService: EntityHistoryService,
     private lessonBillingService: LessonBillingService,
     private eventEmitter: EventEmitter2,
+    private validation: AttendanceValidationService,
+    private admission: LessonAdmissionService,
   ) {}
 
   async scanQr(
@@ -70,39 +74,46 @@ export class QrAttendanceScanService {
       throw new BadRequestException('Guruh topilmadi');
     }
 
-    // No balance gate: a student with insufficient balance is allowed to
-    // scan and be marked PRESENT. The lesson is recorded but no consumption
-    // / deduction / accrual is written by LessonBillingService (B.1 rule).
-    // When the student later tops up, payments-write triggers retroactive
-    // billing to settle the unpaid lessons and accrue teacher salary.
-
-    // Cache the lesson number from the session so the early-return path
-    // (already-marked) and the success path both surface the same value.
-    let lessonNumber: number | null = null;
-    let times: { startTime: string | null; endTime: string | null } | null =
-      null;
-    const sessionRaw = await this.redis.get(`qr-session:${groupId}:${date}`);
-    if (sessionRaw) {
-      const sessionData: QrSession = JSON.parse(sessionRaw);
-      lessonNumber = sessionData.lessonNumber;
-      // An older session has no times: the window is skipped, not guessed.
-      if (sessionData.effectiveEndTime !== undefined) {
-        times = {
-          startTime: sessionData.effectiveStartTime ?? null,
-          endTime: sessionData.effectiveEndTime,
-        };
-      }
-    }
-
-    // A session started inside the window must not outlive it: once the
-    // lesson has ended, or «Dars bo'ldimi?» was asked, no scan may write.
+    // The lesson as the database has it now — its effective times and the
+    // company's lead — on every scan, never what the session remembers: the
+    // last token outlives its session by up to TOKEN_TTL, so a scan after
+    // the lesson ended, or once «Dars bo'ldimi?» was asked, is refused here.
     // Before the transaction, before any write.
+    const lesson = await this.validation.validateLessonDate(
+      groupId,
+      date,
+      companyId,
+    );
     await assertAttendanceWindowOpen(this.prisma, {
       groupId,
       date,
       parsedDate: parsedLessonDate,
-      times,
+      times: {
+        startTime: lesson.effectiveStartTime,
+        endTime: lesson.effectiveEndTime,
+        opensMinutesBefore: lesson.opensMinutesBefore,
+      },
     });
+
+    // Contract 3.2 (ADR-0047): from the month's 2nd lesson a scan admits
+    // only a student whose payments reach this lesson.
+    const admission = await this.admission.forLesson({
+      groupId,
+      lessonDay: date,
+      studentIds: [studentId],
+    });
+    if (admission.get(studentId)?.admitted === false) {
+      throw new BadRequestException(
+        "To'lov qilinmagan: shartnomaga ko'ra 2-darsdan boshlab to'lov qilinmaguncha darsga qo'yilmaysiz",
+      );
+    }
+
+    // The session only supplies the lesson number, so the early-return path
+    // (already marked) and the success path surface the same value.
+    const sessionRaw = await this.redis.get(`qr-session:${groupId}:${date}`);
+    const lessonNumber = sessionRaw
+      ? (JSON.parse(sessionRaw) as QrSession).lessonNumber
+      : null;
 
     // Already marked PRESENT? Nothing to do.
     const existing = await this.prisma.attendance.findUnique({
@@ -159,6 +170,8 @@ export class QrAttendanceScanService {
           },
           update: {
             status: AttendanceStatus.PRESENT,
+            // A LATE row's minutes go with it (ADR-0048).
+            lateMinutes: null,
             markedById: userId,
             markedMethod: AttendanceMethod.QR,
           },

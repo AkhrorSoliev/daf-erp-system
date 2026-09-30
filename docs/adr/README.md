@@ -106,6 +106,9 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0044](0044-darajani-tugatgan-oquvchi-shartnoma-bajarilgan.md) | Darajani tugatgan o'quvchi: shartnoma bajarilgan, oyning o'tilmagan darslari puli qaytadi; 40% qoidasining to'liq hozirgi holati | Qabul qilindi | 2026-09-27 |
 | [0045](0045-bot-xodimni-taniydi-xodim-kabineti-mini-appda.md) | Bot xodimni Telegram bog'lanishi bilan taniydi; xodim kabineti Mini App'da parolsiz ochiladi | Qabul qilindi | 2026-09-28 |
 | [0046](0046-qabul-qilingan-mock-tolovi-tuzatiladi.md) | Admin qabul qilgan mock to'lovi tuzatiladi va bekor qilinadi; onlayn va balans to'lovi — yo'q | Qabul qilindi | 2026-09-28 |
+| [0047](0047-davomat-oynasi-va-tolovsiz-oquvchi.md) | Davomat dars tugashi bilan yopiladi; to'lov qilmagan o'quvchi 2-darsdan puli yetgan darslargacha qatnashadi | Qabul qilindi; dars tugagach tuzatish — ADR-0054 | 2026-09-27 |
+| [0048](0048-davomat-2-bosqich-berilmadi-kechikish-sinov-darsi.md) | «Berilmadi» o'qishda hisoblanadi; kechikish daqiqasi; sinov darsi (3.5) oyni to'liq qaytaradi; qarzdorning 1-darsga kelmagani to'lovgacha ustozga yozilmaydi; uchta sozlama | Qabul qilindi; «Berilmadi» — ADR-0054 bilan to'ldirildi | 2026-09-27 |
+| [0049](0049-markaz-qoplagan-birinchi-dars.md) | Markaz qoplagan 1-dars markazning puli bo'lib ko'rinadi | Rad etildi | 2026-09-28 |
 | [0050](0050-stavka-sanasidan-yozilgan-darslar-qayta-hisoblanadi.md) | Stavka o'z sanasidan beri yozilgan, oyligi hisoblanmagan darslarga ham qo'llanadi; saqlashdan oldin ta'siri ko'rsatiladi | Qabul qilindi | 2026-09-29 |
 | [0051](0051-oylik-hisobsiz-dars-paket-narxida-baholanadi.md) | Oylik kursdagi hisobsiz dars paket narxida baholanadi; ustoz haqi tushib qolmaydi | Qabul qilindi | 2026-09-29 |
 | [0052](0052-oylik-hisobning-tolanmagan-ulushi-markaz-ustunida.md) | Oylik hisobning to'lanmagan ulushi «Markaz qo'shdi» ustunida ko'rinadi; oylik summasi o'zgarmaydi | Qabul qilindi | 2026-09-29 |

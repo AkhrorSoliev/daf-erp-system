@@ -11,6 +11,9 @@ import { AttendanceValidationService } from './attendance-validation.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
+import type { SaveAttendanceDto } from './dto/save-attendance.dto';
+import { ENDED_REFUSAL } from './shared/attendance-window';
 
 const lessonDay = new Date('2026-09-28T00:00:00.000Z');
 const pending = {
@@ -39,6 +42,9 @@ describe('AttendanceSaveService.saveLate', () => {
   let billing: { processAttendanceBilling: jest.Mock };
   let emitter: { emit: jest.Mock };
   let history: { recordCreate: jest.Mock };
+  let admission: { forLesson: jest.Mock };
+  // Read only by the form's register (`save`).
+  let validation: { validateLessonDate: jest.Mock };
 
   // The history row's teacher-pay line.
   const payNote = () =>
@@ -53,6 +59,8 @@ describe('AttendanceSaveService.saveLate', () => {
       },
       attendance: {
         count: jest.fn().mockResolvedValue(0),
+        // The form's register reads the rows already there (none).
+        findMany: jest.fn().mockResolvedValue([]),
         upsert: jest.fn(({ create }: any) =>
           Promise.resolve({
             id: `a-${create.studentId}`,
@@ -108,6 +116,12 @@ describe('AttendanceSaveService.saveLate', () => {
           .fn()
           .mockResolvedValue({ firstName: 'Ali', lastName: 'Valiyev' }),
       },
+      // The name of a student contract 3.2 refuses.
+      student: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ firstName: 'Aziz', lastName: 'Karimov' }),
+      },
     };
     prisma = {
       group: {
@@ -125,14 +139,25 @@ describe('AttendanceSaveService.saveLate', () => {
     };
     billing = { processAttendanceBilling: jest.fn() };
     emitter = { emit: jest.fn() };
+    // Contract 3.2: everybody admitted unless a test says otherwise.
+    admission = { forLesson: jest.fn().mockResolvedValue(new Map()) };
+    validation = {
+      validateLessonDate: jest.fn().mockResolvedValue({
+        parsedDate: lessonDay,
+        effectiveStartTime: '16:00',
+        effectiveEndTime: '17:30',
+        opensMinutesBefore: 10,
+      }),
+    };
 
     const module = await Test.createTestingModule({
       providers: [
         AttendanceSaveService,
         { provide: PrismaService, useValue: prisma },
         { provide: LessonBillingService, useValue: billing },
+        { provide: LessonAdmissionService, useValue: admission },
         { provide: EventEmitter2, useValue: emitter },
-        { provide: AttendanceValidationService, useValue: {} },
+        { provide: AttendanceValidationService, useValue: validation },
         {
           provide: EntityHistoryService,
           useValue: {
@@ -181,6 +206,28 @@ describe('AttendanceSaveService.saveLate', () => {
     expect(result.message).toBe(
       'Davomat saqlandi. Ustozga bu dars uchun haq yozilmaydi',
     );
+  });
+
+  it("writes the register as sent: «Bo'ldi» records no late minutes (ADR-0048)", async () => {
+    await service.saveLate(
+      'g1',
+      '2026-09-28',
+      {
+        entries: [
+          { studentId: 10001, status: 'LATE' },
+          { studentId: 10002, status: 'PRESENT' },
+        ],
+      },
+      3,
+      ['Administrator'],
+      1,
+    );
+    expect(
+      tx.attendance.upsert.mock.calls.map((c: any) => c[0].create),
+    ).toEqual([
+      expect.objectContaining({ status: 'LATE', lateMinutes: null }),
+      expect.objectContaining({ status: 'PRESENT', lateMinutes: null }),
+    ]);
   });
 
   it('records a departed student but takes no money in a lesson-pack course', async () => {
@@ -289,6 +336,169 @@ describe('AttendanceSaveService.saveLate', () => {
         1,
       ),
     ).rejects.toThrow("barcha o'quvchilarning holati belgilanishi shart");
+  });
+
+  // CEO 30.09 (D2): contract 3.2 holds in «Bo'ldi» too. Whether the rule
+  // applies to the day is `forLesson`'s business (mocked here); 10001 is the
+  // month's 2nd lesson's unpaid student.
+  describe('contract 3.2 (D2)', () => {
+    const NOT_PAID =
+      "Aziz Karimov to'lov qilmagan: shartnomaga ko'ra 2-darsdan boshlab to'lov qilinmaguncha darsga qo'yilmaydi";
+    const late = (register: SaveAttendanceDto['entries']) =>
+      service.saveLate(
+        'g1',
+        '2026-09-28',
+        { entries: register },
+        3,
+        ['Administrator'],
+        1,
+      );
+
+    beforeEach(() => {
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10001,
+            {
+              admitted: false,
+              reason: 'NOT_PAID',
+              shortfall: 69231,
+              paidThrough: null,
+            },
+          ],
+        ]),
+      );
+    });
+
+    it.each(['PRESENT', 'LATE', 'ABSENT'] as const)(
+      'refuses him marked %s, by name, before anything is written',
+      async (status) => {
+        await expect(
+          late([{ studentId: 10001, status }, entries[1]]),
+        ).rejects.toThrow(NOT_PAID);
+        expect(tx.student.findUnique).toHaveBeenCalledWith({
+          where: { id: 10001 },
+          select: { firstName: true, lastName: true },
+        });
+        expect(tx.unmarkedLesson.update).not.toHaveBeenCalled();
+        expect(tx.attendance.upsert).not.toHaveBeenCalled();
+      },
+    );
+
+    it('takes him EXCUSED with the rest of the register', async () => {
+      await late([{ studentId: 10001, status: 'EXCUSED' }, entries[1]]);
+      expect(tx.attendance.upsert).toHaveBeenCalledTimes(2);
+      // His name is read only to refuse him.
+      expect(tx.student.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('takes the rest of the register without him', async () => {
+      await late([entries[1]]);
+      expect(tx.attendance.upsert).toHaveBeenCalledTimes(1);
+      expect(tx.attendance.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ studentId: 10002 }),
+        }),
+      );
+    });
+
+    it('with a CEO exemption the others accrue and he does not', async () => {
+      // A monthly course bills the departed 10002 too.
+      prisma.group.findFirst.mockResolvedValue({
+        id: 'g1',
+        name: '#014',
+        branchId: 2,
+        course: { paymentModel: 'MONTHLY' },
+      });
+      prisma.user.findFirst.mockResolvedValue({ id: 1 });
+      await service.saveLate(
+        'g1',
+        '2026-09-28',
+        {
+          entries: [{ studentId: 10002, status: 'PRESENT' }],
+          teacherPayExempt: true,
+          exemptReason: "Akkaunt yo'q edi",
+        },
+        1,
+        ['CEO'],
+        1,
+      );
+      expect(tx.unmarkedLesson.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ teacherPayExempt: true }),
+        }),
+      );
+      expect(billing.processAttendanceBilling).toHaveBeenCalledTimes(1);
+      expect(billing.processAttendanceBilling).toHaveBeenCalledWith(
+        tx,
+        expect.objectContaining({ studentId: 10002, newStatus: 'PRESENT' }),
+      );
+    });
+
+    it('admits him once he has paid, judged inside the transaction', async () => {
+      admission.forLesson.mockResolvedValue(
+        new Map([
+          [
+            10001,
+            { admitted: true, reason: 'PAID', shortfall: 0, paidThrough: null },
+          ],
+        ]),
+      );
+      await late(entries);
+      expect(tx.attendance.upsert).toHaveBeenCalledTimes(2);
+      // Over the roster of THAT day (the departed 10002 included), read with
+      // the transaction's client.
+      expect(admission.forLesson).toHaveBeenCalledWith(
+        { groupId: 'g1', lessonDay: '2026-09-28', studentIds: [10001, 10002] },
+        tx,
+      );
+    });
+  });
+
+  // After the end no role opens a new register in the form (ADR-0054, D1);
+  // the same lesson goes through «Bo'ldi».
+  describe('a new register after the lesson ended', () => {
+    beforeEach(() => {
+      // 18:00 Tashkent; the lesson ran 16:00–17:30.
+      jest.useFakeTimers({
+        now: new Date('2026-09-28T13:00:00.000Z'),
+        doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+      });
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it.each(['CEO', 'Branch Director', 'Administrator'])(
+      "is refused for %s with the «Dars bo'ldimi?» text",
+      async (role) => {
+        await expect(
+          service.save('g1', '2026-09-28', { entries }, 3, [role], 1),
+        ).rejects.toMatchObject({ message: ENDED_REFUSAL });
+        expect(tx.attendance.upsert).not.toHaveBeenCalled();
+      },
+    );
+
+    it("is refused for a teacher with the teacher's own text", async () => {
+      await expect(
+        service.save('g1', '2026-09-28', { entries }, 3, ['Teacher'], 1),
+      ).rejects.toMatchObject({
+        message:
+          "Dars tugagan — davomat olish yopilgan. Dars bo'lgan-bo'lmaganini administrator belgilaydi.",
+      });
+      expect(tx.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it("goes through «Bo'ldi» instead", async () => {
+      await expect(
+        service.saveLate(
+          'g1',
+          '2026-09-28',
+          { entries },
+          3,
+          ['Administrator'],
+          1,
+        ),
+      ).resolves.toMatchObject({ count: 2 });
+    });
   });
 
   it('refuses a lesson that is not waiting for an answer', async () => {

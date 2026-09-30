@@ -473,13 +473,16 @@ export class AttendanceReminderService {
       kind === 'ADMIN_ALERT'
         ? NotificationType.ATTENDANCE_ADMIN_ALERT
         : NotificationType.ATTENDANCE_MISSING_ADMIN;
+    // ADMIN_ALERT (CEO-approved text, 01.10): a register not taken before
+    // the end earns the teacher nothing for the lesson (ADR-0054), so the
+    // administrator is asked to warn the teacher.
     const title =
       kind === 'ADMIN_ALERT'
-        ? "O'qituvchiga eslatib qo'ying"
+        ? "O'qituvchi hali davomat olmadi"
         : 'Davomat olinmadi';
     const message =
       kind === 'ADMIN_ALERT'
-        ? `👀 Dars tugashiga 30 daqiqa qoldi, o'qituvchi hali davomatni belgilamadi\n\n${details}\n\nIltimos, o'qituvchiga eslatib qo'yishingizni so'raymiz.\n🔗 ${ADMIN_PORTAL_URL}`
+        ? `👀 Dars tugashiga 30 daqiqa qoldi, o'qituvchi hali davomat olmadi\n\n${details}\n\nDars tugaguncha davomat olinmasa, ustozga bu dars uchun haq yozilmaydi. Iltimos, o'qituvchini ogohlantiring.\n🔗 ${ADMIN_PORTAL_URL}`
         : `📋 Dars tugadi, davomat olinmadi\n\n${details}\n\nTizimda topshiriq ochildi: dars bo'ldimi? «Bo'ldi» bo'lsa, kim kelganini belgilang.\n🔗 ${ADMIN_PORTAL_URL}/tasks`;
 
     for (const admin of admins) {

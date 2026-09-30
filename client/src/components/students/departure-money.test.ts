@@ -171,6 +171,31 @@ describe("departure money block (contract 6.2, ADR-0043)", () => {
     );
   });
 
+  it("returns the whole month for a trial lesson (contract 3.5) under the default policy", () => {
+    const trial = month({
+      departureDay: "2026-10-02",
+      held: 1,
+      heldPercent: 8,
+      trialLesson: true,
+      outcomes: {
+        STUDENT_CANCELLED: { lessons: 13, amount: 1040000, withheld: false },
+        LEVEL_COMPLETED: { lessons: 13, amount: 1040000, withheld: false },
+        CENTER_INITIATIVE: { lessons: 13, amount: 1040000, withheld: false },
+        QUALITY_CLAIM: { lessons: 13, amount: 1040000, withheld: false },
+      },
+    });
+    const c = departureConsequence(preview({}, trial), "STUDENT_CANCELLED")!;
+    expect(plain(c.head)).toBe(
+      "Sinov darsi (3.5): oyning puli to'liq qaytadi — 1 040 000 so'm",
+    );
+    expect(c.line).toContain(
+      "Ustozga bu oyning darslari uchun haq yozilmaydi.",
+    );
+    expect(policyHint("STUDENT_CANCELLED", trial)).toBe(
+      "Sinov darsi (3.5) — oyning to'liq puli qaytadi",
+    );
+  });
+
   it("closes a debt the return is bigger than", () => {
     const c = departureConsequence(
       preview({ balance: -300000 }),

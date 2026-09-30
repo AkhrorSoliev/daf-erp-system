@@ -95,6 +95,46 @@ describe('loadUnpaidMonthlyShare', () => {
     );
   });
 
+  // A debtor's unpaid PRESENT first lesson of October: accrued as
+  // student-covered, its unpaid share sits under «Markaz qo'shdi» and
+  // shrinks as the student pays (CEO 30.09, D3 — ADR-0049 is not needed).
+  it("shrinks the centre's share of a debtor's first lesson as he pays", async () => {
+    const charge = {
+      id: 'charge-oct',
+      studentId: 20001,
+      type: 'LESSON_DEDUCTION',
+      amount: -400_000,
+      createdAt: new Date('2026-10-01T00:00:00Z'),
+    };
+    const share = (ledger: object[]) =>
+      loadUnpaidMonthlyShare(
+        {
+          enrollmentMonthlyCharge: {
+            findMany: jest
+              .fn()
+              .mockResolvedValue([{ transactionId: 'charge-oct' }]),
+          },
+          student: { findMany: jest.fn().mockResolvedValue([{ id: 20001 }]) },
+          transaction: { findMany: jest.fn().mockResolvedValue(ledger) },
+        } as never,
+        1001,
+        [acc({ deductionTransactionId: 'charge-oct' })],
+      );
+
+    expect((await share([charge])).get(501)).toBe(10_000); // nothing paid
+    const partPaid = await share([
+      charge,
+      {
+        id: 'pay',
+        studentId: 20001,
+        type: 'PAYMENT',
+        amount: 100_000,
+        createdAt: new Date('2026-10-03T00:00:00Z'),
+      },
+    ]);
+    expect(partPaid.get(501)).toBe(7_500); // 300 000 of 400 000 unpaid
+  });
+
   it('asks nothing when no accrual is backed by a charge', async () => {
     const prisma = {
       enrollmentMonthlyCharge: { findMany: jest.fn() },
