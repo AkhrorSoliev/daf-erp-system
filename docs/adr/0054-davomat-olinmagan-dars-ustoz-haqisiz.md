@@ -11,22 +11,27 @@ ustoz haqini va uzrli dars kreditini hal qiladi. Davomat olinmagan dars markaz
 tushumiga kirmasdi, ustozga esa davomat istalgan kuni keyin kiritilsa haq
 yozilardi — o'z vaqtida olmaslik hech narsaga olib kelmasdi. Dars aslida
 bo'lmagan bo'lsa, pul qo'lda bekor qilinmaguncha qaytmasdi (ADR-0053). Tizim
-«dars bo'lmadi» bilan «davomat unutildi»ni ajrata olmaydi.
+«dars bo'lmadi» bilan «davomat unutildi»ni ajrata olmasdi.
 
 ## Qaror
 
-1. Yangi davomat (shu dars uchun hali yozuv yo'q) faqat dars kuni,
+1. Yangi davomat (shu dars uchun hali davomat yozuvi yo'q) faqat dars kuni,
    boshlanishidan 10 daqiqa oldindan tugashigacha kiritiladi — hamma rol
    uchun, CEO ham; tugash daqiqasi kirmaydi. Qo'lda saqlash, QR sessiya
-   boshlash va QR skanerlash bitta qorovuldan o'tadi. Olingan davomatni
-   administrator keyin ham tuzata oladi.
+   boshlash va QR skanerlash bitta qorovuldan o'tadi (ma'lum cheklov: oxirgi
+   QR kodi sessiyadan keyin 50 soniyagacha amal qiladi va unda vaqt
+   tekshirilmaydi — spec 3.1). Olingan davomatni administrator keyin ham
+   tuzata oladi.
 2. Dars tugab davomat bo'lmasa (dars bekor qilinmagan, ko'chirilmagan, bayram
    emas), `UnmarkedLesson` yozuvi va filial administratorlariga tizim
    topshirig'i ochiladi: «Dars bo'ldimi?». Birinchi o'zgartirgan yoki javob
-   bergan administrator topshiriqni oladi. Bu ish tegadigan joylarda bayram
-   kunlari filial bo'yicha hisoblanadi: tekshiruvda, davomat eslatmasida, tugash sanog'ida,
-   guruh kalendarida. Topshiriq muddati — keyingi ish kuni 10:00; yakshanba va
-   filialning bayramlari o'tkazib yuboriladi (qayta ochilganiniki ham).
+   bergan administrator topshiriqni oladi. Bayram quyidagi to'rt joyda filial
+   bo'yicha hisoblanadi: tekshiruvda, davomat eslatmasida, tugash sanog'ida,
+   guruh kalendarida. «Jadval», QR sessiyadagi dars raqami va 09:00 topshiriq
+   eslatmasi esa hanuz istalgan filial bayramini hisobga oladi: istalgan
+   filial bayrami kuni jadval bo'sh (ma'lum cheklov, spec 3.3, 3.6).
+   Topshiriq muddati — keyingi ish kuni 10:00; yakshanba va filialning
+   bayramlari o'tkazib yuboriladi (qayta ochilganiniki ham).
 3. «Bo'ldi» — davomat kech kiritiladi, dars markaz tushumiga kiradi, ustozga
    **haq yozilmaydi**. Qulf ikki joyda: `createAccrual` (har bir yozuv) va
    `sweepGapLessons`ning majburiy `forfeitedLessons` kirishi (oylik hisobi,
@@ -49,16 +54,27 @@ bo'lmagan bo'lsa, pul qo'lda bekor qilinmaguncha qaytmasdi (ADR-0053). Tizim
 6. Javob bo'lmasa, tizim taxmin qilmaydi: ertasi ish kuni 09:00 da eslatma,
    21:00 hisobotida 1 kundan ortiq javobsizlar soni. Bu «Javobsiz darslar»
    qatori hisobotning «Diqqat» qismida chiqadi, shuning uchun kun svetoforini
-   🟡 qiladi. 09:00 eslatmani umumiy topshiriq eslatmasi (`TaskReminderService`)
-   yuboradi. U istalgan filial bayramida to'xtaydi, muddat esa faqat o'z
-   filiali bayramini o'tkazadi: muddati boshqa filialning bayramiga to'g'ri
-   kelgan topshiriqqa 09:00 eslatma bormaydi (ma'lum cheklov).
+   🟡 qiladi. Savolning yoshi `UnmarkedLesson` yozuvi yaratilgan vaqtdan
+   (`createdAt`) sanaladi: qayta ochilgan savol eski yozuvni ishlatadi, shuning
+   uchun asl ochilgan vaqtidan sanaladi va qayta ochilgan kuniyoq bu qatorga
+   tushishi mumkin (ma'lum cheklov). 09:00 eslatmani umumiy topshiriq eslatmasi
+   (`TaskReminderService`) yuboradi. U istalgan filialning bayramini
+   tekshiradi, lekin bayram sanalari UTC yarim tunida saqlangani uchun 09:00 da
+   faqat ko'p kunlik bayramning oxirgi kunidan oldingi kunlarida to'xtaydi;
+   bir kunlik bayramda va ko'p kunlik bayramning oxirgi kunida eslatma baribir
+   ketadi. Muddat esa faqat o'z filiali bayramini o'tkazadi, shuning uchun
+   muddati boshqa filialning ko'p kunlik bayramiga (oxirgi kunidan tashqari)
+   to'g'ri kelgan topshiriqqa 09:00 eslatma bormaydi (ma'lum cheklov).
 
 ## Oqibatlar
 
 - Ustoz davomatni dars ichida olishga majbur: dars oxirigacha 30 daqiqa
   qolganda «olinmasa haq yozilmaydi» ogohlantirishi boradi; «Bo'ldi» dan keyin
   unga «bu dars haqi yozilmadi» xabari yetadi (Telegramda 20:00 yig'mada).
+  Boshlanish va −30 eslatmalari guruhning odatdagi hafta kuni va vaqti
+  bo'yicha ketadi: 5-banddagi qo'shimcha darsga ogohlantirish bormaydi,
+  bekor qilingan yoki boshqa kunga ko'chirilgan kunda esa boradi. Bu ish buni
+  tuzatmaydi (spec 3.2).
 - Bekor qilish yoki ko'chirish qaysi sahifadan qilinmasin, savolga javob
   bo'ladi va guruhga xabar ketadi. Savol ochilayotganda yoki «Bo'ldi»
   bosilganda dars shu orada bekor qilingan yoki boshqa kunga ko'chirilgan
@@ -66,9 +82,10 @@ bo'lmagan bo'lsa, pul qo'lda bekor qilinmaguncha qaytmasdi (ADR-0053). Tizim
   o'quvchiga pul ikki marta qaytardi yoki bekor qilingan dars uchun pul
   olinardi.
 - Bekor qilish yoki ko'chirish o'chirilsa, savol qayta ochiladi. Kunda
-  davomat bo'lsa (masalan, «Bo'ldi» dan keyin bekor qilingan dars), yozuv
-  o'zgarmaydi; ko'chirilgan qo'shimcha darsda davomat olingan bo'lsa, asl kun
-  qayta so'ralmaydi — aks holda bitta dars ikki marta hisoblanardi.
+  davomat bo'lsa (masalan, «Bo'ldi» dan keyin bekor qilingan dars), savol
+  qayta ochilmaydi (`UnmarkedLesson` yozuvi o'zgarmaydi); ko'chirilgan
+  qo'shimcha darsda davomat olingan bo'lsa, asl kun qayta so'ralmaydi — aks
+  holda bitta dars ikki marta hisoblanardi.
 - Savol hech ochilmagan bo'lsa-yu, asl dars tugagach bekor qilish yoki
   ko'chirish o'chirilsa va davomat ham, savol ham yo'q bo'lsa, savol birinchi
   marta ochiladi. U faqat bekor qilish yoki ko'chirish dars tugashidan
@@ -78,16 +95,22 @@ bo'lmagan bo'lsa, pul qo'lda bekor qilinmaguncha qaytmasdi (ADR-0053). Tizim
   tugagach bekor qilib, keyin o'chirish ustozga faqat CEO bera oladigan haqni
   berardi (CEO qarori, 2026-09-30). Ko'chirishdagi istisnoning sababi: «Dars
   oldindan ko'chirilgan edi». Ko'chirish o'chirilganda asl kun bayram bo'lsa
-  yoki hali ham bekor qilingan bo'lsa, savol umuman ochilmaydi.
+  yoki hali ham bekor qilingan bo'lsa, savol umuman ochilmaydi. Bekor qilish
+  o'chirilganda esa bunday tekshiruv yo'q: kun shu orada boshqa kunga
+  ko'chirilgan yoki bayram bo'lsa ham savol ochiladi, ko'chirilgan kunda esa
+  unga javob berib bo'lmaydi (ma'lum cheklov, spec 3.5).
 - Ikki o'zgarish bir vaqtda to'qnashsa (masalan, dars tugashi tekshiruvi va
   davomat saqlash, yoki ikki kishi bitta darsni bekor qilsa), yutqazgan so'rov
   409 «Bir vaqtda boshqa o'zgarish bo'ldi — qayta urinib ko'ring» oladi; tizim
-  o'zi qayta urinmaydi.
+  o'zi qayta urinmaydi. Bitta tor istisno: «Bo'ldi» bilan deyarli bir vaqtda
+  kelgan «Bo'lmadi → Bekor qilish» rad etilmay, hozirgina javob berilgan
+  darsni bekor qiladi (spec 12).
 - Yangi ustoz akkauntsiz dars o'tgan yoki dars paytida server ishlamagan
   holatlar faqat CEO istisnosi bilan to'lanadi. Server yarim soatlik
   yurishlarni ham, 23:00 yurishini ham o'tkazib yuborgan kun esa umuman
-  so'ralmaydi; uni `scripts/open-unmarked-lessons.ts` tiklaydi va savolni
-  istisno (haq yoziladigan) qilib ochadi.
+  so'ralmaydi (22:30 dan keyin tugaydigan, tugash vaqti yo'q va yakshanba
+  darslari uchun 23:00 ning o'zi o'tkazib yuborilsa yetarli); uni
+  `scripts/open-unmarked-lessons.ts` tiklaydi va savolni istisno (haq yoziladigan) qilib ochadi.
 - Oddiy (istisno bo'lmagan) savolga javob qachon berilmasin, ustozga haq
   yozilmaydi. Istisno savol (qoidadan oldingi kun, dars tugashidan oldin
   qilingan bekor qilish yoki ko'chirish o'chirilgani uchun ochilgan savol, CEO
