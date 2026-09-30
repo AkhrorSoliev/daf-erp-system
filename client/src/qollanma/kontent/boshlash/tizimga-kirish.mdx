@@ -17,7 +17,7 @@ Har portal faqat o'z xodimlarini qidiradi. Shuning uchun noto'g'ri portaldan kir
 2. «Parol» maydoniga parolingizni yozing. Ko'z belgisi parolni ko'rsatadi yoki yashiradi.
 3. «Kirish» tugmasini bosing.
 
-Chet el raqami ham shunday yoziladi: avval mamlakat kodi, keyin raqam. Raqam 15 ta raqamgacha bo'lishi mumkin.
+Chet el raqami ham shunday yoziladi: avval mamlakat kodi, keyin raqam. Raqam 15 ta raqamgacha bo'lishi mumkin. O'zbek raqamini 998 siz, 9 ta raqam qilib yozsangiz ham qabul qilinadi.
 
 ### Parol to'g'ri, lekin kirmayapti
 
@@ -47,7 +47,7 @@ Qoidalar:
 - «Qayta yuborish» tugmasi 60 soniyadan keyin ochiladi. Bir raqamga sutkada ko'pi bilan 3 ta kod yuboriladi.
 - Kodni tasdiqlaganingizdan keyin yangi parolni 10 daqiqa ichida saqlashingiz kerak.
 - SMS faqat o'zbek raqamlariga (+998) yuboriladi.
-- Tizim raqam bor-yo'qligini aytmaydi: oyna raqam tizimda bo'lmasa ham «kod yuborildi» deydi. Kod kelmasa, raqamni tekshiring («Raqamni o'zgartirish» tugmasi bor), 60 soniya kutib qayta yuboring.
+- Tizim raqam bor-yo'qligini aytmaydi: oyna raqam tizimda bo'lmasa ham «Tasdiqlash kodi telefon raqamingizga yuborildi.» deydi. Kod kelmasa, raqamni tekshiring («Raqamni o'zgartirish» tugmasi bor), 60 soniya kutib qayta yuboring.
 - Parolni tiklash qaysi portaldan boshlangan bo'lsa, o'sha portalning hisobi uchun ishlaydi.
 
 ## O'z parolingizni o'zgartirish
@@ -94,6 +94,8 @@ Telefoningiz yo'qolsa yoki umumiy kompyuterda chiqishni unutgan bo'lsangiz, paro
 
 Boshqa barcha qurilma va brauzerlardagi kirishlar tugaydi, siz esa shu qurilmada qolasiz. Parol o'zgarmaydi. Menyu pastidagi «Chiqish» esa faqat shu brauzerdan chiqaradi.
 
+Diqqat: kirishlar tugasa ham, tugatilgan qurilmaga brauzer bildirishnomalari kelaveradi, ochiq turgan oynaga esa xabarlar oyna yopilguncha yoki yangilanguncha kelib turadi. Telefoningiz yo'qolgan bo'lsa, parolni ham o'zgartiring va rahbaringizga ayting.
+
 ## Bir odam, ikki rol
 
 | Holat | Hisob | Parol |
@@ -109,12 +111,14 @@ Boshqa barcha qurilma va brauzerlardagi kirishlar tugaydi, siz esa shu qurilmada
 
 | Ekranda | Sababi | Nima qilish kerak |
 |---|---|---|
-| «Login yoki parol noto'g'ri» | Raqam yoki parol xato; noto'g'ri portalga kirdingiz; hisobingiz to'xtatilgan, ishdan bo'shatilgan yoki arxivlangan; bir daqiqada 10 tadan ko'p urinish bo'ldi | Raqamni «998» bilan yozganingizni tekshiring, to'g'ri portalga kiring, bir daqiqa kuting. Yordam bermasa, rahbaringizga murojaat qiling |
-| «Hisobingiz bloklangan» | Hisobingiz «To'xtatilgan», «Ishdan bo'shatilgan» yoki «Arxivlangan» qilingan | Rahbaringizga murojaat qiling |
-| «Bu Telegram raqami tizimda yo'q. Administrator bilan bog'laning.» | Telegramdagi raqam hisobdagi raqamga mos emas, yoki hisobda parol yo'q | Parol bilan kiring. Hisobdagi raqamni sizdan yuqori rahbar tuzatadi (administrator boshqa xodim hisobini o'zgartira olmaydi) |
+| «Login yoki parol noto'g'ri» | Raqam yoki parol xato, noto'g'ri portal, bloklangan hisob yoki juda ko'p urinish | Raqam va parolni tekshiring, to'g'ri portalga kiring, bir daqiqa kuting. Yordam bermasa, rahbaringizga murojaat qiling |
+| «Hisobingiz bloklangan» | Hisobingiz to'xtatilgan, ishdan bo'shatilgan yoki arxivlangan | Rahbaringizga murojaat qiling |
+| «Bu Telegram raqami tizimda yo'q. Administrator bilan bog'laning.» | Telegramdagi raqam hisobdagi raqamga mos emas, yoki hisobda parol yo'q | Parol bilan kiring va «Profil» da raqamingizni joriy parol bilan to'g'rilang. Kira olmasangiz, raqamni sizdan yuqori rahbar tuzatadi (administrator boshqa xodim hisobini o'zgartira olmaydi) |
 | «Bu raqam bir nechta akkauntga tegishli. Iltimos, telefon raqam va parol bilan kiring.» | Shu raqam shu portalda bir necha hisobda turibdi | Telefon raqam va parol bilan kiring |
 | «Telefon raqamni to'liq kiriting» | Parolni tiklashda 9 ta raqam yozilmagan | «+998» dan keyin 9 ta raqamni yozing |
-| «Kod noto'g'ri yoki muddati tugagan» yoki «Kod noto'g'ri. Qolgan urinishlar: 2» | Kod xato, 5 daqiqa o'tgan yoki urinishlar tugagan | Yangi kod so'rang |
+| «Kod noto'g'ri yoki muddati tugagan» | Kod muddati (5 daqiqa) tugagan yoki kod bekor bo'lgan | Yangi kod so'rang |
+| «Kod noto'g'ri. Qolgan urinishlar: 2» | Kod xato yozilgan, urinish hali qolgan | SMS dagi kod bilan solishtirib, qayta yozing |
+| «Kod noto'g'ri. Iltimos, yangi kod so'rang.» | Uchinchi marta xato yozdingiz, kod bekor bo'ldi | Yangi kod so'rang |
 | «Sessiya muddati tugadi. Iltimos, qaytadan urinib ko'ring.» | Kodni tasdiqlaganingizdan keyin 10 daqiqa o'tgan | Parolni tiklashni boshidan boshlang |
 | «Joriy parol noto'g'ri» | Profilda joriy parol xato yozilgan | To'g'ri parolni yozing; unutgan bo'lsangiz, avval parolni tiklang |
 | «Bu telefon raqam boshqa xodim hisobiga tegishli» | Yangi raqam boshqa xodimda turibdi | Boshqa raqam yozing yoki rahbaringizga murojaat qiling |

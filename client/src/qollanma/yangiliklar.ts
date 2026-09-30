@@ -14,7 +14,7 @@ export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-09-24",
     sarlavha: "Boshqa qurilmalardan chiqish",
-    matn: "Profil sahifasida «Boshqa qurilmalardan chiqish» tugmasi paydo bo'ldi. Parol qaysi yo'l bilan o'zgarmasin, boshqa qurilmalardagi kirishlar tugaydi, siz esa shu qurilmada qolasiz.",
+    matn: "Profil sahifasida «Boshqa qurilmalardan chiqish» tugmasi paydo bo'ldi. Parol o'zgarganda (Profilda, SMS orqali yoki rahbar yozib bersa) ham boshqa qurilmalardagi kirishlar tugaydi. Profilda o'zingiz o'zgartirsangiz yoki tugmani bossangiz, shu qurilmada qolasiz.",
     sahifa: { bolim: "boshlash", sahifa: "tizimga-kirish" },
   },
   {
@@ -26,14 +26,14 @@ export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-09-24",
     sarlavha: "Rol berish va xodim hisobini o'zgartirish qoidalari",
-    matn: "Rolni faqat o'zingizdan pastdagilarga bera olasiz. Xodim hisobini faqat undan yuqori rahbar o'zgartiradi: direktor boshqa direktorning hisobini, administrator esa direktor yoki CEO hisobini o'zgartira olmaydi.",
+    matn: "Rolni faqat o'zingizdan pastdagilarga bera olasiz. Xodim hisobini faqat undan yuqori rahbar o'zgartiradi: direktor boshqa direktorning hisobini o'zgartira olmaydi, administrator esa hech kimning hisobini o'zgartira olmaydi.",
     rollar: [1, 2, 3],
     sahifa: { bolim: "boshlash", sahifa: "rollar-va-huquqlar" },
   },
   {
     sana: "2026-09-24",
     sarlavha: "Bloklangan xodim darhol to'xtaydi",
-    matn: "«To'xtatilgan», «Ishdan bo'shatilgan» yoki «Arxivlangan» qilingan xodim keyingi harakatidayoq to'xtaydi va «Hisobingiz bloklangan» xabarini ko'radi. Ilgari u bir soatgacha ishlashda davom etardi.",
+    matn: "«To'xtatilgan» yoki «Ishdan bo'shatilgan» qilingan, yoki arxivlangan xodim keyingi harakatidayoq to'xtaydi va «Hisobingiz bloklangan» xabarini ko'radi. Ilgari u bir soatgacha ishlashda davom etardi.",
     rollar: [1, 2],
     sahifa: { bolim: "boshlash", sahifa: "rollar-va-huquqlar" },
   },
