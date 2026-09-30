@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,12 +18,21 @@ const QIDIRUV_SXEMASI = { q: { type: "string", defaultValue: "" } } as const;
 export function QollanmaBoshSahifa() {
   const user = useAuth((s) => s.user);
   const { filters, setFilter } = useUrlFilters(QIDIRUV_SXEMASI);
-  const [matn, setMatn] = useState(filters.q);
+  // Yozilgan, lekin hali URL'ga yetib bormagan matn (`null` — maydon URL'ni ko'rsatadi).
+  // Havola yoki «orqaga» tugmasidan kelgan o'zgarish maydonga o'zi tushadi; o'z yozuvimiz
+  // qaytganda matn tegilmaydi. "Oxirgi yozilganni saqlash" bu yerda ishlamaydi: router.replace
+  // URL'ni keyinroq yangilaydi, oraliqda maydon eski URL'ga qaytib, terilgan harflar yo'qoladi.
+  const [taslak, setTaslak] = useState<string | null>(null);
+  if (taslak !== null && taslak === filters.q) setTaslak(null);
+  const matn = taslak ?? filters.q;
   const taymer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // Sahifadan chiqilganda kutayotgan yozuv URL'ga tushmasin (router.replace eski yo'lga qaytarmasin).
+  useEffect(() => () => clearTimeout(taymer.current), []);
 
   // URL hodisa ishlovchisidan yoziladi (effekt ichidan emas) — client/CLAUDE.md.
   function ozgardi(qiymat: string) {
-    setMatn(qiymat);
+    setTaslak(qiymat);
     clearTimeout(taymer.current);
     taymer.current = setTimeout(() => setFilter("q", qiymat), 250);
   }
@@ -41,6 +50,7 @@ export function QollanmaBoshSahifa() {
       <div className="relative max-w-xl">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
         <Input
+          type="search"
           value={matn}
           onChange={(e) => ozgardi(e.target.value)}
           placeholder="Qo'llanmadan qidirish..."

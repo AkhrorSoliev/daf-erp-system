@@ -35,12 +35,18 @@ export function QollanmaNav({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav aria-label="Qo'llanma bo'limlari" className="space-y-6">
       <div className="space-y-0.5">
-        <Link href="/qollanma" onClick={onNavigate} className={havolaKlassi(pathname === "/qollanma")}>
+        <Link
+          href="/qollanma"
+          onClick={onNavigate}
+          aria-current={pathname === "/qollanma" ? "page" : undefined}
+          className={havolaKlassi(pathname === "/qollanma")}
+        >
           Bosh sahifa
         </Link>
         <Link
           href="/qollanma/yangiliklar"
           onClick={onNavigate}
+          aria-current={pathname === "/qollanma/yangiliklar" ? "page" : undefined}
           className={havolaKlassi(pathname === "/qollanma/yangiliklar")}
         >
           Nima yangi
@@ -59,9 +65,15 @@ export function QollanmaNav({ onNavigate }: { onNavigate?: () => void }) {
           <ul className="space-y-0.5">
             {royxat.map((s) => {
               const href = sahifaYoli(s);
+              const faol = pathname === href;
               return (
                 <li key={href}>
-                  <Link href={href} onClick={onNavigate} className={havolaKlassi(pathname === href)}>
+                  <Link
+                    href={href}
+                    onClick={onNavigate}
+                    aria-current={faol ? "page" : undefined}
+                    className={havolaKlassi(faol)}
+                  >
                     {s.sarlavha}
                   </Link>
                 </li>
