@@ -151,7 +151,7 @@ export function NotHeldDialog({ open, onOpenChange, lesson, onDone }: NotHeldDia
 
         <DialogFooter className="border-t px-6 py-4">
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={submitting}>
-            Bekor qilish
+            Yopish
           </Button>
           <Button onClick={submit} disabled={!canSubmit}>
             {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
