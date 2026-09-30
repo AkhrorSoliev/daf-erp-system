@@ -1407,6 +1407,7 @@ The `User` model has two related fields: `isActive: Boolean` and `status: UserSt
 - **Status changes must cascade correctly** — when an entity's status changes, all dependent entities must be updated accordingly, and history must be recorded for every affected entity. Never add a status without defining its full cascade behavior
 - **Validation must be comprehensive** — when adding a new operation, validate all preconditions rather than assuming the caller will only send valid data
 - **Think in entity relationships** — a change to a Student affects Enrollments, which affect Groups. A change to a Group affects Enrollments, which affect Students. Always trace the full chain of effects and ensure each link is handled
+- **A behaviour staff can see changes the user guide too** — in the same PR, update the page under `client/src/qollanma/kontent/` and add an entry to `client/src/qollanma/yangiliklar.ts` (see client/CLAUDE.md › User guide). A new ADR is either referenced by a guide page or listed in `client/src/qollanma/texnik-adrlar.ts`; CI enforces it.
 
 ### Code Organization
 

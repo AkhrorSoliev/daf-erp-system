@@ -1092,6 +1092,17 @@ every list renders; the roles are only access.
   line below it counts something else and does not tell you whether the build
   will pass.
 
+### User guide (Qo'llanma)
+
+The in-app guide lives at `/qollanma` (`src/app/(dashboard)/qollanma/`). Content is MDX in `src/qollanma/kontent/<bolim>/<sahifa>.mdx`; metadata lives in ONE registry, `src/qollanma/sahifalar/<bolim>.ts`, collected by `sahifalar/index.ts`. The menu, search, role filter, the header's «?» button and the ADR test all read the registry.
+
+- **A user-visible behaviour change updates the guide in the same PR**: the page's text, its `yangilangan` date, its `adr` list, and one entry in `src/qollanma/yangiliklar.ts`. `adr-qamrovi.test.ts` fails when an ADR is neither referenced by a page nor listed in `texnik-adrlar.ts`.
+- The page title, summary (`qisqacha`) and meta line are drawn from the registry — never write an `# h1` in MDX (`reyestr.test.ts` fails).
+- `yollar` maps ERP routes to a page for the «?» button: an exact path or a trailing `/*`. Every pattern must match a real route (`reyestr.test.ts`).
+- The role filter is convenience, not security: a page opens by URL for any role. Never put real amounts, names, phones or production figures in the guide.
+- MDX components available without import: `<Eslatma tur="malumot|diqqat">`, `<Skrinshot src alt izoh />`, and ```` ```mermaid ```` blocks (rendered by `Diagramma`, which lazy-loads `mermaid`). Avoid `{`, `}` and `<` in prose — MDX parses them as JSX.
+- Screenshots are never taken by hand. `server/scripts/qollanma-baza.sh` rebuilds the local `daf_docs` database (seed + scenario), `npm run qollanma:api` (server) starts the API against it with every external integration blanked, and `npm run qollanma:skrinshot` (client) captures the frames listed in `scripts/qollanma-kadrlar.mjs` into `public/qollanma/rasmlar/`. Re-run it when a pictured screen changes. It refuses anything but localhost.
+
 ### Code Organization
 
 - Keep files small, focused, and maintainable
