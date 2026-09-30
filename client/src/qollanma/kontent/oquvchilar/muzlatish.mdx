@@ -1,0 +1,75 @@
+## Qanday muzlatiladi
+
+1. O'quvchi kartasida «Status o'zgartirish» belgisini bosing (ro'yxatdagi qator menyusida ham amal shu nom bilan turadi). «Statusni o'zgartirish» oynasi ochiladi.
+2. «Muzlatilgan» kartochkasini tanlang («Vaqtincha to'xtadi, keyin qaytadi»).
+3. Sababni tanlang: «Sabab» maydonida «Sababni tanlang» ro'yxati turadi, «Qo'shimcha izoh (ixtiyoriy)» maydoniga xohlasangiz izoh yozasiz. «Boshqa sabab» tanlansa, izoh majburiy (kamida 5 belgi). Sabablar ro'yxati bo'sh bo'lsa, sababni matn bilan yozasiz («Sabab yozing...»). Ro'yxat Sozlamalar → «Sabablar» → «Chiqish va status» da yuritiladi.
+4. Oynadagi pul blokini o'qing (pastda tushuntirilgan).
+5. «O'zgartirish» ni bosing. «Status muvaffaqiyatli o'zgartirildi» xabari chiqadi.
+
+## Muzlatilganda nima bo'ladi
+
+- Holat «Muzlatilgan» bo'ladi. O'quvchining hamma faol yozilishi ham «Muzlatilgan» bo'ladi.
+- O'quvchi davomat ro'yxatidan chiqadi: davomat faqat faol yozilishlar bo'yicha olinadi. Shuning uchun undan dars puli yechilmaydi va ustozga uning nomidan ulush yozilmaydi.
+- Kartadagi «Guruhlar» tabida uning guruhi ko'rinmaydi («Guruhlar mavjud emas» yoziladi). Yozilish saqlanadi: o'quvchi qaytganda guruh qaytadi.
+- Pul balansga qaytadi, naqd berilmaydi. Naqd pulni keyin «Pul qaytarish» orqali berasiz ([Pulni qaytarish va yechib olish](/qollanma/tolovlar/pul-qaytarish)).
+- Eski qarz yo'qolmaydi. Balansda qarz bo'lsa, qaytgan pul avval shu qarzni kamaytiradi.
+- Kirish hisobi ochiq qoladi: muzlatilgan o'quvchi qarzini o'quvchi portalida ko'rishi va to'lashi mumkin.
+
+### Pul: dars paketi
+
+Oynada «Pul qaytarish — qolgan darslar avtomatik balansga qaytariladi» bloki chiqadi. Har guruh uchun bir dars narxi va qaytadigan darslar soni turadi. Bu — oldindan to'langan, hali o'tilmagan darslar; ular to'langan paytdagi dars narxida qaytadi.
+
+Darslar sonini o'zgartirish mumkin:
+
+- Kamaytirsangiz, qolgan darslar puli qaytmaydi.
+- Oldindan to'langandan ko'paytirsangiz, oxirgi o'tgan darslar bekor qilinadi («Sababli» ga o'tadi) va ustozdan mos oylik chiqariladi. Oylik allaqachon tasdiqlangan yoki to'langan bo'lsa, tizim buni rad etadi.
+
+### Pul: oylik to'lov
+
+Oynada «Oylik to'lov — o'tmagan darslar puli avtomatik qaytadi» bloki chiqadi. Har guruh ostida yoziladi: «Oyning qolgan 7 darsi uchun 700 000 so'm balansga qaytadi» (raqamlar misol uchun) yoki «Bu oydan qaytadigan dars yo'q — balans o'zgarmaydi».
+
+- Oyning hali o'tilmagan darslari puli qaytadi. Muzlatilgan kunning o'zi o'tilgan hisoblanadi: shu kundagi dars puli qaytmaydi.
+- Bu summani o'zgartirib bo'lmaydi: tizim o'zi hisoblaydi.
+- Shartnoma 6.2 (40% qoidasi) muzlatishga qo'llanmaydi. Bu qoida haqida — [Guruhdan chiqarish va pul](/qollanma/oquvchilar/guruhdan-chiqarish).
+
+## Qaytarish
+
+1. «Status o'zgartirish» belgisini bosing va «Faol» ni tanlang («Qayta o'qishni davom ettiradi»). Kartadagi oyna «Sabab» ni majburiy qiladi: matn yozing.
+2. «O'zgartirish» ni bosing.
+
+Nima bo'ladi:
+
+- Holat «Faol» bo'ladi va muzlatilgan yozilishlar qayta ochiladi. Faqat «Faol» guruhdagi yozilish qayta ochiladi.
+- Oylik kursda qaytgan kundan keyingi darslar uchun hisob qayta yoziladi va balansdan yechiladi. Qaytgan kunning o'zi hisoblanmaydi: shu kundagi dars bepul. Muzlatilgan paytda o'tgan darslar ham, markaz bekor qilgan dars ham hisoblanmaydi.
+- Muzlatilganda shu oyning hisobi yozilmagan bo'lsa (o'quvchi oy boshida muzlatilgan edi), qaytgan kundan keyingi darslar uchun yangi hisob yoziladi.
+- Dars paketida qaytganda balansdan hech narsa yechilmaydi: darslar davomat olinganda odatdagidek yechiladi.
+
+## Avtomatik pauza
+
+Tizim ketma-ket sababsiz dars qoldirgan o'quvchini o'zi muzlatishi mumkin. Bu sozlama boshida o'chiq turadi. Bunday muzlatish ham shu sahifadagi qoidalar bo'yicha ishlaydi va o'quvchini guruhdan chiqarmaydi. Batafsil — [Avtomatik pauza](/qollanma/davomat/avtomatik-pauza).
+
+Tizim muzlatgan o'quvchini «Aloqa markazi» → «Pauzadagilar» tabidagi «Faollashtirish» tugmasi ham qaytaradi. Bu tab qo'lda muzlatilgan o'quvchilarni ko'rsatmaydi. «Faollashtirish» sabab so'ramaydi va ketma-ket qoldirish sanog'ini noldan boshlaydi.
+
+## Misol
+
+Oylik kurs: oyiga 1 200 000 so'm, oktabrda 12 ta dars, bir dars 100 000 so'm. Ism soxta.
+
+1. Jasur 5-dars kuni muzlatildi. Shu kun o'tilgan hisoblanadi, 7 ta dars qoladi: 7 × 100 000 = 700 000 so'm balansga qaytadi. Oyning hisobi 1 200 000 dan 500 000 gacha kamayadi.
+2. Jasur 8-dars kuni qaytdi. Qaytgan kun hisoblanmaydi. Undan keyingi darslar — 9-, 10-, 11- va 12- — jami 4 ta: 4 × 100 000 = 400 000 so'm balansdan yechiladi. Oyning hisobi 900 000 ga yetadi.
+3. Natijada Jasur oy uchun 9 ta dars puli to'laydi. 6- va 7-dars (muzlatilgan paytda) hamda 8-dars (qaytgan kuni) hisoblanmaydi.
+
+## Istisnolar
+
+- Muzlatilgan o'quvchining guruhi kartada ko'rinmagani uchun uni guruhdan chiqarish tugmasi ekranda yo'q. Muzlatilgan o'quvchini to'g'ridan-to'g'ri «Chetlatilgan» qilish mumkin: [Chetlatish, bitirish, arxiv](/qollanma/oquvchilar/chetlatish-va-arxiv).
+- Guruh bekor qilinsa yoki tugallansa, muzlatilgan yozilish ham yopiladi: o'quvchi guruhdan chiqarilgan hisoblanadi (tugallangan guruhda u bitirmaydi). Qaytarilgan o'quvchi eski guruhiga qaytmaydi. Batafsil — [Guruh holatlari](/qollanma/guruhlar/guruh-holatlari).
+- Muzlatilgan yozilishning guruhi «Boshlanmagan» yoki «Pauza» holatida bo'lsa, o'quvchi qaytganda yozilish ochilmaydi.
+
+## Kim qila oladi
+
+CEO, filial direktori va administrator: ham muzlatadi, ham qaytaradi. Filial direktori va administrator faqat o'z filialidagi o'quvchi bilan ishlaydi. Avtomatik pauzani tizimning o'zi qo'yadi. Kassir va o'qituvchi o'quvchi holatini o'zgartira olmaydi.
+
+## Tizimda qayerda
+
+- [O'quvchi kartasi](/qollanma/oquvchilar/oquvchi-kartasi): chap ustundagi «Status o'zgartirish» belgisi.
+- [O'quvchilar](/students) ro'yxati va guruh sahifasidagi «O'quvchilar» tabi: qator menyusidagi «Status o'zgartirish». Shu menyudagi «Status tarixi» holat o'zgarishlarini ko'rsatadi.
+- «Aloqa markazi» → «Pauzadagilar» — tizim muzlatgan o'quvchilar.

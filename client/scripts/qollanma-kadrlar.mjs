@@ -16,4 +16,31 @@ export const KADRLAR = [
     ],
     kesish: null,
   },
+  {
+    nom: "oquvchilar/oquvchi-kartasi",
+    url: (s) => `/students/profile/${s.oylikOquvchiId}`,
+    kutish: "role=tab[name=\"Guruhlar\"]",
+    belgilar: [
+      { selector: "role=tablist", raqam: 1 },
+      { selector: "text=To'lov", raqam: 2 },
+    ],
+    kesish: null,
+  },
+  {
+    nom: "oquvchilar/guruhdan-chiqarish",
+    url: (s) => `/students/profile/${s.oylikOquvchiId}`,
+    // Guruh kartasidagi «Chiqarish» oynani OCHADI; oynadagi «Chiqarish» bosilmaydi.
+    tayyorla: async (page) => {
+      await page.getByRole("button", { name: "Chiqarish" }).first().click();
+    },
+    kutish: "role=alertdialog",
+    belgilar: [
+      { selector: "role=alertdialog >> [data-slot=select-trigger]", raqam: 1 },
+      { selector: 'role=radiogroup[name="Pulni qaytarish tartibi"]', raqam: 2 },
+      { selector: "role=alertdialog >> span[title=\"O'tgan dars\"]", raqam: 3 },
+      { selector: "role=alertdialog >> role=status", raqam: 4 },
+      { selector: "role=alertdialog >> [data-slot=alert-dialog-action]", raqam: 5 },
+    ],
+    kesish: "role=alertdialog",
+  },
 ];
