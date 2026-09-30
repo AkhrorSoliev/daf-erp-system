@@ -169,7 +169,11 @@ function zahlVon(w: Pick<MaterialWort, 'anzeige'>): number | null {
  * German at all (review 2026-09-30: blind guessing rose from 25% to 48–60%).
  * So the answer's trap comes with pairs of traps of their own — 7 · 17 ·
  * 4 · 14 — and when that cannot be built, no option is a trap of another.
- * `null` when neither can be built from the numbers in `reihe`.
+ *
+ * The shapes match too (`zahlForm`): a decoy pair has the shapes of the
+ * answer and its trap, and without traps the answer's own shape comes
+ * first. A lone compound among round numbers (35 beside 20, 70, 90) was
+ * always the answer. `null` when nothing can be built from `reihe`.
  */
 function zahlenAuswahl<T extends MaterialWort>(
   zielZahl: number,
@@ -181,10 +185,15 @@ function zahlenAuswahl<T extends MaterialWort>(
   const wert = (w: T) => zahlVon(w) as number;
   const frei = (w: T, werte: number[]) =>
     werte.every((z) => !zahlenFalle(z, wert(w)));
+  const formen = (...n: number[]) => n.map(zahlForm).sort().join();
 
   if (anzahl % 2 === 1) {
-    const fallen = zahlen.filter((w) => zahlenFalle(zielZahl, wert(w)));
-    for (const falle of mischen(fallen, rnd)) {
+    const fallen = mischen(
+      zahlen.filter((w) => zahlenFalle(zielZahl, wert(w))),
+      rnd,
+    );
+    for (const falle of fallen) {
+      const soll = formen(zielZahl, wert(falle));
       const gewaehlt = [falle];
       const werte = [zielZahl, wert(falle)];
       for (const x of zahlen) {
@@ -195,7 +204,8 @@ function zahlenAuswahl<T extends MaterialWort>(
             y !== x &&
             !gewaehlt.includes(y) &&
             zahlenFalle(wert(x), wert(y)) &&
-            frei(y, werte),
+            frei(y, werte) &&
+            formen(wert(x), wert(y)) === soll,
         );
         if (!partner) continue;
         gewaehlt.push(x, partner);
@@ -205,15 +215,26 @@ function zahlenAuswahl<T extends MaterialWort>(
     }
   }
 
+  const eigeneForm = zahlForm(zielZahl);
   const gewaehlt: T[] = [];
   const werte = [zielZahl];
-  for (const x of zahlen) {
+  for (const x of [
+    ...zahlen.filter((w) => zahlForm(wert(w)) === eigeneForm),
+    ...zahlen.filter((w) => zahlForm(wert(w)) !== eigeneForm),
+  ]) {
     if (gewaehlt.length === anzahl) break;
     if (!frei(x, werte)) continue;
     gewaehlt.push(x);
     werte.push(wert(x));
   }
   return gewaehlt.length === anzahl ? gewaehlt : null;
+}
+
+/** How a number looks: one digit, a teen, a round number or a compound. */
+function zahlForm(n: number): string {
+  if (n < 10) return 'E';
+  if (n < 20) return 'Z';
+  return n % 10 === 0 ? 'R' : 'K';
 }
 
 /**

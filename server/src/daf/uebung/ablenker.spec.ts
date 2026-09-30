@@ -199,7 +199,7 @@ describe('waehleAblenker — numbers', () => {
       // Review 2026-09-30: "dreißig" always came with 20 and 40, and 7 with
       // 17 beside two unrelated numbers — the answer was the one the traps
       // gathered around, with no German at all (blind guessing 48–60%).
-      for (const pool of [u01, u02]) {
+      for (const pool of [u01, u02, [...u01, ...u02]]) {
         for (const ziel of pool) {
           for (let seed = 1; seed <= 30; seed += 1) {
             const got = waehleAblenker(ziel, pool, { ...f, rnd: prng(seed) })!;
@@ -208,6 +208,27 @@ describe('waehleAblenker — numbers', () => {
               (a) => set.filter((b) => b !== a && zahlenFalle(a, b)).length,
             );
             expect(new Set(grad).size).toBe(1);
+          }
+        }
+      }
+    },
+  );
+
+  it.each(FORMATE)(
+    '$name: no option is the only one of its shape (one digit, teen, round, compound)',
+    (f) => {
+      // Review 2026-09-30: in u02 a lone compound (35 among 20, 70, 90) was
+      // always the answer — 21, 35, 48 and 99 have no trap among 20–100.
+      const form = (n: number) =>
+        n < 10 ? 'E' : n < 20 ? 'Z' : n % 10 === 0 ? 'R' : 'K';
+      for (const pool of [u01, u02, [...u01, ...u02]]) {
+        for (const ziel of pool) {
+          for (let seed = 1; seed <= 30; seed += 1) {
+            const got = waehleAblenker(ziel, pool, { ...f, rnd: prng(seed) })!;
+            const formen = [ziel, ...got].map((x) => form(Number(x.anzeige)));
+            for (const fo of formen) {
+              expect(formen.filter((x) => x === fo).length).toBeGreaterThan(1);
+            }
           }
         }
       }

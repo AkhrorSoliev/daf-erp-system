@@ -650,6 +650,67 @@ describe('UebungService.seans — qaytarish (wiederholung)', () => {
     }
   });
 
+  // Review 2026-09-30: a due word from another unit was asked among TODAY's
+  // words — "sieben" in a lesson of greetings was the only number, and in a
+  // u02 lesson of 20–100 the only small one. It is asked among the words of
+  // its own lesson instead.
+  it('muddati kelgan boshqa bo`lim so`zi o`z darsining so`zlari orasida so`raladi', async () => {
+    const prisma = fakePrisma();
+    const eski = new Date(Date.now() - 60_000);
+    const sonlar = [
+      [501, 'sieben', 'yetti', '7'],
+      [502, 'siebzehn', "o'n yetti", '17'],
+      [503, 'vier', "to'rt", '4'],
+      [504, 'vierzehn', "o'n to'rt", '14'],
+      [505, 'acht', 'sakkiz', '8'],
+    ].map(([id, de, uz, anzeige]) => ({
+      id: Number(id),
+      de: String(de),
+      uz: String(uz),
+      artikel: null,
+      anzeige: String(anzeige),
+      core: true,
+      sectionId: 50,
+      unitId: 3,
+      audioKey: null,
+      imageKey: null,
+      bildTippen: false,
+    }));
+    const altFindMany = prisma.dafLexeme.findMany;
+    prisma.dafLexeme.findMany = jest.fn(async (args: any = {}) => {
+      const where = args?.where ?? {};
+      const eigene = (await altFindMany(args)) as unknown[];
+      const fremde = sonlar.filter(
+        (l) =>
+          (!where.sectionId?.in || where.sectionId.in.includes(l.sectionId)) &&
+          (!where.id?.in || where.id.in.includes(l.id)),
+      );
+      return [...eigene, ...fremde];
+    }) as any;
+    prisma.dafSection.findMany = jest.fn(async (args: any = {}) => {
+      const where = args?.where ?? {};
+      const home = { id: 50, code: 'u03-s4', order: 4, unitId: 3 };
+      if (where.id?.in) return where.id.in.includes(50) ? [home] : [];
+      if (where.unitId?.in) return where.unitId.in.includes(3) ? [home] : [];
+      return [{ id: 7, code: 'u01-s1', order: 1, unitId: 1 }];
+    }) as any;
+    prisma.dafLexemeState.findMany = jest.fn(async (args: any = {}) =>
+      args?.where?.dueAt
+        ? [{ lexemeId: 501, lastFormat: 'UZ_WORT', dueAt: eski }]
+        : [],
+    ) as any;
+
+    const fragen = await new UebungService(prisma as any).seans(100, 55);
+
+    const sieben = fragen.find(
+      (f) => f.itemType === 'WORT' && f.itemId === 501,
+    );
+    expect(sieben?.format).toBe('WORT_UZ');
+    expect([...(sieben?.options ?? [])].sort()).toEqual(
+      ["o'n to'rt", "o'n yetti", "to'rt", 'yetti'].sort(),
+    );
+  });
+
   // Finding 5, qaytarish yo'lidagi hodisasi: muddati kelgan so'zning
   // o'zi tarjimasiz bo'lsa (id 7 — `uz: null`), `baueWiederholung` xato
   // tashlamasdan uni tashlab ketishi kerak.

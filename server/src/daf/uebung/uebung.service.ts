@@ -1139,9 +1139,15 @@ export class UebungService {
     }>;
     const byId = new Map(dueLexemeRows.map((l) => [l.id, l]));
 
-    // Chalg'ituvchi manbai: joriy darsning so'zlariga qaytariladigan
-    // so'zning o'zi ham qo'shiladi — u boshqa bo'limdan bo'lishi mumkin,
-    // shuning uchun panelda kamida o'zi bor bo'lishi kerak.
+    // A due word from another section is asked among the words of its own
+    // lesson. Among today's words it was the odd one out: "sieben" in a
+    // lesson of greetings was the only number, and in a u02 lesson of 20–100
+    // the only small one (review 2026-09-30). Only when its lesson cannot be
+    // found does it fall back to today's words plus itself.
+    const heimat = await this.heimatPools(
+      dueLexemeRows.filter((l) => !coreWords.some((w) => w.id === l.id)),
+    );
+
     const pflicht: Frage[] = [];
     for (const state of due) {
       const raw = byId.get(state.lexemeId);
@@ -1150,7 +1156,7 @@ export class UebungService {
       if (!wort) continue; // tarjimasiz so'z qaytarish savoliga aylana olmaydi.
       const andere = coreWords.some((w) => w.id === wort.id)
         ? coreWords
-        : [...coreWords, wort];
+        : (heimat.get(wort.id) ?? [...coreWords, wort]);
 
       const moeglich = mischen(
         WORT_FORMATE.filter((f) => f !== state.lastFormat),
@@ -1174,6 +1180,76 @@ export class UebungService {
       pflicht.push(frage);
     }
     return pflicht;
+  }
+
+  /**
+   * For each word, the core words of its own lesson: its unit's sections up
+   * to its own, the pool `baueKandidaten` gives that lesson. A word whose
+   * section is gone gets no entry.
+   */
+  private async heimatPools(
+    rows: Array<{ id: number; sectionId: number | null }>,
+  ): Promise<Map<number, MaterialWort[]>> {
+    const pools = new Map<number, MaterialWort[]>();
+    const eigeneIds = [
+      ...new Set(
+        rows.map((r) => r.sectionId).filter((id): id is number => id != null),
+      ),
+    ];
+    if (eigeneIds.length === 0) return pools;
+
+    type SectionRow = {
+      id: number;
+      code: string;
+      order: number;
+      unitId: number;
+    };
+    const eigene = (await this.prisma.dafSection.findMany({
+      where: { id: { in: eigeneIds } },
+    } as any)) as SectionRow[];
+    if (eigene.length === 0) return pools;
+    const alle = (await this.prisma.dafSection.findMany({
+      where: { unitId: { in: [...new Set(eigene.map((s) => s.unitId))] } },
+    } as any)) as SectionRow[];
+    const lexeme = (await this.prisma.dafLexeme.findMany({
+      where: { sectionId: { in: alle.map((s) => s.id) }, core: true },
+    } as any)) as Array<{
+      id: number;
+      de: string;
+      uz: string | null;
+      artikel: string | null;
+      anzeige: string | null;
+      sectionId: number | null;
+      audioKey: string | null;
+      imageKey: string | null;
+      bildTippen: boolean;
+      core?: boolean;
+    }>;
+    const codeById = new Map(alle.map((s) => [s.id, s.code]));
+
+    for (const row of rows) {
+      const sec = eigene.find((s) => s.id === row.sectionId);
+      if (!sec) continue;
+      const bis = new Set(
+        alle
+          .filter((s) => s.unitId === sec.unitId && s.order <= sec.order)
+          .map((s) => s.id),
+      );
+      const pool = lexeme
+        .filter(
+          (l) =>
+            l.core !== false && l.sectionId != null && bis.has(l.sectionId),
+        )
+        .map((l) =>
+          toWort({
+            ...l,
+            sectionCode: codeById.get(l.sectionId as number) ?? '',
+          }),
+        )
+        .filter((w): w is MaterialWort => w !== null);
+      if (pool.some((w) => w.id === row.id)) pools.set(row.id, pool);
+    }
+    return pools;
   }
 
   private baueWortFrage(
