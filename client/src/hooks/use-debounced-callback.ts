@@ -12,6 +12,16 @@ export function useDebouncedCallback<T extends (...args: any[]) => void>(
     callbackRef.current = callback;
   });
 
+  // Unmount'da kutayotgan chaqiruv bekor qilinadi (flush emas): aks holda eski sahifaning
+  // router.replace'i foydalanuvchini ortga qaytaradi. Shu sabab avtosaqlashga yaramaydi.
+  // Layout effekt: tozalash commit ichida ishlaydi, useEffect kabi keyinga qolmaydi.
+  useLayoutEffect(
+    () => () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    },
+    [],
+  );
+
   return useCallback(
     (...args: Parameters<T>) => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);

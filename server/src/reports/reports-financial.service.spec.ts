@@ -235,6 +235,88 @@ describe('ReportsFinancialService', () => {
     });
   });
 
+  describe('getFinancialTrend', () => {
+    // 01.10.2026 01:30 in Tashkent. Production runs in UTC, where the process
+    // calendar still says 30.09 — the months used to be built there.
+    beforeEach(() => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-09-30T20:30:00.000Z'));
+    });
+    afterEach(() => jest.useRealTimers());
+
+    const span = (f: { gte: Date; lt?: Date }) =>
+      `${f.gte.toISOString()}..${f.lt?.toISOString()}`;
+    const spans = (filters: { gte: Date; lt?: Date }[]) =>
+      [...new Set(filters.map(span))].sort();
+
+    it('ends the six-month series on the current Tashkent month', async () => {
+      const res = await service.getFinancialTrend(1, null);
+
+      expect(res.map((r) => r.monthKey)).toEqual([
+        '2026-05',
+        '2026-06',
+        '2026-07',
+        '2026-08',
+        '2026-09',
+        '2026-10',
+      ]);
+      expect(res.map((r) => r.month)).toEqual([
+        '05/2026',
+        '06/2026',
+        '07/2026',
+        '08/2026',
+        '09/2026',
+        '10/2026',
+      ]);
+    });
+
+    it('bounds every timestamp leg by Tashkent midnights, so a payment at 00:30 on the 1st counts in its own month', async () => {
+      await service.getFinancialTrend(1, null);
+
+      const filters = [
+        ...prisma.payment.aggregate.mock.calls.map(
+          ([a]: any) => a.where.createdAt,
+        ),
+        ...prisma.payment.groupBy.mock.calls.map(
+          ([a]: any) => a.where.createdAt,
+        ),
+        ...prisma.student.count.mock.calls.map(([a]: any) => a.where.createdAt),
+        ...prisma.salaryPayment.aggregate.mock.calls.map(
+          ([a]: any) => a.where.paidAt,
+        ),
+        ...prisma.expense.aggregate.mock.calls
+          .filter(([a]: any) => a.where.settledBySalaryPayment)
+          .map(([a]: any) => a.where.settledBySalaryPayment.paidAt),
+      ];
+      // 01.10 00:30 Tashkent is 2026-09-30T19:30Z: inside the last window only.
+      expect(spans(filters)).toEqual([
+        '2026-04-30T19:00:00.000Z..2026-05-31T19:00:00.000Z',
+        '2026-05-31T19:00:00.000Z..2026-06-30T19:00:00.000Z',
+        '2026-06-30T19:00:00.000Z..2026-07-31T19:00:00.000Z',
+        '2026-07-31T19:00:00.000Z..2026-08-31T19:00:00.000Z',
+        '2026-08-31T19:00:00.000Z..2026-09-30T19:00:00.000Z',
+        '2026-09-30T19:00:00.000Z..2026-10-31T19:00:00.000Z',
+      ]);
+    });
+
+    it('bounds the Expense.date legs (@db.Date) by plain calendar dates, not Tashkent-shifted instants', async () => {
+      await service.getFinancialTrend(1, null);
+
+      const filters = prisma.expense.aggregate.mock.calls
+        .filter(([a]: any) => a.where.date)
+        .map(([a]: any) => a.where.date);
+      // Postgres truncates a timestamp to its UTC date against a `date`
+      // column: a 2026-09-30T19:00Z bound would pull 30.09 into October.
+      expect(spans(filters)).toEqual([
+        '2026-05-01T00:00:00.000Z..2026-06-01T00:00:00.000Z',
+        '2026-06-01T00:00:00.000Z..2026-07-01T00:00:00.000Z',
+        '2026-07-01T00:00:00.000Z..2026-08-01T00:00:00.000Z',
+        '2026-08-01T00:00:00.000Z..2026-09-01T00:00:00.000Z',
+        '2026-09-01T00:00:00.000Z..2026-10-01T00:00:00.000Z',
+        '2026-10-01T00:00:00.000Z..2026-11-01T00:00:00.000Z',
+      ]);
+    });
+  });
+
   describe('getYearlyTrend', () => {
     it('buckets by calendar year with the same avanssiz split as the monthly trend', async () => {
       prisma.company.findUnique.mockResolvedValue({

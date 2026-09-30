@@ -7,6 +7,7 @@ import { EditStudentDrawer } from "./edit-student-drawer";
 import { StudentProfileCard } from "./student-profile-card";
 import { StudentProfileTabs } from "./student-profile-tabs";
 import { EnrollToGroupDialog } from "./enroll-to-group-dialog";
+import { InitialBalanceDialog } from "./initial-balance-dialog";
 import { RecordPaymentDialog } from "@/components/payments/record-payment-dialog";
 import { RefundDialog } from "@/components/payments/refund-dialog";
 import { WithdrawalDialog } from "@/components/payments/withdrawal-dialog";
@@ -27,6 +28,7 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [withdrawalOpen, setWithdrawalOpen] = useState(false);
+  const [initialBalanceOpen, setInitialBalanceOpen] = useState(false);
   const [groupsRefreshing, setGroupsRefreshing] = useState(false);
   const setName = useBreadcrumbName((s) => s.setName);
 
@@ -115,6 +117,7 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
             onPaymentHistoryClick={() => handleTabChange("tolovlar")}
             onRefundClick={() => setRefundOpen(true)}
             onWithdrawalClick={() => setWithdrawalOpen(true)}
+            onInitialBalanceClick={() => setInitialBalanceOpen(true)}
             onStatusChanged={refreshStudent}
           />
         </div>
@@ -165,6 +168,13 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
         studentId={student.id}
         studentName={`${student.firstName} ${student.lastName}`}
         onSuccess={() => fetchStudent(false)}
+      />
+      <InitialBalanceDialog
+        open={initialBalanceOpen}
+        onOpenChange={setInitialBalanceOpen}
+        studentId={student.id}
+        studentName={`${student.firstName} ${student.lastName}`}
+        onSaved={() => fetchStudent(false)}
       />
     </>
   );

@@ -59,6 +59,8 @@ describe('DashboardService', () => {
         // Use mockResolvedValue so both calls return the same shape by default.
         groupBy: jest.fn().mockResolvedValue(mockAttendanceCounts),
       },
+      unmarkedLesson: { findMany: jest.fn().mockResolvedValue([]) },
+      user: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
     holidaysService = {
@@ -104,6 +106,7 @@ describe('DashboardService', () => {
         attendanceStatus: expect.stringMatching(
           /^(TAKEN|NOT_TAKEN|MISSED|PENDING)$/,
         ),
+        unmarked: null,
       });
       expect(result.lessons[1].studentCount).toBe(2);
       expect(result.lessons[1].presentCount).toBe(0);
@@ -243,6 +246,31 @@ describe('DashboardService', () => {
       expect(holidaysService.findActiveHolidayCovering).toHaveBeenCalledWith(
         new Date('2026-03-22T00:00:00.000Z'),
       );
+    });
+
+    it("marks a lesson that waits for «Dars bo'ldimi?»", async () => {
+      prisma.unmarkedLesson.findMany.mockResolvedValue([
+        {
+          id: 'u1',
+          groupId: 'group-1',
+          date: new Date('2026-04-13T00:00:00.000Z'),
+          status: 'PENDING',
+          teacherPayExempt: false,
+          lessonStartTime: '09:00',
+          lessonEndTime: '10:30',
+          claimedById: null,
+        },
+      ]);
+      const result = await service.getTodaySchedule(1, 1001, '2026-04-13');
+      expect(result.lessons[0].unmarked).toEqual({
+        id: 'u1',
+        status: 'PENDING',
+        teacherPayExempt: false,
+        lessonStartTime: '09:00',
+        lessonEndTime: '10:30',
+        claimedBy: null,
+      });
+      expect(result.lessons[1].unmarked).toBeNull();
     });
   });
 });

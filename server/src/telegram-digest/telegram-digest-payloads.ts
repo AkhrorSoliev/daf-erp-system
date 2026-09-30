@@ -84,6 +84,14 @@ export interface AttendanceCompletedDigestPayload {
   excused: number;
 }
 
+/** «Bo'ldi» — the lesson was marked after it ended; no pay (ADR-0054). */
+export interface LessonPayForfeitedDigestPayload {
+  groupId: string;
+  groupName: string;
+  /** Lesson date, 'YYYY-MM-DD'. */
+  date: string;
+}
+
 export interface GroupNewStudentDigestPayload {
   studentId: number;
   name: string;
@@ -183,6 +191,7 @@ export type DigestPayloadByCategory = EveryCategory<{
   GROUP_STATUS_CHANGE: GroupStatusChangeDigestPayload;
   MONTHLY_CHARGE: MonthlyChargeDigestPayload;
   PAYMENT_REMINDER: PaymentReminderDigestPayload;
+  LESSON_PAY_FORFEITED: LessonPayForfeitedDigestPayload;
 }>;
 
 /** Who each category is written for — a student row read as USER is never rendered. */
@@ -205,6 +214,7 @@ export type RecipientKindByCategory = EveryCategory<{
   GROUP_STATUS_CHANGE: 'GROUP';
   MONTHLY_CHARGE: 'STUDENT';
   PAYMENT_REMINDER: 'STUDENT';
+  LESSON_PAY_FORFEITED: 'USER';
 }>;
 
 /**

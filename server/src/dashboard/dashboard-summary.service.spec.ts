@@ -214,4 +214,20 @@ describe('DashboardSummaryService.getSummary', () => {
       },
     ]);
   });
+
+  it('asks for the net profit of the Tashkent month', async () => {
+    // 01.10.2026 01:30 in Tashkent, still 30.09 on a UTC host (Railway).
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-30T20:30:00.000Z'));
+    try {
+      const { service, reports } = makeService();
+      await service.getSummary(CEO);
+
+      expect(reports.getNetProfitWithBasis).toHaveBeenCalledWith(
+        CEO.companyId,
+        expect.objectContaining({ month: '2026-10' }),
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });

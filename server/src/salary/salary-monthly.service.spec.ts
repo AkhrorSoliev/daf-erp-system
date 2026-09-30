@@ -57,6 +57,8 @@ describe('SalaryMonthlyService', () => {
       enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
       // Pack markers of monthly-course lessons with no charge (ADR-0051).
       transaction: { findMany: jest.fn().mockResolvedValue([]) },
+      // Lessons whose teacher pay is forfeited (ADR-0054); default none.
+      unmarkedLesson: { findMany: jest.fn().mockResolvedValue([]) },
       employeeSalaryConfigVersion: {
         findMany: jest.fn().mockResolvedValue([]),
       },

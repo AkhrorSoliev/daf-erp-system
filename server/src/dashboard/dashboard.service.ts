@@ -5,6 +5,8 @@ import {
   utcMidnightFromDateStr,
 } from '../attendance/shared/date-utils';
 import { HolidaysService } from '../holidays/holidays.service';
+import { loadUnmarkedLessonInfos } from '../unmarked-lessons/unmarked-lesson-info';
+import { lessonKey } from '../unmarked-lessons/forfeited-lessons';
 
 const DAY_NAMES = [
   'sunday',
@@ -159,6 +161,14 @@ export class DashboardService {
       totalCounts.map((a) => [a.groupId, a._count.id]),
     );
 
+    // «Dars bo'ldimi?» — which lessons of the day still wait for an answer.
+    const unmarked = groupIds.length
+      ? await loadUnmarkedLessonInfos(this.prisma, {
+          groupId: { in: groupIds },
+          date: dateOnly,
+        })
+      : new Map();
+
     // Current time in Asia/Tashkent — production server runs in UTC, lesson
     // times are stored as Tashkent-local strings, so compare in the same zone.
     const tashkentParts = new Intl.DateTimeFormat('en-CA', {
@@ -221,6 +231,7 @@ export class DashboardService {
         studentCount: g.enrollments.length,
         presentCount: presentMap.get(g.id) ?? 0,
         attendanceStatus,
+        unmarked: unmarked.get(lessonKey(g.id, dateOnly)) ?? null,
       };
     });
 

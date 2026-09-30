@@ -13,6 +13,16 @@ import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { CreateLessonCancellationDto } from './dto/create-lesson-cancellation.dto';
 import { resolveBilledEnrollmentId } from '../billing/resolve-billed-enrollment';
+import {
+  markUnmarkedLessonCancelled,
+  reopenAfterCancellationRemoved,
+} from '../unmarked-lessons/unmarked-lesson-transitions';
+import { loadReaskHolidays } from '../unmarked-lessons/reask-holidays';
+import { rethrowAsConflict } from '../common/transaction-conflict';
+import {
+  UNMARKED_LESSON_NOT_HELD,
+  type UnmarkedLessonNotHeldPayload,
+} from '../unmarked-lessons/unmarked-lesson-events';
 
 /**
  * Payload emitted on cancellation create — consumed by
@@ -37,6 +47,21 @@ const DAY_NAME_BY_JS_DAY: Record<number, string> = {
   5: 'friday',
   6: 'saturday',
 };
+
+/** Money moves inside these transactions; Serializable, like the billing writes. */
+const SERIALIZABLE_TX = {
+  isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  maxWait: 10_000,
+  timeout: 15_000,
+} as const;
+
+/**
+ * Both transactions check their unique rows first — the day's live
+ * cancellation (create), the day's «Dars bo'ldimi?» row (remove's re-ask) —
+ * so a unique violation is a concurrent duplicate: 409, like a conflict.
+ */
+const asConflict = (err: unknown) =>
+  rethrowAsConflict(err, { duplicate: true });
 
 @Injectable()
 export class LessonCancellationsService {
@@ -150,8 +175,8 @@ export class LessonCancellationsService {
 
     const date = this.parseDate(dto.date);
 
-    const cancellation = await this.prisma.$transaction(
-      async (tx) => {
+    const { cancellation, released, decision } = await this.prisma
+      .$transaction(async (tx) => {
         const group = await tx.group.findFirst({
           where: { id: dto.groupId, companyId, deletedAt: null },
           select: {
@@ -286,6 +311,16 @@ export class LessonCancellationsService {
           },
         );
 
+        // «Dars bo'ldimi?» (spec 2026-09-29 §3.5): a lesson waiting for an
+        // answer is now answered «Bo'lmadi», and its task closes — whichever
+        // screen cancelled it.
+        const decision = await markUnmarkedLessonCancelled(tx, {
+          groupId: dto.groupId,
+          date,
+          cancellationId: cancellation.id,
+          actorId: cancelledById,
+        });
+
         // Cascade (Stsenariy B / E): if a substitute-teacher override was
         // active on this date, soft-delete it. Salary accruals for those
         // teachers were already reversed by the billing cascade above
@@ -320,14 +355,9 @@ export class LessonCancellationsService {
           tx,
         });
 
-        return cancellation;
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        maxWait: 10_000,
-        timeout: 15_000,
-      },
-    );
+        return { cancellation, released, decision };
+      }, SERIALIZABLE_TX)
+      .catch(asConflict);
 
     // Fire-and-forget event after the tx commits — listener handles
     // Telegram + 4-channel teacher notifications.
@@ -340,14 +370,26 @@ export class LessonCancellationsService {
       companyId,
     } satisfies LessonCancellationPayload);
 
+    if (decision) {
+      this.eventEmitter.emit(UNMARKED_LESSON_NOT_HELD, {
+        ...decision,
+        reason: dto.reason,
+        decidedById: cancelledById,
+        outcome: 'CANCELLED',
+        refundedStudents: released.students,
+        refundedAmount: released.refunded,
+      } satisfies UnmarkedLessonNotHeldPayload);
+    }
+
     return cancellation;
   }
 
   /**
    * Soft-delete a cancellation. Does NOT automatically restore the
    * attendance / consumption / accrual that the create() flow tore down —
-   * admins must re-take the attendance manually if the lesson actually
-   * happened. This avoids surprising auto-rebill on a typo correction.
+   * the lesson goes back to «Dars bo'ldimi?» (spec 2026-09-29 §3.5); nobody
+   * can enter a register for it any other way. This avoids surprising
+   * auto-rebill on a typo correction.
    */
   async remove(
     id: string,
@@ -370,24 +412,44 @@ export class LessonCancellationsService {
       cancellation.groupId,
     );
 
-    return this.prisma.$transaction(async (tx) => {
-      await tx.lessonCancellation.update({
-        where: { id },
-        data: { deletedAt: new Date(), deletedById: userId },
-      });
-      await this.entityHistoryService.recordDelete({
-        entityType: 'LessonCancellation',
-        entityId: id,
-        oldValues: {
-          guruh: cancellation.groupId,
-          sana: cancellation.date.toISOString().slice(0, 10),
-        },
-        changedById: userId,
-        companyId,
-        tx,
-      });
-      return { id };
-    });
+    // The re-asked task skips holidays when it sets its due date.
+    const now = new Date();
+    const holidays = await loadReaskHolidays(
+      this.prisma,
+      cancellation.groupId,
+      now,
+    );
+
+    return this.prisma
+      .$transaction(async (tx) => {
+        await tx.lessonCancellation.update({
+          where: { id },
+          data: { deletedAt: new Date(), deletedById: userId },
+        });
+        await this.entityHistoryService.recordDelete({
+          entityType: 'LessonCancellation',
+          entityId: id,
+          oldValues: {
+            guruh: cancellation.groupId,
+            sana: cancellation.date.toISOString().slice(0, 10),
+          },
+          changedById: userId,
+          companyId,
+          tx,
+        });
+        // The cancellation may have been the answer to «Dars bo'ldimi?» — or
+        // the only reason a finished lesson was never marked. Ask again.
+        await reopenAfterCancellationRemoved(tx, {
+          cancellationId: id,
+          groupId: cancellation.groupId,
+          date: cancellation.date,
+          cancelledAt: cancellation.createdAt,
+          now,
+          holidays,
+        });
+        return { id };
+      }, SERIALIZABLE_TX)
+      .catch(asConflict);
   }
 
   // ---------- internals ----------

@@ -110,6 +110,13 @@ export function TaskKanbanBoard({
 
     if (!targetStatus || targetStatus === task.status) return;
 
+    // The lesson's answer closes a system task: moveTask refuses with its own
+    // toast, so do not ask for a confirmation that can only end in a refusal.
+    if (task.isSystem && (targetStatus === "DONE" || task.status === "DONE")) {
+      void moveTask(activeId, targetStatus);
+      return;
+    }
+
     const content =
       task.content.length > 50 ? task.content.slice(0, 50) + "…" : task.content;
 

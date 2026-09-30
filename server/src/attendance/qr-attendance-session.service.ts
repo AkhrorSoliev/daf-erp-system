@@ -3,6 +3,8 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import { DAY_END_TIME, secondsUntil } from './shared/attendance-window';
+import { assertAttendanceWindowOpen } from './shared/attendance-window-guard';
 import { randomUUID } from 'crypto';
 import { EnrollmentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -35,13 +37,22 @@ export class QrAttendanceSessionService {
     roles?: string[],
   ) {
     // Validate date is a valid lesson date (includes time check for teachers)
-    const { group: validatedGroup, parsedDate } =
+    const { parsedDate, effectiveStartTime, effectiveEndTime } =
       await this.attendanceService.validateLessonDate(
         groupId,
         date,
         companyId,
         roles,
       );
+
+    // A QR session writes a new register — the same window as a manual one
+    // (spec 2026-09-29 §3.1), for every role.
+    await assertAttendanceWindowOpen(this.prisma, {
+      groupId,
+      date,
+      parsedDate,
+      times: { startTime: effectiveStartTime, endTime: effectiveEndTime },
+    });
 
     const group = await this.prisma.group.findFirst({
       where: { id: groupId, deletedAt: null },
@@ -79,20 +90,13 @@ export class QrAttendanceSessionService {
       parsedDate,
     );
 
-    // Session TTL: until lesson ends, capped at SESSION_TTL
-    let sessionTtl = SESSION_TTL;
-    if (validatedGroup.lessonEndTime) {
-      const now = new Date();
-      const [endH, endM] = validatedGroup.lessonEndTime.split(':').map(Number);
-      const lessonEndToday = new Date(now);
-      lessonEndToday.setHours(endH, endM, 0, 0);
-      const remainingSeconds = Math.floor(
-        (lessonEndToday.getTime() - now.getTime()) / 1000,
-      );
-      if (remainingSeconds > 0) {
-        sessionTtl = Math.min(remainingSeconds, SESSION_TTL);
-      }
-    }
+    // Session TTL: until the lesson ends on the Tashkent clock (the window
+    // above guarantees it is today and still ahead), capped at SESSION_TTL.
+    // The floor of 1 s only guards the instant the lesson ends mid-request.
+    const sessionTtl = Math.min(
+      Math.max(secondsUntil(effectiveEndTime ?? DAY_END_TIME), 1),
+      SESSION_TTL,
+    );
 
     const session: QrSession = {
       sessionId,
@@ -101,6 +105,8 @@ export class QrAttendanceSessionService {
       currentToken: token,
       createdAt: new Date().toISOString(),
       lessonNumber,
+      effectiveStartTime,
+      effectiveEndTime,
     };
     await this.redis.set(sessionKey, JSON.stringify(session), 'EX', sessionTtl);
 

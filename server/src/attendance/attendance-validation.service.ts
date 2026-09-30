@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GroupStatus } from '@prisma/client';
 import { DAY_NAME_TO_JS, tashkentDateStr } from './shared/date-utils';
 import { HolidaysService } from '../holidays/holidays.service';
+import { effectiveLessonTimes } from './shared/attendance-window';
 
 @Injectable()
 export class AttendanceValidationService {
@@ -53,6 +54,7 @@ export class AttendanceValidationService {
       select: {
         id: true,
         companyId: true,
+        branchId: true,
         exactDays: true,
         startDate: true,
         endDate: true,
@@ -120,8 +122,10 @@ export class AttendanceValidationService {
       }
     }
 
-    const holiday =
-      await this.holidaysService.findActiveHolidayCovering(parsedDate);
+    const holiday = await this.holidaysService.findActiveHolidayCovering(
+      parsedDate,
+      group.branchId,
+    );
     if (holiday) {
       throw new BadRequestException(`Bu sana bayram kuni: ${holiday.name}`);
     }
@@ -132,14 +136,8 @@ export class AttendanceValidationService {
     const canBypassTime = roles?.some((r) =>
       AttendanceValidationService.TIME_BYPASS_ROLES.has(r),
     );
-    const effectiveStartTime =
-      isMovedLessonDay && reschedule?.newLessonStartTime
-        ? reschedule.newLessonStartTime
-        : group.lessonStartTime;
-    const effectiveEndTime =
-      isMovedLessonDay && reschedule?.newLessonEndTime
-        ? reschedule.newLessonEndTime
-        : group.lessonEndTime;
+    const { startTime: effectiveStartTime, endTime: effectiveEndTime } =
+      effectiveLessonTimes(group, isMovedLessonDay ? reschedule : null);
     if (!canBypassTime) {
       // Production server runs in UTC; lesson times are Asia/Tashkent (UTC+5)
       const tashkentParts = new Intl.DateTimeFormat('en-CA', {
@@ -182,7 +180,7 @@ export class AttendanceValidationService {
             `Davomat dars boshlanishidan 10 daqiqa oldin ochiladi (${effectiveStartTime})`,
           );
         }
-        if (currentMinutes > lessonEnd) {
+        if (currentMinutes >= lessonEnd) {
           throw new BadRequestException(
             `Dars vaqti tugagan (${effectiveEndTime}). Davomat olish yopilgan`,
           );
@@ -190,6 +188,11 @@ export class AttendanceValidationService {
       }
     }
 
-    return { group, parsedDate };
+    return {
+      group,
+      parsedDate,
+      effectiveStartTime: effectiveStartTime ?? null,
+      effectiveEndTime: effectiveEndTime ?? null,
+    };
   }
 }

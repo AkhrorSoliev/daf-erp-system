@@ -11,6 +11,7 @@ import { RedisService } from '../redis/redis.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
+import { assertAttendanceWindowOpen } from './shared/attendance-window-guard';
 import { QrSession, QrToken } from './shared/qr-types';
 
 @Injectable()
@@ -78,11 +79,30 @@ export class QrAttendanceScanService {
     // Cache the lesson number from the session so the early-return path
     // (already-marked) and the success path both surface the same value.
     let lessonNumber: number | null = null;
+    let times: { startTime: string | null; endTime: string | null } | null =
+      null;
     const sessionRaw = await this.redis.get(`qr-session:${groupId}:${date}`);
     if (sessionRaw) {
       const sessionData: QrSession = JSON.parse(sessionRaw);
       lessonNumber = sessionData.lessonNumber;
+      // An older session has no times: the window is skipped, not guessed.
+      if (sessionData.effectiveEndTime !== undefined) {
+        times = {
+          startTime: sessionData.effectiveStartTime ?? null,
+          endTime: sessionData.effectiveEndTime,
+        };
+      }
     }
+
+    // A session started inside the window must not outlive it: once the
+    // lesson has ended, or «Dars bo'ldimi?» was asked, no scan may write.
+    // Before the transaction, before any write.
+    await assertAttendanceWindowOpen(this.prisma, {
+      groupId,
+      date,
+      parsedDate: parsedLessonDate,
+      times,
+    });
 
     // Already marked PRESENT? Nothing to do.
     const existing = await this.prisma.attendance.findUnique({

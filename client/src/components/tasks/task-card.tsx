@@ -7,6 +7,7 @@ import {
   CalendarClock,
   AlertTriangle,
   ArrowUpRight,
+  Bot,
   User,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,6 +21,7 @@ import { useAuth } from "@/hooks/use-auth";
 import type { TaskItem, TaskPriority } from "@/hooks/use-tasks-board";
 import { useTasksBoard } from "@/hooks/use-tasks-board";
 import { cn } from "@/lib/utils";
+import { UnmarkedLessonPrompt } from "@/components/attendance/unmarked/unmarked-lesson-prompt";
 import { taskEntityHref } from "./task-entity-href";
 
 const PRIORITY_CONFIG: Record<
@@ -84,8 +86,9 @@ export function TaskCard({ task, isOverlay, isDragDisabled }: TaskCardProps) {
           opacity: isDragging ? 0.5 : 1,
         };
 
-  const authorInitials =
-    task.author.firstName.charAt(0) + task.author.lastName.charAt(0);
+  const authorInitials = task.author
+    ? task.author.firstName.charAt(0) + task.author.lastName.charAt(0)
+    : "";
 
   const entityLabel = ENTITY_LABEL_MAP[task.entityType] ?? task.entityType;
   const entityUrl = taskEntityHref(
@@ -203,21 +206,61 @@ export function TaskCard({ task, isOverlay, isDragDisabled }: TaskCardProps) {
           </Tooltip>
         )}
 
+        {task.unmarkedLesson?.status === "PENDING" && (
+          // Stop the card's drag and click from firing inside the prompt and
+          // its dialogs (React events bubble through portals).
+          <div
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <UnmarkedLessonPrompt
+              lesson={{
+                groupId: task.unmarkedLesson.groupId,
+                groupName: task.unmarkedLesson.groupName,
+                date: task.unmarkedLesson.date,
+                startTime: task.unmarkedLesson.lessonStartTime,
+                endTime: task.unmarkedLesson.lessonEndTime,
+              }}
+              info={{
+                id: task.unmarkedLesson.id,
+                status: task.unmarkedLesson.status,
+                teacherPayExempt: task.unmarkedLesson.teacherPayExempt,
+                lessonStartTime: task.unmarkedLesson.lessonStartTime,
+                lessonEndTime: task.unmarkedLesson.lessonEndTime,
+                // A viewer who still has the task holds it or nobody does:
+                // the server deletes the other copies when someone takes it.
+                claimedBy: null,
+              }}
+              onAnswered={() => void useTasksBoard.getState().fetchMyTasks()}
+              className="w-full"
+            />
+          </div>
+        )}
+
         {/* Footer: author + assignees */}
         <div className="flex items-center justify-between pt-1 border-t">
-          <div className="flex items-center gap-1.5">
-            <Avatar className="size-5">
-              {task.author.photo && (
-                <AvatarImage src={task.author.photo} alt={task.author.firstName} />
-              )}
-              <AvatarFallback className="text-[8px]">
-                {authorInitials}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-[11px] text-muted-foreground truncate max-w-24">
-              {task.author.firstName} {task.author.lastName}
-            </span>
-          </div>
+          {task.author ? (
+            <div className="flex items-center gap-1.5">
+              <Avatar className="size-5">
+                {task.author.photo && (
+                  <AvatarImage src={task.author.photo} alt={task.author.firstName} />
+                )}
+                <AvatarFallback className="text-[8px]">
+                  {authorInitials}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-[11px] text-muted-foreground truncate max-w-24">
+                {task.author.firstName} {task.author.lastName}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <span className="flex size-5 items-center justify-center rounded-full bg-muted">
+                <Bot className="size-3 text-muted-foreground" />
+              </span>
+              <span className="text-[11px] text-muted-foreground">Tizim</span>
+            </div>
+          )}
 
           {tab === "created" && task.assignees.length > 0 && (
             <div className="flex items-center -space-x-1">

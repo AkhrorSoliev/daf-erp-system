@@ -11,16 +11,18 @@ import { formatPrice } from "@/lib/format-utils";
 import {
   expenseLabel,
   expenseSummary,
+  withdrawalSub,
   type NamedRows,
   type ProfitComposition,
 } from "./profit-composition-text";
 
 /**
- * The five lines the Foyda figure is made of. Each opens to show what is in
- * it; a line with nothing to show stays a plain row.
+ * The lines the Foyda figure is made of (the withdrawal line only in a month
+ * that has one). Each opens to show what is in it; a line with nothing to
+ * show stays a plain row.
  */
 export function ProfitCompositionRows({ data }: { data: ProfitComposition }) {
-  const { revenue, teachers, staff, expenses } = data;
+  const { revenue, withdrawals, teachers, staff, expenses } = data;
   return (
     <div className="rounded-lg border bg-card px-3">
       <BreakdownRow
@@ -38,6 +40,23 @@ export function ProfitCompositionRows({ data }: { data: ProfitComposition }) {
         )}
         <NamedDetail rows={revenue.byCourse} restLabel="Boshqa kurslar" />
       </BreakdownRow>
+
+      {withdrawals && withdrawals.total !== 0 && (
+        <BreakdownRow
+          dot="bg-green-300"
+          label="Balansdan yechib olingan"
+          sub={withdrawalSub(withdrawals)}
+          amount={withdrawals.total}
+        >
+          {withdrawals.rows.length > 0 ? (
+            <NamedDetail
+              rows={withdrawals}
+              restLabel="Yana"
+              restUnit="o'quvchi"
+            />
+          ) : undefined}
+        </BreakdownRow>
+      )}
 
       <BreakdownRow
         dot="bg-slate-500"

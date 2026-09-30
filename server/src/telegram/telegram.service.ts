@@ -62,6 +62,7 @@ import { UploadService } from '../upload/upload.service';
 import { UsersService } from '../users/users.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { PaymentLinkService } from '../payment-gateways/payment-link.service';
+import { describeError } from '../telegram-digest/telegram-send';
 
 /**
  * Telegram'dan qabul qilinadigan yangilanish turlari.
@@ -886,7 +887,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         );
         messageId = msg.message_id;
       } catch (err) {
-        const reason = (err as Error).message;
+        const reason = describeError(err);
         this.logger.warn(
           `broadcastMockResults: failed to send to chat=${r.telegramChatId} participant=${r.id}: ${reason}`,
         );

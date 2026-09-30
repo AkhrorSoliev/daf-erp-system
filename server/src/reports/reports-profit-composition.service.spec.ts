@@ -27,6 +27,7 @@ describe('ReportsProfitCompositionService', () => {
   const netProfit = {
     revenue: 200_000,
     revenueBasis: 'recognized',
+    balanceWithdrawals: 0,
     teacherSalary: 90_000,
     teacherSalaryBasis: 'hisoblangan',
     teacherSalaryHasTopup: true,
@@ -89,6 +90,7 @@ describe('ReportsProfitCompositionService', () => {
       assembleMonthlyNetProfit: jest.fn().mockResolvedValue({
         month: '2026-09',
         netProfit,
+        withdrawals: { total: 0, teacherCredited: 0, students: [] },
         lessons: [
           lesson(1, 'a', 100_000),
           lesson(2, 'a', 50_000), // left group a
@@ -271,6 +273,69 @@ describe('ReportsProfitCompositionService', () => {
     const r = await run([]);
     expect(r.netProfit).toBe(0);
     expect(reports.assembleMonthlyNetProfit).not.toHaveBeenCalled();
+  });
+
+  describe('balance withdrawals (ADR-0055)', () => {
+    beforeEach(async () => {
+      const base = await reports.assembleMonthlyNetProfit();
+      reports.assembleMonthlyNetProfit.mockResolvedValueOnce({
+        ...base,
+        // 20 000 of the teachers' 110 000 is a withdrawal credited to one.
+        netProfit: {
+          ...netProfit,
+          teacherSalary: 110_000,
+          balanceWithdrawals: 30_000,
+          netProfit: 90_000,
+        },
+        withdrawals: {
+          total: 30_000,
+          teacherCredited: 20_000,
+          students: [
+            { studentId: 5, name: 'Ali Valiyev', amount: 20_000 },
+            { studentId: 6, name: 'Vali Aliyev', amount: 10_000 },
+          ],
+        },
+      });
+    });
+
+    it('lists them as their own line, by student, and the lines add up', async () => {
+      const r = await run();
+      expect(r.withdrawals).toEqual({
+        total: 30_000,
+        teacherCredited: 20_000,
+        count: 2,
+        rows: [
+          { name: 'Ali Valiyev', amount: 20_000 },
+          { name: 'Vali Aliyev', amount: 10_000 },
+        ],
+        rest: { count: 0, amount: 0 },
+      });
+      expect(
+        r.revenue.total +
+          r.withdrawals.total -
+          r.teachers.total -
+          r.staff.total -
+          r.expenses.total -
+          r.refunds,
+      ).toBe(r.netProfit);
+    });
+
+    it('keeps a withdrawal credited to a teacher out of the forecast teacher share', async () => {
+      const r = await run();
+      // (110 000 − 20 000) / 200 000 of the 20 000 still to come — as before.
+      expect(r.forecast?.remainingTeacherPay).toBe(9_000);
+    });
+  });
+
+  it('shows no withdrawal line for an empty scope', async () => {
+    const r = await run([]);
+    expect(r.withdrawals).toEqual({
+      total: 0,
+      teacherCredited: 0,
+      count: 0,
+      rows: [],
+      rest: { count: 0, amount: 0 },
+    });
   });
 
   it('shows no per-person rows when a salary leg fell back to cash', async () => {
