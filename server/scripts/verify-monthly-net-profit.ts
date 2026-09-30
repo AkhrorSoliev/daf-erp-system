@@ -15,6 +15,7 @@ import { som, dbEnvLabel, printHeader, section, run } from './lib/check-cli';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { SalaryStaffMonthlyService } from '../src/salary/salary-monthly-staff.service';
 import { SalaryMonthlyService } from '../src/salary/salary-monthly.service';
+import { SalaryMissedLessonsService } from '../src/salary/salary-missed-lessons.service';
 import { ReportsFinancialService } from '../src/reports/reports-financial.service';
 import { ReportsProfitLossService } from '../src/reports/reports-profit-loss.service';
 import { buildNetProfit } from '../src/reports/reports-excel.helpers';
@@ -29,7 +30,11 @@ const MONTHS = (() => {
 async function main(prismaClient: PrismaClient) {
   const prisma = prismaClient as unknown as PrismaService;
   const staff = new SalaryStaffMonthlyService(prisma);
-  const salaryMonthly = new SalaryMonthlyService(prisma, staff);
+  const salaryMonthly = new SalaryMonthlyService(
+    prisma,
+    staff,
+    {} as SalaryMissedLessonsService, // getMonthlyForUser only
+  );
   const financial = new ReportsFinancialService(prisma);
   const profitLoss = new ReportsProfitLossService(prisma);
 
