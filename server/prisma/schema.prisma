@@ -891,6 +891,13 @@ enum MockExamStatus {
   ARCHIVED
 }
 
+// How a mock registration came in. The two creators write it themselves: the
+// Telegram bot scene (BOT) and the admin «Qo'lda qo'shish» (ADMIN). ADR-0056.
+enum MockRegistrationChannel {
+  BOT
+  ADMIN
+}
+
 // Grouping of mock exams (e.g. "IELTS", "SAT", "DTM", "Ichki testlar").
 model MockExamSection {
   id              String     @id @default(uuid())
@@ -1081,6 +1088,10 @@ model MockExamParticipant {
   convertedById Int?
 
   registeredAt DateTime @default(now())
+
+  // Where this registration came from. No default on purpose: every writer
+  // states it, so the statistics never infer it from `telegramFirstName`.
+  registeredVia MockRegistrationChannel
 
   // Payment for this specific mock exam. No Transaction is written: `paid`
   // flips when an admin accepts the fee at the desk (`markPaid`) or when a

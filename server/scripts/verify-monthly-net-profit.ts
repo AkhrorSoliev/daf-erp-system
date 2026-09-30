@@ -56,7 +56,7 @@ async function main(prismaClient: PrismaClient) {
     // switcher. The whole-company figure is what this script verifies.
     const branchIds = null;
 
-    const [recognizedRevenue, sm, pl, outflows, old] = await Promise.all([
+    const [recognizedRevenue, sm, pl, outflows, old, withdrawals] = await Promise.all([
       financial.getRecognizedRevenue(COMPANY_ID, {
         start: new Date(Date.UTC(y, m - 1, 1)),
         end: new Date(Date.UTC(y, m, 1)),
@@ -70,14 +70,24 @@ async function main(prismaClient: PrismaClient) {
         endDate,
         branchIds,
       }),
+      // «Yechib olish» — the net profit's withdrawal leg (ADR-0055).
+      financial.getBalanceWithdrawals(COMPANY_ID, { months: [month], branchIds }),
     ]);
 
-    const np = buildNetProfit(pl, sm, outflows, month, recognizedRevenue);
+    const np = buildNetProfit(
+      pl,
+      sm,
+      outflows,
+      month,
+      recognizedRevenue,
+      withdrawals.total,
+    );
 
     section(`${month}  (${np.teacherSalaryHasTopup ? 'top-up bor' : 'top-up YO‘Q'})`);
     console.log(`  ESKI card netProfit (kassa − naqd oylik) : ${som(old.netProfit)}   ← soxta`);
     console.log('  ─── YANGI (kanonik — card + Excel bir xil) ───');
     console.log(`    Dars tushumi (recognized)      : ${som(np.revenue)}   [${np.revenueBasis}]`);
+    console.log(`  + Balansdan yechib olingan       : ${som(np.balanceWithdrawals)}`);
     console.log(`  − Ustoz oyligi                   : ${som(np.teacherSalary)}   [${np.teacherSalaryBasis}${np.teacherSalaryHasTopup ? ' + qo‘shimcha' : ''}]`);
     console.log(`  − Admin oyligi                   : ${som(np.adminSalary)}`);
     console.log(`  − Operatsion xarajat (avanssiz)  : ${som(np.operatingExpenses)}`);

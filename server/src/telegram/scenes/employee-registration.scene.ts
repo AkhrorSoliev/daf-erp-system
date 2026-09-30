@@ -31,6 +31,7 @@ import { staffPortalFor } from '../../common/auth/staff-telegram';
 import type { StaffCabinet } from '../staff/staff-cabinet';
 import { generatePassword } from '../../common/utils/password.util';
 import { buildStaffCredentialsMessage } from './staff-credentials-message';
+import { finishRegistration } from './finish-registration';
 import { downloadFile } from '../utils/download.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UploadService } from '../../upload/upload.service';
@@ -399,11 +400,11 @@ export function createEmployeeRegistrationScene(
         return;
       }
 
+      // Kirish nomi — telefon, agar u boshqa tirik hisobning nomi bo'lmasa;
+      // aks holda bo'sh (kirish baribir telefon bilan). Parol tasodifiy.
+      const password = generatePassword();
       try {
-        // Kirish nomi — telefon, agar u boshqa tirik hisobning nomi bo'lmasa;
-        // aks holda bo'sh (kirish baribir telefon bilan). Parol tasodifiy.
         const login = await loginForPhone(prisma, data.phone);
-        const password = generatePassword();
 
         await usersService.create(
           {
@@ -426,30 +427,6 @@ export function createEmployeeRegistrationScene(
           // `POST /users` from refusing a registration it was never aimed at.
           { kind: 'self-registration' },
         );
-
-        const isTeacherOnly = roleIds.length === 1 && roleIds[0] === 4;
-        const portalUrl = isTeacherOnly
-          ? 'https://lehrer.dafzentrum.uz'
-          : 'https://admin.dafzentrum.uz';
-
-        await ctx.editMessageCaption('\u2705 Tasdiqlandi!');
-        await ctx.replyWithPhoto(data.photo, {
-          caption: buildStaffCredentialsMessage({
-            phone: data.phone,
-            password,
-            portalUrl,
-          }),
-          parse_mode: 'Markdown',
-        });
-
-        await ctx.scene.leave();
-        // Yangi xodim darhol o'z kabinetini ko'radi (ADR-0045). Xato bo'lsa
-        // faqat log: hisob ochildi, kirish ma'lumotlari yuborildi.
-        await staffCabinet?.showMenuForChat(ctx).catch((err: Error) => {
-          logger.warn(
-            `Xodim menyusi yuborilmadi (chat ${chatId}): ${err.message}`,
-          );
-        });
       } catch (error) {
         // Logged, not swallowed. A bare `catch` here is what hid a total
         // registration outage: every attempt failed, the user saw a polite
@@ -462,7 +439,34 @@ export function createEmployeeRegistrationScene(
           "Ro'yxatdan o'tishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring yoki administrator bilan bog'laning.",
         );
         await ctx.scene.leave();
+        return;
       }
+
+      // The employee's account exists now.
+      const isTeacherOnly = roleIds.length === 1 && roleIds[0] === 4;
+      const portalUrl = isTeacherOnly
+        ? 'https://lehrer.dafzentrum.uz'
+        : 'https://admin.dafzentrum.uz';
+
+      await finishRegistration(
+        ctx,
+        logger,
+        data.photo,
+        buildStaffCredentialsMessage({
+          phone: data.phone,
+          password,
+          portalUrl,
+        }),
+        { parse_mode: 'Markdown' },
+      );
+
+      // Yangi xodim darhol o'z kabinetini ko'radi (ADR-0045). Xato bo'lsa
+      // faqat log: hisob ochildi, kirish ma'lumotlari yuborildi.
+      await staffCabinet?.showMenuForChat(ctx).catch((err: Error) => {
+        logger.warn(
+          `Xodim menyusi yuborilmadi (chat ${chatId}): ${err.message}`,
+        );
+      });
     });
   });
 

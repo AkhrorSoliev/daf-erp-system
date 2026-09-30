@@ -20,3 +20,15 @@ export const RESULTS_AUDIENCE = {
     { feeAmount: null, exam: { price: 0 } },
   ],
 } satisfies Prisma.MockExamParticipantWhereInput;
+
+/**
+ * `RESULTS_AUDIENCE` for rows already in memory (the statistics block). The
+ * spec checks the two against each other case by case.
+ */
+export function inResultsAudience(
+  paid: boolean,
+  feeAmount: number | null,
+  examPrice: number,
+): boolean {
+  return paid || feeAmount === 0 || (feeAmount === null && examPrice === 0);
+}

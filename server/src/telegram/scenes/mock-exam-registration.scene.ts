@@ -1,7 +1,11 @@
 import { Logger } from '@nestjs/common';
 import { Scenes, Markup, Telegraf } from 'telegraf';
 import { message } from 'telegraf/filters';
-import { MockExamStatus, Prisma } from '@prisma/client';
+import {
+  MockExamStatus,
+  MockRegistrationChannel,
+  Prisma,
+} from '@prisma/client';
 import { BotContext } from '../types/context';
 import { SCENES } from '../constants';
 import {
@@ -715,6 +719,7 @@ async function finalizeRegistration(ctx: BotContext, deps: SceneDeps) {
         level,
         examTime,
         feeAmount,
+        registeredVia: MockRegistrationChannel.BOT,
         telegramChatId: chatId,
         telegramUsername: fromUser.username ?? null,
         telegramFirstName: fromUser.first_name ?? null,

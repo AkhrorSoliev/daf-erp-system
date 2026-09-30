@@ -27,6 +27,10 @@ import {
   tashkentMonthRangeUtc,
   tashkentRangeUtc,
 } from '../common/date/tashkent';
+import {
+  loadBalanceWithdrawals,
+  type BalanceWithdrawals,
+} from './balance-withdrawals';
 
 /** One billable lesson held in a window and the revenue it recognises. */
 export interface HeldLessonValue {
@@ -456,6 +460,14 @@ export class ReportsFinancialService {
   ): Promise<number> {
     const lessons = await this.valueHeldLessons(companyId, opts);
     return lessons.reduce((sum, l) => sum + l.value, 0);
+  }
+
+  /** «Yechib olish» over whole months — the net profit's withdrawal leg. */
+  getBalanceWithdrawals(
+    companyId: number,
+    opts: { months: string[]; branchIds: ReportBranchIds },
+  ): Promise<BalanceWithdrawals> {
+    return loadBalanceWithdrawals(this.prisma, companyId, opts);
   }
 
   /**
