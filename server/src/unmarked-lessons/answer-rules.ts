@@ -18,6 +18,36 @@ export async function findPendingUnmarkedLesson(
 }
 
 /**
+ * A cancellation or a move away takes the day off the timetable — the rule
+ * `endedLessonsOn` applies: a day another live move lands on is still a
+ * lesson. Read inside the caller's Serializable transaction, so a cancel or
+ * move committed after the caller's earlier reads either shows up here or
+ * conflicts with it.
+ */
+export async function lessonDayTakenAway(
+  db: Pick<Prisma.TransactionClient, 'lessonCancellation' | 'lessonReschedule'>,
+  groupId: string,
+  date: Date,
+): Promise<'CANCELLED' | 'MOVED' | null> {
+  const cancelled = await db.lessonCancellation.findFirst({
+    where: { groupId, date, deletedAt: null },
+    select: { id: true },
+  });
+  if (cancelled) return 'CANCELLED';
+  const moves = await db.lessonReschedule.findMany({
+    where: {
+      groupId,
+      deletedAt: null,
+      OR: [{ originalDate: date }, { newDate: date }],
+    },
+    select: { originalDate: true, newDate: true },
+  });
+  const away = moves.some((m) => m.originalDate.getTime() === date.getTime());
+  const here = moves.some((m) => m.newDate.getTime() === date.getTime());
+  return away && !here ? 'MOVED' : null;
+}
+
+/**
  * Once an administrator has taken the lesson's task, the other
  * administrators leave it to them; directors and the CEO can always answer
  * (spec §3.3). The roles come from the caller's token — this only ever

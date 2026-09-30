@@ -29,6 +29,7 @@ import { closeLessonTask } from '../unmarked-lessons/lesson-task';
 import {
   assertMayAnswer,
   findPendingUnmarkedLesson,
+  lessonDayTakenAway,
 } from '../unmarked-lessons/answer-rules';
 import {
   UNMARKED_LESSON_HELD,
@@ -255,6 +256,20 @@ export class AttendanceSaveService {
         companyId,
       });
       await assertMayAnswer(tx, row, userId, roles);
+
+      // Cancelled or moved away after the question opened: a register now
+      // would refund an excused student twice or bill a cancelled lesson.
+      const takenAway = await lessonDayTakenAway(tx, groupId, parsedDate);
+      if (takenAway === 'CANCELLED') {
+        throw new BadRequestException(
+          "Bu dars bekor qilingan — davomat kiritib bo'lmaydi",
+        );
+      }
+      if (takenAway === 'MOVED') {
+        throw new BadRequestException(
+          "Bu sana boshqa kunga ko'chirilgan — davomatni yangi sanada oling",
+        );
+      }
 
       const already = await tx.attendance.count({
         where: { groupId, date: parsedDate },

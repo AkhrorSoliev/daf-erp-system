@@ -78,6 +78,8 @@ describe('AttendanceSaveService.saveLate', () => {
         findMany: jest.fn().mockResolvedValue([]),
         updateMany: jest.fn(),
       },
+      lessonCancellation: { findFirst: jest.fn().mockResolvedValue(null) },
+      lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
       commentAssignee: {
         findUnique: jest.fn().mockResolvedValue({ id: 'ca1', seenAt: null }),
         deleteMany: jest.fn(),
@@ -286,6 +288,52 @@ describe('AttendanceSaveService.saveLate', () => {
         1,
       ),
     ).rejects.toThrow('Bu dars uchun davomat allaqachon olingan');
+  });
+
+  // A cancellation or move committed after the question opened: «Bo'ldi»
+  // would refund an EXCUSED student twice (monthly) or bill a cancelled
+  // lesson (pack).
+  it('refuses a lesson cancelled since the question opened', async () => {
+    tx.lessonCancellation.findFirst.mockResolvedValue({ id: 'x1' });
+    await expect(
+      service.saveLate(
+        'g1',
+        '2026-09-28',
+        { entries },
+        3,
+        ['Administrator'],
+        1,
+      ),
+    ).rejects.toThrow("Bu dars bekor qilingan — davomat kiritib bo'lmaydi");
+    expect(tx.lessonCancellation.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { groupId: 'g1', date: lessonDay, deletedAt: null },
+      }),
+    );
+    expect(tx.attendance.upsert).not.toHaveBeenCalled();
+    expect(tx.unmarkedLesson.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses a lesson moved to another day since the question opened', async () => {
+    tx.lessonReschedule.findMany.mockResolvedValue([
+      {
+        originalDate: lessonDay,
+        newDate: new Date('2026-10-02T00:00:00.000Z'),
+      },
+    ]);
+    await expect(
+      service.saveLate(
+        'g1',
+        '2026-09-28',
+        { entries },
+        3,
+        ['Administrator'],
+        1,
+      ),
+    ).rejects.toThrow(
+      "Bu sana boshqa kunga ko'chirilgan — davomatni yangi sanada oling",
+    );
+    expect(tx.attendance.upsert).not.toHaveBeenCalled();
   });
 
   it('lets only the CEO exempt the teacher', async () => {

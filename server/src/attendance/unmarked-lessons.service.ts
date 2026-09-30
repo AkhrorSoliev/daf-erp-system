@@ -19,6 +19,7 @@ import {
 import {
   assertMayAnswer,
   findPendingUnmarkedLesson,
+  lessonDayTakenAway,
 } from '../unmarked-lessons/answer-rules';
 import { HOLIDAY_LOOKAHEAD_DAYS } from '../unmarked-lessons/reask-holidays';
 import { NotHeldDto } from './dto/not-held.dto';
@@ -142,7 +143,9 @@ export class UnmarkedLessonsService {
   /**
    * Serializable, and it READS attendance: a register saved at the same
    * moment reads the question in its own Serializable transaction, so one of
-   * the two aborts (spec §3.1) — a lesson is never both marked and asked.
+   * the two aborts (spec §3.1) — a lesson is never both marked and asked. It
+   * reads the day's cancellation and moves for the same reason: those
+   * transactions read the question too.
    */
   private openOne(
     lesson: EndedLesson,
@@ -157,6 +160,8 @@ export class UnmarkedLessonsService {
           select: { id: true },
         });
         if (marked) return false;
+        // Cancelled or moved away since the sweep loaded the day.
+        if (await lessonDayTakenAway(tx, lesson.groupId, today)) return false;
         const open = await tx.unmarkedLesson.findUnique({
           where: { groupId_date: { groupId: lesson.groupId, date: today } },
           select: { id: true },

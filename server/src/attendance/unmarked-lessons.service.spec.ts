@@ -34,6 +34,8 @@ describe('UnmarkedLessonsService', () => {
   beforeEach(async () => {
     tx = {
       attendance: { findFirst: jest.fn().mockResolvedValue(null) },
+      lessonCancellation: { findFirst: jest.fn().mockResolvedValue(null) },
+      lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
       unmarkedLesson: {
         findUnique: jest.fn().mockResolvedValue(null),
         create: jest.fn(),
@@ -108,6 +110,36 @@ describe('UnmarkedLessonsService', () => {
       tx.attendance.findFirst.mockResolvedValue({ id: 'a1' });
       expect(await service.openForEndedLessons(NOW)).toEqual([]);
       expect(tx.unmarkedLesson.create).not.toHaveBeenCalled();
+    });
+
+    // A cancellation or move committed between the sweep's load and its
+    // transaction: the transaction reads them again (which also gives SSI the
+    // conflict against the cancel/move transaction).
+    it('opens nothing for a lesson cancelled after the sweep loaded the day', async () => {
+      tx.lessonCancellation.findFirst.mockResolvedValue({ id: 'x1' });
+      expect(await service.openForEndedLessons(NOW)).toEqual([]);
+      expect(tx.lessonCancellation.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { groupId: 'g1', date: today, deletedAt: null },
+        }),
+      );
+      expect(tx.unmarkedLesson.create).not.toHaveBeenCalled();
+    });
+
+    it('opens nothing for a lesson moved away after the sweep loaded the day', async () => {
+      tx.lessonReschedule.findMany.mockResolvedValue([
+        { originalDate: today, newDate: new Date('2026-10-02T00:00:00.000Z') },
+      ]);
+      expect(await service.openForEndedLessons(NOW)).toEqual([]);
+      expect(tx.unmarkedLesson.create).not.toHaveBeenCalled();
+    });
+
+    it('still opens a day another live move lands on', async () => {
+      tx.lessonReschedule.findMany.mockResolvedValue([
+        { originalDate: today, newDate: new Date('2026-10-02T00:00:00.000Z') },
+        { originalDate: new Date('2026-09-28T00:00:00.000Z'), newDate: today },
+      ]);
+      expect(await service.openForEndedLessons(NOW)).toHaveLength(1);
     });
 
     it('opens nothing twice', async () => {
