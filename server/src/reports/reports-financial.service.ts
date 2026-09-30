@@ -23,9 +23,11 @@ import {
   tashkentMonthKey,
 } from './debt-history.util';
 import {
+  addMonthsToMonthKey,
   tashkentDateStr,
   tashkentMonthRangeUtc,
   tashkentRangeUtc,
+  utcMidnightFromDateStr,
 } from '../common/date/tashkent';
 
 /** One billable lesson held in a window and the revenue it recognises. */
@@ -821,32 +823,28 @@ export class ReportsFinancialService {
    * Monthly trend data for the last 6 months — used for KPI card charts.
    */
   async getFinancialTrend(companyId: number, branchIds: ReportBranchIds) {
-    const now = new Date();
-    const months: {
-      label: string;
-      monthKey: string;
-      start: Date;
-      end: Date;
-    }[] = [];
-
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const start = new Date(d.getFullYear(), d.getMonth(), 1);
-      const end = new Date(
-        d.getFullYear(),
-        d.getMonth() + 1,
-        0,
-        23,
-        59,
-        59,
-        999,
-      );
-      const label = `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-      // `YYYY-MM` alongside the display label so callers can ask for the
-      // canonical per-month figure without re-parsing `MM/YYYY`.
-      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      months.push({ label, monthKey, start, end });
-    }
+    // Tashkent months. They were built with `new Date(y, m, 1)`, i.e. in the
+    // PROCESS timezone (UTC on Railway): every window ran 05:00 → 05:00
+    // Tashkent, so a payment made before 05:00 on the 1st counted in the
+    // previous month, and until 05:00 the series still ended on that month.
+    const current = tashkentMonthKey(new Date());
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const monthKey = addMonthsToMonthKey(current, i - 5);
+      const [year, month] = monthKey.split('-');
+      return {
+        label: `${month}/${year}`,
+        // `YYYY-MM` alongside the display label so callers can ask for the
+        // canonical per-month figure without re-parsing `MM/YYYY`.
+        monthKey,
+        // TIMESTAMP columns: `createdAt`, `paidAt`.
+        instants: tashkentMonthRangeUtc(monthKey),
+        // `Expense.date` is `@db.Date`: plain calendar dates, next month exclusive.
+        dates: {
+          gte: utcMidnightFromDateStr(`${monthKey}-01`),
+          lt: utcMidnightFromDateStr(`${addMonthsToMonthKey(monthKey, 1)}-01`),
+        },
+      };
+    });
 
     const branchFilter = branchIdWhere(branchIds);
     // The count legs (new students, unique payers) and the payroll leg carry
@@ -860,7 +858,7 @@ export class ReportsFinancialService {
 
     const result = await Promise.all(
       months.map(async (m) => {
-        const dateFilter = { gte: m.start, lte: m.end };
+        const dateFilter = m.instants;
 
         const [
           income,
@@ -886,7 +884,7 @@ export class ReportsFinancialService {
             where: {
               companyId,
               deletedAt: null,
-              date: { gte: m.start, lte: m.end },
+              date: m.dates,
               ...branchFilter,
             },
             _sum: { amount: true },
@@ -905,7 +903,7 @@ export class ReportsFinancialService {
               companyId,
               deletedAt: null,
               category: 'MARKETING',
-              date: { gte: m.start, lte: m.end },
+              date: m.dates,
               ...branchFilter,
             },
             _sum: { amount: true },
@@ -933,7 +931,7 @@ export class ReportsFinancialService {
               companyId,
               deletedAt: null,
               category: 'TEACHER_ADVANCE',
-              date: { gte: m.start, lte: m.end },
+              date: m.dates,
               ...branchFilter,
             },
             _sum: { amount: true },

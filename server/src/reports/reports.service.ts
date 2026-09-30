@@ -26,6 +26,7 @@ import {
   singleBranchId,
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
+import { tashkentMonthKey } from '../common/date/tashkent';
 import {
   ReportsProfitLossService,
   ProfitLossQuery,
@@ -483,9 +484,9 @@ export class ReportsService {
     // Month = the period's START month, the same derivation the salary fold and
     // the Excel `monthStr` already use. Audit H22 (cards sitting on different
     // bases) is a known separate item — do not diverge from the convention here.
-    const month = (
-      query.startDate ?? new Date().toISOString().slice(0, 10)
-    ).slice(0, 7);
+    // With no period the overview covers the current TASHKENT month; the UTC
+    // date used here before projected last month from 00:00 to 05:00 on the 1st.
+    const month = query.startDate?.slice(0, 7) ?? tashkentMonthKey(new Date());
     const expectation = await this.getMonthlyExpectation(companyId, {
       month,
       branchIds: query.branchIds,
