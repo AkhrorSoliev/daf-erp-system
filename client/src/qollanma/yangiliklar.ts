@@ -61,6 +61,13 @@ export const yangiliklar: Yangilik[] = [
     sahifa: { bolim: "oquvchilar", sahifa: "muzlatish" },
   },
   {
+    sana: "2026-09-27",
+    sarlavha: "Guruh holati yo to'liq o'zgaradi, yo umuman",
+    matn: "Guruhni «Bekor qilingan» yoki «Tugallangan» qilganingizda holat, o'quvchilarni chiqarish, pulni qaytarish, tarix va avtomatik bitirish birga bajariladi. Biror qadam yiqilsa, guruh holati o'zgarmaydi va «Guruh holati o'zgarmadi, hech narsa saqlanmadi. Qayta urinib ko'ring.» xabari chiqadi. Ilgari guruh yopilib, o'quvchilar unda ochiq qolib ketishi mumkin edi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "guruhlar", sahifa: "guruh-holatlari" },
+  },
+  {
     sana: "2026-09-26",
     sarlavha: "Barcha kurslar oylik to'lovga o'tdi",
     matn: "01.09.2026 dan barcha kurslar oylik to'lovda; tizimdagi o'tish 26.09.2026 da bajarildi va sentabr oyi qaytadan oylik hisoblandi. Endi oy hisobi oy boshida yoziladi va davomat pulga tegmaydi. Dars paketi tizimda saqlanib qolgan.",
@@ -80,6 +87,13 @@ export const yangiliklar: Yangilik[] = [
     matn: "«To'lovlar» tabi endi «To'lovlar hisoboti»ni ko'rsatadi: bitta gapli javob, «Oylar bo'yicha» jadvali, «To'lovlar qayerga ketdi» bo'limi va PDF. Hisobot balans bilan so'mma-so'm mos keladi; farq chiqsa, u yashirilmaydi.",
     rollar: [1, 2, 3],
     sahifa: { bolim: "oquvchilar", sahifa: "oquvchi-kartasi" },
+  },
+  {
+    sana: "2026-09-26",
+    sarlavha: "Guruh yopilganda muzlatilgan o'quvchi ham chiqariladi",
+    matn: "Guruh «Bekor qilingan» yoki «Tugallangan» qilinsa, muzlatilgan o'quvchining yozilishi ham yopiladi: u guruhdan chiqarilgan hisoblanadi (tugallangan guruhda muzlatilgan o'quvchi bitirmaydi). Guruhni o'chirish oynasi endi nechta o'quvchi chiqishini oldindan ko'rsatadi, o'chirilgan guruh esa arxivdan bo'sh qaytadi. Ilgari muzlatilgan o'quvchi yopilgan guruhda «Muzlatilgan» bo'lib qolardi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "guruhlar", sahifa: "guruh-holatlari" },
   },
   {
     sana: "2026-09-25",
@@ -190,5 +204,11 @@ export const yangiliklar: Yangilik[] = [
     matn: "Har yangi o'quvchi lid bilan bog'lanadi. Shuning uchun «O'quvchilar» sahifasidagi «Yangi o'quvchi» oynasida «Qayerdan bildi?» maydonini tanlash shart.",
     rollar: [1, 2, 3],
     sahifa: { bolim: "oquvchilar", sahifa: "yangi-oquvchi" },
+  },
+  {
+    sana: "2026-09-02",
+    sarlavha: "Kunlik jadval «Jadval» sahifasiga ko'chdi",
+    matn: "Kunlik dars jadvali ilgari Bosh sahifaning o'zi edi; endi u chap menyudagi «Jadval» sahifasida (hamma xodim ko'radi). Bosh sahifada boshqaruv paneli turadi; jadvalni u yerda faqat o'qituvchi roli bor xodim ko'radi.",
+    sahifa: { bolim: "guruhlar", sahifa: "jadval" },
   },
 ];
