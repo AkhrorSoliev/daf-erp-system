@@ -266,6 +266,9 @@ export const useTasksBoard = create<TasksBoardState>((set, get) => ({
       set({ tasks });
       // Includes the server's 409 when another administrator took the task.
       toast.error(getErrorMessage(error, "Status o'zgartirishda xatolik"));
+      // The server deleted this viewer's copy when someone else took the
+      // task: reload so the card does not stay with an enabled prompt.
+      if (task.isSystem) void get().fetchMyTasks();
     }
   },
 }));
