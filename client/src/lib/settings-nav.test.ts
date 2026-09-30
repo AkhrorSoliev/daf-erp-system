@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getVisibleSettingsSections, settingsNavSections } from "./settings-nav";
+import {
+  canOpenEmployeeSettings,
+  getVisibleSettingsSections,
+  settingsNavSections,
+} from "./settings-nav";
 
 /**
  * The /settings page renders this list. `visibleForRoles` must match the
@@ -11,6 +15,7 @@ import { getVisibleSettingsSections, settingsNavSections } from "./settings-nav"
 const CEO = 1;
 const BRANCH_DIRECTOR = 2;
 const ADMINISTRATOR = 3;
+const TEACHER = 4;
 const CASHIER = 5;
 
 /** Section title → titles of the items visible in that section. */
@@ -54,6 +59,22 @@ describe("getVisibleSettingsSections — /settings da kim nimani ko'radi", () =>
     // Cashier goes first on purpose: a buggy filter that only looks at the
     // first role returns the cashier's 3 items here and fails.
     expect(visibleTitles([CASHIER, ADMINISTRATOR])).toEqual(visibleTitles([ADMINISTRATOR]));
+  });
+});
+
+describe("canOpenEmployeeSettings", () => {
+  it("opens an employee's page to the CEO and a Branch Director", () => {
+    expect(canOpenEmployeeSettings([CEO])).toBe(true);
+    expect(canOpenEmployeeSettings([BRANCH_DIRECTOR])).toBe(true);
+    expect(canOpenEmployeeSettings([ADMINISTRATOR, BRANCH_DIRECTOR])).toBe(true);
+  });
+
+  it("keeps it closed to anyone else: SettingsLayoutShell or the API sends them back", () => {
+    expect(canOpenEmployeeSettings([ADMINISTRATOR])).toBe(false);
+    expect(canOpenEmployeeSettings([TEACHER])).toBe(false);
+    expect(canOpenEmployeeSettings([ADMINISTRATOR, TEACHER])).toBe(false);
+    expect(canOpenEmployeeSettings([CASHIER])).toBe(false);
+    expect(canOpenEmployeeSettings([])).toBe(false);
   });
 });
 

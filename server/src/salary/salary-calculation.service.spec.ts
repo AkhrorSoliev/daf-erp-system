@@ -68,6 +68,8 @@ describe('SalaryCalculationService', () => {
       enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
       // Pack markers of monthly-course lessons with no charge (ADR-0051).
       transaction: { findMany: jest.fn().mockResolvedValue([]) },
+      // Lessons whose teacher pay is forfeited (ADR-0054); default none.
+      unmarkedLesson: { findMany: jest.fn().mockResolvedValue([]) },
       // BR-09b backlog scan (un-accrued top-up-era lessons); default none.
       $queryRaw: jest.fn().mockResolvedValue([]),
       $transaction: jest.fn(async (cb: any) => cb(tx)),
@@ -209,6 +211,53 @@ describe('SalaryCalculationService', () => {
           centerFunded: true,
         }),
       );
+    });
+
+    it('never fronts a lesson whose pay was forfeited (ADR-0054)', async () => {
+      prisma.attendance.findMany.mockResolvedValue([
+        {
+          id: 'att-1',
+          studentId: 100,
+          groupId: 'g1',
+          date: new Date('2026-07-10'),
+        },
+      ]);
+      prisma.attendance.groupBy.mockResolvedValue([
+        { studentId: 100, groupId: 'g1', _count: { _all: 6 } },
+      ]);
+      prisma.group.findMany.mockResolvedValue([
+        { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } },
+      ]);
+      prisma.groupTeacher.findMany.mockResolvedValue([
+        { groupId: 'g1', teacherId: 10010 },
+      ]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          salaryType: 'PERCENTAGE',
+          value: 30,
+          effectiveFrom: new Date('2026-05-01'),
+          effectiveTo: null,
+          config: { userId: 10010, groupId: null, salaryType: 'PERCENTAGE' },
+        },
+      ]);
+      prisma.unmarkedLesson.findMany.mockResolvedValue([
+        { groupId: 'g1', date: new Date('2026-07-10') },
+      ]);
+
+      await service.calculateMonthlySalaries(1, {
+        asOfDate: julyAsOf,
+        now: julyNow,
+      });
+
+      expect(prisma.unmarkedLesson.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            companyId: 1,
+            teacherPayExempt: false,
+          }),
+        }),
+      );
+      expect(accrualService.createAccrual).not.toHaveBeenCalled();
     });
 
     // Oylik kursda cron `createAccrual` ga BO'LUVCHINI ham berishi kerak.
@@ -473,6 +522,48 @@ describe('SalaryCalculationService', () => {
           creditPeriodDateOverride: expect.any(Date),
         }),
       );
+    });
+
+    it('BR-09b: never backfills a lesson whose pay was forfeited (ADR-0054)', async () => {
+      const augNow = new Date('2026-09-20T08:00:00.000Z');
+      const augAsOf = new Date('2026-08-15T00:00:00.000Z');
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.attendance.groupBy.mockResolvedValue([
+        { studentId: 100, groupId: 'g1', _count: { _all: 5 } },
+      ]);
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          id: 'jul-att',
+          studentId: 100,
+          groupId: 'g1',
+          date: new Date('2026-07-10'),
+        },
+      ]);
+      prisma.group.findMany.mockResolvedValue([
+        { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } },
+      ]);
+      prisma.groupTeacher.findMany.mockResolvedValue([
+        { groupId: 'g1', teacherId: 10010 },
+      ]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          salaryType: 'PERCENTAGE',
+          value: 30,
+          effectiveFrom: new Date('2026-05-01'),
+          effectiveTo: null,
+          config: { userId: 10010, groupId: null, salaryType: 'PERCENTAGE' },
+        },
+      ]);
+      prisma.unmarkedLesson.findMany.mockResolvedValue([
+        { groupId: 'g1', date: new Date('2026-07-10') },
+      ]);
+
+      await service.calculateMonthlySalaries(1, {
+        asOfDate: augAsOf,
+        now: augNow,
+      });
+
+      expect(accrualService.createAccrual).not.toHaveBeenCalled();
     });
 
     /**

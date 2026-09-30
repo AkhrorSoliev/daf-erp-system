@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { tashkentNow } from "@/lib/tashkent-time";
+import { newAttendanceWindow } from "@/lib/attendance-window";
 import { useAuth } from "@/hooks/use-auth";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { QrAttendanceDialog } from "./qr-attendance-dialog";
@@ -71,6 +72,12 @@ export function AttendanceForm({
   // bu bayroq finalize rejimiga o'tkazadi.
   const [forceFinalizeMode, setForceFinalizeMode] = useState(false);
   const [planSubmitting, setPlanSubmitting] = useState<number | null>(null);
+  // The lesson's real times for this date, from the register's own read: a day
+  // moved here can carry times of its own (the server judges the window on them).
+  const [effectiveTimes, setEffectiveTimes] = useState<{
+    start: string | null;
+    end: string | null;
+  } | null>(null);
 
   const [y, m, d] = date.split("-");
   const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
@@ -82,11 +89,14 @@ export function AttendanceForm({
   const tashkent = tashkentNow();
   const isToday = date === tashkent.dateStr;
 
+  const lessonStartTime = effectiveTimes?.start ?? group.lessonStartTime ?? null;
+  const lessonEndTime = effectiveTimes?.end ?? group.lessonEndTime ?? null;
+
   const lessonTimeInfo = (() => {
-    if (!isToday || !group.lessonStartTime || !group.lessonEndTime) return null;
+    if (!isToday || !lessonStartTime || !lessonEndTime) return null;
     const nowMinutes = tashkent.minutes;
-    const [sh, sm] = group.lessonStartTime.split(":").map(Number);
-    const [eh, em] = group.lessonEndTime.split(":").map(Number);
+    const [sh, sm] = lessonStartTime.split(":").map(Number);
+    const [eh, em] = lessonEndTime.split(":").map(Number);
     const start = sh * 60 + sm;
     const end = eh * 60 + em;
 
@@ -96,40 +106,62 @@ export function AttendanceForm({
     if (nowMinutes < windowStart)
       return {
         status: "before" as const,
-        message: `Dars ${group.lessonStartTime} da boshlanadi (Toshkent vaqti). Davomat dars boshlanishidan 10 daqiqa oldin ochiladi`,
+        message: `Dars ${lessonStartTime} da boshlanadi (Toshkent vaqti). Davomat dars boshlanishidan 10 daqiqa oldin ochiladi`,
       };
-    if (nowMinutes > end)
+    if (nowMinutes >= end)
       return {
         status: "after" as const,
-        message: `Dars vaqti tugagan (${group.lessonStartTime} – ${group.lessonEndTime}, Toshkent vaqti). Davomat olish yopilgan`,
+        message: `Dars vaqti tugagan (${lessonStartTime} – ${lessonEndTime}, Toshkent vaqti). Davomat olish yopilgan`,
       };
     return {
       status: "during" as const,
-      message: `Dars davom etmoqda (${group.lessonStartTime} – ${group.lessonEndTime}, Toshkent vaqti)`,
+      message: `Dars davom etmoqda (${lessonStartTime} – ${lessonEndTime}, Toshkent vaqti)`,
     };
   })();
+
+  // A NEW register is accepted only inside the lesson (spec 2026-09-29 §3.1),
+  // for every role; after it, the lesson is answered through «Dars bo'ldimi?».
+  // Editing a register that already has rows is not governed by this window.
+  const attendanceWindow = newAttendanceWindow({
+    date,
+    todayStr: tashkent.dateStr,
+    nowMinutes: tashkent.minutes,
+    startTime: lessonStartTime,
+    endTime: lessonEndTime,
+  });
+  const isNewRegister =
+    students.length > 0 && students.every((s) => s.status === null);
+  const newRegisterClosed = isNewRegister && attendanceWindow !== "OPEN";
 
   // Teacher bir marta davomat olib saqlagan bo'lsa — qayta tahrirlab bo'lmaydi.
   // Faqat admin/direktor tahrirlay oladi.
   const alreadyTakenForTeacher =
     !isAdmin && students.some((s) => s.status !== null);
 
-  const isLocked =
-    alreadyTakenForTeacher ||
-    (!isAdmin &&
-      lessonTimeInfo != null &&
-      lessonTimeInfo.status !== "during");
-
   // Oldindan belgilash konteksti: admin, davomat hali umuman olinmagan
   // (barcha real status null) va dars bugun yoki kelajakda. Bu holatda
   // admin to'liq ro'yxatni saqlamasdan, bitta o'quvchini oldindan
   // "kelmaydi" deb belgilab qo'yishi mumkin — ustoz qulflanmaydi.
+  // Dars tugagan bo'lsa oldindan belgilash ma'nosiz: forma yopiq qoladi.
   const isPlanningContext =
     isAdmin &&
-    students.length > 0 &&
-    students.every((s) => s.status === null) &&
-    date >= tashkent.dateStr;
+    isNewRegister &&
+    date >= tashkent.dateStr &&
+    attendanceWindow !== "ENDED";
   const planningMode = isPlanningContext && !forceFinalizeMode;
+
+  const isLocked =
+    alreadyTakenForTeacher ||
+    (!isAdmin &&
+      lessonTimeInfo != null &&
+      lessonTimeInfo.status !== "during") ||
+    (newRegisterClosed && !planningMode);
+
+  // The lesson's window governs a NEW register only. An administrator editing
+  // one that already has rows is not bound by it, so «yopilgan» would mislead
+  // (nor while the register is still loading and it is not yet known).
+  const editingExistingRegister =
+    isAdmin && (loading || students.some((s) => s.status !== null));
 
   const fetchAttendance = useCallback(async () => {
     setLoading(true);
@@ -145,6 +177,10 @@ export function AttendanceForm({
       setStudents(active);
       setDebtorStudents(debtors);
       setCoursePrice(data.coursePrice ?? 0);
+      setEffectiveTimes({
+        start: data.effectiveStartTime ?? null,
+        end: data.effectiveEndTime ?? null,
+      });
 
       const map = new Map<number, AttendanceEntry>();
       for (const s of active) {
@@ -165,6 +201,7 @@ export function AttendanceForm({
       setStudents([]);
       setDebtorStudents([]);
       setCoursePrice(0);
+      setEffectiveTimes(null);
       setEntries(new Map());
     } finally {
       setLoading(false);
@@ -376,7 +413,9 @@ export function AttendanceForm({
       )}
 
       {/* Lesson time banner */}
-      {lessonTimeInfo && !alreadyTakenForTeacher && (
+      {lessonTimeInfo &&
+        !alreadyTakenForTeacher &&
+        !(editingExistingRegister && lessonTimeInfo.status !== "during") && (
         <div
           className={cn(
             "flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm",
@@ -393,6 +432,19 @@ export function AttendanceForm({
         </div>
       )}
 
+      {/* Yangi davomat yopiq: dars tugagan yoki o'tgan kun (faqat admin) */}
+      {isAdmin &&
+        newRegisterClosed &&
+        !planningMode &&
+        (attendanceWindow === "ENDED" || date < tashkent.dateStr) && (
+          <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+            <Clock className="size-4 shrink-0" />
+            Dars tugagan — davomat olish yopilgan. Dars bo&apos;lgan-bo&apos;lmaganini
+            «Davomat olinmagan darslar» ro&apos;yxatida, «Jadval» yoki «Topshiriqlar»da
+            belgilang.
+          </div>
+        )}
+
       {/* Oldindan belgilash rejimi banneri */}
       {!loading && planningMode && (
         <div className="flex flex-col gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-400 sm:flex-row sm:items-center sm:justify-between">
@@ -405,14 +457,16 @@ export function AttendanceForm({
               yechilmaydi).
             </span>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setForceFinalizeMode(true)}
-            className="shrink-0"
-          >
-            Hozir to&apos;liq davomat olish
-          </Button>
+          {attendanceWindow === "OPEN" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setForceFinalizeMode(true)}
+              className="shrink-0"
+            >
+              Hozir to&apos;liq davomat olish
+            </Button>
+          )}
         </div>
       )}
 

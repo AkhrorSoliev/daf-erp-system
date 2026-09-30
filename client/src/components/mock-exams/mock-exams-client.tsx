@@ -38,6 +38,7 @@ import {
   CreateExamDrawer,
   type CreateExamPrefill,
 } from "./create-exam-drawer";
+import { MockKpiCard } from "./mock-kpi-card";
 
 const STATUS_FILTERS: MultiSelectOption[] = (
   [
@@ -121,7 +122,7 @@ export function MockExamsClient() {
     <div className="flex flex-col gap-4">
       {revenue && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <KpiCard
+          <MockKpiCard
             icon={<Wallet className="size-4" />}
             label="Mock daromad"
             value={
@@ -131,17 +132,17 @@ export function MockExamsClient() {
               </span>
             }
           />
-          <KpiCard
+          <MockKpiCard
             icon={<CheckCircle2 className="size-4" />}
             label="To'langan ro'yxatlar"
             value={`${revenue.totalPaid}`}
           />
-          <KpiCard
+          <MockKpiCard
             icon={<Users className="size-4" />}
             label="Jami ishtirokchilar"
             value={`${revenue.totalParticipants}`}
           />
-          <KpiCard
+          <MockKpiCard
             icon={<ClipboardCheck className="size-4" />}
             label="Jami imtihonlar"
             value={`${revenue.totalExams}`}
@@ -217,6 +218,8 @@ export function MockExamsClient() {
                 <TableHead>Imtihon nomi</TableHead>
                 <TableHead className="w-36">Holat</TableHead>
                 <TableHead className="w-36 text-right">Ishtirokchilar</TableHead>
+                <TableHead className="w-24 text-right">To&apos;lagan</TableHead>
+                <TableHead className="w-36 text-right">Tushum</TableHead>
                 <TableHead className="w-28 text-right">Narxi</TableHead>
                 <TableHead className="w-32">Yaratilgan</TableHead>
               </TableRow>
@@ -265,6 +268,22 @@ export function MockExamsClient() {
                       <span className="text-muted-foreground">0</span>
                     )}
                   </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {(e.paidCount ?? 0) > 0 ? (
+                      <span className="font-medium">{e.paidCount}</span>
+                    ) : (
+                      <span className="text-muted-foreground">0</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right text-xs tabular-nums">
+                    {(e.revenue ?? 0) > 0 ? (
+                      <span className="font-medium">
+                        {formatPrice(e.revenue ?? 0)} so&apos;m
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right text-xs tabular-nums">
                     {e.price > 0 ? (
                       <span className="font-medium">
@@ -291,26 +310,6 @@ export function MockExamsClient() {
           setCreateExam({ open: false, prefill: { sectionId: null } })
         }
       />
-    </div>
-  );
-}
-
-function KpiCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-lg border bg-card p-4">
-      <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
-        {icon}
-        {label}
-      </div>
-      <div className="mt-1.5 text-lg font-semibold tabular-nums">{value}</div>
     </div>
   );
 }

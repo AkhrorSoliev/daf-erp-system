@@ -247,6 +247,35 @@ describe('paar', () => {
   });
 });
 
+describe('letters are asked by ear only', () => {
+  const C = w(50, 'C', "'C' harfi");
+  const pool = [C, ZIEL, ...ANDERE];
+
+  it('WORT_UZ and UZ_WORT give no question: it would name its answer', () => {
+    expect(wortUz(C, pool, rnd)).toBeNull();
+    expect(uzWort(C, pool, rnd)).toBeNull();
+  });
+
+  it('PAAR leaves letters out', () => {
+    const f = paar([C, w(51, 'E', "'E' harfi"), ...pool], rnd)!;
+    expect(f.options).not.toContain('C');
+    expect(f.options).not.toContain('E');
+  });
+
+  it('AUDIO_WORT still asks a letter, among letters', () => {
+    const letters = ['E', 'H', 'I', 'J'].map((b, i) =>
+      w(60 + i, b, `'${b}' harfi`),
+    );
+    const f = audioWort(
+      { ...C, audioKey: 'daf/audio/c.mp3' },
+      [...pool, ...letters],
+      rnd,
+      (k) => `https://m/${k}`,
+    )!;
+    expect(f.options.every((o) => o.length === 1)).toBe(true);
+  });
+});
+
 describe('artikel', () => {
   it('artiklni so`raydi', () => {
     const f = artikel(w(5, 'Name', 'ism', 'der'))!;

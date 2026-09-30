@@ -214,6 +214,8 @@ export class NotificationEventsListener {
     assignee: any;
     newStatus: string;
   }) {
+    // A system task has no author to tell (ADR-0054).
+    if (!payload.comment?.authorId) return;
     const { comment, assignee, newStatus } = payload;
     const statusLabel =
       newStatus === 'SEEN'

@@ -969,13 +969,17 @@ export function reconciliationSheet(
   // Sof foyda (aniq) — footing so the «Sof foyda» sheet's arithmetic is auditable.
   if (np) {
     const footed =
-      np.revenue -
+      np.revenue +
+      np.balanceWithdrawals -
       np.teacherSalary -
       np.adminSalary -
       np.operatingExpenses -
       np.refunds;
     sectionHeader(ws, 'Sof foyda (aniq) — footing', 6);
     kvRow(ws, 'Tushum', np.revenue);
+    if (np.balanceWithdrawals !== 0) {
+      kvRow(ws, '+ Balansdan yechib olingan', np.balanceWithdrawals);
+    }
     kvRow(ws, `− Ustoz oyligi (${np.teacherSalaryBasis})`, np.teacherSalary);
     kvRow(ws, '− Admin oyligi', np.adminSalary);
     kvRow(ws, '− Operatsion xarajat (avanssiz)', np.operatingExpenses);

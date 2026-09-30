@@ -5,6 +5,12 @@ export interface QrSession {
   currentToken: string;
   createdAt: string;
   lessonNumber: number | null;
+  /**
+   * The lesson's real times, kept so a scan can check the window. Absent on a
+   * session started before they were stored — a scan then skips the time part.
+   */
+  effectiveStartTime?: string | null;
+  effectiveEndTime?: string | null;
 }
 
 export interface QrToken {

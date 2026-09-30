@@ -70,3 +70,39 @@ export interface MockExamParticipant {
   passed: boolean | null;
   rank: number | null;
 }
+
+/** How a paid registration was paid (server `mock-exam-stats.ts`). */
+export type MockStatsMethod =
+  | "CASH"
+  | "CLICK"
+  | "PAYME"
+  | "UZUM"
+  | "TRANSFER"
+  | "BALANCE"
+  | "UNKNOWN";
+
+/** `GET /mock-exams/:id/stats` — the «Umumiy» tab's statistics block. */
+export interface MockExamStats {
+  registered: number;
+  channel: { bot: number; admin: number };
+  daf: { student: number; outsider: number; converted: number };
+  money: {
+    paidCount: number;
+    paidSum: number;
+    unpaidCount: number;
+    unpaidSum: number;
+    cashIntentCount: number;
+    freeCount: number;
+  };
+  methods: { method: MockStatsMethod; count: number; sum: number }[];
+  levels: { level: string | null; registered: number; paid: number }[];
+  times: { time: string | null; registered: number }[];
+  /** Null until the results are announced; the four counts split `audience`. */
+  results: {
+    audience: number;
+    delivered: number;
+    noTelegram: number;
+    failed: number;
+    pending: number;
+  } | null;
+}

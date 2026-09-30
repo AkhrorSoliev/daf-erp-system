@@ -1208,6 +1208,48 @@ describe('ReportsService', () => {
     });
   });
 
+  describe('assembleMonthlyNetProfit', () => {
+    it("adds the month's balance withdrawals as their own leg (ADR-0055)", async () => {
+      const svc: any = service;
+      jest
+        .spyOn(svc.financial, 'valueHeldLessons')
+        .mockResolvedValue([{ value: 100_000 }]);
+      jest
+        .spyOn(svc.financial, 'getPeriodOutflows')
+        .mockResolvedValue({ refunds: 0, writeOffs: 0, providerFees: 0 });
+      jest.spyOn(svc, 'getSalaryMonthly').mockResolvedValue({
+        totals: { covered: 70_000, fullDeserved: 70_000 },
+      });
+      jest.spyOn(svc, 'getProfitLoss').mockResolvedValue({
+        costOfServices: {},
+        operatingExpenses: { adminSalaries: 0, byCategory: [] },
+      });
+      const withdrawals = {
+        total: 30_000,
+        teacherCredited: 30_000,
+        students: [{ studentId: 10001, name: 'Ali Valiyev', amount: 30_000 }],
+      };
+      const load = jest
+        .spyOn(svc, 'getBalanceWithdrawals')
+        .mockResolvedValue(withdrawals);
+
+      const out = await svc.assembleMonthlyNetProfit(1001, {
+        month: '2026-10',
+        branchIds: [1],
+        performedById: 10001,
+      });
+
+      expect(load).toHaveBeenCalledWith(1001, {
+        months: ['2026-10'],
+        branchIds: [1],
+      });
+      expect(out.withdrawals).toBe(withdrawals);
+      expect(out.netProfit.balanceWithdrawals).toBe(30_000);
+      // 100 000 lessons + 30 000 withdrawn − 70 000 teachers.
+      expect(out.netProfit.netProfit).toBe(60_000);
+    });
+  });
+
   describe('getOwnMonthProfit', () => {
     it('combines attribution + net profit into the own-month figure', async () => {
       const svc: any = service;
@@ -1331,10 +1373,10 @@ describe('ReportsService', () => {
       );
 
       expect(redis.get).toHaveBeenCalledWith(
-        'rpt:np:v3:1001:3,7:u10001:2026-08',
+        'rpt:np:v4:1001:3,7:u10001:2026-08',
       );
       expect(redis.setex).toHaveBeenCalledWith(
-        'rpt:np:v3:1001:3,7:u10001:2026-08',
+        'rpt:np:v4:1001:3,7:u10001:2026-08',
         expect.any(Number),
         '4200000',
       );
@@ -1342,6 +1384,33 @@ describe('ReportsService', () => {
         profit: 4_200_000,
         profitBasis: 'kanonik',
       });
+    });
+  });
+
+  describe('getFinancialOverview — month-end expectation', () => {
+    // 01.10.2026 01:30 in Tashkent; the UTC date is still 30.09.
+    beforeEach(() => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-09-30T20:30:00.000Z'));
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('projects the month the overview covers: the current Tashkent month by default, else the period start month', async () => {
+      jest
+        .spyOn((service as any).financial, 'getFinancialOverview')
+        .mockResolvedValue({ income: {}, forecast: {} });
+      const expectation = jest.spyOn(service, 'getMonthlyExpectation');
+
+      await service.getFinancialOverview(1001, { branchIds: null });
+      await service.getFinancialOverview(1001, {
+        branchIds: [7],
+        startDate: '2026-07-01',
+        endDate: '2026-07-31',
+      });
+
+      expect(expectation.mock.calls).toEqual([
+        [1001, { month: '2026-10', branchIds: null }],
+        [1001, { month: '2026-07', branchIds: [7] }],
+      ]);
     });
   });
 });

@@ -129,7 +129,12 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
 
   const openLesson = (id: number) => router.push(`/portal/lernen/lessons/${id}`);
 
-  const boshMi = data && data.sections.length === 0 && data.lessons.length === 0;
+  // A unit whose content is not written yet still has its seeded lessons;
+  // the server says so with `bereit: false` (absent from an older server).
+  const boshMi =
+    data &&
+    (data.bereit === false ||
+      (data.sections.length === 0 && data.lessons.length === 0));
 
   return (
     <Screen narrow>

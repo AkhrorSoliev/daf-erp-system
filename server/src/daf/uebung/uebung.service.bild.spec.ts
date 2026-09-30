@@ -235,6 +235,60 @@ describe('UebungService.pruefen — picture formats', () => {
   });
 });
 
+describe('UebungService.pruefen — spelling (2026-09-30)', () => {
+  const pruefe = async (
+    format: string,
+    given: string,
+    lexeme: Row[] = SECTION,
+  ) => {
+    const prisma = fakePrisma(lexeme);
+    const r = await new UebungService(prisma as any, fakeConfig).pruefen(
+      { itemType: 'WORT', itemId: 1, format: format as any, given },
+      ctx,
+    );
+    const attempt = (prisma.dafAttempt.create.mock.calls as any[])[0][0].data;
+    return { r, attempt };
+  };
+
+  it('WORT_TIPPEN: one slip counts as correct and is flagged', async () => {
+    const { r, attempt } = await pruefe('WORT_TIPPEN', 'bahnof');
+    expect(r).toMatchObject({ isCorrect: true, tippfehler: true });
+    expect(attempt.isCorrect).toBe(true);
+  });
+
+  it('BILD_TIPPEN: a slip in the noun is forgiven, a wrong article is not', async () => {
+    expect((await pruefe('BILD_TIPPEN', 'der bahnof')).r).toMatchObject({
+      isCorrect: true,
+      tippfehler: true,
+    });
+    const falsch = (await pruefe('BILD_TIPPEN', 'die Bahnhof')).r;
+    expect(falsch.isCorrect).toBe(false);
+    expect(falsch).not.toHaveProperty('tippfehler');
+  });
+
+  it('a choice format forgives nothing', async () => {
+    const { r } = await pruefe('WORT_UZ', 'vokzall');
+    expect(r.isCorrect).toBe(false);
+    expect(r).not.toHaveProperty('tippfehler');
+  });
+
+  it('LUECKE: a word`s other spelling is simply correct', async () => {
+    const tschuess = {
+      ...row(1, 'tschüss', 'xayr', null),
+      akzeptiert: ['tschüs'],
+    };
+    const { r } = await pruefe('LUECKE', 'tschüs', [tschuess]);
+    expect(r.isCorrect).toBe(true);
+    expect(r).not.toHaveProperty('tippfehler');
+  });
+
+  it('an exact answer is not flagged', async () => {
+    const { r } = await pruefe('WORT_TIPPEN', 'Bahnhof');
+    expect(r.isCorrect).toBe(true);
+    expect(r).not.toHaveProperty('tippfehler');
+  });
+});
+
 describe('UebungService.seans — picture formats', () => {
   it('a section whose words have pictures asks with four picture options', async () => {
     const fragen = await new UebungService(

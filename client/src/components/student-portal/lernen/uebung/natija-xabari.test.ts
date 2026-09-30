@@ -1,5 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { orinXabari, xatoYorligi } from "./natija-xabari";
+import { javobPaneliMatni, orinXabari, xatoYorligi } from "./natija-xabari";
+
+describe("javobPaneliMatni", () => {
+  it("a slip counts as correct and shows the right spelling", () => {
+    expect(
+      javobPaneliMatni({ isCorrect: true, richtig: "Bahnhof", tippfehler: true }),
+    ).toEqual({ sarlavha: "To'g'ri!", izoh: "Imlosiga e'tibor bering:", soz: "Bahnhof" });
+  });
+
+  it("a plain correct answer shows no word", () => {
+    expect(javobPaneliMatni({ isCorrect: true, richtig: "Bahnhof" })).toEqual({
+      sarlavha: "To'g'ri!",
+      izoh: null,
+      soz: null,
+    });
+  });
+
+  it("a wrong answer shows the right one", () => {
+    expect(javobPaneliMatni({ isCorrect: false, richtig: "Bahnhof" })).toEqual({
+      sarlavha: "Xato",
+      izoh: null,
+      soz: "Bahnhof",
+    });
+  });
+
+  it("a picture answer shows the word, never the picture URL", () => {
+    const natija = { isCorrect: false, richtig: "https://x/b.jpg", loesungWort: "der Bahnhof" };
+    expect(javobPaneliMatni(natija).soz).toBe("der Bahnhof");
+    expect(javobPaneliMatni({ ...natija, isCorrect: true }).soz).toBe("der Bahnhof");
+  });
+});
 
 describe("orinXabari", () => {
   it("ko'tarilganda nechta pog'ona ko'tarilganini aytadi", () => {

@@ -5,6 +5,7 @@ import { TelegramService } from '../telegram/telegram.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { SmsMessageType } from '@prisma/client';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
+import { describeError } from '../telegram-digest/telegram-send';
 
 @Injectable()
 export class SmsService {
@@ -84,10 +85,11 @@ export class SmsService {
           telegramMessageId = result.message_id;
         }
       } catch (error) {
+        // Staff read this text on the SMS tab and in «Tarix».
+        errorMessage = describeError(error);
         this.logger.warn(
-          `Telegram send failed for student ${studentId}: ${error.message}`,
+          `Telegram send failed for student ${studentId}: ${errorMessage}`,
         );
-        errorMessage = error.message;
       }
     }
 

@@ -1,3 +1,5 @@
+import type { UnmarkedLessonInfo } from "@/lib/unmarked-lesson";
+
 export interface LessonDate {
   date: string;
   dayName: string;
@@ -7,6 +9,8 @@ export interface LessonDate {
   lateCount: number;
   excusedCount: number;
   totalStudents: number;
+  /** «Dars bo'ldimi?» — set when the lesson ended unmarked (ADR-0054). */
+  unmarked?: UnmarkedLessonInfo | null;
 }
 
 export const DAY_SHORT: Record<string, string> = {

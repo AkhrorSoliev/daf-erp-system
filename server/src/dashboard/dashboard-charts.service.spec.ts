@@ -8,11 +8,12 @@ const trendRows = [
 
 const netProfit = {
   revenue: 200,
+  balanceWithdrawals: 15,
   teacherSalary: 90,
   adminSalary: 30,
   operatingExpenses: 40,
   refunds: 5,
-  netProfit: 35,
+  netProfit: 50,
   netMarginPercent: 17,
 };
 
@@ -79,11 +80,12 @@ describe('DashboardChartsService.getCharts', () => {
     expect(reports.getMonthlyNetProfit).toHaveBeenCalled();
     expect(res.money!.breakdown).toEqual({
       revenue: 200,
+      balanceWithdrawals: 15,
       teacherSalary: 90,
       adminSalary: 30,
       operatingExpenses: 40,
       refunds: 5,
-      netProfit: 35,
+      netProfit: 50,
     });
   });
 
@@ -177,5 +179,46 @@ describe('DashboardChartsService.getCharts', () => {
       'month',
       'net',
     ]);
+  });
+});
+
+describe('DashboardChartsService — Tashkent calendar', () => {
+  // 01.10.2026 01:30 in Tashkent, still 30.09 on a UTC host (Railway).
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-30T20:30:00.000Z'));
+  });
+  afterEach(() => jest.useRealTimers());
+
+  it('takes the breakdown and the student flow up to the Tashkent month', async () => {
+    const { service, reports } = makeService();
+    await service.getCharts(CEO);
+
+    expect(reports.getMonthlyNetProfit).toHaveBeenCalledWith(
+      CEO.companyId,
+      expect.objectContaining({ month: '2026-10' }),
+    );
+    expect(
+      reports.getStudentFlow.mock.calls.map((c: any[]) => c[1].month),
+    ).toEqual([
+      '2026-05',
+      '2026-06',
+      '2026-07',
+      '2026-08',
+      '2026-09',
+      '2026-10',
+    ]);
+  });
+
+  it('ends the attendance window on the Tashkent day', async () => {
+    const { service, reports } = makeService();
+    await service.getCharts(CEO);
+
+    expect(reports.getAttendanceAnalytics).toHaveBeenCalledWith(
+      CEO.companyId,
+      expect.objectContaining({
+        startDate: '2026-07-09',
+        endDate: '2026-10-01',
+      }),
+    );
   });
 });

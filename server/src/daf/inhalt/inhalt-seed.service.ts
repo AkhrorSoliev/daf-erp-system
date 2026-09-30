@@ -161,6 +161,7 @@ export class InhaltSeedService {
         plural: w.plural ?? null,
         // Ko'rgazma raqami — faqat sonlar bo'limida bor, qolganida `null`.
         anzeige: w.anzeige ?? null,
+        akzeptiert: w.akzeptiert ?? [],
         order: w.order,
         // Aktiv/passiv farqi: `true` — mashqda so'raladi, `false` — faqat
         // dialog/matnda uchraydi va hech qachon so'ralmaydi.

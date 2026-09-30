@@ -9,6 +9,7 @@ import { Books, CheckCircle, X } from "@phosphor-icons/react";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { Button, EmptyState, LoadingCards, ProgressBar } from "../../lumio";
 import { RadioSessionToggle } from "../../radio/radio-session-toggle";
+import { useSidebar } from "../../lib/sidebar-store";
 import { LernenLessonPage } from "../lernen-lesson-page";
 import {
   useAbschluss,
@@ -41,6 +42,7 @@ import {
 } from "./juft-holati";
 import { harakat, koersatma } from "./koersatma";
 import { OvozTugmasi } from "./ovoz-tugmasi";
+import { PastkiPanel } from "./pastki-panel";
 import { Tanlash } from "./tanlash";
 import { RasmTanlash, SavolRasmi } from "./rasm-tanlash";
 import { rasmlarniOldindanYukla } from "./rasm-oldindan";
@@ -121,6 +123,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
   const abschluss = useAbschluss();
   const wiederholungAbschluss = useWiederholungAbschluss();
   const fortschritt = useFortschritt();
+  // The bottom bar is `fixed`; it needs the rail's width to stay clear of it.
+  const sidebarMode = useSidebar((s) => s.mode);
 
   const unitId = darsMi ? (lesson.data?.unit.id ?? null) : null;
   const chiqishHref = unitId
@@ -987,7 +991,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
       </main>
 
       {/* Pastdagi yopishqoq panel — natija ham, tugma ham shu yerda. */}
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+      <PastkiPanel sidebarMode={sidebarMode}>
         <div className="mx-auto w-full max-w-2xl space-y-2.5">
           {natija ? (
             juftlashRejimi ? (
@@ -1051,7 +1055,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
             </Button>
           )}
         </div>
-      </div>
+      </PastkiPanel>
     </div>
   );
 }

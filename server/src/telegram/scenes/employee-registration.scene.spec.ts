@@ -1,8 +1,9 @@
 import { Logger } from '@nestjs/common';
-import { Context } from 'telegraf';
+import { Context, TelegramError } from 'telegraf';
 import type { UserFromGetMe } from 'telegraf/types';
 import { createEmployeeRegistrationScene } from './employee-registration.scene';
 import { CONTACT_NOT_OWN } from '../utils/contact-ownership';
+import * as download from '../utils/download.util';
 
 // Telegraf's Context requires the bot's own identity. These tests never read
 // it, but `undefined` is not what the constructor accepts and the cast that
@@ -176,6 +177,163 @@ describe('employee-registration.scene — confirm_registration', () => {
   });
 });
 
+/** Telegram's refusal as Telegraf throws it: the failed request rides along. */
+function refusal(
+  code: number,
+  description: string,
+  method: string,
+  payload: object,
+) {
+  return new TelegramError(
+    { error_code: code, description },
+    { method, payload },
+  );
+}
+
+/**
+ * Once `UsersService.create` returns, the employee's account exists. The
+ * Telegram calls after it can still fail — a network error, a preview the
+ * person deleted, Telegram unable to fetch the photo from storage — and that
+ * must not read as a failed registration.
+ */
+describe('employee-registration.scene — Telegram fails after the account is created', () => {
+  const PHOTO = 'https://r2.example.com/employees/new.jpg';
+  let usersService: { create: jest.Mock };
+  let uploadService: { deleteFile: jest.Mock };
+  let warn: jest.SpyInstance;
+  let error: jest.SpyInstance;
+
+  beforeEach(() => {
+    usersService = { create: jest.fn().mockResolvedValue({ id: 10950 }) };
+    uploadService = { deleteFile: jest.fn().mockResolvedValue(undefined) };
+    warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    error = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  /** Taps «Tasdiqlash» with `fail` breaking some Telegram call. */
+  async function confirm(fail: (ctx: any) => void) {
+    const ctx = buildConfirmCtx({
+      firstName: 'Nodira',
+      lastName: 'Yusupova',
+      phone: '901112233',
+      gender: 'FEMALE',
+      photo: PHOTO,
+      branchId: 7,
+      roleIds: [3],
+    });
+    fail(ctx);
+    const scene = createEmployeeRegistrationScene(
+      buildPrisma(),
+      uploadService as any,
+      usersService as any,
+      {} as any,
+    );
+
+    await expect(
+      scene.middleware()(ctx, async () => {}),
+    ).resolves.toBeUndefined();
+    return ctx;
+  }
+
+  /** The password the account was created with. */
+  const password = (): string => usersService.create.mock.calls[0][0].password;
+
+  function expectRegistrationStands(ctx: any) {
+    expect(JSON.stringify(ctx.reply.mock.calls)).not.toContain('xatolik');
+    expect(usersService.create).toHaveBeenCalledTimes(1);
+    expect(ctx.scene.leave).toHaveBeenCalled();
+    // The account uses the photo now. A session still holding it would have
+    // the next /start delete it, as it deletes an unfinished registration's.
+    expect(uploadService.deleteFile).not.toHaveBeenCalled();
+    expect(ctx.session.data.photo).toBeUndefined();
+    // A Telegraf error carries the request that failed, caption included.
+    expect(JSON.stringify([warn.mock.calls, error.mock.calls])).not.toContain(
+      password(),
+    );
+  }
+
+  it('a failed «Tasdiqlandi» edit still sends the login and password', async () => {
+    const ctx = await confirm((c) => {
+      c.editMessageCaption = jest
+        .fn()
+        .mockResolvedValueOnce(true) // the loading state, before the account
+        .mockRejectedValue(
+          refusal(
+            400,
+            'Bad Request: message to edit not found',
+            'editMessageCaption',
+            { caption: '✅ Tasdiqlandi!' },
+          ),
+        );
+    });
+
+    expectRegistrationStands(ctx);
+    expect(ctx.replyWithPhoto).toHaveBeenCalledTimes(1);
+    const [photo, extra] = ctx.replyWithPhoto.mock.calls[0];
+    expect(photo).toBe(PHOTO);
+    expect(extra.caption).toContain('901112233');
+    expect(extra.caption).toContain(password());
+    expect(extra.parse_mode).toBe('Markdown');
+  });
+
+  it('a photo Telegram cannot send goes as a text message instead', async () => {
+    const ctx = await confirm((c) => {
+      c.replyWithPhoto = jest.fn((photo: string, extra: object) =>
+        Promise.reject(
+          refusal(
+            400,
+            'Bad Request: failed to get HTTP URL content',
+            'sendPhoto',
+            { chat_id: 555222, photo, ...extra },
+          ),
+        ),
+      );
+    });
+
+    expectRegistrationStands(ctx);
+    expect(ctx.reply).toHaveBeenCalledTimes(1);
+    const [text, extra] = ctx.reply.mock.calls[0];
+    expect(text).toContain('901112233');
+    expect(text).toContain(password());
+    // The same Markdown as the caption: sent without it, the password shows
+    // between backticks, and a person may type them in.
+    expect(extra).toEqual({ parse_mode: 'Markdown' });
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('failed to get HTTP URL content'),
+    );
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it('when nothing reaches the person, the log says so', async () => {
+    const ctx = await confirm((c) => {
+      const blocked = (method: string, field: string) =>
+        jest.fn((content: string, extra?: object) =>
+          Promise.reject(
+            refusal(403, 'Forbidden: bot was blocked by the user', method, {
+              chat_id: 555222,
+              [field]: content,
+              ...extra,
+            }),
+          ),
+        );
+      c.replyWithPhoto = blocked('sendPhoto', 'photo');
+      c.reply = blocked('sendMessage', 'text');
+    });
+
+    expectRegistrationStands(ctx);
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining('bot was blocked by the user'),
+    );
+  });
+});
+
 describe('employee-registration.scene — kontakt qadami', () => {
   const OWN = { phone_number: '+998901112233', first_name: 'T', user_id: 999 };
 
@@ -240,6 +398,119 @@ describe('employee-registration.scene — kontakt qadami', () => {
     expect(ctx.reply.mock.calls[0][0]).toMatch(/xodim hisobi allaqachon bor/);
     expect(ctx.scene.leave).toHaveBeenCalled();
     expect(ctx.session.step).toBe(3);
+  });
+});
+
+/** A photo sent at the photo step (`step 5`), sharing `session` across sends. */
+function buildPhotoCtx(session: Record<string, any>) {
+  const update = {
+    update_id: 6,
+    message: {
+      message_id: 6,
+      date: 0,
+      chat: { id: 555222, type: 'private' },
+      from: { id: 999, is_bot: false, first_name: 'T' },
+      photo: [{ file_id: 'f1', file_unique_id: 'u1', width: 9, height: 9 }],
+    },
+  };
+  const telegram = {
+    getFileLink: jest
+      .fn()
+      .mockResolvedValue(new URL('https://example.com/photo.jpg')),
+  };
+  const ctx = new Context(update as any, telegram as any, BOT_INFO) as any;
+  ctx.session = session;
+  ctx.sendChatAction = jest.fn().mockResolvedValue(undefined);
+  ctx.replyWithPhoto = jest.fn().mockResolvedValue(undefined);
+  ctx.reply = jest.fn().mockResolvedValue(undefined);
+  return ctx;
+}
+
+/**
+ * The preview card after the photo is the only way on: its buttons are what
+ * step 6 answers to. Telegram can refuse to send it (it cannot fetch the
+ * uploaded file, a format it will not show as a photo, a network error), and
+ * the person is then told to send the photo again — so they must still be at
+ * the photo step, and the file nobody will confirm must not stay in storage.
+ */
+describe('employee-registration.scene — tasdiqlash kartasi yuborilmasa', () => {
+  const FIRST = 'https://r2.example.com/employees/first.jpg';
+  const SECOND = 'https://r2.example.com/employees/second.jpg';
+  let uploadService: { uploadFile: jest.Mock; deleteFile: jest.Mock };
+  let session: any;
+  let scene: ReturnType<typeof createEmployeeRegistrationScene>;
+
+  beforeEach(() => {
+    jest.spyOn(download, 'downloadFile').mockResolvedValue(Buffer.from('jpg'));
+    uploadService = {
+      uploadFile: jest
+        .fn()
+        .mockResolvedValueOnce(FIRST)
+        .mockResolvedValueOnce(SECOND),
+      deleteFile: jest.fn().mockResolvedValue(undefined),
+    };
+    session = {
+      step: 5,
+      data: {
+        firstName: 'Nodira',
+        lastName: 'Yusupova',
+        phone: '901112233',
+        gender: 'FEMALE',
+        branchId: 7,
+        roleIds: [3],
+      },
+      processing: false,
+    };
+    scene = createEmployeeRegistrationScene(
+      buildPrisma(),
+      uploadService as any,
+      { create: jest.fn() } as any,
+      {} as any,
+    );
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  async function sendPhoto({ previewFails }: { previewFails: boolean }) {
+    const ctx = buildPhotoCtx(session);
+    if (previewFails) {
+      ctx.replyWithPhoto = jest
+        .fn()
+        .mockRejectedValue(
+          new Error('400: Bad Request: failed to get HTTP URL content'),
+        );
+    }
+    await scene.middleware()(ctx, async () => {});
+    return ctx;
+  }
+
+  it('asks for the photo again and stays at the photo step', async () => {
+    const ctx = await sendPhoto({ previewFails: true });
+
+    expect(ctx.reply).toHaveBeenCalledWith(
+      'Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:',
+    );
+    expect(session.step).toBe(5);
+  });
+
+  it('deletes the photo it could not show instead of keeping it', async () => {
+    await sendPhoto({ previewFails: true });
+
+    expect(uploadService.deleteFile).toHaveBeenCalledWith(FIRST);
+    expect(session.data.photo).toBeUndefined();
+  });
+
+  it('takes the photo sent again', async () => {
+    await sendPhoto({ previewFails: true });
+    const ctx = await sendPhoto({ previewFails: false });
+
+    expect(uploadService.uploadFile).toHaveBeenCalledTimes(2);
+    expect(ctx.replyWithPhoto).toHaveBeenCalledWith(
+      SECOND,
+      expect.objectContaining({ caption: expect.stringContaining('Nodira') }),
+    );
+    expect(session.step).toBe(6);
+    expect(session.data.photo).toBe(SECOND);
   });
 });
 
@@ -521,5 +792,63 @@ describe('employee-registration.scene — xodim kabineti', () => {
     expect(usersService.create).toHaveBeenCalledTimes(1);
     expect(ctx.replyWithPhoto).toHaveBeenCalled();
     expect(JSON.stringify(ctx.reply.mock.calls)).not.toContain('xatolik');
+  });
+});
+
+/**
+ * The photo step (`step 5`). A download that fails (Telegram unreachable, an
+ * error page instead of the file) must leave the person at this step with a
+ * reply, so sending the photo again works, and must reach the log: a bare
+ * `catch` once hid a total registration outage.
+ */
+describe('employee-registration.scene — rasm yuklanmasa', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('replies, keeps the photo step and logs the reason', async () => {
+    jest
+      .spyOn(download, 'downloadFile')
+      .mockRejectedValue(new Error('File download failed: HTTP 404'));
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const uploadService = { uploadFile: jest.fn(), deleteFile: jest.fn() };
+    const telegram = {
+      getFileLink: jest
+        .fn()
+        .mockResolvedValue(new URL('https://example.com/photo.jpg')),
+    };
+    const update = {
+      update_id: 6,
+      message: {
+        message_id: 6,
+        date: 0,
+        chat: { id: 555222, type: 'private' },
+        from: { id: 999, is_bot: false, first_name: 'T' },
+        photo: [{ file_id: 'f1', file_unique_id: 'u1', width: 9, height: 9 }],
+      },
+    };
+    const ctx = new Context(update as any, telegram as any, BOT_INFO) as any;
+    ctx.session = {
+      step: 5,
+      data: { branchId: 7, roleIds: [4] },
+      processing: false,
+    };
+    ctx.sendChatAction = jest.fn().mockResolvedValue(undefined);
+    ctx.reply = jest.fn().mockResolvedValue(undefined);
+    const scene = createEmployeeRegistrationScene(
+      buildPrisma(),
+      uploadService as any,
+      { create: jest.fn() } as any,
+      {} as any,
+    );
+
+    await scene.middleware()(ctx, async () => {});
+
+    expect(ctx.reply).toHaveBeenCalledWith(
+      'Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:',
+    );
+    expect(ctx.session.step).toBe(5);
+    expect(uploadService.uploadFile).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('HTTP 404'));
   });
 });

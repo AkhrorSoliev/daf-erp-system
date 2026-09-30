@@ -252,6 +252,22 @@ describe('NotificationEventsListener', () => {
         },
       });
     });
+
+    it('tells nobody about a system task changing status (no author)', async () => {
+      await listener.handleTaskStatusChanged({
+        comment: { ...comment, authorId: null, author: null },
+        assignee: {
+          userId: 20002,
+          user: { firstName: 'Vali', lastName: 'Aliyev' },
+        },
+        newStatus: 'SEEN',
+      });
+
+      expect(notificationsService.create).not.toHaveBeenCalled();
+      expect(gateway.sendToUser).not.toHaveBeenCalled();
+      expect(pushService.sendToUser).not.toHaveBeenCalled();
+      expect(enqueue).not.toHaveBeenCalled();
+    });
   });
 
   describe('handleSalaryCarriedOver', () => {

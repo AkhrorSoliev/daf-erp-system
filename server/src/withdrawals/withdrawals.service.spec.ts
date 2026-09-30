@@ -153,7 +153,6 @@ describe('WithdrawalsService', () => {
         {
           studentId: 10001,
           amount: 200_000,
-          targetMonth: '2026-01',
           creditTeacher: false,
         },
         7,
@@ -188,7 +187,6 @@ describe('WithdrawalsService', () => {
           {
             studentId: 10001,
             amount: 500_000,
-            targetMonth: '2026-01',
             creditTeacher: false,
           },
           7,
@@ -204,7 +202,6 @@ describe('WithdrawalsService', () => {
           {
             studentId: 99999,
             amount: 100_000,
-            targetMonth: '2026-01',
             creditTeacher: false,
           },
           7,
@@ -220,7 +217,6 @@ describe('WithdrawalsService', () => {
         {
           studentId: 10001,
           amount: 200_000,
-          targetMonth: '2026-03',
           creditTeacher: true,
           teacherUserId: 99,
         },
@@ -248,7 +244,6 @@ describe('WithdrawalsService', () => {
           {
             studentId: 10001,
             amount: 200_000,
-            targetMonth: '2026-01',
             creditTeacher: true,
           },
           7,
@@ -264,7 +259,6 @@ describe('WithdrawalsService', () => {
           {
             studentId: 10001,
             amount: 100_000,
-            targetMonth: '2026-01',
             creditTeacher: true,
             teacherUserId: 12345,
           },
@@ -272,6 +266,98 @@ describe('WithdrawalsService', () => {
           1,
         ),
       ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('create — the month is always the current one (ADR-0055)', () => {
+    // 30.09.2026 20:00 UTC is already 01.10.2026 01:00 in Tashkent.
+    const now = new Date('2026-09-30T20:00:00.000Z');
+    beforeEach(() => jest.useFakeTimers().setSystemTime(now));
+    afterEach(() => jest.useRealTimers());
+
+    it('books the withdrawal in the current Tashkent month and stamps that instant', async () => {
+      const result = await service.create(
+        { studentId: 10001, amount: 200_000, creditTeacher: false },
+        7,
+        1,
+      );
+      expect(prisma.transaction.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          createdAt: now,
+          description: 'Yechib olish (2026-10)',
+          metadata: expect.objectContaining({ targetMonth: '2026-10' }),
+        }),
+      });
+      expect(result.targetMonth).toBe('2026-10');
+    });
+
+    it('stamps the instant it holds the student lock, so the ledger stays in balance-chain order', async () => {
+      // Another write on this student commits while this one waits for the
+      // lock; the ledger replay orders rows by (createdAt, id).
+      const locked = new Date('2026-09-30T20:00:05.000Z');
+      prisma.$queryRaw.mockImplementationOnce(async () => {
+        jest.setSystemTime(locked);
+        return [{ id: 10001, balance: 500_000 }];
+      });
+
+      await service.create(
+        { studentId: 10001, amount: 200_000, creditTeacher: false },
+        7,
+        1,
+      );
+
+      expect(prisma.transaction.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ createdAt: locked }),
+      });
+    });
+
+    it('accepts the current month from a dialog opened before the deploy', async () => {
+      const result = await service.create(
+        {
+          studentId: 10001,
+          amount: 200_000,
+          targetMonth: '2026-10',
+          creditTeacher: false,
+        },
+        7,
+        1,
+      );
+      expect(result.targetMonth).toBe('2026-10');
+    });
+
+    it('refuses any other month and writes nothing', async () => {
+      await expect(
+        service.create(
+          {
+            studentId: 10001,
+            amount: 200_000,
+            targetMonth: '2026-08',
+            creditTeacher: false,
+          },
+          7,
+          1,
+        ),
+      ).rejects.toThrow('Yechib olish faqat joriy oy uchun yoziladi');
+      expect(prisma.transaction.create).not.toHaveBeenCalled();
+      expect(prisma.student.update).not.toHaveBeenCalled();
+    });
+
+    it("dates the teacher's accrual the day of the withdrawal, inside the open payroll period", async () => {
+      await service.create(
+        {
+          studentId: 10001,
+          amount: 200_000,
+          creditTeacher: true,
+          teacherUserId: 99,
+        },
+        7,
+        1,
+      );
+      expect(prisma.salaryAccrual.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          lessonDate: new Date('2026-10-01T00:00:00.000Z'),
+        }),
+      });
     });
   });
 });

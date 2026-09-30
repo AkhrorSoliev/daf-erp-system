@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SaveAttendanceDto } from './dto/save-attendance.dto';
+import { LateAttendanceDto } from './dto/late-attendance.dto';
 import { AttendanceValidationService } from './attendance-validation.service';
 import { AttendanceReadService } from './attendance-read.service';
 import { AttendanceStatsService } from './attendance-stats.service';
@@ -37,8 +38,9 @@ export class AttendanceService {
     date: string,
     companyId?: number,
     roles?: string[],
+    late = false,
   ) {
-    return this.read.getByDate(groupId, date, companyId, roles);
+    return this.read.getByDate(groupId, date, companyId, roles, late);
   }
 
   getLessonSequence(groupId: string, companyId?: number) {
@@ -72,5 +74,23 @@ export class AttendanceService {
     companyId: number,
   ) {
     return this.saveService.save(groupId, date, dto, userId, roles, companyId);
+  }
+
+  saveLate(
+    groupId: string,
+    date: string,
+    dto: LateAttendanceDto,
+    userId: number,
+    roles: string[],
+    companyId: number,
+  ) {
+    return this.saveService.saveLate(
+      groupId,
+      date,
+      dto,
+      userId,
+      roles,
+      companyId,
+    );
   }
 }

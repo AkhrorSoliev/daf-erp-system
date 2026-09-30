@@ -20,6 +20,7 @@ import { assertCallerMayTouchGroup } from '../common/auth/group-branch-scope';
 const NO_TEACHER_PATH: string[] = [];
 import { EntityHistoryService } from '../common/entity-history';
 import { StatusCascadeService } from '../common/status';
+import { closeTasksOfDeletedGroup } from '../unmarked-lessons/unmarked-lesson-transitions';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupStatus, Prisma } from '@prisma/client';
@@ -607,6 +608,9 @@ export class GroupsWriteService {
           tx,
           { groupId: id, userId, at: deletedAt, note },
         );
+
+        // Its «Dars bo'ldimi?» tasks stop asking; the rows stay, unpaid.
+        await closeTasksOfDeletedGroup(tx, id);
 
         // Archive bypasses normal status transition validation
         await tx.statusHistory.create({

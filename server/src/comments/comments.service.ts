@@ -3,9 +3,10 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { AssigneeStatus } from '@prisma/client';
+import { AssigneeStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -16,6 +17,8 @@ import {
 } from './dto/comment-query.dto';
 import { TaskQueryDto } from './dto/task-query.dto';
 import { assertCallerMayTouchCommentEntity } from '../common/auth/comment-entity-scope';
+import { claimSystemTask } from '../unmarked-lessons/lesson-task';
+import { isTransactionConflict } from '../common/transaction-conflict';
 
 // Asia/Tashkent ish kuni va ish soati cheklovi (08:00 dan 18:00 gacha,
 // dushanba–shanba, yakshanba dam). DueDate ushbu deraza tashqarisida
@@ -266,6 +269,12 @@ export class CommentsService {
       throw new NotFoundException('Izoh topilmadi');
     }
 
+    if (comment.isSystem && comment.isTask) {
+      throw new BadRequestException(
+        "Tizim bergan topshiriqni tahrirlab bo'lmaydi",
+      );
+    }
+
     const isCeo = roles.includes('CEO');
     if (comment.authorId !== userId && !isCeo) {
       throw new ForbiddenException(
@@ -317,6 +326,12 @@ export class CommentsService {
 
     if (!comment) {
       throw new NotFoundException('Izoh topilmadi');
+    }
+
+    if (comment.isSystem && comment.isTask) {
+      throw new BadRequestException(
+        "Tizim bergan topshiriqni o'chirib bo'lmaydi",
+      );
     }
 
     // Topshiriq o'chirilganda assignee larga xabar berish
@@ -382,6 +397,18 @@ export class CommentsService {
                 },
                 orderBy: { createdAt: 'asc' },
               },
+              unmarkedLesson: {
+                select: {
+                  id: true,
+                  groupId: true,
+                  date: true,
+                  status: true,
+                  teacherPayExempt: true,
+                  lessonStartTime: true,
+                  lessonEndTime: true,
+                  group: { select: { name: true } },
+                },
+              },
             },
           },
         },
@@ -429,43 +456,77 @@ export class CommentsService {
     userId: number,
     status: AssigneeStatus,
   ) {
-    const assignee = await this.prisma.commentAssignee.findFirst({
-      where: { commentId, userId },
-      include: {
-        comment: {
-          include: {
-            author: { select: { id: true, firstName: true, lastName: true } },
+    const { assignee, updated } = await this.runSerializable(async (tx) => {
+      const assignee = await tx.commentAssignee.findFirst({
+        where: { commentId, userId },
+        include: {
+          comment: {
+            include: {
+              author: { select: { id: true, firstName: true, lastName: true } },
+            },
           },
         },
-      },
-    });
+      });
 
-    if (!assignee) {
-      throw new NotFoundException('Sizga bu topshiriq berilmagan');
-    }
+      if (!assignee) {
+        // A «Dars bo'ldimi?» task another administrator already took.
+        const lesson = await tx.unmarkedLesson.findFirst({
+          where: { taskCommentId: commentId, claimedById: { not: null } },
+          select: { claimedById: true },
+        });
+        if (lesson?.claimedById && lesson.claimedById !== userId) {
+          const holder = await tx.user.findUnique({
+            where: { id: lesson.claimedById },
+            select: { firstName: true, lastName: true },
+          });
+          throw new ConflictException(
+            holder
+              ? `Bu topshiriqni ${holder.firstName} ${holder.lastName} oldi`
+              : 'Bu topshiriqni boshqa administrator oldi',
+          );
+        }
+        throw new NotFoundException('Sizga bu topshiriq berilmagan');
+      }
 
-    if (assignee.status === status) {
-      throw new BadRequestException('Status allaqachon belgilangan');
-    }
+      if (assignee.status === status) {
+        throw new BadRequestException('Status allaqachon belgilangan');
+      }
 
-    const updateData: any = { status };
-    if (status === AssigneeStatus.PENDING) {
-      updateData.seenAt = null;
-      updateData.doneAt = null;
-    } else if (status === AssigneeStatus.SEEN) {
-      updateData.seenAt = new Date();
-      updateData.doneAt = null;
-    } else if (status === AssigneeStatus.DONE) {
-      updateData.doneAt = new Date();
-      if (!assignee.seenAt) updateData.seenAt = new Date();
-    }
+      if (assignee.comment.isSystem && assignee.comment.isTask) {
+        // Only the lesson's answer closes it, and an answered one stays
+        // closed: moving a DONE copy back would reopen a settled question.
+        if (
+          status === AssigneeStatus.DONE ||
+          assignee.status === AssigneeStatus.DONE
+        ) {
+          throw new BadRequestException(
+            "Bu topshiriq darsga javob berilganda o'zi yopiladi",
+          );
+        }
+        // The first administrator to act takes it (spec 2026-09-29 §3.6).
+        await claimSystemTask(tx, commentId, userId);
+      }
 
-    const updated = await this.prisma.commentAssignee.update({
-      where: { id: assignee.id },
-      data: updateData,
-      include: {
-        user: { select: { id: true, firstName: true, lastName: true } },
-      },
+      const updateData: Prisma.CommentAssigneeUpdateInput = { status };
+      if (status === AssigneeStatus.PENDING) {
+        updateData.seenAt = null;
+        updateData.doneAt = null;
+      } else if (status === AssigneeStatus.SEEN) {
+        updateData.seenAt = new Date();
+        updateData.doneAt = null;
+      } else if (status === AssigneeStatus.DONE) {
+        updateData.doneAt = new Date();
+        if (!assignee.seenAt) updateData.seenAt = new Date();
+      }
+
+      const updated = await tx.commentAssignee.update({
+        where: { id: assignee.id },
+        data: updateData,
+        include: {
+          user: { select: { id: true, firstName: true, lastName: true } },
+        },
+      });
+      return { assignee, updated };
     });
 
     this.eventEmitter.emit('task.status.changed', {
@@ -475,5 +536,23 @@ export class CommentsService {
     });
 
     return updated;
+  }
+
+  /** Two administrators taking one task at once: one wins, the other is told. */
+  private async runSerializable<T>(
+    fn: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await this.prisma.$transaction(fn, {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      });
+    } catch (err) {
+      if (isTransactionConflict(err)) {
+        throw new ConflictException(
+          "Topshiriq hozirgina o'zgardi. Sahifani yangilang",
+        );
+      }
+      throw err;
+    }
   }
 }

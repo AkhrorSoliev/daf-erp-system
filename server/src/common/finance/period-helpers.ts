@@ -5,7 +5,13 @@
  * and the timestamp-vs-date-only column boundary handling.
  */
 import { Prisma } from '@prisma/client';
-import { tashkentRangeUtc, utcMidnightFromDateStr } from '../date/tashkent';
+import {
+  addDaysToDateStr,
+  addMonthsToMonthKey,
+  tashkentMonthKey,
+  tashkentRangeUtc,
+  utcMidnightFromDateStr,
+} from '../date/tashkent';
 
 export interface ResolvedPeriod {
   startStr: string; // 'YYYY-MM-DD'
@@ -20,19 +26,17 @@ export interface ResolvedPeriod {
   endDate: Date;
 }
 
-/** Resolve a [start, end] period, defaulting to the current calendar month. */
+/** Resolve a [start, end] period, defaulting to the current Tashkent month. */
 export function resolvePeriod(
   startDate?: string,
   endDate?: string,
 ): ResolvedPeriod {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  const startStr = startDate ?? `${y}-${String(m + 1).padStart(2, '0')}-01`;
-  const lastDay = new Date(y, m + 1, 0).getDate();
+  // Not `getMonth()`: that reads the PROCESS timezone (UTC on Railway), which
+  // still says last month from 00:00 to 05:00 Tashkent on the 1st.
+  const month = tashkentMonthKey(new Date());
+  const startStr = startDate ?? `${month}-01`;
   const endStr =
-    endDate ??
-    `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    endDate ?? addDaysToDateStr(`${addMonthsToMonthKey(month, 1)}-01`, -1);
 
   // Two pairs, because the column type decides the bound (see common/date/tashkent).
   const { gte, lt } = tashkentRangeUtc(startStr, endStr);

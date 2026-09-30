@@ -26,6 +26,7 @@ import {
   singleBranchId,
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
+import { tashkentMonthKey } from '../common/date/tashkent';
 import {
   ReportsProfitLossService,
   ProfitLossQuery,
@@ -139,6 +140,13 @@ export class ReportsService {
   ) {
     return this.financial.getRecognizedRevenue(companyId, opts);
   }
+  // «Yechib olish» — revenue of the month it is withdrawn in (ADR-0055).
+  getBalanceWithdrawals(
+    companyId: number,
+    opts: { months: string[]; branchIds: ReportBranchIds },
+  ) {
+    return this.financial.getBalanceWithdrawals(companyId, opts);
+  }
 
   /**
    * Canonical monthly "Sof foyda" — the ONE net-profit figure the Foyda card and
@@ -204,26 +212,29 @@ export class ReportsService {
     const startDate = `${month}-01`;
     const endDate = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
     const scope = { branchIds, startDate, endDate };
-    const [lessons, salaries, profitLoss, outflows] = await Promise.all([
-      this.financial.valueHeldLessons(companyId, {
-        start: new Date(Date.UTC(y, m - 1, 1)),
-        end: new Date(Date.UTC(y, m, 1)),
-        branchIds,
-      }),
-      // Branch-scoped: subtracting company-wide payroll from ONE branch's
-      // revenue is what made a freshly-opened branch look catastrophically
-      // unprofitable in its first month. Staff by HOME branch, so an
-      // administrator attached to two branches is subtracted from one.
-      this.getSalaryMonthly(
-        companyId,
-        month,
-        performedById,
-        singleBranchId(branchIds),
-        'home',
-      ),
-      this.getProfitLoss(companyId, scope),
-      this.getPeriodOutflows(companyId, scope),
-    ]);
+    const [lessons, salaries, profitLoss, outflows, withdrawals] =
+      await Promise.all([
+        this.financial.valueHeldLessons(companyId, {
+          start: new Date(Date.UTC(y, m - 1, 1)),
+          end: new Date(Date.UTC(y, m, 1)),
+          branchIds,
+        }),
+        // Branch-scoped: subtracting company-wide payroll from ONE branch's
+        // revenue is what made a freshly-opened branch look catastrophically
+        // unprofitable in its first month. Staff by HOME branch, so an
+        // administrator attached to two branches is subtracted from one.
+        this.getSalaryMonthly(
+          companyId,
+          month,
+          performedById,
+          singleBranchId(branchIds),
+          'home',
+        ),
+        this.getProfitLoss(companyId, scope),
+        this.getPeriodOutflows(companyId, scope),
+        // «Yechib olish» — revenue of the month it is withdrawn in (ADR-0055).
+        this.getBalanceWithdrawals(companyId, { months: [month], branchIds }),
+      ]);
     const recognizedRevenue = lessons.reduce((sum, l) => sum + l.value, 0);
     return {
       month,
@@ -231,12 +242,14 @@ export class ReportsService {
       salaries,
       profitLoss,
       outflows,
+      withdrawals,
       netProfit: buildNetProfit(
         profitLoss,
         salaries,
         outflows,
         month,
         recognizedRevenue,
+        withdrawals.total,
       ),
     };
   }
@@ -483,9 +496,9 @@ export class ReportsService {
     // Month = the period's START month, the same derivation the salary fold and
     // the Excel `monthStr` already use. Audit H22 (cards sitting on different
     // bases) is a known separate item — do not diverge from the convention here.
-    const month = (
-      query.startDate ?? new Date().toISOString().slice(0, 10)
-    ).slice(0, 7);
+    // With no period the overview covers the current TASHKENT month; the UTC
+    // date used here before projected last month from 00:00 to 05:00 on the 1st.
+    const month = query.startDate?.slice(0, 7) ?? tashkentMonthKey(new Date());
     const expectation = await this.getMonthlyExpectation(companyId, {
       month,
       branchIds: query.branchIds,

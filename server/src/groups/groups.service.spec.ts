@@ -111,6 +111,8 @@ describe('GroupsService — status methods', () => {
         create: jest.fn(),
         updateMany: jest.fn(),
       },
+      unmarkedLesson: { findMany: jest.fn().mockResolvedValue([]) },
+      commentAssignee: { updateMany: jest.fn() },
       $transaction: jest.fn((arg) =>
         typeof arg === 'function' ? arg(prisma) : Promise.all(arg),
       ),
@@ -485,6 +487,8 @@ describe('GroupsService — status methods', () => {
       tx = {
         group: { update: jest.fn().mockResolvedValue({}) },
         statusHistory: { create: jest.fn().mockResolvedValue({}) },
+        unmarkedLesson: { findMany: jest.fn().mockResolvedValue([]) },
+        commentAssignee: { updateMany: jest.fn() },
       };
       prisma.$transaction.mockImplementation((arg: any) =>
         typeof arg === 'function' ? arg(tx) : Promise.all(arg),
@@ -553,6 +557,19 @@ describe('GroupsService — status methods', () => {
       await expect(service.delete('group-1', 1, 1001)).rejects.toThrow(
         'lock timeout',
       );
+    });
+
+    it("closes the group's unanswered «Dars bo'ldimi?» tasks", async () => {
+      tx.unmarkedLesson.findMany.mockResolvedValue([{ taskCommentId: 'c1' }]);
+      await service.delete('group-1', 1, 1001);
+      expect(tx.unmarkedLesson.findMany).toHaveBeenCalledWith({
+        where: { groupId: 'group-1', status: 'PENDING' },
+        select: { taskCommentId: true },
+      });
+      expect(tx.commentAssignee.updateMany).toHaveBeenCalledWith({
+        where: { commentId: 'c1', status: { not: 'DONE' } },
+        data: { status: 'DONE', doneAt: expect.any(Date) },
+      });
     });
 
     it('throws NotFoundException for a missing group and changes nothing', async () => {

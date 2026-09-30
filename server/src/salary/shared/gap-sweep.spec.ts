@@ -93,6 +93,7 @@ function buildInput(
     ]),
     inactiveSince: new Map(),
     dateStr: (d) => d.toISOString().slice(0, 10),
+    forfeitedLessons: new Set<string>(),
     ...overrides,
   };
 }
@@ -383,5 +384,25 @@ describe('packPriceCandidates', () => {
     expect(
       packPriceCandidates([att('a', 'gm'), att('b', 'gp')], groups, charged),
     ).toEqual([]);
+  });
+});
+
+describe('sweepGapLessons — unmarked lessons (ADR-0054)', () => {
+  // buildInput's one attendance is lessonDate(10) = 2026-09-10 in group GROUP.
+  it('never fronts a lesson whose pay was forfeited', () => {
+    const open = sweepGapLessons(
+      buildInput(MONTHLY_COURSE, PERCENTAGE, {
+        monthlyFrozen: frozen(30_769, 13),
+      }),
+    );
+    expect(open.lessons).toHaveLength(1);
+
+    const forfeited = sweepGapLessons(
+      buildInput(MONTHLY_COURSE, PERCENTAGE, {
+        monthlyFrozen: frozen(30_769, 13),
+        forfeitedLessons: new Set([`${GROUP}:2026-09-10`]),
+      }),
+    );
+    expect(forfeited.lessons).toEqual([]);
   });
 });

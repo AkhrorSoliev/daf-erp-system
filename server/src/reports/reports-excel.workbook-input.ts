@@ -76,16 +76,23 @@ export async function periodNetProfit(
     args.salaries.floorMonth ?? args.monthStr,
   );
 
-  const revenuePerMonth = await Promise.all(
-    months.map((m) => {
-      const [y, mm] = m.split('-').map(Number);
-      return reports.getRecognizedRevenue(companyId, {
-        start: new Date(Date.UTC(y, mm - 1, 1)),
-        end: new Date(Date.UTC(y, mm, 1)),
-        branchIds: args.branchIds,
-      });
+  const [revenuePerMonth, withdrawals] = await Promise.all([
+    Promise.all(
+      months.map((m) => {
+        const [y, mm] = m.split('-').map(Number);
+        return reports.getRecognizedRevenue(companyId, {
+          start: new Date(Date.UTC(y, mm - 1, 1)),
+          end: new Date(Date.UTC(y, mm, 1)),
+          branchIds: args.branchIds,
+        });
+      }),
+    ),
+    // «Yechib olish» over the same months (ADR-0055).
+    reports.getBalanceWithdrawals(companyId, {
+      months,
+      branchIds: args.branchIds,
     }),
-  );
+  ]);
   const recognizedRevenue = revenuePerMonth.reduce((a, b) => a + b, 0);
 
   if (months.length <= 1) {
@@ -98,6 +105,7 @@ export async function periodNetProfit(
         args.outflows,
         months[0] ?? args.monthStr,
         recognizedRevenue,
+        withdrawals.total,
       ),
     };
   }
@@ -126,6 +134,7 @@ export async function periodNetProfit(
       args.outflows,
       undefined,
       recognizedRevenue,
+      withdrawals.total,
     ),
   };
 }
@@ -364,6 +373,7 @@ function toBranchRow(
   return {
     branchName,
     recognized: own.netProfit.revenue,
+    balanceWithdrawals: own.netProfit.balanceWithdrawals,
     cashIn: own.cashTotal,
     teacherSalary: own.netProfit.teacherSalary + own.netProfit.adminSalary,
     operatingExpenses: own.netProfit.operatingExpenses,
