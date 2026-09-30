@@ -90,10 +90,9 @@ tushumga yozilgan.
 |---|---|
 | «Foyda tarkibi» (`/payments/overview`) | Yangi qator «Balansdan yechib olingan» — o'quvchilar ro'yxati bilan; pastki tenglik va sarlavha jumlasi uni qo'shadi; prognozdagi ustoz ulushi yechib olishdan ustozga yozilganni hisobga olmaydi |
 | Bosh sahifa «Pul qayerga ketdi» | Foizlar `revenue + balanceWithdrawals` ga nisbatan, sarlavhada «shundan balansdan yechilgan» |
-| Excel «Sof foyda» | `+  Balansdan yechib olingan` qatori |
-| Excel «Asosiy xulosa» 1-blok | Joriy/o'tgan oy taqqoslash qatori |
-| Excel «Filiallar» | Biror filialda bo'lsa, «Balansdan yechilgan» ustuni |
-| Excel «Tekshiruv» | Footing qo'shadi |
+| Excel «Xulosa» 1-blok (kitobning «SOF FOYDA»si) | `+  Balansdan yechib olingan` — joriy/o'tgan oy taqqoslash qatori |
+| Excel «Filiallar» | Tasdiqlangan ustunlar o'zgarmaydi; izohda yechib olish bor filiallar nomlanadi |
+| Excel «Tekshiruv» | Footing qo'shadi va qatorni ko'rsatadi |
 | Telegram 21:00 va `rm:cfin` | Faqat yakuniy raqam — o'zi yangilanadi |
 
 «Oylar» varag'i o'zgarmaydi (uning ustunlari hech qachon yig'ilmagan).
