@@ -9,6 +9,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { assertCallerMayWriteForStudent } from '../common/auth/financial-write-scope';
 import { EntityHistoryService } from '../common/entity-history';
 import { resolveStudentBranchId } from '../common/finance/resolve-branch';
+import {
+  tashkentDateStr,
+  tashkentMonthKey,
+  utcMidnightFromDateStr,
+} from '../common/date/tashkent';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
 
 @Injectable()
@@ -94,11 +99,15 @@ export class WithdrawalsService {
   }
 
   /**
-   * Drain a portion of the student's positive balance into the system as
-   * revenue for a chosen accounting month. Optionally credit the teacher's
-   * salary for that month by writing a SalaryAccrual linked to the new
+   * Drain a portion of the student's positive balance into the centre's
+   * account. The amount is revenue of the month it is withdrawn in — always
+   * the current Tashkent month, never one the client picks (ADR-0055): the
+   * canonical net profit adds it as its own leg (`loadBalanceWithdrawals`),
+   * so a past month's figure never moves after the fact. Optionally credits
+   * the teacher's salary with a SalaryAccrual linked to the new
    * BALANCE_WITHDRAWAL transaction (attendanceId is NULL — there's no
-   * underlying lesson row).
+   * underlying lesson), dated the day of the withdrawal so it lands in the
+   * open payroll period.
    *
    * All writes happen in one Serializable transaction.
    */
@@ -111,6 +120,17 @@ export class WithdrawalsService {
       dto.studentId,
       companyId,
     );
+
+    // One instant decides the month, the ledger timestamp and the teacher's
+    // accrual date, so the report and the payroll can never file this
+    // withdrawal under two different months.
+    const now = new Date();
+    const targetMonth = tashkentMonthKey(now);
+    if (dto.targetMonth !== undefined && dto.targetMonth !== targetMonth) {
+      throw new BadRequestException(
+        'Yechib olish faqat joriy oy uchun yoziladi',
+      );
+    }
 
     const student = await this.prisma.student.findFirst({
       where: { id: dto.studentId, companyId, deletedAt: null },
@@ -137,7 +157,7 @@ export class WithdrawalsService {
       });
     }
 
-    const targetMonthDate = new Date(`${dto.targetMonth}-01T00:00:00.000Z`);
+    const accrualDate = utcMidnightFromDateStr(tashkentDateStr(now));
 
     const result = await this.prisma.$transaction(
       async (tx) => {
@@ -174,9 +194,10 @@ export class WithdrawalsService {
             branchId,
             companyId,
             performedById: userId,
-            description: dto.reason ?? `Yechib olish (${dto.targetMonth})`,
+            createdAt: now,
+            description: dto.reason ?? `Yechib olish (${targetMonth})`,
             metadata: {
-              targetMonth: dto.targetMonth,
+              targetMonth,
               creditTeacher: dto.creditTeacher,
               teacherUserId: dto.teacherUserId ?? null,
               groupId: teacherGroupId,
@@ -198,7 +219,7 @@ export class WithdrawalsService {
               studentId: dto.studentId,
               groupId: teacherGroupId,
               attendanceId: null,
-              lessonDate: targetMonthDate,
+              lessonDate: accrualDate,
               amount: dto.amount,
               perLessonCost: dto.amount,
               companyId,
@@ -215,7 +236,7 @@ export class WithdrawalsService {
           newValues: {
             balans: balanceAfter,
             yechilgan_summa: dto.amount,
-            oy: dto.targetMonth,
+            oy: targetMonth,
             ustoz_balansiga_yozildi: dto.creditTeacher ? 'Ha' : "Yo'q",
             sabab: dto.reason ?? null,
             status: 'PUL_YECHIB_OLINDI',
@@ -238,7 +259,7 @@ export class WithdrawalsService {
       id: result.transaction.id,
       studentId: dto.studentId,
       amount: dto.amount,
-      targetMonth: dto.targetMonth,
+      targetMonth,
       creditTeacher: dto.creditTeacher,
       teacherUserId: dto.teacherUserId ?? null,
       accrualId: result.accrualId,
