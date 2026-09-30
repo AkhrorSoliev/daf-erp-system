@@ -29,7 +29,12 @@ import {
 import { HolidaysService } from '../holidays/holidays.service';
 import { rosterOnDate } from './shared/roster-on-date';
 import { loadUnmarkedLessonInfos } from '../unmarked-lessons/unmarked-lesson-info';
-import { effectiveLessonTimes } from './shared/attendance-window';
+import {
+  effectiveLessonTimes,
+  leftOutAfterEnd,
+  lessonHasEnded,
+  tashkentClock,
+} from './shared/attendance-window';
 
 @Injectable()
 export class AttendanceReadService {
@@ -625,6 +630,7 @@ export class AttendanceReadService {
       select: {
         id: true,
         studentId: true,
+        createdAt: true,
         student: {
           select: {
             id: true,
@@ -646,6 +652,7 @@ export class AttendanceReadService {
         note: true,
         lateMinutes: true,
         markedMethod: true,
+        createdAt: true,
       },
     });
 
@@ -772,10 +779,23 @@ export class AttendanceReadService {
       coursePrice: group.course.price,
       effectiveStartTime,
       effectiveEndTime,
-      // A manual save took the register (`leftOutAfterEnd`).
-      registerTakenManually: existingAttendance.some(
-        (a) => a.markedMethod === AttendanceMethod.MANUAL,
-      ),
+      // After the lesson, the students the register left out.
+      leftOutStudentIds: [
+        ...leftOutAfterEnd({
+          date,
+          ended: lessonHasEnded({
+            date,
+            ...tashkentClock(),
+            endTime: effectiveEndTime,
+          }),
+          manualRows: existingAttendance.filter(
+            (a) => a.markedMethod === AttendanceMethod.MANUAL,
+          ),
+          unmarked: enrollments
+            .filter((e) => !attendanceMap.has(e.studentId))
+            .map((e) => ({ studentId: e.studentId, enrolledAt: e.createdAt })),
+        }),
+      ],
     };
   }
 

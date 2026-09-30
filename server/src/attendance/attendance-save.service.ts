@@ -182,6 +182,7 @@ export class AttendanceSaveService {
           select: {
             id: true,
             studentId: true,
+            createdAt: true,
             student: { select: { firstName: true, lastName: true } },
           },
         });
@@ -194,7 +195,7 @@ export class AttendanceSaveService {
         const existingRecords = await tx.attendance.findMany({
           where: { groupId, date: parsedDate },
         });
-        const takenManually = existingRecords.some(
+        const manualRows = existingRecords.filter(
           (r) => r.markedMethod === AttendanceMethod.MANUAL,
         );
         const now = new Date();
@@ -203,10 +204,10 @@ export class AttendanceSaveService {
         const leftOut = leftOutAfterEnd({
           date,
           ended: lessonHasEnded({ date, ...clock, endTime: effectiveEndTime }),
-          takenManually,
-          unmarkedIds: [...enrollmentIdByStudent.keys()].filter(
-            (id) => !marked.has(id),
-          ),
+          manualRows,
+          unmarked: enrolled
+            .filter((e) => !marked.has(e.studentId))
+            .map((e) => ({ studentId: e.studentId, enrolledAt: e.createdAt })),
         });
         this.assertFullRoster(
           enrollmentIdByStudent,
@@ -267,7 +268,7 @@ export class AttendanceSaveService {
           existingRecords,
           entries: dto.entries,
           late: {
-            rosterTaken: takenManually,
+            rosterTaken: manualRows.length > 0,
             minutesNow: running
               ? minutesLate({
                   lessonDay: date,

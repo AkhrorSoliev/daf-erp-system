@@ -104,24 +104,39 @@ export function lessonHasEnded(args: {
 
 /**
  * An edit after the lesson (CEO 30.09, D1) keeps contract 3.2 as the lesson
- * saw it. Once a manual save took the register, every student it could mark
- * has a row, so a roster student without one was kept out then (unpaid, or
- * not in the group yet). After the end he stays out: a payment since does
- * not put him in the lesson, and the teacher was told it earns nothing for
- * him. Empty while the lesson runs, and for a register only QR scans took:
- * the first manual save there still marks everyone.
+ * saw it. A manual save marks every student it may, so a roster student who
+ * was already in the group when a manual save first took the register, and
+ * still has no row, was kept out then (unpaid). After the end he stays out:
+ * a payment since does not put him in the lesson, and the teacher was told
+ * it earns nothing for him. A student enrolled after that save is new, not
+ * left out: adding him after the lesson is what D1 was decided for, and the
+ * normal admission judges him. Empty while the lesson runs, for a register
+ * only QR scans took (the first manual save there still marks everyone) and
+ * before 01.10.2026 (older rules let a present student go without a row).
  */
 export function leftOutAfterEnd(input: {
   date: string;
   ended: boolean;
-  takenManually: boolean;
-  unmarkedIds: readonly number[];
+  /** The register's MANUAL rows; the earliest is when a manual save took it. */
+  manualRows: readonly { createdAt: Date }[];
+  /** Roster students with no row, and when each joined the group. */
+  unmarked: readonly { studentId: number; enrolledAt: Date }[];
 }): Set<number> {
-  // Only where contract 3.2 kept anyone out: older registers were saved
-  // under rules that let a present student go without a row.
-  const applies =
-    input.date >= ADMISSION_START_DAY && input.ended && input.takenManually;
-  return new Set(applies ? input.unmarkedIds : []);
+  if (
+    input.date < ADMISSION_START_DAY ||
+    !input.ended ||
+    input.manualRows.length === 0
+  ) {
+    return new Set();
+  }
+  const takenAt = Math.min(
+    ...input.manualRows.map((r) => r.createdAt.getTime()),
+  );
+  return new Set(
+    input.unmarked
+      .filter((s) => s.enrolledAt.getTime() < takenAt)
+      .map((s) => s.studentId),
+  );
 }
 
 /** The Uzbek refusal for a closed window; `null` while it is open. */

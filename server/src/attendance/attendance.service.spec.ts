@@ -721,15 +721,28 @@ describe('AttendanceService', () => {
         jest.setSystemTime(new Date('2026-10-07T04:30:00.000Z'));
       });
       afterEach(() => jest.useRealTimers());
+      // The register was taken at 09:10 on 05.10.
       const row = (markedMethod: string) => ({
         studentId: 10001,
         status: 'PRESENT',
         note: null,
         lateMinutes: null,
         markedMethod,
+        createdAt: new Date('2026-10-05T04:10:00.000Z'),
       });
+      const enrolledOn = (at10002: string) =>
+        prisma.enrollment.findMany.mockResolvedValue(
+          mockEnrollments.map((e) => ({
+            ...e,
+            id: `enr-${e.studentId}`,
+            createdAt: new Date(
+              e.studentId === 10002 ? at10002 : '2026-09-01T05:00:00.000Z',
+            ),
+          })),
+        );
 
       it('reads LEFT_OUT, over NOT_PAID too', async () => {
+        enrolledOn('2026-09-01T05:00:00.000Z');
         prisma.attendance.findMany.mockResolvedValue([row('MANUAL')]);
         admission.forLesson.mockResolvedValue(
           new Map([
@@ -758,11 +771,20 @@ describe('AttendanceService', () => {
         const reasonOn = async (date: string) =>
           (await service.getByDate('group-uuid-1', date, 1)).activeStudents[1]
             .admission.reason;
+        enrolledOn('2026-09-01T05:00:00.000Z');
         prisma.attendance.findMany.mockResolvedValue([row('QR')]);
         expect(await reasonOn('2026-10-05')).toBe('NOT_APPLIED');
         prisma.attendance.findMany.mockResolvedValue([row('MANUAL')]);
         expect(await reasonOn('2026-10-07')).toBe('NOT_APPLIED');
         expect(await reasonOn('2026-09-28')).toBe('NOT_APPLIED');
+      });
+
+      it('is not read for a student enrolled after the register was taken', async () => {
+        enrolledOn('2026-10-05T06:10:00.000Z'); // 11:10, after the lesson
+        prisma.attendance.findMany.mockResolvedValue([row('MANUAL')]);
+        const result = await service.getByDate('group-uuid-1', '2026-10-05', 1);
+        expect(result.activeStudents[1].admission.reason).toBe('NOT_APPLIED');
+        expect(result).not.toHaveProperty('leftOutStudentIds');
       });
     });
 
@@ -2146,6 +2168,12 @@ describe('AttendanceService', () => {
         // Monday 05.10's lesson, which has ended by the pinned clock.
         const saveAs = (entries: SaveAttendanceDto['entries']) =>
           saveOn('2026-10-05', entries);
+        const SEPTEMBER = new Date('2026-09-01T05:00:00.000Z');
+        // The register was taken at 09:10 on 05.10.
+        const takenRow = {
+          ...pastRegister[0],
+          createdAt: new Date('2026-10-05T04:10:00.000Z'),
+        };
         beforeEach(() => {
           // Wednesday 07.10, 09:30 Tashkent.
           jest.setSystemTime(new Date('2026-10-07T04:30:00.000Z'));
@@ -2153,7 +2181,19 @@ describe('AttendanceService', () => {
             ...mockGroup,
             endDate: new Date('2026-12-31'),
           });
-          prisma.attendance.findMany.mockResolvedValue([pastRegister[0]]);
+          // Both students were in the group long before 05.10's register.
+          prisma.enrollment.findMany.mockResolvedValue(
+            mockEnrollments.map((e) => ({
+              id: `enr-${e.studentId}`,
+              studentId: e.studentId,
+              createdAt: SEPTEMBER,
+              student: {
+                firstName: e.student.firstName,
+                lastName: e.student.lastName,
+              },
+            })),
+          );
+          prisma.attendance.findMany.mockResolvedValue([takenRow]);
         });
 
         it('is not required, though he has paid since', async () => {
@@ -2184,9 +2224,34 @@ describe('AttendanceService', () => {
           ).resolves.toMatchObject({ count: 2 });
         });
 
+        // D1's own case: a new student enrolled ten minutes after the lesson
+        // is added to its register. He was not left out, just not there yet.
+        it('lets the administrator add a student enrolled after the register was taken', async () => {
+          prisma.enrollment.findMany.mockResolvedValue(
+            mockEnrollments.map((e) => ({
+              id: `enr-${e.studentId}`,
+              studentId: e.studentId,
+              createdAt:
+                e.studentId === 10002
+                  ? new Date('2026-10-05T06:10:00.000Z') // 11:10
+                  : SEPTEMBER,
+              student: {
+                firstName: e.student.firstName,
+                lastName: e.student.lastName,
+              },
+            })),
+          );
+          await expect(
+            saveAs([
+              { studentId: 10001, status: 'PRESENT' },
+              { studentId: 10002, status: 'PRESENT' },
+            ]),
+          ).resolves.toMatchObject({ count: 2 });
+        });
+
         it('still needs him on a register only QR scans took', async () => {
           prisma.attendance.findMany.mockResolvedValue([
-            { ...pastRegister[0], markedMethod: 'QR' },
+            { ...takenRow, markedMethod: 'QR' },
           ]);
           await expect(
             saveAs([{ studentId: 10001, status: 'PRESENT' }]),

@@ -7,11 +7,6 @@ import { AttendanceStatsService } from './attendance-stats.service';
 import { AttendanceSaveService } from './attendance-save.service';
 import { LessonAdmissionService } from '../billing/lesson-admission.service';
 import { ADMITTED_WITHOUT_RULE, LEFT_OUT } from '../billing/lesson-admission';
-import {
-  leftOutAfterEnd,
-  lessonHasEnded,
-  tashkentClock,
-} from './shared/attendance-window';
 
 @Injectable()
 export class AttendanceService {
@@ -50,7 +45,7 @@ export class AttendanceService {
     roles?: string[],
     late = false,
   ) {
-    const roster = await this.read.getByDate(
+    const { leftOutStudentIds, ...roster } = await this.read.getByDate(
       groupId,
       date,
       companyId,
@@ -67,18 +62,7 @@ export class AttendanceService {
     ]);
     // After the lesson a student the register left out stays out, paid or
     // not — as `save()` judges it.
-    const leftOut = leftOutAfterEnd({
-      date,
-      ended: lessonHasEnded({
-        date,
-        ...tashkentClock(),
-        endTime: roster.effectiveEndTime,
-      }),
-      takenManually: roster.registerTakenManually,
-      unmarkedIds: roster.activeStudents
-        .filter((s) => s.status === null)
-        .map((s) => s.studentId),
-    });
+    const leftOut = new Set(leftOutStudentIds);
     return {
       ...roster,
       opensMinutesBefore,
