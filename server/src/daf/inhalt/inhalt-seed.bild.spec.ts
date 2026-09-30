@@ -104,3 +104,21 @@ describe('InhaltSeedService — pictures', () => {
     expect(tisch.create.bildTippen).toBe(false);
   });
 });
+
+describe('InhaltSeedService — accepted spellings', () => {
+  it('writes a word`s other spellings, and clears them when removed', async () => {
+    const prisma = fakePrisma();
+    const f = files();
+    f.woerter.woerter[1] = {
+      ...f.woerter.woerter[1],
+      de: 'tschüss',
+      akzeptiert: ['tschüs'],
+    };
+    await new InhaltSeedService(prisma as any).seed('u01', f);
+    const hallo = upsertFor(prisma, 'u01-s1-hallo');
+    expect(hallo.create.akzeptiert).toEqual(['tschüs']);
+    expect(hallo.update.akzeptiert).toEqual(['tschüs']);
+    const tisch = upsertFor(prisma, 'u01-s1-tisch');
+    expect(tisch.update.akzeptiert).toEqual([]);
+  });
+});

@@ -512,6 +512,28 @@ describe('UebungService.seans', () => {
     const fragen = await new UebungService(prisma as any).seans(100, 55);
     expect(fragen).toEqual([]);
   });
+
+  it('a lesson of a unit with no content asks nothing, not only due words', async () => {
+    // Unit 4 had its sections and lessons seeded before its words were
+    // written; its lessons used to be one or two due review questions.
+    const prisma = fakePrisma();
+    prisma.dafLexeme.findMany = jest.fn(async (args: any = {}) =>
+      args?.where?.id?.in
+        ? [{ id: 5, de: 'Name', uz: 'ism', artikel: 'der', anzeige: null }]
+        : [],
+    ) as any;
+    prisma.dafSentence.findMany = jest.fn(async () => []) as any;
+    prisma.dafPhrase.findMany = jest.fn(async () => []) as any;
+    prisma.dafDialog.findMany = jest.fn(async () => []) as any;
+    prisma.dafLexemeState.findMany = jest.fn(async () => [
+      { lexemeId: 5, lastFormat: 'WORT_UZ', dueAt: new Date(0) },
+    ]) as any;
+    const service = new UebungService(prisma as any);
+    await expect(service.seans(100, 55)).resolves.toEqual([]);
+    await expect(
+      service.ersatz(100, 55, 'WORT', 5, 'WORT_UZ'),
+    ).resolves.toBeNull();
+  });
 });
 
 describe('UebungService.seans — DIALOG_LUECKE', () => {
@@ -587,20 +609,12 @@ describe('UebungService.seans — qaytarish (wiederholung)', () => {
   // qayta ko'rikdan o'tkazish): 2000 marta ishga tushirilganda,
   // taqiqlangan format aslida 38% holatda namunaga tushar, so'z esa
   // 15%da seansda UMUMAN chiqmasdi — ikkalasida ham tekshiruv jimgina
-  // "o'tib" ketardi. Endi SEEDLANGAN generator beriladi: natija HAR
-  // DOIM bir xil (seed=1 bilan so'z 1 seansda haqiqatda chiqishi
-  // oldindan tekshirilgan), shuning uchun CI'da barqaror va ikkinchi
-  // shart (so'zning seansda haqiqatda BORLIGI) ham endi tasdiqlanadi —
-  // aks holda ichki `for` sikli bo'sh massivda bekorga "o'tib" ketardi.
-  //
-  // SEED `baueKandidaten`GA YANGI NOMZOD MANBAI (`DIALOG_LUECKE`)
-  // qo'shilganda 0dan 1ga ko'chirildi: barcha kandidat quruvchilar BITTA
-  // umumiy `rnd` oqimini baham ko'radi, ya'ni yangi manba ro'yxatning
-  // OXIRIDA turgan bo'lsa ham undan oldingi chaqiruvlar ketma-ketligini
-  // o'zgartirmaydi — lekin `baueSeans`ning O'ZI xuddi shu `rnd`ni davom
-  // ettirib ishlatadi, shuning uchun panelga bir nechta nomzod qo'shilishi
-  // seansning YAKUNIY tanlovini ham siljitadi. Bu — bitta ulashilgan
-  // generatorga tayangan seedli testlarning tabiiy narxi, xatolik emas.
+  // "o'tib" ketardi. Endi SEEDLANGAN generator beriladi va so'z 1
+  // seansda HAQIQATDA chiqqan birinchi seed olinadi, shuning uchun CI'da
+  // barqaror va ikkinchi shart (so'zning seansda BORLIGI) ham
+  // tasdiqlanadi — aks holda ichki `for` sikli bo'sh massivda bekorga
+  // "o'tib" ketardi. Qat'iy bitta seed har quruvchi bitta ortiq tasodifiy
+  // son olganda buzilardi (barchasi bitta `rnd` oqimini baham ko'radi).
   it('oddiy so`zning ham avvalgi formatidagi nomzodi qurilmaydi (dizayn qoidasi 5)', async () => {
     const prisma = fakePrisma();
     prisma.dafLexemeState.findMany = jest.fn(async (args: any) => {
@@ -613,14 +627,19 @@ describe('UebungService.seans — qaytarish (wiederholung)', () => {
       return [];
     }) as any;
 
-    const fragen = await new UebungService(prisma as any).seans(
-      100,
-      55,
-      mulberry32(1),
-    );
-    const soz1Savollari = fragen.filter(
-      (f) => f.itemType === 'WORT' && f.itemId === 1,
-    );
+    // The first seed whose session asks word 1: a fixed seed broke every
+    // time a builder drew one more random number (2026-09-30: distractors).
+    let soz1Savollari: Awaited<ReturnType<UebungService['seans']>> = [];
+    for (let seed = 0; seed < 50 && soz1Savollari.length === 0; seed += 1) {
+      const fragen = await new UebungService(prisma as any).seans(
+        100,
+        55,
+        mulberry32(seed),
+      );
+      soz1Savollari = fragen.filter(
+        (f) => f.itemType === 'WORT' && f.itemId === 1,
+      );
+    }
     // So'z 1 seansda HAQIQATDA chiqadi — aks holda pastdagi tekshiruv
     // bo'sh massivda vaqinchalik "o'tib" ketgan bo'lardi.
     expect(soz1Savollari.length).toBeGreaterThan(0);
@@ -630,6 +649,119 @@ describe('UebungService.seans — qaytarish (wiederholung)', () => {
       expect(f.format).not.toBe('WORT_UZ');
     }
   });
+
+  // Review 2026-09-30: a due word from another unit was asked among TODAY's
+  // words — "sieben" in a lesson of greetings was the only number, and in a
+  // u02 lesson of 20–100 the only small one. Among only the sections up to
+  // its own it was always the newest word (41–50% blind). So a word from an
+  // EARLIER unit, finished by now, is asked among its whole unit; a word from
+  // the same or a later unit among the sections up to its own, never among
+  // words the student has not reached.
+  //
+  // Unit 3 (A1, order 3): section 49 (order 3), 50 (order 4, the due word
+  // "sieben"), 51 (order 5). "olti" in section 49 is not core.
+  function heimatFake(lessonUnitOrder: number) {
+    const prisma = fakePrisma();
+    const eski = new Date(Date.now() - 60_000);
+    const unit3 = { level: 'A1', order: 3 };
+    const sektionen = [
+      { id: 49, code: 'u03-s3', order: 3, unitId: 3, unit: unit3 },
+      { id: 50, code: 'u03-s4', order: 4, unitId: 3, unit: unit3 },
+      { id: 51, code: 'u03-s5', order: 5, unitId: 3, unit: unit3 },
+    ];
+    const woerter = [
+      [490, 'acht', 'sakkiz', '8', 49, true],
+      [491, 'achtzehn', "o'n sakkiz", '18', 49, true],
+      [492, 'neun', "to'qqiz", '9', 49, true],
+      [493, 'neunzehn', "o'n to'qqiz", '19', 49, true],
+      [494, 'sechs', 'olti', '6', 49, false],
+      [501, 'sieben', 'yetti', '7', 50, true],
+      [510, 'siebzehn', "o'n yetti", '17', 51, true],
+      [511, 'vier', "to'rt", '4', 51, true],
+      [512, 'vierzehn', "o'n to'rt", '14', 51, true],
+    ].map(([id, de, uz, anzeige, sectionId, core]) => ({
+      id: Number(id),
+      de: String(de),
+      uz: String(uz),
+      artikel: null,
+      anzeige: String(anzeige),
+      core: Boolean(core),
+      sectionId: Number(sectionId),
+      unitId: 3,
+      audioKey: null,
+      imageKey: null,
+      bildTippen: false,
+    }));
+    const lesson = prisma.dafLesson.findUnique;
+    prisma.dafLesson.findUnique = jest.fn(async () => ({
+      ...(await lesson()),
+      unit: { level: 'A1', order: lessonUnitOrder },
+    })) as any;
+    const altFindMany = prisma.dafLexeme.findMany;
+    prisma.dafLexeme.findMany = jest.fn(async (args: any = {}) => {
+      const where = args?.where ?? {};
+      const eigene = (await altFindMany(args)) as unknown[];
+      const fremde = woerter.filter(
+        (l) =>
+          (!where.sectionId?.in || where.sectionId.in.includes(l.sectionId)) &&
+          (!where.id?.in || where.id.in.includes(l.id)) &&
+          (where.core !== true || l.core),
+      );
+      return [...eigene, ...fremde];
+    }) as any;
+    prisma.dafSection.findMany = jest.fn(async (args: any = {}) => {
+      const where = args?.where ?? {};
+      if (where.id?.in)
+        return sektionen.filter((s) => where.id.in.includes(s.id));
+      if (where.unitId?.in)
+        return sektionen.filter((s) => where.unitId.in.includes(s.unitId));
+      return [{ id: 7, code: 'u01-s1', order: 1, unitId: 1 }];
+    }) as any;
+    prisma.dafLexemeState.findMany = jest.fn(async (args: any = {}) =>
+      args?.where?.dueAt
+        ? [{ lexemeId: 501, lastFormat: 'UZ_WORT', dueAt: eski }]
+        : [],
+    ) as any;
+    return prisma;
+  }
+
+  it('oldingi unit so`zi o`z unitining barcha so`zlari orasida so`raladi', async () => {
+    for (let i = 0; i < 10; i += 1) {
+      const fragen = await new UebungService(heimatFake(5) as any).seans(
+        100,
+        55,
+      );
+      const sieben = fragen.find(
+        (f) => f.itemType === 'WORT' && f.itemId === 501,
+      );
+      expect(sieben?.format).toBe('WORT_UZ');
+      // "o'n yetti" is only in section 51, after the word's own.
+      expect(sieben?.options).toContain("o'n yetti");
+      expect(sieben?.options).toHaveLength(4);
+      expect(sieben?.options).not.toContain('olti');
+    }
+  });
+
+  it.each([
+    ['o`sha', 3],
+    ['keyingi', 2],
+  ])(
+    '%s unit so`zi faqat o`z bo`limigacha bo`lgan so`zlar orasida so`raladi',
+    async (_nomi, lessonUnitOrder) => {
+      for (let i = 0; i < 10; i += 1) {
+        const fragen = await new UebungService(
+          heimatFake(lessonUnitOrder) as any,
+        ).seans(100, 55);
+        const sieben = fragen.find(
+          (f) => f.itemType === 'WORT' && f.itemId === 501,
+        );
+        expect(sieben?.options).toContain('yetti');
+        for (const nie of ["o'n yetti", "to'rt", "o'n to'rt", 'olti']) {
+          expect(sieben?.options).not.toContain(nie);
+        }
+      }
+    },
+  );
 
   // Finding 5, qaytarish yo'lidagi hodisasi: muddati kelgan so'zning
   // o'zi tarjimasiz bo'lsa (id 7 — `uz: null`), `baueWiederholung` xato

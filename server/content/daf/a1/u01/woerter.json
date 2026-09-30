@@ -39,7 +39,10 @@
       "de": "tschüss",
       "uz": "xayr (norasmiy)",
       "core": true,
-      "order": 5
+      "order": 5,
+      "akzeptiert": [
+        "tschüs"
+      ]
     },
     {
       "sourceId": "u01-s1-bis-bald",
@@ -366,6 +369,78 @@
       "uz": "o'n bir",
       "core": true,
       "order": 12
+    },
+    {
+      "sourceId": "u01-s4-zwoelf",
+      "section": "u01-s4",
+      "de": "zwölf",
+      "anzeige": "12",
+      "uz": "o'n ikki",
+      "core": true,
+      "order": 13
+    },
+    {
+      "sourceId": "u01-s4-dreizehn",
+      "section": "u01-s4",
+      "de": "dreizehn",
+      "anzeige": "13",
+      "uz": "o'n uch",
+      "core": true,
+      "order": 14
+    },
+    {
+      "sourceId": "u01-s4-vierzehn",
+      "section": "u01-s4",
+      "de": "vierzehn",
+      "anzeige": "14",
+      "uz": "o'n to'rt",
+      "core": true,
+      "order": 15
+    },
+    {
+      "sourceId": "u01-s4-fuenfzehn",
+      "section": "u01-s4",
+      "de": "fünfzehn",
+      "anzeige": "15",
+      "uz": "o'n besh",
+      "core": true,
+      "order": 16
+    },
+    {
+      "sourceId": "u01-s4-sechzehn",
+      "section": "u01-s4",
+      "de": "sechzehn",
+      "anzeige": "16",
+      "uz": "o'n olti",
+      "core": true,
+      "order": 17
+    },
+    {
+      "sourceId": "u01-s4-siebzehn",
+      "section": "u01-s4",
+      "de": "siebzehn",
+      "anzeige": "17",
+      "uz": "o'n yetti",
+      "core": true,
+      "order": 18
+    },
+    {
+      "sourceId": "u01-s4-achtzehn",
+      "section": "u01-s4",
+      "de": "achtzehn",
+      "anzeige": "18",
+      "uz": "o'n sakkiz",
+      "core": true,
+      "order": 19
+    },
+    {
+      "sourceId": "u01-s4-neunzehn",
+      "section": "u01-s4",
+      "de": "neunzehn",
+      "anzeige": "19",
+      "uz": "o'n to'qqiz",
+      "core": true,
+      "order": 20
     },
     {
       "sourceId": "u01-s5-c",

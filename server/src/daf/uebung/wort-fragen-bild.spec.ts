@@ -95,6 +95,54 @@ describe('bildWort', () => {
   });
 });
 
+describe('number plates and scene pictures are never mixed', () => {
+  // Review 2026-09-30: all 20 u01 number pictures are one plate design, so a
+  // scene among three plates was the odd one out — the answer without the word.
+  const plate = (n: number): MaterialWort => ({
+    ...bild(100 + n, `z${n}`, `u${n}`),
+    anzeige: String(n),
+  });
+  const PLATES = Array.from({ length: 20 }, (_, n) => plate(n));
+  const GUTEN_MORGEN = bild(1, 'Guten Morgen', 'xayrli tong');
+  const SCENES = [
+    bild(2, 'danke', 'rahmat'),
+    bild(3, 'Deutschland', 'Germaniya'),
+    bild(4, 'Usbekistan', "O'zbekiston"),
+  ];
+  const plateUrl = (f: { options: string[] }) =>
+    f.options.filter((o) => /\/b1\d\d\.jpg$/.test(o));
+
+  it.each([0, 0.2, 0.5, 0.8, 0.99])(
+    'a scene word gets scene pictures only (rnd %p)',
+    (r) => {
+      for (const build of [bildWort, audioBild]) {
+        const f = build(
+          GUTEN_MORGEN,
+          [...PLATES, ...SCENES],
+          () => r,
+          mediaUrl,
+        )!;
+        expect(plateUrl(f)).toEqual([]);
+        expect(f.options).toHaveLength(4);
+      }
+    },
+  );
+
+  it.each([0, 0.2, 0.5, 0.8, 0.99])(
+    'a number gets number plates only (rnd %p)',
+    (r) => {
+      const f = bildWort(PLATES[7], [...PLATES, ...SCENES], () => r, mediaUrl)!;
+      expect(plateUrl(f)).toHaveLength(4);
+    },
+  );
+
+  it('asks no picture question when too few pictures of its own family exist', () => {
+    expect(
+      bildWort(GUTEN_MORGEN, [...PLATES, ...SCENES.slice(0, 2)], rnd, mediaUrl),
+    ).toBeNull();
+  });
+});
+
 describe('audioBild', () => {
   it('shows no word: only the audio and 4 picture options', () => {
     const f = audioBild(BAHNHOF, POOL, rnd, mediaUrl)!;

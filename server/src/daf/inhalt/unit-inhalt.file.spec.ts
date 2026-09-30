@@ -1,6 +1,10 @@
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { validateWortliste, UNIT_WORDS_MAX } from './wortliste.validate';
+import {
+  kernwoerterImBudget,
+  validateWortliste,
+  UNIT_WORDS_MAX,
+} from './wortliste.validate';
 import {
   validateEindeutigkeit,
   validateHilfswoerter,
@@ -137,7 +141,11 @@ describe.each(UNITS)('%s — so`zlar', (unit) => {
   });
 
   it(`${UNIT_WORDS_MAX} ta asosiy so\`z bor`, () => {
-    expect(woerter.woerter.filter((w) => w.core)).toHaveLength(UNIT_WORDS_MAX);
+    // Words built from taught ones (dreizehn, einundzwanzig) are outside
+    // the budget (`ausserhalbBudget` in wortliste.json).
+    expect(kernwoerterImBudget(woerter.woerter, wortliste)).toBe(
+      UNIT_WORDS_MAX,
+    );
   });
 
   it('har asosiy so`z taqsimotda ham bor', () => {
@@ -168,12 +176,18 @@ describe.each(UNITS)('%s — so`zlar', (unit) => {
     // o'rgatiladigan narsaning O'ZI (nemischa so'z) bo'lishi kerak —
     // raqam emas. Raqam faqat ko'rgazma sifatida `anzeige`da turadi.
     // `tts` esa faqat talaffuz yozma shakldan farq qilganda kerak —
-    // "eins" kabi so'zlarni TTS o'z-o'zidan to'g'ri o'qiydi.
+    // "eins" kabi so'zlarni TTS o'z-o'zidan to'g'ri o'qiydi. Qo'shma sonni
+    // TTS yutib yuborsa ("fünfunddreißig" → «fum», CEO 30.09 eshitdi),
+    // `tts` o'sha so'zning o'zi, faqat chiziqcha yoki bo'shliq bilan
+    // bo'lingan bo'lishi mumkin — raqam yoki boshqa so'z emas.
     const sonlar = woerter.woerter.filter((w) => w.anzeige !== undefined);
     for (const w of sonlar) {
       expect(/^\d+$/.test(w.de)).toBe(false);
       expect(/^\d+$/.test(w.anzeige ?? '')).toBe(true);
-      expect(w.tts).toBeUndefined();
+      if (w.tts === undefined) continue;
+      // Split inside only: no digit, no edge space, same letters and case.
+      expect(w.tts).toMatch(/^[^\s\d-]+(?:[ -][^\s\d-]+)+$/);
+      expect(w.tts.replace(/[ -]/g, '')).toBe(w.de);
     }
   });
 
@@ -476,9 +490,12 @@ describe.each(UNITS)('%s — gaplar', (unit) => {
 describe('u01 — o`ziga xos faktlar', () => {
   const woerter = read<WoerterFile>('u01', 'woerter.json');
 
-  it('sonlar bo`limida 12 ta son bor', () => {
-    expect(woerter.woerter.filter((w) => w.section === 'u01-s4')).toHaveLength(
-      12,
+  it('sonlar bo`limida 0 dan 19 gacha 20 ta son bor', () => {
+    // 0–11 first, 12–19 added on 2026-09-30 (CEO: numbers were never
+    // taught past eleven).
+    const sonlar = woerter.woerter.filter((w) => w.section === 'u01-s4');
+    expect(sonlar.map((w) => Number(w.anzeige))).toEqual(
+      Array.from({ length: 20 }, (_, i) => i),
     );
   });
 
@@ -487,5 +504,19 @@ describe('u01 — o`ziga xos faktlar', () => {
       (w) => w.section === 'u01-s5' && /^[A-ZÄÖÜ]$/.test(w.de),
     );
     expect(harflar).toHaveLength(9);
+  });
+});
+
+describe('u02 — o`ziga xos faktlar', () => {
+  const woerter = read<WoerterFile>('u02', 'woerter.json');
+
+  it('fünfunddreißig chiziqcha bilan o`qiladi, bitta so`z bo`lib yoziladi', () => {
+    // Bitta so'z holida TTS "fünf"ni «fum» deb o'qidi (CEO 30.09 eshitdi).
+    // CEO uch variantdan chiziqchalisini tanladi; yozuv o'zgarmaydi.
+    const fuenf = woerter.woerter.find(
+      (w) => w.sourceId === 'u02-s2-fuenfunddreissig',
+    );
+    expect(fuenf?.de).toBe('fünfunddreißig');
+    expect(fuenf?.tts).toBe('fünf-und-dreißig');
   });
 });
