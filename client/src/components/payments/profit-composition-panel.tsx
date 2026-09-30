@@ -103,8 +103,9 @@ export function ProfitCompositionPanel({
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-72">
-                Sof foyda = shu oy o&apos;tilgan darslar puli − ustozlar haqi −
-                xodimlar oyligi − xarajatlar − qaytarilgan pul.
+                Sof foyda = shu oy o&apos;tilgan darslar puli + balansdan
+                yechib olingan pul − ustozlar haqi − xodimlar oyligi −
+                xarajatlar − qaytarilgan pul.
                 <br />
                 <br />
                 Kassaga tushgan pul emas, o&apos;tilgan dars hisoblanadi: dars
@@ -161,7 +162,11 @@ export function ProfitCompositionPanel({
               {formatPrice(data.netProfit)} so&apos;m
             </p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {headline(data.revenue.total, data.netProfit)}
+              {headline(
+                data.revenue.total,
+                data.netProfit,
+                data.withdrawals.total,
+              )}
             </p>
           </div>
 
