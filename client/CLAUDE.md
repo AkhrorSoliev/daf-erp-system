@@ -1073,7 +1073,7 @@ every list renders; the roles are only access.
 - **Push hook** (`src/hooks/use-push-notifications.ts`) — service worker registration + push subscription
 - **Service Worker** (`public/sw.js`) — push event handler, notification click → navigates to page
 - **Real-time:** When a new notification arrives via SSE, badge count increments and it's added to the dropdown
-- Notification click → navigates to the related entity page (based on relatedEntityType/Id)
+- Notification click → `notificationHref` (`src/lib/notification-href.ts`, unit-tested against the real page files): task notifications (`TASK_*`) open `/tasks`, the same page their web push opens; the rest open the related entity's page (`/groups/:id`, `/students/profile/:id`, `/settings/absence-pause`, and the viewer's own `/profile/salary` for a `User` notification about themselves). A web push click opens the `url` the server put in the payload — keep the two pointing at the same page.
 
 ### Testing
 

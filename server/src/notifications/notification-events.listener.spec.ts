@@ -89,6 +89,10 @@ describe('NotificationEventsListener', () => {
           companyId: 1,
         }),
       );
+      expect(pushService.sendToUser).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ url: '/students/profile/10001' }),
+      );
     });
 
     it('includes the performer, old/new amounts and reason in the message', async () => {

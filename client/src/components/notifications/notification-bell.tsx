@@ -21,6 +21,8 @@ import {
 } from "@/hooks/use-notifications";
 import { useSSE } from "@/hooks/use-sse";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
+import { useAuth } from "@/hooks/use-auth";
+import { notificationHref } from "@/lib/notification-href";
 
 const TYPE_ICONS: Record<string, typeof MessageSquare> = {
   COMMENT: MessageSquare,
@@ -74,6 +76,7 @@ function NotificationItem({
 
 export function NotificationBell() {
   const router = useRouter();
+  const viewerId = useAuth((s) => s.user?.id);
   const {
     notifications,
     unreadCount,
@@ -105,14 +108,8 @@ export function NotificationBell() {
   };
 
   const handleNavigate = (n: AppNotification) => {
-    if (n.relatedEntityType && n.relatedEntityId) {
-      const routes: Record<string, string> = {
-        Student: `/students/${n.relatedEntityId}`,
-        User: `/teachers/${n.relatedEntityId}`,
-      };
-      const url = routes[n.relatedEntityType];
-      if (url) router.push(url);
-    }
+    const url = notificationHref(n, viewerId);
+    if (url) router.push(url);
   };
 
   return (
