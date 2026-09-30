@@ -1369,6 +1369,7 @@ Rules:
 
 - Use NestJS built-in exceptions (`NotFoundException`, `ForbiddenException`, `BadRequestException`, etc.)
 - Never expose internal error details to clients
+- **A Telegram error can carry the bot token.** A Bot API call goes to `…/bot<token>/<method>`, and Telegraf redacts that URL only when the request itself fails — a non-JSON reply or a body cut off or timed out still quotes it. `installBotTokenRedaction()` (`telegram-digest/telegram-send.ts`, the first line of `main.ts`) strips `bot<id>:<secret>` from the message and stack of every error a Telegram call throws, both bots and `ctx.*` included. Text that is stored or shown goes through `describeError`, which applies the same rule; never write a raw `err.message` from a Telegram call to the database.
 
 ### File Size and Responsibility
 

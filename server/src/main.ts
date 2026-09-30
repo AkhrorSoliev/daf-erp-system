@@ -1,8 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { installBotTokenRedaction } from './telegram-digest/telegram-send';
 
 async function bootstrap() {
+  // Before any bot starts, so no Telegram error can carry the bot token.
+  installBotTokenRedaction();
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api');
