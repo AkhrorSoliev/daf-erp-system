@@ -184,6 +184,7 @@ describe('ReportsExcelService', () => {
   const netProfit = {
     revenue: 1_000_000,
     revenueBasis: 'recognized' as const,
+    balanceWithdrawals: 0,
     teacherSalary: 400_000,
     teacherSalaryBasis: 'hisoblangan' as const,
     adminSalaryBasis: 'hisoblangan' as const,
@@ -343,6 +344,9 @@ describe('ReportsExcelService', () => {
     // Recognized "dars tushumi" — set equal to cash revenue (1_000_000) so the
     // net-profit expectations isolate the salary top-up gating under test.
     getRecognizedRevenue: jest.fn().mockResolvedValue(1_000_000),
+    getBalanceWithdrawals: jest
+      .fn()
+      .mockResolvedValue({ total: 0, teacherCredited: 0, students: [] }),
     getDebtorLineItems: jest.fn().mockResolvedValue(debtors),
     getReconciliation: jest.fn().mockResolvedValue(recon),
     getPeriodOutflows: jest.fn().mockResolvedValue({
@@ -601,6 +605,41 @@ describe('ReportsExcelService', () => {
     expect(teacher.getCell(2).value).toBe(salaryMonthly.totals.fullDeserved);
     // revenue 1_000_000 − teacher(fullDeserved) 500_000 − admin 100_000 − opEx 200_000 − refunds 10_000
     expect(findRow(ws, '=  SOF FOYDA').getCell(2).value).toBe(190_000);
+  });
+
+  it("adds the month's balance withdrawals to «Xulosa» and the Tekshiruv footing (ADR-0055)", async () => {
+    reports.getBalanceWithdrawals.mockResolvedValue({
+      total: 50_000,
+      teacherCredited: 0,
+      students: [],
+    });
+    const wb = await buildWorkbook(
+      {},
+      {
+        startDate: '2026-06-01',
+        endDate: '2026-06-30',
+        include: ['buxgalteriya'],
+      },
+    );
+    expect(reports.getBalanceWithdrawals).toHaveBeenCalledWith(1, {
+      months: ['2026-06'],
+      branchIds: null,
+    });
+
+    const xulosa = wb.getWorksheet('Xulosa')!;
+    expect(
+      findRow(xulosa, '+  Balansdan yechib olingan').getCell(2).value,
+    ).toBe(50_000);
+    // 290 000 (see the pre-top-up case above) + 50 000 withdrawn.
+    expect(findRow(xulosa, '=  SOF FOYDA').getCell(2).value).toBe(340_000);
+
+    const check = wb.getWorksheet('Tekshiruv')!;
+    expect(findRow(check, '+ Balansdan yechib olingan').getCell(2).value).toBe(
+      50_000,
+    );
+    expect(
+      cellText(findRow(check, '= Sof foyda (footing)').getCell(5).value),
+    ).toBe('MOS');
   });
 
   it('totals «Xulosa» block 4 at the full lesson value, not the recognised revenue', async () => {

@@ -152,6 +152,15 @@ function buildBlock1(
     prev.np.revenue,
     "Shu oy o'tilgan darslarning qiymati. Bu kassaga tushgan pul EMAS — puli qachon kelgani muhim emas.",
   );
+  if (cur.np.balanceWithdrawals || prev.np.balanceWithdrawals) {
+    compareRow(
+      ws,
+      '+  Balansdan yechib olingan',
+      cur.np.balanceWithdrawals,
+      prev.np.balanceWithdrawals,
+      "O'quvchi balansidan markaz hisobiga o'tkazilgan pul («Yechib olish»). Kassaga yangi pul kirmagan — u o'quvchi to'lagan kuni tushumda sanalgan.",
+    );
+  }
   compareRow(
     ws,
     '−  Ustoz oyligi (jami hisoblangan)',
