@@ -4,6 +4,8 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { filterPages, type SearchablePage } from "@/data/searchable-pages";
 import api from "@/lib/api";
+import { canOpenEmployeeSettings } from "@/lib/settings-nav";
+import { useAuth } from "@/hooks/use-auth";
 import { useBranchChange } from "@/hooks/use-branch-change";
 
 const RECENT_SEARCHES_KEY = "daf-recent-searches";
@@ -65,6 +67,7 @@ export function useGlobalSearch() {
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const user = useAuth((s) => s.user);
 
   useEffect(() => {
     setRecentSearches(loadRecentSearches());
@@ -164,13 +167,19 @@ export function useGlobalSearch() {
   const pageResults: SearchablePage[] =
     query.trim().length >= 1 ? filterPages(query.trim()).slice(0, 5) : [];
 
+  // "users" are staff without the teacher role. Their only page is employee
+  // settings, which sends an Administrator back to /settings.
+  const visibleResults = canOpenEmployeeSettings(user?.roles.map((r) => r.id) ?? [])
+    ? results
+    : { ...results, users: emptyResult.users };
+
   const hasResults =
     pageResults.length > 0 ||
-    results.students.total > 0 ||
-    results.users.total > 0 ||
-    results.teachers.total > 0 ||
-    results.groups.total > 0 ||
-    results.courses.total > 0;
+    visibleResults.students.total > 0 ||
+    visibleResults.users.total > 0 ||
+    visibleResults.teachers.total > 0 ||
+    visibleResults.groups.total > 0 ||
+    visibleResults.courses.total > 0;
 
   // Show dropdown: when typing (has results or loading) OR when focused with empty query (show hints)
   const showEmpty = query.trim().length === 0;
@@ -182,7 +191,7 @@ export function useGlobalSearch() {
   return {
     query,
     setQuery: handleQueryChange,
-    results,
+    results: visibleResults,
     isLoading,
     isOpen,
     setIsOpen,
