@@ -4,6 +4,10 @@
 **Sana:** 2026-04-16  
 **Tizim:** DaF Sprachzentrum ERP  
 
+> ⚠️ **Bu hujjat 2026-aprel holatini tasvirlaydi va ko'p joyda eskirgan.** Hozirgi qoidalar — [`server/CLAUDE.md`](../server/CLAUDE.md) «Financial System» bo'limi, atamalar — [`CONTEXT.md`](../CONTEXT.md), qarorlar — [`docs/adr/`](adr/README.md). Hujjat bilan kod zid kelsa, **kod haqiqat**.
+>
+> Kodga moslab tuzatilgan joylar: soliq (hisoblanmaydi), pul qaytarish (bir qadam, 50% qoidasi yo'q), oylik davri (prod'da kalendar oyi), ABSENT (hisoblanadi), Payme'da bajarilgan to'lovni bekor qilish, shartnomalar (CRUD moduli olib tashlangan). Qolgan bo'limlar tarixiy rasm sifatida qoldirilgan — ularga tayanishdan oldin kodni tekshiring.
+
 ---
 
 ## 1. Umumiy ko'rinish
@@ -12,7 +16,7 @@ Moliyaviy modul quyidagi jarayonlarni boshqaradi:
 - O'quvchi to'lovlari (naqd va online)
 - Xodimlar oyliklari (o'qituvchi, administrator, kassir, filial direktori)
 - Markaz xarajatlari (ijara, kommunal, ta'minot, marketing, ustozga avans)
-- O'quvchi shartnomasi
+- O'quvchi shartnomasi (model saqlangan, CRUD moduli olib tashlangan — §4.3)
 - Pul qaytarish (refund)
 - Moliyaviy hisobotlar va KPI lar
 - To'lov bekor qilish (reverse) — append-only ledger
@@ -99,6 +103,8 @@ Tizimdagi **har bir pul harakati** shu jadvalga yoziladi. Moliyaviy nazoratning 
 
 #### Contract — Shartnoma
 
+> **Model saqlangan, CRUD olib tashlangan.** `src/contracts/` moduli (`/contracts` endpointlari) va `/payments/contracts` sahifasi yo'q. `Contract` modeli va `contractId` bog'lanishlari (billing, payments, refunds, transactions) qolgan, lekin amalda yangi shartnoma yaratilmaydi. Batafsil: `server/CLAUDE.md` → «Contracts».
+
 | Ustun | Turi | Tavsif |
 |-------|------|--------|
 | contractNumber | String (unique) | Auto-raqam: `DAF-2026-00001` |
@@ -156,9 +162,7 @@ Faqat PERCENTAGE va FIXED_PER_STUDENT turidagi o'qituvchilar uchun.
 | userId | Int | Xodim (oldin `teacherId`) |
 | periodStart | DateTime | Hisoblash davri boshi |
 | periodEnd | DateTime | Hisoblash davri oxiri (cutoff) |
-| grossAmount | Int | Brutto summa |
-| taxAmount | Int | Soliq (default: kompaniya stavkasi 12% ASOT) |
-| netAmount | Int | Netto (gross - tax - avanslar) |
+| amount | Int | To'lanadigan summa: hisoblangan oylik − ushlab qolingan avanslar. Soliq ushlanmaydi |
 | status | SalaryPaymentStatus | CALCULATED → APPROVED → PAID |
 
 #### Refund — Pul qaytarish
@@ -166,22 +170,21 @@ Faqat PERCENTAGE va FIXED_PER_STUDENT turidagi o'qituvchilar uchun.
 | Ustun | Turi | Tavsif |
 |-------|------|--------|
 | studentId | Int | O'quvchi |
-| contractId | UUID | Shartnoma |
+| contractId | UUID? | Shartnoma — faqat eski qatorlarda; yangi refund `enrollmentId` ga bog'lanadi |
 | requestedAmount | Int | So'ralgan summa |
 | approvedAmount | Int? | Tasdiqlangan summa |
 | lessonsCompleted | Int | O'tilgan darslar soni |
 | totalLessons | Int | Jami darslar |
 | deductions | Json? | Tafsilot: consumedFromLedger, lessonsObserved, perLessonCost, previousRefunds, tax, bankFee |
-| status | RefundStatus | REQUESTED → APPROVED → COMPLETED |
+| status | RefundStatus | Yangi refund darhol `COMPLETED`; `REQUESTED`/`APPROVED` faqat eski qatorlarda |
 | refundMethod | PaymentMethod? | Qaytarish usuli |
 
-**Hisoblash qoidalari:**
-- Kurs boshlanmagan → 100% qaytarish (oldingi refundlar chegiriladi)
-- 50%+ dars o'tilgan → 0% (qaytarish yo'q)
-- <50% o'tilgan → `paidAmount - consumedFromLedger - previousRefunds`
-- `consumedFromLedger` = LESSON_DEDUCTION tranzaksiyalari yig'indisi (ledger — haqiqat manbai)
+**Hisoblash qoidalari (`quickRefund`, bir qadam):**
+- Pul faqat ikki joydan qaytadi: o'quvchining bo'sh balansi va to'langan, lekin hali o'tilmagan darslar (`Enrollment.prepaidLessonsRemaining`). O'tilgan darsga ketgan pul qaytmaydi; **ABSENT ham o'tilgan dars** hisoblanadi.
+- `maxRefundable = max(0, balance + prepaidRefundValue(prepaidLessonsRemaining))`. Avval bo'sh balans olinadi, yetmasa eng kam sonli dars bekor qilinadi (`releasePrepaidLessons`: darslar puli `ADJUSTMENT` bilan balansga qaytadi va hisobchi o'sha qadamda kamayadi).
+- **«50%+ dars o'tilgan → qaytarish yo'q» qoidasi yo'q.** U sikl hajmiga (`lessonPaymentCount`) bo'linardi, kursga emas, shuning uchun olib tashlangan. Oylik kursdan ketishdagi 40% qoidasi — alohida qaror (ADR-0044).
 
-**Status o'tishlari:** `REQUESTED → [APPROVED, REJECTED]`, `APPROVED → [PROCESSING, COMPLETED]`
+**Status:** `quickRefund` `COMPLETED` ni darhol yozadi. So'rov → tasdiq → to'lov oqimi (`POST /refunds`) o'chirilgan. Eski `REQUESTED`/`APPROVED` qatorlarni faqat `PATCH /refunds/:id/process` yopadi (ekrani yo'q).
 
 #### Expense — Xarajatlar
 
@@ -195,30 +198,11 @@ Faqat PERCENTAGE va FIXED_PER_STUDENT turidagi o'qituvchilar uchun.
 | relatedUserId | Int? | TEACHER_ADVANCE uchun: avans oluvchi xodim |
 | settledBySalaryPaymentId | UUID? | Avans oylikdan ushlab qolinganida to'ldiriladi |
 
-**TEACHER_ADVANCE xususiyati:** Bu kategoriya avans sifatida beriladi va keyingi oylik hisoblashda xodimning netAmount idan avtomatik ushlab qolinadi (`salary.service.ts → applyPendingAdvances()`).
+**TEACHER_ADVANCE xususiyati:** Bu kategoriya avans sifatida beriladi va keyingi oylik hisoblashda xodimning oylik summasidan avtomatik ushlab qolinadi (`salary.service.ts → applyPendingAdvances()`).
 
-#### CompanyTaxConfig — Soliq sozlamalari
+#### Soliq — hisoblanmaydi
 
-| Ustun | Turi | Tavsif |
-|-------|------|--------|
-| companyId | Int (unique) | Kompaniya |
-| salaryTaxRate | Float | Oylik solig'i (default: 12% ASOT) |
-| refundTaxRate | Float | Refund solig'i (default: 0%) — hozir hech bir servisda o'qilmaydi (kelajak uchun zahirada) |
-| isActive | Boolean | `false` bo'lsa default 12% ishlatiladi. UI orqali o'chirib bo'lmaydi (har doim `true` qilib saqlanadi) |
-
-**API (CEO-only):**
-
-| Endpoint | Maqsad |
-|----------|--------|
-| `GET /api/salary/tax-config` | Joriy stavka. Yozuv yo'q bo'lsa default 12% va `isDefault: true` qaytaradi |
-| `PATCH /api/salary/tax-config` | Stavka yangilash (0–100). Birinchi yozuvda upsert + `EntityHistory.CREATE`, keyingilarida `UPDATE` log'lanadi |
-
-**Cheklov:** Stavka o'zgartirilganda allaqachon hisoblangan oyliklar (`CALCULATED`/`APPROVED`/`PAID`) qayta hisoblanmaydi — yangi stavka faqat keyingi `calculateMonthlySalaries()` ishlashida qo'llaniladi. UI'da bu haqida foydalanuvchiga amber eslatma ko'rsatiladi.
-
-**Hisoblovchi servislar (hammasi `getSalaryTaxRate` helper'i orqali o'qiydi):**
-- `salary-calculation.service.ts` — oylik cron'da SalaryPayment yaratayotganda
-- `salary-summary.service.ts` — Teacher profilidagi "Ish haqi" tab'i uchun expected/actual net hisoblash
-- `reports-financial.service.ts` — KPI dashboard'idagi pending salary tax forecast'i
+`CompanyTaxConfig` modeli, `/salary/tax-config` endpointlari va «Soliq stavkasi» oynasi olib tashlangan. Tizim soliqni hisoblamaydi va hech qaysi to'lovdan ushlamaydi. Ehtimoliy ushlanmalar (ustoz oyligidan 12%, markaz tomonidan ustoz oyligiga 12%, markaz oylik tushumidan 4%, Click/Payme/Uzum har to'lovdan 2%) oylik sahifasida faqat ma'lumot uchun statik izoh (`possible-deductions-info.tsx`) — saqlanmaydi, yig'ilmaydi, hech narsadan ayirilmaydi. Markazning o'zi to'lagan soliq — oddiy xarajat (`Expense`), soliq hisobi emas.
 
 ---
 
@@ -261,20 +245,19 @@ Oy davomida:
   └─ Administrator/Kassir/BD (FIXED_MONTHLY):
       Accrual yaratilmaydi — config.value to'g'ridan-to'g'ri oylik bo'ladi
 
-Oyning 7-si: CUTOFF (hisoblash to'xtaydi)
-Oyning 8-si: Cron avtomatik hisoblaydi (02:00 Toshkent)
+Davr — kalendar oyi (prod'da cycleStartDay = 1)
+Oyning 1-si, 02:00 (Toshkent): cron tugagan oyni yopadi
   ├── O'qituvchilar: unpaid accrual larni yig'adi
   ├── Fixed monthly: config.value dan oylik yaratadi (idempotent)
   ├── Har xodim uchun SalaryPayment yaratadi:
-  │   ├── grossAmount = SUM(accruals) yoki config.value
-  │   ├── taxAmount = gross × salaryTaxRate / 100
-  │   ├── TEACHER_ADVANCE avanslar netAmount dan ushlab qolinadi
-  │   └── netAmount = gross - tax - avanslar
+  │   ├── hisoblangan = SUM(accruals) yoki config.value
+  │   ├── TEACHER_ADVANCE avanslar ushlab qolinadi
+  │   └── amount = hisoblangan − avanslar (soliq ushlanmaydi)
   └── Status: CALCULATED
 
 CEO tasdiqlaydi → APPROVED
 CEO/BD to'laydi → PAID
-  └── Transaction: SALARY_PAYMENT, User.balance -= netAmount
+  └── Transaction: SALARY_PAYMENT, User.balance -= amount
 ```
 
 ### 3.3 To'lov bekor qilish (Reverse)
@@ -315,9 +298,9 @@ Xarajat qo'shiladi (POST /expenses):
 
 Oylik hisoblashda (calculateMonthlySalaries):
   ├── O'qituvchining unsettled avanslar topiladi
-  ├── netAmount dan ushlab qolinadi (createdAt tartibida)
+  ├── oylik summasidan ushlab qolinadi (createdAt tartibida)
   ├── expense.settledBySalaryPaymentId = salaryPayment.id
-  └── Natija: netAmount = gross - tax - avanslar
+  └── Natija: amount = hisoblangan − avanslar
 ```
 
 ---
@@ -348,48 +331,40 @@ Oylik hisoblashda (calculateMonthlySalaries):
 
 ### 4.3 Contracts — Shartnomalar
 
-| Method | Endpoint | Roles | Tavsif |
-|--------|----------|-------|--------|
-| `POST` | `/api/contracts` | CEO, BD, Admin | Shartnoma yaratish |
-| `GET` | `/api/contracts` | CEO, BD, Admin | Ro'yxat |
-| `GET` | `/api/contracts/:id` | CEO, BD, Admin | Detal (to'lovlar bilan) |
-| `GET` | `/api/contracts/student/:id` | CEO, BD, Admin | O'quvchi shartnomalar |
-| `PATCH` | `/api/contracts/:id` | CEO, BD, Admin | Yangilash |
-| `PATCH` | `/api/contracts/:id/status` | CEO, BD | Status o'zgartirish |
+**Olib tashlangan.** `src/contracts/` moduli (`/api/contracts` CRUD endpointlari) va `/payments/contracts` sahifasi yo'q: shartnomalar haqiqiy ish oqimiga ulanmagan edi, sahifa doim bo'sh turardi. `Contract` modeli va `contractId` bog'lanishlari saqlangan — batafsil `server/CLAUDE.md` → «Contracts».
 
 ### 4.4 Salary — Xodimlar oyligi
 
 | Method | Endpoint | Roles | Tavsif |
 |--------|----------|-------|--------|
-| `GET` | `/api/salary/config/:userId` | CEO, BD | Xodim config |
-| `POST` | `/api/salary/config` | CEO, BD | Config yaratish/yangilash |
-| `POST` | `/api/salary/config/global` | CEO, BD | Barchaga joriy qilish (FIXED_MONTHLY uchun emas) |
-| `PATCH` | `/api/salary/config/:id` | CEO, BD | Config tahrirlash |
-| `GET` | `/api/salary/accruals/:userId` | CEO, BD | Yig'ilgan oylik detali |
-| `GET` | `/api/salary/payments` | CEO, BD | Oylik to'lovlar ro'yxati |
+| `GET` | `/api/salary/config/:userId` | CEO, BD, Admin | Xodim config |
+| `POST` | `/api/salary/config` | CEO, BD (faqat o'z filiali ustoziga, ADR-0034) | Config yaratish/yangilash |
+| `POST` | `/api/salary/config/global` | **CEO** | Barchaga joriy qilish (FIXED_MONTHLY uchun emas) |
+| `PATCH` | `/api/salary/config/:id` | **CEO** | Config tahrirlash |
+| `GET` | `/api/salary/accruals/:userId` | CEO, BD, Admin | Yig'ilgan oylik detali |
+| `GET` | `/api/salary/payments` | CEO, BD, Admin | Oylik to'lovlar ro'yxati |
 | `POST` | `/api/salary/calculate` | **CEO** | Oylik hisoblash (trigger) |
 | `PATCH` | `/api/salary/payments/:id/approve` | **CEO** | Tasdiqlash |
 | `POST` | `/api/salary/payments/:id/pay` | CEO, BD | To'lash |
 | `POST` | `/api/salary/payments/batch-pay` | CEO, BD | Ko'p oylikni bir martada to'lash |
 | `GET` | `/api/teachers/:id/salary-summary` | CEO, BD | Kutilayotgan vs haqiqiy oylik |
-| `GET` | `/api/salary/tax-config` | **CEO** | Kompaniya soliq stavkasi (yo'q bo'lsa default 12%) |
-| `PATCH` | `/api/salary/tax-config` | **CEO** | Soliq stavkasini o'zgartirish (0–100). EntityHistory'ga log'lanadi |
 
 ### 4.5 Refunds — Pul qaytarish
 
 | Method | Endpoint | Roles | Tavsif |
 |--------|----------|-------|--------|
-| `POST` | `/api/refunds` | CEO, BD, Admin | Refund so'rash |
-| `GET` | `/api/refunds` | CEO, BD | Ro'yxat |
-| `PATCH` | `/api/refunds/:id/process` | CEO, BD | Tasdiqlash/rad etish/to'lash |
+| `GET` | `/api/refunds/preview/:studentId` | CEO, BD, Admin | Qancha qaytarish mumkin (bo'sh balans + o'tilmagan darslar) |
+| `POST` | `/api/refunds/quick` | CEO, BD, Admin | Bir qadamda qaytarish — darhol `COMPLETED` |
+| `GET` | `/api/refunds` | CEO, BD, Admin | Ro'yxat (filial bo'yicha) |
+| `PATCH` | `/api/refunds/:id/process` | CEO, BD, Admin | Faqat eski `REQUESTED`/`APPROVED` qatorlar uchun; ekrani yo'q |
 | `POST` | `/api/refunds/:id/reverse` | **CEO** | Refundni bekor qilish |
 
 ### 4.6 Expenses — Xarajatlar
 
 | Method | Endpoint | Roles | Tavsif |
 |--------|----------|-------|--------|
-| `POST` | `/api/expenses` | CEO, BD, Admin | Xarajat qo'shish |
-| `GET` | `/api/expenses` | CEO, BD, Admin | Ro'yxat (filial bo'yicha filtrlanadi) |
+| `POST` | `/api/expenses` | CEO, BD | Xarajat qo'shish (Administrator olib tashlangan) |
+| `GET` | `/api/expenses` | CEO, BD | Ro'yxat (filial bo'yicha filtrlanadi) |
 | `PATCH` | `/api/expenses/:id` | CEO, BD | Tahrirlash (moliyaviy field o'zgartsa → ledger qayta yoziladi) |
 | `DELETE` | `/api/expenses/:id` | CEO, BD | O'chirish (soft delete + ledger reversal) |
 
@@ -415,9 +390,8 @@ Oylik hisoblashda (calculateMonthlySalaries):
 | Sahifa | Yo'l | Tavsif |
 |--------|------|--------|
 | Umumiy ma'lumotlar | `/payments/overview` | KPI kartalar, davr tanlash, to'lov usullari, oxirgi to'lovlar |
-| Ish haqi | `/payments/salary` | Oylik jadval + "Oylik belgilash" dialog + batch to'lash + CEO uchun "Sozlamalar" dropdown (Xodim stavkalari, Hisoblash davri, Soliq stavkasi) |
+| Ish haqi | `/payments/salary` | Oylik jadval + "Oylik belgilash" dialog + batch to'lash + CEO uchun "Sozlamalar" dropdown (Xodim stavkalari, Hisoblash davri) |
 | Xarajatlar | `/payments/expenses` | Xarajatlar CRUD (branchId bilan) |
-| Shartnomalar | `/payments/contracts` | Shartnomalar CRUD |
 | Qarzdorlar | `/payments/debtors` | Balansi minus o'quvchilar ro'yxati |
 | Student profil | "To'lovlar" tab | To'lov tarixi + balans tarixi |
 | Teacher profil | "Ish haqi" tab | Kutilayotgan vs haqiqiy oylik, guruhlar bo'yicha |
@@ -427,13 +401,6 @@ Oylik hisoblashda (calculateMonthlySalaries):
 - O'qituvchi tanlansa → 3 xil tur: Foiz, O'quvchi boshiga, Oylik
 - Boshqa xodim tanlansa → faqat Oylik (FIXED_MONTHLY)
 - Mavjud config ko'rsatiladi (agar bor bo'lsa)
-
-**Soliq stavkasi sheet** (`salary-tax-config-sheet.tsx`) — CEO uchun "Sozlamalar" dropdown'idan ochiladi:
-- Joriy stavka ko'rsatiladi; yozuv yo'q bo'lsa "Standart" badge va default 12% (ASOT)
-- Yangi foiz kiritish: 0–100 oralig'ida, 0.1 qadam bilan
-- Saqlash → `PATCH /api/salary/tax-config` (CEO-only). `EntityHistory.CompanyTaxConfig` ga CREATE (birinchi marta) yoki UPDATE (keyingilarida) log'lanadi
-- Amber eslatma: stavka faqat **keyingi** hisoblanadigan oyliklarga ta'sir qiladi — `CALCULATED`/`APPROVED`/`PAID` SalaryPayment'lar o'zgarmaydi
-- Frontend `isCeo` bilan gated; backend GET ham PATCH ham `@Roles('CEO')` — BD/Admin to'g'ridan-to'g'ri API'ga so'rov yuborsa 403 oladi
 
 ---
 
@@ -448,7 +415,7 @@ Oylik hisoblashda (calculateMonthlySalaries):
 - Contract-student ownership: `contractId` aynan shu `studentId` ga tegishli bo'lishi shart
 - Branch mosligi: payment `branchId` shartnoma `branchId` ga mos bo'lishi shart
 - Dublikat tashqi to'lov: `(method, externalId, companyId)` unique constraint
-- Period-closed guard: yopilgan davrdagi accrual rad etiladi
+- Yopilgan oylik davri: kechikkan accrual rad etilmaydi — joriy ochiq davrga o'tkaziladi (`creditPeriodDate`, carry-over)
 - Reversal idempotency: allaqachon bekor qilingan tranzaksiyani qayta bekor qilib bo'lmaydi
 
 ### 6.3 Role-Based Access
@@ -461,11 +428,10 @@ Oylik hisoblashda (calculateMonthlySalaries):
 | Oylik hisoblash | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Oylik tasdiqlash | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Oylik to'lash | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Soliq stavkasini ko'rish/o'zgartirish | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Hisoblash davrini boshqarish | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Refund yaratish | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Refund bekor qilish | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Xarajat yaratish | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Xarajat yaratish | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Xarajat tahrirlash | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Moliyaviy hisobotlar | ✅ | ✅ | ❌ | ❌ | ❌ |
 
@@ -480,15 +446,14 @@ Oylik hisoblashda (calculateMonthlySalaries):
 
 | Cron | Vaqt | Tavsif |
 |------|------|--------|
-| Oylik hisoblash | `0 2 8 * *` (8-sana, 02:00 Toshkent) | Barcha xodimlar oyligi avtomatik hisoblanadi |
+| Oylik hisoblash | `0 2 * * *` (har kuni 02:00 Toshkent; faqat `cycleStartDay` kuni ishlaydi — prod'da oyning 1-si) | Tugagan davr oyligi avtomatik hisoblanadi |
 | Payme timeout | `0 */30 * * * *` (har 30 daqiqa) | 12 soatdan eski Payme pending tranzaksiyalarni bekor qiladi |
 | Click timeout | `0 */10 * * * *` (har 10 daqiqa) | 30 daqiqadan eski Click prepared tranzaksiyalarni bekor qiladi |
 
-- Cutoff: 7-sanagacha bo'lgan accrual lar joriy oyga kiritiladi
-- 8-sanadan keyingi accrual lar keyingi oyga o'tadi
+- Davr `cycleStartDay` kunidan boshlanib, keyingi oyning shu kunidan oldin tugaydi. Prod'da `cycleStartDay = 1`, ya'ni davr — kalendar oyi. Sozlamasi yo'q kompaniya uchun kod 8 ni oladi (`resolve-current-period.ts`) — bu prod'ga mos emas, yangi kompaniyaga sozlama aniq beriladi (`CONTEXT.md`)
 - FIXED_MONTHLY xodimlar uchun idempotent — bir davr uchun qayta yaratmaydi
-- Soliq `CompanyTaxConfig.salaryTaxRate` bo'yicha hisoblanadi (default 12%)
-- TEACHER_ADVANCE avanslar netAmount dan ushlab qolinadi
+- Soliq hisoblanmaydi (§2.2 «Soliq — hisoblanmaydi»)
+- TEACHER_ADVANCE avanslar oylik summasidan ushlab qolinadi
 
 ---
 
@@ -515,7 +480,7 @@ Oylik hisoblashda (calculateMonthlySalaries):
 | `CheckPerformTransaction` | To'lov mumkinmi? | Talaba mavjud + summa > 0 → `{ allow: true }` |
 | `CreateTransaction` | Tranzaksiya yaratish (state=1) | Idempotent (`paymeId` bo'yicha); eski pending bekor qilinadi |
 | `PerformTransaction` | To'lovni bajarish (state=2) | `PaymentsService.createFromExternal()` → talaba balansini oshiradi |
-| `CancelTransaction` | Bekor qilish | state=1→-1 (moliyaviy o'zgarmaydi); state=2→xato -31007 |
+| `CancelTransaction` | Bekor qilish | state=1→-1 (moliyaviy o'zgarmaydi). state=2 → avval ERP to'lovi bekor qilinadi (`PaymentsService.reverse`, balansdan qaytarib olinadi), keyingina state=-2. ERP bekor qilishni rad etsa (odatda to'lov puli darslarga sarflangan — §18) → -31007, state=2 qoladi, admin paneldan hal qiladi |
 | `CheckTransaction` | Holatni tekshirish | To'liq state qaytaradi |
 | `GetStatement` | Vaqt oraligi ro'yxati | Paycom mutanosiblik uchun |
 
@@ -536,7 +501,7 @@ Oylik hisoblashda (calculateMonthlySalaries):
 | `-32601` | Metod topilmadi |
 | `-31001` | Noto'g'ri summa |
 | `-31003` | Tranzaksiya topilmadi |
-| `-31007` | Bekor qilib bo'lmaydi (bajarilgan) |
+| `-31007` | Bekor qilib bo'lmaydi — bajarilgan to'lovning ERP'dagi bekor qilinishi rad etildi (odatda puli darslarga sarflangani uchun) |
 | `-31008` | Amalni bajarib bo'lmaydi |
 | `-31050` | Talaba topilmadi |
 
@@ -762,7 +727,7 @@ Bu bo'lim v2.0 ustiga qurilgan barcha yangi xususiyatlarni hujjatlashtiradi.
 | `Transaction.reversedAt DateTime?`, `reversedById Int?` | "still active" markeri |
 | `TransactionType.LESSON_CONSUMPTION` | har dars uchun audit qator (amount=0) |
 | `TransactionType.INITIAL_BALANCE` | eski tizimdan ko'chirish |
-| `LessonDeductionMode` enum: `FULL_CYCLE` / `PARTIAL` | metadata.mode uchun |
+| `LessonDeductionMode` enum: `FULL_CYCLE` / `PARTIAL` / `SINGLE_UNCOVERED` | metadata.mode uchun |
 | `Attendance.cancellationId String?` | LessonCancellation FK |
 
 Ikkita partial unique index migrationda raw SQL bilan yaratiladi:
@@ -773,16 +738,16 @@ Ikkita partial unique index migrationda raw SQL bilan yaratiladi:
 
 `server/src/billing/lesson-billing.service.ts` — yagona pul yechish nuqtasi. Manual va QR attendance ikkalasi shu service'ga delegate qiladi.
 
-**Status transition matritsasi:**
+**Status transition matritsasi.** ⚠️ **ABSENT hisoblanadi** — «dars o'tdi = dars to'landi»: faqat `EXCUSED` va bekor qilingan dars hisoblanmaydi. Yagona haqiqat — `lesson-billing.service.ts` dagi `BILLABLE` to'plami (PRESENT, LATE, ABSENT).
 
 | Eski | Yangi | Harakat |
 |---|---|---|
-| (yo'q) | ABSENT/EXCUSED | hech narsa |
-| (yo'q) | PRESENT/LATE | **bill** |
-| ABS/EXC | ABS/EXC | hech narsa |
-| ABS/EXC | PRESENT/LATE | **bill** |
-| PRES/LATE | PRES/LATE | hech narsa |
-| PRES/LATE | ABS/EXC | **reverse** |
+| (yo'q) | EXCUSED | hech narsa |
+| (yo'q) | PRESENT/LATE/ABSENT | **bill** |
+| EXC | EXC | hech narsa |
+| EXC | PRESENT/LATE/ABSENT | **bill** |
+| PRES/LATE/ABS | PRES/LATE/ABS | hech narsa |
+| PRES/LATE/ABS | EXC | **reverse** |
 
 **Bill algoritmi:**
 1. Idempotency: shu attendance uchun aktiv `LESSON_CONSUMPTION` bormi → bo'lsa qaytib chiqish.
@@ -790,15 +755,15 @@ Ikkita partial unique index migrationda raw SQL bilan yaratiladi:
 3. `prepaidLessonsRemaining > 0` → decrement, audit qator.
 4. Aks holda balans bo'yicha:
    - `balance ≥ fullCycleCost` → to'liq tsikl yech (FULL_CYCLE), prepaid = lessonPaymentCount.
-   - `balance ≥ perLessonCost` → `floor(balance/perLessonCost)` darsga yech (PARTIAL).
-   - Yetmasa → hech narsa qilmaydi (B.1 saqlanadi).
+   - `balance ≥ perLessonCost` → `lessonsAffordable(...)` ta darsga yech (PARTIAL).
+   - Yetmasa → `SINGLE_UNCOVERED`: bitta dars narxi baribir yechiladi, balans minusga tushadi (qarz ledger'da qoladi). Ustoz haqi to'lov kelguncha kechiktiriladi (B.1).
 5. `LESSON_CONSUMPTION` audit qator (amount=0).
 6. Har ustoz uchun `SalaryAccrual` (B.1 gate).
 
 **Reverse algoritmi:**
-1. Aktiv consumption topilsa → reverseTransaction (asl `reversedAt` belgilanadi), `prepaidLessonsRemaining +=1`.
+1. Aktiv consumption topilsa → reverseTransaction (asl `reversedAt` belgilanadi), keyin `prepaidLessonsRemaining +=1`. Dars `SINGLE_UNCOVERED` bilan yechilgan bo'lsa — prepaid emas, o'sha yechim bekor qilinadi (balans qaytadi, qarz yo'qoladi).
 2. SalaryAccrual `reversedAt` belgilanadi.
-3. Consumption yo'q (pul yetmagan edi) → faqat accrual reverse, prepaid +1 QILMAYDI (bepul dars yo'q).
+3. Consumption yo'q (qarzdor yo'li paydo bo'lishidan oldingi eski qatorlar) → faqat accrual reverse, prepaid +1 QILMAYDI (bepul dars yo'q).
 
 ### 11.4 Atomic transaction guarantee
 
@@ -833,7 +798,7 @@ Har salary config yozish yangi version qatori yaratadi (SCD2). Parent `EmployeeS
 
 ## 13. Salary Period (`SalaryPeriodSetting`)
 
-Konfigurable cycle start day. Default 8.
+Konfigurable cycle start day. Prod'da **1** — davr kalendar oyi. Sozlama yo'q bo'lsa kod 8 ni oladi (fallback, prod'ga mos emas).
 
 **Mid-cycle cutover policy:** agar CEO joriy davr ichida `effectiveFrom` qo'ysa, service avtomatik ravishda eski jadval bo'yicha keyingi davr boshiga ko'chiradi.
 
@@ -845,8 +810,9 @@ Per-group dars bekor qilish (Holiday — company-wide). Partial unique `WHERE de
 
 **Atomik cascade:** `LessonCancellationsService.create()`:
 1. `LessonCancellation` qator.
-2. PRESENT/LATE attendance'larni topish.
+2. PRESENT/LATE/ABSENT attendance'larni topish (hisoblanadigan har qanday holat, ABSENT ham).
 3. Har biri uchun: status → EXCUSED, `cancellationId` set, billing reverse cascade.
+4. Oylik to'lovchilarga o'sha darsning puli darhol balansga qaytadi — davomati belgilanmaganlarga ham (ADR-0053).
 
 **Soft delete:** attendance/billing'ni avtomatik qaytarmaydi.
 
@@ -874,11 +840,10 @@ Per-student "har so'm qayerga ketdi?" hisoboti.
 
 | Endpoint | Eski | Yangi |
 |---|---|---|
-| `POST /salary/config` | CEO + BD | CEO faqat |
+| `POST /salary/config` | CEO + BD | CEO; BD — faqat o'z filiali ustoziga (ADR-0034, 2026-09) |
 | `POST /salary/config/global` | CEO + BD | CEO faqat |
 | `PATCH /salary/config/:id` | CEO + BD | CEO faqat |
 | `POST /salary/period-settings` | yangi | CEO faqat |
-| `GET/PATCH /salary/tax-config` | yangi | CEO faqat |
 
 ## 20. Yangi endpointlar
 
@@ -893,8 +858,6 @@ Per-student "har so'm qayerga ketdi?" hisoboti.
 | `GET /salary/timeline/:userId` | CEO/BD/Admin | Birlashtirilgan timeline |
 | `GET /salary/period-settings` | CEO/BD/Admin | Period sozlamalar |
 | `POST /salary/period-settings` | CEO | Yangi period |
-| `GET /salary/tax-config` | CEO | Soliq stavkasi |
-| `PATCH /salary/tax-config` | CEO | Soliq update |
 | `POST /students/:id/initial-balance` | CEO | Boshlang'ich balans |
 | `GET /transactions/student/:id/lesson-trail` | CEO/BD/Admin/Cashier | Per-student ledger |
 | `POST /lesson-cancellations` | CEO/BD/Admin | Dars bekor qilish |
@@ -906,7 +869,7 @@ Per-student "har so'm qayerga ketdi?" hisoboti.
 
 | Joy | Tafsilot |
 |---|---|
-| `/payments/salary` Sozlamalar dropdown | Xodim stavkalari / Hisoblash davri / Soliq stavkasi |
+| `/payments/salary` Sozlamalar dropdown | Xodim stavkalari / Hisoblash davri |
 | `/payments/salary` "Davrni yakunlash" tugmasi | Eski "Oylikni hisoblash" — Play ikona |
 | Salary breakdown drawer | Salary qatoriga bosish — har dars + CSV export |
 | `/profile/salary` (lehrer) | Ustozning o'z oyligi |
