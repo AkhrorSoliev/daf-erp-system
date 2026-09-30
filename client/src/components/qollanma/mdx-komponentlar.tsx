@@ -2,6 +2,10 @@ import Link from "next/link";
 import type { ComponentPropsWithoutRef } from "react";
 import type { MDXComponents } from "mdx/types";
 import { cn } from "@/lib/utils";
+import { mermaidKodi } from "@/qollanma/mermaid-kodi";
+import { Diagramma } from "./diagramma";
+import { Eslatma } from "./eslatma";
+import { Skrinshot } from "./skrinshot";
 
 function Havola({ href = "", className, ...props }: ComponentPropsWithoutRef<"a">) {
   const klass = cn("font-medium text-primary underline underline-offset-4", className);
@@ -44,4 +48,15 @@ export const qollanmaMdxKomponentlari: MDXComponents = {
   code: ({ className, ...p }) => (
     <code className={cn("rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em]", className)} {...p} />
   ),
+  pre: ({ children, className, ...p }) => {
+    const kod = mermaidKodi(children);
+    if (kod) return <Diagramma kod={kod} />;
+    return (
+      <pre className={cn("my-4 overflow-x-auto rounded-lg border bg-muted/40 p-4 text-sm", className)} {...p}>
+        {children}
+      </pre>
+    );
+  },
+  Eslatma,
+  Skrinshot,
 };
