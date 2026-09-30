@@ -164,12 +164,19 @@ Oynada sabab (majburiy) va ikki tanlov.
    topshiriq yopiladi. Mavjud «ko'chirish» sahifasidan javobi kutilayotgan kun
    ko'chirilsa ham xuddi shunday.
 4. Yangi kunda ustoz davomatni odatdagidek oladi va haq oladi (bu boshqa dars).
-5. Ko'chirish o'chirilsa — yozuv `PENDING` ga qaytadi, yangi topshiriq. Ko'chirish
-   dars oldindan qilingan bo'lsa (yozuv hech ochilmagan), keyin asl dars
-   tugagach o'chirilsa ham savol qayta ochiladi, xuddi bekor qilishni
-   o'chirishdagidek: davomat ham, yozuv ham yo'q bo'lsa — yangi `PENDING` yozuv,
-   `teacherPayExempt: true`, sabab «Dars oldindan ko'chirilgan edi». Asl kun
-   bayram bo'lsa yoki hali bekor qilingan bo'lsa — hech narsa ochilmaydi.
+5. Ko'chirish o'chirilsa — yozuv `PENDING` ga qaytadi, yangi topshiriq; kunda
+   davomat bo'lsa, yozuv o'zgarmaydi. Qo'shimcha darsda (yangi kunda) davomat
+   olingan bo'lsa, asl kun umuman qayta so'ralmaydi — aks holda bitta dars ikki
+   marta hisoblanardi. Yozuv hech ochilmagan bo'lsa (odatda ko'chirish dars
+   oldindan qilingan), asl dars tugagach o'chirilsa ham savol birinchi marta
+   ochiladi, xuddi bekor qilishni o'chirishdagidek: davomat ham, yozuv ham yo'q
+   bo'lsa — yangi `PENDING` yozuv. U faqat ko'chirish darsning tugash vaqtidan
+   **oldin** yaratilgan bo'lsa (`createdAt`, Toshkent soati) istisno bo'ladi:
+   `teacherPayExempt: true`, sabab «Dars oldindan ko'chirilgan edi». Tugash
+   vaqtida yoki undan keyin yaratilgan bo'lsa — oddiy savol
+   (`teacherPayExempt: false`, sababsiz): ustoz haq olmaydi, faqat CEO istisno
+   qila oladi. Asl kun bayram bo'lsa yoki hali bekor qilingan bo'lsa — hech
+   narsa ochilmaydi.
 
 **Ikkala tanlovda ham** Telegram guruhiga **darhol**, commit'dan keyin (admin bot,
 tasdiqlangan guruhlar, o'sha filialni ko'radiganlar — `isVisibleToGroup`, 20:00
@@ -185,11 +192,19 @@ Faqat `UnmarkedLesson` bor kunlar uchun — darsdan oldin qilingan oddiy bekor
 qilish va ko'chirishlar guruhga yuborilmaydi.
 
 **Bekor qilish o'chirilsa** (`DELETE /lesson-cancellations/:id`, CEO / direktor):
-   - shu kun uchun `UnmarkedLesson` bo'lsa → `PENDING`, yangi topshiriq;
+   - shu kun uchun `UnmarkedLesson` bo'lsa → `PENDING`, yangi topshiriq. Kunda
+     davomat bo'lsa (masalan, «Bo'ldi» dan keyin bekor qilingan dars — sababli
+     yozuvlari qoladi), yozuv o'zgarmaydi: aks holda «Bo'ldi» hech qachon
+     qabul qilinmasdi;
    - yozuv yo'q, lekin dars allaqachon tugagan va davomat yo'q bo'lsa (dars
      oldindan bekor qilingan, keyin bekor qilish xato deb o'chirildi) →
-     yangi `PENDING` yozuv, `teacherPayExempt: true` — ustoz bekor qilingan
-     darsga davomat kirita olmagan edi, uni jazolash noto'g'ri;
+     yangi `PENDING` yozuv. Bekor qilish darsning tugash vaqtidan **oldin**
+     yaratilgan bo'lsa (`createdAt`, Toshkent soati) — `teacherPayExempt: true`,
+     sabab «Dars bekor qilingan edi — ustoz davomat kirita olmagan»: ustoz
+     bekor qilingan darsga davomat kirita olmagan edi, uni jazolash noto'g'ri.
+     Tugash vaqtida yoki undan keyin yaratilgan bo'lsa — oddiy savol
+     (`teacherPayExempt: false`): aks holda dars tugagach bekor qilib, keyin
+     o'chirish ustozga faqat CEO bera oladigan haqni berardi;
    - pul avtomatik tiklanmaydi (mavjud qoida).
 
 ### 3.6 Tizim topshirig'i
@@ -297,7 +312,8 @@ uni o'zi topadi.
 | Joy                                                         | O'zgarish                                                                                                        |
 | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | `prisma/schema.prisma` + migratsiya                         | `UnmarkedLesson`, enum, `Comment.authorId` nullable                                                              |
-| `attendance/attendance-window.ts` (yangi)                   | Yangi davomat oynasi — bitta sof funksiya                                                                        |
+| `attendance/shared/attendance-window.ts` (yangi)            | Yangi davomat oynasi — bitta sof funksiya                                                                        |
+| `attendance/shared/attendance-window-guard.ts` (yangi)      | Oyna qorovuli (`assertAttendanceWindowOpen`): qo'lda saqlash, QR boshlash va QR skanerlash                        |
 | `attendance-save.service.ts`                                | Yangi davomat → oyna; yozuv bor bo'lsa rad; kech rejim (ro'yxat, `attendance.completed` yo'q)                    |
 | `qr-attendance-session.service.ts`                          | Oyna                                                                                                             |
 | `attendance/unmarked-lessons.service.ts` (yangi)            | Yaratish, «Bo'ldi», «Bo'lmadi», olish, jadval / guruh uchun ma'lumot                                             |
@@ -307,7 +323,7 @@ uni o'zi topadi.
 | `salary/salary-accrual.service.ts`                          | Yozish qulfi (5.1)                                                                                               |
 | `salary/shared/gap-sweep.ts` + 3 chaqiruvchi                | Hisob qulfi (5.2)                                                                                                |
 | `lesson-cancellations.service.ts`                           | Yaratishda `NOT_HELD` + topshiriqni yopish + guruh xabari; o'chirishda 3.5 «Bekor qilish o'chirilsa» |
-| `lesson-reschedules.service.ts`                             | Yaratishda `RESCHEDULED` + topshiriqni yopish + guruh xabari; o'chirishda `PENDING` + yangi topshiriq |
+| `lesson-reschedules.service.ts`                             | Yaratishda `RESCHEDULED` + topshiriqni yopish + guruh xabari; o'chirishda 3.5 B.5 |
 | `comments/*`, `notification-events.listener.ts`, `task-reminder.service.ts` | `author` null; tizim topshirig'i qoidalari; olish; `task.assigned` yo'q                          |
 | `groups-write.service.ts`                                   | Guruh o'chirilsa topshiriqlarni yopish                                                                           |
 | `dashboard.service.ts`                                      | Har darsga `unmarked: { id, status, teacherPayExempt, lessonStartTime, lessonEndTime, claimedBy } \| null`         |
@@ -383,8 +399,13 @@ uni o'zi topadi.
   yo'q.
 - «Bo'lmadi → Ko'chirish»: yangi dars boshlanishi o'tgan bo'lsa — 400;
   aks holda ko'chirish + `RESCHEDULED` + topshiriq yopildi + guruh xabari; pul
-  qaytmaydi; ko'chirish o'chirilsa — `PENDING` + yangi topshiriq.
-- Bekor qilish o'chirilsa: ikkala holat (3.5, «Bekor qilish o'chirilsa»).
+  qaytmaydi; ko'chirish o'chirilsa — 3.5 B.5.
+- Bekor qilish yoki ko'chirish o'chirilsa: 3.5 dagi barcha holatlar — javob
+  berilgan savol, davomatli kun, qo'shimcha darsda davomat, birinchi marta
+  ochiladigan savol tugashdan oldin (istisno) va keyin (oddiy) yaratilgan
+  bekor qilish / ko'chirish bilan.
+- To'qnashuv: yutqazgan so'rov 409; «Bo'ldi» bekor qilingan yoki ko'chirilgan
+  kunda — 400; mavjud bo'lmagan sana (`2026-02-30`) — 400.
 - Olish: birinchisi oladi, ikkinchisi 409; qolgan qatorlar o'chadi; eslatma
   faqat egasiga.
 - Tizim topshirig'ini qo'lda `DONE` / tahrir / o'chirish — 400; `task.assigned`
@@ -432,3 +453,36 @@ farq qiladi; kod va ADR-0054 shuni aytadi.
   `GET /attendance/:groupId/date/:date` `effectiveStartTime` /
   `effectiveEndTime` ni ham qaytaradi. `UnmarkedLesson` da `Group` bilan
   bog'lanish va `(branchId, status)` indeksi ham bor.
+- **Birinchi marta ochiladigan savolning istisnosi (3.5, 8).** Dizayn bekor
+  qilish yoki ko'chirish o'chirilganda birinchi marta ochiladigan har bir
+  savolni istisno (`teacherPayExempt: true`) qilgan edi. Kodda
+  (`unmarked-lessons/unmarked-lesson-transitions.ts`, `openFirstTimeQuestion`)
+  u faqat o'chirilgan bekor qilish / ko'chirish darsning tugash vaqtidan
+  (Toshkent soati; boshqa ko'chirish kelib tushgan kunda o'sha ko'chirishning
+  vaqti) oldin yaratilgan bo'lsa istisno; tugash vaqtida yoki undan keyin
+  yaratilgan bo'lsa — oddiy, haq yozilmaydigan savol (inson qarori,
+  2026-09-30). Qayta so'rash kunda davomat bo'lsa o'tkazib yuboriladi;
+  ko'chirishning yangi kunida davomat olingan bo'lsa, asl kun qayta
+  so'ralmaydi.
+- **Bir vaqtdagi o'zgarishlar (3.1, 3.4, 3.5).** Tranzaksiya to'qnashuvida
+  (`P2034` yoki Postgres `40P01`) yutqazgan so'rov xom 500 emas, 409 «Bir
+  vaqtda boshqa o'zgarish bo'ldi — qayta urinib ko'ring» oladi
+  (`common/transaction-conflict.ts`); tizim o'zi qayta urinmaydi. Bu davomat
+  saqlash, «Bo'ldi», «Bo'lmadi», bekor qilishni yaratish / o'chirish va
+  ko'chirishni yaratish / tahrirlash / o'chirish yo'llarida. Bekor qilish va
+  ko'chirishda bir vaqtdagi takroriy yozuv (`P2002`) ham shu 409. Topshiriqni
+  olishning o'zidagi to'qnashuv (3.6) esa 409 «Topshiriq hozirgina o'zgardi.
+  Sahifani yangilang».
+- **Bekor qilingan yoki ko'chirilgan kun (3.2, 3.4).** Savol ochilayotganda ham,
+  «Bo'ldi» saqlanayotganda ham kunning bekor qilinishi va ko'chirilishi o'sha
+  Serializable tranzaksiya ichida qayta o'qiladi (`lessonDayTakenAway`,
+  `unmarked-lessons/answer-rules.ts`). Shu orada bekor qilingan yoki boshqa
+  kunga ko'chirilgan dars uchun savol ochilmaydi, «Bo'ldi» esa 400 bilan rad
+  etiladi («Bu dars bekor qilingan — davomat kiritib bo'lmaydi» / «Bu sana
+  boshqa kunga ko'chirilgan — davomatni yangi sanada oling»): aks holda uzrli
+  o'quvchiga pul ikki marta qaytardi yoki bekor qilingan dars uchun pul
+  olinardi.
+- **Sana tekshiruvi (6).** `POST …/late` va `POST …/not-held` sanani haqiqiy
+  kalendar kuni sifatida tekshiradi (`isCalendarDateStr`): `2026-02-30` kabi
+  sana martga surilmaydi, 400 «Noto'g'ri sana formati. YYYY-MM-DD formatda
+  kiriting» oladi.
