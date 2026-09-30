@@ -110,8 +110,6 @@ export class QrAttendanceSessionService {
       currentToken: token,
       createdAt: new Date().toISOString(),
       lessonNumber,
-      effectiveStartTime,
-      effectiveEndTime,
     };
     await this.redis.set(sessionKey, JSON.stringify(session), 'EX', sessionTtl);
 

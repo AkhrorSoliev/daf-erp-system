@@ -74,10 +74,26 @@ export class QrAttendanceScanService {
       throw new BadRequestException('Guruh topilmadi');
     }
 
-    // TODO(integration §4.5): re-read the lesson from the DB on every scan —
-    // `this.validation.validateLessonDate` → the window guard with its
-    // effective times and lead → this admission check → the session only for
-    // `lessonNumber`; then drop the times stored on `QrSession`.
+    // The lesson as the database has it now — its effective times and the
+    // company's lead — on every scan, never what the session remembers: the
+    // last token outlives its session by up to TOKEN_TTL, so a scan after
+    // the lesson ended, or once «Dars bo'ldimi?» was asked, is refused here.
+    // Before the transaction, before any write.
+    const lesson = await this.validation.validateLessonDate(
+      groupId,
+      date,
+      companyId,
+    );
+    await assertAttendanceWindowOpen(this.prisma, {
+      groupId,
+      date,
+      parsedDate: parsedLessonDate,
+      times: {
+        startTime: lesson.effectiveStartTime,
+        endTime: lesson.effectiveEndTime,
+        opensMinutesBefore: lesson.opensMinutesBefore,
+      },
+    });
 
     // Contract 3.2 (ADR-0047): from the month's 2nd lesson a scan admits
     // only a student whose payments reach this lesson.
@@ -92,33 +108,12 @@ export class QrAttendanceScanService {
       );
     }
 
-    // Cache the lesson number from the session so the early-return path
-    // (already-marked) and the success path both surface the same value.
-    let lessonNumber: number | null = null;
-    let times: { startTime: string | null; endTime: string | null } | null =
-      null;
+    // The session only supplies the lesson number, so the early-return path
+    // (already marked) and the success path surface the same value.
     const sessionRaw = await this.redis.get(`qr-session:${groupId}:${date}`);
-    if (sessionRaw) {
-      const sessionData: QrSession = JSON.parse(sessionRaw);
-      lessonNumber = sessionData.lessonNumber;
-      // An older session has no times: the window is skipped, not guessed.
-      if (sessionData.effectiveEndTime !== undefined) {
-        times = {
-          startTime: sessionData.effectiveStartTime ?? null,
-          endTime: sessionData.effectiveEndTime,
-        };
-      }
-    }
-
-    // A session started inside the window must not outlive it: once the
-    // lesson has ended, or «Dars bo'ldimi?» was asked, no scan may write.
-    // Before the transaction, before any write.
-    await assertAttendanceWindowOpen(this.prisma, {
-      groupId,
-      date,
-      parsedDate: parsedLessonDate,
-      times,
-    });
+    const lessonNumber = sessionRaw
+      ? (JSON.parse(sessionRaw) as QrSession).lessonNumber
+      : null;
 
     // Already marked PRESENT? Nothing to do.
     const existing = await this.prisma.attendance.findUnique({
