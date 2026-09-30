@@ -7,14 +7,14 @@ Eslatmalar guruhning dars vaqtiga bog'lab yuboriladi. Davomat olinmagan degani �
 | Dars boshlanish vaqtida | Shart emas | Guruhning o'qituvchilariga | «Dars boshlandi»: darsingiz boshlandi, davomatni belgilashni unutmang. |
 | Dars tugashiga 30 daqiqa qolganda | Ha | Guruhning o'qituvchilariga | «Davomat eslatmasi»: dars tugashiga 30 daqiqa qoldi. |
 | Dars tugashiga 30 daqiqa qolganda | Ha | Guruh filialidagi administratorlarga | «O'qituvchiga eslatib qo'ying»: o'qituvchi hali davomatni belgilamadi. |
+| Dars tugashiga 15 daqiqa qolganda | — | Hech kimga | Xabar yo'q: o'qituvchiga ham, administratorga ham eslatma tugashiga 30 daqiqa qolganda birga boradi. |
 | Dars tugaganda | Ha | Guruhning o'qituvchilariga | «Davomat belgilanmadi»: darsingiz tugadi, ammo davomat belgilanmadi; administrator bilan bog'lanib, davomatni tiklashni so'raydi. |
 | Dars tugaganda | Ha | Guruh filialidagi administratorlarga | «Davomat belgilanmadi»: o'qituvchi davomatni belgilamadi; davomatni qo'lda tiklashni so'raydi. |
 | Davomat shu dars uchun birinchi marta saqlanganda | — | Guruhning o'qituvchilariga | «Davomat qabul qilindi»: «Keldi», «Kelmadi», «Kechikdi» va «Sababli» sonlari. |
 
-- Dars tugashiga 15 daqiqa qolganda alohida eslatma yo'q: o'qituvchiga ham, administratorga ham eslatma tugashiga 30 daqiqa qolganda birga boradi.
 - **Guruhning o'qituvchilari** — guruhga biriktirilgan har bir faol o'qituvchi. O'rinbosar ustozga eslatma bormaydi.
-- **Filial administratorlari** — «Administrator» roli bor va guruh filialiga biriktirilgan har bir faol xodim. CEO va filial direktoriga bu xabarlar bormaydi; o'zi guruhning o'qituvchisi bo'lsa, o'qituvchi xabarlarini oladi.
-- Faol bo'lmagan xodimga eslatma bormaydi: holati «Faol» bo'lmagan yoki arxivlangan xodim. Qarang: [Lug'at](/qollanma/boshlash/lugat) — «Nofaol».
+- **Filial administratorlari** — «Administrator» roli bor va guruh filialiga biriktirilgan har bir faol xodim. CEO va filial direktoriga bu xabarlar bormaydi (o'zi shu guruhning o'qituvchisi yoki «Administrator» roli ham bor bo'lsa — boradi).
+- Faol bo'lmagan xodimga eslatma bormaydi: holati «Faol» bo'lmagan yoki arxivlangan xodim.
 - Bir turdagi xabar bir xodimga bir guruh uchun kuniga bir marta yuboriladi.
 
 ## Xabar qanday yetadi
@@ -23,7 +23,7 @@ Eslatmalar guruhning dars vaqtiga bog'lab yuboriladi. Davomat olinmagan degani �
 - Brauzer bildirishnomasi: brauzer ruxsat so'ragach ruxsat bergan bo'lsangiz.
 - Telegram: Telegram ulangan xodimga, eslatma yuborilgan zahoti.
 - Eslatma xabarlarida guruh nomi, dars vaqti, xona va o'qituvchi yoziladi.
-- «Davomat qabul qilindi» tizim ichida va brauzerda darhol keladi. Telegramda esa u shu kuni soat 20:00 dagi kunlik xabarning ichida boradi: guruh nomi va sonlar qatori (masalan, Keldi: 8 / Kelmadi: 2), nol sonlarsiz.
+- «Davomat qabul qilindi» tizim ichida va brauzerda darhol keladi. Telegramda esa u kunlik xabarning ichida boradi: davomat soat 20:00 dan oldin saqlangan bo'lsa — shu kuni 20:00 da, keyin saqlangan bo'lsa — ertasi kuni 20:00 da. Dars sanasi xabar kunidan boshqa bo'lsa, qatorda u qavs ichida turadi. Qator: guruh nomi va sonlar (masalan, Keldi: 8 / Kelmadi: 2), nol sonlarsiz.
 - Telegram ulanmagan xodim xabarni faqat tizim ichida oladi.
 
 ## Birinchi saqlashdagi xabar
@@ -66,7 +66,7 @@ Guruh 18:00 – 19:30 da o'qiydi. O'qituvchi Aziza, filial administratori Bobur.
 
 ## Kim oladi
 
-«Ha» — xabar keladi. «—» — kelmaydi. Filial administratori faqat o'z filialidagi guruhlar haqida xabar oladi.
+«Ha» — xabar keladi. «—» — kelmaydi. Filial administratori faqat o'z filialidagi guruhlar haqida xabar oladi. Jadval bitta roli bor xodim uchun: CEO yoki direktorda «Administrator» roli ham bo'lsa, u administrator xabarlarini ham oladi.
 
 | Xabar | CEO | Filial direktori | Administrator | O'qituvchi |
 |---|---|---|---|---|
