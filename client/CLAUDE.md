@@ -444,6 +444,7 @@ so existing links keep working.
 - **Adding a settings page:** add one entry to `settingsNavSections` in `src/lib/settings-nav.ts` with `title`, `url`, `icon`, a one-line Uzbek `description` (required — it is shown under the title) and `visibleForRoles` matching the backend `@Roles()` of the page's endpoints. The page then appears on `/settings` and the sidebar needs no change. Also add the new route segment's label to `src/lib/breadcrumb-routes.ts`, or the breadcrumb shows the raw URL segment (see Breadcrumbs below).
 - Role filtering for the list is `getVisibleSettingsSections(roleIds)` in the same file, covered by `src/lib/settings-nav.test.ts`. Update the expected per-role lists there when you add an entry — the friction is deliberate: who sees a settings page must be a conscious choice.
 - Hiding a row is not access control: a restricted settings route still needs a redirect in `SettingsLayoutShell` and a backend `@Roles()` guard (see the RBAC rules above).
+- **Link to an employee's page (`/settings/employees/<id>`) only when `canOpenEmployeeSettings(roleIds)` holds** (same file: the roles of the "Xodimlar" entry), and render plain text otherwise. `SettingsLayoutShell` sends an Administrator back to `/settings`, so an unconditional link bounces them. The notification bell, global search and the history table's "Kim" column follow this.
 
 ### Course Page Follows the Payment Model (`/settings/courses/[id]`)
 
@@ -1086,7 +1087,7 @@ every list renders; the roles are only access.
 - **Push hook** (`src/hooks/use-push-notifications.ts`) — service worker registration + push subscription
 - **Service Worker** (`public/sw.js`) — push event handler, notification click → navigates to page
 - **Real-time:** When a new notification arrives via SSE, badge count increments and it's added to the dropdown
-- Notification click → navigates to the related entity page (based on relatedEntityType/Id)
+- Notification click → navigates to the related entity page. The target comes from `notificationHref` (`notification-href.ts`, unit-tested): Student → profile, Group → group page, Lead → `/leads?lead=<id>`, AbsencePauseSetting → its settings page, and User → `/profile/salary` for the SYSTEM salary carry-over but employee settings (CEO/BD only) for a task. Add a mapping there when the server starts sending a new `relatedEntityType`.
 
 ### Testing
 

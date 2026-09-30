@@ -153,3 +153,15 @@ export function getVisibleSettingsSections(roleIds: number[]): SettingsNavSectio
     }))
     .filter((section) => section.items.length > 0);
 }
+
+/**
+ * Whether these roles can open an employee's page, /settings/employees/<id>:
+ * the roles the "Xodimlar" entry is shown to. Anyone else is sent back by
+ * SettingsLayoutShell or refused by the API, so a link there for them only
+ * bounces.
+ */
+export function canOpenEmployeeSettings(roleIds: number[]): boolean {
+  return getVisibleSettingsSections(roleIds).some((section) =>
+    section.items.some((item) => item.url === "/settings/employees"),
+  );
+}
