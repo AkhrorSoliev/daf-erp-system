@@ -255,6 +255,7 @@ describe('DashboardService', () => {
           groupId: 'group-1',
           date: new Date('2026-04-13T00:00:00.000Z'),
           status: 'PENDING',
+          teacherPayExempt: false,
           claimedById: null,
         },
       ]);
@@ -262,6 +263,7 @@ describe('DashboardService', () => {
       expect(result.lessons[0].unmarked).toEqual({
         id: 'u1',
         status: 'PENDING',
+        teacherPayExempt: false,
         claimedBy: null,
       });
       expect(result.lessons[1].unmarked).toBeNull();

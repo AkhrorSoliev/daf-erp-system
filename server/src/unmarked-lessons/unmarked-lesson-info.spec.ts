@@ -9,6 +9,7 @@ it('keys each lesson and names who took it', async () => {
           groupId: 'g1',
           date: new Date('2026-09-28T00:00:00.000Z'),
           status: 'PENDING',
+          teacherPayExempt: true,
           claimedById: 3,
         },
         {
@@ -16,6 +17,7 @@ it('keys each lesson and names who took it', async () => {
           groupId: 'g2',
           date: new Date('2026-09-28T00:00:00.000Z'),
           status: 'HELD',
+          teacherPayExempt: false,
           claimedById: null,
         },
       ]),
@@ -32,11 +34,13 @@ it('keys each lesson and names who took it', async () => {
   expect(infos.get('g1:2026-09-28')).toEqual({
     id: 'u1',
     status: 'PENDING',
+    teacherPayExempt: true,
     claimedBy: { id: 3, firstName: 'Ali', lastName: 'Valiyev' },
   });
   expect(infos.get('g2:2026-09-28')).toEqual({
     id: 'u2',
     status: 'HELD',
+    teacherPayExempt: false,
     claimedBy: null,
   });
 });

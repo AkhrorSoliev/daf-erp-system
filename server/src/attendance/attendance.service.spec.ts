@@ -641,6 +641,7 @@ describe('AttendanceService', () => {
           groupId: 'group-uuid-1',
           date: new Date('2026-04-01T00:00:00.000Z'),
           status: 'PENDING',
+          teacherPayExempt: true,
           claimedById: 7,
         },
       ]);
@@ -659,6 +660,7 @@ describe('AttendanceService', () => {
       ).toEqual({
         id: 'u1',
         status: 'PENDING',
+        teacherPayExempt: true,
         claimedBy: { id: 7, firstName: 'Ali', lastName: 'Valiyev' },
       });
       expect(

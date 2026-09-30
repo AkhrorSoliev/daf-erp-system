@@ -5,6 +5,8 @@ import { lessonKey } from './forfeited-lessons';
 export interface UnmarkedLessonInfo {
   id: string;
   status: UnmarkedLessonStatus;
+  /** The teacher is paid for this lesson whatever is answered (backfill or re-asked). */
+  teacherPayExempt: boolean;
   claimedBy: { id: number; firstName: string; lastName: string } | null;
 }
 
@@ -20,6 +22,7 @@ export async function loadUnmarkedLessonInfos(
       groupId: true,
       date: true,
       status: true,
+      teacherPayExempt: true,
       claimedById: true,
     },
   });
@@ -41,6 +44,7 @@ export async function loadUnmarkedLessonInfos(
       {
         id: r.id,
         status: r.status,
+        teacherPayExempt: r.teacherPayExempt,
         claimedBy:
           r.claimedById !== null ? (byId.get(r.claimedById) ?? null) : null,
       },
