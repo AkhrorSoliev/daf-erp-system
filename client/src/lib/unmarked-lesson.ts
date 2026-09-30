@@ -4,6 +4,8 @@ export type UnmarkedStatus = "PENDING" | "HELD" | "NOT_HELD" | "RESCHEDULED";
 export interface UnmarkedLessonInfo {
   id: string;
   status: UnmarkedStatus;
+  /** Already exempt (backfill or re-asked): the teacher is paid whatever is answered. */
+  teacherPayExempt: boolean;
   claimedBy: { id: number; firstName: string; lastName: string } | null;
 }
 

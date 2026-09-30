@@ -31,6 +31,8 @@ interface LateAttendanceDialogProps {
   onOpenChange: (open: boolean) => void;
   lesson: UnmarkedLessonRef;
   canExempt: boolean;
+  /** The teacher is already paid for this lesson (backfill or re-asked): no warning, no exemption box. */
+  teacherPayExempt: boolean;
   onSaved: () => void;
 }
 
@@ -39,7 +41,14 @@ interface LateAttendanceDialogProps {
  * roster is who was in the group that day (`?late=1`). Saving leaves the
  * teacher unpaid for the lesson unless the CEO ticks the exemption.
  */
-export function LateAttendanceDialog({ open, onOpenChange, lesson, canExempt, onSaved }: LateAttendanceDialogProps) {
+export function LateAttendanceDialog({
+  open,
+  onOpenChange,
+  lesson,
+  canExempt,
+  teacherPayExempt,
+  onSaved,
+}: LateAttendanceDialogProps) {
   const [marks, setMarks] = useState<Map<number, AttendanceEntry>>(() => new Map());
   const [openNote, setOpenNote] = useState<number | null>(null);
   const [exempt, setExempt] = useState(false);
@@ -55,6 +64,8 @@ export function LateAttendanceDialog({ open, onOpenChange, lesson, canExempt, on
         })
         .then((r) => r.data.activeStudents ?? []),
     enabled: open,
+    // A reopened dialog must never offer an old roster: the server refuses a partial register.
+    staleTime: 0,
   });
   const students = roster.data ?? [];
 
@@ -93,14 +104,14 @@ export function LateAttendanceDialog({ open, onOpenChange, lesson, canExempt, on
   const handleSave = async () => {
     setSubmitting(true);
     try {
-      await api.post(`/attendance/${lesson.groupId}/date/${lesson.date}/late`, {
+      const { data } = await api.post<{ message?: string }>(`/attendance/${lesson.groupId}/date/${lesson.date}/late`, {
         entries: students.map((s) => {
           const e = entryFor(s);
           return { studentId: s.studentId, status: e.status, note: e.note };
         }),
         ...(exempt ? { teacherPayExempt: true, exemptReason: exemptReason.trim() } : {}),
       });
-      toast.success(exempt ? "Davomat saqlandi" : "Davomat saqlandi. Ustozga bu dars uchun haq yozilmaydi");
+      toast.success(data?.message || "Davomat saqlandi");
       reset();
       onSaved();
     } catch (err) {
@@ -124,7 +135,7 @@ export function LateAttendanceDialog({ open, onOpenChange, lesson, canExempt, on
         </DialogHeader>
 
         <div className="flex-1 space-y-3 overflow-y-auto px-6 py-4">
-          {!exempt && (
+          {!exempt && !teacherPayExempt && (
             <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />
               Davomat dars vaqtida olinmagan — ustozga bu dars uchun haq yozilmaydi.
@@ -173,7 +184,7 @@ export function LateAttendanceDialog({ open, onOpenChange, lesson, canExempt, on
             </>
           )}
 
-          {canExempt && (
+          {canExempt && !teacherPayExempt && (
             <div className="space-y-2 rounded-lg border p-3">
               <label className="flex items-center gap-2 text-sm font-medium">
                 <Checkbox checked={exempt} onCheckedChange={(v) => setExempt(v === true)} />
@@ -202,7 +213,7 @@ export function LateAttendanceDialog({ open, onOpenChange, lesson, canExempt, on
           </Button>
           <Button
             onClick={handleSave}
-            disabled={submitting || roster.isPending || students.length === 0 || unmarkedCount > 0 || reasonMissing}
+            disabled={submitting || roster.isFetching || students.length === 0 || unmarkedCount > 0 || reasonMissing}
           >
             {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
             Saqlash

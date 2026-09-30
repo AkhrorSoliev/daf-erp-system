@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,6 +16,17 @@ import { LateAttendanceDialog } from "./late-attendance-dialog";
 import { NotHeldDialog } from "./not-held-dialog";
 
 export type UnmarkedDialog = "held" | "notHeld" | null;
+
+// Same group-scoped keys the lesson-changes tab refreshes after a cancellation or
+// reschedule; a prefix match covers every cached month.
+const ANSWER_GROUP_KEYS = [
+  "attendance-calendar",
+  "attendance-dates",
+  "attendance-lesson-sequence",
+  "lesson-cancellations",
+  "lesson-reschedules",
+  "lesson-teacher-overrides",
+] as const;
 
 /** The two answers, plus who holds the task. */
 export function UnmarkedLessonButtons({
@@ -56,21 +68,34 @@ export function UnmarkedLessonButtons({
   );
 }
 
-/** Both dialogs, driven by one state — mount them OUTSIDE any popover. */
+/**
+ * Both dialogs, driven by one state — mount them OUTSIDE any popover. An answer
+ * refreshes every view that draws the lesson (schedule, calendar, dates, lesson
+ * changes), so no surface keeps offering an answered question; `onAnswered` is
+ * for what is specific to the caller.
+ */
 export function UnmarkedLessonDialogs({
   lesson,
   dialog,
   onDialogChange,
   canExempt,
+  teacherPayExempt,
   onAnswered,
 }: {
   lesson: UnmarkedLessonRef;
   dialog: UnmarkedDialog;
   onDialogChange: (dialog: UnmarkedDialog) => void;
   canExempt: boolean;
+  /** `info.teacherPayExempt` of the question: the teacher is paid whatever is answered. */
+  teacherPayExempt: boolean;
   onAnswered: () => void;
 }) {
+  const queryClient = useQueryClient();
   const done = () => {
+    queryClient.invalidateQueries({ queryKey: ["dashboard", "today-schedule"] });
+    for (const key of ANSWER_GROUP_KEYS) {
+      queryClient.invalidateQueries({ queryKey: [key, lesson.groupId] });
+    }
     onDialogChange(null);
     onAnswered();
   };
@@ -81,6 +106,7 @@ export function UnmarkedLessonDialogs({
         onOpenChange={(o) => onDialogChange(o ? "held" : null)}
         lesson={lesson}
         canExempt={canExempt}
+        teacherPayExempt={teacherPayExempt}
         onSaved={done}
       />
       <NotHeldDialog
@@ -125,6 +151,7 @@ export function UnmarkedLessonPrompt({
         dialog={dialog}
         onDialogChange={setDialog}
         canExempt={state.canExempt}
+        teacherPayExempt={info.teacherPayExempt}
         onAnswered={onAnswered}
       />
     </div>
