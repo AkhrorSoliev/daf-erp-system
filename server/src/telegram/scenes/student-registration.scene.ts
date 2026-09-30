@@ -35,6 +35,7 @@ import {
   registerStudentFromTelegram,
   uploadStudentPhoto,
 } from './student-registration-flow';
+import { finishRegistration } from './finish-registration';
 import { withProcessingLock } from '../utils/processing-lock';
 
 /**
@@ -435,29 +436,15 @@ export function createStudentRegistrationScene(
       const data = ctx.session.data;
       const chatId = String(ctx.chat!.id);
 
+      let plainPassword: string;
       try {
-        const { plainPassword } = await registerStudentFromTelegram(
+        ({ plainPassword } = await registerStudentFromTelegram(
           prisma,
           entityHistoryService,
           leadOrigin,
           data,
           chatId,
-        );
-
-        await ctx.editMessageCaption('✅ Tasdiqlandi!');
-        await ctx.replyWithPhoto(data.photo, {
-          caption:
-            "✅ Ro'yxatdan muvaffaqiyatli o'tdingiz!\n\n" +
-            `👨‍🏫 O'qituvchi: ${data.teacherName}\n` +
-            `📚 Guruh: ${data.groupName}\n\n` +
-            `🔐 Shaxsiy kabinetingiz:\n` +
-            `🌐 student.dafzentrum.uz\n` +
-            `📱 Login: ${data.phone}\n` +
-            `🔑 Parol: ${plainPassword}\n\n` +
-            'Tez orada sizga darslar haqida xabar beramiz!',
-        });
-
-        await ctx.scene.leave();
+        ));
       } catch (error) {
         logger.error("Ro'yxatdan o'tishda xatolik", error as Error);
 
@@ -479,7 +466,23 @@ export function createStudentRegistrationScene(
             ],
           ]),
         );
+        return;
       }
+
+      // The student, their enrollment and their sign-in account exist now.
+      await finishRegistration(
+        ctx,
+        logger,
+        data.photo,
+        "✅ Ro'yxatdan muvaffaqiyatli o'tdingiz!\n\n" +
+          `👨‍🏫 O'qituvchi: ${data.teacherName}\n` +
+          `📚 Guruh: ${data.groupName}\n\n` +
+          `🔐 Shaxsiy kabinetingiz:\n` +
+          `🌐 student.dafzentrum.uz\n` +
+          `📱 Login: ${data.phone}\n` +
+          `🔑 Parol: ${plainPassword}\n\n` +
+          'Tez orada sizga darslar haqida xabar beramiz!',
+      );
     });
   });
 
