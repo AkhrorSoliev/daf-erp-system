@@ -37,6 +37,7 @@ import {
 } from './student-registration-flow';
 import { finishRegistration } from './finish-registration';
 import { withProcessingLock } from '../utils/processing-lock';
+import { describeError } from '../../telegram-digest/telegram-send';
 
 /**
  * Student registration flow:
@@ -380,7 +381,10 @@ export function createStudentRegistrationScene(
 
     try {
       await uploadStudentPhoto(ctx, uploadService, photo.file_id, 'image/jpeg');
-    } catch {
+    } catch (err) {
+      logger.warn(
+        `O'quvchi rasmi yuklanmadi (chat ${ctx.chat.id}): ${describeError(err)}`,
+      );
       await ctx.reply('Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:');
     }
   });
@@ -409,7 +413,10 @@ export function createStudentRegistrationScene(
 
     try {
       await uploadStudentPhoto(ctx, uploadService, doc.file_id, mime);
-    } catch {
+    } catch (err) {
+      logger.warn(
+        `O'quvchi rasmi yuklanmadi (chat ${ctx.chat.id}): ${describeError(err)}`,
+      );
       await ctx.reply('Rasmni yuklashda xatolik yuz berdi. Qayta yuboring:');
     }
   });
