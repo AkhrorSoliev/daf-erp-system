@@ -2,10 +2,24 @@ import { create } from "zustand";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { registerBranchScopedStore } from "@/lib/branch-scoped-stores";
+import { getErrorMessage } from "@/lib/get-error-message";
+import type { UnmarkedStatus } from "@/lib/unmarked-lesson";
 
 export type TaskStatus = "PENDING" | "SEEN" | "DONE";
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 export type TaskTab = "my" | "created";
+
+/** The lesson a «Dars bo'ldimi?» system task asks about (ADR-0054). */
+export interface TaskLesson {
+  id: string;
+  groupId: string;
+  groupName: string;
+  date: string; // YYYY-MM-DD
+  status: UnmarkedStatus;
+  teacherPayExempt: boolean;
+  lessonStartTime: string;
+  lessonEndTime: string;
+}
 
 export interface TaskItem {
   id: string;
@@ -16,12 +30,15 @@ export interface TaskItem {
   priority: TaskPriority | null;
   entityType: string;
   entityId: string;
+  /** Null for a system task (shown as «Tizim»). */
   author: {
     id: number;
     firstName: string;
     lastName: string;
     photo: string | null;
-  };
+  } | null;
+  isSystem: boolean;
+  unmarkedLesson: TaskLesson | null;
   assignees: {
     id: string;
     userId: number;
@@ -82,12 +99,13 @@ export const useTasksBoard = create<TasksBoardState>((set, get) => ({
             entityType: string;
             entityId: string;
             createdAt: string;
+            isSystem?: boolean;
             author: {
               id: number;
               firstName: string;
               lastName: string;
               photo: string | null;
-            };
+            } | null;
             assignees: {
               id: string;
               userId: number;
@@ -97,6 +115,16 @@ export const useTasksBoard = create<TasksBoardState>((set, get) => ({
               };
               status: string;
             }[];
+            unmarkedLesson?: {
+              id: string;
+              groupId: string;
+              date: string;
+              status: UnmarkedStatus;
+              teacherPayExempt: boolean;
+              lessonStartTime: string;
+              lessonEndTime: string;
+              group: { name: string };
+            } | null;
           };
         }) => ({
           id: assignee.id,
@@ -108,6 +136,20 @@ export const useTasksBoard = create<TasksBoardState>((set, get) => ({
           entityType: assignee.comment.entityType,
           entityId: assignee.comment.entityId,
           author: assignee.comment.author,
+          isSystem: assignee.comment.isSystem ?? false,
+          unmarkedLesson: assignee.comment.unmarkedLesson
+            ? {
+                id: assignee.comment.unmarkedLesson.id,
+                groupId: assignee.comment.unmarkedLesson.groupId,
+                groupName: assignee.comment.unmarkedLesson.group.name,
+                date: assignee.comment.unmarkedLesson.date.slice(0, 10),
+                status: assignee.comment.unmarkedLesson.status,
+                teacherPayExempt:
+                  assignee.comment.unmarkedLesson.teacherPayExempt,
+                lessonStartTime: assignee.comment.unmarkedLesson.lessonStartTime,
+                lessonEndTime: assignee.comment.unmarkedLesson.lessonEndTime,
+              }
+            : null,
           assignees: (assignee.comment.assignees ?? []).map(
             (a: {
               id: string;
@@ -170,6 +212,9 @@ export const useTasksBoard = create<TasksBoardState>((set, get) => ({
           entityType: comment.entityType,
           entityId: comment.entityId,
           author: comment.author,
+          // A system task has no author, so it never appears among created tasks.
+          isSystem: false,
+          unmarkedLesson: null,
           assignees: (comment.assignees ?? []).map(
             (a: {
               id: string;
@@ -198,6 +243,13 @@ export const useTasksBoard = create<TasksBoardState>((set, get) => ({
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
+    // The lesson's answer closes a system task, and an answered one stays
+    // closed — the server refuses both, so do not even move the card.
+    if (task.isSystem && (newStatus === "DONE" || task.status === "DONE")) {
+      toast.error("Bu topshiriq darsga javob berilganda o'zi yopiladi");
+      return;
+    }
+
     // Optimistic update
     set({
       tasks: tasks.map((t) =>
@@ -212,10 +264,8 @@ export const useTasksBoard = create<TasksBoardState>((set, get) => ({
     } catch (error) {
       // Revert on error
       set({ tasks });
-      const msg =
-        (error as any)?.response?.data?.message ||
-        "Status o'zgartirishda xatolik";
-      toast.error(Array.isArray(msg) ? msg[0] : msg);
+      // Includes the server's 409 when another administrator took the task.
+      toast.error(getErrorMessage(error, "Status o'zgartirishda xatolik"));
     }
   },
 }));
