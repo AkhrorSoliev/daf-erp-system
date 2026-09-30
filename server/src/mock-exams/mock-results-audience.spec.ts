@@ -1,4 +1,4 @@
-import { RESULTS_AUDIENCE } from './mock-results-audience';
+import { RESULTS_AUDIENCE, inResultsAudience } from './mock-results-audience';
 
 /**
  * CEO, 2026-09-25: only those who paid get their results. A registration that
@@ -49,5 +49,6 @@ describe('mock results audience', () => {
     ],
   ])('%s', (_name, r, expected) => {
     expect(inAudience(r)).toBe(expected);
+    expect(inResultsAudience(r.paid, r.feeAmount, r.exam.price)).toBe(expected);
   });
 });

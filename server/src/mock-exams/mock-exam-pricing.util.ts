@@ -80,3 +80,16 @@ export function resolveParticipantFee(
   }
   return exam.price;
 }
+
+/**
+ * What one registration costs: the fee frozen at registration, or, for a row
+ * from before fees were frozen, the exam's current price. Every total (the
+ * revenue card, the exams list, the statistics block) reads it here so they
+ * cannot drift apart.
+ */
+export function effectiveMockFee(
+  feeAmount: number | null,
+  examPrice: number,
+): number {
+  return feeAmount ?? examPrice;
+}

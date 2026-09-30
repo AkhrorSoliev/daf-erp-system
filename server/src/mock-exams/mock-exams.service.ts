@@ -28,6 +28,7 @@ import { shortId } from '../custom-forms/short-id.util';
 import { isValidMockExamStatusTransition } from './mock-exam-status.util';
 import { applyCompetitionRanks } from './mock-exam-ranking';
 import {
+  effectiveMockFee,
   sanitizeExamTimes,
   sanitizeOfferedLevels,
 } from './mock-exam-pricing.util';
@@ -86,7 +87,7 @@ export class MockExamsService {
     });
 
     const totalRevenue = paid.reduce(
-      (sum, p) => sum + (p.feeAmount ?? p.exam.price ?? 0),
+      (sum, p) => sum + effectiveMockFee(p.feeAmount, p.exam.price),
       0,
     );
 
