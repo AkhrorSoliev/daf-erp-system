@@ -67,7 +67,8 @@ export function DashboardHeader() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <QollanmaYordamTugmasi />
+          {/* key: sarlavha marshrutlar orasida saqlanadi; key bo'lmasa ochiq qolgan panel «orqaga»dan keyin o'zi qayta ochiladi */}
+          <QollanmaYordamTugmasi key={pathname} />
           <TashkentClock />
           <NotificationBell />
           <div className="hidden sm:block">
