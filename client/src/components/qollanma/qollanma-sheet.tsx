@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -26,6 +26,7 @@ export function QollanmaSheet({
 }) {
   const kalit = `${sahifa.bolim}/${sahifa.sahifa}`;
   const [yuklangan, setYuklangan] = useState<Yuklangan | null>(null);
+  const ochuvchi = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!ochiq) return;
@@ -46,7 +47,18 @@ export function QollanmaSheet({
 
   return (
     <Sheet open={ochiq} onOpenChange={onOchiqChange}>
-      <SheetContent side="right" className="flex flex-col gap-0 p-0 data-[side=right]:sm:max-w-2xl">
+      <SheetContent
+        side="right"
+        className="flex flex-col gap-0 p-0 data-[side=right]:sm:max-w-2xl"
+        onOpenAutoFocus={() => {
+          ochuvchi.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        }}
+        onCloseAutoFocus={(e) => {
+          // Radix fokusni faqat o'z SheetTrigger'iga qaytaradi; bu panelni tashqi tugma ochadi.
+          e.preventDefault();
+          ochuvchi.current?.focus();
+        }}
+      >
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle>{sahifa.sarlavha}</SheetTitle>
           <SheetDescription>{sahifa.qisqacha}</SheetDescription>
