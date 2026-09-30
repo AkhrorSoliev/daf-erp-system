@@ -16,6 +16,7 @@ import {
   loadPackLessonPrices,
   periodsInRange,
 } from '../common/finance/monthly-per-lesson';
+import { loadForfeitedLessonKeys } from '../unmarked-lessons/forfeited-lessons';
 import { pickActiveVersion, type RateVersion } from './shared/deserved-math';
 import {
   MonthlyChargeStatus,
@@ -232,11 +233,18 @@ export class SalaryCenterTopUpService {
       packPriceCandidates(attendances, groupMap, monthlyFrozen),
     );
 
+    const forfeitedLessons = await loadForfeitedLessonKeys(this.prisma, {
+      companyId,
+      from: periodStartDate,
+      toExclusive: periodEndDateExclusive,
+    });
+
     const { lessons } = sweepGapLessons({
       attendances,
       groupMap,
       monthlyFrozen,
       packPrices,
+      forfeitedLessons,
       resolveTeachers: (groupId, d) =>
         overrideMap.get(`${groupId}::${d}`) ?? rosterMap.get(groupId) ?? [],
       resolveRate: (tid, groupId, at) =>

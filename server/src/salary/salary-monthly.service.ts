@@ -16,6 +16,7 @@ import {
   loadPackLessonPrices,
   periodsInRange,
 } from '../common/finance/monthly-per-lesson';
+import { loadForfeitedLessonKeys } from '../unmarked-lessons/forfeited-lessons';
 
 export type { SalaryMonthlyQuery } from './shared/resolve-monthly-scope';
 
@@ -503,11 +504,17 @@ export class SalaryMonthlyService {
       companyId,
       packPriceCandidates(attendances, groupMap, monthlyFrozen),
     );
+    const forfeitedLessons = await loadForfeitedLessonKeys(this.prisma, {
+      companyId,
+      from: periodStartDate,
+      toExclusive: periodEndDateExclusive,
+    });
     const sweep = sweepGapLessons({
       attendances,
       groupMap,
       monthlyFrozen,
       packPrices,
+      forfeitedLessons,
       resolveTeachers,
       resolveRate,
       inScope: (tid) => agg.has(tid),

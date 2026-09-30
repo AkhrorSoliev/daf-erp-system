@@ -26,6 +26,10 @@ import {
   loadPackLessonPrices,
   periodsInRange,
 } from '../common/finance/monthly-per-lesson';
+import {
+  lessonKey,
+  loadForfeitedLessonKeys,
+} from '../unmarked-lessons/forfeited-lessons';
 import { SalaryAccrualService } from './salary-accrual.service';
 
 /** One uncovered billable lesson to be fronted by a center top-up accrual. */
@@ -738,6 +742,12 @@ export class SalaryCalculationService {
       companyId,
       packPriceCandidates(attendances, groupMap, monthlyFrozen),
     );
+    // ADR-0054: lessons nobody marked in time are never fronted either.
+    const forfeitedLessons = await loadForfeitedLessonKeys(this.prisma, {
+      companyId,
+      from: periodStartDate,
+      toExclusive: periodEndDateExclusive,
+    });
 
     const gapByUser = new Map<number, GapSpec[]>();
     const sweep = sweepGapLessons({
@@ -745,6 +755,7 @@ export class SalaryCalculationService {
       groupMap,
       monthlyFrozen,
       packPrices,
+      forfeitedLessons,
       resolveTeachers,
       resolveRate,
       // Company-wide: the cron settles every teacher, so nothing is out of
@@ -816,7 +827,13 @@ export class SalaryCalculationService {
         companyId,
         packPriceCandidates(backlog, groupMap, backlogFrozen),
       );
+      const backlogForfeited = await loadForfeitedLessonKeys(this.prisma, {
+        companyId,
+        from: eraStart,
+        toExclusive: periodStart,
+      });
       for (const att of backlog) {
+        if (backlogForfeited.has(lessonKey(att.groupId, att.date))) continue;
         // Only genuine new-student pairs that have NOW crossed the threshold.
         const held =
           heldByStudentGroup.get(`${att.studentId}::${att.groupId}`) ?? 0;

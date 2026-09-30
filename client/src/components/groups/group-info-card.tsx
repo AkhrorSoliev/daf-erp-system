@@ -83,7 +83,7 @@ export function GroupInfoCard({
   const [latestComment, setLatestComment] = useState<{
     content: string;
     isTask?: boolean;
-    author: { firstName: string; lastName: string };
+    author: { firstName: string; lastName: string } | null;
     createdAt: string;
   } | null>(null);
 
@@ -234,8 +234,9 @@ export function GroupInfoCard({
                 </p>
                 <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                   <span className="font-medium">
-                    {latestComment.author.firstName}{" "}
-                    {latestComment.author.lastName}
+                    {latestComment.author
+                      ? `${latestComment.author.firstName} ${latestComment.author.lastName}`
+                      : "Tizim"}
                   </span>
                   <span>&middot;</span>
                   <span>

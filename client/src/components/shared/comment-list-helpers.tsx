@@ -33,7 +33,8 @@ export interface CommentData {
   content: string;
   isTask: boolean;
   isSystem?: boolean;
-  author: CommentAuthor;
+  /** Null for a system task (shown as «Tizim»). */
+  author: CommentAuthor | null;
   assignees: CommentAssignee[];
   createdAt: string;
   _pending?: boolean;

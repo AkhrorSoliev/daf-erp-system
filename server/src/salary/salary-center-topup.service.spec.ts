@@ -77,6 +77,8 @@ describe('SalaryCenterTopUpService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         groupBy: jest.fn().mockResolvedValue([]),
       },
+      // Lessons whose teacher pay is forfeited (ADR-0054); default none.
+      unmarkedLesson: { findMany: jest.fn().mockResolvedValue([]) },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
       lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
       employeeSalaryConfigVersion: {

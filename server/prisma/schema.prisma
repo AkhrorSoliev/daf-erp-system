@@ -1276,6 +1276,7 @@ model Group {
   holidayExtensions      GroupHolidayExtension[]
   plannedAbsences        PlannedAbsence[]
   monthlyCharges         EnrollmentMonthlyCharge[]
+  unmarkedLessons        UnmarkedLesson[]          @relation("UnmarkedLessonGroup")
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -1751,6 +1752,7 @@ enum TelegramDigestCategory {
   GROUP_STATUS_CHANGE
   MONTHLY_CHARGE
   PAYMENT_REMINDER
+  LESSON_PAY_FORFEITED
 }
 
 /// One queued Telegram notification waiting for the 20:00 digest (ADR-0025).
@@ -1840,8 +1842,9 @@ model Comment {
   isSystem   Boolean       @default(false)
   dueDate    DateTime?
   priority   TaskPriority?
-  authorId   Int
-  author     User          @relation("CommentAuthor", fields: [authorId], references: [id])
+  /// NULL = a task the system gave (ADR-0054); the UI shows «Tizim».
+  authorId   Int?
+  author     User?         @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
   companyId  Int
   company    Company       @relation(fields: [companyId], references: [id])
   createdAt  DateTime      @default(now())
@@ -1849,6 +1852,8 @@ model Comment {
 
   assignees     CommentAssignee[]
   notifications Notification[]
+  /// The unmarked lesson this system task asks about (ADR-0054).
+  unmarkedLesson UnmarkedLesson? @relation("UnmarkedLessonTask")
 
   @@index([entityType, entityId])
   @@index([authorId])
@@ -2407,6 +2412,47 @@ model LessonReschedule {
   @@index([companyId])
   @@index([deletedAt])
   @@index([newRoomId])
+}
+
+enum UnmarkedLessonStatus {
+  PENDING
+  HELD
+  NOT_HELD
+  RESCHEDULED
+}
+
+/// A lesson nobody marked before it ended (spec 2026-09-29, ADR-0054). Opened
+/// by the attendance reminder cron, answered by an administrator: HELD (the
+/// register was entered late), NOT_HELD (cancelled) or RESCHEDULED (moved).
+/// While a row exists and `teacherPayExempt` is false, the lesson never earns
+/// the teacher a SalaryAccrual — see `unmarked-lessons/forfeited-lessons.ts`.
+model UnmarkedLesson {
+  id               String               @id @default(uuid())
+  companyId        Int
+  branchId         Int
+  groupId          String
+  group            Group                @relation("UnmarkedLessonGroup", fields: [groupId], references: [id])
+  date             DateTime             @db.Date
+  lessonStartTime  String
+  lessonEndTime    String
+  status           UnmarkedLessonStatus @default(PENDING)
+  /// CEO only (Q9): the teacher could not mark it — the lesson pays as usual.
+  teacherPayExempt Boolean              @default(false)
+  exemptReason     String?
+  /// The administrator who took the system task (first to act on it).
+  claimedById      Int?
+  decidedById      Int?
+  decidedAt        DateTime?
+  cancellationId   String?
+  rescheduleId     String?
+  taskCommentId    String?              @unique
+  taskComment      Comment?             @relation("UnmarkedLessonTask", fields: [taskCommentId], references: [id], onDelete: SetNull)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@unique([groupId, date])
+  @@index([companyId, status])
+  @@index([branchId, status])
 }
 
 model SalaryAccrual {
