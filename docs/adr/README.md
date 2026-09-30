@@ -70,8 +70,10 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0007](0007-lavozim-roldan-ajratilgan.md) | Lavozim roldan ajratilgan | Qabul qilindi | 2026-08-16 |
 | [0008](0008-royxatdan-otish-aktori-oshkora.md) | Chaqiruvchisi yo'q yozuv o'zini oshkora e'lon qiladi | Qabul qilindi | 2026-08-19 |
 | [0009](0009-deutsch-tutor-olib-tashlandi.md) | Deutsch Tutor noldan qayta quriladi, eski qatlam olib tashlandi | Qabul qilindi | 2026-08-19 |
+| [0011](0011-oquv-ozagi-standartga-boglanadi.md) | O'quv o'zagi Goethe standartiga bog'lanadi, manbaga emas | Qabul qilindi | 2026-08-26 |
 | [0012](0012-bosh-sahifa-qayta-hisoblamaydi.md) | Bosh sahifa paneli raqamlarni qayta hisoblamaydi | Qabul qilindi | 2026-09-02 |
 | [0013](0013-majburiy-royxat-boshqaruvsiz-qolmaydi.md) | Majburiy tanlov ro'yxati boshqaruv sahifasisiz qolmaydi | Qabul qilindi | 2026-09-03 |
+| [0014](0014-a1-kursi-on-ikki-unitga-bolinadi.md) | A1 kursi o'n ikki unitga bo'linadi | Qabul qilindi | 2026-09-03 |
 | [0015](0015-faol-oquvchi-tarifi-manifest.md) | «Faol o'quvchi» sanog'i manifest bilan majburlanadi | Qabul qilindi | 2026-09-10 |
 | [0016](0016-kun-chegarasi-toshkent-boyicha.md) | Kun chegarasi Toshkent bo'yicha, ustun tipiga qarab | Qabul qilindi | 2026-09-10 |
 | [0017](0017-har-bir-oquvchi-lid-sifatida-tugiladi.md) | Har bir o'quvchi lid sifatida tug'iladi | Qabul qilindi | 2026-09-10 |
@@ -113,3 +115,5 @@ Uzunligi: bir sahifadan oshmasin. ADR uzun bo'lsa, demak u aslida bir nechta qar
 | [0056](0056-mock-royxat-manbasi-qatorda.md) | Mock ro'yxati qayerdan kelgani (bot yoki admin) qatorning o'zida yoziladi | Qabul qilindi | 2026-09-30 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
+
+> **ADR-0010 indeksda yo'q, chunki fayli repoda yo'q.** U 2026-08-24 da Videothek ishi bilan yozilgan («Videothek darajani pleylistdan meros oladi, transkript qurilmaydi»), lekin o'sha shox `main` ga qo'shilmagan. ADR-0011 ning «Bog'liq» qatori va `docs/superpowers/specs/2026-08-25-daf-learning-system-design.md` unga havola qiladi. Qabul qilingan ADR tahrirlanmagani uchun ADR-0011 dagi havola o'z joyida qoldirildi. 0010 raqami band, qayta ishlatilmaydi.
