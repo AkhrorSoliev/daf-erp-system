@@ -24,7 +24,7 @@ bo'lmagan bo'lsa, pul qo'lda bekor qilinmaguncha qaytmasdi (ADR-0053). Tizim
    emas), `UnmarkedLesson` yozuvi va filial administratorlariga tizim
    topshirig'i ochiladi: «Dars bo'ldimi?». Birinchi o'zgartirgan yoki javob
    bergan administrator topshiriqni oladi. Bu ish tegadigan joylarda bayram
-   kunlari filial bo'yicha hisoblanadi: tekshiruvda, eslatmada, tugash sanog'ida,
+   kunlari filial bo'yicha hisoblanadi: tekshiruvda, davomat eslatmasida, tugash sanog'ida,
    guruh kalendarida. Topshiriq muddati — keyingi ish kuni 10:00; yakshanba va
    filialning bayramlari o'tkazib yuboriladi (qayta ochilganiniki ham).
 3. «Bo'ldi» — davomat kech kiritiladi, dars markaz tushumiga kiradi, ustozga
@@ -32,8 +32,10 @@ bo'lmagan bo'lsa, pul qo'lda bekor qilinmaguncha qaytmasdi (ADR-0053). Tizim
    `sweepGapLessons`ning majburiy `forfeitedLessons` kirishi (oylik hisobi,
    markaz qo'shimchasi, «Qolgan (markaz)»). Ro'yxat — o'sha kuni guruhda
    bo'lgan o'quvchilar. Undan keyin guruhdan chiqqan o'quvchidan paketli
-   (oylik bo'lmagan) kursda pul olinmaydi va uning uchun ustoz haqi ham
-   yozilmaydi — chiqishda dars pullari allaqachon qaytgan; oylik kursda hisob
+   (oylik bo'lmagan) kursda pul olinmaydi — chiqishda dars pullari allaqachon
+   qaytgan — shuning uchun uning uchun jonli ustoz haqi ham yozilmaydi. Istisno
+   darsda esa oylik kunidagi markaz qo'shimchasi (`sweepGapLessons`) bu darsni
+   baribir to'laydi (hozir faol paketli guruh yo'q). Oylik kursda hisob
    odatdagidek.
 4. Faqat CEO «Ustoz aybdor emas» deb belgilay oladi (sabab bilan) — dars
    odatdagidek haq beradi. Qoidadan oldingi izsiz kunlar ham istisno (haq
@@ -47,7 +49,10 @@ bo'lmagan bo'lsa, pul qo'lda bekor qilinmaguncha qaytmasdi (ADR-0053). Tizim
 6. Javob bo'lmasa, tizim taxmin qilmaydi: ertasi ish kuni 09:00 da eslatma,
    21:00 hisobotida 1 kundan ortiq javobsizlar soni. Bu «Javobsiz darslar»
    qatori hisobotning «Diqqat» qismida chiqadi, shuning uchun kun svetoforini
-   🟡 qiladi.
+   🟡 qiladi. 09:00 eslatmani umumiy topshiriq eslatmasi (`TaskReminderService`)
+   yuboradi. U istalgan filial bayramida to'xtaydi, muddat esa faqat o'z
+   filiali bayramini o'tkazadi: muddati boshqa filialning bayramiga to'g'ri
+   kelgan topshiriqqa 09:00 eslatma bormaydi (ma'lum cheklov).
 
 ## Oqibatlar
 
@@ -71,15 +76,18 @@ bo'lmagan bo'lsa, pul qo'lda bekor qilinmaguncha qaytmasdi (ADR-0053). Tizim
   ko'chirilgan darsga davomat kirita olmagan edi. Dars tugagandan keyin
   qilingan bo'lsa, oddiy (haq yozilmaydigan) savol ochiladi — aks holda dars
   tugagach bekor qilib, keyin o'chirish ustozga faqat CEO bera oladigan haqni
-  berardi (CEO qarori, 2026-09-30). Ko'chirishni o'chirganda kun bayram
-  bo'lmasligi va hali bekor qilinmagan bo'lishi ham shart («Dars oldindan
-  ko'chirilgan edi»).
+  berardi (CEO qarori, 2026-09-30). Ko'chirishdagi istisnoning sababi: «Dars
+  oldindan ko'chirilgan edi». Ko'chirish o'chirilganda asl kun bayram bo'lsa
+  yoki hali ham bekor qilingan bo'lsa, savol umuman ochilmaydi.
 - Ikki o'zgarish bir vaqtda to'qnashsa (masalan, dars tugashi tekshiruvi va
   davomat saqlash, yoki ikki kishi bitta darsni bekor qilsa), yutqazgan so'rov
   409 «Bir vaqtda boshqa o'zgarish bo'ldi — qayta urinib ko'ring» oladi; tizim
   o'zi qayta urinmaydi.
-- Yangi ustoz akkauntsiz dars o'tgan yoki server ishlamagan holatlar faqat CEO
-  istisnosi bilan to'lanadi.
+- Yangi ustoz akkauntsiz dars o'tgan yoki dars paytida server ishlamagan
+  holatlar faqat CEO istisnosi bilan to'lanadi. Server yarim soatlik
+  yurishlarni ham, 23:00 yurishini ham o'tkazib yuborgan kun esa umuman
+  so'ralmaydi; uni `scripts/open-unmarked-lessons.ts` tiklaydi va savolni
+  istisno (haq yoziladigan) qilib ochadi.
 - Oddiy (istisno bo'lmagan) savolga javob qachon berilmasin, ustozga haq
   yozilmaydi. Istisno savol (qoidadan oldingi kun, dars tugashidan oldin
   qilingan bekor qilish yoki ko'chirish o'chirilgani uchun ochilgan savol, CEO

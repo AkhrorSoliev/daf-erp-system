@@ -21,14 +21,14 @@ Davomat umuman olinmagan darsda hozir:
   kiritsa, haq yoziladi — «davomatni o'z vaqtida olmaslik» hech narsaga
   olib kelmaydi;
 - dars aslida bo'lmagan bo'lsa, pul hech qachon qaytmaydi, agar kimdir darsni
-  qo'lda bekor qilmasa. 29.09 da shunday 19 kun topilgan (≈5,18 mln so'm),
-  17 tasi hali hal qilinmagan;
+  qo'lda bekor qilmasa. 29.09 dagi tekshiruvda shunday kunlar topilgan, ko'pi
+  hali hal qilinmagan;
 - tizim «dars bo'lmadi» bilan «davomat unutildi»ni ajrata olmaydi (ADR-0053).
 
-**Hajm (ishchi baza, sentabr 01–28):** davomati bor 472 darsdan 10 tasining davomati
-dars kunidan keyin kiritilgan (≈2%). Bular va izsiz kunlar yangi jarayonga
-tushadi. Faol guruhlar 43 ta, hammasi oylik; yakshanba darsi yo'q; har
-filialda kamida bitta faol administrator bor (Farg'ona 5, Namangan 4, Qarshi 1).
+**Hajm (ishchi baza, sentabr 01–28):** davomati bor darslarning oz qismida
+davomat dars kunidan keyin kiritilgan. Bular va izsiz kunlar yangi jarayonga
+tushadi. Faol guruhlarning hammasi oylik; yakshanba darsi yo'q; har filialda
+kamida bitta faol administrator bor.
 
 ## 2. CEO qarorlari (29.09.2026)
 
@@ -44,7 +44,7 @@ filialda kamida bitta faol administrator bor (Farg'ona 5, Namangan 4, Qarshi 1).
 | Q8  | Davomat oynasi          | Hamma rol uchun bir xil: faqat bugun, darsdan 10 daqiqa oldin — dars tugaguncha                                                               |
 | Q9  | Ustoz aybdor bo'lmasa   | Faqat **CEO** «Bo'ldi» da «Ustoz aybdor emas, haq yozilsin» belgisini sabab bilan qo'ya oladi. Filial direktori — yo'q                          |
 | Q10 | Dars keyin o'tiladi     | «Bo'lmadi» da ikki tanlov: «Bekor qilish» (pul qaytadi) yoki «Boshqa kunga ko'chirish» (pul qaytmaydi)                                        |
-| Q11 | 17 ta eski izsiz kun    | Qoidadan oldingi kunlar: «Bo'ldi» bo'lsa ustoz haq oladi                                                                                      |
+| Q11 | Eski izsiz kunlar       | Qoidadan oldingi kunlar: «Bo'ldi» bo'lsa ustoz haq oladi                                                                                      |
 
 ## 3. Jarayon
 
@@ -123,7 +123,7 @@ so'raladi.
   darslar» ro'yxatida (ko'pi bilan 5 ta) va bugungi dars kartasida xuddi shu
   ikki tugma. O'sha kunning formasi ochilsa, u qulflangan va shu joylarga
   yo'naltiruvchi yozuv chiqadi.
-- Topshiriq boshqa admin tomonidan olingan bo'lsa, qolgan adminlar «<Ism
+- Topshiriq boshqa admin tomonidan olingan bo'lsa, qolgan adminlar «\<Ism
   Familiya> javob bermoqda» yozuvini ko'radi, tugmalar o'chiq. Direktor va CEO
   baribir javob bera oladi.
 - Guruh sahifasidagi oddiy bekor qilish / ko'chirish topshiriqni kim olganini
@@ -150,7 +150,9 @@ so'raladi.
    - oldindan belgilangan kelmasliklar odatdagidek iste'mol qilinadi;
    - guruhdan keyin chiqib ketgan o'quvchi (yozilishi endi `ACTIVE` emas)
      ro'yxatda bor, lekin paketli (oylik bo'lmagan) kursda undan pul olinmaydi va
-     uning uchun ustoz haqi ham yozilmaydi: yozilishni yopishda dars pullari
+     uning uchun jonli ustoz haqi ham yozilmaydi (istisno darsda oylik kunidagi
+     markaz qo'shimchasi — `sweepGapLessons` — uni baribir to'laydi; hozir faol
+     paketli guruh yo'q): yozilishni yopishda dars pullari
      allaqachon qaytgan, to'lov hisobi esa chiqib ketgan o'quvchidan butun sikl pulini
      olib, uni yopiq yozilishda qoldirardi. Oylik kursda hisob odatdagidek
      (oylik davomat balansga tegmaydi);
@@ -160,7 +162,7 @@ so'raladi.
    «DAVOMAT_KECH_KIRITILDI» (kim, qachon, ustoz haqi yozildimi va qaysi
    istisno bilan).
 4. `attendance.completed` **yuborilmaydi** — u ustozga «Davomat qabul qilindi.
-   Rahmat!» deydi. O'rniga ustozga (istisno bo'lmasa): «<Guruh>, <sana>:
+   Rahmat!» deydi. O'rniga ustozga (istisno bo'lmasa): «\<Guruh>, \<sana>:
    davomat dars vaqtida olinmagani uchun bu dars haqi yozilmadi».
    Tizim bildirishnomasi va telefon bildirishnomasi darhol, Telegram 20:00
    yig'mada.
@@ -213,11 +215,11 @@ yakunlangandan keyin (admin bot,
 tasdiqlangan guruhlar, o'sha filialni ko'radiganlar — `isVisibleToGroup`, 20:00
 guruh yig'masidagi qoida; pastdagi «Amalga oshirishdagi farqlar»ga qarang):
 
-- A: «❌ Dars bo'lmadi — <guruh>, <sana> <vaqt>. Sabab: … Belgilagan: <ism>.
-  Pul qaytarildi: N o'quvchi, <summa> so'm» (`released.students`,
+- A: «❌ Dars bo'lmadi — \<guruh>, \<sana> \<vaqt>. Sabab: … Belgilagan: \<ism>.
+  Pul qaytarildi: N o'quvchi, \<summa> so'm» (`released.students`,
   `released.refunded`);
-- B: «❌ Dars bo'lmadi — <guruh>, <sana> <vaqt>. Sabab: … Ko'chirildi:
-  <yangi sana> <vaqt>. Belgilagan: <ism>».
+- B: «❌ Dars bo'lmadi — \<guruh>, \<sana> \<vaqt>. Sabab: … Ko'chirildi:
+  \<yangi sana> \<vaqt>. Belgilagan: \<ism>».
 
 Faqat `UnmarkedLesson` bor kunlar uchun — darsdan oldin qilingan oddiy bekor
 qilish va ko'chirishlar guruhga yuborilmaydi.
@@ -242,7 +244,7 @@ qilish va ko'chirishlar guruhga yuborilmaydi.
 
 - `Comment` (`isTask: true`, `isSystem: true`, `authorId: null`),
   `entityType: 'Group'`, `entityId: groupId`.
-- Matn: «<guruh>, <dd.MM.yyyy> <HH:mm–HH:mm>: davomat olinmadi. Dars bo'ldimi?»
+- Matn: «\<guruh>, \<dd.MM.yyyy> \<HH:mm–HH:mm>: davomat olinmadi. Dars bo'ldimi?»
 - Muddat: keyingi ish kuni (yakshanba va bayram emas) 10:00 Toshkent. Mavjud
   `TaskReminderService` 09:00 da eslatadi (u bayramda ishlamaydi — shuning
   uchun bayram o'tkazib yuboriladi). Eslatma xizmati istalgan filial bayramida
@@ -262,7 +264,7 @@ qilish va ko'chirishlar guruhga yuborilmaydi.
   `CommentAssignee` qatorlari o'chiriladi, shart bilan (hali hech kim
   olmagan bo'lsa). Ikki admin aynan bir vaqtda bossa, yutqazgani 409
   «Topshiriq hozirgina o'zgardi. Sahifani yangilang» oladi (12-bo'lim);
-  topshiriq olingandan keyin bosgan admin esa 409 «Bu topshiriqni <ism> oldi»
+  topshiriq olingandan keyin bosgan admin esa 409 «Bu topshiriqni \<ism> oldi»
   oladi.
 - Olingan topshiriq faqat oluvchining «Topshiriqlar»ida ko'rinadi. Eslatma
   ham faqat unga.
@@ -434,15 +436,19 @@ uni o'zi topadi.
   bog'langan; «haq yozilmadi» xabari o'sha kungi ustozlarga.
 - **Topshiriq egasi ishdan ketsa** — direktor / CEO Jadval yoki guruh
   sahifasidan javob beradi.
-- **Javob kechiksa va oy yopilsa** — oylik 01.10 02:00 da hisoblanadi; kutilayotgan
-  dars uchun haq yo'q (davomat yo'q), keyin «Bo'ldi» bo'lsa ham yo'q. Tushum
-  o'sha dars kuniga (o'tgan oyga) kiradi — o'tgan oyning Foyda kartasi keyin
-  o'zgarishi mumkin.
+- **Javob kechiksa va oy yopilsa** — oylik oyning 1-kuni 02:00 da hisoblanadi.
+  Oddiy (istisno bo'lmagan) savolga javob qachon berilmasin, ustozga haq
+  yozilmaydi. Istisno savol (qoidadan oldingi kun, dars tugashidan oldin
+  qilingan bekor qilish yoki ko'chirish o'chirilgani uchun ochilgan savol, CEO
+  istisnosi) o'sha oyning oyligi hisoblangandan keyin «Bo'ldi» deb javob olsa,
+  haq ochiq oyga «Oldingi oydan» bo'lib yoziladi (`createAccrual`,
+  `creditPeriodDate`). Tushum har ikki holda dars kuniga (o'tgan oyga) kiradi —
+  o'tgan oyning Foyda kartasi keyin o'zgarishi mumkin.
 - **Paketli kurs** — faol paketli guruh yo'q; yozish qulfi baribir qoplaydi.
 
 ## 9. Chiqarish
 
-1. Sayt: Vercel, keyin beshta domenni yangi deploy'ga ulash (`vercel alias set`),
+1. Sayt: Vercel, keyin beshta domenni yangi chiqarilgan nusxaga ulash (`vercel alias set`),
    ochiq admin sahifalari yangilanadi — eski sayt muallifsiz («Tizim»)
    topshiriqda yiqiladi. Kechqurun, kunning oxirgi darsidan keyin.
 2. Server: 23:00 dan keyin (Toshkent) — `railway up` da `prisma migrate deploy`,
@@ -483,8 +489,11 @@ uni o'zi topadi.
   berilgan savol, davomatli kun, qo'shimcha darsda davomat, birinchi marta
   ochiladigan savol tugashdan oldin (istisno) va keyin (oddiy) yaratilgan
   bekor qilish / ko'chirish bilan.
-- To'qnashuv: yutqazgan so'rov 409; «Bo'ldi» bekor qilingan yoki ko'chirilgan
-  kunda — 400; mavjud bo'lmagan sana (`2026-02-30`) — 400.
+- To'qnashuv: yutqazgan so'rov 409; dars bekor qilingan yoki ko'chirilgandan
+  keyin «Bo'ldi» — 404 «Javob kutilayotgan dars topilmadi» (ikkalasi bir vaqtda
+  bo'lsa — 409); javob kutilayotgan savol bekor qilingan yoki boshqa kunga
+  ko'chirilgan kunda qolib ketgan bo'lsa — 400 (zaxira qorovul); mavjud
+  bo'lmagan sana (`2026-02-30`) — 400.
 - Olish: birinchisi oladi, ikkinchisi 409; qolgan qatorlar o'chadi; eslatma
   faqat egasiga.
 - Tizim topshirig'ini qo'lda `DONE` / tahrir / o'chirish — 400; `task.assigned`
@@ -512,12 +521,13 @@ qayd etadi. Kod va ADR-0054 shuni aytadi.
   esa yopiq qoldiradi. Ataylab shunday: darhol xabar ham yig'ma bilan bir xil
   qoidaga bo'ysunadi.
 - **Oldindan ko'chirilgan dars (3.5 B.5, 8).** Ko'chirishni o'chirish ham,
-  bekor qilishni o'chirishdagidek, savolni (birinchi marta) ochadi (inson qarori,
+  bekor qilishni o'chirishdagidek, savolni (birinchi marta) ochadi (CEO qarori,
   2026-09-30).
 - **Chiqib ketgan o'quvchining puli (3.4).** Kech davomatda paketli kursda undan
-  pul olinmaydi va unga ustoz haqi yozilmaydi; oylik kursda hisob odatdagidek
-  (inson qarori, 2026-09-30).
-- **Bayram filial bo'yicha (3.2).** Tekshiruvda, eslatmada, tugash sanog'ida va
+  pul olinmaydi va unga jonli ustoz haqi yozilmaydi (istisno darsda oylik
+  kunidagi markaz qo'shimchasi uni baribir to'laydi); oylik kursda hisob
+  odatdagidek (CEO qarori, 2026-09-30).
+- **Bayram filial bo'yicha (3.2).** Tekshiruvda, davomat eslatmasida, tugash sanog'ida va
   guruh kalendarida bayram `findActiveHolidayCovering(sana, filial)` bilan
   hisoblanadi: bir filialning bayrami boshqasining darsini yopmaydi.
 - **QR skanerlash (3.1).** Asl dizayn faqat sessiya boshlashni oynaga bog'lagan edi;
@@ -541,7 +551,7 @@ qayd etadi. Kod va ADR-0054 shuni aytadi.
   u faqat o'chirilgan bekor qilish / ko'chirish darsning tugash vaqtidan
   (Toshkent soati; boshqa ko'chirish kelib tushgan kunda o'sha ko'chirishning
   vaqti) oldin yaratilgan bo'lsa istisno; tugash vaqtida yoki undan keyin
-  yaratilgan bo'lsa — oddiy, haq yozilmaydigan savol (inson qarori,
+  yaratilgan bo'lsa — oddiy, haq yozilmaydigan savol (CEO qarori,
   2026-09-30). Qayta so'rash kunda davomat bo'lsa o'tkazib yuboriladi;
   ko'chirishning yangi kunida davomat olingan bo'lsa, asl kun qayta
   so'ralmaydi.
@@ -554,15 +564,19 @@ qayd etadi. Kod va ADR-0054 shuni aytadi.
   ko'chirishda bir vaqtdagi takroriy yozuv (`P2002`) ham shu 409. Topshiriqni
   olishning o'zidagi to'qnashuv (3.6) esa 409 «Topshiriq hozirgina o'zgardi.
   Sahifani yangilang».
-- **Bekor qilingan yoki ko'chirilgan kun (3.2, 3.4).** Savol ochilayotganda ham,
-  «Bo'ldi» saqlanayotganda ham kunning bekor qilinishi va ko'chirilishi o'sha
-  `Serializable` tranzaksiya ichida qayta o'qiladi (`lessonDayTakenAway`,
-  `unmarked-lessons/answer-rules.ts`). Shu orada bekor qilingan yoki boshqa
-  kunga ko'chirilgan dars uchun savol ochilmaydi, «Bo'ldi» esa 400 bilan rad
-  etiladi («Bu dars bekor qilingan — davomat kiritib bo'lmaydi» / «Bu sana
-  boshqa kunga ko'chirilgan — davomatni yangi sanada oling»): aks holda uzrli
-  o'quvchiga pul ikki marta qaytardi yoki bekor qilingan dars uchun pul
-  olinardi.
+- **Bekor qilingan yoki ko'chirilgan kun (3.2, 3.4).** Savol ochilayotganda
+  kunning bekor qilinishi va ko'chirilishi o'sha `Serializable` tranzaksiya
+  ichida qayta o'qiladi (`lessonDayTakenAway`, `unmarked-lessons/answer-rules.ts`):
+  shu orada bekor qilingan yoki boshqa kunga ko'chirilgan dars uchun savol
+  ochilmaydi. Savol ochilgandan keyingi bekor qilish yoki ko'chirish uni o'z
+  tranzaksiyasida `NOT_HELD` / `RESCHEDULED` qiladi, shuning uchun keyin
+  bosilgan «Bo'ldi» 404 «Javob kutilayotgan dars topilmadi» oladi; ikkalasi
+  bir vaqtda bo'lsa — 409. «Bo'ldi» dagi `lessonDayTakenAway` tekshiruvi (400
+  «Bu dars bekor qilingan — davomat kiritib bo'lmaydi» / «Bu sana boshqa kunga
+  ko'chirilgan — davomatni yangi sanada oling») — zaxira qorovul: u faqat javob
+  kutilayotgan savol bekor qilingan yoki ko'chirilgan kunda qolib ketgan
+  holatda ishlaydi. Aks holda uzrli o'quvchiga pul ikki marta qaytardi yoki
+  bekor qilingan dars uchun pul olinardi.
 - **Sana tekshiruvi (6).** `POST …/late` va `POST …/not-held` sanani haqiqiy
   kalendar kuni sifatida tekshiradi (`isCalendarDateStr`): `2026-02-30` kabi
   sana martga surilmaydi, 400 «Noto'g'ri sana formati. YYYY-MM-DD formatda
