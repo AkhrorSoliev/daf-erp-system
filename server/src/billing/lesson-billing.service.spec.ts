@@ -105,6 +105,8 @@ describe('LessonBillingService', () => {
         findMany: jest.fn().mockResolvedValue([]),
       },
       salaryAccrual: { findMany: jest.fn().mockResolvedValue([]) },
+      // ADR-0054: no forfeited lesson unless a test says so.
+      unmarkedLesson: { findMany: jest.fn().mockResolvedValue([]) },
       groupTeacher: {
         findMany: jest.fn().mockResolvedValue(baseGroup.teachers),
       },
@@ -1488,6 +1490,56 @@ describe('LessonBillingService', () => {
             lessonDate: october,
             carriedOverSink: expect.any(Array),
           }),
+        );
+      });
+
+      it('a payment never retries a forfeited first lesson (ADR-0054)', async () => {
+        tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
+        tx.attendance.findMany.mockResolvedValue([
+          {
+            id: 'att-forfeited',
+            groupId: 'group-1',
+            date: october,
+            group: { branchId: 1 },
+          },
+          {
+            id: 'att-other',
+            groupId: 'group-2',
+            date: new Date('2026-10-05T00:00:00Z'),
+            group: { branchId: 1 },
+          },
+        ]);
+        tx.unmarkedLesson.findMany.mockResolvedValue([
+          { groupId: 'group-1', date: october },
+        ]);
+        const coverage = jest.fn(() => ({
+          firstLesson: true,
+          covered: true,
+          enrollmentId: 'enroll-oct',
+        }));
+        admissionService.loadCoverage.mockResolvedValue(coverage);
+
+        await service.processRetroactiveBillingForStudent(tx, {
+          studentId: 10001,
+          companyId: 1,
+        });
+
+        expect(tx.unmarkedLesson.findMany).toHaveBeenCalledWith({
+          where: {
+            companyId: 1,
+            teacherPayExempt: false,
+            date: {
+              gte: october,
+              lt: new Date('2026-10-06T00:00:00Z'),
+            },
+          },
+          select: { groupId: true, date: true },
+        });
+        expect(coverage).toHaveBeenCalledTimes(1);
+        expect(coverage).toHaveBeenCalledWith('group-2', '2026-10-05');
+        expect(salaryAccrualService.createAccrual).toHaveBeenCalledTimes(1);
+        expect(salaryAccrualService.createAccrual).toHaveBeenCalledWith(
+          expect.objectContaining({ attendanceId: 'att-other' }),
         );
       });
 

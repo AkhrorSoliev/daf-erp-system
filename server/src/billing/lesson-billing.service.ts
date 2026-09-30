@@ -22,6 +22,14 @@ import { MonthlyChargeService } from './monthly-charge.service';
 import { LessonAdmissionService } from './lesson-admission.service';
 import { ADMISSION_START_DAY } from './lesson-admission';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
+import {
+  addDaysToDateStr,
+  utcMidnightFromDateStr,
+} from '../common/date/tashkent';
+import {
+  lessonKey,
+  loadForfeitedLessonKeys,
+} from '../unmarked-lessons/forfeited-lessons';
 import { lessonDatesInMonth } from './planned-lessons';
 import {
   applyDiscount,
@@ -700,18 +708,15 @@ export class LessonBillingService {
   }
 
   /**
-   * Public entry point for the manual "qaytadan hisobla" admin endpoint.
-   * Opens its own Serializable transaction (matching the rest of the
-   * financial layer) and delegates to `processRetroactiveBillingForStudent`.
-   */
-  /**
    * ADR-0048 (R4): writes the teacher's accrual for every ABSENT first lesson
    * of a month (from 01.10.2026, monthly courses) that has no live accrual and
    * that the student's payments now reach. An ABSENT that was not a first
    * lesson was accrued when it was marked, so `firstLessonCoverage` leaves it
    * alone. The accrual goes on the enrollment whose charge billed the lesson;
    * a payment after the month's payroll closed carries it over
-   * (`createAccrual`), and a repeat run finds nothing left to write.
+   * (`createAccrual`), and a repeat run finds nothing left to write. A
+   * forfeited lesson (ADR-0054) is skipped: it never earns an accrual, and
+   * `createAccrual` would refuse it again on every later payment.
    */
   private async accrueDeferredFirstLessons(
     tx: Prisma.TransactionClient,
@@ -744,11 +749,23 @@ export class LessonBillingService {
       select: { attendanceId: true },
     });
     const withAccrual = new Set(accrued.map((a) => a.attendanceId));
-    const pending = absences.filter((a) => !withAccrual.has(a.id));
-    if (pending.length === 0) return;
+    const unaccrued = absences.filter((a) => !withAccrual.has(a.id));
+    if (unaccrued.length === 0) return;
 
     // `Attendance.date` is a @db.Date: its UTC calendar date is the day.
     const dayOf = (d: Date) => d.toISOString().slice(0, 10);
+    const forfeited = await loadForfeitedLessonKeys(tx, {
+      companyId: params.companyId,
+      from: unaccrued[0].date,
+      toExclusive: utcMidnightFromDateStr(
+        addDaysToDateStr(dayOf(unaccrued[unaccrued.length - 1].date), 1),
+      ),
+    });
+    const pending = unaccrued.filter(
+      (a) => !forfeited.has(lessonKey(a.groupId, a.date)),
+    );
+    if (pending.length === 0) return;
+
     const coverage = await this.admission.loadCoverage(
       tx,
       params.studentId,
@@ -778,6 +795,11 @@ export class LessonBillingService {
     }
   }
 
+  /**
+   * Public entry point for the manual "qaytadan hisobla" admin endpoint.
+   * Opens its own Serializable transaction (matching the rest of the
+   * financial layer) and delegates to `processRetroactiveBillingForStudent`.
+   */
   async runRetroactiveBilling(params: {
     studentId: number;
     companyId: number;
