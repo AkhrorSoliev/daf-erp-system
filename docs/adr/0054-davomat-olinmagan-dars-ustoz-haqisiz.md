@@ -55,13 +55,29 @@ bo'lmagan bo'lsa, pul qo'lda bekor qilinmaguncha qaytmasdi (ADR-0053). Tizim
   qolganda «olinmasa haq yozilmaydi» ogohlantirishi boradi; «Bo'ldi» dan keyin
   unga «bu dars haqi yozilmadi» xabari yetadi (Telegramda 20:00 yig'mada).
 - Bekor qilish yoki ko'chirish qaysi sahifadan qilinmasin, savolga javob
-  bo'ladi va guruhga xabar ketadi. Bekor qilish yoki ko'chirish o'chirilsa,
-  savol qayta ochiladi. Bekor qilish yoki ko'chirish dars tugashidan oldin
-  qilingan bo'lsa (savol hech ochilmagan), keyin asl dars tugagach o'chirilsa
-  va davomat ham, savol ham yo'q bo'lsa, savol birinchi marta ochiladi va
-  **istisno** bo'ladi: ustoz bekor qilingan yoki ko'chirilgan darsga davomat
-  kirita olmagan edi. Ko'chirishni o'chirganda kun bayram bo'lmasligi va hali
-  bekor qilinmagan bo'lishi ham shart («Dars oldindan ko'chirilgan edi»).
+  bo'ladi va guruhga xabar ketadi. Savol ochilayotganda yoki «Bo'ldi»
+  bosilganda dars shu orada bekor qilingan yoki boshqa kunga ko'chirilgan
+  bo'lsa, savol ochilmaydi, «Bo'ldi» esa rad etiladi — aks holda uzrli
+  o'quvchiga pul ikki marta qaytardi yoki bekor qilingan dars uchun pul
+  olinardi.
+- Bekor qilish yoki ko'chirish o'chirilsa, savol qayta ochiladi. Kunda
+  davomat bo'lsa (masalan, «Bo'ldi» dan keyin bekor qilingan dars), yozuv
+  o'zgarmaydi; ko'chirilgan qo'shimcha darsda davomat olingan bo'lsa, asl kun
+  qayta so'ralmaydi — aks holda bitta dars ikki marta hisoblanardi.
+- Savol hech ochilmagan bo'lsa-yu, asl dars tugagach bekor qilish yoki
+  ko'chirish o'chirilsa va davomat ham, savol ham yo'q bo'lsa, savol birinchi
+  marta ochiladi. U faqat bekor qilish yoki ko'chirish dars tugashidan
+  **oldin** qilingan bo'lsa **istisno** bo'ladi: ustoz bekor qilingan yoki
+  ko'chirilgan darsga davomat kirita olmagan edi. Dars tugagandan keyin
+  qilingan bo'lsa, oddiy (haq yozilmaydigan) savol ochiladi — aks holda dars
+  tugagach bekor qilib, keyin o'chirish ustozga faqat CEO bera oladigan haqni
+  berardi (CEO qarori, 2026-09-30). Ko'chirishni o'chirganda kun bayram
+  bo'lmasligi va hali bekor qilinmagan bo'lishi ham shart («Dars oldindan
+  ko'chirilgan edi»).
+- Ikki o'zgarish bir vaqtda to'qnashsa (masalan, dars tugashi tekshiruvi va
+  davomat saqlash, yoki ikki kishi bitta darsni bekor qilsa), yutqazgan so'rov
+  409 «Bir vaqtda boshqa o'zgarish bo'ldi — qayta urinib ko'ring» oladi; tizim
+  o'zi qayta urinmaydi.
 - Yangi ustoz akkauntsiz dars o'tgan yoki server ishlamagan holatlar faqat CEO
   istisnosi bilan to'lanadi.
 - Javob kechiksa va oy yopilsa, o'sha dars uchun haq yozilmaydi; tushum esa
