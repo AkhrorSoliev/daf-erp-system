@@ -48,21 +48,27 @@ type GroupWithTeachers = {
  *
  * Idempotency relies on the `Notification` table — one row per (userId, type,
  * relatedEntityId=groupId, today) blocks repeat sends. Cron fires twice per
- * hour (at :00 and :30) between 07:00 and 22:30 Tashkent time, Monday–Saturday.
- * At night and on Sundays the cron is silent so the DB endpoint can stay
- * suspended. This relies on lessons being scheduled on half-hour boundaries
- * — non-aligned lesson times (e.g. 09:15) will not trigger reminders.
+ * hour (at :00 and :30) between 07:00 and 22:30 Tashkent time, Monday–Saturday,
+ * and `closeDay` fires once at 23:00 EVERY day, Sundays included, so the DB is
+ * woken at 23:00 daily. The start and end − 30 reminders rely on lessons being
+ * scheduled on half-hour boundaries — non-aligned lesson times (e.g. 09:15)
+ * will not trigger them. The lesson-end sweep does not: it runs on every tick
+ * and at 23:00 and asks «Dars bo'ldimi?» for any lesson that ended unmarked,
+ * whatever its end time (ADR-0054).
  *
  * Trigger points per lesson:
  *   - start            → LESSON_STARTED (teacher)
  *   - end - 30 minutes → TEACHER_WARNING (teacher) + ADMIN_ALERT (admin)
  *   - end              → handled by the sweep (sweepEndedLessons): MISSING_TEACHER + MISSING_ADMIN, once, when the question is opened
  *
- * Before touching groups we compare the current minute against a cached
- * [earliestStart, latestEnd] window derived from active groups (refreshed
- * hourly). When inside the window, the group query is narrowed to rows whose
- * lessonStartTime or lessonEndTime matches the current trigger minute, so
- * most ticks perform a single indexed lookup returning 0–3 rows.
+ * Every tick starts with the sweep, before any window check, so a tick always
+ * reads the active groups, the day's moves, cancellations and open questions
+ * and the branches' holidays. Only the reminder part after it is narrowed: we
+ * compare the current minute against a cached [earliestStart, latestEnd]
+ * window derived from active groups (refreshed hourly). When inside the
+ * window, the group query is narrowed to rows whose lessonStartTime or
+ * lessonEndTime matches the current trigger minute, so the reminder part
+ * performs a single indexed lookup returning 0–3 rows.
  */
 @Injectable()
 export class AttendanceReminderService {

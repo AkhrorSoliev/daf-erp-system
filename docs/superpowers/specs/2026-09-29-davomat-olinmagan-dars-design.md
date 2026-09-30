@@ -95,10 +95,12 @@ qolgan darslari uchun.
 
 ### 3.3 Qayerda javob beriladi
 
-- **Topshiriqlar** — topshiriq kartasidagi «Javob berish» tugmasi Jadvaldagi
-  o'sha darsni ochadi.
-- **Jadval** — javobi kutilayotgan dars kartasi ustida ochiq turadigan oyna:
-  «✅ Bo'ldi» / «❌ Bo'lmadi». Sana tanlagich bilan o'tgan kunlar ham.
+- **Topshiriqlar** — topshiriq kartasida xuddi shu «Bo'ldi» / «Bo'lmadi»
+  tugmalari bor: Jadvalga o'tmasdan, joyida javob beriladi.
+- **Jadval** — ro'yxat ko'rinishida javobi kutilayotgan dars yonida ochiq turadigan
+  oyna: «✅ Bo'ldi» / «❌ Bo'lmadi». Setka ko'rinishida dars kartasida doim
+  ko'rinib turadigan «Dars bo'ldimi?» belgisi bor, u bosilganda shu tugmalar
+  ochiladi. Sana tanlagich bilan o'tgan kunlar ham.
 - **Guruh sahifasi, Davomat tabi** — o'sha dars ochilganda qulflangan forma
   o'rniga xuddi shu ikki tugma. Adminlar hozir kechikkan davomatni shu yerdan
   kiritadi; busiz ular tushuntirishsiz qulflangan formani ko'radi.
@@ -124,6 +126,12 @@ qolgan darslari uchun.
      (5-bo'lim);
    - sababli belgilanganlarga keyingi oy krediti odatdagidek;
    - oldindan belgilangan kelmasliklar odatdagidek iste'mol qilinadi;
+   - guruhdan keyin chiqib ketgan o'quvchi (yozilishi endi `ACTIVE` emas)
+     ro'yxatda bor, lekin paketli (oylik bo'lmagan) kursda undan pul olinmaydi va
+     uning uchun ustoz haqi ham yozilmaydi: yozilishni yopishda dars pullari
+     allaqachon qaytgan, billing esa chiqib ketgan o'quvchidan butun sikl pulini
+     olib, uni yopiq yozilishda qoldirardi. Oylik kursda hisob odatdagidek
+     (oylik davomat balansga tegmaydi);
    - guruh tarixi: «DAVOMAT_KECH_KIRITILDI» (kim, qachon);
    - topshiriq yopiladi (3.6).
 4. `attendance.completed` **yuborilmaydi** — u ustozga «Davomat qabul qilindi.
@@ -156,11 +164,16 @@ Oynada sabab (majburiy) va ikki tanlov.
    topshiriq yopiladi. Mavjud «ko'chirish» sahifasidan javobi kutilayotgan kun
    ko'chirilsa ham xuddi shunday.
 4. Yangi kunda ustoz davomatni odatdagidek oladi va haq oladi (bu boshqa dars).
-5. Ko'chirish o'chirilsa — yozuv `PENDING` ga qaytadi, yangi topshiriq.
+5. Ko'chirish o'chirilsa — yozuv `PENDING` ga qaytadi, yangi topshiriq. Ko'chirish
+   dars oldindan qilingan bo'lsa (yozuv hech ochilmagan), keyin asl dars
+   tugagach o'chirilsa ham savol qayta ochiladi, xuddi bekor qilishni
+   o'chirishdagidek: davomat ham, yozuv ham yo'q bo'lsa — yangi `PENDING` yozuv,
+   `teacherPayExempt: true`, sabab «Dars oldindan ko'chirilgan edi». Asl kun
+   bayram bo'lsa yoki hali bekor qilingan bo'lsa — hech narsa ochilmaydi.
 
 **Ikkala tanlovda ham** Telegram guruhiga **darhol**, commit'dan keyin (admin bot,
-tasdiqlangan guruhlar, `reportBranchIdsForGroup` bo'yicha o'sha filialni
-ko'radiganlar):
+tasdiqlangan guruhlar, o'sha filialni ko'radiganlar — `isVisibleToGroup`, 20:00
+guruh yig'masidagi qoida; pastdagi «Amalga oshirishdagi farqlar»ga qarang):
 
 - A: «❌ Dars bo'lmadi — <guruh>, <sana> <vaqt>. Sabab: … Belgilagan: <ism>.
   Pul qaytarildi: N o'quvchi, <summa> so'm» (`released.students`,
@@ -236,6 +249,7 @@ model UnmarkedLesson {
   status           UnmarkedLessonStatus @default(PENDING)
   teacherPayExempt Boolean              @default(false)
   exemptReason     String?
+  claimedById      Int?                 // topshiriqni olgan administrator (3.6)
   decidedById      Int?
   decidedAt        DateTime?
   cancellationId   String?
@@ -300,7 +314,7 @@ uni o'zi topadi.
 | `telegram-groups/*`                                         | «Bo'lmadi» darhol xabari; 21:00 «Diqqat» qatori                                                                  |
 | `telegram-digest`                                           | Ustozga «haq yozilmadi» kategoriyasi                                                                             |
 | `direct-send.guard.spec.ts` + ADR-0025 ro'yxati             | Yangi darhol yuboruvchi                                                                                          |
-| `scripts/open-unmarked-lessons.ts`                          | Eski izsiz kunlar (dry-run, `--apply`); `teacherPayExempt: true`, sabab «Qoida kuchga kirishidan oldingi kun» (Q11) |
+| `scripts/open-unmarked-lessons.ts`                          | Eski izsiz kunlar (dry-run, `--apply`); `teacherPayExempt: true`, sabab «Qoida kuchga kirishidan oldingi dars (ADR-0054)» (Q11) |
 | `docs/adr/0054-*.md`                                        | Yangi ADR (raqam band bo'lsa merge oldidan qayta raqamlanadi)                                                    |
 | `server/CLAUDE.md`                                          | Attendance bo'limi, eslatmalar jadvali                                                                           |
 
@@ -323,7 +337,7 @@ uni o'zi topadi.
 
 - **Davomat tugashdan bir soniya oldin saqlandi** — 3.1 poyga qoidasi.
 - **Ko'chirilgan dars** — asl kunga yozuv ochilmaydi; yangi kunda ko'chirishning
-  vaqti bilan.
+  vaqti bilan. Ko'chirish asl dars tugagach o'chirilsa — 3.5 B.5.
 - **Oldindan bekor qilingan dars** — yozuv ochilmaydi (o'chirilsa — 3.5, «Bekor qilish o'chirilsa»).
 - **Cron o'tkazib yuborilsa** — keyingi tick yoki 23:00 yurishi.
 - **«Bo'ldi» noto'g'ri bosilgan** — direktor / CEO darsni keyin bekor qila
@@ -331,8 +345,9 @@ uni o'zi topadi.
 - **Oxirgi dars davomatsiz, keyin guruh yakunlandi** — «Bo'ldi» ishlaydi
   (guruh holati shart emas, ro'yxat — o'sha kungi a'zolar).
 - **O'quvchi darsdan keyin guruhdan chiqdi** — ro'yxatda bor (o'sha kungi a'zo).
-  Uzrli belgilansa, kredit yopilgan yozilishning keyingi oyiga tushadi va
-  ishlatilmaydi — ADR-0053 dagi ma'lum cheklov, bu ish uni kengaytirmaydi.
+  Paketli kursda undan pul olinmaydi (3.4). Uzrli belgilansa, kredit yopilgan
+  yozilishning keyingi oyiga tushadi va ishlatilmaydi — ADR-0053 dagi ma'lum
+  cheklov, bu ish uni kengaytirmaydi.
 - **Ustozni almashtirish (`LessonTeacherOverride`)** — invariant darsga
   bog'langan; «haq yozilmadi» xabari o'sha kungi ustozlarga.
 - **Topshiriq egasi ishdan ketsa** — direktor / CEO Jadvaldan javob beradi.
@@ -384,3 +399,36 @@ uni o'zi topadi.
 - Telegramda javob berish tugmalari (davomat ro'yxatini Telegramda to'ldirib
   bo'lmaydi; guruh tugmasini kim bosgani ishonchli emas, tugma esa pul qaytaradi).
 
+## 12. Amalga oshirishdagi farqlar (2026-09-30)
+
+Yuqoridagi matn — kelishilgan dizayn. Amalga oshirishda quyidagilar undan
+farq qiladi; kod va ADR-0054 shuni aytadi.
+
+- **Guruh xabarining ko'rinishi (3.5).** Spec `reportBranchIdsForGroup` ni
+  nomlagan edi; kodda `isVisibleToGroup` (20:00 guruh yig'masining qoidasi).
+  Ular faqat filialsiz eski guruhda farq qiladi (`receivesAllBranches: false`,
+  filial yo'q): hisobotlar uni kompaniya bo'yicha ko'rsatadi, `isVisibleToGroup`
+  esa yopiq qoldiradi. Ataylab shunday: darhol xabar ham yig'ma bilan bir xil
+  qoidaga bo'ysunadi.
+- **Oldindan ko'chirilgan dars (3.5 B.5, 8).** Ko'chirishni o'chirish ham,
+  bekor qilishni o'chirishdagidek, savolni qayta ochadi (inson qarori,
+  2026-09-30).
+- **Chiqib ketgan o'quvchining puli (3.4).** Kech davomatda paketli kursda undan
+  pul olinmaydi va unga ustoz haqi yozilmaydi; oylik kursda hisob odatdagidek
+  (inson qarori, 2026-09-30).
+- **Bayram filial bo'yicha (3.2).** Tekshiruvda, eslatmada, tugash sanog'ida va
+  guruh kalendarida bayram `findActiveHolidayCovering(sana, filial)` bilan
+  hisoblanadi: bir filialning bayrami boshqasining darsini yopmaydi.
+- **QR skanerlash (3.1).** Spec faqat sessiya boshlashni oynaga bog'lagan edi;
+  skanerlash ham shu qorovuldan o'tadi va dars tugagach yoki savol ochilgach
+  rad etiladi. Sessiya muddati dars tugashigacha, Toshkent soati bilan.
+- **21:00 hisobot (3.7).** «Javobsiz darslar» qatori «Diqqat» belgisi, shuning
+  uchun u kun svetoforini 🟡 qiladi.
+- **Fayllar va shakllar (4, 6).** Oyna `attendance/shared/attendance-window.ts`
+  da; alohida `unmarked-lessons.cron.ts` yo'q — 23:00 yurish
+  `AttendanceReminderService.closeDay`, mantiq `server/src/unmarked-lessons/`
+  va `UnmarkedLessonsService` da. Jadval va kalendardagi `unmarked` maydoni:
+  `{ id, status, teacherPayExempt, lessonStartTime, lessonEndTime, claimedBy }`.
+  `GET /attendance/:groupId/date/:date` `effectiveStartTime` /
+  `effectiveEndTime` ni ham qaytaradi. `UnmarkedLesson` da `Group` bilan
+  bog'lanish va `(branchId, status)` indeksi ham bor.
