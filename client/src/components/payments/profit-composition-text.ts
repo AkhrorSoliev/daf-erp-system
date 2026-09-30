@@ -19,8 +19,8 @@ export interface ProfitComposition {
     byCourse: NamedRows;
     byBranch: { id: number; name: string; amount: number }[];
   };
-  /** «Yechib olish» booked this month (ADR-0055). */
-  withdrawals: {
+  /** «Yechib olish» booked this month (ADR-0055). Absent from a server that predates it (a rollback). */
+  withdrawals?: {
     total: number;
     teacherCredited: number;
     count: number;
@@ -94,7 +94,9 @@ export function headline(
 }
 
 /** "2 o'quvchi balansidan · 200 000 so'mi ustozlar haqiga yozilgan". */
-export function withdrawalSub(w: ProfitComposition["withdrawals"]): string {
+export function withdrawalSub(
+  w: NonNullable<ProfitComposition["withdrawals"]>,
+): string {
   const who = `${w.count} o'quvchi balansidan`;
   return w.teacherCredited > 0
     ? `${who} · ${formatPrice(w.teacherCredited)} so'mi ustozlar haqiga yozilgan`
@@ -143,7 +145,7 @@ export function expenseSummary(
 /** The footer that proves the lines add up to the card. */
 export function reconciliation(c: ProfitComposition): string {
   const f = formatPrice;
-  const withdrawn =
-    c.withdrawals.total !== 0 ? ` + ${f(c.withdrawals.total)}` : "";
+  const w = c.withdrawals?.total ?? 0;
+  const withdrawn = w !== 0 ? ` + ${f(w)}` : "";
   return `${f(c.revenue.total)}${withdrawn} − ${f(c.teachers.total)} − ${f(c.staff.total)} − ${f(c.expenses.total)} − ${f(c.refunds)} = ${f(c.netProfit)}`;
 }

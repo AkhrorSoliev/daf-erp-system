@@ -165,7 +165,7 @@ export function ProfitCompositionPanel({
               {headline(
                 data.revenue.total,
                 data.netProfit,
-                data.withdrawals.total,
+                data.withdrawals?.total ?? 0,
               )}
             </p>
           </div>

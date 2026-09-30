@@ -41,7 +41,7 @@ export function ProfitCompositionRows({ data }: { data: ProfitComposition }) {
         <NamedDetail rows={revenue.byCourse} restLabel="Boshqa kurslar" />
       </BreakdownRow>
 
-      {withdrawals.total !== 0 && (
+      {withdrawals && withdrawals.total !== 0 && (
         <BreakdownRow
           dot="bg-green-300"
           label="Balansdan yechib olingan"

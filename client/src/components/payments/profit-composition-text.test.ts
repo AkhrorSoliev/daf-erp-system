@@ -126,3 +126,20 @@ describe("balansdan yechib olingan pul (ADR-0055)", () => {
     ).toBe("1 o'quvchi balansidan");
   });
 });
+
+describe("eski server javobi (withdrawals yo'q)", () => {
+  it("tenglik yiqilmaydi", () => {
+    const c = {
+      revenue: { total: 1_000 },
+      teachers: { total: 400 },
+      staff: { total: 100 },
+      expenses: { total: 200 },
+      refunds: 0,
+      netProfit: 300,
+    } as unknown as ProfitComposition;
+    const f = formatPrice;
+    expect(reconciliation(c)).toBe(
+      `${f(1_000)} − ${f(400)} − ${f(100)} − ${f(200)} − ${f(0)} = ${f(300)}`,
+    );
+  });
+});
