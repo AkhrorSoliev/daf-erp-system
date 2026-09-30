@@ -16,6 +16,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { LessonBillingService } from '../billing/lesson-billing.service';
+import { LessonAdmissionService } from '../billing/lesson-admission.service';
 import { whereUserMayAct } from '../common/auth/blocked-user';
 import { rethrowAsConflict } from '../common/transaction-conflict';
 import { isCalendarDateStr } from '../common/date/tashkent';
@@ -104,6 +105,7 @@ export class AttendanceSaveService {
     private lessonBillingService: LessonBillingService,
     private eventEmitter: EventEmitter2,
     private validation: AttendanceValidationService,
+    private admission: LessonAdmissionService,
   ) {}
 
   /**
@@ -116,7 +118,9 @@ export class AttendanceSaveService {
    * A NEW register (no rows yet) is accepted only inside the lesson's own
    * window, for every role (spec 2026-09-29 §3.1). After the lesson it goes
    * through `saveLate`. Editing a register that exists stays open to
-   * administrators at any time; a teacher can never edit.
+   * administrators at any time; a teacher can never edit (CEO 30.09, D1).
+   * Contract 3.2 applies to every save (`assertAdmitted`), judged after the
+   * window so an ended lesson reports "ended", not "unpaid".
    */
   async save(
     groupId: string,
@@ -146,8 +150,8 @@ export class AttendanceSaveService {
 
     const results = await this.prisma
       .$transaction(async (tx) => {
-        // Debtors are part of the main roster — anyone may mark them; the
-        // payment pipeline settles their unpaid lessons retroactively.
+        // Debtors are on the roster; from the month's 2nd lesson contract 3.2
+        // decides whether they may be marked (`assertAdmitted` below).
         const enrolled = await tx.enrollment.findMany({
           where: {
             groupId,
@@ -155,15 +159,19 @@ export class AttendanceSaveService {
             status: EnrollmentStatus.ACTIVE,
             OR: [{ startDate: null }, { startDate: { lte: parsedDate } }],
           },
-          select: { id: true, studentId: true },
+          select: {
+            id: true,
+            studentId: true,
+            student: { select: { firstName: true, lastName: true } },
+          },
         });
         const enrollmentIdByStudent = new Map(
           enrolled.map((e) => [e.studentId, e.id]),
         );
-        // TODO(integration §4.3): contract 3.2 — admission over this roster
-        // (names in the select), blocked students skipped here, refused by
-        // `assertAdmitted` after the window guard.
-        this.assertFullRoster(enrollmentIdByStudent, dto.entries);
+        const blocked = await this.blockedStudents(tx, groupId, date, [
+          ...enrollmentIdByStudent.keys(),
+        ]);
+        this.assertFullRoster(enrollmentIdByStudent, dto.entries, blocked);
 
         const existingRecords = await tx.attendance.findMany({
           where: { groupId, date: parsedDate },
@@ -189,6 +197,15 @@ export class AttendanceSaveService {
             },
           });
         }
+        await this.assertAdmitted(
+          dto.entries,
+          blocked,
+          existingRecords,
+          (id) => {
+            const s = enrolled.find((e) => e.studentId === id)?.student;
+            return s ? `${s.firstName} ${s.lastName}` : `#${id}`;
+          },
+        );
 
         return this.writeEntries(tx, {
           groupId,
@@ -317,9 +334,21 @@ export class AttendanceSaveService {
         const enrollmentIdByStudent = new Map(
           roster.map((e) => [e.studentId, e.id]),
         );
-        // TODO(integration §4.3): contract 3.2 in «Bo'ldi» too (D2) — admission
-        // over this roster, then `assertAdmitted` with no existing rows.
-        this.assertFullRoster(enrollmentIdByStudent, dto.entries);
+        // Contract 3.2 in «Bo'ldi» too (CEO 30.09, D2), judged by the
+        // payments as they stand now. Known limit: `forLesson` reads ACTIVE
+        // enrollments' charges only, so a student who has since left the
+        // group is admitted without the rule.
+        const blocked = await this.blockedStudents(tx, groupId, date, [
+          ...enrollmentIdByStudent.keys(),
+        ]);
+        this.assertFullRoster(enrollmentIdByStudent, dto.entries, blocked);
+        await this.assertAdmitted(dto.entries, blocked, [], async (id) => {
+          const s = await tx.student.findUnique({
+            where: { id },
+            select: { firstName: true, lastName: true },
+          });
+          return s ? `${s.firstName} ${s.lastName}` : `#${id}`;
+        });
 
         // A student who has since left is on the register but is not billed in a
         // lesson-pack course: closing their enrollment already refunded the
@@ -403,10 +432,54 @@ export class AttendanceSaveService {
     };
   }
 
-  /** Every entry must be on the roster, and every roster student must have an entry. */
+  /** Contract 3.2 (ADR-0047): the roster students the lesson does not admit. */
+  private async blockedStudents(
+    tx: Tx,
+    groupId: string,
+    lessonDay: string,
+    studentIds: number[],
+  ): Promise<Set<number>> {
+    const admission = await this.admission.forLesson(
+      { groupId, lessonDay, studentIds },
+      tx,
+    );
+    return new Set(
+      [...admission].filter(([, a]) => !a.admitted).map(([id]) => id),
+    );
+  }
+
+  /**
+   * Contract 3.2: a student the rule keeps out of the lesson cannot be marked
+   * present, late or absent. EXCUSED is allowed, and a mark that does not
+   * change is not judged again.
+   */
+  private async assertAdmitted(
+    entries: AttendanceEntryDto[],
+    blocked: Set<number>,
+    existing: ExistingRecord[],
+    nameOf: (studentId: number) => string | Promise<string>,
+  ): Promise<void> {
+    const oldStatus = new Map(existing.map((r) => [r.studentId, r.status]));
+    const refused = entries.find(
+      (e) =>
+        blocked.has(e.studentId) &&
+        e.status !== AttendanceStatus.EXCUSED &&
+        oldStatus.get(e.studentId) !== e.status,
+    );
+    if (!refused) return;
+    throw new BadRequestException(
+      `${await nameOf(refused.studentId)} to'lov qilmagan: shartnomaga ko'ra 2-darsdan boshlab to'lov qilinmaguncha darsga qo'yilmaydi`,
+    );
+  }
+
+  /**
+   * Every entry must be on the roster, and every roster student must have an
+   * entry — except one contract 3.2 keeps out, who may be left off.
+   */
   private assertFullRoster(
     enrollmentIdByStudent: Map<number, string>,
     entries: AttendanceEntryDto[],
+    blocked: Set<number>,
   ): void {
     for (const entry of entries) {
       if (!enrollmentIdByStudent.has(entry.studentId)) {
@@ -417,7 +490,7 @@ export class AttendanceSaveService {
     }
     const submitted = new Set(entries.map((e) => e.studentId));
     const missing = [...enrollmentIdByStudent.keys()].filter(
-      (id) => !submitted.has(id),
+      (id) => !submitted.has(id) && !blocked.has(id),
     );
     if (missing.length > 0) {
       throw new BadRequestException(

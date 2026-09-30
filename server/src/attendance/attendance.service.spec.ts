@@ -909,6 +909,23 @@ describe('AttendanceService', () => {
         { studentId: 10002, status: 'PRESENT' },
       ],
     };
+    // Contract 3.2 (ADR-0047): the students the rule keeps out of the lesson.
+    const blocks = (...ids: number[]) =>
+      admission.forLesson.mockResolvedValue(
+        new Map(
+          ids.map((id) => [
+            id,
+            {
+              admitted: false,
+              reason: 'NOT_PAID',
+              shortfall: 69231,
+              paidThrough: null,
+            },
+          ]),
+        ),
+      );
+    const NOT_PAID =
+      "to'lov qilmagan: shartnomaga ko'ra 2-darsdan boshlab to'lov qilinmaguncha darsga qo'yilmaydi";
 
     // The lesson-end sweep is a Serializable writer too; losing to it is 409.
     it('answers a transaction conflict with 409, anything else unchanged', async () => {
@@ -991,8 +1008,66 @@ describe('AttendanceService', () => {
           ['Teacher'],
           1,
         ),
-      ).rejects.toThrow("Dilnoza Rashidova to'lov qilmagan");
+      ).rejects.toThrow(`Dilnoza Rashidova ${NOT_PAID}`);
       expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+    });
+
+    it.each(['PRESENT', 'LATE', 'ABSENT'] as const)(
+      'refuses a blocked student marked %s, before anything is written',
+      async (status) => {
+        blocks(10002);
+        await expect(
+          service.save(
+            'group-uuid-1',
+            '2026-04-01',
+            {
+              entries: [
+                { studentId: 10001, status: 'PRESENT' },
+                { studentId: 10002, status },
+              ],
+            },
+            1,
+            ['Administrator'],
+            1,
+          ),
+        ).rejects.toThrow(`Dilnoza Rashidova ${NOT_PAID}`);
+        expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+      },
+    );
+
+    it("reads the admission inside the save's transaction, over its roster", async () => {
+      prisma.attendance.upsert.mockResolvedValue({ id: 'att-1' });
+      await service.save(
+        'group-uuid-1',
+        '2026-04-01',
+        twoPresent,
+        1,
+        ['Administrator'],
+        1,
+      );
+      expect(admission.forLesson).toHaveBeenCalledWith(
+        {
+          groupId: 'group-uuid-1',
+          lessonDay: '2026-04-01',
+          studentIds: [10001, 10002],
+        },
+        prisma, // the transaction client: this spec's $transaction passes prisma
+      );
+    });
+
+    it('reports an ended lesson as ended, not as unpaid', async () => {
+      jest.setSystemTime(new Date('2026-04-01T06:00:00.000Z')); // 11:00, the end
+      blocks(10002);
+      await expect(
+        service.save(
+          'group-uuid-1',
+          '2026-04-01',
+          twoPresent,
+          1,
+          ['Administrator'],
+          1,
+        ),
+      ).rejects.toThrow('Dars tugagan');
     });
 
     it('lets a blocked student be left off the roster', async () => {
@@ -1846,6 +1921,71 @@ describe('AttendanceService', () => {
         1,
       );
       expect(result.message).toBe('Davomat muvaffaqiyatli saqlandi');
+    });
+
+    // CEO 30.09 (D1): CEO, BD and Administrator edit a register after the
+    // lesson; a teacher never does. Contract 3.2 still holds (D2).
+    describe('D1: editing a register after the lesson (ADR-0054)', () => {
+      // 2026-03-30 is the Monday before the pinned day: its lesson has ended.
+      const pastRegister = [
+        {
+          id: 'att-1',
+          studentId: 10001,
+          status: 'ABSENT',
+          lateMinutes: null,
+          markedMethod: 'MANUAL',
+          note: null,
+        },
+        {
+          id: 'att-2',
+          studentId: 10002,
+          status: 'ABSENT',
+          lateMinutes: null,
+          markedMethod: 'MANUAL',
+          note: null,
+        },
+      ];
+      const edit = (status: 'PRESENT' | 'ABSENT', roles = ['Administrator']) =>
+        service.save(
+          'group-uuid-1',
+          '2026-03-30',
+          {
+            entries: [
+              { studentId: 10001, status: 'PRESENT' },
+              { studentId: 10002, status },
+            ],
+          },
+          1,
+          roles,
+          1,
+        );
+
+      beforeEach(() => {
+        prisma.attendance.findMany.mockResolvedValue(pastRegister);
+        prisma.attendance.upsert.mockImplementation(({ create }: any) =>
+          Promise.resolve({ id: `att-${create.studentId}`, ...create }),
+        );
+      });
+
+      it("refuses the teacher's edit", async () => {
+        await expect(edit('ABSENT', ['Teacher'])).rejects.toThrow(
+          "Davomat olib bo'lingan",
+        );
+        expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+      });
+
+      it('refuses flipping a blocked student to PRESENT', async () => {
+        blocks(10002);
+        await expect(edit('PRESENT')).rejects.toThrow(
+          `Dilnoza Rashidova ${NOT_PAID}`,
+        );
+        expect(prisma.attendance.upsert).not.toHaveBeenCalled();
+      });
+
+      it("passes a blocked student's unchanged mark", async () => {
+        blocks(10002);
+        await expect(edit('ABSENT')).resolves.toMatchObject({ count: 2 });
+      });
     });
   });
 
