@@ -1,4 +1,5 @@
 import { TASHKENT_OFFSET_MS } from '../../common/date/tashkent';
+import { ADMISSION_START_DAY } from '../../billing/lesson-admission';
 
 /**
  * When a NEW register (no attendance rows yet) may be saved — spec
@@ -111,11 +112,16 @@ export function lessonHasEnded(args: {
  * the first manual save there still marks everyone.
  */
 export function leftOutAfterEnd(input: {
+  date: string;
   ended: boolean;
   takenManually: boolean;
   unmarkedIds: readonly number[];
 }): Set<number> {
-  return new Set(input.ended && input.takenManually ? input.unmarkedIds : []);
+  // Only where contract 3.2 kept anyone out: older registers were saved
+  // under rules that let a present student go without a row.
+  const applies =
+    input.date >= ADMISSION_START_DAY && input.ended && input.takenManually;
+  return new Set(applies ? input.unmarkedIds : []);
 }
 
 /** The Uzbek refusal for a closed window; `null` while it is open. */

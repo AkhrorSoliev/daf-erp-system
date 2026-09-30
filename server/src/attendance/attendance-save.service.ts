@@ -201,6 +201,7 @@ export class AttendanceSaveService {
         const clock = tashkentClock(now);
         const marked = new Set(existingRecords.map((r) => r.studentId));
         const leftOut = leftOutAfterEnd({
+          date,
           ended: lessonHasEnded({ date, ...clock, endTime: effectiveEndTime }),
           takenManually,
           unmarkedIds: [...enrollmentIdByStudent.keys()].filter(

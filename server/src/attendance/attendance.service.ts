@@ -68,6 +68,7 @@ export class AttendanceService {
     // After the lesson a student the register left out stays out, paid or
     // not — as `save()` judges it.
     const leftOut = leftOutAfterEnd({
+      date,
       ended: lessonHasEnded({
         date,
         ...tashkentClock(),

@@ -712,24 +712,57 @@ describe('AttendanceService', () => {
       });
     });
 
-    it('shows a student the register left out, after the lesson, as LEFT_OUT', async () => {
-      prisma.attendance.findMany.mockResolvedValue([
-        {
-          studentId: 10001,
-          status: 'PRESENT',
-          note: null,
-          lateMinutes: null,
-          markedMethod: 'MANUAL',
-        },
-      ]);
-      // 2026-04-01 has passed: its lesson has ended.
-      const result = await service.getByDate('group-uuid-1', '2026-04-01', 1);
-      expect(result.activeStudents[0].admission.reason).toBe('NOT_APPLIED');
-      expect(result.activeStudents[1].admission).toEqual({
-        admitted: false,
-        reason: 'LEFT_OUT',
-        shortfall: 0,
-        paidThrough: null,
+    describe('after the lesson, a student the register left out', () => {
+      beforeEach(() => {
+        jest.useFakeTimers({
+          doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+        });
+        // Wednesday 07.10, 09:30 Tashkent: Monday 05.10's lesson has ended.
+        jest.setSystemTime(new Date('2026-10-07T04:30:00.000Z'));
+      });
+      afterEach(() => jest.useRealTimers());
+      const row = (markedMethod: string) => ({
+        studentId: 10001,
+        status: 'PRESENT',
+        note: null,
+        lateMinutes: null,
+        markedMethod,
+      });
+
+      it('reads LEFT_OUT, over NOT_PAID too', async () => {
+        prisma.attendance.findMany.mockResolvedValue([row('MANUAL')]);
+        admission.forLesson.mockResolvedValue(
+          new Map([
+            [
+              10002,
+              {
+                admitted: false,
+                reason: 'NOT_PAID',
+                shortfall: 69231,
+                paidThrough: null,
+              },
+            ],
+          ]),
+        );
+        const result = await service.getByDate('group-uuid-1', '2026-10-05', 1);
+        expect(result.activeStudents[0].admission.reason).toBe('NOT_APPLIED');
+        expect(result.activeStudents[1].admission).toEqual({
+          admitted: false,
+          reason: 'LEFT_OUT',
+          shortfall: 0,
+          paidThrough: null,
+        });
+      });
+
+      it('is not read on a QR-only register, a running lesson or before 01.10', async () => {
+        const reasonOn = async (date: string) =>
+          (await service.getByDate('group-uuid-1', date, 1)).activeStudents[1]
+            .admission.reason;
+        prisma.attendance.findMany.mockResolvedValue([row('QR')]);
+        expect(await reasonOn('2026-10-05')).toBe('NOT_APPLIED');
+        prisma.attendance.findMany.mockResolvedValue([row('MANUAL')]);
+        expect(await reasonOn('2026-10-07')).toBe('NOT_APPLIED');
+        expect(await reasonOn('2026-09-28')).toBe('NOT_APPLIED');
       });
     });
 
@@ -2095,20 +2128,31 @@ describe('AttendanceService', () => {
 
       // The register left 10002 out (unpaid) and he has paid since (the
       // admission mock admits him). After the lesson he stays out: nobody
-      // must mark him, and no mark pays the teacher for him.
+      // must mark him, and no mark pays the teacher for him. Only from
+      // 01.10.2026, contract 3.2's first day.
       describe('a student the register left out', () => {
         const LEFT_OUT_TEXT =
           "Dilnoza Rashidova dars vaqtida davomatga kiritilmagan: dars tugagach «Keldi», «Kelmadi» yoki «Kechikdi» qo'yib bo'lmaydi";
-        const saveAs = (entries: SaveAttendanceDto['entries']) =>
+        const FULL_ROSTER = "barcha o'quvchilarning holati belgilanishi shart";
+        const saveOn = (date: string, entries: SaveAttendanceDto['entries']) =>
           service.save(
             'group-uuid-1',
-            '2026-03-30',
+            date,
             { entries },
             1,
             ['Administrator'],
             1,
           );
+        // Monday 05.10's lesson, which has ended by the pinned clock.
+        const saveAs = (entries: SaveAttendanceDto['entries']) =>
+          saveOn('2026-10-05', entries);
         beforeEach(() => {
+          // Wednesday 07.10, 09:30 Tashkent.
+          jest.setSystemTime(new Date('2026-10-07T04:30:00.000Z'));
+          prisma.group.findFirst.mockResolvedValue({
+            ...mockGroup,
+            endDate: new Date('2026-12-31'),
+          });
           prisma.attendance.findMany.mockResolvedValue([pastRegister[0]]);
         });
 
@@ -2146,21 +2190,19 @@ describe('AttendanceService', () => {
           ]);
           await expect(
             saveAs([{ studentId: 10001, status: 'PRESENT' }]),
-          ).rejects.toThrow("barcha o'quvchilarning holati belgilanishi shart");
+          ).rejects.toThrow(FULL_ROSTER);
         });
 
         it('still needs him while the lesson runs', async () => {
-          // 09:30 on the pinned day: the lesson is on.
           await expect(
-            service.save(
-              'group-uuid-1',
-              '2026-04-01',
-              { entries: [{ studentId: 10001, status: 'PRESENT' }] },
-              1,
-              ['Administrator'],
-              1,
-            ),
-          ).rejects.toThrow("barcha o'quvchilarning holati belgilanishi shart");
+            saveOn('2026-10-07', [{ studentId: 10001, status: 'PRESENT' }]),
+          ).rejects.toThrow(FULL_ROSTER);
+        });
+
+        it('still needs him on a register from before 01.10.2026', async () => {
+          await expect(
+            saveOn('2026-03-30', [{ studentId: 10001, status: 'PRESENT' }]),
+          ).rejects.toThrow(FULL_ROSTER);
         });
       });
     });

@@ -163,6 +163,22 @@ describe('lessonAdmission', () => {
     expect(admit(-450000, '2026-10-30').admitted).toBe(false);
   });
 
+  it('counts a later month at what it charged, not at its rounded lessons', () => {
+    // 13 lessons at 450 000: 13 × 34 615 = 449 995, five so'm short.
+    const nov13: AdmissionCharge = {
+      ...g005,
+      coveredDates: OCT.map((d) => d.replace('-10-', '-11-')),
+    };
+    const lastOfOctober = lessonAdmission({
+      lessonDay: '2026-10-30',
+      groupId: 'g005',
+      balance: -450000,
+      charges: [g005],
+      laterCharges: [nov13],
+    });
+    expect(lastOfOctober).toMatchObject({ admitted: true, reason: 'PAID' });
+  });
+
   it('the first lesson after a mid-month join is free', () => {
     const joined = { ...g005, coveredDates: OCT.slice(8), coveredLessons: 5 };
     expect(admit(-173077, '2026-10-21', [joined]).reason).toBe('FIRST_LESSON');

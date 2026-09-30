@@ -86,6 +86,17 @@ export function heldAfter(
   return total;
 }
 
+/**
+ * What later months' charges took from the balance, all of it still held for
+ * an earlier lesson. Their `chargedAmount`, not `heldAfter`: a month is
+ * charged at exactly its price, and its lessons at the rounded lesson price
+ * can fall a few so'm short of it (450 000 over 13 lessons), which alone
+ * would block the month's last lesson.
+ */
+export function heldLater(charges: readonly AdmissionCharge[]): number {
+  return charges.reduce((sum, c) => sum + c.chargedAmount, 0);
+}
+
 /** The student's lessons in one group this month, frozen-out ones excluded, sorted. */
 export function groupLessons(
   charges: readonly AdmissionCharge[],
@@ -144,8 +155,9 @@ export function lessonAdmission(input: {
     };
   }
 
-  const held = [...input.charges, ...(input.laterCharges ?? [])];
-  const reach = input.balance + heldAfter(held, input.lessonDay);
+  const later = heldLater(input.laterCharges ?? []);
+  const reach =
+    input.balance + later + heldAfter(input.charges, input.lessonDay);
   if (reach < 0) {
     return {
       admitted: false,
@@ -160,7 +172,7 @@ export function lessonAdmission(input: {
     paidThrough = input.lessonDay;
     for (const day of lessons) {
       if (day <= input.lessonDay) continue;
-      if (input.balance + heldAfter(held, day) < 0) break;
+      if (input.balance + later + heldAfter(input.charges, day) < 0) break;
       paidThrough = day;
     }
   }
@@ -245,8 +257,8 @@ export interface FirstLessonCoverage {
    */
   firstLesson: boolean;
   /**
-   * The student's payments reach it: `balance + heldAfter(charges, day) ≥ 0`
-   * over every charge from the lesson's month on. Money settles the oldest
+   * The student's payments reach it: `balance + heldAfter(month's charges,
+   * day) + heldLater(later months' charges) ≥ 0`. Money settles the oldest
    * charge first, so a later month's charge counts as still held — posted
    * since the lesson, it must not hide a payment that already covered it.
    * Within the lesson's month it is exactly contract 3.2's reach.
@@ -294,7 +306,18 @@ export function firstLessonCoverage(input: {
         groupLessons([owner], input.groupId),
         input.lessonDay,
       ),
-    covered: input.balance + heldAfter(charges, input.lessonDay) >= 0,
+    covered:
+      input.balance +
+        heldLater(
+          charges.filter((c) => c.periodYear * 12 + c.periodMonth > fromMonth),
+        ) +
+        heldAfter(
+          charges.filter(
+            (c) => c.periodYear === year && c.periodMonth === month,
+          ),
+          input.lessonDay,
+        ) >=
+      0,
     enrollmentId: owner?.enrollmentId ?? null,
   };
 }
