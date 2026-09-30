@@ -655,7 +655,7 @@ export function AttendanceForm({
         <AttendanceDebtorsSection
           debtors={debtorStudents}
           suggestedAmount={coursePrice}
-          onPaymentSuccess={fetchAttendance}
+          onPaymentSuccess={refreshRows}
         />
       )}
 

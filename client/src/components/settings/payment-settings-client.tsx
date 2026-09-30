@@ -313,7 +313,7 @@ export function PaymentSettingsClient() {
             <p className="text-xs text-muted-foreground">
               Bu qiymat filial bo&apos;yicha emas — butun kompaniya uchun bitta
               (oylik hisob-kitob croni shunday ishlaydi), shuning uchun faqat
-              CEO o&apos;zgartira oladi.
+              markaz rahbari o&apos;zgartira oladi.
             </p>
           )}
           {/* chargeDayOfMonth companyLevelOnly — filial override HECH
@@ -458,7 +458,8 @@ export function PaymentSettingsClient() {
 
       {!canEdit && (
         <p className="text-xs text-muted-foreground">
-          Bu bo&apos;limni faqat CEO va Filial direktori tahrirlashi mumkin.
+          Bu bo&apos;limni faqat markaz rahbari va filial direktori tahrirlashi
+          mumkin.
         </p>
       )}
     </div>
