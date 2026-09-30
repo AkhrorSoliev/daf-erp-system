@@ -10,6 +10,7 @@ import { SearchDropdown } from "@/components/global-search/search-dropdown";
 import { BranchSwitcher } from "@/components/branch-switcher";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { QollanmaYordamTugmasi } from "@/components/qollanma/qollanma-yordam-tugmasi";
 import { TashkentClock } from "@/components/tashkent-clock";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/use-auth";
@@ -66,6 +67,7 @@ export function DashboardHeader() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <QollanmaYordamTugmasi />
           <TashkentClock />
           <NotificationBell />
           <div className="hidden sm:block">
