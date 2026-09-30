@@ -231,7 +231,7 @@ export function LessonChangesTab({ group }: Props) {
     setConfirmDelete({
       title: "Ko'chirish yozuvini o'chirmoqchimisiz?",
       description:
-        "Diqqat: bu ikkala sanada (asl va yangi) davomatni avtomatik tiklamaydi. Agar dars haqiqatan asl kunda o'tilgan bo'lsa, admin keyin davomatni qo'lda olishi kerak.",
+        "Diqqat: bu ikkala sanada (asl va yangi) davomatni avtomatik tiklamaydi. Agar asl dars vaqti o'tib ketgan bo'lsa, u yana «Dars bo'ldimi?» savoliga qaytadi.",
       onConfirm: () =>
         performDelete(
           `/lesson-reschedules/${id}`,

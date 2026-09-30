@@ -3,6 +3,7 @@ import type { Prisma, UnmarkedLesson } from '@prisma/client';
 import {
   DAY_END_TIME,
   DAY_START_TIME,
+  effectiveLessonTimes,
   lessonHasEnded,
   tashkentClock,
   toMinutes,
@@ -29,6 +30,7 @@ export interface UnmarkedLessonDecision {
 
 export const CANCELLED_BEFORE_REASON =
   'Dars bekor qilingan edi — ustoz davomat kirita olmagan';
+export const MOVED_BEFORE_REASON = "Dars oldindan ko'chirilgan edi";
 
 const dayOf = (d: Date): string => d.toISOString().slice(0, 10);
 
@@ -221,26 +223,22 @@ async function reopen(
 }
 
 /**
- * Deleting a cancellation re-asks the question (§3.5): an answered lesson
- * goes back to PENDING; a lesson cancelled before it happened, whose
- * cancellation is removed after it ended, is asked about for the first time —
- * exempt, because its teacher could not mark a cancelled lesson.
+ * A lesson of a removed cancellation or move that nobody answered for: it
+ * ended, no register was taken, no question exists — asked about for the
+ * first time, exempt, because its teacher could not mark it (it was cancelled
+ * or moved away). A day that is itself the new date of another live move runs
+ * on that move's times.
  */
-export async function reopenAfterCancellationRemoved(
+async function openFirstTimeQuestion(
   tx: Tx,
   args: {
-    cancellationId: string;
     groupId: string;
     date: Date;
+    reason: string;
     now: Date;
     holidays: ReadonlySet<string>;
   },
 ): Promise<void> {
-  const answered = await tx.unmarkedLesson.findFirst({
-    where: { cancellationId: args.cancellationId },
-  });
-  if (answered) return reopen(tx, answered, args.now, args.holidays);
-
   const group = await tx.group.findUnique({
     where: { id: args.groupId },
     select: {
@@ -253,13 +251,18 @@ export async function reopenAfterCancellationRemoved(
     },
   });
   if (!group || group.deletedAt) return;
+  const movedHere = await tx.lessonReschedule.findFirst({
+    where: { groupId: args.groupId, deletedAt: null, newDate: args.date },
+    select: { newLessonStartTime: true, newLessonEndTime: true },
+  });
+  const times = effectiveLessonTimes(group, movedHere);
   const { todayStr, nowMinutes } = tashkentClock(args.now);
   if (
     !lessonHasEnded({
       date: dayOf(args.date),
       todayStr,
       nowMinutes,
-      endTime: group.lessonEndTime,
+      endTime: times.endTime,
     })
   ) {
     return;
@@ -275,8 +278,8 @@ export async function reopenAfterCancellationRemoved(
   });
   if (existing) return;
 
-  const startTime = group.lessonStartTime ?? DAY_START_TIME;
-  const endTime = group.lessonEndTime ?? DAY_END_TIME;
+  const startTime = times.startTime ?? DAY_START_TIME;
+  const endTime = times.endTime ?? DAY_END_TIME;
   const taskCommentId = await createReopenTask(
     tx,
     group.companyId,
@@ -298,13 +301,48 @@ export async function reopenAfterCancellationRemoved(
       lessonStartTime: startTime,
       lessonEndTime: endTime,
       teacherPayExempt: true,
-      exemptReason: CANCELLED_BEFORE_REASON,
+      exemptReason: args.reason,
       taskCommentId,
     },
   });
 }
 
-/** Deleting the move of an unanswered lesson re-asks the question. */
+/**
+ * Deleting a cancellation re-asks the question (§3.5): an answered lesson
+ * goes back to PENDING; a lesson cancelled before it happened, whose
+ * cancellation is removed after it ended, is asked about for the first time —
+ * exempt, because its teacher could not mark a cancelled lesson.
+ */
+export async function reopenAfterCancellationRemoved(
+  tx: Tx,
+  args: {
+    cancellationId: string;
+    groupId: string;
+    date: Date;
+    now: Date;
+    holidays: ReadonlySet<string>;
+  },
+): Promise<void> {
+  const answered = await tx.unmarkedLesson.findFirst({
+    where: { cancellationId: args.cancellationId },
+  });
+  if (answered) return reopen(tx, answered, args.now, args.holidays);
+  await openFirstTimeQuestion(tx, {
+    groupId: args.groupId,
+    date: args.date,
+    reason: CANCELLED_BEFORE_REASON,
+    now: args.now,
+    holidays: args.holidays,
+  });
+}
+
+/**
+ * Deleting a move re-asks the question the same way: a move that answered it
+ * puts the row back to PENDING; a move made in advance (no row ever existed),
+ * deleted after the original lesson ended, opens the first-time exempt
+ * question for the ORIGINAL date. The caller has already soft-deleted the
+ * move in this transaction, so it is read by id, whatever its `deletedAt`.
+ */
 export async function reopenAfterRescheduleRemoved(
   tx: Tx,
   args: { rescheduleId: string; now: Date; holidays: ReadonlySet<string> },
@@ -312,7 +350,20 @@ export async function reopenAfterRescheduleRemoved(
   const answered = await tx.unmarkedLesson.findFirst({
     where: { rescheduleId: args.rescheduleId },
   });
-  if (answered) await reopen(tx, answered, args.now, args.holidays);
+  if (answered) return reopen(tx, answered, args.now, args.holidays);
+
+  const removed = await tx.lessonReschedule.findUnique({
+    where: { id: args.rescheduleId },
+    select: { groupId: true, originalDate: true },
+  });
+  if (!removed) return;
+  await openFirstTimeQuestion(tx, {
+    groupId: removed.groupId,
+    date: removed.originalDate,
+    reason: MOVED_BEFORE_REASON,
+    now: args.now,
+    holidays: args.holidays,
+  });
 }
 
 /** A deleted group's open questions stop asking; their rows stay (no pay). */

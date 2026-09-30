@@ -1,7 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
 import {
   assertMakeUpAhead,
+  CANCELLED_BEFORE_REASON,
   closeTasksOfDeletedGroup,
+  MOVED_BEFORE_REASON,
   markUnmarkedLessonCancelled,
   markUnmarkedLessonRescheduled,
   reopenAfterCancellationRemoved,
@@ -49,6 +51,11 @@ function makeTx(mocks: any = {}) {
     attendance: {
       findFirst: jest.fn().mockResolvedValue(null),
       ...mocks.attendance,
+    },
+    lessonReschedule: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      findUnique: jest.fn().mockResolvedValue(null),
+      ...mocks.lessonReschedule,
     },
     commentAssignee: {
       findUnique: jest.fn().mockResolvedValue(null),
@@ -319,6 +326,205 @@ describe('reopening', () => {
         data: expect.objectContaining({ status: 'PENDING' }),
       }),
     );
+  });
+});
+
+// Addendum A: a move made in advance leaves no UnmarkedLesson row, so deleting
+// it after the original lesson ended must ask about that lesson for the first
+// time — the way deleting a cancellation does.
+describe('reopenAfterRescheduleRemoved — a move made in advance', () => {
+  const now = new Date('2026-09-30T09:00:00.000Z'); // Wed 14:00 Tashkent
+  const args = { rescheduleId: 'r1', now, holidays: new Set<string>() };
+
+  // No row carries this move; the removed move is read by id.
+  const txWithRemovedMove = (originalDate: Date = date) => {
+    const tx = makeTx();
+    tx.lessonReschedule.findUnique.mockResolvedValue({
+      groupId: 'g1',
+      originalDate,
+    });
+    return tx;
+  };
+
+  it('opens an exempt question for the original date once it has ended', async () => {
+    const tx = txWithRemovedMove();
+    await reopenAfterRescheduleRemoved(tx, args);
+
+    expect(tx.lessonReschedule.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'r1' } }),
+    );
+    expect(tx.unmarkedLesson.create).toHaveBeenCalledWith({
+      data: {
+        companyId: 1,
+        branchId: 2,
+        groupId: 'g1',
+        date,
+        lessonStartTime: '16:00',
+        lessonEndTime: '17:30',
+        teacherPayExempt: true,
+        exemptReason: MOVED_BEFORE_REASON,
+        taskCommentId: 'c2',
+      },
+    });
+    expect(MOVED_BEFORE_REASON).toBe("Dars oldindan ko'chirilgan edi");
+    // Wednesday 30.09 → the next working day is Thursday 01.10, 10:00 Tashkent.
+    expect(tx.comment.create.mock.calls[0][0].data.dueDate).toEqual(
+      new Date('2026-10-01T05:00:00.000Z'),
+    );
+  });
+
+  it('skips a holiday when it sets the task due date', async () => {
+    const tx = txWithRemovedMove();
+    await reopenAfterRescheduleRemoved(tx, {
+      ...args,
+      holidays: new Set(['2026-10-01']),
+    });
+    expect(tx.comment.create.mock.calls[0][0].data.dueDate).toEqual(
+      new Date('2026-10-02T05:00:00.000Z'),
+    );
+  });
+
+  it('opens nothing while the original lesson has not ended', async () => {
+    const later = txWithRemovedMove(new Date('2026-10-05T00:00:00.000Z'));
+    await reopenAfterRescheduleRemoved(later, args);
+
+    // Today's lesson, 17:30 not yet reached at 14:00.
+    const today = txWithRemovedMove(new Date('2026-09-30T00:00:00.000Z'));
+    await reopenAfterRescheduleRemoved(today, args);
+
+    expect(later.unmarkedLesson.create).not.toHaveBeenCalled();
+    expect(today.unmarkedLesson.create).not.toHaveBeenCalled();
+  });
+
+  it('opens nothing when the original day already has attendance', async () => {
+    const tx = txWithRemovedMove();
+    tx.attendance.findFirst.mockResolvedValue({ id: 'a1' });
+    await reopenAfterRescheduleRemoved(tx, args);
+    expect(tx.unmarkedLesson.create).not.toHaveBeenCalled();
+  });
+
+  it('opens nothing when a row already exists for the original date', async () => {
+    const tx = txWithRemovedMove();
+    tx.unmarkedLesson.findUnique.mockResolvedValue({ id: 'u9' });
+    await reopenAfterRescheduleRemoved(tx, args);
+    expect(tx.unmarkedLesson.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { groupId_date: { groupId: 'g1', date } },
+      }),
+    );
+    expect(tx.unmarkedLesson.create).not.toHaveBeenCalled();
+  });
+
+  it('opens nothing for a deleted group', async () => {
+    const tx = txWithRemovedMove();
+    tx.group.findUnique.mockResolvedValue({
+      name: '#014',
+      companyId: 1,
+      branchId: 2,
+      lessonStartTime: '16:00',
+      lessonEndTime: '17:30',
+      deletedAt: new Date('2026-09-29T00:00:00.000Z'),
+    });
+    await reopenAfterRescheduleRemoved(tx, args);
+    expect(tx.unmarkedLesson.create).not.toHaveBeenCalled();
+  });
+
+  it('leaves an answered move on the existing path', async () => {
+    const tx = txWithRemovedMove();
+    tx.unmarkedLesson.findFirst.mockResolvedValue(
+      row({ status: 'RESCHEDULED', rescheduleId: 'r1' }),
+    );
+    await reopenAfterRescheduleRemoved(tx, args);
+    expect(tx.unmarkedLesson.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'PENDING' }),
+      }),
+    );
+    expect(tx.unmarkedLesson.create).not.toHaveBeenCalled();
+    expect(tx.lessonReschedule.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('opens nothing when the removed move cannot be read', async () => {
+    const tx = makeTx();
+    await reopenAfterRescheduleRemoved(tx, args);
+    expect(tx.unmarkedLesson.create).not.toHaveBeenCalled();
+  });
+
+  it("times the question by another live move's times when the original day is its new date", async () => {
+    const tx = txWithRemovedMove(new Date('2026-09-30T00:00:00.000Z'));
+    // Group meets 16:00–17:30, but today's lesson was moved here for 10:00–11:00.
+    tx.lessonReschedule.findFirst.mockResolvedValue({
+      newLessonStartTime: '10:00',
+      newLessonEndTime: '11:00',
+    });
+    await reopenAfterRescheduleRemoved(tx, args);
+    expect(tx.unmarkedLesson.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        lessonStartTime: '10:00',
+        lessonEndTime: '11:00',
+        exemptReason: MOVED_BEFORE_REASON,
+      }),
+    });
+  });
+});
+
+// Addendum A item 2: a day that is itself the new date of another live move
+// runs on that move's times, both for «has it ended» and for the row.
+describe('reopenAfterCancellationRemoved — a day moved here', () => {
+  const now = new Date('2026-09-30T09:00:00.000Z'); // Wed 14:00 Tashkent
+  const today = new Date('2026-09-30T00:00:00.000Z');
+  const args = {
+    cancellationId: 'x1',
+    groupId: 'g1',
+    date: today,
+    now,
+    holidays: new Set<string>(),
+  };
+
+  it("carries the move's times and judges «ended» on them", async () => {
+    const tx = makeTx();
+    // Group ends 17:30 (not yet at 14:00), the move ended at 11:00.
+    tx.lessonReschedule.findFirst.mockResolvedValue({
+      newLessonStartTime: '10:00',
+      newLessonEndTime: '11:00',
+    });
+    await reopenAfterCancellationRemoved(tx, args);
+
+    expect(tx.lessonReschedule.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { groupId: 'g1', deletedAt: null, newDate: today },
+      }),
+    );
+    expect(tx.unmarkedLesson.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        date: today,
+        lessonStartTime: '10:00',
+        lessonEndTime: '11:00',
+        teacherPayExempt: true,
+        exemptReason: CANCELLED_BEFORE_REASON,
+      }),
+    });
+  });
+
+  it('opens nothing while the move has not ended, even if the group time has', async () => {
+    const tx = makeTx({
+      group: {
+        findUnique: jest.fn().mockResolvedValue({
+          name: '#014',
+          companyId: 1,
+          branchId: 2,
+          lessonStartTime: '08:00',
+          lessonEndTime: '09:30',
+          deletedAt: null,
+        }),
+      },
+    });
+    tx.lessonReschedule.findFirst.mockResolvedValue({
+      newLessonStartTime: '18:00',
+      newLessonEndTime: '19:00',
+    });
+    await reopenAfterCancellationRemoved(tx, args);
+    expect(tx.unmarkedLesson.create).not.toHaveBeenCalled();
   });
 });
 
