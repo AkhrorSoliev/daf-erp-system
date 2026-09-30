@@ -102,7 +102,7 @@ Rollar: 1 CEO, 2 filial direktori, 3 administrator, 4 ustoz, 5 kassir.
 | Hisobotlar | `hisobotlar/moliya-umumiy` | Umumiy ma'lumotlar va sof foyda | 1,2 | 0001, 0005, 0012, 0016, 0038 | skrinshot |
 | | `hisobotlar/excel-hisobot` | Excel hisobotlari | 1,2 | 0021 | — |
 | | `hisobotlar/boshqa-hisobotlar` | Boshqa hisobotlar | 1,2,3 | 0035 | — |
-| Lidlar | `lidlar/lidlar` | Lidlar bilan ishlash | 1,2,3 | 0017, 0018 | — |
+| Lidlar | `lidlar/lidlar-bilan-ishlash` | Lidlar bilan ishlash | 1,2,3 | 0017, 0018 | — |
 | | `lidlar/formalar` | Formalar va javoblar | 1,2,3 | — | — |
 | | `lidlar/aloqa-markazi` | Aloqa markazi | 1,2,3 | — | — |
 | Mock imtihonlar | `mock-imtihonlar/mock-imtihon` | Mock imtihon | 1,2,3 | 0046 | — |
