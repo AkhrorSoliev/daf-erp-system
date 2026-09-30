@@ -5,6 +5,7 @@ import { routeLabels } from "@/lib/breadcrumb-routes";
 import { bolimlar } from "./bolimlar";
 import { sahifalar } from "./sahifalar";
 import { haqiqiySanami } from "./sana";
+import { yangiliklar } from "./yangiliklar";
 
 const KONTENT = join(__dirname, "kontent");
 const PUBLIC = join(__dirname, "..", "..", "public");
@@ -117,5 +118,17 @@ describe("qo'llanma reyestri", () => {
         .map((src) => `${relative(KONTENT, f)}: ${src}`),
     );
     expect(xato).toEqual([]);
+  });
+});
+
+describe("«Nima yangi»", () => {
+  it("sana haqiqiy, eng yangisi tepada, havola mavjud sahifaga", () => {
+    const reyestrda = new Set(sahifalar.map(slug));
+    for (const y of yangiliklar) {
+      expect(haqiqiySanami(y.sana), y.sarlavha).toBe(true);
+      if (y.sahifa) expect(reyestrda.has(slug(y.sahifa)), y.sarlavha).toBe(true);
+    }
+    const sanalar = yangiliklar.map((y) => y.sana);
+    expect(sanalar).toEqual([...sanalar].sort().reverse());
   });
 });
