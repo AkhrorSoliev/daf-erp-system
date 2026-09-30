@@ -180,4 +180,22 @@ describe('TelegramService.broadcastMockResults — one message per participant',
     expect(failed).toHaveLength(1);
     expect(failed[0].resultSendError).toBe('chat not found');
   });
+
+  it('a failed send is stored without the bot token in the request URL', async () => {
+    const telegram = (service as unknown as { bot: { telegram: any } }).bot
+      .telegram;
+    telegram.sendDocument.mockImplementationOnce(async () => {
+      throw new Error(
+        // Invented token: shaped like one, belongs to no bot.
+        'invalid json response body at https://api.telegram.org/bot123456789:fake_secret-for-tests/sendDocument',
+      );
+    });
+
+    await service.broadcastMockResults(EXAM.id);
+
+    const failed = rows.filter((r) => r.resultSentAt === null);
+    expect(failed[0].resultSendError).toBe(
+      'invalid json response body at https://api.telegram.org/bot***/sendDocument',
+    );
+  });
 });
