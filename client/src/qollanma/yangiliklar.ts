@@ -110,7 +110,7 @@ export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-09-10",
     sarlavha: "Faol o'quvchilar soni hamma joyda bir xil",
-    matn: "Bosh sahifa, «O'quvchilar» sahifasi va Telegram hisobotida «faol o'quvchi» endi bir xil qoida bilan sanaladi: holati «Faol» va hozir faol guruhda o'qiydi.",
+    matn: "Bosh sahifa, «O'quvchilar» sahifasi va Telegram hisobotida faol o'quvchi endi bir xil qoida bilan sanaladi: holati «Faol» va hozir faol guruhda o'qiydi.",
     rollar: [1, 2, 3],
     sahifa: { bolim: "boshlash", sahifa: "lugat" },
   },
