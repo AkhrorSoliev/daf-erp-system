@@ -7002,7 +7002,13 @@ Write down which checks passed and anything that did not, before any merge or de
 
 ## Deploy Notes (not part of this plan's execution)
 
-1. Needs CEO approval. Migration runs on `railway up` (`prisma migrate deploy`). Server first, then Vercel (the client calls the new routes).
-2. Right after the server deploy, run the backfill on production: dry run → CEO looks at the list → `--apply`.
-3. First day: check the first rows, tasks, the teacher/admin Telegram texts, the instant group notice, and the 21:00 line.
-4. 01.10 02:00 settles September payroll: forfeited lessons are excluded by both locks; exempt (backfilled) lessons pay as usual.
+The final review (30.09) changed this order: the server no longer goes out first, and the site is built ahead but switched to only once the server is up.
+
+1. Needs CEO approval. At merge, check that ADR number 0054 is still free on `main`.
+2. Build the site on Vercel (`vercel --prod`), but do not move the five domains (admin, lehrer, student, form, invoice) to it yet.
+3. `railway up` the server, not before 23:00 Tashkent on its day: the sweep has no cutoff date, so a daytime deploy would open normal, unpaid questions for that day's lessons that ended before it. The migration runs on boot (`prisma migrate deploy` in `start:prod`).
+4. As soon as Railway reports SUCCESS, move the five domains to the new site build (`vercel alias set`). No gap either way: the old site crashes on author-less «Tizim» tasks, and the new site needs the server's new routes.
+5. The next day, the backfill: dry run → the CEO reviews the list → `--apply --expect=N`.
+6. First day: check the first rows, tasks, the teacher/admin Telegram texts, the instant group notice, and the 21:00 line.
+7. 01.10 02:00 settles September payroll: forfeited lessons are excluded by both locks; exempt (backfilled) lessons pay as usual.
+8. Open PRs #595 / #596 / #598 (ADR-0047–0049) are integrated after this release, on top of it.

@@ -3,7 +3,8 @@
 **Sana:** 2026-09-29
 **Holati:** Qabul qilindi — ADR-0054 (2026-09-30); amalga oshirishdagi farqlar 12-bo'limda
 **Bog'liq:** ADR-0054 (shu dizayn qarori), ADR-0053 (bekor qilingan dars puli darhol qaytadi), ADR-0025 (Telegram
-yig'ma xabar), PR #608 (ustoz faqat dars kuni davomat kiritadi)
+yig'ma xabar), PR #608 (ustoz faqat dars kuni davomat kiritadi), ADR-0047–0049 (ochiq PR #595,
+#596, #598 — 12-bo'lim)
 
 ## 1. Muammo
 
@@ -81,7 +82,8 @@ kamida bitta faol administrator bor.
   dars tugashidan oldingi soniyada tekshiruvdan o'tib, yurish savolni
   ochgandan keyin yozsa, kunda ham davomat, ham `PENDING` savol bo'lib qolishi
   mumkin (juda tor oraliq; ustoz haqi baribir yozilmaydi — `createAccrual`
-  qulfi). Bunday savol faqat darsni bekor qilish bilan yopiladi.
+  qulfi). Bunday savol darsni bekor qilish yoki boshqa kunga ko'chirish bilan
+  yopiladi; «Bo'ldi» esa 400 «Bu dars uchun davomat allaqachon olingan» oladi.
 
 ### 3.2 Dars tugaganda
 
@@ -106,6 +108,12 @@ Dars boshlanishi va tugashiga 30 daqiqa qolgandagi eslatmalar esa hanuz
 guruhning o'z hafta kuni va vaqti bo'yicha ketadi: bekor qilingan yoki boshqa
 kunga ko'chirilgan kunda ham «haq yozilmaydi» ogohlantirishi boradi,
 ko'chirilgan (qo'shimcha) darsga esa bormaydi — bu ish buni tuzatmaydi.
+Ikkalasini eslatma yurishi yuboradi (dushanba–shanba, 07:00–22:30, har :00
+va :30 da), shuning uchun −30 ogohlantirishi faqat dars tugashi :00 yoki :30
+ga to'g'ri kelsa va guruhning dars vaqtlari kiritilgan bo'lsa boradi. Aks
+holda (masalan, 17:45 da tugaydigan dars, vaqtsiz guruh, yakshanbadagi dars)
+ogohlantirish bormaydi, lekin yurish savolni ochganda ustozga haq baribir
+yozilmaydi — bu ish buni ham o'zgartirmaydi.
 
 `UnmarkedLesson` yozuvlari dushanba–shanba 07:00–22:30 oralig'ida har :00 va
 :30 dagi yurishda bugun tugagan, davomati ham, savol yozuvi ham yo'q barcha
@@ -147,7 +155,9 @@ so'raladi.
 2. Faqat CEO uchun formada belgi: «Ustoz aybdor emas, haq yozilsin» + majburiy
    sabab (masalan, akkaunt hali ochilmagan, server ishlamagan). Server CEO
    bo'lmagan chaqiruvchidan bu belgini 403 bilan rad etadi (rol bazadan
-   o'qiladi, tokendan emas — ADR-0028). Belgi bilan saqlansa
+   o'qiladi, tokendan emas — ADR-0028). Server sababning boshi va oxiridagi
+   bo'sh joylarni olib tashlaydi: faqat bo'sh joydan iborat sabab 400
+   «Sababini yozing» bilan rad etiladi. Belgi bilan saqlansa
    `teacherPayExempt = true` va ustoz odatdagidek haq oladi.
 3. Saqlashda, bitta `Serializable` tranzaksiyada:
    - `UnmarkedLesson` → `HELD`, `decidedById`, `decidedAt`;
@@ -177,7 +187,8 @@ so'raladi.
 
 ### 3.5 «Bo'lmadi»
 
-Oynada sabab (majburiy) va ikki tanlov.
+Oynada sabab (majburiy; server uni 3.4 dagidek tekshiradi — faqat bo'sh
+joydan iborat sabab 400 «Sababini yozing») va ikki tanlov.
 
 **A. «Bekor qilish» — pul qaytadi.**
 
@@ -196,17 +207,25 @@ Oynada sabab (majburiy) va ikki tanlov.
    ololmaydi va u ham «olinmagan» bo'lib qoladi.
 2. Mavjud `LessonReschedulesService.create` (sabab bilan); pul hisobi
    o'zgarmaydi. Yangi qoidalar (qaysi sahifadan bo'lmasin): «Bo'ldi» deb javob
-   berilgan kunni ko'chirib bo'lmaydi (400); savolga javob bo'lgan
+   berilgan kunni ko'chirib bo'lmaydi (400 «Bu darsga «Bo'ldi» deb javob
+   berilgan — uni ko'chirib bo'lmaydi»); savolga javob bo'lgan
    ko'chirishning sanasi yoki boshlanish vaqti tahrirlansa, yangi dars hali
-   boshlanmagan bo'lishi shart (400).
+   boshlanmagan bo'lishi shart (400); qo'shimcha dars o'tgan bo'lsa (yangi
+   kunida davomat yoki «Bo'ldi» javobi bor), ko'chirishning sanasini
+   o'zgartirib bo'lmaydi (400 «Qo'shimcha dars kunida davomat olingan —
+   ko'chirishning sanasini o'zgartirib bo'lmaydi»): yangi sana bitta darsga
+   ikkinchi kun berib, uni ikki marta hisoblatardi. Sana o'zgartirilganda eski
+   qo'shimcha dars kunining savoli B.5 dagidek yopiladi.
 3. Tranzaksiya ichida: `UnmarkedLesson` → `RESCHEDULED`, `rescheduleId`;
    topshiriq yopiladi. Mavjud «ko'chirish» sahifasidan javobi kutilayotgan kun
    ko'chirilsa ham xuddi shunday.
 4. Yangi kunda ustoz davomatni odatdagidek oladi va haq oladi (bu boshqa dars).
 5. Ko'chirish o'chirilsa — savol yozuvi `PENDING` ga qaytadi, yangi topshiriq;
-   kunda davomat bo'lsa, savol yozuvi o'zgarmaydi. Qo'shimcha darsda (yangi kunda) davomat
-   olingan bo'lsa, asl kun umuman qayta so'ralmaydi — aks holda bitta dars ikki
-   marta hisoblanardi. Savol yozuvi hech ochilmagan bo'lsa (odatda ko'chirish
+   kunda davomat bo'lsa, savol yozuvi o'zgarmaydi. Qo'shimcha dars (yangi kunda)
+   o'tgan bo'lsa — davomat olingan yoki «Bo'ldi» deb javob berilgan (o'sha kungi
+   ro'yxat bo'sh bo'lsa «Bo'ldi» davomat yozmaydi) — asl kun umuman qayta
+   so'ralmaydi: aks holda bitta dars ikki marta hisoblanardi.
+   Savol yozuvi hech ochilmagan bo'lsa (odatda ko'chirish
    darsdan oldin qilingan bo'ladi), asl dars tugagach o'chirilsa ham savol birinchi marta
    ochiladi, xuddi bekor qilishni o'chirishdagidek: davomat ham, savol yozuvi ham
    yo'q bo'lsa — yangi `PENDING` savol yozuvi. U faqat ko'chirish darsning tugash vaqtidan
@@ -216,6 +235,24 @@ Oynada sabab (majburiy) va ikki tanlov.
    (`teacherPayExempt: false`, sababsiz): ustoz haq olmaydi, faqat CEO istisno
    qila oladi. Asl kun bayram bo'lsa yoki uning bekor qilinishi hali ham
    turgan bo'lsa — hech narsa ochilmaydi.
+
+   **Qo'shimcha dars kunining o'z savoli.** Ko'chirish yangi kunni dars kuniga
+   aylantiradi, shuning uchun u kun davomatsiz tugasa, yurish unga ham savol
+   ochadi. Ko'chirish o'chirilganda yoki sanasi o'zgartirilganda (B.2),
+   qo'shimcha darsning eski kuni o'sha tranzaksiya ichida, ko'chirish
+   yozilgandan keyin, yurishning o'z qoidasi bilan qayta tekshiriladi
+   (`lessonsOn`: haftalik jadval, amaldagi ko'chirishlar, bekor qilish, filial
+   bayrami, guruh sanalari; `unmarked-lessons/make-up-day.ts`). U endi dars
+   kuni bo'lmasa, o'sha kundagi javob kutilayotgan savol yopiladi: `NOT_HELD`,
+   `cancellationId` va `rescheduleId` bo'sh, `decidedById` — ko'chirishni
+   o'chirgan yoki o'zgartirgan kishi; topshiriq ham yopiladi; guruhga xabar
+   ketmaydi (hech narsa bekor qilinmagan, dars o'z asl kunida so'raladi);
+   `teacherPayExempt` o'zgarmaydi. Aks holda o'sha kunda «Bo'ldi» dars
+   bo'lmagan kunga davomat yozar, asl kun esa yana so'ralardi — bitta dars
+   ikki marta hisoblanardi. Zaxira qorovul: «Bo'ldi» guruhning dars kuni
+   bo'lmagan kunni (guruhning hozirgi hafta kunlarida yo'q va unga amaldagi
+   ko'chirish tushmaydi — `noLessonScheduled`) 400 «Bu kunda dars
+   rejalashtirilmagan» bilan rad etadi.
 
 **Ikkala tanlovda ham** Telegram guruhiga **darhol** xabar ketadi — tranzaksiya
 yakunlangandan keyin (admin bot,
@@ -479,12 +516,16 @@ uni o'zi topadi.
 
 ## 9. Chiqarish
 
-1. Sayt: Vercel, keyin beshta domenni yangi chiqarilgan nusxaga ulash (`vercel alias set`),
-   ochiq admin sahifalari yangilanadi — eski sayt muallifsiz («Tizim»)
-   topshiriqda yiqiladi. Kechqurun, kunning oxirgi darsidan keyin.
-2. Server: 23:00 dan keyin (Toshkent) — `railway up` da `prisma migrate deploy`,
-   keyin server.
-3. Skript: sinov rejimi (yozmaydi, faqat o'qish ulanishi) → CEO ro'yxatni
+1. Sayt: Vercel'da yangi nusxa yig'iladi, lekin beshta domen hali unga
+   ulanmaydi.
+2. Server: 23:00 dan keyin (Toshkent) — `railway up`; server ishga tushganda
+   avval `prisma migrate deploy` bajariladi.
+3. Railway chiqarish muvaffaqiyatli tugaganini (`SUCCESS`) ko'rsatishi bilan
+   beshta domen yangi sayt nusxasiga ulanadi (`vercel alias set`), ochiq admin
+   sahifalari yangilanadi. Oraliq bo'lmasligi kerak: eski sayt muallifsiz
+   («Tizim») topshiriqda yiqiladi, yangi sayt esa serverning yangi so'rov
+   yo'llarini chaqiradi.
+4. Skript (ertasi kuni): sinov rejimi (yozmaydi, faqat o'qish ulanishi) → CEO ro'yxatni
    ko'radi → `--apply --expect=<N>` (N — sinov rejimi chiqargan son; yangi skan
    boshqa son bersa hech narsa yozilmaydi). Qamrov: `--from` (standart
    2026-09-01) dan bugungacha, faqat `ACTIVE` guruhlar.
@@ -494,7 +535,7 @@ uni o'zi topadi.
    haq yozilmaydigan savol sifatida ochadi. Shuning uchun serverni o'sha kungi
    darslar tugagach, 23:00 dan keyin chiqaring va skriptni ertasi kuni ishga
    tushiring. Aks holda bu darslarga CEO «Bo'ldi»da istisno qo'yadi.
-4. Birinchi kun: ishchi tizimda birinchi savol yozuvlari, topshiriqlar, Telegram matnlari va
+5. Birinchi kun: ishchi tizimda birinchi savol yozuvlari, topshiriqlar, Telegram matnlari va
    21:00 qatorini tekshirish.
 
 ## 10. Testlar
@@ -629,6 +670,35 @@ qayd etadi. Kod va ADR-0054 shuni aytadi.
   kalendar kuni sifatida tekshiradi (`isCalendarDateStr`): `2026-02-30` kabi
   sana martga surilmaydi, 400 «Noto'g'ri sana formati. YYYY-MM-DD formatda
   kiriting» oladi.
-- **Chiqarish tartibi (9).** Asl dizayn serverni birinchi chiqarardi. Eski sayt
-  muallifsiz topshiriqda yiqilgani uchun avval sayt, keyin 23:00 dan keyin
-  server (yakuniy ko'rik, 2026-09-30).
+- **Qo'shimcha dars kunining savoli (3.5 B.2, B.5).** Asl dizayn ko'chirish
+  o'chirilganda yoki sanasi o'zgartirilganda qo'shimcha dars kunining o'z
+  savolini ko'zda tutmagan edi: u javob kutib qolardi, unga «Bo'ldi» bosilsa,
+  asl kun ham qayta so'ralib, bitta dars ikki marta hisoblanardi. Endi u kun
+  dars kuni bo'lmay qolsa, savol `NOT_HELD` bo'lib yopiladi; qo'shimcha dars
+  kunidagi «Bo'ldi» javobi davomat kabi hisoblanadi (asl kun qayta
+  so'ralmaydi); o'tgan qo'shimcha darsning sanasini o'zgartirish 400; «Bo'ldi»
+  dars kuni bo'lmagan kunni 400 bilan rad etadi (yakuniy tuzatish,
+  2026-09-30).
+- **Bo'sh sabab (3.4, 3.5).** «Bo'lmadi» sababi va CEO istisnosining sababi
+  tekshiruvdan oldin qirqiladi (`@Transform`), shuning uchun faqat bo'sh
+  joydan iborat sabab 400 «Sababini yozing» oladi. Guruh sahifasidagi oddiy
+  bekor qilishning sababi (`CreateLessonCancellationDto.reason`) esa hanuz
+  bo'sh joyni qabul qiladi (ma'lum cheklov).
+- **Ochiq ADR-0047, 0048, 0049 (PR #595, #596, #598).** Asl dizayn ularni
+  tilga olmagan edi: ular alohida ishlab chiqilgan va hali birlashtirilmagan.
+  Shu ish birinchi chiqadi, ular keyin uning ustiga birlashtiriladi. CEO
+  qarorlari (2026-09-30):
+  - yangi davomat oynasi — ADR-0047 dagi qoidaning o'zi;
+  - ADR-0047 dagi «dars tugagach hech kim, CEO ham, davomatni kirita olmaydi
+    va o'zgartira olmaydi» qoidasini ADR-0054 almashtiradi: olingan davomatni
+    CEO, filial direktori va administrator dars tugagach ham tuzata oladi
+    (Q4), yangi davomatning yagona yo'li — «Bo'ldi»;
+  - ADR-0047 dagi shartnoma 3.2 qoidasi kuchga kirganda «Bo'ldi» ichida ham
+    amal qiladi: darsga qo'yilmagan o'quvchini «Keldi» deb belgilab bo'lmaydi;
+  - ADR-0048 dagi «Berilmadi» ro'yxatiga «Bo'ldi» orqali haqi yozilmagan
+    darslar ham kiradi.
+- **Chiqarish tartibi (9).** Asl dizayn serverni birinchi chiqarardi. Yakuniy
+  ko'rik (2026-09-30) tartibni o'zgartirdi: sayt Vercel'da oldindan
+  yig'iladi, server 23:00 dan keyin chiqadi va Railway `SUCCESS` deyishi
+  bilan beshta domen yangi saytga ulanadi — eski sayt muallifsiz topshiriqda
+  yiqiladi, yangi sayt esa serverning yangi so'rov yo'llarisiz ishlamaydi.
