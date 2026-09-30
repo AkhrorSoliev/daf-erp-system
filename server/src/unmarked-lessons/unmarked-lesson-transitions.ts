@@ -8,6 +8,7 @@ import {
   tashkentClock,
   toMinutes,
 } from '../attendance/shared/attendance-window';
+import { buildHolidayDateSet } from '../holidays/holiday-date-set';
 import {
   closeLessonTask,
   createLessonTask,
@@ -337,6 +338,31 @@ export async function reopenAfterCancellationRemoved(
 }
 
 /**
+ * A move outlives what happened to its original day: a holiday declared after
+ * it, or a cancellation made through a stale tab. The lesson-end sweep never
+ * asks about such a day, so deleting the move must not either. The
+ * `holidays` argument covers only today onward, so a past day is read here.
+ */
+async function originalDayIsClosed(
+  tx: Tx,
+  groupId: string,
+  day: Date,
+): Promise<boolean> {
+  const group = await tx.group.findUnique({
+    where: { id: groupId },
+    select: { branchId: true },
+  });
+  if (!group) return true;
+  const holidays = await buildHolidayDateSet(tx, day, day, group.branchId);
+  if (holidays.has(dayOf(day))) return true;
+  const cancelled = await tx.lessonCancellation.findFirst({
+    where: { groupId, date: day, deletedAt: null },
+    select: { id: true },
+  });
+  return cancelled !== null;
+}
+
+/**
  * Deleting a move re-asks the question the same way: a move that answered it
  * puts the row back to PENDING; a move made in advance (no row ever existed),
  * deleted after the original lesson ended, opens the first-time exempt
@@ -357,6 +383,9 @@ export async function reopenAfterRescheduleRemoved(
     select: { groupId: true, originalDate: true },
   });
   if (!removed) return;
+  if (await originalDayIsClosed(tx, removed.groupId, removed.originalDate)) {
+    return;
+  }
   await openFirstTimeQuestion(tx, {
     groupId: removed.groupId,
     date: removed.originalDate,

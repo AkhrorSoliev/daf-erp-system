@@ -57,6 +57,14 @@ function makeTx(mocks: any = {}) {
       findUnique: jest.fn().mockResolvedValue(null),
       ...mocks.lessonReschedule,
     },
+    lessonCancellation: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      ...mocks.lessonCancellation,
+    },
+    holiday: {
+      findMany: jest.fn().mockResolvedValue([]),
+      ...mocks.holiday,
+    },
     commentAssignee: {
       findUnique: jest.fn().mockResolvedValue(null),
       deleteMany: jest.fn(),
@@ -410,6 +418,36 @@ describe('reopenAfterRescheduleRemoved — a move made in advance', () => {
     expect(tx.unmarkedLesson.findUnique).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { groupId_date: { groupId: 'g1', date } },
+      }),
+    );
+    expect(tx.unmarkedLesson.create).not.toHaveBeenCalled();
+  });
+
+  // The lesson-end sweep never asks about a holiday or a cancelled day, and a
+  // move can outlive both (a holiday declared after it, a stale-tab cancel).
+  it('opens nothing when the original day is a holiday for the branch', async () => {
+    const tx = txWithRemovedMove();
+    tx.holiday.findMany.mockResolvedValue([
+      { date, endDate: date }, // 28.09, the original day
+    ]);
+    await reopenAfterRescheduleRemoved(tx, args);
+    expect(tx.holiday.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: [{ branchId: null }, { branchId: 2 }],
+        }),
+      }),
+    );
+    expect(tx.unmarkedLesson.create).not.toHaveBeenCalled();
+  });
+
+  it('opens nothing when the original day has a live cancellation', async () => {
+    const tx = txWithRemovedMove();
+    tx.lessonCancellation.findFirst.mockResolvedValue({ id: 'x9' });
+    await reopenAfterRescheduleRemoved(tx, args);
+    expect(tx.lessonCancellation.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { groupId: 'g1', date, deletedAt: null },
       }),
     );
     expect(tx.unmarkedLesson.create).not.toHaveBeenCalled();

@@ -747,8 +747,11 @@ export class LessonReschedulesService {
   /**
    * Soft delete: removes the reschedule but does NOT auto-restore
    * attendance on either date. Admins must re-take attendance manually
-   * on whichever date the lesson actually happened. UI explains this. A
-   * lesson whose «Dars bo'ldimi?» the move answered is asked again.
+   * on whichever date the lesson actually happened. UI explains this. The
+   * original lesson is asked about again («Dars bo'ldimi?») when the move
+   * had answered that question, or when the move was made in advance and the
+   * lesson has since ended unmarked on a day that is neither a holiday nor
+   * cancelled.
    */
   async remove(
     id: string,
