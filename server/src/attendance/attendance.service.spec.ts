@@ -1709,9 +1709,22 @@ describe('AttendanceService', () => {
     });
 
     it('emits attendance.student.recorded only for entries whose status changed', async () => {
+      // A roster saved by hand earlier in the lesson (ADR-0048's predicate).
       const existingRecords = [
-        { id: 'att-1', studentId: 10001, status: 'PRESENT', note: null },
-        { id: 'att-2', studentId: 10002, status: 'ABSENT', note: null },
+        {
+          id: 'att-1',
+          studentId: 10001,
+          status: 'PRESENT',
+          markedMethod: 'MANUAL',
+          note: null,
+        },
+        {
+          id: 'att-2',
+          studentId: 10002,
+          status: 'ABSENT',
+          markedMethod: 'MANUAL',
+          note: null,
+        },
       ];
 
       prisma.enrollment.findMany.mockResolvedValue([
@@ -1967,6 +1980,18 @@ describe('AttendanceService', () => {
         );
       });
 
+      it('an administrator edits it: the status goes in as sent, with no minutes', async () => {
+        await edit('PRESENT');
+        // Not LATE with the two days since the lesson's start (ADR-0048 §2
+        // counts minutes only while the lesson runs).
+        expect(
+          prisma.attendance.upsert.mock.calls.map((c: any) => c[0].update),
+        ).toEqual([
+          expect.objectContaining({ status: 'PRESENT', lateMinutes: null }),
+          expect.objectContaining({ status: 'PRESENT', lateMinutes: null }),
+        ]);
+      });
+
       it("refuses the teacher's edit", async () => {
         await expect(edit('ABSENT', ['Teacher'])).rejects.toThrow(
           "Davomat olib bo'lingan",
@@ -1985,6 +2010,81 @@ describe('AttendanceService', () => {
       it("passes a blocked student's unchanged mark", async () => {
         blocks(10002);
         await expect(edit('ABSENT')).resolves.toMatchObject({ count: 2 });
+      });
+    });
+
+    // ADR-0048 §2 under D1: minutes are written only while the lesson runs,
+    // and only once a roster was saved by hand — QR scans do not count.
+    describe('late arrivals during the lesson (ADR-0048)', () => {
+      const row = (
+        studentId: number,
+        status: string,
+        markedMethod: 'MANUAL' | 'QR',
+        lateMinutes: number | null = null,
+      ) => ({
+        id: `att-${studentId}`,
+        studentId,
+        status,
+        markedMethod,
+        lateMinutes,
+        note: null,
+      });
+      const writes = () =>
+        prisma.attendance.upsert.mock.calls.map((c: any) => c[0].update);
+      const adminSaves = () =>
+        service.save(
+          'group-uuid-1',
+          '2026-04-01',
+          twoPresent,
+          1,
+          ['Administrator'],
+          1,
+        );
+
+      beforeEach(() => {
+        prisma.attendance.upsert.mockImplementation(({ create }: any) =>
+          Promise.resolve({ id: `att-${create.studentId}`, ...create }),
+        );
+      });
+
+      it("takes the administrator's first roster after QR scans as sent", async () => {
+        // 10001 scanned the QR; 10002 did not, and sits in the class.
+        prisma.attendance.findMany.mockResolvedValue([
+          row(10001, 'PRESENT', 'QR'),
+        ]);
+        await adminSaves();
+        expect(writes()).toEqual([
+          expect.objectContaining({ status: 'PRESENT', lateMinutes: null }),
+          expect.objectContaining({ status: 'PRESENT', lateMinutes: null }),
+        ]);
+      });
+
+      it('turns a later ABSENT→PRESENT into LATE with the minutes since the start', async () => {
+        prisma.attendance.findMany.mockResolvedValue([
+          row(10001, 'PRESENT', 'MANUAL'),
+          row(10002, 'ABSENT', 'MANUAL'),
+        ]);
+        await adminSaves(); // 09:30, the lesson started at 09:00
+        expect(writes()[1]).toEqual(
+          expect.objectContaining({ status: 'LATE', lateMinutes: 30 }),
+        );
+        // The history counts what was written, not what was sent.
+        expect(entityHistoryService.recordUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            newValues: expect.objectContaining({ keldi: 1, kechikdi: 1 }),
+          }),
+        );
+      });
+
+      it('clears the minutes on LATE→PRESENT', async () => {
+        prisma.attendance.findMany.mockResolvedValue([
+          row(10001, 'PRESENT', 'MANUAL'),
+          row(10002, 'LATE', 'MANUAL', 12),
+        ]);
+        await adminSaves();
+        expect(writes()[1]).toEqual(
+          expect.objectContaining({ status: 'PRESENT', lateMinutes: null }),
+        );
       });
     });
   });

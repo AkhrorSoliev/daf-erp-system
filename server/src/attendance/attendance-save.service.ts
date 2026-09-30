@@ -27,6 +27,12 @@ import {
 import { LateAttendanceDto } from './dto/late-attendance.dto';
 import { AttendanceValidationService } from './attendance-validation.service';
 import { assertAttendanceWindowOpen } from './shared/attendance-window-guard';
+import {
+  lateArrival,
+  minutesLate,
+  newAttendanceWindow,
+  tashkentClock,
+} from './shared/attendance-window';
 import { rosterOnDate } from './shared/roster-on-date';
 import { closeLessonTask } from '../unmarked-lessons/lesson-task';
 import {
@@ -46,7 +52,19 @@ interface ExistingRecord {
   id: string;
   studentId: number;
   status: AttendanceStatus;
+  lateMinutes: number | null;
+  markedMethod: AttendanceMethod;
   note: string | null;
+}
+
+/**
+ * ADR-0048 §2: what a save needs to record a late arrival. `rosterTaken` — a
+ * roster was already saved by hand (QR scans are not one); `minutesNow` —
+ * `minutesLate` now, or null when the lesson is not running.
+ */
+interface LateContext {
+  rosterTaken: boolean;
+  minutesNow: number | null;
 }
 
 interface StatusChange {
@@ -207,6 +225,17 @@ export class AttendanceSaveService {
           },
         );
 
+        // Late minutes only while the lesson runs: an edit after the end
+        // (D1) goes in as sent.
+        const now = new Date();
+        const running =
+          newAttendanceWindow({
+            ...tashkentClock(now),
+            date,
+            startTime: effectiveStartTime,
+            endTime: effectiveEndTime,
+            opensMinutesBefore,
+          }) === 'OPEN';
         return this.writeEntries(tx, {
           groupId,
           parsedDate,
@@ -217,11 +246,25 @@ export class AttendanceSaveService {
           enrollmentIdByStudent,
           existingRecords,
           entries: dto.entries,
+          late: {
+            rosterTaken: existingRecords.some(
+              (r) => r.markedMethod === AttendanceMethod.MANUAL,
+            ),
+            minutesNow: running
+              ? minutesLate({
+                  lessonDay: date,
+                  startTime: effectiveStartTime,
+                  now,
+                })
+              : null,
+          },
         });
       }, TX_OPTIONS)
       .catch(rethrowAsConflict);
 
-    // One history entry per save action (outside the transaction).
+    // One history entry per save action (outside the transaction). It counts
+    // what was written — a late arrival included — not what was sent.
+    const written = results.statusChanges.map((c) => ({ status: c.newStatus }));
     const isUpdate = results.existingMap.size > 0;
     if (isUpdate) {
       await this.entityHistoryService.recordUpdate({
@@ -232,7 +275,7 @@ export class AttendanceSaveService {
           'DAVOMAT_YANGILANDI',
           date,
         ),
-        newValues: summary(dto.entries, 'DAVOMAT_YANGILANDI', date),
+        newValues: summary(written, 'DAVOMAT_YANGILANDI', date),
         changedById: userId,
         companyId,
       });
@@ -240,7 +283,7 @@ export class AttendanceSaveService {
       await this.entityHistoryService.recordCreate({
         entityType: 'GroupAttendance',
         entityId: groupId,
-        newValues: summary(dto.entries, 'DAVOMAT_OLINDI', date),
+        newValues: summary(written, 'DAVOMAT_OLINDI', date),
         changedById: userId,
         companyId,
       });
@@ -385,6 +428,8 @@ export class AttendanceSaveService {
           enrollmentIdByStudent: billedEnrollmentIdByStudent,
           existingRecords: [],
           entries: dto.entries,
+          // The lesson is over: «Bo'ldi» records no late minutes.
+          late: { rosterTaken: false, minutesNow: null },
         });
         await closeLessonTask(tx, row.taskCommentId, userId);
         return {
@@ -528,6 +573,7 @@ export class AttendanceSaveService {
       enrollmentIdByStudent: Map<number, string>;
       existingRecords: ExistingRecord[];
       entries: AttendanceEntryDto[];
+      late: LateContext;
     },
   ): Promise<WriteResult> {
     const existingMap = new Map(
@@ -539,11 +585,20 @@ export class AttendanceSaveService {
     for (const entry of ctx.entries) {
       // Teacher can't write notes
       const note = ctx.isTeacherOnly ? undefined : entry.note;
-      const oldStatus = existingMap.get(entry.studentId)?.status ?? null;
+      const existing = existingMap.get(entry.studentId);
+      const oldStatus = existing?.status ?? null;
+      // ADR-0048 §2: a late arrival is written as LATE with its minutes;
+      // the history, the events and billing all follow the written status.
+      const arrival = lateArrival({
+        lessonAlreadyTaken: ctx.late.rosterTaken,
+        savedByTeacherOnly: ctx.isTeacherOnly,
+        oldStatus,
+        oldLateMinutes: existing?.lateMinutes ?? null,
+        newStatus: entry.status,
+        minutesNow: ctx.late.minutesNow,
+      });
+      const status = arrival.status as AttendanceStatus;
 
-      // TODO(integration §4.4): late minutes — write `lateArrival(...)`'s
-      // status + lateMinutes (shared/attendance-window.ts), only while the
-      // lesson runs; billing and statusChanges follow the written status.
       const result = await tx.attendance.upsert({
         where: {
           groupId_studentId_date: {
@@ -556,14 +611,16 @@ export class AttendanceSaveService {
           groupId: ctx.groupId,
           studentId: entry.studentId,
           date: ctx.parsedDate,
-          status: entry.status,
+          status,
+          lateMinutes: arrival.lateMinutes,
           note: note ?? null,
           markedById: ctx.userId,
           markedMethod: AttendanceMethod.MANUAL,
           companyId: ctx.companyId,
         },
         update: {
-          status: entry.status,
+          status,
+          lateMinutes: arrival.lateMinutes,
           ...(note !== undefined && { note: note ?? null }),
           markedById: ctx.userId,
           markedMethod: AttendanceMethod.MANUAL,
@@ -573,7 +630,7 @@ export class AttendanceSaveService {
       statusChanges.push({
         studentId: entry.studentId,
         oldStatus,
-        newStatus: entry.status,
+        newStatus: status,
       });
 
       // Single billing pipeline shared with QR. Handles all four transitions
@@ -589,7 +646,7 @@ export class AttendanceSaveService {
           branchId: ctx.branchId,
           lessonDate: ctx.parsedDate,
           oldStatus,
-          newStatus: entry.status,
+          newStatus: status,
           companyId: ctx.companyId,
           performedById: ctx.userId,
         });

@@ -195,6 +195,28 @@ describe('AttendanceSaveService.saveLate', () => {
     );
   });
 
+  it("writes the register as sent: «Bo'ldi» records no late minutes (ADR-0048)", async () => {
+    await service.saveLate(
+      'g1',
+      '2026-09-28',
+      {
+        entries: [
+          { studentId: 10001, status: 'LATE' },
+          { studentId: 10002, status: 'PRESENT' },
+        ],
+      },
+      3,
+      ['Administrator'],
+      1,
+    );
+    expect(
+      tx.attendance.upsert.mock.calls.map((c: any) => c[0].create),
+    ).toEqual([
+      expect.objectContaining({ status: 'LATE', lateMinutes: null }),
+      expect.objectContaining({ status: 'PRESENT', lateMinutes: null }),
+    ]);
+  });
+
   it('records a departed student but takes no money in a lesson-pack course', async () => {
     await service.saveLate(
       'g1',
