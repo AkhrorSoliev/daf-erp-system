@@ -122,14 +122,17 @@ export class LessonCancellationsService {
 
   /**
    * Cancel a single lesson. If attendance was already taken, atomically
-   * reverse each affected student's consumption + accrual + restore prepaid.
+   * reverse each affected student's consumption + accrual + restore prepaid,
+   * then release the day from every monthly charge that billed it (ADR-0053).
    *
-   * Misol 6 — admin cancels a day with PRESENT records: every PRESENT/LATE
-   * is flipped to EXCUSED, cancellationId set, money is held (returns as
-   * prepaid +1) so the student doesn't lose value.
+   * Misol 6 — admin cancels a day with marked attendance: every PRESENT/LATE/
+   * ABSENT (every billable status) is flipped to EXCUSED, cancellationId set,
+   * money is held (returns as prepaid +1, or to the balance for a debtor's
+   * SINGLE_UNCOVERED lesson) so the student doesn't lose value.
    *
-   * Misol 7 — cancellation with attendance that had no consumption
-   * (insufficient balance): prepaid is NOT incremented (no free lessons).
+   * Misol 7 — cancellation with attendance that had no consumption (legacy
+   * rows from before the debtor path billed): prepaid is NOT incremented (no
+   * free lessons).
    */
   async create(
     dto: CreateLessonCancellationDto,

@@ -6,7 +6,7 @@
 
 > ⚠️ **Bu hujjat 2026-aprel holatini tasvirlaydi va ko'p joyda eskirgan.** Hozirgi qoidalar — [`server/CLAUDE.md`](../server/CLAUDE.md) «Financial System» bo'limi, atamalar — [`CONTEXT.md`](../CONTEXT.md), qarorlar — [`docs/adr/`](adr/README.md). Hujjat bilan kod zid kelsa, **kod haqiqat**.
 >
-> Kodga moslab tuzatilgan joylar: soliq (hisoblanmaydi), pul qaytarish (bir qadam, 50% qoidasi yo'q), oylik davri (prod'da kalendar oyi), ABSENT (hisoblanadi), Payme'da bajarilgan to'lovni bekor qilish, shartnomalar (CRUD moduli olib tashlangan). Qolgan bo'limlar tarixiy rasm sifatida qoldirilgan — ularga tayanishdan oldin kodni tekshiring.
+> Kodga moslab tuzatilgan joylar: soliq (hisoblanmaydi), pul qaytarish (bir qadam, 50% qoidasi yo'q), oylik davri (prod'da kalendar oyi), ABSENT (hisoblanadi), Payme'da bajarilgan to'lovni bekor qilish, shartnomalar (CRUD moduli olib tashlangan), enum ro'yxatlari. Qolgan bo'limlar tarixiy rasm sifatida qoldirilgan — ularga tayanishdan oldin kodni tekshiring.
 
 ---
 
@@ -15,7 +15,7 @@
 Moliyaviy modul quyidagi jarayonlarni boshqaradi:
 - O'quvchi to'lovlari (naqd va online)
 - Xodimlar oyliklari (o'qituvchi, administrator, kassir, filial direktori)
-- Markaz xarajatlari (ijara, kommunal, ta'minot, marketing, ustozga avans)
+- Markaz xarajatlari (ijara, kommunal, ta'minot, marketing, ustozga avans, jihozlar, ta'mirlash, soliqlar)
 - O'quvchi shartnomasi (model saqlangan, CRUD moduli olib tashlangan — §4.3)
 - Pul qaytarish (refund)
 - Moliyaviy hisobotlar va KPI lar
@@ -36,12 +36,12 @@ Moliyaviy yozuvlar **hech qachon o'chirilmaydi yoki tahrir qilinmaydi**. Xatolik
 | `PaymentMethod` | CASH, PAYME, CLICK, UZUM, TRANSFER | To'lov usuli |
 | `PaymentStatus` | PENDING, COMPLETED, FAILED, REFUNDED, CANCELLED, **REVERSED** | To'lov holati |
 | `PaymentSource` | ADMIN_MANUAL, STUDENT_PORTAL, GATEWAY_WEBHOOK, MANUAL_ATTACH | To'lov manbai |
-| `TransactionType` | PAYMENT, LESSON_DEDUCTION, REFUND, SALARY_ACCRUAL, SALARY_PAYMENT, EXPENSE, ADJUSTMENT, TAX | Tranzaksiya turi |
+| `TransactionType` | PAYMENT, LESSON_DEDUCTION, LESSON_CONSUMPTION, INITIAL_BALANCE, REFUND, SALARY_ACCRUAL, SALARY_PAYMENT, EXPENSE, ADJUSTMENT, TAX, BALANCE_WITHDRAWAL, DISCOUNT_ADJUSTMENT, MOCK_EXAM_FEE, DEBT_WRITE_OFF | Tranzaksiya turi |
 | `ContractStatus` | DRAFT, ACTIVE, COMPLETED, CANCELLED, REFUNDED | Shartnoma holati |
 | `SalaryType` | PERCENTAGE, FIXED_PER_STUDENT, **FIXED_MONTHLY** | Oylik hisoblash turi |
 | `SalaryPaymentStatus` | CALCULATED, APPROVED, PAID, CANCELLED | Oylik to'lov holati |
 | `RefundStatus` | REQUESTED, APPROVED, PROCESSING, COMPLETED, REJECTED | Refund holati |
-| `ExpenseCategory` | RENT, UTILITIES, SUPPLIES, MARKETING, **TEACHER_ADVANCE**, OTHER | Xarajat kategoriyasi |
+| `ExpenseCategory` | RENT, UTILITIES, SUPPLIES, MARKETING, **TEACHER_ADVANCE**, EQUIPMENT, MAINTENANCE, TAXES, OTHER | Xarajat kategoriyasi |
 
 ### 2.2 Moliyaviy Modellar
 
@@ -190,7 +190,7 @@ Faqat PERCENTAGE va FIXED_PER_STUDENT turidagi o'qituvchilar uchun.
 
 | Ustun | Turi | Tavsif |
 |-------|------|--------|
-| category | ExpenseCategory | RENT, UTILITIES, SUPPLIES, MARKETING, TEACHER_ADVANCE, OTHER |
+| category | ExpenseCategory | RENT, UTILITIES, SUPPLIES, MARKETING, TEACHER_ADVANCE, EQUIPMENT, MAINTENANCE, TAXES, OTHER |
 | amount | Int | Summa |
 | description | String | Tavsif |
 | date | Date | Sana |
