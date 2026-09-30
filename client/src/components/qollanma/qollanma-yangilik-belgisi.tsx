@@ -10,7 +10,11 @@ import { oxirgiKorilganniOqi, yangiliklarObunasi } from "@/qollanma/yangiliklar-
 
 export function QollanmaYangilikBelgisi() {
   const user = useAuth((s) => s.user);
-  const oxirgi = useSyncExternalStore(yangiliklarObunasi, oxirgiKorilganniOqi, () => undefined);
+  const oxirgi = useSyncExternalStore(
+    yangiliklarObunasi,
+    () => (user ? oxirgiKorilganniOqi(user.id) : undefined),
+    () => undefined,
+  );
 
   if (!user || oxirgi === undefined) return null;
   const son = oqilmaganSoni(
@@ -19,5 +23,15 @@ export function QollanmaYangilikBelgisi() {
     tashkentNow().dateStr,
   );
   if (son === 0) return null;
-  return <SidebarMenuBadge aria-label={`${son} ta yangilik`}>{son}</SidebarMenuBadge>;
+  return (
+    <>
+      <SidebarMenuBadge aria-hidden>{son}</SidebarMenuBadge>
+      {/* Yig'ilgan (faqat belgilar) menyuda raqam yashirin — o'rniga nuqta. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-1.5 top-1.5 hidden size-2 rounded-full bg-primary group-data-[collapsible=icon]:block"
+      />
+      <span className="sr-only">{son} ta yangi o&apos;zgarish</span>
+    </>
+  );
 }

@@ -12,11 +12,15 @@ import { sanaKorinishi } from "@/qollanma/sana";
 
 export function YangiliklarRoyxati() {
   const user = useAuth((s) => s.user);
+  const userId = user?.id;
 
   useEffect(() => {
+    if (userId === undefined) return;
+    // Ko'rilgan sana ataylab rolga qaramay eng yangi yozuv: keyinroq rol qo'shilsa,
+    // o'sha rolning eski yozuvlari belgini birdan to'ldirib yubormasin.
     const eng = engYangiSana(yangiliklar);
-    if (eng) oxirgiKorilganniYoz(eng);
-  }, []);
+    if (eng) oxirgiKorilganniYoz(userId, eng);
+  }, [userId]);
 
   const royxat = user ? yangiliklarRolUchun(yangiliklar, user.roles.map((r) => r.id)) : null;
 

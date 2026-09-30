@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 import { routeLabels } from "@/lib/breadcrumb-routes";
+import { tashkentNow } from "@/lib/tashkent-time";
 import { bolimlar } from "./bolimlar";
 import { sahifalar } from "./sahifalar";
 import { haqiqiySanami } from "./sana";
@@ -130,5 +131,19 @@ describe("«Nima yangi»", () => {
     }
     const sanalar = yangiliklar.map((y) => y.sana);
     expect(sanalar).toEqual([...sanalar].sort().reverse());
+  });
+
+  it("yozuv to'liq, sana kelajakda emas, bir kunda bir xil sarlavha takrorlanmaydi", () => {
+    const bugun = tashkentNow().dateStr;
+    for (const y of yangiliklar) {
+      expect(y.sarlavha.trim().length, `${y.sarlavha} sarlavha`).toBeGreaterThan(0);
+      expect(y.matn.trim().length, `${y.sarlavha} matn`).toBeGreaterThan(0);
+      // Bo'sh `rollar: []` yozuvni hech kimga ko'rsatmaydi; "hamma uchun" — rollar yozilmaydi.
+      if (y.rollar) expect(y.rollar.length, `${y.sarlavha} rollar`).toBeGreaterThan(0);
+      expect(y.sana <= bugun, `${y.sarlavha}: ${y.sana} kelajakda (bugun ${bugun})`).toBe(true);
+    }
+    // Ro'yxat sahifasi `sana-sarlavha`ni React kaliti qiladi.
+    const kalitlar = yangiliklar.map((y) => `${y.sana} ${y.sarlavha}`);
+    expect(kalitlar.filter((k, i) => kalitlar.indexOf(k) !== i)).toEqual([]);
   });
 });
