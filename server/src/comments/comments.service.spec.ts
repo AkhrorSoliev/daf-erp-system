@@ -767,6 +767,7 @@ describe('CommentsService', () => {
                     groupId: true,
                     date: true,
                     status: true,
+                    teacherPayExempt: true,
                     lessonStartTime: true,
                     lessonEndTime: true,
                     group: { select: { name: true } },
