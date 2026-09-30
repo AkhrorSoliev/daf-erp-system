@@ -101,6 +101,23 @@ export function lessonHasEnded(args: {
   return args.nowMinutes >= toMinutes(args.endTime ?? DAY_END_TIME);
 }
 
+/**
+ * An edit after the lesson (CEO 30.09, D1) keeps contract 3.2 as the lesson
+ * saw it. Once a manual save took the register, every student it could mark
+ * has a row, so a roster student without one was kept out then (unpaid, or
+ * not in the group yet). After the end he stays out: a payment since does
+ * not put him in the lesson, and the teacher was told it earns nothing for
+ * him. Empty while the lesson runs, and for a register only QR scans took:
+ * the first manual save there still marks everyone.
+ */
+export function leftOutAfterEnd(input: {
+  ended: boolean;
+  takenManually: boolean;
+  unmarkedIds: readonly number[];
+}): Set<number> {
+  return new Set(input.ended && input.takenManually ? input.unmarkedIds : []);
+}
+
 /** The Uzbek refusal for a closed window; `null` while it is open. */
 export function windowRefusal(
   window: AttendanceWindow,

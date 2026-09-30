@@ -29,6 +29,8 @@ import { AttendanceValidationService } from './attendance-validation.service';
 import { assertAttendanceWindowOpen } from './shared/attendance-window-guard';
 import {
   lateArrival,
+  leftOutAfterEnd,
+  lessonHasEnded,
   minutesLate,
   newAttendanceWindow,
   tashkentClock,
@@ -189,11 +191,27 @@ export class AttendanceSaveService {
         const blocked = await this.blockedStudents(tx, groupId, date, [
           ...enrollmentIdByStudent.keys(),
         ]);
-        this.assertFullRoster(enrollmentIdByStudent, dto.entries, blocked);
-
         const existingRecords = await tx.attendance.findMany({
           where: { groupId, date: parsedDate },
         });
+        const takenManually = existingRecords.some(
+          (r) => r.markedMethod === AttendanceMethod.MANUAL,
+        );
+        const now = new Date();
+        const clock = tashkentClock(now);
+        const marked = new Set(existingRecords.map((r) => r.studentId));
+        const leftOut = leftOutAfterEnd({
+          ended: lessonHasEnded({ date, ...clock, endTime: effectiveEndTime }),
+          takenManually,
+          unmarkedIds: [...enrollmentIdByStudent.keys()].filter(
+            (id) => !marked.has(id),
+          ),
+        });
+        this.assertFullRoster(
+          enrollmentIdByStudent,
+          dto.entries,
+          new Set([...blocked, ...leftOut]),
+        );
 
         // Teacher can take attendance only once — editing is admin-only.
         if (isTeacherOnly && existingRecords.length > 0) {
@@ -224,14 +242,14 @@ export class AttendanceSaveService {
             const s = enrolled.find((e) => e.studentId === id)?.student;
             return s ? `${s.firstName} ${s.lastName}` : `#${id}`;
           },
+          leftOut,
         );
 
         // Late minutes only while the lesson runs: an edit after the end
         // (D1) goes in as sent.
-        const now = new Date();
         const running =
           newAttendanceWindow({
-            ...tashkentClock(now),
+            ...clock,
             date,
             startTime: effectiveStartTime,
             endTime: effectiveEndTime,
@@ -248,9 +266,7 @@ export class AttendanceSaveService {
           existingRecords,
           entries: dto.entries,
           late: {
-            rosterTaken: existingRecords.some(
-              (r) => r.markedMethod === AttendanceMethod.MANUAL,
-            ),
+            rosterTaken: takenManually,
             minutesNow: running
               ? minutesLate({
                   lessonDay: date,
@@ -496,25 +512,30 @@ export class AttendanceSaveService {
 
   /**
    * Contract 3.2: a student the rule keeps out of the lesson cannot be marked
-   * present, late or absent. EXCUSED is allowed, and a mark that does not
-   * change is not judged again.
+   * present, late or absent, nor, after the lesson, one the register left out
+   * (`leftOutAfterEnd`). EXCUSED is allowed, and a mark that does not change
+   * is not judged again.
    */
   private async assertAdmitted(
     entries: AttendanceEntryDto[],
     blocked: Set<number>,
     existing: ExistingRecord[],
     nameOf: (studentId: number) => string | Promise<string>,
+    leftOut: ReadonlySet<number> = new Set(),
   ): Promise<void> {
     const oldStatus = new Map(existing.map((r) => [r.studentId, r.status]));
     const refused = entries.find(
       (e) =>
-        blocked.has(e.studentId) &&
+        (blocked.has(e.studentId) || leftOut.has(e.studentId)) &&
         e.status !== AttendanceStatus.EXCUSED &&
         oldStatus.get(e.studentId) !== e.status,
     );
     if (!refused) return;
+    const name = await nameOf(refused.studentId);
     throw new BadRequestException(
-      `${await nameOf(refused.studentId)} to'lov qilmagan: shartnomaga ko'ra 2-darsdan boshlab to'lov qilinmaguncha darsga qo'yilmaydi`,
+      leftOut.has(refused.studentId)
+        ? `${name} dars vaqtida davomatga kiritilmagan: dars tugagach «Keldi», «Kelmadi» yoki «Kechikdi» qo'yib bo'lmaydi`
+        : `${name} to'lov qilmagan: shartnomaga ko'ra 2-darsdan boshlab to'lov qilinmaguncha darsga qo'yilmaydi`,
     );
   }
 

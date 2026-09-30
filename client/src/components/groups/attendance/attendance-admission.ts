@@ -32,6 +32,14 @@ export function admissionCopy(
   isAdmin: boolean,
 ): { blocked: boolean; label: string | null; warning: string | null } {
   if (!admission) return { blocked: false, label: null, warning: null };
+  // After the lesson: no payment lets him into it, so no payment prompt.
+  if (admission.reason === "LEFT_OUT") {
+    return {
+      blocked: true,
+      label: "Dars vaqtida davomatga kiritilmagan",
+      warning: null,
+    };
+  }
   if (!admission.admitted) {
     return {
       blocked: true,

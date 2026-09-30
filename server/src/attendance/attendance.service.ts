@@ -6,7 +6,12 @@ import { AttendanceReadService } from './attendance-read.service';
 import { AttendanceStatsService } from './attendance-stats.service';
 import { AttendanceSaveService } from './attendance-save.service';
 import { LessonAdmissionService } from '../billing/lesson-admission.service';
-import { ADMITTED_WITHOUT_RULE } from '../billing/lesson-admission';
+import { ADMITTED_WITHOUT_RULE, LEFT_OUT } from '../billing/lesson-admission';
+import {
+  leftOutAfterEnd,
+  lessonHasEnded,
+  tashkentClock,
+} from './shared/attendance-window';
 
 @Injectable()
 export class AttendanceService {
@@ -60,12 +65,27 @@ export class AttendanceService {
         studentIds: roster.activeStudents.map((s) => s.studentId),
       }),
     ]);
+    // After the lesson a student the register left out stays out, paid or
+    // not — as `save()` judges it.
+    const leftOut = leftOutAfterEnd({
+      ended: lessonHasEnded({
+        date,
+        ...tashkentClock(),
+        endTime: roster.effectiveEndTime,
+      }),
+      takenManually: roster.registerTakenManually,
+      unmarkedIds: roster.activeStudents
+        .filter((s) => s.status === null)
+        .map((s) => s.studentId),
+    });
     return {
       ...roster,
       opensMinutesBefore,
       activeStudents: roster.activeStudents.map((s) => ({
         ...s,
-        admission: admission.get(s.studentId) ?? ADMITTED_WITHOUT_RULE,
+        admission: leftOut.has(s.studentId)
+          ? LEFT_OUT
+          : (admission.get(s.studentId) ?? ADMITTED_WITHOUT_RULE),
       })),
     };
   }

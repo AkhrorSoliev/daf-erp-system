@@ -31,6 +31,21 @@ describe("admissionCopy", () => {
     expect(warning).not.toContain("Bugungi");
   });
 
+  it("locks a student the register left out, with no payment prompt", () => {
+    const leftOut = {
+      admitted: false,
+      reason: "LEFT_OUT" as const,
+      shortfall: 0,
+      paidThrough: null,
+    };
+    expect(admissionCopy(leftOut, true)).toEqual({
+      blocked: true,
+      label: "Dars vaqtida davomatga kiritilmagan",
+      warning: null,
+    });
+    expect(markableStudents([{ admission: leftOut }])).toEqual([]);
+  });
+
   it("names how far a part payment reaches", () => {
     expect(
       admissionCopy(

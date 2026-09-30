@@ -4,7 +4,11 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AttendanceStatus, EnrollmentStatus } from '@prisma/client';
+import {
+  AttendanceMethod,
+  AttendanceStatus,
+  EnrollmentStatus,
+} from '@prisma/client';
 import { STUDENT_ROSTER_ORDER_BY } from '../common/student-roster-order';
 import {
   JS_TO_DAY_NAME,
@@ -641,6 +645,7 @@ export class AttendanceReadService {
         status: true,
         note: true,
         lateMinutes: true,
+        markedMethod: true,
       },
     });
 
@@ -767,6 +772,10 @@ export class AttendanceReadService {
       coursePrice: group.course.price,
       effectiveStartTime,
       effectiveEndTime,
+      // A manual save took the register (`leftOutAfterEnd`).
+      registerTakenManually: existingAttendance.some(
+        (a) => a.markedMethod === AttendanceMethod.MANUAL,
+      ),
     };
   }
 

@@ -13,7 +13,12 @@ export type AdmissionReason =
   | 'NOT_APPLIED'
   | 'FIRST_LESSON'
   | 'PAID'
-  | 'NOT_PAID';
+  | 'NOT_PAID'
+  /**
+   * An edit after the lesson: the register a manual save took left the
+   * student out (`leftOutAfterEnd`), and a payment since does not put him in.
+   */
+  | 'LEFT_OUT';
 
 export interface LessonAdmission {
   admitted: boolean;
@@ -30,6 +35,13 @@ export interface LessonAdmission {
 export const ADMITTED_WITHOUT_RULE: LessonAdmission = {
   admitted: true,
   reason: 'NOT_APPLIED',
+  shortfall: 0,
+  paidThrough: null,
+};
+
+export const LEFT_OUT: LessonAdmission = {
+  admitted: false,
+  reason: 'LEFT_OUT',
   shortfall: 0,
   paidThrough: null,
 };
@@ -106,7 +118,15 @@ export function lessonAdmission(input: {
   lessonDay: string;
   groupId: string;
   balance: number;
+  /** The lesson month's charges. */
   charges: readonly AdmissionCharge[];
+  /**
+   * The student's charges of later months. The balance already carries
+   * them and money settles the oldest charge first, so they count as still
+   * held: posted since the lesson, they must not keep a student who paid the
+   * lesson's month out of it («Bo'ldi» or an edit on 02.11 for 29.10).
+   */
+  laterCharges?: readonly AdmissionCharge[];
 }): LessonAdmission {
   if (input.lessonDay < ADMISSION_START_DAY) return ADMITTED_WITHOUT_RULE;
   const lessons = groupLessons(input.charges, input.groupId);
@@ -124,7 +144,8 @@ export function lessonAdmission(input: {
     };
   }
 
-  const reach = input.balance + heldAfter(input.charges, input.lessonDay);
+  const held = [...input.charges, ...(input.laterCharges ?? [])];
+  const reach = input.balance + heldAfter(held, input.lessonDay);
   if (reach < 0) {
     return {
       admitted: false,
@@ -139,7 +160,7 @@ export function lessonAdmission(input: {
     paidThrough = input.lessonDay;
     for (const day of lessons) {
       if (day <= input.lessonDay) continue;
-      if (input.balance + heldAfter(input.charges, day) < 0) break;
+      if (input.balance + heldAfter(held, day) < 0) break;
       paidThrough = day;
     }
   }

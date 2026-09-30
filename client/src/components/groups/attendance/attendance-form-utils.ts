@@ -37,7 +37,9 @@ export interface StudentAttendance {
 /** Contract 3.2 admission of one student to this lesson (ADR-0047). */
 export interface LessonAdmission {
   admitted: boolean;
-  reason: "NOT_APPLIED" | "FIRST_LESSON" | "PAID" | "NOT_PAID";
+  // LEFT_OUT: after the lesson, a student the register left out stays out,
+  // paid or not (server `leftOutAfterEnd`).
+  reason: "NOT_APPLIED" | "FIRST_LESSON" | "PAID" | "NOT_PAID" | "LEFT_OUT";
   /** The least payment that admits the student today. */
   shortfall: number;
   /** Admitted while owing: the last lesson this month the balance reaches. */

@@ -4,6 +4,8 @@ const OCT = ['2026-10-02', '2026-10-05', '2026-10-07'];
 const chargeRow = (studentId: number) => ({
   studentId,
   groupId: 'g005',
+  periodYear: 2026,
+  periodMonth: 10,
   coveredDates: OCT,
   frozenOutDates: [],
   coveredLessons: 3,
@@ -79,13 +81,34 @@ describe('LessonAdmissionService', () => {
     expect(prisma.enrollmentMonthlyCharge.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          periodYear: 2026,
-          periodMonth: 10,
+          OR: [
+            { periodYear: { gt: 2026 } },
+            { periodYear: 2026, periodMonth: { gte: 10 } },
+          ],
           status: 'CHARGED',
           enrollment: { status: 'ACTIVE', deletedAt: null },
         }),
       }),
     );
+  });
+
+  it("counts a later month's charge as held: October paid, November owed", async () => {
+    prisma.student.findMany.mockResolvedValue([{ id: 1, balance: -300000 }]);
+    // October (300 000) paid in full, November's 300 000 posted and unpaid.
+    prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+      chargeRow(1),
+      {
+        ...chargeRow(1),
+        periodMonth: 11,
+        coveredDates: ['2026-11-02', '2026-11-04', '2026-11-06'],
+      },
+    ]);
+    const result = await service.forLesson({
+      groupId: 'g005',
+      lessonDay: '2026-10-07',
+      studentIds: [1],
+    });
+    expect(result.get(1)).toMatchObject({ admitted: true, reason: 'PAID' });
   });
 
   it('reads nothing before the rule starts', async () => {

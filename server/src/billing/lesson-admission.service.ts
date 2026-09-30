@@ -49,20 +49,26 @@ export class LessonAdmissionService {
     if (students.length === 0) return result;
     // Switched off: nobody is kept out, the map stays empty (all admitted).
     if (!(await this.ruleEnabled(students[0].companyId))) return result;
+    // Later months too: the balance already carries their charges.
     const charges = await this.loadCharges(
       client,
       params.studentIds,
       year,
       month,
+      true,
     );
+    const inMonth = (c: { periodYear: number; periodMonth: number }) =>
+      c.periodYear === year && c.periodMonth === month;
     for (const student of students) {
+      const own = charges.filter((c) => c.studentId === student.id);
       result.set(
         student.id,
         lessonAdmission({
           lessonDay: params.lessonDay,
           groupId: params.groupId,
           balance: student.balance,
-          charges: charges.filter((c) => c.studentId === student.id),
+          charges: own.filter(inMonth),
+          laterCharges: own.filter((c) => !inMonth(c)),
         }),
       );
     }
@@ -170,18 +176,34 @@ export class LessonAdmissionService {
     studentIds: number[],
     year: number,
     month: number,
-  ): Promise<(AdmissionCharge & { studentId: number; groupName: string })[]> {
+    andLater = false,
+  ): Promise<
+    (AdmissionCharge & {
+      studentId: number;
+      groupName: string;
+      periodYear: number;
+      periodMonth: number;
+    })[]
+  > {
     const rows = await client.enrollmentMonthlyCharge.findMany({
       where: {
         studentId: { in: studentIds },
-        periodYear: year,
-        periodMonth: month,
+        ...(andLater
+          ? {
+              OR: [
+                { periodYear: { gt: year } },
+                { periodYear: year, periodMonth: { gte: month } },
+              ],
+            }
+          : { periodYear: year, periodMonth: month }),
         status: MonthlyChargeStatus.CHARGED,
         enrollment: { status: EnrollmentStatus.ACTIVE, deletedAt: null },
       },
       select: {
         studentId: true,
         groupId: true,
+        periodYear: true,
+        periodMonth: true,
         coveredDates: true,
         frozenOutDates: true,
         coveredLessons: true,

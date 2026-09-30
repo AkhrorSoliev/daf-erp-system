@@ -136,6 +136,33 @@ describe('lessonAdmission', () => {
     expect(admit(-450000, '2026-10-05', [])).toEqual(ADMITTED_WITHOUT_RULE);
   });
 
+  it("counts a later month's charge as still held (October paid, November owed)", () => {
+    // November: 12 lessons, 450 000, posted on 01.11 and unpaid.
+    const nov: AdmissionCharge = {
+      ...g005,
+      coveredDates: Array.from(
+        { length: 12 },
+        (_, i) => `2026-11-${String(i + 2).padStart(2, '0')}`,
+      ),
+      coveredLessons: 12,
+      perLessonCost: 37500,
+    };
+    // «Bo'ldi» on 02.11 for 30.10, October's last lesson.
+    const onLast = (balance: number) =>
+      lessonAdmission({
+        lessonDay: '2026-10-30',
+        groupId: 'g005',
+        balance,
+        charges: [g005],
+        laterCharges: [nov],
+      });
+    expect(onLast(-450000).admitted).toBe(true);
+    // One so'm of October still owed.
+    expect(onLast(-450001)).toMatchObject({ admitted: false, shortfall: 1 });
+    // Without November counted, the student who paid October is kept out.
+    expect(admit(-450000, '2026-10-30').admitted).toBe(false);
+  });
+
   it('the first lesson after a mid-month join is free', () => {
     const joined = { ...g005, coveredDates: OCT.slice(8), coveredLessons: 5 };
     expect(admit(-173077, '2026-10-21', [joined]).reason).toBe('FIRST_LESSON');
