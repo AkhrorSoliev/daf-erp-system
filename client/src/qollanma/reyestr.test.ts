@@ -27,6 +27,8 @@ function ichidaSahifaBor(papka: string): boolean {
 
 /** Naqsh `src/app/(dashboard)` dagi haqiqiy marshrutga mos keladimi. */
 function marshrutBor(naqsh: string): boolean {
+  // Faqat yolMosmi tushunadigan shakl: "/" yoki kichik harfli segmentlar, oxirida ixtiyoriy "/*".
+  if (!/^\/$|^(\/[a-z0-9-]+)+(\/\*)?$/.test(naqsh)) return false;
   const qismlar = naqsh.replace(/\/\*$/, "").split("/").filter(Boolean);
   const papka = join(APP, ...qismlar);
   if (!naqsh.endsWith("/*")) return existsSync(join(papka, "page.tsx"));
@@ -54,7 +56,7 @@ describe("qo'llanma reyestri", () => {
 
   it("slug takrorlanmaydi", () => {
     const hammasi = sahifalar.map(slug);
-    expect(new Set(hammasi).size).toBe(hammasi.length);
+    expect(hammasi.filter((s, i) => hammasi.indexOf(s) !== i)).toEqual([]);
   });
 
   it("har sahifaning bo'limi bolimlar.ts da bor", () => {
@@ -67,6 +69,7 @@ describe("qo'llanma reyestri", () => {
       expect(haqiqiySanami(s.yangilangan), `${slug(s)} yangilangan`).toBe(true);
       expect(s.rollar.length, `${slug(s)} rollar`).toBeGreaterThan(0);
       expect(s.qisqacha.trim().length, `${slug(s)} qisqacha`).toBeGreaterThan(0);
+      expect(s.sarlavha.trim().length, `${slug(s)} sarlavha`).toBeGreaterThan(0);
       for (const adr of s.adr) expect(adr, `${slug(s)} adr`).toMatch(/^\d{4}$/);
     }
   });
@@ -83,6 +86,11 @@ describe("qo'llanma reyestri", () => {
       .filter((s) => bolimIdlar.has(s.sahifa) || (routeLabels[s.sahifa] !== undefined && routeLabels[s.sahifa] !== s.sarlavha))
       .map(slug);
     expect(xato).toEqual([]);
+
+    const bolimXato = bolimlar
+      .filter((b) => routeLabels[b.id] !== undefined && routeLabels[b.id] !== b.nom)
+      .map((b) => b.id);
+    expect(bolimXato).toEqual([]);
   });
 
   it("MDX h1 yozmaydi — sarlavha reyestrdan", () => {
@@ -98,6 +106,16 @@ describe("qo'llanma reyestri", () => {
         .filter((rasm) => !existsSync(join(PUBLIC, rasm)))
         .map((rasm) => `${relative(KONTENT, f)}: ${rasm}`);
     });
+    expect(xato).toEqual([]);
+  });
+
+  it("har <Skrinshot> manbasi /qollanma/rasmlar/ ostida", () => {
+    const xato = fayllar.flatMap((f) =>
+      [...readFileSync(f, "utf8").matchAll(/<Skrinshot[^>]*\ssrc="([^"]+)"/g)]
+        .map((m) => m[1])
+        .filter((src) => !src.startsWith("/qollanma/rasmlar/"))
+        .map((src) => `${relative(KONTENT, f)}: ${src}`),
+    );
     expect(xato).toEqual([]);
   });
 });
