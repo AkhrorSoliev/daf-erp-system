@@ -4,6 +4,7 @@ import { PaymentsService } from '../payments/payments.service';
 import { OutreachService } from '../outreach/outreach.service';
 import { DashboardService } from './dashboard.service';
 import { RedisService } from '../redis/redis.service';
+import { tashkentMonthKey } from '../common/date/tashkent';
 import {
   isEmptyScope,
   singleBranchId,
@@ -143,13 +144,8 @@ export class DashboardSummaryService {
     }
   }
 
-  private currentMonth(): string {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  }
-
   private async buildMoney(ctx: SummaryContext): Promise<DashboardMoney> {
-    const month = this.currentMonth();
+    const month = tashkentMonthKey(new Date());
     const [overview, debt] = await Promise.all([
       this.reports.getFinancialOverview(ctx.companyId, {
         branchIds: ctx.branchScope,
