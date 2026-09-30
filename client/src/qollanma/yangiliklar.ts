@@ -21,7 +21,7 @@ export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-09-27",
     sarlavha: "O'quvchi birinchi kirishda jins va tug'ilgan sanani kiritadi",
-    matn: "O'quvchi portalga yoki ilovaga birinchi marta kirganda jinsi va tug'ilgan sanasini kiritadi. Telefonni SMS kod bilan tasdiqlash qadami sozlama bilan yoqiladi. O'quvchi kartasida «Telefon tasdiqlangan» va «Telegram botda ro'yxatdan o'tgan» belgilari alohida ko'rinadi.",
+    matn: "O'quvchi portalga yoki ilovaga birinchi marta kirganda jinsi va tug'ilgan sanasini kiritadi. Telefonni SMS kod bilan tasdiqlash qadami server sozlamasi bilan yoqiladi («Sozlamalar» sahifasida bunday tugma yo'q). O'quvchi kartasida «Telefon tasdiqlangan» va «Telegram botda ro'yxatdan o'tgan» belgilari alohida ko'rinadi.",
     rollar: [1, 2, 3],
     sahifa: { bolim: "oquvchilar", sahifa: "yangi-oquvchi" },
   },
@@ -103,7 +103,7 @@ export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-09-13",
     sarlavha: "Bot va mock imtihondan kelgan o'quvchi ham lid bilan yoziladi",
-    matn: "Telegram bot orqali ro'yxatdan o'tgan va mock imtihon ishtirokchisidan aylantirilgan o'quvchi ham lid bilan bog'lanadi: manbasi «Telegram bot» yoki «Mock imtihon» bo'ladi.",
+    matn: "Telegram bot orqali ro'yxatdan o'tgan va mock imtihon ishtirokchisidan aylantirilgan o'quvchi ham lid bilan bog'lanadi: mos lid bo'lmasa, yangi lidning manbasi «Telegram bot» yoki «Mock imtihon» bo'ladi.",
     rollar: [1, 2, 3],
     sahifa: { bolim: "oquvchilar", sahifa: "hayot-davri" },
   },

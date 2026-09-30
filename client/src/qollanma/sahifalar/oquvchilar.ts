@@ -6,7 +6,7 @@ export const oquvchilar: QollanmaSahifa[] = [
     sahifa: "hayot-davri",
     sarlavha: "O'quvchining hayot davri",
     qisqacha:
-      "O'quvchi lid bo'lib boshlanadi, keyin «Faol» bo'ladi; muzlatilishi, chetlatilishi, bitirishi yoki arxivga tushishi mumkin. Har holat va o'tish diagrammada ko'rsatilgan, «faol o'quvchi» hisobotlarda nimani bildirishi ham yozilgan.",
+      "O'quvchi lid bo'lib boshlanadi, keyin «Faol» bo'ladi; muzlatilishi, chetlatilishi, bitirishi yoki arxivga tushishi mumkin. Har holat va o'tish diagrammada ko'rsatilgan, faol o'quvchi hisobotlarda nimani bildirishi ham yozilgan.",
     rollar: [1, 2, 3],
     adr: ["0015", "0017", "0018"],
     yollar: ["/students"],
@@ -179,7 +179,7 @@ export const oquvchilar: QollanmaSahifa[] = [
     sahifa: "chetlatish-va-arxiv",
     sarlavha: "Chetlatish, bitirish, arxiv",
     qisqacha:
-      "Chetlatilgan o'quvchining qarzi qoladi va u portal orqali to'lay oladi; bitirish guruh tugaganda o'zi bo'ladi. Arxiv faqat xato yoki takroriy yozuv uchun: kirish hisobi yopiladi, tiklashni faqat CEO qiladi.",
+      "Chetlatilgan o'quvchining qarzi qoladi va u portal orqali to'lay oladi; bitirish guruh «Tugallangan» qilinganda o'zi bo'ladi. Arxiv faqat xato yoki takroriy yozuv uchun: kirish hisobi yopiladi, tiklashni faqat CEO qiladi.",
     rollar: [1, 2, 3],
     adr: ["0033"],
     yollar: ["/students/profile/*"],

@@ -9,7 +9,7 @@
 |---|---|---|
 | «Ism» va «Familiya» | Ha | Har biri kamida 2 ta belgi |
 | «Telefon raqam» | Ha | +998 oldindan yozilgan, 9 ta raqam yoziladi |
-| «Qayerdan bildi?» | Ha | O'quvchi markazni qayerdan bilgani: manba ro'yxatdan tanlanadi |
+| «Qayerdan bildi?» | Ha | O'quvchi markazni qayerdan bilgani: manba ro'yxatdan tanlanadi. Telefon raqami mos lidga to'g'ri kelsa, manba o'sha lidniki qoladi |
 | «Guruh (ixtiyoriy)» | Yo'q | Shu filialdagi guruh. «Guruh nomini qidirish...» maydonida qidirasiz, «Tozalash» tanlovni bekor qiladi |
 
 Saqlagach «O'quvchi muvaffaqiyatli qo'shildi» xabari chiqadi. Yangi o'quvchi «Faol» holatda, balansi nol bilan ochiladi. Guruh tanlagan bo'lsangiz, o'quvchi shu guruhga ham qo'shiladi. Guruhga qo'shish rad etilsa, xato xabari chiqadi, lekin o'quvchi baribir yaratilgan bo'ladi: uni kartasidan guruhga qo'shasiz ([Guruhga qo'shish va o'tkazish](/qollanma/oquvchilar/guruhga-qoshish)).
@@ -29,11 +29,11 @@ Boshqa ma'lumotlar — Telegram, tug'ilgan sana, jins, izoh, ota-ona, manzil, pa
 
 O'quvchi o'quvchi portaliga va ilovaga kartadagi telefon raqami bilan kiradi. Kirish raqami va kartadagi raqam — bitta.
 
-- Bir raqam bitta tirik kartada turadi. Raqam boshqa kartada bo'lsa, «Bu telefon raqam allaqachon tizimda mavjud» chiqadi.
+- Bir raqam bitta tirik kartada turadi (barcha filiallar bo'yicha tekshiriladi). Raqam boshqa kartada bo'lsa, «Bu telefon raqam allaqachon tizimda mavjud» chiqadi.
 - Kartadagi raqamni «Tahrirlash» oynasida o'zgartirsangiz, kirish raqami ham shu zahoti o'zgaradi. Eski raqam kirish uchun endi ishlamaydi: o'tish davri yo'q. Sabab: eski raqam boshqa odamga o'tgan bo'lishi mumkin.
 - O'quvchining paroli o'zgarmaydi: u keyingi safar yangi raqam va o'sha parol bilan kiradi.
 - O'zgarish kartaning «Tarix» tabida «Login» qatori bo'lib yoziladi: eski raqam → yangi raqam.
-- Yangi raqam «tasdiqlanmagan» hisoblanadi (pastdagi bo'limga qarang: birinchi kirishda o'quvchi nimani to'ldiradi).
+- Yangi raqamda «Telefon tasdiqlanmagan» belgisi chiqadi (pastdagi bo'limga qarang: birinchi kirishda o'quvchi nimani to'ldiradi).
 
 <Eslatma tur="diqqat">
 
@@ -43,20 +43,20 @@ Kartadagi raqam — kirish kaliti. Uni o'quvchining o'zidan eshitib, ehtiyot bo'
 
 ## O'quvchi parolni qanday oladi
 
-Qo'lda qo'shilgan o'quvchiga tizim kirish hisobini o'zi ochadi. Parolni ekran ko'rsatmaydi. O'quvchi parolni shunday oladi:
+Qo'lda qo'shilgan o'quvchiga tizim kirish hisobini o'zi ochadi. Parolni ekran ko'rsatmaydi. O'quvchi parolni o'zi olishining uch yo'li bor, uchalasi ham kartadagi raqamga bog'liq:
 
 - o'quvchi portalining kirish sahifasida «Parolni unutdingizmi?» — o'quvchi kartadagi raqamni yozadi va SMS kod oladi (SMS faqat +998 raqamlarga yuboriladi);
-- Telegram botda «Parolni tiklash»;
-- yoki «Telegram orqali kirish» tugmasi bilan — parolsiz.
+- Telegram botda «Parolni tiklash» — bot o'quvchini kartaga ulangan Telegram hisobidan taniydi. Hisob hali ulanmagan bo'lsa, o'quvchi botga o'z kontaktini yuboradi: raqami kartadagi raqamga teng bo'lsa, hisob ulanadi. Yangi parol chatga yuboriladi; tiklash 5 daqiqada bir marta va kuniga 3 martagacha mumkin;
+- «Telegram orqali kirish» tugmasi — parolsiz kirish. U faqat Telegram hisobidagi raqam kartadagi raqamga teng bo'lsagina kiritadi; aks holda «Bu Telegram raqami tizimda yo'q. Administrator bilan bog'laning.» chiqadi.
 
-Siz o'zingiz ham parol berishingiz mumkin: kartadagi «Tahrirlash» → «Kirish ma'lumotlari» → «Yangi parol» (kamida 4 ta belgi). Parol o'zgargach, o'quvchining boshqa qurilmalardagi kirishlari tugaydi. Maydon bo'sh qolsa, parol o'zgarmaydi. Telegram bot orqali o'zi ro'yxatdan o'tgan o'quvchi parolni botning o'zidan oladi.
+Siz o'zingiz ham parol berishingiz mumkin: kartadagi «Tahrirlash» → «Kirish ma'lumotlari» → «Yangi parol» (kamida 4 ta belgi). Parol o'zgargach, o'quvchining hamma qurilmadagi kirishlari tugaydi: u yangi parol bilan qaytadan kiradi. Maydon bo'sh qolsa, parol o'zgarmaydi. Telegram bot orqali o'zi ro'yxatdan o'tgan o'quvchi parolni botning o'zidan oladi.
 
 ## Telegram orqali ro'yxatdan o'tish
 
 «O'quvchilar» sahifasidagi «Havola olish» tugmasi tanlangan filial uchun Telegram havolasini nusxalaydi. Tugma «Nusxalandi» bo'ladi va «Havola nusxalandi» xabari chiqadi. Ustiga olib borsangiz, «Telegram orqali ro'yxatdan o'tish havolasini nusxalash» yozuvi turadi.
 
 - Havolani o'quvchiga yuborasiz. U botda o'zi ro'yxatdan o'tadi: kartasi havoladagi filialga yoziladi va kartada «Telegram botda ro'yxatdan o'tgan» belgisi chiqadi.
-- Bunday o'quvchi ham lid bilan yoziladi. Manba — «Telegram bot».
+- Mos lid bo'lmasa, o'quvchi uchun lid o'zi yoziladi va manba «Telegram bot» bo'ladi. Mos lid bor bo'lsa, o'quvchi o'sha lidga ulanadi va lid o'z manbasini saqlaydi ([O'quvchining hayot davri](/qollanma/oquvchilar/hayot-davri)).
 - Tugma ishlamaydigan hollar: filial tanlanmagan («Avval filial tanlang»); filial «Faol» emas («Filial faol emas — bu filialga Telegram orqali ro'yxatdan o'tib bo'lmaydi.»); Telegram bot sozlanmagan («Telegram bot hozircha sozlanmagan — havola yaratib bo'lmaydi. Iltimos, administratorga murojaat qiling.»).
 
 ## Birinchi kirishda o'quvchi nimani to'ldiradi
@@ -64,7 +64,7 @@ Siz o'zingiz ham parol berishingiz mumkin: kartadagi «Tahrirlash» → «Kirish
 O'quvchi portalga yoki ilovaga birinchi marta kirganda, asosiy sahifa ochilishidan oldin quyidagilarni to'ldiradi:
 
 - «Jinsingiz» va «Tug'ilgan sanangiz». Ikkalasi majburiy, yosh 5 dan 100 gacha bo'lishi kerak. Faqat bo'sh maydon so'raladi: siz kartada kiritgan jins yoki sana ustidan yozilmaydi.
-- Telefon raqamini SMS kod bilan tasdiqlash.
+- Telefon raqamini SMS kod bilan tasdiqlash (bu qadam yoqilgan bo'lsagina: pastga qarang).
 
 Telefon tasdig'i shunday ishlaydi:
 
@@ -73,7 +73,7 @@ Telefon tasdig'i shunday ishlaydi:
 - SMS orqali parolini tiklagan o'quvchidan kod yana so'ralmaydi: u raqamini allaqachon isbotlagan.
 - Faqat O'zbekiston raqami (9 ta raqam) tasdiqlanadi. Chet el raqamidagi o'quvchidan SMS so'ralmaydi.
 - Raqam tasdiqlangandan keyin o'quvchi uni o'zi almashtira olmaydi: buni xodim qiladi.
-- Bu qadam alohida sozlama bilan yoqiladi. Yoqilmagan bo'lsa, faqat jins va tug'ilgan sana so'raladi.
+- Bu qadam faqat server sozlamasi yoqilgan va SMS xizmati (Eskiz) ulangan bo'lsagina so'raladi. «Sozlamalar» sahifasida uni yoqadigan tugma yo'q: buni dasturchi qiladi. Yoqilmagan bo'lsa, faqat jins va tug'ilgan sana so'raladi.
 
 Natija kartada ikki alohida belgi bilan ko'rinadi:
 
@@ -87,12 +87,12 @@ Siz kartadagi raqamni o'zgartirsangiz, yangi raqam «Telefon tasdiqlanmagan» bo
 | Xabar yoki holat | Sabab | Nima qilinadi |
 |---|---|---|
 | «Yangi o'quvchi» tugmasi o'chiq, ustida «Avval filial tanlang» | Yuqori panelda «Barcha filiallar» tanlangan | Yuqoridan bitta filialni tanlang |
-| «Bu telefon raqam allaqachon tizimda mavjud» | Raqam boshqa tirik kartada turibdi | O'quvchini shu raqam bilan qidiring va o'sha kartadan foydalaning |
+| «Bu telefon raqam allaqachon tizimda mavjud» | Raqam boshqa tirik kartada turibdi. Tekshiruv barcha filiallar bo'yicha, shuning uchun o'sha karta boshqa filialda bo'lishi mumkin | O'quvchini shu raqam bilan qidiring va o'sha kartadan foydalaning. Topolmasangiz, karta boshqa filialda: CEO barcha filiallarda qidira oladi |
 | «Ism kamida 2 ta belgidan iborat bo'lishi kerak» yoki «Familiya kamida 2 ta belgidan iborat bo'lishi kerak» | Maydon bo'sh yoki bir belgi | Kamida 2 ta belgi yozing |
 | «Telefon raqam 9 ta raqamdan iborat bo'lishi kerak» | +998 dan keyingi raqamlar to'liq emas | 9 ta raqam yozing |
 | «Qayerdan bildi?» maydonini tanlang | Manba tanlanmagan | Ro'yxatdan manbani tanlang |
 | «Havola olish» tugmasi o'chiq | Filial tanlanmagan, «Faol» emas yoki bot sozlanmagan | Ustiga olib borsangiz sabab yoziladi |
-| O'quvchi kartadagi raqam noto'g'ri ekanini aytadi, lekin parolini bilmaydi | «Yo'q, boshqa raqam» yo'li joriy parolni so'raydi | O'quvchi avval parolni tiklaydi yoki siz kartadagi raqamni almashtirasiz |
+| O'quvchi kartadagi raqam noto'g'ri ekanini aytadi, lekin parolini bilmaydi | Parolni tiklashning hamma yo'li (SMS, bot, «Telegram orqali kirish») kartadagi raqamga bog'liq, «Yo'q, boshqa raqam» yo'li esa joriy parolni so'raydi | Avval siz kartadagi raqamni to'g'rilaysiz («Tahrirlash»). Keyin o'quvchi shu raqam bilan parolni tiklaydi yoki siz «Yangi parol» berasiz |
 
 ## Kim qila oladi
 
@@ -101,6 +101,6 @@ CEO, filial direktori va administrator. Filial direktori va administrator faqat 
 ## Tizimda qayerda
 
 - [O'quvchilar](/students) sahifasi: yuqori o'ngda «Yangi o'quvchi» va «Havola olish» tugmalari.
-- «Lidlar» sahifasida lid kartochkasidagi «O'quvchiga aylantirish» — [Lidlar bilan ishlash](/qollanma/lidlar/lidlar-bilan-ishlash).
+- «Lidlar» sahifasida lid kartochkasini ochib, «O'quvchiga aylantirish» — [Lidlar bilan ishlash](/qollanma/lidlar/lidlar-bilan-ishlash).
 - Kartadagi «Tahrirlash» — [O'quvchi kartasi](/qollanma/oquvchilar/oquvchi-kartasi).
 - O'quvchining holatlari — [O'quvchining hayot davri](/qollanma/oquvchilar/hayot-davri).
