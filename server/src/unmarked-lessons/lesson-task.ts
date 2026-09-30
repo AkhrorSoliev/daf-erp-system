@@ -132,7 +132,9 @@ export async function createLessonTask(
 /**
  * Closes the task once its lesson is answered. An administrator on the task
  * takes it (the others' copies go) and their copy becomes DONE; anyone else —
- * a director, the CEO, a cancellation made elsewhere — closes every copy.
+ * a director, the CEO, a cancellation made elsewhere — closes every copy. A
+ * person answering is recorded as the holder either way; a system close
+ * (`actorId` null) records nobody.
  */
 export async function closeLessonTask(
   tx: Tx,
@@ -142,6 +144,13 @@ export async function closeLessonTask(
   if (!commentId) return;
   const now = new Date();
   if (actorId !== null) {
+    // Whoever answers holds the task from then on, even without having
+    // pressed «Ko'rdim» first — a later press by another administrator is told
+    // who took it. Same lock order as `claimSystemTask`: lesson row first.
+    await tx.unmarkedLesson.updateMany({
+      where: { taskCommentId: commentId },
+      data: { claimedById: actorId },
+    });
     const own = await tx.commentAssignee.findUnique({
       where: { commentId_userId: { commentId, userId: actorId } },
       select: { id: true, seenAt: true },
@@ -183,14 +192,18 @@ export async function claimSystemTask(
     select: { userId: true },
   });
   if (!rows.some((r) => r.userId === userId)) return false;
+  // The lesson row comes first: two administrators pressing at once would
+  // otherwise each delete the other's copy and then wait on this row — a
+  // deadlock. Every claimer queues here instead, and the loser fails as a
+  // serialization conflict.
+  await tx.unmarkedLesson.updateMany({
+    where: { taskCommentId: commentId },
+    data: { claimedById: userId },
+  });
   if (rows.length > 1) {
     await tx.commentAssignee.deleteMany({
       where: { commentId, userId: { not: userId } },
     });
   }
-  await tx.unmarkedLesson.updateMany({
-    where: { taskCommentId: commentId },
-    data: { claimedById: userId },
-  });
   return true;
 }

@@ -702,6 +702,56 @@ describe('CommentsService', () => {
       ).rejects.toThrow("Topshiriq hozirgina o'zgardi. Sahifani yangilang");
     });
 
+    it('turns a Postgres deadlock into the same 409', async () => {
+      // The exact object @prisma/adapter-pg produces for SQLSTATE 40P01: it
+      // maps only 40001 to P2034, so a deadlock reaches the caller as a raw
+      // DriverAdapterError with the SQLSTATE on `cause` and no `code` of its
+      // own (captured from a real deadlock between two interactive
+      // transactions).
+      const deadlock = Object.assign(new Error('deadlock detected'), {
+        name: 'DriverAdapterError',
+        cause: {
+          originalCode: '40P01',
+          originalMessage: 'deadlock detected',
+          kind: 'postgres',
+          code: '40P01',
+          severity: 'ERROR',
+          message: 'deadlock detected',
+        },
+      });
+      prisma.$transaction.mockRejectedValueOnce(deadlock);
+      await expect(
+        service.updateAssigneeStatus('c1', 3, 'SEEN' as any),
+      ).rejects.toThrow("Topshiriq hozirgina o'zgardi. Sahifani yangilang");
+    });
+
+    it('does not swallow other database errors', async () => {
+      const boom = Object.assign(new Error('connection lost'), {
+        name: 'DriverAdapterError',
+        cause: { kind: 'postgres', code: '08006' },
+      });
+      prisma.$transaction.mockRejectedValueOnce(boom);
+      await expect(
+        service.updateAssigneeStatus('c1', 3, 'SEEN' as any),
+      ).rejects.toBe(boom);
+    });
+
+    it('keeps an answered system task closed', async () => {
+      prisma.commentAssignee.findFirst.mockResolvedValue({
+        id: 'a3',
+        status: 'DONE',
+        seenAt: new Date(),
+        comment: systemComment,
+      });
+      for (const status of ['SEEN', 'PENDING']) {
+        await expect(
+          service.updateAssigneeStatus('c1', 3, status as any),
+        ).rejects.toThrow("darsga javob berilganda o'zi yopiladi");
+      }
+      expect(prisma.commentAssignee.update).not.toHaveBeenCalled();
+      expect(prisma.commentAssignee.deleteMany).not.toHaveBeenCalled();
+    });
+
     it("carries the lesson's question in getMyTasks", async () => {
       prisma.commentAssignee.findMany.mockResolvedValue([]);
       prisma.commentAssignee.count = jest.fn().mockResolvedValue(0);

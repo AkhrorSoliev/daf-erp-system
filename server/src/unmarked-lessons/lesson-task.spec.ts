@@ -128,6 +128,7 @@ describe('closeLessonTask', () => {
         update: jest.fn(),
         updateMany: jest.fn(),
       },
+      unmarkedLesson: { updateMany: jest.fn() },
     }) as any;
 
   it('lets an answering administrator take it and closes their copy', async () => {
@@ -147,6 +148,20 @@ describe('closeLessonTask', () => {
     });
   });
 
+  it("records the answerer as the holder, so a later «Ko'rdim» by another administrator is told who took it", async () => {
+    const t = tx();
+    t.commentAssignee.findUnique.mockResolvedValue({ id: 'a3', seenAt: null });
+    await closeLessonTask(t, 'c1', 3);
+    expect(t.unmarkedLesson.updateMany).toHaveBeenCalledWith({
+      where: { taskCommentId: 'c1' },
+      data: { claimedById: 3 },
+    });
+    // The lesson row is taken before the other copies go, like a claim.
+    expect(
+      t.unmarkedLesson.updateMany.mock.invocationCallOrder[0],
+    ).toBeLessThan(t.commentAssignee.deleteMany.mock.invocationCallOrder[0]);
+  });
+
   it('closes every copy when a director or the CEO answers', async () => {
     const t = tx();
     t.commentAssignee.findUnique.mockResolvedValue(null);
@@ -155,12 +170,27 @@ describe('closeLessonTask', () => {
       where: { commentId: 'c1', status: { not: 'DONE' } },
       data: { status: 'DONE', doneAt: expect.any(Date) },
     });
+    expect(t.unmarkedLesson.updateMany).toHaveBeenCalledWith({
+      where: { taskCommentId: 'c1' },
+      data: { claimedById: 9 },
+    });
+  });
+
+  it('leaves the holder alone when the system closes it (cron, deleted group)', async () => {
+    const t = tx();
+    await closeLessonTask(t, 'c1', null);
+    expect(t.commentAssignee.updateMany).toHaveBeenCalledWith({
+      where: { commentId: 'c1', status: { not: 'DONE' } },
+      data: { status: 'DONE', doneAt: expect.any(Date) },
+    });
+    expect(t.unmarkedLesson.updateMany).not.toHaveBeenCalled();
   });
 
   it('does nothing without a task', async () => {
     const t = tx();
     await closeLessonTask(t, null, 3);
     expect(t.commentAssignee.findUnique).not.toHaveBeenCalled();
+    expect(t.unmarkedLesson.updateMany).not.toHaveBeenCalled();
   });
 });
 
@@ -181,6 +211,24 @@ describe('claimSystemTask', () => {
       where: { taskCommentId: 'c1' },
       data: { claimedById: 3 },
     });
+  });
+
+  it('queues on the lesson row before touching the other copies', async () => {
+    // Two administrators pressing at once each delete the other's copy and
+    // then wait on the lesson row: a deadlock. Taking the lesson row first
+    // makes every claimer queue on one row; the loser fails as a plain
+    // serialization conflict instead.
+    const t = {
+      commentAssignee: {
+        findMany: jest.fn().mockResolvedValue([{ userId: 3 }, { userId: 4 }]),
+        deleteMany: jest.fn(),
+      },
+      unmarkedLesson: { updateMany: jest.fn() },
+    } as any;
+    await claimSystemTask(t, 'c1', 3);
+    expect(
+      t.unmarkedLesson.updateMany.mock.invocationCallOrder[0],
+    ).toBeLessThan(t.commentAssignee.deleteMany.mock.invocationCallOrder[0]);
   });
 
   it('refuses someone who is not on it', async () => {

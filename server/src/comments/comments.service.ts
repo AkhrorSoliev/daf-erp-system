@@ -52,6 +52,17 @@ function assertDueDateInWorkingWindow(dueDate: string) {
   }
 }
 
+/**
+ * Two people took one task at once. Prisma reports a Serializable write
+ * conflict (SQLSTATE 40001) as P2034, but @prisma/adapter-pg maps nothing
+ * else: a Postgres deadlock (40P01) reaches us as a raw DriverAdapterError —
+ * no `code` of its own, the SQLSTATE on `cause.code`.
+ */
+function isTransactionConflict(err: unknown): boolean {
+  const e = err as { code?: string; cause?: { code?: string } } | null;
+  return e?.code === 'P2034' || e?.cause?.code === '40P01';
+}
+
 const commentInclude = {
   author: {
     select: { id: true, firstName: true, lastName: true, photo: true },
@@ -491,7 +502,12 @@ export class CommentsService {
       }
 
       if (assignee.comment.isSystem && assignee.comment.isTask) {
-        if (status === AssigneeStatus.DONE) {
+        // Only the lesson's answer closes it, and an answered one stays
+        // closed: moving a DONE copy back would reopen a settled question.
+        if (
+          status === AssigneeStatus.DONE ||
+          assignee.status === AssigneeStatus.DONE
+        ) {
           throw new BadRequestException(
             "Bu topshiriq darsga javob berilganda o'zi yopiladi",
           );
@@ -540,7 +556,7 @@ export class CommentsService {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
       });
     } catch (err) {
-      if ((err as { code?: string } | null)?.code === 'P2034') {
+      if (isTransactionConflict(err)) {
         throw new ConflictException(
           "Topshiriq hozirgina o'zgardi. Sahifani yangilang",
         );

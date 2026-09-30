@@ -31,6 +31,7 @@ function makeTx(mocks: any = {}) {
       findFirst: jest.fn().mockResolvedValue(null),
       findMany: jest.fn().mockResolvedValue([]),
       update: jest.fn(),
+      updateMany: jest.fn(),
       create: jest.fn(),
       ...mocks.unmarkedLesson,
     },
@@ -84,6 +85,10 @@ describe('markUnmarkedLessonCancelled', () => {
       },
     });
     expect(tx.commentAssignee.updateMany).toHaveBeenCalled();
+    expect(tx.unmarkedLesson.updateMany).toHaveBeenCalledWith({
+      where: { taskCommentId: 'c1' },
+      data: { claimedById: 9 },
+    });
     expect(decision).toEqual({
       companyId: 1,
       branchId: 2,

@@ -43,6 +43,7 @@ describe('AttendanceSaveService.saveLate', () => {
       unmarkedLesson: {
         findUnique: jest.fn().mockResolvedValue(pending),
         update: jest.fn(),
+        updateMany: jest.fn(),
       },
       attendance: {
         count: jest.fn().mockResolvedValue(0),
@@ -152,6 +153,11 @@ describe('AttendanceSaveService.saveLate', () => {
       expect.objectContaining({ enrollmentId: 'e1', studentId: 10001 }),
     );
     expect(tx.commentAssignee.update).toHaveBeenCalled(); // task taken and closed
+    // the answerer holds the task, even without pressing «Ko'rdim» first
+    expect(tx.unmarkedLesson.updateMany).toHaveBeenCalledWith({
+      where: { taskCommentId: 'c1' },
+      data: { claimedById: 3 },
+    });
     expect(result.message).toBe(
       'Davomat saqlandi. Ustozga bu dars uchun haq yozilmaydi',
     );
