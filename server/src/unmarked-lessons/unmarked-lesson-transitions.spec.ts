@@ -13,6 +13,15 @@ import {
 const date = new Date('2026-09-28T00:00:00.000Z');
 // A cancellation or move made the day before that lesson (28.09 16:00–17:30).
 const before = new Date('2026-09-27T10:00:00.000Z');
+// The removed move, read by id: 28.09 moved to Tuesday 29.09.
+const makeUpDay = new Date('2026-09-29T00:00:00.000Z');
+const removedMove = (over = {}) => ({
+  groupId: 'g1',
+  originalDate: date,
+  newDate: makeUpDay,
+  createdAt: before,
+  ...over,
+});
 const row = (over = {}) => ({
   id: 'u1',
   companyId: 1,
@@ -348,6 +357,7 @@ describe('reopening', () => {
 
   it('skips multiple holidays when calculating task due date for reschedule', async () => {
     const tx = makeTx();
+    tx.lessonReschedule.findUnique.mockResolvedValue(removedMove());
     tx.unmarkedLesson.findFirst.mockResolvedValue(
       row({ status: 'RESCHEDULED', rescheduleId: 'r1' }),
     );
@@ -367,6 +377,7 @@ describe('reopening', () => {
 
   it('puts a moved answer back to PENDING', async () => {
     const tx = makeTx();
+    tx.lessonReschedule.findUnique.mockResolvedValue(removedMove());
     tx.unmarkedLesson.findFirst.mockResolvedValue(
       row({ status: 'RESCHEDULED', rescheduleId: 'r1' }),
     );
@@ -381,6 +392,56 @@ describe('reopening', () => {
       }),
     );
   });
+
+  // A lesson answered «Bo'ldi» and then cancelled keeps its (EXCUSED) rows:
+  // PENDING again would refuse «Bo'ldi» for ever. The row stays as it is.
+  it('leaves an answered row as it is when its day already has attendance', async () => {
+    const tx = makeTx();
+    tx.unmarkedLesson.findFirst.mockResolvedValue(
+      row({ status: 'NOT_HELD', cancellationId: 'x1' }),
+    );
+    tx.attendance.findFirst.mockResolvedValue({ id: 'a1' });
+    await reopenAfterCancellationRemoved(tx, {
+      cancellationId: 'x1',
+      groupId: 'g1',
+      date,
+      cancelledAt: before,
+      now,
+      holidays: new Set(),
+    });
+    expect(tx.attendance.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { groupId: 'g1', date } }),
+    );
+    expect(tx.unmarkedLesson.update).not.toHaveBeenCalled();
+    expect(tx.comment.create).not.toHaveBeenCalled();
+  });
+
+  // The make-up lesson was held on 29.09: asking about 28.09 again and
+  // answering «Bo'ldi» would bill the one lesson twice.
+  it.each([
+    ['an answered move', row({ status: 'RESCHEDULED', rescheduleId: 'r1' })],
+    ['a move made in advance', null],
+  ])(
+    'asks nothing again for %s whose make-up lesson has attendance',
+    async (_label, answered) => {
+      const tx = makeTx();
+      tx.lessonReschedule.findUnique.mockResolvedValue(removedMove());
+      tx.unmarkedLesson.findFirst.mockResolvedValue(answered);
+      tx.attendance.findFirst.mockImplementation(({ where }: any) =>
+        Promise.resolve(
+          where.date.getTime() === makeUpDay.getTime() ? { id: 'a9' } : null,
+        ),
+      );
+      await reopenAfterRescheduleRemoved(tx, {
+        rescheduleId: 'r1',
+        now,
+        holidays: new Set(),
+      });
+      expect(tx.unmarkedLesson.update).not.toHaveBeenCalled();
+      expect(tx.unmarkedLesson.create).not.toHaveBeenCalled();
+      expect(tx.comment.create).not.toHaveBeenCalled();
+    },
+  );
 });
 
 // Addendum A: a move made in advance leaves no UnmarkedLesson row, so deleting
@@ -396,12 +457,9 @@ describe('reopenAfterRescheduleRemoved — a move made in advance', () => {
     createdAt: Date = before,
   ) => {
     const tx = makeTx();
-    tx.lessonReschedule.findUnique.mockResolvedValue({
-      groupId: 'g1',
-      originalDate,
-      newDate: new Date('2026-10-02T00:00:00.000Z'),
-      createdAt,
-    });
+    tx.lessonReschedule.findUnique.mockResolvedValue(
+      removedMove({ originalDate, createdAt }),
+    );
     return tx;
   };
 
@@ -548,7 +606,6 @@ describe('reopenAfterRescheduleRemoved — a move made in advance', () => {
       }),
     );
     expect(tx.unmarkedLesson.create).not.toHaveBeenCalled();
-    expect(tx.lessonReschedule.findUnique).not.toHaveBeenCalled();
   });
 
   it('opens nothing when the removed move cannot be read', async () => {

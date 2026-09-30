@@ -186,12 +186,30 @@ async function createReopenTask(
   });
 }
 
+async function dayHasAttendance(
+  tx: Tx,
+  groupId: string,
+  date: Date,
+): Promise<boolean> {
+  const marked = await tx.attendance.findFirst({
+    where: { groupId, date },
+    select: { id: true },
+  });
+  return marked !== null;
+}
+
+/**
+ * Back to PENDING — unless the day has attendance (a lesson answered
+ * «Bo'ldi» and then cancelled keeps its EXCUSED rows): «Bo'ldi» would be
+ * refused for ever, so the row stays as it is.
+ */
 async function reopen(
   tx: Tx,
   row: UnmarkedLesson,
   now: Date,
   holidays: ReadonlySet<string>,
 ): Promise<void> {
+  if (await dayHasAttendance(tx, row.groupId, row.date)) return;
   const group = await tx.group.findUnique({
     where: { id: row.groupId },
     select: { name: true, deletedAt: true },
@@ -271,11 +289,7 @@ async function openFirstTimeQuestion(
   ) {
     return;
   }
-  const marked = await tx.attendance.findFirst({
-    where: { groupId: args.groupId, date: args.date },
-    select: { id: true },
-  });
-  if (marked) return;
+  if (await dayHasAttendance(tx, args.groupId, args.date)) return;
   const existing = await tx.unmarkedLesson.findUnique({
     where: { groupId_date: { groupId: args.groupId, date: args.date } },
     select: { id: true },
@@ -376,24 +390,33 @@ async function originalDayIsClosed(
 /**
  * Deleting a move re-asks the question the same way: a move that answered it
  * puts the row back to PENDING; a move made in advance (no row ever existed),
- * deleted after the original lesson ended, opens the first-time exempt
- * question for the ORIGINAL date. The caller has already soft-deleted the
- * move in this transaction, so it is read by id, whatever its `deletedAt`.
+ * deleted after the original lesson ended, opens the first-time question for
+ * the ORIGINAL date. Neither when the make-up lesson already has attendance:
+ * «Bo'ldi» on the original day would bill the one lesson twice. The caller
+ * has already soft-deleted the move in this transaction, so it is read by id,
+ * whatever its `deletedAt`.
  */
 export async function reopenAfterRescheduleRemoved(
   tx: Tx,
   args: { rescheduleId: string; now: Date; holidays: ReadonlySet<string> },
 ): Promise<void> {
+  const removed = await tx.lessonReschedule.findUnique({
+    where: { id: args.rescheduleId },
+    select: {
+      groupId: true,
+      originalDate: true,
+      newDate: true,
+      createdAt: true,
+    },
+  });
+  if (!removed) return;
+  if (await dayHasAttendance(tx, removed.groupId, removed.newDate)) return;
+
   const answered = await tx.unmarkedLesson.findFirst({
     where: { rescheduleId: args.rescheduleId },
   });
   if (answered) return reopen(tx, answered, args.now, args.holidays);
 
-  const removed = await tx.lessonReschedule.findUnique({
-    where: { id: args.rescheduleId },
-    select: { groupId: true, originalDate: true, createdAt: true },
-  });
-  if (!removed) return;
   if (await originalDayIsClosed(tx, removed.groupId, removed.originalDate)) {
     return;
   }

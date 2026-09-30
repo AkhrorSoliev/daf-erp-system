@@ -718,6 +718,14 @@ describe('LessonReschedulesService', () => {
       prisma.group.findFirst.mockResolvedValue({ branchId: 2 });
       prisma.group.findUnique.mockResolvedValue({ branchId: 2 });
       tx.lessonReschedule.update.mockResolvedValue({ id: 'rs-1' });
+      // The removed move is read back by id; its make-up day has no register.
+      tx.lessonReschedule.findUnique = jest.fn().mockResolvedValue({
+        groupId: 'group-1',
+        originalDate: new Date('2026-04-15T00:00:00.000Z'),
+        newDate: new Date('2026-10-07T00:00:00.000Z'),
+        createdAt: new Date('2026-04-14T09:00:00.000Z'),
+      });
+      tx.attendance.findFirst = jest.fn().mockResolvedValue(null);
       tx.unmarkedLesson.findFirst.mockResolvedValue(answered);
       tx.group.findUnique.mockResolvedValue({ name: '#014', deletedAt: null });
       tx.user.findMany.mockResolvedValue([{ id: 3 }]);
