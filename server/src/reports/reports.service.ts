@@ -139,6 +139,13 @@ export class ReportsService {
   ) {
     return this.financial.getRecognizedRevenue(companyId, opts);
   }
+  // «Yechib olish» — revenue of the month it is withdrawn in (ADR-0055).
+  getBalanceWithdrawals(
+    companyId: number,
+    opts: { months: string[]; branchIds: ReportBranchIds },
+  ) {
+    return this.financial.getBalanceWithdrawals(companyId, opts);
+  }
 
   /**
    * Canonical monthly "Sof foyda" — the ONE net-profit figure the Foyda card and
@@ -204,26 +211,29 @@ export class ReportsService {
     const startDate = `${month}-01`;
     const endDate = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
     const scope = { branchIds, startDate, endDate };
-    const [lessons, salaries, profitLoss, outflows] = await Promise.all([
-      this.financial.valueHeldLessons(companyId, {
-        start: new Date(Date.UTC(y, m - 1, 1)),
-        end: new Date(Date.UTC(y, m, 1)),
-        branchIds,
-      }),
-      // Branch-scoped: subtracting company-wide payroll from ONE branch's
-      // revenue is what made a freshly-opened branch look catastrophically
-      // unprofitable in its first month. Staff by HOME branch, so an
-      // administrator attached to two branches is subtracted from one.
-      this.getSalaryMonthly(
-        companyId,
-        month,
-        performedById,
-        singleBranchId(branchIds),
-        'home',
-      ),
-      this.getProfitLoss(companyId, scope),
-      this.getPeriodOutflows(companyId, scope),
-    ]);
+    const [lessons, salaries, profitLoss, outflows, withdrawals] =
+      await Promise.all([
+        this.financial.valueHeldLessons(companyId, {
+          start: new Date(Date.UTC(y, m - 1, 1)),
+          end: new Date(Date.UTC(y, m, 1)),
+          branchIds,
+        }),
+        // Branch-scoped: subtracting company-wide payroll from ONE branch's
+        // revenue is what made a freshly-opened branch look catastrophically
+        // unprofitable in its first month. Staff by HOME branch, so an
+        // administrator attached to two branches is subtracted from one.
+        this.getSalaryMonthly(
+          companyId,
+          month,
+          performedById,
+          singleBranchId(branchIds),
+          'home',
+        ),
+        this.getProfitLoss(companyId, scope),
+        this.getPeriodOutflows(companyId, scope),
+        // «Yechib olish» — revenue of the month it is withdrawn in (ADR-0055).
+        this.getBalanceWithdrawals(companyId, { months: [month], branchIds }),
+      ]);
     const recognizedRevenue = lessons.reduce((sum, l) => sum + l.value, 0);
     return {
       month,
@@ -231,12 +241,14 @@ export class ReportsService {
       salaries,
       profitLoss,
       outflows,
+      withdrawals,
       netProfit: buildNetProfit(
         profitLoss,
         salaries,
         outflows,
         month,
         recognizedRevenue,
+        withdrawals.total,
       ),
     };
   }

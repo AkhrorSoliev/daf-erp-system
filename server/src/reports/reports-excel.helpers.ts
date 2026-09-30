@@ -120,6 +120,10 @@ export interface NetProfit {
   /** 'recognized' = dars tushumi (lessons held this month) | 'cash' = COMPLETED
    *  payments received (legacy, when no recognized figure supplied). */
   revenueBasis: 'recognized' | 'cash';
+  /** «Yechib olish» booked in the period — revenue beside `revenue`, which
+   *  stays the lesson value (ADR-0055). 0 on the cash basis: that money was
+   *  already counted when the student paid it. */
+  balanceWithdrawals: number;
   teacherSalary: number;
   /** 'hisoblangan' = deserved (earned this month) | 'naqd' = cash paid (fallback). */
   teacherSalaryBasis: 'hisoblangan' | 'naqd';
@@ -143,6 +147,7 @@ export interface NetProfit {
  * by subtracting EVERY real outflow the two legacy netProfit figures miss:
  *
  *   Tushum (COMPLETED to'lovlar)
+ *   + Balansdan yechib olingan (ADR-0055 — recognised basis only)
  *   − Ustoz oyligi (HISOBLANGAN — bu oy earned; the cash is usually paid next
  *     cycle, so the legacy cash-basis figure showed ~0 here)
  *   − Admin oyligi
@@ -174,11 +179,13 @@ export function buildNetProfit(
   } | null,
   month?: string,
   recognizedRevenue?: number,
+  balanceWithdrawals = 0,
 ): NetProfit {
   // Revenue basis: prefer the "dars tushumi" (recognized — lessons held this
   // month) figure when supplied; fall back to cash COMPLETED payments (pl).
   const useRecognized = typeof recognizedRevenue === 'number';
   const revenue = useRecognized ? recognizedRevenue : (pl?.revenue?.total ?? 0);
+  const withdrawn = useRecognized ? balanceWithdrawals : 0;
   const totals = salaries?.totals ?? {};
   // Include the center top-up (gap) only from the top-up month on.
   const hasTopup = month ? isTopUpMonth(month) : true;
@@ -204,10 +211,17 @@ export function buildNetProfit(
   );
   const refunds = outflows?.refunds ?? 0;
   const netProfit =
-    revenue - teacherSalary - adminSalary - operatingExpenses - refunds;
+    revenue +
+    withdrawn -
+    teacherSalary -
+    adminSalary -
+    operatingExpenses -
+    refunds;
+  const earned = revenue + withdrawn;
   return {
     revenue,
     revenueBasis: useRecognized ? 'recognized' : 'cash',
+    balanceWithdrawals: withdrawn,
     teacherSalary,
     teacherSalaryBasis: hasDeserved ? 'hisoblangan' : 'naqd',
     teacherSalaryHasTopup: hasDeserved && hasTopup,
@@ -220,7 +234,7 @@ export function buildNetProfit(
     refunds,
     netProfit,
     netMarginPercent:
-      revenue > 0 ? Math.round((netProfit / revenue) * 1000) / 10 : 0,
+      earned > 0 ? Math.round((netProfit / earned) * 1000) / 10 : 0,
     memo: {
       writeOffs: outflows?.writeOffs ?? 0,
       providerFees: outflows?.providerFees ?? 0,

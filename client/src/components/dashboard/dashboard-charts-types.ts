@@ -12,11 +12,13 @@ export interface ChartTrendPoint {
 }
 
 /**
- * `revenue − teacherSalary − adminSalary − operatingExpenses − refunds = netProfit`.
+ * `revenue + balanceWithdrawals − teacherSalary − adminSalary − operatingExpenses − refunds = netProfit`.
  * «Sof foyda» kartasi ham AYNAN shu obyektdan chiqadi.
  */
 export interface ChartProfitBreakdown {
   revenue: number;
+  /** «Yechib olish» booked this month (ADR-0055). Absent in a response cached before it shipped. */
+  balanceWithdrawals?: number;
   teacherSalary: number;
   adminSalary: number;
   operatingExpenses: number;

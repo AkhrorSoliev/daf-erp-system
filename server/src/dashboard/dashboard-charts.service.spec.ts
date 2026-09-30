@@ -8,11 +8,12 @@ const trendRows = [
 
 const netProfit = {
   revenue: 200,
+  balanceWithdrawals: 15,
   teacherSalary: 90,
   adminSalary: 30,
   operatingExpenses: 40,
   refunds: 5,
-  netProfit: 35,
+  netProfit: 50,
   netMarginPercent: 17,
 };
 
@@ -79,11 +80,12 @@ describe('DashboardChartsService.getCharts', () => {
     expect(reports.getMonthlyNetProfit).toHaveBeenCalled();
     expect(res.money!.breakdown).toEqual({
       revenue: 200,
+      balanceWithdrawals: 15,
       teacherSalary: 90,
       adminSalary: 30,
       operatingExpenses: 40,
       refunds: 5,
-      netProfit: 35,
+      netProfit: 50,
     });
   });
 

@@ -7,6 +7,7 @@ import {
   mln,
   reconciliation,
   statusLabel,
+  withdrawalSub,
   type ProfitComposition,
 } from "./profit-composition-text";
 
@@ -77,6 +78,7 @@ describe("reconciliation", () => {
   it("writes the sum the card's figure comes from", () => {
     const c = {
       revenue: { total: 141_784_680 },
+      withdrawals: { total: 0 },
       teachers: { total: 66_966_818 },
       staff: { total: 14_900_000 },
       expenses: { total: 12_319_000 },
@@ -87,6 +89,57 @@ describe("reconciliation", () => {
     const f = formatPrice;
     expect(reconciliation(c)).toBe(
       `${f(141_784_680)} − ${f(66_966_818)} − ${f(14_900_000)} − ${f(12_319_000)} − ${f(0)} = ${f(47_598_862)}`,
+    );
+  });
+});
+
+describe("balansdan yechib olingan pul (ADR-0055)", () => {
+  it("sarlavhada darslar puli bilan yonma-yon aytiladi", () => {
+    expect(headline(10_000_000, 2_300_000, 300_000)).toBe(
+      `Darslardan 10,0 mln, balansdan ${formatPrice(300_000)} so'm tushdi — ustozlar, xodimlar va xarajatlardan keyin 2,3 mln qoldi.`,
+    );
+  });
+
+  it("tenglikda o'z qo'shiluvchisi bo'ladi", () => {
+    const c = {
+      revenue: { total: 1_000_000 },
+      withdrawals: { total: 300_000 },
+      teachers: { total: 500_000 },
+      staff: { total: 100_000 },
+      expenses: { total: 200_000 },
+      refunds: 0,
+      netProfit: 500_000,
+    } as unknown as ProfitComposition;
+    const f = formatPrice;
+    expect(reconciliation(c)).toBe(
+      `${f(1_000_000)} + ${f(300_000)} − ${f(500_000)} − ${f(100_000)} − ${f(200_000)} − ${f(0)} = ${f(500_000)}`,
+    );
+  });
+
+  it("ustozga yozilgan qismini aytadi", () => {
+    const rest = { count: 0, amount: 0 };
+    expect(
+      withdrawalSub({ total: 300_000, teacherCredited: 200_000, count: 2, rows: [], rest }),
+    ).toBe(`2 o'quvchi balansidan · ${formatPrice(200_000)} so'mi ustozlar haqiga yozilgan`);
+    expect(
+      withdrawalSub({ total: 300_000, teacherCredited: 0, count: 1, rows: [], rest }),
+    ).toBe("1 o'quvchi balansidan");
+  });
+});
+
+describe("eski server javobi (withdrawals yo'q)", () => {
+  it("tenglik yiqilmaydi", () => {
+    const c = {
+      revenue: { total: 1_000 },
+      teachers: { total: 400 },
+      staff: { total: 100 },
+      expenses: { total: 200 },
+      refunds: 0,
+      netProfit: 300,
+    } as unknown as ProfitComposition;
+    const f = formatPrice;
+    expect(reconciliation(c)).toBe(
+      `${f(1_000)} − ${f(400)} − ${f(100)} − ${f(200)} − ${f(0)} = ${f(300)}`,
     );
   });
 });
