@@ -203,7 +203,7 @@ export function LessonChangesTab({ group }: Props) {
     setConfirmDelete({
       title: "Bekor qilingan dars yozuvini o'chirmoqchimisiz?",
       description:
-        "Diqqat: bu davomat va to'lovni tiklamaydi. Agar dars haqiqatda o'tilgan bo'lsa, admin keyin davomatni qo'lda olishi kerak.",
+        "Diqqat: bu davomat va to'lovni tiklamaydi. Agar dars vaqti o'tib ketgan bo'lsa, u yana «Dars bo'ldimi?» savoliga qaytadi.",
       onConfirm: () =>
         performDelete(
           `/lesson-cancellations/${id}`,

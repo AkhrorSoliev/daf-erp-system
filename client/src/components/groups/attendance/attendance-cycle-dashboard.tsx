@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
 import { tashkentNow } from "@/lib/tashkent-time";
+import type { UnmarkedLessonInfo } from "@/lib/unmarked-lesson";
 import { useAuth } from "@/hooks/use-auth";
 import type { GroupData } from "@/hooks/use-edit-group";
 import {
@@ -34,6 +35,7 @@ interface LessonDateLike {
   lateCount: number;
   excusedCount: number;
   totalStudents: number;
+  unmarked?: UnmarkedLessonInfo | null;
 }
 
 function lessonDateFromCell(c: LessonCalendarCell): LessonDateLike {
@@ -46,6 +48,7 @@ function lessonDateFromCell(c: LessonCalendarCell): LessonDateLike {
     lateCount: c.lateCount,
     excusedCount: c.excusedCount,
     totalStudents: c.totalStudents,
+    unmarked: c.unmarked ?? null,
   };
 }
 
@@ -234,6 +237,12 @@ export function AttendanceCycleDashboard({
         <AttendanceMissedLessons
           cycleLessons={visibleLiveCells}
           todayStr={todayStr}
+          group={{
+            id: group.id,
+            name: group.name,
+            lessonStartTime: group.lessonStartTime ?? null,
+            lessonEndTime: group.lessonEndTime ?? null,
+          }}
           onSelectDate={onSelectDate}
         />
       )}
