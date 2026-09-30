@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { answerState, formatLessonDay, makeUpIsAhead, type UnmarkedLessonInfo } from "./unmarked-lesson";
 
-const pending: UnmarkedLessonInfo = { id: "u1", status: "PENDING", teacherPayExempt: false, claimedBy: null };
+const pending: UnmarkedLessonInfo = {
+  id: "u1",
+  status: "PENDING",
+  teacherPayExempt: false,
+  lessonStartTime: "18:00",
+  lessonEndTime: "19:30",
+  claimedBy: null,
+};
 const admin = { id: 3, roles: [{ id: 3 }] };
 
 describe("answerState", () => {

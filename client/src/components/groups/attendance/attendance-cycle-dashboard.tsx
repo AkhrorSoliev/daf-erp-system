@@ -176,9 +176,14 @@ export function AttendanceCycleDashboard({
         <AttendanceTodayCard
           todayLesson={lessonDateFromCell(todayLesson)}
           todayStr={todayStr}
+          group={{ id: group.id, name: group.name }}
           isAdmin={isAdmin}
-          lessonStartTime={group.lessonStartTime ?? null}
-          lessonEndTime={group.lessonEndTime ?? null}
+          lessonStartTime={
+            todayLesson.unmarked?.lessonStartTime ?? group.lessonStartTime ?? null
+          }
+          lessonEndTime={
+            todayLesson.unmarked?.lessonEndTime ?? group.lessonEndTime ?? null
+          }
           onSelectDate={onSelectDate}
         />
       )}
@@ -237,12 +242,7 @@ export function AttendanceCycleDashboard({
         <AttendanceMissedLessons
           cycleLessons={visibleLiveCells}
           todayStr={todayStr}
-          group={{
-            id: group.id,
-            name: group.name,
-            lessonStartTime: group.lessonStartTime ?? null,
-            lessonEndTime: group.lessonEndTime ?? null,
-          }}
+          group={{ id: group.id, name: group.name }}
           onSelectDate={onSelectDate}
         />
       )}

@@ -6,6 +6,9 @@ export interface UnmarkedLessonInfo {
   status: UnmarkedStatus;
   /** Already exempt (backfill or re-asked): the teacher is paid whatever is answered. */
   teacherPayExempt: boolean;
+  /** The times the lesson really ran (a move can carry its own), as recorded when the question opened. */
+  lessonStartTime: string;
+  lessonEndTime: string;
   claimedBy: { id: number; firstName: string; lastName: string } | null;
 }
 

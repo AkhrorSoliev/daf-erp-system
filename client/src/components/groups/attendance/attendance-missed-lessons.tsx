@@ -11,12 +11,7 @@ import {
 interface AttendanceMissedLessonsProps {
   cycleLessons: LessonDate[];
   todayStr: string;
-  group: {
-    id: string;
-    name: string;
-    lessonStartTime: string | null;
-    lessonEndTime: string | null;
-  };
+  group: { id: string; name: string };
   onSelectDate: (date: string) => void;
 }
 
@@ -65,8 +60,10 @@ export function AttendanceMissedLessons({
                   groupId: group.id,
                   groupName: group.name,
                   date: lesson.date,
-                  startTime: group.lessonStartTime,
-                  endTime: group.lessonEndTime,
+                  // The times the question was opened with: a lesson moved with
+                  // its own times must not show the group's.
+                  startTime: lesson.unmarked.lessonStartTime,
+                  endTime: lesson.unmarked.lessonEndTime,
                 }}
                 info={lesson.unmarked}
                 onAnswered={noop}

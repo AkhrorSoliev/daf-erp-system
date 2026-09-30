@@ -72,6 +72,12 @@ export function AttendanceForm({
   // bu bayroq finalize rejimiga o'tkazadi.
   const [forceFinalizeMode, setForceFinalizeMode] = useState(false);
   const [planSubmitting, setPlanSubmitting] = useState<number | null>(null);
+  // The lesson's real times for this date, from the register's own read: a day
+  // moved here can carry times of its own (the server judges the window on them).
+  const [effectiveTimes, setEffectiveTimes] = useState<{
+    start: string | null;
+    end: string | null;
+  } | null>(null);
 
   const [y, m, d] = date.split("-");
   const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
@@ -83,11 +89,14 @@ export function AttendanceForm({
   const tashkent = tashkentNow();
   const isToday = date === tashkent.dateStr;
 
+  const lessonStartTime = effectiveTimes?.start ?? group.lessonStartTime ?? null;
+  const lessonEndTime = effectiveTimes?.end ?? group.lessonEndTime ?? null;
+
   const lessonTimeInfo = (() => {
-    if (!isToday || !group.lessonStartTime || !group.lessonEndTime) return null;
+    if (!isToday || !lessonStartTime || !lessonEndTime) return null;
     const nowMinutes = tashkent.minutes;
-    const [sh, sm] = group.lessonStartTime.split(":").map(Number);
-    const [eh, em] = group.lessonEndTime.split(":").map(Number);
+    const [sh, sm] = lessonStartTime.split(":").map(Number);
+    const [eh, em] = lessonEndTime.split(":").map(Number);
     const start = sh * 60 + sm;
     const end = eh * 60 + em;
 
@@ -97,16 +106,16 @@ export function AttendanceForm({
     if (nowMinutes < windowStart)
       return {
         status: "before" as const,
-        message: `Dars ${group.lessonStartTime} da boshlanadi (Toshkent vaqti). Davomat dars boshlanishidan 10 daqiqa oldin ochiladi`,
+        message: `Dars ${lessonStartTime} da boshlanadi (Toshkent vaqti). Davomat dars boshlanishidan 10 daqiqa oldin ochiladi`,
       };
     if (nowMinutes >= end)
       return {
         status: "after" as const,
-        message: `Dars vaqti tugagan (${group.lessonStartTime} – ${group.lessonEndTime}, Toshkent vaqti). Davomat olish yopilgan`,
+        message: `Dars vaqti tugagan (${lessonStartTime} – ${lessonEndTime}, Toshkent vaqti). Davomat olish yopilgan`,
       };
     return {
       status: "during" as const,
-      message: `Dars davom etmoqda (${group.lessonStartTime} – ${group.lessonEndTime}, Toshkent vaqti)`,
+      message: `Dars davom etmoqda (${lessonStartTime} – ${lessonEndTime}, Toshkent vaqti)`,
     };
   })();
 
@@ -117,8 +126,8 @@ export function AttendanceForm({
     date,
     todayStr: tashkent.dateStr,
     nowMinutes: tashkent.minutes,
-    startTime: group.lessonStartTime ?? null,
-    endTime: group.lessonEndTime ?? null,
+    startTime: lessonStartTime,
+    endTime: lessonEndTime,
   });
   const isNewRegister =
     students.length > 0 && students.every((s) => s.status === null);
@@ -148,6 +157,12 @@ export function AttendanceForm({
       lessonTimeInfo.status !== "during") ||
     (newRegisterClosed && !planningMode);
 
+  // The lesson's window governs a NEW register only. An administrator editing
+  // one that already has rows is not bound by it, so «yopilgan» would mislead
+  // (nor while the register is still loading and it is not yet known).
+  const editingExistingRegister =
+    isAdmin && (loading || students.some((s) => s.status !== null));
+
   const fetchAttendance = useCallback(async () => {
     setLoading(true);
     try {
@@ -162,6 +177,10 @@ export function AttendanceForm({
       setStudents(active);
       setDebtorStudents(debtors);
       setCoursePrice(data.coursePrice ?? 0);
+      setEffectiveTimes({
+        start: data.effectiveStartTime ?? null,
+        end: data.effectiveEndTime ?? null,
+      });
 
       const map = new Map<number, AttendanceEntry>();
       for (const s of active) {
@@ -182,6 +201,7 @@ export function AttendanceForm({
       setStudents([]);
       setDebtorStudents([]);
       setCoursePrice(0);
+      setEffectiveTimes(null);
       setEntries(new Map());
     } finally {
       setLoading(false);
@@ -393,7 +413,9 @@ export function AttendanceForm({
       )}
 
       {/* Lesson time banner */}
-      {lessonTimeInfo && !alreadyTakenForTeacher && (
+      {lessonTimeInfo &&
+        !alreadyTakenForTeacher &&
+        !(editingExistingRegister && lessonTimeInfo.status !== "during") && (
         <div
           className={cn(
             "flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm",
