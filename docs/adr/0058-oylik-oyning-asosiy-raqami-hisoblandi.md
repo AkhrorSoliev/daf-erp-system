@@ -101,9 +101,13 @@ Spec A2 ning 4-bandi (qarz ikki raqam) — alohida reja
      ADJUSTMENT);
    - **«Kechirildi»**: qarz tarixining oy ro'yxati, kogortaning kechirish
      summasi, kechirilganlar soni va ro'yxati. Qarz tarixi takrorida ikkala
-     qator qoladi (balans ular bilan to'g'ri chiqadi): asl qatorning
-     kamayishi «Boshqa» (`debtOther`) ga, qarshi qatorning oshishi «Yangi
-     qarz» ga yoziladi — bekor qilingan to'lov bilan bir xil qoida.
+     qator qoladi (balans ular bilan to'g'ri chiqadi). Qarshi qatorning
+     oshishi «Yangi qarz» ga yoziladi — bekor qilingan to'lovdagidek. Asl
+     qator esa to'lovdan farq qiladi: bekor qilingan to'lovning asli
+     «To'landi» da qoladi, bekor qilingan kechirishning asli «Kechirildi»
+     dan «Boshqa» (`debtOther`) ga ko'chadi. Shuning uchun yopilgan oyda
+     berilgan kechirish keyin bekor qilinsa, o'sha oyning «Kechirildi» si
+     (va «Boshqa» si) keyinchalik o'zgaradi; oyning oxirgi qarzi o'zgarmaydi.
 
    Balans yurishlari (kogorta `balanceAsOf`, `replayDebtOrigin`) va
    «Tekshiruv» hamma qatorni o'qiydi — ular `Student.balance` ga teng
