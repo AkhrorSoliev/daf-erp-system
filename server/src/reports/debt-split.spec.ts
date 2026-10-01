@@ -16,7 +16,7 @@ describe('studyingDebtorWhere', () => {
 });
 
 describe('splitDebt', () => {
-  it('a studying debtor: debt up to this month is «shu oy», the rest «eski»', () => {
+  it('a studying debtor: debt up to this month is «shu oy», the rest «eski qarz»', () => {
     const r = splitDebt({
       studying: [
         { id: 1, balance: -100_000 },
@@ -39,7 +39,7 @@ describe('splitDebt', () => {
     });
   });
 
-  it('a studying debtor with no charge this month: all of it is «eski»', () => {
+  it('a studying debtor with no charge this month: all of it is «eski qarz»', () => {
     const r = splitDebt({
       studying: [{ id: 1, balance: -80_000 }],
       chargedThisMonth: new Map(),

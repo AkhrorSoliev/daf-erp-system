@@ -30,9 +30,13 @@ qo'shilmaydi, «o'rtacha qarz» olib tashlanadi (spec A2, 2-bo'lim, 1-qaror).
 ## Qaror (spec A2 — CEO, 27.09.2026; Qarzdorlik maketi bilan aniqlashtirildi)
 
 1. **Ikki ta'rif, bitta manba.** Yagona manba — `debt-split.ts`
-   (`loadDebtSplit` → sof `splitDebt`, `ReportsService.getDebtSplit` orqali):
-   `DebtSplit { studying: { total, count, currentMonth, older }, notStudying:
-   { total, count } }`.
+   (`loadDebtSplit` → sof `splitDebt`): `DebtSplit { studying: { total, count,
+   currentMonth, older }, notStudying: { total, count } }`. Yuzalarning ko'pi
+   uni `ReportsService.getDebtSplit` orqali o'qiydi; `GET /payments/debtors/summary`
+   (`payments-debtors.service.ts`) esa `loadDebtSplit` / `splitDebt` ni
+   to'g'ridan-to'g'ri chaqiradi. O'qiyotgan qarzdorlarning sharti ham shu
+   faylda — `studyingDebtorWhere`; `/qarzdorlar` ro'yxati ham shu bilan
+   o'qiladi.
    - **O'qiyotganlar qarzi** — `deletedAt: null`, `balance < 0` va
      `activeStudentWhere()` (ADR-0015 «faol o'quvchi»: statusi ACTIVE va faol
      guruhda faol yozuvi bor). Qarz har o'quvchi uchun ikkiga bo'linadi:
@@ -72,19 +76,25 @@ qo'shilmaydi, «o'rtacha qarz» olib tashlanadi (spec A2, 2-bo'lim, 1-qaror).
      `forecast.debtorExposure` va overview'ning `debtorCount` olib tashlandi;
      xom `ReportsFinancialService` overview'si qarz raqamini umuman bermaydi.
    - **Bosh sahifa** (`GET /dashboard/summary`): qarz kartasi
-     `overview.debtSplit` dan o'qiydi — bo'linmani ikkinchi marta o'qimaydi
-     (ADR-0012).
+     `overview.debtSplit` dan o'qiydi — karta uchun ikkinchi o'qish yo'q
+     (ADR-0012). Sahifaning «E'tibor talab qiladi» bloki esa va'dalar sonini
+     `getDebtorSummary` dan oladi va u bo'linmani yana bir bor o'qiydi.
    - **Qarzdorlik sahifasi:** `GET /payments/debtors/summary` endi `{ split,
      openPromises, overduePromises }` qaytaradi; `totalDebt`, `debtorCount`,
      `avgDebt` olib tashlandi. Sahifada ikki qarz kartasi, va'da kartasi va
      «Ro'yxat filtrlari bu kartalarga ta'sir qilmaydi» izohi: kartalar butun
      filial qamrovini tasvirlaydi, ro'yxat filtri ularni o'zgartirmaydi.
      Aloqa markazi banneri `split.studying.total` ni ko'rsatadi.
-   - **Telegram:** 21:00 hisobotida «O'qiyotganlar qarzi» (soni, summasi, ▲/▼),
-     uning «🟡 shu oy · 🔴 eski qarz» qatori va «O'qimayotganlar qarzi»;
-     `/qarzdorlar` — ikkala jami va eng katta 5 ta o'qiyotgan qarzdor; `/stats`
-     va «💰 Moliyaviy xulosa» — ikki qator. ▲/▼ va 🟡 yorug'ligi qoidasi faqat
-     o'qiyotganlar sonini kuzatadi; o'qimayotganlar chop etiladi, xolos.
+   - **Telegram:** 21:00 hisoboti, `/qarzdorlar`, `/stats` va «💰 Moliyaviy
+     xulosa» qarzni bir xil qatorlarda chop etadi: «O'qiyotganlar qarzi» (soni,
+     summasi), uning «🟡 shu oy · 🔴 eski qarz» qatori (o'qiyotganlar qarzi
+     bo'lmasa chiqmaydi) va «O'qimayotganlar qarzi». Qatorlarni bitta joy quradi
+     — `server/src/telegram-groups/utils/debt-split-lines.util.ts`; sarlavha
+     va belgini har yuza o'zi qo'yadi. 21:00 hisobotida birinchi qatorga
+     kechagi kunga nisbatan ▲/▼ qo'shiladi; `/qarzdorlar` ularning ostida eng
+     katta 5 ta o'qiyotgan qarzdorni sanab beradi. ▲/▼ va 🟡
+     yorug'ligi qoidasi faqat «O'qiyotganlar qarzi» summasiga qaraydi;
+     o'qimayotganlar chop etiladi, xolos.
    - **Kunlik surat:** `DailyFinancialSnapshot.totalDebt` va `debtorCount` endi
      o'qiyotganlarning summasi va sonini saqlaydi (`DailySnapshotService`
      yozadi).
@@ -94,18 +104,29 @@ qo'shilmaydi, «o'rtacha qarz» olib tashlanadi (spec A2, 2-bo'lim, 1-qaror).
    - «Jami qarz» va «O'rtacha qarz» bu yuzalarda yo'q.
 4. **Yiqilsa, nol chizilmaydi.** Nol «hech kim qarzdor emas» deb o'qiladi,
    shuning uchun `getDebtSplit` xato bersa overview, 21:00 hisoboti va Excel
-   eksporti butunlay yiqiladi; «💰 Moliyaviy xulosa» kartasi esa faqat shu ikki
-   qatorni tashlab, qolganini yuboradi.
+   eksporti butunlay yiqiladi; «💰 Moliyaviy xulosa» kartasi esa faqat qarz
+   qatorlarini tashlab, qolganini yuboradi.
 5. **Mijoz serverdan oldin chiqadi.** ADR-0058 dagi deploy tartibi o'zgarmaydi:
    avval mijoz, keyin server. Shuning uchun yangi mijoz ADR-0059 dan oldingi
-   server javobiga chidaydi: bo'linma yo'q joyda «—» chizadi yoki qarz qismini
-   umuman chizmaydi, «0 so'm» emas (4-band). Server oldin chiqsa, eski mijoz
+   server javobiga chidaydi: bo'linma yo'q joyda «0 so'm» emas, «—» chizadi
+   yoki qarz qismini umuman chizmaydi (4-band). Moliya «Qarzdorlik» bloki
+   ikkala yorliqni qoldirib «—» chizadi, «🟡 shu oy · 🔴 eski qarz»
+   qatorisiz (so'rov xato bersa ham shunday); Bosh sahifa kartasi va
+   Qarzdorlik sahifasi kartalari ham «—»; Aloqa markazi banneri qarz qismini
+   tashlab, faqat va'dalar sonini ko'rsatadi. Server oldin chiqsa, eski mijoz
    yangi javobda eski maydonlarni topmaydi va qarzni «0 so'm» yoki «—» deb
    chizadi — tartib shuning uchun ham shunday.
 
 **Ataylab o'zgarmadi** (o'z ta'rifi bilan qoladi):
 - «Oylik qarzdorlik» tabining plitkalari — holatga (status) asoslangan tarix;
   Qarzdorlik sahifasini qayta qurish (B to'plami) uni qayta ishlaydi;
+- Bosh sahifadagi «Eng katta qarzdorlar» ro'yxati — Qarzdorlik ro'yxatining
+  boshi, havolasi `/payments/debt` ni «Barcha holatlar»da ochadi. U har
+  o'quvchining o'z balansini ko'rsatadi: balanslarni qo'shmaydi va
+  o'qiyotgan / o'qimayotganga ajratmaydi. Hamma holatni tartiblaydi, shuning
+  uchun ro'yxat qoidasi (`debtorWhere`) bo'yicha arxivdagi karta ham chiqishi
+  mumkin. Qarzdorlik sahifasini qayta qurish (B to'plami) uni qayta ko'rib
+  chiqishi mumkin;
 - `/students` sahifasidagi qarzdorlar soni;
 - `/payments/pending`;
 - guruh davomat paneli;
@@ -154,15 +175,27 @@ ta'rifni (ADR-0015) ishlatadi.
   ro'yxatning standarti «Barcha holatlar» esa kiritadi: ro'yxat kartalar bilan
   mos tushmaydi. Xuddi shu sahifadagi «Oylik qarzdorlik» tabining plitkalari
   esa eski, holatga asoslangan ta'rifda qoladi.
+- **Qarz ikki raqam o'rtasida ko'chib turadi — har kuni bo'lishi mumkin.**
+  Qarzdorning qarzi bir raqamdan ikkinchisiga o'tadi, masalan: guruhi
+  to'xtatilganda yoki tugaganda, guruhi boshlanganda (FORMING→ACTIVE),
+  guruhsiz qarzdor faol guruhga joylashtirilganda. Qarz o'zgarmagan, lekin
+  21:00 hisobotining ▲/▼ i buni qarzning o'zgarishi deb o'qiydi:
+  o'qiyotganlarga o'tgan qarz ▲, chiqqani ▼ bo'lib ko'rinadi. Bir kunda
+  o'qiyotganlarga 500 000 yoki undan ko'p ko'chsa, kun yangi qarzsiz ham 🟡
+  bo'ladi.
 - **Kunlik suratning ma'nosi bir marta o'zgaradi.** ADR-0059 dan oldingi
-  qatorlarda `totalDebt` / `debtorCount` — status-ACTIVE son, keyingilarida —
-  o'qiyotganlar soni. Qatorlar qayta yozilmaydi: kunlik surat qayta qurilmaydi.
-  Bu ikki ustunni 21:00 hisobotining ▲/▼ idan boshqa o'qiydigan joy yo'q, shu
-  sababli deploydan keyingi birinchi kechqurun u eski ta'rifdagi qator bilan
-  solishtiradi va ▼ qarz kamayganini emas, ta'rif o'zgarganini bildiradi.
-  O'qiyotganlar eski to'plamning qismi, shuning uchun o'zgarish farqni faqat
-  kamaytiradi: u o'zi 🟡 ni yoqmaydi, lekin haqiqiy o'sish shu qadar yashirinadi.
-  Buni chetlab o'tadigan kod yo'q.
+  qatorlarda `totalDebt` / `debtorCount` — statusi ACTIVE qarzdorlarniki,
+  keyingilarida — o'qiyotganlarniki. Qatorlar qayta yozilmaydi: kunlik surat
+  qayta qurilmaydi. Bu ikki ustunni 21:00 hisobotining ▲/▼ idan boshqa
+  o'qiydigan joy yo'q. Deploydan keyingi birinchi 21:00 hisoboti eski
+  ta'rifdagi qator bilan solishtiradi va uning ▼ i qarz kamayganini emas,
+  ta'rif o'zgarganini bildiradi — bir kechqurun. Istisno: deploy bilan o'sha
+  hisobot orasida 23:40 surati yozilsa (masalan, deploy o'sha kunning 21:00
+  hisoboti bilan 23:40 surati orasiga tushsa), saqlangan birinchi qator
+  allaqachon yangi ta'rifda va bunday ▼ chiqmaydi. O'qiyotganlar eski
+  to'plamning qismi, shuning uchun o'zgarish farqni faqat kamaytiradi: u o'zi
+  🟡 ni yoqmaydi, lekin haqiqiy o'sish shu qadar yashirinadi. Buni chetlab
+  o'tadigan kod yo'q.
 - Excel «Filiallar» varag'ining izohi o'qimayotganlar qarzi ustunga kirmaganini
   aytmaydi — buni faqat ustun sarlavhasi aytadi. Uning «Jami»si to'liq qarzni
   («Qarzdorlar», «Balans» varaqlari) ko'rsatmaydi.

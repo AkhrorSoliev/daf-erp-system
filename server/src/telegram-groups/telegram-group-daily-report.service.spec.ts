@@ -991,7 +991,7 @@ describe('TelegramGroupDailyReportService — «Bu oy hisoblandi» (ADR-0058)', 
 
 /**
  * ADR-0059: the debt is two numbers that are never added — «O'qiyotganlar»
- * (students in an active group, with its shu oy / eski split) and
+ * (students in an active group, with its shu oy / eski qarz split) and
  * «O'qimayotganlar» (every other non-archived debtor). `ReportsService
  * .getDebtSplit` is their one source; the ▲/▼ delta, the 🟡 light and the
  * snapshot data all follow the FIRST number alone.
