@@ -1,23 +1,69 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReportsService } from '../reports/reports.service';
+import type { DebtSplit } from '../reports/debt-split';
+import { activeStudentWhere } from '../students/shared/active-student-where';
 import { TelegramGroupStatsService } from './telegram-group-stats.service';
 import { TelegramGroupDailyReportService } from './telegram-group-daily-report.service';
+import { formatNumber, formatSum } from './utils/format.util';
 
 describe('TelegramGroupStatsService', () => {
   let service: TelegramGroupStatsService;
   const build = jest.fn();
+  // The debt is `ReportsService.getDebtSplit`'s (ADR-0059).
+  const getDebtSplit = jest.fn();
+  const NOBODY_OWES: DebtSplit = {
+    studying: { total: 0, count: 0, currentMonth: 0, older: 0 },
+    notStudying: { total: 0, count: 0 },
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    getDebtSplit.mockResolvedValue(NOBODY_OWES);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TelegramGroupStatsService,
         { provide: PrismaService, useValue: {} },
         { provide: TelegramGroupDailyReportService, useValue: { build } },
+        { provide: ReportsService, useValue: { getDebtSplit } },
       ],
     }).compile();
     service = module.get(TelegramGroupStatsService);
   });
+
+  /**
+   * No `student.aggregate`: the totals come from the split, so a command that
+   * reads them from `Student` itself throws here. `findMany` is the top-five
+   * list and answers `debtorRows`.
+   */
+  function makePrisma(debtorRows: unknown[] = []) {
+    const resolve = <T>(v: T) => jest.fn(() => Promise.resolve(v));
+    return {
+      role: { findFirst: resolve({ id: 4 }) },
+      student: {
+        count: resolve(0),
+        findMany: resolve(debtorRows),
+      },
+      group: { count: resolve(0) },
+      user: { count: resolve(0) },
+      payment: {
+        aggregate: resolve({ _sum: { amount: 0 }, _count: 0 }),
+        groupBy: resolve([]),
+      },
+      expense: { aggregate: resolve({ _sum: { amount: 0 } }) },
+    } as any;
+  }
+  async function svcWith(prisma: any) {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        TelegramGroupStatsService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: TelegramGroupDailyReportService, useValue: { build } },
+        { provide: ReportsService, useValue: { getDebtSplit } },
+      ],
+    }).compile();
+    return module.get(TelegramGroupStatsService);
+  }
 
   describe('buildDailyReport — delegates to the daily-report service', () => {
     it('returns only the composed message (no snapshot side-effect on /hisobot)', async () => {
@@ -45,25 +91,8 @@ describe('TelegramGroupStatsService', () => {
     afterEach(() => jest.useRealTimers());
 
     it('bounds the /stats Expense query by a date-only Tashkent month window, not a -5h shifted timestamp (regression)', async () => {
-      const prisma: any = {
-        role: { findFirst: jest.fn(async () => ({ id: 4 })) },
-        student: {
-          count: jest.fn(async () => 0),
-          aggregate: jest.fn(async () => ({ _sum: { balance: 0 }, _count: 0 })),
-        },
-        group: { count: jest.fn(async () => 0) },
-        user: { count: jest.fn(async () => 0) },
-        payment: { aggregate: jest.fn(async () => ({ _sum: { amount: 0 } })) },
-        expense: { aggregate: jest.fn(async () => ({ _sum: { amount: 0 } })) },
-      };
-      const module: TestingModule = await Test.createTestingModule({
-        providers: [
-          TelegramGroupStatsService,
-          { provide: PrismaService, useValue: prisma },
-          { provide: TelegramGroupDailyReportService, useValue: { build } },
-        ],
-      }).compile();
-      const svc = module.get(TelegramGroupStatsService);
+      const prisma = makePrisma();
+      const svc = await svcWith(prisma);
 
       await svc.buildOverallStats(1001, null);
 
@@ -86,35 +115,6 @@ describe('TelegramGroupStatsService', () => {
   // `branchId` on Student or a `branches.some` on Payment would both compile
   // and both be wrong.
   describe('branch scope reaches every model with the right predicate', () => {
-    function makePrisma() {
-      const resolve = <T>(v: T) => jest.fn(() => Promise.resolve(v));
-      return {
-        role: { findFirst: resolve({ id: 4 }) },
-        student: {
-          count: resolve(0),
-          aggregate: resolve({ _sum: { balance: 0 }, _count: 0 }),
-          findMany: resolve([]),
-        },
-        group: { count: resolve(0) },
-        user: { count: resolve(0) },
-        payment: {
-          aggregate: resolve({ _sum: { amount: 0 }, _count: 0 }),
-          groupBy: resolve([]),
-        },
-        expense: { aggregate: resolve({ _sum: { amount: 0 } }) },
-      } as any;
-    }
-    async function svcWith(prisma: any) {
-      const module: TestingModule = await Test.createTestingModule({
-        providers: [
-          TelegramGroupStatsService,
-          { provide: PrismaService, useValue: prisma },
-          { provide: TelegramGroupDailyReportService, useValue: { build } },
-        ],
-      }).compile();
-      return module.get(TelegramGroupStatsService);
-    }
-
     it('slices Student through the StudentBranch join, not a branchId column', async () => {
       const prisma = makePrisma();
       await (await svcWith(prisma)).buildStudentsBlock(1001, [2]);
@@ -127,15 +127,15 @@ describe('TelegramGroupStatsService', () => {
       }
     });
 
-    it('slices the debtor list AND its total the same way', async () => {
+    it('slices the debtor list AND its totals the same way', async () => {
       const prisma = makePrisma();
       await (await svcWith(prisma)).buildDebtorsBlock(1001, [1]);
 
-      const agg = prisma.student.aggregate.mock.calls[0][0].where;
+      // The totals are the split's, asked for this group's own scope; the named
+      // top five must be cut by the same branch predicate, or the bot prints
+      // five Fargona debtors under a company-wide sum.
+      expect(getDebtSplit).toHaveBeenCalledWith(1001, { branchIds: [1] });
       const list = prisma.student.findMany.mock.calls[0][0].where;
-      // The named top-5 and the total they belong to must agree, or the bot
-      // prints five Fargona debtors under a company-wide sum.
-      expect(agg.branches).toEqual({ some: { branchId: { in: [1] } } });
       expect(list.branches).toEqual({ some: { branchId: { in: [1] } } });
     });
 
@@ -170,6 +170,127 @@ describe('TelegramGroupStatsService', () => {
         expect(call[0].where.branches).toBeUndefined();
         expect(call[0].where.branchId).toBeUndefined();
       }
+    });
+  });
+
+  // ADR-0059: the debt is TWO numbers that are never added — «O'qiyotganlar»
+  // (a student in an active group) and «O'qimayotganlar» (every other
+  // non-archived debtor). Both commands print them as the split gives them.
+  describe('debt as two numbers (ADR-0059)', () => {
+    const split: DebtSplit = {
+      studying: {
+        total: 43_500_000,
+        count: 237,
+        currentMonth: 41_100_000,
+        older: 2_400_000,
+      },
+      notStudying: { total: 40_600_000, count: 327 },
+    };
+    const debtors = [
+      { id: 10001, firstName: 'Ali', lastName: 'Valiyev', balance: -3_100_000 },
+      { id: 10002, firstName: 'Vali', lastName: 'Aliyev', balance: -2_800_000 },
+      {
+        id: 10003,
+        firstName: 'Guli',
+        lastName: 'Karimova',
+        balance: -2_500_000,
+      },
+      {
+        id: 10004,
+        firstName: 'Sami',
+        lastName: 'Rashidov',
+        balance: -2_200_000,
+      },
+      {
+        id: 10005,
+        firstName: 'Nilu',
+        lastName: 'Hasanova',
+        balance: -1_900_000,
+      },
+    ];
+
+    beforeEach(() => getDebtSplit.mockResolvedValue(split));
+
+    it('/qarzdorlar prints both totals, then the five largest studying debtors', async () => {
+      const prisma = makePrisma(debtors);
+
+      const text = await (await svcWith(prisma)).buildDebtorsBlock(1001, null);
+
+      // `formatSum` / `formatNumber`, not literals: their thousands separator
+      // is a non-breaking space.
+      const studying = `O'qiyotganlar qarzi: <b>${formatNumber(237)}</b> ta — <b>${formatSum(43_500_000)}</b>`;
+      const notStudying = `O'qimayotganlar qarzi: <b>${formatNumber(327)}</b> ta — <b>${formatSum(40_600_000)}</b>`;
+      expect(text).toContain(studying);
+      expect(text).toContain(notStudying);
+      expect(text.indexOf(studying)).toBeLessThan(text.indexOf(notStudying));
+      expect(text).toContain("<b>Eng katta 5 ta qarzdor (o'qiyotganlar):</b>");
+      expect(text).toContain(
+        `  1. Ali Valiyev (#10001) — <b>${formatSum(3_100_000)}</b>`,
+      );
+      expect(text).toContain(
+        `  5. Nilu Hasanova (#10005) — <b>${formatSum(1_900_000)}</b>`,
+      );
+      // The single combined total is gone, and the two are never added.
+      expect(text).not.toContain('Jami qarz');
+      expect(text).not.toContain('Soni:');
+      expect(text).not.toContain(formatNumber(43_500_000 + 40_600_000));
+    });
+
+    it("lists the debtors by the «o'qiyotgan» definition, biggest debt first", async () => {
+      const prisma = makePrisma(debtors);
+
+      await (await svcWith(prisma)).buildDebtorsBlock(1001, null);
+
+      // `activeStudentWhere()` is what makes the list the studying side of the
+      // very split the totals above it come from.
+      expect(prisma.student.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.student.findMany).toHaveBeenCalledWith({
+        where: {
+          companyId: 1001,
+          deletedAt: null,
+          balance: { lt: 0 },
+          ...activeStudentWhere(),
+        },
+        orderBy: { balance: 'asc' },
+        take: 5,
+        select: { id: true, firstName: true, lastName: true, balance: true },
+      });
+      expect(getDebtSplit).toHaveBeenCalledWith(1001, { branchIds: null });
+    });
+
+    it('/qarzdorlar names nobody when no studying student owes, but still prints both lines', async () => {
+      getDebtSplit.mockResolvedValue({
+        studying: { total: 0, count: 0, currentMonth: 0, older: 0 },
+        notStudying: { total: 40_600_000, count: 327 },
+      });
+
+      const text = await (
+        await svcWith(makePrisma())
+      ).buildDebtorsBlock(1001, null);
+
+      expect(text).toContain(
+        `O'qiyotganlar qarzi: <b>${formatNumber(0)}</b> ta — <b>${formatSum(0)}</b>`,
+      );
+      expect(text).toContain(
+        `O'qimayotganlar qarzi: <b>${formatNumber(327)}</b> ta — <b>${formatSum(40_600_000)}</b>`,
+      );
+      expect(text).not.toContain('Eng katta');
+    });
+
+    it('/stats prints the same two lines in place of «Qarzdorlar»', async () => {
+      const text = await (
+        await svcWith(makePrisma())
+      ).buildOverallStats(1001, [2]);
+
+      expect(text).toContain(
+        `O'qiyotganlar qarzi: <b>${formatNumber(237)}</b> ta — <b>${formatSum(43_500_000)}</b>`,
+      );
+      expect(text).toContain(
+        `O'qimayotganlar qarzi: <b>${formatNumber(327)}</b> ta — <b>${formatSum(40_600_000)}</b>`,
+      );
+      expect(text).not.toContain('Qarzdorlar');
+      expect(text).not.toContain(formatNumber(43_500_000 + 40_600_000));
+      expect(getDebtSplit).toHaveBeenCalledWith(1001, { branchIds: [2] });
     });
   });
 });

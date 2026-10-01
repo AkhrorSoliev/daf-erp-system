@@ -82,31 +82,10 @@ const EXEMPTIONS: { site: string; reason: string }[] = [
       'Filiallar kesimidagi qarz summasi — yuqoridagi «Debitorlik» ning filial ' +
       "bo'yicha bo'lingani. Umumiy son bilan yig'indisi mos tushishi shart.",
   },
-  {
-    site: 'src/telegram-groups/daily-snapshot.service.ts::persistScope',
-    reason:
-      'Kunlik suratdagi qarz summasi va qarzdorlar soni — /payments dagi qarz ' +
-      "kartochkasi bilan bir xil o'lchov.",
-  },
-  {
-    site: 'src/telegram-groups/telegram-group-daily-report.service.ts::build#3',
-    reason: "Kunlik hisobotdagi qarz bloki — surat bilan bir xil o'lchov.",
-  },
-  {
-    site: 'src/telegram-groups/telegram-group-stats.service.ts::buildDebtorsBlock',
-    reason:
-      "/qarzdorlar buyrug'idagi jami qarz — qarz kartochkasi bilan bir xil.",
-  },
-  {
-    site: 'src/telegram-groups/telegram-group-stats.service.ts::buildDebtorsBlock#2',
-    reason:
-      "/qarzdorlar buyrug'idagi eng katta qarzdorlar ro'yxati — summasi bilan " +
-      'bir xil shartdan qurilishi shart.',
-  },
-  {
-    site: 'src/telegram-groups/telegram-group-stats.service.ts::buildOverallStats#3',
-    reason: "/stats dagi qarz bloki — qarz kartochkasi bilan bir xil o'lchov.",
-  },
+  // Telegram: kunlik hisobot, kunlik surat (`daily-snapshot.service.ts`),
+  // /qarzdorlar va /stats qarzni endi `ReportsService.getDebtSplit` dan oladi
+  // (ADR-0059), /qarzdorlar ro'yxati esa `activeStudentWhere()` bilan quriladi —
+  // status-ACTIVE sanoqlari yo'q, shuning uchun bu yerda ular uchun qator ham yo'q.
 ];
 
 const sites = discoverStudentPopulationSites(SRC, REPO_ROOT);
