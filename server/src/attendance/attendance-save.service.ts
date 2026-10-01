@@ -10,6 +10,7 @@ import {
   AttendanceMethod,
   AttendanceStatus,
   EnrollmentStatus,
+  MonthlyChargeStatus,
   PaymentModel,
   Prisma,
 } from '@prisma/client';
@@ -416,10 +417,36 @@ export class AttendanceSaveService {
         // lesson-pack course: closing their enrollment already refunded the
         // prepaid lessons and zeroed the counter, so bill() would take a whole
         // cycle from a departed student and strand the lessons on a closed
-        // enrollment. Monthly billing moves no balance, so it is unaffected.
+        // enrollment. Monthly billing moves no balance: a departed student's
+        // month paid for the day and is billed as usual — unless the departure
+        // gave the day back (a trial lesson or a quality claim returns the
+        // whole month), which would pay the teacher for a day nobody paid for.
+        const departed = roster.filter(
+          (e) => e.status !== EnrollmentStatus.ACTIVE,
+        );
+        const givenBack = new Set(
+          isMonthly && departed.length > 0
+            ? (
+                await tx.enrollmentMonthlyCharge.findMany({
+                  where: {
+                    enrollmentId: { in: departed.map((e) => e.id) },
+                    periodYear: Number(date.slice(0, 4)),
+                    periodMonth: Number(date.slice(5, 7)),
+                    status: MonthlyChargeStatus.CHARGED,
+                    frozenOutDates: { has: date },
+                  },
+                  select: { enrollmentId: true },
+                })
+              ).map((c) => c.enrollmentId)
+            : [],
+        );
         const billedEnrollmentIdByStudent = new Map(
           roster
-            .filter((e) => isMonthly || e.status === EnrollmentStatus.ACTIVE)
+            .filter(
+              (e) =>
+                e.status === EnrollmentStatus.ACTIVE ||
+                (isMonthly && !givenBack.has(e.id)),
+            )
             .map((e) => [e.studentId, e.id]),
         );
 

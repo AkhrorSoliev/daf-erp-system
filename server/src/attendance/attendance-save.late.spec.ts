@@ -92,6 +92,8 @@ describe('AttendanceSaveService.saveLate', () => {
         findMany: jest.fn().mockResolvedValue([]),
         updateMany: jest.fn(),
       },
+      // Departed students' months that gave the day back (none by default).
+      enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
       lessonCancellation: { findFirst: jest.fn().mockResolvedValue(null) },
       lessonReschedule: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -269,6 +271,46 @@ describe('AttendanceSaveService.saveLate', () => {
     expect(billing.processAttendanceBilling).toHaveBeenCalledWith(
       tx,
       expect.objectContaining({ enrollmentId: 'e2', studentId: 10002 }),
+    );
+  });
+
+  it('does not bill a departed student for a day their departure gave back', async () => {
+    // A trial lesson (3.5) or a quality claim returned his whole month: the
+    // teacher must not be paid for it from that month, CEO exemption or not.
+    prisma.group.findFirst.mockResolvedValue({
+      id: 'g1',
+      name: '#014',
+      branchId: 2,
+      course: { paymentModel: 'MONTHLY' },
+    });
+    tx.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+      { enrollmentId: 'e2' },
+    ]);
+    await service.saveLate(
+      'g1',
+      '2026-09-28',
+      { entries },
+      3,
+      ['Administrator'],
+      1,
+    );
+    expect(tx.enrollmentMonthlyCharge.findMany).toHaveBeenCalledWith({
+      where: {
+        enrollmentId: { in: ['e2'] },
+        periodYear: 2026,
+        periodMonth: 9,
+        status: 'CHARGED',
+        frozenOutDates: { has: '2026-09-28' },
+      },
+      select: { enrollmentId: true },
+    });
+    // He stays on the register …
+    expect(tx.attendance.upsert).toHaveBeenCalledTimes(2);
+    // … but only the active student is billed.
+    expect(billing.processAttendanceBilling).toHaveBeenCalledTimes(1);
+    expect(billing.processAttendanceBilling).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({ enrollmentId: 'e1', studentId: 10001 }),
     );
   });
 
