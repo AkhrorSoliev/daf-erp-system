@@ -645,17 +645,6 @@ export class ReportsService {
   ) {
     return this.payments.getPaymentReports(companyId, options);
   }
-  isPaymentOnTime(payment: {
-    studentId: number;
-    createdAt: Date;
-    contractId: string | null;
-    contract: {
-      groupId: string | null;
-      course: { lessonPaymentCount: number };
-    } | null;
-  }) {
-    return this.payments.isPaymentOnTime(payment);
-  }
 
   // Teacher payments
   getTeacherPaymentReports(

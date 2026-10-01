@@ -526,94 +526,12 @@ describe('ReportsService', () => {
     });
   });
 
-  describe('isPaymentOnTime', () => {
-    const basePayment = {
-      studentId: 10001,
-      createdAt: new Date('2026-04-15'),
-      contractId: 'c1',
-      contract: {
-        groupId: 'g1',
-        course: { lessonPaymentCount: 12 },
-      },
-    };
-
-    it('returns true when group has ≤3 lessons (new group)', async () => {
-      prisma.attendance.count
-        .mockResolvedValueOnce(2) // groupLessonsTotal
-        .mockResolvedValueOnce(0); // studentLessonsBefore
-
-      const result = await service.isPaymentOnTime(basePayment);
-      expect(result).toBe(true);
-    });
-
-    it('returns true when student starts a new cycle (lessons % count === 0)', async () => {
-      prisma.attendance.count
-        .mockResolvedValueOnce(50) // groupLessonsTotal (existing group)
-        .mockResolvedValueOnce(12); // studentLessonsBefore: exactly 1 cycle done
-
-      const result = await service.isPaymentOnTime(basePayment);
-      expect(result).toBe(true);
-    });
-
-    it('returns false when payment happens mid-cycle', async () => {
-      prisma.attendance.count
-        .mockResolvedValueOnce(50) // groupLessonsTotal
-        .mockResolvedValueOnce(5); // studentLessonsBefore: mid-cycle
-
-      const result = await service.isPaymentOnTime(basePayment);
-      expect(result).toBe(false);
-    });
-
-    it('returns true for a new student joining an existing group (0 lessons attended)', async () => {
-      prisma.attendance.count
-        .mockResolvedValueOnce(50) // groupLessonsTotal
-        .mockResolvedValueOnce(0); // studentLessonsBefore: brand new student
-
-      const result = await service.isPaymentOnTime(basePayment);
-      expect(result).toBe(true);
-    });
-
-    it('uses 20-lesson cycle when course.lessonPaymentCount is 20', async () => {
-      prisma.attendance.count
-        .mockResolvedValueOnce(50) // groupLessonsTotal
-        .mockResolvedValueOnce(20); // exactly 1 cycle of 20
-
-      const payment = {
-        ...basePayment,
-        contract: { groupId: 'g1', course: { lessonPaymentCount: 20 } },
-      };
-      const result = await service.isPaymentOnTime(payment);
-      expect(result).toBe(true);
-    });
-
-    it('returns null when payment has no contract and student has no enrollment', async () => {
-      prisma.enrollment.findFirst.mockResolvedValueOnce(null);
-      const payment = { ...basePayment, contractId: null, contract: null };
-      const result = await service.isPaymentOnTime(payment);
-      expect(result).toBeNull();
-    });
-
-    it('falls back to student enrollment when contract is missing', async () => {
-      prisma.enrollment.findFirst.mockResolvedValueOnce({
-        groupId: 'g2',
-        group: { course: { lessonPaymentCount: 12 } },
-      });
-      prisma.attendance.count
-        .mockResolvedValueOnce(30) // groupLessonsTotal
-        .mockResolvedValueOnce(0); // studentLessonsBefore: new student
-      const payment = { ...basePayment, contractId: null, contract: null };
-      const result = await service.isPaymentOnTime(payment);
-      expect(result).toBe(true);
-    });
-  });
-
   describe('getPaymentReports', () => {
-    it('returns the expected response shape with 4 metric blocks', async () => {
+    it('returns the expected response shape with 3 metric blocks', async () => {
       prisma.payment.aggregate.mockResolvedValue({
         _sum: { amount: 1_000_000 },
         _count: 10,
       });
-      prisma.payment.findMany.mockResolvedValue([]);
       prisma.payment.groupBy.mockResolvedValue([]);
       prisma.transaction.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
       prisma.transaction.count.mockResolvedValue(0);
@@ -627,9 +545,10 @@ describe('ReportsService', () => {
       });
 
       expect(result).toHaveProperty('totalPayments');
-      expect(result).toHaveProperty('onTimePayments');
       expect(result).toHaveProperty('branchBreakdown');
       expect(result).toHaveProperty('refunds');
+      // «Vaqtida to'lovlar» (12 darslik qoida) oylik tizimda doim xato edi.
+      expect(result).not.toHaveProperty('onTimePayments');
       expect(result.totalPayments.trend).toHaveLength(6);
       expect(result.totalPayments.current).toBe(1_000_000);
     });
@@ -639,7 +558,6 @@ describe('ReportsService', () => {
         _sum: { amount: 500_000 },
         _count: 5,
       });
-      prisma.payment.findMany.mockResolvedValue([]);
       prisma.payment.groupBy.mockResolvedValue([]);
       prisma.transaction.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
       prisma.transaction.count.mockResolvedValue(0);
@@ -657,7 +575,6 @@ describe('ReportsService', () => {
         _sum: { amount: 0 },
         _count: 0,
       });
-      prisma.payment.findMany.mockResolvedValue([]);
       prisma.payment.groupBy.mockResolvedValue([
         { branchId: 1, _sum: { amount: 2_000_000 } },
         { branchId: 2, _sum: { amount: 5_000_000 } },
@@ -684,7 +601,7 @@ describe('ReportsService', () => {
       expect(result).toEqual({ teachers: [] });
     });
 
-    it('aggregates student count, payments, and debt per teacher', async () => {
+    it('aggregates student count and debt per teacher', async () => {
       prisma.user.findMany.mockResolvedValueOnce([
         {
           id: 10001,
@@ -702,12 +619,6 @@ describe('ReportsService', () => {
         { groupId: 'g2', _count: { _all: 5 } },
       ]);
 
-      prisma.payment.findMany.mockResolvedValueOnce([
-        { amount: 500_000, contract: { groupId: 'g1' } },
-        { amount: 300_000, contract: { groupId: 'g2' } },
-        { amount: 200_000, contract: { groupId: 'g1' } },
-      ]);
-
       prisma.student.findMany.mockResolvedValueOnce([
         {
           balance: -100_000,
@@ -718,15 +629,18 @@ describe('ReportsService', () => {
       const result = await service.getTeacherPaymentReports(1, {});
 
       expect(result.teachers).toHaveLength(1);
-      expect(result.teachers[0]).toMatchObject({
+      // toEqual: a revived `totalPayments` (payments looked up through
+      // contracts — always 0) would fail here.
+      expect(result.teachers[0]).toEqual({
         id: 10001,
         name: 'Ali Valiyev',
         groupCount: 2,
         courses: ['B1 German', 'A1 German'],
         studentCount: 15,
-        totalPayments: 1_000_000,
         debtAmount: 100_000,
       });
+      // Payments are no longer looked up at all.
+      expect(prisma.payment.findMany).not.toHaveBeenCalled();
     });
 
     it('filters out teachers with no active groups', async () => {
@@ -743,7 +657,7 @@ describe('ReportsService', () => {
       expect(result.teachers).toEqual([]);
     });
 
-    it('sorts teachers by total payments desc', async () => {
+    it('sorts teachers by debt desc', async () => {
       prisma.user.findMany.mockResolvedValueOnce([
         {
           id: 1,
@@ -762,14 +676,14 @@ describe('ReportsService', () => {
         { groupId: 'g1', _count: { _all: 1 } },
         { groupId: 'g2', _count: { _all: 1 } },
       ]);
-      prisma.payment.findMany.mockResolvedValueOnce([
-        { amount: 100, contract: { groupId: 'g1' } },
-        { amount: 900, contract: { groupId: 'g2' } },
+      prisma.student.findMany.mockResolvedValueOnce([
+        { balance: -100, enrollments: [{ groupId: 'g1' }] },
+        { balance: -900, enrollments: [{ groupId: 'g2' }] },
       ]);
-      prisma.student.findMany.mockResolvedValueOnce([]);
 
       const result = await service.getTeacherPaymentReports(1, {});
       expect(result.teachers.map((t) => t.id)).toEqual([2, 1]);
+      expect(result.teachers.map((t) => t.debtAmount)).toEqual([900, 100]);
     });
   });
 
@@ -795,7 +709,7 @@ describe('ReportsService', () => {
       });
     });
 
-    it('computes per-group stats: students, paid, debtors, expected', async () => {
+    it('computes per-group stats: students, debtors, expected', async () => {
       prisma.user.findFirst.mockResolvedValueOnce({
         id: 10001,
         firstName: 'Ali',
@@ -815,35 +729,49 @@ describe('ReportsService', () => {
         { groupId: 'g1', studentId: 102 },
         { groupId: 'g1', studentId: 103 },
       ]);
-      prisma.payment.findMany.mockResolvedValueOnce([
-        {
-          amount: 300_000,
-          studentId: 101,
-          contract: { groupId: 'g1' },
-        },
-        {
-          amount: 300_000,
-          studentId: 102,
-          contract: { groupId: 'g1' },
-        },
-      ]);
       prisma.student.findMany.mockResolvedValueOnce([
         { balance: -50_000, enrollments: [{ groupId: 'g1' }] },
       ]);
 
       const result = await service.getTeacherGroupsReport(1, 10001, {});
       expect(result.groups).toHaveLength(1);
-      expect(result.groups[0]).toMatchObject({
+      // toEqual: a revived `paidCount` / `totalPayments` (payments looked up
+      // through contracts — always 0) would fail here.
+      expect(result.groups[0]).toEqual({
         id: 'g1',
         name: 'B1-01',
         coursePrice: 300_000,
         totalStudents: 3,
-        paidCount: 2,
         debtorCount: 1,
-        totalPayments: 600_000,
         debtAmount: 50_000,
         expectedAmount: 900_000,
       });
+      // Payments are no longer looked up at all.
+      expect(prisma.payment.findMany).not.toHaveBeenCalled();
+    });
+
+    it('sorts groups by debt desc', async () => {
+      prisma.user.findFirst.mockResolvedValueOnce({
+        id: 10001,
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+      });
+      prisma.groupTeacher.findMany.mockResolvedValueOnce([
+        { group: { id: 'g1', name: 'B1-01', course: { price: 300_000 } } },
+        { group: { id: 'g2', name: 'B1-02', course: { price: 300_000 } } },
+      ]);
+      prisma.enrollment.findMany.mockResolvedValueOnce([
+        { groupId: 'g1', studentId: 101 },
+        { groupId: 'g2', studentId: 102 },
+      ]);
+      prisma.student.findMany.mockResolvedValueOnce([
+        { balance: -50_000, enrollments: [{ groupId: 'g1' }] },
+        { balance: -200_000, enrollments: [{ groupId: 'g2' }] },
+      ]);
+
+      const result = await service.getTeacherGroupsReport(1, 10001, {});
+      expect(result.groups.map((g) => g.id)).toEqual(['g2', 'g1']);
+      expect(result.groups.map((g) => g.debtAmount)).toEqual([200_000, 50_000]);
     });
   });
 

@@ -11,8 +11,6 @@ describe('ReportsPaymentsService.getPaymentReports — branch scope', () => {
         aggregate: jest
           .fn()
           .mockResolvedValue({ _sum: { amount: 0 }, _count: 0 }),
-        // No payments, so the on-time check never issues its own queries.
-        findMany: jest.fn().mockResolvedValue([]),
         groupBy: jest.fn().mockResolvedValue([]),
       },
       branch: { findMany: jest.fn().mockResolvedValue([]) },

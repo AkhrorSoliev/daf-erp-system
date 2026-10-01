@@ -1,12 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  addDaysToDateStr,
-  tashkentDayStartUtc,
-  tashkentMonthKey,
-  tashkentMonthRangeUtc,
-} from '../common/date/tashkent';
 
+/**
+ * «To'lov hisobotlari → O'qituvchilar» jadvali va uning guruhlar oynasi.
+ *
+ * Bu yerda to'lov summasi yo'q: u to'lovni shartnoma (`Contract`) orqali
+ * guruhga bog'lab qidirardi, shartnomalar esa ochilmaydi — natija doim 0 edi.
+ * Qolgan raqamlar BUGUNGI holat: qarz — o'quvchining hozirgi manfiy balansi.
+ * Shu sabab `startDate` / `endDate` qabul qilinadi (eski havolalar buzilmasin),
+ * lekin hech narsani cheklamaydi.
+ */
 @Injectable()
 export class ReportsTeacherPaymentsService {
   constructor(private prisma: PrismaService) {}
@@ -15,7 +18,6 @@ export class ReportsTeacherPaymentsService {
     companyId: number,
     options: { branchId?: number; startDate?: string; endDate?: string },
   ) {
-    const range = this.resolveRange(options.startDate, options.endDate);
     const branchFilter = options.branchId ? { branchId: options.branchId } : {};
 
     const teachers = await this.prisma.user.findMany({
@@ -54,7 +56,7 @@ export class ReportsTeacherPaymentsService {
       return { teachers: [] };
     }
 
-    const [enrollmentsByGroup, payments, debtorStudents] = await Promise.all([
+    const [enrollmentsByGroup, debtorStudents] = await Promise.all([
       this.prisma.enrollment.groupBy({
         by: ['groupId'],
         where: {
@@ -63,18 +65,6 @@ export class ReportsTeacherPaymentsService {
           status: { in: ['ACTIVE', 'FROZEN'] },
         },
         _count: { _all: true },
-      }),
-      this.prisma.payment.findMany({
-        where: {
-          companyId,
-          status: 'COMPLETED',
-          createdAt: { gte: range.start, lt: range.end },
-          contract: { groupId: { in: allGroupIds } },
-        },
-        select: {
-          amount: true,
-          contract: { select: { groupId: true } },
-        },
       }),
       this.prisma.student.findMany({
         where: {
@@ -107,14 +97,6 @@ export class ReportsTeacherPaymentsService {
       enrollmentsByGroup.map((e) => [e.groupId, e._count._all]),
     );
 
-    const paymentsByGroup = new Map<string, number>();
-    for (const p of payments) {
-      const gid = p.contract?.groupId;
-      if (gid) {
-        paymentsByGroup.set(gid, (paymentsByGroup.get(gid) ?? 0) + p.amount);
-      }
-    }
-
     const debtByGroup = new Map<string, number>();
     for (const s of debtorStudents) {
       for (const e of s.enrollments) {
@@ -135,10 +117,6 @@ export class ReportsTeacherPaymentsService {
           (acc, gid) => acc + (studentCountByGroup.get(gid) ?? 0),
           0,
         );
-        const totalPayments = groupIds.reduce(
-          (acc, gid) => acc + (paymentsByGroup.get(gid) ?? 0),
-          0,
-        );
         const debtAmount = groupIds.reduce(
           (acc, gid) => acc + (debtByGroup.get(gid) ?? 0),
           0,
@@ -149,12 +127,11 @@ export class ReportsTeacherPaymentsService {
           groupCount: groupIds.length,
           courses,
           studentCount,
-          totalPayments,
           debtAmount,
         };
       })
       .filter((t) => t.groupCount > 0)
-      .sort((a, b) => b.totalPayments - a.totalPayments);
+      .sort((a, b) => b.debtAmount - a.debtAmount);
 
     return { teachers: result };
   }
@@ -164,7 +141,6 @@ export class ReportsTeacherPaymentsService {
     teacherId: number,
     options: { branchId?: number; startDate?: string; endDate?: string },
   ) {
-    const range = this.resolveRange(options.startDate, options.endDate);
     const branchFilter = options.branchId ? { branchId: options.branchId } : {};
 
     const teacher = await this.prisma.user.findFirst({
@@ -204,7 +180,7 @@ export class ReportsTeacherPaymentsService {
       };
     }
 
-    const [enrollments, payments, debtorStudents] = await Promise.all([
+    const [enrollments, debtorStudents] = await Promise.all([
       this.prisma.enrollment.findMany({
         where: {
           groupId: { in: groupIds },
@@ -212,19 +188,6 @@ export class ReportsTeacherPaymentsService {
           status: { in: ['ACTIVE', 'FROZEN'] },
         },
         select: { groupId: true, studentId: true },
-      }),
-      this.prisma.payment.findMany({
-        where: {
-          companyId,
-          status: 'COMPLETED',
-          createdAt: { gte: range.start, lt: range.end },
-          contract: { groupId: { in: groupIds } },
-        },
-        select: {
-          amount: true,
-          studentId: true,
-          contract: { select: { groupId: true } },
-        },
       }),
       this.prisma.student.findMany({
         where: {
@@ -261,18 +224,6 @@ export class ReportsTeacherPaymentsService {
       studentsByGroup.get(e.groupId)!.add(e.studentId);
     }
 
-    const paymentSumByGroup = new Map<string, number>();
-    const paidStudentsByGroup = new Map<string, Set<number>>();
-    for (const p of payments) {
-      const gid = p.contract?.groupId;
-      if (!gid) continue;
-      paymentSumByGroup.set(gid, (paymentSumByGroup.get(gid) ?? 0) + p.amount);
-      if (!paidStudentsByGroup.has(gid)) {
-        paidStudentsByGroup.set(gid, new Set());
-      }
-      paidStudentsByGroup.get(gid)!.add(p.studentId);
-    }
-
     const debtByGroup = new Map<string, { count: number; sum: number }>();
     for (const s of debtorStudents) {
       for (const e of s.enrollments) {
@@ -286,22 +237,18 @@ export class ReportsTeacherPaymentsService {
     const result = groups
       .map((g) => {
         const totalStudents = studentsByGroup.get(g.id)?.size ?? 0;
-        const paidCount = paidStudentsByGroup.get(g.id)?.size ?? 0;
         const debt = debtByGroup.get(g.id) ?? { count: 0, sum: 0 };
-        const totalPayments = paymentSumByGroup.get(g.id) ?? 0;
         return {
           id: g.id,
           name: g.name,
           coursePrice: g.course.price,
           totalStudents,
-          paidCount,
           debtorCount: debt.count,
-          totalPayments,
           debtAmount: debt.sum,
           expectedAmount: totalStudents * g.course.price,
         };
       })
-      .sort((a, b) => b.totalPayments - a.totalPayments);
+      .sort((a, b) => b.debtAmount - a.debtAmount);
 
     return {
       teacher: {
@@ -309,17 +256,6 @@ export class ReportsTeacherPaymentsService {
         name: `${teacher.firstName} ${teacher.lastName}`,
       },
       groups: result,
-    };
-  }
-
-  /** TIMESTAMP bounds for a Tashkent day range; `end` is EXCLUSIVE. */
-  private resolveRange(startDate?: string, endDate?: string) {
-    const thisMonth = tashkentMonthRangeUtc(tashkentMonthKey(new Date()));
-    return {
-      start: startDate ? tashkentDayStartUtc(startDate) : thisMonth.gte,
-      end: endDate
-        ? tashkentDayStartUtc(addDaysToDateStr(endDate, 1))
-        : thisMonth.lt,
     };
   }
 }
