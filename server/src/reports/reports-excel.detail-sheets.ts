@@ -551,7 +551,7 @@ export function debtFlowSheet(wb: Workbook, history: any) {
   sheetNotes(ws, [
     'Har bir so‘m FAQAT bir marta va faqat o‘zi harakatlangan oyga yoziladi, shuning uchun oqim ustunlari qo‘shiladi.',
     'Oy oxiridagi qarz — muzlagan raqam: o‘tgan oy uchun keyin o‘zgarmaydi. Joriy oy bundan mustasno.',
-    '«Boshqa» — tuzatish (ADJUSTMENT), boshlang‘ich balans va pul qaytarish: qarzni kamaytiradi, lekin markaz yiqqan pul emas.',
+    '«Boshqa» — tuzatish (ADJUSTMENT), boshlang‘ich balans, pul qaytarish va bekor qilingan qarz kechirish: qarzni kamaytiradi, lekin markaz yiqqan pul emas.',
     'Qarz = Σ max(0, −balans). Balans manfiydan musbatga o‘tsa, faqat manfiy qismi hisoblanadi.',
   ]);
 }
