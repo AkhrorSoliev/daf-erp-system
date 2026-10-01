@@ -73,8 +73,10 @@ import { buildMonthChargesLines } from './utils/month-charges-lines.util';
  *    charges came to, how much of it is paid and what is still owed, from
  *    `ReportsService.getMonthCharges` (ADR-0058). Printed from 2026-09 on, in
  *    place of "Shundan yig'ildi", "Oy oxiriga kutilyapti" and "Oy rejasidan
- *    yig'ildi" ("Shu oyning darslari" stays). Before 2026-09, or when the call
- *    fails, those three lines stay as they were. Never re-derive it here.
+ *    yig'ildi" ("Shu oyning darslari" stays). Those three lines print only
+ *    before 2026-09; from then on they never do, not even when the call fails
+ *    (the month block then simply has no hisoblandi / to'landi / qoldi lines,
+ *    and a warning goes to the log). Never re-derive it here.
  *  - "Markaz qo'shimchasi" = SalaryMonthly `centerFunded` — the center's own
  *    leg of the month: top-up accruals it has already written PLUS the lessons
  *    it still has to front. It does NOT drop to 0 once the month is settled.
@@ -536,13 +538,19 @@ export class TelegramGroupDailyReportService {
     // `MTD cash ÷ forecast` — two different things over a denominator that is
     // a schedule guess, so it printed 109–115% while the web page called the
     // same month 83%. Now both surfaces divide the SAME two figures.
+    //
+    // From 2026-09 (ADR-0058) the month is read through «Bu oy hisoblandi /
+    // To'landi / Qoldi» instead, and «Shundan yig'ildi», «Oy oxiriga
+    // kutilyapti» and «Oy rejasidan yig'ildi» NEVER print in such a month — not
+    // even when the charges could not be read. They are the lesson-based
+    // figures that are wrong under monthly billing, so a month block without
+    // the new lines is right and one that falls back to these is not.
+    const monthlyBilling = isMonthlyBillingMonth(monthKey);
     if (attribution && attribution.lessonsValue > 0) {
       lines.push(
         `• Shu oyning darslari: <b>${formatSum(attribution.lessonsValue)}</b>`,
       );
-      // From 2026-09 the month's own «Bu oy hisoblandi / To'landi / Qoldi»
-      // (below) carry the collection reading, so the lesson-based ratio goes.
-      if (!monthCharges) {
+      if (!monthlyBilling) {
         lines.push(
           `• Shundan yig'ildi: <b>${formatSum(attribution.currentMonth)}</b> (<b>${attribution.pct}%</b>)`,
         );
@@ -551,7 +559,7 @@ export class TelegramGroupDailyReportService {
     if (monthCharges) {
       // Same lines, same wording as the «Moliyaviy xulosa» card (ADR-0058).
       for (const line of buildMonthChargesLines(monthCharges)) lines.push(line);
-    } else if (expectedValue !== null && expectedValue > 0) {
+    } else if (!monthlyBilling && expectedValue !== null && expectedValue > 0) {
       // Lesson value, from the ONE canonical source. The line it replaces was a
       // local `exactDays × 4` walk — a second implementation of a figure the web
       // page also computed, and both were wrong the same way.

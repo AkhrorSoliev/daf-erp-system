@@ -856,7 +856,7 @@ describe('TelegramGroupDailyReportService — «Bu oy hisoblandi» (ADR-0058)', 
     });
   });
 
-  it('drops the three lines, warns and still sends the report when getMonthCharges fails', async () => {
+  it('prints neither the new nor the old month lines when getMonthCharges fails, warns and sends the rest', async () => {
     const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
     try {
       const state = defaultState();
@@ -870,12 +870,17 @@ describe('TelegramGroupDailyReportService — «Bu oy hisoblandi» (ADR-0058)', 
 
       const { message } = await service.build(1001, null);
 
+      // No hisoblandi / to'landi / qoldi …
       expect(message).not.toContain('Bu oy hisoblandi');
       expect(message).not.toContain('Qoldi:');
-      // The rest of the report is sent, the month block included — with no
-      // charges to print it stays as it was before the monthly months.
+      // … and NOT the lesson-based lines in their place: in a billing month
+      // they are the wrong figures, whether or not the charges could be read.
+      expect(message).not.toContain("Shundan yig'ildi");
+      expect(message).not.toContain('Oy oxiriga kutilyapti');
+      expect(message).not.toContain("Oy rejasidan yig'ildi");
+      // The rest of the report is sent, «Shu oyning darslari» included.
       expect(message).toContain('Tushum (haqiqiy)');
-      expect(message).toContain("Shundan yig'ildi");
+      expect(message).toContain('• Shu oyning darslari:');
       expect(warn).toHaveBeenCalledWith(
         expect.stringContaining('Oy hisoblari olinmadi: boom'),
       );
