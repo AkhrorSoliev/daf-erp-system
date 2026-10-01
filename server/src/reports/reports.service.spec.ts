@@ -22,6 +22,10 @@ import { SalaryPaymentService } from '../salary/salary-payment.service';
 import { SalaryService } from '../salary/salary.service';
 import { PaymentsDebtorsService } from '../payments/payments-debtors.service';
 import { DEPARTURE_GRACE_DAYS } from '../students/shared/departure-episodes';
+import {
+  resolveMonthlyScope,
+  type SalaryMonthlyQuery,
+} from '../salary/shared/resolve-monthly-scope';
 
 /**
  * One teacher change (5 March, 10:00 Tashkent) in group g1 whose five lessons
@@ -1201,6 +1205,84 @@ describe('ReportsService', () => {
       expect(out.netProfit.balanceWithdrawals).toBe(30_000);
       // 100 000 lessons + 30 000 withdrawn − 70 000 teachers.
       expect(out.netProfit.netProfit).toBe(60_000);
+    });
+
+    /**
+     * A2.8. The payroll leg ran the director's branch scope as `mainBranch`
+     * alone, so a director attached to branches 1 and 2 who picked branch 2 got
+     * a blocked scope: no roster, payroll 0, and the branch's profit looked too
+     * high. The leg below runs the REAL `resolveMonthlyScope`; behind a blocked
+     * scope `SalaryMonthlyService` finds no teachers and returns all-zero totals.
+     */
+    it('subtracts the payroll of the branch a two-branch director picked (A2.8)', async () => {
+      const svc: any = service;
+      jest
+        .spyOn(svc.financial, 'valueHeldLessons')
+        .mockResolvedValue([{ value: 100_000 }]);
+      jest
+        .spyOn(svc.financial, 'getPeriodOutflows')
+        .mockResolvedValue({ refunds: 0, writeOffs: 0, providerFees: 0 });
+      jest.spyOn(svc, 'getProfitLoss').mockResolvedValue({
+        costOfServices: {},
+        operatingExpenses: { adminSalaries: 0, byCategory: [] },
+      });
+      jest
+        .spyOn(svc, 'getBalanceWithdrawals')
+        .mockResolvedValue({ total: 0, teacherCredited: 0, students: [] });
+
+      const salaryPrisma = {
+        company: {
+          findUnique: jest
+            .fn()
+            .mockResolvedValue({ systemStartDate: new Date('2026-05-01') }),
+        },
+        salaryPeriodSetting: {
+          findFirst: jest.fn().mockResolvedValue({ cycleStartDay: 1 }),
+        },
+        user: {
+          findUnique: jest.fn().mockResolvedValue({
+            mainBranch: 1,
+            branches: [{ branchId: 1 }, { branchId: 2 }],
+            roles: [{ role: { name: 'Branch Director' } }],
+          }),
+        },
+      } as any;
+      const getMonthly = jest.fn(
+        async (
+          query: SalaryMonthlyQuery,
+          companyId: number,
+          performedById: number,
+        ) => {
+          const scope = await resolveMonthlyScope(
+            salaryPrisma,
+            query,
+            companyId,
+            performedById,
+          );
+          return {
+            totals: scope.blocked
+              ? { covered: 0, fullDeserved: 0 }
+              : { covered: 70_000, fullDeserved: 70_000 },
+          };
+        },
+      );
+      svc.salary = { getMonthly };
+
+      const out = await svc.assembleMonthlyNetProfit(1001, {
+        month: '2026-10',
+        branchIds: [2],
+        performedById: 10768,
+      });
+
+      expect(getMonthly).toHaveBeenCalledWith(
+        { month: '2026-10', branchId: 2, staffBranchBasis: 'home' },
+        1001,
+        10768,
+      );
+      // 100 000 of lessons − 70 000 of branch 2's payroll, not 100 000 against
+      // a payroll leg that a blocked scope had read as 0.
+      expect(out.netProfit.teacherSalary).toBe(70_000);
+      expect(out.netProfit.netProfit).toBe(30_000);
     });
   });
 

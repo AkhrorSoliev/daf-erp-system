@@ -9,10 +9,12 @@ const CEO = {
 };
 const DIRECTOR_B7 = {
   mainBranch: 7,
+  branches: [],
   roles: [{ role: { name: 'Branch Director' } }],
 };
 const DIRECTOR_NO_BRANCH = {
   mainBranch: null,
+  branches: [],
   roles: [{ role: { name: 'Branch Director' } }],
 };
 

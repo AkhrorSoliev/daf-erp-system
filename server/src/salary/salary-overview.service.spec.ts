@@ -234,6 +234,7 @@ describe('SalaryOverviewService', () => {
   it('scopes the teacher query to the mainBranch for a Branch Director', async () => {
     prisma.user.findUnique.mockResolvedValue({
       mainBranch: 7,
+      branches: [],
       roles: [{ role: { name: 'Branch Director' } }],
     });
 
@@ -287,6 +288,7 @@ describe('SalaryOverviewService', () => {
     it('keeps a director on their own branch when they pick it', async () => {
       prisma.user.findUnique.mockResolvedValue({
         mainBranch: 7,
+        branches: [],
         roles: [{ role: { name: 'Branch Director' } }],
       });
 
@@ -304,6 +306,7 @@ describe('SalaryOverviewService', () => {
     it('REFUSES a director asking for another branch rather than serving their own', async () => {
       prisma.user.findUnique.mockResolvedValue({
         mainBranch: 7,
+        branches: [],
         roles: [{ role: { name: 'Branch Director' } }],
       });
 
@@ -320,6 +323,7 @@ describe('SalaryOverviewService', () => {
       // "no filter" would show them every branch's payroll.
       prisma.user.findUnique.mockResolvedValue({
         mainBranch: null,
+        branches: [],
         roles: [{ role: { name: 'Administrator' } }],
       });
 
@@ -335,6 +339,7 @@ describe('SalaryOverviewService', () => {
       // have tested.
       prisma.user.findUnique.mockResolvedValue({
         mainBranch: null,
+        branches: [],
         roles: [{ role: { name: 'Administrator' } }],
       });
 

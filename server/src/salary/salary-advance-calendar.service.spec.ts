@@ -14,10 +14,12 @@ describe('SalaryAdvanceCalendarService', () => {
   const ceoCaller = { mainBranch: 1, roles: [{ role: { name: 'CEO' } }] };
   const bdCaller = {
     mainBranch: 7,
+    branches: [],
     roles: [{ role: { name: 'Branch Director' } }],
   };
   const bdNoBranch = {
     mainBranch: null,
+    branches: [],
     roles: [{ role: { name: 'Branch Director' } }],
   };
 
