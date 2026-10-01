@@ -97,6 +97,15 @@ export class StudentsStatusService {
       userId,
       dto.departurePolicy,
     );
+    // Contract 3.5 waits for an unanswered «Dars bo'ldimi?» that could decide
+    // the trial lesson (CEO, 01.10.2026) — checked here because the cascade
+    // below settles each month on its own and only logs a refusal.
+    if (dto.status === StudentStatus.EXPELLED) {
+      await this.monthlyChargeService.assertTrialLessonAnswered(this.prisma, {
+        studentId: id,
+        companyId,
+      });
+    }
     return this.applyStatusChange(
       id,
       dto,

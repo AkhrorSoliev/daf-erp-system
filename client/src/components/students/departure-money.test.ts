@@ -196,6 +196,18 @@ describe("departure money block (contract 6.2, ADR-0043)", () => {
     );
   });
 
+  it("asks for the «Dars bo'ldimi?» answer first when it decides the trial lesson", () => {
+    const text =
+      "Avval «Dars bo'ldimi?» savoliga javob bering: 05.10 (#014). Sinov darsi o'quvchi shu darsda bo'lgan-bo'lmaganiga qarab hal bo'ladi.";
+    const waiting = month({ trialAwaitsAnswer: text });
+    for (const policy of ["STUDENT_CANCELLED", "QUALITY_CLAIM"] as const) {
+      const c = departureConsequence(preview({}, waiting), policy)!;
+      expect(c.tone).toBe("warning");
+      expect(c.head).toBe(text);
+      expect(c.line).toBe("");
+    }
+  });
+
   it("closes a debt the return is bigger than", () => {
     const c = departureConsequence(
       preview({ balance: -300000 }),

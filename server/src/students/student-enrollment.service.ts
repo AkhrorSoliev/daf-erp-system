@@ -701,6 +701,13 @@ export class StudentEnrollmentService {
     //      and audit metadata.
     const monthOutcome = await this.prisma.$transaction(
       async (tx) => {
+        // Contract 3.5 waits for an unanswered «Dars bo'ldimi?» that could
+        // decide the trial lesson (CEO, 01.10.2026).
+        await this.monthlyChargeService.assertTrialLessonAnswered(tx, {
+          studentId: enrollment.studentId,
+          companyId,
+          enrollmentId,
+        });
         await this.enrollmentBillingService.refundPrepaidToBalance(tx, {
           enrollmentId,
           performedById: userId,
