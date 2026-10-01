@@ -8,6 +8,7 @@ import { ReportsService } from '../reports/reports.service';
 import { isMonthlyBillingMonth } from '../reports/month-charges';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { formatSum } from './utils/format.util';
+import { buildDebtSplitLines } from './utils/debt-split-lines.util';
 import { buildIncomeSplitLines } from './utils/income-split.util';
 import { buildMonthChargesLines } from './utils/month-charges-lines.util';
 import {
@@ -409,8 +410,9 @@ export class TelegramGroupReportMenuService {
   }
 
   /**
-   * The card's debt: «O'qiyotganlar qarzi» (with its shu oy / eski split) and
-   * «O'qimayotganlar qarzi», two lines that are never added (ADR-0059). They come
+   * The card's debt: «O'qiyotganlar qarzi», its «shu oy · eski qarz» line and
+   * «O'qimayotganlar qarzi» — two numbers that are never added (ADR-0059),
+   * printed by the 21:00 report's renderer, `buildDebtSplitLines`. They come
    * from `ReportsService.getDebtSplit` for the group's own scope — the card used
    * to print the raw overview's status-ACTIVE «Qarzdorlar», which counted an
    * ungrouped «faol» student as a debtor and every other surface did not.
@@ -420,7 +422,7 @@ export class TelegramGroupReportMenuService {
    * month.
    *
    * Returns no lines on failure: a missing line is honest, a zero would claim
-   * nobody owes — and a broken split costs the card these two lines, never the
+   * nobody owes — and a broken split costs the card its debt lines, never the
    * card itself.
    */
   private async debtLines(
@@ -429,14 +431,9 @@ export class TelegramGroupReportMenuService {
     month: string,
   ): Promise<string[]> {
     try {
-      const { studying, notStudying } = await this.reports.getDebtSplit(
-        companyId,
-        { branchIds, month },
+      return buildDebtSplitLines(
+        await this.reports.getDebtSplit(companyId, { branchIds, month }),
       );
-      return [
-        `• O'qiyotganlar qarzi: <b>${studying.count} ta — ${formatSum(studying.total)}</b> (shu oy ${formatSum(studying.currentMonth)} · eski ${formatSum(studying.older)})`,
-        `• O'qimayotganlar qarzi: <b>${notStudying.count} ta — ${formatSum(notStudying.total)}</b>`,
-      ];
     } catch (err: any) {
       this.logger.warn(`Debt split failed: ${err?.message ?? err}`);
       return [];

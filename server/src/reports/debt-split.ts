@@ -59,6 +59,32 @@ type DebtSplitDb = {
   >;
 };
 
+/** Ikkala raqamning asosi: arxivda bo'lmagan, balansi manfiy, qamrovdagi karta. */
+function debtorBase(
+  companyId: number,
+  branchIds: ReportBranchIds,
+): Prisma.StudentWhereInput {
+  return {
+    companyId,
+    deletedAt: null,
+    balance: { lt: 0 },
+    ...studentBranchWhere(branchIds),
+  };
+}
+
+/**
+ * «O'qiyotganlar qarzi»ning qarzdorlari. `loadDebtSplit` o'qiyotganlar jamisini
+ * shu shart bilan o'qiydi, `/qarzdorlar` ning «Eng katta 5 ta» ro'yxati ham —
+ * shuning uchun ro'yxat ustidagi jamining bir qismi. O'qimayotganlar — o'sha
+ * asos, `activeStudentWhere()` ning inkori bilan.
+ */
+export function studyingDebtorWhere(
+  companyId: number,
+  branchIds: ReportBranchIds,
+): Prisma.StudentWhereInput {
+  return { ...debtorBase(companyId, branchIds), ...activeStudentWhere() };
+}
+
 export async function loadDebtSplit(
   prisma: DebtSplitDb,
   companyId: number,
@@ -66,19 +92,16 @@ export async function loadDebtSplit(
 ): Promise<DebtSplit> {
   const month = opts.month ?? tashkentMonthKey(new Date());
   const [y, m] = month.split('-').map(Number);
-  const debtors: Prisma.StudentWhereInput = {
-    companyId,
-    deletedAt: null,
-    balance: { lt: 0 },
-    ...studentBranchWhere(opts.branchIds),
-  };
   const [studying, notStudying] = await Promise.all([
     prisma.student.findMany({
-      where: { ...debtors, ...activeStudentWhere() },
+      where: studyingDebtorWhere(companyId, opts.branchIds),
       select: { id: true, balance: true },
     }),
     prisma.student.aggregate({
-      where: { ...debtors, NOT: activeStudentWhere() },
+      where: {
+        ...debtorBase(companyId, opts.branchIds),
+        NOT: activeStudentWhere(),
+      },
       _sum: { balance: true },
       _count: true,
     }),

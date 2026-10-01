@@ -79,8 +79,8 @@ describe('DailySnapshotService', () => {
   it('writes the studying debt — total and count — and never the two added', async () => {
     await service.persistForCompany(1001);
 
-    // The 21:00 report prints, and compares tomorrow against, the same
-    // «O'qiyotganlar» number; the two writers of this row must agree.
+    // The 21:00 report prints the same «O'qiyotganlar» number, and the next
+    // report's ▲/▼ compares against this row — whose only writer this is.
     const data = prisma.dailyFinancialSnapshot.create.mock.calls[0][0].data;
     expect(data.totalDebt).toBe(500);
     expect(data.debtorCount).toBe(3);

@@ -327,9 +327,11 @@ function toMonthRow(month: string, own: OwnMonthProfit, debt: any): MonthRow {
  * re-issued with a single-branch scope, so `Σ(branches)` ties to the company
  * figures on «Xulosa».
  *
- * The debt column is «O'qiyotganlar qarzi» alone (ADR-0059) — never added to
- * «O'qimayotganlar qarzi», which this sheet does not carry. A student sits in
- * exactly one branch, so the «Jami» row adds no one twice.
+ * The debt column is the exception: «O'qiyotganlar qarzi» alone (ADR-0059),
+ * which no other sheet carries company-wide, so its «Jami» has no counterpart
+ * to tie to. It is never added to «O'qimayotganlar qarzi», which this sheet
+ * does not carry. A student sits in exactly one branch (D5,
+ * `docs/branch-decisions.md`), so the «Jami» row adds no one twice.
  *
  * One branch's student count failing must not cost the reader the entire
  * table, so only that leg degrades — the company-wide flow is the

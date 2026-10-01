@@ -25,6 +25,7 @@ import {
   tashkentDayRange,
   tashkentTodayDate,
 } from './utils/format.util';
+import { buildDebtSplitLines } from './utils/debt-split-lines.util';
 import { buildIncomeSplitLines } from './utils/income-split.util';
 import { buildMonthChargesLines } from './utils/month-charges-lines.util';
 
@@ -149,10 +150,10 @@ export class TelegramGroupDailyReportService {
   ) {}
 
   /**
-   * Builds the full daily report and returns it alongside the point-in-time
-   * figures the cron should persist as tonight's snapshot (for tomorrow's
-   * ▲/▼ delta). Building does NOT write the snapshot — that is the cron's job
-   * after a confirmed send.
+   * Builds the full daily report and returns it alongside its point-in-time
+   * snapshot figures. Nothing persists them: the day's `DailyFinancialSnapshot`
+   * row has one writer, `DailySnapshotService` (23:40, see the class comment),
+   * and the next report's ▲/▼ reads that row.
    */
   async build(
     companyId: number,
@@ -410,9 +411,8 @@ export class TelegramGroupDailyReportService {
     // The snapshot, the ▲/▼ delta and the 🟡 light all follow «O'qiyotganlar»;
     // `DailySnapshotService` writes the same two figures from the same split.
     // «O'qimayotganlar» is printed and nothing more — it is never added to it.
-    const { studying, notStudying } = debtSplit;
-    const totalDebt = studying.total;
-    const debtorCount = studying.count;
+    const totalDebt = debtSplit.studying.total;
+    const debtorCount = debtSplit.studying.count;
 
     const mtdIncome = monthlyIncome._sum.amount ?? 0;
     const mtdExpense = monthlyExpenses._sum.amount ?? 0;
@@ -502,17 +502,17 @@ export class TelegramGroupDailyReportService {
     // 📌 Hozirgi holat
     lines.push(`📌 <b>Hozirgi holat</b>`);
     lines.push(`• Faol o'quvchilar: <b>${formatNumber(activeStudents)}</b>`);
-    // The debt: two lines, never added (ADR-0059). Only the first has a ▲/▼
-    // against yesterday and its shu oy / eski qarz split.
-    lines.push(
-      `• O'qiyotganlar qarzi: <b>${formatNumber(debtorCount)}</b> ta — <b>${formatSum(totalDebt)}</b>${this.buildDebtDeltaSuffix(yesterdaySnapshot, totalDebt, debtorCount)}`,
-    );
-    lines.push(
-      `   🟡 shu oy ${formatSum(studying.currentMonth)} · 🔴 eski qarz ${formatSum(studying.older)}`,
-    );
-    lines.push(
-      `• O'qimayotganlar qarzi: <b>${formatNumber(notStudying.count)}</b> ta — <b>${formatSum(notStudying.total)}</b>`,
-    );
+    // The debt (ADR-0059): the lines every Telegram surface prints. Only
+    // «O'qiyotganlar qarzi» carries the ▲/▼ against yesterday.
+    for (const line of buildDebtSplitLines(debtSplit, {
+      studyingSuffix: this.buildDebtDeltaSuffix(
+        yesterdaySnapshot,
+        totalDebt,
+        debtorCount,
+      ),
+    })) {
+      lines.push(line);
+    }
     lines.push('');
 
     // 📅 Oy boshidan
@@ -528,8 +528,8 @@ export class TelegramGroupDailyReportService {
     // `scripts/audit-finance-reconciliation.ts` checks as G1 — and `logIncome
     // BasisDrift` below says so in the log if that ever stops holding.
     //
-    // The snapshot keeps the aggregate on purpose: `DailySnapshotCron` writes
-    // the same row on that basis, and the two writers must agree.
+    // The returned snapshot figures keep the aggregate on purpose: it is the
+    // basis `DailySnapshotService`, the row's only writer, stores `mtdIncome` on.
     this.logIncomeBasisDrift(companyId, attribution, mtdIncome);
     lines.push(
       `• Tushum (haqiqiy): <b>${formatSum(attribution ? attribution.total : mtdIncome)}</b>`,

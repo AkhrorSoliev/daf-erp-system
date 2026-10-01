@@ -1062,6 +1062,23 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
     expect(message).not.toContain(formatNumber(43_500_000 + 40_600_000));
   });
 
+  it('prints no shu oy / eski qarz line when nobody studying owes', async () => {
+    const { message } = await buildWith(
+      reportsWithDebt(
+        splitOf({ total: 0, count: 0, currentMonth: 0, older: 0 }),
+      ),
+      { yesterdaySnapshot: null },
+    );
+
+    expect(message).toContain(
+      [
+        `• O'qiyotganlar qarzi: <b>${formatNumber(0)}</b> ta — <b>${formatSum(0)}</b>`,
+        `• O'qimayotganlar qarzi: <b>${formatNumber(31)}</b> ta — <b>${formatSum(9_100_000)}</b>`,
+      ].join('\n'),
+    );
+    expect(message).not.toContain('🟡 shu oy');
+  });
+
   it('moves the ▲/▼ and the 🟡 light with the studying number only', async () => {
     // Studying debt is exactly yesterday's; the OTHER number is large and
     // changed. No arrow, and — with no flag, a positive day and good
@@ -1085,8 +1102,17 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
     [500_000, "Kun yakuni: ehtiyot bo'ling"], // exactly the threshold → 🟡
     [499_999, 'Kun yakuni: yaxshi'],
   ])('a studying debt up by %i is read as «%s»', async (growth, subtitle) => {
+    // Yesterday's 235 debtors, their debt up by `growth` in this month's
+    // charges: the split stays whole (total = shu oy + eski qarz).
     const { message } = await buildWith(
-      reportsWithDebt(splitOf({ total: 43_000_000 + growth })),
+      reportsWithDebt(
+        splitOf({
+          total: 43_000_000 + growth,
+          count: 235,
+          currentMonth: 40_600_000 + growth,
+          older: 2_400_000,
+        }),
+      ),
       { flags: [] },
     );
 
@@ -1108,7 +1134,7 @@ describe('TelegramGroupDailyReportService — debt as two numbers (ADR-0059)', (
   });
 
   it('hands the studying number on as the snapshot data', async () => {
-    // `DailySnapshotService` writes the same row from the same split; both
+    // `DailySnapshotService` writes the day's row from the same split; both
     // carry the studying total and count, never the two added.
     const { snapshot } = await buildWith(reportsWithDebt(split));
 

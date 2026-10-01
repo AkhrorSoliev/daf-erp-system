@@ -1,5 +1,19 @@
 import { activeStudentWhere } from '../students/shared/active-student-where';
-import { splitDebt, loadDebtSplit } from './debt-split';
+import { splitDebt, loadDebtSplit, studyingDebtorWhere } from './debt-split';
+
+describe('studyingDebtorWhere', () => {
+  it('is a live card owing money, in scope, by the faol-o‘quvchi rule — nothing else', () => {
+    expect(studyingDebtorWhere(1, null)).toEqual({
+      companyId: 1,
+      deletedAt: null,
+      balance: { lt: 0 },
+      ...activeStudentWhere(),
+    });
+    expect(studyingDebtorWhere(1, [4]).branches).toEqual({
+      some: { branchId: { in: [4] } },
+    });
+  });
+});
 
 describe('splitDebt', () => {
   it('a studying debtor: debt up to this month is «shu oy», the rest «eski»', () => {
@@ -100,6 +114,18 @@ describe('loadDebtSplit', () => {
           .mockResolvedValue({ _sum: { balance: null }, _count: 0 }),
       },
       enrollmentMonthlyCharge: { groupBy: jest.fn().mockResolvedValue([]) },
+    });
+
+    it('reads the studying debtors with the exported predicate — the one /qarzdorlar lists by', async () => {
+      const prisma = makeDb();
+      await loadDebtSplit(prisma as never, 1, {
+        branchIds: [4],
+        month: '2026-10',
+      });
+
+      expect(prisma.student.findMany.mock.calls[0][0].where).toEqual(
+        studyingDebtorWhere(1, [4]),
+      );
     });
 
     it('both groups come from ONE rule: studying is it, not studying is its complement', async () => {

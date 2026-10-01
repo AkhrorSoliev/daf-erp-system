@@ -103,10 +103,11 @@ export class DailySnapshotService {
       ]);
 
     const data = {
-      // «O'qiyotganlar qarzi» — the studying number of the split, which the 21:00
-      // report prints and compares against tomorrow: the two writers of this row
-      // must agree. «O'qimayotganlar» is not stored, and the two are never added.
-      // Rows written before ADR-0059 hold the old status-ACTIVE figure here.
+      // «O'qiyotganlar qarzi» — the studying number of the split, the figure the
+      // 21:00 report prints; the next report's ▲/▼ compares against this row.
+      // This service is the row's only writer. «O'qimayotganlar» is not stored,
+      // and the two are never added. Rows written before ADR-0059 hold the old
+      // status-ACTIVE figure here.
       totalDebt: debtSplit.studying.total,
       debtorCount: debtSplit.studying.count,
       activeStudents,

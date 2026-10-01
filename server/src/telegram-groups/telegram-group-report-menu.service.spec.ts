@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { TelegramGroupReportMenuService } from './telegram-group-report-menu.service';
 import type { ReportsService } from '../reports/reports.service';
-import { formatSum } from './utils/format.util';
+import { formatNumber, formatSum } from './utils/format.util';
 
 function makeCtx(chatId = 111) {
   return {
@@ -483,9 +483,10 @@ describe('TelegramGroupReportMenuService', () => {
   });
 
   // ADR-0059: the card's debt is TWO numbers — «O'qiyotganlar qarzi» with its
-  // shu oy / eski split, and «O'qimayotganlar qarzi» — read from the facade's
-  // split for the group's own scope, never added and never from the raw
-  // overview (whose status-ACTIVE «Qarzdorlar» count is gone).
+  // shu oy / eski qarz split, and «O'qimayotganlar qarzi» — read from the
+  // facade's split for the group's own scope, never added and never from the
+  // raw overview (whose status-ACTIVE «Qarzdorlar» count is gone). The lines
+  // are the 21:00 report's, from the shared `buildDebtSplitLines`.
   describe('the debt lines', () => {
     const split = {
       studying: {
@@ -506,20 +507,24 @@ describe('TelegramGroupReportMenuService', () => {
       ...overrides,
     });
 
-    it('prints the two debts on their own lines, from the split', async () => {
+    it("prints the 21:00 report's debt lines — «eski qarz», not «eski»", async () => {
       const { service } = makeDeps({ reports: reportsWith() });
       const ctx = makeCtx();
 
       await service.sendFinancialCard(ctx);
 
-      // `formatSum`, not a literal: its thousands separator is a non-breaking space.
+      // `formatSum` / `formatNumber`, not literals: their thousands separator
+      // is a non-breaking space. One contiguous block checks wording and order.
       const text = ctx.reply.mock.calls[0][0] as string;
       expect(text).toContain(
-        `• O'qiyotganlar qarzi: <b>237 ta — ${formatSum(43_500_000)}</b> (shu oy ${formatSum(41_100_000)} · eski ${formatSum(2_400_000)})`,
+        [
+          `• O'qiyotganlar qarzi: <b>${formatNumber(237)}</b> ta — <b>${formatSum(43_500_000)}</b>`,
+          `   🟡 shu oy ${formatSum(41_100_000)} · 🔴 eski qarz ${formatSum(2_400_000)}`,
+          `• O'qimayotganlar qarzi: <b>${formatNumber(327)}</b> ta — <b>${formatSum(40_600_000)}</b>`,
+        ].join('\n'),
       );
-      expect(text).toContain(
-        `• O'qimayotganlar qarzi: <b>327 ta — ${formatSum(40_600_000)}</b>`,
-      );
+      // The card used to print a wording of its own: «eski» alone.
+      expect(text).not.toMatch(/eski (?!qarz)/);
     });
 
     it('never adds the two, and the old single «Qarzdorlar» line is gone', async () => {
@@ -569,7 +574,7 @@ describe('TelegramGroupReportMenuService', () => {
       });
     });
 
-    it('nobody owes: both lines still print, as zeros', async () => {
+    it('nobody owes: both numbers still print, as zeros, with no shu oy line', async () => {
       const { service } = makeDeps({
         reports: reportsWith({
           getDebtSplit: jest.fn().mockResolvedValue({
@@ -584,11 +589,13 @@ describe('TelegramGroupReportMenuService', () => {
 
       const text = ctx.reply.mock.calls[0][0] as string;
       expect(text).toContain(
-        `• O'qiyotganlar qarzi: <b>0 ta — ${formatSum(0)}</b> (shu oy ${formatSum(0)} · eski ${formatSum(0)})`,
+        [
+          `• O'qiyotganlar qarzi: <b>${formatNumber(0)}</b> ta — <b>${formatSum(0)}</b>`,
+          `• O'qimayotganlar qarzi: <b>${formatNumber(0)}</b> ta — <b>${formatSum(0)}</b>`,
+        ].join('\n'),
       );
-      expect(text).toContain(
-        `• O'qimayotganlar qarzi: <b>0 ta — ${formatSum(0)}</b>`,
-      );
+      // Nothing studying is owed, so there is no split to print.
+      expect(text).not.toContain('shu oy');
     });
 
     it('still sends the card, without the debt lines, when the split cannot be read', async () => {

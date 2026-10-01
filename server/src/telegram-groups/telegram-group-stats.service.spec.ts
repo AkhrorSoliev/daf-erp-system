@@ -1,8 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportsService } from '../reports/reports.service';
-import type { DebtSplit } from '../reports/debt-split';
-import { activeStudentWhere } from '../students/shared/active-student-where';
+import { studyingDebtorWhere, type DebtSplit } from '../reports/debt-split';
 import { TelegramGroupStatsService } from './telegram-group-stats.service';
 import { TelegramGroupDailyReportService } from './telegram-group-daily-report.service';
 import { formatNumber, formatSum } from './utils/format.util';
@@ -175,7 +174,9 @@ describe('TelegramGroupStatsService', () => {
 
   // ADR-0059: the debt is TWO numbers that are never added — «O'qiyotganlar»
   // (a student in an active group) and «O'qimayotganlar» (every other
-  // non-archived debtor). Both commands print them as the split gives them.
+  // non-archived debtor). Both commands print the 21:00 report's lines
+  // (`buildDebtSplitLines`), shu oy / eski qarz line included, without the
+  // report's bullets: neither command uses any.
   describe('debt as two numbers (ADR-0059)', () => {
     const split: DebtSplit = {
       studying: {
@@ -211,18 +212,22 @@ describe('TelegramGroupStatsService', () => {
 
     beforeEach(() => getDebtSplit.mockResolvedValue(split));
 
+    // `formatSum` / `formatNumber`, not literals: their thousands separator is
+    // a non-breaking space. One contiguous block checks wording and order.
+    const debtBlock = [
+      `O'qiyotganlar qarzi: <b>${formatNumber(237)}</b> ta — <b>${formatSum(43_500_000)}</b>`,
+      `   🟡 shu oy ${formatSum(41_100_000)} · 🔴 eski qarz ${formatSum(2_400_000)}`,
+      `O'qimayotganlar qarzi: <b>${formatNumber(327)}</b> ta — <b>${formatSum(40_600_000)}</b>`,
+    ].join('\n');
+
     it('/qarzdorlar prints both totals, then the five largest studying debtors', async () => {
       const prisma = makePrisma(debtors);
 
       const text = await (await svcWith(prisma)).buildDebtorsBlock(1001, null);
 
-      // `formatSum` / `formatNumber`, not literals: their thousands separator
-      // is a non-breaking space.
-      const studying = `O'qiyotganlar qarzi: <b>${formatNumber(237)}</b> ta — <b>${formatSum(43_500_000)}</b>`;
-      const notStudying = `O'qimayotganlar qarzi: <b>${formatNumber(327)}</b> ta — <b>${formatSum(40_600_000)}</b>`;
-      expect(text).toContain(studying);
-      expect(text).toContain(notStudying);
-      expect(text.indexOf(studying)).toBeLessThan(text.indexOf(notStudying));
+      expect(text).toContain(debtBlock);
+      // The command keeps its own look: no bullets.
+      expect(text).not.toContain('• ');
       expect(text).toContain("<b>Eng katta 5 ta qarzdor (o'qiyotganlar):</b>");
       expect(text).toContain(
         `  1. Ali Valiyev (#10001) — <b>${formatSum(3_100_000)}</b>`,
@@ -236,29 +241,25 @@ describe('TelegramGroupStatsService', () => {
       expect(text).not.toContain(formatNumber(43_500_000 + 40_600_000));
     });
 
-    it("lists the debtors by the «o'qiyotgan» definition, biggest debt first", async () => {
+    it("lists the debtors by the split's own studying predicate, biggest debt first, ties by id", async () => {
       const prisma = makePrisma(debtors);
 
       await (await svcWith(prisma)).buildDebtorsBlock(1001, null);
 
-      // `activeStudentWhere()` is what makes the list the studying side of the
-      // very split the totals above it come from.
+      // `studyingDebtorWhere` is the predicate `loadDebtSplit` reads the
+      // studying total with, so the list is part of the number above it. The
+      // id breaks a tie on balance, so the five are the same five every time.
       expect(prisma.student.findMany).toHaveBeenCalledTimes(1);
       expect(prisma.student.findMany).toHaveBeenCalledWith({
-        where: {
-          companyId: 1001,
-          deletedAt: null,
-          balance: { lt: 0 },
-          ...activeStudentWhere(),
-        },
-        orderBy: { balance: 'asc' },
+        where: studyingDebtorWhere(1001, null),
+        orderBy: [{ balance: 'asc' }, { id: 'asc' }],
         take: 5,
         select: { id: true, firstName: true, lastName: true, balance: true },
       });
       expect(getDebtSplit).toHaveBeenCalledWith(1001, { branchIds: null });
     });
 
-    it('/qarzdorlar names nobody when no studying student owes, but still prints both lines', async () => {
+    it('/qarzdorlar names nobody when no studying student owes, but still prints both numbers', async () => {
       getDebtSplit.mockResolvedValue({
         studying: { total: 0, count: 0, currentMonth: 0, older: 0 },
         notStudying: { total: 40_600_000, count: 327 },
@@ -275,19 +276,17 @@ describe('TelegramGroupStatsService', () => {
         `O'qimayotganlar qarzi: <b>${formatNumber(327)}</b> ta — <b>${formatSum(40_600_000)}</b>`,
       );
       expect(text).not.toContain('Eng katta');
+      // Nothing studying is owed, so there is no split to print.
+      expect(text).not.toContain('shu oy');
     });
 
-    it('/stats prints the same two lines in place of «Qarzdorlar»', async () => {
+    it("/stats prints the 21:00 report's debt lines in place of «Qarzdorlar»", async () => {
       const text = await (
         await svcWith(makePrisma())
       ).buildOverallStats(1001, [2]);
 
-      expect(text).toContain(
-        `O'qiyotganlar qarzi: <b>${formatNumber(237)}</b> ta — <b>${formatSum(43_500_000)}</b>`,
-      );
-      expect(text).toContain(
-        `O'qimayotganlar qarzi: <b>${formatNumber(327)}</b> ta — <b>${formatSum(40_600_000)}</b>`,
-      );
+      expect(text).toContain(debtBlock);
+      expect(text).not.toContain('• ');
       expect(text).not.toContain('Qarzdorlar');
       expect(text).not.toContain(formatNumber(43_500_000 + 40_600_000));
       expect(getDebtSplit).toHaveBeenCalledWith(1001, { branchIds: [2] });

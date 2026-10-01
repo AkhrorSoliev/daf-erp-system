@@ -84,7 +84,8 @@ const EXEMPTIONS: { site: string; reason: string }[] = [
   },
   // Telegram: kunlik hisobot, kunlik surat (`daily-snapshot.service.ts`),
   // /qarzdorlar va /stats qarzni endi `ReportsService.getDebtSplit` dan oladi
-  // (ADR-0059), /qarzdorlar ro'yxati esa `activeStudentWhere()` bilan quriladi —
+  // (ADR-0059), /qarzdorlar ro'yxati esa `studyingDebtorWhere()` bilan
+  // quriladi (ichida `activeStudentWhere()`; skaner uni kanonik deb biladi) —
   // status-ACTIVE sanoqlari yo'q, shuning uchun bu yerda ular uchun qator ham yo'q.
 ];
 

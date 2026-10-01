@@ -8,7 +8,9 @@ import {
 } from '../common/finance/report-branch-scope';
 import { TelegramGroupDailyReportService } from './telegram-group-daily-report.service';
 import { ReportsService } from '../reports/reports.service';
+import { studyingDebtorWhere } from '../reports/debt-split';
 import { activeStudentWhere } from '../students/shared/active-student-where';
+import { buildDebtSplitLines } from './utils/debt-split-lines.util';
 import {
   firstOfThisMonthDate,
   firstOfThisMonthUtc,
@@ -219,25 +221,21 @@ export class TelegramGroupStatsService {
   // -------------------- /qarzdorlar --------------------
   /**
    * The debt as two numbers that are never added (ADR-0059), from
-   * `ReportsService.getDebtSplit`. The five named debtors are the studying side
-   * only: cut by the same definition (`activeStudentWhere`) and branch scope as
-   * its total, so the list is part of the number printed above it.
+   * `ReportsService.getDebtSplit`, in the 21:00 report's lines
+   * (`buildDebtSplitLines`). The five named debtors are the studying side only:
+   * read with `studyingDebtorWhere`, the predicate the split reads its studying
+   * total with, so the list is part of the number printed above it. The id
+   * breaks a tie on balance, so the same five are named every time.
    */
   async buildDebtorsBlock(
     companyId: number,
     branchIds: ReportBranchIds,
   ): Promise<string> {
-    const [{ studying, notStudying }, top] = await Promise.all([
+    const [split, top] = await Promise.all([
       this.reports.getDebtSplit(companyId, { branchIds }),
       this.prisma.student.findMany({
-        where: {
-          companyId,
-          deletedAt: null,
-          balance: { lt: 0 },
-          ...activeStudentWhere(),
-          ...studentBranchWhere(branchIds),
-        },
-        orderBy: { balance: 'asc' }, // most negative first
+        where: studyingDebtorWhere(companyId, branchIds),
+        orderBy: [{ balance: 'asc' }, { id: 'asc' }], // most negative first
         take: 5,
         select: { id: true, firstName: true, lastName: true, balance: true },
       }),
@@ -253,9 +251,8 @@ export class TelegramGroupStatsService {
     return [
       `💸 <b>Qarzdorlar</b>`,
       ``,
-      `O'qiyotganlar qarzi: <b>${formatNumber(studying.count)}</b> ta — <b>${formatSum(studying.total)}</b>`,
-      `O'qimayotganlar qarzi: <b>${formatNumber(notStudying.count)}</b> ta — <b>${formatSum(notStudying.total)}</b>`,
-      studying.count > 0
+      ...buildDebtSplitLines(split, { bullet: '' }),
+      split.studying.count > 0
         ? `\n<b>Eng katta 5 ta qarzdor (o'qiyotganlar):</b>\n${topLines}`
         : '',
     ]
@@ -402,8 +399,7 @@ export class TelegramGroupStatsService {
       `Faol guruhlar: <b>${formatNumber(activeGroups)}</b>`,
       `Faol o'qituvchilar: <b>${formatNumber(activeTeachers)}</b>`,
       ``,
-      `O'qiyotganlar qarzi: <b>${formatNumber(debtSplit.studying.count)}</b> ta — <b>${formatSum(debtSplit.studying.total)}</b>`,
-      `O'qimayotganlar qarzi: <b>${formatNumber(debtSplit.notStudying.count)}</b> ta — <b>${formatSum(debtSplit.notStudying.total)}</b>`,
+      ...buildDebtSplitLines(debtSplit, { bullet: '' }),
       ``,
       `Bu oylik tushum: <b>${formatSum(monthlyIncome._sum.amount ?? 0)}</b>`,
       `Bu oylik xarajat: <b>${formatSum(monthlyExpenses._sum.amount ?? 0)}</b>`,
