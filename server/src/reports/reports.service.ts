@@ -519,7 +519,9 @@ export class ReportsService {
     ]);
     return {
       ...overview,
-      income: { ...overview.income, expected: expectation.expectedValue },
+      // Only `forecast` carries the month-end expectation. The raw service has
+      // none to give, so a caller reaching it directly gets no such fields —
+      // not a stale 0 like its old `income.expected`, which `rm:cfin` printed.
       forecast: {
         ...overview.forecast,
         expectedMonthEnd: expectation.expectedValue,

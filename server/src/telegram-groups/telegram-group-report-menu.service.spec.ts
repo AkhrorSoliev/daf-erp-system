@@ -392,7 +392,7 @@ describe('TelegramGroupReportMenuService', () => {
   // ADR-0058: from 2026-09 the card's month line is «Bu oy hisoblandi / To'landi
   // / Qoldi»; before it, «Oy oxiriga kutilyapti» — now read from the reports
   // facade (A2.2: the card printed `getFinancialOverview().income.expected`,
-  // which the raw service hard-codes to 0).
+  // which the raw service hard-coded to 0 — the field is gone now).
   describe('the month line', () => {
     const monthCharges = {
       month: '2026-10',

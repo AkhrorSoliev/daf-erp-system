@@ -43,7 +43,7 @@ const EXPECTED_MONTH_END = 12_345_678;
  * out, the response carries no computed salary at all.
  */
 const overview = (monthCharges: MonthCharges | null, salaryMonth?: string) => ({
-  income: { expected: 0, actual: 5_000_000, paymentCount: 3, byMethod: [] },
+  income: { actual: 5_000_000, paymentCount: 3, byMethod: [] },
   forecast: {
     expectedMonthEnd: EXPECTED_MONTH_END,
     expectedHeld: 1_000_000,

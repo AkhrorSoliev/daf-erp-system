@@ -45,14 +45,13 @@ export interface MonthCharges {
 
 interface FinancialOverview {
   income: {
-    expected: number;
     actual: number;
     paymentCount: number;
     byMethod: { method: string; amount: number; count: number }[];
   };
   /**
-   * Month-end expectation and receivables (D.2). `income.expected` above is the
-   * same figure, kept for the Excel path.
+   * Month-end expectation (shown for months before the monthly-payment switch)
+   * and receivables (D.2).
    */
   forecast: {
     /** Lessons held-and-paid + the remaining scheduled ones, by lesson value. */
@@ -237,7 +236,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
   }
 
   const empty: FinancialOverview = {
-    income: { expected: 0, actual: 0, paymentCount: 0, byMethod: [] },
+    income: { actual: 0, paymentCount: 0, byMethod: [] },
     forecast: {
       expectedMonthEnd: 0,
       expectedHeld: 0,

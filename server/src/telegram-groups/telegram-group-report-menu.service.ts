@@ -375,9 +375,10 @@ export class TelegramGroupReportMenuService {
    * kutilyapti» before it. Both come from the reports facade, for the card's own
    * month and scope.
    *
-   * The card used to print `getFinancialOverview().income.expected`, but that
-   * is the RAW service, which hard-codes `expected: 0` — only the facade fills
-   * the real value in — so the line always read 0.
+   * The card used to print `getFinancialOverview().income.expected`. It calls
+   * the RAW service, which hard-coded that field to 0 (only the facade filled
+   * the real value in), so the line always read 0; the field is gone and the
+   * figure is asked of the facade's `getMonthlyExpectation` directly.
    *
    * Returns no lines on failure: a broken figure costs the card this one block,
    * never the card itself.

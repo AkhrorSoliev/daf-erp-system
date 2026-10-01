@@ -499,7 +499,6 @@ describe('ReportsController — role guards', () => {
   describe('getFinancialOverview() — sensitive-field stripping', () => {
     const fullOverview = {
       income: {
-        expected: 9,
         actual: 69126991,
         paymentCount: 212,
         byMethod: [{ method: 'CASH', amount: 5, count: 1 }],

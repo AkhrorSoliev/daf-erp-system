@@ -349,10 +349,6 @@ export class ReportsFinancialService {
 
     return {
       income: {
-        // `expected` is written by `ReportsService.getFinancialOverview`, which
-        // folds in the calendar-based month-end expectation. Zero here so a
-        // caller reaching this service directly never sees a stale forecast.
-        expected: 0,
         actual: totalIncome,
         paymentCount: actualIncome._count,
         byMethod: incomeByMethod.map((m) => ({

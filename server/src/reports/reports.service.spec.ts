@@ -1448,6 +1448,45 @@ describe('ReportsService', () => {
         [1001, { month: '2026-07', branchIds: [7] }],
       ]);
     });
+
+    // `income.expected` (a second copy of `forecast.expectedMonthEnd`, hard-coded
+    // to 0 in the raw service) had no reader left and was removed.
+    it('folds the expectation into `forecast` alone: `income` passes through untouched', async () => {
+      const rawIncome = { actual: 5_000, paymentCount: 1, byMethod: [] };
+      jest
+        .spyOn((service as any).financial, 'getFinancialOverview')
+        .mockResolvedValue({
+          income: rawIncome,
+          forecast: {
+            outstandingReceivable: 7,
+            debtorExposure: { count: 1, avgDebt: 7 },
+          },
+        });
+      jest.spyOn(service, 'getMonthlyExpectation').mockResolvedValue({
+        month: '2026-07',
+        heldValue: 100,
+        heldLessons: 1,
+        remainingValue: 200,
+        remainingLessons: 2,
+        expectedValue: 300,
+      } as never);
+
+      const res = await service.getFinancialOverview(1001, {
+        branchIds: null,
+        startDate: '2026-07-01',
+        endDate: '2026-07-31',
+      });
+
+      expect(res.forecast).toEqual({
+        outstandingReceivable: 7,
+        debtorExposure: { count: 1, avgDebt: 7 },
+        expectedMonthEnd: 300,
+        expectedHeld: 100,
+        expectedRemaining: 200,
+      });
+      expect(res.income).toEqual(rawIncome);
+      expect(res.income).not.toHaveProperty('expected');
+    });
   });
 
   describe('getFinancialOverview — «Bu oy hisoblandi»', () => {
