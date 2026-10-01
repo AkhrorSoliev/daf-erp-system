@@ -372,18 +372,29 @@ function buildMonthChargesBlock4(
 ): void {
   blockTitle(ws, `4.  ${curLabel.toUpperCase()} OYLIK HISOBLARI`, 5);
   columnHeader(ws, ["Ko'rsatkich", 'Summa', 'Jamidan %', '', 'Izoh']);
+  // A month with nothing charged yet (01:00–04:00 on the 1st, before the
+  // monthly charge run; a branch with no monthly course) has no bill, so there
+  // is nothing to be «all paid»: «Yo'q — hammasi to'langan» is for a bill that
+  // exists and is settled, never for an empty one.
+  const billed = charges.charged > 0;
   pctRow(
     ws,
     `${curLabel} hisobi`,
     charges.charged,
     charges.charged,
-    "Oyning boshida yozilgan oylik hisoblar: qancha to'langani va qancha qolgani. To'lov avval eng eski qarzni yopadi.",
+    billed
+      ? "Oyning boshida yozilgan oylik hisoblar: qancha to'langani va qancha qolgani. To'lov avval eng eski qarzni yopadi."
+      : 'Bu oy uchun hali oylik hisob yozilmagan.',
   );
   pctRow(ws, "shundan to'langan", charges.paid, charges.charged, '');
-  unpaidRow(ws, "to'lanmagan", charges.unpaid, charges.charged, {
-    none: '',
-    owed: '',
-  });
+  if (billed) {
+    unpaidRow(ws, "to'lanmagan", charges.unpaid, charges.charged, {
+      none: '',
+      owed: '',
+    });
+  } else {
+    ws.addRow(["to'lanmagan", '—', '', '', '']);
+  }
 }
 
 /**

@@ -764,6 +764,34 @@ describe('ReportsExcelService', () => {
       expect(unpaid.getCell(2).font.color.argb).toBe(GREEN);
     });
 
+    it("October with nothing charged yet: «—» and its own note, never «hammasi to'langan»", async () => {
+      // 01:00–04:00 on the 1st (before the monthly charge run) or a branch with
+      // no monthly course: there is no bill, so there is nothing to be «all paid».
+      reports.getMonthCharges.mockResolvedValue({
+        ...monthCharges,
+        charged: 0,
+        paid: 0,
+        unpaid: 0,
+        paidPct: null,
+        students: 0,
+      });
+      const wb = await buildWorkbook({}, october);
+      const ws = wb.getWorksheet('Xulosa')!;
+
+      expect(findRow(ws, 'Oktabr 2026 hisobi').getCell(2).value).toBe(0);
+      expect(findRow(ws, "shundan to'langan").getCell(2).value).toBe(0);
+      const unpaid = findRow(ws, "to'lanmagan");
+      expect(unpaid.getCell(2).value).toBe('—');
+      // Neither the red «still owed» nor the green «all paid» style.
+      expect(unpaid.getCell(2).font?.color?.argb).toBeUndefined();
+
+      const text = allText(ws);
+      expect(text).toContain('Bu oy uchun hali oylik hisob yozilmagan.');
+      expect(text).not.toContain("hammasi to'langan");
+      // The usual note is replaced, not joined.
+      expect(text).not.toContain('Oyning boshida yozilgan oylik hisoblar');
+    });
+
     it('September is the first monthly month', async () => {
       const wb = await buildWorkbook(
         {},
