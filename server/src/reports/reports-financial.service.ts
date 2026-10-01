@@ -1128,6 +1128,9 @@ export class ReportsFinancialService {
    *   recovered_i = min(debt_i, max(0, Σ PAYMENT.amount after monthEnd))
    * `DEBT_WRITE_OFF` is a separate column (forgiven, not cash) so the recovery
    * rate isn't inflated. remaining = closingDebt − recovered − writtenOff.
+   * Only write-offs still in force count there: a cancelled one is two rows
+   * (original + counter-row) and neither is forgiveness, while the balance
+   * walk above keeps every row.
    */
   async getMonthlyDebtRecovery(
     companyId: number,
@@ -1284,12 +1287,18 @@ export class ReportsFinancialService {
         },
         _sum: { amount: true },
       }),
+      // Only write-offs still in force. A cancelled one is two rows — the
+      // original (`reversedAt`) and its counter-row (`reversedTransactionId`)
+      // — and neither is forgiveness. The walk back to the month end above and
+      // the payment sum keep every row: both halves of a pair net out there.
       this.prisma.transaction.groupBy({
         by: ['studentId'],
         where: {
           companyId,
           studentId: { in: cohortIds },
           type: TransactionType.DEBT_WRITE_OFF,
+          reversedAt: null,
+          reversedTransactionId: null,
           createdAt: { gte: boundary },
         },
         _sum: { amount: true },
@@ -1395,8 +1404,6 @@ export class ReportsFinancialService {
       reason: string | null;
       performedBy: string | null;
       createdAt: Date;
-      isReversed: boolean;
-      isReversal: boolean;
     }>;
     truncated: boolean;
   }> {
@@ -1452,7 +1459,8 @@ export class ReportsFinancialService {
     // Headcounts, computed by grouping rather than by de-duplicating the capped
     // lists below — a month past LIST_CAP would otherwise undercount silently.
     // Net sum > 0 so a student whose only payment was fully reversed is not
-    // counted as having paid.
+    // counted as having paid. Forgiven people are counted from write-offs still
+    // in force, the same rows as `writtenOff` (see `reconstructMonthCohort`).
     const [payerGroups, forgivenGroups] = await Promise.all([
       this.prisma.transaction.groupBy({
         by: ['studentId'],
@@ -1470,6 +1478,8 @@ export class ReportsFinancialService {
           companyId,
           studentId: { in: cohortIds },
           type: TransactionType.DEBT_WRITE_OFF,
+          reversedAt: null,
+          reversedTransactionId: null,
           createdAt: { gte: boundary },
         },
         _sum: { amount: true },
@@ -1523,11 +1533,16 @@ export class ReportsFinancialService {
         orderBy: { createdAt: 'desc' },
         take: LIST_CAP + 1,
       }),
+      // Unlike the payments above, write-offs are listed only while in force:
+      // a cancelled one is not «Kechirildi», and its two rows would show
+      // forgiveness that did not stand — the sums above leave them out too.
       this.prisma.transaction.findMany({
         where: {
           companyId,
           studentId: { in: cohortIds },
           type: TransactionType.DEBT_WRITE_OFF,
+          reversedAt: null,
+          reversedTransactionId: null,
           createdAt: { gte: boundary },
         },
         select: {
@@ -1537,8 +1552,6 @@ export class ReportsFinancialService {
           createdAt: true,
           description: true,
           metadata: true,
-          reversedAt: true,
-          reversedTransactionId: true,
           student: { select: { firstName: true, lastName: true } },
           performedBy: { select: { firstName: true, lastName: true } },
         },
@@ -1595,8 +1608,6 @@ export class ReportsFinancialService {
         reason: meta?.reason ?? t.description ?? null,
         performedBy: fullName(t.performedBy),
         createdAt: t.createdAt,
-        isReversed: t.reversedAt != null,
-        isReversal: t.reversedTransactionId != null,
       };
     });
 

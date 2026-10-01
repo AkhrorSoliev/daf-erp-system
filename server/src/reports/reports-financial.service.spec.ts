@@ -375,6 +375,31 @@ describe('ReportsFinancialService', () => {
       expect(m.remainingDebtorCount).toBe(0);
       expect(m.recoveryRate).toBe(100);
     });
+
+    it('sums only write-offs still in force after month-end; the balance walk and the payment tally keep every row (A2.9)', async () => {
+      // A cancelled write-off is two rows — the original (`reversedAt`) and a
+      // counter-row (`reversedTransactionId`) — and neither is forgiveness.
+      // The month-end balance and the payments are different: both halves of a
+      // pair net out there, so those reads must stay unfiltered.
+      prisma.student.findMany.mockResolvedValue([{ id: 1, balance: -100000 }]);
+      prisma.transaction.groupBy.mockResolvedValue([]);
+
+      await service.getMonthlyDebtRecovery(1, null);
+
+      const wheres = prisma.transaction.groupBy.mock.calls.map(
+        ([args]: any[]) => args.where,
+      );
+      const writeOffs = wheres.filter((w: any) => w.type === 'DEBT_WRITE_OFF');
+      expect(writeOffs).toHaveLength(1);
+      expect(writeOffs[0]).toMatchObject({
+        reversedAt: null,
+        reversedTransactionId: null,
+      });
+      for (const w of wheres.filter((w: any) => w.type !== 'DEBT_WRITE_OFF')) {
+        expect(w).not.toHaveProperty('reversedAt');
+        expect(w).not.toHaveProperty('reversedTransactionId');
+      }
+    });
   });
 
   describe('getMonthDebtDetail', () => {
@@ -570,6 +595,41 @@ describe('ReportsFinancialService', () => {
       expect(res.totals.writtenOff).toBe(40000);
       expect(res.totals.recovered).toBe(60000);
       expect(res.totals.remaining).toBe(0);
+    });
+
+    it('lists and counts only write-offs still in force — a cancelled one is not «Kechirildi» (A2.9)', async () => {
+      prisma.student.findMany
+        .mockResolvedValueOnce([{ id: 1, balance: -200000 }])
+        .mockResolvedValueOnce([
+          {
+            id: 1,
+            firstName: 'Ali',
+            lastName: 'Valiyev',
+            phone: null,
+            enrollments: [],
+          },
+        ]);
+      prisma.transaction.groupBy.mockResolvedValue([]);
+      prisma.transaction.findMany.mockResolvedValue([]);
+
+      await service.getMonthDebtDetail(1, '2026-06', null);
+
+      const writeOffWheres = (mock: jest.Mock) =>
+        mock.mock.calls
+          .map(([args]: any[]) => args.where)
+          .filter((w: any) => w.type === 'DEBT_WRITE_OFF');
+      // Two grouped sums — the cohort's `writtenOff` and `forgivenCount` — and
+      // the list itself.
+      const sums = writeOffWheres(prisma.transaction.groupBy);
+      const list = writeOffWheres(prisma.transaction.findMany);
+      expect(sums).toHaveLength(2);
+      expect(list).toHaveLength(1);
+      for (const w of [...sums, ...list]) {
+        expect(w).toMatchObject({
+          reversedAt: null,
+          reversedTransactionId: null,
+        });
+      }
     });
 
     it('short-circuits (no enrichment / list queries) when the month has no debtors', async () => {
