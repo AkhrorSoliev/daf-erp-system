@@ -501,7 +501,6 @@ describe('ReportsController — role guards', () => {
       income: {
         expected: 9,
         actual: 69126991,
-        billed: 8,
         paymentCount: 212,
         byMethod: [{ method: 'CASH', amount: 5, count: 1 }],
       },

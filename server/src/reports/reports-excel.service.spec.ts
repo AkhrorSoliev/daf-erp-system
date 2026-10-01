@@ -1018,7 +1018,7 @@ describe('ReportsExcelService', () => {
       expect(text.join('\n')).toContain('«Boshqa» ulushi');
     });
 
-    it('«Izoh» carries ten plain-language terms and no accounting jargon', async () => {
+    it('«Izoh» carries plain-language terms and no accounting jargon', async () => {
       const wb = await buildWorkbook({});
       const ws = wb.getWorksheet('Izoh')!;
       const text: string[] = [];

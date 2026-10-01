@@ -174,47 +174,6 @@ export class ReportsFinancialService {
       _count: true,
     });
 
-    // Recognized revenue (actual): total lesson value billed to students in
-    // the period — the sum of every LESSON_DEDUCTION prepaid batch. Unlike
-    // recognizedRevenueForecast (a schedule-based projection), this is what
-    // was really charged. Summing signed amounts nets reversed batches out,
-    // since a reversal is itself a LESSON_DEDUCTION row with the opposite sign.
-    const billedLessonsAgg = await this.prisma.transaction.aggregate({
-      where: {
-        companyId,
-        type: 'LESSON_DEDUCTION',
-        createdAt: dateFilter,
-        ...branchFilter,
-      },
-      _sum: { amount: true },
-    });
-    // Billing corrections (the April-cutover over-charge cleanup) were booked as
-    // lump ADJUSTMENT rows, NOT as LESSON_DEDUCTION reversals. That means they
-    // do not net out of the LESSON_DEDUCTION sum above and would leave recognized
-    // revenue overstated by the phantom (double-billed) amount. Net them back in
-    // here so a balance-only correction is reflected: a correction is recognized
-    // in the period it was made (standard correction accounting). Only ADJUSTMENT
-    // rows tagged `metadata.marker = 'overcharge*'` are billing corrections —
-    // other ADJUSTMENTs (manual balance gifts, etc.) are intentionally excluded.
-    const periodAdjustments = await this.prisma.transaction.findMany({
-      where: {
-        companyId,
-        type: 'ADJUSTMENT',
-        createdAt: dateFilter,
-        ...branchFilter,
-      },
-      select: { amount: true, metadata: true },
-    });
-    const overchargeCorrectionSum = periodAdjustments.reduce((sum, t) => {
-      const marker = (t.metadata as { marker?: string } | null)?.marker;
-      return typeof marker === 'string' && marker.startsWith('overcharge')
-        ? sum + t.amount
-        : sum;
-    }, 0);
-    const billedLessons = Math.abs(
-      (billedLessonsAgg._sum.amount ?? 0) + overchargeCorrectionSum,
-    );
-
     // The `exactDays × 4` revenue forecast used to live here. It assumed every
     // month was four weeks (8–13% short on a five-week month) and was rebuilt
     // from whoever was ACTIVE at request time, so a student leaving on the 25th
@@ -395,7 +354,6 @@ export class ReportsFinancialService {
         // caller reaching this service directly never sees a stale forecast.
         expected: 0,
         actual: totalIncome,
-        billed: billedLessons,
         paymentCount: actualIncome._count,
         byMethod: incomeByMethod.map((m) => ({
           method: m.method,
