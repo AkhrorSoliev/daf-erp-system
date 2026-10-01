@@ -56,7 +56,11 @@ export interface StudentPopulationSite {
   line: number;
   /** `where` ning yuqori qavatida FAOLLIK da'vo qilgan ustunlar. */
   statusKeys: string[];
-  /** `...activeStudentWhere()` yoki `...ungroupedStudentWhere()` yoyilganmi. */
+  /**
+   * Kanonik ta'rif ishlatilganmi: `...activeStudentWhere()` /
+   * `...ungroupedStudentWhere()` yoyilgan, yoki `where` butunicha shu nomlar
+   * yoxud `studyingDebtorWhere(...)` chaqiruvi (ADR-0059).
+   */
   usesCanonical: boolean;
   /**
    * `where` obyekt literali sifatida yozilmagan (o'zgaruvchida qurilgan), shu

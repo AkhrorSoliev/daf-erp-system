@@ -36,7 +36,8 @@ qo'shilmaydi, «o'rtacha qarz» olib tashlanadi (spec A2, 2-bo'lim, 1-qaror).
    (`payments-debtors.service.ts`) esa `loadDebtSplit` / `splitDebt` ni
    to'g'ridan-to'g'ri chaqiradi. O'qiyotgan qarzdorlarning sharti ham shu
    faylda — `studyingDebtorWhere`; `/qarzdorlar` ro'yxati ham shu bilan
-   o'qiladi.
+   o'qiladi. ADR-0015 skaneri (`server/scripts/student-status-inventory.ts`)
+   bu chaqiruvni ham kanonik deb biladi: ichida `activeStudentWhere()` turadi.
    - **O'qiyotganlar qarzi** — `deletedAt: null`, `balance < 0` va
      `activeStudentWhere()` (ADR-0015 «faol o'quvchi»: statusi ACTIVE va faol
      guruhda faol yozuvi bor). Qarz har o'quvchi uchun ikkiga bo'linadi:
