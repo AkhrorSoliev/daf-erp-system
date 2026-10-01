@@ -1722,10 +1722,11 @@ export class ReportsFinancialService {
    *                    (`Payment.providerFee`). Income counts the GROSS amount,
    *                    so the fee is money the center never receives.
    *
-   * Refund/write-off are student-ledger rows that don't carry a reliable
-   * branchId, so they are company-wide (like `getReconciliation`); a branchId
-   * filter is applied only to the gateway-fee (Payment) leg, which is branch-
-   * scoped. The Excel net-profit block is company-wide in the common case.
+   * All three legs are filtered by `query.branchIds`: every ledger row carries
+   * a `branchId` now (the historical ones were backfilled), so a branch's own
+   * refunds, write-offs and gateway fees — not the company's — reduce its
+   * profit. `null` (a CEO who picked no branch) reads the whole company and an
+   * empty scope reads nothing.
    */
   async getPeriodOutflows(
     companyId: number,
