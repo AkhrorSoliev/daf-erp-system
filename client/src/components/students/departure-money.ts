@@ -196,9 +196,19 @@ export function departureConsequence(
   const outcomes = rows.map((r) => r.month.outcomes[policy]);
   const amount = outcomes.reduce((s, o) => s + o.amount, 0);
   const lessons = outcomes.reduce((s, o) => s + o.lessons, 0);
+  const trial = rows.every((r) => r.month.trialLesson);
+
+  // A trial month that cost nothing (a 100% discount, the excused credit):
+  // nothing comes back, and the teacher is still not paid for it.
+  if (amount === 0 && trial) {
+    return {
+      tone: "neutral",
+      head: "Sinov darsi (3.5): qaytadigan pul yo'q",
+      line: "Ustozga bu oyning darslari uchun haq yozilmaydi.",
+    };
+  }
 
   if (amount > 0) {
-    const trial = rows.every((r) => r.month.trialLesson);
     const head = trial
       ? `Sinov darsi (3.5): oyning puli to'liq qaytadi — ${som(amount)}`
       : policy === "QUALITY_CLAIM"

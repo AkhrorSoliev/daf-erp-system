@@ -89,7 +89,11 @@ describe('MonthlyChargeService', () => {
       holiday: { findMany: jest.fn().mockResolvedValue([]) },
       // Contract 3.5: billable lessons the student held in all groups.
       // Default: an established student, never a trial.
-      attendance: { count: jest.fn().mockResolvedValue(20) },
+      attendance: {
+        count: jest.fn().mockResolvedValue(20),
+        // His rows on lessons still waiting on «Dars bo'ldimi?» (none).
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       // Contract 3.5: lessons still waiting on «Dars bo'ldimi?». None by default.
       unmarkedLesson: { findMany: jest.fn().mockResolvedValue([]) },
       lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
@@ -2347,6 +2351,30 @@ describe('MonthlyChargeService', () => {
       // counts as the one lesson held, and no accrual (ADR-0054).
       octoberCharge();
       prismaMock.attendance.count.mockResolvedValue(1);
+      // Its question is answered (HELD): only a PENDING one may wait, so the
+      // «Bo'ldi» lesson is not counted a second time.
+      prismaMock.unmarkedLesson.findMany.mockImplementation(
+        ({ where }: { where: { status: string } }) =>
+          Promise.resolve(
+            where.status === 'PENDING'
+              ? []
+              : [
+                  {
+                    groupId: 'grp-1',
+                    date: new Date('2026-10-02T00:00:00Z'),
+                    group: { name: '#014' },
+                  },
+                ],
+          ),
+      );
+      prismaMock.enrollment.findMany.mockResolvedValue([
+        {
+          id: 'enr-1',
+          studentId: 10453,
+          status: 'ACTIVE',
+          statusChangedAt: null,
+        },
+      ]);
       prismaMock.salaryAccrual.findMany.mockResolvedValue([]);
       const res = await service.reverseChargeForDeparture(tx, {
         enrollmentId: 'enr-1',
@@ -2535,11 +2563,17 @@ describe('MonthlyChargeService', () => {
             today: '2026-10-06',
           }),
         ).resolves.toBeUndefined();
+        // The cheap question first: nothing to settle, nothing else read.
+        expect(prismaMock.attendance.count).not.toHaveBeenCalled();
+        expect(prismaMock.unmarkedLesson.findMany).not.toHaveBeenCalled();
       });
 
       it('is no trial question once he held two lessons', async () => {
         awaiting05();
         prismaMock.attendance.count.mockResolvedValue(2);
+        prismaMock.enrollmentMonthlyCharge.count = jest
+          .fn()
+          .mockResolvedValue(1);
         await expect(
           service.assertTrialLessonAnswered(tx, {
             studentId: 10453,
@@ -2576,6 +2610,31 @@ describe('MonthlyChargeService', () => {
         });
         expect(preview?.trialLesson).toBe(true);
         expect(preview?.trialAwaitsAnswer).toBeNull();
+      });
+
+      it('skips a lesson his row already answers (a QR scan that beat the question)', async () => {
+        // ADR-0054's QR race: a row and a PENDING question for one lesson.
+        // The row is counted (or not) by its status; «Bo'ldi» cannot answer.
+        octoberCharge();
+        awaiting05();
+        prismaMock.attendance.findMany.mockResolvedValue([
+          { groupId: 'grp-1', date: new Date('2026-10-05T00:00:00Z') },
+        ]);
+        const departureDate = new Date('2026-10-06T10:00:00Z');
+        const preview = await service.previewDepartureOutcomes(tx, {
+          enrollmentId: 'enr-1',
+          departureDate,
+          companyId: 1,
+        });
+        expect(preview?.trialLesson).toBe(true);
+        expect(preview?.trialAwaitsAnswer).toBeNull();
+        expect(prismaMock.attendance.findMany).toHaveBeenCalledWith({
+          where: {
+            studentId: 10453,
+            OR: [{ groupId: 'grp-1', date: new Date('2026-10-05T00:00:00Z') }],
+          },
+          select: { groupId: true, date: true },
+        });
       });
 
       it('keeps the ordinary rule if a question opens after the check', async () => {

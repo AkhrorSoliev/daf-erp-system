@@ -14,6 +14,7 @@ import { SettingsService } from '../settings/settings.service';
 import { SalaryAccrualService } from '../salary/salary-accrual.service';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import { rosterOnDate } from '../attendance/shared/roster-on-date';
+import { lessonKey } from '../unmarked-lessons/forfeited-lessons';
 import { lessonDatesInMonth } from './planned-lessons';
 import { resolveMonthPlan } from './month-plan';
 import {
@@ -986,8 +987,24 @@ export class MonthlyChargeService {
       select: { groupId: true, date: true, group: { select: { name: true } } },
       orderBy: { date: 'asc' },
     });
+    // A lesson his own row already answers is not waiting: ADR-0054's QR race
+    // can leave a row and a question on one lesson, and `held` reads the row.
+    const answered = new Set(
+      pending.length === 0
+        ? []
+        : (
+            await client.attendance.findMany({
+              where: {
+                studentId,
+                OR: pending.map((p) => ({ groupId: p.groupId, date: p.date })),
+              },
+              select: { groupId: true, date: true },
+            })
+          ).map((a) => lessonKey(a.groupId, a.date)),
+    );
     const awaiting: AwaitingLesson[] = [];
     for (const p of pending) {
+      if (answered.has(lessonKey(p.groupId, p.date))) continue;
       const roster = await rosterOnDate(client, p.groupId, p.date);
       if (roster.some((e) => e.studentId === studentId)) {
         awaiting.push({
@@ -1020,13 +1037,6 @@ export class MonthlyChargeService {
     },
   ): Promise<void> {
     const day = params.today ?? tashkentDateStr(new Date());
-    const { awaiting } = await this.trialLessonVerdict(
-      client,
-      params.studentId,
-      day,
-      params.companyId,
-    );
-    if (awaiting.length === 0) return;
     const settled = await client.enrollmentMonthlyCharge.count({
       where: {
         studentId: params.studentId,
@@ -1040,7 +1050,14 @@ export class MonthlyChargeService {
         },
       },
     });
-    if (settled > 0) {
+    if (settled === 0) return;
+    const { awaiting } = await this.trialLessonVerdict(
+      client,
+      params.studentId,
+      day,
+      params.companyId,
+    );
+    if (awaiting.length > 0) {
       throw new BadRequestException(trialAwaitsAnswerText(awaiting));
     }
   }

@@ -31,13 +31,19 @@ pulini olardi, ustoz haqi esa olib tashlanardi.
    va javobsiz dars bitta), sinov darsi odatdagidek qo'llanadi. 1 tadan ko'p
    darsga kelgan o'quvchida savollar o'qilmaydi.
 4. O'chirilgan guruhning savollari abadiy javobsiz qoladi — ular sanalmaydi.
+   O'quvchining o'sha darsda o'z davomat qatori bo'lsa ham dars kutilmaydi:
+   ADR-0054 dagi QR poygasi bir darsda ham qator, ham savol qoldirishi
+   mumkin, bunday savolga «Bo'ldi» javob bera olmaydi; qatorning o'zi
+   sanaladi.
 5. Chiqarish va chetlatish oynasi shu matnni pul bloki o'rnida oldindan
    ko'rsatadi.
-6. Chetlatishda tekshiruv o'quvchi holati o'zgarishidan OLDIN bo'ladi:
-   chetlatish oy hisobini har bir yozilish uchun alohida yopadi, u yerdagi
-   rad etish esa faqat jurnalga yoziladi. Tekshiruvdan keyin ochilgan savol
-   (savollar har :00 va :30 da ochiladi) ketishni to'xtatmaydi — unda sinov
-   darsi emas, oddiy qoida (shartnoma 6.2) qo'llanadi.
+6. Tekshiruv hech narsa yozilmasdan oldin, lekin kirish huquqi
+   tekshirilgandan keyin bo'ladi (boshqa filial admini savol sanasini
+   ko'rmasligi uchun). Chetlatishda u o'quvchi holati o'zgarishidan OLDIN
+   bo'ladi: chetlatish oy hisobini har bir yozilish uchun alohida yopadi, u
+   yerdagi rad etish esa faqat jurnalga yoziladi. Tekshiruvdan keyin ochilgan
+   savol (savollar har :00 va :30 da ochiladi) ketishni to'xtatmaydi — unda
+   sinov darsi emas, oddiy qoida (shartnoma 6.2) qo'llanadi.
 
 ## Ko'rib chiqilgan muqobillar
 

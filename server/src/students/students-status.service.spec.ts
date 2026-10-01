@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { StudentsStatusService } from './students-status.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
@@ -346,6 +346,14 @@ describe('StudentsStatusService', () => {
       );
       expect(prisma.student.update).not.toHaveBeenCalled();
       expect(cascadeMock.cascade).not.toHaveBeenCalled();
+    });
+
+    it("reads «Dars bo'ldimi?» only once the student is found and the caller may touch him", async () => {
+      // Another company's (or branch's) student: 404/403, never his lessons.
+      prisma.student.findFirst.mockResolvedValueOnce(null);
+
+      await expect(expel()).rejects.toBeInstanceOf(NotFoundException);
+      expect(monthlyCharge.assertTrialLessonAnswered).not.toHaveBeenCalled();
     });
 
     it('refuses a chosen policy from anyone else before anything is written', async () => {

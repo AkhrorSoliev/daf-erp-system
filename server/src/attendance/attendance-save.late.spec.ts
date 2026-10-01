@@ -94,6 +94,8 @@ describe('AttendanceSaveService.saveLate', () => {
       },
       // Departed students' months that gave the day back (none by default).
       enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },
+      // The refunds that released those months (none by default).
+      transaction: { findMany: jest.fn().mockResolvedValue([]) },
       lessonCancellation: { findFirst: jest.fn().mockResolvedValue(null) },
       lessonReschedule: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -312,6 +314,71 @@ describe('AttendanceSaveService.saveLate', () => {
       tx,
       expect.objectContaining({ enrollmentId: 'e1', studentId: 10001 }),
     );
+  });
+
+  describe('a departed student whose month a quality claim returned', () => {
+    // ADR-0043 §8: a quality claim keeps the teacher's pay — the centre
+    // covers it. Only a trial lesson (3.5) earns the teacher nothing.
+    const released = (metadata: Record<string, unknown>) => {
+      prisma.group.findFirst.mockResolvedValue({
+        id: 'g1',
+        name: '#014',
+        branchId: 2,
+        course: { paymentModel: 'MONTHLY' },
+      });
+      tx.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+        { enrollmentId: 'e2' },
+      ]);
+      tx.transaction.findMany.mockResolvedValue([
+        {
+          metadata: {
+            kind: 'monthly-release',
+            enrollmentId: 'e2',
+            period: '2026-09',
+            ...metadata,
+          },
+        },
+      ]);
+    };
+    const save = () =>
+      service.saveLate(
+        'g1',
+        '2026-09-28',
+        { entries },
+        3,
+        ['Administrator'],
+        1,
+      );
+
+    it('is billed like a lesson marked in time', async () => {
+      released({ policy: 'QUALITY_CLAIM' });
+      await save();
+      expect(tx.transaction.findMany).toHaveBeenCalledWith({
+        where: {
+          studentId: { in: [10002] },
+          type: 'ADJUSTMENT',
+          reversedAt: null,
+          metadata: { path: ['kind'], equals: 'monthly-release' },
+        },
+        select: { metadata: true },
+      });
+      expect(billing.processAttendanceBilling).toHaveBeenCalledWith(
+        tx,
+        expect.objectContaining({ enrollmentId: 'e2', studentId: 10002 }),
+      );
+    });
+
+    it('is not billed when the claim was a trial lesson after all', async () => {
+      released({ policy: 'QUALITY_CLAIM', trialLesson: true });
+      await save();
+      expect(billing.processAttendanceBilling).toHaveBeenCalledTimes(1);
+    });
+
+    it("is not billed for another month's claim", async () => {
+      released({ policy: 'QUALITY_CLAIM', period: '2026-08' });
+      await save();
+      expect(billing.processAttendanceBilling).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('marks the row HELD before billing, so the accrual lock sees it', async () => {
