@@ -21,6 +21,7 @@ import {
   Wallet,
 } from "lucide-react";
 import type { KpiKey } from "./kpi-chart-dialog";
+import { monthShort } from "./salary-utils";
 import {
   Tooltip,
   TooltipContent,
@@ -32,7 +33,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
-/** «Bu oy hisoblandi / To'landi / Qoldi» — server `MonthCharges` (ADR-0058). */
+/** «Hisoblandi / To'landi / Qoldi» — server `MonthCharges` (ADR-0058). */
 export interface MonthCharges {
   month: string;
   charged: number;
@@ -391,10 +392,15 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
       <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-4">
         {/* Oyning asosiy raqami. Oylik to'lov oylarida (2026-09 dan): hisoblandi /
             to'landi / qoldi — ADR-0058. Undan oldingi oylar: eski «Oy oxiriga
-            kutilyapti» (bosilsa kunlik siljish). Raqamlarning hammasi serverdan. */}
+            kutilyapti» (bosilsa kunlik siljish). Raqamlarning hammasi serverdan.
+            Karta BIR oyni ko'rsatadi (bir necha oylik davrda — uning boshlang'ich
+            oyini), shuning uchun oy sarlavhada nomlanadi: serverning `month`i,
+            brauzer soati emas. */}
         <div className="rounded-xl border bg-card p-4 space-y-3">
           <p className="text-sm font-medium text-muted-foreground">
-            {d.monthCharges ? "Oy to'lovlari" : "Tushum ko'rsatkichlari"}
+            {d.monthCharges
+              ? `${monthShort(d.monthCharges.month)} to'lovlari`
+              : "Tushum ko'rsatkichlari"}
           </p>
           {d.monthCharges ? (
             <div className="space-y-2.5">
@@ -403,7 +409,7 @@ export function PaymentsOverview({ startDate, endDate, refreshKey }: PaymentsOve
                   <div className="flex justify-between text-sm cursor-help">
                     <span className="text-muted-foreground flex items-center gap-1.5">
                       <Receipt className="size-3.5 text-blue-500" />
-                      Bu oy hisoblandi
+                      Hisoblandi
                     </span>
                     <span className="font-medium">
                       {fmt(d.monthCharges.charged)} so&apos;m

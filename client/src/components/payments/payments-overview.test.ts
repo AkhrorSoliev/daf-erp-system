@@ -86,21 +86,35 @@ function render(monthCharges: MonthCharges | null): string {
   );
 }
 
-// A monthly-payment month (ADR-0058) leads with the month's own bill; an older
+// A monthly-payment month (ADR-0058) leads with the month's own bill, and the
+// title names that month: a period of several months shows its FIRST month's
+// bill, which «Bu oy hisoblandi» used to read as the whole period's. An older
 // month keeps «Oy oxiriga kutilyapti». Neither shows the two rows A2.3 removed:
 // «Hisoblangan darslar» (always wrong) and «Tushgan tushum» (the «Tushumlar»
 // card above it already says the same).
 describe("PaymentsOverview — the month card", () => {
-  it("a monthly-payment month shows hisoblandi, to'landi and qoldi from the server", () => {
+  it("a monthly-payment month is titled with its month and shows hisoblandi, to'landi and qoldi from the server", () => {
     const text = render(charges);
 
-    expect(text).toContain("Oy to'lovlari");
-    expect(text).toContain(`Bu oy hisoblandi ${money(900_000)}`);
+    expect(text).toContain("Oktabr to'lovlari");
+    expect(text).toContain(`Hisoblandi ${money(900_000)}`);
     expect(text).toContain(`To'landi ${money(350_000)} (38.9%)`);
     expect(text).toContain(`Qoldi ${money(550_000)}`);
+    // «Bu oy» is gone from the row and «Oy to'lovlari» from the title: the month is named.
+    expect(text).not.toContain("Bu oy hisoblandi");
+    expect(text).not.toContain("Oy to'lovlari");
     // The expectation is not drawn beside it, and its figure is nowhere on the page.
     expect(text).not.toContain("Oy oxiriga kutilyapti");
     expect(text).not.toContain(money(EXPECTED_MONTH_END));
+  });
+
+  it("names the month the server sent, not the dates the page asked for", () => {
+    // The page asks for October; this bill is September's (a period that
+    // starts in September), and the title says so.
+    const text = render({ ...charges, month: "2026-09" });
+
+    expect(text).toContain("Sentabr to'lovlari");
+    expect(text).not.toContain("Oktabr to'lovlari");
   });
 
   it("an older month keeps «Oy oxiriga kutilyapti» and has no month bill", () => {
@@ -108,8 +122,8 @@ describe("PaymentsOverview — the month card", () => {
 
     expect(text).toContain("Tushum ko'rsatkichlari");
     expect(text).toContain(`Oy oxiriga kutilyapti ${money(EXPECTED_MONTH_END)}`);
+    expect(text).not.toContain("Hisoblandi");
     expect(text).not.toContain("Bu oy hisoblandi");
-    expect(text).not.toContain("Oy to'lovlari");
   });
 
   it("neither month shows the two rows that were removed", () => {

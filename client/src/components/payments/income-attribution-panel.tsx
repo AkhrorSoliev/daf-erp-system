@@ -12,6 +12,7 @@ import { formatPrice } from "@/lib/format-utils";
 import api from "@/lib/api";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import type { MonthCharges } from "./payments-overview";
+import { monthShort } from "./salary-utils";
 
 interface IncomeAttribution {
   period: { start: string; end: string };
@@ -251,7 +252,8 @@ export function IncomeAttributionPanel({
                 />
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Oy hisobi {formatPrice(monthCharges.charged)} so&apos;m — shundan{" "}
+                {monthShort(monthCharges.month)} hisobi{" "}
+                {formatPrice(monthCharges.charged)} so&apos;m — shundan{" "}
                 {formatPrice(monthCharges.paid)} so&apos;m to&apos;landi,{" "}
                 {formatPrice(monthCharges.unpaid)} so&apos;m qoldi
               </p>

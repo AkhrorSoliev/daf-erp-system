@@ -17,6 +17,10 @@ const charges: MonthCharges = {
   students: 2,
 };
 
+// The bill's line leads with the month it is for (the server's `month`), so a
+// period of several months cannot be read as one bill covering all of them.
+const BILL = "Oktabr hisobi";
+
 const attribution = (start: string, end: string) => ({
   period: { start, end },
   monthKey: start.slice(0, 7),
@@ -75,12 +79,21 @@ describe("IncomeAttributionPanel — which collection measure shows", () => {
 
     expect(text).toContain(
       norm(
-        `Oy hisobi ${formatPrice(900_000)} so'm — shundan ${formatPrice(350_000)} so'm to'landi, ${formatPrice(550_000)} so'm qoldi`,
+        `${BILL} ${formatPrice(900_000)} so'm — shundan ${formatPrice(350_000)} so'm to'landi, ${formatPrice(550_000)} so'm qoldi`,
       ),
     );
     expect(text).toContain("38.9%");
+    expect(text).not.toContain("Oy hisobi");
     expect(text).not.toContain("Oy rejasidan yig'ildi");
     expect(text).not.toContain("Yig'im");
+  });
+
+  it("names the month the server sent, not the dates the page asked for", () => {
+    // The panel's period is October; this bill is September's.
+    const text = render({ monthCharges: { ...charges, month: "2026-09" } });
+
+    expect(text).toContain("Sentabr hisobi");
+    expect(text).not.toContain(BILL);
   });
 
   it("a monthly-payment month with no month plan shows no lessons-held fallback beside it", () => {
@@ -89,7 +102,7 @@ describe("IncomeAttributionPanel — which collection measure shows", () => {
     for (const expectedMonthEnd of [0, undefined]) {
       const text = render({ monthCharges: charges, expectedMonthEnd });
 
-      expect(text).toContain("Oy hisobi");
+      expect(text).toContain(BILL);
       expect(text).not.toContain("Yig'im");
     }
   });
@@ -98,7 +111,7 @@ describe("IncomeAttributionPanel — which collection measure shows", () => {
     const text = render({ monthCharges: null, expectedMonthEnd: 1_200_000 });
 
     expect(text).toContain("Oy rejasidan yig'ildi");
-    expect(text).not.toContain("Oy hisobi");
+    expect(text).not.toContain(BILL);
     expect(text).not.toContain("Yig'im");
   });
 
@@ -107,7 +120,7 @@ describe("IncomeAttributionPanel — which collection measure shows", () => {
 
     expect(text).toContain("Yig'im");
     expect(text).not.toContain("Oy rejasidan yig'ildi");
-    expect(text).not.toContain("Oy hisobi");
+    expect(text).not.toContain(BILL);
   });
 
   it("a range over several months shows no month's bill, even when its first month has one", () => {
@@ -117,7 +130,7 @@ describe("IncomeAttributionPanel — which collection measure shows", () => {
     );
 
     expect(text).toContain("Yig'im");
-    expect(text).not.toContain("Oy hisobi");
+    expect(text).not.toContain(BILL);
     expect(text).not.toContain("Oy rejasidan yig'ildi");
   });
 
