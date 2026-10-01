@@ -1,6 +1,6 @@
 # ADR-0002 — Noma'lum filial qamrovi hech narsani ko'rsatmaydi
 
-**Holati:** Qabul qilindi
+**Holati:** Qabul qilindi; `PayrollBranchScope` turi va «asosiy filiali yo'q xodim bo'sh ekran ko'radi» qismi — ADR-0058 bilan o'zgardi
 **Sana:** 2026-07-29
 **Bog'liq:** ADR-0001, ADR-0003, `server/src/salary/shared/payroll-branch-scope.ts`
 
