@@ -63,20 +63,12 @@ const EXEMPTIONS: { site: string; reason: string }[] = [
       "Xuddi shu, faqat MUSBAT balans — oldindan to'langan pul (kechiktirilgan " +
       "daromad). Debitorlik bilan bir juft, ta'rifi ham bir xil bo'lishi shart.",
   },
+  // `getFinancialOverview` had three sites. The first two — the status-ACTIVE
+  // receivable and its debtor count — are gone (ADR-0059: the debt is the two
+  // numbers of `reports/debt-split.ts`, built on `activeStudentWhere()`), so
+  // the «Aktiv balans» read below is now the first and only one.
   {
     site: 'src/reports/reports-financial.service.ts::getFinancialOverview',
-    reason:
-      'Kutilayotgan qarz (D.2) — balans hisobotidagi «Debitorlik» bilan bir xil ' +
-      "o'lchov. Ikkovi birga o'zgarishi kerak, alohida emas.",
-  },
-  {
-    site: 'src/reports/reports-financial.service.ts::getFinancialOverview#2',
-    reason:
-      'Qarzdorlar soni — yuqoridagi qarz summasining sherigi. Summa faol ' +
-      "o'quvchilarniki bo'lsa, sanoq ham o'shalarniki bo'lishi shart.",
-  },
-  {
-    site: 'src/reports/reports-financial.service.ts::getFinancialOverview#3',
     reason:
       "HAL QILINMAGAN. Bu «Aktiv balans» kartochkasi — «Faol o'quvchilar " +
       "hisobidagi jami pul» deb yozilgan, ya'ni ta'rifga bo'ysunishi kerakdek " +
