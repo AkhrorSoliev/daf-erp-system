@@ -347,23 +347,23 @@ export function attendanceSheet(wb: Workbook, att: any, period: string) {
     ws,
     'Umumiy davomat',
     att.overallRate ?? 0,
-    'Sababli (EXCUSED) maxrajdan chiqarilgan.',
+    'Sababli darslar maxrajga kirmaydi.',
     { percent: true },
   );
   if (att.overallRetention != null) {
     kvRow(
       ws,
-      'Retention (ushlab qolish)',
+      'Ushlab qolish',
       att.overallRetention,
       "Davr oxiri / davr boshi o'quvchi soni.",
       { percent: true },
     );
   }
   const sb = att.statusBreakdown ?? {};
-  kvNum(ws, 'Keldi (present)', sb.present ?? 0);
-  kvNum(ws, 'Kelmadi (absent)', sb.absent ?? 0);
-  kvNum(ws, 'Kech keldi (late)', sb.late ?? 0);
-  kvNum(ws, 'Sababli (excused)', sb.excused ?? 0);
+  kvNum(ws, 'Keldi', sb.present ?? 0);
+  kvNum(ws, 'Kelmadi', sb.absent ?? 0);
+  kvNum(ws, 'Kech keldi', sb.late ?? 0);
+  kvNum(ws, 'Sababli', sb.excused ?? 0);
   kvNum(ws, 'Jami belgilangan', sb.total ?? 0);
 
   sectionHeader(
@@ -371,7 +371,7 @@ export function attendanceSheet(wb: Workbook, att: any, period: string) {
     `Trend (${att.bucket === 'month' ? 'oylik' : 'haftalik'})`,
     3,
   );
-  const th = tableHeader(ws, ['Davr', 'Davomat %', 'Retention %']);
+  const th = tableHeader(ws, ['Davr', 'Davomat %', 'Ushlab qolish %']);
   const first = th.number + 1;
   (att.trend ?? []).forEach((t: any) => {
     const r = ws.addRow([t.label, t.rate ?? 0, t.retentionPct ?? '—']);
@@ -405,8 +405,8 @@ export function attendanceSheet(wb: Workbook, att: any, period: string) {
   sheetNotes(
     ws,
     [
-      'Davomat foizi = kelgan darslar / (jami − sababli). Past davomat = daromad va churn xavfi.',
-      "Retention — davr davomida o'quvchilarni ushlab qolish ulushi.",
+      "Davomat foizi = kelgan darslar / (jami − sababli). Past davomat = daromad va o'quvchi ketishi xavfi.",
+      "Ushlab qolish — davr davomida qolgan o'quvchilar ulushi.",
       "Eng past guruhlar — birinchi navbatda e'tibor talab qiladi.",
       'Rang: qizil = past davomat, yashil = yuqori.',
     ],
@@ -426,7 +426,7 @@ export function teacherPerformanceSheet(
     { width: 12 },
     { width: 12 },
     { width: 16 },
-    { width: 14 },
+    { width: 16 },
     { width: 16 },
     { width: 16 },
   ];
@@ -441,7 +441,7 @@ export function teacherPerformanceSheet(
     'Guruhlar',
     "O'quvchilar",
     'Boshi → Oxiri',
-    'Retention %',
+    'Ushlab qolish %',
     "O'rt. davomat %",
     "To'ldirilish %",
   ]);
@@ -465,10 +465,10 @@ export function teacherPerformanceSheet(
   if (last >= first) colorScale(ws, `F${first}:F${last}`);
   freezeAndFilter(ws, header.number, 7);
   const notes = [
-    "Har ustoz: guruh soni, o'quvchi soni, retention, o'rtacha davomat va guruh to'ldirilishi.",
-    '"Boshi → Oxiri" — davr boshidagi va oxiridagi o\'quvchi soni (retention shundan).',
+    "Har ustoz: guruh soni, o'quvchi soni, ushlab qolish, o'rtacha davomat va guruh to'ldirilishi.",
+    '"Boshi → Oxiri" — davr boshidagi va oxiridagi o\'quvchi soni (ushlab qolish shundan).',
     "Rang (o'rt. davomat): qizil = past, yashil = yuqori.",
-    'Faqat ACTIVE/FORMING guruhlar; davr boshi tizim boshlanish sanasigacha cheklangan.',
+    'Faqat faol va shakllanayotgan guruhlar; davr boshi tizim boshlanish sanasigacha cheklangan.',
   ];
   if ((perf.total ?? 0) > teachers.length) {
     notes.push(

@@ -662,7 +662,7 @@ describe('ReportsExcelService', () => {
       50_000,
     );
     expect(
-      cellText(findRow(check, '= Sof foyda (footing)').getCell(5).value),
+      cellText(findRow(check, '= Sof foyda (yig‘indi)').getCell(5).value),
     ).toBe('MOS');
   });
 
@@ -1254,5 +1254,36 @@ describe('ReportsExcelService', () => {
         'Bugungi holat:',
       );
     });
+  });
+
+  it("«Davomat», «O'qituvchilar samaradorligi», «Tekshiruv» and «Foyda va zarar» carry no English words (A3.6)", async () => {
+    // The CEO's rule (27.09): no English word on a screen, in Excel, PDF or
+    // Telegram. These four are the wired sheets that still had one.
+    const english =
+      /\b(retention|present|absent|late|excused|reconciliation|ties|tie-out|recon|footing|refund|roll-forward|audit|accrual|GL|ACTIVE|FORMING|EXCUSED|churn|vs)\b|P&L/i;
+    const wb = await buildWorkbook(
+      {},
+      { include: ['buxgalteriya', 'marketing'] },
+    );
+    // A Set: a merged title answers once per merged cell.
+    const found = new Set<string>();
+    for (const name of [
+      'Davomat',
+      "O'qituvchilar samaradorligi",
+      'Tekshiruv',
+      'Foyda va zarar',
+    ]) {
+      let cells = 0;
+      wb.getWorksheet(name)!.eachRow((row) =>
+        row.eachCell((cell) => {
+          const text = cellText(cell.value);
+          cells++;
+          if (english.test(text)) found.add(`${name}: ${text}`);
+        }),
+      );
+      // A sheet that fell back to its «ma'lumot yo'q» note would pass vacuously.
+      expect(cells).toBeGreaterThan(10);
+    }
+    expect([...found]).toEqual([]);
   });
 });
