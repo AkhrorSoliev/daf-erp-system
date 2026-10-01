@@ -117,13 +117,16 @@ export class PaymentsPreviewService {
       throw new Error("O'quvchi topilmadi");
     }
 
-    // ACTIVE groups only, like the charge itself: `MonthlyChargeService`
-    // bills an enrollment only while its group is ACTIVE (the guard on one
-    // enrollment and the daily run's query). A PAUSED group's enrollment stays
-    // ACTIVE, so without this the dialog asked for a month nobody would bill.
-    // This list sums `nextMonthAmount` and picks the model; the contract 3.2
-    // reach (`monthly.admission`) does not read it — it loads the student's own
-    // month charges.
+    // Groups that bill, or are about to. `MonthlyChargeService` bills an
+    // enrollment only while its group is ACTIVE (the guard on one enrollment
+    // and the daily run's query), and a PAUSED group's enrollment stays ACTIVE,
+    // so without a filter the dialog asked for a month nobody would bill. A
+    // FORMING group stays in: the status cron makes it ACTIVE on its start date
+    // and the daily run then charges it, and a new student in a forming group
+    // is who the admin takes a first payment from. A PAUSED group has no date
+    // at which billing resumes. This list sums `nextMonthAmount` and picks the
+    // model; the contract 3.2 reach (`monthly.admission`) does not read it — it
+    // loads the student's own month charges.
     const enrollments = await this.prisma.enrollment.findMany({
       where: {
         studentId,
@@ -132,7 +135,7 @@ export class PaymentsPreviewService {
         group: {
           companyId,
           deletedAt: null,
-          statusEnum: GroupStatus.ACTIVE,
+          statusEnum: { in: [GroupStatus.ACTIVE, GroupStatus.FORMING] },
         },
       },
       select: {
