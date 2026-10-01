@@ -17,6 +17,17 @@ export interface DashboardMoney {
    * `monthIncome` bilan BOSHQA bazada: ikkovi ayirilmaydi.
    */
   expectedMonthEnd: number;
+  /**
+   * «Bu oy hisoblandi» (ADR-0058): shu oyga yozilgan oylik hisoblar va
+   * shundan to'langani. 2026-09 dan oldingi oyda `null` — u holda karta
+   * `expectedMonthEnd` ni ko'rsatadi.
+   */
+  monthCharges: {
+    charged: number;
+    paid: number;
+    unpaid: number;
+    paidPct: number | null;
+  } | null;
   netProfit: number;
   /**
    * `'cash'` — kanonik sof foyda hisoblanmadi va bu eski kassa raqami.

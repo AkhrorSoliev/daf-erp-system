@@ -5,6 +5,16 @@ const financialOverview = {
   income: { actual: 128_450_000, paymentCount: 214 },
   forecast: { expectedMonthEnd: 176_200_000 },
   netProfit: 78_000_000,
+  // `ReportsService.getFinancialOverview` shu shaklda qaytaradi. `month` va
+  // `students` hisobot sahifasi uchun — bosh sahifaga o'tmaydi.
+  monthCharges: {
+    month: '2026-10',
+    charged: 900_000,
+    paid: 600_000,
+    unpaid: 300_000,
+    paidPct: 66.7,
+    students: 2,
+  },
 };
 
 const kpis = {
@@ -98,10 +108,31 @@ describe('DashboardSummaryService.getSummary', () => {
       monthIncome: 128_450_000,
       paymentCount: 214,
       expectedMonthEnd: 176_200_000,
+      // Faqat to'rt maydon: `month` va `students` o'tib ketsa, toEqual yiqiladi.
+      monthCharges: {
+        charged: 900_000,
+        paid: 600_000,
+        unpaid: 300_000,
+        paidPct: 66.7,
+      },
       netProfit: 18_930_000,
       netProfitBasis: 'recognized',
       debt: { total: 27_748_684, count: 177 },
     });
+  });
+
+  it('oylik hisob boshlanmagan oyda monthCharges null, eski prognoz joyida qoladi', async () => {
+    const { service } = makeService({
+      reports: {
+        getFinancialOverview: jest
+          .fn()
+          .mockResolvedValue({ ...financialOverview, monthCharges: null }),
+      },
+    });
+    const res = await service.getSummary(CEO);
+
+    expect(res.money!.monthCharges).toBeNull();
+    expect(res.money!.expectedMonthEnd).toBe(176_200_000);
   });
 
   it('administrator uchun pul bloki null va moliya servisi umuman chaqirilmaydi', async () => {

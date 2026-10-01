@@ -74,14 +74,29 @@ export function HomeMoneyCards({ money }: { money: DashboardMoney }) {
         tooltip="Shu oy kassaga tushgan pul (so'm)."
         href="/payments/overview"
       />
-      <MoneyCard
-        icon={TrendingUp}
-        label="Oy oxiriga kutilyapti"
-        value={money.expectedMonthEnd}
-        hint="prognoz"
-        tooltip="Oy oxirigi prognoz: o'tilgan va rejadagi darslar qiymati. Bu kassa tushumi emas — ikkovi turli o'lchov, shuning uchun ular ayirilmaydi."
-        href="/payments/overview"
-      />
+      {money.monthCharges ? (
+        <MoneyCard
+          icon={TrendingUp}
+          label="Bu oy hisoblandi"
+          value={money.monthCharges.charged}
+          hint={
+            money.monthCharges.paidPct !== null
+              ? `to'landi ${money.monthCharges.paidPct}%`
+              : "to'lov yo'q"
+          }
+          tooltip="Shu oy uchun o'quvchilarga yozilgan oylik hisoblar. To'landi — shundan to'langan qismi."
+          href="/payments/overview"
+        />
+      ) : (
+        <MoneyCard
+          icon={TrendingUp}
+          label="Oy oxiriga kutilyapti"
+          value={money.expectedMonthEnd}
+          hint="prognoz"
+          tooltip="Oy oxirigi prognoz: o'tilgan va rejadagi darslar qiymati. Bu kassa tushumi emas — ikkovi turli o'lchov, shuning uchun ular ayirilmaydi."
+          href="/payments/overview"
+        />
+      )}
       <MoneyCard
         icon={UserMinus}
         label="Qarzdorlik"

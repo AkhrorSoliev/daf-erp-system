@@ -170,6 +170,17 @@ export class DashboardSummaryService {
       monthIncome: overview.income.actual,
       paymentCount: overview.income.paymentCount,
       expectedMonthEnd: overview.forecast.expectedMonthEnd,
+      // Bosh sahifaga faqat to'rt maydon kerak: `month` va `students` hisobot
+      // sahifasiniki. Oylik hisob boshlanmagan oyda `null` — karta eski
+      // prognozni ko'rsatadi.
+      monthCharges: overview.monthCharges
+        ? {
+            charged: overview.monthCharges.charged,
+            paid: overview.monthCharges.paid,
+            unpaid: overview.monthCharges.unpaid,
+            paidPct: overview.monthCharges.paidPct,
+          }
+        : null,
       netProfit,
       netProfitBasis,
       // Qarz balansi manfiy saqlanadi; karta uni musbat summa qilib
