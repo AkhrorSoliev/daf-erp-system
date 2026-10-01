@@ -2,14 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  CalendarClock,
-  Plus,
-  Search,
-  TrendingDown,
-  Users,
-  Wallet,
-} from "lucide-react";
+import { CalendarClock, Plus, Search, Users, Wallet } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import api from "@/lib/api";
-import { formatBalance, formatNumber } from "@/lib/format-utils";
+import { formatBalance, formatNumber, formatPrice } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { TablePagination } from "@/components/outreach/table-pagination";
 import {
@@ -36,6 +29,7 @@ import {
   type LogCallPrefill,
 } from "@/components/outreach/log-call-dialog";
 import { SummaryCard } from "../summary-card";
+import type { DebtSplit } from "../payments-overview";
 import { RecordPaymentDialog } from "../record-payment-dialog";
 import { type Debtor, DebtorRow } from "../debtor-row";
 import { useDebtFilters } from "./debt-filters-provider";
@@ -53,9 +47,8 @@ type PaymentTarget = {
 };
 
 interface DebtorSummary {
-  totalDebt: number;
-  debtorCount: number;
-  avgDebt: number;
+  /** The debt as two numbers (ADR-0059), never added together. */
+  split: DebtSplit;
   openPromises: number;
   overduePromises: number;
 }
@@ -156,12 +149,15 @@ export function DebtorsView() {
         .then((r) => r.data),
   });
 
+  // The cards describe the WHOLE branch scope, so nothing the list filters by
+  // (status, search, promise) is in the key or the request — picking a status
+  // must not refetch numbers that cannot change.
   const { data: summary } = useQuery({
-    queryKey: ["debtors", "summary", selectedBranch?.id, filters.holat],
+    queryKey: ["debtors", "summary", selectedBranch?.id],
     queryFn: () =>
       api
         .get<DebtorSummary>("/payments/debtors/summary", {
-          params: { branchId: selectedBranch?.id, studentStatus: filters.holat },
+          params: { branchId: selectedBranch?.id },
         })
         .then((r) => r.data),
   });
@@ -182,47 +178,58 @@ export function DebtorsView() {
         </Button>
       </div>
 
-      {/* All three measure "right now". The center top-up figure is deliberately
-          NOT here — it is month-scoped, and a monthly number in a row of live
-          ones invites the two to be read as comparable. It has its own tab. */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <SummaryCard
-          icon={<Wallet className="size-5 text-red-700 dark:text-red-300" />}
-          tone="red"
-          label="Jami qarz"
-          value={summary ? formatBalance(summary.totalDebt) : "—"}
-          hint={
-            filters.holat === "all"
-              ? "Hamma holatdagi qarzdorlar"
-              : `Faqat: ${STATUS_OPTIONS.find((o) => o.value === filters.holat)?.label}`
-          }
-        />
-        <SummaryCard
-          icon={<Users className="size-5 text-slate-700 dark:text-slate-300" />}
-          tone="slate"
-          label="Qarzdorlar soni"
-          value={summary ? `${formatNumber(summary.debtorCount)} ta` : "—"}
-        />
-        <SummaryCard
-          icon={
-            <TrendingDown className="size-5 text-amber-700 dark:text-amber-300" />
-          }
-          tone="amber"
-          label="O'rtacha qarz"
-          value={summary ? formatBalance(summary.avgDebt) : "—"}
-        />
-        <SummaryCard
-          icon={
-            <CalendarClock className="size-5 text-violet-700 dark:text-violet-300" />
-          }
-          tone="violet"
-          label="Belgilangan / muddati o'tgan"
-          value={
-            summary
-              ? `${formatNumber(summary.openPromises)} / ${formatNumber(summary.overduePromises)}`
-              : "—"
-          }
-        />
+      {/* Everything here measures "right now". The center top-up figure is
+          deliberately NOT here — it is month-scoped, and a monthly number in a
+          row of live ones invites the two to be read as comparable. It has its
+          own tab. The two debts are two numbers and are never added (ADR-0059);
+          only the first is split into shu oy and eski qarz. */}
+      <div className="space-y-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <SummaryCard
+            icon={<Wallet className="size-5 text-red-700 dark:text-red-300" />}
+            tone="red"
+            label="O'qiyotganlar qarzi"
+            value={summary ? formatBalance(summary.split.studying.total) : "—"}
+            hint={
+              summary && (
+                <>
+                  <span className="block">
+                    {formatNumber(summary.split.studying.count)} ta
+                  </span>
+                  <span className="block">
+                    {`🟡 shu oy ${formatPrice(summary.split.studying.currentMonth)} · 🔴 eski qarz ${formatPrice(summary.split.studying.older)}`}
+                  </span>
+                </>
+              )
+            }
+          />
+          <SummaryCard
+            icon={<Users className="size-5 text-slate-700 dark:text-slate-300" />}
+            tone="slate"
+            label="O'qimayotganlar qarzi"
+            value={
+              summary ? formatBalance(summary.split.notStudying.total) : "—"
+            }
+            hint={
+              summary && `${formatNumber(summary.split.notStudying.count)} ta`
+            }
+          />
+          <SummaryCard
+            icon={
+              <CalendarClock className="size-5 text-violet-700 dark:text-violet-300" />
+            }
+            tone="violet"
+            label="Belgilangan / muddati o'tgan"
+            value={
+              summary
+                ? `${formatNumber(summary.openPromises)} / ${formatNumber(summary.overduePromises)}`
+                : "—"
+            }
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Ro&apos;yxat filtrlari bu kartalarga ta&apos;sir qilmaydi
+        </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

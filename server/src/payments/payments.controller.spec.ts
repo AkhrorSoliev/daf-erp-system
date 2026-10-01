@@ -126,7 +126,20 @@ describe('PaymentsController — role guards', () => {
       controller.getDebtorSummary({ branchId: 5 } as any, 99, 1001, ['CEO']);
       expect(mockService.getDebtorSummary).toHaveBeenCalledWith(1001, {
         branchId: 5,
-        status: 'all',
+        userId: 99,
+        roles: ['CEO'],
+      });
+    });
+
+    it("kartalar ro'yxat filtrlariga qaramaydi: studentStatus summary'ga o'tmaydi", () => {
+      controller.getDebtorSummary(
+        { branchId: 5, studentStatus: 'FROZEN' } as any,
+        99,
+        1001,
+        ['CEO'],
+      );
+      expect(mockService.getDebtorSummary).toHaveBeenCalledWith(1001, {
+        branchId: 5,
         userId: 99,
         roles: ['CEO'],
       });

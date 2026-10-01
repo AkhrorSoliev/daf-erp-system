@@ -8,7 +8,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatNumber } from "@/lib/format-utils";
+import { formatNumber, formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import type { DashboardMoney } from "./dashboard-summary-types";
 
@@ -97,15 +97,19 @@ export function HomeMoneyCards({ money }: { money: DashboardMoney }) {
           href="/payments/overview"
         />
       )}
+      {/* Qarz — ikki alohida raqam (ADR-0059): karta birinchisini ko'rsatadi,
+          ikkinchisi ost-satrda. Ikkalasi serverdan keladi, qo'shilmaydi. */}
       <MoneyCard
         icon={UserMinus}
-        label="Qarzdorlik"
-        value={money.debt.total}
-        hint={`${formatNumber(money.debt.count)} ta qarzdor`}
-        tooltip="Markazga qarzdor o'quvchilarning jami qarzi (so'm)."
+        label="O'qiyotganlar qarzi"
+        value={money.debt.studying.total}
+        hint={`${formatNumber(money.debt.studying.count)} ta · o'qimayotganlar ${formatPrice(money.debt.notStudying.total)}`}
+        tooltip="Faol guruhda o'qiyotganlarning qarzi. O'qimayotganlar (guruhsiz, muzlatilgan, ketgan) qarzi alohida, qo'shilmaydi."
         href="/payments/debt"
         valueClassName={
-          money.debt.total > 0 ? "text-red-600 dark:text-red-400" : undefined
+          money.debt.studying.total > 0
+            ? "text-red-600 dark:text-red-400"
+            : undefined
         }
       />
       <MoneyCard

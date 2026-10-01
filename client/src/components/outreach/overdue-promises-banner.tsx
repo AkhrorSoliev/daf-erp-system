@@ -6,11 +6,11 @@ import { ArrowUpRight, CalendarClock } from "lucide-react";
 import api from "@/lib/api";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import type { DebtSplit } from "@/components/payments/payments-overview";
 
 interface DebtorSummary {
-  totalDebt: number;
-  debtorCount: number;
-  avgDebt: number;
+  /** The debt as two numbers (ADR-0059); the banner names only the first. */
+  split: DebtSplit;
   openPromises: number;
   overduePromises: number;
 }
@@ -32,11 +32,12 @@ export function OverduePromisesBanner() {
   const { selectedBranch } = useBranchSwitcher();
 
   const { data } = useQuery({
-    queryKey: ["debtors", "summary", selectedBranch?.id, "all"],
+    // The same entry the debt page's cards read: the summary has no filters.
+    queryKey: ["debtors", "summary", selectedBranch?.id],
     queryFn: () =>
       api
         .get<DebtorSummary>("/payments/debtors/summary", {
-          params: { branchId: selectedBranch?.id, studentStatus: "all" },
+          params: { branchId: selectedBranch?.id },
         })
         .then((r) => r.data),
   });
@@ -58,7 +59,7 @@ export function OverduePromisesBanner() {
             o&apos;tib ketgan
           </p>
           <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
-            Jami qarz {formatBalance(data.totalDebt)} ·{" "}
+            O&apos;qiyotganlar qarzi {formatBalance(data.split.studying.total)} ·{" "}
             {formatNumber(data.openPromises)} ta sana kutilmoqda
           </p>
         </div>
