@@ -323,9 +323,13 @@ function toMonthRow(month: string, own: OwnMonthProfit, debt: any): MonthRow {
 
 /**
  * «Filiallar» rows — one per named branch, company-wide scope only. Each row
- * is that branch's own report: the same three calls the whole workbook makes,
+ * is that branch's own report: the same figures the whole workbook reads,
  * re-issued with a single-branch scope, so `Σ(branches)` ties to the company
  * figures on «Xulosa».
+ *
+ * The debt column is «O'qiyotganlar qarzi» alone (ADR-0059) — never added to
+ * «O'qimayotganlar qarzi», which this sheet does not carry. A student sits in
+ * exactly one branch, so the «Jami» row adds no one twice.
  *
  * One branch's student count failing must not cost the reader the entire
  * table, so only that leg degrades — the company-wide flow is the
@@ -344,18 +348,18 @@ export async function buildBranchRows(
   return Promise.all(
     Object.entries(args.branchNames).map(async ([idStr, name]) => {
       const branchIds = [Number(idStr)];
-      const [own, debtors, flow] = await Promise.all([
+      const [own, debtSplit, flow] = await Promise.all([
         reports.getOwnMonthProfit(companyId, {
           month: args.month,
           branchIds,
           performedById: args.performedById,
         }),
-        reports.getDebtorLineItems(companyId, branchIds),
+        reports.getDebtSplit(companyId, { branchIds }),
         args.safe(
           reports.getStudentFlow(companyId, { month: args.month, branchIds }),
         ),
       ]);
-      return toBranchRow(name, own, debtors?.total ?? 0, flow);
+      return toBranchRow(name, own, debtSplit.studying.total, flow);
     }),
   );
 }
@@ -371,7 +375,7 @@ export async function buildBranchRows(
 function toBranchRow(
   branchName: string,
   own: OwnMonthProfit,
-  debtorTotal: number,
+  studyingDebt: number,
   flow: StudentFlow | null,
 ): BranchRow {
   return {
@@ -383,7 +387,7 @@ function toBranchRow(
     operatingExpenses: own.netProfit.operatingExpenses,
     refunds: own.netProfit.refunds,
     netProfit: own.netProfit.netProfit,
-    debt: debtorTotal,
+    debt: studyingDebt,
     inGroup: flow?.inGroup ?? 0,
   };
 }

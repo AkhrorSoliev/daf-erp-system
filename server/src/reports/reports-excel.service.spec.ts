@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Workbook, Worksheet } from 'exceljs';
 import { ReportsExcelService } from './reports-excel.service';
 import { ReportsService } from './reports.service';
+import type { DebtSplit } from './debt-split';
 import {
   cellText,
   tashkentTodayStr,
@@ -143,6 +144,13 @@ describe('ReportsExcelService', () => {
     truncated: false,
     total: 80_000,
     count: 1,
+  };
+  // The debt as two numbers (ADR-0059). «Filiallar» prints the STUDYING one per
+  // branch; neither equals `debtors.total` (the whole receivable the balance
+  // sheet ties to), so a column still reading the old source cannot pass.
+  const debtSplit: DebtSplit = {
+    studying: { total: 60_000, count: 2, currentMonth: 25_000, older: 35_000 },
+    notStudying: { total: 20_000, count: 1 },
   };
   const recon = {
     period: { start: '2026-06-01', end: '2026-06-30' },
@@ -362,6 +370,7 @@ describe('ReportsExcelService', () => {
       .fn()
       .mockResolvedValue({ total: 0, teacherCredited: 0, students: [] }),
     getDebtorLineItems: jest.fn().mockResolvedValue(debtors),
+    getDebtSplit: jest.fn().mockResolvedValue(debtSplit),
     getReconciliation: jest.fn().mockResolvedValue(recon),
     getPeriodOutflows: jest.fn().mockResolvedValue({
       refunds: 10_000,
@@ -885,14 +894,27 @@ describe('ReportsExcelService', () => {
     expect(markaz.getCell(5).value).toBe(netProfit.operatingExpenses);
     expect(markaz.getCell(6).value).toBe(netProfit.refunds);
     expect(markaz.getCell(7).value).toBe(netProfit.netProfit);
-    expect(markaz.getCell(8).value).toBe(debtors.total);
+    // The debt column is the STUDYING debt only (ADR-0059) — not the whole
+    // receivable — and its header says so.
+    expect(findRow(ws, 'Filial').getCell(8).value).toBe(
+      "O'qiyotganlar qarzi (hozir)",
+    );
+    expect(markaz.getCell(8).value).toBe(debtSplit.studying.total);
     expect(markaz.getCell(9).value).toBe(studentFlow.inGroup);
 
     // Each row is that branch's OWN report — re-issued single-branch.
-    expect(reports.getDebtorLineItems).toHaveBeenCalledWith(1, [2]);
+    expect(reports.getDebtSplit).toHaveBeenCalledWith(1, { branchIds: [2] });
     expect(findRow(ws, 'Jami').getCell(4).value).toBe(
       2 * (netProfit.teacherSalary + netProfit.adminSalary),
     );
+  });
+
+  it('a failing per-branch debt read fails the export — a 0 would read as a fact', async () => {
+    reports.getDebtSplit.mockRejectedValue(new Error('boom'));
+
+    await expect(
+      buildWorkbook({}, { branchNames: { 1: 'Markaz' } }),
+    ).rejects.toThrow('boom');
   });
 
   it('Qarzdorlar total ties to the balance-sheet debitorlik', async () => {
