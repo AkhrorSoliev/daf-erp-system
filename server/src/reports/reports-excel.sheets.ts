@@ -409,8 +409,12 @@ export function glossarySheet(wb: Workbook) {
   // are gone; a reader who needs this sheet is not a bookkeeper.
   const terms: [string, string][] = [
     [
+      'Bu oy hisoblandi',
+      "Oylik to'lov tizimidagi oy (2026-yil sentabrdan): shu oy uchun o'quvchilarga yozilgan oylik hisoblar yig'indisi. «To'langan» — shundan to'langani, «to'lanmagan» — hali to'lanmagani. To'lov avval eng eski qarzni yopadi.",
+    ],
+    [
       'Oy oxiriga kutilyapti',
-      'Shu oy allaqachon o‘tilgan darslar qiymati + kalendar bo‘yicha oy oxirigacha qolgan darslar qiymati. Bu kassa bashorati EMAS — pul qachon kelishi bunga kirmaydi.',
+      "Shu oy allaqachon o‘tilgan darslar qiymati + kalendar bo‘yicha oy oxirigacha qolgan darslar qiymati. Bu kassa bashorati EMAS — pul qachon kelishi bunga kirmaydi. (2026-yil sentabrgacha bo'lgan oylar)",
     ],
     [
       "O'tilgan darslar qiymati",
