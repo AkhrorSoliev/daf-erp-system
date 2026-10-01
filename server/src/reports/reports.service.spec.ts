@@ -274,6 +274,30 @@ describe('ReportsService', () => {
       });
     });
 
+    it('should calculate attendance percentage excluding EXCUSED lessons', async () => {
+      prisma.student.count
+        .mockResolvedValueOnce(50) // activeStudents
+        .mockResolvedValueOnce(45) // lastMonthActive
+        .mockResolvedValueOnce(5); // new students
+
+      prisma.group.count.mockResolvedValue(10);
+
+      prisma.attendance.groupBy.mockResolvedValue([
+        { status: 'PRESENT', _count: { id: 70 } },
+        { status: 'LATE', _count: { id: 10 } },
+        { status: 'ABSENT', _count: { id: 10 } },
+        { status: 'EXCUSED', _count: { id: 10 } },
+      ]);
+
+      prisma.lead.count
+        .mockResolvedValueOnce(100) // total
+        .mockResolvedValueOnce(20); // converted
+
+      const result = await service.getKpis(1, {});
+
+      expect(result.averageAttendance).toBe(89); // round(80 / 90 × 100)
+    });
+
     it('should handle zero students gracefully', async () => {
       prisma.student.count.mockResolvedValue(0);
       prisma.group.count.mockResolvedValue(0);
