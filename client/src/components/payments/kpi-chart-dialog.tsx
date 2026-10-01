@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { IncomeAttributionPanel } from "./income-attribution-panel";
 import { ProfitCompositionPanel } from "./profit-composition-panel";
+import type { MonthCharges } from "./payments-overview";
 import api from "@/lib/api";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
@@ -125,6 +126,12 @@ interface Props {
    * rather than fetched again — same request, same figure, no second answer.
    */
   expectedMonthEnd?: number;
+  /**
+   * «Oy to'lovlari» for the period's month (ADR-0058), or `null` for a month
+   * before the monthly-payment switch. Threaded from the overview like
+   * `expectedMonthEnd`, so the card and this drill-down show the same figures.
+   */
+  monthCharges?: MonthCharges | null;
   /** Switches the dialog to another KPI — the profit breakdown links to «Tushumlar». */
   onSelectKpi?: (key: KpiKey) => void;
 }
@@ -136,6 +143,7 @@ export function KpiChartDialog({
   startDate,
   endDate,
   expectedMonthEnd,
+  monthCharges,
   onSelectKpi,
 }: Props) {
   const { selectedBranch } = useBranchSwitcher();
@@ -293,6 +301,7 @@ export function KpiChartDialog({
             startDate={startDate}
             endDate={endDate}
             expectedMonthEnd={expectedMonthEnd}
+            monthCharges={monthCharges}
           />
         )}
 

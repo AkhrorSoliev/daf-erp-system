@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/lib/format-utils";
 import api from "@/lib/api";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import type { MonthCharges } from "./payments-overview";
 
 interface IncomeAttribution {
   period: { start: string; end: string };
@@ -37,6 +38,13 @@ interface Props {
    * never a second answer fetched separately.
    */
   expectedMonthEnd?: number;
+  /**
+   * «Oy to'lovlari» for the period's month (ADR-0058), or `null` before the
+   * monthly-payment switch. Threaded from the overview so this panel and the
+   * card show the same figures. When present it replaces the two collection
+   * rows that measured against the month-end expectation.
+   */
+  monthCharges?: MonthCharges | null;
 }
 
 /**
@@ -67,6 +75,7 @@ export function IncomeAttributionPanel({
   startDate,
   endDate,
   expectedMonthEnd,
+  monthCharges,
 }: Props) {
   const { selectedBranch } = useBranchSwitcher();
 
@@ -225,6 +234,30 @@ export function IncomeAttributionPanel({
             </p>
           </div>
 
+          {/* Oylik to'lov oyi (ADR-0058): yig'im = to'landi ÷ hisoblandi —
+              «Oy to'lovlari» kartasi bilan bir xil raqamlar, serverdan. */}
+          {monthCharges && isSingleMonth && (
+            <div className="rounded-lg border bg-card p-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium">To&apos;landi</span>
+                <span className="text-sm font-semibold tabular-nums">
+                  {monthCharges.paidPct ?? 0}%
+                </span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-blue-500"
+                  style={{ width: `${Math.min(monthCharges.paidPct ?? 0, 100)}%` }}
+                />
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Oy hisobi {formatPrice(monthCharges.charged)} so&apos;m — shundan{" "}
+                {formatPrice(monthCharges.paid)} so&apos;m to&apos;landi,{" "}
+                {formatPrice(monthCharges.unpaid)} so&apos;m qoldi
+              </p>
+            </div>
+          )}
+
           {/* Oy rejasidan yig'ildi — the question a CEO actually asks: are we
               on track for the month? Denominator is «Oy oxiriga kutilyapti»,
               the same figure the card above shows.
@@ -238,7 +271,7 @@ export function IncomeAttributionPanel({
               Note the denominator MOVES: new students enrol, the month gets
               bigger, and the same cash becomes a smaller share. That is correct
               — the target grew — and it is why the figure is worth watching. */}
-          {expectedMonthEnd != null && expectedMonthEnd > 0 && isSingleMonth && (
+          {!monthCharges && expectedMonthEnd != null && expectedMonthEnd > 0 && isSingleMonth && (
             <div className="rounded-lg border bg-card p-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-1.5 text-sm font-medium">
@@ -303,7 +336,8 @@ export function IncomeAttributionPanel({
               the month-end expectation is a single-month figure, so measure
               against the lessons actually held in the window instead. Same
               collection % the 21:00 Telegram report prints. */}
-          {!(expectedMonthEnd != null && expectedMonthEnd > 0 && isSingleMonth) &&
+          {!(monthCharges && isSingleMonth) &&
+            !(expectedMonthEnd != null && expectedMonthEnd > 0 && isSingleMonth) &&
             data.collectionPct !== null && (
               <div className="rounded-lg border bg-card p-3">
                 <div className="flex items-center justify-between gap-2">
